@@ -193,7 +193,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     japan: { name: '부산 왜군', title: '주둔 수군', figure: 'fig_japan', portrait: 'portrait_japan', banner: '倭' },
     map: { x: 0.77, y: 0.47 },
     arrows: [{ from: [0.66, 0.6], to: [0.76, 0.48], team: 'joseon' }],
-    view: { tx: -4200, tz: 3200, dir: -0.77, dist: 1000, pitch: 0.3 },
+    view: { tx: -1000, tz: 2700, dir: -1.33, dist: 1100, pitch: 0.3 },
   },
   chilcheon: {
     id: 'chilcheon',
@@ -437,7 +437,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
         s.speed = 0;
       }
     }
-    const head = Math.atan2(harborShore + 300 - 3600, -500 - -4800);
+    const head = Math.atan2(harborShore + 200 - 4300, -200 - -1300);
     const squads = [
       { name: '선봉', cmd: '녹도만호 정운', kind: 'panokseon' as ShipKind, n: 8 },
       { name: '전라좌수영 본대', cmd: '통제사 이순신', kind: 'panokseon' as ShipKind, n: 13 },
@@ -452,8 +452,8 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     squads.forEach((g, gi) => {
       const sq = squad('joseon', g.name, g.cmd, g.kind);
       const back = gi * 210;
-      const cxj = -4600 - Math.cos(head) * back;
-      const czj = 3600 - Math.sin(head) * back;
+      const cxj = -1100 - Math.cos(head) * back * 0.55 + (gi % 3 - 1) * 260;
+      const czj = 3300 - Math.sin(head) * back * 0.55;
       const spacing = g.kind === 'hyeopseon' ? 30 : 60;
       const cols = g.kind === 'hyeopseon' ? 6 : 3;
       line(sq, g.kind, grid(cxj, czj, head, g.n, cols, spacing, spacing * 0.95, 8, rand), g.name, gi === 1 ? 0 : -1);

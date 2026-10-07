@@ -10,6 +10,8 @@ import {
   Mesh,
   MeshStandardNodeMaterial,
   RedFormat,
+  RGBAFormat,
+  UnsignedByteType,
   RepeatWrapping,
   SRGBColorSpace,
   TextureLoader,
@@ -22,8 +24,11 @@ import {
   float,
   max,
   mix,
+  floor,
+  fract,
   mx_fractal_noise_float,
   normalWorld,
+  positionLocal,
   pow,
   positionWorld,
   smoothstep,
@@ -33,6 +38,7 @@ import {
   vec3,
 } from 'three/tsl';
 import { HANSAN_TERRAIN, type TerrainSpec } from './generate';
+import type { Structure } from './features';
 
 const MESH_RES = 1024;
 
@@ -51,13 +57,21 @@ export class Terrain {
   readonly group = new Group();
   readonly rotation = uniform(new Vector2(1, 0));
   readonly sizeU = uniform(0);
+  readonly season = uniform(0);
   readonly heightTexture: DataTexture;
+  readonly maskTexture: DataTexture;
   private phi = 0;
   private cos = 1;
   private sin = 0;
 
-  private constructor(readonly spec: TerrainSpec, readonly heights: Float32Array) {
+  private constructor(readonly spec: TerrainSpec, readonly heights: Float32Array, readonly mask: Uint8Array, readonly structures: Structure[]) {
     this.sizeU.value = spec.size;
+    const mtex = new DataTexture(mask, spec.res, spec.res, RGBAFormat, UnsignedByteType);
+    mtex.magFilter = LinearFilter;
+    mtex.minFilter = LinearFilter;
+    mtex.generateMipmaps = false;
+    mtex.needsUpdate = true;
+    this.maskTexture = mtex;
     const half = new Uint16Array(heights.length);
     for (let i = 0; i < heights.length; i += 1) half[i] = DataUtils.toHalfFloat(heights[i]!);
     const tex = new DataTexture(half, spec.res, spec.res, RedFormat, HalfFloatType);
@@ -71,13 +85,13 @@ export class Terrain {
 
   static async load(spec: TerrainSpec = HANSAN_TERRAIN) {
     const worker = new Worker(new URL('./terrain.worker.ts', import.meta.url), { type: 'module' });
-    const heights = await new Promise<Float32Array>((resolve, reject) => {
-      worker.onmessage = (e: MessageEvent<Float32Array>) => resolve(e.data);
+    const data = await new Promise<{ heights: Float32Array; mask: Uint8Array; structures: Structure[] }>((resolve, reject) => {
+      worker.onmessage = (e) => resolve(e.data);
       worker.onerror = (e) => reject(e);
       worker.postMessage(spec);
     });
     worker.terminate();
-    return new Terrain(spec, heights);
+    return new Terrain(spec, data.heights, data.mask, data.structures);
   }
 
   setRotation(phi: number) {
@@ -204,9 +218,9 @@ export class Terrain {
     };
     const canopyNoise = mx_fractal_noise_float(vec3(p.x.mul(0.045), p.z.mul(0.045), float(0.3)), 4, 2.1, 0.55, 1.0);
     const crowns = mx_fractal_noise_float(vec3(p.x.mul(0.21), p.z.mul(0.21), float(1.7)), 3, 2.0, 0.5, 1.0);
-    const dark = vec3(0.022, 0.04, 0.02);
-    const mid = vec3(0.05, 0.075, 0.032);
-    const light = vec3(0.09, 0.105, 0.045);
+    const dark = vec3(0.016, 0.032, 0.014);
+    const mid = vec3(0.034, 0.058, 0.022);
+    const light = vec3(0.062, 0.085, 0.032);
     const forestBase = mix(mix(dark, mid, smoothstep(-0.6, 0.4, canopyNoise)), light, smoothstep(0.25, 0.85, crowns).mul(0.6));
     const leafDetail = texture(leaves, p.xz.mul(1 / 9)).rgb;
     const forest = forestBase.mul(leafDetail.mul(1.6).add(0.45));
@@ -229,6 +243,24 @@ export class Terrain {
     col = mix(col, coastCol, coastW);
     col = mix(col, sandCol, beachW);
     col = mix(col, sandCol.mul(vec3(0.55, 0.62, 0.55)), underwater);
+    const lp = positionLocal.xz;
+    const mask: any = texture(this.maskTexture, lp.div(this.spec.size).add(0.5));
+    const plot = floor(vec2(lp.x.div(26), lp.y.div(17)));
+    const plotHash = fract(plot.x.mul(0.1031).add(plot.y.mul(0.3713)).mul(43758.5453).sin().mul(9));
+    const dikeX = smoothstep(0.0, 0.06, fract(lp.x.div(26))).mul(smoothstep(1.0, 0.94, fract(lp.x.div(26))));
+    const dikeZ = smoothstep(0.0, 0.08, fract(lp.y.div(17))).mul(smoothstep(1.0, 0.92, fract(lp.y.div(17))));
+    const paddySummer = mix(vec3(0.07, 0.13, 0.03), vec3(0.12, 0.17, 0.04), plotHash);
+    const paddyAutumn = mix(vec3(0.24, 0.18, 0.06), vec3(0.32, 0.25, 0.08), plotHash);
+    const paddyWinter = mix(vec3(0.16, 0.13, 0.09), vec3(0.2, 0.16, 0.11), plotHash);
+    const paddy = mix(mix(paddySummer, paddyAutumn, smoothstep(0.0, 0.7, this.season)), paddyWinter, smoothstep(0.7, 1.0, this.season));
+    const fieldCol = mix(vec3(0.1, 0.08, 0.05), paddy, dikeX.mul(dikeZ));
+    const fieldW = smoothstep(0.08, 0.5, mask.b).mul(float(1).sub(cliffW)).mul(float(1).sub(beachW));
+    col = mix(col, fieldCol, fieldW);
+    const forestDensity = mask.r;
+    const canopyBase = mix(vec3(0.012, 0.026, 0.011), vec3(0.03, 0.05, 0.018), smoothstep(-0.5, 0.6, canopyNoise));
+    const canopyAutumn = mix(canopyBase, mix(vec3(0.16, 0.06, 0.015), vec3(0.2, 0.14, 0.03), smoothstep(-0.4, 0.5, crowns)), smoothstep(0.25, 0.7, this.season).mul(smoothstep(0.1, 0.6, crowns)).mul(0.6));
+    const canopy = canopyAutumn.mul(smoothstep(0.1, 0.8, crowns).mul(0.5).add(0.75));
+    col = mix(col, canopy, smoothstep(0.15, 0.7, forestDensity).mul(forestW).mul(0.92));
     const wet = float(1).sub(smoothstep(0.2, 2.5, h)).mul(float(1).sub(underwater));
     m.colorNode = col.mul(mix(float(1), float(0.6), wet));
     m.roughnessNode = mix(float(0.92), float(0.35), wet).sub(forestW.mul(0.05));

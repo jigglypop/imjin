@@ -1,0 +1,161 @@
+import {
+  BufferGeometry,
+  CylinderGeometry,
+  Float32BufferAttribute,
+  Group,
+  IcosahedronGeometry,
+  InstancedBufferGeometry,
+  Mesh,
+  MeshStandardNodeMaterial,
+  Vector2,
+  Vector3,
+  type Camera,
+} from 'three/webgpu';
+import { Fn, abs, cos, float, hash, instanceIndex, max, mix, normalGeometry, normalLocal, positionGeometry, sin, smoothstep, texture, uniform, uint, varying, vec2, vec3, attribute, time } from 'three/tsl';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import type { Terrain } from './Terrain';
+
+function tag(geo: BufferGeometry, part: number, ao: (y: number) => number) {
+  const g = geo.toNonIndexed();
+  const pos = g.getAttribute('position');
+  const n = pos.count;
+  const parts = new Float32Array(n);
+  const aos = new Float32Array(n);
+  for (let i = 0; i < n; i += 1) {
+    parts[i] = part;
+    aos[i] = ao(pos.getY(i));
+  }
+  g.setAttribute('part', new Float32BufferAttribute(parts, 1));
+  g.setAttribute('ao', new Float32BufferAttribute(aos, 1));
+  g.deleteAttribute('uv');
+  return g;
+}
+
+function clump(r: number, x: number, y: number, z: number, flat: number, detail: number) {
+  const g = new IcosahedronGeometry(r, detail);
+  g.scale(1, flat, 1);
+  const pos = g.getAttribute('position');
+  for (let i = 0; i < pos.count; i += 1) {
+    const px = pos.getX(i);
+    const py = pos.getY(i);
+    const pz = pos.getZ(i);
+    const n = 1 + Math.sin(px * 3.1 + pz * 2.3) * 0.12 + Math.cos(py * 4.7) * 0.08;
+    pos.setXYZ(i, px * n, py * n, pz * n);
+  }
+  g.computeVertexNormals();
+  const nrm = g.getAttribute('normal');
+  for (let i = 0; i < pos.count; i += 1) {
+    const v = new Vector3(pos.getX(i), pos.getY(i) / flat, pos.getZ(i)).normalize();
+    nrm.setXYZ(i, v.x, v.y * 0.8 + 0.2, v.z);
+  }
+  g.translate(x, y, z);
+  return tag(g, 1, (py) => Math.max(0.35, Math.min(1, (py - (y - r * flat)) / (2 * r * flat))));
+}
+
+function farTree() {
+  return mergeGeometries([clump(4.4, 0, 8.5, 0, 0.7, 0)])!;
+}
+
+function pine(detail: 0 | 1) {
+  const trunk = tag(new CylinderGeometry(0.16, 0.3, 10, detail ? 3 : 5, 1, true).translate(0, 5, 0), 0, () => 0.8);
+  const clumps = detail
+    ? [clump(3.4, 0, 11.8, 0, 0.55, 0), clump(2.6, 0.6, 9.6, -0.5, 0.6, 0)]
+    : [clump(3.1, 0, 12.6, 0, 0.5, 1), clump(2.5, 1.7, 10.6, 0.7, 0.55, 0), clump(2.4, -1.6, 10.1, -0.9, 0.55, 0), clump(2.1, 0.7, 8.7, -1.7, 0.6, 0), clump(2.0, -0.6, 14.2, 0.8, 0.5, 0)];
+  return mergeGeometries([trunk, ...clumps])!;
+}
+
+type Ring = { cell: number; grid: number; inner: number; center: ReturnType<typeof uniform>; mesh: Mesh };
+
+export class Vegetation {
+  readonly group = new Group();
+  private readonly rings: Ring[] = [];
+  private readonly tmp = new Vector3();
+
+  constructor(private readonly terrain: Terrain) {
+    this.rings.push(this.ring(pine(0), 7.5, 200, 0, true));
+    this.rings.push(this.ring(pine(1), 13, 260, 7.5 * 200 * 0.5, false));
+    this.rings.push(this.ring(farTree(), 19, 300, 13 * 260 * 0.5, false));
+  }
+
+  private ring(base: BufferGeometry, cell: number, grid: number, inner: number, shadows: boolean): Ring {
+    const geo = new InstancedBufferGeometry();
+    geo.index = base.index;
+    for (const [name, attr] of Object.entries(base.attributes)) geo.setAttribute(name, attr);
+    geo.instanceCount = grid * grid;
+    const center = uniform(new Vector2());
+    const t = this.terrain;
+    const size = t.spec.size;
+    const m = new MeshStandardNodeMaterial();
+    m.roughness = 0.88;
+    m.metalness = 0;
+    const idx = instanceIndex;
+    const ix = idx.mod(uint(grid));
+    const iz = idx.div(uint(grid));
+    const cellX = (center as any).x.add(float(ix)).sub(grid / 2);
+    const cellZ = (center as any).y.add(float(iz)).sub(grid / 2);
+    const seed = uint(cellX.add(65536)).mul(uint(73856093)).bitXor(uint(cellZ.add(65536)).mul(uint(19349663)));
+    const h1 = hash(seed);
+    const h2 = hash(seed.add(uint(1)));
+    const h3 = hash(seed.add(uint(2)));
+    const h4 = hash(seed.add(uint(3)));
+    const px: any = cellX.add(h1).mul(cell);
+    const pz: any = cellZ.add(h2).mul(cell);
+    const uvT = vec2(px, pz).div(size).add(0.5);
+    const maskV: any = texture(t.maskTexture, uvT).level(float(0));
+    const ground: any = texture(t.heightTexture, uvT).level(float(0)).r;
+    const camX = (center as any).x.mul(cell);
+    const camZ = (center as any).y.mul(cell);
+    const d = max(abs(px.sub(camX)), abs(pz.sub(camZ)));
+    const outer = (grid * cell) / 2;
+    const density = maskV.r.mul(inner > 0 ? 0.82 : 1);
+    const keepDensity = density.greaterThan(h3.mul(0.95).add(0.03));
+    const keepOuter = d.lessThan(h4.mul(0.18).add(0.82).mul(outer));
+    const keepInner = inner > 0 ? d.greaterThan(h4.mul(0.2).add(0.88).mul(inner)) : float(1).greaterThan(0);
+    const keep = keepDensity.and(keepOuter).and(keepInner).and(ground.greaterThan(2.5));
+    const s: any = keep.select(mix(float(0.75), float(1.3), h4).mul(inner > 0 ? (cell > 15 ? 2.1 : 1.45) : 1), float(0));
+    const rot = h1.mul(6.2831);
+    const c = cos(rot);
+    const sn = sin(rot);
+    const part = attribute('part', 'float');
+    const ao = attribute('ao', 'float');
+    const pg: any = positionGeometry;
+    const sway: any = sin(time.mul(1.3).add(px.mul(0.05)).add(h2.mul(6.28))).mul(0.18).mul(pg.y.div(14).pow(2)).mul(part);
+    m.positionNode = Fn(() => {
+      normalLocal.assign(vec3(normalGeometry.x.mul(c).sub(normalGeometry.z.mul(sn)), normalGeometry.y, normalGeometry.x.mul(sn).add(normalGeometry.z.mul(c))));
+      const lx = pg.x.mul(c).sub(pg.z.mul(sn)).mul(s);
+      const lz = pg.x.mul(sn).add(pg.z.mul(c)).mul(s);
+      return vec3(px.add(lx).add(sway), ground.sub(0.5).add(pg.y.mul(s)), pz.add(lz).add(sway.mul(0.6)));
+    })();
+    const tint = varying(h3.mul(0.6).add(h2.mul(0.4)));
+    const autumnPick = varying(smoothstep(0.62, 0.7, h1));
+    const vPart = varying(part);
+    const vAo = varying(ao);
+    const pineCol = mix(vec3(0.022, 0.05, 0.02), vec3(0.045, 0.075, 0.026), tint);
+    const broadAutumn = mix(vec3(0.28, 0.1, 0.02), vec3(0.32, 0.22, 0.03), tint);
+    const winterBare = mix(vec3(0.07, 0.055, 0.04), vec3(0.09, 0.075, 0.05), tint);
+    const seasonal = mix(mix(pineCol, broadAutumn, smoothstep(0.2, 0.7, t.season).mul(autumnPick)), winterBare, smoothstep(0.8, 1.0, t.season).mul(autumnPick));
+    const trunk = vec3(0.11, 0.055, 0.032);
+    m.colorNode = mix(trunk, seasonal, vPart).mul(vAo.mul(0.7).add(0.3));
+    const mesh = new Mesh(geo, m);
+    mesh.frustumCulled = false;
+    mesh.castShadow = shadows;
+    mesh.receiveShadow = shadows;
+    this.group.add(mesh);
+    return { cell, grid, inner, center, mesh };
+  }
+
+  update(camera: Camera) {
+    const cam = camera.position;
+    camera.getWorldDirection(this.tmp);
+    const fx = this.tmp.x;
+    const fz = this.tmp.z;
+    const len = Math.hypot(fx, fz) || 1;
+    const lead = Math.min(700, Math.max(0, cam.y * 1.4));
+    const wx = cam.x + (fx / len) * lead;
+    const wz = cam.z + (fz / len) * lead;
+    const s = this.terrain.toScenario(wx, wz);
+    for (const r of this.rings) {
+      (r.center.value as Vector2).set(Math.floor(s.x / r.cell), Math.floor(s.z / r.cell));
+    }
+  }
+}

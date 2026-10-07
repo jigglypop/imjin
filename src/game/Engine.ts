@@ -54,6 +54,10 @@ import { publish, pushToast, setLoading, setProgress, setReport, type GameSnapsh
 import { SquadronBanners } from '../ui/SquadronBanners';
 import { sound } from '../audio/Sound';
 import { Terrain } from '../terrain/Terrain';
+import { Vegetation } from '../terrain/Vegetation';
+import { Structures } from '../terrain/Structures';
+
+const SEASON: Record<ScenarioId, number> = { okpo: 0.1, sacheon: 0.05, dangpo: 0, hansan: 0, angolpo: 0, busan: 0.6, chilcheon: 0, myeongnyang: 0.72, noryang: 1 };
 import { Minimap } from '../ui/Minimap';
 
 export type EngineOptions = {
@@ -77,6 +81,8 @@ export class Engine {
   readonly rts: RtsCamera;
   battle: Battle = new Battle(1);
   terrain!: Terrain;
+  vegetation: Vegetation | null = null;
+  structures: Structures | null = null;
   ocean!: Ocean;
   fft: FFTWaves | null = null;
   current: CurrentField | null = null;
@@ -156,6 +162,7 @@ export class Engine {
     this.assets = assets;
     this.terrain = terrain;
     this.scene.add(terrain.group);
+    this.dressTerrain();
     this.applySky(sky);
     setLoading('함대를 배치하는 중', 0.82);
     this.placeScenario(sky);
@@ -216,6 +223,15 @@ export class Engine {
     await r.compileAsync(this.scene, this.camera);
     setProgress(1);
     this.ready = true;
+  }
+
+  private dressTerrain() {
+    this.terrain.season.value = SEASON[this.scenarioId] ?? 0;
+    this.vegetation = new Vegetation(this.terrain);
+    this.terrain.group.add(this.vegetation.group);
+    this.structures = new Structures(this.terrain);
+    this.terrain.group.add(this.structures.group);
+    void this.structures.load();
   }
 
   private warm(seconds: number) {
@@ -376,6 +392,7 @@ export class Engine {
     this.scene.remove(this.terrain.group);
     this.terrain = terrain;
     this.scene.add(terrain.group);
+    this.dressTerrain();
     this.applySky(sky);
     this.placeScenario(sky);
     this.scene.remove(this.ocean.mesh);
@@ -442,6 +459,8 @@ export class Engine {
     if (this.rts.followId && !follow) this.rts.followId = 0;
     this.rts.update(dt, follow);
     this.ocean.setTide(this.battle.tide);
+    this.vegetation?.update(this.camera);
+    this.structures?.update(this.camera);
     const tideSign = Math.abs(this.battle.tide) < 0.15 ? 0 : Math.sign(this.battle.tide);
     if (this.current && tideSign !== this.lastTide) {
       if (tideSign === 0) pushToast('물살이 잦아든다 — 곧 물길이 바뀐다');
