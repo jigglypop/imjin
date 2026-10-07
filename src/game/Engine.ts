@@ -33,6 +33,9 @@ import { smaa } from 'three/addons/tsl/display/SMAANode.js';
 import { atmosphere } from '../render/atmosphere';
 import { loadSky, SKY_PRESETS, type LoadedSky, type SkyPresetName } from '../render/sky';
 import { Ocean } from '../ocean/Ocean';
+import { Clouds } from '../render/Clouds';
+
+const COVERAGE: Record<SkyPresetName, number> = { afternoon: 0.5, day: 0.42, sunset: 0.46, overcast: 0.78, night: 0.38 };
 import { WakeMap } from '../ocean/WakeMap';
 import { SEA_STATES, spectrumOf, waveField, type SeaStateName } from '../ocean/waves';
 import { FFTWaves } from '../ocean/FFTWaves';
@@ -60,6 +63,8 @@ import { Structures } from '../terrain/Structures';
 const SEASON: Record<ScenarioId, number> = { okpo: 0.1, sacheon: 0.05, dangpo: 0, hansan: 0, angolpo: 0, busan: 0.6, chilcheon: 0, myeongnyang: 0.72, noryang: 1 };
 import { Minimap } from '../ui/Minimap';
 
+const params = new URLSearchParams(location.search);
+
 export type EngineOptions = {
   scenario: ScenarioId;
   sky?: SkyPresetName;
@@ -84,6 +89,7 @@ export class Engine {
   vegetation: Vegetation | null = null;
   structures: Structures | null = null;
   ocean!: Ocean;
+  clouds: Clouds | null = null;
   fft: FFTWaves | null = null;
   current: CurrentField | null = null;
   readonly wake = new WakeMap();
@@ -169,6 +175,11 @@ export class Engine {
     if ((r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) this.fft = new FFTWaves(spectrumOf(SEA_STATES[this.seaName]));
     this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current);
     this.scene.add(this.ocean.mesh);
+    if (params.get('clouds') !== '0') {
+      this.clouds = new Clouds(sky.environment);
+      this.clouds.coverage.value = COVERAGE[this.skyName];
+      this.scene.add(this.clouds.mesh);
+    }
     const sun = this.sun;
     sun.castShadow = true;
     sun.shadow.mapSize.set(4096, 4096);
@@ -321,6 +332,10 @@ export class Engine {
     this.renderer.toneMappingExposure = preset.exposure;
     if (this.fx) this.fx.night = preset.night;
     if (this.ocean) this.ocean.setEnvironment(sky.environment);
+    if (this.clouds) {
+      this.clouds.setEnvironment(sky.environment);
+      this.clouds.coverage.value = COVERAGE[this.skyName];
+    }
     if (this.fogEnv) this.fogEnv.value = sky.environment;
     if (old) {
       old.background.dispose();
@@ -459,6 +474,7 @@ export class Engine {
     if (this.rts.followId && !follow) this.rts.followId = 0;
     this.rts.update(dt, follow);
     this.ocean.setTide(this.battle.tide);
+    this.clouds?.update(this.camera.position, waveField.time);
     this.vegetation?.update(this.camera);
     this.structures?.update(this.camera);
     const tideSign = Math.abs(this.battle.tide) < 0.15 ? 0 : Math.sign(this.battle.tide);
@@ -638,6 +654,7 @@ export class Engine {
     if (!this.ready) return;
     this.wake.update(this.renderer, this.lastScaled);
     this.fft?.update(this.renderer, waveField.time);
+    this.clouds?.render(this.renderer, this.camera);
     this.pipeline.render();
   }
 
