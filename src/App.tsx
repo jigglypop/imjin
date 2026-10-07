@@ -8,6 +8,7 @@ import { setLoading, setScreen, useUi } from './state/store';
 import { Hud } from './ui/Hud';
 import { BattleSelect } from './ui/BattleSelect';
 import { SCENARIOS, type ScenarioId } from './sim/scenarios';
+import { sound } from './audio/Sound';
 
 declare global {
   interface Window {
@@ -119,7 +120,7 @@ function Loading() {
       <div className="loading-title">{info?.hanja ?? '壬辰海戰'}</div>
       <div className="loading-sub brush">{info?.title ?? '임진 해전'}</div>
       <div className="loading-bar">
-        <div className="loading-fill" style={{ clipPath: `inset(0 ${100 - pct}% 0 0)` }} />
+        <div className="loading-fill" style={{ width: `${pct}%` }} />
       </div>
       <div className="loading-meta">
         <span>{loading}</span>
@@ -144,6 +145,8 @@ export function App() {
   }, []);
 
   const start = (id: ScenarioId) => {
+    sound.click();
+    sound.setMode('battle');
     setScreen('battle');
     if (!mounted) {
       setLoading(`${SCENARIOS[id].title} 준비 중`, 0.01, id);
@@ -171,6 +174,7 @@ export function App() {
           engine={engine}
           onBack={() => {
             engine.paused = true;
+            sound.setMode('select');
             setScreen('select');
           }}
         />

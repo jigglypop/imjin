@@ -161,6 +161,29 @@ const CONCEPTS = {
       },
     ]),
   ),
+  bust_yi: {
+    aspect: '1:1',
+    prompt:
+      'Highly detailed realistic 3D character sculpture reference of Admiral Yi Sun-sin (1545-1598) of Joseon Korea, upper body from the waist up, facing slightly to the left in a three-quarter view, arms at his sides, calm resolute expression. ' +
+      'Long oval face with high cheekbones, deep-set eyes, thin drooping black moustache and a long thin goatee beard streaked with grey. ' +
+      'He wears a Joseon iron general helmet (tugu) with a gilded spike, a red horsehair plume and studded brigandine ear and neck flaps, a deep crimson dujeonggap brigandine armor covered in rows of brass rivets with studded shoulder guards, a dark navy under-robe collar, and a crimson cloak over the shoulders. ' +
+      'Physically based materials, realistic skin, soft even studio lighting, isolated on a plain pure white background, the whole upper body visible and centered, no text, no watermark.',
+  },
+  bust_yi_hero: {
+    aspect: '1:1',
+    prompt:
+      'Highly detailed realistic 3D character sculpture of the legendary Korean Admiral Yi Sun-sin in 1597, heroic and charismatic, upper body from the waist up, standing tall and facing the viewer almost frontally with the head turned very slightly, both hands resting on the pommel of a long straight Joseon sword held vertically in front of his chest. ' +
+      'Intense commanding expression: furrowed brows, piercing deep-set eyes staring straight ahead, firm set jaw, lean weathered face with high cheekbones, a thin drooping black moustache and a long thin goatee beard streaked with grey. ' +
+      'He wears a Joseon iron general helmet (tugu) with a gilded spike and a large flowing red horsehair plume, studded brigandine ear and neck flaps, a deep crimson dujeonggap brigandine armor covered in rows of polished brass rivets with heavy studded shoulder guards, a dark navy collar, and a dark crimson cloak hanging from the shoulders. ' +
+      'Physically based materials, realistic skin pores, crisp sculpted details, soft even studio lighting, isolated on a plain pure white background, the whole upper body and sword hilt visible and centered, no text, no watermark.',
+  },
+  bust_daimyo: {
+    aspect: '1:1',
+    prompt:
+      'Highly detailed realistic 3D character sculpture reference of a Sengoku-period Japanese samurai general of 1592, upper body from the waist up, facing slightly to the right in a three-quarter view, arms at his sides, stern fierce expression with a short moustache. ' +
+      'He wears black lacquered o-yoroi armor laced with dark red silk cords, large shoulder guards, and a black kabuto helmet with a wide neck guard and a tall golden crescent crest, a white surcoat with a black family crest over the armor. ' +
+      'Physically based materials, realistic skin, soft even studio lighting, isolated on a plain pure white background, the whole upper body visible and centered, no text, no watermark.',
+  },
   mingship:
     'A large late 16th-century Ming dynasty Chinese war junk (fuchuan): a tall wooden hull with a high raised stern castle and a raised bow, large painted eyes on both sides of the bow, dark red and black lacquered upper works with gilded trim, ' +
     'three masts with reddish-brown battened junk sails, a row of small bronze cannon ports along the side, tall red and yellow Ming military banners. ' +

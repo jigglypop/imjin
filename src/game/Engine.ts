@@ -47,7 +47,7 @@ import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
 import { Input } from './Input';
 import { publish, setLoading, setProgress, type GameSnapshot } from '../state/store';
 import { SquadronBanners } from '../ui/SquadronBanners';
-import { Sound } from '../audio/Sound';
+import { sound } from '../audio/Sound';
 import { Terrain } from '../terrain/Terrain';
 import { Minimap } from '../ui/Minimap';
 
@@ -78,7 +78,7 @@ export class Engine {
   fx!: Effects;
   input!: Input;
   banners: SquadronBanners | null = null;
-  readonly sound = new Sound();
+  readonly sound = sound;
   readonly minimap = new Minimap();
   private minimapTimer = 0;
   showLabels = true;
@@ -192,6 +192,7 @@ export class Engine {
     }
     if (this.options.gallery) this.setupGallery();
     this.warm(this.options.warmup ?? 0);
+    sound.setMode('battle');
     setLoading('셰이더를 준비하는 중', 0.88);
     await r.compileAsync(this.scene, this.camera);
     setProgress(1);
