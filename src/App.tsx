@@ -9,6 +9,7 @@ import { Hud } from './ui/Hud';
 import { BattleSelect } from './ui/BattleSelect';
 import { SCENARIOS, type ScenarioId } from './sim/scenarios';
 import { sound } from './audio/Sound';
+import { fleetSpawn, useCampaign } from './campaign/campaign';
 
 declare global {
   interface Window {
@@ -21,6 +22,8 @@ declare global {
 const params = new URLSearchParams(location.search);
 const paramScenario = params.get('scenario') as ScenarioId | null;
 const startScenario: ScenarioId = paramScenario && paramScenario in SCENARIOS ? paramScenario : 'hansan';
+
+let pendingCampaign: EngineOptions['campaign'];
 
 function readOptions(scenario: ScenarioId): EngineOptions {
   const sky = params.get('sky') as SkyPresetName | null;
@@ -35,6 +38,7 @@ function readOptions(scenario: ScenarioId): EngineOptions {
     gallery: params.get('gallery') === '1',
     cinematic: params.get('cine') === '1',
     hideLabels: params.get('hud') === '0',
+    campaign: pendingCampaign,
     follow: params.get('follow')
       ? { id: Number(params.get('follow')), distance: Number(params.get('dist') ?? 70), pitch: Number(params.get('pitch') ?? 0.12), yaw: Number(params.get('yaw') ?? 2.4) }
       : undefined,
@@ -144,7 +148,10 @@ export function App() {
     if (!paramScenario) setScreen('select');
   }, []);
 
-  const start = (id: ScenarioId) => {
+  const start = (id: ScenarioId, campaignMode = false) => {
+    const campaign = useCampaign.getState().campaign;
+    pendingCampaign = campaignMode && campaign ? fleetSpawn(campaign) : undefined;
+    if (engine) engine.campaign = pendingCampaign;
     sound.click();
     sound.setMode('battle');
     setScreen('battle');

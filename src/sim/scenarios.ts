@@ -1,5 +1,5 @@
 import { Battle } from './battle';
-import type { ShipKind, Squadron, Team } from './types';
+import type { ShipKind, ShipMods, Squadron, Team } from './types';
 import {
   ANGOLPO_TERRAIN,
   BUSAN_TERRAIN,
@@ -42,6 +42,15 @@ export type ScenarioInfo = {
 };
 
 type Place = (x: number, z: number) => { x: number; z: number };
+
+export type FleetSpawn = {
+  squads: {
+    name: string;
+    commander: string;
+    portrait: string;
+    ships: { kind: ShipKind; name: string; hull: number; crew: number; supply: number; campaignId: string; mods: ShipMods; flagship: boolean }[];
+  }[];
+};
 type Spot = { x: number; z: number; h: number };
 type LandFn = (x: number, z: number) => number;
 
@@ -310,7 +319,7 @@ function arc(cx: number, cz: number, radius: number, center: number, span: numbe
   });
 }
 
-export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: LandFn = () => -50) {
+export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: LandFn = () => -50, fleet?: FleetSpawn) {
   const b = new Battle(seed);
   const ca = Math.cos(axis);
   const sa = Math.sin(axis);
@@ -597,7 +606,71 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     }
     b.retreatBelow = 0.55;
   }
+  if (fleet) spawnFleet(b, fleet, axis, land);
   return b;
+}
+
+function spawnFleet(b: Battle, fleet: FleetSpawn, axis: number, land: LandFn) {
+  const old = b.ships.filter((s) => s.spec.faction === 'joseon');
+  if (!old.length) return;
+  let cx = 0;
+  let cz = 0;
+  let hx = 0;
+  let hz = 0;
+  for (const s of old) {
+    cx += s.x;
+    cz += s.z;
+    hx += Math.cos(s.heading);
+    hz += Math.sin(s.heading);
+  }
+  cx /= old.length;
+  cz /= old.length;
+  const heading = Math.atan2(hz, hx);
+  const holding = old.filter((s) => s.order.type === 'hold').length > old.length / 2;
+  b.removeShips((s) => s.spec.faction === 'joseon');
+  const ca = Math.cos(axis);
+  const sa = Math.sin(axis);
+  const wet = (x: number, z: number) => land(x * ca + z * sa, -x * sa + z * ca) < -4;
+  const fx = Math.cos(heading);
+  const fz = Math.sin(heading);
+  const px = -fz;
+  const pz = fx;
+  const blocks = fleet.squads.map((sq) => {
+    const big = sq.ships.filter((x) => x.kind !== 'hyeopseon').length;
+    const cols = Math.max(3, Math.min(6, Math.ceil(Math.sqrt(sq.ships.length * 1.6))));
+    const spacing = big ? 66 : 34;
+    return { sq, cols, spacing, width: cols * spacing };
+  });
+  const total = blocks.reduce((acc, bl) => acc + bl.width + 40, 0);
+  let offset = -total / 2;
+  const taken: { x: number; z: number }[] = [];
+  for (const bl of blocks) {
+    const squad = b.addSquadron('joseon', bl.sq.name, bl.sq.commander, bl.sq.portrait, bl.sq.ships.some((x) => x.kind === 'geobukseon') && bl.sq.ships.every((x) => x.kind === 'geobukseon') ? 'card_geobukseon' : 'card_panokseon');
+    const mid = offset + bl.width / 2;
+    bl.sq.ships.forEach((spec, i) => {
+      const row = Math.floor(i / bl.cols);
+      const col = i % bl.cols;
+      let x = cx + px * (mid + (col - (bl.cols - 1) / 2) * bl.spacing) - fx * row * bl.spacing * 1.05;
+      let z = cz + pz * (mid + (col - (bl.cols - 1) / 2) * bl.spacing) - fz * row * bl.spacing * 1.05;
+      for (let ring = 0; ring < 30 && (!wet(x, z) || taken.some((t) => (t.x - x) ** 2 + (t.z - z) ** 2 < 900)); ring += 1) {
+        const a = ring * 2.4;
+        x += Math.cos(a) * 30;
+        z += Math.sin(a) * 30;
+      }
+      taken.push({ x, z });
+      const ship = b.addShip(spec.kind, x, z, heading, spec.name, squad, spec.flagship, spec.kind === 'panokseon' ? (spec.flagship ? 0 : 1 + (i % 2)) : 0);
+      ship.hull = ship.spec.hull * Math.max(0.05, spec.hull);
+      ship.crew = ship.spec.crew * Math.max(0.05, spec.crew);
+      b.applySupply(ship, spec.supply);
+      ship.mods = { ...spec.mods };
+      ship.campaignId = spec.campaignId;
+      if (holding) {
+        ship.order = { type: 'hold' };
+        ship.speed = 0;
+      }
+    });
+    offset += bl.width + 40;
+  }
 }
 
 export function scenarioCenter(id: ScenarioId) {

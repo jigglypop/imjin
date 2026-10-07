@@ -3,6 +3,7 @@ import type { SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
 import type { AmmoMode, FireMode, ShipKind, Stance, Team } from '../sim/types';
 import type { ScenarioId } from '../sim/scenarios';
+import type { Report } from '../campaign/campaign';
 
 export type SquadronInfo = {
   id: number;
@@ -76,12 +77,13 @@ type UiState = {
   loading: string | null;
   progress: number;
   loadingScenario: ScenarioId | null;
+  report: Report | null;
   toasts: Toast[];
   box: SelectionBox;
   screen: Screen;
 };
 
-export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingScenario: null, toasts: [], box: null, screen: 'battle' }));
+export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingScenario: null, report: null, toasts: [], box: null, screen: 'battle' }));
 
 let lastJson = '';
 export function publish(snapshot: GameSnapshot, force = false) {
@@ -116,4 +118,8 @@ export function setProgress(progress: number) {
 
 export function setScreen(screen: Screen) {
   useUi.setState({ screen });
+}
+
+export function setReport(report: Report | null) {
+  useUi.setState({ report });
 }

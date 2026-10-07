@@ -71,7 +71,10 @@ export type GunState = {
   stage: number;
   t: number;
   fireDelay: number;
+  ammo: number;
 };
+
+export type ShipMods = { reload: number; accuracy: number; speed: number; turn: number; fire: number; melee: number; defense: number };
 
 export type Ship = {
   id: number;
@@ -117,6 +120,9 @@ export type Ship = {
   volleyTimer: number;
   revealed: number;
   repel: boolean;
+  mods: ShipMods;
+  supply: number;
+  campaignId: string;
 };
 
 export type Squadron = {

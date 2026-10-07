@@ -4,6 +4,8 @@ import { PerspectiveCamera, Vector2, WebGPURenderer } from 'three/webgpu';
 import { SCENARIO_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import { SelectScene } from '../select/SelectScene';
 import { sound } from '../audio/Sound';
+import { CAMPAIGN_ORDER, campaignOver, currentBattle, setMode, useCampaign } from '../campaign/campaign';
+import { CampaignPanel } from './CampaignPanel';
 
 async function createRenderer(props: { canvas: HTMLCanvasElement | OffscreenCanvas }) {
   const renderer = new WebGPURenderer({ canvas: props.canvas as HTMLCanvasElement, antialias: true, powerPreference: 'high-performance' });
@@ -22,7 +24,10 @@ function SelectView({ id, sceneRef, markers }: { id: ScenarioId; sceneRef: React
   useEffect(() => {
     const scene = new SelectScene(gl, camera);
     sceneRef.current = scene;
-    void scene.init(id).then(() => scene.setVisible('left', SCENARIOS[id].joseon.figure === 'fig_yi'));
+    void scene.init(id).then(() => {
+      scene.setVisible('left', SCENARIOS[id].joseon.figure === 'fig_yi');
+      scene.setFlags('帥', SCENARIOS[id].japan.banner);
+    });
     return () => {
       scene.dispose();
       sceneRef.current = null;
@@ -33,6 +38,7 @@ function SelectView({ id, sceneRef, markers }: { id: ScenarioId; sceneRef: React
   useEffect(() => {
     sceneRef.current?.focus(id);
     sceneRef.current?.setVisible('left', SCENARIOS[id].joseon.figure === 'fig_yi');
+    sceneRef.current?.setFlags(SCENARIOS[id].joseon.figure === 'fig_yi' ? '帥' : SCENARIOS[id].joseon.banner, SCENARIOS[id].japan.banner);
   }, [id, sceneRef]);
 
   useFrame((_, dt) => {
@@ -63,8 +69,13 @@ function SelectView({ id, sceneRef, markers }: { id: ScenarioId; sceneRef: React
   return null;
 }
 
-export function BattleSelect({ initial, onStart }: { initial: ScenarioId; onStart: (id: ScenarioId) => void }) {
-  const [id, setIdRaw] = useState<ScenarioId>(initial);
+export function BattleSelect({ initial, onStart }: { initial: ScenarioId; onStart: (id: ScenarioId, campaign: boolean) => void }) {
+  const mode = useCampaign((st) => st.mode);
+  const campaign = useCampaign((st) => st.campaign);
+  const [camp, setCamp] = useState(false);
+  const inCampaign = mode === 'campaign' && !!campaign;
+  const current = campaign ? currentBattle(campaign) : 'okpo';
+  const [id, setIdRaw] = useState<ScenarioId>(inCampaign ? current : initial);
   const setId = (next: ScenarioId) => {
     if (next !== id) sound.click();
     setIdRaw(next);
@@ -73,6 +84,14 @@ export function BattleSelect({ initial, onStart }: { initial: ScenarioId; onStar
   const markers = useRef(new Map<ScenarioId, HTMLDivElement>());
   const s = SCENARIOS[id];
   const yiIn3d = s.joseon.figure === 'fig_yi';
+  const record = (sid: ScenarioId) => campaign?.history.filter((h) => h.id === sid).at(-1);
+  const locked = (sid: ScenarioId) => inCampaign && !!campaign && CAMPAIGN_ORDER.indexOf(sid) > campaign.step;
+  const playable = !inCampaign || (!!campaign && !campaignOver(campaign) && id === current);
+  const switchMode = (next: 'free' | 'campaign') => {
+    sound.click();
+    setMode(next);
+    if (next === 'campaign') setIdRaw(currentBattle(useCampaign.getState().campaign!));
+  };
   return (
     <div className="select">
       <Canvas className="select-canvas" gl={createRenderer as never} camera={{ fov: 34, near: 0.05, far: 600, position: [0, 40, 40] }} dpr={Math.min(window.devicePixelRatio, 1.75)} frameloop="always">
@@ -98,11 +117,20 @@ export function BattleSelect({ initial, onStart }: { initial: ScenarioId; onStar
       <div className="select-top">
         <div className="select-heading">壬辰海戰</div>
         {SCENARIO_ORDER.map((sid) => (
-          <button key={sid} className={`select-tab ${sid === id ? 'select-tab--on' : ''}`} onClick={() => setId(sid)}>
+          <button key={sid} className={`select-tab ${sid === id ? 'select-tab--on' : ''} ${locked(sid) ? 'select-tab--locked' : ''}`} disabled={locked(sid)} onClick={() => setId(sid)}>
+            {inCampaign && record(sid) && <span className={`tab-seal ${record(sid)!.win ? '' : 'tab-seal--loss'}`}>{record(sid)!.win ? '勝' : '敗'}</span>}
             {SCENARIOS[sid].title}
             <small>{SCENARIOS[sid].date.slice(0, 4)}</small>
           </button>
         ))}
+        <div className="mode-switch">
+          <button className={mode === 'free' ? 'on' : ''} onClick={() => switchMode('free')}>
+            자유 전투
+          </button>
+          <button className={mode === 'campaign' ? 'on' : ''} onClick={() => switchMode('campaign')}>
+            전역 · 1592
+          </button>
+        </div>
       </div>
       <div className="select-head">
         <div className="select-title brush">{s.title}</div>
@@ -150,12 +178,18 @@ export function BattleSelect({ initial, onStart }: { initial: ScenarioId; onStar
           </div>
         </div>
         <div className="select-foot">
-          <span className="select-result">역사 기록 · {s.result}</span>
-          <button className="ink-btn" onClick={() => onStart(id)}>
-            전투 개시
+          <span className="select-result">{inCampaign && campaign ? `전역 ${Math.min(campaign.step + 1, CAMPAIGN_ORDER.length)}/${CAMPAIGN_ORDER.length} · 함대 ${campaign.squads.reduce((n, q) => n + q.ships.length, 0)}척` : `역사 기록 · ${s.result}`}</span>
+          {inCampaign && (
+            <button className="mini-btn" onClick={() => setCamp(true)}>
+              군영 · 정비
+            </button>
+          )}
+          <button className="ink-btn" disabled={!playable} onClick={() => onStart(id, inCampaign)}>
+            {inCampaign && campaign && campaignOver(campaign) ? '전역 완료' : '전투 개시'}
           </button>
         </div>
       </div>
+      {camp && campaign && <CampaignPanel campaign={campaign} onClose={() => setCamp(false)} />}
     </div>
   );
 }

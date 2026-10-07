@@ -151,6 +151,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const snap = useUi((s) => s.snapshot);
   const toasts = useUi((s) => s.toasts);
   const box = useUi((s) => s.box);
+  const report = useUi((s) => s.report);
   const [showSettings, setShowSettings] = useState(false);
   const minimapRef = useRef<HTMLDivElement | null>(null);
 
@@ -176,6 +177,11 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
           <button className={`mini-btn ${showSettings ? 'mini-btn--on' : ''}`} onClick={() => setShowSettings((v) => !v)}>
             설정
           </button>
+          {engine.campaign && !snap.winner && (
+            <button className="mini-btn" onClick={() => engine.endBattle()}>
+              철수
+            </button>
+          )}
         </div>
       </div>
 
@@ -352,8 +358,33 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
           <div className="result-stats">
             적선 격파 {snap.japanTotal - snap.japan - snap.escaped}척 · 도주 {snap.escaped}척 · 아군 손실 {snap.joseonTotal - snap.joseon}척
           </div>
+          {report && (
+            <div className="result-camp">
+              <p>
+                전리품 — 군량 <b>+{report.loot.grain}</b> · 화약 <b>+{report.loot.powder}</b> · 목재 <b>+{report.loot.timber}</b>
+              </p>
+              <p>
+                공훈 <b>+{report.loot.merit}</b> · 잃은 배 <b>{report.lost}</b>척
+              </p>
+              {report.xp.map((x) => (
+                <p key={x.name}>
+                  {x.name} 경험 <b>+{x.gained}</b> · Lv.{x.level}
+                </p>
+              ))}
+              {report.levelUps.map((l) => (
+                <p key={l}>
+                  <b>승급</b> {l}
+                </p>
+              ))}
+              {report.events.map((ev) => (
+                <p key={ev} style={{ gridColumn: '1 / -1' }}>
+                  {ev}
+                </p>
+              ))}
+            </div>
+          )}
           <button className="ink-btn" onClick={onBack}>
-            전투 선택
+            {report ? '군영으로' : '전투 선택'}
           </button>
         </div>
       )}

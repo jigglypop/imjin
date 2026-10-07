@@ -41,11 +41,13 @@ import { ShipViews } from '../ships/ShipViews';
 import { Effects } from '../fx/Effects';
 import { Battle, SIM_DT } from '../sim/battle';
 import { GUN_SPECS, STAGE_NAMES } from '../sim/catalog';
-import { buildScenario, SCENARIOS, type ScenarioId } from '../sim/scenarios';
+import { buildScenario, SCENARIOS, type FleetSpawn, type ScenarioId } from '../sim/scenarios';
+import { applyOutcome } from '../campaign/campaign';
+import { GUN_SHOTS } from '../sim/catalog';
 import type { BattleEvent, ShipKind } from '../sim/types';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
 import { Input } from './Input';
-import { publish, setLoading, setProgress, type GameSnapshot } from '../state/store';
+import { publish, setLoading, setProgress, setReport, type GameSnapshot } from '../state/store';
 import { SquadronBanners } from '../ui/SquadronBanners';
 import { sound } from '../audio/Sound';
 import { Terrain } from '../terrain/Terrain';
@@ -61,6 +63,7 @@ export type EngineOptions = {
   cinematic?: boolean;
   hideLabels?: boolean;
   follow?: { id: number; distance: number; pitch: number; yaw: number };
+  campaign?: FleetSpawn;
 };
 
 const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
@@ -103,11 +106,14 @@ export class Engine {
   private interest = { ship: 0, score: 0, age: 99 };
   private shotTimer = 0;
   private initialSquads = new Map<number, number>();
+  campaign: FleetSpawn | undefined;
+  private reported = false;
 
   constructor(readonly renderer: WebGPURenderer, readonly camera: PerspectiveCamera, private readonly options: EngineOptions) {
     this.rts = new RtsCamera(camera);
     this.scenarioId = options.scenario;
     const info = SCENARIOS[options.scenario];
+    this.campaign = options.campaign;
     this.skyName = options.sky ?? info.sky;
     this.seaName = options.sea ?? info.sea;
   }
@@ -213,7 +219,9 @@ export class Engine {
     const sunAz = Math.atan2(sky.info.sunDir.z, sky.info.sunDir.x);
     this.phi = sunAz - preset.axisOffset - info.view.dir;
     this.terrain.setRotation(this.phi);
-    this.battle = buildScenario(this.scenarioId, this.phi, 1592 + Math.floor(Math.random() * 1000), (x, z) => this.terrain.heightAtScenario(x, z));
+    this.battle = buildScenario(this.scenarioId, this.phi, 1592 + Math.floor(Math.random() * 1000), (x, z) => this.terrain.heightAtScenario(x, z), this.campaign);
+    this.reported = false;
+    setReport(null);
     this.battle.land = (x, z) => this.terrain.heightAt(x, z);
     const c = this.terrain.toWorld(info.view.tx, info.view.tz);
     this.battle.center = { x: c.x, z: c.z };
@@ -409,6 +417,7 @@ export class Engine {
       this.input.onEvents(events);
       this.battle.events = [];
     }
+    if (this.battle.winner && !this.reported) this.finishCampaignBattle();
     if (this.rts.cinematic) this.direct(dt);
     const follow = this.rts.followId ? this.views.worldOf(this.rts.followId) : null;
     if (this.rts.followId && !follow) this.rts.followId = 0;
@@ -428,6 +437,37 @@ export class Engine {
       this.minimap.draw(this.battle, this.views.selected, this.rts.target.x, this.rts.target.z, this.rts.yaw);
       this.minimapTimer = 0.1;
     }
+  }
+
+  private finishCampaignBattle() {
+    this.reported = true;
+    if (!this.campaign) return;
+    const b = this.battle;
+    const ships = b.ships
+      .filter((s) => s.campaignId)
+      .map((s) => {
+        let ammo = 0;
+        let max = 0;
+        for (const g of s.guns) {
+          ammo += g.ammo;
+          max += GUN_SHOTS[s.spec.batteries[g.battery]!.gun];
+        }
+        return {
+          campaignId: s.campaignId,
+          alive: s.alive && s.sinking === 0 && !s.struck,
+          hull: Math.max(0, s.hull / s.spec.hull),
+          crew: Math.max(0, s.crew / s.spec.crew),
+          supply: max ? Math.min(s.supply, ammo / max) : s.supply,
+          kills: s.kills,
+        };
+      });
+    const enemySunk = b.initial.japan - b.teamCount('japan') - b.escaped.japan;
+    setReport(applyOutcome({ id: this.scenarioId, win: b.winner === 'joseon', enemySunk, enemyEscaped: b.escaped.japan, ships }));
+  }
+
+  endBattle() {
+    if (this.battle.winner) return;
+    this.battle.winner = 'japan';
   }
 
   private noteInterest(events: BattleEvent[]) {
@@ -635,7 +675,7 @@ export class Engine {
                 label: spec.label,
                 side: g.side,
                 stage: g.stage,
-                stageName: g.stage >= 4 ? (g.stage === 4 ? '조준 대기' : '점화') : STAGE_NAMES[g.stage]!,
+                stageName: g.ammo <= 0 ? '탄약 소진' : g.stage >= 4 ? (g.stage === 4 ? '조준 대기' : '점화') : STAGE_NAMES[g.stage]!,
                 progress: g.stage >= 4 ? 1 : Math.min(1, g.t / need),
               };
             }),

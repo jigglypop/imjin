@@ -1,5 +1,5 @@
 import { waveField } from '../ocean/waves';
-import { GUN_SPECS, SHIP_SPECS } from './catalog';
+import { GUN_SHOTS, GUN_SPECS, NO_MODS, SHIP_SPECS } from './catalog';
 import { ShipGrid } from './grid';
 import type {
   BattleEvent,
@@ -93,7 +93,7 @@ export class Battle {
       for (let i = 0; i < b.count; i += 1) {
         const stages = GUN_SPECS[b.gun].stages;
         const stage = Math.floor(this.rand() * 4);
-        guns.push({ battery: bi, index: i, side: b.side, stage, t: this.rand() * stages[stage]!, fireDelay: 0 });
+        guns.push({ battery: bi, index: i, side: b.side, stage, t: this.rand() * stages[stage]!, fireDelay: 0, ammo: GUN_SHOTS[b.gun] });
       }
     });
     const ship: Ship = {
@@ -140,6 +140,9 @@ export class Battle {
       volleyTimer: 0,
       revealed: 0,
       repel: false,
+      mods: { ...NO_MODS },
+      supply: 1,
+      campaignId: '',
     };
     this.ships.push(ship);
     this.byId.set(ship.id, ship);
@@ -187,6 +190,32 @@ export class Battle {
       const s = this.byId.get(id);
       if (this.isActive(s)) s.order = order;
     }
+  }
+
+  removeShips(pred: (s: Ship) => boolean) {
+    const removed = new Set<number>();
+    this.ships = this.ships.filter((s) => {
+      if (!pred(s)) return true;
+      removed.add(s.id);
+      this.byId.delete(s.id);
+      this.initial[s.team] -= 1;
+      return false;
+    });
+    const kept = this.squadrons.filter((sq) => {
+      sq.shipIds = sq.shipIds.filter((id) => !removed.has(id));
+      return sq.shipIds.length > 0;
+    });
+    kept.forEach((sq, i) => {
+      sq.id = i + 1;
+      for (const id of sq.shipIds) this.byId.get(id)!.squadronId = sq.id;
+      if (!sq.shipIds.includes(sq.leaderId)) sq.leaderId = sq.shipIds[0] ?? 0;
+    });
+    this.squadrons = kept;
+  }
+
+  applySupply(s: Ship, supply: number) {
+    s.supply = supply;
+    for (const g of s.guns) g.ammo = Math.max(0, Math.round(GUN_SHOTS[s.spec.batteries[g.battery]!.gun] * supply));
   }
 
   configure(ids: number[], patch: Partial<Pick<Ship, 'fireMode' | 'ammo' | 'speedCap' | 'stance' | 'lights' | 'repel'>>) {
@@ -630,12 +659,12 @@ export class Battle {
     const crewFactor = 0.35 + 0.65 * Math.max(0, s.crew / spec.crew);
     const sinkingFactor = s.sinking > 0 || s.struck ? 0 : 1;
     const anchored = s.order.type === 'anchor' ? 0 : 1;
-    const target = s.throttle * s.speedCap * spec.maxSpeed * crewFactor * (1 - s.fire * 0.35) * sinkingFactor * anchored;
+    const target = s.throttle * s.speedCap * spec.maxSpeed * s.mods.speed * crewFactor * (1 - s.fire * 0.35) * sinkingFactor * anchored;
     const rate = target > s.speed ? spec.accel : spec.accel * 1.6;
     s.speed += clamp(target - s.speed, -rate * dt, rate * dt);
     if (s.grappledWith) s.speed *= Math.max(0, 1 - dt * 1.5);
     const steer = 0.4 + 0.6 * Math.min(1, Math.abs(s.speed) / spec.maxSpeed);
-    const desiredTurn = s.rudder * spec.turnRate * steer * crewFactor * sinkingFactor * anchored;
+    const desiredTurn = s.rudder * spec.turnRate * s.mods.turn * steer * crewFactor * sinkingFactor * anchored;
     s.turn += (desiredTurn - s.turn) * Math.min(1, dt * 1.4);
     s.heading = wrapAngle(s.heading + s.turn * dt);
     const drift = anchored ? 0.15 : 0;
@@ -804,8 +833,8 @@ export class Battle {
         this.events.push({ type: 'repelled', a: s.id, b: d.id });
         continue;
       }
-      const atk = s.crew * s.spec.melee;
-      const def = d.crew * d.spec.melee * d.spec.deckDefense * (d.repel ? 1.3 : 1);
+      const atk = s.crew * s.spec.melee * s.mods.melee;
+      const def = d.crew * d.spec.melee * d.spec.deckDefense * d.mods.defense * (d.repel ? 1.3 : 1);
       const beforeD = Math.floor(d.crew);
       const beforeS = Math.floor(s.crew);
       d.crew = Math.max(0, d.crew - atk * 0.045 * dt * (0.6 + this.rand() * 0.8));
@@ -851,7 +880,8 @@ export class Battle {
       const gun = GUN_SPECS[battery.gun];
       const range = gun.range * rangeMul;
       if (g.stage < 4) {
-        g.t += dt * crewFactor;
+        if (g.ammo <= 0) continue;
+        g.t += dt * crewFactor * s.mods.reload;
         const need = gun.stages[g.stage]!;
         if (g.t >= need) {
           g.t -= need;
@@ -1044,9 +1074,10 @@ export class Battle {
     const dx = tx - m.x;
     const dz = tz - m.z;
     const d = Math.hypot(dx, dz);
-    const morale = 0.6 + 0.4 * (s.crew / s.spec.crew);
+    const morale = (0.6 + 0.4 * (s.crew / s.spec.crew)) * s.mods.accuracy;
     const spreadAz = ((0.01 + d * 0.00006) / morale) * spreadMul;
     const spreadEl = (0.0035 + d * 0.00001) / morale;
+    fireChance = Math.min(0.85, fireChance * s.mods.fire);
     const gauss = () => (this.rand() + this.rand() + this.rand() - 1.5) * 1.15;
     const az = Math.atan2(dz, dx) + gauss() * spreadAz;
     const k = Math.min(1, (GRAVITY * d) / (gun.muzzle * gun.muzzle));
@@ -1072,6 +1103,7 @@ export class Battle {
     };
     this.projectiles.push(proj);
     s.revealed = 4;
+    g.ammo = Math.max(0, g.ammo - 1);
     const len = Math.hypot(proj.vx, proj.vy, proj.vz);
     this.events.push({ type: 'gun', ship: s.id, gun: gun.type, x: m.x, y: m.y, z: m.z, dx: proj.vx / len, dy: proj.vy / len, dz: proj.vz / len, big: gun.big });
   }

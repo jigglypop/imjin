@@ -1,6 +1,9 @@
 import {
   AmbientLight,
   Box3,
+  CanvasTexture,
+  CylinderGeometry,
+  MeshStandardNodeMaterial,
   Color,
   DataTexture,
   DataUtils,
@@ -25,7 +28,7 @@ import {
   type Object3D,
   type WebGPURenderer,
 } from 'three/webgpu';
-import { abs, clamp, dot, float, fract, fwidth, length, max, mix, normalize, positionLocal, positionWorld, pow, sin, smoothstep, texture, uniform, uv, vec2, vec3 } from 'three/tsl';
+import { abs, clamp, cos, dot, float, fract, fwidth, max, mix, normalize, positionLocal, positionWorld, pow, sin, smoothstep, texture, uniform, uv, vec2, vec3 } from 'three/tsl';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import meta from './demMeta.json';
@@ -86,7 +89,9 @@ async function loadHeights() {
 }
 
 type Side = 'left' | 'right';
-type Bust = { side: Side; group: Group; height: number; yaw: number; phase: number; backdrop: Mesh; key: SpotLight; rim: SpotLight };
+type Bust = { side: Side; group: Group; height: number; yaw: number; phase: number; flag: Group; key: SpotLight; rim: SpotLight; fit: number; lift: number };
+
+const FIT: Record<Side, { fit: number; lift: number }> = { left: { fit: 1.0, lift: 0 }, right: { fit: 1.34, lift: 0.1 } };
 type CardRect = { left: number; top: number; width: number; height: number };
 
 export class SelectScene {
@@ -110,6 +115,8 @@ export class SelectScene {
   private viewport = { w: 1, h: 1 };
   private readonly rig = new Group();
   private readonly paperTone = uniform(new Vector3(0.904, 0.863, 0.776));
+  private readonly clock = uniform(0);
+  private flagText: Record<Side, string> = { left: '帥', right: '倭' };
   private dom: HTMLElement | null = null;
   private drag: { button: number; x: number; y: number } | null = null;
   ready = false;
@@ -282,25 +289,142 @@ export class SelectScene {
     const b = this.busts[side];
     if (b) {
       b.group.visible = visible;
-      b.backdrop.visible = visible;
+      b.flag.visible = visible;
     }
   }
 
-  private makeBackdrop(side: Side) {
-    const tex = new TextureLoader().load('/ui/ink_cloud.jpg');
+  setFlags(left: string, right: string) {
+    if (left === this.flagText.left && right === this.flagText.right) return;
+    this.flagText = { left, right };
+    for (const side of ['left', 'right'] as Side[]) {
+      const b = this.busts[side];
+      if (!b) continue;
+      const mesh = b.flag.children[0] as Mesh;
+      const tex = (mesh.material as MeshBasicNodeMaterial).userData.tex as CanvasTexture | undefined;
+      if (tex) {
+        this.paintFlag(tex.image as HTMLCanvasElement, side, this.flagText[side]);
+        tex.needsUpdate = true;
+      }
+    }
+  }
+
+  private paintFlag(canvas: HTMLCanvasElement, side: Side, text: string) {
+    const ctx = canvas.getContext('2d')!;
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    if (side === 'left') {
+      ctx.fillStyle = '#d8c28c';
+      ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 2600; i += 1) {
+        ctx.fillStyle = 'rgba(' + (120 + Math.random() * 60) + ',' + (95 + Math.random() * 50) + ',' + (50 + Math.random() * 30) + ',' + Math.random() * 0.08 + ')';
+        ctx.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 3, 1 + Math.random() * 12);
+      }
+      ctx.fillStyle = '#8b2e22';
+      const tooth = 34;
+      for (let x = 0; x < w; x += tooth) {
+        ctx.beginPath();
+        ctx.moveTo(x, h);
+        ctx.lineTo(x + tooth / 2, h - 40);
+        ctx.lineTo(x + tooth, h);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + tooth / 2, 34);
+        ctx.lineTo(x + tooth, 0);
+        ctx.fill();
+      }
+      for (let y = 0; y < h; y += tooth) {
+        ctx.beginPath();
+        ctx.moveTo(w, y);
+        ctx.lineTo(w - 40, y + tooth / 2);
+        ctx.lineTo(w, y + tooth);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#16120e';
+      ctx.font = '900 300px "Noto Serif KR", serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, w * 0.47, h * 0.5);
+    } else {
+      ctx.fillStyle = '#ece6d8';
+      ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 1800; i += 1) {
+        ctx.fillStyle = 'rgba(120,110,95,' + Math.random() * 0.06 + ')';
+        ctx.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 10);
+      }
+      ctx.fillStyle = '#16120e';
+      ctx.fillRect(0, 0, w, 26);
+      const cx = w / 2;
+      const cy = w * 0.62;
+      const r = w * 0.3;
+      ctx.lineWidth = 16;
+      ctx.strokeStyle = '#16120e';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let k = 0; k < 3; k += 1) {
+        const a = (k / 3) * Math.PI * 2 - Math.PI / 2;
+        const tx = cx + Math.cos(a) * r * 0.42;
+        const ty = cy + Math.sin(a) * r * 0.42;
+        ctx.beginPath();
+        ctx.arc(tx, ty, r * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(tx + Math.cos(a + 1.6) * r * 0.3, ty + Math.sin(a + 1.6) * r * 0.3);
+        ctx.quadraticCurveTo(cx + Math.cos(a + 1.2) * r * 0.85, cy + Math.sin(a + 1.2) * r * 0.85, cx + Math.cos(a + 2.1) * r * 0.62, cy + Math.sin(a + 2.1) * r * 0.62);
+        ctx.lineTo(tx + Math.cos(a - 0.3) * r * 0.2, ty + Math.sin(a - 0.3) * r * 0.2);
+        ctx.fill();
+      }
+      ctx.font = '900 190px "Noto Serif KR", serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      [...text].forEach((ch, i) => ctx.fillText(ch, cx, w * 1.25 + i * 210));
+    }
+  }
+
+  private makeFlag(side: Side) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = side === 'left' ? 600 : 1300;
+    this.paintFlag(canvas, side, this.flagText[side]);
+    const tex = new CanvasTexture(canvas);
     tex.colorSpace = SRGBColorSpace;
+    tex.anisotropy = 8;
+    void document.fonts.load('900 200px "Noto Serif KR"').then(() => {
+      this.paintFlag(canvas, side, this.flagText[side]);
+      tex.needsUpdate = true;
+    });
+    const aspect = canvas.height / canvas.width;
+    const geo = new PlaneGeometry(1, aspect, 40, Math.round(40 * aspect));
+    geo.translate(side === 'left' ? -0.5 : 0.5, -aspect / 2, 0);
     const m = new MeshBasicNodeMaterial();
-    m.transparent = true;
-    m.depthWrite = false;
     m.side = DoubleSide;
-    const p = uv().sub(0.5);
-    const lum = texture(tex, uv().mul(vec2(0.9, 1)).add(side === 'left' ? vec2(0.05, 0) : vec2(0.02, 0.05))).r;
-    const radial = float(1).sub(smoothstep(0.18, 0.5, length(p.mul(vec2(1.1, 0.85)))));
-    m.colorNode = vec3(0.09, 0.08, 0.07);
-    m.opacityNode = pow(float(1).sub(lum), 1.6).mul(radial).mul(0.92).clamp(0, 0.9);
-    const mesh = new Mesh(new PlaneGeometry(1, 1), m);
-    mesh.renderOrder = 5;
-    return mesh;
+    m.userData.tex = tex;
+    const d = side === 'left' ? float(1).sub(uv().x) : uv().x;
+    const v = uv().y;
+    const t = this.clock;
+    const phase = d.mul(7.5).sub(t.mul(2.6)).add(v.mul(1.8));
+    const wave = sin(phase).mul(0.07).add(sin(d.mul(17).sub(t.mul(4.4)).add(v.mul(3))).mul(0.018)).mul(d);
+    const slope = cos(phase).mul(0.5).add(cos(d.mul(17).sub(t.mul(4.4))).mul(0.25));
+    m.positionNode = positionLocal.add(vec3(0, d.mul(d).mul(-0.04), wave));
+    m.colorNode = texture(tex, uv()).rgb.mul(slope.mul(d).mul(0.22).add(0.86));
+    const cloth = new Mesh(geo, m);
+    cloth.renderOrder = 4;
+    const wood = new MeshStandardNodeMaterial({ color: 0x2a1d14, roughness: 0.45, metalness: 0.1 });
+    const pole = new Mesh(new CylinderGeometry(0.012, 0.014, aspect + 1.6, 10), wood);
+    pole.position.set(0, -aspect / 2 - 0.2, 0);
+    const finial = new Mesh(new CylinderGeometry(0, 0.035, 0.12, 8), new MeshStandardNodeMaterial({ color: 0xb08a3c, roughness: 0.3, metalness: 0.8 }));
+    finial.position.set(0, 0.62, 0);
+    const group = new Group();
+    group.add(cloth, pole, finial);
+    if (side === 'right') {
+      const bar = new Mesh(new CylinderGeometry(0.01, 0.01, 1.05, 8), wood);
+      bar.rotation.z = Math.PI / 2;
+      bar.position.set(0.5, 0, 0);
+      group.add(bar);
+    }
+    return group;
   }
 
   private async loadBusts() {
@@ -331,16 +455,16 @@ export class SelectScene {
         });
         const group = new Group();
         group.add(inner);
-        const backdrop = this.makeBackdrop(side);
+        const flag = this.makeFlag(side);
         const warm = side === 'left' ? 0xffe3c0 : 0xf2ead8;
         const key = new SpotLight(warm, 16, 9, 0.62, 0.55, 1.4);
         const rim = new SpotLight(side === 'left' ? 0xc9d8ff : 0xffd2a8, 38, 9, 0.55, 0.7, 1.4);
         key.target = group;
         rim.target = group;
-        this.rig.add(backdrop, group, key, rim);
-        const bust: Bust = { side, group, height: 1, yaw: side === 'left' ? 0.32 : -0.32, phase: side === 'left' ? 0 : 1.7, backdrop, key, rim };
+        this.rig.add(flag, group, key, rim);
+        const bust: Bust = { side, group, height: 1, yaw: side === 'left' ? 0.32 : -0.32, phase: side === 'left' ? 0 : 1.7, flag, key, rim, ...FIT[side] };
         group.visible = this.visible[side];
-        backdrop.visible = this.visible[side];
+        flag.visible = this.visible[side];
         this.busts[side] = bust;
       } catch {
         this.busts[side] = null;
@@ -361,20 +485,23 @@ export class SelectScene {
     const top = toY(rect.top);
     const bottom = toY(rect.top + rect.height);
     const cardH = top - bottom;
-    const scale = cardH * 1.02;
+    const scale = cardH * 1.02 * b.fit;
     const breathe = Math.sin(this.time * 1.2 + b.phase) * 0.004 * scale;
     b.group.scale.setScalar(scale);
-    b.group.position.set(cx + (b.side === 'left' ? 0.03 : -0.03) * scale, top - scale * 0.5 - cardH * 0.04 + breathe, -BUST_DEPTH);
+    b.group.position.set(cx + (b.side === 'left' ? 0.03 : -0.03) * scale, top - scale * 0.5 + cardH * (b.lift - 0.04) + breathe, -BUST_DEPTH);
     b.group.rotation.y = b.yaw + Math.sin(this.time * 0.3 + b.phase) * 0.04;
-    b.backdrop.scale.set(cardH * 1.35, cardH * 1.25, 1);
-    b.backdrop.position.set(cx, top - cardH * 0.42, -BUST_DEPTH - 0.6);
     const sign = b.side === 'left' ? 1 : -1;
+    const flagScale = cardH * (b.side === 'left' ? 0.7 : 0.46);
+    b.flag.scale.setScalar(flagScale);
+    b.flag.position.set(cx + sign * cardH * 0.16, top + cardH * 0.26, -BUST_DEPTH - 0.7);
+    b.flag.rotation.set(0, -sign * 0.3, -sign * 0.03);
     b.key.position.set(cx + sign * cardH * 0.9, top + cardH * 0.25, -BUST_DEPTH + cardH * 1.4);
     b.rim.position.set(cx - sign * cardH * 0.85, top + cardH * 0.1, -BUST_DEPTH - cardH * 1.1);
   }
 
   update(dt: number) {
     this.time += dt;
+    this.clock.value = this.time;
     this.idle += dt;
     const k = 1 - Math.exp(-dt * 2.4);
     this.target.lerp(this.goal, k);
