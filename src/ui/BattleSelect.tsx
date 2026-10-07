@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { SCENARIO_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
 
-const UPCOMING = ['옥포', '사천', '당포', '안골포', '칠천량', '노량'];
 
 function Arrow({ from, to, team }: { from: [number, number]; to: [number, number]; team: 'joseon' | 'japan' }) {
   const [x1, y1] = [from[0] * 1600, from[1] * 900];
@@ -54,11 +53,6 @@ export function BattleSelect({ initial, onStart }: { initial: ScenarioId; onStar
         {SCENARIO_ORDER.map((sid) => (
           <button key={sid} className={`select-tab ${sid === id ? 'select-tab--on' : ''}`} onClick={() => setId(sid)}>
             {SCENARIOS[sid].title}
-          </button>
-        ))}
-        {UPCOMING.map((name) => (
-          <button key={name} className="select-tab select-tab--locked" disabled title="준비 중">
-            {name}
           </button>
         ))}
       </div>

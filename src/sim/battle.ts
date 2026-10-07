@@ -57,6 +57,8 @@ export class Battle {
   escaped = { joseon: 0, japan: 0 };
   initial = { joseon: 0, japan: 0 };
   retreatBelow = 0.3;
+  night = false;
+  current = { x: 0, z: 0 };
   land: LandSampler = () => -50;
   center = { x: 0, z: 0 };
   arenaRadius = 6000;
@@ -129,6 +131,15 @@ export class Battle {
       kills: 0,
       thinkTimer: this.rand() * THINK_INTERVAL,
       aground: 0,
+      fireMode: 'free',
+      ammo: 'auto',
+      speedCap: 1,
+      stance: 'auto',
+      lights: true,
+      volleySide: -1,
+      volleyTimer: 0,
+      revealed: 0,
+      repel: false,
     };
     this.ships.push(ship);
     this.byId.set(ship.id, ship);
@@ -178,7 +189,53 @@ export class Battle {
     }
   }
 
-  formation(ids: number[], kind: 'crane' | 'line', cx: number, cz: number) {
+  configure(ids: number[], patch: Partial<Pick<Ship, 'fireMode' | 'ammo' | 'speedCap' | 'stance' | 'lights' | 'repel'>>) {
+    for (const id of ids) {
+      const s = this.byId.get(id);
+      if (this.isActive(s)) Object.assign(s, patch);
+    }
+  }
+
+  volley(ids: number[], side: number) {
+    let ships = 0;
+    for (const id of ids) {
+      const s = this.byId.get(id);
+      if (!this.isActive(s)) continue;
+      s.volleySide = side;
+      s.volleyTimer = 2.4;
+      ships += 1;
+    }
+    return ships;
+  }
+
+  cutGrapples(ids: number[]) {
+    let cut = 0;
+    for (const id of ids) {
+      const s = this.byId.get(id);
+      if (!this.isActive(s)) continue;
+      if (s.grappledWith) {
+        s.grappledWith = 0;
+        cut += 1;
+      }
+      for (const o of this.ships) {
+        if (o.grappledWith === s.id && this.rand() < 0.65) {
+          o.grappledWith = 0;
+          o.crew = Math.max(0, o.crew - 4);
+          this.events.push({ type: 'repelled', a: o.id, b: s.id });
+          cut += 1;
+        }
+      }
+    }
+    return cut;
+  }
+
+  canSee(target: Ship, d: number) {
+    if (!this.night) return true;
+    const range = target.lights ? 1900 : target.fire > 0.08 ? 1400 : target.revealed > 0 ? 900 : 260;
+    return d <= range;
+  }
+
+  formation(ids: number[], kind: 'crane' | 'line' | 'column' | 'wedge', cx: number, cz: number) {
     const ships = ids.map((id) => this.byId.get(id)).filter((s): s is Ship => this.isActive(s));
     if (!ships.length) return;
     let fx = 0;
@@ -203,21 +260,42 @@ export class Battle {
         const slot = slots[i]!;
         s.order = { type: 'slot', x: slot.x, z: slot.z, face: slot.a + Math.PI / 2 };
       });
-    } else {
+    } else if (kind === 'line') {
       const along = toFleet + Math.PI / 2;
       const dist = Math.min(380, Math.hypot(fx - cx, fz - cz) * 0.8);
       const lx = cx + Math.cos(toFleet) * dist;
       const lz = cz + Math.sin(toFleet) * dist;
       const sorted = [...ships].sort((p, q) => (p.x - fx) * Math.cos(along) + (p.z - fz) * Math.sin(along) - ((q.x - fx) * Math.cos(along) + (q.z - fz) * Math.sin(along)));
       sorted.forEach((s, i) => {
-        const off = (i - (n - 1) / 2) * 46;
+        const off = (i - (n - 1) / 2) * 52;
         s.order = { type: 'slot', x: lx + Math.cos(along) * off, z: lz + Math.sin(along) * off, face: along };
+      });
+    } else {
+      const heading = toFleet + Math.PI;
+      const sorted = [...ships].sort((p, q) => (q.x - fx) * Math.cos(heading) + (q.z - fz) * Math.sin(heading) - ((p.x - fx) * Math.cos(heading) + (p.z - fz) * Math.sin(heading)));
+      const leader = sorted.find((s) => s.flagship) ?? sorted[0]!;
+      const rest = sorted.filter((s) => s !== leader);
+      const stop = Math.hypot(fx - cx, fz - cz) > 200 ? 0.7 : 0;
+      leader.order = { type: 'move', x: fx + (cx - fx) * (stop || 1), z: fz + (cz - fz) * (stop || 1) };
+      rest.forEach((s, i) => {
+        const rank = i + 1;
+        if (kind === 'column') {
+          s.order = { type: 'follow', leaderId: leader.id, dx: -rank * 60, dz: 0 };
+        } else {
+          const row = Math.ceil(rank / 2);
+          const sideSign = rank % 2 === 1 ? 1 : -1;
+          s.order = { type: 'follow', leaderId: leader.id, dx: -row * 52, dz: sideSign * row * 44 };
+        }
       });
     }
   }
 
+  tide: ((time: number) => { x: number; z: number }) | null = null;
+
   step(dt: number) {
     this.time += dt;
+    if (this.tide) this.current = this.tide(this.time);
+    for (const s of this.ships) if (s.revealed > 0) s.revealed -= dt;
     this.active.joseon.length = 0;
     this.active.japan.length = 0;
     for (const s of this.ships) if (this.isActive(s)) this.active[s.team].push(s);
@@ -256,6 +334,7 @@ export class Battle {
     let bestScore = Infinity;
     for (const o of list) {
       const d = Math.hypot(o.x - s.x, o.z - s.z);
+      if (!this.canSee(o, d)) continue;
       let score = d;
       if (preferBoardable && !o.spec.boardable) score += 260;
       if (o.id === s.targetId) score -= 60;
@@ -319,7 +398,7 @@ export class Battle {
     const range = s.spec.length * 1.8 + 20;
     this.grid.query(s.x, s.z, range + 40, (o) => {
       if (o === s || !o.alive || o.id === s.grappledWith) return;
-      if (s.team !== o.team && s.team === 'japan') return;
+      if (s.team !== o.team && (s.team === 'japan' || s.stance === 'board' || s.stance === 'ram')) return;
       if (s.spec.kind === 'geobukseon' && o.team !== s.team) return;
       const dx = o.x - s.x;
       const dz = o.z - s.z;
@@ -385,6 +464,51 @@ export class Battle {
       this.activity.set(s.id, 'idle');
       return;
     }
+    if (order.type === 'follow') {
+      const leader = this.byId.get(order.leaderId);
+      if (!this.isActive(leader)) {
+        s.order = { type: 'hold' };
+        return;
+      }
+      const c = Math.cos(leader.heading);
+      const n = Math.sin(leader.heading);
+      const tx = leader.x + c * order.dx - n * order.dz;
+      const tz = leader.z + n * order.dx + c * order.dz;
+      const d = Math.hypot(tx - s.x, tz - s.z);
+      if (d < 25) {
+        this.face(s, leader.heading, Math.min(1, leader.speed / s.spec.maxSpeed + 0.05));
+      } else {
+        const ahead = Math.min(80, d);
+        this.steerTo(s, tx + c * ahead * 0.4, tz + n * ahead * 0.4, 50, 1);
+        s.throttle = Math.min(1, s.throttle * (0.7 + Math.min(0.6, d / 120)));
+      }
+      this.activity.set(s.id, 'moving');
+      this.avoid(s);
+      return;
+    }
+    if (order.type === 'broadside') {
+      const target = this.byId.get(order.targetId);
+      if (!this.isActive(target)) {
+        s.order = { type: 'hold' };
+        return;
+      }
+      s.targetId = target.id;
+      const dx = target.x - s.x;
+      const dz = target.z - s.z;
+      const d = Math.hypot(dx, dz);
+      const bearing = Math.atan2(dz, dx);
+      if (d > 300) {
+        this.steerTo(s, target.x, target.z, 120, 1);
+        this.activity.set(s.id, 'moving');
+      } else {
+        const heading = order.side === 0 ? bearing + Math.PI / 2 : bearing - Math.PI / 2;
+        const drift = clamp((d - 190) / 140, -0.5, 0.5) * (order.side === 0 ? -1 : 1) * 0.6;
+        this.face(s, heading + drift, d < 120 ? 0.35 : 0.18);
+        this.activity.set(s.id, 'engaging');
+      }
+      this.avoid(s);
+      return;
+    }
     let target: Ship | undefined;
     if (order.type === 'attack') {
       target = this.byId.get(order.targetId);
@@ -422,6 +546,17 @@ export class Battle {
     const dz = target.z - s.z;
     const d = Math.hypot(dx, dz);
     const bearing = Math.atan2(dz, dx);
+    const stance = s.stance;
+    if (stance === 'board' || stance === 'ram') {
+      const lead = Math.min(3, d / 8);
+      this.steerTo(s, target.x + Math.cos(target.heading) * target.speed * lead, target.z + Math.sin(target.heading) * target.speed * lead, stance === 'board' ? 14 : 10, 1);
+      this.activity.set(s.id, 'charging');
+      return;
+    }
+    if (stance === 'standoff' || stance === 'close') {
+      this.broadsideDuel(s, target, d, bearing, stance === 'close' ? 45 : 150, stance === 'close' ? 140 : 380);
+      return;
+    }
     if (s.spec.kind === 'geobukseon') {
       const timer = (this.chargeTimer.get(s.id) ?? 0) - THINK_INTERVAL;
       this.chargeTimer.set(s.id, timer);
@@ -445,8 +580,10 @@ export class Battle {
       }
       return;
     }
-    const minRange = 150;
-    const maxRange = 380;
+    this.broadsideDuel(s, target, d, bearing, 150, 380);
+  }
+
+  private broadsideDuel(s: Ship, target: Ship, d: number, bearing: number, minRange: number, maxRange: number) {
     if (d < minRange) {
       const away = bearing + Math.PI;
       const side = wrapAngle(away - s.heading) > 0 ? 1 : -1;
@@ -493,7 +630,7 @@ export class Battle {
     const crewFactor = 0.35 + 0.65 * Math.max(0, s.crew / spec.crew);
     const sinkingFactor = s.sinking > 0 || s.struck ? 0 : 1;
     const anchored = s.order.type === 'anchor' ? 0 : 1;
-    const target = s.throttle * spec.maxSpeed * crewFactor * (1 - s.fire * 0.35) * sinkingFactor * anchored;
+    const target = s.throttle * s.speedCap * spec.maxSpeed * crewFactor * (1 - s.fire * 0.35) * sinkingFactor * anchored;
     const rate = target > s.speed ? spec.accel : spec.accel * 1.6;
     s.speed += clamp(target - s.speed, -rate * dt, rate * dt);
     if (s.grappledWith) s.speed *= Math.max(0, 1 - dt * 1.5);
@@ -502,8 +639,8 @@ export class Battle {
     s.turn += (desiredTurn - s.turn) * Math.min(1, dt * 1.4);
     s.heading = wrapAngle(s.heading + s.turn * dt);
     const drift = anchored ? 0.15 : 0;
-    const nx = s.x + Math.cos(s.heading) * s.speed * dt + Math.cos(this.windAngle) * drift * dt;
-    const nz = s.z + Math.sin(s.heading) * s.speed * dt + Math.sin(this.windAngle) * drift * dt;
+    const nx = s.x + Math.cos(s.heading) * s.speed * dt + (Math.cos(this.windAngle) * drift + this.current.x) * dt;
+    const nz = s.z + Math.sin(s.heading) * s.speed * dt + (Math.sin(this.windAngle) * drift + this.current.z) * dt;
     const bowX = nx + Math.cos(s.heading) * spec.length * 0.45;
     const bowZ = nz + Math.sin(s.heading) * spec.length * 0.45;
     if (this.land(bowX, bowZ) > DRAFT || this.land(nx, nz) > DRAFT) {
@@ -612,12 +749,27 @@ export class Battle {
     }
   }
 
+  private wantsBoard(s: Ship) {
+    return s.team === 'japan' ? s.stance !== 'standoff' : s.stance === 'board';
+  }
+
   private tryGrapple(a: Ship, b: Ship) {
     if (a.team === b.team) return;
-    const attacker = a.team === 'japan' ? a : b;
+    let attacker: Ship;
+    if (this.wantsBoard(a) && !a.grappledWith) attacker = a;
+    else if (this.wantsBoard(b) && !b.grappledWith) attacker = b;
+    else return;
     const defender = attacker === a ? b : a;
     if (!this.isActive(attacker) || !this.isActive(defender)) return;
     if (attacker.grappledWith) return;
+    if (defender.repel && this.rand() < 0.55) {
+      if (this.time - attacker.lastHit > 1.2) {
+        attacker.lastHit = this.time;
+        attacker.crew = Math.max(0, attacker.crew - 2);
+        this.events.push({ type: 'repelled', a: attacker.id, b: defender.id });
+      }
+      return;
+    }
     if (!defender.spec.boardable) {
       if (this.time - attacker.lastHit > 1.5) {
         attacker.crew = Math.max(0, attacker.crew - 3);
@@ -647,8 +799,13 @@ export class Battle {
         s.grappledWith = 0;
         continue;
       }
+      if (d.repel && this.rand() < dt * 0.14) {
+        s.grappledWith = 0;
+        this.events.push({ type: 'repelled', a: s.id, b: d.id });
+        continue;
+      }
       const atk = s.crew * s.spec.melee;
-      const def = d.crew * d.spec.melee * d.spec.deckDefense;
+      const def = d.crew * d.spec.melee * d.spec.deckDefense * (d.repel ? 1.3 : 1);
       const beforeD = Math.floor(d.crew);
       const beforeS = Math.floor(s.crew);
       d.crew = Math.max(0, d.crew - atk * 0.045 * dt * (0.6 + this.rand() * 0.8));
@@ -671,15 +828,28 @@ export class Battle {
     }
   }
 
+  private rangeFactor(s: Ship) {
+    return s.ammo === 'crew' ? 0.72 : s.ammo === 'fire' ? 0.85 : 1;
+  }
+
   private weapons(s: Ship, dt: number) {
     if (!this.isActive(s)) return;
     const crewFactor = 0.25 + 0.75 * (s.crew / s.spec.crew);
     const spec = s.spec;
     const targets: (Ship | undefined | null)[] = [null, null, null];
+    const volleyTargets: (Ship | undefined | null)[] = [null, null, null];
+    const volleying = s.volleySide >= 0 && s.volleyTimer > 0;
+    let volleyCount = 0;
+    if (s.volleyTimer > 0) {
+      s.volleyTimer -= dt;
+      if (s.volleyTimer <= 0) s.volleySide = -1;
+    }
+    const rangeMul = this.rangeFactor(s);
     for (const raw of s.guns) {
       const g = raw as AimedGun;
       const battery = spec.batteries[g.battery]!;
       const gun = GUN_SPECS[battery.gun];
+      const range = gun.range * rangeMul;
       if (g.stage < 4) {
         g.t += dt * crewFactor;
         const need = gun.stages[g.stage]!;
@@ -691,10 +861,21 @@ export class Battle {
       }
       if (g.stage === 4) {
         const sideIndex = g.side === 2 ? 2 : g.side;
-        if (targets[sideIndex] === null) targets[sideIndex] = g.side === 2 ? this.findBowTarget(s, gun.range) : this.findBroadsideTarget(s, g.side, gun.range);
+        if (volleying && (s.volleySide === sideIndex || (s.volleySide === 3 && sideIndex !== 2))) {
+          if (volleyTargets[sideIndex] === null) volleyTargets[sideIndex] = g.side === 2 ? this.findBowTarget(s, range * 1.15) : this.findBroadsideTarget(s, g.side, range * 1.15);
+          const vt = volleyTargets[sideIndex];
+          g.stage = 5;
+          g.t = 0;
+          g.fireDelay = 0.04 + this.rand() * 0.5;
+          g.target = vt ? vt.id : -1;
+          volleyCount += 1;
+          continue;
+        }
+        if (s.fireMode === 'hold') continue;
+        if (targets[sideIndex] === null) targets[sideIndex] = g.side === 2 ? this.findBowTarget(s, range) : this.findBroadsideTarget(s, g.side, range);
         const target = targets[sideIndex];
         if (!target) continue;
-        if (Math.hypot(target.x - s.x, target.z - s.z) > gun.range) continue;
+        if (Math.hypot(target.x - s.x, target.z - s.z) > range) continue;
         g.stage = 5;
         g.t = 0;
         g.fireDelay = gun.stages[5]! * (0.6 + this.rand() * 0.9);
@@ -708,6 +889,13 @@ export class Battle {
         g.t = 0;
       }
     }
+    if (volleyCount > 0) {
+      this.events.push({ type: 'volley', ship: s.id, side: s.volleySide, count: volleyCount });
+      if (s.volleySide !== 3) {
+        s.volleySide = -1;
+        s.volleyTimer = 0;
+      }
+    }
     if (spec.musketRange > 0) {
       s.musketReload = Math.max(0, s.musketReload - dt * crewFactor);
       if (s.musketReload <= 0) {
@@ -716,6 +904,7 @@ export class Battle {
         this.grid.query(s.x, s.z, spec.musketRange, (o) => {
           if (o.team === s.team || !this.isActive(o)) return;
           const d = Math.hypot(o.x - s.x, o.z - s.z);
+          if (!this.canSee(o, d)) return;
           if (d < best) {
             best = d;
             target = o;
@@ -755,6 +944,7 @@ export class Battle {
       const dz = o.z - s.z;
       const d = Math.hypot(dx, dz);
       if (d > range || d < 8) return;
+      if (!this.canSee(o, d)) return;
       const c = (dx * sx + dz * sz) / d;
       if (c < cosArc) return;
       const score = d - (o.id === s.targetId ? 80 : 0) - c * 40;
@@ -777,6 +967,7 @@ export class Battle {
       const dz = o.z - s.z;
       const d = Math.hypot(dx, dz);
       if (d > range) return;
+      if (!this.canSee(o, d)) return;
       if ((dx * fx + dz * fz) / d < Math.cos(0.35)) return;
       if (d < bestD) {
         bestD = d;
@@ -802,23 +993,59 @@ export class Battle {
   }
 
   private fireGun(s: Ship, g: GunState, targetId: number) {
-    const target = this.byId.get(targetId);
-    if (!this.isActive(target)) return;
+    const target = targetId > 0 ? this.byId.get(targetId) : undefined;
+    const blind = targetId < 0;
+    if (!blind && !this.isActive(target)) return;
     const battery = s.spec.batteries[g.battery]!;
     const gun = GUN_SPECS[battery.gun];
     const sideGuns = s.guns.filter((x) => x.side === g.side);
     const slot = sideGuns.indexOf(g);
     const m = this.muzzle(s, g.side, slot, sideGuns.length);
-    const d0 = Math.hypot(target.x - m.x, target.z - m.z);
-    const flight = d0 / gun.muzzle;
-    const tx = target.x + Math.cos(target.heading) * target.speed * flight;
-    const tz = target.z + Math.sin(target.heading) * target.speed * flight;
+    let tx: number;
+    let tz: number;
+    let aimHeight: number;
+    if (target && this.isActive(target)) {
+      const d0 = Math.hypot(target.x - m.x, target.z - m.z);
+      const flight = d0 / gun.muzzle;
+      tx = target.x + Math.cos(target.heading) * target.speed * flight;
+      tz = target.z + Math.sin(target.heading) * target.speed * flight;
+      aimHeight = target.spec.deck * 0.6 - m.y;
+    } else {
+      const reach = Math.min(gun.range * 0.7, 260);
+      tx = m.x + m.dx * reach;
+      tz = m.z + m.dz * reach;
+      aimHeight = 2 - m.y;
+    }
+    const mode = s.ammo;
+    let damage = gun.damage;
+    let crewDamage = gun.crewDamage;
+    let ammo = gun.ammo;
+    let fireChance = s.team === 'joseon' ? (gun.ammo === 'arrow' ? 0.16 : 0.07) : 0.04;
+    let spreadMul = gun.ammo === 'grape' ? 1.8 : 1;
+    if (mode === 'hull') {
+      damage *= 1.25;
+      crewDamage *= 0.6;
+      fireChance *= 0.6;
+      if (ammo === 'grape') ammo = 'ball';
+      spreadMul = 1;
+    } else if (mode === 'crew') {
+      damage *= 0.45;
+      crewDamage *= 2.3;
+      fireChance *= 0.5;
+      ammo = 'grape';
+      spreadMul = 1.7;
+    } else if (mode === 'fire') {
+      damage *= 0.7;
+      crewDamage *= 0.8;
+      fireChance = Math.min(0.72, fireChance * 3.2 + 0.14);
+      ammo = 'fire';
+      spreadMul = 1.15;
+    }
     const dx = tx - m.x;
     const dz = tz - m.z;
     const d = Math.hypot(dx, dz);
-    const aimHeight = target.spec.deck * 0.6 - m.y;
     const morale = 0.6 + 0.4 * (s.crew / s.spec.crew);
-    const spreadAz = ((0.01 + d * 0.00006) / morale) * (gun.ammo === 'grape' ? 1.8 : 1);
+    const spreadAz = ((0.01 + d * 0.00006) / morale) * spreadMul;
     const spreadEl = (0.0035 + d * 0.00001) / morale;
     const gauss = () => (this.rand() + this.rand() + this.rand() - 1.5) * 1.15;
     const az = Math.atan2(dz, dx) + gauss() * spreadAz;
@@ -835,14 +1062,16 @@ export class Battle {
       vz: Math.sin(az) * Math.cos(elev) * v,
       team: s.team,
       shooter: s.id,
-      damage: gun.damage,
-      crewDamage: gun.crewDamage,
-      ammo: gun.ammo,
+      damage,
+      crewDamage,
+      ammo,
       gun: gun.type,
+      fireChance,
       age: 0,
       alive: true,
     };
     this.projectiles.push(proj);
+    s.revealed = 4;
     const len = Math.hypot(proj.vx, proj.vy, proj.vz);
     this.events.push({ type: 'gun', ship: s.id, gun: gun.type, x: m.x, y: m.y, z: m.z, dx: proj.vx / len, dy: proj.vy / len, dz: proj.vz / len, big: gun.big });
   }
@@ -894,8 +1123,7 @@ export class Battle {
           s.crew = Math.max(0, s.crew - (p.crewDamage * (0.5 + this.rand())) / Math.max(1, s.spec.deckDefense * 0.8));
           const killed = before - Math.floor(s.crew);
           if (killed > 0) this.events.push({ type: 'casualty', ship: s.id, count: killed, melee: false });
-          const fireChance = p.team === 'joseon' ? (p.ammo === 'arrow' ? 0.16 : 0.07) : 0.04;
-          if (this.rand() < fireChance) this.ignite(s, 0.2);
+          if (this.rand() < p.fireChance) this.ignite(s, p.ammo === 'fire' ? 0.26 : 0.2);
           this.events.push({ type: 'hit', ship: s.id, x: p.x, y: p.y, z: p.z, damage: dmg, ammo: p.ammo });
         });
       }

@@ -45,7 +45,7 @@ import { buildScenario, SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import type { BattleEvent, ShipKind } from '../sim/types';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
 import { Input } from './Input';
-import { publish, setLoading, type GameSnapshot } from '../state/store';
+import { publish, setLoading, setProgress, type GameSnapshot } from '../state/store';
 import { SquadronBanners } from '../ui/SquadronBanners';
 import { Sound } from '../audio/Sound';
 import { Terrain } from '../terrain/Terrain';
@@ -63,7 +63,7 @@ export type EngineOptions = {
   follow?: { id: number; distance: number; pitch: number; yaw: number };
 };
 
-const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya'];
+const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
 
 export class Engine {
   readonly scene = new Scene();
@@ -122,14 +122,29 @@ export class Engine {
     this.camera.fov = 42;
     this.camera.updateProjectionMatrix();
     waveField.setState(SEA_STATES[this.seaName]);
-    setLoading('바다와 하늘을 그리는 중');
     const info = SCENARIOS[this.scenarioId];
-    const [sky, terrain, assets] = await Promise.all([loadSky(SKY_PRESETS[this.skyName]), Terrain.load(info.terrain), loadShipAssets(ALL_KINDS)]);
+    setLoading('바다와 하늘을 그리는 중', 0.03, this.scenarioId);
+    let done = 0.03;
+    const track = <T,>(p: Promise<T>, weight: number) =>
+      p.then((v) => {
+        done += weight;
+        setProgress(done);
+        return v;
+      });
+    const [sky, terrain, assets] = await Promise.all([
+      track(loadSky(SKY_PRESETS[this.skyName]), 0.2),
+      track(Terrain.load(info.terrain), 0.22),
+      loadShipAssets(ALL_KINDS, (f) => setProgress(done + f * 0.35)).then((v) => {
+        done += 0.35;
+        setProgress(done);
+        return v;
+      }),
+    ]);
     this.assets = assets;
     this.terrain = terrain;
     this.scene.add(terrain.group);
     this.applySky(sky);
-    setLoading('함대를 배치하는 중');
+    setLoading('함대를 배치하는 중', 0.82);
     this.placeScenario(sky);
     if ((r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) this.fft = new FFTWaves(spectrumOf(SEA_STATES[this.seaName]));
     this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft);
@@ -177,8 +192,9 @@ export class Engine {
     }
     if (this.options.gallery) this.setupGallery();
     this.warm(this.options.warmup ?? 0);
-    setLoading('셰이더를 준비하는 중');
+    setLoading('셰이더를 준비하는 중', 0.88);
     await r.compileAsync(this.scene, this.camera);
+    setProgress(1);
     this.ready = true;
   }
 
@@ -196,7 +212,7 @@ export class Engine {
     const sunAz = Math.atan2(sky.info.sunDir.z, sky.info.sunDir.x);
     this.phi = sunAz - preset.axisOffset - info.view.dir;
     this.terrain.setRotation(this.phi);
-    this.battle = buildScenario(this.scenarioId, this.phi, 1592 + Math.floor(Math.random() * 1000));
+    this.battle = buildScenario(this.scenarioId, this.phi, 1592 + Math.floor(Math.random() * 1000), (x, z) => this.terrain.heightAtScenario(x, z));
     this.battle.land = (x, z) => this.terrain.heightAt(x, z);
     const c = this.terrain.toWorld(info.view.tx, info.view.tz);
     this.battle.center = { x: c.x, z: c.z };
@@ -320,11 +336,19 @@ export class Engine {
     this.ready = false;
     this.scenarioId = id;
     const info = SCENARIOS[id];
-    setLoading(`${info.title} 준비 중`);
+    setLoading(`${info.title} 준비 중`, 0.04, id);
     this.skyName = info.sky;
     this.seaName = info.sea;
     waveField.setState(SEA_STATES[this.seaName]);
-    const [sky, terrain] = await Promise.all([loadSky(SKY_PRESETS[this.skyName]), Terrain.load(info.terrain)]);
+    let done = 0.04;
+    const track = <T,>(p: Promise<T>, weight: number) =>
+      p.then((v) => {
+        done += weight;
+        setProgress(done);
+        return v;
+      });
+    const [sky, terrain] = await Promise.all([track(loadSky(SKY_PRESETS[this.skyName]), 0.38), track(Terrain.load(info.terrain), 0.4)]);
+    setLoading('함대를 배치하는 중', 0.84);
     this.scene.remove(this.terrain.group);
     this.terrain = terrain;
     this.scene.add(terrain.group);
@@ -338,6 +362,7 @@ export class Engine {
     this.banners?.clear();
     this.rts.setPose(this.defaultPose());
     this.paused = false;
+    setLoading('셰이더를 준비하는 중', 0.9);
     await this.renderer.compileAsync(this.scene, this.camera);
     this.ready = true;
     setLoading(null);
@@ -550,6 +575,7 @@ export class Engine {
         commander: sq.commander,
         portrait: sq.portrait,
         card: sq.card,
+        kind: (b.get(sq.leaderId) ?? b.get(sq.shipIds[0] ?? 0))?.spec.kind ?? 'panokseon',
         total: this.initialSquads.get(sq.id) ?? sq.shipIds.length,
         alive,
         hull: alive ? hull / alive : 0,
@@ -581,6 +607,7 @@ export class Engine {
       fps: this.fps,
       muted: this.sound.muted,
       selectedCount: this.views.selected.size,
+      night: b.night,
       squadrons,
       primary: primary
         ? {
@@ -593,6 +620,13 @@ export class Engine {
             maxCrew: primary.spec.crew,
             fire: primary.fire,
             activity: b.activityOf(primary.id),
+            fireMode: primary.fireMode,
+            ammo: primary.ammo,
+            speedCap: primary.speedCap,
+            stance: primary.stance,
+            lights: primary.lights,
+            repel: primary.repel,
+            grappled: !!primary.grappledWith || b.ships.some((o) => o.grappledWith === primary.id),
             guns: primary.guns.map((g) => {
               const spec = GUN_SPECS[primary.spec.batteries[g.battery]!.gun];
               const need = spec.stages[g.stage] ?? 1;
@@ -653,6 +687,7 @@ export class Engine {
     return {
       fps: this.fps,
       ships: this.battle.ships.filter((s) => s.alive).length,
+      onLand: this.battle.ships.filter((s) => s.alive && this.terrain.heightAt(s.x, s.z) > -1.4).length,
       projectiles: this.battle.projectiles.length,
       smoke: this.fx?.smoke.count,
       fire: this.fx?.fire.count,

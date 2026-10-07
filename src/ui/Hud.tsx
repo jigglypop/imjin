@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Engine } from '../game/Engine';
+import { AMMO_NAMES } from '../game/Input';
 import { SKY_PRESETS, type SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
-import { useUi, type SquadronInfo } from '../state/store';
+import { useUi, type PrimaryInfo, type SquadronInfo } from '../state/store';
+import type { ShipKind } from '../sim/types';
 
 const SEA_LABELS: Record<SeaStateName, string> = { calm: '잔잔', moderate: '보통', rough: '거침' };
 const ACTIVITY: Record<string, string> = {
@@ -18,6 +20,20 @@ const ACTIVITY: Record<string, string> = {
   fleeing: '도주',
   aground: '좌초',
 };
+export const KIND_HANJA: Record<ShipKind, string> = {
+  panokseon: '板',
+  geobukseon: '龜',
+  hyeopseon: '挾',
+  atakebune: '安',
+  sekibune: '關',
+  kobaya: '小',
+  mingship: '明',
+  mingsmall: '沙',
+};
+const STANCE_SHORT = { auto: '자유', standoff: '원거리', close: '근접', ram: '충파', board: '등선' } as const;
+const AMMO_SHORT = { auto: '기본탄', hull: '대장군전', crew: '조란환', fire: '화전' } as const;
+
+type Tab = 'form' | 'gun' | 'move' | 'tactic';
 
 function formatTime(t: number) {
   const m = Math.floor(t / 60);
@@ -40,13 +56,14 @@ function Stat({ label, value, tone, text }: { label: string; value: number; tone
 function Card({ sq, onClick, onDouble }: { sq: SquadronInfo; onClick: (e: React.MouseEvent) => void; onDouble: () => void }) {
   return (
     <button className={`card ${sq.selected ? 'card--selected' : ''} ${sq.alive === 0 ? 'card--dead' : ''}`} onClick={onClick} onDoubleClick={onDouble} title={`${sq.name} · ${sq.commander}`}>
-      <img src={`/ui/cards/${sq.card}.jpg`} alt="" />
-      <div className="card-name">{sq.name}</div>
+      <img src={`/ui/portraits/${sq.portrait}.jpg`} alt="" />
+      <div className="card-kind">{KIND_HANJA[sq.kind] ?? '船'}</div>
       <div className="card-flags">
         {sq.burning > 0 && <div className="card-flag card-flag--fire">火</div>}
         {sq.boarding > 0 && <div className="card-flag card-flag--melee">戰</div>}
       </div>
       <div className="card-foot">
+        <div className="card-name">{sq.name}</div>
         <div className="card-count">
           {sq.alive}
           <small>/{sq.total}</small>
@@ -56,6 +73,77 @@ function Card({ sq, onClick, onDouble }: { sq: SquadronInfo; onClick: (e: React.
         </div>
       </div>
     </button>
+  );
+}
+
+type OrderDef = { icon: string; label: string; key: string; run: () => void; on?: boolean; disabled?: boolean };
+
+function Orders({ engine, p, night, selected }: { engine: Engine; p: PrimaryInfo | null; night: boolean; selected: number }) {
+  const [tab, setTab] = useState<Tab>('form');
+  const input = engine.input;
+  const none = selected === 0;
+  const tabs: Record<Tab, { title: string; items: OrderDef[] }> = {
+    form: {
+      title: '진형',
+      items: [
+        { icon: '鶴', label: '학익진', key: '1', run: () => input.formation('crane') },
+        { icon: '一', label: '일자진', key: '2', run: () => input.formation('line') },
+        { icon: '長', label: '장사진', key: '3', run: () => input.formation('column') },
+        { icon: '尖', label: '첨자진', key: '4', run: () => input.formation('wedge') },
+        { icon: '戰', label: '자유교전', key: 'G', run: () => input.auto() },
+      ],
+    },
+    gun: {
+      title: '포격',
+      items: [
+        { icon: '左', label: '좌현 일제', key: 'Z', run: () => input.volley(0), disabled: none },
+        { icon: '右', label: '우현 일제', key: 'X', run: () => input.volley(1), disabled: none },
+        { icon: p?.fireMode === 'hold' ? '停' : '射', label: p?.fireMode === 'hold' ? '사격 중지' : '자유 사격', key: 'Y', run: () => input.toggleFire(), on: p?.fireMode === 'hold' },
+        { icon: '彈', label: p ? AMMO_SHORT[p.ammo] : '탄종', key: 'T', run: () => input.cycleAmmo(), on: !!p && p.ammo !== 'auto' },
+        { icon: '舷', label: '측면 정렬', key: 'U', run: () => input.presentBroadside(), disabled: none },
+      ],
+    },
+    move: {
+      title: '기동',
+      items: [
+        { icon: '進', label: '전속', key: '5', run: () => input.setSpeed(1), on: !!p && p.speedCap >= 1, disabled: none },
+        { icon: '緩', label: '반속', key: '6', run: () => input.setSpeed(0.6), on: !!p && p.speedCap >= 0.5 && p.speedCap < 1, disabled: none },
+        { icon: '微', label: '미속', key: '7', run: () => input.setSpeed(0.3), on: !!p && p.speedCap > 0 && p.speedCap < 0.5, disabled: none },
+        { icon: '止', label: '정지', key: 'H', run: () => input.hold(), disabled: none },
+        { icon: '燈', label: p && !p.lights ? '등화관제' : '등불', key: 'L', run: () => input.toggleLights(), on: !!p && !p.lights, disabled: !night && none },
+      ],
+    },
+    tactic: {
+      title: '전술',
+      items: [
+        { icon: '遠', label: '원거리', key: 'K', run: () => input.setStance('standoff'), on: p?.stance === 'standoff', disabled: none },
+        { icon: '近', label: '근접 포격', key: 'J', run: () => input.setStance('close'), on: p?.stance === 'close', disabled: none },
+        { icon: '衝', label: '충파', key: 'N', run: () => input.setStance('ram'), on: p?.stance === 'ram', disabled: none },
+        { icon: '登', label: '등선', key: 'B', run: () => input.setStance('board'), on: p?.stance === 'board', disabled: none },
+        { icon: '拒', label: '이탈·거부', key: 'P', run: () => input.repel(), on: !!p && p.repel, disabled: none },
+      ],
+    },
+  };
+  const current = tabs[tab];
+  return (
+    <>
+      <div className="orders-tabs">
+        {(Object.keys(tabs) as Tab[]).map((k) => (
+          <button key={k} className={`orders-tab ${k === tab ? 'orders-tab--on' : ''}`} onClick={() => setTab(k)}>
+            {tabs[k].title}
+          </button>
+        ))}
+      </div>
+      <div className="orders-grid">
+        {current.items.map((o) => (
+          <button key={o.label + o.key} className={`order ${o.on ? 'order--on' : ''}`} onClick={o.run} disabled={o.disabled} title={`${o.label} (${o.key})`}>
+            <span className="order-icon">{o.icon}</span>
+            {o.label}
+            <kbd>{o.key}</kbd>
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -85,14 +173,14 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
           <button className="mini-btn" onClick={onBack}>
             전투 선택
           </button>
-          <button className="mini-btn" onClick={() => setShowSettings((v) => !v)}>
+          <button className={`mini-btn ${showSettings ? 'mini-btn--on' : ''}`} onClick={() => setShowSettings((v) => !v)}>
             설정
           </button>
         </div>
       </div>
 
       <div className="balance">
-        <img className="balance-emblem" src="/ui/emblems/joseon.png" alt="조선" />
+        <div className="emblem">朝</div>
         <div className="balance-center">
           <div className="balance-row">
             <span>
@@ -112,7 +200,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             <div className="balance-fill" style={{ width: `${snap.balance * 100}%` }} />
           </div>
         </div>
-        <img className="balance-emblem" src="/ui/emblems/japan.png" alt="일본" />
+        <div className="emblem emblem--japan">倭</div>
       </div>
 
       <div className="toasts">
@@ -184,12 +272,14 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
         <div className="detail paper interactive">
           {p ? (
             <>
-              <img className="detail-portrait" src={`/ui/portraits/${selectedSquad?.portrait ?? 'portrait_admiral'}.jpg`} alt="" />
+              <img className="detail-portrait" src={`/ui/portraits/${selectedSquad?.portrait ?? snap.squadrons.find((s) => s.selected)?.portrait ?? 'portrait_admiral'}.jpg`} alt="" />
               <div className="detail-body">
                 <div className="detail-name">{p.name}</div>
                 <div className="detail-sub">
                   {p.kind} · {ACTIVITY[p.activity] ?? p.activity}
-                  {snap.selectedCount > 1 ? ` · ${snap.selectedCount}척 선택` : ''}
+                  {snap.selectedCount > 1 ? ` · ${snap.selectedCount}척` : ''} · {STANCE_SHORT[p.stance]} · {AMMO_SHORT[p.ammo]}
+                  {p.fireMode === 'hold' ? ' · 사격중지' : ''}
+                  {!p.lights && snap.night ? ' · 등화관제' : ''}
                 </div>
                 <Stat label="선체" value={p.hull} tone="hull" text={`${Math.round(p.hull * 100)}%`} />
                 <Stat label="병력" value={p.crew / p.maxCrew} tone="crew" text={`${p.crew}`} />
@@ -215,8 +305,9 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
           ) : (
             <div className="detail-empty">
               <div className="detail-name">함대 지휘</div>
-              <div>아래 부대 패를 누르거나 배를 클릭해 선택하세요.</div>
-              <div>우클릭 이동 · 적함 우클릭 공격 · 휠 확대 · WASD 이동</div>
+              <div>아래 장수 패를 누르거나 배를 클릭해 선택하십시오.</div>
+              <div>우클릭 이동 · 적함 우클릭 공격 · Z/X 일제 사격</div>
+              <div>휠 확대 · WASD 이동 · Q/E 회전</div>
             </div>
           )}
         </div>
@@ -226,24 +317,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
           ))}
         </div>
         <div className="orders paper interactive">
-          <div className="orders-grid">
-            <button className="order" onClick={() => engine.input.formation('crane')}>
-              <span className="order-icon">鶴</span>
-              학익진 <kbd>1</kbd>
-            </button>
-            <button className="order" onClick={() => engine.input.formation('line')}>
-              <span className="order-icon">一</span>
-              일자진 <kbd>2</kbd>
-            </button>
-            <button className="order" onClick={() => engine.input.auto()}>
-              <span className="order-icon">戰</span>
-              자유교전 <kbd>G</kbd>
-            </button>
-            <button className="order" onClick={() => engine.input.hold()} disabled={!snap.selectedCount}>
-              <span className="order-icon">止</span>
-              정지 <kbd>H</kbd>
-            </button>
-          </div>
+          <Orders engine={engine} p={p} night={snap.night} selected={snap.selectedCount} />
           <div className="speed">
             <button
               className={snap.paused ? 'on' : ''}
@@ -286,3 +360,5 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
     </div>
   );
 }
+
+export { AMMO_NAMES };

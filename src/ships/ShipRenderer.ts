@@ -49,11 +49,15 @@ export const SHIP_MODELS: ShipModelSpec[] = [
   { kind: 'sekibune', variant: 0, base: '/models/sekibune_v2', axis: 'z', bow: 1, waterline: 0.11 },
   { kind: 'hyeopseon', variant: 0, base: '/models/hyeopseon', axis: 'z', bow: 1, waterline: 0.1 },
   { kind: 'kobaya', variant: 0, base: '/models/kobaya', axis: 'z', bow: 1, waterline: 0.11 },
+  { kind: 'mingship', variant: 0, base: '/models/mingship', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'mingsmall', variant: 0, base: '/models/mingsmall', axis: 'z', bow: 1, waterline: 0.1 },
 ];
 
 export const FALLBACK_MODEL: Partial<Record<ShipKind, string>> = {
   hyeopseon: '/models/sekibune_v2',
   kobaya: '/models/sekibune_v2',
+  mingship: '/models/atakebune_v2',
+  mingsmall: '/models/sekibune_v2',
 };
 
 export const LOD_COUNT = 3;
@@ -138,9 +142,18 @@ async function loadModel(spec: ShipModelSpec): Promise<ModelAsset> {
   return { key: modelKey(spec.kind, spec.variant), kind: spec.kind, variant: spec.variant, lods, bounds: lods[0]!.geometry.boundingBox!.clone() };
 }
 
-export async function loadShipAssets(kinds: ShipKind[]) {
+export async function loadShipAssets(kinds: ShipKind[], onProgress?: (fraction: number) => void) {
   const specs = SHIP_MODELS.filter((m) => kinds.includes(m.kind));
-  const list = await Promise.all(specs.map((s) => loadModel(s)));
+  let loaded = 0;
+  const list = await Promise.all(
+    specs.map((s) =>
+      loadModel(s).then((a) => {
+        loaded += 1;
+        onProgress?.(loaded / specs.length);
+        return a;
+      }),
+    ),
+  );
   return Object.fromEntries(list.map((a) => [a.key, a])) as Record<string, ModelAsset>;
 }
 

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
-import type { Team } from '../sim/types';
+import type { AmmoMode, FireMode, ShipKind, Stance, Team } from '../sim/types';
 import type { ScenarioId } from '../sim/scenarios';
 
 export type SquadronInfo = {
@@ -11,6 +11,7 @@ export type SquadronInfo = {
   commander: string;
   portrait: string;
   card: string;
+  kind: ShipKind;
   total: number;
   alive: number;
   hull: number;
@@ -33,6 +34,13 @@ export type PrimaryInfo = {
   fire: number;
   activity: string;
   guns: GunInfo[];
+  fireMode: FireMode;
+  ammo: AmmoMode;
+  speedCap: number;
+  stance: Stance;
+  lights: boolean;
+  repel: boolean;
+  grappled: boolean;
 };
 
 export type GameSnapshot = {
@@ -54,6 +62,7 @@ export type GameSnapshot = {
   fps: number;
   muted: boolean;
   selectedCount: number;
+  night: boolean;
   squadrons: SquadronInfo[];
   primary: PrimaryInfo | null;
 };
@@ -65,12 +74,14 @@ export type Screen = 'select' | 'battle';
 type UiState = {
   snapshot: GameSnapshot | null;
   loading: string | null;
+  progress: number;
+  loadingScenario: ScenarioId | null;
   toasts: Toast[];
   box: SelectionBox;
   screen: Screen;
 };
 
-export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', toasts: [], box: null, screen: 'battle' }));
+export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingScenario: null, toasts: [], box: null, screen: 'battle' }));
 
 let lastJson = '';
 export function publish(snapshot: GameSnapshot, force = false) {
@@ -91,8 +102,16 @@ export function setSelectionBox(box: SelectionBox) {
   useUi.setState({ box });
 }
 
-export function setLoading(text: string | null) {
-  useUi.setState({ loading: text });
+export function setLoading(text: string | null, progress?: number, scenario?: ScenarioId) {
+  useUi.setState((s) => ({
+    loading: text,
+    progress: text === null ? 1 : progress ?? s.progress,
+    loadingScenario: scenario ?? s.loadingScenario,
+  }));
+}
+
+export function setProgress(progress: number) {
+  useUi.setState((s) => ({ progress: Math.max(s.progress, progress) }));
 }
 
 export function setScreen(screen: Screen) {

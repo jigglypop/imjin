@@ -1,9 +1,13 @@
 import { Ray, Vector2, Vector3 } from 'three/webgpu';
 import type { Engine } from './Engine';
-import type { BattleEvent, Ship } from '../sim/types';
+import type { AmmoMode, BattleEvent, Ship, Stance } from '../sim/types';
 import { setSelectionBox, pushToast } from '../state/store';
 
 const DRAG_THRESHOLD = 6;
+
+export const FORMATION_NAMES = { crane: '학익진', line: '일자진', column: '장사진', wedge: '첨자진' } as const;
+export const AMMO_NAMES: Record<AmmoMode, string> = { auto: '총통별 기본탄', hull: '대장군전 · 철환 (선체)', crew: '조란환 (병력 살상)', fire: '화전 (화공)' };
+export const STANCE_NAMES: Record<Stance, string> = { auto: '자유 교전', standoff: '원거리 포격 — 거리 유지', close: '근접 포격', ram: '충파 — 들이받아라', board: '등선 — 적선에 올라라' };
 
 export class Input {
   private dom: HTMLElement | null = null;
@@ -234,7 +238,7 @@ export class Input {
     this.engine.fx.spray.emit({ x: tx, y: 0.5, z: tz, vy: 2, life: 0.6, size0: 3, size1: 9, alpha: 0.5, r: 1, g: 0.85, b: 0.4, lift: -3 });
   }
 
-  formation(kind: 'crane' | 'line') {
+  formation(kind: 'crane' | 'line' | 'column' | 'wedge') {
     const b = this.engine.battle;
     let ids = this.selectedJoseon();
     if (!ids.length) ids = b.ships.filter((s) => s.team === 'joseon' && b.isActive(s) && s.spec.kind !== 'geobukseon').map((s) => s.id);
@@ -250,7 +254,109 @@ export class Input {
     if (!n) return;
     b.formation(ids, kind, ex / n, ez / n);
     this.engine.sound.drums(kind === 'crane' ? 3 : 2);
-    pushToast(kind === 'crane' ? '학익진 전개' : '일자진 전개');
+    pushToast(FORMATION_NAMES[kind] + ' 전개');
+  }
+
+  private commandIds(all = false) {
+    const ids = this.selectedJoseon();
+    if (ids.length || !all) return ids;
+    const b = this.engine.battle;
+    return b.ships.filter((s) => s.team === 'joseon' && b.isActive(s)).map((s) => s.id);
+  }
+
+  private need(ids: number[]) {
+    if (ids.length) return true;
+    pushToast('먼저 배를 선택하십시오');
+    return false;
+  }
+
+  volley(side: 0 | 1 | 2) {
+    const ids = this.commandIds();
+    if (!this.need(ids)) return;
+    const n = this.engine.battle.volley(ids, side);
+    this.engine.sound.drums(1);
+    pushToast(`${n}척 ${side === 0 ? '좌현' : side === 1 ? '우현' : '함수'} 일제 사격`);
+    this.engine.publish(true);
+  }
+
+  toggleFire() {
+    const ids = this.commandIds(true);
+    const b = this.engine.battle;
+    const first = b.get(ids[0] ?? 0);
+    const mode = first?.fireMode === 'hold' ? 'free' : 'hold';
+    b.configure(ids, { fireMode: mode });
+    pushToast(mode === 'hold' ? '사격 중지 — 장전 후 대기' : '자유 사격');
+    this.engine.publish(true);
+  }
+
+  cycleAmmo() {
+    const ids = this.commandIds(true);
+    const b = this.engine.battle;
+    const order: AmmoMode[] = ['auto', 'hull', 'crew', 'fire'];
+    const first = b.get(ids[0] ?? 0);
+    const next = order[(order.indexOf(first?.ammo ?? 'auto') + 1) % order.length]!;
+    b.configure(ids, { ammo: next });
+    pushToast(`탄종 — ${AMMO_NAMES[next]}`);
+    this.engine.publish(true);
+  }
+
+  setSpeed(cap: number) {
+    const ids = this.commandIds();
+    if (!this.need(ids)) return;
+    this.engine.battle.configure(ids, { speedCap: cap });
+    if (cap === 0) this.engine.battle.setOrder(ids, { type: 'hold' });
+    pushToast(cap >= 1 ? '전속 노 젓기' : cap >= 0.6 ? '반속' : cap > 0 ? '미속' : '정지');
+    this.engine.publish(true);
+  }
+
+  setStance(stance: Stance) {
+    const ids = this.commandIds();
+    if (!this.need(ids)) return;
+    const b = this.engine.battle;
+    b.configure(ids, { stance, repel: false });
+    for (const id of ids) {
+      const s = b.get(id)!;
+      if (s.order.type === 'hold' || s.order.type === 'slot' || s.order.type === 'move' || s.order.type === 'follow' || s.order.type === 'broadside') s.order = { type: 'auto' };
+    }
+    pushToast(STANCE_NAMES[stance]);
+    this.engine.publish(true);
+  }
+
+  presentBroadside() {
+    const ids = this.commandIds();
+    if (!this.need(ids)) return;
+    const b = this.engine.battle;
+    for (const id of ids) {
+      const s = b.get(id)!;
+      const target = b.get(s.targetId);
+      if (!b.isActive(target)) continue;
+      const bearing = Math.atan2(target.z - s.z, target.x - s.x);
+      const portDiff = Math.abs(Math.atan2(Math.sin(bearing + Math.PI / 2 - s.heading), Math.cos(bearing + Math.PI / 2 - s.heading)));
+      const starDiff = Math.abs(Math.atan2(Math.sin(bearing - Math.PI / 2 - s.heading), Math.cos(bearing - Math.PI / 2 - s.heading)));
+      b.setOrder([id], { type: 'broadside', targetId: target.id, side: portDiff < starDiff ? 0 : 1 });
+    }
+    pushToast('측면을 적에게 — 포문 정렬');
+    this.engine.publish(true);
+  }
+
+  toggleLights() {
+    const ids = this.commandIds(true);
+    const b = this.engine.battle;
+    const first = b.get(ids[0] ?? 0);
+    const on = !(first?.lights ?? true);
+    b.configure(ids, { lights: on });
+    pushToast(on ? '등불을 밝힌다' : '등화관제 — 불을 끈다');
+    this.engine.publish(true);
+  }
+
+  repel() {
+    const ids = this.commandIds();
+    if (!this.need(ids)) return;
+    const b = this.engine.battle;
+    b.configure(ids, { repel: true, stance: 'standoff' });
+    const cut = b.cutGrapples(ids);
+    pushToast(cut ? `갈고리를 끊고 이탈 — ${cut}척` : '등선 거부 — 적의 접현을 막는다');
+    this.engine.publish(true);
   }
 
   auto() {
@@ -299,6 +405,51 @@ export class Input {
       case 'Digit2':
         this.formation('line');
         break;
+      case 'Digit3':
+        this.formation('column');
+        break;
+      case 'Digit4':
+        this.formation('wedge');
+        break;
+      case 'Digit5':
+        this.setSpeed(1);
+        break;
+      case 'Digit6':
+        this.setSpeed(0.6);
+        break;
+      case 'Digit7':
+        this.setSpeed(0.3);
+        break;
+      case 'KeyZ':
+        this.volley(0);
+        break;
+      case 'KeyX':
+        this.volley(1);
+        break;
+      case 'KeyY':
+        this.toggleFire();
+        break;
+      case 'KeyT':
+        this.cycleAmmo();
+        break;
+      case 'KeyU':
+        this.presentBroadside();
+        break;
+      case 'KeyK':
+        this.setStance('standoff');
+        break;
+      case 'KeyJ':
+        this.setStance('close');
+        break;
+      case 'KeyN':
+        this.setStance('ram');
+        break;
+      case 'KeyB':
+        this.setStance('board');
+        break;
+      case 'KeyP':
+        this.repel();
+        break;
       case 'KeyG':
         this.auto();
         break;
@@ -313,6 +464,9 @@ export class Input {
         this.engine.publish(true);
         break;
       case 'KeyL':
+        this.toggleLights();
+        break;
+      case 'KeyI':
         this.engine.showLabels = !this.engine.showLabels;
         break;
       case 'KeyV':

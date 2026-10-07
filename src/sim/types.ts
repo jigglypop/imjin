@@ -1,8 +1,9 @@
 export type Team = 'joseon' | 'japan';
-export type ShipKind = 'panokseon' | 'geobukseon' | 'hyeopseon' | 'atakebune' | 'sekibune' | 'kobaya';
+export type ShipKind = 'panokseon' | 'geobukseon' | 'hyeopseon' | 'atakebune' | 'sekibune' | 'kobaya' | 'mingship' | 'mingsmall';
+export type Faction = 'joseon' | 'japan' | 'ming';
 export type Side = 0 | 1;
 
-export type GunType = 'cheonja' | 'jija' | 'hyeonja' | 'hwangja' | 'seungja' | 'ozutsu';
+export type GunType = 'cheonja' | 'jija' | 'hyeonja' | 'hwangja' | 'seungja' | 'ozutsu' | 'folangji' | 'hudun';
 export type AmmoType = 'arrow' | 'ball' | 'grape' | 'fire';
 
 export type GunSpec = {
@@ -28,6 +29,7 @@ export type ShipSpec = {
   kind: ShipKind;
   label: string;
   team: Team;
+  faction: Faction;
   length: number;
   beam: number;
   deck: number;
@@ -48,13 +50,19 @@ export type ShipSpec = {
   soldiers: number;
 };
 
+export type FireMode = 'free' | 'hold';
+export type AmmoMode = 'auto' | 'hull' | 'crew' | 'fire';
+export type Stance = 'auto' | 'standoff' | 'close' | 'ram' | 'board';
+
 export type Order =
   | { type: 'auto' }
   | { type: 'move'; x: number; z: number }
   | { type: 'attack'; targetId: number }
   | { type: 'hold' }
   | { type: 'anchor' }
-  | { type: 'slot'; x: number; z: number; face: number };
+  | { type: 'slot'; x: number; z: number; face: number }
+  | { type: 'follow'; leaderId: number; dx: number; dz: number }
+  | { type: 'broadside'; targetId: number; side: Side };
 
 export type GunState = {
   battery: number;
@@ -100,6 +108,15 @@ export type Ship = {
   kills: number;
   thinkTimer: number;
   aground: number;
+  fireMode: FireMode;
+  ammo: AmmoMode;
+  speedCap: number;
+  stance: Stance;
+  lights: boolean;
+  volleySide: number;
+  volleyTimer: number;
+  revealed: number;
+  repel: boolean;
 };
 
 export type Squadron = {
@@ -127,6 +144,7 @@ export type Projectile = {
   crewDamage: number;
   ammo: AmmoType;
   gun: GunType;
+  fireChance: number;
   age: number;
   alive: boolean;
 };
@@ -142,6 +160,8 @@ export type BattleEvent =
   | { type: 'ram'; a: number; b: number; x: number; z: number; power: number }
   | { type: 'board'; a: number; b: number }
   | { type: 'casualty'; ship: number; count: number; melee: boolean }
+  | { type: 'volley'; ship: number; side: number; count: number }
+  | { type: 'repelled'; a: number; b: number }
   | { type: 'sinking'; ship: number }
   | { type: 'struck'; ship: number }
   | { type: 'removed'; ship: number };
