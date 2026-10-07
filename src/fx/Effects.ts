@@ -99,6 +99,10 @@ export class Effects {
     this.group.add(this.smoke.sprite, this.fire.sprite, this.spray.sprite, this.debrisMesh, this.balls, this.arrows);
   }
 
+  lantern(x: number, y: number, z: number, intensity: number) {
+    this.sources.push({ x, y, z, intensity, decay: 1, r: 1, g: 0.6, b: 0.27, age: 0, life: 0.03, dist: 70 });
+  }
+
   private light(x: number, y: number, z: number, intensity: number, life: number, r = 1, g = 0.62, b = 0.3, dist = 140) {
     this.sources.push({ x, y, z, intensity, decay: 1, r, g, b, age: 0, life, dist });
   }

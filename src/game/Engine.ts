@@ -40,6 +40,7 @@ import { loadShipAssets, type ModelAsset } from '../ships/ShipRenderer';
 import { ShipViews } from '../ships/ShipViews';
 import { Effects } from '../fx/Effects';
 import { Crew } from '../fx/Crew';
+import { Lanterns } from '../fx/Lanterns';
 import { Battle, SIM_DT } from '../sim/battle';
 import { GUN_SPECS, STAGE_NAMES } from '../sim/catalog';
 import { buildScenario, SCENARIOS, type FleetSpawn, type ScenarioId } from '../sim/scenarios';
@@ -83,6 +84,7 @@ export class Engine {
   views!: ShipViews;
   fx!: Effects;
   crew!: Crew;
+  lanterns!: Lanterns;
   input!: Input;
   banners: SquadronBanners | null = null;
   readonly sound = sound;
@@ -176,6 +178,9 @@ export class Engine {
     this.scene.add(this.fx.group);
     this.crew = new Crew(this.views);
     this.scene.add(this.crew.group);
+    this.lanterns = new Lanterns(this.views);
+    this.lanterns.onLight = (x, y, z, i) => this.fx.lantern(x, y, z, i);
+    this.scene.add(this.lanterns.group);
     this.setupFog(sky.environment);
     this.setupPipeline();
     if (!this.options.hideLabels) {
@@ -451,6 +456,7 @@ export class Engine {
     } else this.sound.setRoar(0);
     this.fx.update(this.battle, scaled, this.camera);
     this.crew.update(this.battle, scaled, this.camera);
+    this.lanterns.update(this.battle, this.camera);
     this.updateSun();
     const el = this.renderer.domElement;
     this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.rts.cinematic);
