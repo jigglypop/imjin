@@ -205,6 +205,12 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
           <div className="balance-bar">
             <div className="balance-fill" style={{ width: `${snap.balance * 100}%` }} />
           </div>
+          {snap.tide && (
+            <div className={`tide tide--${snap.tide.dir < 0 ? 'flood' : snap.tide.dir > 0 ? 'ebb' : 'slack'}`}>
+              <span className="tide-arrow">{snap.tide.dir < 0 ? '⟵' : snap.tide.dir > 0 ? '⟶' : '·'}</span>
+              물살 {snap.tide.knots}노트 · {snap.tide.label}
+            </div>
+          )}
         </div>
         <div className="emblem emblem--japan">倭</div>
       </div>

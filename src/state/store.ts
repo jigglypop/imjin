@@ -64,6 +64,7 @@ export type GameSnapshot = {
   muted: boolean;
   selectedCount: number;
   night: boolean;
+  tide: { label: string; knots: number; dir: number } | null;
   squadrons: SquadronInfo[];
   primary: PrimaryInfo | null;
 };

@@ -1861,3 +1861,27 @@ button {
 .result-camp b {
   color: var(--ink);
 }
+
+.tide {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  padding: 3px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--ivory);
+  background: rgba(22, 18, 14, 0.72);
+  box-shadow: 0 0 0 1px rgba(205, 176, 115, 0.5);
+}
+
+.tide-arrow {
+  font-size: 16px;
+  color: var(--gold-2);
+}
+
+.tide--ebb {
+  box-shadow: 0 0 0 1px var(--gold-2), 0 0 14px rgba(205, 176, 115, 0.5);
+}

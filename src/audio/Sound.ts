@@ -23,6 +23,7 @@ export class Sound {
   private lastDegree = 4;
   private intensity = 0;
   private rumble: GainNode | null = null;
+  private roar: GainNode | null = null;
   muted = false;
   private readonly tmp = new Vector3();
   private readonly right = new Vector3();
@@ -139,6 +140,21 @@ export class Sound {
     sea.start();
     wind.start();
     rumbleSrc.start();
+    const roarSrc = this.noiseSource(true);
+    const roarLp = ctx.createBiquadFilter();
+    roarLp.type = 'lowpass';
+    roarLp.frequency.value = 380;
+    roarLp.Q.value = 0.8;
+    const roarLfo = ctx.createOscillator();
+    roarLfo.frequency.value = 0.23;
+    const roarLfoGain = ctx.createGain();
+    roarLfoGain.gain.value = 140;
+    roarLfo.connect(roarLfoGain).connect(roarLp.frequency);
+    roarLfo.start();
+    this.roar = ctx.createGain();
+    this.roar.gain.value = 0;
+    roarSrc.connect(roarLp).connect(this.roar).connect(this.ambience!);
+    roarSrc.start();
     lfo.start();
     lfo2.start();
   }
@@ -155,6 +171,10 @@ export class Sound {
     const tc = instant ? 0.01 : 1.2;
     this.music.gain.setTargetAtTime(this.mode === 'select' ? 0.42 : 0.12, t, tc);
     this.ambience.gain.setTargetAtTime(this.mode === 'select' ? 0.22 : 0.6, t, tc);
+  }
+
+  setRoar(level: number) {
+    if (this.roar && this.ctx) this.roar.gain.setTargetAtTime(level * 1.4, this.ctx.currentTime, 0.8);
   }
 
   setMuted(muted: boolean) {

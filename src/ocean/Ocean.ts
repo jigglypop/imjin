@@ -5,12 +5,19 @@ import {
   Mesh,
   MeshBasicNodeMaterial,
   Uint32BufferAttribute,
+  Vector2,
   Vector4,
   type Texture,
 } from 'three/webgpu';
 import {
   Fn,
   Loop,
+  abs,
+  atan,
+  fract,
+  log,
+  sign,
+  step,
   cameraFar,
   cameraNear,
   cameraPosition,
@@ -56,6 +63,7 @@ import type { WakeMap } from './WakeMap';
 import type { Terrain } from '../terrain/Terrain';
 import { LIGHT_COUNT, pointLights } from '../render/lights';
 import { CASCADES, FFT_N, type FFTWaves } from './FFTWaves';
+import type { CurrentField } from '../sim/current';
 
 function createOceanGeometry(segments = 400, r0 = 0.4, rMax = 46000, aspect = 1.05) {
   const growth = 1 + ((2 * Math.PI) / segments) * aspect;
@@ -107,12 +115,13 @@ export class Ocean {
   readonly whitecaps = uniform(0.6);
   readonly heightScale = uniform(0.5);
   readonly debugWake = uniform(0);
+  readonly tide = uniform(0);
   private readonly waveA: Vector4[];
   private readonly waveB: Vector4[];
   private readonly pmremNodes: ReturnType<typeof pmremTexture>[] = [];
   private waveVersion = -1;
 
-  constructor(private readonly waves: WaveField, envTexture: Texture, wake: WakeMap, terrain: Terrain, fft: FFTWaves | null) {
+  constructor(private readonly waves: WaveField, envTexture: Texture, wake: WakeMap, terrain: Terrain, fft: FFTWaves | null, current: CurrentField | null = null) {
     this.waveA = Array.from({ length: WAVE_COUNT }, () => new Vector4());
     this.waveB = Array.from({ length: WAVE_COUNT }, () => new Vector4());
     this.syncWaves();
@@ -172,8 +181,28 @@ export class Ocean {
 
     const pmremNodes = this.pmremNodes;
 
+    const flowCenter = uniform(new Vector2(current?.centerWorld.x ?? 0, current?.centerWorld.z ?? 0));
+    const flowExtent = uniform(current?.extent ?? 1);
+    const vortexData = current?.vortexData() ?? [];
+    const vortices = uniformArray(Array.from({ length: 8 }, (_, i) => new Vector4(vortexData[i * 4] ?? 0, vortexData[i * 4 + 1] ?? 0, vortexData[i * 4 + 2] ?? 1, vortexData[i * 4 + 3] ?? 0)), 'vec4');
+    const tide = this.tide;
+
     material.colorNode = Fn(() => {
       const p0 = vP0;
+      const flow = vec2(0, 0).toVar();
+      if (current) {
+        const fuv = p0.sub(flowCenter).div(flowExtent).add(0.5);
+        const inside = step(0, fuv.x).mul(step(fuv.x, 1)).mul(step(0, fuv.y)).mul(step(fuv.y, 1));
+        const f: any = texture(current.texture, fuv);
+        flow.assign(select(tide.lessThan(0), f.xy.mul(tide.negate()), f.zw.mul(tide)).mul(inside));
+      }
+      const FLOW_T = 5;
+      const ph0 = fract(uTime.div(FLOW_T));
+      const ph1 = fract(uTime.div(FLOW_T).add(0.5));
+      const w0 = float(1).sub(abs(ph0.mul(2).sub(1)));
+      const off0 = flow.mul(ph0.mul(FLOW_T));
+      const off1 = flow.mul(ph1.mul(FLOW_T));
+      const sampleFlow = (tex: any, L: number) => (current ? mix(texture(tex, p0.sub(off1).div(L)), texture(tex, p0.sub(off0).div(L)), w0) : texture(tex, p0.div(L)));
       const toCam = cameraPosition.sub(positionWorld);
       const dist = length(toCam);
       const V = toCam.div(dist);
@@ -212,9 +241,8 @@ export class Ocean {
         const g = gust(p0, float(0));
         for (let c = 0; c < CASCADES.length; c += 1) {
           const L = CASCADES[c]!.size;
-          const uvc = p0.div(L);
-          const der: any = texture(fft.derivatives[c]!, uvc);
-          const disp: any = texture(fft.displacement[c]!, uvc);
+          const der: any = sampleFlow(fft.derivatives[c]!, L);
+          const disp: any = sampleFlow(fft.displacement[c]!, L);
           const w: any = c === 0 ? float(1) : c === 1 ? g : g.mul(this.detailStrength);
           dyx.addAssign(der.x.mul(w));
           dyz.addAssign(der.y.mul(w));
@@ -327,10 +355,36 @@ export class Ocean {
       const whitecap = saturate(float(0.82).sub(jacobian).mul(2.4)).mul(this.whitecaps);
       const contact = float(1).sub(smoothstep(0, 1.4, thickness)).mul(select(thickness.lessThan(30), float(1), float(0)));
       const surf = float(1).sub(smoothstep(0.0, 4.5, depthBelow)).mul(sin(depthBelow.mul(2.2).sub(t.mul(1.6))).mul(0.35).add(0.75));
-      const coverage = whitecap.mul(1.35).mul(shore).add(contact.mul(1.2)).add(wakeFoam.mul(1.15)).add(surf.mul(select(depthBelow.greaterThan(-0.5), float(1), float(0))));
+      const speed = length(flow);
+      const whirl = float(0).toVar();
+      const core = float(0).toVar();
+      if (current) {
+        const dir = flow.div(max(speed, 0.001));
+        const along = dot(p0, dir);
+        const across = dot(p0, vec2(dir.y.negate(), dir.x));
+        const streak = texture(foamTex, vec2(along.div(42).sub(t.mul(speed).div(42)), across.div(3.4))).r;
+        whirl.addAssign(smoothstep(0.55, 0.95, streak).mul(smoothstep(1.2, 4.2, speed)).mul(0.75));
+        const base = select(tide.lessThan(0), float(0), float(4));
+        Loop(4, ({ i }) => {
+          const v: any = vortices.element(base.add(i).toInt());
+          const d = p0.sub(v.xy);
+          const r = length(d);
+          const a = atan(d.y, d.x);
+          const spin = sign(v.w);
+          const spiral = sin(a.mul(3).add(log(r.add(1)).mul(7).mul(spin)).sub(t.mul(2.4).mul(spin))).mul(0.5).add(0.5);
+          const breakup = texture(foamTex, p0.div(11).add(vec2(t.mul(0.013), t.mul(-0.009)))).r;
+          const ring = smoothstep(v.z.mul(1.6), v.z.mul(0.35), r).mul(smoothstep(v.z.mul(0.03), v.z.mul(0.2), r));
+          const k = abs(v.w).mul(abs(tide));
+          whirl.addAssign(smoothstep(0.45, 0.95, spiral).mul(smoothstep(0.3, 0.85, breakup)).mul(ring).mul(k).mul(1.15));
+          whirl.addAssign(smoothstep(0.7, 1, breakup).mul(ring).mul(k).mul(0.35));
+          core.addAssign(smoothstep(v.z.mul(0.45), float(0), r).mul(k));
+        });
+      }
+      const coverage = whitecap.mul(1.35).mul(shore).add(contact.mul(1.2)).add(wakeFoam.mul(1.15)).add(whirl).add(surf.mul(select(depthBelow.greaterThan(-0.5), float(1), float(0))));
       const foam = saturate(coverage.sub(float(1).sub(pattern)).mul(3.2));
       const foamLight = atmosphere.skyAmbient.mul(0.95).add(atmosphere.sunIrradiance.mul(NoL.mul(0.6).add(0.25)).mul(1 / Math.PI)).add(lightDiffuse.mul(1 / Math.PI));
       color.assign(mix(color, vec3(0.93, 0.95, 0.96).mul(foamLight), foam.mul(0.92)));
+      color.assign(color.mul(float(1).sub(core.clamp(0, 1).mul(0.35))));
 
       const horizonDir = normalize(vec3(V.x.negate(), 0.035, V.z.negate()));
       const fogNode = pmremTexture(envTexture, horizonDir, float(0.45));
@@ -365,6 +419,10 @@ export class Ocean {
     this.whitecaps.value = this.waves.state.whitecaps;
     this.detailStrength.value = this.waves.state.detail;
     this.waveVersion = this.waves.version;
+  }
+
+  setTide(tide: number) {
+    this.tide.value = tide;
   }
 
   update(cameraX: number, cameraZ: number) {

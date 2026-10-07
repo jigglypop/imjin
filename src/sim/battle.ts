@@ -1,6 +1,7 @@
 import { waveField } from '../ocean/waves';
 import { GUN_SHOTS, GUN_SPECS, NO_MODS, SHIP_SPECS } from './catalog';
 import { ShipGrid } from './grid';
+import type { CurrentField } from './current';
 import type {
   BattleEvent,
   GunState,
@@ -319,11 +320,12 @@ export class Battle {
     }
   }
 
-  tide: ((time: number) => { x: number; z: number }) | null = null;
+  flow: CurrentField | null = null;
+  tide = 0;
 
   step(dt: number) {
     this.time += dt;
-    if (this.tide) this.current = this.tide(this.time);
+    if (this.flow) this.tide = this.flow.tideAt(this.time);
     for (const s of this.ships) if (s.revealed > 0) s.revealed -= dt;
     this.active.joseon.length = 0;
     this.active.japan.length = 0;
@@ -668,8 +670,14 @@ export class Battle {
     s.turn += (desiredTurn - s.turn) * Math.min(1, dt * 1.4);
     s.heading = wrapAngle(s.heading + s.turn * dt);
     const drift = anchored ? 0.15 : 0;
-    const nx = s.x + Math.cos(s.heading) * s.speed * dt + (Math.cos(this.windAngle) * drift + this.current.x) * dt;
-    const nz = s.z + Math.sin(s.heading) * s.speed * dt + (Math.sin(this.windAngle) * drift + this.current.z) * dt;
+    const flow = this.flow ? this.flow.velocity(s.x, s.z, this.tide) : this.current;
+    const set = s.order.type === 'anchor' ? 0.15 : 1;
+    const nx = s.x + Math.cos(s.heading) * s.speed * dt + (Math.cos(this.windAngle) * drift + flow.x * set) * dt;
+    const nz = s.z + Math.sin(s.heading) * s.speed * dt + (Math.sin(this.windAngle) * drift + flow.z * set) * dt;
+    if (this.flow && (flow.x || flow.z)) {
+      const cross = Math.cos(s.heading) * flow.z - Math.sin(s.heading) * flow.x;
+      s.heading = wrapAngle(s.heading + cross * dt * 0.012 * (40 / s.spec.length));
+    }
     const bowX = nx + Math.cos(s.heading) * spec.length * 0.45;
     const bowZ = nz + Math.sin(s.heading) * spec.length * 0.45;
     if (this.land(bowX, bowZ) > DRAFT || this.land(nx, nz) > DRAFT) {

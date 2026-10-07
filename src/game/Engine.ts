@@ -44,10 +44,11 @@ import { GUN_SPECS, STAGE_NAMES } from '../sim/catalog';
 import { buildScenario, SCENARIOS, type FleetSpawn, type ScenarioId } from '../sim/scenarios';
 import { applyOutcome } from '../campaign/campaign';
 import { GUN_SHOTS } from '../sim/catalog';
+import { CurrentField } from '../sim/current';
 import type { BattleEvent, ShipKind } from '../sim/types';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
 import { Input } from './Input';
-import { publish, setLoading, setProgress, setReport, type GameSnapshot } from '../state/store';
+import { publish, pushToast, setLoading, setProgress, setReport, type GameSnapshot } from '../state/store';
 import { SquadronBanners } from '../ui/SquadronBanners';
 import { sound } from '../audio/Sound';
 import { Terrain } from '../terrain/Terrain';
@@ -76,6 +77,7 @@ export class Engine {
   terrain!: Terrain;
   ocean!: Ocean;
   fft: FFTWaves | null = null;
+  current: CurrentField | null = null;
   readonly wake = new WakeMap();
   views!: ShipViews;
   fx!: Effects;
@@ -108,6 +110,7 @@ export class Engine {
   private initialSquads = new Map<number, number>();
   campaign: FleetSpawn | undefined;
   private reported = false;
+  private lastTide = -1;
 
   constructor(readonly renderer: WebGPURenderer, readonly camera: PerspectiveCamera, private readonly options: EngineOptions) {
     this.rts = new RtsCamera(camera);
@@ -153,7 +156,7 @@ export class Engine {
     setLoading('함대를 배치하는 중', 0.82);
     this.placeScenario(sky);
     if ((r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) this.fft = new FFTWaves(spectrumOf(SEA_STATES[this.seaName]));
-    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft);
+    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current);
     this.scene.add(this.ocean.mesh);
     const sun = this.sun;
     sun.castShadow = true;
@@ -223,6 +226,8 @@ export class Engine {
     this.reported = false;
     setReport(null);
     this.battle.land = (x, z) => this.terrain.heightAt(x, z);
+    this.current = info.current ? new CurrentField(info.current, (x, z) => this.terrain.heightAtScenario(x, z), this.phi) : null;
+    this.battle.flow = this.current;
     const c = this.terrain.toWorld(info.view.tx, info.view.tz);
     this.battle.center = { x: c.x, z: c.z };
     this.battle.arenaRadius = 5200;
@@ -365,7 +370,7 @@ export class Engine {
     this.placeScenario(sky);
     this.scene.remove(this.ocean.mesh);
     this.fft?.setSpectrum(spectrumOf(SEA_STATES[this.seaName]));
-    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft);
+    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current);
     this.scene.add(this.ocean.mesh);
     this.views.reset(this.assets, this.battle);
     this.banners?.clear();
@@ -422,7 +427,19 @@ export class Engine {
     const follow = this.rts.followId ? this.views.worldOf(this.rts.followId) : null;
     if (this.rts.followId && !follow) this.rts.followId = 0;
     this.rts.update(dt, follow);
+    this.ocean.setTide(this.battle.tide);
+    const tideSign = Math.abs(this.battle.tide) < 0.15 ? 0 : Math.sign(this.battle.tide);
+    if (this.current && tideSign !== this.lastTide) {
+      if (tideSign === 0) pushToast('물살이 잦아든다 — 곧 물길이 바뀐다');
+      else if (this.lastTide === 0) pushToast(tideSign > 0 ? '울돌목의 물길이 뒤집혔다! 왜선이 밀려난다' : '거센 물살이 왜선을 실어 온다', tideSign > 0 ? 'good' : 'bad');
+      this.lastTide = tideSign;
+    }
     this.ocean.update(this.camera.position.x, this.camera.position.z);
+    if (this.current) {
+      const t = this.rts.target;
+      const v = this.current.velocity(t.x, t.z, this.battle.tide);
+      this.sound.setRoar(Math.min(1, Math.hypot(v.x, v.z) / 4) * Math.max(0.2, 1 - this.rts.distance / 3000));
+    } else this.sound.setRoar(0);
     this.fx.update(this.battle, scaled, this.camera);
     this.updateSun();
     const el = this.renderer.domElement;
@@ -649,6 +666,13 @@ export class Engine {
       muted: this.sound.muted,
       selectedCount: this.views.selected.size,
       night: b.night,
+      tide: this.current
+        ? {
+            label: Math.abs(b.tide) < 0.15 ? '정조 · 물살이 멎었다' : b.tide < 0 ? '밀물 · 왜선 쪽으로 흐름' : '썰물 · 물길이 뒤집혔다',
+            knots: Math.round(this.current.peakSpeed(b.tide) * 1.944 * 10) / 10,
+            dir: Math.sign(b.tide),
+          }
+        : null,
       squadrons,
       primary: primary
         ? {

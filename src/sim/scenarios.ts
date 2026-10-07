@@ -14,6 +14,7 @@ import {
 } from '../terrain/generate';
 import type { SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
+import type { CurrentSpec } from './current';
 
 export type ScenarioId = 'okpo' | 'sacheon' | 'dangpo' | 'hansan' | 'angolpo' | 'busan' | 'chilcheon' | 'myeongnyang' | 'noryang';
 
@@ -33,6 +34,7 @@ export type ScenarioInfo = {
   sky: SkyPresetName;
   sea: SeaStateName;
   night: boolean;
+  current?: CurrentSpec;
   terrain: TerrainSpec;
   joseon: Commander;
   japan: Commander;
@@ -234,6 +236,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     sea: 'rough',
     night: false,
     terrain: MYEONGNYANG_TERRAIN,
+    current: { cx: 0, cz: 0, angle: 0, peak: 4.6, reach: 4300, narrows: 330, turnAt: 330, slack: 50, floodFirst: true },
     joseon: YI_TONGJE,
     japan: { name: '도도 다카토라', title: '수군 대장', figure: 'fig_todo', portrait: 'portrait_todo', banner: '藤堂' },
     map: { x: 0.33, y: 0.64 },
@@ -256,6 +259,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     sea: 'rough',
     night: true,
     terrain: NORYANG_TERRAIN,
+    current: { cx: 0, cz: 0, angle: 0, peak: 1.9, reach: 4600, narrows: 480, turnAt: 480, slack: 70, floodFirst: true },
     joseon: YI_TONGJE,
     japan: { name: '시마즈 요시히로', title: '사쓰마 번주', figure: 'fig_shimazu', portrait: 'portrait_shimazu', banner: '島津' },
     map: { x: 0.44, y: 0.61 },
@@ -479,12 +483,6 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
       line(sq, kind, grid(x, 0, Math.PI, g.n, 5, gi % 3 === 0 ? 70 : 48, 42, 10, rand), g.name, 0);
     });
     b.retreatBelow = 0.75;
-    b.tide = (t) => {
-      const turn = 300;
-      const k = Math.max(-1, Math.min(1, (t - turn) / 40));
-      const speed = k < 0 ? -1.6 * Math.min(1, -k * 1.4) : 2.2 * k;
-      return { x: speed * ca, z: speed * sa };
-    };
   } else if (id === 'okpo') {
     const anchored = [squad('japan', '도도 본대', '도도 다카토라', 'atakebune'), squad('japan', '옥포 정박 2진', '왜장', 'sekibune'), squad('japan', '옥포 정박 3진', '왜장', 'sekibune')];
     anchorage(anchored[0]!, 18, -1500, 150, 650, 480, mix(0.5, 0.4), 0);
