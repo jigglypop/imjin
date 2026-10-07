@@ -192,7 +192,7 @@ export const SHIP_SPECS: Record<ShipKind, ShipSpec> = {
     beam: 12.5,
     deck: 5,
     height: 18,
-    maxSpeed: 4.3,
+    maxSpeed: 5.0,
     accel: 0.35,
     turnRate: 0.1,
     hull: 230,

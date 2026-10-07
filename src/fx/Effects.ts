@@ -1,6 +1,9 @@
 import {
   BoxGeometry,
+  BufferGeometry,
   Color,
+  ConeGeometry,
+  CylinderGeometry,
   DynamicDrawUsage,
   Euler,
   Group,
@@ -14,7 +17,8 @@ import {
   type Camera,
 } from 'three/webgpu';
 import type { Battle } from '../sim/battle';
-import type { BattleEvent } from '../sim/types';
+import type { AmmoType, BattleEvent } from '../sim/types';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { ShipViews } from '../ships/ShipViews';
 import { waveField } from '../ocean/waves';
 import { ParticleLayer } from './ParticleLayer';
@@ -23,6 +27,7 @@ import { pointLights } from '../render/lights';
 
 const MAX_DEBRIS = 400;
 const MAX_BALLS = 600;
+const MAX_ARROWS = 400;
 export const LIGHTS = 8;
 const OARS: Record<string, number> = { panokseon: 8, geobukseon: 8, atakebune: 13, sekibune: 11 };
 
@@ -39,6 +44,9 @@ export class Effects {
   private readonly debrisMesh: InstancedMesh;
   private readonly debris: Debris[] = [];
   private readonly balls: InstancedMesh;
+  private readonly arrows: InstancedMesh;
+  private readonly camPos = new Vector3();
+  onShake: ((amount: number) => void) | null = null;
   private readonly lights: PointLight[] = [];
   private readonly sources: LightSource[] = [];
   private readonly m = new Matrix4();
@@ -56,8 +64,8 @@ export class Effects {
   night = 0;
 
   constructor(private readonly views: ShipViews) {
-    const wood = new MeshStandardNodeMaterial({ color: new Color(0.23, 0.15, 0.09), roughness: 0.9, metalness: 0 });
-    this.debrisMesh = new InstancedMesh(new BoxGeometry(1, 0.25, 0.35), wood, MAX_DEBRIS);
+    const wood = new MeshStandardNodeMaterial({ color: new Color(0.13, 0.085, 0.05), roughness: 0.9, metalness: 0 });
+    this.debrisMesh = new InstancedMesh(new BoxGeometry(1, 0.12, 0.26), wood, MAX_DEBRIS);
     this.debrisMesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.debrisMesh.count = 0;
     this.debrisMesh.frustumCulled = false;
@@ -67,13 +75,28 @@ export class Effects {
     this.balls.instanceMatrix.setUsage(DynamicDrawUsage);
     this.balls.count = 0;
     this.balls.frustumCulled = false;
+    const shaft = new CylinderGeometry(0.07, 0.07, 2.4, 6);
+    shaft.rotateZ(Math.PI / 2);
+    const head = new ConeGeometry(0.16, 0.5, 6);
+    head.rotateZ(-Math.PI / 2);
+    head.translate(1.45, 0, 0);
+    const fins = new BoxGeometry(0.5, 0.02, 0.32);
+    fins.translate(-1.05, 0, 0);
+    const fins2 = fins.clone();
+    fins2.rotateX(Math.PI / 2);
+    const arrowGeo = mergeGeometries([shaft, head, fins, fins2].map((g) => g.toNonIndexed() as BufferGeometry));
+    const arrowMat = new MeshStandardNodeMaterial({ color: new Color(0.16, 0.11, 0.07), roughness: 0.7, metalness: 0.2 });
+    this.arrows = new InstancedMesh(arrowGeo, arrowMat, MAX_ARROWS);
+    this.arrows.instanceMatrix.setUsage(DynamicDrawUsage);
+    this.arrows.count = 0;
+    this.arrows.frustumCulled = false;
     for (let i = 0; i < LIGHTS; i += 1) {
       const l = new PointLight(0xffaa55, 0, 160, 1.6);
       l.castShadow = false;
       this.lights.push(l);
       this.group.add(l);
     }
-    this.group.add(this.smoke.sprite, this.fire.sprite, this.spray.sprite, this.debrisMesh, this.balls);
+    this.group.add(this.smoke.sprite, this.fire.sprite, this.spray.sprite, this.debrisMesh, this.balls, this.arrows);
   }
 
   private light(x: number, y: number, z: number, intensity: number, life: number, r = 1, g = 0.62, b = 0.3, dist = 140) {
@@ -90,8 +113,11 @@ export class Effects {
           this.musket(e.ship, e.dx, e.dz, e.count, battle);
           break;
         case 'hit':
-          this.hit(e.x, e.y, e.z, e.damage);
+          this.hit(e.x, e.y, e.z, e.damage, e.ammo);
           this.views.flash(e.ship);
+          break;
+        case 'ground':
+          this.ground(e.x, e.y, e.z);
           break;
         case 'splash':
           this.splash(e.x, e.z, e.size);
@@ -111,14 +137,46 @@ export class Effects {
     }
   }
 
+  private shakeAt(x: number, y: number, z: number, strength: number) {
+    const d = this.camPos.distanceTo(this.v.set(x, y, z));
+    const k = strength / (1 + (d / 90) ** 2);
+    if (k > 0.02) this.onShake?.(k);
+  }
+
   gun(x: number, y: number, z: number, dx: number, dy: number, dz: number, big: boolean) {
     const scale = big ? 1 : 0.6;
-    this.fire.emit({ x: x + dx * 1.2, y: y + dy, z: z + dz * 1.2, vx: dx * 30, vy: dy * 30, vz: dz * 30, life: 0.09, size0: 3.5 * scale, size1: 6 * scale, alpha: 1, heat: 1, drag: 8, wind: 0 });
-    for (let i = 0; i < 5; i += 1) {
-      const sp = rnd(10, 50);
-      this.fire.emit({ x, y, z, vx: dx * sp + rnd(-4, 4), vy: dy * sp + rnd(-2, 4), vz: dz * sp + rnd(-4, 4), life: rnd(0.06, 0.16), size0: 1.6 * scale, size1: 2.6 * scale, heat: 0.8, drag: 6, wind: 0 });
+    const flames = big ? 16 : 9;
+    for (let i = 0; i < flames; i += 1) {
+      const f = i / flames;
+      const sp = 18 + f * 70;
+      const spread = 2 + f * 5;
+      this.fire.emit({ x: x + dx * (0.6 + f * 1.2), y: y + dy * (0.6 + f), z: z + dz * (0.6 + f * 1.2), vx: dx * sp + rnd(-spread, spread), vy: dy * sp + rnd(-spread, spread) * 0.6, vz: dz * sp + rnd(-spread, spread), life: rnd(0.07, 0.2) * (1 - f * 0.4), size0: (4.5 - f * 2.2) * scale, size1: (7.5 - f * 3) * scale, alpha: 1, heat: 1 - f * 0.3, drag: 7, wind: 0 });
     }
-    const puffs = big ? 14 : 8;
+    this.fire.emit({ x: x + dx * 1.5, y: y + dy * 1.5, z: z + dz * 1.5, life: 0.06, size0: 7 * scale, size1: 10 * scale, alpha: 1, heat: 1, drag: 8, wind: 0 });
+    for (let i = 0; i < (big ? 14 : 7); i += 1) {
+      const sp = rnd(25, 70);
+      this.fire.emit({ x, y, z, vx: dx * sp + rnd(-6, 6), vy: dy * sp + rnd(0, 8), vz: dz * sp + rnd(-6, 6), life: rnd(0.5, 1.4), size0: 0.28, size1: 0.1, heat: 1, drag: 0.8, lift: -6, wind: 0.2 });
+    }
+    const px = -dz;
+    const pz = dx;
+    for (let i = 0; i < (big ? 18 : 10); i += 1) {
+      const a = (i / (big ? 18 : 10)) * Math.PI * 2;
+      const ux = px * Math.cos(a);
+      const uy = Math.sin(a);
+      const uz = pz * Math.cos(a);
+      const sp = rnd(9, 16) * scale;
+      this.smoke.emit({ x: x + dx * 2.2, y: y + dy * 2, z: z + dz * 2.2, vx: ux * sp + dx * 7, vy: uy * sp * 0.7 + 0.5, vz: uz * sp + dz * 7, life: rnd(5, 9), size0: 1.6 * scale, size1: rnd(8, 12) * scale, alpha: 0.7, r: 0.93, g: 0.92, b: 0.9, drag: 2.6, lift: 0.18, wind: 1 });
+    }
+    if (big) {
+      const h = waveField.heightAt(x, z, waveField.time, 6);
+      for (let i = 0; i < 14; i += 1) {
+        const a = Math.random() * Math.PI * 2;
+        this.spray.emit({ x: x + dx * 5 + Math.cos(a) * 2, y: h + 0.2, z: z + dz * 5 + Math.sin(a) * 2, vx: Math.cos(a) * rnd(2, 6) + dx * 6, vy: rnd(1.5, 4), vz: Math.sin(a) * rnd(2, 6) + dz * 6, life: rnd(0.8, 1.4), size0: 0.8, size1: rnd(2.5, 4), alpha: 0.55, r: 0.95, g: 0.97, b: 1, drag: 0.8, lift: -9.8, wind: 0.2 });
+      }
+      this.wake?.stamp(x + dx * 6, z + dz * 6, Math.atan2(dz, dx), 9, 0.5, 1, 1.2);
+    }
+    this.shakeAt(x, y, z, big ? 0.55 : 0.28);
+    const puffs = big ? 22 : 11;
     for (let i = 0; i < puffs; i += 1) {
       const sp = rnd(4, 26) * scale;
       const gray = rnd(0.78, 0.92);
@@ -129,9 +187,9 @@ export class Effects {
         vx: dx * sp + rnd(-1.5, 1.5),
         vy: dy * sp + rnd(0, 1.5),
         vz: dz * sp + rnd(-1.5, 1.5),
-        life: rnd(9, 18),
-        size0: rnd(1.5, 3) * scale,
-        size1: rnd(11, 19) * scale,
+        life: rnd(12, 24),
+        size0: rnd(2, 3.5) * scale,
+        size1: rnd(14, 26) * scale,
         alpha: rnd(0.55, 0.8),
         r: gray,
         g: gray,
@@ -142,7 +200,7 @@ export class Effects {
         heat: i < 3 ? 0.6 : 0,
       });
     }
-    this.light(x + dx * 3, y + 1, z + dz * 3, big ? 9000 : 4000, 0.16, 1, 0.7, 0.4, 120);
+    this.light(x + dx * 3, y + 1, z + dz * 3, big ? 16000 : 6500, 0.2, 1, 0.68, 0.36, big ? 180 : 120);
   }
 
   musket(id: number, dx: number, dz: number, count: number, battle: Battle) {
@@ -159,20 +217,39 @@ export class Effects {
     }
   }
 
-  hit(x: number, y: number, z: number, damage: number) {
-    const n = Math.round(5 + damage * 1.2);
+  hit(x: number, y: number, z: number, damage: number, ammo: AmmoType = 'ball') {
+    const n = Math.round(10 + damage * 1.8);
     for (let i = 0; i < n; i += 1) {
-      this.spawnDebris(x, y, z, rnd(-9, 9), rnd(3, 13), rnd(-9, 9), rnd(0.35, 1.3));
+      const big = i < 3;
+      this.spawnDebris(x, y, z, rnd(-12, 12), rnd(4, 17), rnd(-12, 12), big ? rnd(0.9, 1.8) : rnd(0.25, 0.8));
     }
-    for (let i = 0; i < 5; i += 1) {
-      this.smoke.emit({ x, y, z, vx: rnd(-4, 4), vy: rnd(1, 5), vz: rnd(-4, 4), life: rnd(3, 6), size0: 1, size1: rnd(5, 8), alpha: 0.5, r: 0.45, g: 0.38, b: 0.3, drag: 1.5, lift: 0.3 });
+    for (let i = 0; i < 9; i += 1) {
+      this.smoke.emit({ x, y, z, vx: rnd(-6, 6), vy: rnd(1, 7), vz: rnd(-6, 6), life: rnd(3, 7), size0: 1.2, size1: rnd(6, 11), alpha: 0.55, r: 0.5, g: 0.42, b: 0.32, drag: 1.8, lift: 0.3 });
     }
-    this.fire.emit({ x, y, z, life: 0.1, size0: 2.5, size1: 4, heat: 1, drag: 4, wind: 0 });
-    this.light(x, y + 1, z, 2500, 0.12);
+    for (let i = 0; i < 10; i += 1) {
+      this.fire.emit({ x, y, z, vx: rnd(-14, 14), vy: rnd(2, 12), vz: rnd(-14, 14), life: rnd(0.2, 0.6), size0: 0.22, size1: 0.08, heat: 1, drag: 1.5, lift: -8 });
+    }
+    this.fire.emit({ x, y, z, life: 0.12, size0: 3.5, size1: 6, heat: 1, drag: 4, wind: 0 });
+    if (ammo === 'fire') {
+      for (let i = 0; i < 12; i += 1) this.fire.emit({ x: x + rnd(-1, 1), y: y + rnd(0, 1.5), z: z + rnd(-1, 1), vx: rnd(-2, 2), vy: rnd(2, 6), vz: rnd(-2, 2), life: rnd(0.5, 1.2), size0: rnd(1.5, 3), size1: rnd(3, 5), heat: rnd(0.6, 1), drag: 1.5, lift: 2.5, wind: 0.5 });
+    }
+    this.light(x, y + 1, z, ammo === 'fire' ? 6000 : 3500, 0.16);
+    this.shakeAt(x, y, z, 0.3 + damage * 0.02);
+  }
+
+  ground(x: number, y: number, z: number) {
+    for (let i = 0; i < 18; i += 1) {
+      this.smoke.emit({ x, y, z, vx: rnd(-5, 5), vy: rnd(3, 12), vz: rnd(-5, 5), life: rnd(3, 6), size0: 1.2, size1: rnd(5, 9), alpha: 0.6, r: 0.42, g: 0.36, b: 0.28, drag: 1.4, lift: -1.5, wind: 0.6 });
+    }
+    for (let i = 0; i < 8; i += 1) this.spawnDebris(x, y + 0.5, z, rnd(-6, 6), rnd(5, 12), rnd(-6, 6), rnd(0.3, 0.8));
+    this.light(x, y + 1, z, 1800, 0.1);
   }
 
   splash(x: number, z: number, size: number) {
     const h = waveField.heightAt(x, z);
+    for (let i = 0; i < Math.round(14 * size); i += 1) {
+      this.spray.emit({ x: x + rnd(-0.6, 0.6), y: h + 0.3, z: z + rnd(-0.6, 0.6), vx: rnd(-0.8, 0.8), vy: rnd(14, 26) * size, vz: rnd(-0.8, 0.8), life: rnd(1.6, 2.6), size0: rnd(1, 1.8) * size, size1: rnd(3.5, 6) * size, alpha: rnd(0.6, 0.9), r: 0.95, g: 0.97, b: 1, drag: 0.25, lift: -9.8, wind: 0.25 });
+    }
     const n = Math.round(26 * size);
     for (let i = 0; i < n; i += 1) {
       const a = Math.random() * Math.PI * 2;
@@ -283,7 +360,14 @@ export class Effects {
     for (const ship of battle.ships) {
       if (!ship.alive) continue;
       const burning = ship.fire > 0.02 || (ship.sinking > 0 && ship.sinking < 0.85);
-      if (!burning) continue;
+      if (!burning) {
+        const wreck = 1 - ship.hull / ship.spec.hull;
+        if (wreck > 0.45 && ship.sinking === 0 && Math.random() < dt * wreck * 5) {
+          this.views.localToWorld(ship.id, rnd(-0.3, 0.3) * ship.spec.length, ship.spec.deck, rnd(-0.3, 0.3) * ship.spec.beam, this.p);
+          this.smoke.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: rnd(-0.5, 0.5), vy: rnd(1.5, 3), vz: rnd(-0.5, 0.5), life: rnd(8, 14), size0: 2, size1: rnd(10, 16), alpha: 0.45, r: 0.35, g: 0.33, b: 0.31, drag: 0.8, lift: 0.4, wind: 1 });
+        }
+        continue;
+      }
       const level = Math.max(ship.fire, ship.sinking > 0 ? 0.35 : 0);
       const rate = 40 * level + 6;
       let acc = (this.emitAccum.get(ship.id) ?? 0) + rate * dt;
@@ -323,14 +407,32 @@ export class Effects {
     this.smoke.update(dt, this.windX, this.windZ, camera);
     this.fire.update(dt, this.windX, this.windZ, camera);
     this.spray.update(dt, this.windX * 0.3, this.windZ * 0.3, camera);
+    this.camPos.copy(camera.position);
     let n = 0;
+    let na = 0;
     for (const p of battle.projectiles) {
-      if (n >= MAX_BALLS) break;
-      this.m.makeTranslation(p.x, p.y, p.z);
+      if (p.ammo === 'arrow' || p.ammo === 'fire') {
+        if (na >= MAX_ARROWS) continue;
+        const sp = Math.hypot(p.vx, p.vy, p.vz) || 1;
+        this.v.set(p.vx / sp, p.vy / sp, p.vz / sp);
+        this.q.setFromUnitVectors(this.xAxis, this.v);
+        const big = p.gun === 'cheonja' ? 1.6 : p.gun === 'jija' ? 1.25 : 1;
+        this.s.set(big, big, big);
+        this.p.set(p.x, p.y, p.z);
+        this.m.compose(this.p, this.q, this.s);
+        this.arrows.setMatrixAt(na++, this.m);
+        if (p.ammo === 'fire' && Math.random() < dt * 30) this.fire.emit({ x: p.x, y: p.y, z: p.z, life: rnd(0.15, 0.35), size0: 0.9, size1: 0.3, heat: 1, drag: 2, wind: 0.2 });
+        continue;
+      }
+      if (n >= MAX_BALLS) continue;
+      const r = p.ammo === 'grape' ? 0.55 : 1;
+      this.m.makeScale(r, r, r).setPosition(p.x, p.y, p.z);
       this.balls.setMatrixAt(n++, this.m);
     }
     this.balls.count = n;
     this.balls.instanceMatrix.needsUpdate = true;
+    this.arrows.count = na;
+    this.arrows.instanceMatrix.needsUpdate = true;
     const t = waveField.time;
     let k = 0;
     for (let i = this.debris.length - 1; i >= 0; i -= 1) {
@@ -374,6 +476,7 @@ export class Effects {
   }
 
   private readonly euler = new Euler();
+  private readonly xAxis = new Vector3(1, 0, 0);
 
   private updateLights(dt: number, camera: Camera) {
     const cam = camera.position;

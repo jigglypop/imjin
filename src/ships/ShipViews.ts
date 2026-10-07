@@ -164,7 +164,7 @@ export class ShipViews {
         if ((lodTarget > v.lod && dist > edge) || (lodTarget < v.lod && dist < edge)) v.lod = lodTarget;
       }
       this.updateTransform(ship, v, dt, dist);
-      if (v.visible) this.renderer.add(v.key, v.lod, v.matrix, v.origin, v.up, ship.burn, v.flash);
+      if (v.visible) this.renderer.add(v.key, v.lod, v.matrix, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), v.flash);
       const show = (this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0;
       if (show) {
         const ring = ship.team === 'joseon' ? this.ringsOwn : this.ringsEnemy;

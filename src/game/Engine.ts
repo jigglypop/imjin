@@ -39,6 +39,7 @@ import { FFTWaves } from '../ocean/FFTWaves';
 import { loadShipAssets, type ModelAsset } from '../ships/ShipRenderer';
 import { ShipViews } from '../ships/ShipViews';
 import { Effects } from '../fx/Effects';
+import { Crew } from '../fx/Crew';
 import { Battle, SIM_DT } from '../sim/battle';
 import { GUN_SPECS, STAGE_NAMES } from '../sim/catalog';
 import { buildScenario, SCENARIOS, type FleetSpawn, type ScenarioId } from '../sim/scenarios';
@@ -81,6 +82,7 @@ export class Engine {
   readonly wake = new WakeMap();
   views!: ShipViews;
   fx!: Effects;
+  crew!: Crew;
   input!: Input;
   banners: SquadronBanners | null = null;
   readonly sound = sound;
@@ -170,7 +172,10 @@ export class Engine {
     this.scene.add(this.views.group);
     this.fx = new Effects(this.views);
     this.fx.wake = this.wake;
+    this.fx.onShake = (k) => this.rts.shake(k);
     this.scene.add(this.fx.group);
+    this.crew = new Crew(this.views);
+    this.scene.add(this.crew.group);
     this.setupFog(sky.environment);
     this.setupPipeline();
     if (!this.options.hideLabels) {
@@ -373,6 +378,9 @@ export class Engine {
     this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current);
     this.scene.add(this.ocean.mesh);
     this.views.reset(this.assets, this.battle);
+    this.scene.remove(this.crew.group);
+    this.crew = new Crew(this.views);
+    this.scene.add(this.crew.group);
     this.banners?.clear();
     this.rts.setPose(this.defaultPose());
     this.paused = false;
@@ -419,6 +427,7 @@ export class Engine {
       this.sound.update(events, this.battle, this.camera, scaled);
       this.noteInterest(events);
       this.fx.handle(events, this.battle);
+      this.crew.handle(events, this.battle);
       this.input.onEvents(events);
       this.battle.events = [];
     }
@@ -441,6 +450,7 @@ export class Engine {
       this.sound.setRoar(Math.min(1, Math.hypot(v.x, v.z) / 4) * Math.max(0.2, 1 - this.rts.distance / 3000));
     } else this.sound.setRoar(0);
     this.fx.update(this.battle, scaled, this.camera);
+    this.crew.update(this.battle, scaled, this.camera);
     this.updateSun();
     const el = this.renderer.domElement;
     this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.rts.cinematic);

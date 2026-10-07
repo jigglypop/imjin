@@ -80,7 +80,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     japan: { name: '도도 다카토라', title: '수군 장수', figure: 'fig_todo', portrait: 'portrait_todo', banner: '藤堂' },
     map: { x: 0.64, y: 0.6 },
     arrows: [{ from: [0.71, 0.66], to: [0.645, 0.605], team: 'joseon' }],
-    view: { tx: 2900, tz: 300, dir: Math.PI, dist: 1150, pitch: 0.3 },
+    view: { tx: 1500, tz: 300, dir: Math.PI, dist: 1150, pitch: 0.3 },
   },
   sacheon: {
     id: 'sacheon',
@@ -102,7 +102,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     japan: { name: '사천 주둔 왜군', title: '선창 수비대', figure: 'fig_japan', portrait: 'portrait_japan', banner: '倭' },
     map: { x: 0.5, y: 0.56 },
     arrows: [{ from: [0.52, 0.64], to: [0.5, 0.565], team: 'joseon' }],
-    view: { tx: 0, tz: 900, dir: -Math.PI / 2, dist: 1050, pitch: 0.3 },
+    view: { tx: 0, tz: -200, dir: -Math.PI / 2, dist: 1050, pitch: 0.3 },
   },
   dangpo: {
     id: 'dangpo',
@@ -124,7 +124,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     japan: { name: '구루시마 미치유키', title: '수군 장수', figure: 'fig_kurushima', portrait: 'portrait_kurushima', banner: '來島' },
     map: { x: 0.56, y: 0.63 },
     arrows: [{ from: [0.6, 0.68], to: [0.565, 0.635], team: 'joseon' }],
-    view: { tx: 1200, tz: 1300, dir: -2.2, dist: 1050, pitch: 0.3 },
+    view: { tx: 300, tz: 200, dir: -2.2, dist: 1050, pitch: 0.3 },
   },
   hansan: {
     id: 'hansan',
@@ -171,7 +171,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     japan: { name: '구키 요시타카', title: '수군 대장', figure: 'fig_kuki', portrait: 'portrait_kuki', banner: '九鬼' },
     map: { x: 0.67, y: 0.5 },
     arrows: [{ from: [0.63, 0.58], to: [0.665, 0.505], team: 'joseon' }],
-    view: { tx: 200, tz: 900, dir: -Math.PI / 2, dist: 1150, pitch: 0.3 },
+    view: { tx: 200, tz: 150, dir: -Math.PI / 2, dist: 1150, pitch: 0.3 },
   },
   busan: {
     id: 'busan',
@@ -391,8 +391,8 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
   if (id === 'hansan') {
     const cx = 700;
     const cz = -250;
-    const facing = Math.PI + Math.atan2(-2400 - cz, 3000 - cx);
-    const allArc = arc(cx, cz, 1150, facing, 2.25, 53);
+    const facing = Math.PI + Math.atan2(-850 - cz, 1350 - cx);
+    const allArc = arc(cx, cz, 950, facing, 2.35, 53);
     const sqYi = squad('joseon', '전라좌수영 본대', '통제사 이순신', 'panokseon');
     const sqTurtle = squad('joseon', '돌격 거북선', '돌격장 이기남', 'geobukseon');
     const sqEok = squad('joseon', '전라우수영', '전라우수사 이억기', 'panokseon');
@@ -403,7 +403,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     const turtleAt = { x: cx - 350, z: cz };
     line(sqTurtle, 'geobukseon', [-1, 0, 1].map((k) => ({ x: turtleAt.x + 160, z: turtleAt.z + k * 90, h: facing + Math.PI })), '거북선');
     for (const sq of [sqYi, sqEok, sqWon]) slotAll(sq);
-    const jHeading = Math.atan2(cz - -2400, cx - 3000);
+    const jHeading = Math.atan2(cz - -850, cx - 1350);
     const japanSquads = [
       { name: '와키자카 본대', cmd: '와키자카 야스하루', kind: 'atakebune' as ShipKind, n: 12 },
       { name: '와키자카 사베에 대', cmd: '와키자카 사베에', kind: 'atakebune' as ShipKind, n: 12 },
@@ -414,9 +414,9 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     ];
     japanSquads.forEach((g, gi) => {
       const sq = squad('japan', g.name, g.cmd, g.kind);
-      const back = gi * 230;
-      const cxj = 3000 - Math.cos(jHeading) * back + (gi % 2 ? 120 : -120) * Math.sin(jHeading);
-      const czj = -2400 - Math.sin(jHeading) * back - (gi % 2 ? 120 : -120) * Math.cos(jHeading);
+      const back = gi * 190;
+      const cxj = 1350 - Math.cos(jHeading) * back + (gi % 2 ? 120 : -120) * Math.sin(jHeading);
+      const czj = -850 - Math.sin(jHeading) * back - (gi % 2 ? 120 : -120) * Math.cos(jHeading);
       const spacing = g.kind === 'atakebune' ? 70 : g.kind === 'sekibune' ? 50 : 34;
       line(sq, g.kind, grid(cxj, czj, jHeading, g.n, 4, spacing, spacing * 0.9, 12, rand), g.name, gi === 0 ? 0 : -1);
     });
@@ -479,7 +479,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     japanSquads.forEach((g, gi) => {
       const kind: ShipKind = gi % 3 === 0 ? 'atakebune' : 'sekibune';
       const sq = squad('japan', g.name, g.cmd, kind);
-      const x = 1400 + gi * 520;
+      const x = 300 + gi * 430;
       line(sq, kind, grid(x, 0, Math.PI, g.n, 5, gi % 3 === 0 ? 70 : 48, 42, 10, rand), g.name, 0);
     });
     b.retreatBelow = 0.75;
@@ -493,10 +493,10 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     const sqJung = squad('joseon', '중위 · 녹도', '녹도만호 정운', 'panokseon');
     const sqWon = squad('joseon', '경상우수영', '경상우수사 원균', 'panokseon');
     const sqHyeop = squad('joseon', '협선대', '협선장', 'hyeopseon');
-    line(sqYi, 'panokseon', grid(2700, 300, head, 14, 7, 70, 62, 10, rand), '좌수영', 3);
-    line(sqJung, 'panokseon', grid(3100, -380, head, 10, 5, 70, 62, 10, rand), '중위');
-    line(sqWon, 'panokseon', grid(3150, 980, head, 4, 4, 70, 62, 10, rand), '경상우수영');
-    line(sqHyeop, 'hyeopseon', grid(3600, 300, head, 17, 6, 34, 32, 8, rand), '협선');
+    line(sqYi, 'panokseon', grid(1150, 300, head, 14, 7, 70, 62, 10, rand), '좌수영', 3);
+    line(sqJung, 'panokseon', grid(1550, -380, head, 10, 5, 70, 62, 10, rand), '중위');
+    line(sqWon, 'panokseon', grid(1600, 980, head, 4, 4, 70, 62, 10, rand), '경상우수영');
+    line(sqHyeop, 'hyeopseon', grid(2050, 300, head, 17, 6, 34, 32, 8, rand), '협선');
     b.retreatBelow = 0.45;
   } else if (id === 'sacheon') {
     const sq1 = squad('japan', '사천 선창 대선', '왜장', 'atakebune');
@@ -508,10 +508,10 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     const sqTurtle = squad('joseon', '돌격 거북선', '돌격장 이기남', 'geobukseon');
     const sqJung = squad('joseon', '중위장', '광양현감 어영담', 'panokseon');
     const sqWon = squad('joseon', '경상우수영', '경상우수사 원균', 'panokseon');
-    line(sqYi, 'panokseon', grid(0, 1300, head, 12, 6, 70, 64, 10, rand), '좌수영', 2);
-    line(sqJung, 'panokseon', grid(-700, 1750, head, 10, 5, 70, 64, 10, rand), '중위');
-    line(sqWon, 'panokseon', grid(700, 1750, head, 3, 3, 70, 64, 10, rand), '경상우수영');
-    line(sqTurtle, 'geobukseon', [{ x: 0, z: 950, h: head }], '거북선');
+    line(sqYi, 'panokseon', grid(0, 150, head, 12, 6, 70, 64, 10, rand), '좌수영', 2);
+    line(sqJung, 'panokseon', grid(-700, 600, head, 10, 5, 70, 64, 10, rand), '중위');
+    line(sqWon, 'panokseon', grid(700, 600, head, 3, 3, 70, 64, 10, rand), '경상우수영');
+    line(sqTurtle, 'geobukseon', [{ x: 0, z: -200, h: head }], '거북선');
     b.retreatBelow = 0;
   } else if (id === 'dangpo') {
     const sqFlag = squad('japan', '구루시마 대장선단', '구루시마 미치유키', 'atakebune');
@@ -522,9 +522,9 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     const sqYi = squad('joseon', '전라좌수영 본대', '좌수사 이순신', 'panokseon');
     const sqTurtle = squad('joseon', '돌격 거북선', '돌격장 이기남', 'geobukseon');
     const sqKwon = squad('joseon', '중위장', '순천부사 권준', 'panokseon');
-    line(sqYi, 'panokseon', grid(1300, 1500, head, 14, 7, 70, 64, 10, rand), '좌수영', 3);
-    line(sqKwon, 'panokseon', grid(1900, 1950, head, 10, 5, 70, 64, 10, rand), '중위');
-    line(sqTurtle, 'geobukseon', [{ x: 950, z: 1050, h: head }, { x: 1120, z: 980, h: head }], '거북선');
+    line(sqYi, 'panokseon', grid(250, 200, head, 14, 7, 70, 64, 10, rand), '좌수영', 3);
+    line(sqKwon, 'panokseon', grid(850, 650, head, 10, 5, 70, 64, 10, rand), '중위');
+    line(sqTurtle, 'geobukseon', [{ x: -100, z: -250, h: head }, { x: 70, z: -320, h: head }], '거북선');
     b.retreatBelow = 0;
   } else if (id === 'angolpo') {
     const sqKuki = squad('japan', '구키 본대', '구키 요시타카', 'atakebune');
@@ -538,10 +538,10 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     const sqTurtle = squad('joseon', '돌격 거북선', '돌격장 이기남', 'geobukseon');
     const sqEok = squad('joseon', '전라우수영', '전라우수사 이억기', 'panokseon');
     const sqWon = squad('joseon', '경상우수영', '경상우수사 원균', 'panokseon');
-    line(sqYi, 'panokseon', grid(0, 900, head, 22, 8, 70, 62, 10, rand), '좌수영', 4);
-    line(sqEok, 'panokseon', grid(-900, 1500, head, 24, 8, 70, 62, 10, rand), '우수영', 0);
-    line(sqWon, 'panokseon', grid(900, 1500, head, 6, 6, 70, 62, 10, rand), '경상우수영');
-    line(sqTurtle, 'geobukseon', [{ x: -100, z: 520, h: head }, { x: 100, z: 520, h: head }], '거북선');
+    line(sqYi, 'panokseon', grid(0, 150, head, 22, 8, 70, 62, 10, rand), '좌수영', 4);
+    line(sqEok, 'panokseon', grid(-900, 750, head, 24, 8, 70, 62, 10, rand), '우수영', 0);
+    line(sqWon, 'panokseon', grid(900, 750, head, 6, 6, 70, 62, 10, rand), '경상우수영');
+    line(sqTurtle, 'geobukseon', [{ x: -100, z: -250, h: head }, { x: 100, z: -250, h: head }], '거북선');
     b.retreatBelow = 0.5;
   } else if (id === 'chilcheon') {
     b.night = true;
@@ -563,14 +563,14 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     const turtles = squad('joseon', '거북선', '돌격장', 'geobukseon');
     line(turtles, 'geobukseon', [{ x: 520, z: -1600, h: -Math.PI / 2 }, { x: 650, z: -1650, h: -Math.PI / 2 }, { x: 780, z: -1600, h: -Math.PI / 2 }], '거북선');
     const raid = [
-      { name: '도도 선봉', cmd: '도도 다카토라', n: 70, x: 650, z: -6200, h: Math.PI / 2 },
-      { name: '와키자카 대', cmd: '와키자카 야스하루', n: 70, x: 500, z: -7400, h: Math.PI / 2 },
-      { name: '가토 대', cmd: '가토 요시아키', n: 60, x: 800, z: -8300, h: Math.PI / 2 },
-      { name: '시마즈 대', cmd: '시마즈 요시히로', n: 75, x: 650, z: 6200, h: -Math.PI / 2 },
-      { name: '고니시 대', cmd: '고니시 유키나가', n: 75, x: 500, z: 7400, h: -Math.PI / 2 },
-      { name: '구루시마 대', cmd: '구루시마 미치후사', n: 50, x: 800, z: 8300, h: -Math.PI / 2 },
-      { name: '서쪽 매복', cmd: '모리 다카마사', n: 50, x: -1800, z: -4200, h: 0.9 },
-      { name: '남서 우회대', cmd: '왜장', n: 50, x: -1600, z: 4700, h: -0.8 },
+      { name: '도도 선봉', cmd: '도도 다카토라', n: 70, x: 650, z: -3300, h: Math.PI / 2 },
+      { name: '와키자카 대', cmd: '와키자카 야스하루', n: 70, x: 500, z: -4300, h: Math.PI / 2 },
+      { name: '가토 대', cmd: '가토 요시아키', n: 60, x: 800, z: -5200, h: Math.PI / 2 },
+      { name: '시마즈 대', cmd: '시마즈 요시히로', n: 75, x: 650, z: 3900, h: -Math.PI / 2 },
+      { name: '고니시 대', cmd: '고니시 유키나가', n: 75, x: 500, z: 4900, h: -Math.PI / 2 },
+      { name: '구루시마 대', cmd: '구루시마 미치후사', n: 50, x: 800, z: 5800, h: -Math.PI / 2 },
+      { name: '서쪽 매복', cmd: '모리 다카마사', n: 50, x: -1500, z: -3600, h: 0.9 },
+      { name: '남서 우회대', cmd: '왜장', n: 50, x: -1400, z: 4300, h: -0.8 },
     ];
     raid.forEach((g, gi) => {
       const kindOf = mix(0.18, 0.55);
@@ -600,7 +600,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
       const cmd = q === 0 ? '시마즈 요시히로' : q === 1 ? '다치바나 무네시게' : q === 2 ? '소 요시토시' : q === 3 ? '데라자와 마사나리' : '왜장';
       const sq = squad('japan', q < 4 ? `${cmd.split(' ')[0]} 대` : `사쓰마 ${q + 1}진`, cmd, q % 4 === 0 ? 'atakebune' : 'sekibune');
       const kindOf = mix(0.22, 0.6);
-      grid(1200 + q * 330, (q % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, `${sq.name} ${i + 1}`, i === 0));
+      grid(450 + q * 300, (q % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, `${sq.name} ${i + 1}`, i === 0));
     }
     b.retreatBelow = 0.55;
   }

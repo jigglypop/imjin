@@ -98,6 +98,13 @@ export class RtsCamera {
     this.keys.delete(e.code);
   };
 
+  private shakeAmount = 0;
+  private shakeClock = 0;
+
+  shake(amount: number) {
+    this.shakeAmount = Math.min(1.6, this.shakeAmount + amount);
+  }
+
   update(dt: number, followTarget: Vector3 | null) {
     const k = this.keys;
     const pan = this.goal.distance * 0.9 * dt;
@@ -147,6 +154,15 @@ export class RtsCamera {
     py = Math.max(py, water + 2.2, land + 12);
     this.camera.position.set(px, py, pz);
     this.camera.lookAt(this.target.x, lookY, this.target.z);
+    if (this.shakeAmount > 0.002) {
+      this.shakeClock += dt;
+      const a = this.shakeAmount * Math.min(1, this.distance / 60);
+      const t = this.shakeClock;
+      this.camera.position.x += (Math.sin(t * 41) + Math.sin(t * 23.7)) * a * 0.18;
+      this.camera.position.y += (Math.sin(t * 37.3) + Math.sin(t * 19.1)) * a * 0.14;
+      this.camera.rotateZ((Math.sin(t * 29.5) * a) / 160);
+      this.shakeAmount *= Math.exp(-dt * 7);
+    }
     this.camera.updateMatrixWorld();
   }
 }

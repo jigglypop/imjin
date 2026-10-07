@@ -367,7 +367,7 @@ export class Battle {
       const d = Math.hypot(o.x - s.x, o.z - s.z);
       if (!this.canSee(o, d)) continue;
       let score = d;
-      if (preferBoardable && !o.spec.boardable) score += 260;
+      if (preferBoardable && !o.spec.boardable) score += 700;
       if (o.id === s.targetId) score -= 60;
       if (o.spec.kind === 'hyeopseon') score += 120;
       if (score < bestScore) {
