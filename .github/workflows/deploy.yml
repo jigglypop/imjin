@@ -1,0 +1,58 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ap-northeast-2
+  BUCKET: imjin1592.com
+  DISTRIBUTION: EARA00UGW51K0
+  ROLE: arn:aws:iam::960243570517:role/imjin1592-github-deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx vite build
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload hashed bundles
+        run: aws s3 sync dist/assets "s3://$BUCKET/assets" --delete --cache-control "public,max-age=31536000,immutable"
+
+      - name: Upload static assets
+        run: |
+          aws s3 sync dist "s3://$BUCKET" --delete --size-only \
+            --exclude "index.html" --exclude "assets/*" --exclude "*.glb" \
+            --cache-control "public,max-age=86400"
+          aws s3 sync dist "s3://$BUCKET" --size-only \
+            --exclude "*" --include "*.glb" \
+            --content-type "model/gltf-binary" --cache-control "public,max-age=86400"
+
+      - name: Upload index
+        run: aws s3 cp dist/index.html "s3://$BUCKET/index.html" --content-type "text/html; charset=utf-8" --cache-control "no-cache"
+
+      - name: Invalidate CDN
+        run: aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION" --paths "/*"

@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+assets-src/tasks.json
+*.log
+shots/
+assets-src/models/
+assets-src/lods/
+assets-src/unused/
+assets-src/textures-orig/
+assets-src/concepts/

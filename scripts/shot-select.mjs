@@ -1,0 +1,16 @@
+import { chromium } from 'playwright-core';
+const out = process.argv[2] ?? 'shots/select.png';
+const tab = process.argv[3];
+const browser = await chromium.launch({ channel: 'msedge', headless: true, args: ['--enable-unsafe-webgpu'] });
+const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+const logs = [];
+page.on('console', (m) => logs.push(`[${m.type()}] ${m.text()}`));
+page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}`));
+await page.goto('http://127.0.0.1:5291/');
+await page.waitForSelector('.select-title', { timeout: 30000 });
+if (tab) await page.click(`text=${tab}`);
+await page.waitForTimeout(2500);
+await page.screenshot({ path: out });
+console.log('saved', out);
+console.log(logs.filter((l) => !l.includes('vite') && !l.includes('DevTools')).slice(-10).join('\n'));
+await browser.close();

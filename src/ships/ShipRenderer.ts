@@ -1,0 +1,267 @@
+import {
+  Box3,
+  BufferAttribute,
+  BufferGeometry,
+  DynamicDrawUsage,
+  Float32BufferAttribute,
+  Group,
+  InstancedBufferAttribute,
+  InstancedMesh,
+  Matrix4,
+  Mesh,
+  MeshStandardMaterial,
+  MeshStandardNodeMaterial,
+  Vector3,
+  type Texture,
+} from 'three/webgpu';
+import {
+  dot,
+  float,
+  instancedDynamicBufferAttribute,
+  mix,
+  mx_noise_float,
+  positionWorld,
+  smoothstep,
+  texture,
+  uv,
+  vec3,
+} from 'three/tsl';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import type { ShipKind } from '../sim/types';
+import { SHIP_SPECS } from '../sim/catalog';
+
+export type ShipModelSpec = {
+  kind: ShipKind;
+  variant: number;
+  base: string;
+  axis: 'x' | 'z';
+  bow: 1 | -1;
+  waterline: number;
+};
+
+export const SHIP_MODELS: ShipModelSpec[] = [
+  { kind: 'panokseon', variant: 0, base: '/models/panokseon_a', axis: 'x', bow: -1, waterline: 0.13 },
+  { kind: 'panokseon', variant: 1, base: '/models/panokseon_b', axis: 'x', bow: -1, waterline: 0.13 },
+  { kind: 'panokseon', variant: 2, base: '/models/panokseon_c', axis: 'x', bow: 1, waterline: 0.13 },
+  { kind: 'geobukseon', variant: 0, base: '/models/geobukseon_v2', axis: 'z', bow: 1, waterline: 0.22 },
+  { kind: 'atakebune', variant: 0, base: '/models/atakebune_v2', axis: 'z', bow: 1, waterline: 0.12 },
+  { kind: 'sekibune', variant: 0, base: '/models/sekibune_v2', axis: 'z', bow: 1, waterline: 0.11 },
+  { kind: 'hyeopseon', variant: 0, base: '/models/hyeopseon', axis: 'z', bow: 1, waterline: 0.1 },
+  { kind: 'kobaya', variant: 0, base: '/models/kobaya', axis: 'z', bow: 1, waterline: 0.11 },
+];
+
+export const FALLBACK_MODEL: Partial<Record<ShipKind, string>> = {
+  hyeopseon: '/models/sekibune_v2',
+  kobaya: '/models/sekibune_v2',
+};
+
+export const LOD_COUNT = 3;
+
+export type LodAsset = { geometry: BufferGeometry; source: MeshStandardMaterial };
+export type ModelAsset = { key: string; kind: ShipKind; variant: number; lods: LodAsset[]; bounds: Box3 };
+
+export const modelKey = (kind: ShipKind, variant: number) => `${kind}#${variant}`;
+
+const loader = new GLTFLoader();
+loader.setMeshoptDecoder(MeshoptDecoder);
+
+function findMesh(root: Group) {
+  let found: Mesh | null = null;
+  root.updateMatrixWorld(true);
+  root.traverse((o) => {
+    if (!found && (o as Mesh).isMesh) found = o as Mesh;
+  });
+  if (!found) throw new Error('model has no mesh');
+  return found as Mesh;
+}
+
+function toFloat(attr: BufferAttribute, itemSize: number) {
+  const out = new Float32Array(attr.count * itemSize);
+  for (let i = 0; i < attr.count; i += 1) {
+    out[i * itemSize] = attr.getX(i);
+    if (itemSize > 1) out[i * itemSize + 1] = attr.getY(i);
+    if (itemSize > 2) out[i * itemSize + 2] = attr.getZ(i);
+  }
+  return new Float32BufferAttribute(out, itemSize);
+}
+
+function bake(mesh: Mesh, matrix: Matrix4) {
+  const src = mesh.geometry;
+  const geo = new BufferGeometry();
+  geo.setAttribute('position', toFloat(src.getAttribute('position') as BufferAttribute, 3));
+  if (src.getAttribute('normal')) geo.setAttribute('normal', toFloat(src.getAttribute('normal') as BufferAttribute, 3));
+  if (src.getAttribute('uv')) geo.setAttribute('uv', toFloat(src.getAttribute('uv') as BufferAttribute, 2));
+  if (src.index) geo.setIndex(src.index);
+  geo.applyMatrix4(matrix);
+  if (!geo.getAttribute('normal')) geo.computeVertexNormals();
+  geo.computeBoundingSphere();
+  geo.computeBoundingBox();
+  return geo;
+}
+
+async function loadGltf(url: string) {
+  const gltf = await loader.loadAsync(url);
+  return gltf.scene as Group;
+}
+
+async function loadModel(spec: ShipModelSpec): Promise<ModelAsset> {
+  let base = spec.base;
+  let scenes: (Group | null)[];
+  try {
+    scenes = await Promise.all([loadGltf(`${base}.glb`), loadGltf(`${base}_lod1.glb`).catch(() => null), loadGltf(`${base}_lod2.glb`).catch(() => null)]);
+  } catch (err) {
+    const fallback = FALLBACK_MODEL[spec.kind];
+    if (!fallback) throw err;
+    base = fallback;
+    scenes = await Promise.all([loadGltf(`${base}.glb`), loadGltf(`${base}_lod1.glb`).catch(() => null), loadGltf(`${base}_lod2.glb`).catch(() => null)]);
+    spec = { ...spec, axis: 'z', bow: 1, waterline: 0.27 };
+  }
+  const lod0 = findMesh(scenes[0]!);
+  const orient = new Matrix4().makeRotationY(spec.axis === 'z' ? (spec.bow > 0 ? Math.PI / 2 : -Math.PI / 2) : spec.bow > 0 ? 0 : Math.PI);
+  const probe = bake(lod0, new Matrix4().multiplyMatrices(orient, lod0.matrixWorld));
+  const box = probe.boundingBox!.clone();
+  const length = SHIP_SPECS[spec.kind].length;
+  const scale = length / (box.max.x - box.min.x);
+  const center = box.getCenter(new Vector3());
+  const height = box.max.y - box.min.y;
+  const fix = new Matrix4()
+    .makeTranslation(-center.x * scale, -(box.min.y + height * spec.waterline) * scale, -center.z * scale)
+    .multiply(new Matrix4().makeScale(scale, scale, scale));
+  const lods: LodAsset[] = [];
+  for (let i = 0; i < LOD_COUNT; i += 1) {
+    const scene = scenes[i] ?? scenes[0]!;
+    const mesh = findMesh(scene);
+    const m = new Matrix4().multiplyMatrices(fix, new Matrix4().multiplyMatrices(orient, mesh.matrixWorld));
+    lods.push({ geometry: bake(mesh, m), source: mesh.material as MeshStandardMaterial });
+  }
+  return { key: modelKey(spec.kind, spec.variant), kind: spec.kind, variant: spec.variant, lods, bounds: lods[0]!.geometry.boundingBox!.clone() };
+}
+
+export async function loadShipAssets(kinds: ShipKind[]) {
+  const specs = SHIP_MODELS.filter((m) => kinds.includes(m.kind));
+  const list = await Promise.all(specs.map((s) => loadModel(s)));
+  return Object.fromEntries(list.map((a) => [a.key, a])) as Record<string, ModelAsset>;
+}
+
+function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, b: InstancedBufferAttribute) {
+  const m = new MeshStandardNodeMaterial();
+  m.side = src.side;
+  if (src.normalMap) {
+    m.normalMap = src.normalMap;
+    m.normalScale.copy(src.normalScale);
+    src.normalMap.anisotropy = 16;
+  }
+  m.metalness = 0;
+  m.roughness = 1;
+  const map = src.map as Texture | null;
+  if (map) map.anisotropy = 16;
+  const A: any = instancedDynamicBufferAttribute(a, 'vec4');
+  const B: any = instancedDynamicBufferAttribute(b, 'vec4');
+  const origin = A.xyz;
+  const burn = A.w;
+  const up = B.xyz;
+  const flash = B.w;
+  const baseColor = map ? texture(map, uv()).rgb : vec3(src.color.r, src.color.g, src.color.b);
+  const rough = src.roughnessMap ? texture(src.roughnessMap, uv()).g : float(0.85);
+  const shipY = dot(positionWorld.sub(origin), up);
+  const wet = float(1).sub(smoothstep(-0.1, 0.9, shipY));
+  const under = float(1).sub(smoothstep(-0.9, -0.05, shipY));
+  const noise = mx_noise_float(positionWorld.mul(0.35)).mul(0.5).add(0.5);
+  const charAmount = smoothstep(0.35, 0.75, noise.add(burn.mul(0.9)).sub(0.45)).mul(burn);
+  const ember = smoothstep(0.62, 0.95, mx_noise_float(positionWorld.mul(1.3).add(vec3(0, burn.mul(4), 0))).mul(0.5).add(0.5));
+  const wetColor = baseColor.mul(mix(float(1), float(0.55), wet));
+  const algae = mix(wetColor, wetColor.mul(vec3(0.42, 0.52, 0.36)), under.mul(0.85));
+  const charred = mix(algae, vec3(0.025, 0.02, 0.018), charAmount.mul(0.9));
+  m.colorNode = charred.mul(float(1).add(flash.mul(2)));
+  m.roughnessNode = mix(rough.mul(0.95).add(0.05), float(0.25), wet.mul(0.8)).max(0.05);
+  m.emissiveNode = vec3(1.0, 0.32, 0.06).mul(charAmount.mul(burn).mul(ember).mul(4));
+  return m;
+}
+
+type Batch = { mesh: InstancedMesh; a: InstancedBufferAttribute; b: InstancedBufferAttribute; count: number };
+
+export class ShipRenderer {
+  readonly group = new Group();
+  private batches = new Map<string, Batch[]>();
+  private capacity = new Map<string, number>();
+
+  constructor(private assets: Record<string, ModelAsset>, capacity: Map<string, number>) {
+    this.capacity = capacity;
+    this.build();
+  }
+
+  has(key: string) {
+    return this.batches.has(key);
+  }
+
+  private build() {
+    for (const child of [...this.group.children]) this.group.remove(child);
+    this.batches.clear();
+    for (const [key, asset] of Object.entries(this.assets)) {
+      const cap = Math.max(1, this.capacity.get(key) ?? 0);
+      if (!this.capacity.get(key)) continue;
+      this.batches.set(
+        key,
+        asset.lods.map((lod, level) => {
+          const a = new InstancedBufferAttribute(new Float32Array(cap * 4), 4);
+          const b = new InstancedBufferAttribute(new Float32Array(cap * 4), 4);
+          a.setUsage(DynamicDrawUsage);
+          b.setUsage(DynamicDrawUsage);
+          const mesh = new InstancedMesh(lod.geometry, createMaterial(lod.source, a, b), cap);
+          mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+          mesh.count = 0;
+          mesh.frustumCulled = false;
+          mesh.castShadow = level < 2;
+          mesh.receiveShadow = level < 2;
+          this.group.add(mesh);
+          return { mesh, a, b, count: 0 };
+        }),
+      );
+    }
+  }
+
+  begin() {
+    for (const list of this.batches.values()) for (const batch of list) batch.count = 0;
+  }
+
+  add(key: string, lod: number, matrix: Matrix4, origin: Vector3, up: Vector3, burn: number, flash: number) {
+    const batch = this.batches.get(key)?.[lod];
+    if (!batch || batch.count >= batch.mesh.instanceMatrix.count) return;
+    const i = batch.count++;
+    batch.mesh.setMatrixAt(i, matrix);
+    const A = batch.a.array as Float32Array;
+    const B = batch.b.array as Float32Array;
+    A[i * 4] = origin.x;
+    A[i * 4 + 1] = origin.y;
+    A[i * 4 + 2] = origin.z;
+    A[i * 4 + 3] = burn;
+    B[i * 4] = up.x;
+    B[i * 4 + 1] = up.y;
+    B[i * 4 + 2] = up.z;
+    B[i * 4 + 3] = flash;
+  }
+
+  end() {
+    for (const list of this.batches.values()) {
+      for (const batch of list) {
+        batch.mesh.count = batch.count;
+        if (batch.count === 0) continue;
+        batch.mesh.instanceMatrix.clearUpdateRanges();
+        batch.mesh.instanceMatrix.addUpdateRange(0, batch.count * 16);
+        batch.mesh.instanceMatrix.needsUpdate = true;
+        for (const attr of [batch.a, batch.b]) {
+          attr.clearUpdateRanges();
+          attr.addUpdateRange(0, batch.count * 4);
+          attr.needsUpdate = true;
+        }
+      }
+    }
+  }
+
+  stats() {
+    const out: Record<string, number[]> = {};
+    for (const [k, list] of this.batches) out[k] = list.map((b) => b.count);
+    return out;
+  }
+}
