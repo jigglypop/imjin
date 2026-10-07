@@ -41,8 +41,8 @@ export type ShipModelSpec = {
 };
 
 export const SHIP_MODELS: ShipModelSpec[] = [
-  { kind: 'panokseon', variant: 0, base: '/models/panokseon_a', axis: 'x', bow: -1, waterline: 0.13 },
-  { kind: 'panokseon', variant: 1, base: '/models/panokseon_b', axis: 'x', bow: -1, waterline: 0.13 },
+  { kind: 'panokseon', variant: 0, base: '/models/panokseon_a', axis: 'x', bow: -1, waterline: 0.155 },
+  { kind: 'panokseon', variant: 1, base: '/models/panokseon_b', axis: 'x', bow: -1, waterline: 0.15 },
   { kind: 'panokseon', variant: 2, base: '/models/panokseon_c', axis: 'x', bow: 1, waterline: 0.13 },
   { kind: 'geobukseon', variant: 0, base: '/models/geobukseon_v2', axis: 'z', bow: 1, waterline: 0.22 },
   { kind: 'atakebune', variant: 0, base: '/models/atakebune_v2', axis: 'z', bow: 1, waterline: 0.12 },

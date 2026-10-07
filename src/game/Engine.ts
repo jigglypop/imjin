@@ -34,7 +34,8 @@ import { atmosphere } from '../render/atmosphere';
 import { loadSky, SKY_PRESETS, type LoadedSky, type SkyPresetName } from '../render/sky';
 import { Ocean } from '../ocean/Ocean';
 import { WakeMap } from '../ocean/WakeMap';
-import { SEA_STATES, waveField, type SeaStateName } from '../ocean/waves';
+import { SEA_STATES, spectrumOf, waveField, type SeaStateName } from '../ocean/waves';
+import { FFTWaves } from '../ocean/FFTWaves';
 import { loadShipAssets, type ModelAsset } from '../ships/ShipRenderer';
 import { ShipViews } from '../ships/ShipViews';
 import { Effects } from '../fx/Effects';
@@ -71,6 +72,7 @@ export class Engine {
   battle: Battle = new Battle(1);
   terrain!: Terrain;
   ocean!: Ocean;
+  fft: FFTWaves | null = null;
   readonly wake = new WakeMap();
   views!: ShipViews;
   fx!: Effects;
@@ -129,7 +131,8 @@ export class Engine {
     this.applySky(sky);
     setLoading('함대를 배치하는 중');
     this.placeScenario(sky);
-    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain);
+    if ((r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) this.fft = new FFTWaves(spectrumOf(SEA_STATES[this.seaName]));
+    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft);
     this.scene.add(this.ocean.mesh);
     const sun = this.sun;
     sun.castShadow = true;
@@ -309,6 +312,7 @@ export class Engine {
   setSea(name: SeaStateName) {
     this.seaName = name;
     waveField.setState(SEA_STATES[name]);
+    this.fft?.setSpectrum(spectrumOf(SEA_STATES[name]));
     this.publish(true);
   }
 
@@ -327,7 +331,8 @@ export class Engine {
     this.applySky(sky);
     this.placeScenario(sky);
     this.scene.remove(this.ocean.mesh);
-    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain);
+    this.fft?.setSpectrum(spectrumOf(SEA_STATES[this.seaName]));
+    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft);
     this.scene.add(this.ocean.mesh);
     this.views.reset(this.assets, this.battle);
     this.banners?.clear();
@@ -514,6 +519,7 @@ export class Engine {
   render() {
     if (!this.ready) return;
     this.wake.update(this.renderer, this.lastScaled);
+    this.fft?.update(this.renderer, waveField.time);
     this.pipeline.render();
   }
 

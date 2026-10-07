@@ -141,8 +141,8 @@ export function generateHeightmap(spec: TerrainSpec) {
       }
       for (const ch of spec.channels) {
         const d = segmentDistance(wx, wz, ch.x0, ch.z0, ch.x1, ch.z1);
-        const carve = 1 - d / ch.width;
-        if (carve > 0) land = Math.min(land, -carve * 0.6 + 0.02 * (1 - carve));
+        const valley = ((d - ch.width) / (ch.width * 2.4)) * 0.55;
+        if (valley < land + 0.2) land = -smoothMax(-land, -valley, 0.18);
       }
       let h: number;
       if (land > 0) {

@@ -18,7 +18,7 @@ export type SeaState = {
 export const SEA_STATES: Record<SeaStateName, SeaState> = {
   calm: { windAngle: 0.6, wind: 6.5, fetch: 60000, spread: 1, choppiness: 0.85, detail: 0.7, whitecaps: 0.12 },
   moderate: { windAngle: 0.6, wind: 10.5, fetch: 120000, spread: 1, choppiness: 1.05, detail: 1, whitecaps: 0.55 },
-  rough: { windAngle: 0.6, wind: 14.5, fetch: 220000, spread: 0.85, choppiness: 1.2, detail: 1.25, whitecaps: 1 },
+  rough: { windAngle: 0.6, wind: 13.5, fetch: 200000, spread: 0.85, choppiness: 1.2, detail: 1.25, whitecaps: 1 },
 };
 
 export function spectrumOf(state: SeaState): SpectrumParams {
