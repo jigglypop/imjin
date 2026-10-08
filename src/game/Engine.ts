@@ -413,6 +413,22 @@ export class Engine {
     this.minimap.setTerrain(this.terrain, (minX + maxX) / 2, (minZ + maxZ) / 2, extent * (setup ? 1.05 : 1.35));
   }
 
+  /** Ships drawn in cutaway: the selection, once close enough to see inside. */
+  cutawayIds() {
+    const out = new Set<number>();
+    if (!this.cutaway) return out;
+    const cam = this.camera.position;
+    for (const id of this.views.selected) {
+      const s = this.battle.get(id);
+      if (s && s.alive && Math.hypot(s.x - cam.x, s.z - cam.z, cam.y) < 650) out.add(id);
+    }
+    return out;
+  }
+
+  private crewView() {
+    return { cutaway: this.cutaway, cut: this.cutawayIds(), winner: this.battle.winner };
+  }
+
   /** Steps the cutaway down one deck at a time and back to the closed hull. */
   toggleCutaway() {
     this.cutaway = (this.cutaway + 1) % 4;
@@ -660,6 +676,8 @@ export class Engine {
     }
     if (steps >= 8) this.accumulator = 0;
     const events = this.battle.events;
+    this.views.cutaway.clear();
+    for (const id of this.cutawayIds()) this.views.cutaway.set(id, this.cutaway);
     this.views.sync(this.battle, scaled, this.camera, this.assets);
     this.stampWakes(events, scaled);
     if (events.length) {
@@ -693,7 +711,7 @@ export class Engine {
       this.sound.setRoar(Math.min(1, Math.hypot(v.x, v.z) / 4) * Math.max(0.2, 1 - this.rts.distance / 3000));
     } else this.sound.setRoar(0);
     this.fx.update(this.battle, scaled, this.camera);
-    this.crew.update(this.battle, scaled, this.camera);
+    this.crew.update(this.battle, scaled, this.camera, this.crewView());
     this.lanterns.update(this.battle, this.camera);
     this.updateSun();
     const el = this.renderer.domElement;

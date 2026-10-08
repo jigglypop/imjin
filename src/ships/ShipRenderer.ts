@@ -2,6 +2,7 @@ import {
   Box3,
   BufferAttribute,
   BufferGeometry,
+  DoubleSide,
   DynamicDrawUsage,
   Float32BufferAttribute,
   Group,
@@ -15,12 +16,17 @@ import {
   type Texture,
 } from 'three/webgpu';
 import {
+  Discard,
   dot,
   float,
+  Fn,
+  frontFacing,
+  If,
   instancedDynamicBufferAttribute,
   mix,
   mx_noise_float,
   positionWorld,
+  select,
   smoothstep,
   texture,
   uv,
@@ -157,9 +163,13 @@ export async function loadShipAssets(kinds: ShipKind[], onProgress?: (fraction: 
   return Object.fromEntries(list.map((a) => [a.key, a])) as Record<string, ModelAsset>;
 }
 
-function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, b: InstancedBufferAttribute) {
+/**
+ * Hull material. With a cut attribute the hull is drawn as a section: everything above the cut height (in ship space)
+ * is discarded and the inside faces show as raw timber, so the decks below can be seen.
+ */
+function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, b: InstancedBufferAttribute, c?: InstancedBufferAttribute) {
   const m = new MeshStandardNodeMaterial();
-  m.side = src.side;
+  m.side = c ? DoubleSide : src.side;
   if (src.normalMap) {
     m.normalMap = src.normalMap;
     m.normalScale.copy(src.normalScale);
@@ -186,17 +196,31 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   const wetColor = baseColor.mul(mix(float(1), float(0.55), wet));
   const algae = mix(wetColor, wetColor.mul(vec3(0.42, 0.52, 0.36)), under.mul(0.85));
   const charred = mix(algae, vec3(0.025, 0.02, 0.018), charAmount.mul(0.9));
-  m.colorNode = charred.mul(float(1).add(flash.mul(2)));
+  const lit = charred.mul(float(1).add(flash.mul(2)));
+  if (c) {
+    const C: any = instancedDynamicBufferAttribute(c, 'vec4');
+    const grain = mx_noise_float(positionWorld.mul(vec3(0.8, 6, 0.8))).mul(0.5).add(0.5);
+    const timber = mix(vec3(0.16, 0.1, 0.055), vec3(0.3, 0.2, 0.11), grain);
+    m.colorNode = Fn(() => {
+      If(shipY.greaterThan(C.x), () => {
+        Discard();
+      });
+      return select(frontFacing, lit, timber);
+    })();
+  } else m.colorNode = lit;
   m.roughnessNode = mix(rough.mul(0.95).add(0.05), float(0.25), wet.mul(0.8)).max(0.05);
   m.emissiveNode = vec3(1.0, 0.32, 0.06).mul(charAmount.mul(burn).mul(ember).mul(4));
   return m;
 }
 
-type Batch = { mesh: InstancedMesh; a: InstancedBufferAttribute; b: InstancedBufferAttribute; count: number };
+type Batch = { mesh: InstancedMesh; a: InstancedBufferAttribute; b: InstancedBufferAttribute; c?: InstancedBufferAttribute; count: number };
+const CUT_CAP = 12;
 
 export class ShipRenderer {
   readonly group = new Group();
   private batches = new Map<string, Batch[]>();
+  /** Section-cut copies of the near model, for the few ships shown in cutaway. Made on first use. */
+  private cuts = new Map<string, Batch>();
   private capacity = new Map<string, number>();
 
   constructor(private assets: Record<string, ModelAsset>, capacity: Map<string, number>) {
@@ -250,11 +274,38 @@ export class ShipRenderer {
 
   begin() {
     for (const list of this.batches.values()) for (const batch of list) batch.count = 0;
+    for (const batch of this.cuts.values()) batch.count = 0;
   }
 
-  add(key: string, lod: number, matrix: Matrix4, origin: Vector3, up: Vector3, burn: number, flash: number) {
-    const batch = this.batches.get(key)?.[lod];
+  private cutBatch(key: string) {
+    let batch = this.cuts.get(key);
+    if (batch || !this.assets[key]) return batch;
+    const lod = this.assets[key]!.lods[0]!;
+    const mk = () => {
+      const attr = new InstancedBufferAttribute(new Float32Array(CUT_CAP * 4), 4);
+      attr.setUsage(DynamicDrawUsage);
+      return attr;
+    };
+    const a = mk();
+    const b = mk();
+    const c = mk();
+    const mesh = new InstancedMesh(lod.geometry, createMaterial(lod.source, a, b, c), CUT_CAP);
+    mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    mesh.count = 0;
+    mesh.frustumCulled = false;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    this.group.add(mesh);
+    batch = { mesh, a, b, c, count: 0 };
+    this.cuts.set(key, batch);
+    return batch;
+  }
+
+  /** cut: height in ship space above which the hull is cut away, or undefined for the whole ship. */
+  add(key: string, lod: number, matrix: Matrix4, origin: Vector3, up: Vector3, burn: number, flash: number, cut?: number) {
+    const batch = cut === undefined ? this.batches.get(key)?.[lod] : this.cutBatch(key);
     if (!batch || batch.count >= batch.mesh.instanceMatrix.count) return;
+    if (batch.c) (batch.c.array as Float32Array)[batch.count * 4] = cut!;
     const i = batch.count++;
     batch.mesh.setMatrixAt(i, matrix);
     const A = batch.a.array as Float32Array;
@@ -270,18 +321,16 @@ export class ShipRenderer {
   }
 
   end() {
-    for (const list of this.batches.values()) {
-      for (const batch of list) {
-        batch.mesh.count = batch.count;
-        if (batch.count === 0) continue;
-        batch.mesh.instanceMatrix.clearUpdateRanges();
-        batch.mesh.instanceMatrix.addUpdateRange(0, batch.count * 16);
-        batch.mesh.instanceMatrix.needsUpdate = true;
-        for (const attr of [batch.a, batch.b]) {
-          attr.clearUpdateRanges();
-          attr.addUpdateRange(0, batch.count * 4);
-          attr.needsUpdate = true;
-        }
+    for (const batch of [...[...this.batches.values()].flat(), ...this.cuts.values()]) {
+      batch.mesh.count = batch.count;
+      if (batch.count === 0) continue;
+      batch.mesh.instanceMatrix.clearUpdateRanges();
+      batch.mesh.instanceMatrix.addUpdateRange(0, batch.count * 16);
+      batch.mesh.instanceMatrix.needsUpdate = true;
+      for (const attr of batch.c ? [batch.a, batch.b, batch.c] : [batch.a, batch.b]) {
+        attr.clearUpdateRanges();
+        attr.addUpdateRange(0, batch.count * 4);
+        attr.needsUpdate = true;
       }
     }
   }

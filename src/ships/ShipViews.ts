@@ -1,6 +1,8 @@
 import {
+  BoxGeometry,
   Color,
   DynamicDrawUsage,
+  MeshStandardNodeMaterial,
   Euler,
   Frustum,
   Group,
@@ -19,6 +21,9 @@ import type { Ship, ShipKind, Team } from '../sim/types';
 import { waveField } from '../ocean/waves';
 import { modelKey, ShipRenderer, type ModelAsset } from './ShipRenderer';
 import type { ShipLodQuality } from '../game/quality';
+import { cutHeight, DECKS, mainDeck } from './decks';
+
+const MAX_PROPS = 600;
 
 export type ViewState = {
   id: number;
@@ -58,6 +63,17 @@ export class ShipViews {
   private readonly dists: number[] = [];
   private readonly sFlag = new Vector3(1.12, 1.12, 1.12);
   private readonly need = new Map<string, number>();
+  /** Ships drawn in cutaway, by level (1 roofs off, 2 walls off, 3 down to the rowers' deck). */
+  cutaway = new Map<number, number>();
+  /** Timber of the decks a cutaway opens up: the rowers' floor, oar looms and posts. */
+  private readonly props: InstancedMesh;
+  private readonly propMatrix = new Matrix4();
+  private readonly propPos = new Vector3();
+  private readonly propScale = new Vector3();
+  private readonly propQ = new Quaternion();
+  private readonly shipQ = new Quaternion();
+  private readonly partQ = new Quaternion();
+  private readonly partE = new Euler();
 
   constructor(
     assets: Record<string, ModelAsset>,
@@ -71,6 +87,14 @@ export class ShipViews {
     ringGeo.rotateX(-Math.PI / 2);
     this.ringsOwn = new InstancedMesh(ringGeo, this.makeRingMaterial(new Color(1.0, 0.72, 0.22)), MAX_RINGS);
     this.ringsEnemy = new InstancedMesh(ringGeo, this.makeRingMaterial(new Color(1.0, 0.25, 0.18)), MAX_RINGS);
+    const wood = new MeshStandardNodeMaterial({ color: new Color(0.34, 0.24, 0.15), roughness: 0.9 });
+    this.props = new InstancedMesh(new BoxGeometry(1, 1, 1), wood, MAX_PROPS);
+    this.props.instanceMatrix.setUsage(DynamicDrawUsage);
+    this.props.count = 0;
+    this.props.frustumCulled = false;
+    this.props.castShadow = true;
+    this.props.receiveShadow = true;
+    this.group.add(this.props);
     for (const r of [this.ringsOwn, this.ringsEnemy]) {
       r.instanceMatrix.setUsage(DynamicDrawUsage);
       r.count = 0;
@@ -128,6 +152,7 @@ export class ShipViews {
     for (const ship of battle.ships) if (ship.alive) this.need.set(this.keyFor(ship, assets), (this.need.get(this.keyFor(ship, assets)) ?? 0) + 1);
     for (const [key, n] of this.need) this.renderer.ensure(key, n);
     this.renderer.begin();
+    let props = 0;
     let own = 0;
     let enemy = 0;
     const cam = camera.position;
@@ -177,7 +202,11 @@ export class ShipViews {
         if ((lodTarget > v.lod && dist > edge) || (lodTarget < v.lod && dist < edge)) v.lod = lodTarget;
       }
       this.updateTransform(ship, v, dt, dist);
-      if (v.visible) this.renderer.add(v.key, v.lod, v.matrix, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), v.flash);
+      const level = this.cutaway.get(ship.id) ?? 0;
+      const main = level ? mainDeck(v.key, ship.spec.kind, ship.spec.deck) : 0;
+      const cut = level ? cutHeight(level, main, DECKS[ship.spec.kind]) : undefined;
+      if (v.visible) this.renderer.add(v.key, cut === undefined ? v.lod : 0, v.matrix, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), v.flash, cut);
+      if (level === 3 && v.visible) props = this.interior(ship, v, main, props);
       const show = (this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0;
       if (show) {
         const ring = ship.team === this.team ? this.ringsOwn : this.ringsEnemy;
@@ -190,10 +219,48 @@ export class ShipViews {
       }
     }
     this.renderer.end();
+    this.props.count = props;
+    this.props.instanceMatrix.needsUpdate = true;
     this.ringsOwn.count = Math.min(own, MAX_RINGS);
     this.ringsEnemy.count = Math.min(enemy, MAX_RINGS);
     this.ringsOwn.instanceMatrix.needsUpdate = true;
     this.ringsEnemy.instanceMatrix.needsUpdate = true;
+  }
+
+  /** One timber piece in ship space: centre, size, and an optional roll about the ship's length. */
+  private prop(v: ViewState, i: number, x: number, y: number, z: number, sx: number, sy: number, sz: number, roll = 0) {
+    if (i >= MAX_PROPS) return i;
+    this.propPos.set(x, y, z).applyMatrix4(v.matrix);
+    this.partE.set(roll, 0, 0);
+    this.partQ.setFromEuler(this.partE);
+    this.propQ.multiplyQuaternions(this.shipQ, this.partQ);
+    this.propScale.set(sx, sy, sz);
+    this.propMatrix.compose(this.propPos, this.propQ, this.propScale);
+    this.props.setMatrixAt(i, this.propMatrix);
+    return i + 1;
+  }
+
+  /** The rowers' deck under a cut-away main deck: floor, posts holding up the deck above, and the oar looms. */
+  private interior(s: Ship, v: ViewState, main: number, i: number) {
+    const plan = DECKS[s.spec.kind];
+    if (plan.oarDrop <= 0) return i;
+    const L = s.spec.length;
+    const B = s.spec.beam;
+    const floor = main - plan.oarDrop;
+    this.tmp.setFromMatrixPosition(v.matrix);
+    v.matrix.decompose(this.tmp, this.shipQ, this.propScale);
+    i = this.prop(v, i, -0.02 * L, floor - 0.15, 0, L * 0.8, 0.3, B * 0.74);
+    for (const x of [-0.3, -0.1, 0.1, 0.3]) for (const z of [-0.18, 0.18]) i = this.prop(v, i, x * L, floor + plan.oarDrop * 0.45 - 0.2, z * B, 0.35, plan.oarDrop * 0.9 - 0.4, 0.35);
+    const per = plan.oars;
+    for (let k = 0; k < per; k += 1) {
+      const x = (-0.36 + (0.7 * (k + 0.5)) / per) * L;
+      for (const side of [1, -1]) {
+        // A loom from the rower out through the oar port, dipping toward the water.
+        const len = B * 0.34 + 3;
+        i = this.prop(v, i, x, floor + 1.05, side * (B * 0.31 + len * 0.42), 0.14, 0.14, len, side * 0.22);
+      }
+    }
+    return i;
   }
 
   private updateTransform(s: Ship, v: ViewState, dt: number, dist: number) {
