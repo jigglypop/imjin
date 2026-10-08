@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 import type { SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
-import type { AmmoMode, FireMode, ShipKind, Stance, Team } from '../sim/types';
+import type { AmmoMode, Faction, FireMode, ShipKind, Stance, Team } from '../sim/types';
 import type { ScenarioId } from '../sim/scenarios';
 import type { Report } from '../campaign/campaign';
 
 export type SquadronInfo = {
   id: number;
   team: Team;
+  faction: Faction;
   name: string;
   commander: string;
   portrait: string;
@@ -46,11 +47,15 @@ export type PrimaryInfo = {
 
 export type GameSnapshot = {
   scenario: { id: ScenarioId; title: string; hanja: string; date: string; place: string; season: string };
+  /** The side the player leads, and its team. Counts below are by team: the player's against the enemy's. */
+  faction: Faction;
+  team: Team;
   time: number;
-  joseon: number;
-  japan: number;
-  joseonTotal: number;
-  japanTotal: number;
+  own: number;
+  enemy: number;
+  ownTotal: number;
+  enemyTotal: number;
+  /** Enemy ships that fled the battle. */
   escaped: number;
   balance: number;
   winner: Team | null;
@@ -61,6 +66,8 @@ export type GameSnapshot = {
   following: number;
   cinematic: boolean;
   fps: number;
+  level: number;
+  levelAuto: boolean;
   muted: boolean;
   selectedCount: number;
   night: boolean;
@@ -82,9 +89,10 @@ type UiState = {
   toasts: Toast[];
   box: SelectionBox;
   screen: Screen;
+  touchBox: boolean;
 };
 
-export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingScenario: null, report: null, toasts: [], box: null, screen: 'battle' }));
+export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingScenario: null, report: null, toasts: [], box: null, screen: 'battle', touchBox: false }));
 
 let lastJson = '';
 export function publish(snapshot: GameSnapshot, force = false) {
@@ -103,6 +111,10 @@ export function pushToast(text: string, tone: Toast['tone'] = 'info') {
 
 export function setSelectionBox(box: SelectionBox) {
   useUi.setState({ box });
+}
+
+export function setTouchBox(touchBox: boolean) {
+  useUi.setState({ touchBox });
 }
 
 export function setLoading(text: string | null, progress?: number, scenario?: ScenarioId) {

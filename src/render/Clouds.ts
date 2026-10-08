@@ -50,10 +50,15 @@ import { uv as uv0 } from 'three/tsl';
 import { atmosphere } from './atmosphere';
 import { createCloudNoise } from './cloudNoise';
 
-const STEPS = 48;
-const LIGHT_STEPS = 4;
 const BOTTOM = 1500;
 const TOP = 3900;
+/** Total distance the light march covers, split across its steps. */
+const LIGHT_SPAN = 760;
+/** Loop bounds are fixed when the shader compiles. Steps below the run-time count are used, the rest are skipped. */
+const MAX_STEPS = 64;
+const MAX_LIGHT_STEPS = 4;
+
+export type CloudQuality = { steps: number; lightSteps: number; divisor: number; every: number };
 
 export class Clouds {
   readonly mesh: Mesh;
@@ -65,6 +70,10 @@ export class Clouds {
   private readonly blurH: QuadMesh;
   private readonly blurV: QuadMesh;
   private readonly size = new Vector2();
+  // Typed loosely: the TSL node types do not accept uniform nodes as operands of float arithmetic.
+  private readonly stepsU: any;
+  private readonly lightStepsU: any;
+  private quality: CloudQuality;
   readonly time = uniform(0);
   readonly coverage = uniform(0.5);
   readonly density = uniform(0.032);
@@ -72,7 +81,13 @@ export class Clouds {
   private readonly noise: Data3DTexture;
   private readonly envNode: ReturnType<typeof pmremTexture>;
 
-  constructor(env: Texture) {
+  constructor(env: Texture, quality: CloudQuality) {
+    this.quality = quality;
+    this.stepsU = uniform(Math.min(MAX_STEPS, quality.steps));
+    this.lightStepsU = uniform(Math.min(MAX_LIGHT_STEPS, quality.lightSteps));
+    const stepsU = this.stepsU;
+    const lightStepsU = this.lightStepsU;
+    const lightStep = float(LIGHT_SPAN).div(lightStepsU);
     this.noise = createCloudNoise(64);
     const noise = this.noise;
     const m = new MeshBasicNodeMaterial();
@@ -107,7 +122,7 @@ export class Clouds {
         const t0 = max(float(BOTTOM).sub(camY).div(up), 0);
         const t1 = min(min(float(TOP).sub(camY).div(up), 52000), t0.add(9000));
         const span = max(t1.sub(t0), 0);
-        const stepLen = span.div(STEPS);
+        const stepLen = span.div(stepsU);
         const jitter = hash(screenCoordinate.x.add(screenCoordinate.y.mul(4096)).toUint());
         const trans = float(1).toVar();
         const light = vec3(0).toVar();
@@ -117,20 +132,22 @@ export class Clouds {
         const hg1 = float(1 - g1 * g1).div(pow(float(1 + g1 * g1).sub(cosA.mul(2 * g1)), 1.5));
         const hg2 = float(1 - g2 * g2).div(pow(float(1 + g2 * g2).sub(cosA.mul(2 * g2)), 1.5));
         const phase = mix(hg2, hg1, 0.7).mul(1 / (4 * Math.PI));
-        Loop(STEPS, ({ i }) => {
-          If(trans.greaterThan(0.02), () => {
+        Loop(MAX_STEPS, ({ i }) => {
+          If(trans.greaterThan(0.02).and(float(i).lessThan(stepsU)), () => {
             const tt = t0.add(float(i).add(jitter).mul(stepLen));
             const p = cameraPosition.add(dir.mul(tt));
             const far = smoothstep(9000, 30000, tt);
             const d = sample(p, far);
             If(d.greaterThan(0.001), () => {
               const od = float(0).toVar();
-              Loop(LIGHT_STEPS, ({ i: k }) => {
-                const lp = p.add(sun.mul(float(k).add(0.5).mul(190)));
-                od.addAssign(sample(lp, far));
+              Loop(MAX_LIGHT_STEPS, ({ i: k }) => {
+                If(float(k).lessThan(lightStepsU), () => {
+                  const lp = p.add(sun.mul(float(k).add(0.5).mul(lightStep)));
+                  od.addAssign(sample(lp, far));
+                });
               });
               const sigma = d.mul(this.density);
-              const lightT = exp(od.mul(this.density).mul(190).negate());
+              const lightT = exp(od.mul(this.density).mul(lightStep).negate());
               const powder = float(1).sub(exp(d.mul(-2.4)));
               const hfrac = p.y.sub(BOTTOM).div(TOP - BOTTOM);
               const ambient = atmosphere.skyAmbient.mul(float(0.55).add(hfrac.mul(0.6))).mul(1.6);
@@ -198,10 +215,17 @@ export class Clouds {
     this.mesh = mesh;
   }
 
+  /** Changes steps and resolution while the battle runs. The shader is not recompiled. */
+  setQuality(quality: CloudQuality) {
+    this.quality = quality;
+    this.stepsU.value = Math.min(MAX_STEPS, quality.steps);
+    this.lightStepsU.value = Math.min(MAX_LIGHT_STEPS, quality.lightSteps);
+  }
+
   render(renderer: WebGPURenderer, camera: Camera) {
     renderer.getDrawingBufferSize(this.size);
-    const w = Math.max(1, Math.floor(this.size.x / 2));
-    const h = Math.max(1, Math.floor(this.size.y / 2));
+    const w = Math.max(1, Math.floor(this.size.x / this.quality.divisor));
+    const h = Math.max(1, Math.floor(this.size.y / this.quality.divisor));
     if (this.rtA.width !== w || this.rtA.height !== h) {
       this.rtA.setSize(w, h);
       this.rtB.setSize(w, h);

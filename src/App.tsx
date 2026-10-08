@@ -8,8 +8,12 @@ import { setLoading, setScreen, useUi } from './state/store';
 import { Hud } from './ui/Hud';
 import { BattleSelect } from './ui/BattleSelect';
 import { SCENARIOS, type ScenarioId } from './sim/scenarios';
+import { playableFactions } from './sim/balance';
+import type { Faction } from './sim/types';
 import { sound } from './audio/Sound';
 import { fleetSpawn, useCampaign } from './campaign/campaign';
+import { isTouchDevice } from './game/device';
+import { useCompactLayout } from './ui/useCompactLayout';
 
 declare global {
   interface Window {
@@ -22,8 +26,10 @@ declare global {
 const params = new URLSearchParams(location.search);
 const paramScenario = params.get('scenario') as ScenarioId | null;
 const startScenario: ScenarioId = paramScenario && paramScenario in SCENARIOS ? paramScenario : 'hansan';
+const paramSide = params.get('side') as Faction | null;
 
 let pendingCampaign: EngineOptions['campaign'];
+let pendingFaction: Faction = paramSide && playableFactions(startScenario).includes(paramSide) ? paramSide : 'joseon';
 
 function readOptions(scenario: ScenarioId): EngineOptions {
   const sky = params.get('sky') as SkyPresetName | null;
@@ -39,6 +45,7 @@ function readOptions(scenario: ScenarioId): EngineOptions {
     cinematic: params.get('cine') === '1',
     hideLabels: params.get('hud') === '0',
     campaign: pendingCampaign,
+    faction: pendingFaction,
     follow: params.get('follow')
       ? { id: Number(params.get('follow')), distance: Number(params.get('dist') ?? 70), pitch: Number(params.get('pitch') ?? 0.12), yaw: Number(params.get('yaw') ?? 2.4) }
       : undefined,
@@ -143,14 +150,16 @@ export function App() {
   const [engine, setEngine] = useState<Engine | null>(null);
   const [mounted, setMounted] = useState<ScenarioId | null>(paramScenario ? startScenario : null);
   const hideHud = params.get('hud') === '0';
+  const compact = useCompactLayout();
 
   useEffect(() => {
     if (!paramScenario) setScreen('select');
   }, []);
 
-  const start = (id: ScenarioId, campaignMode = false) => {
+  const start = (id: ScenarioId, campaignMode: boolean, faction: Faction) => {
     const campaign = useCampaign.getState().campaign;
     pendingCampaign = campaignMode && campaign ? fleetSpawn(campaign) : undefined;
+    pendingFaction = pendingCampaign ? 'joseon' : faction;
     if (engine) engine.campaign = pendingCampaign;
     sound.click();
     sound.setMode('battle');
@@ -159,19 +168,21 @@ export function App() {
       setLoading(`${SCENARIOS[id].title} 준비 중`, 0.01, id);
       setMounted(id);
     } else if (engine) {
-      void engine.setScenario(id);
+      void engine.setScenario(id, pendingFaction);
     }
   };
 
+  // The engine sets the pixel ratio for each quality level, so the canvas only starts at the device ratio.
+  // The battle canvas stops drawing while the menu is open, so the menu gets the whole GPU.
   return (
-    <div className="app">
+    <div className={`app ${compact ? 'app--compact' : ''} ${isTouchDevice ? 'app--touch' : ''}`}>
       {mounted && (
         <Canvas
           className="viewport"
           gl={createRenderer as never}
           camera={{ fov: 42, near: 0.5, far: 60000, position: [0, 50, 200] }}
-          dpr={Math.min(window.devicePixelRatio, Number(params.get('dpr') ?? 1.5))}
-          frameloop="always"
+          dpr={Math.min(window.devicePixelRatio, Number(params.get('dpr') ?? 2))}
+          frameloop={screen === 'battle' ? 'always' : 'never'}
         >
           <Game scenario={mounted} onEngine={setEngine} />
         </Canvas>

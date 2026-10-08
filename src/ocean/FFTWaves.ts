@@ -2,9 +2,6 @@ import { HalfFloatType, LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, 
 import { Fn, cos, float, instanceIndex, instancedArray, max, select, sin, sqrt, textureStore, uniform, uvec2, vec2, vec4 } from 'three/tsl';
 import { directionalSpectrum, gaussian, GRAVITY, mulberry32, type SpectrumParams } from './spectrum';
 
-export const FFT_N = 256;
-const LOG_N = 8;
-const AREA = FFT_N * FFT_N;
 const TWO_PI = Math.PI * 2;
 
 export type Cascade = { size: number; kLow: number; kHigh: number; minWave: number };
@@ -19,10 +16,9 @@ export const CASCADES: Cascade[] = [
 type Buf = any;
 
 const COUNT = CASCADES.length;
-const TOTAL = COUNT * AREA;
 
-function makeTexture() {
-  const t = new StorageTexture(FFT_N, FFT_N);
+function makeTexture(n: number) {
+  const t = new StorageTexture(n, n);
   t.type = HalfFloatType;
   t.wrapS = RepeatWrapping;
   t.wrapT = RepeatWrapping;
@@ -33,24 +29,39 @@ function makeTexture() {
   return t;
 }
 
+/**
+ * Ocean displacement and slope maps, evolved on the GPU each frame.
+ * `n` is the grid size per cascade (a power of two). 256 on desktop, 128 on mobile.
+ */
 export class FFTWaves {
-  readonly displacement = CASCADES.map(() => makeTexture());
-  readonly derivatives = CASCADES.map(() => makeTexture());
+  readonly displacement: StorageTexture[];
+  readonly derivatives: StorageTexture[];
   readonly time = uniform(0);
   readonly choppiness = uniform(1.1);
   readonly slopeVariance = [0, 0, 0];
-  private readonly h0Data = new Float32Array(TOTAL * 4);
-  private readonly h0: Buf = instancedArray(this.h0Data, 'vec4');
+  private readonly area: number;
+  private readonly total: number;
+  private readonly logN: number;
+  private readonly h0Data: Float32Array;
+  private readonly h0: Buf;
   private readonly passes: any[] = [];
 
-  constructor(params: SpectrumParams, seed = 1592) {
+  constructor(params: SpectrumParams, readonly n = 256, seed = 1592) {
+    if (n < 16 || (n & (n - 1)) !== 0) throw new Error(`FFT size must be a power of two, got ${n}`);
+    this.area = n * n;
+    this.total = COUNT * this.area;
+    this.logN = Math.round(Math.log2(n));
+    this.displacement = CASCADES.map(() => makeTexture(n));
+    this.derivatives = CASCADES.map(() => makeTexture(n));
+    this.h0Data = new Float32Array(this.total * 4);
+    this.h0 = instancedArray(this.h0Data, 'vec4');
     this.setSpectrum(params, seed);
-    const a: Buf[] = [instancedArray(TOTAL, 'vec4'), instancedArray(TOTAL, 'vec4')];
-    const b: Buf[] = [instancedArray(TOTAL, 'vec4'), instancedArray(TOTAL, 'vec4')];
+    const a: Buf[] = [instancedArray(this.total, 'vec4'), instancedArray(this.total, 'vec4')];
+    const b: Buf[] = [instancedArray(this.total, 'vec4'), instancedArray(this.total, 'vec4')];
     this.passes.push(this.evolvePass(a[0]!, b[0]!));
     let src = 0;
     for (const dir of [0, 1]) {
-      for (let s = 0; s < LOG_N; s += 1) {
+      for (let s = 0; s < this.logN; s += 1) {
         const size = 2 << s;
         this.passes.push(this.butterflyPass(dir, size, a[src]!, b[src]!, a[1 - src]!, b[1 - src]!));
         src = 1 - src;
@@ -60,21 +71,22 @@ export class FFTWaves {
   }
 
   setSpectrum(params: SpectrumParams, seed = 1592) {
+    const n = this.n;
     const rand = mulberry32(seed);
     const data = this.h0Data;
-    const amp = new Float32Array(AREA * 2);
+    const amp = new Float32Array(this.area * 2);
     for (let c = 0; c < COUNT; c += 1) {
       const cas = CASCADES[c]!;
       const dk = TWO_PI / cas.size;
       let slope = 0;
-      for (let y = 0; y < FFT_N; y += 1) {
-        const m = y < FFT_N / 2 ? y : y - FFT_N;
-        for (let x = 0; x < FFT_N; x += 1) {
-          const n = x < FFT_N / 2 ? x : x - FFT_N;
-          const kx = n * dk;
+      for (let y = 0; y < n; y += 1) {
+        const m = y < n / 2 ? y : y - n;
+        for (let x = 0; x < n; x += 1) {
+          const kn = x < n / 2 ? x : x - n;
+          const kx = kn * dk;
           const kz = m * dk;
           const k = Math.hypot(kx, kz);
-          const i = y * FFT_N + x;
+          const i = y * n + x;
           const g1 = gaussian(rand);
           const g2 = gaussian(rand);
           if (k < cas.kLow || k >= cas.kHigh) {
@@ -91,13 +103,13 @@ export class FFTWaves {
         }
       }
       this.slopeVariance[c] = slope;
-      const base = c * AREA;
-      for (let y = 0; y < FFT_N; y += 1) {
-        const my = (FFT_N - y) % FFT_N;
-        for (let x = 0; x < FFT_N; x += 1) {
-          const mx = (FFT_N - x) % FFT_N;
-          const i = y * FFT_N + x;
-          const j = my * FFT_N + mx;
+      const base = c * this.area;
+      for (let y = 0; y < n; y += 1) {
+        const my = (n - y) % n;
+        for (let x = 0; x < n; x += 1) {
+          const mx = (n - x) % n;
+          const i = y * n + x;
+          const j = my * n + mx;
           const o = (base + i) * 4;
           data[o] = amp[i * 2]!;
           data[o + 1] = amp[i * 2 + 1]!;
@@ -112,24 +124,25 @@ export class FFTWaves {
 
   private indices() {
     const idx = instanceIndex;
-    const c = idx.div(AREA);
-    const rem = idx.mod(AREA);
-    const y = rem.div(FFT_N);
-    const x = rem.mod(FFT_N);
+    const c = idx.div(this.area);
+    const rem = idx.mod(this.area);
+    const y = rem.div(this.n);
+    const x = rem.mod(this.n);
     return { idx, c, y, x };
   }
 
   private evolvePass(outA: Buf, outB: Buf) {
     const h0 = this.h0;
     const time = this.time;
+    const n = this.n;
     const fn = Fn(() => {
       const { idx, c, y, x } = this.indices();
-      const half = FFT_N / 2;
-      const n = select(x.lessThan(half), float(x), float(x).sub(FFT_N));
-      const m = select(y.lessThan(half), float(y), float(y).sub(FFT_N));
+      const half = n / 2;
+      const kn = select(x.lessThan(half), float(x), float(x).sub(n));
+      const m = select(y.lessThan(half), float(y), float(y).sub(n));
       const size = select(c.equal(0), float(CASCADES[0]!.size), select(c.equal(1), float(CASCADES[1]!.size), float(CASCADES[2]!.size)));
       const dk = float(TWO_PI).div(size);
-      const kx: any = n.mul(dk);
+      const kx: any = kn.mul(dk);
       const kz: any = m.mul(dk);
       const k: any = max(sqrt(kx.mul(kx).add(kz.mul(kz))), 1e-5);
       const omega = sqrt(k.mul(GRAVITY));
@@ -160,18 +173,20 @@ export class FFTWaves {
       outA.element(idx).assign(vec4(dxR.sub(dzI), dxI.add(dzR), hr.sub(dxzI), hi.add(dxzR)));
       outB.element(idx).assign(vec4(ikxR.sub(ikzI), ikxI.add(ikzR), dxxR.sub(dzzI), dxxI.add(dzzR)));
     });
-    return (fn() as any).compute(TOTAL, [64]);
+    return (fn() as any).compute(this.total, [64]);
   }
 
   private butterflyPass(dir: number, size: number, srcA: Buf, srcB: Buf, dstA: Buf, dstB: Buf) {
+    const n = this.n;
+    const area = this.area;
     const fn = Fn(() => {
       const { idx, c, y, x } = this.indices();
       const i = dir === 0 ? x : y;
       const evenIndex = i.div(size).mul(size / 2).add(i.mod(size / 2));
-      const oddIndex = evenIndex.add(FFT_N / 2);
-      const base = c.mul(AREA);
-      const evenAddr = dir === 0 ? base.add(y.mul(FFT_N)).add(evenIndex) : base.add(evenIndex.mul(FFT_N)).add(x);
-      const oddAddr = dir === 0 ? base.add(y.mul(FFT_N)).add(oddIndex) : base.add(oddIndex.mul(FFT_N)).add(x);
+      const oddIndex = evenIndex.add(n / 2);
+      const base = c.mul(area);
+      const evenAddr = dir === 0 ? base.add(y.mul(n)).add(evenIndex) : base.add(evenIndex.mul(n)).add(x);
+      const oddAddr = dir === 0 ? base.add(y.mul(n)).add(oddIndex) : base.add(oddIndex.mul(n)).add(x);
       const angle = float(i).mul(TWO_PI / size);
       const tw = vec2(cos(angle), sin(angle));
       const mix4 = (src: Buf, dst: Buf) => {
@@ -186,25 +201,27 @@ export class FFTWaves {
       mix4(srcA, dstA);
       mix4(srcB, dstB);
     });
-    return (fn() as any).compute(TOTAL, [64]);
+    return (fn() as any).compute(this.total, [64]);
   }
 
   private assemblePass(cascade: number, srcA: Buf, srcB: Buf) {
     const chop = this.choppiness;
     const disp = this.displacement[cascade]!;
     const deriv = this.derivatives[cascade]!;
+    const n = this.n;
+    const area = this.area;
     const fn = Fn(() => {
       const idx = instanceIndex;
-      const y = idx.div(FFT_N);
-      const x = idx.mod(FFT_N);
-      const addr = idx.add(cascade * AREA);
+      const y = idx.div(n);
+      const x = idx.mod(n);
+      const addr = idx.add(cascade * area);
       const a: any = srcA.element(addr);
       const b: any = srcB.element(addr);
       const coord = uvec2(x, y);
       textureStore(disp, coord, vec4(a.x.mul(chop), a.z, a.y.mul(chop), a.w.mul(chop))).toWriteOnly();
       textureStore(deriv, coord, vec4(b.x, b.y, b.z.mul(chop), b.w.mul(chop))).toWriteOnly();
     });
-    return (fn() as any).compute(AREA, [64]);
+    return (fn() as any).compute(area, [64]);
   }
 
   update(renderer: WebGPURenderer, time: number) {

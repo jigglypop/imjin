@@ -14,6 +14,7 @@ import {
 import { Fn, abs, cos, float, hash, instanceIndex, max, mix, normalGeometry, normalLocal, positionGeometry, sin, smoothstep, texture, uniform, uint, varying, vec2, vec3, attribute, time } from 'three/tsl';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Terrain } from './Terrain';
+import type { VegetationQuality } from '../game/quality';
 
 function tag(geo: BufferGeometry, part: number, ao: (y: number) => number) {
   const g = geo.toNonIndexed();
@@ -56,32 +57,60 @@ function farTree() {
   return mergeGeometries([clump(4.4, 0, 8.5, 0, 0.7, 0)])!;
 }
 
-function pine(detail: 0 | 1) {
-  const trunk = tag(new CylinderGeometry(0.16, 0.3, 10, detail ? 3 : 5, 1, true).translate(0, 5, 0), 0, () => 0.8);
-  const clumps = detail
-    ? [clump(3.4, 0, 11.8, 0, 0.55, 0), clump(2.6, 0.6, 9.6, -0.5, 0.6, 0)]
-    : [clump(3.1, 0, 12.6, 0, 0.5, 1), clump(2.5, 1.7, 10.6, 0.7, 0.55, 0), clump(2.4, -1.6, 10.1, -0.9, 0.55, 0), clump(2.1, 0.7, 8.7, -1.7, 0.6, 0), clump(2.0, -0.6, 14.2, 0.8, 0.5, 0)];
+function pine(detail: 0 | 1, lite = false) {
+  // Lite variants trade crown detail for vertices. A lite tree is about half the cost of a full one at distance.
+  const trunk = tag(new CylinderGeometry(0.16, 0.3, 10, lite ? 4 : detail ? 3 : 5, 1, true).translate(0, 5, 0), 0, () => 0.8);
+  const clumps = lite
+    ? detail
+      ? [clump(2.8, 0, 11.3, 0, 0.55, 0)]
+      : [clump(3.1, 0, 12.6, 0, 0.5, 0), clump(2.5, 1.7, 10.6, 0.7, 0.55, 0), clump(2.2, -1.6, 10.1, -0.9, 0.55, 0)]
+    : detail
+      ? [clump(3.4, 0, 11.8, 0, 0.55, 0), clump(2.6, 0.6, 9.6, -0.5, 0.6, 0)]
+      : [clump(3.1, 0, 12.6, 0, 0.5, 1), clump(2.5, 1.7, 10.6, 0.7, 0.55, 0), clump(2.4, -1.6, 10.1, -0.9, 0.55, 0), clump(2.1, 0.7, 8.7, -1.7, 0.6, 0), clump(2.0, -0.6, 14.2, 0.8, 0.5, 0)];
   return mergeGeometries([trunk, ...clumps])!;
 }
 
-type Ring = { cell: number; grid: number; inner: number; center: ReturnType<typeof uniform>; mesh: Mesh };
+/** An instanced draw of `base`. The vertices are shared with the base geometry, so every ring variant costs no extra copy. */
+function instancedGeometry(base: BufferGeometry, count: number) {
+  const geo = new InstancedBufferGeometry();
+  geo.index = base.index;
+  for (const [name, attr] of Object.entries(base.attributes)) geo.setAttribute(name, attr);
+  geo.instanceCount = count;
+  return geo;
+}
+
+type Ring = { cell: number; grid: number; inner: number; center: ReturnType<typeof uniform>; mesh: Mesh; full: InstancedBufferGeometry; lite: InstancedBufferGeometry };
 
 export class Vegetation {
   readonly group = new Group();
   private readonly rings: Ring[] = [];
   private readonly tmp = new Vector3();
 
-  constructor(private readonly terrain: Terrain) {
-    this.rings.push(this.ring(pine(0), 7.5, 200, 0, true));
-    this.rings.push(this.ring(pine(1), 13, 260, 7.5 * 200 * 0.5, false));
-    this.rings.push(this.ring(farTree(), 19, 300, 13 * 260 * 0.5, false));
+  constructor(
+    private readonly terrain: Terrain,
+    quality: VegetationQuality,
+  ) {
+    // Each ring covers a square of `grid` cells. Its inner edge is the outer edge of the ring before it, so the rings
+    // tile outward without gaps. Fewer cells on mobile shrink the forest radius, and fog hides most of the difference.
+    const [g0, g1, g2] = quality.grids;
+    const c0 = 7.5;
+    const c1 = 13;
+    const c2 = 19;
+    const edge0 = (c0 * g0) / 2;
+    const edge1 = (c1 * g1) / 2;
+    this.rings.push(this.ring({ full: pine(0), lite: pine(0, true) }, c0, g0, 0, quality.shadows));
+    this.rings.push(this.ring({ full: pine(1), lite: pine(1, true) }, c1, g1, edge0, false));
+    this.rings.push(this.ring({ full: farTree(), lite: farTree() }, c2, g2, edge1, false));
   }
 
-  private ring(base: BufferGeometry, cell: number, grid: number, inner: number, shadows: boolean): Ring {
-    const geo = new InstancedBufferGeometry();
-    geo.index = base.index;
-    for (const [name, attr] of Object.entries(base.attributes)) geo.setAttribute(name, attr);
-    geo.instanceCount = grid * grid;
+  /** Full and lite crown geometry for the level, switched at run time. */
+  setLite(lite: boolean) {
+    for (const r of this.rings) r.mesh.geometry = lite ? r.lite : r.full;
+  }
+
+  private ring(variants: { full: BufferGeometry; lite: BufferGeometry }, cell: number, grid: number, inner: number, shadows: boolean): Ring {
+    const full = instancedGeometry(variants.full, grid * grid);
+    const lite = instancedGeometry(variants.lite, grid * grid);
     const center = uniform(new Vector2());
     const t = this.terrain;
     const size = t.spec.size;
@@ -136,12 +165,12 @@ export class Vegetation {
     const seasonal = mix(mix(pineCol, broadAutumn, smoothstep(0.2, 0.7, t.season).mul(autumnPick)), winterBare, smoothstep(0.8, 1.0, t.season).mul(autumnPick));
     const trunk = vec3(0.11, 0.055, 0.032);
     m.colorNode = mix(trunk, seasonal, vPart).mul(vAo.mul(0.7).add(0.3));
-    const mesh = new Mesh(geo, m);
+    const mesh = new Mesh(full, m);
     mesh.frustumCulled = false;
     mesh.castShadow = shadows;
     mesh.receiveShadow = shadows;
     this.group.add(mesh);
-    return { cell, grid, inner, center, mesh };
+    return { cell, grid, inner, center, mesh, full, lite };
   }
 
   update(camera: Camera) {

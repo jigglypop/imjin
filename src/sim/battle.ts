@@ -2,17 +2,20 @@ import { waveField } from '../ocean/waves';
 import { GUN_SHOTS, GUN_SPECS, NO_MODS, SHIP_SPECS } from './catalog';
 import { ShipGrid } from './grid';
 import type { CurrentField } from './current';
-import type {
-  BattleEvent,
-  GunState,
-  LandSampler,
-  Order,
-  Projectile,
-  Ship,
-  ShipKind,
-  Side,
-  Squadron,
-  Team,
+import {
+  TEAMS,
+  teamOf,
+  type BattleEvent,
+  type Faction,
+  type GunState,
+  type LandSampler,
+  type Order,
+  type Projectile,
+  type Ship,
+  type ShipKind,
+  type Side,
+  type Squadron,
+  type Team,
 } from './types';
 
 export const SIM_DT = 1 / 30;
@@ -21,6 +24,12 @@ const SINK_DURATION = 38;
 const TAU = Math.PI * 2;
 const THINK_INTERVAL = 0.3;
 const DRAFT = -1.4;
+// Ships the player does not command start in the orders the scenario gave them: a formation slot, or holding still
+// at anchorage. They leave that order for free combat when an enemy they can see comes close, or when the battle
+// has gone on long enough that waiting no longer makes sense.
+const WAKE_SLOT = 320;
+const WAKE_HOLD = 700;
+const WAKE_AFTER = 150;
 
 function mulberry32(seed: number) {
   let a = seed >>> 0;
@@ -57,7 +66,12 @@ export class Battle {
   winner: Team | null = null;
   escaped = { joseon: 0, japan: 0 };
   initial = { joseon: 0, japan: 0 };
-  retreatBelow = 0.3;
+  /** A computer-led team turns and flees once its share of ships still fighting drops below this. 0 fights to the end. */
+  retreatBelow: Record<Team, number> = { joseon: 0, japan: 0.3 };
+  /** The faction the player commands. Its ships keep their orders until the player changes them, and its team never flees on its own. */
+  player: Faction = 'joseon';
+  /** Balance runs: the computer also leads the player's ships. */
+  autopilot = false;
   night = false;
   current = { x: 0, z: 0 };
   land: LandSampler = () => -50;
@@ -71,7 +85,7 @@ export class Battle {
   private chargeTimer = new Map<number, number>();
   private readonly grid = new ShipGrid(120);
   private active: Record<Team, Ship[]> = { joseon: [], japan: [] };
-  private retreating = false;
+  private retreating: Record<Team, boolean> = { joseon: false, japan: false };
 
   constructor(seed = 1592) {
     this.rand = mulberry32(seed);
@@ -82,7 +96,7 @@ export class Battle {
   }
 
   addSquadron(team: Team, name: string, commander: string, portrait: string, card: string) {
-    const sq: Squadron = { id: this.squadrons.length + 1, team, name, commander, portrait, card, shipIds: [], leaderId: 0 };
+    const sq: Squadron = { id: this.squadrons.length + 1, team, faction: team, name, commander, portrait, card, shipIds: [], leaderId: 0 };
     this.squadrons.push(sq);
     return sq;
   }
@@ -149,6 +163,7 @@ export class Battle {
     this.byId.set(ship.id, ship);
     this.initial[ship.team] += 1;
     if (squadron) {
+      if (!squadron.shipIds.length) squadron.faction = spec.faction;
       squadron.shipIds.push(ship.id);
       if (!squadron.leaderId || flagship) squadron.leaderId = ship.id;
     }
@@ -354,9 +369,27 @@ export class Battle {
   }
 
   private checkRetreat() {
-    if (this.retreating) return;
-    const ratio = this.active.japan.length / Math.max(1, this.initial.japan);
-    if (ratio < this.retreatBelow && this.time > 60) this.retreating = true;
+    if (this.time <= 60) return;
+    const own = teamOf(this.player);
+    for (const team of TEAMS) {
+      if (this.retreating[team] || team === own) continue;
+      const ratio = this.active[team].length / Math.max(1, this.initial[team]);
+      if (ratio < this.retreatBelow[team]) this.retreating[team] = true;
+    }
+  }
+
+  /** Whether the computer leads this ship. */
+  isAi(s: Ship) {
+    return this.autopilot || s.spec.faction !== this.player;
+  }
+
+  /** A computer-led ship waiting in its starting order joins the fight once the enemy is close or the wait is over. */
+  private wake(s: Ship) {
+    const type = s.order.type;
+    if ((type !== 'slot' && type !== 'hold') || !this.isAi(s)) return;
+    const enemy = this.nearestEnemy(s);
+    const reach = type === 'slot' ? WAKE_SLOT : WAKE_HOLD;
+    if (this.time > WAKE_AFTER || (enemy && Math.hypot(enemy.x - s.x, enemy.z - s.z) < reach)) s.order = { type: 'auto' };
   }
 
   private nearestEnemy(s: Ship, preferBoardable = false) {
@@ -459,10 +492,11 @@ export class Battle {
       this.activity.set(s.id, 'boarding');
       return;
     }
-    if (s.team === 'japan' && this.retreating && s.order.type !== 'anchor') {
+    if (this.retreating[s.team] && s.order.type !== 'anchor') {
       this.flee(s);
       return;
     }
+    this.wake(s);
     const order = s.order;
     if (order.type === 'anchor') {
       s.throttle = 0;
@@ -559,7 +593,7 @@ export class Battle {
     this.activity.set(s.id, 'fleeing');
     if (Math.hypot(s.x - this.center.x, s.z - this.center.z) > this.arenaRadius) {
       s.alive = false;
-      this.escaped.japan += 1;
+      this.escaped[s.team] += 1;
       this.events.push({ type: 'removed', ship: s.id });
     }
   }
@@ -935,7 +969,7 @@ export class Battle {
       }
     }
     if (spec.musketRange > 0) {
-      s.musketReload = Math.max(0, s.musketReload - dt * crewFactor);
+      s.musketReload = Math.max(0, s.musketReload - dt * crewFactor * s.mods.reload);
       if (s.musketReload <= 0) {
         let target: Ship | undefined;
         let best = spec.musketRange;
@@ -950,7 +984,7 @@ export class Battle {
         });
         if (target) {
           const t = target as Ship;
-          const accuracy = 1 - (best / spec.musketRange) * 0.6;
+          const accuracy = (1 - (best / spec.musketRange) * 0.6) * s.mods.accuracy;
           const loss = (spec.musketPower * (s.crew / spec.crew) * (2.5 + this.rand() * 4) * accuracy) / t.spec.deckDefense;
           const before = Math.floor(t.crew);
           t.crew = Math.max(0, t.crew - loss);

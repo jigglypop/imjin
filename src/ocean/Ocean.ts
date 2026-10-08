@@ -61,9 +61,12 @@ import { WAVE_COUNT, type WaveField } from './waves';
 import { createDetailNormalTexture, createFoamTexture } from './detailNormals';
 import type { WakeMap } from './WakeMap';
 import type { Terrain } from '../terrain/Terrain';
-import { LIGHT_COUNT, pointLights } from '../render/lights';
-import { CASCADES, FFT_N, type FFTWaves } from './FFTWaves';
+import { pointLights } from '../render/lights';
+import { CASCADES, type FFTWaves } from './FFTWaves';
 import type { CurrentField } from '../sim/current';
+
+/** Mesh density and shading cost for the ocean. `lights` is how many point lights the surface shades. */
+export type OceanRenderQuality = { segments: number; lights: number };
 
 function createOceanGeometry(segments = 400, r0 = 0.4, rMax = 46000, aspect = 1.05) {
   const growth = 1 + ((2 * Math.PI) / segments) * aspect;
@@ -110,6 +113,8 @@ function createOceanGeometry(segments = 400, r0 = 0.4, rMax = 46000, aspect = 1.
 
 export class Ocean {
   readonly mesh: Mesh;
+  private readonly matRefract: MeshBasicNodeMaterial;
+  private readonly matPlain: MeshBasicNodeMaterial;
   readonly time = uniform(0);
   readonly detailStrength = uniform(1);
   readonly whitecaps = uniform(0.6);
@@ -121,7 +126,15 @@ export class Ocean {
   private readonly pmremNodes: ReturnType<typeof pmremTexture>[] = [];
   private waveVersion = -1;
 
-  constructor(private readonly waves: WaveField, envTexture: Texture, wake: WakeMap, terrain: Terrain, fft: FFTWaves | null, current: CurrentField | null = null) {
+  constructor(
+    private readonly waves: WaveField,
+    envTexture: Texture,
+    wake: WakeMap,
+    terrain: Terrain,
+    fft: FFTWaves | null,
+    current: CurrentField | null,
+    quality: OceanRenderQuality,
+  ) {
     this.waveA = Array.from({ length: WAVE_COUNT }, () => new Vector4());
     this.waveB = Array.from({ length: WAVE_COUNT }, () => new Vector4());
     this.syncWaves();
@@ -130,7 +143,8 @@ export class Ocean {
     const detailTex = createDetailNormalTexture(waves.state.windAngle);
     const foamTex = createFoamTexture();
     const uTime = this.time;
-    const { geometry, spacing } = createOceanGeometry();
+    const lightCount = quality.lights;
+    const { geometry, spacing } = createOceanGeometry(quality.segments);
 
     const worldXZ = modelWorldMatrix.mul(vec4(positionGeometry, 1)).xz;
     const vertexDistance = length(worldXZ.sub(cameraPosition.xz));
@@ -159,7 +173,7 @@ export class Ocean {
         const g = gust(worldXZ, float(0));
         for (let c = 0; c < 2; c += 1) {
           const L = CASCADES[c]!.size;
-          const texel = L / FFT_N;
+          const texel = L / fft.n;
           const lod = max(log2(vSpacing.mul(2.2).div(texel)), 0);
           const d: any = texture(fft.displacement[c]!, worldXZ.div(L)).level(lod);
           const w = c === 0 ? float(1) : g;
@@ -187,7 +201,8 @@ export class Ocean {
     const vortices = uniformArray(Array.from({ length: 8 }, (_, i) => new Vector4(vortexData[i * 4] ?? 0, vortexData[i * 4 + 1] ?? 0, vortexData[i * 4 + 2] ?? 1, vortexData[i * 4 + 3] ?? 0)), 'vec4');
     const tide = this.tide;
 
-    material.colorNode = Fn(() => {
+    // One colour graph per surface variant. The refracting variant reads the framebuffer, which costs a copy per frame.
+    const colorFor = (refraction: boolean) => Fn(() => {
       const p0 = vP0;
       const flow = vec2(0, 0).toVar();
       if (current) {
@@ -307,7 +322,7 @@ export class Ocean {
       const lightSpec = vec3(0).toVar();
       const lightDiffuse = vec3(0).toVar();
       const aL = float(0.09).mul(float(0.09)).mul(float(0.09)).mul(float(0.09));
-      Loop(LIGHT_COUNT, ({ i }) => {
+      Loop(lightCount, ({ i }) => {
         const lp: any = pointLights.posNode.element(i);
         const lc: any = pointLights.colNode.element(i);
         const toL = lp.xyz.sub(positionWorld);
@@ -333,19 +348,26 @@ export class Ocean {
       const scatter = atmosphere.waterScatter.mul(atmosphere.sunIrradiance).mul(scatterAmount).mul(0.18);
       const body = atmosphere.waterDeep.mul(atmosphere.skyAmbient.mul(4.2).add(atmosphere.sunIrradiance.mul(NoL.mul(0.25).add(0.12)))).add(scatter).add(atmosphere.waterScatter.mul(atmosphere.skyAmbient).mul(crest.mul(0.35).add(wakeTurb.mul(1.6))));
 
-      const distortion = N.xz.mul(0.035).div(max(dist.mul(0.02), 1));
-      const uvR = screenUV.add(distortion);
-      const surfaceZ = positionView.z;
-      const sceneZr = perspectiveDepthToViewZ(viewportDepthTexture(uvR), cameraNear, cameraFar);
-      const useDistorted = sceneZr.lessThan(surfaceZ);
-      const uvFinal = select(useDistorted, uvR, screenUV);
-      const sceneZ = perspectiveDepthToViewZ(viewportDepthTexture(uvFinal), cameraNear, cameraFar);
-      const thickness = max(surfaceZ.sub(sceneZ), 0);
       const shallowTint = float(1).sub(smoothstep(1.5, 14, depthBelow));
-      const absorb = mix(vec3(0.55, 0.16, 0.11), vec3(0.42, 0.11, 0.12), shallowTint);
-      const trans = exp(absorb.mul(thickness).negate());
-      const behind = viewportSharedTexture(uvFinal).rgb;
-      const underwater = mix(body, behind.mul(mix(vec3(0.55, 0.85, 0.8), vec3(0.62, 0.92, 0.82), shallowTint)), trans);
+      // Refraction and contact foam read the scene colour and depth behind the surface. That costs a framebuffer
+      // copy every frame, so the mobile tiers use the body colour alone and skip the foam at the shoreline contact.
+      let underwater: any = body;
+      let contact: any = float(0);
+      if (refraction) {
+        const distortion = N.xz.mul(0.035).div(max(dist.mul(0.02), 1));
+        const uvR = screenUV.add(distortion);
+        const surfaceZ = positionView.z;
+        const sceneZr = perspectiveDepthToViewZ(viewportDepthTexture(uvR), cameraNear, cameraFar);
+        const useDistorted = sceneZr.lessThan(surfaceZ);
+        const uvFinal = select(useDistorted, uvR, screenUV);
+        const sceneZ = perspectiveDepthToViewZ(viewportDepthTexture(uvFinal), cameraNear, cameraFar);
+        const thickness = max(surfaceZ.sub(sceneZ), 0);
+        const absorb = mix(vec3(0.55, 0.16, 0.11), vec3(0.42, 0.11, 0.12), shallowTint);
+        const trans = exp(absorb.mul(thickness).negate());
+        const behind = viewportSharedTexture(uvFinal).rgb;
+        underwater = mix(body, behind.mul(mix(vec3(0.55, 0.85, 0.8), vec3(0.62, 0.92, 0.82), shallowTint)), trans);
+        contact = float(1).sub(smoothstep(0, 1.4, thickness)).mul(select(thickness.lessThan(30), float(1), float(0)));
+      }
 
       const color = mix(underwater.add(atmosphere.waterScatter.mul(lightDiffuse).mul(0.05)), reflection, fresnel).add(spec).add(lightSpec).toVar();
 
@@ -353,7 +375,6 @@ export class Ocean {
       const foamUV2 = p0.mul(1 / 4.3).add(N.xz.mul(0.12)).sub(vec2(t.mul(0.011), t.mul(0.004)));
       const pattern = texture(foamTex, foamUV).r.mul(0.62).add(texture(foamTex, foamUV2).r.mul(0.38));
       const whitecap = saturate(float(0.82).sub(jacobian).mul(2.4)).mul(this.whitecaps);
-      const contact = float(1).sub(smoothstep(0, 1.4, thickness)).mul(select(thickness.lessThan(30), float(1), float(0)));
       const surf = float(1).sub(smoothstep(0.0, 4.5, depthBelow)).mul(sin(depthBelow.mul(2.2).sub(t.mul(1.6))).mul(0.35).add(0.75));
       const speed = length(flow);
       const whirl = float(0).toVar();
@@ -396,12 +417,24 @@ export class Ocean {
       return mix(finalColor, vec3(wakeFoam, wakeTurb, wakeEdge.mul(0.2)), this.debugWake);
     })();
 
-    const mesh = new Mesh(geometry, material);
+    const matRefract = material;
+    matRefract.colorNode = colorFor(true);
+    const matPlain = material.clone();
+    matPlain.colorNode = colorFor(false);
+    this.matRefract = matRefract;
+    this.matPlain = matPlain;
+
+    const mesh = new Mesh(geometry, matPlain);
     mesh.frustumCulled = false;
     mesh.renderOrder = -10;
     mesh.receiveShadow = false;
     mesh.castShadow = false;
     this.mesh = mesh;
+  }
+
+  /** Switches between the refracting and the plain surface. Both are compiled when the battle loads. */
+  setRefraction(on: boolean) {
+    this.mesh.material = on ? this.matRefract : this.matPlain;
   }
 
   setEnvironment(envTexture: Texture) {

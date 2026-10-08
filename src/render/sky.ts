@@ -4,6 +4,7 @@ import {
   EquirectangularReflectionMapping,
   HalfFloatType,
   LinearFilter,
+  LinearSRGBColorSpace,
   RGBAFormat,
   Vector3,
 } from 'three/webgpu';
@@ -56,13 +57,44 @@ export type LoadedSky = {
   info: SkyInfo;
 };
 
-export async function loadSky(preset: SkyPreset): Promise<LoadedSky> {
+/** Box-filter a half-float equirect by an integer factor. Output is always RGBA. */
+function downsampleHalf(img: { data: Uint16Array; width: number; height: number }, channels: number, factor: number, table: Float32Array) {
+  const w = Math.floor(img.width / factor);
+  const h = Math.floor(img.height / factor);
+  const out = new Uint16Array(w * h * 4);
+  for (let y = 0; y < h; y += 1) {
+    for (let x = 0; x < w; x += 1) {
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let n = 0;
+      for (let sy = y * factor; sy < (y + 1) * factor; sy += 1) {
+        for (let sx = x * factor; sx < (x + 1) * factor; sx += 1) {
+          const i = (sy * img.width + sx) * channels;
+          r += table[img.data[i]!]!;
+          g += table[img.data[i + 1]!]!;
+          b += table[img.data[i + 2]!]!;
+          n += 1;
+        }
+      }
+      const o = (y * w + x) * 4;
+      out[o] = DataUtils.toHalfFloat(r / n);
+      out[o + 1] = DataUtils.toHalfFloat(g / n);
+      out[o + 2] = DataUtils.toHalfFloat(b / n);
+      out[o + 3] = DataUtils.toHalfFloat(1);
+    }
+  }
+  return { data: out, width: w, height: h };
+}
+
+/** `downscale` shrinks the visible background texture (memory and bandwidth). Lighting is always computed at full resolution. */
+export async function loadSky(preset: SkyPreset, downscale = 1): Promise<LoadedSky> {
   const loader = new HDRLoader();
   loader.setDataType(HalfFloatType);
-  const background = await loader.loadAsync(`/hdri/${preset.file}`);
-  background.mapping = EquirectangularReflectionMapping;
-  background.needsUpdate = true;
-  const img = background.image as { data: Uint16Array; width: number; height: number };
+  const source = await loader.loadAsync(`/hdri/${preset.file}`);
+  source.mapping = EquirectangularReflectionMapping;
+  source.needsUpdate = true;
+  const img = source.image as { data: Uint16Array; width: number; height: number };
   const table = decodeTable();
   const srcW = img.width;
   const srcH = img.height;
@@ -180,5 +212,17 @@ export async function loadSky(preset: SkyPreset): Promise<LoadedSky> {
   environment.flipY = false;
   environment.generateMipmaps = false;
   environment.needsUpdate = true;
+  let background: DataTexture = source;
+  if (downscale > 1) {
+    const small = downsampleHalf(img, channels, downscale, table);
+    background = new DataTexture(small.data, small.width, small.height, RGBAFormat, HalfFloatType);
+    background.mapping = EquirectangularReflectionMapping;
+    background.colorSpace = LinearSRGBColorSpace;
+    background.flipY = source.flipY;
+    background.magFilter = LinearFilter;
+    background.minFilter = LinearFilter;
+    background.generateMipmaps = false;
+    background.needsUpdate = true;
+  }
   return { background, environment, info: { sunDir, sunIrradiance: irr, skyAmbient, horizon, ambientLum: ambL } };
 }

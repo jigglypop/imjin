@@ -1,7 +1,7 @@
 import { Ray, Vector2, Vector3 } from 'three/webgpu';
 import type { Engine } from './Engine';
 import type { AmmoMode, BattleEvent, Ship, Stance } from '../sim/types';
-import { setSelectionBox, pushToast } from '../state/store';
+import { setSelectionBox, pushToast, useUi } from '../state/store';
 
 const DRAG_THRESHOLD = 6;
 
@@ -115,7 +115,14 @@ export class Input {
     return this.tmp.copy(this.ray.origin).addScaledVector(d, t);
   }
 
+  /** When on, a one-finger drag draws a selection box instead of panning the camera. */
+  get touchBox() {
+    return useUi.getState().touchBox;
+  }
+
+  // Touch pointers are routed to TouchControls. The handlers below only deal with mouse input.
   private onDown = (e: PointerEvent) => {
+    if (e.pointerType === 'touch') return;
     if (e.button === 0 && !e.altKey) {
       this.leftDown = true;
       this.dragging = false;
@@ -127,11 +134,12 @@ export class Input {
   };
 
   private onMove = (e: PointerEvent) => {
+    if (e.pointerType === 'touch') return;
     if (!this.leftDown) {
       if (this.dom && e.target === this.dom) {
         const s = this.pickShip(e.clientX, e.clientY);
         this.engine.views.hovered = s ? s.id : 0;
-        this.dom.style.cursor = s ? (s.team === 'japan' && this.engine.views.selected.size ? 'crosshair' : 'pointer') : 'default';
+        this.dom.style.cursor = s ? (s.team === this.engine.enemyTeam && this.engine.views.selected.size ? 'crosshair' : 'pointer') : 'default';
       }
       return;
     }
@@ -144,25 +152,63 @@ export class Input {
     }
   };
 
+  /** Select own ships whose screen position falls inside a rectangle given in client coordinates. */
+  boxSelect(left: number, top: number, right: number, bottom: number, additive: boolean) {
+    const rect = this.dom!.getBoundingClientRect();
+    const x0 = left - rect.left;
+    const x1 = right - rect.left;
+    const y0 = top - rect.top;
+    const y1 = bottom - rect.top;
+    const views = this.engine.views;
+    if (!additive) views.selected.clear();
+    for (const s of this.engine.battle.ships) {
+      if (!this.engine.isOwn(s)) continue;
+      if (!this.engine.screenPosition(s.x, s.spec.deck, s.z, this.screen)) continue;
+      if (this.screen.x >= x0 && this.screen.x <= x1 && this.screen.y >= y0 && this.screen.y <= y1) views.selected.add(s.id);
+    }
+    this.engine.publish(true);
+  }
+
+  /**
+   * A tap on the battlefield (touch). Own ship: select it. Enemy ship or open water: command the selection.
+   * Without a selection the tap only reminds the player to select a ship.
+   */
+  tap(clientX: number, clientY: number) {
+    const ship = this.pickShip(clientX, clientY);
+    if (this.engine.isOwn(ship)) {
+      const now = performance.now();
+      if (ship.id === this.lastClickId && now - this.lastClickTime < 350) {
+        this.engine.rts.followId = ship.id;
+        this.engine.rts.goal.distance = Math.min(this.engine.rts.goal.distance, 160);
+      }
+      this.lastClickTime = now;
+      this.lastClickId = ship.id;
+      this.engine.views.selected.clear();
+      this.engine.views.selected.add(ship.id);
+      this.engine.publish(true);
+      return;
+    }
+    if (!this.selectedOwn().length) {
+      this.need([]);
+      return;
+    }
+    this.command(clientX, clientY, false);
+  }
+
+  clearSelection() {
+    this.engine.views.selected.clear();
+    this.engine.rts.followId = 0;
+    this.engine.publish(true);
+  }
+
   private onUp = (e: PointerEvent) => {
-    if (e.button !== 0 || !this.leftDown) return;
+    if (e.pointerType === 'touch' || e.button !== 0 || !this.leftDown) return;
     this.leftDown = false;
     const views = this.engine.views;
     if (this.dragging) {
       this.dragging = false;
       setSelectionBox(null);
-      const rect = this.dom!.getBoundingClientRect();
-      const x0 = Math.min(this.downX, e.clientX) - rect.left;
-      const x1 = Math.max(this.downX, e.clientX) - rect.left;
-      const y0 = Math.min(this.downY, e.clientY) - rect.top;
-      const y1 = Math.max(this.downY, e.clientY) - rect.top;
-      if (!e.shiftKey) views.selected.clear();
-      for (const s of this.engine.battle.ships) {
-        if (!this.engine.battle.isActive(s) || s.team !== 'joseon') continue;
-        if (!this.engine.screenPosition(s.x, s.spec.deck, s.z, this.screen)) continue;
-        if (this.screen.x >= x0 && this.screen.x <= x1 && this.screen.y >= y0 && this.screen.y <= y1) views.selected.add(s.id);
-      }
-      this.engine.publish(true);
+      this.boxSelect(Math.min(this.downX, e.clientX), Math.min(this.downY, e.clientY), Math.max(this.downX, e.clientX), Math.max(this.downY, e.clientY), e.shiftKey);
       return;
     }
     const ship = this.pickShip(e.clientX, e.clientY);
@@ -181,19 +227,21 @@ export class Input {
     this.engine.publish(true);
   };
 
-  private selectedJoseon() {
-    return [...this.engine.views.selected].filter((id) => {
-      const s = this.engine.battle.get(id);
-      return this.engine.battle.isActive(s) && s.team === 'joseon';
-    });
+  /** Selected ships the player may command. Enemy and allied ships can be selected to look at, not to order. */
+  private selectedOwn() {
+    return [...this.engine.views.selected].filter((id) => this.engine.isOwn(this.engine.battle.get(id)));
+  }
+
+  private ownShips() {
+    return this.engine.battle.ships.filter((s) => this.engine.isOwn(s));
   }
 
   private command(clientX: number, clientY: number, queue: boolean) {
-    const ids = this.selectedJoseon();
+    const ids = this.selectedOwn();
     if (!ids.length) return;
     const b = this.engine.battle;
     const target = this.pickShip(clientX, clientY);
-    if (target && target.team === 'japan' && b.isActive(target)) {
+    if (target && target.team === this.engine.enemyTeam && b.isActive(target)) {
       b.setOrder(ids, { type: 'attack', targetId: target.id });
       pushToast(`${ids.length}척, ${target.name} 공격`);
       return;
@@ -205,7 +253,7 @@ export class Input {
   }
 
   moveSelected(tx: number, tz: number) {
-    const ids = this.selectedJoseon();
+    const ids = this.selectedOwn();
     if (!ids.length) return;
     const b = this.engine.battle;
     let cx = 0;
@@ -240,13 +288,13 @@ export class Input {
 
   formation(kind: 'crane' | 'line' | 'column' | 'wedge') {
     const b = this.engine.battle;
-    let ids = this.selectedJoseon();
-    if (!ids.length) ids = b.ships.filter((s) => s.team === 'joseon' && b.isActive(s) && s.spec.kind !== 'geobukseon').map((s) => s.id);
+    let ids = this.selectedOwn();
+    if (!ids.length) ids = this.ownShips().filter((s) => s.spec.kind !== 'geobukseon').map((s) => s.id);
     let ex = 0;
     let ez = 0;
     let n = 0;
     for (const s of b.ships) {
-      if (s.team !== 'japan' || !b.isActive(s)) continue;
+      if (s.team !== this.engine.enemyTeam || !b.isActive(s)) continue;
       ex += s.x;
       ez += s.z;
       n += 1;
@@ -258,10 +306,9 @@ export class Input {
   }
 
   private commandIds(all = false) {
-    const ids = this.selectedJoseon();
+    const ids = this.selectedOwn();
     if (ids.length || !all) return ids;
-    const b = this.engine.battle;
-    return b.ships.filter((s) => s.team === 'joseon' && b.isActive(s)).map((s) => s.id);
+    return this.ownShips().map((s) => s.id);
   }
 
   private need(ids: number[]) {
@@ -360,15 +407,14 @@ export class Input {
   }
 
   auto() {
-    const b = this.engine.battle;
-    let ids = this.selectedJoseon();
-    if (!ids.length) ids = b.ships.filter((s) => s.team === 'joseon' && b.isActive(s)).map((s) => s.id);
-    b.setOrder(ids, { type: 'auto' });
+    let ids = this.selectedOwn();
+    if (!ids.length) ids = this.ownShips().map((s) => s.id);
+    this.engine.battle.setOrder(ids, { type: 'auto' });
     pushToast('자유 교전');
   }
 
   hold() {
-    const ids = this.selectedJoseon();
+    const ids = this.selectedOwn();
     if (!ids.length) return;
     this.engine.battle.setOrder(ids, { type: 'hold' });
     pushToast('정지');
@@ -383,8 +429,7 @@ export class Input {
   }
 
   cycle() {
-    const b = this.engine.battle;
-    const own = b.ships.filter((s) => s.team === 'joseon' && b.isActive(s));
+    const own = this.ownShips();
     if (!own.length) return;
     const current = [...this.engine.views.selected][0] ?? 0;
     const idx = own.findIndex((s) => s.id === current);
@@ -493,16 +538,17 @@ export class Input {
 
   onEvents(events: BattleEvent[]) {
     const b = this.engine.battle;
+    const team = this.engine.team;
     for (const e of events) {
       if (e.type === 'sinking') {
         const s = b.get(e.ship);
-        if (s) pushToast(`${s.team === 'joseon' ? '아군' : '적'} ${s.spec.label} 침몰 — ${s.name}`, s.team === 'joseon' ? 'bad' : 'good');
+        if (s) pushToast(`${s.team === team ? '아군' : '적'} ${s.spec.label} 침몰 — ${s.name}`, s.team === team ? 'bad' : 'good');
       } else if (e.type === 'struck') {
         const s = b.get(e.ship);
-        if (s) pushToast(`${s.team === 'joseon' ? '아군' : '적'} ${s.spec.label} 전투 불능 — ${s.name}`, s.team === 'joseon' ? 'bad' : 'good');
+        if (s) pushToast(`${s.team === team ? '아군' : '적'} ${s.spec.label} 전투 불능 — ${s.name}`, s.team === team ? 'bad' : 'good');
       } else if (e.type === 'explode') {
         const s = b.get(e.ship);
-        if (s) pushToast(`화약고 폭발 — ${s.name}`, s.team === 'joseon' ? 'bad' : 'good');
+        if (s) pushToast(`화약고 폭발 — ${s.name}`, s.team === team ? 'bad' : 'good');
       }
     }
   }

@@ -36,7 +36,7 @@ import {
 const MAX_STAMPS = 2048;
 
 export class WakeMap {
-  readonly resolution = 2048;
+  readonly resolution: number;
   extent = 3600;
   readonly center = uniform(new Vector2());
   readonly extentU = uniform(3600);
@@ -53,7 +53,9 @@ export class WakeMap {
   private count = 0;
   private readonly sampleNodes: ReturnType<typeof texture>[] = [];
 
-  constructor() {
+  /** `resolution` is the square texture size. Smaller saves memory and fill rate, and makes wakes softer. */
+  constructor(resolution = 2048) {
+    this.resolution = resolution;
     const make = () => {
       const rt = new RenderTarget(this.resolution, this.resolution, { type: HalfFloatType, depthBuffer: false });
       rt.texture.minFilter = LinearFilter;

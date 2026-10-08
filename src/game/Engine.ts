@@ -47,12 +47,16 @@ import { Lanterns } from '../fx/Lanterns';
 import { Battle, SIM_DT } from '../sim/battle';
 import { GUN_SPECS, STAGE_NAMES } from '../sim/catalog';
 import { buildScenario, SCENARIOS, type FleetSpawn, type ScenarioId } from '../sim/scenarios';
+import { applyBalance } from '../sim/balance';
 import { applyOutcome } from '../campaign/campaign';
 import { GUN_SHOTS } from '../sim/catalog';
 import { CurrentField } from '../sim/current';
-import type { BattleEvent, ShipKind } from '../sim/types';
+import { teamOf, type BattleEvent, type Faction, type Ship, type ShipKind, type Team } from '../sim/types';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
 import { Input } from './Input';
+import { TouchControls } from './Touch';
+import { AdaptiveQuality } from './adaptive';
+import { equipment, LEVELS, levelSetting, saveLevelSetting, startLevel, type LevelSetting, type OceanQuality, type TerrainQuality } from './quality';
 import { publish, pushToast, setLoading, setProgress, setReport, type GameSnapshot } from '../state/store';
 import { SquadronBanners } from '../ui/SquadronBanners';
 import { sound } from '../audio/Sound';
@@ -76,6 +80,8 @@ export type EngineOptions = {
   hideLabels?: boolean;
   follow?: { id: number; distance: number; pitch: number; yaw: number };
   campaign?: FleetSpawn;
+  /** The side the player leads. The campaign is always Joseon. */
+  faction?: Faction;
 };
 
 const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
@@ -92,7 +98,7 @@ export class Engine {
   clouds: Clouds | null = null;
   fft: FFTWaves | null = null;
   current: CurrentField | null = null;
-  readonly wake = new WakeMap();
+  readonly wake: WakeMap;
   views!: ShipViews;
   fx!: Effects;
   crew!: Crew;
@@ -107,6 +113,8 @@ export class Engine {
   paused = false;
   ready = false;
   scenarioId: ScenarioId;
+  /** The side the player leads. Ships of other factions, allies included, follow the computer. */
+  faction: Faction;
   skyName: SkyPresetName;
   seaName: SeaStateName;
   fps = 0;
@@ -127,14 +135,42 @@ export class Engine {
   campaign: FleetSpawn | undefined;
   private reported = false;
   private lastTide = -1;
+  private readonly eq = equipment;
+  private adaptive: AdaptiveQuality | null = null;
+  private level: number = startLevel;
+  private frame = 0;
+  private shadowEvery = 1;
+  private cloudEvery = 1;
+  private bloomNode: ReturnType<typeof bloom> | null = null;
+  private dprOverride: number | null = null;
+  private gpuMs: number | null = null;
+  private gpuProbe = false;
+  private touch: TouchControls | null = null;
 
   constructor(readonly renderer: WebGPURenderer, readonly camera: PerspectiveCamera, private readonly options: EngineOptions) {
+    this.level = levelSetting === 'auto' ? startLevel : levelSetting;
+    this.wake = new WakeMap(equipment.wakeResolution);
     this.rts = new RtsCamera(camera);
     this.scenarioId = options.scenario;
     const info = SCENARIOS[options.scenario];
     this.campaign = options.campaign;
+    this.faction = options.campaign ? 'joseon' : options.faction ?? 'joseon';
     this.skyName = options.sky ?? info.sky;
     this.seaName = options.sea ?? info.sea;
+  }
+
+  /** The player's team. The Ming fleet fights on the Joseon team. */
+  get team(): Team {
+    return teamOf(this.faction);
+  }
+
+  get enemyTeam(): Team {
+    return this.team === 'joseon' ? 'japan' : 'joseon';
+  }
+
+  /** Ships the player commands: the active ships of the player's faction. Allies of other factions are not among them. */
+  isOwn(s: Ship | undefined): s is Ship {
+    return this.battle.isActive(s) && s.spec.faction === this.faction;
   }
 
   async init() {
@@ -157,8 +193,8 @@ export class Engine {
         return v;
       });
     const [sky, terrain, assets] = await Promise.all([
-      track(loadSky(SKY_PRESETS[this.skyName]), 0.2),
-      track(Terrain.load(info.terrain), 0.22),
+      track(loadSky(SKY_PRESETS[this.skyName], this.eq.hdriDownscale), 0.2),
+      track(Terrain.load(info.terrain, this.terrainQuality()), 0.22),
       loadShipAssets(ALL_KINDS, (f) => setProgress(done + f * 0.35)).then((v) => {
         done += 0.35;
         setProgress(done);
@@ -172,25 +208,26 @@ export class Engine {
     this.applySky(sky);
     setLoading('함대를 배치하는 중', 0.82);
     this.placeScenario(sky);
-    if ((r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) this.fft = new FFTWaves(spectrumOf(SEA_STATES[this.seaName]));
-    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current);
+    if ((r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) this.fft = new FFTWaves(spectrumOf(SEA_STATES[this.seaName]), this.eq.fftN);
+    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
     this.scene.add(this.ocean.mesh);
     if (params.get('clouds') !== '0') {
-      this.clouds = new Clouds(sky.environment);
+      this.clouds = new Clouds(sky.environment, LEVELS[this.level]!.cloud);
       this.clouds.coverage.value = COVERAGE[this.skyName];
       this.scene.add(this.clouds.mesh);
     }
     const sun = this.sun;
     sun.castShadow = true;
-    sun.shadow.mapSize.set(4096, 4096);
+    sun.shadow.mapSize.set(this.eq.shadowMap, this.eq.shadowMap);
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.04;
     sun.shadow.camera.near = 1;
     sun.shadow.camera.far = 3200;
     this.scene.add(sun, sun.target);
-    this.views = new ShipViews(this.assets, this.battle);
+    this.views = new ShipViews(this.assets, this.battle, this.eq.ships);
+    this.views.team = this.team;
     this.scene.add(this.views.group);
-    this.fx = new Effects(this.views);
+    this.fx = new Effects(this.views, { lights: this.eq.lights, particles: { keep: LEVELS[this.level]!.particleKeep, sort: true, noise: this.eq.noise } });
     this.fx.wake = this.wake;
     this.fx.onShake = (k) => this.rts.shake(k);
     this.scene.add(this.fx.group);
@@ -207,7 +244,11 @@ export class Engine {
     }
     this.input = new Input(this);
     this.input.attach(r.domElement);
+    this.touch = new TouchControls(this);
+    this.touch.attach(r.domElement);
     this.rts.attach(r.domElement);
+    const dprParam = params.get('dpr');
+    this.dprOverride = dprParam ? Number(dprParam) : null;
     this.rts.ground = (x, z) => this.terrain.heightAt(x, z);
     this.minimap.onPick = (x, z, button) => {
       if (button === 2) this.input.moveSelected(x, z);
@@ -232,13 +273,32 @@ export class Engine {
     sound.setMode('battle');
     setLoading('셰이더를 준비하는 중', 0.88);
     await r.compileAsync(this.scene, this.camera);
+    this.primeOcean();
+    this.adaptive = new AdaptiveQuality(this.level, levelSetting === 'auto', (l) => this.applyLevel(l));
+    this.applyLevel(this.level);
     setProgress(1);
     this.ready = true;
   }
 
+  private terrainQuality(): TerrainQuality {
+    return { mesh: this.eq.terrainMesh, triplanar: this.eq.triplanar, anisotropy: this.eq.anisotropy, noise: this.eq.noise };
+  }
+
+  private oceanQuality(): OceanQuality {
+    return { segments: this.eq.oceanSegments, lights: this.eq.lights };
+  }
+
+  /** The refraction variant is a second ocean material. Render both once, so neither hitches on its first use. */
+  private primeOcean() {
+    this.ocean.setRefraction(true);
+    this.pipeline.render();
+    this.ocean.setRefraction(false);
+    this.pipeline.render();
+  }
+
   private dressTerrain() {
     this.terrain.season.value = SEASON[this.scenarioId] ?? 0;
-    this.vegetation = new Vegetation(this.terrain);
+    this.vegetation = new Vegetation(this.terrain, { grids: this.eq.vegetationGrids, shadows: true });
     this.terrain.group.add(this.vegetation.group);
     this.structures = new Structures(this.terrain);
     this.terrain.group.add(this.structures.group);
@@ -260,6 +320,8 @@ export class Engine {
     this.phi = sunAz - preset.axisOffset - info.view.dir;
     this.terrain.setRotation(this.phi);
     this.battle = buildScenario(this.scenarioId, this.phi, 1592 + Math.floor(Math.random() * 1000), (x, z) => this.terrain.heightAtScenario(x, z), this.campaign);
+    applyBalance(this.battle, this.scenarioId, this.faction);
+    this.minimap.team = this.team;
     this.reported = false;
     setReport(null);
     this.battle.land = (x, z) => this.terrain.heightAt(x, z);
@@ -288,9 +350,30 @@ export class Engine {
 
   private defaultPose(): CameraPose {
     const info = SCENARIOS[this.scenarioId];
-    const c = this.terrain.toWorld(info.view.tx, info.view.tz);
-    const dir = info.view.dir + this.phi;
-    return { tx: c.x, tz: c.z, yaw: dir + Math.PI + 0.22, pitch: info.view.pitch, distance: info.view.dist };
+    if (this.faction === 'joseon') {
+      const c = this.terrain.toWorld(info.view.tx, info.view.tz);
+      const dir = info.view.dir + this.phi;
+      return { tx: c.x, tz: c.z, yaw: dir + Math.PI + 0.22, pitch: info.view.pitch, distance: info.view.dist };
+    }
+    // The scenario views look over the Joseon fleet. Other sides start behind their own ships, facing the enemy,
+    // with the view pushed a quarter of the way across so the enemy is in sight.
+    const own = this.centroid((s) => s.spec.faction === this.faction);
+    const enemy = this.centroid((s) => s.team === this.enemyTeam);
+    const back = Math.atan2(own.z - enemy.z, own.x - enemy.x);
+    return { tx: own.x + (enemy.x - own.x) * 0.25, tz: own.z + (enemy.z - own.z) * 0.25, yaw: back + 0.22, pitch: info.view.pitch, distance: info.view.dist };
+  }
+
+  private centroid(pick: (s: Ship) => boolean) {
+    let x = 0;
+    let z = 0;
+    let n = 0;
+    for (const s of this.battle.ships) {
+      if (!pick(s)) continue;
+      x += s.x;
+      z += s.z;
+      n += 1;
+    }
+    return n ? { x: x / n, z: z / n } : { ...this.battle.center };
   }
 
   private setupGallery() {
@@ -357,10 +440,10 @@ export class Engine {
   private setupPipeline() {
     const pipeline = new RenderPipeline(this.renderer);
     pipeline.outputColorTransform = false;
-    const scenePass = pass(this.scene, this.camera, { samples: 4 });
+    const scenePass = pass(this.scene, this.camera, { samples: this.eq.msaa });
     const color = scenePass.getTextureNode('output');
-    const glow = bloom(color, 0.22, 0.5, 2.2);
-    const hdr = color.add(glow);
+    this.bloomNode = bloom(color, 0.22, 0.5, 2.2);
+    const hdr = color.add(this.bloomNode);
     const mapped = renderOutput(hdr);
     const d = length(uv().sub(0.5).mul(vec3(1.25, 1, 1).xy));
     const vig = mix(float(1), float(0.62), smoothstep(0.35, 0.95, d).mul(this.vignette.mul(2.5)));
@@ -375,7 +458,7 @@ export class Engine {
   async setSky(name: SkyPresetName) {
     if (name === this.skyName && this.sky) return;
     this.skyName = name;
-    const sky = await loadSky(SKY_PRESETS[name]);
+    const sky = await loadSky(SKY_PRESETS[name], this.eq.hdriDownscale);
     this.applySky(sky);
     this.publish(true);
   }
@@ -387,9 +470,10 @@ export class Engine {
     this.publish(true);
   }
 
-  async setScenario(id: ScenarioId) {
+  async setScenario(id: ScenarioId, faction?: Faction) {
     this.ready = false;
     this.scenarioId = id;
+    this.faction = this.campaign ? 'joseon' : faction ?? this.faction;
     const info = SCENARIOS[id];
     setLoading(`${info.title} 준비 중`, 0.04, id);
     this.skyName = info.sky;
@@ -402,7 +486,7 @@ export class Engine {
         setProgress(done);
         return v;
       });
-    const [sky, terrain] = await Promise.all([track(loadSky(SKY_PRESETS[this.skyName]), 0.38), track(Terrain.load(info.terrain), 0.4)]);
+    const [sky, terrain] = await Promise.all([track(loadSky(SKY_PRESETS[this.skyName], this.eq.hdriDownscale), 0.38), track(Terrain.load(info.terrain, this.terrainQuality()), 0.4)]);
     setLoading('함대를 배치하는 중', 0.84);
     this.scene.remove(this.terrain.group);
     this.terrain = terrain;
@@ -412,9 +496,10 @@ export class Engine {
     this.placeScenario(sky);
     this.scene.remove(this.ocean.mesh);
     this.fft?.setSpectrum(spectrumOf(SEA_STATES[this.seaName]));
-    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current);
+    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
     this.scene.add(this.ocean.mesh);
     this.views.reset(this.assets, this.battle);
+    this.views.team = this.team;
     this.scene.remove(this.crew.group);
     this.crew = new Crew(this.views);
     this.scene.add(this.crew.group);
@@ -423,6 +508,9 @@ export class Engine {
     this.paused = false;
     setLoading('셰이더를 준비하는 중', 0.9);
     await this.renderer.compileAsync(this.scene, this.camera);
+    this.primeOcean();
+    // The rebuilt terrain, vegetation and ocean start from the plain state. Re-apply the current level to them.
+    this.applyLevel(this.level);
     this.ready = true;
     setLoading(null);
     this.publish(true);
@@ -446,6 +534,7 @@ export class Engine {
       this.fpsFrames = 0;
       this.fpsTime = 0;
     }
+    this.adaptive?.update(frameDt, this.gpuMs);
     const dt = Math.min(frameDt, 0.1);
     const scaled = this.paused ? 0 : dt * this.speed;
     this.lastScaled = scaled;
@@ -480,7 +569,7 @@ export class Engine {
     const tideSign = Math.abs(this.battle.tide) < 0.15 ? 0 : Math.sign(this.battle.tide);
     if (this.current && tideSign !== this.lastTide) {
       if (tideSign === 0) pushToast('물살이 잦아든다 — 곧 물길이 바뀐다');
-      else if (this.lastTide === 0) pushToast(tideSign > 0 ? '울돌목의 물길이 뒤집혔다! 왜선이 밀려난다' : '거센 물살이 왜선을 실어 온다', tideSign > 0 ? 'good' : 'bad');
+      else if (this.lastTide === 0) pushToast(tideSign > 0 ? '울돌목의 물길이 뒤집혔다! 왜선이 밀려난다' : '거센 물살이 왜선을 실어 온다', (tideSign > 0) === (this.team === 'joseon') ? 'good' : 'bad');
       this.lastTide = tideSign;
     }
     this.ocean.update(this.camera.position.x, this.camera.position.z);
@@ -502,7 +591,7 @@ export class Engine {
     }
     this.minimapTimer -= dt;
     if (this.minimapTimer <= 0) {
-      this.minimap.draw(this.battle, this.views.selected, this.rts.target.x, this.rts.target.z, this.rts.yaw);
+      if (this.minimap.visible) this.minimap.draw(this.battle, this.views.selected, this.rts.target.x, this.rts.target.z, this.rts.yaw);
       this.minimapTimer = 0.1;
     }
   }
@@ -529,13 +618,15 @@ export class Engine {
           kills: s.kills,
         };
       });
-    const enemySunk = b.initial.japan - b.teamCount('japan') - b.escaped.japan;
-    setReport(applyOutcome({ id: this.scenarioId, win: b.winner === 'joseon', enemySunk, enemyEscaped: b.escaped.japan, ships }));
+    const enemy = this.enemyTeam;
+    const enemySunk = b.initial[enemy] - b.teamCount(enemy) - b.escaped[enemy];
+    setReport(applyOutcome({ id: this.scenarioId, win: b.winner === this.team, enemySunk, enemyEscaped: b.escaped[enemy], ships }));
   }
 
+  /** Withdrawal. The battle counts as lost. */
   endBattle() {
     if (this.battle.winner) return;
-    this.battle.winner = 'japan';
+    this.battle.winner = this.enemyTeam;
   }
 
   private noteInterest(events: BattleEvent[]) {
@@ -654,8 +745,59 @@ export class Engine {
     if (!this.ready) return;
     this.wake.update(this.renderer, this.lastScaled);
     this.fft?.update(this.renderer, waveField.time);
-    this.clouds?.render(this.renderer, this.camera);
+    this.frame += 1;
+    // Lower levels refresh shadows every few frames. Each refresh redraws the whole shadow map.
+    this.sun.shadow.autoUpdate = this.shadowEvery === 1;
+    this.sun.shadow.needsUpdate = this.frame % this.shadowEvery === 0;
+    if (this.clouds && this.frame % this.cloudEvery === 0) this.clouds.render(this.renderer, this.camera);
     this.pipeline.render();
+    this.probeGpu();
+  }
+
+  /**
+   * Time from submitting this frame to the GPU finishing it. One probe is in flight at a time, so the cost is one
+   * promise per few frames. The frame controller uses it to tell a GPU-bound frame rate from a capped one.
+   */
+  private probeGpu() {
+    if (this.gpuProbe) return;
+    const device = (this.renderer.backend as unknown as { device?: { queue?: { onSubmittedWorkDone?: () => Promise<void> } } | null }).device;
+    const done = device?.queue?.onSubmittedWorkDone;
+    if (!device || !done) return;
+    this.gpuProbe = true;
+    const started = performance.now();
+    done.call(device.queue).then(
+      () => {
+        this.gpuMs = performance.now() - started;
+        this.gpuProbe = false;
+      },
+      () => {
+        this.gpuProbe = false;
+      },
+    );
+  }
+
+  /** Applies a quality level to everything that can change while a battle is running. */
+  private applyLevel(l: number) {
+    const L = LEVELS[l]!;
+    this.level = l;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.dprOverride ?? L.dprCap));
+    this.clouds?.setQuality(L.cloud);
+    this.cloudEvery = L.cloud.every;
+    this.shadowEvery = L.shadowEvery;
+    this.fx?.setParticleKeep(L.particleKeep);
+    this.vegetation?.setLite(L.vegetationLite);
+    this.ocean?.setRefraction(L.refraction);
+    this.bloomNode?.setResolutionScale(L.bloomResolution);
+    if (this.bloomNode) this.bloomNode.strength.value = L.bloomStrength;
+    this.publish(true);
+  }
+
+  /** From the settings panel. 'auto' hands control back to the frame-rate controller. */
+  setQualityLevel(setting: LevelSetting) {
+    if (setting === 'auto') this.adaptive?.setAuto(true);
+    else this.adaptive?.pin(setting);
+    saveLevelSetting(setting);
+    this.publish(true);
   }
 
   publish(force = false) {
@@ -681,6 +823,7 @@ export class Engine {
       return {
         id: sq.id,
         team: sq.team,
+        faction: sq.faction,
         name: sq.name,
         commander: sq.commander,
         portrait: sq.portrait,
@@ -696,17 +839,21 @@ export class Engine {
       };
     });
     const primary = [...this.views.selected].map((id) => b.get(id)).find((s) => !!s && s.alive);
-    const strengthJ = b.strength('joseon');
-    const strengthW = b.strength('japan');
+    const own = this.team;
+    const enemy = this.enemyTeam;
+    const strengthOwn = b.strength(own);
+    const strengthEnemy = b.strength(enemy);
     const snapshot: GameSnapshot = {
       scenario: { id: info.id, title: info.title, hanja: info.hanja, date: info.date, place: info.place, season: info.season },
+      faction: this.faction,
+      team: own,
       time: b.time,
-      joseon: b.teamCount('joseon'),
-      japan: b.teamCount('japan'),
-      joseonTotal: b.initial.joseon,
-      japanTotal: b.initial.japan,
-      escaped: b.escaped.japan,
-      balance: strengthJ / Math.max(1, strengthJ + strengthW),
+      own: b.teamCount(own),
+      enemy: b.teamCount(enemy),
+      ownTotal: b.initial[own],
+      enemyTotal: b.initial[enemy],
+      escaped: b.escaped[enemy],
+      balance: strengthOwn / Math.max(1, strengthOwn + strengthEnemy),
       winner: b.winner,
       paused: this.paused,
       speed: this.speed,
@@ -715,6 +862,8 @@ export class Engine {
       following: this.rts.followId,
       cinematic: this.rts.cinematic,
       fps: this.fps,
+      level: this.level,
+      levelAuto: this.adaptive?.auto ?? levelSetting === 'auto',
       muted: this.sound.muted,
       selectedCount: this.views.selected.size,
       night: b.night,
@@ -797,6 +946,7 @@ export class Engine {
 
   dispose() {
     this.input?.detach();
+    this.touch?.detach();
     this.rts.detach();
   }
 

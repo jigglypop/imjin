@@ -1,10 +1,8 @@
 import {
-  AmbientLight,
-  Box3,
   CanvasTexture,
-  CylinderGeometry,
-  MeshStandardNodeMaterial,
+  CircleGeometry,
   Color,
+  CylinderGeometry,
   DataTexture,
   DataUtils,
   DoubleSide,
@@ -13,26 +11,23 @@ import {
   LinearFilter,
   Mesh,
   MeshBasicNodeMaterial,
-  MeshStandardMaterial,
   NoToneMapping,
   PerspectiveCamera,
   PlaneGeometry,
   RedFormat,
   RepeatWrapping,
   Scene,
-  SpotLight,
   SRGBColorSpace,
   TextureLoader,
   Vector2,
   Vector3,
-  type Object3D,
   type WebGPURenderer,
 } from 'three/webgpu';
 import { abs, clamp, cos, dot, float, fract, fwidth, max, mix, normalize, positionLocal, positionWorld, pow, sin, smoothstep, texture, uniform, uv, vec2, vec3 } from 'three/tsl';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import meta from './demMeta.json';
-import type { ScenarioId } from '../sim/scenarios';
+import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
+import { playableFactions } from '../sim/balance';
+import type { Faction } from '../sim/types';
 
 export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
   okpo: { lon: 128.69, lat: 34.89 },
@@ -48,7 +43,6 @@ export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
 
 const MAP_W = 100;
 const EXAGGERATION = 4.2;
-const BUST_DEPTH = 2.4;
 
 const lonToX = (lon: number) => ((lon + 180) / 360) * 2 ** meta.zoom;
 const latToY = (lat: number) => {
@@ -88,12 +82,39 @@ async function loadHeights() {
   return { heights, tex };
 }
 
-type Side = 'left' | 'right';
-type Bust = { side: Side; group: Group; height: number; yaw: number; phase: number; flag: Group; key: SpotLight; rim: SpotLight; fit: number; lift: number };
+// War-table flags for the sides of the selected battle, pinned into the map around the site: Joseon and Ming to the
+// west, where their fleets sailed from, Japan to the east. The side the player leads stands taller. Sizes are in
+// map units (one unit is about 3.3 km).
+const FLAG_AT: Record<Faction, { dx: number; dz: number; size: number; lean: number }> = {
+  joseon: { dx: -1.4, dz: 0.5, size: 0.95, lean: 0.3 },
+  ming: { dx: -2.4, dz: -0.5, size: 0.9, lean: 0.25 },
+  japan: { dx: 1.5, dz: -0.2, size: 0.62, lean: -0.3 },
+};
+const PLAYER_FLAG = 1.3;
 
-const FIT: Record<Side, { fit: number; lift: number }> = { left: { fit: 1.0, lift: 0 }, right: { fit: 1.34, lift: 0.1 } };
-type CardRect = { left: number; top: number; width: number; height: number };
+/** Banner text: Yi's command flag reads 帥, other commanders fly their name. */
+function flagText(id: ScenarioId, faction: Faction) {
+  const s = SCENARIOS[id];
+  if (faction === 'joseon') return s.joseon.figure === 'fig_yi' ? '帥' : s.joseon.banner;
+  if (faction === 'ming') return s.ming?.banner ?? '明';
+  return s.japan.banner;
+}
 
+type Flag = {
+  faction: Faction;
+  group: Group;
+  canvas: HTMLCanvasElement;
+  tex: CanvasTexture;
+  text: string;
+  /** Height of the group origin above the foot of the pole, at scale 1. */
+  base: number;
+  pos: Vector3;
+  goal: Vector3;
+  scale: number;
+  goalScale: number;
+};
+
+/** The menu is a 3D map with scenario markers. The camera drifts around the selected site. */
 export class SelectScene {
   readonly scene = new Scene();
   readonly camera: PerspectiveCamera;
@@ -109,19 +130,20 @@ export class SelectScene {
   private goalPitch = 0.86;
   private time = 0;
   private idle = 0;
-  private readonly busts: Record<Side, Bust | null> = { left: null, right: null };
-  private readonly visible: Record<Side, boolean> = { left: true, right: true };
-  private readonly cards: Record<Side, CardRect | null> = { left: null, right: null };
-  private viewport = { w: 1, h: 1 };
-  private readonly rig = new Group();
   private readonly paperTone = uniform(new Vector3(0.904, 0.863, 0.776));
   private readonly clock = uniform(0);
-  private flagText: Record<Side, string> = { left: '帥', right: '倭' };
+  private readonly flags: Flag[] = [];
+  private forces: { id: ScenarioId; player: Faction } | null = null;
+  private flagsPlaced = false;
   private dom: HTMLElement | null = null;
   private drag: { button: number; x: number; y: number } | null = null;
   ready = false;
 
-  constructor(private readonly renderer: WebGPURenderer, camera: PerspectiveCamera) {
+  constructor(
+    private readonly renderer: WebGPURenderer,
+    camera: PerspectiveCamera,
+    private readonly segments = 900,
+  ) {
     this.camera = camera;
     camera.fov = 34;
     camera.near = 0.05;
@@ -135,12 +157,14 @@ export class SelectScene {
     const { heights, tex } = await loadHeights();
     this.heights = heights;
     this.scene.add(this.buildMap(tex));
-    this.scene.add(new AmbientLight(0xfff6ea, 0.16));
-    this.camera.add(this.rig);
-    this.scene.add(this.camera);
+    for (const faction of ['joseon', 'ming', 'japan'] as Faction[]) {
+      const flag = this.makeFlag(faction);
+      this.flags.push(flag);
+      this.scene.add(flag.group);
+    }
+    if (this.forces) this.setForces(this.forces.id, this.forces.player);
     this.focus(initial, true);
     this.attach(this.renderer.domElement);
-    void this.loadBusts();
     this.ready = true;
   }
 
@@ -149,6 +173,7 @@ export class SelectScene {
     dom.addEventListener('pointerdown', this.onDown);
     window.addEventListener('pointermove', this.onMove);
     window.addEventListener('pointerup', this.onUp);
+    window.addEventListener('pointercancel', this.onUp);
     dom.addEventListener('wheel', this.onWheel, { passive: false });
     dom.addEventListener('contextmenu', this.onContext);
   }
@@ -159,18 +184,51 @@ export class SelectScene {
     dom.removeEventListener('pointerdown', this.onDown);
     window.removeEventListener('pointermove', this.onMove);
     window.removeEventListener('pointerup', this.onUp);
+    window.removeEventListener('pointercancel', this.onUp);
     dom.removeEventListener('wheel', this.onWheel);
     dom.removeEventListener('contextmenu', this.onContext);
   }
 
   private onContext = (e: Event) => e.preventDefault();
 
+  private readonly touches = new Map<number, { x: number; y: number }>();
+  private pinchDist = 0;
+
+  private spread() {
+    const [a, b] = [...this.touches.values()] as [{ x: number; y: number }, { x: number; y: number }];
+    return Math.hypot(b.x - a.x, b.y - a.y);
+  }
+
   private onDown = (e: PointerEvent) => {
+    if (e.pointerType === 'touch') {
+      this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      this.idle = 0;
+      if (this.touches.size === 2) {
+        // Two fingers: pinch to zoom instead of dragging.
+        this.drag = null;
+        this.pinchDist = this.spread();
+      } else {
+        this.drag = { button: 0, x: e.clientX, y: e.clientY };
+      }
+      return;
+    }
     this.drag = { button: e.button === 2 || e.ctrlKey ? 2 : 0, x: e.clientX, y: e.clientY };
     this.idle = 0;
   };
 
   private onMove = (e: PointerEvent) => {
+    const touch = this.touches.get(e.pointerId);
+    if (touch) {
+      touch.x = e.clientX;
+      touch.y = e.clientY;
+      if (this.touches.size >= 2) {
+        const d = this.spread();
+        if (this.pinchDist > 1 && d > 1) this.goalDist = Math.max(10, Math.min(110, this.goalDist * (this.pinchDist / d)));
+        this.pinchDist = d;
+        this.idle = 0;
+        return;
+      }
+    }
     if (!this.drag) return;
     const dx = e.clientX - this.drag.x;
     const dy = e.clientY - this.drag.y;
@@ -182,17 +240,19 @@ export class SelectScene {
       this.goalPitch = Math.max(0.32, Math.min(1.35, this.goalPitch + dy * 0.004));
       return;
     }
-    const k = (this.dist / this.viewport.h) * 0.9;
+    const k = (this.dist / this.viewportHeight()) * 0.9;
     const c = Math.cos(this.yaw);
     const s = Math.sin(this.yaw);
     const mx = -dx * k;
-    const mz = -dy * k / Math.max(0.35, Math.sin(this.pitch));
+    const mz = (-dy * k) / Math.max(0.35, Math.sin(this.pitch));
     this.goal.x = Math.max(-MAP_W / 2, Math.min(MAP_W / 2, this.goal.x + mx * c + mz * s));
     this.goal.z = Math.max(-this.mapH / 2, Math.min(this.mapH / 2, this.goal.z - mx * s + mz * c));
     this.goal.y = this.groundAt(this.goal.x, this.goal.z);
   };
 
-  private onUp = () => {
+  private onUp = (e: PointerEvent) => {
+    this.touches.delete(e.pointerId);
+    // After a pinch, the remaining finger does not resume dragging until it lands again. That avoids a jump.
     this.drag = null;
   };
 
@@ -202,8 +262,13 @@ export class SelectScene {
     this.goalDist = Math.max(10, Math.min(110, this.goalDist * Math.exp(e.deltaY * 0.0012)));
   };
 
+  private viewportHeight() {
+    return this.dom?.clientHeight || 1;
+  }
+
   private buildMap(demTex: DataTexture) {
-    const geo = new PlaneGeometry(MAP_W, this.mapH, 900, Math.round((900 * meta.height) / meta.width));
+    const segments = this.segments;
+    const geo = new PlaneGeometry(MAP_W, this.mapH, segments, Math.round((segments * meta.height) / meta.width));
     geo.rotateX(-Math.PI / 2);
     const hanji = new TextureLoader().load('/ui/hanji_fiber.jpg');
     hanji.wrapS = RepeatWrapping;
@@ -278,75 +343,37 @@ export class SelectScene {
     }
   }
 
-  setCards(left: CardRect | null, right: CardRect | null, w: number, h: number) {
-    this.cards.left = left;
-    this.cards.right = right;
-    this.viewport = { w, h };
-  }
-
-  setVisible(side: Side, visible: boolean) {
-    this.visible[side] = visible;
-    const b = this.busts[side];
-    if (b) {
-      b.group.visible = visible;
-      b.flag.visible = visible;
-    }
-  }
-
-  setFlags(left: string, right: string) {
-    if (left === this.flagText.left && right === this.flagText.right) return;
-    this.flagText = { left, right };
-    for (const side of ['left', 'right'] as Side[]) {
-      const b = this.busts[side];
-      if (!b) continue;
-      const mesh = b.flag.children[0] as Mesh;
-      const tex = (mesh.material as MeshBasicNodeMaterial).userData.tex as CanvasTexture | undefined;
-      if (tex) {
-        this.paintFlag(tex.image as HTMLCanvasElement, side, this.flagText[side]);
-        tex.needsUpdate = true;
+  /** Plants the flags of the battle's sides around its site. The flags glide over when the battle changes. */
+  setForces(id: ScenarioId, player: Faction) {
+    this.forces = { id, player };
+    if (!this.heights || !this.flags.length) return;
+    const site = this.worldOf(id);
+    const sides = playableFactions(id);
+    for (const f of this.flags) {
+      const at = FLAG_AT[f.faction];
+      f.goal.set(site.x + at.dx, 0, site.z + at.dz);
+      f.goalScale = sides.includes(f.faction) ? at.size * (f.faction === player ? PLAYER_FLAG : 1) : 0;
+      if (!this.flagsPlaced) {
+        f.pos.copy(f.goal);
+        f.scale = f.goalScale;
+      }
+      const text = flagText(id, f.faction);
+      if (text !== f.text) {
+        f.text = text;
+        this.paintFlag(f.canvas, f.faction, text);
+        f.tex.needsUpdate = true;
       }
     }
+    this.flagsPlaced = true;
   }
 
-  private paintFlag(canvas: HTMLCanvasElement, side: Side, text: string) {
+  private paintFlag(canvas: HTMLCanvasElement, faction: Faction, text: string) {
     const ctx = canvas.getContext('2d')!;
     const w = canvas.width;
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
-    if (side === 'left') {
-      ctx.fillStyle = '#d8c28c';
-      ctx.fillRect(0, 0, w, h);
-      for (let i = 0; i < 2600; i += 1) {
-        ctx.fillStyle = 'rgba(' + (120 + Math.random() * 60) + ',' + (95 + Math.random() * 50) + ',' + (50 + Math.random() * 30) + ',' + Math.random() * 0.08 + ')';
-        ctx.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 3, 1 + Math.random() * 12);
-      }
-      ctx.fillStyle = '#8b2e22';
-      const tooth = 34;
-      for (let x = 0; x < w; x += tooth) {
-        ctx.beginPath();
-        ctx.moveTo(x, h);
-        ctx.lineTo(x + tooth / 2, h - 40);
-        ctx.lineTo(x + tooth, h);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x + tooth / 2, 34);
-        ctx.lineTo(x + tooth, 0);
-        ctx.fill();
-      }
-      for (let y = 0; y < h; y += tooth) {
-        ctx.beginPath();
-        ctx.moveTo(w, y);
-        ctx.lineTo(w - 40, y + tooth / 2);
-        ctx.lineTo(w, y + tooth);
-        ctx.fill();
-      }
-      ctx.fillStyle = '#16120e';
-      ctx.font = '900 300px "Noto Serif KR", serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, w * 0.47, h * 0.5);
-    } else {
+    if (faction === 'japan') {
+      // Nobori: a tall white banner with a crest and the commander's name down the middle.
       ctx.fillStyle = '#ece6d8';
       ctx.fillRect(0, 0, w, h);
       for (let i = 0; i < 1800; i += 1) {
@@ -380,28 +407,73 @@ export class SelectScene {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       [...text].forEach((ch, i) => ctx.fillText(ch, cx, w * 1.25 + i * 210));
+      return;
     }
+    // Joseon: a hemp-coloured command flag with a red flame border. Ming: a red flag with a gold border and seal.
+    const ming = faction === 'ming';
+    ctx.fillStyle = ming ? '#9b2f22' : '#d8c28c';
+    ctx.fillRect(0, 0, w, h);
+    for (let i = 0; i < 2600; i += 1) {
+      ctx.fillStyle = ming
+        ? 'rgba(60,10,6,' + Math.random() * 0.1 + ')'
+        : 'rgba(' + (120 + Math.random() * 60) + ',' + (95 + Math.random() * 50) + ',' + (50 + Math.random() * 30) + ',' + Math.random() * 0.08 + ')';
+      ctx.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 3, 1 + Math.random() * 12);
+    }
+    ctx.fillStyle = ming ? '#d9a441' : '#8b2e22';
+    const tooth = 34;
+    for (let x = 0; x < w; x += tooth) {
+      ctx.beginPath();
+      ctx.moveTo(x, h);
+      ctx.lineTo(x + tooth / 2, h - 40);
+      ctx.lineTo(x + tooth, h);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + tooth / 2, 34);
+      ctx.lineTo(x + tooth, 0);
+      ctx.fill();
+    }
+    for (let y = 0; y < h; y += tooth) {
+      ctx.beginPath();
+      ctx.moveTo(w, y);
+      ctx.lineTo(w - 40, y + tooth / 2);
+      ctx.lineTo(w, y + tooth);
+      ctx.fill();
+    }
+    if (ming) {
+      ctx.fillStyle = '#d9a441';
+      ctx.beginPath();
+      ctx.arc(w * 0.47, h * 0.5, w * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#16120e';
+    ctx.font = `900 ${ming ? 230 : 300}px "Noto Serif KR", serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, w * 0.47, h * 0.5);
   }
 
-  private makeFlag(side: Side) {
+  private makeFlag(faction: Faction): Flag {
+    const tall = faction === 'japan';
     const canvas = document.createElement('canvas');
     canvas.width = 512;
-    canvas.height = side === 'left' ? 600 : 1300;
-    this.paintFlag(canvas, side, this.flagText[side]);
+    canvas.height = tall ? 1300 : 600;
     const tex = new CanvasTexture(canvas);
     tex.colorSpace = SRGBColorSpace;
     tex.anisotropy = 8;
+    const flag: Flag = { faction, group: new Group(), canvas, tex, text: '', base: 0, pos: new Vector3(), goal: new Vector3(), scale: 0, goalScale: 0 };
     void document.fonts.load('900 200px "Noto Serif KR"').then(() => {
-      this.paintFlag(canvas, side, this.flagText[side]);
+      if (!flag.text) return;
+      this.paintFlag(canvas, faction, flag.text);
       tex.needsUpdate = true;
     });
+    // The cloth hangs from the pole: to the left for the square flags, to the right for the nobori.
     const aspect = canvas.height / canvas.width;
     const geo = new PlaneGeometry(1, aspect, 40, Math.round(40 * aspect));
-    geo.translate(side === 'left' ? -0.5 : 0.5, -aspect / 2, 0);
+    geo.translate(tall ? 0.5 : -0.5, -aspect / 2, 0);
     const m = new MeshBasicNodeMaterial();
     m.side = DoubleSide;
-    m.userData.tex = tex;
-    const d = side === 'left' ? float(1).sub(uv().x) : uv().x;
+    const d = tall ? uv().x : float(1).sub(uv().x);
     const v = uv().y;
     const t = this.clock;
     const phase = d.mul(7.5).sub(t.mul(2.6)).add(v.mul(1.8));
@@ -410,98 +482,46 @@ export class SelectScene {
     m.positionNode = positionLocal.add(vec3(0, d.mul(d).mul(-0.04), wave));
     m.colorNode = texture(tex, uv()).rgb.mul(slope.mul(d).mul(0.22).add(0.86));
     const cloth = new Mesh(geo, m);
-    cloth.renderOrder = 4;
-    const wood = new MeshStandardNodeMaterial({ color: 0x2a1d14, roughness: 0.45, metalness: 0.1 });
-    const pole = new Mesh(new CylinderGeometry(0.012, 0.014, aspect + 1.6, 10), wood);
+    const wood = new MeshBasicNodeMaterial({ color: 0x2a1d14 });
+    const pole = new Mesh(new CylinderGeometry(0.014, 0.018, aspect + 1.6, 10), wood);
     pole.position.set(0, -aspect / 2 - 0.2, 0);
-    const finial = new Mesh(new CylinderGeometry(0, 0.035, 0.12, 8), new MeshStandardNodeMaterial({ color: 0xb08a3c, roughness: 0.3, metalness: 0.8 }));
-    finial.position.set(0, 0.62, 0);
-    const group = new Group();
-    group.add(cloth, pole, finial);
-    if (side === 'right') {
-      const bar = new Mesh(new CylinderGeometry(0.01, 0.01, 1.05, 8), wood);
+    const finial = new Mesh(new CylinderGeometry(0, 0.04, 0.13, 8), new MeshBasicNodeMaterial({ color: 0xb08a3c }));
+    finial.position.set(0, 0.665, 0);
+    flag.group.add(cloth, pole, finial);
+    if (tall) {
+      const bar = new Mesh(new CylinderGeometry(0.011, 0.011, 1.05, 8), wood);
       bar.rotation.z = Math.PI / 2;
       bar.position.set(0.5, 0, 0);
-      group.add(bar);
+      flag.group.add(bar);
     }
-    return group;
+    // An ink shadow where the pole meets the map.
+    flag.base = aspect + 1;
+    const shadow = new Mesh(new CircleGeometry(0.32, 28), new MeshBasicNodeMaterial({ color: 0x1b1814, transparent: true, opacity: 0.28, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.position.set(0, -flag.base + 0.03, 0);
+    flag.group.add(shadow);
+    flag.group.visible = false;
+    return flag;
   }
 
-  private async loadBusts() {
-    const loader = new GLTFLoader();
-    loader.setMeshoptDecoder(MeshoptDecoder);
-    const load = async (url: string, side: Side, yaw: number) => {
-      try {
-        const gltf = await loader.loadAsync(url);
-        const root = gltf.scene as Object3D;
-        root.rotation.y = yaw;
-        root.updateMatrixWorld(true);
-        const box = new Box3().setFromObject(root);
-        const size = box.getSize(new Vector3());
-        const center = box.getCenter(new Vector3());
-        const inner = new Group();
-        root.position.sub(center);
-        inner.add(root);
-        inner.scale.setScalar(1 / size.y);
-        root.traverse((o) => {
-          const mesh = o as Mesh;
-          if (!mesh.isMesh) return;
-          const mat = mesh.material as MeshStandardMaterial;
-          if (mat && 'roughness' in mat) {
-            mat.roughness = Math.min(1, mat.roughness * 0.92);
-            mat.envMapIntensity = 0.5;
-          }
-          mesh.renderOrder = 6;
-        });
-        const group = new Group();
-        group.add(inner);
-        const flag = this.makeFlag(side);
-        const warm = side === 'left' ? 0xffe3c0 : 0xf2ead8;
-        const key = new SpotLight(warm, 16, 9, 0.62, 0.55, 1.4);
-        const rim = new SpotLight(side === 'left' ? 0xc9d8ff : 0xffd2a8, 38, 9, 0.55, 0.7, 1.4);
-        key.target = group;
-        rim.target = group;
-        this.rig.add(flag, group, key, rim);
-        const bust: Bust = { side, group, height: 1, yaw: side === 'left' ? 0.32 : -0.32, phase: side === 'left' ? 0 : 1.7, flag, key, rim, ...FIT[side] };
-        group.visible = this.visible[side];
-        flag.visible = this.visible[side];
-        this.busts[side] = bust;
-      } catch {
-        this.busts[side] = null;
-      }
-    };
-    await Promise.all([load('/models/busts/yi.glb', 'left', 0), load('/models/busts/daimyo.glb', 'right', -Math.PI / 2)]);
-  }
-
-  private layoutBust(b: Bust) {
-    const rect = this.cards[b.side];
-    if (!rect) return;
-    const { w, h } = this.viewport;
-    const hh = Math.tan((this.camera.fov * Math.PI) / 360) * BUST_DEPTH;
-    const hw = hh * this.camera.aspect;
-    const toX = (px: number) => ((px / w) * 2 - 1) * hw;
-    const toY = (py: number) => (1 - (py / h) * 2) * hh;
-    const cx = toX(rect.left + rect.width / 2);
-    const top = toY(rect.top);
-    const bottom = toY(rect.top + rect.height);
-    const cardH = top - bottom;
-    const scale = cardH * 1.02 * b.fit;
-    const breathe = Math.sin(this.time * 1.2 + b.phase) * 0.004 * scale;
-    b.group.scale.setScalar(scale);
-    b.group.position.set(cx + (b.side === 'left' ? 0.03 : -0.03) * scale, top - scale * 0.5 + cardH * (b.lift - 0.04) + breathe, -BUST_DEPTH);
-    b.group.rotation.y = b.yaw + Math.sin(this.time * 0.3 + b.phase) * 0.04;
-    const sign = b.side === 'left' ? 1 : -1;
-    const flagScale = cardH * (b.side === 'left' ? 0.7 : 0.46);
-    b.flag.scale.setScalar(flagScale);
-    b.flag.position.set(cx + sign * cardH * 0.16, top + cardH * 0.26, -BUST_DEPTH - 0.7);
-    b.flag.rotation.set(0, -sign * 0.3, -sign * 0.03);
-    b.key.position.set(cx + sign * cardH * 0.9, top + cardH * 0.25, -BUST_DEPTH + cardH * 1.4);
-    b.rim.position.set(cx - sign * cardH * 0.85, top + cardH * 0.1, -BUST_DEPTH - cardH * 1.1);
+  private updateFlags(dt: number, yaw: number) {
+    this.clock.value = this.time;
+    const glide = 1 - Math.exp(-dt * 3);
+    const grow = 1 - Math.exp(-dt * 6);
+    for (const f of this.flags) {
+      f.pos.lerp(f.goal, glide);
+      f.scale += (f.goalScale - f.scale) * grow;
+      f.group.visible = f.scale > 0.02;
+      if (!f.group.visible) continue;
+      f.group.scale.setScalar(f.scale);
+      f.group.position.set(f.pos.x, this.groundAt(f.pos.x, f.pos.z) + f.base * f.scale, f.pos.z);
+      // Turn with the camera, so the cloth always shows its face, at a slight angle for depth.
+      f.group.rotation.y = yaw + FLAG_AT[f.faction].lean;
+    }
   }
 
   update(dt: number) {
     this.time += dt;
-    this.clock.value = this.time;
     this.idle += dt;
     const k = 1 - Math.exp(-dt * 2.4);
     this.target.lerp(this.goal, k);
@@ -515,7 +535,7 @@ export class SelectScene {
     const cy = this.target.y + Math.sin(this.pitch) * this.dist;
     this.camera.position.set(cx, cy, cz);
     this.camera.lookAt(this.target);
-    for (const b of [this.busts.left, this.busts.right]) if (b) this.layoutBust(b);
+    this.updateFlags(dt, yaw);
   }
 
   project(id: ScenarioId, width: number, height: number, out: Vector2) {

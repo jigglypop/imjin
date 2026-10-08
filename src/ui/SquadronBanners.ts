@@ -1,6 +1,7 @@
 import { Vector3, type PerspectiveCamera } from 'three/webgpu';
 import type { Battle } from '../sim/battle';
 import type { Squadron } from '../sim/types';
+import { FACTION_MARK } from '../sim/balance';
 import type { ShipViews } from '../ships/ShipViews';
 
 type Banner = {
@@ -28,11 +29,14 @@ const MARKS: [string, string][] = [
   ['가토', '加'],
   ['간 ', '菅'],
   ['모리', '毛'],
+  ['진린', '陳'],
+  ['등자룡', '鄧'],
+  ['시마즈', '島'],
 ];
 
 export function squadronMark(sq: Squadron) {
   for (const [key, mark] of MARKS) if (sq.commander.includes(key) || sq.name.includes(key)) return mark;
-  return sq.team === 'joseon' ? '朝' : '倭';
+  return FACTION_MARK[sq.faction];
 }
 
 const tmp = new Vector3();
@@ -50,7 +54,7 @@ export class SquadronBanners {
 
   private create(sq: Squadron) {
     const root = document.createElement('div');
-    root.className = `sqb sqb--${sq.team}`;
+    root.className = `sqb sqb--${sq.team}${sq.faction === 'ming' ? ' sqb--ming' : ''}`;
     const flag = document.createElement('div');
     flag.className = 'sqb-flag';
     const mark = document.createElement('span');

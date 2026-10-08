@@ -2,32 +2,50 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
 import { PerspectiveCamera, Vector2, WebGPURenderer } from 'three/webgpu';
 import { SCENARIO_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
+import { commanderOf, FACTION_MARK, FACTION_NAME, FACTION_SHORT, forcesOf, handicap, playableFactions } from '../sim/balance';
+import type { Faction } from '../sim/types';
 import { SelectScene } from '../select/SelectScene';
 import { sound } from '../audio/Sound';
 import { CAMPAIGN_ORDER, campaignOver, currentBattle, setMode, useCampaign } from '../campaign/campaign';
 import { CampaignPanel } from './CampaignPanel';
+import { equipment } from '../game/quality';
+
+const FACTION_KEY = 'imjin.faction';
+
+function readFaction(): Faction {
+  try {
+    const v = localStorage.getItem(FACTION_KEY);
+    return v === 'japan' || v === 'ming' ? v : 'joseon';
+  } catch {
+    return 'joseon';
+  }
+}
+
+function saveFaction(f: Faction) {
+  try {
+    localStorage.setItem(FACTION_KEY, f);
+  } catch {
+    // storage unavailable: the choice lasts until the page reloads
+  }
+}
 
 async function createRenderer(props: { canvas: HTMLCanvasElement | OffscreenCanvas }) {
-  const renderer = new WebGPURenderer({ canvas: props.canvas as HTMLCanvasElement, antialias: true, powerPreference: 'high-performance' });
+  const renderer = new WebGPURenderer({ canvas: props.canvas as HTMLCanvasElement, antialias: equipment.select.antialias, powerPreference: 'high-performance' });
   await renderer.init();
   return renderer;
 }
 
-function SelectView({ id, sceneRef, markers }: { id: ScenarioId; sceneRef: React.MutableRefObject<SelectScene | null>; markers: React.MutableRefObject<Map<ScenarioId, HTMLDivElement>> }) {
+function SelectView({ id, side, sceneRef, markers }: { id: ScenarioId; side: Faction; sceneRef: React.MutableRefObject<SelectScene | null>; markers: React.MutableRefObject<Map<ScenarioId, HTMLDivElement>> }) {
   const gl = useThree((s) => s.gl) as unknown as WebGPURenderer;
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const size = useThree((s) => s.size);
   const tmp = useRef(new Vector2());
-  const idRef = useRef(id);
-  idRef.current = id;
 
   useEffect(() => {
-    const scene = new SelectScene(gl, camera);
+    const scene = new SelectScene(gl, camera, equipment.select.mapSegments);
     sceneRef.current = scene;
-    void scene.init(id).then(() => {
-      scene.setVisible('left', SCENARIOS[id].joseon.figure === 'fig_yi');
-      scene.setFlags('帥', SCENARIOS[id].japan.banner);
-    });
+    scene.setForces(id, side);
+    void scene.init(id);
     return () => {
       scene.dispose();
       sceneRef.current = null;
@@ -37,21 +55,15 @@ function SelectView({ id, sceneRef, markers }: { id: ScenarioId; sceneRef: React
 
   useEffect(() => {
     sceneRef.current?.focus(id);
-    sceneRef.current?.setVisible('left', SCENARIOS[id].joseon.figure === 'fig_yi');
-    sceneRef.current?.setFlags(SCENARIOS[id].joseon.figure === 'fig_yi' ? '帥' : SCENARIOS[id].joseon.banner, SCENARIOS[id].japan.banner);
   }, [id, sceneRef]);
+
+  useEffect(() => {
+    sceneRef.current?.setForces(id, side);
+  }, [id, side, sceneRef]);
 
   useFrame((_, dt) => {
     const scene = sceneRef.current;
     if (!scene?.ready) return;
-    const rect = (sel: string) => {
-      const el = document.querySelector(sel);
-      if (!el) return null;
-      const r = el.getBoundingClientRect();
-      return { left: r.left, top: r.top, width: r.width, height: r.height };
-    };
-    const cards = [rect('.portrait-card--left'), rect('.portrait-card--right')];
-    scene.setCards(cards[0]!, cards[1]!, size.width, size.height);
     scene.update(Math.min(dt, 0.05));
     scene.render();
     for (const sid of SCENARIO_ORDER) {
@@ -59,10 +71,9 @@ function SelectView({ id, sceneRef, markers }: { id: ScenarioId; sceneRef: React
       if (!el) continue;
       const visible = scene.project(sid, size.width, size.height, tmp.current);
       const { x, y } = tmp.current;
-      const covered = sid !== idRef.current && cards.some((r) => r && x > r.left && x < r.left + r.width && y > r.top && y < r.top + r.height);
       el.style.transform = `translate(${x}px, ${y}px)`;
-      el.style.opacity = visible && !covered ? '1' : '0';
-      el.style.pointerEvents = visible && !covered ? 'auto' : 'none';
+      el.style.opacity = visible ? '1' : '0';
+      el.style.pointerEvents = visible ? 'auto' : 'none';
     }
   }, 1);
 
@@ -83,7 +94,6 @@ export function BattleSelect({ initial, onStart }: { initial: ScenarioId; onStar
   const sceneRef = useRef<SelectScene | null>(null);
   const markers = useRef(new Map<ScenarioId, HTMLDivElement>());
   const s = SCENARIOS[id];
-  const yiIn3d = s.joseon.figure === 'fig_yi';
   const record = (sid: ScenarioId) => campaign?.history.filter((h) => h.id === sid).at(-1);
   const locked = (sid: ScenarioId) => inCampaign && !!campaign && CAMPAIGN_ORDER.indexOf(sid) > campaign.step;
   const playable = !inCampaign || (!!campaign && !campaignOver(campaign) && id === current);
@@ -94,7 +104,7 @@ export function BattleSelect({ initial, onStart }: { initial: ScenarioId; onStar
   };
   return (
     <div className="select">
-      <Canvas className="select-canvas" gl={createRenderer as never} camera={{ fov: 34, near: 0.05, far: 600, position: [0, 40, 40] }} dpr={Math.min(window.devicePixelRatio, 1.75)} frameloop="always">
+      <Canvas className="select-canvas" gl={createRenderer as never} camera={{ fov: 34, near: 0.05, far: 600, position: [0, 40, 40] }} dpr={Math.min(window.devicePixelRatio, equipment.select.dprCap)} frameloop="always">
         <SelectView id={id} sceneRef={sceneRef} markers={markers} />
       </Canvas>
       <div className="select-grain" />
@@ -139,25 +149,6 @@ export function BattleSelect({ initial, onStart }: { initial: ScenarioId; onStar
           {s.date} · {s.place}
         </div>
       </div>
-      <div className={`portrait-card portrait-card--left ${yiIn3d ? '' : 'portrait-card--flat'}`}>
-        {!yiIn3d && <img src={`/ui/figures/${s.joseon.figure}.webp`} alt={s.joseon.name} />}
-        <div className="portrait-plate">
-          <span className="seal">{s.joseon.banner.slice(0, 1)}</span>
-          <div>
-            <b>{s.joseon.name}</b>
-            <small>{s.joseon.title}</small>
-          </div>
-        </div>
-      </div>
-      <div className="portrait-card portrait-card--right">
-        <div className="portrait-plate portrait-plate--right">
-          <div>
-            <b>{s.japan.name}</b>
-            <small>{s.japan.title}</small>
-          </div>
-          <span className="seal seal--ink">{s.japan.banner.slice(0, 1)}</span>
-        </div>
-      </div>
       <div className="select-brief paper">
         <div className="select-brief-head">
           <span>
@@ -166,6 +157,9 @@ export function BattleSelect({ initial, onStart }: { initial: ScenarioId; onStar
           <span>{s.season}</span>
           {s.night && <span className="night-tag">야간 전투</span>}
         </div>
+        <p className="select-cmd">
+          조선 <b>{s.joseon.name}</b> <small>{s.joseon.title}</small> · 일본 <b>{s.japan.name}</b> <small>{s.japan.title}</small>
+        </p>
         <p>{s.summary}</p>
         <div className="select-forces">
           <div className="select-force">

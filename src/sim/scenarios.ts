@@ -30,7 +30,7 @@ export type ScenarioInfo = {
   difficulty: string;
   summary: string;
   result: string;
-  forces: { joseon: string; japan: string };
+  forces: { joseon: string; japan: string; ming?: string };
   sky: SkyPresetName;
   sea: SeaStateName;
   night: boolean;
@@ -38,6 +38,8 @@ export type ScenarioInfo = {
   terrain: TerrainSpec;
   joseon: Commander;
   japan: Commander;
+  /** Only where the Ming fleet took part. */
+  ming?: Commander;
   map: { x: number; y: number };
   arrows: { from: [number, number]; to: [number, number]; team: Team }[];
   view: { tx: number; tz: number; dir: number; dist: number; pitch: number };
@@ -254,7 +256,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     summary:
       '전쟁의 마지막 밤. 순천에 갇힌 고니시를 구하려 시마즈 요시히로의 함대 500척이 노량 해협으로 밀려든다. 조선 수군과 진린의 명 수군이 해협 끝에서 기다린다. 횃불과 불화살이 어둠을 가르고, 새벽녘 이순신은 "싸움이 급하니 나의 죽음을 알리지 말라" 하였다.',
     result: '왜선 200여 척 격파, 이순신 전사',
-    forces: { joseon: '판옥선 60 · 명 전선 63', japan: '왜선 500여 척' },
+    forces: { joseon: '판옥선 60', ming: '전선 30 · 사선 33', japan: '왜선 500여 척' },
     sky: 'night',
     sea: 'rough',
     night: true,
@@ -262,6 +264,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     current: { cx: 0, cz: 0, angle: 0, peak: 1.9, reach: 4600, narrows: 480, turnAt: 480, slack: 70, floodFirst: true },
     joseon: YI_TONGJE,
     japan: { name: '시마즈 요시히로', title: '사쓰마 번주', figure: 'fig_shimazu', portrait: 'portrait_shimazu', banner: '島津' },
+    ming: { name: '진린', title: '명 수군 도독', figure: 'fig_chenlin', portrait: 'portrait_chenlin', banner: '陳' },
     map: { x: 0.44, y: 0.61 },
     arrows: [
       { from: [0.5, 0.6], to: [0.45, 0.61], team: 'japan' },
@@ -420,7 +423,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
       const spacing = g.kind === 'atakebune' ? 70 : g.kind === 'sekibune' ? 50 : 34;
       line(sq, g.kind, grid(cxj, czj, jHeading, g.n, 4, spacing, spacing * 0.9, 12, rand), g.name, gi === 0 ? 0 : -1);
     });
-    b.retreatBelow = 0.22;
+    b.retreatBelow.japan =0.22;
   } else if (id === 'busan') {
     const harborShore = -900;
     const perSquad = [40, 40, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39];
@@ -458,7 +461,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
       const cols = g.kind === 'hyeopseon' ? 6 : 3;
       line(sq, g.kind, grid(cxj, czj, head, g.n, cols, spacing, spacing * 0.95, 8, rand), g.name, gi === 1 ? 0 : -1);
     });
-    b.retreatBelow = 0;
+    b.retreatBelow.japan =0;
   } else if (id === 'myeongnyang') {
     const yi = squad('joseon', '대장선', '통제사 이순신', 'panokseon');
     const rest = squad('joseon', '잔여 함대', '거제현령 안위 · 중군장 김응함', 'panokseon');
@@ -482,7 +485,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
       const x = 300 + gi * 430;
       line(sq, kind, grid(x, 0, Math.PI, g.n, 5, gi % 3 === 0 ? 70 : 48, 42, 10, rand), g.name, 0);
     });
-    b.retreatBelow = 0.75;
+    b.retreatBelow.japan =0.75;
   } else if (id === 'okpo') {
     const anchored = [squad('japan', '도도 본대', '도도 다카토라', 'atakebune'), squad('japan', '옥포 정박 2진', '왜장', 'sekibune'), squad('japan', '옥포 정박 3진', '왜장', 'sekibune')];
     anchorage(anchored[0]!, 18, -1500, 150, 650, 480, mix(0.5, 0.4), 0);
@@ -497,7 +500,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     line(sqJung, 'panokseon', grid(1550, -380, head, 10, 5, 70, 62, 10, rand), '중위');
     line(sqWon, 'panokseon', grid(1600, 980, head, 4, 4, 70, 62, 10, rand), '경상우수영');
     line(sqHyeop, 'hyeopseon', grid(2050, 300, head, 17, 6, 34, 32, 8, rand), '협선');
-    b.retreatBelow = 0.45;
+    b.retreatBelow.japan =0.45;
   } else if (id === 'sacheon') {
     const sq1 = squad('japan', '사천 선창 대선', '왜장', 'atakebune');
     const sq2 = squad('japan', '사천 선창 중선', '왜장', 'sekibune');
@@ -512,7 +515,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     line(sqJung, 'panokseon', grid(-700, 600, head, 10, 5, 70, 64, 10, rand), '중위');
     line(sqWon, 'panokseon', grid(700, 600, head, 3, 3, 70, 64, 10, rand), '경상우수영');
     line(sqTurtle, 'geobukseon', [{ x: 0, z: -200, h: head }], '거북선');
-    b.retreatBelow = 0;
+    b.retreatBelow.japan =0;
   } else if (id === 'dangpo') {
     const sqFlag = squad('japan', '구루시마 대장선단', '구루시마 미치유키', 'atakebune');
     const sqRest = squad('japan', '당포 정박선', '왜장', 'sekibune');
@@ -525,7 +528,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     line(sqYi, 'panokseon', grid(250, 200, head, 14, 7, 70, 64, 10, rand), '좌수영', 3);
     line(sqKwon, 'panokseon', grid(850, 650, head, 10, 5, 70, 64, 10, rand), '중위');
     line(sqTurtle, 'geobukseon', [{ x: -100, z: -250, h: head }, { x: 70, z: -320, h: head }], '거북선');
-    b.retreatBelow = 0;
+    b.retreatBelow.japan =0;
   } else if (id === 'angolpo') {
     const sqKuki = squad('japan', '구키 본대', '구키 요시타카', 'atakebune');
     const sqKato = squad('japan', '가토 대', '가토 요시아키', 'atakebune');
@@ -542,7 +545,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     line(sqEok, 'panokseon', grid(-900, 750, head, 24, 8, 70, 62, 10, rand), '우수영', 0);
     line(sqWon, 'panokseon', grid(900, 750, head, 6, 6, 70, 62, 10, rand), '경상우수영');
     line(sqTurtle, 'geobukseon', [{ x: -100, z: -250, h: head }, { x: 100, z: -250, h: head }], '거북선');
-    b.retreatBelow = 0.5;
+    b.retreatBelow.japan =0.5;
   } else if (id === 'chilcheon') {
     b.night = true;
     const groups = [
@@ -580,7 +583,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
         s.lights = false;
       });
     });
-    b.retreatBelow = 0.35;
+    b.retreatBelow.japan =0.35;
   } else {
     b.night = true;
     const head = 0;
@@ -602,7 +605,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
       const kindOf = mix(0.22, 0.6);
       grid(450 + q * 300, (q % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, `${sq.name} ${i + 1}`, i === 0));
     }
-    b.retreatBelow = 0.55;
+    b.retreatBelow.japan =0.55;
   }
   if (fleet) spawnFleet(b, fleet, axis, land);
   return b;

@@ -13,6 +13,8 @@
   --joseon-2: #cdb073;
   --japan: #3a352f;
   --japan-2: #5f584f;
+  --ming: #9b2f22;
+  --ming-2: #d9a441;
   --display: 'Nanum Myeongjo', 'Noto Serif KR', serif;
   --serif: 'Noto Serif KR', 'Nanum Myeongjo', serif;
   --hanja: 'Noto Serif KR', 'Nanum Myeongjo', serif;
@@ -142,6 +144,16 @@ button {
 
 .emblem--japan::before {
   border-color: rgba(243, 236, 220, 0.45);
+}
+
+.emblem--ming {
+  background-color: var(--ming);
+  color: var(--ming-2);
+  background-blend-mode: soft-light;
+}
+
+.emblem--ming::before {
+  border-color: rgba(217, 164, 65, 0.6);
 }
 
 .ink-btn {
@@ -510,90 +522,6 @@ button {
   text-shadow: 0 0 10px var(--paper), 0 0 4px var(--paper), 0 0 2px var(--paper);
 }
 
-.portrait-card {
-  position: absolute;
-  bottom: 22px;
-  width: min(25vw, 420px);
-  height: min(66vh, 640px);
-  z-index: 4;
-  pointer-events: none;
-}
-
-.portrait-card--left {
-  left: 2.4vw;
-}
-
-.portrait-card--right {
-  right: 2.4vw;
-}
-
-.portrait-card img {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  height: 112%;
-  transform: translateX(-50%);
-  object-fit: contain;
-  filter: drop-shadow(0 10px 16px rgba(40, 28, 12, 0.25));
-}
-
-.portrait-card--flat {
-  background: rgba(245, 241, 232, 0.55);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  overflow: hidden;
-}
-
-.portrait-plate {
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 12px 26px;
-  color: var(--ivory);
-  isolation: isolate;
-}
-
-.portrait-plate::before {
-  content: '';
-  position: absolute;
-  inset: -4px -40px;
-  background: linear-gradient(90deg, transparent, rgba(22, 18, 14, 0.9) 18%, rgba(22, 18, 14, 0.9) 82%, transparent);
-  z-index: -1;
-}
-
-.portrait-plate--right {
-  text-align: right;
-}
-
-.portrait-plate b {
-  display: block;
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: clamp(18px, 1.55vw, 26px);
-  letter-spacing: 4px;
-  white-space: nowrap;
-}
-
-.portrait-plate small {
-  display: block;
-  white-space: nowrap;
-  margin-top: 2px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 3px;
-  color: rgba(243, 236, 220, 0.72);
-}
-
-.seal--ink {
-  background: #f1ece0;
-  color: var(--ink);
-}
-
 .select-brief {
   position: absolute;
   left: 50%;
@@ -634,6 +562,27 @@ button {
   font-weight: 500;
   line-height: 1.85;
   color: var(--ink);
+}
+
+.select-brief .select-cmd {
+  margin-bottom: 4px;
+  font-size: 13.5px;
+  letter-spacing: 1px;
+  color: var(--ink-2);
+}
+
+.select-cmd b {
+  font-family: var(--display);
+  font-weight: 800;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.select-cmd small {
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--ink-3);
+  white-space: nowrap;
 }
 
 .select-forces {
@@ -883,6 +832,23 @@ button {
   font-size: 15px;
   letter-spacing: 3px;
   margin-bottom: 6px;
+}
+
+.settings-label small {
+  margin-left: 6px;
+  font-family: var(--serif);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--ink-3);
+}
+
+.settings-hint {
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--ink-3);
 }
 
 .chips {
@@ -1380,7 +1346,7 @@ button {
   letter-spacing: 12px;
 }
 
-.result--japan .result-title {
+.result--loss .result-title {
   color: var(--seal);
 }
 
@@ -1445,6 +1411,16 @@ button {
   border-right: 3px solid #d9d0bd;
 }
 
+.sqb--ming .sqb-flag {
+  background-color: var(--ming);
+  border-left: 3px solid var(--ming-2);
+  border-right: 3px solid var(--ming-2);
+}
+
+.sqb--ming .sqb-mark {
+  color: var(--ming-2);
+}
+
 .sqb-mark {
   font-family: var(--hanja);
   font-weight: 900;
@@ -1504,7 +1480,6 @@ button {
   .toasts,
   .settings,
   .select-brief,
-  .portrait-card,
   .select-head {
     zoom: 0.88;
   }
@@ -1517,7 +1492,6 @@ button {
   .toasts,
   .settings,
   .select-brief,
-  .portrait-card,
   .select-head {
     zoom: 0.74;
   }
@@ -1884,4 +1858,785 @@ button {
 
 .tide--ebb {
   box-shadow: 0 0 0 1px var(--gold-2), 0 0 14px rgba(205, 176, 115, 0.5);
+}
+
+/* ============================================================================
+   Touch and compact layout
+   `.app--compact` is set for phones and narrow windows (see useCompactLayout).
+   `.app--touch` is set on touch devices. These rules come last, so they win over the
+   desktop rules above. Desktop with a wide window matches none of them.
+   ============================================================================ */
+
+html,
+body,
+#root {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* No browser pan or pinch-zoom anywhere in the app. Taps still reach buttons. Scrollable panels opt back in below. */
+.app {
+  touch-action: none;
+}
+
+.cards,
+.select-top {
+  touch-action: pan-x;
+}
+
+.camp,
+.camp-body,
+.settings-body,
+.select-brief,
+.result {
+  touch-action: pan-y;
+}
+
+.app--touch .order kbd {
+  display: none;
+}
+
+.tool {
+  width: 54px;
+  height: 40px;
+  border: 1px solid rgba(22, 18, 14, 0.45);
+  background-color: rgba(235, 227, 209, 0.92);
+  background-image: url(/ui/hanji.jpg);
+  background-size: 300px;
+  background-blend-mode: multiply;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.tool--on {
+  background: var(--ink);
+  color: var(--ivory);
+}
+
+.tool:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.touch-bar {
+  position: absolute;
+  top: 50%;
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.touch-bar .tool {
+  pointer-events: auto;
+}
+
+.orders-fold {
+  display: none;
+}
+
+.mini-btn .short {
+  display: none;
+}
+
+.minimap--float {
+  position: absolute;
+  z-index: 12;
+  top: calc(env(safe-area-inset-top, 0px) + 112px);
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
+  width: 116px;
+  height: 116px;
+  pointer-events: auto;
+}
+
+/* Desktop zoom shrink does not apply here. The compact layout is sized for the real screen. */
+.app--compact .bottom,
+.app--compact .balance,
+.app--compact .hud-title,
+.app--compact .toasts,
+.app--compact .settings,
+.app--compact .select-brief,
+.app--compact .select-head {
+  zoom: 1;
+}
+
+/* ---- Top bar: title and menu share a row, the balance sits under it ---- */
+.app--compact .hud-title {
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  left: calc(env(safe-area-inset-left, 0px) + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1px 8px;
+}
+
+.app--compact .hud-title-main {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  padding: 3px 14px;
+  font-size: 17px;
+  letter-spacing: 3px;
+  white-space: nowrap;
+}
+
+.app--compact .brush::before {
+  inset: -6px -16px;
+}
+
+.app--compact .hud-title-sub {
+  grid-column: 1;
+  grid-row: 2;
+  padding-left: 4px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app--compact .hud-menu {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  margin-top: 0;
+  gap: 4px;
+}
+
+.app--compact .hud-menu .mini-btn {
+  min-height: 32px;
+  padding: 5px 9px;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.app--compact .mini-btn .long {
+  display: none;
+}
+
+.app--compact .mini-btn .short {
+  display: inline;
+}
+
+.app--compact .balance {
+  top: calc(env(safe-area-inset-top, 0px) + 50px);
+  left: calc(env(safe-area-inset-left, 0px) + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
+  width: auto;
+  transform: none;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.app--compact .balance .emblem {
+  display: none;
+}
+
+.app--compact .balance-center {
+  gap: 3px;
+}
+
+.app--compact .balance-row {
+  font-size: 12px;
+}
+
+.app--compact .balance-row b {
+  font-size: 16px;
+}
+
+.app--compact .balance-bar {
+  height: 7px;
+}
+
+.app--compact .tide {
+  align-self: flex-start;
+  margin-top: 0;
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.app--compact .toasts {
+  top: calc(env(safe-area-inset-top, 0px) + 112px);
+  left: calc(env(safe-area-inset-left, 0px) + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.app--compact .toast {
+  max-width: 100%;
+  padding: 5px 12px 5px 6px;
+  font-size: 12.5px;
+}
+
+.app--compact .toast:nth-last-child(n + 3) {
+  display: none;
+}
+
+.app--compact .settings {
+  z-index: 20;
+  top: calc(env(safe-area-inset-top, 0px) + 46px);
+  left: calc(env(safe-area-inset-left, 0px) + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
+  width: auto;
+  align-items: stretch;
+}
+
+.app--compact .settings-body {
+  max-height: 72vh;
+  overflow-y: auto;
+}
+
+.app--compact .ink-btn {
+  font-size: 16px;
+  letter-spacing: 4px;
+  padding: 9px 26px;
+}
+
+/* ---- Portrait phones: the bottom is a sheet of detail, cards and orders ---- */
+@media (orientation: portrait) {
+  .app--compact .bottom {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 6px calc(env(safe-area-inset-right, 0px) + 8px) calc(env(safe-area-inset-bottom, 0px) + 6px) calc(env(safe-area-inset-left, 0px) + 8px);
+    background: linear-gradient(transparent, rgba(10, 8, 6, 0.55) 28%);
+  }
+
+  .app--compact .detail {
+    width: 100%;
+    height: auto;
+    gap: 10px;
+    padding: 8px 10px;
+  }
+
+  .app--compact .detail-portrait {
+    width: 46px;
+    height: 46px;
+  }
+
+  .app--compact .detail-name {
+    font-size: 16px;
+  }
+
+  .app--compact .detail-sub {
+    font-size: 11.5px;
+  }
+
+  .app--compact .detail .stat {
+    grid-template-columns: 30px 1fr 34px;
+    font-size: 11px;
+  }
+
+  .app--compact .guns {
+    display: none;
+  }
+
+  .app--compact .detail-empty {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .app--compact .detail-empty > div:nth-child(n + 4) {
+    display: none;
+  }
+
+  .app--compact .cards {
+    flex: none;
+    width: 100%;
+    height: 100px;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 6px 2px 2px;
+  }
+
+  .app--compact .card {
+    width: 64px;
+    height: 90px;
+  }
+
+  .app--compact .orders {
+    width: 100%;
+    gap: 6px;
+    padding: 8px 10px 7px;
+  }
+
+  .app--compact .orders--collapsed {
+    padding-bottom: 6px;
+  }
+
+  .app--compact .orders-fold {
+    display: block;
+    flex: none;
+    width: 34px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .app--compact .orders-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px 2px;
+  }
+
+  .app--compact .order-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+
+  .app--compact .order {
+    font-size: 10px;
+  }
+
+  .app--compact .speed button {
+    min-height: 30px;
+    font-size: 12px;
+  }
+
+  .app--compact .speed {
+    padding-top: 6px;
+  }
+
+  /* Below the top bar and the floating minimap, and clear of the bottom sheet, which grows with the selection. */
+  .app--compact .touch-bar {
+    top: calc(env(safe-area-inset-top, 0px) + 236px);
+    transform: none;
+  }
+}
+
+/* ---- Landscape phones: one band along the bottom ---- */
+@media (orientation: landscape) and (max-height: 540px) {
+  .app--compact .hud-title {
+    top: calc(env(safe-area-inset-top, 0px) + 6px);
+  }
+
+  .app--compact .hud-title-sub {
+    display: none;
+  }
+
+  .app--compact .balance {
+    top: calc(env(safe-area-inset-top, 0px) + 6px);
+    left: 50%;
+    right: auto;
+    width: min(440px, 40vw);
+    transform: translateX(-50%);
+  }
+
+  .app--compact .toasts {
+    top: calc(env(safe-area-inset-top, 0px) + 58px);
+  }
+
+  .app--compact .minimap--float {
+    top: calc(env(safe-area-inset-top, 0px) + 44px);
+    width: 104px;
+    height: 104px;
+  }
+
+  .app--compact .settings {
+    top: calc(env(safe-area-inset-top, 0px) + 40px);
+    left: auto;
+    right: calc(env(safe-area-inset-right, 0px) + 8px);
+    width: min(300px, 46vw);
+  }
+
+  .app--compact .bottom {
+    height: 130px;
+    gap: 8px;
+    padding: 6px calc(env(safe-area-inset-right, 0px) + 8px) calc(env(safe-area-inset-bottom, 0px) + 6px) calc(env(safe-area-inset-left, 0px) + 8px);
+    background: linear-gradient(transparent, rgba(10, 8, 6, 0.5));
+  }
+
+  .app--compact .detail {
+    width: 214px;
+    height: 100%;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .app--compact .detail-portrait {
+    width: 42px;
+    height: 42px;
+  }
+
+  .app--compact .detail-name {
+    font-size: 14px;
+  }
+
+  .app--compact .detail-sub {
+    font-size: 11px;
+  }
+
+  .app--compact .detail .stat {
+    grid-template-columns: 28px 1fr 32px;
+    font-size: 10.5px;
+    gap: 4px;
+  }
+
+  .app--compact .detail .stat-bar {
+    height: 6px;
+  }
+
+  .app--compact .guns {
+    display: none;
+  }
+
+  .app--compact .detail-empty {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .app--compact .detail-empty > div:nth-child(n + 4) {
+    display: none;
+  }
+
+  .app--compact .cards {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 6px 2px 2px;
+  }
+
+  .app--compact .card {
+    width: 60px;
+    height: 84px;
+  }
+
+  .app--compact .orders {
+    width: 304px;
+    height: 100%;
+    gap: 4px;
+    padding: 6px 8px;
+    overflow: hidden;
+  }
+
+  .app--compact .orders-tab {
+    padding: 2px 0 3px;
+    font-size: 11px;
+  }
+
+  .app--compact .orders-fold {
+    display: block;
+    flex: none;
+    width: 24px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .app--compact .orders-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2px;
+  }
+
+  .app--compact .order-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .app--compact .order {
+    font-size: 9.5px;
+  }
+
+  .app--compact .order kbd {
+    display: none;
+  }
+
+  .app--compact .speed {
+    padding-top: 4px;
+  }
+
+  .app--compact .speed button {
+    min-height: 24px;
+    padding: 0;
+    font-size: 11px;
+  }
+
+  .app--compact .touch-bar {
+    top: calc(50% - 40px);
+  }
+}
+
+/* ---- Battle selection on phones ---- */
+.app--compact .select-top {
+  height: 46px;
+  gap: 0;
+  padding: 0 8px;
+  padding-left: calc(env(safe-area-inset-left, 0px) + 8px);
+  padding-right: calc(env(safe-area-inset-right, 0px) + 8px);
+}
+
+.app--compact .select-heading {
+  display: none;
+}
+
+.app--compact .select-tab {
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.app--compact .select-tab small {
+  display: none;
+}
+
+/* The mode switch moves to the front of the scrolling tab row, so it is visible without scrolling. */
+.app--compact .mode-switch {
+  order: -1;
+  margin: 0 8px 0 0;
+}
+
+.app--compact .mode-switch button {
+  padding: 5px 9px;
+  font-size: 12px;
+}
+
+.app--compact .select-head {
+  top: 56px;
+  gap: 2px;
+}
+
+.app--compact .select-title {
+  padding: 2px 16px;
+  font-size: clamp(24px, 7.5vw, 36px);
+  letter-spacing: 4px;
+  white-space: nowrap;
+}
+
+.app--compact .select-title.brush::before {
+  inset: -6px -12px;
+}
+
+.app--compact .select-hanja {
+  font-size: 12px;
+  letter-spacing: 6px;
+}
+
+.app--compact .select-date {
+  font-size: 11px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+
+.app--compact .select-brief {
+  left: calc(env(safe-area-inset-left, 0px) + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  width: auto;
+  max-height: 50vh;
+  overflow-y: auto;
+  transform: none;
+  padding: 12px 14px;
+}
+
+.app--compact .select-brief-head {
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.app--compact .select-brief p {
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+.app--compact .select-forces {
+  grid-template-columns: 1fr;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.app--compact .select-foot {
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.app--compact .select-result {
+  font-size: 12px;
+}
+
+
+@media (orientation: landscape) and (max-height: 540px) {
+  .app--compact .select-head {
+    top: 50px;
+  }
+
+  .app--compact .select-title {
+    font-size: 26px;
+    padding: 0 12px;
+  }
+
+  .app--compact .select-hanja {
+    display: none;
+  }
+
+  /* A right-hand column keeps the selected site, at the centre of the map, in view. */
+  .app--compact .select-brief {
+    top: 118px;
+    left: auto;
+    right: calc(env(safe-area-inset-right, 0px) + 8px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
+    width: min(330px, 38vw);
+    max-height: none;
+    transform: none;
+    overflow-y: auto;
+    padding: 10px 12px;
+  }
+
+  .app--compact .select-brief p {
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+
+  .app--compact .select-brief-head {
+    font-size: 11px;
+  }
+
+  .app--compact .select-forces {
+    margin-top: 6px;
+    font-size: 12px;
+  }
+
+  .app--compact .select-foot {
+    margin-top: 8px;
+  }
+}
+
+/* ---- Campaign room (군영) on phones: one scrolling column ---- */
+.app--compact .camp {
+  width: 96vw;
+  height: 92vh;
+  height: 92dvh;
+  gap: 10px;
+  padding: 12px;
+}
+
+.app--compact .camp-head {
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding-bottom: 8px;
+}
+
+.app--compact .camp-title {
+  font-size: 19px;
+  letter-spacing: 3px;
+}
+
+.app--compact .camp-res {
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-left: 0;
+  font-size: 12px;
+}
+
+.app--compact .camp-res b {
+  font-size: 15px;
+}
+
+.app--compact .camp-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+/* Sections keep their natural height. The room itself scrolls, so nothing is squeezed over the next section. */
+.app--compact .camp-body section {
+  flex: none;
+  min-height: auto;
+  overflow: visible;
+  padding-right: 0;
+}
+
+.app--compact .camp-ships {
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+}
+
+/* ---- Loading and result panels on phones ---- */
+/* The title is five hanja. Sizing by viewport width keeps the whole line on one row on a phone. */
+.app--compact .loading-title {
+  font-size: clamp(40px, 13vw, 92px);
+  letter-spacing: 4px;
+  white-space: nowrap;
+}
+
+.app--compact .loading-sub {
+  padding: 6px 28px;
+  font-size: 18px;
+  letter-spacing: 6px;
+}
+
+.app--compact .loading-bar,
+.app--compact .loading-meta {
+  width: min(560px, 80vw);
+}
+
+.app--compact .loading-quote {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 6vh);
+  max-width: 92vw;
+  padding: 10px 14px;
+}
+
+.app--compact .loading-quote strong {
+  font-size: 18px;
+  letter-spacing: 5px;
+}
+
+.app--compact .loading-quote span {
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.app--compact .result {
+  top: 50%;
+  width: 92vw;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
+  gap: 12px;
+  padding: 22px 16px 18px;
+}
+
+.app--compact .result-title {
+  font-size: clamp(60px, 22vw, 104px);
+  letter-spacing: 6px;
+}
+
+.app--compact .result-sub {
+  font-size: 17px;
+  letter-spacing: 3px;
+  text-align: center;
+}
+
+.app--compact .result-stats {
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.app--compact .result-camp {
+  grid-template-columns: 1fr;
+  max-width: 100%;
+  gap: 4px;
+  font-size: 13px;
 }

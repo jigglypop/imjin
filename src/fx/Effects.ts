@@ -23,13 +23,15 @@ import type { ShipViews } from '../ships/ShipViews';
 import { waveField } from '../ocean/waves';
 import { ParticleLayer } from './ParticleLayer';
 import type { WakeMap } from '../ocean/WakeMap';
-import { pointLights } from '../render/lights';
+import { LIGHT_COUNT, pointLights } from '../render/lights';
+import type { ParticleQuality } from '../game/quality';
 
 const MAX_DEBRIS = 400;
 const MAX_BALLS = 600;
 const MAX_ARROWS = 400;
-export const LIGHTS = 8;
 const OARS: Record<string, number> = { panokseon: 8, geobukseon: 8, atakebune: 13, sekibune: 11 };
+
+export type EffectsQuality = { lights: number; particles: ParticleQuality };
 
 type Debris = { x: number; y: number; z: number; vx: number; vy: number; vz: number; rx: number; ry: number; rz: number; wx: number; wy: number; wz: number; s: number; age: number; life: number; floating: boolean };
 type LightSource = { x: number; y: number; z: number; intensity: number; decay: number; r: number; g: number; b: number; age: number; life: number; dist: number };
@@ -38,9 +40,10 @@ const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
 export class Effects {
   readonly group = new Group();
-  readonly smoke = new ParticleLayer('smoke', 9000);
-  readonly fire = new ParticleLayer('fire', 6000);
-  readonly spray = new ParticleLayer('spray', 5000);
+  readonly smoke: ParticleLayer;
+  readonly fire: ParticleLayer;
+  readonly spray: ParticleLayer;
+  private readonly lightCount: number;
   private readonly debrisMesh: InstancedMesh;
   private readonly debris: Debris[] = [];
   private readonly balls: InstancedMesh;
@@ -63,7 +66,14 @@ export class Effects {
   windZ = 1.6;
   night = 0;
 
-  constructor(private readonly views: ShipViews) {
+  constructor(private readonly views: ShipViews, quality: EffectsQuality) {
+    // Capacities leave headroom above the level 4 emission rate, so the layers do not saturate in a big battle.
+    this.smoke = new ParticleLayer('smoke', 12000, quality.particles);
+    this.fire = new ParticleLayer('fire', 8000, quality.particles);
+    this.spray = new ParticleLayer('spray', 6000, quality.particles);
+    this.lightCount = quality.lights;
+    // Lights past the active count stay dark so the surface shader's light loop adds nothing for them.
+    for (let i = this.lightCount; i < LIGHT_COUNT; i += 1) this.lightPos[i]!.w = 0;
     const wood = new MeshStandardNodeMaterial({ color: new Color(0.13, 0.085, 0.05), roughness: 0.9, metalness: 0 });
     this.debrisMesh = new InstancedMesh(new BoxGeometry(1, 0.12, 0.26), wood, MAX_DEBRIS);
     this.debrisMesh.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -90,13 +100,20 @@ export class Effects {
     this.arrows.instanceMatrix.setUsage(DynamicDrawUsage);
     this.arrows.count = 0;
     this.arrows.frustumCulled = false;
-    for (let i = 0; i < LIGHTS; i += 1) {
+    for (let i = 0; i < this.lightCount; i += 1) {
       const l = new PointLight(0xffaa55, 0, 160, 1.6);
       l.castShadow = false;
       this.lights.push(l);
       this.group.add(l);
     }
     this.group.add(this.smoke.sprite, this.fire.sprite, this.spray.sprite, this.debrisMesh, this.balls, this.arrows);
+  }
+
+  /** Run-time emission rate for all particle layers. See ParticleLayer.setKeep. */
+  setParticleKeep(keep: number) {
+    this.smoke.setKeep(keep);
+    this.fire.setKeep(keep);
+    this.spray.setKeep(keep);
   }
 
   lantern(x: number, y: number, z: number, intensity: number) {
@@ -492,7 +509,7 @@ export class Effects {
     const ranked = this.sources
       .map((s) => ({ s, score: (s.intensity * (1 - s.age / s.life)) / (1 + (cam.distanceTo(this.v.set(s.x, s.y, s.z)) / 300) ** 2) }))
       .sort((a, b) => b.score - a.score);
-    for (let i = 0; i < LIGHTS; i += 1) {
+    for (let i = 0; i < this.lightCount; i += 1) {
       const l = this.lights[i]!;
       const entry = ranked[i];
       if (!entry) {

@@ -15,9 +15,10 @@ import {
 } from 'three/webgpu';
 import { float, length, sin, smoothstep, time, uniform, uv, vec4 } from 'three/tsl';
 import type { Battle } from '../sim/battle';
-import type { Ship } from '../sim/types';
+import type { Ship, Team } from '../sim/types';
 import { waveField } from '../ocean/waves';
 import { modelKey, ShipRenderer, type ModelAsset } from './ShipRenderer';
+import type { ShipLodQuality } from '../game/quality';
 
 export type ViewState = {
   id: number;
@@ -34,9 +35,6 @@ export type ViewState = {
   key: string;
 };
 
-const LOD_NEAR = 560;
-const LOD_MID = 1900;
-const MAX_LOD0 = 28;
 const MAX_RINGS = 256;
 
 export class ShipViews {
@@ -44,6 +42,8 @@ export class ShipViews {
   readonly states = new Map<number, ViewState>();
   selected = new Set<number>();
   hovered = 0;
+  /** The player's team. Its ships get the gold selection ring, the other team the red one. */
+  team: Team = 'joseon';
   renderer: ShipRenderer;
   private readonly frustum = new Frustum();
   private readonly projScreen = new Matrix4();
@@ -58,7 +58,11 @@ export class ShipViews {
   private readonly dists: number[] = [];
   private readonly sFlag = new Vector3(1.12, 1.12, 1.12);
 
-  constructor(assets: Record<string, ModelAsset>, battle: Battle) {
+  constructor(
+    assets: Record<string, ModelAsset>,
+    battle: Battle,
+    private readonly lod: ShipLodQuality,
+  ) {
     this.renderer = new ShipRenderer(assets, this.capacities(battle, assets));
     this.group.add(this.renderer.group);
     const ringGeo = new RingGeometry(0.92, 1, 96, 1);
@@ -122,10 +126,10 @@ export class ShipViews {
     const dists = this.dists;
     dists.length = 0;
     for (const ship of battle.ships) if (ship.alive) dists.push(Math.hypot(ship.x - cam.x, ship.z - cam.z, cam.y));
-    let near = LOD_NEAR;
-    if (dists.length > MAX_LOD0) {
+    let near = this.lod.near;
+    if (dists.length > this.lod.maxLod0) {
       dists.sort((a, b) => a - b);
-      near = Math.min(LOD_NEAR, dists[MAX_LOD0 - 1]! + 1);
+      near = Math.min(this.lod.near, dists[this.lod.maxLod0 - 1]! + 1);
     }
     for (const ship of battle.ships) {
       let v = this.states.get(ship.id);
@@ -158,17 +162,18 @@ export class ShipViews {
       this.sphere.center.set(ship.x, ship.spec.height * 0.4, ship.z);
       this.sphere.radius = L * 0.6 + ship.spec.height * 0.5;
       v.visible = this.frustum.intersectsSphere(this.sphere);
-      const lodTarget = dist < near ? 0 : dist < LOD_MID ? 1 : 2;
+      const mid = this.lod.mid;
+      const lodTarget = dist < near ? 0 : dist < mid ? 1 : 2;
       if (lodTarget !== v.lod) {
-        const edge = v.lod === 0 ? near * 1.04 : v.lod === 1 ? (lodTarget === 0 ? near * 0.96 : LOD_MID * 1.08) : LOD_MID * 0.92;
+        const edge = v.lod === 0 ? near * 1.04 : v.lod === 1 ? (lodTarget === 0 ? near * 0.96 : mid * 1.08) : mid * 0.92;
         if ((lodTarget > v.lod && dist > edge) || (lodTarget < v.lod && dist < edge)) v.lod = lodTarget;
       }
       this.updateTransform(ship, v, dt, dist);
       if (v.visible) this.renderer.add(v.key, v.lod, v.matrix, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), v.flash);
       const show = (this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0;
       if (show) {
-        const ring = ship.team === 'joseon' ? this.ringsOwn : this.ringsEnemy;
-        const index = ship.team === 'joseon' ? own++ : enemy++;
+        const ring = ship.team === this.team ? this.ringsOwn : this.ringsEnemy;
+        const index = ship.team === this.team ? own++ : enemy++;
         if (index < MAX_RINGS) {
           const scale = L * 0.62;
           this.ringMatrix.makeScale(scale, scale, scale).setPosition(ship.x, v.heave + 0.35, ship.z);

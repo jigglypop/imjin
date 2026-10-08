@@ -28,8 +28,11 @@ import {
   vec4,
 } from 'three/tsl';
 import { atmosphere } from '../render/atmosphere';
+import type { ParticleQuality } from '../game/quality';
 
 export type ParticleKind = 'smoke' | 'fire' | 'spray';
+
+const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
 export type EmitOptions = {
   x: number;
@@ -82,10 +85,14 @@ export class ParticleLayer {
   private readonly order: Uint32Array;
   private readonly depth: Float32Array;
   private readonly sorted: boolean;
+  private keep: number;
   private readonly tmp = new Vector3();
 
-  constructor(readonly kind: ParticleKind, capacity: number) {
+  constructor(readonly kind: ParticleKind, capacity: number, quality: ParticleQuality) {
     this.capacity = capacity;
+    this.keep = quality.keep;
+    // Shader noise octaves scale with the tier. High keeps the original counts.
+    const octaves = (base: number) => Math.max(1, Math.round(base * quality.noise));
     this.pos = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
     this.params = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
     this.tint = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
@@ -112,7 +119,7 @@ export class ParticleLayer {
     this.col = new Float32Array(capacity * 3);
     this.order = new Uint32Array(capacity);
     this.depth = new Float32Array(capacity);
-    this.sorted = kind !== 'fire';
+    this.sorted = kind !== 'fire' && quality.sort;
 
     const material = new SpriteNodeMaterial();
     const P: any = instancedDynamicBufferAttribute(this.pos, 'vec4');
@@ -132,7 +139,7 @@ export class ParticleLayer {
       material.blending = AdditiveBlending;
       material.fog = false;
       const flow = vec3(c.x.mul(1.6).add(seed.mul(41.0)), c.y.mul(1.1).sub(life.mul(2.6)).add(seed.mul(17.0)), seed.mul(5.0));
-      const n = mx_fractal_noise_float(flow, 4, 2.0, 0.5, 1.0);
+      const n = mx_fractal_noise_float(flow, octaves(4), 2.0, 0.5, 1.0);
       const body = length(vec2(c.x.mul(1.35), c.y.mul(0.85).add(0.22)));
       const shape = saturate(float(1).sub(body.add(n.mul(0.55)).add(uv().y.mul(0.3))).mul(2.2));
       const temp = shape.mul(float(1).sub(life.mul(0.75))).mul(T.w.mul(0.5).add(0.5));
@@ -146,7 +153,7 @@ export class ParticleLayer {
       material.scaleNode = Q.x;
       material.blending = NormalBlending;
       const p3 = vec3(c.mul(1.15).add(vec2(seed.mul(53.0), seed.mul(29.0))), life.mul(1.3).add(seed.mul(11.0)));
-      const n = mx_fractal_noise_float(p3, 5, 2.1, 0.55, 1.0);
+      const n = mx_fractal_noise_float(p3, octaves(5), 2.1, 0.55, 1.0);
       const density = smoothstep(1.0, 0.2, r.add(n.mul(0.62)));
       const erosion = life.mul(life).mul(0.55);
       const mask = saturate(density.sub(erosion).mul(1.9)).mul(smoothstep(1.0, 0.72, r));
@@ -164,7 +171,7 @@ export class ParticleLayer {
     } else {
       material.scaleNode = Q.x;
       material.blending = NormalBlending;
-      const n = mx_fractal_noise_float(vec3(c.mul(2.2), seed.mul(9.7).add(life.mul(2.0))), 3, 2.0, 0.5, 1.0);
+      const n = mx_fractal_noise_float(vec3(c.mul(2.2), seed.mul(9.7).add(life.mul(2.0))), octaves(3), 2.0, 0.5, 1.0);
       const mask = smoothstep(1.0, 0.1, r.add(n.mul(0.7))).mul(smoothstep(1.0, 0.7, r));
       const lit = atmosphere.skyAmbient.mul(1.15).add(atmosphere.sunIrradiance.mul(0.14));
       material.colorNode = vec4(T.rgb.mul(lit), 1);
@@ -177,7 +184,22 @@ export class ParticleLayer {
     this.sprite = sprite;
   }
 
+  /** Emission rate in run time. Below 1, some emitters are dropped at random. Above 1, some are doubled with a small offset. */
+  setKeep(keep: number) {
+    this.keep = keep;
+  }
+
   emit(o: EmitOptions) {
+    const k = this.keep;
+    const whole = Math.floor(k);
+    const copies = whole + (Math.random() < k - whole ? 1 : 0);
+    for (let c = 0; c < copies; c += 1) {
+      if (c === 0) this.spawn(o);
+      else this.spawn({ ...o, x: o.x + rnd(-0.3, 0.3), z: o.z + rnd(-0.3, 0.3) });
+    }
+  }
+
+  private spawn(o: EmitOptions) {
     if (this.count >= this.capacity) return;
     const i = this.count++;
     this.px[i] = o.x;

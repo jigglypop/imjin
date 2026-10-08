@@ -37,16 +37,15 @@ import {
   vec2,
   vec3,
 } from 'three/tsl';
-import { HANSAN_TERRAIN, type TerrainSpec } from './generate';
+import { type TerrainSpec } from './generate';
 import type { Structure } from './features';
+import type { TerrainQuality } from '../game/quality';
 
-const MESH_RES = 1024;
-
-function loadTex(url: string, srgb: boolean) {
+function loadTex(url: string, srgb: boolean, anisotropy: number) {
   const t = new TextureLoader().load(url);
   t.wrapS = RepeatWrapping;
   t.wrapT = RepeatWrapping;
-  t.anisotropy = 16;
+  t.anisotropy = anisotropy;
   t.minFilter = LinearMipmapLinearFilter;
   t.magFilter = LinearFilter;
   if (srgb) t.colorSpace = SRGBColorSpace;
@@ -64,7 +63,7 @@ export class Terrain {
   private cos = 1;
   private sin = 0;
 
-  private constructor(readonly spec: TerrainSpec, readonly heights: Float32Array, readonly mask: Uint8Array, readonly structures: Structure[]) {
+  private constructor(readonly spec: TerrainSpec, readonly heights: Float32Array, readonly mask: Uint8Array, readonly structures: Structure[], quality: TerrainQuality) {
     this.sizeU.value = spec.size;
     const mtex = new DataTexture(mask, spec.res, spec.res, RGBAFormat, UnsignedByteType);
     mtex.magFilter = LinearFilter;
@@ -80,10 +79,10 @@ export class Terrain {
     tex.generateMipmaps = false;
     tex.needsUpdate = true;
     this.heightTexture = tex;
-    this.group.add(this.buildMesh());
+    this.group.add(this.buildMesh(quality));
   }
 
-  static async load(spec: TerrainSpec = HANSAN_TERRAIN) {
+  static async load(spec: TerrainSpec, quality: TerrainQuality) {
     const worker = new Worker(new URL('./terrain.worker.ts', import.meta.url), { type: 'module' });
     const data = await new Promise<{ heights: Float32Array; mask: Uint8Array; structures: Structure[] }>((resolve, reject) => {
       worker.onmessage = (e) => resolve(e.data);
@@ -91,7 +90,7 @@ export class Terrain {
       worker.postMessage(spec);
     });
     worker.terminate();
-    return new Terrain(spec, data.heights, data.mask, data.structures);
+    return new Terrain(spec, data.heights, data.mask, data.structures, quality);
   }
 
   setRotation(phi: number) {
@@ -137,9 +136,9 @@ export class Terrain {
     return this.heightAtScenario(sx, sz);
   }
 
-  private buildMesh() {
+  private buildMesh(quality: TerrainQuality) {
     const { size, res } = this.spec;
-    const n = MESH_RES;
+    const n = quality.mesh;
     const step = size / (n - 1);
     const positions = new Float32Array(n * n * 3);
     const normals = new Float32Array(n * n * 3);
@@ -189,26 +188,29 @@ export class Terrain {
     geo.setIndex(new Uint32BufferAttribute(new Uint32Array(indices), 1));
     geo.computeBoundingSphere();
     void res;
-    const mesh = new Mesh(geo, this.buildMaterial());
+    const mesh = new Mesh(geo, this.buildMaterial(quality));
     mesh.receiveShadow = true;
     mesh.castShadow = true;
     mesh.frustumCulled = false;
     return mesh;
   }
 
-  private buildMaterial() {
-    const rock = loadTex('/textures/aerial_rocks_02/diff.jpg', true);
-    const cliff = loadTex('/textures/cliff_side/diff.jpg', true);
-    const coastRocks = loadTex('/textures/coast_land_rocks_01/diff.jpg', true);
-    const grass = loadTex('/textures/aerial_grass_rock/diff.jpg', true);
-    const sand = loadTex('/textures/coast_sand_01/diff.jpg', true);
-    const leaves = loadTex('/textures/forest_leaves_02/diff.jpg', true);
+  private buildMaterial(quality: TerrainQuality) {
+    const aniso = quality.anisotropy;
+    const rock = loadTex('/textures/aerial_rocks_02/diff.jpg', true, aniso);
+    const cliff = loadTex('/textures/cliff_side/diff.jpg', true, aniso);
+    const coastRocks = loadTex('/textures/coast_land_rocks_01/diff.jpg', true, aniso);
+    const grass = loadTex('/textures/aerial_grass_rock/diff.jpg', true, aniso);
+    const sand = loadTex('/textures/coast_sand_01/diff.jpg', true, aniso);
+    const leaves = loadTex('/textures/forest_leaves_02/diff.jpg', true, aniso);
     const m = new MeshStandardNodeMaterial();
     const p = positionWorld;
     const n = normalWorld;
     const slope = float(1).sub(n.y);
     const h = p.y;
     const tri = (tex: Texture, scale: number) => {
+      // Mobile tiers project straight down. That is three texture reads cheaper per material, and cliffs stretch a bit.
+      if (!quality.triplanar) return texture(tex, p.xz.mul(scale)).rgb;
       const w = pow(abs(n), vec3(4));
       const ws = w.div(w.x.add(w.y).add(w.z));
       const a = texture(tex, p.zy.mul(scale)).rgb;
@@ -216,8 +218,9 @@ export class Terrain {
       const c = texture(tex, p.xy.mul(scale)).rgb;
       return a.mul(ws.x).add(b.mul(ws.y)).add(c.mul(ws.z));
     };
-    const canopyNoise = mx_fractal_noise_float(vec3(p.x.mul(0.045), p.z.mul(0.045), float(0.3)), 4, 2.1, 0.55, 1.0);
-    const crowns = mx_fractal_noise_float(vec3(p.x.mul(0.21), p.z.mul(0.21), float(1.7)), 3, 2.0, 0.5, 1.0);
+    const octaves = (base: number) => Math.max(1, Math.round(base * quality.noise));
+    const canopyNoise = mx_fractal_noise_float(vec3(p.x.mul(0.045), p.z.mul(0.045), float(0.3)), octaves(4), 2.1, 0.55, 1.0);
+    const crowns = mx_fractal_noise_float(vec3(p.x.mul(0.21), p.z.mul(0.21), float(1.7)), octaves(3), 2.0, 0.5, 1.0);
     const dark = vec3(0.016, 0.032, 0.014);
     const mid = vec3(0.034, 0.058, 0.022);
     const light = vec3(0.062, 0.085, 0.032);

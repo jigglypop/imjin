@@ -1,4 +1,5 @@
 import type { Battle } from '../sim/battle';
+import type { Team } from '../sim/types';
 import type { Terrain } from '../terrain/Terrain';
 
 const SIZE = 320;
@@ -28,7 +29,13 @@ export class Minimap {
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
+  /** False while no panel shows the map. The engine skips redrawing it then. */
+  visible = false;
+  /** The player's team, drawn blue. The other team is red. */
+  team: Team = 'joseon';
+
   mount(el: HTMLElement | null) {
+    this.visible = !!el;
     if (el && this.canvas.parentElement !== el) el.appendChild(this.canvas);
   }
 
@@ -92,7 +99,7 @@ export class Minimap {
       const [px, py] = toPx(s.x, s.z);
       if (px < 0 || py < 0 || px > SIZE || py > SIZE) continue;
       const sel = selected.has(s.id);
-      ctx.fillStyle = sel ? '#e2a93c' : s.team === 'joseon' ? '#1f4e7a' : '#9a2a20';
+      ctx.fillStyle = sel ? '#e2a93c' : s.team === this.team ? '#1f4e7a' : '#9a2a20';
       const r = s.spec.length > 30 ? 3.2 : s.spec.length > 20 ? 2.6 : 2;
       ctx.beginPath();
       ctx.arc(px, py, sel ? r + 1 : r, 0, Math.PI * 2);

@@ -1,6 +1,9 @@
 export type Team = 'joseon' | 'japan';
+export const TEAMS: readonly Team[] = ['joseon', 'japan'];
 export type ShipKind = 'panokseon' | 'geobukseon' | 'hyeopseon' | 'atakebune' | 'sekibune' | 'kobaya' | 'mingship' | 'mingsmall';
 export type Faction = 'joseon' | 'japan' | 'ming';
+/** The Ming fleet fights on the Joseon side. */
+export const teamOf = (faction: Faction): Team => (faction === 'japan' ? 'japan' : 'joseon');
 export type Side = 0 | 1;
 
 export type GunType = 'cheonja' | 'jija' | 'hyeonja' | 'hwangja' | 'seungja' | 'ozutsu' | 'folangji' | 'hudun';
@@ -128,6 +131,8 @@ export type Ship = {
 export type Squadron = {
   id: number;
   team: Team;
+  /** Taken from the first ship. Ming squadrons sail on the Joseon team. */
+  faction: Faction;
   name: string;
   commander: string;
   portrait: string;

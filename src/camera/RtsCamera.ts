@@ -98,6 +98,41 @@ export class RtsCamera {
     this.keys.delete(e.code);
   };
 
+  /**
+   * Drag the map by a screen-space offset in CSS pixels, so the ground under the finger stays under the finger.
+   * Used by touch input. `viewportHeight` converts pixels to world units at the current zoom.
+   */
+  panScreen(dx: number, dy: number, viewportHeight: number) {
+    // Visible world height at the target distance (vertical FOV 42°), spread over the viewport height.
+    const k = (0.77 * this.goal.distance) / Math.max(1, viewportHeight);
+    const fwdX = -Math.cos(this.goal.yaw);
+    const fwdZ = -Math.sin(this.goal.yaw);
+    const rightX = -fwdZ;
+    const rightZ = fwdX;
+    // Vertical pixels cover more ground when the camera looks down at a shallow angle.
+    const depth = 1 / Math.max(0.35, Math.sin(this.goal.pitch));
+    this.goal.tx += (-dx * rightX + dy * fwdX * depth) * k;
+    this.goal.tz += (-dx * rightZ + dy * fwdZ * depth) * k;
+    this.followId = 0;
+    this.cinematic = false;
+  }
+
+  zoomBy(factor: number) {
+    this.goal.distance = MathUtils.clamp(this.goal.distance * factor, this.minDistance, this.maxDistance);
+    this.cinematic = false;
+  }
+
+  /** Positive turns the scene counter-clockwise when seen from above. */
+  rotateBy(dyaw: number) {
+    this.goal.yaw += dyaw;
+    this.cinematic = false;
+  }
+
+  tiltBy(dpitch: number) {
+    this.goal.pitch = MathUtils.clamp(this.goal.pitch + dpitch, 0.02, 1.45);
+    this.cinematic = false;
+  }
+
   private shakeAmount = 0;
   private shakeClock = 0;
 
