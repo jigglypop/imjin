@@ -90,7 +90,7 @@ export const CONQUEST_MAPS: Record<ConquestMapId, ConquestMap> = {
     terrain: HALLYEO_TERRAIN,
     seats: 4,
     points: [
-      ...pair({ name: '좌수영', hanja: '左水營', x: -2000, z: -1420, r: 260, value: 2, home: 0 }, '왜성 포구', '倭城浦', 1),
+      ...pair({ name: '서영', hanja: '西營', x: -2000, z: -1420, r: 260, value: 2, home: 0 }, '동영', '東營', 1),
       ...pair({ name: '서섬 진', hanja: '西島鎭', x: -2180, z: 640, r: 240, value: 2, home: 2 }, '동섬 진', '東島鎭', 3),
       ...pair({ name: '견내 포구', hanja: '見乃浦', x: -900, z: 400, r: 220, value: 1 }, '두억 포구', '豆億浦'),
       ...pair({ name: '북녘 포구', hanja: '北浦', x: -320, z: -1360, r: 220, value: 1 }, '남녘 포구', '南浦'),
@@ -113,7 +113,7 @@ export const CONQUEST_MAPS: Record<ConquestMapId, ConquestMap> = {
     terrain: GYEONNAERYANG_TERRAIN,
     seats: 2,
     points: [
-      ...pair({ name: '서쪽 수영', hanja: '西水營', x: -2700, z: -420, r: 260, value: 2, home: 0 }, '동쪽 왜성', '東倭城', 1),
+      ...pair({ name: '서영', hanja: '西營', x: -2700, z: -420, r: 260, value: 2, home: 0 }, '동영', '東營', 1),
       ...pair({ name: '서섬 포구', hanja: '西島浦', x: -1350, z: -60, r: 220, value: 1 }, '동섬 포구', '東島浦'),
       { name: '물길 한가운데', hanja: '梁中', x: 0, z: 0, r: 320, value: 2 },
     ],

@@ -431,7 +431,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
         </div>
         <div className={`orders paper interactive ${ordersCollapsed ? 'orders--collapsed' : ''}`}>
           <Orders engine={engine} p={p} night={snap.night} selected={snap.selectedCount} collapsed={ordersCollapsed} onToggle={() => setOrdersCollapsed((v) => !v)} />
-          <div className="speed">
+          <div className="speed" style={engine.remote ? { display: 'none' } : undefined}>
             <button
               className={snap.paused ? 'on' : ''}
               onClick={() => {

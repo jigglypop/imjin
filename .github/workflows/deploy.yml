@@ -31,7 +31,7 @@ jobs:
           cache: npm
 
       - run: npm ci
-      - run: npx tsc --noEmit
+      - run: npm run typecheck
       - run: npx vite build
 
       - uses: aws-actions/configure-aws-credentials@v5
@@ -56,3 +56,12 @@ jobs:
 
       - name: Invalidate CDN
         run: aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION" --paths "/*"
+
+      # The multiplayer server (scripts/deploy-mp.sh). Skipped until the repository variable MP_INSTANCE_ID is set.
+      - name: Deploy multiplayer server
+        if: vars.MP_INSTANCE_ID != ''
+        run: |
+          npm run server:build
+          aws s3 cp server/dist/server.cjs s3://imjin1592-deploy/server/server.cjs --only-show-errors
+          aws ssm send-command --instance-ids "${{ vars.MP_INSTANCE_ID }}" --document-name AWS-RunShellScript \
+            --parameters 'commands=["/usr/local/bin/imjin-deploy"]' --query Command.CommandId --output text

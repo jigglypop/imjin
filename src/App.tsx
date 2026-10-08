@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import { PerspectiveCamera, WebGPURenderer } from 'three/webgpu';
 import { Engine, type ConquestSetup, type EngineOptions } from './game/Engine';
 import { CONQUEST_MAPS, defaultSeats, type ConquestMapId } from './sim/maps';
+import { net } from './net/NetClient';
+import { NetBattle } from './net/NetBattle';
+import { OnlinePanel } from './ui/OnlinePanel';
 import { SKY_PRESETS, type SkyPresetName } from './render/sky';
 import { SEA_STATES, type SeaStateName } from './ocean/waves';
 import { setLoading, setScreen, useUi } from './state/store';
@@ -30,6 +33,7 @@ const startScenario: ScenarioId = paramScenario && paramScenario in SCENARIOS ? 
 const paramSide = params.get('side') as Faction | null;
 
 let pendingCampaign: EngineOptions['campaign'];
+let pendingRemote: NetBattle | undefined;
 // Test hook: ?conquest=hallyeo&me=joseon&foe=japan&size=4 opens a conquest battle directly.
 const paramConquest = params.get('conquest') as ConquestMapId | null;
 let pendingConquest: ConquestSetup | undefined =
@@ -59,6 +63,7 @@ function readOptions(scenario: ScenarioId): EngineOptions {
     campaign: pendingCampaign,
     faction: pendingFaction,
     conquest: pendingConquest,
+    remote: pendingRemote,
     follow: params.get('follow')
       ? { id: Number(params.get('follow')), distance: Number(params.get('dist') ?? 70), pitch: Number(params.get('pitch') ?? 0.12), yaw: Number(params.get('yaw') ?? 2.4) }
       : undefined,
@@ -169,8 +174,9 @@ export function App() {
     if (!paramScenario && !pendingConquest) setScreen('select');
   }, []);
 
-  const startConquest = (setup: ConquestSetup) => {
+  const startConquest = (setup: ConquestSetup, remote?: NetBattle) => {
     pendingConquest = setup;
+    pendingRemote = remote;
     pendingCampaign = undefined;
     if (engine) engine.campaign = undefined;
     sound.click();
@@ -180,9 +186,17 @@ export function App() {
       setLoading('쟁탈전 준비 중', 0.01);
       setMounted(startScenario);
     } else if (engine) {
-      void engine.setConquest(setup);
+      void engine.setConquest(setup, remote ?? null);
     }
   };
+
+  // The server says when a multiplayer battle starts; the engine then draws the server's battle.
+  useEffect(() => {
+    net.onStart = (msg) => startConquest({ map: msg.map, seats: msg.seats, you: msg.you, seed: msg.seed }, new NetBattle());
+    return () => {
+      net.onStart = null;
+    };
+  });
 
   const start = (id: ScenarioId, campaignMode: boolean, faction: Faction) => {
     pendingConquest = undefined;
@@ -220,13 +234,17 @@ export function App() {
         <Hud
           engine={engine}
           onBack={() => {
+            if (engine.remote) {
+              net.send({ t: 'leave' });
+              engine.leaveRemote();
+            }
             engine.paused = true;
             sound.setMode('select');
             setScreen('select');
           }}
         />
       )}
-      {screen === 'select' && <BattleSelect initial={engine?.scenarioId ?? startScenario} onStart={start} onConquest={startConquest} />}
+      {screen === 'select' && <BattleSelect initial={engine?.scenarioId ?? startScenario} onStart={start} onConquest={startConquest} onlinePanel={<OnlinePanel />} />}
       {mounted && <Loading />}
     </div>
   );

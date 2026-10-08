@@ -811,3 +811,169 @@
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------- online lobby */
+
+.net-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 3px;
+}
+
+.net-title small {
+  margin-left: auto;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--ink-3);
+}
+
+.net-title code,
+.net-room code {
+  font-family: var(--display);
+  font-size: 14px;
+  padding: 1px 8px;
+  border: 1px solid var(--ink);
+  letter-spacing: 3px;
+}
+
+.net-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid rgba(22, 18, 14, 0.35);
+  background: rgba(255, 252, 244, 0.6);
+  font-family: var(--serif);
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.net-input--code {
+  flex: none;
+  width: 90px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+.net-go {
+  flex: none;
+}
+
+.net-error {
+  padding: 6px 10px;
+  background: rgba(143, 58, 43, 0.12);
+  border-left: 3px solid var(--seal);
+  font-size: 13px;
+  color: var(--seal);
+}
+
+.net-rooms {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.net-room {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid rgba(22, 18, 14, 0.22);
+  background: rgba(255, 252, 244, 0.32);
+  font-size: 13px;
+}
+
+.net-room b {
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.net-room span {
+  color: var(--ink-3);
+}
+
+.net-seats {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.net-seat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  border: 1px solid rgba(22, 18, 14, 0.22);
+  border-left: 4px solid #a88648;
+  background: rgba(255, 252, 244, 0.32);
+  font-size: 13px;
+}
+
+.net-seat--japan {
+  border-left-color: #6e2318;
+}
+
+.net-seat--me {
+  background: rgba(205, 176, 115, 0.25);
+}
+
+.net-seat b {
+  flex: 1;
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.net-side {
+  width: 40px;
+  font-weight: 800;
+  color: var(--ink-2);
+  letter-spacing: 2px;
+}
+
+.net-seat .cs-faction {
+  padding: 2px;
+}
+
+.net-seat .cs-faction:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.net-seat .cs-faction--on:disabled {
+  opacity: 1;
+}
+
+.net-ready {
+  padding: 1px 8px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid rgba(22, 18, 14, 0.3);
+  color: var(--ink-3);
+}
+
+.net-ready--on {
+  background: var(--ink);
+  color: var(--ivory);
+}
+
+.net-chat {
+  height: 110px;
+  overflow-y: auto;
+  padding: 6px 10px;
+  border: 1px solid rgba(22, 18, 14, 0.18);
+  background: rgba(255, 252, 244, 0.25);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.net-chat b {
+  margin-right: 6px;
+}

@@ -1,6 +1,7 @@
 import type { Battle, BattleRules } from './battle';
 import { GUN_SPECS, SHIP_SPECS } from './catalog';
 import { Strategist } from './strategy';
+import type { ConquestState } from '../net/protocol';
 import { otherTeam, TEAMS, type Faction, type GunType, type LandSampler, type Ship, type ShipKind, type Squadron, type Team } from './types';
 
 export type BuildingKind = 'shipyard' | 'battery' | 'magazine' | 'dock' | 'beacon';
@@ -212,6 +213,57 @@ export class Conquest implements BattleRules {
       if (p.buildings.length > 1) p.buildings[1] = this.newBuilding('battery', true);
     }
     for (const p of this.players) if (!p.human) this.brains.set(p.slot, new Strategist(p.slot));
+  }
+
+  /** A seat changes hands between a person and the computer, as when a player drops out of a multiplayer battle. */
+  setHuman(slot: number, human: boolean) {
+    const p = this.players[slot];
+    if (!p) return;
+    p.human = human;
+    if (human) this.brains.delete(slot);
+    else if (!this.brains.has(slot)) this.brains.set(slot, new Strategist(slot));
+  }
+
+  /** What changes during the battle, for a multiplayer server to send. */
+  state(): ConquestState {
+    return {
+      tickets: { joseon: Math.round(this.tickets.joseon), japan: Math.round(this.tickets.japan) },
+      points: this.points.map((p) => ({
+        owner: p.owner,
+        hold: Math.round(p.hold * 1000) / 1000,
+        contested: p.contested,
+        buildings: p.buildings.map((b) => (b ? { kind: b.kind, hp: Math.round(b.hp), progress: Math.round(b.progress * 1000) / 1000 } : null)),
+        queue: p.queue.map((q) => ({ kind: q.kind, left: Math.round(q.left * 10) / 10, total: q.total })),
+      })),
+      players: this.players.map((pl) => ({ funds: Math.floor(pl.funds), income: pl.income, sunk: pl.sunk, lost: pl.lost, human: pl.human })),
+    };
+  }
+
+  /** A multiplayer client's copy takes the server's state; it never steps on its own. */
+  applyState(st: ConquestState) {
+    this.tickets.joseon = st.tickets.joseon;
+    this.tickets.japan = st.tickets.japan;
+    st.points.forEach((ps, i) => {
+      const p = this.points[i];
+      if (!p) return;
+      p.owner = ps.owner;
+      p.hold = ps.hold;
+      p.contested = ps.contested;
+      p.buildings = p.slots.map((_, k) => {
+        const b = ps.buildings[k];
+        return b ? { kind: b.kind, hp: b.hp, progress: b.progress, reload: [] } : null;
+      });
+      p.queue = ps.queue.map((q) => ({ ...q }));
+    });
+    st.players.forEach((ps, i) => {
+      const pl = this.players[i];
+      if (!pl) return;
+      pl.funds = ps.funds;
+      pl.income = ps.income;
+      pl.sunk = ps.sunk;
+      pl.lost = ps.lost;
+      pl.human = ps.human;
+    });
   }
 
   player(slot: number) {

@@ -57,6 +57,7 @@ import { BUILDING_ORDER, BUILDINGS, ROSTER, SHORT_NAME, type Conquest } from '..
 import { applyCommand, type Command } from '../sim/commands';
 import { conquestInfo, scenarioInfo, type BattleInfo } from '../sim/info';
 import { ConquestView } from '../conquest/ConquestView';
+import type { NetBattle } from '../net/NetBattle';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
 import { Input } from './Input';
 import { TouchControls } from './Touch';
@@ -88,6 +89,8 @@ export type EngineOptions = {
   faction?: Faction;
   /** A conquest battle instead of a historical one. */
   conquest?: ConquestSetup;
+  /** A conquest battle run by the multiplayer server. */
+  remote?: NetBattle;
 };
 
 /** A conquest battle: the map, every seat, and which seat is the player's. */
@@ -139,6 +142,8 @@ export class Engine {
   selectedPoint = -1;
   /** Set by a multiplayer session: commands go to the server instead of the local battle. */
   sink: CommandSink | null = null;
+  /** The server's battle this engine draws, in a multiplayer game. */
+  remote: NetBattle | null = null;
   /** Cutaway of the selected ships: 0 off, 1 top deck, 2 gun deck, 3 oar deck. */
   cutaway = 0;
   skyName: SkyPresetName;
@@ -180,6 +185,8 @@ export class Engine {
     this.scenarioId = options.scenario;
     this.campaign = options.campaign;
     this.conquestSetup = options.conquest ?? null;
+    this.remote = options.remote ?? null;
+    this.sink = this.remote;
     const seat = this.conquestSetup?.seats[this.conquestSetup.you];
     this.faction = options.campaign ? 'joseon' : seat?.faction ?? options.faction ?? 'joseon';
     this.battleInfo = this.conquestSetup ? conquestInfo(this.conquestSetup.map) : scenarioInfo(options.scenario);
@@ -577,14 +584,20 @@ export class Engine {
   }
 
   async setScenario(id: ScenarioId, faction?: Faction) {
+    this.remote?.dispose();
+    this.remote = null;
+    this.sink = null;
     this.conquestSetup = null;
     this.scenarioId = id;
     this.faction = this.campaign ? 'joseon' : faction ?? this.faction;
     await this.stage(scenarioInfo(id));
   }
 
-  /** Starts a conquest battle on the running engine. */
-  async setConquest(setup: ConquestSetup) {
+  /** Starts a conquest battle on the running engine, local or drawn from a multiplayer server. */
+  async setConquest(setup: ConquestSetup, remote: NetBattle | null = null) {
+    this.remote?.dispose();
+    this.remote = remote;
+    this.sink = remote;
     this.conquestSetup = setup;
     this.faction = setup.seats[setup.you]!.faction;
     await this.stage(conquestInfo(setup.map));
@@ -665,16 +678,22 @@ export class Engine {
     }
     this.adaptive?.update(frameDt, this.gpuMs);
     const dt = Math.min(frameDt, 0.1);
-    const scaled = this.paused ? 0 : dt * this.speed;
+    // A multiplayer battle runs on the server at its own pace: no pause, no speed-up, nothing simulated here.
+    const scaled = this.remote ? dt : this.paused ? 0 : dt * this.speed;
     this.lastScaled = scaled;
-    this.accumulator += scaled;
-    let steps = 0;
-    while (this.accumulator >= SIM_DT && steps < 8) {
-      this.stepSim(SIM_DT);
-      this.accumulator -= SIM_DT;
-      steps += 1;
+    if (this.remote) {
+      this.remote.advance(this.battle, this.conquest, dt);
+      waveField.time += dt;
+    } else {
+      this.accumulator += scaled;
+      let steps = 0;
+      while (this.accumulator >= SIM_DT && steps < 8) {
+        this.stepSim(SIM_DT);
+        this.accumulator -= SIM_DT;
+        steps += 1;
+      }
+      if (steps >= 8) this.accumulator = 0;
     }
-    if (steps >= 8) this.accumulator = 0;
     const events = this.battle.events;
     this.views.cutaway.clear();
     for (const id of this.cutawayIds()) this.views.cutaway.set(id, this.cutaway);
@@ -769,6 +788,15 @@ export class Engine {
   endBattle() {
     if (this.battle.winner) return;
     this.battle.winner = this.enemyTeam;
+  }
+
+  /** Leaves a multiplayer battle: the server hands the fleet to the computer. */
+  leaveRemote() {
+    if (!this.remote) return;
+    this.remote.dispose();
+    this.remote = null;
+    this.sink = null;
+    this.paused = true;
   }
 
   private noteInterest(events: BattleEvent[]) {
