@@ -1,6 +1,7 @@
 import { Ray, Vector2, Vector3 } from 'three/webgpu';
 import type { Engine } from './Engine';
-import type { AmmoMode, BattleEvent, Ship, Stance } from '../sim/types';
+import type { AmmoMode, BattleEvent, CrewPlan, Ship, Stance } from '../sim/types';
+import { BUILDINGS } from '../sim/conquest';
 import { setSelectionBox, pushToast, useUi } from '../state/store';
 
 const DRAG_THRESHOLD = 6;
@@ -242,14 +243,45 @@ export class Input {
     const b = this.engine.battle;
     const target = this.pickShip(clientX, clientY);
     if (target && target.team === this.engine.enemyTeam && b.isActive(target)) {
-      b.setOrder(ids, { type: 'attack', targetId: target.id });
+      this.engine.issue({ type: 'order', ids, order: { type: 'attack', targetId: target.id } });
       pushToast(`${ids.length}척, ${target.name} 공격`);
+      return;
+    }
+    const works = this.pickWorks(clientX, clientY);
+    if (works) {
+      this.engine.issue({ type: 'order', ids, order: { type: 'bombard', x: works.x, y: works.y, z: works.z } });
+      pushToast(`${ids.length}척, ${works.name} 포격`);
       return;
     }
     const p = this.waterPoint(clientX, clientY);
     if (!p) return;
     void queue;
     this.moveSelected(p.x, p.z);
+  }
+
+  /** An enemy shore work under the cursor, picked on screen within a few dozen pixels. */
+  private pickWorks(clientX: number, clientY: number) {
+    const c = this.engine.conquest;
+    if (!c || !this.dom) return null;
+    const rect = this.dom.getBoundingClientRect();
+    let best: { x: number; y: number; z: number; name: string } | null = null;
+    let bestD = 34;
+    for (const p of c.points) {
+      const team = c.teamOfPoint(p);
+      if (!team || team === this.engine.team) continue;
+      p.buildings.forEach((bd, i) => {
+        if (!bd) return;
+        const spot = p.slots[i]!;
+        const y = this.engine.terrain.heightAt(spot.x, spot.z) + 5;
+        if (!this.engine.screenPosition(spot.x, y, spot.z, this.screen)) return;
+        const d = Math.hypot(this.screen.x - (clientX - rect.left), this.screen.y - (clientY - rect.top));
+        if (d < bestD) {
+          bestD = d;
+          best = { x: spot.x, y, z: spot.z, name: `${p.name} ${BUILDINGS[bd.kind].label}` };
+        }
+      });
+    }
+    return best as { x: number; y: number; z: number; name: string } | null;
   }
 
   moveSelected(tx: number, tz: number) {
@@ -276,13 +308,14 @@ export class Input {
       const sc = b.get(c)!;
       return (sa.x - cx) * px + (sa.z - cz) * pz - ((sc.x - cx) * px + (sc.z - cz) * pz);
     });
-    sorted.forEach((id, i) => {
+    const list = sorted.map((id, i) => {
       const row = Math.floor(i / perRow);
       const col = i % perRow;
       const inRow = Math.min(perRow, sorted.length - row * perRow);
       const off = (col - (inRow - 1) / 2) * 48;
-      b.setOrder([id], { type: 'move', x: tx + px * off - fx * row * 60, z: tz + pz * off - fz * row * 60 });
+      return { id, order: { type: 'move' as const, x: tx + px * off - fx * row * 60, z: tz + pz * off - fz * row * 60 } };
     });
+    this.engine.issue({ type: 'orders', list });
     this.engine.fx.spray.emit({ x: tx, y: 0.5, z: tz, vy: 2, life: 0.6, size0: 3, size1: 9, alpha: 0.5, r: 1, g: 0.85, b: 0.4, lift: -3 });
   }
 
@@ -300,7 +333,7 @@ export class Input {
       n += 1;
     }
     if (!n) return;
-    b.formation(ids, kind, ex / n, ez / n);
+    this.engine.issue({ type: 'formation', ids, kind, cx: ex / n, cz: ez / n });
     this.engine.sound.drums(kind === 'crane' ? 3 : 2);
     pushToast(FORMATION_NAMES[kind] + ' 전개');
   }
@@ -320,7 +353,7 @@ export class Input {
   volley(side: 0 | 1 | 2) {
     const ids = this.commandIds();
     if (!this.need(ids)) return;
-    const n = this.engine.battle.volley(ids, side);
+    const n = this.engine.issue({ type: 'volley', ids, side });
     this.engine.sound.drums(1);
     pushToast(`${n}척 ${side === 0 ? '좌현' : side === 1 ? '우현' : '함수'} 일제 사격`);
     this.engine.publish(true);
@@ -331,7 +364,7 @@ export class Input {
     const b = this.engine.battle;
     const first = b.get(ids[0] ?? 0);
     const mode = first?.fireMode === 'hold' ? 'free' : 'hold';
-    b.configure(ids, { fireMode: mode });
+    this.engine.issue({ type: 'configure', ids, patch: { fireMode: mode } });
     pushToast(mode === 'hold' ? '사격 중지 — 장전 후 대기' : '자유 사격');
     this.engine.publish(true);
   }
@@ -342,7 +375,7 @@ export class Input {
     const order: AmmoMode[] = ['auto', 'hull', 'crew', 'fire'];
     const first = b.get(ids[0] ?? 0);
     const next = order[(order.indexOf(first?.ammo ?? 'auto') + 1) % order.length]!;
-    b.configure(ids, { ammo: next });
+    this.engine.issue({ type: 'configure', ids, patch: { ammo: next } });
     pushToast(`탄종 — ${AMMO_NAMES[next]}`);
     this.engine.publish(true);
   }
@@ -350,8 +383,8 @@ export class Input {
   setSpeed(cap: number) {
     const ids = this.commandIds();
     if (!this.need(ids)) return;
-    this.engine.battle.configure(ids, { speedCap: cap });
-    if (cap === 0) this.engine.battle.setOrder(ids, { type: 'hold' });
+    this.engine.issue({ type: 'configure', ids, patch: { speedCap: cap } });
+    if (cap === 0) this.engine.issue({ type: 'order', ids, order: { type: 'hold' } });
     pushToast(cap >= 1 ? '전속 노 젓기' : cap >= 0.6 ? '반속' : cap > 0 ? '미속' : '정지');
     this.engine.publish(true);
   }
@@ -359,12 +392,7 @@ export class Input {
   setStance(stance: Stance) {
     const ids = this.commandIds();
     if (!this.need(ids)) return;
-    const b = this.engine.battle;
-    b.configure(ids, { stance, repel: false });
-    for (const id of ids) {
-      const s = b.get(id)!;
-      if (s.order.type === 'hold' || s.order.type === 'slot' || s.order.type === 'move' || s.order.type === 'follow' || s.order.type === 'broadside') s.order = { type: 'auto' };
-    }
+    this.engine.issue({ type: 'configure', ids, patch: { stance, repel: false } });
     pushToast(STANCE_NAMES[stance]);
     this.engine.publish(true);
   }
@@ -373,15 +401,14 @@ export class Input {
     const ids = this.commandIds();
     if (!this.need(ids)) return;
     const b = this.engine.battle;
+    const list = [];
     for (const id of ids) {
       const s = b.get(id)!;
       const target = b.get(s.targetId);
       if (!b.isActive(target)) continue;
-      const bearing = Math.atan2(target.z - s.z, target.x - s.x);
-      const portDiff = Math.abs(Math.atan2(Math.sin(bearing + Math.PI / 2 - s.heading), Math.cos(bearing + Math.PI / 2 - s.heading)));
-      const starDiff = Math.abs(Math.atan2(Math.sin(bearing - Math.PI / 2 - s.heading), Math.cos(bearing - Math.PI / 2 - s.heading)));
-      b.setOrder([id], { type: 'broadside', targetId: target.id, side: portDiff < starDiff ? 0 : 1 });
+      list.push({ id, order: { type: 'broadside' as const, targetId: target.id, side: b.sideToward(s, target.x, target.z) } });
     }
+    this.engine.issue({ type: 'orders', list });
     pushToast('측면을 적에게 — 포문 정렬');
     this.engine.publish(true);
   }
@@ -391,7 +418,7 @@ export class Input {
     const b = this.engine.battle;
     const first = b.get(ids[0] ?? 0);
     const on = !(first?.lights ?? true);
-    b.configure(ids, { lights: on });
+    this.engine.issue({ type: 'configure', ids, patch: { lights: on } });
     pushToast(on ? '등불을 밝힌다' : '등화관제 — 불을 끈다');
     this.engine.publish(true);
   }
@@ -399,9 +426,8 @@ export class Input {
   repel() {
     const ids = this.commandIds();
     if (!this.need(ids)) return;
-    const b = this.engine.battle;
-    b.configure(ids, { repel: true, stance: 'standoff' });
-    const cut = b.cutGrapples(ids);
+    this.engine.issue({ type: 'configure', ids, patch: { repel: true, stance: 'standoff' } });
+    const cut = this.engine.issue({ type: 'cut', ids });
     pushToast(cut ? `갈고리를 끊고 이탈 — ${cut}척` : '등선 거부 — 적의 접현을 막는다');
     this.engine.publish(true);
   }
@@ -409,15 +435,24 @@ export class Input {
   auto() {
     let ids = this.selectedOwn();
     if (!ids.length) ids = this.ownShips().map((s) => s.id);
-    this.engine.battle.setOrder(ids, { type: 'auto' });
+    this.engine.issue({ type: 'order', ids, order: { type: 'auto' } });
     pushToast('자유 교전');
   }
 
   hold() {
     const ids = this.selectedOwn();
     if (!ids.length) return;
-    this.engine.battle.setOrder(ids, { type: 'hold' });
+    this.engine.issue({ type: 'order', ids, order: { type: 'hold' } });
     pushToast('정지');
+  }
+
+  /** Station plan for the selection: more hands at the oars, the guns, the bows or on deck. */
+  setPlan(plan: CrewPlan, label: string) {
+    const ids = this.commandIds(true);
+    if (!this.need(ids)) return;
+    this.engine.issue({ type: 'plan', ids, plan });
+    pushToast(`배치 — ${label}`);
+    this.engine.publish(true);
   }
 
   followSelected() {
@@ -529,7 +564,11 @@ export class Input {
       case 'Escape':
         this.engine.views.selected.clear();
         this.engine.rts.followId = 0;
+        this.engine.selectedPoint = -1;
         this.engine.publish(true);
+        break;
+      case 'KeyF':
+        this.engine.toggleCutaway();
         break;
       default:
         break;
@@ -549,6 +588,27 @@ export class Input {
       } else if (e.type === 'explode') {
         const s = b.get(e.ship);
         if (s) pushToast(`화약고 폭발 — ${s.name}`, s.team === team ? 'bad' : 'good');
+      } else if (e.type === 'captured') {
+        const c = this.engine.conquest;
+        const p = c?.points[e.point];
+        if (!c || !p) continue;
+        if (e.owner < 0) {
+          const lost = e.from >= 0 && c.player(e.from)?.team === team;
+          pushToast(lost ? `${p.name} 상실 — 거점이 무주가 되었다` : `${p.name}의 적 수비를 무너뜨렸다`, lost ? 'bad' : 'good');
+        } else {
+          const ours = c.player(e.owner)?.team === team;
+          pushToast(ours ? `${p.name} 점령` : `적이 ${p.name} 점령`, ours ? 'good' : 'bad');
+        }
+      } else if (e.type === 'built') {
+        const p = this.engine.conquest?.points[e.point];
+        if (p && e.owner === this.engine.owner) pushToast(`${p.name} ${BUILDINGS[e.building as keyof typeof BUILDINGS].label} 준공`, 'good');
+      } else if (e.type === 'razed') {
+        const c = this.engine.conquest;
+        const p = c?.points[e.point];
+        if (c && p) pushToast(`${p.name} ${BUILDINGS[e.building as keyof typeof BUILDINGS].label} 파괴`, c.teamOfPoint(p) === team ? 'bad' : 'good');
+      } else if (e.type === 'spawned') {
+        const s = b.get(e.ship);
+        if (s && s.owner === this.engine.owner) pushToast(`${s.name} 진수`);
       }
     }
   }

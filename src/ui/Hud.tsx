@@ -8,8 +8,8 @@ import type { SeaStateName } from '../ocean/waves';
 import { setTouchBox, useUi, type GameSnapshot, type PrimaryInfo, type SquadronInfo } from '../state/store';
 import type { ShipKind, Team } from '../sim/types';
 import { FACTION_MARK, FACTION_NAME } from '../sim/balance';
-import { SCENARIOS } from '../sim/scenarios';
 import { useCompactLayout } from './useCompactLayout';
+import { ConquestBar, CrewPanel, PointPanel } from './ConquestPanels';
 
 const SEA_LABELS: Record<SeaStateName, string> = { calm: '잔잔', moderate: '보통', rough: '거침' };
 const ACTIVITY: Record<string, string> = {
@@ -47,11 +47,9 @@ function formatTime(t: number) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-/** Counts are by team, and at Noryang the Joseon team carries the Ming fleet. The player's own faction is named first. */
+/** Counts are by team. The engine names the sides, the player's first. */
 function teamName(snap: GameSnapshot, team: Team) {
-  if (team === 'japan') return FACTION_NAME.japan;
-  if (!SCENARIOS[snap.scenario.id].ming) return FACTION_NAME.joseon;
-  return snap.faction === 'ming' ? '명·조선 연합' : '조선·명 연합';
+  return team === snap.team ? snap.sides.own : snap.sides.enemy;
 }
 
 // The equipment class is resolved at page load, and its build-time resources are fixed for the session.
@@ -198,6 +196,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const selectedSquad = own.find((s) => s.selected);
   const p = snap.primary;
   const enemyTeam: Team = snap.team === 'joseon' ? 'japan' : 'joseon';
+  const enemyFaction = snap.squadrons.find((s) => s.team === enemyTeam)?.faction ?? enemyTeam;
   const won = snap.winner === snap.team;
   return (
     <div className="hud">
@@ -249,6 +248,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
           <div className="balance-bar">
             <div className="balance-fill" style={{ width: `${snap.balance * 100}%` }} />
           </div>
+          {snap.conquest && <ConquestBar c={snap.conquest} />}
           {snap.tide && (
             <div className={`tide tide--${snap.tide.dir < 0 ? 'flood' : snap.tide.dir > 0 ? 'ebb' : 'slack'}`}>
               <span className="tide-arrow">{snap.tide.dir < 0 ? '⟵' : snap.tide.dir > 0 ? '⟶' : '·'}</span>
@@ -256,8 +256,10 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             </div>
           )}
         </div>
-        <div className={`emblem emblem--${enemyTeam}`}>{FACTION_MARK[enemyTeam]}</div>
+        <div className={`emblem emblem--${enemyFaction}`}>{FACTION_MARK[enemyFaction]}</div>
       </div>
+
+      {snap.conquest?.selected && <PointPanel engine={engine} p={snap.conquest.selected} onClose={() => engine.selectPoint(snap.conquest!.selected!.id)} />}
 
       <div className="toasts">
         {toasts.map((t) => (
@@ -384,6 +386,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                 <Stat label="선체" value={p.hull} tone="hull" text={`${Math.round(p.hull * 100)}%`} />
                 <Stat label="병력" value={p.crew / p.maxCrew} tone="crew" text={`${p.crew}`} />
                 {p.fire > 0.02 && <Stat label="화재" value={p.fire} tone="fire" text={`${Math.round(p.fire * 100)}%`} />}
+                <CrewPanel engine={engine} p={p} />
                 {p.guns.length > 0 && (
                   <div className="guns">
                     {p.guns
@@ -460,7 +463,9 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
           <div className="result-title">{won ? '大捷' : '敗戰'}</div>
           <div className="result-sub">{won ? `${snap.scenario.title} — 승리` : `${FACTION_NAME[snap.faction]} 패전`}</div>
           <div className="result-stats">
-            적선 격파 {snap.enemyTotal - snap.enemy - snap.escaped}척 · 도주 {snap.escaped}척 · 아군 손실 {snap.ownTotal - snap.own}척
+            {snap.conquest
+              ? `기세 ${snap.conquest.tickets.own} : ${snap.conquest.tickets.foe} · 거점 ${snap.conquest.held.own} : ${snap.conquest.held.foe}`
+              : `적선 격파 ${snap.enemyTotal - snap.enemy - snap.escaped}척 · 도주 ${snap.escaped}척 · 아군 손실 ${snap.ownTotal - snap.own}척`}
           </div>
           {report && (
             <div className="result-camp">

@@ -15,7 +15,7 @@ import {
 } from 'three/webgpu';
 import { float, length, sin, smoothstep, time, uniform, uv, vec4 } from 'three/tsl';
 import type { Battle } from '../sim/battle';
-import type { Ship, Team } from '../sim/types';
+import type { Ship, ShipKind, Team } from '../sim/types';
 import { waveField } from '../ocean/waves';
 import { modelKey, ShipRenderer, type ModelAsset } from './ShipRenderer';
 import type { ShipLodQuality } from '../game/quality';
@@ -57,13 +57,15 @@ export class ShipViews {
   private readonly ringMatrix = new Matrix4();
   private readonly dists: number[] = [];
   private readonly sFlag = new Vector3(1.12, 1.12, 1.12);
+  private readonly need = new Map<string, number>();
 
   constructor(
     assets: Record<string, ModelAsset>,
     battle: Battle,
     private readonly lod: ShipLodQuality,
+    hint: Map<ShipKind, number> = new Map(),
   ) {
-    this.renderer = new ShipRenderer(assets, this.capacities(battle, assets));
+    this.renderer = new ShipRenderer(assets, this.capacities(battle, assets, hint));
     this.group.add(this.renderer.group);
     const ringGeo = new RingGeometry(0.92, 1, 96, 1);
     ringGeo.rotateX(-Math.PI / 2);
@@ -78,11 +80,14 @@ export class ShipViews {
     }
   }
 
-  private capacities(battle: Battle, assets: Record<string, ModelAsset>) {
+  private capacities(battle: Battle, assets: Record<string, ModelAsset>, hint: Map<ShipKind, number>) {
     const caps = new Map<string, number>();
     for (const s of battle.ships) {
       const key = this.keyFor(s, assets);
       caps.set(key, (caps.get(key) ?? 0) + 1);
+    }
+    for (const [kind, n] of hint) {
+      for (const key of Object.keys(assets)) if (assets[key]!.kind === kind) caps.set(key, Math.max(caps.get(key) ?? 0, n));
     }
     return caps;
   }
@@ -92,9 +97,9 @@ export class ShipViews {
     return assets[key] ? key : modelKey(s.spec.kind, 0);
   }
 
-  reset(assets: Record<string, ModelAsset>, battle: Battle) {
+  reset(assets: Record<string, ModelAsset>, battle: Battle, hint: Map<ShipKind, number> = new Map()) {
     this.group.remove(this.renderer.group);
-    this.renderer = new ShipRenderer(assets, this.capacities(battle, assets));
+    this.renderer = new ShipRenderer(assets, this.capacities(battle, assets, hint));
     this.group.add(this.renderer.group);
     this.states.clear();
     this.selected.clear();
@@ -119,6 +124,9 @@ export class ShipViews {
   sync(battle: Battle, dt: number, camera: PerspectiveCamera, assets: Record<string, ModelAsset>) {
     this.projScreen.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.projScreen);
+    this.need.clear();
+    for (const ship of battle.ships) if (ship.alive) this.need.set(this.keyFor(ship, assets), (this.need.get(this.keyFor(ship, assets)) ?? 0) + 1);
+    for (const [key, n] of this.need) this.renderer.ensure(key, n);
     this.renderer.begin();
     let own = 0;
     let enemy = 0;

@@ -17,6 +17,10 @@ export type TerrainSpec = {
   shapes: LandShape[];
   channels: { x0: number; z0: number; x1: number; z1: number; width: number }[];
   bays?: { x: number; z: number; rx: number; rz: number; rot: number }[];
+  /** Point-symmetric about the centre: the noise of one half is mirrored onto the other, so neither side of a contest map has better water. */
+  symmetric?: boolean;
+  /** Ground kept clear of villages and trees, such as the shore works of capture points. */
+  reserve?: { x: number; z: number; r: number }[];
 };
 
 export const HANSAN_TERRAIN: TerrainSpec = {
@@ -207,7 +211,8 @@ export function generateHeightmap(spec: TerrainSpec) {
   const shapes = spec.shapes.map((s) => ({ ...s, c: Math.cos(s.rot), n: Math.sin(s.rot) }));
   const bays = (spec.bays ?? []).map((b) => ({ ...b, c: Math.cos(b.rot), n: Math.sin(b.rot) }));
   const half = size / 2;
-  for (let j = 0; j < res; j += 1) {
+  const rows = spec.symmetric ? Math.ceil(res / 2) : res;
+  for (let j = 0; j < rows; j += 1) {
     const z = -half + ((j + 0.5) / res) * size;
     for (let i = 0; i < res; i += 1) {
       const x = -half + ((i + 0.5) / res) * size;
@@ -266,6 +271,9 @@ export function generateHeightmap(spec: TerrainSpec) {
       }
       heights[j * res + i] = h;
     }
+  }
+  if (spec.symmetric) {
+    for (let j = 0; j < rows; j += 1) for (let i = 0; i < res; i += 1) heights[(res - 1 - j) * res + (res - 1 - i)] = heights[j * res + i]!;
   }
   return heights;
 }

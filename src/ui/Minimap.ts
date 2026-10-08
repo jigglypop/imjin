@@ -90,10 +90,20 @@ export class Minimap {
     ctx.putImageData(img, 0, 0);
   }
 
-  draw(battle: Battle, selected: Set<number>, camX: number, camZ: number, yaw: number) {
+  draw(battle: Battle, selected: Set<number>, camX: number, camZ: number, yaw: number, points?: { x: number; z: number; r: number; side: 'own' | 'foe' | 'none'; selected: boolean }[]) {
     const ctx = this.ctx;
     ctx.drawImage(this.base, 0, 0);
     const toPx = (x: number, z: number) => [((x - this.cx) / this.extent + 0.5) * SIZE, ((z - this.cz) / this.extent + 0.5) * SIZE] as const;
+    for (const p of points ?? []) {
+      const [px, py] = toPx(p.x, p.z);
+      ctx.beginPath();
+      ctx.arc(px, py, Math.max(5, (p.r / this.extent) * SIZE), 0, Math.PI * 2);
+      ctx.fillStyle = p.side === 'own' ? 'rgba(31, 78, 122, 0.28)' : p.side === 'foe' ? 'rgba(154, 42, 32, 0.28)' : 'rgba(23, 19, 15, 0.08)';
+      ctx.fill();
+      ctx.lineWidth = p.selected ? 2.5 : 1.4;
+      ctx.strokeStyle = p.side === 'own' ? '#1f4e7a' : p.side === 'foe' ? '#9a2a20' : 'rgba(23, 19, 15, 0.55)';
+      ctx.stroke();
+    }
     for (const s of battle.ships) {
       if (!s.alive || s.sinking > 0) continue;
       const [px, py] = toPx(s.x, s.z);

@@ -211,9 +211,23 @@ export class ShipRenderer {
   private build() {
     for (const child of [...this.group.children]) this.group.remove(child);
     this.batches.clear();
-    for (const [key, asset] of Object.entries(this.assets)) {
-      const cap = Math.max(1, this.capacity.get(key) ?? 0);
-      if (!this.capacity.get(key)) continue;
+    for (const key of Object.keys(this.assets)) this.buildKey(key);
+  }
+
+  /** Room for at least count ships of a model. Ships launched mid-battle can outgrow what the battle started with. */
+  ensure(key: string, count: number) {
+    const cap = this.capacity.get(key) ?? 0;
+    if (count <= cap || !this.assets[key]) return;
+    this.capacity.set(key, Math.max(count, cap * 2, 4));
+    for (const batch of this.batches.get(key) ?? []) this.group.remove(batch.mesh);
+    this.buildKey(key);
+  }
+
+  private buildKey(key: string) {
+    const asset = this.assets[key]!;
+    const cap = Math.max(1, this.capacity.get(key) ?? 0);
+    if (!this.capacity.get(key)) return;
+    {
       this.batches.set(
         key,
         asset.lods.map((lod, level) => {

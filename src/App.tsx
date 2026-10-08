@@ -1,7 +1,8 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
 import { PerspectiveCamera, WebGPURenderer } from 'three/webgpu';
-import { Engine, type EngineOptions } from './game/Engine';
+import { Engine, type ConquestSetup, type EngineOptions } from './game/Engine';
+import { CONQUEST_MAPS, defaultSeats, type ConquestMapId } from './sim/maps';
 import { SKY_PRESETS, type SkyPresetName } from './render/sky';
 import { SEA_STATES, type SeaStateName } from './ocean/waves';
 import { setLoading, setScreen, useUi } from './state/store';
@@ -29,6 +30,17 @@ const startScenario: ScenarioId = paramScenario && paramScenario in SCENARIOS ? 
 const paramSide = params.get('side') as Faction | null;
 
 let pendingCampaign: EngineOptions['campaign'];
+// Test hook: ?conquest=hallyeo&me=joseon&foe=japan&size=4 opens a conquest battle directly.
+const paramConquest = params.get('conquest') as ConquestMapId | null;
+let pendingConquest: ConquestSetup | undefined =
+  paramConquest && paramConquest in CONQUEST_MAPS
+    ? {
+        map: paramConquest,
+        seats: defaultSeats((params.get('me') as Faction | null) ?? 'joseon', (params.get('foe') as Faction | null) ?? 'japan', params.get('size') === '4' ? 4 : 2),
+        you: 0,
+        seed: Number(params.get('seed') ?? 1592),
+      }
+    : undefined;
 let pendingFaction: Faction = paramSide && playableFactions(startScenario).includes(paramSide) ? paramSide : 'joseon';
 
 function readOptions(scenario: ScenarioId): EngineOptions {
@@ -46,6 +58,7 @@ function readOptions(scenario: ScenarioId): EngineOptions {
     hideLabels: params.get('hud') === '0',
     campaign: pendingCampaign,
     faction: pendingFaction,
+    conquest: pendingConquest,
     follow: params.get('follow')
       ? { id: Number(params.get('follow')), distance: Number(params.get('dist') ?? 70), pitch: Number(params.get('pitch') ?? 0.12), yaw: Number(params.get('yaw') ?? 2.4) }
       : undefined,
@@ -148,15 +161,31 @@ function Loading() {
 export function App() {
   const screen = useUi((s) => s.screen);
   const [engine, setEngine] = useState<Engine | null>(null);
-  const [mounted, setMounted] = useState<ScenarioId | null>(paramScenario ? startScenario : null);
+  const [mounted, setMounted] = useState<ScenarioId | null>(paramScenario || pendingConquest ? startScenario : null);
   const hideHud = params.get('hud') === '0';
   const compact = useCompactLayout();
 
   useEffect(() => {
-    if (!paramScenario) setScreen('select');
+    if (!paramScenario && !pendingConquest) setScreen('select');
   }, []);
 
+  const startConquest = (setup: ConquestSetup) => {
+    pendingConquest = setup;
+    pendingCampaign = undefined;
+    if (engine) engine.campaign = undefined;
+    sound.click();
+    sound.setMode('battle');
+    setScreen('battle');
+    if (!mounted) {
+      setLoading('쟁탈전 준비 중', 0.01);
+      setMounted(startScenario);
+    } else if (engine) {
+      void engine.setConquest(setup);
+    }
+  };
+
   const start = (id: ScenarioId, campaignMode: boolean, faction: Faction) => {
+    pendingConquest = undefined;
     const campaign = useCampaign.getState().campaign;
     pendingCampaign = campaignMode && campaign ? fleetSpawn(campaign) : undefined;
     pendingFaction = pendingCampaign ? 'joseon' : faction;
@@ -197,7 +226,7 @@ export function App() {
           }}
         />
       )}
-      {screen === 'select' && <BattleSelect initial={engine?.scenarioId ?? startScenario} onStart={start} />}
+      {screen === 'select' && <BattleSelect initial={engine?.scenarioId ?? startScenario} onStart={start} onConquest={startConquest} />}
       {mounted && <Loading />}
     </div>
   );

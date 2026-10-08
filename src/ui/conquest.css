@@ -1,0 +1,813 @@
+/* ---------------------------------------------------------------- faction picker on the battle brief */
+
+.select-sides {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 10px;
+}
+
+.side-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  border: 1px solid rgba(22, 18, 14, 0.25);
+  background: rgba(255, 252, 244, 0.35);
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.side-btn .emblem,
+.cs-faction .emblem {
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
+  box-shadow: 0 0 0 1.5px var(--ink);
+}
+
+.side-btn .emblem::before,
+.cs-faction .emblem::before {
+  inset: 3px;
+}
+
+.side-btn span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.side-btn b {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.side-btn small {
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 1px;
+}
+
+.side-btn--on {
+  background: var(--ink);
+  color: var(--ivory);
+  border-color: var(--ink);
+}
+
+.side-btn--on small {
+  color: rgba(243, 236, 220, 0.7);
+}
+
+.side-vs {
+  margin-left: auto;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--ink-3);
+}
+
+.side-vs b {
+  font-family: var(--display);
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- conquest setup */
+
+.cs {
+  position: absolute;
+  left: 50%;
+  top: 84px;
+  transform: translateX(-50%);
+  width: min(820px, calc(100vw - 32px));
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+  padding: 18px 24px 16px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cs-maps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cs-map {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 14px;
+  border: 1px solid rgba(22, 18, 14, 0.28);
+  background: rgba(255, 252, 244, 0.35);
+  cursor: pointer;
+  color: var(--ink);
+  text-align: left;
+}
+
+.cs-map b {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 3px;
+}
+
+.cs-map small {
+  font-size: 12px;
+  color: var(--ink-3);
+  letter-spacing: 1px;
+}
+
+.cs-map--on {
+  background: var(--ink);
+  color: var(--ivory);
+}
+
+.cs-map--on small {
+  color: rgba(243, 236, 220, 0.72);
+}
+
+.cs-summary {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.8;
+}
+
+.cs-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cs-row--top {
+  align-items: flex-start;
+}
+
+.cs-label {
+  flex: none;
+  width: 44px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: var(--ink-2);
+}
+
+.cs-factions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cs-faction {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 12px 3px 3px;
+  border: 1px solid rgba(22, 18, 14, 0.25);
+  background: rgba(255, 252, 244, 0.35);
+  cursor: pointer;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--ink);
+}
+
+.cs-faction--on {
+  background: var(--ink);
+  color: var(--ivory);
+}
+
+.cs-muster {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cs-budget {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cs-budget small {
+  color: var(--ink-3);
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+.cs-budget-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(22, 18, 14, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(22, 18, 14, 0.3);
+}
+
+.cs-budget-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(#cdb073, #8e6e36);
+}
+
+.cs-ships {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.cs-ship {
+  padding: 8px 10px;
+  border: 1px solid rgba(22, 18, 14, 0.22);
+  background: rgba(255, 252, 244, 0.32);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cs-ship-name {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.cs-ship-name b {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 2px;
+}
+
+.cs-ship-name small,
+.cs-ship-note {
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.cs-ship-count {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cs-ship-count button {
+  width: 26px;
+  height: 24px;
+  border: 1px solid rgba(22, 18, 14, 0.35);
+  background: transparent;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.cs-ship-count button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.cs-ship-count b {
+  min-width: 18px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.cs-trait {
+  font-size: 13px;
+  color: var(--ink-2);
+  letter-spacing: 1px;
+  border-top: 1px solid rgba(22, 18, 14, 0.15);
+  padding-top: 8px;
+}
+
+/* ---------------------------------------------------------------- conquest HUD */
+
+.cq-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cq-tickets {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.cq-ticket {
+  position: relative;
+  height: 16px;
+  background: rgba(10, 8, 6, 0.55);
+  box-shadow: 0 0 0 1px rgba(10, 8, 6, 0.8), 0 0 0 2px rgba(235, 227, 209, 0.3);
+  overflow: hidden;
+}
+
+.cq-ticket i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  transition: width 0.6s ease;
+}
+
+.cq-ticket--own i {
+  right: 0;
+  background: linear-gradient(#cdb073, #8e6e36);
+}
+
+.cq-ticket--foe i {
+  left: 0;
+  background: linear-gradient(#b8432f, #6e2318);
+}
+
+.cq-ticket span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 7px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--ivory);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  gap: 6px;
+}
+
+.cq-ticket--own span {
+  justify-content: flex-end;
+}
+
+.cq-ticket small {
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.cq-clock {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--ivory);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.cq-purse {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ivory);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.5);
+  letter-spacing: 1px;
+}
+
+.cq-purse b {
+  font-weight: 800;
+  color: #f1dca7;
+}
+
+.cq-purse small {
+  margin-left: 2px;
+  opacity: 0.8;
+}
+
+.cq-point {
+  position: absolute;
+  right: 24px;
+  top: 96px;
+  width: 300px;
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.cq-point-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cq-seal {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--hanja);
+  font-weight: 900;
+  font-size: 20px;
+  border: 2px solid var(--ink);
+  background: var(--paper-2);
+}
+
+.cq-seal--own {
+  background: #cdb073;
+}
+
+.cq-seal--foe {
+  background: var(--seal);
+  color: #f4e6d0;
+  border-color: #5e2116;
+}
+
+.cq-point-name {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 3px;
+}
+
+.cq-point-name small {
+  font-size: 12px;
+  color: var(--ink-3);
+  letter-spacing: 1px;
+}
+
+.cq-point-sub {
+  font-size: 12px;
+  color: var(--ink-3);
+  letter-spacing: 1px;
+}
+
+.cq-close {
+  margin-left: auto;
+  align-self: flex-start;
+  border: 0;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--ink-2);
+}
+
+.cq-hold {
+  position: relative;
+  height: 14px;
+  background: rgba(22, 18, 14, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(22, 18, 14, 0.3);
+}
+
+.cq-hold i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgba(22, 18, 14, 0.4);
+}
+
+.cq-hold--own i {
+  background: linear-gradient(#cdb073, #8e6e36);
+}
+
+.cq-hold--foe i {
+  background: linear-gradient(#b8432f, #6e2318);
+}
+
+.cq-hold span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.cq-label {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 3px;
+  color: var(--ink-2);
+  border-bottom: 1px solid rgba(22, 18, 14, 0.15);
+  padding-bottom: 2px;
+}
+
+.cq-works {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+}
+
+.cq-work {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 6px;
+  align-items: center;
+  padding: 5px 7px;
+  border: 1px solid rgba(22, 18, 14, 0.25);
+  background: rgba(255, 252, 244, 0.35);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.cq-work b {
+  grid-row: span 2;
+  font-family: var(--hanja);
+  font-size: 18px;
+}
+
+.cq-work-bar {
+  height: 4px;
+  background: rgba(22, 18, 14, 0.15);
+}
+
+.cq-work-bar i {
+  display: block;
+  height: 100%;
+  background: var(--ink-2);
+}
+
+.cq-work--building .cq-work-bar i {
+  background: #a88648;
+}
+
+.cq-work--empty {
+  display: flex;
+  justify-content: center;
+  color: var(--ink-3);
+  font-weight: 600;
+  border-style: dashed;
+}
+
+.cq-x {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ink-3);
+  font-size: 14px;
+}
+
+.cq-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.cq-buy b {
+  font-family: var(--hanja);
+}
+
+.cq-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cq-q {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 8px;
+  border: 1px solid rgba(22, 18, 14, 0.25);
+  background: rgba(255, 252, 244, 0.3);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+}
+
+.cq-q i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgba(168, 134, 72, 0.35);
+}
+
+.cq-q span,
+.cq-q small {
+  position: relative;
+}
+
+.cq-hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+/* ---------------------------------------------------------------- capture point labels over the 3D view */
+
+.cpoints {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+  overflow: hidden;
+}
+
+.cpoint {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transform-origin: 50% 100%;
+  will-change: transform;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.cpoint-name {
+  padding: 2px 10px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--ink);
+  background-color: rgba(235, 227, 209, 0.9);
+  background-image: url(/ui/hanji.jpg);
+  background-size: 160px;
+  background-blend-mode: multiply;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(22, 18, 14, 0.55);
+  white-space: nowrap;
+}
+
+.cpoint--home .cpoint-name::before {
+  content: '本 ';
+  font-family: var(--hanja);
+}
+
+.cpoint--own .cpoint-name {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 2px #a88648;
+}
+
+.cpoint--foe .cpoint-name {
+  background-color: #6e2318;
+  color: #f4e6d0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 1px #2a0e09;
+}
+
+.cpoint--selected .cpoint-name {
+  outline: 2px solid var(--ivory);
+  outline-offset: 2px;
+}
+
+.cpoint--contested .cpoint-name {
+  animation: cpoint-flash 0.8s steps(2) infinite;
+}
+
+@keyframes cpoint-flash {
+  50% {
+    background-color: #b8432f;
+    color: #f4e6d0;
+  }
+}
+
+.cpoint-bar {
+  width: 64px;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+.cpoint-bar i {
+  display: block;
+  height: 100%;
+  background: rgba(235, 227, 209, 0.6);
+}
+
+.cpoint-bar i.own {
+  background: #cdb073;
+}
+
+.cpoint-bar i.foe {
+  background: #c4523c;
+}
+
+.cpoint-works {
+  min-height: 14px;
+  font-family: var(--hanja);
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--ivory);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+}
+
+/* squadron flags: friend or foe when both fleets fly the same colours */
+
+.sqb--foe .sqb-flag {
+  outline: 2px solid #b8432f;
+  outline-offset: -1px;
+}
+
+/* ---------------------------------------------------------------- crew stations of the selected ship */
+
+.crew-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 6px 0 4px;
+}
+
+.crew-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.crew-row {
+  display: grid;
+  grid-template-columns: 16px 34px 1fr 30px 18px 18px;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.crew-row--off {
+  opacity: 0.35;
+}
+
+.crew-row b {
+  font-family: var(--hanja);
+  font-size: 13px;
+}
+
+.crew-row small {
+  text-align: right;
+  color: var(--ink-2);
+}
+
+.crew-bar {
+  position: relative;
+  height: 6px;
+  background: rgba(22, 18, 14, 0.14);
+}
+
+.crew-bar i {
+  display: block;
+  height: 100%;
+  background: var(--ink-2);
+}
+
+.crew-bar em {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: #a88648;
+  transform: translateX(-1px);
+}
+
+.crew-row button {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid rgba(22, 18, 14, 0.35);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.crew-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.crew-presets .chip {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.app--compact .cq-point {
+  right: 8px;
+  left: auto;
+  top: 70px;
+  width: min(300px, calc(100vw - 16px));
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.app--compact .cs-ships,
+.app--compact .cs-maps {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 1820px) {
+  .select-tab {
+    padding: 8px 9px;
+    font-size: 14px;
+  }
+
+  .select-tab small {
+    display: none;
+  }
+}

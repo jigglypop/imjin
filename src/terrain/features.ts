@@ -61,6 +61,8 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
     }
   const coastAt = (i: number, j: number) => coast[Math.max(0, Math.min(S - 1, Math.round(j / step))) * S + Math.max(0, Math.min(S - 1, Math.round(i / step)))]!;
 
+  const reserve = spec.reserve ?? [];
+  const reserved = (x: number, z: number, margin = 0) => reserve.some((r) => (r.x - x) ** 2 + (r.z - z) ** 2 < (r.r + margin) ** 2);
   const candidates: { i: number; j: number; score: number }[] = [];
   for (let j = 8; j < res - 8; j += 6) {
     for (let i = 8; i < res - 8; i += 6) {
@@ -80,6 +82,7 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
     if (villages.length >= maxVillages) break;
     const w = toWorld(c.i, c.j);
     if (villages.some((v) => Math.hypot(v.x - w.x, v.z - w.z) < 1400)) continue;
+    if (reserved(w.x, w.z, 450)) continue;
     villages.push({ x: w.x, z: w.z, r: 0 });
   }
 
@@ -102,6 +105,7 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
       if (g.g > 0.16) continue;
       if (coastAt(i, j) < 22) continue;
       if (houses.some((p) => Math.hypot(p.x - x, p.z - z) < 17)) continue;
+      if (reserved(x, z)) continue;
       houses.push({ x, z });
       const downhill = Math.atan2(-g.gz, -g.gx);
       const giwa = rand() < 0.2;
@@ -198,6 +202,10 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
       if (beacons.length) {
         const w = toWorld(i, j);
         for (const b of beacons) if (Math.hypot(w.x - b.x, w.z - b.z) < 45) forest = 0;
+      }
+      if (reserve.length && forest > 0) {
+        const w = toWorld(i, j);
+        if (reserved(w.x, w.z)) forest = 0;
       }
       mask[k] = Math.round(forest * 255);
       mask[k + 1] = Math.round(Math.max(0, Math.min(1, rocky)) * 255);

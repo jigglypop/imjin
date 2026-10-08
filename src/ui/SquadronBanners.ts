@@ -1,6 +1,6 @@
 import { Vector3, type PerspectiveCamera } from 'three/webgpu';
 import type { Battle } from '../sim/battle';
-import type { Squadron } from '../sim/types';
+import type { Squadron, Team } from '../sim/types';
 import { FACTION_MARK } from '../sim/balance';
 import type { ShipViews } from '../ships/ShipViews';
 
@@ -52,9 +52,9 @@ export class SquadronBanners {
     parent.appendChild(this.layer);
   }
 
-  private create(sq: Squadron) {
+  private create(sq: Squadron, own: boolean) {
     const root = document.createElement('div');
-    root.className = `sqb sqb--${sq.team}${sq.faction === 'ming' ? ' sqb--ming' : ''}`;
+    root.className = `sqb sqb--${sq.faction === 'japan' ? 'japan' : 'joseon'}${sq.faction === 'ming' ? ' sqb--ming' : ''}`;
     const flag = document.createElement('div');
     flag.className = 'sqb-flag';
     const mark = document.createElement('span');
@@ -71,6 +71,8 @@ export class SquadronBanners {
     pole.className = 'sqb-pole';
     root.append(flag, barWrap, count, pole);
     root.title = `${sq.name} · ${sq.commander}`;
+    // In a battle between two fleets of the same navy, the rim tells friend from foe.
+    root.classList.add(own ? 'sqb--own' : 'sqb--foe');
     root.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       if (e.button === 0) this.onSelect?.(sq.id, e.shiftKey);
@@ -81,7 +83,7 @@ export class SquadronBanners {
     return banner;
   }
 
-  update(battle: Battle, views: ShipViews, camera: PerspectiveCamera, width: number, height: number, visible: boolean) {
+  update(battle: Battle, views: ShipViews, camera: PerspectiveCamera, width: number, height: number, visible: boolean, team: Team) {
     this.layer.style.display = visible ? '' : 'none';
     if (!visible) return;
     for (const sq of battle.squadrons) {
@@ -102,7 +104,7 @@ export class SquadronBanners {
         alive += 1;
         if (views.selected.has(id)) selected += 1;
       }
-      const banner = this.banners.get(sq.id) ?? this.create(sq);
+      const banner = this.banners.get(sq.id) ?? this.create(sq, sq.team === team);
       if (!alive) {
         if (banner.lastState !== 'dead') {
           banner.root.style.display = 'none';

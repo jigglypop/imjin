@@ -1,0 +1,17 @@
+import { chromium } from 'playwright-core';
+const browser = await chromium.launch({ channel: 'msedge', headless: true, args: ['--enable-unsafe-webgpu', '--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=d3d11'] });
+const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+const errors = [];
+page.on('pageerror', (e) => errors.push(e.message));
+page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+await page.goto('https://imjin1592.com/', { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('.select-title', { timeout: 60000 });
+await page.waitForTimeout(9000);
+await page.screenshot({ path: 'shots/live_select.png' });
+await page.click('.select-foot .ink-btn');
+await page.waitForFunction(() => window.__ready === true, null, { timeout: 180000 });
+await page.waitForTimeout(4000);
+const info = await page.evaluate(() => window.__info());
+await page.screenshot({ path: 'shots/live_battle.png' });
+console.log('live ok', JSON.stringify({ fps: info.fps, ships: info.ships, backend: info.backend }), errors.slice(-5));
+await browser.close();

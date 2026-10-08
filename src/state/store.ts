@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import type { SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
-import type { AmmoMode, Faction, FireMode, ShipKind, Stance, Team } from '../sim/types';
+import type { AmmoMode, CrewPlan, Faction, FireMode, ShipKind, SmallArms, Stance, Team } from '../sim/types';
+import type { BuildingKind } from '../sim/conquest';
 import type { ScenarioId } from '../sim/scenarios';
 import type { Report } from '../campaign/campaign';
 
@@ -43,10 +44,54 @@ export type PrimaryInfo = {
   lights: boolean;
   repel: boolean;
   grappled: boolean;
+  /** Crew per station and the station plan, in CREW_ROLES order. */
+  roles: number[];
+  plan: CrewPlan;
+  defaultPlan: CrewPlan;
+  arms: SmallArms;
+  /** The player commands this ship. */
+  owned: boolean;
+};
+
+export type PointSummary = { id: number; name: string; side: 'own' | 'foe' | 'none'; hold: number; contested: boolean };
+
+export type PointDetail = {
+  id: number;
+  name: string;
+  hanja: string;
+  side: 'own' | 'foe' | 'none';
+  holder: string;
+  value: number;
+  home: boolean;
+  contested: boolean;
+  hold: number;
+  mine: boolean;
+  buildings: ({ slot: number; kind: BuildingKind; label: string; hanja: string; progress: number; hp: number } | null)[];
+  queue: { kind: ShipKind; label: string; left: number; total: number }[];
+  build: { kind: BuildingKind; label: string; hanja: string; cost: number; desc: string; ok: boolean }[];
+  recruit: { kind: ShipKind; label: string; cost: number; time: number; ok: boolean }[];
+  shipyard: boolean;
+};
+
+export type ConquestSnapshot = {
+  tickets: { own: number; foe: number; max: number };
+  timeLeft: number;
+  funds: number;
+  income: number;
+  fleetValue: number;
+  cap: number;
+  ships: number;
+  maxShips: number;
+  held: { own: number; foe: number };
+  points: PointSummary[];
+  selected: PointDetail | null;
 };
 
 export type GameSnapshot = {
-  scenario: { id: ScenarioId; title: string; hanja: string; date: string; place: string; season: string };
+  scenario: { id: string; title: string; hanja: string; date: string; place: string; season: string };
+  mode: 'scenario' | 'conquest';
+  /** Display names of the player's side and the enemy's. */
+  sides: { own: string; enemy: string };
   /** The side the player leads, and its team. Counts below are by team: the player's against the enemy's. */
   faction: Faction;
   team: Team;
@@ -74,6 +119,7 @@ export type GameSnapshot = {
   tide: { label: string; knots: number; dir: number } | null;
   squadrons: SquadronInfo[];
   primary: PrimaryInfo | null;
+  conquest: ConquestSnapshot | null;
 };
 
 export type Toast = { id: number; text: string; tone: 'info' | 'good' | 'bad'; at: number };

@@ -236,6 +236,26 @@ const CONCEPTS = {
   bongsu:
     'A Joseon dynasty Korean beacon fire station (bongsudae) on a hilltop: five short round chimney-like towers built of rough stacked grey stone in a row on a low stone platform, each with a dark sooty opening at the top, a small storage hut with a thatched roof at the side. ' +
     STYLE.replace('no people, ', 'no people, no ground plane, '),
+  seonso:
+    'A Joseon dynasty Korean naval shipyard (seonso) from the 16th century, built on flat ground: a long wooden slipway ramp with a half-built wooden warship hull skeleton of curved ribs on it, ' +
+    'simple wooden scaffolding beside the hull, a large open-sided timber work shed with a dark grey tiled roof, neat stacks of pine logs and sawn planks. Compact footprint. ' +
+    STYLE.replace('no people, ', 'no people, no ground plane, no water, '),
+  seonso_hall:
+    'A Joseon dynasty Korean shipbuilding hall from the 16th century: a long rectangular open-sided timber hall with a heavy dark grey tiled roof with upturned eaves resting on thick round wooden posts, ' +
+    'over a flat stone-paved floor; inside the hall sits one finished wooden boat hull on log rollers; stacked lumber along one side. Simple, solid, chunky shapes. ' +
+    STYLE.replace('no people, ', 'no people, no ground plane, no water, '),
+  podae:
+    'A Joseon dynasty Korean coastal artillery battery from the 16th century: a low thick crescent-shaped wall of fitted grey granite blocks with three square embrasures, ' +
+    'three dark bronze cannons on low wooden carriages behind the wall, a small guardhouse with a dark tiled roof at one end and a tall wooden pole with a military banner. Compact footprint. ' +
+    STYLE.replace('no people, ', 'no people, no ground plane, '),
+  hwayakgo:
+    'A Joseon dynasty Korean gunpowder magazine from the 16th century: a small square fortified storehouse with thick whitewashed stone walls on a granite base, a heavy wooden door bound with iron, ' +
+    'a dark grey tiled hip roof, a few wooden powder barrels and a pyramid of stacked iron cannonballs beside the door. ' +
+    STYLE.replace('no people, ', 'no people, no ground plane, '),
+  suriso:
+    'A Joseon dynasty Korean ship repair yard from the 16th century built on flat ground: a sturdy timber frame crane with ropes and wooden pulleys, a raised wooden work platform, ' +
+    'piles of planks and spare oars, black tar pots on a small fire pit and a small thatched-roof workers hut. Compact footprint. ' +
+    STYLE.replace('no people, ', 'no people, no ground plane, no water, '),
   dragonhead:
     'A carved wooden dragon head figurehead from a Korean turtle ship (geobukseon), Joseon dynasty style. ' +
     'Fierce wide open mouth with white teeth, curled horns, flowing carved mane, bulging eyes, ' +

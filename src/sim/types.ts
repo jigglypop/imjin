@@ -1,9 +1,18 @@
+/**
+ * The two sides of a battle. The names are the historical defaults: in the nine battles the Joseon side carries the
+ * Ming fleet as well. In a conquest battle either side may be led by any faction, so code that means "which navy"
+ * reads Ship.spec.faction and code that means "friend or foe" reads Ship.team.
+ */
 export type Team = 'joseon' | 'japan';
 export const TEAMS: readonly Team[] = ['joseon', 'japan'];
+export const otherTeam = (t: Team): Team => (t === 'joseon' ? 'japan' : 'joseon');
 export type ShipKind = 'panokseon' | 'geobukseon' | 'hyeopseon' | 'atakebune' | 'sekibune' | 'kobaya' | 'mingship' | 'mingsmall';
 export type Faction = 'joseon' | 'japan' | 'ming';
+export const FACTIONS: readonly Faction[] = ['joseon', 'japan', 'ming'];
 /** The Ming fleet fights on the Joseon side. */
 export const teamOf = (faction: Faction): Team => (faction === 'japan' ? 'japan' : 'joseon');
+/** In the historical battles each faction is one commander, with these owner ids. Conquest battles number their players from 0. */
+export const OWNER_OF: Record<Faction, number> = { joseon: 0, japan: 1, ming: 2 };
 export type Side = 0 | 1;
 
 export type GunType = 'cheonja' | 'jija' | 'hyeonja' | 'hwangja' | 'seungja' | 'ozutsu' | 'folangji' | 'hudun';
@@ -28,6 +37,18 @@ export type Battery = {
   side: Side | 2;
 };
 
+/**
+ * Crew stations. Rowers (격군) work the oars on the enclosed lower deck, gunners (포수) serve the guns, shooters (사수)
+ * are the archers or arquebusiers on the open deck, and the melee troops (살수 · 무사) hold the deck against boarders.
+ */
+export type CrewRole = 'oar' | 'gun' | 'shot' | 'melee';
+export const CREW_ROLES: readonly CrewRole[] = ['oar', 'gun', 'shot', 'melee'];
+/** Crew per role, in CREW_ROLES order. */
+export type CrewCounts = [number, number, number, number];
+/** Share of the crew wanted at each station, in CREW_ROLES order. Sums to 1. */
+export type CrewPlan = [number, number, number, number];
+export type SmallArms = 'bow' | 'gun';
+
 export type ShipSpec = {
   kind: ShipKind;
   label: string;
@@ -45,12 +66,19 @@ export type ShipSpec = {
   batteries: Battery[];
   musketRange: number;
   musketPower: number;
+  /** What the shooters carry: Joseon and Ming crews fought with bows, the Japanese with arquebuses. */
+  arms: SmallArms;
   melee: number;
   deckDefense: number;
   armor: number;
   boardable: boolean;
   ramPower: number;
   soldiers: number;
+  /** The usual station plan for this ship. */
+  crewPlan: CrewPlan;
+  /** Conquest battles: price in funds, and seconds on the slipway. */
+  cost: number;
+  build: number;
 };
 
 export type FireMode = 'free' | 'hold';
@@ -65,7 +93,8 @@ export type Order =
   | { type: 'anchor' }
   | { type: 'slot'; x: number; z: number; face: number }
   | { type: 'follow'; leaderId: number; dx: number; dz: number }
-  | { type: 'broadside'; targetId: number; side: Side };
+  | { type: 'broadside'; targetId: number; side: Side }
+  | { type: 'bombard'; x: number; y: number; z: number };
 
 export type GunState = {
   battery: number;
@@ -83,6 +112,8 @@ export type Ship = {
   id: number;
   spec: ShipSpec;
   team: Team;
+  /** The commander who gives this ship its orders. See OWNER_OF. */
+  owner: number;
   name: string;
   squadronId: number;
   flagship: boolean;
@@ -95,7 +126,10 @@ export type Ship = {
   throttle: number;
   rudder: number;
   hull: number;
+  /** Total crew, always the sum of roles. */
   crew: number;
+  roles: CrewCounts;
+  plan: CrewPlan;
   fire: number;
   burn: number;
   morale: number;
@@ -133,6 +167,8 @@ export type Squadron = {
   team: Team;
   /** Taken from the first ship. Ming squadrons sail on the Joseon team. */
   faction: Faction;
+  /** -1 until the first ship joins and sets it from its faction, unless the builder set it. */
+  owner: number;
   name: string;
   commander: string;
   portrait: string;
@@ -150,6 +186,7 @@ export type Projectile = {
   vy: number;
   vz: number;
   team: Team;
+  /** The firing ship, or 0 for a shore battery. */
   shooter: number;
   damage: number;
   crewDamage: number;
@@ -162,10 +199,11 @@ export type Projectile = {
 
 export type BattleEvent =
   | { type: 'gun'; ship: number; gun: GunType; x: number; y: number; z: number; dx: number; dy: number; dz: number; big: boolean }
-  | { type: 'musket'; ship: number; x: number; y: number; z: number; dx: number; dz: number; count: number }
-  | { type: 'hit'; ship: number; x: number; y: number; z: number; damage: number; ammo: AmmoType }
-  | { type: 'splash'; x: number; z: number; size: number }
-  | { type: 'ground'; x: number; y: number; z: number }
+  | { type: 'shot'; id: number; team: Team; gun: GunType; ammo: AmmoType; x: number; y: number; z: number; vx: number; vy: number; vz: number }
+  | { type: 'musket'; ship: number; x: number; y: number; z: number; dx: number; dz: number; count: number; arms: SmallArms }
+  | { type: 'hit'; ship: number; proj: number; x: number; y: number; z: number; damage: number; ammo: AmmoType }
+  | { type: 'splash'; proj: number; x: number; z: number; size: number }
+  | { type: 'ground'; proj: number; x: number; y: number; z: number }
   | { type: 'ignite'; ship: number }
   | { type: 'explode'; ship: number; x: number; y: number; z: number }
   | { type: 'ram'; a: number; b: number; x: number; z: number; power: number }
@@ -175,6 +213,11 @@ export type BattleEvent =
   | { type: 'repelled'; a: number; b: number }
   | { type: 'sinking'; ship: number }
   | { type: 'struck'; ship: number }
-  | { type: 'removed'; ship: number };
+  | { type: 'removed'; ship: number }
+  | { type: 'spawned'; ship: number; point: number }
+  | { type: 'captured'; point: number; owner: number; from: number }
+  | { type: 'built'; point: number; building: string; owner: number }
+  | { type: 'razed'; point: number; building: string }
+  | { type: 'battery'; point: number; x: number; y: number; z: number; dx: number; dy: number; dz: number };
 
 export type LandSampler = (x: number, z: number) => number;

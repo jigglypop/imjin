@@ -1,6 +1,6 @@
 import type { Battle } from './battle';
 import { SCENARIOS, type ScenarioId } from './scenarios';
-import { teamOf, type Faction, type ShipMods } from './types';
+import { OWNER_OF, teamOf, type Faction, type ShipMods } from './types';
 
 export const FACTION_NAME: Record<Faction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군' };
 export const FACTION_SHORT: Record<Faction, string> = { joseon: '조선', japan: '일본', ming: '명' };
@@ -46,7 +46,7 @@ export function handicap(id: ScenarioId, faction: Faction): Handicap {
 
 /** Hands the battle to the chosen faction and applies its corrections. Call once, right after the scenario is built. */
 export function applyBalance(b: Battle, id: ScenarioId, faction: Faction) {
-  b.player = faction;
+  b.humans = new Set([OWNER_OF[faction]]);
   const h = handicap(id, faction);
   const own = teamOf(faction);
   for (const s of b.ships) {

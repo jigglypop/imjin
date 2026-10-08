@@ -47,11 +47,16 @@ import { Lanterns } from '../fx/Lanterns';
 import { Battle, SIM_DT } from '../sim/battle';
 import { GUN_SPECS, STAGE_NAMES } from '../sim/catalog';
 import { buildScenario, SCENARIOS, type FleetSpawn, type ScenarioId } from '../sim/scenarios';
-import { applyBalance } from '../sim/balance';
+import { applyBalance, FACTION_NAME } from '../sim/balance';
 import { applyOutcome } from '../campaign/campaign';
-import { GUN_SHOTS } from '../sim/catalog';
+import { GUN_SHOTS, SHIP_SPECS } from '../sim/catalog';
 import { CurrentField } from '../sim/current';
-import { teamOf, type BattleEvent, type Faction, type Ship, type ShipKind, type Team } from '../sim/types';
+import { OWNER_OF, otherTeam, teamOf, type BattleEvent, type Faction, type Ship, type ShipKind, type Team } from '../sim/types';
+import { buildConquest, homeAxis, type ConquestMapId, type Seat } from '../sim/maps';
+import { BUILDING_ORDER, BUILDINGS, ROSTER, SHORT_NAME, type Conquest } from '../sim/conquest';
+import { applyCommand, type Command } from '../sim/commands';
+import { conquestInfo, scenarioInfo, type BattleInfo } from '../sim/info';
+import { ConquestView } from '../conquest/ConquestView';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
 import { Input } from './Input';
 import { TouchControls } from './Touch';
@@ -64,7 +69,6 @@ import { Terrain } from '../terrain/Terrain';
 import { Vegetation } from '../terrain/Vegetation';
 import { Structures } from '../terrain/Structures';
 
-const SEASON: Record<ScenarioId, number> = { okpo: 0.1, sacheon: 0.05, dangpo: 0, hansan: 0, angolpo: 0, busan: 0.6, chilcheon: 0, myeongnyang: 0.72, noryang: 1 };
 import { Minimap } from '../ui/Minimap';
 
 const params = new URLSearchParams(location.search);
@@ -82,7 +86,17 @@ export type EngineOptions = {
   campaign?: FleetSpawn;
   /** The side the player leads. The campaign is always Joseon. */
   faction?: Faction;
+  /** A conquest battle instead of a historical one. */
+  conquest?: ConquestSetup;
 };
+
+/** A conquest battle: the map, every seat, and which seat is the player's. */
+export type ConquestSetup = { map: ConquestMapId; seats: Seat[]; you: number; seed: number };
+
+/** Sends commands somewhere other than the local battle: a multiplayer server. */
+export interface CommandSink {
+  send(cmd: Command): void;
+}
 
 const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
 
@@ -115,6 +129,18 @@ export class Engine {
   scenarioId: ScenarioId;
   /** The side the player leads. Ships of other factions, allies included, follow the computer. */
   faction: Faction;
+  /** The commander id of the player's ships. See OWNER_OF; in a conquest battle the player's seat. */
+  owner = 0;
+  battleInfo: BattleInfo;
+  conquest: Conquest | null = null;
+  conquestSetup: ConquestSetup | null = null;
+  conquestView: ConquestView | null = null;
+  /** The capture point picked in the conquest panel, or -1. */
+  selectedPoint = -1;
+  /** Set by a multiplayer session: commands go to the server instead of the local battle. */
+  sink: CommandSink | null = null;
+  /** Cutaway of the selected ships: 0 off, 1 top deck, 2 gun deck, 3 oar deck. */
+  cutaway = 0;
   skyName: SkyPresetName;
   seaName: SeaStateName;
   fps = 0;
@@ -152,25 +178,37 @@ export class Engine {
     this.wake = new WakeMap(equipment.wakeResolution);
     this.rts = new RtsCamera(camera);
     this.scenarioId = options.scenario;
-    const info = SCENARIOS[options.scenario];
     this.campaign = options.campaign;
-    this.faction = options.campaign ? 'joseon' : options.faction ?? 'joseon';
-    this.skyName = options.sky ?? info.sky;
-    this.seaName = options.sea ?? info.sea;
+    this.conquestSetup = options.conquest ?? null;
+    const seat = this.conquestSetup?.seats[this.conquestSetup.you];
+    this.faction = options.campaign ? 'joseon' : seat?.faction ?? options.faction ?? 'joseon';
+    this.battleInfo = this.conquestSetup ? conquestInfo(this.conquestSetup.map) : scenarioInfo(options.scenario);
+    this.skyName = options.sky ?? this.battleInfo.sky;
+    this.seaName = options.sea ?? this.battleInfo.sea;
   }
 
-  /** The player's team. The Ming fleet fights on the Joseon team. */
+  /** The player's team. The Ming fleet fights on the Joseon team; in a conquest battle the seat says. */
   get team(): Team {
-    return teamOf(this.faction);
+    const setup = this.conquestSetup;
+    return setup ? setup.seats[setup.you]!.team : teamOf(this.faction);
   }
 
   get enemyTeam(): Team {
-    return this.team === 'joseon' ? 'japan' : 'joseon';
+    return otherTeam(this.team);
   }
 
-  /** Ships the player commands: the active ships of the player's faction. Allies of other factions are not among them. */
+  /** Ships the player commands. Allies under other commanders are not among them. */
   isOwn(s: Ship | undefined): s is Ship {
-    return this.battle.isActive(s) && s.spec.faction === this.faction;
+    return this.battle.isActive(s) && s.owner === this.owner;
+  }
+
+  /** Every order from the player goes through here: to the local battle, or to the server in a multiplayer game. */
+  issue(cmd: Command) {
+    if (this.sink) {
+      this.sink.send(cmd);
+      return 'ids' in cmd ? cmd.ids.length : 1;
+    }
+    return applyCommand(this.battle, this.owner, cmd, this.conquest);
   }
 
   async init() {
@@ -183,8 +221,8 @@ export class Engine {
     this.camera.fov = 42;
     this.camera.updateProjectionMatrix();
     waveField.setState(SEA_STATES[this.seaName]);
-    const info = SCENARIOS[this.scenarioId];
-    setLoading('바다와 하늘을 그리는 중', 0.03, this.scenarioId);
+    const info = this.battleInfo;
+    setLoading('바다와 하늘을 그리는 중', 0.03, info.mode === 'scenario' ? this.scenarioId : undefined);
     let done = 0.03;
     const track = <T,>(p: Promise<T>, weight: number) =>
       p.then((v) => {
@@ -297,7 +335,7 @@ export class Engine {
   }
 
   private dressTerrain() {
-    this.terrain.season.value = SEASON[this.scenarioId] ?? 0;
+    this.terrain.season.value = this.battleInfo.foliage;
     this.vegetation = new Vegetation(this.terrain, { grids: this.eq.vegetationGrids, shadows: true });
     this.terrain.group.add(this.vegetation.group);
     this.structures = new Structures(this.terrain);
@@ -314,13 +352,38 @@ export class Engine {
   }
 
   private placeScenario(sky: LoadedSky) {
-    const info = SCENARIOS[this.scenarioId];
+    const info = this.battleInfo;
     const preset = SKY_PRESETS[this.skyName];
     const sunAz = Math.atan2(sky.info.sunDir.z, sky.info.sunDir.x);
-    this.phi = sunAz - preset.axisOffset - info.view.dir;
-    this.terrain.setRotation(this.phi);
-    this.battle = buildScenario(this.scenarioId, this.phi, 1592 + Math.floor(Math.random() * 1000), (x, z) => this.terrain.heightAtScenario(x, z), this.campaign);
-    applyBalance(this.battle, this.scenarioId, this.faction);
+    if (this.conquestView) {
+      this.conquestView.dispose();
+      this.scene.remove(this.conquestView.group);
+    }
+    this.conquestView = null;
+    this.conquest = null;
+    this.selectedPoint = -1;
+    const setup = this.conquestSetup;
+    if (setup) {
+      // Turned so the sun falls across the line between the home ports, from the side for both fleets. A multiplayer
+      // client keeps the map unturned so its coordinates match the server's.
+      this.phi = this.sink ? 0 : sunAz - Math.PI / 2 - homeAxis(setup.map);
+      this.terrain.setRotation(this.phi);
+      const built = buildConquest(setup.map, setup.seats, (x, z) => this.terrain.heightAt(x, z), setup.seed, {}, this.phi);
+      this.battle = built.battle;
+      this.conquest = built.conquest;
+      this.owner = setup.you;
+      if (this.sink) this.battle.humans = new Set();
+      this.conquestView = new ConquestView(built.conquest, (x, z) => this.terrain.heightAt(x, z), document.querySelector('.app') ?? document.body);
+      this.conquestView.onSelect = (id) => this.selectPoint(id);
+      this.scene.add(this.conquestView.group);
+      void this.conquestView.load();
+    } else {
+      this.phi = sunAz - preset.axisOffset - info.view.dir;
+      this.terrain.setRotation(this.phi);
+      this.battle = buildScenario(this.scenarioId, this.phi, 1592 + Math.floor(Math.random() * 1000), (x, z) => this.terrain.heightAtScenario(x, z), this.campaign);
+      applyBalance(this.battle, this.scenarioId, this.faction);
+      this.owner = OWNER_OF[this.faction];
+    }
     this.minimap.team = this.team;
     this.reported = false;
     setReport(null);
@@ -329,28 +392,55 @@ export class Engine {
     this.battle.flow = this.current;
     const c = this.terrain.toWorld(info.view.tx, info.view.tz);
     this.battle.center = { x: c.x, z: c.z };
-    this.battle.arenaRadius = 5200;
+    if (!setup) this.battle.arenaRadius = 5200;
     this.initialSquads.clear();
     for (const sq of this.battle.squadrons) this.initialSquads.set(sq.id, sq.shipIds.length);
     let minX = Infinity;
     let maxX = -Infinity;
     let minZ = Infinity;
     let maxZ = -Infinity;
-    for (const s of this.battle.ships) {
-      minX = Math.min(minX, s.x);
-      maxX = Math.max(maxX, s.x);
-      minZ = Math.min(minZ, s.z);
-      maxZ = Math.max(maxZ, s.z);
-    }
+    const extendTo = (x: number, z: number) => {
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minZ = Math.min(minZ, z);
+      maxZ = Math.max(maxZ, z);
+    };
+    for (const s of this.battle.ships) extendTo(s.x, s.z);
+    for (const p of this.conquest?.points ?? []) extendTo(p.x, p.z);
     this.wake.setCenter((minX + maxX) / 2, (minZ + maxZ) / 2);
     const extent = Math.min(8000, Math.max(3000, Math.max(maxX - minX, maxZ - minZ) + 2400));
     this.wake.setExtent(extent);
-    this.minimap.setTerrain(this.terrain, (minX + maxX) / 2, (minZ + maxZ) / 2, extent * 1.35);
+    this.minimap.setTerrain(this.terrain, (minX + maxX) / 2, (minZ + maxZ) / 2, extent * (setup ? 1.05 : 1.35));
+  }
+
+  /** Steps the cutaway down one deck at a time and back to the closed hull. */
+  toggleCutaway() {
+    this.cutaway = (this.cutaway + 1) % 4;
+    pushToast(['선내 보기를 닫는다', '상갑판 — 지붕과 장대를 걷어낸다', '포갑판 — 포수와 사부', '노갑판 — 격군'][this.cutaway]!);
+    this.publish(true);
+  }
+
+  selectPoint(id: number) {
+    this.selectedPoint = this.selectedPoint === id ? -1 : id;
+    const p = this.conquest?.points[id];
+    if (p && this.selectedPoint === id) {
+      this.rts.followId = 0;
+      this.rts.goal.tx = p.x;
+      this.rts.goal.tz = p.z;
+    }
+    this.sound.click();
+    this.publish(true);
   }
 
   private defaultPose(): CameraPose {
-    const info = SCENARIOS[this.scenarioId];
-    if (this.faction === 'joseon') {
+    const info = this.battleInfo;
+    if (this.conquest) {
+      // Behind the player's fleet, looking past it toward the middle of the map.
+      const own = this.centroid((s) => s.owner === this.owner);
+      const back = Math.atan2(own.z, own.x);
+      return { tx: own.x - Math.cos(back) * 260, tz: own.z - Math.sin(back) * 260, yaw: back + 0.15, pitch: 0.34, distance: 720 };
+    }
+    if (this.faction === 'joseon' && info.mode === 'scenario') {
       const c = this.terrain.toWorld(info.view.tx, info.view.tz);
       const dir = info.view.dir + this.phi;
       return { tx: c.x, tz: c.z, yaw: dir + Math.PI + 0.22, pitch: info.view.pitch, distance: info.view.dist };
@@ -471,11 +561,23 @@ export class Engine {
   }
 
   async setScenario(id: ScenarioId, faction?: Faction) {
-    this.ready = false;
+    this.conquestSetup = null;
     this.scenarioId = id;
     this.faction = this.campaign ? 'joseon' : faction ?? this.faction;
-    const info = SCENARIOS[id];
-    setLoading(`${info.title} 준비 중`, 0.04, id);
+    await this.stage(scenarioInfo(id));
+  }
+
+  /** Starts a conquest battle on the running engine. */
+  async setConquest(setup: ConquestSetup) {
+    this.conquestSetup = setup;
+    this.faction = setup.seats[setup.you]!.faction;
+    await this.stage(conquestInfo(setup.map));
+  }
+
+  private async stage(info: BattleInfo) {
+    this.ready = false;
+    this.battleInfo = info;
+    setLoading(`${info.title} 준비 중`, 0.04, info.mode === 'scenario' ? (info.id as ScenarioId) : undefined);
     this.skyName = info.sky;
     this.seaName = info.sea;
     waveField.setState(SEA_STATES[this.seaName]);
@@ -498,7 +600,7 @@ export class Engine {
     this.fft?.setSpectrum(spectrumOf(SEA_STATES[this.seaName]));
     this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
     this.scene.add(this.ocean.mesh);
-    this.views.reset(this.assets, this.battle);
+    this.views.reset(this.assets, this.battle, this.capacityHint());
     this.views.team = this.team;
     this.scene.remove(this.crew.group);
     this.crew = new Crew(this.views);
@@ -516,8 +618,19 @@ export class Engine {
     this.publish(true);
   }
 
+  /** Ships can be launched in a conquest battle, so its renderer reserves room for each kind the seats can build. */
+  capacityHint() {
+    const hint = new Map<ShipKind, number>();
+    const setup = this.conquestSetup;
+    if (!setup || !this.conquest) return hint;
+    const c = this.conquest;
+    for (const seat of setup.seats) for (const kind of ROSTER[seat.faction]) hint.set(kind, (hint.get(kind) ?? 0) + Math.min(c.options.maxShips, Math.ceil(c.options.cap / SHIP_SPECS[kind].cost) + 4));
+    return hint;
+  }
+
   restart() {
-    void this.setScenario(this.scenarioId);
+    if (this.conquestSetup) void this.setConquest({ ...this.conquestSetup, seed: this.conquestSetup.seed + 1 });
+    else void this.setScenario(this.scenarioId);
   }
 
   private stepSim(dt: number) {
@@ -555,6 +668,7 @@ export class Engine {
       this.fx.handle(events, this.battle);
       this.crew.handle(events, this.battle);
       this.input.onEvents(events);
+      for (const e of events) if (e.type === 'battery') this.fx.gun(e.x, e.y, e.z, e.dx, e.dy, e.dz, true);
       this.battle.events = [];
     }
     if (this.battle.winner && !this.reported) this.finishCampaignBattle();
@@ -583,7 +697,8 @@ export class Engine {
     this.lanterns.update(this.battle, this.camera);
     this.updateSun();
     const el = this.renderer.domElement;
-    this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.rts.cinematic);
+    this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.rts.cinematic, this.team);
+    this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.rts.cinematic && !this.options.hideLabels);
     this.publishTimer -= dt;
     if (this.publishTimer <= 0) {
       this.publish();
@@ -591,9 +706,18 @@ export class Engine {
     }
     this.minimapTimer -= dt;
     if (this.minimapTimer <= 0) {
-      if (this.minimap.visible) this.minimap.draw(this.battle, this.views.selected, this.rts.target.x, this.rts.target.z, this.rts.yaw);
+      if (this.minimap.visible) this.minimap.draw(this.battle, this.views.selected, this.rts.target.x, this.rts.target.z, this.rts.yaw, this.minimapPoints());
       this.minimapTimer = 0.1;
     }
+  }
+
+  private minimapPoints() {
+    const c = this.conquest;
+    if (!c) return undefined;
+    return c.points.map((p) => {
+      const t = c.teamOfPoint(p);
+      return { x: p.x, z: p.z, r: p.r, side: (t ? (t === this.team ? 'own' : 'foe') : 'none') as 'own' | 'foe' | 'none', selected: p.id === this.selectedPoint };
+    });
   }
 
   private finishCampaignBattle() {
@@ -802,7 +926,7 @@ export class Engine {
 
   publish(force = false) {
     const b = this.battle;
-    const info = SCENARIOS[this.scenarioId];
+    const info = this.battleInfo;
     const squadrons = b.squadrons.map((sq) => {
       let alive = 0;
       let hull = 0;
@@ -845,6 +969,8 @@ export class Engine {
     const strengthEnemy = b.strength(enemy);
     const snapshot: GameSnapshot = {
       scenario: { id: info.id, title: info.title, hanja: info.hanja, date: info.date, place: info.place, season: info.season },
+      mode: info.mode,
+      sides: this.sideNames(),
       faction: this.faction,
       team: own,
       time: b.time,
@@ -893,6 +1019,11 @@ export class Engine {
             lights: primary.lights,
             repel: primary.repel,
             grappled: !!primary.grappledWith || b.ships.some((o) => o.grappledWith === primary.id),
+            roles: primary.roles.map((r) => Math.round(r)),
+            plan: [...primary.plan],
+            defaultPlan: [...primary.spec.crewPlan],
+            arms: primary.spec.arms,
+            owned: primary.owner === this.owner,
             guns: primary.guns.map((g) => {
               const spec = GUN_SPECS[primary.spec.batteries[g.battery]!.gun];
               const need = spec.stages[g.stage] ?? 1;
@@ -906,8 +1037,65 @@ export class Engine {
             }),
           }
         : null,
+      conquest: this.conquestSnapshot(),
     };
     publish(snapshot, force);
+  }
+
+  /** Display names for the two sides, the player's first. */
+  private sideNames() {
+    const setup = this.conquestSetup;
+    if (setup) {
+      const names = (team: Team) => {
+        const factions = [...new Set(setup.seats.filter((s) => s.team === team).map((s) => s.faction))];
+        return factions.map((f) => FACTION_NAME[f].replace(' 수군', '')).join('·') + ' 수군';
+      };
+      return { own: names(this.team), enemy: names(this.enemyTeam) };
+    }
+    const ming = !!SCENARIOS[this.scenarioId].ming;
+    const name = (team: Team) => (team === 'japan' ? FACTION_NAME.japan : !ming ? FACTION_NAME.joseon : this.faction === 'ming' ? '명·조선 연합' : '조선·명 연합');
+    return { own: name(this.team), enemy: name(this.enemyTeam) };
+  }
+
+  private conquestSnapshot(): GameSnapshot['conquest'] {
+    const c = this.conquest;
+    if (!c) return null;
+    const me = c.player(this.owner)!;
+    const fleet = c.fleet(this.battle, this.owner);
+    const sideOf = (t: Team | null) => (t ? (t === this.team ? 'own' : 'foe') : 'none') as 'own' | 'foe' | 'none';
+    const p = c.points[this.selectedPoint];
+    const mine = !!p && p.owner === this.owner;
+    return {
+      tickets: { own: Math.max(0, Math.round(c.tickets[this.team])), foe: Math.max(0, Math.round(c.tickets[this.enemyTeam])), max: c.options.tickets },
+      timeLeft: Math.max(0, c.options.timeLimit - this.battle.time),
+      funds: Math.floor(me.funds),
+      income: me.income,
+      fleetValue: fleet.value,
+      cap: me.cap,
+      ships: fleet.count,
+      maxShips: c.options.maxShips,
+      held: { own: c.held(this.team), foe: c.held(this.enemyTeam) },
+      points: c.points.map((q) => ({ id: q.id, name: q.name, side: sideOf(c.teamOfPoint(q)), hold: q.hold, contested: q.contested })),
+      selected: p
+        ? {
+            id: p.id,
+            name: p.name,
+            hanja: p.hanja,
+            side: sideOf(c.teamOfPoint(p)),
+            holder: p.owner >= 0 ? `${c.player(p.owner)!.name} · ${FACTION_NAME[c.player(p.owner)!.faction]}` : '무주',
+            value: p.value,
+            home: p.home >= 0,
+            contested: p.contested,
+            hold: p.hold,
+            mine,
+            buildings: p.buildings.map((bd, slot) => (bd ? { slot, kind: bd.kind, label: BUILDINGS[bd.kind].label, hanja: BUILDINGS[bd.kind].hanja, progress: bd.progress, hp: bd.hp / BUILDINGS[bd.kind].hp } : null)),
+            queue: p.queue.map((q) => ({ kind: q.kind, label: SHORT_NAME[q.kind], left: Math.ceil(q.left), total: q.total })),
+            build: BUILDING_ORDER.map((kind) => ({ kind, label: BUILDINGS[kind].label, hanja: BUILDINGS[kind].hanja, cost: BUILDINGS[kind].cost, desc: BUILDINGS[kind].desc, ok: mine && c.canBuild(this.owner, p.id, kind) })),
+            recruit: ROSTER[me.faction].map((kind) => ({ kind, label: SHORT_NAME[kind], cost: SHIP_SPECS[kind].cost, time: SHIP_SPECS[kind].build, ok: mine && c.canRecruit(this.battle, this.owner, p.id, kind) })),
+            shipyard: c.count(p, 'shipyard') > 0,
+          }
+        : null,
+    };
   }
 
   screenPosition(x: number, y: number, z: number, out: Vector2) {
