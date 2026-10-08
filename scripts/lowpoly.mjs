@@ -38,7 +38,7 @@ for (const prim of prims) {
     if (uv) attrs.set(uv.getElement(i, t2), i * 5 + 3);
   }
   const target = Math.max(12, Math.floor((index.length / 3) * ratio) * 3);
-  const [kept] = ratio < 1 ? MeshoptSimplifier.simplifyWithAttributes(index, positions, 3, attrs, 5, [0.3, 0.3, 0.3, 1, 1], null, target, Number(errorArg ?? 0.02), ['Permissive']) : [index];
+  const [kept] = ratio < 1 ? MeshoptSimplifier.simplifyWithAttributes(index, positions, 3, attrs, 5, [0.3, 0.3, 0.3, Number(process.env.UVW ?? 1), Number(process.env.UVW ?? 1)], null, target, Number(errorArg ?? 0.02), ['Permissive']) : [index];
   // Compact to the vertices still used.
   const remap = new Int32Array(n).fill(-1);
   let used = 0;
