@@ -130,8 +130,9 @@ function sail(fl: Fleet, from: RegionId, to: RegionId) {
     fl.at = to;
     fl.transit = null;
   } else {
+    // The turn of the fight counts as the first turn at sea, like a departure, so the voyage is as long as the lane.
     fl.at = null;
-    fl.transit = { from, to, left: 1 };
+    fl.transit = { from, to, left: turns - 1 };
   }
 }
 
@@ -240,7 +241,8 @@ export function applyContactOutcome(g: Grand, c: Contact, outcome: BattleOutcome
   const mine = g.player === c.attacker || g.player === c.defender;
   const winner = attackerWon ? c.attacker : c.defender;
   note(g, `${REGIONS[c.regionId].name} 해전 — ${TUNING.faction[winner].label} 승리 (${aLabel} ${lostA}척, ${dLabel} ${lostD}척 잃음)`, !mine ? 'info' : winner === g.player ? 'good' : 'bad');
-  for (const f of [...attackers, ...defenders]) f.rest = TUNING.restAfterBattle;
+  // The turn closes right after the fight and takes one off, so the rest is counted from the next turn.
+  for (const f of [...attackers, ...defenders]) f.rest = TUNING.restAfterBattle + 1;
   if (attackerWon) {
     for (const f of defenders) if (g.fleets.includes(f)) retreat(g, f, c.regionId);
     for (const f of attackers) if (g.fleets.includes(f)) f.route = [];
@@ -266,6 +268,19 @@ export function previewContact(g: Grand, contactId: string) {
   const f = contactForces(g, c);
   const odds = previewStrength(f.attacker.ships, f.defender.ships, f.defender.region);
   return { contact: c, attacker: odds.attacker, defender: odds.defender, ratio: odds.ratio, attackerShips: f.attacker.ships.length, defenderShips: f.defender.ships.length, battery: f.defender.region ? levelOf(f.defender.region, 'battery') : 0 };
+}
+
+/** How often the attacker wins when the numbers settle the meeting, over differently seeded luck. For the preview's odds. */
+export function oddsOfContact(g: Grand, contactId: string, samples = 40): number | null {
+  const c = g.pending.find((p) => p.id === contactId);
+  if (!c) return null;
+  const f = contactForces(g, c);
+  let wins = 0;
+  for (let i = 0; i < samples; i += 1) {
+    const r = autoResolve({ attacker: f.attacker, defender: f.defender, seed: g.seed + 7919 * (i + 1), tags: [g.turn, REGION_ORDER.indexOf(c.regionId)] });
+    if (r.outcome.winner === 'attacker') wins += 1;
+  }
+  return wins / samples;
 }
 
 /** Settles a contact without playing it. The same game state always gives the same result. */
@@ -295,9 +310,9 @@ function moveFleets(g: Grand) {
   // and the other arrives to fight it, so fleets cannot slip past each other.
   for (const a of g.fleets) {
     const to = a.route[0];
-    if (!to || !a.at || a.transit) continue;
+    if (!to || !a.at || a.transit || a.rest > 0) continue;
     for (const b of g.fleets) {
-      if (b.at === to && b.route[0] === a.at && !b.transit && atWar(g, a.faction, b.faction) && LANES[a.at].find((l) => l.to === to)?.turns === 1) b.route = [];
+      if (b.at === to && b.route[0] === a.at && !b.transit && b.rest <= 0 && atWar(g, a.faction, b.faction) && LANES[a.at].find((l) => l.to === to)?.turns === 1) b.route = [];
     }
   }
   for (const fl of [...g.fleets]) {
@@ -507,8 +522,8 @@ function advanceTurn(g: Grand) {
       }
     }
     if (!r.owner) continue;
-    // A shipyard that is razed or still in its foundations builds nothing.
-    for (const q of [...r.queue]) {
+    // A shipyard that is razed or still in its foundations builds nothing: the queue waits.
+    for (const q of levelOf(r, 'shipyard') > 0 ? [...r.queue] : []) {
       q.left -= 1;
       if (q.left > 0) continue;
       r.queue.splice(r.queue.indexOf(q), 1);

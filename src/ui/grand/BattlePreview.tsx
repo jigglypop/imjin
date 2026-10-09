@@ -6,6 +6,8 @@ export interface BattlePreviewProps {
   onFight?: () => void;
   onAuto?: () => void;
   onCancel?: () => void;
+  /** Label of the button that closes the preview, e.g. 나중에. */
+  cancelLabel?: string;
 }
 
 function Side({ side, role, share }: { side: BattleSideView; role: string; share: number }) {
@@ -46,7 +48,7 @@ function Side({ side, role, share }: { side: BattleSideView; role: string; share
 }
 
 /** Pre-battle summary: both sides' strength as a tug-of-war bar, then fight it out in 3D or let the numbers decide. */
-export function BattlePreview({ battle, onFight, onAuto, onCancel }: BattlePreviewProps) {
+export function BattlePreview({ battle, onFight, onAuto, onCancel, cancelLabel = '취소' }: BattlePreviewProps) {
   const { attacker, defender } = battle;
   const total = Math.max(1, attacker.power + defender.power);
   const aShare = attacker.power / total;
@@ -73,11 +75,11 @@ export function BattlePreview({ battle, onFight, onAuto, onCancel }: BattlePrevi
         </header>
         <div className="g-sheet__body">
           <div className="g-versus">
-            <Side side={attacker} role="공격" share={aShare} />
+            <Side side={attacker} role={battle.you === 'attacker' ? '공격 · 우리' : '공격'} share={aShare} />
             <span className="g-versus__vs" aria-hidden>
               對
             </span>
-            <Side side={defender} role="수비" share={1 - aShare} />
+            <Side side={defender} role={battle.you === 'defender' ? '수비 · 우리' : '수비'} share={1 - aShare} />
           </div>
 
           <div className="g-power" role="img" aria-label={`전력 비 ${Math.round(aShare * 100)} 대 ${Math.round((1 - aShare) * 100)}`}>
@@ -86,7 +88,9 @@ export function BattlePreview({ battle, onFight, onAuto, onCancel }: BattlePrevi
           </div>
           <div className="g-power__legend">
             <span style={{ color: a }}>공격 {Math.round(aShare * 100)}</span>
-            <span className="g-power__odds">자동 전투 승률 {Math.round(battle.winChance * 100)}%</span>
+            <span className="g-power__odds">
+              자동 전투 {battle.you === 'defender' ? '수비 쪽' : '공격 쪽'} 승률 {Math.round((battle.you === 'defender' ? 1 - battle.winChance : battle.winChance) * 100)}%
+            </span>
             <span style={{ color: d }}>수비 {Math.round((1 - aShare) * 100)}</span>
           </div>
 
@@ -107,7 +111,7 @@ export function BattlePreview({ battle, onFight, onAuto, onCancel }: BattlePrevi
               자동 전투
             </button>
             <button type="button" className="g-btn g-btn--ghost" onClick={onCancel}>
-              취소
+              {cancelLabel}
             </button>
           </div>
         </footer>

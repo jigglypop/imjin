@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { ResolveResult } from '../sim/grand/autoresolve';
 import { applyBattleResult, describeBattle, type RegionBattle } from '../sim/grand/bridge';
+import { summarizeBattle, type BattleSummary } from '../sim/grand/report';
 import { cancelBuild, cancelRecruit, orderAlliance, orderBuild, orderCommander, orderDeclareWar, orderDisband, orderMerge, orderMove, orderRecruit, orderRefit, orderSplit, orderStop } from '../sim/grand/orders';
 import { REGION_ORDER } from '../sim/grand/regions';
 import { autoResolveContact, endTurn, newGrand, type TurnReport } from '../sim/grand/turn';
@@ -43,9 +44,18 @@ function save(g: Grand | null) {
   }
 }
 
-type GrandState = { grand: Grand | null };
+type GrandState = {
+  grand: Grand | null;
+  /** The meeting settled last, until the player has read it. Not saved. */
+  lastBattle: BattleSummary | null;
+  /** The turn whose news the player has not read yet (the turn that just ended). Not saved. */
+  reported: number | null;
+};
 
-export const useGrand = create<GrandState>(() => ({ grand: load() }));
+export const useGrand = create<GrandState>(() => ({ grand: load(), lastBattle: null, reported: null }));
+
+export const dismissBattle = () => useGrand.setState({ lastBattle: null });
+export const dismissReport = () => useGrand.setState({ reported: null });
 
 /** Whether a save exists, for the "continue" button. */
 export const hasGrandSave = () => useGrand.getState().grand !== null;
@@ -66,13 +76,13 @@ function commit(change: (g: Grand) => Result): Result {
 /** Starts a fresh campaign as the chosen navy, replacing any save. */
 export function startGrand(player: GrandFaction, difficulty: Grand['difficulty'] = 'normal', seed = Math.floor(Math.random() * 2147483647)): Grand {
   const g = newGrand(player, seed, difficulty);
-  useGrand.setState({ grand: g });
+  useGrand.setState({ grand: g, lastBattle: null, reported: null });
   save(g);
   return g;
 }
 
 export function abandonGrand() {
-  useGrand.setState({ grand: null });
+  useGrand.setState({ grand: null, lastBattle: null, reported: null });
   save(null);
 }
 
@@ -109,7 +119,7 @@ export function endGrandTurn(): TurnReport | null {
   if (!current || current.phase !== 'orders') return null;
   const next = structuredClone(current);
   const report = endTurn(next);
-  useGrand.setState({ grand: next });
+  useGrand.setState({ grand: next, reported: current.turn });
   save(next);
   return report;
 }
@@ -121,7 +131,7 @@ export function autoResolveGrand(contactId: string): ResolveResult | null {
   const next = structuredClone(current);
   const result = autoResolveContact(next, contactId);
   if (!result) return null;
-  useGrand.setState({ grand: next });
+  useGrand.setState({ grand: next, lastBattle: summarizeBattle(current, contactId, result.outcome, false) });
   save(next);
   return result;
 }
@@ -137,9 +147,10 @@ export function finishGrandBattle(battle: RegionBattle, outcome: BattleOutcome):
   const current = useGrand.getState().grand;
   if (!current) return false;
   const next = structuredClone(current);
+  const lastBattle = summarizeBattle(current, battle.contactId, outcome, true);
   const applied = applyBattleResult(next, battle, outcome);
   if (!applied) return false;
-  useGrand.setState({ grand: next });
+  useGrand.setState({ grand: next, lastBattle });
   save(next);
   return true;
 }

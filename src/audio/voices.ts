@@ -181,6 +181,13 @@ export class Voices {
     src.connect(f).connect(g).connect(this.out(pan, wet));
   }
 
+  /** A war drum stroke: a sine falling from 120 to 55 Hz with a dull skin slap on top. */
+  drum(t: number) {
+    const dest = this.out(0, 0.2);
+    this.tone('sine', t, 120, 55, 0.35, 0.8).connect(this.envelope(t, 0.9, 0.008, 0.7)).connect(dest);
+    this.burst(t, 0.25, 0, 'lowpass', 900, 0.7, 0.12, 0);
+  }
+
   /**
    * One cannon shot: a sharp crack, a punchy chest thump through a soft clip, a mid body, a long rolling tail and a
    * late echo off the shore. Distance closes the crack and the body first and leaves the thump and the tail.

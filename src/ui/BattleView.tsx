@@ -8,7 +8,7 @@ import { SEA_STATES, type SeaStateName } from '../ocean/waves';
 import { sound } from '../audio/Sound';
 import { setFatal, setLoading, setScreen, useUi } from '../state/store';
 import { Hud } from './Hud';
-import { hideHud, params, startScenario, type Launch } from './launch';
+import { conquestOf, hideHud, params, startScenario, type Launch } from './launch';
 
 declare global {
   interface Window {
@@ -34,8 +34,8 @@ function readOptions(launch: Launch): EngineOptions {
     hideLabels: params.get('hud') === '0',
     campaign: launch.kind === 'scenario' ? launch.campaign : undefined,
     faction: launch.kind === 'scenario' ? (launch.campaign ? 'joseon' : launch.faction) : 'joseon',
-    conquest: launch.kind === 'conquest' ? launch.setup : undefined,
-    remote: launch.remote,
+    conquest: conquestOf(launch),
+    remote: launch.kind === 'grand' ? undefined : launch.remote,
     follow: params.get('follow')
       ? { id: Number(params.get('follow')), distance: Number(params.get('dist') ?? 70), pitch: Number(params.get('pitch') ?? 0.12), yaw: Number(params.get('yaw') ?? 2.4) }
       : undefined,
@@ -119,10 +119,11 @@ export default function BattleView({ launch }: { launch: Launch }) {
   useEffect(() => {
     if (!engine || applied.current === launch.seq) return;
     applied.current = launch.seq;
-    if (launch.kind === 'conquest') {
+    const conquest = conquestOf(launch);
+    if (conquest) {
       engine.campaign = undefined;
-      void engine.setConquest(launch.setup, launch.remote ?? null);
-    } else {
+      void engine.setConquest(conquest, launch.kind === 'conquest' ? launch.remote ?? null : null);
+    } else if (launch.kind === 'scenario') {
       engine.campaign = launch.campaign;
       void engine.setScenario(launch.id, launch.campaign ? 'joseon' : launch.faction, launch.remote ?? null);
     }

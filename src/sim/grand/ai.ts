@@ -272,7 +272,9 @@ function fleetsPlan(g: Grand, f: GrandFaction) {
   const P = AI[f];
   // A navy that has not fought for a while grows bolder: the standoff has to end.
   const patience = Math.max(P.minPatience, 1 - P.impatience * g.factions[f].idle);
-  const groups = idleGroups(g, f);
+  // Small groups decide first, so they flow into the larger body and the larger one, seeing them coming, stays; two groups never swap ports.
+  const strength = (fleets: Fleet[]) => fleets.reduce((a, fl) => a + fleetStrength(fl), 0);
+  const groups = [...idleGroups(g, f)].sort((a, b) => strength(a[1]) - strength(b[1]));
   // The first turn is a lull: the player gets one turn to see the board before any computer navy attacks.
   const targets = g.turn <= TUNING.openingPeace ? [] : enemiesOf(g, f).flatMap((e) => ownedBy(g, e));
   for (const [at, fleets] of groups) {
@@ -309,7 +311,9 @@ function fleetsPlan(g: Grand, f: GrandFaction) {
     if (resting || threat > 0) continue;
     // No fight to be had: gather at the port nearest the enemy, where the fleet is useful.
     const front = stagingPort(g, f, at, fleets);
-    if (front && front !== at) for (const fl of fleets) orderMove(g, fl.id, front);
+    // A group already ordered from that port to this one has the same idea: one of the two stays, so they do not swap.
+    const swapping = front !== null && g.fleets.some((o) => o.faction === f && o.at === front && o.route[o.route.length - 1] === at);
+    if (front && front !== at && !swapping) for (const fl of fleets) orderMove(g, fl.id, front);
   }
 }
 

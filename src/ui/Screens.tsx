@@ -1,9 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { sound } from '../audio/Sound';
 import { EQUIPMENT_LABEL, equipment, saveEquipmentSetting, type EquipmentSetting } from '../game/quality';
-import { FACTION_MARK } from '../sim/balance';
-import { FACTIONS } from '../sim/types';
 import { setScreen, type Screen } from '../state/store';
+import { Backdrop } from './Backdrop';
 
 const go = (screen: Screen) => () => {
   sound.click();
@@ -14,7 +13,7 @@ const go = (screen: Screen) => () => {
 export function ScreenFrame({ title, children, actions, className = '' }: { title: string; children: ReactNode; actions?: ReactNode; className?: string }) {
   return (
     <section className={`screen ${className}`}>
-      <div className="screen-bg screen-bg--on" />
+      <Backdrop kind="menu" calm />
       <header className="screen-top">
         <button className="back-btn" onClick={go('menu')} aria-label="메뉴로">
           <span aria-hidden>‹</span> 메뉴
@@ -27,23 +26,17 @@ export function ScreenFrame({ title, children, actions, className = '' }: { titl
   );
 }
 
-const MODES: { screen: Screen; icon: string; title: string; desc: string; brief: string; soon?: boolean }[] = [
-  { screen: 'select', icon: '史', title: '역사 전투', desc: '명량, 한산도 등 아홉 해전을 그날의 바다에서 치른다. 진영을 골라 지휘하고, 1592 전역으로도 이어 간다.', brief: '아홉 해전을 그날의 바다에서' },
-  { screen: 'faction', icon: '覇', title: '진영 전역', desc: '조선, 명, 일본 가운데 한 진영을 골라 바다와 포구를 넓혀 가는 전략 전역.', brief: '한 진영을 골라 바다를 넓힌다', soon: true },
-  { screen: 'skirmish', icon: '爭', title: '쟁탈전', desc: '포구를 차지해 적의 기세를 꺾는 거점 점령전. 함대를 직접 편성해 출진한다.', brief: '포구를 차지하는 거점 점령전' },
-  { screen: 'online', icon: '對', title: '온라인 대전', desc: '다른 사람과 같은 바다에서 겨룬다. 방을 열거나 열린 방에 들어간다.', brief: '다른 사람과 같은 바다에서' },
+const MODES: { screen: Screen; art: string; icon: string; title: string; desc: string; brief: string }[] = [
+  { screen: 'select', art: 'mode_history', icon: '史', title: '역사 전투', desc: '명량, 한산도 등 아홉 해전을 그날의 바다에서 치른다. 진영을 골라 지휘하고, 1592 전역으로도 이어 간다.', brief: '아홉 해전을 그날의 바다에서' },
+  { screen: 'faction', art: 'mode_campaign', icon: '覇', title: '진영 전역', desc: '조선, 명, 일본 가운데 한 진영을 골라 바다와 포구를 넓혀 가는 전략 전역.', brief: '한 진영을 골라 바다를 넓힌다' },
+  { screen: 'skirmish', art: 'mode_skirmish', icon: '爭', title: '쟁탈전', desc: '포구를 차지해 적의 기세를 꺾는 거점 점령전. 함대를 직접 편성해 출진한다.', brief: '포구를 차지하는 거점 점령전' },
+  { screen: 'online', art: 'mode_online', icon: '對', title: '온라인 대전', desc: '다른 사람과 같은 바다에서 겨룬다. 방을 열거나 열린 방에 들어간다.', brief: '다른 사람과 같은 바다에서' },
 ];
 
 export function MainMenu() {
-  const [bg, setBg] = useState(false);
-  // The map fades in after first paint; the menu itself needs no image.
-  useEffect(() => {
-    const id = window.setTimeout(() => setBg(true), 60);
-    return () => window.clearTimeout(id);
-  }, []);
   return (
     <section className="screen menu">
-      <div className={`screen-bg ${bg ? 'screen-bg--on' : ''}`} />
+      <Backdrop kind="menu" />
       <header className="screen-top">
         <button className="back-btn" onClick={go('settings')}>
           설정
@@ -58,14 +51,20 @@ export function MainMenu() {
         <div>
           <div className="mode-grid">
             {MODES.map((m) => (
-              <button key={m.screen} className={`mode-card ${m.soon ? 'mode-card--soon' : ''}`} onClick={go(m.screen)}>
+              <button key={m.screen} className="mode-card" onClick={go(m.screen)}>
+                <img
+                  className="mode-art"
+                  src={`/ui/art/${m.art}.webp`}
+                  srcSet={`/ui/art/${m.art}_sm.webp 600w, /ui/art/${m.art}.webp 1200w`}
+                  sizes="(max-width: 700px) 100vw, 520px"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
                 <span className="mode-icon" aria-hidden>
                   {m.icon}
                 </span>
-                <span className="mode-title">
-                  {m.title}
-                  {m.soon && <span className="badge">준비 중</span>}
-                </span>
+                <span className="mode-title">{m.title}</span>
                 <span className="mode-desc">
                   <span className="long">{m.desc}</span>
                   <span className="brief">{m.brief}</span>
@@ -76,29 +75,6 @@ export function MainMenu() {
         </div>
       </div>
     </section>
-  );
-}
-
-/** The Total War style faction campaign is built elsewhere; this holds its place in the menu. */
-export function FactionScreen() {
-  return (
-    <ScreenFrame title="진영 전역">
-      <div className="notice glass">
-        <span className="badge">준비 중</span>
-        <h2>진영 전역</h2>
-        <p>조선, 명, 일본 가운데 한 진영을 골라 영토를 넓히고 함대를 키우며 바다를 차지하는 전략 전역입니다. 지금은 만들고 있습니다.</p>
-        <div className="notice-emblems">
-          {FACTIONS.map((f) => (
-            <i key={f} className={`emblem emblem--${f}`}>
-              {FACTION_MARK[f]}
-            </i>
-          ))}
-        </div>
-        <button className="ink-btn" onClick={go('menu')}>
-          메뉴로 돌아가기
-        </button>
-      </div>
-    </ScreenFrame>
   );
 }
 

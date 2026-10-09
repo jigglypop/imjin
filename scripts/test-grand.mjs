@@ -19,7 +19,10 @@ const { planAi } = await load('/src/sim/grand/ai.ts');
 const orders = await load('/src/sim/grand/orders.ts');
 const bridge = await load('/src/sim/grand/bridge.ts');
 const { REGION_ORDER } = await load('/src/sim/grand/regions.ts');
-const { factionIncome } = await load('/src/sim/grand/economy.ts');
+const { factionIncome, TUNING } = await load('/src/sim/grand/economy.ts');
+const turn = await load('/src/sim/grand/turn.ts');
+const spawn = await load('/src/sim/grand/spawn.ts');
+const { SHIP_SPECS } = await load('/src/sim/catalog.ts');
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -136,6 +139,93 @@ function playOut(g) {
   const g = newGrand(null, 3);
   const income = Object.fromEntries(['joseon', 'japan', 'ming'].map((f) => [f, factionIncome(g, f)]));
   check(`opening incomes are close (${JSON.stringify(income)})`, Math.max(...Object.values(income)) / Math.min(...Object.values(income)) < 2.2);
+}
+
+// 6. Fixes and the 3D hand-off.
+{
+  // A fleet that fought rests two whole turns: the closing turn takes one off at once, so the order counts one more.
+  const g = newGrand('joseon', 5);
+  const jp = g.fleets.find((f) => f.faction === 'japan' && f.at === 'busan');
+  g.turn = 3;
+  orders.orderMove(g, jp.id, 'geoje');
+  planAi(g, 'ming');
+  const report = endTurn(g);
+  check('a meeting with the player waits for a decision', report.pending.length === 1);
+  autoResolveContact(g, report.pending[0].id);
+  const rested = g.fleets.filter((f) => f.rest > 0);
+  check(`fleets that fought rest ${TUNING.restAfterBattle} turns after the turn closes`, rested.length > 0 && rested.every((f) => f.rest === TUNING.restAfterBattle));
+}
+{
+  // A razed shipyard builds nothing: the order waits in the queue.
+  const g = newGrand('joseon', 6);
+  orders.orderRecruit(g, 'yeosu', 'hyeopseon');
+  const item = g.regions.yeosu.queue[0];
+  g.regions.yeosu.buildings.find((b) => b.kind === 'shipyard').level = 0;
+  endTurn(g);
+  check('a ship ordered at a razed shipyard does not advance', item.left === item.total && g.regions.yeosu.queue.length === 1);
+}
+{
+  // A beaten fleet falls back along the lane in as many turns as the lane is long.
+  const lane = (from, to, owner, relation) => {
+    const g = newGrand('joseon', 7);
+    if (relation) g.relations[relation] = 'war';
+    const fl = g.fleets.find((f) => f.faction === 'ming');
+    fl.at = from === 'myeongnyang' ? 'myeongnyang' : 'busan';
+    fl.from = to;
+    g.regions[to].owner = owner;
+    g.regions[fl.at].owner = 'joseon';
+    const c = { id: 'x', regionId: fl.at, attacker: 'ming', defender: 'joseon', attackerFleets: [fl.id], defenderFleets: [], player: false };
+    g.pending.push(c);
+    turn.applyContactOutcome(g, c, { winner: 'defender', ships: [], razed: [] });
+    return fl;
+  };
+  const far = lane('myeongnyang', 'shandong', 'ming', 'joseon:ming');
+  check('a retreat along a three turn lane takes three turns', far.transit && far.transit.left === 2);
+}
+{
+  // The computer never swaps two fleets between two ports.
+  let swaps = 0;
+  for (let seed = 1; seed <= 4; seed += 1) {
+    const g = newGrand(null, seed);
+    for (let t = 0; t < 30 && g.phase !== 'over'; t += 1) {
+      for (const f of ['joseon', 'japan', 'ming']) {
+        if (!g.factions[f].alive) continue;
+        planAi(g, f);
+        for (const a of g.fleets) for (const b of g.fleets) if (a !== b && a.faction === b.faction && a.at && b.at && a.at !== b.at && a.route[0] === b.at && b.route[0] === a.at && a.route.length === 1 && b.route.length === 1) swaps += 1;
+      }
+      endTurn(g);
+    }
+  }
+  check(`no two fleets of one navy swap ports (${swaps})`, swaps === 0);
+}
+{
+  // The conquest battle of a campaign meeting: the campaign's ships, the defender's works, the funds and the options.
+  const g = newGrand('japan', 3);
+  const jp = g.fleets.find((f) => f.faction === 'japan' && f.at === 'busan');
+  jp.ships[0].hull = 0.5;
+  jp.ships[1].crew = 0.4;
+  const defenders = g.fleets.filter((f) => f.faction === 'joseon' && f.at === 'hansan').map((f) => f.id);
+  const c = { id: 'h', regionId: 'hansan', attacker: 'japan', defender: 'joseon', attackerFleets: [jp.id], defenderFleets: defenders, player: true };
+  g.pending.push(c);
+  const rb = bridge.describeContact(g, c);
+  const land = (x, z) => (z < -1700 ? 20 : -50);
+  const built = spawn.buildGrandConquest(rb, land, 0);
+  const ships = built.battle.ships;
+  check('every campaign ship is in the battle', ships.length === rb.attacker.ships.length + rb.defender.ships.length && ships.every((s) => s.campaignId));
+  const worn = ships.find((s) => s.campaignId === jp.ships[0].id);
+  check('hull, crew and name carry over', Math.abs(worn.hull / worn.spec.hull - 0.5) < 1e-6 && worn.name === jp.ships[0].name && Math.abs(built.battle.get(ships.find((s) => s.campaignId === jp.ships[1].id).id).crew / SHIP_SPECS[jp.ships[1].kind].crew - 0.4) < 1e-6);
+  check('the sides sit in their own seats and teams', ships.filter((s) => s.owner === 0).length === rb.attacker.ships.length && ships.every((s) => s.team === (s.owner === 0 ? rb.attacker.team : rb.defender.team)));
+  const home = built.conquest.homeOf(1);
+  const kinds = home.buildings.filter(Boolean).map((b) => b.kind);
+  check(`the defender's port stands with its works (${kinds.join(',')})`, kinds.includes('shipyard') && kinds.includes('battery') && built.conquest.homeOf(0).buildings.every((b) => !b));
+  check('funds and options follow the description', built.conquest.players[0].funds === rb.options.startFunds.attacker && built.conquest.players[1].funds === rb.options.startFunds.defender && built.conquest.options.tickets === 500 && built.conquest.options.maxShips === 30);
+  check('the outcome lists one entry per campaign ship', spawn.shipOutcomes(ships).length === ships.length);
+  check('untouched works are not razed', spawn.worksAfter(rb, built.conquest).razed.length === 0);
+  const slot = home.buildings.findIndex((b) => b && b.kind === 'battery');
+  home.buildings[slot] = null;
+  check('a battery that fell is reported razed', spawn.worksAfter(rb, built.conquest).razed.join() === 'battery');
+  for (let i = 0; i < 1200; i += 1) built.battle.step(1 / 20);
+  check('the battle runs', built.battle.ships.length > 0);
 }
 
 await server.close();

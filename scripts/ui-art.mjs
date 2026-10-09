@@ -34,7 +34,7 @@ const MODELS = [opt('model', 'gpt-image-2'), 'gpt-image-2.5'];
 // Which candidate ships. A or B, chosen by eye.
 const PICKS = {
   menu_hero_wide: 'A',
-  menu_hero_tall: 'A',
+  menu_hero_tall: 'B',
   mode_history: 'A',
   mode_campaign: 'A',
   mode_skirmish: 'A',
@@ -48,10 +48,17 @@ const FILM =
   'Joseon panokseon: broad flat-bottomed wooden warships with a continuous wall of vertical plank shields around the upper deck, a roofed command pavilion, two masts with tan hemp sails, many oars, blue, red and white military banners. ' +
   'Korean turtle ship (geobukseon): low hull entirely covered by an armored roof studded with iron spikes, a carved dragon head at the bow breathing smoke. ' +
   'Japanese atakebune and sekibune: boxy black-lacquered and white-plastered fortress hulls with loopholes, straw-colored sails, tall white nobori banners with plain dark crests, no readable lettering. ';
-const CLEAN =
+// Japanese sides are shown by clan mon on plain nobori only. A red sun disc or radiating rays reads as the Rising Sun
+// Flag (旭日旗), which is deeply offensive in Korea, so every prompt carries this and no emblem may use a sunburst.
+const NO_SUN =
+  ' No rising sun flag, no sunburst rays, no radiating stripes, no red sun disc on any flag or banner; Japanese banners are plain white or black nobori with a small dark clan mon (crest) only.';
+const CLEAN = NO_SUN +
   ' Premium, refined, high-end look: soft atmospheric depth, restrained desaturated palette, fine film grain, shallow haze. ' +
   'Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no borders, no frames, no UI.';
 // Light, airy grade for the artwork that sits under white glass panels.
+// Near-white key art: the menu background itself, so white glass cards sit on it without a dark ground.
+const HIGHKEY =
+  ' High-key grade: the whole frame is bright, pearly white and pale grey-blue like a sumi-e wash on white paper, luminance mostly above 80 percent, no dark areas, no black, ships as soft muted grey-brown silhouettes dissolving into white fog, restrained and desaturated.';
 const AIRY =
   ' Overall tonality is airy and relatively bright with luminous pale mist, lifted shadows and pearly sky so that white translucent panels laid over it stay legible.';
 const DARK =
@@ -62,18 +69,18 @@ const items = [];
 const add = (it) => items.push(it);
 
 add({
-  id: 'menu_hero_wide', kind: 'hero', variants: ['A', 'B'], gen: [2400, 1344], out: [2400, 1350], q: 80,
+  id: 'menu_hero_wide', kind: 'hero', variants: ['A', 'B'], gen: [2400, 1344], out: [2400, 1350], small: [1200, 675], q: 80,
   prompt:
     FILM + 'Main-menu key art, ultra-wide landscape. Early morning on the southern Korean sea, thick pearly mist. In the right two thirds of the frame a long line of Joseon panokseon ' +
     'under oar and sail with a single turtle ship in the lead, bronze cannon smoke drifting, spray from the bows, facing a distant dense fleet of Japanese atakebune dissolving into the haze on the far right horizon. ' +
-    'Rugged green islands silhouetted in the mist. The LEFT third of the frame is calm, open, softly misted sea and pale sky, deliberately empty and clean negative space for a title and menu.' + AIRY + CLEAN,
+    'Rugged green islands silhouetted in the mist. The LEFT third of the frame is calm, open, softly misted sea and pale sky, deliberately empty and clean negative space for a title and menu.' + AIRY + HIGHKEY + CLEAN,
 });
 add({
   id: 'menu_hero_tall', kind: 'hero', variants: ['A', 'B'], gen: [1088, 1920], out: [1080, 1920], q: 78,
   prompt:
     FILM + 'Main-menu key art, tall vertical portrait composition for a phone. Dawn on the southern Korean sea in heavy mist. The bottom 45 percent of the frame: a Joseon panokseon line and a turtle ship ' +
     'advancing toward the viewer-left, spray and gunpowder smoke, a distant Japanese atakebune fleet fading into fog behind them. The TOP 55 percent of the frame is soft luminous pale sky and mist with a faint pale sun, ' +
-    'calm and almost empty, deliberately clean negative space for a title and menu buttons.' + AIRY + CLEAN,
+    'calm and almost empty, deliberately clean negative space for a title and menu buttons.' + AIRY + HIGHKEY + CLEAN,
 });
 
 const MODES = {
@@ -82,7 +89,7 @@ const MODES = {
     'surrounded by a swarm of Japanese ships, whirlpool currents churning white around the hulls, arrows and smoke. Dramatic overcast light.',
   mode_campaign:
     'Mode card art "faction campaign": a strategic war table seen from above at an angle. A large aged hand-painted map of the Korean peninsula and the southern sea on the table, with small carved wooden warship miniatures ' +
-    'and cloth flags of three factions: Joseon (blue and white), Japan (red sun-disc and black), Ming China (yellow and red). Brass compass, ink stone, brushes, a candle glow, a general\'s armored hand moving a ship token. Warm low light. No readable writing on the map.',
+    'and cloth flags of three factions: Joseon (blue and white), Japan (plain white nobori with a small black clan crest), Ming China (yellow and red). Brass compass, ink stone, brushes, a candle glow, a general\'s armored hand moving a ship token. Warm low light. No readable writing on the map.',
   mode_skirmish:
     'Mode card art "contested harbor skirmish": a fight at a fortified harbor. A wooden palisade fort with a gate tower on a rocky shore firing matchlocks and cannons, a Japanese harbor mooring full of ships, ' +
     'Joseon panokseon and a turtle ship attacking in the foreground with cannon smoke, a captured flag being contested on the fort wall. Dynamic, afternoon sun through smoke.',
@@ -91,27 +98,27 @@ const MODES = {
     'a stretch of sparkling choppy sea between them, first cannon shots and smoke, tense stillness before the clash, low sun on the horizon.',
 };
 for (const [id, p] of Object.entries(MODES)) {
-  add({ id, kind: 'mode', variants: ['A', 'B'], gen: [1536, 1024], out: [1200, 800], q: 80, prompt: FILM + p + AIRY + CLEAN });
+  add({ id, kind: 'mode', variants: ['A', 'B'], gen: [1536, 1024], out: [1200, 800], small: [600, 400], q: 78, prompt: FILM + p + AIRY + CLEAN });
 }
 
 const EMBLEM_STYLE =
   ' Clean modern seal / crest design, flat vector-like illustration with subtle depth, perfectly centered, a single circular badge filling about 88 percent of the square, ' +
-  'bold simple shapes that stay legible at 32 pixels, refined thin gold rim. The area outside the circular badge is a pure flat white background (#FFFFFF) with nothing else, no shadow, no glow. ' +
+  'bold simple shapes that stay legible at 32 pixels, refined thin gold rim. No sun disc, no rays, no sunburst. The area outside the circular badge is a pure flat white background (#FFFFFF) with nothing else, no shadow, no glow. ' +
   'No text, no letters, no Chinese characters, no numbers.';
 add({
-  id: 'emblem_joseon', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512],
+  id: 'emblem_joseon', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
   prompt:
-    'Emblem of the Joseon navy: a deep indigo-navy circular badge with a white stylized panokseon ship silhouette (two sails, plank-shield hull) riding on abstract stylized white waves, a red taegeuk-like circle as a rising sun behind the sails, ' +
-    'accents of Joseon blue, red and white.' + EMBLEM_STYLE,
+    'Emblem of the Joseon navy: a deep indigo-navy circular badge with a white stylized panokseon ship silhouette (two sails, plank-shield hull) riding on abstract stylized white waves, a calm pale moon-like circle of white behind the sails, ' +
+    'accents of Joseon blue and white with a little red.' + EMBLEM_STYLE,
 });
 add({
-  id: 'emblem_japan', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512],
+  id: 'emblem_japan', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
   prompt:
-    'Emblem of the Japanese Sengoku navy: a deep crimson-red circular badge with a bold stylized gold and white paulownia (kiri) mon crest in the center, flanked by two crossed sengoku nobori banners, black and gold accents, ' +
-    'strong stylized rising-sun rays at the edge.' + EMBLEM_STYLE,
+    'Emblem of the Japanese Sengoku navy: a plain matte black circular badge with one large bold gold Toyotomi paulownia crest (go-shichi no kiri: three leaves topped by flower spikes of five, seven and five blossoms) centered, ' +
+    'thin gold rim, nothing else on the badge: no rays, no sun disc, no red stripes, no banners, no waves.' + EMBLEM_STYLE,
 });
 add({
-  id: 'emblem_ming', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512],
+  id: 'emblem_ming', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
   prompt:
     'Emblem of the Ming dynasty navy: an imperial yellow and vermilion circular badge with a bold stylized coiled Chinese dragon medallion in the center, cloud scrolls, ' +
     'imperial gold, vermilion and deep teal accents.' + EMBLEM_STYLE,
@@ -247,7 +254,18 @@ async function matteEmblem(buf, size) {
 async function convert(it, manifest) {
   const v = it.variants.length > 1 ? PICKS[it.id] || 'A' : it.variants[0];
   const src = rawPath(it, v);
-  if (!existsSync(src)) return console.log(`  skip ${it.id} (no raw)`);
+  if (!existsSync(src)) {
+    // Raws are not kept in git. A missing small copy can still be cut from the shipped full-size file.
+    const main = join(OUT, `${it.kind === 'loading' ? 'loading_' : ''}${it.id}.webp`);
+    const smallName = `${it.kind === 'loading' ? 'loading_' : ''}${it.id}_sm.webp`;
+    if (it.small && existsSync(main) && !existsSync(join(OUT, smallName))) {
+      const sm = await sharp(main).resize(it.small[0], it.small[1], { fit: 'cover', kernel: 'lanczos3' }).webp(it.kind === 'emblem' ? { quality: 88, alphaQuality: 100 } : { quality: it.q - 2, effort: 5 }).toBuffer();
+      await writeFile(join(OUT, smallName), sm);
+      if (manifest[it.id]) Object.assign(manifest[it.id], { small: smallName, smallSize: it.small, smallBytes: sm.length });
+      return console.log(`  cut ${smallName} from the shipped file`);
+    }
+    return console.log(`  skip ${it.id} (no raw)`);
+  }
   const buf = await readFile(src);
   const files = {};
   const prefix = it.kind === 'loading' ? 'loading_' : '';
@@ -256,6 +274,11 @@ async function convert(it, manifest) {
     await writeFile(join(OUT, `${it.id}.webp`), await sharp(png).webp({ quality: 88, alphaQuality: 100 }).toBuffer());
     files.file = `${it.id}.webp`;
     files.size = it.out;
+    if (it.small) { // badges are drawn at 30-60 px: a 128 px copy keeps them cheap
+      const sm = await sharp(png).resize(it.small[0], it.small[1], { kernel: 'lanczos3' }).webp({ quality: 88, alphaQuality: 100 }).toBuffer();
+      await writeFile(join(OUT, `${it.id}_sm.webp`), sm);
+      files.small = `${it.id}_sm.webp`; files.smallSize = it.small; files.smallBytes = sm.length;
+    }
   } else {
     const main = await sharp(buf).resize(it.out[0], it.out[1], { fit: 'cover', kernel: 'lanczos3' }).webp({ quality: it.q, effort: 5 }).toBuffer();
     await writeFile(join(OUT, `${prefix}${it.id}.webp`), main);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SCENARIOS } from '../sim/scenarios';
 import { useUi } from '../state/store';
+import { Backdrop } from './Backdrop';
 
 const QUOTES: [string, string][] = [
   ['必死則生 必生則死', '죽고자 하면 살 것이요, 살고자 하면 죽을 것이다'],
@@ -21,18 +22,21 @@ export function Loading() {
   const pct = Math.round(Math.max(0, Math.min(1, progress)) * 100);
   return (
     <div className="loading" role="status">
-      <div className="loading-title">{info?.hanja ?? '壬辰海戰'}</div>
-      <div className="loading-sub">{info?.title ?? '임진 해전'}</div>
-      <div className="loading-bar">
-        <div className="loading-fill" style={{ width: `${pct}%` }} />
-      </div>
-      <div className="loading-meta">
-        <span>{loading}</span>
-        <b>{pct}%</b>
-      </div>
-      <div className="loading-quote">
-        <strong>{quote[0]}</strong>
-        <span>{quote[1]}</span>
+      <Backdrop kind="loading" id={sid ?? undefined} />
+      <div className="loading-card glass">
+        <div className="loading-title">{info?.hanja ?? '壬辰海戰'}</div>
+        <div className="loading-sub">{info?.title ?? '임진 해전'}</div>
+        <div className="loading-bar">
+          <div className="loading-fill" style={{ width: `${pct}%` }} />
+        </div>
+        <div className="loading-meta">
+          <span>{loading}</span>
+          <b>{pct}%</b>
+        </div>
+        <div className="loading-quote">
+          <strong>{quote[0]}</strong>
+          <span>{quote[1]}</span>
+        </div>
       </div>
     </div>
   );

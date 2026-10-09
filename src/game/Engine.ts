@@ -52,7 +52,11 @@ import { GUN_SPECS, STAGE_NAMES } from '../sim/catalog';
 import { buildScenario, SCENARIOS, type FleetSpawn, type ScenarioId } from '../sim/scenarios';
 import { applyBalance, FACTION_NAME } from '../sim/balance';
 import { applyOutcome } from '../campaign/campaign';
-import { GUN_SHOTS, SHIP_SPECS } from '../sim/catalog';
+import { finishGrandBattle } from '../campaign/grand';
+import { outcomeOfBattle, type RegionBattle } from '../sim/grand/bridge';
+import { dateLabel } from '../sim/grand/economy';
+import { buildGrandConquest, shipOutcomes, worksAfter } from '../sim/grand/spawn';
+import { SHIP_SPECS } from '../sim/catalog';
 import { CurrentField } from '../sim/current';
 import { OWNER_OF, otherTeam, teamOf, type BattleEvent, type Faction, type Ship, type ShipKind, type Team } from '../sim/types';
 import { buildConquest, homeAxis, type ConquestMapId, type Seat } from '../sim/maps';
@@ -98,8 +102,15 @@ export type EngineOptions = {
   remote?: NetBattle;
 };
 
-/** A conquest battle: the map, every seat, and which seat is the player's. */
-export type ConquestSetup = { map: ConquestMapId; seats: Seat[]; you: number; seed: number };
+/** What the HUD calls a conquest battle: a campaign meeting is named for its region and month instead of the map. */
+function conquestInfoOf(setup: ConquestSetup): BattleInfo {
+  const info = conquestInfo(setup.map);
+  const rb = setup.grand;
+  return rb ? { ...info, title: `${rb.regionName} 해전`, place: rb.regionName, date: dateLabel(rb.turn), season: dateLabel(rb.turn) } : info;
+}
+
+/** A conquest battle: the map, every seat, and which seat is the player's. `grand` is a faction campaign meeting played on it, with the campaign's own ships. */
+export type ConquestSetup = { map: ConquestMapId; seats: Seat[]; you: number; seed: number; grand?: RegionBattle };
 
 /** Sends commands somewhere other than the local battle: a multiplayer server. */
 export interface CommandSink {
@@ -224,7 +235,7 @@ export class Engine {
     this.sink = this.remote;
     const seat = this.conquestSetup?.seats[this.conquestSetup.you];
     this.faction = options.campaign ? 'joseon' : seat?.faction ?? options.faction ?? 'joseon';
-    this.battleInfo = this.conquestSetup ? conquestInfo(this.conquestSetup.map) : scenarioInfo(options.scenario);
+    this.battleInfo = this.conquestSetup ? conquestInfoOf(this.conquestSetup) : scenarioInfo(options.scenario);
     this.skyName = options.sky ?? this.battleInfo.sky;
     this.seaName = options.sea ?? this.battleInfo.sea;
     const dprParam = params.get('dpr');
@@ -449,8 +460,13 @@ export class Engine {
     if (this.options.gallery) return ALL_KINDS;
     const kinds = new Set<ShipKind>();
     const setup = this.conquestSetup;
-    if (setup) for (const seat of setup.seats) for (const kind of ROSTER[seat.faction]) kinds.add(kind);
-    else for (const ship of buildScenario(this.scenarioId, 0, 1, () => -50, this.campaign).ships) kinds.add(ship.spec.kind);
+    if (setup) {
+      for (const seat of setup.seats) for (const kind of ROSTER[seat.faction]) kinds.add(kind);
+      // An allied navy's ships (Ming beside Joseon) are not in the seat's roster.
+      if (setup.grand) for (const seat of [setup.grand.attacker, setup.grand.defender]) for (const ship of seat.ships) kinds.add(ship.kind);
+    } else {
+      for (const ship of buildScenario(this.scenarioId, 0, 1, () => -50, this.campaign).ships) kinds.add(ship.spec.kind);
+    }
     return [...kinds];
   }
 
@@ -552,7 +568,8 @@ export class Engine {
       // client keeps the map unturned so its coordinates match the server's.
       this.phi = this.sink ? 0 : sunAz - Math.PI / 2 - homeAxis(setup.map);
       this.terrain.setRotation(this.phi);
-      const built = buildConquest(setup.map, setup.seats, (x, z) => this.terrain.heightAt(x, z), setup.seed, {}, this.phi);
+      const land = (x: number, z: number) => this.terrain.heightAt(x, z);
+      const built = setup.grand ? buildGrandConquest(setup.grand, land, this.phi) : buildConquest(setup.map, setup.seats, land, setup.seed, {}, this.phi);
       this.battle = built.battle;
       this.conquest = built.conquest;
       this.owner = setup.you;
@@ -786,7 +803,7 @@ export class Engine {
     this.sink = remote;
     this.conquestSetup = setup;
     this.faction = setup.seats[setup.you]!.faction;
-    await this.stage(conquestInfo(setup.map));
+    await this.stage(conquestInfoOf(setup));
   }
 
   private async stage(info: BattleInfo) {
@@ -852,11 +869,17 @@ export class Engine {
     if (!setup || !this.conquest) return hint;
     const c = this.conquest;
     for (const seat of setup.seats) for (const kind of ROSTER[seat.faction]) hint.set(kind, (hint.get(kind) ?? 0) + Math.min(c.options.maxShips, Math.ceil(c.options.cap / SHIP_SPECS[kind].cost) + 4));
+    if (setup.grand) {
+      for (const seat of [setup.grand.attacker, setup.grand.defender]) {
+        for (const kind of new Set(seat.ships.map((s) => s.kind))) hint.set(kind, Math.max(hint.get(kind) ?? 0, seat.ships.filter((s) => s.kind === kind).length + 4));
+      }
+    }
     return hint;
   }
 
   restart() {
-    if (this.remote) return;
+    // A campaign meeting is settled once; playing it again would not change the campaign.
+    if (this.remote || this.conquestSetup?.grand) return;
     if (this.conquestSetup) void this.setConquest({ ...this.conquestSetup, seed: this.conquestSetup.seed + 1 });
     else void this.setScenario(this.scenarioId);
   }
@@ -1015,29 +1038,23 @@ export class Engine {
 
   private finishCampaignBattle() {
     this.reported = true;
+    const grand = this.conquestSetup?.grand;
+    if (grand && this.conquest) {
+      this.finishGrandBattle(grand, this.conquest);
+      return;
+    }
     if (!this.campaign) return;
     const b = this.battle;
-    const ships = b.ships
-      .filter((s) => s.campaignId)
-      .map((s) => {
-        let ammo = 0;
-        let max = 0;
-        for (const g of s.guns) {
-          ammo += g.ammo;
-          max += GUN_SHOTS[s.spec.batteries[g.battery]!.gun];
-        }
-        return {
-          campaignId: s.campaignId,
-          alive: s.alive && s.sinking === 0 && !s.struck,
-          hull: Math.max(0, s.hull / s.spec.hull),
-          crew: Math.max(0, s.crew / s.spec.crew),
-          supply: max ? Math.min(s.supply, ammo / max) : s.supply,
-          kills: s.kills,
-        };
-      });
+    const ships = shipOutcomes(b.ships);
     const enemy = this.enemyTeam;
     const enemySunk = b.initial[enemy] - b.teamCount(enemy) - b.escaped[enemy];
     setReport(applyOutcome({ id: this.scenarioId, win: b.winner === this.team, enemySunk, enemyEscaped: b.escaped[enemy], ships }));
+  }
+
+  /** A faction campaign meeting is over: the campaign takes what happened to its ships and to the defender's port. */
+  private finishGrandBattle(rb: RegionBattle, conquest: Conquest) {
+    const works = worksAfter(rb, conquest);
+    finishGrandBattle(rb, { ...outcomeOfBattle(rb, this.battle.winner, shipOutcomes(this.battle.ships), works.razed), damage: works.damage });
   }
 
   /** Withdrawal. The battle counts as lost. */

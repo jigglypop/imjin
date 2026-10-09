@@ -51,8 +51,8 @@ export const TUNING = {
     japan: { first: 6, every: 6, at: 'nagoya', ships: { atakebune: 3, sekibune: 4, kobaya: 4 } },
     ming: { first: 8, every: 10, at: 'liaodong', ships: { mingship: 3, mingsmall: 4 } },
   } as Record<GrandFaction, { first: number; every: number; at: RegionId; ships: Partial<Record<ShipKind, number>> }>,
-  /** Opening fleet size by navy, as a multiple of the table in regions.ts. */
-  startFleet: { joseon: 1, japan: 1, ming: 1 } as Record<GrandFaction, number>,
+  /** Opening fleet size by navy, as a multiple of the table in regions.ts. The computer's fleets gather into one body since small groups no longer swap ports, which favoured the invaders; the Japanese start smaller to keep the three navies level. */
+  startFleet: { joseon: 1, japan: 0.8, ming: 1 } as Record<GrandFaction, number>,
   /** Turn the first turtle ship can be built. */
   geobukseonTurn: 3,
   faction: {

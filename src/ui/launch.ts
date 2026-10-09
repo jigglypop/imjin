@@ -1,4 +1,6 @@
 import type { ConquestSetup, EngineOptions } from '../game/Engine';
+import type { RegionBattle } from '../sim/grand/bridge';
+import { grandMap, grandSeats, grandYou } from '../sim/grand/spawn';
 import type { NetBattle } from '../net/NetBattle';
 import { playableFactions } from '../sim/balance';
 import { CONQUEST_MAPS, defaultSeats, type ConquestMapId } from '../sim/maps';
@@ -12,8 +14,20 @@ export const params = new URLSearchParams(location.search);
 /** What to load into the battle view. A new `seq` means a new battle. */
 export type LaunchBody =
   | { kind: 'scenario'; id: ScenarioId; faction: Faction; campaign?: EngineOptions['campaign']; remote?: NetBattle }
-  | { kind: 'conquest'; setup: ConquestSetup; remote?: NetBattle };
+  | { kind: 'conquest'; setup: ConquestSetup; remote?: NetBattle }
+  /** A meeting of the faction campaign, played as a conquest battle with the campaign's own ships. */
+  | { kind: 'grand'; battle: RegionBattle };
 export type Launch = LaunchBody & { seq: number };
+
+/** The conquest battle a launch asks for, if it is one. */
+export function conquestOf(launch: LaunchBody): ConquestSetup | undefined {
+  if (launch.kind === 'conquest') return launch.setup;
+  if (launch.kind === 'grand') {
+    const rb = launch.battle;
+    return { map: grandMap(rb), seats: grandSeats(rb), you: grandYou(rb), seed: rb.seed, grand: rb };
+  }
+  return undefined;
+}
 
 const paramScenario = params.get('scenario') as ScenarioId | null;
 const paramSide = params.get('side') as Faction | null;

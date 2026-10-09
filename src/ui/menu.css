@@ -1,6 +1,7 @@
 /* ============================================================================
    App shell: main menu, mode screens, battle select, loading, error notice, campaign room.
-   Dark sea behind, white glass in front. Sheets in portrait, two columns in landscape.
+   Pale misty key art behind, white glass in front. The 3D battle map (.hs) is the one dark screen.
+   Sheets in portrait, two columns in landscape.
    ============================================================================ */
 
 .screen {
@@ -11,23 +12,49 @@
   flex-direction: column;
   height: 100dvh;
   overflow: hidden;
-  color: var(--on-dark);
-  background: radial-gradient(120% 90% at 50% 0%, var(--sea-2) 0%, var(--sea-1) 45%, var(--sea-0) 100%);
+  color: var(--ink);
+  /* Stands in for the key art until it has loaded: the same pale mist, so nothing flashes. */
+  background: radial-gradient(120% 90% at 30% 10%, #ffffff 0%, #eef3f7 55%, #dfe8ef 100%);
 }
 
-.screen-bg {
+/* Key art behind a screen: fades in over the mist gradient, then a white wash keeps the glass and type legible. */
+.art-bg {
   position: absolute;
   inset: 0;
+  z-index: 0;
+  overflow: hidden;
   pointer-events: none;
-  background: url(/ui/map_south.webp) 62% 55% / cover no-repeat;
-  opacity: 0;
-  transition: opacity 0.9s ease;
-  -webkit-mask: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.3));
-  mask: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.3));
 }
 
-.screen-bg--on {
-  opacity: 0.34;
+.art-bg img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 70% 50%;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+
+.art-bg--on img {
+  opacity: 1;
+}
+
+.art-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.12) 42%, rgba(255, 255, 255, 0.5) 100%);
+}
+
+/* Behind the mode screens the picture is only a hint of sea. */
+.art-bg--calm img {
+  filter: blur(2px);
+}
+
+.art-bg--calm::after {
+  background: rgba(255, 255, 255, 0.66);
 }
 
 .screen-top {
@@ -61,26 +88,27 @@
   gap: 6px;
   min-height: var(--tap);
   padding: 0 16px 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid var(--glass-line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--on-dark);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
   font-size: var(--fs-15);
   font-weight: 650;
   cursor: pointer;
+  box-shadow: 0 2px 10px rgba(30, 50, 75, 0.14);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: background 0.15s;
 }
 
 .back-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: #fff;
 }
 
 .app--touch .back-btn {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .screen-body {
@@ -99,6 +127,7 @@
 .screen-body > .paper {
   margin-bottom: var(--sp-5);
   background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 30px rgba(30, 50, 75, 0.14), 0 1px 3px rgba(30, 50, 75, 0.1);
 }
 
 @media (max-width: 900px), (max-height: 540px) {
@@ -165,21 +194,24 @@
   line-height: 1.05;
   letter-spacing: 0.28em;
   padding-left: 0.28em;
-  color: #fff;
-  text-shadow: 0 2px 30px rgba(120, 180, 255, 0.28);
+  color: #12263f;
+  text-shadow: 0 0 28px rgba(255, 255, 255, 0.95), 0 0 6px rgba(255, 255, 255, 0.8);
 }
 
 .wordmark-ko {
   font-size: var(--fs-28);
   font-weight: 750;
   letter-spacing: 0.04em;
+  color: var(--ink);
+  text-shadow: 0 0 16px rgba(255, 255, 255, 0.95);
 }
 
 .wordmark-sub {
   font-size: var(--fs-13);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.18em;
-  color: var(--on-dark-2);
+  color: #3d4b5e;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.95);
 }
 
 .mode-grid {
@@ -191,6 +223,8 @@
 .mode-card {
   position: relative;
   display: grid;
+  overflow: hidden;
+  isolation: isolate;
   grid-template-columns: 52px minmax(0, 1fr);
   grid-template-rows: auto auto;
   align-content: center;
@@ -222,6 +256,31 @@
   background: #fff;
 }
 
+/* The mode's picture is a quiet background: a white wash covers the text side and thins out towards the right. */
+.mode-art {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 60% 50%;
+  pointer-events: none;
+}
+
+.mode-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, #fff 0%, rgba(255, 255, 255, 0.95) 38%, rgba(255, 255, 255, 0.52) 100%);
+  transition: opacity 0.25s;
+}
+
+.mode-card:hover::before {
+  opacity: 0.8;
+}
+
 .mode-card:active {
   transform: translateY(0);
 }
@@ -244,8 +303,9 @@
 .mode-title {
   align-self: end;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 2px 8px;
   font-size: var(--fs-20);
   font-weight: 750;
   letter-spacing: -0.01em;
@@ -272,16 +332,54 @@
   color: var(--ink-2);
   font-size: var(--fs-12);
   font-weight: 700;
-}
-
-.mode-card--soon .mode-icon {
-  background: var(--ink-3);
+  white-space: nowrap;
 }
 
 .menu-foot {
   text-align: center;
   font-size: var(--fs-12);
-  color: var(--on-dark-2);
+  color: var(--ink-2);
+}
+
+/* ---------------------------------------------------------------- faction emblems */
+
+/* On the menu screens the navy badges are the gpt-image crests (128 px cut). The battle HUD keeps its plain disc. */
+.screen .emblem {
+  background-color: transparent;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  color: transparent;
+  font-size: 0;
+  box-shadow: none;
+  filter: drop-shadow(0 2px 5px rgba(20, 35, 55, 0.28));
+}
+
+.screen .emblem--joseon {
+  background-image: url(/ui/art/emblem_joseon_sm.webp);
+}
+
+.screen .emblem--japan {
+  background-image: url(/ui/art/emblem_japan_sm.webp);
+}
+
+.screen .emblem--ming {
+  background-image: url(/ui/art/emblem_ming_sm.webp);
+}
+
+/* The notice's large badges are drawn at 60 px or more: use the 512 px crest on retina screens. */
+@media (min-resolution: 2dppx) {
+  .notice-emblems .emblem--joseon {
+    background-image: url(/ui/art/emblem_joseon.webp);
+  }
+
+  .notice-emblems .emblem--japan {
+    background-image: url(/ui/art/emblem_japan.webp);
+  }
+
+  .notice-emblems .emblem--ming {
+    background-image: url(/ui/art/emblem_ming.webp);
+  }
 }
 
 /* ---------------------------------------------------------------- placeholder and settings screens */
@@ -344,14 +442,14 @@
 /* ---------------------------------------------------------------- history battles */
 
 .hs {
-  background: var(--sea-0);
+  background: #e4ecf3;
 }
 
 .hs-top {
   position: relative;
   z-index: 6;
   flex: none;
-  background: linear-gradient(rgba(5, 11, 19, 0.82), rgba(5, 11, 19, 0));
+  background: linear-gradient(rgba(238, 244, 249, 0.92), rgba(238, 244, 249, 0));
 }
 
 .hs-top .screen-top {
@@ -361,9 +459,10 @@
 .seg {
   display: inline-flex;
   padding: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid var(--glass-line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 2px 10px rgba(30, 50, 75, 0.14);
 }
 
 .seg button {
@@ -372,7 +471,7 @@
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--on-dark-2);
+  color: var(--ink-2);
   font-size: var(--fs-13);
   font-weight: 650;
   cursor: pointer;
@@ -380,8 +479,8 @@
 }
 
 .seg button.on {
-  background: #fff;
-  color: var(--ink);
+  background: var(--accent);
+  color: #fff;
 }
 
 .hs-tabs {
@@ -400,34 +499,35 @@
   gap: 6px;
   min-height: 40px;
   padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--glass-line);
   border-radius: 999px;
-  background: rgba(10, 22, 35, 0.55);
-  color: var(--on-dark);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--ink);
   font-size: var(--fs-13);
   font-weight: 650;
   cursor: pointer;
+  box-shadow: 0 2px 10px rgba(30, 50, 75, 0.14);
   transition: background 0.15s;
 }
 
 .hs-tab small {
   font-size: var(--fs-12);
   font-weight: 500;
-  color: var(--on-dark-2);
+  color: var(--ink-3);
 }
 
 .hs-tab:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: #fff;
 }
 
 .hs-tab--on {
-  background: #fff;
-  border-color: #fff;
-  color: var(--ink);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .hs-tab--on small {
-  color: var(--ink-2);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .hs-tab--locked {
@@ -457,7 +557,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: var(--sea-0);
+  background: #e4ecf3;
 }
 
 .select-canvas {
@@ -470,7 +570,7 @@
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 46%, transparent 45%, rgba(3, 8, 14, 0.7) 100%);
+  background: radial-gradient(ellipse at 50% 46%, transparent 40%, rgba(232, 240, 247, 0.9) 100%);
 }
 
 .select-markers {
@@ -572,13 +672,14 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 90px 80px #050b13;
+  box-shadow: inset 0 0 90px 80px #e4ecf3;
 }
 
 .smap-plane img {
   width: 100%;
   height: 100%;
   display: block;
+  filter: brightness(1.45) contrast(0.88) saturate(0.85);
   pointer-events: none;
   -webkit-user-drag: none;
 }
@@ -751,43 +852,66 @@
   z-index: 50;
   height: 100dvh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--sp-3);
   padding: calc(var(--sat) + 16px) calc(var(--sar) + 24px) calc(var(--sab) + 16px) calc(var(--sal) + 24px);
-  color: var(--on-dark);
-  background: radial-gradient(120% 90% at 50% 20%, var(--sea-2), var(--sea-0) 80%);
+  color: var(--ink);
+  background: radial-gradient(120% 90% at 50% 30%, #ffffff, #e3ebf2 80%);
+}
+
+/* The battle's own picture shows through; only a light wash sits over it, the card carries the text. */
+.loading .art-bg img {
+  object-position: 50% 50%;
+}
+
+.loading .art-bg::after {
+  background: radial-gradient(70% 60% at 50% 50%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.12) 100%);
+}
+
+.loading-card {
+  position: relative;
+  z-index: 2;
+  width: min(480px, 100%);
+  padding: var(--sp-6) var(--sp-5) var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  text-align: center;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 18px 50px rgba(20, 35, 55, 0.22), 0 1px 3px rgba(20, 35, 55, 0.12);
 }
 
 .loading-title {
   font-family: var(--hanja);
   font-weight: 700;
-  font-size: clamp(36px, 9vw, 64px);
+  font-size: clamp(34px, 8vw, 54px);
+  line-height: 1.1;
   letter-spacing: 0.28em;
   padding-left: 0.28em;
   white-space: nowrap;
+  color: #12263f;
 }
 
 .loading-sub {
   font-size: var(--fs-20);
   font-weight: 700;
-  color: var(--on-dark-2);
+  color: var(--ink-2);
 }
 
 .loading-bar {
-  width: min(420px, 72vw);
-  height: 4px;
-  margin-top: var(--sp-5);
+  width: 100%;
+  height: 5px;
+  margin-top: var(--sp-4);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--fill-2);
   overflow: hidden;
 }
 
 .loading-fill {
   height: 100%;
   border-radius: 999px;
-  background: #fff;
+  background: var(--accent);
   transition: width 0.35s ease-out;
 }
 
@@ -795,22 +919,23 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  width: min(420px, 72vw);
+  width: 100%;
   font-size: var(--fs-13);
-  color: var(--on-dark-2);
+  color: var(--ink-2);
 }
 
 .loading-meta b {
   font-size: var(--fs-15);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: #fff;
+  color: var(--ink);
 }
 
 .loading-quote {
-  position: absolute;
-  bottom: calc(var(--sab) + 7dvh);
-  max-width: 92vw;
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
+  width: 100%;
+  border-top: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -821,14 +946,15 @@
 .loading-quote strong {
   font-family: var(--hanja);
   font-weight: 700;
-  font-size: var(--fs-17);
-  letter-spacing: 0.2em;
-  color: #fff;
+  font-size: var(--fs-15);
+  letter-spacing: 0.16em;
+  color: #12263f;
 }
 
 .loading-quote span {
   font-size: var(--fs-13);
-  color: var(--on-dark-2);
+  line-height: 1.5;
+  color: var(--ink-2);
 }
 
 .loading-error {
@@ -840,7 +966,7 @@
   max-width: min(480px, 90vw);
   text-align: center;
   font-size: var(--fs-13);
-  color: var(--on-dark-2);
+  color: var(--ink-2);
   word-break: break-word;
 }
 
@@ -853,7 +979,7 @@
   align-items: center;
   justify-content: center;
   padding: calc(var(--sat) + 16px) calc(var(--sar) + 16px) calc(var(--sab) + 16px) calc(var(--sal) + 16px);
-  background: radial-gradient(120% 90% at 50% 20%, var(--sea-2), var(--sea-0) 80%);
+  background: radial-gradient(120% 90% at 50% 30%, #ffffff, #e3ebf2 80%);
 }
 
 .fatal .notice {
@@ -1406,12 +1532,21 @@
     min-width: 0;
   }
 
-  .loading {
-    gap: var(--sp-2);
+  .loading-card {
+    width: min(420px, 100%);
+    padding: var(--sp-4) var(--sp-5);
+  }
+
+  .loading-title {
+    font-size: clamp(28px, 6vw, 40px);
+  }
+
+  .loading-sub {
+    font-size: var(--fs-15);
   }
 
   .loading-bar {
-    margin-top: var(--sp-3);
+    margin-top: var(--sp-2);
   }
 
   .loading-quote {

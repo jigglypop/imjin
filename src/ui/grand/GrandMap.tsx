@@ -17,7 +17,7 @@ export interface GrandMapProps {
   me: FactionId;
   selectedRegionId?: string | null;
   selectedFleetId?: string | null;
-  /** Regions the selected fleet may move to: highlighted and pulsing. */
+  /** Regions the selected fleet may sail to: highlighted and pulsing. */
   moveTargets?: string[];
   /** Screen space covered by panels; a focused region is centred in the rest. */
   insets?: MapInsets;
@@ -42,7 +42,7 @@ const TAP_SLOP = 8;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 function nodeRadius(r: RegionView) {
-  return r.offMap ? 20 : 14 + r.value * 2.4;
+  return r.offMap ? 20 : 12 + r.value * 3.4;
 }
 
 /** Strategic map: image backdrop, sea lanes, region nodes, fleet tokens. Pan with a drag, zoom with wheel or pinch. */
@@ -88,12 +88,14 @@ export function GrandMap({
       const { min, max } = limits();
       const s = clamp(v.s, min, max);
       const mh = s / MAP_ASPECT;
+      // The map may slide as far as the panels cover, so a port at the map's edge can still be centred in what they leave free.
+      const ins = insetsRef.current;
       const slackX = w * 0.06;
       const slackY = h * 0.06;
-      const lx = Math.min(w - s, (w - s) / 2) - slackX;
-      const hx = Math.max(0, (w - s) / 2) + slackX;
-      const ly = Math.min(h - mh, (h - mh) / 2) - slackY;
-      const hy = Math.max(0, (h - mh) / 2) + slackY;
+      const lx = Math.min(w - s, (w - s) / 2) - slackX - ins.right;
+      const hx = Math.max(0, (w - s) / 2) + slackX + ins.left;
+      const ly = Math.min(h - mh, (h - mh) / 2) - slackY - ins.bottom;
+      const hy = Math.max(0, (h - mh) / 2) + slackY + ins.top;
       return { s, x: clamp(v.x, lx, hx), y: clamp(v.y, ly, hy) };
     },
     [limits],
@@ -291,11 +293,12 @@ export function GrandMap({
 
   const fleetsAt = useMemo(() => {
     const m = new Map<string, FleetView[]>();
-    for (const f of fleets) m.set(f.at, [...(m.get(f.at) ?? []), f]);
+    for (const f of fleets) if (f.at) m.set(f.at, [...(m.get(f.at) ?? []), f]);
     return m;
   }, [fleets]);
+  const sailing = useMemo(() => fleets.filter((f) => f.transit && byId.has(f.transit.from) && byId.has(f.transit.to)), [fleets, byId]);
 
-  const showLabel = (r: RegionView) => r.id === selectedRegionId || r.offMap || r.value >= 4 || zoomRatio >= 1.25 || (zoomRatio >= 0.85 && r.value >= 3);
+  const showLabel = (r: RegionView) => r.id === selectedRegionId || r.offMap || r.value >= 3 || zoomRatio >= 1.1 || (zoomRatio >= 0.85 && r.value >= 2);
 
   return (
     <div
@@ -335,35 +338,47 @@ export function GrandMap({
             const off = a.offMap || b.offMap ? 'off' : '';
             return <line key={`${a.id}-${b.id}`} className={`gm-lane ${hot} ${front} ${off}`} x1={px(a.id)} y1={py(a.id)} x2={px(b.id)} y2={py(b.id)} />;
           })}
+          {lanes
+            .filter(({ a, b }) => (a.laneTurns?.[b.id] ?? 1) > 1)
+            .map(({ a, b }) => (
+              <text key={`t-${a.id}-${b.id}`} className="gm-lane-turns" x={(px(a.id) + px(b.id)) / 2} y={(py(a.id) + py(b.id)) / 2 - 7} textAnchor="middle">
+                {a.laneTurns?.[b.id]}턴
+              </text>
+            ))}
           {fleets
-            .filter((f) => f.moveTo && byId.has(f.moveTo))
-            .map((f) => {
-              const ax = px(f.at);
-              const ay = py(f.at);
-              const bx = px(f.moveTo!);
-              const by = py(f.moveTo!);
-              const dx = bx - ax;
-              const dy = by - ay;
-              const len = Math.hypot(dx, dy) || 1;
-              const ra = nodeRadius(byId.get(f.at)!) + 4;
-              const rb = nodeRadius(byId.get(f.moveTo!)!) + 8;
-              const ux = dx / len;
-              const uy = dy / len;
-              const sx = ax + ux * ra;
-              const sy = ay + uy * ra;
-              const ex = bx - ux * rb;
-              const ey = by - uy * rb;
-              const bend = Math.min(40, len * 0.14);
-              const cx = (sx + ex) / 2 - uy * bend;
-              const cy = (sy + ey) / 2 + ux * bend;
-              const d = `M${sx} ${sy} Q${cx} ${cy} ${ex} ${ey}`;
-              const col = FACTION_INFO[f.faction].color;
-              return (
-                <g key={f.id} className={f.id === selectedFleetId ? 'gm-arrow gm-arrow--sel' : 'gm-arrow'}>
-                  <path d={d} className="gm-arrow__halo" />
-                  <path d={d} className="gm-arrow__line" stroke={col} markerEnd={`url(#gm-head-${f.faction})`} />
-                </g>
-              );
+            .filter((f) => f.at && f.route.length)
+            .flatMap((f) => {
+              const stops = [f.at!, ...f.route].filter((id) => byId.has(id));
+              return stops.slice(1).map((to, i) => {
+                const from = stops[i]!;
+                const last = i === stops.length - 2;
+                const ax = px(from);
+                const ay = py(from);
+                const bx = px(to);
+                const by = py(to);
+                const dx = bx - ax;
+                const dy = by - ay;
+                const len = Math.hypot(dx, dy) || 1;
+                const ra = nodeRadius(byId.get(from)!) + 4;
+                const rb = nodeRadius(byId.get(to)!) + (last ? 8 : 4);
+                const ux = dx / len;
+                const uy = dy / len;
+                const sx = ax + ux * ra;
+                const sy = ay + uy * ra;
+                const ex = bx - ux * rb;
+                const ey = by - uy * rb;
+                const bend = Math.min(40, len * 0.14);
+                const cx = (sx + ex) / 2 - uy * bend;
+                const cy = (sy + ey) / 2 + ux * bend;
+                const d = `M${sx} ${sy} Q${cx} ${cy} ${ex} ${ey}`;
+                const col = FACTION_INFO[f.faction].color;
+                return (
+                  <g key={`${f.id}-${i}`} className={f.id === selectedFleetId ? 'gm-arrow gm-arrow--sel' : 'gm-arrow'}>
+                    <path d={d} className="gm-arrow__halo" />
+                    <path d={d} className="gm-arrow__line" stroke={col} markerEnd={last ? `url(#gm-head-${f.faction})` : undefined} />
+                  </g>
+                );
+              });
             })}
         </svg>
       )}
@@ -381,7 +396,7 @@ export function GrandMap({
             <button
               key={r.id}
               type="button"
-              className={`gm-node${sel ? ' gm-node--sel' : ''}${tgt ? ' gm-node--target' : ''}${r.offMap ? ' gm-node--off' : ''}${r.owner ? '' : ' gm-node--neutral'}`}
+              className={`gm-node${sel ? ' gm-node--sel' : ''}${tgt ? ' gm-node--target' : ''}${r.offMap ? ' gm-node--off' : ''}${r.owner ? '' : ' gm-node--neutral'}${r.visible ? '' : ' gm-node--fog'}`}
               style={{ transform: `translate3d(${x}px, ${y}px, 0)`, ['--r' as string]: `${rad}px`, ['--c' as string]: col }}
               aria-label={`${r.name}, ${ownerName(r.owner)}`}
               aria-pressed={sel}
@@ -395,7 +410,7 @@ export function GrandMap({
                 </b>
                 <span>
                   {ownerName(r.owner)}
-                  {r.offMap ? ' · 본토' : ` · 수비 ${r.garrison}`}
+                  {r.offMap ? ' · 본토' : r.visible ? ` · 수비 ${r.garrison}` : ' · 시야 밖'}
                 </span>
               </span>
             </button>
@@ -426,11 +441,37 @@ export function GrandMap({
                 <span className="gm-fleet__pill">
                   <span className="gm-fleet__flag">{FACTION_INFO[f.faction].hanja}</span>
                   <b>{f.ships.length}</b>
-                  {f.moveTo && <i aria-hidden>▸</i>}
+                  {f.route.length > 0 && <i aria-hidden>▸</i>}
                 </span>
               </button>
             );
           });
+        })}
+      {w > 0 &&
+        sailing.map((f) => {
+          const t = f.transit!;
+          const x = (px(t.from) + px(t.to)) / 2;
+          const y = (py(t.from) + py(t.to)) / 2;
+          if (x < -80 || y < -80 || x > w + 80 || y > h + 80) return null;
+          const sel = f.id === selectedFleetId;
+          const mine = f.faction === me;
+          return (
+            <button
+              key={f.id}
+              type="button"
+              className={`gm-fleet gm-fleet--sailing${sel ? ' gm-fleet--sel' : ''}${mine ? '' : ' gm-fleet--foreign'}`}
+              style={{ transform: `translate3d(${x}px, ${y}px, 0)`, ['--c' as string]: FACTION_INFO[f.faction].color }}
+              aria-label={`${f.name}, 항해 중, 함선 ${f.ships.length}척`}
+              aria-pressed={sel}
+              onClick={tap(() => onSelectFleet?.(f.id))}
+            >
+              <span className="gm-fleet__pill">
+                <span className="gm-fleet__flag">{FACTION_INFO[f.faction].hanja}</span>
+                <b>{f.ships.length}</b>
+                <i aria-hidden>≈</i>
+              </span>
+            </button>
+          );
         })}
       <div
         className="gm__zoom"

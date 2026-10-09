@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import type { ConquestSetup } from './game/Engine';
+import type { RegionBattle } from './sim/grand/bridge';
 import { net } from './net/NetClient';
 import { NetBattle } from './net/NetBattle';
 import { OnlinePanel } from './ui/OnlinePanel';
@@ -14,9 +15,9 @@ import { ConquestSetupPanel } from './ui/ConquestSetup';
 import { HistoryScreen } from './ui/HistoryScreen';
 import { ErrorBoundary, FatalNotice } from './ui/ErrorBoundary';
 import { Loading } from './ui/Loading';
-import { FactionScreen, MainMenu, ScreenFrame, SettingsScreen } from './ui/Screens';
-import { params, startScenario, urlLaunch, type Launch, type LaunchBody } from './ui/launch';
-import { GrandDemo } from './ui/grand/GrandDemo';
+import { MainMenu, ScreenFrame, SettingsScreen } from './ui/Screens';
+import { startScenario, urlLaunch, type Launch, type LaunchBody } from './ui/launch';
+import { GrandScreen } from './ui/GrandScreen';
 
 // The battle (three.js, engine, HUD) is its own chunk: the menu paints without parsing it.
 const loadBattle = () => import('./ui/BattleView');
@@ -28,7 +29,6 @@ const firstLaunch = urlLaunch();
 useUi.setState({ screen: firstLaunch ? 'battle' : 'menu' });
 
 export function App() {
-  if (params.get('granddemo')) return <GrandDemo />; // strategic-map UI kit preview, fixed per page load
   const screen = useUi((s) => s.screen);
   const fatal = useUi((s) => s.fatal);
   const compact = useCompactLayout();
@@ -79,6 +79,11 @@ export function App() {
     };
   });
 
+  const startGrandBattle = (battle: RegionBattle) => {
+    setOrigin('faction');
+    begin({ kind: 'grand', battle }, `${battle.regionName} 해전 준비 중`);
+  };
+
   const startHistory = (id: ScenarioId, campaignMode: boolean, faction: Faction) => {
     const campaign = useCampaign.getState().campaign;
     const spawn = campaignMode && campaign ? fleetSpawn(campaign) : undefined;
@@ -98,7 +103,7 @@ export function App() {
       )}
       {screen === 'menu' && <MainMenu />}
       {screen === 'select' && <HistoryScreen initial={lastScenario.current} onStart={startHistory} />}
-      {screen === 'faction' && <FactionScreen />}
+      {screen === 'faction' && <GrandScreen onBattle={startGrandBattle} />}
       {screen === 'skirmish' && (
         <ScreenFrame title="쟁탈전">
           <ConquestSetupPanel onStart={startConquest} />

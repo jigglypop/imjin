@@ -161,6 +161,8 @@ export type Ship = {
   mods: ShipMods;
   supply: number;
   campaignId: string;
+  /** Left the arena alive while retreating (alive is false then, but the ship was not lost). */
+  fled?: boolean;
 };
 
 export type Squadron = {

@@ -3,18 +3,26 @@ import { MAP_IMAGE } from './projection';
 import { Chip, FACTION_INFO } from './shared';
 import type { FactionId, FactionOption } from './types';
 
+export type Level = 'easy' | 'normal' | 'hard';
+
 export interface FactionPickProps {
   options: FactionOption[];
   initial?: FactionId;
-  onPick: (id: FactionId) => void;
+  onPick: (id: FactionId, level: Level) => void;
   onBack?: () => void;
 }
 
 const DIFFICULTY = ['쉬움', '보통', '어려움'];
+const LEVELS: { id: Level; name: string; hint: string }[] = [
+  { id: 'easy', name: '쉬움', hint: '적 진영의 수입이 10% 줄어듭니다' },
+  { id: 'normal', name: '보통', hint: '모든 진영이 같은 조건입니다' },
+  { id: 'hard', name: '어려움', hint: '적 진영의 수입이 15% 늘어납니다' },
+];
 
 /** Choose the faction to lead: one card each with its strengths and starting regions. */
 export function FactionPick({ options, initial, onPick, onBack }: FactionPickProps) {
   const [sel, setSel] = useState<FactionId>(initial ?? options[0]?.id ?? 'joseon');
+  const [level, setLevel] = useState<Level>('normal');
   const chosen = options.find((o) => o.id === sel);
   return (
     <div className="g-pick" style={{ ['--backdrop' as string]: `url(${MAP_IMAGE})` }}>
@@ -84,7 +92,15 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
         </div>
       </div>
       <footer className="g-pick__foot">
-        <button type="button" className="g-btn g-btn--primary g-btn--lg" onClick={() => onPick(sel)}>
+        <div className="g-level" role="radiogroup" aria-label="난이도">
+          {LEVELS.map((l) => (
+            <button key={l.id} type="button" role="radio" aria-checked={level === l.id} className={`g-level__opt${level === l.id ? ' g-level__opt--on' : ''}`} onClick={() => setLevel(l.id)}>
+              {l.name}
+            </button>
+          ))}
+          <span className="g-level__hint">{LEVELS.find((l) => l.id === level)?.hint}</span>
+        </div>
+        <button type="button" className="g-btn g-btn--primary g-btn--lg" onClick={() => onPick(sel, level)}>
           {chosen ? `${chosen.name}으로 전역 시작` : '전역 시작'}
         </button>
       </footer>

@@ -1,4 +1,4 @@
-import { FactionSeal, RESOURCES, signed } from './shared';
+import { FactionSeal, signed } from './shared';
 import type { TreasuryView, TurnView } from './types';
 
 export interface TopBarProps {
@@ -6,11 +6,15 @@ export interface TopBarProps {
   treasury: TreasuryView;
   onEndTurn?: () => void;
   onMenu?: () => void;
-  /** Disables 턴 종료, e.g. while the enemy moves. */
+  /** Opens the war status panel (objective, scores, log). */
+  onStatus?: () => void;
+  /** Disables 턴 종료, e.g. while battles wait or the war is over. */
   busy?: boolean;
+  endLabel?: string;
 }
 
-export function TopBar({ turn, treasury, onEndTurn, onMenu, busy }: TopBarProps) {
+export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, busy, endLabel = '턴 종료' }: TopBarProps) {
+  const net = treasury.income.gold;
   return (
     <header className="g-glass g-top">
       <div className="g-top__turn">
@@ -22,26 +26,30 @@ export function TopBar({ turn, treasury, onEndTurn, onMenu, busy }: TopBarProps)
         <FactionSeal faction={turn.faction} />
         <div className="g-top__date">
           <b>{turn.date}</b>
-          <span>{turn.turn}턴</span>
+          <span>
+            {turn.turn} / {turn.maxTurns}턴
+          </span>
         </div>
       </div>
       <ul className="g-top__res" aria-label="재물">
-        {RESOURCES.map((r) => {
-          const net = treasury.income[r.kind];
-          return (
-            <li key={r.kind} className="g-res" title={r.name}>
-              <span className="g-res__glyph" aria-hidden>
-                {r.glyph}
-              </span>
-              <span className="g-res__name">{r.name}</span>
-              <b className="g-res__val">{treasury.stock[r.kind].toLocaleString('ko-KR')}</b>
-              <span className={`g-res__net${net < 0 ? ' g-res__net--neg' : ''}`}>{signed(net)}</span>
-            </li>
-          );
-        })}
+        <li className="g-res" title="은">
+          <span className="g-res__glyph" aria-hidden>
+            銀
+          </span>
+          <span className="g-res__name">은</span>
+          <b className="g-res__val">{treasury.stock.gold.toLocaleString('ko-KR')}</b>
+          <span className={`g-res__net${net < 0 ? ' g-res__net--neg' : ''}`}>{signed(net)}</span>
+        </li>
+        {onStatus && (
+          <li>
+            <button type="button" className="g-btn g-btn--sm g-top__status" onClick={onStatus}>
+              전황
+            </button>
+          </li>
+        )}
       </ul>
       <button type="button" className="g-btn g-btn--primary g-top__end" disabled={busy} onClick={onEndTurn}>
-        {busy ? '진행 중…' : '턴 종료'}
+        {endLabel}
       </button>
     </header>
   );

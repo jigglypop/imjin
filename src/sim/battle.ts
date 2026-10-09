@@ -758,6 +758,7 @@ export class Battle {
     this.activity.set(s.id, 'fleeing');
     if (Math.hypot(s.x - this.center.x, s.z - this.center.z) > this.arenaRadius) {
       s.alive = false;
+      s.fled = true;
       this.escaped[s.team] += 1;
       this.events.push({ type: 'removed', ship: s.id });
       this.rules?.lost?.(this, s);

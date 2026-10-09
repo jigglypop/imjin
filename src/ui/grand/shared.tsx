@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import type { BuildingKind, FactionId, Owner, ResourceKind, Resources, ShipClass } from './types';
+import type { BuildingKind, FactionId, Owner, Resources, ShipClass } from './types';
 
 export const FACTION_INFO: Record<FactionId, { name: string; hanja: string; color: string }> = {
   joseon: { name: '조선', hanja: '朝', color: '#2f6db5' },
@@ -9,20 +9,13 @@ export const FACTION_INFO: Record<FactionId, { name: string; hanja: string; colo
 
 export const ownerName = (o: Owner) => (o ? FACTION_INFO[o].name : '중립');
 
-export const RESOURCES: { kind: ResourceKind; name: string; glyph: string }[] = [
-  { kind: 'gold', name: '금', glyph: '金' },
-  { kind: 'wood', name: '목재', glyph: '木' },
-  { kind: 'powder', name: '화약', glyph: '火' },
-  { kind: 'food', name: '군량', glyph: '糧' },
-];
-
 export const BUILDINGS: Record<BuildingKind, { name: string; glyph: string; desc: string }> = {
-  barracks: { name: '군영', glyph: '營', desc: '수비병 증원, 병사 모집' },
-  shipyard: { name: '선소', glyph: '船', desc: '함선 건조, 상위 함선 해금' },
-  battery: { name: '포대', glyph: '砲', desc: '방어전 화력 보너스' },
-  repair: { name: '수리소', glyph: '修', desc: '주둔 함대 선체 회복' },
-  storehouse: { name: '창고', glyph: '倉', desc: '수입 증가, 군량 보관' },
-  beacon: { name: '봉수대', glyph: '烽', desc: '인접 해역 시야, 기습 경보' },
+  camp: { name: '군영', glyph: '營', desc: '유지비 면제 · 빠른 수리 · 수비대 증원' },
+  shipyard: { name: '선소', glyph: '船', desc: '전선을 건조한다. 등급이 오르면 한 번에 짓는 배가 늘고 값이 싸진다' },
+  battery: { name: '포대', glyph: '砲', desc: '적이 쳐들어오면 먼저 포격한다. 전투에도 지어진 채 나타난다' },
+  dock: { name: '수리소', glyph: '修', desc: '머문 배의 선체와 병력을 빨리 회복' },
+  granary: { name: '창고', glyph: '倉', desc: '수입 +25% (등급마다) · 전투에서는 화약고' },
+  beacon: { name: '봉수대', glyph: '烽', desc: '두 칸 앞까지 적 함대를 알아본다 · 수입 +5%' },
 };
 
 export const SHIP_NAME: Record<ShipClass, string> = {
@@ -36,10 +29,10 @@ export const SHIP_NAME: Record<ShipClass, string> = {
   mingsmall: '명 사선',
 };
 
+export const goldText = (gold: number) => `${gold.toLocaleString('ko-KR')}냥`;
+
 export function costText(cost: Partial<Resources>) {
-  return RESOURCES.filter((r) => cost[r.kind])
-    .map((r) => `${r.name} ${cost[r.kind]}`)
-    .join(' · ');
+  return cost.gold ? goldText(cost.gold) : '';
 }
 
 export const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
@@ -118,6 +111,37 @@ export function Sheet({
       <div className="g-sheet__body">{children}</div>
       {footer && <footer className="g-sheet__foot">{footer}</footer>}
     </section>
+  );
+}
+
+/** A centred dialog on desktop and landscape, a bottom sheet in portrait: the same frame as the battle preview. */
+export function Modal({ title, eyebrow, label, onClose, children, footer, tone }: { title: ReactNode; eyebrow?: ReactNode; label: string; onClose?: () => void; children: ReactNode; footer?: ReactNode; tone?: Owner }) {
+  return (
+    <div className="g-scrim" role="presentation" onClick={onClose}>
+      <section
+        className="g-glass g-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={label}
+        style={tone ? { ['--tone' as string]: FACTION_INFO[tone].color } : undefined}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="g-sheet__handle g-sheet__handle--static" aria-hidden />
+        <header className="g-sheet__head">
+          <div className="g-sheet__titles">
+            {eyebrow && <div className="g-sheet__eyebrow">{eyebrow}</div>}
+            <h2 className="g-sheet__title">{title}</h2>
+          </div>
+          {onClose && (
+            <button type="button" className="g-icon-btn" aria-label="닫기" onClick={onClose}>
+              ×
+            </button>
+          )}
+        </header>
+        <div className="g-sheet__body">{children}</div>
+        {footer && <footer className="g-sheet__foot">{footer}</footer>}
+      </section>
+    </div>
   );
 }
 
