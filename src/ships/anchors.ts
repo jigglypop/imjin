@@ -203,7 +203,7 @@ export const GEOBUK_PLAN: GeobukPlan = {
   roofTop: 7.3,
   overhang: 0.45,
   oars: { n: 8, x0: -14, x1: 14, y: 1.5 },
-  head: { baseX: 14.95, mouthY: 3.9 },
+  head: { baseX: 13.6, mouthY: 3.9 },
 };
 
 export type HyeopPlan = {
@@ -237,7 +237,7 @@ export type AtakePlan = {
   oars: { n: number; x0: number; x1: number; y: number };
 };
 
-export const ATAKE_PLAN: AtakePlan = {
+const ATAKE_FIRST: AtakePlan = {
   hull: { length: 40, beam: 12.5, draft: 1.9, deck: 3.8, flat: 0.5, bilge: 1.3, mid: 0.34, bowF: 0.5, sternF: 0.78, rise: 1.7, risePow: 2.2, flare: 0.25, taper: 1.3 },
   parapet: 1.55,
   sheer: 0.4,
@@ -251,6 +251,26 @@ export const ATAKE_PLAN: AtakePlan = {
   mast: { x: 14.6, h: 13.4, sailW: 8.0, sailH: 7.6, set: true, r: 0.36 },
   oars: { n: 13, x0: -15.5, x1: 15.5, y: 2.5 },
 };
+
+/** The second atakebune: a lower two-tier castle set aft, a small turret on the foredeck and the mast moved forward. */
+const ATAKE_SECOND: AtakePlan = {
+  hull: { ...ATAKE_FIRST.hull, deck: 3.9, beam: 12, flat: 0.46, bowF: 0.44, sternF: 0.72, rise: 1.9, mid: 0.3, flare: 0.35 },
+  parapet: 1.7,
+  sheer: 0.7,
+  cx: -6,
+  tiers: [
+    { hx: 8.6, hz: 4.3, h: 2.4 },
+    { hx: 4.6, hz: 2.9, h: 2.2 },
+  ],
+  skirt: 1.1,
+  mast: { x: 10.4, h: 14.5, sailW: 8.6, sailH: 7.4, set: true, r: 0.36 },
+  oars: ATAKE_FIRST.oars,
+};
+
+export const ATAKE_PLANS: AtakePlan[] = [ATAKE_FIRST, ATAKE_SECOND];
+
+/** Foredeck turret of the second atakebune: centre, half sizes and wall height. */
+export const ATAKE_TURRET = { x: 15.6, hx: 2.5, hz: 2.4, h: 2.2 };
 
 /** Heights of the fortress tiers: wall base, wall top and the plateau the next tier stands on. */
 export function atakeLevels(p: AtakePlan) {
@@ -274,7 +294,7 @@ export type SekiPlan = {
   oars: { n: number; x0: number; x1: number; y: number };
 };
 
-export const SEKI_PLAN: SekiPlan = {
+const SEKI_FIRST: SekiPlan = {
   hull: { length: 24, beam: 6, draft: 0.95, deck: 1.7, flat: 0.4, bilge: 0.8, mid: 0.25, bowF: 0.26, sternF: 0.6, rise: 1.2, risePow: 2.2, flare: 0.35, taper: 1.2, bowDrop: -0.7 },
   parapet: 1.35,
   sheer: 0.3,
@@ -282,6 +302,18 @@ export const SEKI_PLAN: SekiPlan = {
   mast: { x: 4.4, h: 7.1, sailW: 4.6, sailH: 4.4, set: true, r: 0.2 },
   oars: { n: 7, x0: -8, x1: 8, y: 2.1 },
 };
+
+/** The second sekibune: no lacquer, the cabin amidships under a plain hip roof and the mast aft. */
+const SEKI_SECOND: SekiPlan = {
+  hull: { ...SEKI_FIRST.hull, deck: 1.75, beam: 6.3, flat: 0.42, bowF: 0.3, sternF: 0.66, rise: 1.3 },
+  parapet: 1.25,
+  sheer: 0.4,
+  cabin: { x: 1.2, hx: 2.3, hz: 1.6, h: 1.5 },
+  mast: { x: -6.4, h: 7.6, sailW: 4.2, sailH: 4.6, set: true, r: 0.2 },
+  oars: SEKI_FIRST.oars,
+};
+
+export const SEKI_PLANS: SekiPlan[] = [SEKI_FIRST, SEKI_SECOND];
 
 export type KobayaPlan = {
   hull: HullPlan;
@@ -765,8 +797,8 @@ export function anchorsFor(key: string): ShipAnchors | undefined {
   if (kind === 'panokseon') a = panokAnchors(PANOK_PLANS[variant] ?? PANOK_PLANS[0]!);
   else if (kind === 'geobukseon') a = geobukAnchors(GEOBUK_PLAN);
   else if (kind === 'hyeopseon') a = hyeopAnchors(HYEOP_PLAN);
-  else if (kind === 'atakebune') a = atakeAnchors(ATAKE_PLAN);
-  else if (kind === 'sekibune') a = sekiAnchors(SEKI_PLAN);
+  else if (kind === 'atakebune') a = atakeAnchors(ATAKE_PLANS[variant] ?? ATAKE_PLANS[0]!);
+  else if (kind === 'sekibune') a = sekiAnchors(SEKI_PLANS[variant] ?? SEKI_PLANS[0]!);
   else if (kind === 'kobaya') a = kobayaAnchors(KOBAYA_PLAN);
   else if (kind === 'mingship') a = mingAnchors(MING_PLAN);
   else if (kind === 'mingsmall') a = mingSmallAnchors(MINGSMALL_PLAN);
@@ -775,4 +807,13 @@ export function anchorsFor(key: string): ShipAnchors | undefined {
 }
 
 export const PROCEDURAL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
-export const panokVariants = () => PANOK_PLANS.length;
+/** How many models a kind has. */
+export const variantCount = (kind: ShipKind) => (kind === 'panokseon' ? PANOK_PLANS.length : kind === 'atakebune' ? ATAKE_PLANS.length : kind === 'sekibune' ? SEKI_PLANS.length : 1);
+
+/** Model variant of the i-th ship of a kind in a fleet: the flagship keeps the first, the rest alternate through the others. */
+export function variantFor(kind: ShipKind, i: number, flagship = false) {
+  const n = variantCount(kind);
+  if (n === 1) return 0;
+  if (kind === 'panokseon') return flagship ? 0 : 1 + (i % 2);
+  return i % n;
+}

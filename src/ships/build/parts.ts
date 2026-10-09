@@ -4,7 +4,7 @@
  *
  * Vertex layout of the merged mesh (see MeshData):
  *   position, normal, uv (tile space: repeats per atlas cell, wrapped in the shader), color (tint x AO),
- *   mat = (atlas cell, surface class), sway = (weight, phase) for cloth that flutters.
+ *   mat = (atlas cell, surface class), sway = (weight, phase) for cloth that flutters. bakeGrime adds a soot amount (0..1) to mat's surface class as a fraction of SOOT_STEP.
  * Ship space is +X bow, +Y up, Z across the beam, origin amidships on the waterline, metres.
  */
 import { cellOf, type Faction } from './atlas';

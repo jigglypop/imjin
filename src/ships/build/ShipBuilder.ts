@@ -10,6 +10,7 @@ import { buildKobaya } from './kobaya';
 import { buildSekibune } from './sekibune';
 import { buildGeobukseon } from './geobukseon';
 import { buildHyeopseon } from './hyeopseon';
+import { bakeGrime } from './bake';
 import type { MeshData } from './parts';
 import { buildPanokseon } from './panokseon';
 
@@ -29,9 +30,9 @@ function buildLod(kind: ShipKind, variant: number, lod: Lod): MeshData {
     case 'hyeopseon':
       return buildHyeopseon(lod);
     case 'atakebune':
-      return buildAtakebune(lod);
+      return buildAtakebune(variant, lod);
     case 'sekibune':
-      return buildSekibune(lod);
+      return buildSekibune(variant, lod);
     case 'kobaya':
       return buildKobaya(lod);
     case 'mingship':
@@ -47,5 +48,7 @@ function buildLod(kind: ShipKind, variant: number, lod: Lod): MeshData {
 export function buildShip(kind: ShipKind, variant: number): BuiltShip {
   const anchors = anchorsFor(`${kind}#${variant}`);
   if (!anchors) throw new Error(`no anchors for ${kind}#${variant}`);
-  return { lods: LOD_LEVELS.map((l) => buildLod(kind, variant, l)), anchors, faction: SHIP_SPECS[kind].faction };
+  const lods = LOD_LEVELS.map((l) => buildLod(kind, variant, l));
+  bakeGrime(lods, anchors);
+  return { lods, anchors, faction: SHIP_SPECS[kind].faction };
 }

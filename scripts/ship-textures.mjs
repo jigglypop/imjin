@@ -3,6 +3,7 @@
 //
 //   node scripts/ship-textures.mjs generate [--faction=joseon,japan,ming] [--only=slot,slot] [--n=1] [--model=gpt-image-2] [--jobs=8]
 //   node scripts/ship-textures.mjs compose  [--faction=...] [--pick=joseon/hull_plank:2,...]
+//   node scripts/ship-textures.mjs patch    --faction=joseon --only=slot,slot   (recompose just those cells into the published atlas)
 //   node scripts/ship-textures.mjs all      (generate then compose)
 //
 // Layout, prompts and per-cell material hints live in src/ships/build/atlasLayout.json (shared with the game code).
@@ -245,15 +246,22 @@ async function writeWebp(raw, width, file, opts) {
   await sharp(raw, { raw: { width, height: width, channels: 3 } }).webp(opts).toFile(file);
 }
 
-async function compose(faction) {
+/** The published atlas of a faction as full-size raw planes, so single cells can be swapped without the other raw images. */
+async function loadPublished(faction, dim) {
+  const plane = (kind) => sharp(join(OUT, `${faction}_${kind}.webp`)).resize(dim, dim, { kernel: 'lanczos3' }).removeAlpha().raw().toBuffer();
+  return { albedo: await plane('albedo'), normal: await plane('normal'), rough: await plane('rough') };
+}
+
+async function compose(faction, patch = false) {
   const { grid, cell, pad } = layout;
   const dim = grid * cell;
   const slots = layout.factions[faction];
-  const albedo = Buffer.alloc(dim * dim * 3);
-  const normal = Buffer.alloc(dim * dim * 3);
-  const rough = Buffer.alloc(dim * dim * 3);
+  const { albedo, normal, rough } = patch
+    ? await loadPublished(faction, dim)
+    : { albedo: Buffer.alloc(dim * dim * 3), normal: Buffer.alloc(dim * dim * 3), rough: Buffer.alloc(dim * dim * 3) };
   for (let i = 0; i < slots.length; i += 1) {
     const slot = slots[i];
+    if (patch && !only?.has(slot.name)) continue;
     const cx = i % grid;
     const cy = Math.floor(i / grid);
     const { sheet, size, wrap } = await composeCell(faction, slot, cell, pad);
@@ -288,7 +296,11 @@ async function compose(faction) {
     .toFile(join(CACHE, `${faction}_atlas_preview.jpg`));
 }
 
-if (mode === 'generate' || mode === 'all') await runGenerate();
+if (mode === 'generate' || mode === 'all' || mode === 'patch') await runGenerate();
 if (mode === 'compose' || mode === 'all') {
   for (const f of factions) await compose(f);
+}
+if (mode === 'patch') {
+  if (!only) throw new Error('patch needs --only=slot,slot');
+  for (const f of factions) await compose(f, true);
 }

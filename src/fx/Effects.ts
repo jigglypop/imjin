@@ -23,6 +23,8 @@ import { waveField } from '../ocean/waves';
 import { ParticleLayer, StreakLayer } from './ParticleLayer';
 import { DebrisField, Piece } from './Debris';
 import { gunClass } from './gunClass';
+import { anchorsFor } from '../ships/anchors';
+import { DECKS, mainDeck } from '../ships/decks';
 import { planSinking, type CueKind, type SinkCue } from './sinkPlan';
 import type { WakeMap } from '../ocean/WakeMap';
 import { LIGHT_COUNT, pointLights } from '../render/lights';
@@ -72,6 +74,8 @@ export class Effects {
   private readonly s = new Vector3();
   private readonly p = new Vector3();
   private emitAccum = new Map<number, number>();
+  /** Turtle ships: how hard the dragon's mouth is smoking (1 right after the bow gun fired) and its emission carry-over. */
+  private readonly dragon = new Map<number, { blast: number; acc: number }>();
   private strokes = new Map<number, number>();
   private readonly trails = new Map<number, Trail>();
   private readonly trailPool: Trail[] = [];
@@ -155,9 +159,13 @@ export class Effects {
   handle(events: BattleEvent[], battle: Battle) {
     for (const e of events) {
       switch (e.type) {
-        case 'gun':
+        case 'gun': {
           this.gun(e.x, e.y, e.z, e.dx, e.dy, e.dz, e.big, e.gun);
+          const ship = battle.get(e.ship);
+          const mouth = ship?.spec.kind === 'geobukseon' ? this.dragon.get(ship.id) : undefined;
+          if (ship && mouth && e.dx * Math.cos(ship.heading) + e.dz * Math.sin(ship.heading) > 0.9) mouth.blast = 1;
           break;
+        }
         case 'musket':
           this.musket(e.ship, e.dx, e.dz, e.count, battle);
           break;
@@ -186,6 +194,7 @@ export class Effects {
           break;
         }
         case 'removed':
+          this.dragon.delete(e.ship);
           this.finishSink(e.ship, battle);
           break;
         default:
@@ -307,7 +316,7 @@ export class Effects {
     const side = (-dx * Math.sin(ship.heading) + dz * Math.cos(ship.heading)) > 0 ? 1 : -1;
     for (let i = 0; i < count; i += 1) {
       const along = rnd(-0.4, 0.4) * L;
-      this.views.localToWorld(id, along, ship.spec.deck + rnd(0.6, 1.6), side * ship.spec.beam * 0.5, this.p);
+      this.views.localToWorld(id, along, this.deckOf(ship) + rnd(0.6, 1.6), side * ship.spec.beam * 0.5, this.p);
       const delay = rnd(0, 0.5);
       this.fire.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: dx * 12, vy: 0, vz: dz * 12, life: 0.05 + delay * 0.1, size0: 0.9, size1: 1.4, heat: 1, drag: 10, wind: 0 });
       this.smoke.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: dx * rnd(3, 9), vy: rnd(0, 1), vz: dz * rnd(3, 9), life: rnd(4, 8), size0: 0.5, size1: rnd(3.5, 6), alpha: 0.55, r: 0.86, g: 0.86, b: 0.84, drag: 1.4, lift: 0.18 });
@@ -427,7 +436,7 @@ export class Effects {
   ignite(id: number, battle: Battle) {
     const ship = battle.get(id);
     if (!ship) return;
-    this.views.localToWorld(id, rnd(-0.2, 0.2) * ship.spec.length, ship.spec.deck, 0, this.p);
+    this.views.localToWorld(id, rnd(-0.2, 0.2) * ship.spec.length, this.deckOf(ship), 0, this.p);
     for (let i = 0; i < 10; i += 1) this.fire.emit({ x: this.p.x + rnd(-2, 2), y: this.p.y, z: this.p.z + rnd(-2, 2), vx: rnd(-1, 1), vy: rnd(3, 8), vz: rnd(-1, 1), life: rnd(0.5, 1.1), size0: 2, size1: rnd(4, 7), heat: rnd(0.6, 1), drag: 1.2, lift: 3, wind: 0.5 });
     this.light(this.p.x, this.p.y + 3, this.p.z, 12000, 0.5, 1, 0.5, 0.2, 200);
   }
@@ -455,7 +464,7 @@ export class Effects {
   explode(id: number, battle: Battle) {
     const ship = battle.get(id);
     if (!ship) return;
-    this.views.localToWorld(id, rnd(-0.2, 0.2) * ship.spec.length, ship.spec.deck, 0, this.p);
+    this.views.localToWorld(id, rnd(-0.2, 0.2) * ship.spec.length, this.deckOf(ship), 0, this.p);
     const { x, y, z } = this.p;
     this.blast(x, y, z, 1);
     this.splash(x + rnd(-10, 10), z + rnd(-10, 10), 1.6);
@@ -512,7 +521,7 @@ export class Effects {
     // The low side of the heeling hull: local +z, mirrored by the sign of the roll.
     const sideX = -Math.sin(ship.heading) * down;
     const sideZ = Math.cos(ship.heading) * down;
-    this.views.localToWorld(id, 0, ship.spec.deck, 0, this.p);
+    this.views.localToWorld(id, 0, this.deckOf(ship), 0, this.p);
     const cx = this.p.x;
     const cy = this.p.y;
     const cz = this.p.z;
@@ -520,7 +529,7 @@ export class Effects {
       case 'groan':
       case 'crack': {
         if (c.kind === 'crack') {
-          this.views.localToWorld(id, rnd(-0.4, 0.4) * L, ship.spec.deck + rnd(0, 1.5), rnd(-0.4, 0.4) * B, this.p);
+          this.views.localToWorld(id, rnd(-0.4, 0.4) * L, this.deckOf(ship) + rnd(0, 1.5), rnd(-0.4, 0.4) * B, this.p);
           this.shatter(this.p.x, this.p.y, this.p.z, this.n(5 + 4 * c.size), 0.7, 5);
           this.sparks(this.p.x, this.p.y, this.p.z, 6, 8, 9);
           this.shakeAt(this.p.x, this.p.y, this.p.z, 0.1);
@@ -531,7 +540,7 @@ export class Effects {
       case 'wreck': {
         const count = this.n(Math.round((6 + 10 * c.size) * (0.45 + L / 60)) * this.tier);
         for (let i = 0; i < count; i += 1) {
-          this.views.localToWorld(id, rnd(-0.42, 0.42) * L, ship.spec.deck + rnd(0, 1.2), rnd(-0.45, 0.45) * B, this.p);
+          this.views.localToWorld(id, rnd(-0.42, 0.42) * L, this.deckOf(ship) + rnd(0, 1.2), rnd(-0.45, 0.45) * B, this.p);
           const out = rnd(1, 5);
           const vx = sideX * out + rnd(-2, 2);
           const vz = sideZ * out + rnd(-2, 2);
@@ -553,7 +562,7 @@ export class Effects {
       }
       case 'mast': {
         const i = Math.floor(rnd(0, Math.min(MAST_AT.length, MASTS[ship.spec.kind] ?? 1)));
-        this.views.localToWorld(id, MAST_AT[i]! * L, ship.spec.deck + ship.spec.height * 0.45, 0, this.p);
+        this.views.localToWorld(id, MAST_AT[i]! * L, this.deckOf(ship) + ship.spec.height * 0.45, 0, this.p);
         const len = ship.spec.height * rnd(0.7, 1.1);
         // The snapped mast topples toward the low side and takes a spar or two with it.
         this.debris.spawn(Piece.Mast, this.p.x, this.p.y, this.p.z, sideX * rnd(3, 7), rnd(2, 5), sideZ * rnd(3, 7), len, 0.7, 0.7, rnd(34, 52), 0.35);
@@ -566,7 +575,7 @@ export class Effects {
       }
       case 'blast': {
         if (ship.fire < 0.08) break;
-        this.views.localToWorld(id, rnd(-0.3, 0.3) * L, ship.spec.deck + 1, rnd(-0.3, 0.3) * B, this.p);
+        this.views.localToWorld(id, rnd(-0.3, 0.3) * L, this.deckOf(ship) + 1, rnd(-0.3, 0.3) * B, this.p);
         this.blast(this.p.x, this.p.y, this.p.z, 0.22 + 0.3 * c.size);
         this.cue('blast', this.p.x, this.p.y, this.p.z, c.size);
         break;
@@ -682,16 +691,41 @@ export class Effects {
     }
   }
 
+  /** Height of the deck flames and smoke rise from: the fighting deck of an open ship, the hull's rim under the turtle's roof. */
+  private deckOf(ship: Ship) {
+    const kind = ship.spec.kind;
+    return DECKS[kind].open ? mainDeck(`${kind}#${ship.variant}`, kind, ship.spec.deck) : ship.spec.deck;
+  }
+
+  /** The turtle ship's dragon keeps breathing dark sulphur smoke through the battle, a great belch when the bow gun fires. */
+  private dragonSmoke(ship: Ship, dt: number) {
+    const mouth = anchorsFor('geobukseon#0')?.smokeStack;
+    if (!mouth || dt <= 0) return;
+    let d = this.dragon.get(ship.id);
+    if (!d) this.dragon.set(ship.id, (d = { blast: 0, acc: 0 }));
+    d.blast = Math.max(0, d.blast - dt * 0.6);
+    d.acc = Math.min(d.acc + (7 + 90 * d.blast) * dt, 10);
+    const c = Math.cos(ship.heading);
+    const n = Math.sin(ship.heading);
+    while (d.acc >= 1) {
+      d.acc -= 1;
+      this.views.localToWorld(ship.id, mouth[0] + 0.4, mouth[1] + rnd(-0.2, 0.5), rnd(-0.4, 0.4), this.p);
+      const sp = rnd(2, 5) + 9 * d.blast;
+      this.smoke.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: c * sp + rnd(-0.8, 0.8), vy: rnd(0.8, 2.2), vz: n * sp + rnd(-0.8, 0.8), life: rnd(5, 9), size0: rnd(0.8, 1.4), size1: rnd(5, 8) * (1 + d.blast * 0.8), alpha: 0.5 + 0.25 * d.blast, r: 0.22, g: 0.2, b: 0.1, drag: 1.3, lift: 0.3, wind: 1, heat: 0.15 });
+    }
+  }
+
   private continuous(battle: Battle, dt: number) {
     if (dt > 0) this.rowing(battle, dt);
     for (const ship of battle.ships) {
       if (!ship.alive) continue;
+      if (ship.spec.kind === 'geobukseon' && ship.sinking === 0) this.dragonSmoke(ship, dt);
       if (ship.sinking > 0) this.sinking(ship, dt);
       const burning = ship.fire > 0.02 || (ship.sinking > 0 && ship.sinking < 0.85);
       if (!burning) {
         const wreck = 1 - ship.hull / ship.spec.hull;
         if (wreck > 0.45 && ship.sinking === 0 && Math.random() < dt * wreck * 5) {
-          this.views.localToWorld(ship.id, rnd(-0.3, 0.3) * ship.spec.length, ship.spec.deck, rnd(-0.3, 0.3) * ship.spec.beam, this.p);
+          this.views.localToWorld(ship.id, rnd(-0.3, 0.3) * ship.spec.length, this.deckOf(ship), rnd(-0.3, 0.3) * ship.spec.beam, this.p);
           this.smoke.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: rnd(-0.5, 0.5), vy: rnd(1.5, 3), vz: rnd(-0.5, 0.5), life: rnd(8, 14), size0: 2, size1: rnd(10, 16), alpha: 0.45, r: 0.35, g: 0.33, b: 0.31, drag: 0.8, lift: 0.4, wind: 1 });
         }
         continue;
@@ -707,7 +741,7 @@ export class Effects {
         acc -= 1;
         const lx = rnd(-0.38, 0.38) * L;
         const lz = rnd(-0.4, 0.4) * ship.spec.beam;
-        this.views.localToWorld(ship.id, lx, ship.spec.deck * rnd(0.7, 1.2), lz, this.p);
+        this.views.localToWorld(ship.id, lx, this.deckOf(ship) * rnd(0.85, 1.15), lz, this.p);
         // Flames that would sit under the waterline of a heeled, sinking hull are out.
         if (this.p.y < sea + 0.4) continue;
         const big = rnd(0.6, 1.4) * (0.6 + level);
@@ -721,7 +755,7 @@ export class Effects {
       }
       this.emitAccum.set(ship.id, acc);
       if (level > 0.15) {
-        this.views.localToWorld(ship.id, 0, ship.spec.deck + 3, 0, this.p);
+        this.views.localToWorld(ship.id, 0, this.deckOf(ship) + 3, 0, this.p);
         this.sources.push({ x: this.p.x, y: this.p.y, z: this.p.z, intensity: 5000 * level * (0.85 + Math.random() * 0.3), decay: 1, r: 1, g: 0.5, b: 0.2, age: 0, life: dt * 1.01, dist: 180 });
       }
       if (ship.sinking > 0 && Math.random() < dt * 6) {

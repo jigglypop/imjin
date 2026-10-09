@@ -74,6 +74,16 @@ const SHOTS = [
   { name: 'ming_cut3', key: 'mingship#0', yaw: 0.6, pitch: 0.6, distance: 50, cut: 3 },
   { name: 'msmall_34', key: 'mingsmall#0', yaw: 0.8, pitch: 0.2, distance: 34 },
   { name: 'msmall_side', key: 'mingsmall#0', yaw: PI / 2, pitch: 0.08, distance: 36 },
+  { name: 'geo_hullclose', key: 'geobukseon#0', yaw: PI / 2 - 0.25, pitch: 0.06, distance: 15, dx: 3, dz: 0 },
+  { name: 'geo_dragon', key: 'geobukseon#0', yaw: 0.35, pitch: 0.12, distance: 17, dx: 15.5 },
+  { name: 'pano0_hullclose', key: 'panokseon#0', yaw: PI / 2 - 0.3, pitch: 0.06, distance: 15, dx: 2 },
+  { name: 'ming_hullclose', key: 'mingship#0', yaw: PI / 2 - 0.3, pitch: 0.06, distance: 16, dx: 2 },
+  { name: 'atake1_34', key: 'atakebune#1', yaw: 0.8, pitch: 0.2, distance: 66 },
+  { name: 'atake1_castle', key: 'atakebune#1', yaw: 0.6, pitch: 0.18, distance: 28, dx: -5 },
+  { name: 'seki1_34', key: 'sekibune#1', yaw: 0.8, pitch: 0.2, distance: 40 },
+  { name: 'pano0_cut3_stern', key: 'panokseon#0', yaw: 0.9, pitch: 0.75, distance: 22, dx: -13, cut: 3 },
+  { name: 'pano0_cut3_bow', key: 'panokseon#0', yaw: 0.6, pitch: 0.7, distance: 22, dx: 13, cut: 3 },
+  { name: 'geo_mid', key: 'geobukseon#0', yaw: PI / 2 - 0.5, pitch: 0.12, distance: 34, dx: 4 },
   { name: 'row_japan', key: 'atakebune#0', yaw: 0.7, pitch: 0.25, distance: 150, dx: 60 },
 ];
 const only = args.shots ? new Set(args.shots.split(',')) : null;

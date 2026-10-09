@@ -3,8 +3,8 @@
  * crested shield boards with ozutsu ports, a three-tier plaster-and-timber castle with kawara skirts, an irimoya
  * roof crowned by gold shachihoko, maku curtains with the crest, nobori banners and one straw sail on the foremast.
  */
-import { anchorsFor, ATAKE_PLAN, atakeLevels, sideZ } from '../anchors';
-import { box, cylinder, MeshBuilder, paints, rectSection, sweep, type MeshData, type V3 } from './parts';
+import { anchorsFor, ATAKE_PLANS, ATAKE_TURRET, atakeLevels, sideZ } from '../anchors';
+import { box, cylinder, hipRoof, MeshBuilder, paints, rectSection, spike, sweep, xlate, type MeshData, type V3 } from './parts';
 import {
   anchorProp,
   barrel,
@@ -32,11 +32,11 @@ import {
 import { makuRun, nobori, plasterTier, shachihoko } from './japan';
 import { irimoyaRoof, skirtRoof } from './roofs';
 
-export function buildAtakebune(lod: Lod): MeshData {
-  const plan = ATAKE_PLAN;
-  const anchors = anchorsFor('atakebune#0')!;
+export function buildAtakebune(variant: number, lod: Lod): MeshData {
+  const plan = ATAKE_PLANS[variant] ?? ATAKE_PLANS[0]!;
+  const anchors = anchorsFor(`atakebune#${ATAKE_PLANS[variant] ? variant : 0}`)!;
   const b = new MeshBuilder();
-  const ctx: Ctx = { b, lod, faction: 'japan', P: paints('japan'), rnd: mulberry32(5150) };
+  const ctx: Ctx = { b, lod, faction: 'japan', P: paints('japan'), rnd: mulberry32(5150 + variant) };
   const { P } = ctx;
   const h = plan.hull;
   const L = h.length;
@@ -45,9 +45,9 @@ export function buildAtakebune(lod: Lod): MeshData {
   const plank = P('hull_plank', { tint: [0.66, 0.6, 0.55] });
   const dark = P('black_lacquer', { tint: [0.16, 0.16, 0.16] });
   const iron = P('iron', { tint: [0.85, 0.8, 0.78] });
-  const gold = P('gold', { tint: [1.15, 1.0, 0.7] });
+  const gold = P('gold', { tint: [0.95, 0.85, 0.65] });
   const kawara = P('kawara');
-  const plaster = P('plaster');
+  const plaster = P('plaster', { tint: [0.92, 0.9, 0.86] });
   const rope = P('rope');
   const wood = P('hull_plank', { tint: [0.85, 0.78, 0.7] });
   const sheer = (x: number) => plan.sheer * Math.pow(Math.abs((2 * x) / L), 2.2);
@@ -134,6 +134,13 @@ export function buildAtakebune(lod: Lod): MeshData {
       if (lod < 2) longPennant(ctx, clothPatch(ctx, 'nobori_a', 'red'), [staff[0] - 0.05, staff[1] + 2.35, 0], 6.5, 0.9, 0.3);
     }
   });
+  // the second atakebune carries a small turret on the foredeck as well
+  if (variant === 1) {
+    const u = ATAKE_TURRET;
+    plasterTier(ctx, { cx: u.x, hx: u.hx, hz: u.hz, y0: deck, y1: deck + u.h, base: 0.6, bay: 2.4, loop: [0.24, 0.24], window: false }, { plaster, lacquer, frame, dark });
+    b.with(xlate(u.x, 0, 0), () => hipRoof(b, kawara, lacquer, lacquer, { hx: u.hx + 1.0, hz: u.hz + 1.0, ridge: 0.4, y: deck + u.h - 0.05, rise: 1.5, lift: 0.45, concave: 1.7, nSlope: byLod(ctx, 5, 3, 1), nEave: byLod(ctx, 12, 6, 2), fascia: 0.34 }));
+    if (lod < 2) spike(b, gold, [u.x, deck + u.h + 1.5, 0], [0, 1, 0], 0.1, 1.2, 5);
+  }
   // maku curtains hang under the eaves of the lowest tier
   const t0 = lv[0]!;
   for (const side of [-1, 1] as const) makuRun(ctx, P('maku', { rect: [0.01, 0.01, 0.99, 0.99] }), plan.cx - t0.hx + 0.5, plan.cx + t0.hx - 0.5, side * (t0.hz + 0.2), t0.y1 - 0.12, 1.5, 4, side, frame);
@@ -165,7 +172,7 @@ export function buildAtakebune(lod: Lod): MeshData {
   ropeCoil(ctx, rope, [12.6, deck, -3.6], 0.45);
   hatch(ctx, P('deck_plank'), dark, -14.2, deck, 0.6, 2.2, 1.5);
   hatch(ctx, P('deck_plank'), dark, 13.4, deck, -0.4, 1.8, 1.4);
-  windlass(ctx, wood, iron, 16.2, deck, 1.5);
+  if (variant === 0) windlass(ctx, wood, iron, 16.2, deck, 1.5);
   for (const side of [-1, 1]) anchorProp(ctx, wood, iron, [13.6, deck - 0.1, side * (outer(13.6) + 0.45)]);
   for (const l of anchors.lanterns) lantern(ctx, P('sail_cloth', { tint: [1.35, 1.2, 0.95] }), lacquer, l);
   return b.data();

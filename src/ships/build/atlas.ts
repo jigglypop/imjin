@@ -10,7 +10,8 @@ export const ATLAS = { grid: layout.grid, cell: layout.cell, pad: layout.pad };
 
 /** Surface class by material name: drives roughness/metalness and cloth lighting. */
 function surfOf(name: string) {
-  if (/sail|flag|maku|nobori|matting|pennant/.test(name)) return SURF.cloth;
+  if (/flag|maku|nobori|pennant/.test(name)) return SURF.banner;
+  if (/sail|matting/.test(name)) return SURF.cloth;
   if (/bronze|iron|gold/.test(name)) return SURF.metal;
   if (/lacquer|gilt|glazed|scale|dancheong/.test(name)) return SURF.gloss;
   return SURF.wood;

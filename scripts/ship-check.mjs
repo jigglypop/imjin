@@ -26,7 +26,7 @@ const m = await import(pathToFileURL(outfile).href);
 const only = process.argv.slice(2);
 const keys = [];
 for (const kind of m.PROCEDURAL_KINDS) {
-  const variants = kind === 'panokseon' ? m.panokVariants() : 1;
+  const variants = m.variantCount(kind);
   for (let v = 0; v < variants; v += 1) keys.push([kind, v]);
 }
 const BUDGET = {

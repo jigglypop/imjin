@@ -3,17 +3,17 @@
  * with gun slits and oar notches, a small plaster cabin under an irimoya roof aft, nobori banners, seven oars a side
  * and a single sail.
  */
-import { anchorsFor, hullTop, SEKI_PLAN, sideZ } from '../anchors';
-import { box, MeshBuilder, paints, rectSection, sweep, type MeshData, type V3 } from './parts';
+import { anchorsFor, hullTop, SEKI_PLANS, sideZ } from '../anchors';
+import { box, hipRoof, MeshBuilder, paints, rectSection, spike, sweep, xlate, type MeshData, type V3 } from './parts';
 import { anchorProp, barrel, byLod, clothPatch, deckPlane, hullBand, lantern, loftHull, longPennant, mast, mulberry32, oar, oarPortFrame, ropeCoil, sail, sideTimber, wallRun, type Ctx, type Lod } from './common';
 import { nobori, plasterTier, shachihoko } from './japan';
 import { irimoyaRoof } from './roofs';
 
-export function buildSekibune(lod: Lod): MeshData {
-  const plan = SEKI_PLAN;
-  const anchors = anchorsFor('sekibune#0')!;
+export function buildSekibune(variant: number, lod: Lod): MeshData {
+  const plan = SEKI_PLANS[variant] ?? SEKI_PLANS[0]!;
+  const anchors = anchorsFor(`sekibune#${SEKI_PLANS[variant] ? variant : 0}`)!;
   const b = new MeshBuilder();
-  const ctx: Ctx = { b, lod, faction: 'japan', P: paints('japan'), rnd: mulberry32(6200) };
+  const ctx: Ctx = { b, lod, faction: 'japan', P: paints('japan'), rnd: mulberry32(6200 + variant) };
   const { P } = ctx;
   const h = plan.hull;
   const L = h.length;
@@ -23,14 +23,15 @@ export function buildSekibune(lod: Lod): MeshData {
   const wood = P('hull_plank', { tint: [0.9, 0.82, 0.72] });
   const dark = P('black_lacquer', { tint: [0.16, 0.16, 0.16] });
   const iron = P('iron', { tint: [0.85, 0.8, 0.78] });
-  const gold = P('gold', { tint: [1.15, 1.0, 0.7] });
+  const gold = P('gold', { tint: [0.95, 0.85, 0.65] });
   const rope = P('rope');
   const top = (x: number) => hullTop(h, x) + plan.parapet + plan.sheer * Math.pow(Math.abs((2 * x) / L), 2.2);
   const outer = (x: number) => sideZ(h, x, hullTop(h, x)) + 0.03;
 
   // --- hull ---
   loftHull(ctx, h, plank, plank);
-  hullBand(ctx, h, lacquer, -L / 2 + 0.05, L / 2 - 0.05, 0.85, (x) => hullTop(h, x) - 0.02, 0.04);
+  // the second sekibune is left in plain weathered timber below its wall
+  if (variant === 0) hullBand(ctx, h, lacquer, -L / 2 + 0.05, L / 2 - 0.05, 0.85, (x) => hullTop(h, x) - 0.02, 0.04);
   deckPlane(ctx, h, P('deck_plank'), -L / 2 + 0.35, L / 2 - 0.35, deck, 0.04);
   if (lod < 2) {
     deckPlane(ctx, h, P('deck_plank', { tint: [0.85, 0.8, 0.74] }), 7.5, L / 2 - 0.5, deck + 0.5, 0.1);
@@ -86,14 +87,19 @@ export function buildSekibune(lod: Lod): MeshData {
   // --- cabin aft ---
   const c = plan.cabin;
   plasterTier(ctx, { cx: c.x, hx: c.hx, hz: c.hz, y0: deck, y1: deck + c.h, base: 0.4, bay: 1.8, loop: [0.2, 0.2], window: true }, { plaster: P('plaster'), lacquer, frame: lacquer, dark });
-  const roof = irimoyaRoof(ctx, { tile: P('kawara'), trim: lacquer, cap: lacquer }, P('plaster'), { cx: c.x, hx: c.hx + 0.9, hz: c.hz + 0.9, wx: c.hx - 0.5, wz: c.hz - 0.45, y: deck + c.h - 0.04, skirt: 0.55, hafu: 0.4, gable: 0.95, lift: 0.35 });
-  for (const sx of [-1, 1] as const) shachihoko(ctx, gold, [c.x + sx * roof.ridgeX, roof.ridgeY + 0.15, 0], sx, 0.5);
+  if (variant === 0) {
+    const roof = irimoyaRoof(ctx, { tile: P('kawara'), trim: lacquer, cap: lacquer }, P('plaster'), { cx: c.x, hx: c.hx + 0.9, hz: c.hz + 0.9, wx: c.hx - 0.5, wz: c.hz - 0.45, y: deck + c.h - 0.04, skirt: 0.55, hafu: 0.4, gable: 0.95, lift: 0.35 });
+    for (const sx of [-1, 1] as const) shachihoko(ctx, gold, [c.x + sx * roof.ridgeX, roof.ridgeY + 0.15, 0], sx, 0.5);
+  } else {
+    b.with(xlate(c.x, 0, 0), () => hipRoof(b, P('shingle', { tint: [0.7, 0.66, 0.62] }), lacquer, lacquer, { hx: c.hx + 0.8, hz: c.hz + 0.8, ridge: 0.5, y: deck + c.h - 0.04, rise: 1.0, lift: 0.3, concave: 1.5, nSlope: byLod(ctx, 4, 2, 1), nEave: byLod(ctx, 10, 5, 2), fascia: 0.26 }));
+    if (lod < 2) spike(b, gold, [c.x, deck + c.h + 1.0, 0], [0, 1, 0], 0.07, 0.8, 5);
+  }
 
   // --- mast, sail, banners ---
   const m = plan.mast;
   mast(ctx, wood, iron, m.x, deck, m.h, m.r);
   if (lod < 2) box(b, plank, [m.x - 0.4, deck, -0.4], [m.x + 0.4, deck + 0.35, 0.4], { grain: 0 });
-  sail(ctx, P('sail_cloth', { tint: [1.0, 0.95, 0.85] }), wood, rope, { x: m.x, yTop: deck + m.h - 1.0, w: m.sailW, h: m.sailH, billow: 0.55, battens: 6, phase: 0.9 });
+  sail(ctx, variant === 0 ? P('sail_cloth', { tint: [1.0, 0.95, 0.85] }) : P('matting', { tint: [0.95, 0.85, 0.7] }), wood, rope, { x: m.x, yTop: deck + m.h - 1.0, w: m.sailW, h: m.sailH, billow: 0.55, battens: 6, phase: 0.9 });
   if (lod < 2) longPennant(ctx, clothPatch(ctx, 'nobori_a', 'red'), [m.x - 0.05, deck + m.h - 0.1, 0], 3.4, 0.5, 0.7);
   for (const f of anchors.flagMounts) if (f.kind === 'nobori') nobori(ctx, f.pos, f.size[1] + 0.8, f.size[0], f.size[1], f.id.slice(7), f.pos[0] + f.pos[2], wood);
 

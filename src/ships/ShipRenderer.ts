@@ -50,6 +50,9 @@ import { SHIP_SPECS } from '../sim/catalog';
 import type { ShipAnchors } from './anchors';
 import { useProcedural } from './build/mode';
 import { loadProcedural } from './build/procedural';
+import { equipment } from '../game/quality';
+import { emberGlow, weather } from './weather';
+import { SOOT_STEP } from './build/bake';
 
 export type ShipModelSpec = {
   kind: ShipKind;
@@ -66,7 +69,9 @@ export const SHIP_MODELS: ShipModelSpec[] = [
   { kind: 'panokseon', variant: 2, base: '/models/panokseon_c', axis: 'x', bow: 1, waterline: 0.13 },
   { kind: 'geobukseon', variant: 0, base: '/models/geobukseon_v2', axis: 'z', bow: 1, waterline: 0.22 },
   { kind: 'atakebune', variant: 0, base: '/models/atakebune_v2', axis: 'z', bow: 1, waterline: 0.12 },
+  { kind: 'atakebune', variant: 1, base: '/models/atakebune_v2', axis: 'z', bow: 1, waterline: 0.12 },
   { kind: 'sekibune', variant: 0, base: '/models/sekibune_v2', axis: 'z', bow: 1, waterline: 0.11 },
+  { kind: 'sekibune', variant: 1, base: '/models/sekibune_v2', axis: 'z', bow: 1, waterline: 0.11 },
   { kind: 'hyeopseon', variant: 0, base: '/models/hyeopseon', axis: 'z', bow: 1, waterline: 0.1 },
   { kind: 'kobaya', variant: 0, base: '/models/kobaya', axis: 'z', bow: 1, waterline: 0.11 },
   { kind: 'mingship', variant: 0, base: '/models/mingship', axis: 'z', bow: 1, waterline: 0.15 },
@@ -267,8 +272,10 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   const burn = A.w;
   const up = B.xyz;
   const flash = B.w;
+  const shipY = dot(positionWorld.sub(origin), up);
   let baseColor: any = map ? texture(map, uv()).rgb : vec3(src.color.r, src.color.g, src.color.b);
   let rough: any = src.roughnessMap ? texture(src.roughnessMap, uv()).g : float(0.85);
+  let glow: any = vec3(0);
   if (atlas) {
     // Procedural ships: uv is in tile space (repeats per atlas cell), mat = (cell, surface class). Each cell is a
     // tile with a wrapped gutter, so the repeat happens here with explicit gradients to keep mip selection seamless.
@@ -284,13 +291,11 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
     const gy = dFdy(U).mul(k);
     const sample = (t: Texture) => texture(t, auv).grad(gx, gy);
     const tint: any = attribute('color', 'vec3');
-    baseColor = sample(map!).rgb.mul(tint);
     const surf = mat.y.add(0.5).floor();
-    const isCloth = surf.equal(1);
+    const soot = mat.y.sub(surf).div(SOOT_STEP);
+    const isCloth = surf.equal(1).or(surf.equal(4));
     const isMetal = surf.equal(2);
-    const isGloss = surf.equal(3);
-    rough = sample(src.roughnessMap!).g;
-    rough = select(isGloss, rough.mul(0.8), select(isMetal, rough.mul(0.8), select(isCloth, float(0.95), rough)));
+    rough = select(isCloth, float(0.95), sample(src.roughnessMap!).g);
     m.metalnessNode = select(isMetal, float(0.55), float(0));
     m.normalNode = normalMap(sample(src.normalMap!).rgb, vec2(1, 1));
     // Flags and sails flutter along their own normal; hull vertices have weight 0.
@@ -298,15 +303,19 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
     const phase = sway.y.add(positionGeometry.x.mul(0.9));
     const wave = sin(time.mul(3.1).add(phase)).add(sin(time.mul(5.3).add(phase.mul(1.7))).mul(0.4));
     m.positionNode = positionLocal.add(normalLocal.mul(wave.mul(sway.x).mul(0.2)));
+    const worn = weather({ color: sample(map!).rgb.mul(tint), surf, soot, shipY, rough, detail: equipment.tier !== 'low' });
+    baseColor = worn.color;
+    rough = worn.rough;
+    glow = emberGlow(surf, tint);
   }
-  const shipY = dot(positionWorld.sub(origin), up);
   const wet = float(1).sub(smoothstep(-0.1, 0.9, shipY));
   const under = float(1).sub(smoothstep(-0.9, -0.05, shipY));
   const noise = mx_noise_float(positionWorld.mul(0.35)).mul(0.5).add(0.5);
   const charAmount = smoothstep(0.35, 0.75, noise.add(burn.mul(0.9)).sub(0.45)).mul(burn);
   const ember = smoothstep(0.62, 0.95, mx_noise_float(positionWorld.mul(1.3).add(vec3(0, burn.mul(4), 0))).mul(0.5).add(0.5));
-  const wetColor = baseColor.mul(mix(float(1), float(0.55), wet));
-  const algae = mix(wetColor, wetColor.mul(vec3(0.42, 0.52, 0.36)), under.mul(0.85));
+  // Atlas ships get their waterline in weather(); the legacy models still need it here.
+  const wetColor = atlas ? baseColor : baseColor.mul(mix(float(1), float(0.55), wet));
+  const algae = atlas ? wetColor : mix(wetColor, wetColor.mul(vec3(0.42, 0.52, 0.36)), under.mul(0.85));
   const charred = mix(algae, vec3(0.025, 0.02, 0.018), charAmount.mul(0.9));
   const lit = charred.mul(float(1).add(flash.mul(2)));
   if (c) {
@@ -320,8 +329,10 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
       return select(frontFacing, lit, timber);
     })();
   } else m.colorNode = lit;
-  m.roughnessNode = mix(rough.mul(0.95).add(0.05), float(0.25), wet.mul(0.8)).max(0.05);
-  m.emissiveNode = vec3(1.0, 0.32, 0.06).mul(charAmount.mul(burn).mul(ember).mul(4));
+  const wetRough = mix(rough.mul(0.95).add(0.05), float(0.25), wet.mul(0.8)).max(0.05);
+  // Inside a section-cut hull the raw timber never got wet: without this the scoop of the hull bottom mirrors the sky.
+  m.roughnessNode = c ? select(frontFacing, wetRough, float(0.9)) : wetRough;
+  m.emissiveNode = vec3(1.0, 0.32, 0.06).mul(charAmount.mul(burn).mul(ember).mul(4)).add(glow);
   return m;
 }
 

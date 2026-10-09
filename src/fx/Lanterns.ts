@@ -114,14 +114,21 @@ export class Lanterns {
         if (!ship.alive || !ship.lights || ship.sinking > 0.3) continue;
         const v = this.views.states.get(ship.id);
         if (!v || !v.visible) continue;
-        const pts = POINTS[ship.spec.kind];
+        // Modelled ships carry their lantern hooks in ship space; the legacy ones use fractions of their size.
+        const anchors = this.views.assets?.[v.key]?.anchors;
+        const legacy = POINTS[ship.spec.kind];
         const deck = DECK[v.key] ?? ship.spec.deck;
         const dist = Math.hypot(ship.x - cam.x, ship.z - cam.z);
         const size = 1.5 + dist * 0.0075;
-        for (const [fl, dy, fb] of pts) {
+        const count = anchors ? anchors.lanterns.length : legacy.length;
+        for (let i = 0; i < count; i += 1) {
           if (n >= CAPACITY) break;
-          this.views.localToWorld(ship.id, fl * ship.spec.length, deck + dy, fb * ship.spec.beam, this.p);
-          const flicker = 0.88 + Math.sin(battle.time * 13 + ship.id * 3.1 + fl * 7) * 0.06 + Math.random() * 0.06;
+          const l = anchors ? anchors.lanterns[i]! : legacy[i]!;
+          const fl = anchors ? l[0] : l[0] * ship.spec.length;
+          const y = anchors ? l[1] : deck + l[1];
+          const dy = anchors ? l[1] - anchors.mainDeck : l[1];
+          this.views.localToWorld(ship.id, fl, y, anchors ? l[2] : l[2] * ship.spec.beam, this.p);
+          const flicker = 0.88 + Math.sin(battle.time * 13 + ship.id * 3.1 + fl * 0.2) * 0.06 + Math.random() * 0.06;
           const o = n * 4;
           G[o] = this.p.x;
           G[o + 1] = this.p.y;

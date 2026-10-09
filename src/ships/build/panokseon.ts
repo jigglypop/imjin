@@ -63,7 +63,9 @@ const FLAG_CYCLE: [string, string][] = [
   ['flags_b', 'blue'],
   ['flags_a', 'red'],
   ['flags_b', 'white'],
+  ['flags_a', 'tiger'],
   ['flags_b', 'yellow'],
+  ['flags_a', 'jang'],
   ['flags_b', 'black'],
 ];
 
@@ -106,7 +108,8 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
     anchors.gunPorts
       .filter((g) => g.side === side)
       .map((g) => ({ x: g.pos[0], w: 0.85, y0: deck + 0.5, y1: deck + 1.2 }));
-  const shields = [P('shield_cloud', { rect: [0.02, 0.02, 0.98, 0.98] }), P('shield_tiger', { rect: [0.02, 0.02, 0.98, 0.98] })];
+  // Shield boards: repainted every few campaigns, so a little faded.
+  const shields = [P('shield_cloud', { rect: [0.02, 0.02, 0.98, 0.98], tint: [0.88, 0.85, 0.82] }), P('shield_tiger', { rect: [0.02, 0.02, 0.98, 0.98], tint: [0.88, 0.85, 0.82] })];
   for (const side of [-1, 1] as const) {
     wallRun(ctx, side, -L / 2 + 0.3, L / 2 - 0.3, deck, top, outer, 0.26, ports(side === -1 ? 0 : 1), timber.tinted(wallTint), timber.tinted([0.8, 0.78, 0.74]));
     // coping rail along the top
@@ -189,22 +192,33 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
       }
     }
     if (lod < 2) {
-      const fl =variant === 0 ? ['flags_b', 'yellow'] : variant === 1 ? ['flags_a', 'jang'] : ['flags_a', 'tiger'];
-      if (i === 0) flag(ctx, { pole: [m.x, deck + m.h + 0.4, 0], poleH: 1.0, w: variant === 0 ? 1.5 : 1.7, h: variant === 0 ? 1.4 : 1.6, sheet: fl[0]!, flag: fl[1]!, phase: 2.1, wood: timber });
+      const fl = variant === 0 ? ['flags_a', 'su'] : variant === 1 ? ['flags_a', 'jang'] : ['flags_a', 'tiger'];
+      if (i === 0) flag(ctx, { pole: [m.x, deck + m.h + 0.4, 0], poleH: 1.0, w: variant === 0 ? 2.5 : 1.7, h: variant === 0 ? 2.3 : 1.6, sheet: fl[0]!, flag: fl[1]!, phase: 2.1, wood: timber });
       else if (i === 1) longPennant(ctx, fl[0] === 'flags_a' ? clothPatch(ctx, 'flags_a', 'red') : clothPatch(ctx, 'flags_b', 'blue'), [m.x - 0.1, deck + m.h - 0.1, 0], 7.5, 0.8, 0.6);
     }
   });
 
-  // --- banners along the bulwark ---
+  // --- banners along the bulwark: every colour of the five directions, tall and short, a different order per variant ---
   if (lod < 2) {
     let k = 0;
     for (const side of [-1, 1] as const) {
       boardXs.forEach((x, i) => {
         if (lod === 1 && i % 2) return;
-        const [sheet, name] = FLAG_CYCLE[(k + side + 2) % 5]!;
+        const [sheet, name] = FLAG_CYCLE[(k * 3 + (side + 1) * 2 + variant * 2) % FLAG_CYCLE.length]!;
+        const tall = (k + variant) % 3;
         k += 1;
-        flag(ctx, { pole: [x, top(x) + 0.1, side * (outer(x) - 0.12)], poleH: 1.7, w: 1.05, h: 0.8, sheet, flag: name, phase: k * 0.9, wood: timber, nu: byLod(ctx, 4, 1, 1), nv: byLod(ctx, 3, 1, 1) });
+        flag(ctx, { pole: [x, top(x) + 0.1, side * (outer(x) - 0.12)], poleH: 1.7 + tall * 0.45, w: 1.05 + tall * 0.2, h: 0.8 + tall * 0.3, sheet, flag: name, phase: k * 0.9, wood: timber, nu: byLod(ctx, 4, 1, 1), nv: byLod(ctx, 3, 1, 1) });
       });
+    }
+    // great staffs at the stern corners and the bow, flying the commanders' own colours
+    const staffs: [number, number, string, string][] = [
+      [-L / 2 + 0.9, -1, 'flags_a', variant === 0 ? 'jang' : 'tiger'],
+      [-L / 2 + 0.9, 1, 'flags_b', variant === 2 ? 'black' : 'blue'],
+      [L / 2 - 1.2, 0, 'flags_a', variant === 1 ? 'tiger' : 'red'],
+    ];
+    for (const [x, sgn, sheet, name] of staffs) {
+      const z = sgn * (outer(x) - 0.6);
+      flag(ctx, { pole: [x, top(x) + 0.1, z], poleH: 3.4, w: 2.1, h: 2.5, sheet, flag: name, phase: x * 0.3 + sgn, wood: timber, nu: byLod(ctx, 6, 2, 1), nv: byLod(ctx, 5, 2, 1), flutter: 1.1 });
     }
   }
 
@@ -342,8 +356,12 @@ function pavilion(ctx: Ctx, plan: PanokPlan, variant: number) {
     b.with(xlate(x0, 0, 0), () => hipRoof(b, giwa, dan, cap, { hx: uh, hz: uw, ridge: Math.max(0.3, uh - uw - 0.2), y: uy + 2.15, rise: 1.15, lift: 0.4, concave: 1.6, nSlope: nS, nEave: nE, fascia: 0.28 }));
     flagBase = uy + 2.15 + 1.15;
   }
+  // little streamers on the four roof corners
+  if (lod < 2) {
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) flag(ctx, { pole: [x0 + sx * (eaveHx - 0.1), yTop + 0.6, sz * (eaveHz - 0.1)], poleH: 1.3, w: 0.9, h: 0.6, sheet: 'flags_b', flag: (sx + sz) % 2 ? 'yellow' : 'blue', phase: sx + sz * 2, wood: timber, nu: byLod(ctx, 3, 1, 1), nv: 1 });
+  }
   // command banner
-  const f = variant === 0 ? { w: 4.5, h: 3.7, name: 'su' } : variant === 1 ? { w: 3.4, h: 3.0, name: 'jang' } : { w: 3.8, h: 3.2, name: 'tiger' };
+  const f = variant === 0 ? { w: 6.4, h: 5.2, name: 'su' } : variant === 1 ? { w: 3.4, h: 3.0, name: 'jang' } : { w: 3.8, h: 3.2, name: 'tiger' };
   flag(ctx, { pole: [x0 + (tier3 ? 0 : 0.3), flagBase - 0.1, 0], poleH: f.h + 1.2, w: f.w, h: f.h, sheet: 'flags_a', flag: f.name, phase: 0.3, wood: timber, nu: byLod(ctx, 10, 3, 1), nv: byLod(ctx, 7, 3, 1), flutter: 1.2 });
 }
 

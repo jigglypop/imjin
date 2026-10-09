@@ -1,6 +1,7 @@
 import { waveField } from '../ocean/waves';
 import { GUN_SHOTS, GUN_SPECS, NO_MODS, SHIP_SPECS } from './catalog';
 import { ShipGrid } from './grid';
+import { anchorsFor } from '../ships/anchors';
 import type { CurrentField } from './current';
 import {
   OWNER_OF,
@@ -1440,10 +1441,22 @@ export class Battle {
     return best;
   }
 
+  /**
+   * Where a gun's shot leaves the ship. Ships with modelled gun ports (ships/anchors.ts, the same data the 3D model is
+   * built from) fire from the port itself; the others from a point scaled from the spec.
+   */
   muzzle(s: Ship, side: Side | 2, slot: number, count: number) {
     const spec = s.spec;
     const c = Math.cos(s.heading);
     const n = Math.sin(s.heading);
+    const anchors = anchorsFor(`${spec.kind}#${s.variant}`) ?? anchorsFor(`${spec.kind}#0`);
+    const port = anchors?.gunPorts.find((g) => g.side === side && g.index === slot);
+    if (port) {
+      // Ship space has +X forward and +Z across the beam; the shot starts a little past the muzzle of the carriage gun.
+      const lx = port.pos[0] + port.dir[0] * 0.9;
+      const lz = port.pos[2] + port.dir[2] * 0.9;
+      return { x: s.x + c * lx - n * lz, y: port.pos[1], z: s.z + n * lx + c * lz, dx: c * port.dir[0] - n * port.dir[2], dz: n * port.dir[0] + c * port.dir[2] };
+    }
     if (side === 2) {
       const f = spec.length * 0.5 + 0.5;
       return { x: s.x + c * f, y: spec.deck * 0.75, z: s.z + n * f, dx: c, dz: n };

@@ -1,4 +1,5 @@
 import { Battle } from './battle';
+import { variantFor } from '../ships/anchors';
 import type { ShipKind, ShipMods, Squadron, Team } from './types';
 import {
   ANGOLPO_TERRAIN,
@@ -352,16 +353,16 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     return p;
   };
   const squad = (team: Team, name: string, cmd: string, kind: ShipKind) => b.addSquadron(team, name, cmd, portraitFor(team, cmd), cardFor(kind));
-  const ship = (sq: Squadron, kind: ShipKind, p: Spot, name: string, flagship = false, variant = 0) => {
+  const ship = (sq: Squadron, kind: ShipKind, p: Spot, name: string, flagship = false, variant?: number) => {
     const r = kind === 'panokseon' || kind === 'geobukseon' || kind === 'atakebune' || kind === 'mingship' ? 22 : kind === 'sekibune' || kind === 'mingsmall' ? 15 : 9;
     const spot = settle(p, r);
     taken.push({ x: spot.x, z: spot.z, r });
     const w = place(spot.x, spot.z);
-    return b.addShip(kind, w.x, w.z, spot.h + axis, name, sq, flagship, variant);
+    return b.addShip(kind, w.x, w.z, spot.h + axis, name, sq, flagship, variant ?? (kind === 'panokseon' ? 0 : variantFor(kind, taken.length, flagship)));
   };
   const panoVariant = (i: number, flag: boolean) => (flag ? 0 : 1 + (i % 2));
   const line = (sq: Squadron, kind: ShipKind, spots: Spot[], prefix: string, flagIndex = -1) =>
-    spots.map((p, i) => ship(sq, kind, p, i === flagIndex ? `${prefix} 대장선` : `${prefix} ${i + 1}호`, i === flagIndex, kind === 'panokseon' ? panoVariant(i, i === flagIndex) : 0));
+    spots.map((p, i) => ship(sq, kind, p, i === flagIndex ? `${prefix} 대장선` : `${prefix} ${i + 1}호`, i === flagIndex, kind === 'panokseon' ? panoVariant(i, i === flagIndex) : undefined));
   const slotAll = (sq: Squadron) => {
     for (const sid of sq.shipIds) {
       const s = b.get(sid)!;
@@ -659,7 +660,7 @@ function spawnFleet(b: Battle, fleet: FleetSpawn, axis: number, land: LandFn) {
         z += Math.sin(a) * 30;
       }
       taken.push({ x, z });
-      const ship = b.addShip(spec.kind, x, z, heading, spec.name, squad, spec.flagship, spec.kind === 'panokseon' ? (spec.flagship ? 0 : 1 + (i % 2)) : 0);
+      const ship = b.addShip(spec.kind, x, z, heading, spec.name, squad, spec.flagship, variantFor(spec.kind, i, spec.flagship));
       ship.hull = ship.spec.hull * Math.max(0.05, spec.hull);
       ship.crew = ship.spec.crew * Math.max(0.05, spec.crew);
       b.applySupply(ship, spec.supply);

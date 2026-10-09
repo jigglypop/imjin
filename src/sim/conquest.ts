@@ -1,6 +1,7 @@
 import type { Battle, BattleRules } from './battle';
 import { GUN_SPECS, SHIP_SPECS } from './catalog';
 import { Strategist } from './strategy';
+import { variantFor } from '../ships/anchors';
 import type { ConquestState } from '../net/protocol';
 import { otherTeam, TEAMS, type Faction, type GunType, type LandSampler, type Ship, type ShipKind, type Squadron, type Team } from './types';
 
@@ -481,7 +482,7 @@ export class Conquest implements BattleRules {
     const key = `${pl.slot}:${kind}`;
     const n = (this.recruitSeq.get(key) ?? 0) + 1;
     this.recruitSeq.set(key, n);
-    const ship = b.addShip(kind, x, z, heading, `${SHORT_NAME[kind]} ${n}호`, sq, false, kind === 'panokseon' ? 1 + (n % 2) : 0);
+    const ship = b.addShip(kind, x, z, heading, `${SHORT_NAME[kind]} ${n}호`, sq, false, variantFor(kind, n));
     ship.speed = 0;
     ship.order = { type: 'move', x: p.x + Math.cos(heading) * 30, z: p.z + Math.sin(heading) * 30 };
     b.events.push({ type: 'spawned', ship: ship.id, point: p.id });
