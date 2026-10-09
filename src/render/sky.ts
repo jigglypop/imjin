@@ -4,7 +4,6 @@ import {
   EquirectangularReflectionMapping,
   HalfFloatType,
   LinearFilter,
-  LinearSRGBColorSpace,
   RGBAFormat,
   Vector3,
 } from 'three/webgpu';
@@ -15,6 +14,7 @@ export type SkyPresetName = 'afternoon' | 'day' | 'sunset' | 'overcast' | 'night
 
 export type SkyPreset = {
   label: string;
+  /** File name without size and extension: public/hdri/<file>_4k.hdr, and _2k.hdr from scripts/build-hdri.mjs. */
   file: string;
   exposure: number;
   brightness: number;
@@ -25,11 +25,11 @@ export type SkyPreset = {
 };
 
 export const SKY_PRESETS: Record<SkyPresetName, SkyPreset> = {
-  afternoon: { label: '오후', file: 'table_mountain_1_puresky_4k.hdr', exposure: 0.95, brightness: 1, fogDensity: 0.00007, minSunRatio: 12, axisOffset: 1.15, night: 0 },
-  day: { label: '한낮', file: 'kloofendal_48d_partly_cloudy_puresky_4k.hdr', exposure: 0.95, brightness: 1.05, fogDensity: 0.00006, minSunRatio: 12, axisOffset: 1.3, night: 0 },
-  sunset: { label: '노을', file: 'kloppenheim_06_puresky_4k.hdr', exposure: 1.0, brightness: 0.8, fogDensity: 0.00009, minSunRatio: 9, axisOffset: 0.5, night: 0 },
-  overcast: { label: '흐림', file: 'kloofendal_overcast_puresky_4k.hdr', exposure: 1.0, brightness: 0.85, fogDensity: 0.00018, minSunRatio: 0, axisOffset: 1.15, night: 0 },
-  night: { label: '달밤', file: 'qwantani_moonrise_puresky_4k.hdr', exposure: 1.0, brightness: 0.085, fogDensity: 0.00011, minSunRatio: 5, axisOffset: 0.4, night: 1 },
+  afternoon: { label: '오후', file: 'table_mountain_1_puresky', exposure: 0.95, brightness: 1, fogDensity: 0.00007, minSunRatio: 12, axisOffset: 1.15, night: 0 },
+  day: { label: '한낮', file: 'kloofendal_48d_partly_cloudy_puresky', exposure: 0.95, brightness: 1.05, fogDensity: 0.00006, minSunRatio: 12, axisOffset: 1.3, night: 0 },
+  sunset: { label: '노을', file: 'kloppenheim_06_puresky', exposure: 1.0, brightness: 0.8, fogDensity: 0.00009, minSunRatio: 9, axisOffset: 0.5, night: 0 },
+  overcast: { label: '흐림', file: 'kloofendal_overcast_puresky', exposure: 1.0, brightness: 0.85, fogDensity: 0.00018, minSunRatio: 0, axisOffset: 1.15, night: 0 },
+  night: { label: '달밤', file: 'qwantani_moonrise_puresky', exposure: 1.0, brightness: 0.085, fogDensity: 0.00011, minSunRatio: 5, axisOffset: 0.4, night: 1 },
 };
 
 const ENV_W = 1024;
@@ -57,41 +57,16 @@ export type LoadedSky = {
   info: SkyInfo;
 };
 
-/** Box-filter a half-float equirect by an integer factor. Output is always RGBA. */
-function downsampleHalf(img: { data: Uint16Array; width: number; height: number }, channels: number, factor: number, table: Float32Array) {
-  const w = Math.floor(img.width / factor);
-  const h = Math.floor(img.height / factor);
-  const out = new Uint16Array(w * h * 4);
-  for (let y = 0; y < h; y += 1) {
-    for (let x = 0; x < w; x += 1) {
-      let r = 0;
-      let g = 0;
-      let b = 0;
-      let n = 0;
-      for (let sy = y * factor; sy < (y + 1) * factor; sy += 1) {
-        for (let sx = x * factor; sx < (x + 1) * factor; sx += 1) {
-          const i = (sy * img.width + sx) * channels;
-          r += table[img.data[i]!]!;
-          g += table[img.data[i + 1]!]!;
-          b += table[img.data[i + 2]!]!;
-          n += 1;
-        }
-      }
-      const o = (y * w + x) * 4;
-      out[o] = DataUtils.toHalfFloat(r / n);
-      out[o + 1] = DataUtils.toHalfFloat(g / n);
-      out[o + 2] = DataUtils.toHalfFloat(b / n);
-      out[o + 3] = DataUtils.toHalfFloat(1);
-    }
-  }
-  return { data: out, width: w, height: h };
-}
-
-/** `downscale` shrinks the visible background texture (memory and bandwidth). Lighting is always computed at full resolution. */
-export async function loadSky(preset: SkyPreset, downscale = 1): Promise<LoadedSky> {
+/**
+ * `size` picks the prebuilt file: the background is the file itself, the lighting is computed from a 1024x512 filter of it.
+ * With `reuse` the new sky is written into the textures of the previous one instead of making new ones. The renderer
+ * builds its filtered reflection maps (and the objects that hold them) per texture and never frees the ones of a
+ * texture it has dropped, so a battle's sky must stay the same texture objects to leave nothing behind.
+ */
+export async function loadSky(preset: SkyPreset, size: '2k' | '4k' = '4k', reuse?: LoadedSky): Promise<LoadedSky> {
   const loader = new HDRLoader();
   loader.setDataType(HalfFloatType);
-  const source = await loader.loadAsync(`/hdri/${preset.file}`);
+  const source = await loader.loadAsync(`/hdri/${preset.file}_${size}.hdr`);
   source.mapping = EquirectangularReflectionMapping;
   source.needsUpdate = true;
   const img = source.image as { data: Uint16Array; width: number; height: number };
@@ -101,6 +76,8 @@ export async function loadSky(preset: SkyPreset, downscale = 1): Promise<LoadedS
   const channels = img.data.length / (srcW * srcH);
   const fx = srcW / ENV_W;
   const fy = srcH / ENV_H;
+  // Every other source pixel is enough from a 4k file. A 2k file has half as many to spare.
+  const stride = Math.max(1, Math.floor(fx / 2));
   const env = new Float32Array(ENV_W * ENV_H * 4);
   for (let y = 0; y < ENV_H; y += 1) {
     const sy0 = Math.floor(y * fy);
@@ -112,8 +89,8 @@ export async function loadSky(preset: SkyPreset, downscale = 1): Promise<LoadedS
       let g = 0;
       let b = 0;
       let n = 0;
-      for (let sy = sy0; sy < sy1; sy += 2) {
-        for (let sx = sx0; sx < sx1; sx += 2) {
+      for (let sy = sy0; sy < sy1; sy += stride) {
+        for (let sx = sx0; sx < sx1; sx += stride) {
           const i = (sy * srcW + sx) * channels;
           r += table[img.data[i]!]!;
           g += table[img.data[i + 1]!]!;
@@ -205,24 +182,25 @@ export async function loadSky(preset: SkyPreset, downscale = 1): Promise<LoadedS
     const dst = (ENV_H - 1 - y) * ENV_W * 4;
     for (let i = 0; i < ENV_W * 4; i += 1) half[dst + i] = DataUtils.toHalfFloat(env[src + i]!);
   }
-  const environment = new DataTexture(half, ENV_W, ENV_H, RGBAFormat, HalfFloatType);
-  environment.mapping = EquirectangularReflectionMapping;
-  environment.magFilter = LinearFilter;
-  environment.minFilter = LinearFilter;
-  environment.flipY = false;
-  environment.generateMipmaps = false;
-  environment.needsUpdate = true;
+  let environment: DataTexture;
   let background: DataTexture = source;
-  if (downscale > 1) {
-    const small = downsampleHalf(img, channels, downscale, table);
-    background = new DataTexture(small.data, small.width, small.height, RGBAFormat, HalfFloatType);
-    background.mapping = EquirectangularReflectionMapping;
-    background.colorSpace = LinearSRGBColorSpace;
-    background.flipY = source.flipY;
-    background.magFilter = LinearFilter;
-    background.minFilter = LinearFilter;
-    background.generateMipmaps = false;
+  const old = reuse?.background.image as { width: number; height: number } | undefined;
+  if (reuse && old && old.width === srcW && old.height === srcH) {
+    environment = reuse.environment;
+    environment.image.data = half;
+    environment.needsUpdate = true;
+    environment.needsPMREMUpdate = true;
+    background = reuse.background;
+    background.image = source.image;
     background.needsUpdate = true;
+  } else {
+    environment = new DataTexture(half, ENV_W, ENV_H, RGBAFormat, HalfFloatType);
+    environment.mapping = EquirectangularReflectionMapping;
+    environment.magFilter = LinearFilter;
+    environment.minFilter = LinearFilter;
+    environment.flipY = false;
+    environment.generateMipmaps = false;
+    environment.needsUpdate = true;
   }
   return { background, environment, info: { sunDir, sunIrradiance: irr, skyAmbient, horizon, ambientLum: ambL } };
 }

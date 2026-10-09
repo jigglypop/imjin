@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import type { Structure, StructureType } from './features';
 import type { Terrain } from './Terrain';
+import { equipment } from '../game/quality';
 
 const SIZE: Record<StructureType, number> = { choga: 13, giwa: 17, fortgate: 48, bongsu: 24 };
 const NEAR = 420;
@@ -22,7 +23,20 @@ function firstMesh(root: Object3D) {
   return found as Mesh | null;
 }
 
-async function loadModel(type: StructureType, suffix: string): Promise<Model | null> {
+// Shared by every battle: the village models are the same wherever they stand.
+const models = new Map<string, Promise<Model | null>>();
+
+function loadModel(type: StructureType, suffix: string) {
+  const key = type + suffix;
+  let model = models.get(key);
+  if (!model) {
+    model = fetchModel(type, suffix);
+    models.set(key, model);
+  }
+  return model;
+}
+
+async function fetchModel(type: StructureType, suffix: string): Promise<Model | null> {
   try {
     const gltf = await loader.loadAsync(`/models/env/${type}${suffix}.glb`);
     const mesh = firstMesh(gltf.scene);
@@ -41,6 +55,11 @@ async function loadModel(type: StructureType, suffix: string): Promise<Model | n
   }
 }
 
+/** Fetches every village model into the cache, so a battle's own load finds them there instead of waiting for the terrain first. */
+export async function preloadStructures() {
+  await Promise.all((Object.keys(SIZE) as StructureType[]).map((type) => Promise.all([equipment.ships.skipLod0 ? null : loadModel(type, ''), loadModel(type, '_lod1')])));
+}
+
 export class Structures {
   readonly group = new Group();
   private readonly batches: Batch[] = [];
@@ -57,7 +76,9 @@ export class Structures {
     }
     await Promise.all(
       [...byType.entries()].map(async ([type, list]) => {
-        const [lod0, lod1] = await Promise.all([loadModel(type, ''), loadModel(type, '_lod1')]);
+        // Phones skip the 1024 px near model: the low level is built for 30 m and more, and small on a phone screen.
+        const [full, lod1] = await Promise.all([equipment.ships.skipLod0 ? null : loadModel(type, ''), loadModel(type, '_lod1')]);
+        const lod0 = full ?? lod1 ?? (await loadModel(type, ''));
         if (!lod0) return;
         const far = lod1 ?? lod0;
         const near = new InstancedMesh(lod0.geometry, lod0.material, list.length);
@@ -77,6 +98,16 @@ export class Structures {
       }),
     );
     this.ready = true;
+  }
+
+  /** Frees the instance buffers. The models themselves stay cached for the next battle. */
+  dispose() {
+    for (const b of this.batches) {
+      b.near.dispose();
+      b.far.dispose();
+    }
+    this.batches.length = 0;
+    this.group.removeFromParent();
   }
 
   update(camera: Camera) {

@@ -10,7 +10,8 @@ Live at https://imjin1592.com. Player-facing text is Korean; code and comments a
 - Screenshots (macOS uses Chrome + Metal, Windows Edge + D3D11):
   - `node scripts/shot.mjs --url=http://127.0.0.1:5291/?scenario=hansan --out=<png>` desktop WebGPU
   - `node scripts/probe-mobile.mjs --url=... [--orient=portrait,landscape]` WebKit iPhone 15 Pro emulation (iOS Safari engine, WebGL2 path)
-  - `node scripts/probe-memory.mjs [url]` WebKit process RSS + `renderer.info.memory` during a battle load
+  - `node scripts/probe-memory.mjs [url] [--then=myeongnyang,hansan]` WebKit process RSS + `renderer.info.memory` during a battle load and after further battles in the same page; PASS/FAIL against the phone budget (textures < 300 MB, GPU memory < 400 MB, ready < 10 s)
+  - `node scripts/probe-load.mjs [url] [--engine=chromium]` load timeline (step, bar, GPU counters); `probe-calls.mjs` draw calls per frame; `probe-programs.mjs` shader programs; `probe-leak.mjs` textures that outlive a battle; `probe-cpu.mjs` main-thread profile of a load
   - `node scripts/probe-pace.mjs --url=... --seconds=40` battle time / fast-forward / closest-enemy distance over real time
 - Balance: `node scripts/balance.mjs` (historical scenarios), `node scripts/balance-conquest.mjs --duel --seeds=3` (faction duels), `node scripts/balance-grand.mjs` (faction campaign, all-computer wars; `--sweep`, `--fit=japan`, `--catalog`), `node scripts/test-grand.mjs` (its rules and save/load)
 - URL test hooks (App.tsx): `?scenario=<id>&side=<faction>`, `?conquest=hallyeo&me=joseon&foe=japan&size=2`, `?gallery=1`, `?hud=0`, `?q=low|medium|high`, `?lv=0-4`, `?webgl=1`, `?sky=`, `?sea=`, `?paused=1`
@@ -32,6 +33,9 @@ Live at https://imjin1592.com. Player-facing text is Korean; code and comments a
 - `src/sim` must stay deterministic: no `Date.now`, `Math.random`, DOM or three.js; use the battle's seeded RNG. Changes there also change the multiplayer server.
 - Adding a field to a BattleEvent or Ship that clients need means updating `src/net/protocol.ts` too.
 - Phones: iOS Safari kills a tab at roughly 1.2–1.5 GB. Keep the low tier's GPU memory (`renderer.info.memory.total`) far below that and check with `probe-memory.mjs`.
+  - `renderer.info.render.calls` counts `render()` calls since page start, not draw calls: use `probe-calls.mjs`.
+  - What the low tier loads is decided in `quality.ts` equipment: no 2048 px ship models or normal/roughness maps, 2k sky (`scripts/build-hdri.mjs`), 1k ground textures (`scripts/build-terrain-tex.mjs`), only the ship kinds the battle uses. A battle must free what it built (`Engine.disposeBattle`) and must not make the renderer create new sky textures (`loadSky` reuses them): check with `probe-leak.mjs`.
+  - The engine owns the pixel ratio (it wraps `renderer.setPixelRatio`); do not set it elsewhere.
 - Match surrounding code: comments explain why in plain sentences; no dead code.
 
 ## Deploy

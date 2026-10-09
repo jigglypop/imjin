@@ -14,10 +14,14 @@ export type EquipmentSetting = 'auto' | EquipmentTier;
 
 export type CloudQuality = { steps: number; lightSteps: number; divisor: number; every: number };
 export type ParticleQuality = { keep: number; sort: boolean; noise: number };
-export type TerrainQuality = { mesh: number; triplanar: boolean; anisotropy: number; noise: number };
+export type TerrainQuality = { mesh: number; triplanar: boolean; anisotropy: number; noise: number; texSize: 1024 | 2048 };
 export type VegetationQuality = { grids: [number, number, number]; shadows: boolean };
 export type OceanQuality = { segments: number; lights: number };
-export type ShipLodQuality = { maxLod0: number; near: number; mid: number };
+/**
+ * `skipLod0` leaves out the full-detail GLB model and `baseColorOnly` the normal and roughness maps: the 2048 px textures
+ * alone cost more memory than a phone has to spare. A model without its near level draws the 1024 px one up close.
+ */
+export type ShipLodQuality = { maxLod0: number; near: number; mid: number; skipLod0: boolean; baseColorOnly: boolean };
 
 export type Equipment = {
   terrainMesh: number;
@@ -31,7 +35,15 @@ export type Equipment = {
   anisotropy: number;
   triplanar: boolean;
   noise: number;
-  hdriDownscale: number;
+  /** Which prebuilt sky file to load. A phone screen is about 400 CSS px wide, so 2k shows the same sky there. */
+  hdriSize: '2k' | '4k';
+  /** Side length of the terrain ground textures: the 1k files hold a quarter of the memory. */
+  terrainTexSize: 1024 | 2048;
+  vegetationShadows: boolean;
+  /** FFT waves need WebGPU compute. Cheap enough on tablets and PCs, left out on phones. */
+  fft: boolean;
+  /** The highest run-time level the frame-rate controller may climb to. Levels above it are for a manual pick only. */
+  maxLevel: number;
   ships: ShipLodQuality;
   select: { dprCap: number; antialias: boolean; mapSegments: number };
 };
@@ -49,8 +61,12 @@ const EQUIPMENT: Record<EquipmentTier, Equipment> = {
     anisotropy: 16,
     triplanar: true,
     noise: 1,
-    hdriDownscale: 1,
-    ships: { maxLod0: 28, near: 560, mid: 1900 },
+    hdriSize: '4k',
+    terrainTexSize: 2048,
+    vegetationShadows: true,
+    fft: true,
+    maxLevel: 4,
+    ships: { maxLod0: 28, near: 560, mid: 1900, skipLod0: false, baseColorOnly: false },
     select: { dprCap: 2, antialias: true, mapSegments: 900 },
   },
   medium: {
@@ -65,15 +81,19 @@ const EQUIPMENT: Record<EquipmentTier, Equipment> = {
     anisotropy: 8,
     triplanar: true,
     noise: 0.75,
-    hdriDownscale: 1,
-    ships: { maxLod0: 22, near: 480, mid: 1500 },
+    hdriSize: '2k',
+    terrainTexSize: 2048,
+    vegetationShadows: true,
+    fft: true,
+    maxLevel: 3,
+    ships: { maxLod0: 22, near: 480, mid: 1500, skipLod0: false, baseColorOnly: false },
     select: { dprCap: 1.5, antialias: true, mapSegments: 900 },
   },
   low: {
     terrainMesh: 640,
     oceanSegments: 240,
     fftN: 128,
-    vegetationGrids: [140, 160, 180],
+    vegetationGrids: [100, 120, 140],
     shadowMap: 2048,
     msaa: 0,
     lights: 4,
@@ -81,9 +101,12 @@ const EQUIPMENT: Record<EquipmentTier, Equipment> = {
     anisotropy: 8,
     triplanar: true,
     noise: 0.75,
-    // A phone screen is about 400 CSS px wide. A half-resolution HDRI shows the same sky there.
-    hdriDownscale: 2,
-    ships: { maxLod0: 16, near: 420, mid: 1200 },
+    hdriSize: '2k',
+    terrainTexSize: 1024,
+    vegetationShadows: false,
+    fft: false,
+    maxLevel: 2,
+    ships: { maxLod0: 16, near: 420, mid: 1200, skipLod0: true, baseColorOnly: true },
     select: { dprCap: 1.5, antialias: false, mapSegments: 450 },
   },
 };

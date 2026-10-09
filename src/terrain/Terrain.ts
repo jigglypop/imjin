@@ -40,16 +40,39 @@ import {
 import { type TerrainSpec } from './generate';
 import type { Structure } from './features';
 import type { TerrainQuality } from '../game/quality';
+import { disposeTree } from '../render/dispose';
 
-function loadTex(url: string, srgb: boolean, anisotropy: number) {
-  const t = new TextureLoader().load(url);
-  t.wrapS = RepeatWrapping;
-  t.wrapT = RepeatWrapping;
-  t.anisotropy = anisotropy;
-  t.minFilter = LinearMipmapLinearFilter;
-  t.magFilter = LinearFilter;
-  if (srgb) t.colorSpace = SRGBColorSpace;
-  return t;
+/** The ground textures: one folder each under /textures. */
+const GROUND = ['aerial_rocks_02', 'cliff_side', 'coast_land_rocks_01', 'aerial_grass_rock', 'coast_sand_01', 'forest_leaves_02'] as const;
+type Ground = Record<(typeof GROUND)[number], Texture>;
+
+// Shared by every battle of the page: the terrain material only reads them, and 6 textures are 33 MB (1k) to 118 MB (2k)
+// of GPU memory that a second battle should not pay for again.
+const groundCache = new Map<string, Promise<Ground>>();
+
+function loadGround(size: 1024 | 2048, anisotropy: number): Promise<Ground> {
+  const key = `${size}:${anisotropy}`;
+  let cached = groundCache.get(key);
+  if (!cached) {
+    const loader = new TextureLoader();
+    // The 1k copies come from scripts/build-terrain-tex.mjs.
+    const file = (name: string) => `/textures/${name}/${size === 1024 ? 'diff_1k' : 'diff'}.jpg`;
+    cached = Promise.all(
+      GROUND.map(async (name) => {
+        const t = await loader.loadAsync(file(name));
+        t.wrapS = RepeatWrapping;
+        t.wrapT = RepeatWrapping;
+        t.anisotropy = anisotropy;
+        t.minFilter = LinearMipmapLinearFilter;
+        t.magFilter = LinearFilter;
+        t.colorSpace = SRGBColorSpace;
+        return [name, t] as const;
+      }),
+    ).then((list) => Object.fromEntries(list) as Ground);
+    groundCache.set(key, cached);
+    cached.catch(() => groundCache.delete(key));
+  }
+  return cached;
 }
 
 export class Terrain {
@@ -63,7 +86,7 @@ export class Terrain {
   private cos = 1;
   private sin = 0;
 
-  private constructor(readonly spec: TerrainSpec, readonly heights: Float32Array, readonly mask: Uint8Array, readonly structures: Structure[], quality: TerrainQuality) {
+  private constructor(readonly spec: TerrainSpec, readonly heights: Float32Array, readonly mask: Uint8Array, readonly structures: Structure[], quality: TerrainQuality, private readonly ground: Ground) {
     this.sizeU.value = spec.size;
     const mtex = new DataTexture(mask, spec.res, spec.res, RGBAFormat, UnsignedByteType);
     mtex.magFilter = LinearFilter;
@@ -82,15 +105,26 @@ export class Terrain {
     this.group.add(this.buildMesh(quality));
   }
 
+  /** The heightmap comes from a worker and the ground textures from the shared cache, both fetched at the same time. */
   static async load(spec: TerrainSpec, quality: TerrainQuality) {
     const worker = new Worker(new URL('./terrain.worker.ts', import.meta.url), { type: 'module' });
-    const data = await new Promise<{ heights: Float32Array; mask: Uint8Array; structures: Structure[] }>((resolve, reject) => {
-      worker.onmessage = (e) => resolve(e.data);
-      worker.onerror = (e) => reject(e);
-      worker.postMessage(spec);
-    });
+    const [data, ground] = await Promise.all([
+      new Promise<{ heights: Float32Array; mask: Uint8Array; structures: Structure[] }>((resolve, reject) => {
+        worker.onmessage = (e) => resolve(e.data);
+        worker.onerror = (e) => reject(e);
+        worker.postMessage(spec);
+      }),
+      loadGround(quality.texSize, quality.anisotropy),
+    ]);
     worker.terminate();
-    return new Terrain(spec, data.heights, data.mask, data.structures, quality);
+    return new Terrain(spec, data.heights, data.mask, data.structures, quality, ground);
+  }
+
+  /** Frees the mesh, the height and mask textures and the material. The ground textures stay cached for the next battle. */
+  dispose() {
+    disposeTree(this.group);
+    this.heightTexture.dispose();
+    this.maskTexture.dispose();
   }
 
   setRotation(phi: number) {
@@ -170,7 +204,9 @@ export class Terrain {
         normals[k * 3 + 2] = nz / len;
       }
     }
-    const indices: number[] = [];
+    // Typed from the start: a plain array of 2.4 million numbers is a large transient on a phone.
+    const indices = new Uint32Array((n - 1) * (n - 1) * 6);
+    let used = 0;
     const deep = -14;
     for (let j = 0; j < n - 1; j += 1) {
       for (let i = 0; i < n - 1; i += 1) {
@@ -179,13 +215,18 @@ export class Terrain {
         const c = a + n;
         const d = c + 1;
         if (Math.max(hs[a]!, hs[b]!, hs[c]!, hs[d]!) < deep) continue;
-        indices.push(a, c, b, b, c, d);
+        indices[used++] = a;
+        indices[used++] = c;
+        indices[used++] = b;
+        indices[used++] = b;
+        indices[used++] = c;
+        indices[used++] = d;
       }
     }
     const geo = new BufferGeometry();
     geo.setAttribute('position', new Float32BufferAttribute(positions, 3));
     geo.setAttribute('normal', new Float32BufferAttribute(normals, 3));
-    geo.setIndex(new Uint32BufferAttribute(new Uint32Array(indices), 1));
+    geo.setIndex(new Uint32BufferAttribute(indices.slice(0, used), 1));
     geo.computeBoundingSphere();
     void res;
     const mesh = new Mesh(geo, this.buildMaterial(quality));
@@ -196,13 +237,13 @@ export class Terrain {
   }
 
   private buildMaterial(quality: TerrainQuality) {
-    const aniso = quality.anisotropy;
-    const rock = loadTex('/textures/aerial_rocks_02/diff.jpg', true, aniso);
-    const cliff = loadTex('/textures/cliff_side/diff.jpg', true, aniso);
-    const coastRocks = loadTex('/textures/coast_land_rocks_01/diff.jpg', true, aniso);
-    const grass = loadTex('/textures/aerial_grass_rock/diff.jpg', true, aniso);
-    const sand = loadTex('/textures/coast_sand_01/diff.jpg', true, aniso);
-    const leaves = loadTex('/textures/forest_leaves_02/diff.jpg', true, aniso);
+    const g = this.ground;
+    const rock = g.aerial_rocks_02;
+    const cliff = g.cliff_side;
+    const coastRocks = g.coast_land_rocks_01;
+    const grass = g.aerial_grass_rock;
+    const sand = g.coast_sand_01;
+    const leaves = g.forest_leaves_02;
     const m = new MeshStandardNodeMaterial();
     const p = positionWorld;
     const n = normalWorld;

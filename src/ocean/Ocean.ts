@@ -68,6 +68,25 @@ import type { CurrentField } from '../sim/current';
 /** Mesh density and shading cost for the ocean. `lights` is how many point lights the surface shades. */
 export type OceanRenderQuality = { segments: number; lights: number };
 
+// The wave detail and foam textures depend only on the wind direction, and take a few hundred milliseconds to fill on
+// the main thread. A second battle reuses them.
+const detailCache = new Map<number, Texture>();
+let foamCache: Texture | null = null;
+
+function detailTexture(windAngle: number) {
+  let tex = detailCache.get(windAngle);
+  if (!tex) {
+    tex = createDetailNormalTexture(windAngle);
+    detailCache.set(windAngle, tex);
+  }
+  return tex;
+}
+
+function foamTexture() {
+  foamCache ??= createFoamTexture();
+  return foamCache;
+}
+
 function createOceanGeometry(segments = 400, r0 = 0.4, rMax = 46000, aspect = 1.05) {
   const growth = 1 + ((2 * Math.PI) / segments) * aspect;
   const radii: number[] = [];
@@ -113,8 +132,11 @@ function createOceanGeometry(segments = 400, r0 = 0.4, rMax = 46000, aspect = 1.
 
 export class Ocean {
   readonly mesh: Mesh;
-  private readonly matRefract: MeshBasicNodeMaterial;
+  /** Made on first use when the tier cannot reach a level with refraction, so it never costs a compile at load. */
+  private matRefract: MeshBasicNodeMaterial | null = null;
+  private readonly makeRefract: () => MeshBasicNodeMaterial;
   private readonly matPlain: MeshBasicNodeMaterial;
+  private envTexture: Texture;
   readonly time = uniform(0);
   readonly detailStrength = uniform(1);
   readonly whitecaps = uniform(0.6);
@@ -129,19 +151,20 @@ export class Ocean {
   constructor(
     private readonly waves: WaveField,
     envTexture: Texture,
-    wake: WakeMap,
+    private readonly wake: WakeMap,
     terrain: Terrain,
     fft: FFTWaves | null,
     current: CurrentField | null,
     quality: OceanRenderQuality,
   ) {
+    this.envTexture = envTexture;
     this.waveA = Array.from({ length: WAVE_COUNT }, () => new Vector4());
     this.waveB = Array.from({ length: WAVE_COUNT }, () => new Vector4());
     this.syncWaves();
     const waveA = uniformArray(this.waveA, 'vec4');
     const waveB = uniformArray(this.waveB, 'vec4');
-    const detailTex = createDetailNormalTexture(waves.state.windAngle);
-    const foamTex = createFoamTexture();
+    const detailTex = detailTexture(waves.state.windAngle);
+    const foamTex = foamTexture();
     const uTime = this.time;
     const lightCount = quality.lights;
     const { geometry, spacing } = createOceanGeometry(quality.segments);
@@ -290,7 +313,7 @@ export class Ocean {
 
       const wakeUV = vec2(p0.x.sub(wake.center.x).div(wake.extentU).add(0.5), p0.y.sub(wake.center.y).div(wake.extentU).add(0.5));
       const wakeEdge = smoothstep(0.0, 0.03, wakeUV.x).mul(smoothstep(1.0, 0.97, wakeUV.x)).mul(smoothstep(0.0, 0.03, wakeUV.y)).mul(smoothstep(1.0, 0.97, wakeUV.y));
-      const wakeTex = wake.sample(wakeUV);
+      const wakeTex = wake.sample(wakeUV, this);
       const wakeFoam = saturate(wakeTex.r.mul(wakeEdge));
       const wakeTurb = saturate(wakeTex.g.mul(wakeEdge));
       const uv3 = p0.mul(1 / 2.3).add(vec2(t.mul(0.031), t.mul(-0.024)));
@@ -304,7 +327,7 @@ export class Ocean {
       const R = reflect(V.negate(), N);
       const Rc = normalize(vec3(R.x, max(R.y, 0.025), R.z));
       const roughEnv = mix(float(0.03), float(0.2), smoothstep(40, 5000, dist)).add(lostSlope.mul(0.6)).min(0.45);
-      const reflNode = pmremTexture(envTexture, Rc, roughEnv);
+      const reflNode = pmremTexture(this.envTexture, Rc, roughEnv);
       pmremNodes.push(reflNode);
       const reflection = vec3(reflNode).mul(atmosphere.envIntensity);
 
@@ -408,7 +431,7 @@ export class Ocean {
       color.assign(color.mul(float(1).sub(core.clamp(0, 1).mul(0.35))));
 
       const horizonDir = normalize(vec3(V.x.negate(), 0.035, V.z.negate()));
-      const fogNode = pmremTexture(envTexture, horizonDir, float(0.45));
+      const fogNode = pmremTexture(this.envTexture, horizonDir, float(0.45));
       pmremNodes.push(fogNode);
       const fogColor = vec3(fogNode).mul(atmosphere.envIntensity);
       const fogAmount = float(1).sub(exp(dist.mul(atmosphere.fogDensity).negate()));
@@ -417,12 +440,14 @@ export class Ocean {
       return mix(finalColor, vec3(wakeFoam, wakeTurb, wakeEdge.mul(0.2)), this.debugWake);
     })();
 
-    const matRefract = material;
-    matRefract.colorNode = colorFor(true);
-    const matPlain = material.clone();
-    matPlain.colorNode = colorFor(false);
-    this.matRefract = matRefract;
+    material.colorNode = colorFor(false);
+    const matPlain = material;
     this.matPlain = matPlain;
+    this.makeRefract = () => {
+      const m = material.clone();
+      m.colorNode = colorFor(true);
+      return m;
+    };
 
     const mesh = new Mesh(geometry, matPlain);
     mesh.frustumCulled = false;
@@ -432,13 +457,27 @@ export class Ocean {
     this.mesh = mesh;
   }
 
-  /** Switches between the refracting and the plain surface. Both are compiled when the battle loads. */
+  /** Switches between the refracting and the plain surface. The refracting one is built the first time it is asked for. */
   setRefraction(on: boolean) {
-    this.mesh.material = on ? this.matRefract : this.matPlain;
+    if (on) this.matRefract ??= this.makeRefract();
+    this.mesh.material = on ? this.matRefract! : this.matPlain;
   }
 
   setEnvironment(envTexture: Texture) {
+    this.envTexture = envTexture;
     for (const node of this.pmremNodes) node.value = envTexture;
+  }
+
+  /** Frees the mesh and both surface materials. The wave textures are cached for the next battle. */
+  dispose() {
+    this.mesh.geometry.dispose();
+    this.matPlain.dispose();
+    this.matRefract?.dispose();
+    // Each reflection node owns a PMREM generator with its own render targets.
+    for (const node of this.pmremNodes) node.dispose();
+    this.pmremNodes.length = 0;
+    this.wake.release(this);
+    this.mesh.removeFromParent();
   }
 
   syncWaves() {

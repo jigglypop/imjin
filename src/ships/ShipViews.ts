@@ -19,7 +19,7 @@ import { float, length, sin, smoothstep, time, uniform, uv, vec4 } from 'three/t
 import type { Battle } from '../sim/battle';
 import type { Ship, ShipKind, Team } from '../sim/types';
 import { waveField } from '../ocean/waves';
-import { modelKey, ShipRenderer, type ModelAsset } from './ShipRenderer';
+import { LOD_COUNT, modelKey, ShipRenderer, type ModelAsset } from './ShipRenderer';
 import type { ShipLodQuality } from '../game/quality';
 import { cutHeight, DECKS, mainDeck } from './decks';
 
@@ -122,7 +122,7 @@ export class ShipViews {
   }
 
   reset(assets: Record<string, ModelAsset>, battle: Battle, hint: Map<ShipKind, number> = new Map()) {
-    this.group.remove(this.renderer.group);
+    this.renderer.dispose();
     this.renderer = new ShipRenderer(assets, this.capacities(battle, assets, hint));
     this.group.add(this.renderer.group);
     this.states.clear();
@@ -205,7 +205,9 @@ export class ShipViews {
       const level = this.cutaway.get(ship.id) ?? 0;
       const main = level ? mainDeck(v.key, ship.spec.kind, ship.spec.deck) : 0;
       const cut = level ? cutHeight(level, main, DECKS[ship.spec.kind]) : undefined;
-      if (v.visible) this.renderer.add(v.key, cut === undefined ? v.lod : 0, v.matrix, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), v.flash, cut);
+      // A model loaded without its near level has fewer levels: the nearest one it has serves the closer ranges.
+      const have = assets[v.key]?.lods.length ?? LOD_COUNT;
+      if (v.visible) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, v.matrix, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), v.flash, cut);
       if (level === 3 && v.visible) props = this.interior(ship, v, main, props);
       const show = (this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0;
       if (show) {

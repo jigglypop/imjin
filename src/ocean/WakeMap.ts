@@ -51,7 +51,8 @@ export class WakeMap {
   private readonly b: InstancedBufferAttribute;
   private readonly mesh: Mesh;
   private count = 0;
-  private readonly sampleNodes: ReturnType<typeof texture>[] = [];
+  /** The texture nodes that read the finished map, per ocean. A battle that is thrown away takes its own out. */
+  private readonly sampleNodes = new Map<object, ReturnType<typeof texture>[]>();
 
   /** `resolution` is the square texture size. Smaller saves memory and fill rate, and makes wakes softer. */
   constructor(resolution = 2048) {
@@ -106,10 +107,30 @@ export class WakeMap {
     this.extentU.value = this.extent;
   }
 
-  sample(uvNode: Parameters<typeof texture>[1]) {
+  sample(uvNode: Parameters<typeof texture>[1], owner: object) {
     const node = texture(this.targets[1].texture, uvNode);
-    this.sampleNodes.push(node);
+    const list = this.sampleNodes.get(owner) ?? [];
+    list.push(node);
+    this.sampleNodes.set(owner, list);
     return node;
+  }
+
+  /** Stops updating the nodes of an ocean that is gone. */
+  release(owner: object) {
+    this.sampleNodes.delete(owner);
+  }
+
+  /** Renders every pass once, so their programs are built before the first frame of the battle. */
+  prewarm(renderer: WebGPURenderer) {
+    this.stamp(this.center.value.x, this.center.value.y, 0, 1, 0, 1, 1);
+    this.update(renderer, 1 / 60);
+  }
+
+  dispose() {
+    for (const rt of this.targets) rt.dispose();
+    (this.quad.material as MeshBasicNodeMaterial).dispose();
+    this.mesh.geometry.dispose();
+    (this.mesh.material as MeshBasicNodeMaterial).dispose();
   }
 
   setExtent(extent: number) {
@@ -161,7 +182,7 @@ export class WakeMap {
     }
     renderer.setRenderTarget(prevTarget);
     renderer.autoClear = prevAutoClear;
-    for (const node of this.sampleNodes) node.value = dst.texture;
+    for (const list of this.sampleNodes.values()) for (const node of list) node.value = dst.texture;
     this.current = 1 - this.current;
     this.count = 0;
   }

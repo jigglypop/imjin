@@ -57,6 +57,8 @@ const LIGHT_SPAN = 760;
 /** Loop bounds are fixed when the shader compiles. Steps below the run-time count are used, the rest are skipped. */
 const MAX_STEPS = 64;
 const MAX_LIGHT_STEPS = 4;
+/** What the shader is built for when the levels that can run never need the most: a smaller program for the driver to build. */
+export type CloudLimits = { steps: number; lightSteps: number };
 
 export type CloudQuality = { steps: number; lightSteps: number; divisor: number; every: number };
 
@@ -81,10 +83,17 @@ export class Clouds {
   private readonly noise: Data3DTexture;
   private readonly envNode: ReturnType<typeof pmremTexture>;
 
-  constructor(env: Texture, quality: CloudQuality) {
+  private readonly maxSteps: number;
+  private readonly maxLightSteps: number;
+
+  constructor(env: Texture, quality: CloudQuality, limits: CloudLimits = { steps: MAX_STEPS, lightSteps: MAX_LIGHT_STEPS }) {
     this.quality = quality;
-    this.stepsU = uniform(Math.min(MAX_STEPS, quality.steps));
-    this.lightStepsU = uniform(Math.min(MAX_LIGHT_STEPS, quality.lightSteps));
+    this.maxSteps = Math.min(MAX_STEPS, limits.steps);
+    this.maxLightSteps = Math.min(MAX_LIGHT_STEPS, limits.lightSteps);
+    const maxSteps = this.maxSteps;
+    const maxLightSteps = this.maxLightSteps;
+    this.stepsU = uniform(Math.min(maxSteps, quality.steps));
+    this.lightStepsU = uniform(Math.min(maxLightSteps, quality.lightSteps));
     const stepsU = this.stepsU;
     const lightStepsU = this.lightStepsU;
     const lightStep = float(LIGHT_SPAN).div(lightStepsU);
@@ -132,7 +141,7 @@ export class Clouds {
         const hg1 = float(1 - g1 * g1).div(pow(float(1 + g1 * g1).sub(cosA.mul(2 * g1)), 1.5));
         const hg2 = float(1 - g2 * g2).div(pow(float(1 + g2 * g2).sub(cosA.mul(2 * g2)), 1.5));
         const phase = mix(hg2, hg1, 0.7).mul(1 / (4 * Math.PI));
-        Loop(MAX_STEPS, ({ i }) => {
+        Loop(maxSteps, ({ i }) => {
           If(trans.greaterThan(0.02).and(float(i).lessThan(stepsU)), () => {
             const tt = t0.add(float(i).add(jitter).mul(stepLen));
             const p = cameraPosition.add(dir.mul(tt));
@@ -140,7 +149,7 @@ export class Clouds {
             const d = sample(p, far);
             If(d.greaterThan(0.001), () => {
               const od = float(0).toVar();
-              Loop(MAX_LIGHT_STEPS, ({ i: k }) => {
+              Loop(maxLightSteps, ({ i: k }) => {
                 If(float(k).lessThan(lightStepsU), () => {
                   const lp = p.add(sun.mul(float(k).add(0.5).mul(lightStep)));
                   od.addAssign(sample(lp, far));
@@ -218,8 +227,8 @@ export class Clouds {
   /** Changes steps and resolution while the battle runs. The shader is not recompiled. */
   setQuality(quality: CloudQuality) {
     this.quality = quality;
-    this.stepsU.value = Math.min(MAX_STEPS, quality.steps);
-    this.lightStepsU.value = Math.min(MAX_LIGHT_STEPS, quality.lightSteps);
+    this.stepsU.value = Math.min(this.maxSteps, quality.steps);
+    this.lightStepsU.value = Math.min(this.maxLightSteps, quality.lightSteps);
   }
 
   render(renderer: WebGPURenderer, camera: Camera) {
@@ -244,6 +253,22 @@ export class Clouds {
 
   setEnvironment(env: Texture) {
     this.envNode.value = env;
+  }
+
+  /** Runs the march and both blur passes once, so their programs are built while the battle is still loading. */
+  prewarm(renderer: WebGPURenderer, camera: Camera) {
+    this.render(renderer, camera);
+  }
+
+  dispose() {
+    for (const rt of [this.rtA, this.rtB]) rt.dispose();
+    this.noise.dispose();
+    this.marcher.geometry.dispose();
+    (this.marcher.material as MeshBasicNodeMaterial).dispose();
+    this.mesh.geometry.dispose();
+    (this.mesh.material as MeshBasicNodeMaterial).dispose();
+    for (const quad of [this.blurH, this.blurV]) (quad.material as MeshBasicNodeMaterial).dispose();
+    this.mesh.removeFromParent();
   }
 
   update(camera: { x: number; y: number; z: number }, time: number) {

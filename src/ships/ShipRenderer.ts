@@ -66,7 +66,12 @@ export const FALLBACK_MODEL: Partial<Record<ShipKind, string>> = {
   mingsmall: '/models/sekibune_v2',
 };
 
+/** Detail levels a full model set has: near, mid, far. A model loaded without its near level has fewer. */
 export const LOD_COUNT = 3;
+
+/** What a phone can afford. `skipLod0` leaves the 2048 px near model out, `baseColorOnly` drops the normal and roughness maps. */
+export type ShipAssetOptions = { skipLod0: boolean; baseColorOnly: boolean; anisotropy: number };
+let assetOptions: ShipAssetOptions = { skipLod0: false, baseColorOnly: false, anisotropy: 16 };
 
 export type LodAsset = { geometry: BufferGeometry; source: MeshStandardMaterial };
 export type ModelAsset = { key: string; kind: ShipKind; variant: number; lods: LodAsset[]; bounds: Box3 };
@@ -115,16 +120,35 @@ async function loadGltf(url: string) {
   return gltf.scene as Group;
 }
 
+/** The mesh files of one model, nearest level first. Without LOD0 the first file is the 1024 px level. */
+async function loadScenes(base: string) {
+  if (!assetOptions.skipLod0) return Promise.all([loadGltf(`${base}.glb`), loadGltf(`${base}_lod1.glb`).catch(() => null), loadGltf(`${base}_lod2.glb`).catch(() => null)]);
+  const [lod1, lod2] = await Promise.all([loadGltf(`${base}_lod1.glb`).catch(() => null), loadGltf(`${base}_lod2.glb`).catch(() => null)]);
+  if (lod1) return [lod1, lod2];
+  return [await loadGltf(`${base}.glb`), lod2];
+}
+
+/** Phones draw the base colour map only: the normal and roughness maps would double the texture memory of every hull. */
+function trimMaterial(mat: MeshStandardMaterial) {
+  for (const key of ['normalMap', 'roughnessMap', 'metalnessMap', 'aoMap'] as const) {
+    const t = mat[key];
+    if (!t) continue;
+    (t.image as { close?: () => void } | null)?.close?.();
+    t.dispose();
+    mat[key] = null;
+  }
+}
+
 async function loadModel(spec: ShipModelSpec): Promise<ModelAsset> {
   let base = spec.base;
   let scenes: (Group | null)[];
   try {
-    scenes = await Promise.all([loadGltf(`${base}.glb`), loadGltf(`${base}_lod1.glb`).catch(() => null), loadGltf(`${base}_lod2.glb`).catch(() => null)]);
+    scenes = await loadScenes(base);
   } catch (err) {
     const fallback = FALLBACK_MODEL[spec.kind];
     if (!fallback) throw err;
     base = fallback;
-    scenes = await Promise.all([loadGltf(`${base}.glb`), loadGltf(`${base}_lod1.glb`).catch(() => null), loadGltf(`${base}_lod2.glb`).catch(() => null)]);
+    scenes = await loadScenes(base);
     spec = { ...spec, axis: 'z', bow: 1, waterline: 0.27 };
   }
   const lod0 = findMesh(scenes[0]!);
@@ -139,28 +163,66 @@ async function loadModel(spec: ShipModelSpec): Promise<ModelAsset> {
     .makeTranslation(-center.x * scale, -(box.min.y + height * spec.waterline) * scale, -center.z * scale)
     .multiply(new Matrix4().makeScale(scale, scale, scale));
   const lods: LodAsset[] = [];
-  for (let i = 0; i < LOD_COUNT; i += 1) {
+  for (let i = 0; i < scenes.length; i += 1) {
     const scene = scenes[i] ?? scenes[0]!;
     const mesh = findMesh(scene);
     const m = new Matrix4().multiplyMatrices(fix, new Matrix4().multiplyMatrices(orient, mesh.matrixWorld));
-    lods.push({ geometry: bake(mesh, m), source: mesh.material as MeshStandardMaterial });
+    const source = mesh.material as MeshStandardMaterial;
+    if (assetOptions.baseColorOnly) trimMaterial(source);
+    lods.push({ geometry: bake(mesh, m), source });
+  }
+  if (assetOptions.baseColorOnly) {
+    // The levels are simplified copies of one model with the same UVs, so the first one's colour map serves them all.
+    // One texture and one shader program per model instead of one per level.
+    const shared = lods[0]!.source.map;
+    for (const lod of lods.slice(1)) {
+      if (!shared || lod.source.map === shared) continue;
+      (lod.source.map?.image as { close?: () => void } | null)?.close?.();
+      lod.source.map?.dispose();
+      lod.source.map = shared;
+    }
   }
   return { key: modelKey(spec.kind, spec.variant), kind: spec.kind, variant: spec.variant, lods, bounds: lods[0]!.geometry.boundingBox!.clone() };
 }
 
-export async function loadShipAssets(kinds: ShipKind[], onProgress?: (fraction: number) => void) {
+// Loaded models are shared by every battle of the page. A later battle only loads the kinds it adds.
+const modelCache = new Map<string, Promise<ModelAsset>>();
+
+export async function loadShipAssets(kinds: ShipKind[], options: ShipAssetOptions, onProgress?: (fraction: number) => void) {
+  assetOptions = options;
   const specs = SHIP_MODELS.filter((m) => kinds.includes(m.kind));
   let loaded = 0;
   const list = await Promise.all(
-    specs.map((s) =>
-      loadModel(s).then((a) => {
+    specs.map((s) => {
+      let model = modelCache.get(modelKey(s.kind, s.variant));
+      if (!model) {
+        model = loadModel(s);
+        modelCache.set(modelKey(s.kind, s.variant), model);
+        model.catch(() => modelCache.delete(modelKey(s.kind, s.variant)));
+      }
+      return model.then((a) => {
         loaded += 1;
         onProgress?.(loaded / specs.length);
         return a;
-      }),
-    ),
+      });
+    }),
   );
   return Object.fromEntries(list.map((a) => [a.key, a])) as Record<string, ModelAsset>;
+}
+
+/** Frees the models no longer in `keep`: their geometry and textures. Call once the batches that drew them are gone. */
+export async function releaseShipAssets(keep: Set<string>) {
+  for (const [key, pending] of [...modelCache]) {
+    if (keep.has(key)) continue;
+    modelCache.delete(key);
+    const asset = await pending.catch(() => null);
+    if (!asset) continue;
+    for (const lod of asset.lods) {
+      lod.geometry.dispose();
+      for (const value of Object.values(lod.source)) if (value && (value as Texture).isTexture) (value as Texture).dispose();
+      lod.source.dispose();
+    }
+  }
 }
 
 /**
@@ -173,12 +235,12 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   if (src.normalMap) {
     m.normalMap = src.normalMap;
     m.normalScale.copy(src.normalScale);
-    src.normalMap.anisotropy = 16;
+    src.normalMap.anisotropy = assetOptions.anisotropy;
   }
   m.metalness = 0;
   m.roughness = 1;
   const map = src.map as Texture | null;
-  if (map) map.anisotropy = 16;
+  if (map) map.anisotropy = assetOptions.anisotropy;
   const A: any = instancedDynamicBufferAttribute(a, 'vec4');
   const B: any = instancedDynamicBufferAttribute(b, 'vec4');
   const origin = A.xyz;
@@ -243,7 +305,10 @@ export class ShipRenderer {
     const cap = this.capacity.get(key) ?? 0;
     if (count <= cap || !this.assets[key]) return;
     this.capacity.set(key, Math.max(count, cap * 2, 4));
-    for (const batch of this.batches.get(key) ?? []) this.group.remove(batch.mesh);
+    for (const batch of this.batches.get(key) ?? []) {
+      this.group.remove(batch.mesh);
+      (batch.mesh.material as MeshStandardNodeMaterial).dispose();
+    }
     this.buildKey(key);
   }
 
@@ -263,13 +328,23 @@ export class ShipRenderer {
           mesh.instanceMatrix.setUsage(DynamicDrawUsage);
           mesh.count = 0;
           mesh.frustumCulled = false;
-          mesh.castShadow = level < 2;
-          mesh.receiveShadow = level < 2;
+          // Shadows and shading from the two nearest of the three levels, counted as if the full set were there.
+          const nominal = level + LOD_COUNT - asset.lods.length;
+          mesh.castShadow = nominal < 2;
+          mesh.receiveShadow = nominal < 2;
           this.group.add(mesh);
           return { mesh, a, b, count: 0 };
         }),
       );
     }
+  }
+
+  /** Frees the hull materials of every batch. The geometry and textures belong to the shared models. */
+  dispose() {
+    for (const batch of [...[...this.batches.values()].flat(), ...this.cuts.values()]) (batch.mesh.material as MeshStandardNodeMaterial).dispose();
+    this.batches.clear();
+    this.cuts.clear();
+    this.group.removeFromParent();
   }
 
   begin() {

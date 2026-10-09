@@ -1,13 +1,16 @@
 import {
   ACESFilmicToneMapping,
+  DataTexture,
   DirectionalLight,
+  EquirectangularReflectionMapping,
+  HalfFloatType,
   PCFShadowMap,
   PerspectiveCamera,
   RenderPipeline,
+  RGBAFormat,
   Scene,
   Vector2,
   Vector3,
-  type DataTexture,
   type WebGPURenderer,
 } from 'three/webgpu';
 import {
@@ -39,10 +42,10 @@ const COVERAGE: Record<SkyPresetName, number> = { afternoon: 0.5, day: 0.42, sun
 import { WakeMap } from '../ocean/WakeMap';
 import { SEA_STATES, spectrumOf, waveField, type SeaStateName } from '../ocean/waves';
 import { FFTWaves } from '../ocean/FFTWaves';
-import { loadShipAssets, type ModelAsset } from '../ships/ShipRenderer';
+import { loadShipAssets, releaseShipAssets, type ModelAsset, type ShipAssetOptions } from '../ships/ShipRenderer';
 import { ShipViews } from '../ships/ShipViews';
 import { Effects } from '../fx/Effects';
-import { Crew } from '../fx/Crew';
+import { Crew, crewAssets } from '../fx/Crew';
 import { Lanterns } from '../fx/Lanterns';
 import { Battle, SIM_DT } from '../sim/battle';
 import { GUN_SPECS, STAGE_NAMES } from '../sim/catalog';
@@ -56,7 +59,7 @@ import { buildConquest, homeAxis, type ConquestMapId, type Seat } from '../sim/m
 import { BUILDING_ORDER, BUILDINGS, ROSTER, SHORT_NAME, type Conquest } from '../sim/conquest';
 import { applyCommand, type Command } from '../sim/commands';
 import { conquestInfo, scenarioInfo, type BattleInfo } from '../sim/info';
-import { ConquestView } from '../conquest/ConquestView';
+import { ConquestView, preloadWorks } from '../conquest/ConquestView';
 import type { NetBattle } from '../net/NetBattle';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
 import { Input } from './Input';
@@ -68,7 +71,8 @@ import { SquadronBanners } from '../ui/SquadronBanners';
 import { sound } from '../audio/Sound';
 import { Terrain } from '../terrain/Terrain';
 import { Vegetation } from '../terrain/Vegetation';
-import { Structures } from '../terrain/Structures';
+import { preloadStructures, Structures } from '../terrain/Structures';
+import { disposeTree } from '../render/dispose';
 
 import { Minimap } from '../ui/Minimap';
 
@@ -101,7 +105,20 @@ export interface CommandSink {
   send(cmd: Command): void;
 }
 
+/** Every kind there is: the gallery shows them all. A battle loads only the kinds it uses. */
 const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
+
+/** Lets the browser paint the loading bar before the next stretch of blocking work (a timer covers a hidden tab, where frames never come). */
+const settle = () => new Promise<void>((resolve) => {
+  const timer = setTimeout(resolve, 120);
+  requestAnimationFrame(() => {
+    clearTimeout(timer);
+    setTimeout(resolve, 0);
+  });
+});
+
+/** Shown when the graphics device is lost (the browser reclaimed the GPU, usually for memory). Nothing can be drawn after it. */
+const DEVICE_LOST_TEXT = '그래픽 장치가 멈췄습니다 — 메모리가 부족했을 수 있습니다. 페이지를 새로고침해 주세요';
 
 /** Multipliers the player can pick. The approach before first contact runs at the largest. */
 export const SPEEDS = [1, 2, 4, 8, 16, 32] as const;
@@ -209,6 +226,47 @@ export class Engine {
     this.battleInfo = this.conquestSetup ? conquestInfo(this.conquestSetup.map) : scenarioInfo(options.scenario);
     this.skyName = options.sky ?? this.battleInfo.sky;
     this.seaName = options.sea ?? this.battleInfo.sea;
+    const dprParam = params.get('dpr');
+    this.dprOverride = dprParam ? Number(dprParam) : null;
+    this.takePixelRatio();
+    this.watchDevice();
+  }
+
+  /** The pixel ratio the current level allows. */
+  private pixelRatio() {
+    return Math.min(window.devicePixelRatio, this.dprOverride ?? LEVELS[this.level]!.dprCap);
+  }
+
+  /**
+   * The engine owns the pixel ratio. React Three Fiber calls setPixelRatio with the device ratio on every resize
+   * (a rotation, the browser toolbar sliding away), which would blow every render target up to the full resolution
+   * while the level says otherwise. Its calls now land on the level's ratio.
+   */
+  private takePixelRatio() {
+    const r = this.renderer;
+    const original = r.setPixelRatio;
+    r.setPixelRatio = (value?: number) => original.call(r, Math.min(value ?? 1, this.pixelRatio()));
+    this.releasePixelRatio = () => {
+      r.setPixelRatio = original;
+    };
+    original.call(r, this.pixelRatio());
+  }
+
+  private releasePixelRatio: (() => void) | null = null;
+  /** The village and shore-works models arrive after the rest. The battle waits for them, so their shaders are built with the others. */
+  private placeholderSky: DataTexture | null = null;
+  private worksLoad: Promise<void> = Promise.resolve();
+  private conquestLoad: Promise<void> = Promise.resolve();
+
+  /** A lost device or context cannot be recovered here. Say so, so the page does not just freeze. */
+  private watchDevice() {
+    const r = this.renderer;
+    const previous = r.onDeviceLost;
+    r.onDeviceLost = (info) => {
+      previous.call(r, info);
+      this.ready = false;
+      setLoading(DEVICE_LOST_TEXT, 1);
+    };
   }
 
   /** The player's team. The Ming fleet fights on the Joseon team; in a conquest battle the seat says. */
@@ -247,37 +305,22 @@ export class Engine {
     waveField.setState(SEA_STATES[this.seaName]);
     const info = this.battleInfo;
     setLoading('바다와 하늘을 그리는 중', 0.03, info.mode === 'scenario' ? this.scenarioId : undefined);
-    let done = 0.03;
-    const track = <T,>(p: Promise<T>, weight: number) =>
-      p.then((v) => {
-        done += weight;
-        setProgress(done);
-        return v;
-      });
-    const [sky, terrain, assets] = await Promise.all([
-      track(loadSky(SKY_PRESETS[this.skyName], this.eq.hdriDownscale), 0.2),
-      track(Terrain.load(info.terrain, this.terrainQuality()), 0.22),
-      loadShipAssets(ALL_KINDS, (f) => setProgress(done + f * 0.35)).then((v) => {
-        done += 0.35;
-        setProgress(done);
-        return v;
-      }),
-    ]);
+    // The files download while the cloud and wake shaders build, so neither waits for the other.
+    const loading = this.loadAssets(0.03);
+    await this.warmShared();
+    const [sky, terrain, assets] = await loading;
     this.assets = assets;
     this.terrain = terrain;
     this.scene.add(terrain.group);
+    setLoading('숲과 마을을 세우는 중', 0.64);
     this.dressTerrain();
     this.applySky(sky);
-    setLoading('함대를 배치하는 중', 0.82);
+    setLoading('함대를 배치하는 중', 0.68);
     this.placeScenario(sky);
-    if ((r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) this.fft = new FFTWaves(spectrumOf(SEA_STATES[this.seaName]), this.eq.fftN);
+    setLoading('바다와 하늘을 짓는 중', 0.72);
+    if (this.eq.fft && (r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) this.fft = new FFTWaves(spectrumOf(SEA_STATES[this.seaName]), this.eq.fftN);
     this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
     this.scene.add(this.ocean.mesh);
-    if (params.get('clouds') !== '0') {
-      this.clouds = new Clouds(sky.environment, LEVELS[this.level]!.cloud);
-      this.clouds.coverage.value = COVERAGE[this.skyName];
-      this.scene.add(this.clouds.mesh);
-    }
     const sun = this.sun;
     sun.castShadow = true;
     sun.shadow.mapSize.set(this.eq.shadowMap, this.eq.shadowMap);
@@ -309,8 +352,6 @@ export class Engine {
     this.touch = new TouchControls(this);
     this.touch.attach(r.domElement);
     this.rts.attach(r.domElement);
-    const dprParam = params.get('dpr');
-    this.dprOverride = dprParam ? Number(dprParam) : null;
     this.rts.ground = (x, z) => this.terrain.heightAt(x, z);
     this.minimap.onPick = (x, z, button) => {
       if (button === 2) this.input.moveSelected(x, z);
@@ -333,38 +374,155 @@ export class Engine {
     if (this.options.gallery) this.setupGallery();
     this.warm(this.options.warmup ?? 0);
     sound.setMode('battle');
-    setLoading('셰이더를 준비하는 중', 0.88);
-    await r.compileAsync(this.scene, this.camera);
-    this.primeOcean();
-    this.adaptive = new AdaptiveQuality(this.level, levelSetting === 'auto', (l) => this.applyLevel(l));
+    await this.prewarm(0.78);
+    this.adaptive = new AdaptiveQuality(this.level, levelSetting === 'auto', (l) => this.applyLevel(l), this.eq.maxLevel);
     this.applyLevel(this.level);
     setProgress(1);
     this.ready = true;
   }
 
+  /**
+   * Fetches the sky, the terrain, the ships this battle uses and the crew models at the same time, with the progress
+   * bar moving as each finishes. `from` is the bar position the fetch starts at; the fetch fills the bar up to 0.62.
+   */
+  private async loadAssets(from: number) {
+    const info = this.battleInfo;
+    const weights = { sky: 0.1, terrain: 0.2, ships: 0.26, crew: 0.03 };
+    const span = 0.62 - from;
+    const total = weights.sky + weights.terrain + weights.ships + weights.crew;
+    let done = from;
+    const add = (w: number) => {
+      done += (w / total) * span;
+      setProgress(done);
+    };
+    const track = <T,>(p: Promise<T>, w: number) =>
+      p.then((v) => {
+        add(w);
+        return v;
+      });
+    const options = this.shipOptions();
+    const shipsDone = (w: number) => (f: number) => setProgress(done + f * (w / total) * span);
+    const [sky, terrain, assets] = await Promise.all([
+      track(loadSky(SKY_PRESETS[this.skyName], this.eq.hdriSize, this.sky ?? undefined), weights.sky),
+      track(Terrain.load(info.terrain, this.terrainQuality()), weights.terrain),
+      track(loadShipAssets(this.kindsInBattle(), options, shipsDone(weights.ships)), weights.ships),
+      track(crewAssets(), weights.crew),
+      preloadStructures(),
+      this.conquestSetup ? preloadWorks() : undefined,
+    ]);
+    return [sky, terrain, assets] as const;
+  }
+
+  /**
+   * The cloud layer and the wake map do not depend on the battle's files, so they are built and run once up front, while
+   * the sky, terrain and ships are still downloading. The clouds start on a plain placeholder sky; applySky swaps in the
+   * real one. The march shader is built for the most steps the tier's levels can ask for, which is a smaller program on a phone.
+   */
+  private async warmShared() {
+    if (params.get('clouds') !== '0') {
+      const reach = LEVELS.slice(0, Math.max(this.eq.maxLevel, this.level) + 1);
+      const limits = { steps: Math.max(...reach.map((l) => l.cloud.steps)), lightSteps: Math.max(...reach.map((l) => l.cloud.lightSteps)) };
+      const gray = new DataTexture(new Uint16Array(64 * 32 * 4).fill(0x3800), 64, 32, RGBAFormat, HalfFloatType);
+      gray.mapping = EquirectangularReflectionMapping;
+      gray.needsUpdate = true;
+      this.placeholderSky = gray;
+      this.clouds = new Clouds(gray, LEVELS[this.level]!.cloud, limits);
+      this.clouds.coverage.value = COVERAGE[this.skyName];
+      this.scene.add(this.clouds.mesh);
+    }
+    await settle();
+    this.wake.prewarm(this.renderer);
+    this.clouds?.prewarm(this.renderer, this.camera);
+  }
+
+  private shipOptions(): ShipAssetOptions {
+    return { skipLod0: this.eq.ships.skipLod0, baseColorOnly: this.eq.ships.baseColorOnly, anisotropy: this.eq.anisotropy };
+  }
+
+  /**
+   * The ship kinds this battle can show: the fleets the scenario spawns, or the rosters of every seat of a conquest battle
+   * (ships are built mid-battle). Loading only these keeps the models of the other navies out of a phone's memory.
+   */
+  private kindsInBattle(): ShipKind[] {
+    if (this.options.gallery) return ALL_KINDS;
+    const kinds = new Set<ShipKind>();
+    const setup = this.conquestSetup;
+    if (setup) for (const seat of setup.seats) for (const kind of ROSTER[seat.faction]) kinds.add(kind);
+    else for (const ship of buildScenario(this.scenarioId, 0, 1, () => -50, this.campaign).ships) kinds.add(ship.spec.kind);
+    return [...kinds];
+  }
+
+  /**
+   * Builds every program and pass before the battle shows, so none compiles on the first frames as a hitch. WebGPU
+   * builds its pipelines in parallel behind compileAsync, which reports progress. On WebGL the driver compiles one
+   * program at a time, and compileAsync takes twice as long as rendering the scene would, so the whole pipeline is
+   * rendered once part by part (ground, sea and sky, ships and crew), each step moving the loading bar. Last comes
+   * the render with everything, and with the refracting ocean if a level can reach it. `from` is where the bar starts.
+   */
+  private async prewarm(from: number) {
+    const r = this.renderer;
+    const webgpu = !!(r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend;
+    setLoading('셰이더를 준비하는 중', from);
+    await Promise.all([this.worksLoad, this.conquestLoad]);
+    if (webgpu) {
+      await r.compileAsync(this.scene, this.camera, null, (e) => setProgress(from + 0.16 * (e.loaded / Math.max(1, e.total))));
+    } else {
+      await this.compileByParts(from);
+    }
+    setLoading('첫 화면을 그리는 중', from + 0.2);
+    await settle();
+    this.primeOcean();
+    setProgress(from + 0.22);
+  }
+
+  /** Renders the pipeline once per group of the scene, letting the loading bar move between the blocking renders. */
+  private async compileByParts(from: number) {
+    const clouds = this.clouds?.mesh;
+    const works = this.conquestView?.group;
+    const parts = [this.terrain.group, this.ocean.mesh, clouds, this.views.group, this.crew.group, this.fx.group, this.lanterns.group, works].filter((o): o is NonNullable<typeof o> => !!o);
+    const steps: [string, (typeof parts)[number][]][] = [
+      ['땅과 숲을 준비하는 중', [this.terrain.group, ...(works ? [works] : [])]],
+      ['바다와 하늘을 준비하는 중', [this.ocean.mesh, ...(clouds ? [clouds] : [])]],
+      ['함선과 병사를 준비하는 중', [this.views.group, this.crew.group, this.fx.group, this.lanterns.group]],
+    ];
+    const visible = parts.map((o) => o.visible);
+    for (const [n, [text, show]] of steps.entries()) {
+      setLoading(text, from + 0.04 + n * 0.05);
+      await settle();
+      parts.forEach((o) => (o.visible = show.includes(o)));
+      this.pipeline.render();
+      parts.forEach((o, i) => (o.visible = visible[i]!));
+    }
+  }
+
   private terrainQuality(): TerrainQuality {
-    return { mesh: this.eq.terrainMesh, triplanar: this.eq.triplanar, anisotropy: this.eq.anisotropy, noise: this.eq.noise };
+    return { mesh: this.eq.terrainMesh, triplanar: this.eq.triplanar, anisotropy: this.eq.anisotropy, noise: this.eq.noise, texSize: this.eq.terrainTexSize };
   }
 
   private oceanQuality(): OceanQuality {
     return { segments: this.eq.oceanSegments, lights: this.eq.lights };
   }
 
-  /** The refraction variant is a second ocean material. Render both once, so neither hitches on its first use. */
+  /**
+   * Renders the whole pipeline once with the ocean the first level will use, and once more with the refracting ocean if
+   * a level can reach it. A tier that stops below the refraction levels never builds that variant at all.
+   */
   private primeOcean() {
-    this.ocean.setRefraction(true);
-    this.pipeline.render();
+    if (this.eq.maxLevel >= 3 || this.level >= 3) {
+      this.ocean.setRefraction(true);
+      this.pipeline.render();
+    }
     this.ocean.setRefraction(false);
     this.pipeline.render();
   }
 
   private dressTerrain() {
     this.terrain.season.value = this.battleInfo.foliage;
-    this.vegetation = new Vegetation(this.terrain, { grids: this.eq.vegetationGrids, shadows: true });
+    this.vegetation = new Vegetation(this.terrain, { grids: this.eq.vegetationGrids, shadows: this.eq.vegetationShadows });
     this.terrain.group.add(this.vegetation.group);
     this.structures = new Structures(this.terrain);
     this.terrain.group.add(this.structures.group);
-    void this.structures.load();
+    this.worksLoad = this.structures.load();
   }
 
   private warm(seconds: number) {
@@ -400,7 +558,7 @@ export class Engine {
       this.conquestView = new ConquestView(built.conquest, (x, z) => this.terrain.heightAt(x, z), document.querySelector('.app') ?? document.body);
       this.conquestView.onSelect = (id) => this.selectPoint(id);
       this.scene.add(this.conquestView.group);
-      void this.conquestView.load();
+      this.conquestLoad = this.conquestView.load();
     } else {
       this.phi = sunAz - preset.axisOffset - info.view.dir;
       this.terrain.setRotation(this.phi);
@@ -548,12 +706,13 @@ export class Engine {
     if (this.clouds) {
       this.clouds.setEnvironment(sky.environment);
       this.clouds.coverage.value = COVERAGE[this.skyName];
+      this.placeholderSky?.dispose();
+      this.placeholderSky = null;
     }
     if (this.fogEnv) this.fogEnv.value = sky.environment;
-    if (old) {
-      old.background.dispose();
-      old.environment.dispose();
-    }
+    // A reused sky keeps its textures. Only a sky that came in new textures frees the ones it replaces.
+    if (old && old.background !== sky.background) old.background.dispose();
+    if (old && old.environment !== sky.environment) old.environment.dispose();
   }
 
   private setupFog(env: DataTexture) {
@@ -588,7 +747,7 @@ export class Engine {
   async setSky(name: SkyPresetName) {
     if (name === this.skyName && this.sky) return;
     this.skyName = name;
-    const sky = await loadSky(SKY_PRESETS[name], this.eq.hdriDownscale);
+    const sky = await loadSky(SKY_PRESETS[name], this.eq.hdriSize, this.sky ?? undefined);
     this.applySky(sky);
     this.publish(true);
   }
@@ -627,28 +786,25 @@ export class Engine {
     this.skyName = info.sky;
     this.seaName = info.sea;
     waveField.setState(SEA_STATES[this.seaName]);
-    let done = 0.04;
-    const track = <T,>(p: Promise<T>, weight: number) =>
-      p.then((v) => {
-        done += weight;
-        setProgress(done);
-        return v;
-      });
-    const [sky, terrain] = await Promise.all([track(loadSky(SKY_PRESETS[this.skyName], this.eq.hdriDownscale), 0.38), track(Terrain.load(info.terrain, this.terrainQuality()), 0.4)]);
-    setLoading('함대를 배치하는 중', 0.84);
-    this.scene.remove(this.terrain.group);
+    const [sky, terrain, assets] = await this.loadAssets(0.04);
+    setLoading('숲과 마을을 세우는 중', 0.64);
+    // The previous battle's terrain, ocean and ship batches are freed before the new ones are built, so two battles
+    // never sit in memory together.
+    this.disposeBattle();
+    this.assets = assets;
     this.terrain = terrain;
     this.scene.add(terrain.group);
     this.dressTerrain();
     this.applySky(sky);
+    setLoading('함대를 배치하는 중', 0.68);
     this.placeScenario(sky);
-    this.scene.remove(this.ocean.mesh);
+    setLoading('바다와 하늘을 짓는 중', 0.72);
     this.fft?.setSpectrum(spectrumOf(SEA_STATES[this.seaName]));
     this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
     this.scene.add(this.ocean.mesh);
     this.views.reset(this.assets, this.battle, this.capacityHint());
     this.views.team = this.team;
-    this.scene.remove(this.crew.group);
+    void releaseShipAssets(new Set(Object.keys(this.assets)));
     this.crew = new Crew(this.views);
     this.scene.add(this.crew.group);
     this.banners?.clear();
@@ -657,14 +813,26 @@ export class Engine {
     this.autoFast = !this.remote;
     this.fastForward = false;
     this.contactTimer = 0;
-    setLoading('셰이더를 준비하는 중', 0.9);
-    await this.renderer.compileAsync(this.scene, this.camera);
-    this.primeOcean();
+    await this.prewarm(0.78);
     // The rebuilt terrain, vegetation and ocean start from the plain state. Re-apply the current level to them.
     this.applyLevel(this.level);
     this.ready = true;
     setLoading(null);
     this.publish(true);
+  }
+
+  /** Frees the previous battle's terrain with its vegetation and villages, the ocean and the conquest works. */
+  private disposeBattle() {
+    this.vegetation?.dispose();
+    this.vegetation = null;
+    this.structures?.dispose();
+    this.structures = null;
+    this.terrain?.dispose();
+    this.ocean?.dispose();
+    this.current?.texture.dispose();
+    this.conquestView?.dispose();
+    this.conquestView = null;
+    this.crew?.group.removeFromParent();
   }
 
   /** Ships can be launched in a conquest battle, so its renderer reserves room for each kind the seats can build. */
@@ -1013,7 +1181,7 @@ export class Engine {
   private applyLevel(l: number) {
     const L = LEVELS[l]!;
     this.level = l;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.dprOverride ?? L.dprCap));
+    this.renderer.setPixelRatio(this.pixelRatio());
     this.clouds?.setQuality(L.cloud);
     this.cloudEvery = L.cloud.every;
     this.shadowEvery = L.shadowEvery;
@@ -1243,10 +1411,29 @@ export class Engine {
     this.rts.goal.tz = z / n;
   }
 
+  /** Gives back everything the battle holds: inputs, labels, GPU buffers and programs, and the graphics device itself. */
   dispose() {
+    this.ready = false;
     this.input?.detach();
     this.touch?.detach();
     this.rts.detach();
+    this.banners?.clear();
+    this.releasePixelRatio?.();
+    this.releasePixelRatio = null;
+    if (!this.terrain) return;
+    this.disposeBattle();
+    this.clouds?.dispose();
+    this.wake.dispose();
+    this.views.renderer.dispose();
+    this.fx.group.removeFromParent();
+    disposeTree(this.fx.group);
+    this.lanterns.group.removeFromParent();
+    disposeTree(this.lanterns.group);
+    this.pipeline.dispose();
+    this.sky?.background.dispose();
+    this.sky?.environment.dispose();
+    void releaseShipAssets(new Set());
+    this.renderer.dispose().catch(() => undefined);
   }
 
   info() {

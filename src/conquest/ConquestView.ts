@@ -24,6 +24,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { BUILDINGS, type BuildingKind, type CapturePoint, type Conquest } from '../sim/conquest';
 import type { Faction, Team } from '../sim/types';
+import { equipment } from '../game/quality';
 
 /** Footprint widths in metres. */
 const SIZE: Record<BuildingKind, number> = { shipyard: 30, battery: 24, magazine: 11, dock: 20, beacon: 17 };
@@ -36,7 +37,20 @@ loader.setMeshoptDecoder(MeshoptDecoder);
 
 type Model = { geometry: BufferGeometry; material: Material; base: Matrix4 };
 
-async function loadModel(kind: BuildingKind, suffix: string): Promise<Model | null> {
+// Shared by every battle of the page.
+const models = new Map<string, Promise<Model | null>>();
+
+function loadModel(kind: BuildingKind, suffix: string) {
+  const key = FILE[kind] + suffix;
+  let model = models.get(key);
+  if (!model) {
+    model = fetchModel(kind, suffix);
+    models.set(key, model);
+  }
+  return model;
+}
+
+async function fetchModel(kind: BuildingKind, suffix: string): Promise<Model | null> {
   try {
     const gltf = await loader.loadAsync(`/models/env/${FILE[kind]}${suffix}.glb`);
     let mesh: Mesh | null = null;
@@ -57,6 +71,11 @@ async function loadModel(kind: BuildingKind, suffix: string): Promise<Model | nu
   } catch {
     return null;
   }
+}
+
+/** Fetches every shore-works model into the cache, ahead of the conquest view that will draw them. */
+export async function preloadWorks() {
+  await Promise.all((Object.keys(BUILDINGS) as BuildingKind[]).map((kind) => Promise.all([equipment.ships.skipLod0 ? null : loadModel(kind, ''), loadModel(kind, '_lod1')])));
 }
 
 /** Banner colours by navy, matching the squadron flags. */
@@ -122,7 +141,9 @@ export class ConquestView {
   async load() {
     await Promise.all(
       (Object.keys(BUILDINGS) as BuildingKind[]).map(async (kind) => {
-        const [near, far] = await Promise.all([loadModel(kind, ''), loadModel(kind, '_lod1')]);
+        // Phones skip the 1024 px near model. The low level is a quarter of the size and reads the same on a phone screen.
+        const [full, far] = await Promise.all([equipment.ships.skipLod0 ? null : loadModel(kind, ''), loadModel(kind, '_lod1')]);
+        const near = full ?? far ?? (await loadModel(kind, ''));
         if (!near) return;
         const farModel = far ?? near;
         const a = new InstancedMesh(near.geometry, near.material, CAP);
@@ -288,7 +309,17 @@ export class ConquestView {
     });
   }
 
+  /** Frees the rings, banners and instance buffers. The building models stay cached for the next battle. */
   dispose() {
     this.layer.remove();
+    for (const mesh of [...this.rings, this.poles, this.cloths]) {
+      mesh.geometry.dispose();
+      (mesh.material as Material).dispose();
+    }
+    for (const batch of this.batches.values()) {
+      batch.near.dispose();
+      batch.far.dispose();
+    }
+    this.group.removeFromParent();
   }
 }

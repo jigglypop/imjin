@@ -103,6 +103,16 @@ export class Vegetation {
     this.rings.push(this.ring({ full: farTree(), lite: farTree() }, c2, g2, edge1, false));
   }
 
+  /** Frees both crown geometries and the material of every ring. */
+  dispose() {
+    for (const r of this.rings) {
+      r.full.dispose();
+      r.lite.dispose();
+      (r.mesh.material as MeshStandardNodeMaterial).dispose();
+    }
+    this.group.removeFromParent();
+  }
+
   /** Full and lite crown geometry for the level, switched at run time. */
   setLite(lite: boolean) {
     for (const r of this.rings) r.mesh.geometry = lite ? r.lite : r.full;
