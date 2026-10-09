@@ -353,7 +353,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
   };
   const squad = (team: Team, name: string, cmd: string, kind: ShipKind) => b.addSquadron(team, name, cmd, portraitFor(team, cmd), cardFor(kind));
   const ship = (sq: Squadron, kind: ShipKind, p: Spot, name: string, flagship = false, variant = 0) => {
-    const r = kind === 'panokseon' || kind === 'atakebune' || kind === 'mingship' ? 22 : kind === 'sekibune' || kind === 'geobukseon' || kind === 'mingsmall' ? 15 : 9;
+    const r = kind === 'panokseon' || kind === 'geobukseon' || kind === 'atakebune' || kind === 'mingship' ? 22 : kind === 'sekibune' || kind === 'mingsmall' ? 15 : 9;
     const spot = settle(p, r);
     taken.push({ x: spot.x, z: spot.z, r });
     const w = place(spot.x, spot.z);

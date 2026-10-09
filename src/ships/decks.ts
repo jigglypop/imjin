@@ -15,7 +15,7 @@ export const MAIN_DECK: Record<string, number> = {
   'kobaya#0': 0.75,
   'mingship#0': 2.5,
   'mingsmall#0': 0.75,
-  'geobukseon#0': 3.6,
+  'geobukseon#0': 4.7,
 };
 
 export type DeckPlan = {
@@ -36,7 +36,7 @@ export type DeckPlan = {
 
 export const DECKS: Record<ShipKind, DeckPlan> = {
   panokseon: { oarDrop: 1.9, open: true, length: 0.66, beam: 0.72, command: { x: -0.12, up: 3.2 }, figures: { oar: 24, gun: 14, shot: 12, melee: 8 }, oars: 8 },
-  geobukseon: { oarDrop: 1.9, open: false, length: 0.62, beam: 0.62, command: null, figures: { oar: 20, gun: 12, shot: 2, melee: 4 }, oars: 8 },
+  geobukseon: { oarDrop: 2.5, open: false, length: 0.62, beam: 0.62, command: null, figures: { oar: 20, gun: 12, shot: 2, melee: 4 }, oars: 8 },
   hyeopseon: { oarDrop: 0, open: true, length: 0.6, beam: 0.5, command: null, figures: { oar: 8, gun: 2, shot: 2, melee: 1 }, oars: 4 },
   atakebune: { oarDrop: 2.2, open: true, length: 0.6, beam: 0.68, command: { x: -0.05, up: 4 }, figures: { oar: 26, gun: 4, shot: 16, melee: 12 }, oars: 13 },
   sekibune: { oarDrop: 0, open: true, length: 0.66, beam: 0.55, command: null, figures: { oar: 14, gun: 0, shot: 8, melee: 6 }, oars: 7 },
