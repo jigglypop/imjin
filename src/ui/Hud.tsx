@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Engine } from '../game/Engine';
+import { SPEEDS, type Engine } from '../game/Engine';
 import { AMMO_NAMES } from '../game/Input';
 import { isTouchDevice } from '../game/device';
 import { EQUIPMENT_LABEL, LEVELS, equipment, saveEquipmentSetting, type EquipmentSetting } from '../game/quality';
@@ -441,7 +441,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             >
               {snap.paused ? '▶' : '❚❚'}
             </button>
-            {[1, 2, 4, 8].map((s) => (
+            {SPEEDS.map((s) => (
               <button
                 key={s}
                 className={!snap.paused && snap.speed === s ? 'on' : ''}

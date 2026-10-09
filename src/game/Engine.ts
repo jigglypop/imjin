@@ -103,13 +103,17 @@ export interface CommandSink {
 
 const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
 
-/** Speed of the fast-forwarded approach, and the largest multiplier the player can pick. */
-export const FAST_SPEED = 8;
+/** Multipliers the player can pick. The approach before first contact runs at the largest. */
+export const SPEEDS = [1, 2, 4, 8, 16, 32] as const;
+const FAST_SPEED = SPEEDS[SPEEDS.length - 1];
 /** The approach ends when two hostile ships come this close (inside the computer's broadside range), or at the first shot. */
 const CONTACT_RANGE = 400;
-/** Sim steps per frame are capped by count and by time, so 8x on a phone degrades gracefully. */
-const MAX_STEPS = 32;
-const SIM_BUDGET_MS = 9;
+/**
+ * Sim steps per frame are capped by count and by time, so high multipliers degrade gracefully on a slow device.
+ * The time budget grows with the multiplier: at 16-32x the player wants the battle to move, not a smooth 60 fps.
+ */
+const MAX_STEPS = 96;
+const simBudgetMs = (speed: number) => (speed >= 16 ? 24 : speed >= 8 ? 14 : 9);
 
 export class Engine {
   readonly scene = new Scene();
@@ -692,11 +696,13 @@ export class Engine {
       this.fpsFrames = 0;
       this.fpsTime = 0;
     }
-    this.adaptive?.update(frameDt, this.gpuMs);
     const dt = Math.min(frameDt, 0.1);
     // A multiplayer battle runs on the server at its own pace: no pause, no speed-up, nothing simulated here.
     if (!this.remote) this.updateFastForward(dt);
     const speed = this.fastForward ? Math.max(this.speed, FAST_SPEED) : this.speed;
+    // Above 4x the frame rate is set by the simulation's share of each frame, not by the GPU, so it says nothing
+    // about which quality level the device can hold.
+    if (this.remote || this.paused || speed <= 4) this.adaptive?.update(frameDt, this.gpuMs);
     const scaled = this.remote ? dt : this.paused ? 0 : dt * speed;
     this.lastScaled = scaled;
     if (this.remote) {
@@ -707,12 +713,13 @@ export class Engine {
       // frames (and simply runs the battle a little slower than asked) instead of stalling.
       this.accumulator += scaled;
       const start = performance.now();
+      const budget = simBudgetMs(speed);
       let steps = 0;
       while (this.accumulator >= SIM_DT && steps < MAX_STEPS) {
         this.stepSim(SIM_DT);
         this.accumulator -= SIM_DT;
         steps += 1;
-        if (performance.now() - start > SIM_BUDGET_MS) break;
+        if (performance.now() - start > budget) break;
       }
       if (this.accumulator > SIM_DT * 4) this.accumulator = 0;
     }
