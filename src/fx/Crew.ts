@@ -2,16 +2,15 @@ import { Group, Quaternion, Vector3, type Camera } from 'three/webgpu';
 import type { Battle } from '../sim/battle';
 import type { BattleEvent, Ship, Team } from '../sim/types';
 import type { ShipViews } from '../ships/ShipViews';
-import { DECKS, mainDeck, type DeckPlan } from '../ships/decks';
+import { DECKS, blocked, layoutFor, mainDeck, type DeckLayout, type DeckPlan } from '../ships/decks';
 import { equipment } from '../game/quality';
 import { beginCrew, crewTime, endCrew, loadCrew, pushCrew, type Clip, type ClipName, type CrewAsset, type CrewKey } from './crewModels';
 import { disposeTree } from '../render/dispose';
 import { Boarding, ST_DUEL, placement } from './Boarding';
-import { ARMS, CAST, GUN, HAND_ARMS, MELEE, NO_WEAPON, OAR, OFFICER, SHOT, frac, lerpAngle, rnd, seeded, smooth, yawTo, type Deck, type Member, type Roster, type Station } from './crewTypes';
+import { ARMS, CAST, CREW_RANGE, GUN, HAND_ARMS, MELEE, NO_WEAPON, OAR, OFFICER, SHOT, figureScale, frac, lerpAngle, rnd, seeded, smooth, yawTo, type Deck, type Member, type Roster, type Station } from './crewTypes';
 
 const LOD_NEAR = { high: 85, medium: 65, low: 45 }[equipment.tier];
 const LOD_MID = { high: 230, medium: 180, low: 140 }[equipment.tier];
-const RANGE = { high: 540, medium: 440, low: 320 }[equipment.tier];
 const DEATH = 2.6;
 /** Fighting men are drawn in greater numbers where the device can take it, so a boarding looks like a crowd. */
 const FIGHTERS = { high: 2.2, medium: 1.6, low: 1.15 }[equipment.tier];
@@ -21,42 +20,62 @@ const FPS = 15;
 /** Leading frames of the bow soldiers' shoot clip that hold no pose. */
 const SHOOT_SKIP = 11;
 
-function stations(ship: Ship, plan: DeckPlan, figures: DeckPlan['figures']): Station[][] {
+function stations(ship: Ship, figures: DeckPlan['figures'], lay: DeckLayout): Station[][] {
   const L = ship.spec.length;
-  const B = ship.spec.beam;
   const rand = seeded(ship.id * 7919 + 13);
   const out: Station[][] = [[], [], [], [], []];
-  const lowDeck: Deck = plan.oarDrop > 0 ? 0 : 1;
+  const lowDeck: Deck = lay.oarDrop > 0 ? 0 : 1;
+  const x0 = lay.x0 + 0.8;
+  const x1 = lay.x1 - 0.8;
   // Rowers: a line down each side, facing their oars.
   const perSide = Math.max(1, Math.ceil(figures.oar / 2));
   for (let i = 0; i < figures.oar; i += 1) {
     const side = i % 2 === 0 ? 1 : -1;
     const k = Math.floor(i / 2);
-    const x = (-0.36 + (0.7 * (k + 0.5)) / perSide) * L;
-    out[OAR]!.push({ x, z: side * B * (plan.oarDrop > 0 ? 0.31 : 0.28), yaw: yawTo(0, side), deck: lowDeck });
+    const x = lay.oars.length ? lay.oars[Math.min(lay.oars.length - 1, Math.floor(((k + 0.5) * lay.oars.length) / perSide))]! : (-0.36 + (0.7 * (k + 0.5)) / perSide) * L;
+    let z = side * Math.max(0.7, lay.edge(x) - (lay.oarDrop > 0 ? 1.6 : 0.6));
+    // On an open deck the rowers sit outside any cabin.
+    if (lay.oarDrop === 0 && blocked(lay, x, z, 0.3)) z = side * Math.max(0.7, lay.edge(x) - 0.35);
+    out[OAR]!.push({ x, z, yaw: yawTo(0, side), deck: lowDeck });
   }
   // Gunners stand at the guns of each broadside.
   const sides = [0, 1].map((side) => ship.guns.filter((g) => g.side === side).length);
   for (let i = 0; i < figures.gun; i += 1) {
     const side = i % 2;
-    const count = Math.max(1, sides[side]!);
+    const ports = lay.guns?.[side];
+    const count = Math.max(1, ports?.length ?? sides[side]!);
     const slot = Math.floor(i / 2) % count;
-    const along = count <= 1 ? 0 : (slot / (count - 1) - 0.5) * L * 0.66;
-    const z = (side === 0 ? -1 : 1) * (B * 0.5 - 1.6);
-    out[GUN]!.push({ x: along + (Math.floor(i / 2) >= count ? 1.2 : 0), z, yaw: yawTo(0, Math.sign(z)), deck: 1 });
+    const along = ports && ports.length ? ports[Math.min(ports.length - 1, slot)]! : count <= 1 ? 0 : (slot / (count - 1) - 0.5) * L * 0.66;
+    const x = along + (Math.floor(i / 2) >= count ? 1.2 : 0);
+    const z = (side === 0 ? -1 : 1) * Math.max(0.7, lay.edge(x) - 0.9);
+    out[GUN]!.push({ x, z, yaw: yawTo(0, Math.sign(z)), deck: 1 });
   }
-  // Shooters line the rails.
+  // Shooters line the rails, where no cabin stands.
   for (let i = 0; i < figures.shot; i += 1) {
     const side = i % 2 === 0 ? 1 : -1;
-    const x = (-0.3 + 0.66 * rand()) * L * (plan.length / 0.66);
-    out[SHOT]!.push({ x, z: side * (B * 0.5 * plan.beam - 0.4), yaw: yawTo(rand() * 0.6 - 0.3, side), deck: 1 });
+    let x = x0 + (x1 - x0) * rand();
+    for (let t = 0; t < 8 && blocked(lay, x, side * Math.max(0.7, lay.edge(x) - 0.5), 0.2); t += 1) x = x0 + (x1 - x0) * rand();
+    out[SHOT]!.push({ x, z: side * Math.max(0.7, lay.edge(x) - 0.5), yaw: yawTo(rand() * 0.6 - 0.3, side), deck: 1 });
   }
-  // Deck fighters hold the middle.
+  // Deck fighters hold the middle, or what is left of it beside a tower or cabin.
   for (let i = 0; i < figures.melee; i += 1) {
-    out[MELEE]!.push({ x: (rand() - 0.5) * L * 0.42, z: (rand() - 0.5) * B * 0.36, yaw: yawTo(1, (rand() - 0.5) * 0.8), deck: 1 });
+    let x = 0;
+    let z = 0;
+    let ok = false;
+    for (let t = 0; t < 16 && !ok; t += 1) {
+      x = Math.max(x0, Math.min(x1, (rand() - 0.5) * L * 0.6));
+      z = (rand() - 0.5) * 2 * lay.edge(x) * 0.7;
+      ok = !blocked(lay, x, z, 0.5);
+    }
+    if (!ok) z = (rand() < 0.5 ? -1 : 1) * Math.max(0.7, lay.edge(x) - 1.3);
+    out[MELEE]!.push({ x, z, yaw: yawTo(1, (rand() - 0.5) * 0.8), deck: 1 });
   }
-  if (plan.command) out[OFFICER]!.push({ x: plan.command.x * L, z: 0, yaw: yawTo(1, 0), deck: 2 });
-  else out[OFFICER]!.push({ x: -0.32 * L, z: 0, yaw: yawTo(1, 0), deck: 1 });
+  if (lay.command) out[OFFICER]!.push({ x: lay.command.x, z: 0, yaw: yawTo(1, 0), deck: 2 });
+  else {
+    let x = Math.max(x0, -0.32 * L);
+    for (let t = 0; t < 10 && blocked(lay, x, 0, 0.5); t += 1) x -= 1;
+    out[OFFICER]!.push({ x: Math.max(lay.x0 + 0.3, x), z: 0, yaw: yawTo(1, 0), deck: 1 });
+  }
   return out;
 }
 
@@ -116,7 +135,7 @@ export class Crew {
   }
 
   private deckY(r: Roster, deck: Deck) {
-    return deck === 0 ? r.main - r.plan.oarDrop : deck === 2 ? r.main + (r.plan.command?.up ?? 0) : r.main;
+    return deck === 0 ? r.main - r.layout.oarDrop : deck === 2 ? r.main + (r.layout.command?.up ?? 0) : r.main;
   }
 
   private roster(ship: Ship): Roster {
@@ -125,14 +144,16 @@ export class Crew {
     if (r && r.key === key) return r;
     const plan = DECKS[ship.spec.kind];
     const figures = { oar: plan.figures.oar, gun: plan.figures.gun, shot: Math.round(plan.figures.shot * FIGHTERS), melee: Math.round(plan.figures.melee * FIGHTERS) };
+    const layout = layoutFor(key, ship.spec.kind, ship.spec.length, ship.spec.beam);
     r = {
       key,
       plan,
       main: mainDeck(key, ship.spec.kind, ship.spec.deck),
-      stations: stations(ship, plan, figures),
+      stations: stations(ship, figures, layout),
       figures,
       members: [[], [], [], [], []],
-      half: Math.max(1, ship.spec.beam * 0.5 * plan.beam - 0.4),
+      layout,
+      grow: 1,
       len: ship.spec.length,
       q: new Quaternion(),
       live: -1,
@@ -247,7 +268,7 @@ export class Crew {
     const st = r.stations[role]![mem.station]!;
     const melee = r.boarded || this.time - (this.meleeAt.get(ship.id) ?? -99) < 3;
     // Men at the rail are knocked over it; the blow throws them toward the side they stand on.
-    if (Math.abs(st.z) > r.half * 0.7 && Math.random() < (melee ? 0.55 : 0.35)) mem.fling = st.z >= 0 ? 1 : -1;
+    if (Math.abs(st.z) > r.layout.edge(st.x) * 0.7 && Math.random() < (melee ? 0.55 : 0.35)) mem.fling = st.z >= 0 ? 1 : -1;
   }
 
   handle(events: BattleEvent[], battle: Battle) {
@@ -308,14 +329,15 @@ export class Crew {
       const v = this.views.states.get(ship.id);
       if (!v || !v.visible) continue;
       const dist = Math.hypot(ship.x - cam.x, ship.z - cam.z, cam.y);
-      if (dist > RANGE) continue;
+      if (dist > CREW_RANGE) continue;
       const r = this.roster(ship);
       r.live = this.frame;
       this.live.push(r);
       r.dist = dist;
+      r.grow = figureScale(dist);
       r.lod = dist < LOD_NEAR ? 0 : dist < LOD_MID ? 1 : 2;
       const cut = view.cut.has(ship.id) ? view.cutaway : 0;
-      const lowDeck = r.plan.oarDrop > 0;
+      const lowDeck = r.layout.oarDrop > 0;
       r.showMain = cut === 0 ? r.plan.open : cut < 3 || !lowDeck;
       r.showLow = !lowDeck ? r.showMain : cut === 3;
       r.showCommand = cut <= 1 && (cut > 0 || r.plan.open);
@@ -505,7 +527,7 @@ export class Crew {
           this.tilt.setFromAxisAngle(this.side, p.lean);
           this.q.multiply(this.tilt);
         }
-        pushCrew(l, this.p.x, this.p.y, this.p.z, p.scale, this.q.x, this.q.y, this.q.z, this.q.w, data, p.t0, p.rate, p.weapon, p.dark);
+        pushCrew(l, this.p.x, this.p.y, this.p.z, p.scale * (st.deck === 0 ? 1 : r.grow), this.q.x, this.q.y, this.q.z, this.q.w, data, p.t0, p.rate, p.weapon, p.dark);
       }
     }
   }

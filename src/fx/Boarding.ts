@@ -1,31 +1,21 @@
-import {
-  BoxGeometry,
-  DynamicDrawUsage,
-  Group,
-  InstancedBufferAttribute,
-  InstancedMesh,
-  Matrix4,
-  MeshBasicNodeMaterial,
-  MeshStandardNodeMaterial,
-  PlaneGeometry,
-  Quaternion,
-  Vector3,
-  type Camera,
-} from 'three/webgpu';
-import { attribute, length, smoothstep, uv, vec3 } from 'three/tsl';
+import { BoxGeometry, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardNodeMaterial, Quaternion, Vector3, type Camera } from 'three/webgpu';
+import { attribute } from 'three/tsl';
 import type { Battle } from '../sim/battle';
 import type { Faction, Ship } from '../sim/types';
 import type { ShipViews } from '../ships/ShipViews';
+import { blocked, layoutFor, mainDeck } from '../ships/decks';
 import { waveField } from '../ocean/waves';
 import { equipment } from '../game/quality';
 import { pushCrew, type Clip, type ClipName, type CrewAsset, type CrewKey } from './crewModels';
-import { CAST, GUN, HAND_ARMS, MELEE, OFFICER, SHOT, frac, lerpAngle, rnd, smooth, yawTo, type Member, type Roster, type Station } from './crewTypes';
+import { CAST, GUN, HAND_ARMS, MELEE, OFFICER, SHOT, figureScale, frac, lerpAngle, rnd, smooth, yawTo, type Member, type Roster, type Station } from './crewTypes';
+import { ArrowField } from './arrows';
+import { PuffField } from './puffs';
 
-/** What a tier of device can afford to show at once. */
+/** What a tier of device can afford to show at once. `perFight` caps the men crossing and fighting for one grappled pair. */
 const BUDGET = {
-  high: { figures: 80, fights: 8, arrows: 56, sprites: 96, fallen: 64 },
-  medium: { figures: 48, fights: 5, arrows: 32, sprites: 64, fallen: 40 },
-  low: { figures: 24, fights: 3, arrows: 16, sprites: 40, fallen: 20 },
+  high: { figures: 120, fights: 8, perFight: 40, fallen: 64 },
+  medium: { figures: 72, fights: 5, perFight: 24, fallen: 40 },
+  low: { figures: 28, fights: 3, perFight: 12, fallen: 20 },
 }[equipment.tier];
 
 const WALK = 3.4;
@@ -35,7 +25,11 @@ const MAX_LINKS = 3;
 const ROPE_SEGS = 5;
 const PROPS_PER_LINK = 2 * ROPE_SEGS + 2 + 3;
 const FLAGS = 8;
-const PROPS = BUDGET.fights * MAX_LINKS * PROPS_PER_LINK + BUDGET.arrows + FLAGS * 2;
+/** Boxes of a flag: pole, four strips of cloth. */
+const FLAG_BOXES = 5;
+/** Weapons a beaten crew lets fall, per captured ship, two boxes each. */
+const DROPS = 8;
+const PROPS = BUDGET.fights * MAX_LINKS * PROPS_PER_LINK + FLAGS * (FLAG_BOXES + DROPS * 2);
 
 const PARTNERS = [MELEE, SHOT, GUN, OFFICER];
 const PARTNER_PENALTY = [0, 4, 9, 12];
@@ -47,17 +41,25 @@ const ST_RALLY = 3;
 const ST_RETREAT = 4;
 const ST_DYING = 5;
 
-/** Flag colours by navy; the last is the white of a surrender. */
+/** How a boarder gets over: along a plank, in a leap from rail to rail, or hand over hand on a grappling rope. */
+const PLANK = 0;
+const LEAP = 1;
+const ROPE = 2;
+
+/**
+ * Flag colours by navy: faded indigo for Joseon, oxblood for Japan, ochre for Ming; the last is the dull white of a
+ * surrender.
+ */
 const FLAG_COLORS: [number, number, number][] = [
-  [0.12, 0.32, 0.72],
-  [0.78, 0.1, 0.08],
-  [0.92, 0.7, 0.14],
-  [0.93, 0.93, 0.9],
+  [0.2, 0.27, 0.4],
+  [0.46, 0.17, 0.14],
+  [0.64, 0.5, 0.2],
+  [0.86, 0.84, 0.78],
 ];
 const FACTION_INDEX: Record<Faction, number> = { joseon: 0, japan: 1, ming: 2 };
 
 type Link = {
-  /** Rail points on the grappling ship (a) and the held ship (d), in each ship's own frame. */
+  /** Rail points on the grappling ship (a) and the held ship (d), in each ship's own frame: the top of the rail. */
   ax: number;
   az: number;
   ay: number;
@@ -105,9 +107,14 @@ export type Figure = {
   role: number;
   seed: number;
   state: number;
+  /** How he crosses: PLANK, LEAP or ROPE. */
+  style: number;
   u: number;
   dir: number;
+  /** Time on the grappling ship's deck: walk to the foot of the rail (up to dw), then vault onto it. */
   d1: number;
+  dw: number;
+  /** Time crossing, and time on the held ship from the rail to his place. */
   d2: number;
   d3: number;
   sx: number;
@@ -129,28 +136,36 @@ export type Figure = {
   search: number;
   born: number;
   rally: number;
+  /** Battle time of the next flash of steel while he duels. */
+  spark: number;
+  /** He fights from the top of the enemy's rail, over the heads of its crew; up is how high he stands above the deck. */
+  rail: boolean;
+  up: number;
+  /** Battle time he stops holding the rail when no man is left to fight there. */
+  railUntil: number;
 };
 
 type Fallen = { used: boolean; x: number; y: number; z: number; vx: number; vy: number; vz: number; spin: number; key: CrewKey; age: number; splashed: boolean; yaw: number };
-type Arrow = { used: boolean; x0: number; y0: number; z0: number; vx: number; vy: number; vz: number; t: number; T: number; tid: number; lx: number; ly: number; lz: number; qx: number; qy: number; qz: number; qw: number; hit: number };
-type Sprite = { used: boolean; x: number; y: number; z: number; vx: number; vy: number; vz: number; age: number; life: number; s0: number; s1: number; r: number; g: number; b: number; a: number; g0: number };
-type Capture = { id: number; t0: number; win: number; lose: number; by: number };
+/** A weapon a beaten man lets fall, in the ship's own frame. */
+type Drop = { x: number; z: number; yaw: number; len: number; late: number };
+type Capture = { id: number; t0: number; win: number; lose: number; by: number; drops: Drop[]; dropped: boolean };
 
 export type Placement = { x: number; z: number; yaw: number };
 
 const G = 9.81;
 const UP = new Vector3(0, 1, 0);
+const X_AXIS = new Vector3(1, 0, 0);
 const Z_AXIS = new Vector3(0, 0, 1);
 
-/**
- * Where a man really stands. When an enemy is alongside the crew leaves its stations and crowds the rail on that
- * side, so fighters meet on the contact line instead of each at his own post.
- */
 /** Along-ship position of the pole the flag flies from: forward of the command tower, which would hide it. */
 export function flagX(r: Roster) {
   return r.len * 0.3;
 }
 
+/**
+ * Where a man really stands. When an enemy is alongside the crew leaves its stations and crowds the rail on that
+ * side, so fighters meet on the contact line instead of each at his own post.
+ */
 export function placement(r: Roster, role: number, mem: Member, st: Station, out: Placement) {
   out.x = st.x;
   out.z = st.z;
@@ -161,8 +176,11 @@ export function placement(r: Roster, role: number, mem: Member, st: Station, out
   const s1 = frac(mem.seed * 37.7);
   const s2 = frac(mem.seed * 91.3);
   const side = r.cs[k]!;
-  const tx = r.cx[k]! + (s1 - 0.5) * 6;
-  const tz = side * Math.max(0.8, r.half - 1.7 - 1.3 * s2);
+  const lay = r.layout;
+  const tx = Math.max(lay.x0, Math.min(lay.x1, r.cx[k]! + (s1 - 0.5) * 7));
+  // Packed against the rail, in rows; a tower or cabin there pushes them out to the rail itself.
+  let tz = side * Math.max(0.8, lay.edge(tx) - 0.55 - 1.25 * s2);
+  if (blocked(lay, tx, tz, 0.35)) tz = side * Math.max(0.8, lay.edge(tx) - 0.45);
   out.x = st.x + (tx - st.x) * w;
   out.z = st.z + (tz - st.z) * w;
   out.yaw = lerpAngle(st.yaw, yawTo(0, side) + (s1 - 0.5) * 0.5, w);
@@ -176,11 +194,12 @@ export function placement(r: Roster, role: number, mem: Member, st: Station, out
 export class Boarding {
   readonly group = new Group();
   readonly pose = { clip: 'melee' as ClipName, t0: 0, rate: 1 };
+  /** Arrows in the air and in the planks, and the smoke, flashes and splashes of the scene. */
+  readonly arrows: ArrowField;
+  readonly puffs: PuffField;
   private readonly fights: Fight[] = [];
   private readonly figs: Figure[] = [];
   private readonly fallen: Fallen[] = [];
-  private readonly arrows: Arrow[] = [];
-  private readonly sprites: Sprite[] = [];
   private readonly captures = new Map<number, Capture>();
   private readonly captureList: Capture[] = [];
   private readonly lastAttacker = new Map<number, number>();
@@ -188,9 +207,6 @@ export class Boarding {
   private readonly kneel = new Map<CrewKey, Clip>();
   private readonly props: InstancedMesh;
   private readonly propColor: InstancedBufferAttribute;
-  private readonly puffs: InstancedMesh;
-  private readonly puffTint: InstancedBufferAttribute;
-  private readonly puffFade: InstancedBufferAttribute;
   private nProps = 0;
   private time = 0;
   private dt = 0;
@@ -203,6 +219,7 @@ export class Boarding {
   private readonly dirv = new Vector3();
   private readonly q = new Quaternion();
   private readonly q2 = new Quaternion();
+  private readonly q3 = new Quaternion();
   private readonly basis = new Matrix4();
   private readonly right = new Vector3();
   private readonly camPos = new Vector3();
@@ -220,15 +237,13 @@ export class Boarding {
     }
     for (let i = 0; i < BUDGET.figures; i += 1) {
       this.figs.push({
-        used: false, fight: null, link: null, mem: null, partner: null, partnerRole: 0, from: 0, to: 0, key: 'rower', faction: 'joseon', role: MELEE, seed: 0, state: 0, u: 0, dir: 1, d1: 1, d2: 1, d3: 1,
-        sx: 0, sz: 0, lat: 0, tx: 0, tz: 0, px: 0, pz: 0, landed: false, wx: 0, wy: 0, wz: 0, wq: new Quaternion(), yaw: 0, dieAt: 0, hurt: 0, fling: 0, search: 0, born: 0, rally: 0,
+        used: false, fight: null, link: null, mem: null, partner: null, partnerRole: 0, from: 0, to: 0, key: 'rower', faction: 'joseon', role: MELEE, seed: 0, state: 0, style: PLANK, u: 0, dir: 1, d1: 1, dw: 1, d2: 1, d3: 1,
+        sx: 0, sz: 0, lat: 0, tx: 0, tz: 0, px: 0, pz: 0, landed: false, wx: 0, wy: 0, wz: 0, wq: new Quaternion(), yaw: 0, dieAt: 0, hurt: 0, fling: 0, search: 0, born: 0, rally: 0, spark: 0, rail: false, up: 0, railUntil: 0,
       });
     }
     for (let i = 0; i < BUDGET.fallen; i += 1) this.fallen.push({ used: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, spin: 0, key: 'rower', age: 0, splashed: false, yaw: 0 });
-    for (let i = 0; i < BUDGET.arrows; i += 1) this.arrows.push({ used: false, x0: 0, y0: 0, z0: 0, vx: 0, vy: 0, vz: 0, t: 0, T: 1, tid: 0, lx: 0, ly: 0, lz: 0, qx: 0, qy: 0, qz: 0, qw: 1, hit: 0 });
-    for (let i = 0; i < BUDGET.sprites; i += 1) this.sprites.push({ used: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, age: 0, life: 1, s0: 1, s1: 1, r: 1, g: 1, b: 1, a: 1, g0: 0 });
 
-    // Ropes, planks, hooks, arrows and flags are boxes of one instanced mesh, each with its own colour.
+    // Ropes, planks, hooks, flags and dropped weapons are boxes of one instanced mesh, each with its own colour.
     const geo = new BoxGeometry(1, 1, 1);
     this.propColor = new InstancedBufferAttribute(new Float32Array(PROPS * 3), 3);
     this.propColor.setUsage(DynamicDrawUsage);
@@ -243,23 +258,10 @@ export class Boarding {
     this.props.receiveShadow = true;
     this.group.add(this.props);
 
-    // Muzzle flashes and splashes are soft round sprites turned toward the camera.
-    const quad = new PlaneGeometry(1, 1);
-    this.puffTint = new InstancedBufferAttribute(new Float32Array(BUDGET.sprites * 3), 3);
-    this.puffFade = new InstancedBufferAttribute(new Float32Array(BUDGET.sprites), 1);
-    this.puffTint.setUsage(DynamicDrawUsage);
-    this.puffFade.setUsage(DynamicDrawUsage);
-    quad.setAttribute('iTint', this.puffTint);
-    quad.setAttribute('iFade', this.puffFade);
-    const puffMat = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
-    puffMat.colorNode = attribute('iTint', 'vec3').mul(vec3(1));
-    puffMat.opacityNode = smoothstep(0.5, 0.08, length(uv().sub(0.5))).mul(attribute('iFade', 'float'));
-    this.puffs = new InstancedMesh(quad, puffMat, BUDGET.sprites);
-    this.puffs.instanceMatrix.setUsage(DynamicDrawUsage);
-    this.puffs.count = 0;
-    this.puffs.frustumCulled = false;
-    this.puffs.renderOrder = 5;
-    this.group.add(this.puffs);
+    this.puffs = new PuffField();
+    this.arrows = new ArrowField(views, this.puffs);
+    this.group.add(this.arrows.group);
+    this.group.add(this.puffs.group);
   }
 
   // ---------------------------------------------------------------- events
@@ -283,7 +285,9 @@ export class Boarding {
     }
     if (!win) win = this.lastAttacker.get(id) ?? 0;
     const victor = win ? battle.get(win) : undefined;
-    const capture = { id, t0: this.time, win: victor ? FACTION_INDEX[victor.spec.faction] : 3, lose: FACTION_INDEX[ship.spec.faction], by: win };
+    const drops: Drop[] = [];
+    for (let i = 0; i < DROPS; i += 1) drops.push({ x: 0, z: 0, yaw: 0, len: 1, late: 0 });
+    const capture = { id, t0: this.time, win: victor ? FACTION_INDEX[victor.spec.faction] : 3, lose: FACTION_INDEX[ship.spec.faction], by: win, drops, dropped: false };
     this.captures.set(id, capture);
     this.captureList.push(capture);
     if (victor) this.cheerUntil.set(victor.id, this.time + 8);
@@ -327,22 +331,28 @@ export class Boarding {
     const lz = sd.z - sa.z;
     f.sa = -lx * Math.sin(sa.heading) + lz * Math.cos(sa.heading) >= 0 ? 1 : -1;
     f.sd = lx * Math.sin(sd.heading) - lz * Math.cos(sd.heading) >= 0 ? 1 : -1;
-    // Links: spread along the grappling ship, each meeting the nearest rail point on the other.
+    // Links: spread along the grappling ship at its boarding points, each meeting the nearest rail point on the other.
     const want = equipment.tier === 'low' ? 2 : sa.spec.length > 26 ? 3 : 2;
     f.nlinks = want;
+    const la = rA.layout;
+    const ld = rD.layout;
+    const pts = la.boarding;
     for (let k = 0; k < want; k += 1) {
       const link = f.links[k]!;
-      const xa = (k - (want - 1) / 2) * 0.3 * sa.spec.length * rA.plan.length;
+      const pick = Math.round((k * (pts.length - 1)) / (want - 1));
+      let xa = pts[Math.min(pts.length - 1, pick)]!;
+      if (k > 0 && Math.abs(xa - f.links[k - 1]!.ax) < 2) xa = f.links[k - 1]!.ax + 4;
+      xa = Math.max(la.x0 + 1, Math.min(la.x1 - 1, xa));
       link.ax = xa;
-      link.az = f.sa * rA.half;
-      link.ay = rA.main + 0.5;
+      link.az = f.sa * (la.edge(xa) + 0.1);
+      link.ay = rA.main + la.railUp;
       this.views.localToWorld(sa.id, link.ax, link.ay, link.az, this.a);
       let best = 1e9;
       let bx = 0;
-      const span = sd.spec.length * rD.plan.length * 0.5;
-      for (let i = 0; i <= 8; i += 1) {
-        const xd = (i / 8 - 0.5) * 2 * span * 0.8;
-        this.views.localToWorld(sd.id, xd, rD.main + 0.5, f.sd * rD.half, this.b);
+      const span = ld.x1 - ld.x0 - 3;
+      for (let i = 0; i <= 12; i += 1) {
+        const xd = ld.x0 + 1.5 + (span * i) / 12;
+        this.views.localToWorld(sd.id, xd, rD.main + ld.railUp, f.sd * (ld.edge(xd) + 0.1), this.b);
         const d = this.a.distanceToSquared(this.b);
         if (d < best) {
           best = d;
@@ -350,10 +360,12 @@ export class Boarding {
         }
       }
       link.dx = bx;
-      link.dz = f.sd * rD.half;
-      link.dy = rD.main + 0.5;
+      link.dz = f.sd * (ld.edge(bx) + 0.1);
+      link.dy = rD.main + ld.railUp;
       const gap = Math.sqrt(best);
-      link.plank = gap < 17;
+      // A plank only where the rails are about level; a high wall is climbed by rope.
+      this.views.localToWorld(sd.id, link.dx, link.dy, link.dz, this.b);
+      link.plank = gap >= 4.5 && gap < 17 && Math.abs(this.b.y - this.a.y) < 1.5;
       link.rest = gap * 1.06 + 0.5;
       link.cut = -1;
       link.splashed = false;
@@ -399,6 +411,7 @@ export class Boarding {
       const rad = 1.4 + frac(fig.seed * 17) * 2.6;
       fig.tx = flagX(rD) + Math.cos(ang) * rad;
       fig.tz = Math.sin(ang) * rad * 0.8;
+      this.clear(rD, fig);
     }
   }
 
@@ -423,6 +436,15 @@ export class Boarding {
     fig.partner = null;
     fig.fight = null;
     fig.link = null;
+  }
+
+  /** Moves a figure's target out of a cabin or tower, to the open deck beside it. */
+  private clear(rD: Roster, fig: Figure) {
+    const lay = rD.layout;
+    fig.tx = Math.max(lay.x0, Math.min(lay.x1, fig.tx));
+    const edge = lay.edge(fig.tx);
+    fig.tz = Math.max(-edge + 0.4, Math.min(edge - 0.4, fig.tz));
+    if (blocked(lay, fig.tx, fig.tz, 0.3)) fig.tz = (fig.tz >= 0 ? 1 : -1) * Math.max(0.6, edge - 0.7);
   }
 
   /** Looks for a free defender for this boarder to fight: the fighters first, nearest along the rail. */
@@ -548,14 +570,24 @@ export class Boarding {
     return false;
   }
 
-  /** Lends men from the grappling ship to the plank, as fast as the fight and the ship's fighting strength allow. */
+  /**
+   * Lends men from the grappling ship to the rail, in waves that follow its fighting strength: a ship full of
+   * soldiers sends a crowd, a weak one a handful, and no pair puts more than the tier's share on screen.
+   */
   private sendBoarders(f: Fight, a: Ship, d: Ship, rA: Roster, rD: Roster) {
     const age = this.time - f.t0;
     const ready = f.links[0]!.plank ? 1.2 : 0.8;
     if (age < ready) return;
-    const strength = (a.roles[MELEE] + a.roles[SHOT] * 0.6) / Math.max(1, a.spec.crew * (a.spec.crewPlan[MELEE]! + a.spec.crewPlan[SHOT]! * 0.6));
-    f.acc = Math.min(5, f.acc + this.dt * (1 + 2.4 * Math.min(1, strength)));
+    const full = Math.max(1, a.spec.crew * (a.spec.crewPlan[MELEE]! + a.spec.crewPlan[SHOT]! * 0.6));
+    const men = a.roles[MELEE] + a.roles[SHOT] * 0.6;
+    const strength = Math.min(1.2, men / full);
+    f.acc = Math.min(6, f.acc + this.dt * (1.8 + 4.4 * strength));
     if (f.acc < 1) return;
+    // The men on screen for this pair: as many as its fighters are worth, a body for every few real men.
+    const want = Math.max(4, Math.min(BUDGET.perFight, Math.round(men / 4.5)));
+    let mine = 0;
+    for (const fig of this.figs) if (fig.used && fig.fight === f && fig.state !== ST_DYING) mine += 1;
+    if (mine >= want) return;
     // Count the men already across and those still on deck who can go.
     let away = 0;
     let free = 0;
@@ -566,9 +598,9 @@ export class Boarding {
         else free += 1;
       }
     }
-    if (free + away <= 0 || away >= (free + away) * 0.75) return;
+    if (free + away <= 0 || away >= (free + away) * 0.85) return;
     let spawned = 0;
-    while (f.acc >= 1 && spawned < 3) {
+    while (f.acc >= 1 && spawned < 4 && mine + spawned < want) {
       const fig = this.spawnBoarder(f, a, d, rA, rD);
       f.acc -= 1;
       if (!fig) break;
@@ -605,6 +637,17 @@ export class Boarding {
     placement(rA, role, mem, st, this.pl);
     const link = f.links[f.next % f.nlinks]!;
     f.next += 1;
+    this.views.localToWorld(a.id, link.ax, link.ay, link.az, this.a);
+    this.views.localToWorld(d.id, link.dx, link.dy, link.dz, this.b);
+    const gap = this.a.distanceTo(this.b);
+    const reach = Math.hypot(this.b.x - this.a.x, this.b.z - this.a.z);
+    const rise = this.b.y - this.a.y;
+    const roll = frac(mem.seed * 71.3);
+    // A plank where the hulls lie apart, a leap where the rails are within reach, a rope where the wall is high.
+    let style: number;
+    if (link.plank && reach > 3.5 && link.cut < 0) style = roll < 0.7 || reach > 8 ? PLANK : LEAP;
+    else if (reach <= 7 && rise <= 1.4) style = roll < 0.78 ? LEAP : ROPE;
+    else style = ROPE;
     fig.used = true;
     fig.fight = f;
     fig.link = link;
@@ -616,31 +659,45 @@ export class Boarding {
     fig.key = CAST[a.spec.faction][role]!;
     fig.seed = mem.seed;
     fig.state = ST_PATH;
+    fig.style = style;
     fig.u = 0;
     fig.dir = 1;
     fig.sx = this.pl.x;
     fig.sz = this.pl.z;
-    fig.lat = (frac(mem.seed * 53.1) - 0.5) * 0.5;
+    // Across the rail men spread along it; on a rope they hang from one of the two lines; on a plank they keep to it.
+    fig.lat = style === ROPE ? (roll < 0.5 ? -1.3 : 1.3) + (frac(mem.seed * 53.1) - 0.5) * 0.3 : style === PLANK ? (frac(mem.seed * 53.1) - 0.5) * 0.5 : (frac(mem.seed * 53.1) - 0.5) * 5;
     fig.landed = false;
     fig.born = this.time;
     fig.partner = null;
     fig.search = 0;
+    fig.spark = this.time + 0.6 + Math.random();
+    // Some climb up on the enemy's wall and fight from it, in sight of the camera.
+    fig.rail = rD.layout.railUp >= 0.9 && frac(mem.seed * 19.7) < 0.45;
+    fig.up = 0;
+    fig.railUntil = 0;
     mem.away = true;
-    const walk = Math.hypot(link.ax + fig.lat - fig.sx, link.az - fig.sz);
-    fig.d1 = Math.max(0.35, walk / RUN);
-    this.views.localToWorld(a.id, link.ax, link.ay, link.az, this.a);
-    this.views.localToWorld(d.id, link.dx, link.dy, link.dz, this.b);
-    const gap = this.a.distanceTo(this.b);
-    fig.d2 = link.plank ? Math.max(0.6, gap / WALK) : Math.max(0.5, gap / 4.5 + 0.3);
+    const railUp = link.ay - rA.main;
+    const foot = Math.abs(link.az) - 0.6;
+    fig.dw = Math.max(0.3, Math.hypot(link.ax + fig.lat - fig.sx, Math.sign(link.az) * foot - fig.sz) / RUN);
+    fig.d1 = fig.dw + 0.16 + railUp * 0.12;
+    if (style === PLANK) fig.d2 = Math.max(0.6, gap / WALK);
+    else if (style === LEAP) fig.d2 = Math.max(0.5, 0.38 + gap * 0.06);
+    else fig.d2 = Math.max(0.9, gap / 2.6 + Math.max(0, rise) / 1.4 + 0.3);
     if (this.findPartner(fig, rD, link.dx)) this.partnerSpot(fig, rD, f.sd);
     else this.holdSpot(fig, rD, link, f.sd);
-    fig.d3 = Math.max(0.4, Math.hypot(fig.tx - link.dx, fig.tz - link.dz) / RUN);
+    fig.d3 = Math.max(0.5, Math.hypot(fig.tx - link.dx, fig.tz - link.dz) / RUN + 0.2);
     return fig;
   }
 
   private holdSpot(fig: Figure, rD: Roster, link: Link, sd: number) {
+    if (fig.rail) {
+      fig.tx = link.dx + fig.lat;
+      fig.tz = link.dz;
+      return;
+    }
     fig.tx = link.dx + (frac(fig.seed * 29) - 0.5) * 5;
-    fig.tz = sd * Math.max(0.6, rD.half - 2.6 - frac(fig.seed * 61) * 2.2);
+    fig.tz = sd * Math.max(0.6, rD.layout.edge(fig.tx) - 1.0 - frac(fig.seed * 61) * 2.2);
+    this.clear(rD, fig);
   }
 
   /** Stands the boarder against his man, on the side nearest the rail he came over. */
@@ -648,6 +705,13 @@ export class Boarding {
     const m = fig.partner!;
     const st = rD.stations[fig.partnerRole]![m.station]!;
     placement(rD, fig.partnerRole, m, st, this.pl2);
+    if (fig.rail) {
+      // On the wall above his man, who looks up at him.
+      fig.tx = this.pl2.x + (frac(fig.seed * 23) - 0.5) * 0.8;
+      fig.tz = sd * (rD.layout.edge(fig.tx) + 0.1);
+      fig.yaw = yawTo(this.pl2.x - fig.tx, this.pl2.z - fig.tz);
+      return;
+    }
     const ang = (frac(fig.seed * 23) - 0.5) * 1.1;
     fig.tx = this.pl2.x + Math.sin(ang) * 1.05;
     fig.tz = this.pl2.z + sd * Math.cos(ang) * 1.05;
@@ -663,9 +727,9 @@ export class Boarding {
     for (const f of this.fights) if (f.used && !f.dormant) this.drawLinks(f);
     for (const fig of this.figs) if (fig.used) this.drawFigure(fig, assets);
     this.drawFallen(assets);
-    this.drawArrows();
     this.drawFlags(battle);
-    this.drawSprites(camera);
+    this.arrows.update(this.dt, this.camPos);
+    this.puffs.update(this.dt, camera);
     this.props.count = this.nProps;
     this.props.instanceMatrix.needsUpdate = true;
     this.propColor.needsUpdate = true;
@@ -723,10 +787,15 @@ export class Boarding {
     this.putBox((ax + bx) / 2, (ay + by) / 2, (az + bz) / 2, this.q.x, this.q.y, this.q.z, this.q.w, thick, thick, len, r, g, b);
   }
 
+  /** Sag of a rope of this slack between two points, metres. */
+  private sag(d: number, rest: number) {
+    return Math.min(3.2, Math.sqrt(Math.max(0, (3 * d * (rest - d)) / 8)) + 0.08);
+  }
+
   /** A rope hanging between two points, sagging while it is slack. */
-  private putRope(ax: number, ay: number, az: number, bx: number, by: number, bz: number, rest: number, grow: number, fall: number) {
+  private putRope(ax: number, ay: number, az: number, bx: number, by: number, bz: number, rest: number, grow: number, fall: number, thick: number) {
     const d = Math.hypot(bx - ax, by - ay, bz - az);
-    const sag = Math.min(3.2, Math.sqrt(Math.max(0, (3 * d * (rest - d)) / 8)) + 0.08 + fall * 0.8);
+    const sag = this.sag(d, rest) + fall * 0.8;
     const reach = grow;
     let px = ax;
     let py = ay;
@@ -737,7 +806,7 @@ export class Boarding {
       let ny = ay + (by - ay) * s - sag * 4 * s * (1 - s);
       const nz = az + (bz - az) * s;
       ny -= fall * fall * 4.9 * s;
-      this.putSeg(px, py, pz, nx, ny, nz, 0.14, 0.6, 0.5, 0.32);
+      this.putSeg(px, py, pz, nx, ny, nz, thick, 0.075, 0.058, 0.04);
       px = nx;
       py = ny;
       pz = nz;
@@ -756,7 +825,12 @@ export class Boarding {
       this.views.localToWorld(f.a, l.ax, l.ay, l.az, this.a);
       this.views.localToWorld(f.d, l.dx, l.dy, l.dz, this.b);
       const gap = this.a.distanceTo(this.b);
+      const reach = Math.hypot(this.b.x - this.a.x, this.b.z - this.a.z);
       if (l.cut < 0 && gap > l.rest * 1.5 + 3) l.cut = this.time;
+      // The crews haul the lines in as the hulls close, so a rope a man climbs is a taut one.
+      if (l.cut < 0) l.rest = Math.min(l.rest, gap * 1.04 + 0.4);
+      // Ropes and planks are thicker the farther the camera, so a link still shows at the battle camera's distance.
+      const tg = Math.max(1, Math.min(3, Math.hypot(this.a.x - this.camPos.x, this.a.y - this.camPos.y, this.a.z - this.camPos.z) / 70));
       const ax = this.a.x;
       const ay = this.a.y;
       const az = this.a.z;
@@ -765,17 +839,17 @@ export class Boarding {
       const bz = this.b.z;
       // Two ropes a body-width apart on each link.
       for (let side = -1; side <= 1; side += 2) {
-        this.views.localToWorld(f.a, l.ax + side * 1.3, l.ay + 0.9, l.az, this.c);
+        this.views.localToWorld(f.a, l.ax + side * 1.3, l.ay + 0.15, l.az, this.c);
         const sx = this.c.x;
         const sy = this.c.y;
         const sz = this.c.z;
-        this.views.localToWorld(f.d, l.dx + side * 1.3, l.dy + 0.15, l.dz, this.c);
-        this.putRope(sx, sy, sz, this.c.x, this.c.y, this.c.z, l.rest, grow, fall);
+        this.views.localToWorld(f.d, l.dx + side * 1.3, l.dy + 0.05, l.dz, this.c);
+        this.putRope(sx, sy, sz, this.c.x, this.c.y, this.c.z, l.rest, grow, fall, 0.085 * tg);
         if (grow >= 1) {
-          this.putBox(this.c.x, this.c.y - fall * fall * 4.9, this.c.z, 0, 0, 0, 1, 0.22, 0.16, 0.22, 0.12, 0.12, 0.13);
+          this.putBox(this.c.x, this.c.y - fall * fall * 4.9, this.c.z, 0, 0, 0, 1, 0.22 * tg, 0.16 * tg, 0.22 * tg, 0.04, 0.04, 0.045);
         }
       }
-      if (l.plank && age > 0.6) {
+      if (l.plank && reach > 3.2 && age > 0.6) {
         const lay = smooth((age - 0.6) / 0.7);
         const drop = fall * fall * 4.9;
         const len = (gap + 1.4) * lay;
@@ -788,11 +862,11 @@ export class Boarding {
         this.basis.makeBasis(this.right, this.c, this.dirv);
         this.q2.setFromRotationMatrix(this.basis);
         const half = len / 2 - 0.5;
-        this.putBox(ax + this.dirv.x * half, ay + this.dirv.y * half - drop, az + this.dirv.z * half, this.q2.x, this.q2.y, this.q2.z, this.q2.w, 0.95, 0.09, len, 0.45, 0.33, 0.2);
+        this.putBox(ax + this.dirv.x * half, ay + this.dirv.y * half - drop, az + this.dirv.z * half, this.q2.x, this.q2.y, this.q2.z, this.q2.w, 0.95 * Math.min(tg, 2), 0.12 * tg, len, 0.1, 0.07, 0.045);
         // The side rails of the walkway.
         if (lay >= 1) {
           for (let side = -1; side <= 1; side += 2) {
-            this.putBox(ax + this.dirv.x * half + this.right.x * side * 0.45, ay + this.dirv.y * half - drop + 0.06, az + this.dirv.z * half + this.right.z * side * 0.45, this.q2.x, this.q2.y, this.q2.z, this.q2.w, 0.06, 0.1, len, 0.3, 0.22, 0.14);
+            this.putBox(ax + this.dirv.x * half + this.right.x * side * 0.45, ay + this.dirv.y * half - drop + 0.06, az + this.dirv.z * half + this.right.z * side * 0.45, this.q2.x, this.q2.y, this.q2.z, this.q2.w, 0.06, 0.1, len, 0.07, 0.05, 0.035);
           }
         }
         if (fall > 0.7 && !l.splashed) {
@@ -836,6 +910,7 @@ export class Boarding {
     let dark = 0;
     let frame: Roster | null = null;
     let yaw = 0;
+    let lean = 0;
     if (fig.state === ST_PATH) {
       const total = fig.d1 + fig.d2 + fig.d3;
       fig.u += dt * fig.dir;
@@ -849,9 +924,11 @@ export class Boarding {
         fig.landed = true;
         fig.px = fig.tx;
         fig.pz = fig.tz;
+        fig.up = fig.rail ? link.dy - rD.main : 0;
         if (f && f.mode === 0) {
           fig.state = fig.partner ? ST_DUEL : ST_HOLD;
           fig.search = this.time + 0.5;
+          fig.railUntil = this.time + 2.5;
         } else if (f) this.rally(fig, f);
       }
       const u = fig.u;
@@ -859,10 +936,13 @@ export class Boarding {
       rate = 1.15;
       t0 = fig.born;
       if (u < fig.d1) {
-        const k = smooth(u / fig.d1);
+        // Run to the foot of the rail, then vault up on it.
+        const k = smooth(Math.min(1, u / fig.dw));
+        const v = u > fig.dw ? smooth((u - fig.dw) / (fig.d1 - fig.dw)) : 0;
+        const foot = Math.sign(link.az) * (Math.abs(link.az) - 0.6);
         const lx = fig.sx + (link.ax + fig.lat - fig.sx) * k;
-        const lz = fig.sz + (link.az - fig.sz) * k;
-        this.views.localToWorld(fig.from, lx, rA!.main + (link.ay - rA!.main) * k, lz, this.c);
+        const lz = fig.sz + (foot - fig.sz) * k + (link.az - foot) * v;
+        this.views.localToWorld(fig.from, lx, rA!.main + (link.ay - rA!.main) * v, lz, this.c);
         yaw = yawTo(link.ax + fig.lat - fig.sx, link.az - fig.sz);
         frame = rA!;
       } else if (u < fig.d1 + fig.d2) {
@@ -872,16 +952,45 @@ export class Boarding {
         const dx = this.b.x - this.a.x;
         const dz = this.b.z - this.a.z;
         const len = Math.hypot(dx, dz) || 1;
-        // Offsets across the plank so the men do not walk through one another.
-        const off = fig.lat * 0.6;
-        const jump = !link.plank || (link.cut >= 0 && this.time > link.cut);
-        this.c.set(this.a.x + dx * k - (dz / len) * off, this.a.y + (this.b.y - this.a.y) * k + (jump ? Math.sin(k * Math.PI) * (0.7 + len * 0.1) : 0), this.a.z + dz * k + (dx / len) * off);
+        const cut = link.cut >= 0 && this.time > link.cut;
+        let style = fig.style;
+        if (style === PLANK && cut) style = LEAP;
+        if (style === ROPE && cut) {
+          // The line is gone with him on it.
+          this.fall(fig.key, this.a.x + dx * k, this.a.y + (this.b.y - this.a.y) * k - 1, this.a.z + dz * k, dx * 0.4, 0.5, dz * 0.4);
+          if (fig.mem) fig.mem.gone = true;
+          this.release(fig);
+          return;
+        }
         yaw = yawTo(dx, dz);
+        if (style === PLANK) {
+          // Offsets across the plank so the men do not walk through one another.
+          const off = fig.lat * 0.6;
+          this.c.set(this.a.x + dx * k - (dz / len) * off, this.a.y + (this.b.y - this.a.y) * k, this.a.z + dz * k + (dx / len) * off);
+        } else if (style === LEAP) {
+          // Over the rail in an arc, weapon up, coming down on the far wall.
+          const arc = 0.6 + Math.hypot(dx, dz) * 0.12;
+          this.c.set(this.a.x + dx * k, this.a.y + (this.b.y - this.a.y) * k + Math.sin(k * Math.PI) * arc, this.a.z + dz * k);
+          clip = 'melee';
+          rate = 1.3;
+          t0 = this.time - k * fig.d2;
+          lean = 0.3 * Math.sin(k * Math.PI);
+        } else {
+          // Hand over hand along the grappling rope, the body hanging below it.
+          const d = Math.hypot(dx, dz, this.b.y - this.a.y);
+          const hang = 1.25 * smooth(Math.min(1, Math.min(k, 1 - k) * 7));
+          this.c.set(this.a.x + dx * k, this.a.y + (this.b.y - this.a.y) * k - this.sag(d, link.rest) * 4 * k * (1 - k) - hang, this.a.z + dz * k);
+          clip = 'cheer';
+          rate = 1.5;
+          t0 = fig.born + fig.seed;
+        }
       } else {
+        // Over the far rail and down on the deck.
         const k = smooth((u - fig.d1 - fig.d2) / fig.d3);
         const lx = link.dx + fig.lat + (fig.tx - link.dx - fig.lat) * k;
         const lz = link.dz + (fig.tz - link.dz) * k;
-        this.views.localToWorld(fig.to, lx, link.dy + (rD.main - link.dy) * k, lz, this.c);
+        const s = Math.min(1, (u - fig.d1 - fig.d2) / (fig.d3 * 0.45));
+        this.views.localToWorld(fig.to, lx, rD.main + (link.dy - rD.main) * (fig.rail ? 1 : 1 - s * s), lz, this.c);
         yaw = yawTo(fig.tx - link.dx - fig.lat, fig.tz - link.dz);
         frame = rD;
         fig.px = lx;
@@ -892,7 +1001,7 @@ export class Boarding {
       fig.yaw = yaw;
     } else if (fig.state !== ST_DYING) {
       this.stepOnDeck(fig, rD);
-      this.views.localToWorld(fig.to, fig.px, rD.main, fig.pz, this.c);
+      this.views.localToWorld(fig.to, fig.px, rD.main + fig.up, fig.pz, this.c);
       frame = rD;
       yaw = fig.yaw;
       if (fig.state === ST_RETREAT || Math.hypot(fig.tx - fig.px, fig.tz - fig.pz) > 0.3) {
@@ -904,6 +1013,7 @@ export class Boarding {
         clip = this.pose.clip;
         t0 = this.pose.t0;
         rate = this.pose.rate;
+        this.clash(fig, rD);
       } else if (fig.state === ST_RALLY) {
         clip = this.time - fig.rally > 11 ? 'idle' : 'cheer';
         t0 = fig.rally + fig.seed;
@@ -915,7 +1025,7 @@ export class Boarding {
     } else {
       // Dying: on the deck he stays with the ship, in the air he stays where he fell.
       if (fig.landed) {
-        this.views.localToWorld(fig.to, fig.px, rD.main, fig.pz, this.c);
+        this.views.localToWorld(fig.to, fig.px, rD.main + fig.up, fig.pz, this.c);
         frame = rD;
         yaw = fig.yaw;
       } else this.c.set(fig.wx, fig.wy, fig.wz);
@@ -923,7 +1033,7 @@ export class Boarding {
         clip = 'hit';
         rate = 1.5;
         t0 = fig.hurt;
-      } else if (fig.fling !== 0 || !fig.landed) {
+      } else if (fig.fling !== 0 || !fig.landed || fig.up > 0.5) {
         // Over the rail (and anyone who dies before reaching the deck falls too, not hangs) toward the gap between the hulls.
         const side = fig.fight ? fig.fight.sd : fig.pz >= 0 ? 1 : -1;
         this.dirv.set(0, 0, side).applyQuaternion(rD.q);
@@ -951,6 +1061,7 @@ export class Boarding {
       this.q2.setFromAxisAngle(UP, yaw);
       if (frame) this.q.multiplyQuaternions(frame.q, this.q2);
       else this.q.copy(this.q2);
+      if (lean !== 0) this.q.multiply(this.q3.setFromAxisAngle(X_AXIS, lean));
     }
     if (fig.state !== ST_DYING) {
       fig.wx = this.c.x;
@@ -958,12 +1069,22 @@ export class Boarding {
       fig.wz = this.c.z;
       fig.wq.copy(this.q);
     }
-    pushCrew(asset.lods[this.lodOf(this.c.x, this.c.y, this.c.z)]!, this.c.x, this.c.y, this.c.z, 1, this.q.x, this.q.y, this.q.z, this.q.w, c, t0, rate, weapon, dark);
+    const dist = Math.hypot(this.c.x - this.camPos.x, this.c.y - this.camPos.y, this.c.z - this.camPos.z);
+    pushCrew(asset.lods[this.lodAt(dist)]!, this.c.x, this.c.y, this.c.z, figureScale(dist), this.q.x, this.q.y, this.q.z, this.q.w, c, t0, rate, weapon, dark);
   }
 
-  private lodOf(x: number, y: number, z: number) {
-    const d = Math.hypot(x - this.camPos.x, y - this.camPos.y, z - this.camPos.z);
+  private lodAt(d: number) {
     return d < 85 ? 0 : d < 230 ? 1 : 2;
+  }
+
+  /** The glint where a boarder's blade meets his man's, now and then, and a pale puff of splinters with it. */
+  private clash(fig: Figure, rD: Roster) {
+    if (this.time < fig.spark) return;
+    fig.spark = this.time + 0.45 + Math.random() * 0.9;
+    const dist = Math.hypot(this.c.x - this.camPos.x, this.c.y - this.camPos.y, this.c.z - this.camPos.z);
+    if (dist > 190 || this.puffs.room < 14) return;
+    this.dirv.set(Math.sin(fig.yaw), 0, Math.cos(fig.yaw)).applyQuaternion(rD.q);
+    this.puffs.spark(this.c.x + this.dirv.x * 0.55, this.c.y + 1.3, this.c.z + this.dirv.z * 0.55, Math.max(1, dist / 55));
   }
 
   /** Moves a figure on the deck toward its target and picks a new man to fight when his is gone. */
@@ -976,6 +1097,7 @@ export class Boarding {
       fig.partner = null;
       fig.state = ST_HOLD;
       fig.search = this.time + 0.3;
+      fig.railUntil = this.time + 1.4;
       this.holdSpot(fig, rD, fig.link ?? f!.links[0]!, sd);
     }
     if (fig.state === ST_HOLD && this.time >= fig.search) {
@@ -983,6 +1105,11 @@ export class Boarding {
       if (f && f.mode === 0 && this.findPartner(fig, rD, fig.px)) fig.state = ST_DUEL;
     }
     if (fig.state === ST_DUEL && fig.partner) this.partnerSpot(fig, rD, sd);
+    // A man on the wall with nobody to fight comes down after a moment; one with a man below stays up.
+    if (fig.rail && fig.state === ST_HOLD && this.time > fig.railUntil) fig.rail = false;
+    const up = fig.rail && (fig.state === ST_DUEL || fig.state === ST_HOLD) ? (fig.link ? fig.link.dy - rD.main : 0) : 0;
+    fig.up += (up - fig.up) * Math.min(1, this.dt * 6);
+    if (fig.state === ST_HOLD && !fig.rail && fig.up > 0.05) this.holdSpot(fig, rD, fig.link ?? f!.links[0]!, sd);
     if (fig.state === ST_RETREAT) {
       const link = fig.link!;
       fig.tx = link.dx + fig.lat;
@@ -998,6 +1125,7 @@ export class Boarding {
       if (dist > 0.3) fig.yaw = yawTo(dx, dz);
     }
     if (fig.state === ST_RETREAT && dist < 0.35) {
+      // Back over the rail the way he came: he climbs the wall first.
       fig.state = ST_PATH;
       fig.dir = -1;
       fig.u = fig.d1 + fig.d2 + 0.001;
@@ -1074,12 +1202,12 @@ export class Boarding {
       } else {
         if (!f.splashed) {
           f.splashed = true;
-          this.splash(f.x, f.z, 1);
+          this.splash(f.x, f.z, 1.1);
         }
-        f.y = h - 0.9 - Math.max(0, f.age - 4) * 0.3;
+        f.y = h - 0.9 - Math.max(0, f.age - 3) * 0.35;
         f.spin = 1.45;
       }
-      if (f.age > 12) {
+      if (f.age > 9) {
         f.used = false;
         continue;
       }
@@ -1089,91 +1217,66 @@ export class Boarding {
       this.q2.setFromAxisAngle(UP, f.yaw);
       this.q.setFromAxisAngle(this.right.set(1, 0, 0), Math.min(1.45, f.spin));
       this.q.premultiply(this.q2);
-      pushCrew(asset.lods[this.lodOf(f.x, f.y, f.z)]!, f.x, f.y, f.z, 1, this.q.x, this.q.y, this.q.z, this.q.w, clip, this.time - 10, -1, 0, Math.min(0.8, f.age / 8));
+      const dist = Math.hypot(f.x - this.camPos.x, f.y - this.camPos.y, f.z - this.camPos.z);
+      pushCrew(asset.lods[this.lodAt(dist)]!, f.x, f.y, f.z, figureScale(dist), this.q.x, this.q.y, this.q.z, this.q.w, clip, this.time - 10, -1, 0, Math.min(0.8, f.age / 7));
     }
   }
 
   // ---------------------------------------------------------------- volleys
 
-  /** A shot leaves a rail: a flash for a matchlock, an arrow arcing over for a bow. */
+  /**
+   * A shot leaves a rail: a flash and white smoke for a matchlock, an arrow arcing over for a bow. The arrow flies
+   * at a man's ship and lands in its deck or hull, or falls short into the sea.
+   */
   fire(ship: Ship, battle: Battle, x: number, y: number, z: number, dx: number, dz: number, bow: boolean) {
+    const far = Math.hypot(x - this.camPos.x, y - this.camPos.y, z - this.camPos.z);
     if (!bow) {
-      this.spawnSprite(x + dx * 0.9, y, z + dz * 0.9, dx * 2, 0.2, dz * 2, 0.4, 1, 0.13, 1, 0.72, 0.3, 1, 0);
-      this.spawnSprite(x + dx * 0.8, y, z + dz * 0.8, dx, 0.1, dz, 0.22, 0.5, 0.09, 1, 0.96, 0.8, 1, 0);
+      this.puffs.gunshot(x, y, z, dx, dz, Math.max(1, Math.min(2.6, far / 70)));
       return;
     }
-    let a: Arrow | null = null;
-    for (const o of this.arrows) {
-      if (!o.used) {
-        a = o;
-        break;
-      }
-    }
-    if (!a) return;
     const target = battle.get(ship.targetId);
-    let tx: number;
-    let ty: number;
-    let tz: number;
-    a.tid = 0;
     if (target && battle.isActive(target) && target.team !== ship.team) {
-      const rT = this.rosters.get(target.id);
-      a.lx = rnd(-0.3, 0.3) * target.spec.length;
-      a.ly = (rT ? rT.main : target.spec.deck) + 1;
-      a.lz = rnd(-0.35, 0.35) * target.spec.beam;
-      this.views.localToWorld(target.id, a.lx, a.ly, a.lz, this.c);
-      tx = this.c.x;
-      ty = this.c.y;
-      tz = this.c.z;
-      a.tid = target.id;
-    } else {
-      tx = x + dx * 70;
-      tz = z + dz * 70;
-      ty = 0;
+      const dist = Math.hypot(target.x - x, target.z - z);
+      const T = Math.max(0.5, dist / 56);
+      if (Math.random() < 0.22) {
+        // Short or long of the ship: the sea takes it.
+        const ux = (target.x - x) / (dist || 1);
+        const uz = (target.z - z) / (dist || 1);
+        const along = dist + rnd(-10, 5);
+        const side = rnd(-5, 5);
+        const wx = x + ux * along - uz * side;
+        const wz = z + uz * along + ux * side;
+        this.arrows.launch(x, y, z, 0, wx, waveField.heightAt(wx, wz, waveField.time, 8), wz, T);
+        return;
+      }
+      this.hitPoint(target, x, z);
+      this.arrows.launch(x, y, z, target.id, this.a.x, this.a.y, this.a.z, T);
+      return;
     }
-    const dist = Math.hypot(tx - x, tz - z);
-    a.T = Math.max(0.35, dist / 52);
-    a.x0 = x;
-    a.y0 = y;
-    a.z0 = z;
-    a.vx = (tx - x) / a.T;
-    a.vz = (tz - z) / a.T;
-    a.vy = (ty - y + 0.5 * G * a.T * a.T) / a.T;
-    a.t = 0;
-    a.hit = 0;
-    a.used = true;
+    // Nothing to aim at: the arrow drops in the water ahead.
+    const wx = x + dx * 70;
+    const wz = z + dz * 70;
+    this.arrows.launch(x, y, z, 0, wx, waveField.heightAt(wx, wz, waveField.time, 8), wz, 1.3);
   }
 
-  private drawArrows() {
-    const dt = this.dt;
-    for (const a of this.arrows) {
-      if (!a.used) continue;
-      a.t += dt;
-      if (a.t <= a.T) {
-        const t = a.t;
-        const x = a.x0 + a.vx * t;
-        const y = a.y0 + a.vy * t - 0.5 * G * t * t;
-        const z = a.z0 + a.vz * t;
-        this.dirv.set(a.vx, a.vy - G * t, a.vz).normalize();
-        this.q.setFromUnitVectors(Z_AXIS, this.dirv);
-        a.qx = this.q.x;
-        a.qy = this.q.y;
-        a.qz = this.q.z;
-        a.qw = this.q.w;
-        this.putBox(x, y, z, a.qx, a.qy, a.qz, a.qw, 0.07, 0.07, 2.2, 0.95, 0.9, 0.75);
-        continue;
-      }
-      if (a.hit === 0) {
-        a.hit = this.time;
-        if (!a.tid) this.splash(a.x0 + a.vx * a.T, a.z0 + a.vz * a.T, 0.5);
-      }
-      if (!a.tid || this.time - a.hit > 2.5 || !this.views.states.get(a.tid)) {
-        a.used = false;
-        continue;
-      }
-      // Stuck in the deck, it rides with the ship.
-      this.views.localToWorld(a.tid, a.lx, a.ly, a.lz, this.c);
-      this.putBox(this.c.x, this.c.y, this.c.z, a.qx, a.qy, a.qz, a.qw, 0.06, 0.06, 1.2, 0.95, 0.9, 0.75);
+  /** A place on the target ship, in its own frame, for an arrow from (sx, sz): in the planks of the deck or in the wall facing the shooter. */
+  private hitPoint(target: Ship, sx: number, sz: number) {
+    const key = this.views.states.get(target.id)?.key ?? `${target.spec.kind}#0`;
+    const lay = layoutFor(key, target.spec.kind, target.spec.length, target.spec.beam);
+    const main = mainDeck(key, target.spec.kind, target.spec.deck);
+    const c = Math.cos(target.heading);
+    const s = Math.sin(target.heading);
+    const side = -(sx - target.x) * s + (sz - target.z) * c >= 0 ? 1 : -1;
+    const x = lay.x0 + 1 + (lay.x1 - lay.x0 - 2) * Math.random();
+    if (Math.random() < 0.3) {
+      this.a.set(x, main + rnd(-1.1, lay.railUp * 0.85), side * (lay.edge(x) + 0.35));
+      return;
     }
+    let z = (Math.random() * 2 - 1) * lay.edge(x) * 0.85;
+    for (let i = 0; i < 4 && blocked(lay, x, z, 0.1); i += 1) z = (Math.random() * 2 - 1) * lay.edge(x) * 0.85;
+    // A cabin or tower in the way: the arrow sticks in its wall instead.
+    if (blocked(lay, x, z, 0.1)) this.a.set(x, main + rnd(0.3, 1.2), side * (lay.edge(x) + 0.35));
+    else this.a.set(x, main, z);
   }
 
   // ---------------------------------------------------------------- flags
@@ -1185,11 +1288,15 @@ export class Boarding {
       const ship = battle.get(c.id);
       if (!r || !ship || r.live !== this.frame || n >= FLAGS) continue;
       n += 1;
+      const t = this.time - c.t0;
+      if (!c.dropped) this.dropArms(c, r);
+      this.drawDrops(c, r, t);
       const L = ship.spec.length;
-      const poleH = Math.min(11, Math.max(6, L * 0.3));
+      // From the battle camera a flag is a few pixels: it grows with the distance, up to twice its size.
+      const grow = Math.max(1, Math.min(2.2, r.dist / 120));
+      const poleH = Math.min(11, Math.max(6.5, L * 0.3)) * (0.85 + grow * 0.15);
       const mx = flagX(r);
       const base = r.main;
-      const t = this.time - c.t0;
       // The colours come down, change, and go back up.
       const lowered = smooth(t / 0.9) * (1 - smooth((t - 2.4) / 1.2));
       const top = base + poleH;
@@ -1197,110 +1304,85 @@ export class Boarding {
       const mix = smooth((t - 0.9) / 1.5);
       const from = FLAG_COLORS[c.lose]!;
       const to = FLAG_COLORS[c.win]!;
-      const w = Math.min(4.6, Math.max(2.2, L * 0.12));
-      const sway = Math.sin(this.time * 2.6 + c.id) * 0.12;
+      const w = Math.min(4.6, Math.max(2.2, L * 0.12)) * grow;
       this.views.localToWorld(c.id, mx, base + poleH / 2, 0, this.c);
-      this.putBox(this.c.x, this.c.y, this.c.z, r.q.x, r.q.y, r.q.z, r.q.w, 0.1, poleH, 0.1, 0.24, 0.17, 0.11);
-      this.q2.setFromAxisAngle(UP, sway);
-      this.q.multiplyQuaternions(r.q, this.q2);
-      this.views.localToWorld(c.id, mx - w / 2 - 0.05, clothY, 0, this.c);
-      this.putBox(this.c.x, this.c.y, this.c.z, this.q.x, this.q.y, this.q.z, this.q.w, w, w * 0.62, 0.04, from[0]! + (to[0]! - from[0]!) * mix, from[1]! + (to[1]! - from[1]!) * mix, from[2]! + (to[2]! - from[2]!) * mix);
+      this.putBox(this.c.x, this.c.y, this.c.z, r.q.x, r.q.y, r.q.z, r.q.w, 0.1 * grow, poleH, 0.1 * grow, 0.22, 0.16, 0.11);
+      // The cloth is four strips that ripple one after another.
+      const strips = FLAG_BOXES - 1;
+      const sw = w / strips;
+      for (let i = 0; i < strips; i += 1) {
+        const ripple = Math.sin(this.time * 3.1 - i * 1.1 + c.id) * 0.1 * (i + 1) * grow;
+        this.q2.setFromAxisAngle(UP, ripple * 0.8);
+        this.q.multiplyQuaternions(r.q, this.q2);
+        this.views.localToWorld(c.id, mx - (i + 0.5) * sw - 0.05, clothY + Math.sin(this.time * 2.3 - i * 0.9 + c.id) * 0.06 * grow, ripple, this.c);
+        const shade = 0.94 + 0.08 * Math.sin(i * 1.9 + this.time * 2.2 + c.id);
+        this.putBox(
+          this.c.x,
+          this.c.y,
+          this.c.z,
+          this.q.x,
+          this.q.y,
+          this.q.z,
+          this.q.w,
+          sw * 1.02,
+          w * 0.62,
+          0.04 * grow,
+          (from[0]! + (to[0]! - from[0]!) * mix) * shade,
+          (from[1]! + (to[1]! - from[1]!) * mix) * shade,
+          (from[2]! + (to[2]! - from[2]!) * mix) * shade,
+        );
+      }
     }
   }
 
-  // ---------------------------------------------------------------- sprites
+  /** Picks the men who will throw their weapons down: where they stand, which way the weapon lies. */
+  private dropArms(c: Capture, r: Roster) {
+    c.dropped = true;
+    let n = 0;
+    for (let role = MELEE; role >= SHOT && n < DROPS; role -= 1) {
+      const list = r.members[role]!;
+      for (let i = 0; i < list.length && n < DROPS; i += 1) {
+        const m = list[i]!;
+        if (m.dying >= 0 || m.gone || m.away) continue;
+        const st = r.stations[role]![m.station]!;
+        placement(r, role, m, st, this.pl);
+        const d = c.drops[n]!;
+        d.x = this.pl.x + Math.sin(this.pl.yaw) * 0.5;
+        d.z = this.pl.z + Math.cos(this.pl.yaw) * 0.5;
+        d.yaw = (frac(m.seed * 43.7) - 0.5) * 2.4 + (role === MELEE ? 0.6 : 2.2);
+        d.len = role === MELEE ? 1.1 : 2.2;
+        d.late = 0.15 + frac(m.seed * 17.3) * 0.7;
+        n += 1;
+      }
+    }
+    // The rest stay out of the count.
+    for (let i = n; i < DROPS; i += 1) c.drops[i]!.len = 0;
+  }
 
-  private spawnSprite(x: number, y: number, z: number, vx: number, vy: number, vz: number, s0: number, s1: number, life: number, r: number, g: number, b: number, a: number, g0: number) {
-    for (const s of this.sprites) {
-      if (s.used) continue;
-      s.used = true;
-      s.x = x;
-      s.y = y;
-      s.z = z;
-      s.vx = vx;
-      s.vy = vy;
-      s.vz = vz;
-      s.age = 0;
-      s.life = life;
-      s.s0 = s0;
-      s.s1 = s1;
-      s.r = r;
-      s.g = g;
-      s.b = b;
-      s.a = a;
-      s.g0 = g0;
-      return;
+  /** Spears and swords falling from the hands of the beaten and lying on the deck. */
+  private drawDrops(c: Capture, r: Roster, t: number) {
+    for (const d of c.drops) {
+      if (d.len <= 0) continue;
+      const s = Math.min(1, (t - d.late) / 0.45);
+      if (s <= 0) continue;
+      // Falls from the hand and tumbles flat.
+      const y = r.main + 0.08 + 1.0 * (1 - s * s);
+      this.q2.setFromAxisAngle(UP, d.yaw);
+      this.q3.setFromAxisAngle(X_AXIS, (1 - s) * 1.1);
+      this.q.multiplyQuaternions(r.q, this.q2).multiply(this.q3);
+      this.views.localToWorld(c.id, d.x, y, d.z, this.c);
+      this.putBox(this.c.x, this.c.y, this.c.z, this.q.x, this.q.y, this.q.z, this.q.w, 0.07, 0.07, d.len, 0.34, 0.25, 0.16);
+      // The head, dark iron, at the tip.
+      this.dirv.set(0, 0, d.len * 0.5).applyQuaternion(this.q);
+      this.putBox(this.c.x + this.dirv.x, this.c.y + this.dirv.y, this.c.z + this.dirv.z, this.q.x, this.q.y, this.q.z, this.q.w, 0.09, 0.09, d.len > 1.5 ? 0.3 : 0.16, 0.2, 0.2, 0.21);
     }
   }
+
+  // ---------------------------------------------------------------- splashes
 
   /** White water thrown up where something hits the sea. */
   splash(x: number, z: number, size: number) {
-    const y = waveField.heightAt(x, z, waveField.time, 8);
-    for (let i = 0; i < 4; i += 1) {
-      this.spawnSprite(x + rnd(-0.3, 0.3) * size, y + 0.1, z + rnd(-0.3, 0.3) * size, rnd(-1, 1) * size, rnd(2.2, 4) * size, rnd(-1, 1) * size, 0.5 * size, 1.5 * size, rnd(0.7, 1.1), 0.88, 0.94, 1, 0.85, 7);
-    }
-  }
-
-  private drawSprites(camera: Camera) {
-    const dt = this.dt;
-    const m = this.puffs.instanceMatrix.array as Float32Array;
-    const tint = this.puffTint.array as Float32Array;
-    const fade = this.puffFade.array as Float32Array;
-    const cq = camera.quaternion;
-    const x2 = cq.x * 2;
-    const y2 = cq.y * 2;
-    const z2 = cq.z * 2;
-    const xx = cq.x * x2;
-    const xy = cq.x * y2;
-    const xz = cq.x * z2;
-    const yy = cq.y * y2;
-    const yz = cq.y * z2;
-    const zz = cq.z * z2;
-    const wx = cq.w * x2;
-    const wy = cq.w * y2;
-    const wz = cq.w * z2;
-    let n = 0;
-    for (const s of this.sprites) {
-      if (!s.used) continue;
-      s.age += dt;
-      if (s.age >= s.life) {
-        s.used = false;
-        continue;
-      }
-      const k = s.age / s.life;
-      s.vy -= s.g0 * dt;
-      s.x += s.vx * dt;
-      s.y += s.vy * dt;
-      s.z += s.vz * dt;
-      const size = s.s0 + (s.s1 - s.s0) * k;
-      const o = n * 16;
-      m[o] = (1 - (yy + zz)) * size;
-      m[o + 1] = (xy + wz) * size;
-      m[o + 2] = (xz - wy) * size;
-      m[o + 3] = 0;
-      m[o + 4] = (xy - wz) * size;
-      m[o + 5] = (1 - (xx + zz)) * size;
-      m[o + 6] = (yz + wx) * size;
-      m[o + 7] = 0;
-      m[o + 8] = (xz + wy) * size;
-      m[o + 9] = (yz - wx) * size;
-      m[o + 10] = (1 - (xx + yy)) * size;
-      m[o + 11] = 0;
-      m[o + 12] = s.x;
-      m[o + 13] = s.y;
-      m[o + 14] = s.z;
-      m[o + 15] = 1;
-      tint[n * 3] = s.r;
-      tint[n * 3 + 1] = s.g;
-      tint[n * 3 + 2] = s.b;
-      fade[n] = s.a * (1 - k) * (1 - k * 0.3);
-      n += 1;
-    }
-    this.puffs.count = n;
-    this.puffs.visible = n > 0;
-    this.puffs.instanceMatrix.needsUpdate = true;
-    this.puffTint.needsUpdate = true;
-    this.puffFade.needsUpdate = true;
+    this.puffs.splash(x, waveField.heightAt(x, z, waveField.time, 8), z, size);
   }
 
   // ---------------------------------------------------------------- surrender

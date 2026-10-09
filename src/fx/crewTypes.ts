@@ -1,6 +1,7 @@
 import type { Quaternion } from 'three/webgpu';
 import type { Faction } from '../sim/types';
-import type { DeckPlan } from '../ships/decks';
+import { equipment } from '../game/quality';
+import type { DeckLayout, DeckPlan } from '../ships/decks';
 import type { ClipName, CrewKey } from './crewModels';
 import type { Figure } from './Boarding';
 
@@ -71,8 +72,10 @@ export type Roster = {
   members: Member[][];
   /** Figures drawn for a full crew, by station. */
   figures: DeckPlan['figures'];
-  /** Half the width of the deck at the rails, metres. */
-  half: number;
+  /** Where men can stand and cross on this model's deck. */
+  layout: DeckLayout;
+  /** Scale that keeps a man readable at this distance from the camera. */
+  grow: number;
   /** Ship length, metres. */
   len: number;
   q: Quaternion;
@@ -94,6 +97,16 @@ export type Roster = {
   boarded: boolean;
   hold: boolean;
 };
+
+/** Distance beyond which men are drawn larger than life so they still read from the battle camera, by tier. */
+const GROW_FROM = { high: 110, medium: 95, low: 80 }[equipment.tier];
+const GROW_MAX = 2.2;
+
+/** A gentle floor on the size of a man on screen: true to scale up close, up to GROW_MAX times that far away. */
+export const figureScale = (dist: number) => (dist <= GROW_FROM ? 1 : Math.min(GROW_MAX, dist / GROW_FROM));
+
+/** Distance within which a ship's crew is drawn, and with it the crew's own flashes and smoke, by tier. */
+export const CREW_RANGE = { high: 540, medium: 440, low: 320 }[equipment.tier];
 
 export const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 export const frac = (v: number) => v - Math.floor(v);

@@ -11,6 +11,7 @@ import { Munitions, Shell, shellKind, type ShellKind, type Trail } from './Proje
 import { anchorsFor } from '../ships/anchors';
 import { DECKS, mainDeck } from '../ships/decks';
 import { planSinking, type CueKind, type SinkCue } from './sinkPlan';
+import { CREW_RANGE } from './crewTypes';
 import type { WakeMap } from '../ocean/WakeMap';
 import { LIGHT_COUNT, pointLights } from '../render/lights';
 import type { ParticleQuality } from '../game/quality';
@@ -172,7 +173,7 @@ export class Effects {
           break;
         }
         case 'musket':
-          this.musket(e.ship, e.dx, e.dz, e.count, battle);
+          this.musket(e.ship, e.dx, e.dz, e.count, e.arms === 'bow', battle);
           break;
         case 'hit': {
           const shell = this.flights.get(e.proj)?.ref;
@@ -320,9 +321,10 @@ export class Effects {
     this.light(x + dx * 3, y + 1, z + dz * 3, 6500 + 9500 * w, 0.2, 1, 0.68, 0.36, 120 + 60 * w);
   }
 
-  musket(id: number, dx: number, dz: number, count: number, battle: Battle) {
+  /** Far volleys only: where the crew is drawn its shooters make their own flashes and smoke, and a bow makes none. */
+  musket(id: number, dx: number, dz: number, count: number, bow: boolean, battle: Battle) {
     const ship = battle.get(id);
-    if (!ship) return;
+    if (!ship || bow || Math.hypot(ship.x - this.camPos.x, this.camPos.y, ship.z - this.camPos.z) < CREW_RANGE) return;
     const L = ship.spec.length;
     const side = (-dx * Math.sin(ship.heading) + dz * Math.cos(ship.heading)) > 0 ? 1 : -1;
     for (let i = 0; i < count; i += 1) {
