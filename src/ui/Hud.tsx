@@ -205,13 +205,15 @@ function SpeedControl({ engine, snap, compact }: { engine: Engine; snap: GameSna
           </button>
         ))
       )}
-      {(snap.autoFast || snap.fastForward) && (
+      {snap.approach && (
         <button
-          className={`speed-skip ${snap.fastForward ? 'on' : ''}`}
-          title="적과 마주칠 때까지 빠르게 진행"
+          className={`speed-skip ${snap.autoFast || snap.fastForward ? 'on' : ''}`}
+          title={snap.autoFast ? '빠른 접근 끄기' : '적과 마주칠 때까지 빠르게 진행'}
           onClick={() => {
-            engine.autoFast = false;
-            engine.fastForward = false;
+            // Toggles: a capture-point battle starts with it off, a historical one with it on.
+            const on = !(snap.autoFast || snap.fastForward);
+            engine.autoFast = on;
+            if (!on) engine.fastForward = false;
             engine.publish(true);
           }}
         >

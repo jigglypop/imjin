@@ -110,6 +110,8 @@ export type GameSnapshot = {
   autoFast: boolean;
   /** The approach is being fast-forwarded now. */
   fastForward: boolean;
+  /** No contact yet, so the approach can still be fast-forwarded (the ⏩ button shows). */
+  approach: boolean;
   sky: SkyPresetName;
   sea: SeaStateName;
   following: number;

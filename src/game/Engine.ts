@@ -173,6 +173,8 @@ export class Engine {
   autoFast = true;
   /** The approach is being fast-forwarded right now. */
   fastForward = false;
+  /** First contact has happened: there is no approach left to skip. */
+  approachOver = false;
   private contactTimer = 0;
   ready = false;
   scenarioId: ScenarioId;
@@ -391,7 +393,19 @@ export class Engine {
     this.adaptive = new AdaptiveQuality(this.level, levelSetting === 'auto', (l) => this.applyLevel(l), this.eq.maxLevel);
     this.applyLevel(this.level);
     setProgress(1);
+    this.resetApproach();
     this.ready = true;
+  }
+
+  /**
+   * A capture-point battle starts at normal speed: its opening moves decide which points fall, so the player sails out
+   * on their own clock and can still press ⏩. Historical battles skip the empty sea straight away.
+   */
+  private resetApproach() {
+    this.autoFast = !this.remote && !this.conquest;
+    this.fastForward = false;
+    this.approachOver = false;
+    this.contactTimer = 0;
   }
 
   /**
@@ -841,9 +855,7 @@ export class Engine {
     this.banners?.clear();
     this.rts.setPose(this.defaultPose());
     this.paused = false;
-    this.autoFast = !this.remote;
-    this.fastForward = false;
-    this.contactTimer = 0;
+    this.resetApproach();
     await this.prewarm(0.78);
     // The rebuilt terrain, vegetation and ocean start from the plain state. Re-apply the current level to them.
     this.applyLevel(this.level);
@@ -997,21 +1009,21 @@ export class Engine {
    */
   private updateFastForward(dt: number) {
     const b = this.battle;
-    if (!this.autoFast || this.paused || b.winner || this.options.gallery) {
+    if (this.approachOver || b.winner || this.options.gallery) {
       this.fastForward = false;
       return;
     }
+    // Contact is watched even while the fast-forward is off, so the ⏩ button disappears once there is nothing to skip.
     this.contactTimer -= dt;
     if (this.contactTimer > 0) return;
     this.contactTimer = 0.25;
-    if (this.inContact()) {
-      if (this.fastForward) this.endFastForward();
-      else this.autoFast = false;
-    } else this.fastForward = true;
+    if (this.inContact()) this.endFastForward();
+    else this.fastForward = this.autoFast && !this.paused;
   }
 
   private endFastForward() {
     if (this.fastForward) pushToast('적과 접촉 — 정상 속도로 돌아온다', 'info');
+    this.approachOver = true;
     this.autoFast = false;
     this.fastForward = false;
   }
@@ -1245,6 +1257,7 @@ export class Engine {
       speed: this.speed,
       autoFast: this.autoFast && !this.remote,
       fastForward: this.fastForward,
+      approach: !this.remote && !this.approachOver && !this.battle.winner,
       sky: this.skyName,
       sea: this.seaName,
       following: this.rts.followId,
