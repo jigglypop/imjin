@@ -27,7 +27,7 @@ export function Loading() {
     <div className={`loading${info?.night ? ' loading--night' : ''}`} role="status">
       <Backdrop kind="loading" id={sid ?? undefined} />
       <div className="loading-card glass">
-        <div className="loading-title">{t(info?.title ?? '임진 해전')}</div>
+        <div className="loading-title">{t(info?.title ?? '임진왜란')}</div>
         <div className="loading-bar">
           <div className="loading-fill" style={{ width: `${pct}%` }} />
         </div>

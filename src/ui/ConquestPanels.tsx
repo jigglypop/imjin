@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Engine } from '../game/Engine';
 import type { ConquestSnapshot, PointDetail, PrimaryInfo } from '../state/store';
 import type { CrewPlan } from '../sim/types';
@@ -166,9 +167,24 @@ function nudge(plan: CrewPlan, base: CrewPlan, role: number, delta: number): Cre
   return plan.map((v, i) => (i === role ? target : v * scale)) as CrewPlan;
 }
 
-/** Stations of the selected ship: who is at the oars, the guns, the bows and on deck, and the plan to move them. */
+const CREW_DETAIL_KEY = 'imjin.hud.crewDetail';
+
+function readCrewDetail(): boolean {
+  try {
+    return localStorage.getItem(CREW_DETAIL_KEY) === 'on';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Crew stations of one of the player's ships: the presets in one row, and who is at the oars, the guns, the bows and on
+ * deck behind a toggle (closed by default, remembered) so the panel stays short. A foreign ship shows nothing here.
+ */
 export function CrewPanel({ engine, p }: { engine: Engine; p: PrimaryInfo }) {
   const t = useT();
+  const [open, setOpen] = useState(readCrewDetail);
+  if (!p.owned) return null;
   const labels = ROLE_LABEL.map((l, i) => t(i === 2 ? (p.arms === 'gun' ? '조총' : '활') : l));
   const total = p.roles.reduce((a, v) => a + v, 0) || 1;
   const presets: { label: string; plan: CrewPlan }[] = [
@@ -179,36 +195,47 @@ export function CrewPanel({ engine, p }: { engine: Engine; p: PrimaryInfo }) {
     { label: t('백병전'), plan: emphasize(p.defaultPlan, 3) },
   ];
   const same = (a: CrewPlan, b: CrewPlan) => a.every((v, i) => Math.abs(v - b[i]!) < 0.01);
+  const toggle = () => {
+    setOpen(!open);
+    try {
+      localStorage.setItem(CREW_DETAIL_KEY, open ? 'off' : 'on');
+    } catch {
+      // Not remembered; the toggle still works on this page.
+    }
+  };
   return (
     <div className="crew-panel">
-      <div className="crew-rows">
-        {p.roles.map((n, i) => (
-          <div key={i} className={`crew-row ${p.defaultPlan[i] === 0 ? 'crew-row--off' : ''}`}>
-            <span>{labels[i]}</span>
-            <div className="crew-bar">
-              <i style={{ width: `${(n / total) * 100}%` }} />
-              <em style={{ left: `${p.plan[i]! * 100}%` }} />
-            </div>
-            <small>{n}</small>
-            {p.owned && p.defaultPlan[i]! > 0 && (
-              <>
-                <button onClick={() => engine.input.setPlan(nudge(p.plan, p.defaultPlan, i, -0.05), t('{role} 줄임', { role: labels[i]! }))}>−</button>
-                <button onClick={() => engine.input.setPlan(nudge(p.plan, p.defaultPlan, i, 0.05), t('{role} 늘림', { role: labels[i]! }))}>+</button>
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-      {p.owned && (
-        <div className="crew-presets">
-          {presets.map((x) => (
-            <button key={x.label} className={`chip ${same(x.plan, p.plan) ? 'chip--on' : ''}`} onClick={() => engine.input.setPlan(x.plan, x.label)}>
-              {x.label}
-            </button>
-          ))}
-          <button className={`chip ${engine.cutaway ? 'chip--on' : ''}`} onClick={() => engine.toggleCutaway()} title={t('선내 보기 (F)')}>
-            {t(engine.cutaway ? ['', '상갑판', '포갑판', '노갑판'][engine.cutaway]! : '선내')}
+      <div className="crew-presets">
+        {presets.map((x) => (
+          <button key={x.label} className={`chip ${same(x.plan, p.plan) ? 'chip--on' : ''}`} onClick={() => engine.input.setPlan(x.plan, x.label)}>
+            {x.label}
           </button>
+        ))}
+        <button className={`chip ${engine.cutaway ? 'chip--on' : ''}`} onClick={() => engine.toggleCutaway()} title={t('선내 보기 (F)')}>
+          {t(engine.cutaway ? ['', '상갑판', '포갑판', '노갑판'][engine.cutaway]! : '선내')}
+        </button>
+        <button className={`crew-more ${open ? 'crew-more--open' : ''}`} onClick={toggle} aria-expanded={open} aria-label={t('승조원 세부 배치')} title={t('승조원 세부 배치')}>
+          <Icon name="chevronDown" size={14} />
+        </button>
+      </div>
+      {open && (
+        <div className="crew-rows">
+          {p.roles.map((n, i) => (
+            <div key={i} className={`crew-row ${p.defaultPlan[i] === 0 ? 'crew-row--off' : ''}`}>
+              <span>{labels[i]}</span>
+              <div className="crew-bar">
+                <i style={{ width: `${(n / total) * 100}%` }} />
+                <em style={{ left: `${p.plan[i]! * 100}%` }} />
+              </div>
+              <small>{n}</small>
+              {p.defaultPlan[i]! > 0 && (
+                <>
+                  <button onClick={() => engine.input.setPlan(nudge(p.plan, p.defaultPlan, i, -0.05), t('{role} 줄임', { role: labels[i]! }))}>−</button>
+                  <button onClick={() => engine.input.setPlan(nudge(p.plan, p.defaultPlan, i, 0.05), t('{role} 늘림', { role: labels[i]! }))}>+</button>
+                </>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

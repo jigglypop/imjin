@@ -1,7 +1,7 @@
 /** English for the words every screen shares, keyed by the exact Korean source text. See ../index.ts and ../GLOSSARY.md. */
 export const EN_COMMON: Record<string, string> = {
   // The game and its modes
-  '임진 해전': 'Imjin War at Sea',
+  '임진왜란': 'The Imjin War',
   '역사 전투': 'Historical Battles',
   '진영 전역': 'Faction Campaign',
   '쟁탈전': 'Conquest',

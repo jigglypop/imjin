@@ -50,8 +50,9 @@ export function MainMenu() {
       </header>
       <div className="menu-inner">
         <div className="wordmark">
-          <div className="wordmark-hanja">壬辰海戰</div>
-          <div className="wordmark-ko">{t('임진 해전')}</div>
+          <div className="wordmark-kicker">壬辰倭亂 · 1592–1598</div>
+          <h1 className="wordmark-title">임진왜란</h1>
+          <div className="wordmark-en">The Imjin War</div>
         </div>
         <div>
           <div className="mode-grid">

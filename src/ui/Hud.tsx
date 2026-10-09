@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { SPEEDS, type Engine } from '../game/Engine';
 import { AMMO_NAMES } from '../game/Input';
 import { isTouchDevice } from '../game/device';
@@ -6,7 +6,7 @@ import { EQUIPMENT_LABEL, equipment, saveEquipmentSetting, type EquipmentSetting
 import { SKY_PRESETS, type SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
 import { setLang, t as tr, useLang, useT } from '../i18n';
-import { setTouchBox, useUi, type BattleOrigin, type GameSnapshot, type PrimaryInfo, type SquadronInfo } from '../state/store';
+import { setTouchBox, useUi, type BattleOrigin, type GameSnapshot, type GunInfo, type PrimaryInfo, type SquadronInfo } from '../state/store';
 import type { Team } from '../sim/types';
 import { useCompactLayout } from './useCompactLayout';
 import { ConquestBar, CrewPanel, PointPanel } from './ConquestPanels';
@@ -31,7 +31,6 @@ const ACTIVITY: Record<string, string> = {
   fleeing: '도주 중',
   aground: '좌초',
 };
-const STANCE_SHORT = { auto: '자유', standoff: '원거리', close: '근접', ram: '들이받기', board: '백병전' } as const;
 const AMMO_SHORT = { auto: '기본탄', hull: '대장군전', crew: '조란환', fire: '화전' } as const;
 const EQUIPMENT_CHOICES: EquipmentSetting[] = ['auto', 'high', 'medium', 'low'];
 /** The run-time quality levels, lowest first, in the words the settings screen uses. */
@@ -300,9 +299,45 @@ function SpeedControl({ engine, snap, compact }: { engine: Engine; snap: GameSna
   );
 }
 
-function Detail({ engine, snap, p, portrait, compact }: { engine: Engine; snap: GameSnapshot; p: PrimaryInfo; portrait: string; compact: boolean }) {
+const GUN_SIDES: [number, string][] = [
+  [0, '좌현'],
+  [2, '함수'],
+  [1, '우현'],
+];
+
+/**
+ * The ship's guns as lights, one per gun, grouped by side: green when it can fire, filling amber while it loads, an empty
+ * ring when it is out of shot. Each light names its gun and stage on hover.
+ */
+function GunLights({ guns }: { guns: GunInfo[] }) {
   const t = useT();
-  const ready = p.guns.filter((g) => g.stage >= 4 && !g.empty).length;
+  return (
+    <div className="gun-lights">
+      {GUN_SIDES.map(([side, label]) => {
+        const list = guns.filter((g) => g.side === side);
+        if (!list.length) return null;
+        return (
+          <div key={side} className="gun-side">
+            <span>{t(label)}</span>
+            <div className="gun-dots">
+              {list.map((g, i) => (
+                <i
+                  key={i}
+                  className={`gun-dot ${g.empty ? 'gun-dot--empty' : g.stage >= 4 ? 'gun-dot--ready' : ''}`}
+                  style={{ '--p': Math.min(1, (g.stage + g.progress) / 4) } as CSSProperties}
+                  title={`${t(g.label)} · ${g.stageName}`}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Detail({ engine, snap, p, portrait }: { engine: Engine; snap: GameSnapshot; p: PrimaryInfo; portrait: string }) {
+  const t = useT();
   return (
     <div className="detail glass interactive">
         <div className="detail-head">
@@ -311,11 +346,8 @@ function Detail({ engine, snap, p, portrait, compact }: { engine: Engine; snap: 
             <div className="detail-name">{tName(p.name)}</div>
             <div className="detail-sub">
               {t(p.kind)} · {t(ACTIVITY[p.activity] ?? p.activity)}
-              <span className="detail-more">
-                {snap.selectedCount > 1 ? ' · ' + t('{n}척 선택', { n: snap.selectedCount }) : ''} · {t(STANCE_SHORT[p.stance])} · {t(AMMO_SHORT[p.ammo])}
-                {p.fireMode === 'hold' ? ' · ' + t('사격 중지') : ''}
-                {!p.lights && snap.night ? ' · ' + t('등불 꺼짐') : ''}
-              </span>
+              {p.fireMode === 'hold' ? ' · ' + t('사격 중지') : ''}
+              {!p.lights && snap.night ? ' · ' + t('등불 꺼짐') : ''}
             </div>
           </div>
         </div>
@@ -323,31 +355,8 @@ function Detail({ engine, snap, p, portrait, compact }: { engine: Engine; snap: 
           <Stat label={t('선체')} value={p.hull} tone="hull" text={`${Math.round(p.hull * 100)}%`} />
           <Stat label={t('승조원')} value={p.crew / p.maxCrew} tone="crew" text={`${p.crew}`} />
           {p.fire > 0.02 && <Stat label={t('화재')} value={p.fire} tone="fire" text={`${Math.round(p.fire * 100)}%`} />}
+          {p.guns.length > 0 && <GunLights guns={p.guns} />}
           <CrewPanel engine={engine} p={p} />
-          {p.guns.length > 0 &&
-            (compact ? (
-              // The per-gun list does not fit a phone: one line says how many guns are loaded.
-              <div className="guns-sum" style={{ fontSize: 12, color: 'var(--ink-2)' }}>
-                {t('포 {n}문 · {r}문 준비', { n: p.guns.length, r: ready })}
-              </div>
-            ) : (
-              <div className="guns">
-                {p.guns
-                  .filter((g) => g.side !== 1)
-                  .slice(0, 8)
-                  .map((g, i) => (
-                    <div key={i} className={`gun ${g.stage >= 4 ? 'gun--ready' : ''}`}>
-                      <span className="gun-name" title={t(g.label)}>
-                        {t(g.label).replace(/총통$| cannon$/, '')}
-                      </span>
-                      <span className="gun-state">{g.stageName}</span>
-                      <div className="gun-track">
-                        <i style={{ width: `${((g.stage + g.progress) / 6) * 100}%` }} />
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            ))}
         </div>
     </div>
   );
@@ -695,7 +704,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
         {/* Once the battle is decided the result card is the only thing to act on: no orders or cards behind it. */}
         {!snap.winner && (
           <>
-            {p ? <Detail engine={engine} snap={snap} p={p} compact={compact} portrait={selectedSquad?.portrait ?? snap.squadrons.find((s) => s.selected)?.portrait ?? 'portrait_admiral'} /> : hintOpen && !tourActive && <Hint onClose={closeHint} />}
+            {p ? <Detail engine={engine} snap={snap} p={p} portrait={selectedSquad?.portrait ?? snap.squadrons.find((s) => s.selected)?.portrait ?? 'portrait_admiral'} /> : hintOpen && !tourActive && <Hint onClose={closeHint} />}
             <div className="cards">
               {own.map((sq) => (
                 <Card key={sq.id} sq={sq} compact={compact} onClick={(e) => engine.selectSquadron(sq.id, e.shiftKey)} onDouble={() => engine.focusSquadron(sq.id)} />
@@ -762,9 +771,16 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
               ))}
             </div>
           )}
-          <button className="ink-btn" onClick={onBack}>
-            {report ? t('군영으로') : t(BACK_LABEL[origin].long)}
-          </button>
+          <div className="result-actions">
+            {origin !== 'faction' && !engine.remote && !engine.campaign && (
+              <button className="chip" onClick={() => engine.restart()}>
+                {t('다시 시작')}
+              </button>
+            )}
+            <button className="ink-btn" onClick={onBack}>
+              {report ? t('군영으로') : t(BACK_LABEL[origin].long)}
+            </button>
+          </div>
         </div>
       )}
     </div>

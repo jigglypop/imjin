@@ -483,57 +483,44 @@
   color: var(--ink);
 }
 
-.guns {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 12px;
+.gun-lights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
   margin-top: 4px;
 }
 
-/* One gun: its name and state as text, with a hairline of progress underneath. */
-.gun {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: baseline;
-  gap: 2px 8px;
+.gun-side {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: var(--fs-12);
   font-weight: 500;
-  color: var(--ink-2);
-}
-
-.gun-state {
-  text-align: right;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 400;
   color: var(--ink-3);
 }
 
-.gun--ready .gun-state {
-  font-weight: 500;
-  color: var(--good);
+.gun-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
-.gun-track {
-  grid-column: 1 / -1;
-  height: 3px;
-  border-radius: 999px;
-  background: var(--fill-2);
-  overflow: hidden;
+/* A gun loading: the light fills clockwise in amber. Ready: a green signal. Out of shot: an empty ring. */
+.gun-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: conic-gradient(var(--warn) calc(var(--p, 0) * 1turn), var(--fill-2) 0);
 }
 
-.gun-track i {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--ink-3);
-  opacity: 0.55;
+.gun-dot--ready {
+  background: var(--signal-go);
+  box-shadow: 0 0 7px rgba(116, 201, 143, 0.6);
 }
 
-.gun--ready .gun-track i {
-  background: var(--good);
-  opacity: 1;
+.gun-dot--empty {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--line-2);
 }
 
 /* ---------------------------------------------------------------- squadron cards */
@@ -956,6 +943,14 @@
   text-align: center;
 }
 
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
 .result-camp {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1357,11 +1352,11 @@
     gap: 2px 14px;
   }
 
-  .app--compact .guns-sum {
+  .app--compact .gun-lights {
     grid-column: 1 / -1;
+    margin-top: 2px;
   }
 
-  .app--compact .guns,
   .app--compact .crew-panel {
     display: none;
   }
@@ -1557,17 +1552,13 @@
     font-size: var(--fs-15);
   }
 
-  /* A short band: kind and activity only, tight rows, so both bars are whole. */
-  .app--compact .detail-more {
-    display: none;
-  }
-
   .app--compact .detail-body {
     gap: 2px;
     padding-bottom: 10px;
   }
 
-  .app--compact .guns,
+  /* A short band: name, kind and both bars are whole; the lights and crew stations wait for a wider screen. */
+  .app--compact .gun-lights,
   .app--compact .crew-panel {
     display: none;
   }

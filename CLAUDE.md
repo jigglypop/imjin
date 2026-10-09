@@ -1,4 +1,4 @@
-# 임진 해전 (imjin)
+# 임진왜란 (imjin)
 
 WebGPU 3D naval strategy game about the Imjin War: three.js r186 `three/webgpu` + TSL, @react-three/fiber, React 19, zustand.
 Live at https://imjin1592.com. Player-facing text is Korean; code and comments are English.

@@ -50,6 +50,8 @@
   --good: #8db59a;
   --bad: #cf9686;
   --warn: #c8b88a;
+  /* The ready light on a gun: the one clear green, a signal rather than a fill */
+  --signal-go: #74c98f;
   --good-ink: var(--good);
   --bad-ink: var(--bad);
   /* Older name of --bad */
@@ -70,6 +72,8 @@
   /* Type: Pretendard everywhere. Sizes 12/13/15/17/20/24/32, weights 400/500/600. */
   --font-ui: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
   --hanja: var(--font-ui);
+  /* The title wordmark's serif (loaded in index.html), and nothing else. */
+  --font-title: 'Noto Serif KR', 'Nanum Myeongjo', 'AppleMyungjo', serif;
   --fs-12: 12px;
   --fs-13: 13px;
   --fs-15: 15px;

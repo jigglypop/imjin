@@ -67,9 +67,9 @@ export function App() {
 
   // The page title, the description and the home-screen name follow the language.
   useEffect(() => {
-    document.title = t('임진 해전');
+    document.title = t('임진왜란');
     document.querySelector('meta[name="description"]')?.setAttribute('content', t('1592, 조선 수군의 바다. 3D 해전 전략 게임.'));
-    document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', t('임진 해전'));
+    document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', t('임진왜란'));
   }, [lang]);
 
   // Fetch the battle chunk in the background once a screen that can start a battle opens.

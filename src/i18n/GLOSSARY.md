@@ -19,7 +19,8 @@ passed through `t()` where they are shown.
   em dashes inside sentences; no trailing period on buttons and labels; periods on full sentences.
 - One term per concept:
   함선 (a ship) · 함대 (fleet) · 전대/편대 → 함대 · 거점 (capture point) · 군영 · 선소 · 포대 · 수리소 · 창고 · 봉수대 ·
-  조선 수군 / 일본 수군 / 명 수군 (never 왜군 or 倭 in UI; 왜선 → 일본 함선) · 승리 / 패배 · 장수 (commander) ·
+  조선 수군 / 일본 수군 / 명 수군 (never 왜군 or 倭 in UI; 왜선 → 일본 함선; the one exception is the title 임진왜란, the war's
+  standard Korean name) · 승리 / 패배 · 장수 (commander) ·
   도선 (boarding) · 포격 · 진형 · 기동 · 전술 · 배속 (game speed) · 빠른 접근 (approach fast-forward)
 
 ## English style
@@ -32,7 +33,7 @@ passed through `t()` where they are shown.
 ## Terms
 | Korean | English |
 |---|---|
-| 임진 해전 / 壬辰海戰 | Imjin War at Sea |
+| 임진왜란 / 壬辰倭亂 (the game's title) | The Imjin War |
 | 역사 전투 | Historical Battles |
 | 진영 전역 | Faction Campaign |
 | 쟁탈전 | Conquest |
@@ -50,7 +51,7 @@ passed through `t()` where they are shown.
 | 천자총통 / 지자총통 / 현자총통 / 황자총통 / 승자총통 | Cheonja / Jija / Hyeonja / Hwangja / Seungja cannon |
 | 대장군전 | Great general arrow |
 | 조총 | Arquebus |
-| 학익진 / 일자진 / 장사진 / 첨자진 / 자유교전 | Crane Wing / Line Abreast / Long Snake / Wedge / Free Engagement |
+| 학익진 / 일자진 / 장사진 / 첨자진 / 자유교전 | Crane Wing / Line Abreast / Long Snake / Wedge / Free Fight |
 | 거점 / 본영 | Capture point / Home port |
 | 군영 / 선소 / 포대 / 수리소 / 창고 / 봉수대 | Camp / Shipyard / Battery / Dock / Depot / Beacon |
 | 군자금 / 은 | Funds / Silver |
