@@ -1,6 +1,6 @@
 import type { Battle } from '../sim/battle';
 import type { Faction, Team } from '../sim/types';
-import { factionColor, sealColor, withAlpha } from './tokens';
+import { factionColor, lighten, sealColor, withAlpha } from './tokens';
 import type { Terrain } from '../terrain/Terrain';
 
 const SIZE = 320;
@@ -32,7 +32,7 @@ export class Minimap {
 
   /** False while no panel shows the map. The engine skips redrawing it then. */
   visible = false;
-  /** The player's team. Ships and points use their navy's colour, with a white ring for friends and a red ring for foes. */
+  /** The player's team. Ships and points use their navy's tone, with a white ring for friends and a muted brown one for foes. */
   team: Team = 'joseon';
 
   mount(el: HTMLElement | null) {
@@ -63,24 +63,24 @@ export class Minimap {
         let b: number;
         if (v <= 0) {
           const depth = Math.min(1, -v / 45);
-          r = 20 - depth * 9;
-          g = 42 - depth * 17;
-          b = 66 - depth * 24;
+          r = 44 - depth * 14;
+          g = 60 - depth * 17;
+          b = 74 - depth * 20;
         } else {
           const e = Math.min(1, v / 420);
           const right = h[j * SIZE + Math.min(SIZE - 1, i + 1)]!;
           const down = h[Math.min(SIZE - 1, j + 1) * SIZE + i]!;
           const shade = Math.max(-1, Math.min(1, (v - right + (v - down)) * 0.035));
-          const lift = 70 + (1 - e) * 36 + shade * 26;
-          r = lift * 0.62;
-          g = lift * 0.76;
-          b = lift;
+          const lift = 150 + (1 - e) * 44 + shade * 30;
+          r = lift;
+          g = lift * 0.975;
+          b = lift * 0.92;
         }
         const coast = (v > 0) !== (h[j * SIZE + Math.min(SIZE - 1, i + 1)]! > 0) || (v > 0) !== (h[Math.min(SIZE - 1, j + 1) * SIZE + i]! > 0);
         if (coast) {
-          r = 196;
-          g = 216;
-          b = 236;
+          r = 226;
+          g = 229;
+          b = 230;
         }
         img.data[k * 4] = r;
         img.data[k * 4 + 1] = g;
@@ -100,17 +100,19 @@ export class Minimap {
     const foe0 = battle.ships.find((s) => s.team !== this.team);
     if (own0) own = own0.spec.faction;
     if (foe0) foe = foe0.spec.faction;
-    const seal = sealColor();
+    const foeRing = lighten(sealColor(), 0.35);
+    // The sea is dark, so the faction tones are lifted to read on it.
+    const tone = (f: Faction) => lighten(factionColor(f), 0.4);
     const toPx = (x: number, z: number) => [((x - this.cx) / this.extent + 0.5) * SIZE, ((z - this.cz) / this.extent + 0.5) * SIZE] as const;
     for (const p of points ?? []) {
       const [px, py] = toPx(p.x, p.z);
       ctx.beginPath();
       ctx.arc(px, py, Math.max(5, (p.r / this.extent) * SIZE), 0, Math.PI * 2);
       const pc = p.side === 'own' ? factionColor(own) : p.side === 'foe' ? factionColor(foe) : '';
-      ctx.fillStyle = pc ? withAlpha(pc, 0.3) : 'rgba(255, 255, 255, 0.08)';
+      ctx.fillStyle = pc ? withAlpha(pc, 0.28) : 'rgba(255, 255, 255, 0.07)';
       ctx.fill();
-      ctx.lineWidth = p.selected ? 2.5 : 1.4;
-      ctx.strokeStyle = pc || 'rgba(255, 255, 255, 0.55)';
+      ctx.lineWidth = p.selected ? 2 : 1.1;
+      ctx.strokeStyle = pc ? tone(p.side === 'own' ? own : foe) : 'rgba(255, 255, 255, 0.5)';
       ctx.stroke();
     }
     for (const s of battle.ships) {
@@ -119,9 +121,9 @@ export class Minimap {
       if (px < 0 || py < 0 || px > SIZE || py > SIZE) continue;
       const sel = selected.has(s.id);
       const friend = s.team === this.team;
-      ctx.fillStyle = sel ? '#ffffff' : factionColor(s.spec.faction);
-      ctx.strokeStyle = friend ? 'rgba(255, 255, 255, 0.9)' : seal;
-      ctx.lineWidth = friend ? 0.8 : 1.4;
+      ctx.fillStyle = sel ? '#ffffff' : tone(s.spec.faction);
+      ctx.strokeStyle = friend ? 'rgba(255, 255, 255, 0.85)' : foeRing;
+      ctx.lineWidth = friend ? 0.7 : 1.2;
       const r = s.spec.length > 30 ? 3.4 : s.spec.length > 20 ? 2.8 : 2.2;
       ctx.beginPath();
       ctx.arc(px, py, sel ? r + 1 : r, 0, Math.PI * 2);
@@ -133,9 +135,9 @@ export class Minimap {
     const dirZ = -Math.sin(yaw);
     const spread = 0.55;
     const len = 46;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-    ctx.lineWidth = 1.5;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 1.25;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     const a = Math.atan2(dirZ, dirX);

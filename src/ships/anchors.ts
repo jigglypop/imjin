@@ -425,8 +425,8 @@ function panokAnchors(plan: PanokPlan): ShipAnchors {
   const floorY = deck + pv.floorUp;
   const stern = -L / 2;
   const flags: FlagMount[] = [
-    { id: 'command', pos: [pv.x - 0.3, floorY + pv.postH + pv.roofRise + 1.4, 0], kind: 'command', size: [4.4, 3.8], color: '#b31d1a' },
-    ...plan.masts.map((m, i): FlagMount => ({ id: `mast${i}`, pos: [m.x, deck + m.h + 0.2, 0], kind: 'pennant', size: [5.5, 0.9], color: '#c8a23a' })),
+    { id: 'command', pos: [pv.x - 0.3, floorY + pv.postH + pv.roofRise + 1.4, 0], kind: 'command', size: [4.4, 3.8], color: '#5b2c26' },
+    ...plan.masts.map((m, i): FlagMount => ({ id: `mast${i}`, pos: [m.x, deck + m.h + 0.2, 0], kind: 'pennant', size: [5.5, 0.9], color: '#8d7442' })),
   ];
   const mastTops: V3[] = plan.masts.map((m) => [m.x, deck + m.h, 0]);
   return {
@@ -502,8 +502,8 @@ function geobukAnchors(plan: GeobukPlan): ShipAnchors {
       [-L / 2 + 5, plan.roofTop - 1.2, 0],
     ],
     flagMounts: [
-      { id: 'ensign', pos: [-4, plan.roofTop + 0.4, 0], kind: 'ensign', size: [2.8, 2.2], color: '#b31d1a' },
-      { id: 'pennant', pos: [5, plan.roofTop + 0.4, 0], kind: 'pennant', size: [3.4, 0.8], color: '#c8a23a' },
+      { id: 'ensign', pos: [-4, plan.roofTop + 0.4, 0], kind: 'ensign', size: [2.8, 2.2], color: '#5b2c26' },
+      { id: 'pennant', pos: [5, plan.roofTop + 0.4, 0], kind: 'pennant', size: [3.4, 0.8], color: '#8d7442' },
     ],
     mastTops: [
       [-4, plan.roofTop + 2.4, 0],
@@ -552,7 +552,7 @@ function hyeopAnchors(plan: HyeopPlan): ShipAnchors {
     rowStations: sideRail(h, plan.oars.x0, plan.oars.x1, plan.oars.n, h.deck - 0.55, 0.6),
     boardingPoints: [0, 1].map((side) => ({ pos: [0, h.deck, sideSign(side) * sideZ(h, 0, h.deck)] as V3, side: side as 0 | 1 })),
     lanterns: [[-L / 2 + 0.6, h.deck + 1.2, 0]],
-    flagMounts: [{ id: 'pennant', pos: [plan.mast.x, h.deck + plan.mast.h, 0], kind: 'pennant', size: [2.4, 0.5], color: '#c8a23a' }],
+    flagMounts: [{ id: 'pennant', pos: [plan.mast.x, h.deck + plan.mast.h, 0], kind: 'pennant', size: [2.4, 0.5], color: '#8d7442' }],
     mastTops: [[plan.mast.x, h.deck + plan.mast.h, 0]],
     fireSpots: [[0, h.deck - 0.4, 0]],
     damageSpots: [
@@ -613,11 +613,11 @@ function atakeAnchors(plan: AtakePlan): ShipAnchors {
   const noboriAt = (x: number, z: number, w: number, hh: number, key: string): FlagMount => ({ id: `nobori:${key}`, pos: [x, deck + 0.1, z], kind: 'nobori', size: [w, hh], color: '#e8e0d0' });
   const flags: FlagMount[] = [
     noboriAt(L / 2 - 3.4, -1.6, 1.8, 5.4, 'nobori_a/white'),
-    noboriAt(L / 2 - 3.4, 1.6, 1.8, 5.4, 'nobori_a/red'),
+    noboriAt(L / 2 - 3.4, 1.6, 1.8, 5.4, 'nobori_a/linen'),
     noboriAt(-L / 2 + 2.4, -2.6, 1.8, 5.6, 'nobori_b/black'),
     noboriAt(-L / 2 + 2.4, 2.6, 1.8, 5.6, 'nobori_b/indigo'),
     noboriAt(plan.cx - 12.2, -3.8, 1.6, 4.8, 'nobori_a/white'),
-    noboriAt(plan.cx - 12.2, 3.8, 1.6, 4.8, 'nobori_a/red'),
+    noboriAt(plan.cx - 12.2, 3.8, 1.6, 4.8, 'nobori_a/linen'),
     noboriAt(plan.cx + 12.2, -3.8, 1.6, 4.8, 'nobori_b/indigo'),
     noboriAt(plan.cx + 12.2, 3.8, 1.6, 4.8, 'nobori_b/black'),
     { id: 'command', pos: [plan.cx, top.plateau + 3.4, 0], kind: 'command', size: [1.5, 4.4], color: '#e8e0d0' },
@@ -681,7 +681,7 @@ function sekiAnchors(plan: SekiPlan): ShipAnchors {
     flagMounts: [
       noboriAt(-L / 2 + 1.4, -1.2, 'nobori_a/white'),
       noboriAt(-L / 2 + 1.4, 1.2, 'nobori_b/indigo'),
-      noboriAt(c.x + 1.0, 0, 'nobori_a/red'),
+      noboriAt(c.x + 1.0, 0, 'nobori_a/linen'),
       { id: 'mast', pos: [plan.mast.x, deck + plan.mast.h, 0], kind: 'pennant', size: [3.2, 0.5], color: '#e8e0d0' },
     ],
     mastTops: [[plan.mast.x, deck + plan.mast.h, 0]],
@@ -720,7 +720,7 @@ function mingAnchors(plan: MingPlan): ShipAnchors {
   const deck = h.deck;
   const c = plan.castle;
   const floor2 = deck + c.h1;
-  const flagsAt = (x: number, z: number, hh: number, sheet: string, name: string, id: string): FlagMount => ({ id: `${id}:${sheet}/${name}`, pos: [x, deck + plan.parapet + 0.1, z], kind: 'pennant', size: [1.2, hh], color: '#c8a23a' });
+  const flagsAt = (x: number, z: number, hh: number, sheet: string, name: string, id: string): FlagMount => ({ id: `${id}:${sheet}/${name}`, pos: [x, deck + plan.parapet + 0.1, z], kind: 'pennant', size: [1.2, hh], color: '#8d7442' });
   return BASE(h, {
     mainDeck: deck,
     oarDeck: deck - 1.4,
@@ -739,10 +739,10 @@ function mingAnchors(plan: MingPlan): ShipAnchors {
       [L / 2 - 1.5, deck + plan.parapet + 0.4, 0],
     ],
     flagMounts: [
-      { id: 'command', pos: [c.x, floor2 + c.h2 + 2.3, 0], kind: 'command', size: [3.4, 2.8], color: '#b31d1a' },
+      { id: 'command', pos: [c.x, floor2 + c.h2 + 2.3, 0], kind: 'command', size: [3.4, 2.8], color: '#5b2c26' },
       flagsAt(L / 2 - 1.5, -2.3, 1.0, 'flags_a', 'red', 'bow'),
       flagsAt(L / 2 - 1.5, 2.3, 1.0, 'flags_b', 'yellow', 'bow'),
-      ...plan.masts.map((m, i): FlagMount => ({ id: `mast${i}`, pos: [m.x, deck + m.h + 0.2, 0], kind: 'pennant', size: [6, 1.0], color: i % 2 ? '#c8a23a' : '#b31d1a' })),
+      ...plan.masts.map((m, i): FlagMount => ({ id: `mast${i}`, pos: [m.x, deck + m.h + 0.2, 0], kind: 'pennant', size: [6, 1.0], color: i % 2 ? '#8d7442' : '#5b2c26' })),
     ],
     mastTops: plan.masts.map((m): V3 => [m.x, deck + m.h, 0]),
     fireSpots: [[0, deck + 0.3, 0], [9, deck + 0.3, 2], [-6, deck + 0.3, -2], [c.x, floor2 + 0.4, 0]],
@@ -772,8 +772,8 @@ function mingSmallAnchors(plan: MingSmallPlan): ShipAnchors {
     boardingPoints: boarding(h, [-3, 3], deck + 0.2),
     lanterns: [[c.x + c.hx - 0.2, deck + c.h, c.hz + 0.1], [c.x + c.hx - 0.2, deck + c.h, -c.hz - 0.1]],
     flagMounts: [
-      { id: 'command', pos: [c.x, deck + c.h + 1.3, 0], kind: 'ensign', size: [1.6, 1.4], color: '#b31d1a' },
-      ...plan.masts.map((m, i): FlagMount => ({ id: `mast${i}`, pos: [m.x, deck + m.h + 0.2, 0], kind: 'pennant', size: [3.4, 0.7], color: i ? '#c8a23a' : '#b31d1a' })),
+      { id: 'command', pos: [c.x, deck + c.h + 1.3, 0], kind: 'ensign', size: [1.6, 1.4], color: '#5b2c26' },
+      ...plan.masts.map((m, i): FlagMount => ({ id: `mast${i}`, pos: [m.x, deck + m.h + 0.2, 0], kind: 'pennant', size: [3.4, 0.7], color: i ? '#8d7442' : '#5b2c26' })),
     ],
     mastTops: plan.masts.map((m): V3 => [m.x, deck + m.h, 0]),
     fireSpots: [[0, deck + 0.3, 0], [c.x, deck + 0.4, 0]],

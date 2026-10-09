@@ -16,7 +16,7 @@ export function buildHyeopseon(lod: Lod): MeshData {
   const L = h.length;
   const deck = h.deck;
   const timber = P('dark_timber');
-  const red = P('red_lacquer');
+  const stain = P('stained_wood');
   const hullPaint = P('hull_plank', { tint: [0.95, 0.9, 0.82] });
   const floorY = 0.55;
   const rope = P('rope');
@@ -25,7 +25,7 @@ export function buildHyeopseon(lod: Lod): MeshData {
   innerLiner(ctx, h, P('deck_plank', { tint: [0.8, 0.76, 0.7] }), 0.14, floorY);
   deckPlane(ctx, h, P('deck_plank'), -L / 2 + 0.6, L / 2 - 0.9, floorY, 0.2);
   // gunwale cap closes the gap between skin and liner
-  sideTimber(ctx, h, red, -L / 2 + 0.2, L / 2 - 0.2, deck - 0.02, 0.3, 0.14, 0.0);
+  sideTimber(ctx, h, stain, -L / 2 + 0.2, L / 2 - 0.2, deck - 0.02, 0.3, 0.14, 0.0);
   if (lod === 0) sideTimber(ctx, h, timber.tinted([0.9, 0.85, 0.8]), -L / 2 + 0.4, L / 2 - 0.4, 0.5, 0.1, 0.22, 0.05);
 
   // low bulwark of painted shield boards with a gun port a side
@@ -83,7 +83,7 @@ export function buildHyeopseon(lod: Lod): MeshData {
   const cx = -L / 2 + 2.3;
   if (lod < 2) {
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) post(ctx, timber, cx + sx * 0.9, floorY, deck + 1.3, sz * 0.85, 0.1);
-    b.with(xlate(cx, 0, 0), () => hipRoof(b, P('sail_hemp', { tint: [0.85, 0.75, 0.62] }), red, timber, { hx: 1.4, hz: 1.3, ridge: 0.2, y: deck + 1.3, rise: 0.55, lift: 0.1, concave: 1.2, nSlope: 2, nEave: 4, fascia: 0.12 }));
+    b.with(xlate(cx, 0, 0), () => hipRoof(b, P('sail_hemp', { tint: [0.85, 0.75, 0.62] }), stain, timber, { hx: 1.4, hz: 1.3, ridge: 0.2, y: deck + 1.3, rise: 0.55, lift: 0.1, concave: 1.2, nSlope: 2, nEave: 4, fascia: 0.12 }));
   }
   // rudder
   if (lod < 2) {

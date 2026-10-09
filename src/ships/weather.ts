@@ -54,7 +54,7 @@ export function weather({ color, surf, soot, shipY, rough, detail }: WeatherIn):
   // Phones skip the fine noise, so chips and rust would only show as big soft blotches there: leave them out.
   const chips = detail ? smoothstep(0.68, 0.73, wear) : float(0);
   const haze = smoothstep(0.45, 0.9, n1.mul(0.6).add(streak.mul(0.4)));
-  let lac: any = desat(color, 0.82).mul(vec3(0.95, 0.8, 0.76));
+  let lac: any = desat(color, 0.7).mul(vec3(0.95, 0.88, 0.84));
   lac = mix(lac, vec3(0.13, 0.095, 0.07).mul(n2.mul(0.5).add(0.75)), chips.mul(0.75));
   lac = mix(lac, vec3(luma(lac).add(0.1)).mul(vec3(0.9, 0.92, 0.95)), haze.mul(detail ? 0.22 : 0.08).mul(oneMinus(smoothstep(0.05, 0.3, luma(lac)).mul(0.6))));
 
@@ -66,12 +66,12 @@ export function weather({ color, surf, soot, shipY, rough, detail }: WeatherIn):
   // Sails: dirty hemp, tide-stained streaks, patches of newer or older cloth.
   const stain = smoothstep(0.52, 0.85, streak);
   const patch = step(0.9, hash(floor(P.z.mul(0.85)).mul(13.1).add(floor(P.y.mul(1.1)).mul(5.7)).add(floor(P.x.mul(0.8)).mul(2.3))));
-  let sail: any = desat(color, 0.75).mul(vec3(0.9, 0.86, 0.8));
+  let sail: any = desat(color, 0.62).mul(vec3(0.9, 0.86, 0.8));
   sail = mix(sail, sail.mul(vec3(0.62, 0.52, 0.4)), stain.mul(0.6));
   sail = mix(sail, sail.mul(vec3(0.78, 0.74, 0.66)), patch.mul(0.5));
 
   // Banners keep their colours, a little faded and dirty.
-  const banner: any = desat(color, 0.74).mul(0.84).mul(mix(float(1), float(0.72), stain.mul(0.5)));
+  const banner: any = desat(color, 0.64).mul(0.84).mul(mix(float(1), float(0.72), stain.mul(0.5)));
 
   let out: any = select(isGloss, lac, select(isMetal, met, select(isSail, sail, select(isBanner, banner, select(surf.equal(5), color, wood)))));
 

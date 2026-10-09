@@ -100,7 +100,7 @@ export function buildSekibune(variant: number, lod: Lod): MeshData {
   mast(ctx, wood, iron, m.x, deck, m.h, m.r);
   if (lod < 2) box(b, plank, [m.x - 0.4, deck, -0.4], [m.x + 0.4, deck + 0.35, 0.4], { grain: 0 });
   sail(ctx, variant === 0 ? P('sail_cloth', { tint: [1.0, 0.95, 0.85] }) : P('matting', { tint: [0.95, 0.85, 0.7] }), wood, rope, { x: m.x, yTop: deck + m.h - 1.0, w: m.sailW, h: m.sailH, billow: 0.55, battens: 6, phase: 0.9 });
-  if (lod < 2) longPennant(ctx, clothPatch(ctx, 'nobori_a', 'red'), [m.x - 0.05, deck + m.h - 0.1, 0], 3.4, 0.5, 0.7);
+  if (lod < 2) longPennant(ctx, clothPatch(ctx, 'nobori_a', 'linen'), [m.x - 0.05, deck + m.h - 0.1, 0], 3.4, 0.5, 0.7);
   for (const f of anchors.flagMounts) if (f.kind === 'nobori') nobori(ctx, f.pos, f.size[1] + 0.8, f.size[0], f.size[1], f.id.slice(7), f.pos[0] + f.pos[2], wood);
 
   // --- fittings ---

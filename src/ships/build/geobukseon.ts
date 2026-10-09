@@ -1,5 +1,5 @@
 /**
- * Geobukseon (turtle ship): red-lacquered hull with gun ports all round, an arched roof of dark hexagonal iron
+ * Geobukseon (turtle ship): dark-stained hull with gun ports all round, an arched roof of dark hexagonal iron
  * plates studded with spikes, a dragon head at the bow that can belch smoke (anchors.smokeStack), a stern tail,
  * oars under the eaves and one raised mast. Larger than the panokseon on purpose.
  */
@@ -38,16 +38,16 @@ export function buildGeobukseon(lod: Lod): MeshData {
   const { P } = ctx;
   const h = plan.hull;
   const L = h.length;
-  const red = P('red_lacquer');
+  const stain = P('stained_wood');
   const timber = P('dark_timber');
   const dark = P('dark_timber', { tint: [0.14, 0.13, 0.12] });
   const hexIron = P('iron_hex', { size: 1.9, tint: [1.3, 1.3, 1.35] });
   const strap = P('iron_hex', { surf: 2, tint: [1.0, 0.95, 0.9] });
   const top = (x: number) => hullTop(h, x);
 
-  // --- hull: tarred planks below, red lacquered topsides above ---
-  loftHull(ctx, h, P('hull_plank', { tint: [0.62, 0.58, 0.55] }), P('red_lacquer'));
-  hullBand(ctx, h, red, -L / 2 + 0.05, L / 2 - 0.05, 0.45, (x) => top(x) - 0.02, 0.09);
+  // --- hull: tarred planks below, dark-stained topsides above ---
+  loftHull(ctx, h, P('hull_plank', { tint: [0.62, 0.58, 0.55] }), P('stained_wood'));
+  hullBand(ctx, h, stain, -L / 2 + 0.05, L / 2 - 0.05, 0.45, (x) => top(x) - 0.02, 0.09);
   if (lod < 2) {
     hullBand(ctx, h, P('dancheong'), -L / 2 + 0.6, L / 2 - 2.0, (x) => top(x) - 0.62, (x) => top(x) - 0.08, 0.12);
   }
@@ -87,7 +87,7 @@ export function buildGeobukseon(lod: Lod): MeshData {
       }
       // hinged lid propped open above the port
       b.with(xlate(x, g.pos[1] + 0.62, zo), () => {
-        b.with(rotX(-0.9 * side), () => box(b, red, [-0.62, -0.035, Math.min(0, side * 0.9)], [0.62, 0.035, Math.max(0, side * 0.9)]));
+        b.with(rotX(-0.9 * side), () => box(b, stain, [-0.62, -0.035, Math.min(0, side * 0.9)], [0.62, 0.035, Math.max(0, side * 0.9)]));
       });
     }
     if (lod < 2) cannon(ctx, [x, g.pos[1], zo], [0, 0, side], g.gun, timber, P('bronze', { tint: [1.25, 0.95, 0.7] }), P('iron_hex', { surf: 2 }));
@@ -271,18 +271,18 @@ const HEAD_SCALE = 1.22;
 
 /**
  * Dragon head: neck rising from the roof, skull, open jaws with fangs, swept horns, spines, whiskers. Dark bronze and
- * blackened iron with red lacquer left in the recesses; the throat and eyes glow. Designed in its own space (mouth
+ * blackened iron with old bronze showing through in the recesses; the throat and eyes glow. Designed in its own space (mouth
  * centre at x = 0, y = 3.9) and then scaled and moved so the lips land at the bow.
  */
 function dragonHead(ctx: Ctx, baseX: number, mouthY: number, bowX: number) {
   const { b, lod, P } = ctx;
   const k = HEAD_SCALE;
-  const skin = P('dragon_scale', { surf: 2, tint: [3.0, 2.6, 2.2] });
+  const skin = P('dragon_scale', { surf: 2, tint: [2.7, 2.05, 1.4] });
   const bronze = P('dragon_scale', { surf: 2, tint: [3.2, 2.5, 1.5] });
-  const lacquer = P('red_lacquer', { tint: [1.5, 1.0, 0.9] });
-  const throat = P('red_lacquer', { surf: 5, tint: [0.9, 0.18, 0.04] });
-  const tongue = P('red_lacquer', { surf: 5, tint: [0.4, 0.07, 0.03] });
-  const eye = P('red_lacquer', { surf: 5, tint: [0.8, 0.22, 0.03] });
+  const lacquer = P('stained_wood', { tint: [1.5, 1.0, 0.9] });
+  const throat = P('stained_wood', { surf: 5, tint: [0.03, 0.012, 0.008] });
+  const tongue = P('stained_wood', { surf: 5, tint: [0.02, 0.008, 0.005] });
+  const eye = P('stained_wood', { surf: 5, tint: [0.05, 0.02, 0.007] });
   const fang = P('iron_hex', { surf: 2, tint: [1.7, 1.55, 1.4] });
   const seg = byLod(ctx, 12, 8, 5);
   const S = (p: [number, number, number], a: number, c: number): TubeStation => ({ p, a, b: c });
@@ -340,7 +340,7 @@ function dragonHead(ctx: Ctx, baseX: number, mouthY: number, bowX: number) {
         spike(b, bronze, [-1.3 + t * 3.2, 6.45 - t * 0.5, 0], [-0.55, 1, 0], 0.22, 1.25 - t * 0.35, 5);
       }
     }
-    // frill of fins fanning out behind the skull, red lacquer at the edge, and cheek fins
+    // frill of fins fanning out behind the skull, darker wood at the edge, and cheek fins
     if (lod < 2) {
       const n = byLod(ctx, 9, 5, 3);
       for (let i = 0; i < n; i += 1) {
@@ -355,10 +355,10 @@ function dragonHead(ctx: Ctx, baseX: number, mouthY: number, bowX: number) {
         }
       }
     }
-    // whiskers: long dark-red cloth streamers trailing from the snout
+    // whiskers: long dark oxblood cloth streamers trailing from the snout
     if (lod < 2) {
       for (const z of [-1, 1]) {
-        pennant(b, clothPatch(ctx, 'flags_a', 'red').tinted([0.6, 0.45, 0.45]), [5.2, 4.4, z * 0.55], [-1, -0.2, z * 0.5], [0, -1, 0], 4.6, 0.3, 0.04, byLod(ctx, 8, 3, 1), { flutter: 1.4, phase: z });
+        pennant(b, clothPatch(ctx, 'flags_a', 'red').tinted([0.4, 0.3, 0.3]), [5.2, 4.4, z * 0.55], [-1, -0.2, z * 0.5], [0, -1, 0], 4.6, 0.3, 0.04, byLod(ctx, 8, 3, 1), { flutter: 1.4, phase: z });
       }
     }
   });

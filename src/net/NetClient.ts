@@ -186,7 +186,7 @@ class NetClient {
         this.everOnline = false;
         store(TOKEN_KEY, '', 'session');
         const playing = useNet.getState().battle === 'playing';
-        useNet.setState({ status: 'error', error: '다른 창에서 같은 장수로 접속해 이 창의 연결을 끊었습니다.', room: null, quick: null, retry: null, battle: playing ? 'lost' : 'none', notice: playing ? '다른 창에서 이 자리를 이어받았습니다.' : null });
+        useNet.setState({ status: 'error', error: '다른 창에서 같은 닉네임으로 접속해 이 창의 연결을 끊었습니다.', room: null, quick: null, retry: null, battle: playing ? 'lost' : 'none', notice: playing ? '다른 창에서 이 자리를 이어받았습니다.' : null });
         return;
       }
       this.failed(!this.everOnline, quiet);
@@ -201,7 +201,7 @@ class NetClient {
     }
     if (first) {
       this.stopped = true;
-      useNet.setState({ status: quiet ? 'idle' : 'error', error: quiet ? null : '서버에 연결할 수 없습니다 — 잠시 후 다시 시도', retry: null });
+      useNet.setState({ status: quiet ? 'idle' : 'error', error: quiet ? null : '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.', retry: null });
       return;
     }
     if (!this.lostAt) this.lostAt = performance.now();
@@ -227,7 +227,7 @@ class NetClient {
     const playing = useNet.getState().battle === 'playing';
     useNet.setState({
       status: 'error',
-      error: '서버에 연결할 수 없습니다 — 잠시 후 다시 시도',
+      error: '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',
       room: null,
       quick: null,
       retry: null,

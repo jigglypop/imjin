@@ -1,10 +1,14 @@
-/* Online lobby and battle overlay, in the white glass look of the rest of the menus (tokens from styles.css). */
+/* Online lobby and battle overlay, in the white glass look of the rest of the menus (tokens from styles.css and menu.css). */
 
 .on {
   --on-line: var(--line-2);
-  --on-fill: var(--fill);
-  --on-soft: var(--ink-2);
+  --on-fill: rgba(255, 255, 255, 0.6);
+  --on-soft: var(--ink-3);
   gap: 12px;
+}
+
+.cs.on {
+  padding-bottom: var(--sp-5);
 }
 
 .on-title {
@@ -12,47 +16,49 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: 4px 10px;
-  font-weight: 800;
-  font-size: 18px;
-  letter-spacing: 0;
+  font-weight: 600;
+  font-size: var(--fs-20);
+  letter-spacing: -0.01em;
 }
 
 .on-title small {
   margin-left: auto;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--fs-12);
+  font-weight: 400;
   letter-spacing: 0;
   color: var(--on-soft);
 }
 
 .on-title code,
 .on-room code {
-  font-size: 14px;
+  font-size: var(--fs-13);
+  font-weight: 500;
   padding: 1px 8px;
   border-radius: 8px;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line-2);
   letter-spacing: 3px;
   font-family: inherit;
+  color: var(--ink-2);
 }
 
 .on-lead {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--on-soft);
+  font-size: var(--fs-15);
+  line-height: 1.5;
+  color: var(--ink-2);
 }
 
 .on-hint {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--on-soft);
 }
 
 .on-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--on-line);
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
   background: var(--on-fill);
   border-radius: var(--r-sm);
 }
@@ -65,7 +71,8 @@
 }
 
 .on-card-head b {
-  font-size: 15px;
+  font-size: var(--fs-15);
+  font-weight: 600;
   letter-spacing: 0;
 }
 
@@ -78,9 +85,9 @@
 
 .on-label {
   flex: none;
-  min-width: 44px;
-  font-size: 13px;
-  font-weight: 700;
+  min-width: 52px;
+  font-size: var(--fs-13);
+  font-weight: 500;
   color: var(--on-soft);
 }
 
@@ -88,15 +95,22 @@
 .on-select {
   flex: 1;
   min-width: 0;
-  padding: 8px 12px;
-  border-radius: var(--r-sm);
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 999px;
   border: 1px solid var(--line-2);
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--fs-15);
+  font-weight: 400;
   color: var(--ink);
   -webkit-user-select: text;
   user-select: text;
+}
+
+.on-input::placeholder {
+  color: var(--ink-3);
+  opacity: 0.8;
 }
 
 .on-select {
@@ -105,7 +119,7 @@
 
 .on-input--code {
   flex: none;
-  width: 96px;
+  width: 104px;
   letter-spacing: 4px;
   text-transform: uppercase;
 }
@@ -119,11 +133,11 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 12px;
-  padding: 8px 12px;
-  border-left: 3px solid var(--seal);
-  background: color-mix(in srgb, var(--seal) 12%, transparent);
-  font-size: 13px;
-  color: var(--seal);
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--bad) 28%, transparent);
+  background: color-mix(in srgb, var(--bad) 8%, #fff);
+  font-size: var(--fs-13);
+  color: var(--bad);
   border-radius: var(--r-sm);
 }
 
@@ -140,23 +154,23 @@
 .on-seg {
   display: inline-flex;
   align-self: flex-start;
-  overflow: hidden;
-  border: 1px solid var(--on-line);
+  padding: 3px;
+  border: 1px solid var(--line);
   border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
 }
 
 .on-seg-btn {
-  padding: 5px 14px;
+  min-height: 32px;
+  padding: 0 16px;
   border: 0;
+  border-radius: 999px;
   background: transparent;
   font: inherit;
-  font-size: 13px;
-  color: inherit;
+  font-size: var(--fs-13);
+  font-weight: 500;
+  color: var(--ink-2);
   cursor: pointer;
-}
-
-.on-seg-btn + .on-seg-btn {
-  border-left: 1px solid var(--on-line);
 }
 
 .on-seg-btn--on {
@@ -181,22 +195,30 @@
 .on-navy {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px 4px 6px;
-  border: 1px solid var(--on-line);
-  background: var(--on-fill);
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 14px 4px 8px;
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, 0.7);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-13);
+  font-weight: 500;
   white-space: nowrap;
   color: inherit;
   cursor: pointer;
   border-radius: 999px;
 }
 
+.on-navy:hover {
+  border-color: var(--accent);
+  background: #fff;
+}
+
 .on-navy--on {
   border-color: var(--accent);
-  background: var(--accent-soft);
-  font-weight: 700;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--accent);
+  font-weight: 600;
 }
 
 .on-searching {
@@ -204,10 +226,11 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  font-size: 14px;
+  font-size: var(--fs-15);
 }
 
 .on-searching small {
+  margin-left: 6px;
   color: var(--on-soft);
 }
 
@@ -218,8 +241,8 @@
 .on-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid var(--on-line);
-  border-top-color: var(--ink);
+  border: 2px solid var(--line-2);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: on-spin 0.9s linear infinite;
 }
@@ -233,7 +256,7 @@
 .on-rooms {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   max-height: 200px;
   overflow-y: auto;
 }
@@ -243,15 +266,16 @@
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 2px 10px;
-  padding: 7px 10px;
-  border: 1px solid var(--on-line);
-  background: var(--on-fill);
-  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.7);
+  font-size: var(--fs-13);
   border-radius: var(--r-sm);
 }
 
 .on-room b {
   grid-column: 1;
+  font-weight: 600;
   letter-spacing: 0;
 }
 
@@ -274,24 +298,26 @@
 .on-seats {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
+/* A seat: its side as a thin tonal bar on the left, the player, the navy, the state. */
 .on-seat {
+  --bar: var(--joseon);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px 10px;
-  padding: 6px 10px;
-  border: 1px solid var(--on-line);
-  border-left: 4px solid var(--joseon);
-  background: var(--on-fill);
-  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--bar);
+  background: rgba(255, 255, 255, 0.7);
+  font-size: var(--fs-13);
   border-radius: var(--r-sm);
 }
 
 .on-seat--japan {
-  border-left-color: var(--japan);
+  --bar: var(--japan);
 }
 
 .on-seat--me {
@@ -301,14 +327,14 @@
 .on-seat b {
   flex: 1;
   min-width: 80px;
+  font-weight: 600;
   letter-spacing: 0;
 }
 
 .on-side {
-  min-width: 52px;
-  font-weight: 800;
+  min-width: 56px;
+  font-weight: 500;
   color: var(--on-soft);
-  letter-spacing: 2px;
 }
 
 .on-factions {
@@ -330,7 +356,7 @@
 }
 
 .on-faction--on {
-  border-color: var(--ink);
+  border-color: var(--accent);
 }
 
 .on-faction--on:disabled {
@@ -338,10 +364,10 @@
 }
 
 .on-tag {
-  padding: 1px 8px;
-  font-size: 12px;
-  font-weight: 700;
-  border: 1px solid var(--on-line);
+  padding: 1px 10px;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  border: 1px solid var(--line-2);
   color: var(--on-soft);
   border-radius: 999px;
 }
@@ -357,18 +383,18 @@
 }
 
 .on-tag--warn {
-  border-color: var(--seal);
-  color: var(--seal);
+  border-color: var(--bad);
+  color: var(--bad);
 }
 
 .on-chat {
   height: 96px;
   overflow-y: auto;
-  padding: 6px 10px;
-  border: 1px solid var(--on-line);
-  background: var(--on-fill);
-  font-size: 13px;
-  line-height: 1.6;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.7);
+  font-size: var(--fs-13);
+  line-height: 1.55;
   -webkit-user-select: text;
   user-select: text;
   border-radius: var(--r-sm);
@@ -376,6 +402,7 @@
 
 .on-chat b {
   margin-right: 6px;
+  font-weight: 600;
 }
 
 .on-toast {
@@ -384,12 +411,21 @@
   bottom: 24px;
   transform: translateX(-50%);
   z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   max-width: calc(100vw - 32px);
-  padding: 8px 16px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
   background: var(--accent);
   color: #fff;
-  font-size: 13px;
+  font: inherit;
+  font-size: var(--fs-13);
+  font-weight: 500;
   border-radius: 999px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
 }
 
 /* ------------------------------------------------------------ over the battle */
@@ -399,12 +435,13 @@
   inset: 0;
   z-index: 45;
   pointer-events: none;
-  font-size: 14px;
+  font-size: var(--fs-13);
 }
 
+/* Just under the score panel, however many rows it has (--bal-bottom is measured by the HUD). */
 .on-pills {
   position: absolute;
-  top: 112px;
+  top: calc(var(--bal-bottom, 112px) + 10px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -422,23 +459,27 @@
   gap: 2px 10px;
   padding: 6px 14px;
   border-radius: 999px;
-  background: rgba(15, 23, 32, 0.84);
-  color: #fff;
+  border: 1px solid var(--glass-line);
+  background: var(--glass-hi);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
   pointer-events: auto;
-  backdrop-filter: blur(6px);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .on-pill b {
-  letter-spacing: 0;
+  font-weight: 600;
 }
 
 .on-pill span {
-  font-size: 12px;
-  opacity: 0.85;
+  font-size: var(--fs-12);
+  color: var(--ink-3);
 }
 
 .on-pill--warn {
-  background: color-mix(in srgb, var(--seal) 90%, transparent);
+  border-color: color-mix(in srgb, var(--warn) 32%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, white);
 }
 
 .on-pill .chip {
@@ -509,18 +550,12 @@
   }
 }
 
-/* The navy emblems are drawn by the shell's .emblem; here they are small badges. */
+/* In the lobby a navy is its crest: no ring, no disc. */
 .on-navy .emblem,
 .on-faction .emblem {
-  width: 30px;
-  height: 30px;
-  font-size: 15px;
-  box-shadow: 0 0 0 1.5px var(--ink);
-}
-
-.on-navy .emblem::before,
-.on-faction .emblem::before {
-  inset: 3px;
+  width: 28px;
+  height: 28px;
+  box-shadow: none;
 }
 
 /* iOS zooms the page when a field under 16px takes focus, and the battle page cannot be pinched back. */

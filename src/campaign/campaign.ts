@@ -10,7 +10,7 @@ export type SkillKey = 'gunnery' | 'command' | 'seamanship' | 'fire' | 'melee';
 export const SKILLS: Record<SkillKey, { label: string; hanja: string; desc: string }> = {
   gunnery: { label: '포술', hanja: '砲', desc: '장전 속도 +6% · 명중률 +5% (단계당)' },
   command: { label: '통솔', hanja: '帥', desc: '사기와 백병 방어 +6% (단계당)' },
-  seamanship: { label: '조선', hanja: '操', desc: '속도 +3% · 선회 +5% (단계당)' },
+  seamanship: { label: '조함', hanja: '操', desc: '속도 +3% · 선회 +5% (단계당)' },
   fire: { label: '화공', hanja: '火', desc: '불붙일 확률 +12% (단계당)' },
   melee: { label: '단병', hanja: '劍', desc: '백병전 공격 +8% (단계당)' },
 };
@@ -89,7 +89,7 @@ export function newCampaign(): Campaign {
       { id: 'q5', name: '협선대', commanderId: 'kwon', ships: ships('hyeopseon', 15, '협선') },
     ],
     history: [],
-    log: ['임진년 4월, 왜군 15만이 부산에 상륙했다. 전라좌수영 함대가 첫 출전을 준비한다.'],
+    log: ['1592년 4월, 일본군 15만이 부산에 상륙했습니다. 전라좌수영 함대가 첫 출전을 준비합니다.'],
   };
 }
 
@@ -211,7 +211,7 @@ export function buildShip(kind: ShipKind, squadId: string) {
     c.resources.powder -= cost.powder;
     c.resources.grain -= cost.grain;
     sq.ships.push({ id: `s${shipSeq++}`, kind, name: `${cost.label} ${sq.ships.filter((s) => s.kind === kind).length + 1}호`, hull: 1, crew: 1, supply: 1, kills: 0 });
-    c.log.unshift(`${sq.name}에 ${cost.label} 한 척을 새로 건조했다.`);
+    c.log.unshift(`${sq.name}에 ${cost.label} 한 척을 건조했습니다.`);
   });
 }
 
@@ -247,17 +247,17 @@ const EVENTS: Partial<Record<ScenarioId, (c: Campaign) => string[]>> = {
   okpo: (c) => {
     const sq = c.squads.find((q) => q.commanderId === 'yi');
     sq?.ships.push({ id: `s${shipSeq++}`, kind: 'geobukseon', name: '거북선 1호', hull: 1, crew: 1, supply: 1, kills: 0 });
-    return ['나대용이 설계한 거북선이 완성되어 함대에 합류했다.'];
+    return ['나대용이 설계한 거북선이 완성되어 함대에 합류했습니다.'];
   },
   dangpo: (c) => {
     if (!c.commanders.some((x) => x.id === 'eokgi')) c.commanders.push(commander('eokgi', '이억기', '전라우수사', 'portrait_eokgi', 2, { command: 1 }));
     c.squads.push({ id: `q${c.squads.length + 1}`, name: '전라우수영', commanderId: 'eokgi', ships: ships('panokseon', 25, '우수영') });
-    return ['전라우수사 이억기가 판옥선 25척을 이끌고 합류했다.'];
+    return ['전라우수사 이억기가 판옥선 25척을 이끌고 합류했습니다.'];
   },
   hansan: (c) => {
     c.resources.timber += 40;
     c.resources.powder += 30;
-    return ['조정에서 군량과 화약을 내려보냈다. 거북선을 더 건조할 수 있다.'];
+    return ['조정에서 군량과 화약을 보냈습니다. 거북선을 더 건조할 수 있습니다.'];
   },
   busan: (c) => {
     const jeong = c.commanders.find((x) => x.id === 'jeongun');
@@ -265,9 +265,9 @@ const EVENTS: Partial<Record<ScenarioId, (c: Campaign) => string[]>> = {
       jeong.alive = false;
       const sq = c.squads.find((q) => q.commanderId === 'jeongun');
       if (sq) sq.commanderId = 'yi';
-      return ['부산포에서 선봉장 정운이 적탄에 전사했다. 그의 함대는 통제사가 직접 거느린다.', '임진년이 저물고 정유년, 이순신은 모함을 받아 한양으로 압송되었다. 원균이 통제사가 된다.'];
+      return ['부산포에서 선봉장 정운이 적탄에 전사했습니다. 그의 함대는 통제사가 직접 지휘합니다.', '1597년, 이순신은 모함을 받아 한양으로 압송되고 원균이 통제사가 됩니다.'];
     }
-    return ['정유년, 이순신이 압송되고 원균이 통제사가 되었다.'];
+    return ['1597년, 이순신이 압송되고 원균이 통제사가 되었습니다.'];
   },
   chilcheon: (c) => {
     const survivors = c.squads.flatMap((q) => q.ships).filter((s) => s.kind === 'panokseon');
@@ -277,14 +277,14 @@ const EVENTS: Partial<Record<ScenarioId, (c: Campaign) => string[]>> = {
     c.squads[0]!.ships.push({ id: `s${shipSeq++}`, kind: 'panokseon', name: '통제사 대장선', hull: 1, crew: 1, supply: 1, kills: 0 });
     const won = c.commanders.find((x) => x.id === 'won');
     if (won) won.alive = false;
-    return [`칠천량의 패전 뒤 백의종군하던 이순신이 다시 통제사가 되었다. 남은 배는 ${c.squads[0]!.ships.length}척.`];
+    return [`칠천량의 패전 뒤 백의종군하던 이순신이 다시 통제사가 되었습니다. 남은 배는 ${c.squads[0]!.ships.length}척.`];
   },
   myeongnyang: (c) => {
     c.resources.timber += 120;
     c.resources.grain += 120;
     c.resources.powder += 60;
     c.squads[0]!.ships.push(...ships('panokseon', 20, '신조'));
-    return ['고금도에서 수군을 재건했다. 판옥선 20척을 새로 지었고, 명의 진린 함대가 합류한다.'];
+    return ['고금도에서 수군을 재건했습니다. 판옥선 20척을 새로 지었고, 명의 진린 함대가 합류합니다.'];
   },
 };
 
@@ -343,9 +343,9 @@ export function applyOutcome(o: BattleOutcome): Report {
       c.log.unshift(...events);
       c.step += 1;
     } else {
-      report.events.push('패전했다. 함대를 정비하여 다시 싸울 수 있다.');
+      report.events.push('패전했습니다. 함대를 정비한 뒤 다시 싸울 수 있습니다.');
     }
-    c.log.unshift(`${SCENARIOS[o.id].title} — ${o.win ? '승리' : '패배'} · 적선 ${o.enemySunk}척 격파 · 아군 손실 ${report.lost}척`);
+    c.log.unshift(`${SCENARIOS[o.id].title}: ${o.win ? '승리' : '패배'} · 적선 ${o.enemySunk}척 격파 · 아군 손실 ${report.lost}척`);
   });
   return report;
 }

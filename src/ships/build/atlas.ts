@@ -13,7 +13,7 @@ function surfOf(name: string) {
   if (/flag|maku|nobori|pennant/.test(name)) return SURF.banner;
   if (/sail|matting/.test(name)) return SURF.cloth;
   if (/bronze|iron|gold/.test(name)) return SURF.metal;
-  if (/lacquer|gilt|glazed|scale|dancheong/.test(name)) return SURF.gloss;
+  if (/lacquer|gilt|glazed|scale/.test(name)) return SURF.gloss;
   return SURF.wood;
 }
 

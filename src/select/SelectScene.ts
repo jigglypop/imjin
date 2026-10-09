@@ -340,8 +340,9 @@ export class SelectScene {
   focus(id: ScenarioId, instant = false) {
     this.worldOf(id, this.goal);
     this.goalYaw = 0;
-    // Aim south of the site so it sits in the upper half of the screen, above the brief card.
-    this.goal.z += 2.4;
+    // Aim south of the site so it sits in the upper half of the screen, above the brief card. A shorter window leaves the
+    // map less room above the card, so the aim moves further south.
+    this.goal.z += 2.4 + Math.max(0, 900 - this.viewportHeight()) * 0.025;
     this.goalDist = Math.min(this.goalDist, 40);
     if (instant) {
       this.target.copy(this.goal);
@@ -380,15 +381,15 @@ export class SelectScene {
     ctx.clearRect(0, 0, w, h);
     if (faction === 'japan') {
       // Nobori: a tall white banner with a crest and the commander's name down the middle.
-      ctx.fillStyle = '#d2453d';
+      ctx.fillStyle = '#6b4a40';
       ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = '#f5f8fc';
+      ctx.fillStyle = '#efe6e1';
       ctx.fillRect(0, 0, w, 26);
       const cx = w / 2;
       const cy = w * 0.62;
       const r = w * 0.3;
       ctx.lineWidth = 16;
-      ctx.strokeStyle = '#f5f8fc';
+      ctx.strokeStyle = '#efe6e1';
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.stroke();
@@ -411,11 +412,11 @@ export class SelectScene {
       [...text].forEach((ch, i) => ctx.fillText(ch, cx, w * 1.25 + i * 210));
       return;
     }
-    // Joseon: a hemp-coloured command flag with a red flame border. Ming: a red flag with a gold border and seal.
+    // Joseon: a slate-indigo command flag with a pale flame border. Ming: an ochre flag with a pale border and seal.
     const ming = faction === 'ming';
-    ctx.fillStyle = ming ? '#e2a53b' : '#3a86d6';
+    ctx.fillStyle = ming ? '#8c7040' : '#46637a';
     ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = ming ? '#fff1cf' : '#f5f8fc';
+    ctx.fillStyle = ming ? '#efe9dd' : '#e4eaef';
     const tooth = 34;
     for (let x = 0; x < w; x += tooth) {
       ctx.beginPath();
@@ -437,12 +438,12 @@ export class SelectScene {
       ctx.fill();
     }
     if (ming) {
-      ctx.fillStyle = '#fff1cf';
+      ctx.fillStyle = '#efe9dd';
       ctx.beginPath();
       ctx.arc(w * 0.47, h * 0.5, w * 0.3, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = ming ? '#2b1c00' : '#ffffff';
+    ctx.fillStyle = ming ? '#3a2d17' : '#f4f6f8';
     ctx.font = `700 ${ming ? 230 : 300}px "Noto Serif KR", serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -478,7 +479,7 @@ export class SelectScene {
     m.positionNode = positionLocal.add(vec3(0, d.mul(d).mul(-0.04), wave));
     m.colorNode = texture(tex, uv()).rgb.mul(slope.mul(d).mul(0.22).add(0.86));
     const cloth = new Mesh(geo, m);
-    const wood = new MeshBasicNodeMaterial({ color: 0x1a2430 });
+    const wood = new MeshBasicNodeMaterial({ color: 0x2a2f35 });
     const pole = new Mesh(new CylinderGeometry(0.014, 0.018, aspect + 1.6, 10), wood);
     pole.position.set(0, -aspect / 2 - 0.2, 0);
     const finial = new Mesh(new CylinderGeometry(0, 0.04, 0.13, 8), new MeshBasicNodeMaterial({ color: 0xdfe8f2 }));

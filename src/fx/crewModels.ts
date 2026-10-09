@@ -120,7 +120,12 @@ function makeMaterial(map: Texture, anim: DataTexture, influences: number) {
     return rot(pos.mul(iPos.w)).add(iPos.xyz);
   })();
   m.normalNode = transformNormalToView(skinned);
-  const base = texture(map).rgb;
+  // The painted robes are saturated; muting them (and sinking pink-reds toward oxblood) keeps a crew from reading as red
+  // specks on a weathered deck.
+  const raw = texture(map).rgb;
+  const grey = raw.dot(vec3(0.299, 0.587, 0.114));
+  const redness = max(raw.r.sub(max(raw.g, raw.b)).mul(3), 0).min(1);
+  const base = mix(vec3(grey), raw, 0.5).mul(float(1).sub(redness.mul(0.3)));
   // Fallen and drowning figures darken with iMisc.z; iMisc.y tints the cloth a little toward the side's colour.
   m.colorNode = mix(base, tint.rgb, tint.a).mul(float(1).sub(iMisc.z.mul(0.5)));
   return m;

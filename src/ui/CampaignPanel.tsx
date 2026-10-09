@@ -11,7 +11,6 @@ import {
   type SkillKey,
 } from '../campaign/campaign';
 import { sound } from '../audio/Sound';
-import { KIND_HANJA } from './kinds';
 import type { ShipKind } from '../sim/types';
 
 function Bar({ value, tone }: { value: number; tone: 'hull' | 'crew' | 'supply' }) {
@@ -34,7 +33,7 @@ export function CampaignPanel({ campaign, onClose }: { campaign: Campaign; onClo
     <div className="camp-backdrop" onClick={onClose}>
       <div className="camp glass" onClick={(e) => e.stopPropagation()}>
         <div className="camp-head">
-          <div className="camp-title">軍營 · 군영</div>
+          <div className="camp-title">군영</div>
           <div className="camp-res">
             <span>
               군량 <b>{Math.floor(r.grain)}</b>
@@ -73,10 +72,10 @@ export function CampaignPanel({ campaign, onClose }: { campaign: Campaign; onClo
                 const locked = campaign.step < b.unlock;
                 const afford = r.timber >= b.timber && r.powder >= b.powder && r.grain >= b.grain;
                 return (
-                  <button key={kind} className="chip" disabled={locked || !afford} onClick={click(() => buildShip(kind, campaign.squads[0]?.id ?? ''))} title={locked ? '아직 건조할 수 없다' : ''}>
+                  <button key={kind} className="chip" disabled={locked || !afford} onClick={click(() => buildShip(kind, campaign.squads[0]?.id ?? ''))} title={locked ? '아직 건조할 수 없습니다' : ''}>
                     {b.label} 건조{' '}
                     <small>
-                      목{b.timber} · 화{b.powder} · 량{b.grain}
+                      목재 {b.timber} · 화약 {b.powder} · 군량 {b.grain}
                     </small>
                   </button>
                 );
@@ -99,7 +98,7 @@ export function CampaignPanel({ campaign, onClose }: { campaign: Campaign; onClo
                     <div className="camp-ships">
                       {sq.ships.map((s) => (
                         <div key={s.id} className="camp-ship" title={`${s.name} · 격파 ${s.kills}`}>
-                          <span className="camp-kind">{KIND_HANJA[s.kind]}</span>
+                          <span className="camp-kind">{s.name}</span>
                           <Bar value={s.hull} tone="hull" />
                           <Bar value={s.crew} tone="crew" />
                           <Bar value={s.supply} tone="supply" />
@@ -132,9 +131,8 @@ export function CampaignPanel({ campaign, onClose }: { campaign: Campaign; onClo
                       </div>
                       <div className="camp-skills">
                         {(Object.keys(SKILLS) as SkillKey[]).map((k) => (
-                          <button key={k} className={`camp-skill ${c.skills[k] ? 'camp-skill--on' : ''}`} disabled={c.points <= 0 || c.skills[k] >= 5} onClick={click(() => spendSkill(c.id, k))} title={`${SKILLS[k].label} — ${SKILLS[k].desc}`}>
-                            <span>{SKILLS[k].hanja}</span>
-                            {c.skills[k]}
+                          <button key={k} className={`camp-skill ${c.skills[k] ? 'camp-skill--on' : ''}`} disabled={c.points <= 0 || c.skills[k] >= 5} onClick={click(() => spendSkill(c.id, k))} title={`${SKILLS[k].label}: ${SKILLS[k].desc}`}>
+                            {SKILLS[k].label} <b>{c.skills[k]}</b>
                           </button>
                         ))}
                       </div>
@@ -151,10 +149,10 @@ export function CampaignPanel({ campaign, onClose }: { campaign: Campaign; onClo
             <button
               className="chip camp-reset"
               onClick={click(() => {
-                if (confirm('전역을 처음부터 다시 시작합니까?')) resetCampaign();
+                if (confirm('연속 전투를 처음부터 다시 시작합니다. 계속할까요?')) resetCampaign();
               })}
             >
-              전역 새로 시작
+              처음부터 다시 시작
             </button>
           </section>
         </div>

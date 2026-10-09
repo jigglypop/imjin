@@ -128,7 +128,7 @@ const settle = () => new Promise<void>((resolve) => {
 });
 
 /** Shown when the graphics device is lost (the browser reclaimed the GPU, usually for memory). Nothing can be drawn after it. */
-const DEVICE_LOST_TEXT = '그래픽 장치가 멈췄습니다 — 메모리가 부족했을 수 있습니다. 페이지를 새로고침해 주세요';
+const DEVICE_LOST_TEXT = '그래픽 장치가 멈췄습니다. 메모리가 부족했을 수 있습니다. 페이지를 새로고침해 주세요.';
 
 /** Multipliers the player can pick. The approach before first contact runs at the largest. */
 export const SPEEDS = [1, 2, 4, 8, 16, 32, 64, 128] as const;
@@ -343,7 +343,7 @@ export class Engine {
     this.camera.updateProjectionMatrix();
     waveField.setState(SEA_STATES[this.seaName]);
     const info = this.battleInfo;
-    setLoading('바다와 하늘을 그리는 중', 0.03, info.art ?? null);
+    setLoading('바다와 하늘을 준비하는 중', 0.03, info.art ?? null);
     // The files download while the cloud and wake shaders build, so neither waits for the other.
     const loading = this.loadAssets(0.03);
     await this.warmShared();
@@ -351,12 +351,12 @@ export class Engine {
     this.assets = assets;
     this.terrain = terrain;
     this.scene.add(terrain.group);
-    setLoading('숲과 마을을 세우는 중', 0.64);
+    setLoading('지형을 준비하는 중', 0.64);
     this.dressTerrain();
     this.applySky(sky);
     setLoading('함대를 배치하는 중', 0.68);
     this.placeScenario(sky);
-    setLoading('바다와 하늘을 짓는 중', 0.72);
+    setLoading('날씨와 파도를 준비하는 중', 0.72);
     if (this.eq.fft && (r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) this.fft = new FFTWaves(spectrumOf(SEA_STATES[this.seaName]), this.eq.fftN);
     this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
     this.scene.add(this.ocean.mesh);
@@ -520,7 +520,7 @@ export class Engine {
   private async prewarm(from: number) {
     const r = this.renderer;
     const webgpu = !!(r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend;
-    setLoading('셰이더를 준비하는 중', from);
+    setLoading('화면 효과를 준비하는 중', from);
     await Promise.all([this.worksLoad, this.conquestLoad]);
     // The land is drawn in tiles that the camera culls. All of them draw during warm-up, so the terrain program is built here
     // and not when land first comes into view.
@@ -530,7 +530,7 @@ export class Engine {
     } else {
       await this.compileByParts(from);
     }
-    setLoading('첫 화면을 그리는 중', from + 0.2);
+    setLoading('첫 화면을 준비하는 중', from + 0.2);
     await settle();
     this.primeOcean();
     this.terrain.setCulling(true);
@@ -688,7 +688,7 @@ export class Engine {
   /** Steps the cutaway down one deck at a time and back to the closed hull. */
   toggleCutaway() {
     this.cutaway = (this.cutaway + 1) % 4;
-    pushToast(['선내 보기를 닫는다', '상갑판 — 지붕과 장대를 걷어낸다', '포갑판 — 포수와 사부', '노갑판 — 격군'][this.cutaway]!);
+    pushToast(['선내 보기를 닫습니다', '상갑판 · 지붕과 장대를 걷어냅니다', '포갑판 · 포수와 사수', '노갑판 · 격군'][this.cutaway]!);
     this.publish(true);
   }
 
@@ -869,7 +869,7 @@ export class Engine {
     this.seaName = info.sea;
     waveField.setState(SEA_STATES[this.seaName]);
     const [sky, terrain, assets] = await this.loadAssets(0.04);
-    setLoading('숲과 마을을 세우는 중', 0.64);
+    setLoading('지형을 준비하는 중', 0.64);
     // The previous battle's terrain, ocean and ship batches are freed before the new ones are built, so two battles
     // never sit in memory together.
     this.disposeBattle();
@@ -880,7 +880,7 @@ export class Engine {
     this.applySky(sky);
     setLoading('함대를 배치하는 중', 0.68);
     this.placeScenario(sky);
-    setLoading('바다와 하늘을 짓는 중', 0.72);
+    setLoading('날씨와 파도를 준비하는 중', 0.72);
     this.fft?.setSpectrum(spectrumOf(SEA_STATES[this.seaName]));
     this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
     this.scene.add(this.ocean.mesh);
@@ -1012,8 +1012,8 @@ export class Engine {
     this.structures?.update(this.camera);
     const tideSign = Math.abs(this.battle.tide) < 0.15 ? 0 : Math.sign(this.battle.tide);
     if (this.current && tideSign !== this.lastTide) {
-      if (tideSign === 0) pushToast('물살이 잦아든다 — 곧 물길이 바뀐다');
-      else if (this.lastTide === 0) pushToast(tideSign > 0 ? '울돌목의 물길이 뒤집혔다! 왜선이 밀려난다' : '거센 물살이 왜선을 실어 온다', (tideSign > 0) === (this.team === 'joseon') ? 'good' : 'bad');
+      if (tideSign === 0) pushToast('물살이 잦아듭니다 · 곧 물길이 바뀝니다');
+      else if (this.lastTide === 0) pushToast(tideSign > 0 ? '울돌목의 물길이 뒤집혔습니다 · 일본 함선이 밀려납니다' : '거센 물살이 일본 함선을 실어 옵니다', (tideSign > 0) === (this.team === 'joseon') ? 'good' : 'bad');
       this.lastTide = tideSign;
     }
     this.ocean.update(this.camera.position.x, this.camera.position.z);
@@ -1062,7 +1062,7 @@ export class Engine {
   }
 
   private endFastForward() {
-    if (this.fastForward) pushToast('적과 접촉 — 정상 속도로 돌아온다', 'info');
+    if (this.fastForward) pushToast('적과 접촉했습니다 · 정상 속도로 돌아갑니다', 'info');
     this.approachOver = true;
     this.autoFast = false;
     this.fastForward = false;
@@ -1310,7 +1310,7 @@ export class Engine {
       night: b.night,
       tide: this.current
         ? {
-            label: Math.abs(b.tide) < 0.15 ? '정조 · 물살이 멎었다' : b.tide < 0 ? '밀물 · 왜선 쪽으로 흐름' : '썰물 · 물길이 뒤집혔다',
+            label: Math.abs(b.tide) < 0.15 ? '정조 · 물살이 멎었습니다' : b.tide < 0 ? '밀물 · 일본 함선 쪽으로 흐릅니다' : '썰물 · 물길이 뒤집혔습니다',
             knots: Math.round(this.current.peakSpeed(b.tide) * 1.944 * 10) / 10,
             dir: Math.sign(b.tide),
           }
@@ -1395,17 +1395,16 @@ export class Engine {
         ? {
             id: p.id,
             name: p.name,
-            hanja: p.hanja,
             side: sideOf(c.teamOfPoint(p)),
-            holder: p.owner >= 0 ? `${c.player(p.owner)!.name} · ${FACTION_NAME[c.player(p.owner)!.faction]}` : '무주',
+            holder: p.owner >= 0 ? `${c.player(p.owner)!.name} · ${FACTION_NAME[c.player(p.owner)!.faction]}` : '주인 없음',
             value: p.value,
             home: p.home >= 0,
             contested: p.contested,
             hold: p.hold,
             mine,
-            buildings: p.buildings.map((bd, slot) => (bd ? { slot, kind: bd.kind, label: BUILDINGS[bd.kind].label, hanja: BUILDINGS[bd.kind].hanja, progress: bd.progress, hp: bd.hp / BUILDINGS[bd.kind].hp } : null)),
+            buildings: p.buildings.map((bd, slot) => (bd ? { slot, kind: bd.kind, label: BUILDINGS[bd.kind].label, progress: bd.progress, hp: bd.hp / BUILDINGS[bd.kind].hp } : null)),
             queue: p.queue.map((q) => ({ kind: q.kind, label: SHORT_NAME[q.kind], left: Math.ceil(q.left), total: q.total })),
-            build: BUILDING_ORDER.map((kind) => ({ kind, label: BUILDINGS[kind].label, hanja: BUILDINGS[kind].hanja, cost: BUILDINGS[kind].cost, desc: BUILDINGS[kind].desc, ok: mine && c.canBuild(this.owner, p.id, kind) })),
+            build: BUILDING_ORDER.map((kind) => ({ kind, label: BUILDINGS[kind].label, cost: BUILDINGS[kind].cost, desc: BUILDINGS[kind].desc, ok: mine && c.canBuild(this.owner, p.id, kind) })),
             recruit: ROSTER[me.faction].map((kind) => ({ kind, label: SHORT_NAME[kind], cost: SHIP_SPECS[kind].cost, time: SHIP_SPECS[kind].build, ok: mine && c.canRecruit(this.battle, this.owner, p.id, kind) })),
             shipyard: c.count(p, 'shipyard') > 0,
           }

@@ -46,21 +46,21 @@ function OnlineOverlay() {
       <div className="on-pills">
         {battle === 'playing' && speed.target === 0 && (
           <div className="on-pill">
-            <b>상대를 기다리는 중</b>
-            <span>모두 전장에 들어서면 시작합니다</span>
+            <b>상대를 기다리고 있습니다</b>
+            <span>모두 입장하면 전투가 시작됩니다</span>
           </div>
         )}
         {battle === 'playing' && speed.target > 1 && (
-          <div className="on-pill" title="적과 마주칠 때까지 서버가 시간을 빠르게 흘려보냅니다">
-            <b>접근 가속 ×{speed.speed}</b>
-            <span>적과 마주치면 정상 속도</span>
+          <div className="on-pill" title="적과 접촉할 때까지 서버가 시간을 빠르게 진행합니다">
+            <b>빠른 접근 ×{speed.speed}</b>
+            <span>적과 접촉하면 정상 속도로 돌아갑니다</span>
           </div>
         )}
         {status !== 'online' && battle !== 'lost' && (
           <div className="on-pill on-pill--warn">
             <b>연결이 끊어졌습니다</b>
             <span>
-              {retry ? `${retry.in}초 뒤 다시 연결합니다` : '다시 연결하는 중'} · 자리는 {GRACE_SECONDS}초간 지켜집니다
+              {retry ? `${retry.in}초 뒤 다시 연결합니다` : '다시 연결하고 있습니다'} · 자리는 {GRACE_SECONDS}초 동안 유지됩니다
             </span>
             <button className="chip" onClick={() => net.retryNow()}>
               지금 다시 시도
@@ -71,7 +71,7 @@ function OnlineOverlay() {
       {battle === 'ended' && room && (
         <div className="on-end paper">
           <span>
-            {mine?.rematch ? `재대결을 기다리는 중 (${humans.filter((s) => s.rematch).length}/${humans.length})` : '한 판 더 겨루시겠습니까?'}
+            {mine?.rematch ? `재대결을 기다리고 있습니다 (${humans.filter((s) => s.rematch).length}/${humans.length})` : '한 판 더 겨루시겠습니까?'}
           </span>
           <button className={`chip ${mine?.rematch ? 'chip--on' : ''}`} disabled={!mine || mine.rematch} onClick={() => net.send({ t: 'rematch' })}>
             재대결

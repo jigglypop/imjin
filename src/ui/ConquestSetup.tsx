@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react';
 import { CONQUEST_MAPS, CONQUEST_ORDER, MUSTER_BUDGET, autoFleet, fleetCost, type ConquestMapId, type Seat } from '../sim/maps';
 import { ROSTER, SHORT_NAME } from '../sim/conquest';
 import { SHIP_SPECS } from '../sim/catalog';
-import { FACTION_MARK, FACTION_NAME } from '../sim/balance';
+import { FACTION_NAME } from '../sim/balance';
 import { FACTIONS, type Faction, type ShipKind } from '../sim/types';
 import type { ConquestSetup } from '../game/Engine';
 import { sound } from '../audio/Sound';
+import { Minus, Plus } from './icons';
 
 const KEY = 'imjin.conquest';
 
@@ -30,20 +31,20 @@ function save(v: Saved) {
 }
 
 const ROLE_NOTE: Record<ShipKind, string> = {
-  panokseon: '천·지자총통 · 두꺼운 판옥',
-  geobukseon: '충파 · 등선 불가',
-  hyeopseon: '빠른 척후 · 점령',
-  atakebune: '조총 누각 · 등선',
-  sekibune: '빠른 등선 돌격',
-  kobaya: '값싼 소선 · 점령',
-  mingship: '불랑기 속사 · 큰 배',
-  mingsmall: '불랑기 · 빠른 사선',
+  panokseon: '천·지자총통, 튼튼한 선체',
+  geobukseon: '충돌 돌격, 적이 올라탈 수 없음',
+  hyeopseon: '빠른 정찰선, 거점 점령',
+  atakebune: '조총 누각, 적선에 올라탐',
+  sekibune: '빠른 돌격선, 적선에 올라탐',
+  kobaya: '값싼 소형선, 거점 점령',
+  mingship: '불랑기포 속사, 대형선',
+  mingsmall: '불랑기포, 빠른 소형선',
 };
 
 const TRAIT: Record<Faction, string> = {
-  joseon: '총통의 화력과 단단한 판옥선. 비싸지만 함대전에서 강하다.',
-  japan: '조총과 등선. 배가 싸고 빨라 포구를 먼저 차지한다.',
-  ming: '불랑기포의 빠른 장전과 큰 전선. 수가 적고 느리다.',
+  joseon: '총통의 화력과 튼튼한 판옥선이 강점입니다. 값이 비싸지만 함대전에 강합니다.',
+  japan: '조총과 적선에 올라타는 전술이 강점입니다. 함선이 싸고 빨라 거점을 먼저 차지할 수 있습니다.',
+  ming: '불랑기포의 빠른 장전과 큰 함선이 강점입니다. 함선 수가 적고 느립니다.',
 };
 
 function FactionPick({ value, onChange, label }: { value: Faction; onChange: (f: Faction) => void; label: string }) {
@@ -53,7 +54,7 @@ function FactionPick({ value, onChange, label }: { value: Faction; onChange: (f:
       <div className="cs-factions">
         {FACTIONS.map((f) => (
           <button key={f} className={`cs-faction ${value === f ? 'cs-faction--on' : ''}`} onClick={() => onChange(f)} title={TRAIT[f]}>
-            <i className={`emblem emblem--${f}`}>{FACTION_MARK[f]}</i>
+            <i className={`emblem emblem--${f}`} />
             {FACTION_NAME[f].replace(' 수군', '')}
           </button>
         ))}
@@ -98,7 +99,7 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
       { name: '적 본대', faction: cfg.foe, team: 'japan', human: false, fleet: autoFleet(cfg.foe) },
     ];
     if (size === 4) {
-      seats.push({ name: '우군', faction: cfg.ally, team: 'joseon', human: false, fleet: autoFleet(cfg.ally) });
+      seats.push({ name: '동맹군', faction: cfg.ally, team: 'joseon', human: false, fleet: autoFleet(cfg.ally) });
       seats.push({ name: '적 별동대', faction: cfg.foe, team: 'japan', human: false, fleet: autoFleet(cfg.foe) });
     }
     onStart({ map: cfg.map, seats, you: 0, seed: 1592 + Math.floor(Math.random() * 100000) });
@@ -111,15 +112,14 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
             {CONQUEST_ORDER.map((id) => (
               <button key={id} className={`cs-map ${cfg.map === id ? 'cs-map--on' : ''}`} onClick={() => setCfg({ map: id })}>
                 <b>{CONQUEST_MAPS[id].title}</b>
-                <small>
-                  {CONQUEST_MAPS[id].place} · {CONQUEST_MAPS[id].seats >= 4 ? '1:1 · 2:2' : '1:1'}
-                </small>
+                <small>{CONQUEST_MAPS[id].place}</small>
+                <small>{CONQUEST_MAPS[id].seats >= 4 ? '1:1 · 2:2' : '1:1'}</small>
               </button>
             ))}
           </div>
           <p className="cs-summary">{map.summary}</p>
-          <FactionPick label="아군" value={cfg.me} onChange={(me) => setCfg({ me })} />
-          <FactionPick label="적군" value={cfg.foe} onChange={(foe) => setCfg({ foe })} />
+          <FactionPick label="내 진영" value={cfg.me} onChange={(me) => setCfg({ me })} />
+          <FactionPick label="상대" value={cfg.foe} onChange={(foe) => setCfg({ foe })} />
           {map.seats >= 4 && (
             <div className="cs-row">
               <span className="cs-label">규모</span>
@@ -128,23 +128,23 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
                   1 : 1
                 </button>
                 <button className={`chip ${size === 4 ? 'chip--on' : ''}`} onClick={() => setCfg({ size: 4 })}>
-                  2 : 2 (컴퓨터 우군)
+                  2 : 2 (컴퓨터 동맹)
                 </button>
               </div>
             </div>
           )}
-          {size === 4 && <FactionPick label="우군" value={cfg.ally} onChange={(ally) => setCfg({ ally })} />}
+          {size === 4 && <FactionPick label="동맹" value={cfg.ally} onChange={(ally) => setCfg({ ally })} />}
         </div>
         <div className="cs-col">
           <div className="cs-row cs-row--top">
-            <span className="cs-label">편성</span>
+            <span className="cs-label">함대</span>
             <div className="cs-muster">
               <div className="cs-budget">
                 <div className="cs-budget-bar">
                   <i style={{ width: `${(cost / MUSTER_BUDGET) * 100}%` }} />
                 </div>
                 <span>
-                  {cost.toLocaleString('ko-KR')} / {MUSTER_BUDGET.toLocaleString('ko-KR')} <small>남는 돈은 군자금으로</small>
+                  {cost.toLocaleString('ko-KR')} / {MUSTER_BUDGET.toLocaleString('ko-KR')} <small>남은 금액은 군자금이 됩니다</small>
                 </span>
               </div>
               <div className="cs-ships">
@@ -152,16 +152,16 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
                   <div key={k} className="cs-ship">
                     <div className="cs-ship-name">
                       <b>{SHORT_NAME[k]}</b>
-                      <small>{SHIP_SPECS[k].cost}</small>
+                      <small>{SHIP_SPECS[k].cost.toLocaleString('ko-KR')}</small>
                     </div>
                     <div className="cs-ship-note">{ROLE_NOTE[k]}</div>
                     <div className="cs-ship-count">
-                      <button onClick={() => remove(k)} disabled={!counts.get(k)}>
-                        −
+                      <button onClick={() => remove(k)} disabled={!counts.get(k)} aria-label={`${SHORT_NAME[k]} 줄이기`}>
+                        <Minus size={16} />
                       </button>
                       <b>{counts.get(k) ?? 0}</b>
-                      <button onClick={() => add(k)} disabled={cost + SHIP_SPECS[k].cost > MUSTER_BUDGET}>
-                        +
+                      <button onClick={() => add(k)} disabled={cost + SHIP_SPECS[k].cost > MUSTER_BUDGET} aria-label={`${SHORT_NAME[k]} 늘리기`}>
+                        <Plus size={16} />
                       </button>
                     </div>
                   </div>
@@ -169,7 +169,7 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
               </div>
               <div className="chips">
                 <button className="chip" onClick={() => setFleet(autoFleet(cfg.me))}>
-                  기본 편성
+                  기본 구성
                 </button>
                 <button className="chip" onClick={() => setFleet([])}>
                   비우기
@@ -181,9 +181,9 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
         </div>
       </div>
       <div className="select-foot">
-        <span className="select-result">포구를 차지해 적의 기세를 꺾어라 · 30분</span>
+        <span className="select-result">거점을 차지해 적의 기세를 먼저 꺾으면 승리합니다 · 제한 시간 30분</span>
         <button className="ink-btn" disabled={!fleet.length} onClick={start}>
-          출진
+          전투 시작
         </button>
       </div>
     </div>

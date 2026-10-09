@@ -131,7 +131,7 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
       // staff for the command banner
       const staff: V3 = [plan.cx, roof.ridgeY + 0.3, 0];
       cylinder(b, wood, staff, [staff[0], staff[1] + 2.4, 0], 0.06, 0.04, byLod(ctx, 5, 4, 3), true);
-      if (lod < 2) longPennant(ctx, clothPatch(ctx, 'nobori_a', 'red'), [staff[0] - 0.05, staff[1] + 2.35, 0], 6.5, 0.9, 0.3);
+      if (lod < 2) longPennant(ctx, clothPatch(ctx, 'nobori_a', 'linen'), [staff[0] - 0.05, staff[1] + 2.35, 0], 6.5, 0.9, 0.3);
     }
   });
   // the second atakebune carries a small turret on the foredeck as well

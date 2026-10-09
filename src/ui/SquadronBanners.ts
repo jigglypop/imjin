@@ -1,7 +1,6 @@
 import { Vector3, type PerspectiveCamera } from 'three/webgpu';
 import type { Battle } from '../sim/battle';
 import type { Squadron, Team } from '../sim/types';
-import { FACTION_MARK } from '../sim/balance';
 import type { ShipViews } from '../ships/ShipViews';
 
 type Banner = {
@@ -11,32 +10,19 @@ type Banner = {
   lastHull: number;
   lastCount: number;
   lastState: string;
+  far: boolean;
 };
 
-const MARKS: [string, string][] = [
-  ['이순신', '李'],
-  ['이억기', '李'],
-  ['이기남', '龜'],
-  ['원균', '元'],
-  ['정운', '鄭'],
-  ['안위', '安'],
-  ['협선', '挾'],
-  ['와키자카', '脇'],
-  ['와타나베', '渡'],
-  ['마나베', '眞'],
-  ['도도', '藤'],
-  ['구루시마', '來'],
-  ['가토', '加'],
-  ['간 ', '菅'],
-  ['모리', '毛'],
-  ['진린', '陳'],
-  ['등자룡', '鄧'],
-  ['시마즈', '島'],
-];
+/** Commanders that are a role or a seat, not a person: the squadron's own name says more. */
+const ROLE = /(협선장|척후장|돌격장|유격장|왜장|중군|장수|휘하|수군)$|^이름 없는/;
 
-export function squadronMark(sq: Squadron) {
-  for (const [key, mark] of MARKS) if (sq.commander.includes(key) || sq.name.includes(key)) return mark;
-  return FACTION_MARK[sq.faction];
+/** What a squadron is called on the water: its commander's name when it is a person's, else the squadron's name. */
+export function squadronLabel(sq: Squadron) {
+  const first = sq.commander.split(' · ')[0]!;
+  if (ROLE.test(first)) return sq.name;
+  const words = first.split(' ');
+  // Japanese names come surname first; Joseon and Ming titles come before the name.
+  return sq.faction === 'japan' ? words[0]! : words[words.length - 1]!;
 }
 
 const tmp = new Vector3();
@@ -54,22 +40,22 @@ export class SquadronBanners {
 
   private create(sq: Squadron, own: boolean) {
     const root = document.createElement('div');
-    root.className = `sqb sqb--${sq.faction === 'japan' ? 'japan' : 'joseon'}${sq.faction === 'ming' ? ' sqb--ming' : ''}`;
-    const flag = document.createElement('div');
-    flag.className = 'sqb-flag';
-    const mark = document.createElement('span');
-    mark.className = 'sqb-mark';
-    mark.textContent = squadronMark(sq);
-    flag.appendChild(mark);
+    root.className = `sqb sqb--${sq.faction}`;
+    const pill = document.createElement('div');
+    pill.className = 'sqb-pill';
+    const name = document.createElement('span');
+    name.className = 'sqb-name';
+    name.textContent = squadronLabel(sq);
+    const count = document.createElement('b');
+    count.className = 'sqb-count';
     const bar = document.createElement('i');
     const barWrap = document.createElement('div');
     barWrap.className = 'sqb-bar';
     barWrap.appendChild(bar);
-    const count = document.createElement('div');
-    count.className = 'sqb-count';
+    pill.append(name, count, barWrap);
     const pole = document.createElement('div');
     pole.className = 'sqb-pole';
-    root.append(flag, barWrap, count, pole);
+    root.append(pill, pole);
     root.title = `${sq.name} · ${sq.commander}`;
     // In a battle between two fleets of the same navy, the rim tells friend from foe.
     root.classList.add(own ? 'sqb--own' : 'sqb--foe');
@@ -78,7 +64,7 @@ export class SquadronBanners {
       if (e.button === 0) this.onSelect?.(sq.id, e.shiftKey);
     });
     this.layer.appendChild(root);
-    const banner: Banner = { root, bar, count, lastHull: -1, lastCount: -1, lastState: '' };
+    const banner: Banner = { root, bar, count, lastHull: -1, lastCount: -1, lastState: '', far: false };
     this.banners.set(sq.id, banner);
     return banner;
   }
@@ -128,7 +114,13 @@ export class SquadronBanners {
       if (!onScreen) continue;
       const sx = (tmp.x * 0.5 + 0.5) * width;
       const sy = (-tmp.y * 0.5 + 0.5) * height;
-      const scale = Math.max(0.62, Math.min(1.08, 900 / Math.max(dist, 1)));
+      const scale = Math.max(0.7, Math.min(1.08, 900 / Math.max(dist, 1)));
+      // A distant fleet shows only its ship count: a name at this size cannot be read and only crowds the others.
+      const far = dist > 1500;
+      if (far !== banner.far) {
+        banner.root.classList.toggle('sqb--far', far);
+        banner.far = far;
+      }
       banner.root.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px) translate(-50%, -100%) scale(${scale.toFixed(3)})`;
       const h = Math.round((hull / alive) * 100);
       if (h !== banner.lastHull) {

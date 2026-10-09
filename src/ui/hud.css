@@ -1,0 +1,1602 @@
+/* ============================================================================
+   The battle HUD: score panel, toasts, settings sheet, minimap, selection detail, squadron cards, orders, speed,
+   result, squadron banners over the sea, touch tools, and the compact (phone) layouts.
+   Restrained white glass, graphite ink, faction tones only as thin marks. Conquest panels are in conquest.css.
+   ============================================================================ */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  line-height: 1.45;
+}
+
+/* <b> would otherwise be one step bolder than its parent: 600 is the heaviest weight here. */
+.hud b {
+  font-weight: 600;
+}
+
+.hud button,
+.hud .interactive {
+  pointer-events: auto;
+}
+
+.ico {
+  flex: none;
+  display: block;
+}
+
+.mini-btn .ico {
+  margin-right: 6px;
+}
+
+/* ---------------------------------------------------------------- title and menu */
+
+.hud-title {
+  position: absolute;
+  top: calc(var(--sat) + 18px);
+  left: calc(var(--sal) + 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hud-title-main {
+  align-self: flex-start;
+  font-size: var(--fs-20);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--on-dark);
+  text-shadow: 0 1px 6px rgba(8, 12, 18, 0.7), 0 0 16px rgba(8, 12, 18, 0.4);
+}
+
+.hud-title-sub {
+  font-size: var(--fs-13);
+  font-weight: 500;
+  color: var(--on-dark-2);
+  text-shadow: 0 1px 4px rgba(8, 12, 18, 0.8);
+}
+
+.hud-menu {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.mini-btn .short {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- score panel */
+
+.hud .balance {
+  position: absolute;
+  top: calc(var(--sat) + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, 44vw);
+  padding: 10px 16px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: var(--r);
+}
+
+.bal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.bal-side {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.bal-side--foe {
+  justify-content: flex-end;
+}
+
+.bal-mark {
+  flex: none;
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+}
+
+.bal-side--own .bal-mark {
+  background: var(--own-fc, var(--joseon));
+}
+
+.bal-side--foe .bal-mark {
+  background: var(--enemy-fc, var(--japan));
+}
+
+.bal-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--fs-13);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.bal-side b {
+  font-size: var(--fs-20);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.bal-side small {
+  margin-left: -3px;
+  font-size: var(--fs-12);
+  color: var(--ink-3);
+}
+
+.bal-side--foe small {
+  margin-left: 0;
+  margin-right: -3px;
+  order: 2;
+}
+
+.bal-side--foe b {
+  order: 1;
+}
+
+.bal-side--foe .bal-name {
+  order: 3;
+}
+
+.bal-side--foe .bal-mark {
+  order: 4;
+}
+
+.bal-time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: var(--fs-15);
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.fps {
+  font-size: var(--fs-12);
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+/* Strength of the two fleets as one thin split bar: the player's share from the left, the foe's from the right. */
+.bal-bar {
+  display: flex;
+  gap: 2px;
+  height: 4px;
+}
+
+.bal-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.bal-bar i:first-child {
+  flex: 0 0 auto;
+  background: var(--own-fc, var(--joseon));
+  transition: flex-basis 0.6s ease;
+}
+
+.bal-bar i:last-child {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--enemy-fc, var(--japan));
+}
+
+.tide {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 10px;
+  border-radius: 999px;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink-2);
+  background: var(--fill);
+}
+
+.tide-arrow {
+  font-size: var(--fs-13);
+  color: var(--ink-3);
+}
+
+/* ---------------------------------------------------------------- toasts */
+
+.toasts {
+  position: absolute;
+  top: calc(var(--bal-bottom, calc(var(--sat) + 140px)) + 8px);
+  left: calc(var(--sal) + 24px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.hud .toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 12px;
+  border-radius: 999px;
+  font-size: var(--fs-13);
+  font-weight: 500;
+  animation: toast-in 0.3s ease-out;
+}
+
+.toast-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-3);
+}
+
+.toast--good .toast-dot {
+  background: var(--good);
+}
+
+.toast--bad .toast-dot {
+  background: var(--bad);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* ---------------------------------------------------------------- settings sheet */
+
+.settings {
+  position: absolute;
+  top: calc(var(--sat) + 18px);
+  right: calc(var(--sar) + 24px);
+  width: 264px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.settings-body {
+  width: 100%;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  pointer-events: auto;
+}
+
+.settings-body .settings-label {
+  margin-bottom: 8px;
+  font-size: var(--fs-13);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.settings-body .settings-label small {
+  margin-left: 6px;
+  font-size: var(--fs-12);
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.settings-body .settings-hint {
+  margin-top: 8px;
+  font-size: var(--fs-12);
+  line-height: 1.45;
+  color: var(--ink-3);
+  word-break: keep-all;
+}
+
+.settings-body .chip {
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+/* ---------------------------------------------------------------- bottom band */
+
+.bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 0 calc(var(--sar) + 22px) calc(var(--sab) + 18px) calc(var(--sal) + 22px);
+  background: linear-gradient(transparent, rgba(12, 18, 26, 0.4));
+}
+
+.minimap {
+  position: relative;
+  width: var(--bh);
+  height: var(--bh);
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(8, 12, 18, 0.4), 0 0 0 2px rgba(255, 255, 255, 0.82);
+  pointer-events: auto;
+  cursor: crosshair;
+  background: #2c3c4a;
+}
+
+.minimap canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.detail {
+  width: clamp(250px, 23vw, 360px);
+  /* A selected ship lists crew stations and guns, more than the minimap's height holds: the panel grows upward from the bottom edge. */
+  min-height: var(--bh);
+  max-height: calc(100dvh - 150px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  flex: none;
+  padding: 14px 16px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 14px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 14px), transparent);
+}
+
+.detail-portrait {
+  width: 68px;
+  height: 68px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--line-2);
+}
+
+.detail-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-bottom: 14px;
+}
+
+.detail-name {
+  font-size: var(--fs-17);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-sub {
+  font-size: var(--fs-12);
+  font-weight: 400;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The reminder while nothing is selected: small, and gone for good once the player closes it. */
+.hint {
+  width: clamp(230px, 20vw, 290px);
+  flex: none;
+  padding: 12px 14px 12px;
+}
+
+.hint-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.hint-x {
+  width: 28px;
+  height: 28px;
+  margin: -6px -8px -6px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.hint p {
+  margin: 4px 0 0;
+  word-break: keep-all;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+
+.stat {
+  display: grid;
+  grid-template-columns: 32px 1fr 38px;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.stat-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.stat-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.stat-bar--hull i {
+  background: var(--good);
+}
+
+.stat-bar--crew i {
+  background: #6f8497;
+}
+
+.stat-bar--fire i {
+  background: var(--bad);
+}
+
+.stat b {
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.guns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin-top: 4px;
+}
+
+/* One gun: its name and state as text, with a hairline of progress underneath. */
+.gun {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 2px 8px;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.gun-state {
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.gun--ready .gun-state {
+  font-weight: 500;
+  color: var(--good);
+}
+
+.gun-track {
+  grid-column: 1 / -1;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.gun-track i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ink-3);
+  opacity: 0.55;
+}
+
+.gun--ready .gun-track i {
+  background: var(--good);
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------- squadron cards */
+
+.cards {
+  flex: 1;
+  min-width: 0;
+  height: calc(var(--bh) - 16px);
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 14px 6px 4px;
+  pointer-events: auto;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+/* Auto margins centre the row while it fits; justify-content: center would push the first card out of reach once it does not. */
+.cards > :first-child {
+  margin-left: auto;
+}
+
+.cards > :last-child {
+  margin-right: auto;
+}
+
+.card {
+  position: relative;
+  flex: none;
+  width: clamp(64px, 5.4vw, 96px);
+  height: clamp(116px, 9.8vw, 142px);
+  border: 0;
+  border-radius: var(--r-sm);
+  padding: 0;
+  cursor: pointer;
+  background: var(--sea-1);
+  box-shadow: 0 4px 14px rgba(8, 12, 18, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  z-index: 2;
+  background: var(--fc, var(--joseon));
+}
+
+.card:hover {
+  transform: translateY(-3px);
+}
+
+.card--selected {
+  transform: translateY(-7px);
+  box-shadow: 0 10px 22px rgba(8, 12, 18, 0.45), 0 0 0 2px var(--accent), 0 0 0 4px rgba(255, 255, 255, 0.95);
+}
+
+.card--dead {
+  filter: grayscale(1) brightness(0.55);
+}
+
+.card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 14%;
+  display: block;
+}
+
+.card-foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 22px 7px 7px;
+  background: linear-gradient(transparent, rgba(10, 15, 21, 0.9) 42%);
+  text-align: left;
+}
+
+.card-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--on-dark);
+  word-break: keep-all;
+}
+
+.card-count {
+  margin-top: 1px;
+  font-size: var(--fs-15);
+  font-weight: 600;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-count small {
+  font-size: var(--fs-12);
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.card-bar {
+  height: 3px;
+  margin-top: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.card-bar i {
+  display: block;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.card-flags {
+  position: absolute;
+  right: 5px;
+  top: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.card-flag {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+}
+
+.card-flag--fire {
+  color: var(--bad);
+}
+
+/* ---------------------------------------------------------------- orders */
+
+.orders {
+  width: clamp(300px, 24vw, 340px);
+  flex: none;
+  padding: 10px 12px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.orders-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.orders-tab {
+  flex: 1;
+  min-height: 28px;
+  border: 0;
+  background: transparent;
+  padding: 3px 0 7px;
+  font-weight: 500;
+  font-size: var(--fs-13);
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.orders-tab--on {
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.orders-fold {
+  display: none;
+}
+
+.orders-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.order {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ink);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.order-icon {
+  width: 46px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink);
+  transition: background 0.15s, color 0.15s;
+}
+
+.order:hover .order-icon {
+  background: var(--fill);
+}
+
+.order--on .order-icon {
+  background: var(--accent);
+  box-shadow: none;
+  color: #fff;
+}
+
+.order:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.order kbd {
+  font-family: var(--font-ui);
+  font-size: var(--fs-12);
+  font-weight: 400;
+  color: var(--ink-3);
+  line-height: 1.1;
+}
+
+.app--touch .order kbd {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- speed: a segmented control on wide layouts, a pause button plus one cycle button on compact ones */
+
+.speed {
+  display: flex;
+  gap: 3px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.speed button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: transparent;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.speed button.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.speed .speed-skip {
+  flex: 1.3;
+}
+
+.dock {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.dock button {
+  min-width: var(--tap);
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 12px;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  background: var(--glass-hi);
+  color: var(--ink);
+  font-size: var(--fs-15);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.dock button.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.dock .dock-fold {
+  margin-right: auto;
+  gap: 6px;
+  font-size: var(--fs-13);
+}
+
+.select-box {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ---------------------------------------------------------------- result */
+
+.hud .result {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: min(380px, 90vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 56px 30px;
+  border-radius: 20px;
+  pointer-events: auto;
+  touch-action: pan-y;
+  animation: toast-in 0.5s ease-out;
+}
+
+.result::before {
+  content: '';
+  width: 32px;
+  height: 3px;
+  margin-bottom: 4px;
+  border-radius: 2px;
+  background: var(--good);
+}
+
+.result--loss::before {
+  background: var(--bad);
+}
+
+.result-title {
+  font-size: var(--fs-32);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+.result--loss .result-title {
+  color: var(--bad);
+}
+
+.result-sub {
+  font-size: var(--fs-15);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.result-stats {
+  margin-bottom: 6px;
+  font-size: var(--fs-13);
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.result-camp {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 26px;
+  max-width: 640px;
+  margin-bottom: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-13);
+  color: var(--ink-2);
+}
+
+.result-camp p {
+  margin: 0;
+}
+
+.result-camp b {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- squadron banners over the 3D view (DOM built by SquadronBanners) */
+
+.banners {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.sqb {
+  --fc: var(--joseon);
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: 50% 100%;
+  will-change: transform;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.sqb--japan {
+  --fc: var(--japan);
+}
+
+.sqb--ming {
+  --fc: var(--ming);
+}
+
+.sqb-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 11px;
+  border: 1px solid rgba(27, 30, 34, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(8, 12, 18, 0.3);
+}
+
+.sqb-pill::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--fc);
+}
+
+.sqb-name {
+  max-width: 9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sqb--far .sqb-name {
+  display: none;
+}
+
+.sqb-count {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+.sqb-bar {
+  position: absolute;
+  left: 3px;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: rgba(27, 30, 34, 0.1);
+}
+
+.sqb-bar i {
+  display: block;
+  height: 100%;
+  background: var(--fc);
+}
+
+.sqb-pole {
+  width: 1px;
+  height: 12px;
+  background: linear-gradient(rgba(255, 255, 255, 0.75), transparent);
+}
+
+/* Fleets of the same navy on both sides: the foe's rim is the muted brown. */
+.sqb--foe .sqb-pill {
+  border-color: rgba(140, 75, 63, 0.5);
+}
+
+.sqb--selected .sqb-pill {
+  background: #fff;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 4px rgba(255, 255, 255, 0.92), 0 4px 12px rgba(8, 12, 18, 0.35);
+}
+
+.sqb--dark {
+  opacity: 0.55;
+}
+
+/* ---------------------------------------------------------------- touch tools */
+
+.tool {
+  width: 56px;
+  height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-sm);
+  background: var(--glass);
+  color: var(--ink);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  line-height: 1.1;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  cursor: pointer;
+}
+
+.tool--on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.tool:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.touch-bar {
+  position: absolute;
+  top: 50%;
+  right: calc(var(--sar) + 8px);
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.touch-bar .tool {
+  pointer-events: auto;
+}
+
+.minimap--float {
+  position: absolute;
+  z-index: 12;
+  top: calc(var(--sat) + 112px);
+  /* Left of the touch tools column, which would otherwise sit under it. */
+  right: calc(var(--sar) + 68px);
+  width: 116px;
+  height: 116px;
+  pointer-events: auto;
+}
+
+/* ============================================================================
+   Compact layouts. `.app--compact` is set for phones and narrow windows (useCompactLayout).
+   ============================================================================ */
+
+.app--compact .hud-title {
+  top: calc(var(--sat) + 8px);
+  left: calc(var(--sal) + 8px);
+  right: calc(var(--sar) + 8px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 8px;
+}
+
+.app--compact .hud-title-main {
+  grid-column: 1;
+  grid-row: 1;
+  font-size: var(--fs-15);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.app--compact .hud-title-sub {
+  grid-column: 1;
+  grid-row: 2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app--compact .hud-menu {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  margin-top: 0;
+  gap: 4px;
+}
+
+.app--compact .hud-menu .mini-btn {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.app--compact .mini-btn .long {
+  display: none;
+}
+
+.app--compact .mini-btn .short {
+  display: inline;
+}
+
+.app--compact .hud .balance {
+  top: calc(var(--sat) + 52px);
+  left: calc(var(--sal) + 8px);
+  right: calc(var(--sar) + 8px);
+  width: auto;
+  transform: none;
+  padding: 8px 12px 9px;
+  gap: 6px;
+}
+
+.app--compact .bal-row {
+  gap: 8px;
+}
+
+.app--compact .bal-side b {
+  font-size: var(--fs-17);
+}
+
+.app--compact .tide {
+  align-self: flex-start;
+  padding: 1px 10px;
+}
+
+.app--compact .toasts {
+  top: calc(var(--bal-bottom, calc(var(--sat) + 110px)) + 6px);
+  left: calc(var(--sal) + 8px);
+  right: calc(var(--sar) + 8px);
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.app--compact .hud .toast {
+  max-width: 100%;
+  padding: 5px 12px 5px 10px;
+}
+
+.app--compact .toast:nth-last-child(n + 3) {
+  display: none;
+}
+
+.app--compact .settings {
+  z-index: 20;
+  top: calc(var(--sat) + 52px);
+  left: calc(var(--sal) + 8px);
+  right: calc(var(--sar) + 8px);
+  width: auto;
+  align-items: stretch;
+}
+
+/* The settings sheet covers a busy HUD: at 95% white the cards and speed buttons behind it still read through. */
+.app--touch .settings-body {
+  background: rgba(255, 255, 255, 0.99);
+}
+
+.app--compact .settings-body {
+  background: rgba(255, 255, 255, 0.985);
+  max-height: calc(100dvh - var(--sat) - var(--sab) - 70px);
+  overflow-y: auto;
+}
+
+.app--compact .orders .speed {
+  display: none;
+}
+
+.app--compact .orders-fold {
+  display: block;
+  flex: none;
+  width: 36px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: var(--fs-15);
+  cursor: pointer;
+}
+
+/* ---- Portrait phones: the bottom is one sheet of at most about a third of the height ---- */
+@media (orientation: portrait) {
+  .app--compact .bottom {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 6px calc(var(--sar) + 8px) calc(var(--sab) + 6px) calc(var(--sal) + 8px);
+    background: linear-gradient(transparent, rgba(12, 18, 26, 0.5) 30%);
+  }
+
+  .app--compact .cards {
+    order: 1;
+    flex: none;
+    width: 100%;
+    height: 96px;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 8px 2px 2px;
+  }
+
+  .app--compact .card {
+    width: 64px;
+    height: 88px;
+  }
+
+  .app--compact .card-foot {
+    padding: 14px 4px 4px;
+  }
+
+  .app--compact .card-name {
+    -webkit-line-clamp: 2;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .app--compact .card-count {
+    font-size: var(--fs-13);
+  }
+
+  .app--compact .dock {
+    order: 2;
+  }
+
+  .app--compact .detail {
+    order: 3;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    max-height: 38vh;
+    gap: 10px;
+    padding: 8px 12px;
+    flex: none;
+  }
+
+  /* With nothing selected the hint is not worth the room it takes on a phone. */
+  .app--compact .hint {
+    display: none;
+  }
+
+  .app--compact .detail-portrait {
+    width: 40px;
+    height: 40px;
+  }
+
+  .app--compact .detail-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 14px;
+  }
+
+  .app--compact .detail-name,
+  .app--compact .detail-sub {
+    grid-column: 1 / -1;
+  }
+
+  .app--compact .guns,
+  .app--compact .crew-panel {
+    display: none;
+  }
+
+  .app--compact .orders {
+    order: 4;
+    width: 100%;
+    gap: 4px;
+    padding: 6px 10px 6px;
+    flex: none;
+  }
+
+  .app--compact .orders-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2px;
+  }
+
+  .app--compact .order-icon {
+    width: 44px;
+    height: 34px;
+  }
+
+  .app--compact .orders-fold {
+    display: none;
+  }
+
+  .app--compact .bottom--folded .detail,
+  .app--compact .bottom--folded .orders {
+    display: none;
+  }
+
+  .app--compact .touch-bar {
+    top: calc(var(--sat) + 188px);
+    transform: none;
+  }
+
+  /* One row of chips: the secondary figures (income, cap) are in the point and fleet details. */
+  .app--compact .cq-chip em {
+    display: none;
+  }
+}
+
+/* ---- Landscape phones: a thin top bar and a slim bottom band ---- */
+@media (orientation: landscape) and (max-height: 540px) {
+  .app--compact .hud-title {
+    top: calc(var(--sat) + 6px);
+    right: auto;
+    display: block;
+  }
+
+  .app--compact .hud-title-main,
+  .app--compact .hud-title-sub {
+    display: none;
+  }
+
+  .app--compact .hud-menu .mini-btn {
+    min-height: 34px;
+    padding: 0 10px;
+  }
+
+  /* Between the menu buttons and the speed pills, whatever their real widths are (measured into --tl-right / --tr-left). */
+  .app--compact .hud .balance {
+    top: calc(var(--sat) + 6px);
+    left: calc(var(--tl-right, 224px) + 10px);
+    right: calc(100vw - var(--tr-left, 676px) + 10px);
+    width: auto;
+    transform: none;
+    padding: 5px 12px 6px;
+    gap: 4px;
+    border-radius: 12px;
+  }
+
+  /* The ticket meters already show the fleets' strength; the score panel stays two thin rows plus one line of chips. */
+  .app--compact .balance--cq .bal-bar {
+    display: none;
+  }
+
+  .app--compact .balance--cq .cq-bar {
+    gap: 4px;
+  }
+
+  .app--compact .balance--cq .cq-tickets {
+    gap: 8px;
+  }
+
+  .app--compact .balance--cq .cq-chips {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  .app--compact .balance--cq .cq-chip {
+    padding: 1px 8px;
+    gap: 4px;
+  }
+
+  .app--compact .balance--cq .cq-chip em {
+    display: none;
+  }
+
+  .app--compact .balance--cq .cq-chip:first-child em {
+    display: inline;
+  }
+
+  .app--compact .bal-row {
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .app--compact .bal-name {
+    font-size: var(--fs-12);
+  }
+
+  .app--compact .fps {
+    display: none;
+  }
+
+  .app--compact .tide {
+    display: none;
+  }
+
+  .app--compact .dock {
+    position: fixed;
+    top: calc(var(--sat) + 4px);
+    right: calc(var(--sar) + 8px);
+    z-index: 11;
+  }
+
+  .app--compact .dock .dock-fold {
+    display: none;
+  }
+
+  .app--compact .toasts {
+    top: calc(var(--bal-bottom, calc(var(--sat) + 50px)) + 6px);
+    right: auto;
+    max-width: 40vw;
+  }
+
+  .app--compact .minimap--float {
+    top: calc(var(--sat) + 52px);
+    width: 104px;
+    height: 104px;
+  }
+
+  .app--compact .settings {
+    top: calc(var(--sat) + 48px);
+    left: auto;
+    right: calc(var(--sar) + 8px);
+    width: min(320px, 46vw);
+  }
+
+  .app--compact .bottom {
+    height: 104px;
+    gap: 8px;
+    padding: 6px calc(var(--sar) + 8px) calc(var(--sab) + 6px) calc(var(--sal) + 8px);
+    background: linear-gradient(transparent, rgba(12, 18, 26, 0.45));
+  }
+
+  .app--compact .detail {
+    width: clamp(190px, 26vw, 230px);
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .app--compact .hint {
+    width: clamp(190px, 26vw, 230px);
+    padding: 8px 10px;
+  }
+
+  .app--compact .hint p {
+    margin-top: 2px;
+  }
+
+  .app--compact .detail-portrait {
+    width: 38px;
+    height: 38px;
+  }
+
+  .app--compact .detail-name {
+    font-size: var(--fs-15);
+  }
+
+  /* A short band: kind and activity only, tight rows, so both bars are whole. */
+  .app--compact .detail-more {
+    display: none;
+  }
+
+  .app--compact .detail-body {
+    gap: 2px;
+    padding-bottom: 10px;
+  }
+
+  .app--compact .guns,
+  .app--compact .crew-panel {
+    display: none;
+  }
+
+  .app--compact .cards {
+    height: 100%;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 8px 2px 2px;
+  }
+
+  .app--compact .card {
+    width: 58px;
+    height: 82px;
+  }
+
+  .app--compact .card-foot {
+    padding: 10px 4px 4px;
+  }
+
+  .app--compact .card-name {
+    display: none;
+  }
+
+  .app--compact .orders {
+    width: clamp(280px, 38vw, 320px);
+    height: 100%;
+    gap: 2px;
+    padding: 4px 8px 4px;
+    overflow: hidden;
+  }
+
+  .app--compact .orders-tab {
+    min-height: 22px;
+    padding: 0 0 3px;
+    font-size: var(--fs-12);
+  }
+
+  .app--compact .orders-fold {
+    width: 28px;
+    font-size: var(--fs-13);
+  }
+
+  .app--compact .orders-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2px;
+  }
+
+  .app--compact .order {
+    gap: 0;
+  }
+
+  .app--compact .order-icon {
+    width: 40px;
+    height: 30px;
+  }
+
+  .app--compact .order kbd {
+    display: none;
+  }
+
+  .app--compact .touch-bar {
+    top: calc(var(--sat) + 70px);
+    transform: none;
+    gap: 6px;
+  }
+
+  .app--compact .touch-bar .tool {
+    width: 52px;
+    height: 44px;
+  }
+
+  /* Below the score panel's real bottom edge and above the bottom band, scrolling inside when the works do not fit. */
+  .app--compact .cq-point {
+    top: calc(var(--bal-bottom, calc(var(--sat) + 100px)) + 8px);
+    max-height: calc(100dvh - var(--bal-bottom, 100px) - 104px - var(--sab) - 22px);
+    padding: 10px 12px 14px;
+    gap: 6px;
+    -webkit-mask-image: linear-gradient(#000 calc(100% - 14px), transparent);
+    mask-image: linear-gradient(#000 calc(100% - 14px), transparent);
+  }
+}
+
+/* ---- Result on phones ---- */
+.app--compact .hud .result {
+  top: 46%;
+  width: min(92vw, 560px);
+  max-height: 88dvh;
+  overflow-y: auto;
+  gap: 8px;
+  padding: 26px 16px 18px;
+}
+
+.app--compact .result-camp {
+  grid-template-columns: 1fr;
+  max-width: 100%;
+  gap: 4px;
+}

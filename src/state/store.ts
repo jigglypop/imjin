@@ -58,7 +58,6 @@ export type PointSummary = { id: number; name: string; side: 'own' | 'foe' | 'no
 export type PointDetail = {
   id: number;
   name: string;
-  hanja: string;
   side: 'own' | 'foe' | 'none';
   holder: string;
   value: number;
@@ -66,9 +65,9 @@ export type PointDetail = {
   contested: boolean;
   hold: number;
   mine: boolean;
-  buildings: ({ slot: number; kind: BuildingKind; label: string; hanja: string; progress: number; hp: number } | null)[];
+  buildings: ({ slot: number; kind: BuildingKind; label: string; progress: number; hp: number } | null)[];
   queue: { kind: ShipKind; label: string; left: number; total: number }[];
-  build: { kind: BuildingKind; label: string; hanja: string; cost: number; desc: string; ok: boolean }[];
+  build: { kind: BuildingKind; label: string; cost: number; desc: string; ok: boolean }[];
   recruit: { kind: ShipKind; label: string; cost: number; time: number; ok: boolean }[];
   shipyard: boolean;
 };

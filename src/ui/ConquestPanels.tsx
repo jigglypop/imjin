@@ -1,6 +1,7 @@
 import type { Engine } from '../game/Engine';
 import type { ConquestSnapshot, PointDetail, PrimaryInfo } from '../state/store';
 import type { CrewPlan } from '../sim/types';
+import { Icon } from './battleIcons';
 
 const won = (n: number) => n.toLocaleString('ko-KR');
 
@@ -10,36 +11,40 @@ function clock(t: number) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-/** Ticket bars, treasury and fleet size, under the battle balance. */
+/** Ticket meters and the treasury chips, under the battle balance. */
 export function ConquestBar({ c }: { c: ConquestSnapshot }) {
   return (
     <div className="cq-bar">
       <div className="cq-tickets">
         <div className="cq-ticket cq-ticket--own" title="아군 기세">
-          <i style={{ width: `${(c.tickets.own / c.tickets.max) * 100}%` }} />
           <span>
-            {won(c.tickets.own)} <small>거점 {c.held.own}</small>
+            <small>기세</small> <b>{won(c.tickets.own)}</b> <small>거점 {c.held.own}</small>
           </span>
+          <div className="cq-meter">
+            <i style={{ width: `${(c.tickets.own / c.tickets.max) * 100}%` }} />
+          </div>
         </div>
-        <span className="cq-clock">{clock(c.timeLeft)}</span>
+        <span className="cq-clock" title="남은 시간">
+          {clock(c.timeLeft)}
+        </span>
         <div className="cq-ticket cq-ticket--foe" title="적 기세">
-          <i style={{ width: `${(c.tickets.foe / c.tickets.max) * 100}%` }} />
           <span>
-            <small>거점 {c.held.foe}</small> {won(c.tickets.foe)}
+            <small>거점 {c.held.foe}</small> <b>{won(c.tickets.foe)}</b> <small>기세</small>
           </span>
+          <div className="cq-meter">
+            <i style={{ width: `${(c.tickets.foe / c.tickets.max) * 100}%` }} />
+          </div>
         </div>
       </div>
-      <div className="cq-purse">
-        <span>
-          군자금 <b>{won(c.funds)}</b> <small>+{c.income}/분</small>
+      <div className="cq-chips">
+        <span className="cq-chip">
+          <small>군자금</small> <b>{won(c.funds)}</b> <em>+{c.income}/분</em>
         </span>
-        <span>
-          군세 <b>{won(c.fleetValue)}</b>
-          <small>/{won(c.cap)}</small>
+        <span className="cq-chip">
+          <small>군세</small> <b>{won(c.fleetValue)}</b> <em>/{won(c.cap)}</em>
         </span>
-        <span>
-          전선 <b>{c.ships}</b>
-          <small>/{c.maxShips}</small>
+        <span className="cq-chip">
+          <small>함선</small> <b>{c.ships}</b> <em>/{c.maxShips}</em>
         </span>
       </div>
     </div>
@@ -52,19 +57,18 @@ export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDet
   return (
     <aside className="cq-point glass interactive">
       <div className="cq-point-head">
-        <div className={`cq-seal cq-seal--${p.side}`}>{p.hanja[0]}</div>
+        <i className={`cq-edge cq-edge--${p.side}`} />
         <div>
-          <div className="cq-point-name">
-            {p.name} <small>{p.hanja}</small>
-          </div>
+          <div className="cq-point-name">{p.name}</div>
           <div className="cq-point-sub">
-            {p.holder} · 가치 {p.value}
+            {p.holder}
             {p.home ? ' · 본영' : ''}
             {p.contested ? ' · 교전 중' : ''}
+            {` · 가치 ${p.value}`}
           </div>
         </div>
-        <button className="cq-close" onClick={onClose} title="닫기">
-          ×
+        <button className="cq-close" onClick={onClose} aria-label="닫기">
+          <Icon name="x" size={16} />
         </button>
       </div>
       <div className={`cq-hold cq-hold--${p.side}`}>
@@ -76,14 +80,14 @@ export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDet
         {p.buildings.map((bd, i) =>
           bd ? (
             <div key={i} className={`cq-work ${bd.progress < 1 ? 'cq-work--building' : ''}`} title={bd.label}>
-              <b>{bd.hanja}</b>
+              <Icon name={bd.kind} size={20} />
               <span>{bd.label}</span>
               <div className="cq-work-bar">
                 <i style={{ width: `${(bd.progress < 1 ? bd.progress : bd.hp) * 100}%` }} />
               </div>
               {p.mine && (
-                <button className="cq-x" title="철거 (비용 일부 환급)" onClick={() => engine.issue({ type: 'demolish', point: p.id, slot: bd.slot })}>
-                  ×
+                <button className="cq-x" title="철거 (비용 일부 환급)" aria-label={`${bd.label} 철거`} onClick={() => engine.issue({ type: 'demolish', point: p.id, slot: bd.slot })}>
+                  <Icon name="x" size={12} />
                 </button>
               )}
             </div>
@@ -96,11 +100,12 @@ export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDet
       </div>
       {p.mine && (
         <>
-          <div className="cq-label">축조</div>
+          <div className="cq-label">건설</div>
           <div className="cq-buttons">
             {p.build.map((b) => (
               <button key={b.kind} className="chip cq-buy" disabled={!b.ok} title={b.desc} onClick={() => engine.issue({ type: 'build', point: p.id, building: b.kind })}>
-                <b>{b.hanja[0]}</b> {b.label}
+                <Icon name={b.kind} size={16} />
+                {b.label}
                 <small>{won(b.cost)}</small>
               </button>
             ))}
@@ -109,7 +114,7 @@ export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDet
       )}
       {p.mine && p.shipyard && (
         <>
-          <div className="cq-label">건조 {p.queue.length ? `· 대기 ${p.queue.length}` : ''}</div>
+          <div className="cq-label">함선 건조 {p.queue.length ? `· 대기 ${p.queue.length}` : ''}</div>
           <div className="cq-buttons">
             {p.recruit.map((r) => (
               <button key={r.kind} className="chip cq-buy" disabled={!r.ok} title={`${r.label} · ${r.time}초`} onClick={() => engine.issue({ type: 'recruit', point: p.id, kind: r.kind })}>
@@ -131,15 +136,14 @@ export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDet
           )}
         </>
       )}
-      {p.mine && !p.shipyard && <div className="cq-hint">선소를 지으면 이 포구에서 배를 건조할 수 있습니다.</div>}
-      {!p.mine && p.side === 'foe' && <div className="cq-hint">배를 고른 뒤 적 시설을 우클릭하면 포격합니다. 원 안에 아군만 남으면 장악이 넘어옵니다.</div>}
-      {!p.mine && p.side === 'none' && <div className="cq-hint">원 안으로 배를 보내 점령하십시오. 작은 배는 반만 셈합니다.</div>}
+      {p.mine && !p.shipyard && <div className="cq-hint">선소를 지으면 이 거점에서 함선을 건조할 수 있습니다.</div>}
+      {!p.mine && p.side === 'foe' && <div className="cq-hint">적 시설에 공격 명령을 내리면 포격합니다. 원 안에 아군만 남으면 거점을 차지합니다.</div>}
+      {!p.mine && p.side === 'none' && <div className="cq-hint">함선을 원 안으로 보내 거점을 차지합니다. 작은 함선은 절반으로 셉니다.</div>}
     </aside>
   );
 }
 
-const ROLE_LABEL = ['격군', '포수', '사수', '살수'];
-const ROLE_HANJA = ['櫓', '砲', '射', '殺'];
+const ROLE_LABEL = ['격군', '포수', '사수', '백병'];
 
 function emphasize(base: CrewPlan, role: number): CrewPlan {
   if (base[role] === 0) return base;
@@ -173,7 +177,6 @@ export function CrewPanel({ engine, p }: { engine: Engine; p: PrimaryInfo }) {
       <div className="crew-rows">
         {p.roles.map((n, i) => (
           <div key={i} className={`crew-row ${p.defaultPlan[i] === 0 ? 'crew-row--off' : ''}`}>
-            <b>{ROLE_HANJA[i]}</b>
             <span>{labels[i]}</span>
             <div className="crew-bar">
               <i style={{ width: `${(n / total) * 100}%` }} />

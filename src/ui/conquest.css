@@ -11,33 +11,34 @@
   gap: 8px;
 }
 
+/* A side to lead: its crest, its name, who commands it. The chosen one gets a graphite ring. */
 .side-btn,
 .cs-faction {
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: var(--tap);
-  padding: 4px 14px 4px 5px;
+  padding: 4px 16px 4px 8px;
   border: 1px solid var(--line-2);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   color: var(--ink);
   font-size: var(--fs-13);
-  font-weight: 650;
-  transition: background 0.15s, border-color 0.15s;
+  font-weight: 500;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
 .side-btn:hover,
 .cs-faction:hover {
-  border-color: var(--ink);
+  border-color: var(--accent);
+  background: #fff;
 }
 
 .side-btn .emblem,
 .cs-faction .emblem {
-  width: 32px;
-  height: 32px;
-  font-size: var(--fs-15);
+  width: 28px;
+  height: 28px;
   box-shadow: none;
 }
 
@@ -50,34 +51,21 @@
 
 .side-btn b {
   font-size: var(--fs-13);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .side-btn small {
   font-size: var(--fs-12);
-  font-weight: 500;
-  color: var(--ink-2);
+  font-weight: 400;
+  color: var(--ink-3);
 }
 
 .side-btn--on,
 .cs-faction--on {
-  background: var(--accent);
+  background: #fff;
   border-color: var(--accent);
-  color: #fff;
-}
-
-.side-btn--on small {
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.side-vs {
-  margin-left: auto;
-  font-size: var(--fs-12);
-  color: var(--ink-2);
-}
-
-.side-vs b {
-  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  font-weight: 600;
 }
 
 /* ---------------------------------------------------------------- skirmish setup panel */
@@ -119,37 +107,38 @@
   padding: 10px 14px;
   border: 1px solid var(--line-2);
   border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   color: var(--ink);
   text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.cs-map:hover {
+  border-color: var(--accent);
 }
 
 .cs-map b {
   font-size: var(--fs-17);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .cs-map small {
   font-size: var(--fs-12);
-  font-weight: 500;
-  color: var(--ink-2);
+  font-weight: 400;
+  color: var(--ink-3);
 }
 
 .cs-map--on {
-  background: var(--accent);
+  background: #fff;
   border-color: var(--accent);
-  color: #fff;
-}
-
-.cs-map--on small {
-  color: rgba(255, 255, 255, 0.75);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .cs-summary {
   margin: 0;
   font-size: var(--fs-15);
-  line-height: 1.7;
+  line-height: 1.55;
   color: var(--ink-2);
 }
 
@@ -165,10 +154,10 @@
 
 .cs-label {
   flex: none;
-  width: 44px;
-  font-weight: 700;
+  width: 52px;
+  font-weight: 500;
   font-size: var(--fs-13);
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
 
 .cs-factions {
@@ -190,18 +179,18 @@
   align-items: center;
   gap: 10px;
   font-size: var(--fs-13);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .cs-budget small {
   margin-left: 6px;
-  color: var(--ink-2);
-  font-weight: 500;
+  color: var(--ink-3);
+  font-weight: 400;
 }
 
 .cs-budget-bar {
   flex: 1;
-  height: 8px;
+  height: 6px;
   border-radius: 999px;
   background: var(--fill-2);
   overflow: hidden;
@@ -224,7 +213,7 @@
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.6);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -238,13 +227,13 @@
 
 .cs-ship-name b {
   font-size: var(--fs-15);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .cs-ship-name small,
 .cs-ship-note {
   font-size: var(--fs-12);
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
 
 .cs-ship-count {
@@ -252,17 +241,25 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  margin-top: 2px;
 }
 
 .cs-ship-count button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: var(--tap);
   height: 36px;
   border: 1px solid var(--line-2);
-  border-radius: 10px;
-  background: transparent;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  font-size: var(--fs-17);
   color: var(--ink);
+}
+
+.cs-ship-count button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: #fff;
 }
 
 .cs-ship-count button:disabled {
@@ -274,6 +271,7 @@
   min-width: 20px;
   text-align: center;
   font-size: var(--fs-17);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -290,6 +288,7 @@
 
 .cs-trait {
   font-size: var(--fs-13);
+  line-height: 1.5;
   color: var(--ink-2);
   border-top: 1px solid var(--line);
   padding-top: var(--sp-3);
@@ -299,306 +298,146 @@
 .cs .select-foot {
   position: sticky;
   bottom: 0;
+  z-index: 3;
   margin: 0 calc(var(--sp-5) * -1);
   padding: var(--sp-3) var(--sp-5) calc(var(--sab) + var(--sp-3));
-  background: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.92) 30%);
+  border-top: 1px solid var(--line);
+  background: #fff;
   border-radius: 0 0 var(--r) var(--r);
-}
-
-/* ---------------------------------------------------------------- online lobby */
-
-.net-title {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 10px;
-  font-weight: 750;
-  font-size: var(--fs-20);
-}
-
-.net-title small {
-  margin-left: auto;
-  font-size: var(--fs-13);
-  font-weight: 500;
-  color: var(--ink-2);
-}
-
-.net-title code,
-.net-room code {
-  font-family: var(--font-ui);
-  font-size: var(--fs-13);
-  font-weight: 700;
-  padding: 2px 10px;
-  border: 1px solid var(--line-2);
-  border-radius: 8px;
-  letter-spacing: 0.2em;
-}
-
-.net-input {
-  flex: 1;
-  min-width: 0;
-  min-height: var(--tap);
-  padding: 0 14px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.8);
-  font-size: 16px;
-  color: var(--ink);
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-.net-input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 0;
-}
-
-.net-input--code {
-  flex: none;
-  width: 110px;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-}
-
-.net-go {
-  flex: none;
-}
-
-.net-error {
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: rgba(194, 55, 46, 0.1);
-  border-left: 3px solid var(--seal);
-  font-size: var(--fs-13);
-  color: var(--seal);
-}
-
-.net-rooms {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 260px;
-  overflow-y: auto;
-}
-
-.net-room {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.5);
-  font-size: var(--fs-13);
-}
-
-.net-room b {
-  font-weight: 700;
-}
-
-.net-room span {
-  color: var(--ink-2);
-}
-
-.net-seats {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.net-seat {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 6px 12px;
-  border: 1px solid var(--line);
-  border-left: 4px solid var(--joseon);
-  border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.5);
-  font-size: var(--fs-13);
-}
-
-.net-seat--japan {
-  border-left-color: var(--japan);
-}
-
-.net-seat--me {
-  background: var(--accent-soft);
-}
-
-.net-seat b {
-  flex: 1;
-  min-width: 80px;
-  font-weight: 700;
-}
-
-.net-side {
-  width: 40px;
-  font-weight: 700;
-  color: var(--ink-2);
-}
-
-.net-seat .cs-faction {
-  min-height: 36px;
-  padding: 2px;
-}
-
-.net-seat .cs-faction:disabled {
-  cursor: default;
-  opacity: 0.55;
-}
-
-.net-seat .cs-faction--on:disabled {
-  opacity: 1;
-}
-
-.net-ready {
-  padding: 2px 10px;
-  border: 1px solid var(--line-2);
-  border-radius: 999px;
-  font-size: var(--fs-12);
-  font-weight: 700;
-  color: var(--ink-2);
-}
-
-.net-ready--on {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-.net-chat {
-  height: 110px;
-  overflow-y: auto;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.4);
-  font-size: var(--fs-13);
-  line-height: 1.6;
-  -webkit-user-select: text;
-  user-select: text;
-  touch-action: pan-y;
-}
-
-.net-chat b {
-  margin-right: 6px;
 }
 
 /* The online lobby's action row (start, ready, leave) stays reachable at the bottom. */
 .net > .cs-row:last-child {
   position: sticky;
   bottom: 0;
+  z-index: 3;
   margin: 0 calc(var(--sp-5) * -1);
   padding: var(--sp-3) var(--sp-5) calc(var(--sab) + var(--sp-3));
-  background: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.92) 30%);
+  border-top: 1px solid var(--line);
+  background: #fff;
   border-radius: 0 0 var(--r) var(--r);
 }
 
-/* ---------------------------------------------------------------- conquest HUD */
+/* ---------------------------------------------------------------- conquest HUD (inside the score panel) */
 
 .cq-bar {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 8px;
 }
 
 .cq-tickets {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 12px;
 }
 
 .cq-ticket {
-  position: relative;
-  height: 18px;
-  border-radius: 999px;
-  background: rgba(7, 15, 25, 0.6);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
-  overflow: hidden;
-}
-
-.cq-ticket i {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  transition: width 0.6s ease;
-}
-
-.cq-ticket--own i {
-  right: 0;
-  background: var(--own-fc, var(--joseon));
-}
-
-.cq-ticket--foe i {
-  left: 0;
-  background: var(--enemy-fc, var(--japan));
-}
-
-.cq-ticket span {
-  position: absolute;
-  inset: 0;
   display: flex;
-  align-items: center;
-  padding: 0 8px;
+  flex-direction: column;
+  gap: 4px;
   font-size: var(--fs-12);
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  gap: 6px;
+  font-weight: 400;
+  color: var(--ink-3);
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-.cq-ticket--own span {
+.cq-ticket--foe {
+  text-align: right;
+}
+
+.cq-ticket b {
+  font-size: var(--fs-13);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.cq-meter {
+  display: flex;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.cq-ticket--foe .cq-meter {
   justify-content: flex-end;
 }
 
-.cq-ticket small {
-  font-weight: 500;
-  opacity: 0.9;
+.cq-meter i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+.cq-ticket--own .cq-meter i {
+  background: var(--own-fc, var(--joseon));
+}
+
+.cq-ticket--foe .cq-meter i {
+  background: var(--enemy-fc, var(--japan));
 }
 
 .cq-clock {
   font-size: var(--fs-13);
-  font-weight: 700;
-  color: var(--on-dark);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+  font-weight: 600;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
-.cq-purse {
+.cq-chips {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 4px 16px;
+  gap: 6px;
+}
+
+.cq-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--fill);
   font-size: var(--fs-12);
-  font-weight: 500;
-  color: var(--on-dark);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.5);
+  color: var(--ink-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-.cq-purse b {
-  font-weight: 700;
+.cq-chip b {
+  font-weight: 600;
+  color: var(--ink);
 }
 
-.cq-purse small {
-  margin-left: 2px;
-  opacity: 0.8;
+.cq-chip em {
+  margin-left: -2px;
+  font-style: normal;
+  color: var(--ink-3);
 }
 
 .cq-point {
   position: absolute;
   right: calc(var(--sar) + 24px);
-  top: calc(var(--sat) + 96px);
+  top: calc(var(--bal-bottom, calc(var(--sat) + 140px)) + 10px);
   width: 300px;
-  padding: 14px 16px 12px;
+  max-height: calc(100dvh - var(--bal-bottom, 150px) - 215px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 14px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 14px), transparent);
+  padding: 14px 16px 18px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   pointer-events: auto;
+}
+
+.cq-point > * {
+  flex-shrink: 0;
 }
 
 .cq-point-head {
@@ -607,74 +446,60 @@
   gap: 10px;
 }
 
-.cq-seal {
+.cq-edge {
   flex: none;
-  width: 38px;
-  height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  font-family: var(--hanja);
-  font-weight: 700;
-  font-size: var(--fs-20);
-  background: var(--fill-2);
-  color: var(--ink);
+  width: 3px;
+  height: 34px;
+  border-radius: 2px;
+  background: #a9b0b6;
 }
 
-.cq-seal--own {
+.cq-edge--own {
   background: var(--own-fc, var(--joseon));
-  color: #fff;
 }
 
-.cq-seal--foe {
+.cq-edge--foe {
   background: var(--enemy-fc, var(--japan));
-  color: #fff;
 }
 
 .cq-point-name {
   font-size: var(--fs-17);
-  font-weight: 750;
-}
-
-.cq-point-name small {
-  margin-left: 4px;
-  font-family: var(--hanja);
-  font-size: var(--fs-12);
-  font-weight: 500;
-  color: var(--ink-2);
+  font-weight: 600;
 }
 
 .cq-point-sub {
   font-size: var(--fs-12);
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
 
 .cq-close {
   margin-left: auto;
   align-self: flex-start;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   margin-top: -6px;
   margin-right: -8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   background: transparent;
-  font-size: var(--fs-20);
   cursor: pointer;
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
 
 .cq-hold {
   position: relative;
-  height: 16px;
+  height: 4px;
+  margin-top: 16px;
   border-radius: 999px;
   background: var(--fill-2);
-  overflow: hidden;
 }
 
 .cq-hold i {
   position: absolute;
   inset: 0 auto 0 0;
+  border-radius: inherit;
   background: var(--ink-3);
 }
 
@@ -688,20 +513,17 @@
 
 .cq-hold span {
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  left: 0;
+  bottom: 9px;
   font-size: var(--fs-12);
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  font-weight: 500;
+  color: var(--ink-2);
 }
 
 .cq-label {
-  font-weight: 700;
-  font-size: var(--fs-13);
-  color: var(--ink-2);
+  font-weight: 600;
+  font-size: var(--fs-12);
+  color: var(--ink-3);
   border-bottom: 1px solid var(--line);
   padding-bottom: 3px;
 }
@@ -716,25 +538,21 @@
   position: relative;
   display: grid;
   grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
   column-gap: 8px;
   align-items: center;
-  padding: 6px 8px;
+  padding: 7px 28px 8px 10px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.5);
   font-size: var(--fs-13);
-  font-weight: 600;
-}
-
-.cq-work b {
-  grid-row: span 2;
-  font-family: var(--hanja);
-  font-size: var(--fs-20);
+  font-weight: 500;
+  color: var(--ink);
 }
 
 .cq-work-bar {
-  height: 4px;
+  grid-column: 1 / -1;
+  height: 3px;
+  margin-top: 6px;
   border-radius: 999px;
   background: var(--fill-2);
   overflow: hidden;
@@ -743,32 +561,35 @@
 .cq-work-bar i {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--good);
 }
 
 .cq-work--building .cq-work-bar i {
-  background: var(--ming);
+  background: var(--warn);
 }
 
 .cq-work--empty {
   display: flex;
   justify-content: center;
+  padding: 7px 10px 8px;
   color: var(--ink-3);
-  font-weight: 500;
+  font-weight: 400;
   border-style: dashed;
 }
 
 .cq-x {
   position: absolute;
-  top: 0;
+  top: 2px;
   right: 2px;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   background: transparent;
   cursor: pointer;
   color: var(--ink-3);
-  font-size: var(--fs-15);
 }
 
 .cq-buttons {
@@ -777,8 +598,8 @@
   gap: 6px;
 }
 
-.cq-buy b {
-  font-family: var(--hanja);
+.cq-buy {
+  gap: 6px;
 }
 
 .cq-queue {
@@ -799,7 +620,7 @@
   background: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   font-size: var(--fs-12);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink);
   overflow: hidden;
 }
@@ -817,11 +638,11 @@
 
 .cq-hint {
   font-size: var(--fs-12);
-  line-height: 1.6;
+  line-height: 1.5;
   color: var(--ink-2);
 }
 
-/* ---------------------------------------------------------------- capture point labels over the 3D view */
+/* ---------------------------------------------------------------- capture point labels over the 3D view: small glass pills */
 
 .cpoints {
   position: absolute;
@@ -835,74 +656,98 @@
   position: absolute;
   left: 0;
   top: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
   transform-origin: 0 0;
   will-change: transform;
   pointer-events: auto;
   cursor: pointer;
 }
 
-.cpoint-name {
-  padding: 3px 12px;
+.cpoint-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 11px 4px 13px;
+  border: 1px solid rgba(27, 30, 34, 0.1);
   border-radius: 999px;
-  font-size: var(--fs-12);
-  font-weight: 700;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 2px 8px rgba(8, 12, 18, 0.28);
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  font-size: var(--fs-12);
   white-space: nowrap;
+  overflow: hidden;
 }
 
-.cpoint--home .cpoint-name::before {
-  content: '本 ';
-  font-family: var(--hanja);
+.cpoint-pill::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #a9b0b6;
 }
 
-.cpoint--own .cpoint-name {
+.cpoint--own .cpoint-pill::before {
   background: var(--own-fc, var(--joseon));
-  color: #fff;
 }
 
-.cpoint--foe .cpoint-name {
+.cpoint--foe .cpoint-pill::before {
   background: var(--enemy-fc, var(--japan));
-  color: #fff;
+}
+
+.cpoint-name {
+  font-weight: 600;
+}
+
+.cpoint--home .cpoint-name::after {
+  content: '본영';
+  margin-left: 6px;
+  font-weight: 400;
+  color: var(--ink-3);
 }
 
 .cpoint--edge {
   opacity: 0.9;
 }
 
-.cpoint--selected .cpoint-name {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
+.cpoint-works {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-2);
 }
 
-.cpoint--contested .cpoint-name {
-  animation: cpoint-flash 0.8s steps(2) infinite;
+.cpoint-works:empty {
+  display: none;
 }
 
-@keyframes cpoint-flash {
-  50% {
-    background: var(--seal);
-    color: #fff;
-  }
+.cpoint-works span {
+  display: flex;
+}
+
+.cpoint-wip {
+  opacity: 0.4;
+}
+
+.cpoint-works em {
+  font-style: normal;
+  color: var(--ink-3);
 }
 
 .cpoint-bar {
-  width: 64px;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.55);
-  overflow: hidden;
+  position: absolute;
+  left: 3px;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: rgba(27, 30, 34, 0.1);
 }
 
 .cpoint-bar i {
   display: block;
   height: 100%;
-  background: rgba(255, 255, 255, 0.7);
+  background: #8e969d;
 }
 
 .cpoint-bar i.own {
@@ -913,20 +758,20 @@
   background: var(--enemy-fc, var(--japan));
 }
 
-.cpoint-works {
-  min-height: 14px;
-  font-family: var(--hanja);
-  font-weight: 700;
-  font-size: var(--fs-12);
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+.cpoint--selected .cpoint-pill {
+  background: #fff;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 4px rgba(255, 255, 255, 0.92), 0 4px 12px rgba(8, 12, 18, 0.35);
 }
 
-/* squadron flags: friend or foe when both fleets fly the same colours */
+.cpoint--contested .cpoint-pill {
+  animation: cpoint-pulse 1.4s ease-in-out infinite;
+}
 
-.sqb--foe .sqb-flag {
-  outline: 2px solid var(--seal);
-  outline-offset: -1px;
+@keyframes cpoint-pulse {
+  50% {
+    border-color: rgba(138, 109, 47, 0.75);
+  }
 }
 
 /* ---------------------------------------------------------------- crew stations of the selected ship */
@@ -941,35 +786,31 @@
 .crew-rows {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .crew-row {
   display: grid;
-  grid-template-columns: 16px 34px 1fr 30px 20px 20px;
+  grid-template-columns: 34px 1fr 30px 20px 20px;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: var(--fs-12);
-  font-weight: 600;
+  font-weight: 500;
+  color: var(--ink-3);
 }
 
 .crew-row--off {
   opacity: 0.35;
 }
 
-.crew-row b {
-  font-family: var(--hanja);
-  font-size: var(--fs-13);
-}
-
 .crew-row small {
   text-align: right;
-  color: var(--ink-2);
+  color: var(--ink);
 }
 
 .crew-bar {
   position: relative;
-  height: 6px;
+  height: 4px;
   border-radius: 999px;
   background: var(--fill-2);
 }
@@ -978,15 +819,16 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: var(--accent);
+  background: #6f8497;
 }
 
 .crew-bar em {
   position: absolute;
-  top: -2px;
-  bottom: -2px;
+  top: -3px;
+  bottom: -3px;
   width: 2px;
-  background: var(--ming);
+  border-radius: 1px;
+  background: var(--accent);
   transform: translateX(-1px);
 }
 
@@ -1020,7 +862,7 @@
 .app--compact .cq-point {
   right: calc(var(--sar) + 8px);
   left: auto;
-  top: calc(var(--sat) + 76px);
+  top: calc(var(--bal-bottom, calc(var(--sat) + 168px)) + 8px);
   width: min(300px, calc(100vw - 16px));
   max-height: 50dvh;
   overflow-y: auto;
@@ -1066,24 +908,6 @@
     margin: 0 calc(var(--sp-4) * -1);
     padding-left: var(--sp-4);
     padding-right: var(--sp-4);
-  }
-
-  .net-room {
-    grid-template-columns: 1fr auto;
-  }
-
-  .net-room span {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-
-  .net-seat .cs-factions {
-    order: 3;
-    width: 100%;
-  }
-
-  .net-input--code {
-    width: 96px;
   }
 }
 

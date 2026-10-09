@@ -1,8 +1,48 @@
 /* ============================================================================
-   App shell: main menu, mode screens, battle select, loading, error notice, campaign room.
-   Pale misty key art behind, white glass in front. The 3D battle map (.hs) is the one dark screen.
+   App shell: main menu, mode screens, battle select, settings, loading, notices, campaign room.
+   Calm white glass over pale key art, graphite ink for the one primary action, hairline borders.
+   The 3D battle map (.hs) is the only screen with a live picture behind the glass.
    Sheets in portrait, two columns in landscape.
    ============================================================================ */
+
+/* The menu palette. Saturation stays low: graphite is the accent, the factions are small tonal marks (slate indigo,
+   umber, ochre) and never a large fill. The same values live in :root (styles.css); they are repeated here so the
+   shell never depends on the order the sheets load in. */
+.screen,
+.loading,
+.fatal,
+.recovery,
+.camp-backdrop {
+  --ink: #1b1e22;
+  --ink-2: #3c434b;
+  --ink-3: #5d6670;
+  --line: rgba(27, 30, 34, 0.1);
+  --line-2: rgba(27, 30, 34, 0.18);
+  --fill: rgba(27, 30, 34, 0.05);
+  --fill-2: rgba(27, 30, 34, 0.09);
+  --mist: #eef1f4;
+  --accent: #23303d;
+  --accent-2: #2f3e4e;
+  --accent-soft: rgba(35, 48, 61, 0.07);
+  --joseon: #46637a;
+  --joseon-soft: #e4eaef;
+  --japan: #6b4a40;
+  --japan-soft: #ede6e3;
+  --ming: #8c7040;
+  --ming-soft: #efe9dd;
+  --good: #4a6b55;
+  --bad: #8c4b3f;
+  --warn: #8a6d2f;
+  --seal: var(--bad);
+  --glass-line: var(--line);
+  --shadow: 0 10px 32px rgba(27, 30, 34, 0.1), 0 1px 2px rgba(27, 30, 34, 0.06);
+  --shadow-sm: 0 2px 10px rgba(27, 30, 34, 0.08);
+  --fs-24: 24px;
+  --fs-32: 32px;
+  /* Korean breaks between words, not inside them. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
 
 .screen {
   position: absolute;
@@ -13,8 +53,10 @@
   height: 100dvh;
   overflow: hidden;
   color: var(--ink);
+  line-height: 1.45;
+  font-weight: 400;
   /* Stands in for the key art until it has loaded: the same pale mist, so nothing flashes. */
-  background: radial-gradient(120% 90% at 30% 10%, #ffffff 0%, #eef3f7 55%, #dfe8ef 100%);
+  background: radial-gradient(120% 90% at 30% 10%, #ffffff 0%, var(--mist) 60%, #e3e8ec 100%);
 }
 
 /* Key art behind a screen: fades in over the mist gradient, then a white wash keeps the glass and type legible. */
@@ -54,7 +96,7 @@
 }
 
 .art-bg--calm::after {
-  background: rgba(255, 255, 255, 0.66);
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .screen-top {
@@ -70,7 +112,7 @@
 .screen-title {
   margin: 0;
   font-size: var(--fs-20);
-  font-weight: 750;
+  font-weight: 600;
   letter-spacing: -0.01em;
   white-space: nowrap;
 }
@@ -82,33 +124,35 @@
   gap: var(--sp-2);
 }
 
+/* Secondary pill: white glass with a hairline border. */
 .back-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   min-height: var(--tap);
-  padding: 0 16px 0 12px;
-  border: 1px solid var(--glass-line);
+  padding: 0 18px 0 12px;
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.84);
   color: var(--ink);
-  font-size: var(--fs-15);
-  font-weight: 650;
+  font-size: var(--fs-13);
+  font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(30, 50, 75, 0.14);
+  box-shadow: var(--shadow-sm);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .back-btn:hover {
   background: #fff;
+  border-color: var(--line-2);
 }
 
 .app--touch .back-btn {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
 }
 
 .screen-body {
@@ -127,7 +171,6 @@
 .screen-body > .paper {
   margin-bottom: var(--sp-5);
   background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 10px 30px rgba(30, 50, 75, 0.14), 0 1px 3px rgba(30, 50, 75, 0.1);
 }
 
 @media (max-width: 900px), (max-height: 540px) {
@@ -157,6 +200,104 @@
   color: var(--ink-2);
 }
 
+/* ---------------------------------------------------------------- buttons on the menu screens */
+
+.screen .ink-btn {
+  border-radius: 999px;
+  background: var(--accent);
+  font-size: var(--fs-15);
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(27, 30, 34, 0.2), 0 6px 16px rgba(27, 30, 34, 0.14);
+}
+
+.screen .ink-btn:hover {
+  background: var(--accent-2);
+}
+
+.screen .ink-btn:disabled {
+  opacity: 0.35;
+  box-shadow: none;
+}
+
+.screen .chip,
+.camp-backdrop .chip,
+.fatal .chip,
+.recovery .chip {
+  min-height: 36px;
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, 0.78);
+  font-size: var(--fs-13);
+  font-weight: 500;
+}
+
+.screen .chip:hover:not(:disabled),
+.camp-backdrop .chip:hover:not(:disabled),
+.fatal .chip:hover:not(:disabled),
+.recovery .chip:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: #fff;
+}
+
+/* A lit chip is a selection: graphite ring and a faint graphite wash, not a filled block. */
+.screen .chip--on,
+.camp-backdrop .chip--on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  color: var(--ink);
+}
+
+.screen .chip small,
+.camp-backdrop .chip small {
+  color: var(--ink-3);
+}
+
+.screen .chip--on small {
+  color: var(--ink-2);
+}
+
+.screen .mini-btn,
+.camp-backdrop .mini-btn {
+  font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Segmented control: a white glass track, the chosen segment is a graphite pill. */
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: var(--shadow-sm);
+}
+
+.seg button {
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--fs-13);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.seg button:not(.on):hover {
+  color: var(--ink);
+  background: var(--fill);
+}
+
+.seg button.on {
+  background: var(--accent);
+  color: #fff;
+}
+
 /* ---------------------------------------------------------------- main menu */
 
 .menu .screen-top {
@@ -168,12 +309,12 @@
   z-index: 2;
   flex: 1;
   min-height: 0;
-  width: min(1040px, 100%);
+  width: min(940px, 100%);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: clamp(20px, 5dvh, 44px);
+  gap: clamp(24px, 6dvh, 52px);
   padding: 0 calc(var(--sar) + 20px) calc(var(--sab) + 20px) calc(var(--sal) + 20px);
   overflow-y: auto;
   touch-action: pan-y;
@@ -183,34 +324,36 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   text-align: center;
 }
 
+/* The one serif on the page, set light: the title reads as a film poster's, not a banner's. */
 .wordmark-hanja {
   font-family: var(--hanja);
-  font-weight: 700;
-  font-size: clamp(40px, 7.5vw, 72px);
-  line-height: 1.05;
-  letter-spacing: 0.28em;
-  padding-left: 0.28em;
-  color: #12263f;
+  font-weight: 500;
+  font-size: clamp(36px, 6vw, 60px);
+  line-height: 1.1;
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+  color: var(--ink);
   text-shadow: 0 0 28px rgba(255, 255, 255, 0.95), 0 0 6px rgba(255, 255, 255, 0.8);
 }
 
 .wordmark-ko {
-  font-size: var(--fs-28);
-  font-weight: 750;
-  letter-spacing: 0.04em;
-  color: var(--ink);
+  font-size: var(--fs-17);
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+  color: var(--ink-2);
   text-shadow: 0 0 16px rgba(255, 255, 255, 0.95);
 }
 
 .wordmark-sub {
   font-size: var(--fs-13);
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  color: #3d4b5e;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
   text-shadow: 0 0 12px rgba(255, 255, 255, 0.95);
 }
 
@@ -221,28 +364,25 @@
 }
 
 .mode-card {
-  position: relative;
   display: grid;
-  overflow: hidden;
-  isolation: isolate;
-  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-columns: 104px minmax(0, 1fr);
   grid-template-rows: auto auto;
   align-content: center;
   column-gap: var(--sp-4);
   row-gap: 4px;
   align-items: center;
-  min-height: 112px;
-  padding: var(--sp-4) var(--sp-5);
-  border: 1px solid var(--glass-line);
+  min-height: 124px;
+  padding: 10px 20px 10px 10px;
+  border: 1px solid var(--line);
   border-radius: var(--r);
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.84);
   color: var(--ink);
   text-align: left;
   cursor: pointer;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  transition: transform 0.18s ease, background 0.18s;
+  transition: transform 0.18s ease, background 0.18s, border-color 0.18s, box-shadow 0.18s;
 }
 
 .app--touch .mode-card {
@@ -252,69 +392,38 @@
 }
 
 .mode-card:hover {
-  transform: translateY(-3px);
-  background: #fff;
-}
-
-/* The mode's picture is a quiet background: a white wash covers the text side and thins out towards the right. */
-.mode-art {
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 60% 50%;
-  pointer-events: none;
-}
-
-.mode-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(90deg, #fff 0%, rgba(255, 255, 255, 0.95) 38%, rgba(255, 255, 255, 0.52) 100%);
-  transition: opacity 0.25s;
-}
-
-.mode-card:hover::before {
-  opacity: 0.8;
+  transform: translateY(-2px);
+  border-color: var(--line-2);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow);
 }
 
 .mode-card:active {
   transform: translateY(0);
 }
 
-.mode-icon {
+/* A small rounded still of the mode, set into the card like a film frame. */
+.mode-art {
   grid-row: 1 / span 2;
-  width: 52px;
-  height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 14px;
-  background: var(--accent);
-  color: #fff;
-  font-family: var(--hanja);
-  font-weight: 700;
-  font-size: 26px;
+  width: 104px;
+  height: 104px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--mist);
+  pointer-events: none;
 }
 
 .mode-title {
   align-self: end;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px 8px;
-  font-size: var(--fs-20);
-  font-weight: 750;
+  font-size: var(--fs-17);
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
 .mode-desc {
   align-self: start;
   font-size: var(--fs-13);
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.5;
   color: var(--ink-2);
 }
@@ -331,28 +440,20 @@
   background: var(--fill-2);
   color: var(--ink-2);
   font-size: var(--fs-12);
-  font-weight: 700;
+  font-weight: 500;
   white-space: nowrap;
 }
 
-.menu-foot {
-  text-align: center;
-  font-size: var(--fs-12);
-  color: var(--ink-2);
-}
+/* ---------------------------------------------------------------- faction crests */
 
-/* ---------------------------------------------------------------- faction emblems */
-
-/* On the menu screens the navy badges are the gpt-image crests (128 px cut). The battle HUD keeps its plain disc. */
+/* On the menu screens a faction is its gpt-image crest (128 px cut), never a coloured disc. The battle HUD keeps its own. */
 .screen .emblem {
   background-color: transparent;
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
-  color: transparent;
-  font-size: 0;
   box-shadow: none;
-  filter: drop-shadow(0 2px 5px rgba(20, 35, 55, 0.28));
+  filter: drop-shadow(0 1px 3px rgba(27, 30, 34, 0.22));
 }
 
 .screen .emblem--joseon {
@@ -367,30 +468,15 @@
   background-image: url(/ui/art/emblem_ming_sm.webp);
 }
 
-/* The notice's large badges are drawn at 60 px or more: use the 512 px crest on retina screens. */
-@media (min-resolution: 2dppx) {
-  .notice-emblems .emblem--joseon {
-    background-image: url(/ui/art/emblem_joseon.webp);
-  }
-
-  .notice-emblems .emblem--japan {
-    background-image: url(/ui/art/emblem_japan.webp);
-  }
-
-  .notice-emblems .emblem--ming {
-    background-image: url(/ui/art/emblem_ming.webp);
-  }
-}
-
-/* ---------------------------------------------------------------- placeholder and settings screens */
+/* ---------------------------------------------------------------- notices and settings */
 
 .notice,
-.settings-page {
+.settings-page .set-group {
   background: rgba(255, 255, 255, 0.94);
 }
 
 .notice {
-  width: min(560px, 100%);
+  width: min(520px, 100%);
   margin: auto;
   padding: var(--sp-6) var(--sp-5);
   display: flex;
@@ -400,87 +486,178 @@
   text-align: center;
 }
 
+.notice-icon {
+  display: inline-flex;
+  color: var(--ink-3);
+}
+
 .notice h2 {
   margin: 0;
-  font-size: var(--fs-28);
-  font-weight: 750;
+  font-size: var(--fs-20);
+  font-weight: 600;
 }
 
 .notice p {
   margin: 0;
   font-size: var(--fs-15);
-  line-height: 1.7;
+  line-height: 1.55;
   color: var(--ink-2);
 }
 
-.notice-emblems {
-  display: flex;
-  gap: var(--sp-4);
-  margin: var(--sp-2) 0;
-}
-
-.notice-emblems .emblem {
-  width: 60px;
-  height: 60px;
-  font-size: 28px;
-  opacity: 0.9;
+/* The technical detail of a failure: quiet, selectable, never the headline. */
+.notice p.notice-detail {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--fill);
+  font-size: var(--fs-12);
+  line-height: 1.5;
+  color: var(--ink-3);
+  word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .settings-page {
   width: min(640px, 100%);
   margin: var(--sp-2) auto var(--sp-5);
-  padding: var(--sp-4) var(--sp-5) var(--sp-5);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-4);
+  gap: var(--sp-3);
 }
 
-.settings-page .settings-label {
+.set-group {
+  padding: var(--sp-4) var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.set-group h2 {
+  margin: 0;
+  font-size: var(--fs-13);
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  min-height: 48px;
+}
+
+.set-row + .set-row {
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--line);
+}
+
+.set-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.set-text b {
   font-size: var(--fs-15);
+  font-weight: 500;
+}
+
+.set-text small {
+  font-size: var(--fs-13);
+  color: var(--ink-3);
+}
+
+.set-control {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.set-state {
+  display: inline-flex;
+  color: var(--ink-3);
+}
+
+.settings-page .settings-hint {
+  margin: 0;
+  font-size: var(--fs-13);
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: var(--fill-2);
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+}
+
+.switch i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(27, 30, 34, 0.3);
+  transition: transform 0.18s;
+}
+
+.switch--on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch--on i {
+  transform: translateX(18px);
+}
+
+.seg--set button {
+  min-height: 32px;
+  padding: 0 14px;
+}
+
+.set-group--help {
+  padding-top: var(--sp-3);
+}
+
+.settings-page .ctl-help summary {
+  font-size: var(--fs-13);
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.settings-page .ctl-body h3 {
+  color: var(--ink-2);
+  font-weight: 600;
 }
 
 /* ---------------------------------------------------------------- history battles */
 
 .hs {
-  background: #e4ecf3;
+  background: var(--mist);
 }
 
 .hs-top {
   position: relative;
   z-index: 6;
   flex: none;
-  background: linear-gradient(rgba(238, 244, 249, 0.92), rgba(238, 244, 249, 0));
+  background: linear-gradient(rgba(238, 241, 244, 0.92), rgba(238, 241, 244, 0));
 }
 
 .hs-top .screen-top {
   padding-bottom: 6px;
-}
-
-.seg {
-  display: inline-flex;
-  padding: 3px;
-  border: 1px solid var(--glass-line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 2px 10px rgba(30, 50, 75, 0.14);
-}
-
-.seg button {
-  min-height: 38px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--ink-2);
-  font-size: var(--fs-13);
-  font-weight: 650;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.seg button.on {
-  background: var(--accent);
-  color: #fff;
 }
 
 .hs-tabs {
@@ -499,25 +676,26 @@
   gap: 6px;
   min-height: 40px;
   padding: 0 14px;
-  border: 1px solid var(--glass-line);
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.86);
   color: var(--ink);
   font-size: var(--fs-13);
-  font-weight: 650;
+  font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(30, 50, 75, 0.14);
-  transition: background 0.15s;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .hs-tab small {
   font-size: var(--fs-12);
-  font-weight: 500;
+  font-weight: 400;
   color: var(--ink-3);
 }
 
 .hs-tab:not(.hs-tab--on):hover {
   background: #fff;
+  border-color: var(--line-2);
 }
 
 .hs-tab--on {
@@ -527,11 +705,11 @@
 }
 
 .hs-tab--on small {
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .hs-tab--locked {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: default;
 }
 
@@ -544,13 +722,10 @@
   border-radius: 50%;
   background: var(--good);
   color: #fff;
-  font-family: var(--hanja);
-  font-size: var(--fs-12);
-  font-weight: 700;
 }
 
 .tab-seal--loss {
-  background: var(--seal);
+  background: var(--bad);
 }
 
 .hs-map {
@@ -604,9 +779,9 @@
   margin-top: -6px;
   border-radius: 50%;
   background: #fff;
-  border: 2.5px solid var(--accent);
+  border: 2px solid var(--accent);
   box-sizing: border-box;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 2px 8px rgba(20, 40, 70, 0.35);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 2px 6px rgba(27, 30, 34, 0.25);
 }
 
 .marker span {
@@ -614,17 +789,17 @@
   padding: 3px 10px;
   border-radius: 999px;
   font-size: var(--fs-12);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--ink);
   background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 0 0 1px rgba(20, 40, 70, 0.14), 0 2px 8px rgba(20, 40, 70, 0.25);
+  box-shadow: 0 0 0 1px var(--line), 0 2px 6px rgba(27, 30, 34, 0.14);
 }
 
 /* Touch screens keep :hover after a tap, which would paint the chosen marker's white label on white. */
 @media (hover: hover) {
   .marker:not(.marker--on):hover span {
     background: #fff;
-    box-shadow: 0 0 0 1.5px var(--accent-2), 0 3px 10px rgba(20, 40, 70, 0.3);
+    box-shadow: 0 0 0 1.5px var(--accent), 0 3px 10px rgba(27, 30, 34, 0.2);
   }
 }
 
@@ -634,7 +809,7 @@
 }
 
 .marker--night i {
-  background: #8fa6c4;
+  background: #9aa4af;
 }
 
 .marker--on {
@@ -642,24 +817,27 @@
 }
 
 .marker--on i {
-  width: 20px;
-  height: 20px;
-  margin-left: -10px;
-  margin-top: -10px;
-  background: var(--accent-2);
-  box-shadow: 0 0 0 3px #fff, 0 0 22px rgba(90, 160, 255, 0.7);
-  animation: marker-pulse 1.8s ease-in-out infinite;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
+  background: var(--accent);
+  border-color: #fff;
+  border-width: 3px;
+  box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(35, 48, 61, 0.35);
+  animation: marker-pulse 2s ease-in-out infinite;
 }
 
 .marker--on span {
   font-size: var(--fs-13);
+  font-weight: 600;
   background: var(--accent);
   color: #fff;
 }
 
 @keyframes marker-pulse {
   50% {
-    box-shadow: 0 0 0 3px #fff, 0 0 0 9px rgba(90, 160, 255, 0.3), 0 0 30px rgba(90, 160, 255, 0.6);
+    box-shadow: 0 0 0 1px var(--accent), 0 0 0 9px rgba(35, 48, 61, 0.14), 0 0 22px rgba(35, 48, 61, 0.3);
   }
 }
 
@@ -715,6 +893,7 @@
   right: 24px;
 }
 
+/* The brief: date and place, the name, difficulty, what happened, the side to lead, the two fleets, then the way in. */
 .hs-brief {
   position: absolute;
   z-index: 5;
@@ -726,6 +905,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .hs-brief-scroll {
@@ -740,10 +920,10 @@
   gap: var(--sp-3);
 }
 
-/* While more of the brief waits below the fold its last lines fade out, with a pill that scrolls on. */
+/* While more of the brief waits below the fold its last lines fade out, with a pill below them that scrolls on. */
 .hs-brief-scroll[data-more='true'] {
-  -webkit-mask-image: linear-gradient(#000 calc(100% - 44px), transparent);
-  mask-image: linear-gradient(#000 calc(100% - 44px), transparent);
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 28px), transparent);
 }
 
 .hs-brief-wrap {
@@ -755,24 +935,22 @@
 }
 
 .hs-more {
-  position: absolute;
-  left: 50%;
-  bottom: 6px;
-  z-index: 2;
-  transform: translateX(-50%);
+  flex: none;
+  align-self: center;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   min-height: 30px;
+  margin: 0 0 var(--sp-2);
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.96);
   color: var(--ink-2);
   font-size: var(--fs-12);
-  font-weight: 650;
+  font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(30, 50, 75, 0.16);
+  box-shadow: var(--shadow-sm);
 }
 
 .hs-brief h2 {
@@ -781,31 +959,31 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: 4px 12px;
-  font-size: var(--fs-28);
-  font-weight: 750;
+  font-size: var(--fs-24);
+  font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 1.2;
 }
 
 .hs-brief h2 .hanja {
-  font-size: var(--fs-15);
-  font-weight: 500;
+  font-size: var(--fs-13);
+  font-weight: 400;
   letter-spacing: 0.2em;
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
 
 .select-date {
   font-size: var(--fs-13);
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
 
 .select-brief-head {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  font-size: var(--fs-13);
-  font-weight: 600;
+  gap: 6px;
+  font-size: var(--fs-12);
+  font-weight: 500;
   color: var(--ink-2);
 }
 
@@ -817,69 +995,60 @@
 
 .select-brief-head b {
   color: var(--ink);
-  font-weight: 750;
+  font-weight: 600;
 }
 
-.night-tag {
-  background: var(--sea-1) !important;
+.select-brief-head .night-tag {
+  background: var(--accent);
   color: #fff;
 }
 
 .hs-brief p {
   margin: 0;
   font-size: var(--fs-15);
-  line-height: 1.7;
+  line-height: 1.55;
   color: var(--ink);
 }
 
-.hs-brief .select-cmd {
+/* Who fought: a thin tonal bar, the navy, the commander and what he brought. */
+.select-forces {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--sp-3) var(--sp-5);
+}
+
+.select-force {
+  --bar: var(--ink-3);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 12px;
+  border-left: 3px solid var(--bar);
   font-size: var(--fs-13);
   color: var(--ink-2);
 }
 
-.select-cmd b {
-  font-weight: 700;
-  color: var(--ink);
-  white-space: nowrap;
+.select-force--joseon {
+  --bar: var(--joseon);
 }
 
-.select-cmd small {
-  font-size: var(--fs-12);
-  color: var(--ink-3);
-  white-space: nowrap;
+.select-force--japan {
+  --bar: var(--japan);
 }
 
-.select-forces {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px 16px;
+.select-force--ming {
+  --bar: var(--ming);
+}
+
+.select-force b {
   font-size: var(--fs-13);
   font-weight: 600;
+  color: var(--ink);
 }
 
-.select-force {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.force-dot {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.force-dot--joseon {
-  background: var(--joseon);
-}
-
-.force-dot--japan {
-  background: var(--japan);
-}
-
-.force-dot--ming {
-  background: var(--ming);
+.select-force small {
+  font-size: var(--fs-12);
+  color: var(--ink-3);
 }
 
 .select-foot {
@@ -893,12 +1062,12 @@
   flex: none;
   padding: var(--sp-3) var(--sp-5) calc(var(--sp-3) + 2px);
   border-top: 1px solid var(--line);
-  background: var(--glass-hi);
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .select-result {
   font-size: var(--fs-13);
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
 
 .hs-foot .ink-btn {
@@ -917,7 +1086,8 @@
   justify-content: center;
   padding: calc(var(--sat) + 16px) calc(var(--sar) + 24px) calc(var(--sab) + 16px) calc(var(--sal) + 24px);
   color: var(--ink);
-  background: radial-gradient(120% 90% at 50% 30%, #ffffff, #e3ebf2 80%);
+  line-height: 1.45;
+  background: radial-gradient(120% 90% at 50% 30%, #ffffff, #e3e8ec 80%);
 }
 
 /* The battle's own picture shows through; only a light wash sits over it, the card carries the text. */
@@ -926,21 +1096,21 @@
 }
 
 .loading .art-bg::after {
-  background: radial-gradient(70% 60% at 50% 50%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.12) 100%);
+  background: radial-gradient(70% 60% at 50% 50%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.1) 100%);
 }
 
 .loading-card {
   position: relative;
   z-index: 2;
-  width: min(480px, 100%);
+  width: min(440px, 100%);
   padding: var(--sp-6) var(--sp-5) var(--sp-5);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--sp-2);
+  gap: 6px;
   text-align: center;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 50px rgba(20, 35, 55, 0.28), 0 1px 3px rgba(20, 35, 55, 0.14);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 18px 50px rgba(27, 30, 34, 0.22), 0 1px 2px rgba(27, 30, 34, 0.1);
 }
 
 /* A night battle's picture is dark: a white wash over it only turns it grey, so it stays dark and the card stands out. */
@@ -950,29 +1120,29 @@
 
 .loading--night .loading-card {
   background: #fff;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7), 0 22px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6), 0 22px 60px rgba(0, 0, 0, 0.5);
+}
+
+.loading-hanja {
+  font-family: var(--hanja);
+  font-weight: 400;
+  font-size: var(--fs-13);
+  letter-spacing: 0.4em;
+  padding-left: 0.4em;
+  white-space: nowrap;
+  color: var(--ink-3);
 }
 
 .loading-title {
-  font-family: var(--hanja);
-  font-weight: 700;
-  font-size: clamp(34px, 8vw, 54px);
-  line-height: 1.1;
-  letter-spacing: 0.28em;
-  padding-left: 0.28em;
-  white-space: nowrap;
-  color: #12263f;
-}
-
-.loading-sub {
-  font-size: var(--fs-20);
-  font-weight: 700;
-  color: var(--ink-2);
+  font-size: var(--fs-24);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
 }
 
 .loading-bar {
   width: 100%;
-  height: 5px;
+  height: 4px;
   margin-top: var(--sp-4);
   border-radius: 999px;
   background: var(--fill-2);
@@ -992,12 +1162,12 @@
   align-items: baseline;
   width: 100%;
   font-size: var(--fs-13);
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
 
 .loading-meta b {
-  font-size: var(--fs-15);
-  font-weight: 700;
+  font-size: var(--fs-13);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
@@ -1010,22 +1180,22 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   text-align: center;
+}
+
+.loading-quote span {
+  font-size: var(--fs-15);
+  line-height: 1.45;
+  color: var(--ink-2);
 }
 
 .loading-quote strong {
   font-family: var(--hanja);
-  font-weight: 700;
-  font-size: var(--fs-15);
+  font-weight: 400;
+  font-size: var(--fs-12);
   letter-spacing: 0.16em;
-  color: #12263f;
-}
-
-.loading-quote span {
-  font-size: var(--fs-13);
-  line-height: 1.5;
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
 
 .loading-error {
@@ -1050,7 +1220,9 @@
   align-items: center;
   justify-content: center;
   padding: calc(var(--sat) + 16px) calc(var(--sar) + 16px) calc(var(--sab) + 16px) calc(var(--sal) + 16px);
-  background: radial-gradient(120% 90% at 50% 30%, #ffffff, #e3ebf2 80%);
+  color: var(--ink);
+  line-height: 1.45;
+  background: radial-gradient(120% 90% at 50% 30%, #ffffff, #e3e8ec 80%);
 }
 
 .fatal .notice {
@@ -1062,10 +1234,48 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--sp-2);
+  margin-top: var(--sp-2);
 }
 
 .fatal-actions a {
   text-decoration: none;
+}
+
+.screen .chip .icon,
+.fatal .chip .icon {
+  margin-right: 6px;
+}
+
+.fatal .ink-btn {
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0;
+  box-shadow: 0 1px 2px rgba(27, 30, 34, 0.2), 0 6px 16px rgba(27, 30, 34, 0.14);
+}
+
+/* ---------------------------------------------------------------- notice after a crash */
+
+.recovery {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: var(--shadow);
+}
+
+.recovery p {
+  font-size: var(--fs-13);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.recovery .ink-btn {
+  min-height: 36px;
+  padding: 0 var(--sp-4);
+  border-radius: 999px;
+  font-size: var(--fs-13);
+  font-weight: 600;
+  letter-spacing: 0;
+  box-shadow: none;
 }
 
 /* ---------------------------------------------------------------- campaign room (군영) */
@@ -1077,13 +1287,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(24, 40, 62, 0.4);
+  background: rgba(27, 30, 34, 0.36);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
 
 .camp.glass {
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .camp {
@@ -1093,6 +1303,7 @@
   flex-direction: column;
   padding: var(--sp-4) var(--sp-5);
   gap: var(--sp-3);
+  line-height: 1.45;
 }
 
 .camp-head {
@@ -1105,12 +1316,7 @@
 
 .camp-title {
   font-size: var(--fs-20);
-  font-weight: 750;
-}
-
-.camp-title .hanja {
-  margin-right: 8px;
-  color: var(--ink-2);
+  font-weight: 600;
 }
 
 .camp-res {
@@ -1118,12 +1324,14 @@
   gap: 18px;
   margin-left: auto;
   font-size: var(--fs-13);
-  font-weight: 600;
-  color: var(--ink-2);
+  font-weight: 500;
+  color: var(--ink-3);
 }
 
 .camp-res b {
+  margin-left: 2px;
   font-size: var(--fs-17);
+  font-weight: 600;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
@@ -1147,7 +1355,7 @@
 
 .camp-section-title {
   font-size: var(--fs-15);
-  font-weight: 750;
+  font-weight: 600;
 }
 
 .camp-actions,
@@ -1168,14 +1376,14 @@
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .camp-squad-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .camp-squad-head img,
@@ -1190,36 +1398,36 @@
 .camp-squad-head b,
 .camp-cmd-name b {
   font-size: var(--fs-15);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .camp-squad-head small,
 .camp-cmd-name small {
   display: block;
   font-size: var(--fs-12);
-  color: var(--ink-2);
-  font-weight: 500;
+  color: var(--ink-3);
+  font-weight: 400;
 }
 
 .camp-ships {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
-  gap: 6px 10px;
+  gap: 8px 10px;
 }
 
 .camp-ship {
-  display: grid;
-  grid-template-columns: 18px 1fr;
-  grid-template-rows: repeat(3, 4px);
-  gap: 2px 4px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .camp-kind {
-  grid-row: 1 / span 3;
-  font-family: var(--hanja);
-  font-weight: 700;
-  font-size: var(--fs-13);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink-2);
 }
 
 .camp-bar,
@@ -1241,7 +1449,7 @@
 }
 
 .camp-bar--crew i {
-  background: #5d7a99;
+  background: var(--joseon);
 }
 
 .camp-bar--supply i {
@@ -1277,16 +1485,16 @@
 .camp-level {
   margin-left: auto;
   font-size: var(--fs-13);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .camp-points {
   padding: 0 8px;
   border-radius: 999px;
-  background: var(--seal);
+  background: var(--accent);
   color: #fff;
   font-size: var(--fs-12);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .camp-skills {
@@ -1298,23 +1506,25 @@
 .camp-skill {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   min-height: 32px;
   border: 1px solid var(--line-2);
   border-radius: 999px;
   background: transparent;
-  padding: 0 10px;
+  padding: 0 12px;
   font-size: var(--fs-12);
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   color: var(--ink);
 }
 
-.camp-skill span {
-  font-family: var(--hanja);
+.camp-skill b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .camp-skill--on {
+  border-color: var(--accent);
   background: var(--accent-soft);
 }
 
@@ -1325,7 +1535,7 @@
 .camp-log p {
   margin: 0 0 6px;
   font-size: var(--fs-13);
-  line-height: 1.6;
+  line-height: 1.5;
   color: var(--ink-2);
 }
 
@@ -1346,19 +1556,15 @@
   }
 
   .mode-card {
-    min-height: 76px;
-    padding: var(--sp-3) var(--sp-4);
-    grid-template-columns: 44px minmax(0, 1fr);
+    min-height: 84px;
+    padding: 8px 14px 8px 8px;
+    grid-template-columns: 68px minmax(0, 1fr);
+    column-gap: var(--sp-3);
   }
 
-  .mode-icon {
-    width: 44px;
-    height: 44px;
-    font-size: 22px;
-  }
-
-  .mode-title {
-    font-size: var(--fs-17);
+  .mode-art {
+    width: 68px;
+    height: 68px;
   }
 
   .mode-desc {
@@ -1372,11 +1578,11 @@
   }
 
   .wordmark-hanja {
-    font-size: clamp(34px, 12vw, 52px);
+    font-size: clamp(34px, 11vw, 48px);
   }
 
   .wordmark-ko {
-    font-size: var(--fs-20);
+    font-size: var(--fs-15);
   }
 
   .screen-top,
@@ -1395,7 +1601,7 @@
     right: calc(var(--sar) + 8px);
     bottom: calc(var(--sab) + 8px);
     width: auto;
-    max-height: 54dvh;
+    max-height: 56dvh;
     transform: none;
   }
 
@@ -1410,11 +1616,12 @@
 
   .hs-brief p {
     font-size: var(--fs-13);
-    line-height: 1.6;
+    line-height: 1.55;
   }
 
   .select-forces {
     grid-template-columns: 1fr;
+    gap: var(--sp-2);
   }
 
   .hs-foot {
@@ -1433,7 +1640,15 @@
     flex: 1;
   }
 
-  .settings-page,
+  .set-group {
+    padding-left: var(--sp-4);
+    padding-right: var(--sp-4);
+  }
+
+  .set-row {
+    flex-wrap: wrap;
+  }
+
   .notice {
     padding-left: var(--sp-4);
     padding-right: var(--sp-4);
@@ -1496,19 +1711,12 @@
   }
 
   .wordmark-hanja {
-    font-size: clamp(32px, 6vw, 48px);
+    font-size: clamp(30px, 5.5vw, 44px);
   }
 
   .wordmark-ko {
-    font-size: var(--fs-20);
-  }
-
-  .wordmark-sub {
-    letter-spacing: 0.1em;
-  }
-
-  .menu-foot {
-    display: none;
+    font-size: var(--fs-15);
+    letter-spacing: 0.22em;
   }
 
   .mode-grid {
@@ -1518,16 +1726,15 @@
 
   .mode-card {
     min-height: 84px;
-    padding: var(--sp-3);
-    grid-template-columns: 40px minmax(0, 1fr);
+    padding: 8px 12px 8px 8px;
+    grid-template-columns: 56px minmax(0, 1fr);
     column-gap: var(--sp-3);
   }
 
-  .mode-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
-    border-radius: 12px;
+  .mode-art {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
   }
 
   .mode-title {
@@ -1580,8 +1787,18 @@
     font-size: var(--fs-17);
   }
 
+  .hs-brief p {
+    font-size: var(--fs-13);
+  }
+
   .hs-brief-scroll {
     padding: var(--sp-3) var(--sp-4) var(--sp-2);
+    gap: var(--sp-2);
+  }
+
+  .select-forces {
+    grid-template-columns: 1fr;
+    gap: var(--sp-2);
   }
 
   .hs-foot {
@@ -1593,9 +1810,7 @@
     gap: var(--sp-2);
   }
 
-  .hs-foot .select-result,
-  .hs-brief .select-cmd,
-  .hs-brief .side-vs {
+  .hs-foot .select-result {
     display: none;
   }
 
@@ -1610,11 +1825,7 @@
   }
 
   .loading-title {
-    font-size: clamp(28px, 6vw, 40px);
-  }
-
-  .loading-sub {
-    font-size: var(--fs-15);
+    font-size: var(--fs-20);
   }
 
   .loading-bar {

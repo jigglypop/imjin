@@ -58,7 +58,7 @@ input {
   margin: 0;
   font-size: var(--fs-14, 14px);
   line-height: 1.55;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .recovery-actions {

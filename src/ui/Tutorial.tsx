@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { Engine } from '../game/Engine';
 import { isTouchDevice, isTouchOnly } from '../game/device';
 import { params } from './launch';
+import { Icon } from './battleIcons';
 import { TIPS } from './tips';
 import './tutorial.css';
 
@@ -51,7 +52,7 @@ type Step = {
   target?: (compact: boolean) => string | null;
   /** The order tab this step shows. */
   tab?: number;
-  /** Extra sentence for the ⏩ button, only when the battle has one. */
+  /** Extra sentence for the fast-approach button, only when the battle has one. */
   extra?: string;
 };
 
@@ -59,67 +60,67 @@ const STEPS: Step[] = [
   {
     id: 'select',
     title: '함대 고르기',
-    mouse: '아래 장수 패를 누르거나 바다의 배를 클릭해 고릅니다. Shift+클릭으로 더하고, 끌어서 사각형으로 여러 척을 한꺼번에 고를 수 있습니다.',
-    touch: '아래 장수 패를 탭하거나 바다의 배를 탭해 고릅니다. 오른쪽 “박스”를 켜면 한 손가락으로 끌어 여러 척을 한꺼번에 고릅니다.',
+    mouse: '아래 장수 패를 누르거나 바다의 함선을 클릭해 고릅니다. Shift+클릭으로 더하고, 끌어서 사각형을 그리면 여러 척을 한꺼번에 고를 수 있습니다.',
+    touch: '아래 장수 패나 바다의 함선을 탭해 고릅니다. 오른쪽의 박스를 켜면 한 손가락으로 끌어 여러 척을 한꺼번에 고를 수 있습니다.',
     target: () => '.cards .card',
   },
   {
     id: 'move',
     title: '이동',
-    mouse: '배를 고른 뒤 빈 바다를 우클릭하면 그곳으로 이동합니다. 여러 척이면 줄을 맞춰 도착합니다.',
-    touch: '배를 고른 뒤 빈 바다를 탭하면 그곳으로 이동합니다. 여러 척이면 줄을 맞춰 도착합니다.',
+    mouse: '함선을 고른 뒤 빈 바다를 우클릭하면 그곳으로 이동합니다. 여러 척이면 줄을 맞춰 도착합니다.',
+    touch: '함선을 고른 뒤 빈 바다를 탭하면 그곳으로 이동합니다. 여러 척이면 줄을 맞춰 도착합니다.',
   },
   {
     id: 'attack',
     title: '공격',
-    mouse: '적함을 우클릭하면 그 배를 목표로 삼아 공격합니다. 쟁탈전에서는 적 포구의 시설도 같은 방법으로 포격합니다.',
-    touch: '적함을 탭하면 그 배를 목표로 삼아 공격합니다. 쟁탈전에서는 적 포구의 시설도 같은 방법으로 포격합니다.',
+    mouse: '적 함선을 우클릭하면 그 함선을 공격합니다. 쟁탈전에서는 적 거점의 시설도 같은 방법으로 포격합니다.',
+    touch: '적 함선을 탭하면 그 함선을 공격합니다. 쟁탈전에서는 적 거점의 시설도 같은 방법으로 포격합니다.',
   },
   {
     id: 'form',
     title: '진형',
     tab: 0,
-    mouse: '학익진 · 일자진 · 장사진 · 첨자진으로 함대를 적을 향해 세웁니다. 戰 자유교전은 모든 명령을 풀고 알아서 싸우게 합니다. 아이콘에 마우스를 올리면 쓰임새가 나옵니다.',
-    touch: '학익진 · 일자진 · 장사진 · 첨자진으로 함대를 적을 향해 세웁니다. 戰 자유교전은 모든 명령을 풀고 알아서 싸우게 합니다. 아이콘을 길게 누르면 쓰임새가 나옵니다.',
+    mouse: '학익진, 일자진, 장사진, 첨자진으로 함대를 적을 향해 세웁니다. 자유교전은 모든 명령을 풀고 함선이 알아서 싸우게 합니다. 아이콘에 마우스를 올리면 설명이 나옵니다.',
+    touch: '학익진, 일자진, 장사진, 첨자진으로 함대를 적을 향해 세웁니다. 자유교전은 모든 명령을 풀고 함선이 알아서 싸우게 합니다. 아이콘을 길게 누르면 설명이 나옵니다.',
     target: () => '.orders',
   },
   {
     id: 'gun',
     title: '포격',
     tab: 1,
-    mouse: '좌현·우현 일제 사격, 사격 중지, 탄종 고르기, 측면 정렬을 맡습니다. 포는 배의 옆구리에 있으니 적에게 측면을 돌려야 쏩니다.',
-    touch: '좌현·우현 일제 사격, 사격 중지, 탄종 고르기, 측면 정렬을 맡습니다. 포는 배의 옆구리에 있으니 적에게 측면을 돌려야 쏩니다.',
+    mouse: '좌현·우현 일제 사격, 사격 중지, 탄종 변경, 측면 정렬을 지시합니다. 포는 함선의 옆면에 있으므로 적에게 측면을 돌려야 쏠 수 있습니다.',
+    touch: '좌현·우현 일제 사격, 사격 중지, 탄종 변경, 측면 정렬을 지시합니다. 포는 함선의 옆면에 있으므로 적에게 측면을 돌려야 쏠 수 있습니다.',
     target: () => '.orders',
   },
   {
     id: 'move-tab',
     title: '기동',
     tab: 2,
-    mouse: '전속 · 반속 · 미속으로 속도를 제한하고, 정지시키고, 밤에는 등불을 끕니다. 키 5, 6, 7과 H, L로도 됩니다.',
-    touch: '전속 · 반속 · 미속으로 속도를 제한하고, 정지시키고, 밤에는 등불을 끕니다.',
+    mouse: '전속, 반속, 미속으로 속도를 제한하고, 정지하고, 밤에는 등불을 끕니다. 단축키는 5·6·7, H, L입니다.',
+    touch: '전속, 반속, 미속으로 속도를 제한하고, 정지하고, 밤에는 등불을 끕니다.',
     target: () => '.orders',
   },
   {
     id: 'tactic',
     title: '전술',
     tab: 3,
-    mouse: '원거리 포격, 근접 포격, 충파, 등선, 이탈로 배가 적을 어떻게 상대할지 정합니다. 배를 고른 뒤 누릅니다.',
-    touch: '원거리 포격, 근접 포격, 충파, 등선, 이탈로 배가 적을 어떻게 상대할지 정합니다. 배를 고른 뒤 누릅니다.',
+    mouse: '원거리 포격, 근접 포격, 충파, 등선, 등선 방어로 함선이 적을 상대하는 방식을 정합니다. 함선을 고른 뒤 누릅니다.',
+    touch: '원거리 포격, 근접 포격, 충파, 등선, 등선 방어로 함선이 적을 상대하는 방식을 정합니다. 함선을 고른 뒤 누릅니다.',
     target: () => '.orders',
   },
   {
     id: 'speed',
     title: '배속',
-    mouse: '❚❚로 멈추고, 배속 버튼으로 전투가 흐르는 속도를 바꿉니다.',
-    touch: '❚❚로 멈추고, 배속 버튼을 누를 때마다 전투가 흐르는 속도가 바뀝니다.',
-    extra: ' ⏩는 적과 처음 마주칠 때까지 빠르게 돌립니다.',
+    mouse: '일시정지 버튼으로 멈추고, 배속 버튼으로 전투 속도를 바꿉니다.',
+    touch: '일시정지 버튼으로 멈추고, 배속 버튼을 누를 때마다 전투 속도가 바뀝니다.',
+    extra: ' 빠른 접근 버튼은 적과 처음 마주칠 때까지 시간을 빠르게 돌립니다.',
     target: (compact) => (compact ? '.dock' : '.speed'),
   },
   {
     id: 'camera',
     title: '카메라',
-    mouse: '휠로 확대·축소, WASD로 이동, Q/E로 회전, 휠 버튼이나 Alt+끌기로 시점을 돌립니다. C는 교전을 따라가는 연출 카메라, O는 고른 배 추적입니다.',
-    touch: '한 손가락으로 끌어 이동, 두 손가락을 벌려 확대, 돌려서 회전, 위아래로 밀어 기울입니다. “추적”은 고른 배를 따라갑니다.',
+    mouse: '휠로 확대·축소, WASD로 이동, Q·E로 회전, 휠 버튼이나 Alt+끌기로 시점을 돌립니다. C는 연출 카메라, O는 선택한 함선 추적입니다.',
+    touch: '한 손가락으로 끌어 이동하고, 두 손가락을 벌려 확대하고, 돌려서 회전하고, 위아래로 밀어 기울입니다. 추적은 선택한 함선을 따라갑니다.',
     target: () => (isTouchDevice ? '.touch-bar' : null),
   },
 ];
@@ -151,14 +152,18 @@ function showOrders(tab: number, opened: { sheet: boolean }) {
 type Place = { ring: DOMRect | null; style: React.CSSProperties };
 
 /** Puts the card beside its target without leaving the screen: above a bottom target, below a top one, left of an edge strip. */
-function place(target: DOMRect | null, width: number, height: number): Place {
+function place(target: DOMRect | null, width: number, height: number, barBottom: number): Place {
   const vw = innerWidth;
   const vh = innerHeight;
-  const clampX = (x: number) => Math.max(8, Math.min(vw - width - 8, x));
+  // A short landscape phone keeps its right-hand tool column free.
+  const edge = vh < 500 && isTouchDevice ? 72 : 8;
+  const clampX = (x: number) => Math.max(8, Math.min(vw - width - edge, x));
   const clampY = (y: number) => Math.max(8, Math.min(vh - height - 8, y));
+  const phone = vw < 700 && vw < vh;
   if (!target) {
-    // Out on the sea: under the score bar, leaving the water itself free to tap.
-    return { ring: null, style: { width, left: clampX((vw - width) / 2), top: clampY(vh < 500 ? 56 : 128) } };
+    // Out on the sea: left of centre and under the score panel, so neither the panel nor the controls are covered.
+    const top = Math.max(barBottom + 12, vh * 0.38 - height / 2);
+    return { ring: null, style: { width, left: clampX(phone ? (vw - width) / 2 : vw * 0.3 - width / 2), top: clampY(top) } };
   }
   const left = Math.max(0, target.left);
   const top = Math.max(0, target.top);
@@ -167,7 +172,9 @@ function place(target: DOMRect | null, width: number, height: number): Place {
     return { ring, style: { width, left: clampX(ring.left - width - 18), top: clampY(ring.top) } };
   }
   const style: React.CSSProperties = { width, left: clampX(ring.left + ring.width / 2 - width / 2) };
-  if (ring.top + ring.height / 2 > vh / 2) style.top = clampY(ring.top - height - 12);
+  // The phone's bottom sheet stacks the speed dock and the cards above the orders: a card above the target would hide them.
+  if (phone && ring.top + ring.height / 2 > vh / 2) style.top = clampY(barBottom + 12);
+  else if (ring.top + ring.height / 2 > vh / 2) style.top = clampY(ring.top - height - 12);
   else style.top = clampY(ring.bottom + 12);
   return { ring, style };
 }
@@ -223,7 +230,7 @@ export function Tutorial({ engine, compact }: { engine: Engine; compact: boolean
     if (current.tab !== undefined) showOrders(current.tab, opened.current);
     const measure = () => {
       const width = Math.min(compact && innerHeight < 500 ? 300 : 340, innerWidth - 16);
-      const next = place(rectOf(current.target?.(compact)), width, cardRef.current?.offsetHeight ?? 170);
+      const next = place(rectOf(current.target?.(compact)), width, cardRef.current?.offsetHeight ?? 170, document.querySelector('.hud .balance')?.getBoundingClientRect().bottom ?? 0);
       setPlaced((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
     };
     measure();
@@ -259,7 +266,7 @@ export function Tutorial({ engine, compact }: { engine: Engine; compact: boolean
             {step + 1} / {steps.length}
           </span>
           <button className="tour-x" onClick={close} aria-label="안내 닫기">
-            ✕
+            <Icon name="x" size={14} />
           </button>
         </div>
         <div className="tour-title">{current.title}</div>
@@ -426,58 +433,58 @@ const KEYS: { title: string; rows: [string, string][] }[] = [
   {
     title: '선택',
     rows: [
-      ['클릭', '배 선택'],
+      ['클릭', '함선 선택'],
       ['Shift+클릭', '선택에 더하기·빼기'],
       ['끌기', '사각형으로 여러 척 선택'],
-      ['Tab', '다음 배'],
+      ['Tab', '다음 함선'],
       ['Esc', '선택 풀기'],
     ],
   },
   {
     title: '명령',
     rows: [
-      ['우클릭', '바다: 이동 · 적함: 공격'],
-      ['1 2 3 4', '학익 · 일자 · 장사 · 첨자진'],
-      ['G', '자유 교전'],
-      ['Z / X', '좌현 / 우현 일제 사격'],
+      ['우클릭', '바다는 이동, 적 함선은 공격'],
+      ['1 2 3 4', '학익진 · 일자진 · 장사진 · 첨자진'],
+      ['G', '자유교전'],
+      ['Z / X', '좌현 · 우현 일제 사격'],
       ['Y', '사격 중지 · 자유 사격'],
-      ['T', '탄종 바꾸기'],
+      ['T', '탄종 변경'],
       ['U', '측면 정렬'],
       ['5 6 7', '전속 · 반속 · 미속'],
       ['H', '정지'],
-      ['L', '등불 끄기·켜기'],
+      ['L', '등불 켜기 · 끄기'],
       ['K J N B', '원거리 · 근접 · 충파 · 등선'],
-      ['P', '이탈·등선 거부'],
+      ['P', '등선 방어'],
     ],
   },
   {
     title: '카메라와 화면',
     rows: [
       ['휠', '확대 · 축소'],
-      ['W A S D', '시점 이동 (방향키도 됨)'],
+      ['W A S D', '시점 이동 (방향키도 가능)'],
       ['Q / E', '시점 회전'],
       ['R / F', '시점 기울임'],
       ['휠 버튼 · Alt+끌기', '시점 돌리기'],
       ['C', '연출 카메라'],
       ['V', '연출 슬로모션'],
-      ['O', '고른 배 추적'],
-      ['F', '선내 단면 (층마다 바뀜)'],
-      ['I', '이름표 켜기·끄기'],
+      ['O', '선택한 함선 추적'],
+      ['F', '선내 단면 (누를 때마다 층이 바뀜)'],
+      ['I', '이름표 켜기 · 끄기'],
       ['Space', '일시정지'],
-      ['M', '소리 켜기·끄기'],
+      ['M', '소리 켜기 · 끄기'],
     ],
   },
 ];
 
 const GESTURES: [string, string][] = [
-  ['탭', '배 선택 · 빈 바다는 이동 · 적함은 공격'],
-  ['한 손가락 끌기', '시점 이동 (“박스”를 켜면 사각형 선택)'],
+  ['탭', '함선 선택 · 빈 바다는 이동 · 적 함선은 공격'],
+  ['한 손가락 끌기', '시점 이동 (박스를 켜면 사각형 선택)'],
   ['두 손가락 벌리기·모으기', '확대 · 축소'],
   ['두 손가락 돌리기', '시점 회전'],
   ['두 손가락 위아래로 밀기', '시점 기울임'],
   ['장수 패 두 번 탭', '그 부대로 카메라 이동'],
-  ['배 두 번 탭', '그 배를 따라가기'],
-  ['아이콘 길게 누르기', '명령의 쓰임새 보기'],
+  ['함선 두 번 탭', '그 함선 따라가기'],
+  ['아이콘 길게 누르기', '명령 설명 보기'],
 ];
 
 function Rows({ rows }: { rows: [string, string][] }) {
@@ -529,7 +536,7 @@ export function ControlsHelp({ onReplay, open }: { onReplay?: () => void; open?:
         </div>
       </details>
       <button className="chip" onClick={replay} disabled={armed}>
-        {armed ? '다음 전투에서 다시 안내합니다' : '조작법 다시 보기'}
+        {armed ? '다음 전투에서 다시 안내합니다' : '조작 안내 다시 보기'}
       </button>
     </div>
   );

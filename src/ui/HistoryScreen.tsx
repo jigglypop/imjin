@@ -1,12 +1,13 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { SCENARIO_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
-import { commanderOf, FACTION_MARK, FACTION_NAME, FACTION_SHORT, forcesOf, handicap, playableFactions } from '../sim/balance';
+import { commanderOf, FACTION_NAME, FACTION_SHORT, forcesOf, handicap, playableFactions } from '../sim/balance';
 import type { Faction } from '../sim/types';
 import { sound } from '../audio/Sound';
 import { CAMPAIGN_ORDER, campaignOver, currentBattle, setMode, useCampaign } from '../campaign/campaign';
 import { isPhone, isTouchOnly } from '../game/device';
 import { CampaignPanel } from './CampaignPanel';
 import { ErrorBoundary } from './ErrorBoundary';
+import { Check, ChevronDown, ChevronLeft, Cross } from './icons';
 import { params } from './launch';
 import { StaticMap } from './StaticMap';
 import { setScreen } from '../state/store';
@@ -16,6 +17,8 @@ const SelectCanvas = lazy(() => import('./SelectCanvas'));
 const flatMap = isPhone || isTouchOnly || params.get('map') === 'static';
 
 const FACTION_KEY = 'imjin.faction';
+/** The order the sides are listed in: the allies first, the invader last. */
+const ORDER: Faction[] = ['joseon', 'ming', 'japan'];
 
 function readFaction(): Faction {
   try {
@@ -33,8 +36,6 @@ function saveFaction(f: Faction) {
     // storage unavailable: the choice lasts until the page reloads
   }
 }
-
-const enemyOf = (f: Faction): Faction => (f === 'japan' ? 'joseon' : 'japan');
 
 /** The nine historical battles: pick a battle on the map, pick a side, and sail. The 1592 campaign is a secondary mode here. */
 export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onStart: (id: ScenarioId, campaign: boolean, faction: Faction) => void }) {
@@ -58,7 +59,7 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
   const playable = !inCampaign || (!!campaign && !campaignOver(campaign) && id === current);
   const factions = playableFactions(id);
   const effective: Faction = inCampaign ? 'joseon' : factions.includes(side) ? side : 'joseon';
-  const ownSide: Faction = effective === 'japan' ? 'joseon' : effective;
+  const sides: Faction[] = [...factions].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
   const setSide = (f: Faction) => {
     sound.click();
     setSideRaw(f);
@@ -109,18 +110,17 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
               sound.click();
               setScreen('menu');
             }}
-            aria-label="메뉴로"
           >
-            <span aria-hidden>‹</span> 메뉴
+            <ChevronLeft /> 뒤로
           </button>
           <h1 className="screen-title">역사 전투</h1>
           <div className="screen-actions">
             <div className="seg" role="tablist">
-              <button className={mode === 'free' ? 'on' : ''} onClick={() => switchMode('free')}>
-                자유 전투
+              <button role="tab" aria-selected={mode === 'free'} className={mode === 'free' ? 'on' : ''} onClick={() => switchMode('free')}>
+                단일 전투
               </button>
-              <button className={mode === 'campaign' ? 'on' : ''} onClick={() => switchMode('campaign')}>
-                전역 · 1592
+              <button role="tab" aria-selected={mode === 'campaign'} className={mode === 'campaign' ? 'on' : ''} onClick={() => switchMode('campaign')}>
+                연속 전투
               </button>
             </div>
           </div>
@@ -128,7 +128,11 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
         <div className="hs-tabs">
           {SCENARIO_ORDER.map((sid) => (
             <button key={sid} className={`hs-tab ${sid === id ? 'hs-tab--on' : ''} ${locked(sid) ? 'hs-tab--locked' : ''}`} disabled={locked(sid)} onClick={() => setId(sid)}>
-              {inCampaign && record(sid) && <span className={`tab-seal ${record(sid)!.win ? '' : 'tab-seal--loss'}`}>{record(sid)!.win ? '勝' : '敗'}</span>}
+              {inCampaign && record(sid) && (
+                <span className={`tab-seal ${record(sid)!.win ? '' : 'tab-seal--loss'}`} role="img" aria-label={record(sid)!.win ? '승리' : '패배'}>
+                  {record(sid)!.win ? <Check size={12} /> : <Cross size={12} />}
+                </span>
+              )}
               {SCENARIOS[sid].title}
               <small>{SCENARIOS[sid].date.slice(0, 4)}</small>
             </button>
@@ -138,13 +142,13 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
       <div className="hs-brief glass">
         <div className="hs-brief-wrap">
           <div className="hs-brief-scroll" ref={briefRef} data-more={more} onScroll={measure}>
+            <div className="select-date">
+              {s.date} · {s.place}
+            </div>
             <h2>
               {s.title}
               <span className="hanja">{s.hanja}</span>
             </h2>
-            <div className="select-date">
-              {s.date} · {s.place}
-            </div>
             <div className="select-brief-head">
               <span>
                 난이도 <b>{handicap(id, effective).difficulty}</b>
@@ -152,53 +156,48 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
               <span>{s.season}</span>
               {s.night && <span className="night-tag">야간 전투</span>}
             </div>
+            <p className="select-summary">{s.summary}</p>
             {!inCampaign && (
-              <div className="select-sides">
+              <div className="select-sides" role="radiogroup" aria-label="지휘할 진영">
                 {factions.map((f) => (
-                  <button key={f} className={`side-btn ${f === effective ? 'side-btn--on' : ''}`} onClick={() => setSide(f)}>
-                    <i className={`emblem emblem--${f}`}>{FACTION_MARK[f]}</i>
+                  <button key={f} role="radio" aria-checked={f === effective} className={`side-btn ${f === effective ? 'side-btn--on' : ''}`} onClick={() => setSide(f)}>
+                    <i className={`emblem emblem--${f}`} />
                     <span>
                       <b>{FACTION_SHORT[f]}</b>
                       <small>{commanderOf(id, f).name}</small>
                     </span>
                   </button>
                 ))}
-                <span className="side-vs">
-                  대적 <b>{commanderOf(id, enemyOf(effective)).name}</b>
-                </span>
               </div>
             )}
-            <p className="select-cmd">
-              조선 <b>{s.joseon.name}</b> <small>{s.joseon.title}</small> · 일본 <b>{s.japan.name}</b> <small>{s.japan.title}</small>
-            </p>
-            <p>{s.summary}</p>
             <div className="select-forces">
-              <div className="select-force">
-                <i className={`force-dot force-dot--${ownSide}`} />
-                {FACTION_NAME[ownSide].replace(' 수군', '')} — {forcesOf(id, ownSide)}
-              </div>
-              <div className="select-force">
-                <i className="force-dot force-dot--japan" />
-                일본 — {s.forces.japan}
-              </div>
+              {sides.map((f) => (
+                <div key={f} className={`select-force select-force--${f}`}>
+                  <b>{FACTION_NAME[f]}</b>
+                  <span>
+                    {commanderOf(id, f).name} <small>{commanderOf(id, f).title}</small>
+                  </span>
+                  <span>{forcesOf(id, f)}</span>
+                </div>
+              ))}
             </div>
           </div>
           {more && (
             <button type="button" className="hs-more" onClick={() => briefRef.current?.scrollBy({ top: 140, behavior: 'smooth' })}>
-              더 보기 <span aria-hidden>⌄</span>
+              더 보기 <ChevronDown size={14} />
             </button>
           )}
         </div>
         <div className="hs-foot">
           <div className="select-foot">
-            <span className="select-result">{inCampaign && campaign ? `전역 ${Math.min(campaign.step + 1, CAMPAIGN_ORDER.length)}/${CAMPAIGN_ORDER.length} · 함대 ${campaign.squads.reduce((n, q) => n + q.ships.length, 0)}척` : `역사 기록 · ${s.result}`}</span>
+            <span className="select-result">{inCampaign && campaign ? `연속 전투 ${Math.min(campaign.step + 1, CAMPAIGN_ORDER.length)}/${CAMPAIGN_ORDER.length} · 함선 ${campaign.squads.reduce((n, q) => n + q.ships.length, 0)}척` : `역사 기록 · ${s.result}`}</span>
             {inCampaign && (
               <button className="chip" onClick={() => setCamp(true)}>
-                군영 · 정비
+                군영
               </button>
             )}
             <button className="ink-btn" disabled={!playable} onClick={() => onStart(id, inCampaign, effective)}>
-              {inCampaign && campaign && campaignOver(campaign) ? '전역 완료' : '전투 개시'}
+              {inCampaign && campaign && campaignOver(campaign) ? '완료' : '전투 시작'}
             </button>
           </div>
         </div>

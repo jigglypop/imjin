@@ -25,6 +25,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { BUILDINGS, type BuildingKind, type CapturePoint, type Conquest } from '../sim/conquest';
 import type { Faction, Team } from '../sim/types';
 import { equipment } from '../game/quality';
+import { iconSvg } from '../ui/battleIcons';
 
 /** Footprint widths in metres. */
 const SIZE: Record<BuildingKind, number> = { shipyard: 30, battery: 24, magazine: 11, dock: 20, beacon: 17 };
@@ -78,15 +79,19 @@ export async function preloadWorks() {
   await Promise.all((Object.keys(BUILDINGS) as BuildingKind[]).map((kind) => Promise.all([equipment.ships.skipLod0 ? null : loadModel(kind, ''), loadModel(kind, '_lod1')])));
 }
 
-/** Banner colours by navy, matching the squadron flags. */
-const FLAG: Record<Faction, Color> = { joseon: new Color('#c9ab6c'), japan: new Color('#1b1917'), ming: new Color('#9b2f22') };
-const NEUTRAL = new Color('#e9e2d0');
+/** Banner colours by navy: the faction tones of the HUD (styles.css), a little lifted so cloth reads in daylight. */
+const FLAG: Record<Faction, Color> = { joseon: new Color('#4f7088'), japan: new Color('#7a564a'), ming: new Color('#a08450') };
+const NEUTRAL = new Color('#d9dcdf');
+/** Ring strokes: the player's navy in slate, the foe's in umber, a point nobody holds in grey. */
+const RING_OWN = new Color('#7597b1');
+const RING_FOE = new Color('#b0806c');
+const RING_WARN = new Color('#d1b274');
 
 type Label = { root: HTMLDivElement; name: HTMLElement; bar: HTMLElement; fill: HTMLElement; works: HTMLElement; last: string };
 
 /**
- * The capture points of a conquest battle: a ring on the water that fills as a point changes hands, the shore works
- * on land, a banner in the holder's colours, and a label with the name, the hold and the works.
+ * The capture points of a conquest battle: a thin ring on the water that fills as a point changes hands, the shore
+ * works on land, a banner in the holder's colours, and a small glass label with the name, the hold and the works.
  */
 export class ConquestView {
   readonly group = new Group();
@@ -165,7 +170,7 @@ export class ConquestView {
   }
 
   private addRing(p: CapturePoint) {
-    const geo = new RingGeometry(0.955, 1, 160, 1);
+    const geo = new RingGeometry(0.986, 1, 192, 1);
     geo.rotateX(-Math.PI / 2);
     const color = uniform(new Color(1, 1, 1));
     const capture = uniform(new Color(1, 1, 1));
@@ -173,15 +178,15 @@ export class ConquestView {
     const selected = uniform(0);
     const contested = uniform(0);
     const mat = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
-    // The ring fills clockwise in the capturing side's colour as the hold moves away from the holder.
+    // The ring fills clockwise in the capturing side's tone as the hold moves away from the holder.
     const c = uv().sub(0.5);
     const angle = fract(atan(c.y, c.x).div(Math.PI * 2).add(0.25));
     const filled = step(angle, abs(hold));
     const base = mix(color, capture, filled);
     const pulse = sin(time.mul(7)).mul(0.5).add(0.5);
-    const rgb = mix(base, vec3(1, 0.35, 0.2), contested.mul(pulse).mul(0.6));
-    mat.colorNode = vec4(rgb.mul(1.2), 1);
-    mat.opacityNode = float(0.42).add(selected.mul(0.4)).add(contested.mul(pulse).mul(0.25));
+    const rgb = mix(base, vec3(RING_WARN.r, RING_WARN.g, RING_WARN.b), contested.mul(pulse).mul(0.7));
+    mat.colorNode = vec4(rgb, 1);
+    mat.opacityNode = float(0.6).add(selected.mul(0.3)).add(contested.mul(pulse).mul(0.15));
     mat.fog = false;
     const mesh = new Mesh(geo, mat);
     mesh.scale.setScalar(p.r);
@@ -195,16 +200,19 @@ export class ConquestView {
   private addLabel(p: CapturePoint): Label {
     const root = document.createElement('div');
     root.className = 'cpoint';
-    const name = document.createElement('div');
+    const pill = document.createElement('div');
+    pill.className = 'cpoint-pill';
+    const name = document.createElement('span');
     name.className = 'cpoint-name';
     name.textContent = p.name;
+    const works = document.createElement('span');
+    works.className = 'cpoint-works';
     const bar = document.createElement('div');
     bar.className = 'cpoint-bar';
     const fill = document.createElement('i');
     bar.appendChild(fill);
-    const works = document.createElement('div');
-    works.className = 'cpoint-works';
-    root.append(name, bar, works);
+    pill.append(name, works, bar);
+    root.appendChild(pill);
     root.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       if (e.button === 0) this.onSelect?.(p.id);
@@ -215,7 +223,7 @@ export class ConquestView {
 
   private teamColor(team: Team | null, playerTeam: Team) {
     if (!team) return NEUTRAL;
-    return team === playerTeam ? new Color('#e3c27a') : new Color('#b8432f');
+    return team === playerTeam ? RING_OWN : RING_FOE;
   }
 
   update(camera: PerspectiveCamera, width: number, height: number, playerTeam: Team, selected: number, showLabels: boolean) {
@@ -282,12 +290,12 @@ export class ConquestView {
     this.updateLabels(camera, width, height, playerTeam, selected, showLabels);
   }
 
-  /** Bottom edge of the top bar and the span it covers, so labels never sit under it. Re-measured twice a second. */
+  /** Bottom edge of the score panel and the span it covers, so labels never sit under it. Re-measured twice a second. */
   private barBox() {
     const now = performance.now();
     if (now - this.barAt > 500) {
       this.barAt = now;
-      const el = document.querySelector('.cq-bar');
+      const el = document.querySelector('.balance');
       const r = el?.getBoundingClientRect();
       this.bar = r && r.height > 0 ? { left: r.left - 8, right: r.right + 8, bottom: r.bottom + 6 } : { left: 0, right: 0, bottom: 0 };
     }
@@ -307,6 +315,11 @@ export class ConquestView {
     const cands: { label: Label; p: CapturePoint; sx: number; sy: number; dist: number; scale: number; rank: number; edge: boolean }[] = [];
     c.points.forEach((p, i) => {
       const label = this.labels[i]!;
+      // The picked point is described by its own panel; a label behind that glass would only show through as ghost text.
+      if (selected === p.id) {
+        label.root.style.display = 'none';
+        return;
+      }
       this.tmp.set(p.x, 26, p.z);
       const dist = this.tmp.distanceTo(camera.position);
       this.tmp.project(camera);
@@ -366,14 +379,15 @@ export class ConquestView {
       label.root.style.transform = `translate(${l.toFixed(1)}px, ${top.toFixed(1)}px) scale(${scale.toFixed(3)})`;
       const holder = c.teamOfPoint(p);
       const side = holder ? (holder === playerTeam ? 'own' : 'foe') : 'none';
-      const works = p.buildings.map((bd) => (bd ? BUILDINGS[bd.kind].hanja[0]! + (bd.progress < 1 ? '·' : '') : '')).join('');
+      const works = p.buildings.map((bd) => (bd ? `${bd.kind}${bd.progress < 1 ? '*' : ''}` : '')).join(',');
       const key = `${edge}|${side}|${p.contested}|${selected === p.id}|${works}|${p.queue.length}|${Math.round(Math.abs(p.hold) * 20)}`;
       if (key === label.last) continue;
       label.last = key;
       label.root.className = `cpoint cpoint--${side}${p.contested ? ' cpoint--contested' : ''}${selected === p.id ? ' cpoint--selected' : ''}${p.home >= 0 ? ' cpoint--home' : ''}${edge ? ' cpoint--edge' : ''}`;
       label.fill.style.width = `${Math.round(Math.abs(p.hold) * 100)}%`;
       label.fill.className = p.hold === 0 ? '' : (p.hold > 0 ? 'joseon' : 'japan') === playerTeam ? 'own' : 'foe';
-      label.works.textContent = works + (p.queue.length ? ` 船${p.queue.length}` : '');
+      label.works.innerHTML =
+        p.buildings.map((bd) => (bd ? `<span class="${bd.progress < 1 ? 'cpoint-wip' : ''}">${iconSvg(bd.kind, 13)}</span>` : '')).join('') + (p.queue.length ? `<em>함선 ${p.queue.length}</em>` : '');
     }
   }
 

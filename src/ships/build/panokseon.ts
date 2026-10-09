@@ -80,7 +80,7 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
   const { P } = ctx;
   const hullPaint = P('hull_plank');
   const timber = P('dark_timber');
-  const red = P('red_lacquer');
+  const stain = P('stained_wood');
   const dark = P('dark_timber', { tint: [0.16, 0.15, 0.14] });
   const rope = P('rope');
   const sheer = (x: number) => plan.sheer * Math.pow(Math.abs((2 * x) / L), 2.2);
@@ -94,7 +94,7 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
   deckPlane(ctx, h, P('deck_plank'), -L / 2 + 0.35, L / 2 - 0.35, deck, 0.04);
   if (lod === 0) deckPlane(ctx, h, P('deck_plank', { tint: [0.7, 0.68, 0.64] }), -L / 2 + 3, L / 2 - 3, deck - 1.9, 0.5);
   const wales: [number, number, number][] = lod === 0 ? [[0.35, 0.16, 0.34], [1.35, 0.14, 0.26], [deck - 0.06, 0.2, 0.3]] : lod === 1 ? [[deck - 0.06, 0.2, 0.3]] : [];
-  for (const [y, t, tall] of wales) sideTimber(ctx, h, y === deck - 0.06 ? red : timber.tinted(tintV), -L / 2 + 0.6, L / 2 - 0.6, y, t, tall, 0.07);
+  for (const [y, t, tall] of wales) sideTimber(ctx, h, y === deck - 0.06 ? stain : timber.tinted(tintV), -L / 2 + 0.6, L / 2 - 0.6, y, t, tall, 0.07);
 
   // --- oars and their ports ---
   for (const op of anchors.oarPorts) {
@@ -109,7 +109,7 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
       .filter((g) => g.side === side)
       .map((g) => ({ x: g.pos[0], w: 0.85, y0: deck + 0.5, y1: deck + 1.2 }));
   // Shield boards: repainted every few campaigns, so a little faded.
-  const shields = [P('shield_cloud', { rect: [0.02, 0.02, 0.98, 0.98], tint: [0.88, 0.85, 0.82] }), P('shield_tiger', { rect: [0.02, 0.02, 0.98, 0.98], tint: [0.88, 0.85, 0.82] })];
+  const shields = [P('shield_cloud', { rect: [0.02, 0.02, 0.98, 0.98], tint: [0.78, 0.7, 0.62] }), P('shield_tiger', { rect: [0.02, 0.02, 0.98, 0.98], tint: [0.78, 0.7, 0.62] })];
   for (const side of [-1, 1] as const) {
     wallRun(ctx, side, -L / 2 + 0.3, L / 2 - 0.3, deck, top, outer, 0.26, ports(side === -1 ? 0 : 1), timber.tinted(wallTint), timber.tinted([0.8, 0.78, 0.74]));
     // coping rail along the top
@@ -119,7 +119,7 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
       const x = -L / 2 + 0.3 + ((L - 0.6) * i) / n;
       path.push([x, top(x) + 0.08, side * (outer(x) - 0.12)]);
     }
-    sweep(b, red, path, rectSection(0.44, 0.18));
+    sweep(b, stain, path, rectSection(0.44, 0.18));
   }
   // bow and stern walls
   for (const sgn of [-1, 1]) {
@@ -140,7 +140,7 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
         const y0 = deck + 0.28;
         const y1 = y0 + plan.parapet - 0.55;
         const sh = variant === 1 ? shields[1]! : variant === 2 ? shields[0]! : shields[(i + (side > 0 ? 1 : 0)) % 2]!;
-        b.quadF(red, [[x - wb / 2 - 0.08, y0 - 0.06, z], [x + wb / 2 + 0.08, y0 - 0.06, z], [x + wb / 2 + 0.08, y1 + 0.06, z], [x - wb / 2 - 0.08, y1 + 0.06, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+        b.quadF(stain, [[x - wb / 2 - 0.08, y0 - 0.06, z], [x + wb / 2 + 0.08, y0 - 0.06, z], [x + wb / 2 + 0.08, y1 + 0.06, z], [x - wb / 2 - 0.08, y1 + 0.06, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
         b.quadF(sh, [[x - wb / 2, y0, z + side * 0.012], [x + wb / 2, y0, z + side * 0.012], [x + wb / 2, y1, z + side * 0.012], [x - wb / 2, y1, z + side * 0.012]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
         for (const dx of [-1.2, 1.2]) {
           const xs = x + dx;
@@ -153,8 +153,8 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
     for (const g of anchors.gunPorts) {
       const side = g.side === 0 ? -1 : 1;
       const z = side * (outer(g.pos[0]) + 0.02);
-      for (const dx of [-0.55, 0.55]) box(b, red, [g.pos[0] + dx - 0.09, deck + 0.3, z - 0.17], [g.pos[0] + dx + 0.09, deck + 1.45, z + 0.17], { grain: 1 });
-      box(b, red, [g.pos[0] - 0.64, deck + 1.2, z - 0.17], [g.pos[0] + 0.64, deck + 1.4, z + 0.17], { grain: 0 });
+      for (const dx of [-0.55, 0.55]) box(b, stain, [g.pos[0] + dx - 0.09, deck + 0.3, z - 0.17], [g.pos[0] + dx + 0.09, deck + 1.45, z + 0.17], { grain: 1 });
+      box(b, stain, [g.pos[0] - 0.64, deck + 1.2, z - 0.17], [g.pos[0] + 0.64, deck + 1.4, z + 0.17], { grain: 0 });
       cannon(ctx, [g.pos[0], g.pos[1], side * (outer(g.pos[0]) + 0.02)], [0, 0, side], g.gun, timber, P('bronze', { tint: [1.25, 0.95, 0.7] }), P('iron_hex', { surf: 2 }));
     }
   }
@@ -231,9 +231,9 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
   hatch(ctx, P('deck_plank'), dark, 8.6, deck, 0.2, 1.8, 1.4);
   windlass(ctx, timber, P('iron_hex', { surf: 2 }), 7.0, deck, 2.0);
   for (const side of [-1, 1]) anchorProp(ctx, timber, P('iron_hex', { surf: 2 }), [14.2, deck - 0.1, side * (outer(14.2) + 0.45)]);
-  for (const l of anchors.lanterns) lantern(ctx, P('red_lacquer', { tint: [1.3, 0.9, 0.7] }), timber, l);
-  // bracket dentils under the coping and projecting deck-beam ends
-  blockRow(ctx, h, red, -16.5, 16.5, 0.95, (x) => top(x) - 0.34, [0.24, 0.26, 0.32], 0.1);
+  for (const l of anchors.lanterns) lantern(ctx, P('sail_hemp', { tint: [1.35, 1.15, 0.85] }), timber, l);
+  // bracket dentils under the coping (the one small touch of faded oxblood left on the hull) and projecting deck-beam ends
+  blockRow(ctx, h, P('stained_wood', { tint: [1.7, 0.8, 0.72] }), -16.5, 16.5, 0.95, (x) => top(x) - 0.34, [0.24, 0.26, 0.32], 0.1);
   blockRow(ctx, h, timber, -17, 17, 2.3, deck - 0.42, [0.34, 0.3, 0.7], 0.2);
   return b.data();
 }
@@ -245,7 +245,7 @@ function pavilion(ctx: Ctx, plan: PanokPlan, variant: number) {
   const floorY = deck + pv.floorUp;
   const x0 = pv.x;
   const timber = P('dark_timber');
-  const red = P('red_lacquer');
+  const stain = P('stained_wood');
   const dan = P('dancheong');
   const giwa = P('giwa');
   const hx = pv.hx;
@@ -278,8 +278,8 @@ function pavilion(ctx: Ctx, plan: PanokPlan, variant: number) {
       [x0 + hx, railY, hz],
       [x0 + hx, railY, hz * 0.1 + 1.25],
     ];
-    sweep(b, red, edge.slice(0, 5), rectSection(0.12, 0.12), { caps: true });
-    for (const pt of [edge[0]!, edge[1]!, edge[2]!, edge[3]!, edge[4]!]) post(ctx, red, pt[0], floorY, railY + 0.12, pt[2], 0.17);
+    sweep(b, stain, edge.slice(0, 5), rectSection(0.12, 0.12), { caps: true });
+    for (const pt of [edge[0]!, edge[1]!, edge[2]!, edge[3]!, edge[4]!]) post(ctx, stain, pt[0], floorY, railY + 0.12, pt[2], 0.17);
     if (lod === 0) {
       const bal = (xa: number, za: number, xb: number, zb: number) => {
         const n = Math.max(1, Math.round(Math.hypot(xb - xa, zb - za) / 0.6));
@@ -295,11 +295,11 @@ function pavilion(ctx: Ctx, plan: PanokPlan, variant: number) {
   const px = hx * 0.78;
   const pz = hz * 0.78;
   const tier3 = pv.tiers === 3;
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) post(ctx, tier3 ? timber : red, x0 + sx * px, floorY, yTop, sz * pz, tier3 ? 0.3 : 0.42);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) post(ctx, tier3 ? timber : stain, x0 + sx * px, floorY, yTop, sz * pz, tier3 ? 0.3 : 0.42);
   if (lod < 2) {
     for (const sz of [-1, 1]) box(b, tier3 ? timber : dan, [x0 - px - 0.3, yTop - 0.55, sz * pz - 0.2], [x0 + px + 0.3, yTop - 0.1, sz * pz + 0.2], { grain: 0 });
     for (const sx of [-1, 1]) box(b, tier3 ? timber : dan, [x0 + sx * px - 0.2, yTop - 0.55, -pz - 0.3], [x0 + sx * px + 0.2, yTop - 0.1, pz + 0.3], { grain: 2 });
-    for (const sz of [-1, 1]) box(b, red, [x0 - px, floorY + 1.05, sz * pz - 0.1], [x0 + px, floorY + 1.25, sz * pz + 0.1], { grain: 0 });
+    for (const sz of [-1, 1]) box(b, stain, [x0 - px, floorY + 1.05, sz * pz - 0.1], [x0 + px, floorY + 1.25, sz * pz + 0.1], { grain: 0 });
     if (variant === 1) {
       // enclosed lower storey: plank walls on three sides with a lattice band
       const wallPaint = timber.tinted([0.9, 0.85, 0.8]);
@@ -321,7 +321,7 @@ function pavilion(ctx: Ctx, plan: PanokPlan, variant: number) {
   if (lod === 0 && variant !== 2) {
     b.with(xlate(x0 + hx - 0.9, floorY, -hz + 0.9), () => {
       const prof: V2[] = [[0.5, 0.45], [0.58, 0.8], [0.58, 1.1], [0.5, 1.45]];
-      lathe(b, red, prof, 12);
+      lathe(b, stain, prof, 12);
       polygon(b, P('sail_hemp'), Array.from({ length: 12 }, (_, i): V3 => [Math.cos((i / 12) * 6.283) * 0.5, 1.45, Math.sin((i / 12) * 6.283) * 0.5]), [0, 1, 0], (p) => P('sail_hemp').map(p[0], p[2]));
       for (const sx of [-1, 1]) box(b, timber, [sx * 0.5 - 0.06, 0, -0.35], [sx * 0.5 + 0.06, 0.8, 0.35], { grain: 1 });
     });
@@ -333,7 +333,7 @@ function pavilion(ctx: Ctx, plan: PanokPlan, variant: number) {
   const nS = byLod(ctx, 6, 3, 1);
   const nE = byLod(ctx, 12, 6, 2);
   const roofTile = tier3 ? P('sail_hemp', { tint: [0.9, 0.82, 0.7] }) : giwa;
-  const trim = tier3 ? red : dan;
+  const trim = tier3 ? stain : dan;
   const cap = tier3 ? timber : P('dark_timber', { tint: [0.45, 0.45, 0.47] });
   b.with(xlate(x0, 0, 0), () => {
     hipRoof(b, roofTile, trim, cap, { hx: eaveHx, hz: eaveHz, ridge: tier3 ? 0.5 : ridge, y: yTop + 0.05, rise: pv.roofRise, lift: tier3 ? 0.25 : 0.55, concave: tier3 ? 1.2 : 1.7, nSlope: nS, nEave: nE, fascia: tier3 ? 0.22 : 0.34 });
@@ -350,7 +350,7 @@ function pavilion(ctx: Ctx, plan: PanokPlan, variant: number) {
     const ux = hx * 0.45;
     const uz = hz * 0.4;
     box(b, dan, [x0 - ux - 0.3, uy, -uz - 0.3], [x0 + ux + 0.3, uy + 0.3, uz + 0.3], { grain: 0 });
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) post(ctx, red, x0 + sx * ux, uy + 0.3, uy + 2.1, sz * uz, 0.3);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) post(ctx, stain, x0 + sx * ux, uy + 0.3, uy + 2.1, sz * uz, 0.3);
     const uh = ux + 0.95;
     const uw = uz + 0.95;
     b.with(xlate(x0, 0, 0), () => hipRoof(b, giwa, dan, cap, { hx: uh, hz: uw, ridge: Math.max(0.3, uh - uw - 0.2), y: uy + 2.15, rise: 1.15, lift: 0.4, concave: 1.6, nSlope: nS, nEave: nE, fascia: 0.28 }));
@@ -371,14 +371,14 @@ function lookout(ctx: Ctx, plan: PanokPlan, variant: number) {
   const x0 = plan.hull.length / 2 - 4.2;
   const fy = deck + 2.3;
   const timber = P('dark_timber');
-  const red = P('red_lacquer');
+  const stain = P('stained_wood');
   const hw = 1.6;
   box(b, P('deck_plank'), [x0 - hw, fy - 0.22, -hw], [x0 + hw, fy, hw], { grain: 0 });
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) post(ctx, timber, x0 + sx * (hw - 0.2), deck, fy, sz * (hw - 0.2), 0.3);
   if (lod < 2) {
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) post(ctx, red, x0 + sx * (hw - 0.15), fy, fy + 1.0, sz * (hw - 0.15), 0.14);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) post(ctx, stain, x0 + sx * (hw - 0.15), fy, fy + 1.0, sz * (hw - 0.15), 0.14);
     const rail: V3[] = [[x0 + hw - 0.15, fy + 0.95, -hw + 0.15], [x0 - hw + 0.15, fy + 0.95, -hw + 0.15], [x0 - hw + 0.15, fy + 0.95, hw - 0.15], [x0 + hw - 0.15, fy + 0.95, hw - 0.15], [x0 + hw - 0.15, fy + 0.95, -hw + 0.15]];
-    sweep(ctx.b, red, rail, rectSection(0.1, 0.1), { caps: true });
+    sweep(ctx.b, stain, rail, rectSection(0.1, 0.1), { caps: true });
     cylinder(b, P('pine_mast'), [x0, fy, 0], [x0, fy + 3.2, 0], 0.13, 0.1, 6, true);
     void variant;
   }

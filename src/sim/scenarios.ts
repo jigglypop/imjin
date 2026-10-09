@@ -68,13 +68,13 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     title: '옥포 해전',
     hanja: '玉浦海戰',
     date: '1592년 5월 7일',
-    season: '임진년 늦봄',
+    season: '늦봄',
     place: '거제 옥포만',
     difficulty: '쉬움',
     summary:
-      '전쟁이 시작되고 스무날, 조선 수군의 첫 출전이다. 도도 다카토라의 왜선들이 옥포 포구에 배를 대고 마을을 약탈하고 있다. 이순신은 "가벼이 움직이지 말고 산처럼 침착하라" 이르고 포구로 돌입한다.',
-    result: '왜선 26척 격파, 아군 손실 없음',
-    forces: { joseon: '판옥선 28 · 협선 17', japan: '왜선 50여 척 (정박)' },
+      '임진왜란이 시작되고 3주쯤 지난 5월 7일, 조선 수군이 처음으로 출전한 해전입니다. 도도 다카토라가 이끄는 일본 함선들이 옥포 포구에 정박해 마을을 약탈하고 있었고, 이순신의 함대가 포구로 들어가 공격했습니다. 일본 함선 26척을 격파했으며 조선 수군의 손실은 없었습니다.',
+    result: '일본 함선 26척 격파, 아군 손실 없음',
+    forces: { joseon: '판옥선 28 · 협선 17', japan: '함선 50여 척 (정박)' },
     sky: 'afternoon',
     sea: 'rough',
     night: false,
@@ -90,19 +90,19 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     title: '사천 해전',
     hanja: '泗川海戰',
     date: '1592년 5월 29일',
-    season: '임진년 초여름',
+    season: '초여름',
     place: '사천 선창',
     difficulty: '보통',
     summary:
-      '거북선이 처음으로 바다에 나섰다. 언덕 위 왜군의 조총이 포구를 지키니, 조선 수군은 물러나는 척하여 적선을 끌어낸다. 밀물이 차오르는 순간 거북선이 용머리로 연기를 뿜으며 돌격한다. 이 싸움에서 이순신은 왼쪽 어깨에 총탄을 맞았다.',
-    result: '왜선 13척 전부 격파',
+      '거북선이 처음으로 실전에 투입된 해전입니다. 일본군은 언덕 위에 조총 부대를 두고 선창에 배를 정박해 두었는데, 조선 수군은 물러나는 척하며 적선을 바다로 끌어낸 뒤 거북선을 앞세워 돌격했습니다. 이순신은 이 싸움에서 왼쪽 어깨에 총상을 입었습니다.',
+    result: '일본 함선 13척 전부 격파',
     forces: { joseon: '판옥선 25 · 거북선 1', japan: '대선 4 · 중선 9' },
     sky: 'day',
     sea: 'rough',
     night: false,
     terrain: SACHEON_TERRAIN,
     joseon: YI,
-    japan: { name: '사천 주둔 왜군', title: '선창 수비대', figure: 'fig_japan', portrait: 'portrait_japan', banner: '倭' },
+    japan: { name: '사천 주둔 일본군', title: '선창 수비대', figure: 'fig_japan', portrait: 'portrait_japan', banner: '日' },
     map: { x: 0.5, y: 0.56 },
     arrows: [{ from: [0.52, 0.64], to: [0.5, 0.565], team: 'joseon' }],
     view: { tx: 0, tz: -200, dir: -Math.PI / 2, dist: 1050, pitch: 0.3 },
@@ -112,12 +112,12 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     title: '당포 해전',
     hanja: '唐浦海戰',
     date: '1592년 6월 2일',
-    season: '임진년 여름',
+    season: '여름',
     place: '통영 당포',
     difficulty: '보통',
     summary:
-      '당포 선창에 왜선 21척이 정박했다. 층루를 높이 세운 대장선 위에서 구루시마 미치유키가 붉은 일산 아래 지휘한다. 거북선이 대장선을 들이받고 판옥선들이 총통을 쏘아붙이니, 적장은 화살에 맞아 쓰러진다.',
-    result: '왜선 21척 전부 격파, 적장 구루시마 미치유키 전사',
+      '당포 선창에 정박한 일본 함선 21척을 공격한 해전입니다. 거북선이 층루를 높게 세운 일본 대장선을 들이받고 판옥선들이 총통을 쏘았으며, 일본 장수 구루시마 미치유키가 화살에 맞아 쓰러졌습니다.',
+    result: '일본 함선 21척 전부 격파, 적장 구루시마 미치유키 전사',
     forces: { joseon: '판옥선 24 · 거북선 2', japan: '대선 9 · 중소선 12' },
     sky: 'afternoon',
     sea: 'rough',
@@ -134,12 +134,12 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     title: '한산도 대첩',
     hanja: '閑山島大捷',
     date: '1592년 7월 8일',
-    season: '임진년 여름',
+    season: '여름',
     place: '견내량 · 한산도 앞바다',
     difficulty: '보통',
     summary:
-      '견내량의 좁은 물길에 정박한 와키자카 야스하루의 함대를 넓은 바다로 끌어낸다. 판옥선 몇 척이 미끼가 되어 물러나면, 기다리던 함대가 학의 날개처럼 펼쳐 적을 감싸고 총통을 퍼붓는다.',
-    result: '왜선 59척 격침·나포, 14척 도주',
+      '견내량의 좁은 물길에 정박한 와키자카 야스하루의 함대를 한산도 앞바다로 끌어낸 해전입니다. 조선 수군은 판옥선 몇 척으로 적을 유인한 뒤 학익진으로 에워싸고 총통을 쏘아 59척을 격침하거나 나포했습니다.',
+    result: '일본 함선 59척 격침·나포, 14척 도주',
     forces: { joseon: '판옥선 53 · 거북선 3', japan: '대선 36 · 중선 24 · 소선 13' },
     sky: 'afternoon',
     sea: 'rough',
@@ -159,12 +159,12 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     title: '안골포 해전',
     hanja: '安骨浦海戰',
     date: '1592년 7월 10일',
-    season: '임진년 여름',
+    season: '여름',
     place: '진해 안골포',
     difficulty: '어려움',
     summary:
-      '한산도의 패보를 들은 구키 요시타카와 가토 요시아키는 좁고 얕은 안골포 깊숙이 배를 숨기고 나오지 않는다. 판옥선은 포구에 들어갈 수 없으니, 여러 척이 번갈아 드나들며 총통을 쏘아 정박한 적선을 하나씩 깨뜨린다.',
-    result: '왜선 20여 척 격파, 남은 적은 밤에 도주',
+      '한산도 대첩 이틀 뒤, 구키 요시타카와 가토 요시아키의 함대가 숨어 있는 안골포를 공격한 해전입니다. 포구가 좁고 얕아 판옥선이 한꺼번에 들어갈 수 없었기 때문에, 여러 척이 번갈아 드나들며 정박한 적선에 총통을 쏘았습니다.',
+    result: '일본 함선 20여 척 격파, 남은 적은 밤에 도주',
     forces: { joseon: '판옥선 52 · 거북선 2', japan: '대선 21 · 중선 15 · 소선 6' },
     sky: 'overcast',
     sea: 'rough',
@@ -181,19 +181,19 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     title: '부산포 해전',
     hanja: '釜山浦海戰',
     date: '1592년 9월 1일',
-    season: '임진년 가을',
+    season: '가을',
     place: '부산포',
     difficulty: '어려움',
     summary:
-      '왜군의 본거지 부산포에 470여 척이 정박해 있다. 장사진으로 포구에 돌입한 조선 수군은 해안의 조총 사격을 받으며 정박한 적선을 차례로 불태운다. 선봉장 정운이 이 싸움에서 전사했다.',
-    result: '왜선 100여 척 격파',
-    forces: { joseon: '판옥선 71 · 거북선 3 · 협선 92', japan: '정박선 470여 척' },
+      '일본군의 거점인 부산포에는 470여 척이 정박해 있었습니다. 조선 수군은 포구 안으로 돌입해 해안의 조총 사격을 받으면서도 정박한 일본 함선을 차례로 불태웠습니다. 선봉장 정운이 이 싸움에서 전사했습니다.',
+    result: '일본 함선 100여 척 격파',
+    forces: { joseon: '판옥선 71 · 거북선 3 · 협선 92', japan: '정박 함선 470여 척' },
     sky: 'day',
     sea: 'rough',
     night: false,
     terrain: BUSAN_TERRAIN,
     joseon: YI,
-    japan: { name: '부산 왜군', title: '주둔 수군', figure: 'fig_japan', portrait: 'portrait_japan', banner: '倭' },
+    japan: { name: '부산 주둔 일본군', title: '주둔 수군', figure: 'fig_japan', portrait: 'portrait_japan', banner: '日' },
     map: { x: 0.77, y: 0.47 },
     arrows: [{ from: [0.66, 0.6], to: [0.76, 0.48], team: 'joseon' }],
     view: { tx: -1000, tz: 2700, dir: -1.33, dist: 1100, pitch: 0.3 },
@@ -203,13 +203,13 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     title: '칠천량 해전',
     hanja: '漆川梁海戰',
     date: '1597년 7월 16일',
-    season: '정유년 여름 · 새벽',
+    season: '여름 · 새벽',
     place: '거제 칠천량',
-    difficulty: '극악',
+    difficulty: '극히 어려움',
     summary:
-      '이순신이 투옥된 뒤 통제사가 된 원균은 칠천량에 함대를 정박한다. 새벽 어둠 속에 불을 끈 왜선 수백 척이 사방에서 다가온다. 역사 속 조선 수군은 이 밤에 무너졌다. 등불을 끄고 포위를 뚫어 한 척이라도 더 살려내라.',
+      '이순신이 투옥된 뒤 삼도수군통제사가 된 원균은 칠천량에 함대를 정박시켰습니다. 새벽 어둠 속에서 일본 함대가 사방으로 접근해 기습했고, 조선 수군은 이 싸움에서 궤멸했습니다. 포위를 뚫고 최대한 많은 함선을 지켜 내는 것이 목표입니다.',
     result: '조선 수군 궤멸, 배설의 판옥선 12척만 탈출',
-    forces: { joseon: '판옥선 134 · 거북선 3', japan: '왜선 500여 척 (야습)' },
+    forces: { joseon: '판옥선 134 · 거북선 3', japan: '함선 500여 척 (야습)' },
     sky: 'night',
     sea: 'rough',
     night: true,
@@ -228,13 +228,13 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     title: '명량 해전',
     hanja: '鳴梁海戰',
     date: '1597년 9월 16일',
-    season: '정유년 가을',
+    season: '가을',
     place: '울돌목',
     difficulty: '매우 어려움',
     summary:
-      '칠천량에서 수군이 무너지고 남은 배는 열세 척. 울돌목의 거센 물살 앞에서 대장선이 홀로 133척을 막아선다. 물길이 뒤집히는 순간이 승부를 가른다. "신에게는 아직 열두 척의 배가 남아 있사옵니다."',
-    result: '왜선 31척 격파, 적 퇴각',
-    forces: { joseon: '판옥선 13', japan: '왜선 133척' },
+      '칠천량의 패배 뒤 조선 수군에게 남은 배는 열세 척뿐이었습니다. 이순신은 울돌목의 거센 물살을 이용해 일본 함선 133척과 맞섰고, 물살의 방향이 바뀐 뒤 반격에 나서 31척을 격파했습니다.',
+    result: '일본 함선 31척 격파, 적 퇴각',
+    forces: { joseon: '판옥선 13', japan: '함선 133척' },
     sky: 'overcast',
     sea: 'rough',
     night: false,
@@ -251,13 +251,13 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     title: '노량 해전',
     hanja: '露梁海戰',
     date: '1598년 11월 19일',
-    season: '무술년 겨울 · 새벽',
+    season: '겨울 · 새벽',
     place: '노량 해협 · 관음포',
     difficulty: '매우 어려움',
     summary:
-      '전쟁의 마지막 밤. 순천에 갇힌 고니시를 구하려 시마즈 요시히로의 함대 500척이 노량 해협으로 밀려든다. 조선 수군과 진린의 명 수군이 해협 끝에서 기다린다. 횃불과 불화살이 어둠을 가르고, 새벽녘 이순신은 "싸움이 급하니 나의 죽음을 알리지 말라" 하였다.',
-    result: '왜선 200여 척 격파, 이순신 전사',
-    forces: { joseon: '판옥선 60', ming: '전선 30 · 사선 33', japan: '왜선 500여 척' },
+      '임진왜란의 마지막 해전입니다. 순천에 고립된 고니시 유키나가를 구하려는 시마즈 요시히로의 함대 500여 척과 조선·명 연합 수군이 노량 해협에서 밤새 맞붙었습니다. 이순신은 새벽 전투 중 전사했습니다.',
+    result: '일본 함선 200여 척 격파, 이순신 전사',
+    forces: { joseon: '판옥선 60', ming: '전선 30 · 사선 33', japan: '함선 500여 척' },
     sky: 'night',
     sea: 'rough',
     night: true,
@@ -429,7 +429,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     const harborShore = -900;
     const perSquad = [40, 40, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39];
     for (let q = 0; q < perSquad.length; q += 1) {
-      const sq = squad('japan', `부산포 정박 ${q + 1}진`, '왜장', q % 3 === 0 ? 'atakebune' : 'sekibune');
+      const sq = squad('japan', `부산포 정박 ${q + 1}진`, '일본 장수', q % 3 === 0 ? 'atakebune' : 'sekibune');
       const n = perSquad[q]!;
       const xs = -3100 + q * 520;
       for (let i = 0; i < n; i += 1) {
@@ -488,7 +488,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     });
     b.retreatBelow.japan =0.75;
   } else if (id === 'okpo') {
-    const anchored = [squad('japan', '도도 본대', '도도 다카토라', 'atakebune'), squad('japan', '옥포 정박 2진', '왜장', 'sekibune'), squad('japan', '옥포 정박 3진', '왜장', 'sekibune')];
+    const anchored = [squad('japan', '도도 본대', '도도 다카토라', 'atakebune'), squad('japan', '옥포 정박 2진', '일본 장수', 'sekibune'), squad('japan', '옥포 정박 3진', '일본 장수', 'sekibune')];
     anchorage(anchored[0]!, 18, -1500, 150, 650, 480, mix(0.5, 0.4), 0);
     anchorage(anchored[1]!, 17, -1100, -300, 600, 420, mix(0.3, 0.5), 0.3);
     anchorage(anchored[2]!, 15, -1050, 650, 560, 380, mix(0.2, 0.5), -0.3);
@@ -503,8 +503,8 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     line(sqHyeop, 'hyeopseon', grid(1600, 300, head, 17, 6, 34, 32, 8, rand), '협선');
     b.retreatBelow.japan =0.45;
   } else if (id === 'sacheon') {
-    const sq1 = squad('japan', '사천 선창 대선', '왜장', 'atakebune');
-    const sq2 = squad('japan', '사천 선창 중선', '왜장', 'sekibune');
+    const sq1 = squad('japan', '사천 선창 대선', '일본 장수', 'atakebune');
+    const sq2 = squad('japan', '사천 선창 중선', '일본 장수', 'sekibune');
     anchorage(sq1, 4, -350, -2900, 380, 520, () => 'atakebune', Math.PI / 2);
     anchorage(sq2, 9, -250, -2500, 520, 700, () => 'sekibune', Math.PI / 2);
     const head = -Math.PI / 2;
@@ -519,7 +519,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     b.retreatBelow.japan =0;
   } else if (id === 'dangpo') {
     const sqFlag = squad('japan', '구루시마 대장선단', '구루시마 미치유키', 'atakebune');
-    const sqRest = squad('japan', '당포 정박선', '왜장', 'sekibune');
+    const sqRest = squad('japan', '당포 정박선', '일본 장수', 'sekibune');
     anchorage(sqFlag, 9, -1350, -2100, 420, 380, () => 'atakebune', 0.6);
     anchorage(sqRest, 12, -1050, -1650, 520, 420, (i) => (i % 2 ? 'sekibune' : 'kobaya'), 0.6);
     const head = Math.atan2(-1900 - 1300, -1200 - 1100);
@@ -533,7 +533,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
   } else if (id === 'angolpo') {
     const sqKuki = squad('japan', '구키 본대', '구키 요시타카', 'atakebune');
     const sqKato = squad('japan', '가토 대', '가토 요시아키', 'atakebune');
-    const sqSmall = squad('japan', '안골포 중소선', '왜장', 'sekibune');
+    const sqSmall = squad('japan', '안골포 중소선', '일본 장수', 'sekibune');
     anchorage(sqKuki, 12, 150, -2350, 420, 520, (i) => (i < 11 ? 'atakebune' : 'sekibune'), Math.PI / 2);
     anchorage(sqKato, 12, 250, -1850, 420, 500, (i) => (i < 10 ? 'atakebune' : 'sekibune'), Math.PI / 2);
     anchorage(sqSmall, 18, 200, -1500, 520, 420, (i) => (i < 12 ? 'sekibune' : 'kobaya'), Math.PI / 2);
@@ -574,7 +574,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
       { name: '고니시 대', cmd: '고니시 유키나가', n: 75, x: 500, z: 4900, h: -Math.PI / 2 },
       { name: '구루시마 대', cmd: '구루시마 미치후사', n: 50, x: 800, z: 5800, h: -Math.PI / 2 },
       { name: '서쪽 매복', cmd: '모리 다카마사', n: 50, x: -1500, z: -3600, h: 0.9 },
-      { name: '남서 우회대', cmd: '왜장', n: 50, x: -1400, z: 4300, h: -0.8 },
+      { name: '남서 우회대', cmd: '일본 장수', n: 50, x: -1400, z: 4300, h: -0.8 },
     ];
     raid.forEach((g, gi) => {
       const kindOf = mix(0.18, 0.55);
@@ -601,7 +601,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     line(sqDeng, 'mingship', grid(-1900, 520, head, 14, 4, 66, 60, 10, rand), '명 선봉', 0);
     line(sqSha, 'mingsmall', grid(-3200, 900, head, 33, 6, 40, 36, 10, rand), '사선');
     for (let q = 0; q < 20; q += 1) {
-      const cmd = q === 0 ? '시마즈 요시히로' : q === 1 ? '다치바나 무네시게' : q === 2 ? '소 요시토시' : q === 3 ? '데라자와 마사나리' : '왜장';
+      const cmd = q === 0 ? '시마즈 요시히로' : q === 1 ? '다치바나 무네시게' : q === 2 ? '소 요시토시' : q === 3 ? '데라자와 마사나리' : '일본 장수';
       const sq = squad('japan', q < 4 ? `${cmd.split(' ')[0]} 대` : `사쓰마 ${q + 1}진`, cmd, q % 4 === 0 ? 'atakebune' : 'sekibune');
       const kindOf = mix(0.22, 0.6);
       grid(-550 + q * 300, (q % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, `${sq.name} ${i + 1}`, i === 0));

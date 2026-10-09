@@ -7,14 +7,14 @@ import { otherTeam, TEAMS, type Faction, type GunType, type LandSampler, type Sh
 
 export type BuildingKind = 'shipyard' | 'battery' | 'magazine' | 'dock' | 'beacon';
 
-export type BuildingSpec = { kind: BuildingKind; label: string; hanja: string; cost: number; time: number; hp: number; desc: string };
+export type BuildingSpec = { kind: BuildingKind; label: string; cost: number; time: number; hp: number; desc: string };
 
 export const BUILDINGS: Record<BuildingKind, BuildingSpec> = {
-  shipyard: { kind: 'shipyard', label: '선소', hanja: '船所', cost: 450, time: 40, hp: 520, desc: '전선을 건조한다' },
-  battery: { kind: 'battery', label: '포대', hanja: '砲臺', cost: 500, time: 45, hp: 640, desc: '사거리 안의 적선을 포격한다' },
-  magazine: { kind: 'magazine', label: '화약고', hanja: '火藥庫', cost: 300, time: 30, hp: 360, desc: '포구의 배에 탄약 보급 · 수입 +30%' },
-  dock: { kind: 'dock', label: '수리소', hanja: '修理所', cost: 350, time: 35, hp: 420, desc: '포구에 머문 배의 선체와 병력을 회복' },
-  beacon: { kind: 'beacon', label: '봉수대', hanja: '烽燧臺', cost: 300, time: 25, hp: 300, desc: '거점 가치 1.5배 · 야간 정찰' },
+  shipyard: { kind: 'shipyard', label: '선소', cost: 450, time: 40, hp: 520, desc: '함선을 건조합니다' },
+  battery: { kind: 'battery', label: '포대', cost: 500, time: 45, hp: 640, desc: '사거리 안의 적 함선을 포격합니다' },
+  magazine: { kind: 'magazine', label: '창고', cost: 300, time: 30, hp: 360, desc: '거점의 함선에 탄약을 보급하고 수입이 30% 늘어납니다' },
+  dock: { kind: 'dock', label: '수리소', cost: 350, time: 35, hp: 420, desc: '거점에 머문 함선의 선체와 병력을 회복합니다' },
+  beacon: { kind: 'beacon', label: '봉수대', cost: 300, time: 25, hp: 300, desc: '거점 가치가 1.5배가 되고 밤에도 멀리까지 볼 수 있습니다' },
 };
 export const BUILDING_ORDER: BuildingKind[] = ['shipyard', 'battery', 'magazine', 'dock', 'beacon'];
 
