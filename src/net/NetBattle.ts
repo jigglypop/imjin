@@ -34,6 +34,11 @@ export class NetBattle implements BattleListener {
   private readonly shots = new Map<number, Projectile>();
   winner: Team | null = null;
 
+  /** Simulated seconds per real second of playback now. */
+  get playbackPace() {
+    return this.pace;
+  }
+
   /** `seed` and `you` are what the server built the battle from; a historical duel is rebuilt locally from them. */
   constructor(readonly seed = 0, readonly you = 0) {
     net.listener = this;
@@ -123,10 +128,12 @@ export class NetBattle implements BattleListener {
       }
     }
     for (const p of this.shots.values()) {
-      p.vy -= GRAVITY * dt;
+      // The exact parabola for the step, so a long frame (the fast approach) lands where many short sim steps would;
+      // Effects reads the flight's end from this state and draws the arc over it.
       p.x += p.vx * dt;
-      p.y += p.vy * dt;
+      p.y += p.vy * dt - 0.5 * GRAVITY * dt * dt;
       p.z += p.vz * dt;
+      p.vy -= GRAVITY * dt;
       p.age += dt;
       if (p.age > 14 || p.y < -6) this.shots.delete(p.id);
     }

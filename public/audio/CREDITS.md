@@ -4,6 +4,8 @@ Battle sound samples for the game, built from Freesound recordings that are all 
 
 27 files, mono, 44.1 kHz, MP3 96 kbps CBR, 1081 KB in total. No recording is used raw: each file is an edit, pitch change, layering and reverb of the sources below, with a synthesized 30-95 Hz sub-bass thump added to the guns and explosions, a synthetic outdoor reverb tail, and a limiter. Loudness is normalized per class (max momentary loudness, EBU R128, LUFS-M): heavy guns -13.5, broadsides -12, explosions -11.5, medium guns -15, wood impacts -15, small guns -17, splashes -18, far booms -19, musket volleys -20, sinking -20, creak -24; peaks are limited to -1.5 dBFS before encoding (decoded MP3 true peaks stay below -1.3 dBFS).
 
+Some files are played in more than one way: `sink_1` also in slices of 1.4 to 4.5 s (with fades) for the bubbles and the last gulp of a sinking ship, and a short high-pitched slice of `impact_wood_2` for blows in a melee. No other recording is used; the synthesised fallback voices make no sound that is not noise or a low thump.
+
 ## Files
 
 | file | length | size | what it is | made from (Freesound id) |

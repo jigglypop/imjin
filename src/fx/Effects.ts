@@ -18,13 +18,14 @@ import {
   type Camera,
 } from 'three/webgpu';
 import type { Battle } from '../sim/battle';
-import type { AmmoType, BattleEvent, GunType, Ship } from '../sim/types';
+import type { AmmoType, BattleEvent, GunType, Projectile, Ship } from '../sim/types';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { ShipViews } from '../ships/ShipViews';
 import { waveField } from '../ocean/waves';
 import { ParticleLayer, StreakLayer } from './ParticleLayer';
 import { DebrisField, Piece } from './Debris';
 import { gunClass } from './gunClass';
+import { arcPeak, timeToImpact } from './flight';
 import { anchorsFor } from '../ships/anchors';
 import { DECKS, mainDeck } from '../ships/decks';
 import { planSinking, type CueKind, type SinkCue } from './sinkPlan';
@@ -57,8 +58,13 @@ type LightSource = {
   once?: boolean;
   score?: number;
 };
-/** Where a shell's smoke trail was last laid. */
-type Trail = { x: number; y: number; z: number; seen: number };
+/**
+ * A shell in flight as drawn: where its smoke trail was last laid (on the drawn arc), the flight time the sim will
+ * give it before a hull, the shore or the sea ends it, and the peak of the arc it is lifted onto.
+ */
+type Flight = { x: number; y: number; z: number; seen: number; end: number; peak: number; next: number; ghost: number; ref: Projectile | null };
+/** Seconds a shell the sim ended early takes to settle from its lifted arc onto the sim's point. */
+const SETTLE = 0.12;
 /** A ship going down: its script and the running parts of the sinking effects. */
 type SinkState = { plan: SinkCue[]; next: number; bubbles: number; slick: number; bubbleUntil: number };
 
@@ -73,7 +79,7 @@ export class Effects {
   readonly smoke: ParticleLayer;
   readonly fire: ParticleLayer;
   readonly spray: ParticleLayer;
-  /** Sparks, tracers and glowing embers: velocity-aligned additive streaks. */
+  /** Sparks and glowing embers: velocity-aligned additive streaks, plus the soft smear of a flying ball. */
   readonly streaks: StreakLayer;
   private readonly lightCount: number;
   private readonly debris: DebrisField;
@@ -99,8 +105,13 @@ export class Effects {
   private readonly rowFrustum = new Frustum();
   private readonly rowClip = new Matrix4();
   private readonly rowBall = new Sphere();
-  private readonly trails = new Map<number, Trail>();
-  private readonly trailPool: Trail[] = [];
+  private readonly flights = new Map<number, Flight>();
+  private readonly flightPool: Flight[] = [];
+  /** Shells that ended while still lifted above their sim path (a hit earlier than predicted, a server event): they settle down. */
+  private readonly ghosts: Projectile[] = [];
+  /** Ship seconds per shell second: above 1 in a multiplayer battle while the server skips the approach. */
+  shipRate = 1;
+  private readonly seaAt = (x: number, z: number) => waveField.heightAt(x, z, waveField.time, 8);
   private readonly sinks = new Map<number, SinkState>();
   private frame = 0;
   /** Equipment class: how big the pools are (1 PC, less on tablets and phones). */
@@ -184,8 +195,9 @@ export class Effects {
     this.dragon.clear();
     this.strokes.clear();
     this.sinks.clear();
-    for (const t of this.trails.values()) this.trailPool.push(t);
-    this.trails.clear();
+    for (const f of this.flights.values()) this.flightPool.push(f);
+    this.flights.clear();
+    this.ghosts.length = 0;
   }
 
   handle(events: BattleEvent[], battle: Battle) {
@@ -820,11 +832,29 @@ export class Effects {
     }
   }
 
-  /** One puff of trail smoke for a shell at the given point. */
-  private trailPuff(x: number, y: number, z: number, ammo: AmmoType, weight: number) {
+  /** One puff of trail smoke for a shell at the given point; `k` grows the puff so that wide-spaced puffs still run together. */
+  private trailPuff(x: number, y: number, z: number, ammo: AmmoType, weight: number, k: number) {
     const fiery = ammo === 'fire';
-    this.smoke.emit({ x, y, z, vx: rnd(-0.3, 0.3), vy: rnd(0, 0.5), vz: rnd(-0.3, 0.3), life: rnd(1.4, 2.6), size0: 1 + 0.6 * weight, size1: rnd(3.4, 4.6) + 1.4 * weight, alpha: fiery ? 0.32 : 0.26, r: fiery ? 0.34 : 0.88, g: fiery ? 0.32 : 0.88, b: fiery ? 0.3 : 0.88, drag: 1.4, lift: 0.1, wind: 0.6, heat: fiery ? 0.5 : 0 });
-    if (fiery) this.fire.emit({ x, y, z, life: rnd(0.2, 0.4), size0: 1.1, size1: 0.3, heat: 1, drag: 2, wind: 0.2 });
+    this.smoke.emit({ x, y, z, vx: rnd(-0.3, 0.3), vy: rnd(0, 0.5), vz: rnd(-0.3, 0.3), life: rnd(1.2, 2.2), size0: (1.7 + 0.8 * weight) * k, size1: (rnd(3.4, 4.4) + 1.2 * weight) * k, alpha: fiery ? 0.3 : 0.22, r: fiery ? 0.34 : 0.88, g: fiery ? 0.32 : 0.88, b: fiery ? 0.3 : 0.88, drag: 1.4, lift: 0.1, wind: 0.6, heat: fiery ? 0.5 : 0 });
+    if (fiery) this.fire.emit({ x, y, z, life: rnd(0.2, 0.4), size0: 1.1 * k, size1: 0.3, heat: 1, drag: 2, wind: 0.2 });
+  }
+
+  /** How far above the sim's path a shell is drawn now, for a camera that follows it. */
+  liftOf(p: Projectile) {
+    const f = this.flights.get(p.id);
+    if (!f || f.end <= 0) return 0;
+    const s = Math.min(1, p.age / f.end);
+    return 4 * f.peak * s * (1 - s) * (f.ghost >= 0 ? Math.max(0, 1 - f.ghost / SETTLE) : 1);
+  }
+
+  /** Learns what the sim will do with a shell the first time it is seen: when it ends, and so how high its drawn arc peaks. */
+  private planFlight(p: Projectile, battle: Battle, f: Flight, blend: number) {
+    const end = p.age + timeToImpact(p, battle, this.seaAt, this.shipRate);
+    const peak = arcPeak(p.ammo, Math.hypot(p.vx, p.vz) * end);
+    // Ships turn, drift and are steered after the plan was made: plan again as the shell flies and ease toward the new answer.
+    f.end += (end - f.end) * blend;
+    f.peak += (peak - f.peak) * blend;
+    f.next = p.age + (end - p.age < 0.5 ? 0.08 : 0.25);
   }
 
   update(battle: Battle, dt: number, camera: Camera) {
@@ -832,59 +862,80 @@ export class Effects {
     this.continuous(battle, dt);
     this.camPos.copy(camera.position);
     this.frame += 1;
-    const shells = battle.projectiles;
+    for (let i = this.ghosts.length - 1; i >= 0; i -= 1) {
+      const g = this.ghosts[i]!;
+      const gf = this.flights.get(g.id);
+      if (gf) gf.ghost += dt;
+      if (!gf || gf.ghost >= SETTLE) {
+        this.ghosts.splice(i, 1);
+        if (gf) {
+          this.flights.delete(g.id);
+          this.flightPool.push(gf);
+        }
+      }
+    }
+    const shells = this.ghosts.length ? battle.projectiles.concat(this.ghosts) : battle.projectiles;
     // Pixels per metre at one metre from the camera, for a 900 px tall view: the size a shell must grow to stay seen.
     const focal = (camera.projectionMatrix.elements[5] ?? 1.7) * 450;
     // With many shells in flight each leaves fewer puffs, so the smoke layer never fills up.
-    const crowd = Math.max(1, shells.length / 20);
+    const crowd = Math.max(1, Math.sqrt(shells.length / 20));
     let n = 0;
     let na = 0;
     for (const p of shells) {
-      const sp = Math.hypot(p.vx, p.vy, p.vz) || 1;
-      const ux = p.vx / sp;
-      const uy = p.vy / sp;
-      const uz = p.vz / sp;
-      const d = Math.max(1, this.camPos.distanceTo(this.p.set(p.x, p.y, p.z)));
-      const ppm = focal / d;
-      const cls = gunClass(p.gun, true);
-      const weight = cls.weight;
-      const fiery = p.ammo === 'fire';
-      // Tracer: a thin hot streak along the flight, never thinner than ~2.4 px and never shorter than ~16 px.
-      const len = Math.min(70, Math.max(sp * 0.05, 16 / ppm));
-      const width = Math.max(0.26 + 0.2 * weight, 2.4 / ppm);
-      if (fiery) {
-        this.streaks.put(p.x, p.y, p.z, ux, uy, uz, len, width, 1, 0.5, 0.16, 1);
-        this.streaks.put(p.x, p.y, p.z, ux, uy, uz, width * 2.4, width * 2.6, 1, 0.45, 0.12, 0.55);
-      } else if (p.ammo === 'grape') this.streaks.put(p.x, p.y, p.z, ux, uy, uz, len * 0.6, width * 0.8, 0.95, 0.85, 0.7, 0.55);
-      else this.streaks.put(p.x, p.y, p.z, ux, uy, uz, len, width, 1, 0.82, 0.5, 0.85);
-      // Smoke trail: a puff every couple of metres actually flown, not every so many milliseconds.
-      let t = this.trails.get(p.id);
-      if (!t) {
-        t = this.trailPool.pop() ?? { x: 0, y: 0, z: 0, seen: 0 };
-        t.x = p.x;
-        t.y = p.y;
-        t.z = p.z;
-        this.trails.set(p.id, t);
+      let f = this.flights.get(p.id);
+      let fresh = false;
+      if (!f) {
+        f = this.flightPool.pop() ?? { x: 0, y: 0, z: 0, seen: 0, end: 0, peak: 0, next: 0, ghost: -1, ref: null };
+        f.ghost = -1;
+        this.planFlight(p, battle, f, 1);
+        this.flights.set(p.id, f);
+        fresh = true;
       }
-      t.seen = this.frame;
+      f.seen = this.frame;
+      f.ref = p;
+      if (f.ghost < 0 && !fresh && p.age >= f.next) this.planFlight(p, battle, f, 0.5);
+      const settle = f.ghost >= 0 ? Math.max(0, 1 - f.ghost / SETTLE) : 1;
+      // The drawn shell rides above the sim's path on an arc that is flat at both ends: the hit stays where the sim put it.
+      const s = f.end > 0 ? Math.min(1, p.age / f.end) : 1;
+      const px = p.x;
+      const py = p.y + 4 * f.peak * s * (1 - s) * settle;
+      const pz = p.z;
+      // The tangent of the drawn arc, for the arrow's pitch and the ball's smear.
+      const climb = f.end > p.age && f.ghost < 0 ? (4 * f.peak * (1 - 2 * s)) / f.end : 0;
+      const vy = p.vy + climb;
+      const sp = Math.hypot(p.vx, vy, p.vz) || 1;
+      const ux = p.vx / sp;
+      const uy = vy / sp;
+      const uz = p.vz / sp;
+      if (fresh) {
+        f.x = px;
+        f.y = py;
+        f.z = pz;
+      }
+      const d = Math.max(1, this.camPos.distanceTo(this.p.set(px, py, pz)));
+      const ppm = focal / d;
+      const weight = gunClass(p.gun, true).weight;
+      const fiery = p.ammo === 'fire';
+      // Smoke trail laid along the drawn arc: a puff every few pixels of screen, so the arc reads as a ribbon and not as beads.
       if (d < 2600) {
-        const spacing = Math.min(14, 1.7 * crowd * Math.max(1, d / 500));
-        const run = Math.hypot(p.x - t.x, p.y - t.y, p.z - t.z);
+        const spacing = Math.min(10, Math.max(1.8, 4.5 / ppm) * crowd);
+        const run = Math.hypot(px - f.x, py - f.y, pz - f.z);
         if (run >= spacing) {
           const puffs = Math.min(16, Math.floor(run / spacing));
+          const k = Math.max(1, spacing / 1.8);
           for (let i = 1; i <= puffs; i += 1) {
-            const f = (i * spacing) / run;
-            this.trailPuff(t.x + (p.x - t.x) * f, t.y + (p.y - t.y) * f, t.z + (p.z - t.z) * f, p.ammo, weight);
+            const at = (i * spacing) / run;
+            this.trailPuff(f.x + (px - f.x) * at, f.y + (py - f.y) * at, f.z + (pz - f.z) * at, p.ammo, weight, k);
           }
           const adv = Math.min(1, (puffs * spacing) / run);
-          t.x += (p.x - t.x) * adv;
-          t.y += (p.y - t.y) * adv;
-          t.z += (p.z - t.z) * adv;
+          f.x += (px - f.x) * adv;
+          f.y += (py - f.y) * adv;
+          f.z += (pz - f.z) * adv;
         }
       } else {
-        t.x = p.x;
-        t.y = p.y;
-        t.z = p.z;
+        f.x = px;
+        f.y = py;
+        f.z = pz;
       }
       if (p.ammo === 'arrow' || fiery) {
         if (na >= MAX_ARROWS) continue;
@@ -894,22 +945,42 @@ export class Effects {
         const base = p.gun === 'cheonja' ? 3.2 : p.gun === 'jija' ? 2.6 : fiery ? 1.7 : 1.4;
         const big = Math.min(9, Math.max(base, 10 / (3.2 * ppm)));
         this.s.set(big, big, big);
-        this.p.set(p.x, p.y, p.z);
+        this.p.set(px, py, pz);
         this.m.compose(this.p, this.q, this.s);
         this.arrows.setMatrixAt(na++, this.m);
+        // Fire ammo only: a faint heat glow round the head.
+        if (fiery) {
+          const glow = Math.max(1.4, 7 / ppm);
+          this.streaks.put(px, py, pz, ux, uy, uz, glow, glow, 1, 0.5, 0.16, 0.22);
+        }
         continue;
       }
       if (n >= MAX_BALLS) continue;
       // A round shot swells with distance so it stays about 3 px across.
       const r = Math.min(14, Math.max(1, 1.5 / (0.22 * ppm))) * (p.ammo === 'grape' ? 0.6 : 1) * (0.9 + 0.3 * weight);
-      this.m.makeScale(r, r, r).setPosition(p.x, p.y, p.z);
+      this.m.makeScale(r, r, r).setPosition(px, py, pz);
       this.balls.setMatrixAt(n++, this.m);
+      // A short soft smear of the ball's own motion, not a streak along the flight.
+      const dia = 0.44 * r;
+      this.streaks.put(px, py, pz, ux, uy, uz, dia * 3, dia * 1.5, 0.95, 0.9, 0.8, p.ammo === 'grape' ? 0.1 : 0.2);
     }
-    if (this.trails.size > shells.length) {
-      for (const [id, t] of this.trails) {
-        if (t.seen === this.frame) continue;
-        this.trails.delete(id);
-        this.trailPool.push(t);
+    if (this.flights.size > shells.length) {
+      for (const [id, f] of this.flights) {
+        if (f.seen === this.frame) continue;
+        // A shell that vanished high above its sim path does not pop out of the air: it settles onto the point where it ended.
+        const ref = f.ref;
+        if (ref && f.ghost < 0 && f.end > 0) {
+          const q = Math.min(1, ref.age / f.end);
+          if (4 * f.peak * q * (1 - q) > 0.4) {
+            f.ghost = 0;
+            f.seen = this.frame;
+            this.ghosts.push(ref);
+            continue;
+          }
+        }
+        f.ref = null;
+        this.flights.delete(id);
+        this.flightPool.push(f);
       }
     }
     this.balls.count = n;

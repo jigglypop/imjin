@@ -1,6 +1,8 @@
 // Renders the battle voices (src/audio/voices.ts) and a whole scripted battle through the game's own sound code
 // (src/audio/battlefield.ts with the recorded samples) offline, and writes WAV files to listen to.
-//   node scripts/render-sounds.mjs [--url=http://127.0.0.1:5291] [--out=<dir>] [--only=cannon_near,sinking,battle]
+//   node scripts/render-sounds.mjs [--url=http://127.0.0.1:5291] [--out=<dir>] [--only=cannon_near,sinking,battle] [--prefix=after_]
+// `--only=inventory` renders every voice alone (v_*), the music bed and UI sounds (music_*, ui_*) and the retired
+// references (legacy_*), one file each, for scripts/audio/analyze.py to go through.
 // Needs a running dev server: the modules are loaded through Vite, then rendered in an OfflineAudioContext in Chrome.
 // `battle` writes audio2_battle.wav; the others are the synthesised voices alone.
 import { chromium } from 'playwright-core';
@@ -17,6 +19,7 @@ const args = Object.fromEntries(
 const base = (args.url ?? 'http://127.0.0.1:5291').replace(/\/$/, '');
 const out = args.out ?? join(ROOT, 'shots', 'progress');
 const only = args.only ? args.only.split(',') : null;
+const prefix = args.prefix ?? '';
 const RATE = 44100;
 
 await mkdir(out, { recursive: true });
@@ -66,7 +69,7 @@ const scenes = {
     v.gurgle(at(1) + 0.2, spot, 1);` },
   // A scripted battle (about 48 s) played through Battlefield with the sample bank: a distant barrage, single heavy
   // guns, broadsides from both fleets, musketry, near misses, a magazine going up, a sinking and a ram.
-  battle: { field: true, secs: 50, file: 'audio2_battle.wav', script: `
+  battle: { field: true, mix: true, secs: 50, file: 'audio2_battle.wav', script: `
     const joseon = [1, 2, 3, 4, 5].map((id, i) => ship(id, -210 + i * 24, -170 - i * 55));
     const japan = [11, 12, 13, 14, 15, 16].map((id, i) => ship(id, 240 + i * 38, -320 - i * 45));
     const horizon = [21, 22, 23].map((id, i) => ship(id, -500 + i * 500, -1900 - i * 300));
@@ -110,27 +113,115 @@ const scenes = {
     at(33.5, { type: 'sinking', ship: 12 });
     at(36.5, { type: 'ram', a: 3, b: 12, x: -100, z: -120, power: 1 });
     for (let t = 41; t < 48; t += 0.9 + rng() * 1.2) fireAt(t, horizon[Math.floor(rng() * 3)], 'jija', joseon[0]);
+    // fire, a boarding fight with men falling every few frames, and the cues the effects raise as a ship sinks
+    at(20, { type: 'ignite', ship: 13 });
+    at(35, { type: 'board', a: 3, b: 12 });
+    for (let t = 35.2; t < 44; t += 0.1) at(t, { type: 'casualty', ship: 3, count: 1, melee: true });
+    [[33.6, 'groan'], [34.5, 'crack'], [35.5, 'bubbles'], [36.5, 'mast'], [38, 'groan'], [39, 'bubbles'], [41, 'plunge'], [43, 'gone']].forEach(([t, kind]) => at(t, { cue: [kind, -100, 3, -110, 1] }));
   ` },
 };
 
+// One file per sound: every synthesised voice alone, the music bed and the UI sounds (once they exist), and the
+// legacy_* references, the retired flute music and sine click, kept so before and after can be heard side by side.
+const single = (secs, play) => ({ secs, play });
+Object.assign(scenes, {
+  v_cannon_heavy: single(5, `v.cannon(0.3, ranged(40, 0), GUN_CLASS.cheonja, 'full');`),
+  v_cannon_medium: single(4, `v.cannon(0.3, ranged(70, 0), GUN_CLASS.hyeonja, 'full');`),
+  v_cannon_small: single(3, `v.cannon(0.3, ranged(70, 0), GUN_CLASS.seungja, 'full');`),
+  v_cannon_far: single(6, `v.cannon(0.3, ranged(1200, 0.2), GUN_CLASS.jija, 'lite');`),
+  v_drum: single(3, `v.drum(0.3); v.drum(1.2);`),
+  v_explosion: single(8, `v.explosion(0.3, ranged(150, 0), 1);`),
+  v_hit: single(2, `v.hit(0.3, ranged(60, 0), 10);`),
+  v_splash: single(3, `v.splash(0.3, ranged(60, 0), 1);`),
+  v_ground: single(3, `v.ground(0.3, ranged(60, 0));`),
+  v_ignite: single(4, `v.ignite(0.3, ranged(60, 0));`),
+  v_whiz: single(2, `v.whiz(0.3, { gain: 0.5, pan: 0, muffle: 9000, dist: 0 }, 0.5);`),
+  v_groan: single(5, `v.groan(0.3, ranged(60, 0), 1);`),
+  v_planks: single(3, `v.planks(0.3, ranged(60, 0), 1);`),
+  v_mast: single(4, `v.mast(0.3, ranged(60, 0));`),
+  v_bubbles: single(6, `v.bubbles(0.3, ranged(60, 0), 3, 1);`),
+  v_gurgle: single(8, `v.gurgle(0.3, ranged(60, 0), 1);`),
+  // The bursts of a melee casualty (the board and casualty events) as they were: three resonant chirps per man down.
+  ui_click: single(2, `const n = M.ambience.makeNoise(ctx); [0.2, 0.7, 1.1, 1.3].forEach((t) => M.ui.woodTap(ctx, bus.sfx, n, t));`),
+  ambience_select: single(30, `const n = M.ambience.makeNoise(ctx); const g = ctx.createGain(); g.gain.value = M.mix.LEVELS.select.ambience; g.connect(bus.master); new M.ambience.Ambience(ctx, n, g, bus.sfx);`),
+  ambience_battle: single(30, `const n = M.ambience.makeNoise(ctx); const g = ctx.createGain(); g.gain.value = M.mix.LEVELS.battle.ambience; g.connect(bus.master); new M.ambience.Ambience(ctx, n, g, bus.sfx);`),
+  ambience_hot: single(30, `const n = M.ambience.makeNoise(ctx); const g = ctx.createGain(); g.gain.value = M.mix.LEVELS.battle.ambience; g.connect(bus.master); const a = new M.ambience.Ambience(ctx, n, g, bus.sfx); a.setRumble(1); a.setRoar(1);`),
+  music_bed_select: single(45, `const n = M.ambience.makeNoise(ctx); const m = ctx.createGain(); m.gain.value = M.mix.LEVELS.select.music; m.connect(bus.master); m.connect(bus.reverb); const bed = new M.music.Bed(ctx, m, bus.reverb, n); bed.start(); bed.schedule(45, 'select');`),
+  music_bed_battle: single(45, `const n = M.ambience.makeNoise(ctx); const m = ctx.createGain(); m.gain.value = M.mix.LEVELS.battle.music; m.connect(bus.master); m.connect(bus.reverb); const bed = new M.music.Bed(ctx, m, bus.reverb, n); bed.start(); bed.schedule(45, 'battle');`),
+  v_clack: single(2, `[0.2, 0.5, 0.75, 1.1].forEach((t) => v.clack(t, 0.4, 0));`),
+  legacy_melee: single(6, `for (let k = 0; k < 8; k += 1) for (let i = 0; i < 3; i += 1) v.burst(0.3 + k * 0.5 + Math.random() * 0.3, 0.3, 0, 'bandpass', 3200 + Math.random() * 1800, 8, 0.05);`),
+  legacy_click: single(1, `
+    const t = 0.1, osc = ctx.createOscillator(); osc.type = 'sine';
+    osc.frequency.setValueAtTime(780, t); osc.frequency.exponentialRampToValueAtTime(420, t + 0.08);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    osc.connect(g).connect(bus.sfx); osc.start(t); osc.stop(t + 0.15);
+    v.burst(t, 0.18, 0, 'bandpass', 2400, 3, 0.05);`),
+  // Notes of the old procedural flute as Sound.ts scheduled them: a random walk over a pentatonic scale.
+  legacy_music: single(24, `
+    const SCALE = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22], ROOT = 146.83;
+    const music = ctx.createGain(); music.gain.value = 0.42; music.connect(bus.master);
+    const flute = (t, freq, dur, gain) => {
+      const osc = ctx.createOscillator(); osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq * 0.985, t); osc.frequency.exponentialRampToValueAtTime(freq, t + 0.18);
+      const vib = ctx.createOscillator(); vib.frequency.value = 5; const vg = ctx.createGain();
+      vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(freq * 0.012, t + dur * 0.6); vib.connect(vg).connect(osc.frequency);
+      const over = ctx.createOscillator(); over.type = 'triangle'; over.frequency.value = freq * 2; const og = ctx.createGain(); og.gain.value = 0.12;
+      const env = ctx.createGain(); env.gain.setValueAtTime(0.0001, t); env.gain.exponentialRampToValueAtTime(gain, t + 0.22);
+      env.gain.setTargetAtTime(gain * 0.7, t + 0.3, dur * 0.4); env.gain.setTargetAtTime(0.0001, t + dur, 0.25);
+      osc.connect(env); over.connect(og).connect(env); env.connect(music);
+      for (const n of [osc, vib, over]) { n.start(t); n.stop(t + dur + 1.4); }
+    };
+    let t = 0.5, deg = 4, seed = 7; const r = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+    while (t < 22) {
+      const step = r() < 0.6 ? (r() < 0.5 ? -1 : 1) : r() < 0.5 ? -2 : 2;
+      deg = Math.max(1, Math.min(8, deg + step));
+      const dur = [0.9, 1.4, 1.9, 2.6][Math.floor(r() * 4)];
+      if (r() >= 0.22) flute(t, ROOT * 2 * Math.pow(2, SCALE[deg] / 12), dur, 0.12);
+      t += dur + 0.15;
+    }`),
+});
+
+const wanted = (name) => !only || only.includes(name) || (only.includes('inventory') && /^(v|ui|music|ambience|legacy)_/.test(name));
 for (const [name, scene] of Object.entries(scenes)) {
-  if (only && !only.includes(name)) continue;
+  if (!wanted(name)) continue;
   const b64 = await page.evaluate(
-    async ({ rate, secs, play, field, base }) => {
+    async ({ rate, secs, play, field, base, mix }) => {
       const { buildBus, Voices, ranged } = await import('/src/audio/voices.ts');
       const { GUN_CLASS } = await import('/src/fx/gunClass.ts');
       const { planSinking } = await import('/src/fx/sinkPlan.ts');
       const ctx = new OfflineAudioContext(2, Math.floor(rate * secs), rate);
       const bus = buildBus(ctx);
+      // The music bed, sea and UI sounds are loaded when the checkout has them, so the same script renders before and after.
+      const M = {};
+      for (const [key, path] of [['music', '/src/audio/music.ts'], ['ui', '/src/audio/ui.ts'], ['ambience', '/src/audio/ambience.ts'], ['mix', '/src/audio/mix.ts']]) M[key] = await import(/* @vite-ignore */ path).catch(() => null);
       if (field) {
         const { Battlefield } = await import('/src/audio/battlefield.ts');
-        const { Samples } = await import('/src/audio/samples.ts');
         const counts = {};
-        const original = Samples.prototype.play;
-        Samples.prototype.play = function (kind, t, o) { counts[kind] = (counts[kind] ?? 0) + 1; return original.call(this, kind, t, o); };
         window.__counts = counts;
-        const bf = new Battlefield(ctx, bus.sfx, bus.reverb);
+        // With `mix` the sea, the rumble and the bed play under the guns exactly as Sound.ts wires them.
+        let weather = null;
+        const ducks = [];
+        if (mix && M.ambience) {
+          const noise = M.ambience.makeNoise(ctx);
+          const sea = ctx.createGain();
+          sea.gain.value = M.mix.LEVELS.battle.ambience;
+          const duck = ctx.createGain();
+          sea.connect(duck).connect(bus.master);
+          ducks.push({ node: duck, depth: 0.35 });
+          weather = new M.ambience.Ambience(ctx, noise, sea, bus.sfx);
+          const music = ctx.createGain();
+          music.gain.value = M.mix.LEVELS.battle.music;
+          music.connect(bus.master);
+          music.connect(bus.reverb);
+          const bed = new M.music.Bed(ctx, music, bus.reverb, noise);
+          bed.start();
+          bed.schedule(secs, 'battle');
+        }
+        const bf = new Battlefield(ctx, bus.sfx, bus.reverb, ducks);
         await bf.load(`${base}/`);
+        // Count what is played by wrapping the bank's own instance (a second import of the module would be another copy).
+        const original = bf.samples.play.bind(bf.samples);
+        bf.samples.play = (kind, t, o) => { counts[kind] = (counts[kind] ?? 0) + 1; return original(kind, t, o); };
         // Facing -z, so +x is to the right. Only x, y, z (and w) are read from these.
         const camera = { position: { x: 0, y: 35, z: 0 }, quaternion: { x: 0, y: 0, z: 0, w: 1 } };
         // Seeded, so every render of the script is the same battle.
@@ -148,8 +239,13 @@ for (const [name, scene] of Object.entries(scenes)) {
         let next = 0;
         const step = (t) => {
           const events = [];
-          while (next < timeline.length && timeline[next].t <= t) events.push(timeline[next++].e);
+          while (next < timeline.length && timeline[next].t <= t) {
+            const e = timeline[next++].e;
+            if (e.cue) bf.cue(...e.cue);
+            else events.push(e);
+          }
           bf.tick(camera, STEP, t * 1000);
+          weather?.setRumble(bf.intensity);
           if (events.length) bf.update(events, battle, camera);
           if (t + STEP < secs - 0.1) ctx.suspend(t + STEP).then(() => step(t + STEP));
           ctx.resume();
@@ -158,7 +254,7 @@ for (const [name, scene] of Object.entries(scenes)) {
         var buf = await ctx.startRendering();
       } else {
         const v = new Voices(ctx, bus.sfx, bus.reverb);
-        new Function('v', 'ranged', 'GUN_CLASS', 'planSinking', play)(v, ranged, GUN_CLASS, planSinking);
+        new Function('v', 'ranged', 'GUN_CLASS', 'planSinking', 'ctx', 'bus', 'M', play)(v, ranged, GUN_CLASS, planSinking, ctx, bus, M);
         var buf = await ctx.startRendering();
       }
       const l = buf.getChannelData(0);
@@ -176,7 +272,7 @@ for (const [name, scene] of Object.entries(scenes)) {
       for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
       return { data: btoa(bin), peak };
     },
-    { rate: RATE, secs: scene.secs, play: scene.script ?? scene.play, field: !!scene.field, base },
+    { rate: RATE, secs: scene.secs, play: scene.script ?? scene.play, field: !!scene.field, base, mix: !!scene.mix },
   );
   if (scene.field) console.log('samples played', JSON.stringify(await page.evaluate(() => window.__counts)));
   const pcm = Buffer.from(b64.data, 'base64');
@@ -193,7 +289,7 @@ for (const [name, scene] of Object.entries(scenes)) {
   header.writeUInt16LE(16, 34);
   header.write('data', 36);
   header.writeUInt32LE(pcm.length, 40);
-  const file = join(out, scene.file ?? `${name}.wav`);
+  const file = join(out, prefix + (scene.file ?? `${name}.wav`));
   await writeFile(file, Buffer.concat([header, pcm]));
   console.log('wrote', file, `${scene.secs}s`, 'peak', b64.peak.toFixed(2));
 }

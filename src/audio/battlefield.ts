@@ -35,6 +35,8 @@ const FAR_RANGE = 900;
 /** A ship that fires this many guns within BROADSIDE_WINDOW seconds is a broadside, not a string of single shots. */
 const BROADSIDE_GUNS = 4;
 const BROADSIDE_WINDOW = 0.5;
+/** The synthesised guns measure about 2 dB louder than the recorded ones (scripts/audio/analyze.py), so they are trimmed to match. */
+const SYNTH_TRIM = 0.8;
 /** Seconds a sample voice is counted as alive in the node ledger. */
 const SAMPLE_SECS = 4;
 
@@ -70,6 +72,8 @@ export class Battlefield {
   private farPan = 0;
   private nextFlush = 0;
   private nextBarrage = 0;
+  /** Context times before which another sound of that kind is held back: a pass, a blow, a flame or a drum a moment ago masks the next. */
+  private readonly gate = { whoosh: 0, melee: 0, ignite: 0, drum: 0, cue: 0 };
   /** Context time of the last voice the player could hear from the near field or the far flush. */
   private lastAudible = -99;
   private camera: Pick<PerspectiveCamera, 'position' | 'quaternion'> | null = null;
@@ -103,6 +107,7 @@ export class Battlefield {
     this.farCount = 0;
     this.nextFlush = 0;
     this.nextBarrage = 0;
+    this.gate.whoosh = this.gate.melee = this.gate.ignite = this.gate.drum = this.gate.cue = 0;
     this.recent = 0;
     this.intensity = 0;
   }
@@ -227,7 +232,7 @@ export class Battlefield {
     if (this.budget < 1 || !this.reserve(cost.nodes, cost.secs, t0)) return;
     this.budget -= 1;
     const swell = Math.min(1.8, 1 + 0.4 * Math.log(group.length));
-    this.voices.cannon(t0, { ...s, gain: s.gain * swell }, cls, tier);
+    this.voices.cannon(t0, { ...s, gain: s.gain * swell * SYNTH_TRIM }, cls, tier);
     // The other guns of the broadside follow within a fraction of a second, a lighter voice each.
     const extra = Math.min(group.length - 1, isPhone ? 2 : 4);
     for (let i = 1; i <= extra; i += 1) {
@@ -236,7 +241,7 @@ export class Battlefield {
       const lite = this.tierFor(r.s.dist) === 'full' ? 'mid' : 'lite';
       if (this.budget < 0.4 || !this.reserve(COST[lite].nodes, COST[lite].secs, t1)) break;
       this.budget -= 0.4;
-      this.voices.cannon(t1, { ...r.s, gain: r.s.gain * 0.75 }, r.cls, lite);
+      this.voices.cannon(t1, { ...r.s, gain: r.s.gain * 0.75 * SYNTH_TRIM }, r.cls, lite);
     }
   }
 
@@ -280,6 +285,9 @@ export class Battlefield {
     if (dist > 90) return;
     this.right.set(1, 0, 0).applyQuaternion(camera.quaternion);
     const side = Math.max(-0.85, Math.min(0.85, (rel.dot(this.right) / Math.max(dist, 12)) * 0.9));
+    // A near miss is an event, not a texture: one every quarter second at most, and fewer as the battle runs faster.
+    if (now < this.gate.whoosh || Math.random() > this.keep()) return;
+    this.gate.whoosh = now + 0.25;
     const at = now + ts / this.timeScale + dist / SPEED_OF_SOUND;
     const gain = 0.55 + 0.45 * (1 - dist / 90);
     if (this.samples.has('whoosh')) this.sample('whoosh', at, { gain, pan: side, rate: rnd(0.9, 1.1), wet: 0.1 }, 0.5);
@@ -289,20 +297,48 @@ export class Battlefield {
     }
   }
 
-  /** The script of a sinking ship (see sinkPlan.ts) and the last moment of it, as the effects reach each cue. */
+  /**
+   * The script of a sinking ship (see sinkPlan.ts) and the last moment of it, as the effects reach each cue. Every cue
+   * is a slice of the recorded bank (the synthesised voices cover only what has not decoded yet). A sinking raises many
+   * cues, and at speed many ships sink at once, so the small ones are thinned out as the battle runs faster.
+   */
   cue(kind: CueKind, x: number, y: number, z: number, size: number) {
     const camera = this.camera;
     if (!camera) return;
     const s = this.spatial(camera, x, y, z);
     if (s.gain < 0.03 || this.budget < 1) return;
-    const at = this.ctx.currentTime + s.delay + Math.random() * 0.02;
+    const now = this.ctx.currentTime;
+    const small = kind === 'groan' || kind === 'crack' || kind === 'wreck' || kind === 'bubbles';
+    if (small && (now < this.gate.cue || Math.random() > this.keep())) return;
+    if (small) this.gate.cue = now + 0.4;
+    const at = now + s.delay + Math.random() * 0.02;
     const voices = this.voices;
-    if (kind === 'groan' && this.samples.has('creak')) {
-      this.sample('creak', at, { gain: loud(s.gain) * (0.5 + 0.5 * size), pan: s.pan, rate: rnd(0.85, 1.1), cutoff: Math.max(900, s.muffle) });
+    const samples = this.samples;
+    const gain = loud(s.gain);
+    const lp = Math.max(900, s.muffle);
+    if (kind === 'groan' && samples.has('creak')) {
+      this.sample('creak', at, { gain: gain * (0.5 + 0.5 * size), pan: s.pan, rate: rnd(0.85, 1.1), cutoff: lp });
       return;
     }
-    if (kind === 'blast' && this.samples.has('explosion')) {
-      this.sample('explosion', at, { gain: loud(s.gain) * (0.5 + 0.4 * size), pan: s.pan, rate: rnd(0.95, 1.1), cutoff: Math.max(900, s.muffle) }, 1.5);
+    if (kind === 'blast' && samples.has('explosion')) {
+      this.sample('explosion', at, { gain: loud(s.gain) * (0.5 + 0.4 * size), pan: s.pan, rate: rnd(0.95, 1.1), cutoff: lp }, 1.5);
+      return;
+    }
+    if ((kind === 'crack' || kind === 'wreck') && samples.has('impact_wood')) {
+      this.sample('impact_wood', at, { gain: gain * (kind === 'wreck' ? 0.35 : 0.5) * (0.5 + 0.5 * size), pan: s.pan, rate: rnd(0.8, 1), cutoff: lp, index: 1 });
+      return;
+    }
+    if (kind === 'mast' && samples.has('impact_wood')) {
+      this.sample('impact_wood', at, { gain: gain * 0.9, pan: s.pan, rate: rnd(0.85, 0.95), cutoff: lp, index: 0 }, 1.5);
+      this.sample('creak', at + 0.15, { gain, pan: s.pan, rate: rnd(0.8, 0.95), cutoff: lp });
+      return;
+    }
+    if ((kind === 'bubbles' || kind === 'plunge' || kind === 'gone') && samples.has('sink')) {
+      // The sinking recording is air and water; a slice of it for a few bubbles, all of it for the last gulp.
+      const dur = kind === 'bubbles' ? 1.4 + size * 1.2 : kind === 'plunge' ? 2.6 : 4.5;
+      const offset = kind === 'gone' ? 0.6 : rnd(0, 2.5);
+      if (kind === 'plunge') this.sample('splash', at, { gain, pan: s.pan, rate: 0.85, cutoff: lp });
+      this.sample('sink', at, { gain: gain * (kind === 'bubbles' ? 0.45 : 0.7), pan: s.pan, rate: rnd(0.92, 1.05), cutoff: lp, offset, dur });
       return;
     }
     const cost = kind === 'groan' ? COST.groan : kind === 'crack' || kind === 'wreck' ? COST.crack : kind === 'mast' ? COST.mast : kind === 'blast' ? COST.explosion : kind === 'bubbles' ? COST.bubbles : COST.gurgle;
@@ -316,7 +352,7 @@ export class Battlefield {
     else if (kind === 'bubbles') voices.bubbles(at, s, 1.6 + size * 1.6, size);
     else if (kind === 'plunge') {
       voices.bubbles(at, s, 2.8, 1);
-      if (!this.sample('splash', at, { gain: loud(s.gain), pan: s.pan, rate: 0.85, cutoff: Math.max(900, s.muffle) })) voices.splash(at, s, 1.6);
+      if (!samples.has('splash') || !this.sample('splash', at, { gain, pan: s.pan, rate: 0.85, cutoff: lp })) voices.splash(at, s, 1.6);
     } else voices.gurgle(at, s, size);
   }
 
@@ -452,14 +488,15 @@ export class Battlefield {
         }
       } else if (e.type === 'ground') {
         const s = this.spatial(camera, e.x, e.y, e.z);
-        if (s.gain < 0.04 || !this.reserve(COST.ground.nodes, COST.ground.secs, now + s.delay)) continue;
+        if (s.gain < 0.04 || Math.random() > keep || !this.reserve(COST.ground.nodes, COST.ground.secs, now + s.delay)) continue;
         this.budget -= 0.5;
         voices.ground(now + s.delay, s);
       } else if (e.type === 'ignite') {
         const ship = battle.get(e.ship);
         if (!ship) continue;
         const s = this.spatial(camera, ship.x, ship.spec.deck, ship.z);
-        if (s.gain < 0.05 || !this.reserve(COST.ignite.nodes, COST.ignite.secs, now + s.delay)) continue;
+        if (s.gain < 0.05 || now < this.gate.ignite || !this.reserve(COST.ignite.nodes, COST.ignite.secs, now + s.delay)) continue;
+        this.gate.ignite = now + 0.4;
         this.budget -= 0.8;
         voices.ignite(now + s.delay, s);
       } else if (e.type === 'explode') {
@@ -496,10 +533,17 @@ export class Battlefield {
         const ship = battle.get(e.type === 'board' ? e.b : e.ship);
         if (!ship) continue;
         const s = this.spatial(camera, ship.x, 3, ship.z);
-        if (s.gain < 0.05) continue;
+        // A boarding fight raises a casualty every few frames; the clash is a texture, so it speaks about five times a second.
+        if (s.gain < 0.05 || now < this.gate.melee || Math.random() > keep) continue;
+        this.gate.melee = now + 0.2;
         this.budget -= 0.5;
-        for (let i = 0; i < 3; i += 1) voices.burst(now + s.delay + Math.random() * 0.3, s.gain * 0.3, s.pan, 'bandpass', 3200 + Math.random() * 1800, 8, 0.05);
+        const at = now + s.delay;
+        // A short slice of the bank's splintering plank, high and quick, makes a blow; the synthesised clack is the stand-in.
+        if (!this.sample('impact_wood', at, { gain: loud(s.gain) * 0.3, pan: s.pan, rate: rnd(1.3, 1.7), cutoff: Math.max(900, s.muffle), index: 1, offset: rnd(0, 0.15), dur: 0.3 }, 0.5)) voices.clack(at, s.gain * 0.4, s.pan);
       } else if (e.type === 'volley') {
+        // The drum that calls a volley: one stroke every second or so however many ships order one.
+        if (now < this.gate.drum || Math.random() > keep) continue;
+        this.gate.drum = now + 1;
         this.drums(1);
       }
     }

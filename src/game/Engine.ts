@@ -1023,6 +1023,7 @@ export class Engine {
       this.sound.setRoar(Math.min(1, Math.hypot(v.x, v.z) / 4) * Math.max(0.2, 1 - this.rts.distance / 3000));
     } else this.sound.setRoar(0);
     this.sound.tick(this.battle, this.camera, scaled);
+    this.fx.shipRate = this.remote ? this.remote.playbackPace : 1;
     this.fx.update(this.battle, scaled, this.camera);
     this.crew.update(this.battle, scaled, this.camera, this.crewView());
     this.lanterns.update(this.battle, this.camera);

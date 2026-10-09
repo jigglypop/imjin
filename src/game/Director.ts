@@ -2,7 +2,7 @@ import type { PerspectiveCamera, Vector3 } from 'three/webgpu';
 import { atmosphere } from '../render/atmosphere';
 import type { RtsCamera } from '../camera/RtsCamera';
 import type { Battle } from '../sim/battle';
-import type { BattleEvent, GunType, Ship } from '../sim/types';
+import type { BattleEvent, GunType, Projectile, Ship } from '../sim/types';
 
 /**
  * Battle director. It watches the sim's events and does three things:
@@ -22,6 +22,7 @@ export interface DirectorHost {
   readonly paused: boolean;
   readonly fastForward: boolean;
   readonly speed: number;
+  readonly fx: { liftOf(p: Projectile): number };
 }
 
 export type ShotKind = 'broadside' | 'shell' | 'impact' | 'sinking' | 'explosion' | 'boarding' | 'wide';
@@ -513,7 +514,7 @@ export class Director {
           const n = Math.hypot(p.vx, p.vz) || 1;
           g.tx = p.x + (p.vx / n) * 8;
           g.tz = p.z + (p.vz / n) * 8;
-          s.lift = Math.max(0, p.y - 2);
+          s.lift = Math.max(0, p.y + this.host.fx.liftOf(p) - 2);
         } else if (s.landed) {
           g.tx = s.landed.x;
           g.tz = s.landed.z;

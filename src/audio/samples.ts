@@ -2,21 +2,25 @@
 // loading and decoding, and the one way every sample is played. No DOM and no three.js, so the same code runs in the
 // game's AudioContext and in an OfflineAudioContext.
 
-/** Files per kind. The loudness of each kind is already normalised in the files; `gain` is the playing level. */
+/**
+ * Files per kind. The loudness of each kind is already normalised in the files (heavy guns -13.5 LUFS, broadsides -12,
+ * wood -15, splashes -18, muskets -20); `gain` is the playing level, set so the guns stand 5 to 10 dB above everything
+ * a battle raises more often than they fire: splashes, hits and near misses.
+ */
 export const BANK = {
-  cannon_heavy: { count: 3, gain: 0.9 },
-  cannon_medium: { count: 3, gain: 0.85 },
+  cannon_heavy: { count: 3, gain: 1.2 },
+  cannon_medium: { count: 3, gain: 1 },
   cannon_small: { count: 2, gain: 0.8 },
-  cannon_far: { count: 2, gain: 1 },
-  broadside: { count: 2, gain: 0.9 },
+  cannon_far: { count: 2, gain: 1.1 },
+  broadside: { count: 2, gain: 1.1 },
   explosion: { count: 2, gain: 1 },
-  impact_wood: { count: 3, gain: 0.9 },
-  splash: { count: 2, gain: 0.8 },
-  whoosh: { count: 2, gain: 0.7 },
+  impact_wood: { count: 3, gain: 0.75 },
+  splash: { count: 2, gain: 0.55 },
+  whoosh: { count: 2, gain: 0.5 },
   musket_volley: { count: 2, gain: 0.8 },
   creak: { count: 1, gain: 0.6 },
   sink: { count: 1, gain: 0.8 },
-  drum: { count: 2, gain: 0.9 },
+  drum: { count: 2, gain: 0.75 },
 } as const;
 
 export type Kind = keyof typeof BANK;
@@ -38,6 +42,9 @@ export type PlayOptions = {
   index?: number;
   /** Where the voice goes instead of the sfx bus (a duckable sub-mix). */
   dest?: AudioNode;
+  /** Play only `dur` seconds of the file from `offset`, faded in and out: a slice of a long recording. */
+  offset?: number;
+  dur?: number;
 };
 
 /** Nodes a played sample uses, for the caller's load ledger. */
@@ -116,7 +123,19 @@ export class Samples {
       tail = tail.connect(lp);
     }
     const gain = ctx.createGain();
-    gain.gain.value = o.gain * BANK[kind].gain;
+    const peak = o.gain * BANK[kind].gain;
+    let length = buffer.duration;
+    let from = 0;
+    if (o.dur === undefined) gain.gain.value = peak;
+    else {
+      length = Math.min(o.dur * rate, buffer.duration);
+      from = Math.min(o.offset ?? 0, buffer.duration - length);
+      const fade = Math.min(0.25, o.dur / 3);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(peak, t + fade);
+      gain.gain.setValueAtTime(peak, t + o.dur - fade);
+      gain.gain.linearRampToValueAtTime(0.0001, t + o.dur);
+    }
     tail = tail.connect(gain);
     const panner = ctx.createStereoPanner();
     panner.pan.value = o.pan ?? 0;
@@ -127,7 +146,8 @@ export class Samples {
       send.gain.value = wet;
       panner.connect(send).connect(this.wetBus);
     }
-    src.start(t);
-    return buffer.duration / rate;
+    if (o.dur === undefined) src.start(t);
+    else src.start(t, from, length);
+    return length / rate;
   }
 }

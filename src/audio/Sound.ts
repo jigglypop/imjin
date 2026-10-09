@@ -3,13 +3,24 @@ import type { BattleEvent } from '../sim/types';
 import type { Battle } from '../sim/battle';
 import type { CueKind } from '../fx/sinkPlan';
 import { Battlefield, type CampaignCue } from './battlefield';
-import { buildBus } from './voices';
+import { buildBus, MASTER_GAIN } from './voices';
+import { Ambience, makeNoise } from './ambience';
+import { Bed } from './music';
+import { woodTap } from './ui';
+import { LEVELS, type Mode } from './mix';
 import { isIOS } from '../game/device';
 
-const SCALE = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22];
-const ROOT_HZ = 146.83;
+const MUSIC_KEY = 'imjin.music';
 
-type Mode = 'select' | 'battle';
+/** The music bed is on unless the player turned it off (`?music=0` does it for a session, `setMusic` for good). */
+function storedMusic() {
+  try {
+    if (new URLSearchParams(location.search).get('music') === '0') return false;
+    return localStorage.getItem(MUSIC_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
 
 export class Sound {
   private ctx: AudioContext | null = null;
@@ -20,16 +31,16 @@ export class Sound {
   private reverb: ConvolverNode | null = null;
   private noise: AudioBuffer | null = null;
   private field: Battlefield | null = null;
+  private bed: Bed | null = null;
+  private weather: Ambience | null = null;
   private mode: Mode = 'select';
-  private nextNote = 0;
-  private phrase = 0;
-  private lastDegree = 4;
-  private rumble: GainNode | null = null;
-  private roar: GainNode | null = null;
   muted = false;
+  /** The drone and far drums under the menus and battles; off for players who want only the sea and the guns. */
+  musicOn = storedMusic();
   /** The page went to the background and the context was suspended on purpose, so the retry loop leaves it alone. */
   private suspendedByPage = false;
   private lastWake = 0;
+  private lastClick = -1;
   /** iOS decodes the sample bank only once the first battle is up, so the decode does not add to the load's memory peak. */
   private samplesAllowed = !isIOS;
   private samplesRequested = false;
@@ -86,13 +97,13 @@ export class Sound {
     if (this.ctx) return;
     const ctx = new AudioContext();
     this.ctx = ctx;
-    const bus = buildBus(ctx, this.muted ? 0 : 0.9);
+    const bus = buildBus(ctx, this.muted ? 0 : MASTER_GAIN);
     const master = bus.master;
     this.master = master;
     this.reverb = bus.reverb;
     this.sfx = bus.sfx;
     this.ambience = ctx.createGain();
-    this.ambience.gain.value = 0.3;
+    this.ambience.gain.value = LEVELS.select.ambience;
     // Heavy salvos push the sea and wind down for a moment so the guns stay in front.
     const ambienceDuck = ctx.createGain();
     this.ambience.connect(ambienceDuck).connect(master);
@@ -102,88 +113,16 @@ export class Sound {
     this.music.gain.value = 0;
     this.music.connect(master);
     this.music.connect(this.reverb);
-    const length = ctx.sampleRate * 3;
-    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    let last = 0;
-    for (let i = 0; i < length; i += 1) {
-      const white = Math.random() * 2 - 1;
-      last = last * 0.985 + white * 0.15;
-      data[i] = white * 0.55 + last * 1.6;
-    }
-    this.noise = buffer;
-    this.startAmbience();
+    this.noise = makeNoise(ctx);
+    this.weather = new Ambience(ctx, this.noise, this.ambience, this.sfx);
+    this.bed = new Bed(ctx, this.music, this.reverb, this.noise);
+    this.bed.start();
     this.applyMode(true);
     window.setInterval(() => {
-      this.scheduleMusic();
+      if (ctx.state === 'running' && this.musicOn) this.bed?.schedule(ctx.currentTime + 0.5, this.mode);
       // After a phone call or another app's audio the context can come back 'interrupted' with no gesture to resume it.
       if (ctx.state !== 'running' && !document.hidden && performance.now() - this.lastWake > 2000) this.wake();
-    }, 120);
-  }
-
-  private noiseSource(loop = false) {
-    const src = this.ctx!.createBufferSource();
-    src.buffer = this.noise;
-    src.loop = loop;
-    src.loopStart = Math.random() * 2;
-    return src;
-  }
-
-  private startAmbience() {
-    const ctx = this.ctx!;
-    const sea = this.noiseSource(true);
-    const low = ctx.createBiquadFilter();
-    low.type = 'lowpass';
-    low.frequency.value = 520;
-    low.Q.value = 0.4;
-    const swell = ctx.createGain();
-    swell.gain.value = 0.4;
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = 0.11;
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0.25;
-    lfo.connect(lfoGain).connect(swell.gain);
-    const lfo2 = ctx.createOscillator();
-    lfo2.frequency.value = 0.07;
-    const lfo2Gain = ctx.createGain();
-    lfo2Gain.gain.value = 180;
-    lfo2.connect(lfo2Gain).connect(low.frequency);
-    sea.connect(low).connect(swell).connect(this.ambience!);
-    const wind = this.noiseSource(true);
-    const band = ctx.createBiquadFilter();
-    band.type = 'bandpass';
-    band.frequency.value = 900;
-    band.Q.value = 0.6;
-    const windGain = ctx.createGain();
-    windGain.gain.value = 0.06;
-    wind.connect(band).connect(windGain).connect(this.ambience!);
-    const rumbleSrc = this.noiseSource(true);
-    const rumbleLp = ctx.createBiquadFilter();
-    rumbleLp.type = 'lowpass';
-    rumbleLp.frequency.value = 140;
-    this.rumble = ctx.createGain();
-    this.rumble.gain.value = 0;
-    rumbleSrc.connect(rumbleLp).connect(this.rumble).connect(this.sfx!);
-    sea.start();
-    wind.start();
-    rumbleSrc.start();
-    const roarSrc = this.noiseSource(true);
-    const roarLp = ctx.createBiquadFilter();
-    roarLp.type = 'lowpass';
-    roarLp.frequency.value = 380;
-    roarLp.Q.value = 0.8;
-    const roarLfo = ctx.createOscillator();
-    roarLfo.frequency.value = 0.23;
-    const roarLfoGain = ctx.createGain();
-    roarLfoGain.gain.value = 140;
-    roarLfo.connect(roarLfoGain).connect(roarLp.frequency);
-    roarLfo.start();
-    this.roar = ctx.createGain();
-    this.roar.gain.value = 0;
-    roarSrc.connect(roarLp).connect(this.roar).connect(this.ambience!);
-    roarSrc.start();
-    lfo.start();
-    lfo2.start();
+    }, 250);
   }
 
   setMode(mode: Mode) {
@@ -196,135 +135,39 @@ export class Sound {
     if (!ctx || !this.music || !this.ambience) return;
     const t = ctx.currentTime;
     const tc = instant ? 0.01 : 1.2;
-    this.music.gain.setTargetAtTime(this.mode === 'select' ? 0.42 : 0.12, t, tc);
-    this.ambience.gain.setTargetAtTime(this.mode === 'select' ? 0.22 : 0.6, t, tc);
+    const level = LEVELS[this.mode];
+    this.music.gain.setTargetAtTime(this.musicOn ? level.music : 0, t, tc);
+    this.ambience.gain.setTargetAtTime(level.ambience, t, tc);
   }
 
   setRoar(level: number) {
-    if (this.roar && this.ctx) this.roar.gain.setTargetAtTime(level * 1.4, this.ctx.currentTime, 0.8);
+    this.weather?.setRoar(level);
   }
 
   setMuted(muted: boolean) {
     this.muted = muted;
-    if (this.master && this.ctx) this.master.gain.setTargetAtTime(muted ? 0 : 0.9, this.ctx.currentTime, 0.1);
+    if (this.master && this.ctx) this.master.gain.setTargetAtTime(muted ? 0 : MASTER_GAIN, this.ctx.currentTime, 0.1);
   }
 
+  /** Turns the music bed on or off and remembers the choice. */
+  setMusic(on: boolean) {
+    this.musicOn = on;
+    try {
+      localStorage.setItem(MUSIC_KEY, on ? '1' : '0');
+    } catch {
+      // Private mode: the choice lasts for the session.
+    }
+    this.applyMode(false);
+  }
+
+  /** A tap of wood. Held to one per 60 ms, so a burst of clicks (a drag across a list) is not a buzz. */
   click() {
     const ctx = this.ctx;
-    if (!ctx || this.muted) return;
+    if (!ctx || this.muted || !this.noise || !this.sfx) return;
     const t = ctx.currentTime + 0.005;
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(780, t);
-    osc.frequency.exponentialRampToValueAtTime(420, t + 0.08);
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.35, t + 0.004);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-    osc.connect(g).connect(this.sfx!);
-    osc.start(t);
-    osc.stop(t + 0.15);
-    this.field?.voices.burst(t, 0.18, 0, 'bandpass', 2400, 3, 0.05);
-  }
-
-  private flute(t: number, freq: number, dur: number, gain: number) {
-    const ctx = this.ctx!;
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq * 0.985, t);
-    osc.frequency.exponentialRampToValueAtTime(freq, t + 0.18);
-    const vib = ctx.createOscillator();
-    vib.frequency.value = 4.6 + Math.random() * 0.8;
-    const vibGain = ctx.createGain();
-    vibGain.gain.setValueAtTime(0, t);
-    vibGain.gain.linearRampToValueAtTime(freq * 0.012, t + dur * 0.6);
-    vib.connect(vibGain).connect(osc.frequency);
-    const over = ctx.createOscillator();
-    over.type = 'triangle';
-    over.frequency.value = freq * 2;
-    const overGain = ctx.createGain();
-    overGain.gain.value = 0.12;
-    const env = ctx.createGain();
-    env.gain.setValueAtTime(0.0001, t);
-    env.gain.exponentialRampToValueAtTime(gain, t + 0.22);
-    env.gain.setTargetAtTime(gain * 0.7, t + 0.3, dur * 0.4);
-    env.gain.setTargetAtTime(0.0001, t + dur, 0.25);
-    osc.connect(env);
-    over.connect(overGain).connect(env);
-    env.connect(this.music!);
-    const breath = this.noiseSource();
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = freq * 2.2;
-    bp.Q.value = 6;
-    const bg = ctx.createGain();
-    bg.gain.setValueAtTime(0.0001, t);
-    bg.gain.exponentialRampToValueAtTime(gain * 0.5, t + 0.08);
-    bg.gain.exponentialRampToValueAtTime(gain * 0.12, t + 0.4);
-    bg.gain.setTargetAtTime(0.0001, t + dur, 0.2);
-    breath.connect(bp).connect(bg).connect(this.music!);
-    for (const node of [osc, vib, over]) {
-      node.start(t);
-      node.stop(t + dur + 1.4);
-    }
-    breath.start(t, Math.random() * 2);
-    breath.stop(t + dur + 1.2);
-  }
-
-  private drone(t: number, dur: number) {
-    const ctx = this.ctx!;
-    for (const [ratio, g] of [
-      [0.5, 0.05],
-      [0.75, 0.025],
-    ] as const) {
-      const osc = ctx.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.value = ROOT_HZ * ratio;
-      const lp = ctx.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 360;
-      const env = ctx.createGain();
-      env.gain.setValueAtTime(0.0001, t);
-      env.gain.exponentialRampToValueAtTime(g, t + dur * 0.3);
-      env.gain.setTargetAtTime(0.0001, t + dur * 0.75, dur * 0.15);
-      osc.connect(lp).connect(env).connect(this.music!);
-      osc.start(t);
-      osc.stop(t + dur + 1);
-    }
-  }
-
-  private buk(t: number, gain: number) {
-    const ctx = this.ctx!;
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(110, t);
-    osc.frequency.exponentialRampToValueAtTime(48, t + 0.4);
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain, t + 0.008);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
-    osc.connect(g).connect(this.music!);
-    osc.start(t);
-    osc.stop(t + 1);
-  }
-
-  private scheduleMusic() {
-    const ctx = this.ctx;
-    if (!ctx || ctx.state !== 'running') return;
-    const ahead = ctx.currentTime + 0.4;
-    if (this.nextNote < ctx.currentTime) this.nextNote = ctx.currentTime + 0.3;
-    while (this.nextNote < ahead) {
-      const t = this.nextNote;
-      if (this.phrase % 8 === 0) this.drone(t, 9);
-      if (this.mode === 'battle' && this.phrase % 2 === 0) this.buk(t, 0.5);
-      const rest = Math.random() < 0.22;
-      const step = Math.random() < 0.6 ? (Math.random() < 0.5 ? -1 : 1) : Math.random() < 0.5 ? -2 : 2;
-      this.lastDegree = Math.max(1, Math.min(SCALE.length - 2, this.lastDegree + step));
-      const dur = [0.9, 1.4, 1.9, 2.6][Math.floor(Math.random() * 4)]!;
-      if (!rest) this.flute(t, ROOT_HZ * 2 * Math.pow(2, SCALE[this.lastDegree]! / 12), dur, 0.12);
-      this.nextNote = t + dur + (rest ? 1.2 : 0.15);
-      this.phrase += 1;
-    }
+    if (t - this.lastClick < 0.06) return;
+    this.lastClick = t;
+    woodTap(ctx, this.sfx, this.noise, t);
   }
 
   /** Called every frame: near-field housekeeping, the speed of the battle and how hot the battle is. */
@@ -332,7 +175,7 @@ export class Sound {
     const field = this.field;
     if (!this.ctx || !field || this.muted) return;
     field.tick(camera, scaled);
-    if (this.rumble) this.rumble.gain.setTargetAtTime(field.intensity * 0.35, this.ctx.currentTime, 0.6);
+    this.weather?.setRumble(field.intensity);
   }
 
   /** The script of a sinking ship (see sinkPlan.ts) and the last moment of it, as the effects reach each cue. */
@@ -349,16 +192,11 @@ export class Sound {
     this.field?.drums(count);
   }
 
-  /** A cue of the faction campaign's map and dialogs; a victory adds a short flute phrase. Silent when muted. */
+  /** A cue of the faction campaign's map and dialogs. Silent when muted. */
   campaign(cue: CampaignCue) {
-    const ctx = this.ctx;
-    if (this.muted || !ctx || !this.field) return;
+    if (this.muted || !this.ctx || !this.field) return;
     this.field.campaignCue(cue);
     if (cue === 'move') this.click();
-    if (cue === 'victory' && this.music) {
-      const t = ctx.currentTime + 0.8;
-      [4, 5, 7].forEach((degree, i) => this.flute(t + i * 0.55, ROOT_HZ * 2 * 2 ** (SCALE[degree]! / 12), 1.4, 0.5));
-    }
   }
 
   update(events: BattleEvent[], battle: Battle, camera: PerspectiveCamera, _dt: number) {

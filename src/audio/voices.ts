@@ -24,8 +24,9 @@ export const COST = {
   groan: { nodes: 13, secs: 3 },
   crack: { nodes: 8, secs: 0.4 },
   mast: { nodes: 16, secs: 1.4 },
-  bubbles: { nodes: 8, secs: 3.5 },
-  gurgle: { nodes: 16, secs: 3.5 },
+  bubbles: { nodes: 80, secs: 3.5 },
+  gurgle: { nodes: 140, secs: 3.5 },
+  clack: { nodes: 6, secs: 0.2 },
 } as const;
 
 /** The distance model: gain, speed-of-sound delay and a low-pass cutoff that closes with range. */
@@ -51,8 +52,14 @@ function impulse(ctx: BaseAudioContext, seconds: number, decay: number) {
   return buf;
 }
 
+/**
+ * Level of the master bus. The sea and the bed sit low (-30 LUFS) so that the guns stand 12 to 20 dB over them; this
+ * brings the whole mix up so those guns peak near -12 LUFS, and the compressor and the soft ceiling below keep it clean.
+ */
+export const MASTER_GAIN = 1.4;
+
 /** master -> compressor -> destination, with the shared reverb and the sfx bus. */
-export function buildBus(ctx: BaseAudioContext, masterGain = 0.9): Bus {
+export function buildBus(ctx: BaseAudioContext, masterGain = MASTER_GAIN): Bus {
   const master = ctx.createGain();
   master.gain.value = masterGain;
   const comp = ctx.createDynamicsCompressor();
@@ -66,7 +73,10 @@ export function buildBus(ctx: BaseAudioContext, masterGain = 0.9): Bus {
   ceiling.curve = curve;
   const half = ctx.createGain();
   half.gain.value = 0.5;
-  master.connect(comp).connect(half).connect(ceiling).connect(ctx.destination);
+  // The last stage keeps the peaks a dB under full scale, so the converter's own overshoot cannot clip.
+  const trim = ctx.createGain();
+  trim.gain.value = 0.89;
+  master.connect(comp).connect(half).connect(ceiling).connect(trim).connect(ctx.destination);
   const reverb = ctx.createConvolver();
   reverb.buffer = impulse(ctx, 3.2, 2.6);
   const wet = ctx.createGain();
@@ -347,17 +357,17 @@ export class Voices {
     env.gain.exponentialRampToValueAtTime(Math.max(0.0002, g * 0.6), t + 0.35);
     env.gain.exponentialRampToValueAtTime(0.0001, t + 1.5);
     whoosh.connect(bp).connect(env).connect(dest);
-    for (let i = 0; i < 5; i += 1) this.burst(t + rnd(0.1, 1.4), g * rnd(0.15, 0.3), spot.pan, 'bandpass', rnd(2200, 4200), 6, rnd(0.02, 0.05), 0.4);
+    for (let i = 0; i < 5; i += 1) this.burst(t + rnd(0.1, 1.4), g * rnd(0.15, 0.3), spot.pan, 'highpass', rnd(1500, 2600), 0.6, rnd(0.012, 0.03), 0.4);
   }
 
-  /** A round passing close to the listener: a band of noise that falls in pitch as it goes by. */
+  /** A round passing close to the listener: a wide band of noise that falls as it goes by (too narrow a band whistles). */
   whiz(t: number, spot: Spot, side: number) {
     const dest = this.ctx.createStereoPanner();
     dest.pan.setValueAtTime(Math.max(-0.9, Math.min(0.9, side)), t);
     dest.pan.linearRampToValueAtTime(-Math.max(-0.7, Math.min(0.7, side)) * 0.6, t + 0.4);
     dest.connect(this.dest);
     const src = this.noise('crack', t, 0.6);
-    const bp = this.filter('bandpass', 3200, 4, t);
+    const bp = this.filter('bandpass', 3200, 1.2, t);
     bp.frequency.exponentialRampToValueAtTime(750, t + 0.4);
     const g = this.ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
@@ -383,7 +393,7 @@ export class Voices {
       osc.stop(t + dur + 0.1);
       osc.connect(mix);
     }
-    const formant = this.filter('bandpass', rnd(160, 260), 7, t);
+    const formant = this.filter('bandpass', rnd(160, 260), 3, t);
     formant.frequency.linearRampToValueAtTime(rnd(280, 520), t + dur);
     const shudder = this.ctx.createOscillator();
     shudder.frequency.value = rnd(5, 12);
@@ -400,7 +410,7 @@ export class Voices {
     env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     mix.connect(formant).connect(tremolo).connect(env).connect(dest);
     const rub = this.noise('body', t, dur + 0.1);
-    const rubBp = this.filter('bandpass', rnd(500, 900), 5);
+    const rubBp = this.filter('bandpass', rnd(500, 900), 1.5);
     const rubEnv = this.envelope(t + dur * 0.1, g * 0.3, dur * 0.3, dur);
     rub.connect(rubBp).connect(rubEnv).connect(dest);
   }
@@ -419,6 +429,15 @@ export class Voices {
     }
   }
 
+  /** A blow in a melee: wood on wood, a dull clack of low-passed noise over a short knock. No resonance, so no pitch. */
+  clack(t: number, gain: number, pan: number) {
+    const dest = this.out(pan, 0.35);
+    const k = rnd(0.85, 1.2);
+    const src = this.noise('crack', t, 0.12);
+    src.connect(this.filter('lowpass', 1500 * k, 0.5)).connect(this.envelope(t, gain, 0.002, 0.05)).connect(dest);
+    this.tone('sine', t, 170 * k, 90 * k, 0.04, 0.12).connect(this.envelope(t, gain * 0.7, 0.002, 0.07)).connect(dest);
+  }
+
   /** A mast breaking off: a long tearing splinter and a heavy crack. */
   mast(t: number, spot: Spot) {
     this.planks(t, spot, 1);
@@ -430,27 +449,20 @@ export class Voices {
     this.tone('sine', t + 0.55, 90, 38, 0.3, 0.9).connect(this.envelope(t + 0.55, spot.gain * 0.8, 0.005, 0.7)).connect(dest);
   }
 
-  /** Air boiling up through the water: a train of rising blips over a low boil. */
+  /**
+   * Air boiling up through the water: a low boil with soft plops on top. Each plop is a puff of noise in a low, wide
+   * band; a sine blip that rises in pitch (the first version) is a beep, and a train of them is a ringtone.
+   */
   bubbles(t: number, spot: Spot, dur: number, size: number) {
     const g = spot.gain * (0.3 + 0.5 * size);
     const dest = this.out(spot.pan, 0.6);
-    const osc = this.ctx.createOscillator();
-    osc.type = 'sine';
-    const env = this.ctx.createGain();
-    env.gain.setValueAtTime(0.0001, t);
-    const n = Math.round(dur * (8 + 14 * size));
+    const n = Math.round(dur * (3 + 4 * size));
     for (let i = 0; i < n; i += 1) {
       const at = t + (i / n) * dur + rnd(0, dur / n);
-      const f = rnd(260, 900) * (1.3 - (i / n) * 0.4);
-      osc.frequency.setValueAtTime(f, at);
-      osc.frequency.exponentialRampToValueAtTime(f * rnd(1.4, 2), at + 0.06);
-      env.gain.setValueAtTime(0.0001, at);
-      env.gain.linearRampToValueAtTime(g * rnd(0.3, 0.8), at + 0.006);
-      env.gain.exponentialRampToValueAtTime(0.0001, at + rnd(0.05, 0.1));
+      const src = this.noise('body', at, 0.2);
+      const bp = this.filter('bandpass', rnd(170, 430) * (1.2 - (i / n) * 0.3), 1.1);
+      src.connect(bp).connect(this.envelope(at, g * rnd(0.3, 0.9), 0.008, rnd(0.05, 0.11))).connect(dest);
     }
-    osc.connect(env).connect(dest);
-    osc.start(t);
-    osc.stop(t + dur + 0.2);
     const boil = this.noise('body', t, dur + 0.2);
     const lp = this.filter('lowpass', 520, 0.6);
     const boilEnv = this.ctx.createGain();
@@ -470,24 +482,15 @@ export class Voices {
     const bp = this.filter('bandpass', 700, 0.8, t);
     bp.frequency.exponentialRampToValueAtTime(160, t + 2.4);
     rush.connect(bp).connect(this.envelope(t, g * 0.9, 0.08, 2.6)).connect(dest);
-    // The glugs: a slow sine dipping in pitch, struck again and again with falling strength.
-    const osc = this.ctx.createOscillator();
-    osc.type = 'sine';
-    const env = this.ctx.createGain();
-    env.gain.setValueAtTime(0.0001, t);
+    // The glugs: a slow sine dipping in pitch, struck again and again with falling strength. Each has its own oscillator
+    // and envelope, so none starts on a step in level (that is a tick).
     let at = t + 0.1;
     for (let i = 0; i < 7; i += 1) {
       const f = rnd(110, 190) * (1 - i * 0.05);
-      osc.frequency.setValueAtTime(f, at);
-      osc.frequency.exponentialRampToValueAtTime(f * 0.45, at + 0.26);
-      env.gain.setValueAtTime(0.0001, at);
-      env.gain.linearRampToValueAtTime(g * 0.9 * (1 - i * 0.1), at + 0.02);
-      env.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
+      const glug = this.tone('sine', at, f, f * 0.45, 0.26, 0.34);
+      glug.connect(this.envelope(at, g * 0.9 * (1 - i * 0.1), 0.02, 0.3)).connect(dest);
       at += rnd(0.22, 0.42);
     }
-    osc.connect(env).connect(dest);
-    osc.start(t);
-    osc.stop(at + 0.4);
     this.bubbles(t + 0.2, spot, 2.4, size);
     this.tone('sine', at, 130, 48, 0.4, 0.8).connect(this.envelope(at, g * 1.1, 0.01, 0.7)).connect(dest);
   }
