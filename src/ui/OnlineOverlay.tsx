@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { net, useNet } from '../net/NetClient';
 import { GRACE_SECONDS } from '../net/protocol';
+import { useT } from '../i18n';
 import { setScreen, useUi } from '../state/store';
 import { sound } from '../audio/Sound';
 import type { Engine } from '../game/Engine';
@@ -24,6 +25,7 @@ function exitBattle(leaveRoom: boolean) {
  * connection, and what to do once the battle is over or the seat was lost. It sits beside the HUD rather than in it.
  */
 function OnlineOverlay() {
+  const t = useT();
   const screen = useUi((s) => s.screen);
   const battle = useNet((s) => s.battle);
   const status = useNet((s) => s.status);
@@ -46,24 +48,24 @@ function OnlineOverlay() {
       <div className="on-pills">
         {battle === 'playing' && speed.target === 0 && (
           <div className="on-pill">
-            <b>상대를 기다리고 있습니다</b>
-            <span>모두 입장하면 전투가 시작됩니다</span>
+            <b>{t('상대를 기다리고 있습니다')}</b>
+            <span>{t('모두 입장하면 전투가 시작됩니다')}</span>
           </div>
         )}
         {battle === 'playing' && speed.target > 1 && (
-          <div className="on-pill" title="적과 접촉할 때까지 서버가 시간을 빠르게 진행합니다">
-            <b>빠른 접근 ×{speed.speed}</b>
-            <span>적과 접촉하면 정상 속도로 돌아갑니다</span>
+          <div className="on-pill" title={t('적과 접촉할 때까지 서버가 시간을 빠르게 진행합니다')}>
+            <b>{t('빠른 접근 ×{n}', { n: speed.speed })}</b>
+            <span>{t('적과 접촉하면 정상 속도로 돌아갑니다')}</span>
           </div>
         )}
         {status !== 'online' && battle !== 'lost' && (
           <div className="on-pill on-pill--warn">
-            <b>연결이 끊어졌습니다</b>
+            <b>{t('연결이 끊어졌습니다')}</b>
             <span>
-              {retry ? `${retry.in}초 뒤 다시 연결합니다` : '다시 연결하고 있습니다'} · 자리는 {GRACE_SECONDS}초 동안 유지됩니다
+              {retry ? t('{n}초 뒤 다시 연결합니다', { n: retry.in }) : t('다시 연결하고 있습니다')} · {t('자리는 {n}초 동안 유지됩니다', { n: GRACE_SECONDS })}
             </span>
             <button className="chip" onClick={() => net.retryNow()}>
-              지금 다시 시도
+              {t('지금 다시 시도')}
             </button>
           </div>
         )}
@@ -71,19 +73,19 @@ function OnlineOverlay() {
       {battle === 'ended' && room && (
         <div className="on-end paper">
           <span>
-            {mine?.rematch ? `재대결을 기다리고 있습니다 (${humans.filter((s) => s.rematch).length}/${humans.length})` : '한 판 더 겨루시겠습니까?'}
+            {mine?.rematch ? t('재대결을 기다리고 있습니다 ({done}/{total})', { done: humans.filter((s) => s.rematch).length, total: humans.length }) : t('한 판 더 하시겠습니까?')}
           </span>
           <button className={`chip ${mine?.rematch ? 'chip--on' : ''}`} disabled={!mine || mine.rematch} onClick={() => net.send({ t: 'rematch' })}>
-            재대결
+            {t('재대결')}
           </button>
           <button className="chip" onClick={() => exitBattle(false)}>
-            대기실로
+            {t('대기실로')}
           </button>
         </div>
       )}
       {battle === 'lost' && (
         <div className="on-lost paper">
-          <b>{notice ?? '전투에서 물러났습니다.'}</b>
+          <b>{t(notice ?? '전투에서 물러났습니다.')}</b>
           <button
             className="ink-btn on-go"
             onClick={() => {
@@ -91,7 +93,7 @@ function OnlineOverlay() {
               exitBattle(true);
             }}
           >
-            대기실로
+            {t('대기실로')}
           </button>
         </div>
       )}

@@ -17,7 +17,7 @@ const ICONS: Record<string, Parts[]> = {
   starboardVolley: [{ rect: [8, 3.5, 6, 17, 3] }, { d: 'M17 8h4 M17 12h4 M17 16h4' }],
   aim: [{ circles: [[12, 12, 7]] }, { d: 'M12 2.5v4 M12 17.5v4 M2.5 12h4 M17.5 12h4' }, { dots: [[12, 12]] }],
   hold: [{ circles: [[12, 12, 8.5]] }, { d: 'M10 8.5v7 M14 8.5v7' }],
-  shot: [{ circles: [[11, 13, 6]] }, { d: 'M15.5 8.5L19 5 M17 4h3v3' }],
+  shot: [{ circles: [[15.5, 12, 5.5]] }, { d: 'M2.5 8.5h6 M2.5 12h4 M2.5 15.5h6' }],
   broadside: [{ rect: [3, 12, 18, 6, 3] }, { d: 'M7 3v5 M12 3v5 M17 3v5' }],
 
   // Movement
@@ -43,6 +43,8 @@ const ICONS: Record<string, Parts[]> = {
   settings: [{ d: 'M4 7h9 M19 7h1 M4 17h1 M11 17h9' }, { circles: [[16, 7, 2.5], [8, 17, 2.5]] }],
   x: [{ d: 'M6 6l12 12 M18 6L6 18' }],
   chevronDown: [{ d: 'M6 9.5l6 6 6-6' }],
+  chevronLeft: [{ d: 'M14.5 6l-6 6 6 6' }],
+  chevronRight: [{ d: 'M9.5 6l6 6-6 6' }],
   chevronUp: [{ d: 'M6 14.5l6-6 6 6' }],
   play: [{ d: 'M8 5.5v13l11-6.5z' }],
   pause: [{ d: 'M9 5.5v13 M15 5.5v13' }],

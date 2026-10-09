@@ -193,17 +193,20 @@ export type GeobukPlan = {
   roofTop: number;
   overhang: number;
   oars: { n: number; x0: number; x1: number; y: number };
-  /** Dragon head: mouth tip at +length/2, centre height. */
-  head: { baseX: number; mouthY: number };
+  /**
+   * Dragon head: the neck starts under the front of the roof at (baseX, baseY) and the head reaches past the bow;
+   * the bow gun's muzzle sits in the open mouth at (mouthX, mouthY).
+   */
+  head: { baseX: number; baseY: number; mouthX: number; mouthY: number };
 };
 
 export const GEOBUK_PLAN: GeobukPlan = {
-  hull: { length: 42, beam: 12, draft: 1.5, deck: 5, flat: 0.34, bilge: 1.6, mid: 0.24, bowF: 0.34, sternF: 0.5, rise: 2.0, risePow: 2.2, flare: 0.2, taper: 1.2, bowDrop: 1.9 },
+  hull: { length: 42, beam: 12, draft: 1.5, deck: 5, flat: 0.34, bilge: 1.6, mid: 0.24, bowF: 0.34, sternF: 0.5, rise: 2.0, risePow: 2.2, flare: 0.2, taper: 1.2 },
   floor: 2.6,
   roofTop: 7.3,
   overhang: 0.45,
   oars: { n: 8, x0: -14, x1: 14, y: 1.5 },
-  head: { baseX: 13.6, mouthY: 3.9 },
+  head: { baseX: 18.4, baseY: 4.75, mouthX: 23.15, mouthY: 5.08 },
 };
 
 export type HyeopPlan = {
@@ -408,6 +411,10 @@ function sideRail(hull: HullPlan, x0: number, x1: number, n: number, y: number, 
   return out;
 }
 
+/** Height of a lantern hung on a pole standing on the wall top: its hook sits this far above the wall. */
+const POLE_LANTERN = 1.3;
+const sheerAt = (rise: number, L: number, x: number, pow = 2.2) => rise * Math.pow(Math.abs((2 * x) / L), pow);
+
 function panokAnchors(plan: PanokPlan): ShipAnchors {
   const h = plan.hull;
   const L = h.length;
@@ -447,8 +454,8 @@ function panokAnchors(plan: PanokPlan): ShipAnchors {
       [pv.x - pv.hx + 0.4, floorY + postHalf(pv), -pv.hz + 0.4],
       [pv.x + pv.hx - 0.4, floorY + postHalf(pv), pv.hz - 0.4],
       [pv.x + pv.hx - 0.4, floorY + postHalf(pv), -pv.hz + 0.4],
-      [L / 2 - 1.5, deck + plan.parapet + 0.4, 0],
-      [-L / 2 + 1.0, deck + plan.parapet + 0.4, 0],
+      [L / 2 - 1.5, deck + plan.parapet + sheerAt(plan.sheer, L, L / 2 - 1.5) + POLE_LANTERN, 0],
+      [-L / 2 + 1.0, deck + plan.parapet + sheerAt(plan.sheer, L, -L / 2 + 1.0) + POLE_LANTERN, 0],
     ],
     flagMounts: flags,
     mastTops,
@@ -471,6 +478,23 @@ function panokAnchors(plan: PanokPlan): ShipAnchors {
 
 const postHalf = (pv: PanokPlan['pavilion']) => pv.postH * 0.85;
 
+/** Where the turtle ship's iron roof starts and ends along the ship: it covers the whole deck, stern to bow. */
+export const geobukRoofSpan = (plan: GeobukPlan): [number, number] => [-plan.hull.length / 2 + 0.6, plan.hull.length / 2 - 0.35];
+
+/**
+ * Height of the turtle ship's iron roof at (x, z): a hump along the ship, falling away to the eaves. The front stays
+ * higher than the stern, where the dragon's neck comes out from under it.
+ */
+export function geobukRoofY(plan: GeobukPlan, x: number, z: number) {
+  const h = plan.hull;
+  const [xs0, xs1] = geobukRoofSpan(plan);
+  const top = hullTop(h, x);
+  const u = ((x - xs0) / (xs1 - xs0)) * 2 - 1;
+  const g = u > 0 ? 1 - 0.62 * smooth(0.35, 1, u) : 1 - 0.78 * smooth(0.3, 1, -u);
+  const t = Math.min(1, Math.abs(z) / (sideZ(h, x, top) + plan.overhang));
+  return top + (plan.roofTop - h.deck) * g * (1 - Math.pow(t, 2.5));
+}
+
 function geobukAnchors(plan: GeobukPlan): ShipAnchors {
   const h = plan.hull;
   const L = h.length;
@@ -483,7 +507,7 @@ function geobukAnchors(plan: GeobukPlan): ShipAnchors {
       gunPorts.push({ side, index: i, gun, pos: [x, gunY, sideSign(side) * (sideZ(h, x, gunY) + 0.2)], dir: [0, 0, sideSign(side)] });
     });
   }
-  slots[2]!.forEach((gun, i) => gunPorts.push({ side: 2, index: i, gun, pos: [L / 2 - 0.4, plan.head.mouthY, 0], dir: [1, 0, 0] }));
+  slots[2]!.forEach((gun, i) => gunPorts.push({ side: 2, index: i, gun, pos: [plan.head.mouthX, plan.head.mouthY, 0], dir: [1, 0, 0] }));
   return {
     length: L,
     beam: h.beam,
@@ -498,8 +522,8 @@ function geobukAnchors(plan: GeobukPlan): ShipAnchors {
     rowStations: sideRail(h, plan.oars.x0, plan.oars.x1, plan.oars.n, plan.floor - 2.5, 1.6),
     boardingPoints: [],
     lanterns: [
-      [L / 2 - 6, plan.roofTop - 0.6, 0],
-      [-L / 2 + 5, plan.roofTop - 1.2, 0],
+      [10.5, geobukRoofY(plan, 10.5, 0) + POLE_LANTERN, 0],
+      [-14, geobukRoofY(plan, -14, 0) + POLE_LANTERN, 0],
     ],
     flagMounts: [
       { id: 'ensign', pos: [-4, plan.roofTop + 0.4, 0], kind: 'ensign', size: [2.8, 2.2], color: '#5b2c26' },
@@ -509,7 +533,7 @@ function geobukAnchors(plan: GeobukPlan): ShipAnchors {
       [-4, plan.roofTop + 2.4, 0],
       [5, plan.roofTop + 1.9, 0],
     ],
-    smokeStack: [L / 2 - 0.6, plan.head.mouthY, 0],
+    smokeStack: [plan.head.mouthX - 0.3, plan.head.mouthY, 0],
     fireSpots: [
       [0, plan.roofTop, 0],
       [-9, plan.roofTop - 1.2, 0],
@@ -551,7 +575,7 @@ function hyeopAnchors(plan: HyeopPlan): ShipAnchors {
     railStations: sideRail(h, -3, 4, 3, h.deck - 0.55, 0.45),
     rowStations: sideRail(h, plan.oars.x0, plan.oars.x1, plan.oars.n, h.deck - 0.55, 0.6),
     boardingPoints: [0, 1].map((side) => ({ pos: [0, h.deck, sideSign(side) * sideZ(h, 0, h.deck)] as V3, side: side as 0 | 1 })),
-    lanterns: [[-L / 2 + 0.6, h.deck + 1.2, 0]],
+    lanterns: [[-L / 2 + 0.6, h.deck + POLE_LANTERN + 0.2, 0]],
     flagMounts: [{ id: 'pennant', pos: [plan.mast.x, h.deck + plan.mast.h, 0], kind: 'pennant', size: [2.4, 0.5], color: '#8d7442' }],
     mastTops: [[plan.mast.x, h.deck + plan.mast.h, 0]],
     fireSpots: [[0, h.deck - 0.4, 0]],
@@ -637,8 +661,8 @@ function atakeAnchors(plan: AtakePlan): ShipAnchors {
       [plan.cx - lv[0]!.hx + 0.3, lv[0]!.y1 - 0.4, -lv[0]!.hz - 0.2],
       [plan.cx + lv[0]!.hx - 0.3, lv[0]!.y1 - 0.4, lv[0]!.hz + 0.2],
       [plan.cx + lv[0]!.hx - 0.3, lv[0]!.y1 - 0.4, -lv[0]!.hz - 0.2],
-      [L / 2 - 1.2, deck + plan.parapet + 0.3, 0],
-      [-L / 2 + 1.0, deck + plan.parapet + 0.3, 0],
+      [L / 2 - 1.2, deck + plan.parapet + sheerAt(plan.sheer, L, L / 2 - 1.2) + POLE_LANTERN, 0],
+      [-L / 2 + 1.0, deck + plan.parapet + sheerAt(plan.sheer, L, -L / 2 + 1.0) + POLE_LANTERN, 0],
     ],
     flagMounts: flags,
     mastTops: [[plan.mast.x, deck + plan.mast.h, 0]],
@@ -676,7 +700,7 @@ function sekiAnchors(plan: SekiPlan): ShipAnchors {
     lanterns: [
       [c.x + c.hx - 0.3, deck + c.h - 0.3, c.hz + 0.2],
       [c.x + c.hx - 0.3, deck + c.h - 0.3, -c.hz - 0.2],
-      [-L / 2 + 0.8, deck + plan.parapet + 0.2, 0],
+      [-L / 2 + 0.8, hullTop(h, -L / 2 + 0.8) + plan.parapet + sheerAt(plan.sheer, L, -L / 2 + 0.8) + POLE_LANTERN, 0],
     ],
     flagMounts: [
       noboriAt(-L / 2 + 1.4, -1.2, 'nobori_a/white'),
@@ -705,7 +729,7 @@ function kobayaAnchors(plan: KobayaPlan): ShipAnchors {
     railStations: sideRail(h, -2.5, 3.5, 3, h.deck - 0.45, 0.4),
     rowStations: sideRail(h, plan.oars.x0, plan.oars.x1, plan.oars.n, h.deck - 0.45, 0.45),
     boardingPoints: boarding(h, [0], h.deck),
-    lanterns: [[-L / 2 + 0.5, h.deck + 1.0, 0]],
+    lanterns: [[-L / 2 + 0.5, h.deck + POLE_LANTERN + 0.2, 0]],
     flagMounts: plan.poles.map((p, i): FlagMount => ({ id: `nobori:${i ? 'nobori_b/black' : 'nobori_a/white'}`, pos: [p.x, h.deck - 0.4, p.z], kind: 'nobori', size: [1.0, p.h - 1.6], color: '#e8e0d0' })),
     mastTops: [],
     fireSpots: [[0, 0.8, 0]],
@@ -736,7 +760,7 @@ function mingAnchors(plan: MingPlan): ShipAnchors {
       [c.x + c.hx - 0.4, floor2 + 2.0, -c.hz + 0.4],
       [c.x - c.hx + 0.4, floor2 + 2.0, c.hz - 0.4],
       [c.x - c.hx + 0.4, floor2 + 2.0, -c.hz + 0.4],
-      [L / 2 - 1.5, deck + plan.parapet + 0.4, 0],
+      [L / 2 - 1.5, deck + plan.parapet + sheerAt(0.5, L, L / 2 - 1.5, 2.4) + POLE_LANTERN, 0],
     ],
     flagMounts: [
       { id: 'command', pos: [c.x, floor2 + c.h2 + 2.3, 0], kind: 'command', size: [3.4, 2.8], color: '#5b2c26' },

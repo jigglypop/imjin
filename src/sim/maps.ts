@@ -80,9 +80,9 @@ export const CONQUEST_MAPS: Record<ConquestMapId, ConquestMap> = {
     title: '한려 쟁탈전',
     hanja: '閑麗爭奪戰',
     place: '한려 수도 · 거점 9곳',
-    date: '정유년 여름',
-    season: '정유년 여름',
-    summary: '섬이 흩어진 물길에 거점 아홉 곳이 있습니다. 거점을 차지하면 군자금이 들어오고, 선소에서 새 함선을 건조할 수 있습니다. 포대로 물길을 막고 적의 거점을 빼앗아 기세를 꺾습니다.',
+    date: '1597년 여름',
+    season: '여름',
+    summary: '섬이 흩어진 물길에 거점이 아홉 곳 있습니다. 거점을 차지하면 군자금이 들어오고, 선소에서 새 함선을 건조할 수 있습니다. 포대로 물길을 지키면서 적의 거점을 빼앗는 것이 승리의 열쇠입니다.',
     sky: 'afternoon',
     sea: 'moderate',
     night: false,
@@ -93,7 +93,7 @@ export const CONQUEST_MAPS: Record<ConquestMapId, ConquestMap> = {
       ...pair({ name: '서영', hanja: '西營', x: -2000, z: -1420, r: 260, value: 2, home: 0 }, '동영', '東營', 1),
       ...pair({ name: '서섬 진', hanja: '西島鎭', x: -2180, z: 640, r: 240, value: 2, home: 2 }, '동섬 진', '東島鎭', 3),
       ...pair({ name: '견내 포구', hanja: '見乃浦', x: -900, z: 400, r: 220, value: 1 }, '두억 포구', '豆億浦'),
-      ...pair({ name: '북녘 포구', hanja: '北浦', x: -320, z: -1360, r: 220, value: 1 }, '남녘 포구', '南浦'),
+      ...pair({ name: '북쪽 포구', hanja: '北浦', x: -320, z: -1360, r: 220, value: 1 }, '남쪽 포구', '南浦'),
       { name: '한산 앞바다', hanja: '閑山洋', x: 0, z: 0, r: 360, value: 2 },
     ],
     view: { tx: 0, tz: 0, dir: 0, dist: 2200, pitch: 0.6 },
@@ -103,8 +103,8 @@ export const CONQUEST_MAPS: Record<ConquestMapId, ConquestMap> = {
     title: '견내량 쟁탈전',
     hanja: '見乃梁爭奪戰',
     place: '견내량 · 거점 5곳',
-    date: '임진년 여름',
-    season: '임진년 여름',
+    date: '1592년 여름',
+    season: '여름',
     summary: '양쪽 육지 사이로 좁은 물길이 지나갑니다. 물길 한가운데의 거점을 차지한 쪽이 바다를 장악합니다. 함선이 방향을 바꿀 공간이 좁아, 진형과 포대의 위치가 승패를 좌우합니다.',
     sky: 'day',
     sea: 'calm',
@@ -115,7 +115,7 @@ export const CONQUEST_MAPS: Record<ConquestMapId, ConquestMap> = {
     points: [
       ...pair({ name: '서영', hanja: '西營', x: -2700, z: -420, r: 260, value: 2, home: 0 }, '동영', '東營', 1),
       ...pair({ name: '서섬 포구', hanja: '西島浦', x: -1350, z: -60, r: 220, value: 1 }, '동섬 포구', '東島浦'),
-      { name: '물길 한가운데', hanja: '梁中', x: 0, z: 0, r: 320, value: 2 },
+      { name: '물길 중앙', hanja: '梁中', x: 0, z: 0, r: 320, value: 2 },
     ],
     view: { tx: 0, tz: 0, dir: 0, dist: 2000, pitch: 0.6 },
   },
@@ -177,13 +177,13 @@ export function wetSpot(land: LandSampler, x: number, z: number, placed: { x: nu
 /** Default seats: the player against the computer, or a 2-against-2. */
 export function defaultSeats(player: Faction, enemy: Faction, count = 2): Seat[] {
   const seats: Seat[] = [
-    { name: '나', faction: player, team: 'joseon', human: true, fleet: autoFleet(player) },
-    { name: '적장', faction: enemy, team: 'japan', human: false, fleet: autoFleet(enemy) },
+    { name: '아군 본대', faction: player, team: 'joseon', human: true, fleet: autoFleet(player) },
+    { name: '적 본대', faction: enemy, team: 'japan', human: false, fleet: autoFleet(enemy) },
   ];
   if (count === 4) {
     const ally: Faction = player === 'japan' ? 'japan' : player === 'ming' ? 'joseon' : 'ming';
-    seats.push({ name: '우군', faction: ally, team: 'joseon', human: false, fleet: autoFleet(ally) });
-    seats.push({ name: '적 부장', faction: enemy, team: 'japan', human: false, fleet: autoFleet(enemy) });
+    seats.push({ name: '동맹군', faction: ally, team: 'joseon', human: false, fleet: autoFleet(ally) });
+    seats.push({ name: '적 별동대', faction: enemy, team: 'japan', human: false, fleet: autoFleet(enemy) });
   }
   return seats;
 }

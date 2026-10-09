@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { MAP_IMAGE } from './projection';
+import { useT } from '../../i18n';
 import { Chip, FACTION_INFO, FactionCrest, Icon } from './shared';
+import { fleetsText, portsText } from './text';
 import type { FactionId, FactionOption } from './types';
-import { josa } from '../../sim/grand/josa';
 
 export type Level = 'easy' | 'normal' | 'hard';
 
@@ -13,6 +14,7 @@ export interface FactionPickProps {
   onBack?: () => void;
 }
 
+/** Korean source text: shown through t(). */
 const DIFFICULTY = ['쉬움', '보통', '어려움'];
 const LEVELS: { id: Level; name: string; hint: string }[] = [
   { id: 'easy', name: '쉬움', hint: '적 진영의 수입이 10% 줄어듭니다.' },
@@ -22,6 +24,7 @@ const LEVELS: { id: Level; name: string; hint: string }[] = [
 
 /** Choose the faction to lead: one card each with its strengths and starting ports. */
 export function FactionPick({ options, initial, onPick, onBack }: FactionPickProps) {
+  const t = useT();
   const [sel, setSel] = useState<FactionId>(initial ?? options[0]?.id ?? 'joseon');
   const [level, setLevel] = useState<Level>('normal');
   const chosen = options.find((o) => o.id === sel);
@@ -33,15 +36,15 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
             {onBack && (
               <button type="button" className="g-back" onClick={onBack}>
                 <Icon name="back" size="sm" />
-                뒤로
+                {t('뒤로')}
               </button>
             )}
             <div>
-              <div className="g-sheet__eyebrow">진영 전역 · 1592</div>
-              <h1 className="g-pick__title">진영을 선택하세요</h1>
+              <div className="g-sheet__eyebrow">{t('진영 전역 · 1592')}</div>
+              <h1 className="g-pick__title">{t('진영 선택')}</h1>
             </div>
           </header>
-          <div className="g-pick__cards" role="radiogroup" aria-label="진영">
+          <div className="g-pick__cards" role="radiogroup" aria-label={t('진영')}>
             {options.map((o) => {
               const f = FACTION_INFO[o.id];
               const on = o.id === sel;
@@ -61,8 +64,8 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
                       <b>{o.name}</b>
                       <span>{o.leader}</span>
                     </span>
-                    <span className="g-fcard__diff" aria-label={`난이도 ${DIFFICULTY[o.difficulty - 1]}`}>
-                      {DIFFICULTY[o.difficulty - 1]}
+                    <span className="g-fcard__diff" aria-label={t('난이도 {level}', { level: t(DIFFICULTY[o.difficulty - 1]!) })}>
+                      {t(DIFFICULTY[o.difficulty - 1]!)}
                       <i>
                         {[1, 2, 3].map((n) => (
                           <u key={n} className={n <= o.difficulty ? 'on' : ''} />
@@ -78,9 +81,7 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
                     <Chip tone="warn">{o.weakness}</Chip>
                   </span>
                   <span className="g-fcard__start">
-                    <span>
-                      시작 포구 {o.startRegions.length}곳 · 함대 {o.fleets}개
-                    </span>
+                    <span>{t('시작 포구 {ports} · 함대 {fleets}', { ports: portsText(o.startRegions.length), fleets: fleetsText(o.fleets) })}</span>
                     <b>{o.startRegions.join(' · ')}</b>
                   </span>
                 </button>
@@ -88,16 +89,16 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
             })}
           </div>
           <footer className="g-glass g-pick__foot">
-            <div className="g-level" role="radiogroup" aria-label="난이도">
+            <div className="g-level" role="radiogroup" aria-label={t('난이도')}>
               {LEVELS.map((l) => (
                 <button key={l.id} type="button" role="radio" aria-checked={level === l.id} className={`g-level__opt${level === l.id ? ' g-level__opt--on' : ''}`} onClick={() => setLevel(l.id)}>
-                  {l.name}
+                  {t(l.name)}
                 </button>
               ))}
             </div>
-            <span className="g-level__hint">{LEVELS.find((l) => l.id === level)?.hint}</span>
+            <span className="g-level__hint">{t(LEVELS.find((l) => l.id === level)?.hint ?? '')}</span>
             <button type="button" className="g-btn g-btn--primary g-btn--lg g-pick__go" onClick={() => onPick(sel, level)}>
-              {chosen ? `${josa(chosen.name, '으로/로')} 시작` : '시작'}
+              {chosen ? t('{name|으로/로} 시작', { name: chosen.name }) : t('시작')}
             </button>
           </footer>
         </div>

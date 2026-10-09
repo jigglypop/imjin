@@ -1,15 +1,16 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { getLang, t, useT } from '../../i18n';
 import type { BuildingKind, FactionId, Owner, Resources, ShipClass } from './types';
 
-/** The three navies as small tonal accents: the muted tones the CSS tokens carry, and the crest of each. */
+/** The three navies as small tonal accents: the muted tones the CSS tokens carry, and the crest of each. `name` and `navy` are Korean source text: show them through ownerName / navyName. */
 export const FACTION_INFO: Record<FactionId, { name: string; navy: string; color: string; soft: string; crest: string }> = {
-  joseon: { name: '조선', navy: '조선 수군', color: '#46637a', soft: '#e4eaef', crest: 'joseon' },
-  japan: { name: '일본', navy: '일본 수군', color: '#6b4a40', soft: '#ede6e3', crest: 'japan' },
-  ming: { name: '명', navy: '명 수군', color: '#8c7040', soft: '#efe9dd', crest: 'ming' },
+  joseon: { name: '조선', navy: '조선 수군', color: 'var(--joseon)', soft: 'var(--joseon-soft)', crest: 'joseon' },
+  japan: { name: '일본', navy: '일본 수군', color: 'var(--japan)', soft: 'var(--japan-soft)', crest: 'japan' },
+  ming: { name: '명', navy: '명 수군', color: 'var(--ming)', soft: 'var(--ming-soft)', crest: 'ming' },
 };
 
-export const ownerName = (o: Owner) => (o ? FACTION_INFO[o].name : '중립');
-export const navyName = (o: Owner) => (o ? FACTION_INFO[o].navy : '중립');
+export const ownerName = (o: Owner) => t(o ? FACTION_INFO[o].name : '중립');
+export const navyName = (o: Owner) => t(o ? FACTION_INFO[o].navy : '중립');
 
 const ICONS = {
   menu: 'M4 7h16M4 12h16M4 17h16',
@@ -44,15 +45,20 @@ export function Icon({ name, size }: { name: IconName; size?: 'sm' | 'lg' }) {
   );
 }
 
+/** Korean source text: show a work's name and help through buildingName / buildingDesc. */
 export const BUILDINGS: Record<BuildingKind, { name: string; icon: IconName; desc: string }> = {
-  camp: { name: '군영', icon: 'camp', desc: '유지비가 들지 않고 수리가 빠릅니다. 수비대가 늘어납니다.' },
-  shipyard: { name: '선소', icon: 'shipyard', desc: '함선을 건조합니다. 단계가 오르면 동시에 지을 수 있는 수가 늘고 값이 내려갑니다.' },
-  battery: { name: '포대', icon: 'battery', desc: '적이 공격해 오면 먼저 포격합니다. 전투에도 그대로 배치됩니다.' },
+  camp: { name: '군영', icon: 'camp', desc: '함대 유지비 면제 한도가 늘고 수리가 빨라집니다. 수비대도 늘어납니다.' },
+  shipyard: { name: '선소', icon: 'shipyard', desc: '함선을 건조합니다. 단계가 오르면 동시에 지을 수 있는 함선이 늘고 값이 내려갑니다.' },
+  battery: { name: '포대', icon: 'battery', desc: '적이 쳐들어오면 먼저 포격합니다. 직접 지휘하는 전투에도 그대로 배치됩니다.' },
   dock: { name: '수리소', icon: 'dock', desc: '머무는 함선의 선체와 승조원을 빠르게 회복합니다.' },
   granary: { name: '창고', icon: 'granary', desc: '단계마다 수입이 25% 늘고, 전투에서는 화약고가 됩니다.' },
-  beacon: { name: '봉수대', icon: 'beacon', desc: '두 칸 앞까지 적 함대를 볼 수 있고 수입이 5% 늘어납니다.' },
+  beacon: { name: '봉수대', icon: 'beacon', desc: '두 항로 앞까지 적 함대가 보이고 수입이 5% 늘어납니다.' },
 };
 
+export const buildingName = (kind: BuildingKind) => t(BUILDINGS[kind].name);
+export const buildingDesc = (kind: BuildingKind) => t(BUILDINGS[kind].desc);
+
+/** Korean source text: show a ship's class through shipName. */
 export const SHIP_NAME: Record<ShipClass, string> = {
   panokseon: '판옥선',
   geobukseon: '거북선',
@@ -60,11 +66,16 @@ export const SHIP_NAME: Record<ShipClass, string> = {
   atakebune: '아타케부네',
   sekibune: '세키부네',
   kobaya: '고바야',
-  mingship: '명 복선',
-  mingsmall: '명 사선',
+  mingship: '명 대형선',
+  mingsmall: '명 소형선',
 };
 
-export const goldText = (gold: number) => `${gold.toLocaleString('ko-KR')}냥`;
+export const shipName = (kind: ShipClass) => t(SHIP_NAME[kind]);
+
+/** A number with thousands separators the way the current language writes them. */
+export const num = (n: number) => n.toLocaleString(getLang() === 'ko' ? 'ko-KR' : 'en-US');
+
+export const goldText = (gold: number) => t('{gold}냥', { gold });
 
 export function costText(cost: Partial<Resources>) {
   return cost.gold ? goldText(cost.gold) : '';
@@ -130,20 +141,21 @@ export function Sheet({
   tone?: Owner;
   className?: string;
 }) {
+  const t = useT();
   const [tall, setTall] = useState(false);
   return (
     <section
       className={`g-glass g-sheet${tall ? ' g-sheet--tall' : ''} ${className}`}
       style={toneStyle(tone ?? null)}
     >
-      <button type="button" className="g-sheet__handle" aria-label={tall ? '패널 줄이기' : '패널 늘리기'} onClick={() => setTall((t) => !t)} />
+      <button type="button" className="g-sheet__handle" aria-label={tall ? t('패널 줄이기') : t('패널 늘리기')} onClick={() => setTall((v) => !v)} />
       <header className="g-sheet__head">
         <div className="g-sheet__titles">
           {eyebrow && <div className="g-sheet__eyebrow">{eyebrow}</div>}
           <h2 className="g-sheet__title">{title}</h2>
         </div>
         {onClose && (
-          <button type="button" className="g-icon-btn" aria-label="닫기" onClick={onClose}>
+          <button type="button" className="g-icon-btn" aria-label={t('닫기')} onClick={onClose}>
             <Icon name="close" />
           </button>
         )}
@@ -156,6 +168,14 @@ export function Sheet({
 
 /** A centred dialog on desktop and landscape, a bottom sheet in portrait: the same frame as the battle preview. */
 export function Modal({ title, eyebrow, label, onClose, children, footer, tone }: { title: ReactNode; eyebrow?: ReactNode; label: string; onClose?: () => void; children: ReactNode; footer?: ReactNode; tone?: Owner }) {
+  const t = useT();
+  // Esc closes a dialog that can be closed, like its close button and a tap outside it.
+  useEffect(() => {
+    if (!onClose) return;
+    const on = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    addEventListener('keydown', on);
+    return () => removeEventListener('keydown', on);
+  }, [onClose]);
   return (
     <div className="g-scrim" role="presentation" onClick={onClose}>
       <section
@@ -173,7 +193,7 @@ export function Modal({ title, eyebrow, label, onClose, children, footer, tone }
             <h2 className="g-sheet__title">{title}</h2>
           </div>
           {onClose && (
-            <button type="button" className="g-icon-btn" aria-label="닫기" onClick={onClose}>
+            <button type="button" className="g-icon-btn" aria-label={t('닫기')} onClick={onClose}>
               <Icon name="close" />
             </button>
           )}

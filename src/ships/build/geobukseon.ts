@@ -3,7 +3,7 @@
  * plates studded with spikes, a dragon head at the bow that can belch smoke (anchors.smokeStack), a stern tail,
  * oars under the eaves and one raised mast. Larger than the panokseon on purpose.
  */
-import { anchorsFor, GEOBUK_PLAN, hullTop, sideZ } from '../anchors';
+import { anchorsFor, GEOBUK_PLAN, geobukRoofSpan, geobukRoofY, hullTop, sideZ } from '../anchors';
 import {
   box,
   cylinder,
@@ -15,20 +15,17 @@ import {
   pennant,
   polygon,
   rectSection,
-  smoothstep,
   spike,
   sweep,
   tube,
   xlate,
   rotX,
-  compose,
-  scaleXf,
   type MeshData,
   type V2,
   type V3,
   type TubeStation,
 } from './parts';
-import { barrel, byLod, cannon, clothPatch, flag, furledSail, hullBand, loftHull, mast, mulberry32, oar, oarPortFrame, ropeCoil, sideTimber, type Ctx, type Lod } from './common';
+import { barrel, byLod, cannon, clothPatch, flag, furledSail, hullBand, lantern, lanternPole, loftHull, mast, mulberry32, oar, oarPortFrame, ropeCoil, sideTimber, type Ctx, type Lod } from './common';
 
 export function buildGeobukseon(lod: Lod): MeshData {
   const plan = GEOBUK_PLAN;
@@ -110,20 +107,15 @@ export function buildGeobukseon(lod: Lod): MeshData {
     oar(ctx, op.pos, side, 0.55, P('pine_mast', { tint: [0.9, 0.85, 0.8] }), P('hull_plank'), 2.2, 5.2);
   }
 
-  // --- the iron roof ---
-  const xs0 = -L / 2 + 0.6;
-  const xs1 = L / 2 - 5.4;
+  // --- the iron roof: the shell covers the whole deck, bow to stern; the dragon's neck comes out from under its front ---
+  const [xs0, xs1] = geobukRoofSpan(plan);
   const span = xs1 - xs0;
-  const nx = byLod(ctx, 26, 12, 6);
+  const nx = byLod(ctx, 30, 14, 7);
   const nz = byLod(ctx, 20, 10, 6);
   const eaveW = (x: number) => sideZ(h, x, top(x)) + plan.overhang;
-  const H = plan.roofTop - h.deck;
-  const roofY = (x: number, z: number) => {
-    const u = ((x - xs0) / span) * 2 - 1;
-    const g = 1 - 0.78 * smoothstep(0.3, 1, Math.abs(u));
-    const t = Math.min(1, Math.abs(z) / eaveW(x));
-    return top(x) + H * g * (1 - Math.pow(t, 2.5));
-  };
+  const roofY = (x: number, z: number) => geobukRoofY(plan, x, z);
+  /** Clear of the dragon's neck where it runs under the front of the roof. */
+  const clearOfNeck = (x: number, z: number) => x < plan.head.baseX - 1.2 || Math.abs(z) > 1.25;
   const rows: V3[][] = [];
   for (let i = 0; i <= nx; i += 1) {
     const x = lerp(xs0, xs1, i / nx);
@@ -151,6 +143,8 @@ export function buildGeobukseon(lod: Lod): MeshData {
     }
     sweep(b, timber, path, rectSection(0.32, 0.3));
   }
+  // the end plates face the low sun head-on, so they are darker than the roof to read as the same iron
+  const endIron = P('iron_hex', { size: 1.9, tint: [0.7, 0.7, 0.74] });
   for (const [x, facing] of [[xs0, -1], [xs1, 1]] as [number, number][]) {
     const w = eaveW(x);
     const ring: V3[] = [];
@@ -158,12 +152,12 @@ export function buildGeobukseon(lod: Lod): MeshData {
       const z = lerp(-w, w, j / 8);
       ring.push([x, roofY(x, z), z]);
     }
-    polygon(b, hexIron, [[x, top(x) - 0.1, -w], ...ring, [x, top(x) - 0.1, w]], [facing, 0, 0], (p) => hexIron.map(p[2], p[1]));
+    polygon(b, endIron, [[x, top(x) - 0.1, -w], ...ring, [x, top(x) - 0.1, w]], [facing, 0, 0], (p) => endIron.map(p[2], p[1]));
   }
   // raised ribs across the plating and a spine beam along the ridge
   if (lod < 2) {
     const ribStep = byLod(ctx, 2.8, 5.6, 99);
-    for (let x = xs0 + 2.2; x < xs1 - 1.2; x += ribStep) {
+    for (let x = xs0 + 2.2; x < plan.head.baseX - 0.6; x += ribStep) {
       const w = eaveW(x);
       const path: V3[] = [];
       const n = byLod(ctx, 22, 8, 4);
@@ -186,7 +180,7 @@ export function buildGeobukseon(lod: Lod): MeshData {
     }
     const spine: V3[] = [];
     for (let i = 0; i <= byLod(ctx, 30, 10, 4); i += 1) {
-      const x = lerp(xs0 + 0.5, xs1 - 0.4, i / byLod(ctx, 30, 10, 4));
+      const x = lerp(xs0 + 0.5, plan.head.baseX - 1.0, i / byLod(ctx, 30, 10, 4));
       spine.push([x, roofY(x, 0) + 0.06, 0]);
     }
     sweep(b, timber, spine, rectSection(0.34, 0.2));
@@ -195,7 +189,7 @@ export function buildGeobukseon(lod: Lod): MeshData {
   if (lod === 1) {
     const iron = P('iron_hex', { surf: 2, tint: [0.75, 0.75, 0.8] });
     for (const t of [-0.8, -0.4, 0.4, 0.8]) {
-      for (let x = xs0 + 1.5; x < xs1 - 0.8; x += 2.8) spike(b, iron, [x, roofY(x, t * eaveW(x)), t * eaveW(x)], [0, 1, 0], 0.15, 0.85, 3);
+      for (let x = xs0 + 1.5; x < xs1 - 0.8; x += 2.8) if (clearOfNeck(x, t * eaveW(x))) spike(b, iron, [x, roofY(x, t * eaveW(x)), t * eaveW(x)], [0, 1, 0], 0.15, 0.85, 3);
     }
   }
   if (lod === 0) {
@@ -204,6 +198,7 @@ export function buildGeobukseon(lod: Lod): MeshData {
     for (const t of rowsT) {
       for (let x = xs0 + 1.3; x < xs1 - 0.8; x += 1.4) {
         const z = t * eaveW(x);
+        if (!clearOfNeck(x, z)) continue;
         const y = roofY(x, z);
         const dz = (roofY(x, z + 0.1) - roofY(x, z - 0.1)) / 0.2;
         const dx = (roofY(x + 0.1, z) - roofY(x - 0.1, z)) / 0.2;
@@ -227,8 +222,14 @@ export function buildGeobukseon(lod: Lod): MeshData {
     for (const sx of [-5.5, 6.0]) box(b, timber, [sx - 1.0, roofY(sx, 0) - 0.05, -0.7], [sx + 1.0, roofY(sx, 0) + 0.18, 0.7], { grain: 0 });
   }
 
+  // a heavy cap timber across the bow, between the front of the roof and the bow planking
+  {
+    const w = sideZ(h, L / 2 - 0.2, top(L / 2)) + 0.12;
+    box(b, timber, [xs1 - 0.1, top(L / 2) - 0.12, -w], [L / 2 + 0.1, top(L / 2) + 0.16, w], { grain: 0 });
+  }
+
   // --- dragon head ---
-  dragonHead(ctx, plan.head.baseX, plan.head.mouthY, L / 2);
+  dragonHead(ctx, plan.head);
 
   // --- stern: tail and rudder ---
   if (lod < 2) {
@@ -261,107 +262,93 @@ export function buildGeobukseon(lod: Lod): MeshData {
       ropeCoil(ctx, P('rope'), [3.0, roofAt(3.0) + 0.05, -1.4], 0.55);
     }
   }
+  // lanterns on poles standing in the roof's spikes, one over the stern and one before the ridge hatch
+  const lampPaint = P('sail_hemp', { tint: [1.35, 1.15, 0.85] });
+  anchors.lanterns.forEach((l, i) => {
+    lantern(ctx, lampPaint, timber, l);
+    lanternPole(ctx, timber, l, roofAt(l[0]) - 0.1, i ? 0.5 : -0.5, 0);
+  });
   void xlate;
   void lathe;
   return b.data();
 }
 
-/** How much bigger than the first design the dragon is: the figurehead of the biggest ship of the fleet. */
-const HEAD_SCALE = 1.22;
-
 /**
- * Dragon head: neck rising from the roof, skull, open jaws with fangs, swept horns, spines, whiskers. Dark bronze and
- * blackened iron with old bronze showing through in the recesses; the throat and eyes glow. Designed in its own space (mouth
- * centre at x = 0, y = 3.9) and then scaled and moved so the lips land at the bow.
+ * Dragon head, carved in dark wood and sheathed in old bronze. The neck starts under the front of the roof at `base`
+ * and rises forward past the bow; the head looks ahead with its jaws open around the bow gun, so the smoke and the shot
+ * come out of the mouth. One pair of horns swept back, a short mane, heavy brows over glowing eyes, two pairs of fangs.
+ * Built in metres around the neck base (x forward, y up).
  */
-function dragonHead(ctx: Ctx, baseX: number, mouthY: number, bowX: number) {
+function dragonHead(ctx: Ctx, head: { baseX: number; baseY: number; mouthX: number; mouthY: number }) {
   const { b, lod, P } = ctx;
-  const k = HEAD_SCALE;
-  const skin = P('dragon_scale', { surf: 2, tint: [2.7, 2.05, 1.4] });
-  const bronze = P('dragon_scale', { surf: 2, tint: [3.2, 2.5, 1.5] });
-  const lacquer = P('stained_wood', { tint: [1.5, 1.0, 0.9] });
+  const skin = P('dragon_scale', { surf: 2, tint: [3.3, 2.6, 1.85] });
+  const bronze = P('bronze', { tint: [0.85, 0.72, 0.55] });
+  const mouthIn = P('dark_timber', { tint: [0.16, 0.11, 0.09] });
   const throat = P('stained_wood', { surf: 5, tint: [0.03, 0.012, 0.008] });
-  const tongue = P('stained_wood', { surf: 5, tint: [0.02, 0.008, 0.005] });
   const eye = P('stained_wood', { surf: 5, tint: [0.05, 0.02, 0.007] });
-  const fang = P('iron_hex', { surf: 2, tint: [1.7, 1.55, 1.4] });
-  const seg = byLod(ctx, 12, 8, 5);
-  const S = (p: [number, number, number], a: number, c: number): TubeStation => ({ p, a, b: c });
-  b.with(compose(xlate(baseX, mouthY - 3.9 * k, 0), scaleXf(k)), () => {
-    // neck: from the roof end, arching forward and down to the head
-    tube(b, skin, [S([-1.6, 5.6, 0], 1.05, 1.05), S([-0.4, 5.9, 0], 1.0, 1.0), S([0.9, 5.7, 0], 0.95, 0.95), S([2.0, 5.2, 0], 0.92, 0.95)], seg, { up: [0, 1, 0] });
-    // skull and upper jaw, the snout turning up a little at the end
-    tube(b, skin, [S([2.0, 5.15, 0], 0.98, 1.0), S([3.0, 5.15, 0], 1.02, 0.98), S([4.0, 4.95, 0], 0.86, 0.72), S([5.0, 4.85, 0], 0.66, 0.5), S([5.8, 4.84, 0], 0.55, 0.42), S([6.05, 4.84, 0], 0.46, 0.34), S([6.2, 4.82, 0], 0.3, 0.22), S([6.28, 4.8, 0], 0.06, 0.05)], seg);
-    // lower jaw, dropped wide open
-    tube(b, skin, [S([2.6, 3.25, 0], 0.88, 0.42), S([3.8, 2.95, 0], 0.7, 0.34), S([5.0, 2.8, 0], 0.55, 0.28), S([5.6, 2.9, 0], 0.4, 0.22), S([5.85, 2.97, 0], 0.3, 0.17), S([5.95, 3.0, 0], 0.05, 0.04)], seg);
-    // the glowing throat, and a tongue lolling out over the lower jaw
-    box(b, throat, [2.55, 2.9, -0.8], [2.75, 4.6, 0.8], { grain: 1 });
-    box(b, tongue, [2.75, 3.3, -0.32], [5.4, 3.42, 0.32], { grain: 0 });
-    // fangs: big canines at the front, smaller teeth behind
-    if (lod === 0) {
-      for (let i = 0; i < 7; i += 1) {
-        const x = 3.2 + i * 0.5;
-        const front = i >= 5;
-        for (const z of [-0.5, 0.5]) {
-          spike(b, fang, [x, 4.35, z * (1 - i * 0.06)], [0.05, -1, 0], front ? 0.13 : 0.1, front ? 1.0 : 0.5, 4);
-          if (i < 6) spike(b, fang, [x + 0.2, 3.3, z * (1 - i * 0.06) * 0.8], [-0.05, 1, 0], front ? 0.12 : 0.09, front ? 0.85 : 0.42, 4);
-        }
-      }
-    } else if (lod === 1) {
-      for (const z of [-0.45, 0.45]) {
-        spike(b, fang, [5.6, 4.35, z], [0.05, -1, 0], 0.12, 0.95, 4);
-        spike(b, fang, [5.2, 3.1, z * 0.8], [-0.05, 1, 0], 0.1, 0.8, 4);
-      }
-    }
+  const fang = P('iron_hex', { surf: 2, tint: [1.7, 1.6, 1.45] });
+  const seg = byLod(ctx, 14, 9, 6);
+  const S = (p: V3, a: number, c: number): TubeStation => ({ p, a, b: c });
+  const bx = head.baseX;
+  const by = head.baseY;
+  b.with(xlate(bx, by, 0), () => {
+    // neck: out from under the roof, rising forward
+    tube(b, skin, [S([-1.2, -0.25, 0], 0.9, 0.9), S([0.4, 0.15, 0], 0.86, 0.86), S([1.6, 0.6, 0], 0.8, 0.82), S([2.6, 1.0, 0], 0.77, 0.8)], seg);
+    // skull and upper jaw: a broad brow tapering to a blunt snout that lifts a little at the tip
+    tube(
+      b,
+      skin,
+      [S([2.5, 1.0, 0], 0.8, 0.86), S([3.2, 1.15, 0], 0.84, 0.82), S([3.9, 1.12, 0], 0.72, 0.62), S([4.6, 1.0, 0], 0.56, 0.46), S([5.2, 0.95, 0], 0.46, 0.36), S([5.55, 0.97, 0], 0.38, 0.3), S([5.72, 0.98, 0], 0.22, 0.18), S([5.78, 0.98, 0], 0.04, 0.04)],
+      seg,
+    );
+    // lower jaw, open
+    tube(b, skin, [S([2.9, 0.35, 0], 0.66, 0.34), S([3.7, 0.08, 0], 0.56, 0.27), S([4.5, -0.14, 0], 0.44, 0.22), S([5.05, -0.24, 0], 0.34, 0.17), S([5.3, -0.24, 0], 0.22, 0.12), S([5.38, -0.23, 0], 0.04, 0.04)], seg);
+    // inside of the mouth: dark cheeks closing the corners, the throat glowing at the back
+    box(b, mouthIn, [2.9, 0.2, -0.5], [4.2, 0.78, -0.44]);
+    box(b, mouthIn, [2.9, 0.2, 0.44], [4.2, 0.78, 0.5]);
+    box(b, throat, [2.95, 0.22, -0.46], [3.1, 0.92, 0.46], { grain: 1 });
     for (const z of [-1, 1]) {
+      // fangs: one long pair above, one shorter pair below, and a few small teeth behind them up close
+      spike(b, fang, [5.15, 0.62, z * 0.27], [0.08, -1, 0], 0.075, 0.42, 4);
+      spike(b, fang, [4.9, 0.02, z * 0.24], [0.05, 1, 0], 0.065, 0.32, 4);
       if (lod === 0) {
-        // eyes: small, burning, set deep under a heavy slanted brow
-        b.with(xlate(3.7, 5.35, z * 0.88), () => {
+        for (const x of [4.0, 4.35, 4.7]) spike(b, fang, [x, 0.6 + (4.7 - x) * 0.12, z * (0.42 - (x - 4.0) * 0.12)], [0, -1, 0], 0.045, 0.16, 4);
+      }
+      // eyes deep under heavy brows
+      if (lod < 2) {
+        b.with(xlate(3.6, 1.5, z * 0.63), () => {
           const prof: V2[] = [];
           for (let i = 0; i <= 6; i += 1) {
             const a = (i / 6) * Math.PI;
-            prof.push([Math.sin(a) * 0.17, -Math.cos(a) * 0.17]);
+            prof.push([Math.sin(a) * 0.16, -Math.cos(a) * 0.16]);
           }
           lathe(b, eye, prof, 8);
         });
-        tube(b, skin, [S([4.1, 5.6, z * 0.3], 0.2, 0.17), S([3.5, 5.78, z * 0.7], 0.24, 0.2), S([2.9, 5.7, z * 1.0], 0.2, 0.17)], 6, { capEnd: true });
-        // nostril: flared and dark
-        box(b, P('dark_timber', { tint: [0.1, 0.1, 0.1] }), [5.45, 5.0, z * 0.22 - 0.09], [5.8, 5.12, z * 0.22 + 0.09]);
+        tube(b, skin, [S([4.05, 1.62, z * 0.3], 0.17, 0.14), S([3.6, 1.8, z * 0.62], 0.18, 0.15), S([3.05, 1.74, z * 0.8], 0.14, 0.12)], 6, { capStart: true, capEnd: true });
+        // nostrils on top of the snout
+        box(b, mouthIn, [5.35, 1.2, z * 0.17 - 0.07], [5.6, 1.27, z * 0.17 + 0.07]);
       }
-      // horns: two pairs swept back and up, the lower pair shorter and cruel
-      tube(b, bronze, [S([3.0, 5.9, z * 0.55], 0.3, 0.3), S([2.1, 6.75, z * 0.8], 0.26, 0.26), S([1.0, 7.35, z * 1.0], 0.18, 0.18), S([0.0, 7.5, z * 1.1], 0.06, 0.06)], byLod(ctx, 7, 5, 4), { capEnd: true });
-      if (lod < 2) tube(b, bronze, [S([3.4, 5.4, z * 0.95], 0.2, 0.2), S([2.7, 5.6, z * 1.5], 0.16, 0.16), S([2.0, 5.5, z * 2.0], 0.07, 0.07)], byLod(ctx, 6, 4, 3), { capEnd: true });
-    }
-    // a horn on the nose
-    if (lod < 2) spike(b, bronze, [5.5, 5.1, 0], [0.3, 1, 0], 0.17, 0.75, 5);
-    // mane and spines down the neck, sharp and tall
-    if (lod < 2) {
-      for (let i = 0; i < 7; i += 1) {
-        const t = i / 6;
-        spike(b, bronze, [-1.3 + t * 3.2, 6.45 - t * 0.5, 0], [-0.55, 1, 0], 0.22, 1.25 - t * 0.35, 5);
-      }
-    }
-    // frill of fins fanning out behind the skull, darker wood at the edge, and cheek fins
-    if (lod < 2) {
-      const n = byLod(ctx, 9, 5, 3);
-      for (let i = 0; i < n; i += 1) {
-        const a = -1.35 + (2.7 * i) / (n - 1);
-        spike(b, i % 2 ? lacquer : bronze, [2.0, 5.2 + Math.cos(a) * 0.5, Math.sin(a) * 0.9], [-0.55, Math.cos(a) * 0.7, Math.sin(a) * 1.0], 0.2, 1.45, 4);
-      }
+      // one pair of horns, swept back along the neck
+      tube(b, bronze, [S([3.05, 1.72, z * 0.42], 0.17, 0.17), S([2.4, 2.22, z * 0.55], 0.14, 0.14), S([1.7, 2.5, z * 0.62], 0.09, 0.09), S([1.1, 2.56, z * 0.66], 0.03, 0.03)], byLod(ctx, 7, 5, 4), { capEnd: true });
+      // whiskers: thin bronze tendrils curling back from the snout
       if (lod === 0) {
-        for (const z of [-1, 1]) {
-          for (const i of [0, 1, 2]) spike(b, lacquer, [3.9 - i * 0.55, 4.3 - i * 0.25, z * (0.72 - i * 0.04)], [-0.4, -0.25 - i * 0.12, z * 1.0], 0.14, 0.95 - i * 0.2, 4);
-          // beard tufts under the lower jaw
-          for (const [x, y] of [[5.6, 2.75], [4.6, 2.65], [3.6, 2.8]] as [number, number][]) spike(b, bronze, [x, y, z * 0.14], [0.1, -1, z * 0.12], 0.1, 0.75, 4);
-        }
+        tube(b, bronze, [S([5.15, 0.8, z * 0.42], 0.05, 0.05), S([4.6, 0.64, z * 0.82], 0.045, 0.045), S([3.85, 0.7, z * 1.08], 0.035, 0.035), S([3.25, 0.92, z * 1.12], 0.015, 0.015)], 5, { capEnd: true });
       }
     }
-    // whiskers: long dark oxblood cloth streamers trailing from the snout
+    // a short carved mane down the back of the neck
     if (lod < 2) {
-      for (const z of [-1, 1]) {
-        pennant(b, clothPatch(ctx, 'flags_a', 'red').tinted([0.4, 0.3, 0.3]), [5.2, 4.4, z * 0.55], [-1, -0.2, z * 0.5], [0, -1, 0], 4.6, 0.3, 0.04, byLod(ctx, 8, 3, 1), { flutter: 1.4, phase: z });
+      for (let i = 0; i < 5; i += 1) {
+        const x = 0.4 + i * 0.5;
+        const y = 0.15 + (x - 0.4) * 0.38 + 0.84;
+        spike(b, bronze, [x, y - 0.06, 0], [-0.7, 1, 0], 0.12, 0.62 - i * 0.05, 4);
       }
+    }
+    // the bow gun's muzzle in the mouth
+    if (lod < 2) {
+      const mx = head.mouthX - bx;
+      const my = head.mouthY - by;
+      cylinder(b, bronze, [mx - 1.4, my, 0], [mx - 0.12, my, 0], 0.2, 0.19, 8, false);
+      cylinder(b, bronze, [mx - 0.12, my, 0], [mx, my, 0], 0.25, 0.25, 8, true);
     }
   });
-  // the bow gun, muzzle at the lips
-  if (lod < 2) cannon(ctx, [bowX - 1.0, mouthY, 0], [1, 0, 0], 'hyeonja', P('dark_timber'), P('bronze', { tint: [1.25, 0.95, 0.7] }), P('iron_hex', { surf: 2 }));
 }

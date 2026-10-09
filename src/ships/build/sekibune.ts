@@ -5,7 +5,7 @@
  */
 import { anchorsFor, hullTop, SEKI_PLANS, sideZ } from '../anchors';
 import { box, hipRoof, MeshBuilder, paints, rectSection, spike, sweep, xlate, type MeshData, type V3 } from './parts';
-import { anchorProp, barrel, byLod, clothPatch, deckPlane, hullBand, lantern, loftHull, longPennant, mast, mulberry32, oar, oarPortFrame, ropeCoil, sail, sideTimber, wallRun, type Ctx, type Lod } from './common';
+import { anchorProp, barrel, byLod, clothPatch, deckPlane, hangLanterns, hullBand, loftHull, longPennant, mast, mulberry32, oar, oarPortFrame, ropeCoil, sail, sideTimber, wallRun, type Ctx, type Lod } from './common';
 import { nobori, plasterTier, shachihoko } from './japan';
 import { irimoyaRoof } from './roofs';
 
@@ -107,6 +107,6 @@ export function buildSekibune(variant: number, lod: Lod): MeshData {
   [[-8.6, 1.3], [-8.4, -1.2]].forEach(([x, z]) => barrel(ctx, P('hull_plank', { tint: [0.75, 0.65, 0.55] }), iron, [x!, deck, z!], 0.34, 0.7));
   ropeCoil(ctx, rope, [8.6, deck + 0.5, 0.6], 0.4);
   for (const side of [-1, 1]) anchorProp(ctx, wood, iron, [8.6, deck + 0.1, side * (outer(8.6) + 0.35)]);
-  for (const l of anchors.lanterns) lantern(ctx, P('sail_cloth', { tint: [1.35, 1.2, 0.95] }), lacquer, l, 0.2);
+  hangLanterns(ctx, P('sail_cloth', { tint: [1.35, 1.2, 0.95] }), lacquer, lacquer, anchors, top, 0.2);
   return b.data();
 }

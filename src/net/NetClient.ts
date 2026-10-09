@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { t } from '../i18n';
 import { pushToast } from '../state/store';
 import { GRACE_SECONDS, PROTOCOL, type BattleChoice, type ClientMsg, type RoomInfo, type RoomSummary, type ServerMsg } from './protocol';
 
@@ -8,7 +9,8 @@ export const MP_URL: string =
 
 /** idle: not connected; connecting: first attempt; online; reconnecting: the line dropped and we keep trying; error: gave up. */
 type Status = 'idle' | 'connecting' | 'online' | 'reconnecting' | 'error';
-type ChatLine = { from: string; text: string; at: number };
+/** A system line keeps its Korean template and values, so it is translated when drawn (the language can change meanwhile). */
+type ChatLine = { from: string; text: string; args?: Record<string, string | number>; system: boolean; at: number };
 /** none: no online battle; playing; ended: the result is out (rematch possible); lost: the seat could not be recovered. */
 type BattlePhase = 'none' | 'playing' | 'ended' | 'lost';
 
@@ -19,6 +21,7 @@ type NetState = {
   rooms: RoomSummary[];
   room: RoomInfo | null;
   chat: ChatLine[];
+  /** Korean source text, translated where it is drawn (a language switch updates it). */
   error: string | null;
   ping: number;
   /** Quick match: when the search began (client clock) and how long it waits for a person. */
@@ -28,7 +31,7 @@ type NetState = {
   speed: { speed: number; target: number };
   /** Seconds until the next reconnect attempt, and which attempt it is. */
   retry: { in: number; attempt: number } | null;
-  /** Set when the server closed the room or the seat was lost. */
+  /** Set when the server closed the room or the seat was lost (Korean source text, like `error`). */
   notice: string | null;
 };
 
@@ -56,6 +59,14 @@ function store(key: string, value: string, area: 'local' | 'session') {
   } catch {
     // the value lasts this session only
   }
+}
+
+/** The server names the computer's seats and the sides in Korean; the player sees them in the current language. */
+const SIDE_NAMES = new Set(['서군', '동군', '서군 우익', '동군 우익']);
+function seatName(name: string) {
+  const computer = name.match(/^컴퓨터 (\d+)$/);
+  if (computer) return t('컴퓨터 {n}', { n: computer[1]! });
+  return SIDE_NAMES.has(name) ? t(name) : name;
 }
 
 const NO_SPEED = { speed: 1, target: 1 };
@@ -125,7 +136,7 @@ class NetClient {
   }
 
   connect(name: string, quiet = false) {
-    const clean = name.trim().slice(0, 16) || '무명';
+    const clean = name.trim().slice(0, 16) || t('무명');
     store(NAME_KEY, clean, 'local');
     useNet.setState({ name: clean });
     if (this.ws && this.ws.readyState <= WebSocket.OPEN) {
@@ -186,7 +197,7 @@ class NetClient {
         this.everOnline = false;
         store(TOKEN_KEY, '', 'session');
         const playing = useNet.getState().battle === 'playing';
-        useNet.setState({ status: 'error', error: '다른 창에서 같은 닉네임으로 접속해 이 창의 연결을 끊었습니다.', room: null, quick: null, retry: null, battle: playing ? 'lost' : 'none', notice: playing ? '다른 창에서 이 자리를 이어받았습니다.' : null });
+        useNet.setState({ status: 'error', error: '다른 창에서 같은 닉네임으로 접속하여 이 창의 연결이 끊어졌습니다.', room: null, quick: null, retry: null, battle: playing ? 'lost' : 'none', notice: playing ? '다른 창에서 이 자리를 이어받았습니다.' : null });
         return;
       }
       this.failed(!this.everOnline, quiet);
@@ -201,7 +212,7 @@ class NetClient {
     }
     if (first) {
       this.stopped = true;
-      useNet.setState({ status: quiet ? 'idle' : 'error', error: quiet ? null : '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.', retry: null });
+      useNet.setState({ status: quiet ? 'idle' : 'error', error: quiet ? null : '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주시기 바랍니다.', retry: null });
       return;
     }
     if (!this.lostAt) this.lostAt = performance.now();
@@ -227,7 +238,7 @@ class NetClient {
     const playing = useNet.getState().battle === 'playing';
     useNet.setState({
       status: 'error',
-      error: '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+      error: '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주시기 바랍니다.',
       room: null,
       quick: null,
       retry: null,
@@ -289,7 +300,7 @@ class NetClient {
           room: msg.resumed ? s.room : null,
           quick: msg.resumed ? s.quick : null,
           battle: lostSeat ? 'lost' : s.battle,
-          notice: lostSeat ? '자리를 지키지 못해 전투에서 물러났습니다.' : s.notice,
+          notice: lostSeat ? '연결이 오래 끊겨 자리를 잃고 전투에서 물러났습니다.' : s.notice,
         }));
         return;
       }
@@ -307,8 +318,12 @@ class NetClient {
         useNet.setState({ error: msg.text, ...(msg.code === 'version' ? { status: 'error' as const } : {}) });
         return;
       case 'chat':
-        useNet.setState((s) => ({ chat: [...s.chat.slice(-60), { from: msg.from, text: msg.text, at: Date.now() }] }));
-        if (msg.from === '알림' && useNet.getState().battle === 'playing') pushToast(msg.text, 'info');
+        {
+          const system = msg.from === '알림';
+          const text = msg.key ?? msg.text;
+          useNet.setState((s) => ({ chat: [...s.chat.slice(-60), { from: msg.from, text, args: msg.args, system, at: Date.now() }] }));
+          if (system && useNet.getState().battle === 'playing') pushToast(t(text, msg.args), 'info');
+        }
         return;
       case 'pong':
         useNet.setState({ ping: Math.round(performance.now() - msg.at) });
@@ -328,8 +343,11 @@ class NetClient {
         }
         this.listener = null;
         useNet.setState({ battle: 'playing', speed: NO_SPEED });
-        if (this.starter) this.starter(msg);
-        else this.pendingStart = msg;
+        {
+          const start: StartMsg = { ...msg, seats: msg.seats.map((seat) => ({ ...seat, name: seatName(seat.name) })) };
+          if (this.starter) this.starter(start);
+          else this.pendingStart = start;
+        }
         return;
       case 'speed':
         useNet.setState({ speed: { speed: msg.speed, target: msg.target } });

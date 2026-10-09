@@ -14,7 +14,7 @@ import {
   deckPlane,
   hatch,
   hullBand,
-  lantern,
+  hangLanterns,
   loftHull,
   longPennant,
   mast,
@@ -174,6 +174,6 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
   hatch(ctx, P('deck_plank'), dark, 13.4, deck, -0.4, 1.8, 1.4);
   if (variant === 0) windlass(ctx, wood, iron, 16.2, deck, 1.5);
   for (const side of [-1, 1]) anchorProp(ctx, wood, iron, [13.6, deck - 0.1, side * (outer(13.6) + 0.45)]);
-  for (const l of anchors.lanterns) lantern(ctx, P('sail_cloth', { tint: [1.35, 1.2, 0.95] }), lacquer, l);
+  hangLanterns(ctx, P('sail_cloth', { tint: [1.35, 1.2, 0.95] }), lacquer, lacquer, anchors, top);
   return b.data();
 }

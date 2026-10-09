@@ -72,7 +72,7 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     value: 1,
     terrain: 'strait',
     korea: true,
-    blurb: '남해도와 하동 사이의 좁은 수로입니다. 동서 항로를 쥐고 있습니다.',
+    blurb: '남해도와 하동 사이의 좁은 수로입니다. 동서 항로를 잇는 길목입니다.',
   },
   sacheon: {
     id: 'sacheon',
@@ -83,7 +83,7 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     value: 1,
     terrain: 'bay',
     korea: true,
-    blurb: '안쪽으로 깊은 만과 포구입니다. 함대를 모으기 좋습니다.',
+    blurb: '안쪽으로 깊이 들어간 만과 포구입니다. 함대를 모으기 좋습니다.',
   },
   hansan: {
     id: 'hansan',
@@ -116,7 +116,7 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     value: 1,
     terrain: 'bay',
     korea: true,
-    blurb: '부산 서쪽의 만입니다. 일본군의 보급선이 드나듭니다.',
+    blurb: '부산 서쪽의 만입니다. 일본 수군의 보급선이 드나듭니다.',
   },
   busan: {
     id: 'busan',
@@ -127,7 +127,7 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     value: 3,
     terrain: 'bay',
     korea: true,
-    blurb: '쓰시마에서 오는 항로가 닿는 가장 큰 포구입니다. 일본군의 본진이 있습니다.',
+    blurb: '쓰시마에서 오는 항로가 닿는 가장 큰 포구입니다. 일본의 본진이 있습니다.',
   },
   tsushima: {
     id: 'tsushima',
@@ -138,7 +138,7 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     value: 1,
     terrain: 'island',
     korea: false,
-    blurb: '일본군이 바다를 건너는 중간 기지입니다.',
+    blurb: '일본이 바다를 건너는 중간 기지입니다.',
   },
   nagoya: {
     id: 'nagoya',
@@ -270,9 +270,9 @@ export const START: StartSetup = {
     { faction: 'joseon', at: 'hansan', name: '한산 함대', ships: { panokseon: 4, hyeopseon: 3 }, commander: 'kwon' },
     { faction: 'joseon', at: 'geoje', name: '경상우수영', ships: { panokseon: 2, hyeopseon: 2 }, commander: 'won' },
     { faction: 'japan', at: 'busan', name: '부산 함대', ships: { atakebune: 10, sekibune: 13, kobaya: 13 }, commander: 'wakisaka' },
-    { faction: 'japan', at: 'busan', name: '구키 수군', ships: { atakebune: 6, sekibune: 10, kobaya: 6 }, commander: 'kuki' },
-    { faction: 'japan', at: 'nagoya', name: '나고야 후속대', ships: { atakebune: 10, sekibune: 10, kobaya: 10 }, commander: 'kato' },
-    { faction: 'ming', at: 'liaodong', name: '요동 수군', ships: { mingship: 6, mingsmall: 8 }, commander: 'chenlin' },
+    { faction: 'japan', at: 'busan', name: '구키 함대', ships: { atakebune: 6, sekibune: 10, kobaya: 6 }, commander: 'kuki' },
+    { faction: 'japan', at: 'nagoya', name: '나고야 후속 함대', ships: { atakebune: 10, sekibune: 10, kobaya: 10 }, commander: 'kato' },
+    { faction: 'ming', at: 'liaodong', name: '요동 함대', ships: { mingship: 6, mingsmall: 8 }, commander: 'chenlin' },
   ],
   gold: { joseon: 900, japan: 1000, ming: 1500 },
 };

@@ -410,6 +410,30 @@ export function lantern(ctx: Ctx, paint: Paint, trim: Paint, p: V3, r = 0.24) {
   cylinder(ctx.b, trim, [p[0], p[1], p[2]], [p[0], p[1] + 0.3, p[2]], 0.012, 0.012, 3, false);
 }
 
+/** A short pole from baseY with an arm over to p, where a lantern is hooked; (awayX, awayZ) is where the pole stands relative to p. */
+export function lanternPole(ctx: Ctx, wood: Paint, p: V3, baseY: number, awayX: number, awayZ: number) {
+  if (ctx.lod > 0) return;
+  const px = p[0] + awayX;
+  const pz = p[2] + awayZ;
+  const top = p[1] + 0.34;
+  cylinder(ctx.b, wood, [px, baseY, pz], [px, top + 0.06, pz], 0.05, 0.04, 5, true);
+  cylinder(ctx.b, wood, [px, top, pz], [p[0], top, p[2]], 0.03, 0.03, 4, false);
+}
+
+/**
+ * The ship's paper lanterns. Those on the centreline near bow or stern stand on a pole above the wall (`wallTop` is the
+ * wall's height there), so they do not hang inside it; the rest hang from the structure the anchors put them on.
+ */
+export function hangLanterns(ctx: Ctx, paint: Paint, trim: Paint, wood: Paint, anchors: { length: number; lanterns: V3[] }, wallTop: (x: number) => number, r = 0.24) {
+  for (const l of anchors.lanterns) {
+    lantern(ctx, paint, trim, l, r);
+    if (l[2] === 0 && Math.abs(l[0]) > anchors.length / 2 - 3) {
+      const away = l[0] > 0 ? -0.5 : 0.5;
+      lanternPole(ctx, wood, l, wallTop(l[0] + away) - 0.05, away, 0);
+    }
+  }
+}
+
 /** Wooden hatch with a slatted grating. */
 export function hatch(ctx: Ctx, wood: Paint, dark: Paint, x: number, y: number, z: number, w: number, d: number) {
   if (ctx.lod > 0) return;

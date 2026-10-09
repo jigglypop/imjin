@@ -4,7 +4,6 @@ import { OWNER_OF, teamOf, type Faction, type ShipMods } from './types';
 
 export const FACTION_NAME: Record<Faction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군' };
 export const FACTION_SHORT: Record<Faction, string> = { joseon: '조선', japan: '일본', ming: '명' };
-export const FACTION_MARK: Record<Faction, string> = { joseon: '朝', japan: '日', ming: '明' };
 
 /** Factions the player can lead in a battle. The Ming fleet only sailed at Noryang. */
 export function playableFactions(id: ScenarioId): Faction[] {

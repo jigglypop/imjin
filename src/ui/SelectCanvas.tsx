@@ -5,6 +5,7 @@ import { SCENARIO_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import type { Faction } from '../sim/types';
 import { SelectScene } from '../select/SelectScene';
 import { equipment, forceWebGL } from '../game/quality';
+import { useT } from '../i18n';
 import { shortTitle } from './siteMap';
 
 async function createRenderer(props: { canvas: HTMLCanvasElement | OffscreenCanvas }) {
@@ -61,6 +62,7 @@ function SelectView({ id, look, side, markers }: { id: ScenarioId; look: number;
 
 /** The 3D war-table map of the south coast, for desktops and tablets. Loaded on demand so the menu does not parse three.js. */
 export default function SelectCanvas({ id, look, side, onSelect }: { id: ScenarioId; look: number; side: Faction; onSelect: (id: ScenarioId) => void }) {
+  const t = useT();
   const markers = useRef(new Map<ScenarioId, HTMLButtonElement>());
   return (
     <>
@@ -79,7 +81,7 @@ export default function SelectCanvas({ id, look, side, onSelect }: { id: Scenari
             onClick={() => onSelect(sid)}
           >
             <i />
-            <span>{shortTitle(SCENARIOS[sid].title)}</span>
+            <span>{shortTitle(t(SCENARIOS[sid].title))}</span>
           </button>
         ))}
       </div>

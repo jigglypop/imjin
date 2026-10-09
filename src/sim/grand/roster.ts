@@ -1,5 +1,4 @@
 import type { ShipKind } from '../types';
-import { josa } from './josa';
 import type { Commander, Fleet, Grand, GrandFaction, RegionId, ShipUnit } from './types';
 import { mintId, note } from './world';
 
@@ -11,16 +10,16 @@ export const SHIP_PREFIX: Record<ShipKind, string> = {
   panokseon: '판옥선',
   geobukseon: '거북선',
   hyeopseon: '협선',
-  atakebune: '아타케',
+  atakebune: '아타케부네',
   sekibune: '세키부네',
   kobaya: '고바야',
-  mingship: '명 복선',
-  mingsmall: '명 사선',
+  mingship: '명 대형선',
+  mingsmall: '명 소형선',
 };
 
 export function spawnShip(g: Grand, kind: ShipKind, hull = 1, crew = 1): ShipUnit {
   const id = mintId(g, 's');
-  return { id, kind, name: `${SHIP_PREFIX[kind]} ${id.slice(1)}호`, hull, crew, supply: 1, kills: 0 };
+  return { id, kind, name: `${SHIP_PREFIX[kind]} ${id.slice(1)}호`, hull, crew, supply: 1, kills: 0 }; // i18n-ignore: numbered ship; the UI translates the pattern
 }
 
 export function spawnFleet(g: Grand, faction: GrandFaction, at: RegionId, name: string, ships: Partial<Record<ShipKind, number>>, commanderId: string | null): Fleet {
@@ -36,6 +35,6 @@ export function grantXp(g: Grand, faction: GrandFaction, cmd: Commander, xp: num
   cmd.xp += xp;
   while (cmd.level < LEVEL_XP.length && cmd.xp >= LEVEL_XP[cmd.level]!) {
     cmd.level += 1;
-    note(g, `${cmd.name}의 레벨이 ${josa(String(cmd.level), '으로/로')} 올랐습니다`, faction === g.player ? 'good' : 'info');
+    note(g, '{name}의 레벨이 {level|으로/로} 올랐습니다', { name: cmd.name, level: String(cmd.level) }, faction === g.player ? 'good' : 'info');
   }
 }

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Bar, Chip, FactionMark, Icon, SHIP_NAME, Sheet, goldText, navyName } from './shared';
+import { useT } from '../../i18n';
+import { Bar, Chip, FactionMark, Icon, Sheet, goldText, navyName, shipName } from './shared';
+import { shipsText, turnsText } from './text';
 import type { CommanderView, FactionId, FleetView } from './types';
 
 export interface FleetPanelProps {
@@ -45,6 +47,7 @@ export function FleetPanel({
   onRefit,
   onDisband,
 }: FleetPanelProps) {
+  const t = useT();
   const own = fleet.faction === me;
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [merging, setMerging] = useState(false);
@@ -59,12 +62,12 @@ export function FleetPanel({
       return next;
     });
   };
+  const where = fleet.transit ? t('항해 중') : regionName;
   const docked = fleet.at !== null;
   // A fleet keeps at least one ship, so splitting everything off is not offered.
   const canSplit = own && docked && picked.size > 0 && picked.size < fleet.ships.length;
   const canMove = own && docked && fleet.rest === 0;
   const avg = (pick: (s: FleetView['ships'][number]) => number) => fleet.ships.reduce((a, s) => a + pick(s), 0) / Math.max(1, fleet.ships.length);
-  const where = fleet.transit ? '항해 중' : regionName;
 
   return (
     <Sheet
@@ -82,15 +85,15 @@ export function FleetPanel({
           <div className="g-actions">
             {moving ? (
               <button type="button" className="g-btn g-btn--ghost" onClick={() => onCancelMove?.(fleet.id)}>
-                이동 취소
+                {t('이동 취소')}
               </button>
             ) : (
               <button type="button" className="g-btn g-btn--primary" data-guide="move" disabled={!canMove} onClick={() => onMove?.(fleet.id)}>
-                이동
+                {t('이동')}
               </button>
             )}
             <button type="button" className="g-btn" disabled={!docked || mergeWith.length === 0} aria-expanded={merging} onClick={() => setMerging((m) => !m)}>
-              합류
+              {t('합류')}
             </button>
             <button
               type="button"
@@ -101,36 +104,36 @@ export function FleetPanel({
                 setPicked(new Set());
               }}
             >
-              {picked.size > 0 ? `분할 (${picked.size})` : '분할'}
+              {picked.size > 0 ? t('분할 ({n})', { n: picked.size }) : t('분할')}
             </button>
           </div>
         ) : undefined
       }
     >
-      {moving && <p className="g-banner">지도에서 강조된 포구를 눌러 목적지를 정하세요. 적의 포구를 고르면 공격합니다.</p>}
-      {fleet.transit && <p className="g-hint">항해 중입니다. {fleet.transit.left}턴 뒤에 도착합니다.</p>}
-      {fleet.rest > 0 && !fleet.transit && <p className="g-hint">전투 후 정비 중입니다. {fleet.rest}턴 동안 출항할 수 없습니다.</p>}
+      {moving && <p className="g-banner">{t('지도에서 강조된 포구 중 목적지를 고릅니다. 적의 포구를 고르면 공격합니다.')}</p>}
+      {fleet.transit && <p className="g-hint">{t('항해 중입니다. {turns} 뒤에 도착합니다.', { turns: turnsText(fleet.transit.left) })}</p>}
+      {fleet.rest > 0 && !fleet.transit && <p className="g-hint">{t('전투 후 정비 중입니다. {turns} 동안 출항할 수 없습니다.', { turns: turnsText(fleet.rest) })}</p>}
       {routeText && !moving && (
         <p className="g-note g-route">
-          <b>항로</b> {routeText}
+          <b>{t('항로')}</b> {routeText}
           {own && (
             <button type="button" className="g-btn g-btn--ghost g-btn--sm" onClick={() => onStop?.(fleet.id)}>
-              명령 취소
+              {t('이동 명령 취소')}
             </button>
           )}
         </p>
       )}
       <div className="gk-stats gk-stats--3">
         <div className="gk-stat">
-          <span className="gk-stat__label">함선</span>
-          <span className="gk-stat__value">{fleet.ships.length}척</span>
+          <span className="gk-stat__label">{t('함선')}</span>
+          <span className="gk-stat__value">{shipsText(fleet.ships.length)}</span>
         </div>
         <div className="gk-stat">
-          <span className="gk-stat__label">평균 선체</span>
+          <span className="gk-stat__label">{t('평균 선체')}</span>
           <span className="gk-stat__value">{Math.round(avg((s) => s.hull) * 100)}%</span>
         </div>
         <div className="gk-stat">
-          <span className="gk-stat__label">보급</span>
+          <span className="gk-stat__label">{t('보급')}</span>
           <span className="gk-stat__value">{Math.round(avg((s) => s.supply) * 100)}%</span>
         </div>
       </div>
@@ -146,7 +149,7 @@ export function FleetPanel({
           </span>
           {own && docked && officers.length > 0 && (
             <button type="button" className="g-btn g-btn--sm" aria-expanded={choosing} onClick={() => setChoosing((c) => !c)}>
-              교체
+              {t('교체')}
             </button>
           )}
         </div>
@@ -155,7 +158,7 @@ export function FleetPanel({
         docked &&
         officers.length > 0 && (
           <button type="button" className="g-btn g-btn--sm g-leader-add" aria-expanded={choosing} onClick={() => setChoosing((c) => !c)}>
-            지휘관 임명
+            {t('지휘관 임명')}
           </button>
         )
       )}
@@ -176,7 +179,7 @@ export function FleetPanel({
                 <span className="g-row__title">
                   {officer.name} <span className="g-row__kind">Lv.{officer.level}</span>
                 </span>
-                <span className="g-row__sub">{leads ? `${leads} 지휘 중` : officer.title}</span>
+                <span className="g-row__sub">{leads ? t('{fleet} 지휘 중', { fleet: leads }) : officer.title}</span>
               </span>
               <span className="g-chev" aria-hidden>
                 <Icon name="chev" />
@@ -192,7 +195,7 @@ export function FleetPanel({
                 setChoosing(false);
               }}
             >
-              지휘관 해임
+              {t('지휘관 해임')}
             </button>
           )}
         </div>
@@ -200,7 +203,7 @@ export function FleetPanel({
 
       {merging && mergeWith.length > 0 && (
         <div className="g-merge">
-          <div className="g-section">합류할 함대</div>
+          <div className="g-section">{t('합류할 함대')}</div>
           {mergeWith.map((o) => (
             <button
               key={o.id}
@@ -214,7 +217,7 @@ export function FleetPanel({
               <span className="g-row__main">
                 <span className="g-row__title">{o.name}</span>
                 <span className="g-row__sub">
-                  함선 {o.ships.length}척 · 합류하면 {fleet.ships.length + o.ships.length}척
+                  {t('함선 {n}척 · 합류하면 {total}척', { n: o.ships.length, total: fleet.ships.length + o.ships.length })}
                 </span>
               </span>
               <span className="g-chev" aria-hidden>
@@ -228,13 +231,13 @@ export function FleetPanel({
       {own && docked && fleet.refit > 0 && (
         <div className="g-tools">
           <button type="button" className="g-btn g-btn--sm" disabled={gold < fleet.refit} onClick={() => onRefit?.(fleet.id)}>
-            정비 {goldText(fleet.refit)}
+            {t('정비 {price}', { price: goldText(fleet.refit) })}
           </button>
-          <Chip>선체와 승조원을 모두 채웁니다</Chip>
+          <Chip>{t('선체와 승조원을 모두 회복합니다')}</Chip>
         </div>
       )}
 
-      <h3 className="g-section">함선 {own && <span className="g-section__hint">분할하거나 해체할 함선을 선택하세요</span>}</h3>
+      <h3 className="g-section">{t('함선')} {own && <span className="g-section__hint">{t('분할하거나 해체할 함선을 고릅니다')}</span>}</h3>
       <ul className="g-list">
         {fleet.ships.map((s) => (
           <li key={s.id}>
@@ -242,17 +245,17 @@ export function FleetPanel({
               {own && docked && <input type="checkbox" className="g-check" checked={picked.has(s.id)} onChange={() => toggle(s.id)} />}
               <span className="g-row__main">
                 <span className="g-row__title">
-                  {s.name ?? SHIP_NAME[s.kind]}
-                  {s.name && <span className="g-row__kind">{SHIP_NAME[s.kind]}</span>}
+                  {s.name ?? shipName(s.kind)}
+                  {s.name && <span className="g-row__kind">{shipName(s.kind)}</span>}
                 </span>
                 <span className="g-meter">
-                  <span className="g-meter__label">선체</span>
-                  <Bar value={s.hull} label={`선체 ${Math.round(s.hull * 100)}%`} />
+                  <span className="g-meter__label">{t('선체')}</span>
+                  <Bar value={s.hull} label={t('선체 {n}%', { n: Math.round(s.hull * 100) })} />
                   <span className="g-meter__num">{Math.round(s.hull * 100)}</span>
                 </span>
                 <span className="g-meter">
-                  <span className="g-meter__label">승조원</span>
-                  <Bar value={s.crew} label={`승조원 ${Math.round(s.crew * 100)}%`} />
+                  <span className="g-meter__label">{t('승조원')}</span>
+                  <Bar value={s.crew} label={t('승조원 {n}%', { n: Math.round(s.crew * 100) })} />
                   <span className="g-meter__num">{Math.round(s.crew * 100)}</span>
                 </span>
               </span>
@@ -272,14 +275,14 @@ export function FleetPanel({
                 setSure(false);
               }}
             >
-              해체 확인 ({picked.size}척)
+              {t('해체 확인 ({n}척)', { n: picked.size })}
             </button>
           ) : (
             <button type="button" className="g-btn g-btn--sm" onClick={() => setSure(true)}>
-              해체 ({picked.size}척)
+              {t('해체 ({n}척)', { n: picked.size })}
             </button>
           )}
-          <Chip>건조비 일부를 돌려받습니다</Chip>
+          <Chip>{t('건조비의 20%를 돌려받습니다')}</Chip>
         </div>
       )}
     </Sheet>

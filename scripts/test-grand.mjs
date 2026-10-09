@@ -305,6 +305,10 @@ function playOut(g) {
   check('josa reads digits, letters and a trailing note', josa('Lv3', '이/가') === 'Lv3이' && josa('HMS', '은/는') === 'HMS는' && josa('나고야 (히젠)', '이/가') === '나고야 (히젠)가');
   const war = playOut(newGrand(null, 77));
   check('no particle placeholders in a played campaign log', !war.log.some((e) => /\((이|가|을|를|은|는|과|와|으)\)/.test(e.text)));
+  // The log keeps Korean templates and their params, so the interface can write each line in the language set when it is read.
+  const holes = war.log.filter((e) => [...e.text.matchAll(/\{(\w+)(?:\|[^}]+)?\}/g)].some((m) => e.params?.[m[1]] === undefined));
+  check('every placeholder of a log line has its param', war.log.length > 10 && holes.length === 0);
+  check('log lines carry names as params, not finished sentences', war.log.some((e) => e.params && Object.values(e.params).some((v) => typeof v === 'string')));
 }
 
 // 8. The calendar and the scripted events of the war's history.

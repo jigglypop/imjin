@@ -1,4 +1,6 @@
-import { BUILDINGS, Bar, Chip, FactionMark, Icon, SHIP_NAME, Sheet, Stat, costText, goldText, navyName, signed } from './shared';
+import { useT } from '../../i18n';
+import { BUILDINGS, Bar, Chip, FactionMark, Icon, Sheet, Stat, buildingDesc, buildingName, costText, goldText, navyName, shipName, signed } from './shared';
+import { turnsText } from './text';
 import type { BuildingKind, FactionId, FleetView, RegionView, ShipClass } from './types';
 
 export interface RegionPanelProps {
@@ -16,6 +18,7 @@ export interface RegionPanelProps {
 
 
 export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuild, onRecruit, onCancelRecruit, onSelectFleet }: RegionPanelProps) {
+  const t = useT();
   const own = region.owner === me;
   const seen = region.visible || own;
   const building = new Set(region.works.map((w) => w.kind));
@@ -26,7 +29,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
       eyebrow={
         <span className="gk-row">
           <FactionMark faction={region.owner} />
-          {navyName(region.owner)} · {region.offMap ? '본토 기지' : '포구'}
+          {navyName(region.owner)} · {region.offMap ? t('본토 기지') : t('포구')}
         </span>
       }
       title={
@@ -37,42 +40,42 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
     >
       {region.note && <p className="g-note">{region.note}</p>}
       {!seen ? (
-        <p className="g-hint">시야 밖입니다. 봉수대를 세우거나 가까운 포구에 함대를 두면 상황을 볼 수 있습니다.</p>
+        <p className="g-hint">{t('시야 밖입니다. 봉수대를 세우거나 가까운 포구에 함대를 두면 상황을 볼 수 있습니다.')}</p>
       ) : (
         <>
           <div className="gk-stats gk-stats--2">
-            <Stat label="중요도">
+            <Stat label={t('중요도')}>
               <span className="g-stars" role="img" aria-label={`${region.value} / 3`}>
                 {[1, 2, 3].map((n) => (
                   <i key={n} className={n <= region.value ? 'on' : ''} />
                 ))}
               </span>
             </Stat>
-            <Stat label={`수비대 ${region.garrison} / ${region.garrisonMax}척`}>
-              <Bar value={region.garrison / Math.max(1, region.garrisonMax)} tone={own ? 'accent' : 'bad'} label="수비대" />
+            <Stat label={t('수비대 {n} / {max}척', { n: region.garrison, max: region.garrisonMax })}>
+              <Bar value={region.garrison / Math.max(1, region.garrisonMax)} tone={own ? 'accent' : 'bad'} label={t('수비대')} />
             </Stat>
-            <Stat label="턴당 수입" wide>
+            <Stat label={t('턴당 수입')} wide>
               <span className="gk-row gk-row--wrap">
                 <Chip>
                   <Icon name="coin" size="sm" />
-                  은 {signed(region.income)}
+                  {t('은 {n}', { n: signed(region.income) })}
                 </Chip>
-                {region.unrest > 0 && <Chip tone="warn">민심 불안 {region.unrest}턴 · 수입 절반</Chip>}
+                {region.unrest > 0 && <Chip tone="warn">{t('민심 불안 {turns} · 수입 절반', { turns: turnsText(region.unrest) })}</Chip>}
               </span>
             </Stat>
           </div>
 
           <h3 className="g-section">
-            시설 <span className="g-section__hint">빈 부지 {region.freeSlots}곳</span>
+            {t('시설')} <span className="g-section__hint">{t('빈 부지 {n}곳', { n: region.freeSlots })}</span>
           </h3>
           <ul className="g-list" data-guide="build">
             {region.buildings.map((b) => {
               const info = BUILDINGS[b.kind];
-              const maxed = b.level >= b.maxLevel;
               const busy = building.has(b.kind);
-              const can = own && b.buildable && !maxed && !busy;
-              const why = maxed ? '최고 단계' : busy ? '공사 중' : (b.blocked ?? '');
+              const maxed = b.maxLevel <= b.level;
               const showCost = own && !maxed && !busy;
+              const can = own && b.buildable && !maxed && !busy;
+              const why = maxed ? t('최고 단계') : busy ? t('공사 중') : (b.blocked ?? '');
               return (
                 <li key={b.kind} className="g-row">
                   <span className="g-glyph" aria-hidden>
@@ -80,20 +83,20 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
                   </span>
                   <span className="g-row__main">
                     <span className="g-row__title">
-                      {info.name}
-                      <span className="g-pips" aria-label={`${b.level} / ${b.maxLevel}단계`}>
+                      {buildingName(b.kind)}
+                      <span className="g-pips" aria-label={t('{level} / {max}단계', { level: b.level, max: b.maxLevel })}>
                         {Array.from({ length: b.maxLevel }, (_, i) => (
                           <i key={i} className={i < b.level ? 'on' : ''} />
                         ))}
                       </span>
                     </span>
                     <span className={`g-row__sub${showCost && b.blocked ? ' g-row__sub--warn' : ''}`}>
-                      {showCost ? (b.blocked ? b.blocked : `${costText(b.cost)} · ${b.turns}턴`) : busy ? `${b.level + 1}단계 공사 중 · ${b.upgradeLeft}턴 남음` : info.desc}
+                      {showCost ? (b.blocked ? b.blocked : t('{cost} · {turns}', { cost: costText(b.cost), turns: turnsText(b.turns) })) : busy ? t('{level}단계 공사 중 · {turns} 남음', { level: b.level + 1, turns: turnsText(b.upgradeLeft) }) : buildingDesc(b.kind)}
                     </span>
                   </span>
                   {own && (
                     <button type="button" className="g-btn g-btn--sm" disabled={!can} title={why} onClick={() => onBuild?.(region.id, b.kind)}>
-                      {maxed ? '최대' : busy ? '공사 중' : b.level === 0 ? '건설' : '증축'}
+                      {maxed ? t('최대') : busy ? t('공사 중') : b.level === 0 ? t('건설') : t('증축')}
                     </button>
                   )}
                 </li>
@@ -103,7 +106,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
 
           {region.works.length > 0 && (
             <>
-              <h3 className="g-section">공사 현황</h3>
+              <h3 className="g-section">{t('공사 현황')}</h3>
               <ul className="g-list">
                 {region.works.map((q) => (
                   <li key={q.id} className="g-row">
@@ -112,13 +115,13 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
                     </span>
                     <span className="g-row__main">
                       <span className="g-row__title">
-                        {BUILDINGS[q.kind].name} {q.toLevel}단계
+                        {t('{work} {level}단계', { work: buildingName(q.kind), level: q.toLevel })}
                       </span>
-                      <span className="g-row__sub">{q.turnsLeft}턴 남음</span>
+                      <span className="g-row__sub">{t('{turns} 남음', { turns: turnsText(q.turnsLeft) })}</span>
                     </span>
                     {own && q.cancelable && (
                       <button type="button" className="g-btn g-btn--ghost g-btn--sm" onClick={() => onCancelBuild?.(region.id, q.kind)}>
-                        취소
+                        {t('취소')}
                       </button>
                     )}
                   </li>
@@ -130,7 +133,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
           {own && (region.recruit.length > 0 || region.yard.length > 0) && (
             <>
               <h3 className="g-section">
-                함선 건조 <span className="g-section__hint">{region.yardIdle ? '선소가 완공되어야 건조가 시작됩니다' : '주문 즉시 은이 차감됩니다'}</span>
+                {t('함선 건조')} <span className="g-section__hint">{region.yardIdle ? t('선소가 완공되어야 건조가 시작됩니다') : t('주문 즉시 은이 차감됩니다')}</span>
               </h3>
               {region.yard.length > 0 && (
                 <ul className="g-list g-list--tight">
@@ -138,11 +141,11 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
                     <li key={q.id} className="g-row">
                       <span className="g-row__main">
                         <span className="g-row__title">{q.name}</span>
-                        <span className="g-row__sub">{region.yardIdle ? '선소 없음 · 대기 중' : `${q.turnsLeft}턴 뒤 완성`}</span>
+                        <span className="g-row__sub">{region.yardIdle ? t('선소 없음 · 대기 중') : t('{turns} 뒤 완성', { turns: turnsText(q.turnsLeft) })}</span>
                       </span>
                       {q.cancelable && (
                         <button type="button" className="g-btn g-btn--ghost g-btn--sm" onClick={() => onCancelRecruit?.(region.id, q.id)}>
-                          취소
+                          {t('취소')}
                         </button>
                       )}
                     </li>
@@ -154,10 +157,10 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
                   <li key={r.kind} className="g-row">
                     <span className="g-row__main">
                       <span className="g-row__title">{r.name}</span>
-                      <span className={`g-row__sub${r.blocked ? ' g-row__sub--warn' : ''}`}>{r.blocked ?? `${goldText(r.cost)} · ${r.turns}턴`}</span>
+                      <span className={`g-row__sub${r.blocked ? ' g-row__sub--warn' : ''}`}>{r.blocked ?? t('{cost} · {turns}', { cost: goldText(r.cost), turns: turnsText(r.turns) })}</span>
                     </span>
                     <button type="button" className="g-btn g-btn--sm" disabled={!!r.blocked} title={r.blocked} onClick={() => onRecruit?.(region.id, r.kind)}>
-                      건조
+                      {t('건조')}
                     </button>
                   </li>
                 ))}
@@ -165,9 +168,9 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
             </>
           )}
 
-          <h3 className="g-section">주둔 함대</h3>
+          <h3 className="g-section">{t('주둔 함대')}</h3>
           {fleets.length === 0 ? (
-            <p className="g-hint">주둔 중인 함대가 없습니다.</p>
+            <p className="g-hint">{t('주둔 중인 함대가 없습니다.')}</p>
           ) : (
             <ul className="g-list">
               {fleets.map((f) => (
@@ -178,8 +181,8 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
                       <span className="g-row__title">{f.name}</span>
                       <span className="g-row__sub">
                         {summarize(f)}
-                        {f.route.length ? ' · 이동 중' : ''}
-                        {f.rest > 0 ? ` · 정비 ${f.rest}턴` : ''}
+                        {f.route.length ? ' · ' + t('이동 중') : ''}
+                        {f.rest > 0 ? ' · ' + t('정비 {turns}', { turns: turnsText(f.rest) }) : ''}
                       </span>
                     </span>
                     <span className="g-chev" aria-hidden>
@@ -198,6 +201,6 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
 
 function summarize(f: FleetView) {
   const counts = new Map<string, number>();
-  for (const s of f.ships) counts.set(SHIP_NAME[s.kind], (counts.get(SHIP_NAME[s.kind]) ?? 0) + 1);
+  for (const s of f.ships) counts.set(shipName(s.kind), (counts.get(shipName(s.kind)) ?? 0) + 1);
   return [...counts.entries()].map(([k, n]) => `${k} ${n}`).join(' · ');
 }

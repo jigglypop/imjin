@@ -1,6 +1,6 @@
 import { listStrength, batteryStrength } from './economy';
 import { LANES, REGION_ORDER, REGIONS } from './regions';
-import type { Fleet, Grand, GrandFaction, LogEntry, RegionId, ShipUnit } from './types';
+import type { Fleet, Grand, GrandFaction, LogEntry, MsgParams, RegionId, ShipUnit } from './types';
 import { pairKey } from './types';
 
 /** Read-only questions about a campaign, shared by the orders, the turn and the computer players. */
@@ -18,8 +18,15 @@ export function mintId(g: Grand, prefix: string): string {
   return `${prefix}${g.nextId}`;
 }
 
-export function note(g: Grand, text: string, tone: LogEntry['tone'] = 'info', tag?: LogEntry['tag']) {
-  g.log.push(tag ? { turn: g.turn, text, tone, tag } : { turn: g.turn, text, tone });
+/**
+ * Adds a line to the war's log. `text` is a Korean template with `{name}` and `{name|이/가}` placeholders and `params`
+ * fills them in the interface, so names are stored in the log as the data they are, not as finished sentences.
+ */
+export function note(g: Grand, text: string, params?: MsgParams, tone: LogEntry['tone'] = 'info', tag?: LogEntry['tag']) {
+  const entry: LogEntry = { turn: g.turn, text, tone };
+  if (params) entry.params = params;
+  if (tag) entry.tag = tag;
+  g.log.push(entry);
   if (g.log.length > 160) g.log.splice(0, g.log.length - 160);
 }
 

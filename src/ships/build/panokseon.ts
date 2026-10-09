@@ -32,7 +32,7 @@ import {
   flag,
   furledSail,
   hatch,
-  lantern,
+  hangLanterns,
   loftHull,
   longPennant,
   mast,
@@ -231,7 +231,7 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
   hatch(ctx, P('deck_plank'), dark, 8.6, deck, 0.2, 1.8, 1.4);
   windlass(ctx, timber, P('iron_hex', { surf: 2 }), 7.0, deck, 2.0);
   for (const side of [-1, 1]) anchorProp(ctx, timber, P('iron_hex', { surf: 2 }), [14.2, deck - 0.1, side * (outer(14.2) + 0.45)]);
-  for (const l of anchors.lanterns) lantern(ctx, P('sail_hemp', { tint: [1.35, 1.15, 0.85] }), timber, l);
+  hangLanterns(ctx, P('sail_hemp', { tint: [1.35, 1.15, 0.85] }), timber, timber, anchors, top);
   // bracket dentils under the coping (the one small touch of faded oxblood left on the hull) and projecting deck-beam ends
   blockRow(ctx, h, P('stained_wood', { tint: [1.7, 0.8, 0.72] }), -16.5, 16.5, 0.95, (x) => top(x) - 0.34, [0.24, 0.26, 0.32], 0.1);
   blockRow(ctx, h, timber, -17, 17, 2.3, deck - 0.42, [0.34, 0.3, 0.7], 0.2);

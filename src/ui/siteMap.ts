@@ -26,5 +26,6 @@ export function siteUV(id: ScenarioId) {
   return { u: (lonToX(s.lon) - meta.x0) / (meta.x1 - meta.x0), v: (latToY(s.lat) - meta.y0) / (meta.y1 - meta.y0) };
 }
 
-/** Marker label: the battle's name without the generic suffix. */
-export const shortTitle = (title: string) => title.replace(' 해전', '').replace(' 대첩', '');
+/** Marker label: the battle's name without the generic suffix or prefix (Korean "옥포 해전", English "Battle of Okpo"). */
+export const shortTitle = (title: string) =>
+  title.replace(/ (해전|대첩)$/, '').replace(/^Battle of (the )?/, '');

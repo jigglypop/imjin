@@ -167,8 +167,9 @@ export class SelectScene {
       this.scene.add(flag.group);
     }
     if (this.forces) this.setForces(this.forces.id, this.forces.player);
-    this.focus(initial, true);
+    // Attach first: focus() reads the canvas height to decide how far south to aim, and an unattached canvas reads as 1 px.
     this.attach(this.renderer.domElement);
+    this.focus(initial, true);
     this.ready = true;
   }
 
@@ -267,7 +268,7 @@ export class SelectScene {
   };
 
   private viewportHeight() {
-    return this.dom?.clientHeight || 1;
+    return (this.dom ?? this.renderer.domElement).clientHeight || window.innerHeight;
   }
 
   private buildMap(demTex: DataTexture) {

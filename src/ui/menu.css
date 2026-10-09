@@ -1,42 +1,16 @@
 /* ============================================================================
    App shell: main menu, mode screens, battle select, settings, loading, notices, campaign room.
-   Calm white glass over pale key art, graphite ink for the one primary action, hairline borders.
+   Black translucent glass over the key art (dimmed to dusk), a light pill for the one primary action, hairline borders.
    The 3D battle map (.hs) is the only screen with a live picture behind the glass.
    Sheets in portrait, two columns in landscape.
    ============================================================================ */
 
-/* The menu palette. Saturation stays low: graphite is the accent, the factions are small tonal marks (slate indigo,
-   umber, ochre) and never a large fill. The same values live in :root (styles.css); they are repeated here so the
-   shell never depends on the order the sheets load in. */
+/* The shell's scoped values: only what :root (styles.css) does not already say. The palette lives there. */
 .screen,
 .loading,
 .fatal,
 .recovery,
 .camp-backdrop {
-  --ink: #1b1e22;
-  --ink-2: #3c434b;
-  --ink-3: #5d6670;
-  --line: rgba(27, 30, 34, 0.1);
-  --line-2: rgba(27, 30, 34, 0.18);
-  --fill: rgba(27, 30, 34, 0.05);
-  --fill-2: rgba(27, 30, 34, 0.09);
-  --mist: #eef1f4;
-  --accent: #23303d;
-  --accent-2: #2f3e4e;
-  --accent-soft: rgba(35, 48, 61, 0.07);
-  --joseon: #46637a;
-  --joseon-soft: #e4eaef;
-  --japan: #6b4a40;
-  --japan-soft: #ede6e3;
-  --ming: #8c7040;
-  --ming-soft: #efe9dd;
-  --good: #4a6b55;
-  --bad: #8c4b3f;
-  --warn: #8a6d2f;
-  --seal: var(--bad);
-  --glass-line: var(--line);
-  --shadow: 0 10px 32px rgba(27, 30, 34, 0.1), 0 1px 2px rgba(27, 30, 34, 0.06);
-  --shadow-sm: 0 2px 10px rgba(27, 30, 34, 0.08);
   --fs-24: 24px;
   --fs-32: 32px;
   /* Korean breaks between words, not inside them. */
@@ -55,11 +29,11 @@
   color: var(--ink);
   line-height: 1.45;
   font-weight: 400;
-  /* Stands in for the key art until it has loaded: the same pale mist, so nothing flashes. */
-  background: radial-gradient(120% 90% at 30% 10%, #ffffff 0%, var(--mist) 60%, #e3e8ec 100%);
+  /* Stands in for the key art until it has loaded: the same dusk, so nothing flashes. */
+  background: radial-gradient(120% 90% at 30% 10%, var(--sea-2) 0%, var(--sea-1) 60%, var(--sea-0) 100%);
 }
 
-/* Key art behind a screen: fades in over the mist gradient, then a white wash keeps the glass and type legible. */
+/* Key art behind a screen: fades in over the dusk gradient, then a dark wash dims the mist so the glass and the light type stay legible. */
 .art-bg {
   position: absolute;
   inset: 0;
@@ -87,7 +61,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.12) 42%, rgba(255, 255, 255, 0.5) 100%);
+  background: linear-gradient(180deg, rgba(8, 12, 18, 0.5) 0%, rgba(8, 12, 18, 0.42) 42%, rgba(8, 12, 18, 0.6) 100%);
 }
 
 /* Behind the mode screens the picture is only a hint of sea. */
@@ -96,7 +70,7 @@
 }
 
 .art-bg--calm::after {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(8, 12, 18, 0.68);
 }
 
 .screen-top {
@@ -124,7 +98,7 @@
   gap: var(--sp-2);
 }
 
-/* Secondary pill: white glass with a hairline border. */
+/* Secondary pill: black glass with a hairline border. */
 .back-btn {
   display: inline-flex;
   align-items: center;
@@ -133,26 +107,26 @@
   padding: 0 18px 0 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.84);
+  background: var(--glass);
   color: var(--ink);
   font-size: var(--fs-13);
   font-weight: 500;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   transition: background 0.15s, border-color 0.15s;
 }
 
 .back-btn:hover {
-  background: #fff;
+  background: var(--glass-hi);
   border-color: var(--line-2);
 }
 
 .app--touch .back-btn {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--glass-solid);
 }
 
 .screen-body {
@@ -170,7 +144,7 @@
 .screen-body > .glass,
 .screen-body > .paper {
   margin-bottom: var(--sp-5);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--glass-hi);
 }
 
 @media (max-width: 900px), (max-height: 540px) {
@@ -184,6 +158,13 @@
 
   .screen-body > .cs {
     display: flex;
+  }
+
+  /* The connect card is one short row: it is a card, not a full-height sheet with an empty belly. */
+  .screen-body > .net:has(.on-connect) {
+    min-height: 0;
+    margin-bottom: var(--sp-5);
+    border-radius: var(--r);
   }
 
   .screen-body > .cs .select-foot {
@@ -209,11 +190,11 @@
   font-weight: 600;
   letter-spacing: 0;
   white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(27, 30, 34, 0.2), 0 6px 16px rgba(27, 30, 34, 0.14);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px rgba(0, 0, 0, 0.24);
 }
 
 .screen .ink-btn:hover {
-  background: var(--accent-2);
+  background: var(--accent-hover);
 }
 
 .screen .ink-btn:disabled {
@@ -227,7 +208,7 @@
 .recovery .chip {
   min-height: 36px;
   border: 1px solid var(--line-2);
-  background: rgba(255, 255, 255, 0.78);
+  background: transparent;
   font-size: var(--fs-13);
   font-weight: 500;
 }
@@ -236,11 +217,11 @@
 .camp-backdrop .chip:hover:not(:disabled),
 .fatal .chip:hover:not(:disabled),
 .recovery .chip:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: #fff;
+  border-color: var(--ink-2);
+  background: var(--fill);
 }
 
-/* A lit chip is a selection: graphite ring and a faint graphite wash, not a filled block. */
+/* A lit chip is a selection: a light ring and a faint light wash, not a filled block. */
 .screen .chip--on,
 .camp-backdrop .chip--on {
   border-color: var(--accent);
@@ -264,13 +245,13 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* Segmented control: a white glass track, the chosen segment is a graphite pill. */
+/* Segmented control: a black glass track, the chosen segment is the light pill. */
 .seg {
   display: inline-flex;
   padding: 3px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.84);
+  background: var(--glass);
   box-shadow: var(--shadow-sm);
 }
 
@@ -295,7 +276,7 @@
 
 .seg button.on {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 /* ---------------------------------------------------------------- main menu */
@@ -337,7 +318,7 @@
   letter-spacing: 0.3em;
   padding-left: 0.3em;
   color: var(--ink);
-  text-shadow: 0 0 28px rgba(255, 255, 255, 0.95), 0 0 6px rgba(255, 255, 255, 0.8);
+  text-shadow: 0 2px 24px rgba(4, 8, 14, 0.7), 0 1px 3px rgba(4, 8, 14, 0.5);
 }
 
 .wordmark-ko {
@@ -346,15 +327,15 @@
   letter-spacing: 0.3em;
   padding-left: 0.3em;
   color: var(--ink-2);
-  text-shadow: 0 0 16px rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 14px rgba(4, 8, 14, 0.7);
 }
 
 .wordmark-sub {
   font-size: var(--fs-13);
   font-weight: 400;
   letter-spacing: 0.06em;
-  color: var(--ink-3);
-  text-shadow: 0 0 12px rgba(255, 255, 255, 0.95);
+  color: var(--ink-2);
+  text-shadow: 0 1px 10px rgba(4, 8, 14, 0.7);
 }
 
 .mode-grid {
@@ -375,7 +356,7 @@
   padding: 10px 20px 10px 10px;
   border: 1px solid var(--line);
   border-radius: var(--r);
-  background: rgba(255, 255, 255, 0.84);
+  background: var(--glass);
   color: var(--ink);
   text-align: left;
   cursor: pointer;
@@ -386,7 +367,7 @@
 }
 
 .app--touch .mode-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--glass-solid);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
@@ -394,7 +375,7 @@
 .mode-card:hover {
   transform: translateY(-2px);
   border-color: var(--line-2);
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--glass-hi);
   box-shadow: var(--shadow);
 }
 
@@ -453,7 +434,7 @@
   background-repeat: no-repeat;
   background-size: contain;
   box-shadow: none;
-  filter: drop-shadow(0 1px 3px rgba(27, 30, 34, 0.22));
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
 }
 
 .screen .emblem--joseon {
@@ -472,7 +453,7 @@
 
 .notice,
 .settings-page .set-group {
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--glass-hi);
 }
 
 .notice {
@@ -609,14 +590,18 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(27, 30, 34, 0.3);
-  transition: transform 0.18s;
+  background: var(--ink-2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 0.18s, background 0.18s;
 }
 
 .switch--on {
   background: var(--accent);
   border-color: var(--accent);
+}
+
+.switch--on i {
+  background: var(--accent-ink);
 }
 
 .switch--on i {
@@ -649,11 +634,16 @@
   background: var(--mist);
 }
 
+/* The map is the one pale picture: the title sits on it in dark ink, the buttons and tabs are black glass. */
 .hs-top {
   position: relative;
   z-index: 6;
   flex: none;
   background: linear-gradient(rgba(238, 241, 244, 0.92), rgba(238, 241, 244, 0));
+}
+
+.hs .screen-title {
+  color: var(--ink-dark);
 }
 
 .hs-top .screen-top {
@@ -678,12 +668,14 @@
   padding: 0 14px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.86);
+  background: var(--glass-hi);
   color: var(--ink);
   font-size: var(--fs-13);
   font-weight: 500;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   transition: background 0.15s, border-color 0.15s;
 }
 
@@ -694,18 +686,20 @@
 }
 
 .hs-tab:not(.hs-tab--on):hover {
-  background: #fff;
+  background: var(--glass-solid);
   border-color: var(--line-2);
 }
 
 .hs-tab--on {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
+  /* The pale map would swallow a light pill: it gets a dark ring. */
+  box-shadow: 0 0 0 1.5px var(--ink-dark), var(--shadow-sm);
 }
 
 .hs-tab--on small {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(20, 24, 29, 0.66);
 }
 
 .hs-tab--locked {
@@ -721,7 +715,7 @@
   height: 18px;
   border-radius: 50%;
   background: var(--good);
-  color: #fff;
+  color: var(--ink-dark);
 }
 
 .tab-seal--loss {
@@ -778,10 +772,10 @@
   margin-left: -6px;
   margin-top: -6px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--ink-dark);
   border: 2px solid var(--accent);
   box-sizing: border-box;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 2px 6px rgba(27, 30, 34, 0.25);
+  box-shadow: 0 0 0 2px rgba(20, 24, 29, 0.35), 0 2px 6px rgba(20, 24, 29, 0.3);
 }
 
 .marker span {
@@ -791,15 +785,15 @@
   font-size: var(--fs-12);
   font-weight: 500;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 0 0 1px var(--line), 0 2px 6px rgba(27, 30, 34, 0.14);
+  background: rgba(14, 16, 20, 0.84);
+  box-shadow: 0 0 0 1px var(--line), 0 2px 6px rgba(20, 24, 29, 0.24);
 }
 
-/* Touch screens keep :hover after a tap, which would paint the chosen marker's white label on white. */
+/* Touch screens keep :hover after a tap, which would paint the chosen marker's label like a hovered one. */
 @media (hover: hover) {
   .marker:not(.marker--on):hover span {
-    background: #fff;
-    box-shadow: 0 0 0 1.5px var(--accent), 0 3px 10px rgba(27, 30, 34, 0.2);
+    background: var(--glass-solid);
+    box-shadow: 0 0 0 1.5px var(--accent), 0 3px 10px rgba(20, 24, 29, 0.3);
   }
 }
 
@@ -809,7 +803,7 @@
 }
 
 .marker--night i {
-  background: #9aa4af;
+  background: var(--ink-dark-2);
 }
 
 .marker--on {
@@ -822,9 +816,9 @@
   margin-left: -9px;
   margin-top: -9px;
   background: var(--accent);
-  border-color: #fff;
+  border-color: var(--ink-dark);
   border-width: 3px;
-  box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(35, 48, 61, 0.35);
+  box-shadow: 0 0 0 1px var(--ink-dark), 0 0 18px rgba(20, 24, 29, 0.35);
   animation: marker-pulse 2s ease-in-out infinite;
 }
 
@@ -832,12 +826,12 @@
   font-size: var(--fs-13);
   font-weight: 600;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 @keyframes marker-pulse {
   50% {
-    box-shadow: 0 0 0 1px var(--accent), 0 0 0 9px rgba(35, 48, 61, 0.14), 0 0 22px rgba(35, 48, 61, 0.3);
+    box-shadow: 0 0 0 1px var(--ink-dark), 0 0 0 9px rgba(20, 24, 29, 0.14), 0 0 22px rgba(20, 24, 29, 0.3);
   }
 }
 
@@ -905,7 +899,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--glass-sheet);
 }
 
 .hs-brief-scroll {
@@ -945,7 +939,7 @@
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--glass-solid);
   color: var(--ink-2);
   font-size: var(--fs-12);
   font-weight: 500;
@@ -1000,7 +994,7 @@
 
 .select-brief-head .night-tag {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .hs-brief p {
@@ -1062,7 +1056,7 @@
   flex: none;
   padding: var(--sp-3) var(--sp-5) calc(var(--sp-3) + 2px);
   border-top: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--fill);
 }
 
 .select-result {
@@ -1087,16 +1081,16 @@
   padding: calc(var(--sat) + 16px) calc(var(--sar) + 24px) calc(var(--sab) + 16px) calc(var(--sal) + 24px);
   color: var(--ink);
   line-height: 1.45;
-  background: radial-gradient(120% 90% at 50% 30%, #ffffff, #e3e8ec 80%);
+  background: radial-gradient(120% 90% at 50% 30%, var(--sea-2), var(--sea-0) 80%);
 }
 
-/* The battle's own picture shows through; only a light wash sits over it, the card carries the text. */
+/* The battle's own picture shows through; only a dark wash sits over it, the card carries the text. */
 .loading .art-bg img {
   object-position: 50% 50%;
 }
 
 .loading .art-bg::after {
-  background: radial-gradient(70% 60% at 50% 50%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.1) 100%);
+  background: radial-gradient(70% 60% at 50% 50%, rgba(8, 12, 18, 0.3), rgba(8, 12, 18, 0.55) 100%);
 }
 
 .loading-card {
@@ -1109,18 +1103,13 @@
   align-items: center;
   gap: 6px;
   text-align: center;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 18px 50px rgba(27, 30, 34, 0.22), 0 1px 2px rgba(27, 30, 34, 0.1);
+  background: var(--glass-sheet);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-/* A night battle's picture is dark: a white wash over it only turns it grey, so it stays dark and the card stands out. */
+/* A night battle's picture is already dark: the wash is lighter so it does not turn to black. */
 .loading--night .art-bg::after {
-  background: radial-gradient(70% 60% at 50% 50%, rgba(6, 12, 22, 0.22), rgba(6, 12, 22, 0.5) 100%);
-}
-
-.loading--night .loading-card {
-  background: #fff;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6), 0 22px 60px rgba(0, 0, 0, 0.5);
+  background: radial-gradient(70% 60% at 50% 50%, rgba(6, 12, 22, 0.12), rgba(6, 12, 22, 0.4) 100%);
 }
 
 .loading-hanja {
@@ -1222,7 +1211,7 @@
   padding: calc(var(--sat) + 16px) calc(var(--sar) + 16px) calc(var(--sab) + 16px) calc(var(--sal) + 16px);
   color: var(--ink);
   line-height: 1.45;
-  background: radial-gradient(120% 90% at 50% 30%, #ffffff, #e3e8ec 80%);
+  background: radial-gradient(120% 90% at 50% 30%, var(--sea-2), var(--sea-0) 80%);
 }
 
 .fatal .notice {
@@ -1250,14 +1239,14 @@
   border-radius: 999px;
   font-weight: 600;
   letter-spacing: 0;
-  box-shadow: 0 1px 2px rgba(27, 30, 34, 0.2), 0 6px 16px rgba(27, 30, 34, 0.14);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px rgba(0, 0, 0, 0.24);
 }
 
 /* ---------------------------------------------------------------- notice after a crash */
 
 .recovery {
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--glass-solid);
   box-shadow: var(--shadow);
 }
 
@@ -1287,13 +1276,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(27, 30, 34, 0.36);
+  background: rgba(6, 9, 13, 0.6);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
 
+/* Nothing of the screen behind may read through the room. */
 .camp.glass {
-  background: rgba(255, 255, 255, 0.96);
+  background: #0c0e12;
 }
 
 .camp {
@@ -1376,7 +1366,7 @@
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--fill);
 }
 
 .camp-squad-head {
@@ -1392,7 +1382,7 @@
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--line-2);
+  box-shadow: 0 0 0 2px var(--line-2);
 }
 
 .camp-squad-head b,
@@ -1492,7 +1482,7 @@
   padding: 0 8px;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   font-size: var(--fs-12);
   font-weight: 600;
 }

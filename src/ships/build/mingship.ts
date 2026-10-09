@@ -15,7 +15,7 @@ import {
   flag,
   hatch,
   hullBand,
-  lantern,
+  hangLanterns,
   loftHull,
   longPennant,
   mast,
@@ -224,6 +224,6 @@ export function buildMingship(lod: Lod): MeshData {
   hatch(ctx, P('deck_plank'), dark, 7.0, deck, -0.6, 1.8, 1.4);
   windlass(ctx, timber, iron, 14.6, deck, 1.8);
   for (const side of [-1, 1]) anchorProp(ctx, timber, iron, [8.0, deck - 0.1, side * (outer(8.0) + 0.45)]);
-  for (const l of anchors.lanterns) lantern(ctx, P('red_lacquer', { tint: [1.35, 0.95, 0.75] }), gilt, l);
+  hangLanterns(ctx, P('red_lacquer', { tint: [1.35, 0.95, 0.75] }), gilt, gilt, anchors, top);
   return b.data();
 }

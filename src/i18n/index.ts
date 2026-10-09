@@ -7,7 +7,7 @@ import { EN } from './en';
  * looked up by that exact text, so a missing translation falls back to readable Korean instead of a key.
  *
  *   t('전투 시작')                                  -> 'Start battle'
- *   t('{n}척', { n: 12 })                           -> '12 ships'
+ *   t('{n}척', { n: 12 })                           -> 'Ships: 12'
  *   t('{who|이/가} {place|을/를} 차지했습니다', ...)  -> Korean picks 이/가 and 을/를 from the word; English uses
  *                                                     its own template ('{who} took {place}') and ignores the pair.
  *

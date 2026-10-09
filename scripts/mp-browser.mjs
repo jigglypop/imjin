@@ -18,6 +18,11 @@ const url = args.url ?? 'http://127.0.0.1:5306/';
 const mode = args.mode ?? 'all';
 const out = args.out ?? join(new URL('..', import.meta.url).pathname, 'shots');
 const scenario = args.scenario ?? 'hansan';
+// The UI language of the pages (the lobby is matched by its words): --lang=ko|en.
+const lang = args.lang ?? 'ko';
+const X = lang === 'en'
+  ? { newRoom: 'New room', quickMatch: 'Quick Match', historical: 'Historical Battles', japan: 'Japan', takeSeat: 'Take seat', rematch: 'Rematch', unreachable: 'Cannot reach the server' }
+  : { newRoom: '새 방', quickMatch: '빠른 대전', historical: '역사 전투', japan: '일본', takeSeat: '자리 잡기', rematch: '재대결', unreachable: '서버에 연결할 수 없습니다' };
 const width = Number(args.w ?? 1280);
 const height = Number(args.h ?? 760);
 await mkdir(out, { recursive: true });
@@ -46,7 +51,7 @@ const open = async (name, size = { width, height }) => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && !/WebSocket|ERR_CONNECTION/.test(m.text()) && errors.push(m.text()));
-  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${url}${url.includes('?') ? '&' : '?'}lang=${lang}`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.mode-card', { timeout: 60000 });
   await gotoOnline(page, name);
   return { page, errors, name };
@@ -114,8 +119,8 @@ async function room(kind) {
   const b = await open(`을-${kind}`);
   await shot(a.page, `${kind}_lobby`);
   if (kind === 'scenario') {
-    await a.page.click('.on-card:has-text("새 방") .on-seg-btn:has-text("역사 전투")');
-    await a.page.selectOption('.on-card:has-text("새 방") .on-select', scenario);
+    await a.page.click(`.on-card:has-text("${X.newRoom}") .on-seg-btn:has-text("${X.historical}")`);
+    await a.page.selectOption(`.on-card:has-text("${X.newRoom}") .on-select`, scenario);
   }
   await a.page.click('.on-create');
   await a.page.waitForSelector('.on-seats', { timeout: 10000 });
@@ -159,7 +164,7 @@ async function reconnectCheck(a, b) {
   await page.addInitScript((t) => sessionStorage.setItem('imjin.session', t), token);
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${url}${url.includes('?') ? '&' : '?'}lang=${lang}`, { waitUntil: 'domcontentloaded' });
   const again = { page, errors, name: b.name };
   await waitBattle(again);
   await page.waitForTimeout(3000);
@@ -190,11 +195,11 @@ try {
   if (mode === 'quick' || mode === 'all') {
     const a = await open('갑-quick');
     const b = await open('을-quick');
-    await a.page.click('.on-card:has-text("빠른 대전") .on-seg-btn:has-text("역사 전투")');
-    await a.page.selectOption('.on-card:has-text("빠른 대전") .on-select', 'okpo');
-    await b.page.click('.on-card:has-text("빠른 대전") .on-seg-btn:has-text("역사 전투")');
-    await b.page.selectOption('.on-card:has-text("빠른 대전") .on-select', 'okpo');
-    await b.page.click('.on-navy:has-text("일본")');
+    await a.page.click(`.on-card:has-text("${X.quickMatch}") .on-seg-btn:has-text("${X.historical}")`);
+    await a.page.selectOption(`.on-card:has-text("${X.quickMatch}") .on-select`, 'okpo');
+    await b.page.click(`.on-card:has-text("${X.quickMatch}") .on-seg-btn:has-text("${X.historical}")`);
+    await b.page.selectOption(`.on-card:has-text("${X.quickMatch}") .on-select`, 'okpo');
+    await b.page.click(`.on-navy:has-text("${X.japan}")`);
     await a.page.click('.on-quick-go');
     await a.page.waitForSelector('.on-searching');
     await a.page.waitForTimeout(1500);
@@ -207,7 +212,7 @@ try {
     // Lobby and room at the size given by --w/--h (a phone, say), then a room with a historical duel.
     const a = await open('장수');
     await shot(a.page, 'ui_lobby');
-    await a.page.click('.on-card:has-text("새 방") .on-seg-btn:has-text("역사 전투")');
+    await a.page.click(`.on-card:has-text("${X.newRoom}") .on-seg-btn:has-text("${X.historical}")`);
     await a.page.click('.on-create');
     await a.page.waitForSelector('.on-seats');
     await a.page.waitForTimeout(400);
@@ -218,31 +223,31 @@ try {
     // Run with the server stopped: the first connection fails with a retry offered.
     const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
     const page = await context.newPage();
-    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${url}${url.includes('?') ? '&' : '?'}lang=${lang}`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.mode-card', { timeout: 60000 });
     await page.click('.mode-grid .mode-card:nth-child(4)');
     await page.fill('.on-input', '장수');
     await page.click('.on-connect');
     await page.waitForSelector('.on-alert', { timeout: 20000 });
-    check((await page.locator('.on-alert').textContent()).includes('서버에 연결할 수 없습니다'), 'down: unreachable server is explained');
+    check((await page.locator('.on-alert').textContent()).includes(X.unreachable), 'down: unreachable server is explained');
     await shot(page, 'down_error');
     await context.close();
   }
   if (mode === 'rematch') {
     // Needs a server with BASE_SPEED=30. The host takes the Japanese seat and sits idle; the Joseon computer wins.
     const a = await open('홀로-rematch');
-    await a.page.click('.on-card:has-text("새 방") .on-seg-btn:has-text("역사 전투")');
-    await a.page.selectOption('.on-card:has-text("새 방") .on-select', 'okpo');
+    await a.page.click(`.on-card:has-text("${X.newRoom}") .on-seg-btn:has-text("${X.historical}")`);
+    await a.page.selectOption(`.on-card:has-text("${X.newRoom}") .on-select`, 'okpo');
     await a.page.click('.on-create');
     await a.page.waitForSelector('.on-seats');
-    await a.page.locator('.on-seat').nth(1).locator('.chip:has-text("자리 잡기")').click();
+    await a.page.locator('.on-seat').nth(1).locator(`.chip:has-text("${X.takeSeat}")`).click();
     await a.page.waitForTimeout(500);
     await a.page.click('.on-start');
     await waitBattle(a, 120000);
     await a.page.waitForSelector('.on-end', { timeout: 240000 });
     await a.page.waitForTimeout(1500);
     await shot(a.page, 'rematch_ended');
-    await a.page.click('.on-end .chip:has-text("재대결")');
+    await a.page.click(`.on-end .chip:has-text("${X.rematch}")`);
     await a.page.waitForSelector('.on-seats', { timeout: 10000 });
     check((await a.page.locator('.on-seats').count()) === 1 && (await a.page.locator('.on-overlay .on-end').count()) === 0, 'rematch: back in the room lobby');
     await shot(a.page, 'rematch_room');

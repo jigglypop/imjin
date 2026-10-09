@@ -41,7 +41,7 @@ export function grandInfo(rb: RegionBattle): BattleInfo {
   return {
     mode: 'conquest',
     id: rb.mapId,
-    title: `${rb.regionName} 해전`,
+    title: `${rb.regionName} 해전`, // i18n-ignore: every region has an English entry for its battle title
     hanja: REGIONS[rb.regionId].hanja,
     date,
     place: rb.regionName,
@@ -106,7 +106,7 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
   const cols = Math.max(3, Math.min(8, Math.ceil(Math.sqrt(seat.ships.length * 1.3))));
   const squads = new Map<string, Squadron>();
   const portrait = seat.leader?.portrait ?? DEFAULT_PORTRAIT[seat.faction];
-  const commander = seat.leader ? `${seat.leader.title} ${seat.leader.name}` : `${seat.name} 수군`;
+  const commander = seat.leader ? `${seat.leader.title} ${seat.leader.name}` : `${seat.name} 수군`; // i18n-ignore: '조선 수군' and the others have English entries
   seat.ships.forEach((u, i) => {
     const spec = SHIP_SPECS[u.kind];
     // A squadron holds six ships of one kind, the way the conquest raises them.
@@ -116,7 +116,7 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
     if (!sq) {
       const index = [...squads.keys()].filter((k) => k.startsWith(`${u.kind}:`)).length + 1;
       const card = `card_${u.kind === 'hyeopseon' || u.kind.startsWith('ming') ? 'panokseon' : u.kind === 'kobaya' ? 'sekibune' : u.kind}`;
-      sq = b.addSquadron(seat.team, `${SHORT_NAME[u.kind]} ${index}대`, commander, portrait, card, slot);
+      sq = b.addSquadron(seat.team, `${SHORT_NAME[u.kind]} ${index}대`, commander, portrait, card, slot); // i18n-ignore: same squadron label as the conquest mode
       // A squadron of an allied navy (Ming beside Joseon) is listed with the seat that commands it.
       sq.faction = seat.faction;
       squads.set(key, sq);

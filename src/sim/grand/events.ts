@@ -3,7 +3,7 @@ import { SHIP_SPECS } from '../catalog';
 import { REGIONS } from './regions';
 import { forkRng, next } from './rng';
 import { grantXp, spawnFleet } from './roster';
-import type { Commander, Grand, GrandFaction, RegionId, Result } from './types';
+import type { Commander, Grand, GrandFaction, MsgParams, RegionId, Result } from './types';
 import { GRAND_FACTIONS, fail, ok } from './types';
 import { note, ownedBy } from './world';
 
@@ -66,7 +66,7 @@ export const EVENTS: readonly GameEvent[] = [
         text: '일본 함선 수백 척이 부산포를 덮쳤습니다. 경상도 수군은 싸워 보지도 못하고 흩어졌고, 전라좌수영에는 아직 출전 명령이 닿지 않았습니다. 병사들은 포구에서 명령을 기다리고 있습니다.',
         portrait: 'portrait_yi',
         choices: [
-          { label: '의병과 어민을 모아 협선 확충', effect: { ships: { at: 'yeosu', name: '의병 수군', kinds: { hyeopseon: 3 } } } },
+          { label: '의병과 어민을 모아 협선 확충', effect: { ships: { at: 'yeosu', name: '의병 함대', kinds: { hyeopseon: 3 } } } },
           { label: '군량과 화약 비축', effect: { gold: 250 } },
         ],
       },
@@ -84,7 +84,7 @@ export const EVENTS: readonly GameEvent[] = [
         text: '일본군이 조선에 상륙했다는 급보가 도착했습니다. 조정은 일본군이 압록강을 넘어 요동까지 노릴 것을 우려하고 있습니다.',
         portrait: 'portrait_chenlin',
         choices: [
-          { label: '요동 수군 증강', effect: { ships: { at: 'liaodong', name: '요동 증강대', kinds: { mingsmall: 1 } } } },
+          { label: '요동 수군 증강', effect: { ships: { at: 'liaodong', name: '요동 증강 함대', kinds: { mingsmall: 1 } } } },
           { label: '군비를 아끼며 상황 관망', effect: { gold: 220 } },
         ],
       },
@@ -118,7 +118,7 @@ export const EVENTS: readonly GameEvent[] = [
         text: '명군 4만이 압록강을 건넜습니다. 수군도 서해를 건너 조선을 도울 때가 되었습니다.',
         portrait: 'portrait_deng',
         choices: [
-          { label: '수군 증파', effect: { gold: -150, ships: { at: 'liaodong', name: '명 증원 수군', kinds: { mingship: 1 } } } },
+          { label: '수군 증파', effect: { gold: -150, ships: { at: 'liaodong', name: '명 증원 함대', kinds: { mingship: 1 } } } },
           { label: '군량 지원과 장병 격려', effect: { gold: 100, xp: 100 } },
         ],
       },
@@ -142,7 +142,7 @@ export const EVENTS: readonly GameEvent[] = [
         text: '명과 강화를 논의하는 동안 전선이 조용합니다. 이 틈에 군량을 채울 수 있습니다.',
         choices: [
           { label: '교섭에 응해 군량 확보', effect: { gold: 200, income: { mult: 0.95, turns: 2 } } },
-          { label: '교섭 중에도 함선 증강', effect: { ships: { at: 'nagoya', name: '강화 중 신조', kinds: { sekibune: 2, kobaya: 5 } } } },
+          { label: '교섭 중에도 함선 증강', effect: { ships: { at: 'nagoya', name: '신조 함대', kinds: { sekibune: 2, kobaya: 5 } } } },
         ],
       },
       ming: {
@@ -174,7 +174,7 @@ export const EVENTS: readonly GameEvent[] = [
         text: '일본군이 다시 바다를 건넌다는 보고가 들어왔습니다. 남해안의 방비를 서둘러야 합니다.',
         portrait: 'portrait_yi',
         choices: [
-          { label: '수군 재건', effect: { gold: -150, ships: { at: 'yeosu', name: '재건 수군', kinds: { panokseon: 1, hyeopseon: 2 } } } },
+          { label: '수군 재건', effect: { gold: -150, ships: { at: 'yeosu', name: '재건 함대', kinds: { panokseon: 1, hyeopseon: 2 } } } },
           { label: '포구의 군량과 화약 보충', effect: { gold: 250 } },
         ],
       },
@@ -183,7 +183,7 @@ export const EVENTS: readonly GameEvent[] = [
         text: '일본군이 다시 조선을 공격했습니다. 원군을 다시 보낼지를 두고 조정의 의견이 갈립니다.',
         portrait: 'portrait_chenlin',
         choices: [
-          { label: '수군 재파견', effect: { gold: -400, ships: { at: 'liaodong', name: '명 재파병 수군', kinds: { mingship: 2 } } } },
+          { label: '수군 재파견', effect: { gold: -400, ships: { at: 'liaodong', name: '명 재파병 함대', kinds: { mingship: 2 } } } },
           { label: '은으로 조선을 지원하며 관망', effect: { gold: 200, xp: 60 } },
         ],
       },
@@ -216,7 +216,7 @@ export const EVENTS: readonly GameEvent[] = [
         text: '칠천량에서 원균의 수군이 무너졌습니다. 조정은 이순신을 다시 삼도수군통제사로 임명했습니다. 남은 판옥선은 열두 척뿐입니다.',
         portrait: 'portrait_yi',
         choices: [
-          { label: '남은 판옥선을 수습해 수군 재건', effect: { restore: 'yi', xp: 120, ships: { at: 'myeongnyang', name: '수습한 판옥선', kinds: { panokseon: 2 } } } },
+          { label: '남은 판옥선을 수습해 수군 재건', effect: { restore: 'yi', xp: 120, ships: { at: 'myeongnyang', name: '수습 함대', kinds: { panokseon: 2 } } } },
           { label: '피난민과 군량을 모아 전열 정비', effect: { restore: 'yi', repair: 0.15, gold: 150 } },
         ],
       },
@@ -331,27 +331,30 @@ export function applyEffect(g: Grand, f: GrandFaction, e: Effect): void {
   }
 }
 
-/** The effect as a short Korean line for the card's buttons. */
-export function describeEffect(e: Effect): string {
-  const parts: string[] = [];
-  if (e.gold) parts.push(`은 ${e.gold > 0 ? '+' : '−'}${Math.abs(e.gold)}냥`);
+/** A Korean template and what fills it, for the interface to render in its language. */
+export type Msg = { text: string; params?: MsgParams };
+
+/** The effect as short Korean fragments for the card's buttons; the interface renders and joins them. */
+export function describeEffect(e: Effect): Msg[] {
+  const parts: Msg[] = [];
+  if (e.gold) parts.push({ text: e.gold > 0 ? '은 +{gold}냥' : '은 −{gold}냥', params: { gold: Math.abs(e.gold) } });
   if (e.ships) {
-    const names = (Object.entries(e.ships.kinds) as [ShipKind, number][]).map(([k, n]) => `${SHIP_SPECS[k].label} ${n}척`).join(' · ');
-    parts.push(`${names} 합류 (${REGIONS[e.ships.at].name})`);
+    const place = REGIONS[e.ships.at].name;
+    for (const [kind, n] of Object.entries(e.ships.kinds) as [ShipKind, number][]) parts.push({ text: '{ship} {n}척 합류 ({place})', params: { ship: SHIP_SPECS[kind].label, n, place } });
   }
-  if (e.xp) parts.push(`지휘관 경험 +${e.xp}`);
-  if (e.repair) parts.push(`함대 회복 +${Math.round(e.repair * 100)}%`);
-  if (e.income) parts.push(`수입 ${e.income.mult >= 1 ? '+' : '−'}${Math.round(Math.abs(e.income.mult - 1) * 100)}% (${e.income.turns}턴)`);
-  if (e.suspend) parts.push('이순신이 지휘에서 물러남');
-  if (e.restore) parts.push('이순신이 지휘로 복귀');
-  return parts.join(' · ');
+  if (e.xp) parts.push({ text: '지휘관 경험 +{n}', params: { n: e.xp } });
+  if (e.repair) parts.push({ text: '함대 회복 +{n}%', params: { n: Math.round(e.repair * 100) } });
+  if (e.income) parts.push({ text: e.income.mult >= 1 ? '수입 +{n}% ({turns}턴)' : '수입 −{n}% ({turns}턴)', params: { n: Math.round(Math.abs(e.income.mult - 1) * 100), turns: e.income.turns } });
+  if (e.suspend) parts.push({ text: '이순신이 지휘에서 물러남' });
+  if (e.restore) parts.push({ text: '이순신이 지휘로 복귀' });
+  return parts;
 }
 
 function resolve(g: Grand, ev: GameEvent, f: GrandFaction, index: number) {
   const card = cardFor(g, ev, f);
   if (!card) return;
   applyEffect(g, f, card.choices[index]!.effect);
-  if (f === g.player) note(g, `${card.title}: ${card.choices[index]!.label}`, 'info');
+  if (f === g.player) note(g, '{title}: {answer}', { title: card.title, answer: card.choices[index]!.label }, 'info');
 }
 
 /**
@@ -364,7 +367,7 @@ export function fireEvents(g: Grand): void {
   // A card the player left unanswered gets its first answer rather than blocking the next.
   if (g.events.pending) chooseEvent(g, 0);
   g.events.done[ev.id] = -2;
-  note(g, ev.headline, 'info', 'event');
+  note(g, ev.headline, undefined, 'info', 'event');
   const index = EVENTS.indexOf(ev);
   for (const f of GRAND_FACTIONS) {
     if (!cardFor(g, ev, f)) continue;
@@ -387,5 +390,5 @@ export function chooseEvent(g: Grand, index: number): Result {
   resolve(g, shown.event, g.player, index);
   g.events.done[shown.event.id] = index;
   g.events.pending = null;
-  return ok(`${shown.card.title}에 대응했습니다`);
+  return ok('{title}에 대응했습니다', { title: shown.card.title });
 }

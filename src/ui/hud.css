@@ -1,7 +1,7 @@
 /* ============================================================================
    The battle HUD: score panel, toasts, settings sheet, minimap, selection detail, squadron cards, orders, speed,
    result, squadron banners over the sea, touch tools, and the compact (phone) layouts.
-   Restrained white glass, graphite ink, faction tones only as thin marks. Conquest panels are in conquest.css.
+   Black translucent glass, light type, faction tones only as thin marks. Conquest panels are in conquest.css.
    ============================================================================ */
 
 .hud {
@@ -220,7 +220,8 @@
 
 .toasts {
   position: absolute;
-  top: calc(var(--bal-bottom, calc(var(--sat) + 140px)) + 8px);
+  /* Below the left menu buttons (title, date and the two buttons end about 128px down), whatever the score panel's height. */
+  top: max(calc(var(--bal-bottom, calc(var(--sat) + 140px)) + 8px), calc(var(--sat) + 128px));
   left: calc(var(--sal) + 24px);
   display: flex;
   flex-direction: column;
@@ -321,7 +322,7 @@
   align-items: flex-end;
   gap: 14px;
   padding: 0 calc(var(--sar) + 22px) calc(var(--sab) + 18px) calc(var(--sal) + 22px);
-  background: linear-gradient(transparent, rgba(12, 18, 26, 0.4));
+  background: linear-gradient(transparent, rgba(12, 18, 26, 0.22));
 }
 
 .minimap {
@@ -331,7 +332,7 @@
   flex: none;
   border-radius: 50%;
   overflow: hidden;
-  box-shadow: 0 6px 18px rgba(8, 12, 18, 0.4), 0 0 0 2px rgba(255, 255, 255, 0.82);
+  box-shadow: 0 6px 18px rgba(8, 12, 18, 0.4), 0 0 0 1px var(--line-2);
   pointer-events: auto;
   cursor: crosshair;
   background: #2c3c4a;
@@ -355,8 +356,6 @@
   display: flex;
   align-items: flex-start;
   gap: 13px;
-  -webkit-mask-image: linear-gradient(#000 calc(100% - 14px), transparent);
-  mask-image: linear-gradient(#000 calc(100% - 14px), transparent);
 }
 
 .detail-portrait {
@@ -365,7 +364,7 @@
   flex: none;
   border-radius: 50%;
   object-fit: cover;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--line-2);
+  box-shadow: 0 0 0 2px var(--line-2);
 }
 
 .detail-body {
@@ -458,7 +457,7 @@
 }
 
 .stat-bar--crew i {
-  background: #6f8497;
+  background: var(--joseon);
 }
 
 .stat-bar--fire i {
@@ -561,7 +560,7 @@
   padding: 0;
   cursor: pointer;
   background: var(--sea-1);
-  box-shadow: 0 4px 14px rgba(8, 12, 18, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 14px rgba(8, 12, 18, 0.4), 0 0 0 1px var(--line-2);
   transition: transform 0.15s, box-shadow 0.15s;
   overflow: hidden;
 }
@@ -583,7 +582,7 @@
 
 .card--selected {
   transform: translateY(-7px);
-  box-shadow: 0 10px 22px rgba(8, 12, 18, 0.45), 0 0 0 2px var(--accent), 0 0 0 4px rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 22px rgba(8, 12, 18, 0.45), 0 0 0 2px var(--sea-0), 0 0 0 4px var(--accent);
 }
 
 .card--dead {
@@ -664,7 +663,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--glass-solid);
   color: var(--ink);
 }
 
@@ -732,6 +731,17 @@
   white-space: nowrap;
 }
 
+/* English names run longer than the Korean ones: they wrap inside the button instead of running into the next. */
+.order-label {
+  max-width: 100%;
+  text-align: center;
+  line-height: 1.15;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
 .order-icon {
   width: 46px;
   height: 36px;
@@ -749,10 +759,11 @@
   background: var(--fill);
 }
 
-.order--on .order-icon {
+.order--on .order-icon,
+.order--on:hover .order-icon {
   background: var(--accent);
   box-shadow: none;
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .order:disabled {
@@ -803,7 +814,7 @@
 .speed button.on {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .speed .speed-skip {
@@ -839,7 +850,7 @@
 .dock button.on {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .dock .dock-fold {
@@ -872,6 +883,21 @@
   pointer-events: auto;
   touch-action: pan-y;
   animation: toast-in 0.5s ease-out;
+}
+
+/* The result card and the settings sheet hide what is behind them: dark enough that nothing reads through. Everything
+   that would peek past the card (toolbar, orders, cards, minimap) is hidden while it is up. */
+.hud .result.glass,
+.hud .settings-body.glass {
+  background: rgba(12, 14, 18, 0.97);
+}
+
+.app:has(.hud .result) .touch-bar,
+.app:has(.hud .result) .bottom,
+.app:has(.hud .result) .minimap--float,
+.app:has(.hud .result) .banners,
+.app:has(.hud .result) .cpoints {
+  visibility: hidden;
 }
 
 .result::before {
@@ -970,9 +996,9 @@
   align-items: center;
   gap: 6px;
   padding: 3px 10px 3px 11px;
-  border: 1px solid rgba(27, 30, 34, 0.12);
+  border: 1px solid var(--glass-line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(14, 16, 20, 0.78);
   color: var(--ink);
   font-size: var(--fs-12);
   font-weight: 500;
@@ -1013,7 +1039,7 @@
   right: 0;
   bottom: 0;
   height: 2px;
-  background: rgba(27, 30, 34, 0.1);
+  background: var(--fill-2);
 }
 
 .sqb-bar i {
@@ -1025,18 +1051,18 @@
 .sqb-pole {
   width: 1px;
   height: 12px;
-  background: linear-gradient(rgba(255, 255, 255, 0.75), transparent);
+  background: linear-gradient(rgba(255, 255, 255, 0.5), transparent);
 }
 
 /* Fleets of the same navy on both sides: the foe's rim is the muted brown. */
 .sqb--foe .sqb-pill {
-  border-color: rgba(140, 75, 63, 0.5);
+  border-color: rgba(184, 150, 138, 0.55);
 }
 
 .sqb--selected .sqb-pill {
-  background: #fff;
+  background: var(--glass-solid);
   border-color: transparent;
-  box-shadow: 0 0 0 2px var(--accent), 0 0 0 4px rgba(255, 255, 255, 0.92), 0 4px 12px rgba(8, 12, 18, 0.35);
+  box-shadow: 0 0 0 2px var(--accent), 0 4px 12px rgba(8, 12, 18, 0.35);
 }
 
 .sqb--dark {
@@ -1070,7 +1096,7 @@
 .tool--on {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .tool:disabled {
@@ -1096,7 +1122,8 @@
 .minimap--float {
   position: absolute;
   z-index: 12;
-  top: calc(var(--sat) + 112px);
+  /* Below the score panel and the two toasts that stack under it, so a toast is never covered. */
+  top: calc(var(--bal-bottom, calc(var(--sat) + 112px)) + 96px);
   /* Left of the touch tools column, which would otherwise sit under it. */
   right: calc(var(--sar) + 68px);
   width: 116px;
@@ -1205,15 +1232,21 @@
   align-items: stretch;
 }
 
-/* The settings sheet covers a busy HUD: at 95% white the cards and speed buttons behind it still read through. */
+/* The settings sheet covers a busy HUD: it is dark enough that nothing behind it reads through. */
 .app--touch .settings-body {
-  background: rgba(255, 255, 255, 0.99);
+  background: rgba(12, 14, 18, 0.97);
 }
 
 .app--compact .settings-body {
-  background: rgba(255, 255, 255, 0.985);
+  background: rgba(12, 14, 18, 0.97);
   max-height: calc(100dvh - var(--sat) - var(--sab) - 70px);
   overflow-y: auto;
+}
+
+.app--compact:has(.hud .settings-body) .bottom,
+.app--compact:has(.hud .settings-body) .touch-bar,
+.app--compact:has(.hud .settings-body) .minimap--float {
+  visibility: hidden;
 }
 
 .app--compact .orders .speed {
@@ -1238,7 +1271,7 @@
     align-items: stretch;
     gap: 6px;
     padding: 6px calc(var(--sar) + 8px) calc(var(--sab) + 6px) calc(var(--sal) + 8px);
-    background: linear-gradient(transparent, rgba(12, 18, 26, 0.5) 30%);
+    background: linear-gradient(transparent, rgba(12, 18, 26, 0.3) 30%);
   }
 
   .app--compact .cards {
@@ -1461,7 +1494,7 @@
     height: 104px;
     gap: 8px;
     padding: 6px calc(var(--sar) + 8px) calc(var(--sab) + 6px) calc(var(--sal) + 8px);
-    background: linear-gradient(transparent, rgba(12, 18, 26, 0.45));
+    background: linear-gradient(transparent, rgba(12, 18, 26, 0.26));
   }
 
   .app--compact .detail {
@@ -1580,8 +1613,6 @@
     max-height: calc(100dvh - var(--bal-bottom, 100px) - 104px - var(--sab) - 22px);
     padding: 10px 12px 14px;
     gap: 6px;
-    -webkit-mask-image: linear-gradient(#000 calc(100% - 14px), transparent);
-    mask-image: linear-gradient(#000 calc(100% - 14px), transparent);
   }
 }
 
@@ -1599,4 +1630,24 @@
   grid-template-columns: 1fr;
   max-width: 100%;
   gap: 4px;
+}
+
+/* In portrait the settings sheet reaches over the score panel and the toasts; they wait behind it instead of ghosting through. */
+@media (orientation: portrait) {
+  .app--compact:has(.hud .settings-body) .balance,
+  .app--compact:has(.hud .settings-body) .toasts {
+    visibility: hidden;
+  }
+}
+
+/* A sheet that scrolls shows a soft light edge where more of it waits (scroll shadows: the covers are `local`, the glow
+   `scroll`), since a phone has no scrollbar to tell. */
+.hud .settings-body.glass,
+.app--compact .cq-point.glass {
+  background:
+    linear-gradient(#0c0e12 30%, rgba(12, 14, 18, 0)) center top / 100% 28px no-repeat local,
+    linear-gradient(rgba(12, 14, 18, 0), #0c0e12 70%) center bottom / 100% 28px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0)) center top / 100% 12px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0)) center bottom / 100% 12px no-repeat scroll,
+    rgba(12, 14, 18, 0.97);
 }

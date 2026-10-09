@@ -24,7 +24,7 @@ export type SquadronInfo = {
   selected: boolean;
 };
 
-export type GunInfo = { label: string; side: number; stage: number; stageName: string; progress: number };
+export type GunInfo = { label: string; side: number; stage: number; stageName: string; progress: number; empty: boolean };
 
 export type PrimaryInfo = {
   id: number;
@@ -199,7 +199,7 @@ export function setOrigin(origin: BattleOrigin) {
 /** A battle that could not be built: the loading card goes, the fatal notice offers the way out. */
 export function failBattle(err: unknown) {
   console.error(err);
-  useUi.setState({ loading: null, fatal: `초기화 실패: ${String(err)}` });
+  useUi.setState({ loading: null, fatal: String(err) });
 }
 
 export function setFatal(fatal: string | null) {

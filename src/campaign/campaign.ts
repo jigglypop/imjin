@@ -2,17 +2,19 @@ import { create } from 'zustand';
 import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import type { ShipKind, ShipMods } from '../sim/types';
 import type { FleetSpawn } from '../sim/scenarios';
+import { t } from '../i18n';
+import { flagshipOf, numbered } from '../i18n/names';
 
 export const CAMPAIGN_ORDER: ScenarioId[] = ['okpo', 'sacheon', 'dangpo', 'hansan', 'angolpo', 'busan', 'chilcheon', 'myeongnyang', 'noryang'];
 
 export type SkillKey = 'gunnery' | 'command' | 'seamanship' | 'fire' | 'melee';
 
-export const SKILLS: Record<SkillKey, { label: string; hanja: string; desc: string }> = {
-  gunnery: { label: '포술', hanja: '砲', desc: '장전 속도 +6% · 명중률 +5% (단계당)' },
-  command: { label: '통솔', hanja: '帥', desc: '사기와 백병 방어 +6% (단계당)' },
-  seamanship: { label: '조함', hanja: '操', desc: '속도 +3% · 선회 +5% (단계당)' },
-  fire: { label: '화공', hanja: '火', desc: '불붙일 확률 +12% (단계당)' },
-  melee: { label: '단병', hanja: '劍', desc: '백병전 공격 +8% (단계당)' },
+export const SKILLS: Record<SkillKey, { label: string; desc: string }> = {
+  gunnery: { label: '포술', desc: '장전 속도 +6% · 명중률 +5% (단계당)' },
+  command: { label: '통솔', desc: '사기와 백병 방어 +6% (단계당)' },
+  seamanship: { label: '항해', desc: '속도 +3% · 선회 +5% (단계당)' },
+  fire: { label: '화공', desc: '불붙일 확률 +12% (단계당)' },
+  melee: { label: '백병', desc: '백병전 공격 +8% (단계당)' },
 };
 
 export type Commander = {
@@ -65,7 +67,7 @@ function commander(id: string, name: string, title: string, portrait: string, le
 
 let shipSeq = 1;
 function ships(kind: ShipKind, count: number, prefix: string): FleetShip[] {
-  return Array.from({ length: count }, (_, i) => ({ id: `s${shipSeq++}`, kind, name: `${prefix} ${i + 1}호`, hull: 1, crew: 1, supply: 1, kills: 0 }));
+  return Array.from({ length: count }, (_, i) => ({ id: `s${shipSeq++}`, kind, name: numbered(prefix, i + 1), hull: 1, crew: 1, supply: 1, kills: 0 }));
 }
 
 export function newCampaign(): Campaign {
@@ -89,7 +91,7 @@ export function newCampaign(): Campaign {
       { id: 'q5', name: '협선대', commanderId: 'kwon', ships: ships('hyeopseon', 15, '협선') },
     ],
     history: [],
-    log: ['1592년 4월, 일본군 15만이 부산에 상륙했습니다. 전라좌수영 함대가 첫 출전을 준비합니다.'],
+    log: [t('1592년 4월, 일본군 15만이 부산에 상륙했습니다. 전라좌수영 함대가 첫 출전을 준비합니다.')],
   };
 }
 
@@ -210,8 +212,8 @@ export function buildShip(kind: ShipKind, squadId: string) {
     c.resources.timber -= cost.timber;
     c.resources.powder -= cost.powder;
     c.resources.grain -= cost.grain;
-    sq.ships.push({ id: `s${shipSeq++}`, kind, name: `${cost.label} ${sq.ships.filter((s) => s.kind === kind).length + 1}호`, hull: 1, crew: 1, supply: 1, kills: 0 });
-    c.log.unshift(`${sq.name}에 ${cost.label} 한 척을 건조했습니다.`);
+    sq.ships.push({ id: `s${shipSeq++}`, kind, name: numbered(cost.label, sq.ships.filter((s) => s.kind === kind).length + 1), hull: 1, crew: 1, supply: 1, kills: 0 });
+    c.log.unshift(t('{squad}에 {ship} 한 척을 건조했습니다.', { squad: t(sq.name), ship: t(cost.label) }));
   });
 }
 
@@ -246,18 +248,18 @@ export type Report = { win: boolean; lost: number; sunk: number; loot: Resources
 const EVENTS: Partial<Record<ScenarioId, (c: Campaign) => string[]>> = {
   okpo: (c) => {
     const sq = c.squads.find((q) => q.commanderId === 'yi');
-    sq?.ships.push({ id: `s${shipSeq++}`, kind: 'geobukseon', name: '거북선 1호', hull: 1, crew: 1, supply: 1, kills: 0 });
-    return ['나대용이 설계한 거북선이 완성되어 함대에 합류했습니다.'];
+    sq?.ships.push({ id: `s${shipSeq++}`, kind: 'geobukseon', name: numbered('거북선', 1), hull: 1, crew: 1, supply: 1, kills: 0 });
+    return [t('나대용이 건조를 맡은 거북선이 완성되어 함대에 합류했습니다.')];
   },
   dangpo: (c) => {
     if (!c.commanders.some((x) => x.id === 'eokgi')) c.commanders.push(commander('eokgi', '이억기', '전라우수사', 'portrait_eokgi', 2, { command: 1 }));
     c.squads.push({ id: `q${c.squads.length + 1}`, name: '전라우수영', commanderId: 'eokgi', ships: ships('panokseon', 25, '우수영') });
-    return ['전라우수사 이억기가 판옥선 25척을 이끌고 합류했습니다.'];
+    return [t('전라우수사 이억기가 판옥선 25척을 이끌고 합류했습니다.')];
   },
   hansan: (c) => {
     c.resources.timber += 40;
     c.resources.powder += 30;
-    return ['조정에서 군량과 화약을 보냈습니다. 거북선을 더 건조할 수 있습니다.'];
+    return [t('조정에서 목재와 화약을 보냈습니다. 거북선을 더 건조할 수 있습니다.')];
   },
   busan: (c) => {
     const jeong = c.commanders.find((x) => x.id === 'jeongun');
@@ -265,26 +267,26 @@ const EVENTS: Partial<Record<ScenarioId, (c: Campaign) => string[]>> = {
       jeong.alive = false;
       const sq = c.squads.find((q) => q.commanderId === 'jeongun');
       if (sq) sq.commanderId = 'yi';
-      return ['부산포에서 선봉장 정운이 적탄에 전사했습니다. 그의 함대는 통제사가 직접 지휘합니다.', '1597년, 이순신은 모함을 받아 한양으로 압송되고 원균이 통제사가 됩니다.'];
+      return [t('부산포에서 선봉장 정운이 적탄에 전사했습니다. 그의 함대는 이순신이 직접 지휘합니다.'), t('1597년, 이순신은 모함을 받아 한양으로 압송되고 원균이 통제사가 되었습니다.')];
     }
-    return ['1597년, 이순신이 압송되고 원균이 통제사가 되었습니다.'];
+    return [t('1597년, 이순신이 압송되고 원균이 통제사가 되었습니다.')];
   },
   chilcheon: (c) => {
     const survivors = c.squads.flatMap((q) => q.ships).filter((s) => s.kind === 'panokseon');
     const keep = Math.max(12, Math.min(survivors.length, 40));
     const kept = survivors.slice(0, keep);
-    c.squads = [{ id: 'q1', name: '통제사 본대', commanderId: 'yi', ships: kept.length ? kept : ships('panokseon', 12, '잔여') }];
-    c.squads[0]!.ships.push({ id: `s${shipSeq++}`, kind: 'panokseon', name: '통제사 대장선', hull: 1, crew: 1, supply: 1, kills: 0 });
+    c.squads = [{ id: 'q1', name: '통제사 본대', commanderId: 'yi', ships: kept.length ? kept : ships('panokseon', 12, '판옥선') }];
+    c.squads[0]!.ships.push({ id: `s${shipSeq++}`, kind: 'panokseon', name: flagshipOf('통제사'), hull: 1, crew: 1, supply: 1, kills: 0 });
     const won = c.commanders.find((x) => x.id === 'won');
     if (won) won.alive = false;
-    return [`칠천량의 패전 뒤 백의종군하던 이순신이 다시 통제사가 되었습니다. 남은 배는 ${c.squads[0]!.ships.length}척.`];
+    return [t('칠천량의 패전 뒤 백의종군하던 이순신이 다시 통제사가 되었습니다. 남은 배는 {n}척입니다.', { n: c.squads[0]!.ships.length })];
   },
   myeongnyang: (c) => {
     c.resources.timber += 120;
     c.resources.grain += 120;
     c.resources.powder += 60;
-    c.squads[0]!.ships.push(...ships('panokseon', 20, '신조'));
-    return ['고금도에서 수군을 재건했습니다. 판옥선 20척을 새로 지었고, 명의 진린 함대가 합류합니다.'];
+    c.squads[0]!.ships.push(...ships('panokseon', 20, '신조 판옥선'));
+    return [t('고금도에서 수군을 재건했습니다. 판옥선 20척을 새로 지었고, 명의 진린 함대가 합류합니다.')];
   },
 };
 
@@ -321,7 +323,7 @@ export function applyOutcome(o: BattleOutcome): Report {
         ups += 1;
       }
       report.xp.push({ name: cmd.name, gained, level: cmd.level });
-      if (ups) report.levelUps.push(`${cmd.name} — ${cmd.level}레벨 (기술 점수 +${ups})`);
+      if (ups) report.levelUps.push(t('{name} {level}레벨 (기술 점수 +{n})', { name: t(cmd.name), level: cmd.level, n: ups }));
     }
     const loot = {
       grain: Math.round(o.enemySunk * 3 + (o.win ? 40 : 10)),
@@ -343,9 +345,9 @@ export function applyOutcome(o: BattleOutcome): Report {
       c.log.unshift(...events);
       c.step += 1;
     } else {
-      report.events.push('패전했습니다. 함대를 정비한 뒤 다시 싸울 수 있습니다.');
+      report.events.push(t('패전했습니다. 함대를 정비한 뒤 다시 싸울 수 있습니다.'));
     }
-    c.log.unshift(`${SCENARIOS[o.id].title}: ${o.win ? '승리' : '패배'} · 적선 ${o.enemySunk}척 격파 · 아군 손실 ${report.lost}척`);
+    c.log.unshift(t('{title}: {result} · 적 함선 {sunk}척 격파 · 아군 손실 {lost}척', { title: t(SCENARIOS[o.id].title), result: o.win ? t('승리') : t('패배'), sunk: o.enemySunk, lost: report.lost }));
   });
   return report;
 }
@@ -364,7 +366,7 @@ export function fleetSpawn(c: Campaign): FleetSpawn {
         ships: sq.ships.map((s) => {
           const flagship = !flagDone && s.kind === 'panokseon' && (cmd?.id === 'yi' || (battle === 'chilcheon' && cmd?.id === 'won'));
           if (flagship) flagDone = true;
-          return { kind: s.kind, name: flagship ? `${cmd?.name ?? ''} 대장선` : s.name, hull: s.hull, crew: s.crew, supply: s.supply, campaignId: s.id, mods: modsFor(cmd, Math.min(10, s.kills)), flagship };
+          return { kind: s.kind, name: flagship ? flagshipOf(cmd?.name ?? '') : s.name, hull: s.hull, crew: s.crew, supply: s.supply, campaignId: s.id, mods: modsFor(cmd, Math.min(10, s.kills)), flagship };
         }),
       };
     }),

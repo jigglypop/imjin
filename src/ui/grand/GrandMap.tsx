@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { MAP_ASPECT, MAP_IMAGE, project } from './projection';
 import { ReplayLayer } from './Replay';
+import { useT } from '../../i18n';
 import { FACTION_INFO, Icon, navyName } from './shared';
+import { shipsText, turnsText } from './text';
 import type { FactionId, FleetView, RegionView, ReplayView } from './types';
 
 export interface MapInsets {
@@ -71,6 +73,7 @@ export function GrandMap({
   onReplayBeat,
   onReplayDone,
 }: GrandMapProps) {
+  const t = useT();
   const rootRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [view, setView] = useState<View>({ s: 1, x: 0, y: 0 });
@@ -392,7 +395,7 @@ export function GrandMap({
             .filter(({ a, b }) => (a.laneTurns?.[b.id] ?? 1) > 1)
             .map(({ a, b }) => (
               <text key={`t-${a.id}-${b.id}`} className="gm-lane-turns" x={(px(a.id) + px(b.id)) / 2} y={(py(a.id) + py(b.id)) / 2 - 7} textAnchor="middle">
-                {a.laneTurns?.[b.id]}턴
+                {turnsText(a.laneTurns?.[b.id] ?? 1)}
               </text>
             ))}
           {fleets
@@ -448,6 +451,7 @@ export function GrandMap({
               type="button"
               className={`gm-node${sel ? ' gm-node--sel' : ''}${tgt ? ' gm-node--target' : ''}${r.offMap ? ' gm-node--off' : ''}${r.seat ? ' gm-node--seat' : ''}${r.owner ? '' : ' gm-node--neutral'}${r.visible ? '' : ' gm-node--fog'}`}
               style={{ transform: `translate3d(${x}px, ${y}px, 0)`, ['--r' as string]: `${rad}px`, ['--c' as string]: col }}
+              data-region={r.id}
               aria-label={`${r.name}, ${navyName(r.owner)}`}
               aria-pressed={sel}
               onClick={tap(() => onSelectRegion?.(r.id))}
@@ -460,7 +464,7 @@ export function GrandMap({
                 </b>
                 <span>
                   {navyName(r.owner)}
-                  {r.offMap ? ' · 본토 기지' : r.visible ? ` · 수비대 ${r.garrison}척` : ' · 시야 밖'}
+                  {' · ' + (r.offMap ? t('본토 기지') : r.visible ? t('수비대 {ships}', { ships: shipsText(r.garrison) }) : t('시야 밖'))}
                 </span>
               </span>
             </button>
@@ -474,6 +478,8 @@ export function GrandMap({
           const y = py(rid);
           if (x < -80 || y < -120 || x > w + 80 || y > h + 80) return [];
           const rad = nodeRadius(r);
+          // The badges stack on the side of the node away from its label, clear of the disc and its ring.
+          const dir = r.labelSide === 't' ? 1 : -1;
           return list.map((f, i) => {
             const sel = f.id === selectedFleetId;
             const col = FACTION_INFO[f.faction].color;
@@ -483,8 +489,8 @@ export function GrandMap({
                 key={f.id}
                 type="button"
                 className={`gm-fleet${sel ? ' gm-fleet--sel' : ''}${mine ? '' : ' gm-fleet--foreign'}`}
-                style={{ transform: `translate3d(${x + rad * 0.55}px, ${y - rad - 6 - i * 30}px, 0)`, ['--c' as string]: col }}
-                aria-label={`${f.name}, 함선 ${f.ships.length}척`}
+                style={{ transform: `translate3d(${x + rad * 0.6}px, ${y + dir * (rad + 22 + i * 30)}px, 0)`, ['--c' as string]: col }}
+                aria-label={t('{name}, 함선 {ships}', { name: f.name, ships: shipsText(f.ships.length) })}
                 aria-pressed={sel}
                 onClick={tap(() => onSelectFleet?.(f.id))}
               >
@@ -499,9 +505,9 @@ export function GrandMap({
         })}
       {w > 0 &&
         sailing.map((f) => {
-          const t = f.transit!;
-          const x = (px(t.from) + px(t.to)) / 2;
-          const y = (py(t.from) + py(t.to)) / 2;
+          const lane = f.transit!;
+          const x = (px(lane.from) + px(lane.to)) / 2;
+          const y = (py(lane.from) + py(lane.to)) / 2;
           if (x < -80 || y < -80 || x > w + 80 || y > h + 80) return null;
           const sel = f.id === selectedFleetId;
           const mine = f.faction === me;
@@ -511,7 +517,7 @@ export function GrandMap({
               type="button"
               className={`gm-fleet gm-fleet--sailing${sel ? ' gm-fleet--sel' : ''}${mine ? '' : ' gm-fleet--foreign'}`}
               style={{ transform: `translate3d(${x}px, ${y}px, 0)`, ['--c' as string]: FACTION_INFO[f.faction].color }}
-              aria-label={`${f.name}, 항해 중, 함선 ${f.ships.length}척`}
+              aria-label={t('{name}, 항해 중, 함선 {ships}', { name: f.name, ships: shipsText(f.ships.length) })}
               aria-pressed={sel}
               onClick={tap(() => onSelectFleet?.(f.id))}
             >
@@ -541,10 +547,10 @@ export function GrandMap({
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={(e) => e.stopPropagation()}
       >
-        <button type="button" className="g-glass g-icon-btn" aria-label="확대" onClick={() => zoomAt(1.5, w / 2, h / 2)}>
+        <button type="button" className="g-glass g-icon-btn" aria-label={t('확대')} onClick={() => zoomAt(1.5, w / 2, h / 2)}>
           <Icon name="plus" />
         </button>
-        <button type="button" className="g-glass g-icon-btn" aria-label="축소" onClick={() => zoomAt(1 / 1.5, w / 2, h / 2)}>
+        <button type="button" className="g-glass g-icon-btn" aria-label={t('축소')} onClick={() => zoomAt(1 / 1.5, w / 2, h / 2)}>
           <Icon name="minus" />
         </button>
       </div>

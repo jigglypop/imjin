@@ -2,6 +2,7 @@ import type { PerspectiveCamera, Vector3 } from 'three/webgpu';
 import { atmosphere } from '../render/atmosphere';
 import type { RtsCamera } from '../camera/RtsCamera';
 import type { Battle } from '../sim/battle';
+import { t } from '../i18n';
 import type { BattleEvent, GunType, Projectile, Ship } from '../sim/types';
 
 /**
@@ -143,7 +144,7 @@ export class Director {
 
   /** Name of the shot on screen while the cinematic camera runs, for the HUD. */
   get shotName() {
-    return this.host.rts.cinematic && this.shot ? SHOT_LABEL[this.shot.kind] : '';
+    return this.host.rts.cinematic && this.shot ? t(SHOT_LABEL[this.shot.kind]) : '';
   }
 
   get slowing() {

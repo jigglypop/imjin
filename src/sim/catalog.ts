@@ -1,6 +1,7 @@
 import type { GunSpec, GunType, ShipKind, ShipSpec } from './types';
 
-export const STAGE_NAMES = ['포구 청소', '화약 장전', '격목 다짐', '탄환 장전', '조준', '점화'];
+/** What a gun crew is doing at each stage of a round, in plain words. The last two are the idle states the HUD shows. */
+export const STAGE_NAMES = ['포구 청소', '화약 넣기', '마개 다지기', '탄환 넣기', '조준 대기', '발사 준비'];
 
 export const GUN_SHOTS: Record<GunType, number> = { cheonja: 18, jija: 24, hyeonja: 36, hwangja: 48, seungja: 60, ozutsu: 30, folangji: 50, hudun: 40 };
 
@@ -10,7 +11,6 @@ export const GUN_SPECS: Record<GunType, GunSpec> = {
   cheonja: {
     type: 'cheonja',
     label: '천자총통',
-    hanja: '天字銃筒',
     range: 520,
     damage: 15,
     crewDamage: 5,
@@ -22,7 +22,6 @@ export const GUN_SPECS: Record<GunType, GunSpec> = {
   jija: {
     type: 'jija',
     label: '지자총통',
-    hanja: '地字銃筒',
     range: 460,
     damage: 10,
     crewDamage: 4,
@@ -34,7 +33,6 @@ export const GUN_SPECS: Record<GunType, GunSpec> = {
   hyeonja: {
     type: 'hyeonja',
     label: '현자총통',
-    hanja: '玄字銃筒',
     range: 400,
     damage: 6,
     crewDamage: 6,
@@ -46,7 +44,6 @@ export const GUN_SPECS: Record<GunType, GunSpec> = {
   hwangja: {
     type: 'hwangja',
     label: '황자총통',
-    hanja: '黃字銃筒',
     range: 360,
     damage: 3.5,
     crewDamage: 7,
@@ -58,7 +55,6 @@ export const GUN_SPECS: Record<GunType, GunSpec> = {
   seungja: {
     type: 'seungja',
     label: '승자총통',
-    hanja: '勝字銃筒',
     range: 160,
     damage: 0.8,
     crewDamage: 4,
@@ -70,7 +66,6 @@ export const GUN_SPECS: Record<GunType, GunSpec> = {
   folangji: {
     type: 'folangji',
     label: '불랑기포',
-    hanja: '佛郎機砲',
     range: 400,
     damage: 7,
     crewDamage: 5,
@@ -82,7 +77,6 @@ export const GUN_SPECS: Record<GunType, GunSpec> = {
   hudun: {
     type: 'hudun',
     label: '호준포',
-    hanja: '虎蹲砲',
     range: 220,
     damage: 2.5,
     crewDamage: 8,
@@ -94,7 +88,6 @@ export const GUN_SPECS: Record<GunType, GunSpec> = {
   ozutsu: {
     type: 'ozutsu',
     label: '대통',
-    hanja: '大筒',
     range: 230,
     damage: 4,
     crewDamage: 5,

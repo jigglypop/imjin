@@ -1,31 +1,13 @@
-import {
-  BoxGeometry,
-  BufferGeometry,
-  Color,
-  ConeGeometry,
-  CylinderGeometry,
-  DynamicDrawUsage,
-  Frustum,
-  Group,
-  InstancedMesh,
-  Matrix4,
-  MeshStandardNodeMaterial,
-  PointLight,
-  Quaternion,
-  Sphere,
-  SphereGeometry,
-  Vector3,
-  type Camera,
-} from 'three/webgpu';
+import { Frustum, Group, Matrix4, PointLight, Sphere, Vector3, type Camera } from 'three/webgpu';
 import type { Battle } from '../sim/battle';
 import type { AmmoType, BattleEvent, GunType, Projectile, Ship } from '../sim/types';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { ShipViews } from '../ships/ShipViews';
 import { waveField } from '../ocean/waves';
 import { ParticleLayer, StreakLayer } from './ParticleLayer';
 import { DebrisField, Piece } from './Debris';
 import { gunClass } from './gunClass';
 import { arcPeak, timeToImpact } from './flight';
+import { Munitions, Shell, shellKind, type ShellKind, type Trail } from './Projectiles';
 import { anchorsFor } from '../ships/anchors';
 import { DECKS, mainDeck } from '../ships/decks';
 import { planSinking, type CueKind, type SinkCue } from './sinkPlan';
@@ -33,8 +15,6 @@ import type { WakeMap } from '../ocean/WakeMap';
 import { LIGHT_COUNT, pointLights } from '../render/lights';
 import type { ParticleQuality } from '../game/quality';
 
-const MAX_BALLS = 600;
-const MAX_ARROWS = 400;
 const OARS: Record<string, number> = { panokseon: 8, geobukseon: 8, atakebune: 13, sekibune: 11 };
 const MASTS: Record<string, number> = { panokseon: 2, geobukseon: 1, hyeopseon: 1, atakebune: 2, sekibune: 1, kobaya: 1, mingship: 3, mingsmall: 1 };
 /** Where the masts stand along the hull, as fractions of the length. */
@@ -62,7 +42,7 @@ type LightSource = {
  * A shell in flight as drawn: where its smoke trail was last laid (on the drawn arc), the flight time the sim will
  * give it before a hull, the shore or the sea ends it, and the peak of the arc it is lifted onto.
  */
-type Flight = { x: number; y: number; z: number; seen: number; end: number; peak: number; next: number; ghost: number; ref: Projectile | null };
+type Flight = { x: number; y: number; z: number; seen: number; end: number; peak: number; next: number; ghost: number; ref: Projectile | null; kind: ShellKind; seed: number };
 /** Seconds a shell the sim ended early takes to settle from its lifted arc onto the sim's point. */
 const SETTLE = 0.12;
 /** A ship going down: its script and the running parts of the sinking effects. */
@@ -83,16 +63,13 @@ export class Effects {
   readonly streaks: StreakLayer;
   private readonly lightCount: number;
   private readonly debris: DebrisField;
-  private readonly balls: InstancedMesh;
-  private readonly arrows: InstancedMesh;
+  private readonly mun: Munitions;
   private readonly camPos = new Vector3();
   onShake: ((amount: number) => void) | null = null;
   /** Sinking cues (see sinkPlan.ts) for the sound: kind, world position, 0..1 size. */
   onCue: ((kind: CueKind, x: number, y: number, z: number, size: number) => void) | null = null;
   private readonly lights: PointLight[] = [];
   private readonly sources: LightSource[] = [];
-  private readonly m = new Matrix4();
-  private readonly q = new Quaternion();
   private readonly v = new Vector3();
   private readonly s = new Vector3();
   private readonly p = new Vector3();
@@ -133,38 +110,20 @@ export class Effects {
     this.lightCount = quality.lights;
     this.tier = quality.lights >= 8 ? 1 : quality.lights >= 6 ? 0.7 : 0.45;
     this.k = Math.min(1.25, Math.max(0.4, quality.particles.keep));
-    this.streaks = new StreakLayer(Math.round(1200 * this.tier), Math.round(1000 * this.tier), quality.particles);
+    this.streaks = new StreakLayer(Math.round(1200 * this.tier), Math.round(1700 * this.tier), quality.particles);
     this.debris = new DebrisField(Math.round(900 * this.tier));
     // Lights past the active count stay dark so the surface shader's light loop adds nothing for them.
     for (let i = this.lightCount; i < LIGHT_COUNT; i += 1) this.lightPos[i]!.w = 0;
-    const iron = new MeshStandardNodeMaterial({ color: new Color(0.04, 0.04, 0.04), roughness: 0.35, metalness: 0.85 });
-    this.balls = new InstancedMesh(new SphereGeometry(0.22, 10, 8), iron, MAX_BALLS);
-    this.balls.instanceMatrix.setUsage(DynamicDrawUsage);
-    this.balls.count = 0;
-    this.balls.frustumCulled = false;
-    const shaft = new CylinderGeometry(0.08, 0.08, 2.4, 6);
-    shaft.rotateZ(Math.PI / 2);
-    const head = new ConeGeometry(0.2, 0.62, 6);
-    head.rotateZ(-Math.PI / 2);
-    head.translate(1.5, 0, 0);
-    const fins = new BoxGeometry(0.6, 0.03, 0.4);
-    fins.translate(-1.05, 0, 0);
-    const fins2 = fins.clone();
-    fins2.rotateX(Math.PI / 2);
-    const arrowGeo = mergeGeometries([shaft, head, fins, fins2].map((g) => g.toNonIndexed() as BufferGeometry));
-    // A faint glow so the big arrows still read against dark water and at dusk.
-    const arrowMat = new MeshStandardNodeMaterial({ color: new Color(0.3, 0.2, 0.12), roughness: 0.6, metalness: 0.3, emissive: new Color(0.22, 0.11, 0.04) });
-    this.arrows = new InstancedMesh(arrowGeo, arrowMat, MAX_ARROWS);
-    this.arrows.instanceMatrix.setUsage(DynamicDrawUsage);
-    this.arrows.count = 0;
-    this.arrows.frustumCulled = false;
+    this.mun = new Munitions(views, this.smoke, this.fire, this.streaks, this.tier);
+    this.mun.setKeep(this.k);
+    this.mun.onLand = this.onRocketLand;
     for (let i = 0; i < this.lightCount; i += 1) {
       const l = new PointLight(0xffaa55, 0, 160, 1.6);
       l.castShadow = false;
       this.lights.push(l);
       this.group.add(l);
     }
-    this.group.add(this.smoke.sprite, this.fire.sprite, this.spray.sprite, this.streaks.sprite, this.debris.group, this.balls, this.arrows);
+    this.group.add(this.smoke.sprite, this.fire.sprite, this.spray.sprite, this.streaks.sprite, this.debris.group, this.mun.group);
   }
 
   /** Run-time emission rate for all particle layers. See ParticleLayer.setKeep. */
@@ -174,6 +133,7 @@ export class Effects {
     this.fire.setKeep(keep);
     this.spray.setKeep(keep);
     this.streaks.setKeep(keep);
+    this.mun.setKeep(this.k);
   }
 
   /** A count scaled to the quality level (at least 1). */
@@ -198,6 +158,7 @@ export class Effects {
     for (const f of this.flights.values()) this.flightPool.push(f);
     this.flights.clear();
     this.ghosts.length = 0;
+    this.mun.clear();
   }
 
   handle(events: BattleEvent[], battle: Battle) {
@@ -213,16 +174,22 @@ export class Effects {
         case 'musket':
           this.musket(e.ship, e.dx, e.dz, e.count, battle);
           break;
-        case 'hit':
-          this.hit(e.x, e.y, e.z, e.damage, e.ammo);
+        case 'hit': {
+          const shell = this.flights.get(e.proj)?.ref;
+          this.hit(e.x, e.y, e.z, e.damage, e.ammo, shell ? shellKind(shell.ammo, shell.gun) : e.ammo === 'fire' ? Shell.Hiya : Shell.Ball);
+          if (shell && (e.ammo === 'arrow' || e.ammo === 'fire')) this.stickArrow(e.ship, e.x, e.y, e.z, shell, battle);
           this.views.flash(e.ship);
           break;
+        }
         case 'ground':
           this.ground(e.x, e.y, e.z);
           break;
-        case 'splash':
-          this.splash(e.x, e.z, e.size);
+        case 'splash': {
+          // A rocket arrow is a thin thing: it throws up a small plume.
+          const kind = this.flights.get(e.proj)?.kind;
+          this.splash(e.x, e.z, kind === Shell.Rocket || kind === Shell.Lance ? e.size * 0.55 : e.size);
           break;
+        }
         case 'explode':
           this.explode(e.ship, battle);
           break;
@@ -395,7 +362,44 @@ export class Effects {
     }
   }
 
-  hit(x: number, y: number, z: number, damage: number, ammo: AmmoType = 'ball') {
+  /** An arrow that struck a hull stays in it for a while. */
+  private stickArrow(ship: number, x: number, y: number, z: number, shell: Projectile, battle: Battle) {
+    const kind = shellKind(shell.ammo, shell.gun);
+    if (kind !== Shell.Heavy && kind !== Shell.Hiya) return;
+    const sp = Math.hypot(shell.vx, shell.vy, shell.vz) || 1;
+    this.mun.stick(ship, x, y, z, shell.vx / sp, shell.vy / sp, shell.vz / sp, shell.gun, kind === Shell.Heavy ? 0 : 1, battle);
+  }
+
+  /** A rocket came down on a deck, or into the sea beside the ship: the rockets of a salvo that the sim does not count. */
+  private readonly onRocketLand = (x: number, y: number, z: number, hull: boolean) => {
+    if (!hull) {
+      this.splash(x, z, 0.4);
+      return;
+    }
+    this.rocketBurst(x, y, z, 0.7);
+  };
+
+  /** A rocket's charge going off on a hit: small puffs of fire, sparks and a bit of dark smoke, no splinters to speak of. */
+  private rocketBurst(x: number, y: number, z: number, scale: number) {
+    for (let i = 0; i < this.n(7); i += 1) {
+      this.fire.emit({ x: x + rnd(-0.6, 0.6), y: y + rnd(0, 0.8), z: z + rnd(-0.6, 0.6), vx: rnd(-3, 3), vy: rnd(1.5, 5), vz: rnd(-3, 3), life: rnd(0.25, 0.7), size0: rnd(1, 1.9) * scale, size1: rnd(2.2, 3.6) * scale, heat: rnd(0.7, 1), drag: 2, lift: 2, wind: 0.4, alpha: 0.9 });
+    }
+    this.fire.emit({ x, y: y + 0.4, z, life: 0.1, size0: 2.2 * scale, size1: 4 * scale, heat: 1, drag: 4, wind: 0 });
+    for (let i = 0; i < 3; i += 1) {
+      this.smoke.emit({ x, y: y + 0.5, z, vx: rnd(-2, 2), vy: rnd(1, 3.5), vz: rnd(-2, 2), life: rnd(3, 6), size0: 0.9, size1: rnd(3.5, 6) * scale, alpha: 0.4, r: 0.4, g: 0.38, b: 0.35, drag: 1.4, lift: 0.3, wind: 0.8 });
+    }
+    this.sparks(x, y + 0.3, z, 12 * scale, 14, 14);
+    this.light(x, y + 1, z, 1800 * scale, 0.14, 1, 0.6, 0.25, 90);
+  }
+
+  hit(x: number, y: number, z: number, damage: number, ammo: AmmoType = 'ball', kind: ShellKind = Shell.Ball) {
+    // A rocket arrow bursts in small puffs of fire, a fire arrow (hiya) leaves a bit of flame: neither tears the planking like a shot.
+    if (kind === Shell.Rocket || kind === Shell.Lance) {
+      this.shatter(x, y, z, this.n(3 + damage * 0.5), 0.55, 6);
+      this.rocketBurst(x, y, z, kind === Shell.Rocket ? 1 : 0.7);
+      this.shakeAt(x, y, z, 0.12 + damage * 0.01);
+      return;
+    }
     // A heavy arrow (daejanggun-jeon) is a log of oak with an iron head: more timber, bigger pieces.
     const power = ammo === 'arrow' ? 1.35 : 1;
     this.shatter(x, y, z, this.n((10 + damage * 1.8) * power), power, 12);
@@ -833,10 +837,36 @@ export class Effects {
   }
 
   /** One puff of trail smoke for a shell at the given point; `k` grows the puff so that wide-spaced puffs still run together. */
-  private trailPuff(x: number, y: number, z: number, ammo: AmmoType, weight: number, k: number) {
-    const fiery = ammo === 'fire';
+  private trailPuff(x: number, y: number, z: number, kind: ShellKind, weight: number, k: number) {
+    if (kind === Shell.Rocket || kind === Shell.Lance) {
+      // The white smoke of a rocket motor: thin and long-lived, with a spark of flame at the nozzle.
+      this.smoke.emit({ x, y, z, vx: rnd(-0.4, 0.4), vy: rnd(0, 0.5), vz: rnd(-0.4, 0.4), life: rnd(1.6, 2.6), size0: 2.3 * k, size1: rnd(4, 5) * k, alpha: 0.16, r: 0.95, g: 0.95, b: 0.92, drag: 1.2, lift: 0.12, wind: 0.8 });
+      return;
+    }
+    const fiery = kind === Shell.Hiya;
     this.smoke.emit({ x, y, z, vx: rnd(-0.3, 0.3), vy: rnd(0, 0.5), vz: rnd(-0.3, 0.3), life: rnd(1.2, 2.2), size0: (1.7 + 0.8 * weight) * k, size1: (rnd(3.4, 4.4) + 1.2 * weight) * k, alpha: fiery ? 0.3 : 0.22, r: fiery ? 0.34 : 0.88, g: fiery ? 0.32 : 0.88, b: fiery ? 0.3 : 0.88, drag: 1.4, lift: 0.1, wind: 0.6, heat: fiery ? 0.5 : 0 });
-    if (fiery) this.fire.emit({ x, y, z, life: rnd(0.2, 0.4), size0: 1.1 * k, size1: 0.3, heat: 1, drag: 2, wind: 0.2 });
+    if (fiery) this.fire.emit({ x, y, z, life: rnd(0.15, 0.3), size0: 0.55 * k, size1: 0.15, alpha: 0.7, heat: 0.9, drag: 2, wind: 0.2 });
+  }
+
+  /**
+   * Lays the smoke ribbon of a shell along its drawn arc up to (px, py, pz): a puff every few pixels of screen, so the
+   * arc reads as a ribbon and not as beads. `trail` remembers where the last puff went.
+   */
+  private layTrail(trail: Trail, px: number, py: number, pz: number, ppm: number, crowd: number, kind: ShellKind, weight: number) {
+    const rocket = kind === Shell.Rocket || kind === Shell.Lance;
+    const spacing = Math.min(10, Math.max(rocket ? 2 : 1.8, 4.5 / ppm) * crowd);
+    const run = Math.hypot(px - trail.x, py - trail.y, pz - trail.z);
+    if (run < spacing) return;
+    const puffs = Math.min(rocket ? 8 : 16, Math.floor(run / spacing));
+    const k = Math.max(1, spacing / (rocket ? 2 : 1.8));
+    for (let i = 1; i <= puffs; i += 1) {
+      const at = (i * spacing) / run;
+      this.trailPuff(trail.x + (px - trail.x) * at, trail.y + (py - trail.y) * at, trail.z + (pz - trail.z) * at, kind, weight, k);
+    }
+    const adv = Math.min(1, (puffs * spacing) / run);
+    trail.x += (px - trail.x) * adv;
+    trail.y += (py - trail.y) * adv;
+    trail.z += (pz - trail.z) * adv;
   }
 
   /** How far above the sim's path a shell is drawn now, for a camera that follows it. */
@@ -878,15 +908,17 @@ export class Effects {
     // Pixels per metre at one metre from the camera, for a 900 px tall view: the size a shell must grow to stay seen.
     const focal = (camera.projectionMatrix.elements[5] ?? 1.7) * 450;
     // With many shells in flight each leaves fewer puffs, so the smoke layer never fills up.
-    const crowd = Math.max(1, Math.sqrt(shells.length / 20));
-    let n = 0;
-    let na = 0;
+    const crowd = Math.max(1, Math.sqrt((shells.length + this.mun.rocketsInFlight) / 20));
+    this.crowd = crowd;
+    this.mun.begin();
     for (const p of shells) {
       let f = this.flights.get(p.id);
       let fresh = false;
       if (!f) {
-        f = this.flightPool.pop() ?? { x: 0, y: 0, z: 0, seen: 0, end: 0, peak: 0, next: 0, ghost: -1, ref: null };
+        f = this.flightPool.pop() ?? { x: 0, y: 0, z: 0, seen: 0, end: 0, peak: 0, next: 0, ghost: -1, ref: null, kind: Shell.Ball, seed: 0 };
         f.ghost = -1;
+        f.kind = shellKind(p.ammo, p.gun);
+        f.seed = rnd(0, 6.28);
         this.planFlight(p, battle, f, 1);
         this.flights.set(p.id, f);
         fresh = true;
@@ -897,9 +929,9 @@ export class Effects {
       const settle = f.ghost >= 0 ? Math.max(0, 1 - f.ghost / SETTLE) : 1;
       // The drawn shell rides above the sim's path on an arc that is flat at both ends: the hit stays where the sim put it.
       const s = f.end > 0 ? Math.min(1, p.age / f.end) : 1;
-      const px = p.x;
-      const py = p.y + 4 * f.peak * s * (1 - s) * settle;
-      const pz = p.z;
+      let px = p.x;
+      let py = p.y + 4 * f.peak * s * (1 - s) * settle;
+      let pz = p.z;
       // The tangent of the drawn arc, for the arrow's pitch and the ball's smear.
       const climb = f.end > p.age && f.ghost < 0 ? (4 * f.peak * (1 - 2 * s)) / f.end : 0;
       const vy = p.vy + climb;
@@ -907,63 +939,56 @@ export class Effects {
       const ux = p.vx / sp;
       const uy = vy / sp;
       const uz = p.vz / sp;
+      const kind = f.kind;
+      const rocket = kind === Shell.Rocket || kind === Shell.Lance;
+      // A rocket corkscrews a little round its line.
+      if (rocket) {
+        this.mun.corkscrew(ux, uy, uz, p.age, f.seed, 0.2 * smooth(0, 0.5, p.age) * (1 - s * s * s), this.s);
+        px += this.s.x;
+        py += this.s.y;
+        pz += this.s.z;
+      }
       if (fresh) {
         f.x = px;
         f.y = py;
         f.z = pz;
+        if (kind === Shell.Rocket) {
+          this.mun.launch(px, py, pz, ux, uy, uz, 1.3);
+          if (f.ghost < 0) this.mun.salvo(p, f.end - p.age, f.peak, battle);
+        } else if (kind === Shell.Lance) this.mun.launch(px, py, pz, ux, uy, uz, 0.7);
       }
       const d = Math.max(1, this.camPos.distanceTo(this.p.set(px, py, pz)));
       const ppm = focal / d;
       const weight = gunClass(p.gun, true).weight;
-      const fiery = p.ammo === 'fire';
-      // Smoke trail laid along the drawn arc: a puff every few pixels of screen, so the arc reads as a ribbon and not as beads.
-      if (d < 2600) {
-        const spacing = Math.min(10, Math.max(1.8, 4.5 / ppm) * crowd);
-        const run = Math.hypot(px - f.x, py - f.y, pz - f.z);
-        if (run >= spacing) {
-          const puffs = Math.min(16, Math.floor(run / spacing));
-          const k = Math.max(1, spacing / 1.8);
-          for (let i = 1; i <= puffs; i += 1) {
-            const at = (i * spacing) / run;
-            this.trailPuff(f.x + (px - f.x) * at, f.y + (py - f.y) * at, f.z + (pz - f.z) * at, p.ammo, weight, k);
-          }
-          const adv = Math.min(1, (puffs * spacing) / run);
-          f.x += (px - f.x) * adv;
-          f.y += (py - f.y) * adv;
-          f.z += (pz - f.z) * adv;
-        }
-      } else {
+      if (d < 2600) this.layTrail(f, px, py, pz, ppm, crowd, kind, weight);
+      else {
         f.x = px;
         f.y = py;
         f.z = pz;
       }
-      if (p.ammo === 'arrow' || fiery) {
-        if (na >= MAX_ARROWS) continue;
-        this.v.set(ux, uy, uz);
-        this.q.setFromUnitVectors(this.xAxis, this.v);
-        // Daejanggun-jeon, the great general arrow of the heavy guns: big, and bigger still when far.
-        const base = p.gun === 'cheonja' ? 3.2 : p.gun === 'jija' ? 2.6 : fiery ? 1.7 : 1.4;
-        const big = Math.min(9, Math.max(base, 10 / (3.2 * ppm)));
-        this.s.set(big, big, big);
-        this.p.set(px, py, pz);
-        this.m.compose(this.p, this.q, this.s);
-        this.arrows.setMatrixAt(na++, this.m);
-        // Fire ammo only: a faint heat glow round the head.
-        if (fiery) {
-          const glow = Math.max(1.4, 7 / ppm);
-          this.streaks.put(px, py, pz, ux, uy, uz, glow, glow, 1, 0.5, 0.16, 0.22);
-        }
-        continue;
+      switch (kind) {
+        case Shell.Heavy:
+          this.mun.heavyArrow(px, py, pz, ux, uy, uz, sp, ppm, p.gun);
+          break;
+        case Shell.Hiya:
+          this.mun.fireArrow(px, py, pz, ux, uy, uz, ppm);
+          break;
+        case Shell.Rocket:
+          this.mun.rocket(px, py, pz, ux, uy, uz, 1.6, ppm, dt);
+          break;
+        case Shell.Lance:
+          this.mun.rocket(px, py, pz, ux, uy, uz, 0.95, ppm, dt);
+          break;
+        case Shell.Grape:
+          this.mun.grape(px, py, pz, ux, uy, uz, sp, ppm, p.id, p.age);
+          break;
+        default:
+          this.mun.ball(px, py, pz, ux, uy, uz, sp, ppm, weight);
       }
-      if (n >= MAX_BALLS) continue;
-      // A round shot swells with distance so it stays about 3 px across.
-      const r = Math.min(14, Math.max(1, 1.5 / (0.22 * ppm))) * (p.ammo === 'grape' ? 0.6 : 1) * (0.9 + 0.3 * weight);
-      this.m.makeScale(r, r, r).setPosition(px, py, pz);
-      this.balls.setMatrixAt(n++, this.m);
-      // A short soft smear of the ball's own motion, not a streak along the flight.
-      const dia = 0.44 * r;
-      this.streaks.put(px, py, pz, ux, uy, uz, dia * 3, dia * 1.5, 0.95, 0.9, 0.8, p.ammo === 'grape' ? 0.1 : 0.2);
     }
+    this.mun.fly(dt, this.camPos.x, this.camPos.y, this.camPos.z, focal, this.layRocket);
+    this.mun.stuck(dt, battle, this.camPos.x, this.camPos.y, this.camPos.z, focal);
+    this.mun.end();
     if (this.flights.size > shells.length) {
       for (const [id, f] of this.flights) {
         if (f.seen === this.frame) continue;
@@ -983,10 +1008,6 @@ export class Effects {
         this.flightPool.push(f);
       }
     }
-    this.balls.count = n;
-    this.balls.instanceMatrix.needsUpdate = true;
-    this.arrows.count = na;
-    this.arrows.instanceMatrix.needsUpdate = true;
     this.smoke.update(dt, this.windX, this.windZ, camera);
     this.fire.update(dt, this.windX, this.windZ, camera);
     this.spray.update(dt, this.windX * 0.3, this.windZ * 0.3, camera);
@@ -1004,7 +1025,9 @@ export class Effects {
     this.smoke.emit({ x, y: y + 0.5, z, vy: 1.5, life: rnd(3, 6), size0: 0.8, size1: rnd(3, 5), alpha: 0.35, r: 0.3, g: 0.29, b: 0.28, drag: 0.8, lift: 0.4 });
   };
 
-  private readonly xAxis = new Vector3(1, 0, 0);
+  /** Crowding of the shells of this frame, for the trails of the salvo's rockets. */
+  private crowd = 1;
+  private readonly layRocket = (t: Trail, x: number, y: number, z: number, ppm: number) => this.layTrail(t, x, y, z, ppm, this.crowd, Shell.Rocket, 0);
 
   private updateLights(dt: number, camera: Camera) {
     const cam = camera.position;

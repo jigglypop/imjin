@@ -2,6 +2,7 @@ import type { Battle, BattleRules } from './battle';
 import { GUN_SPECS, SHIP_SPECS } from './catalog';
 import { Strategist } from './strategy';
 import { variantFor } from '../ships/anchors';
+import { fleetNo, numbered } from '../i18n/names';
 import type { ConquestState } from '../net/protocol';
 import { otherTeam, TEAMS, type Faction, type GunType, type LandSampler, type Ship, type ShipKind, type Squadron, type Team } from './types';
 
@@ -12,7 +13,7 @@ export type BuildingSpec = { kind: BuildingKind; label: string; cost: number; ti
 export const BUILDINGS: Record<BuildingKind, BuildingSpec> = {
   shipyard: { kind: 'shipyard', label: '선소', cost: 450, time: 40, hp: 520, desc: '함선을 건조합니다' },
   battery: { kind: 'battery', label: '포대', cost: 500, time: 45, hp: 640, desc: '사거리 안의 적 함선을 포격합니다' },
-  magazine: { kind: 'magazine', label: '창고', cost: 300, time: 30, hp: 360, desc: '거점의 함선에 탄약을 보급하고 수입이 30% 늘어납니다' },
+  magazine: { kind: 'magazine', label: '창고', cost: 300, time: 30, hp: 360, desc: '거점의 함선에 탄약을 보급하고, 수입이 30% 늘어납니다' },
   dock: { kind: 'dock', label: '수리소', cost: 350, time: 35, hp: 420, desc: '거점에 머문 함선의 선체와 병력을 회복합니다' },
   beacon: { kind: 'beacon', label: '봉수대', cost: 300, time: 25, hp: 300, desc: '거점 가치가 1.5배가 되고 밤에도 멀리까지 볼 수 있습니다' },
 };
@@ -37,10 +38,10 @@ export const SHORT_NAME: Record<ShipKind, string> = {
   panokseon: '판옥선',
   geobukseon: '거북선',
   hyeopseon: '협선',
-  atakebune: '아타케',
+  atakebune: '아타케부네',
   sekibune: '세키부네',
   kobaya: '고바야',
-  mingship: '명 복선',
+  mingship: '명 전선',
   mingsmall: '명 사선',
 };
 
@@ -482,7 +483,7 @@ export class Conquest implements BattleRules {
     const key = `${pl.slot}:${kind}`;
     const n = (this.recruitSeq.get(key) ?? 0) + 1;
     this.recruitSeq.set(key, n);
-    const ship = b.addShip(kind, x, z, heading, `${SHORT_NAME[kind]} ${n}호`, sq, false, variantFor(kind, n));
+    const ship = b.addShip(kind, x, z, heading, numbered(SHORT_NAME[kind], n), sq, false, variantFor(kind, n));
     ship.speed = 0;
     ship.order = { type: 'move', x: p.x + Math.cos(heading) * 30, z: p.z + Math.sin(heading) * 30 };
     b.events.push({ type: 'spawned', ship: ship.id, point: p.id });
@@ -498,7 +499,7 @@ export class Conquest implements BattleRules {
     const portraits = PORTRAITS[pl.faction];
     const portrait = portraits[all % portraits.length]!;
     const card = `card_${kind === 'hyeopseon' || kind.startsWith('ming') ? 'panokseon' : kind === 'kobaya' ? 'sekibune' : kind}`;
-    return b.addSquadron(pl.team, `${label} ${index}대`, `${pl.name} 휘하`, portrait, card, pl.slot);
+    return b.addSquadron(pl.team, fleetNo(label, index), pl.name, portrait, card, pl.slot);
   }
 
   /** Shore batteries, docks, magazines and beacons. */

@@ -21,7 +21,6 @@ export type AmmoType = 'arrow' | 'ball' | 'grape' | 'fire';
 export type GunSpec = {
   type: GunType;
   label: string;
-  hanja: string;
   range: number;
   damage: number;
   crewDamage: number;

@@ -4,7 +4,7 @@
  */
 import { anchorsFor, MINGSMALL_PLAN, sideZ } from '../anchors';
 import { box, hipRoof, MeshBuilder, paints, rectSection, sweep, xlate, type MeshData, type V3 } from './parts';
-import { barrel, byLod, cannon, clothPatch, deckPlane, flag, hullBand, lantern, loftHull, longPennant, mast, mulberry32, oar, oarPortFrame, ropeCoil, sideTimber, wallRun, type Ctx, type Lod } from './common';
+import { barrel, byLod, cannon, clothPatch, deckPlane, flag, hangLanterns, hullBand, loftHull, longPennant, mast, mulberry32, oar, oarPortFrame, ropeCoil, sideTimber, wallRun, type Ctx, type Lod } from './common';
 import { hullPatch, junkSail, railRect } from './ming';
 
 export function buildMingsmall(lod: Lod): MeshData {
@@ -103,6 +103,6 @@ export function buildMingsmall(lod: Lod): MeshData {
   // fittings
   [[-1.4, 1.5], [3.0, -1.4]].forEach(([x, z]) => barrel(ctx, P('hull_plank', { tint: [0.8, 0.62, 0.5] }), iron, [x!, deck, z!], 0.34, 0.7));
   ropeCoil(ctx, rope, [5.8, deck, 1.0], 0.38);
-  for (const l of anchors.lanterns) lantern(ctx, P('red_lacquer', { tint: [1.35, 0.95, 0.75] }), gilt, l, 0.2);
+  hangLanterns(ctx, P('red_lacquer', { tint: [1.35, 0.95, 0.75] }), gilt, gilt, anchors, top, 0.2);
   return b.data();
 }

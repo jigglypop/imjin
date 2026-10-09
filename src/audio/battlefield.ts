@@ -73,7 +73,7 @@ export class Battlefield {
   private nextFlush = 0;
   private nextBarrage = 0;
   /** Context times before which another sound of that kind is held back: a pass, a blow, a flame or a drum a moment ago masks the next. */
-  private readonly gate = { whoosh: 0, melee: 0, ignite: 0, drum: 0, cue: 0 };
+  private readonly gate = { whoosh: 0, hiss: 0, melee: 0, ignite: 0, drum: 0, cue: 0 };
   /** Context time of the last voice the player could hear from the near field or the far flush. */
   private lastAudible = -99;
   private camera: Pick<PerspectiveCamera, 'position' | 'quaternion'> | null = null;
@@ -107,7 +107,7 @@ export class Battlefield {
     this.farCount = 0;
     this.nextFlush = 0;
     this.nextBarrage = 0;
-    this.gate.whoosh = this.gate.melee = this.gate.ignite = this.gate.drum = this.gate.cue = 0;
+    this.gate.whoosh = this.gate.hiss = this.gate.melee = this.gate.ignite = this.gate.drum = this.gate.cue = 0;
     this.recent = 0;
     this.intensity = 0;
   }
@@ -271,6 +271,15 @@ export class Battlefield {
       if (played >= (isPhone ? 3 : 6)) break;
       if (this.single(f, now + f.s.delay + (played ? rnd(0, 0.12) : rnd(0, 0.02)), played ? 0.85 : 1)) played += 1;
     }
+  }
+
+  /** A rocket arrow (singijeon) leaving its launcher: the recorded whoosh pitched up into a hiss, a few a second at most however big the salvo. */
+  private hiss(e: Extract<BattleEvent, { type: 'shot' }>, camera: Pick<PerspectiveCamera, 'position' | 'quaternion'>, now: number) {
+    if (e.gun === 'ozutsu' || now < this.gate.hiss || Math.random() > this.keep() || !this.samples.has('whoosh')) return;
+    const s = this.spatial(camera, e.x, e.y, e.z);
+    if (s.gain < 0.05) return;
+    this.gate.hiss = now + 0.18;
+    this.sample('whoosh', now + s.delay, { gain: 0.55 * s.gain, pan: s.pan, rate: rnd(1.5, 1.8), cutoff: Math.max(2500, s.muffle), wet: 0.12 }, 0.5);
   }
 
   /** A round that will pass close to the camera: a whoosh at the moment of closest approach. */
@@ -447,6 +456,7 @@ export class Battlefield {
     for (const e of events) {
       if (e.type === 'shot') {
         this.whoosh(e, camera, now);
+        if (e.ammo === 'fire') this.hiss(e, camera, now);
         continue;
       }
       if (this.budget < 0.5) break;

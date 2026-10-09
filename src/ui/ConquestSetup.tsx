@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react';
 import { CONQUEST_MAPS, CONQUEST_ORDER, MUSTER_BUDGET, autoFleet, fleetCost, type ConquestMapId, type Seat } from '../sim/maps';
 import { ROSTER, SHORT_NAME } from '../sim/conquest';
 import { SHIP_SPECS } from '../sim/catalog';
-import { FACTION_NAME } from '../sim/balance';
+import { FACTION_SHORT } from '../sim/balance';
 import { FACTIONS, type Faction, type ShipKind } from '../sim/types';
 import type { ConquestSetup } from '../game/Engine';
 import { sound } from '../audio/Sound';
+import { useT } from '../i18n';
 import { Minus, Plus } from './icons';
 
 const KEY = 'imjin.conquest';
@@ -32,10 +33,10 @@ function save(v: Saved) {
 
 const ROLE_NOTE: Record<ShipKind, string> = {
   panokseon: '천·지자총통, 튼튼한 선체',
-  geobukseon: '충돌 돌격, 적이 올라탈 수 없음',
+  geobukseon: '충돌 돌격, 적의 도선 불가',
   hyeopseon: '빠른 정찰선, 거점 점령',
-  atakebune: '조총 누각, 적선에 올라탐',
-  sekibune: '빠른 돌격선, 적선에 올라탐',
+  atakebune: '조총 누각, 적 함선 도선',
+  sekibune: '빠른 돌격선, 적 함선 도선',
   kobaya: '값싼 소형선, 거점 점령',
   mingship: '불랑기포 속사, 대형선',
   mingsmall: '불랑기포, 빠른 소형선',
@@ -48,14 +49,15 @@ const TRAIT: Record<Faction, string> = {
 };
 
 function FactionPick({ value, onChange, label }: { value: Faction; onChange: (f: Faction) => void; label: string }) {
+  const t = useT();
   return (
     <div className="cs-row">
       <span className="cs-label">{label}</span>
       <div className="cs-factions">
         {FACTIONS.map((f) => (
-          <button key={f} className={`cs-faction ${value === f ? 'cs-faction--on' : ''}`} onClick={() => onChange(f)} title={TRAIT[f]}>
+          <button key={f} className={`cs-faction ${value === f ? 'cs-faction--on' : ''}`} onClick={() => onChange(f)} title={t(TRAIT[f])}>
             <i className={`emblem emblem--${f}`} />
-            {FACTION_NAME[f].replace(' 수군', '')}
+            {t(FACTION_SHORT[f])}
           </button>
         ))}
       </div>
@@ -65,6 +67,7 @@ function FactionPick({ value, onChange, label }: { value: Faction; onChange: (f:
 
 /** Conquest battle setup: map, sides and the opening fleet bought from the muster budget. */
 export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup) => void }) {
+  const t = useT();
   const [cfg, setCfgRaw] = useState<Saved>(load);
   const [fleet, setFleet] = useState<ShipKind[]>(() => autoFleet(cfg.me));
   const setCfg = (patch: Partial<Saved>) => {
@@ -95,12 +98,12 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
   };
   const start = () => {
     const seats: Seat[] = [
-      { name: '아군 본대', faction: cfg.me, team: 'joseon', human: true, fleet },
-      { name: '적 본대', faction: cfg.foe, team: 'japan', human: false, fleet: autoFleet(cfg.foe) },
+      { name: t('아군 본대'), faction: cfg.me, team: 'joseon', human: true, fleet },
+      { name: t('적 본대'), faction: cfg.foe, team: 'japan', human: false, fleet: autoFleet(cfg.foe) },
     ];
     if (size === 4) {
-      seats.push({ name: '동맹군', faction: cfg.ally, team: 'joseon', human: false, fleet: autoFleet(cfg.ally) });
-      seats.push({ name: '적 별동대', faction: cfg.foe, team: 'japan', human: false, fleet: autoFleet(cfg.foe) });
+      seats.push({ name: t('동맹군'), faction: cfg.ally, team: 'joseon', human: false, fleet: autoFleet(cfg.ally) });
+      seats.push({ name: t('적 별동대'), faction: cfg.foe, team: 'japan', human: false, fleet: autoFleet(cfg.foe) });
     }
     onStart({ map: cfg.map, seats, you: 0, seed: 1592 + Math.floor(Math.random() * 100000) });
   };
@@ -111,56 +114,56 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
           <div className="cs-maps">
             {CONQUEST_ORDER.map((id) => (
               <button key={id} className={`cs-map ${cfg.map === id ? 'cs-map--on' : ''}`} onClick={() => setCfg({ map: id })}>
-                <b>{CONQUEST_MAPS[id].title}</b>
-                <small>{CONQUEST_MAPS[id].place}</small>
+                <b>{t(CONQUEST_MAPS[id].title)}</b>
+                <small>{t(CONQUEST_MAPS[id].place)}</small>
                 <small>{CONQUEST_MAPS[id].seats >= 4 ? '1:1 · 2:2' : '1:1'}</small>
               </button>
             ))}
           </div>
-          <p className="cs-summary">{map.summary}</p>
-          <FactionPick label="내 진영" value={cfg.me} onChange={(me) => setCfg({ me })} />
-          <FactionPick label="상대" value={cfg.foe} onChange={(foe) => setCfg({ foe })} />
+          <p className="cs-summary">{t(map.summary)}</p>
+          <FactionPick label={t('내 진영')} value={cfg.me} onChange={(me) => setCfg({ me })} />
+          <FactionPick label={t('상대')} value={cfg.foe} onChange={(foe) => setCfg({ foe })} />
           {map.seats >= 4 && (
             <div className="cs-row">
-              <span className="cs-label">규모</span>
+              <span className="cs-label">{t('규모')}</span>
               <div className="chips">
                 <button className={`chip ${size === 2 ? 'chip--on' : ''}`} onClick={() => setCfg({ size: 2 })}>
                   1 : 1
                 </button>
                 <button className={`chip ${size === 4 ? 'chip--on' : ''}`} onClick={() => setCfg({ size: 4 })}>
-                  2 : 2 (컴퓨터 동맹)
+                  {t('2 : 2 (컴퓨터 동맹군)')}
                 </button>
               </div>
             </div>
           )}
-          {size === 4 && <FactionPick label="동맹" value={cfg.ally} onChange={(ally) => setCfg({ ally })} />}
+          {size === 4 && <FactionPick label={t('동맹')} value={cfg.ally} onChange={(ally) => setCfg({ ally })} />}
         </div>
         <div className="cs-col">
           <div className="cs-row cs-row--top">
-            <span className="cs-label">함대</span>
+            <span className="cs-label">{t('함대')}</span>
             <div className="cs-muster">
               <div className="cs-budget">
                 <div className="cs-budget-bar">
                   <i style={{ width: `${(cost / MUSTER_BUDGET) * 100}%` }} />
                 </div>
                 <span>
-                  {cost.toLocaleString('ko-KR')} / {MUSTER_BUDGET.toLocaleString('ko-KR')} <small>남은 금액은 군자금이 됩니다</small>
+                  {cost.toLocaleString('ko-KR')} / {MUSTER_BUDGET.toLocaleString('ko-KR')} <small>{t('남은 금액은 군자금이 됩니다')}</small>
                 </span>
               </div>
               <div className="cs-ships">
                 {ROSTER[cfg.me].map((k) => (
                   <div key={k} className="cs-ship">
                     <div className="cs-ship-name">
-                      <b>{SHORT_NAME[k]}</b>
+                      <b>{t(SHORT_NAME[k])}</b>
                       <small>{SHIP_SPECS[k].cost.toLocaleString('ko-KR')}</small>
                     </div>
-                    <div className="cs-ship-note">{ROLE_NOTE[k]}</div>
+                    <div className="cs-ship-note">{t(ROLE_NOTE[k])}</div>
                     <div className="cs-ship-count">
-                      <button onClick={() => remove(k)} disabled={!counts.get(k)} aria-label={`${SHORT_NAME[k]} 줄이기`}>
+                      <button onClick={() => remove(k)} disabled={!counts.get(k)} aria-label={t('{name} 줄이기', { name: t(SHORT_NAME[k]) })}>
                         <Minus size={16} />
                       </button>
                       <b>{counts.get(k) ?? 0}</b>
-                      <button onClick={() => add(k)} disabled={cost + SHIP_SPECS[k].cost > MUSTER_BUDGET} aria-label={`${SHORT_NAME[k]} 늘리기`}>
+                      <button onClick={() => add(k)} disabled={cost + SHIP_SPECS[k].cost > MUSTER_BUDGET} aria-label={t('{name} 늘리기', { name: t(SHORT_NAME[k]) })}>
                         <Plus size={16} />
                       </button>
                     </div>
@@ -169,21 +172,21 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
               </div>
               <div className="chips">
                 <button className="chip" onClick={() => setFleet(autoFleet(cfg.me))}>
-                  기본 구성
+                  {t('기본 구성')}
                 </button>
                 <button className="chip" onClick={() => setFleet([])}>
-                  비우기
+                  {t('비우기')}
                 </button>
               </div>
             </div>
           </div>
-          <div className="cs-trait">{TRAIT[cfg.me]}</div>
+          <div className="cs-trait">{t(TRAIT[cfg.me])}</div>
         </div>
       </div>
       <div className="select-foot">
-        <span className="select-result">거점을 차지해 적의 기세를 먼저 꺾으면 승리합니다 · 제한 시간 30분</span>
+        <span className="select-result">{t('거점을 차지해 적의 기세를 먼저 꺾으면 승리합니다 · 제한 시간 30분')}</span>
         <button className="ink-btn" disabled={!fleet.length} onClick={start}>
-          전투 시작
+          {t('전투 시작')}
         </button>
       </div>
     </div>

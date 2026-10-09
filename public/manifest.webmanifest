@@ -1,7 +1,7 @@
 {
-  "name": "임진 해전",
-  "short_name": "임진해전",
-  "description": "1592, 조선 수군의 바다. 3D 해전 전략 게임.",
+  "name": "임진 해전 · Imjin War at Sea",
+  "short_name": "임진 해전",
+  "description": "1592, 조선 수군의 바다. 3D 해전 전략 게임. A 3D naval strategy game about the Imjin War.",
   "lang": "ko",
   "start_url": "/",
   "scope": "/",

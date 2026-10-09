@@ -102,8 +102,16 @@ export type BattleOutcome = {
   damage?: Partial<Record<BuildingKind, number>>;
 };
 
-/** `tag` marks the news the interface also answers with a sound or a mention: a finished work or a launched ship, a historical event. */
-export type LogEntry = { turn: number; text: string; tone: 'info' | 'good' | 'bad'; tag?: 'built' | 'event' };
+/** Values that fill the `{name}` placeholders of a message template (the UI's t() reads them). */
+export type MsgParams = Record<string, string | number>;
+
+/**
+ * `text` is a Korean template and `params` fills it, so the interface renders the line in the language it is set to
+ * now (a saved campaign shows its log in English after a switch). A save from before the templates holds finished
+ * Korean in `text` and no params; rendering that is a plain lookup.
+ * `tag` marks the news the interface also answers with a sound or a mention: a finished work or a launched ship, a historical event.
+ */
+export type LogEntry = { turn: number; text: string; params?: MsgParams; tone: 'info' | 'good' | 'bad'; tag?: 'built' | 'event' };
 
 export type TurnStat = {
   turn: number;
@@ -159,8 +167,9 @@ export type Grand = {
   events: EventState;
 };
 
-export type Result = { ok: true; note?: string } | { ok: false; reason: string };
-export const ok = (note?: string): Result => ({ ok: true, note });
-export const fail = (reason: string): Result => ({ ok: false, reason });
+/** The answer to an order. `note` and `reason` are Korean templates; `params` fills their placeholders. */
+export type Result = { ok: true; note?: string; params?: MsgParams } | { ok: false; reason: string; params?: MsgParams };
+export const ok = (note?: string, params?: MsgParams): Result => (params ? { ok: true, note, params } : { ok: true, note });
+export const fail = (reason: string, params?: MsgParams): Result => (params ? { ok: false, reason, params } : { ok: false, reason });
 
 export const pairKey = (a: GrandFaction, b: GrandFaction): PairKey => (a < b ? `${a}:${b}` : `${b}:${a}`) as PairKey;

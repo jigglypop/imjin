@@ -1,6 +1,6 @@
 import type { Battle } from '../sim/battle';
 import type { Faction, Team } from '../sim/types';
-import { factionColor, lighten, sealColor, withAlpha } from './tokens';
+import { factionColor, withAlpha } from './tokens';
 import type { Terrain } from '../terrain/Terrain';
 
 const SIZE = 320;
@@ -100,9 +100,9 @@ export class Minimap {
     const foe0 = battle.ships.find((s) => s.team !== this.team);
     if (own0) own = own0.spec.faction;
     if (foe0) foe = foe0.spec.faction;
-    const foeRing = lighten(sealColor(), 0.35);
-    // The sea is dark, so the faction tones are lifted to read on it.
-    const tone = (f: Faction) => lighten(factionColor(f), 0.4);
+    // The faction tones are already lifted for dark glass, which is what the minimap's sea is; the foe's rim stays umber.
+    const foeRing = factionColor('japan');
+    const tone = (f: Faction) => factionColor(f);
     const toPx = (x: number, z: number) => [((x - this.cx) / this.extent + 0.5) * SIZE, ((z - this.cz) / this.extent + 0.5) * SIZE] as const;
     for (const p of points ?? []) {
       const [px, py] = toPx(p.x, p.z);

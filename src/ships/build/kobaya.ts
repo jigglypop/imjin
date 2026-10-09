@@ -4,7 +4,7 @@
  */
 import { anchorsFor, hullTop, KOBAYA_PLAN, sideZ } from '../anchors';
 import { box, cylinder, MeshBuilder, paints, rectSection, sweep, type MeshData, type V3 } from './parts';
-import { deckPlane, innerLiner, loftHull, mulberry32, oar, post, sideTimber, wallRun, type Ctx, type Lod } from './common';
+import { deckPlane, innerLiner, lantern, lanternPole, loftHull, mulberry32, oar, post, sideTimber, wallRun, type Ctx, type Lod } from './common';
 import { nobori } from './japan';
 
 export function buildKobaya(lod: Lod): MeshData {
@@ -80,6 +80,10 @@ export function buildKobaya(lod: Lod): MeshData {
     if (f.kind !== 'nobori') continue;
     nobori(ctx, [f.pos[0], floorY, f.pos[2]], f.size[1] + 2.1, f.size[0], f.size[1], f.id.slice(7), f.pos[0] * 0.8, wood);
     if (lod < 2) box(b, plank, [f.pos[0] - 0.22, floorY, -0.22], [f.pos[0] + 0.22, floorY + 0.3, 0.22], { grain: 1 });
+  }
+  for (const l of anchors.lanterns) {
+    lantern(ctx, P('sail_cloth', { tint: [1.35, 1.2, 0.95] }), lacquer, l, 0.2);
+    lanternPole(ctx, lacquer, l, deck - 0.1, 0, 0.4);
   }
   return b.data();
 }

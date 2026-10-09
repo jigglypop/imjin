@@ -4,7 +4,7 @@
  */
 import { anchorsFor, HYEOP_PLAN, hullTop, sideZ } from '../anchors';
 import { box, cylinder, hipRoof, MeshBuilder, paints, xlate, type MeshData } from './parts';
-import { cannon, clothPatch, deckPlane, flag, innerLiner, loftHull, longPennant, mast, mulberry32, oar, oarPortFrame, post, sail, sideTimber, wallRun, type Ctx, type Lod } from './common';
+import { cannon, clothPatch, deckPlane, flag, innerLiner, lantern, lanternPole, loftHull, longPennant, mast, mulberry32, oar, oarPortFrame, post, sail, sideTimber, wallRun, type Ctx, type Lod } from './common';
 
 export function buildHyeopseon(lod: Lod): MeshData {
   const plan = HYEOP_PLAN;
@@ -89,6 +89,10 @@ export function buildHyeopseon(lod: Lod): MeshData {
   if (lod < 2) {
     box(b, timber, [-L / 2 - 0.35, -0.9, -0.1], [-L / 2 - 0.02, 0.7, 0.1], { grain: 1 });
     cylinder(b, timber, [-L / 2 - 0.2, 0.7, 0], [-L / 2 + 0.7, deck + 0.7, 0], 0.05, 0.05, 5, true);
+  }
+  for (const l of anchors.lanterns) {
+    lantern(ctx, P('sail_hemp', { tint: [1.35, 1.15, 0.85] }), timber, l);
+    lanternPole(ctx, timber, l, deck - 0.1, 0, 0.42);
   }
   return b.data();
 }

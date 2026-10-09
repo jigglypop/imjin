@@ -4,7 +4,6 @@ import { BUILDING_DEFS, BUILDING_ORDER, TUNING, navyName, buildingCost, building
 import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId, Result, ShipUnit } from './types';
 import { MAX_LEVEL, fail, ok, pairKey } from './types';
 import { allied, atWar, fleetById, findRoute, mintId, note } from './world';
-import { josa } from './josa';
 
 /**
  * Everything a commander can order, for the player and the computer alike. An order that is allowed takes effect now:
@@ -28,7 +27,7 @@ export function orderMove(g: Grand, fleetId: string, dest: RegionId): Result {
   const route = findRoute(g, fl.faction, fl.at, dest);
   if (!route) return fail('그곳으로 가는 안전한 항로가 없습니다');
   fl.route = route.path;
-  return ok(`${route.turns}턴`);
+  return ok('{turns}턴', { turns: route.turns });
 }
 
 export function orderStop(g: Grand, fleetId: string): Result {
@@ -64,11 +63,11 @@ export function orderBuild(g: Grand, id: RegionId, kind: BuildingKind): Result {
   if (need) return fail(need);
   const cost = buildingCost(kind, level);
   const f = g.factions[owner];
-  if (f.gold < cost.gold) return fail(`은이 부족합니다 (${cost.gold}냥 필요)`);
+  if (f.gold < cost.gold) return fail('은이 부족합니다 ({gold}냥 필요)', { gold: cost.gold });
   f.gold -= cost.gold;
   if (have) have.upgradeLeft = cost.turns;
   else r.buildings.push({ kind, level: 0, upgradeLeft: cost.turns, hp: 1 });
-  return ok(`${BUILDING_DEFS[kind].label} ${level}단계 · ${cost.turns}턴`);
+  return ok('{work} {level}단계 · {turns}턴', { work: BUILDING_DEFS[kind].label, level, turns: cost.turns });
 }
 
 /** A work that has not yet had a turn of labor can be called off with the whole price refunded. */
@@ -86,6 +85,9 @@ export function cancelBuild(g: Grand, id: RegionId, kind: BuildingKind): Result 
   return ok();
 }
 
+/** The reasons a better shipyard is needed, one per level, so each reads as a whole sentence in either language. */
+const YARD_NEEDED: Record<number, string> = { 2: '선소 2단계가 필요합니다', 3: '선소 3단계가 필요합니다' };
+
 /** Why a navy cannot yet build a ship here, or null. */
 export function recruitProblem(g: Grand, id: RegionId, kind: ShipKind): string | null {
   const r = g.regions[id];
@@ -96,7 +98,7 @@ export function recruitProblem(g: Grand, id: RegionId, kind: ShipKind): string |
   if (yard < 1) return '선소가 없습니다';
   const gate = GATES[kind];
   if (gate) {
-    if (yard < gate.yard) return `선소 ${gate.yard}단계가 필요합니다`;
+    if (yard < gate.yard) return YARD_NEEDED[gate.yard] ?? '선소 단계가 부족합니다';
     if (gate.unlock && !g.factions[owner].unlocked.includes(kind)) return '아직 설계되지 않았습니다';
   }
   return null;
@@ -111,11 +113,11 @@ export function orderRecruit(g: Grand, id: RegionId, kind: ShipKind): Result {
   const owner = r.owner!;
   if (r.queue.length >= queueSlots(r)) return fail('건조 칸이 모두 찼습니다');
   const price = yardPrice(kind, levelOf(r, 'shipyard'));
-  if (g.factions[owner].gold < price) return fail(`은이 부족합니다 (${price}냥 필요)`);
+  if (g.factions[owner].gold < price) return fail('은이 부족합니다 ({gold}냥 필요)', { gold: price });
   g.factions[owner].gold -= price;
   const turns = shipDef(kind).turns;
   r.queue.push({ id: mintId(g, 'q'), kind, left: turns, total: turns });
-  return ok(`${SHIP_SPECS[kind].label} · ${turns}턴`);
+  return ok('{ship} · {turns}턴', { ship: SHIP_SPECS[kind].label, turns });
 }
 
 export function cancelRecruit(g: Grand, id: RegionId, itemId: string): Result {
@@ -137,7 +139,7 @@ export function orderMerge(g: Grand, keepId: string, otherId: string): Result {
   const b = fleetById(g, otherId);
   if (!a || !b || a === b) return fail('합칠 수 없습니다');
   if (a.faction !== b.faction || !a.at || a.at !== b.at) return fail('같은 포구의 함대끼리만 합칠 수 있습니다');
-  if (a.ships.length + b.ships.length > TUNING.fleetCap) return fail(`한 함대는 최대 ${TUNING.fleetCap}척입니다`);
+  if (a.ships.length + b.ships.length > TUNING.fleetCap) return fail('한 함대는 최대 {n}척입니다', { n: TUNING.fleetCap });
   a.ships.push(...b.ships);
   a.rest = Math.max(a.rest, b.rest);
   if (!a.commanderId) a.commanderId = b.commanderId;
@@ -152,10 +154,10 @@ export function orderSplit(g: Grand, fleetId: string, shipIds: string[]): Result
   const fl = fleetById(g, fleetId);
   if (!fl || !fl.at) return fail('나눌 수 없습니다');
   const take = fl.ships.filter((s) => shipIds.includes(s.id));
-  if (!take.length) return fail('나눌 함선을 선택하세요');
+  if (!take.length) return fail('나눌 함선을 먼저 선택해야 합니다');
   if (take.length >= fl.ships.length) return fail('함선을 전부 나눌 수는 없습니다');
   fl.ships = fl.ships.filter((s) => !shipIds.includes(s.id));
-  const next: Fleet = { id: mintId(g, 'f'), faction: fl.faction, name: `${fl.name} 분견대`, commanderId: null, ships: take, at: fl.at, transit: null, route: [], from: fl.from, rest: fl.rest };
+  const next: Fleet = { id: mintId(g, 'f'), faction: fl.faction, name: `${fl.name} 분견 함대`, commanderId: null, ships: take, at: fl.at, transit: null, route: [], from: fl.from, rest: fl.rest }; // i18n-ignore: detachment name; the UI translates the pattern
   g.fleets.push(next);
   return ok(next.id);
 }
@@ -202,14 +204,14 @@ export function orderRefit(g: Grand, fleetId: string): Result {
   const cost = refitCost(fl);
   if (cost <= 0) return fail('손상된 곳이 없습니다');
   const f = g.factions[fl.faction];
-  if (f.gold < cost) return fail(`은이 부족합니다 (${cost}냥 필요)`);
+  if (f.gold < cost) return fail('은이 부족합니다 ({gold}냥 필요)', { gold: cost });
   f.gold -= cost;
   for (const u of fl.ships) {
     u.hull = 1;
     u.crew = 1;
     u.supply = 1;
   }
-  return ok(`${cost}`);
+  return ok();
 }
 
 export function orderDisband(g: Grand, fleetId: string, shipId: string): Result {
@@ -230,7 +232,7 @@ export function orderDeclareWar(g: Grand, a: GrandFaction, b: GrandFaction): Res
   if (bad) return bad;
   if (a === b || atWar(g, a, b)) return fail('이미 적대 관계입니다');
   g.relations[pairKey(a, b)] = 'war';
-  note(g, `${josa(navyName(a), '이/가')} ${josa(navyName(b), '과/와')}의 동맹을 파기했습니다`, 'bad');
+  note(g, '{a|이/가} {b|과/와}의 동맹을 파기했습니다', { a: navyName(a), b: navyName(b) }, 'bad');
   return ok();
 }
 
@@ -241,7 +243,7 @@ export function orderAlliance(g: Grand, a: GrandFaction, b: GrandFaction): Resul
   // The invaders accept no treaty: only the two defenders of Joseon may ally.
   if (a === 'japan' || b === 'japan') return fail('일본은 동맹을 맺지 않습니다');
   g.relations[pairKey(a, b)] = 'allied';
-  note(g, `${josa(navyName(a), '과/와')} ${josa(navyName(b), '이/가')} 동맹을 맺었습니다`, 'good');
+  note(g, '{a|과/와} {b|이/가} 동맹을 맺었습니다', { a: navyName(a), b: navyName(b) }, 'good');
   return ok();
 }
 

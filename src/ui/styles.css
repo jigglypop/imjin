@@ -1,55 +1,71 @@
 /* ============================================================================
    Design tokens, base, shared components. The battle HUD lives in hud.css, menus in menu.css, conquest and online in
-   conquest.css and online.css.
-   Look: restrained white glass over a calm sea, graphite ink, tonal faction accents. Nothing saturated:
-   keep every colour under about 45% saturation.
+   conquest.css and online.css, the faction campaign in grand/grand.css.
+   Look: black translucent glass that sits quietly over the 3D scene and the key art, light type, tonal faction
+   accents. Nothing saturated: keep every colour under about 45% saturation.
+   This :root is the one place the palette is written down; the other sheets and tokens.ts read it.
    ============================================================================ */
 
 :root {
+  color-scheme: dark;
+
   /* Sea (backgrounds behind glass) */
   --sea-0: #0a1118;
   --sea-1: #121c26;
   --sea-2: #1c2a38;
 
-  /* Text */
-  --ink: #1b1e22;
-  --ink-2: #3c434b;
-  --ink-3: #5d6670;
+  /* Text on the glass: AA over the glass on any background it sits on. */
+  --ink: #f1f3f5;
+  --ink-2: #c3cad2;
+  --ink-3: #9aa4ae;
+  /* Text that sits straight on a light surface (the pale map, a light pill, a tonal fill) */
+  --ink-dark: #14181d;
+  --ink-dark-2: #3c434b;
   --mist: #eef1f4;
   --on-dark: #f6f7f9;
   --on-dark-2: rgba(246, 247, 249, 0.74);
 
-  /* White glass */
-  --glass: rgba(255, 255, 255, 0.78);
-  --glass-hi: rgba(255, 255, 255, 0.92);
-  --glass-line: rgba(255, 255, 255, 0.7);
-  --glass-blur: blur(18px) saturate(120%);
-  --shadow: 0 10px 30px rgba(14, 20, 28, 0.2), 0 1px 2px rgba(14, 20, 28, 0.12);
-  --shadow-sm: 0 3px 12px rgba(14, 20, 28, 0.18);
-  --glass-dark: rgba(16, 22, 30, 0.5);
-  --line: rgba(27, 30, 34, 0.1);
-  --line-2: rgba(27, 30, 34, 0.18);
-  --fill: rgba(27, 30, 34, 0.05);
-  --fill-2: rgba(27, 30, 34, 0.09);
+  /* Black glass: panels, sheets, pills. Touch devices swap the blur for a near-opaque fill (see .app--touch). */
+  --glass: rgba(14, 16, 20, 0.52);
+  --glass-hi: rgba(14, 16, 20, 0.68);
+  --glass-sheet: rgba(14, 16, 20, 0.82);
+  --glass-solid: rgba(14, 16, 20, 0.9);
+  --glass-line: rgba(255, 255, 255, 0.12);
+  --glass-blur: blur(16px) saturate(115%);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-sm: 0 3px 12px rgba(0, 0, 0, 0.28);
+  --glass-dark: rgba(14, 16, 20, 0.5);
+  --line: rgba(255, 255, 255, 0.12);
+  --line-2: rgba(255, 255, 255, 0.2);
+  --fill: rgba(255, 255, 255, 0.06);
+  --fill-2: rgba(255, 255, 255, 0.1);
 
-  /* One accent: graphite ink for primary buttons and selection rings. Status colours are muted and used sparingly. */
-  --accent: #23303d;
-  --accent-hover: #2f3e4e;
-  --accent-2: #2f3e4e;
-  --accent-soft: rgba(35, 48, 61, 0.08);
-  --good: #4a6b55;
-  --bad: #8c4b3f;
-  --warn: #8a6d2f;
+  /* One primary: a light pill with dark type. Secondary buttons are transparent with a hairline. */
+  --accent: #eef1f3;
+  --accent-ink: #14181d;
+  --accent-hover: #ffffff;
+  --accent-2: #dfe5ea;
+  --accent-soft: rgba(238, 241, 243, 0.1);
+  /* Status colours, lifted for the dark glass and kept muted */
+  --good: #8db59a;
+  --bad: #cf9686;
+  --warn: #c8b88a;
+  --good-ink: var(--good);
+  --bad-ink: var(--bad);
   /* Older name of --bad */
   --seal: var(--bad);
 
   /* Factions: small tonal accents (marks, edges, thin bars, the minimap), never big fills */
-  --joseon: #46637a;
-  --joseon-soft: #e4eaef;
-  --japan: #6b4a40;
-  --japan-soft: #ede6e3;
-  --ming: #8c7040;
-  --ming-soft: #efe9dd;
+  --joseon: #87a3ba;
+  --joseon-soft: rgba(135, 163, 186, 0.16);
+  --japan: #b8968a;
+  --japan-soft: rgba(184, 150, 138, 0.16);
+  --ming: #c8a96c;
+  --ming-soft: rgba(200, 169, 108, 0.16);
+  /* The same tones, deeper, for marks drawn straight on the pale map (campaign lines and arrowheads) */
+  --joseon-deep: #46637a;
+  --japan-deep: #6b4a40;
+  --ming-deep: #8c7040;
 
   /* Type: Pretendard everywhere. Sizes 12/13/15/17/20/24/32, weights 400/500/600. */
   --font-ui: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
@@ -118,7 +134,7 @@ input {
   font-family: var(--font-ui);
 }
 
-/* Keyboard users get one clear ring everywhere; the gap keeps it visible on navy buttons too. Mouse clicks do not show it. */
+/* Keyboard users get one clear ring everywhere: a light ring that shows on the black glass and on the light pill. Mouse clicks do not show it. */
 :focus-visible {
   outline: 2px solid var(--accent-2);
   outline-offset: 2px;
@@ -170,35 +186,36 @@ input {
   -webkit-backdrop-filter: var(--glass-blur);
 }
 
-/* iOS pays for every backdrop blur drawn over a live WebGL canvas, so touch devices get near-opaque white. */
+/* iOS pays for every backdrop blur drawn over a live WebGL canvas, so touch devices get near-opaque black. */
 .app--touch .glass,
 .app--touch .paper,
 .app--touch .mini-btn,
 .app--touch .tool {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--glass-solid);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
-/* The rule above is more specific than the plain "on" rules, so a lit toggle would be white text on white. */
+/* The rule above is more specific than the plain "on" rules, so a lit toggle would keep the black fill. */
 .app--touch .mini-btn--on,
 .app--touch .tool--on {
   background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .f-joseon {
   --fc: var(--joseon);
-  --fc-ink: #fff;
+  --fc-ink: var(--ink-dark);
 }
 
 .f-japan {
   --fc: var(--japan);
-  --fc-ink: #fff;
+  --fc-ink: var(--ink-dark);
 }
 
 .f-ming {
   --fc: var(--ming);
-  --fc-ink: #2b1c00;
+  --fc-ink: var(--ink-dark);
 }
 
 /* ---------------------------------------------------------------- buttons */
@@ -213,12 +230,12 @@ input {
   border: 0;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   font-weight: 600;
   font-size: var(--fs-15);
   cursor: pointer;
   pointer-events: auto;
-  box-shadow: 0 4px 14px rgba(14, 20, 28, 0.22);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
   transition: background 0.15s, transform 0.15s;
 }
 
@@ -262,7 +279,7 @@ input {
 .mini-btn--on {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .chips {
@@ -279,7 +296,7 @@ input {
   padding: 0 14px;
   border: 1px solid var(--line-2);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.55);
+  background: transparent;
   color: var(--ink);
   font-size: var(--fs-13);
   font-weight: 600;
@@ -293,7 +310,7 @@ input {
 
 .chip--on {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   border-color: var(--accent);
 }
 
@@ -304,11 +321,7 @@ input {
 }
 
 .chip--on small {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.chip--on small {
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(20, 24, 29, 0.72);
 }
 
 .chip:disabled {
@@ -327,7 +340,7 @@ input {
   flex: none;
   border-radius: 8px;
   background: var(--seal);
-  color: #fff;
+  color: var(--ink-dark);
   font-family: var(--hanja);
   font-weight: 700;
   font-size: var(--fs-15);
@@ -343,12 +356,12 @@ input {
   align-items: center;
   justify-content: center;
   background: var(--joseon);
-  color: #fff;
+  color: var(--ink-dark);
   font-family: var(--hanja);
   font-style: normal;
   font-weight: 700;
   font-size: 24px;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), var(--shadow-sm);
+  box-shadow: 0 0 0 2px var(--glass-line), var(--shadow-sm);
 }
 
 .emblem--japan {
@@ -357,7 +370,7 @@ input {
 
 .emblem--ming {
   background: var(--ming);
-  color: #2b1c00;
+  color: var(--ink-dark);
 }
 
 /* The battle HUD (top bar, cards, orders, banners, result, compact layouts) is in hud.css. */
@@ -378,7 +391,8 @@ input {
   pointer-events: none;
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
   color: var(--ink);
   font-size: var(--fs-12);
   font-weight: 600;

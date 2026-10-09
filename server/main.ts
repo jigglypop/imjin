@@ -107,7 +107,14 @@ const broadcast = (room: Room, msg: ServerMsg) => {
   const text = JSON.stringify(msg);
   for (const c of room.clients) if (c.ws && c.ws.readyState === c.ws.OPEN) c.ws.send(text);
 };
-const notice = (room: Room, text: string) => broadcast(room, { t: 'chat', from: '알림', text });
+/**
+ * A system line in the room's chat. `text` is the finished Korean sentence (what an older client shows); `key` is the
+ * template and `args` its values, so a client in another language can translate the template and fill it itself.
+ */
+const notice = (room: Room, key: string, args?: Record<string, string | number>) => {
+  const text = args ? key.replace(/\{(\w+)\}/g, (whole, name: string) => String(args[name] ?? whole)) : key;
+  broadcast(room, { t: 'chat', from: '알림', text, ...(args ? { key, args } : {}) });
+};
 
 function code() {
   const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -157,7 +164,7 @@ function leave(c: Client) {
     if (room.live && !room.live.endedAt) {
       room.live.conquest?.setHuman(i, false);
       room.live.battle.humans.delete(i);
-      notice(room, `${c.name} 이탈 — 컴퓨터가 함대를 맡는다`);
+      notice(room, '{name}님이 전투에서 이탈했습니다. 컴퓨터가 함대를 맡습니다.', { name: c.name });
     }
   }
   if (!room.clients.size) {
@@ -234,7 +241,7 @@ async function start(room: Room) {
     sendSpeed(room, live);
   } catch (err) {
     console.error('start failed', err);
-    broadcast(room, { t: 'error', text: '전장을 준비하지 못했습니다. 다시 시도해 주십시오.' });
+    broadcast(room, { t: 'error', text: '전장을 준비하지 못했습니다. 잠시 후 다시 시도해 주시기 바랍니다.' });
   } finally {
     room.building = false;
   }
@@ -554,7 +561,7 @@ function handle(c: Client, msg: ClientMsg) {
 /** A connection says who it is. A known token takes its old seat back. */
 function attach(ws: WebSocket, msg: Extract<ClientMsg, { t: 'hello' }>): Client | null {
   if (msg.v !== PROTOCOL) {
-    ws.send(JSON.stringify({ t: 'error', code: 'version', text: '게임 판이 서버와 다릅니다. 새로고침 해 주십시오.' } satisfies ServerMsg));
+    ws.send(JSON.stringify({ t: 'error', code: 'version', text: '게임 버전이 서버와 다릅니다. 새로고침이 필요합니다.' } satisfies ServerMsg));
     ws.close();
     return null;
   }
@@ -568,7 +575,7 @@ function attach(ws: WebSocket, msg: Extract<ClientMsg, { t: 'hello' }>): Client 
     c.grace = null;
   } else {
     if (byId.size >= MAX_CLIENTS) {
-      ws.send(JSON.stringify({ t: 'error', code: 'full', text: '서버가 가득 찼습니다. 잠시 후 다시 시도해 주십시오.' } satisfies ServerMsg));
+      ws.send(JSON.stringify({ t: 'error', code: 'full', text: '서버가 가득 찼습니다. 잠시 후 다시 시도해 주시기 바랍니다.' } satisfies ServerMsg));
       ws.close();
       return null;
     }
@@ -584,7 +591,7 @@ function attach(ws: WebSocket, msg: Extract<ClientMsg, { t: 'hello' }>): Client 
   if (c.room && seat) {
     if (seat.away) {
       seat.away = false;
-      notice(c.room, `${c.name} 다시 접속했다`);
+      notice(c.room, '{name}님이 다시 접속했습니다.', { name: c.name });
     }
     resume(c);
     pushRoom(c.room);
@@ -608,7 +615,7 @@ function detach(c: Client) {
   }
   seat.away = true;
   room.live?.waiting.delete(c.id);
-  notice(room, `${c.name} 연결이 끊어졌다 — ${GRACE_SECONDS}초를 기다린다`);
+  notice(room, '{name}님의 연결이 끊어졌습니다. {n}초 동안 기다립니다.', { name: c.name, n: GRACE_SECONDS });
   pushRoom(room);
   c.grace = setTimeout(() => drop(c), GRACE_SECONDS * 1000);
 }

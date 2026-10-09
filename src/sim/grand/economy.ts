@@ -64,24 +64,24 @@ export const TUNING = {
 };
 
 /** A navy as the campaign names it in its log and panels: 조선 수군, 일본 수군, 명 수군. */
-export const navyName = (f: GrandFaction) => `${TUNING.faction[f].label} 수군`;
+export const navyName = (f: GrandFaction) => `${TUNING.faction[f].label} 수군`; // i18n-ignore: a name built from data; shown through t()
 
 /** A turn is a season: three months. The war is counted from April 1592 (turn 1) and ends at this turn if nobody has won. */
 export const MONTHS_PER_TURN = 3;
 export const MAX_TURNS = 36;
 
-export type BuildingDef = { kind: BuildingKind; label: string; hanja: string; baseGold: number; baseTurns: number; desc: string };
+export type BuildingDef = { kind: BuildingKind; label: string; baseGold: number; baseTurns: number };
 
 // Prices and times of shipyard, battery, dock and beacon follow the conquest mode's works (cost 450/500/350/300, 40/45/35/25 s).
 const conquestWork = (cost: number, seconds: number) => ({ baseGold: Math.round(cost * TUNING.buildingGoldScale), baseTurns: Math.max(1, Math.ceil(seconds / TUNING.buildingSecondsPerTurn)) });
 
 export const BUILDING_DEFS: Record<BuildingKind, BuildingDef> = {
-  camp: { kind: 'camp', label: '군영', hanja: '軍營', baseGold: 400, baseTurns: 2, desc: '유지비가 들지 않고 수리가 빠릅니다. 수비대가 늘어납니다.' },
-  shipyard: { kind: 'shipyard', label: '선소', hanja: '船所', ...conquestWork(450, 40), desc: '함선을 건조합니다. 단계가 오르면 동시에 지을 수 있는 수가 늘고 값이 내려갑니다.' },
-  battery: { kind: 'battery', label: '포대', hanja: '砲臺', ...conquestWork(500, 45), desc: '적이 공격해 오면 먼저 포격합니다. 전투에도 그대로 배치됩니다.' },
-  dock: { kind: 'dock', label: '수리소', hanja: '修理所', ...conquestWork(350, 35), desc: '머무는 함선의 선체와 승조원을 빠르게 회복합니다.' },
-  granary: { kind: 'granary', label: '창고', hanja: '倉庫', baseGold: 300, baseTurns: 2, desc: '단계마다 수입이 25% 늘고, 전투에서는 화약고가 됩니다.' },
-  beacon: { kind: 'beacon', label: '봉수대', hanja: '烽燧臺', ...conquestWork(300, 25), desc: '두 칸 앞까지 적 함대를 볼 수 있고 수입이 5% 늘어납니다.' },
+  camp: { kind: 'camp', label: '군영', baseGold: 400, baseTurns: 2 },
+  shipyard: { kind: 'shipyard', label: '선소', ...conquestWork(450, 40) },
+  battery: { kind: 'battery', label: '포대', ...conquestWork(500, 45) },
+  dock: { kind: 'dock', label: '수리소', ...conquestWork(350, 35) },
+  granary: { kind: 'granary', label: '창고', baseGold: 300, baseTurns: 2 },
+  beacon: { kind: 'beacon', label: '봉수대', ...conquestWork(300, 25) },
 };
 
 export const BUILDING_ORDER: readonly BuildingKind[] = ['camp', 'shipyard', 'battery', 'dock', 'granary', 'beacon'];
@@ -244,5 +244,5 @@ export const dateOf = (turn: number): { year: number; month: number } => {
 
 export const dateLabel = (turn: number): string => {
   const { year, month } = dateOf(turn);
-  return `${year}년 ${month}월`;
+  return `${year}년 ${month}월`; // i18n-ignore: every 'year년 month월' has an English entry
 };

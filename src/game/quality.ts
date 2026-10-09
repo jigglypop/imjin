@@ -128,11 +128,11 @@ export type Level = {
 // and bloom further. Anything that is built into the scene (terrain, ocean, vegetation density) stays at the equipment
 // values, because it cannot be switched off at run time.
 const BASE_LEVELS: Level[] = [
-  { label: '절전', dprCap: 0.8, cloud: { steps: 16, lightSteps: 2, divisor: 4, every: 3 }, particleKeep: 0.4, vegetationLite: true, shadowEvery: 8, refraction: false, bloomResolution: 0.25, bloomStrength: 0.18 },
+  { label: '가장 낮음', dprCap: 0.8, cloud: { steps: 16, lightSteps: 2, divisor: 4, every: 3 }, particleKeep: 0.4, vegetationLite: true, shadowEvery: 8, refraction: false, bloomResolution: 0.25, bloomStrength: 0.18 },
   { label: '낮음', dprCap: 1, cloud: { steps: 24, lightSteps: 2, divisor: 4, every: 2 }, particleKeep: 0.6, vegetationLite: true, shadowEvery: 4, refraction: false, bloomResolution: 0.25, bloomStrength: 0.2 },
   { label: '보통', dprCap: 1.25, cloud: { steps: 32, lightSteps: 3, divisor: 3, every: 1 }, particleKeep: 0.8, vegetationLite: true, shadowEvery: 2, refraction: false, bloomResolution: 0.35, bloomStrength: 0.22 },
   { label: '높음', dprCap: 1.5, cloud: { steps: 48, lightSteps: 4, divisor: 2, every: 1 }, particleKeep: 1, vegetationLite: false, shadowEvery: 1, refraction: true, bloomResolution: 0.5, bloomStrength: 0.22 },
-  { label: '화려', dprCap: 2, cloud: { steps: 64, lightSteps: 4, divisor: 2, every: 1 }, particleKeep: 1.25, vegetationLite: false, shadowEvery: 1, refraction: true, bloomResolution: 0.5, bloomStrength: 0.26 },
+  { label: '가장 높음', dprCap: 2, cloud: { steps: 64, lightSteps: 4, divisor: 2, every: 1 }, particleKeep: 1.25, vegetationLite: false, shadowEvery: 1, refraction: true, bloomResolution: 0.5, bloomStrength: 0.26 },
 ];
 // After a second crash in a row the resolution drops below every level's own cap.
 const RECOVERY_DPR_CAP = 0.6;
@@ -143,7 +143,8 @@ const EQUIPMENT_STORAGE_KEY = 'imjin.quality';
 const LEVEL_STORAGE_KEY = 'imjin.level';
 const EQUIPMENT_SETTINGS: readonly EquipmentSetting[] = ['auto', 'high', 'medium', 'low'];
 
-export const EQUIPMENT_LABEL: Record<EquipmentSetting, string> = { auto: '자동', high: 'PC급', medium: '태블릿급', low: '폰급' };
+/** The device tier, named the same on the settings screen and in the battle sheet. Korean source text: show it through t(). */
+export const EQUIPMENT_LABEL: Record<EquipmentSetting, string> = { auto: '자동', high: 'PC', medium: '태블릿', low: '스마트폰' };
 
 function isEquipmentSetting(value: string | null): value is EquipmentSetting {
   return value !== null && (EQUIPMENT_SETTINGS as readonly string[]).includes(value);

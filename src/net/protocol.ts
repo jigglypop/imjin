@@ -61,7 +61,8 @@ export type ServerMsg =
   | { t: 'rooms'; rooms: RoomSummary[] }
   | { t: 'room'; room: RoomInfo | null }
   | { t: 'error'; text: string; code?: 'version' | 'full' }
-  | { t: 'chat'; from: string; text: string }
+  /** A system line (`from` '알림') also carries its template as `key` and the values as `args`, for the client to translate. */
+  | { t: 'chat'; from: string; text: string; key?: string; args?: Record<string, string | number> }
   /** `resume` is a rejoin of a battle already running: a client still drawing it just keeps going. */
   | { t: 'start'; battle: BattleChoice; seats: Seat[]; you: number; seed: number; resume?: boolean }
   /** Server pace while the approach is skipped: `speed` is what the server manages, `target` what it asks for. 0 means the clock waits for pages still loading. */

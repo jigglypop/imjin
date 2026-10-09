@@ -46,7 +46,8 @@ export function weather({ color, surf, soot, shipY, rough, detail }: WeatherIn):
   const pv = hash(row.mul(7.13).add(butt.mul(3.71)));
   const plank = mix(vec3(0.72, 0.68, 0.64), vec3(1.16, 1.07, 0.95), pv);
   const bleach = smoothstep(0.35, 0.8, n1).mul(smoothstep(1.2, 4, shipY)).mul(0.4);
-  let wood: any = desat(color, 0.6).mul(0.9).mul(plank).mul(mix(float(0.8), float(1.06), streak));
+  // Weathered pine and oak: the atlas wood is dark, so it is lifted and warmed toward a grey-brown (never red).
+  let wood: any = desat(color, 0.6).mul(vec3(1.5, 1.34, 1.12)).mul(plank).mul(mix(float(0.8), float(1.06), streak));
   wood = mix(wood, vec3(luma(wood).mul(1.25).add(0.03)), bleach);
 
   // Lacquer: worn to a deep red-brown or sooty black, chipped to bare wood, hazed with salt.
@@ -54,7 +55,8 @@ export function weather({ color, surf, soot, shipY, rough, detail }: WeatherIn):
   // Phones skip the fine noise, so chips and rust would only show as big soft blotches there: leave them out.
   const chips = detail ? smoothstep(0.68, 0.73, wear) : float(0);
   const haze = smoothstep(0.45, 0.9, n1.mul(0.6).add(streak.mul(0.4)));
-  let lac: any = desat(color, 0.7).mul(vec3(0.95, 0.88, 0.84));
+  // Worn lacquer reads as dark weathered timber, not black plastic: lifted, and kept out of the reds.
+  let lac: any = desat(color, 0.7).mul(vec3(1.4, 1.28, 1.14));
   lac = mix(lac, vec3(0.13, 0.095, 0.07).mul(n2.mul(0.5).add(0.75)), chips.mul(0.75));
   lac = mix(lac, vec3(luma(lac).add(0.1)).mul(vec3(0.9, 0.92, 0.95)), haze.mul(detail ? 0.22 : 0.08).mul(oneMinus(smoothstep(0.05, 0.3, luma(lac)).mul(0.6))));
 
@@ -82,9 +84,9 @@ export function weather({ color, surf, soot, shipY, rough, detail }: WeatherIn):
   // Waterline: a tar-dark band, slime and weed at the water, a pale tide line, wet timber above fading out by a metre.
   const h = shipY.add(n1.sub(0.5).mul(0.3));
   const tar = oneMinus(smoothstep(0.28, 0.5, h));
-  out = mix(out, vec3(0.05, 0.042, 0.034).mul(luma(out).mul(2).add(0.6)), tar.mul(0.92));
+  out = mix(out, vec3(0.05, 0.042, 0.034).mul(luma(out).mul(2).add(0.6)), tar.mul(0.78));
   const wetK = oneMinus(smoothstep(0.4, 1.15, h));
-  out = out.mul(mix(float(1), float(0.74), wetK.mul(oneMinus(tar))));
+  out = out.mul(mix(float(1), float(0.84), wetK.mul(oneMinus(tar))));
   const tide = smoothstep(0.5, 0.6, h).mul(oneMinus(smoothstep(0.66, 0.8, h))).mul(n2);
   out = mix(out, vec3(luma(out).add(0.22)), tide.mul(0.22));
   const slime = smoothstep(-0.6, -0.1, h).mul(oneMinus(smoothstep(0.05, 0.4, h))).mul(n2.mul(0.7).add(0.3));

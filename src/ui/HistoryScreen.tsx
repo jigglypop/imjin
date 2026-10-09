@@ -10,6 +10,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { Check, ChevronDown, ChevronLeft, Cross } from './icons';
 import { params } from './launch';
 import { StaticMap } from './StaticMap';
+import { useT } from '../i18n';
 import { setScreen } from '../state/store';
 
 // The 3D war-table map needs three.js and a second renderer. Phones and touch-only tablets get the flat map, so only one renderer ever exists there.
@@ -37,8 +38,12 @@ function saveFaction(f: Faction) {
   }
 }
 
+/** Difficulty is shown as a whole phrase: 보통 alone also names a graphics level, which reads differently in English. */
+const DIFFICULTY: Record<string, string> = { 쉬움: '난이도 쉬움', 보통: '난이도 보통', 어려움: '난이도 어려움' };
+
 /** The nine historical battles: pick a battle on the map, pick a side, and sail. The 1592 campaign is a secondary mode here. */
 export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onStart: (id: ScenarioId, campaign: boolean, faction: Faction) => void }) {
+  const t = useT();
   const mode = useCampaign((st) => st.mode);
   const campaign = useCampaign((st) => st.campaign);
   const [camp, setCamp] = useState(false);
@@ -111,16 +116,16 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
               setScreen('menu');
             }}
           >
-            <ChevronLeft /> 뒤로
+            <ChevronLeft /> {t('뒤로')}
           </button>
-          <h1 className="screen-title">역사 전투</h1>
+          <h1 className="screen-title">{t('역사 전투')}</h1>
           <div className="screen-actions">
             <div className="seg" role="tablist">
               <button role="tab" aria-selected={mode === 'free'} className={mode === 'free' ? 'on' : ''} onClick={() => switchMode('free')}>
-                단일 전투
+                {t('단일 전투')}
               </button>
               <button role="tab" aria-selected={mode === 'campaign'} className={mode === 'campaign' ? 'on' : ''} onClick={() => switchMode('campaign')}>
-                연속 전투
+                {t('연속 전투')}
               </button>
             </div>
           </div>
@@ -129,11 +134,11 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
           {SCENARIO_ORDER.map((sid) => (
             <button key={sid} className={`hs-tab ${sid === id ? 'hs-tab--on' : ''} ${locked(sid) ? 'hs-tab--locked' : ''}`} disabled={locked(sid)} onClick={() => setId(sid)}>
               {inCampaign && record(sid) && (
-                <span className={`tab-seal ${record(sid)!.win ? '' : 'tab-seal--loss'}`} role="img" aria-label={record(sid)!.win ? '승리' : '패배'}>
+                <span className={`tab-seal ${record(sid)!.win ? '' : 'tab-seal--loss'}`} role="img" aria-label={record(sid)!.win ? t('승리') : t('패배')}>
                   {record(sid)!.win ? <Check size={12} /> : <Cross size={12} />}
                 </span>
               )}
-              {SCENARIOS[sid].title}
+              {t(SCENARIOS[sid].title)}
               <small>{SCENARIOS[sid].date.slice(0, 4)}</small>
             </button>
           ))}
@@ -143,28 +148,23 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
         <div className="hs-brief-wrap">
           <div className="hs-brief-scroll" ref={briefRef} data-more={more} onScroll={measure}>
             <div className="select-date">
-              {s.date} · {s.place}
+              {t(s.date)} · {t(s.place)}
             </div>
-            <h2>
-              {s.title}
-              <span className="hanja">{s.hanja}</span>
-            </h2>
+            <h2>{t(s.title)}</h2>
             <div className="select-brief-head">
-              <span>
-                난이도 <b>{handicap(id, effective).difficulty}</b>
-              </span>
-              <span>{s.season}</span>
-              {s.night && <span className="night-tag">야간 전투</span>}
+              <span>{t(DIFFICULTY[handicap(id, effective).difficulty] ?? '난이도 보통')}</span>
+              <span>{t(s.season)}</span>
+              {s.night && <span className="night-tag">{t('야간 전투')}</span>}
             </div>
-            <p className="select-summary">{s.summary}</p>
+            <p className="select-summary">{t(s.summary)}</p>
             {!inCampaign && (
-              <div className="select-sides" role="radiogroup" aria-label="지휘할 진영">
+              <div className="select-sides" role="radiogroup" aria-label={t('지휘할 진영')}>
                 {factions.map((f) => (
                   <button key={f} role="radio" aria-checked={f === effective} className={`side-btn ${f === effective ? 'side-btn--on' : ''}`} onClick={() => setSide(f)}>
                     <i className={`emblem emblem--${f}`} />
                     <span>
-                      <b>{FACTION_SHORT[f]}</b>
-                      <small>{commanderOf(id, f).name}</small>
+                      <b>{t(FACTION_SHORT[f])}</b>
+                      <small>{t(commanderOf(id, f).name)}</small>
                     </span>
                   </button>
                 ))}
@@ -173,31 +173,33 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
             <div className="select-forces">
               {sides.map((f) => (
                 <div key={f} className={`select-force select-force--${f}`}>
-                  <b>{FACTION_NAME[f]}</b>
+                  <b>{t(FACTION_NAME[f])}</b>
                   <span>
-                    {commanderOf(id, f).name} <small>{commanderOf(id, f).title}</small>
+                    {t(commanderOf(id, f).name)} <small>{t(commanderOf(id, f).title)}</small>
                   </span>
-                  <span>{forcesOf(id, f)}</span>
+                  <span>{t(forcesOf(id, f))}</span>
                 </div>
               ))}
             </div>
           </div>
           {more && (
             <button type="button" className="hs-more" onClick={() => briefRef.current?.scrollBy({ top: 140, behavior: 'smooth' })}>
-              더 보기 <ChevronDown size={14} />
+              {t('더 보기')} <ChevronDown size={14} />
             </button>
           )}
         </div>
         <div className="hs-foot">
           <div className="select-foot">
-            <span className="select-result">{inCampaign && campaign ? `연속 전투 ${Math.min(campaign.step + 1, CAMPAIGN_ORDER.length)}/${CAMPAIGN_ORDER.length} · 함선 ${campaign.squads.reduce((n, q) => n + q.ships.length, 0)}척` : `역사 기록 · ${s.result}`}</span>
+            <span className="select-result">{inCampaign && campaign
+                ? t('연속 전투 {step}/{total} · 함선 {n}척', { step: Math.min(campaign.step + 1, CAMPAIGN_ORDER.length), total: CAMPAIGN_ORDER.length, n: campaign.squads.reduce((n, q) => n + q.ships.length, 0) })
+                : t('역사 기록 · {result}', { result: t(s.result) })}</span>
             {inCampaign && (
               <button className="chip" onClick={() => setCamp(true)}>
-                군영
+                {t('군영')}
               </button>
             )}
             <button className="ink-btn" disabled={!playable} onClick={() => onStart(id, inCampaign, effective)}>
-              {inCampaign && campaign && campaignOver(campaign) ? '완료' : '전투 시작'}
+              {inCampaign && campaign && campaignOver(campaign) ? t('완료') : t('전투 시작')}
             </button>
           </div>
         </div>

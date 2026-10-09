@@ -8,6 +8,7 @@ import { setFatal, setLoading, setOrigin, setScreen, useUi } from './state/store
 import { SCENARIOS, type ScenarioId } from './sim/scenarios';
 import type { Faction } from './sim/types';
 import { sound } from './audio/Sound';
+import { t, useLang } from './i18n';
 import { fleetSpawn, useCampaign } from './campaign/campaign';
 import { isIOS, isPhone, isTouchDevice } from './game/device';
 import { installTouchGuard } from './game/ios';
@@ -56,12 +57,20 @@ useUi.setState({ screen: firstLaunch ? 'battle' : 'menu' });
 if (firstLaunch) markLoading(resumable(firstLaunch));
 
 export function App() {
+  const lang = useLang();
   const screen = useUi((s) => s.screen);
   const fatal = useUi((s) => s.fatal);
   const compact = useCompactLayout();
   const [launch, setLaunch] = useState<Launch | null>(firstLaunch);
   const lastScenario = useRef<ScenarioId>(startScenario);
   const [notice, setNotice] = useState(recovery.step > 0);
+
+  // The page title, the description and the home-screen name follow the language.
+  useEffect(() => {
+    document.title = t('임진 해전');
+    document.querySelector('meta[name="description"]')?.setAttribute('content', t('1592, 조선 수군의 바다. 3D 해전 전략 게임.'));
+    document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', t('임진 해전'));
+  }, [lang]);
 
   // Fetch the battle chunk in the background once a screen that can start a battle opens.
   // The menu itself stays light, and phones wait until a mode is chosen.
@@ -99,7 +108,7 @@ export function App() {
 
   const startConquest = (setup: ConquestSetup, remote?: NetBattle) => {
     setOrigin(remote ? 'online' : 'skirmish');
-    begin({ kind: 'conquest', setup, remote }, '쟁탈전 준비 중');
+    begin({ kind: 'conquest', setup, remote }, t('쟁탈전 준비 중'));
   };
 
   // The server says when a multiplayer battle starts; the engine then draws the server's battle: a conquest map, or
@@ -113,7 +122,7 @@ export function App() {
       }
       const id = msg.battle.id;
       setOrigin('online');
-      begin({ kind: 'scenario', id, faction: msg.seats[msg.you]!.faction, remote }, `${SCENARIOS[id].title} 준비 중`, id);
+      begin({ kind: 'scenario', id, faction: msg.seats[msg.you]!.faction, remote }, t('{name} 준비 중', { name: t(SCENARIOS[id].title) }), id);
     };
     return () => {
       net.onStart = null;
@@ -122,7 +131,7 @@ export function App() {
 
   const startGrandBattle = (battle: RegionBattle) => {
     setOrigin('faction');
-    begin({ kind: 'grand', battle }, `${battle.regionName} 해전 준비 중`);
+    begin({ kind: 'grand', battle }, t('{name} 해전 준비 중', { name: t(battle.regionName) }));
   };
 
   const startHistory = (id: ScenarioId, campaignMode: boolean, faction: Faction) => {
@@ -130,7 +139,7 @@ export function App() {
     const spawn = campaignMode && campaign ? fleetSpawn(campaign) : undefined;
     lastScenario.current = id;
     setOrigin('select');
-    begin({ kind: 'scenario', id, faction: spawn ? 'joseon' : faction, campaign: spawn }, `${SCENARIOS[id].title} 준비 중`, id);
+    begin({ kind: 'scenario', id, faction: spawn ? 'joseon' : faction, campaign: spawn }, t('{name} 준비 중', { name: t(SCENARIOS[id].title) }), id);
   };
 
   const resume = recovery.resume;

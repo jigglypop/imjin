@@ -3,6 +3,8 @@
 //   2. Korean string literals and JSX text that are not passed through t() and have no English entry either
 //      (data in src/sim is fine as long as it has an entry: the UI translates it where it is shown).
 //   node scripts/i18n-check.mjs [--area=src/ui/grand] [--list] [--strict]
+// A line marked `// i18n-ignore` is skipped: it builds a Korean name from data (a numbered ship, a fleet at a port), which the
+// interface translates by pattern where it is shown. Particle pairs such as '이/가' are grammar, not text.
 // --strict exits 1 when anything is missing. Comments are ignored; console messages and tests are not player-facing.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -13,6 +15,7 @@ const area = args.area ? join(ROOT, args.area) : join(ROOT, 'src');
 const HANGUL = /[\uac00-\ud7a3]/;
 
 function walk(dir, out = []) {
+  if (statSync(dir).isFile()) return [dir];
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
     if (statSync(p).isDirectory()) walk(p, out);
@@ -47,8 +50,10 @@ const LITERAL = /'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g;
 for (const file of walk(area)) {
   if (file.includes('/src/i18n/')) continue;
   const rel = relative(ROOT, file);
-  const src = stripComments(readFileSync(file, 'utf8'));
+  const raw = readFileSync(file, 'utf8');
+  const src = stripComments(raw);
   const lineOf = (i) => src.slice(0, i).split('\n').length;
+  const ignored = new Set(raw.split('\n').flatMap((line, i) => (line.includes('i18n-ignore') ? [i + 1] : [])));
   // 1. t('...') calls with a static first argument.
   for (const m of src.matchAll(/\bt\(\s*('(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*")/g)) {
     const key = unescape(m[1].slice(1, -1));
@@ -62,6 +67,7 @@ for (const file of walk(area)) {
     if (/\bt\(\s*$/.test(before)) continue; // already t('...')
     if (/console\.\w+\(\s*$/.test(src.slice(Math.max(0, m.index - 16), m.index))) continue;
     const text = lit.slice(1, -1);
+    if (ignored.has(lineOf(m.index)) || /^[\uac00-\ud7a3]+\/[\uac00-\ud7a3]+$/.test(text)) continue;
     if (lit[0] !== '`' && dict.has(unescape(text))) continue; // data with an entry
     unwrapped.set(`${rel}:${lineOf(m.index)}`, text.slice(0, 80));
   }

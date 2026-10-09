@@ -25,7 +25,9 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { BUILDINGS, type BuildingKind, type CapturePoint, type Conquest } from '../sim/conquest';
 import type { Faction, Team } from '../sim/types';
 import { equipment } from '../game/quality';
+import { RING_FOE, RING_OWN, RING_WARN } from '../ships/ringTones';
 import { iconSvg } from '../ui/battleIcons';
+import { getLang, t } from '../i18n';
 
 /** Footprint widths in metres. */
 const SIZE: Record<BuildingKind, number> = { shipyard: 30, battery: 24, magazine: 11, dock: 20, beacon: 17 };
@@ -82,10 +84,6 @@ export async function preloadWorks() {
 /** Banner colours by navy: the faction tones of the HUD (styles.css), a little lifted so cloth reads in daylight. */
 const FLAG: Record<Faction, Color> = { joseon: new Color('#4f7088'), japan: new Color('#7a564a'), ming: new Color('#a08450') };
 const NEUTRAL = new Color('#d9dcdf');
-/** Ring strokes: the player's navy in slate, the foe's in umber, a point nobody holds in grey. */
-const RING_OWN = new Color('#7597b1');
-const RING_FOE = new Color('#b0806c');
-const RING_WARN = new Color('#d1b274');
 
 type Label = { root: HTMLDivElement; name: HTMLElement; bar: HTMLElement; fill: HTMLElement; works: HTMLElement; last: string };
 
@@ -204,7 +202,7 @@ export class ConquestView {
     pill.className = 'cpoint-pill';
     const name = document.createElement('span');
     name.className = 'cpoint-name';
-    name.textContent = p.name;
+    name.textContent = t(p.name);
     const works = document.createElement('span');
     works.className = 'cpoint-works';
     const bar = document.createElement('div');
@@ -345,7 +343,7 @@ export class ConquestView {
       }
       const sx = (nx * 0.5 + 0.5) * width;
       const sy = (-ny * 0.5 + 0.5) * height;
-      const scale = on ? Math.max(0.7, Math.min(1.05, 1600 / Math.max(dist, 1))) : 0.85;
+      const scale = on ? Math.max(0.95, Math.min(1.05, 1600 / Math.max(dist, 1))) : 0.85;
       const rank = (selected === p.id ? 1e6 : 0) + (own ? 5e5 : 0) + (p.contested ? 3e5 : 0) + (p.home >= 0 ? 2e5 : 0) + p.value * 1e4 - dist;
       cands.push({ label, p, sx, sy, dist, scale, rank, edge: !on });
     });
@@ -380,14 +378,15 @@ export class ConquestView {
       const holder = c.teamOfPoint(p);
       const side = holder ? (holder === playerTeam ? 'own' : 'foe') : 'none';
       const works = p.buildings.map((bd) => (bd ? `${bd.kind}${bd.progress < 1 ? '*' : ''}` : '')).join(',');
-      const key = `${edge}|${side}|${p.contested}|${selected === p.id}|${works}|${p.queue.length}|${Math.round(Math.abs(p.hold) * 20)}`;
+      const key = `${getLang()}|${edge}|${side}|${p.contested}|${selected === p.id}|${works}|${p.queue.length}|${Math.round(Math.abs(p.hold) * 20)}`;
       if (key === label.last) continue;
       label.last = key;
+      label.name.replaceChildren(t(p.name), ...(p.home >= 0 ? [Object.assign(document.createElement('small'), { className: 'cpoint-tag', textContent: t('본거지') })] : []));
       label.root.className = `cpoint cpoint--${side}${p.contested ? ' cpoint--contested' : ''}${selected === p.id ? ' cpoint--selected' : ''}${p.home >= 0 ? ' cpoint--home' : ''}${edge ? ' cpoint--edge' : ''}`;
       label.fill.style.width = `${Math.round(Math.abs(p.hold) * 100)}%`;
       label.fill.className = p.hold === 0 ? '' : (p.hold > 0 ? 'joseon' : 'japan') === playerTeam ? 'own' : 'foe';
       label.works.innerHTML =
-        p.buildings.map((bd) => (bd ? `<span class="${bd.progress < 1 ? 'cpoint-wip' : ''}">${iconSvg(bd.kind, 13)}</span>` : '')).join('') + (p.queue.length ? `<em>함선 ${p.queue.length}</em>` : '');
+        p.buildings.map((bd) => (bd ? `<span class="${bd.progress < 1 ? 'cpoint-wip' : ''}">${iconSvg(bd.kind, 13)}</span>` : '')).join('') + (p.queue.length ? '<em>' + t('함선 {n}', { n: p.queue.length }) + '</em>' : '');
     }
   }
 

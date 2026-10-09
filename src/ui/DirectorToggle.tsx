@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Engine } from '../game/Engine';
 import { isTouchDevice } from '../game/device';
+import { useT } from '../i18n';
 
 /** Repaints a few times a second: the director lives in the engine and changes without React knowing. */
 function usePoll(ms: number) {
@@ -14,19 +15,22 @@ function usePoll(ms: number) {
 /** Settings rows for the battle director: cinematic camera (C) and kill-cam slow motion (V). */
 export function DirectorSettings({ engine }: { engine: Engine }) {
   usePoll(250);
+  const t = useT();
   const d = engine.director;
   const keys = !isTouchDevice;
   return (
     <div>
-      <div className="settings-label">연출</div>
+      <div className="settings-label">{t('연출')}</div>
       <div className="chips">
         <button className={`chip ${engine.rts.cinematic ? 'chip--on' : ''}`} onClick={() => d.toggleCinematic()}>
-          연출 카메라{keys && ' (C)'}
+          {t('연출 카메라')}
+          {keys && ' (C)'}
         </button>
         {/* Slow motion never runs in a multiplayer battle, so the switch would do nothing there. */}
         {!engine.remote && (
           <button className={`chip ${d.slowMo ? 'chip--on' : ''}`} onClick={() => d.toggleSlowMo()}>
-            슬로모션{keys && ' (V)'}
+            {t('슬로모션')}
+            {keys && ' (V)'}
           </button>
         )}
       </div>

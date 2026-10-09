@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FACTION_INFO, FactionMark, Icon } from './shared';
+import { useT } from '../../i18n';
+import { FACTION_INFO, FactionMark, Icon, ownerName } from './shared';
 import type { FactionId, ReplayView, SpotView } from './types';
 
 /**
@@ -80,6 +81,7 @@ function along(points: Pt[], u: number): { upTo: Pt[]; head: Pt; angle: number }
 }
 
 export function ReplayLayer({ replay, at, top, reduced, onPhase, onBeat, onDone }: ReplayLayerProps) {
+  const t = useT();
   const [p, setP] = useState(0);
   const length = replayLength(replay, reduced);
   const fired = useRef({ clash: false, change: false, done: false });
@@ -198,7 +200,7 @@ export function ReplayLayer({ replay, at, top, reduced, onPhase, onBeat, onDone 
           const pos = at(c.regionId);
           return pos ? (
             <div key={c.regionId} className="gm-clash" style={{ transform: `translate3d(${pos.x}px, ${pos.y - 4}px, 0)` }}>
-              <span className="gm-clash__icon" title="전투">
+              <span className="gm-clash__icon" title={t('전투')}>
                 <Icon name="swords" />
               </span>
             </div>
@@ -211,14 +213,14 @@ export function ReplayLayer({ replay, at, top, reduced, onPhase, onBeat, onDone 
             <div key={c.regionId} className="gm-flip" style={{ transform: `translate3d(${pos.x}px, ${pos.y + 30}px, 0)` }}>
               <span className="gm-flip__chip">
                 <FactionMark faction={c.to} />
-                {c.from ? `${FACTION_INFO[c.from].name} → ${FACTION_INFO[c.to].name}` : `${FACTION_INFO[c.to].name} 점령`}
+                {c.from ? `${ownerName(c.from)} → ${ownerName(c.to)}` : t('{owner} 점령', { owner: ownerName(c.to) })}
               </span>
             </div>
           ) : null;
         })}
       <div className="g-glass gm-replay__caption" style={{ top }}>
-        <b>이번 턴의 움직임</b>
-        <span>탭하거나 Space 키로 건너뛰기</span>
+        <b>{t('이번 턴의 움직임')}</b>
+        <span>{t('탭하거나 Space 키로 건너뛰기')}</span>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { useT } from '../i18n';
 import { setFatal } from '../state/store';
 import { Home, Notice, Retry } from './icons';
 
@@ -29,25 +30,30 @@ function lowQualityUrl() {
   return url.toString();
 }
 
+/** The player sees a plain reason; the renderer's own error text stays behind '자세히' for bug reports. */
 export function FatalNotice({ message, onMenu }: { message: string; onMenu: () => void }) {
+  const t = useT();
   return (
     <div className="fatal">
       <div className="notice glass" role="alert">
         <span className="notice-icon">
           <Notice size={28} />
         </span>
-        <h2>화면을 시작하지 못했습니다</h2>
-        <p>이 기기에서 전투 화면을 열 수 없습니다. 낮은 품질 설정으로 다시 시도하면 대부분 해결됩니다.</p>
-        <p className="notice-detail">{message}</p>
+        <h2>{t('전투 화면을 시작하지 못했습니다')}</h2>
+        <p>{t('이 기기에서 그래픽을 켜지 못했습니다. 가벼운 설정으로 다시 시도하면 대부분 해결됩니다.')}</p>
+        <details className="notice-more">
+          <summary>{t('자세히')}</summary>
+          <p className="notice-detail">{message}</p>
+        </details>
         <div className="fatal-actions">
           <a className="ink-btn" href={lowQualityUrl()}>
-            낮은 품질로 다시 시도
+            {t('가벼운 설정으로 다시 시도')}
           </a>
           <button className="chip" onClick={() => location.reload()}>
-            <Retry /> 새로고침
+            <Retry /> {t('새로고침')}
           </button>
           <button className="chip" onClick={onMenu}>
-            <Home /> 메뉴로
+            <Home /> {t('메뉴로')}
           </button>
         </div>
       </div>

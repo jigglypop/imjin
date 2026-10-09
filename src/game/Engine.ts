@@ -48,9 +48,9 @@ import { Effects } from '../fx/Effects';
 import { Crew, crewAssets } from '../fx/Crew';
 import { Lanterns } from '../fx/Lanterns';
 import { Battle, SIM_DT } from '../sim/battle';
-import { GUN_SPECS, STAGE_NAMES } from '../sim/catalog';
+import { GUN_SPECS } from '../sim/catalog';
 import { buildScenario, SCENARIOS, type FleetSpawn, type ScenarioId } from '../sim/scenarios';
-import { applyBalance, FACTION_NAME } from '../sim/balance';
+import { applyBalance, FACTION_NAME, FACTION_SHORT } from '../sim/balance';
 import { applyOutcome } from '../campaign/campaign';
 import { finishGrandBattle } from '../campaign/grand';
 import { outcomeOfBattle, type RegionBattle } from '../sim/grand/bridge';
@@ -70,6 +70,7 @@ import { Input } from './Input';
 import { TouchControls } from './Touch';
 import { AdaptiveQuality } from './adaptive';
 import { equipment, LEVELS, levelSetting, saveLevelSetting, startLevel, type LevelSetting, type OceanQuality, type TerrainQuality } from './quality';
+import { t } from '../i18n';
 import { failBattle, publish, pushToast, setLoading, setProgress, setReport, type GameSnapshot } from '../state/store';
 import { SquadronBanners } from '../ui/SquadronBanners';
 import { sound } from '../audio/Sound';
@@ -129,6 +130,9 @@ const settle = () => new Promise<void>((resolve) => {
 
 /** Shown when the graphics device is lost (the browser reclaimed the GPU, usually for memory). Nothing can be drawn after it. */
 const DEVICE_LOST_TEXT = '그래픽 장치가 멈췄습니다. 메모리가 부족했을 수 있습니다. 페이지를 새로고침해 주세요.';
+
+/** What a gun's crew is doing at each stage of loading; the last two wait for the shot. */
+const GUN_STAGE = ['포구 닦기', '화약 넣기', '마개 다지기', '포탄 넣기', '발사 준비', '발사'];
 
 /** Multipliers the player can pick. The approach before first contact runs at the largest. */
 export const SPEEDS = [1, 2, 4, 8, 16, 32, 64, 128] as const;
@@ -279,7 +283,7 @@ export class Engine {
     r.onDeviceLost = (info) => {
       previous.call(r, info);
       this.ready = false;
-      setLoading(DEVICE_LOST_TEXT, 1);
+      setLoading(t(DEVICE_LOST_TEXT), 1);
     };
   }
 
@@ -343,7 +347,7 @@ export class Engine {
     this.camera.updateProjectionMatrix();
     waveField.setState(SEA_STATES[this.seaName]);
     const info = this.battleInfo;
-    setLoading('바다와 하늘을 준비하는 중', 0.03, info.art ?? null);
+    setLoading(t('바다와 하늘을 준비하는 중'), 0.03, info.art ?? null);
     // The files download while the cloud and wake shaders build, so neither waits for the other.
     const loading = this.loadAssets(0.03);
     await this.warmShared();
@@ -351,12 +355,12 @@ export class Engine {
     this.assets = assets;
     this.terrain = terrain;
     this.scene.add(terrain.group);
-    setLoading('지형을 준비하는 중', 0.64);
+    setLoading(t('지형을 준비하는 중'), 0.64);
     this.dressTerrain();
     this.applySky(sky);
-    setLoading('함대를 배치하는 중', 0.68);
+    setLoading(t('함대를 배치하는 중'), 0.68);
     this.placeScenario(sky);
-    setLoading('날씨와 파도를 준비하는 중', 0.72);
+    setLoading(t('날씨와 파도를 준비하는 중'), 0.72);
     if (this.eq.fft && (r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) this.fft = new FFTWaves(spectrumOf(SEA_STATES[this.seaName]), this.eq.fftN);
     this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
     this.scene.add(this.ocean.mesh);
@@ -520,7 +524,7 @@ export class Engine {
   private async prewarm(from: number) {
     const r = this.renderer;
     const webgpu = !!(r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend;
-    setLoading('화면 효과를 준비하는 중', from);
+    setLoading(t('화면 효과를 준비하는 중'), from);
     await Promise.all([this.worksLoad, this.conquestLoad]);
     // The land is drawn in tiles that the camera culls. All of them draw during warm-up, so the terrain program is built here
     // and not when land first comes into view.
@@ -530,7 +534,7 @@ export class Engine {
     } else {
       await this.compileByParts(from);
     }
-    setLoading('첫 화면을 준비하는 중', from + 0.2);
+    setLoading(t('첫 화면을 준비하는 중'), from + 0.2);
     await settle();
     this.primeOcean();
     this.terrain.setCulling(true);
@@ -543,9 +547,9 @@ export class Engine {
     const works = this.conquestView?.group;
     const parts = [this.terrain.group, this.ocean.mesh, clouds, this.views.group, this.crew.group, this.fx.group, this.lanterns.group, works].filter((o): o is NonNullable<typeof o> => !!o);
     const steps: [string, (typeof parts)[number][]][] = [
-      ['땅과 숲을 준비하는 중', [this.terrain.group, ...(works ? [works] : [])]],
-      ['바다와 하늘을 준비하는 중', [this.ocean.mesh, ...(clouds ? [clouds] : [])]],
-      ['함선과 병사를 준비하는 중', [this.views.group, this.crew.group, this.fx.group, this.lanterns.group]],
+      [t('땅과 숲을 준비하는 중'), [this.terrain.group, ...(works ? [works] : [])]],
+      [t('바다와 하늘을 준비하는 중'), [this.ocean.mesh, ...(clouds ? [clouds] : [])]],
+      [t('함선과 병사를 준비하는 중'), [this.views.group, this.crew.group, this.fx.group, this.lanterns.group]],
     ];
     const visible = parts.map((o) => o.visible);
     for (const [n, [text, show]] of steps.entries()) {
@@ -688,7 +692,7 @@ export class Engine {
   /** Steps the cutaway down one deck at a time and back to the closed hull. */
   toggleCutaway() {
     this.cutaway = (this.cutaway + 1) % 4;
-    pushToast(['선내 보기를 닫습니다', '상갑판 · 지붕과 장대를 걷어냅니다', '포갑판 · 포수와 사수', '노갑판 · 격군'][this.cutaway]!);
+    pushToast(t(['선내 보기를 닫습니다', '상갑판 · 지붕과 장대를 걷어냅니다', '포갑판 · 포격 승조원과 조총·활', '노갑판 · 노 젓는 승조원'][this.cutaway]!));
     this.publish(true);
   }
 
@@ -864,12 +868,12 @@ export class Engine {
   private async stage(info: BattleInfo) {
     this.ready = false;
     this.battleInfo = info;
-    setLoading(`${info.title} 준비 중`, 0.04, info.art ?? null);
+    setLoading(t('{title} 준비 중', { title: t(info.title) }), 0.04, info.art ?? null);
     this.skyName = info.sky;
     this.seaName = info.sea;
     waveField.setState(SEA_STATES[this.seaName]);
     const [sky, terrain, assets] = await this.loadAssets(0.04);
-    setLoading('지형을 준비하는 중', 0.64);
+    setLoading(t('지형을 준비하는 중'), 0.64);
     // The previous battle's terrain, ocean and ship batches are freed before the new ones are built, so two battles
     // never sit in memory together.
     this.disposeBattle();
@@ -878,9 +882,9 @@ export class Engine {
     this.scene.add(terrain.group);
     this.dressTerrain();
     this.applySky(sky);
-    setLoading('함대를 배치하는 중', 0.68);
+    setLoading(t('함대를 배치하는 중'), 0.68);
     this.placeScenario(sky);
-    setLoading('날씨와 파도를 준비하는 중', 0.72);
+    setLoading(t('날씨와 파도를 준비하는 중'), 0.72);
     this.fft?.setSpectrum(spectrumOf(SEA_STATES[this.seaName]));
     this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
     this.scene.add(this.ocean.mesh);
@@ -1012,8 +1016,8 @@ export class Engine {
     this.structures?.update(this.camera);
     const tideSign = Math.abs(this.battle.tide) < 0.15 ? 0 : Math.sign(this.battle.tide);
     if (this.current && tideSign !== this.lastTide) {
-      if (tideSign === 0) pushToast('물살이 잦아듭니다 · 곧 물길이 바뀝니다');
-      else if (this.lastTide === 0) pushToast(tideSign > 0 ? '울돌목의 물길이 뒤집혔습니다 · 일본 함선이 밀려납니다' : '거센 물살이 일본 함선을 실어 옵니다', (tideSign > 0) === (this.team === 'joseon') ? 'good' : 'bad');
+      if (tideSign === 0) pushToast(t('물살이 잦아듭니다 · 곧 물길이 바뀝니다'));
+      else if (this.lastTide === 0) pushToast(t(tideSign > 0 ? '울돌목의 물길이 뒤집혔습니다 · 일본 함선이 밀려납니다' : '거센 물살이 일본 함선을 실어 옵니다'), (tideSign > 0) === (this.team === 'joseon') ? 'good' : 'bad');
       this.lastTide = tideSign;
     }
     this.ocean.update(this.camera.position.x, this.camera.position.z);
@@ -1026,11 +1030,11 @@ export class Engine {
     this.fx.shipRate = this.remote ? this.remote.playbackPace : 1;
     this.fx.update(this.battle, scaled, this.camera);
     this.crew.update(this.battle, scaled, this.camera, this.crewView());
-    this.lanterns.update(this.battle, this.camera);
+    this.lanterns.update(this.battle, this.camera, this.battle.night || SKY_PRESETS[this.skyName].night > 0.5);
     this.updateSun();
     const el = this.renderer.domElement;
-    this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.rts.cinematic, this.team);
-    this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.rts.cinematic && !this.options.hideLabels);
+    this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.rts.cinematic && !this.battle.winner, this.team);
+    this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.rts.cinematic && !this.options.hideLabels && !this.battle.winner);
     this.publishTimer -= dt;
     if (this.publishTimer <= 0) {
       this.publish();
@@ -1062,7 +1066,7 @@ export class Engine {
   }
 
   private endFastForward() {
-    if (this.fastForward) pushToast('적과 접촉했습니다 · 정상 속도로 돌아갑니다', 'info');
+    if (this.fastForward) pushToast(t('적과 접촉했습니다 · 정상 속도로 돌아갑니다'), 'info');
     this.approachOver = true;
     this.autoFast = false;
     this.fastForward = false;
@@ -1310,7 +1314,7 @@ export class Engine {
       night: b.night,
       tide: this.current
         ? {
-            label: Math.abs(b.tide) < 0.15 ? '정조 · 물살이 멎었습니다' : b.tide < 0 ? '밀물 · 일본 함선 쪽으로 흐릅니다' : '썰물 · 물길이 뒤집혔습니다',
+            label: t(Math.abs(b.tide) < 0.15 ? '정조 · 물살이 멎었습니다' : b.tide < 0 ? '밀물 · 일본 함선 쪽으로 흐릅니다' : '썰물 · 물길이 뒤집혔습니다'),
             knots: Math.round(this.current.peakSpeed(b.tide) * 1.944 * 10) / 10,
             dir: Math.sign(b.tide),
           }
@@ -1346,7 +1350,8 @@ export class Engine {
                 label: spec.label,
                 side: g.side,
                 stage: g.stage,
-                stageName: g.ammo <= 0 ? '탄약 소진' : g.stage >= 4 ? (g.stage === 4 ? '조준 대기' : '점화') : STAGE_NAMES[g.stage]!,
+                stageName: t(g.ammo <= 0 ? '탄약 없음' : GUN_STAGE[Math.min(g.stage, GUN_STAGE.length - 1)]!),
+                empty: g.ammo <= 0,
                 progress: g.stage >= 4 ? 1 : Math.min(1, g.t / need),
               };
             }),
@@ -1363,12 +1368,12 @@ export class Engine {
     if (setup) {
       const names = (team: Team) => {
         const factions = [...new Set(setup.seats.filter((s) => s.team === team).map((s) => s.faction))];
-        return factions.map((f) => FACTION_NAME[f].replace(' 수군', '')).join('·') + ' 수군';
+        return factions.length === 1 ? t(FACTION_NAME[factions[0]!]) : t('{names} 수군', { names: factions.map((f) => t(FACTION_SHORT[f])).join('·') });
       };
       return { own: names(this.team), enemy: names(this.enemyTeam) };
     }
     const ming = !!SCENARIOS[this.scenarioId].ming;
-    const name = (team: Team) => (team === 'japan' ? FACTION_NAME.japan : !ming ? FACTION_NAME.joseon : this.faction === 'ming' ? '명·조선 연합' : '조선·명 연합');
+    const name = (team: Team) => (team === 'japan' ? t(FACTION_NAME.japan) : !ming ? t(FACTION_NAME.joseon) : t(this.faction === 'ming' ? '명·조선 연합' : '조선·명 연합'));
     return { own: name(this.team), enemy: name(this.enemyTeam) };
   }
 
@@ -1396,7 +1401,7 @@ export class Engine {
             id: p.id,
             name: p.name,
             side: sideOf(c.teamOfPoint(p)),
-            holder: p.owner >= 0 ? `${c.player(p.owner)!.name} · ${FACTION_NAME[c.player(p.owner)!.faction]}` : '주인 없음',
+            holder: p.owner >= 0 ? `${t(c.player(p.owner)!.name)} · ${t(FACTION_NAME[c.player(p.owner)!.faction])}` : t('주인 없음'),
             value: p.value,
             home: p.home >= 0,
             contested: p.contested,

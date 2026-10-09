@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { chooseEvent } from '../sim/grand/events';
 import { buildReplay, isEmpty, type TurnReplay } from '../sim/grand/replay';
 import type { ResolveResult } from '../sim/grand/autoresolve';
-import { applyBattleResult, describeBattle, type RegionBattle } from '../sim/grand/bridge';
+import { t } from '../i18n';
+import { tName } from '../ui/grand/text';
+import { applyBattleResult, describeBattle, type BridgeSeat, type RegionBattle } from '../sim/grand/bridge';
 import { summarizeBattle, type BattleSummary } from '../sim/grand/report';
 import { cancelBuild, cancelRecruit, orderAlliance, orderBuild, orderCommander, orderDeclareWar, orderDisband, orderMerge, orderMove, orderRecruit, orderRefit, orderSplit, orderStop } from '../sim/grand/orders';
 import { REGION_ORDER } from '../sim/grand/regions';
@@ -168,10 +170,17 @@ export function autoResolveGrand(contactId: string): ResolveResult | null {
   return result;
 }
 
+/** The ship names and the officer a battle shows, in the language set when the battle starts. */
+function localSeat(seat: BridgeSeat): BridgeSeat {
+  const named = (list: BridgeSeat['ships']) => list.map((ship) => ({ ...ship, name: tName(ship.name) }));
+  return { ...seat, ships: named(seat.ships), reserve: named(seat.reserve), leader: seat.leader && { ...seat.leader, name: t(seat.leader.name), title: t(seat.leader.title) } };
+}
+
 /** The description the Engine plays a waiting meeting from. Does not change the campaign. */
 export function prepareGrandBattle(contactId: string): RegionBattle | null {
   const current = useGrand.getState().grand;
-  return current ? describeBattle(current, contactId) : null;
+  const battle = current ? describeBattle(current, contactId) : null;
+  return battle && { ...battle, attacker: localSeat(battle.attacker), defender: localSeat(battle.defender) };
 }
 
 /** Takes the outcome of a played battle into the campaign. False when the meeting was already settled. */

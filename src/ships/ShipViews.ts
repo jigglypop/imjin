@@ -22,6 +22,7 @@ import { waveField } from '../ocean/waves';
 import { LOD_COUNT, modelKey, ShipRenderer, type ModelAsset } from './ShipRenderer';
 import type { ShipLodQuality } from '../game/quality';
 import { cutHeight, DECKS, mainDeck } from './decks';
+import { RING_FOE, RING_OWN } from './ringTones';
 
 const MAX_PROPS = 600;
 
@@ -92,8 +93,8 @@ export class ShipViews {
     this.group.add(this.renderer.group);
     const ringGeo = new RingGeometry(0.92, 1, 96, 1);
     ringGeo.rotateX(-Math.PI / 2);
-    this.ringsOwn = new InstancedMesh(ringGeo, this.makeRingMaterial(new Color(1.0, 0.72, 0.22)), MAX_RINGS);
-    this.ringsEnemy = new InstancedMesh(ringGeo, this.makeRingMaterial(new Color(1.0, 0.25, 0.18)), MAX_RINGS);
+    this.ringsOwn = new InstancedMesh(ringGeo, this.makeRingMaterial(RING_OWN), MAX_RINGS);
+    this.ringsEnemy = new InstancedMesh(ringGeo, this.makeRingMaterial(RING_FOE), MAX_RINGS);
     const wood = new MeshStandardNodeMaterial({ color: new Color(0.34, 0.24, 0.15), roughness: 0.9 });
     this.props = new InstancedMesh(new BoxGeometry(1, 1, 1), wood, MAX_PROPS);
     this.props.instanceMatrix.setUsage(DynamicDrawUsage);
