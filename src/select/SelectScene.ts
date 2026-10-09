@@ -278,7 +278,9 @@ export class SelectScene {
     const m = new MeshBasicNodeMaterial();
     const fUV = vec2(uv().x, float(1).sub(uv().y));
     const hV = texture(demTex, fUV).level(float(0)).r;
-    m.positionNode = positionLocal.add(vec3(0, max(hV, 0).mul(vScale), 0));
+    // The relief settles to flat sea at the map's border, so no land stands cut off against the mist there.
+    const rim = smoothstep(0, 0.07, uv().x).mul(smoothstep(1, 0.93, uv().x)).mul(smoothstep(0, 0.09, uv().y)).mul(smoothstep(1, 0.91, uv().y));
+    m.positionNode = positionLocal.add(vec3(0, max(hV, 0).mul(vScale).mul(rim), 0));
     const texel = vec2(1 / meta.width, 1 / meta.height);
     const h = texture(demTex, fUV).r;
     const hx = texture(demTex, fUV.add(vec2(texel.x, 0))).r.sub(texture(demTex, fUV.sub(vec2(texel.x, 0))).r);
@@ -337,6 +339,7 @@ export class SelectScene {
 
   focus(id: ScenarioId, instant = false) {
     this.worldOf(id, this.goal);
+    this.goalYaw = 0;
     // Aim south of the site so it sits in the upper half of the screen, above the brief card.
     this.goal.z += 2.4;
     this.goalDist = Math.min(this.goalDist, 40);

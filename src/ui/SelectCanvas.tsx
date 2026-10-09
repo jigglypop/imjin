@@ -13,7 +13,7 @@ async function createRenderer(props: { canvas: HTMLCanvasElement | OffscreenCanv
   return renderer;
 }
 
-function SelectView({ id, side, markers }: { id: ScenarioId; side: Faction; markers: React.MutableRefObject<Map<ScenarioId, HTMLButtonElement>> }) {
+function SelectView({ id, look, side, markers }: { id: ScenarioId; look: number; side: Faction; markers: React.MutableRefObject<Map<ScenarioId, HTMLButtonElement>> }) {
   const gl = useThree((s) => s.gl) as unknown as WebGPURenderer;
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const size = useThree((s) => s.size);
@@ -34,7 +34,7 @@ function SelectView({ id, side, markers }: { id: ScenarioId; side: Faction; mark
 
   useEffect(() => {
     sceneRef.current?.focus(id);
-  }, [id]);
+  }, [id, look]);
 
   useEffect(() => {
     sceneRef.current?.setForces(id, side);
@@ -60,12 +60,12 @@ function SelectView({ id, side, markers }: { id: ScenarioId; side: Faction; mark
 }
 
 /** The 3D war-table map of the south coast, for desktops and tablets. Loaded on demand so the menu does not parse three.js. */
-export default function SelectCanvas({ id, side, onSelect }: { id: ScenarioId; side: Faction; onSelect: (id: ScenarioId) => void }) {
+export default function SelectCanvas({ id, look, side, onSelect }: { id: ScenarioId; look: number; side: Faction; onSelect: (id: ScenarioId) => void }) {
   const markers = useRef(new Map<ScenarioId, HTMLButtonElement>());
   return (
     <>
       <Canvas className="select-canvas" gl={createRenderer as never} camera={{ fov: 34, near: 0.05, far: 600, position: [0, 40, 40] }} dpr={Math.min(window.devicePixelRatio, equipment.select.dprCap)} frameloop="always">
-        <SelectView id={id} side={side} markers={markers} />
+        <SelectView id={id} look={look} side={side} markers={markers} />
       </Canvas>
       <div className="select-markers">
         {SCENARIO_ORDER.map((sid) => (

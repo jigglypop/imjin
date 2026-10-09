@@ -22,7 +22,8 @@ import type { Terrain } from './Terrain';
 import type { VegetationQuality } from '../game/quality';
 
 function tag(geo: BufferGeometry, part: number, ao: (y: number) => number) {
-  const g = geo.toNonIndexed();
+  // Icosahedra come non-indexed already, and toNonIndexed warns about those.
+  const g = geo.index ? geo.toNonIndexed() : geo;
   const pos = g.getAttribute('position');
   const n = pos.count;
   const parts = new Float32Array(n);

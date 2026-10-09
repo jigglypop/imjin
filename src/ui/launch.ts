@@ -1,6 +1,6 @@
 import type { ConquestSetup, EngineOptions } from '../game/Engine';
 import type { RegionBattle } from '../sim/grand/bridge';
-import { grandMap, grandSeats, grandYou } from '../sim/grand/spawn';
+import { grandSeats, grandYou } from '../sim/grand/spawn';
 import type { NetBattle } from '../net/NetBattle';
 import { playableFactions } from '../sim/balance';
 import { CONQUEST_MAPS, defaultSeats, type ConquestMapId } from '../sim/maps';
@@ -24,7 +24,7 @@ export function conquestOf(launch: LaunchBody): ConquestSetup | undefined {
   if (launch.kind === 'conquest') return launch.setup;
   if (launch.kind === 'grand') {
     const rb = launch.battle;
-    return { map: grandMap(rb), seats: grandSeats(rb), you: grandYou(rb), seed: rb.seed, grand: rb };
+    return { seats: grandSeats(rb), you: grandYou(rb), seed: rb.seed, grand: rb };
   }
   return undefined;
 }

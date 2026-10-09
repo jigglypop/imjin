@@ -24,6 +24,33 @@ const turn = await load('/src/sim/grand/turn.ts');
 const spawn = await load('/src/sim/grand/spawn.ts');
 const { SHIP_SPECS } = await load('/src/sim/catalog.ts');
 const { josa } = await load('/src/sim/grand/josa.ts');
+const { REGION_MAPS, REGION_SITES } = await load('/src/sim/grand/coast.ts');
+const { generateHeightmap } = await load('/src/terrain/generate.ts');
+
+// The land sampler of a region's terrain as the engine hands it to the builder: world coordinates, the map turned by `axis`.
+const heightmaps = new Map();
+function landOf(spec, axis = 0) {
+  let h = heightmaps.get(spec.seed + ':' + spec.size);
+  if (!h) heightmaps.set(spec.seed + ':' + spec.size, (h = generateHeightmap(spec)));
+  const { size, res } = spec;
+  const ca = Math.cos(axis);
+  const sa = Math.sin(axis);
+  return (wx, wz) => {
+    const sx = wx * ca + wz * sa;
+    const sz = -wx * sa + wz * ca;
+    const fx = ((sx + size / 2) / size) * res - 0.5;
+    const fz = ((sz + size / 2) / size) * res - 0.5;
+    const x0 = Math.max(0, Math.min(res - 2, Math.floor(fx)));
+    const z0 = Math.max(0, Math.min(res - 2, Math.floor(fz)));
+    const tx = Math.max(0, Math.min(1, fx - x0));
+    const tz = Math.max(0, Math.min(1, fz - z0));
+    const a = h[z0 * res + x0];
+    const b = h[z0 * res + x0 + 1];
+    const c = h[(z0 + 1) * res + x0];
+    const d = h[(z0 + 1) * res + x0 + 1];
+    return (a + (b - a) * tx) * (1 - tz) + (c + (d - c) * tx) * tz;
+  };
+}
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -117,7 +144,7 @@ function playOut(g) {
         // The "engine" reports the defender holding with every ship slightly worn.
         const ships = [...rb.attacker.ships, ...rb.defender.ships].map((s) => ({ campaignId: s.campaignId, alive: s.hull > 0.5, hull: s.hull * 0.8, crew: s.crew * 0.9, supply: s.supply * 0.8, kills: 0 }));
         const outcome = bridge.outcomeOfBattle(rb, rb.defender.team, ships);
-        check(`battle ${played + auto + 1}: seats and teams are described`, rb.attacker.ships.length > 0 && rb.attacker.team !== rb.defender.team && rb.options.tickets === 500 && rb.mapId);
+        check(`battle ${played + auto + 1}: seats and teams are described`, rb.attacker.ships.length > 0 && rb.attacker.team !== rb.defender.team && rb.options.tickets === 500 && rb.mapId === rb.regionId);
         if (!bridge.applyBattleResult(g, rb, outcome)) check('a played battle is applied', false);
         if (stale) {
           check('a second report of the same battle is refused', bridge.applyBattleResult(g, rb, outcome) === false);
@@ -209,10 +236,10 @@ function playOut(g) {
   const c = { id: 'h', regionId: 'hansan', attacker: 'japan', defender: 'joseon', attackerFleets: [jp.id], defenderFleets: defenders, player: true };
   g.pending.push(c);
   const rb = bridge.describeContact(g, c);
-  const land = (x, z) => (z < -1700 ? 20 : -50);
-  const built = spawn.buildGrandConquest(rb, land, 0);
+  const land = landOf(REGION_MAPS.hansan.terrain, 0.4);
+  const built = spawn.buildGrandConquest(rb, land, 0.4);
   const ships = built.battle.ships;
-  check('every campaign ship is in the battle', ships.length === rb.attacker.ships.length + rb.defender.ships.length && ships.every((s) => s.campaignId));
+  check('every campaign ship is in the battle and afloat', ships.length === rb.attacker.ships.length + rb.defender.ships.length && ships.every((s) => s.campaignId && land(s.x, s.z) < -4));
   const worn = ships.find((s) => s.campaignId === jp.ships[0].id);
   check('hull, crew and name carry over', Math.abs(worn.hull / worn.spec.hull - 0.5) < 1e-6 && worn.name === jp.ships[0].name && Math.abs(built.battle.get(ships.find((s) => s.campaignId === jp.ships[1].id).id).crew / SHIP_SPECS[jp.ships[1].kind].crew - 0.4) < 1e-6);
   check('the sides sit in their own seats and teams', ships.filter((s) => s.owner === 0).length === rb.attacker.ships.length && ships.every((s) => s.team === (s.owner === 0 ? rb.attacker.team : rb.defender.team)));
@@ -227,6 +254,46 @@ function playOut(g) {
   check('a battery that fell is reported razed', spawn.worksAfter(rb, built.conquest).razed.join() === 'battery');
   for (let i = 0; i < 1200; i += 1) built.battle.step(1 / 20);
   check('the battle runs', built.battle.ships.length > 0);
+}
+
+// 7. Every region fights on its own coast: real terrain, capture points on the water by a shore, no ship aground.
+{
+  const g = newGrand('japan', 3);
+  const jp = g.fleets.filter((f) => f.faction === 'japan').map((f) => f.id);
+  const jo = g.fleets.filter((f) => f.faction === 'joseon').map((f) => f.id);
+  const bad = [];
+  for (const id of REGION_ORDER) {
+    const map = REGION_MAPS[id];
+    const g2 = structuredClone(g);
+    g2.regions[id].owner = 'joseon';
+    g2.regions[id].buildings = [{ kind: 'shipyard', level: 1, upgradeLeft: 0, hp: 1 }, { kind: 'battery', level: 2, upgradeLeft: 0, hp: 1 }];
+    const c = { id: 'r', regionId: id, attacker: 'japan', defender: 'joseon', attackerFleets: jp, defenderFleets: jo, player: true };
+    g2.pending.push(c);
+    const rb = bridge.describeContact(g2, c);
+    const axis = spawn.grandAxis(rb);
+    const land = landOf(map.terrain, axis * 0.5 + 0.3);
+    const built = spawn.buildGrandConquest(rb, land, axis * 0.5 + 0.3);
+    const pts = built.conquest.points;
+    const homes = [built.conquest.homeOf(0), built.conquest.homeOf(1)];
+    const gap = Math.hypot(homes[0].x - homes[1].x, homes[0].z - homes[1].z);
+    if (pts.length < 3 || pts.length > 5) bad.push(`${id}: ${pts.length} points`);
+    if (pts.some((p) => land(p.x, p.z) > -6)) bad.push(`${id}: a capture point on land`);
+    if (homes.some((h) => h.slots.length < 3)) bad.push(`${id}: a home port without room for works`);
+    if (gap < 1000 || gap > 1400) bad.push(`${id}: ports ${gap.toFixed(0)} m apart`);
+    const aground = built.battle.ships.filter((s) => land(s.x, s.z) > -4).length;
+    if (aground) bad.push(`${id}: ${aground} ships aground`);
+    if (!!map.current !== (id === 'myeongnyang' || id === 'noryang')) bad.push(`${id}: tidal current ${!!map.current}`);
+    if (!map.terrain.reserve.length) bad.push(`${id}: shore works not kept clear`);
+    const again = REGION_MAPS[id].points.map((p) => `${p.x},${p.z}`).join();
+    if (again !== map.points.map((p) => `${p.x},${p.z}`).join()) bad.push(`${id}: map changes between reads`);
+    if (rb.mapId !== id || REGION_SITES[id].terrain === undefined) bad.push(`${id}: no map`);
+    // The computer plays the whole battle through on this coast.
+    built.conquest.autopilot = true;
+    for (const p of built.conquest.players) built.conquest.setHuman(p.slot, false);
+    for (let i = 0; i < 20 * 60 * 6 && !built.battle.winner; i += 1) built.battle.step(1 / 20);
+    if (built.battle.ships.some((s) => !Number.isFinite(s.x) || !Number.isFinite(s.z))) bad.push(`${id}: a ship left the world`);
+  }
+  check(`all ${REGION_ORDER.length} regions have a coast to fight on${bad.length ? ': ' + bad.join('; ') : ''}`, !bad.length);
 }
 
 {

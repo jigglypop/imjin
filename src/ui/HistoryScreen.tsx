@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { SCENARIO_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import { commanderOf, FACTION_MARK, FACTION_NAME, FACTION_SHORT, forcesOf, handicap, playableFactions } from '../sim/balance';
 import type { Faction } from '../sim/types';
@@ -45,9 +45,12 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
   const inCampaign = mode === 'campaign' && !!campaign;
   const current = campaign ? currentBattle(campaign) : 'okpo';
   const [id, setIdRaw] = useState<ScenarioId>(inCampaign ? current : initial);
+  // Bumped by every pick, so choosing the battle already selected still flies the 3D camera back to its site.
+  const [look, setLook] = useState(0);
   const setId = (next: ScenarioId) => {
     if (next !== id) sound.click();
     setIdRaw(next);
+    setLook((n) => n + 1);
   };
   const s = SCENARIOS[id];
   const record = (sid: ScenarioId) => campaign?.history.filter((h) => h.id === sid).at(-1);
@@ -66,6 +69,23 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
     setMode(next);
     if (next === 'campaign') setIdRaw(currentBattle(useCampaign.getState().campaign!));
   };
+  // The brief scrolls inside its card: fade its bottom edge while there is more below, so a cut line reads as "scroll".
+  const briefRef = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState(false);
+  const measure = useCallback(() => {
+    const el = briefRef.current;
+    if (el) setMore(el.scrollHeight - el.scrollTop - el.clientHeight > 6);
+  }, []);
+  useEffect(() => {
+    const el = briefRef.current;
+    if (!el) return;
+    el.scrollTop = 0;
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(el);
+    if (el.firstElementChild) watch.observe(el.firstElementChild);
+    return () => watch.disconnect();
+  }, [id, inCampaign, effective, measure]);
   const flat = <StaticMap id={id} onSelect={setId} />;
   return (
     <section className="screen hs">
@@ -75,7 +95,7 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
         ) : (
           <ErrorBoundary fallback={flat}>
             <Suspense fallback={null}>
-              <SelectCanvas id={id} side={effective} onSelect={setId} />
+              <SelectCanvas id={id} look={look} side={effective} onSelect={setId} />
             </Suspense>
           </ErrorBoundary>
         )}
@@ -116,51 +136,58 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
         </div>
       </div>
       <div className="hs-brief glass">
-        <div className="hs-brief-scroll">
-          <h2>
-            {s.title}
-            <span className="hanja">{s.hanja}</span>
-          </h2>
-          <div className="select-date">
-            {s.date} · {s.place}
-          </div>
-          <div className="select-brief-head">
-            <span>
-              난이도 <b>{handicap(id, effective).difficulty}</b>
-            </span>
-            <span>{s.season}</span>
-            {s.night && <span className="night-tag">야간 전투</span>}
-          </div>
-          {!inCampaign && (
-            <div className="select-sides">
-              {factions.map((f) => (
-                <button key={f} className={`side-btn ${f === effective ? 'side-btn--on' : ''}`} onClick={() => setSide(f)}>
-                  <i className={`emblem emblem--${f}`}>{FACTION_MARK[f]}</i>
-                  <span>
-                    <b>{FACTION_SHORT[f]}</b>
-                    <small>{commanderOf(id, f).name}</small>
-                  </span>
-                </button>
-              ))}
-              <span className="side-vs">
-                대적 <b>{commanderOf(id, enemyOf(effective)).name}</b>
+        <div className="hs-brief-wrap">
+          <div className="hs-brief-scroll" ref={briefRef} data-more={more} onScroll={measure}>
+            <h2>
+              {s.title}
+              <span className="hanja">{s.hanja}</span>
+            </h2>
+            <div className="select-date">
+              {s.date} · {s.place}
+            </div>
+            <div className="select-brief-head">
+              <span>
+                난이도 <b>{handicap(id, effective).difficulty}</b>
               </span>
+              <span>{s.season}</span>
+              {s.night && <span className="night-tag">야간 전투</span>}
             </div>
-          )}
-          <p className="select-cmd">
-            조선 <b>{s.joseon.name}</b> <small>{s.joseon.title}</small> · 일본 <b>{s.japan.name}</b> <small>{s.japan.title}</small>
-          </p>
-          <p>{s.summary}</p>
-          <div className="select-forces">
-            <div className="select-force">
-              <i className={`force-dot force-dot--${ownSide}`} />
-              {FACTION_NAME[ownSide].replace(' 수군', '')} — {forcesOf(id, ownSide)}
-            </div>
-            <div className="select-force">
-              <i className="force-dot force-dot--japan" />
-              일본 — {s.forces.japan}
+            {!inCampaign && (
+              <div className="select-sides">
+                {factions.map((f) => (
+                  <button key={f} className={`side-btn ${f === effective ? 'side-btn--on' : ''}`} onClick={() => setSide(f)}>
+                    <i className={`emblem emblem--${f}`}>{FACTION_MARK[f]}</i>
+                    <span>
+                      <b>{FACTION_SHORT[f]}</b>
+                      <small>{commanderOf(id, f).name}</small>
+                    </span>
+                  </button>
+                ))}
+                <span className="side-vs">
+                  대적 <b>{commanderOf(id, enemyOf(effective)).name}</b>
+                </span>
+              </div>
+            )}
+            <p className="select-cmd">
+              조선 <b>{s.joseon.name}</b> <small>{s.joseon.title}</small> · 일본 <b>{s.japan.name}</b> <small>{s.japan.title}</small>
+            </p>
+            <p>{s.summary}</p>
+            <div className="select-forces">
+              <div className="select-force">
+                <i className={`force-dot force-dot--${ownSide}`} />
+                {FACTION_NAME[ownSide].replace(' 수군', '')} — {forcesOf(id, ownSide)}
+              </div>
+              <div className="select-force">
+                <i className="force-dot force-dot--japan" />
+                일본 — {s.forces.japan}
+              </div>
             </div>
           </div>
+          {more && (
+            <button type="button" className="hs-more" onClick={() => briefRef.current?.scrollBy({ top: 140, behavior: 'smooth' })}>
+              더 보기 <span aria-hidden>⌄</span>
+            </button>
+          )}
         </div>
         <div className="hs-foot">
           <div className="select-foot">

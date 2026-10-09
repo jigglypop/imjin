@@ -314,7 +314,7 @@ export function Hub({ save, onContinue, onNew, onBack }: HubProps) {
   const f = FACTION_INFO[save.faction];
   return (
     <div className="g-hub" style={{ ['--backdrop' as string]: `url(${MAP_IMAGE})` }}>
-      <button type="button" className="g-btn g-btn--ghost g-btn--sm g-hub__back" onClick={onBack}>
+      <button type="button" className="g-back g-hub__back" onClick={onBack}>
         ‹ 메뉴
       </button>
       <section className="g-glass g-hub__card" style={{ ['--tone' as string]: f.color }}>

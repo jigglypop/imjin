@@ -5,9 +5,6 @@ export type Terrain = 'strait' | 'bay' | 'open' | 'island';
 
 export type Lane = { to: RegionId; /** Turns to sail the lane. */ turns: 1 | 2 | 3 };
 
-/** The conquest battle map a region fight is played on until region-specific maps exist. */
-export type BattleMap = 'gyeonnaeryang' | 'hallyeo';
-
 export type RegionDef = {
   id: RegionId;
   name: string;
@@ -20,7 +17,6 @@ export type RegionDef = {
   /** 1 to 3. Sets income, building slots and the weight of the region in a score. */
   value: 1 | 2 | 3;
   terrain: Terrain;
-  battleMap: BattleMap;
   /** On the Korean south coast: the regions Joseon must hold and Japan wants. */
   korea: boolean;
   /** The faction whose seat this region is, if any. Pays a capital bonus while that faction owns it. */
@@ -52,7 +48,6 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     lat: 34.57,
     value: 2,
     terrain: 'strait',
-    battleMap: 'gyeonnaeryang',
     korea: true,
     blurb: '서해로 드는 길목. 울돌목의 거센 물살이 수비하는 쪽을 돕는다.',
   },
@@ -64,7 +59,6 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     lat: 34.74,
     value: 2,
     terrain: 'bay',
-    battleMap: 'hallyeo',
     korea: true,
     capitalOf: 'joseon',
     blurb: '전라좌수영. 조선 수군의 뿌리가 되는 군항.',
@@ -77,7 +71,6 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     lat: 34.94,
     value: 1,
     terrain: 'strait',
-    battleMap: 'gyeonnaeryang',
     korea: true,
     blurb: '남해도와 하동 사이의 좁은 물길. 서쪽에서 동으로 가는 길을 쥔다.',
   },
@@ -89,7 +82,6 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     lat: 34.93,
     value: 1,
     terrain: 'bay',
-    battleMap: 'hallyeo',
     korea: true,
     blurb: '깊숙한 만과 포구. 함대가 모이기 좋다.',
   },
@@ -101,7 +93,6 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     lat: 34.79,
     value: 2,
     terrain: 'island',
-    battleMap: 'hallyeo',
     korea: true,
     blurb: '견내량 너머의 섬. 큰 바다를 등지고 적을 끌어들이기 좋은 곳.',
   },
@@ -113,7 +104,6 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     lat: 34.89,
     value: 2,
     terrain: 'island',
-    battleMap: 'hallyeo',
     korea: true,
     blurb: '남해안 가운데의 큰 섬. 부산으로 가는 앞마당.',
   },
@@ -125,7 +115,6 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     lat: 35.08,
     value: 1,
     terrain: 'bay',
-    battleMap: 'hallyeo',
     korea: true,
     blurb: '부산 서쪽의 만. 왜군이 보급선을 대는 곳.',
   },
@@ -137,7 +126,6 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     lat: 35.1,
     value: 3,
     terrain: 'bay',
-    battleMap: 'hallyeo',
     korea: true,
     blurb: '대마도에서 오는 길이 닿는 곳. 왜군의 본진이 놓인 최대의 포구.',
   },
@@ -149,7 +137,6 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     lat: 34.45,
     value: 1,
     terrain: 'island',
-    battleMap: 'hallyeo',
     korea: false,
     blurb: '왜군이 바다를 건너는 징검다리.',
   },
@@ -162,7 +149,6 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     edge: 'se',
     value: 3,
     terrain: 'bay',
-    battleMap: 'hallyeo',
     korea: false,
     capitalOf: 'japan',
     blurb: '히데요시의 대본영. 병력과 군선이 이곳에서 출발한다.',
@@ -176,7 +162,6 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     edge: 'nw',
     value: 3,
     terrain: 'open',
-    battleMap: 'hallyeo',
     korea: false,
     capitalOf: 'ming',
     blurb: '명의 수군 기지. 곡식과 은이 넉넉하나 조선까지는 멀다.',
@@ -190,7 +175,6 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     edge: 'nw',
     value: 2,
     terrain: 'open',
-    battleMap: 'hallyeo',
     korea: false,
     blurb: '압록강 너머 명의 북쪽 거점.',
   },

@@ -295,6 +295,11 @@ export class Sound {
     if (!this.muted) this.field?.cue(kind, x, y, z, size);
   }
 
+  /** Called when a battle is set up on the running engine. */
+  newBattle() {
+    this.field?.newBattle();
+  }
+
   drums(count = 3) {
     this.field?.drums(count);
   }

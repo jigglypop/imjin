@@ -40,6 +40,7 @@ import {
   texture,
   time,
   uv,
+  varying,
   vec2,
   vec3,
 } from 'three/tsl';
@@ -52,7 +53,8 @@ import { useProcedural } from './build/mode';
 import { loadProcedural } from './build/procedural';
 import { equipment } from '../game/quality';
 import { emberGlow, weather } from './weather';
-import { SOOT_STEP } from './build/bake';
+import { freeAfterDraw } from '../render/dispose';
+import { PHASE_RANGE, SWAY_RANGE, TINT_RANGE } from './build/procedural';
 
 export type ShipModelSpec = {
   kind: ShipKind;
@@ -236,9 +238,11 @@ export async function loadShipAssets(kinds: ShipKind[], options: ShipAssetOption
 
 /** Frees the models no longer in `keep`: their geometry and textures. Call once the batches that drew them are gone. */
 export async function releaseShipAssets(keep: Set<string>) {
-  for (const [key, pending] of [...modelCache]) {
-    if (keep.has(key)) continue;
-    modelCache.delete(key);
+  // Every dropped model leaves the cache at once: one that stayed in it while an earlier one was awaited could be
+  // picked up by the next battle after its buffers were freed.
+  const dropped = [...modelCache].filter(([key]) => !keep.has(key));
+  for (const [key] of dropped) modelCache.delete(key);
+  for (const [, pending] of dropped) {
     const asset = await pending.catch(() => null);
     if (!asset) continue;
     for (const lod of asset.lods) {
@@ -277,11 +281,15 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   let rough: any = src.roughnessMap ? texture(src.roughnessMap, uv()).g : float(0.85);
   let glow: any = vec3(0);
   if (atlas) {
-    // Procedural ships: uv is in tile space (repeats per atlas cell), mat = (cell, surface class). Each cell is a
-    // tile with a wrapped gutter, so the repeat happens here with explicit gradients to keep mip selection seamless.
+    // Procedural ships: uv is in tile space (repeats per atlas cell, wrapped in the shader). The vertex attributes are
+    // packed bytes, see procedural.ts: mat = (cell * 16 + surface class, sway phase high and low byte, soot), color = (tint, sway weight).
+    // Each cell is a tile with a wrapped gutter, so the repeat happens here with explicit gradients to keep mip
+    // selection seamless.
     const U: any = uv();
-    const mat: any = attribute('mat', 'vec2');
-    const cell = mat.x.add(0.5).floor();
+    const mat: any = attribute('mat', 'vec4');
+    const packedColor: any = attribute('color', 'vec4');
+    const cellSurf = mat.x.mul(255).add(0.5).floor();
+    const cell = cellSurf.div(16).floor();
     const origin = vec2(cell.mod(atlas.grid), cell.div(atlas.grid).floor());
     const usable = (atlas.cell - atlas.pad * 2) / atlas.cell;
     const local = vec2(fract(U.x), float(1).sub(fract(U.y))).mul(usable).add(atlas.pad / atlas.cell);
@@ -290,19 +298,19 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
     const gx = dFdx(U).mul(k);
     const gy = dFdy(U).mul(k);
     const sample = (t: Texture) => texture(t, auv).grad(gx, gy);
-    const tint: any = attribute('color', 'vec3');
-    const surf = mat.y.add(0.5).floor();
-    const soot = mat.y.sub(surf).div(SOOT_STEP);
+    // The tint is sqrt-coded: it is decoded per vertex, so the interpolation across a triangle stays linear.
+    const tint: any = varying(packedColor.xyz.mul(packedColor.xyz).mul(TINT_RANGE));
+    const surf = cellSurf.sub(cell.mul(16));
+    const soot: any = mat.w;
     const isCloth = surf.equal(1).or(surf.equal(4));
     const isMetal = surf.equal(2);
     rough = select(isCloth, float(0.95), sample(src.roughnessMap!).g);
     m.metalnessNode = select(isMetal, float(0.55), float(0));
     m.normalNode = normalMap(sample(src.normalMap!).rgb, vec2(1, 1));
     // Flags and sails flutter along their own normal; hull vertices have weight 0.
-    const sway: any = attribute('sway', 'vec2');
-    const phase = sway.y.add(positionGeometry.x.mul(0.9));
+    const phase = mat.y.mul(255 * 256).add(mat.z.mul(255)).div(65535).sub(0.5).mul(PHASE_RANGE).add(positionGeometry.x.mul(0.9));
     const wave = sin(time.mul(3.1).add(phase)).add(sin(time.mul(5.3).add(phase.mul(1.7))).mul(0.4));
-    m.positionNode = positionLocal.add(normalLocal.mul(wave.mul(sway.x).mul(0.2)));
+    m.positionNode = positionLocal.add(normalLocal.mul(wave.mul(packedColor.w.mul(SWAY_RANGE)).mul(0.2)));
     const worn = weather({ color: sample(map!).rgb.mul(tint), surf, soot, shipY, rough, detail: equipment.tier !== 'low' });
     baseColor = worn.color;
     rough = worn.rough;
@@ -389,6 +397,7 @@ export class ShipRenderer {
           mesh.instanceMatrix.setUsage(DynamicDrawUsage);
           mesh.count = 0;
           mesh.frustumCulled = false;
+          freeAfterDraw(mesh);
           // Shadows and shading from the two nearest of the three levels, counted as if the full set were there.
           const nominal = level + LOD_COUNT - asset.lods.length;
           mesh.castShadow = nominal < 2;
@@ -431,6 +440,7 @@ export class ShipRenderer {
     mesh.frustumCulled = false;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    freeAfterDraw(mesh);
     this.group.add(mesh);
     batch = { mesh, a, b, c, count: 0 };
     this.cuts.set(key, batch);

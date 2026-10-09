@@ -272,6 +272,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
 
       {preview && !previewHidden && !lastBattle && (
         <BattlePreview
+          key={pending?.id}
           battle={{ ...preview, notes: [...(preview.notes ?? []), ...(g.pending.length > 1 ? [`이 달에 치를 전투가 ${g.pending.length}건 있습니다`] : [])] }}
           cancelLabel="나중에"
           onCancel={() => setPreviewHidden(true)}

@@ -31,7 +31,7 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
         <div className="g-pick__inner">
           <header className="g-pick__head">
             {onBack && (
-              <button type="button" className="g-btn g-btn--ghost g-btn--sm" onClick={onBack}>
+              <button type="button" className="g-back" onClick={onBack}>
                 ‹ 뒤로
               </button>
             )}
@@ -90,21 +90,21 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
               );
             })}
           </div>
+          <footer className="g-pick__foot">
+            <div className="g-level" role="radiogroup" aria-label="난이도">
+              {LEVELS.map((l) => (
+                <button key={l.id} type="button" role="radio" aria-checked={level === l.id} className={`g-level__opt${level === l.id ? ' g-level__opt--on' : ''}`} onClick={() => setLevel(l.id)}>
+                  {l.name}
+                </button>
+              ))}
+              <span className="g-level__hint">{LEVELS.find((l) => l.id === level)?.hint}</span>
+            </div>
+            <button type="button" className="g-btn g-btn--primary g-btn--lg" onClick={() => onPick(sel, level)}>
+              {chosen ? `${josa(chosen.name, '으로/로')} 전역 시작` : '전역 시작'}
+            </button>
+          </footer>
         </div>
       </div>
-      <footer className="g-pick__foot">
-        <div className="g-level" role="radiogroup" aria-label="난이도">
-          {LEVELS.map((l) => (
-            <button key={l.id} type="button" role="radio" aria-checked={level === l.id} className={`g-level__opt${level === l.id ? ' g-level__opt--on' : ''}`} onClick={() => setLevel(l.id)}>
-              {l.name}
-            </button>
-          ))}
-          <span className="g-level__hint">{LEVELS.find((l) => l.id === level)?.hint}</span>
-        </div>
-        <button type="button" className="g-btn g-btn--primary g-btn--lg" onClick={() => onPick(sel, level)}>
-          {chosen ? `${josa(chosen.name, '으로/로')} 전역 시작` : '전역 시작'}
-        </button>
-      </footer>
     </div>
   );
 }

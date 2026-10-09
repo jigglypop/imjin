@@ -620,9 +620,12 @@
   box-shadow: 0 0 0 1px rgba(20, 40, 70, 0.14), 0 2px 8px rgba(20, 40, 70, 0.25);
 }
 
-.marker:hover span {
-  background: #fff;
-  box-shadow: 0 0 0 1.5px var(--accent-2), 0 3px 10px rgba(20, 40, 70, 0.3);
+/* Touch screens keep :hover after a tap, which would paint the chosen marker's white label on white. */
+@media (hover: hover) {
+  .marker:not(.marker--on):hover span {
+    background: #fff;
+    box-shadow: 0 0 0 1.5px var(--accent-2), 0 3px 10px rgba(20, 40, 70, 0.3);
+  }
 }
 
 .marker:focus-visible span {
@@ -700,6 +703,18 @@
   top: calc(var(--mv) * 100%);
 }
 
+/* Neighbouring pins (당포 beside 한산도) put their label on opposite sides. */
+.smap .marker--left span {
+  position: absolute;
+  right: 16px;
+  top: 0;
+  margin: 0;
+}
+
+.smap .marker--left.marker--on span {
+  right: 24px;
+}
+
 .hs-brief {
   position: absolute;
   z-index: 5;
@@ -723,6 +738,41 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
+}
+
+/* While more of the brief waits below the fold its last lines fade out, with a pill that scrolls on. */
+.hs-brief-scroll[data-more='true'] {
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 44px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 44px), transparent);
+}
+
+.hs-brief-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hs-more {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  z-index: 2;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink-2);
+  font-size: var(--fs-12);
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(30, 50, 75, 0.16);
 }
 
 .hs-brief h2 {

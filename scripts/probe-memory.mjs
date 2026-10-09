@@ -1,6 +1,8 @@
 // Memory of a battle load on the WebKit iPhone path (iOS Safari engine, WebGL2): process RSS while loading, GPU memory
 // from renderer.info.memory once ready, and the same again after each further battle started in the same page (a second
-// battle must not grow memory). Prints PASS/FAIL for the phone budget and exits 1 when one fails.
+// battle must not grow memory). Prints PASS/FAIL for the phone budget and exits 1 when one fails. `footprint` is the
+// WebContent process's dirty memory from macOS's footprint tool: what iOS counts against the tab, unlike RSS, which also
+// holds freed pages the allocator has not returned yet.
 //   node scripts/probe-memory.mjs [url] [--then=myeongnyang,hansan] [--budget=false]
 import { webkit, devices } from 'playwright-core';
 import { execSync } from 'node:child_process';
@@ -18,8 +20,15 @@ const sample = (label) => {
   const rows = execSync("ps -axo pid=,rss=,comm=").toString().trim().split('\n').map((l) => l.trim().split(/\s+/));
   const mine = rows.filter(([pid, , comm]) => !before.has(pid) && /WebKit/.test(comm ?? ''));
   const total = mine.reduce((s, r) => s + Number(r[1]), 0);
+  const web = mine.find((r) => /WebContent/.test(r.slice(2).join(' ')));
+  let footprint = '';
+  try {
+    footprint = web ? ` footprint=${/Footprint: (\d+) MB/.exec(execSync(`footprint ${web[0]} 2>&1`).toString())?.[1] ?? '?'}MB` : '';
+  } catch {
+    // footprint needs macOS
+  }
   const top = mine.sort((a, b) => Number(b[1]) - Number(a[1])).slice(0, 3).map((r) => `${r.slice(2).join(' ').split('/').pop().replace('com.apple.WebKit.', '').replace('.Development', '')}:${Math.round(Number(r[1]) / 1024)}MB`);
-  console.log(label, `t=${((Date.now() - t0) / 1000).toFixed(1)}s webkit=${Math.round(total / 1024)}MB`, top.join(' '));
+  console.log(label, `t=${((Date.now() - t0) / 1000).toFixed(1)}s webkit=${Math.round(total / 1024)}MB${footprint}`, top.join(' '));
   return Math.round(total / 1024);
 };
 const gpuStats = () => page.evaluate(() => {
@@ -64,7 +73,7 @@ if (flags.budget !== 'false' && first && typeof first === 'object') {
   check('textures < 300 MB', first.textureMB < 300, `${first.textureMB} MB`);
   check('gpu memory < 400 MB', first.totalMB < 400, `${first.totalMB} MB`);
   check('ready < 10 s', ready && readyMs < 10000, `${(readyMs / 1000).toFixed(1)} s`);
-  check('programs < 130', first.programs < 130, `${first.programs}`);
+  check('programs < 110', first.programs < 110, `${first.programs}`);
   for (const [i, s] of later.entries()) if (typeof s === 'object' && s) check(`battle ${i + 2} textures within 20% of battle 1 + 60 MB`, s.textureMB < first.textureMB * 1.2 + 60, `${s.textureMB} MB`);
 }
 void rss;

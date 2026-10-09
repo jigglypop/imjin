@@ -1,0 +1,77 @@
+{
+  "myeongnyang": [
+    {"role":"attacker","x":320,"z":-200,"r":260,"value":2,"site":{"x":500,"z":-380}},
+    {"role":"defender","x":-930,"z":180,"r":260,"value":2,"site":{"x":-1100,"z":350}},
+    {"role":"centre","x":-305,"z":-10,"r":340,"value":2,"site":{"x":-300,"z":300}},
+    {"role":"flank","x":-433,"z":-431,"r":220,"value":1,"site":{"x":-430,"z":-610}}
+  ],
+  "yeosu": [
+    {"role":"attacker","x":-1360,"z":-1030,"r":260,"value":2,"site":{"x":-1620,"z":-1140}},
+    {"role":"defender","x":-1590,"z":-2340,"r":260,"value":2,"site":{"x":-1790,"z":-2540}},
+    {"role":"centre","x":-1317,"z":-1713,"r":340,"value":2,"site":{"x":-1770,"z":-1420}},
+    {"role":"flank","x":-864,"z":-1792,"r":220,"value":1,"site":{"x":-340,"z":-1790}}
+  ],
+  "noryang": [
+    {"role":"attacker","x":-540,"z":150,"r":260,"value":2,"site":{"x":-280,"z":410}},
+    {"role":"defender","x":760,"z":150,"r":260,"value":2,"site":{"x":660,"z":390}},
+    {"role":"centre","x":110,"z":150,"r":340,"value":2,"site":{"x":370,"z":410}},
+    {"role":"flank","x":110,"z":-410,"r":220,"value":1,"site":{"x":190,"z":-950}}
+  ],
+  "sacheon": [
+    {"role":"attacker","x":700,"z":-1920,"r":260,"value":2,"site":{"x":1010,"z":-2200}},
+    {"role":"defender","x":230,"z":-2970,"r":260,"value":2,"site":{"x":490,"z":-3080}},
+    {"role":"centre","x":465,"z":-2445,"r":340,"value":2,"site":{"x":710,"z":-2690}},
+    {"role":"flank","x":-46,"z":-2216,"r":220,"value":1}
+  ],
+  "hansan": [
+    {"role":"attacker","x":-1630,"z":1580,"r":260,"value":2,"site":{"x":-2080,"z":2460}},
+    {"role":"defender","x":-1570,"z":2660,"r":260,"value":2,"site":{"x":-1740,"z":2830}},
+    {"role":"centre","x":-1600,"z":2120,"r":340,"value":2,"site":{"x":-2050,"z":2480}},
+    {"role":"flank","x":-1041,"z":2089,"r":220,"value":1},
+    {"role":"flank","x":-2159,"z":2151,"r":220,"value":1,"site":{"x":-2160,"z":2390}}
+  ],
+  "geoje": [
+    {"role":"attacker","x":-640,"z":-340,"r":260,"value":2,"site":{"x":-780,"z":-680}},
+    {"role":"defender","x":-1770,"z":40,"r":260,"value":2,"site":{"x":-1950,"z":-140}},
+    {"role":"centre","x":-1205,"z":-150,"r":340,"value":2,"site":{"x":-1540,"z":-430}},
+    {"role":"flank","x":-1027,"z":381,"r":220,"value":1}
+  ],
+  "angolpo": [
+    {"role":"attacker","x":-870,"z":-710,"r":260,"value":2,"site":{"x":-1260,"z":-710}},
+    {"role":"defender","x":-470,"z":-1960,"r":260,"value":2,"site":{"x":-700,"z":-1960}},
+    {"role":"centre","x":-670,"z":-1335,"r":340,"value":2,"site":{"x":-1100,"z":-1770}},
+    {"role":"flank","x":-137,"z":-1164,"r":220,"value":1}
+  ],
+  "busan": [
+    {"role":"attacker","x":970,"z":620,"r":260,"value":2,"site":{"x":1050,"z":810}},
+    {"role":"defender","x":1460,"z":-470,"r":260,"value":2,"site":{"x":1390,"z":-640}},
+    {"role":"centre","x":1215,"z":75,"r":340,"value":2,"site":{"x":1620,"z":620}},
+    {"role":"flank","x":650,"z":-179,"r":220,"value":1,"site":{"x":560,"z":-400}},
+    {"role":"flank","x":1780,"z":329,"r":220,"value":1,"site":{"x":1940,"z":480}}
+  ],
+  "tsushima": [
+    {"role":"attacker","x":230,"z":-530,"r":260,"value":2,"site":{"x":-50,"z":-810}},
+    {"role":"defender","x":-310,"z":530,"r":260,"value":2,"site":{"x":-540,"z":530}},
+    {"role":"centre","x":-40,"z":0,"r":340,"value":2,"site":{"x":-390,"z":140}},
+    {"role":"flank","x":459,"z":254,"r":220,"value":1,"site":{"x":-350,"z":180}}
+  ],
+  "nagoya": [
+    {"role":"attacker","x":-5860,"z":-2850,"r":260,"value":2,"site":{"x":-5640,"z":-3070}},
+    {"role":"defender","x":-4700,"z":-2700,"r":260,"value":2,"site":{"x":-4620,"z":-2510}},
+    {"role":"centre","x":-5280,"z":-2775,"r":340,"value":2,"site":{"x":-5000,"z":-2890}},
+    {"role":"flank","x":-5352,"z":-2220,"r":220,"value":1,"site":{"x":-5070,"z":-1940}}
+  ],
+  "shandong": [
+    {"role":"attacker","x":-1650,"z":-1190,"r":260,"value":2,"site":{"x":-1910,"z":-1300}},
+    {"role":"defender","x":-900,"z":-1920,"r":260,"value":2,"site":{"x":-900,"z":-2180}},
+    {"role":"centre","x":-1275,"z":-1555,"r":340,"value":2,"site":{"x":-1920,"z":-1550}},
+    {"role":"flank","x":-1707,"z":-1999,"r":220,"value":1,"site":{"x":-1950,"z":-2000}},
+    {"role":"flank","x":-884,"z":-1154,"r":220,"value":1}
+  ],
+  "liaodong": [
+    {"role":"attacker","x":-2490,"z":800,"r":260,"value":2,"site":{"x":-2630,"z":1140}},
+    {"role":"defender","x":-1560,"z":1580,"r":260,"value":2,"site":{"x":-1800,"z":1680}},
+    {"role":"centre","x":-2025,"z":1190,"r":340,"value":2,"site":{"x":-2020,"z":1430}},
+    {"role":"flank","x":-1665,"z":761,"r":220,"value":1,"site":{"x":-2000,"z":1450}}
+  ]
+}

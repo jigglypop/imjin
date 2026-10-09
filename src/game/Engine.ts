@@ -54,8 +54,7 @@ import { applyBalance, FACTION_NAME } from '../sim/balance';
 import { applyOutcome } from '../campaign/campaign';
 import { finishGrandBattle } from '../campaign/grand';
 import { outcomeOfBattle, type RegionBattle } from '../sim/grand/bridge';
-import { dateLabel } from '../sim/grand/economy';
-import { buildGrandConquest, shipOutcomes, worksAfter } from '../sim/grand/spawn';
+import { buildGrandConquest, grandAxis, grandInfo, shipOutcomes, worksAfter } from '../sim/grand/spawn';
 import { SHIP_SPECS } from '../sim/catalog';
 import { CurrentField } from '../sim/current';
 import { OWNER_OF, otherTeam, teamOf, type BattleEvent, type Faction, type Ship, type ShipKind, type Team } from '../sim/types';
@@ -78,6 +77,7 @@ import { Terrain } from '../terrain/Terrain';
 import { Vegetation } from '../terrain/Vegetation';
 import { preloadStructures, Structures } from '../terrain/Structures';
 import { disposeTree } from '../render/dispose';
+import { tuneWebGLBackend } from '../render/webglBackend';
 
 import { Minimap } from '../ui/Minimap';
 
@@ -102,15 +102,13 @@ export type EngineOptions = {
   remote?: NetBattle;
 };
 
-/** What the HUD calls a conquest battle: a campaign meeting is named for its region and month instead of the map. */
+/** What the HUD calls a conquest battle: a campaign meeting is named for its region and month and fought on the region's own coast. */
 function conquestInfoOf(setup: ConquestSetup): BattleInfo {
-  const info = conquestInfo(setup.map);
-  const rb = setup.grand;
-  return rb ? { ...info, title: `${rb.regionName} 해전`, place: rb.regionName, date: dateLabel(rb.turn), season: dateLabel(rb.turn) } : info;
+  return setup.grand ? grandInfo(setup.grand) : conquestInfo(setup.map);
 }
 
-/** A conquest battle: the map, every seat, and which seat is the player's. `grand` is a faction campaign meeting played on it, with the campaign's own ships. */
-export type ConquestSetup = { map: ConquestMapId; seats: Seat[]; you: number; seed: number; grand?: RegionBattle };
+/** A conquest battle: the map, every seat, and which seat is the player's. `grand` is a faction campaign meeting played on its region's coast instead of a conquest map, with the campaign's own ships. */
+export type ConquestSetup = { seats: Seat[]; you: number; seed: number } & ({ map: ConquestMapId; grand?: undefined } | { grand: RegionBattle; map?: undefined });
 
 /** Sends commands somewhere other than the local battle: a multiplayer server. */
 export interface CommandSink {
@@ -244,6 +242,7 @@ export class Engine {
     this.dprOverride = dprParam ? Number(dprParam) : null;
     this.takePixelRatio();
     this.watchDevice();
+    tuneWebGLBackend(renderer);
   }
 
   /** The pixel ratio the current level allows. */
@@ -318,7 +317,7 @@ export class Engine {
     this.camera.updateProjectionMatrix();
     waveField.setState(SEA_STATES[this.seaName]);
     const info = this.battleInfo;
-    setLoading('바다와 하늘을 그리는 중', 0.03, info.mode === 'scenario' ? this.scenarioId : undefined);
+    setLoading('바다와 하늘을 그리는 중', 0.03, info.art);
     // The files download while the cloud and wake shaders build, so neither waits for the other.
     const loading = this.loadAssets(0.03);
     await this.warmShared();
@@ -584,7 +583,7 @@ export class Engine {
     if (setup) {
       // Turned so the sun falls across the line between the home ports, from the side for both fleets. A multiplayer
       // client keeps the map unturned so its coordinates match the server's.
-      this.phi = this.sink ? 0 : sunAz - Math.PI / 2 - homeAxis(setup.map);
+      this.phi = this.sink ? 0 : sunAz - Math.PI / 2 - (setup.grand ? grandAxis(setup.grand) : homeAxis(setup.map));
       this.terrain.setRotation(this.phi);
       const land = (x: number, z: number) => this.terrain.heightAt(x, z);
       const built = setup.grand ? buildGrandConquest(setup.grand, land, this.phi) : buildConquest(setup.map, setup.seats, land, setup.seed, {}, this.phi);
@@ -677,9 +676,16 @@ export class Engine {
   private defaultPose(): CameraPose {
     const info = this.battleInfo;
     if (this.conquest) {
-      // Behind the player's fleet, looking past it toward the middle of the map.
+      // Three quarters on to the player's fleet with its home port in the same frame, so the opening shows both
+      // the ships and the port they sail from. Without a home port: behind the fleet, looking toward the middle.
       const own = this.centroid((s) => s.owner === this.owner);
       const back = Math.atan2(own.z, own.x);
+      const home = this.conquest.homeOf(this.owner);
+      if (home) {
+        const gap = Math.hypot(home.x - own.x, home.z - own.z);
+        const toHome = Math.atan2(home.z - own.z, home.x - own.x);
+        return { tx: own.x + Math.cos(toHome) * gap * 0.4, tz: own.z + Math.sin(toHome) * gap * 0.4, yaw: toHome + Math.PI / 2 + 0.55, pitch: 0.5, distance: Math.min(2200, Math.max(720, gap * 0.8 + 380)) };
+      }
       return { tx: own.x - Math.cos(back) * 260, tz: own.z - Math.sin(back) * 260, yaw: back + 0.15, pitch: 0.34, distance: 720 };
     }
     if (this.faction === 'joseon' && info.mode === 'scenario') {
@@ -827,7 +833,7 @@ export class Engine {
   private async stage(info: BattleInfo) {
     this.ready = false;
     this.battleInfo = info;
-    setLoading(`${info.title} 준비 중`, 0.04, info.mode === 'scenario' ? (info.id as ScenarioId) : undefined);
+    setLoading(`${info.title} 준비 중`, 0.04, info.art);
     this.skyName = info.sky;
     this.seaName = info.sea;
     waveField.setState(SEA_STATES[this.seaName]);
@@ -853,6 +859,8 @@ export class Engine {
     this.crew = new Crew(this.views);
     this.scene.add(this.crew.group);
     this.banners?.clear();
+    this.sound.newBattle();
+    this.fx.newBattle();
     this.rts.setPose(this.defaultPose());
     this.paused = false;
     this.resetApproach();
@@ -875,7 +883,7 @@ export class Engine {
     this.current?.texture.dispose();
     this.conquestView?.dispose();
     this.conquestView = null;
-    this.crew?.group.removeFromParent();
+    this.crew?.dispose();
   }
 
   /** Ships can be launched in a conquest battle, so its renderer reserves room for each kind the seats can build. */

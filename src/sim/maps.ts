@@ -160,7 +160,7 @@ export function autoFleet(faction: Faction, budget = MUSTER_BUDGET): ShipKind[] 
 const MUSTER_RADIUS = 700;
 
 /** The nearest open water to a point, clear of ships already placed. */
-function wetSpot(land: LandSampler, x: number, z: number, placed: { x: number; z: number }[]) {
+export function wetSpot(land: LandSampler, x: number, z: number, placed: { x: number; z: number }[]) {
   const free = (px: number, pz: number) => land(px, pz) < -6 && placed.every((o) => (o.x - px) ** 2 + (o.z - pz) ** 2 > 40 * 40);
   if (free(x, z)) return { x, z };
   for (let ring = 1; ring <= 40; ring += 1) {
@@ -204,7 +204,13 @@ export const defaultTeam = (f: Faction) => teamOf(f);
  * agree on positions without knowing each other's lighting.
  */
 export function buildConquest(id: ConquestMapId, seats: Seat[], land: LandSampler, seed = 1592, options: Partial<ConquestOptions> = {}, axis = 0) {
-  const map = CONQUEST_MAPS[id];
+  return buildConquestOn(CONQUEST_MAPS[id], seats, land, seed, options, axis);
+}
+
+/** The part of a map a battle is built from: the capture points and whether it is fought at night. A campaign region's coast is one too. */
+export type MapLayout = { points: MapPoint[]; night: boolean };
+
+export function buildConquestOn<M extends MapLayout>(map: M, seats: Seat[], land: LandSampler, seed = 1592, options: Partial<ConquestOptions> = {}, axis = 0) {
   const b = new Battle(seed);
   const players = seats.map((s, slot) => ({ slot, name: s.name, faction: s.faction, team: s.team, human: s.human }));
   const leftovers = seats.map((s) => Math.max(0, MUSTER_BUDGET - fleetCost(s.fleet)));

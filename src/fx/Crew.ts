@@ -5,6 +5,7 @@ import type { ShipViews } from '../ships/ShipViews';
 import { DECKS, mainDeck, type DeckPlan } from '../ships/decks';
 import { equipment } from '../game/quality';
 import { beginCrew, crewTime, endCrew, loadCrew, pushCrew, type Clip, type ClipName, type CrewAsset, type CrewKey } from './crewModels';
+import { disposeTree } from '../render/dispose';
 import { Boarding, ST_DUEL, placement } from './Boarding';
 import { ARMS, CAST, GUN, HAND_ARMS, MELEE, NO_WEAPON, OAR, OFFICER, SHOT, frac, lerpAngle, rnd, seeded, smooth, yawTo, type Deck, type Member, type Roster, type Station } from './crewTypes';
 
@@ -105,6 +106,13 @@ export class Crew {
       this.assets = assets;
       for (const a of assets.values()) for (const l of a.lods) this.group.add(l.mesh);
     });
+  }
+
+  /** Frees the boarding props and sprites. The skinned crew meshes are cached for the next battle and only leave this group. */
+  dispose() {
+    disposeTree(this.boarding.group);
+    this.group.removeFromParent();
+    this.group.clear();
   }
 
   private deckY(r: Roster, deck: Deck) {

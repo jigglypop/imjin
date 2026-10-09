@@ -107,7 +107,7 @@ const QUEUE_MAX = 5;
 const dist2 = (ax: number, az: number, bx: number, bz: number) => (ax - bx) ** 2 + (az - bz) ** 2;
 
 /** A shore spot near a capture circle where buildings can stand: dry, low and not too steep. */
-function findSite(land: LandSampler, x: number, z: number, r: number) {
+export function findSite(land: LandSampler, x: number, z: number, r: number) {
   for (const steep of [0.32, 0.55, 0.9]) {
     const site = searchSite(land, x, z, r, steep);
     if (site) return site;
@@ -136,7 +136,7 @@ function searchSite(land: LandSampler, x: number, z: number, r: number, steep: n
   return best;
 }
 
-function placeSlots(land: LandSampler, sx: number, sz: number, face: number, count: number): Spot[] {
+export function placeSlots(land: LandSampler, sx: number, sz: number, face: number, count: number): Spot[] {
   const out: Spot[] = [];
   const fx = Math.cos(face);
   const fz = Math.sin(face);
@@ -165,7 +165,7 @@ function placeSlots(land: LandSampler, sx: number, sz: number, face: number, cou
 }
 
 /** Where new ships are launched: out from the slipways toward the capture circle, inside its edge if the water allows. */
-function findSpawn(land: LandSampler, sx: number, sz: number, cx: number, cz: number, r: number) {
+export function findSpawn(land: LandSampler, sx: number, sz: number, cx: number, cz: number, r: number) {
   const a = Math.atan2(cz - sz, cx - sx);
   let d = 10;
   while (d < 1200 && land(sx + Math.cos(a) * d, sz + Math.sin(a) * d) > -7) d += 10;

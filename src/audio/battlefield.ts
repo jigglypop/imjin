@@ -91,6 +91,19 @@ export class Battlefield {
     this.ducks = [...ducks, { node: this.musketBus, depth: 0.55 }];
   }
 
+  /** A new battle starts: forget the old one's ships (ids restart from 1, so stale state would silence new ships) and volleys. */
+  newBattle() {
+    this.volleys.clear();
+    this.ships.clear();
+    this.musketLast.clear();
+    this.musketEnds = [];
+    this.farCount = 0;
+    this.nextFlush = 0;
+    this.nextBarrage = 0;
+    this.recent = 0;
+    this.intensity = 0;
+  }
+
   load(base: string) {
     return this.samples.load(base, isPhone);
   }

@@ -5,12 +5,14 @@ import {
   ConeGeometry,
   CylinderGeometry,
   DynamicDrawUsage,
+  Frustum,
   Group,
   InstancedMesh,
   Matrix4,
   MeshStandardNodeMaterial,
   PointLight,
   Quaternion,
+  Sphere,
   SphereGeometry,
   Vector3,
   type Camera,
@@ -77,6 +79,11 @@ export class Effects {
   /** Turtle ships: how hard the dragon's mouth is smoking (1 right after the bow gun fired) and its emission carry-over. */
   private readonly dragon = new Map<number, { blast: number; acc: number }>();
   private strokes = new Map<number, number>();
+  /** The camera of the last frame, the frustum and the scratch sphere the oar splashes are culled with. */
+  private rowCam: Camera | null = null;
+  private readonly rowFrustum = new Frustum();
+  private readonly rowClip = new Matrix4();
+  private readonly rowBall = new Sphere();
   private readonly trails = new Map<number, Trail>();
   private readonly trailPool: Trail[] = [];
   private readonly sinks = new Map<number, SinkState>();
@@ -154,6 +161,16 @@ export class Effects {
 
   private light(x: number, y: number, z: number, intensity: number, life: number, r = 1, g = 0.62, b = 0.3, dist = 140) {
     this.sources.push({ x, y, z, intensity, decay: 1, r, g, b, age: 0, life, dist });
+  }
+
+  /** A new battle starts on this engine: ship and shell ids restart, so the old battle's per-id state must not carry over. */
+  newBattle() {
+    this.emitAccum.clear();
+    this.dragon.clear();
+    this.strokes.clear();
+    this.sinks.clear();
+    for (const t of this.trails.values()) this.trailPool.push(t);
+    this.trails.clear();
   }
 
   handle(events: BattleEvent[], battle: Battle) {
@@ -653,41 +670,63 @@ export class Effects {
     this.cue('gone', ship.x, 0, ship.z, size);
   }
 
+  /**
+   * Oar strokes and the bow wave. Only ships the camera can see are worked on, near ones in full and far ones sparsely,
+   * and each stroke samples the sea once for the whole ship instead of once per oar. At high speeds a frame spans
+   * seconds of battle, so the splashes (a second long) would be gone before they were drawn: those frames keep the
+   * stroke clock running and skip the spray.
+   */
   private rowing(battle: Battle, dt: number) {
+    const camera = this.rowCam;
+    if (camera) {
+      this.rowClip.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+      this.rowFrustum.setFromProjectionMatrix(this.rowClip);
+    }
+    const detail = dt < 0.25;
     for (const ship of battle.ships) {
       if (!ship.alive || ship.sinking > 0 || ship.struck) continue;
       const speed = Math.abs(ship.speed);
       const L = ship.spec.length;
-      const B = ship.spec.beam;
+      let phase = this.strokes.get(ship.id) ?? Math.random();
+      const rowers = speed >= 0.6 && ship.crew >= ship.spec.crew * 0.2;
+      if (rowers) phase += dt / (L > 30 ? 2.8 : 2.2);
+      const f = speed / ship.spec.maxSpeed;
+      const stroke = rowers && phase >= 1;
+      if (stroke) phase -= 1;
+      if (rowers) this.strokes.set(ship.id, phase % 1);
+      if (!detail || (!stroke && f <= 0.55)) continue;
+      // Spray reaches a few metres past the hull; beyond 700 m a splash is under a pixel.
+      const dist = this.camPos.distanceTo(this.v.set(ship.x, 0, ship.z));
+      if (dist > 700) continue;
+      if (camera) {
+        this.rowBall.set(this.v, L * 0.6 + 12);
+        if (!this.rowFrustum.intersectsSphere(this.rowBall)) continue;
+      }
       const c = Math.cos(ship.heading);
       const n = Math.sin(ship.heading);
-      const f = speed / ship.spec.maxSpeed;
+      const B = ship.spec.beam;
+      const h = waveField.heightAt(ship.x, ship.z, waveField.time, 6);
       if (f > 0.55 && Math.random() < dt * 5 * f) {
         const side = Math.random() < 0.5 ? 1 : -1;
         const bx = ship.x + c * L * 0.47 + n * B * 0.3 * side;
         const bz = ship.z + n * L * 0.47 - c * B * 0.3 * side;
-        const h = waveField.heightAt(bx, bz);
         for (let i = 0; i < 5; i += 1) this.spray.emit({ x: bx, y: h + 0.3, z: bz, vx: c * speed * 0.6 + n * side * rnd(1.5, 4), vy: rnd(1.5, 4.5) * f, vz: n * speed * 0.6 - c * side * rnd(1.5, 4), life: rnd(0.6, 1.2), size0: 0.6, size1: rnd(1.6, 2.6), alpha: 0.6, r: 0.95, g: 0.97, b: 1, drag: 0.6, lift: -9.8, wind: 0.2 });
       }
-      if (speed < 0.6 || ship.crew < ship.spec.crew * 0.2) continue;
-      const period = L > 30 ? 2.8 : 2.2;
-      let phase = (this.strokes.get(ship.id) ?? Math.random()) + dt / period;
-      if (phase >= 1) {
-        phase -= 1;
-        const oars = OARS[ship.spec.kind] ?? 8;
-        for (let i = 0; i < oars; i += 1) {
-          const along = (-0.36 + (0.58 * i) / Math.max(1, oars - 1)) * L;
-          for (const side of [1, -1]) {
-            const out = B * 0.5 + 3.2;
-            const ox = ship.x + c * along + n * out * side;
-            const oz = ship.z + n * along - c * out * side;
-            const h = waveField.heightAt(ox, oz, waveField.time, 6);
-            this.spray.emit({ x: ox, y: h + 0.15, z: oz, vx: -c * rnd(0.5, 1.5), vy: rnd(1, 2.6), vz: -n * rnd(0.5, 1.5), life: rnd(0.45, 0.8), size0: 0.35, size1: rnd(0.9, 1.4), alpha: 0.55, r: 0.95, g: 0.97, b: 1, drag: 1, lift: -9.8, wind: 0.1 });
-            this.wake?.stamp(ox, oz, ship.heading, 2.2, 0.35, 1.4, 0.4);
-          }
+      if (!stroke) continue;
+      const oars = OARS[ship.spec.kind] ?? 8;
+      // Past 250 m the oars read as one blur: every other one is enough, and no wake is stamped for them.
+      const near = dist < 250;
+      const skip = near ? 1 : 2;
+      for (let i = 0; i < oars; i += skip) {
+        const along = (-0.36 + (0.58 * i) / Math.max(1, oars - 1)) * L;
+        for (const side of [1, -1]) {
+          const out = B * 0.5 + 3.2;
+          const ox = ship.x + c * along + n * out * side;
+          const oz = ship.z + n * along - c * out * side;
+          this.spray.emit({ x: ox, y: h + 0.15, z: oz, vx: -c * rnd(0.5, 1.5), vy: rnd(1, 2.6), vz: -n * rnd(0.5, 1.5), life: rnd(0.45, 0.8), size0: 0.35, size1: rnd(0.9, 1.4), alpha: 0.55, r: 0.95, g: 0.97, b: 1, drag: 1, lift: -9.8, wind: 0.1 });
+          if (near) this.wake?.stamp(ox, oz, ship.heading, 2.2, 0.35, 1.4, 0.4);
         }
       }
-      this.strokes.set(ship.id, phase);
     }
   }
 
@@ -774,6 +813,7 @@ export class Effects {
   }
 
   update(battle: Battle, dt: number, camera: Camera) {
+    this.rowCam = camera;
     this.continuous(battle, dt);
     this.camPos.copy(camera.position);
     this.frame += 1;

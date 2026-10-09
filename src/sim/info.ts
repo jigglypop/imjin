@@ -22,13 +22,15 @@ export type BattleInfo = {
   view: { tx: number; tz: number; dir: number; dist: number; pitch: number };
   /** 0 summer green to 1 winter, for the forests. */
   foliage: number;
+  /** The historical battle whose picture the loading screen shows. A campaign region's battle borrows the picture of the coast it is fought on. */
+  art?: ScenarioId;
 };
 
 const FOLIAGE: Record<ScenarioId, number> = { okpo: 0.1, sacheon: 0.05, dangpo: 0, hansan: 0, angolpo: 0, busan: 0.6, chilcheon: 0, myeongnyang: 0.72, noryang: 1 };
 
 export function scenarioInfo(id: ScenarioId): BattleInfo {
   const s = SCENARIOS[id];
-  return { mode: 'scenario', id, title: s.title, hanja: s.hanja, date: s.date, place: s.place, season: s.season, sky: s.sky, sea: s.sea, night: s.night, terrain: s.terrain, current: s.current, view: s.view, foliage: FOLIAGE[id] ?? 0 };
+  return { mode: 'scenario', id, art: id, title: s.title, hanja: s.hanja, date: s.date, place: s.place, season: s.season, sky: s.sky, sea: s.sea, night: s.night, terrain: s.terrain, current: s.current, view: s.view, foliage: FOLIAGE[id] ?? 0 };
 }
 
 export function conquestInfo(id: ConquestMapId): BattleInfo {

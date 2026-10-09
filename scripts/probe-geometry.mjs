@@ -22,14 +22,18 @@ const out = await page.evaluate(() => {
     const g = o.geometry;
     if (!g || seen.has(g)) return;
     seen.add(g);
-    const attrs = new Set(Object.values(g.attributes));
-    if (g.index) attrs.add(g.index);
+    // An interleaved attribute is a view on a shared buffer: count the buffer, not one copy per attribute.
+    // The size comes from the renderer's own bookkeeping: the CPU copies are freed once drawn (freeAfterDraw), so their
+    // byteLength is gone. memoryMap holds the size at upload, per attribute, so a shared buffer is read through one of them.
+    const owners = new Map(Object.values(g.attributes).map((a) => [a.isInterleavedBufferAttribute ? a.data : a, a]));
+    if (g.index) owners.set(g.index, g.index);
+    const attrs = new Set(owners.keys());
     let bytes = 0;
     // Tiles and crown variants share vertex buffers: each buffer counts once, for the first geometry that has it.
     for (const a of attrs) {
       if (counted.has(a)) continue;
       counted.add(a);
-      bytes += a.array.byteLength;
+      bytes += e.renderer.info.memoryMap.get(owners.get(a))?.size ?? a.array.byteLength;
     }
     const inst = o.isInstancedMesh ? o.instanceMatrix.array.byteLength : 0;
     let path = o.name || o.type;

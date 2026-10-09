@@ -15,7 +15,7 @@ import {
   TextureLoader,
   type Texture,
 } from 'three/webgpu';
-import { abs, attribute, cross, float, floor, Fn, If, int, ivec2, max, min, mix, mod, normalLocal, select, texture, uniform, vec3, vec4 } from 'three/tsl';
+import { abs, attribute, cross, float, floor, Fn, If, int, ivec2, max, min, mix, mod, select, texture, transformNormalToView, uniform, varyingProperty, vec3, vec4 } from 'three/tsl';
 
 export type CrewKey = 'joseon_soldier' | 'joseon_marine' | 'joseon_officer' | 'japan_ashigaru' | 'japan_samurai' | 'japan_officer' | 'ming_soldier' | 'ming_officer' | 'rower';
 export const CREW_KEYS: CrewKey[] = ['joseon_soldier', 'joseon_marine', 'joseon_officer', 'japan_ashigaru', 'japan_samurai', 'japan_officer', 'ming_soldier', 'ming_officer', 'rower'];
@@ -80,6 +80,7 @@ function makeMaterial(map: Texture, anim: DataTexture, influences: number) {
   const nor4 = attribute('nor4', 'vec4');
   const tint = attribute('tint', 'vec4');
   const fps = float(15);
+  const skinned = varyingProperty('vec3', 'crewNormal');
   m.positionNode = Fn(() => {
     // Frame: looping clips wrap, a negative rate holds the last frame (the dead stay down).
     const local = floor(max(crewTime.sub(iAnim.z), 0).mul(fps).mul(abs(iAnim.w)));
@@ -114,9 +115,11 @@ function makeMaterial(map: Texture, anim: DataTexture, influences: number) {
     const q = iQuat;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rot = (v: any) => v.add(cross(q.xyz, cross(q.xyz, v).add(v.mul(q.w))).mul(2));
-    normalLocal.assign(rot(nrm).normalize());
+    // The skinned normal goes to the fragment stage as a varying: the geometry has no 'normal' attribute (nor4 holds it).
+    skinned.assign(rot(nrm).normalize());
     return rot(pos.mul(iPos.w)).add(iPos.xyz);
   })();
+  m.normalNode = transformNormalToView(skinned);
   const base = texture(map).rgb;
   // Fallen and drowning figures darken with iMisc.z; iMisc.y tints the cloth a little toward the side's colour.
   m.colorNode = mix(base, tint.rgb, tint.a).mul(float(1).sub(iMisc.z.mul(0.5)));

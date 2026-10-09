@@ -1,21 +1,26 @@
 import type { Battle } from '../battle';
 import { GUN_SHOTS, SHIP_SPECS } from '../catalog';
 import { BUILDINGS, SHORT_NAME, type Building, type BuildingKind as WorkKind, type Conquest } from '../conquest';
-import { buildConquest, type ConquestMapId, type Seat } from '../maps';
+import { buildConquestOn, wetSpot, type Seat } from '../maps';
+import { dateLabel } from './economy';
+import type { BattleInfo } from '../info';
 import type { LandSampler, Ship, Squadron } from '../types';
 import type { BridgeSeat, RegionBattle, RegionBattleBuilding } from './bridge';
+import { ATTACKER_HOME, DEFENDER_HOME, REGION_MAPS } from './coast';
+import { REGIONS } from './regions';
 import type { BattleOutcomeShip, BuildingKind } from './types';
 
 /**
- * Plays a campaign meeting as a conquest battle. The two sides take the two home ports of the region's map; their ships
- * are the persistent hulls of the campaign, spawned with the hull, crew, supply and skill they carry, and the
- * defender's home port gets the works its region has. Nothing here edits the conquest builder: it is asked for a battle
- * without opening fleets, and the fleets are put in afterwards.
+ * Plays a campaign meeting as a conquest battle on the region's own coast (coast.ts). The two sides take the map's two
+ * home ports, the defender's on its shore and the attacker's offshore about a kilometre away; their ships are the
+ * persistent hulls of the campaign, spawned with the hull, crew, supply and skill they carry, and the defender's home
+ * port gets the works its region has. Nothing here edits the conquest builder: it is asked for a battle without opening
+ * fleets, and the fleets are put in afterwards.
  */
 
 /** The attacker sits in the first home port and the defender in the second. */
-export const ATTACKER_SEAT = 0;
-export const DEFENDER_SEAT = 1;
+export const ATTACKER_SEAT = ATTACKER_HOME;
+export const DEFENDER_SEAT = DEFENDER_HOME;
 
 /** The conquest seats of a region battle. The fleets are empty: `spawnGrandFleets` puts the campaign's ships in. */
 export function grandSeats(rb: RegionBattle): Seat[] {
@@ -26,8 +31,34 @@ export function grandSeats(rb: RegionBattle): Seat[] {
 /** Which seat the player commands. */
 export const grandYou = (rb: RegionBattle) => (rb.humanSide === 'attacker' ? ATTACKER_SEAT : DEFENDER_SEAT);
 
-/** The conquest map of a region battle. */
-export const grandMap = (rb: RegionBattle): ConquestMapId => rb.mapId;
+/** The coast a region battle is fought on. */
+export const grandMap = (rb: RegionBattle) => REGION_MAPS[rb.mapId];
+
+/** What the engine stages a region battle from: the real terrain of the region, its tide, sky and loading picture. */
+export function grandInfo(rb: RegionBattle): BattleInfo {
+  const m = grandMap(rb);
+  const date = dateLabel(rb.turn);
+  return {
+    mode: 'conquest',
+    id: rb.mapId,
+    title: `${rb.regionName} 해전`,
+    hanja: REGIONS[rb.regionId].hanja,
+    date,
+    place: rb.regionName,
+    season: date,
+    sky: m.sky,
+    sea: m.sea,
+    night: m.night,
+    terrain: m.terrain,
+    current: m.current,
+    view: m.view,
+    foliage: m.foliage,
+    art: m.scenario ?? undefined,
+  };
+}
+
+/** Bearing from the attacker's anchorage to the defender's port in the terrain's own coordinates: the engine turns the map to the light by it. */
+export const grandAxis = (rb: RegionBattle) => grandMap(rb).axis;
 
 const DEFAULT_PORTRAIT = { joseon: 'portrait_admiral', japan: 'portrait_japan', ming: 'portrait_deng' } as const;
 const HP_FLOOR = 0.25;
@@ -63,12 +94,15 @@ function stand(conquest: Conquest, slot: number, works: RegionBattleBuilding[]) 
     });
 }
 
-function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat, land: LandSampler) {
+function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat, land: LandSampler, placed: { x: number; z: number }[]) {
   const home = conquest.homeOf(slot);
-  if (!home) return;
-  const toCentre = Math.atan2(-home.z, -home.x);
-  const fx = Math.cos(toCentre);
-  const fz = Math.sin(toCentre);
+  const foe = conquest.homeOf(slot === ATTACKER_SEAT ? DEFENDER_SEAT : ATTACKER_SEAT);
+  if (!home || !foe) return;
+  // The fleet forms up on its port's capture circle, not at the slipways, so both sides start the same distance from the middle,
+  // and faces the other port; a ship whose berth is dry or taken moves to the nearest open water.
+  const toFoe = Math.atan2(foe.z - home.z, foe.x - home.x);
+  const fx = Math.cos(toFoe);
+  const fz = Math.sin(toFoe);
   const cols = Math.max(3, Math.min(8, Math.ceil(Math.sqrt(seat.ships.length * 1.3))));
   const squads = new Map<string, Squadron>();
   const portrait = seat.leader?.portrait ?? DEFAULT_PORTRAIT[seat.faction];
@@ -89,14 +123,11 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
     }
     const row = Math.floor(i / cols);
     const col = (i % cols) - (cols - 1) / 2;
-    let x = home.spawn.x + fx * (60 - row * 62) - fz * col * 58;
-    let z = home.spawn.z + fz * (60 - row * 62) + fx * col * 58;
-    for (let tries = 0; tries < 30 && land(x, z) > -5; tries += 1) {
-      x += fx * 25;
-      z += fz * 25;
-    }
+    const spot = wetSpot(land, home.x + fx * (60 - row * 62) - fz * col * 58, home.z + fz * (60 - row * 62) + fx * col * 58, placed);
+    placed.push(spot);
+    const { x, z } = spot;
     const flagship = i === 0 && !!seat.leader;
-    const ship = b.addShip(u.kind, x, z, toCentre, u.name, sq, flagship, u.kind === 'panokseon' ? (flagship ? 0 : 1 + (i % 2)) : 0);
+    const ship = b.addShip(u.kind, x, z, toFoe, u.name, sq, flagship, u.kind === 'panokseon' ? (flagship ? 0 : 1 + (i % 2)) : 0);
     ship.hull = spec.hull * Math.max(0.05, u.hull);
     b.setCrew(ship, spec.crew * Math.max(0.05, u.crew));
     b.applySupply(ship, u.supply);
@@ -113,8 +144,14 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
  */
 export function buildGrandConquest(rb: RegionBattle, land: LandSampler, axis = 0) {
   const o = rb.options;
-  const built = buildConquest(rb.mapId, grandSeats(rb), land, rb.seed, { tickets: o.tickets, timeLimit: o.timeLimit, cap: o.cap, maxShips: o.maxShips }, axis);
+  const map = grandMap(rb);
+  const built = buildConquestOn(map, grandSeats(rb), land, rb.seed, { tickets: o.tickets, timeLimit: o.timeLimit, cap: o.cap, maxShips: o.maxShips }, axis);
   const { battle, conquest } = built;
+  // The arena is the stretch of water the two ports share, not the middle of the terrain.
+  const ca = Math.cos(axis);
+  const sa = Math.sin(axis);
+  battle.center = { x: map.view.tx * ca - map.view.tz * sa, z: map.view.tx * sa + map.view.tz * ca };
+  battle.arenaRadius = 5200;
   conquest.players[ATTACKER_SEAT]!.funds = o.startFunds.attacker;
   conquest.players[DEFENDER_SEAT]!.funds = o.startFunds.defender;
   // The attacker comes by sea with no works; the defender's port has what its region built.
@@ -122,8 +159,9 @@ export function buildGrandConquest(rb: RegionBattle, land: LandSampler, axis = 0
   stand(conquest, DEFENDER_SEAT, rb.defenderBuildings);
   // Ships the conquest raises during the fight are numbered from one; the campaign's own hulls carry their numbers already.
   (conquest as unknown as { recruitSeq: Map<string, number> }).recruitSeq.clear();
-  spawnSeat(battle, conquest, ATTACKER_SEAT, rb.attacker, land);
-  spawnSeat(battle, conquest, DEFENDER_SEAT, rb.defender, land);
+  const placed: { x: number; z: number }[] = [];
+  spawnSeat(battle, conquest, ATTACKER_SEAT, rb.attacker, land, placed);
+  spawnSeat(battle, conquest, DEFENDER_SEAT, rb.defender, land, placed);
   battle.events.length = 0;
   return built;
 }

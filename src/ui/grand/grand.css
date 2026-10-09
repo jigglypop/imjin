@@ -4,8 +4,10 @@
   --ink: #14202e;
   --ink-2: #4a5868;
   --ink-3: #5d6b7b;
-  --accent: #2456d6;
-  --accent-soft: rgba(36, 86, 214, 0.11);
+  /* The same navy as the rest of the game's menus. */
+  --accent: #14365d;
+  --accent-2: #1d4c82;
+  --accent-soft: rgba(20, 54, 93, 0.1);
   --line: rgba(20, 32, 46, 0.08);
   --good: #36a173;
   /* The same hues as text, dark enough for AA on white glass. */
@@ -140,10 +142,10 @@
 }
 @keyframes gm-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(36, 86, 214, 0.55), 0 2px 8px rgba(20, 40, 70, 0.22);
+    box-shadow: 0 0 0 0 rgba(20, 54, 93, 0.55), 0 2px 8px rgba(20, 40, 70, 0.22);
   }
   100% {
-    box-shadow: 0 0 0 16px rgba(36, 86, 214, 0), 0 2px 8px rgba(20, 40, 70, 0.22);
+    box-shadow: 0 0 0 16px rgba(20, 54, 93, 0), 0 2px 8px rgba(20, 40, 70, 0.22);
   }
 }
 
@@ -413,10 +415,33 @@
   background: var(--accent);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 6px 16px rgba(36, 86, 214, 0.28);
+  border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(20, 54, 93, 0.35);
 }
 .grand .g-btn--primary:hover:not(:disabled) {
-  background: #1d49b8;
+  background: var(--accent-2);
+}
+/* The back pill of the menu screens: white glass, same height and shadow. */
+.grand .g-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(30, 50, 75, 0.14);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition: background 0.15s ease;
+}
+.grand .g-back:hover {
+  background: #fff;
 }
 .grand .g-btn--ghost {
   background: transparent;
@@ -435,6 +460,9 @@
   font-size: 16px;
   border-radius: 16px;
   padding: 0 28px;
+}
+.grand .g-btn--primary.g-btn--lg {
+  border-radius: 999px;
 }
 @media (pointer: coarse) {
   .grand .g-btn--sm {
@@ -1030,8 +1058,21 @@
   font-weight: 700;
 }
 .g-power__odds {
-  color: var(--ink-2);
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 13px;
   font-weight: 600;
+  color: var(--ink-2);
+}
+.g-power__odds--risky {
+  color: var(--bad-ink);
+}
+.g-sure p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--bad-ink);
 }
 .g-notes {
   margin: 14px 0 0;
@@ -1079,18 +1120,35 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: max(24px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) 16px max(18px, env(safe-area-inset-left));
+  padding: max(24px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left));
 }
 .g-pick__inner {
   margin: auto;
   width: 100%;
+}
+.g-pick .g-back {
+  position: fixed;
+  z-index: 3;
+  left: max(20px, env(safe-area-inset-left));
+  top: max(12px, env(safe-area-inset-top));
 }
 .g-pick__head {
   display: flex;
   align-items: flex-end;
   gap: 12px;
   max-width: 1080px;
-  margin: 0 auto 18px;
+  margin: 0 auto 20px;
+}
+/* Narrow screens: the back pill joins the flow above the title instead of floating over it. */
+@media (max-width: 900px) {
+  .g-pick .g-back {
+    position: static;
+  }
+  .g-pick__head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
 }
 .g-pick__title {
   margin: 0;
@@ -1207,8 +1265,12 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
-  background: linear-gradient(rgba(246, 250, 253, 0), rgba(246, 250, 253, 0.92) 40%);
+  margin-top: 4px;
+  padding: 28px 0 calc(18px + env(safe-area-inset-bottom));
+  /* Sits right under the cards; once the cards need the whole screen it stays on the bottom edge. */
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(rgba(246, 250, 253, 0), rgba(246, 250, 253, 0.96) 24px);
 }
 .g-pick__foot .g-btn {
   width: min(420px, 100%);
@@ -1667,7 +1729,7 @@
     font-size: 20px;
   }
   .g-pick__foot {
-    padding-top: 8px;
+    padding-top: 20px;
     padding-bottom: calc(8px + env(safe-area-inset-bottom));
   }
   .g-pick__foot .g-btn {

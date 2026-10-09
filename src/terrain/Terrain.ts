@@ -42,7 +42,7 @@ import {
 import { type TerrainSpec } from './generate';
 import type { Structure } from './features';
 import type { TerrainQuality } from '../game/quality';
-import { disposeTree } from '../render/dispose';
+import { disposeTree, freeAfterDraw, freeArray } from '../render/dispose';
 
 /** The ground textures: one folder each under /textures. */
 const GROUND = ['aerial_rocks_02', 'cliff_side', 'coast_land_rocks_01', 'aerial_grass_rock', 'coast_sand_01', 'forest_leaves_02'] as const;
@@ -104,6 +104,8 @@ export class Terrain {
     tex.minFilter = LinearFilter;
     tex.generateMipmaps = false;
     tex.needsUpdate = true;
+    // Only the GPU reads this copy of the heights (the CPU has the float array), so it goes once uploaded.
+    tex.onUpdate = () => freeArray(half);
     this.heightTexture = tex;
     this.tiles = this.buildMesh(quality);
     this.group.add(...this.tiles);
@@ -129,6 +131,8 @@ export class Terrain {
     disposeTree(this.group);
     this.heightTexture.dispose();
     this.maskTexture.dispose();
+    freeArray(this.heights);
+    freeArray(this.mask);
   }
 
   setRotation(phi: number) {
@@ -261,6 +265,7 @@ export class Terrain {
         const mesh = new Mesh(geo, material);
         mesh.receiveShadow = true;
         mesh.castShadow = true;
+        freeAfterDraw(mesh);
         meshes.push(mesh);
       }
     }

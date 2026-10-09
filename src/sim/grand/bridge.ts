@@ -1,7 +1,7 @@
 import type { ShipKind, ShipMods, Team } from '../types';
 import { teamOf } from '../types';
 import { TUNING, buildingOf, levelOf, shipGold } from './economy';
-import { REGION_ORDER, REGIONS, type BattleMap, type Terrain } from './regions';
+import { REGION_ORDER, REGIONS, type Terrain } from './regions';
 import { mix32 } from './rng';
 import { applyContactOutcome, commanderLevel, contactForces, settlePending } from './turn';
 import type { BattleOutcome, BattleOutcomeShip, BuildingKind, Contact, Fleet, Grand, GrandFaction, RegionId, ShipUnit } from './types';
@@ -9,7 +9,7 @@ import type { BattleOutcome, BattleOutcomeShip, BuildingKind, Contact, Fleet, Gr
 /**
  * The seam between the strategic map and the 3D battle. `describeBattle` turns a waiting contact into a typed
  * description the Engine integration reads to build a conquest battle; `applyBattleResult` takes what the battle
- * reports back. Nothing here touches maps.ts or conquest.ts.
+ * reports back. Nothing here touches maps.ts or conquest.ts; the battle's coast is in coast.ts.
  *
  * What the Engine integration has to do with a RegionBattle:
  *  - seat the two sides from `attacker` / `defender`. Each ship carries its `campaignId`, hull, crew, supply and
@@ -68,8 +68,8 @@ export type RegionBattle = {
   turn: number;
   regionId: RegionId;
   regionName: string;
-  /** The existing conquest map to play on, until the regions have maps of their own. */
-  mapId: BattleMap;
+  /** The region's own battle map (`REGION_MAPS` in coast.ts): its coast, capture points and spawn waters. */
+  mapId: RegionId;
   terrain: Terrain;
   humanSide: 'attacker' | 'defender';
   seed: number;
@@ -163,7 +163,7 @@ export function describeContact(g: Grand, c: Contact): RegionBattle {
     turn: g.turn,
     regionId: c.regionId,
     regionName: def.name,
-    mapId: def.battleMap,
+    mapId: c.regionId,
     terrain: def.terrain,
     humanSide: humanAttacker ? 'attacker' : 'defender',
     seed: mix32(g.seed ^ mix32(g.turn * 131 + REGION_ORDER.indexOf(c.regionId))) || 1592,

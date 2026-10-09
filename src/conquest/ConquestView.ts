@@ -104,6 +104,8 @@ export class ConquestView {
   private readonly s = new Vector3();
   private readonly up = new Vector3(0, 1, 0);
   private readonly tmp = new Vector3();
+  private bar = { left: 0, right: 0, bottom: 0 };
+  private barAt = -1e9;
   onSelect: ((point: number) => void) | null = null;
 
   constructor(
@@ -280,33 +282,99 @@ export class ConquestView {
     this.updateLabels(camera, width, height, playerTeam, selected, showLabels);
   }
 
+  /** Bottom edge of the top bar and the span it covers, so labels never sit under it. Re-measured twice a second. */
+  private barBox() {
+    const now = performance.now();
+    if (now - this.barAt > 500) {
+      this.barAt = now;
+      const el = document.querySelector('.cq-bar');
+      const r = el?.getBoundingClientRect();
+      this.bar = r && r.height > 0 ? { left: r.left - 8, right: r.right + 8, bottom: r.bottom + 6 } : { left: 0, right: 0, bottom: 0 };
+    }
+    return this.bar;
+  }
+
+  /**
+   * Labels are placed by priority (selected, own home, contested, enemy home, rich points, near ones): each takes its
+   * spot over the point, slides up out of the way of the labels already placed and out from under the top bar, and
+   * fades with distance. A point that cannot be placed without covering a higher-priority one is hidden.
+   */
   private updateLabels(camera: PerspectiveCamera, width: number, height: number, playerTeam: Team, selected: number, show: boolean) {
     this.layer.style.display = show ? '' : 'none';
     if (!show) return;
     const c = this.conquest;
+    const bar = this.barBox();
+    const cands: { label: Label; p: CapturePoint; sx: number; sy: number; dist: number; scale: number; rank: number; edge: boolean }[] = [];
     c.points.forEach((p, i) => {
       const label = this.labels[i]!;
       this.tmp.set(p.x, 26, p.z);
       const dist = this.tmp.distanceTo(camera.position);
       this.tmp.project(camera);
       const on = this.tmp.z < 1 && Math.abs(this.tmp.x) < 1.1 && Math.abs(this.tmp.y) < 1.1;
-      label.root.style.display = on ? '' : 'none';
-      if (!on) return;
-      const sx = (this.tmp.x * 0.5 + 0.5) * width;
-      const sy = (-this.tmp.y * 0.5 + 0.5) * height;
-      const scale = Math.max(0.7, Math.min(1.05, 1600 / Math.max(dist, 1)));
-      label.root.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px) translate(-50%, -100%) scale(${scale.toFixed(3)})`;
+      const own = p.home >= 0 && c.teamOfPoint(p) === playerTeam;
+      if (!on && !own) {
+        label.root.style.display = 'none';
+        return;
+      }
+      let nx = this.tmp.x;
+      let ny = this.tmp.y;
+      // The player's own home port is never lost: off screen (even behind the camera) its label pins to the edge
+      // the port lies toward.
+      if (!on) {
+        if (this.tmp.z > 1) {
+          nx = -nx;
+          ny = -ny;
+        }
+        const far = Math.max(Math.abs(nx), Math.abs(ny), 1e-3);
+        // The bottom edge stops above the minimap and the command panels.
+        nx = (nx / far) * 0.93;
+        ny = Math.max(-0.5, (ny / far) * 0.9);
+      }
+      const sx = (nx * 0.5 + 0.5) * width;
+      const sy = (-ny * 0.5 + 0.5) * height;
+      const scale = on ? Math.max(0.7, Math.min(1.05, 1600 / Math.max(dist, 1))) : 0.85;
+      const rank = (selected === p.id ? 1e6 : 0) + (own ? 5e5 : 0) + (p.contested ? 3e5 : 0) + (p.home >= 0 ? 2e5 : 0) + p.value * 1e4 - dist;
+      cands.push({ label, p, sx, sy, dist, scale, rank, edge: !on });
+    });
+    cands.sort((a, b) => b.rank - a.rank);
+    const placed: { l: number; r: number; t: number; b: number }[] = [];
+    for (const { label, p, sx, sy, dist, scale, rank, edge } of cands) {
+      const w = (label.root.offsetWidth || 80) * scale;
+      const h = (label.root.offsetHeight || 44) * scale;
+      const l = Math.max(4, Math.min(width - w - 4, sx - w / 2));
+      const underBar = l + w > bar.left && l < bar.right;
+      const minTop = underBar ? bar.bottom : 6;
+      let top = Math.max(minTop, sy - h);
+      // Slide up past a label already there; below the bar there is no up, so slide down instead.
+      let step = 0;
+      const hit = () => placed.find((o) => l < o.r + 4 && l + w > o.l - 4 && top < o.b + 3 && top + h > o.t - 3);
+      let o = hit();
+      while (o && step < 6) {
+        top = o.t - h - 3 >= minTop ? o.t - h - 3 : o.b + 3;
+        o = hit();
+        step += 1;
+      }
+      if (o || top > height - 70) {
+        label.root.style.display = 'none';
+        continue;
+      }
+      placed.push({ l, r: l + w, t: top, b: top + h });
+      // Far points fade out, the ones that matter stay.
+      const fade = rank >= 2e5 ? 1 : Math.max(0.35, Math.min(1, 1 - (dist - 2600) / 3000));
+      label.root.style.display = '';
+      label.root.style.opacity = fade.toFixed(2);
+      label.root.style.transform = `translate(${l.toFixed(1)}px, ${top.toFixed(1)}px) scale(${scale.toFixed(3)})`;
       const holder = c.teamOfPoint(p);
       const side = holder ? (holder === playerTeam ? 'own' : 'foe') : 'none';
       const works = p.buildings.map((bd) => (bd ? BUILDINGS[bd.kind].hanja[0]! + (bd.progress < 1 ? '·' : '') : '')).join('');
-      const key = `${side}|${p.contested}|${selected === p.id}|${works}|${p.queue.length}|${Math.round(Math.abs(p.hold) * 20)}`;
-      if (key === label.last) return;
+      const key = `${edge}|${side}|${p.contested}|${selected === p.id}|${works}|${p.queue.length}|${Math.round(Math.abs(p.hold) * 20)}`;
+      if (key === label.last) continue;
       label.last = key;
-      label.root.className = `cpoint cpoint--${side}${p.contested ? ' cpoint--contested' : ''}${selected === p.id ? ' cpoint--selected' : ''}${p.home >= 0 ? ' cpoint--home' : ''}`;
+      label.root.className = `cpoint cpoint--${side}${p.contested ? ' cpoint--contested' : ''}${selected === p.id ? ' cpoint--selected' : ''}${p.home >= 0 ? ' cpoint--home' : ''}${edge ? ' cpoint--edge' : ''}`;
       label.fill.style.width = `${Math.round(Math.abs(p.hold) * 100)}%`;
       label.fill.className = p.hold === 0 ? '' : (p.hold > 0 ? 'joseon' : 'japan') === playerTeam ? 'own' : 'foe';
       label.works.textContent = works + (p.queue.length ? ` 船${p.queue.length}` : '');
-    });
+    }
   }
 
   /** Frees the rings, banners and instance buffers. The building models stay cached for the next battle. */

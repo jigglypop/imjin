@@ -51,6 +51,7 @@ export class WakeMap {
   private readonly b: InstancedBufferAttribute;
   private readonly mesh: Mesh;
   private count = 0;
+  private renderer: WebGPURenderer | null = null;
   /** The texture nodes that read the finished map, per ocean. A battle that is thrown away takes its own out. */
   private readonly sampleNodes = new Map<object, ReturnType<typeof texture>[]>();
 
@@ -115,9 +116,20 @@ export class WakeMap {
     return node;
   }
 
-  /** Stops updating the nodes of an ocean that is gone. */
+  /**
+   * Stops updating the nodes of an ocean that is gone. The nodes flip between the two targets every frame, and three only
+   * unlinks a bind group from the target its node shows when the group dies. The other target keeps the dead group
+   * (and with it the old battle's height texture), so the groups are taken out of both here.
+   */
   release(owner: object) {
+    const nodes = this.sampleNodes.get(owner);
     this.sampleNodes.delete(owner);
+    const textures = (this.renderer as unknown as { _textures?: { get(t: unknown): { bindGroups?: Set<{ bindings: { textureNode?: unknown }[] }> } } } | null)?._textures;
+    if (!nodes || !textures) return;
+    for (const rt of this.targets) {
+      const groups = textures.get(rt.texture).bindGroups;
+      if (groups) for (const group of groups) if (group.bindings.some((b) => nodes.includes(b.textureNode as (typeof nodes)[number]))) groups.delete(group);
+    }
   }
 
   /** Renders every pass once, so their programs are built before the first frame of the battle. */
@@ -159,6 +171,7 @@ export class WakeMap {
   }
 
   update(renderer: WebGPURenderer, dt: number) {
+    this.renderer = renderer;
     if (dt <= 0 && this.count === 0) return;
     const src = this.targets[this.current]!;
     const dst = this.targets[1 - this.current]!;
