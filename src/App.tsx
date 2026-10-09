@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import type { ConquestSetup } from './game/Engine';
 import type { RegionBattle } from './sim/grand/bridge';
-import { net } from './net/NetClient';
+import { net, useNet } from './net/NetClient';
 import { NetBattle } from './net/NetBattle';
 import { OnlinePanel } from './ui/OnlinePanel';
 import { setFatal, setLoading, setOrigin, setScreen, useUi } from './state/store';
@@ -74,6 +74,17 @@ export function App() {
     const id = window.setTimeout(() => void loadBattle(), 2500);
     return () => window.clearTimeout(id);
   }, []);
+
+  // Walking away from the online screen gives up the queue and the seat; otherwise the match would start mid-menu.
+  const lastScreen = useRef(screen);
+  useEffect(() => {
+    const from = lastScreen.current;
+    lastScreen.current = screen;
+    if (from !== 'online' || screen === 'online' || screen === 'battle') return;
+    const { room, quick } = useNet.getState();
+    if (quick) net.send({ t: 'quickCancel' });
+    if (room) net.send({ t: 'leave' });
+  }, [screen]);
 
   const begin = (next: LaunchBody, text: string, scenario?: ScenarioId) => {
     sound.click();

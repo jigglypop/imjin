@@ -345,7 +345,8 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
 }
 
 type Batch = { mesh: InstancedMesh; a: InstancedBufferAttribute; b: InstancedBufferAttribute; c?: InstancedBufferAttribute; count: number };
-const CUT_CAP = 12;
+/** Most ships one model can show in cutaway; the engine picks no more than this many in all. */
+export const CUT_CAP = 12;
 
 export class ShipRenderer {
   readonly group = new Group();

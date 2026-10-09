@@ -1,13 +1,15 @@
 import type { WebGPURenderer } from 'three/webgpu';
 
+/** The renderer's pipeline cache: it drops a pipeline or a shader stage when no object uses it any more. */
+type Pipelines = { _releasePipeline(pipeline: object): void; _releaseProgram(program: object): void };
 type Builder = { getUniformBufferLimit(): number };
 type Backend = {
   isWebGLBackend?: boolean;
   gl: WebGL2RenderingContext;
   vaoCache: Record<string, WebGLVertexArrayObject>;
-  get(attribute: unknown): { id?: number };
   createNodeBuilder(object: { isInstancedMesh?: boolean } | null, renderer: unknown): Builder;
   destroyAttribute(attribute: unknown): void;
+  get(object: unknown): { id?: number; programGPU?: WebGLProgram; shaderGPU?: WebGLShader };
   __tuned?: boolean;
 };
 
@@ -24,6 +26,9 @@ type Backend = {
  * Vertex arrays. The backend caches one vertex array object per combination of attributes and never drops it. A vertex
  * array keeps its buffers alive, so deleting a finished battle's geometry freed nothing on the GPU: the terrain's 10 MB
  * vertex buffer and every ship buffer stayed, battle after battle. They are dropped with the attribute they use.
+ *
+ * Programs. The backend never deletes a linked program or a compiled shader, though the renderer forgets a pipeline and
+ * its stages once nothing draws with them: 25 more programs stayed alive per battle. They are deleted with them.
  */
 export function tuneWebGLBackend(renderer: WebGPURenderer) {
   const backend = renderer.backend as unknown as Backend;
@@ -47,5 +52,20 @@ export function tuneWebGLBackend(renderer: WebGPURenderer) {
       backend.gl.deleteVertexArray(backend.vaoCache[key]!);
       delete backend.vaoCache[key];
     }
+  };
+
+  const pipelines = (renderer as unknown as { _pipelines?: Pipelines })._pipelines;
+  if (!pipelines) return;
+  const releasePipeline = pipelines._releasePipeline.bind(pipelines);
+  pipelines._releasePipeline = (pipeline) => {
+    const program = backend.get(pipeline).programGPU;
+    releasePipeline(pipeline);
+    if (program) backend.gl.deleteProgram(program);
+  };
+  const releaseProgram = pipelines._releaseProgram.bind(pipelines);
+  pipelines._releaseProgram = (program) => {
+    const shader = backend.get(program).shaderGPU;
+    releaseProgram(program);
+    if (shader) backend.gl.deleteShader(shader);
   };
 }

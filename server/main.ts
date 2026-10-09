@@ -279,12 +279,16 @@ function resume(c: Client) {
   send(c, { t: 'room', room: roomInfo(room) });
   const live = room.live;
   if (!live) return;
+  // A finished battle is not replayed: a page still on it learns the result, one in the lobby stays there.
+  if (live.endedAt) {
+    if (live.battle.winner) send(c, { t: 'end', winner: live.battle.winner as Team });
+    return;
+  }
   sendStart(c, room, true);
   const meta = metaMsg(live, true);
   if (meta) send(c, meta);
   if (live.conquest) send(c, { t: 'state', conquest: live.conquest.state() });
   send(c, holding(live) ? { t: 'speed', speed: 0, target: 0 } : { t: 'speed', speed: speedOf(live), target: speedOf(live) });
-  if (live.endedAt && live.battle.winner) send(c, { t: 'end', winner: live.battle.winner as Team });
 }
 
 function stepOnce(room: Room, live: Live) {

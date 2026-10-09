@@ -9,7 +9,7 @@ import { sound } from '../audio/Sound';
 import { isIOS } from '../game/device';
 import { forceWebGL } from '../game/quality';
 import { clearLoading } from '../game/recovery';
-import { setFatal, setLoading, setScreen, useUi } from '../state/store';
+import { failBattle, setLoading, setScreen, useUi } from '../state/store';
 import { Hud } from './Hud';
 import { conquestOf, hideHud, params, startScenario, type Launch } from './launch';
 
@@ -90,11 +90,7 @@ function Game({ launch, onEngine }: { launch: Launch; onEngine: (e: Engine) => v
         };
         requestAnimationFrame(tick);
       })
-      .catch((err: unknown) => {
-        console.error(err);
-        setLoading(null);
-        setFatal(`초기화 실패: ${String(err)}`);
-      });
+      .catch(failBattle);
     return () => {
       cancelled = true;
       engine.dispose();
@@ -145,10 +141,10 @@ export default function BattleView({ launch }: { launch: Launch }) {
     const conquest = conquestOf(launch);
     if (conquest) {
       engine.campaign = undefined;
-      void engine.setConquest(conquest, launch.kind === 'conquest' ? launch.remote ?? null : null);
+      engine.setConquest(conquest, launch.kind === 'conquest' ? launch.remote ?? null : null).catch(failBattle);
     } else if (launch.kind === 'scenario') {
       engine.campaign = launch.campaign;
-      void engine.setScenario(launch.id, launch.campaign ? 'joseon' : launch.faction, launch.remote ?? null);
+      engine.setScenario(launch.id, launch.campaign ? 'joseon' : launch.faction, launch.remote ?? null).catch(failBattle);
     }
   }, [engine, launch]);
 

@@ -42,7 +42,7 @@ const COVERAGE: Record<SkyPresetName, number> = { afternoon: 0.5, day: 0.42, sun
 import { WakeMap } from '../ocean/WakeMap';
 import { SEA_STATES, spectrumOf, waveField, type SeaStateName } from '../ocean/waves';
 import { FFTWaves } from '../ocean/FFTWaves';
-import { loadShipAssets, releaseShipAssets, type ModelAsset, type ShipAssetOptions } from '../ships/ShipRenderer';
+import { CUT_CAP, loadShipAssets, releaseShipAssets, type ModelAsset, type ShipAssetOptions } from '../ships/ShipRenderer';
 import { ShipViews } from '../ships/ShipViews';
 import { Effects } from '../fx/Effects';
 import { Crew, crewAssets } from '../fx/Crew';
@@ -70,7 +70,7 @@ import { Input } from './Input';
 import { TouchControls } from './Touch';
 import { AdaptiveQuality } from './adaptive';
 import { equipment, LEVELS, levelSetting, saveLevelSetting, startLevel, type LevelSetting, type OceanQuality, type TerrainQuality } from './quality';
-import { publish, pushToast, setLoading, setProgress, setReport, type GameSnapshot } from '../state/store';
+import { failBattle, publish, pushToast, setLoading, setProgress, setReport, type GameSnapshot } from '../state/store';
 import { SquadronBanners } from '../ui/SquadronBanners';
 import { sound } from '../audio/Sound';
 import { Terrain } from '../terrain/Terrain';
@@ -343,7 +343,7 @@ export class Engine {
     this.camera.updateProjectionMatrix();
     waveField.setState(SEA_STATES[this.seaName]);
     const info = this.battleInfo;
-    setLoading('바다와 하늘을 그리는 중', 0.03, info.art);
+    setLoading('바다와 하늘을 그리는 중', 0.03, info.art ?? null);
     // The files download while the cloud and wake shaders build, so neither waits for the other.
     const loading = this.loadAssets(0.03);
     await this.warmShared();
@@ -420,6 +420,7 @@ export class Engine {
     setProgress(1);
     this.resetApproach();
     this.ready = true;
+    this.remote?.announce();
   }
 
   /**
@@ -664,15 +665,19 @@ export class Engine {
     this.minimap.setTerrain(this.terrain, (minX + maxX) / 2, (minZ + maxZ) / 2, extent * (setup ? 1.05 : 1.35));
   }
 
-  /** Ships drawn in cutaway: the selection, once close enough to see inside. */
+  /** Ships drawn in cutaway: the selection, once close enough to see inside, nearest first and no more than a section batch holds. */
   cutawayIds() {
     const out = new Set<number>();
     if (!this.cutaway) return out;
     const cam = this.camera.position;
+    const near: { id: number; d: number }[] = [];
     for (const id of this.views.selected) {
       const s = this.battle.get(id);
-      if (s && s.alive && Math.hypot(s.x - cam.x, s.z - cam.z, cam.y) < 650) out.add(id);
+      const d = s && s.alive ? Math.hypot(s.x - cam.x, s.z - cam.z, cam.y) : Infinity;
+      if (d < 650) near.push({ id, d });
     }
+    near.sort((a, b) => a.d - b.d);
+    for (const n of near.slice(0, CUT_CAP)) out.add(n.id);
     return out;
   }
 
@@ -859,7 +864,7 @@ export class Engine {
   private async stage(info: BattleInfo) {
     this.ready = false;
     this.battleInfo = info;
-    setLoading(`${info.title} 준비 중`, 0.04, info.art);
+    setLoading(`${info.title} 준비 중`, 0.04, info.art ?? null);
     this.skyName = info.sky;
     this.seaName = info.sea;
     waveField.setState(SEA_STATES[this.seaName]);
@@ -894,6 +899,7 @@ export class Engine {
     // The rebuilt terrain, vegetation and ocean start from the plain state. Re-apply the current level to them.
     this.applyLevel(this.level);
     this.ready = true;
+    this.remote?.announce();
     setLoading(null);
     this.publish(true);
   }
@@ -928,10 +934,9 @@ export class Engine {
   }
 
   restart() {
-    // A campaign meeting is settled once; playing it again would not change the campaign.
-    if (this.remote || this.conquestSetup?.grand) return;
-    if (this.conquestSetup) void this.setConquest({ ...this.conquestSetup, seed: this.conquestSetup.seed + 1 });
-    else void this.setScenario(this.scenarioId);
+    // A campaign meeting is settled once; playing it again would not change the campaign, or would settle it twice.
+    if (this.remote || this.campaign || this.conquestSetup?.grand) return;
+    (this.conquestSetup ? this.setConquest({ ...this.conquestSetup, seed: this.conquestSetup.seed + 1 }) : this.setScenario(this.scenarioId)).catch(failBattle);
   }
 
   private stepSim(dt: number) {

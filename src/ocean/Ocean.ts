@@ -146,6 +146,8 @@ export class Ocean {
   private readonly waveA: Vector4[];
   private readonly waveB: Vector4[];
   private readonly pmremNodes: ReturnType<typeof pmremTexture>[] = [];
+  /** Each refraction depth lookup clones a framebuffer-sized depth texture that three never frees. */
+  private readonly depthNodes: ReturnType<typeof viewportDepthTexture>[] = [];
   private waveVersion = -1;
 
   constructor(
@@ -217,6 +219,7 @@ export class Ocean {
     material.positionNode = positionGeometry.add(displacement);
 
     const pmremNodes = this.pmremNodes;
+    const depthNodes = this.depthNodes;
 
     const flowCenter = uniform(new Vector2(current?.centerWorld.x ?? 0, current?.centerWorld.z ?? 0));
     const flowExtent = uniform(current?.extent ?? 1);
@@ -380,10 +383,14 @@ export class Ocean {
         const distortion = N.xz.mul(0.035).div(max(dist.mul(0.02), 1));
         const uvR = screenUV.add(distortion);
         const surfaceZ = positionView.z;
-        const sceneZr = perspectiveDepthToViewZ(viewportDepthTexture(uvR), cameraNear, cameraFar);
+        const depthR = viewportDepthTexture(uvR);
+        depthNodes.push(depthR);
+        const sceneZr = perspectiveDepthToViewZ(depthR, cameraNear, cameraFar);
         const useDistorted = sceneZr.lessThan(surfaceZ);
         const uvFinal = select(useDistorted, uvR, screenUV);
-        const sceneZ = perspectiveDepthToViewZ(viewportDepthTexture(uvFinal), cameraNear, cameraFar);
+        const depthFinal = viewportDepthTexture(uvFinal);
+        depthNodes.push(depthFinal);
+        const sceneZ = perspectiveDepthToViewZ(depthFinal, cameraNear, cameraFar);
         const thickness = max(surfaceZ.sub(sceneZ), 0);
         const absorb = mix(vec3(0.55, 0.16, 0.11), vec3(0.42, 0.11, 0.12), shallowTint);
         const trans = exp(absorb.mul(thickness).negate());
@@ -476,6 +483,9 @@ export class Ocean {
     // Each reflection node owns a PMREM generator with its own render targets.
     for (const node of this.pmremNodes) node.dispose();
     this.pmremNodes.length = 0;
+    // The node's value is the clone made for the canvas on its first render.
+    for (const node of this.depthNodes) node.value.dispose();
+    this.depthNodes.length = 0;
     this.wake.release(this);
     this.mesh.removeFromParent();
   }

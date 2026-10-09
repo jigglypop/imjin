@@ -49,6 +49,8 @@ const GRAPPLE_SPEED = { japan: 6, other: 3.5 };
 const MAX_BOARDERS = 4;
 /** A grapple parts when the hulls drift further apart than this. */
 const GRAPPLE_SLACK = 14;
+/** Seconds a ship cannot throw a grapple at the ship it was just cut or repelled from. */
+const REGRAPPLE_LOCK = 6;
 /** Boarders hit hardest in the first seconds after the grapple lands, while the defenders are still taking their stations. */
 const SHOCK_TIME = 10;
 const SHOCK_BONUS = 0.7;
@@ -163,6 +165,8 @@ export class Battle {
   private readonly rand: () => number;
   private readonly activity = new Map<number, ShipActivity>();
   private chargeTimer = new Map<number, number>();
+  /** Boarder id to the ship it was cut loose from and when it may try again. */
+  private grappleLock = new Map<number, { on: number; until: number }>();
   /** Ships holding each boarded ship, by the boarded ship's id, as of the last step. */
   private boarders = new Map<number, number>();
   private readonly gapA: number[] = [];
@@ -366,11 +370,13 @@ export class Battle {
       const s = this.byId.get(id);
       if (!this.isActive(s)) continue;
       if (s.grappledWith) {
+        this.lockGrapple(s, s.grappledWith);
         s.grappledWith = 0;
         cut += 1;
       }
       for (const o of this.ships) {
         if (o.grappledWith === s.id && this.rand() < 0.65) {
+          this.lockGrapple(o, s.id);
           o.grappledWith = 0;
           this.casualties(o, 4, 'melee', true);
           this.events.push({ type: 'repelled', a: o.id, b: s.id });
@@ -379,6 +385,20 @@ export class Battle {
       }
     }
     return cut;
+  }
+
+  private lockGrapple(s: Ship, on: number) {
+    this.grappleLock.set(s.id, { on, until: this.time + REGRAPPLE_LOCK });
+  }
+
+  private grappleLocked(s: Ship, on: number) {
+    const lock = this.grappleLock.get(s.id);
+    if (!lock) return false;
+    if (this.time >= lock.until) {
+      this.grappleLock.delete(s.id);
+      return false;
+    }
+    return lock.on === on;
   }
 
   canSee(target: Ship, d: number) {
@@ -1102,7 +1122,7 @@ export class Battle {
       let best: Ship | undefined;
       let bestGap = GRAPPLE_REACH.japan;
       this.grid.query(s.x, s.z, s.spec.length * 0.5 + GRAPPLE_REACH.japan + 24, (o) => {
-        if (o.team === s.team || !this.isActive(o) || !o.spec.boardable) return;
+        if (o.team === s.team || !this.isActive(o) || !o.spec.boardable || this.grappleLocked(s, o.id)) return;
         const gap = this.hullGap(s, o);
         if (gap < bestGap) {
           bestGap = gap;
@@ -1116,8 +1136,8 @@ export class Battle {
   private tryGrapple(a: Ship, b: Ship) {
     if (a.team === b.team) return;
     if (a.grappledWith === b.id || b.grappledWith === a.id) return;
-    const aWants = this.wantsBoard(a, b) && !a.grappledWith;
-    const bWants = this.wantsBoard(b, a) && !b.grappledWith;
+    const aWants = this.wantsBoard(a, b) && !a.grappledWith && !this.grappleLocked(a, b.id);
+    const bWants = this.wantsBoard(b, a) && !b.grappledWith && !this.grappleLocked(b, a.id);
     if (!aWants && !bWants) return;
     // When both crews want to board, either may throw the first grapple.
     const attacker = aWants && bWants ? (this.rand() < 0.5 ? a : b) : aWants ? a : b;
@@ -1178,6 +1198,7 @@ export class Battle {
         continue;
       }
       if (d.repel && this.rand() < dt * 0.14) {
+        this.lockGrapple(s, d.id);
         s.grappledWith = 0;
         this.events.push({ type: 'repelled', a: s.id, b: d.id });
         continue;

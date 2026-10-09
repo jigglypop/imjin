@@ -8,7 +8,7 @@ page.on('pageerror', (e) => errors.push(e.message));
 await page.goto(args.url ?? 'http://127.0.0.1:5291/', { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('.select-top', { timeout: 60000 });
 await page.waitForTimeout(6000);
-if (args.tab) await page.click(`.mode-switch button:nth-child(${args.tab})`);
+if (args.tab) await page.click(`.mode-grid .mode-card:nth-child(${args.tab})`);
 if (args.side) await page.click(`.side-btn:nth-child(${args.side})`);
 await page.waitForTimeout(1500);
 await page.screenshot({ path: args.out ?? 'shots/select.png' });

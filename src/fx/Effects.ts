@@ -41,7 +41,22 @@ const MAST_AT = [-0.22, 0.14, 0.34];
 
 export type EffectsQuality = { lights: number; particles: ParticleQuality };
 
-type LightSource = { x: number; y: number; z: number; intensity: number; decay: number; r: number; g: number; b: number; age: number; life: number; dist: number };
+type LightSource = {
+  x: number;
+  y: number;
+  z: number;
+  intensity: number;
+  decay: number;
+  r: number;
+  g: number;
+  b: number;
+  age: number;
+  life: number;
+  dist: number;
+  /** Lives for one lighting pass whatever the sim clock does (it stands still while paused). */
+  once?: boolean;
+  score?: number;
+};
 /** Where a shell's smoke trail was last laid. */
 type Trail = { x: number; y: number; z: number; seen: number };
 /** A ship going down: its script and the running parts of the sinking effects. */
@@ -156,7 +171,7 @@ export class Effects {
   }
 
   lantern(x: number, y: number, z: number, intensity: number) {
-    this.sources.push({ x, y, z, intensity, decay: 1, r: 1, g: 0.6, b: 0.27, age: 0, life: 0.03, dist: 70 });
+    this.sources.push({ x, y, z, intensity, decay: 1, r: 1, g: 0.6, b: 0.27, age: 0, life: 1, dist: 70, once: true });
   }
 
   private light(x: number, y: number, z: number, intensity: number, life: number, r = 1, g = 0.62, b = 0.3, dist = 140) {
@@ -795,7 +810,7 @@ export class Effects {
       this.emitAccum.set(ship.id, acc);
       if (level > 0.15) {
         this.views.localToWorld(ship.id, 0, this.deckOf(ship) + 3, 0, this.p);
-        this.sources.push({ x: this.p.x, y: this.p.y, z: this.p.z, intensity: 5000 * level * (0.85 + Math.random() * 0.3), decay: 1, r: 1, g: 0.5, b: 0.2, age: 0, life: dt * 1.01, dist: 180 });
+        this.sources.push({ x: this.p.x, y: this.p.y, z: this.p.z, intensity: 5000 * level * (0.85 + Math.random() * 0.3), decay: 1, r: 1, g: 0.5, b: 0.2, age: 0, life: 1, dist: 180, once: true });
       }
       if (ship.sinking > 0 && Math.random() < dt * 6) {
         this.views.localToWorld(ship.id, rnd(-0.45, 0.45) * L, 0, rnd(-0.5, 0.5) * ship.spec.beam, this.p);
@@ -924,22 +939,24 @@ export class Effects {
     const cam = camera.position;
     for (let i = this.sources.length - 1; i >= 0; i -= 1) {
       const s = this.sources[i]!;
+      if (s.once) continue;
       s.age += dt;
       if (s.age > s.life) this.sources.splice(i, 1);
     }
-    const ranked = this.sources
-      .map((s) => ({ s, score: (s.intensity * (1 - s.age / s.life)) / (1 + (cam.distanceTo(this.v.set(s.x, s.y, s.z)) / 300) ** 2) }))
-      .sort((a, b) => b.score - a.score);
+    for (const s of this.sources) {
+      const fade = s.life > 0 ? 1 - s.age / s.life : 1;
+      s.score = (s.intensity * fade) / (1 + (cam.distanceTo(this.v.set(s.x, s.y, s.z)) / 300) ** 2);
+    }
+    this.sources.sort((a, b) => b.score! - a.score!);
     for (let i = 0; i < this.lightCount; i += 1) {
       const l = this.lights[i]!;
-      const entry = ranked[i];
-      if (!entry) {
+      const s = this.sources[i];
+      if (!s) {
         l.intensity = 0;
         this.lightPos[i]!.w = 0;
         continue;
       }
-      const s = entry.s;
-      const fade = 1 - s.age / s.life;
+      const fade = s.life > 0 ? 1 - s.age / s.life : 1;
       l.position.set(s.x, s.y, s.z);
       l.color.setRGB(s.r, s.g, s.b);
       l.intensity = s.intensity * fade * (1 + this.night * 0.5);
@@ -947,5 +964,6 @@ export class Effects {
       this.lightPos[i]!.set(s.x, s.y, s.z, l.intensity);
       this.lightCol[i]!.set(s.r, s.g, s.b, s.dist);
     }
+    for (let i = this.sources.length - 1; i >= 0; i -= 1) if (this.sources[i]!.once) this.sources.splice(i, 1);
   }
 }

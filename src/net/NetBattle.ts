@@ -81,12 +81,14 @@ export class NetBattle implements BattleListener {
     }
   }
 
+  /** The engine has staged the battle: the server may start its clock. Not tied to a frame, so a hidden tab still says it. */
+  announce() {
+    if (this.announced) return;
+    this.announced = true;
+    net.send({ t: 'loaded' });
+  }
+
   advance(b: Battle, conquest: Conquest | null, dt: number) {
-    // The engine calls this once it has staged the battle: the server may start its clock.
-    if (!this.announced) {
-      this.announced = true;
-      net.send({ t: 'loaded' });
-    }
     for (const m of this.metas) this.applyMeta(b, m);
     this.metas.length = 0;
     if (this.state && conquest) {

@@ -77,6 +77,8 @@ export const useNet = create<NetState>(() => ({
 
 /** Battle traffic goes to whoever is listening: the networked battle of the running engine. */
 export interface BattleListener {
+  /** What the battle was built from: a resume only counts for the battle with the same seed. */
+  readonly seed: number;
   snapshot(buf: ArrayBuffer): void;
   message(msg: ServerMsg): void;
 }
@@ -319,11 +321,12 @@ class NetClient {
         return;
       case 'start':
         useNet.setState({ quick: null, notice: null });
-        // A page still drawing this battle only needed its seat back.
-        if (msg.resume && this.listener) {
+        // A page still drawing this battle only needed its seat back. A different seed is a new battle (a rematch).
+        if (msg.resume && this.listener?.seed === msg.seed) {
           useNet.setState({ battle: 'playing' });
           return;
         }
+        this.listener = null;
         useNet.setState({ battle: 'playing', speed: NO_SPEED });
         if (this.starter) this.starter(msg);
         else this.pendingStart = msg;
@@ -333,7 +336,8 @@ class NetClient {
         this.listener?.message(msg);
         return;
       case 'end':
-        useNet.setState({ battle: 'ended' });
+        // A page that already left the battle (back to the lobby) has nothing to end.
+        if (this.listener || useNet.getState().battle === 'playing') useNet.setState({ battle: 'ended' });
         this.listener?.message(msg);
         return;
       default:

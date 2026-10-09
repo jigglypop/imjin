@@ -108,7 +108,7 @@ export function SettingsScreen() {
             <button
               className={`chip ${!muted ? 'chip--on' : ''}`}
               onClick={() => {
-                sound.setMuted(muted);
+                sound.setMuted(!muted);
                 setMuted(!muted);
               }}
             >

@@ -176,17 +176,32 @@ export function Tutorial({ engine, compact }: { engine: Engine; compact: boolean
   const [step, setStep] = useState<number | null>(null);
   const [placed, setPlaced] = useState<Place>({ ring: null, style: {} });
   const opened = useRef({ sheet: false });
+  // The battle waits while the tour is read: a first-time player should not lose ships to the clock. A pause the
+  // player made themselves is left alone, and so is a multiplayer battle, which cannot be paused.
+  const paused = useRef(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const touch = isTouchDevice;
 
   // A multiplayer battle has no speed control, so that step is left out.
   const steps = STEPS.filter((s) => !(s.id === 'speed' && engine.remote));
 
+  const release = useCallback(() => {
+    if (!paused.current) return;
+    paused.current = false;
+    engine.paused = false;
+    engine.publish(true);
+  }, [engine]);
+
   const start = useCallback(() => {
     writeSeen(true);
     opened.current.sheet = false;
+    if (!engine.remote && !engine.paused) {
+      paused.current = true;
+      engine.paused = true;
+      engine.publish(true);
+    }
     setStep(0);
-  }, []);
+  }, [engine]);
 
   useEffect(() => {
     let timer = 0;
@@ -228,8 +243,9 @@ export function Tutorial({ engine, compact }: { engine: Engine; compact: boolean
     if (opened.current.sheet && !document.querySelector('.bottom--folded')) click('.dock-fold');
     opened.current.sheet = false;
     click('.orders-tab', 0);
+    release();
     setStep(null);
-  }, []);
+  }, [release]);
 
   if (!current || step === null) return null;
   const last = step === steps.length - 1;

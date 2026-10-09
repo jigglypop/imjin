@@ -522,3 +522,11 @@
 .on-faction .emblem::before {
   inset: 3px;
 }
+
+/* iOS zooms the page when a field under 16px takes focus, and the battle page cannot be pinched back. */
+@media (pointer: coarse) {
+  .on-input,
+  .on-select {
+    font-size: 16px;
+  }
+}

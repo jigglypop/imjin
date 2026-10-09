@@ -176,11 +176,12 @@ export function setTouchBox(touchBox: boolean) {
   useUi.setState({ touchBox });
 }
 
-export function setLoading(text: string | null, progress?: number, scenario?: ScenarioId) {
+/** `scenario` null clears the loading card's artwork; undefined keeps the one shown. */
+export function setLoading(text: string | null, progress?: number, scenario?: ScenarioId | null) {
   useUi.setState((s) => ({
     loading: text,
     progress: text === null ? 1 : progress ?? s.progress,
-    loadingScenario: scenario ?? s.loadingScenario,
+    loadingScenario: scenario !== undefined ? scenario : s.loadingScenario,
   }));
 }
 
@@ -194,6 +195,12 @@ export function setScreen(screen: Screen) {
 
 export function setOrigin(origin: BattleOrigin) {
   useUi.setState({ origin });
+}
+
+/** A battle that could not be built: the loading card goes, the fatal notice offers the way out. */
+export function failBattle(err: unknown) {
+  console.error(err);
+  useUi.setState({ loading: null, fatal: `초기화 실패: ${String(err)}` });
 }
 
 export function setFatal(fatal: string | null) {

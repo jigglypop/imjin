@@ -6,7 +6,7 @@ import { setScreen, useUi } from '../state/store';
 import { sound } from '../audio/Sound';
 import type { Engine } from '../game/Engine';
 
-/** Back to the select screen. `leaveRoom` also gives up the seat; otherwise the room stays for a rematch. */
+/** Back to the online lobby (the room, when it is kept). `leaveRoom` also gives up the seat; otherwise the room stays for a rematch. */
 function exitBattle(leaveRoom: boolean) {
   const engine = (window as unknown as { __engine?: Engine }).__engine;
   if (leaveRoom) net.send({ t: 'leave' });
@@ -16,7 +16,7 @@ function exitBattle(leaveRoom: boolean) {
     engine.paused = true;
   }
   sound.setMode('select');
-  setScreen('select');
+  setScreen('online');
 }
 
 /**
@@ -91,7 +91,7 @@ function OnlineOverlay() {
               exitBattle(true);
             }}
           >
-            전투 선택
+            대기실로
           </button>
         </div>
       )}

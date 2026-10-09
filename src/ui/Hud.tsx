@@ -172,7 +172,7 @@ const BACK_LABEL: Record<BattleOrigin, { long: string; short: string }> = {
   select: { long: '전투 선택', short: '선택' },
   skirmish: { long: '쟁탈전', short: '쟁탈전' },
   online: { long: '대전 대기실', short: '대기실' },
-  faction: { long: '전역 지도', short: '지도' },
+  faction: { long: '전역 지도', short: '전역' },
 };
 
 /** Pause and speed. Wide layouts show every multiplier; compact ones show one button that cycles through them. */
@@ -393,7 +393,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                 >
                   소리
                 </button>
-                {origin !== 'faction' && (
+                {origin !== 'faction' && !engine.remote && !engine.campaign && (
                   <button className="chip" onClick={() => engine.restart()}>
                     다시 시작
                   </button>

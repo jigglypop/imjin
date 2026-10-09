@@ -47,12 +47,12 @@ const open = async (name, size = { width, height }) => {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && !/WebSocket|ERR_CONNECTION/.test(m.text()) && errors.push(m.text()));
   await page.goto(url, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('.mode-switch', { timeout: 60000 });
+  await page.waitForSelector('.mode-card', { timeout: 60000 });
   await gotoOnline(page, name);
   return { page, errors, name };
 };
 const gotoOnline = async (page, name) => {
-  await page.click('.mode-switch button:nth-child(4)');
+  await page.click('.mode-grid .mode-card:nth-child(4)');
   await page.fill('.on-input', name);
   await page.click('.on-connect');
   await page.waitForSelector('.on-card', { timeout: 20000 });
@@ -219,8 +219,8 @@ try {
     const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
     const page = await context.newPage();
     await page.goto(url, { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('.mode-switch', { timeout: 60000 });
-    await page.click('.mode-switch button:nth-child(4)');
+    await page.waitForSelector('.mode-card', { timeout: 60000 });
+    await page.click('.mode-grid .mode-card:nth-child(4)');
     await page.fill('.on-input', '장수');
     await page.click('.on-connect');
     await page.waitForSelector('.on-alert', { timeout: 20000 });
