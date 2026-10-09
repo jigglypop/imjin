@@ -1708,3 +1708,20 @@ input {
   max-width: 100%;
   gap: 4px;
 }
+
+/* The cinematic camera names its shot in a small pill under the top bar; it never takes input. */
+.shot-label {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 96px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ink);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  white-space: nowrap;
+}
