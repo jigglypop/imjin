@@ -91,9 +91,9 @@ async function loadHeights() {
 // west, where their fleets sailed from, Japan to the east. The side the player leads stands taller. Sizes are in
 // map units (one unit is about 3.3 km).
 const FLAG_AT: Record<Faction, { dx: number; dz: number; size: number; lean: number }> = {
-  joseon: { dx: -1.4, dz: 0.5, size: 0.95, lean: 0.3 },
-  ming: { dx: -2.4, dz: -0.5, size: 0.9, lean: 0.25 },
-  japan: { dx: 1.5, dz: -0.2, size: 0.62, lean: -0.3 },
+  joseon: { dx: -1.5, dz: 0.5, size: 1.15, lean: 0.3 },
+  ming: { dx: -2.7, dz: -0.5, size: 1.08, lean: 0.25 },
+  japan: { dx: 1.6, dz: -0.2, size: 0.76, lean: -0.3 },
 };
 const PLAYER_FLAG = 1.3;
 
@@ -103,6 +103,164 @@ function flagText(id: ScenarioId, faction: Faction) {
   if (faction === 'joseon') return s.joseon.figure === 'fig_yi' ? '帥' : s.joseon.banner;
   if (faction === 'ming') return s.ming?.banner ?? '明';
   return s.japan.banner;
+}
+
+/** A repeatable pseudo-random sequence, so a flag's weave and wear come out the same every time it is painted. */
+function seeded(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** The banners are written with a brush. Only the characters the banners use are fetched (a few kilobytes). */
+const FLAG_FONT = 'Yuji Boku';
+let flagFont: Promise<unknown> | null = null;
+function loadFlagFont() {
+  if (!flagFont) {
+    const chars = new Set([...'帥明']);
+    for (const s of Object.values(SCENARIOS)) for (const ch of s.joseon.banner + s.japan.banner + (s.ming?.banner ?? '')) chars.add(ch);
+    const text = [...chars].join('');
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=Yuji+Boku&display=swap&text=${encodeURIComponent(text)}`;
+    flagFont = new Promise((resolve) => {
+      link.onload = resolve;
+      link.onerror = resolve;
+      document.head.appendChild(link);
+    }).then(() => document.fonts.load(`400 200px "${FLAG_FONT}"`, text));
+  }
+  return flagFont;
+}
+
+const INK = '#1a1612';
+
+/**
+ * Aged hemp: the cloth's outline with a frayed fly edge, the weave, a few stains and a darker rim. Leaves the cloth as the
+ * clip, so what is painted next stays on it.
+ */
+function paintCloth(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, ground: string, flyLeft: boolean, rnd: () => number) {
+  const fray = (amp: number) => Math.max(0, (rnd() - 0.3) * amp);
+  const step = 12;
+  ctx.beginPath();
+  ctx.moveTo(x0, y0);
+  for (let x = x0 + step; x < x1; x += step) ctx.lineTo(x, y0 + fray(5));
+  ctx.lineTo(x1, y0);
+  for (let y = y0 + step; y < y1; y += step) ctx.lineTo(flyLeft ? x1 : x1 - fray(14), y);
+  ctx.lineTo(x1, y1);
+  for (let x = x1 - step; x > x0; x -= step) ctx.lineTo(x, y1 - fray(5));
+  ctx.lineTo(x0, y1);
+  for (let y = y1 - step; y > y0; y -= step) ctx.lineTo(flyLeft ? x0 + fray(14) : x0, y);
+  ctx.closePath();
+  ctx.fillStyle = ground;
+  ctx.fill();
+  ctx.clip();
+  // the weave: warp and weft threads a shade lighter and darker than the ground
+  for (let y = y0; y < y1; y += 3) {
+    ctx.fillStyle = `rgba(70, 52, 34, ${0.03 + rnd() * 0.06})`;
+    ctx.fillRect(x0, y, x1 - x0, 1);
+  }
+  for (let x = x0; x < x1; x += 3) {
+    ctx.fillStyle = `rgba(255, 248, 230, ${0.02 + rnd() * 0.05})`;
+    ctx.fillRect(x, y0, 1, y1 - y0);
+  }
+  // water and smoke stains
+  for (let i = 0; i < 10; i += 1) {
+    const x = x0 + rnd() * (x1 - x0);
+    const y = y0 + rnd() * (y1 - y0);
+    const r = 30 + rnd() * 150;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(96, 70, 44, ${0.05 + rnd() * 0.09})`);
+    g.addColorStop(1, 'rgba(96, 70, 44, 0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // a darker rim where the cloth has been handled and weathered
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  const rim = ctx.createRadialGradient(cx, cy, Math.min(x1 - x0, y1 - y0) * 0.3, cx, cy, Math.max(x1 - x0, y1 - y0) * 0.72);
+  rim.addColorStop(0, 'rgba(40, 28, 18, 0)');
+  rim.addColorStop(1, 'rgba(40, 28, 18, 0.32)');
+  ctx.fillStyle = rim;
+  ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+}
+
+/** Flame tongues (화염각) along one edge, pointing outward: each a curved lick, no two alike. */
+function paintFlames(ctx: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, nx: number, ny: number, color: string, rnd: () => number) {
+  const len = Math.hypot(bx - ax, by - ay);
+  const tx = (bx - ax) / len;
+  const ty = (by - ay) / len;
+  const width = 42;
+  ctx.fillStyle = color;
+  // the strip the tongues are sewn to
+  ctx.beginPath();
+  ctx.moveTo(ax - nx * 14, ay - ny * 14);
+  ctx.lineTo(bx - nx * 14, by - ny * 14);
+  ctx.lineTo(bx + nx * 2, by + ny * 2);
+  ctx.lineTo(ax + nx * 2, ay + ny * 2);
+  ctx.fill();
+  for (let s = 0; s < len - 4; s += width) {
+    const w = Math.min(width, len - s);
+    const p0x = ax + tx * s;
+    const p0y = ay + ty * s;
+    const p1x = p0x + tx * w;
+    const p1y = p0y + ty * w;
+    const reach = 46 + rnd() * 22;
+    const sway = (rnd() - 0.3) * 22;
+    const tipX = (p0x + p1x) / 2 + nx * reach + tx * sway;
+    const tipY = (p0y + p1y) / 2 + ny * reach + ty * sway;
+    ctx.beginPath();
+    ctx.moveTo(p0x, p0y);
+    ctx.quadraticCurveTo(p0x + nx * reach * 0.6 + tx * (sway * 0.2 - 4), p0y + ny * reach * 0.6 + ty * (sway * 0.2 - 4), tipX, tipY);
+    ctx.quadraticCurveTo(p1x + nx * reach * 0.35 + tx * (sway * 0.5 + 3), p1y + ny * reach * 0.35 + ty * (sway * 0.5 + 3), p1x, p1y);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+/** Characters in ink: multiplied into the cloth so the weave shows through, with a slight bleed. */
+function inkText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.fillStyle = INK;
+  ctx.shadowColor = 'rgba(26, 22, 18, 0.45)';
+  ctx.shadowBlur = size * 0.03;
+  ctx.font = `400 ${size}px "${FLAG_FONT}", "Noto Serif KR", serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+/** A clan crest (mon) in ink: three tomoe whirling inside a ring. */
+function paintMon(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.fillStyle = INK;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = r * 0.12;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+  for (let k = 0; k < 3; k += 1) {
+    const a = (k / 3) * Math.PI * 2 - Math.PI / 2;
+    const hx = cx + Math.cos(a) * r * 0.38;
+    const hy = cy + Math.sin(a) * r * 0.38;
+    // the head of the comma, then its tail sweeping round the centre
+    ctx.beginPath();
+    ctx.arc(hx, hy, r * 0.27, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(hx + Math.cos(a - Math.PI / 2) * r * 0.27, hy + Math.sin(a - Math.PI / 2) * r * 0.27);
+    ctx.quadraticCurveTo(cx + Math.cos(a + 1.1) * r * 0.95, cy + Math.sin(a + 1.1) * r * 0.95, cx + Math.cos(a + 2.0) * r * 0.66, cy + Math.sin(a + 2.0) * r * 0.66);
+    ctx.quadraticCurveTo(cx + Math.cos(a + 1.0) * r * 0.55, cy + Math.sin(a + 1.0) * r * 0.55, hx + Math.cos(a + Math.PI / 2) * r * 0.27, hy + Math.sin(a + Math.PI / 2) * r * 0.27);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 type Flag = {
@@ -375,80 +533,58 @@ export class SelectScene {
     this.flagsPlaced = true;
   }
 
+  /**
+   * The flags are cloth, not icons: aged hemp with the commander's mark written in ink. Joseon flies a command flag with
+   * slate flame tongues (화염각), Ming an ochre flag with its seal, Japan a tall nobori with a crest and the name down it.
+   * The faction's colour is in the trim, not the whole cloth.
+   */
   private paintFlag(canvas: HTMLCanvasElement, faction: Faction, text: string) {
     const ctx = canvas.getContext('2d')!;
     const w = canvas.width;
     const h = canvas.height;
+    const rnd = seeded(faction === 'joseon' ? 11 : faction === 'japan' ? 23 : 37);
     ctx.clearRect(0, 0, w, h);
+    ctx.save();
     if (faction === 'japan') {
-      // Nobori: a tall white banner with a crest and the commander's name down the middle.
-      ctx.fillStyle = '#6b4a40';
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = '#efe6e1';
-      ctx.fillRect(0, 0, w, 26);
-      const cx = w / 2;
-      const cy = w * 0.62;
-      const r = w * 0.3;
-      ctx.lineWidth = 16;
-      ctx.strokeStyle = '#efe6e1';
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.stroke();
-      for (let k = 0; k < 3; k += 1) {
-        const a = (k / 3) * Math.PI * 2 - Math.PI / 2;
-        const tx = cx + Math.cos(a) * r * 0.42;
-        const ty = cy + Math.sin(a) * r * 0.42;
-        ctx.beginPath();
-        ctx.arc(tx, ty, r * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(tx + Math.cos(a + 1.6) * r * 0.3, ty + Math.sin(a + 1.6) * r * 0.3);
-        ctx.quadraticCurveTo(cx + Math.cos(a + 1.2) * r * 0.85, cy + Math.sin(a + 1.2) * r * 0.85, cx + Math.cos(a + 2.1) * r * 0.62, cy + Math.sin(a + 2.1) * r * 0.62);
-        ctx.lineTo(tx + Math.cos(a - 0.3) * r * 0.2, ty + Math.sin(a - 0.3) * r * 0.2);
-        ctx.fill();
+      // Nobori: the pole runs down the left edge, with cloth loops along it.
+      paintCloth(ctx, 18, 0, w, h, '#ddd4be', false, rnd);
+      // the clan's colour: a broad band at the head and another at the foot
+      ctx.fillStyle = '#5f4238';
+      ctx.fillRect(0, 0, w, 64);
+      ctx.fillRect(0, h - 40, w, 40);
+      paintMon(ctx, w / 2 + 9, w * 0.58, w * 0.27);
+      [...text].forEach((ch, i, all) => inkText(ctx, ch, w / 2 + 9, w * 1.2 + i * (all.length > 2 ? 190 : 230), all.length > 2 ? 190 : 230));
+      ctx.restore();
+      for (let y = 70; y < h - 40; y += 120) {
+        ctx.fillStyle = '#5f4238';
+        ctx.fillRect(0, y, 26, 34);
+        ctx.fillStyle = 'rgba(40, 28, 18, 0.35)';
+        ctx.fillRect(0, y + 30, 26, 4);
       }
-      ctx.font = '700 190px "Noto Serif KR", serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      [...text].forEach((ch, i) => ctx.fillText(ch, cx, w * 1.25 + i * 210));
       return;
     }
-    // Joseon: a slate-indigo command flag with a pale flame border. Ming: an ochre flag with a pale border and seal.
+    // Square flags hang to the left of the pole: the right edge is the sleeve, the other three carry the trim.
     const ming = faction === 'ming';
-    ctx.fillStyle = ming ? '#8c7040' : '#46637a';
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = ming ? '#efe9dd' : '#e4eaef';
-    const tooth = 34;
-    for (let x = 0; x < w; x += tooth) {
-      ctx.beginPath();
-      ctx.moveTo(x, h);
-      ctx.lineTo(x + tooth / 2, h - 40);
-      ctx.lineTo(x + tooth, h);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x + tooth / 2, 34);
-      ctx.lineTo(x + tooth, 0);
-      ctx.fill();
-    }
-    for (let y = 0; y < h; y += tooth) {
-      ctx.beginPath();
-      ctx.moveTo(w, y);
-      ctx.lineTo(w - 40, y + tooth / 2);
-      ctx.lineTo(w, y + tooth);
-      ctx.fill();
-    }
+    const trim = ming ? '#7d6337' : '#3d566b';
+    const m = 72;
+    paintCloth(ctx, m, m, w - 22, h - m, ming ? '#c4a66b' : '#d8cdb1', true, rnd);
     if (ming) {
-      ctx.fillStyle = '#efe9dd';
+      // a pale seal disc behind the character
+      ctx.fillStyle = 'rgba(236, 226, 200, 0.92)';
       ctx.beginPath();
-      ctx.arc(w * 0.47, h * 0.5, w * 0.3, 0, Math.PI * 2);
+      ctx.arc((m + w - 22) / 2, h / 2, w * 0.25, 0, Math.PI * 2);
       ctx.fill();
+      inkText(ctx, text, (m + w - 22) / 2, h / 2 + 6, 220);
+    } else {
+      inkText(ctx, text, (m + w - 22) / 2, h / 2 + 8, 300);
     }
-    ctx.fillStyle = ming ? '#3a2d17' : '#f4f6f8';
-    ctx.font = `700 ${ming ? 230 : 300}px "Noto Serif KR", serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, w * 0.47, h * 0.5);
+    ctx.restore();
+    paintFlames(ctx, m, m, w - 22, m, 0, -1, trim, rnd);
+    paintFlames(ctx, w - 22, h - m, m, h - m, 0, 1, trim, rnd);
+    paintFlames(ctx, m, h - m, m, m, -1, 0, trim, rnd);
+    // the sleeve the pole runs through
+    ctx.fillStyle = trim;
+    ctx.fillRect(w - 24, m - 10, 24, h - 2 * m + 20);
   }
 
   private makeFlag(faction: Faction): Flag {
@@ -460,7 +596,7 @@ export class SelectScene {
     tex.colorSpace = SRGBColorSpace;
     tex.anisotropy = 8;
     const flag: Flag = { faction, group: new Group(), canvas, tex, text: '', base: 0, pos: new Vector3(), goal: new Vector3(), scale: 0, goalScale: 0 };
-    void document.fonts.load('700 200px "Noto Serif KR"').then(() => {
+    void loadFlagFont().then(() => {
       if (!flag.text) return;
       this.paintFlag(canvas, faction, flag.text);
       tex.needsUpdate = true;
@@ -478,7 +614,11 @@ export class SelectScene {
     const wave = sin(phase).mul(0.07).add(sin(d.mul(17).sub(t.mul(4.4)).add(v.mul(3))).mul(0.018)).mul(d);
     const slope = cos(phase).mul(0.5).add(cos(d.mul(17).sub(t.mul(4.4))).mul(0.25));
     m.positionNode = positionLocal.add(vec3(0, d.mul(d).mul(-0.04), wave));
-    m.colorNode = texture(tex, uv()).rgb.mul(slope.mul(d).mul(0.22).add(0.86));
+    const cloth0 = texture(tex, uv());
+    m.colorNode = cloth0.rgb.mul(slope.mul(d).mul(0.22).add(0.86));
+    // the frayed edge and the flame tongues are cut out of the plane
+    m.opacityNode = cloth0.a;
+    m.alphaTest = 0.5;
     const cloth = new Mesh(geo, m);
     const wood = new MeshBasicNodeMaterial({ color: 0x8a8174 });
     const pole = new Mesh(new CylinderGeometry(0.014, 0.018, aspect + 1.6, 10), wood);
