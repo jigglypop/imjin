@@ -456,7 +456,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
       const sq = squad('joseon', g.name, g.cmd, g.kind);
       const back = gi * 210;
       const cxj = -1100 - Math.cos(head) * back * 0.55 + (gi % 3 - 1) * 260;
-      const czj = 3300 - Math.sin(head) * back * 0.55;
+      const czj = 650 - Math.sin(head) * back * 0.55;
       const spacing = g.kind === 'hyeopseon' ? 30 : 60;
       const cols = g.kind === 'hyeopseon' ? 6 : 3;
       line(sq, g.kind, grid(cxj, czj, head, g.n, cols, spacing, spacing * 0.95, 8, rand), g.name, gi === 1 ? 0 : -1);
@@ -482,7 +482,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     japanSquads.forEach((g, gi) => {
       const kind: ShipKind = gi % 3 === 0 ? 'atakebune' : 'sekibune';
       const sq = squad('japan', g.name, g.cmd, kind);
-      const x = 300 + gi * 430;
+      const x = -600 + gi * 430;
       line(sq, kind, grid(x, 0, Math.PI, g.n, 5, gi % 3 === 0 ? 70 : 48, 42, 10, rand), g.name, 0);
     });
     b.retreatBelow.japan =0.75;
@@ -496,10 +496,10 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     const sqJung = squad('joseon', '중위 · 녹도', '녹도만호 정운', 'panokseon');
     const sqWon = squad('joseon', '경상우수영', '경상우수사 원균', 'panokseon');
     const sqHyeop = squad('joseon', '협선대', '협선장', 'hyeopseon');
-    line(sqYi, 'panokseon', grid(1150, 300, head, 14, 7, 70, 62, 10, rand), '좌수영', 3);
-    line(sqJung, 'panokseon', grid(1550, -380, head, 10, 5, 70, 62, 10, rand), '중위');
-    line(sqWon, 'panokseon', grid(1600, 980, head, 4, 4, 70, 62, 10, rand), '경상우수영');
-    line(sqHyeop, 'hyeopseon', grid(2050, 300, head, 17, 6, 34, 32, 8, rand), '협선');
+    line(sqYi, 'panokseon', grid(700, 300, head, 14, 7, 70, 62, 10, rand), '좌수영', 3);
+    line(sqJung, 'panokseon', grid(1100, -380, head, 10, 5, 70, 62, 10, rand), '중위');
+    line(sqWon, 'panokseon', grid(1150, 980, head, 4, 4, 70, 62, 10, rand), '경상우수영');
+    line(sqHyeop, 'hyeopseon', grid(1600, 300, head, 17, 6, 34, 32, 8, rand), '협선');
     b.retreatBelow.japan =0.45;
   } else if (id === 'sacheon') {
     const sq1 = squad('japan', '사천 선창 대선', '왜장', 'atakebune');
@@ -511,10 +511,10 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     const sqTurtle = squad('joseon', '돌격 거북선', '돌격장 이기남', 'geobukseon');
     const sqJung = squad('joseon', '중위장', '광양현감 어영담', 'panokseon');
     const sqWon = squad('joseon', '경상우수영', '경상우수사 원균', 'panokseon');
-    line(sqYi, 'panokseon', grid(0, 150, head, 12, 6, 70, 64, 10, rand), '좌수영', 2);
-    line(sqJung, 'panokseon', grid(-700, 600, head, 10, 5, 70, 64, 10, rand), '중위');
-    line(sqWon, 'panokseon', grid(700, 600, head, 3, 3, 70, 64, 10, rand), '경상우수영');
-    line(sqTurtle, 'geobukseon', [{ x: 0, z: -200, h: head }], '거북선');
+    line(sqYi, 'panokseon', grid(0, -450, head, 12, 6, 70, 64, 10, rand), '좌수영', 2);
+    line(sqJung, 'panokseon', grid(-700, 0, head, 10, 5, 70, 64, 10, rand), '중위');
+    line(sqWon, 'panokseon', grid(700, 0, head, 3, 3, 70, 64, 10, rand), '경상우수영');
+    line(sqTurtle, 'geobukseon', [{ x: 0, z: -800, h: head }], '거북선');
     b.retreatBelow.japan =0;
   } else if (id === 'dangpo') {
     const sqFlag = squad('japan', '구루시마 대장선단', '구루시마 미치유키', 'atakebune');
@@ -525,9 +525,9 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     const sqYi = squad('joseon', '전라좌수영 본대', '좌수사 이순신', 'panokseon');
     const sqTurtle = squad('joseon', '돌격 거북선', '돌격장 이기남', 'geobukseon');
     const sqKwon = squad('joseon', '중위장', '순천부사 권준', 'panokseon');
-    line(sqYi, 'panokseon', grid(250, 200, head, 14, 7, 70, 64, 10, rand), '좌수영', 3);
-    line(sqKwon, 'panokseon', grid(850, 650, head, 10, 5, 70, 64, 10, rand), '중위');
-    line(sqTurtle, 'geobukseon', [{ x: -100, z: -250, h: head }, { x: 70, z: -320, h: head }], '거북선');
+    line(sqYi, 'panokseon', grid(-50, -100, head, 14, 7, 70, 64, 10, rand), '좌수영', 3);
+    line(sqKwon, 'panokseon', grid(550, 350, head, 10, 5, 70, 64, 10, rand), '중위');
+    line(sqTurtle, 'geobukseon', [{ x: -400, z: -550, h: head }, { x: -230, z: -620, h: head }], '거북선');
     b.retreatBelow.japan =0;
   } else if (id === 'angolpo') {
     const sqKuki = squad('japan', '구키 본대', '구키 요시타카', 'atakebune');
@@ -603,7 +603,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
       const cmd = q === 0 ? '시마즈 요시히로' : q === 1 ? '다치바나 무네시게' : q === 2 ? '소 요시토시' : q === 3 ? '데라자와 마사나리' : '왜장';
       const sq = squad('japan', q < 4 ? `${cmd.split(' ')[0]} 대` : `사쓰마 ${q + 1}진`, cmd, q % 4 === 0 ? 'atakebune' : 'sekibune');
       const kindOf = mix(0.22, 0.6);
-      grid(450 + q * 300, (q % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, `${sq.name} ${i + 1}`, i === 0));
+      grid(-550 + q * 300, (q % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, `${sq.name} ${i + 1}`, i === 0));
     }
     b.retreatBelow.japan =0.55;
   }

@@ -156,6 +156,24 @@ export function autoFleet(faction: Faction, budget = MUSTER_BUDGET): ShipKind[] 
   return out;
 }
 
+/** How far from the middle of the map the opening fleets form up. */
+const MUSTER_RADIUS = 700;
+
+/** The nearest open water to a point, clear of ships already placed. */
+function wetSpot(land: LandSampler, x: number, z: number, placed: { x: number; z: number }[]) {
+  const free = (px: number, pz: number) => land(px, pz) < -6 && placed.every((o) => (o.x - px) ** 2 + (o.z - pz) ** 2 > 40 * 40);
+  if (free(x, z)) return { x, z };
+  for (let ring = 1; ring <= 40; ring += 1) {
+    for (let k = 0; k < 12; k += 1) {
+      const a = (k / 12) * Math.PI * 2 + ring;
+      const px = x + Math.cos(a) * ring * 25;
+      const pz = z + Math.sin(a) * ring * 25;
+      if (free(px, pz)) return { x: px, z: pz };
+    }
+  }
+  return { x, z };
+}
+
 /** Default seats: the player against the computer, or a 2-against-2. */
 export function defaultSeats(player: Faction, enemy: Faction, count = 2): Seat[] {
   const seats: Seat[] = [
@@ -204,25 +222,27 @@ export function buildConquest(id: ConquestMapId, seats: Seat[], land: LandSample
   b.humans = new Set(seats.flatMap((s, i) => (s.human ? [i] : [])));
   b.center = { x: 0, z: 0 };
   b.arenaRadius = 7600;
+  // The opening fleets muster this far from the middle of the map instead of in their home ports, so that the first
+  // contact comes within a few minutes rather than a quarter of an hour. Ships built later still launch at the port.
+  const muster = points.reduce((best, p) => (Math.hypot(p.x, p.z) < Math.hypot(best.x, best.z) ? p : best));
+  const placed: { x: number; z: number }[] = [];
   seats.forEach((seat, slot) => {
     const home = conquest.homeOf(slot);
     if (!home) return;
     const toCentre = Math.atan2(-home.z, -home.x);
     const fx = Math.cos(toCentre);
     const fz = Math.sin(toCentre);
+    const advance = Math.max(0, Math.hypot(home.spawn.x, home.spawn.z) - MUSTER_RADIUS);
     const cols = 5;
     let value = 0;
     seat.fleet.filter((k) => (value += SHIP_SPECS[k].cost) <= conquest.players[slot]!.cap).forEach((kind, i) => {
       const row = Math.floor(i / cols);
       const col = (i % cols) - (cols - 1) / 2;
-      let x = home.spawn.x + fx * (60 + row * -62) - fz * col * 58;
-      let z = home.spawn.z + fz * (60 + row * -62) + fx * col * 58;
-      for (let tries = 0; tries < 30 && land(x, z) > -5; tries += 1) {
-        x += fx * 25;
-        z += fz * 25;
-      }
-      const ship = conquest.launch(b, home, kind, x, z, toCentre);
-      ship.order = { type: 'hold' };
+      const spot = wetSpot(land, home.spawn.x + fx * (advance + 60 - row * 62) - fz * col * 58, home.spawn.z + fz * (advance + 60 - row * 62) + fx * col * 58, placed);
+      placed.push(spot);
+      const ship = conquest.launch(b, home, kind, spot.x, spot.z, toCentre);
+      // A person gives their own orders; the computer's fleet sails for the contested water in the middle.
+      ship.order = seat.human ? { type: 'hold' } : { type: 'move', x: muster.x, z: muster.z };
     });
   });
   b.events.length = 0;

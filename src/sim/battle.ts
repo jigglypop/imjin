@@ -24,7 +24,7 @@ import {
 
 export const SIM_DT = 1 / 30;
 const GRAVITY = 9.81;
-const SINK_DURATION = 38;
+const SINK_DURATION = 24;
 const TAU = Math.PI * 2;
 const THINK_INTERVAL = 0.3;
 const DRAFT = -1.4;
@@ -33,7 +33,46 @@ const DRAFT = -1.4;
 // has gone on long enough that waiting no longer makes sense.
 const WAKE_SLOT = 320;
 const WAKE_HOLD = 700;
+const WAKE_ANCHOR = 650;
 const WAKE_AFTER = 150;
+/** Computer-led ships this close to one that weighs anchor follow it: an anchored fleet sorties together. */
+const ALARM_RADIUS = 1400;
+
+// Boarding. The Japanese fleet fought to close and board, so its crews throw grapples from further off and at a
+// higher relative speed than the Joseon and Ming crews, who board only to finish a ship that is already beaten.
+/** Hull-to-hull gap in metres within which a grapple can be thrown. */
+const GRAPPLE_REACH = { japan: 12, other: 3 };
+/** Fastest relative speed in m/s at which a grapple still holds. */
+const GRAPPLE_SPEED = { japan: 6, other: 3.5 };
+/** Most ships that can hold one enemy ship at the same time. */
+const MAX_BOARDERS = 4;
+/** A grapple parts when the hulls drift further apart than this. */
+const GRAPPLE_SLACK = 14;
+/** Boarders hit hardest in the first seconds after the grapple lands, while the defenders are still taking their stations. */
+const SHOCK_TIME = 10;
+const SHOCK_BONUS = 0.7;
+/** Soldiers count for more than a sailor with a pike: this many sailors each. */
+const SOLDIER_WEIGHT = 2;
+/** Men lost per second per point of fighting strength on the other side of the rail. */
+const MELEE_RATE = 0.025;
+/** How much of a defender's deck-defence rating (parapet, bulwark, tower) works in a melee. */
+const PARAPET_SHARE = 0.6;
+/** A ship with less than this share of its crew left is a target to finish off by boarding. */
+const FINISH_CREW = 0.35;
+/** A beaten ship is only worth closing on with none of its fleet within this many metres. */
+const FINISH_SAFE = 220;
+/** Share of the crew left below which a boarded ship is taken. */
+const CAPTURE_CREW = 0.08;
+/** Boarders close in at FLEET_PACE (m/s) while farther than this from their enemy, then go flat out together. */
+const RUSH_RANGE = 450;
+const FLEET_PACE = 5;
+/** Boarders look for company within this many metres, and wait for the others when this far ahead of them. */
+const FLEET_REACH = 800;
+const FLEET_SLACK = 70;
+/** Arquebusiers this close pick their man: a deadlier volley, loaded faster (seconds between volleys, plus up to 0.9). */
+const CLOSE_RANGE = 80;
+const CLOSE_LOSS = 1.3;
+const CLOSE_RELOAD = 2.6;
 
 // How much each station adds in a deck fight, in CREW_ROLES order: soldiers fight hardest, rowers least.
 const MELEE_WEIGHT: CrewCounts = [0.15, 0.4, 0.6, 1];
@@ -120,6 +159,10 @@ export class Battle {
   private readonly rand: () => number;
   private readonly activity = new Map<number, ShipActivity>();
   private chargeTimer = new Map<number, number>();
+  /** Ships holding each boarded ship, by the boarded ship's id, as of the last step. */
+  private boarders = new Map<number, number>();
+  private readonly gapA: number[] = [];
+  private readonly gapB: number[] = [];
   private readonly grid = new ShipGrid(120);
   private active: Record<Team, Ship[]> = { joseon: [], japan: [] };
   private retreating: Record<Team, boolean> = { joseon: false, japan: false };
@@ -418,6 +461,7 @@ export class Battle {
     }
     for (const s of this.ships) if (s.alive) this.move(s, dt);
     this.collide(dt);
+    this.reachGrapples();
     for (const s of this.ships) if (s.alive) this.weapons(s, dt);
     this.updateProjectiles(dt);
     for (const s of this.ships) {
@@ -472,7 +516,23 @@ export class Battle {
     if ((type !== 'slot' && type !== 'hold') || !this.isAi(s) || this.rules) return;
     const enemy = this.nearestEnemy(s);
     const reach = type === 'slot' ? WAKE_SLOT : WAKE_HOLD;
-    if (this.time > WAKE_AFTER || (enemy && Math.hypot(enemy.x - s.x, enemy.z - s.z) < reach)) s.order = { type: 'auto' };
+    if (this.time > WAKE_AFTER || (enemy && Math.hypot(enemy.x - s.x, enemy.z - s.z) < reach)) {
+      s.order = { type: 'auto' };
+      this.raiseAlarm(s);
+    }
+  }
+
+  /** A ship that gets under way rouses the computer-led ships of its squadron and those lying close by: a fleet sorties together. */
+  private raiseAlarm(s: Ship) {
+    const rouse = (o: Ship) => {
+      const type = o.order.type;
+      if (o !== s && o.team === s.team && (type === 'anchor' || type === 'hold' || type === 'slot') && this.isAi(o)) o.order = { type: 'auto' };
+    };
+    const sq = this.squadrons[s.squadronId - 1];
+    if (sq) for (const id of sq.shipIds) rouse(this.byId.get(id)!);
+    this.grid.query(s.x, s.z, ALARM_RADIUS, (o) => {
+      if ((o.x - s.x) ** 2 + (o.z - s.z) ** 2 < ALARM_RADIUS * ALARM_RADIUS) rouse(o);
+    });
   }
 
   nearestEnemy(s: Ship, preferBoardable = false, within = Infinity) {
@@ -485,6 +545,8 @@ export class Battle {
       let score = d;
       if (preferBoardable && !o.spec.boardable) score += 700;
       if (o.id === s.targetId) score -= 60;
+      // Boarders gang up on a ship that is already held.
+      if (boardsFirst(s)) score -= 40 * Math.min(2, this.boarders.get(o.id) ?? 0);
       if (o.spec.kind === 'hyeopseon') score += 120;
       if (score < bestScore) {
         bestScore = score;
@@ -545,7 +607,7 @@ export class Battle {
     const range = s.spec.length * 1.8 + 20;
     this.grid.query(s.x, s.z, range + 40, (o) => {
       if (o === s || !o.alive || o.id === s.grappledWith) return;
-      if (s.team !== o.team && (boardsFirst(s) || s.stance === 'board' || s.stance === 'ram')) return;
+      if (s.team !== o.team && (boardsFirst(s) || s.stance === 'board' || s.stance === 'ram' || this.crippled(o))) return;
       if (s.spec.kind === 'geobukseon' && o.team !== s.team) return;
       const dx = o.x - s.x;
       const dz = o.z - s.z;
@@ -569,7 +631,7 @@ export class Battle {
       this.activity.set(s.id, s.sinking > 0 ? 'sinking' : 'struck');
       return;
     }
-    if (s.grappledWith) {
+    if (s.grappledWith || this.boarders.has(s.id)) {
       s.throttle = 0;
       s.rudder = 0;
       this.activity.set(s.id, 'boarding');
@@ -586,7 +648,11 @@ export class Battle {
       s.rudder = 0;
       this.activity.set(s.id, 'anchored');
       const enemy = this.nearestEnemy(s);
-      if (enemy && s.spec.kind !== 'atakebune' && Math.hypot(enemy.x - s.x, enemy.z - s.z) < 300) s.order = { type: 'auto' };
+      // A fleet at anchor under a person's command only rouses itself when the enemy is on top of it.
+      if (enemy && Math.hypot(enemy.x - s.x, enemy.z - s.z) < (this.isAi(s) ? WAKE_ANCHOR : 300)) {
+        s.order = { type: 'auto' };
+        if (this.isAi(s)) this.raiseAlarm(s);
+      }
       return;
     }
     if (order.type === 'move') {
@@ -698,8 +764,40 @@ export class Battle {
     }
   }
 
+  /** A ship too short of men to hold its deck against boarders. */
+  crippled(o: Ship) {
+    return o.crew < o.spec.crew * FINISH_CREW;
+  }
+
+  /** Whether the ship has others of its fleet close by: closing on a beaten ship there is sailing into its friends. */
+  private guarded(o: Ship) {
+    let friends = 0;
+    this.grid.query(o.x, o.z, FINISH_SAFE, (e) => {
+      if (e !== o && e.team === o.team && this.isActive(e) && (e.x - o.x) ** 2 + (e.z - o.z) ** 2 < FINISH_SAFE * FINISH_SAFE) friends += 1;
+    });
+    return friends > 0;
+  }
+
+  /** The nearest beaten enemy a gunnery ship could close on and take. */
+  private finishTarget(s: Ship) {
+    if (s.stance === 'standoff' || s.spec.kind === 'geobukseon' || s.spec.kind === 'hyeopseon') return undefined;
+    let best: Ship | undefined;
+    let bestD = 320;
+    this.grid.query(s.x, s.z, bestD, (o) => {
+      if (o.team === s.team || !this.isActive(o) || !o.spec.boardable || !this.crippled(o)) return;
+      if ((this.boarders.get(o.id) ?? 0) >= MAX_BOARDERS) return;
+      const d = Math.hypot(o.x - s.x, o.z - s.z);
+      if (d < bestD && this.canSee(o, d) && !this.guarded(o)) {
+        bestD = d;
+        best = o;
+      }
+    });
+    return best;
+  }
+
   private thinkGunner(s: Ship, forced: Ship | undefined) {
-    const target = forced ?? this.nearestEnemy(s);
+    const finish = forced ? undefined : this.finishTarget(s);
+    const target = forced ?? finish ?? this.nearestEnemy(s);
     if (!target) {
       s.throttle = 0.12;
       s.rudder = 0;
@@ -712,9 +810,9 @@ export class Battle {
     const d = Math.hypot(dx, dz);
     const bearing = Math.atan2(dz, dx);
     const stance = s.stance;
-    if (stance === 'board' || stance === 'ram') {
+    if (stance === 'board' || stance === 'ram' || finish) {
       const lead = Math.min(3, d / 8);
-      this.steerTo(s, target.x + Math.cos(target.heading) * target.speed * lead, target.z + Math.sin(target.heading) * target.speed * lead, stance === 'board' ? 14 : 10, 1);
+      this.steerTo(s, target.x + Math.cos(target.heading) * target.speed * lead, target.z + Math.sin(target.heading) * target.speed * lead, stance === 'ram' ? 10 : 14, 1);
       this.activity.set(s.id, 'charging');
       return;
     }
@@ -791,7 +889,29 @@ export class Battle {
       return;
     }
     this.steerTo(s, tx, tz, 8, 1);
+    // The fleet closes at the pace of its big ships, the leaders waiting for the rest, and rushes in together once inside
+    // RUSH_RANGE, so the boats do not arrive one at a time into the whole enemy line's fire.
+    if (d > RUSH_RANGE && this.isAi(s)) s.throttle = Math.min(s.throttle, this.fleetPace(s, target, d));
+    // Ease off at the last moment so the grapple holds; the rest of the way is flat out.
+    if (d < 90) s.throttle = Math.min(s.throttle, (GRAPPLE_SPEED.japan - 1 + Math.max(0, target.speed)) / s.spec.maxSpeed);
     this.activity.set(s.id, d < 200 ? 'charging' : 'moving');
+  }
+
+  /** Throttle that keeps a boarding ship level with the other boarders near it on the way to the same enemy. */
+  private fleetPace(s: Ship, target: Ship, d: number) {
+    let n = 0;
+    let sum = 0;
+    this.grid.query(s.x, s.z, FLEET_REACH, (o) => {
+      if (o === s || o.team !== s.team || !boardsFirst(o) || o.grappledWith || !this.isActive(o)) return;
+      // Only AI boarders under way for the same enemy set the pace; held, anchored, human-led or stuck ships never stall the rest.
+      if (!this.isAi(o) || o.order.type !== 'auto' || o.targetId !== target.id || o.speed < 0.5) return;
+      if ((o.x - s.x) ** 2 + (o.z - s.z) ** 2 > FLEET_REACH * FLEET_REACH) return;
+      sum += Math.hypot(o.x - target.x, o.z - target.z);
+      n += 1;
+    });
+    const ahead = n ? sum / n - d : 0;
+    if (ahead > FLEET_SLACK) return 0.15;
+    return ahead < -FLEET_SLACK ? 1 : FLEET_PACE / s.spec.maxSpeed;
   }
 
   /** Rowers at their oars against the ship's usual complement. Above 1 with extra hands on the oars. */
@@ -831,7 +951,7 @@ export class Battle {
     const target = s.throttle * s.speedCap * spec.maxSpeed * s.mods.speed * crewFactor * (1 - s.fire * 0.35) * sinkingFactor * anchored;
     const rate = target > s.speed ? spec.accel : spec.accel * 1.6;
     s.speed += clamp(target - s.speed, -rate * dt, rate * dt);
-    if (s.grappledWith) s.speed *= Math.max(0, 1 - dt * 1.5);
+    if (s.grappledWith || this.boarders.has(s.id)) s.speed *= Math.max(0, 1 - dt * 1.5);
     const steer = 0.4 + 0.6 * Math.min(1, Math.abs(s.speed) / spec.maxSpeed);
     const desiredTurn = s.rudder * spec.turnRate * s.mods.turn * steer * Math.min(1, crewFactor) * sinkingFactor * anchored;
     s.turn += (desiredTurn - s.turn) * Math.min(1, dt * 1.4);
@@ -951,14 +1071,48 @@ export class Battle {
     }
   }
 
-  private wantsBoard(s: Ship) {
-    return boardsFirst(s) ? s.stance !== 'standoff' && s.stance !== 'close' : s.stance === 'board';
+  private wantsBoard(s: Ship, other: Ship) {
+    if (boardsFirst(s)) return s.stance !== 'standoff' && s.stance !== 'close';
+    return s.stance === 'board' || (s.stance !== 'standoff' && s.spec.kind !== 'geobukseon' && this.crippled(other));
+  }
+
+  /** Smallest gap between the two hulls, from their three-circle outlines. Negative when they overlap. */
+  private hullGap(a: Ship, b: Ship) {
+    const ca = this.circles(a, this.gapA);
+    const cb = this.circles(b, this.gapB);
+    let gap = Infinity;
+    for (let p = 0; p < 9; p += 3) {
+      for (let q = 0; q < 9; q += 3) {
+        const g = Math.hypot(cb[q]! - ca[p]!, cb[q + 1]! - ca[p + 1]!) - ca[p + 2]! - cb[q + 2]!;
+        if (g < gap) gap = g;
+      }
+    }
+    return gap;
+  }
+
+  /** Boarders throw their grapples from a few metres off: no collision needed. */
+  private reachGrapples() {
+    for (const s of this.ships) {
+      if (!s.alive || s.grappledWith || !boardsFirst(s) || !this.isActive(s) || s.stance === 'standoff' || s.stance === 'close') continue;
+      let best: Ship | undefined;
+      let bestGap = GRAPPLE_REACH.japan;
+      this.grid.query(s.x, s.z, s.spec.length * 0.5 + GRAPPLE_REACH.japan + 24, (o) => {
+        if (o.team === s.team || !this.isActive(o) || !o.spec.boardable) return;
+        const gap = this.hullGap(s, o);
+        if (gap < bestGap) {
+          bestGap = gap;
+          best = o;
+        }
+      });
+      if (best) this.tryGrapple(s, best);
+    }
   }
 
   private tryGrapple(a: Ship, b: Ship) {
     if (a.team === b.team) return;
-    const aWants = this.wantsBoard(a) && !a.grappledWith;
-    const bWants = this.wantsBoard(b) && !b.grappledWith;
+    if (a.grappledWith === b.id || b.grappledWith === a.id) return;
+    const aWants = this.wantsBoard(a, b) && !a.grappledWith;
+    const bWants = this.wantsBoard(b, a) && !b.grappledWith;
     if (!aWants && !bWants) return;
     // When both crews want to board, either may throw the first grapple.
     const attacker = aWants && bWants ? (this.rand() < 0.5 ? a : b) : aWants ? a : b;
@@ -980,14 +1134,31 @@ export class Battle {
       }
       return;
     }
+    if ((this.boarders.get(defender.id) ?? 0) >= MAX_BOARDERS) return;
     const rel = Math.abs(attacker.speed - defender.speed * Math.cos(attacker.heading - defender.heading));
-    if (rel > 3.5) return;
+    if (rel > (boardsFirst(attacker) ? GRAPPLE_SPEED.japan : GRAPPLE_SPEED.other)) return;
     attacker.grappledWith = defender.id;
     attacker.grappleTime = 0;
+    this.boarders.set(defender.id, (this.boarders.get(defender.id) ?? 0) + 1);
     this.events.push({ type: 'board', a: attacker.id, b: defender.id });
   }
 
+  /**
+   * What a ship's deck is worth in a melee: the fighting crew, with the soldiers aboard counting several times over,
+   * both in proportion to the men still alive.
+   */
+  boardStrength(s: Ship) {
+    return this.meleeStrength(s) + s.spec.soldiers * SOLDIER_WEIGHT * (s.crew / s.spec.crew);
+  }
+
+  /**
+   * Deck fights. The boarders of one ship fight together: their combined strength cuts down the defenders, and the
+   * defenders' strength is spread over the boarders in proportion to theirs. Numbers count twice (Lanchester's square
+   * law), so a swarm of small boats can take a big ship that would beat any one of them.
+   */
   private resolveBoarding(dt: number) {
+    this.boarders.clear();
+    const fights = new Map<number, Ship[]>();
     for (const s of this.ships) {
       if (!s.grappledWith) continue;
       const d = this.byId.get(s.grappledWith);
@@ -996,8 +1167,8 @@ export class Battle {
         continue;
       }
       s.grappleTime += dt;
-      const dist = Math.hypot(d.x - s.x, d.z - s.z);
-      if (dist > (s.spec.length + d.spec.length) * 0.5 + 6) {
+      const gap = this.hullGap(s, d);
+      if (gap > GRAPPLE_SLACK) {
         s.grappledWith = 0;
         continue;
       }
@@ -1006,27 +1177,60 @@ export class Battle {
         this.events.push({ type: 'repelled', a: s.id, b: d.id });
         continue;
       }
-      const atk = this.meleeStrength(s) * s.spec.melee * s.mods.melee;
-      const def = this.meleeStrength(d) * d.spec.melee * d.spec.deckDefense * d.mods.defense * (d.repel ? 1.3 : 1);
-      this.casualties(d, atk * 0.045 * dt * (0.6 + this.rand() * 0.8), 'melee', true);
-      this.casualties(s, def * 0.05 * dt * (0.6 + this.rand() * 0.8), 'melee', true);
-      if (d.crew < d.spec.crew * 0.06) {
-        s.grappledWith = 0;
-        s.kills += 1;
-        this.strike(d);
+      // The grapple lines haul the two hulls together.
+      if (gap > 1.5) {
+        const dx = d.x - s.x;
+        const dz = d.z - s.z;
+        const len = Math.hypot(dx, dz) || 1;
+        const pull = Math.min(gap - 1, 2 * dt);
+        s.x += (dx / len) * pull;
+        s.z += (dz / len) * pull;
+      }
+      const list = fights.get(d.id);
+      if (list) list.push(s);
+      else fights.set(d.id, [s]);
+      this.boarders.set(d.id, (this.boarders.get(d.id) ?? 0) + 1);
+    }
+    for (const [id, attackers] of fights) {
+      const d = this.byId.get(id)!;
+      const power = attackers.map((a) => {
+        const shock = 1 + SHOCK_BONUS * Math.max(0, 1 - a.grappleTime / SHOCK_TIME);
+        return this.boardStrength(a) * a.spec.melee * a.mods.melee * shock;
+      });
+      const total = power.reduce((sum, v) => sum + v, 0);
+      const deck = attackers.reduce((sum, a) => sum + a.spec.deck, 0) / attackers.length;
+      // Looking down from a high deck on men climbing up from a low one is worth something.
+      const height = clamp(1 + 0.05 * (d.spec.deck - deck), 0.85, 1.25);
+      const parapet = 1 + (d.spec.deckDefense - 1) * PARAPET_SHARE;
+      const def = this.boardStrength(d) * d.spec.melee * parapet * height * d.mods.defense * (d.repel ? 1.3 : 1);
+      this.casualties(d, total * MELEE_RATE * dt * (0.6 + this.rand() * 0.8), 'melee', true);
+      attackers.forEach((a, i) => this.casualties(a, def * (power[i]! / Math.max(1e-6, total)) * MELEE_RATE * dt * (0.6 + this.rand() * 0.8), 'melee', true));
+      if (d.crew < d.spec.crew * CAPTURE_CREW) {
+        let top = 0;
+        power.forEach((v, i) => {
+          if (v > power[top]!) top = i;
+        });
+        const victor = attackers[top]!;
+        victor.kills += 1;
+        for (const a of attackers) a.grappledWith = 0;
+        this.strike(d, victor.id);
         d.fire = Math.max(d.fire, 0.5);
-      } else if (s.crew < s.spec.crew * 0.12) {
-        s.grappledWith = 0;
-        this.strike(s);
+        continue;
+      }
+      for (const a of attackers) {
+        if (a.crew < a.spec.crew * 0.12) {
+          a.grappledWith = 0;
+          this.strike(a, d.id);
+        }
       }
     }
   }
 
-  /** The ship is taken or abandoned: it stops fighting and drifts, burning. */
-  private strike(s: Ship) {
+  /** The ship is taken or abandoned: it stops fighting and drifts, burning. `by` is the ship that took it, 0 when none did. */
+  private strike(s: Ship, by = 0) {
     if (s.struck) return;
     s.struck = true;
-    this.events.push({ type: 'struck', ship: s.id });
+    this.events.push({ type: 'struck', ship: s.id, by });
     this.rules?.lost?.(this, s);
   }
 
@@ -1164,15 +1368,16 @@ export class Battle {
     if (!target) return;
     const t = target as Ship;
     const accuracy = (1 - (best / spec.musketRange) * 0.6) * s.mods.accuracy;
-    const loss = (spec.musketPower * strength * (2.5 + this.rand() * 4) * accuracy) / t.spec.deckDefense;
+    const close = best < CLOSE_RANGE && boardsFirst(s);
+    const loss = (spec.musketPower * strength * (2.5 + this.rand() * 4) * accuracy * (close ? CLOSE_LOSS : 1)) / t.spec.deckDefense;
     this.casualties(t, loss, 'deck', false);
     const dx = (t.x - s.x) / best;
     const dz = (t.z - s.z) / best;
     const shooters = Math.max(1, Math.round((s.roles[2] / Math.max(1, spec.crew * spec.crewPlan[2])) * (s.spec.kind === 'atakebune' ? 10 : spec.length > 30 ? 7 : spec.length > 20 ? 5 : 3)));
     this.events.push({ type: 'musket', ship: s.id, x: s.x, y: spec.deck + 1, z: s.z, dx, dz, count: shooters, arms: spec.arms });
     if (best < 95 && t.spec.boardable && this.rand() < (spec.arms === 'bow' ? 0.035 : 0.06)) this.ignite(t, 0.18);
-    s.musketReload = (spec.arms === 'bow' ? 2.6 : 3.2) + this.rand() * 1.5;
-    if (t.crew < t.spec.crew * 0.04) this.strike(t);
+    s.musketReload = close ? CLOSE_RELOAD + this.rand() * 0.9 : (spec.arms === 'bow' ? 2.6 : 3.2) + this.rand() * 1.5;
+    if (t.crew < t.spec.crew * 0.04) this.strike(t, s.id);
   }
 
   /** Whether the bombard point lies off this side and within range. */
@@ -1264,7 +1469,7 @@ export class Battle {
     let damage = gun.damage;
     let crewDamage = gun.crewDamage;
     let ammo = gun.ammo;
-    let fireChance = s.spec.faction !== 'japan' ? (gun.ammo === 'arrow' ? 0.16 : 0.07) : 0.04;
+    let fireChance = s.spec.faction !== 'japan' ? (gun.ammo === 'arrow' ? 0.16 : 0.07) : 0.09;
     let spreadMul = gun.ammo === 'grape' ? 1.8 : 1;
     const mode = s.ammo;
     if (mode === 'hull') {

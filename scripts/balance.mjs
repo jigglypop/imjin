@@ -1,6 +1,7 @@
 // Computer-against-computer battles for balancing the playable factions. Runs the simulation only: no browser, no GPU.
 //   node scripts/balance.mjs                                   every battle, every playable side, 2 seeds
 //   node scripts/balance.mjs hansan okpo --side=japan --seeds=4 --minutes=20
+//   node scripts/balance.mjs --pace                            opening gap, ships on land and sim time to first contact
 // The player's side is led by the same computer rules as the enemy, so a human with a plan should do better.
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -105,8 +106,49 @@ function run(id, faction, seed) {
   };
 }
 
+// Pacing: how far apart the fleets start, whether any ship starts on dry ground, and how long the approach takes.
+// First contact is what the engine's fast-forward waits for: an enemy within 400 m, a shot in the air or a grapple.
+function pace(id, seed) {
+  const info = SCENARIOS[id];
+  const land = landOf(info.terrain);
+  waveField.setState(SEA_STATES[info.sea]);
+  waveField.time = 0;
+  const b = buildScenario(id, 0, seed, land);
+  b.land = land;
+  b.flow = info.current ? new CurrentField(info.current, land, 0) : null;
+  b.center = { x: info.view.tx, z: info.view.tz };
+  b.arenaRadius = 5200;
+  b.autopilot = true;
+  const gap = () => {
+    let min = Infinity;
+    for (const a of b.activeOf('joseon')) for (const c of b.activeOf('japan')) min = Math.min(min, Math.hypot(a.x - c.x, a.z - c.z));
+    return min;
+  };
+  b.step(SIM_DT);
+  const start = gap();
+  const aground = b.ships.filter((s) => land(s.x, s.z) > -1.4).length;
+  let contact = null;
+  while (contact === null && b.time < 1200) {
+    b.step(SIM_DT);
+    waveField.time += SIM_DT;
+    if (b.projectiles.length || b.ships.some((s) => s.grappledWith) || gap() < 400) contact = b.time;
+    b.events.length = 0;
+  }
+  return { start, aground, contact };
+}
+
 const pct = (v) => `${Math.round(v * 100)}%`.padStart(4);
 const list = only.length ? only : SCENARIO_ORDER;
+if (args.includes('--pace')) {
+  for (const id of list) {
+    const rows = [];
+    for (let k = 0; k < seeds; k += 1) rows.push(pace(id, 1592 + k * 101));
+    const mean = (f) => rows.reduce((a, r) => a + f(r), 0) / rows.length;
+    console.log(`${id.padEnd(12)} opening gap ${mean((r) => r.start).toFixed(0).padStart(5)} m · on land ${Math.max(...rows.map((r) => r.aground))} · first contact ${mean((r) => r.contact ?? 1200).toFixed(0).padStart(4)} s of battle time`);
+  }
+  await server.close();
+  process.exit(0);
+}
 console.log(`seeds ${seeds} · cap ${minutes} min · win% = player side wins · lost = share of ships sunk or struck · share = strength left at the end`);
 for (const id of list) {
   for (const faction of playableFactions(id)) {

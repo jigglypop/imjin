@@ -561,7 +561,7 @@ export class Conquest implements BattleRules {
         kit.gun,
         pl.team,
         0,
-        { damage: gun.damage, crewDamage: gun.crewDamage, ammo: gun.ammo, spreadMul: 0.9, morale: 1, fireChance: pl.faction === 'japan' ? 0.04 : 0.1 },
+        { damage: gun.damage, crewDamage: gun.crewDamage, ammo: gun.ammo, spreadMul: 0.9, morale: 1, fireChance: 0.1 },
       );
       b.events.push({ type: 'battery', point: p.id, x: ox, y: oy, z: oz, dx: dx / d, dy: 0.05, dz: dz / d });
       bd.reload[g] = kit.reload * (0.85 + b.random() * 0.3);

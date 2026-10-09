@@ -95,6 +95,7 @@ export const SENT_EVENTS = new Set<BattleEvent['type']>([
   'volley',
   'repelled',
   'sinking',
+  // Sent whole, so the `by` field (the ship that took it) reaches clients for capture visuals.
   'struck',
   'removed',
   'spawned',

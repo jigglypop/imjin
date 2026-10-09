@@ -11,14 +11,23 @@ const DOCTRINE: Record<Faction, Partial<Record<ShipKind, number>>> = {
 };
 
 const THINK = 2;
-const ENGAGE = 650;
 const CLUSTER = 520;
 
 type Cluster = { x: number; z: number; power: number; ships: Ship[] };
 
-// What a ship is worth in a fight, by its price. The Japanese fleet is cheap for its strength in open battle, so the
-// computer counts it lower when sizing up a fight.
-const EFFICIENCY: Record<Faction, number> = { joseon: 1, ming: 1, japan: 0.8 };
+// What a ship is worth in a fight, by its price. The navies are priced to be even, so each counts for its cost.
+const EFFICIENCY: Record<Faction, number> = { joseon: 1, ming: 1, japan: 1 };
+
+/**
+ * How the navies pick their fights. The Japanese close and board, so the fleet takes on groups it cannot out-gun at
+ * range, goes after prey from further off and falls back only from a far stronger enemy. The Joseon and Ming fleets
+ * fight at a distance and choose their odds.
+ */
+const DOCTRINE_OF_FIGHT: Record<Faction, { engage: number; prey: number; reach: number; retreat: number }> = {
+  joseon: { engage: 650, prey: 0.9, reach: 1800, retreat: 2.2 },
+  ming: { engage: 650, prey: 0.9, reach: 1800, retreat: 2.2 },
+  japan: { engage: 900, prey: 1.25, reach: 2600, retreat: 3.2 },
+};
 const power = (list: Ship[]) => list.reduce((a, s) => a + s.spec.cost * EFFICIENCY[s.spec.faction] * (0.35 + 0.65 * (s.hull / s.spec.hull)) * (0.4 + 0.6 * (s.crew / s.spec.crew)), 0);
 
 function centroid(list: Ship[]) {
@@ -184,13 +193,15 @@ export class Strategist {
 
   /** The main body: fight what it can beat, defend what is threatened, else take a point. */
   private lead(c: Conquest, body: Ship[], foes: Cluster[]) {
-    const team = c.player(this.slot)!.team;
+    const me = c.player(this.slot)!;
+    const team = me.team;
+    const fight = DOCTRINE_OF_FIGHT[me.faction];
     const at = centroid(body);
     const strength = power(body);
-    const near = foes.filter((f) => Math.hypot(f.x - at.x, f.z - at.z) < ENGAGE + Math.sqrt(f.ships.length) * 40);
+    const near = foes.filter((f) => Math.hypot(f.x - at.x, f.z - at.z) < fight.engage + Math.sqrt(f.ships.length) * 40);
     const nearPower = near.reduce((a, f) => a + f.power, 0);
     if (near.length) {
-      if (nearPower > strength * 2.2 && this.retreat(c, body, at)) return;
+      if (nearPower > strength * fight.retreat && this.retreat(c, body, at)) return;
       // Well ahead in the fight: the ships farthest from it peel off to take a point nobody guards.
       let fighting = body;
       if (strength > nearPower * 1.8 && body.length >= 6) {
@@ -209,7 +220,7 @@ export class Strategist {
       return;
     }
     // Hunt a weaker enemy group close by.
-    const prey = foes.filter((f) => f.power < strength * 0.9 && Math.hypot(f.x - at.x, f.z - at.z) < 1800).sort((p, q) => Math.hypot(p.x - at.x, p.z - at.z) - Math.hypot(q.x - at.x, q.z - at.z))[0];
+    const prey = foes.filter((f) => f.power < strength * fight.prey && Math.hypot(f.x - at.x, f.z - at.z) < fight.reach).sort((p, q) => Math.hypot(p.x - at.x, p.z - at.z) - Math.hypot(q.x - at.x, q.z - at.z))[0];
     if (prey) {
       this.sail(body, prey.x, prey.z, 60);
       return;

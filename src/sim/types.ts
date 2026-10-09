@@ -73,6 +73,7 @@ export type ShipSpec = {
   armor: number;
   boardable: boolean;
   ramPower: number;
+  /** Trained fighters among the crew. In a deck fight each counts for several sailors. */
   soldiers: number;
   /** The usual station plan for this ship. */
   crewPlan: CrewPlan;
@@ -212,7 +213,8 @@ export type BattleEvent =
   | { type: 'volley'; ship: number; side: number; count: number }
   | { type: 'repelled'; a: number; b: number }
   | { type: 'sinking'; ship: number }
-  | { type: 'struck'; ship: number }
+  /** `by` is the ship whose boarders or fire took it, 0 when none is known. */
+  | { type: 'struck'; ship: number; by: number }
   | { type: 'removed'; ship: number }
   | { type: 'spawned'; ship: number; point: number }
   | { type: 'captured'; point: number; owner: number; from: number }
