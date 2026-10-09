@@ -28,10 +28,14 @@ export class NetBattle implements BattleListener {
   private metas: Extract<ServerMsg, { t: 'meta' }>[] = [];
   private state: ConquestState | null = null;
   private clock = -1;
+  /** Simulated seconds per real second at the server (it skips the approach fast). The playback clock runs at this pace. */
+  private pace = 1;
+  private announced = false;
   private readonly shots = new Map<number, Projectile>();
   winner: Team | null = null;
 
-  constructor() {
+  /** `seed` and `you` are what the server built the battle from; a historical duel is rebuilt locally from them. */
+  constructor(readonly seed = 0, readonly you = 0) {
     net.listener = this;
   }
 
@@ -55,6 +59,10 @@ export class NetBattle implements BattleListener {
     else if (msg.t === 'events') for (const e of msg.events) this.events.push(e);
     else if (msg.t === 'state') this.state = msg.conquest;
     else if (msg.t === 'end') this.winner = msg.winner;
+    else if (msg.t === 'speed' && msg.speed !== this.pace) {
+      this.pace = Math.max(1, msg.speed);
+      this.clock = -1;
+    }
   }
 
   private applyMeta(b: Battle, msg: Extract<ServerMsg, { t: 'meta' }>) {
@@ -74,6 +82,11 @@ export class NetBattle implements BattleListener {
   }
 
   advance(b: Battle, conquest: Conquest | null, dt: number) {
+    // The engine calls this once it has staged the battle: the server may start its clock.
+    if (!this.announced) {
+      this.announced = true;
+      net.send({ t: 'loaded' });
+    }
     for (const m of this.metas) this.applyMeta(b, m);
     this.metas.length = 0;
     if (this.state && conquest) {
@@ -82,9 +95,10 @@ export class NetBattle implements BattleListener {
     }
     const latest = this.frames[this.frames.length - 1];
     if (latest) {
+      const delay = DELAY * this.pace;
       const behind = latest.time - this.clock;
-      if (this.clock < 0 || behind < 0 || behind > 0.6) this.clock = latest.time - DELAY;
-      else this.clock += dt * (behind > DELAY * 1.5 ? 1.08 : behind < DELAY * 0.5 ? 0.92 : 1);
+      if (this.clock < 0 || behind < 0 || behind > 0.6 * this.pace) this.clock = latest.time - delay;
+      else this.clock += dt * this.pace * (behind > delay * 1.5 ? 1.08 : behind < delay * 0.5 ? 0.92 : 1);
       let a = this.frames[0]!;
       let c = latest;
       for (let i = 0; i < this.frames.length - 1; i += 1) {

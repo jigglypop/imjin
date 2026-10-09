@@ -39,7 +39,8 @@ Description=Imjin multiplayer server
 After=network-online.target
 [Service]
 User=imjin
-Environment=PORT=8787
+Environment=PORT=8787 NODE_OPTIONS=--max-old-space-size=1024
+LimitNOFILE=65536
 ExecStart=$NODE /opt/imjin/server.cjs
 Restart=always
 RestartSec=2

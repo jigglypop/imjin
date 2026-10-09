@@ -39,6 +39,27 @@ jobs:
           role-to-assume: ${{ env.ROLE }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # The multiplayer server (scripts/deploy-mp.sh). Skipped until the repository variable MP_INSTANCE_ID is set. It goes
+      # out before the site: a PROTOCOL bump must reach the server first, or new pages meet an old server. A failed server
+      # deploy only warns, so the site still ships.
+      - name: Deploy multiplayer server
+        if: vars.MP_INSTANCE_ID != ''
+        continue-on-error: true
+        env:
+          INSTANCE: ${{ vars.MP_INSTANCE_ID }}
+        run: |
+          npm run server:build
+          aws s3 cp server/dist/server.cjs s3://imjin1592-deploy/server/server.cjs --only-show-errors
+          CMD=$(aws ssm send-command --instance-ids "$INSTANCE" --document-name AWS-RunShellScript \
+            --parameters 'commands=["/usr/local/bin/imjin-deploy"]' --query Command.CommandId --output text)
+          aws ssm wait command-executed --command-id "$CMD" --instance-id "$INSTANCE"
+          for i in 1 2 3 4 5 6; do
+            curl -fsS --max-time 10 https://mp.imjin1592.com/health && exit 0
+            sleep 5
+          done
+          echo "::warning::multiplayer server did not answer /health after the deploy"
+          exit 1
+
       - name: Upload hashed bundles
         run: aws s3 sync dist/assets "s3://$BUCKET/assets" --delete --cache-control "public,max-age=31536000,immutable"
 
@@ -56,12 +77,3 @@ jobs:
 
       - name: Invalidate CDN
         run: aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION" --paths "/*"
-
-      # The multiplayer server (scripts/deploy-mp.sh). Skipped until the repository variable MP_INSTANCE_ID is set.
-      - name: Deploy multiplayer server
-        if: vars.MP_INSTANCE_ID != ''
-        run: |
-          npm run server:build
-          aws s3 cp server/dist/server.cjs s3://imjin1592-deploy/server/server.cjs --only-show-errors
-          aws ssm send-command --instance-ids "${{ vars.MP_INSTANCE_ID }}" --document-name AWS-RunShellScript \
-            --parameters 'commands=["/usr/local/bin/imjin-deploy"]' --query Command.CommandId --output text

@@ -10,6 +10,7 @@ import { CAMPAIGN_ORDER, campaignOver, currentBattle, setMode, useCampaign } fro
 import { CampaignPanel } from './CampaignPanel';
 import { equipment } from '../game/quality';
 import { ConquestSetupPanel } from './ConquestSetup';
+import { useNet } from '../net/NetClient';
 import type { ConquestSetup } from '../game/Engine';
 
 const FACTION_KEY = 'imjin.faction';
@@ -98,7 +99,8 @@ export function BattleSelect({
   const mode = useCampaign((st) => st.mode);
   const campaign = useCampaign((st) => st.campaign);
   const [camp, setCamp] = useState(false);
-  const [view, setView] = useState<View>('history');
+  // Back from an online battle with the room still open, the lobby is where the player left off.
+  const [view, setView] = useState<View>(() => (useNet.getState().room ? 'online' : 'history'));
   const [side, setSideRaw] = useState<Faction>(readFaction);
   const inCampaign = mode === 'campaign' && !!campaign;
   const current = campaign ? currentBattle(campaign) : 'okpo';

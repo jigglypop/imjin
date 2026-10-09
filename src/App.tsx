@@ -190,9 +190,31 @@ export function App() {
     }
   };
 
-  // The server says when a multiplayer battle starts; the engine then draws the server's battle.
+  // The server says when a multiplayer battle starts; the engine then draws the server's battle: a conquest map, or
+  // a historical scenario fought as a duel.
   useEffect(() => {
-    net.onStart = (msg) => startConquest({ map: msg.map, seats: msg.seats, you: msg.you, seed: msg.seed }, new NetBattle());
+    net.onStart = (msg) => {
+      const remote = new NetBattle(msg.seed, msg.you);
+      if (msg.battle.kind === 'conquest') {
+        startConquest({ map: msg.battle.map, seats: msg.seats, you: msg.you, seed: msg.seed }, remote);
+        return;
+      }
+      const id = msg.battle.id;
+      pendingConquest = undefined;
+      pendingCampaign = undefined;
+      pendingRemote = remote;
+      pendingFaction = msg.seats[msg.you]!.faction;
+      if (engine) engine.campaign = undefined;
+      sound.click();
+      sound.setMode('battle');
+      setScreen('battle');
+      if (!mounted) {
+        setLoading(`${SCENARIOS[id].title} 준비 중`, 0.01, id);
+        setMounted(id);
+      } else if (engine) {
+        void engine.setScenario(id, pendingFaction, remote);
+      }
+    };
     return () => {
       net.onStart = null;
     };

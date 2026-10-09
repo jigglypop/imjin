@@ -7,6 +7,7 @@ Live at https://imjin1592.com. Player-facing text is Korean; code and comments a
 - `npm run dev` — Vite on http://127.0.0.1:5291 (strictPort; use `npx vite --port <n> --strictPort` for a second server)
 - `npm run typecheck` — client + server; must pass before any commit (CI runs it)
 - `npx vite build`, `npm run server` (multiplayer server on :8787, localhost clients connect to it automatically)
+- Online locally: `npm run server:build && PORT=8791 node server/dist/server.cjs`, `VITE_MP_URL=ws://127.0.0.1:8791/ws npx vite --port 5306 --strictPort`, then `node scripts/mp-smoke.mjs` (ws only) and `node scripts/mp-browser.mjs --url=http://127.0.0.1:5306/ --mode=all` (two pages)
 - Screenshots (macOS uses Chrome + Metal, Windows Edge + D3D11):
   - `node scripts/shot.mjs --url=http://127.0.0.1:5291/?scenario=hansan --out=<png>` desktop WebGPU
   - `node scripts/probe-mobile.mjs --url=... [--orient=portrait,landscape]` WebKit iPhone 15 Pro emulation (iOS Safari engine, WebGL2 path)
@@ -27,7 +28,7 @@ Live at https://imjin1592.com. Player-facing text is Korean; code and comments a
 - `src/ocean/` FFT (WebGPU compute only) or Gerstner fallback; `src/render/` sky (HDRI), clouds (raymarched); `src/terrain/` worker heightmap, vegetation, structures
 - `src/sim/grand/*` faction campaign (진영 전역), pure TS like the rest of `src/sim`: regions, economy, orders, turn, ai, autoresolve, bridge (the typed hand-off to a 3D region battle); `src/campaign/grand.ts` is its store (`imjin.grand.v1`). All its numbers derive from SHIP_SPECS through `TUNING` in `economy.ts`
 - `src/campaign/campaign.ts` linear 1592 campaign (Joseon); `src/select/SelectScene.ts` 3D ink map of the south coast for the select screen
-- `src/net/` + `server/main.ts` multiplayer: authoritative Node server, binary snapshots, lobby (conquest maps only so far)
+- `src/net/` + `server/` multiplayer: authoritative Node server (`main.ts` rooms/sessions/quick match/tick, `battles.ts` conquest + historical-duel builders, `terrain.ts` heightmaps in worker threads), binary snapshots, protocol v2 (`protocol.ts`). Lobby for conquest maps and historical duels, quick match (computer fills after 20 s), reconnect with a per-tab session token (seat kept 60 s), the approach skipped at up to 32x until first contact. UI in `src/ui/OnlinePanel.tsx`, `OnlineOverlay.tsx`, `online.css`
 - `src/ui/` React HUD/menus; `styles.css` + `conquest.css`; compact layout via `useCompactLayout` (`.app--compact`, `.app--touch`)
 
 ## Rules

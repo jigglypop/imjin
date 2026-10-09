@@ -94,7 +94,7 @@ export type EngineOptions = {
   faction?: Faction;
   /** A conquest battle instead of a historical one. */
   conquest?: ConquestSetup;
-  /** A conquest battle run by the multiplayer server. */
+  /** A battle run by the multiplayer server (conquest, or a historical duel when no conquest setup is given). */
   remote?: NetBattle;
 };
 
@@ -562,11 +562,18 @@ export class Engine {
       this.scene.add(this.conquestView.group);
       this.conquestLoad = this.conquestView.load();
     } else {
-      this.phi = sunAz - preset.axisOffset - info.view.dir;
+      // A duel on the server keeps the map unturned and is built from the server's seed, so ship ids and positions
+      // match; the server's snapshots then drive every ship.
+      this.phi = this.remote ? 0 : sunAz - preset.axisOffset - info.view.dir;
       this.terrain.setRotation(this.phi);
-      this.battle = buildScenario(this.scenarioId, this.phi, 1592 + Math.floor(Math.random() * 1000), (x, z) => this.terrain.heightAtScenario(x, z), this.campaign);
-      applyBalance(this.battle, this.scenarioId, this.faction);
-      this.owner = OWNER_OF[this.faction];
+      this.battle = buildScenario(this.scenarioId, this.phi, this.remote?.seed ?? 1592 + Math.floor(Math.random() * 1000), (x, z) => this.terrain.heightAtScenario(x, z), this.campaign);
+      if (this.remote) {
+        this.battle.humans = new Set();
+        this.owner = this.remote.you;
+      } else {
+        applyBalance(this.battle, this.scenarioId, this.faction);
+        this.owner = OWNER_OF[this.faction];
+      }
     }
     this.minimap.team = this.team;
     this.reported = false;
@@ -761,10 +768,11 @@ export class Engine {
     this.publish(true);
   }
 
-  async setScenario(id: ScenarioId, faction?: Faction) {
+  /** Starts a historical battle on the running engine; with `remote` it is a duel run by the multiplayer server. */
+  async setScenario(id: ScenarioId, faction?: Faction, remote: NetBattle | null = null) {
     this.remote?.dispose();
-    this.remote = null;
-    this.sink = null;
+    this.remote = remote;
+    this.sink = remote;
     this.conquestSetup = null;
     this.scenarioId = id;
     this.faction = this.campaign ? 'joseon' : faction ?? this.faction;
@@ -848,6 +856,7 @@ export class Engine {
   }
 
   restart() {
+    if (this.remote) return;
     if (this.conquestSetup) void this.setConquest({ ...this.conquestSetup, seed: this.conquestSetup.seed + 1 });
     else void this.setScenario(this.scenarioId);
   }

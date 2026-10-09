@@ -1,20 +1,29 @@
 #!/usr/bin/env bash
 # Multiplayer server on EC2, reached at wss://mp.imjin1592.com/ws.
+#   scripts/deploy-mp.sh check    read-only preflight: AWS CLI v2, login, bucket, role, hosted zone, VPC (run this first)
 #   scripts/deploy-mp.sh setup    one time: security group (80/443 only), t4g.small with the instance role and
 #                                 infra/mp-user-data.sh, Elastic IP, Route 53 record for mp.imjin1592.com
 #   scripts/deploy-mp.sh deploy   build server/dist/server.cjs, upload it, restart the service through SSM
 #   scripts/deploy-mp.sh ci       let the GitHub deploy role do the same on every push (repository variable
 #                                 MP_INSTANCE_ID must then be set to the instance id)
-#   scripts/deploy-mp.sh status   health check
+#   scripts/deploy-mp.sh status   instance state and health check
 # Already in place: private bucket imjin1592-deploy, role and instance profile imjin-mp-instance (SSM core + read
 # of s3://imjin1592-deploy/server/*). There is no SSH key or port; use `aws ssm start-session` for a shell.
+# Needs AWS CLI v2 and a login (`aws login`, or `aws configure sso`; AWS_PROFILE picks a named one). Works with the
+# bash 3.2 and BSD tools macOS ships.
 set -euo pipefail
-export AWS_REGION=ap-northeast-2 MSYS_NO_PATHCONV=1
+# Both spellings, as CLI versions differ; no pager, so `aws` never waits for a key press in a terminal.
+export AWS_REGION=ap-northeast-2 AWS_DEFAULT_REGION=ap-northeast-2 AWS_PAGER="" MSYS_NO_PATHCONV=1
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 ZONE=Z0649700MFCE82BHO7X1
 HOST=mp.imjin1592.com
 VPC=vpc-01dc516a
 GITHUB_ROLE=imjin1592-github-deploy
+
+die() {
+  echo "error: $*" >&2
+  exit 1
+}
 
 instance_id() {
   aws ec2 describe-instances --filters Name=tag:Name,Values=imjin-mp Name=instance-state-name,Values=pending,running \
@@ -22,6 +31,18 @@ instance_id() {
 }
 
 case "${1:-}" in
+  check)
+    command -v aws >/dev/null || die "aws CLI not found; install AWS CLI v2 (brew install awscli)"
+    VERSION=$(aws --version 2>&1 | sed -n 's#^aws-cli/\([0-9]*\).*#\1#p')
+    [ "$VERSION" = "2" ] || die "AWS CLI v2 is needed, found: $(aws --version 2>&1)"
+    CALLER=$(aws sts get-caller-identity --query Arn --output text) || die "not logged in; run: aws login"
+    echo "caller:        $CALLER"
+    aws s3api head-bucket --bucket imjin1592-deploy && echo "bucket:        imjin1592-deploy ok"
+    aws iam get-instance-profile --instance-profile-name imjin-mp-instance --query InstanceProfile.InstanceProfileName --output text | sed 's/^/instance profile: /'
+    aws route53 get-hosted-zone --id $ZONE --query HostedZone.Name --output text | sed 's/^/hosted zone:   /'
+    aws ec2 describe-vpcs --vpc-ids $VPC --query 'Vpcs[0].VpcId' --output text | sed 's/^/vpc:           /'
+    echo "instance:      $(instance_id) (None means setup has not run yet)"
+    ;;
   setup)
     SG=$(aws ec2 describe-security-groups --filters Name=group-name,Values=imjin-mp --query 'SecurityGroups[0].GroupId' --output text)
     if [ "$SG" = "None" ]; then
@@ -56,14 +77,18 @@ case "${1:-}" in
     ( cd "$ROOT" && npm run server:build >/dev/null )
     aws s3 cp "$ROOT/server/dist/server.cjs" s3://imjin1592-deploy/server/server.cjs --only-show-errors
     ID=$(instance_id)
-    aws ssm send-command --instance-ids "$ID" --document-name AWS-RunShellScript --parameters 'commands=["/usr/local/bin/imjin-deploy"]' --query Command.CommandId --output text
+    [ "$ID" != "None" ] || die "no running imjin-mp instance; run setup first"
+    CMD=$(aws ssm send-command --instance-ids "$ID" --document-name AWS-RunShellScript --parameters 'commands=["/usr/local/bin/imjin-deploy"]' --query Command.CommandId --output text)
+    aws ssm wait command-executed --command-id "$CMD" --instance-id "$ID" || true
+    aws ssm get-command-invocation --command-id "$CMD" --instance-id "$ID" --query '[Status,StandardErrorContent]' --output text
     ;;
   ci)
     ID=$(instance_id)
     POLICY=$(cat <<JSON
 {"Version":"2012-10-17","Statement":[
  {"Effect":"Allow","Action":["s3:PutObject"],"Resource":"arn:aws:s3:::imjin1592-deploy/server/*"},
- {"Effect":"Allow","Action":["ssm:SendCommand"],"Resource":["arn:aws:ec2:$AWS_REGION:*:instance/$ID","arn:aws:ssm:$AWS_REGION::document/AWS-RunShellScript"]}
+ {"Effect":"Allow","Action":["ssm:SendCommand"],"Resource":["arn:aws:ec2:$AWS_REGION:*:instance/$ID","arn:aws:ssm:$AWS_REGION::document/AWS-RunShellScript"]},
+ {"Effect":"Allow","Action":["ssm:GetCommandInvocation"],"Resource":"*"}
 ]}
 JSON
 )
@@ -71,10 +96,13 @@ JSON
     echo "set the repository variable MP_INSTANCE_ID=$ID so the deploy workflow updates the server"
     ;;
   status)
-    curl -fsS "https://$HOST/health" && echo
+    ID=$(instance_id)
+    echo "instance: $ID"
+    [ "$ID" = "None" ] || aws ec2 describe-instances --instance-ids "$ID" --query 'Reservations[0].Instances[0].[State.Name,PublicIpAddress]' --output text
+    curl -fsS --max-time 10 "https://$HOST/health" && echo
     ;;
   *)
-    sed -n '2,13p' "$0"
+    sed -n '2,17p' "$0"
     exit 1
     ;;
 esac

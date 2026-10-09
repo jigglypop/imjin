@@ -1,15 +1,27 @@
 import type { Command } from '../sim/commands';
 import type { BuildingKind } from '../sim/conquest';
 import type { ConquestMapId, Seat } from '../sim/maps';
+import type { ScenarioId } from '../sim/scenarios';
 import type { BattleEvent, CrewPlan, Faction, Ship, ShipKind, Squadron, Team } from '../sim/types';
 
 /** Bumped whenever client and server stop understanding each other. */
-export const PROTOCOL = 1;
+export const PROTOCOL = 2;
 export const SNAPSHOT_HZ = 10;
+/** How long a dropped player's fleet waits for them before the computer takes it over. */
+export const GRACE_SECONDS = 60;
+/** How long quick match waits for a human opponent before the computer fills the other side. */
+export const QUICK_SECONDS = 20;
 
-export type RoomSeat = { name: string; faction: Faction; team: Team; human: boolean; client: string | null; ready: boolean };
-export type RoomInfo = { id: string; name: string; map: ConquestMapId; size: 2 | 4; host: string; state: 'lobby' | 'battle' | 'ended'; seats: RoomSeat[] };
-export type RoomSummary = { id: string; name: string; map: ConquestMapId; size: number; humans: number; open: number; state: RoomInfo['state'] };
+/**
+ * What is fought: a conquest map (2 or 4 seats), or one of the historical battles as a duel, one human per side. In
+ * a duel seat 0 leads the Joseon side (owner 0) and seat 1 the Japanese side (owner 1).
+ */
+export type BattleChoice = { kind: 'conquest'; map: ConquestMapId; size: 2 | 4 } | { kind: 'scenario'; id: ScenarioId };
+
+/** `name` labels the seat (its side); `player` is who sits there. */
+export type RoomSeat = { name: string; player: string; faction: Faction; team: Team; human: boolean; client: string | null; ready: boolean; away: boolean; rematch: boolean };
+export type RoomInfo = { id: string; name: string; battle: BattleChoice; host: string; state: 'lobby' | 'battle' | 'ended'; quick: boolean; seats: RoomSeat[] };
+export type RoomSummary = { id: string; name: string; battle: BattleChoice; size: number; humans: number; open: number; state: RoomInfo['state'] };
 
 export type ShipMeta = { id: number; kind: ShipKind; name: string; squadron: number; flagship: boolean; variant: number; owner: number; team: Team };
 export type PointState = {
@@ -26,26 +38,36 @@ export type ConquestState = {
 };
 
 export type ClientMsg =
-  | { t: 'hello'; name: string; v: number }
+  | { t: 'hello'; name: string; v: number; token?: string }
   | { t: 'list' }
-  | { t: 'create'; name: string; map: ConquestMapId; size: 2 | 4 }
+  | { t: 'create'; name: string; battle: BattleChoice }
   | { t: 'join'; room: string }
   | { t: 'leave' }
   | { t: 'take'; index: number }
   | { t: 'seat'; index: number; faction?: Faction; human?: boolean }
   | { t: 'ready'; ready: boolean }
   | { t: 'start' }
+  | { t: 'quick'; battle: BattleChoice; faction: Faction }
+  | { t: 'quickCancel' }
+  | { t: 'rematch' }
+  /** The page has staged the battle; the server starts its clock once every seat has said so. */
+  | { t: 'loaded' }
   | { t: 'cmd'; cmd: Command }
   | { t: 'chat'; text: string }
   | { t: 'ping'; at: number };
 
 export type ServerMsg =
-  | { t: 'welcome'; id: string; v: number }
+  | { t: 'welcome'; id: string; v: number; token: string; resumed: boolean }
   | { t: 'rooms'; rooms: RoomSummary[] }
   | { t: 'room'; room: RoomInfo | null }
-  | { t: 'error'; text: string }
+  | { t: 'error'; text: string; code?: 'version' | 'full' }
   | { t: 'chat'; from: string; text: string }
-  | { t: 'start'; map: ConquestMapId; seats: Seat[]; you: number; seed: number }
+  /** `resume` is a rejoin of a battle already running: a client still drawing it just keeps going. */
+  | { t: 'start'; battle: BattleChoice; seats: Seat[]; you: number; seed: number; resume?: boolean }
+  /** Server pace while the approach is skipped: `speed` is what the server manages, `target` what it asks for. 0 means the clock waits for pages still loading. */
+  | { t: 'speed'; speed: number; target: number }
+  | { t: 'quick'; state: 'searching' | 'idle'; seconds: number }
+  | { t: 'closed'; reason: string }
   | { t: 'meta'; ships: ShipMeta[]; squadrons: Squadron[] }
   | { t: 'state'; conquest: ConquestState }
   | { t: 'events'; events: BattleEvent[] }
