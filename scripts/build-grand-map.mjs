@@ -1,8 +1,8 @@
 // Renders the strategic map backdrop for the faction campaign: public/ui/grand_map.webp.
-// Pale blue-grey sea with a soft shelf and shadow along the coast, white/stone land with subtle shaded relief and a
-// hairline coast. Heights come from public/ui/korea_dem.webp where it reaches and from terrarium tiles around it (Jeju,
-// Kyushu, the Yellow Sea side), so the off-map edge nodes sit on a believable sea. The frame is src/ui/grand/mapFrame.json,
-// shared with src/ui/grand/projection.ts so node positions line up with the image.
+// Near-black sea with a lighter shelf and a shadow along the coast, slate land with subtle shaded relief and a pale
+// hairline coast, to sit under the black glass. Heights come from public/ui/korea_dem.webp where it reaches and from
+// terrarium tiles around it (Jeju, Kyushu, the Yellow Sea side), so the off-map edge nodes sit on a believable sea. The
+// frame is src/ui/grand/mapFrame.json, shared with src/ui/grand/projection.ts so node positions line up with the image.
 //   node scripts/build-grand-map.mjs
 import sharp from 'sharp';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -128,12 +128,12 @@ for (let j = 1; j < H - 1; j += 1) {
 }
 
 const mix = (a, b, t) => a + (b - a) * t;
-const SEA_DEEP = [193, 208, 222];
-const SEA_SHALLOW = [222, 233, 242];
-const LAND = [247, 245, 239];
-const LAND_HIGH = [222, 226, 226];
-const LINE = [170, 186, 201];
-const FOG = [236, 242, 247];
+const SEA_DEEP = [15, 22, 29];
+const SEA_SHALLOW = [28, 40, 51];
+const LAND = [70, 77, 84];
+const LAND_HIGH = [96, 103, 109];
+const LINE = [118, 132, 146];
+const FOG = [13, 18, 23];
 const rgb = Buffer.alloc(W * H * 3);
 const fade = W * 0.035;
 // Per-pixel hash noise (a sequential generator would stripe along rows) to keep the soft gradients from banding.

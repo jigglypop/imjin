@@ -42,12 +42,12 @@ export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
 
 const MAP_W = 100;
 /** The fog the map fades into at its edge; the screen's CSS veil (.hs-vignette) uses the same colour. */
-const MIST_HEX = '#e9f0f6';
+const MIST_HEX = '#0d1217';
 const EXAGGERATION = 4.2;
 
 /** A colour written in sRGB, as the node graph works in linear light. */
 const srgb = (r: number, g: number, b: number) => vec3(...[r, g, b].map((v) => (v / 255) ** 2.2) as [number, number, number]);
-const MIST = srgb(233, 240, 246);
+const MIST = srgb(13, 18, 23);
 
 const lonToX = (lon: number) => ((lon + 180) / 360) * 2 ** meta.zoom;
 const latToY = (lat: number) => {
@@ -292,18 +292,18 @@ export class SelectScene {
     const L = normalize(vec3(-0.55, 0.62, -0.55));
     const lit = clamp(dot(n, L), 0, 1);
     const slope = float(1).sub(n.y);
-    // A pale misty map in the same palette as the campaign map (scripts/build-grand-map.mjs) and the phone map
-    // (scripts/build-ui-map.mjs): stone-white land with soft relief, a pale blue-grey sea lighter on the shelf, a hairline coast.
+    // A dark chart under the black glass, in the same palette as the campaign map (scripts/build-grand-map.mjs) and the
+    // phone map (scripts/build-ui-map.mjs): slate land with soft relief, a near-black sea lighter on the shelf, a pale hairline coast.
     const land = h.greaterThan(0);
     const hi = smoothstep(0, 900, h).mul(0.6);
     const lum = clamp(float(0.86).add(lit.sub(0.62).mul(1.5)).sub(slope.mul(0.55)), 0.35, 1.04);
-    const stone = mix(srgb(247, 245, 239), srgb(222, 226, 226), hi);
-    const shadowTint = srgb(140, 158, 176);
+    const stone = mix(srgb(70, 77, 84), srgb(96, 103, 109), hi);
+    const shadowTint = srgb(28, 33, 38);
     const band = abs(fract(h.div(250)).sub(0.5));
     const contour = smoothstep(0.47, 0.5, band.add(fwidth(h.div(250)).mul(0.6))).mul(smoothstep(80, 200, h)).mul(0.1);
-    const landColor = mix(mix(shadowTint, stone, lum), srgb(170, 186, 201), contour);
+    const landColor = mix(mix(shadowTint, stone, lum), srgb(118, 132, 146), contour);
     const depth = h.negate().max(0);
-    const seaShelf = mix(srgb(204, 221, 236), srgb(172, 194, 214), smoothstep(0, 80, depth));
+    const seaShelf = mix(srgb(28, 40, 51), srgb(15, 22, 29), smoothstep(0, 80, depth));
     const seaShadow = float(1).sub(smoothstep(0, 14, depth)).mul(0.1);
     const waves = sin(positionWorld.z.mul(5.2).add(sin(positionWorld.x.mul(0.9)).mul(1.4))).mul(0.5).add(0.5);
     const waveLines = smoothstep(0.94, 1, waves).mul(0.03).mul(smoothstep(30, 400, depth));
@@ -311,7 +311,7 @@ export class SelectScene {
     const coastW = fwidth(h).mul(1.3).add(2);
     const coast = float(1).sub(smoothstep(0, coastW, abs(h)));
     const base = land.select(landColor, seaColor);
-    const withCoast = mix(base, srgb(140, 160, 180), coast.mul(0.6));
+    const withCoast = mix(base, srgb(118, 132, 146), coast.mul(0.6));
     const edge = smoothstep(0, 0.08, uv().x).mul(smoothstep(1, 0.92, uv().x)).mul(smoothstep(0, 0.1, uv().y)).mul(smoothstep(1, 0.9, uv().y));
     m.colorNode = mix(MIST, withCoast, edge);
     const mesh = new Mesh(geo, m);
@@ -480,7 +480,7 @@ export class SelectScene {
     m.positionNode = positionLocal.add(vec3(0, d.mul(d).mul(-0.04), wave));
     m.colorNode = texture(tex, uv()).rgb.mul(slope.mul(d).mul(0.22).add(0.86));
     const cloth = new Mesh(geo, m);
-    const wood = new MeshBasicNodeMaterial({ color: 0x2a2f35 });
+    const wood = new MeshBasicNodeMaterial({ color: 0x8a8174 });
     const pole = new Mesh(new CylinderGeometry(0.014, 0.018, aspect + 1.6, 10), wood);
     pole.position.set(0, -aspect / 2 - 0.2, 0);
     const finial = new Mesh(new CylinderGeometry(0, 0.04, 0.13, 8), new MeshBasicNodeMaterial({ color: 0xdfe8f2 }));

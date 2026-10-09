@@ -1,5 +1,5 @@
-// Bakes the static pale map used by phones (no 3D select scene there). Same palette as the 3D map in src/select/SelectScene.ts
-// and the campaign map (scripts/build-grand-map.mjs): stone-white land with soft relief, pale blue-grey sea, hairline coast.
+// Bakes the static dark map used by phones (no 3D select scene there). Same palette as the 3D map in src/select/SelectScene.ts
+// and the campaign map (scripts/build-grand-map.mjs): slate land with soft relief, near-black sea, pale hairline coast.
 // The image covers the same lon/lat window as src/select/demMeta.json, so markers use the same projection math.
 //   node scripts/build-ui-map.mjs
 import sharp from 'sharp';
@@ -17,13 +17,13 @@ const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
 
 const out = Buffer.alloc(w * h * 3);
-const SEA_SHALLOW = [204, 221, 236];
-const SEA_DEEP = [172, 194, 214];
-const LAND = [247, 245, 239];
-const LAND_HIGH = [222, 226, 226];
-const SHADOW = [140, 158, 176];
-const LINE = [140, 160, 180];
-const MIST = [233, 240, 246];
+const SEA_SHALLOW = [28, 40, 51];
+const SEA_DEEP = [15, 22, 29];
+const LAND = [70, 77, 84];
+const LAND_HIGH = [96, 103, 109];
+const SHADOW = [28, 33, 38];
+const LINE = [118, 132, 146];
+const MIST = [13, 18, 23];
 const light = [-0.55, -0.55, 0.62];
 const ll = Math.hypot(...light);
 const fade = Math.round(w * 0.05);

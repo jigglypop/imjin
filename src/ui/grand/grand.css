@@ -101,7 +101,7 @@
   overflow: hidden;
   touch-action: none;
   /* The map image fades to this exact tone along all four edges (checked on the pixels), so its rectangle never shows. */
-  background: #ecf2f7;
+  background: #0d1217;
   cursor: grab;
 }
 .gm:active {
@@ -122,40 +122,33 @@
   -webkit-mask-composite: source-in;
   mask-composite: intersect;
 }
-/* Lines and arrowheads are drawn straight on the pale map, so they take the faction's deeper tone, not the lifted one the glass uses. */
-.gm__svg,
-.gm-replay__svg {
-  --joseon: var(--joseon-deep);
-  --japan: var(--japan-deep);
-  --ming: var(--ming-deep);
-}
 .gm__svg {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 .gm-lane {
-  stroke: rgba(27, 30, 34, 0.3);
+  stroke: rgba(235, 240, 245, 0.24);
   stroke-width: 1.5;
   stroke-dasharray: 1 6;
   stroke-linecap: round;
 }
 .gm-lane.front {
-  stroke: rgba(140, 75, 63, 0.6);
+  stroke: rgba(207, 150, 134, 0.72);
   stroke-dasharray: 7 6;
 }
 .gm-lane.off {
-  stroke: rgba(27, 30, 34, 0.34);
+  stroke: rgba(235, 240, 245, 0.16);
   stroke-dasharray: 3 8;
 }
 .gm-lane.hot {
-  stroke: var(--ink-dark);
+  stroke: var(--ink);
   stroke-width: 2.4;
   stroke-dasharray: 8 6;
 }
 .gm-arrow__halo {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.92);
+  stroke: rgba(9, 12, 16, 0.82);
   stroke-width: 7;
   stroke-linecap: round;
 }
@@ -217,7 +210,7 @@
   background: rgba(14, 16, 20, 0.86);
   border: 2px solid var(--c);
   color: var(--c);
-  box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.7), 0 1px 4px rgba(27, 30, 34, 0.22);
+  box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.26), 0 1px 4px rgba(0, 0, 0, 0.4);
   transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 /* The faction's tone sits in the middle as a dot; a seat of power wears a second ring. */
@@ -229,7 +222,7 @@
   background: var(--c);
 }
 .gm-node--seat .gm-node__disc {
-  box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.7), 0 0 0 4px var(--c), 0 1px 4px rgba(27, 30, 34, 0.22);
+  box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.26), 0 0 0 4px var(--c), 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 .gm-node:hover .gm-node__disc {
   transform: scale(1.1);
@@ -258,16 +251,16 @@
 .gm-node--sel .gm-node__disc {
   background: rgba(14, 16, 20, 0.92);
   border-color: var(--c);
-  box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--ink-dark), 0 6px 16px rgba(27, 30, 34, 0.26);
+  box-shadow: 0 0 0 3px #0d1217, 0 0 0 5px var(--ink), 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 .gm-node__label {
   position: absolute;
   white-space: nowrap;
   font-size: 12px;
   font-weight: 600;
-  color: var(--ink-dark);
+  color: var(--ink);
   letter-spacing: -0.01em;
-  text-shadow: 0 0 2px #fff, 0 0 3px #fff, 0 0 6px #fff, 0 0 8px #fff;
+  text-shadow: 0 0 2px #0b0f13, 0 0 3px #0b0f13, 0 0 6px #0b0f13, 0 0 8px #0b0f13;
   pointer-events: none;
 }
 .gm-node__label--b {
@@ -385,7 +378,7 @@
   z-index: 6;
 }
 .gm-fleet--sel .gm-fleet__pill {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ink-dark), 0 6px 16px rgba(27, 30, 34, 0.26);
+  box-shadow: 0 0 0 2px #0d1217, 0 0 0 4px var(--ink), 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 .gm-fleet--foreign .gm-fleet__pill {
   background: rgba(14, 16, 20, 0.78);
@@ -1407,9 +1400,9 @@
 .gm-lane-turns {
   font-size: 12px;
   font-weight: 600;
-  fill: var(--ink-dark-2);
+  fill: var(--ink-2);
   paint-order: stroke;
-  stroke: rgba(255, 255, 255, 0.9);
+  stroke: rgba(9, 12, 16, 0.9);
   stroke-width: 3px;
 }
 .gm-fleet--sailing {
@@ -2054,7 +2047,7 @@
 }
 .gm-replay__halo {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.92);
+  stroke: rgba(9, 12, 16, 0.82);
   stroke-width: 8;
   stroke-linecap: round;
   stroke-linejoin: round;

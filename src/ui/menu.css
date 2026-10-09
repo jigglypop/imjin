@@ -631,19 +631,19 @@
 /* ---------------------------------------------------------------- history battles */
 
 .hs {
-  background: var(--mist);
+  background: #0d1217;
 }
 
-/* The map is the one pale picture: the title sits on it in dark ink, the buttons and tabs are black glass. */
+/* The map is a dark chart under the black glass: the title sits on its fog in light type. */
 .hs-top {
   position: relative;
   z-index: 6;
   flex: none;
-  background: linear-gradient(rgba(238, 241, 244, 0.92), rgba(238, 241, 244, 0));
+  background: linear-gradient(rgba(13, 18, 23, 0.92), rgba(13, 18, 23, 0));
 }
 
 .hs .screen-title {
-  color: var(--ink-dark);
+  color: var(--ink);
 }
 
 .hs-top .screen-top {
@@ -694,8 +694,7 @@
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-ink);
-  /* The pale map would swallow a light pill: it gets a dark ring. */
-  box-shadow: 0 0 0 1.5px var(--ink-dark), var(--shadow-sm);
+  box-shadow: var(--shadow-sm);
 }
 
 .hs-tab--on small {
@@ -726,7 +725,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: #e9f0f6;
+  background: #0d1217;
 }
 
 .select-canvas {
@@ -739,7 +738,7 @@
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 46%, transparent 52%, rgba(233, 240, 246, 0.92) 100%);
+  background: radial-gradient(ellipse at 50% 46%, transparent 52%, rgba(13, 18, 23, 0.92) 100%);
 }
 
 .select-markers {
@@ -818,7 +817,7 @@
   background: var(--accent);
   border-color: var(--ink-dark);
   border-width: 3px;
-  box-shadow: 0 0 0 1px var(--ink-dark), 0 0 18px rgba(20, 24, 29, 0.35);
+  box-shadow: 0 0 0 1px var(--ink-dark), 0 0 18px rgba(238, 241, 243, 0.22);
   animation: marker-pulse 2s ease-in-out infinite;
 }
 
@@ -831,7 +830,7 @@
 
 @keyframes marker-pulse {
   50% {
-    box-shadow: 0 0 0 1px var(--ink-dark), 0 0 0 9px rgba(20, 24, 29, 0.14), 0 0 22px rgba(20, 24, 29, 0.3);
+    box-shadow: 0 0 0 1px var(--ink-dark), 0 0 0 9px rgba(238, 241, 243, 0.12), 0 0 22px rgba(238, 241, 243, 0.24);
   }
 }
 
@@ -859,7 +858,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 90px 80px #e9f0f6;
+  box-shadow: inset 0 0 90px 80px #0d1217;
 }
 
 .smap-plane img {
