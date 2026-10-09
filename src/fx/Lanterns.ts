@@ -3,7 +3,6 @@ import { float, instancedDynamicBufferAttribute, length, mx_noise_float, pow, sm
 import type { Battle } from '../sim/battle';
 import type { ShipKind } from '../sim/types';
 import type { ShipViews } from '../ships/ShipViews';
-import { waveField } from '../ocean/waves';
 
 const CAPACITY = 4000;
 
@@ -108,7 +107,6 @@ export class Lanterns {
       const G = this.glowPos.array as Float32Array;
       const R = this.reflPos.array as Float32Array;
       const cam = camera.position;
-      const t = waveField.time;
       let lights = 0;
       for (const ship of battle.ships) {
         if (!ship.alive || !ship.lights || ship.sinking > 0.3) continue;
@@ -118,7 +116,9 @@ export class Lanterns {
         const anchors = this.views.assets?.[v.key]?.anchors;
         const legacy = POINTS[ship.spec.kind];
         const deck = DECK[v.key] ?? ship.spec.deck;
-        const dist = Math.hypot(ship.x - cam.x, ship.z - cam.z);
+        const ddx = ship.x - cam.x;
+        const ddz = ship.z - cam.z;
+        const dist = Math.sqrt(ddx * ddx + ddz * ddz);
         const size = 1.5 + dist * 0.0075;
         const count = anchors ? anchors.lanterns.length : legacy.length;
         for (let i = 0; i < count; i += 1) {
@@ -136,11 +136,11 @@ export class Lanterns {
           G[o + 3] = size * flicker;
           const dx = cam.x - this.p.x;
           const dz = cam.z - this.p.z;
-          const dl = Math.hypot(dx, dz) || 1;
-          const water = waveField.heightAt(this.p.x, this.p.z, t, 10);
+          const dl = Math.sqrt(dx * dx + dz * dz) || 1;
           const len = Math.min(26, 6 + this.p.y * 1.2) * (1 + dist / 700);
           R[o] = this.p.x + (dx / dl) * len * 0.5;
-          R[o + 1] = water + 0.2;
+          // The streak lies on the sea under the ship, which the ship's own wave sample already gives.
+          R[o + 1] = v.heave + 0.2;
           R[o + 2] = this.p.z + (dz / dl) * len * 0.5;
           R[o + 3] = len * 0.38;
           n += 1;

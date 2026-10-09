@@ -22,7 +22,7 @@ import {
   Vector3,
   type WebGPURenderer,
 } from 'three/webgpu';
-import { abs, clamp, cos, dot, float, fract, fwidth, max, mix, normalize, positionLocal, positionWorld, pow, sin, smoothstep, texture, uniform, uv, vec2, vec3 } from 'three/tsl';
+import { abs, clamp, cos, dot, float, fract, fwidth, max, mix, normalize, positionLocal, positionWorld, sin, smoothstep, texture, uniform, uv, vec2, vec3 } from 'three/tsl';
 import meta from './demMeta.json';
 import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import { playableFactions } from '../sim/balance';
@@ -41,7 +41,13 @@ export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
 };
 
 const MAP_W = 100;
+/** The fog the map fades into at its edge; the screen's CSS veil (.hs-vignette) uses the same colour. */
+const MIST_HEX = '#e9f0f6';
 const EXAGGERATION = 4.2;
+
+/** A colour written in sRGB, as the node graph works in linear light. */
+const srgb = (r: number, g: number, b: number) => vec3(...[r, g, b].map((v) => (v / 255) ** 2.2) as [number, number, number]);
+const MIST = srgb(233, 240, 246);
 
 const lonToX = (lon: number) => ((lon + 180) / 360) * 2 ** meta.zoom;
 const latToY = (lat: number) => {
@@ -147,7 +153,7 @@ export class SelectScene {
     camera.near = 0.05;
     camera.far = 600;
     camera.updateProjectionMatrix();
-    this.scene.background = new Color('#050b13');
+    this.scene.background = new Color(MIST_HEX);
   }
 
   async init(initial: ScenarioId) {
@@ -283,29 +289,28 @@ export class SelectScene {
     const L = normalize(vec3(-0.55, 0.62, -0.55));
     const lit = clamp(dot(n, L), 0, 1);
     const slope = float(1).sub(n.y);
-    // Dark sea, slate land, a light rim along the coast (the same look as the static phone map, public/ui/map_south.webp).
-    const paper = vec3(0.4, 0.5, 0.62);
-    const ink = vec3(0.035, 0.07, 0.11);
-    const rim = vec3(0.82, 0.91, 1);
-    const seaBase = vec3(0.02, 0.043, 0.075);
+    // A pale misty map in the same palette as the campaign map (scripts/build-grand-map.mjs) and the phone map
+    // (scripts/build-ui-map.mjs): stone-white land with soft relief, a pale blue-grey sea lighter on the shelf, a hairline coast.
     const land = h.greaterThan(0);
-    const heightWash = smoothstep(50, 1600, h).mul(0.3);
-    const shade = pow(float(1).sub(lit), 1.4).mul(0.6).add(slope.mul(0.85)).add(heightWash).clamp(0, 0.82);
+    const hi = smoothstep(0, 900, h).mul(0.6);
+    const lum = clamp(float(0.86).add(lit.sub(0.62).mul(1.5)).sub(slope.mul(0.55)), 0.35, 1.04);
+    const stone = mix(srgb(247, 245, 239), srgb(222, 226, 226), hi);
+    const shadowTint = srgb(140, 158, 176);
     const band = abs(fract(h.div(250)).sub(0.5));
-    const contour = smoothstep(0.47, 0.5, band.add(fwidth(h.div(250)).mul(0.6))).mul(smoothstep(80, 200, h));
-    const landColor = mix(paper, ink, shade.add(contour.mul(0.1)));
+    const contour = smoothstep(0.47, 0.5, band.add(fwidth(h.div(250)).mul(0.6))).mul(smoothstep(80, 200, h)).mul(0.1);
+    const landColor = mix(mix(shadowTint, stone, lum), srgb(170, 186, 201), contour);
     const depth = h.negate().max(0);
-    const seaWash = mix(vec3(0.078, 0.2, 0.32), vec3(0.024, 0.055, 0.095), smoothstep(0, 900, depth));
+    const seaShelf = mix(srgb(204, 221, 236), srgb(172, 194, 214), smoothstep(0, 80, depth));
+    const seaShadow = float(1).sub(smoothstep(0, 14, depth)).mul(0.1);
     const waves = sin(positionWorld.z.mul(5.2).add(sin(positionWorld.x.mul(0.9)).mul(1.4))).mul(0.5).add(0.5);
-    const waveLines = smoothstep(0.94, 1, waves).mul(0.035).mul(float(1).sub(smoothstep(0, 400, depth)).add(0.35));
-    const seaColor = seaWash.add(waveLines.mul(0.4));
+    const waveLines = smoothstep(0.94, 1, waves).mul(0.03).mul(smoothstep(30, 400, depth));
+    const seaColor = seaShelf.mul(float(1).sub(seaShadow).sub(waveLines));
     const coastW = fwidth(h).mul(1.3).add(2);
     const coast = float(1).sub(smoothstep(0, coastW, abs(h)));
-    const surf = float(1).sub(smoothstep(0, 45, depth)).mul(land.select(float(0), float(1)));
-    const base = land.select(landColor, mix(seaColor, vec3(0.2, 0.36, 0.52), surf.mul(0.35)));
-    const withCoast = mix(base, rim, coast.mul(0.5));
+    const base = land.select(landColor, seaColor);
+    const withCoast = mix(base, srgb(140, 160, 180), coast.mul(0.6));
     const edge = smoothstep(0, 0.08, uv().x).mul(smoothstep(1, 0.92, uv().x)).mul(smoothstep(0, 0.1, uv().y)).mul(smoothstep(1, 0.9, uv().y));
-    m.colorNode = mix(seaBase, withCoast, edge);
+    m.colorNode = mix(MIST, withCoast, edge);
     const mesh = new Mesh(geo, m);
     mesh.frustumCulled = false;
     return mesh;

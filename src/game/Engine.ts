@@ -344,7 +344,7 @@ export class Engine {
     this.views = new ShipViews(this.assets, this.battle, this.eq.ships);
     this.views.team = this.team;
     this.scene.add(this.views.group);
-    this.fx = new Effects(this.views, { lights: this.eq.lights, particles: { keep: LEVELS[this.level]!.particleKeep, sort: true, noise: this.eq.noise } });
+    this.fx = new Effects(this.views, { lights: this.eq.lights, particles: { keep: LEVELS[this.level]!.particleKeep, sort: true } });
     this.fx.wake = this.wake;
     this.fx.onShake = (k) => this.rts.shake(k);
     this.fx.onCue = (kind, x, y, z, size) => this.sound.cue(kind, x, y, z, size);
@@ -482,6 +482,9 @@ export class Engine {
     const webgpu = !!(r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend;
     setLoading('셰이더를 준비하는 중', from);
     await Promise.all([this.worksLoad, this.conquestLoad]);
+    // The land is drawn in tiles that the camera culls. All of them draw during warm-up, so the terrain program is built here
+    // and not when land first comes into view.
+    this.terrain.setCulling(false);
     if (webgpu) {
       await r.compileAsync(this.scene, this.camera, null, (e) => setProgress(from + 0.16 * (e.loaded / Math.max(1, e.total))));
     } else {
@@ -490,6 +493,7 @@ export class Engine {
     setLoading('첫 화면을 그리는 중', from + 0.2);
     await settle();
     this.primeOcean();
+    this.terrain.setCulling(true);
     setProgress(from + 0.22);
   }
 

@@ -3,15 +3,20 @@ import {
   CylinderGeometry,
   Float32BufferAttribute,
   Group,
+  Box3,
+  DynamicDrawUsage,
+  Frustum,
   IcosahedronGeometry,
+  InstancedBufferAttribute,
   InstancedBufferGeometry,
+  Matrix4,
   Mesh,
   MeshStandardNodeMaterial,
   Vector2,
   Vector3,
   type Camera,
 } from 'three/webgpu';
-import { Fn, abs, cos, float, hash, instanceIndex, max, mix, normalGeometry, normalLocal, positionGeometry, sin, smoothstep, texture, uniform, uint, varying, vec2, vec3, attribute, time } from 'three/tsl';
+import { Fn, abs, cos, float, hash, max, mix, normalGeometry, normalLocal, positionGeometry, sin, smoothstep, texture, uniform, uint, varying, vec2, vec3, attribute, time } from 'three/tsl';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Terrain } from './Terrain';
 import type { VegetationQuality } from '../game/quality';
@@ -71,20 +76,47 @@ function pine(detail: 0 | 1, lite = false) {
 }
 
 /** An instanced draw of `base`. The vertices are shared with the base geometry, so every ring variant costs no extra copy. */
-function instancedGeometry(base: BufferGeometry, count: number) {
+function instancedGeometry(base: BufferGeometry, cells: InstancedBufferAttribute) {
   const geo = new InstancedBufferGeometry();
   geo.index = base.index;
   for (const [name, attr] of Object.entries(base.attributes)) geo.setAttribute(name, attr);
-  geo.instanceCount = count;
+  geo.setAttribute('treeCell', cells);
+  geo.instanceCount = 1;
   return geo;
 }
 
-type Ring = { cell: number; grid: number; inner: number; center: ReturnType<typeof uniform>; mesh: Mesh; full: InstancedBufferGeometry; lite: InstancedBufferGeometry };
+/** Cells per side of a block. A block is tested against the terrain once and against the camera every frame. */
+const BLOCK = 16;
+/** A tree throws its shadow this far (m) from where it stands, and a crown leans out a little: blocks that near the view still draw. */
+const SHADOW_REACH = 60;
+const TREE_TOP = 36;
+const MAX_BLOCKS = 3000;
+
+type Block = { cells: Int16Array; top: number };
+
+type Ring = {
+  cell: number;
+  grid: number;
+  inner: number;
+  center: ReturnType<typeof uniform>;
+  mesh: Mesh;
+  full: InstancedBufferGeometry;
+  lite: InstancedBufferGeometry;
+  /** The (x, z) cell of every tree slot to draw, a prefix of this array. */
+  cells: InstancedBufferAttribute;
+  blocks: Map<number, Block>;
+  /** Camera and centre the instance list was built for. */
+  built: { cx: number; cz: number; view: Float32Array } | null;
+};
 
 export class Vegetation {
   readonly group = new Group();
   private readonly rings: Ring[] = [];
   private readonly tmp = new Vector3();
+  private readonly frustum = new Frustum();
+  private readonly viewProj = new Matrix4();
+  private readonly toTerrain = new Matrix4();
+  private readonly box = new Box3();
 
   constructor(
     private readonly terrain: Terrain,
@@ -119,19 +151,21 @@ export class Vegetation {
   }
 
   private ring(variants: { full: BufferGeometry; lite: BufferGeometry }, cell: number, grid: number, inner: number, shadows: boolean): Ring {
-    const full = instancedGeometry(variants.full, grid * grid);
-    const lite = instancedGeometry(variants.lite, grid * grid);
+    // Only cells that can hold a tree are drawn. The cells come from the CPU, so the GPU does not run the vertex
+    // shader of a whole crown for every cell of the grid, most of which lie in the sea or outside the screen.
+    const cells = new InstancedBufferAttribute(new Float32Array(grid * grid * 2), 2);
+    cells.setUsage(DynamicDrawUsage);
+    const full = instancedGeometry(variants.full, cells);
+    const lite = instancedGeometry(variants.lite, cells);
     const center = uniform(new Vector2());
     const t = this.terrain;
     const size = t.spec.size;
     const m = new MeshStandardNodeMaterial();
     m.roughness = 0.88;
     m.metalness = 0;
-    const idx = instanceIndex;
-    const ix = idx.mod(uint(grid));
-    const iz = idx.div(uint(grid));
-    const cellX = (center as any).x.add(float(ix)).sub(grid / 2);
-    const cellZ = (center as any).y.add(float(iz)).sub(grid / 2);
+    const treeCell: any = attribute('treeCell', 'vec2');
+    const cellX = treeCell.x;
+    const cellZ = treeCell.y;
     const seed = uint(cellX.add(65536)).mul(uint(73856093)).bitXor(uint(cellZ.add(65536)).mul(uint(19349663)));
     const h1 = hash(seed);
     const h2 = hash(seed.add(uint(1)));
@@ -180,10 +214,12 @@ export class Vegetation {
     mesh.castShadow = shadows;
     mesh.receiveShadow = shadows;
     this.group.add(mesh);
-    return { cell, grid, inner, center, mesh, full, lite };
+    return { cell, grid, inner, center, mesh, full, lite, cells, blocks: new Map(), built: null };
   }
 
   update(camera: Camera) {
+    // The renderer refreshes the camera's matrices at draw time, a frame behind the pose set this frame.
+    camera.updateMatrixWorld();
     const cam = camera.position;
     camera.getWorldDirection(this.tmp);
     const fx = this.tmp.x;
@@ -193,8 +229,117 @@ export class Vegetation {
     const wx = cam.x + (fx / len) * lead;
     const wz = cam.z + (fz / len) * lead;
     const s = this.terrain.toScenario(wx, wz);
+    let view: Frustum | null = null;
     for (const r of this.rings) {
-      (r.center.value as Vector2).set(Math.floor(s.x / r.cell), Math.floor(s.z / r.cell));
+      const cx = Math.floor(s.x / r.cell);
+      const cz = Math.floor(s.z / r.cell);
+      (r.center.value as Vector2).set(cx, cz);
+      if (r.built && r.built.cx === cx && r.built.cz === cz && this.sameView(r.built.view, camera)) continue;
+      view ??= this.viewFrustum(camera);
+      this.gather(r, cx, cz, view, camera);
     }
+  }
+
+  private sameView(view: Float32Array, camera: Camera) {
+    const m = camera.matrixWorld.elements;
+    const p = camera.projectionMatrix.elements;
+    for (let i = 0; i < 16; i += 1) if (view[i] !== m[i] || view[16 + i] !== p[i]) return false;
+    return true;
+  }
+
+  /** The camera frustum in the terrain's own space, where the trees' cells are laid out. */
+  private viewFrustum(camera: Camera) {
+    this.toTerrain.copy(camera.matrixWorld).invert().multiply(this.terrain.group.matrixWorld);
+    this.viewProj.multiplyMatrices(camera.projectionMatrix, this.toTerrain);
+    return this.frustum.setFromProjectionMatrix(this.viewProj);
+  }
+
+  /**
+   * Lists the cells of a ring that can hold a tree and are near the screen. The shader still decides, cell by cell,
+   * whether a tree stands there and how big it is, so the picture is that of drawing the whole grid.
+   */
+  private gather(r: Ring, cx: number, cz: number, view: Frustum, camera: Camera) {
+    const half = r.grid / 2;
+    const x0 = cx - half;
+    const z0 = cz - half;
+    const out = r.cells.array as Float32Array;
+    // A cell nearer than the previous ring's edge is that ring's.
+    const skip = r.inner > 0 ? (0.88 * r.inner) / r.cell : 0;
+    let n = 0;
+    for (let bz = Math.floor(z0 / BLOCK); bz <= Math.floor((z0 + r.grid - 1) / BLOCK); bz += 1) {
+      for (let bx = Math.floor(x0 / BLOCK); bx <= Math.floor((x0 + r.grid - 1) / BLOCK); bx += 1) {
+        const block = this.block(r, bx, bz);
+        if (block.cells.length === 0) continue;
+        this.box.min.set((bx * BLOCK) * r.cell - SHADOW_REACH, -4, (bz * BLOCK) * r.cell - SHADOW_REACH);
+        this.box.max.set(((bx + 1) * BLOCK) * r.cell + SHADOW_REACH, block.top + TREE_TOP, ((bz + 1) * BLOCK) * r.cell + SHADOW_REACH);
+        if (!view.intersectsBox(this.box)) continue;
+        const list = block.cells;
+        for (let k = 0; k < list.length; k += 2) {
+          const x = list[k]!;
+          const z = list[k + 1]!;
+          if (x < x0 || x >= x0 + r.grid || z < z0 || z >= z0 + r.grid) continue;
+          if (skip > 0 && Math.max(Math.abs(x - cx), Math.abs(x + 1 - cx), Math.abs(z - cz), Math.abs(z + 1 - cz)) < skip) continue;
+          out[n * 2] = x;
+          out[n * 2 + 1] = z;
+          n += 1;
+        }
+      }
+    }
+    // An empty list still draws one slot, a cell that holds no tree, so the pipeline exists before the first tree does.
+    if (n === 0) {
+      out[0] = 0;
+      out[1] = 0;
+      n = 1;
+    }
+    r.full.instanceCount = n;
+    r.lite.instanceCount = n;
+    r.cells.clearUpdateRanges();
+    r.cells.addUpdateRange(0, n * 2);
+    r.cells.needsUpdate = true;
+    const view16 = r.built?.view ?? new Float32Array(32);
+    view16.set(camera.matrixWorld.elements, 0);
+    view16.set(camera.projectionMatrix.elements, 16);
+    r.built = { cx, cz, view: view16 };
+  }
+
+  /** The cells of a block where the ground is land and the forest mask is not empty: the only places a tree can stand. */
+  private block(r: Ring, bx: number, bz: number) {
+    const key = (bx + 4096) * 8192 + (bz + 4096);
+    let block = r.blocks.get(key);
+    if (block) return block;
+    if (r.blocks.size >= MAX_BLOCKS) r.blocks.clear();
+    const { size, res } = this.terrain.spec;
+    const heights = this.terrain.heights;
+    const mask = this.terrain.mask;
+    const density = r.inner > 0 ? 0.82 : 1;
+    const toTexel = (v: number) => ((v + size / 2) / size) * res - 0.5;
+    const clamp = (i: number) => Math.max(0, Math.min(res - 1, i));
+    const found: number[] = [];
+    let top = 0;
+    for (let z = bz * BLOCK; z < (bz + 1) * BLOCK; z += 1) {
+      const j0 = clamp(Math.floor(toTexel(z * r.cell)));
+      const j1 = clamp(Math.floor(toTexel((z + 1) * r.cell)) + 1);
+      for (let x = bx * BLOCK; x < (bx + 1) * BLOCK; x += 1) {
+        const i0 = clamp(Math.floor(toTexel(x * r.cell)));
+        const i1 = clamp(Math.floor(toTexel((x + 1) * r.cell)) + 1);
+        let forest = 0;
+        let ground = -Infinity;
+        for (let j = j0; j <= j1; j += 1) {
+          for (let i = i0; i <= i1; i += 1) {
+            const f = mask[(j * res + i) * 4]!;
+            if (f > forest) forest = f;
+            const h = heights[j * res + i]!;
+            if (h > ground) ground = h;
+          }
+        }
+        // The shader keeps a cell when density > 0.03 + 0.95 * hash and the ground is above 2.5 m.
+        if ((forest / 255) * density <= 0.03 || ground <= 2.5) continue;
+        found.push(x, z);
+        if (ground > top) top = ground;
+      }
+    }
+    block = { cells: Int16Array.from(found), top };
+    r.blocks.set(key, block);
+    return block;
   }
 }

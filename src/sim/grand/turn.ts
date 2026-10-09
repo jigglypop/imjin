@@ -18,6 +18,7 @@ import { makeRng, next } from './rng';
 import type { BattleOutcome, BuildingKind, Contact, Fleet, Grand, GrandFaction, RegionId, ShipUnit } from './types';
 import { GRAND_FACTIONS } from './types';
 import { allied, atWar, fleetById, fleetStrength, mintId, note, ownedBy, passable, shipCount } from './world';
+import { josa } from './josa';
 
 export { MAX_TURNS };
 
@@ -144,7 +145,7 @@ function retreat(g: Grand, fl: Fleet, from: RegionId) {
   const mine = (id: RegionId) => (g.regions[id].owner === fl.faction ? 0 : 1);
   const choice = home ?? [...lanes].sort((a, b) => a.turns - b.turns || mine(a.to) - mine(b.to))[0];
   if (!choice) {
-    note(g, `${fl.name}이(가) 도망칠 곳 없이 전멸했다`, fl.faction === g.player ? 'bad' : 'info');
+    note(g, `${josa(fl.name, '이/가')} 도망칠 곳 없이 전멸했다`, fl.faction === g.player ? 'bad' : 'info');
     g.fleets.splice(g.fleets.indexOf(fl), 1);
     return;
   }
@@ -171,7 +172,7 @@ export function captureRegion(g: Grand, id: RegionId, taker: GrandFaction) {
     .filter((b) => b.level > 0);
   const label = TUNING.faction[by].label;
   const tone = by === g.player ? 'good' : prev === g.player ? 'bad' : 'info';
-  note(g, liberated ? `${TUNING.faction[taker].label}이(가) ${REGIONS[id].name}을(를) 되찾아 ${label}에 돌려주었다` : `${label}이(가) ${REGIONS[id].name}을(를) 차지했다`, tone);
+  note(g, liberated ? `${josa(TUNING.faction[taker].label, '이/가')} ${josa(REGIONS[id].name, '을/를')} 되찾아 ${label}에 돌려주었다` : `${josa(label, '이/가')} ${josa(REGIONS[id].name, '을/를')} 차지했다`, tone);
 }
 
 function dropEmpty(g: Grand) {
@@ -184,7 +185,7 @@ function giveXp(g: Grand, fl: Fleet, kills: number, won: boolean) {
   cmd.xp += 25 + kills * 8 + (won ? 50 : 0);
   while (cmd.level < LEVEL_XP.length && cmd.xp >= LEVEL_XP[cmd.level]!) {
     cmd.level += 1;
-    note(g, `${cmd.name}이(가) ${cmd.level}레벨이 되었다`, fl.faction === g.player ? 'good' : 'info');
+    note(g, `${josa(cmd.name, '이/가')} ${cmd.level}레벨이 되었다`, fl.faction === g.player ? 'good' : 'info');
   }
 }
 
@@ -487,7 +488,7 @@ function checkVictory(g: Grand) {
     if (st.alive && ownedBy(g, f).length === 0) {
       st.alive = false;
       g.fleets = g.fleets.filter((fl) => fl.faction !== f);
-      note(g, `${TUNING.faction[f].label}은(는) 모든 포구를 잃고 무너졌다`, f === g.player ? 'bad' : 'info');
+      note(g, `${josa(TUNING.faction[f].label, '은/는')} 모든 포구를 잃고 무너졌다`, f === g.player ? 'bad' : 'info');
     }
     st.idle += 1;
     st.objectiveHold = st.alive && objectiveMet(g, f) ? st.objectiveHold + 1 : 0;

@@ -4,7 +4,7 @@ import type { BuildingKind, FactionId, Owner, Resources, ShipClass } from './typ
 export const FACTION_INFO: Record<FactionId, { name: string; hanja: string; color: string }> = {
   joseon: { name: '조선', hanja: '朝', color: '#2f6db5' },
   japan: { name: '일본', hanja: '日', color: '#c9433b' },
-  ming: { name: '명', hanja: '明', color: '#c4952a' },
+  ming: { name: '명', hanja: '明', color: '#9c700f' },
 };
 
 export const ownerName = (o: Owner) => (o ? FACTION_INFO[o].name : '중립');

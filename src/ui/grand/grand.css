@@ -3,16 +3,19 @@
 .grand {
   --ink: #14202e;
   --ink-2: #4a5868;
-  --ink-3: #8393a3;
+  --ink-3: #5d6b7b;
   --accent: #2456d6;
   --accent-soft: rgba(36, 86, 214, 0.11);
   --line: rgba(20, 32, 46, 0.08);
   --good: #36a173;
+  /* The same hues as text, dark enough for AA on white glass. */
+  --good-ink: #1d7550;
+  --bad-ink: #b3382e;
   --warn: #e0a030;
   --bad: #d5584c;
   --c-joseon: #2f6db5;
   --c-japan: #c9433b;
-  --c-ming: #c4952a;
+  --c-ming: #9c700f;
   --top-gap: max(12px, env(safe-area-inset-top));
   --top-space: calc(var(--top-gap) + 68px);
 
@@ -616,11 +619,11 @@
 .g-res__net {
   font-size: 11px;
   font-weight: 650;
-  color: var(--good);
+  color: var(--good-ink);
   font-variant-numeric: tabular-nums;
 }
 .g-res__net--neg {
-  color: var(--bad);
+  color: var(--bad-ink);
 }
 .g-top__end {
   flex: none;
@@ -1363,17 +1366,17 @@
   font-weight: 800;
 }
 .g-verdict--win {
-  color: var(--good);
+  color: var(--good-ink);
 }
 .g-verdict--loss {
-  color: var(--bad);
+  color: var(--bad-ink);
 }
 .g-verdict--info {
   color: var(--ink-2);
 }
 .g-banner--bad {
   background: rgba(213, 88, 76, 0.12);
-  color: var(--bad);
+  color: var(--bad-ink);
   margin-top: 12px;
 }
 .g-ship-line {

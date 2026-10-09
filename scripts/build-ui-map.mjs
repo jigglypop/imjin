@@ -1,4 +1,5 @@
-// Bakes the static dark sea map used by the menu and by phones (no 3D select scene there).
+// Bakes the static pale map used by phones (no 3D select scene there). Same palette as the 3D map in src/select/SelectScene.ts
+// and the campaign map (scripts/build-grand-map.mjs): stone-white land with soft relief, pale blue-grey sea, hairline coast.
 // The image covers the same lon/lat window as src/select/demMeta.json, so markers use the same projection math.
 //   node scripts/build-ui-map.mjs
 import sharp from 'sharp';
@@ -16,13 +17,16 @@ const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
 
 const out = Buffer.alloc(w * h * 3);
-const sea0 = [20, 52, 82];
-const sea1 = [6, 14, 24];
-const land0 = [16, 28, 42];
-const land1 = [118, 146, 176];
-const rim = [214, 232, 248];
+const SEA_SHALLOW = [204, 221, 236];
+const SEA_DEEP = [172, 194, 214];
+const LAND = [247, 245, 239];
+const LAND_HIGH = [222, 226, 226];
+const SHADOW = [140, 158, 176];
+const LINE = [140, 160, 180];
+const MIST = [233, 240, 246];
 const light = [-0.55, -0.55, 0.62];
 const ll = Math.hypot(...light);
+const fade = Math.round(w * 0.05);
 for (let y = 0; y < h; y += 1) {
   for (let x = 0; x < w; x += 1) {
     const v = at(x, y);
@@ -35,18 +39,23 @@ for (let y = 0; y < h; y += 1) {
     const lit = clamp((n[0] * light[0] + n[1] * light[1] + n[2] * light[2]) / (nl * ll));
     let c;
     if (v > 0) {
-      const t = clamp(0.04 + lit * 0.72 + smooth(50, 1500, v) * 0.2 - (1 - n[2] / nl) * 0.55);
-      c = land0.map((a, i) => mix(a, land1[i], t));
+      const hi = smooth(0, 900, v) * 0.6;
+      const lum = clamp(0.86 + (lit - 0.62) * 1.5 - (1 - n[2] / nl) * 0.55, 0.35, 1.04);
+      const stone = LAND.map((a, i) => mix(a, LAND_HIGH[i], hi));
+      c = SHADOW.map((a, i) => mix(a, stone[i], clamp(lum)));
+      c = c.map((a) => (lum > 1 ? Math.min(255, a * lum) : a));
       const band = Math.abs(((v / 250) % 1) - 0.5);
-      if (v > 80 && band > 0.485) c = c.map((a, i) => mix(a, rim[i], 0.12));
+      if (v > 80 && band > 0.485) c = c.map((a, i) => mix(a, LINE[i], 0.1));
     } else {
-      const d = smooth(0, 900, -v);
-      c = sea0.map((a, i) => mix(a, sea1[i], d));
-      const shallow = 1 - smooth(0, 60, -v);
-      c = c.map((a) => a + shallow * 8);
+      c = SEA_SHALLOW.map((a, i) => mix(a, SEA_DEEP[i], smooth(0, 80, -v)));
+      const shadow = (1 - smooth(0, 14, -v)) * 0.1;
+      c = c.map((a) => a * (1 - shadow));
     }
     const coast = (v > 0) !== (at(x + 1, y) > 0) || (v > 0) !== (at(x, y + 1) > 0);
-    if (coast) c = c.map((a, i) => mix(a, rim[i], 0.5));
+    if (coast) c = c.map((a, i) => mix(a, LINE[i], 0.6));
+    const edge = Math.min(x, y, w - 1 - x, h - 1 - y);
+    const f = edge < fade ? 1 - (edge / fade) ** 1.4 : 0;
+    c = c.map((a, i) => mix(a, MIST[i], f));
     out[k] = c[0];
     out[k + 1] = c[1];
     out[k + 2] = c[2];

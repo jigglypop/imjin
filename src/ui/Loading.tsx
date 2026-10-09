@@ -21,7 +21,7 @@ export function Loading() {
   const info = sid ? SCENARIOS[sid] : null;
   const pct = Math.round(Math.max(0, Math.min(1, progress)) * 100);
   return (
-    <div className="loading" role="status">
+    <div className={`loading${info?.night ? ' loading--night' : ''}`} role="status">
       <Backdrop kind="loading" id={sid ?? undefined} />
       <div className="loading-card glass">
         <div className="loading-title">{info?.hanja ?? '壬辰海戰'}</div>

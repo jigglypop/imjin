@@ -376,7 +376,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
               </div>
             </div>
             <div>
-              <div className="settings-label">소리 · 카메라</div>
+              <div className="settings-label">소리</div>
               <div className="chips">
                 <button
                   className={`chip ${!snap.muted ? 'chip--on' : ''}`}
@@ -386,15 +386,6 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                   }}
                 >
                   소리
-                </button>
-                <button
-                  className={`chip ${snap.cinematic ? 'chip--on' : ''}`}
-                  onClick={() => {
-                    engine.rts.cinematic = !engine.rts.cinematic;
-                    engine.publish(true);
-                  }}
-                >
-                  관전 카메라
                 </button>
                 {origin !== 'faction' && (
                   <button className="chip" onClick={() => engine.restart()}>
@@ -421,6 +412,10 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
           </button>
           <button className={`tool ${snap.following ? 'tool--on' : ''}`} onClick={() => engine.input.followSelected()} disabled={snap.selectedCount === 0}>
             추적
+          </button>
+          {/* The crew panel with the cutaway chip is hidden on phones, so the deck view needs its own button. */}
+          <button className={`tool ${engine.cutaway ? 'tool--on' : ''}`} onClick={() => engine.toggleCutaway()} disabled={snap.selectedCount === 0 && !engine.cutaway}>
+            {engine.cutaway ? ['', '상갑판', '포갑판', '노갑판'][engine.cutaway] : '선내'}
           </button>
         </div>
       )}

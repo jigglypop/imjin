@@ -13,7 +13,7 @@ export type EquipmentTier = 'high' | 'medium' | 'low'; // high = PC, medium = ta
 export type EquipmentSetting = 'auto' | EquipmentTier;
 
 export type CloudQuality = { steps: number; lightSteps: number; divisor: number; every: number };
-export type ParticleQuality = { keep: number; sort: boolean; noise: number };
+export type ParticleQuality = { keep: number; sort: boolean };
 export type TerrainQuality = { mesh: number; triplanar: boolean; anisotropy: number; noise: number; texSize: 1024 | 2048 };
 export type VegetationQuality = { grids: [number, number, number]; shadows: boolean };
 export type OceanQuality = { segments: number; lights: number };

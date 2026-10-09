@@ -15,8 +15,10 @@ import {
   RepeatWrapping,
   SRGBColorSpace,
   TextureLoader,
+  Sphere,
   Uint32BufferAttribute,
   Vector2,
+  Vector3,
   type Texture,
 } from 'three/webgpu';
 import {
@@ -82,6 +84,7 @@ export class Terrain {
   readonly season = uniform(0);
   readonly heightTexture: DataTexture;
   readonly maskTexture: DataTexture;
+  private readonly tiles: Mesh[];
   private phi = 0;
   private cos = 1;
   private sin = 0;
@@ -102,7 +105,8 @@ export class Terrain {
     tex.generateMipmaps = false;
     tex.needsUpdate = true;
     this.heightTexture = tex;
-    this.group.add(this.buildMesh(quality));
+    this.tiles = this.buildMesh(quality);
+    this.group.add(...this.tiles);
   }
 
   /** The heightmap comes from a worker and the ground textures from the shared cache, both fetched at the same time. */
@@ -204,36 +208,69 @@ export class Terrain {
         normals[k * 3 + 2] = nz / len;
       }
     }
-    // Typed from the start: a plain array of 2.4 million numbers is a large transient on a phone.
-    const indices = new Uint32Array((n - 1) * (n - 1) * 6);
-    let used = 0;
+    const position = new Float32BufferAttribute(positions, 3);
+    const normal = new Float32BufferAttribute(normals, 3);
+    // The land is cut into tiles that share the vertex buffers and each carry their own index list and bounds, so a tile
+    // out of view (or out of the sun's shadow map) is not drawn. One mesh of 2 million triangles was drawn whole, twice.
+    const tiles = n >= 1000 ? 8 : n >= 700 ? 6 : 4;
+    const per = Math.ceil((n - 1) / tiles);
     const deep = -14;
-    for (let j = 0; j < n - 1; j += 1) {
-      for (let i = 0; i < n - 1; i += 1) {
-        const a = j * n + i;
-        const b = a + 1;
-        const c = a + n;
-        const d = c + 1;
-        if (Math.max(hs[a]!, hs[b]!, hs[c]!, hs[d]!) < deep) continue;
-        indices[used++] = a;
-        indices[used++] = c;
-        indices[used++] = b;
-        indices[used++] = b;
-        indices[used++] = c;
-        indices[used++] = d;
+    const meshes: Mesh[] = [];
+    const material = this.buildMaterial(quality);
+    for (let tj = 0; tj < tiles; tj += 1) {
+      for (let ti = 0; ti < tiles; ti += 1) {
+        const i0 = ti * per;
+        const i1 = Math.min(n - 1, i0 + per);
+        const j0 = tj * per;
+        const j1 = Math.min(n - 1, j0 + per);
+        if (i0 >= i1 || j0 >= j1) continue;
+        // Typed from the start: a plain array of millions of numbers is a large transient on a phone.
+        const indices = new Uint32Array((i1 - i0) * (j1 - j0) * 6);
+        let used = 0;
+        let low = Infinity;
+        let high = -Infinity;
+        for (let j = j0; j < j1; j += 1) {
+          for (let i = i0; i < i1; i += 1) {
+            const a = j * n + i;
+            const b = a + 1;
+            const c = a + n;
+            const d = c + 1;
+            const top = Math.max(hs[a]!, hs[b]!, hs[c]!, hs[d]!);
+            if (top < deep) continue;
+            indices[used++] = a;
+            indices[used++] = c;
+            indices[used++] = b;
+            indices[used++] = b;
+            indices[used++] = c;
+            indices[used++] = d;
+            high = Math.max(high, top);
+            low = Math.min(low, hs[a]!, hs[b]!, hs[c]!, hs[d]!);
+          }
+        }
+        if (used === 0) continue;
+        const geo = new BufferGeometry();
+        geo.setAttribute('position', position);
+        geo.setAttribute('normal', normal);
+        geo.setIndex(new Uint32BufferAttribute(indices.slice(0, used), 1));
+        const x0 = -size / 2 + i0 * step;
+        const x1 = -size / 2 + i1 * step;
+        const z0 = -size / 2 + j0 * step;
+        const z1 = -size / 2 + j1 * step;
+        const center = new Vector3((x0 + x1) / 2, (low + high) / 2, (z0 + z1) / 2);
+        geo.boundingSphere = new Sphere(center, Math.hypot((x1 - x0) / 2, (high - low) / 2, (z1 - z0) / 2));
+        const mesh = new Mesh(geo, material);
+        mesh.receiveShadow = true;
+        mesh.castShadow = true;
+        meshes.push(mesh);
       }
     }
-    const geo = new BufferGeometry();
-    geo.setAttribute('position', new Float32BufferAttribute(positions, 3));
-    geo.setAttribute('normal', new Float32BufferAttribute(normals, 3));
-    geo.setIndex(new Uint32BufferAttribute(indices.slice(0, used), 1));
-    geo.computeBoundingSphere();
     void res;
-    const mesh = new Mesh(geo, this.buildMaterial(quality));
-    mesh.receiveShadow = true;
-    mesh.castShadow = true;
-    mesh.frustumCulled = false;
-    return mesh;
+    return meshes;
+  }
+
+  /** The tiles are culled by the camera. Shader warm-up turns that off so every program is built before the first frame. */
+  setCulling(on: boolean) {
+    for (const mesh of this.tiles) mesh.frustumCulled = on;
   }
 
   private buildMaterial(quality: TerrainQuality) {

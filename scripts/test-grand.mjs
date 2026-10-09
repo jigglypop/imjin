@@ -23,6 +23,7 @@ const { factionIncome, TUNING } = await load('/src/sim/grand/economy.ts');
 const turn = await load('/src/sim/grand/turn.ts');
 const spawn = await load('/src/sim/grand/spawn.ts');
 const { SHIP_SPECS } = await load('/src/sim/catalog.ts');
+const { josa } = await load('/src/sim/grand/josa.ts');
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -226,6 +227,14 @@ function playOut(g) {
   check('a battery that fell is reported razed', spawn.worksAfter(rb, built.conquest).razed.join() === 'battery');
   for (let i = 0; i < 1200; i += 1) built.battle.step(1 / 20);
   check('the battle runs', built.battle.ships.length > 0);
+}
+
+{
+  check('josa picks the particle from the final sound', josa('옥포', '을/를') === '옥포를' && josa('일본', '은/는') === '일본은' && josa('명', '이/가') === '명이' && josa('한산도', '과/와') === '한산도와' && josa('쓰시마', '이/가') === '쓰시마가');
+  check('josa 로 follows ㄹ like a vowel', josa('서울', '으로/로') === '서울로' && josa('조선', '으로/로') === '조선으로' && josa('여수', '으로/로') === '여수로');
+  check('josa reads digits, letters and a trailing note', josa('Lv3', '이/가') === 'Lv3이' && josa('HMS', '은/는') === 'HMS는' && josa('나고야 (히젠)', '이/가') === '나고야 (히젠)가');
+  const war = playOut(newGrand(null, 77));
+  check('no particle placeholders in a played campaign log', !war.log.some((e) => /\((이|가|을|를|은|는|과|와|으)\)/.test(e.text)));
 }
 
 await server.close();

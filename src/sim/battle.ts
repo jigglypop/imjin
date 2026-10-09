@@ -112,6 +112,9 @@ function clamp(v: number, lo: number, hi: number) {
   return v < lo ? lo : v > hi ? hi : v;
 }
 
+/** Plane distance. Math.hypot allocates in V8, and the AI and gunnery call it hundreds of thousands of times a second. */
+const hyp = (x: number, z: number) => Math.sqrt(x * x + z * z);
+
 /** The Japanese navy closed and boarded; the Joseon and Ming fleets fought with guns at a distance. */
 export const boardsFirst = (s: Ship) => s.spec.faction === 'japan';
 
@@ -411,7 +414,7 @@ export class Battle {
       });
     } else if (kind === 'line') {
       const along = toFleet + Math.PI / 2;
-      const dist = Math.min(380, Math.hypot(fx - cx, fz - cz) * 0.8);
+      const dist = Math.min(380, hyp(fx - cx, fz - cz) * 0.8);
       const lx = cx + Math.cos(toFleet) * dist;
       const lz = cz + Math.sin(toFleet) * dist;
       const sorted = [...ships].sort((p, q) => (p.x - fx) * Math.cos(along) + (p.z - fz) * Math.sin(along) - ((q.x - fx) * Math.cos(along) + (q.z - fz) * Math.sin(along)));
@@ -424,7 +427,7 @@ export class Battle {
       const sorted = [...ships].sort((p, q) => (q.x - fx) * Math.cos(heading) + (q.z - fz) * Math.sin(heading) - ((p.x - fx) * Math.cos(heading) + (p.z - fz) * Math.sin(heading)));
       const leader = sorted.find((s) => s.flagship) ?? sorted[0]!;
       const rest = sorted.filter((s) => s !== leader);
-      const stop = Math.hypot(fx - cx, fz - cz) > 200 ? 0.7 : 0;
+      const stop = hyp(fx - cx, fz - cz) > 200 ? 0.7 : 0;
       leader.order = { type: 'move', x: fx + (cx - fx) * (stop || 1), z: fz + (cz - fz) * (stop || 1) };
       rest.forEach((s, i) => {
         const rank = i + 1;
@@ -517,7 +520,7 @@ export class Battle {
     if ((type !== 'slot' && type !== 'hold') || !this.isAi(s) || this.rules) return;
     const enemy = this.nearestEnemy(s);
     const reach = type === 'slot' ? WAKE_SLOT : WAKE_HOLD;
-    if (this.time > WAKE_AFTER || (enemy && Math.hypot(enemy.x - s.x, enemy.z - s.z) < reach)) {
+    if (this.time > WAKE_AFTER || (enemy && hyp(enemy.x - s.x, enemy.z - s.z) < reach)) {
       s.order = { type: 'auto' };
       this.raiseAlarm(s);
     }
@@ -541,7 +544,7 @@ export class Battle {
     let best: Ship | undefined;
     let bestScore = Infinity;
     for (const o of list) {
-      const d = Math.hypot(o.x - s.x, o.z - s.z);
+      const d = hyp(o.x - s.x, o.z - s.z);
       if (d > within || !this.canSee(o, d)) continue;
       let score = d;
       if (preferBoardable && !o.spec.boardable) score += 700;
@@ -560,7 +563,7 @@ export class Battle {
   private steerTo(s: Ship, tx: number, tz: number, arrive: number, maxThrottle = 1) {
     const dx = tx - s.x;
     const dz = tz - s.z;
-    const dist = Math.hypot(dx, dz);
+    const dist = hyp(dx, dz);
     const diff = wrapAngle(Math.atan2(dz, dx) - s.heading);
     s.rudder = clamp(diff * 2.4, -1, 1);
     const turnPenalty = Math.abs(diff) > 1.4 ? 0.35 : Math.abs(diff) > 0.7 ? 0.7 : 1;
@@ -650,7 +653,7 @@ export class Battle {
       this.activity.set(s.id, 'anchored');
       const enemy = this.nearestEnemy(s);
       // A fleet at anchor under a person's command only rouses itself when the enemy is on top of it.
-      if (enemy && Math.hypot(enemy.x - s.x, enemy.z - s.z) < (this.isAi(s) ? WAKE_ANCHOR : 300)) {
+      if (enemy && hyp(enemy.x - s.x, enemy.z - s.z) < (this.isAi(s) ? WAKE_ANCHOR : 300)) {
         s.order = { type: 'auto' };
         if (this.isAi(s)) this.raiseAlarm(s);
       }
@@ -689,7 +692,7 @@ export class Battle {
       const n = Math.sin(leader.heading);
       const tx = leader.x + c * order.dx - n * order.dz;
       const tz = leader.z + n * order.dx + c * order.dz;
-      const d = Math.hypot(tx - s.x, tz - s.z);
+      const d = hyp(tx - s.x, tz - s.z);
       if (d < 25) {
         this.face(s, leader.heading, Math.min(1, leader.speed / s.spec.maxSpeed + 0.05));
       } else {
@@ -740,7 +743,7 @@ export class Battle {
   private presentSide(s: Ship, tx: number, tz: number, side: Side, range: number) {
     const dx = tx - s.x;
     const dz = tz - s.z;
-    const d = Math.hypot(dx, dz);
+    const d = hyp(dx, dz);
     const bearing = Math.atan2(dz, dx);
     if (d > range + 110) {
       this.steerTo(s, tx, tz, 120, 1);
@@ -757,7 +760,7 @@ export class Battle {
     const away = Math.atan2(s.z - this.center.z, s.x - this.center.x);
     this.steerTo(s, s.x + Math.cos(away) * 400, s.z + Math.sin(away) * 400, 50, 1);
     this.activity.set(s.id, 'fleeing');
-    if (Math.hypot(s.x - this.center.x, s.z - this.center.z) > this.arenaRadius) {
+    if (hyp(s.x - this.center.x, s.z - this.center.z) > this.arenaRadius) {
       s.alive = false;
       s.fled = true;
       this.escaped[s.team] += 1;
@@ -788,7 +791,7 @@ export class Battle {
     this.grid.query(s.x, s.z, bestD, (o) => {
       if (o.team === s.team || !this.isActive(o) || !o.spec.boardable || !this.crippled(o)) return;
       if ((this.boarders.get(o.id) ?? 0) >= MAX_BOARDERS) return;
-      const d = Math.hypot(o.x - s.x, o.z - s.z);
+      const d = hyp(o.x - s.x, o.z - s.z);
       if (d < bestD && this.canSee(o, d) && !this.guarded(o)) {
         bestD = d;
         best = o;
@@ -809,7 +812,7 @@ export class Battle {
     s.targetId = target.id;
     const dx = target.x - s.x;
     const dz = target.z - s.z;
-    const d = Math.hypot(dx, dz);
+    const d = hyp(dx, dz);
     const bearing = Math.atan2(dz, dx);
     const stance = s.stance;
     if (stance === 'board' || stance === 'ram' || finish) {
@@ -880,7 +883,7 @@ export class Battle {
       return;
     }
     s.targetId = target.id;
-    const d = Math.hypot(target.x - s.x, target.z - s.z);
+    const d = hyp(target.x - s.x, target.z - s.z);
     const lead = Math.min(4, d / Math.max(2, s.spec.maxSpeed));
     const tx = target.x + Math.cos(target.heading) * target.speed * lead;
     const tz = target.z + Math.sin(target.heading) * target.speed * lead;
@@ -908,7 +911,7 @@ export class Battle {
       // Only AI boarders under way for the same enemy set the pace; held, anchored, human-led or stuck ships never stall the rest.
       if (!this.isAi(o) || o.order.type !== 'auto' || o.targetId !== target.id || o.speed < 0.5) return;
       if ((o.x - s.x) ** 2 + (o.z - s.z) ** 2 > FLEET_REACH * FLEET_REACH) return;
-      sum += Math.hypot(o.x - target.x, o.z - target.z);
+      sum += hyp(o.x - target.x, o.z - target.z);
       n += 1;
     });
     const ahead = n ? sum / n - d : 0;
@@ -975,7 +978,7 @@ export class Battle {
       const e = 6;
       const gx = this.land(s.x + e, s.z) - this.land(s.x - e, s.z);
       const gz = this.land(s.x, s.z + e) - this.land(s.x, s.z - e);
-      const g = Math.hypot(gx, gz) || 1;
+      const g = hyp(gx, gz) || 1;
       s.x -= (gx / g) * dt * 3;
       s.z -= (gz / g) * dt * 3;
     } else {
@@ -1024,7 +1027,7 @@ export class Battle {
           for (let q = 0; q < 9; q += 3) {
             const dx = cb[q]! - ca[p]!;
             const dz = cb[q + 1]! - ca[p + 1]!;
-            const d = Math.hypot(dx, dz) || 0.001;
+            const d = hyp(dx, dz) || 0.001;
             const pen = ca[p + 2]! + cb[q + 2]! - d;
             if (pen > bestPen) {
               bestPen = pen;
@@ -1085,7 +1088,7 @@ export class Battle {
     let gap = Infinity;
     for (let p = 0; p < 9; p += 3) {
       for (let q = 0; q < 9; q += 3) {
-        const g = Math.hypot(cb[q]! - ca[p]!, cb[q + 1]! - ca[p + 1]!) - ca[p + 2]! - cb[q + 2]!;
+        const g = hyp(cb[q]! - ca[p]!, cb[q + 1]! - ca[p + 1]!) - ca[p + 2]! - cb[q + 2]!;
         if (g < gap) gap = g;
       }
     }
@@ -1183,7 +1186,7 @@ export class Battle {
       if (gap > 1.5) {
         const dx = d.x - s.x;
         const dz = d.z - s.z;
-        const len = Math.hypot(dx, dz) || 1;
+        const len = hyp(dx, dz) || 1;
         const pull = Math.min(gap - 1, 2 * dt);
         s.x += (dx / len) * pull;
         s.z += (dz / len) * pull;
@@ -1326,7 +1329,7 @@ export class Battle {
           }
           continue;
         }
-        if (Math.hypot(target.x - s.x, target.z - s.z) > range) continue;
+        if (hyp(target.x - s.x, target.z - s.z) > range) continue;
         g.stage = 5;
         g.t = 0;
         g.fireDelay = gun.stages[5]! * (0.6 + this.rand() * 0.9);
@@ -1360,7 +1363,7 @@ export class Battle {
     let best = spec.musketRange;
     this.grid.query(s.x, s.z, spec.musketRange, (o) => {
       if (o.team === s.team || !this.isActive(o)) return;
-      const d = Math.hypot(o.x - s.x, o.z - s.z);
+      const d = hyp(o.x - s.x, o.z - s.z);
       if (!this.canSee(o, d)) return;
       if (d < best) {
         best = d;
@@ -1388,7 +1391,7 @@ export class Battle {
     if (o.type !== 'bombard') return false;
     const dx = o.x - s.x;
     const dz = o.z - s.z;
-    const d = Math.hypot(dx, dz);
+    const d = hyp(dx, dz);
     if (d > range || d < 8) return false;
     if (side === 2) return (dx * Math.cos(s.heading) + dz * Math.sin(s.heading)) / d > Math.cos(0.35);
     const sx = side === 0 ? Math.sin(s.heading) : -Math.sin(s.heading);
@@ -1406,7 +1409,7 @@ export class Battle {
       if (o.team === s.team || !this.isActive(o)) return;
       const dx = o.x - s.x;
       const dz = o.z - s.z;
-      const d = Math.hypot(dx, dz);
+      const d = hyp(dx, dz);
       if (d > range || d < 8) return;
       if (!this.canSee(o, d)) return;
       const c = (dx * sx + dz * sz) / d;
@@ -1429,7 +1432,7 @@ export class Battle {
       if (o.team === s.team || !this.isActive(o)) return;
       const dx = o.x - s.x;
       const dz = o.z - s.z;
-      const d = Math.hypot(dx, dz);
+      const d = hyp(dx, dz);
       if (d > range) return;
       if (!this.canSee(o, d)) return;
       if ((dx * fx + dz * fz) / d < Math.cos(0.35)) return;
@@ -1528,7 +1531,7 @@ export class Battle {
     let tz: number;
     let aimHeight: number;
     if (aim) {
-      const d0 = Math.hypot(aim.x - m.x, aim.z - m.z);
+      const d0 = hyp(aim.x - m.x, aim.z - m.z);
       const flight = d0 / gun.muzzle;
       tx = aim.x + aim.vx * flight;
       tz = aim.z + aim.vz * flight;
@@ -1541,7 +1544,7 @@ export class Battle {
     }
     const dx = tx - m.x;
     const dz = tz - m.z;
-    const d = Math.hypot(dx, dz);
+    const d = hyp(dx, dz);
     const spreadAz = ((0.01 + d * 0.00006) / load.morale) * load.spreadMul;
     const spreadEl = (0.0035 + d * 0.00001) / load.morale;
     const gauss = () => (this.rand() + this.rand() + this.rand() - 1.5) * 1.15;

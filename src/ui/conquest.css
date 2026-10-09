@@ -1021,6 +1021,12 @@
   touch-action: pan-y;
 }
 
+/* The touch tools sit in a column along the right edge: the panel keeps clear of it so its close button stays reachable. */
+.app--touch.app--compact .cq-point {
+  right: calc(var(--sar) + 64px);
+  width: min(300px, calc(100vw - 72px));
+}
+
 @media (max-width: 700px) {
   .cs {
     padding: var(--sp-3) var(--sp-4) 0;

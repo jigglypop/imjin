@@ -11,8 +11,8 @@
 
   /* Text */
   --ink: #0f1720;
-  --ink-2: #5b6675;
-  --ink-3: #8592a2;
+  --ink-2: #4b5667;
+  --ink-3: #5d697a;
   --on-dark: #f5f8fc;
   --on-dark-2: rgba(245, 248, 252, 0.7);
 
@@ -106,6 +106,18 @@ input {
   font-family: var(--font-ui);
 }
 
+/* Keyboard users get one clear ring everywhere; the gap keeps it visible on navy buttons too. Mouse clicks do not show it. */
+:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible {
+  outline-offset: 0;
+  border-color: var(--accent-2);
+}
+
 button {
   font-weight: 600;
 }
@@ -154,6 +166,12 @@ input {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+/* The rule above is more specific than the plain "on" rules, so a lit toggle would be white text on white. */
+.app--touch .mini-btn--on,
+.app--touch .tool--on {
+  background: var(--accent);
 }
 
 .f-joseon {
@@ -226,7 +244,7 @@ input {
   -webkit-backdrop-filter: var(--glass-blur);
 }
 
-.mini-btn:hover {
+.mini-btn:not(.mini-btn--on):hover {
   background: var(--glass-hi);
 }
 
@@ -272,6 +290,10 @@ input {
   margin-left: 4px;
   font-size: var(--fs-12);
   color: var(--ink-2);
+}
+
+.chip--on small {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .chip--on small {
@@ -583,12 +605,21 @@ input {
 }
 
 .detail {
-  width: clamp(290px, 25vw, 360px);
-  height: var(--bh);
+  width: clamp(250px, 23vw, 360px);
+  /* A selected ship lists crew stations and guns, more than the minimap's height holds: the panel grows upward from the bottom edge. */
+  min-height: var(--bh);
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
+  scrollbar-width: thin;
   flex: none;
   padding: 14px 16px 12px;
   display: flex;
+  align-items: flex-start;
   gap: 13px;
+}
+
+.detail--empty {
+  align-items: center;
 }
 
 .detail-portrait {
@@ -738,7 +769,6 @@ input {
   height: calc(var(--bh) - 16px);
   display: flex;
   align-items: flex-end;
-  justify-content: center;
   gap: 8px;
   overflow-x: auto;
   overflow-y: hidden;
@@ -748,10 +778,19 @@ input {
   touch-action: pan-x;
 }
 
+/* Auto margins centre the row while it fits; justify-content: center would push the first card out of reach once it does not. */
+.cards > :first-child {
+  margin-left: auto;
+}
+
+.cards > :last-child {
+  margin-right: auto;
+}
+
 .card {
   position: relative;
   flex: none;
-  width: clamp(76px, 6.4vw, 92px);
+  width: clamp(60px, 5vw, 92px);
   height: clamp(112px, 9.6vw, 138px);
   border: 0;
   border-radius: var(--r-sm);
@@ -998,14 +1037,14 @@ input {
 .speed {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 3px;
   border-top: 1px solid var(--line);
   padding-top: 8px;
 }
 
 .speed button {
   flex: 1 1 0;
-  min-width: 30px;
+  min-width: 26px;
   min-height: 32px;
   border: 1px solid var(--line-2);
   border-radius: 8px;
@@ -1266,7 +1305,8 @@ input {
   position: absolute;
   z-index: 12;
   top: calc(var(--sat) + 112px);
-  right: calc(var(--sar) + 8px);
+  /* Left of the touch tools column, which would otherwise sit under it. */
+  right: calc(var(--sar) + 68px);
   width: 116px;
   height: 116px;
   pointer-events: auto;
@@ -1385,6 +1425,11 @@ input {
   align-items: stretch;
 }
 
+/* The settings sheet covers a busy HUD: at 95% white the cards and speed buttons behind it still read through. */
+.app--touch .settings-body {
+  background: rgba(255, 255, 255, 0.99);
+}
+
 .app--compact .settings-body {
   max-height: calc(100dvh - var(--sat) - var(--sab) - 70px);
   overflow-y: auto;
@@ -1446,6 +1491,8 @@ input {
     order: 3;
     width: 100%;
     height: auto;
+    min-height: 0;
+    max-height: 38vh;
     gap: 10px;
     padding: 8px 12px;
     flex: none;
@@ -1598,6 +1645,8 @@ input {
   .app--compact .detail {
     width: clamp(190px, 26vw, 230px);
     height: 100%;
+    min-height: 0;
+    max-height: none;
     gap: 8px;
     padding: 8px 10px;
   }
@@ -1683,8 +1732,9 @@ input {
   }
 
   .app--compact .touch-bar {
-    top: calc(50% - 60px);
+    top: calc(var(--sat) + 70px);
     transform: none;
+    gap: 6px;
   }
 
   .app--compact .touch-bar .tool {
@@ -1724,4 +1774,33 @@ input {
   font-size: var(--fs-12);
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* Hover feedback for the pill buttons that only had a pressed state (pointer devices only, so touch does not stick). */
+@media (hover: hover) {
+  .seg button:not(.on):hover,
+  .on-seg-btn:not(.on-seg-btn--on):hover {
+    background: var(--fill);
+    color: var(--ink);
+  }
+
+  .on-navy:not(.on-navy--on):hover,
+  .on-room:hover,
+  .cq-work:hover {
+    border-color: var(--ink);
+  }
+
+  .on-faction:not(:disabled):hover {
+    border-color: var(--line-2);
+  }
+
+  .net-input:hover,
+  .on-input:hover,
+  .on-select:hover {
+    border-color: var(--ink-3);
+  }
+
+  .cq-x:hover {
+    color: var(--seal);
+  }
 }

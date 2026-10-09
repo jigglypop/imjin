@@ -516,7 +516,7 @@
   color: var(--ink-3);
 }
 
-.hs-tab:hover {
+.hs-tab:not(.hs-tab--on):hover {
   background: #fff;
 }
 
@@ -557,7 +557,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: #e4ecf3;
+  background: #e9f0f6;
 }
 
 .select-canvas {
@@ -570,7 +570,7 @@
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 46%, transparent 40%, rgba(232, 240, 247, 0.9) 100%);
+  background: radial-gradient(ellipse at 50% 46%, transparent 52%, rgba(233, 240, 246, 0.92) 100%);
 }
 
 .select-markers {
@@ -604,7 +604,9 @@
   margin-top: -6px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.28), 0 2px 8px rgba(0, 0, 0, 0.5);
+  border: 2.5px solid var(--accent);
+  box-sizing: border-box;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 2px 8px rgba(20, 40, 70, 0.35);
 }
 
 .marker span {
@@ -614,12 +616,22 @@
   font-size: var(--fs-12);
   font-weight: 700;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 0 0 1px rgba(20, 40, 70, 0.14), 0 2px 8px rgba(20, 40, 70, 0.25);
+}
+
+.marker:hover span {
+  background: #fff;
+  box-shadow: 0 0 0 1.5px var(--accent-2), 0 3px 10px rgba(20, 40, 70, 0.3);
+}
+
+.marker:focus-visible span {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
 }
 
 .marker--night i {
-  background: #9db4cf;
+  background: #8fa6c4;
 }
 
 .marker--on {
@@ -672,14 +684,13 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 90px 80px #e4ecf3;
+  box-shadow: inset 0 0 90px 80px #e9f0f6;
 }
 
 .smap-plane img {
   width: 100%;
   height: 100%;
   display: block;
-  filter: brightness(1.45) contrast(0.88) saturate(0.85);
   pointer-events: none;
   -webkit-user-drag: none;
 }
@@ -878,8 +889,18 @@
   align-items: center;
   gap: var(--sp-2);
   text-align: center;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 18px 50px rgba(20, 35, 55, 0.22), 0 1px 3px rgba(20, 35, 55, 0.12);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 50px rgba(20, 35, 55, 0.28), 0 1px 3px rgba(20, 35, 55, 0.14);
+}
+
+/* A night battle's picture is dark: a white wash over it only turns it grey, so it stays dark and the card stands out. */
+.loading--night .art-bg::after {
+  background: radial-gradient(70% 60% at 50% 50%, rgba(6, 12, 22, 0.22), rgba(6, 12, 22, 0.5) 100%);
+}
+
+.loading--night .loading-card {
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7), 0 22px 60px rgba(0, 0, 0, 0.5);
 }
 
 .loading-title {
@@ -1006,7 +1027,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(3, 8, 14, 0.55);
+  background: rgba(24, 40, 62, 0.4);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }

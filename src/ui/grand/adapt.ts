@@ -25,6 +25,7 @@ import type {
   TreasuryView,
   TurnView,
 } from './types';
+import { josa } from '../../sim/grand/josa';
 
 /**
  * Maps the campaign state onto the plain view models the UI kit draws. Nothing here changes the campaign; every
@@ -311,7 +312,7 @@ export function resultView(s: BattleSummary): BattleResultView {
     played: s.played,
     won,
     headline: won === null ? '교전 종료' : won ? '승전' : '패전',
-    outcome: s.captured ? `${LABEL_OF[winnerSide.faction]}은 ${place}을(를) 차지했다. ${LABEL_OF[loser.faction]}의 함대는 물러났다.` : `${LABEL_OF[winnerSide.faction]}은 ${place}을(를) 지켜 냈다. 공격군은 물러났다.`,
+    outcome: s.captured ? `${josa(LABEL_OF[winnerSide.faction], '은/는')} ${josa(place, '을/를')} 차지했다. ${LABEL_OF[loser.faction]}의 함대는 물러났다.` : `${josa(LABEL_OF[winnerSide.faction], '은/는')} ${josa(place, '을/를')} 지켜 냈다. 공격군은 물러났다.`,
     sides: [
       { role: '공격', faction: s.attacker.faction, ships: s.attacker.ships, lost: s.attacker.lost, kills: s.attacker.kills, you: you('attacker') },
       { role: '수비', faction: s.defender.faction, ships: s.defender.ships, lost: s.defender.lost, kills: s.defender.kills, you: you('defender') },
@@ -331,7 +332,7 @@ export function overView(g: Grand): GameOverView | null {
   return {
     won,
     headline: won ? '大捷' : '敗戰',
-    text: v.faction === me ? `${name}은 ${how}.` : won ? `우리 진영은 ${name}과 함께 ${how}.` : `${name}은 ${how}.`,
+    text: v.faction === me ? `${josa(name, '은/는')} ${how}.` : won ? `우리 진영은 ${josa(name, '과/와')} 함께 ${how}.` : `${josa(name, '은/는')} ${how}.`,
     turn: v.turn,
     scores: scoreViews(g),
   };

@@ -17,7 +17,6 @@ import {
   length,
   max,
   mix,
-  mx_fractal_noise_float,
   normalize,
   positionWorld,
   pow,
@@ -30,6 +29,7 @@ import {
 } from 'three/tsl';
 import { atmosphere } from '../render/atmosphere';
 import type { ParticleQuality } from '../game/quality';
+import { puffNoise } from './particleNoise';
 
 export type ParticleKind = 'smoke' | 'fire' | 'spray';
 
@@ -83,8 +83,12 @@ export class ParticleLayer {
   private readonly seed: Float32Array;
   private readonly col: Float32Array;
   private readonly heat: Float32Array;
-  private readonly order: Uint32Array;
+  private order: Uint32Array;
+  private spare: Uint32Array;
   private readonly depth: Float32Array;
+  /** The depth values as bits, for the radix sort. */
+  private readonly depthBits: Uint32Array;
+  private readonly bins = new Uint32Array(3 * 2048);
   private readonly sorted: boolean;
   private keep: number;
   private readonly tmp = new Vector3();
@@ -92,8 +96,6 @@ export class ParticleLayer {
   constructor(readonly kind: ParticleKind, capacity: number, quality: ParticleQuality) {
     this.capacity = capacity;
     this.keep = quality.keep;
-    // Shader noise octaves scale with the tier. High keeps the original counts.
-    const octaves = (base: number) => Math.max(1, Math.round(base * quality.noise));
     this.pos = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
     this.params = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
     this.tint = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
@@ -119,7 +121,9 @@ export class ParticleLayer {
     this.heat = f();
     this.col = new Float32Array(capacity * 3);
     this.order = new Uint32Array(capacity);
+    this.spare = new Uint32Array(capacity);
     this.depth = new Float32Array(capacity);
+    this.depthBits = new Uint32Array(this.depth.buffer);
     this.sorted = kind !== 'fire' && quality.sort;
 
     const material = new SpriteNodeMaterial();
@@ -139,8 +143,7 @@ export class ParticleLayer {
       material.scaleNode = vec2(Q.x.mul(0.72), Q.x.mul(1.2));
       material.blending = AdditiveBlending;
       material.fog = false;
-      const flow = vec3(c.x.mul(1.6).add(seed.mul(41.0)), c.y.mul(1.1).sub(life.mul(2.6)).add(seed.mul(17.0)), seed.mul(5.0));
-      const n = mx_fractal_noise_float(flow, octaves(4), 2.0, 0.5, 1.0);
+      const n: any = puffNoise(vec2(c.x.mul(1.6).add(seed.mul(41.0)), c.y.mul(1.1).sub(life.mul(2.6)).add(seed.mul(17.0))), life, 1.2);
       const body = length(vec2(c.x.mul(1.35), c.y.mul(0.85).add(0.22)));
       const shape = saturate(float(1).sub(body.add(n.mul(0.55)).add(uv().y.mul(0.3))).mul(2.2));
       const temp = shape.mul(float(1).sub(life.mul(0.75))).mul(T.w.mul(0.5).add(0.5));
@@ -153,8 +156,7 @@ export class ParticleLayer {
     } else if (kind === 'smoke') {
       material.scaleNode = Q.x;
       material.blending = NormalBlending;
-      const p3 = vec3(c.mul(1.15).add(vec2(seed.mul(53.0), seed.mul(29.0))), life.mul(1.3).add(seed.mul(11.0)));
-      const n = mx_fractal_noise_float(p3, octaves(5), 2.1, 0.55, 1.0);
+      const n: any = puffNoise(c.mul(1.15).add(vec2(seed.mul(53.0), seed.mul(29.0))), life, 2.2);
       const density = smoothstep(1.0, 0.2, r.add(n.mul(0.62)));
       const erosion = life.mul(life).mul(0.55);
       const mask = saturate(density.sub(erosion).mul(1.9)).mul(smoothstep(1.0, 0.72, r));
@@ -172,7 +174,7 @@ export class ParticleLayer {
     } else {
       material.scaleNode = Q.x;
       material.blending = NormalBlending;
-      const n = mx_fractal_noise_float(vec3(c.mul(2.2), seed.mul(9.7).add(life.mul(2.0))), octaves(3), 2.0, 0.5, 1.0);
+      const n: any = puffNoise(c.mul(2.2).add(vec2(seed.mul(37.0), seed.mul(17.0))), life, 3);
       const mask = smoothstep(1.0, 0.1, r.add(n.mul(0.7))).mul(smoothstep(1.0, 0.7, r));
       const lit = atmosphere.skyAmbient.mul(1.15).add(atmosphere.sunIrradiance.mul(0.14));
       material.colorNode = vec4(T.rgb.mul(lit), 1);
@@ -252,6 +254,48 @@ export class ParticleLayer {
     this.col[i * 3 + 2] = this.col[last * 3 + 2]!;
   }
 
+  /**
+   * Orders `order[0..n)` by ascending depth (farthest first) with a three-pass radix sort. A comparator sort of a
+   * typed array allocates a number per comparison, which at thousands of particles is megabytes of garbage a frame.
+   */
+  private sortByDepth(n: number) {
+    const keys = this.depthBits;
+    const bins = this.bins;
+    bins.fill(0);
+    for (let i = 0; i < n; i += 1) {
+      const u = keys[i]!;
+      // Floats order as unsigned integers once the sign is folded in: flip all bits of negatives, only the sign of the rest.
+      const k = (u & 0x80000000 ? ~u : u | 0x80000000) >>> 0;
+      keys[i] = k;
+      bins[k & 2047]! += 1;
+      bins[2048 + ((k >>> 11) & 2047)]! += 1;
+      bins[4096 + (k >>> 22)]! += 1;
+    }
+    for (let pass = 0; pass < 3; pass += 1) {
+      let sum = 0;
+      for (let b = pass * 2048; b < pass * 2048 + 2048; b += 1) {
+        const c = bins[b]!;
+        bins[b] = sum;
+        sum += c;
+      }
+    }
+    let from = this.order;
+    let to = this.spare;
+    for (let pass = 0; pass < 3; pass += 1) {
+      const shift = pass * 11;
+      const base = pass * 2048;
+      for (let i = 0; i < n; i += 1) {
+        const id = from[i]!;
+        to[bins[base + ((keys[id]! >>> shift) & 2047)]!++] = id;
+      }
+      const t = from;
+      from = to;
+      to = t;
+    }
+    this.order = from;
+    this.spare = to;
+  }
+
   update(dt: number, windX: number, windZ: number, camera: Camera) {
     for (let i = this.count - 1; i >= 0; i -= 1) {
       const age = (this.age[i] = this.age[i]! + dt);
@@ -274,9 +318,7 @@ export class ParticleLayer {
     if (this.sorted && n > 1) {
       const e = camera.matrixWorldInverse.elements;
       for (let i = 0; i < n; i += 1) this.depth[i] = e[2]! * this.px[i]! + e[6]! * this.py[i]! + e[10]! * this.pz[i]! + e[14]!;
-      const depth = this.depth;
-      const view = this.order.subarray(0, n);
-      view.sort((a, b) => depth[a]! - depth[b]!);
+      this.sortByDepth(n);
     }
     const P = this.pos.array as Float32Array;
     const Q = this.params.array as Float32Array;

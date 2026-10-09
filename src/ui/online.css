@@ -1,10 +1,9 @@
-/* Online lobby and battle overlay. Colors come from the app's variables (with fallbacks) and borders are mixed from
-   the ink color, so the panel follows whatever look the shell gives .paper, .chip and .ink-btn. */
+/* Online lobby and battle overlay, in the white glass look of the rest of the menus (tokens from styles.css). */
 
 .on {
-  --on-line: color-mix(in srgb, var(--ink, #1b1814) 22%, transparent);
-  --on-fill: color-mix(in srgb, var(--paper, #f5f1e8) 45%, transparent);
-  --on-soft: var(--ink-3, #6a5f50);
+  --on-line: var(--line-2);
+  --on-fill: var(--fill);
+  --on-soft: var(--ink-2);
   gap: 12px;
 }
 
@@ -15,7 +14,7 @@
   gap: 4px 10px;
   font-weight: 800;
   font-size: 18px;
-  letter-spacing: 2px;
+  letter-spacing: 0;
 }
 
 .on-title small {
@@ -30,7 +29,8 @@
 .on-room code {
   font-size: 14px;
   padding: 1px 8px;
-  border: 1px solid var(--ink, #1b1814);
+  border-radius: 8px;
+  border: 1px solid var(--ink);
   letter-spacing: 3px;
   font-family: inherit;
 }
@@ -54,6 +54,7 @@
   padding: 10px 12px;
   border: 1px solid var(--on-line);
   background: var(--on-fill);
+  border-radius: var(--r-sm);
 }
 
 .on-card-head {
@@ -65,7 +66,7 @@
 
 .on-card-head b {
   font-size: 15px;
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 
 .on-row {
@@ -87,12 +88,13 @@
 .on-select {
   flex: 1;
   min-width: 0;
-  padding: 7px 10px;
-  border: 1px solid color-mix(in srgb, var(--ink, #1b1814) 35%, transparent);
-  background: color-mix(in srgb, #fff 60%, transparent);
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, 0.85);
   font: inherit;
   font-size: 14px;
-  color: var(--ink, #1b1814);
+  color: var(--ink);
   user-select: text;
 }
 
@@ -117,10 +119,11 @@
   flex-wrap: wrap;
   gap: 8px 12px;
   padding: 8px 12px;
-  border-left: 3px solid var(--seal, #8f3a2b);
-  background: color-mix(in srgb, var(--seal, #8f3a2b) 12%, transparent);
+  border-left: 3px solid var(--seal);
+  background: color-mix(in srgb, var(--seal) 12%, transparent);
   font-size: 13px;
-  color: var(--seal, #8f3a2b);
+  color: var(--seal);
+  border-radius: var(--r-sm);
 }
 
 .on-alert .chip {
@@ -136,7 +139,9 @@
 .on-seg {
   display: inline-flex;
   align-self: flex-start;
+  overflow: hidden;
   border: 1px solid var(--on-line);
+  border-radius: 999px;
 }
 
 .on-seg-btn {
@@ -154,8 +159,8 @@
 }
 
 .on-seg-btn--on {
-  background: var(--ink, #1b1814);
-  color: var(--ivory, #f3ecdc);
+  background: var(--accent);
+  color: #fff;
 }
 
 .on-chips {
@@ -184,11 +189,12 @@
   white-space: nowrap;
   color: inherit;
   cursor: pointer;
+  border-radius: 999px;
 }
 
 .on-navy--on {
-  border-color: var(--ink, #1b1814);
-  background: color-mix(in srgb, var(--gold-2, #cdb073) 45%, transparent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
   font-weight: 700;
 }
 
@@ -212,7 +218,7 @@
   width: 16px;
   height: 16px;
   border: 2px solid var(--on-line);
-  border-top-color: var(--ink, #1b1814);
+  border-top-color: var(--ink);
   border-radius: 50%;
   animation: on-spin 0.9s linear infinite;
 }
@@ -240,11 +246,12 @@
   border: 1px solid var(--on-line);
   background: var(--on-fill);
   font-size: 13px;
+  border-radius: var(--r-sm);
 }
 
 .on-room b {
   grid-column: 1;
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 
 .on-room span {
@@ -276,23 +283,24 @@
   gap: 6px 10px;
   padding: 6px 10px;
   border: 1px solid var(--on-line);
-  border-left: 4px solid var(--joseon, #a88648);
+  border-left: 4px solid var(--joseon);
   background: var(--on-fill);
   font-size: 13px;
+  border-radius: var(--r-sm);
 }
 
 .on-seat--japan {
-  border-left-color: var(--japan, #3a352f);
+  border-left-color: var(--japan);
 }
 
 .on-seat--me {
-  background: color-mix(in srgb, var(--gold-2, #cdb073) 28%, transparent);
+  background: var(--accent-soft);
 }
 
 .on-seat b {
   flex: 1;
   min-width: 80px;
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 
 .on-side {
@@ -312,6 +320,7 @@
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
+  border-radius: 50%;
 }
 
 .on-faction:disabled {
@@ -320,7 +329,7 @@
 }
 
 .on-faction--on {
-  border-color: var(--ink, #1b1814);
+  border-color: var(--ink);
 }
 
 .on-faction--on:disabled {
@@ -333,6 +342,7 @@
   font-weight: 700;
   border: 1px solid var(--on-line);
   color: var(--on-soft);
+  border-radius: 999px;
 }
 
 .on-tag:empty {
@@ -340,14 +350,14 @@
 }
 
 .on-tag--on {
-  background: var(--ink, #1b1814);
-  border-color: var(--ink, #1b1814);
-  color: var(--ivory, #f3ecdc);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .on-tag--warn {
-  border-color: var(--seal, #8f3a2b);
-  color: var(--seal, #8f3a2b);
+  border-color: var(--seal);
+  color: var(--seal);
 }
 
 .on-chat {
@@ -359,6 +369,7 @@
   font-size: 13px;
   line-height: 1.6;
   user-select: text;
+  border-radius: var(--r-sm);
 }
 
 .on-chat b {
@@ -373,9 +384,10 @@
   z-index: 6;
   max-width: calc(100vw - 32px);
   padding: 8px 16px;
-  background: var(--ink, #1b1814);
-  color: var(--ivory, #f3ecdc);
+  background: var(--accent);
+  color: #fff;
   font-size: 13px;
+  border-radius: 999px;
 }
 
 /* ------------------------------------------------------------ over the battle */
@@ -408,27 +420,27 @@
   gap: 2px 10px;
   padding: 6px 14px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--ink, #1b1814) 82%, transparent);
-  color: var(--ivory, #f3ecdc);
+  background: rgba(15, 23, 32, 0.84);
+  color: #fff;
   pointer-events: auto;
   backdrop-filter: blur(6px);
 }
 
 .on-pill b {
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 
 .on-pill span {
   font-size: 12px;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 .on-pill--warn {
-  background: color-mix(in srgb, var(--seal, #8f3a2b) 90%, transparent);
+  background: color-mix(in srgb, var(--seal) 90%, transparent);
 }
 
 .on-pill .chip {
-  color: var(--ink, #1b1814);
+  color: var(--ink);
 }
 
 .on-overlay .on-end,
@@ -501,7 +513,7 @@
   width: 30px;
   height: 30px;
   font-size: 15px;
-  box-shadow: 0 0 0 1.5px var(--ink, #1b1814);
+  box-shadow: 0 0 0 1.5px var(--ink);
 }
 
 .on-navy .emblem::before,

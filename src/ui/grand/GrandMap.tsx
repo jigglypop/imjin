@@ -143,7 +143,9 @@ export function GrandMap({
     if (box.w < 100 || box.h < 100) return;
     if (!touched.current) {
       ready.current = true;
-      const mine = regions.filter((r) => r.owner === me && !r.offMap);
+      // Ming starts with ports off the map only: open on those (the limits keep them at the edge) rather than on a coast that is not theirs.
+      const owned = regions.filter((r) => r.owner === me);
+      const mine = owned.some((r) => !r.offMap) ? owned.filter((r) => !r.offMap) : owned;
       const pts = mine.map((r) => pos.get(r.id)!);
       const u = pts.length ? pts.reduce((a, p) => a + p.u, 0) / pts.length : 0.45;
       const v = pts.length ? pts.reduce((a, p) => a + p.v, 0) / pts.length : 0.4;

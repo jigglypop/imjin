@@ -25,16 +25,15 @@ export function spectrumOf(state: SeaState): SpectrumParams {
   return { wind: state.wind, fetch: state.fetch, angle: state.windAngle, spread: state.spread, swell: 0 };
 }
 
-export type Vec3Like = { x: number; y: number; z: number };
-
 export class WaveField {
   readonly dirK = new Float32Array(WAVE_COUNT * 4);
   readonly ampQ = new Float32Array(WAVE_COUNT * 4);
   state: SeaState = SEA_STATES.rough;
   time = 0;
   version = 0;
+  /** No point of the surface is higher than this: the sum of every wave's amplitude. */
+  crest = 0;
   private readonly seed: number;
-  private readonly scratch = { x: 0, y: 0, z: 0 };
 
   constructor(seed = 1592) {
     this.seed = seed;
@@ -91,44 +90,43 @@ export class WaveField {
       this.ampQ[o + 2] = rand() * Math.PI * 2;
       this.ampQ[o + 3] = (2 * Math.PI) / k;
     }
+    let crest = 0;
+    for (let i = 0; i < WAVE_COUNT; i += 1) crest += this.ampQ[i * 4]!;
+    this.crest = crest;
     this.version += 1;
   }
 
-  displacement(x0: number, z0: number, t: number, out: Vec3Like, minLambda = 0) {
-    let dx = 0;
-    let dy = 0;
-    let dz = 0;
-    for (let i = 0; i < WAVE_COUNT; i += 1) {
-      const o = i * 4;
-      if (this.ampQ[o + 3]! < minLambda) continue;
-      const Dx = this.dirK[o]!;
-      const Dz = this.dirK[o + 1]!;
-      const k = this.dirK[o + 2]!;
-      const w = this.dirK[o + 3]!;
-      const theta = k * (Dx * x0 + Dz * z0) - w * t + this.ampQ[o + 2]!;
-      const c = Math.cos(theta);
-      const qa = this.ampQ[o + 1]!;
-      dx += qa * Dx * c;
-      dz += qa * Dz * c;
-      dy += this.ampQ[o]! * Math.sin(theta);
-    }
-    out.x = dx;
-    out.y = dy;
-    out.z = dz;
-    return out;
-  }
-
+  /**
+   * The surface height under the point (x, z): the horizontal displacement of every wave is undone by fixed-point
+   * iteration, then the height is summed there. Written as one loop with no inner calls: this runs thousands
+   * of times a frame, and a call with number arguments allocates in V8.
+   */
   heightAt(x: number, z: number, t = this.time, minLambda = 0) {
-    const d = this.scratch;
+    const dirK = this.dirK;
+    const ampQ = this.ampQ;
     let px = x;
     let pz = z;
-    for (let it = 0; it < 4; it += 1) {
-      this.displacement(px, pz, t, d, minLambda);
-      px = x - d.x;
-      pz = z - d.z;
+    let dy = 0;
+    for (let it = 0; it < 5; it += 1) {
+      let dx = 0;
+      let dz = 0;
+      dy = 0;
+      for (let i = 0; i < WAVE_COUNT; i += 1) {
+        const o = i * 4;
+        if (ampQ[o + 3]! < minLambda) continue;
+        const Dx = dirK[o]!;
+        const Dz = dirK[o + 1]!;
+        const theta = dirK[o + 2]! * (Dx * px + Dz * pz) - dirK[o + 3]! * t + ampQ[o + 2]!;
+        const c = Math.cos(theta);
+        const qa = ampQ[o + 1]!;
+        dx += qa * Dx * c;
+        dz += qa * Dz * c;
+        dy += ampQ[o]! * Math.sin(theta);
+      }
+      px = x - dx;
+      pz = z - dz;
     }
-    this.displacement(px, pz, t, d, minLambda);
-    return d.y;
+    return dy;
   }
 
   significantHeight() {

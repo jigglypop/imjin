@@ -3,7 +3,7 @@ import { sound } from '../audio/Sound';
 import { abandonGrand, autoResolveGrand, dismissBattle, dismissReport, endGrandTurn, grandOrders, prepareGrandBattle, startGrand, useGrand } from '../campaign/grand';
 import type { RegionBattle } from '../sim/grand/bridge';
 import { dateLabel } from '../sim/grand/economy';
-import type { BuildingKind as SimBuilding, Grand, RegionId } from '../sim/grand/types';
+import type { BuildingKind as SimBuilding, Grand, GrandFaction, RegionId } from '../sim/grand/types';
 import type { ShipKind } from '../sim/types';
 import { setScreen } from '../state/store';
 import { BattlePreview } from './grand/BattlePreview';
@@ -34,6 +34,8 @@ import {
 import './grand/grand.css';
 import { useMapInsets } from './grand/shared';
 import type { FactionId } from './grand/types';
+import { josa } from '../sim/grand/josa';
+import { atWar } from '../sim/grand/world';
 
 type Stage = 'hub' | 'pick' | 'map';
 
@@ -133,8 +135,9 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
       const res = grandOrders.move(fleet.id, id as RegionId);
       if (res.ok) {
         const dest = regions.find((r) => r.id === id)!;
-        const hostile = dest.owner !== null && dest.owner !== me;
-        say(`${fleet.name}: ${dest.name}${hostile ? ' 공격' : '(으)로 출항'} 명령 · ${res.note ?? ''}`);
+        // Only a region of a faction at war with the player is attacked: an ally's port is simply entered.
+        const hostile = dest.owner !== null && atWar(g, me, dest.owner as GrandFaction);
+        say(`${fleet.name}: ${hostile ? `${dest.name} 공격` : `${josa(dest.name, '으로/로')} 출항`} 명령 · ${res.note ?? ''}`);
         setMoving(false);
       } else say(res.reason);
       return;

@@ -60,8 +60,13 @@ export class DebrisField {
   private readonly age: Float32Array;
   private readonly life: Float32Array;
   private readonly ember: Float32Array;
+  /** The sea surface under a floating piece, refreshed every few updates: it moves slowly next to a piece's spring. */
+  private readonly surf: Float32Array;
   private readonly kind: Uint8Array;
   private readonly floating: Uint8Array;
+  /** Every per-piece float array, so removing a piece is one loop over a list that exists once. */
+  private readonly pool: Float32Array[];
+  private tick = 0;
   private readonly m = new Matrix4();
   private readonly q = new Quaternion();
   private readonly pos = new Vector3();
@@ -89,6 +94,8 @@ export class DebrisField {
     this.age = f();
     this.life = f();
     this.ember = f();
+    this.surf = f();
+    this.pool = [this.x, this.y, this.z, this.vx, this.vy, this.vz, this.rx, this.ry, this.rz, this.wx, this.wy, this.wz, this.sx, this.sy, this.sz, this.age, this.life, this.ember, this.surf];
     this.kind = new Uint8Array(cap);
     this.floating = new Uint8Array(cap);
 
@@ -155,7 +162,7 @@ export class DebrisField {
   private remove(i: number) {
     const last = --this.count;
     if (i === last) return;
-    for (const a of [this.x, this.y, this.z, this.vx, this.vy, this.vz, this.rx, this.ry, this.rz, this.wx, this.wy, this.wz, this.sx, this.sy, this.sz, this.age, this.life, this.ember]) a[i] = a[last]!;
+    for (const a of this.pool) a[i] = a[last]!;
     this.kind[i] = this.kind[last]!;
     this.floating[i] = this.floating[last]!;
     if (this.evict > this.count) this.evict = 0;
@@ -167,6 +174,9 @@ export class DebrisField {
     const h = Math.min(dt, FIXED_STEP * MAX_STEPS);
     const steps = h > 0 ? Math.min(MAX_STEPS, Math.ceil(h / FIXED_STEP)) : 0;
     const step = steps > 0 ? h / steps : 0;
+    // Nothing above the highest crest can be touching the water, so a flying piece only samples the waves when low.
+    const crest = waveField.crest;
+    const turn = this.tick++ % 3;
     for (let i = this.count - 1; i >= 0; i -= 1) {
       const age = (this.age[i] = this.age[i]! + dt);
       if (age > this.life[i]!) {
@@ -174,6 +184,7 @@ export class DebrisField {
         continue;
       }
       const kind = this.kind[i]!;
+      if (this.floating[i] === 1 && (i + turn) % 3 === 0) this.surf[i] = waveField.heightAt(this.x[i]!, this.z[i]!, t, 6);
       for (let s = 0; s < steps; s += 1) {
         if (this.floating[i] === 0) {
           this.vy[i] = this.vy[i]! - 9.81 * step;
@@ -183,7 +194,7 @@ export class DebrisField {
           this.rx[i] = this.rx[i]! + this.wx[i]! * step;
           this.ry[i] = this.ry[i]! + this.wy[i]! * step;
           this.rz[i] = this.rz[i]! + this.wz[i]! * step;
-          if (this.y[i]! < waveField.heightAt(this.x[i]!, this.z[i]!, t, 6)) {
+          if (this.y[i]! < crest && this.y[i]! < (this.surf[i] = waveField.heightAt(this.x[i]!, this.z[i]!, t, 6))) {
             this.floating[i] = 1;
             const size = this.sx[i]!;
             if (size > 1 || kind === Piece.Sail) onSplash(this.x[i]!, this.y[i]!, this.z[i]!, Math.min(1.6, size * 0.4));
@@ -195,7 +206,7 @@ export class DebrisField {
             this.wy[i] = this.wy[i]! * 0.3;
           }
         } else {
-          const surface = waveField.heightAt(this.x[i]!, this.z[i]!, t, 6);
+          const surface = this.surf[i]!;
           const sinkStart = this.life[i]! * 0.6;
           const sunk = Math.max(0, age - sinkStart) * 0.18;
           const target = surface - this.sy[i]! * DRAFT[kind]! - sunk;

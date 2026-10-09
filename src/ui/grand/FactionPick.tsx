@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MAP_IMAGE } from './projection';
 import { Chip, FACTION_INFO } from './shared';
 import type { FactionId, FactionOption } from './types';
+import { josa } from '../../sim/grand/josa';
 
 export type Level = 'easy' | 'normal' | 'hard';
 
@@ -101,7 +102,7 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
           <span className="g-level__hint">{LEVELS.find((l) => l.id === level)?.hint}</span>
         </div>
         <button type="button" className="g-btn g-btn--primary g-btn--lg" onClick={() => onPick(sel, level)}>
-          {chosen ? `${chosen.name}으로 전역 시작` : '전역 시작'}
+          {chosen ? `${josa(chosen.name, '으로/로')} 전역 시작` : '전역 시작'}
         </button>
       </footer>
     </div>

@@ -4,6 +4,7 @@ import { BUILDING_DEFS, BUILDING_ORDER, TUNING, buildingCost, buildingOf, freeSl
 import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId, Result, ShipUnit } from './types';
 import { MAX_LEVEL, fail, ok, pairKey } from './types';
 import { allied, atWar, fleetById, findRoute, mintId, note } from './world';
+import { josa } from './josa';
 
 /**
  * Everything a commander can order, for the player and the computer alike. An order that is allowed takes effect now:
@@ -223,7 +224,7 @@ export function orderDeclareWar(g: Grand, a: GrandFaction, b: GrandFaction): Res
   if (bad) return bad;
   if (a === b || atWar(g, a, b)) return fail('이미 적대 관계다');
   g.relations[pairKey(a, b)] = 'war';
-  note(g, `${TUNING.faction[a].label}이(가) ${TUNING.faction[b].label}과의 동맹을 깼다`, 'bad');
+  note(g, `${josa(TUNING.faction[a].label, '이/가')} ${josa(TUNING.faction[b].label, '과/와')}의 동맹을 깼다`, 'bad');
   return ok();
 }
 
@@ -234,7 +235,7 @@ export function orderAlliance(g: Grand, a: GrandFaction, b: GrandFaction): Resul
   // The invaders accept no treaty: only the two defenders of Joseon may ally.
   if (a === 'japan' || b === 'japan') return fail('왜는 동맹을 맺지 않는다');
   g.relations[pairKey(a, b)] = 'allied';
-  note(g, `${TUNING.faction[a].label}과 ${TUNING.faction[b].label}이(가) 다시 손을 잡았다`, 'good');
+  note(g, `${josa(TUNING.faction[a].label, '과/와')} ${josa(TUNING.faction[b].label, '이/가')} 다시 손을 잡았다`, 'good');
   return ok();
 }
 

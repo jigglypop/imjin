@@ -65,7 +65,8 @@ export class ShipViews {
   private readonly ringsOwn: InstancedMesh;
   private readonly ringsEnemy: InstancedMesh;
   private readonly ringMatrix = new Matrix4();
-  private readonly dists: number[] = [];
+  /** The distances of the nearest ships to the camera, ascending. */
+  private readonly nearest: Float64Array;
   private readonly sFlag = new Vector3(1.12, 1.12, 1.12);
   private readonly need = new Map<string, number>();
   /** Ships drawn in cutaway, by level (1 roofs off, 2 walls off, 3 down to the rowers' deck). */
@@ -86,6 +87,7 @@ export class ShipViews {
     private readonly lod: ShipLodQuality,
     hint: Map<ShipKind, number> = new Map(),
   ) {
+    this.nearest = new Float64Array(Math.max(1, lod.maxLod0));
     this.renderer = new ShipRenderer(assets, this.capacities(battle, assets, hint));
     this.group.add(this.renderer.group);
     const ringGeo = new RingGeometry(0.92, 1, 96, 1);
@@ -154,21 +156,38 @@ export class ShipViews {
     this.projScreen.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.projScreen);
     this.need.clear();
-    for (const ship of battle.ships) if (ship.alive) this.need.set(this.keyFor(ship, assets), (this.need.get(this.keyFor(ship, assets)) ?? 0) + 1);
+    for (const ship of battle.ships) {
+      if (!ship.alive) continue;
+      const key = this.states.get(ship.id)?.key ?? this.keyFor(ship, assets);
+      this.need.set(key, (this.need.get(key) ?? 0) + 1);
+    }
     for (const [key, n] of this.need) this.renderer.ensure(key, n);
     this.renderer.begin();
     let props = 0;
     let own = 0;
     let enemy = 0;
     const cam = camera.position;
-    const dists = this.dists;
-    dists.length = 0;
-    for (const ship of battle.ships) if (ship.alive) dists.push(Math.hypot(ship.x - cam.x, ship.z - cam.z, cam.y));
-    let near = this.lod.near;
-    if (dists.length > this.lod.maxLod0) {
-      dists.sort((a, b) => a - b);
-      near = Math.min(this.lod.near, dists[this.lod.maxLod0 - 1]! + 1);
+    // Only so many ships get the full model: the near limit is pulled in to the distance of the last one that may have it.
+    const keep = this.lod.maxLod0;
+    const nearest = this.nearest;
+    let found = 0;
+    let alive = 0;
+    for (const ship of battle.ships) {
+      if (!ship.alive) continue;
+      alive += 1;
+      const dx = ship.x - cam.x;
+      const dz = ship.z - cam.z;
+      const d = Math.sqrt(dx * dx + dz * dz + cam.y * cam.y);
+      if (found === keep && d >= nearest[keep - 1]!) continue;
+      let k = found < keep ? found++ : keep - 1;
+      while (k > 0 && nearest[k - 1]! > d) {
+        nearest[k] = nearest[k - 1]!;
+        k -= 1;
+      }
+      nearest[k] = d;
     }
+    let near = this.lod.near;
+    if (alive > keep) near = Math.min(near, nearest[keep - 1]! + 1);
     for (const ship of battle.ships) {
       let v = this.states.get(ship.id);
       if (!ship.alive) {
@@ -196,7 +215,9 @@ export class ShipViews {
         this.states.set(ship.id, v);
       }
       const L = ship.spec.length;
-      const dist = Math.hypot(ship.x - cam.x, ship.z - cam.z, cam.y);
+      const ddx = ship.x - cam.x;
+      const ddz = ship.z - cam.z;
+      const dist = Math.sqrt(ddx * ddx + ddz * ddz + cam.y * cam.y);
       this.sphere.center.set(ship.x, ship.spec.height * 0.4, ship.z);
       this.sphere.radius = L * 0.6 + ship.spec.height * 0.5;
       v.visible = this.frustum.intersectsSphere(this.sphere);
