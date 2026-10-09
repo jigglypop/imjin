@@ -15,7 +15,8 @@ import { HistoryScreen } from './ui/HistoryScreen';
 import { ErrorBoundary, FatalNotice } from './ui/ErrorBoundary';
 import { Loading } from './ui/Loading';
 import { FactionScreen, MainMenu, ScreenFrame, SettingsScreen } from './ui/Screens';
-import { startScenario, urlLaunch, type Launch, type LaunchBody } from './ui/launch';
+import { params, startScenario, urlLaunch, type Launch, type LaunchBody } from './ui/launch';
+import { GrandDemo } from './ui/grand/GrandDemo';
 
 // The battle (three.js, engine, HUD) is its own chunk: the menu paints without parsing it.
 const loadBattle = () => import('./ui/BattleView');
@@ -27,6 +28,7 @@ const firstLaunch = urlLaunch();
 useUi.setState({ screen: firstLaunch ? 'battle' : 'menu' });
 
 export function App() {
+  if (params.get('granddemo')) return <GrandDemo />; // strategic-map UI kit preview, fixed per page load
   const screen = useUi((s) => s.screen);
   const fatal = useUi((s) => s.fatal);
   const compact = useCompactLayout();
