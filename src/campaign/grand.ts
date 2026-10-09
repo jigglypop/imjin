@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { chooseEvent } from '../sim/grand/events';
+import { buildReplay, isEmpty, type TurnReplay } from '../sim/grand/replay';
 import type { ResolveResult } from '../sim/grand/autoresolve';
 import { applyBattleResult, describeBattle, type RegionBattle } from '../sim/grand/bridge';
 import { summarizeBattle, type BattleSummary } from '../sim/grand/report';
@@ -29,7 +31,10 @@ function load(): Grand | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    return valid(parsed) ? parsed : null;
+    if (!valid(parsed)) return null;
+    // A war saved before the historical events existed goes on without the cards it never dealt.
+    parsed.events ??= { done: {}, pending: null, flags: [], mods: [] };
+    return parsed;
   } catch {
     return null;
   }
@@ -50,12 +55,34 @@ type GrandState = {
   lastBattle: BattleSummary | null;
   /** The turn whose news the player has not read yet (the turn that just ended). Not saved. */
   reported: number | null;
+  /** The campaign as it stood before the turn that just closed, and what that turn did, for the map to play back. Not saved. */
+  replay: { before: Grand; moves: TurnReplay } | null;
 };
 
-export const useGrand = create<GrandState>(() => ({ grand: load(), lastBattle: null, reported: null }));
+export const useGrand = create<GrandState>(() => ({ grand: load(), lastBattle: null, reported: null, replay: null }));
 
 export const dismissBattle = () => useGrand.setState({ lastBattle: null });
 export const dismissReport = () => useGrand.setState({ reported: null });
+export const dismissReplay = () => useGrand.setState({ replay: null });
+
+const GUIDE_KEY = 'imjin.grand.guide.v1';
+
+/** Whether the first-turn guide has been shown through or dismissed. */
+export function guideSeen(): boolean {
+  try {
+    return localStorage.getItem(GUIDE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function markGuideSeen() {
+  try {
+    localStorage.setItem(GUIDE_KEY, '1');
+  } catch {
+    // storage unavailable; the guide shows again next time
+  }
+}
 
 /** Whether a save exists, for the "continue" button. */
 export const hasGrandSave = () => useGrand.getState().grand !== null;
@@ -76,13 +103,13 @@ function commit(change: (g: Grand) => Result): Result {
 /** Starts a fresh campaign as the chosen navy, replacing any save. */
 export function startGrand(player: GrandFaction, difficulty: Grand['difficulty'] = 'normal', seed = Math.floor(Math.random() * 2147483647)): Grand {
   const g = newGrand(player, seed, difficulty);
-  useGrand.setState({ grand: g, lastBattle: null, reported: null });
+  useGrand.setState({ grand: g, lastBattle: null, reported: null, replay: null });
   save(g);
   return g;
 }
 
 export function abandonGrand() {
-  useGrand.setState({ grand: null, lastBattle: null, reported: null });
+  useGrand.setState({ grand: null, lastBattle: null, reported: null, replay: null });
   save(null);
 }
 
@@ -116,13 +143,18 @@ export const grandOrders = {
  */
 export function endGrandTurn(): TurnReport | null {
   const current = useGrand.getState().grand;
-  if (!current || current.phase !== 'orders') return null;
+  // A card of the war's history has to be answered before the turn can close.
+  if (!current || current.phase !== 'orders' || current.events.pending) return null;
   const next = structuredClone(current);
   const report = endTurn(next);
-  useGrand.setState({ grand: next, reported: current.turn });
+  const moves = buildReplay(current, next, report.contacts, current.player ?? 'joseon');
+  useGrand.setState({ grand: next, reported: current.turn, replay: isEmpty(moves) ? null : { before: current, moves } });
   save(next);
   return report;
 }
+
+/** The player's answer to the historical event that waits (0 or 1). */
+export const chooseGrandEvent = (index: number): Result => commit((g) => chooseEvent(g, index));
 
 /** Settles a waiting meeting by arithmetic. */
 export function autoResolveGrand(contactId: string): ResolveResult | null {

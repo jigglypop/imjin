@@ -1,4 +1,5 @@
-import { deviceMemoryGB, isPhone, isTouchOnly } from './device';
+import { deviceMemoryGB, isIOS, isPhone, isTouchOnly } from './device';
+import { recovery } from './recovery';
 
 // Two kinds of quality settings.
 //
@@ -126,13 +127,16 @@ export type Level = {
 // Level 3 matches the settings the game shipped with on PCs. Level 4 pushes resolution, cloud detail, particle density
 // and bloom further. Anything that is built into the scene (terrain, ocean, vegetation density) stays at the equipment
 // values, because it cannot be switched off at run time.
-export const LEVELS: Level[] = [
+const BASE_LEVELS: Level[] = [
   { label: '절전', dprCap: 0.8, cloud: { steps: 16, lightSteps: 2, divisor: 4, every: 3 }, particleKeep: 0.4, vegetationLite: true, shadowEvery: 8, refraction: false, bloomResolution: 0.25, bloomStrength: 0.18 },
   { label: '낮음', dprCap: 1, cloud: { steps: 24, lightSteps: 2, divisor: 4, every: 2 }, particleKeep: 0.6, vegetationLite: true, shadowEvery: 4, refraction: false, bloomResolution: 0.25, bloomStrength: 0.2 },
   { label: '보통', dprCap: 1.25, cloud: { steps: 32, lightSteps: 3, divisor: 3, every: 1 }, particleKeep: 0.8, vegetationLite: true, shadowEvery: 2, refraction: false, bloomResolution: 0.35, bloomStrength: 0.22 },
   { label: '높음', dprCap: 1.5, cloud: { steps: 48, lightSteps: 4, divisor: 2, every: 1 }, particleKeep: 1, vegetationLite: false, shadowEvery: 1, refraction: true, bloomResolution: 0.5, bloomStrength: 0.22 },
   { label: '화려', dprCap: 2, cloud: { steps: 64, lightSteps: 4, divisor: 2, every: 1 }, particleKeep: 1.25, vegetationLite: false, shadowEvery: 1, refraction: true, bloomResolution: 0.5, bloomStrength: 0.26 },
 ];
+// After a second crash in a row the resolution drops below every level's own cap.
+const RECOVERY_DPR_CAP = 0.6;
+export const LEVELS: Level[] = recovery.step >= 2 ? BASE_LEVELS.map((l) => ({ ...l, dprCap: Math.min(l.dprCap, RECOVERY_DPR_CAP) })) : BASE_LEVELS;
 export const LEVEL_MAX = LEVELS.length - 1;
 
 const EQUIPMENT_STORAGE_KEY = 'imjin.quality';
@@ -201,13 +205,48 @@ function autoTier(): EquipmentTier {
 }
 
 const equipmentSetting = readEquipmentSetting();
-const tier: EquipmentTier = equipmentSetting === 'auto' ? autoTier() : equipmentSetting;
+// A battle that killed the previous page load starts at the lowest tier whatever the setting says.
+const tier: EquipmentTier = recovery.step > 0 ? 'low' : equipmentSetting === 'auto' ? autoTier() : equipmentSetting;
+
+// The second crash also cuts the number of ships drawn with the full model and turns the clouds off.
+const RECOVERY_LOD0 = 4;
+const baseEquipment = EQUIPMENT[tier];
+const recovered = recovery.step >= 2;
 
 /** Equipment for this page load. Resolved once at startup. */
-export const equipment: Equipment & { tier: EquipmentTier; setting: EquipmentSetting } = { ...EQUIPMENT[tier], tier, setting: equipmentSetting };
+export const equipment: Equipment & { tier: EquipmentTier; setting: EquipmentSetting; clouds: boolean } = {
+  ...baseEquipment,
+  ships: recovered ? { ...baseEquipment.ships, maxLod0: Math.min(baseEquipment.ships.maxLod0, RECOVERY_LOD0) } : baseEquipment.ships,
+  clouds: !recovered,
+  tier,
+  setting: equipmentSetting,
+};
 
-/** Level setting for this page load. */
-export const levelSetting: LevelSetting = readLevelSetting();
+/** Level setting for this page load. A recovering page pins the lowest level so the frame-rate controller cannot climb back into the memory it ran out of. */
+export const levelSetting: LevelSetting = recovery.step > 0 ? 0 : readLevelSetting();
 
 /** Where the frame-rate controller starts. PCs start at the top level and let it drop if needed. Others climb from the middle. */
-export const startLevel = tier === 'high' ? LEVEL_MAX : 2;
+export const startLevel = recovery.step > 0 ? 0 : tier === 'high' ? LEVEL_MAX : 2;
+
+const WEBGPU_STORAGE_KEY = 'imjin.webgpu';
+
+/** The player chose WebGPU in the settings (iOS only, where WebGL2 is the default). */
+export function webgpuOptIn(): boolean {
+  return readStored(WEBGPU_STORAGE_KEY) === '1';
+}
+
+export function saveWebgpuOptIn(on: boolean) {
+  writeStored(WEBGPU_STORAGE_KEY, on ? '1' : '0');
+}
+
+function resolveWebGL(): boolean {
+  const fromUrl = new URLSearchParams(location.search).get('webgl');
+  if (fromUrl === '1') return true;
+  if (fromUrl === '0') return false;
+  if (recovery.step > 0) return true;
+  // iOS Safari: WebGL2 is the path every WebKit test ran on. WebGPU there stays opt-in.
+  return isIOS && !webgpuOptIn();
+}
+
+/** Whether the renderer is forced onto its WebGL2 backend. Desktop and Android keep WebGPU unless ?webgl=1 says otherwise. */
+export const forceWebGL: boolean = resolveWebGL();

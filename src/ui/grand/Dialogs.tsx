@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { MAP_IMAGE } from './projection';
 import { Bar, FACTION_INFO, FactionSeal, Modal, SHIP_NAME, goldText, ownerName } from './shared';
-import type { BattleResultView, FactionId, GameOverView, LogLineView, ObjectiveView, RelationView, SaveView, ScoreView } from './types';
+import type { BattleResultView, EventView, FactionId, GameOverView, LogLineView, ObjectiveView, RelationView, SaveView, ScoreView, TurnReportView } from './types';
 
 /** Dialogs of the faction campaign that are not the map's panels: war status, battle result, turn report, end of the war, menu, continue. */
 
@@ -71,7 +71,7 @@ export function StatusPanel({ me, objective, scores, relations, log, canOrder, o
         </b>
       </div>
       <p className="g-hint">
-        {objective.hold > 0 ? `목표를 ${objective.hold}달째 쥐고 있습니다 (${objective.holdNeeded}달을 버티면 승리).` : `목표를 모두 이룬 채 ${objective.holdNeeded}달을 버티면 승리합니다. 그렇지 못하면 정해진 달에 점수로 가립니다.`}
+        {objective.hold > 0 ? `목표를 ${objective.hold * 3}개월째 쥐고 있습니다 (${objective.holdNeeded * 3}개월을 버티면 승리).` : `목표를 모두 이룬 채 ${objective.holdNeeded * 3}개월을 버티면 승리합니다. 그렇지 못하면 정해진 때에 점수로 가립니다.`}
       </p>
 
       <h3 className="g-section">점수</h3>
@@ -205,19 +205,30 @@ export function BattleResult({ result, onClose }: BattleResultProps) {
 }
 
 export interface TurnSummaryProps {
-  date: string;
-  lines: LogLineView[];
-  gold: number;
+  report: TurnReportView;
   onClose: () => void;
 }
 
-/** The month that just passed: what the log recorded while the fleets sailed. */
-export function TurnSummary({ date, lines, gold, onClose }: TurnSummaryProps) {
+/** A change against the turn before: green when it is a gain, red when a loss. */
+function Delta({ n, unit = '' }: { n: number; unit?: string }) {
+  return <span className={`g-delta${n > 0 ? ' g-delta--up' : n < 0 ? ' g-delta--down' : ''}`}>{n > 0 ? `+${n.toLocaleString('ko-KR')}` : n < 0 ? `−${Math.abs(n).toLocaleString('ko-KR')}` : '±0'}{unit}</span>;
+}
+
+/** The season that just passed, as numbers first (treasury, ports, ships, battles and where the silver went), then the news. */
+export function TurnSummary({ report, onClose }: TurnSummaryProps) {
+  const { gold, regions, ships } = report;
+  const rows: { label: string; value: number; main?: boolean }[] = [
+    { label: '지난 턴 말 금고', value: gold.before, main: true },
+    { label: '포구 수입', value: gold.earned },
+    { label: '함대 유지비', value: -gold.upkeep },
+    ...(gold.spent ? [{ label: '공사 · 건조에 쓴 은', value: -gold.spent }] : []),
+    ...(gold.events ? [{ label: '사건으로 얻고 잃은 은', value: gold.events }] : []),
+  ];
   return (
     <Modal
-      label="이번 달의 소식"
-      eyebrow="달이 바뀌었습니다"
-      title={date}
+      label="지난 석 달의 소식"
+      eyebrow={report.date}
+      title="지난 석 달의 소식"
       onClose={onClose}
       footer={
         <button type="button" className="g-btn g-btn--primary g-btn--block" onClick={onClose}>
@@ -225,8 +236,67 @@ export function TurnSummary({ date, lines, gold, onClose }: TurnSummaryProps) {
         </button>
       }
     >
-      <Log lines={lines} />
-      <p className="g-hint">곳간에는 {goldText(gold)}이 있습니다.</p>
+      <ul className="g-tiles" aria-label="이번 턴의 수치">
+        <li>
+          <span>은</span>
+          <b>{gold.now.toLocaleString('ko-KR')}</b>
+          <Delta n={gold.now - gold.before} />
+        </li>
+        <li>
+          <span>포구</span>
+          <b>{regions.now}곳</b>
+          <Delta n={regions.now - regions.before} />
+        </li>
+        <li>
+          <span>함선</span>
+          <b>{ships.now}척</b>
+          <Delta n={ships.now - ships.before} />
+        </li>
+        <li>
+          <span>해전</span>
+          <b>{report.battles}건</b>
+        </li>
+      </ul>
+      <dl className="g-ledger" aria-label="은의 출납">
+        {rows.map((r) => (
+          <div key={r.label} className={r.main ? 'g-ledger__main' : undefined}>
+            <dt>{r.label}</dt>
+            <dd>{r.main ? goldText(r.value) : <Delta n={r.value} unit="냥" />}</dd>
+          </div>
+        ))}
+        <div className="g-ledger__total">
+          <dt>지금 금고</dt>
+          <dd>{goldText(gold.now)}</dd>
+        </div>
+      </dl>
+      <h3 className="g-section">소식</h3>
+      <Log lines={report.news} />
+    </Modal>
+  );
+}
+
+export interface EventCardProps {
+  event: EventView;
+  me: FactionId;
+  onChoose: (index: number) => void;
+}
+
+/** A scripted turning point of the war: a short text and two answers. It cannot be dismissed, only answered. */
+export function EventCard({ event, me, onChoose }: EventCardProps) {
+  return (
+    <Modal label={event.title} eyebrow={`${event.date} · 역사의 갈림길`} title={event.title} tone={me}>
+      <div className="g-event">
+        {event.portrait && <img className="g-event__portrait" src={`/ui/portraits/${event.portrait}.jpg`} alt="" width={84} height={84} />}
+        <p className="g-event__text">{event.text}</p>
+      </div>
+      <div className="g-event__choices">
+        {event.choices.map((c, i) => (
+          <button key={c.label} type="button" className="g-choice" onClick={() => onChoose(i)}>
+            <b>{c.label}</b>
+            {c.hint && <span>{c.hint}</span>}
+          </button>
+        ))}
+      </div>
     </Modal>
   );
 }

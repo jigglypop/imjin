@@ -6,6 +6,7 @@
 //   node scripts/balance-grand.mjs --spread=0.1             perturb every navy's opening fleet by up to 10%, to see how stable the result is
 //   node scripts/balance-grand.mjs --fit=japan --seeds=300  find the fighting-power multiplier that gives that navy a third of the wars
 //   node scripts/balance-grand.mjs --catalog --odds         the ship table the campaign derives from SHIP_SPECS, and auto-resolve odds for a few matched fleets
+//   node scripts/balance-grand.mjs --no-events              the same wars without the scripted historical events (src/sim/grand/events.ts), to see what they shift
 //   node scripts/balance-grand.mjs --verbose                one line per game
 //   node scripts/balance-grand.mjs --trace=1592             one game turn by turn: gold (net), each region as owner+garrison[fleets], the log
 // Game rules are in src/sim/grand/*. --set and --sweep reach TUNING (economy.ts) by dotted path, and AI (ai.ts) with an "ai." prefix.
@@ -35,6 +36,8 @@ const { newGrand, endTurn, MAX_TURNS, scoreOf } = await load('/src/sim/grand/tur
 const { TUNING, netIncome } = await load('/src/sim/grand/economy.ts');
 const { AI } = await load('/src/sim/grand/ai.ts');
 const { REGION_ORDER } = await load('/src/sim/grand/regions.ts');
+const { EVENTS } = await load('/src/sim/grand/events.ts');
+if (args.includes('--no-events')) for (const e of EVENTS) e.cards = {};
 
 const FACTIONS = ['joseon', 'japan', 'ming'];
 const label = { joseon: '조선', japan: '일본', ming: '명' };
@@ -194,6 +197,8 @@ if (args.includes('--json')) {
   console.log(`${games.length} games, seeds ${seed0}+17k, ${seconds.toFixed(1)}s`);
   console.log('win rate   ' + FACTIONS.map((f) => `${label[f]} ${pct(s.wins[f].total, games.length)} (목표 ${s.wins[f].objective} · 점수 ${s.wins[f].score} · 섬멸 ${s.wins[f].elimination})`).join('  |  ') + `  |  none ${s.none}`);
   console.log(`average length ${s.length.toFixed(1)} turns, battles per game ${s.battles.toFixed(1)}`);
+  // How many wars live to see each card of the war's history (the computer navies answer them from the seed).
+  console.log('events     ' + EVENTS.map((e) => `${e.id} ${pct(games.filter((g) => g.events.done[e.id] !== undefined).length, games.length).trim()}`).join(' · '));
   // How hard Japan hits: its best moment, and how low Joseon is driven.
   const peak = (g, f) => Math.max(...g.stats.map((r) => r.regions[f]));
   const trough = (g, f) => Math.min(...g.stats.map((r) => r.regions[f]));

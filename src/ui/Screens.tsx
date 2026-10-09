@@ -1,8 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import { sound } from '../audio/Sound';
-import { EQUIPMENT_LABEL, equipment, saveEquipmentSetting, type EquipmentSetting } from '../game/quality';
+import { isIOS } from '../game/device';
+import { EQUIPMENT_LABEL, equipment, forceWebGL, saveEquipmentSetting, saveWebgpuOptIn, webgpuOptIn, type EquipmentSetting } from '../game/quality';
 import { setScreen, type Screen } from '../state/store';
 import { Backdrop } from './Backdrop';
+import { ControlsHelp } from './Tutorial';
 
 const go = (screen: Screen) => () => {
   sound.click();
@@ -89,6 +91,14 @@ export function SettingsScreen() {
     url.searchParams.delete('q');
     location.assign(url.toString());
   };
+  // WebGL2 is the default on iOS, where it is the path that has been tested. WebGPU there is an experiment.
+  const chooseBackend = (webgpu: boolean) => {
+    if (webgpu === webgpuOptIn()) return;
+    saveWebgpuOptIn(webgpu);
+    const url = new URL(location.href);
+    url.searchParams.delete('webgl');
+    location.assign(url.toString());
+  };
   return (
     <ScreenFrame title="설정">
       <div className="settings-page glass">
@@ -119,6 +129,20 @@ export function SettingsScreen() {
           </div>
           <div className="settings-hint">자동은 기기에 맞춰 고릅니다. 화면이 끊기거나 꺼진다면 폰급으로 낮추십시오.</div>
         </div>
+        {isIOS && (
+          <div>
+            <div className="settings-label">
+              그래픽 방식 <small>{forceWebGL ? 'WebGL2' : 'WebGPU'} · 바꾸면 페이지를 다시 불러옵니다</small>
+            </div>
+            <div className="chips">
+              <button className={`chip ${webgpuOptIn() ? 'chip--on' : ''}`} onClick={() => chooseBackend(!webgpuOptIn())}>
+                WebGPU 사용 (실험)
+              </button>
+            </div>
+            <div className="settings-hint">기본은 WebGL2입니다. WebGPU는 아직 이 기기에서 충분히 시험되지 않았습니다. 전투가 시작되지 않으면 끄십시오.</div>
+          </div>
+        )}
+        <ControlsHelp open />
         <div className="settings-hint">전투 중의 화질·하늘·파도는 전투 화면의 설정에서 바꿉니다.</div>
       </div>
     </ScreenFrame>

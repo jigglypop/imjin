@@ -1,7 +1,7 @@
-import type { ShipKind } from '../types';
 import { planAi } from './ai';
 import { autoResolve, previewStrength, type Force, type ResolveResult } from './autoresolve';
 import {
+  BUILDING_DEFS,
   GARRISON_KIND,
   MAX_TURNS,
   TUNING,
@@ -19,36 +19,10 @@ import type { BattleOutcome, BuildingKind, Contact, Fleet, Grand, GrandFaction, 
 import { GRAND_FACTIONS } from './types';
 import { allied, atWar, fleetById, fleetStrength, mintId, note, ownedBy, passable, shipCount } from './world';
 import { josa } from './josa';
+import { LEVEL_XP, SHIP_PREFIX, grantXp, spawnFleet, spawnShip } from './roster';
+import { fireEvents } from './events';
 
-export { MAX_TURNS };
-
-export const LEVEL_XP = [0, 120, 320, 600, 1000, 1500];
-
-// --- A new game -------------------------------------------------------------------------------------------------
-
-const SHIP_PREFIX: Record<ShipKind, string> = {
-  panokseon: '판옥선',
-  geobukseon: '거북선',
-  hyeopseon: '협선',
-  atakebune: '아타케',
-  sekibune: '세키부네',
-  kobaya: '고바야',
-  mingship: '명 복선',
-  mingsmall: '명 사선',
-};
-
-export function spawnShip(g: Grand, kind: ShipKind, hull = 1, crew = 1): ShipUnit {
-  const id = mintId(g, 's');
-  return { id, kind, name: `${SHIP_PREFIX[kind]} ${id.slice(1)}호`, hull, crew, supply: 1, kills: 0 };
-}
-
-function spawnFleet(g: Grand, faction: GrandFaction, at: RegionId, name: string, ships: Partial<Record<ShipKind, number>>, commanderId: string | null): Fleet {
-  const list: ShipUnit[] = [];
-  for (const [kind, n] of Object.entries(ships) as [ShipKind, number][]) for (let i = 0; i < n; i += 1) list.push(spawnShip(g, kind));
-  const fleet: Fleet = { id: mintId(g, 'f'), faction, name, commanderId, ships: list, at, transit: null, route: [], from: at, rest: 0 };
-  g.fleets.push(fleet);
-  return fleet;
-}
+export { MAX_TURNS, LEVEL_XP, spawnShip };
 
 /**
  * A new campaign. `spread` perturbs each navy's opening fleet by up to that share, from the seed: 0 for a real game,
@@ -74,6 +48,7 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
     log: [],
     stats: [],
     victory: null,
+    events: { done: {}, pending: null, flags: [], mods: [] },
   };
   for (const id of REGION_ORDER) {
     const owner = START.owners[id];
@@ -100,6 +75,7 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
   }
   note(g, '임진년 4월. 왜군이 부산에 상륙했다. 남해의 물길을 두고 세 진영이 맞선다.');
   recordStats(g, 0, 0);
+  fireEvents(g);
   return g;
 }
 
@@ -182,11 +158,7 @@ function dropEmpty(g: Grand) {
 function giveXp(g: Grand, fl: Fleet, kills: number, won: boolean) {
   const cmd = commanderOf(g, fl);
   if (!cmd || !cmd.alive) return;
-  cmd.xp += 25 + kills * 8 + (won ? 50 : 0);
-  while (cmd.level < LEVEL_XP.length && cmd.xp >= LEVEL_XP[cmd.level]!) {
-    cmd.level += 1;
-    note(g, `${josa(cmd.name, '이/가')} ${cmd.level}레벨이 되었다`, fl.faction === g.player ? 'good' : 'info');
-  }
+  grantXp(g, fl.faction, cmd, 25 + kills * 8 + (won ? 50 : 0));
 }
 
 /** The one way a battle, played or auto-resolved, changes the campaign. */
@@ -382,14 +354,15 @@ function findContacts(g: Grand): Contact[] {
 
 const isOver = (g: Grand) => g.phase === 'over';
 
-export type TurnReport = { pending: Contact[]; finished: boolean };
+/** What the closing turn did: the meetings still waiting for the player, and every meeting it brought about (for the map's replay). */
+export type TurnReport = { pending: Contact[]; finished: boolean; contacts: Contact[] };
 
 /**
  * Ends the player's turn: the computer factions give their orders, every fleet sails one lane, and the meetings that
  * result are fought. Meetings that involve the player wait in `g.pending`; when none is left the turn closes.
  */
 export function endTurn(g: Grand): TurnReport {
-  if (g.phase !== 'orders') return { pending: g.pending, finished: g.phase === 'over' };
+  if (g.phase !== 'orders') return { pending: g.pending, finished: g.phase === 'over', contacts: [] };
   for (const f of GRAND_FACTIONS) if (g.factions[f].alive && f !== g.player) planAi(g, f);
   for (const fl of g.fleets) fl.from = fl.at ?? fl.transit?.from ?? null;
   moveFleets(g);
@@ -405,22 +378,24 @@ export function endTurn(g: Grand): TurnReport {
   g.pending = waiting;
   if (waiting.length) {
     g.phase = 'battles';
-    return { pending: waiting, finished: false };
+    return { pending: waiting, finished: false, contacts };
   }
   advanceTurn(g);
-  return { pending: [], finished: isOver(g) };
+  return { pending: [], finished: isOver(g), contacts };
 }
 
 // --- The turn closes --------------------------------------------------------------------------------------------
 
-function recordStats(g: Grand, battles: number, turn = g.turn) {
-  const row = { turn, battles, gold: {}, regions: {}, ships: {}, strength: {}, income: {} } as unknown as Grand['stats'][number];
+function recordStats(g: Grand, battles: number, turn = g.turn, paid?: Record<GrandFaction, { earned: number; upkeep: number }>) {
+  const row = { turn, battles, gold: {}, regions: {}, ships: {}, strength: {}, income: {}, earned: {}, upkeep: {} } as unknown as Required<Grand['stats'][number]>;
   for (const f of GRAND_FACTIONS) {
     row.gold[f] = Math.round(g.factions[f].gold);
     row.regions[f] = ownedBy(g, f).length;
     row.ships[f] = shipCount(g, f);
     row.strength[f] = Math.round(g.fleets.reduce((a, fl) => a + (fl.faction === f ? fleetStrength(fl) : 0), 0));
     row.income[f] = factionIncome(g, f) - factionUpkeep(g, f);
+    row.earned[f] = paid?.[f].earned ?? 0;
+    row.upkeep[f] = paid?.[f].upkeep ?? 0;
   }
   g.stats.push(row);
 }
@@ -453,9 +428,9 @@ function runEvents(g: Grand) {
 export const OBJECTIVE_HOLD = 2;
 
 export function objectiveText(f: GrandFaction): string {
-  if (f === 'joseon') return '남해안 여덟 포구와 쓰시마를 모두 차지하고 두 달 버틴다';
-  if (f === 'japan') return '남해안 여덟 포구 가운데 여섯을 차지하고 두 달 버틴다';
-  return '부산포를 차지하고 대마도나 나고야까지 손에 넣어 두 달 버틴다';
+  if (f === 'joseon') return '남해안 여덟 포구와 쓰시마를 모두 차지하고 반년 버틴다';
+  if (f === 'japan') return '남해안 여덟 포구 가운데 여섯을 차지하고 반년 버틴다';
+  return '부산포를 차지하고 대마도나 나고야까지 손에 넣어 반년 버틴다';
 }
 
 export function objectiveMet(g: Grand, f: GrandFaction): boolean {
@@ -518,7 +493,7 @@ function advanceTurn(g: Grand) {
         if (b.upgradeLeft === 0) {
           b.level += 1;
           b.hp = 1;
-          if (r.owner === g.player) note(g, `${REGIONS[id].name}: ${b.kind} ${b.level}단계 완공`, 'good');
+          if (r.owner === g.player) note(g, `${REGIONS[id].name}: ${BUILDING_DEFS[b.kind].label} ${b.level}단계 완공`, 'good', 'built');
         }
       }
     }
@@ -529,7 +504,7 @@ function advanceTurn(g: Grand) {
       if (q.left > 0) continue;
       r.queue.splice(r.queue.indexOf(q), 1);
       joinOrNewFleet(g, r.owner, id, spawnShip(g, q.kind));
-      if (r.owner === g.player) note(g, `${REGIONS[id].name}: ${SHIP_PREFIX[q.kind]} 진수`, 'good');
+      if (r.owner === g.player) note(g, `${REGIONS[id].name}: ${SHIP_PREFIX[q.kind]} 진수`, 'good', 'built');
     }
     if (r.unrest > 0) r.unrest -= 1;
     else {
@@ -560,21 +535,26 @@ function advanceTurn(g: Grand) {
     }
   }
   // Treasury.
+  const paid = {} as Record<GrandFaction, { earned: number; upkeep: number }>;
   for (const f of GRAND_FACTIONS) {
     const st = g.factions[f];
+    paid[f] = { earned: 0, upkeep: 0 };
     if (!st.alive) continue;
-    st.gold += factionIncome(g, f) - factionUpkeep(g, f);
+    paid[f] = { earned: factionIncome(g, f), upkeep: factionUpkeep(g, f) };
+    st.gold += paid[f].earned - paid[f].upkeep;
     if (st.gold < 0) {
       st.gold = 0;
       desert(g, f);
     }
   }
+  g.events.mods = g.events.mods.map((m) => ({ ...m, left: m.left - 1 })).filter((m) => m.left > 0);
   runEvents(g);
-  recordStats(g, g.fought);
+  recordStats(g, g.fought, g.turn, paid);
   checkVictory(g);
   if (g.phase !== 'over') {
     g.turn += 1;
     g.phase = 'orders';
+    fireEvents(g);
   }
 }
 

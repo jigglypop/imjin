@@ -1,0 +1,73 @@
+/* iOS Safari details. Loaded last so these win over the page's own rules. */
+
+/* Safari only knows the prefixed form, so the unprefixed user-select: none on the root never applied there. Controls
+   and the canvas must not start a text selection or the long-press callout; fields and the few text panels opt back in. */
+html,
+body,
+#root,
+.app {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea,
+[contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* A double tap on a control is two taps, not a zoom. */
+button,
+a,
+select,
+label,
+summary,
+[role='button'],
+input {
+  touch-action: manipulation;
+}
+
+/* The notice after a crash: above the loading screen and the fatal notice, inside the safe areas. */
+.recovery {
+  position: fixed;
+  z-index: 60;
+  top: calc(var(--sat) + 12px);
+  left: 50%;
+  width: min(460px, calc(100vw - var(--sal) - var(--sar) - 24px));
+  transform: translateX(-50%);
+  padding: var(--sp-3) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  touch-action: manipulation;
+}
+
+.recovery p {
+  margin: 0;
+  font-size: var(--fs-14, 14px);
+  line-height: 1.55;
+  font-weight: 600;
+}
+
+.recovery-actions {
+  display: flex;
+  gap: var(--sp-2);
+  justify-content: flex-end;
+}
+
+/* Only iOS WebKit knows -webkit-touch-callout, so this block is iOS alone. */
+@supports (-webkit-touch-callout: none) {
+  /* The page itself never scrolls: fixing the root stops the rubber band even where overscroll-behavior is ignored. */
+  html,
+  body {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+  }
+}

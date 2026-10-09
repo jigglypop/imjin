@@ -1813,3 +1813,366 @@
   font-size: 12.5px;
   color: var(--ink-2);
 }
+
+/* ---------- the closed turn played back on the map ---------- */
+
+.gm-replay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  cursor: pointer;
+  touch-action: none;
+}
+.gm-replay__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.gm-replay__halo {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.gm-replay__line {
+  fill: none;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 9 6;
+}
+.gm-replay__ring {
+  fill: none;
+  stroke-width: 3;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gm-ring 0.9s ease-out 2;
+}
+@keyframes gm-ring {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+.gm-rtoken,
+.gm-clash,
+.gm-flip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.gm-rtoken .gm-fleet__pill {
+  box-shadow: 0 4px 14px rgba(20, 40, 70, 0.32);
+}
+.gm-clash__icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -19px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--bad);
+  color: var(--bad-ink);
+  font-size: 20px;
+  line-height: 1;
+  box-shadow: 0 4px 14px rgba(180, 50, 40, 0.35);
+  animation: gm-pop 0.34s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes gm-pop {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.gm-flip__chip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, 0);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 4px;
+  border-radius: 99px;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 12px rgba(20, 40, 70, 0.22);
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+  animation: gm-pop 0.3s ease-out both;
+}
+.gm-replay__caption {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  max-width: calc(100% - 32px);
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.gm-replay__caption span {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+@media (max-width: 520px) {
+  .gm-replay__caption span {
+    display: none;
+  }
+}
+
+/* ---------- turn report numbers ---------- */
+
+.g-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.g-tiles li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 10px 9px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid var(--line);
+}
+.g-tiles li span {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--ink-3);
+}
+.g-tiles li b {
+  font-size: 17px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.g-delta {
+  font-size: 12px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+.g-delta--up {
+  color: var(--good-ink);
+}
+.g-delta--down {
+  color: var(--bad-ink);
+}
+.g-ledger {
+  margin: 0 0 4px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.g-ledger > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.g-ledger > div + div {
+  border-top: 1px solid var(--line);
+}
+.g-ledger dt {
+  color: var(--ink-2);
+}
+.g-ledger dd {
+  margin: 0;
+  font-weight: 700;
+}
+.g-ledger__total dt,
+.g-ledger__total dd {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+/* ---------- cards of the war's history ---------- */
+
+.g-event {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.g-event__portrait {
+  flex: none;
+  width: 84px;
+  height: 84px;
+  border-radius: 16px;
+  object-fit: cover;
+  object-position: top;
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 12px rgba(20, 40, 70, 0.14);
+}
+.g-event__text {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  word-break: keep-all;
+  color: var(--ink);
+}
+.g-event__choices {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+.grand .g-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-height: 56px;
+  padding: 11px 14px;
+  text-align: left;
+  border-radius: 14px;
+  border: 1px solid rgba(20, 32, 46, 0.14);
+  background: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.grand .g-choice:hover {
+  background: #fff;
+  border-color: var(--accent);
+}
+.grand .g-choice:active {
+  transform: scale(0.99);
+}
+.grand .g-choice b {
+  font-size: 14px;
+  font-weight: 750;
+  word-break: keep-all;
+}
+.grand .g-choice span {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  word-break: keep-all;
+}
+@media (max-width: 520px) {
+  .g-event__portrait {
+    width: 64px;
+    height: 64px;
+  }
+  .g-tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.g-avatar {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  object-fit: cover;
+  object-position: top;
+}
+.g-leader--tight {
+  margin: 10px 0 0;
+  padding: 6px 8px;
+  gap: 8px;
+}
+.g-leader--tight img {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+/* ---------- first-turn guide ---------- */
+
+.g-guide {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+}
+.g-guide__ring {
+  position: fixed;
+  border-radius: 14px;
+  border: 3px solid var(--accent-2);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.85), 0 0 24px rgba(29, 76, 130, 0.4);
+  animation: g-guide-ring 1.3s ease-in-out infinite;
+}
+@keyframes g-guide-ring {
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.85), 0 0 34px rgba(29, 76, 130, 0.55);
+  }
+}
+.g-guide__card {
+  position: fixed;
+  width: min(320px, calc(100vw - 24px));
+  padding: 14px 16px 14px;
+  pointer-events: auto;
+}
+.g-guide__dots {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.g-guide__dots i {
+  width: 18px;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(20, 32, 46, 0.14);
+}
+.g-guide__dots i.done {
+  background: rgba(29, 76, 130, 0.4);
+}
+.g-guide__dots i.on {
+  background: var(--accent-2);
+}
+.g-guide__title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 800;
+}
+.g-guide__text {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  word-break: keep-all;
+}
+.g-guide__actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gm-replay__ring,
+  .gm-clash__icon,
+  .gm-flip__chip,
+  .g-guide__ring {
+    animation: none;
+  }
+}

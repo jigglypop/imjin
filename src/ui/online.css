@@ -95,6 +95,7 @@
   font: inherit;
   font-size: 14px;
   color: var(--ink);
+  -webkit-user-select: text;
   user-select: text;
 }
 
@@ -368,6 +369,7 @@
   background: var(--on-fill);
   font-size: 13px;
   line-height: 1.6;
+  -webkit-user-select: text;
   user-select: text;
   border-radius: var(--r-sm);
 }

@@ -4,11 +4,11 @@ import { PerspectiveCamera, Vector2, WebGPURenderer } from 'three/webgpu';
 import { SCENARIO_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import type { Faction } from '../sim/types';
 import { SelectScene } from '../select/SelectScene';
-import { equipment } from '../game/quality';
+import { equipment, forceWebGL } from '../game/quality';
 import { shortTitle } from './siteMap';
 
 async function createRenderer(props: { canvas: HTMLCanvasElement | OffscreenCanvas }) {
-  const renderer = new WebGPURenderer({ canvas: props.canvas as HTMLCanvasElement, antialias: equipment.select.antialias, powerPreference: 'high-performance' });
+  const renderer = new WebGPURenderer({ canvas: props.canvas as HTMLCanvasElement, antialias: equipment.select.antialias, powerPreference: 'high-performance', forceWebGL });
   await renderer.init();
   return renderer;
 }

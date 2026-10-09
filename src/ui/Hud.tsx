@@ -12,6 +12,7 @@ import { useCompactLayout } from './useCompactLayout';
 import { ConquestBar, CrewPanel, PointPanel } from './ConquestPanels';
 import { DirectorSettings, ShotLabel } from './DirectorToggle';
 import { KIND_HANJA } from './kinds';
+import { ControlsHelp, Tooltips, Tutorial } from './Tutorial';
 
 const SEA_LABELS: Record<SeaStateName, string> = { calm: '잔잔', moderate: '보통', rough: '거침' };
 const ACTIVITY: Record<string, string> = {
@@ -69,7 +70,7 @@ function Stat({ label, value, tone, text }: { label: string; value: number; tone
 
 function Card({ sq, onClick, onDouble }: { sq: SquadronInfo; onClick: (e: React.MouseEvent) => void; onDouble: () => void }) {
   return (
-    <button className={`card f-${sq.faction} ${sq.selected ? 'card--selected' : ''} ${sq.alive === 0 ? 'card--dead' : ''}`} onClick={onClick} onDoubleClick={onDouble} title={`${sq.name} · ${sq.commander}`}>
+    <button className={`card f-${sq.faction} ${sq.selected ? 'card--selected' : ''} ${sq.alive === 0 ? 'card--dead' : ''}`} onClick={onClick} onDoubleClick={onDouble} aria-label={`${sq.name} · ${sq.commander}`} data-tip="card">
       <img src={`/ui/portraits/${sq.portrait}.jpg`} alt="" />
       <div className="card-kind">{KIND_HANJA[sq.kind] ?? '船'}</div>
       <div className="card-flags">
@@ -90,7 +91,7 @@ function Card({ sq, onClick, onDouble }: { sq: SquadronInfo; onClick: (e: React.
   );
 }
 
-type OrderDef = { icon: string; label: string; key: string; run: () => void; on?: boolean; disabled?: boolean };
+type OrderDef = { icon: string; label: string; key: string; tip: string; run: () => void; on?: boolean; disabled?: boolean };
 
 function Orders({ engine, p, night, selected, collapsed, onToggle }: { engine: Engine; p: PrimaryInfo | null; night: boolean; selected: number; collapsed: boolean; onToggle: () => void }) {
   const [tab, setTab] = useState<Tab>('form');
@@ -100,41 +101,41 @@ function Orders({ engine, p, night, selected, collapsed, onToggle }: { engine: E
     form: {
       title: '진형',
       items: [
-        { icon: '鶴', label: '학익진', key: '1', run: () => input.formation('crane') },
-        { icon: '一', label: '일자진', key: '2', run: () => input.formation('line') },
-        { icon: '長', label: '장사진', key: '3', run: () => input.formation('column') },
-        { icon: '尖', label: '첨자진', key: '4', run: () => input.formation('wedge') },
-        { icon: '戰', label: '자유교전', key: 'G', run: () => input.auto() },
+        { icon: '鶴', label: '학익진', key: '1', tip: 'crane', run: () => input.formation('crane') },
+        { icon: '一', label: '일자진', key: '2', tip: 'line', run: () => input.formation('line') },
+        { icon: '長', label: '장사진', key: '3', tip: 'column', run: () => input.formation('column') },
+        { icon: '尖', label: '첨자진', key: '4', tip: 'wedge', run: () => input.formation('wedge') },
+        { icon: '戰', label: '자유교전', key: 'G', tip: 'auto', run: () => input.auto() },
       ],
     },
     gun: {
       title: '포격',
       items: [
-        { icon: '左', label: '좌현 일제', key: 'Z', run: () => input.volley(0), disabled: none },
-        { icon: '右', label: '우현 일제', key: 'X', run: () => input.volley(1), disabled: none },
-        { icon: p?.fireMode === 'hold' ? '停' : '射', label: p?.fireMode === 'hold' ? '사격 중지' : '자유 사격', key: 'Y', run: () => input.toggleFire(), on: p?.fireMode === 'hold' },
-        { icon: '彈', label: p ? AMMO_SHORT[p.ammo] : '탄종', key: 'T', run: () => input.cycleAmmo(), on: !!p && p.ammo !== 'auto' },
-        { icon: '舷', label: '측면 정렬', key: 'U', run: () => input.presentBroadside(), disabled: none },
+        { icon: '左', label: '좌현 일제', key: 'Z', tip: 'volley.port', run: () => input.volley(0), disabled: none },
+        { icon: '右', label: '우현 일제', key: 'X', tip: 'volley.starboard', run: () => input.volley(1), disabled: none },
+        { icon: p?.fireMode === 'hold' ? '停' : '射', label: p?.fireMode === 'hold' ? '사격 중지' : '자유 사격', key: 'Y', tip: 'fire', run: () => input.toggleFire(), on: p?.fireMode === 'hold' },
+        { icon: '彈', label: p ? AMMO_SHORT[p.ammo] : '탄종', key: 'T', tip: 'ammo', run: () => input.cycleAmmo(), on: !!p && p.ammo !== 'auto' },
+        { icon: '舷', label: '측면 정렬', key: 'U', tip: 'broadside', run: () => input.presentBroadside(), disabled: none },
       ],
     },
     move: {
       title: '기동',
       items: [
-        { icon: '進', label: '전속', key: '5', run: () => input.setSpeed(1), on: !!p && p.speedCap >= 1, disabled: none },
-        { icon: '緩', label: '반속', key: '6', run: () => input.setSpeed(0.6), on: !!p && p.speedCap >= 0.5 && p.speedCap < 1, disabled: none },
-        { icon: '微', label: '미속', key: '7', run: () => input.setSpeed(0.3), on: !!p && p.speedCap > 0 && p.speedCap < 0.5, disabled: none },
-        { icon: '止', label: '정지', key: 'H', run: () => input.hold(), disabled: none },
-        { icon: '燈', label: p && !p.lights ? '등화관제' : '등불', key: 'L', run: () => input.toggleLights(), on: !!p && !p.lights, disabled: !night && none },
+        { icon: '進', label: '전속', key: '5', tip: 'speed.full', run: () => input.setSpeed(1), on: !!p && p.speedCap >= 1, disabled: none },
+        { icon: '緩', label: '반속', key: '6', tip: 'speed.half', run: () => input.setSpeed(0.6), on: !!p && p.speedCap >= 0.5 && p.speedCap < 1, disabled: none },
+        { icon: '微', label: '미속', key: '7', tip: 'speed.slow', run: () => input.setSpeed(0.3), on: !!p && p.speedCap > 0 && p.speedCap < 0.5, disabled: none },
+        { icon: '止', label: '정지', key: 'H', tip: 'hold', run: () => input.hold(), disabled: none },
+        { icon: '燈', label: p && !p.lights ? '등화관제' : '등불', key: 'L', tip: 'lights', run: () => input.toggleLights(), on: !!p && !p.lights, disabled: !night && none },
       ],
     },
     tactic: {
       title: '전술',
       items: [
-        { icon: '遠', label: '원거리', key: 'K', run: () => input.setStance('standoff'), on: p?.stance === 'standoff', disabled: none },
-        { icon: '近', label: '근접 포격', key: 'J', run: () => input.setStance('close'), on: p?.stance === 'close', disabled: none },
-        { icon: '衝', label: '충파', key: 'N', run: () => input.setStance('ram'), on: p?.stance === 'ram', disabled: none },
-        { icon: '登', label: '등선', key: 'B', run: () => input.setStance('board'), on: p?.stance === 'board', disabled: none },
-        { icon: '拒', label: '이탈·거부', key: 'P', run: () => input.repel(), on: !!p && p.repel, disabled: none },
+        { icon: '遠', label: '원거리', key: 'K', tip: 'standoff', run: () => input.setStance('standoff'), on: p?.stance === 'standoff', disabled: none },
+        { icon: '近', label: '근접 포격', key: 'J', tip: 'close', run: () => input.setStance('close'), on: p?.stance === 'close', disabled: none },
+        { icon: '衝', label: '충파', key: 'N', tip: 'ram', run: () => input.setStance('ram'), on: p?.stance === 'ram', disabled: none },
+        { icon: '登', label: '등선', key: 'B', tip: 'board', run: () => input.setStance('board'), on: p?.stance === 'board', disabled: none },
+        { icon: '拒', label: '이탈·거부', key: 'P', tip: 'repel', run: () => input.repel(), on: !!p && p.repel, disabled: none },
       ],
     },
   };
@@ -143,7 +144,7 @@ function Orders({ engine, p, night, selected, collapsed, onToggle }: { engine: E
     <>
       <div className="orders-tabs">
         {(Object.keys(tabs) as Tab[]).map((k) => (
-          <button key={k} className={`orders-tab ${k === tab ? 'orders-tab--on' : ''}`} onClick={() => setTab(k)}>
+          <button key={k} className={`orders-tab ${k === tab ? 'orders-tab--on' : ''}`} onClick={() => setTab(k)} data-tip={`tab.${k}`}>
             {tabs[k].title}
           </button>
         ))}
@@ -154,7 +155,7 @@ function Orders({ engine, p, night, selected, collapsed, onToggle }: { engine: E
       {!collapsed && (
         <div className="orders-grid">
           {current.items.map((o) => (
-            <button key={o.label + o.key} className={`order ${o.on ? 'order--on' : ''}`} onClick={o.run} disabled={o.disabled} title={`${o.label} (${o.key})`}>
+            <button key={o.label + o.key} className={`order ${o.on ? 'order--on' : ''}`} onClick={o.disabled ? undefined : o.run} aria-disabled={o.disabled || undefined} aria-label={`${o.label} (${o.key})`} data-tip={o.tip}>
               <span className="order-icon">{o.icon}</span>
               {o.label}
               <kbd>{o.key}</kbd>
@@ -187,6 +188,7 @@ function SpeedControl({ engine, snap, compact }: { engine: Engine; snap: GameSna
       <button
         className={snap.paused ? 'on' : ''}
         aria-label={snap.paused ? '계속' : '일시정지'}
+        data-tip="pause"
         onClick={() => {
           engine.paused = !engine.paused;
           engine.publish(true);
@@ -195,12 +197,12 @@ function SpeedControl({ engine, snap, compact }: { engine: Engine; snap: GameSna
         {snap.paused ? '▶' : '❚❚'}
       </button>
       {compact ? (
-        <button aria-label="배속 바꾸기" onClick={() => setSpeed(next)}>
+        <button aria-label="배속 바꾸기" data-tip="speed" onClick={() => setSpeed(next)}>
           {snap.speed}×
         </button>
       ) : (
         SPEEDS.map((s) => (
-          <button key={s} className={!snap.paused && snap.speed === s ? 'on' : ''} onClick={() => setSpeed(s)}>
+          <button key={s} className={!snap.paused && snap.speed === s ? 'on' : ''} data-tip="speed" onClick={() => setSpeed(s)}>
             {s}×
           </button>
         ))
@@ -208,7 +210,8 @@ function SpeedControl({ engine, snap, compact }: { engine: Engine; snap: GameSna
       {snap.approach && (
         <button
           className={`speed-skip ${snap.autoFast || snap.fastForward ? 'on' : ''}`}
-          title={snap.autoFast ? '빠른 접근 끄기' : '적과 마주칠 때까지 빠르게 진행'}
+          aria-label={snap.autoFast ? '빠른 접근 끄기' : '적과 마주칠 때까지 빠르게 진행'}
+          data-tip="skip"
           onClick={() => {
             // Toggles: a capture-point battle starts with it off, a historical one with it on.
             const on = !(snap.autoFast || snap.fastForward);
@@ -329,6 +332,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
         <aside className="settings">
           <div className="settings-body glass">
             <DirectorSettings engine={engine} />
+            <ControlsHelp onReplay={() => setShowSettings(false)} />
             <div>
               <div className="settings-label">하늘</div>
               <div className="chips">
@@ -406,17 +410,17 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
 
       {isTouchDevice && (
         <div className="touch-bar">
-          <button className={`tool ${touchBox ? 'tool--on' : ''}`} onClick={() => setTouchBox(!touchBox)} title="한 손가락 끌기로 박스 선택">
+          <button className={`tool ${touchBox ? 'tool--on' : ''}`} onClick={() => setTouchBox(!touchBox)} data-tip="tool.box">
             박스
           </button>
-          <button className="tool" onClick={() => engine.input.clearSelection()} disabled={snap.selectedCount === 0}>
+          <button className="tool" onClick={() => engine.input.clearSelection()} aria-disabled={snap.selectedCount === 0 || undefined} data-tip="tool.clear">
             해제
           </button>
-          <button className={`tool ${snap.following ? 'tool--on' : ''}`} onClick={() => engine.input.followSelected()} disabled={snap.selectedCount === 0}>
+          <button className={`tool ${snap.following ? 'tool--on' : ''}`} onClick={() => snap.selectedCount > 0 && engine.input.followSelected()} aria-disabled={snap.selectedCount === 0 || undefined} data-tip="tool.follow">
             추적
           </button>
           {/* The crew panel with the cutaway chip is hidden on phones, so the deck view needs its own button. */}
-          <button className={`tool ${engine.cutaway ? 'tool--on' : ''}`} onClick={() => engine.toggleCutaway()} disabled={snap.selectedCount === 0 && !engine.cutaway}>
+          <button className={`tool ${engine.cutaway ? 'tool--on' : ''}`} onClick={() => (snap.selectedCount > 0 || engine.cutaway) && engine.toggleCutaway()} aria-disabled={(snap.selectedCount === 0 && !engine.cutaway) || undefined} data-tip="tool.deck">
             {engine.cutaway ? ['', '상갑판', '포갑판', '노갑판'][engine.cutaway] : '선내'}
           </button>
         </div>
@@ -499,6 +503,9 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
           </div>
         )}
       </div>
+
+      <Tutorial engine={engine} compact={compact} />
+      <Tooltips />
 
       {snap.winner && (
         <div className={`result glass result--${won ? 'win' : 'loss'}`}>

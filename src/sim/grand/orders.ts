@@ -160,6 +160,11 @@ export function orderSplit(g: Grand, fleetId: string, shipIds: string[]): Result
   return ok(next.id);
 }
 
+/** A commander the court has stripped of command (flag set by an event, cleared when he is restored). */
+export function commanderSuspended(g: Grand, commanderId: string): boolean {
+  return g.events.flags.includes(`suspended:${commanderId}`);
+}
+
 export function orderCommander(g: Grand, fleetId: string, commanderId: string | null): Result {
   const bad = noOrders(g);
   if (bad) return bad;
@@ -168,6 +173,7 @@ export function orderCommander(g: Grand, fleetId: string, commanderId: string | 
   if (commanderId) {
     const c = g.factions[fl.faction].commanders.find((x) => x.id === commanderId);
     if (!c || !c.alive) return fail('그런 장수가 없다');
+    if (commanderSuspended(g, commanderId)) return fail('조정의 명으로 지휘권이 박탈되었다');
     // A leader changes ship only in port, and only from a fleet in the same port (or from none).
     if (!fl.at) return fail('항해 중에는 장수를 맡길 수 없다');
     const from = g.fleets.find((x) => x.commanderId === commanderId);

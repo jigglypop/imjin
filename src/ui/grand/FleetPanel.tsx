@@ -85,7 +85,7 @@ export function FleetPanel({
                 이동 취소
               </button>
             ) : (
-              <button type="button" className="g-btn g-btn--primary" disabled={!canMove} onClick={() => onMove?.(fleet.id)}>
+              <button type="button" className="g-btn g-btn--primary" data-guide="move" disabled={!canMove} onClick={() => onMove?.(fleet.id)}>
                 이동
               </button>
             )}
@@ -171,6 +171,7 @@ export function FleetPanel({
                 setChoosing(false);
               }}
             >
+              <img className="g-avatar" src={`/ui/portraits/${officer.portrait}.jpg`} alt="" width={34} height={34} />
               <span className="g-row__main">
                 <span className="g-row__title">
                   {officer.name} <span className="g-row__kind">Lv.{officer.level}</span>

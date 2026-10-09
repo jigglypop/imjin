@@ -3,6 +3,8 @@ import { buildingCost, buildingOf, dateLabel, garrisonCap, levelOf, netIncome, q
 import { buildMenu, recruitMenu, refitCost } from '../../sim/grand/orders';
 import { LANES, REGIONS, REGION_ORDER, START, type RegionDef } from '../../sim/grand/regions';
 import type { BattleSummary } from '../../sim/grand/report';
+import { pendingCard, describeEffect } from '../../sim/grand/events';
+import type { TurnReplay } from '../../sim/grand/replay';
 import { MAX_TURNS, OBJECTIVE_HOLD, contactForces, objectiveProgress, objectiveText, oddsOfContact, previewContact, scoreOf } from '../../sim/grand/turn';
 import type { Fleet, Grand, GrandFaction, RegionId } from '../../sim/grand/types';
 import { MAX_LEVEL } from '../../sim/grand/types';
@@ -14,6 +16,7 @@ import type {
   SaveView,
   BuildingView,
   CommanderView,
+  EventView,
   FactionOption,
   FactionId,
   FleetView,
@@ -21,8 +24,10 @@ import type {
   ObjectiveView,
   RegionView,
   RelationView,
+  ReplayView,
   ScoreView,
   TreasuryView,
+  TurnReportView,
   TurnView,
 } from './types';
 import { josa } from '../../sim/grand/josa';
@@ -209,10 +214,7 @@ export function previewView(g: Grand, contactId: string): BattlePreviewView | nu
   const me = player(g);
   const region = g.regions[c.regionId];
   const crewOf = (ships: { kind: keyof typeof SHIP_SPECS; crew: number }[]) => Math.round(ships.reduce((a, s) => a + SHIP_SPECS[s.kind].crew * s.crew, 0));
-  const leader = (fleets: Fleet[]) => {
-    const best = fleets.map((fl) => commanderView(g, fl.faction, fl.commanderId)).filter((x): x is CommanderView => !!x).sort((a, b) => b.level - a.level)[0];
-    return best ? `${best.name} Lv.${best.level}` : null;
-  };
+  const leaderOf = (fleets: Fleet[]) => fleets.map((fl) => commanderView(g, fl.faction, fl.commanderId)).filter((x): x is CommanderView => !!x).sort((a, b) => b.level - a.level)[0];
   const youAttack = c.attacker === me || f.attackers.some((fl) => fl.faction === me);
   const youDefend = c.defender === me || f.defenders.some((fl) => fl.faction === me);
   const names = (fleets: Fleet[], fallback: string) => (fleets.length ? fleets.map((fl) => fl.name).join(' + ') : fallback);
@@ -220,15 +222,14 @@ export function previewView(g: Grand, contactId: string): BattlePreviewView | nu
   const defenderBonus = [
     ...(p.battery ? [`포대 ${p.battery}단계`] : []),
     ...(camp ? [`군영 ${camp}단계`] : []),
-    ...(leader(f.defenders) ? [leader(f.defenders)!] : []),
   ];
   const notes = [TERRAIN_NOTE[REGIONS[c.regionId].terrain]];
   if (p.attackerShips > 30 || p.defenderShips > 30) notes.push('3D 전투에는 한 쪽에서 가장 강한 배 30척까지 나섭니다');
   return {
     regionId: c.regionId,
     regionName: REGIONS[c.regionId].name,
-    attacker: { faction: c.attacker, name: names(f.attackers, '공격군'), ships: p.attackerShips, crew: crewOf(f.attacker.ships), power: Math.round(p.attacker), bonuses: leader(f.attackers) ? [leader(f.attackers)!] : [] },
-    defender: { faction: c.defender, name: names(f.defenders, `${REGIONS[c.regionId].name} 수비대`), ships: p.defenderShips, crew: crewOf(f.defender.ships), power: Math.round(p.defender), bonuses: defenderBonus },
+    attacker: { faction: c.attacker, leader: leaderOf(f.attackers), name: names(f.attackers, '공격군'), ships: p.attackerShips, crew: crewOf(f.attacker.ships), power: Math.round(p.attacker), bonuses: [] },
+    defender: { faction: c.defender, leader: leaderOf(f.defenders), name: names(f.defenders, `${REGIONS[c.regionId].name} 수비대`), ships: p.defenderShips, crew: crewOf(f.defender.ships), power: Math.round(p.defender), bonuses: defenderBonus },
     winChance: oddsOfContact(g, contactId) ?? 0.5,
     you: youAttack ? 'attacker' : youDefend ? 'defender' : null,
     notes,
@@ -247,7 +248,7 @@ export function scoreViews(g: Grand): ScoreView[] {
 
 export function logLines(g: Grand, turn?: number, limit = 14): LogLineView[] {
   const lines = turn === undefined ? g.log : g.log.filter((l) => l.turn === turn);
-  return lines.slice(-limit).map((l) => ({ turn: l.turn, text: l.text, tone: l.tone }));
+  return lines.slice(-limit).map((l) => ({ turn: l.turn, text: l.text, tone: l.tone, tag: l.tag }));
 }
 
 export function relationViews(g: Grand): RelationView[] {
@@ -274,7 +275,7 @@ const OPTION_TEXT: Record<GrandFaction, Omit<FactionOption, 'id' | 'startRegions
   },
   japan: {
     name: '일본',
-    hanja: '日',
+    hanja: '倭',
     leader: '와키자카 · 구키',
     blurb: '대군과 등선 백병전의 공세 진영. 부산에 이미 상륙해 있고, 싼 배를 많이 지어 포구를 차례로 삼킵니다.',
     strengths: ['등선 백병전', '많은 함선', '싼 건조비'],
@@ -328,7 +329,7 @@ export function overView(g: Grand): GameOverView | null {
   const me = player(g);
   const won = v.faction === me || allied(g, me, v.faction);
   const name = LABEL_OF[v.faction];
-  const how = v.kind === 'objective' ? '목표를 이루고 버텨 냈다' : v.kind === 'score' ? '정해진 달이 다하고 가장 큰 공을 세웠다' : '맞서는 진영이 모두 무너졌다';
+  const how = v.kind === 'objective' ? '목표를 이루고 버텨 냈다' : v.kind === 'score' ? '정해진 때가 다하고 가장 큰 공을 세웠다' : '맞서는 진영이 모두 무너졌다';
   return {
     won,
     headline: won ? '大捷' : '敗戰',
@@ -351,5 +352,57 @@ export function saveView(g: Grand): SaveView {
     difficulty: g.difficulty === 'easy' ? '쉬움' : g.difficulty === 'hard' ? '어려움' : '보통',
     waiting: g.pending.length,
     over: g.phase === 'over',
+  };
+}
+
+export function replayView(r: TurnReplay): ReplayView {
+  return {
+    moves: r.moves.map((m) => ({ id: m.fleetId, faction: m.faction, name: m.name, ships: m.ships, path: m.path, lost: m.lost })),
+    clashes: r.clashes,
+    changes: r.changes,
+  };
+}
+
+/** The card of the war's history that waits for the player. */
+export function eventView(g: Grand): EventView | null {
+  const shown = pendingCard(g);
+  if (!shown) return null;
+  return {
+    id: shown.event.id,
+    date: dateLabel(g.turn),
+    title: shown.card.title,
+    text: shown.card.text,
+    portrait: shown.card.portrait,
+    choices: shown.card.choices.map((c) => ({ label: c.label, hint: describeEffect(c.effect) })),
+  };
+}
+
+/** The turn that closed as numbers: where the treasury, the ports and the fleet stand now against the turn before. */
+export function turnReportView(g: Grand, turn: number): TurnReportView {
+  const me = player(g);
+  const row = g.stats.find((s) => s.turn === turn);
+  const prev = g.stats.find((s) => s.turn === turn - 1) ?? g.stats[0];
+  const earned = row?.earned?.[me] ?? 0;
+  const upkeep = row?.upkeep?.[me] ?? 0;
+  const before = prev?.gold[me] ?? 0;
+  const closed = row?.gold[me] ?? Math.round(g.factions[me].gold);
+  const now = Math.round(g.factions[me].gold);
+  return {
+    date: `${dateLabel(turn)} → ${dateLabel(turn + 1)}`,
+    gold: {
+      now,
+      before,
+      earned,
+      upkeep,
+      // What the player's own orders cost in the turn: works and ships paid when they were given.
+      spent: Math.max(0, before + earned - upkeep - closed),
+      // Treasury changes the turn's historical event made after the books were closed.
+      events: now - closed,
+    },
+    regions: { now: ownedBy(g, me).length, before: prev?.regions[me] ?? ownedBy(g, me).length },
+    ships: { now: shipCount(g, me), before: prev?.ships[me] ?? shipCount(g, me) },
+    battles: row?.battles ?? 0,
+    // The card of the history that opened the next turn belongs to this news too.
+    news: g.log.filter((l) => l.turn === turn || (l.turn === turn + 1 && l.tag === 'event')).slice(-30).map((l) => ({ turn: l.turn, text: l.text, tone: l.tone, tag: l.tag })),
   };
 }

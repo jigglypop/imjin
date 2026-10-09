@@ -102,7 +102,8 @@ export type BattleOutcome = {
   damage?: Partial<Record<BuildingKind, number>>;
 };
 
-export type LogEntry = { turn: number; text: string; tone: 'info' | 'good' | 'bad' };
+/** `tag` marks the news the interface also answers with a sound or a mention: a finished work or a launched ship, a historical event. */
+export type LogEntry = { turn: number; text: string; tone: 'info' | 'good' | 'bad'; tag?: 'built' | 'event' };
 
 export type TurnStat = {
   turn: number;
@@ -113,6 +114,21 @@ export type TurnStat = {
   income: Record<GrandFaction, number>;
   /** Fights this turn, settled by the player or automatically. */
   battles: number;
+  /** What the treasury took in and paid out when the turn closed (old saves lack them). */
+  earned?: Record<GrandFaction, number>;
+  upkeep?: Record<GrandFaction, number>;
+};
+
+/** A pause on income from a historical event: the faction's income is multiplied by `mult` for `left` more turns. */
+export type IncomeMod = { faction: GrandFaction; mult: number; left: number };
+
+/** The scripted events (events.ts): which have happened and what each player chose, the one waiting for the player, and their lasting effects. */
+export type EventState = {
+  /** Event id to the index of the choice taken; -1 while it waits for the player, -2 when it did not concern anyone. */
+  done: Record<string, number>;
+  pending: string | null;
+  flags: string[];
+  mods: IncomeMod[];
 };
 
 export type Victory = { faction: GrandFaction; kind: 'objective' | 'score' | 'elimination'; turn: number };
@@ -140,6 +156,7 @@ export type Grand = {
   log: LogEntry[];
   stats: TurnStat[];
   victory: Victory | null;
+  events: EventState;
 };
 
 export type Result = { ok: true; note?: string } | { ok: false; reason: string };

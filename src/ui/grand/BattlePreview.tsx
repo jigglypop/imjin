@@ -24,6 +24,17 @@ function Side({ side, role, share }: { side: BattleSideView; role: string; share
           <span>{f.name}</span>
         </div>
       </div>
+      {side.leader && (
+        <div className="g-leader g-leader--tight">
+          <img src={`/ui/portraits/${side.leader.portrait}.jpg`} alt="" width={36} height={36} />
+          <span className="g-row__main">
+            <span className="g-row__title">{side.leader.name}</span>
+            <span className="g-row__sub">
+              {side.leader.title} · Lv.{side.leader.level}
+            </span>
+          </span>
+        </div>
+      )}
       <dl className="g-bside__stats">
         <div>
           <dt>함선</dt>

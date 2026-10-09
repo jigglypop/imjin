@@ -9,12 +9,15 @@ import { SCENARIOS, type ScenarioId } from './sim/scenarios';
 import type { Faction } from './sim/types';
 import { sound } from './audio/Sound';
 import { fleetSpawn, useCampaign } from './campaign/campaign';
-import { isPhone, isTouchDevice } from './game/device';
+import { isIOS, isPhone, isTouchDevice } from './game/device';
+import { installTouchGuard } from './game/ios';
+import { battleReady, clearLoading, markLoading, recovery, type ResumeLaunch } from './game/recovery';
 import { useCompactLayout } from './ui/useCompactLayout';
 import { ConquestSetupPanel } from './ui/ConquestSetup';
 import { HistoryScreen } from './ui/HistoryScreen';
 import { ErrorBoundary, FatalNotice } from './ui/ErrorBoundary';
 import { Loading } from './ui/Loading';
+import { RecoveryNotice } from './ui/RecoveryNotice';
 import { MainMenu, ScreenFrame, SettingsScreen } from './ui/Screens';
 import { startScenario, urlLaunch, type Launch, type LaunchBody } from './ui/launch';
 import { GrandScreen } from './ui/GrandScreen';
@@ -24,9 +27,33 @@ const loadBattle = () => import('./ui/BattleView');
 const BattleView = lazy(loadBattle);
 
 let seq = 1;
+
+/** The part of a launch that can be started again after a crash. Multiplayer, campaign and faction battles cannot. */
+function resumable(body: LaunchBody): ResumeLaunch | undefined {
+  if (body.kind === 'scenario' && !body.remote && !body.campaign) return { kind: 'scenario', id: body.id, faction: body.faction };
+  if (body.kind === 'conquest' && !body.remote) return { kind: 'conquest', setup: body.setup };
+  return undefined;
+}
+
+// A battle that starts loading leaves a marker; reaching ready (the loading screen going away without a fatal notice)
+// removes it. If the page is killed in between, the next startup finds the marker (see recovery.ts).
+useUi.subscribe((state, previous) => {
+  if (state.fatal && !previous.fatal) clearLoading();
+  if (previous.loading !== null && state.loading === null) {
+    // BattleView clears the loading text just before it reports a failure, so look again once that has been set.
+    window.setTimeout(() => {
+      if (useUi.getState().fatal) return;
+      battleReady();
+      sound.allowSamples();
+    }, 0);
+  }
+});
+if (isIOS) installTouchGuard();
+
 // Test hooks (?scenario=, ?conquest=) skip the menu and boot straight into the battle.
 const firstLaunch = urlLaunch();
 useUi.setState({ screen: firstLaunch ? 'battle' : 'menu' });
+if (firstLaunch) markLoading(resumable(firstLaunch));
 
 export function App() {
   const screen = useUi((s) => s.screen);
@@ -34,6 +61,7 @@ export function App() {
   const compact = useCompactLayout();
   const [launch, setLaunch] = useState<Launch | null>(firstLaunch);
   const lastScenario = useRef<ScenarioId>(startScenario);
+  const [notice, setNotice] = useState(recovery.step > 0);
 
   // Fetch the battle chunk in the background once a screen that can start a battle opens.
   // The menu itself stays light, and phones wait until a mode is chosen.
@@ -50,6 +78,8 @@ export function App() {
   const begin = (next: LaunchBody, text: string, scenario?: ScenarioId) => {
     sound.click();
     sound.setMode('battle');
+    markLoading(resumable(next));
+    setNotice(false);
     setFatal(null);
     setScreen('battle');
     if (!launch) setLoading(text, 0.01, scenario);
@@ -92,6 +122,12 @@ export function App() {
     begin({ kind: 'scenario', id, faction: spawn ? 'joseon' : faction, campaign: spawn }, `${SCENARIOS[id].title} 준비 중`, id);
   };
 
+  const resume = recovery.resume;
+  const resumeBattle = () => {
+    if (resume?.kind === 'scenario') startHistory(resume.id, false, resume.faction);
+    else if (resume?.kind === 'conquest') startConquest(resume.setup);
+  };
+
   return (
     <div className={`app ${compact ? 'app--compact' : ''} ${isTouchDevice ? 'app--touch' : ''}`}>
       {launch && (
@@ -116,6 +152,7 @@ export function App() {
       )}
       {screen === 'settings' && <SettingsScreen />}
       {launch && <Loading />}
+      {notice && <RecoveryNotice onResume={resume ? resumeBattle : undefined} onClose={() => setNotice(false)} />}
       {fatal && (
         <FatalNotice
           message={fatal}

@@ -11,6 +11,9 @@ import { isPhone, isTouchDevice } from '../game/device';
 import { COST, ranged, SPEED_OF_SOUND, Voices, type Tier } from './voices';
 import { BANK, Samples, SAMPLE_NODES, type Kind, type PlayOptions } from './samples';
 
+/** Cues of the faction campaign's screens, played by `campaignCue`. */
+export type CampaignCue = 'endTurn' | 'move' | 'built' | 'battle' | 'clash' | 'capture' | 'event' | 'victory' | 'defeat';
+
 type GunBank = 'cannon_heavy' | 'cannon_medium' | 'cannon_small';
 const GUN_BANK: Record<GunType, GunBank> = {
   cheonja: 'cannon_heavy',
@@ -315,6 +318,54 @@ export class Battlefield {
       voices.bubbles(at, s, 2.8, 1);
       if (!this.sample('splash', at, { gain: loud(s.gain), pan: s.pan, rate: 0.85, cutoff: Math.max(900, s.muffle) })) voices.splash(at, s, 1.6);
     } else voices.gurgle(at, s, size);
+  }
+
+  /**
+   * The sounds of the faction campaign's map and dialogs: a few strokes of the recorded bank played straight away (the
+   * battle's voice budget is only refilled while a battle runs), the synthesised drum when the bank has not decoded.
+   */
+  campaignCue(cue: CampaignCue) {
+    const t = this.ctx.currentTime + 0.03;
+    const play = (kind: Kind, after: number, o: Partial<PlayOptions>) => this.samples.has(kind) && this.samples.play(kind, t + after, { gain: 0.8, wet: 0.2, ...o }) > 0;
+    const drum = (after: number, o: Partial<PlayOptions> = {}) => play('drum', after, o) || this.voices.drum(t + after);
+    switch (cue) {
+      case 'endTurn':
+        drum(0, { index: 0 });
+        drum(0.4, { index: 1, gain: 0.6, rate: 0.94 });
+        break;
+      case 'move':
+        play('whoosh', 0, { gain: 0.45, rate: 0.85 });
+        break;
+      case 'built':
+        play('impact_wood', 0, { gain: 0.5, rate: 1.1 });
+        play('impact_wood', 0.2, { gain: 0.4, rate: 0.95 });
+        break;
+      case 'battle':
+        this.drums(3);
+        play('cannon_far', 1.0, { gain: 0.5, rate: 0.95 });
+        break;
+      case 'clash':
+        play('cannon_far', 0, { gain: 0.45, rate: rnd(0.92, 1.08) });
+        break;
+      case 'capture':
+        drum(0, { gain: 0.7, rate: 1.05 });
+        play('impact_wood', 0.12, { gain: 0.45 });
+        break;
+      case 'event':
+        drum(0, { gain: 0.55, rate: 0.9 });
+        play('creak', 0.1, { gain: 0.4 });
+        break;
+      case 'victory':
+        drum(0);
+        drum(0.45, { gain: 0.8, rate: 1.05 });
+        drum(0.9, { gain: 0.9, rate: 1.1 });
+        break;
+      case 'defeat':
+        drum(0, { rate: 0.75 });
+        drum(0.7, { rate: 0.7, gain: 0.7 });
+        play('sink', 0.2, { gain: 0.35 });
+        break;
+    }
   }
 
   drums(count = 3) {

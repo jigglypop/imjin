@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sound } from '../audio/Sound';
-import { abandonGrand, autoResolveGrand, dismissBattle, dismissReport, endGrandTurn, grandOrders, prepareGrandBattle, startGrand, useGrand } from '../campaign/grand';
+import { abandonGrand, autoResolveGrand, chooseGrandEvent, dismissBattle, dismissReplay, dismissReport, endGrandTurn, grandOrders, guideSeen, markGuideSeen, prepareGrandBattle, startGrand, useGrand } from '../campaign/grand';
 import type { RegionBattle } from '../sim/grand/bridge';
-import { dateLabel } from '../sim/grand/economy';
 import type { BuildingKind as SimBuilding, Grand, GrandFaction, RegionId } from '../sim/grand/types';
 import type { ShipKind } from '../sim/types';
 import { setScreen } from '../state/store';
 import { BattlePreview } from './grand/BattlePreview';
-import { BattleResult, GameOver, GrandMenu, Hub, StatusPanel, TurnSummary } from './grand/Dialogs';
+import { BattleResult, EventCard, GameOver, GrandMenu, Hub, StatusPanel, TurnSummary } from './grand/Dialogs';
 import { FactionPick } from './grand/FactionPick';
 import { FleetPanel } from './grand/FleetPanel';
 import { GrandMap } from './grand/GrandMap';
+import { Guide, type GuideStepView } from './grand/Guide';
 import { RegionPanel } from './grand/RegionPanel';
 import { TopBar } from './grand/TopBar';
 import {
   FACTION_OPTIONS,
+  eventView,
   fleetViews,
   logLines,
   moveTargets,
@@ -24,17 +25,20 @@ import {
   previewView,
   regionViews,
   relationViews,
+  replayView,
   resultView,
   routeText,
   saveView,
   scoreViews,
   treasuryView,
+  turnReportView,
   turnView,
 } from './grand/adapt';
 import './grand/grand.css';
 import { useMapInsets } from './grand/shared';
 import type { FactionId } from './grand/types';
 import { josa } from '../sim/grand/josa';
+import { REGIONS } from '../sim/grand/regions';
 import { atWar } from '../sim/grand/world';
 
 type Stage = 'hub' | 'pick' | 'map';
@@ -43,6 +47,16 @@ const toMenu = () => {
   sound.click();
   setScreen('menu');
 };
+
+const prefersReducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** The four steps of the first-turn guide; the screen fills in what each one points at. */
+const GUIDE_STEPS: Omit<GuideStepView, 'target'>[] = [
+  { title: '1. 영토 고르기', text: '지도의 포구를 눌러 보세요. 둥근 표지의 색이 그 땅의 주인입니다. 누르면 수비대와 수입, 시설을 볼 수 있습니다.' },
+  { title: '2. 군영과 선소 짓기', text: '시설 목록에서 군영(수리와 유지비 면제)이나 선소(함선 건조)를 지으세요. 은을 바로 내고 몇 턴 뒤 완공됩니다. 선소가 서면 함선도 주문할 수 있습니다.' },
+  { title: '3. 함대 보내기', text: "함대 표지를 눌러 고른 뒤 '이동'을 누르고, 강조된 해역을 누르면 항로가 정해집니다. 적의 포구를 고르면 공격 명령입니다." },
+  { title: '4. 턴 종료', text: "명령을 마쳤으면 '턴 종료'를 누르세요. 석 달이 흐르고 적 함대가 움직이는 모습을 보여 드린 뒤 소식과 수치를 알려 드립니다." },
+];
 
 /**
  * The faction campaign screen: continue or begin a war, then the strategic map with its panels. The campaign itself
@@ -90,6 +104,7 @@ export function GrandScreen({ onBattle }: { onBattle: (battle: RegionBattle) => 
 function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: RegionBattle) => void; onNew: () => void }) {
   const lastBattle = useGrand((s) => s.lastBattle);
   const reported = useGrand((s) => s.reported);
+  const replay = useGrand((s) => s.replay);
   const me: FactionId = g.player ?? 'joseon';
   const [regionId, setRegionId] = useState<string | null>(null);
   const [fleetId, setFleetId] = useState<string | null>(null);
@@ -100,16 +115,30 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const [menu, setMenu] = useState(false);
   const [previewHidden, setPreviewHidden] = useState(false);
   const [overSeen, setOverSeen] = useState(false);
+  const [flipped, setFlipped] = useState(false);
+  const [reduced] = useState(prefersReducedMotion);
+  const [guideOn, setGuideOn] = useState(() => g.turn === 1 && g.phase === 'orders' && !guideSeen());
+  const [guideStep, setGuideStep] = useState(0);
   const toastTimer = useRef(0);
 
-  const regions = useMemo(() => regionViews(g), [g]);
-  const fleets = useMemo(() => fleetViews(g), [g]);
+  // While the closed turn plays back, the map still shows the turn before: its fleets are drawn by the replay, and the
+  // ports change colour when the clashes appear.
+  const replayMovers = useMemo(() => new Set(replay?.moves.moves.map((m) => m.fleetId)), [replay]);
+  const regions = useMemo(() => regionViews(replay && !flipped ? replay.before : g), [g, replay, flipped]);
+  const fleets = useMemo(() => {
+    const all = fleetViews(replay ? replay.before : g);
+    return replay ? all.filter((f) => !replayMovers.has(f.id)) : all;
+  }, [g, replay, replayMovers]);
+  const replayData = useMemo(() => (replay ? replayView(replay.moves) : null), [replay]);
+  useEffect(() => setFlipped(false), [replay]);
   const region = regions.find((r) => r.id === regionId) ?? null;
   const fleet = fleets.find((f) => f.id === fleetId) ?? null;
   const simFleet = g.fleets.find((f) => f.id === fleetId);
   const insets = useMapInsets(!!(region || fleet));
   const targets = useMemo(() => (moving && simFleet ? moveTargets(g, simFleet) : undefined), [moving, simFleet, g]);
   const pending = g.phase === 'battles' ? g.pending[0] : undefined;
+  const eventCard = useMemo(() => (g.events.pending ? eventView(g) : null), [g]);
+  const turnReport = useMemo(() => (reported !== null ? turnReportView(g, reported) : null), [g, reported]);
   const preview = useMemo(() => (pending ? previewView(g, pending.id) : null), [g, pending]);
   const over = g.phase === 'over' ? overView(g) : null;
 
@@ -125,6 +154,15 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
     say(res.ok ? (done ?? res.note ?? '명령을 내렸다') : res.reason);
     return res.ok;
   };
+  /** An order that spends silver on works or ships: a click for it, and the guide's second step is done. */
+  const ordered = (res: { ok: true; note?: string } | { ok: false; reason: string }) => {
+    const done = report(res);
+    if (done) {
+      sound.click();
+      advanceGuide(1);
+    }
+    return done;
+  };
 
   const selectRegion = (id: string) => {
     if (moving && fleet) {
@@ -138,7 +176,9 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         // Only a region of a faction at war with the player is attacked: an ally's port is simply entered.
         const hostile = dest.owner !== null && atWar(g, me, dest.owner as GrandFaction);
         say(`${fleet.name}: ${hostile ? `${dest.name} 공격` : `${josa(dest.name, '으로/로')} 출항`} 명령 · ${res.note ?? ''}`);
+        sound.campaign('move');
         setMoving(false);
+        advanceGuide(2);
       } else say(res.reason);
       return;
     }
@@ -168,7 +208,8 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
       setPreviewHidden(false);
       return;
     }
-    sound.click();
+    sound.campaign('endTurn');
+    if (guideOn) closeGuide();
     closePanels();
     setToast(null);
     setPreviewHidden(false);
@@ -178,8 +219,47 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const fight = () => {
     if (!pending) return;
     const rb = prepareGrandBattle(pending.id);
-    if (rb) onBattle(rb);
+    if (rb) {
+      sound.campaign('battle');
+      onBattle(rb);
+    }
   };
+
+  // The first-turn guide: each step moves on when the player does what it asks, or when they press 다음.
+  const closeGuide = () => {
+    markGuideSeen();
+    setGuideOn(false);
+  };
+  const advanceGuide = (from: number) => setGuideStep((s) => (s === from ? from + 1 : s));
+  const nextGuide = () => (guideStep >= GUIDE_STEPS.length - 1 ? closeGuide() : setGuideStep(guideStep + 1));
+  useEffect(() => {
+    if (guideOn && guideStep === 0 && region && region.owner === me) setGuideStep(1);
+  }, [guideOn, guideStep, region, me]);
+  const homeName = Object.values(REGIONS).find((r) => r.capitalOf === me)?.name;
+  const homeNode = homeName ? `.gm-node[aria-label^="${homeName},"] .gm-node__disc` : undefined;
+  const guideTargets = [
+    homeNode,
+    region && region.owner === me ? '[data-guide="build"]' : homeNode,
+    fleet && fleet.faction === me ? (moving ? undefined : '[data-guide="move"]') : '.gm-fleet:not(.gm-fleet--foreign) .gm-fleet__pill',
+    '.g-top__end',
+  ];
+  const guideSteps: GuideStepView[] = GUIDE_STEPS.map((st, i) => ({ ...st, target: guideTargets[i] }));
+  const guideHidden = !!(replay || g.events.pending || status || menu || lastBattle || pending || over);
+
+  // Sounds of the campaign's own beats: a finished work, the card of a turning point, the end of a fight or of the war.
+  const builtNow = !replay && !g.events.pending && !!turnReport?.news.some((l) => l.tag === 'built');
+  useEffect(() => {
+    if (builtNow) sound.campaign('built');
+  }, [builtNow, reported]);
+  useEffect(() => {
+    if (eventCard && !replay) sound.campaign('event');
+  }, [eventCard?.id, !!replay]);
+  useEffect(() => {
+    if (lastBattle) sound.campaign(lastBattle.humanSide === null ? 'clash' : lastBattle.humanSide === lastBattle.winner ? 'victory' : 'defeat');
+  }, [lastBattle]);
+  useEffect(() => {
+    if (over && !lastBattle) sound.campaign(over.won ? 'victory' : 'defeat');
+  }, [over?.won, g.phase === 'over']);
 
   const gold = Math.round(g.factions[me].gold);
   const here = region ? fleets.filter((f) => f.at === region.id) : [];
@@ -201,6 +281,14 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         onBackground={() => {
           if (!moving) closePanels();
         }}
+        replay={replayData}
+        reducedMotion={reduced}
+        onReplayPhase={(phase) => phase === 'clash' && setFlipped(true)}
+        onReplayBeat={(kind) => sound.campaign(kind)}
+        onReplayDone={() => {
+          setFlipped(false);
+          dismissReplay();
+        }}
       />
       <TopBar
         turn={turnView(g)}
@@ -208,7 +296,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         onEndTurn={endTurn}
         onMenu={() => setMenu(true)}
         onStatus={() => setStatus(true)}
-        busy={g.phase === 'over'}
+        busy={g.phase === 'over' || !!replay || !!g.events.pending}
         endLabel={g.phase === 'battles' ? `전투 ${g.pending.length}건` : '턴 종료'}
       />
       <div className="g-dock">
@@ -255,9 +343,9 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
             fleets={here}
             me={me}
             onClose={closePanels}
-            onBuild={(id, kind) => report(grandOrders.build(id as RegionId, kind as SimBuilding))}
+            onBuild={(id, kind) => ordered(grandOrders.build(id as RegionId, kind as SimBuilding))}
             onCancelBuild={(id, kind) => report(grandOrders.cancelBuild(id as RegionId, kind as SimBuilding), '공사를 취소하고 값을 돌려받았다')}
-            onRecruit={(id, kind) => report(grandOrders.recruit(id as RegionId, kind as ShipKind))}
+            onRecruit={(id, kind) => ordered(grandOrders.recruit(id as RegionId, kind as ShipKind))}
             onCancelRecruit={(id, item) => report(grandOrders.cancelRecruit(id as RegionId, item), '주문을 취소하고 값을 돌려받았다')}
             onSelectFleet={selectFleet}
           />
@@ -270,10 +358,10 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         </div>
       )}
 
-      {preview && !previewHidden && !lastBattle && (
+      {preview && !previewHidden && !lastBattle && !replay && !eventCard && (
         <BattlePreview
           key={pending?.id}
-          battle={{ ...preview, notes: [...(preview.notes ?? []), ...(g.pending.length > 1 ? [`이 달에 치를 전투가 ${g.pending.length}건 있습니다`] : [])] }}
+          battle={{ ...preview, notes: [...(preview.notes ?? []), ...(g.pending.length > 1 ? [`이번 턴에 치를 전투가 ${g.pending.length}건 있습니다`] : [])] }}
           cancelLabel="나중에"
           onCancel={() => setPreviewHidden(true)}
           onFight={fight}
@@ -284,10 +372,9 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         />
       )}
       {lastBattle && <BattleResult result={resultView(lastBattle)} onClose={dismissBattle} />}
-      {!lastBattle && reported !== null && !over && g.phase === 'orders' && (
-        <TurnSummary date={dateLabel(reported)} lines={logLines(g, reported)} gold={gold} onClose={dismissReport} />
-      )}
-      {!lastBattle && over && !overSeen && (
+      {!lastBattle && !replay && eventCard && <EventCard event={eventCard} me={me} onChoose={(i) => chooseGrandEvent(i)} />}
+      {!lastBattle && !replay && !eventCard && turnReport && !over && g.phase === 'orders' && <TurnSummary report={turnReport} onClose={dismissReport} />}
+      {!lastBattle && !replay && over && !overSeen && (
         <GameOver
           over={over}
           me={me}
@@ -312,6 +399,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
           onClose={() => setStatus(false)}
         />
       )}
+      {guideOn && !guideHidden && <Guide step={guideStep} steps={guideSteps} onNext={nextGuide} onClose={closeGuide} />}
       {menu && (
         <GrandMenu
           onClose={() => setMenu(false)}

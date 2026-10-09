@@ -4,6 +4,9 @@ const ua = navigator.userAgent;
 const coarse = matchMedia('(any-pointer: coarse)').matches;
 const iPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
 
+/** iPhone, iPad and iPod, and iPadOS Safari, which reports itself as a Mac. Every browser on iOS runs WebKit. */
+export const isIOS = /iPhone|iPad|iPod/i.test(ua) || iPadOS;
+
 /** A touch screen is present: phones, tablets, touch laptops. */
 export const isTouchDevice = coarse || iPadOS || /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
 

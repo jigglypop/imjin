@@ -6,6 +6,9 @@ import { net } from '../net/NetClient';
 import { SKY_PRESETS, type SkyPresetName } from '../render/sky';
 import { SEA_STATES, type SeaStateName } from '../ocean/waves';
 import { sound } from '../audio/Sound';
+import { isIOS } from '../game/device';
+import { forceWebGL } from '../game/quality';
+import { clearLoading } from '../game/recovery';
 import { setFatal, setLoading, setScreen, useUi } from '../state/store';
 import { Hud } from './Hud';
 import { conquestOf, hideHud, params, startScenario, type Launch } from './launch';
@@ -48,7 +51,7 @@ async function createRenderer(props: { canvas: HTMLCanvasElement | OffscreenCanv
       canvas: props.canvas as HTMLCanvasElement,
       antialias: false,
       powerPreference: 'high-performance',
-      forceWebGL: params.get('webgl') === '1',
+      forceWebGL,
     });
     await renderer.init();
     return renderer;
@@ -108,11 +111,31 @@ function Game({ launch, onEngine }: { launch: Launch; onEngine: (e: Engine) => v
   return null;
 }
 
+/**
+ * The address bar sliding in and out resizes the page many times a second. Every size the canvas takes rebuilds the
+ * render targets, so on iOS it waits for the size to settle.
+ */
+const IOS_RESIZE = { scroll: false, debounce: { scroll: 0, resize: 250 } };
+
+/** False while the page is in the background: the canvas stops drawing and the engine stops simulating. */
+function usePageVisible() {
+  const [visible, setVisible] = useState(!document.hidden);
+  useEffect(() => {
+    const sync = () => setVisible(!document.hidden);
+    document.addEventListener('visibilitychange', sync);
+    return () => {
+      document.removeEventListener('visibilitychange', sync);
+    };
+  }, []);
+  return visible;
+}
+
 /** The battle: 3D canvas, engine and HUD. Lazy-loaded so the menu paints without parsing three.js. */
 export default function BattleView({ launch }: { launch: Launch }) {
   const screen = useUi((s) => s.screen);
   const origin = useUi((s) => s.origin);
   const [engine, setEngine] = useState<Engine | null>(null);
+  const visible = usePageVisible();
   const applied = useRef(launch.seq);
 
   // Battles after the first reuse the running engine.
@@ -136,6 +159,7 @@ export default function BattleView({ launch }: { launch: Launch }) {
       engine.leaveRemote();
     }
     engine.paused = true;
+    clearLoading();
     sound.setMode('select');
     setScreen(origin);
   };
@@ -149,7 +173,8 @@ export default function BattleView({ launch }: { launch: Launch }) {
         gl={createRenderer as never}
         camera={{ fov: 42, near: 0.5, far: 60000, position: [0, 50, 200] }}
         dpr={Math.min(window.devicePixelRatio, Number(params.get('dpr') ?? 2))}
-        frameloop={screen === 'battle' ? 'always' : 'never'}
+        frameloop={screen === 'battle' && visible ? 'always' : 'never'}
+        resize={isIOS ? IOS_RESIZE : undefined}
       >
         <Game launch={launch} onEngine={setEngine} />
       </Canvas>

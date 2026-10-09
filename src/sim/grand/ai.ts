@@ -14,7 +14,7 @@ import {
   shipDef,
   yardPrice,
 } from './economy';
-import { buildRequirement, orderBuild, orderCommander, orderMerge, orderMove, orderRecruit, orderRefit, recruitProblem, refitCost } from './orders';
+import { buildRequirement, orderBuild, commanderSuspended, orderCommander, orderMerge, orderMove, orderRecruit, orderRefit, recruitProblem, refitCost } from './orders';
 import { LANES, REGIONS } from './regions';
 import { next, range } from './rng';
 import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId } from './types';
@@ -353,7 +353,7 @@ function stagingPort(g: Grand, f: GrandFaction, from: RegionId, moving: Fleet[])
 
 /** Fleets without a commander get the best officer who has none. */
 function assignCommanders(g: Grand, f: GrandFaction) {
-  const free = g.factions[f].commanders.filter((c) => c.alive && !g.fleets.some((fl) => fl.commanderId === c.id)).sort((a, b) => b.level - a.level);
+  const free = g.factions[f].commanders.filter((c) => c.alive && !commanderSuspended(g, c.id) && !g.fleets.some((fl) => fl.commanderId === c.id)).sort((a, b) => b.level - a.level);
   const bare = g.fleets.filter((fl) => fl.faction === f && !fl.commanderId).sort((a, b) => b.ships.length - a.ships.length);
   for (const fl of bare) {
     const c = free.shift();

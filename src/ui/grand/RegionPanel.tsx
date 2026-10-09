@@ -62,7 +62,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
           <h3 className="g-section">
             시설 <span className="g-section__hint">남은 터 {region.freeSlots}</span>
           </h3>
-          <ul className="g-list">
+          <ul className="g-list" data-guide="build">
             {region.buildings.map((b) => {
               const info = BUILDINGS[b.kind];
               const maxed = b.level >= b.maxLevel;

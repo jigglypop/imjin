@@ -18,8 +18,8 @@ export function mintId(g: Grand, prefix: string): string {
   return `${prefix}${g.nextId}`;
 }
 
-export function note(g: Grand, text: string, tone: LogEntry['tone'] = 'info') {
-  g.log.push({ turn: g.turn, text, tone });
+export function note(g: Grand, text: string, tone: LogEntry['tone'] = 'info', tag?: LogEntry['tag']) {
+  g.log.push(tag ? { turn: g.turn, text, tone, tag } : { turn: g.turn, text, tone });
   if (g.log.length > 160) g.log.splice(0, g.log.length - 160);
 }
 

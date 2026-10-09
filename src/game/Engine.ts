@@ -242,6 +242,7 @@ export class Engine {
     this.dprOverride = dprParam ? Number(dprParam) : null;
     this.takePixelRatio();
     this.watchDevice();
+    this.watchVisibility();
     tuneWebGLBackend(renderer);
   }
 
@@ -279,6 +280,31 @@ export class Engine {
       previous.call(r, info);
       this.ready = false;
       setLoading(DEVICE_LOST_TEXT, 1);
+    };
+  }
+
+  /**
+   * A page in the background draws nothing and simulates nothing. Browsers stop animation frames there already, but the
+   * first frame back arrives with the whole absence as its time step, and a phone that is short of memory should not
+   * also be fed work nobody sees.
+   */
+  private pageHidden = document.hidden;
+  private releaseVisibility: (() => void) | null = null;
+
+  private watchVisibility() {
+    const hide = () => {
+      this.pageHidden = true;
+    };
+    const sync = () => {
+      this.pageHidden = document.hidden;
+    };
+    document.addEventListener('visibilitychange', sync);
+    window.addEventListener('pagehide', hide);
+    window.addEventListener('pageshow', sync);
+    this.releaseVisibility = () => {
+      document.removeEventListener('visibilitychange', sync);
+      window.removeEventListener('pagehide', hide);
+      window.removeEventListener('pageshow', sync);
     };
   }
 
@@ -445,7 +471,7 @@ export class Engine {
    * real one. The march shader is built for the most steps the tier's levels can ask for, which is a smaller program on a phone.
    */
   private async warmShared() {
-    if (params.get('clouds') !== '0') {
+    if (params.get('clouds') !== '0' && this.eq.clouds) {
       const reach = LEVELS.slice(0, Math.max(this.eq.maxLevel, this.level) + 1);
       const limits = { steps: Math.max(...reach.map((l) => l.cloud.steps)), lightSteps: Math.max(...reach.map((l) => l.cloud.lightSteps)) };
       const gray = new DataTexture(new Uint16Array(64 * 32 * 4).fill(0x3800), 64, 32, RGBAFormat, HalfFloatType);
@@ -914,7 +940,7 @@ export class Engine {
   }
 
   update(frameDt: number) {
-    if (!this.ready) return;
+    if (!this.ready || this.pageHidden) return;
     this.fpsFrames += 1;
     this.fpsTime += frameDt;
     if (this.fpsTime >= 1) {
@@ -1146,7 +1172,7 @@ export class Engine {
   }
 
   render() {
-    if (!this.ready) return;
+    if (!this.ready || this.pageHidden) return;
     this.wake.update(this.renderer, this.lastScaled);
     this.fft?.update(this.renderer, waveField.time);
     this.frame += 1;
@@ -1418,6 +1444,8 @@ export class Engine {
   /** Gives back everything the battle holds: inputs, labels, GPU buffers and programs, and the graphics device itself. */
   dispose() {
     this.ready = false;
+    this.releaseVisibility?.();
+    this.releaseVisibility = null;
     this.input?.detach();
     this.touch?.detach();
     this.rts.detach();

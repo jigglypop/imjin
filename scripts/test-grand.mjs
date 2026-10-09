@@ -24,6 +24,9 @@ const turn = await load('/src/sim/grand/turn.ts');
 const spawn = await load('/src/sim/grand/spawn.ts');
 const { SHIP_SPECS } = await load('/src/sim/catalog.ts');
 const { josa } = await load('/src/sim/grand/josa.ts');
+const events = await load('/src/sim/grand/events.ts');
+const { buildReplay, isEmpty } = await load('/src/sim/grand/replay.ts');
+const { dateOf, dateLabel } = await load('/src/sim/grand/economy.ts');
 const { REGION_MAPS, REGION_SITES } = await load('/src/sim/grand/coast.ts');
 const { generateHeightmap } = await load('/src/terrain/generate.ts');
 
@@ -302,6 +305,104 @@ function playOut(g) {
   check('josa reads digits, letters and a trailing note', josa('Lv3', '이/가') === 'Lv3이' && josa('HMS', '은/는') === 'HMS는' && josa('나고야 (히젠)', '이/가') === '나고야 (히젠)가');
   const war = playOut(newGrand(null, 77));
   check('no particle placeholders in a played campaign log', !war.log.some((e) => /\((이|가|을|를|은|는|과|와|으)\)/.test(e.text)));
+}
+
+// 8. The calendar and the scripted events of the war's history.
+{
+  check('a turn is a season: turn 1 is April 1592, turn 4 January 1593, turn 21 April 1597', dateLabel(1) === '1592년 4월' && dateLabel(4) === '1593년 1월' && dateLabel(21) === '1597년 4월' && dateOf(27).year === 1598);
+  const badDate = events.EVENTS.filter((e) => e.headline.slice(0, dateLabel(e.turn).length) !== dateLabel(e.turn));
+  check(`every event's headline opens with the date of its turn${badDate.length ? ' (' + badDate.map((e) => e.id).join() + ')' : ''}`, badDate.length === 0);
+  check('every event has a card and two described answers for each navy it names', events.EVENTS.every((e) => Object.values(e.cards).every((c) => c.choices.length === 2 && c.choices.every((x) => events.describeEffect(x.effect).length > 0))));
+
+  const g = newGrand('joseon', 21);
+  check('the first card is dealt to the player at the start of the war', g.events.pending === 'busan_landing' && events.pendingCard(g)?.card.choices.length === 2);
+  const gold0 = g.factions.joseon.gold;
+  const ships0 = g.fleets.length;
+  const answered = events.chooseEvent(g, 1);
+  check('answering applies the choice, closes the card and cannot be repeated', answered.ok && g.events.pending === null && g.factions.joseon.gold === gold0 + 250 && g.events.done.busan_landing === 1 && !events.chooseEvent(g, 0).ok && g.fleets.length === ships0);
+  const ai = newGrand(null, 21);
+  check('with nobody at the table the computer navies answer at once', ai.events.pending === null && ai.events.done.busan_landing === -2);
+  const twin = newGrand('joseon', 21);
+  events.chooseEvent(twin, 1);
+  check('the same seed and answer give the same war', JSON.stringify(twin) === JSON.stringify(g));
+
+  // A save with a card waiting reloads into the same card and goes on identically.
+  const saved = newGrand('japan', 8);
+  const copy = JSON.parse(JSON.stringify(saved));
+  events.chooseEvent(saved, 0);
+  events.chooseEvent(copy, 0);
+  for (let i = 0; i < 25; i += 1) {
+    if (saved.phase === 'over') break;
+    planAi(saved, 'japan');
+    planAi(copy, 'japan');
+    endTurn(saved);
+    endTurn(copy);
+    for (const c of [...saved.pending]) autoResolveContact(saved, c.id);
+    for (const c of [...copy.pending]) autoResolveContact(copy, c.id);
+    if (saved.events.pending) events.chooseEvent(saved, 1);
+    if (copy.events.pending) events.chooseEvent(copy, 1);
+  }
+  check('a reloaded war with its cards goes on identically', JSON.stringify(saved) === JSON.stringify(copy) && Object.keys(saved.events.done).length >= 4);
+
+  // The path of Yi Sun-sin through 1597: taken off his fleet, and brought back by the next card.
+  const yi = newGrand('joseon', 4);
+  events.chooseEvent(yi, 0);
+  const flag = yi.fleets.find((f) => f.commanderId === 'yi');
+  yi.turn = 21;
+  events.fireEvents(yi);
+  check('the arrest card waits for the player', yi.events.pending === 'yi_arrest');
+  events.chooseEvent(yi, 0);
+  check('obeying the court takes him off his fleet', flag.commanderId === null && yi.events.flags.includes('yi_suspended'));
+  yi.turn = 22;
+  events.fireEvents(yi);
+  check('the next card calls him back', yi.events.pending === 'yi_return');
+  events.chooseEvent(yi, 1);
+  check('and he commands a fleet again', yi.fleets.some((f) => f.commanderId === 'yi') && !yi.events.flags.includes('yi_suspended'));
+  const kept = newGrand('joseon', 4);
+  events.chooseEvent(kept, 0);
+  kept.turn = 21;
+  events.fireEvents(kept);
+  events.chooseEvent(kept, 1);
+  kept.turn = 22;
+  events.fireEvents(kept);
+  check('had the generals pleaded for him, no return card is needed', kept.events.pending === null && kept.fleets.some((f) => f.commanderId === 'yi'));
+
+  // A pause on income runs out.
+  const mod = newGrand('joseon', 4);
+  events.chooseEvent(mod, 0);
+  const full = factionIncome(mod, 'joseon');
+  events.applyEffect(mod, 'joseon', { income: { mult: 0.5, turns: 2 } });
+  const halved = factionIncome(mod, 'joseon');
+  const turnOver = () => {
+    endTurn(mod);
+    for (const c of [...mod.pending]) autoResolveContact(mod, c.id);
+  };
+  turnOver();
+  const during = mod.events.mods.length;
+  turnOver();
+  check(`income halved for two turns then back (${full} -> ${halved})`, halved === Math.round(full * 0.5) && during === 1 && mod.events.mods.length === 0);
+}
+
+// 9. The replay of a closed turn: fleets, meetings and captures as the player saw them.
+{
+  const g = newGrand('joseon', 1234);
+  events.chooseEvent(g, 0);
+  let moves = 0;
+  let clashes = 0;
+  let short = false;
+  for (let t = 0; t < 10 && g.phase !== 'over'; t += 1) {
+    const before = structuredClone(g);
+    const report = endTurn(g);
+    const replay = buildReplay(before, g, report.contacts, 'joseon');
+    moves += replay.moves.length;
+    clashes += replay.clashes.length;
+    if (replay.moves.some((m) => m.path.length < 2)) short = true;
+    if (g.events.pending) events.chooseEvent(g, 0);
+    for (const c of [...g.pending]) autoResolveContact(g, c.id);
+  }
+  check(`ten turns replay (${moves} fleet moves, ${clashes} meetings)`, moves > 10 && clashes > 0 && !short);
+  const quiet = newGrand('joseon', 5);
+  check('a turn in which nothing moved replays as empty', isEmpty(buildReplay(quiet, structuredClone(quiet), [], 'joseon')));
 }
 
 await server.close();

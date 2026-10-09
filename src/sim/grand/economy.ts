@@ -63,7 +63,8 @@ export const TUNING = {
   } as Record<GrandFaction, { income: number; cost: number; power: number; label: string }>,
 };
 
-/** The war is counted in months, from April 1592 (turn 1), and ends at this turn if nobody has won. */
+/** A turn is a season: three months. The war is counted from April 1592 (turn 1) and ends at this turn if nobody has won. */
+export const MONTHS_PER_TURN = 3;
 export const MAX_TURNS = 36;
 
 export type BuildingDef = { kind: BuildingKind; label: string; hanja: string; baseGold: number; baseTurns: number; desc: string };
@@ -184,7 +185,9 @@ export function regionIncome(g: Grand, id: RegionId): number {
 export function factionIncome(g: Grand, f: GrandFaction): number {
   let sum = 0;
   for (const id of Object.keys(g.regions) as RegionId[]) if (g.regions[id].owner === f) sum += regionIncome(g, id);
-  return sum;
+  // Lasting effects of the historical events (aid, war weariness).
+  for (const m of g.events?.mods ?? []) if (m.faction === f) sum *= m.mult;
+  return Math.round(sum);
 }
 
 /** Gold value of every ship the faction has afloat or on the slipways (garrisons are free). */
@@ -230,8 +233,13 @@ export const batteryStrength = (r: RegionState): number => {
   return b.level * 420 * (0.4 + 0.6 * b.hp);
 };
 
+/** Year and month (1..12) at the start of a turn. */
+export const dateOf = (turn: number): { year: number; month: number } => {
+  const since = 3 + (turn - 1) * MONTHS_PER_TURN;
+  return { year: 1592 + Math.floor(since / 12), month: (since % 12) + 1 };
+};
+
 export const dateLabel = (turn: number): string => {
-  const month = (3 + turn - 1) % 12;
-  const year = 1592 + Math.floor((3 + turn - 1) / 12);
-  return `${year}년 ${month + 1}월`;
+  const { year, month } = dateOf(turn);
+  return `${year}년 ${month}월`;
 };

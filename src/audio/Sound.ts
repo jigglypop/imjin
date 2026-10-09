@@ -2,8 +2,9 @@ import type { PerspectiveCamera } from 'three/webgpu';
 import type { BattleEvent } from '../sim/types';
 import type { Battle } from '../sim/battle';
 import type { CueKind } from '../fx/sinkPlan';
-import { Battlefield } from './battlefield';
+import { Battlefield, type CampaignCue } from './battlefield';
 import { buildBus } from './voices';
+import { isIOS } from '../game/device';
 
 const SCALE = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22];
 const ROOT_HZ = 146.83;
@@ -26,15 +27,55 @@ export class Sound {
   private rumble: GainNode | null = null;
   private roar: GainNode | null = null;
   muted = false;
+  /** The page went to the background and the context was suspended on purpose, so the retry loop leaves it alone. */
+  private suspendedByPage = false;
+  private lastWake = 0;
+  /** iOS decodes the sample bank only once the first battle is up, so the decode does not add to the load's memory peak. */
+  private samplesAllowed = !isIOS;
+  private samplesRequested = false;
 
   constructor() {
+    // iOS only lets a context start from touchend or click, not from touchstart, and an interruption (a call, another
+    // app taking the audio) leaves it suspended until the next gesture. The listeners therefore stay for good: each one
+    // creates the context on first use and resumes it whenever it is not running.
     const start = () => {
       this.init();
-      void this.ctx?.resume();
+      this.wake();
     };
-    window.addEventListener('pointerdown', start, { passive: true });
-    window.addEventListener('keydown', start);
-    window.addEventListener('touchstart', start, { passive: true });
+    for (const type of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown'] as const) {
+      window.addEventListener(type, start, { passive: true, capture: true });
+    }
+    document.addEventListener('visibilitychange', () => {
+      const ctx = this.ctx;
+      if (!ctx) return;
+      if (document.hidden) {
+        this.suspendedByPage = true;
+        void ctx.suspend().catch(() => undefined);
+      } else {
+        this.suspendedByPage = false;
+        this.wake();
+      }
+    });
+  }
+
+  /** Resumes a context that is not running. Safe to call as often as a gesture arrives. */
+  private wake() {
+    const ctx = this.ctx;
+    if (!ctx || this.suspendedByPage || ctx.state === 'running') return;
+    this.lastWake = performance.now();
+    void ctx.resume().catch(() => undefined);
+  }
+
+  /** The first battle is ready: on iOS this is when the sample bank starts to decode. */
+  allowSamples() {
+    this.samplesAllowed = true;
+    if (this.ctx) this.loadSamples();
+  }
+
+  private loadSamples() {
+    if (!this.samplesAllowed || this.samplesRequested || !this.field) return;
+    this.samplesRequested = true;
+    void this.field.load(import.meta.env.BASE_URL);
   }
 
   get ready() {
@@ -56,7 +97,7 @@ export class Sound {
     const ambienceDuck = ctx.createGain();
     this.ambience.connect(ambienceDuck).connect(master);
     this.field = new Battlefield(ctx, bus.sfx, bus.reverb, [{ node: ambienceDuck, depth: 0.35 }]);
-    void this.field.load(import.meta.env.BASE_URL);
+    this.loadSamples();
     this.music = ctx.createGain();
     this.music.gain.value = 0;
     this.music.connect(master);
@@ -73,7 +114,11 @@ export class Sound {
     this.noise = buffer;
     this.startAmbience();
     this.applyMode(true);
-    window.setInterval(() => this.scheduleMusic(), 120);
+    window.setInterval(() => {
+      this.scheduleMusic();
+      // After a phone call or another app's audio the context can come back 'interrupted' with no gesture to resume it.
+      if (ctx.state !== 'running' && !document.hidden && performance.now() - this.lastWake > 2000) this.wake();
+    }, 120);
   }
 
   private noiseSource(loop = false) {
@@ -302,6 +347,18 @@ export class Sound {
 
   drums(count = 3) {
     this.field?.drums(count);
+  }
+
+  /** A cue of the faction campaign's map and dialogs; a victory adds a short flute phrase. Silent when muted. */
+  campaign(cue: CampaignCue) {
+    const ctx = this.ctx;
+    if (this.muted || !ctx || !this.field) return;
+    this.field.campaignCue(cue);
+    if (cue === 'move') this.click();
+    if (cue === 'victory' && this.music) {
+      const t = ctx.currentTime + 0.8;
+      [4, 5, 7].forEach((degree, i) => this.flute(t + i * 0.55, ROOT_HZ * 2 * 2 ** (SCALE[degree]! / 12), 1.4, 0.5));
+    }
   }
 
   update(events: BattleEvent[], battle: Battle, camera: PerspectiveCamera, _dt: number) {

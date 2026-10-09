@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { MAP_ASPECT, MAP_IMAGE, project } from './projection';
+import { ReplayLayer } from './Replay';
 import { FACTION_INFO, ownerName } from './shared';
-import type { FactionId, FleetView, RegionView } from './types';
+import type { FactionId, FleetView, RegionView, ReplayView } from './types';
 
 export interface MapInsets {
   top: number;
@@ -26,6 +27,12 @@ export interface GrandMapProps {
   onSelectRegion?: (id: string) => void;
   onSelectFleet?: (id: string) => void;
   onBackground?: () => void;
+  /** The turn that just closed, played over the map until it ends or is skipped. */
+  replay?: ReplayView | null;
+  reducedMotion?: boolean;
+  onReplayPhase?: (phase: 'sail' | 'clash') => void;
+  onReplayBeat?: (kind: 'clash' | 'capture') => void;
+  onReplayDone?: () => void;
 }
 
 interface View {
@@ -58,6 +65,11 @@ export function GrandMap({
   onSelectRegion,
   onSelectFleet,
   onBackground,
+  replay,
+  reducedMotion = false,
+  onReplayPhase,
+  onReplayBeat,
+  onReplayDone,
 }: GrandMapProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
@@ -167,6 +179,42 @@ export function GrandMap({
   }, [focus?.nonce]);
 
   useEffect(() => () => cancelAnimationFrame(anim.current), []);
+
+  // Closing or opening a panel changes how far the map may slide: keep it inside the new limits.
+  useEffect(() => {
+    if (ready.current) setView((cur) => constrain(cur));
+  }, [insets.top, insets.right, insets.bottom, insets.left, constrain]);
+
+  // The camera follows the action: when what the replay shows lies partly off screen, the map pans (and zooms out a little) to take it in.
+  useEffect(() => {
+    if (!replay || !ready.current) return;
+    // Meetings and captures first, then the player's own fleets, then everything that moved.
+    const spots = (list: ReplayView['moves']) => list.flatMap((m) => m.path.flatMap((spot) => [spot.at, spot.to ?? spot.at]));
+    const ids = new Set<string>([...replay.clashes.map((c) => c.regionId), ...replay.changes.map((c) => c.regionId)]);
+    if (!ids.size) for (const id of spots(replay.moves.filter((m) => m.faction === me))) ids.add(id);
+    if (!ids.size) for (const id of spots(replay.moves)) ids.add(id);
+    // A fleet that reaches one of them comes into frame from where it set out.
+    for (const m of replay.moves) if (m.path.some((spot) => ids.has(spot.at))) for (const id of spots([m])) ids.add(id);
+    const pts = [...ids].flatMap((id) => pos.get(id) ?? []);
+    if (!pts.length) return;
+    const { w, h } = boxRef.current;
+    const ins = insetsRef.current;
+    const cur = viewRef.current;
+    const pad = 56;
+    const seen = pts.every((p) => {
+      const x = cur.x + p.u * cur.s;
+      const y = cur.y + (p.v * cur.s) / MAP_ASPECT;
+      return x >= ins.left + pad && x <= w - ins.right - pad && y >= ins.top + pad && y <= h - ins.bottom - pad;
+    });
+    if (seen) return;
+    const us = pts.map((p) => p.u);
+    const vs = pts.map((p) => p.v);
+    const [u0, u1, v0, v1] = [Math.min(...us), Math.max(...us), Math.min(...vs), Math.max(...vs)];
+    const fit = Math.min((w - ins.left - ins.right - 2 * pad) / Math.max(u1 - u0, 0.02), ((h - ins.top - ins.bottom - 2 * pad) * MAP_ASPECT) / Math.max(v1 - v0, 0.02));
+    flyTo(centred((u0 + u1) / 2, (v0 + v1) / 2, Math.min(cur.s, Math.max(fit, cur.s * 0.6))));
+    // Only a new replay moves the camera; panning and zooming during it must not.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replay]);
 
   const zoomAt = useCallback(
     (factor: number, px: number, py: number) => {
@@ -475,6 +523,17 @@ export function GrandMap({
             </button>
           );
         })}
+      {w > 0 && replay && (
+        <ReplayLayer
+          replay={replay}
+          at={(id) => (pos.has(id) ? { x: px(id), y: py(id) } : null)}
+          top={insets.top + 6}
+          reduced={reducedMotion}
+          onPhase={(phase) => onReplayPhase?.(phase)}
+          onBeat={(kind) => onReplayBeat?.(kind)}
+          onDone={() => onReplayDone?.()}
+        />
+      )}
       <div
         className="gm__zoom"
         style={{ left: 12 + insets.left, bottom: 12 + insets.bottom }}

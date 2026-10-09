@@ -145,6 +145,8 @@ export interface TurnView {
 export interface BattleSideView {
   faction: FactionId;
   name: string;
+  /** The commander at the head of this side, if it has one. */
+  leader?: CommanderView;
   ships: number;
   crew: number;
   /** Combined fighting power, any unit: only the ratio is shown. */
@@ -200,6 +202,8 @@ export interface LogLineView {
   turn: number;
   text: string;
   tone: 'info' | 'good' | 'bad';
+  /** Set on news the screen answers with a sound: a finished work or a launched ship. */
+  tag?: 'built' | 'event';
 }
 
 export interface RelationView {
@@ -244,4 +248,39 @@ export interface SaveView {
   /** Meetings waiting to be fought. */
   waiting: number;
   over: boolean;
+}
+
+/** A point on the map: a region, or a fraction `t` of the way along the lane from `at` to `to`. */
+export interface SpotView {
+  at: string;
+  to?: string;
+  t?: number;
+}
+
+/** What the turn that just closed did to the map, for the replay layer. */
+export interface ReplayView {
+  moves: { id: string; faction: FactionId; name: string; ships: number; path: SpotView[]; lost: boolean }[];
+  clashes: { regionId: string; attacker: FactionId; defender: FactionId; waiting: boolean }[];
+  changes: { regionId: string; from: Owner; to: FactionId }[];
+}
+
+/** A scripted turning point of the war, dealt as a card with two answers. */
+export interface EventView {
+  id: string;
+  /** "1597년 4월". */
+  date: string;
+  title: string;
+  text: string;
+  portrait?: string;
+  choices: { label: string; hint: string }[];
+}
+
+/** The numbers of the turn that closed: treasury, ports, ships, and what the news said. */
+export interface TurnReportView {
+  date: string;
+  gold: { now: number; before: number; earned: number; upkeep: number; spent: number; events: number };
+  regions: { now: number; before: number };
+  ships: { now: number; before: number };
+  battles: number;
+  news: LogLineView[];
 }

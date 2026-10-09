@@ -608,7 +608,7 @@ input {
   width: clamp(250px, 23vw, 360px);
   /* A selected ship lists crew stations and guns, more than the minimap's height holds: the panel grows upward from the bottom edge. */
   min-height: var(--bh);
-  max-height: calc(100vh - 150px);
+  max-height: calc(100dvh - 150px);
   overflow-y: auto;
   scrollbar-width: thin;
   flex: none;
