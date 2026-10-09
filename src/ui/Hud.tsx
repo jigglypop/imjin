@@ -5,12 +5,13 @@ import { isTouchDevice } from '../game/device';
 import { EQUIPMENT_LABEL, LEVELS, equipment, saveEquipmentSetting, type EquipmentSetting } from '../game/quality';
 import { SKY_PRESETS, type SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
-import { setTouchBox, useUi, type GameSnapshot, type PrimaryInfo, type SquadronInfo } from '../state/store';
-import type { ShipKind, Team } from '../sim/types';
+import { setTouchBox, useUi, type BattleOrigin, type GameSnapshot, type PrimaryInfo, type SquadronInfo } from '../state/store';
+import type { Team } from '../sim/types';
 import { FACTION_MARK, FACTION_NAME } from '../sim/balance';
 import { useCompactLayout } from './useCompactLayout';
 import { ConquestBar, CrewPanel, PointPanel } from './ConquestPanels';
 import { DirectorToggle } from './DirectorToggle';
+import { KIND_HANJA } from './kinds';
 
 const SEA_LABELS: Record<SeaStateName, string> = { calm: '잔잔', moderate: '보통', rough: '거침' };
 const ACTIVITY: Record<string, string> = {
@@ -25,16 +26,6 @@ const ACTIVITY: Record<string, string> = {
   anchored: '정박',
   fleeing: '도주',
   aground: '좌초',
-};
-export const KIND_HANJA: Record<ShipKind, string> = {
-  panokseon: '板',
-  geobukseon: '龜',
-  hyeopseon: '挾',
-  atakebune: '安',
-  sekibune: '關',
-  kobaya: '小',
-  mingship: '明',
-  mingsmall: '沙',
 };
 const STANCE_SHORT = { auto: '자유', standoff: '원거리', close: '근접', ram: '충파', board: '등선' } as const;
 const AMMO_SHORT = { auto: '기본탄', hull: '대장군전', crew: '조란환', fire: '화전' } as const;
@@ -78,7 +69,7 @@ function Stat({ label, value, tone, text }: { label: string; value: number; tone
 
 function Card({ sq, onClick, onDouble }: { sq: SquadronInfo; onClick: (e: React.MouseEvent) => void; onDouble: () => void }) {
   return (
-    <button className={`card ${sq.selected ? 'card--selected' : ''} ${sq.alive === 0 ? 'card--dead' : ''}`} onClick={onClick} onDoubleClick={onDouble} title={`${sq.name} · ${sq.commander}`}>
+    <button className={`card f-${sq.faction} ${sq.selected ? 'card--selected' : ''} ${sq.alive === 0 ? 'card--dead' : ''}`} onClick={onClick} onDoubleClick={onDouble} title={`${sq.name} · ${sq.commander}`}>
       <img src={`/ui/portraits/${sq.portrait}.jpg`} alt="" />
       <div className="card-kind">{KIND_HANJA[sq.kind] ?? '船'}</div>
       <div className="card-flags">
@@ -175,17 +166,75 @@ function Orders({ engine, p, night, selected, collapsed, onToggle }: { engine: E
   );
 }
 
+/** Where the back button leads, named for the screen the battle was started from. */
+const BACK_LABEL: Record<BattleOrigin, { long: string; short: string }> = {
+  select: { long: '전투 선택', short: '선택' },
+  skirmish: { long: '쟁탈전', short: '쟁탈전' },
+  online: { long: '대전 대기실', short: '대기실' },
+};
+
+/** Pause and speed. Wide layouts show every multiplier; compact ones show one button that cycles through them. */
+function SpeedControl({ engine, snap, compact }: { engine: Engine; snap: GameSnapshot; compact: boolean }) {
+  const setSpeed = (s: number) => {
+    engine.speed = s;
+    engine.paused = false;
+    engine.publish(true);
+  };
+  const next = SPEEDS[(SPEEDS.findIndex((s) => s === snap.speed) + 1) % SPEEDS.length]!;
+  return (
+    <>
+      <button
+        className={snap.paused ? 'on' : ''}
+        aria-label={snap.paused ? '계속' : '일시정지'}
+        onClick={() => {
+          engine.paused = !engine.paused;
+          engine.publish(true);
+        }}
+      >
+        {snap.paused ? '▶' : '❚❚'}
+      </button>
+      {compact ? (
+        <button aria-label="배속 바꾸기" onClick={() => setSpeed(next)}>
+          {snap.speed}×
+        </button>
+      ) : (
+        SPEEDS.map((s) => (
+          <button key={s} className={!snap.paused && snap.speed === s ? 'on' : ''} onClick={() => setSpeed(s)}>
+            {s}×
+          </button>
+        ))
+      )}
+      {(snap.autoFast || snap.fastForward) && (
+        <button
+          className={`speed-skip ${snap.fastForward ? 'on' : ''}`}
+          title="적과 마주칠 때까지 빠르게 진행"
+          onClick={() => {
+            engine.autoFast = false;
+            engine.fastForward = false;
+            engine.publish(true);
+          }}
+        >
+          {snap.fastForward ? (compact ? '⏩ 접근' : '접근 중 ⏩') : '⏩'}
+        </button>
+      )}
+    </>
+  );
+}
+
 export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) {
   const snap = useUi((s) => s.snapshot);
   const toasts = useUi((s) => s.toasts);
   const box = useUi((s) => s.box);
   const report = useUi((s) => s.report);
   const touchBox = useUi((s) => s.touchBox);
+  const origin = useUi((s) => s.origin);
   const compact = useCompactLayout();
   const [showSettings, setShowSettings] = useState(false);
   // The minimap is always on in the wide layout. On phones it opens as a floating panel from the menu.
   const [mapOn, setMapOn] = useState(false);
   const [ordersCollapsed, setOrdersCollapsed] = useState(false);
+  // Portrait phones fold the detail and orders away to leave the sea in view. Short phones start folded.
+  const [sheetFolded, setSheetFolded] = useState(() => innerHeight < 760);
   const minimapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -200,16 +249,16 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const enemyFaction = snap.squadrons.find((s) => s.team === enemyTeam)?.faction ?? enemyTeam;
   const won = snap.winner === snap.team;
   return (
-    <div className="hud">
+    <div className="hud" style={{ '--own-fc': `var(--${snap.faction})`, '--enemy-fc': `var(--${enemyFaction})` } as React.CSSProperties}>
       <div className="hud-title">
-        <div className="hud-title-main brush">{snap.scenario.title}</div>
+        <div className="hud-title-main">{snap.scenario.title}</div>
         <div className="hud-title-sub">
           {snap.scenario.date} · {snap.scenario.place}
         </div>
         <div className="hud-menu">
           <button className="mini-btn" onClick={onBack}>
-            <span className="long">전투 선택</span>
-            <span className="short">선택</span>
+            <span className="long">{BACK_LABEL[origin].long}</span>
+            <span className="short">{BACK_LABEL[origin].short}</span>
           </button>
           <button className={`mini-btn ${showSettings ? 'mini-btn--on' : ''}`} onClick={() => setShowSettings((v) => !v)}>
             설정
@@ -266,7 +315,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
 
       <div className="toasts">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast paper toast--${t.tone}`}>
+          <div key={t.id} className={`toast glass toast--${t.tone}`}>
             <span className="seal">{t.tone === 'good' ? '勝' : t.tone === 'bad' ? '敗' : '令'}</span>
             {t.text}
           </div>
@@ -275,7 +324,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
 
       {showSettings && (
         <aside className="settings">
-          <div className="settings-body paper">
+          <div className="settings-body glass">
             <div>
               <div className="settings-label">하늘</div>
               <div className="chips">
@@ -372,9 +421,9 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
         </div>
       )}
 
-      <div className="bottom">
+      <div className={`bottom ${sheetFolded ? 'bottom--folded' : ''}`}>
         {!compact && <div className="minimap" ref={minimapRef} />}
-        <div className="detail paper interactive">
+        <div className={`detail glass interactive ${p ? '' : 'detail--empty'}`}>
           {p ? (
             <>
               <img className="detail-portrait" src={`/ui/portraits/${selectedSquad?.portrait ?? snap.squadrons.find((s) => s.selected)?.portrait ?? 'portrait_admiral'}.jpg`} alt="" />
@@ -432,50 +481,26 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             <Card key={sq.id} sq={sq} onClick={(e) => engine.selectSquadron(sq.id, e.shiftKey)} onDouble={() => engine.focusSquadron(sq.id)} />
           ))}
         </div>
-        <div className={`orders paper interactive ${ordersCollapsed ? 'orders--collapsed' : ''}`}>
+        <div className={`orders glass interactive ${ordersCollapsed ? 'orders--collapsed' : ''}`}>
           <Orders engine={engine} p={p} night={snap.night} selected={snap.selectedCount} collapsed={ordersCollapsed} onToggle={() => setOrdersCollapsed((v) => !v)} />
-          <div className="speed" style={engine.remote ? { display: 'none' } : undefined}>
-            <button
-              className={snap.paused ? 'on' : ''}
-              onClick={() => {
-                engine.paused = !engine.paused;
-                engine.publish(true);
-              }}
-            >
-              {snap.paused ? '▶' : '❚❚'}
-            </button>
-            {SPEEDS.map((s) => (
-              <button
-                key={s}
-                className={!snap.paused && snap.speed === s ? 'on' : ''}
-                onClick={() => {
-                  engine.speed = s;
-                  engine.paused = false;
-                  engine.publish(true);
-                }}
-              >
-                {s}×
-              </button>
-            ))}
-            {(snap.autoFast || snap.fastForward) && (
-              <button
-                className={`speed-skip ${snap.fastForward ? 'on' : ''}`}
-                title="적과 마주칠 때까지 빠르게 진행"
-                onClick={() => {
-                  engine.autoFast = false;
-                  engine.fastForward = false;
-                  engine.publish(true);
-                }}
-              >
-                ⏩
-              </button>
-            )}
-          </div>
+          {!compact && !engine.remote && (
+            <div className="speed">
+              <SpeedControl engine={engine} snap={snap} compact={false} />
+            </div>
+          )}
         </div>
+        {compact && (
+          <div className="dock interactive">
+            <button className="dock-fold" aria-expanded={!sheetFolded} onClick={() => setSheetFolded((v) => !v)}>
+              지휘 <span aria-hidden>{sheetFolded ? '▴' : '▾'}</span>
+            </button>
+            {!engine.remote && <SpeedControl engine={engine} snap={snap} compact />}
+          </div>
+        )}
       </div>
 
       {snap.winner && (
-        <div className={`result paper result--${won ? 'win' : 'loss'}`}>
+        <div className={`result glass result--${won ? 'win' : 'loss'}`}>
           <div className="result-title">{won ? '大捷' : '敗戰'}</div>
           <div className="result-sub">{won ? `${snap.scenario.title} — 승리` : `${FACTION_NAME[snap.faction]} 패전`}</div>
           <div className="result-stats">
@@ -509,7 +534,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             </div>
           )}
           <button className="ink-btn" onClick={onBack}>
-            {report ? '군영으로' : '전투 선택'}
+            {report ? '군영으로' : BACK_LABEL[origin].long}
           </button>
         </div>
       )}

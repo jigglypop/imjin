@@ -15,7 +15,6 @@ import {
   PerspectiveCamera,
   PlaneGeometry,
   RedFormat,
-  RepeatWrapping,
   Scene,
   SRGBColorSpace,
   TextureLoader,
@@ -130,7 +129,6 @@ export class SelectScene {
   private goalPitch = 0.86;
   private time = 0;
   private idle = 0;
-  private readonly paperTone = uniform(new Vector3(0.904, 0.863, 0.776));
   private readonly clock = uniform(0);
   private readonly flags: Flag[] = [];
   private forces: { id: ScenarioId; player: Faction } | null = null;
@@ -149,7 +147,7 @@ export class SelectScene {
     camera.near = 0.05;
     camera.far = 600;
     camera.updateProjectionMatrix();
-    this.scene.background = new Color('#efe9dc');
+    this.scene.background = new Color('#050b13');
   }
 
   async init(initial: ScenarioId) {
@@ -270,10 +268,6 @@ export class SelectScene {
     const segments = this.segments;
     const geo = new PlaneGeometry(MAP_W, this.mapH, segments, Math.round((segments * meta.height) / meta.width));
     geo.rotateX(-Math.PI / 2);
-    const hanji = new TextureLoader().load('/ui/hanji_fiber.jpg');
-    hanji.wrapS = RepeatWrapping;
-    hanji.wrapT = RepeatWrapping;
-    hanji.colorSpace = SRGBColorSpace;
     const vScale = (EXAGGERATION * MAP_W) / (meta.width * meta.metersPerPixel);
     const m = new MeshBasicNodeMaterial();
     const fUV = vec2(uv().x, float(1).sub(uv().y));
@@ -289,8 +283,11 @@ export class SelectScene {
     const L = normalize(vec3(-0.55, 0.62, -0.55));
     const lit = clamp(dot(n, L), 0, 1);
     const slope = float(1).sub(n.y);
-    const paper = vec3(this.paperTone).mul(texture(hanji, positionWorld.xz.mul(0.045)).rgb.mul(0.16).add(0.86));
-    const ink = vec3(0.13, 0.115, 0.1);
+    // Dark sea, slate land, a light rim along the coast (the same look as the static phone map, public/ui/map_south.webp).
+    const paper = vec3(0.4, 0.5, 0.62);
+    const ink = vec3(0.035, 0.07, 0.11);
+    const rim = vec3(0.82, 0.91, 1);
+    const seaBase = vec3(0.02, 0.043, 0.075);
     const land = h.greaterThan(0);
     const heightWash = smoothstep(50, 1600, h).mul(0.3);
     const shade = pow(float(1).sub(lit), 1.4).mul(0.6).add(slope.mul(0.85)).add(heightWash).clamp(0, 0.82);
@@ -298,17 +295,17 @@ export class SelectScene {
     const contour = smoothstep(0.47, 0.5, band.add(fwidth(h.div(250)).mul(0.6))).mul(smoothstep(80, 200, h));
     const landColor = mix(paper, ink, shade.add(contour.mul(0.1)));
     const depth = h.negate().max(0);
-    const seaWash = mix(vec3(0.94, 0.93, 0.89), vec3(0.76, 0.79, 0.8), smoothstep(0, 900, depth));
+    const seaWash = mix(vec3(0.078, 0.2, 0.32), vec3(0.024, 0.055, 0.095), smoothstep(0, 900, depth));
     const waves = sin(positionWorld.z.mul(5.2).add(sin(positionWorld.x.mul(0.9)).mul(1.4))).mul(0.5).add(0.5);
     const waveLines = smoothstep(0.94, 1, waves).mul(0.035).mul(float(1).sub(smoothstep(0, 400, depth)).add(0.35));
-    const seaColor = paper.mul(seaWash.mul(1.02)).sub(waveLines);
+    const seaColor = seaWash.add(waveLines.mul(0.4));
     const coastW = fwidth(h).mul(1.3).add(2);
     const coast = float(1).sub(smoothstep(0, coastW, abs(h)));
     const surf = float(1).sub(smoothstep(0, 45, depth)).mul(land.select(float(0), float(1)));
-    const base = land.select(landColor, mix(seaColor, ink, surf.mul(0.16)));
-    const withCoast = mix(base, ink, coast.mul(0.85));
+    const base = land.select(landColor, mix(seaColor, vec3(0.2, 0.36, 0.52), surf.mul(0.35)));
+    const withCoast = mix(base, rim, coast.mul(0.5));
     const edge = smoothstep(0, 0.08, uv().x).mul(smoothstep(1, 0.92, uv().x)).mul(smoothstep(0, 0.1, uv().y)).mul(smoothstep(1, 0.9, uv().y));
-    m.colorNode = mix(vec3(this.paperTone), withCoast, edge);
+    m.colorNode = mix(seaBase, withCoast, edge);
     const mesh = new Mesh(geo, m);
     mesh.frustumCulled = false;
     return mesh;
@@ -335,7 +332,8 @@ export class SelectScene {
 
   focus(id: ScenarioId, instant = false) {
     this.worldOf(id, this.goal);
-    this.goal.z -= 3.2;
+    // Aim south of the site so it sits in the upper half of the screen, above the brief card.
+    this.goal.z += 2.4;
     this.goalDist = Math.min(this.goalDist, 40);
     if (instant) {
       this.target.copy(this.goal);
@@ -374,19 +372,15 @@ export class SelectScene {
     ctx.clearRect(0, 0, w, h);
     if (faction === 'japan') {
       // Nobori: a tall white banner with a crest and the commander's name down the middle.
-      ctx.fillStyle = '#ece6d8';
+      ctx.fillStyle = '#d2453d';
       ctx.fillRect(0, 0, w, h);
-      for (let i = 0; i < 1800; i += 1) {
-        ctx.fillStyle = 'rgba(120,110,95,' + Math.random() * 0.06 + ')';
-        ctx.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 10);
-      }
-      ctx.fillStyle = '#16120e';
+      ctx.fillStyle = '#f5f8fc';
       ctx.fillRect(0, 0, w, 26);
       const cx = w / 2;
       const cy = w * 0.62;
       const r = w * 0.3;
       ctx.lineWidth = 16;
-      ctx.strokeStyle = '#16120e';
+      ctx.strokeStyle = '#f5f8fc';
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.stroke();
@@ -403,7 +397,7 @@ export class SelectScene {
         ctx.lineTo(tx + Math.cos(a - 0.3) * r * 0.2, ty + Math.sin(a - 0.3) * r * 0.2);
         ctx.fill();
       }
-      ctx.font = '900 190px "Noto Serif KR", serif';
+      ctx.font = '700 190px "Noto Serif KR", serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       [...text].forEach((ch, i) => ctx.fillText(ch, cx, w * 1.25 + i * 210));
@@ -411,15 +405,9 @@ export class SelectScene {
     }
     // Joseon: a hemp-coloured command flag with a red flame border. Ming: a red flag with a gold border and seal.
     const ming = faction === 'ming';
-    ctx.fillStyle = ming ? '#9b2f22' : '#d8c28c';
+    ctx.fillStyle = ming ? '#e2a53b' : '#3a86d6';
     ctx.fillRect(0, 0, w, h);
-    for (let i = 0; i < 2600; i += 1) {
-      ctx.fillStyle = ming
-        ? 'rgba(60,10,6,' + Math.random() * 0.1 + ')'
-        : 'rgba(' + (120 + Math.random() * 60) + ',' + (95 + Math.random() * 50) + ',' + (50 + Math.random() * 30) + ',' + Math.random() * 0.08 + ')';
-      ctx.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 3, 1 + Math.random() * 12);
-    }
-    ctx.fillStyle = ming ? '#d9a441' : '#8b2e22';
+    ctx.fillStyle = ming ? '#fff1cf' : '#f5f8fc';
     const tooth = 34;
     for (let x = 0; x < w; x += tooth) {
       ctx.beginPath();
@@ -441,13 +429,13 @@ export class SelectScene {
       ctx.fill();
     }
     if (ming) {
-      ctx.fillStyle = '#d9a441';
+      ctx.fillStyle = '#fff1cf';
       ctx.beginPath();
       ctx.arc(w * 0.47, h * 0.5, w * 0.3, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = '#16120e';
-    ctx.font = `900 ${ming ? 230 : 300}px "Noto Serif KR", serif`;
+    ctx.fillStyle = ming ? '#2b1c00' : '#ffffff';
+    ctx.font = `700 ${ming ? 230 : 300}px "Noto Serif KR", serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, w * 0.47, h * 0.5);
@@ -462,7 +450,7 @@ export class SelectScene {
     tex.colorSpace = SRGBColorSpace;
     tex.anisotropy = 8;
     const flag: Flag = { faction, group: new Group(), canvas, tex, text: '', base: 0, pos: new Vector3(), goal: new Vector3(), scale: 0, goalScale: 0 };
-    void document.fonts.load('900 200px "Noto Serif KR"').then(() => {
+    void document.fonts.load('700 200px "Noto Serif KR"').then(() => {
       if (!flag.text) return;
       this.paintFlag(canvas, faction, flag.text);
       tex.needsUpdate = true;
@@ -482,10 +470,10 @@ export class SelectScene {
     m.positionNode = positionLocal.add(vec3(0, d.mul(d).mul(-0.04), wave));
     m.colorNode = texture(tex, uv()).rgb.mul(slope.mul(d).mul(0.22).add(0.86));
     const cloth = new Mesh(geo, m);
-    const wood = new MeshBasicNodeMaterial({ color: 0x2a1d14 });
+    const wood = new MeshBasicNodeMaterial({ color: 0x1a2430 });
     const pole = new Mesh(new CylinderGeometry(0.014, 0.018, aspect + 1.6, 10), wood);
     pole.position.set(0, -aspect / 2 - 0.2, 0);
-    const finial = new Mesh(new CylinderGeometry(0, 0.04, 0.13, 8), new MeshBasicNodeMaterial({ color: 0xb08a3c }));
+    const finial = new Mesh(new CylinderGeometry(0, 0.04, 0.13, 8), new MeshBasicNodeMaterial({ color: 0xdfe8f2 }));
     finial.position.set(0, 0.665, 0);
     flag.group.add(cloth, pole, finial);
     if (tall) {

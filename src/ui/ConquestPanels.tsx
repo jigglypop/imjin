@@ -50,7 +50,7 @@ export function ConquestBar({ c }: { c: ConquestSnapshot }) {
 export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDetail; onClose: () => void }) {
   const holdPct = Math.round(Math.abs(p.hold) * 100);
   return (
-    <aside className="cq-point paper interactive">
+    <aside className="cq-point glass interactive">
       <div className="cq-point-head">
         <div className={`cq-seal cq-seal--${p.side}`}>{p.hanja[0]}</div>
         <div>

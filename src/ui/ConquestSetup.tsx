@@ -104,76 +104,82 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
     onStart({ map: cfg.map, seats, you: 0, seed: 1592 + Math.floor(Math.random() * 100000) });
   };
   return (
-    <div className="cs paper">
-      <div className="cs-maps">
-        {CONQUEST_ORDER.map((id) => (
-          <button key={id} className={`cs-map ${cfg.map === id ? 'cs-map--on' : ''}`} onClick={() => setCfg({ map: id })}>
-            <b>{CONQUEST_MAPS[id].title}</b>
-            <small>
-              {CONQUEST_MAPS[id].place} · {CONQUEST_MAPS[id].seats >= 4 ? '1:1 · 2:2' : '1:1'}
-            </small>
-          </button>
-        ))}
-      </div>
-      <p className="cs-summary">{map.summary}</p>
-      <FactionPick label="아군" value={cfg.me} onChange={(me) => setCfg({ me })} />
-      <FactionPick label="적군" value={cfg.foe} onChange={(foe) => setCfg({ foe })} />
-      {map.seats >= 4 && (
-        <div className="cs-row">
-          <span className="cs-label">규모</span>
-          <div className="chips">
-            <button className={`chip ${size === 2 ? 'chip--on' : ''}`} onClick={() => setCfg({ size: 2 })}>
-              1 : 1
-            </button>
-            <button className={`chip ${size === 4 ? 'chip--on' : ''}`} onClick={() => setCfg({ size: 4 })}>
-              2 : 2 (컴퓨터 우군)
-            </button>
-          </div>
-        </div>
-      )}
-      {size === 4 && <FactionPick label="우군" value={cfg.ally} onChange={(ally) => setCfg({ ally })} />}
-      <div className="cs-row cs-row--top">
-        <span className="cs-label">편성</span>
-        <div className="cs-muster">
-          <div className="cs-budget">
-            <div className="cs-budget-bar">
-              <i style={{ width: `${(cost / MUSTER_BUDGET) * 100}%` }} />
-            </div>
-            <span>
-              {cost.toLocaleString('ko-KR')} / {MUSTER_BUDGET.toLocaleString('ko-KR')} <small>남는 돈은 군자금으로</small>
-            </span>
-          </div>
-          <div className="cs-ships">
-            {ROSTER[cfg.me].map((k) => (
-              <div key={k} className="cs-ship">
-                <div className="cs-ship-name">
-                  <b>{SHORT_NAME[k]}</b>
-                  <small>{SHIP_SPECS[k].cost}</small>
-                </div>
-                <div className="cs-ship-note">{ROLE_NOTE[k]}</div>
-                <div className="cs-ship-count">
-                  <button onClick={() => remove(k)} disabled={!counts.get(k)}>
-                    −
-                  </button>
-                  <b>{counts.get(k) ?? 0}</b>
-                  <button onClick={() => add(k)} disabled={cost + SHIP_SPECS[k].cost > MUSTER_BUDGET}>
-                    +
-                  </button>
-                </div>
-              </div>
+    <div className="cs glass">
+      <div className="cs-cols">
+        <div className="cs-col">
+          <div className="cs-maps">
+            {CONQUEST_ORDER.map((id) => (
+              <button key={id} className={`cs-map ${cfg.map === id ? 'cs-map--on' : ''}`} onClick={() => setCfg({ map: id })}>
+                <b>{CONQUEST_MAPS[id].title}</b>
+                <small>
+                  {CONQUEST_MAPS[id].place} · {CONQUEST_MAPS[id].seats >= 4 ? '1:1 · 2:2' : '1:1'}
+                </small>
+              </button>
             ))}
           </div>
-          <div className="chips">
-            <button className="chip" onClick={() => setFleet(autoFleet(cfg.me))}>
-              기본 편성
-            </button>
-            <button className="chip" onClick={() => setFleet([])}>
-              비우기
-            </button>
+          <p className="cs-summary">{map.summary}</p>
+          <FactionPick label="아군" value={cfg.me} onChange={(me) => setCfg({ me })} />
+          <FactionPick label="적군" value={cfg.foe} onChange={(foe) => setCfg({ foe })} />
+          {map.seats >= 4 && (
+            <div className="cs-row">
+              <span className="cs-label">규모</span>
+              <div className="chips">
+                <button className={`chip ${size === 2 ? 'chip--on' : ''}`} onClick={() => setCfg({ size: 2 })}>
+                  1 : 1
+                </button>
+                <button className={`chip ${size === 4 ? 'chip--on' : ''}`} onClick={() => setCfg({ size: 4 })}>
+                  2 : 2 (컴퓨터 우군)
+                </button>
+              </div>
+            </div>
+          )}
+          {size === 4 && <FactionPick label="우군" value={cfg.ally} onChange={(ally) => setCfg({ ally })} />}
+        </div>
+        <div className="cs-col">
+          <div className="cs-row cs-row--top">
+            <span className="cs-label">편성</span>
+            <div className="cs-muster">
+              <div className="cs-budget">
+                <div className="cs-budget-bar">
+                  <i style={{ width: `${(cost / MUSTER_BUDGET) * 100}%` }} />
+                </div>
+                <span>
+                  {cost.toLocaleString('ko-KR')} / {MUSTER_BUDGET.toLocaleString('ko-KR')} <small>남는 돈은 군자금으로</small>
+                </span>
+              </div>
+              <div className="cs-ships">
+                {ROSTER[cfg.me].map((k) => (
+                  <div key={k} className="cs-ship">
+                    <div className="cs-ship-name">
+                      <b>{SHORT_NAME[k]}</b>
+                      <small>{SHIP_SPECS[k].cost}</small>
+                    </div>
+                    <div className="cs-ship-note">{ROLE_NOTE[k]}</div>
+                    <div className="cs-ship-count">
+                      <button onClick={() => remove(k)} disabled={!counts.get(k)}>
+                        −
+                      </button>
+                      <b>{counts.get(k) ?? 0}</b>
+                      <button onClick={() => add(k)} disabled={cost + SHIP_SPECS[k].cost > MUSTER_BUDGET}>
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="chips">
+                <button className="chip" onClick={() => setFleet(autoFleet(cfg.me))}>
+                  기본 편성
+                </button>
+                <button className="chip" onClick={() => setFleet([])}>
+                  비우기
+                </button>
+              </div>
+            </div>
           </div>
+          <div className="cs-trait">{TRAIT[cfg.me]}</div>
         </div>
       </div>
-      <div className="cs-trait">{TRAIT[cfg.me]}</div>
       <div className="select-foot">
         <span className="select-result">포구를 차지해 적의 기세를 꺾어라 · 30분</span>
         <button className="ink-btn" disabled={!fleet.length} onClick={start}>

@@ -1,0 +1,150 @@
+import { useEffect, useState, type ReactNode } from 'react';
+import { sound } from '../audio/Sound';
+import { EQUIPMENT_LABEL, equipment, saveEquipmentSetting, type EquipmentSetting } from '../game/quality';
+import { FACTION_MARK } from '../sim/balance';
+import { FACTIONS } from '../sim/types';
+import { setScreen, type Screen } from '../state/store';
+
+const go = (screen: Screen) => () => {
+  sound.click();
+  setScreen(screen);
+};
+
+/** Header with a back button to the menu, for every screen below the main menu. */
+export function ScreenFrame({ title, children, actions, className = '' }: { title: string; children: ReactNode; actions?: ReactNode; className?: string }) {
+  return (
+    <section className={`screen ${className}`}>
+      <div className="screen-bg screen-bg--on" />
+      <header className="screen-top">
+        <button className="back-btn" onClick={go('menu')} aria-label="메뉴로">
+          <span aria-hidden>‹</span> 메뉴
+        </button>
+        <h1 className="screen-title">{title}</h1>
+        {actions && <div className="screen-actions">{actions}</div>}
+      </header>
+      <div className="screen-body">{children}</div>
+    </section>
+  );
+}
+
+const MODES: { screen: Screen; icon: string; title: string; desc: string; brief: string; soon?: boolean }[] = [
+  { screen: 'select', icon: '史', title: '역사 전투', desc: '명량, 한산도 등 아홉 해전을 그날의 바다에서 치른다. 진영을 골라 지휘하고, 1592 전역으로도 이어 간다.', brief: '아홉 해전을 그날의 바다에서' },
+  { screen: 'faction', icon: '覇', title: '진영 전역', desc: '조선, 명, 일본 가운데 한 진영을 골라 바다와 포구를 넓혀 가는 전략 전역.', brief: '한 진영을 골라 바다를 넓힌다', soon: true },
+  { screen: 'skirmish', icon: '爭', title: '쟁탈전', desc: '포구를 차지해 적의 기세를 꺾는 거점 점령전. 함대를 직접 편성해 출진한다.', brief: '포구를 차지하는 거점 점령전' },
+  { screen: 'online', icon: '對', title: '온라인 대전', desc: '다른 사람과 같은 바다에서 겨룬다. 방을 열거나 열린 방에 들어간다.', brief: '다른 사람과 같은 바다에서' },
+];
+
+export function MainMenu() {
+  const [bg, setBg] = useState(false);
+  // The map fades in after first paint; the menu itself needs no image.
+  useEffect(() => {
+    const id = window.setTimeout(() => setBg(true), 60);
+    return () => window.clearTimeout(id);
+  }, []);
+  return (
+    <section className="screen menu">
+      <div className={`screen-bg ${bg ? 'screen-bg--on' : ''}`} />
+      <header className="screen-top">
+        <button className="back-btn" onClick={go('settings')}>
+          설정
+        </button>
+      </header>
+      <div className="menu-inner">
+        <div className="wordmark">
+          <div className="wordmark-hanja">壬辰海戰</div>
+          <div className="wordmark-ko">임진 해전</div>
+          <div className="wordmark-sub">1592 · 조선 수군의 바다</div>
+        </div>
+        <div>
+          <div className="mode-grid">
+            {MODES.map((m) => (
+              <button key={m.screen} className={`mode-card ${m.soon ? 'mode-card--soon' : ''}`} onClick={go(m.screen)}>
+                <span className="mode-icon" aria-hidden>
+                  {m.icon}
+                </span>
+                <span className="mode-title">
+                  {m.title}
+                  {m.soon && <span className="badge">준비 중</span>}
+                </span>
+                <span className="mode-desc">
+                  <span className="long">{m.desc}</span>
+                  <span className="brief">{m.brief}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** The Total War style faction campaign is built elsewhere; this holds its place in the menu. */
+export function FactionScreen() {
+  return (
+    <ScreenFrame title="진영 전역">
+      <div className="notice glass">
+        <span className="badge">준비 중</span>
+        <h2>진영 전역</h2>
+        <p>조선, 명, 일본 가운데 한 진영을 골라 영토를 넓히고 함대를 키우며 바다를 차지하는 전략 전역입니다. 지금은 만들고 있습니다.</p>
+        <div className="notice-emblems">
+          {FACTIONS.map((f) => (
+            <i key={f} className={`emblem emblem--${f}`}>
+              {FACTION_MARK[f]}
+            </i>
+          ))}
+        </div>
+        <button className="ink-btn" onClick={go('menu')}>
+          메뉴로 돌아가기
+        </button>
+      </div>
+    </ScreenFrame>
+  );
+}
+
+const EQUIPMENT_CHOICES: EquipmentSetting[] = ['auto', 'high', 'medium', 'low'];
+
+export function SettingsScreen() {
+  const [muted, setMuted] = useState(sound.muted);
+  const choose = (next: EquipmentSetting) => {
+    if (next === equipment.setting) return;
+    saveEquipmentSetting(next);
+    const url = new URL(location.href);
+    url.searchParams.delete('q');
+    location.assign(url.toString());
+  };
+  return (
+    <ScreenFrame title="설정">
+      <div className="settings-page glass">
+        <div>
+          <div className="settings-label">소리</div>
+          <div className="chips">
+            <button
+              className={`chip ${!muted ? 'chip--on' : ''}`}
+              onClick={() => {
+                sound.setMuted(muted);
+                setMuted(!muted);
+              }}
+            >
+              {muted ? '소리 꺼짐' : '소리 켜짐'}
+            </button>
+          </div>
+        </div>
+        <div>
+          <div className="settings-label">
+            설비 등급 <small>{EQUIPMENT_LABEL[equipment.setting]} · 바꾸면 페이지를 다시 불러옵니다</small>
+          </div>
+          <div className="chips">
+            {EQUIPMENT_CHOICES.map((k) => (
+              <button key={k} className={`chip ${equipment.setting === k ? 'chip--on' : ''}`} onClick={() => choose(k)}>
+                {EQUIPMENT_LABEL[k]}
+              </button>
+            ))}
+          </div>
+          <div className="settings-hint">자동은 기기에 맞춰 고릅니다. 화면이 끊기거나 꺼진다면 폰급으로 낮추십시오.</div>
+        </div>
+        <div className="settings-hint">전투 중의 화질·하늘·파도는 전투 화면의 설정에서 바꿉니다.</div>
+      </div>
+    </ScreenFrame>
+  );
+}

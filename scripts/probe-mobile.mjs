@@ -33,7 +33,7 @@ for (const orient of orientations) {
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   const gpu = await page.evaluate(async () => { const g = navigator.gpu; if (!g) return 'no navigator.gpu'; try { const a = await g.requestAdapter(); return a ? 'webgpu adapter ok' : 'no adapter'; } catch (e) { return 'adapter error ' + e; } });
   let ready = true;
-  try { await page.waitForFunction(() => window.__ready === true || document.querySelector('.select, .battle-select, .mode-menu'), null, { timeout }); } catch { ready = false; }
+  try { await page.waitForFunction(() => window.__ready === true || document.querySelector('.screen, .select, .battle-select, .mode-menu'), null, { timeout }); } catch { ready = false; }
   const ms = Date.now() - t0;
   await page.waitForTimeout(Number(args.wait ?? 2500));
   const info = await page.evaluate(() => ({ ready: window.__ready === true, loading: document.querySelector('.loading')?.textContent?.slice(0, 120) ?? null, backend: window.__engine?.renderer?.backend?.isWebGPUBackend ? 'webgpu' : (window.__engine ? 'webgl2?' : 'no engine'), w: innerWidth, h: innerHeight, dpr: devicePixelRatio, heap: performance.memory?.usedJSHeapSize ?? null })).catch((e) => ({ err: String(e) }));

@@ -11,7 +11,7 @@ import {
   type SkillKey,
 } from '../campaign/campaign';
 import { sound } from '../audio/Sound';
-import { KIND_HANJA } from './Hud';
+import { KIND_HANJA } from './kinds';
 import type { ShipKind } from '../sim/types';
 
 function Bar({ value, tone }: { value: number; tone: 'hull' | 'crew' | 'supply' }) {
@@ -32,7 +32,7 @@ export function CampaignPanel({ campaign, onClose }: { campaign: Campaign; onClo
   const totals = campaign.squads.reduce((acc, sq) => acc + sq.ships.length, 0);
   return (
     <div className="camp-backdrop" onClick={onClose}>
-      <div className="camp paper" onClick={(e) => e.stopPropagation()}>
+      <div className="camp glass" onClick={(e) => e.stopPropagation()}>
         <div className="camp-head">
           <div className="camp-title">軍營 · 군영</div>
           <div className="camp-res">

@@ -1,34 +1,44 @@
-/* ---------------------------------------------------------------- faction picker on the battle brief */
+/* ============================================================================
+   Skirmish setup, online lobby, conquest HUD, capture-point labels and crew stations.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------- faction pick (history brief and skirmish setup) */
 
 .select-sides {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin: 2px 0 10px;
 }
 
-.side-btn {
+.side-btn,
+.cs-faction {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 12px 4px 4px;
-  border: 1px solid rgba(22, 18, 14, 0.25);
-  background: rgba(255, 252, 244, 0.35);
+  min-height: var(--tap);
+  padding: 4px 14px 4px 5px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
   cursor: pointer;
   color: var(--ink);
+  font-size: var(--fs-13);
+  font-weight: 650;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.side-btn:hover,
+.cs-faction:hover {
+  border-color: var(--ink);
 }
 
 .side-btn .emblem,
 .cs-faction .emblem {
-  width: 30px;
-  height: 30px;
-  font-size: 15px;
-  box-shadow: 0 0 0 1.5px var(--ink);
-}
-
-.side-btn .emblem::before,
-.cs-faction .emblem::before {
-  inset: 3px;
+  width: 32px;
+  height: 32px;
+  font-size: var(--fs-15);
+  box-shadow: none;
 }
 
 .side-btn span {
@@ -39,55 +49,59 @@
 }
 
 .side-btn b {
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 14px;
-  letter-spacing: 2px;
+  font-size: var(--fs-13);
+  font-weight: 700;
 }
 
 .side-btn small {
-  font-size: 11px;
-  color: var(--ink-3);
-  letter-spacing: 1px;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink-2);
 }
 
-.side-btn--on {
-  background: var(--ink);
-  color: var(--ivory);
-  border-color: var(--ink);
+.side-btn--on,
+.cs-faction--on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .side-btn--on small {
-  color: rgba(243, 236, 220, 0.7);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .side-vs {
   margin-left: auto;
-  font-size: 12px;
-  letter-spacing: 1px;
-  color: var(--ink-3);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
 }
 
 .side-vs b {
-  font-family: var(--display);
   color: var(--ink);
 }
 
-/* ---------------------------------------------------------------- conquest setup */
+/* ---------------------------------------------------------------- skirmish setup panel */
 
 .cs {
-  position: absolute;
-  left: 50%;
-  top: 84px;
-  transform: translateX(-50%);
-  width: min(820px, calc(100vw - 32px));
-  max-height: calc(100vh - 110px);
-  overflow-y: auto;
-  padding: 18px 24px 16px;
-  z-index: 5;
+  width: min(860px, 100%);
+  margin: 0 auto;
+  padding: var(--sp-4) var(--sp-5) 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-3);
+}
+
+.cs-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-3) var(--sp-5);
+}
+
+.cs-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
 }
 
 .cs-maps {
@@ -101,40 +115,42 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 3px;
+  min-height: var(--tap);
   padding: 10px 14px;
-  border: 1px solid rgba(22, 18, 14, 0.28);
-  background: rgba(255, 252, 244, 0.35);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.55);
   cursor: pointer;
   color: var(--ink);
   text-align: left;
 }
 
 .cs-map b {
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 17px;
-  letter-spacing: 3px;
+  font-size: var(--fs-17);
+  font-weight: 700;
 }
 
 .cs-map small {
-  font-size: 12px;
-  color: var(--ink-3);
-  letter-spacing: 1px;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink-2);
 }
 
 .cs-map--on {
-  background: var(--ink);
-  color: var(--ivory);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .cs-map--on small {
-  color: rgba(243, 236, 220, 0.72);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .cs-summary {
   margin: 0;
-  font-size: 14.5px;
-  line-height: 1.8;
+  font-size: var(--fs-15);
+  line-height: 1.7;
+  color: var(--ink-2);
 }
 
 .cs-row {
@@ -150,10 +166,8 @@
 .cs-label {
   flex: none;
   width: 44px;
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 14px;
-  letter-spacing: 3px;
+  font-weight: 700;
+  font-size: var(--fs-13);
   color: var(--ink-2);
 }
 
@@ -163,28 +177,9 @@
   gap: 6px;
 }
 
-.cs-faction {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 3px 12px 3px 3px;
-  border: 1px solid rgba(22, 18, 14, 0.25);
-  background: rgba(255, 252, 244, 0.35);
-  cursor: pointer;
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 13px;
-  letter-spacing: 2px;
-  color: var(--ink);
-}
-
-.cs-faction--on {
-  background: var(--ink);
-  color: var(--ivory);
-}
-
 .cs-muster {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -194,39 +189,42 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--fs-13);
+  font-weight: 650;
 }
 
 .cs-budget small {
-  color: var(--ink-3);
-  font-weight: 600;
   margin-left: 6px;
+  color: var(--ink-2);
+  font-weight: 500;
 }
 
 .cs-budget-bar {
   flex: 1;
   height: 8px;
-  background: rgba(22, 18, 14, 0.14);
-  box-shadow: inset 0 0 0 1px rgba(22, 18, 14, 0.3);
+  border-radius: 999px;
+  background: var(--fill-2);
+  overflow: hidden;
 }
 
 .cs-budget-bar i {
   display: block;
   height: 100%;
-  background: linear-gradient(#cdb073, #8e6e36);
+  border-radius: 999px;
+  background: var(--accent);
 }
 
 .cs-ships {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
 }
 
 .cs-ship {
-  padding: 8px 10px;
-  border: 1px solid rgba(22, 18, 14, 0.22);
-  background: rgba(255, 252, 244, 0.32);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.5);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -239,31 +237,31 @@
 }
 
 .cs-ship-name b {
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 15px;
-  letter-spacing: 2px;
+  font-size: var(--fs-15);
+  font-weight: 700;
 }
 
 .cs-ship-name small,
 .cs-ship-note {
-  font-size: 11.5px;
-  color: var(--ink-3);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
 }
 
 .cs-ship-count {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
 }
 
 .cs-ship-count button {
-  width: 26px;
-  height: 24px;
-  border: 1px solid rgba(22, 18, 14, 0.35);
+  width: var(--tap);
+  height: 36px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
   background: transparent;
   cursor: pointer;
-  font-size: 15px;
+  font-size: var(--fs-17);
   color: var(--ink);
 }
 
@@ -273,17 +271,228 @@
 }
 
 .cs-ship-count b {
-  min-width: 18px;
+  min-width: 20px;
   text-align: center;
-  font-size: 16px;
+  font-size: var(--fs-17);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Two columns once there is room: map and sides on the left, the fleet on the right. */
+@media (min-width: 900px), (orientation: landscape) and (max-height: 540px) {
+  .cs {
+    width: min(1080px, 100%);
+  }
+
+  .cs-cols {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
 }
 
 .cs-trait {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--ink-2);
-  letter-spacing: 1px;
-  border-top: 1px solid rgba(22, 18, 14, 0.15);
-  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: var(--sp-3);
+}
+
+/* The start button row stays at the bottom of the scrolling screen. */
+.cs .select-foot {
+  position: sticky;
+  bottom: 0;
+  margin: 0 calc(var(--sp-5) * -1);
+  padding: var(--sp-3) var(--sp-5) calc(var(--sab) + var(--sp-3));
+  background: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.92) 30%);
+  border-radius: 0 0 var(--r) var(--r);
+}
+
+/* ---------------------------------------------------------------- online lobby */
+
+.net-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-weight: 750;
+  font-size: var(--fs-20);
+}
+
+.net-title small {
+  margin-left: auto;
+  font-size: var(--fs-13);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.net-title code,
+.net-room code {
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  padding: 2px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  letter-spacing: 0.2em;
+}
+
+.net-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  color: var(--ink);
+  user-select: text;
+}
+
+.net-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+.net-input--code {
+  flex: none;
+  width: 110px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.net-go {
+  flex: none;
+}
+
+.net-error {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(194, 55, 46, 0.1);
+  border-left: 3px solid var(--seal);
+  font-size: var(--fs-13);
+  color: var(--seal);
+}
+
+.net-rooms {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.net-room {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.5);
+  font-size: var(--fs-13);
+}
+
+.net-room b {
+  font-weight: 700;
+}
+
+.net-room span {
+  color: var(--ink-2);
+}
+
+.net-seats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.net-seat {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--joseon);
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.5);
+  font-size: var(--fs-13);
+}
+
+.net-seat--japan {
+  border-left-color: var(--japan);
+}
+
+.net-seat--me {
+  background: var(--accent-soft);
+}
+
+.net-seat b {
+  flex: 1;
+  min-width: 80px;
+  font-weight: 700;
+}
+
+.net-side {
+  width: 40px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.net-seat .cs-faction {
+  min-height: 36px;
+  padding: 2px;
+}
+
+.net-seat .cs-faction:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.net-seat .cs-faction--on:disabled {
+  opacity: 1;
+}
+
+.net-ready {
+  padding: 2px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  font-size: var(--fs-12);
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.net-ready--on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.net-chat {
+  height: 110px;
+  overflow-y: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.4);
+  font-size: var(--fs-13);
+  line-height: 1.6;
+  user-select: text;
+  touch-action: pan-y;
+}
+
+.net-chat b {
+  margin-right: 6px;
+}
+
+/* The online lobby's action row (start, ready, leave) stays reachable at the bottom. */
+.net > .cs-row:last-child {
+  position: sticky;
+  bottom: 0;
+  margin: 0 calc(var(--sp-5) * -1);
+  padding: var(--sp-3) var(--sp-5) calc(var(--sab) + var(--sp-3));
+  background: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.92) 30%);
+  border-radius: 0 0 var(--r) var(--r);
 }
 
 /* ---------------------------------------------------------------- conquest HUD */
@@ -303,9 +512,10 @@
 
 .cq-ticket {
   position: relative;
-  height: 16px;
-  background: rgba(10, 8, 6, 0.55);
-  box-shadow: 0 0 0 1px rgba(10, 8, 6, 0.8), 0 0 0 2px rgba(235, 227, 209, 0.3);
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(7, 15, 25, 0.6);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
   overflow: hidden;
 }
 
@@ -318,12 +528,12 @@
 
 .cq-ticket--own i {
   right: 0;
-  background: linear-gradient(#cdb073, #8e6e36);
+  background: var(--own-fc, var(--joseon));
 }
 
 .cq-ticket--foe i {
   left: 0;
-  background: linear-gradient(#b8432f, #6e2318);
+  background: var(--enemy-fc, var(--japan));
 }
 
 .cq-ticket span {
@@ -331,12 +541,13 @@
   inset: 0;
   display: flex;
   align-items: center;
-  padding: 0 7px;
-  font-size: 11.5px;
-  font-weight: 800;
-  color: var(--ivory);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  padding: 0 8px;
+  font-size: var(--fs-12);
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   gap: 6px;
+  font-variant-numeric: tabular-nums;
 }
 
 .cq-ticket--own span {
@@ -344,32 +555,31 @@
 }
 
 .cq-ticket small {
-  font-weight: 600;
-  opacity: 0.85;
+  font-weight: 500;
+  opacity: 0.9;
 }
 
 .cq-clock {
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 13px;
-  color: var(--ivory);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  color: var(--on-dark);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+  font-variant-numeric: tabular-nums;
 }
 
 .cq-purse {
   display: flex;
   justify-content: center;
-  gap: 16px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ivory);
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--on-dark);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.5);
-  letter-spacing: 1px;
 }
 
 .cq-purse b {
-  font-weight: 800;
-  color: #f1dca7;
+  font-weight: 700;
 }
 
 .cq-purse small {
@@ -379,8 +589,8 @@
 
 .cq-point {
   position: absolute;
-  right: 24px;
-  top: 96px;
+  right: calc(var(--sar) + 24px);
+  top: calc(var(--sat) + 96px);
   width: 300px;
   padding: 14px 16px 12px;
   display: flex;
@@ -402,71 +612,76 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 10px;
   font-family: var(--hanja);
-  font-weight: 900;
-  font-size: 20px;
-  border: 2px solid var(--ink);
-  background: var(--paper-2);
+  font-weight: 700;
+  font-size: var(--fs-20);
+  background: var(--fill-2);
+  color: var(--ink);
 }
 
 .cq-seal--own {
-  background: #cdb073;
+  background: var(--own-fc, var(--joseon));
+  color: #fff;
 }
 
 .cq-seal--foe {
-  background: var(--seal);
-  color: #f4e6d0;
-  border-color: #5e2116;
+  background: var(--enemy-fc, var(--japan));
+  color: #fff;
 }
 
 .cq-point-name {
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 18px;
-  letter-spacing: 3px;
+  font-size: var(--fs-17);
+  font-weight: 750;
 }
 
 .cq-point-name small {
-  font-size: 12px;
-  color: var(--ink-3);
-  letter-spacing: 1px;
+  margin-left: 4px;
+  font-family: var(--hanja);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink-2);
 }
 
 .cq-point-sub {
-  font-size: 12px;
-  color: var(--ink-3);
-  letter-spacing: 1px;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
 }
 
 .cq-close {
   margin-left: auto;
   align-self: flex-start;
+  width: 36px;
+  height: 36px;
+  margin-top: -6px;
+  margin-right: -8px;
   border: 0;
   background: transparent;
-  font-size: 20px;
+  font-size: var(--fs-20);
   cursor: pointer;
   color: var(--ink-2);
 }
 
 .cq-hold {
   position: relative;
-  height: 14px;
-  background: rgba(22, 18, 14, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(22, 18, 14, 0.3);
+  height: 16px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  overflow: hidden;
 }
 
 .cq-hold i {
   position: absolute;
   inset: 0 auto 0 0;
-  background: rgba(22, 18, 14, 0.4);
+  background: var(--ink-3);
 }
 
 .cq-hold--own i {
-  background: linear-gradient(#cdb073, #8e6e36);
+  background: var(--own-fc, var(--joseon));
 }
 
 .cq-hold--foe i {
-  background: linear-gradient(#b8432f, #6e2318);
+  background: var(--enemy-fc, var(--japan));
 }
 
 .cq-hold span {
@@ -475,25 +690,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 1px;
+  font-size: var(--fs-12);
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 .cq-label {
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 13px;
-  letter-spacing: 3px;
+  font-weight: 700;
+  font-size: var(--fs-13);
   color: var(--ink-2);
-  border-bottom: 1px solid rgba(22, 18, 14, 0.15);
-  padding-bottom: 2px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 3px;
 }
 
 .cq-works {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 5px;
+  gap: 6px;
 }
 
 .cq-work {
@@ -501,59 +715,64 @@
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: auto auto;
-  column-gap: 6px;
+  column-gap: 8px;
   align-items: center;
-  padding: 5px 7px;
-  border: 1px solid rgba(22, 18, 14, 0.25);
-  background: rgba(255, 252, 244, 0.35);
-  font-size: 12.5px;
-  font-weight: 700;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  font-size: var(--fs-13);
+  font-weight: 600;
 }
 
 .cq-work b {
   grid-row: span 2;
   font-family: var(--hanja);
-  font-size: 18px;
+  font-size: var(--fs-20);
 }
 
 .cq-work-bar {
   height: 4px;
-  background: rgba(22, 18, 14, 0.15);
+  border-radius: 999px;
+  background: var(--fill-2);
+  overflow: hidden;
 }
 
 .cq-work-bar i {
   display: block;
   height: 100%;
-  background: var(--ink-2);
+  background: var(--accent);
 }
 
 .cq-work--building .cq-work-bar i {
-  background: #a88648;
+  background: var(--ming);
 }
 
 .cq-work--empty {
   display: flex;
   justify-content: center;
   color: var(--ink-3);
-  font-weight: 600;
+  font-weight: 500;
   border-style: dashed;
 }
 
 .cq-x {
   position: absolute;
-  top: 1px;
-  right: 3px;
+  top: 0;
+  right: 2px;
+  width: 28px;
+  height: 28px;
   border: 0;
   background: transparent;
   cursor: pointer;
   color: var(--ink-3);
-  font-size: 14px;
+  font-size: var(--fs-15);
 }
 
 .cq-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
 }
 
 .cq-buy b {
@@ -563,19 +782,22 @@
 .cq-queue {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .cq-q {
   position: relative;
   display: flex;
   justify-content: space-between;
-  padding: 3px 8px;
-  border: 1px solid rgba(22, 18, 14, 0.25);
-  background: rgba(255, 252, 244, 0.3);
+  min-height: 32px;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.5);
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--fs-12);
+  font-weight: 600;
   color: var(--ink);
   overflow: hidden;
 }
@@ -583,7 +805,7 @@
 .cq-q i {
   position: absolute;
   inset: 0 auto 0 0;
-  background: rgba(168, 134, 72, 0.35);
+  background: var(--accent-soft);
 }
 
 .cq-q span,
@@ -592,9 +814,9 @@
 }
 
 .cq-hint {
-  font-size: 12px;
+  font-size: var(--fs-12);
   line-height: 1.6;
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
 /* ---------------------------------------------------------------- capture point labels over the 3D view */
@@ -614,7 +836,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   transform-origin: 50% 100%;
   will-change: transform;
   pointer-events: auto;
@@ -622,17 +844,13 @@
 }
 
 .cpoint-name {
-  padding: 2px 10px;
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 13px;
-  letter-spacing: 2px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: var(--fs-12);
+  font-weight: 700;
   color: var(--ink);
-  background-color: rgba(235, 227, 209, 0.9);
-  background-image: url(/ui/hanji.jpg);
-  background-size: 160px;
-  background-blend-mode: multiply;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(22, 18, 14, 0.55);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   white-space: nowrap;
 }
 
@@ -642,17 +860,17 @@
 }
 
 .cpoint--own .cpoint-name {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 2px #a88648;
+  background: var(--own-fc, var(--joseon));
+  color: #fff;
 }
 
 .cpoint--foe .cpoint-name {
-  background-color: #6e2318;
-  color: #f4e6d0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 1px #2a0e09;
+  background: var(--enemy-fc, var(--japan));
+  color: #fff;
 }
 
 .cpoint--selected .cpoint-name {
-  outline: 2px solid var(--ivory);
+  outline: 2px solid #fff;
   outline-offset: 2px;
 }
 
@@ -662,46 +880,46 @@
 
 @keyframes cpoint-flash {
   50% {
-    background-color: #b8432f;
-    color: #f4e6d0;
+    background: var(--seal);
+    color: #fff;
   }
 }
 
 .cpoint-bar {
   width: 64px;
   height: 4px;
+  border-radius: 999px;
   background: rgba(0, 0, 0, 0.55);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
 }
 
 .cpoint-bar i {
   display: block;
   height: 100%;
-  background: rgba(235, 227, 209, 0.6);
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .cpoint-bar i.own {
-  background: #cdb073;
+  background: var(--own-fc, var(--joseon));
 }
 
 .cpoint-bar i.foe {
-  background: #c4523c;
+  background: var(--enemy-fc, var(--japan));
 }
 
 .cpoint-works {
   min-height: 14px;
   font-family: var(--hanja);
-  font-weight: 900;
-  font-size: 12px;
-  letter-spacing: 1px;
-  color: var(--ivory);
+  font-weight: 700;
+  font-size: var(--fs-12);
+  color: #fff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
 /* squadron flags: friend or foe when both fleets fly the same colours */
 
 .sqb--foe .sqb-flag {
-  outline: 2px solid #b8432f;
+  outline: 2px solid var(--seal);
   outline-offset: -1px;
 }
 
@@ -722,11 +940,11 @@
 
 .crew-row {
   display: grid;
-  grid-template-columns: 16px 34px 1fr 30px 18px 18px;
+  grid-template-columns: 16px 34px 1fr 30px 20px 20px;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--fs-12);
+  font-weight: 600;
 }
 
 .crew-row--off {
@@ -735,7 +953,7 @@
 
 .crew-row b {
   font-family: var(--hanja);
-  font-size: 13px;
+  font-size: var(--fs-13);
 }
 
 .crew-row small {
@@ -746,13 +964,15 @@
 .crew-bar {
   position: relative;
   height: 6px;
-  background: rgba(22, 18, 14, 0.14);
+  border-radius: 999px;
+  background: var(--fill-2);
 }
 
 .crew-bar i {
   display: block;
   height: 100%;
-  background: var(--ink-2);
+  border-radius: 999px;
+  background: var(--accent);
 }
 
 .crew-bar em {
@@ -760,18 +980,19 @@
   top: -2px;
   bottom: -2px;
   width: 2px;
-  background: #a88648;
+  background: var(--ming);
   transform: translateX(-1px);
 }
 
 .crew-row button {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   padding: 0;
-  border: 1px solid rgba(22, 18, 14, 0.35);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-12);
   line-height: 1;
   color: var(--ink);
 }
@@ -783,197 +1004,74 @@
 }
 
 .crew-presets .chip {
-  padding: 2px 8px;
-  font-size: 12px;
+  min-height: 24px;
+  padding: 0 8px;
+  font-size: var(--fs-12);
 }
+
+/* ---------------------------------------------------------------- phones */
 
 .app--compact .cq-point {
-  right: 8px;
+  right: calc(var(--sar) + 8px);
   left: auto;
-  top: 70px;
+  top: calc(var(--sat) + 76px);
   width: min(300px, calc(100vw - 16px));
-  max-height: 55vh;
+  max-height: 50dvh;
   overflow-y: auto;
+  touch-action: pan-y;
 }
 
-.app--compact .cs-ships,
-.app--compact .cs-maps {
-  grid-template-columns: 1fr;
-}
-
-@media (max-width: 1820px) {
-  .select-tab {
-    padding: 8px 9px;
-    font-size: 14px;
+@media (max-width: 700px) {
+  .cs {
+    padding: var(--sp-3) var(--sp-4) 0;
   }
 
-  .select-tab small {
-    display: none;
+  .cs-maps,
+  .cs-ships {
+    grid-template-columns: 1fr;
+  }
+
+  .cs-maps {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cs-row {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+
+  .cs-label {
+    width: 100%;
+  }
+
+  .cs-row--top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cs .select-foot,
+  .net > .cs-row:last-child {
+    margin: 0 calc(var(--sp-4) * -1);
+    padding-left: var(--sp-4);
+    padding-right: var(--sp-4);
+  }
+
+  .net-room {
+    grid-template-columns: 1fr auto;
+  }
+
+  .net-room span {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .net-seat .cs-factions {
+    order: 3;
+    width: 100%;
+  }
+
+  .net-input--code {
+    width: 96px;
   }
 }
 
-/* ---------------------------------------------------------------- online lobby */
-
-.net-title {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 18px;
-  letter-spacing: 3px;
-}
-
-.net-title small {
-  margin-left: auto;
-  font-size: 12px;
-  letter-spacing: 1px;
-  color: var(--ink-3);
-}
-
-.net-title code,
-.net-room code {
-  font-family: var(--display);
-  font-size: 14px;
-  padding: 1px 8px;
-  border: 1px solid var(--ink);
-  letter-spacing: 3px;
-}
-
-.net-input {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 10px;
-  border: 1px solid rgba(22, 18, 14, 0.35);
-  background: rgba(255, 252, 244, 0.6);
-  font-family: var(--serif);
-  font-size: 14px;
-  color: var(--ink);
-}
-
-.net-input--code {
-  flex: none;
-  width: 90px;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-}
-
-.net-go {
-  flex: none;
-}
-
-.net-error {
-  padding: 6px 10px;
-  background: rgba(143, 58, 43, 0.12);
-  border-left: 3px solid var(--seal);
-  font-size: 13px;
-  color: var(--seal);
-}
-
-.net-rooms {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  max-height: 260px;
-  overflow-y: auto;
-}
-
-.net-room {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
-  border: 1px solid rgba(22, 18, 14, 0.22);
-  background: rgba(255, 252, 244, 0.32);
-  font-size: 13px;
-}
-
-.net-room b {
-  font-family: var(--display);
-  font-weight: 800;
-  letter-spacing: 2px;
-}
-
-.net-room span {
-  color: var(--ink-3);
-}
-
-.net-seats {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.net-seat {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 10px;
-  border: 1px solid rgba(22, 18, 14, 0.22);
-  border-left: 4px solid #a88648;
-  background: rgba(255, 252, 244, 0.32);
-  font-size: 13px;
-}
-
-.net-seat--japan {
-  border-left-color: #6e2318;
-}
-
-.net-seat--me {
-  background: rgba(205, 176, 115, 0.25);
-}
-
-.net-seat b {
-  flex: 1;
-  font-family: var(--display);
-  font-weight: 800;
-  letter-spacing: 1px;
-}
-
-.net-side {
-  width: 40px;
-  font-weight: 800;
-  color: var(--ink-2);
-  letter-spacing: 2px;
-}
-
-.net-seat .cs-faction {
-  padding: 2px;
-}
-
-.net-seat .cs-faction:disabled {
-  cursor: default;
-  opacity: 0.55;
-}
-
-.net-seat .cs-faction--on:disabled {
-  opacity: 1;
-}
-
-.net-ready {
-  padding: 1px 8px;
-  font-size: 12px;
-  font-weight: 800;
-  border: 1px solid rgba(22, 18, 14, 0.3);
-  color: var(--ink-3);
-}
-
-.net-ready--on {
-  background: var(--ink);
-  color: var(--ivory);
-}
-
-.net-chat {
-  height: 110px;
-  overflow-y: auto;
-  padding: 6px 10px;
-  border: 1px solid rgba(22, 18, 14, 0.18);
-  background: rgba(255, 252, 244, 0.25);
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.net-chat b {
-  margin-right: 6px;
-}

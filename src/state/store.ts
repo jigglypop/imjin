@@ -128,7 +128,10 @@ export type GameSnapshot = {
 
 export type Toast = { id: number; text: string; tone: 'info' | 'good' | 'bad'; at: number };
 export type SelectionBox = { x0: number; y0: number; x1: number; y1: number } | null;
-export type Screen = 'select' | 'battle';
+/** menu: mode cards. select: the nine historical battles. faction: the faction campaign (not built yet). skirmish and online: setup screens. */
+export type Screen = 'menu' | 'select' | 'faction' | 'skirmish' | 'online' | 'settings' | 'battle';
+/** Screens a battle can be started from, so the HUD back button returns to where the player came from. */
+export type BattleOrigin = 'select' | 'skirmish' | 'online';
 
 type UiState = {
   snapshot: GameSnapshot | null;
@@ -139,10 +142,14 @@ type UiState = {
   toasts: Toast[];
   box: SelectionBox;
   screen: Screen;
+  /** The screen the running battle was started from. */
+  origin: BattleOrigin;
+  /** A renderer or engine failure that stops the battle from starting. */
+  fatal: string | null;
   touchBox: boolean;
 };
 
-export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingScenario: null, report: null, toasts: [], box: null, screen: 'battle', touchBox: false }));
+export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingScenario: null, report: null, toasts: [], box: null, screen: 'menu', origin: 'select', fatal: null, touchBox: false }));
 
 let lastJson = '';
 export function publish(snapshot: GameSnapshot, force = false) {
@@ -181,6 +188,14 @@ export function setProgress(progress: number) {
 
 export function setScreen(screen: Screen) {
   useUi.setState({ screen });
+}
+
+export function setOrigin(origin: BattleOrigin) {
+  useUi.setState({ origin });
+}
+
+export function setFatal(fatal: string | null) {
+  useUi.setState({ fatal });
 }
 
 export function setReport(report: Report | null) {
