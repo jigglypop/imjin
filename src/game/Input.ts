@@ -459,6 +459,7 @@ export class Input {
     const id = [...this.engine.views.selected][0];
     if (id) {
       this.engine.rts.followId = this.engine.rts.followId === id ? 0 : id;
+      if (this.engine.rts.followId) this.engine.rts.cinematic = false;
       this.engine.publish(true);
     }
   }
@@ -515,6 +516,9 @@ export class Input {
       case 'KeyU':
         this.presentBroadside();
         break;
+      case 'KeyO':
+        this.followSelected();
+        break;
       case 'KeyK':
         this.setStance('standoff');
         break;
@@ -537,7 +541,13 @@ export class Input {
         this.hold();
         break;
       case 'KeyC':
-        this.followSelected();
+        this.engine.director.toggleCinematic();
+        pushToast(this.engine.rts.cinematic ? '연출 카메라 — 교전을 따라간다 (C로 끈다)' : '연출 카메라 끔');
+        this.engine.publish(true);
+        break;
+      case 'KeyV':
+        this.engine.director.toggleSlowMo();
+        pushToast(this.engine.director.slowMo ? '연출 슬로모션 켬' : '연출 슬로모션 끔');
         break;
       case 'KeyM':
         this.engine.sound.setMuted(!this.engine.sound.muted);
@@ -548,9 +558,6 @@ export class Input {
         break;
       case 'KeyI':
         this.engine.showLabels = !this.engine.showLabels;
-        break;
-      case 'KeyV':
-        this.engine.rts.cinematic = !this.engine.rts.cinematic;
         break;
       case 'Tab':
         e.preventDefault();

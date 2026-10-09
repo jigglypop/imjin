@@ -11,12 +11,15 @@ export class RtsCamera {
   goal = { tx: 0, tz: 0, yaw: 0, pitch: 0.35, distance: 300 };
   followId = 0;
   cinematic = false;
+  /** Scales how fast the camera chases its goal. The battle director raises it to hold a moving subject, e.g. a shell. */
+  rate = 1;
+  /** Height above the usual look-at point; follows a shell through the air or a mast top. */
+  lookLift = 0;
   private keys = new Set<string>();
   private dragging: 'orbit' | null = null;
   private lastX = 0;
   private lastY = 0;
   private dom: HTMLElement | null = null;
-  private cineTime = 0;
   readonly minDistance = 14;
   readonly maxDistance = 6500;
   ground: (x: number, z: number) => number = () => -50;
@@ -136,6 +139,10 @@ export class RtsCamera {
   private shakeAmount = 0;
   private shakeClock = 0;
 
+  /**
+   * Adds trauma. The offset grows with its square, so a pile of small shots stays a tremor while one big gun or a
+   * magazine going up really throws the camera. The caller has already attenuated `amount` by distance.
+   */
   shake(amount: number) {
     this.shakeAmount = Math.min(1.6, this.shakeAmount + amount);
   }
@@ -163,23 +170,19 @@ export class RtsCamera {
     if (k.has('KeyE')) this.goal.yaw -= dt * 1.2;
     if (k.has('KeyR')) this.goal.pitch = Math.min(1.45, this.goal.pitch + dt * 0.8);
     if (k.has('KeyF')) this.goal.pitch = Math.max(0.02, this.goal.pitch - dt * 0.8);
-    if (this.cinematic) {
-      this.cineTime += dt;
-      this.goal.yaw += dt * 0.035;
-    }
     if (followTarget) {
       this.goal.tx = followTarget.x;
       this.goal.tz = followTarget.z;
     }
-    const s = 1 - Math.exp(-dt * 6);
-    const sr = 1 - Math.exp(-dt * 8);
+    const s = 1 - Math.exp(-dt * 6 * this.rate);
+    const sr = 1 - Math.exp(-dt * 8 * this.rate);
     this.target.x += (this.goal.tx - this.target.x) * s;
     this.target.z += (this.goal.tz - this.target.z) * s;
     this.yaw += (this.goal.yaw - this.yaw) * sr;
     this.pitch += (this.goal.pitch - this.pitch) * sr;
     this.distance += (this.goal.distance - this.distance) * s;
     const groundY = Math.max(waveField.heightAt(this.target.x, this.target.z) * 0.4, this.ground(this.target.x, this.target.z));
-    const lookY = groundY + Math.min(8, 2 + this.distance * 0.02);
+    const lookY = groundY + Math.min(8, 2 + this.distance * 0.02) + this.lookLift;
     const cp = Math.cos(this.pitch);
     const px = this.target.x + Math.cos(this.yaw) * cp * this.distance;
     const pz = this.target.z + Math.sin(this.yaw) * cp * this.distance;
@@ -191,12 +194,16 @@ export class RtsCamera {
     this.camera.lookAt(this.target.x, lookY, this.target.z);
     if (this.shakeAmount > 0.002) {
       this.shakeClock += dt;
-      const a = this.shakeAmount * Math.min(1, this.distance / 60);
+      const a = this.shakeAmount * this.shakeAmount;
       const t = this.shakeClock;
-      this.camera.position.x += (Math.sin(t * 41) + Math.sin(t * 23.7)) * a * 0.18;
-      this.camera.position.y += (Math.sin(t * 37.3) + Math.sin(t * 19.1)) * a * 0.14;
-      this.camera.rotateZ((Math.sin(t * 29.5) * a) / 160);
-      this.shakeAmount *= Math.exp(-dt * 7);
+      // Angular jitter reads the same at any zoom; the positional part is scaled by distance so a far camera still moves.
+      const reach = 0.25 + Math.min(1, this.distance / 120) * 0.75;
+      this.camera.position.x += (Math.sin(t * 41) + Math.sin(t * 23.7)) * a * 0.22 * reach;
+      this.camera.position.y += (Math.sin(t * 37.3) + Math.sin(t * 19.1)) * a * 0.18 * reach;
+      this.camera.rotateX((Math.sin(t * 33.1) + Math.sin(t * 17.3)) * a * 0.009);
+      this.camera.rotateY((Math.sin(t * 27.9) + Math.sin(t * 15.1)) * a * 0.009);
+      this.camera.rotateZ(Math.sin(t * 29.5) * a * 0.016);
+      this.shakeAmount *= Math.exp(-dt * 6);
     }
     this.camera.updateMatrixWorld();
   }

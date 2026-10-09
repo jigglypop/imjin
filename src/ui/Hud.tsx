@@ -10,6 +10,7 @@ import type { ShipKind, Team } from '../sim/types';
 import { FACTION_MARK, FACTION_NAME } from '../sim/balance';
 import { useCompactLayout } from './useCompactLayout';
 import { ConquestBar, CrewPanel, PointPanel } from './ConquestPanels';
+import { DirectorToggle } from './DirectorToggle';
 
 const SEA_LABELS: Record<SeaStateName, string> = { calm: '잔잔', moderate: '보통', rough: '거침' };
 const ACTIVITY: Record<string, string> = {
@@ -260,6 +261,8 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
       </div>
 
       {snap.conquest?.selected && <PointPanel engine={engine} p={snap.conquest.selected} onClose={() => engine.selectPoint(snap.conquest!.selected!.id)} />}
+
+      <DirectorToggle engine={engine} />
 
       <div className="toasts">
         {toasts.map((t) => (

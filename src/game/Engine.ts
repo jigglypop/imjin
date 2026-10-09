@@ -62,6 +62,7 @@ import { conquestInfo, scenarioInfo, type BattleInfo } from '../sim/info';
 import { ConquestView, preloadWorks } from '../conquest/ConquestView';
 import type { NetBattle } from '../net/NetBattle';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
+import { Director } from './Director';
 import { Input } from './Input';
 import { TouchControls } from './Touch';
 import { AdaptiveQuality } from './adaptive';
@@ -194,8 +195,8 @@ export class Engine {
   private lastScaled = 0;
   private vignette = uniform(0.32);
   private phi = 0;
-  private interest = { ship: 0, score: 0, age: 99 };
-  private shotTimer = 0;
+  /** Cinematic camera, kill-cam slow motion and shot feel. */
+  readonly director = new Director(this);
   private initialSquads = new Map<number, number>();
   campaign: FleetSpawn | undefined;
   private reported = false;
@@ -868,7 +869,8 @@ export class Engine {
     const dt = Math.min(frameDt, 0.1);
     // A multiplayer battle runs on the server at its own pace: no pause, no speed-up, nothing simulated here.
     if (!this.remote) this.updateFastForward(dt);
-    const speed = this.fastForward ? Math.max(this.speed, FAST_SPEED) : this.speed;
+    const base = this.fastForward ? Math.max(this.speed, FAST_SPEED) : this.speed;
+    const speed = base * this.director.timeFactor(base);
     // Above 4x the frame rate is set by the simulation's share of each frame, not by the GPU, so it says nothing
     // about which quality level the device can hold.
     if (this.remote || this.paused || speed <= 4) this.adaptive?.update(frameDt, this.gpuMs);
@@ -899,7 +901,7 @@ export class Engine {
     this.stampWakes(events, scaled);
     if (events.length) {
       this.sound.update(events, this.battle, this.camera, scaled);
-      this.noteInterest(events);
+      this.director.feed(events);
       this.fx.handle(events, this.battle);
       this.crew.handle(events, this.battle);
       this.input.onEvents(events);
@@ -907,7 +909,7 @@ export class Engine {
       this.battle.events = [];
     }
     if (this.battle.winner && !this.reported) this.finishCampaignBattle();
-    if (this.rts.cinematic) this.direct(dt);
+    this.director.update(dt);
     const follow = this.rts.followId ? this.views.worldOf(this.rts.followId) : null;
     if (this.rts.followId && !follow) this.rts.followId = 0;
     this.rts.update(dt, follow);
@@ -1030,69 +1032,6 @@ export class Engine {
     this.remote = null;
     this.sink = null;
     this.paused = true;
-  }
-
-  private noteInterest(events: BattleEvent[]) {
-    for (const e of events) {
-      let score = 0;
-      let ship = 0;
-      if (e.type === 'explode' || e.type === 'sinking' || e.type === 'struck') [score, ship] = [6, e.ship];
-      else if (e.type === 'ram') [score, ship] = [4, e.a];
-      else if (e.type === 'board') [score, ship] = [3, e.b];
-      else if (e.type === 'hit') [score, ship] = [1.5, e.ship];
-      else if (e.type === 'gun') [score, ship] = [0.6, e.ship];
-      const current = this.interest.score * Math.exp(-this.interest.age * 0.3);
-      if (score > current) this.interest = { ship, score, age: 0 };
-    }
-  }
-
-  private direct(dt: number) {
-    this.interest.age += dt;
-    this.shotTimer -= dt;
-    if (this.shotTimer > 0) return;
-    const b = this.battle;
-    let subject = b.get(this.interest.ship);
-    if (!subject || !subject.alive || this.interest.age > 12) {
-      const active = b.ships.filter((s) => b.isActive(s));
-      subject = active.sort((p, q) => q.lastHit - p.lastHit)[0];
-    }
-    if (!subject) return;
-    let other = b.get(subject.targetId);
-    if (!other || !other.alive) {
-      let best = Infinity;
-      for (const s of b.ships) {
-        if (!s.alive || s.team === subject.team) continue;
-        const d = Math.hypot(s.x - subject.x, s.z - subject.z);
-        if (d < best) {
-          best = d;
-          other = s;
-        }
-      }
-    }
-    const g = this.rts.goal;
-    const sun = atmosphere.sunDir.value as Vector3;
-    if (other) {
-      const dx = other.x - subject.x;
-      const dz = other.z - subject.z;
-      const d = Math.hypot(dx, dz);
-      const line = Math.atan2(dz, dx);
-      const k = Math.min(0.32, 60 / Math.max(1, d));
-      g.tx = subject.x + dx * k;
-      g.tz = subject.z + dz * k;
-      g.distance = Math.min(260, Math.max(90, d * 0.45));
-      const y1 = line + Math.PI / 2 + (Math.random() - 0.5) * 0.7;
-      const y2 = line - Math.PI / 2 + (Math.random() - 0.5) * 0.7;
-      const s1 = Math.cos(y1) * sun.x + Math.sin(y1) * sun.z;
-      const s2 = Math.cos(y2) * sun.x + Math.sin(y2) * sun.z;
-      g.yaw = (s1 > s2) === Math.random() < 0.8 ? y1 : y2;
-    } else {
-      g.tx = subject.x;
-      g.tz = subject.z;
-      g.distance = 160;
-    }
-    g.yaw = this.rts.yaw + Math.atan2(Math.sin(g.yaw - this.rts.yaw), Math.cos(g.yaw - this.rts.yaw));
-    g.pitch = 0.05 + Math.random() * 0.09;
-    this.shotTimer = 8 + Math.random() * 6;
   }
 
   private stampWakes(events: BattleEvent[], scaled: number) {
