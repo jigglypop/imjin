@@ -464,7 +464,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                   engine.publish(true);
                 }}
               >
-                {snap.fastForward ? '접근 중 ⏩' : '⏩'}
+                ⏩
               </button>
             )}
           </div>

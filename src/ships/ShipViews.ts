@@ -25,6 +25,11 @@ import { cutHeight, DECKS, mainDeck } from './decks';
 
 const MAX_PROPS = 600;
 
+const smooth = (a: number, b: number, x: number) => {
+  const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return k * k * (3 - 2 * k);
+};
+
 export type ViewState = {
   id: number;
   heave: number;
@@ -296,16 +301,25 @@ export class ShipViews {
     let heave = v.heave;
     let pitch = v.pitch - s.speed * 0.004;
     let roll = v.roll;
+    let yaw = 0;
     if (s.sinking > 0) {
+      // Driven only by the progress 0..1, so it plays the same whatever the sinking lasts. The hull lists over to
+      // 50-70 degrees with a settling wobble, then the bow or the stern lifts and it slides under, turning a little.
       const p = s.sinking;
-      const e = p * p * (3 - 2 * p);
-      heave -= Math.pow(p, 1.6) * (s.spec.height + 8);
-      roll += s.sinkRoll * e;
-      pitch += s.sinkPitch * e;
+      const heelDir = Math.sign(s.sinkRoll) || 1;
+      const heel = heelDir * Math.min(1.22, 0.85 + Math.abs(s.sinkRoll) * 0.45);
+      const lean = (s.sinkPitch >= 0 ? 1 : -1) * Math.min(0.95, 0.55 + Math.abs(s.sinkPitch) * 1.6);
+      const shudder = Math.sin(t * 8.3 + s.id * 1.7) * 0.012 * smooth(0, 0.06, p) * (1 - smooth(0.4, 0.9, p));
+      roll += heel * smooth(0, 0.3, p) + Math.sin(p * 38) * 0.05 * Math.exp(-p * 9) * heelDir + shudder;
+      pitch += lean * smooth(0.22, 0.8, p) + shudder * 0.6;
+      yaw = (s.id % 2 === 0 ? 1 : -1) * 0.4 * Math.pow(p, 1.2);
+      // Deep enough that the highest point of the tilted hull is under water when the progress reaches 1.
+      const depth = 0.5 * L * Math.abs(Math.sin(lean)) + s.spec.height * 0.6 + B * 0.5 * Math.abs(Math.sin(heel)) + 4;
+      heave -= depth * (0.08 * smooth(0, 0.3, p) + 0.27 * smooth(0.2, 0.72, p) + 0.65 * Math.pow(smooth(0.62, 1, p), 1.4));
     } else if (s.struck) {
       roll += 0.06;
     }
-    this.e.set(roll, -s.heading, pitch, 'YZX');
+    this.e.set(roll, -s.heading + yaw, pitch, 'YZX');
     this.q.setFromEuler(this.e);
     this.tmp.set(s.x, heave, s.z);
     v.matrix.compose(this.tmp, this.q, s.flagship ? this.sFlag : this.s1);

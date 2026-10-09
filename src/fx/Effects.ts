@@ -5,7 +5,6 @@ import {
   ConeGeometry,
   CylinderGeometry,
   DynamicDrawUsage,
-  Euler,
   Group,
   InstancedMesh,
   Matrix4,
@@ -17,39 +16,54 @@ import {
   type Camera,
 } from 'three/webgpu';
 import type { Battle } from '../sim/battle';
-import type { AmmoType, BattleEvent } from '../sim/types';
+import type { AmmoType, BattleEvent, GunType, Ship } from '../sim/types';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { ShipViews } from '../ships/ShipViews';
 import { waveField } from '../ocean/waves';
-import { ParticleLayer } from './ParticleLayer';
+import { ParticleLayer, StreakLayer } from './ParticleLayer';
+import { DebrisField, Piece } from './Debris';
+import { gunClass } from './gunClass';
+import { planSinking, type CueKind, type SinkCue } from './sinkPlan';
 import type { WakeMap } from '../ocean/WakeMap';
 import { LIGHT_COUNT, pointLights } from '../render/lights';
 import type { ParticleQuality } from '../game/quality';
 
-const MAX_DEBRIS = 400;
 const MAX_BALLS = 600;
 const MAX_ARROWS = 400;
 const OARS: Record<string, number> = { panokseon: 8, geobukseon: 8, atakebune: 13, sekibune: 11 };
+const MASTS: Record<string, number> = { panokseon: 2, geobukseon: 1, hyeopseon: 1, atakebune: 2, sekibune: 1, kobaya: 1, mingship: 3, mingsmall: 1 };
+/** Where the masts stand along the hull, as fractions of the length. */
+const MAST_AT = [-0.22, 0.14, 0.34];
 
 export type EffectsQuality = { lights: number; particles: ParticleQuality };
 
-type Debris = { x: number; y: number; z: number; vx: number; vy: number; vz: number; rx: number; ry: number; rz: number; wx: number; wy: number; wz: number; s: number; age: number; life: number; floating: boolean };
 type LightSource = { x: number; y: number; z: number; intensity: number; decay: number; r: number; g: number; b: number; age: number; life: number; dist: number };
+/** Where a shell's smoke trail was last laid. */
+type Trail = { x: number; y: number; z: number; seen: number };
+/** A ship going down: its script and the running parts of the sinking effects. */
+type SinkState = { plan: SinkCue[]; next: number; bubbles: number; slick: number; bubbleUntil: number };
 
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
+const smooth = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
 
 export class Effects {
   readonly group = new Group();
   readonly smoke: ParticleLayer;
   readonly fire: ParticleLayer;
   readonly spray: ParticleLayer;
+  /** Sparks, tracers and glowing embers: velocity-aligned additive streaks. */
+  readonly streaks: StreakLayer;
   private readonly lightCount: number;
-  private readonly debrisMesh: InstancedMesh;
-  private readonly debris: Debris[] = [];
+  private readonly debris: DebrisField;
   private readonly balls: InstancedMesh;
   private readonly arrows: InstancedMesh;
   private readonly camPos = new Vector3();
   onShake: ((amount: number) => void) | null = null;
+  /** Sinking cues (see sinkPlan.ts) for the sound: kind, world position, 0..1 size. */
+  onCue: ((kind: CueKind, x: number, y: number, z: number, size: number) => void) | null = null;
   private readonly lights: PointLight[] = [];
   private readonly sources: LightSource[] = [];
   private readonly m = new Matrix4();
@@ -59,6 +73,14 @@ export class Effects {
   private readonly p = new Vector3();
   private emitAccum = new Map<number, number>();
   private strokes = new Map<number, number>();
+  private readonly trails = new Map<number, Trail>();
+  private readonly trailPool: Trail[] = [];
+  private readonly sinks = new Map<number, SinkState>();
+  private frame = 0;
+  /** Equipment class: how big the pools are (1 PC, less on tablets and phones). */
+  private readonly tier: number;
+  /** Run-time emission scale from the quality level. */
+  private k: number;
   wake: WakeMap | null = null;
   readonly lightPos = pointLights.pos;
   readonly lightCol = pointLights.col;
@@ -72,30 +94,29 @@ export class Effects {
     this.fire = new ParticleLayer('fire', 8000, quality.particles);
     this.spray = new ParticleLayer('spray', 6000, quality.particles);
     this.lightCount = quality.lights;
+    this.tier = quality.lights >= 8 ? 1 : quality.lights >= 6 ? 0.7 : 0.45;
+    this.k = Math.min(1.25, Math.max(0.4, quality.particles.keep));
+    this.streaks = new StreakLayer(Math.round(1200 * this.tier), Math.round(1000 * this.tier), quality.particles);
+    this.debris = new DebrisField(Math.round(900 * this.tier));
     // Lights past the active count stay dark so the surface shader's light loop adds nothing for them.
     for (let i = this.lightCount; i < LIGHT_COUNT; i += 1) this.lightPos[i]!.w = 0;
-    const wood = new MeshStandardNodeMaterial({ color: new Color(0.13, 0.085, 0.05), roughness: 0.9, metalness: 0 });
-    this.debrisMesh = new InstancedMesh(new BoxGeometry(1, 0.12, 0.26), wood, MAX_DEBRIS);
-    this.debrisMesh.instanceMatrix.setUsage(DynamicDrawUsage);
-    this.debrisMesh.count = 0;
-    this.debrisMesh.frustumCulled = false;
-    this.debrisMesh.castShadow = false;
-    const iron = new MeshStandardNodeMaterial({ color: new Color(0.03, 0.03, 0.03), roughness: 0.4, metalness: 0.8 });
+    const iron = new MeshStandardNodeMaterial({ color: new Color(0.04, 0.04, 0.04), roughness: 0.35, metalness: 0.85 });
     this.balls = new InstancedMesh(new SphereGeometry(0.22, 10, 8), iron, MAX_BALLS);
     this.balls.instanceMatrix.setUsage(DynamicDrawUsage);
     this.balls.count = 0;
     this.balls.frustumCulled = false;
-    const shaft = new CylinderGeometry(0.07, 0.07, 2.4, 6);
+    const shaft = new CylinderGeometry(0.08, 0.08, 2.4, 6);
     shaft.rotateZ(Math.PI / 2);
-    const head = new ConeGeometry(0.16, 0.5, 6);
+    const head = new ConeGeometry(0.2, 0.62, 6);
     head.rotateZ(-Math.PI / 2);
-    head.translate(1.45, 0, 0);
-    const fins = new BoxGeometry(0.5, 0.02, 0.32);
+    head.translate(1.5, 0, 0);
+    const fins = new BoxGeometry(0.6, 0.03, 0.4);
     fins.translate(-1.05, 0, 0);
     const fins2 = fins.clone();
     fins2.rotateX(Math.PI / 2);
     const arrowGeo = mergeGeometries([shaft, head, fins, fins2].map((g) => g.toNonIndexed() as BufferGeometry));
-    const arrowMat = new MeshStandardNodeMaterial({ color: new Color(0.16, 0.11, 0.07), roughness: 0.7, metalness: 0.2 });
+    // A faint glow so the big arrows still read against dark water and at dusk.
+    const arrowMat = new MeshStandardNodeMaterial({ color: new Color(0.3, 0.2, 0.12), roughness: 0.6, metalness: 0.3, emissive: new Color(0.22, 0.11, 0.04) });
     this.arrows = new InstancedMesh(arrowGeo, arrowMat, MAX_ARROWS);
     this.arrows.instanceMatrix.setUsage(DynamicDrawUsage);
     this.arrows.count = 0;
@@ -106,14 +127,21 @@ export class Effects {
       this.lights.push(l);
       this.group.add(l);
     }
-    this.group.add(this.smoke.sprite, this.fire.sprite, this.spray.sprite, this.debrisMesh, this.balls, this.arrows);
+    this.group.add(this.smoke.sprite, this.fire.sprite, this.spray.sprite, this.streaks.sprite, this.debris.group, this.balls, this.arrows);
   }
 
   /** Run-time emission rate for all particle layers. See ParticleLayer.setKeep. */
   setParticleKeep(keep: number) {
+    this.k = Math.min(1.25, Math.max(0.4, keep));
     this.smoke.setKeep(keep);
     this.fire.setKeep(keep);
     this.spray.setKeep(keep);
+    this.streaks.setKeep(keep);
+  }
+
+  /** A count scaled to the quality level (at least 1). */
+  private n(count: number) {
+    return Math.max(1, Math.round(count * this.k));
   }
 
   lantern(x: number, y: number, z: number, intensity: number) {
@@ -128,7 +156,7 @@ export class Effects {
     for (const e of events) {
       switch (e.type) {
         case 'gun':
-          this.gun(e.x, e.y, e.z, e.dx, e.dy, e.dz, e.big);
+          this.gun(e.x, e.y, e.z, e.dx, e.dy, e.dz, e.big, e.gun);
           break;
         case 'musket':
           this.musket(e.ship, e.dx, e.dz, e.count, battle);
@@ -146,11 +174,19 @@ export class Effects {
         case 'explode':
           this.explode(e.ship, battle);
           break;
+        case 'ignite':
+          this.ignite(e.ship, battle);
+          break;
         case 'ram':
           this.ram(e.x, e.z, e.power);
           break;
-        case 'sinking':
-          this.sinkingBurst(e.ship, battle);
+        case 'sinking': {
+          const ship = battle.get(e.ship);
+          if (ship) this.beginSink(ship);
+          break;
+        }
+        case 'removed':
+          this.finishSink(e.ship, battle);
           break;
         default:
           break;
@@ -164,9 +200,15 @@ export class Effects {
     if (k > 0.02) this.onShake?.(k);
   }
 
-  gun(x: number, y: number, z: number, dx: number, dy: number, dz: number, big: boolean) {
-    const scale = big ? 1 : 0.6;
-    const flames = big ? 16 : 9;
+  /** Streaks and glow shrink to nothing when the camera is far; widen them with distance so they still read. */
+  private zoomBoost(x: number, y: number, z: number) {
+    return Math.min(5, Math.max(1, this.camPos.distanceTo(this.v.set(x, y, z)) / 160));
+  }
+
+  gun(x: number, y: number, z: number, dx: number, dy: number, dz: number, big: boolean, type?: GunType) {
+    const w = gunClass(type, big).weight;
+    const scale = 0.55 + 0.6 * w;
+    const flames = Math.round(8 + 10 * w);
     for (let i = 0; i < flames; i += 1) {
       const f = i / flames;
       const sp = 18 + f * 70;
@@ -174,30 +216,64 @@ export class Effects {
       this.fire.emit({ x: x + dx * (0.6 + f * 1.2), y: y + dy * (0.6 + f), z: z + dz * (0.6 + f * 1.2), vx: dx * sp + rnd(-spread, spread), vy: dy * sp + rnd(-spread, spread) * 0.6, vz: dz * sp + rnd(-spread, spread), life: rnd(0.07, 0.2) * (1 - f * 0.4), size0: (4.5 - f * 2.2) * scale, size1: (7.5 - f * 3) * scale, alpha: 1, heat: 1 - f * 0.3, drag: 7, wind: 0 });
     }
     this.fire.emit({ x: x + dx * 1.5, y: y + dy * 1.5, z: z + dz * 1.5, life: 0.06, size0: 7 * scale, size1: 10 * scale, alpha: 1, heat: 1, drag: 8, wind: 0 });
-    for (let i = 0; i < (big ? 14 : 7); i += 1) {
+    if (w > 0.6) {
+      // The fireball of a heavy gun: a few large, brief blooms a little way off the muzzle.
+      for (let i = 0; i < 3; i += 1) this.fire.emit({ x: x + dx * (3 + i * 2.4), y: y + dy * (3 + i * 2.4) + 0.3, z: z + dz * (3 + i * 2.4), vx: dx * 30, vy: dy * 30 + 1, vz: dz * 30, life: rnd(0.1, 0.16), size0: 4 * scale, size1: 8 * scale, alpha: 0.55, heat: 0.9, drag: 5, wind: 0 });
+    }
+    for (let i = 0; i < this.n(8 + 8 * w); i += 1) {
       const sp = rnd(25, 70);
       this.fire.emit({ x, y, z, vx: dx * sp + rnd(-6, 6), vy: dy * sp + rnd(0, 8), vz: dz * sp + rnd(-6, 6), life: rnd(0.5, 1.4), size0: 0.28, size1: 0.1, heat: 1, drag: 0.8, lift: -6, wind: 0.2 });
     }
+    // Burning powder streaking out of the bore in a narrow fan.
+    const boost = this.zoomBoost(x, y, z);
+    for (let i = 0; i < this.n(12 + 24 * w); i += 1) {
+      const sp = rnd(45, 150);
+      const fan = 0.22;
+      this.streaks.emit({
+        x: x + dx * 0.8,
+        y: y + dy * 0.8,
+        z: z + dz * 0.8,
+        vx: dx * sp + rnd(-fan, fan) * sp * 0.5,
+        vy: dy * sp + rnd(-fan, fan) * sp * 0.5,
+        vz: dz * sp + rnd(-fan, fan) * sp * 0.5,
+        life: rnd(0.12, 0.4),
+        minLen: 0.6,
+        stretch: 0.03,
+        width: (0.1 + 0.14 * w) * boost,
+        r: 1,
+        g: rnd(0.55, 0.8),
+        b: rnd(0.2, 0.4),
+        gravity: 6,
+        drag: 0.9,
+      });
+    }
     const px = -dz;
     const pz = dx;
-    for (let i = 0; i < (big ? 18 : 10); i += 1) {
-      const a = (i / (big ? 18 : 10)) * Math.PI * 2;
+    const ring = Math.round(10 + 8 * w);
+    for (let i = 0; i < ring; i += 1) {
+      const a = (i / ring) * Math.PI * 2;
       const ux = px * Math.cos(a);
       const uy = Math.sin(a);
       const uz = pz * Math.cos(a);
       const sp = rnd(9, 16) * scale;
       this.smoke.emit({ x: x + dx * 2.2, y: y + dy * 2, z: z + dz * 2.2, vx: ux * sp + dx * 7, vy: uy * sp * 0.7 + 0.5, vz: uz * sp + dz * 7, life: rnd(5, 9), size0: 1.6 * scale, size1: rnd(8, 12) * scale, alpha: 0.7, r: 0.93, g: 0.92, b: 0.9, drag: 2.6, lift: 0.18, wind: 1 });
     }
-    if (big) {
+    // A fast jet of dark powder smoke straight out of the muzzle.
+    for (let i = 0; i < Math.round(3 + 4 * w); i += 1) {
+      const sp = rnd(30, 60);
+      this.smoke.emit({ x: x + dx * 1.2, y: y + dy * 1.2, z: z + dz * 1.2, vx: dx * sp, vy: dy * sp + 0.3, vz: dz * sp, life: rnd(3, 6), size0: 1.2 * scale, size1: rnd(6, 10) * scale, alpha: 0.6, r: 0.3, g: 0.29, b: 0.28, drag: 3.2, lift: 0.15, wind: 1, heat: 0.3 });
+    }
+    if (w > 0.45) {
       const h = waveField.heightAt(x, z, waveField.time, 6);
       for (let i = 0; i < 14; i += 1) {
         const a = Math.random() * Math.PI * 2;
         this.spray.emit({ x: x + dx * 5 + Math.cos(a) * 2, y: h + 0.2, z: z + dz * 5 + Math.sin(a) * 2, vx: Math.cos(a) * rnd(2, 6) + dx * 6, vy: rnd(1.5, 4), vz: Math.sin(a) * rnd(2, 6) + dz * 6, life: rnd(0.8, 1.4), size0: 0.8, size1: rnd(2.5, 4), alpha: 0.55, r: 0.95, g: 0.97, b: 1, drag: 0.8, lift: -9.8, wind: 0.2 });
       }
-      this.wake?.stamp(x + dx * 6, z + dz * 6, Math.atan2(dz, dx), 9, 0.5, 1, 1.2);
+      // The blast's pressure flattens the sea in front of the muzzle.
+      this.wake?.stamp(x + dx * 6, z + dz * 6, Math.atan2(dz, dx), 9 + 5 * w, 0.5 + 0.3 * w, 1, 1.2);
     }
-    this.shakeAt(x, y, z, big ? 0.55 : 0.28);
-    const puffs = big ? 22 : 11;
+    this.shakeAt(x, y, z, 0.2 + 0.4 * w);
+    const puffs = Math.round(11 + 11 * w);
     for (let i = 0; i < puffs; i += 1) {
       const sp = rnd(4, 26) * scale;
       const gray = rnd(0.78, 0.92);
@@ -221,7 +297,7 @@ export class Effects {
         heat: i < 3 ? 0.6 : 0,
       });
     }
-    this.light(x + dx * 3, y + 1, z + dz * 3, big ? 16000 : 6500, 0.2, 1, 0.68, 0.36, big ? 180 : 120);
+    this.light(x + dx * 3, y + 1, z + dz * 3, 6500 + 9500 * w, 0.2, 1, 0.68, 0.36, 120 + 60 * w);
   }
 
   musket(id: number, dx: number, dz: number, count: number, battle: Battle) {
@@ -238,19 +314,50 @@ export class Effects {
     }
   }
 
-  hit(x: number, y: number, z: number, damage: number, ammo: AmmoType = 'ball') {
-    const n = Math.round(10 + damage * 1.8);
-    for (let i = 0; i < n; i += 1) {
-      const big = i < 3;
-      this.spawnDebris(x, y, z, rnd(-12, 12), rnd(4, 17), rnd(-12, 12), big ? rnd(0.9, 1.8) : rnd(0.25, 0.8));
+  /** Planking, splinters and charred lumps thrown out from a point, `power` 1 being a round shot's hit. */
+  private shatter(x: number, y: number, z: number, count: number, power: number, spread: number) {
+    for (let i = 0; i < count; i += 1) {
+      const r = Math.random();
+      const vx = rnd(-spread, spread);
+      const vz = rnd(-spread, spread);
+      if (i < 2) {
+        const s = rnd(1.3, 2.4) * power;
+        this.debris.spawn(Piece.Plank, x, y, z, vx * 0.7, rnd(4, 15), vz * 0.7, s, s * 1.3, s * 1.3, rnd(14, 26));
+      } else if (r < 0.5) {
+        this.debris.spawn(Piece.Splinter, x, y, z, vx * 1.3, rnd(5, 19), vz * 1.3, rnd(0.9, 2.8) * power, rnd(1.4, 2.4), rnd(1.4, 2.4), rnd(10, 20), 1.6);
+      } else if (r < 0.82) {
+        const s = rnd(0.45, 1.2) * power;
+        this.debris.spawn(Piece.Plank, x, y, z, vx, rnd(4, 17), vz, s, s, s, rnd(14, 26));
+      } else {
+        const s = rnd(0.4, 1.1) * power;
+        this.debris.spawn(Piece.Chunk, x, y, z, vx * 0.8, rnd(3, 13), vz * 0.8, s, s, s, rnd(10, 18));
+      }
     }
+  }
+
+  private sparks(x: number, y: number, z: number, count: number, speed: number, up: number) {
+    const boost = this.zoomBoost(x, y, z);
+    for (let i = 0; i < this.n(count); i += 1) {
+      this.streaks.emit({ x, y, z, vx: rnd(-1, 1) * speed, vy: rnd(0.1, 1) * up + 2, vz: rnd(-1, 1) * speed, life: rnd(0.25, 0.7), minLen: 0.3, stretch: 0.035, width: 0.13 * boost, r: 1, g: rnd(0.5, 0.75), b: rnd(0.15, 0.3), gravity: 20, drag: 0.4 });
+    }
+  }
+
+  hit(x: number, y: number, z: number, damage: number, ammo: AmmoType = 'ball') {
+    // A heavy arrow (daejanggun-jeon) is a log of oak with an iron head: more timber, bigger pieces.
+    const power = ammo === 'arrow' ? 1.35 : 1;
+    this.shatter(x, y, z, this.n((10 + damage * 1.8) * power), power, 12);
     for (let i = 0; i < 9; i += 1) {
       this.smoke.emit({ x, y, z, vx: rnd(-6, 6), vy: rnd(1, 7), vz: rnd(-6, 6), life: rnd(3, 7), size0: 1.2, size1: rnd(6, 11), alpha: 0.55, r: 0.5, g: 0.42, b: 0.32, drag: 1.8, lift: 0.3 });
     }
-    for (let i = 0; i < 10; i += 1) {
+    this.sparks(x, y, z, 14 + damage * 0.9, 24, 26);
+    // Pale wood dust billowing off the struck planks.
+    for (let i = 0; i < 5; i += 1) {
+      this.smoke.emit({ x, y, z, vx: rnd(-5, 5), vy: rnd(0.5, 4), vz: rnd(-5, 5), life: rnd(2, 4), size0: 1.5, size1: rnd(8, 14) * power, alpha: 0.5, r: 0.7, g: 0.6, b: 0.46, drag: 1.6, lift: 0.2, wind: 0.8 });
+    }
+    for (let i = 0; i < 6; i += 1) {
       this.fire.emit({ x, y, z, vx: rnd(-14, 14), vy: rnd(2, 12), vz: rnd(-14, 14), life: rnd(0.2, 0.6), size0: 0.22, size1: 0.08, heat: 1, drag: 1.5, lift: -8 });
     }
-    this.fire.emit({ x, y, z, life: 0.12, size0: 3.5, size1: 6, heat: 1, drag: 4, wind: 0 });
+    this.fire.emit({ x, y, z, life: 0.12, size0: 3.5 * power, size1: 6 * power, heat: 1, drag: 4, wind: 0 });
     if (ammo === 'fire') {
       for (let i = 0; i < 12; i += 1) this.fire.emit({ x: x + rnd(-1, 1), y: y + rnd(0, 1.5), z: z + rnd(-1, 1), vx: rnd(-2, 2), vy: rnd(2, 6), vz: rnd(-2, 2), life: rnd(0.5, 1.2), size0: rnd(1.5, 3), size1: rnd(3, 5), heat: rnd(0.6, 1), drag: 1.5, lift: 2.5, wind: 0.5 });
     }
@@ -262,7 +369,11 @@ export class Effects {
     for (let i = 0; i < 18; i += 1) {
       this.smoke.emit({ x, y, z, vx: rnd(-5, 5), vy: rnd(3, 12), vz: rnd(-5, 5), life: rnd(3, 6), size0: 1.2, size1: rnd(5, 9), alpha: 0.6, r: 0.42, g: 0.36, b: 0.28, drag: 1.4, lift: -1.5, wind: 0.6 });
     }
-    for (let i = 0; i < 8; i += 1) this.spawnDebris(x, y + 0.5, z, rnd(-6, 6), rnd(5, 12), rnd(-6, 6), rnd(0.3, 0.8));
+    for (let i = 0; i < this.n(10); i += 1) {
+      const s = rnd(0.35, 1);
+      this.debris.spawn(Piece.Chunk, x, y + 0.5, z, rnd(-6, 6), rnd(5, 13), rnd(-6, 6), s, s, s, rnd(6, 12));
+    }
+    this.sparks(x, y + 0.3, z, 8, 12, 14);
     this.light(x, y + 1, z, 1800, 0.1);
   }
 
@@ -297,11 +408,48 @@ export class Effects {
     for (let i = 0; i < 6; i += 1) {
       this.spray.emit({ x: x + rnd(-1, 1), y: h + 0.3, z: z + rnd(-1, 1), vx: rnd(-1, 1), vy: rnd(0.2, 1.2), vz: rnd(-1, 1), life: rnd(2, 3.5), size0: 2, size1: rnd(5, 8) * size, alpha: 0.4, r: 0.9, g: 0.95, b: 0.97, drag: 1.2, lift: 0, wind: 0.4 });
     }
+    // Flung drops catch the light as short streaks, and a heavy shot leaves a ring on the sea.
+    const boost = this.zoomBoost(x, h, z);
+    for (let i = 0; i < this.n(8 * size); i += 1) {
+      const a = Math.random() * Math.PI * 2;
+      const out = rnd(1, 6) * size;
+      this.streaks.emit({ x, y: h + 0.5, z, vx: Math.cos(a) * out, vy: rnd(8, 20) * size, vz: Math.sin(a) * out, life: rnd(0.8, 1.5), minLen: 0.3, stretch: 0.03, width: 0.11 * boost * size, r: 0.82, g: 0.9, b: 1, alpha: 0.55, gravity: 9.8, drag: 0.1 });
+    }
+    if (size > 0.9) this.wake?.stamp(x, z, 0, 5 * size, 0.6 * Math.min(1.5, size), 1, 1.3);
   }
 
   ram(x: number, z: number, power: number) {
-    for (let i = 0; i < 24; i += 1) this.spawnDebris(x, 3, z, rnd(-8, 8), rnd(3, 11), rnd(-8, 8), rnd(0.5, 1.8));
+    this.shatter(x, 3, z, this.n(26), 1.2, 8);
     this.splash(x, z, 0.9 + Math.min(1, power * 0.15));
+  }
+
+  /** Flames taking hold: a short flare-up over the deck. */
+  ignite(id: number, battle: Battle) {
+    const ship = battle.get(id);
+    if (!ship) return;
+    this.views.localToWorld(id, rnd(-0.2, 0.2) * ship.spec.length, ship.spec.deck, 0, this.p);
+    for (let i = 0; i < 10; i += 1) this.fire.emit({ x: this.p.x + rnd(-2, 2), y: this.p.y, z: this.p.z + rnd(-2, 2), vx: rnd(-1, 1), vy: rnd(3, 8), vz: rnd(-1, 1), life: rnd(0.5, 1.1), size0: 2, size1: rnd(4, 7), heat: rnd(0.6, 1), drag: 1.2, lift: 3, wind: 0.5 });
+    this.light(this.p.x, this.p.y + 3, this.p.z, 12000, 0.5, 1, 0.5, 0.2, 200);
+  }
+
+  /** A blast: scale 1 is a magazine going up, 0.3 a cooking-off powder keg. */
+  private blast(x: number, y: number, z: number, scale: number) {
+    const nf = Math.max(6, Math.round(90 * scale * this.k));
+    for (let i = 0; i < nf; i += 1) {
+      const a = Math.random() * Math.PI * 2;
+      const e = Math.random() * 1.2;
+      const sp = rnd(6, 30) * (0.5 + scale * 0.5);
+      this.fire.emit({ x, y, z, vx: Math.cos(a) * Math.cos(e) * sp, vy: Math.sin(e) * sp + 4, vz: Math.sin(a) * Math.cos(e) * sp, life: rnd(0.5, 1.4), size0: rnd(4, 8) * (0.5 + scale * 0.5), size1: rnd(9, 16) * (0.5 + scale * 0.5), heat: rnd(0.6, 1), drag: 2.5, lift: 3, wind: 0.2 });
+    }
+    const ns = Math.max(4, Math.round(50 * scale * this.k));
+    for (let i = 0; i < ns; i += 1) {
+      const a = Math.random() * Math.PI * 2;
+      this.smoke.emit({ x, y: y + rnd(0, 6), z, vx: Math.cos(a) * rnd(3, 14), vy: rnd(3, 16), vz: Math.sin(a) * rnd(3, 14), life: rnd(14, 28), size0: rnd(5, 9) * (0.5 + scale * 0.5), size1: rnd(22, 38) * (0.4 + scale * 0.6), alpha: 0.85, r: 0.16, g: 0.14, b: 0.13, drag: 0.9, lift: 0.5, heat: 0.8 });
+    }
+    this.shatter(x, y + 2, z, this.n(70 * scale), 1.5 * (0.6 + scale * 0.4), 22 * (0.5 + scale * 0.5));
+    this.sparks(x, y + 1, z, 60 * scale, 36, 40);
+    this.light(x, y + 6, z, 220000 * scale ** 1.5, 0.5 + 0.9 * scale, 1, 0.55, 0.25, 250 + 350 * scale);
+    this.shakeAt(x, y, z, 0.35 + 0.7 * scale);
   }
 
   explode(id: number, battle: Battle) {
@@ -309,33 +457,191 @@ export class Effects {
     if (!ship) return;
     this.views.localToWorld(id, rnd(-0.2, 0.2) * ship.spec.length, ship.spec.deck, 0, this.p);
     const { x, y, z } = this.p;
-    for (let i = 0; i < 90; i += 1) {
-      const a = Math.random() * Math.PI * 2;
-      const e = Math.random() * 1.2;
-      const sp = rnd(6, 30);
-      this.fire.emit({ x, y, z, vx: Math.cos(a) * Math.cos(e) * sp, vy: Math.sin(e) * sp + 4, vz: Math.sin(a) * Math.cos(e) * sp, life: rnd(0.5, 1.4), size0: rnd(4, 8), size1: rnd(9, 16), heat: rnd(0.6, 1), drag: 2.5, lift: 3, wind: 0.2 });
-    }
-    for (let i = 0; i < 50; i += 1) {
-      const a = Math.random() * Math.PI * 2;
-      this.smoke.emit({ x, y: y + rnd(0, 6), z, vx: Math.cos(a) * rnd(3, 14), vy: rnd(3, 16), vz: Math.sin(a) * rnd(3, 14), life: rnd(14, 28), size0: rnd(5, 9), size1: rnd(22, 38), alpha: 0.85, r: 0.16, g: 0.14, b: 0.13, drag: 0.9, lift: 0.5, heat: 0.8 });
-    }
-    for (let i = 0; i < 70; i += 1) this.spawnDebris(x, y + 2, z, rnd(-22, 22), rnd(8, 32), rnd(-22, 22), rnd(0.6, 2.6));
-    this.light(x, y + 6, z, 220000, 1.4, 1, 0.55, 0.25, 600);
+    this.blast(x, y, z, 1);
     this.splash(x + rnd(-10, 10), z + rnd(-10, 10), 1.6);
   }
 
-  sinkingBurst(id: number, battle: Battle) {
-    const ship = battle.get(id);
-    if (!ship) return;
-    for (let i = 0; i < 4; i += 1) {
-      this.views.localToWorld(id, rnd(-0.4, 0.4) * ship.spec.length, 0, rnd(-0.5, 0.5) * ship.spec.beam, this.p);
-      this.splash(this.p.x, this.p.z, 0.8);
+  // ---- A ship going down ----------------------------------------------------------------------------------------
+
+  private beginSink(ship: Ship) {
+    let st = this.sinks.get(ship.id);
+    if (!st) {
+      st = { plan: planSinking(ship.id, MASTS[ship.spec.kind] ?? 1, ship.spec.length), next: 0, bubbles: 0, slick: 0, bubbleUntil: 0 };
+      this.sinks.set(ship.id, st);
+    }
+    return st;
+  }
+
+  private cue(kind: CueKind, x: number, y: number, z: number, size: number) {
+    this.onCue?.(kind, x, y, z, size);
+  }
+
+  /** Runs one step of the sinking script and the always-on parts (bubbling and the oil slick). */
+  private sinking(ship: Ship, dt: number) {
+    const st = this.beginSink(ship);
+    const p = ship.sinking;
+    const L = ship.spec.length;
+    while (st.next < st.plan.length && st.plan[st.next]!.at <= p) this.runCue(ship, st, st.plan[st.next++]!);
+    if (dt <= 0) return;
+    const hullBubbles = p > 0.5 || p < st.bubbleUntil;
+    if (hullBubbles) {
+      st.bubbles += (6 + 60 * smooth(0.5, 1, p)) * (L / 40) * this.k * dt;
+      let guard = 24;
+      while (st.bubbles >= 1 && guard-- > 0) {
+        st.bubbles -= 1;
+        const lx = rnd(-0.45, 0.45) * L;
+        const lz = rnd(-0.5, 0.5) * ship.spec.beam;
+        this.views.localToWorld(ship.id, lx, 0, lz, this.p);
+        const h = waveField.heightAt(this.p.x, this.p.z);
+        this.spray.emit({ x: this.p.x, y: h + 0.15, z: this.p.z, vx: rnd(-0.6, 0.6), vy: rnd(0.8, 2.6), vz: rnd(-0.6, 0.6), life: rnd(0.9, 1.8), size0: 0.5, size1: rnd(1.3, 2.4), alpha: 0.7, r: 0.95, g: 0.98, b: 1, drag: 1.2, lift: -3, wind: 0.2 });
+      }
+      if (st.bubbles > 8) st.bubbles = 0;
+    }
+    st.slick -= dt;
+    if (st.slick <= 0) {
+      st.slick = 0.45;
+      this.wake?.stamp(ship.x, ship.z, ship.heading, L * 0.55, 0.35 + 0.35 * p, 1.6, 1.5);
     }
   }
 
-  private spawnDebris(x: number, y: number, z: number, vx: number, vy: number, vz: number, s: number) {
-    if (this.debris.length >= MAX_DEBRIS) this.debris.shift();
-    this.debris.push({ x, y, z, vx, vy, vz, rx: rnd(0, 6), ry: rnd(0, 6), rz: rnd(0, 6), wx: rnd(-9, 9), wy: rnd(-9, 9), wz: rnd(-9, 9), s, age: 0, life: rnd(14, 26), floating: false });
+  private runCue(ship: Ship, st: SinkState, c: SinkCue) {
+    const L = ship.spec.length;
+    const B = ship.spec.beam;
+    const id = ship.id;
+    const down = Math.sign(ship.sinkRoll) || 1;
+    // The low side of the heeling hull: local +z, mirrored by the sign of the roll.
+    const sideX = -Math.sin(ship.heading) * down;
+    const sideZ = Math.cos(ship.heading) * down;
+    this.views.localToWorld(id, 0, ship.spec.deck, 0, this.p);
+    const cx = this.p.x;
+    const cy = this.p.y;
+    const cz = this.p.z;
+    switch (c.kind) {
+      case 'groan':
+      case 'crack': {
+        if (c.kind === 'crack') {
+          this.views.localToWorld(id, rnd(-0.4, 0.4) * L, ship.spec.deck + rnd(0, 1.5), rnd(-0.4, 0.4) * B, this.p);
+          this.shatter(this.p.x, this.p.y, this.p.z, this.n(5 + 4 * c.size), 0.7, 5);
+          this.sparks(this.p.x, this.p.y, this.p.z, 6, 8, 9);
+          this.shakeAt(this.p.x, this.p.y, this.p.z, 0.1);
+        }
+        this.cue(c.kind, cx, cy, cz, c.size);
+        break;
+      }
+      case 'wreck': {
+        const count = this.n(Math.round((6 + 10 * c.size) * (0.45 + L / 60)) * this.tier);
+        for (let i = 0; i < count; i += 1) {
+          this.views.localToWorld(id, rnd(-0.42, 0.42) * L, ship.spec.deck + rnd(0, 1.2), rnd(-0.45, 0.45) * B, this.p);
+          const out = rnd(1, 5);
+          const vx = sideX * out + rnd(-2, 2);
+          const vz = sideZ * out + rnd(-2, 2);
+          const vy = rnd(1, 6);
+          const life = rnd(26, 44);
+          const ember = ship.fire > 0.2 && Math.random() < 0.4 ? 1 : 0;
+          const r = Math.random();
+          if (r < 0.34) {
+            const s = rnd(0.8, 1.9);
+            this.debris.spawn(Piece.Plank, this.p.x, this.p.y, this.p.z, vx, vy, vz, s * 1.6, s, s, life, 0.8, ember);
+          } else if (r < 0.5) this.debris.spawn(Piece.Spar, this.p.x, this.p.y, this.p.z, vx, vy, vz, rnd(3, 7), 0.22, 0.22, life, 0.5, ember);
+          else if (r < 0.7) this.debris.spawn(Piece.Sail, this.p.x, this.p.y, this.p.z, vx * 0.6, vy, vz * 0.6, rnd(3, 7), 1, rnd(2, 5), life, 0.4, ember);
+          else if (r < 0.82) this.debris.spawn(Piece.Beam, this.p.x, this.p.y, this.p.z, vx, vy, vz, rnd(2, 4.5), 1, 1, life, 0.7, ember);
+          else if (r < 0.92) this.debris.spawn(Piece.Barrel, this.p.x, this.p.y, this.p.z, vx, vy, vz, 1, 1, 1, life, 1, ember);
+          else this.debris.spawn(Piece.Splinter, this.p.x, this.p.y, this.p.z, vx, vy, vz, rnd(1, 2.4), 1.6, 1.6, life, 1);
+        }
+        this.cue('wreck', cx, cy, cz, c.size);
+        break;
+      }
+      case 'mast': {
+        const i = Math.floor(rnd(0, Math.min(MAST_AT.length, MASTS[ship.spec.kind] ?? 1)));
+        this.views.localToWorld(id, MAST_AT[i]! * L, ship.spec.deck + ship.spec.height * 0.45, 0, this.p);
+        const len = ship.spec.height * rnd(0.7, 1.1);
+        // The snapped mast topples toward the low side and takes a spar or two with it.
+        this.debris.spawn(Piece.Mast, this.p.x, this.p.y, this.p.z, sideX * rnd(3, 7), rnd(2, 5), sideZ * rnd(3, 7), len, 0.7, 0.7, rnd(34, 52), 0.35);
+        this.debris.spawn(Piece.Spar, this.p.x, this.p.y, this.p.z, sideX * rnd(3, 8), rnd(2, 6), sideZ * rnd(3, 8), len * 0.6, 0.3, 0.3, rnd(30, 46), 0.5);
+        for (let k = 0; k < 4; k += 1) this.smoke.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: rnd(-3, 3), vy: rnd(1, 5), vz: rnd(-3, 3), life: rnd(3, 6), size0: 1.5, size1: rnd(5, 8), alpha: 0.5, r: 0.5, g: 0.45, b: 0.4, drag: 1.5, lift: 0.3 });
+        this.shatter(this.p.x, this.p.y, this.p.z, this.n(8), 0.9, 6);
+        this.shakeAt(this.p.x, this.p.y, this.p.z, 0.3);
+        this.cue('mast', this.p.x, this.p.y, this.p.z, c.size);
+        break;
+      }
+      case 'blast': {
+        if (ship.fire < 0.08) break;
+        this.views.localToWorld(id, rnd(-0.3, 0.3) * L, ship.spec.deck + 1, rnd(-0.3, 0.3) * B, this.p);
+        this.blast(this.p.x, this.p.y, this.p.z, 0.22 + 0.3 * c.size);
+        this.cue('blast', this.p.x, this.p.y, this.p.z, c.size);
+        break;
+      }
+      case 'bubbles':
+        st.bubbleUntil = Math.max(st.bubbleUntil, c.at + 0.18);
+        this.cue('bubbles', cx, 0, cz, c.size);
+        break;
+      case 'plunge':
+        this.plunge(ship);
+        this.cue('plunge', ship.x, 0, ship.z, 1);
+        break;
+    }
+  }
+
+  /** The hull going under: air escapes in a boiling burst and pieces that were trapped inside pop up. */
+  private plunge(ship: Ship) {
+    const L = ship.spec.length;
+    const h = waveField.heightAt(ship.x, ship.z);
+    for (let i = 0; i < this.n(36); i += 1) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * L * 0.3;
+      this.spray.emit({ x: ship.x + Math.cos(a) * r, y: h + 0.2, z: ship.z + Math.sin(a) * r, vx: Math.cos(a) * rnd(0.5, 3), vy: rnd(6, 15), vz: Math.sin(a) * rnd(0.5, 3), life: rnd(1.2, 2.4), size0: 1.5, size1: rnd(4, 8), alpha: 0.75, r: 0.95, g: 0.98, b: 1, drag: 0.5, lift: -9.8, wind: 0.3 });
+    }
+    for (let i = 0; i < 3; i += 1) this.splash(ship.x + rnd(-0.3, 0.3) * L * Math.cos(ship.heading), ship.z + rnd(-0.3, 0.3) * L * Math.sin(ship.heading), 1.1);
+    this.wake?.stamp(ship.x, ship.z, ship.heading, L * 0.9, 0.9, 1.2, 1.8);
+    this.shakeAt(ship.x, 2, ship.z, 0.35);
+  }
+
+  /** The hull is gone: a last splash and the wreck it leaves on the water. */
+  private finishSink(id: number, battle: Battle) {
+    const st = this.sinks.get(id);
+    if (!st) return;
+    this.sinks.delete(id);
+    const ship = battle.get(id);
+    if (!ship) return;
+    const L = ship.spec.length;
+    const h = waveField.heightAt(ship.x, ship.z);
+    // A frame can skip past the plan at high speed; the late cues still play.
+    for (; st.next < st.plan.length; st.next += 1) {
+      const c = st.plan[st.next]!;
+      if (c.kind === 'plunge') {
+        this.plunge(ship);
+        this.cue('plunge', ship.x, 0, ship.z, 1);
+      }
+    }
+    const size = Math.min(1.2, Math.max(0.4, L / 40));
+    this.splash(ship.x, ship.z, 1.7 * size + 0.4);
+    for (let i = 0; i < 3; i += 1) this.splash(ship.x + rnd(-0.35, 0.35) * L * Math.cos(ship.heading), ship.z + rnd(-0.35, 0.35) * L * Math.sin(ship.heading), 1.1);
+    const count = this.n(Math.round(30 * size) * this.tier);
+    const c = Math.cos(ship.heading);
+    const n = Math.sin(ship.heading);
+    for (let i = 0; i < count; i += 1) {
+      const along = rnd(-0.45, 0.45) * L;
+      const across = rnd(-0.5, 0.5) * ship.spec.beam;
+      const x = ship.x + c * along - n * across;
+      const z = ship.z + n * along + c * across;
+      const life = rnd(24, 42);
+      const vx = rnd(-3, 3);
+      const vz = rnd(-3, 3);
+      const vy = rnd(5, 12);
+      const r = Math.random();
+      const y = h - 0.5;
+      if (r < 0.4) {
+        const s = rnd(0.7, 1.7);
+        this.debris.spawn(Piece.Plank, x, y, z, vx, vy, vz, s * 1.6, s, s, life, 0.8);
+      } else if (r < 0.55) this.debris.spawn(Piece.Beam, x, y, z, vx, vy, vz, rnd(2, 5), 1, 1, life, 0.7);
+      else if (r < 0.7) this.debris.spawn(Piece.Sail, x, y, z, vx * 0.6, vy, vz * 0.6, rnd(3, 6), 1, rnd(2, 4), life, 0.4);
+      else if (r < 0.82) this.debris.spawn(Piece.Barrel, x, y, z, vx, vy, vz, 1, 1, 1, life, 1);
+      else if (r < 0.92) this.debris.spawn(Piece.Spar, x, y, z, vx, vy, vz, rnd(3, 6), 0.22, 0.22, life, 0.5);
+      else this.debris.spawn(Piece.Chunk, x, y, z, vx, vy, vz, 0.7, 0.7, 0.7, life, 1);
+    }
+    this.wake?.stamp(ship.x, ship.z, ship.heading, L * 1.1, 1, 1, 2);
+    this.shakeAt(ship.x, 2, ship.z, 0.3);
+    this.cue('gone', ship.x, 0, ship.z, size);
   }
 
   private rowing(battle: Battle, dt: number) {
@@ -380,6 +686,7 @@ export class Effects {
     if (dt > 0) this.rowing(battle, dt);
     for (const ship of battle.ships) {
       if (!ship.alive) continue;
+      if (ship.sinking > 0) this.sinking(ship, dt);
       const burning = ship.fire > 0.02 || (ship.sinking > 0 && ship.sinking < 0.85);
       if (!burning) {
         const wreck = 1 - ship.hull / ship.spec.hull;
@@ -393,18 +700,23 @@ export class Effects {
       const rate = 40 * level + 6;
       let acc = (this.emitAccum.get(ship.id) ?? 0) + rate * dt;
       const L = ship.spec.length;
+      const sea = ship.sinking > 0 ? waveField.heightAt(ship.x, ship.z) : -100;
+      // At 128x one frame spans seconds of sim time: cap the burst so it cannot snowball.
+      acc = Math.min(acc, 24);
       while (acc >= 1) {
         acc -= 1;
         const lx = rnd(-0.38, 0.38) * L;
         const lz = rnd(-0.4, 0.4) * ship.spec.beam;
         this.views.localToWorld(ship.id, lx, ship.spec.deck * rnd(0.7, 1.2), lz, this.p);
+        // Flames that would sit under the waterline of a heeled, sinking hull are out.
+        if (this.p.y < sea + 0.4) continue;
         const big = rnd(0.6, 1.4) * (0.6 + level);
         this.fire.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: rnd(-0.6, 0.6), vy: rnd(1.5, 4), vz: rnd(-0.6, 0.6), life: rnd(0.7, 1.4), size0: 2.6 * big, size1: 4.2 * big, heat: rnd(0.5, 1), drag: 1.5, lift: 2.5, wind: 0.5, alpha: 0.8, rot: rnd(-0.15, 0.15), spin: 0.05 });
         if (Math.random() < 0.55) {
           this.smoke.emit({ x: this.p.x, y: this.p.y + 2, z: this.p.z, vx: rnd(-1, 1), vy: rnd(3, 6), vz: rnd(-1, 1), life: rnd(14, 26), size0: rnd(3, 5), size1: rnd(18, 30) * (0.6 + level * 0.6), alpha: 0.75, r: 0.12, g: 0.11, b: 0.1, drag: 0.6, lift: 0.6, wind: 1, heat: 0.35 });
         }
         if (Math.random() < 0.3) {
-          this.fire.emit({ x: this.p.x, y: this.p.y + 1, z: this.p.z, vx: rnd(-2, 2), vy: rnd(5, 12), vz: rnd(-2, 2), life: rnd(1.2, 2.6), size0: 0.25, size1: 0.12, heat: 1, drag: 0.8, lift: 1, wind: 1.2 });
+          this.streaks.emit({ x: this.p.x, y: this.p.y + 1, z: this.p.z, vx: rnd(-2, 2), vy: rnd(5, 12), vz: rnd(-2, 2), life: rnd(1.2, 2.6), minLen: 0.3, stretch: 0.03, width: 0.09, r: 1, g: 0.55, b: 0.2, alpha: 0.9, gravity: 1.5, drag: 0.5 });
         }
       }
       this.emitAccum.set(ship.id, acc);
@@ -420,83 +732,118 @@ export class Effects {
     }
   }
 
+  /** One puff of trail smoke for a shell at the given point. */
+  private trailPuff(x: number, y: number, z: number, ammo: AmmoType, weight: number) {
+    const fiery = ammo === 'fire';
+    this.smoke.emit({ x, y, z, vx: rnd(-0.3, 0.3), vy: rnd(0, 0.5), vz: rnd(-0.3, 0.3), life: rnd(1.4, 2.6), size0: 1 + 0.6 * weight, size1: rnd(3.4, 4.6) + 1.4 * weight, alpha: fiery ? 0.32 : 0.26, r: fiery ? 0.34 : 0.88, g: fiery ? 0.32 : 0.88, b: fiery ? 0.3 : 0.88, drag: 1.4, lift: 0.1, wind: 0.6, heat: fiery ? 0.5 : 0 });
+    if (fiery) this.fire.emit({ x, y, z, life: rnd(0.2, 0.4), size0: 1.1, size1: 0.3, heat: 1, drag: 2, wind: 0.2 });
+  }
+
   update(battle: Battle, dt: number, camera: Camera) {
     this.continuous(battle, dt);
-    for (const p of battle.projectiles) {
-      if (Math.random() < dt * 14) this.smoke.emit({ x: p.x, y: p.y, z: p.z, vx: 0, vy: 0.2, vz: 0, life: rnd(0.6, 1.4), size0: 0.35, size1: 1.6, alpha: 0.28, r: 0.88, g: 0.88, b: 0.88, drag: 2 });
-    }
-    this.smoke.update(dt, this.windX, this.windZ, camera);
-    this.fire.update(dt, this.windX, this.windZ, camera);
-    this.spray.update(dt, this.windX * 0.3, this.windZ * 0.3, camera);
     this.camPos.copy(camera.position);
+    this.frame += 1;
+    const shells = battle.projectiles;
+    // Pixels per metre at one metre from the camera, for a 900 px tall view: the size a shell must grow to stay seen.
+    const focal = (camera.projectionMatrix.elements[5] ?? 1.7) * 450;
+    // With many shells in flight each leaves fewer puffs, so the smoke layer never fills up.
+    const crowd = Math.max(1, shells.length / 20);
     let n = 0;
     let na = 0;
-    for (const p of battle.projectiles) {
-      if (p.ammo === 'arrow' || p.ammo === 'fire') {
+    for (const p of shells) {
+      const sp = Math.hypot(p.vx, p.vy, p.vz) || 1;
+      const ux = p.vx / sp;
+      const uy = p.vy / sp;
+      const uz = p.vz / sp;
+      const d = Math.max(1, this.camPos.distanceTo(this.p.set(p.x, p.y, p.z)));
+      const ppm = focal / d;
+      const cls = gunClass(p.gun, true);
+      const weight = cls.weight;
+      const fiery = p.ammo === 'fire';
+      // Tracer: a thin hot streak along the flight, never thinner than ~2.4 px and never shorter than ~16 px.
+      const len = Math.min(70, Math.max(sp * 0.05, 16 / ppm));
+      const width = Math.max(0.26 + 0.2 * weight, 2.4 / ppm);
+      if (fiery) {
+        this.streaks.put(p.x, p.y, p.z, ux, uy, uz, len, width, 1, 0.5, 0.16, 1);
+        this.streaks.put(p.x, p.y, p.z, ux, uy, uz, width * 2.4, width * 2.6, 1, 0.45, 0.12, 0.55);
+      } else if (p.ammo === 'grape') this.streaks.put(p.x, p.y, p.z, ux, uy, uz, len * 0.6, width * 0.8, 0.95, 0.85, 0.7, 0.55);
+      else this.streaks.put(p.x, p.y, p.z, ux, uy, uz, len, width, 1, 0.82, 0.5, 0.85);
+      // Smoke trail: a puff every couple of metres actually flown, not every so many milliseconds.
+      let t = this.trails.get(p.id);
+      if (!t) {
+        t = this.trailPool.pop() ?? { x: 0, y: 0, z: 0, seen: 0 };
+        t.x = p.x;
+        t.y = p.y;
+        t.z = p.z;
+        this.trails.set(p.id, t);
+      }
+      t.seen = this.frame;
+      if (d < 2600) {
+        const spacing = Math.min(14, 1.7 * crowd * Math.max(1, d / 500));
+        const run = Math.hypot(p.x - t.x, p.y - t.y, p.z - t.z);
+        if (run >= spacing) {
+          const puffs = Math.min(16, Math.floor(run / spacing));
+          for (let i = 1; i <= puffs; i += 1) {
+            const f = (i * spacing) / run;
+            this.trailPuff(t.x + (p.x - t.x) * f, t.y + (p.y - t.y) * f, t.z + (p.z - t.z) * f, p.ammo, weight);
+          }
+          const adv = Math.min(1, (puffs * spacing) / run);
+          t.x += (p.x - t.x) * adv;
+          t.y += (p.y - t.y) * adv;
+          t.z += (p.z - t.z) * adv;
+        }
+      } else {
+        t.x = p.x;
+        t.y = p.y;
+        t.z = p.z;
+      }
+      if (p.ammo === 'arrow' || fiery) {
         if (na >= MAX_ARROWS) continue;
-        const sp = Math.hypot(p.vx, p.vy, p.vz) || 1;
-        this.v.set(p.vx / sp, p.vy / sp, p.vz / sp);
+        this.v.set(ux, uy, uz);
         this.q.setFromUnitVectors(this.xAxis, this.v);
-        const big = p.gun === 'cheonja' ? 1.6 : p.gun === 'jija' ? 1.25 : 1;
+        // Daejanggun-jeon, the great general arrow of the heavy guns: big, and bigger still when far.
+        const base = p.gun === 'cheonja' ? 3.2 : p.gun === 'jija' ? 2.6 : fiery ? 1.7 : 1.4;
+        const big = Math.min(9, Math.max(base, 10 / (3.2 * ppm)));
         this.s.set(big, big, big);
         this.p.set(p.x, p.y, p.z);
         this.m.compose(this.p, this.q, this.s);
         this.arrows.setMatrixAt(na++, this.m);
-        if (p.ammo === 'fire' && Math.random() < dt * 30) this.fire.emit({ x: p.x, y: p.y, z: p.z, life: rnd(0.15, 0.35), size0: 0.9, size1: 0.3, heat: 1, drag: 2, wind: 0.2 });
         continue;
       }
       if (n >= MAX_BALLS) continue;
-      const r = p.ammo === 'grape' ? 0.55 : 1;
+      // A round shot swells with distance so it stays about 3 px across.
+      const r = Math.min(14, Math.max(1, 1.5 / (0.22 * ppm))) * (p.ammo === 'grape' ? 0.6 : 1) * (0.9 + 0.3 * weight);
       this.m.makeScale(r, r, r).setPosition(p.x, p.y, p.z);
       this.balls.setMatrixAt(n++, this.m);
+    }
+    if (this.trails.size > shells.length) {
+      for (const [id, t] of this.trails) {
+        if (t.seen === this.frame) continue;
+        this.trails.delete(id);
+        this.trailPool.push(t);
+      }
     }
     this.balls.count = n;
     this.balls.instanceMatrix.needsUpdate = true;
     this.arrows.count = na;
     this.arrows.instanceMatrix.needsUpdate = true;
-    const t = waveField.time;
-    let k = 0;
-    for (let i = this.debris.length - 1; i >= 0; i -= 1) {
-      const d = this.debris[i]!;
-      d.age += dt;
-      if (d.age > d.life) {
-        this.debris.splice(i, 1);
-        continue;
-      }
-      if (!d.floating) {
-        d.vy -= 9.81 * dt;
-        d.x += d.vx * dt;
-        d.y += d.vy * dt;
-        d.z += d.vz * dt;
-        d.rx += d.wx * dt;
-        d.ry += d.wy * dt;
-        d.rz += d.wz * dt;
-        const h = waveField.heightAt(d.x, d.z, t, 6);
-        if (d.y < h) {
-          d.floating = true;
-          if (d.s > 1) this.spray.emit({ x: d.x, y: h, z: d.z, vy: 3, life: 0.8, size0: 0.6, size1: 1.6, alpha: 0.5, r: 0.95, g: 0.97, b: 1, lift: -9.8 });
-        }
-      } else {
-        d.x += this.windX * 0.05 * dt;
-        d.z += this.windZ * 0.05 * dt;
-        const h = waveField.heightAt(d.x, d.z, t, 6);
-        const sink = Math.max(0, d.age - d.life * 0.6) * 0.15;
-        d.y = h - 0.05 - sink;
-        d.rx *= 0.98;
-        d.rz *= 0.98;
-      }
-      this.q.setFromEuler(this.euler.set(d.rx, d.ry, d.rz));
-      this.s.set(d.s, d.s, d.s);
-      this.v.set(d.x, d.y, d.z);
-      this.m.compose(this.v, this.q, this.s);
-      this.debrisMesh.setMatrixAt(k++, this.m);
-    }
-    this.debrisMesh.count = k;
-    this.debrisMesh.instanceMatrix.needsUpdate = true;
+    this.smoke.update(dt, this.windX, this.windZ, camera);
+    this.fire.update(dt, this.windX, this.windZ, camera);
+    this.spray.update(dt, this.windX * 0.3, this.windZ * 0.3, camera);
+    this.streaks.update(dt);
+    this.debris.update(dt, this.windX, this.windZ, this.onDebrisSplash, this.onDebrisEmber);
     this.updateLights(dt, camera);
   }
 
-  private readonly euler = new Euler();
+  private readonly onDebrisSplash = (x: number, y: number, z: number, size: number) => {
+    this.spray.emit({ x, y, z, vy: 3 + 3 * size, life: 0.9, size0: 0.6 * size, size1: 1.8 * size, alpha: 0.55, r: 0.95, g: 0.97, b: 1, lift: -9.8 });
+  };
+
+  private readonly onDebrisEmber = (x: number, y: number, z: number) => {
+    this.fire.emit({ x, y, z, vy: 1.5, life: rnd(0.4, 0.8), size0: 0.9, size1: 0.3, heat: 1, drag: 1, lift: 2 });
+    this.smoke.emit({ x, y: y + 0.5, z, vy: 1.5, life: rnd(3, 6), size0: 0.8, size1: rnd(3, 5), alpha: 0.35, r: 0.3, g: 0.29, b: 0.28, drag: 0.8, lift: 0.4 });
+  };
+
   private readonly xAxis = new Vector3(1, 0, 0);
 
   private updateLights(dt: number, camera: Camera) {

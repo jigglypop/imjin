@@ -13,6 +13,7 @@ Live at https://imjin1592.com. Player-facing text is Korean; code and comments a
   - `node scripts/probe-memory.mjs [url] [--then=myeongnyang,hansan]` WebKit process RSS + `renderer.info.memory` during a battle load and after further battles in the same page; PASS/FAIL against the phone budget (textures < 300 MB, GPU memory < 400 MB, ready < 10 s)
   - `node scripts/probe-load.mjs [url] [--engine=chromium]` load timeline (step, bar, GPU counters); `probe-calls.mjs` draw calls per frame; `probe-programs.mjs` shader programs; `probe-leak.mjs` textures that outlive a battle; `probe-cpu.mjs` main-thread profile of a load
   - `node scripts/probe-pace.mjs --url=... --seconds=40` battle time / fast-forward / closest-enemy distance over real time
+- `node scripts/render-sounds.mjs --url=http://127.0.0.1:5291 [--out=<dir>]` renders the battle voices (`src/audio/voices.ts`) offline to cannon_near/cannon_far/broadside/explosion/sinking .wav files to listen to
 - Balance: `node scripts/balance.mjs` (historical scenarios), `node scripts/balance-conquest.mjs --duel --seeds=3` (faction duels), `node scripts/balance-grand.mjs` (faction campaign, all-computer wars; `--sweep`, `--fit=japan`, `--catalog`), `node scripts/test-grand.mjs` (its rules and save/load)
 - URL test hooks (App.tsx): `?scenario=<id>&side=<faction>`, `?conquest=hallyeo&me=joseon&foe=japan&size=2`, `?gallery=1`, `?hud=0`, `?q=low|medium|high`, `?lv=0-4`, `?webgl=1`, `?sky=`, `?sea=`, `?paused=1`
 

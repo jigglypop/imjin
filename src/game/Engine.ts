@@ -121,16 +121,16 @@ const settle = () => new Promise<void>((resolve) => {
 const DEVICE_LOST_TEXT = '그래픽 장치가 멈췄습니다 — 메모리가 부족했을 수 있습니다. 페이지를 새로고침해 주세요';
 
 /** Multipliers the player can pick. The approach before first contact runs at the largest. */
-export const SPEEDS = [1, 2, 4, 8, 16, 32] as const;
+export const SPEEDS = [1, 2, 4, 8, 16, 32, 64, 128] as const;
 const FAST_SPEED = SPEEDS[SPEEDS.length - 1];
 /** The approach ends when two hostile ships come this close (inside the computer's broadside range), or at the first shot. */
 const CONTACT_RANGE = 400;
 /**
  * Sim steps per frame are capped by count and by time, so high multipliers degrade gracefully on a slow device.
- * The time budget grows with the multiplier: at 16-32x the player wants the battle to move, not a smooth 60 fps.
+ * The time budget grows with the multiplier: at 16x and up the player wants the battle to move, not a smooth 60 fps.
  */
-const MAX_STEPS = 96;
-const simBudgetMs = (speed: number) => (speed >= 16 ? 24 : speed >= 8 ? 14 : 9);
+const MAX_STEPS = 192;
+const simBudgetMs = (speed: number) => (speed >= 64 ? 40 : speed >= 16 ? 24 : speed >= 8 ? 14 : 9);
 
 export class Engine {
   readonly scene = new Scene();
@@ -335,6 +335,7 @@ export class Engine {
     this.fx = new Effects(this.views, { lights: this.eq.lights, particles: { keep: LEVELS[this.level]!.particleKeep, sort: true, noise: this.eq.noise } });
     this.fx.wake = this.wake;
     this.fx.onShake = (k) => this.rts.shake(k);
+    this.fx.onCue = (kind, x, y, z, size) => this.sound.cue(kind, x, y, z, size);
     this.scene.add(this.fx.group);
     this.crew = new Crew(this.views);
     this.scene.add(this.crew.group);
@@ -926,6 +927,7 @@ export class Engine {
       const v = this.current.velocity(t.x, t.z, this.battle.tide);
       this.sound.setRoar(Math.min(1, Math.hypot(v.x, v.z) / 4) * Math.max(0.2, 1 - this.rts.distance / 3000));
     } else this.sound.setRoar(0);
+    this.sound.tick(this.battle, this.camera, scaled);
     this.fx.update(this.battle, scaled, this.camera);
     this.crew.update(this.battle, scaled, this.camera, this.crewView());
     this.lanterns.update(this.battle, this.camera);

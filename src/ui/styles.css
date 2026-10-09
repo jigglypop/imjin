@@ -1298,13 +1298,15 @@ button {
 
 .speed {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   border-top: 1px solid rgba(22, 18, 14, 0.18);
   padding-top: 7px;
 }
 
 .speed button {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   border: 1px solid rgba(22, 18, 14, 0.25);
   background: transparent;
   font-size: 13px;
