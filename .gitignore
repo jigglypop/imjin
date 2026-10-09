@@ -12,3 +12,4 @@ assets-src/concepts/
 assets-src/characters/
 server/dist/
 assets-src/hipoly/
+.claude/worktrees/

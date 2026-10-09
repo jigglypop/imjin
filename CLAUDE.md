@@ -12,7 +12,7 @@ Live at https://imjin1592.com. Player-facing text is Korean; code and comments a
   - `node scripts/probe-mobile.mjs --url=... [--orient=portrait,landscape]` WebKit iPhone 15 Pro emulation (iOS Safari engine, WebGL2 path)
   - `node scripts/probe-memory.mjs [url]` WebKit process RSS + `renderer.info.memory` during a battle load
   - `node scripts/probe-pace.mjs --url=... --seconds=40` battle time / fast-forward / closest-enemy distance over real time
-- Balance: `node scripts/balance.mjs` (historical scenarios), `node scripts/balance-conquest.mjs --duel --seeds=3` (faction duels)
+- Balance: `node scripts/balance.mjs` (historical scenarios), `node scripts/balance-conquest.mjs --duel --seeds=3` (faction duels), `node scripts/balance-grand.mjs` (faction campaign, all-computer wars; `--sweep`, `--fit=japan`, `--catalog`), `node scripts/test-grand.mjs` (its rules and save/load)
 - URL test hooks (App.tsx): `?scenario=<id>&side=<faction>`, `?conquest=hallyeo&me=joseon&foe=japan&size=2`, `?gallery=1`, `?hud=0`, `?q=low|medium|high`, `?lv=0-4`, `?webgl=1`, `?sky=`, `?sea=`, `?paused=1`
 
 ## Architecture map
@@ -23,6 +23,7 @@ Live at https://imjin1592.com. Player-facing text is Korean; code and comments a
 - `src/fx/` Effects (muzzle, projectiles, hits, debris), ParticleLayer (CPU particles, TSL sprites), Crew (GPU-skinned baked crews), Lanterns
 - `src/audio/Sound.ts` WebAudio synthesis only (no samples)
 - `src/ocean/` FFT (WebGPU compute only) or Gerstner fallback; `src/render/` sky (HDRI), clouds (raymarched); `src/terrain/` worker heightmap, vegetation, structures
+- `src/sim/grand/*` faction campaign (진영 전역), pure TS like the rest of `src/sim`: regions, economy, orders, turn, ai, autoresolve, bridge (the typed hand-off to a 3D region battle); `src/campaign/grand.ts` is its store (`imjin.grand.v1`). All its numbers derive from SHIP_SPECS through `TUNING` in `economy.ts`
 - `src/campaign/campaign.ts` linear 1592 campaign (Joseon); `src/select/SelectScene.ts` 3D ink map of the south coast for the select screen
 - `src/net/` + `server/main.ts` multiplayer: authoritative Node server, binary snapshots, lobby (conquest maps only so far)
 - `src/ui/` React HUD/menus; `styles.css` + `conquest.css`; compact layout via `useCompactLayout` (`.app--compact`, `.app--touch`)
