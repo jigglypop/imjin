@@ -92,7 +92,7 @@ export function Guide({ step, steps, onNext, onClose }: GuideProps) {
   return (
     <div className="g-guide" aria-live="polite">
       {box && <span className="g-guide__ring" style={{ left: box.left - 6, top: box.top - 6, width: box.width + 12, height: box.height + 12 }} />}
-      <section ref={cardRef} className="g-glass g-guide__card" role="dialog" aria-label="처음 하는 길잡이" style={{ left: at.left, top: at.top }}>
+      <section ref={cardRef} className="g-glass g-guide__card" role="dialog" aria-label="시작 안내" style={{ left: at.left, top: at.top }}>
         <div className="g-guide__dots" aria-label={`${step + 1} / ${steps.length}단계`}>
           {steps.map((s, i) => (
             <i key={s.title} className={i === step ? 'on' : i < step ? 'done' : ''} />
@@ -105,7 +105,7 @@ export function Guide({ step, steps, onNext, onClose }: GuideProps) {
             {step === steps.length - 1 ? '마치기' : '다음'}
           </button>
           <button type="button" className="g-btn g-btn--sm g-btn--ghost" onClick={onClose}>
-            그만 보기
+            건너뛰기
           </button>
         </div>
       </section>

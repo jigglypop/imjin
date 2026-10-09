@@ -1,23 +1,26 @@
 /* Faction campaign UI kit: white glassmorphism over the strategic map. Everything is scoped under .grand. */
 
 .grand {
-  --ink: #14202e;
-  --ink-2: #4a5868;
-  --ink-3: #5d6b7b;
-  /* The same navy as the rest of the game's menus. */
-  --accent: #14365d;
-  --accent-2: #1d4c82;
-  --accent-soft: rgba(20, 54, 93, 0.1);
-  --line: rgba(20, 32, 46, 0.08);
-  --good: #36a173;
-  /* The same hues as text, dark enough for AA on white glass. */
-  --good-ink: #1d7550;
-  --bad-ink: #b3382e;
-  --warn: #e0a030;
-  --bad: #d5584c;
-  --c-joseon: #2f6db5;
-  --c-japan: #c9433b;
-  --c-ming: #9c700f;
+  /* Quiet graphite and three muted faction tones: nothing here is a saturated primary. */
+  --ink: #1b1e22;
+  --ink-2: #3c434b;
+  --ink-3: #5d6670;
+  --line: rgba(27, 30, 34, 0.1);
+  --mist: #eef1f4;
+  --accent: #23303d;
+  --accent-2: #2f3e4e;
+  --accent-soft: rgba(35, 48, 61, 0.08);
+  --good: #4a6b55;
+  --good-ink: #4a6b55;
+  --bad: #8c4b3f;
+  --bad-ink: #8c4b3f;
+  --warn: #8a6d2f;
+  --joseon: #46637a;
+  --joseon-soft: #e4eaef;
+  --japan: #6b4a40;
+  --japan-soft: #ede6e3;
+  --ming: #8c7040;
+  --ming-soft: #efe9dd;
   --top-gap: max(12px, env(safe-area-inset-top));
   --top-space: calc(var(--top-gap) + 68px);
 
@@ -27,11 +30,11 @@
   z-index: 40;
   height: 100dvh;
   overflow: hidden;
-  background: #dfe9f1;
+  background: #e6ebf0;
   color: var(--ink);
   font-family: 'Pretendard Variable', Pretendard, system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: 15px;
+  line-height: 1.45;
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
@@ -57,12 +60,12 @@
 
 /* Glass surfaces. Phones get near-opaque white: backdrop blur over a big moving image costs too much there. */
 .grand .g-glass {
-  background: rgba(255, 255, 255, 0.72);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  backdrop-filter: blur(18px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  border-radius: 18px;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 10px 30px rgba(28, 48, 78, 0.14), 0 1px 2px rgba(28, 48, 78, 0.08);
+  background: rgba(255, 255, 255, 0.78);
+  -webkit-backdrop-filter: blur(18px) saturate(110%);
+  backdrop-filter: blur(18px) saturate(110%);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 8px 28px rgba(27, 30, 34, 0.1), 0 1px 2px rgba(27, 30, 34, 0.06);
 }
 @media (hover: none) and (pointer: coarse) {
   .grand .g-glass {
@@ -70,6 +73,34 @@
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
+  /* Panels and dialogs carry text over the map, so they are solid: nothing underneath may read through. */
+  .grand .g-glass.g-sheet,
+  .grand .g-glass.g-modal,
+  .grand .g-glass.g-guide__card {
+    background: #fff;
+  }
+}
+
+/* Monoline icons (shared.tsx Icon): 1.75 px stroke, round caps, the colour of the text around them. */
+.g-ico {
+  display: inline-block;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: middle;
+}
+.g-ico--sm {
+  width: 16px;
+  height: 16px;
+}
+.g-ico--lg {
+  width: 22px;
+  height: 22px;
 }
 
 /* ---------- map ---------- */
@@ -79,7 +110,7 @@
   inset: 0;
   overflow: hidden;
   touch-action: none;
-  /* The image fades into this exact sea colour (rgb 236 242 247) at its borders, so where it ends there is no seam at any zoom. */
+  /* The map image fades to this exact tone along all four edges (checked on the pixels), so its rectangle never shows. */
   background: #ecf2f7;
   cursor: grab;
 }
@@ -107,22 +138,22 @@
   pointer-events: none;
 }
 .gm-lane {
-  stroke: rgba(40, 62, 90, 0.3);
-  stroke-width: 1.6;
+  stroke: rgba(27, 30, 34, 0.3);
+  stroke-width: 1.5;
   stroke-dasharray: 1 6;
   stroke-linecap: round;
 }
 .gm-lane.front {
-  stroke: rgba(201, 67, 59, 0.55);
+  stroke: rgba(140, 75, 63, 0.6);
   stroke-dasharray: 7 6;
 }
 .gm-lane.off {
-  stroke: rgba(40, 62, 90, 0.38);
+  stroke: rgba(27, 30, 34, 0.34);
   stroke-dasharray: 3 8;
 }
 .gm-lane.hot {
   stroke: var(--accent);
-  stroke-width: 2.6;
+  stroke-width: 2.4;
   stroke-dasharray: 8 6;
 }
 .gm-arrow__halo {
@@ -148,10 +179,10 @@
 }
 @keyframes gm-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(20, 54, 93, 0.55), 0 2px 8px rgba(20, 40, 70, 0.22);
+    box-shadow: 0 0 0 0 rgba(35, 48, 61, 0.45), 0 1px 4px rgba(27, 30, 34, 0.2);
   }
   100% {
-    box-shadow: 0 0 0 16px rgba(20, 54, 93, 0), 0 2px 8px rgba(20, 40, 70, 0.22);
+    box-shadow: 0 0 0 14px rgba(35, 48, 61, 0), 0 1px 4px rgba(27, 30, 34, 0.2);
   }
 }
 
@@ -187,13 +218,21 @@
   place-items: center;
   border-radius: 50%;
   background: #fff;
-  border: 3px solid var(--c);
+  border: 2px solid var(--c);
   color: var(--c);
-  font-size: calc(var(--r) * 0.78);
-  font-weight: 800;
-  line-height: 1;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.65), 0 2px 8px rgba(20, 40, 70, 0.22);
-  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+  box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.7), 0 1px 4px rgba(27, 30, 34, 0.22);
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+/* The faction's tone sits in the middle as a dot; a seat of power wears a second ring. */
+.gm-node__disc::before {
+  content: '';
+  width: 46%;
+  height: 46%;
+  border-radius: 50%;
+  background: var(--c);
+}
+.gm-node--seat .gm-node__disc {
+  box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.7), 0 0 0 4px var(--c), 0 1px 4px rgba(27, 30, 34, 0.22);
 }
 .gm-node:hover .gm-node__disc {
   transform: scale(1.1);
@@ -202,10 +241,12 @@
   border-style: dashed;
 }
 .gm-node--off .gm-node__disc {
-  border-radius: 14px;
+  border-radius: 12px;
   border-style: dashed;
-  background: rgba(255, 255, 255, 0.9);
-  font-size: 20px;
+  background: rgba(255, 255, 255, 0.92);
+}
+.gm-node--off .gm-node__disc::before {
+  display: none;
 }
 .gm-node--target {
   z-index: 3;
@@ -218,17 +259,17 @@
   z-index: 4;
 }
 .gm-node--sel .gm-node__disc {
-  background: var(--c);
-  color: #fff;
-  border-color: #fff;
-  box-shadow: 0 0 0 3px var(--accent), 0 8px 20px rgba(20, 40, 70, 0.32);
+  background: #fff;
+  border-color: var(--c);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--accent), 0 6px 16px rgba(27, 30, 34, 0.26);
 }
 .gm-node__label {
   position: absolute;
   white-space: nowrap;
-  font-size: 12.5px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--ink);
+  letter-spacing: -0.01em;
   text-shadow: 0 0 2px #fff, 0 0 3px #fff, 0 0 6px #fff, 0 0 8px #fff;
   pointer-events: none;
 }
@@ -260,7 +301,8 @@
   padding: 8px 12px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 8px 24px rgba(20, 40, 70, 0.22);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(27, 30, 34, 0.16);
   text-align: left;
   white-space: nowrap;
   pointer-events: none;
@@ -269,7 +311,7 @@
 }
 .gm-tip b {
   display: block;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--ink);
 }
 .gm-tip i {
@@ -315,39 +357,38 @@
   align-items: center;
   gap: 5px;
   height: 26px;
-  padding: 0 9px 0 3px;
+  padding: 0 10px 0 8px;
   border-radius: 99px;
   background: #fff;
-  border: 2px solid var(--c);
-  box-shadow: 0 3px 10px rgba(20, 40, 70, 0.25);
+  border: 1.5px solid color-mix(in srgb, var(--c) 70%, #fff);
+  color: var(--c);
+  box-shadow: 0 2px 8px rgba(27, 30, 34, 0.18);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   transition: transform 0.15s ease;
 }
 .gm-fleet:hover .gm-fleet__pill {
-  transform: translate(-50%, -50%) scale(1.08);
+  transform: translate(-50%, -50%) scale(1.06);
 }
-.gm-fleet__flag {
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--c);
-  color: #fff;
-  font-size: 11px;
+.gm-fleet__pill b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.gm-fleet__pill .g-ico {
+  width: 15px;
+  height: 15px;
 }
 .gm-fleet__pill i {
   font-style: normal;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--c);
 }
 .gm-fleet--sel {
   z-index: 6;
 }
 .gm-fleet--sel .gm-fleet__pill {
-  box-shadow: 0 0 0 3px var(--accent), 0 6px 16px rgba(20, 40, 70, 0.3);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent), 0 6px 16px rgba(27, 30, 34, 0.26);
 }
 .gm-fleet--foreign .gm-fleet__pill {
   background: rgba(255, 255, 255, 0.92);
@@ -379,69 +420,80 @@
   padding: 0;
   border: 0;
   border-radius: 14px;
-  background: rgba(20, 32, 46, 0.05);
-  font-size: 22px;
+  background: transparent;
   line-height: 1;
-  color: var(--ink);
+  color: var(--ink-2);
   cursor: pointer;
+  transition: background 0.15s ease;
+}
+.grand .g-icon-btn:hover {
+  background: rgba(27, 30, 34, 0.06);
 }
 .grand .g-glass.g-icon-btn {
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
 }
 .grand .g-icon-btn--flat {
   background: none;
   width: 44px;
-  font-size: 20px;
   color: var(--ink-2);
 }
+/* A secondary button is a white glass pill with a hairline; the primary one is a graphite pill. */
 .grand .g-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-height: 44px;
-  padding: 0 18px;
-  border-radius: 14px;
-  border: 1px solid rgba(20, 32, 46, 0.12);
-  background: rgba(255, 255, 255, 0.88);
-  font-size: 14px;
-  font-weight: 650;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(27, 30, 34, 0.14);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 .grand .g-btn:hover:not(:disabled) {
   background: #fff;
+  border-color: rgba(27, 30, 34, 0.26);
 }
 .grand .g-btn:active:not(:disabled) {
   transform: scale(0.98);
 }
 .grand .g-btn:disabled {
-  opacity: 0.42;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 .grand .g-btn--primary {
   background: var(--accent);
   border-color: transparent;
   color: #fff;
-  border-radius: 999px;
-  box-shadow: 0 6px 16px rgba(20, 54, 93, 0.35);
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(35, 48, 61, 0.22);
 }
 .grand .g-btn--primary:hover:not(:disabled) {
   background: var(--accent-2);
+  border-color: transparent;
 }
 /* The back pill of the menu screens: white glass, same height and shadow. */
 .grand .g-back {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-height: 44px;
-  padding: 0 16px 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  padding: 0 18px 0 12px;
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.85);
   color: var(--ink);
   font-size: 15px;
-  font-weight: 650;
+  font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(30, 50, 75, 0.14);
+  box-shadow: 0 2px 10px rgba(27, 30, 34, 0.08);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   transition: background 0.15s ease;
@@ -454,21 +506,20 @@
   border-color: transparent;
   color: var(--ink-2);
 }
+.grand .g-btn--ghost:hover:not(:disabled) {
+  background: rgba(27, 30, 34, 0.06);
+  border-color: transparent;
+}
 .grand .g-btn--sm {
-  min-height: 38px;
+  min-height: 36px;
   min-width: 58px;
-  padding: 0 12px;
+  padding: 0 14px;
   font-size: 13px;
-  border-radius: 12px;
 }
 .grand .g-btn--lg {
-  min-height: 54px;
-  font-size: 16px;
-  border-radius: 16px;
+  min-height: 52px;
+  font-size: 15px;
   padding: 0 28px;
-}
-.grand .g-btn--primary.g-btn--lg {
-  border-radius: 999px;
 }
 @media (pointer: coarse) {
   .grand .g-btn--sm {
@@ -479,57 +530,55 @@
 .gk-row {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .gk-row--wrap {
   flex-wrap: wrap;
 }
-.gk-seal {
-  display: inline-grid;
-  place-items: center;
+/* Faction identity: a 3 px bar in the faction's tone (the crest only on the big cards). */
+.gk-mark {
+  display: inline-block;
   flex: none;
+  align-self: center;
+  width: 3px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--c, #9aa1a9);
+}
+.gk-mark--md {
+  height: 30px;
+}
+.gk-mark--none {
+  background: #aab1b8;
+}
+.gk-crest {
+  flex: none;
+  display: block;
+  object-fit: cover;
   border-radius: 50%;
-  color: #fff;
-  font-weight: 700;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 2px 6px rgba(20, 40, 70, 0.2);
-}
-.gk-seal--sm {
-  width: 20px;
-  height: 20px;
-  font-size: 11px;
-}
-.gk-seal--md {
-  width: 34px;
-  height: 34px;
-  font-size: 17px;
-}
-.gk-seal--lg {
-  width: 52px;
-  height: 52px;
-  font-size: 26px;
-}
-.gk-seal--none {
-  background: #9aa6b2;
+  filter: saturate(0.6);
+  box-shadow: 0 0 0 1px var(--line), 0 4px 12px rgba(27, 30, 34, 0.14);
 }
 .gk-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 9px;
+  padding: 3px 10px;
   border-radius: 99px;
-  background: rgba(20, 32, 46, 0.06);
+  background: var(--mist);
+  color: var(--ink-2);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .gk-chip--accent {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--mist);
+  color: var(--ink-2);
 }
 .gk-chip--warn {
-  background: rgba(214, 138, 26, 0.14);
-  color: #94590a;
+  background: rgba(138, 109, 47, 0.12);
+  color: var(--warn);
 }
 .gk-bar {
   display: block;
@@ -537,7 +586,7 @@
   min-width: 0;
   height: 6px;
   border-radius: 99px;
-  background: rgba(20, 32, 46, 0.09);
+  background: rgba(27, 30, 34, 0.08);
   overflow: hidden;
 }
 .gk-bar__fill {
@@ -554,6 +603,9 @@
 }
 .gk-bar__fill--bad {
   background: var(--bad);
+}
+.gk-bar__fill--tone {
+  background: var(--tone, var(--accent));
 }
 .gk-stats {
   display: grid;
@@ -573,21 +625,30 @@
   min-width: 0;
 }
 .gk-stat__label {
-  font-size: 11.5px;
-  font-weight: 650;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink-3);
 }
 .gk-stat__value {
   display: flex;
   align-items: center;
-  font-size: 14px;
-  font-weight: 650;
+  font-size: 15px;
+  font-weight: 600;
   min-height: 22px;
 }
 .g-stars {
-  letter-spacing: 2px;
-  font-size: 12px;
-  color: var(--accent);
+  display: inline-flex;
+  gap: 4px;
+}
+.g-stars i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink-3);
+}
+.g-stars i.on {
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 /* ---------- top bar ---------- */
@@ -613,7 +674,7 @@
 .g-top__date b {
   display: block;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
 }
 .g-top__date span {
@@ -629,17 +690,16 @@
 }
 .g-res {
   display: flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 6px 11px;
-  border-radius: 12px;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.6);
   border: 1px solid var(--line);
   white-space: nowrap;
 }
 .g-res__glyph {
-  font-size: 13px;
-  font-weight: 700;
+  display: grid;
   color: var(--ink-3);
 }
 .g-res__name {
@@ -648,11 +708,12 @@
 }
 .g-res__val {
   font-size: 15px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .g-res__net {
-  font-size: 11px;
-  font-weight: 650;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--good-ink);
   font-variant-numeric: tabular-nums;
 }
@@ -716,7 +777,7 @@
   height: 5px;
   margin-left: -20px;
   border-radius: 3px;
-  background: rgba(20, 32, 46, 0.2);
+  background: rgba(27, 30, 34, 0.18);
 }
 .g-sheet__head {
   position: relative;
@@ -733,22 +794,22 @@
 }
 .g-sheet__eyebrow {
   font-size: 12px;
-  font-weight: 650;
-  color: var(--ink-2);
+  font-weight: 500;
+  color: var(--ink-3);
   margin-bottom: 3px;
 }
 .g-sheet__title {
   margin: 0;
-  font-size: 21px;
-  font-weight: 750;
-  line-height: 1.2;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
   letter-spacing: -0.02em;
 }
 .g-hanja {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 400;
   color: var(--ink-3);
-  margin-left: 4px;
+  margin-left: 6px;
 }
 .g-sheet__body {
   flex: 1;
@@ -783,8 +844,7 @@
   gap: 8px;
   margin: 18px 0 8px;
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 600;
   color: var(--ink-3);
 }
 .g-section__hint {
@@ -792,24 +852,26 @@
   letter-spacing: 0;
 }
 .g-note {
+  word-break: keep-all;
   margin: 0 0 10px;
   font-size: 13px;
   line-height: 1.5;
   color: var(--ink-2);
 }
 .g-hint {
+  word-break: keep-all;
   margin: 6px 0 0;
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--ink-3);
 }
 .g-banner {
   margin: 0 0 12px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--mist);
+  color: var(--ink-2);
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 500;
 }
 .g-list {
   display: grid;
@@ -824,9 +886,9 @@
   gap: 12px;
   width: 100%;
   min-height: 52px;
-  padding: 8px 10px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.6);
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
   border: 1px solid var(--line);
   text-align: left;
 }
@@ -846,12 +908,12 @@
 .g-row__title {
   display: flex;
   align-items: center;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
 }
 .g-row__kind {
   margin-left: 8px;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--ink-3);
 }
@@ -860,7 +922,7 @@
   color: var(--ink-2);
 }
 .g-row__sub--warn {
-  color: #b0701a;
+  color: var(--warn);
 }
 .g-glyph {
   display: grid;
@@ -868,15 +930,13 @@
   flex: none;
   width: 36px;
   height: 36px;
-  border-radius: 11px;
-  background: rgba(20, 32, 46, 0.06);
-  font-size: 17px;
-  font-weight: 700;
+  border-radius: 12px;
+  background: var(--mist);
   color: var(--ink-2);
 }
 .g-glyph--accent {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--accent);
+  color: #fff;
 }
 .g-pips {
   display: inline-flex;
@@ -887,13 +947,13 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(20, 32, 46, 0.14);
+  background: rgba(27, 30, 34, 0.14);
 }
 .g-pips i.on {
   background: var(--accent);
 }
 .g-chev {
-  font-size: 22px;
+  display: grid;
   color: var(--ink-3);
 }
 
@@ -913,7 +973,7 @@
   width: 24px;
   height: 24px;
   margin: 1px 0 0;
-  border: 2px solid rgba(20, 32, 46, 0.28);
+  border: 1.5px solid rgba(27, 30, 34, 0.3);
   border-radius: 8px;
   background: #fff;
   cursor: pointer;
@@ -930,11 +990,11 @@
   margin-top: 2px;
 }
 .g-meter__label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-3);
 }
 .g-meter__num {
-  font-size: 11px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--ink-2);
@@ -952,7 +1012,7 @@
   display: grid;
   place-items: center;
   padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  background: rgba(20, 32, 46, 0.28);
+  background: rgba(27, 30, 34, 0.3);
 }
 .g-modal {
   display: flex;
@@ -976,22 +1036,23 @@
 }
 .g-versus__vs {
   align-self: center;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   color: var(--ink-3);
 }
 .g-bside {
   padding: 12px;
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.62);
   border: 1px solid var(--line);
   border-top: 3px solid var(--tone);
   min-width: 0;
 }
 .g-bside__role {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--tone);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
   margin-bottom: 8px;
 }
 .g-bside__who {
@@ -1001,11 +1062,12 @@
 }
 .g-bside__who b {
   display: block;
-  font-size: 13.5px;
-  line-height: 1.25;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
 }
 .g-bside__who span {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--ink-3);
 }
 .g-bside__stats {
@@ -1016,14 +1078,14 @@
 .g-bside__stats div {
   display: flex;
   justify-content: space-between;
-  font-size: 12.5px;
+  font-size: 12px;
 }
 .g-bside__stats dt {
   color: var(--ink-2);
 }
 .g-bside__stats dd {
   margin: 0;
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .g-bside__bonus {
@@ -1035,17 +1097,17 @@
   gap: 4px;
 }
 .g-bside__bonus li {
-  padding: 2px 8px;
+  padding: 2px 10px;
   border-radius: 99px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 11.5px;
-  font-weight: 650;
+  background: var(--mist);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
 }
 .g-power {
   display: flex;
   gap: 3px;
-  height: 14px;
+  height: 8px;
   margin-top: 16px;
   overflow: hidden;
   border-radius: 99px;
@@ -1060,8 +1122,8 @@
   justify-content: space-between;
   gap: 8px;
   margin-top: 6px;
-  font-size: 12.5px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
 }
 .g-power__odds {
   margin: 10px 0 0;
@@ -1085,8 +1147,8 @@
   padding: 10px 12px;
   list-style: none;
   border-radius: 12px;
-  background: rgba(20, 32, 46, 0.04);
-  font-size: 12.5px;
+  background: var(--mist);
+  font-size: 12px;
   color: var(--ink-2);
 }
 .g-notes li + li {
@@ -1101,20 +1163,20 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #e8eff5;
+  background: #eceff3;
 }
 .g-pick::before {
   content: '';
   position: absolute;
   inset: -24px;
   background: var(--backdrop) 40% 42% / cover no-repeat;
-  filter: blur(3px);
+  filter: blur(3px) saturate(0.8);
 }
 .g-pick::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(rgba(246, 250, 253, 0.4), rgba(246, 250, 253, 0.78));
+  background: linear-gradient(rgba(247, 248, 250, 0.45), rgba(247, 248, 250, 0.82));
 }
 .g-pick > * {
   position: relative;
@@ -1126,7 +1188,7 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: max(24px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left));
+  padding: max(24px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
 }
 .g-pick__inner {
   margin: auto;
@@ -1158,10 +1220,10 @@
 }
 .g-pick__title {
   margin: 0;
-  font-size: 30px;
-  font-weight: 800;
+  font-size: 32px;
+  font-weight: 600;
   letter-spacing: -0.03em;
-  line-height: 1.15;
+  line-height: 1.2;
 }
 .g-pick__cards {
   display: grid;
@@ -1177,33 +1239,36 @@
   padding: 18px;
   text-align: left;
   cursor: pointer;
-  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--line);
+  position: relative;
+  overflow: hidden;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+/* The faction's tone, as a thin bar along the top edge. */
+.g-fcard::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  background: var(--tone);
 }
 .grand .g-fcard:hover {
   transform: translateY(-2px);
 }
 .grand .g-fcard--on {
-  border-color: var(--tone);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 22%, transparent), 0 14px 36px rgba(28, 48, 78, 0.18);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 14px 36px rgba(27, 30, 34, 0.14);
 }
 .g-fcard__top {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.g-fcard__seal {
-  display: grid;
-  place-items: center;
-  flex: none;
+.g-fcard__crest {
   width: 52px;
   height: 52px;
-  border-radius: 50%;
-  background: var(--tone);
-  color: #fff;
-  font-size: 26px;
-  font-weight: 700;
-  box-shadow: 0 6px 14px color-mix(in srgb, var(--tone) 35%, transparent);
 }
 .g-fcard__name {
   flex: 1;
@@ -1211,22 +1276,22 @@
 }
 .g-fcard__name b {
   display: block;
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 .g-fcard__name span {
-  font-size: 12.5px;
-  color: var(--ink-2);
+  font-size: 13px;
+  color: var(--ink-3);
 }
 .g-fcard__diff {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
-  font-size: 11.5px;
-  font-weight: 650;
-  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-3);
 }
 .g-fcard__diff i {
   display: flex;
@@ -1236,15 +1301,16 @@
   width: 14px;
   height: 5px;
   border-radius: 3px;
-  background: rgba(20, 32, 46, 0.14);
+  background: rgba(27, 30, 34, 0.12);
 }
 .g-fcard__diff u.on {
   background: var(--tone);
 }
 .g-fcard__blurb {
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-size: 15px;
+  line-height: 1.5;
   color: var(--ink-2);
+  word-break: keep-all;
 }
 .g-fcard__chips {
   display: flex;
@@ -1258,32 +1324,45 @@
   margin-top: auto;
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(20, 32, 46, 0.045);
+  background: var(--mist);
   font-size: 12px;
   color: var(--ink-3);
 }
 .g-fcard__start b {
   font-size: 13px;
+  font-weight: 500;
+  word-break: keep-all;
   color: var(--ink);
 }
-/* A glass card the width of the cards above it. It sits right under them; once the cards need the whole screen it stays on the bottom edge. */
+/* One quiet glass bar as wide as the cards: difficulty, what it means, and the start button on a single row. */
 .g-pick__foot {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 10px;
-  box-sizing: border-box;
+  gap: 8px 18px;
   max-width: 1080px;
-  margin: 14px auto 0;
-  padding: 14px 16px;
-  position: sticky;
-  bottom: max(14px, env(safe-area-inset-bottom));
+  margin: 16px auto 0;
+  padding: 10px 10px 10px 14px;
 }
-.g-pick__inner {
-  padding-bottom: max(14px, env(safe-area-inset-bottom));
+.g-pick__foot .g-level__hint {
+  min-width: 0;
 }
-.g-pick__foot .g-btn {
-  width: min(420px, 100%);
+.g-pick__go {
+  min-width: 200px;
+}
+/* On a phone the bar floats over the bottom of the scrolling cards, fully opaque so nothing reads through it. */
+@media (hover: none) and (pointer: coarse) {
+  .grand .g-glass.g-pick__foot {
+    position: sticky;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    z-index: 2;
+    background: #fff;
+  }
+  .g-pick__go {
+    justify-self: end;
+    width: 100%;
+    max-width: 300px;
+  }
 }
 @media (min-width: 901px), (max-height: 540px) and (orientation: landscape) {
   /* Wide screens and landscape phones: difficulty on the left, the start button on the right, so the card stays one slim row. */
@@ -1317,7 +1396,7 @@
   padding: 10px 16px;
   border-radius: 14px;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 500;
   text-align: center;
 }
 
@@ -1328,8 +1407,8 @@
   border-style: dotted;
 }
 .gm-lane-turns {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   fill: var(--ink-2);
   paint-order: stroke;
   stroke: rgba(255, 255, 255, 0.9);
@@ -1354,9 +1433,11 @@
   background: var(--bad);
   border-color: transparent;
   color: #fff;
+  font-weight: 600;
 }
 .grand .g-btn--danger:hover:not(:disabled) {
-  background: #b9433a;
+  background: #7a4036;
+  border-color: transparent;
 }
 .grand .g-btn--block {
   width: 100%;
@@ -1379,8 +1460,8 @@
   gap: 12px;
   margin: 12px 0 4px;
   padding: 8px 10px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
   border: 1px solid var(--line);
 }
 .g-leader img {
@@ -1417,7 +1498,7 @@
 }
 .g-score--me {
   background: #fff;
-  box-shadow: 0 0 0 1px var(--tone) inset;
+  box-shadow: 0 0 0 1px var(--accent) inset;
 }
 .g-score__num {
   font-size: 17px;
@@ -1433,9 +1514,9 @@
 .g-log li {
   display: flex;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 8px 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.62);
   border: 1px solid var(--line);
   font-size: 13px;
   line-height: 1.45;
@@ -1443,8 +1524,8 @@
 .g-log li span {
   flex: none;
   min-width: 30px;
-  font-size: 11.5px;
-  font-weight: 650;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -1456,7 +1537,10 @@
 }
 .g-verdict {
   margin-left: 6px;
-  font-weight: 800;
+  font-weight: 600;
+}
+.g-sheet__title > .g-verdict:first-child {
+  margin-left: 0;
 }
 .g-verdict--win {
   color: var(--good-ink);
@@ -1468,7 +1552,7 @@
   color: var(--ink-2);
 }
 .g-banner--bad {
-  background: rgba(213, 88, 76, 0.12);
+  background: rgba(140, 75, 63, 0.1);
   color: var(--bad-ink);
   margin-top: 12px;
 }
@@ -1494,7 +1578,7 @@
   display: grid;
   place-items: center;
   padding: max(24px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
-  background: #e8eff5;
+  background: #eceff3;
   overflow-y: auto;
 }
 .g-hub::before {
@@ -1502,13 +1586,13 @@
   position: absolute;
   inset: -24px;
   background: var(--backdrop) 40% 42% / cover no-repeat;
-  filter: blur(3px);
+  filter: blur(3px) saturate(0.8);
 }
 .g-hub::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(rgba(246, 250, 253, 0.4), rgba(246, 250, 253, 0.78));
+  background: linear-gradient(rgba(247, 248, 250, 0.45), rgba(247, 248, 250, 0.82));
 }
 .g-hub > * {
   position: relative;
@@ -1521,25 +1605,25 @@
 }
 .g-hub__card {
   width: min(480px, 100%);
-  padding: 22px;
-  border-top: 4px solid var(--tone);
+  padding: 24px;
 }
 .g-hub__title {
   display: flex;
   align-items: center;
   gap: 14px;
-  margin: 8px 0 16px;
-  font-size: 26px;
-  font-weight: 800;
+  margin: 8px 0 18px;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.3;
   letter-spacing: -0.03em;
 }
 .g-hub__title small {
   display: block;
   margin-top: 3px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: 0;
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
 .g-hub__stats {
   display: grid;
@@ -1550,17 +1634,17 @@
 .g-hub__stats div {
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(20, 32, 46, 0.05);
+  background: var(--mist);
 }
 .g-hub__stats dt {
-  font-size: 11.5px;
-  font-weight: 650;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink-3);
 }
 .g-hub__stats dd {
   margin: 2px 0 0;
-  font-size: 18px;
-  font-weight: 750;
+  font-size: 17px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .g-hub__actions {
@@ -1596,31 +1680,23 @@
     gap: 6px;
     margin: 0;
   }
+  /* One line, with the unit spelled out, so the coin icon is never the only hint of what the number is. */
   .g-res {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-areas: 'glyph val' 'glyph net';
-    column-gap: 6px;
-    row-gap: 0;
+    display: flex;
     align-items: center;
-    padding: 4px 8px;
+    gap: 6px;
+    padding: 6px 12px;
   }
   .g-res__glyph {
-    grid-area: glyph;
     font-size: 15px;
   }
-  .g-res__name {
-    display: none;
-  }
   .g-res__val {
-    grid-area: val;
-    font-size: 14px;
-    line-height: 1.15;
+    font-size: 16px;
+    line-height: 1.2;
   }
   .g-res__net {
-    grid-area: net;
-    font-size: 10.5px;
-    line-height: 1.1;
+    font-size: 12px;
+    line-height: 1.2;
   }
   .g-dock .g-sheet {
     left: 0;
@@ -1650,6 +1726,10 @@
     align-items: end;
     padding: 0;
   }
+  /* A dialog sheet reaches over the top bar: hide the bar while it is open instead of letting it peek out. */
+  .grand:has(.g-scrim) .g-top {
+    visibility: hidden;
+  }
   .g-modal {
     width: 100%;
     border-radius: 22px 22px 0 0;
@@ -1671,6 +1751,24 @@
   }
   .g-pick__title {
     font-size: 24px;
+  }
+  .g-pick__foot {
+    grid-template-columns: auto 1fr;
+    grid-template-areas: 'level go' 'hint hint';
+    gap: 6px 10px;
+    padding: 8px 8px 8px 10px;
+  }
+  .g-pick__foot .g-level {
+    grid-area: level;
+  }
+  .g-pick__foot .g-level__hint {
+    grid-area: hint;
+    font-size: 12px;
+    padding-left: 4px;
+  }
+  .g-pick__go {
+    grid-area: go;
+    min-width: 0;
   }
   .g-fcard__blurb {
     font-size: 13px;
@@ -1709,14 +1807,11 @@
     padding: 3px 7px;
     gap: 4px;
   }
-  .g-res__name {
-    display: none;
-  }
   .g-res__val {
     font-size: 13px;
   }
   .g-res__net {
-    font-size: 10px;
+    font-size: 12px;
   }
   .g-top__end {
     min-height: 38px;
@@ -1726,10 +1821,11 @@
     padding-top: 10px;
   }
   .g-sheet__title {
-    font-size: 18px;
+    font-size: 17px;
   }
   .g-pick__scroll {
     padding-top: max(14px, env(safe-area-inset-top));
+    padding-bottom: 8px;
   }
   .g-pick__head {
     margin-bottom: 10px;
@@ -1741,37 +1837,42 @@
     padding: 14px;
     gap: 9px;
   }
-  .g-fcard__seal {
-    width: 44px;
-    height: 44px;
-    font-size: 22px;
+  .g-fcard__top {
+    gap: 8px;
+  }
+  .g-fcard__crest {
+    width: 40px;
+    height: 40px;
   }
   .g-fcard__name b {
-    font-size: 19px;
+    font-size: 17px;
   }
   .g-fcard__diff-text {
     display: none;
   }
   .g-fcard__blurb {
-    font-size: 12.5px;
+    font-size: 12px;
     line-height: 1.45;
   }
   .g-pick__title {
     font-size: 20px;
   }
   .g-pick__foot {
-    padding: 8px 12px;
-  }
-  .g-pick__foot .g-btn {
-    min-height: 46px;
-    width: 280px;
-  }
-  .g-pick__foot .g-level__opt {
-    min-height: 40px;
-    min-width: 64px;
+    grid-template-columns: auto 1fr;
+    margin-top: 10px;
+    padding: 6px;
   }
   .g-pick__foot .g-level__hint {
-    font-size: 11.5px;
+    display: none;
+  }
+  .g-pick__foot .g-btn {
+    min-height: 42px;
+  }
+  .g-level__opt {
+    min-height: 36px;
+    min-width: 56px;
+    padding: 0 12px;
+    font-size: 14px;
   }
   .g-scrim {
     padding-top: 8px;
@@ -1799,7 +1900,7 @@
     font-size: 12px;
   }
   .g-bside__stats dt {
-    font-size: 10.5px;
+    font-size: 12px;
   }
   .g-power {
     margin-top: 10px;
@@ -1807,12 +1908,89 @@
   .g-notes {
     display: none;
   }
+  .g-power__legend {
+    display: none;
+  }
+  /* The odds are what the player decides on: on a short screen they come first instead of below the fold. */
+  .g-battle .g-sheet__body {
+    display: flex;
+    flex-direction: column;
+  }
+  .g-battle .g-power__odds {
+    order: -1;
+    margin: 0 0 8px;
+    text-align: left;
+  }
+  /* The fleet panel: the three figures become one line and the commander a slim row, so the ships get the room. */
+  .gk-stats--3 {
+    grid-template-columns: repeat(3, auto);
+    justify-content: space-between;
+    gap: 6px;
+    margin: 0;
+  }
+  .gk-stats--3 .gk-stat__label {
+    white-space: nowrap;
+  }
+  .gk-stats--3 .gk-stat {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .gk-stats--3 .gk-stat__value {
+    font-size: 14px;
+  }
+  .g-sheet .g-leader {
+    gap: 8px;
+    margin: 6px 0 2px;
+    padding: 4px 8px;
+  }
+  .g-sheet .g-leader img {
+    width: 30px;
+    height: 30px;
+  }
+  .grand:has(.g-scrim) .g-top {
+    visibility: hidden;
+  }
+  /* A ship row: the name on top, hull and crew side by side. */
+  .g-ship .g-row__main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 10px;
+  }
+  .g-ship .g-row__title {
+    grid-column: 1 / -1;
+  }
+  .g-ship .g-meter {
+    grid-template-columns: auto 1fr auto;
+    gap: 5px;
+  }
+  .g-leader--tight {
+    margin-top: 6px;
+    padding: 4px 6px;
+  }
+  .g-leader--tight img {
+    width: 28px;
+    height: 28px;
+  }
+  .g-bside__who b {
+    font-size: 13px;
+  }
+  .grand .g-top__status {
+    min-height: 36px;
+    padding: 0 12px;
+  }
+  .g-fcard__diff i {
+    display: none;
+  }
+  .g-fcard__name span {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 @media (max-width: 1000px) and (min-width: 821px) {
-  .g-res__name {
-    display: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1822,34 +2000,36 @@
   }
 }
 
+/* A segmented control: one hairline pill, the chosen option filled with graphite. */
 .g-level {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.7);
 }
 .g-level__opt {
-  min-height: 44px;
-  min-width: 72px;
+  min-height: 38px;
+  min-width: 64px;
   padding: 0 16px;
   border-radius: 99px;
-  border: 1px solid rgba(20, 32, 46, 0.14);
-  background: rgba(255, 255, 255, 0.85);
-  font-size: 14px;
-  font-weight: 650;
+  border: 0;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-2);
   cursor: pointer;
 }
 .grand .g-level__opt--on {
-  background: var(--ink);
-  border-color: var(--ink);
+  background: var(--accent);
   color: #fff;
+  font-weight: 600;
 }
 .g-level__hint {
-  flex-basis: 100%;
-  text-align: center;
-  font-size: 12.5px;
-  color: var(--ink-2);
+  font-size: 13px;
+  color: var(--ink-3);
 }
 
 /* ---------- the closed turn played back on the map ---------- */
@@ -1911,7 +2091,7 @@
   pointer-events: none;
 }
 .gm-rtoken .gm-fleet__pill {
-  box-shadow: 0 4px 14px rgba(20, 40, 70, 0.32);
+  box-shadow: 0 4px 14px rgba(27, 30, 34, 0.26);
 }
 .gm-clash__icon {
   position: absolute;
@@ -1924,11 +2104,10 @@
   margin: -19px 0 0 -19px;
   border-radius: 50%;
   background: #fff;
-  border: 2px solid var(--bad);
+  border: 1.5px solid var(--bad);
   color: var(--bad-ink);
-  font-size: 20px;
   line-height: 1;
-  box-shadow: 0 4px 14px rgba(180, 50, 40, 0.35);
+  box-shadow: 0 4px 14px rgba(27, 30, 34, 0.22);
   animation: gm-pop 0.34s cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
 @keyframes gm-pop {
@@ -1953,9 +2132,9 @@
   border-radius: 99px;
   background: #fff;
   border: 1px solid var(--line);
-  box-shadow: 0 4px 12px rgba(20, 40, 70, 0.22);
+  box-shadow: 0 4px 12px rgba(27, 30, 34, 0.18);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 600;
   white-space: nowrap;
   animation: gm-pop 0.3s ease-out both;
 }
@@ -2003,19 +2182,19 @@
   border: 1px solid var(--line);
 }
 .g-tiles li span {
-  font-size: 11.5px;
-  font-weight: 650;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--ink-3);
 }
 .g-tiles li b {
   font-size: 17px;
-  font-weight: 800;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 .g-delta {
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
 }
@@ -2048,12 +2227,12 @@
 }
 .g-ledger dd {
   margin: 0;
-  font-weight: 700;
+  font-weight: 600;
 }
 .g-ledger__total dt,
 .g-ledger__total dd {
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 600;
 }
 
 /* ---------- cards of the war's history ---------- */
@@ -2067,18 +2246,18 @@
   flex: none;
   width: 84px;
   height: 84px;
-  border-radius: 16px;
+  border-radius: 14px;
   object-fit: cover;
   object-position: top;
   border: 1px solid var(--line);
-  box-shadow: 0 4px 12px rgba(20, 40, 70, 0.14);
+  box-shadow: 0 4px 12px rgba(27, 30, 34, 0.12);
 }
 .g-event__text {
   margin: 0;
-  font-size: 14.5px;
+  font-size: 15px;
   line-height: 1.6;
   word-break: keep-all;
-  color: var(--ink);
+  color: var(--ink-2);
 }
 .g-event__choices {
   display: grid;
@@ -2093,9 +2272,9 @@
   min-height: 56px;
   padding: 11px 14px;
   text-align: left;
-  border-radius: 14px;
-  border: 1px solid rgba(20, 32, 46, 0.14);
-  background: rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  border: 1px solid rgba(27, 30, 34, 0.14);
+  background: rgba(255, 255, 255, 0.88);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
@@ -2107,13 +2286,13 @@
   transform: scale(0.99);
 }
 .grand .g-choice b {
-  font-size: 14px;
-  font-weight: 750;
+  font-size: 15px;
+  font-weight: 600;
   word-break: keep-all;
 }
 .grand .g-choice span {
-  font-size: 12.5px;
-  color: var(--ink-2);
+  font-size: 13px;
+  color: var(--ink-3);
   word-break: keep-all;
 }
 @media (max-width: 520px) {
@@ -2156,14 +2335,14 @@
 .g-guide__ring {
   position: fixed;
   border-radius: 14px;
-  border: 3px solid var(--accent-2);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.85), 0 0 24px rgba(29, 76, 130, 0.4);
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.85), 0 0 24px rgba(27, 30, 34, 0.28);
   animation: g-guide-ring 1.3s ease-in-out infinite;
 }
 @keyframes g-guide-ring {
   50% {
     transform: scale(1.05);
-    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.85), 0 0 34px rgba(29, 76, 130, 0.55);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.85), 0 0 34px rgba(27, 30, 34, 0.4);
   }
 }
 .g-guide__card {
@@ -2181,18 +2360,18 @@
   width: 18px;
   height: 4px;
   border-radius: 99px;
-  background: rgba(20, 32, 46, 0.14);
+  background: rgba(27, 30, 34, 0.14);
 }
 .g-guide__dots i.done {
-  background: rgba(29, 76, 130, 0.4);
+  background: rgba(35, 48, 61, 0.4);
 }
 .g-guide__dots i.on {
-  background: var(--accent-2);
+  background: var(--accent);
 }
 .g-guide__title {
   margin: 0 0 4px;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 600;
 }
 .g-guide__text {
   margin: 0 0 12px;

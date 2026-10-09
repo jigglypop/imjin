@@ -1,4 +1,4 @@
-import { BUILDINGS, Bar, Chip, FactionSeal, SHIP_NAME, Sheet, Stat, costText, goldText, ownerName, signed } from './shared';
+import { BUILDINGS, Bar, Chip, FactionMark, Icon, SHIP_NAME, Sheet, Stat, costText, goldText, navyName, signed } from './shared';
 import type { BuildingKind, FactionId, FleetView, RegionView, ShipClass } from './types';
 
 export interface RegionPanelProps {
@@ -14,7 +14,6 @@ export interface RegionPanelProps {
   onSelectFleet?: (fleetId: string) => void;
 }
 
-const stars = (n: number) => '●'.repeat(n) + '○'.repeat(Math.max(0, 3 - n));
 
 export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuild, onRecruit, onCancelRecruit, onSelectFleet }: RegionPanelProps) {
   const own = region.owner === me;
@@ -26,9 +25,8 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
       onClose={onClose}
       eyebrow={
         <span className="gk-row">
-          {region.owner ? <FactionSeal faction={region.owner} size="sm" /> : <span className="gk-seal gk-seal--sm gk-seal--none">中</span>}
-          {ownerName(region.owner)}
-          {region.offMap ? ' 본토' : ' 영토'}
+          <FactionMark faction={region.owner} />
+          {navyName(region.owner)} · {region.offMap ? '본토 기지' : '포구'}
         </span>
       }
       title={
@@ -39,13 +37,15 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
     >
       {region.note && <p className="g-note">{region.note}</p>}
       {!seen ? (
-        <p className="g-hint">시야 밖입니다. 봉수대를 세우거나 가까운 포구에 함대를 두면 그곳의 사정이 보입니다.</p>
+        <p className="g-hint">시야 밖입니다. 봉수대를 세우거나 가까운 포구에 함대를 두면 상황을 볼 수 있습니다.</p>
       ) : (
         <>
           <div className="gk-stats gk-stats--2">
-            <Stat label="전략 가치">
-              <span className="g-stars" aria-label={`${region.value} / 3`}>
-                {stars(region.value)}
+            <Stat label="중요도">
+              <span className="g-stars" role="img" aria-label={`${region.value} / 3`}>
+                {[1, 2, 3].map((n) => (
+                  <i key={n} className={n <= region.value ? 'on' : ''} />
+                ))}
               </span>
             </Stat>
             <Stat label={`수비대 ${region.garrison} / ${region.garrisonMax}척`}>
@@ -53,14 +53,17 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
             </Stat>
             <Stat label="턴당 수입" wide>
               <span className="gk-row gk-row--wrap">
-                <Chip>銀 {signed(region.income)}</Chip>
+                <Chip>
+                  <Icon name="coin" size="sm" />
+                  은 {signed(region.income)}
+                </Chip>
                 {region.unrest > 0 && <Chip tone="warn">민심 불안 {region.unrest}턴 · 수입 절반</Chip>}
               </span>
             </Stat>
           </div>
 
           <h3 className="g-section">
-            시설 <span className="g-section__hint">남은 터 {region.freeSlots}</span>
+            시설 <span className="g-section__hint">빈 부지 {region.freeSlots}곳</span>
           </h3>
           <ul className="g-list" data-guide="build">
             {region.buildings.map((b) => {
@@ -73,7 +76,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
               return (
                 <li key={b.kind} className="g-row">
                   <span className="g-glyph" aria-hidden>
-                    {info.glyph}
+                    <Icon name={info.icon} />
                   </span>
                   <span className="g-row__main">
                     <span className="g-row__title">
@@ -85,12 +88,12 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
                       </span>
                     </span>
                     <span className={`g-row__sub${showCost && b.blocked ? ' g-row__sub--warn' : ''}`}>
-                      {showCost ? (b.blocked ? b.blocked : `${costText(b.cost)} · ${b.turns}턴`) : busy ? `${b.level + 1}단계 공사 중 · ${b.upgradeLeft}턴` : info.desc}
+                      {showCost ? (b.blocked ? b.blocked : `${costText(b.cost)} · ${b.turns}턴`) : busy ? `${b.level + 1}단계 공사 중 · ${b.upgradeLeft}턴 남음` : info.desc}
                     </span>
                   </span>
                   {own && (
                     <button type="button" className="g-btn g-btn--sm" disabled={!can} title={why} onClick={() => onBuild?.(region.id, b.kind)}>
-                      {maxed ? '완료' : busy ? '진행' : b.level === 0 ? '건설' : '증축'}
+                      {maxed ? '최대' : busy ? '공사 중' : b.level === 0 ? '건설' : '증축'}
                     </button>
                   )}
                 </li>
@@ -100,12 +103,12 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
 
           {region.works.length > 0 && (
             <>
-              <h3 className="g-section">공사 중</h3>
+              <h3 className="g-section">공사 현황</h3>
               <ul className="g-list">
                 {region.works.map((q) => (
                   <li key={q.id} className="g-row">
                     <span className="g-glyph g-glyph--accent" aria-hidden>
-                      {BUILDINGS[q.kind].glyph}
+                      <Icon name={BUILDINGS[q.kind].icon} />
                     </span>
                     <span className="g-row__main">
                       <span className="g-row__title">
@@ -127,7 +130,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
           {own && (region.recruit.length > 0 || region.yard.length > 0) && (
             <>
               <h3 className="g-section">
-                함선 건조 <span className="g-section__hint">{region.yardIdle ? '선소가 서야 일을 시작합니다' : '발주하면 은을 바로 냅니다'}</span>
+                함선 건조 <span className="g-section__hint">{region.yardIdle ? '선소가 완공되어야 건조가 시작됩니다' : '주문 즉시 은이 차감됩니다'}</span>
               </h3>
               {region.yard.length > 0 && (
                 <ul className="g-list g-list--tight">
@@ -135,7 +138,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
                     <li key={q.id} className="g-row">
                       <span className="g-row__main">
                         <span className="g-row__title">{q.name}</span>
-                        <span className="g-row__sub">{region.yardIdle ? '선소 없음 · 대기' : `${q.turnsLeft}턴 뒤 진수`}</span>
+                        <span className="g-row__sub">{region.yardIdle ? '선소 없음 · 대기 중' : `${q.turnsLeft}턴 뒤 완성`}</span>
                       </span>
                       {q.cancelable && (
                         <button type="button" className="g-btn g-btn--ghost g-btn--sm" onClick={() => onCancelRecruit?.(region.id, q.id)}>
@@ -154,7 +157,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
                       <span className={`g-row__sub${r.blocked ? ' g-row__sub--warn' : ''}`}>{r.blocked ?? `${goldText(r.cost)} · ${r.turns}턴`}</span>
                     </span>
                     <button type="button" className="g-btn g-btn--sm" disabled={!!r.blocked} title={r.blocked} onClick={() => onRecruit?.(region.id, r.kind)}>
-                      발주
+                      건조
                     </button>
                   </li>
                 ))}
@@ -164,23 +167,23 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
 
           <h3 className="g-section">주둔 함대</h3>
           {fleets.length === 0 ? (
-            <p className="g-hint">이 해역에는 함대가 없습니다.</p>
+            <p className="g-hint">주둔 중인 함대가 없습니다.</p>
           ) : (
             <ul className="g-list">
               {fleets.map((f) => (
                 <li key={f.id}>
                   <button type="button" className="g-row g-row--btn" onClick={() => onSelectFleet?.(f.id)}>
-                    <FactionSeal faction={f.faction} size="sm" />
+                    <FactionMark faction={f.faction} size="md" />
                     <span className="g-row__main">
                       <span className="g-row__title">{f.name}</span>
                       <span className="g-row__sub">
                         {summarize(f)}
-                        {f.route.length ? ' · 이동 명령' : ''}
+                        {f.route.length ? ' · 이동 중' : ''}
                         {f.rest > 0 ? ` · 정비 ${f.rest}턴` : ''}
                       </span>
                     </span>
                     <span className="g-chev" aria-hidden>
-                      ›
+                      <Icon name="chev" />
                     </span>
                   </button>
                 </li>

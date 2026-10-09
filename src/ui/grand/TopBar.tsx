@@ -1,4 +1,4 @@
-import { FactionSeal, signed } from './shared';
+import { FACTION_INFO, FactionMark, Icon, signed } from './shared';
 import type { TreasuryView, TurnView } from './types';
 
 export interface TopBarProps {
@@ -8,7 +8,7 @@ export interface TopBarProps {
   onMenu?: () => void;
   /** Opens the war status panel (objective, scores, log). */
   onStatus?: () => void;
-  /** Disables 턴 종료, e.g. while battles wait or the war is over. */
+  /** Disables the end-turn button, e.g. while battles wait or the war is over. */
   busy?: boolean;
   endLabel?: string;
 }
@@ -20,21 +20,21 @@ export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, busy, endL
       <div className="g-top__turn">
         {onMenu && (
           <button type="button" className="g-icon-btn g-icon-btn--flat" aria-label="메뉴" onClick={onMenu}>
-            ☰
+            <Icon name="menu" />
           </button>
         )}
-        <FactionSeal faction={turn.faction} />
+        <FactionMark faction={turn.faction} size="md" />
         <div className="g-top__date">
           <b>{turn.date}</b>
           <span>
-            {turn.turn} / {turn.maxTurns}턴
+            {FACTION_INFO[turn.faction].navy} · {turn.turn} / {turn.maxTurns}턴
           </span>
         </div>
       </div>
       <ul className="g-top__res" aria-label="재물">
         <li className="g-res" title="은">
-          <span className="g-res__glyph" aria-hidden>
-            銀
+          <span className="g-res__glyph">
+            <Icon name="coin" />
           </span>
           <span className="g-res__name">은</span>
           <b className="g-res__val">{treasury.stock.gold.toLocaleString('ko-KR')}</b>

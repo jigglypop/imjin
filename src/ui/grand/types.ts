@@ -81,6 +81,8 @@ export interface RegionView {
   laneTurns?: Record<string, number>;
   /** Node of the map edge that stands for a faraway land (Kyushu, Shandong): drawn as a portal, not a place. */
   offMap?: boolean;
+  /** The seat of a navy (its capital): drawn with a second ring. */
+  seat?: boolean;
   /** The player's side can see what is there; a region out of sight shows only its owner. */
   visible: boolean;
   /** Where the label sits relative to the node. */
@@ -170,7 +172,6 @@ export interface BattlePreviewView {
 export interface FactionOption {
   id: FactionId;
   name: string;
-  hanja: string;
   leader: string;
   blurb: string;
   strengths: string[];

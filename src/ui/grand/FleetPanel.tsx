@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bar, Chip, FactionSeal, SHIP_NAME, Sheet, goldText, ownerName } from './shared';
+import { Bar, Chip, FactionMark, Icon, SHIP_NAME, Sheet, goldText, navyName } from './shared';
 import type { CommanderView, FactionId, FleetView } from './types';
 
 export interface FleetPanelProps {
@@ -72,8 +72,8 @@ export function FleetPanel({
       onClose={onClose}
       eyebrow={
         <span className="gk-row">
-          <FactionSeal faction={fleet.faction} size="sm" />
-          {ownerName(fleet.faction)} 함대 · {where}
+          <FactionMark faction={fleet.faction} />
+          {navyName(fleet.faction)} · {where}
         </span>
       }
       title={fleet.name}
@@ -107,9 +107,9 @@ export function FleetPanel({
         ) : undefined
       }
     >
-      {moving && <p className="g-banner">지도에서 강조된 해역을 눌러 목적지를 정하세요. 적의 포구를 고르면 공격 명령입니다.</p>}
-      {fleet.transit && <p className="g-hint">물길을 건너는 중입니다. {fleet.transit.left}턴 뒤 닿습니다.</p>}
-      {fleet.rest > 0 && !fleet.transit && <p className="g-hint">해전 뒤 정비 중입니다. {fleet.rest}턴 동안 출항할 수 없습니다.</p>}
+      {moving && <p className="g-banner">지도에서 강조된 포구를 눌러 목적지를 정하세요. 적의 포구를 고르면 공격합니다.</p>}
+      {fleet.transit && <p className="g-hint">항해 중입니다. {fleet.transit.left}턴 뒤에 도착합니다.</p>}
+      {fleet.rest > 0 && !fleet.transit && <p className="g-hint">전투 후 정비 중입니다. {fleet.rest}턴 동안 출항할 수 없습니다.</p>}
       {routeText && !moving && (
         <p className="g-note g-route">
           <b>항로</b> {routeText}
@@ -155,7 +155,7 @@ export function FleetPanel({
         docked &&
         officers.length > 0 && (
           <button type="button" className="g-btn g-btn--sm g-leader-add" aria-expanded={choosing} onClick={() => setChoosing((c) => !c)}>
-            장수 임명
+            지휘관 임명
           </button>
         )
       )}
@@ -179,7 +179,7 @@ export function FleetPanel({
                 <span className="g-row__sub">{leads ? `${leads} 지휘 중` : officer.title}</span>
               </span>
               <span className="g-chev" aria-hidden>
-                ›
+                <Icon name="chev" />
               </span>
             </button>
           ))}
@@ -192,7 +192,7 @@ export function FleetPanel({
                 setChoosing(false);
               }}
             >
-              장수 해임
+              지휘관 해임
             </button>
           )}
         </div>
@@ -214,11 +214,11 @@ export function FleetPanel({
               <span className="g-row__main">
                 <span className="g-row__title">{o.name}</span>
                 <span className="g-row__sub">
-                  함선 {o.ships.length}척과 합쳐 {fleet.ships.length + o.ships.length}척
+                  함선 {o.ships.length}척 · 합류하면 {fleet.ships.length + o.ships.length}척
                 </span>
               </span>
               <span className="g-chev" aria-hidden>
-                ›
+                <Icon name="chev" />
               </span>
             </button>
           ))}
@@ -230,11 +230,11 @@ export function FleetPanel({
           <button type="button" className="g-btn g-btn--sm" disabled={gold < fleet.refit} onClick={() => onRefit?.(fleet.id)}>
             정비 {goldText(fleet.refit)}
           </button>
-          <Chip>선체와 병력을 한 번에 채웁니다</Chip>
+          <Chip>선체와 승조원을 모두 채웁니다</Chip>
         </div>
       )}
 
-      <h3 className="g-section">함선 {own && <span className="g-section__hint">나누거나 해체할 배를 고르세요</span>}</h3>
+      <h3 className="g-section">함선 {own && <span className="g-section__hint">분할하거나 해체할 함선을 선택하세요</span>}</h3>
       <ul className="g-list">
         {fleet.ships.map((s) => (
           <li key={s.id}>
@@ -272,14 +272,14 @@ export function FleetPanel({
                 setSure(false);
               }}
             >
-              정말 해체 ({picked.size}척)
+              해체 확인 ({picked.size}척)
             </button>
           ) : (
             <button type="button" className="g-btn g-btn--sm" onClick={() => setSure(true)}>
               해체 ({picked.size}척)
             </button>
           )}
-          <Chip>건조비의 일부를 돌려받습니다</Chip>
+          <Chip>건조비 일부를 돌려받습니다</Chip>
         </div>
       )}
     </Sheet>

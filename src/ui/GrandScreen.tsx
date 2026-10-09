@@ -52,10 +52,10 @@ const prefersReducedMotion = () => typeof matchMedia === 'function' && matchMedi
 
 /** The four steps of the first-turn guide; the screen fills in what each one points at. */
 const GUIDE_STEPS: Omit<GuideStepView, 'target'>[] = [
-  { title: '1. 영토 고르기', text: '지도의 포구를 눌러 보세요. 둥근 표지의 색이 그 땅의 주인입니다. 누르면 수비대와 수입, 시설을 볼 수 있습니다.' },
-  { title: '2. 군영과 선소 짓기', text: '시설 목록에서 군영(수리와 유지비 면제)이나 선소(함선 건조)를 지으세요. 은을 바로 내고 몇 턴 뒤 완공됩니다. 선소가 서면 함선도 주문할 수 있습니다.' },
-  { title: '3. 함대 보내기', text: "함대 표지를 눌러 고른 뒤 '이동'을 누르고, 강조된 해역을 누르면 항로가 정해집니다. 적의 포구를 고르면 공격 명령입니다." },
-  { title: '4. 턴 종료', text: "명령을 마쳤으면 '턴 종료'를 누르세요. 석 달이 흐르고 적 함대가 움직이는 모습을 보여 드린 뒤 소식과 수치를 알려 드립니다." },
+  { title: '1. 포구 선택', text: '지도의 포구를 눌러 보세요. 표지의 색은 그 포구를 가진 진영을 뜻합니다. 수비대와 수입, 시설을 확인할 수 있습니다.' },
+  { title: '2. 시설 건설', text: '군영(수리, 유지비 면제)이나 선소(함선 건조)를 지어 보세요. 은은 바로 차감되고 몇 턴 뒤에 완공됩니다. 선소가 있으면 함선도 주문할 수 있습니다.' },
+  { title: '3. 함대 이동', text: "함대 표지를 눌러 선택하고 '이동'을 누른 뒤, 강조된 포구를 누르세요. 적의 포구를 고르면 공격합니다." },
+  { title: '4. 턴 종료', text: "명령을 마쳤다면 '턴 종료'를 누르세요. 한 턴은 석 달입니다. 적 함대의 움직임을 보여 드린 뒤 결과를 알려 드립니다." },
 ];
 
 /**
@@ -151,7 +151,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
 
   const flyTo = (id: string) => setFocus((f) => ({ id, nonce: (f?.nonce ?? 0) + 1 }));
   const report = (res: { ok: true; note?: string } | { ok: false; reason: string }, done?: string) => {
-    say(res.ok ? (done ?? res.note ?? '명령을 내렸다') : res.reason);
+    say(res.ok ? (done ?? res.note ?? '명령을 내렸습니다') : res.reason);
     return res.ok;
   };
   /** An order that spends silver on works or ships: a click for it, and the guide's second step is done. */
@@ -167,7 +167,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const selectRegion = (id: string) => {
     if (moving && fleet) {
       if (targets && !targets.includes(id as RegionId)) {
-        say('그 곳으로 가는 안전한 물길이 없습니다');
+        say('그곳으로 가는 안전한 항로가 없습니다.');
         return;
       }
       const res = grandOrders.move(fleet.id, id as RegionId);
@@ -175,7 +175,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         const dest = regions.find((r) => r.id === id)!;
         // Only a region of a faction at war with the player is attacked: an ally's port is simply entered.
         const hostile = dest.owner !== null && atWar(g, me, dest.owner as GrandFaction);
-        say(`${fleet.name}: ${hostile ? `${dest.name} 공격` : `${josa(dest.name, '으로/로')} 출항`} 명령 · ${res.note ?? ''}`);
+        say(`${fleet.name}: ${hostile ? `${josa(dest.name, '을/를')} 공격합니다` : `${josa(dest.name, '으로/로')} 이동합니다`} (${res.note ?? ''})`);
         sound.campaign('move');
         setMoving(false);
         advanceGuide(2);
@@ -314,15 +314,15 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
             onClose={closePanels}
             onMove={() => setMoving(true)}
             onCancelMove={() => setMoving(false)}
-            onStop={(id) => report(grandOrders.stop(id), '명령을 거두었다')}
-            onMerge={(keep, other) => report(grandOrders.merge(keep, other), '함대를 합쳤다')}
+            onStop={(id) => report(grandOrders.stop(id), '명령을 취소했습니다')}
+            onMerge={(keep, other) => report(grandOrders.merge(keep, other), '함대를 합쳤습니다')}
             onSplit={(id, ships) => {
               const res = grandOrders.split(id, ships);
               if (res.ok && res.note) setFleetId(res.note);
-              report(res, '분견대를 편성했다');
+              report(res, '함대를 나누었습니다');
             }}
-            onCommander={(id, cmd) => report(grandOrders.commander(id, cmd), cmd ? '장수를 임명했다' : '장수를 해임했다')}
-            onRefit={(id) => report(grandOrders.refit(id), '정비를 마쳤다')}
+            onCommander={(id, cmd) => report(grandOrders.commander(id, cmd), cmd ? '지휘관을 임명했습니다' : '지휘관을 해임했습니다')}
+            onRefit={(id) => report(grandOrders.refit(id), '정비를 마쳤습니다')}
             onDisband={(id, ships) => {
               let sold = 0;
               for (const s of ships) {
@@ -333,7 +333,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
                 }
                 sold += 1;
               }
-              if (sold) say(`${sold}척을 해체했다`);
+              if (sold) say(`함선 ${sold}척을 해체했습니다.`);
               if (!useGrand.getState().grand?.fleets.some((f) => f.id === id)) closePanels();
             }}
           />
@@ -344,9 +344,9 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
             me={me}
             onClose={closePanels}
             onBuild={(id, kind) => ordered(grandOrders.build(id as RegionId, kind as SimBuilding))}
-            onCancelBuild={(id, kind) => report(grandOrders.cancelBuild(id as RegionId, kind as SimBuilding), '공사를 취소하고 값을 돌려받았다')}
+            onCancelBuild={(id, kind) => report(grandOrders.cancelBuild(id as RegionId, kind as SimBuilding), '공사를 취소하고 비용을 돌려받았습니다')}
             onRecruit={(id, kind) => ordered(grandOrders.recruit(id as RegionId, kind as ShipKind))}
-            onCancelRecruit={(id, item) => report(grandOrders.cancelRecruit(id as RegionId, item), '주문을 취소하고 값을 돌려받았다')}
+            onCancelRecruit={(id, item) => report(grandOrders.cancelRecruit(id as RegionId, item), '주문을 취소하고 비용을 돌려받았습니다')}
             onSelectFleet={selectFleet}
           />
         ) : null}
@@ -361,7 +361,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
       {preview && !previewHidden && !lastBattle && !replay && !eventCard && (
         <BattlePreview
           key={pending?.id}
-          battle={{ ...preview, notes: [...(preview.notes ?? []), ...(g.pending.length > 1 ? [`이번 턴에 치를 전투가 ${g.pending.length}건 있습니다`] : [])] }}
+          battle={{ ...preview, notes: [...(preview.notes ?? []), ...(g.pending.length > 1 ? [`이번 턴에 진행할 전투가 ${g.pending.length}건 있습니다.`] : [])] }}
           cancelLabel="나중에"
           onCancel={() => setPreviewHidden(true)}
           onFight={fight}
@@ -395,7 +395,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
           log={logLines(g)}
           canOrder={g.phase === 'orders'}
           onAlliance={(other) => report(grandOrders.alliance(me, other))}
-          onWar={(other) => report(grandOrders.declareWar(me, other), '동맹을 깼다')}
+          onWar={(other) => report(grandOrders.declareWar(me, other), '동맹을 파기했습니다')}
           onClose={() => setStatus(false)}
         />
       )}

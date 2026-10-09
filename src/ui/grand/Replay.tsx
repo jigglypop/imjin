@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FACTION_INFO, FactionSeal } from './shared';
+import { FACTION_INFO, FactionMark, Icon } from './shared';
 import type { FactionId, ReplayView, SpotView } from './types';
 
 /**
@@ -187,7 +187,7 @@ export function ReplayLayer({ replay, at, top, reduced, onPhase, onBeat, onDone 
         return (
           <div key={move.id} className="gm-rtoken" style={{ transform: `translate3d(${head.x}px, ${head.y}px, 0)`, opacity: fade, ['--c' as string]: FACTION_INFO[move.faction].color }}>
             <span className="gm-fleet__pill">
-              <span className="gm-fleet__flag">{FACTION_INFO[move.faction].hanja}</span>
+              <Icon name="ship" size="sm" />
               <b>{move.ships}</b>
             </span>
           </div>
@@ -198,8 +198,8 @@ export function ReplayLayer({ replay, at, top, reduced, onPhase, onBeat, onDone 
           const pos = at(c.regionId);
           return pos ? (
             <div key={c.regionId} className="gm-clash" style={{ transform: `translate3d(${pos.x}px, ${pos.y - 4}px, 0)` }}>
-              <span className="gm-clash__icon" title="해전">
-                ⚔
+              <span className="gm-clash__icon" title="전투">
+                <Icon name="swords" />
               </span>
             </div>
           ) : null;
@@ -210,15 +210,15 @@ export function ReplayLayer({ replay, at, top, reduced, onPhase, onBeat, onDone 
           return pos ? (
             <div key={c.regionId} className="gm-flip" style={{ transform: `translate3d(${pos.x}px, ${pos.y + 30}px, 0)` }}>
               <span className="gm-flip__chip">
-                <FactionSeal faction={c.to} size="sm" />
-                {c.from ? `${FACTION_INFO[c.from].name} → ${FACTION_INFO[c.to].name}` : `${FACTION_INFO[c.to].name} 차지`}
+                <FactionMark faction={c.to} />
+                {c.from ? `${FACTION_INFO[c.from].name} → ${FACTION_INFO[c.to].name}` : `${FACTION_INFO[c.to].name} 점령`}
               </span>
             </div>
           ) : null;
         })}
       <div className="g-glass gm-replay__caption" style={{ top }}>
-        <b>지난 석 달의 움직임</b>
-        <span>탭하거나 Space를 눌러 건너뛰기</span>
+        <b>이번 턴의 움직임</b>
+        <span>탭하거나 Space 키로 건너뛰기</span>
       </div>
     </div>
   );

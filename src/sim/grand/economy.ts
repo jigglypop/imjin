@@ -63,6 +63,9 @@ export const TUNING = {
   } as Record<GrandFaction, { income: number; cost: number; power: number; label: string }>,
 };
 
+/** A navy as the campaign names it in its log and panels: 조선 수군, 일본 수군, 명 수군. */
+export const navyName = (f: GrandFaction) => `${TUNING.faction[f].label} 수군`;
+
 /** A turn is a season: three months. The war is counted from April 1592 (turn 1) and ends at this turn if nobody has won. */
 export const MONTHS_PER_TURN = 3;
 export const MAX_TURNS = 36;
@@ -73,12 +76,12 @@ export type BuildingDef = { kind: BuildingKind; label: string; hanja: string; ba
 const conquestWork = (cost: number, seconds: number) => ({ baseGold: Math.round(cost * TUNING.buildingGoldScale), baseTurns: Math.max(1, Math.ceil(seconds / TUNING.buildingSecondsPerTurn)) });
 
 export const BUILDING_DEFS: Record<BuildingKind, BuildingDef> = {
-  camp: { kind: 'camp', label: '군영', hanja: '軍營', baseGold: 400, baseTurns: 2, desc: '병영. 유지비 면제 · 수리 · 진영 수비대 · 큰 포구를 짓는 바탕' },
-  shipyard: { kind: 'shipyard', label: '선소', hanja: '船所', ...conquestWork(450, 40), desc: '전선을 건조한다. 등급이 오르면 한 번에 짓는 배와 싼 값이 늘어난다' },
-  battery: { kind: 'battery', label: '포대', hanja: '砲臺', ...conquestWork(500, 45), desc: '적이 쳐들어오면 먼저 포격한다. 전투에도 지어진 채 나타난다' },
-  dock: { kind: 'dock', label: '수리소', hanja: '修理所', ...conquestWork(350, 35), desc: '머문 배의 선체와 병력을 빨리 회복' },
-  granary: { kind: 'granary', label: '창고', hanja: '倉庫', baseGold: 300, baseTurns: 2, desc: '곡식과 물자를 쌓는다. 수입 +25% (등급마다)' },
-  beacon: { kind: 'beacon', label: '봉수대', hanja: '烽燧臺', ...conquestWork(300, 25), desc: '두 칸 앞까지 적 함대를 알아본다 · 수입 +5%' },
+  camp: { kind: 'camp', label: '군영', hanja: '軍營', baseGold: 400, baseTurns: 2, desc: '유지비가 들지 않고 수리가 빠릅니다. 수비대가 늘어납니다.' },
+  shipyard: { kind: 'shipyard', label: '선소', hanja: '船所', ...conquestWork(450, 40), desc: '함선을 건조합니다. 단계가 오르면 동시에 지을 수 있는 수가 늘고 값이 내려갑니다.' },
+  battery: { kind: 'battery', label: '포대', hanja: '砲臺', ...conquestWork(500, 45), desc: '적이 공격해 오면 먼저 포격합니다. 전투에도 그대로 배치됩니다.' },
+  dock: { kind: 'dock', label: '수리소', hanja: '修理所', ...conquestWork(350, 35), desc: '머무는 함선의 선체와 승조원을 빠르게 회복합니다.' },
+  granary: { kind: 'granary', label: '창고', hanja: '倉庫', baseGold: 300, baseTurns: 2, desc: '단계마다 수입이 25% 늘고, 전투에서는 화약고가 됩니다.' },
+  beacon: { kind: 'beacon', label: '봉수대', hanja: '烽燧臺', ...conquestWork(300, 25), desc: '두 칸 앞까지 적 함대를 볼 수 있고 수입이 5% 늘어납니다.' },
 };
 
 export const BUILDING_ORDER: readonly BuildingKind[] = ['camp', 'shipyard', 'battery', 'dock', 'granary', 'beacon'];

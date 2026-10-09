@@ -60,10 +60,10 @@ const LABEL: Record<RegionId, RegionView['labelSide']> = {
 };
 
 const TERRAIN_NOTE: Record<RegionDef['terrain'], string> = {
-  strait: '좁은 물길: 큰 배가 돌아설 자리가 없고, 수비하는 쪽이 길목을 쥡니다',
-  bay: '만과 포구: 항구에 닿으려면 포대의 사정권을 지나야 합니다',
-  island: '섬 사이 물길: 섬 그늘에서 기습하기 좋습니다',
-  open: '트인 바다: 속도와 화력이 그대로 승부를 가릅니다',
+  strait: '좁은 해협입니다. 큰 배가 방향을 바꾸기 어려워 수비하는 쪽이 유리합니다.',
+  bay: '만과 포구입니다. 항구에 접근하려면 포대의 사정권을 지나야 합니다.',
+  island: '섬 사이의 물길입니다. 섬 그늘에 숨어 기습하기 좋습니다.',
+  open: '트인 바다입니다. 속도와 화력이 승부를 가릅니다.',
 };
 
 const player = (g: Grand): GrandFaction => g.player ?? 'joseon';
@@ -101,7 +101,7 @@ export function regionViews(g: Grand): RegionView[] {
           name: SHIP_SPECS[m.kind].label,
           cost: m.gold,
           turns: m.turns,
-          blocked: m.problem ?? (full ? '선소의 건조 칸이 모두 찼다' : gold < m.gold ? '은이 모자란다' : undefined),
+          blocked: m.problem ?? (full ? '건조 칸이 모두 찼습니다' : gold < m.gold ? '은이 부족합니다' : undefined),
         }))
       : [];
     const yard = r.queue.map((q) => ({ id: q.id, kind: q.kind, name: SHIP_SPECS[q.kind].label, turnsLeft: q.left, total: q.total, cancelable: q.left === q.total }));
@@ -125,6 +125,7 @@ export function regionViews(g: Grand): RegionView[] {
       adj: LANES[id].map((l) => l.to),
       laneTurns: Object.fromEntries(LANES[id].map((l) => [l.to, l.turns])),
       offMap: !!def.edge,
+      seat: !!def.capitalOf,
       visible,
       labelSide: LABEL[id],
       note: def.blurb,
@@ -224,11 +225,11 @@ export function previewView(g: Grand, contactId: string): BattlePreviewView | nu
     ...(camp ? [`군영 ${camp}단계`] : []),
   ];
   const notes = [TERRAIN_NOTE[REGIONS[c.regionId].terrain]];
-  if (p.attackerShips > 30 || p.defenderShips > 30) notes.push('3D 전투에는 한 쪽에서 가장 강한 배 30척까지 나섭니다');
+  if (p.attackerShips > 30 || p.defenderShips > 30) notes.push('직접 지휘하는 전투에는 한쪽에서 가장 강한 함선 30척까지 참전합니다.');
   return {
     regionId: c.regionId,
     regionName: REGIONS[c.regionId].name,
-    attacker: { faction: c.attacker, leader: leaderOf(f.attackers), name: names(f.attackers, '공격군'), ships: p.attackerShips, crew: crewOf(f.attacker.ships), power: Math.round(p.attacker), bonuses: [] },
+    attacker: { faction: c.attacker, leader: leaderOf(f.attackers), name: names(f.attackers, '공격 함대'), ships: p.attackerShips, crew: crewOf(f.attacker.ships), power: Math.round(p.attacker), bonuses: [] },
     defender: { faction: c.defender, leader: leaderOf(f.defenders), name: names(f.defenders, `${REGIONS[c.regionId].name} 수비대`), ships: p.defenderShips, crew: crewOf(f.defender.ships), power: Math.round(p.defender), bonuses: defenderBonus },
     winChance: oddsOfContact(g, contactId) ?? 0.5,
     you: youAttack ? 'attacker' : youDefend ? 'defender' : null,
@@ -258,7 +259,7 @@ export function relationViews(g: Grand): RelationView[] {
     .map((other) => {
       const isAllied = allied(g, me, other);
       // The invaders accept no treaty, and a navy that has fallen has no one left to treat with.
-      const locked = me === 'japan' || other === 'japan' ? '왜는 동맹을 맺지 않는다' : !g.factions[other].alive ? '이미 무너진 진영이다' : undefined;
+      const locked = me === 'japan' || other === 'japan' ? '일본은 동맹을 맺지 않습니다.' : !g.factions[other].alive ? '이미 패망한 진영입니다.' : undefined;
       return { other: other as FactionId, allied: isAllied, locked };
     });
 }
@@ -266,29 +267,26 @@ export function relationViews(g: Grand): RelationView[] {
 const OPTION_TEXT: Record<GrandFaction, Omit<FactionOption, 'id' | 'startRegions' | 'fleets'>> = {
   joseon: {
     name: '조선',
-    hanja: '朝',
     leader: '이순신 · 원균',
-    blurb: '화포와 판옥선으로 바다를 지키는 수성의 진영. 여수 선소에서 거북선을 지어 해전에서 앞섭니다.',
+    blurb: '화포와 판옥선으로 바다를 지키는 수비형 진영입니다. 여수 선소에서 거북선을 건조할 수 있습니다.',
     strengths: ['함포 화력', '거북선', '수입 +20%'],
-    weakness: '일본보다 배가 적음',
+    weakness: '함선 수 열세',
     difficulty: 2,
   },
   japan: {
     name: '일본',
-    hanja: '倭',
     leader: '와키자카 · 구키',
-    blurb: '대군과 등선 백병전의 공세 진영. 부산에 이미 상륙해 있고, 싼 배를 많이 지어 포구를 차례로 삼킵니다.',
-    strengths: ['등선 백병전', '많은 함선', '싼 건조비'],
+    blurb: '많은 함선과 등선 백병전으로 밀어붙이는 공세형 진영입니다. 부산에서 시작해 값싼 함선을 늘려 가며 포구를 차지합니다.',
+    strengths: ['등선 백병전', '많은 함선', '낮은 건조비'],
     weakness: '해상 화력 열세',
     difficulty: 2,
   },
   ming: {
     name: '명',
-    hanja: '明',
     leader: '진린 · 등자룡',
-    blurb: '서해 멀리서 오는 원군 진영. 넉넉한 은으로 시작하지만 조선까지는 사흘 뱃길입니다.',
-    strengths: ['넉넉한 은', '수입 +20%', '명 복선'],
-    weakness: '전장까지 먼 뱃길',
+    blurb: '서해 건너에서 원군으로 참전하는 진영입니다. 은이 넉넉하지만 조선 해역까지 3턴이 걸립니다.',
+    strengths: ['풍부한 은', '수입 +20%', '명 복선'],
+    weakness: '먼 출전 거리',
     difficulty: 3,
   },
 };
@@ -300,7 +298,7 @@ export const FACTION_OPTIONS: FactionOption[] = (['joseon', 'japan', 'ming'] as 
   fleets: START.fleets.filter((f) => f.faction === id).length,
 }));
 
-const LABEL_OF: Record<GrandFaction, string> = { joseon: '조선', japan: '일본', ming: '명' };
+const NAVY: Record<GrandFaction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군' };
 
 export function resultView(s: BattleSummary): BattleResultView {
   const winnerSide = s.winner === 'attacker' ? s.attacker : s.defender;
@@ -312,8 +310,8 @@ export function resultView(s: BattleSummary): BattleResultView {
     regionName: place,
     played: s.played,
     won,
-    headline: won === null ? '교전 종료' : won ? '승전' : '패전',
-    outcome: s.captured ? `${josa(LABEL_OF[winnerSide.faction], '은/는')} ${josa(place, '을/를')} 차지했다. ${LABEL_OF[loser.faction]}의 함대는 물러났다.` : `${josa(LABEL_OF[winnerSide.faction], '은/는')} ${josa(place, '을/를')} 지켜 냈다. 공격군은 물러났다.`,
+    headline: won === null ? '교전 종료' : won ? '승리' : '패배',
+    outcome: s.captured ? `${josa(NAVY[winnerSide.faction], '이/가')} ${josa(place, '을/를')} 차지했습니다. ${josa(NAVY[loser.faction], '은/는')} 후퇴했습니다.` : `${josa(NAVY[winnerSide.faction], '이/가')} ${josa(place, '을/를')} 지켜 냈습니다. 공격 함대는 후퇴했습니다.`,
     sides: [
       { role: '공격', faction: s.attacker.faction, ships: s.attacker.ships, lost: s.attacker.lost, kills: s.attacker.kills, you: you('attacker') },
       { role: '수비', faction: s.defender.faction, ships: s.defender.ships, lost: s.defender.lost, kills: s.defender.kills, you: you('defender') },
@@ -328,12 +326,19 @@ export function overView(g: Grand): GameOverView | null {
   if (!v) return null;
   const me = player(g);
   const won = v.faction === me || allied(g, me, v.faction);
-  const name = LABEL_OF[v.faction];
-  const how = v.kind === 'objective' ? '목표를 이루고 버텨 냈다' : v.kind === 'score' ? '정해진 때가 다하고 가장 큰 공을 세웠다' : '맞서는 진영이 모두 무너졌다';
+  const name = NAVY[v.faction];
+  const how = v.kind === 'objective' ? '목표를 달성하고 유지했습니다' : v.kind === 'score' ? '마지막 턴에 가장 높은 점수를 얻었습니다' : '맞서던 진영이 모두 패망했습니다';
+  const fallen = !g.factions[me].alive;
   return {
     won,
-    headline: won ? '大捷' : '敗戰',
-    text: v.faction === me ? `${josa(name, '은/는')} ${how}.` : won ? `우리 진영은 ${josa(name, '과/와')} 함께 ${how}.` : `${josa(name, '은/는')} ${how}.`,
+    headline: won ? '전역 승리' : '전역 패배',
+    text: fallen
+      ? `${josa(NAVY[me], '은/는')} 모든 포구를 잃고 패망했습니다.`
+      : v.faction === me
+        ? `${josa(name, '이/가')} ${how}.`
+        : won
+          ? `${josa(NAVY[me], '과/와')} ${josa(name, '이/가')} 함께 ${how}.`
+          : `${josa(name, '이/가')} ${how}.`,
     turn: v.turn,
     scores: scoreViews(g),
   };

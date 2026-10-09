@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { MAP_ASPECT, MAP_IMAGE, project } from './projection';
 import { ReplayLayer } from './Replay';
-import { FACTION_INFO, ownerName } from './shared';
+import { FACTION_INFO, Icon, navyName } from './shared';
 import type { FactionId, FleetView, RegionView, ReplayView } from './types';
 
 export interface MapInsets {
@@ -49,7 +49,7 @@ const TAP_SLOP = 8;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 function nodeRadius(r: RegionView) {
-  return r.offMap ? 20 : 12 + r.value * 3.4;
+  return r.offMap ? 16 : 11 + r.value * 3;
 }
 
 /** Strategic map: image backdrop, sea lanes, region nodes, fleet tokens. Pan with a drag, zoom with wheel or pinch. */
@@ -440,27 +440,27 @@ export function GrandMap({
           const rad = nodeRadius(r);
           const sel = r.id === selectedRegionId;
           const tgt = targets.has(r.id);
-          const col = r.owner ? FACTION_INFO[r.owner].color : '#8b97a4';
+          const col = r.owner ? FACTION_INFO[r.owner].color : '#8a939c';
           const side = r.labelSide ?? 'b';
           return (
             <button
               key={r.id}
               type="button"
-              className={`gm-node${sel ? ' gm-node--sel' : ''}${tgt ? ' gm-node--target' : ''}${r.offMap ? ' gm-node--off' : ''}${r.owner ? '' : ' gm-node--neutral'}${r.visible ? '' : ' gm-node--fog'}`}
+              className={`gm-node${sel ? ' gm-node--sel' : ''}${tgt ? ' gm-node--target' : ''}${r.offMap ? ' gm-node--off' : ''}${r.seat ? ' gm-node--seat' : ''}${r.owner ? '' : ' gm-node--neutral'}${r.visible ? '' : ' gm-node--fog'}`}
               style={{ transform: `translate3d(${x}px, ${y}px, 0)`, ['--r' as string]: `${rad}px`, ['--c' as string]: col }}
-              aria-label={`${r.name}, ${ownerName(r.owner)}`}
+              aria-label={`${r.name}, ${navyName(r.owner)}`}
               aria-pressed={sel}
               onClick={tap(() => onSelectRegion?.(r.id))}
             >
-              <span className="gm-node__disc">{r.offMap ? '↗' : r.hanja.charAt(0)}</span>
+              <span className="gm-node__disc">{r.offMap && <Icon name="portal" size="sm" />}</span>
               {showLabel(r) && <span className={`gm-node__label gm-node__label--${side}`}>{r.name}</span>}
               <span className="gm-tip">
                 <b>
                   {r.name} <i>{r.hanja}</i>
                 </b>
                 <span>
-                  {ownerName(r.owner)}
-                  {r.offMap ? ' · 본토' : r.visible ? ` · 수비 ${r.garrison}` : ' · 시야 밖'}
+                  {navyName(r.owner)}
+                  {r.offMap ? ' · 본토 기지' : r.visible ? ` · 수비대 ${r.garrison}척` : ' · 시야 밖'}
                 </span>
               </span>
             </button>
@@ -489,9 +489,9 @@ export function GrandMap({
                 onClick={tap(() => onSelectFleet?.(f.id))}
               >
                 <span className="gm-fleet__pill">
-                  <span className="gm-fleet__flag">{FACTION_INFO[f.faction].hanja}</span>
+                  <Icon name="ship" size="sm" />
                   <b>{f.ships.length}</b>
-                  {f.route.length > 0 && <i aria-hidden>▸</i>}
+                  {f.route.length > 0 && <Icon name="sail" size="sm" />}
                 </span>
               </button>
             );
@@ -516,9 +516,9 @@ export function GrandMap({
               onClick={tap(() => onSelectFleet?.(f.id))}
             >
               <span className="gm-fleet__pill">
-                <span className="gm-fleet__flag">{FACTION_INFO[f.faction].hanja}</span>
+                <Icon name="ship" size="sm" />
                 <b>{f.ships.length}</b>
-                <i aria-hidden>≈</i>
+                <i aria-hidden>···</i>
               </span>
             </button>
           );
@@ -542,10 +542,10 @@ export function GrandMap({
         onDoubleClick={(e) => e.stopPropagation()}
       >
         <button type="button" className="g-glass g-icon-btn" aria-label="확대" onClick={() => zoomAt(1.5, w / 2, h / 2)}>
-          +
+          <Icon name="plus" />
         </button>
         <button type="button" className="g-glass g-icon-btn" aria-label="축소" onClick={() => zoomAt(1 / 1.5, w / 2, h / 2)}>
-          −
+          <Icon name="minus" />
         </button>
       </div>
     </div>

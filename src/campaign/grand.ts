@@ -90,7 +90,7 @@ export const hasGrandSave = () => useGrand.getState().grand !== null;
 /** Runs a change on a copy of the campaign and keeps it only when the change succeeded. */
 function commit(change: (g: Grand) => Result): Result {
   const current = useGrand.getState().grand;
-  if (!current) return { ok: false, reason: '진행 중인 전역이 없다' };
+  if (!current) return { ok: false, reason: '진행 중인 전역이 없습니다' };
   const next = structuredClone(current);
   const result = change(next);
   if (result.ok) {
@@ -113,7 +113,7 @@ export function abandonGrand() {
   save(null);
 }
 
-const notYours = { ok: false, reason: '우리 편의 것이 아니다' } as const;
+const notYours = { ok: false, reason: '우리 진영의 것이 아닙니다' } as const;
 const ownFleet = (g: Grand, id: string) => g.fleets.find((f) => f.id === id)?.faction === g.player;
 const ownRegion = (g: Grand, id: RegionId) => g.regions[id]?.owner === g.player;
 /** Runs an order only when its target belongs to the player's own navy. */
