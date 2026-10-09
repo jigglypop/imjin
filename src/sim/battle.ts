@@ -66,6 +66,39 @@ const FINISH_CREW = 0.35;
 const FINISH_SAFE = 220;
 /** Share of the crew left below which a boarded ship is taken. */
 const CAPTURE_CREW = 0.08;
+// Stalemates. A battle always ends. Once the first blow has landed, a lull in which no shot hits, no ram strikes and no
+// grapple holds anywhere stirs the computer's fleets: ships still waiting in their starting orders sail out, nobody
+// needs light to find the enemy, and the weaker side finally gives the field up.
+/** Seconds without a blow, anywhere, after which computer-led ships stop waiting and hunt the nearest enemy. */
+const STALL_AI = 90;
+/** The same for ships a person leads that still hold the scenario's orders (a formation slot, a hold, an anchor). */
+const STALL_HUMAN = 150;
+/** Seconds of lull after which a side with less than STALL_SHARE of the combined strength leaves the field. */
+const STALL_RETREAT = 240;
+const STALL_SHARE = 0.4;
+const STALL_WEAR = 0.5;
+/** Seconds of lull after which the weaker computer-led side leaves, however close the odds. */
+const STALL_YIELD = 600;
+/** A battle that has dragged on this long (seconds) is lost by a side that is clearly behind; after OVERTIME by the weaker one, however close. */
+const LONG_BATTLE = 35 * 60;
+const OVERTIME = 50 * 60;
+/** The fight is called: whoever has the greater strength left wins. No battle runs longer, whoever leads it. */
+const CALLED = 60 * 60;
+/** With no blow struck by this time the lull counts from the start, so a battle nobody joins still ends. */
+const OPENING = 480;
+/** A fleeing ship this far from every enemy is out of the fight and gets away. */
+const ESCAPE_CLEAR = 2400;
+/** A ship that has fled this many seconds gets away once no enemy is within ESCAPE_NEAR metres, and after FLEE_GONE whatever the enemy does:
+ * a coast can pen a fleeing ship in, and a fleet that cannot leave the map would never let the battle end. */
+const FLEE_CLEAR = 90;
+const ESCAPE_NEAR = 900;
+const FLEE_GONE = 240;
+/** A ship that has seen no enemy for this many seconds steers for the nearest one it knows of, lit or not. */
+const SEARCH_AFTER = 45;
+/** Seconds a boarder waits for the rest of the fleet to come up before it goes in on its own, and how long it then goes unwaited. */
+const PACE_PATIENCE = 60;
+const PACE_FREE = 45;
+
 /** Boarders close in at FLEET_PACE (m/s) while farther than this from their enemy, then go flat out together. */
 const RUSH_RANGE = 450;
 const FLEET_PACE = 5;
@@ -174,6 +207,20 @@ export class Battle {
   private readonly grid = new ShipGrid(120);
   private active: Record<Team, Ship[]> = { joseon: [], japan: [] };
   private retreating: Record<Team, boolean> = { joseon: false, japan: false };
+  /** When a blow last landed: a hit, a ram, a grapple or a man cut down in a melee. */
+  private lastBlow = 0;
+  private blows = 0;
+  /** Seconds since the last blow, once the opening is over; 0 while the fleets are still closing. */
+  private lull = 0;
+  private strengthAt = -10;
+  /** Each side's strength when the lull rules first looked, which is its strength at the outset. */
+  private fullStrength: Record<Team, number> | null = null;
+  /** Boarder id to the seconds it has waited for the fleet, and the time until which it needs not wait again. */
+  private paceWait = new Map<number, { wait: number; until: number }>();
+  /** Fleeing ship id to the time it turned to flee. */
+  private fleeSince = new Map<number, number>();
+  /** Ship id to the time it lost sight of every enemy. */
+  private searchSince = new Map<number, number>();
 
   constructor(seed = 1592) {
     this.rand = mulberry32(seed);
@@ -495,10 +542,12 @@ export class Battle {
     }
     this.resolveBoarding(dt);
     this.rules?.step(this, dt);
+    this.lull = !this.rules && (this.blows > 0 || this.time > OPENING) ? this.time - this.lastBlow : 0;
     if (!this.winner) {
       if (this.rules?.decide) this.winner = this.rules.decide(this);
       else if (this.active.japan.length === 0 && this.initial.japan > 0) this.winner = 'joseon';
       else if (this.active.joseon.length === 0 && this.initial.joseon > 0) this.winner = 'japan';
+      else if (this.time >= CALLED) this.winner = this.strength('joseon') >= this.strength('japan') ? 'joseon' : 'japan';
     }
   }
 
@@ -515,11 +564,23 @@ export class Battle {
   }
 
   private checkRetreat() {
+    if (!this.rules) this.fullStrength ??= { joseon: this.strength('joseon'), japan: this.strength('japan') };
     if (this.time <= 60) return;
     for (const team of TEAMS) {
       if (this.retreating[team] || this.ledByHuman(team)) continue;
       const ratio = this.active[team].length / Math.max(1, this.initial[team]);
       if (ratio < this.retreatBelow[team]) this.retreating[team] = true;
+    }
+    if (!this.fullStrength || (this.lull < STALL_RETREAT && this.time < LONG_BATTLE) || this.time - this.strengthAt < 1) return;
+    // A lull that will not break, or a battle that has dragged on: the weaker computer-led side gives up the field.
+    this.strengthAt = this.time;
+    const own = { joseon: this.strength('joseon'), japan: this.strength('japan') };
+    const weaker: Team = own.joseon < own.japan ? 'joseon' : 'japan';
+    for (const team of TEAMS) {
+      if (this.retreating[team] || this.ledByHuman(team) || !this.active[team].length) continue;
+      const share = own[team] / Math.max(1, own.joseon + own.japan);
+      // Badly outnumbered and already bled white; a fleet that was always the smaller one is not beaten by that alone.
+      if ((share < STALL_SHARE && own[team] < this.fullStrength[team] * STALL_WEAR) || (team === weaker && (this.lull >= STALL_YIELD || this.time >= OVERTIME))) this.retreating[team] = true;
     }
   }
 
@@ -546,6 +607,19 @@ export class Battle {
     }
   }
 
+  /** Whether the lull has gone on long enough that this ship should stop waiting for the enemy to come to it. */
+  private restless(s: Ship) {
+    return this.lull >= (this.isAi(s) ? STALL_AI : STALL_HUMAN);
+  }
+
+  /** A ship still in an order that waits on the enemy leaves it once the battle has stalled. */
+  private stir(s: Ship) {
+    const type = s.order.type;
+    if ((type !== 'slot' && type !== 'hold' && type !== 'anchor' && type !== 'follow' && type !== 'bombard' && type !== 'broadside') || !this.restless(s)) return;
+    s.order = { type: 'auto' };
+    if (this.isAi(s)) this.raiseAlarm(s);
+  }
+
   /** A ship that gets under way rouses the computer-led ships of its squadron and those lying close by: a fleet sorties together. */
   private raiseAlarm(s: Ship) {
     const rouse = (o: Ship) => {
@@ -565,7 +639,7 @@ export class Battle {
     let bestScore = Infinity;
     for (const o of list) {
       const d = hyp(o.x - s.x, o.z - s.z);
-      if (d > within || !this.canSee(o, d)) continue;
+      if (d > within || !(this.lull >= STALL_AI || this.canSee(o, d))) continue;
       let score = d;
       if (preferBoardable && !o.spec.boardable) score += 700;
       if (o.id === s.targetId) score -= 60;
@@ -574,6 +648,26 @@ export class Battle {
       if (o.spec.kind === 'hyeopseon') score += 120;
       if (score < bestScore) {
         bestScore = score;
+        best = o;
+      }
+    }
+    return best;
+  }
+
+  /** The nearest enemy of a ship that has seen none for a while: after dark a fleet hunts by where the enemy last was. */
+  private hunted(s: Ship, boardable = false) {
+    const since = this.searchSince.get(s.id);
+    if (since === undefined) {
+      this.searchSince.set(s.id, this.time);
+      return undefined;
+    }
+    if (this.time - since < SEARCH_AFTER) return undefined;
+    let best: Ship | undefined;
+    let bestD = Infinity;
+    for (const o of this.active[otherTeam(s.team)]) {
+      const d = hyp(o.x - s.x, o.z - s.z) + (boardable && !o.spec.boardable ? 700 : 0);
+      if (d < bestD) {
+        bestD = d;
         best = o;
       }
     }
@@ -665,6 +759,7 @@ export class Battle {
       this.flee(s);
       return;
     }
+    this.stir(s);
     this.wake(s);
     const order = s.order;
     if (order.type === 'anchor') {
@@ -780,13 +875,25 @@ export class Battle {
     const away = Math.atan2(s.z - this.center.z, s.x - this.center.x);
     this.steerTo(s, s.x + Math.cos(away) * 400, s.z + Math.sin(away) * 400, 50, 1);
     this.activity.set(s.id, 'fleeing');
-    if (hyp(s.x - this.center.x, s.z - this.center.z) > this.arenaRadius) {
+    let since = this.fleeSince.get(s.id);
+    if (since === undefined) {
+      since = this.time;
+      this.fleeSince.set(s.id, since);
+    }
+    const fled = this.time - since;
+    if (hyp(s.x - this.center.x, s.z - this.center.z) > this.arenaRadius || fled > FLEE_GONE || this.clearOfEnemy(s, fled > FLEE_CLEAR ? ESCAPE_NEAR : ESCAPE_CLEAR)) {
       s.alive = false;
       s.fled = true;
       this.escaped[s.team] += 1;
       this.events.push({ type: 'removed', ship: s.id });
       this.rules?.lost?.(this, s);
     }
+  }
+
+  /** Whether no enemy that is still fighting is within sight of the ship. */
+  private clearOfEnemy(s: Ship, range: number) {
+    for (const o of this.active[otherTeam(s.team)]) if ((o.x - s.x) ** 2 + (o.z - s.z) ** 2 < range * range) return false;
+    return true;
   }
 
   /** A ship too short of men to hold its deck against boarders. */
@@ -822,7 +929,9 @@ export class Battle {
 
   private thinkGunner(s: Ship, forced: Ship | undefined) {
     const finish = forced ? undefined : this.finishTarget(s);
-    const target = forced ?? finish ?? this.nearestEnemy(s);
+    const seen = forced ?? finish ?? this.nearestEnemy(s);
+    if (seen) this.searchSince.delete(s.id);
+    const target = seen ?? this.hunted(s);
     if (!target) {
       s.throttle = 0.12;
       s.rudder = 0;
@@ -896,7 +1005,9 @@ export class Battle {
       this.thinkGunner(s, forced);
       return;
     }
-    const target = forced ?? this.nearestEnemy(s, true);
+    const seen = forced ?? this.nearestEnemy(s, true);
+    if (seen) this.searchSince.delete(s.id);
+    const target = seen ?? this.hunted(s, true);
     if (!target) {
       s.throttle = 0.2;
       this.activity.set(s.id, 'idle');
@@ -935,7 +1046,19 @@ export class Battle {
       n += 1;
     });
     const ahead = n ? sum / n - d : 0;
-    if (ahead > FLEET_SLACK) return 0.15;
+    if (ahead <= FLEET_SLACK) this.paceWait.delete(s.id);
+    if (ahead > FLEET_SLACK && this.lull < STALL_AI) {
+      // The others may be held up for good, on a shoal or behind a wreck: after a while a boarder goes in without them.
+      const w = this.paceWait.get(s.id) ?? { wait: 0, until: 0 };
+      if (this.time < w.until) return 1;
+      w.wait += THINK_INTERVAL;
+      if (w.wait > PACE_PATIENCE) {
+        w.wait = 0;
+        w.until = this.time + PACE_FREE;
+      }
+      this.paceWait.set(s.id, w);
+      return 0.15;
+    }
     return ahead < -FLEET_SLACK ? 1 : FLEET_PACE / s.spec.maxSpeed;
   }
 
@@ -1085,6 +1208,7 @@ export class Battle {
           this.casualties(b, toB * 0.4, 'hull', false);
           a.lastHit = this.time;
           b.lastHit = this.time;
+          this.blow();
           this.events.push({ type: 'ram', a: a.id, b: b.id, x: px, z: pz, power: closing });
           if (a.spec.kind === 'geobukseon') this.chargeTimer.set(a.id, 9);
           if (b.spec.kind === 'geobukseon') this.chargeTimer.set(b.id, 9);
@@ -1165,7 +1289,13 @@ export class Battle {
     attacker.grappledWith = defender.id;
     attacker.grappleTime = 0;
     this.boarders.set(defender.id, (this.boarders.get(defender.id) ?? 0) + 1);
+    this.blow();
     this.events.push({ type: 'board', a: attacker.id, b: defender.id });
+  }
+
+  private blow() {
+    this.lastBlow = this.time;
+    this.blows += 1;
   }
 
   /**
@@ -1283,6 +1413,7 @@ export class Battle {
     }
     s.crew = s.roles[0] + s.roles[1] + s.roles[2] + s.roles[3];
     const killed = before - Math.floor(s.crew);
+    if (killed > 0 && melee) this.blow();
     if (killed > 0) this.events.push({ type: 'casualty', ship: s.id, count: killed, melee });
     return killed;
   }
@@ -1646,6 +1777,7 @@ export class Battle {
           const exposure: Exposure = p.ammo === 'grape' || p.y > s.spec.deck ? 'deck' : 'hull';
           this.casualties(s, (p.crewDamage * (0.5 + this.rand())) / Math.max(1, s.spec.deckDefense * 0.8), exposure, false);
           if (this.rand() < p.fireChance) this.ignite(s, p.ammo === 'fire' ? 0.26 : 0.2);
+          this.blow();
           this.events.push({ type: 'hit', ship: s.id, proj: p.id, x: p.x, y: p.y, z: p.z, damage: dmg, ammo: p.ammo });
         });
       }

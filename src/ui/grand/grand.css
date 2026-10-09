@@ -79,7 +79,8 @@
   inset: 0;
   overflow: hidden;
   touch-action: none;
-  background: #e4edf4;
+  /* The image fades into this exact sea colour (rgb 236 242 247) at its borders, so where it ends there is no seam at any zoom. */
+  background: #ecf2f7;
   cursor: grab;
 }
 .gm:active {
@@ -94,6 +95,11 @@
   will-change: transform;
   pointer-events: none;
   -webkit-user-drag: none;
+  /* The baked border is a ramp of about 3% that reads as an edge once zoomed in; this widens it into a long feather. */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent), linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent), linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
 }
 .gm__svg {
   position: absolute;
@@ -1260,20 +1266,45 @@
   font-size: 13px;
   color: var(--ink);
 }
+/* A glass card the width of the cards above it. It sits right under them; once the cards need the whole screen it stays on the bottom edge. */
 .g-pick__foot {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  margin-top: 4px;
-  padding: 28px 0 calc(18px + env(safe-area-inset-bottom));
-  /* Sits right under the cards; once the cards need the whole screen it stays on the bottom edge. */
+  box-sizing: border-box;
+  max-width: 1080px;
+  margin: 14px auto 0;
+  padding: 14px 16px;
   position: sticky;
-  bottom: 0;
-  background: linear-gradient(rgba(246, 250, 253, 0), rgba(246, 250, 253, 0.96) 24px);
+  bottom: max(14px, env(safe-area-inset-bottom));
+}
+.g-pick__inner {
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
 }
 .g-pick__foot .g-btn {
   width: min(420px, 100%);
+}
+@media (min-width: 901px), (max-height: 540px) and (orientation: landscape) {
+  /* Wide screens and landscape phones: difficulty on the left, the start button on the right, so the card stays one slim row. */
+  .g-pick__foot {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 20px;
+  }
+  .g-pick__foot .g-level {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+  .g-pick__foot .g-level__hint {
+    flex-basis: auto;
+    margin-left: 6px;
+    text-align: left;
+  }
+  .g-pick__foot .g-btn {
+    width: 320px;
+    flex: none;
+  }
 }
 
 .g-toast {
@@ -1729,11 +1760,18 @@
     font-size: 20px;
   }
   .g-pick__foot {
-    padding-top: 20px;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    padding: 8px 12px;
   }
   .g-pick__foot .g-btn {
     min-height: 46px;
+    width: 280px;
+  }
+  .g-pick__foot .g-level__opt {
+    min-height: 40px;
+    min-width: 64px;
+  }
+  .g-pick__foot .g-level__hint {
+    font-size: 11.5px;
   }
   .g-scrim {
     padding-top: 8px;

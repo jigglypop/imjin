@@ -90,7 +90,7 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
               );
             })}
           </div>
-          <footer className="g-pick__foot">
+          <footer className="g-glass g-pick__foot">
             <div className="g-level" role="radiogroup" aria-label="난이도">
               {LEVELS.map((l) => (
                 <button key={l.id} type="button" role="radio" aria-checked={level === l.id} className={`g-level__opt${level === l.id ? ' g-level__opt--on' : ''}`} onClick={() => setLevel(l.id)}>

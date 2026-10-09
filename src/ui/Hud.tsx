@@ -169,7 +169,7 @@ function Orders({ engine, p, night, selected, collapsed, onToggle }: { engine: E
 
 /** Where the back button leads, named for the screen the battle was started from. */
 const BACK_LABEL: Record<BattleOrigin, { long: string; short: string }> = {
-  select: { long: '전투 선택', short: '선택' },
+  select: { long: '전투 선택', short: '전투 선택' },
   skirmish: { long: '쟁탈전', short: '쟁탈전' },
   online: { long: '대전 대기실', short: '대기실' },
   faction: { long: '전역 지도', short: '전역' },
