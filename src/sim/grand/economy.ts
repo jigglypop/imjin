@@ -58,7 +58,7 @@ export const TUNING = {
   faction: {
     joseon: { income: 1.2, cost: 1, power: 1, label: '조선' },
     // Cheap hulls in numbers, strong boarders. The catalog measures a Japanese ship at about nine tenths of a Joseon one per price point.
-    japan: { income: 1, cost: 0.85, power: 0.93, label: '일본' },
+    japan: { income: 1, cost: 0.85, power: 0.94, label: '일본' },
     ming: { income: 1.2, cost: 1, power: 1.05, label: '명' },
   } as Record<GrandFaction, { income: number; cost: number; power: number; label: string }>,
 };
