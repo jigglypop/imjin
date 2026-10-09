@@ -106,6 +106,10 @@ export type GameSnapshot = {
   winner: Team | null;
   paused: boolean;
   speed: number;
+  /** Fast-forward the approach until first contact (off in multiplayer and after contact). */
+  autoFast: boolean;
+  /** The approach is being fast-forwarded now. */
+  fastForward: boolean;
   sky: SkyPresetName;
   sea: SeaStateName;
   following: number;

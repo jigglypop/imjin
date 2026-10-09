@@ -441,7 +441,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             >
               {snap.paused ? '▶' : '❚❚'}
             </button>
-            {[1, 2, 4].map((s) => (
+            {[1, 2, 4, 8].map((s) => (
               <button
                 key={s}
                 className={!snap.paused && snap.speed === s ? 'on' : ''}
@@ -454,6 +454,19 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                 {s}×
               </button>
             ))}
+            {(snap.autoFast || snap.fastForward) && (
+              <button
+                className={`speed-skip ${snap.fastForward ? 'on' : ''}`}
+                title="적과 마주칠 때까지 빠르게 진행"
+                onClick={() => {
+                  engine.autoFast = false;
+                  engine.fastForward = false;
+                  engine.publish(true);
+                }}
+              >
+                {snap.fastForward ? '접근 중 ⏩' : '⏩'}
+              </button>
+            )}
           </div>
         </div>
       </div>

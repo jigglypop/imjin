@@ -2,7 +2,7 @@
 import { chromium } from 'playwright-core';
 
 const url = process.argv[2] ?? 'http://127.0.0.1:5291/';
-const browser = await chromium.launch({ channel: 'msedge', headless: true, args: ['--enable-unsafe-webgpu', '--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=d3d11'] });
+const browser = await chromium.launch({ channel: process.platform === 'win32' ? 'msedge' : 'chrome', headless: true, args: ['--enable-unsafe-webgpu', '--enable-gpu', '--ignore-gpu-blocklist', process.platform === 'win32' ? '--use-angle=d3d11' : '--use-angle=metal'] });
 const open = async (name) => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 760 } });
   const errors = [];

@@ -17,9 +17,9 @@ const wait = Number(args.wait ?? 1500);
 
 await mkdir(join(ROOT, 'shots'), { recursive: true });
 const browser = await chromium.launch({
-  channel: 'msedge',
+  channel: process.platform === 'win32' ? 'msedge' : 'chrome',
   headless: true,
-  args: ['--enable-unsafe-webgpu', '--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=d3d11'],
+  args: ['--enable-unsafe-webgpu', '--enable-gpu', '--ignore-gpu-blocklist', process.platform === 'win32' ? '--use-angle=d3d11' : '--use-angle=metal'],
 });
 const page = await browser.newPage({ viewport: { width: Number(args.w ?? 1600), height: Number(args.h ?? 900) }, deviceScaleFactor: 1 });
 const logs = [];

@@ -19,9 +19,9 @@ const headed = args.headed === 'true';
 
 await mkdir(join(out, '..'), { recursive: true });
 const browser = await chromium.launch({
-  channel: args.channel ?? 'msedge',
+  channel: args.channel ?? (process.platform === 'win32' ? 'msedge' : 'chrome'),
   headless: !headed,
-  args: ['--enable-unsafe-webgpu', '--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=d3d11'],
+  args: ['--enable-unsafe-webgpu', '--enable-gpu', '--ignore-gpu-blocklist', process.platform === 'win32' ? '--use-angle=d3d11' : '--use-angle=metal'],
 });
 const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
 const logs = [];

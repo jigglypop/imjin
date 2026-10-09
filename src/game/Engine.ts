@@ -103,6 +103,14 @@ export interface CommandSink {
 
 const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
 
+/** Speed of the fast-forwarded approach, and the largest multiplier the player can pick. */
+export const FAST_SPEED = 8;
+/** The approach ends when two hostile ships come this close (inside the computer's broadside range), or at the first shot. */
+const CONTACT_RANGE = 400;
+/** Sim steps per frame are capped by count and by time, so 8x on a phone degrades gracefully. */
+const MAX_STEPS = 32;
+const SIM_BUDGET_MS = 9;
+
 export class Engine {
   readonly scene = new Scene();
   readonly sun = new DirectionalLight(0xffffff, 3);
@@ -128,6 +136,11 @@ export class Engine {
   showLabels = true;
   speed = 1;
   paused = false;
+  /** Fast-forward the approach: run at FAST_SPEED until the fleets are in gun range, then drop back to `speed`. */
+  autoFast = true;
+  /** The approach is being fast-forwarded right now. */
+  fastForward = false;
+  private contactTimer = 0;
   ready = false;
   scenarioId: ScenarioId;
   /** The side the player leads. Ships of other factions, allies included, follow the computer. */
@@ -637,6 +650,9 @@ export class Engine {
     this.banners?.clear();
     this.rts.setPose(this.defaultPose());
     this.paused = false;
+    this.autoFast = !this.remote;
+    this.fastForward = false;
+    this.contactTimer = 0;
     setLoading('셰이더를 준비하는 중', 0.9);
     await this.renderer.compileAsync(this.scene, this.camera);
     this.primeOcean();
@@ -679,20 +695,26 @@ export class Engine {
     this.adaptive?.update(frameDt, this.gpuMs);
     const dt = Math.min(frameDt, 0.1);
     // A multiplayer battle runs on the server at its own pace: no pause, no speed-up, nothing simulated here.
-    const scaled = this.remote ? dt : this.paused ? 0 : dt * this.speed;
+    if (!this.remote) this.updateFastForward(dt);
+    const speed = this.fastForward ? Math.max(this.speed, FAST_SPEED) : this.speed;
+    const scaled = this.remote ? dt : this.paused ? 0 : dt * speed;
     this.lastScaled = scaled;
     if (this.remote) {
       this.remote.advance(this.battle, this.conquest, dt);
       waveField.time += dt;
     } else {
+      // High multipliers ask for many sim steps per frame. Steps stop at a time budget so a slow device keeps drawing
+      // frames (and simply runs the battle a little slower than asked) instead of stalling.
       this.accumulator += scaled;
+      const start = performance.now();
       let steps = 0;
-      while (this.accumulator >= SIM_DT && steps < 8) {
+      while (this.accumulator >= SIM_DT && steps < MAX_STEPS) {
         this.stepSim(SIM_DT);
         this.accumulator -= SIM_DT;
         steps += 1;
+        if (performance.now() - start > SIM_BUDGET_MS) break;
       }
-      if (steps >= 8) this.accumulator = 0;
+      if (this.accumulator > SIM_DT * 4) this.accumulator = 0;
     }
     const events = this.battle.events;
     this.views.cutaway.clear();
@@ -746,6 +768,40 @@ export class Engine {
       if (this.minimap.visible) this.minimap.draw(this.battle, this.views.selected, this.rts.target.x, this.rts.target.z, this.rts.yaw, this.minimapPoints());
       this.minimapTimer = 0.1;
     }
+  }
+
+  /**
+   * Contact: an enemy within CONTACT_RANGE, a shot in the air, or a grapple. Until then the approach can be
+   * fast-forwarded; it ends for good at the first contact so the player is never yanked between speeds.
+   */
+  private updateFastForward(dt: number) {
+    const b = this.battle;
+    if (!this.autoFast || this.paused || b.winner || this.options.gallery) {
+      this.fastForward = false;
+      return;
+    }
+    this.contactTimer -= dt;
+    if (this.contactTimer > 0) return;
+    this.contactTimer = 0.25;
+    const contact = this.inContact();
+    if (this.fastForward && contact) pushToast('적과 접촉 — 정상 속도로 돌아온다', 'info');
+    if (contact) this.autoFast = false;
+    this.fastForward = !contact;
+  }
+
+  private inContact() {
+    const b = this.battle;
+    if (b.projectiles.length > 0) return true;
+    const own: Ship[] = [];
+    const foe: Ship[] = [];
+    for (const s of b.ships) {
+      if (!s.alive || s.sinking > 0) continue;
+      if (s.grappledWith) return true;
+      (s.team === this.team ? own : foe).push(s);
+    }
+    const r2 = CONTACT_RANGE * CONTACT_RANGE;
+    for (const a of own) for (const e of foe) if ((a.x - e.x) ** 2 + (a.z - e.z) ** 2 < r2) return true;
+    return own.length === 0 || foe.length === 0;
   }
 
   private minimapPoints() {
@@ -1029,6 +1085,8 @@ export class Engine {
       winner: b.winner,
       paused: this.paused,
       speed: this.speed,
+      autoFast: this.autoFast && !this.remote,
+      fastForward: this.fastForward,
       sky: this.skyName,
       sea: this.seaName,
       following: this.rts.followId,
