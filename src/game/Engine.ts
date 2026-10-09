@@ -130,8 +130,8 @@ const CONTACT_RANGE = 400;
  * Sim steps per frame are capped by count and by time, so high multipliers degrade gracefully on a slow device.
  * The time budget grows with the multiplier: at 16x and up the player wants the battle to move, not a smooth 60 fps.
  */
-const MAX_STEPS = 192;
-const simBudgetMs = (speed: number) => (speed >= 64 ? 40 : speed >= 16 ? 24 : speed >= 8 ? 14 : 9);
+const MAX_STEPS = 160;
+const simBudgetMs = (speed: number) => (speed >= 64 ? 32 : speed >= 16 ? 24 : speed >= 8 ? 14 : 9);
 
 export class Engine {
   readonly scene = new Scene();
@@ -899,6 +899,12 @@ export class Engine {
         this.stepSim(SIM_DT);
         this.accumulator -= SIM_DT;
         steps += 1;
+        // Contact is judged in sim time, not real time: at 128x a quarter second of real time is 32 sim seconds.
+        if (this.fastForward && steps % 4 === 0 && this.inContact()) {
+          this.endFastForward();
+          this.accumulator = 0;
+          break;
+        }
         if (performance.now() - start > budget) break;
       }
       if (this.accumulator > SIM_DT * 4) this.accumulator = 0;
@@ -971,10 +977,16 @@ export class Engine {
     this.contactTimer -= dt;
     if (this.contactTimer > 0) return;
     this.contactTimer = 0.25;
-    const contact = this.inContact();
-    if (this.fastForward && contact) pushToast('적과 접촉 — 정상 속도로 돌아온다', 'info');
-    if (contact) this.autoFast = false;
-    this.fastForward = !contact;
+    if (this.inContact()) {
+      if (this.fastForward) this.endFastForward();
+      else this.autoFast = false;
+    } else this.fastForward = true;
+  }
+
+  private endFastForward() {
+    if (this.fastForward) pushToast('적과 접촉 — 정상 속도로 돌아온다', 'info');
+    this.autoFast = false;
+    this.fastForward = false;
   }
 
   private inContact() {

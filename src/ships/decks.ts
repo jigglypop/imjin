@@ -1,4 +1,6 @@
 import type { ShipKind } from '../sim/types';
+import { anchorsFor } from './anchors';
+import { useProcedural } from './build/mode';
 
 /**
  * Deck heights above the waterline for each ship model, measured by casting down through the meshes. The main
@@ -46,7 +48,8 @@ export const DECKS: Record<ShipKind, DeckPlan> = {
 };
 
 export function mainDeck(key: string, kind: ShipKind, fallback: number) {
-  return MAIN_DECK[key] ?? MAIN_DECK[`${kind}#0`] ?? fallback;
+  const built = useProcedural(kind) ? anchorsFor(key)?.mainDeck : undefined;
+  return built ?? MAIN_DECK[key] ?? MAIN_DECK[`${kind}#0`] ?? fallback;
 }
 
 /** Cutaway heights by level: 1 lifts off roofs and towers, 2 the deck walls, 3 the main deck itself to show the rowers. */

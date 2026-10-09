@@ -16,26 +16,40 @@ import {
   type Texture,
 } from 'three/webgpu';
 import {
+  attribute,
   Discard,
+  dFdx,
+  dFdy,
   dot,
   float,
   Fn,
+  fract,
   frontFacing,
   If,
   instancedDynamicBufferAttribute,
   mix,
   mx_noise_float,
+  normalLocal,
+  normalMap,
+  positionGeometry,
+  positionLocal,
   positionWorld,
   select,
+  sin,
   smoothstep,
   texture,
+  time,
   uv,
+  vec2,
   vec3,
 } from 'three/tsl';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import type { ShipKind } from '../sim/types';
 import { SHIP_SPECS } from '../sim/catalog';
+import type { ShipAnchors } from './anchors';
+import { useProcedural } from './build/mode';
+import { loadProcedural } from './build/procedural';
 
 export type ShipModelSpec = {
   kind: ShipKind;
@@ -74,7 +88,7 @@ export type ShipAssetOptions = { skipLod0: boolean; baseColorOnly: boolean; anis
 let assetOptions: ShipAssetOptions = { skipLod0: false, baseColorOnly: false, anisotropy: 16 };
 
 export type LodAsset = { geometry: BufferGeometry; source: MeshStandardMaterial };
-export type ModelAsset = { key: string; kind: ShipKind; variant: number; lods: LodAsset[]; bounds: Box3 };
+export type ModelAsset = { key: string; kind: ShipKind; variant: number; lods: LodAsset[]; bounds: Box3; anchors?: ShipAnchors };
 
 export const modelKey = (kind: ShipKind, variant: number) => `${kind}#${variant}`;
 
@@ -140,6 +154,11 @@ function trimMaterial(mat: MeshStandardMaterial) {
 }
 
 async function loadModel(spec: ShipModelSpec): Promise<ModelAsset> {
+  if (useProcedural(spec.kind)) {
+    // Built to SHIP_SPECS dimensions in ship space already: no orient/scale/waterline fit.
+    const p = await loadProcedural(spec.kind, spec.variant);
+    return { key: modelKey(spec.kind, spec.variant), kind: spec.kind, variant: spec.variant, lods: p.lods, bounds: p.lods[0]!.geometry.boundingBox!.clone(), anchors: p.anchors };
+  }
   let base = spec.base;
   let scenes: (Group | null)[];
   try {
@@ -232,7 +251,8 @@ export async function releaseShipAssets(keep: Set<string>) {
 function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, b: InstancedBufferAttribute, c?: InstancedBufferAttribute) {
   const m = new MeshStandardNodeMaterial();
   m.side = c ? DoubleSide : src.side;
-  if (src.normalMap) {
+  const atlas = src.userData.atlas as { grid: number; cell: number; pad: number } | undefined;
+  if (src.normalMap && !atlas) {
     m.normalMap = src.normalMap;
     m.normalScale.copy(src.normalScale);
     src.normalMap.anisotropy = assetOptions.anisotropy;
@@ -247,8 +267,38 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   const burn = A.w;
   const up = B.xyz;
   const flash = B.w;
-  const baseColor = map ? texture(map, uv()).rgb : vec3(src.color.r, src.color.g, src.color.b);
-  const rough = src.roughnessMap ? texture(src.roughnessMap, uv()).g : float(0.85);
+  let baseColor: any = map ? texture(map, uv()).rgb : vec3(src.color.r, src.color.g, src.color.b);
+  let rough: any = src.roughnessMap ? texture(src.roughnessMap, uv()).g : float(0.85);
+  if (atlas) {
+    // Procedural ships: uv is in tile space (repeats per atlas cell), mat = (cell, surface class). Each cell is a
+    // tile with a wrapped gutter, so the repeat happens here with explicit gradients to keep mip selection seamless.
+    const U: any = uv();
+    const mat: any = attribute('mat', 'vec2');
+    const cell = mat.x.add(0.5).floor();
+    const origin = vec2(cell.mod(atlas.grid), cell.div(atlas.grid).floor());
+    const usable = (atlas.cell - atlas.pad * 2) / atlas.cell;
+    const local = vec2(fract(U.x), float(1).sub(fract(U.y))).mul(usable).add(atlas.pad / atlas.cell);
+    const auv = origin.add(local).div(atlas.grid);
+    const k = usable / atlas.grid;
+    const gx = dFdx(U).mul(k);
+    const gy = dFdy(U).mul(k);
+    const sample = (t: Texture) => texture(t, auv).grad(gx, gy);
+    const tint: any = attribute('color', 'vec3');
+    baseColor = sample(map!).rgb.mul(tint);
+    const surf = mat.y.add(0.5).floor();
+    const isCloth = surf.equal(1);
+    const isMetal = surf.equal(2);
+    const isGloss = surf.equal(3);
+    rough = sample(src.roughnessMap!).g;
+    rough = select(isGloss, rough.mul(0.8), select(isMetal, rough.mul(0.8), select(isCloth, float(0.95), rough)));
+    m.metalnessNode = select(isMetal, float(0.55), float(0));
+    m.normalNode = normalMap(sample(src.normalMap!).rgb, vec2(1, 1));
+    // Flags and sails flutter along their own normal; hull vertices have weight 0.
+    const sway: any = attribute('sway', 'vec2');
+    const phase = sway.y.add(positionGeometry.x.mul(0.9));
+    const wave = sin(time.mul(3.1).add(phase)).add(sin(time.mul(5.3).add(phase.mul(1.7))).mul(0.4));
+    m.positionNode = positionLocal.add(normalLocal.mul(wave.mul(sway.x).mul(0.2)));
+  }
   const shipY = dot(positionWorld.sub(origin), up);
   const wet = float(1).sub(smoothstep(-0.1, 0.9, shipY));
   const under = float(1).sub(smoothstep(-0.9, -0.05, shipY));
