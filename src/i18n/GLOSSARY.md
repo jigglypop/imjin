@@ -10,8 +10,11 @@ passed through `t()` where they are shown.
 - Descriptions, help, toasts, notices, tooltips: 합니다체, one or two plain sentences. Never mix 하십시오체 (~하십시오),
   해요체 (~해요) or literary plain forms (~한다, ~이다, ~간다) in UI text.
 - Buttons and labels: short nouns or verbs without endings (전투 시작, 다시 시작, 뒤로, 설정, 나가기, 저장).
-- No archaic or poetic phrasing in UI (그날의 바다에서 치른다, 넓혀 가는, 돌아온다, 무주). Historical event narration and
-  loading quotes may keep a light historical tone but must read naturally.
+- No archaic or poetic phrasing in UI (그날의 바다에서 치른다, 넓혀 가는, 돌아온다, 무주). Historical event narration may
+  keep a light historical tone but must read naturally.
+- Quotations of historical figures (the loading quotes, Yi Sun-sin's words) are not UI copy: keep their traditional
+  wording and register (죽고자 하면 살 것이요, 살고자 하면 죽을 것이다 / 신에게는 아직 열두 척의 배가 남아 있사옵니다 /
+  나의 죽음을 알리지 말라). Never convert them to 합니다체.
 - Standard spacing (띄어쓰기) and punctuation: units attach to numbers (12척, 3턴, 35%); use `·` as a separator; avoid
   em dashes inside sentences; no trailing period on buttons and labels; periods on full sentences.
 - One term per concept:

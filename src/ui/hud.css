@@ -345,35 +345,47 @@
 }
 
 .detail {
-  width: clamp(250px, 23vw, 360px);
+  width: clamp(300px, 25vw, 380px);
   /* A selected ship lists crew stations and guns, more than the minimap's height holds: the panel grows upward from the bottom edge. */
   min-height: var(--bh);
   max-height: calc(100dvh - 150px);
   overflow-y: auto;
   scrollbar-width: thin;
   flex: none;
-  padding: 14px 16px 0;
+  padding: 14px 16px;
   display: flex;
-  align-items: flex-start;
-  gap: 13px;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Portrait and name on one line; everything below uses the panel's whole width, so it never runs tall and narrow. */
+.detail-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .detail-portrait {
-  width: 68px;
-  height: 68px;
+  width: 52px;
+  height: 52px;
   flex: none;
   border-radius: 50%;
   object-fit: cover;
   box-shadow: 0 0 0 2px var(--line-2);
 }
 
-.detail-body {
+.detail-title {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 3px;
+}
+
+.detail-body {
+  display: flex;
+  flex-direction: column;
   gap: 5px;
-  padding-bottom: 14px;
 }
 
 .detail-name {
@@ -617,6 +629,13 @@
   line-height: 1.25;
   color: var(--on-dark);
   word-break: keep-all;
+}
+
+/* English fleet names run longer than the Korean ones: a smaller face and a third line before the clamp. */
+:lang(en) .card .card-name {
+  -webkit-line-clamp: 3;
+  font-size: 11px;
+  letter-spacing: -0.01em;
 }
 
 .card-count {
@@ -1023,6 +1042,10 @@
   text-overflow: ellipsis;
 }
 
+:lang(en) .sqb-name {
+  max-width: 13em;
+}
+
 .sqb--far .sqb-name {
   display: none;
 }
@@ -1313,7 +1336,7 @@
     height: auto;
     min-height: 0;
     max-height: 38vh;
-    gap: 10px;
+    gap: 6px;
     padding: 8px 12px;
     flex: none;
   }
@@ -1334,8 +1357,7 @@
     gap: 2px 14px;
   }
 
-  .app--compact .detail-name,
-  .app--compact .detail-sub {
+  .app--compact .guns-sum {
     grid-column: 1 / -1;
   }
 
@@ -1502,9 +1524,19 @@
     height: 100%;
     min-height: 0;
     max-height: none;
-    gap: 8px;
     padding: 8px 10px;
+    /* A short band: the portrait stands beside the name and the bars. */
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 2px 8px;
+    align-content: start;
   }
+
+  .app--compact .detail-head {
+    display: contents;
+  }
+
 
   .app--compact .hint {
     width: clamp(190px, 26vw, 230px);
@@ -1516,6 +1548,7 @@
   }
 
   .app--compact .detail-portrait {
+    grid-row: 1 / span 2;
     width: 38px;
     height: 38px;
   }

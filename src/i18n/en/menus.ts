@@ -51,12 +51,12 @@ export const EN_MENUS: Record<string, string> = {
   '역사 기록 · {result}': 'Historical result: {result}',
 
   // Loading
-  '죽기를 각오하면 살고, 살기를 바라면 죽습니다': 'Those who are ready to die will live; those who wish to live will die.',
-  '함부로 움직이지 말고, 산처럼 침착하고 무겁게 행동해야 합니다': 'Do not move rashly. Stay calm and steady as a mountain.',
-  '신에게는 아직 열두 척의 배가 있습니다': 'Your servant still has twelve ships.',
-  '호남이 없으면 나라도 없습니다': 'Without Honam, there is no nation.',
-  '싸움이 급하니 내 죽음을 알려서는 안 됩니다': 'The battle is urgent. Do not announce my death.',
-  '한 사람이 길목을 지키면 천 명도 두렵게 할 수 있습니다': 'One man holding the pass can make a thousand afraid.',
+  '죽고자 하면 살 것이요, 살고자 하면 죽을 것이다': 'Seek death and you shall live; seek life and you shall die.',
+  '가벼이 움직이지 말고, 태산같이 무겁게 행동하라': 'Do not move rashly. Stand as still and heavy as a mountain.',
+  '신에게는 아직 열두 척의 배가 남아 있사옵니다': 'Your servant still has twelve ships.',
+  '호남이 없으면 나라도 없다': 'Without Honam, there is no nation.',
+  '싸움이 급하니 나의 죽음을 알리지 말라': 'The battle is at its height. Do not announce my death.',
+  '한 사람이 길목을 지키면 천 명도 두렵게 할 수 있다': 'One man holding the pass can strike fear into a thousand.',
 
   // Notices
   '메모리가 부족해 이전 전투가 종료되었습니다. 이번에는 가벼운 설정으로 실행합니다.': 'The previous battle closed because the device ran out of memory. This one runs on lighter settings.',

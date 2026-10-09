@@ -305,17 +305,21 @@ function Detail({ engine, snap, p, portrait, compact }: { engine: Engine; snap: 
   const ready = p.guns.filter((g) => g.stage >= 4 && !g.empty).length;
   return (
     <div className="detail glass interactive">
-        <img className="detail-portrait" src={`/ui/portraits/${portrait}.jpg`} alt="" />
-        <div className="detail-body">
-          <div className="detail-name">{tName(p.name)}</div>
-          <div className="detail-sub">
-            {t(p.kind)} · {t(ACTIVITY[p.activity] ?? p.activity)}
-            <span className="detail-more">
-              {snap.selectedCount > 1 ? ' · ' + t('{n}척 선택', { n: snap.selectedCount }) : ''} · {t(STANCE_SHORT[p.stance])} · {t(AMMO_SHORT[p.ammo])}
-              {p.fireMode === 'hold' ? ' · ' + t('사격 중지') : ''}
-              {!p.lights && snap.night ? ' · ' + t('등불 꺼짐') : ''}
-            </span>
+        <div className="detail-head">
+          <img className="detail-portrait" src={`/ui/portraits/${portrait}.jpg`} alt="" />
+          <div className="detail-title">
+            <div className="detail-name">{tName(p.name)}</div>
+            <div className="detail-sub">
+              {t(p.kind)} · {t(ACTIVITY[p.activity] ?? p.activity)}
+              <span className="detail-more">
+                {snap.selectedCount > 1 ? ' · ' + t('{n}척 선택', { n: snap.selectedCount }) : ''} · {t(STANCE_SHORT[p.stance])} · {t(AMMO_SHORT[p.ammo])}
+                {p.fireMode === 'hold' ? ' · ' + t('사격 중지') : ''}
+                {!p.lights && snap.night ? ' · ' + t('등불 꺼짐') : ''}
+              </span>
+            </div>
           </div>
+        </div>
+        <div className="detail-body">
           <Stat label={t('선체')} value={p.hull} tone="hull" text={`${Math.round(p.hull * 100)}%`} />
           <Stat label={t('승조원')} value={p.crew / p.maxCrew} tone="crew" text={`${p.crew}`} />
           {p.fire > 0.02 && <Stat label={t('화재')} value={p.fire} tone="fire" text={`${Math.round(p.fire * 100)}%`} />}
