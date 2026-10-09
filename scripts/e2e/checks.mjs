@@ -80,6 +80,18 @@ async function approachCheck(ctx) {
   try {
     const ms = await waitReady(s.page, num(ctx.args['ready-timeout'], 150000));
     if (ms == null) return { status: 'FAIL', details: [...fatalProblems(s.problems), 'window.__ready not set, cannot measure the approach'], shot: await ctx.shot(s.page) };
+    // At the top multipliers the whole approach can finish during the 30 frames before __ready: the battle clock is
+    // then already far ahead of the second or two of real time those frames took.
+    const atReady = await s.page.evaluate(() => ({ auto: window.__engine?.autoFast === true, sim: window.__engine?.battle?.time ?? 0 })).catch(() => null);
+    if (atReady && !atReady.auto && atReady.sim > 15) {
+      const issues = fatalProblems(s.problems);
+      return {
+        status: issues.length ? 'FAIL' : 'PASS',
+        details: issues.length ? issues : [`approach already fast-forwarded before ready: sim ${Math.round(atReady.sim)}s`],
+        metrics: { sawFastForward: true, simTime: Math.round(atReady.sim) },
+        shot: await ctx.shot(s.page),
+      };
+    }
     // Page-side per-frame watcher: the fast-forward window is ~0.5 s real time, far shorter than any sane polling interval.
     await s.page.evaluate(() => {
       const w = window;
