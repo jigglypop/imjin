@@ -769,21 +769,24 @@ export class Effects {
     return DECKS[kind].open ? mainDeck(`${kind}#${ship.variant}`, kind, ship.spec.deck) : ship.spec.deck;
   }
 
-  /** The turtle ship's dragon keeps breathing dark sulphur smoke through the battle, a great belch when the bow gun fires. */
+  /**
+   * The turtle ship's dragon keeps breathing a thin dark smoke through the battle, a great belch when the bow gun fires.
+   * Neutral grey: a yellow tint read as a sickly green cloud in sunlight.
+   */
   private dragonSmoke(ship: Ship, dt: number) {
     const mouth = anchorsFor('geobukseon#0')?.smokeStack;
     if (!mouth || dt <= 0) return;
     let d = this.dragon.get(ship.id);
     if (!d) this.dragon.set(ship.id, (d = { blast: 0, acc: 0 }));
     d.blast = Math.max(0, d.blast - dt * 0.6);
-    d.acc = Math.min(d.acc + (7 + 90 * d.blast) * dt, 10);
+    d.acc = Math.min(d.acc + (4 + 90 * d.blast) * dt, 10);
     const c = Math.cos(ship.heading);
     const n = Math.sin(ship.heading);
     while (d.acc >= 1) {
       d.acc -= 1;
       this.views.localToWorld(ship.id, mouth[0] + 0.4, mouth[1] + rnd(-0.2, 0.5), rnd(-0.4, 0.4), this.p);
       const sp = rnd(2, 5) + 9 * d.blast;
-      this.smoke.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: c * sp + rnd(-0.8, 0.8), vy: rnd(0.8, 2.2), vz: n * sp + rnd(-0.8, 0.8), life: rnd(5, 9), size0: rnd(0.8, 1.4), size1: rnd(5, 8) * (1 + d.blast * 0.8), alpha: 0.5 + 0.25 * d.blast, r: 0.22, g: 0.2, b: 0.1, drag: 1.3, lift: 0.3, wind: 1, heat: 0.15 });
+      this.smoke.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: c * sp + rnd(-0.8, 0.8), vy: rnd(0.8, 2.2), vz: n * sp + rnd(-0.8, 0.8), life: rnd(5, 9), size0: rnd(0.8, 1.4), size1: rnd(5, 8) * (1 + d.blast * 0.8), alpha: 0.38 + 0.3 * d.blast, r: 0.16, g: 0.16, b: 0.17, drag: 1.3, lift: 0.3, wind: 1, heat: 0.15 });
     }
   }
 
