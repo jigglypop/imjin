@@ -66,14 +66,19 @@ jobs:
       - name: Upload static assets
         run: |
           aws s3 sync dist "s3://$BUCKET" --delete --size-only \
-            --exclude "index.html" --exclude "assets/*" --exclude "*.glb" \
+            --exclude "index.html" --exclude "assets/*" --exclude "*.glb" --exclude "en" --exclude "en/" --exclude "en/index.html" \
             --cache-control "public,max-age=86400"
           aws s3 sync dist "s3://$BUCKET" --size-only \
             --exclude "*" --include "*.glb" \
             --content-type "model/gltf-binary" --cache-control "public,max-age=86400"
 
       - name: Upload index
-        run: aws s3 cp dist/index.html "s3://$BUCKET/index.html" --content-type "text/html; charset=utf-8" --cache-control "no-cache"
+        run: |
+          aws s3 cp dist/index.html "s3://$BUCKET/index.html" --content-type "text/html; charset=utf-8" --cache-control "no-cache"
+          # The English edition answers at /en, /en/ and /en/index.html (the origin has no directory index).
+          aws s3 cp dist/en/index.html "s3://$BUCKET/en/index.html" --content-type "text/html; charset=utf-8" --cache-control "no-cache"
+          aws s3api put-object --bucket "$BUCKET" --key en --body dist/en/index.html --content-type "text/html; charset=utf-8" --cache-control "no-cache" >/dev/null
+          aws s3api put-object --bucket "$BUCKET" --key en/ --body dist/en/index.html --content-type "text/html; charset=utf-8" --cache-control "no-cache" >/dev/null
 
       - name: Invalidate CDN
         run: aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION" --paths "/*"

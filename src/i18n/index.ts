@@ -32,6 +32,8 @@ function initialLang(): Lang {
   if (typeof location !== 'undefined') {
     const p = new URLSearchParams(location.search).get('lang');
     if (p === 'ko' || p === 'en') return p;
+    // imjin1592.com/en is the English edition's address: it opens in English whatever was chosen before.
+    if (/^\/en(\/(index\.html)?)?$/.test(location.pathname)) return 'en';
   }
   const s = typeof localStorage !== 'undefined' ? stored() : null;
   if (s) return s;
