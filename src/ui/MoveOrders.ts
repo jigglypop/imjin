@@ -66,14 +66,25 @@ export class MoveOrders {
     const y = waves.heightAt(mark.x, mark.z, waves.time, 8);
     const visible = !hidden && this.engine.screenPosition(mark.x, y, mark.z, this.screen);
     mark.root.style.display = visible ? '' : 'none';
-    if (!visible) return false;
+    if (!visible) return 0;
     const cam = this.engine.camera.position;
     const distance = Math.hypot(cam.x - mark.x, cam.y - y, cam.z - mark.z);
     // Phones keep a larger floor: a finger-sized screen cannot read a 40 px flag.
     const scale = Math.max(isTouchDevice ? 0.95 : 0.8, Math.min(1.3, 1000 / distance));
     mark.root.style.transformOrigin = `${mark.foot.x}px ${mark.foot.y}px`;
     mark.root.style.transform = `translate(${this.screen.x - mark.foot.x}px, ${this.screen.y - mark.foot.y}px) scale(${scale.toFixed(3)})`;
-    return true;
+    return this.underHud(this.screen.x, this.screen.y, scale, mark) ? 0.15 : 1;
+  }
+
+  /** True when a HUD panel covers the flag cloth or its foot, so the flag steps back instead of fighting the panel. */
+  private underHud(x: number, y: number, scale: number, mark: Mark) {
+    const canvas = this.engine.renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    const probe = (px: number, py: number) => {
+      const top = document.elementsFromPoint(rect.left + px, rect.top + py).find((el) => !this.layer.contains(el) && !el.closest('.cpoints, .banners'));
+      return !!top && top !== canvas;
+    };
+    return probe(x, y) || probe(x + 20 * scale, y - (mark.foot.y - 26) * scale);
   }
 
   private arrived(mark: Mark) {
@@ -93,7 +104,8 @@ export class MoveOrders {
       if (age >= LIFETIME) { mark.root.remove(); return false; }
       // Arrival shortens what is left of the flag's life to a quick fade instead of cutting it off.
       if (age > 1200 && this.arrived(mark)) mark.at = Math.min(mark.at, now - (LIFETIME - 700));
-      if (this.place(mark, hidden)) mark.root.style.opacity = String(Math.min(1, (LIFETIME - age) / 1500));
+      const shown = this.place(mark, hidden);
+      if (shown) mark.root.style.opacity = String(Math.min(1, (LIFETIME - age) / 1500) * shown);
       return true;
     });
     this.updateRallies(hidden);
@@ -116,7 +128,8 @@ export class MoveOrders {
         mark = { root, x: p.rally.x, z: p.rally.z, at: performance.now(), foot: FOOT.rally, ids: [], key };
         this.rallies.set(p.id, mark);
       }
-      this.place(mark, hidden);
+      const shown = this.place(mark, hidden);
+      if (shown) mark.root.style.opacity = String(shown);
     }
     for (const [id, mark] of this.rallies) {
       if (live.has(id)) continue;
