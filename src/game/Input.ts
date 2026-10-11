@@ -125,8 +125,16 @@ export class Input {
     this.setRay(clientX, clientY);
     const d = this.ray.direction;
     if (d.y > -0.0005) return null;
-    const t = -this.ray.origin.y / d.y;
-    return this.tmp.copy(this.ray.origin).addScaledVector(d, t);
+    const o = this.ray.origin;
+    const waves = this.engine.battle.waves;
+    // Aim at the water surface the player sees, not the flat plane under it: the marker is drawn on the waves,
+    // so a plane hit would sit a crest's height away from the cursor.
+    let t = -o.y / d.y;
+    for (let i = 0; i < 3; i += 1) {
+      const h = waves.heightAt(o.x + d.x * t, o.z + d.z * t, waves.time, 8);
+      t = (h - o.y) / d.y;
+    }
+    return this.tmp.copy(o).addScaledVector(d, t);
   }
 
   /** When on, a one-finger drag draws a selection box instead of panning the camera. */
@@ -437,7 +445,7 @@ export class Input {
     this.engine.issue({ type: 'orders', list, queue });
     if (queue) pushToast(t('이동 경로 예약 · 최대 16곳'));
     this.engine.publish(true);
-    this.engine.moveOrders?.show(tx, tz, queue);
+    this.engine.moveOrders?.show(tx, tz, queue, ids);
   }
 
   formation(kind: FormationKind) {
