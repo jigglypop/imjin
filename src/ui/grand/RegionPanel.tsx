@@ -16,7 +16,49 @@ export interface RegionPanelProps {
   onSelectFleet?: (fleetId: string) => void;
   onMobilize?: (regionId: string) => void;
 }
+/**
+ * Which commander's camp art a port shows (public/ui/camps/<id>-L<level>.webp, scripts/generate-camp-art.mjs). A seat
+ * keeps its own picture only while its own navy holds it; any other owner gets that navy's shared camp.
+ */
+const CAMP_SEAT: Record<string, [art: string, faction: FactionId]> = {
+  yeosu: ['yi', 'joseon'], geoje: ['won', 'joseon'], myeongnyang: ['eokgi', 'joseon'], hansan: ['kwon', 'joseon'],
+  nokdo: ['jeongun', 'joseon'], bangdap: ['eo', 'joseon'], mokpo: ['anwi', 'joseon'],
+  busan: ['wakisaka', 'japan'], angolpo: ['kuki', 'japan'], nagoya: ['kato', 'japan'], tsushima: ['konishi', 'japan'],
+  dadaepo: ['todo', 'japan'], cheonseongpo: ['kurushima', 'japan'], jepo: ['shimazu', 'japan'],
+  liaodong: ['chenlin', 'ming'], shandong: ['deng', 'ming'],
+};
+const SHARED_CAMP: Record<FactionId, string> = { joseon: 'admiral', japan: 'japan', ming: 'deng' };
 
+const campArt = (regionId: string, owner: FactionId) => {
+  const seat = CAMP_SEAT[regionId];
+  return seat && seat[1] === owner ? seat[0] : SHARED_CAMP[owner];
+};
+
+/** The bird's-eye view of the port's camp at the level it has reached; nothing until the first camp stands. */
+function CampView({ region }: { region: RegionView }) {
+  const t = useT();
+  const camp = region.buildings.find((b) => b.kind === 'camp');
+  if (!camp || camp.level < 1 || !region.owner) return null;
+  const level = Math.min(camp.level, camp.maxLevel);
+  const rising = camp.upgradeLeft > 0;
+  const art = campArt(region.id, region.owner);
+  return (
+    <figure className={`g-camp${rising ? ' g-camp--rising' : ''}`} data-guide="camp">
+      <img
+        key={`${art}-${level}`}
+        className="g-camp__img"
+        src={`/ui/camps/${art}-L${level}.webp`}
+        alt={`${region.name} ${t('군영 {n}단계', { n: level })}`}
+        width={1024}
+        height={683}
+        decoding="async"
+      />
+      <figcaption className="g-camp__cap">
+        {rising ? t('{level}단계 공사 중 · {turns} 남음', { level: level + 1, turns: turnsText(camp.upgradeLeft) }) : t('군영 {n}단계', { n: level })}
+      </figcaption>
+    </figure>
+  );
+}
 
 export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuild, onRecruit, onCancelRecruit, onSelectFleet, onMobilize }: RegionPanelProps) {
   const t = useT();
@@ -44,6 +86,8 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
         <p className="g-hint">{t('시야 밖입니다. 봉수대를 세우거나 가까운 포구에 함대를 두면 상황을 볼 수 있습니다.')}</p>
       ) : (
         <>
+          <CampView region={region} />
+
           <div className="gk-stats gk-stats--2">
             <Stat label={t('수비 병력')}>{t('{n}명 승조원', { n: region.garrisonCrew.toLocaleString() })}</Stat>
             <Stat label={t('중요도')}>

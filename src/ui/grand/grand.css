@@ -866,6 +866,38 @@
   line-height: 1.5;
   color: var(--ink-2);
 }
+.g-camp {
+  position: relative;
+  margin: 0 0 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--fill-2);
+  aspect-ratio: 3 / 2;
+}
+.g-camp__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter 0.4s ease;
+}
+/* The camp that is going up stays on screen as it was, dimmed, until the work is done. */
+.g-camp--rising .g-camp__img {
+  filter: brightness(0.5) saturate(0.7);
+}
+.g-camp__cap {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  max-width: calc(100% - 16px);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(8, 14, 24, 0.72);
+  color: #f2ead8;
+  font-size: 12px;
+  font-weight: 600;
+  word-break: keep-all;
+}
 .g-hint {
   word-break: keep-all;
   margin: 6px 0 0;
@@ -2266,13 +2298,14 @@
   gap: 14px;
   align-items: flex-start;
 }
+/* A small round avatar beside the event text, not a full-size face. */
 .g-event__portrait {
   flex: none;
-  width: 84px;
-  height: 84px;
-  border-radius: 14px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
   object-fit: cover;
-  object-position: top;
+  object-position: 50% 14%;
   border: 1px solid var(--line);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
@@ -2321,8 +2354,8 @@
 }
 @media (max-width: 520px) {
   .g-event__portrait {
-    width: 64px;
-    height: 64px;
+    width: 40px;
+    height: 40px;
   }
   .g-tiles {
     grid-template-columns: repeat(2, 1fr);

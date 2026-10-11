@@ -1,0 +1,534 @@
+{
+  "provider": "OpenAI Images API",
+  "model": "gpt-image-2",
+  "quality": "medium",
+  "size": "1536x1024",
+  "generatedAt": "2026-10-11",
+  "note": "Level 1 from text; levels 2 and 3 are edits of the level below. Exported as WebP, 1024 px wide.",
+  "style": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction.",
+  "factions": {
+    "joseon": "Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions).",
+    "japan": "Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes.",
+    "ming": "Ming China: brick walls, red and yellow lacquered gate towers with yellow-glazed tiled roofs, plain red and yellow cloth banners without any emblem, large Chinese junk warships with batten sails."
+  },
+  "camps": [
+    {
+      "id": "yi",
+      "faction": "joseon",
+      "commander": "이순신",
+      "regions": [
+        "yeosu"
+      ],
+      "site": "a deep sheltered bay with a wide timber pier, the headquarters of the Jeolla Left Naval District, a modest single-storey tiled hall facing the water",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/yi-L1.webp",
+          "bytes": 60122,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a deep sheltered bay with a wide timber pier, the headquarters of the Jeolla Left Naval District, a modest single-storey tiled hall facing the water."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/yi-L2.webp",
+          "bytes": 73080,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/yi-L3.webp",
+          "bytes": 143410,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "won",
+      "faction": "joseon",
+      "commander": "원균",
+      "regions": [
+        "geoje"
+      ],
+      "site": "a broad island cove on a rocky shore, the Gyeongsang Right Naval District, with a long stone-faced wharf",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/won-L1.webp",
+          "bytes": 81010,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a broad island cove on a rocky shore, the Gyeongsang Right Naval District, with a long stone-faced wharf."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/won-L2.webp",
+          "bytes": 100358,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/won-L3.webp",
+          "bytes": 146090,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "eokgi",
+      "faction": "joseon",
+      "commander": "이억기",
+      "regions": [
+        "myeongnyang"
+      ],
+      "site": "a windswept island headland beside a fast tidal strait, the Jeolla Right Naval District, with pine-covered hills and a short pier",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/eokgi-L1.webp",
+          "bytes": 76106,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a windswept island headland beside a fast tidal strait, the Jeolla Right Naval District, with pine-covered hills and a short pier."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/eokgi-L2.webp",
+          "bytes": 83822,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/eokgi-L3.webp",
+          "bytes": 119302,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "kwon",
+      "faction": "joseon",
+      "commander": "권준",
+      "regions": [
+        "hansan"
+      ],
+      "site": "a small island harbour among steep wooded islets, with a narrow landing beach and a watch post on the ridge",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/kwon-L1.webp",
+          "bytes": 73268,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a small island harbour among steep wooded islets, with a narrow landing beach and a watch post on the ridge."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/kwon-L2.webp",
+          "bytes": 84580,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/kwon-L3.webp",
+          "bytes": 119468,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "jeongun",
+      "faction": "joseon",
+      "commander": "정운",
+      "regions": [
+        "nokdo"
+      ],
+      "site": "a small walled coastal fort on a peninsula, a village of thatched houses behind it and a fishing-boat shore",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/jeongun-L1.webp",
+          "bytes": 55680,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a small walled coastal fort on a peninsula, a village of thatched houses behind it and a fishing-boat shore."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/jeongun-L2.webp",
+          "bytes": 69960,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/jeongun-L3.webp",
+          "bytes": 113114,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "eo",
+      "faction": "joseon",
+      "commander": "어영담",
+      "regions": [
+        "bangdap"
+      ],
+      "site": "an island fort overlooking a channel, terraced hillside, rice fields behind and a modest landing",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/eo-L1.webp",
+          "bytes": 46538,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: an island fort overlooking a channel, terraced hillside, rice fields behind and a modest landing."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/eo-L2.webp",
+          "bytes": 67610,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/eo-L3.webp",
+          "bytes": 134186,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "anwi",
+      "faction": "joseon",
+      "commander": "안위",
+      "regions": [
+        "mokpo"
+      ],
+      "site": "a river-mouth port on a muddy estuary with reed banks, wooden quays and a signal-fire hill",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/anwi-L1.webp",
+          "bytes": 71678,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a river-mouth port on a muddy estuary with reed banks, wooden quays and a signal-fire hill."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/anwi-L2.webp",
+          "bytes": 91152,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/anwi-L3.webp",
+          "bytes": 120258,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "admiral",
+      "faction": "joseon",
+      "commander": "수군 통제사 (공용)",
+      "regions": [],
+      "site": "a typical Joseon coastal naval post on a bay, hills with pines behind and a timber pier",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/admiral-L1.webp",
+          "bytes": 55582,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a typical Joseon coastal naval post on a bay, hills with pines behind and a timber pier."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/admiral-L2.webp",
+          "bytes": 74828,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/admiral-L3.webp",
+          "bytes": 98490,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions). Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "wakisaka",
+      "faction": "japan",
+      "commander": "와키자카 야스하루",
+      "regions": [
+        "busan"
+      ],
+      "site": "a captured harbour town on a curved bay, a Japanese-built hill fortress above the quay, large anchorage",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/wakisaka-L1.webp",
+          "bytes": 55516,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a captured harbour town on a curved bay, a Japanese-built hill fortress above the quay, large anchorage."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/wakisaka-L2.webp",
+          "bytes": 73990,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/wakisaka-L3.webp",
+          "bytes": 107926,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "kuki",
+      "faction": "japan",
+      "commander": "구키 요시타카",
+      "regions": [
+        "angolpo"
+      ],
+      "site": "a narrow inlet camp on a rocky shore, large warships beached on the sand and moored in rows",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/kuki-L1.webp",
+          "bytes": 46568,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a narrow inlet camp on a rocky shore, large warships beached on the sand and moored in rows."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/kuki-L2.webp",
+          "bytes": 56754,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/kuki-L3.webp",
+          "bytes": 97756,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "kato",
+      "faction": "japan",
+      "commander": "가토 요시아키",
+      "regions": [
+        "nagoya"
+      ],
+      "site": "the vast staging base of the invasion on a bay of north-west Kyushu, a castle on the hill and encampments of many clans stretching along the shore",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/kato-L1.webp",
+          "bytes": 66042,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: the vast staging base of the invasion on a bay of north-west Kyushu, a castle on the hill and encampments of many clans stretching along the shore."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/kato-L2.webp",
+          "bytes": 72264,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/kato-L3.webp",
+          "bytes": 93932,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "kurushima",
+      "faction": "japan",
+      "commander": "구루시마 미치후사",
+      "regions": [
+        "cheonseongpo"
+      ],
+      "site": "a rocky island stronghold of a sea-raider clan, boats hidden in a small cove, a wooden lookout tower",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/kurushima-L1.webp",
+          "bytes": 62950,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a rocky island stronghold of a sea-raider clan, boats hidden in a small cove, a wooden lookout tower."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/kurushima-L2.webp",
+          "bytes": 77104,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/kurushima-L3.webp",
+          "bytes": 108754,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "konishi",
+      "faction": "japan",
+      "commander": "고니시 유키나가",
+      "regions": [
+        "tsushima"
+      ],
+      "site": "a steep island harbour, a hill fortress and a fleet gathering point on a long narrow inlet",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/konishi-L1.webp",
+          "bytes": 55054,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a steep island harbour, a hill fortress and a fleet gathering point on a long narrow inlet."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/konishi-L2.webp",
+          "bytes": 74532,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/konishi-L3.webp",
+          "bytes": 102470,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "todo",
+      "faction": "japan",
+      "commander": "도도 다카토라",
+      "regions": [
+        "dadaepo"
+      ],
+      "site": "a coastal fort on a headland, a wide gravel landing and stacked supply crates",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/todo-L1.webp",
+          "bytes": 72304,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a coastal fort on a headland, a wide gravel landing and stacked supply crates."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/todo-L2.webp",
+          "bytes": 81330,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/todo-L3.webp",
+          "bytes": 101402,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "shimazu",
+      "faction": "japan",
+      "commander": "시마즈 요시히로",
+      "regions": [
+        "jepo"
+      ],
+      "site": "a hillside encampment above a river mouth with a defended landing, palisades terraced up the slope",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/shimazu-L1.webp",
+          "bytes": 68756,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a hillside encampment above a river mouth with a defended landing, palisades terraced up the slope."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/shimazu-L2.webp",
+          "bytes": 75622,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/shimazu-L3.webp",
+          "bytes": 98144,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "japan",
+      "faction": "japan",
+      "commander": "일본 수군 (공용)",
+      "regions": [],
+      "site": "a typical captured Korean coastal port held by Japanese troops, a bay with hills behind",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/japan-L1.webp",
+          "bytes": 68440,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a typical captured Korean coastal port held by Japanese troops, a bay with hills behind."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/japan-L2.webp",
+          "bytes": 69194,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/japan-L3.webp",
+          "bytes": 96618,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes. Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "chenlin",
+      "faction": "ming",
+      "commander": "진린",
+      "regions": [
+        "liaodong"
+      ],
+      "site": "a northern Chinese river-mouth garrison on a flat coast, a brick-faced earthen wall and a long canal dock",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/chenlin-L1.webp",
+          "bytes": 61908,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Ming China: brick walls, red and yellow lacquered gate towers with yellow-glazed tiled roofs, plain red and yellow cloth banners without any emblem, large Chinese junk warships with batten sails. LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a northern Chinese river-mouth garrison on a flat coast, a brick-faced earthen wall and a long canal dock."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/chenlin-L2.webp",
+          "bytes": 72476,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Ming China: brick walls, red and yellow lacquered gate towers with yellow-glazed tiled roofs, plain red and yellow cloth banners without any emblem, large Chinese junk warships with batten sails. Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/chenlin-L3.webp",
+          "bytes": 111792,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Ming China: brick walls, red and yellow lacquered gate towers with yellow-glazed tiled roofs, plain red and yellow cloth banners without any emblem, large Chinese junk warships with batten sails. Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "deng",
+      "faction": "ming",
+      "commander": "등자룡",
+      "regions": [
+        "shandong"
+      ],
+      "site": "a large Chinese naval harbour on a flat coast with a walled yamen compound, brick towers and a broad quay",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/deng-L1.webp",
+          "bytes": 58646,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Ming China: brick walls, red and yellow lacquered gate towers with yellow-glazed tiled roofs, plain red and yellow cloth banners without any emblem, large Chinese junk warships with batten sails. LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a large Chinese naval harbour on a flat coast with a walled yamen compound, brick towers and a broad quay."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/deng-L2.webp",
+          "bytes": 73588,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Ming China: brick walls, red and yellow lacquered gate towers with yellow-glazed tiled roofs, plain red and yellow cloth banners without any emblem, large Chinese junk warships with batten sails. Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/deng-L3.webp",
+          "bytes": 108712,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. Ming China: brick walls, red and yellow lacquered gate towers with yellow-glazed tiled roofs, plain red and yellow cloth banners without any emblem, large Chinese junk warships with batten sails. Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    }
+  ]
+}

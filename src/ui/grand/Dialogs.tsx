@@ -294,7 +294,7 @@ export function EventCard({ event, me, onChoose }: EventCardProps) {
   return (
     <Modal label={event.title} eyebrow={t('{date} · 역사 사건', { date: event.date })} title={event.title} tone={me}>
       <div className="g-event">
-        {event.portrait && <img className="g-event__portrait" src={`/ui/portraits/${event.portrait}.jpg`} alt="" width={84} height={84} />}
+        {event.portrait && <img className="g-event__portrait" src={`/ui/portraits/${event.portrait}.jpg`} alt="" width={48} height={48} />}
         <p className="g-event__text">{event.text}</p>
       </div>
       <div className="g-event__choices">
