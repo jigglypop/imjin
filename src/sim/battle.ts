@@ -596,6 +596,10 @@ export class Battle {
     for (const s of this.ships) if (this.isActive(s)) this.active[s.team].push(s);
     if (this.profile !== 'historical') {
       this.boardingTargets.clear();
+      for (const id of this.boardingSlots.keys()) {
+        const s = this.get(id);
+        if (!s || !this.isActive(s)) this.boardingSlots.delete(id);
+      }
       for (const s of this.ships) if (this.isActive(s) && boardsFirst(s) && s.targetId) {
         this.boardingTargets.set(s.targetId, (this.boardingTargets.get(s.targetId) ?? 0) + 1);
       }

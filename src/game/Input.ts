@@ -437,7 +437,7 @@ export class Input {
     this.engine.issue({ type: 'orders', list, queue });
     if (queue) pushToast(t('이동 경로 예약 · 최대 16곳'));
     this.engine.publish(true);
-    this.engine.fx.spray.emit({ x: tx, y: 0.5, z: tz, vy: 2, life: 0.6, size0: 3, size1: 9, alpha: 0.5, r: 1, g: 0.85, b: 0.4, lift: -3 });
+    this.engine.moveOrders?.show(tx, tz, queue);
   }
 
   formation(kind: FormationKind) {

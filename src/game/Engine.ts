@@ -74,6 +74,7 @@ import { equipment, LEVELS, levelSetting, saveLevelSetting, startLevel, type Lev
 import { t } from '../i18n';
 import { failBattle, publish, pushToast, setLoading, setProgress, setReport, type GameSnapshot } from '../state/store';
 import { SquadronBanners } from '../ui/SquadronBanners';
+import { MoveOrders } from '../ui/MoveOrders';
 import { sound } from '../audio/Sound';
 import { Terrain } from '../terrain/Terrain';
 import { Vegetation } from '../terrain/Vegetation';
@@ -165,6 +166,7 @@ export class Engine {
   lanterns!: Lanterns;
   input!: Input;
   banners: SquadronBanners | null = null;
+  moveOrders: MoveOrders | null = null;
   readonly sound = sound;
   readonly minimap = new Minimap();
   private minimapTimer = 0;
@@ -412,6 +414,7 @@ export class Engine {
       }
       this.input = new Input(this);
       this.input.attach(r.domElement);
+      this.moveOrders = new MoveOrders(this, document.querySelector('.app') ?? document.body);
       this.touch = new TouchControls(this);
       this.touch.attach(r.domElement);
       this.rts.attach(r.domElement);
@@ -683,6 +686,7 @@ export class Engine {
   }
 
   private placeScenario(sky: LoadedSky) {
+    this.moveOrders?.clear();
     const info = this.battleInfo;
     const preset = SKY_PRESETS[this.skyName];
     const sunAz = Math.atan2(sky.info.sunDir.z, sky.info.sunDir.x);
@@ -1164,6 +1168,7 @@ export class Engine {
     this.updateSun();
     const el = this.renderer.domElement;
     this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.rts.cinematic && !this.battle.ended, this.team);
+    this.moveOrders?.update();
     this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.rts.cinematic && !this.options.hideLabels && !this.battle.ended, this.battle);
     this.publishTimer -= dt;
     if (this.publishTimer <= 0) {
@@ -1607,6 +1612,8 @@ export class Engine {
     this.touch?.detach();
     this.rts.detach();
     this.banners?.clear();
+    this.moveOrders?.dispose();
+    this.moveOrders = null;
     this.releasePixelRatio?.();
     this.releasePixelRatio = null;
     this.minimap.onPick = null;

@@ -218,6 +218,72 @@ try {
     me.funds = 2000; me.cap = c.fleet(b, 0).value + shipSpec('panokseon').cost;
     ai.recruit(b, c, [p]); assert.equal(p.queue[0].kind, 'panokseon');
   });
+  check('scouts keep safe objectives instead of chasing a gunship 450m away, in every faction', () => {
+    for (const kind of ['hyeopseon', 'kobaya', 'mingsmall']) {
+      const b = new Battle(23, COMPETITIVE_PROFILE), ai = new Strategist(0);
+      const scouts = Array.from({ length: 6 }, (_, i) => b.addShip(kind, 550, (i - 2.5) * 15, 0, '', null));
+      const enemy = b.addShip('panokseon', 1000, 0, 0, '', null);
+      const p = { id: 0, x: 0, z: 0, r: 220, value: 1, home: -1, hold: 0 };
+      const fixture = { player: () => ({ team: 'joseon' }), points: [p], teamOfPoint: () => null };
+      ai.raid(b, fixture, scouts, [{ x: enemy.x, z: enemy.z, ships: [enemy], power: combatValue(enemy.spec.kind) }]);
+      for (const s of scouts) {
+        assert.equal(s.order.type, 'move');
+        assert.ok(Math.hypot(s.order.x, s.order.z) <= p.r * 0.4 + 1e-9);
+      }
+    }
+  });
+  check('eighteen scouts split into three small groups with mirrored separate goals', () => {
+    const run = (mirror) => {
+      const b = new Battle(23, COMPETITIVE_PROFILE), ai = new Strategist(0), sign = mirror ? -1 : 1;
+      ai.axis = mirror ? Math.PI : 0; ai.spreadHulls = true;
+      const scouts = Array.from({ length: 18 }, (_, i) => b.addShip('kobaya', -1500 * sign, (i - 8.5) * 20 * sign, ai.axis, '', null));
+      const points = [-600, 0, 600].map((z, i) => ({ id: i, x: 0, z: z * sign, r: 220, value: 1, home: -1, hold: 0 }));
+      const fixture = { player: () => ({ team: 'joseon' }), points, teamOfPoint: () => null };
+      ai.raid(b, fixture, scouts, []);
+      const counts = new Map();
+      for (const s of scouts) {
+        assert.equal(s.order.type, 'move');
+        const p = points.find((p) => Math.hypot(p.x - s.order.x, p.z - s.order.z) <= p.r * 0.4 + 1e-9);
+        assert.ok(p); counts.set(p.id, (counts.get(p.id) ?? 0) + 1);
+      }
+      assert.deepEqual([...counts.values()].sort(), [6, 6, 6]);
+      return scouts.map((s) => s.order);
+    };
+    const a = run(false), z = run(true);
+    a.forEach((o, i) => { assert.ok(Math.abs(o.x + z[i].x) < 1e-9); assert.ok(Math.abs(o.z + z[i].z) < 1e-9); });
+  });
+  check('parallel light-scout capture retains its real weighted rate instead of assuming six small ships saturate it', () => {
+    const run = (split) => {
+      const { battle: b, conquest: c } = buildConquest('hallyeo', [{ name: '', faction: 'japan', team: 'joseon', human: false, fleet: [] }, { name: '', faction: 'ming', team: 'japan', human: false, fleet: [] }], () => -50, 23);
+      c.points = c.points.filter((p) => p.home < 0).slice(0, 3);
+      assert.equal(c.points.length, 3);
+      for (const p of c.points) { p.owner = -1; p.hold = 0; }
+      const sq = b.addSquadron('joseon', '', '', '', '', 0);
+      for (let i = 0; i < 18; i++) {
+        const p = c.points[split ? Math.floor(i / 6) : 0];
+        b.addShip('kobaya', p.x, p.z, 0, '', sq);
+      }
+      b.grid.rebuild(b.ships); c.capture(b, 10);
+      return c.points.map((p) => p.hold);
+    };
+    const split = run(true), together = run(false);
+    split.forEach((hold) => assert.ok(Math.abs(hold - 0.025 * 1.44 * 10) < 1e-9));
+    assert.ok(Math.abs(together[0] - 0.025 * 3 * 10) < 1e-9);
+    assert.ok(split.reduce((a, n) => a + n, 0) > together.reduce((a, n) => a + n, 0));
+  });
+  check('scouts fight nearby weak opposition but withdraw from a stronger gunship', () => {
+    const run = (kind) => {
+      const b = new Battle(23, COMPETITIVE_PROFILE), ai = new Strategist(0);
+      const scouts = Array.from({ length: 6 }, (_, i) => b.addShip('kobaya', 0, i * 10, 0, '', null));
+      const enemy = b.addShip(kind, 100, 0, 0, '', null);
+      const p = { id: 0, x: -2000, z: 0, r: 220, value: 1, home: 0, hold: 1 };
+      const fixture = { player: () => ({ team: 'joseon' }), points: [p], teamOfPoint: () => 'joseon', count: () => 0 };
+      ai.raid(b, fixture, scouts, [{ x: enemy.x, z: enemy.z, ships: [enemy], power: combatValue(enemy.spec.kind) }]);
+      return scouts;
+    };
+    assert.ok(run('hyeopseon').every((s) => s.order.type === 'auto'));
+    assert.ok(run('panokseon').every((s) => s.order.type === 'move' && s.order.x < -1900));
+  });
   check('competitive weather varies by battle seed while historical weather stays unchanged', () => {
     const a = new Battle(77, COMPETITIVE_PROFILE), b = new Battle(77, COMPETITIVE_PROFILE), z = new Battle(78, COMPETITIVE_PROFILE);
     assert.deepEqual(a.waves.ampQ, b.waves.ampQ); assert.notDeepEqual(a.waves.ampQ, z.waves.ampQ);
@@ -353,6 +419,12 @@ try {
       // A player may explicitly select the defended gunship even though the computer favours the soft escort.
       b.setOrder([a.id], { type: 'attack', targetId: gunship.id }); b.think(a); assert.equal(a.targetId, gunship.id);
     }
+  });
+  check('boarding approach assignments discard retired hulls in an uncapped battle', () => {
+    const b = new Battle(92, COMPETITIVE_PROFILE);
+    const s = b.addShip('kobaya', 0, 0, 0, '', null);
+    b.boardingSlots.set(s.id, 1); s.alive = false;
+    b.step(0); assert.equal(b.boardingSlots.size, 0);
   });
 } finally { await server.close(); }
 console.log(failed ? `${failed} failed` : 'all passed');

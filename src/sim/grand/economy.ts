@@ -52,12 +52,12 @@ export const TUNING = {
     japan: { first: 8, every: 8, at: 'nagoya', ships: { atakebune: 1, sekibune: 3, kobaya: 2 } },
     ming: { first: 8, every: 8, at: 'liaodong', ships: { mingship: 1, mingsmall: 2 } },
   } as Record<GrandFaction, { first: number; every: number; at: RegionId; ships: Partial<Record<ShipKind, number>> }>,
-  /** Opening fleet scaling compensates for the expedition's travel and Japan facing two allied navies. */
-  startFleet: { joseon: 1.04, japan: 0.69, ming: 1.42 } as Record<GrandFaction, number>,
+  /** Allied campaign train/development cohorts account for unequal opening holdings and expedition travel. */
+  startFleet: { joseon: 0.98, japan: 0.74, ming: 1.95 } as Record<GrandFaction, number>,
   /** Turn the first turtle ship can be built. */
   geobukseonTurn: 3,
   faction: {
-    joseon: { ...COMPETITIVE_FACTIONS.joseon, label: '조선' },
+    joseon: { ...COMPETITIVE_FACTIONS.joseon, income: 0.85, label: '조선' },
     // Japan funds two fronts; Ming's two commercial bases must finance its longer expedition to the expanded coast.
     japan: { ...COMPETITIVE_FACTIONS.japan, income: 1.35, label: '일본' },
     ming: { ...COMPETITIVE_FACTIONS.ming, income: 1.9, label: '명' },

@@ -1025,6 +1025,42 @@
 
 /* ---------------------------------------------------------------- squadron banners over the 3D view (DOM built by SquadronBanners) */
 
+.move-orders {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 6;
+}
+.move-order {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  color: #ffe58d;
+  filter: drop-shadow(0 2px 2px #061018) drop-shadow(0 0 7px #ffe58d80);
+}
+.move-order svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.move-order__rim { fill: #091d3266; stroke: currentColor; stroke-width: 3; }
+.move-order__ticks { stroke: #fff; stroke-width: 3; stroke-linecap: round; }
+.move-order__dot { fill: #fff; stroke: #07151d; stroke-width: 2; }
+.move-order__pulse {
+  position: absolute;
+  inset: 5px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  animation: move-order-pulse 0.85s ease-out 3;
+  opacity: 0;
+}
+.move-order--queued { color: #91edff; }
+.move-order--queued .move-order__rim { stroke-dasharray: 6 3; }
+@keyframes move-order-pulse {
+  from { transform: scale(0.55); opacity: 1; }
+  to { transform: scale(1.45); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .move-order__pulse { animation: none; }
+}
+
 .banners {
   position: absolute;
   inset: 0;

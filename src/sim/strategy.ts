@@ -298,23 +298,40 @@ export class Strategist {
     this.sail(body, goal.x, goal.z, goal.r * 0.45);
   }
 
-  /** Small boats take points no enemy group guards. */
+  /** Small boats take separate lightly held points, instead of chasing a distant gun line. */
   private raid(_b: Battle, c: Conquest, raiders: Ship[], foes: Cluster[]) {
     if (!raiders.length) return;
-    const at = centroid(raiders);
-    if (foes.some((f) => Math.hypot(f.x - at.x, f.z - at.z) < 450)) {
-      for (const s of raiders) if (s.order.type !== 'auto') s.order = { type: 'auto' };
-      return;
+    const remaining = new Set(raiders), claimed = new Set<number>();
+    while (remaining.size) {
+      const first = remaining.values().next().value!;
+      // Small detachments can take several points at once. Light hulls still have capture's 0.35 weight;
+      // six of them get a 1.44 rate multiplier, rather than the eighteen-hull maximum of three.
+      const group = [...remaining].sort((a, b) => (a.x - first.x) ** 2 + (a.z - first.z) ** 2 - ((b.x - first.x) ** 2 + (b.z - first.z) ** 2) || a.id - b.id).slice(0, 6);
+      for (const s of group) remaining.delete(s);
+      const at = centroid(group), strength = power(group);
+      const close = foes.flatMap((f) => f.ships).filter((e) => group.some((s) => (e.x - s.x) ** 2 + (e.z - s.z) ** 2 < 120 * 120));
+      if (close.length && power(close) <= strength * 1.2) {
+        for (const s of group) if (s.order.type !== 'auto') s.order = { type: 'auto' };
+        continue;
+      }
+      const goal = this.pickPoint(c, at.x, at.z, strength, foes, true, claimed);
+      if (goal) {
+        claimed.add(goal.id);
+        this.sail(group, goal.x, goal.z, goal.r * 0.4);
+      } else if (!this.retreat(c, group, at)) {
+        // No safe objective remains. In particular, gunless scouts must not pursue a ship 450m away
+        // while armed scouts happen to stay inside a capture circle under the same 'auto' order.
+        for (const s of group) if (s.order.type !== 'hold') s.order = { type: 'hold' };
+      }
     }
-    const goal = this.pickPoint(c, at.x, at.z, power(raiders), foes, true);
-    if (goal) this.sail(raiders, goal.x, goal.z, goal.r * 0.4);
   }
 
-  private pickPoint(c: Conquest, x: number, z: number, strength: number, foes: Cluster[], avoid: boolean) {
+  private pickPoint(c: Conquest, x: number, z: number, strength: number, foes: Cluster[], avoid: boolean, claimed?: ReadonlySet<number>) {
     const team = c.player(this.slot)!.team;
     let best: CapturePoint | null = null;
     let bestScore = -Infinity;
     for (const p of c.points) {
+      if (claimed?.has(p.id)) continue;
       const held = c.teamOfPoint(p) === team && Math.abs(p.hold) >= 0.999;
       if (held) continue;
       // Shore batteries guard a point as well as ships do.
