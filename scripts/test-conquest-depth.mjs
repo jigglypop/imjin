@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
+import { groundHeights } from './region-ground.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
@@ -25,8 +26,11 @@ try {
   const { generateHeightmap } = await server.ssrLoadModule('/src/terrain/generate.ts');
   const { encodeSnapshot, decodeSnapshot } = await server.ssrLoadModule('/src/net/protocol.ts');
   const { Strategist } = await server.ssrLoadModule('/src/sim/strategy.ts');
+  // Region windows are read from public/terrain, so they are built up front.
+  const grounds = new Map();
+  for (const m of Object.values(REGION_MAPS)) grounds.set(m.terrain, await groundHeights((p) => server.ssrLoadModule(p), m.terrain));
   function terrainLand(spec) {
-    const heights = generateHeightmap(spec), { size, res } = spec;
+    const heights = grounds.get(spec) ?? generateHeightmap(spec), { size, res } = spec;
     return (x, z) => {
       const fx = ((x + size / 2) / size) * res - 0.5, fz = ((z + size / 2) / size) * res - 0.5;
       const x0 = Math.max(0, Math.min(res - 2, Math.floor(fx))), z0 = Math.max(0, Math.min(res - 2, Math.floor(fz)));
@@ -413,7 +417,7 @@ try {
     for (const s of battle.ships) {
       const u = source.get(s.campaignId); assert.ok(u);
       close(s.hull / s.spec.hull, u.hull); close(s.crew / s.spec.crew, u.crew); assert.equal(s.name, u.name);
-      assert.ok(actualLand(s.x, s.z) < -6);
+      assert.ok(actualLand(s.x, s.z) < -6, `${s.name} ${s.x.toFixed(0)},${s.z.toFixed(0)} h=${actualLand(s.x, s.z).toFixed(1)}`);
     }
     const home = conquest.homeOf(1);
     assert.equal(home.buildings.find((bd) => bd?.kind === 'shipyard').level, 3);

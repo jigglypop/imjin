@@ -128,7 +128,7 @@ function distanceToLand(dem: RegionDem) {
 }
 
 /** Depth (m, positive) of open water `d` metres from the nearest shore: a shelf that reaches 50 m a kilometre out. */
-const shelf = (d: number) => 0.3 + 54 * (1 - Math.exp(-d / 450));
+const shelf = (d: number) => 0.3 + 54 * (1 - Math.exp(-d / 250));
 
 /** Where the window's rim is pulled under the sea, so the land does not end in a bare wall. */
 const RIM = 700;

@@ -24,6 +24,7 @@ const only = args.filter((a) => !a.startsWith('--'));
 const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
 const load = (p) => server.ssrLoadModule(p);
 const { findSite, placeSlots, findSpawn } = await load('/src/sim/conquest.ts');
+const { wetSpot } = await load('/src/sim/maps.ts');
 const { REGION_SITES } = await load('/src/sim/grand/coast.ts');
 const { REGION_ORDER } = await load('/src/sim/grand/regions.ts');
 
@@ -116,6 +117,27 @@ function homeSpot(L, x, z, reach, maxShore) {
   return best;
 }
 
+/**
+ * Water for a whole fleet: a campaign meeting can bring 300 ships a side, and spawnSeat (src/sim/grand/spawn.ts) forms them up
+ * in rows on the port's capture circle, each moving to the nearest open water. They must all find 6 m of water.
+ */
+function musters(L, home, foe) {
+  const toFoe = Math.atan2(foe.z - home.z, foe.x - home.x);
+  const fx = Math.cos(toFoe);
+  const fz = Math.sin(toFoe);
+  const count = 301;
+  const cols = Math.max(3, Math.min(8, Math.ceil(Math.sqrt(count * 1.3))));
+  const placed = [];
+  for (let i = 0; i < count; i += 1) {
+    const row = Math.floor(i / cols);
+    const col = (i % cols) - (cols - 1) / 2;
+    const spot = wetSpot(L, home.x + fx * (60 - row * 62) - fz * col * 58, home.z + fz * (60 - row * 62) + fx * col * 58, placed);
+    if (L(spot.x, spot.z) >= -6) return false;
+    placed.push(spot);
+  }
+  return true;
+}
+
 /** The ports a coast has room for near a point, nearest first and at least 200 m apart: a window's marker may stand in a dead end, so the layout tries more than one. */
 function homeSpots(L, x, z, reach, maxShore, count) {
   const found = [];
@@ -143,7 +165,7 @@ function wetShare(L, a, b) {
 function layout(id, L) {
   const site = REGION_SITES[id];
   // A window cut from the real coast is centred on the port's marker, which may stand a little inland or in a dead end.
-  const defenders = site.terrain.region ? homeSpots(L, site.port.x, site.port.z, 3000, 300, 12) : [homeSpot(L, site.port.x, site.port.z, 1500, 300)].filter(Boolean);
+  const defenders = site.terrain.region ? homeSpots(L, site.port.x, site.port.z, 3000, 300, 40) : [homeSpot(L, site.port.x, site.port.z, 1500, 300)].filter(Boolean);
   if (!defenders.length) throw new Error(`${id}: no port with room for works near ${site.port.x},${site.port.z}`);
   let failure;
   for (const defender of defenders) {
@@ -157,6 +179,7 @@ function layout(id, L) {
 }
 
 function layoutFrom(id, L, site, defender) {
+  const real = !!site.terrain.region;
   // The attacker's anchorage: out toward the sea, as near the span as the shore allows, by a shore of its own.
   let attacker = null;
   // A shore of its own close by if there is one; failing that, the nearest shore the works can be built on.
@@ -182,6 +205,7 @@ function layoutFrom(id, L, site, defender) {
     home.x = round(home.x);
     home.z = round(home.z);
   }
+  if (real && !(musters(L, attacker, defender) && musters(L, defender, attacker))) throw new Error(`${id}: too little water to muster a fleet at ${defender.x},${defender.z}`);
   const points = [
     { role: 'attacker', ...attacker, r: R_HOME, value: 2 },
     { role: 'defender', ...defender, r: R_HOME, value: 2 },
