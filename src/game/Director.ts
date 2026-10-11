@@ -339,7 +339,7 @@ export class Director {
     if (!k) return;
     const { x, z, level } = k;
     const { rts, battle } = this.host;
-    if (!this.slowEnabled || this.host.remote || this.host.paused || this.host.fastForward || battle.winner) return;
+    if (!this.slowEnabled || this.host.remote || this.host.paused || this.host.fastForward || battle.ended) return;
     if (this.slowClock >= 0 || this.clock < this.slowReadyAt) return;
     const g = rts.goal;
     if (Math.hypot(x - g.tx, z - g.tz) > Math.max(240, g.distance * 1.3)) return;

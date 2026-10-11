@@ -74,7 +74,9 @@ function Game({ launch, onEngine }: { launch: Launch; onEngine: (e: Engine) => v
     engineRef.current = engine;
     window.__engine = engine;
     window.__info = () => engine.info();
+    window.__ready = false;
     let cancelled = false;
+    let readyFrame = 0;
     engine
       .init()
       .then(() => {
@@ -84,15 +86,25 @@ function Game({ launch, onEngine }: { launch: Launch; onEngine: (e: Engine) => v
         if (params.get('paused') === '1') engine.paused = true;
         let frames = 0;
         const tick = () => {
+          if (cancelled) return;
           frames += 1;
           if (frames > 30) window.__ready = true;
-          else requestAnimationFrame(tick);
+          else readyFrame = requestAnimationFrame(tick);
         };
-        requestAnimationFrame(tick);
+        readyFrame = requestAnimationFrame(tick);
       })
-      .catch(failBattle);
+      .catch((err: unknown) => {
+        if (!cancelled && !(err instanceof Error && err.name === 'AbortError')) failBattle(err);
+      });
     return () => {
       cancelled = true;
+      cancelAnimationFrame(readyFrame);
+      engineRef.current = null;
+      if (window.__engine === engine) {
+        delete window.__engine;
+        delete window.__info;
+        window.__ready = false;
+      }
       engine.dispose();
     };
   }, [gl, camera, onEngine]);
@@ -139,13 +151,18 @@ export default function BattleView({ launch }: { launch: Launch }) {
     if (!engine || applied.current === launch.seq) return;
     applied.current = launch.seq;
     const conquest = conquestOf(launch);
+    let cancelled = false;
+    const fail = (err: unknown) => {
+      if (!cancelled && !(err instanceof Error && err.name === 'AbortError')) failBattle(err);
+    };
     if (conquest) {
       engine.campaign = undefined;
-      engine.setConquest(conquest, launch.kind === 'conquest' ? launch.remote ?? null : null).catch(failBattle);
+      engine.setConquest(conquest, launch.kind === 'conquest' ? launch.remote ?? null : null).catch(fail);
     } else if (launch.kind === 'scenario') {
       engine.campaign = launch.campaign;
-      engine.setScenario(launch.id, launch.campaign ? 'joseon' : launch.faction, launch.remote ?? null).catch(failBattle);
+      engine.setScenario(launch.id, launch.campaign ? 'joseon' : launch.faction, launch.remote ?? null).catch(fail);
     }
+    return () => { cancelled = true; };
   }, [engine, launch]);
 
   const back = () => {

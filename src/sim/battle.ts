@@ -1,4 +1,4 @@
-import { waveField } from '../ocean/waves';
+import { SEA_STATES, WaveField, type SeaState } from '../ocean/waves';
 import { GUN_SHOTS, GUN_SPECS, NO_MODS, SHIP_SPECS } from './catalog';
 import { ShipGrid } from './grid';
 import { anchorsFor } from '../ships/anchors';
@@ -165,7 +165,7 @@ export interface BattleRules {
   /** A projectile landed on dry ground. */
   impact?(b: Battle, x: number, y: number, z: number, damage: number, team: Team): void;
   /** Overrides the default end, which is one side having no ships left. */
-  decide?(b: Battle): Team | null;
+  decide?(b: Battle): Team | 'draw' | null;
 }
 
 export class Battle {
@@ -178,6 +178,8 @@ export class Battle {
   /** Leeway: how fast the wind pushes a ship that is not at anchor, in m/s. Contest maps turn it off to keep both sides even. */
   windDrift = 0.15;
   winner: Team | null = null;
+  draw = false;
+  readonly waves = new WaveField();
   escaped = { joseon: 0, japan: 0 };
   initial = { joseon: 0, japan: 0 };
   /** A computer-led team turns and flees once its share of ships still fighting drops below this. 0 fights to the end. */
@@ -224,6 +226,17 @@ export class Battle {
 
   constructor(seed = 1592) {
     this.rand = mulberry32(seed);
+    this.setSea(SEA_STATES.moderate);
+  }
+
+  get ended() {
+    return this.winner !== null || this.draw;
+  }
+
+  /** Each battle owns its sea; rendering and other battles cannot change its collisions. */
+  setSea(state: SeaState) {
+    this.waves.setState({ ...state });
+    this.waves.time = this.time;
   }
 
   random() {
@@ -299,6 +312,7 @@ export class Battle {
       supply: 1,
       campaignId: '',
     };
+    this.setCrew(ship, spec.crew);
     this.nextId = Math.max(this.nextId, ship.id + 1);
     this.ships.push(ship);
     this.byId.set(ship.id, ship);
@@ -371,14 +385,15 @@ export class Battle {
   }
 
   applySupply(s: Ship, supply: number) {
-    s.supply = supply;
-    for (const g of s.guns) g.ammo = Math.max(0, Math.round(GUN_SHOTS[s.spec.batteries[g.battery]!.gun] * supply));
+    s.supply = Number.isFinite(supply) ? clamp(supply, 0, 1) : 0;
+    for (const g of s.guns) g.ammo = GUN_SHOTS[s.spec.batteries[g.battery]!.gun] * s.supply;
   }
 
   /** Sets the total crew, spread over the stations by the ship's plan. */
   setCrew(s: Ship, total: number) {
-    s.crew = Math.max(0, total);
-    for (let i = 0; i < 4; i += 1) s.roles[i] = s.crew * s.plan[i]!;
+    const crew = Number.isFinite(total) ? clamp(total, 0, s.spec.crew) : 0;
+    for (let i = 0; i < 4; i += 1) s.roles[i] = crew * s.plan[i]!;
+    s.crew = s.roles[0] + s.roles[1] + s.roles[2] + s.roles[3];
   }
 
   configure(ids: number[], patch: Partial<Pick<Ship, 'fireMode' | 'ammo' | 'speedCap' | 'stance' | 'lights' | 'repel'>>) {
@@ -394,7 +409,8 @@ export class Battle {
       const s = this.byId.get(id);
       if (!this.isActive(s)) continue;
       const p = plan.map((v, i) => (s.spec.crewPlan[i]! > 0 ? Math.max(0, v) : 0));
-      const sum = p.reduce((a, v) => a + v, 0) || 1;
+      const sum = p.reduce((a, v) => a + v, 0);
+      if (!(sum > 0) || !Number.isFinite(sum)) continue;
       s.plan = p.map((v) => v / sum) as CrewPlan;
     }
   }
@@ -514,6 +530,7 @@ export class Battle {
 
   step(dt: number) {
     this.time += dt;
+    this.waves.time = this.time;
     if (this.flow) this.tide = this.flow.tideAt(this.time);
     for (const s of this.ships) if (s.revealed > 0) s.revealed -= dt;
     this.active.joseon.length = 0;
@@ -543,11 +560,21 @@ export class Battle {
     this.resolveBoarding(dt);
     this.rules?.step(this, dt);
     this.lull = !this.rules && (this.blows > 0 || this.time > OPENING) ? this.time - this.lastBlow : 0;
-    if (!this.winner) {
-      if (this.rules?.decide) this.winner = this.rules.decide(this);
+    if (!this.ended) {
+      if (this.rules?.decide) {
+        const result = this.rules.decide(this);
+        if (result === 'draw') this.draw = true;
+        else this.winner = result;
+      }
+      else if (this.active.japan.length === 0 && this.active.joseon.length === 0 && this.initial.japan > 0 && this.initial.joseon > 0) this.draw = true;
       else if (this.active.japan.length === 0 && this.initial.japan > 0) this.winner = 'joseon';
       else if (this.active.joseon.length === 0 && this.initial.joseon > 0) this.winner = 'japan';
-      else if (this.time >= CALLED) this.winner = this.strength('joseon') >= this.strength('japan') ? 'joseon' : 'japan';
+      else if (this.time >= CALLED) {
+        const a = this.strength('joseon');
+        const d = this.strength('japan');
+        if (a === d) this.draw = true;
+        else this.winner = a > d ? 'joseon' : 'japan';
+      }
     }
   }
 
@@ -1423,6 +1450,7 @@ export class Battle {
     if (s.crew <= 0) return;
     const k = Math.min(1, dt * REASSIGN_RATE);
     for (let i = 0; i < 4; i += 1) s.roles[i] = s.roles[i]! + (s.crew * s.plan[i]! - s.roles[i]!) * k;
+    s.crew = s.roles[0] + s.roles[1] + s.roles[2] + s.roles[3];
   }
 
   private rangeFactor(s: Ship) {
@@ -1444,11 +1472,11 @@ export class Battle {
     const rangeMul = this.rangeFactor(s);
     for (const raw of s.guns) {
       const g = raw as AimedGun;
+      if (g.ammo < 1 - 1e-9) continue;
       const battery = spec.batteries[g.battery]!;
       const gun = GUN_SPECS[battery.gun];
       const range = gun.range * rangeMul;
       if (g.stage < 4) {
-        if (g.ammo <= 0) continue;
         g.t += dt * crewFactor * s.mods.reload;
         const need = gun.stages[g.stage]!;
         if (g.t >= need) {
@@ -1749,7 +1777,7 @@ export class Battle {
             break;
           }
         }
-        if (p.y < 1.5 && p.y <= waveField.heightAt(p.x, p.z, waveField.time, 8)) {
+        if (p.y < 1.5 && p.y <= this.waves.heightAt(p.x, p.z, this.time, 8)) {
           p.alive = false;
           this.events.push({ type: 'splash', proj: p.id, x: p.x, z: p.z, size: p.ammo === 'arrow' ? 1.2 : p.ammo === 'grape' ? 0.6 : 1 });
           break;
@@ -1814,16 +1842,16 @@ export class Battle {
     const add = Math.min(s.spec.crew - s.crew, s.spec.crew * crew);
     if (add <= 0) return;
     for (let i = 0; i < 4; i += 1) s.roles[i] = s.roles[i]! + add * s.plan[i]!;
-    s.crew += add;
+    s.crew = s.roles[0] + s.roles[1] + s.roles[2] + s.roles[3];
   }
 
   /** Shot and powder from a magazine. Fraction of a full load per call. */
   resupply(s: Ship, amount: number) {
-    if (!this.isActive(s)) return;
+    if (!this.isActive(s) || !Number.isFinite(amount) || amount <= 0) return;
     s.supply = Math.min(1, s.supply + amount);
     for (const g of s.guns) {
       const full = GUN_SHOTS[s.spec.batteries[g.battery]!.gun];
-      g.ammo = Math.min(full, g.ammo + Math.max(1, Math.round(full * amount)));
+      g.ammo = Math.min(full, g.ammo + full * amount);
     }
   }
 

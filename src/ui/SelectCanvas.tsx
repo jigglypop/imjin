@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PerspectiveCamera, Vector2, WebGPURenderer } from 'three/webgpu';
 import { SCENARIO_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import type { Faction } from '../sim/types';
@@ -20,13 +20,18 @@ function SelectView({ id, look, side, markers }: { id: ScenarioId; look: number;
   const size = useThree((s) => s.size);
   const tmp = useRef(new Vector2());
   const sceneRef = useRef<SelectScene | null>(null);
+  const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     const scene = new SelectScene(gl, camera, equipment.select.mapSegments);
     sceneRef.current = scene;
     scene.setForces(id, side);
-    void scene.init(id);
+    let cancelled = false;
+    void scene.init(id).catch((err: unknown) => {
+      if (!cancelled && !(err instanceof Error && err.name === 'AbortError')) setError(err);
+    });
     return () => {
+      cancelled = true;
       scene.dispose();
       sceneRef.current = null;
     };
@@ -57,6 +62,7 @@ function SelectView({ id, look, side, markers }: { id: ScenarioId; look: number;
     }
   }, 1);
 
+  if (error) throw error;
   return null;
 }
 

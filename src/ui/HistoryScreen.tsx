@@ -134,8 +134,8 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
           {SCENARIO_ORDER.map((sid) => (
             <button key={sid} className={`hs-tab ${sid === id ? 'hs-tab--on' : ''} ${locked(sid) ? 'hs-tab--locked' : ''}`} disabled={locked(sid)} onClick={() => setId(sid)}>
               {inCampaign && record(sid) && (
-                <span className={`tab-seal ${record(sid)!.win ? '' : 'tab-seal--loss'}`} role="img" aria-label={record(sid)!.win ? t('승리') : t('패배')}>
-                  {record(sid)!.win ? <Check size={12} /> : <Cross size={12} />}
+                <span className={`tab-seal ${record(sid)!.draw ? 'tab-seal--draw' : record(sid)!.win ? '' : 'tab-seal--loss'}`} role="img" aria-label={record(sid)!.draw ? t('무승부') : record(sid)!.win ? t('승리') : t('패배')}>
+                  {record(sid)!.draw ? '–' : record(sid)!.win ? <Check size={12} /> : <Cross size={12} />}
                 </span>
               )}
               {t(SCENARIOS[sid].title)}

@@ -8,8 +8,9 @@
 // --strict exits 1 when anything is missing. Comments are ignored; console messages and tests are not player-facing.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, ...v] = a.replace(/^--/, '').split('='); return [k, v.join('=') || 'true']; }));
 const area = args.area ? join(ROOT, args.area) : join(ROOT, 'src');
 const HANGUL = /[\uac00-\ud7a3]/;
@@ -48,8 +49,8 @@ const unwrapped = new Map();
 const LITERAL = /'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g;
 
 for (const file of walk(area)) {
-  if (file.includes('/src/i18n/')) continue;
-  const rel = relative(ROOT, file);
+  const rel = relative(ROOT, file).replaceAll('\\', '/');
+  if (rel.startsWith('src/i18n/')) continue;
   const raw = readFileSync(file, 'utf8');
   const src = stripComments(raw);
   const lineOf = (i) => src.slice(0, i).split('\n').length;

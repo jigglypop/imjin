@@ -79,8 +79,17 @@ case "${1:-}" in
     ID=$(instance_id)
     [ "$ID" != "None" ] || die "no running imjin-mp instance; run setup first"
     CMD=$(aws ssm send-command --instance-ids "$ID" --document-name AWS-RunShellScript --parameters 'commands=["/usr/local/bin/imjin-deploy"]' --query Command.CommandId --output text)
-    aws ssm wait command-executed --command-id "$CMD" --instance-id "$ID" || true
+    aws ssm wait command-executed --command-id "$CMD" --instance-id "$ID"
     aws ssm get-command-invocation --command-id "$CMD" --instance-id "$ID" --query '[Status,StandardErrorContent]' --output text
+    VERIFIED=false
+    for i in 1 2 3 4 5 6; do
+      if node "$ROOT/scripts/check-mp-health.mjs" --url="https://$HOST/health"; then
+        VERIFIED=true
+        break
+      fi
+      sleep 5
+    done
+    [ "$VERIFIED" = true ] || die "multiplayer server did not confirm the built revision and protocol"
     ;;
   ci)
     ID=$(instance_id)

@@ -27,6 +27,7 @@ import meta from './demMeta.json';
 import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import { playableFactions } from '../sim/balance';
 import type { Faction } from '../sim/types';
+import { disposeTree } from '../render/dispose';
 
 export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
   okpo: { lon: 128.69, lat: 34.89 },
@@ -60,31 +61,36 @@ export function siteUV(id: ScenarioId) {
   return { u: (lonToX(s.lon) - meta.x0) / (meta.x1 - meta.x0), v: (latToY(s.lat) - meta.y0) / (meta.y1 - meta.y0) };
 }
 
-async function loadHeights() {
+async function loadHeights(signal: AbortSignal) {
+  signal.throwIfAborted();
   const img = await new TextureLoader().loadAsync('/ui/korea_dem.webp');
-  const source = img.image as HTMLImageElement | ImageBitmap;
-  const w = meta.width;
-  const h = meta.height;
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-  ctx.drawImage(source as CanvasImageSource, 0, 0);
-  const px = ctx.getImageData(0, 0, w, h).data;
-  const heights = new Float32Array(w * h);
-  const half = new Uint16Array(w * h);
-  for (let i = 0; i < w * h; i += 1) {
-    const v = px[i * 4]! * 256 + px[i * 4 + 1]! + px[i * 4 + 2]! / 256 - 32768;
-    heights[i] = v;
-    half[i] = DataUtils.toHalfFloat(v);
+  try {
+    signal.throwIfAborted();
+    const source = img.image as HTMLImageElement | ImageBitmap;
+    const w = meta.width;
+    const h = meta.height;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+    ctx.drawImage(source as CanvasImageSource, 0, 0);
+    const px = ctx.getImageData(0, 0, w, h).data;
+    const heights = new Float32Array(w * h);
+    const half = new Uint16Array(w * h);
+    for (let i = 0; i < w * h; i += 1) {
+      const v = px[i * 4]! * 256 + px[i * 4 + 1]! + px[i * 4 + 2]! / 256 - 32768;
+      heights[i] = v;
+      half[i] = DataUtils.toHalfFloat(v);
+    }
+    const tex = new DataTexture(half, w, h, RedFormat, HalfFloatType);
+    tex.magFilter = LinearFilter;
+    tex.minFilter = LinearFilter;
+    tex.flipY = false;
+    tex.needsUpdate = true;
+    return { heights, tex };
+  } finally {
+    img.dispose();
   }
-  img.dispose();
-  const tex = new DataTexture(half, w, h, RedFormat, HalfFloatType);
-  tex.magFilter = LinearFilter;
-  tex.minFilter = LinearFilter;
-  tex.flipY = false;
-  tex.needsUpdate = true;
-  return { heights, tex };
 }
 
 // War-table flags for the sides of the selected battle, pinned into the map around the site: Joseon and Ming to the
@@ -300,6 +306,9 @@ export class SelectScene {
   private dom: HTMLElement | null = null;
   private drag: { button: number; x: number; y: number } | null = null;
   ready = false;
+  private readonly loading = new AbortController();
+  private disposed = false;
+  private demTexture: DataTexture | null = null;
 
   constructor(
     private readonly renderer: WebGPURenderer,
@@ -315,8 +324,11 @@ export class SelectScene {
   }
 
   async init(initial: ScenarioId) {
+    this.loading.signal.throwIfAborted();
     this.renderer.toneMapping = NoToneMapping;
-    const { heights, tex } = await loadHeights();
+    const { heights, tex } = await loadHeights(this.loading.signal);
+    this.loading.signal.throwIfAborted();
+    this.demTexture = tex;
     this.heights = heights;
     this.scene.add(this.buildMap(tex));
     for (const faction of ['joseon', 'ming', 'japan'] as Faction[]) {
@@ -342,14 +354,26 @@ export class SelectScene {
   }
 
   dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.ready = false;
+    this.loading.abort();
     const dom = this.dom;
-    if (!dom) return;
-    dom.removeEventListener('pointerdown', this.onDown);
+    dom?.removeEventListener('pointerdown', this.onDown);
     window.removeEventListener('pointermove', this.onMove);
     window.removeEventListener('pointerup', this.onUp);
     window.removeEventListener('pointercancel', this.onUp);
-    dom.removeEventListener('wheel', this.onWheel);
-    dom.removeEventListener('contextmenu', this.onContext);
+    dom?.removeEventListener('wheel', this.onWheel);
+    dom?.removeEventListener('contextmenu', this.onContext);
+    this.dom = null;
+    this.touches.clear();
+    this.drag = null;
+    disposeTree(this.scene);
+    this.demTexture?.dispose();
+    this.demTexture = null;
+    for (const flag of this.flags) flag.tex.dispose();
+    this.flags.length = 0;
+    this.heights = null;
   }
 
   private onContext = (e: Event) => e.preventDefault();
@@ -597,6 +621,7 @@ export class SelectScene {
     tex.anisotropy = 8;
     const flag: Flag = { faction, group: new Group(), canvas, tex, text: '', base: 0, pos: new Vector3(), goal: new Vector3(), scale: 0, goalScale: 0 };
     void loadFlagFont().then(() => {
+      if (this.disposed) return;
       if (!flag.text) return;
       this.paintFlag(canvas, faction, flag.text);
       tex.needsUpdate = true;

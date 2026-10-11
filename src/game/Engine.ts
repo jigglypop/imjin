@@ -145,6 +145,7 @@ const CONTACT_RANGE = 400;
  */
 const MAX_STEPS = 160;
 const simBudgetMs = (speed: number) => (speed >= 64 ? 32 : speed >= 16 ? 24 : speed >= 8 ? 14 : 9);
+type LoadTask = { controller: AbortController; terrain?: Terrain; sky?: LoadedSky };
 
 export class Engine {
   readonly scene = new Scene();
@@ -227,6 +228,10 @@ export class Engine {
   private gpuMs: number | null = null;
   private gpuProbe = false;
   private touch: TouchControls | null = null;
+  private disposed = false;
+  private loading: LoadTask | null = null;
+  private skyLoading: AbortController | null = null;
+  private releaseDevice: (() => void) | null = null;
 
   constructor(readonly renderer: WebGPURenderer, readonly camera: PerspectiveCamera, private readonly options: EngineOptions) {
     this.level = levelSetting === 'auto' ? startLevel : levelSetting;
@@ -280,10 +285,17 @@ export class Engine {
   private watchDevice() {
     const r = this.renderer;
     const previous = r.onDeviceLost;
-    r.onDeviceLost = (info) => {
+    const lost: typeof r.onDeviceLost = (info) => {
       previous.call(r, info);
+      if (this.disposed) return;
+      if (this.loading) this.cancelLoad(this.loading);
+      this.skyLoading?.abort();
       this.ready = false;
       setLoading(t(DEVICE_LOST_TEXT), 1);
+    };
+    r.onDeviceLost = lost;
+    this.releaseDevice = () => {
+      if (r.onDeviceLost === lost) r.onDeviceLost = previous;
     };
   }
 
@@ -329,6 +341,7 @@ export class Engine {
 
   /** Every order from the player goes through here: to the local battle, or to the server in a multiplayer game. */
   issue(cmd: Command) {
+    if (!this.ready || this.disposed) return 0;
     if (this.sink) {
       this.sink.send(cmd);
       return 'ids' in cmd ? cmd.ids.length : 1;
@@ -337,94 +350,138 @@ export class Engine {
   }
 
   async init() {
-    const r = this.renderer;
-    r.toneMapping = ACESFilmicToneMapping;
-    r.shadowMap.enabled = true;
-    r.shadowMap.type = PCFShadowMap;
-    this.camera.near = 0.5;
-    this.camera.far = 60000;
-    this.camera.fov = 42;
-    this.camera.updateProjectionMatrix();
-    waveField.setState(SEA_STATES[this.seaName]);
-    const info = this.battleInfo;
-    setLoading(t('바다와 하늘을 준비하는 중'), 0.03, info.art ?? null);
-    // The files download while the cloud and wake shaders build, so neither waits for the other.
-    const loading = this.loadAssets(0.03);
-    await this.warmShared();
-    const [sky, terrain, assets] = await loading;
-    this.assets = assets;
-    this.terrain = terrain;
-    this.scene.add(terrain.group);
-    setLoading(t('지형을 준비하는 중'), 0.64);
-    this.dressTerrain();
-    this.applySky(sky);
-    setLoading(t('함대를 배치하는 중'), 0.68);
-    this.placeScenario(sky);
-    setLoading(t('날씨와 파도를 준비하는 중'), 0.72);
-    if (this.eq.fft && (r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) this.fft = new FFTWaves(spectrumOf(SEA_STATES[this.seaName]), this.eq.fftN);
-    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
-    this.scene.add(this.ocean.mesh);
-    const sun = this.sun;
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(this.eq.shadowMap, this.eq.shadowMap);
-    sun.shadow.bias = -0.0004;
-    sun.shadow.normalBias = 0.04;
-    sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 3200;
-    this.scene.add(sun, sun.target);
-    this.views = new ShipViews(this.assets, this.battle, this.eq.ships);
-    this.views.team = this.team;
-    this.scene.add(this.views.group);
-    this.fx = new Effects(this.views, { lights: this.eq.lights, particles: { keep: LEVELS[this.level]!.particleKeep, sort: true } });
-    this.fx.wake = this.wake;
-    this.fx.onShake = (k) => this.rts.shake(k);
-    this.fx.onCue = (kind, x, y, z, size) => this.sound.cue(kind, x, y, z, size);
-    this.scene.add(this.fx.group);
-    this.crew = new Crew(this.views);
-    this.scene.add(this.crew.group);
-    this.lanterns = new Lanterns(this.views);
-    this.lanterns.onLight = (x, y, z, i) => this.fx.lantern(x, y, z, i);
-    this.scene.add(this.lanterns.group);
-    this.setupFog(sky.environment);
-    this.setupPipeline();
-    if (!this.options.hideLabels) {
-      this.banners = new SquadronBanners(document.querySelector('.app') ?? document.body);
-      this.banners.onSelect = (id, additive) => this.selectSquadron(id, additive);
-    }
-    this.input = new Input(this);
-    this.input.attach(r.domElement);
-    this.touch = new TouchControls(this);
-    this.touch.attach(r.domElement);
-    this.rts.attach(r.domElement);
-    this.rts.ground = (x, z) => this.terrain.heightAt(x, z);
-    this.minimap.onPick = (x, z, button) => {
-      if (button === 2) this.input.moveSelected(x, z);
-      else {
-        this.rts.followId = 0;
-        this.rts.goal.tx = x;
-        this.rts.goal.tz = z;
+    const task = this.beginLoad();
+    try {
+      const r = this.renderer;
+      r.toneMapping = ACESFilmicToneMapping;
+      r.shadowMap.enabled = true;
+      r.shadowMap.type = PCFShadowMap;
+      this.camera.near = 0.5;
+      this.camera.far = 60000;
+      this.camera.fov = 42;
+      this.camera.updateProjectionMatrix();
+      waveField.setState(SEA_STATES[this.seaName]);
+      const info = this.battleInfo;
+      setLoading(t('바다와 하늘을 준비하는 중'), 0.03, info.art ?? null);
+      // The files download while the cloud and wake shaders build, so neither waits for the other.
+      const loading = this.loadAssets(0.03, task);
+      // The asset promise may fail while the shared programs are being built.
+      void loading.catch(() => undefined);
+      await this.warmShared(task);
+      const [sky, terrain, assets] = await loading;
+      this.checkLoad(task);
+      task.terrain = undefined;
+      this.assets = assets;
+      this.terrain = terrain;
+      this.scene.add(terrain.group);
+      setLoading(t('지형을 준비하는 중'), 0.64);
+      this.dressTerrain();
+      this.applySky(sky);
+      task.sky = undefined;
+      setLoading(t('함대를 배치하는 중'), 0.68);
+      this.placeScenario(sky);
+      setLoading(t('날씨와 파도를 준비하는 중'), 0.72);
+      if (this.eq.fft && (r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) this.fft = new FFTWaves(spectrumOf(SEA_STATES[this.seaName]), this.eq.fftN);
+      this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
+      this.scene.add(this.ocean.mesh);
+      const sun = this.sun;
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(this.eq.shadowMap, this.eq.shadowMap);
+      sun.shadow.bias = -0.0004;
+      sun.shadow.normalBias = 0.04;
+      sun.shadow.camera.near = 1;
+      sun.shadow.camera.far = 3200;
+      this.scene.add(sun, sun.target);
+      this.views = new ShipViews(this.assets, this.battle, this.eq.ships);
+      this.views.team = this.team;
+      this.scene.add(this.views.group);
+      this.fx = new Effects(this.views, { lights: this.eq.lights, particles: { keep: LEVELS[this.level]!.particleKeep, sort: true } });
+      this.fx.wake = this.wake;
+      this.fx.onShake = (k) => this.rts.shake(k);
+      this.fx.onCue = (kind, x, y, z, size) => this.sound.cue(kind, x, y, z, size);
+      this.scene.add(this.fx.group);
+      this.crew = new Crew(this.views);
+      this.scene.add(this.crew.group);
+      this.lanterns = new Lanterns(this.views);
+      this.lanterns.onLight = (x, y, z, i) => this.fx.lantern(x, y, z, i);
+      this.scene.add(this.lanterns.group);
+      this.setupFog(sky.environment);
+      this.setupPipeline();
+      if (!this.options.hideLabels) {
+        this.banners = new SquadronBanners(document.querySelector('.app') ?? document.body);
+        this.banners.onSelect = (id, additive) => this.selectSquadron(id, additive);
       }
-    };
-    this.rts.setPose(this.options.pose ?? this.defaultPose());
-    this.rts.cinematic = !!this.options.cinematic;
-    const f = this.options.follow;
-    if (f) {
-      const ship = this.battle.get(f.id);
-      if (ship) {
-        this.rts.followId = ship.id;
-        this.rts.setPose({ tx: ship.x, tz: ship.z, yaw: ship.heading + f.yaw, pitch: f.pitch, distance: f.distance });
+      this.input = new Input(this);
+      this.input.attach(r.domElement);
+      this.touch = new TouchControls(this);
+      this.touch.attach(r.domElement);
+      this.rts.attach(r.domElement);
+      this.rts.ground = (x, z) => this.terrain.heightAt(x, z);
+      this.minimap.onPick = (x, z, button) => {
+        if (button === 2) this.input.moveSelected(x, z);
+        else {
+          this.rts.followId = 0;
+          this.rts.goal.tx = x;
+          this.rts.goal.tz = z;
+        }
+      };
+      this.rts.setPose(this.options.pose ?? this.defaultPose());
+      this.rts.cinematic = !!this.options.cinematic;
+      const f = this.options.follow;
+      if (f) {
+        const ship = this.battle.get(f.id);
+        if (ship) {
+          this.rts.followId = ship.id;
+          this.rts.setPose({ tx: ship.x, tz: ship.z, yaw: ship.heading + f.yaw, pitch: f.pitch, distance: f.distance });
+        }
       }
+      if (this.options.gallery) this.setupGallery();
+      this.warm(this.options.warmup ?? 0);
+      sound.setMode('battle');
+      await this.prewarm(0.78, task);
+      this.checkLoad(task);
+      this.adaptive = new AdaptiveQuality(this.level, levelSetting === 'auto', (l) => this.applyLevel(l), this.eq.maxLevel);
+      this.applyLevel(this.level);
+      setProgress(1);
+      this.resetApproach();
+      this.ready = true;
+      this.remote?.announce();
+      this.loading = null;
+    } catch (err) {
+      this.cancelLoad(task);
+      throw err;
     }
-    if (this.options.gallery) this.setupGallery();
-    this.warm(this.options.warmup ?? 0);
-    sound.setMode('battle');
-    await this.prewarm(0.78);
-    this.adaptive = new AdaptiveQuality(this.level, levelSetting === 'auto', (l) => this.applyLevel(l), this.eq.maxLevel);
-    this.applyLevel(this.level);
-    setProgress(1);
-    this.resetApproach();
-    this.ready = true;
-    this.remote?.announce();
+  }
+
+  /** A later load owns the scene. Earlier downloads may finish, but they cannot install anything into it. */
+  private beginLoad(): LoadTask {
+    if (this.disposed) throw new DOMException('Battle disposed', 'AbortError');
+    if (this.loading) this.cancelLoad(this.loading);
+    this.skyLoading?.abort();
+    this.skyLoading = null;
+    this.ready = false;
+    const task = { controller: new AbortController() };
+    this.loading = task;
+    return task;
+  }
+
+  private checkLoad(task: LoadTask) {
+    task.controller.signal.throwIfAborted();
+    if (this.disposed || this.loading !== task) throw new DOMException('Battle load superseded', 'AbortError');
+  }
+
+  private releaseLoadedSky(sky: LoadedSky) {
+    if (sky.background !== this.sky?.background) sky.background.dispose();
+    if (sky.environment !== this.sky?.environment) sky.environment.dispose();
+  }
+
+  private cancelLoad(task: LoadTask) {
+    task.controller.abort();
+    task.terrain?.dispose();
+    task.terrain = undefined;
+    if (task.sky) this.releaseLoadedSky(task.sky);
+    task.sky = undefined;
+    if (this.loading === task) this.loading = null;
   }
 
   /**
@@ -442,13 +499,14 @@ export class Engine {
    * Fetches the sky, the terrain, the ships this battle uses and the crew models at the same time, with the progress
    * bar moving as each finishes. `from` is the bar position the fetch starts at; the fetch fills the bar up to 0.62.
    */
-  private async loadAssets(from: number) {
+  private async loadAssets(from: number, task: LoadTask) {
     const info = this.battleInfo;
     const weights = { sky: 0.1, terrain: 0.2, ships: 0.26, crew: 0.03 };
     const span = 0.62 - from;
     const total = weights.sky + weights.terrain + weights.ships + weights.crew;
     let done = from;
     const add = (w: number) => {
+      this.checkLoad(task);
       done += (w / total) * span;
       setProgress(done);
     };
@@ -458,10 +516,29 @@ export class Engine {
         return v;
       });
     const options = this.shipOptions();
-    const shipsDone = (w: number) => (f: number) => setProgress(done + f * (w / total) * span);
+    const shipsDone = (w: number) => (f: number) => {
+      if (!task.controller.signal.aborted) setProgress(done + f * (w / total) * span);
+    };
+    const signal = task.controller.signal;
+    const skyLoad = loadSky(SKY_PRESETS[this.skyName], this.eq.hdriSize, this.sky ?? undefined, signal).then((sky) => {
+      if (signal.aborted) {
+        this.releaseLoadedSky(sky);
+        signal.throwIfAborted();
+      }
+      task.sky = sky;
+      return sky;
+    });
+    const terrainLoad = Terrain.load(info.terrain, this.terrainQuality(), signal).then((terrain) => {
+      if (signal.aborted) {
+        terrain.dispose();
+        signal.throwIfAborted();
+      }
+      task.terrain = terrain;
+      return terrain;
+    });
     const [sky, terrain, assets] = await Promise.all([
-      track(loadSky(SKY_PRESETS[this.skyName], this.eq.hdriSize, this.sky ?? undefined), weights.sky),
-      track(Terrain.load(info.terrain, this.terrainQuality()), weights.terrain),
+      track(skyLoad, weights.sky),
+      track(terrainLoad, weights.terrain),
       track(loadShipAssets(this.kindsInBattle(), options, shipsDone(weights.ships)), weights.ships),
       track(crewAssets(), weights.crew),
       preloadStructures(),
@@ -475,7 +552,7 @@ export class Engine {
    * the sky, terrain and ships are still downloading. The clouds start on a plain placeholder sky; applySky swaps in the
    * real one. The march shader is built for the most steps the tier's levels can ask for, which is a smaller program on a phone.
    */
-  private async warmShared() {
+  private async warmShared(task: LoadTask) {
     if (params.get('clouds') !== '0' && this.eq.clouds) {
       const reach = LEVELS.slice(0, Math.max(this.eq.maxLevel, this.level) + 1);
       const limits = { steps: Math.max(...reach.map((l) => l.cloud.steps)), lightSteps: Math.max(...reach.map((l) => l.cloud.lightSteps)) };
@@ -488,6 +565,7 @@ export class Engine {
       this.scene.add(this.clouds.mesh);
     }
     await settle();
+    this.checkLoad(task);
     this.wake.prewarm(this.renderer);
     this.clouds?.prewarm(this.renderer, this.camera);
   }
@@ -521,28 +599,33 @@ export class Engine {
    * rendered once part by part (ground, sea and sky, ships and crew), each step moving the loading bar. Last comes
    * the render with everything, and with the refracting ocean if a level can reach it. `from` is where the bar starts.
    */
-  private async prewarm(from: number) {
+  private async prewarm(from: number, task: LoadTask) {
     const r = this.renderer;
     const webgpu = !!(r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend;
     setLoading(t('화면 효과를 준비하는 중'), from);
     await Promise.all([this.worksLoad, this.conquestLoad]);
+    this.checkLoad(task);
     // The land is drawn in tiles that the camera culls. All of them draw during warm-up, so the terrain program is built here
     // and not when land first comes into view.
     this.terrain.setCulling(false);
     if (webgpu) {
-      await r.compileAsync(this.scene, this.camera, null, (e) => setProgress(from + 0.16 * (e.loaded / Math.max(1, e.total))));
+      await r.compileAsync(this.scene, this.camera, null, (e) => {
+        if (!task.controller.signal.aborted) setProgress(from + 0.16 * (e.loaded / Math.max(1, e.total)));
+      });
     } else {
-      await this.compileByParts(from);
+      await this.compileByParts(from, task);
     }
+    this.checkLoad(task);
     setLoading(t('첫 화면을 준비하는 중'), from + 0.2);
     await settle();
+    this.checkLoad(task);
     this.primeOcean();
     this.terrain.setCulling(true);
     setProgress(from + 0.22);
   }
 
   /** Renders the pipeline once per group of the scene, letting the loading bar move between the blocking renders. */
-  private async compileByParts(from: number) {
+  private async compileByParts(from: number, task: LoadTask) {
     const clouds = this.clouds?.mesh;
     const works = this.conquestView?.group;
     const parts = [this.terrain.group, this.ocean.mesh, clouds, this.views.group, this.crew.group, this.fx.group, this.lanterns.group, works].filter((o): o is NonNullable<typeof o> => !!o);
@@ -555,6 +638,7 @@ export class Engine {
     for (const [n, [text, show]] of steps.entries()) {
       setLoading(text, from + 0.04 + n * 0.05);
       await settle();
+      this.checkLoad(task);
       parts.forEach((o) => (o.visible = show.includes(o)));
       this.pipeline.render();
       parts.forEach((o, i) => (o.visible = visible[i]!));
@@ -641,6 +725,8 @@ export class Engine {
       }
     }
     this.minimap.team = this.team;
+    this.battle.setSea(SEA_STATES[this.seaName]);
+    waveField.time = this.battle.time;
     this.reported = false;
     setReport(null);
     this.battle.land = (x, z) => this.terrain.heightAt(x, z);
@@ -830,22 +916,41 @@ export class Engine {
   }
 
   async setSky(name: SkyPresetName) {
+    if (this.disposed || !this.ready) return;
+    this.skyLoading?.abort();
+    this.skyLoading = null;
     if (name === this.skyName && this.sky) return;
-    this.skyName = name;
-    const sky = await loadSky(SKY_PRESETS[name], this.eq.hdriSize, this.sky ?? undefined);
-    this.applySky(sky);
-    this.publish(true);
+    const controller = new AbortController();
+    this.skyLoading = controller;
+    try {
+      const sky = await loadSky(SKY_PRESETS[name], this.eq.hdriSize, this.sky ?? undefined, controller.signal);
+      if (controller.signal.aborted || this.disposed) {
+        this.releaseLoadedSky(sky);
+        return;
+      }
+      this.skyName = name;
+      this.applySky(sky);
+      this.publish(true);
+    } catch (err) {
+      // Settings clicks may supersede an HDR download; only the current request can report a real failure.
+      if (!controller.signal.aborted && !this.disposed) throw err;
+    } finally {
+      if (this.skyLoading === controller) this.skyLoading = null;
+    }
   }
 
   setSea(name: SeaStateName) {
+    if (this.disposed || !this.ready) return;
     this.seaName = name;
     waveField.setState(SEA_STATES[name]);
+    this.battle.setSea(SEA_STATES[name]);
     this.fft?.setSpectrum(spectrumOf(SEA_STATES[name]));
     this.publish(true);
   }
 
   /** Starts a historical battle on the running engine; with `remote` it is a duel run by the multiplayer server. */
   async setScenario(id: ScenarioId, faction?: Faction, remote: NetBattle | null = null) {
+    if (this.disposed) throw new DOMException('Battle disposed', 'AbortError');
     this.remote?.dispose();
     this.remote = remote;
     this.sink = remote;
@@ -857,6 +962,7 @@ export class Engine {
 
   /** Starts a conquest battle on the running engine, local or drawn from a multiplayer server. */
   async setConquest(setup: ConquestSetup, remote: NetBattle | null = null) {
+    if (this.disposed) throw new DOMException('Battle disposed', 'AbortError');
     this.remote?.dispose();
     this.remote = remote;
     this.sink = remote;
@@ -866,46 +972,59 @@ export class Engine {
   }
 
   private async stage(info: BattleInfo) {
-    this.ready = false;
-    this.battleInfo = info;
-    setLoading(t('{title} 준비 중', { title: t(info.title) }), 0.04, info.art ?? null);
-    this.skyName = info.sky;
-    this.seaName = info.sea;
-    waveField.setState(SEA_STATES[this.seaName]);
-    const [sky, terrain, assets] = await this.loadAssets(0.04);
-    setLoading(t('지형을 준비하는 중'), 0.64);
-    // The previous battle's terrain, ocean and ship batches are freed before the new ones are built, so two battles
-    // never sit in memory together.
-    this.disposeBattle();
-    this.assets = assets;
-    this.terrain = terrain;
-    this.scene.add(terrain.group);
-    this.dressTerrain();
-    this.applySky(sky);
-    setLoading(t('함대를 배치하는 중'), 0.68);
-    this.placeScenario(sky);
-    setLoading(t('날씨와 파도를 준비하는 중'), 0.72);
-    this.fft?.setSpectrum(spectrumOf(SEA_STATES[this.seaName]));
-    this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
-    this.scene.add(this.ocean.mesh);
-    this.views.reset(this.assets, this.battle, this.capacityHint());
-    this.views.team = this.team;
-    void releaseShipAssets(new Set(Object.keys(this.assets)));
-    this.crew = new Crew(this.views);
-    this.scene.add(this.crew.group);
-    this.banners?.clear();
-    this.sound.newBattle();
-    this.fx.newBattle();
-    this.rts.setPose(this.defaultPose());
-    this.paused = false;
-    this.resetApproach();
-    await this.prewarm(0.78);
-    // The rebuilt terrain, vegetation and ocean start from the plain state. Re-apply the current level to them.
-    this.applyLevel(this.level);
-    this.ready = true;
-    this.remote?.announce();
-    setLoading(null);
-    this.publish(true);
+    const task = this.beginLoad();
+    try {
+      this.battleInfo = info;
+      setLoading(t('{title} 준비 중', { title: t(info.title) }), 0.04, info.art ?? null);
+      this.skyName = info.sky;
+      this.seaName = info.sea;
+      waveField.setState(SEA_STATES[this.seaName]);
+      const [sky, terrain, assets] = await this.loadAssets(0.04, task);
+      this.checkLoad(task);
+      setLoading(t('지형을 준비하는 중'), 0.64);
+      // The previous battle's terrain, ocean and ship batches are freed before the new ones are built, so two battles
+      // never sit in memory together.
+      this.disposeBattle();
+      this.assets = assets;
+      this.terrain = terrain;
+      task.terrain = undefined;
+      this.scene.add(terrain.group);
+      this.dressTerrain();
+      this.applySky(sky);
+      task.sky = undefined;
+      setLoading(t('함대를 배치하는 중'), 0.68);
+      this.placeScenario(sky);
+      setLoading(t('날씨와 파도를 준비하는 중'), 0.72);
+      this.fft?.setSpectrum(spectrumOf(SEA_STATES[this.seaName]));
+      this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
+      this.scene.add(this.ocean.mesh);
+      this.views.reset(this.assets, this.battle, this.capacityHint());
+      this.views.team = this.team;
+      void releaseShipAssets(new Set(Object.keys(this.assets)));
+      this.crew = new Crew(this.views);
+      this.scene.add(this.crew.group);
+      this.banners?.clear();
+      this.sound.newBattle();
+      this.fx.newBattle();
+      this.rts.setPose(this.defaultPose());
+      this.paused = false;
+      this.accumulator = 0;
+      this.lastScaled = 0;
+      this.lastTide = -1;
+      this.resetApproach();
+      await this.prewarm(0.78, task);
+      this.checkLoad(task);
+      // The rebuilt terrain, vegetation and ocean start from the plain state. Re-apply the current level to them.
+      this.applyLevel(this.level);
+      this.ready = true;
+      this.remote?.announce();
+      setLoading(null);
+      this.publish(true);
+      this.loading = null;
+    } catch (err) {
+      this.cancelLoad(task);
+      throw err;
+    }
   }
 
   /** Frees the previous battle's terrain with its vegetation and villages, the ocean and the conquest works. */
@@ -940,12 +1059,14 @@ export class Engine {
   restart() {
     // A campaign meeting is settled once; playing it again would not change the campaign, or would settle it twice.
     if (this.remote || this.campaign || this.conquestSetup?.grand) return;
-    (this.conquestSetup ? this.setConquest({ ...this.conquestSetup, seed: this.conquestSetup.seed + 1 }) : this.setScenario(this.scenarioId)).catch(failBattle);
+    (this.conquestSetup ? this.setConquest({ ...this.conquestSetup, seed: this.conquestSetup.seed + 1 }) : this.setScenario(this.scenarioId)).catch((error) => {
+      if (!this.disposed && !(error instanceof DOMException && error.name === 'AbortError')) failBattle(error);
+    });
   }
 
   private stepSim(dt: number) {
     this.battle.step(dt);
-    waveField.time += dt;
+    waveField.time = this.battle.time;
   }
 
   update(frameDt: number) {
@@ -965,20 +1086,21 @@ export class Engine {
     // Above 4x the frame rate is set by the simulation's share of each frame, not by the GPU, so it says nothing
     // about which quality level the device can hold.
     if (this.remote || this.paused || speed <= 4) this.adaptive?.update(frameDt, this.gpuMs);
-    const scaled = this.remote ? dt : this.paused ? 0 : dt * speed;
-    this.lastScaled = scaled;
+    const requested = this.paused ? 0 : dt * speed;
+    let scaled = this.remote ? dt : 0;
     if (this.remote) {
       this.remote.advance(this.battle, this.conquest, dt);
-      waveField.time += dt;
+      waveField.time = this.battle.time;
     } else {
       // High multipliers ask for many sim steps per frame. Steps stop at a time budget so a slow device keeps drawing
       // frames (and simply runs the battle a little slower than asked) instead of stalling.
-      this.accumulator += scaled;
+      this.accumulator += requested;
       const start = performance.now();
       const budget = simBudgetMs(speed);
       let steps = 0;
-      while (this.accumulator >= SIM_DT && steps < MAX_STEPS) {
+      while (!this.paused && this.accumulator >= SIM_DT && steps < MAX_STEPS) {
         this.stepSim(SIM_DT);
+        scaled += SIM_DT;
         this.accumulator -= SIM_DT;
         steps += 1;
         // Contact is judged in sim time, not real time: at 128x a quarter second of real time is 32 sim seconds.
@@ -991,6 +1113,7 @@ export class Engine {
       }
       if (this.accumulator > SIM_DT * 4) this.accumulator = 0;
     }
+    this.lastScaled = scaled;
     const events = this.battle.events;
     this.views.cutaway.clear();
     for (const id of this.cutawayIds()) this.views.cutaway.set(id, this.cutaway);
@@ -1005,7 +1128,7 @@ export class Engine {
       for (const e of events) if (e.type === 'battery') this.fx.gun(e.x, e.y, e.z, e.dx, e.dy, e.dz, true);
       this.battle.events = [];
     }
-    if (this.battle.winner && !this.reported) this.finishCampaignBattle();
+    if (this.battle.ended && !this.reported) this.finishCampaignBattle();
     this.director.update(dt);
     const follow = this.rts.followId ? this.views.worldOf(this.rts.followId) : null;
     if (this.rts.followId && !follow) this.rts.followId = 0;
@@ -1033,8 +1156,8 @@ export class Engine {
     this.lanterns.update(this.battle, this.camera, this.battle.night || SKY_PRESETS[this.skyName].night > 0.5);
     this.updateSun();
     const el = this.renderer.domElement;
-    this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.rts.cinematic && !this.battle.winner, this.team);
-    this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.rts.cinematic && !this.options.hideLabels && !this.battle.winner);
+    this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.rts.cinematic && !this.battle.ended, this.team);
+    this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.rts.cinematic && !this.options.hideLabels && !this.battle.ended);
     this.publishTimer -= dt;
     if (this.publishTimer <= 0) {
       this.publish();
@@ -1053,7 +1176,7 @@ export class Engine {
    */
   private updateFastForward(dt: number) {
     const b = this.battle;
-    if (this.approachOver || b.winner || this.options.gallery) {
+    if (this.approachOver || b.ended || this.options.gallery) {
       this.fastForward = false;
       return;
     }
@@ -1108,7 +1231,7 @@ export class Engine {
     const ships = shipOutcomes(b.ships);
     const enemy = this.enemyTeam;
     const enemySunk = b.initial[enemy] - b.teamCount(enemy) - b.escaped[enemy];
-    setReport(applyOutcome({ id: this.scenarioId, win: b.winner === this.team, enemySunk, enemyEscaped: b.escaped[enemy], ships }));
+    setReport(applyOutcome({ id: this.scenarioId, win: b.winner === this.team, draw: b.draw, enemySunk, enemyEscaped: b.escaped[enemy], ships }));
   }
 
   /** A faction campaign meeting is over: the campaign takes what happened to its ships and to the defender's port. */
@@ -1119,7 +1242,7 @@ export class Engine {
 
   /** Withdrawal. The battle counts as lost. */
   endBattle() {
-    if (this.battle.winner) return;
+    if (this.battle.ended) return;
     this.battle.winner = this.enemyTeam;
   }
 
@@ -1297,11 +1420,12 @@ export class Engine {
       escaped: b.escaped[enemy],
       balance: strengthOwn / Math.max(1, strengthOwn + strengthEnemy),
       winner: b.winner,
+      draw: b.draw,
       paused: this.paused,
       speed: this.speed,
       autoFast: this.autoFast && !this.remote,
       fastForward: this.fastForward,
-      approach: !this.remote && !this.approachOver && !this.battle.winner,
+      approach: !this.remote && !this.approachOver && !this.battle.ended,
       sky: this.skyName,
       sea: this.seaName,
       following: this.rts.followId,
@@ -1350,8 +1474,8 @@ export class Engine {
                 label: spec.label,
                 side: g.side,
                 stage: g.stage,
-                stageName: t(g.ammo <= 0 ? '탄약 없음' : GUN_STAGE[Math.min(g.stage, GUN_STAGE.length - 1)]!),
-                empty: g.ammo <= 0,
+                stageName: t(g.ammo < 1 - 1e-9 ? '탄약 없음' : GUN_STAGE[Math.min(g.stage, GUN_STAGE.length - 1)]!),
+                empty: g.ammo < 1 - 1e-9,
                 progress: g.stage >= 4 ? 1 : Math.min(1, g.t / need),
               };
             }),
@@ -1453,25 +1577,36 @@ export class Engine {
 
   /** Gives back everything the battle holds: inputs, labels, GPU buffers and programs, and the graphics device itself. */
   dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
     this.ready = false;
+    if (this.loading) this.cancelLoad(this.loading);
+    this.skyLoading?.abort();
+    this.skyLoading = null;
     this.releaseVisibility?.();
     this.releaseVisibility = null;
+    this.releaseDevice?.();
+    this.releaseDevice = null;
     this.input?.detach();
     this.touch?.detach();
     this.rts.detach();
     this.banners?.clear();
     this.releasePixelRatio?.();
     this.releasePixelRatio = null;
-    if (!this.terrain) return;
+    this.minimap.onPick = null;
+    this.remote?.dispose();
+    this.remote = null;
+    this.sink = null;
     this.disposeBattle();
     this.clouds?.dispose();
+    this.placeholderSky?.dispose();
+    this.placeholderSky = null;
     this.wake.dispose();
-    this.views.renderer.dispose();
-    this.fx.group.removeFromParent();
-    disposeTree(this.fx.group);
-    this.lanterns.group.removeFromParent();
-    disposeTree(this.lanterns.group);
-    this.pipeline.dispose();
+    this.views?.renderer.dispose();
+    if (this.views) disposeTree(this.views.group);
+    if (this.fx) disposeTree(this.fx.group);
+    if (this.lanterns) disposeTree(this.lanterns.group);
+    this.pipeline?.dispose();
     this.sky?.background.dispose();
     this.sky?.environment.dispose();
     void releaseShipAssets(new Set());

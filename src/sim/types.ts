@@ -103,6 +103,7 @@ export type GunState = {
   stage: number;
   t: number;
   fireDelay: number;
+  /** Remaining rounds, including fractional magazine resupply; firing requires a whole round. */
   ammo: number;
 };
 

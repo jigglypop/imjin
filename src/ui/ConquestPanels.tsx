@@ -211,7 +211,7 @@ export function CrewPanel({ engine, p }: { engine: Engine; p: PrimaryInfo }) {
             {x.label}
           </button>
         ))}
-        <button className={`chip ${engine.cutaway ? 'chip--on' : ''}`} onClick={() => engine.toggleCutaway()} title={t('선내 보기 (F)')}>
+        <button className={`chip ${engine.cutaway ? 'chip--on' : ''}`} onClick={() => engine.toggleCutaway()} title={t('선내 보기 (Shift+F)')}>
           {t(engine.cutaway ? ['', '상갑판', '포갑판', '노갑판'][engine.cutaway]! : '선내')}
         </button>
         <button className={`crew-more ${open ? 'crew-more--open' : ''}`} onClick={toggle} aria-expanded={open} aria-label={t('승조원 세부 배치')} title={t('승조원 세부 배치')}>

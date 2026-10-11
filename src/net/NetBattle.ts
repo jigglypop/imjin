@@ -33,6 +33,7 @@ export class NetBattle implements BattleListener {
   private announced = false;
   private readonly shots = new Map<number, Projectile>();
   winner: Team | null = null;
+  draw = false;
 
   /** Simulated seconds per real second of playback now. */
   get playbackPace() {
@@ -63,7 +64,10 @@ export class NetBattle implements BattleListener {
     if (msg.t === 'meta') this.metas.push(msg);
     else if (msg.t === 'events') for (const e of msg.events) this.events.push(e);
     else if (msg.t === 'state') this.state = msg.conquest;
-    else if (msg.t === 'end') this.winner = msg.winner;
+    else if (msg.t === 'end') {
+      this.winner = msg.winner;
+      this.draw = msg.draw;
+    }
     else if (msg.t === 'speed' && msg.speed !== this.pace) {
       this.pace = Math.max(1, msg.speed);
       this.clock = -1;
@@ -141,6 +145,7 @@ export class NetBattle implements BattleListener {
     b.events = this.events;
     this.events = [];
     if (this.winner) b.winner = this.winner;
+    if (this.draw) b.draw = true;
   }
 
   private applyFrames(b: Battle, a: Frame, c: Frame, t: number) {

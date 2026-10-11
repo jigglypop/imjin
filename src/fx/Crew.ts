@@ -93,6 +93,7 @@ const NO_VIEW: CrewView = { cutaway: 0, cut: new Set(), winner: null };
 export class Crew {
   readonly group = new Group();
   private assets: Map<CrewKey, CrewAsset> | null = null;
+  private disposed = false;
   private readonly rosters = new Map<number, Roster>();
   /** The rosters of ships close enough to draw this frame. */
   private readonly live: Roster[] = [];
@@ -122,6 +123,7 @@ export class Crew {
     this.boarding = new Boarding(views, this.rosters, this.live);
     this.group.add(this.boarding.group);
     void crewAssets().then((assets) => {
+      if (this.disposed) return;
       this.assets = assets;
       for (const a of assets.values()) for (const l of a.lods) this.group.add(l.mesh);
     });
@@ -129,6 +131,9 @@ export class Crew {
 
   /** Frees the boarding props and sprites. The skinned crew meshes are cached for the next battle and only leave this group. */
   dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.assets = null;
     disposeTree(this.boarding.group);
     this.group.removeFromParent();
     this.group.clear();
@@ -477,7 +482,7 @@ export class Crew {
     const facts = this.shipState;
     facts.reloading = false;
     for (const g of ship.guns) {
-      if (g.stage < 4 && g.ammo > 0) {
+      if (g.stage < 4 && g.ammo >= 1 - 1e-9) {
         facts.reloading = true;
         break;
       }

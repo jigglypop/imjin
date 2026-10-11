@@ -29,6 +29,7 @@ const { buildReplay, isEmpty } = await load('/src/sim/grand/replay.ts');
 const { dateOf, dateLabel } = await load('/src/sim/grand/economy.ts');
 const { REGION_MAPS, REGION_SITES } = await load('/src/sim/grand/coast.ts');
 const { generateHeightmap } = await load('/src/terrain/generate.ts');
+const { SIM_DT } = await load('/src/sim/battle.ts');
 
 // The land sampler of a region's terrain as the engine hands it to the builder: world coordinates, the map turned by `axis`.
 const heightmaps = new Map();
@@ -255,7 +256,7 @@ function playOut(g) {
   const slot = home.buildings.findIndex((b) => b && b.kind === 'battery');
   home.buildings[slot] = null;
   check('a battery that fell is reported razed', spawn.worksAfter(rb, built.conquest).razed.join() === 'battery');
-  for (let i = 0; i < 1200; i += 1) built.battle.step(1 / 20);
+  for (let i = 0; i < Math.round(60 / SIM_DT); i += 1) built.battle.step(SIM_DT);
   check('the battle runs', built.battle.ships.length > 0);
 }
 
@@ -293,7 +294,7 @@ function playOut(g) {
     // The computer plays the whole battle through on this coast.
     built.conquest.autopilot = true;
     for (const p of built.conquest.players) built.conquest.setHuman(p.slot, false);
-    for (let i = 0; i < 20 * 60 * 6 && !built.battle.winner; i += 1) built.battle.step(1 / 20);
+    for (let i = 0; i < Math.round(60 * 6 / SIM_DT) && !built.battle.ended; i += 1) built.battle.step(SIM_DT);
     if (built.battle.ships.some((s) => !Number.isFinite(s.x) || !Number.isFinite(s.z))) bad.push(`${id}: a ship left the world`);
   }
   check(`all ${REGION_ORDER.length} regions have a coast to fight on${bad.length ? ': ' + bad.join('; ') : ''}`, !bad.length);

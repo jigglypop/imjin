@@ -35,7 +35,6 @@ const { applyBalance, playableFactions } = await load('/src/sim/balance.ts');
 const { teamOf } = await load('/src/sim/types.ts');
 const { generateHeightmap } = await load('/src/terrain/generate.ts');
 const { CurrentField } = await load('/src/sim/current.ts');
-const { waveField, SEA_STATES } = await load('/src/ocean/waves.ts');
 
 // Heightmaps take a while to generate, so they are kept between runs.
 const cacheDir = join(root, 'node_modules', '.cache', 'balance');
@@ -75,8 +74,6 @@ function landOf(spec) {
 function run(id, faction, seed) {
   const info = SCENARIOS[id];
   const land = landOf(info.terrain);
-  waveField.setState(SEA_STATES[info.sea]);
-  waveField.time = 0;
   const b = buildScenario(id, 0, seed, land);
   b.land = land;
   b.flow = info.current ? new CurrentField(info.current, land, 0) : null;
@@ -87,16 +84,16 @@ function run(id, faction, seed) {
   const own = teamOf(faction);
   const enemy = own === 'joseon' ? 'japan' : 'joseon';
   const started = performance.now();
-  while (!b.winner && b.time < minutes * 60) {
+  while (!b.ended && b.time < minutes * 60) {
     b.step(SIM_DT);
-    waveField.time += SIM_DT;
     b.events.length = 0;
   }
   const so = b.strength(own);
   const se = b.strength(enemy);
   return {
     win: b.winner === own,
-    decided: !!b.winner,
+    decided: b.ended,
+    draw: b.draw,
     time: b.time,
     ownLost: 1 - b.teamCount(own) / Math.max(1, b.initial[own]),
     enemyLost: 1 - (b.teamCount(enemy) + b.escaped[enemy]) / Math.max(1, b.initial[enemy]),
@@ -111,8 +108,6 @@ function run(id, faction, seed) {
 function pace(id, seed) {
   const info = SCENARIOS[id];
   const land = landOf(info.terrain);
-  waveField.setState(SEA_STATES[info.sea]);
-  waveField.time = 0;
   const b = buildScenario(id, 0, seed, land);
   b.land = land;
   b.flow = info.current ? new CurrentField(info.current, land, 0) : null;
@@ -128,9 +123,8 @@ function pace(id, seed) {
   const start = gap();
   const aground = b.ships.filter((s) => land(s.x, s.z) > -1.4).length;
   let contact = null;
-  while (contact === null && b.time < 1200) {
+  while (contact === null && !b.ended && b.time < 1200) {
     b.step(SIM_DT);
-    waveField.time += SIM_DT;
     if (b.projectiles.length || b.ships.some((s) => s.grappledWith) || gap() < 400) contact = b.time;
     b.events.length = 0;
   }
@@ -158,8 +152,9 @@ for (const id of list) {
     const mean = (f) => rows.reduce((a, r) => a + f(r), 0) / rows.length;
     const wins = rows.filter((r) => r.win).length;
     const open = rows.filter((r) => !r.decided).length;
+    const draws = rows.filter((r) => r.draw).length;
     console.log(
-      `${id.padEnd(12)} ${faction.padEnd(7)} win ${pct(wins / rows.length)}${open ? ` (${open} undecided)` : ''} · ${(mean((r) => r.time) / 60).toFixed(1)} min · own lost ${pct(mean((r) => r.ownLost))} · enemy lost ${pct(mean((r) => r.enemyLost))} · fled ${mean((r) => r.enemyFled).toFixed(0)} · share ${pct(mean((r) => r.share))} · ${mean((r) => r.seconds).toFixed(0)}s/run`,
+      `${id.padEnd(12)} ${faction.padEnd(7)} win ${pct(wins / rows.length)}${draws ? ` (${draws} draw)` : ''}${open ? ` (${open} undecided)` : ''} · ${(mean((r) => r.time) / 60).toFixed(1)} min · own lost ${pct(mean((r) => r.ownLost))} · enemy lost ${pct(mean((r) => r.enemyLost))} · fled ${mean((r) => r.enemyFled).toFixed(0)} · share ${pct(mean((r) => r.share))} · ${mean((r) => r.seconds).toFixed(0)}s/run`,
     );
   }
 }

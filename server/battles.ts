@@ -9,6 +9,7 @@ import { autoFleet, buildConquest, CONQUEST_MAPS, type ConquestMapId, type Seat 
 import { buildScenario, SCENARIOS, type ScenarioId } from '../src/sim/scenarios';
 import type { Faction, LandSampler } from '../src/sim/types';
 import type { BattleChoice, RoomSeat } from '../src/net/protocol';
+import { SEA_STATES } from '../src/ocean/waves';
 
 /** An enemy this close (metres) ends the skipped approach. Same number as Engine.CONTACT_RANGE. */
 const CONTACT_RANGE = 400;
@@ -18,8 +19,8 @@ export const DEFAULT_CHOICE: BattleChoice = { kind: 'conquest', map: 'hallyeo', 
 /** Whatever arrived over the wire, as a choice the server can run. */
 export function sanitizeChoice(raw: unknown): BattleChoice {
   const c = raw as { kind?: string; id?: string; map?: string; size?: number } | null | undefined;
-  if (c?.kind === 'scenario' && c.id && c.id in SCENARIOS) return { kind: 'scenario', id: c.id as ScenarioId };
-  if (c?.kind === 'conquest' && c.map && c.map in CONQUEST_MAPS) {
+  if (c?.kind === 'scenario' && typeof c.id === 'string' && Object.hasOwn(SCENARIOS, c.id)) return { kind: 'scenario', id: c.id as ScenarioId };
+  if (c?.kind === 'conquest' && typeof c.map === 'string' && Object.hasOwn(CONQUEST_MAPS, c.map)) {
     const map = c.map as ConquestMapId;
     return { kind: 'conquest', map, size: c.size === 4 && CONQUEST_MAPS[map].seats >= 4 ? 4 : 2 };
   }
@@ -51,10 +52,12 @@ export function buildBattle(choice: BattleChoice, land: LandSampler, seats: Pick
   if (choice.kind === 'conquest') {
     const list: Seat[] = seats.map((s, i) => ({ name: names[i]!, faction: s.faction, team: s.team, human: human[i]!, fleet: autoFleet(s.faction) }));
     const built = buildConquest(choice.map, list, land, seed);
+    built.battle.setSea(SEA_STATES[CONQUEST_MAPS[choice.map].sea]);
     return { battle: built.battle, conquest: built.conquest, seats: list };
   }
   const info = SCENARIOS[choice.id];
   const battle = buildScenario(choice.id, 0, seed, land);
+  battle.setSea(SEA_STATES[info.sea]);
   // The corrections in balance.ts make a side fair against the computer; two people get the written scenario.
   applyBalance(battle, choice.id, 'joseon');
   battle.humans = new Set(human.flatMap((h, i) => (h ? [i] : [])));

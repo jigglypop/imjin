@@ -145,7 +145,7 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
 export function buildGrandConquest(rb: RegionBattle, land: LandSampler, axis = 0) {
   const o = rb.options;
   const map = grandMap(rb);
-  const built = buildConquestOn(map, grandSeats(rb), land, rb.seed, { tickets: o.tickets, timeLimit: o.timeLimit, cap: o.cap, maxShips: o.maxShips }, axis);
+  const built = buildConquestOn(map, grandSeats(rb), land, rb.seed, { tickets: o.tickets, timeLimit: o.timeLimit, cap: o.cap, maxShips: o.maxShips, tieWinner: rb.defender.team }, axis);
   const { battle, conquest } = built;
   // The arena is the stretch of water the two ports share, not the middle of the terrain.
   const ca = Math.cos(axis);

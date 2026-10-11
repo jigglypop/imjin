@@ -36,6 +36,7 @@ export const EN_COMMON: Record<string, string> = {
   '승리': 'Victory',
   '패배': 'Defeat',
   '무승부': 'Draw',
+  '무승부입니다. 함대를 정비한 뒤 다시 싸울 수 있습니다.': 'A draw. Refit the fleet, then try again.',
 
   // Device tiers (the graphics level names 낮음/보통/높음 belong to the battle sheet; 보통 is also a difficulty in sim data)
   '자동': 'Auto',
@@ -53,6 +54,7 @@ export const EN_COMMON: Record<string, string> = {
   '함대': 'Fleet',
   '장수': 'Commanders',
   '바다를 준비하는 중': 'Preparing the sea',
+  '하늘을 불러오지 못했습니다': 'Could not load the sky',
   '가장 낮음': 'Lowest',
   '가장 높음': 'Highest',
 };

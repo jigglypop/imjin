@@ -1,5 +1,5 @@
 // Every battle must end. Runs each historical scenario with a passive player (no orders, so the player's ships keep the
-// orders the scenario gave them) and asserts that a winner is decided within the time limit. Simulation only, no browser.
+// orders the scenario gave them) and asserts that a result is decided within the time limit. Simulation only, no browser.
 //   node scripts/check-stalemate.mjs                           every scenario, every playable side, 2 seeds, 65 sim minutes
 //   node scripts/check-stalemate.mjs hansan --side=joseon --seeds=4 --minutes=30 --verbose
 //   node scripts/check-stalemate.mjs --conquest                the capture-point maps instead, with an idle player
@@ -39,7 +39,6 @@ const { applyBalance, playableFactions } = await load('/src/sim/balance.ts');
 const { teamOf } = await load('/src/sim/types.ts');
 const { generateHeightmap } = await load('/src/terrain/generate.ts');
 const { CurrentField } = await load('/src/sim/current.ts');
-const { waveField, SEA_STATES } = await load('/src/ocean/waves.ts');
 
 const cacheDir = join(root, 'node_modules', '.cache', 'balance');
 mkdirSync(cacheDir, { recursive: true });
@@ -77,8 +76,6 @@ function landOf(spec) {
 function run(id, faction, seed) {
   const info = SCENARIOS[id];
   const land = landOf(info.terrain);
-  waveField.setState(SEA_STATES[info.sea]);
-  waveField.time = 0;
   const b = buildScenario(id, 0, seed, land);
   b.land = land;
   b.flow = info.current ? new CurrentField(info.current, land, 0) : null;
@@ -88,9 +85,8 @@ function run(id, faction, seed) {
   // autopilot stays off: the player's ships keep the orders the scenario gave them, as when nobody touches the controls.
   const started = performance.now();
   let shots = 0;
-  while (!b.winner && b.time < minutes * 60) {
+  while (!b.ended && b.time < minutes * 60) {
     b.step(SIM_DT);
-    waveField.time += SIM_DT;
     if (trace && Math.floor(b.time / SIM_DT) % Math.round(120 / SIM_DT) === 0) {
       const kinds = {};
       for (const t of ['joseon', 'japan']) for (const s of b.activeOf(t)) kinds[`${t}:${s.order.type}/${b.activityOf(s.id)}`] = (kinds[`${t}:${s.order.type}/${b.activityOf(s.id)}`] ?? 0) + 1;
@@ -108,7 +104,8 @@ function run(id, faction, seed) {
     b.events.length = 0;
   }
   return {
-    decided: !!b.winner,
+    decided: b.ended,
+    draw: b.draw,
     winner: b.winner,
     time: b.time,
     left: { joseon: b.teamCount('joseon'), japan: b.teamCount('japan') },
@@ -121,8 +118,6 @@ function run(id, faction, seed) {
 function runConquest(mapId, faction, seed) {
   const map = CONQUEST_MAPS[mapId];
   const land = landOf(map.terrain);
-  waveField.setState(SEA_STATES[map.sea]);
-  waveField.time = 0;
   const foe = faction === 'japan' ? 'joseon' : 'japan';
   const seats = [
     { name: 'player', faction, team: 'joseon', human: true, fleet: autoFleet(faction) },
@@ -130,12 +125,11 @@ function runConquest(mapId, faction, seed) {
   ];
   const { battle: b, conquest } = buildConquest(mapId, seats, land, seed, {});
   const started = performance.now();
-  while (!b.winner && b.time < conquest.options.timeLimit + 5) {
+  while (!b.ended && b.time < conquest.options.timeLimit + 5) {
     b.step(SIM_DT);
-    waveField.time += SIM_DT;
     b.events.length = 0;
   }
-  return { decided: !!b.winner, winner: b.winner, time: b.time, left: { joseon: b.teamCount('joseon'), japan: b.teamCount('japan') }, fled: { ...b.escaped }, seconds: (performance.now() - started) / 1000 };
+  return { decided: b.ended, winner: b.winner, draw: b.draw, time: b.time, left: { joseon: b.teamCount('joseon'), japan: b.teamCount('japan') }, fled: { ...b.escaped }, seconds: (performance.now() - started) / 1000 };
 }
 
 const list = only.length ? only : SCENARIO_ORDER;
@@ -146,7 +140,7 @@ if (args.includes('--conquest')) {
       for (let k = 0; k < seeds; k += 1) {
         const r = runConquest(mapId, faction, 1592 + k * 101);
         if (!r.decided) bad += 1;
-        if (!r.decided || verbose) console.log(`${r.decided ? 'ok  ' : 'FAIL'} conquest ${mapId.padEnd(10)} ${faction.padEnd(7)} seed ${k} · ${r.decided ? `${r.winner} wins` : 'UNDECIDED'} at ${(r.time / 60).toFixed(1)} min · left ${r.left.joseon}/${r.left.japan} · ${r.seconds.toFixed(0)}s`);
+        if (!r.decided || verbose) console.log(`${r.decided ? 'ok  ' : 'FAIL'} conquest ${mapId.padEnd(10)} ${faction.padEnd(7)} seed ${k} · ${r.draw ? 'draw' : r.decided ? `${r.winner} wins` : 'UNDECIDED'} at ${(r.time / 60).toFixed(1)} min · left ${r.left.joseon}/${r.left.japan} · ${r.seconds.toFixed(0)}s`);
       }
     }
   }
@@ -163,7 +157,7 @@ for (const id of list) {
       if (!r.decided) bad += 1;
       if (!r.decided || verbose) {
         console.log(
-          `${r.decided ? 'ok  ' : 'FAIL'} ${id.padEnd(12)} ${faction.padEnd(7)} seed ${k} · ${r.decided ? `${r.winner} wins` : 'UNDECIDED'} at ${(r.time / 60).toFixed(1)} min · left joseon ${r.left.joseon} japan ${r.left.japan} · fled ${r.fled.joseon}/${r.fled.japan} · ${r.seconds.toFixed(0)}s`,
+          `${r.decided ? 'ok  ' : 'FAIL'} ${id.padEnd(12)} ${faction.padEnd(7)} seed ${k} · ${r.draw ? 'draw' : r.decided ? `${r.winner} wins` : 'UNDECIDED'} at ${(r.time / 60).toFixed(1)} min · left joseon ${r.left.joseon} japan ${r.left.japan} · fled ${r.fled.joseon}/${r.fled.japan} · ${r.seconds.toFixed(0)}s`,
         );
       }
     }

@@ -14,7 +14,6 @@ import type { Conquest } from '../src/sim/conquest';
 import { CONQUEST_MAPS, CONQUEST_ORDER, type Seat } from '../src/sim/maps';
 import { SCENARIO_ORDER, SCENARIOS } from '../src/sim/scenarios';
 import { FACTIONS, teamOf, type BattleEvent, type Faction, type Team } from '../src/sim/types';
-import { SEA_STATES, waveField } from '../src/ocean/waves';
 import {
   encodeSnapshot,
   GRACE_SECONDS,
@@ -30,6 +29,11 @@ import {
 } from '../src/net/protocol';
 import { buildBattle, choiceKey, inContact, openSeats, sanitizeChoice, terrainOf, titleOf } from './battles';
 import { loadLand, terrainWorker } from './terrain';
+import { clientMessage } from './messages';
+
+/** Set by build-server.mjs, so health identifies the bundle actually running. */
+declare const IMJIN_BUILD_REVISION: string;
+const BUILD_REVISION = IMJIN_BUILD_REVISION;
 
 const PORT = Number(process.env.PORT ?? 8787);
 const MAX_ROOMS = 40;
@@ -288,7 +292,7 @@ function resume(c: Client) {
   if (!live) return;
   // A finished battle is not replayed: a page still on it learns the result, one in the lobby stays there.
   if (live.endedAt) {
-    if (live.battle.winner) send(c, { t: 'end', winner: live.battle.winner as Team });
+    if (live.battle.ended) send(c, { t: 'end', winner: live.battle.winner as Team | null, draw: live.battle.draw });
     return;
   }
   sendStart(c, room, true);
@@ -300,13 +304,12 @@ function resume(c: Client) {
 
 function stepOnce(room: Room, live: Live) {
   live.battle.step(SIM_DT);
-  waveField.time += SIM_DT;
   for (const e of live.battle.events) if (SENT_EVENTS.has(e.type)) live.events.push(e);
   live.battle.events.length = 0;
   live.steps += 1;
   live.paceSim += SIM_DT;
   if (speedOf(live) === 1 && live.steps % STEPS_PER_SNAPSHOT === 0) flush(room, live);
-  if (live.battle.winner) {
+  if (live.battle.ended) {
     flush(room, live);
     live.endedAt = Date.now();
     room.info.state = 'ended';
@@ -314,7 +317,7 @@ function stepOnce(room: Room, live: Live) {
       live.ff = false;
       sendSpeed(room, live);
     }
-    broadcast(room, { t: 'end', winner: live.battle.winner as Team });
+    broadcast(room, { t: 'end', winner: live.battle.winner as Team | null, draw: live.battle.draw });
     pushRoom(room);
   }
 }
@@ -481,6 +484,7 @@ function handle(c: Client, msg: ClientMsg) {
       return;
     case 'take': {
       if (!room || room.info.state !== 'lobby') return;
+      if (!Number.isInteger(msg.index) || msg.index < 0 || msg.index >= room.info.seats.length) return;
       const seat = room.info.seats[msg.index];
       if (!seat || !seat.human || seat.client) return;
       for (const s of room.info.seats)
@@ -494,6 +498,7 @@ function handle(c: Client, msg: ClientMsg) {
     }
     case 'seat': {
       if (!room || room.info.state !== 'lobby') return;
+      if (!Number.isInteger(msg.index) || msg.index < 0 || msg.index >= room.info.seats.length) return;
       const seat = room.info.seats[msg.index];
       if (!seat) return;
       const mine = seat.client === c.id;
@@ -621,14 +626,14 @@ function detach(c: Client) {
 }
 
 function main() {
-  waveField.setState(SEA_STATES.moderate);
   const http = createServer((req, res) => {
     if (req.url === '/health') {
-      res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
+      res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'cache-control': 'no-store' });
       res.end(
         JSON.stringify({
           ok: true,
           protocol: PROTOCOL,
+          revision: BUILD_REVISION,
           rooms: rooms.size,
           battles: [...rooms.values()].filter((r) => r.live && !r.live.endedAt).length,
           clients: byId.size,
@@ -646,34 +651,42 @@ function main() {
   const wss = new WebSocketServer({ server: http, path: '/ws', maxPayload: 64 * 1024, verifyClient: (info: { origin: string }) => originAllowed(info.origin || undefined) });
   wss.on('connection', (ws) => {
     let c: Client | null = null;
+    // Receiver errors (including maxPayload) belong to this connection, not the process.
+    ws.on('error', () => ws.terminate());
     ws.on('pong', () => {
       if (c) c.alive = true;
     });
     ws.on('message', (data, binary) => {
       if (binary) return;
-      let msg: ClientMsg;
+      let raw: unknown;
       try {
-        msg = JSON.parse(String(data)) as ClientMsg;
+        raw = JSON.parse(String(data));
       } catch {
         return;
       }
-      if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string') return;
-      if (msg.t === 'hello') {
-        // A second hello on the same connection only renames the player.
-        if (c && c.ws === ws && msg.v === PROTOCOL) {
-          c.name = clean(msg.name, 16) || c.name;
-          send(c, { t: 'rooms', rooms: summary() });
-        } else c = attach(ws, msg) ?? c;
-        return;
+      const msg = clientMessage(raw);
+      if (!msg) return;
+      try {
+        if (msg.t === 'hello') {
+          // A second hello on the same connection only renames the player.
+          if (c && c.ws === ws && msg.v === PROTOCOL) {
+            c.name = clean(msg.name, 16) || c.name;
+            send(c, { t: 'rooms', rooms: summary() });
+          } else c = attach(ws, msg) ?? c;
+          return;
+        }
+        // Not yet introduced, or a connection that was replaced by a newer one.
+        if (!c || c.ws !== ws) return;
+        const now = performance.now();
+        c.budget = Math.min(120, c.budget + ((now - c.budgetAt) / 1000) * 60);
+        c.budgetAt = now;
+        if (c.budget < 1) return;
+        c.budget -= 1;
+        handle(c, msg);
+      } catch (err) {
+        console.warn('client request failed', err);
+        ws.close(1011, 'request failed');
       }
-      // Not yet introduced, or a connection that was replaced by a newer one.
-      if (!c || c.ws !== ws) return;
-      const now = performance.now();
-      c.budget = Math.min(120, c.budget + ((now - c.budgetAt) / 1000) * 60);
-      c.budgetAt = now;
-      if (c.budget < 1) return;
-      c.budget -= 1;
-      handle(c, msg);
     });
     ws.on('close', () => {
       if (c && c.ws === ws) detach(c);
@@ -737,7 +750,10 @@ function main() {
       }
     }
   })();
-  http.listen(PORT, () => console.log(`imjin server on :${PORT}, protocol ${PROTOCOL}`));
+  http.listen(PORT, () => {
+    const address = http.address();
+    console.log(`imjin server on :${typeof address === 'object' && address ? address.port : PORT}, protocol ${PROTOCOL}`);
+  });
 }
 
 if (isMainThread) main();

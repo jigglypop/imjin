@@ -6,6 +6,7 @@ Live at https://imjin1592.com. Player-facing text is Korean; code and comments a
 ## Commands
 - `npm run dev` — Vite on http://127.0.0.1:5291 (strictPort; use `npx vite --port <n> --strictPort` for a second server)
 - `npm run typecheck` — client + server; must pass before any commit (CI runs it)
+- `npm test` — simulation, renderer lifecycle, network client, server input/health and grand campaign regressions (CI runs it)
 - `npx vite build`, `npm run server` (multiplayer server on :8787, localhost clients connect to it automatically)
 - Online locally: `npm run server:build && PORT=8791 node server/dist/server.cjs`, `VITE_MP_URL=ws://127.0.0.1:8791/ws npx vite --port 5306 --strictPort`, then `node scripts/mp-smoke.mjs` (ws only) and `node scripts/mp-browser.mjs --url=http://127.0.0.1:5306/ --mode=all` (two pages)
 - Screenshots (macOS uses Chrome + Metal, Windows Edge + D3D11):
@@ -29,7 +30,7 @@ Live at https://imjin1592.com. Player-facing text is Korean; code and comments a
 - `src/ocean/` FFT (WebGPU compute only) or Gerstner fallback; `src/render/` sky (HDRI), clouds (raymarched); `src/terrain/` worker heightmap, vegetation, structures. The terrain is drawn in culled tiles; each forest ring is a GPU-driven grid of tree cells, but `Vegetation.gather` lists on the CPU only the land cells near the screen, so the vertex shader never runs for sea or off-screen cells (22 M triangles a frame became 4 M). Smoke, fire and spray shade from one noise texture (`src/fx/particleNoise.ts`), not per-pixel noise octaves
 - `src/sim/grand/*` faction campaign (진영 전역), pure TS like the rest of `src/sim`: regions, economy, orders, turn, ai, autoresolve, bridge (the typed hand-off to a 3D region battle), coast (each region's battle map: the terrain of the nearest historical battle with capture points along its real coast, the defender's port and the attacker's anchorage about 1.2 km apart and the contested waters between them exactly equidistant from both; the points are `regionPoints.json`, written by `node scripts/build-region-maps.mjs [--preview=<dir>] [--check]` from the anchors in coast.ts, so rerun it after changing an anchor or a terrain), spawn (builds that battle as a conquest battle on that coast with the campaign's own ships and the defender's works), report (battle summaries), events (the scripted, dated historical events: cards with two answers, the computer's answers forked from the seed, kept in `Grand.events`; a turn is a season, so 1597 is turn 20-22), replay (what a closed turn did to the map, derived from before and after for the map's playback), roster (ships, fleets, commander xp); `src/campaign/grand.ts` is its store (`imjin.grand.v1`). All its numbers derive from SHIP_SPECS through `TUNING` in `economy.ts`. UI: `src/ui/GrandScreen.tsx` (hub, faction pick, map, dialogs, orders) over the prop-driven kit in `src/ui/grand/*` (`adapt.ts` maps the store onto its view models); a meeting played in 3D is a `grand` launch kind (`launch.ts`) and `Engine` hands the per-ship outcome back through `finishGrandBattle`
 - `src/campaign/campaign.ts` linear 1592 campaign (Joseon); `src/select/SelectScene.ts` 3D ink map of the south coast for the select screen
-- `src/net/` + `server/` multiplayer: authoritative Node server (`main.ts` rooms/sessions/quick match/tick, `battles.ts` conquest + historical-duel builders, `terrain.ts` heightmaps in worker threads), binary snapshots, protocol v2 (`protocol.ts`). Lobby for conquest maps and historical duels, quick match (computer fills after 20 s), reconnect with a per-tab session token (seat kept 60 s), the approach skipped at up to 32x until first contact. UI in `src/ui/OnlinePanel.tsx`, `OnlineOverlay.tsx`, `online.css`
+- `src/net/` + `server/` multiplayer: authoritative Node server (`main.ts` rooms/sessions/quick match/tick, `battles.ts` conquest + historical-duel builders, `terrain.ts` heightmaps in worker threads), binary snapshots, protocol v3 (`protocol.ts`, explicit draw results). Lobby for conquest maps and historical duels, quick match (computer fills after 20 s), reconnect with a per-tab session token (seat kept 60 s), the approach skipped at up to 32x until first contact. UI in `src/ui/OnlinePanel.tsx`, `OnlineOverlay.tsx`, `online.css`
 - `src/ui/` React HUD/menus; `styles.css` + `conquest.css`; compact layout via `useCompactLayout` (`.app--compact`, `.app--touch`)
 
 ## Rules
@@ -43,7 +44,7 @@ Live at https://imjin1592.com. Player-facing text is Korean; code and comments a
 - Match surrounding code: comments explain why in plain sentences; no dead code.
 
 ## Deploy
-- Site: push to `main` → GitHub Actions (typecheck, build, S3 `imjin1592.com`, CloudFront invalidation).
+- Site: push to `main` → GitHub Actions (typecheck, regressions, build, multiplayer protocol/revision gate, S3 `imjin1592.com`, CloudFront invalidation). An unset `MP_INSTANCE_ID` permits protocol-only checking; server code then needs a separate deployment.
 - Multiplayer server: `scripts/deploy-mp.sh setup|deploy|ci|status` (EC2 t4g.small behind Caddy at mp.imjin1592.com, via SSM). Needs local AWS credentials (`aws login` / `aws configure`).
 
 ## Agents

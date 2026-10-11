@@ -103,6 +103,7 @@ export type GameSnapshot = {
   escaped: number;
   balance: number;
   winner: Team | null;
+  draw: boolean;
   paused: boolean;
   speed: number;
   /** Fast-forward the approach until first contact (off in multiplayer and after contact). */

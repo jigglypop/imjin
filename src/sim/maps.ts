@@ -4,7 +4,7 @@ import { Conquest, ROSTER, type ConquestOptions, type MapPoint } from './conques
 import { teamOf, type Faction, type LandSampler, type ShipKind, type Team } from './types';
 import type { TerrainSpec } from '../terrain/generate';
 import type { SkyPresetName } from '../render/sky';
-import type { SeaStateName } from '../ocean/waves';
+import { SEA_STATES, type SeaStateName } from '../ocean/waves';
 
 export type ConquestMapId = 'hallyeo' | 'gyeonnaeryang';
 
@@ -207,11 +207,12 @@ export function buildConquest(id: ConquestMapId, seats: Seat[], land: LandSample
   return buildConquestOn(CONQUEST_MAPS[id], seats, land, seed, options, axis);
 }
 
-/** The part of a map a battle is built from: the capture points and whether it is fought at night. A campaign region's coast is one too. */
-export type MapLayout = { points: MapPoint[]; night: boolean };
+/** The capture points, light and sea of a battle. A campaign region's coast is a map too. */
+export type MapLayout = { points: MapPoint[]; night: boolean; sea?: SeaStateName };
 
 export function buildConquestOn<M extends MapLayout>(map: M, seats: Seat[], land: LandSampler, seed = 1592, options: Partial<ConquestOptions> = {}, axis = 0) {
   const b = new Battle(seed);
+  b.setSea(SEA_STATES[map.sea ?? 'moderate']);
   const players = seats.map((s, slot) => ({ slot, name: s.name, faction: s.faction, team: s.team, human: s.human }));
   const leftovers = seats.map((s) => Math.max(0, MUSTER_BUDGET - fleetCost(s.fleet)));
   // A single player game turns the whole map about its centre to suit the light; the land sampler is turned to match.

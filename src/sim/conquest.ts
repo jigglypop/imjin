@@ -97,7 +97,15 @@ export type ConquestPlayer = {
 
 export type MapPoint = { name: string; hanja: string; x: number; z: number; r: number; value: number; home?: number };
 
-export type ConquestOptions = { tickets: number; timeLimit: number; startFunds: number; cap: number; maxShips: number };
+export type ConquestOptions = {
+  tickets: number;
+  timeLimit: number;
+  startFunds: number;
+  cap: number;
+  maxShips: number;
+  /** A campaign port holds for its defender on a tie. Ordinary skirmishes end in a draw. */
+  tieWinner?: Team;
+};
 export const DEFAULT_OPTIONS: ConquestOptions = { tickets: 1000, timeLimit: 30 * 60, startFunds: 1200, cap: 10000, maxShips: 36 };
 
 const BASE_INCOME = 60;
@@ -333,6 +341,7 @@ export class Conquest implements BattleRules {
   }
 
   demolish(b: Battle, owner: number, pointId: number, slot: number) {
+    if (!Number.isInteger(pointId) || pointId < 0 || !Number.isInteger(slot) || slot < 0) return false;
     const p = this.points[pointId];
     const bd = p?.buildings[slot];
     if (!p || !bd || p.owner !== owner) return false;
@@ -361,6 +370,7 @@ export class Conquest implements BattleRules {
   }
 
   cancel(owner: number, pointId: number, index: number) {
+    if (!Number.isInteger(pointId) || pointId < 0 || !Number.isInteger(index) || index < 0) return false;
     const p = this.points[pointId];
     const item = p?.queue[index];
     if (!p || !item || p.owner !== owner) return false;
@@ -641,15 +651,23 @@ export class Conquest implements BattleRules {
     return best as { point: number; slot: number; x: number; y: number; z: number } | null;
   }
 
-  decide(b: Battle): Team | null {
+  decide(b: Battle): Team | 'draw' | null {
+    const tie = () => this.options.tieWinner ?? 'draw';
+    if (this.tickets.joseon <= 0 && this.tickets.japan <= 0) return tie();
     for (const t of TEAMS) if (this.tickets[t] <= 0) return otherTeam(t);
+    const defeated: Team[] = [];
     for (const t of TEAMS) {
       if (b.activeOf(t).length > 0) continue;
       const seats = this.players.filter((p) => p.team === t);
       const rebuilding = seats.some((pl) => this.points.some((p) => p.owner === pl.slot && (p.queue.length > 0 || (this.count(p, 'shipyard') > 0 && pl.funds >= Math.min(...ROSTER[pl.faction].map((k) => SHIP_SPECS[k].cost))))));
-      if (!rebuilding && b.time > 5) return otherTeam(t);
+      if (!rebuilding && b.time > 5) defeated.push(t);
     }
-    if (b.time >= this.options.timeLimit) return this.tickets.joseon >= this.tickets.japan ? 'joseon' : 'japan';
+    if (defeated.length === 2) return tie();
+    if (defeated.length === 1) return otherTeam(defeated[0]!);
+    if (b.time >= this.options.timeLimit) {
+      if (this.tickets.joseon === this.tickets.japan) return tie();
+      return this.tickets.joseon > this.tickets.japan ? 'joseon' : 'japan';
+    }
     return null;
   }
 }

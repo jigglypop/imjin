@@ -43,7 +43,7 @@ export type FleetSquad = { id: string; name: string; commanderId: string; ships:
 
 export type Resources = { grain: number; powder: number; timber: number; merit: number };
 
-export type BattleRecord = { id: ScenarioId; win: boolean; sunk: number; lost: number; escaped: number };
+export type BattleRecord = { id: ScenarioId; win: boolean; draw?: boolean; sunk: number; lost: number; escaped: number };
 
 export type Campaign = {
   version: 1;
@@ -207,8 +207,12 @@ export function buildShip(kind: ShipKind, squadId: string) {
     const cost = BUILD[kind];
     if (!cost || c.step < cost.unlock) return;
     if (c.resources.timber < cost.timber || c.resources.powder < cost.powder || c.resources.grain < cost.grain) return;
-    const sq = c.squads.find((q) => q.id === squadId) ?? c.squads[0];
-    if (!sq) return;
+    let sq = c.squads.find((q) => q.id === squadId) ?? c.squads[0];
+    if (!sq) {
+      const cmd = c.commanders.find((x) => x.id === 'yi' && x.alive) ?? c.commanders.find((x) => x.alive);
+      sq = { id: 'q1', name: '전라좌수영 본대', commanderId: cmd?.id ?? 'yi', ships: [] };
+      c.squads.push(sq);
+    }
     c.resources.timber -= cost.timber;
     c.resources.powder -= cost.powder;
     c.resources.grain -= cost.grain;
@@ -241,9 +245,9 @@ export function modsFor(cmd: Commander | undefined, veteran: number): ShipMods {
 }
 
 export type ShipOutcome = { campaignId: string; alive: boolean; hull: number; crew: number; supply: number; kills: number };
-export type BattleOutcome = { id: ScenarioId; win: boolean; enemySunk: number; enemyEscaped: number; ships: ShipOutcome[] };
+export type BattleOutcome = { id: ScenarioId; win: boolean; draw?: boolean; enemySunk: number; enemyEscaped: number; ships: ShipOutcome[] };
 
-export type Report = { win: boolean; lost: number; sunk: number; loot: Resources; levelUps: string[]; xp: { name: string; gained: number; level: number }[]; events: string[] };
+export type Report = { win: boolean; draw?: boolean; lost: number; sunk: number; loot: Resources; levelUps: string[]; xp: { name: string; gained: number; level: number }[]; events: string[] };
 
 const EVENTS: Partial<Record<ScenarioId, (c: Campaign) => string[]>> = {
   okpo: (c) => {
@@ -291,7 +295,9 @@ const EVENTS: Partial<Record<ScenarioId, (c: Campaign) => string[]>> = {
 };
 
 export function applyOutcome(o: BattleOutcome): Report {
-  const report: Report = { win: o.win, lost: 0, sunk: o.enemySunk, loot: { grain: 0, powder: 0, timber: 0, merit: 0 }, levelUps: [], xp: [], events: [] };
+  const win = o.win && !o.draw;
+  const draw = o.draw ? { draw: true } : {};
+  const report: Report = { win, ...draw, lost: 0, sunk: o.enemySunk, loot: { grain: 0, powder: 0, timber: 0, merit: 0 }, levelUps: [], xp: [], events: [] };
   commit((c) => {
     const byId = new Map(o.ships.map((s) => [s.campaignId, s]));
     const xpBy = new Map<string, number>();
@@ -310,7 +316,7 @@ export function applyOutcome(o: BattleOutcome): Report {
         return true;
       });
       report.lost += before - sq.ships.length;
-      xpBy.set(sq.commanderId, (xpBy.get(sq.commanderId) ?? 0) + 60 + kills * 35 + (o.win ? 90 : 0));
+      xpBy.set(sq.commanderId, (xpBy.get(sq.commanderId) ?? 0) + 60 + kills * 35 + (win ? 90 : 0));
     }
     for (const cmd of c.commanders) {
       const gained = xpBy.get(cmd.id);
@@ -326,10 +332,10 @@ export function applyOutcome(o: BattleOutcome): Report {
       if (ups) report.levelUps.push(t('{name} {level}레벨 (기술 점수 +{n})', { name: t(cmd.name), level: cmd.level, n: ups }));
     }
     const loot = {
-      grain: Math.round(o.enemySunk * 3 + (o.win ? 40 : 10)),
-      powder: Math.round(o.enemySunk * 1.2 + (o.win ? 20 : 5)),
-      timber: Math.round(o.enemySunk * 1.5 + (o.win ? 25 : 5)),
-      merit: o.win ? 100 + o.enemySunk * 5 : o.enemySunk * 2,
+      grain: Math.round(o.enemySunk * 3 + (win ? 40 : 10)),
+      powder: Math.round(o.enemySunk * 1.2 + (win ? 20 : 5)),
+      timber: Math.round(o.enemySunk * 1.5 + (win ? 25 : 5)),
+      merit: win ? 100 + o.enemySunk * 5 : o.enemySunk * 2,
     };
     c.resources.grain += loot.grain;
     c.resources.powder += loot.powder;
@@ -337,17 +343,17 @@ export function applyOutcome(o: BattleOutcome): Report {
     c.resources.merit += loot.merit;
     report.loot = loot;
     c.squads = c.squads.filter((q) => q.ships.length > 0);
-    c.history.push({ id: o.id, win: o.win, sunk: o.enemySunk, lost: report.lost, escaped: o.enemyEscaped });
+    c.history.push({ id: o.id, win, ...draw, sunk: o.enemySunk, lost: report.lost, escaped: o.enemyEscaped });
     const historicalLoss = o.id === 'chilcheon';
-    if (o.win || historicalLoss) {
+    if (win || historicalLoss) {
       const events = EVENTS[o.id]?.(c) ?? [];
       report.events.push(...events);
       c.log.unshift(...events);
       c.step += 1;
     } else {
-      report.events.push(t('패전했습니다. 함대를 정비한 뒤 다시 싸울 수 있습니다.'));
+      report.events.push(t(o.draw ? '무승부입니다. 함대를 정비한 뒤 다시 싸울 수 있습니다.' : '패전했습니다. 함대를 정비한 뒤 다시 싸울 수 있습니다.'));
     }
-    c.log.unshift(t('{title}: {result} · 적 함선 {sunk}척 격파 · 아군 손실 {lost}척', { title: t(SCENARIOS[o.id].title), result: o.win ? t('승리') : t('패배'), sunk: o.enemySunk, lost: report.lost }));
+    c.log.unshift(t('{title}: {result} · 적 함선 {sunk}척 격파 · 아군 손실 {lost}척', { title: t(SCENARIOS[o.id].title), result: o.draw ? t('무승부') : win ? t('승리') : t('패배'), sunk: o.enemySunk, lost: report.lost }));
   });
   return report;
 }

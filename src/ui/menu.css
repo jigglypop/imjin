@@ -740,6 +740,10 @@
   background: var(--bad);
 }
 
+.tab-seal--draw {
+  background: var(--ink-2);
+}
+
 .hs-map {
   position: absolute;
   inset: 0;

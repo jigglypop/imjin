@@ -95,7 +95,7 @@ export const EN_BATTLE: Record<string, string> = {
   '{role} 늘림': 'More on {role}',
   '승조원 배치 · {label}': 'Crew posted · {label}',
   '선내': 'Cutaway',
-  '선내 보기 (F)': 'Cutaway (F)',
+  '선내 보기 (Shift+F)': 'Cutaway (Shift+F)',
   '상갑판': 'Upper deck',
   '포갑판': 'Gun deck',
   '노갑판': 'Oar deck',

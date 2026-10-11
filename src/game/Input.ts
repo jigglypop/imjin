@@ -581,7 +581,7 @@ export class Input {
         this.engine.publish(true);
         break;
       case 'KeyF':
-        this.engine.toggleCutaway();
+        if (e.shiftKey && !e.repeat) this.engine.toggleCutaway();
         break;
       default:
         break;

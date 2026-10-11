@@ -95,7 +95,9 @@ export class Sound {
 
   private init() {
     if (this.ctx) return;
-    const ctx = new AudioContext();
+    const AudioContextClass = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
     this.ctx = ctx;
     const bus = buildBus(ctx, this.muted ? 0 : MASTER_GAIN);
     const master = bus.master;

@@ -96,6 +96,7 @@ export class ConquestView {
   private readonly rings: Mesh[] = [];
   private readonly ringState: { color: ReturnType<typeof uniform>; hold: ReturnType<typeof uniform>; capture: ReturnType<typeof uniform>; selected: ReturnType<typeof uniform>; contested: ReturnType<typeof uniform> }[] = [];
   private readonly batches = new Map<BuildingKind, { near: InstancedMesh; far: InstancedMesh }>();
+  private disposed = false;
   private readonly poles: InstancedMesh;
   private readonly cloths: InstancedMesh;
   private readonly clothColor: InstancedBufferAttribute;
@@ -144,12 +145,13 @@ export class ConquestView {
   }
 
   async load() {
+    if (this.disposed) return;
     await Promise.all(
       (Object.keys(BUILDINGS) as BuildingKind[]).map(async (kind) => {
         // Phones skip the 1024 px near model. The low level is a quarter of the size and reads the same on a phone screen.
         const [full, far] = await Promise.all([equipment.ships.skipLod0 ? null : loadModel(kind, ''), loadModel(kind, '_lod1')]);
         const near = full ?? far ?? (await loadModel(kind, ''));
-        if (!near) return;
+        if (this.disposed || !near) return;
         const farModel = far ?? near;
         const a = new InstancedMesh(near.geometry, near.material, CAP);
         const b = new InstancedMesh(farModel.geometry, farModel.material, CAP);
@@ -392,6 +394,9 @@ export class ConquestView {
 
   /** Frees the rings, banners and instance buffers. The building models stay cached for the next battle. */
   dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.onSelect = null;
     this.layer.remove();
     for (const mesh of [...this.rings, this.poles, this.cloths]) {
       mesh.geometry.dispose();
@@ -401,6 +406,8 @@ export class ConquestView {
       batch.near.dispose();
       batch.far.dispose();
     }
+    this.batches.clear();
     this.group.removeFromParent();
+    this.group.clear();
   }
 }

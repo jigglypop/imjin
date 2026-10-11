@@ -1,4 +1,5 @@
 import { Battle } from './battle';
+import { SEA_STATES } from '../ocean/waves';
 import { variantFor } from '../ships/anchors';
 import type { ShipKind, ShipMods, Squadron, Team } from './types';
 import {
@@ -338,6 +339,7 @@ const LEADS = [
 
 export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: LandFn = () => -50, fleet?: FleetSpawn) {
   const b = new Battle(seed);
+  b.setSea(SEA_STATES[SCENARIOS[id].sea]);
   const ca = Math.cos(axis);
   const sa = Math.sin(axis);
   const place: Place = (x, z) => ({ x: x * ca - z * sa, z: x * sa + z * ca });
@@ -671,7 +673,7 @@ function spawnFleet(b: Battle, fleet: FleetSpawn, axis: number, land: LandFn) {
       taken.push({ x, z });
       const ship = b.addShip(spec.kind, x, z, heading, spec.name, squad, spec.flagship, variantFor(spec.kind, i, spec.flagship));
       ship.hull = ship.spec.hull * Math.max(0.05, spec.hull);
-      ship.crew = ship.spec.crew * Math.max(0.05, spec.crew);
+      b.setCrew(ship, ship.spec.crew * Math.max(0.05, spec.crew));
       b.applySupply(ship, spec.supply);
       ship.mods = { ...spec.mods };
       ship.campaignId = spec.campaignId;

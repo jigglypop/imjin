@@ -112,18 +112,30 @@ export class Terrain {
   }
 
   /** The heightmap comes from a worker and the ground textures from the shared cache, both fetched at the same time. */
-  static async load(spec: TerrainSpec, quality: TerrainQuality) {
+  static async load(spec: TerrainSpec, quality: TerrainQuality, signal?: AbortSignal) {
+    signal?.throwIfAborted();
     const worker = new Worker(new URL('./terrain.worker.ts', import.meta.url), { type: 'module' });
-    const [data, ground] = await Promise.all([
-      new Promise<{ heights: Float32Array; mask: Uint8Array; structures: Structure[] }>((resolve, reject) => {
-        worker.onmessage = (e) => resolve(e.data);
-        worker.onerror = (e) => reject(e);
-        worker.postMessage(spec);
-      }),
-      loadGround(quality.texSize, quality.anisotropy),
-    ]);
-    worker.terminate();
-    return new Terrain(spec, data.heights, data.mask, data.structures, quality, ground);
+    let onAbort: (() => void) | undefined;
+    const aborted = signal ? new Promise<never>((_, reject) => {
+      onAbort = () => reject(signal.reason);
+      signal.addEventListener('abort', onAbort, { once: true });
+    }) : null;
+    try {
+      const loading = Promise.all([
+        new Promise<{ heights: Float32Array; mask: Uint8Array; structures: Structure[] }>((resolve, reject) => {
+          worker.onmessage = (e) => resolve(e.data);
+          worker.onerror = (e) => reject(e);
+          worker.postMessage(spec);
+        }),
+        loadGround(quality.texSize, quality.anisotropy),
+      ]);
+      const [data, ground] = await (aborted ? Promise.race([loading, aborted]) : loading);
+      signal?.throwIfAborted();
+      return new Terrain(spec, data.heights, data.mask, data.structures, quality, ground);
+    } finally {
+      if (onAbort) signal?.removeEventListener('abort', onAbort);
+      worker.terminate();
+    }
   }
 
   /** Frees the mesh, the height and mask textures and the material. The ground textures stay cached for the next battle. */

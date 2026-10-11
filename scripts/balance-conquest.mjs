@@ -32,7 +32,6 @@ const battleModule = await load('/src/sim/battle.ts');
 const { SIM_DT } = battleModule;
 const { buildConquest, CONQUEST_MAPS, CONQUEST_ORDER, autoFleet } = await load('/src/sim/maps.ts');
 const { generateHeightmap } = await load('/src/terrain/generate.ts');
-const { waveField, SEA_STATES } = await load('/src/ocean/waves.ts');
 
 const maps = flag('map', null)?.split(',') ?? CONQUEST_ORDER;
 const matches = (flag('match', 'joseon:japan,ming:japan,joseon:ming,japan:japan')).split(',').map((m) => m.split(':'));
@@ -73,8 +72,6 @@ function landOf(spec) {
 function run(mapId, west, east, seed) {
   const map = CONQUEST_MAPS[mapId];
   const land = landOf(map.terrain);
-  waveField.setState(SEA_STATES[map.sea]);
-  waveField.time = 0;
   const seats = [
     { name: 'west', faction: west, team: 'joseon', human: false, fleet: autoFleet(west) },
     { name: 'east', faction: east, team: 'japan', human: false, fleet: autoFleet(east) },
@@ -89,7 +86,7 @@ function run(mapId, west, east, seed) {
   let captures = 0;
   let nextTrace = 60;
   const lostValue = { joseon: 0, japan: 0 };
-  while (!b.winner && b.time < minutes * 60 + 1) {
+  while (!b.ended && b.time < minutes * 60 + 1) {
     b.step(SIM_DT);
     for (const e of b.events) {
       if (e.type === 'sinking' || e.type === 'struck') {
@@ -103,7 +100,6 @@ function run(mapId, west, east, seed) {
       for (const s of b.ships) if (b.isActive(s)) orders[s.team + ':' + s.order.type] = (orders[s.team + ':' + s.order.type] ?? 0) + 1;
       console.log('    t' + Math.round(b.time / 60), 'lost', lostValue.joseon, lostValue.japan, 'value', ['joseon', 'japan'].map((t) => b.ships.filter((x) => x.team === t && b.isActive(x)).reduce((a, x) => a + x.spec.cost, 0)).join('/'), 'held', c.held('joseon'), c.held('japan'), 'tix', Math.round(c.tickets.joseon), Math.round(c.tickets.japan), 'ships', b.teamCount('joseon'), b.teamCount('japan'), 'funds', c.players.map((p) => Math.round(p.funds)).join('/'), 'pts', c.points.map((p) => p.owner + ':' + p.hold.toFixed(1) + (p.contested ? '!' : '')).join(' '), JSON.stringify(orders));
     }
-    waveField.time += SIM_DT;
     for (const e of b.events) {
       if (e.type === 'built') built += 1;
       else if (e.type === 'spawned') recruited += 1;
@@ -113,6 +109,9 @@ function run(mapId, west, east, seed) {
   }
   return {
     westWin: b.winner === 'joseon',
+    eastWin: b.winner === 'japan',
+    draw: b.draw,
+    decided: b.ended,
     time: b.time,
     tickets: { west: Math.round(c.tickets.joseon), east: Math.round(c.tickets.japan) },
     ships: { west: b.teamCount('joseon'), east: b.teamCount('japan') },
@@ -147,9 +146,8 @@ function duel(a, z, seed, budget, swap = false) {
   });
   // Ships lost by team, split into sunk by gunfire or fire and taken in a boarding fight.
   const lost = { joseon: { sunk: 0, taken: 0 }, japan: { sunk: 0, taken: 0 } };
-  while (!b.winner && b.time < 900) {
+  while (!b.ended && b.time < 900) {
     b.step(SIM_DT);
-    waveField.time += SIM_DT;
     for (const e of b.events) {
       const s = e.type === 'sinking' || e.type === 'struck' ? b.get(e.ship) : null;
       if (s && e.type === 'sinking' && !s.struck) lost[s.team].sunk += 1;
@@ -158,15 +156,13 @@ function duel(a, z, seed, budget, swap = false) {
     b.events.length = 0;
   }
   const value = (team) => b.ships.filter((s) => s.team === team && b.isActive(s)).reduce((v, s) => v + s.spec.cost * (s.hull / s.spec.hull * 0.6 + s.crew / s.spec.crew * 0.4), 0);
-  return { lost, aWin: b.winner === 'joseon' || (!b.winner && value('joseon') > value('japan')), time: b.time, left: [value('joseon'), value('japan')].map(Math.round) };
+  return { lost, aWin: b.winner === 'joseon' || (!b.ended && value('joseon') > value('japan')), draw: b.draw || (!b.ended && value('joseon') === value('japan')), time: b.time, left: [value('joseon'), value('japan')].map(Math.round) };
 }
 
 /** How far apart the fleets form up and how long they take to meet; first contact is an enemy within 400 m, a shot or a grapple. */
 function pace(mapId, west, east, seed) {
   const map = CONQUEST_MAPS[mapId];
   const land = landOf(map.terrain);
-  waveField.setState(SEA_STATES[map.sea]);
-  waveField.time = 0;
   const seats = [
     { name: 'west', faction: west, team: 'joseon', human: false, fleet: autoFleet(west) },
     { name: 'east', faction: east, team: 'japan', human: false, fleet: autoFleet(east) },
@@ -181,9 +177,8 @@ function pace(mapId, west, east, seed) {
   const start = gap();
   const aground = b.ships.filter((s) => land(s.x, s.z) > -1.4).length;
   let contact = null;
-  while (contact === null && b.time < 1200) {
+  while (contact === null && !b.ended && b.time < 1200) {
     b.step(SIM_DT);
-    waveField.time += SIM_DT;
     if (b.projectiles.length || b.ships.some((s) => s.grappledWith) || gap() < 400) contact = b.time;
     b.events.length = 0;
   }
@@ -210,11 +205,12 @@ if (args.includes('--duel')) {
     const rows = [];
     for (let k = 0; k < seeds; k += 1) rows.push(duel(a, z, 1592 + k * 31, budget, k % 2 === 1));
     const wins = rows.filter((r) => r.aWin).length;
+    const draws = rows.filter((r) => r.draw).length;
     const minutesMean = rows.reduce((s, r) => s + r.time, 0) / rows.length / 60;
     // Losses are reported for the first faction and the second, whichever side of the field each started on.
     const sum = (f) => rows.reduce((t, r, k) => t + f(r, k % 2 === 1), 0);
     const loss = (kind) => (a_, z_) => [sum((r) => r.lost.joseon[kind]), sum((r) => r.lost.japan[kind])];
-    console.log(`duel ${a.padEnd(7)} vs ${z.padEnd(7)} ${pct(wins / rows.length)} · ${minutesMean.toFixed(1)} min · sunk ${a} ${loss('sunk')()[0]} / ${z} ${loss('sunk')()[1]} · taken ${a} ${loss('taken')()[0]} / ${z} ${loss('taken')()[1]}`);
+    console.log(`duel ${a.padEnd(7)} vs ${z.padEnd(7)} ${pct(wins / rows.length)}${draws ? ` (${draws} draw)` : ''} · ${minutesMean.toFixed(1)} min · sunk ${a} ${loss('sunk')()[0]} / ${z} ${loss('sunk')()[1]} · taken ${a} ${loss('taken')()[0]} / ${z} ${loss('taken')()[1]}`);
     if (args.includes('--verbose')) console.log(`    left ${rows.map((r) => r.left.join('/')).join(' ')}`);
   }
   await server.close();
@@ -227,14 +223,16 @@ for (const mapId of maps) {
       const seed = 1592 + k * 101;
       const r1 = run(mapId, a, z, seed);
       const r2 = run(mapId, z, a, seed + 7);
-      rows.push({ aWin: r1.westWin, ...r1, side: 'west' }, { aWin: !r2.westWin, ...r2, side: 'east' });
+      rows.push({ aWin: r1.westWin, ...r1, side: 'west' }, { aWin: r2.eastWin, ...r2, side: 'east' });
       if (verbose) {
         for (const r of [r1, r2]) console.log(`   ${mapId} ${r === r1 ? a + ' W' : z + ' W'} ${(r.time / 60).toFixed(1)}min tickets ${r.tickets.west}/${r.tickets.east} ships ${r.ships.west}/${r.ships.east} held ${r.held.west}/${r.held.east} built ${r.built} recruited ${r.recruited} caps ${r.captures} ${r.seconds.toFixed(0)}s`);
       }
     }
     const wins = rows.filter((r) => r.aWin).length;
+    const draws = rows.filter((r) => r.draw).length;
+    const open = rows.filter((r) => !r.decided).length;
     const mean = (f) => rows.reduce((s, r) => s + f(r), 0) / rows.length;
-    console.log(`${mapId.padEnd(14)} ${a.padEnd(7)} vs ${z.padEnd(7)} ${pct(wins / rows.length)} · ${(mean((r) => r.time) / 60).toFixed(1)} min · built ${mean((r) => r.built).toFixed(1)} · recruited ${mean((r) => r.recruited).toFixed(1)} · captures ${mean((r) => r.captures).toFixed(1)} · ${mean((r) => r.seconds).toFixed(0)}s/run`);
+    console.log(`${mapId.padEnd(14)} ${a.padEnd(7)} vs ${z.padEnd(7)} ${pct(wins / rows.length)}${draws ? ` (${draws} draw)` : ''}${open ? ` (${open} undecided)` : ''} · ${(mean((r) => r.time) / 60).toFixed(1)} min · built ${mean((r) => r.built).toFixed(1)} · recruited ${mean((r) => r.recruited).toFixed(1)} · captures ${mean((r) => r.captures).toFixed(1)} · ${mean((r) => r.seconds).toFixed(0)}s/run`);
   }
 }
 await server.close();

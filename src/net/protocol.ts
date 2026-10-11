@@ -5,7 +5,7 @@ import type { ScenarioId } from '../sim/scenarios';
 import type { BattleEvent, CrewPlan, Faction, Ship, ShipKind, Squadron, Team } from '../sim/types';
 
 /** Bumped whenever client and server stop understanding each other. */
-export const PROTOCOL = 2;
+export const PROTOCOL = 3;
 export const SNAPSHOT_HZ = 10;
 /** How long a dropped player's fleet waits for them before the computer takes it over. */
 export const GRACE_SECONDS = 60;
@@ -72,7 +72,7 @@ export type ServerMsg =
   | { t: 'meta'; ships: ShipMeta[]; squadrons: Squadron[] }
   | { t: 'state'; conquest: ConquestState }
   | { t: 'events'; events: BattleEvent[] }
-  | { t: 'end'; winner: Team }
+  | { t: 'end'; winner: Team | null; draw: boolean }
   | { t: 'pong'; at: number };
 
 export const KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
@@ -185,7 +185,8 @@ export function encodeSnapshot(time: number, ships: readonly Ship[], owner: numb
     for (const g of s.guns) {
       d.setUint8(o, g.stage);
       d.setUint8(o + 1, Math.min(255, Math.round(g.t * 10)));
-      d.setUint16(o + 2, g.ammo, true);
+      // Fractional resupply stays on the server; the client sees only rounds that can be fired.
+      d.setUint16(o + 2, Math.floor(g.ammo + 1e-9), true);
       o += 4;
     }
   }

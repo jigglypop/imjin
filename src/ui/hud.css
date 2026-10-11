@@ -919,6 +919,10 @@
   background: var(--bad);
 }
 
+.result--draw::before {
+  background: var(--ink-2);
+}
+
 .result-title {
   font-size: var(--fs-32);
   font-weight: 600;

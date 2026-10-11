@@ -63,11 +63,13 @@ export async function preloadStructures() {
 export class Structures {
   readonly group = new Group();
   private readonly batches: Batch[] = [];
+  private disposed = false;
   ready = false;
 
   constructor(private readonly terrain: Terrain) {}
 
   async load() {
+    if (this.disposed) return;
     const byType = new Map<StructureType, Structure[]>();
     for (const s of this.terrain.structures) {
       const list = byType.get(s.type) ?? [];
@@ -79,7 +81,7 @@ export class Structures {
         // Phones skip the 1024 px near model: the low level is built for 30 m and more, and small on a phone screen.
         const [full, lod1] = await Promise.all([equipment.ships.skipLod0 ? null : loadModel(type, ''), loadModel(type, '_lod1')]);
         const lod0 = full ?? lod1 ?? (await loadModel(type, ''));
-        if (!lod0) return;
+        if (this.disposed || !lod0) return;
         const far = lod1 ?? lod0;
         const near = new InstancedMesh(lod0.geometry, lod0.material, list.length);
         const farMesh = new InstancedMesh(far.geometry, far.material, list.length);
@@ -97,17 +99,21 @@ export class Structures {
         this.batches.push({ near, far: farMesh, items });
       }),
     );
-    this.ready = true;
+    this.ready = !this.disposed;
   }
 
   /** Frees the instance buffers. The models themselves stay cached for the next battle. */
   dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.ready = false;
     for (const b of this.batches) {
       b.near.dispose();
       b.far.dispose();
     }
     this.batches.length = 0;
     this.group.removeFromParent();
+    this.group.clear();
   }
 
   update(camera: Camera) {

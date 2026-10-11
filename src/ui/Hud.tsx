@@ -6,7 +6,7 @@ import { EQUIPMENT_LABEL, equipment, saveEquipmentSetting, type EquipmentSetting
 import { SKY_PRESETS, type SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
 import { setLang, t as tr, useLang, useT } from '../i18n';
-import { setTouchBox, useUi, type BattleOrigin, type GameSnapshot, type GunInfo, type PrimaryInfo, type SquadronInfo } from '../state/store';
+import { pushToast, setTouchBox, useUi, type BattleOrigin, type GameSnapshot, type GunInfo, type PrimaryInfo, type SquadronInfo } from '../state/store';
 import type { Team } from '../sim/types';
 import { useCompactLayout } from './useCompactLayout';
 import { ConquestBar, CrewPanel, PointPanel } from './ConquestPanels';
@@ -457,6 +457,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const enemyTeam: Team = snap.team === 'joseon' ? 'japan' : 'joseon';
   const enemyFaction = snap.squadrons.find((s) => s.team === enemyTeam)?.faction ?? enemyTeam;
   const won = snap.winner === snap.team;
+  const ended = !!snap.winner || snap.draw;
   // A phone's score panel has room for the navy's name only.
   const sideName = (team: Team) => {
     const name = teamName(snap, team);
@@ -496,7 +497,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
               {t('지도')}
             </button>
           )}
-          {engine.campaign && !snap.winner && (
+          {engine.campaign && !ended && (
             <button className="mini-btn" onClick={() => engine.endBattle()}>
               {t('철수')}
             </button>
@@ -561,7 +562,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
               <div className="settings-label">{t('하늘')}</div>
               <div className="chips">
                 {(Object.keys(SKY_PRESETS) as SkyPresetName[]).map((k) => (
-                  <button key={k} className={`chip ${snap.sky === k ? 'chip--on' : ''}`} onClick={() => void engine.setSky(k)}>
+                  <button key={k} className={`chip ${snap.sky === k ? 'chip--on' : ''}`} onClick={() => void engine.setSky(k).catch(() => pushToast(t('하늘을 불러오지 못했습니다'), 'bad'))}>
                     {t(SKY_PRESETS[k].label)}
                   </button>
                 ))}
@@ -677,7 +678,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
 
       {compact && mapOn && <div className="minimap minimap--float" ref={minimapRef} />}
 
-      {isTouchDevice && !snap.winner && (
+      {isTouchDevice && !ended && (
         <div className="touch-bar">
           <button className={`tool ${touchBox ? 'tool--on' : ''}`} onClick={() => setTouchBox(!touchBox)} data-tip="tool.box">
             <Icon name="box" size={19} />
@@ -702,7 +703,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
       <div className={`bottom ${sheetFolded ? 'bottom--folded' : ''}`}>
         {!compact && <div className="minimap" ref={minimapRef} />}
         {/* Once the battle is decided the result card is the only thing to act on: no orders or cards behind it. */}
-        {!snap.winner && (
+        {!ended && (
           <>
             {p ? <Detail engine={engine} snap={snap} p={p} portrait={selectedSquad?.portrait ?? snap.squadrons.find((s) => s.selected)?.portrait ?? 'portrait_admiral'} /> : hintOpen && !tourActive && <Hint onClose={closeHint} />}
             <div className="cards">
@@ -731,12 +732,12 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
         )}
       </div>
 
-      <Tutorial engine={engine} compact={compact} />
+      {!ended && <Tutorial engine={engine} compact={compact} />}
       <Tooltips />
 
-      {snap.winner && (
-        <div className={`result glass result--${won ? 'win' : 'loss'}`}>
-          <div className="result-title">{t(won ? '승리' : '패배')}</div>
+      {ended && (
+        <div className={`result glass result--${snap.draw ? 'draw' : won ? 'win' : 'loss'}`}>
+          <div className="result-title">{t(snap.draw ? '무승부' : won ? '승리' : '패배')}</div>
           <div className="result-sub">{t(snap.scenario.title)}</div>
           <div className="result-stats">
             {stats.map((s, i) => (
