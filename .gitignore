@@ -16,3 +16,10 @@ server/data/
 assets-src/hipoly/
 .claude/worktrees/
 assets-src/ui-art/
+# Local Meshy review and intermediate exports; retain original reference and source GLB.
+assets-src/dragonhead-*/dragonhead-form-review.blend*
+assets-src/dragonhead-*/draft-hull.json
+assets-src/dragonhead-*/ship-builder.mjs
+assets-src/dragonhead-*/meshes/dragonhead-fitted-lod*.glb
+assets-src/dragonhead-*/renders/
+assets-src/dragonhead-*/props.provider-private.json

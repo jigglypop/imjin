@@ -3,7 +3,7 @@ import { GUN_SHOTS, GUN_SPECS } from './catalog';
 import { combatValue, shipGunSpec, shipMods, shipSpec, type BalanceProfile } from './competitive';
 import { ShipGrid } from './grid';
 import { isShipVisible } from './visibility';
-import { anchorsFor } from '../ships/anchors';
+import { anchorsFor, GEOBUK_SCALE } from '../ships/anchors';
 import type { CurrentField } from './current';
 import { coastalFormationSlots, type CoastalFormationKind } from './coastal-tactics';
 import {
@@ -1855,8 +1855,9 @@ export class Battle {
     const port = anchors?.gunPorts.find((g) => g.side === side && g.index === slot);
     if (port) {
       // Ship space has +X forward and +Z across the beam; the shot starts a little past the muzzle of the carriage gun.
-      const lx = port.pos[0] + port.dir[0] * 0.9;
-      const lz = port.pos[2] + port.dir[2] * 0.9;
+      const out = 0.9 * (spec.kind === 'geobukseon' ? GEOBUK_SCALE : 1);
+      const lx = port.pos[0] + port.dir[0] * out;
+      const lz = port.pos[2] + port.dir[2] * out;
       return { x: s.x + c * lx - n * lz, y: port.pos[1], z: s.z + n * lx + c * lz, dx: c * port.dir[0] - n * port.dir[2], dz: n * port.dir[0] + c * port.dir[2] };
     }
     if (side === 2) {

@@ -1,0 +1,65 @@
+{
+  "schema": "game-room.room-brief.v1",
+  "roomId": "imjin-geobuk-dragonhead",
+  "family": "custom",
+  "purpose": "Asset-only turtle-ship dragonhead replacement; no room architecture",
+  "runtimeSurface": "imjin ShipRenderer geobukseon repeated mesh, bow near-camera and fleet far-camera",
+  "boundsMeters": [
+    5.6,
+    2.7,
+    1.8
+  ],
+  "hero": {
+    "id": "dragonhead",
+    "role": "bow figurehead and smoke aperture",
+    "reservedBoundsMeters": [
+      5.6,
+      2.7,
+      1.8
+    ]
+  },
+  "symmetry": {
+    "mode": "bilateral",
+    "order": 2,
+    "appliesTo": [
+      "dragonhead"
+    ],
+    "exceptions": []
+  },
+  "circulation": {
+    "description": "No room or player circulation; attach to ship bow and preserve cannon anchor",
+    "minimumClearanceMeters": 0
+  },
+  "productionCamera": {
+    "viewport": [
+      1440,
+      900
+    ],
+    "location": [
+      25,
+      10,
+      14
+    ],
+    "target": [
+      20,
+      5,
+      0
+    ],
+    "verticalFovDegrees": 45
+  },
+  "performanceBudget": {
+    "maxSceneTriangles": 1500,
+    "maxVLowBytes": 350000,
+    "maxHighTextureBytes": 2000000
+  },
+  "creditBudget": {
+    "maximumCredits": 30,
+    "approvalRequired": true
+  },
+  "environment": {
+    "type": "asset-preview",
+    "identity": "imjin-ship-preview",
+    "source": "runtime renderer",
+    "assignmentKey": "geobukseon#0"
+  }
+}

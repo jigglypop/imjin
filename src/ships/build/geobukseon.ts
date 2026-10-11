@@ -3,7 +3,7 @@
  * plates studded with spikes, a dragon head at the bow that can belch smoke (anchors.smokeStack), a stern tail,
  * oars under the eaves and one raised mast. Larger than the panokseon on purpose.
  */
-import { anchorsFor, GEOBUK_PLAN, geobukRoofSpan, geobukRoofY, hullTop, sideZ } from '../anchors';
+import { buildAnchorsFor, GEOBUK_PLAN, geobukRoofSpan, geobukRoofY, hullTop, sideZ } from '../anchors';
 import {
   box,
   cylinder,
@@ -27,9 +27,9 @@ import {
 } from './parts';
 import { barrel, byLod, cannon, clothPatch, flag, furledSail, hullBand, lantern, lanternPole, loftHull, mast, mulberry32, oar, oarPortFrame, ropeCoil, sideTimber, type Ctx, type Lod } from './common';
 
-export function buildGeobukseon(lod: Lod): MeshData {
+export function buildGeobukseon(lod: Lod, omitDragonHead = false): MeshData {
   const plan = GEOBUK_PLAN;
-  const anchors = anchorsFor('geobukseon#0')!;
+  const anchors = buildAnchorsFor('geobukseon#0')!;
   const b = new MeshBuilder();
   const ctx: Ctx = { b, lod, faction: 'joseon', P: paints('joseon'), rnd: mulberry32(4242) };
   const { P } = ctx;
@@ -229,7 +229,7 @@ export function buildGeobukseon(lod: Lod): MeshData {
   }
 
   // --- dragon head ---
-  dragonHead(ctx, plan.head);
+  if (!omitDragonHead) dragonHead(ctx, plan.head);
 
   // --- stern: tail and rudder ---
   if (lod < 2) {

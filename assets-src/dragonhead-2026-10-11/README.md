@@ -1,0 +1,9 @@
+The original Meshy 7.1 output is preserved in `meshes/dragonhead-attempt-1.glb`. The user approved its actual four views and mounted Form, then requested a uniform 1.2× larger representative turtle ship. Only one paid job was submitted: 30 credits, with no additional generation.
+
+`props.json`, `milestone-reviews.json`, `form-fit-recipe.json`, and `runtime-assets.json` retain the provider task ID, original hash, approval, fitting recipe and shipped asset hashes. Temporary signed provider URLs are excluded from the accepted manifest. The approved `.blend` and review images remain local evidence; rebuilding does not require the `.blend` or fitted intermediate GLBs.
+
+To reproduce the local exports, install the repository dependencies and Blender 5.2, then run `node scripts/build-dragonhead-lods.mjs`. Set `DRAGONHEAD_BLENDER` if Blender is installed elsewhere. The script verifies source and human approval hashes before normalization, welds coincident geometry while preserving UV corners, builds the three LODs, and compresses their PBR textures. It never submits provider jobs.
+
+The runtime GLBs contain 1,499 / 499 / 179 triangles, with 1024 / 512 / 256 px texture tiers. The default procedural turtle hull omits its old dragon-head call only after all generated head LODs load. The generated part shares hull poses, LOD selection, cutaway height, burning and launch-capacity growth. Failed attachment loading retains the complete original head.
+
+`node scripts/test-dragonhead.mjs` verifies the shipped GLBs, unchanged weapon statistics, single geometry/anchor scaling, real instanced growth, cutaway, mobile tier loading, and the failure fallback. Actual WebGPU review evidence is under `shots/dragonhead-runtime-2026-10-11/`, including four views, all three LODs, 40 repeated ships, a panokseon comparison, a live battle close-up and mobile checks. These captures do not establish a frame-rate benchmark.

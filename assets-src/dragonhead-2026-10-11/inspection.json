@@ -1,0 +1,429 @@
+{
+  "schema": "imjin.dragonhead-inspection.v1",
+  "task": {
+    "id": "01a12b5e-8e1c-759a-b96a-cab196950e03",
+    "model": "meshy-7.1",
+    "consumedCredits": 30
+  },
+  "providerPreviews": [
+    {
+      "view": "front",
+      "path": "renders/provider-front.png",
+      "bytes": 83217,
+      "sha256": "2a6a96b03b148aa8007c12d98a07514528681d76a3a9f8fdaeb090c39de537f6"
+    },
+    {
+      "view": "right",
+      "path": "renders/provider-right.png",
+      "bytes": 137535,
+      "sha256": "a0ce4b8d567bbf1b236e4cc6571f772826b3b1565b44f84992d0c2ab3b68ce78"
+    },
+    {
+      "view": "back",
+      "path": "renders/provider-back.png",
+      "bytes": 79144,
+      "sha256": "2dfd549e17d527d950f5c9687092d2c5ead47c21be6d6cb27b8eb551b5cbf4cc"
+    },
+    {
+      "view": "left",
+      "path": "renders/provider-left.png",
+      "bytes": 135612,
+      "sha256": "f624b81f786c7044f5d800ce9b9d1d961eb350e8cb443122dd92c48564d057d0"
+    }
+  ],
+  "assets": [
+    {
+      "file": "assets-src/dragonhead-2026-10-11/meshes/dragonhead-attempt-1.glb",
+      "bytes": 12056084,
+      "sha256": "2d3bc67e6064eadaeaaf4f0d9bba3448069684a18321eea7465cc8f45e0ae5f8",
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.29796302318573,
+          -0.6274821162223816,
+          -0.9478230476379395
+        ],
+        "max": [
+          0.3005410432815552,
+          0.6242610812187195,
+          0.9480520486831665
+        ],
+        "size": [
+          0.5985040664672852,
+          1.251743197441101,
+          1.895875096321106
+        ]
+      },
+      "primitives": [
+        {
+          "node": "Mesh_0",
+          "mesh": "Mesh_0",
+          "vertices": 3167,
+          "triangles": 1563,
+          "attributes": [
+            "POSITION",
+            "NORMAL",
+            "TEXCOORD_0"
+          ],
+          "material": 0,
+          "mode": 4
+        }
+      ],
+      "triangles": 1563,
+      "materials": [
+        {
+          "doubleSided": true,
+          "name": "Material_0",
+          "normalTexture": {
+            "index": 0
+          },
+          "pbrMetallicRoughness": {
+            "baseColorTexture": {
+              "index": 1
+            },
+            "metallicRoughnessTexture": {
+              "index": 2
+            }
+          }
+        }
+      ],
+      "images": [
+        {
+          "name": "normal",
+          "mimeType": "image/png",
+          "bytes": 5803533
+        },
+        {
+          "name": "Image_0",
+          "mimeType": "image/jpeg",
+          "bytes": 3700310
+        },
+        {
+          "name": "Image_1",
+          "mimeType": "image/jpeg",
+          "bytes": 2439815
+        }
+      ],
+      "textures": [
+        {
+          "sampler": 0,
+          "source": 0
+        },
+        {
+          "sampler": 0,
+          "source": 1
+        },
+        {
+          "sampler": 0,
+          "source": 2
+        }
+      ]
+    },
+    {
+      "file": "public/models/geobukseon_v2.glb",
+      "bytes": 1273380,
+      "sha256": "522d5a6506aa724fd2b2c76c445160abf5776e211d9bc08112d40800df1ebfce",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ],
+      "bounds": {
+        "min": [
+          -0.2622719869365987,
+          -0.16778061473388947,
+          -0.48925575613975525
+        ],
+        "max": [
+          0.2623076846327471,
+          0.16916715583451522,
+          0.4908390151176718
+        ],
+        "size": [
+          0.5245796715693458,
+          0.3369477705684047,
+          0.980094771257427
+        ]
+      },
+      "primitives": [
+        {
+          "node": "tripo_node_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "mesh": "tripo_mesh_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "vertices": 29915,
+          "triangles": 29996,
+          "attributes": [
+            "NORMAL",
+            "POSITION",
+            "TEXCOORD_0"
+          ],
+          "material": 0,
+          "mode": 4
+        }
+      ],
+      "triangles": 29996,
+      "materials": [
+        {
+          "name": "tripo_material_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "pbrMetallicRoughness": {
+            "baseColorTexture": {
+              "index": 0
+            },
+            "metallicRoughnessTexture": {
+              "index": 2
+            }
+          },
+          "normalTexture": {
+            "index": 1
+          }
+        }
+      ],
+      "images": [
+        {
+          "name": "Color_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "mimeType": "image/webp",
+          "bytes": 456848
+        },
+        {
+          "name": "ORM_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "mimeType": "image/webp",
+          "bytes": 123662
+        },
+        {
+          "name": "NormalGL_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "mimeType": "image/webp",
+          "bytes": 251628
+        }
+      ],
+      "textures": [
+        {
+          "sampler": 0,
+          "extensions": {
+            "EXT_texture_webp": {
+              "source": 0
+            }
+          }
+        },
+        {
+          "sampler": 0,
+          "extensions": {
+            "EXT_texture_webp": {
+              "source": 2
+            }
+          }
+        },
+        {
+          "sampler": 0,
+          "extensions": {
+            "EXT_texture_webp": {
+              "source": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "file": "public/models/geobukseon_v2_lod1.glb",
+      "bytes": 422160,
+      "sha256": "87f97e025fac981e56f29d418b1254b8ee20a5282218c4003efc88043a5a85d6",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ],
+      "bounds": {
+        "min": [
+          -0.26098841595843303,
+          -0.16778512175339438,
+          -0.48919591033336474
+        ],
+        "max": [
+          0.26228090481036737,
+          0.1678550258918437,
+          0.48467469250835293
+        ],
+        "size": [
+          0.5232693207688004,
+          0.3356401476452381,
+          0.9738706028417177
+        ]
+      },
+      "primitives": [
+        {
+          "node": "tripo_node_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "mesh": "tripo_mesh_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "vertices": 7521,
+          "triangles": 5936,
+          "attributes": [
+            "NORMAL",
+            "POSITION",
+            "TEXCOORD_0"
+          ],
+          "material": 0,
+          "mode": 4
+        }
+      ],
+      "triangles": 5936,
+      "materials": [
+        {
+          "name": "tripo_material_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "pbrMetallicRoughness": {
+            "baseColorTexture": {
+              "index": 0
+            },
+            "metallicRoughnessTexture": {
+              "index": 2
+            }
+          },
+          "normalTexture": {
+            "index": 1
+          }
+        }
+      ],
+      "images": [
+        {
+          "name": "Color_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "mimeType": "image/webp",
+          "bytes": 176012
+        },
+        {
+          "name": "ORM_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "mimeType": "image/webp",
+          "bytes": 43064
+        },
+        {
+          "name": "NormalGL_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "mimeType": "image/webp",
+          "bytes": 83598
+        }
+      ],
+      "textures": [
+        {
+          "sampler": 0,
+          "extensions": {
+            "EXT_texture_webp": {
+              "source": 0
+            }
+          }
+        },
+        {
+          "sampler": 0,
+          "extensions": {
+            "EXT_texture_webp": {
+              "source": 2
+            }
+          }
+        },
+        {
+          "sampler": 0,
+          "extensions": {
+            "EXT_texture_webp": {
+              "source": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "file": "public/models/geobukseon_v2_lod2.glb",
+      "bytes": 122208,
+      "sha256": "354c790fcf3cb5217cce9570d215632aa19a22ed0f1fbb2bd53484491bfb9ba6",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ],
+      "bounds": {
+        "min": [
+          -0.2603805851732015,
+          -0.16772287771919475,
+          -0.4878792733711883
+        ],
+        "max": [
+          0.20145140499561043,
+          0.1476839772571436,
+          0.4833580555461765
+        ],
+        "size": [
+          0.46183199016881193,
+          0.31540685497633836,
+          0.9712373289173648
+        ]
+      },
+      "primitives": [
+        {
+          "node": "tripo_node_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "mesh": "tripo_mesh_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "vertices": 1097,
+          "triangles": 1180,
+          "attributes": [
+            "NORMAL",
+            "POSITION",
+            "TEXCOORD_0"
+          ],
+          "material": 0,
+          "mode": 4
+        }
+      ],
+      "triangles": 1180,
+      "materials": [
+        {
+          "name": "tripo_material_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "pbrMetallicRoughness": {
+            "baseColorTexture": {
+              "index": 0
+            },
+            "metallicRoughnessTexture": {
+              "index": 2
+            }
+          },
+          "normalTexture": {
+            "index": 1
+          }
+        }
+      ],
+      "images": [
+        {
+          "name": "Color_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "mimeType": "image/webp",
+          "bytes": 62116
+        },
+        {
+          "name": "ORM_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "mimeType": "image/webp",
+          "bytes": 15704
+        },
+        {
+          "name": "NormalGL_1d3c573e-ada3-4dfe-aa93-6f68f4389f3d",
+          "mimeType": "image/webp",
+          "bytes": 22200
+        }
+      ],
+      "textures": [
+        {
+          "sampler": 0,
+          "extensions": {
+            "EXT_texture_webp": {
+              "source": 0
+            }
+          }
+        },
+        {
+          "sampler": 0,
+          "extensions": {
+            "EXT_texture_webp": {
+              "source": 2
+            }
+          }
+        },
+        {
+          "sampler": 0,
+          "extensions": {
+            "EXT_texture_webp": {
+              "source": 1
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

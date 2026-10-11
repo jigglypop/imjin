@@ -1,6 +1,6 @@
 import type { ShipKind } from '../../sim/types';
 import { SHIP_SPECS } from '../../sim/catalog';
-import { anchorsFor, PROCEDURAL_KINDS, type ShipAnchors } from '../anchors';
+import { anchorsFor, buildAnchorsFor, GEOBUK_SCALE, PROCEDURAL_KINDS, type ShipAnchors } from '../anchors';
 import type { Faction } from './atlas';
 import type { Lod } from './common';
 import { buildAtakebune } from './atakebune';
@@ -21,12 +21,12 @@ export const isProcedural = (kind: ShipKind) => PROCEDURAL_KINDS.includes(kind);
 
 export type BuiltShip = { lods: MeshData[]; anchors: ShipAnchors; faction: Faction };
 
-function buildLod(kind: ShipKind, variant: number, lod: Lod): MeshData {
+function buildLod(kind: ShipKind, variant: number, lod: Lod, omitDragonHead: boolean): MeshData {
   switch (kind) {
     case 'panokseon':
       return buildPanokseon(variant, lod);
     case 'geobukseon':
-      return buildGeobukseon(lod);
+      return buildGeobukseon(lod, omitDragonHead);
     case 'hyeopseon':
       return buildHyeopseon(lod);
     case 'atakebune':
@@ -45,10 +45,11 @@ function buildLod(kind: ShipKind, variant: number, lod: Lod): MeshData {
 }
 
 /** All three LODs of a model plus its anchors. Pure CPU work: runs in Node as well as in the browser. */
-export function buildShip(kind: ShipKind, variant: number): BuiltShip {
+export function buildShip(kind: ShipKind, variant: number, omitDragonHead = false): BuiltShip {
   const anchors = anchorsFor(`${kind}#${variant}`);
   if (!anchors) throw new Error(`no anchors for ${kind}#${variant}`);
-  const lods = LOD_LEVELS.map((l) => buildLod(kind, variant, l));
-  bakeGrime(lods, anchors);
+  const lods = LOD_LEVELS.map((l) => buildLod(kind, variant, l, omitDragonHead));
+  bakeGrime(lods, buildAnchorsFor(`${kind}#${variant}`)!);
+  if (kind === 'geobukseon') for (const lod of lods) for (let i = 0; i < lod.position.length; i++) lod.position[i]! *= GEOBUK_SCALE;
   return { lods, anchors, faction: SHIP_SPECS[kind].faction };
 }

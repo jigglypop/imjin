@@ -61,8 +61,8 @@ function toGeometry(d: MeshData) {
 export type ProceduralModel = { lods: { geometry: BufferGeometry; source: MeshStandardMaterial }[]; anchors: ShipAnchors };
 
 /** Builds the three LODs of a procedural ship and loads its faction atlas. */
-export async function loadProcedural(kind: ShipKind, variant: number): Promise<ProceduralModel> {
-  const built = buildShip(kind, variant);
+export async function loadProcedural(kind: ShipKind, variant: number, omitDragonHead = false): Promise<ProceduralModel> {
+  const built = buildShip(kind, variant, omitDragonHead);
   const source = await atlasMaterial(built.faction);
   return { lods: built.lods.map((d) => ({ geometry: toGeometry(d), source })), anchors: built.anchors };
 }

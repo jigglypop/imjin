@@ -1,0 +1,64 @@
+{
+  "schema": "imjin.dragonhead-runtime-assets.v1",
+  "provider": "Meshy",
+  "model": "meshy-7.1",
+  "taskId": "01a12b5e-8e1c-759a-b96a-cab196950e03",
+  "consumedCredits": 30,
+  "extraGenerationCredits": 0,
+  "sourceSha256": "2d3bc67e6064eadaeaaf4f0d9bba3448069684a18321eea7465cc8f45e0ae5f8",
+  "approvedDraftBlendSha256": "fd8d2dc39c81ef83b0dce60dab2568fd1736063fb625ce4c6dd5acc8cfe892d5",
+  "originalApprovedFitBounds": {
+    "min": [
+      18.399999618530273,
+      3.999999761581421,
+      -0.8999999761581421
+    ],
+    "max": [
+      24,
+      6.699999809265137,
+      0.8999999761581421
+    ]
+  },
+  "uniformShipScale": 1.2,
+  "scaleApproval": "User requested a larger representative turtle ship after approving its Form.",
+  "oldProceduralHeadRemoved": true,
+  "anchorsScaledOnce": true,
+  "lods": [
+    {
+      "level": 0,
+      "path": "public/models/geobukseon_dragonhead_71.glb",
+      "bytes": 503528,
+      "sha256": "eed50bd71a7989afb4c32ca5b8165086a12786cb8371dbe81e35031b72a51a31",
+      "triangles": 1499,
+      "textureSize": 1024,
+      "textureBytes": 463714,
+      "meshCount": 1,
+      "primitiveCount": 1,
+      "materials": 1
+    },
+    {
+      "level": 1,
+      "path": "public/models/geobukseon_dragonhead_71_lod1.glb",
+      "bytes": 172216,
+      "sha256": "1bfe7b9f956bd887e843b89c51a8fc8d7f1a3e3ea83698e1b4fbf5f18c180366",
+      "triangles": 499,
+      "textureSize": 512,
+      "textureBytes": 153606,
+      "meshCount": 1,
+      "primitiveCount": 1,
+      "materials": 1
+    },
+    {
+      "level": 2,
+      "path": "public/models/geobukseon_dragonhead_71_lod2.glb",
+      "bytes": 57336,
+      "sha256": "df9bc086cd13ae8f851b5081d2c7914f74110ae2b0023eea86169363af7b769e",
+      "triangles": 179,
+      "textureSize": 256,
+      "textureBytes": 48218,
+      "meshCount": 1,
+      "primitiveCount": 1,
+      "materials": 1
+    }
+  ]
+}

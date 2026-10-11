@@ -1,0 +1,114 @@
+{
+  "assets": [
+    {
+      "attachmentFace": "flat rear neck mount",
+      "attempts": [
+        {
+          "checkedAt": "2026-10-11T14:34:45.226827Z",
+          "consumedCredits": 30,
+          "createdAt": "2026-10-11T14:29:43.937411Z",
+          "downloadedMesh": {
+            "downloadedAt": "2026-10-11T14:35:13.051029Z",
+            "path": "meshes\\dragonhead-attempt-1.glb",
+            "sha256": "2d3bc67e6064eadaeaaf4f0d9bba3448069684a18321eea7465cc8f45e0ae5f8"
+          },
+          "number": 1,
+          "rejectionReason": "",
+          "request": {
+            "ai_model": "meshy-7.1",
+            "enable_pbr": true,
+            "imageSha256": "1fef566faeee1e799d2d1a3abac20397af75fcd9380e0e20af1c82e4c8dd7f64",
+            "image_enhancement": false,
+            "model_type": "standard",
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "should_remesh": true,
+            "should_texture": true,
+            "target_formats": [
+              "glb"
+            ],
+            "target_polycount": 1500,
+            "texture_prompt": "Heavy carved timber naval dragon, blackened bronze-brown finish, aged matte material, muted brass patina on raised edges, deep dark mouth, restrained muted colors, no smoke, no fire, no backdrop baked into texture.",
+            "texture_resolution": "2k",
+            "topology": "triangle"
+          },
+          "status": "SUCCEEDED",
+          "submittedAt": "2026-10-11T14:29:48.188433Z",
+          "task": {
+            "id": "01a12b5e-8e1c-759a-b96a-cab196950e03",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791728983083,
+            "started_at": 1791728983105,
+            "finished_at": 1791729130755,
+            "consumed_credits": 30
+          },
+          "taskId": "01a12b5e-8e1c-759a-b96a-cab196950e03"
+        }
+      ],
+      "class": "hero",
+      "dimensionsMeters": [
+        5.6,
+        2.7,
+        1.8
+      ],
+      "function": "Readable geobukseon bow figurehead, open smoke/cannon mouth, reused across turtle ships",
+      "id": "dragonhead",
+      "image": {
+        "approval": "이 이미지로 생성 진행",
+        "approved": true,
+        "approvedAt": "2026-10-11T14:26:05.398Z",
+        "approvedBy": "user",
+        "generator": "built-in image_gen",
+        "prompt": "Use case: historical-scene game prop reference. One isolated sculptural dragon-head figurehead and its short integrated curved mounting neck, built for a Joseon Korean turtle ship. Entire object fully visible with generous margin, three-quarter SIDE view so both length and depth are readable, even studio illumination against a plain uniform light-gray opaque background. Fierce broad eyebrow ridge and forceful blunt snout, open jaw with a clean hollow smoke/cannon aperture, two restrained backswept horns, compact thick carved whisker ridges fused firmly to the muzzle, large angular carved scales and strong Korean guardian-dragon silhouette. Mouth and horns must remain readable at distance. It is a real heavy carved timber naval figurehead with blackened bronze-colored surface, muted old brass patina on a few raised edges, deep carved eye sockets and dark throat, aged matte weathered materials. Grounded cinematic film-prop quality inspired by Korean naval war epics. The neck curves gently upward from a substantial FLAT rear mounting face, not a detached floating head; front points horizontally forward. Bilateral symmetry. Model-ready economical broad forms, no wispy hair or wires, no fine needle teeth, no filigree that would require many polygons. Approximate full shape proportions length5.6,width1.8,height2.7. No ship, water, smoke, fire, pedestal, neighboring objects, human, text, watermark, border, dramatic shadow or cropped part.",
+        "source": "images/reference.png"
+      },
+      "lodTriangleTargets": [
+        1500,
+        500,
+        180
+      ],
+      "rejectionCriteria": [
+        "mouth fused shut or cannon aperture lost",
+        "cropped/missing neck or flat attachment",
+        "unusable rear surface",
+        "merged background slab",
+        "horns/scales detached or excessively thin",
+        "cannot meet 1500 triangle silhouette after reduction"
+      ],
+      "semanticFront": "+X toward open mouth",
+      "symmetry": "bilateral about X/Y center plane",
+      "targetPolycount": 1500,
+      "texturePrompt": "Heavy carved timber naval dragon, blackened bronze-brown finish, aged matte material, muted brass patina on raised edges, deep dark mouth, restrained muted colors, no smoke, no fire, no backdrop baked into texture.",
+      "acceptedMesh": {
+        "path": "meshes/dragonhead-attempt-1.glb",
+        "sha256": "2d3bc67e6064eadaeaaf4f0d9bba3448069684a18321eea7465cc8f45e0ae5f8",
+        "taskId": "01a12b5e-8e1c-759a-b96a-cab196950e03",
+        "model": "meshy-7.1",
+        "consumedCredits": 30,
+        "approvedBy": "user",
+        "approval": "이대로 장착·배포",
+        "approvedAt": "2026-10-11T14:48:56.968Z"
+      }
+    }
+  ],
+  "generation": {
+    "apiModel": "meshy-7.1",
+    "creditsPerTexturedTask": 30,
+    "hardCreditCeiling": 30,
+    "maxChargedAttemptsPerAsset": 2,
+    "modelOverride": "User explicitly requested latest Meshy. Official API lists Meshy 7.1 as latest and Meshy 5 retired October 10, 2026.",
+    "pricingSource": "https://docs.meshy.ai/en/api/pricing",
+    "pricingVerifiedAt": "2026-10-11T14:26:05.373Z",
+    "provider": "meshy"
+  },
+  "roomId": "imjin-geobuk-dragonhead",
+  "schema": "game-room.prop-manifest.v1",
+  "localProcessing": {
+    "uniformShipScale": 1.2,
+    "fitRecipe": "form-fit-recipe.json",
+    "runtimeAssets": "runtime-assets.json",
+    "oldHeadReplacement": "procedural dragonHead call omitted only after all generated LODs load",
+    "extraGenerationCredits": 0
+  }
+}

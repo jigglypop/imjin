@@ -1,0 +1,24 @@
+{
+  "source": "src/ships/build/geobukseon.ts dragonHead call omitted, no spatial clipping",
+  "anchorsIdentical": true,
+  "lods": [
+    {
+      "lod": 0,
+      "beforeTriangles": 22568,
+      "withoutHeadTriangles": 21548,
+      "removedTriangles": 1020
+    },
+    {
+      "lod": 1,
+      "beforeTriangles": 3784,
+      "withoutHeadTriangles": 3036,
+      "removedTriangles": 748
+    },
+    {
+      "lod": 2,
+      "beforeTriangles": 746,
+      "withoutHeadTriangles": 458,
+      "removedTriangles": 288
+    }
+  ]
+}

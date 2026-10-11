@@ -1,0 +1,48 @@
+{
+  "schema": "game-room.milestone-reviews.v1",
+  "roomId": "imjin-geobuk-dragonhead",
+  "function": {
+    "status": "approved",
+    "approvedBy": "user",
+    "approvedAt": "2026-10-11T14:26:05.398Z",
+    "evidence": [
+      "images/reference.png",
+      "props.json"
+    ],
+    "notes": "Asset-only image/model/budget approval, user selected 이 이미지로 생성 진행 after latest Meshy instruction."
+  },
+  "form": {
+    "status": "approved",
+    "approvedBy": "user",
+    "approvedAt": "2026-10-11T14:48:56.972Z",
+    "approval": "이대로 장착·배포",
+    "evidence": [
+      "renders/head-front.png",
+      "renders/head-right.png",
+      "renders/head-back.png",
+      "renders/head-left.png",
+      "renders/mounted-bow.png",
+      "renders/mounted-side.png"
+    ],
+    "draftBlendSha256": "fd8d2dc39c81ef83b0dce60dab2568fd1736063fb625ce4c6dd5acc8cfe892d5",
+    "notes": "User reviewed the actual views; local LOD export only, no extra generation cost.",
+    "fitRecipeSha256": "e7b529b4c9c9fae57811c4d905d053c79cdf8bdced30ce41ca27f7638f09c5c2",
+    "uniformScaleApproval": {
+      "scale": 1.2,
+      "approvedBy": "user",
+      "instruction": "거북선 좀 크기 키워봐 판옥선보다 크고 멋있어야함 대표"
+    }
+  },
+  "runtime": {
+    "status": "approved",
+    "approvedBy": "runtime-verification",
+    "verifiedAt": "2026-10-11T15:09:30.510Z",
+    "evidence": [
+      "runtime-assets.json",
+      "../../shots/dragonhead-runtime-2026-10-11/verification.json",
+      "../../shots/dragonhead-runtime-2026-10-11/comparison.png",
+      "../../shots/dragonhead-runtime-2026-10-11/battle-close.png"
+    ],
+    "notes": "18 actual WebGPU checks; no page errors, missing assets, attachment fallbacks or unexpected warnings. Existing Three.Clock/Windows powerPreference warnings recorded separately. Performance not benchmarked."
+  }
+}

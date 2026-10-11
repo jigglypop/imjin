@@ -1,0 +1,50 @@
+{
+  "source": {
+    "path": "meshes/dragonhead-attempt-1.glb",
+    "sha256": "2d3bc67e6064eadaeaaf4f0d9bba3448069684a18321eea7465cc8f45e0ae5f8",
+    "taskId": "01a12b5e-8e1c-759a-b96a-cab196950e03",
+    "model": "meshy-7.1",
+    "consumedCredits": 30,
+    "approvedBy": "user",
+    "approval": "\uc774\ub300\ub85c \uc7a5\ucc29\u00b7\ubc30\ud3ec",
+    "approvedAt": "2026-10-11T14:48:56.968Z"
+  },
+  "outputs": [
+    {
+      "level": 0,
+      "target": 1500,
+      "triangles": 1499,
+      "verticesBeforeWeld": 3167,
+      "verticesAfterLOD": 752,
+      "boundaryEdges": 8,
+      "looseEdges": 0,
+      "uniformShipScale": 1.2,
+      "path": "meshes/dragonhead-fitted-lod0.glb",
+      "sha256": "159de7c87d32a7f547197807e4936431e19b5338e880ac23e5242ffbb7444768"
+    },
+    {
+      "level": 1,
+      "target": 500,
+      "triangles": 499,
+      "verticesBeforeWeld": 3167,
+      "verticesAfterLOD": 252,
+      "boundaryEdges": 8,
+      "looseEdges": 0,
+      "uniformShipScale": 1.2,
+      "path": "meshes/dragonhead-fitted-lod1.glb",
+      "sha256": "161b6c9528b67acec838c6c2be88909aff348716fa65ed2d7de269a021150c06"
+    },
+    {
+      "level": 2,
+      "target": 180,
+      "triangles": 179,
+      "verticesBeforeWeld": 3167,
+      "verticesAfterLOD": 92,
+      "boundaryEdges": 8,
+      "looseEdges": 0,
+      "uniformShipScale": 1.2,
+      "path": "meshes/dragonhead-fitted-lod2.glb",
+      "sha256": "763e938bc4bd0f95c53b4fdbc9d73dbb5670c2946fcffb3b1177decfab1c6965"
+    }
+  ]
+}

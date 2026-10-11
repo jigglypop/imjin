@@ -810,9 +810,42 @@ function mingSmallAnchors(plan: MingSmallPlan): ShipAnchors {
 }
 
 const registry = new Map<string, ShipAnchors>();
+const scaledRegistry = new Map<string, ShipAnchors>();
 
-/** Anchors of a procedural ship model by its key (`kind#variant`); undefined for kinds still on the legacy models. */
+/** The representative turtle ship is enlarged uniformly; its construction plan remains in original metres. */
+export const GEOBUK_SCALE = 1.2;
+
+function scaledAnchors(a: ShipAnchors, scale: number): ShipAnchors {
+  const pos = (p: V3): V3 => [p[0] * scale, p[1] * scale, p[2] * scale];
+  return {
+    ...a, length: a.length * scale, beam: a.beam * scale, mainDeck: a.mainDeck * scale,
+    oarDeck: a.oarDeck === null ? null : a.oarDeck * scale,
+    commandDeck: a.commandDeck ? pos(a.commandDeck) : null,
+    deckBounds: { x0: a.deckBounds.x0 * scale, x1: a.deckBounds.x1 * scale, halfBeam: (x) => a.deckBounds.halfBeam(x / scale) * scale },
+    gunPorts: a.gunPorts.map((g) => ({ ...g, pos: pos(g.pos) })),
+    oarPorts: a.oarPorts.map((o) => ({ ...o, pos: pos(o.pos) })),
+    railStations: a.railStations.map((s) => ({ ...s, pos: pos(s.pos) })),
+    rowStations: a.rowStations.map((s) => ({ ...s, pos: pos(s.pos) })),
+    boardingPoints: a.boardingPoints.map((s) => ({ ...s, pos: pos(s.pos) })),
+    lanterns: a.lanterns.map(pos),
+    flagMounts: a.flagMounts.map((f) => ({ ...f, pos: pos(f.pos), size: [f.size[0] * scale, f.size[1] * scale] })),
+    mastTops: a.mastTops.map(pos), smokeStack: a.smokeStack ? pos(a.smokeStack) : undefined,
+    fireSpots: a.fireSpots.map(pos), damageSpots: a.damageSpots.map(pos), stern: pos(a.stern), bow: pos(a.bow),
+    ramTip: a.ramTip ? pos(a.ramTip) : undefined,
+  };
+}
+
+/** Runtime anchors: match the uniformly enlarged geometry, including cannon, crew, oars and smoke. */
 export function anchorsFor(key: string): ShipAnchors | undefined {
+  const raw = buildAnchorsFor(key);
+  if (!raw || !key.startsWith('geobukseon#')) return raw;
+  let a = scaledRegistry.get(key);
+  if (!a) { a = scaledAnchors(raw, GEOBUK_SCALE); scaledRegistry.set(key, a); }
+  return a;
+}
+
+/** Original plan coordinates for construction and grime baking, before the uniform runtime enlargement. */
+export function buildAnchorsFor(key: string): ShipAnchors | undefined {
   const cached = registry.get(key);
   if (cached) return cached;
   const [kind, v] = key.split('#');

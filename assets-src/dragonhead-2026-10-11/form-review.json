@@ -1,0 +1,40 @@
+{
+  "schema": "imjin.dragonhead-form-draft.v1",
+  "source": "meshes/dragonhead-attempt-1.glb",
+  "headObject": "Meshy71_Dragonhead_DRAFT",
+  "oldHeadRemoved": true,
+  "sourceRearPlaneArea": [
+    0.001588363025803119,
+    0.15685152099467814
+  ],
+  "sourceRearBlenderY": "max",
+  "fitBoundsShipSpace": {
+    "min": [
+      18.399999618530273,
+      3.999999761581421,
+      -0.8999999761581421
+    ],
+    "max": [
+      24,
+      6.699999809265137,
+      0.8999999761581421
+    ]
+  },
+  "scaleBlenderXYZ": [
+    2.9537811279296875,
+    3.007498264312744,
+    2.156991958618164
+  ],
+  "anchorsUnchanged": true,
+  "formApproval": "approved",
+  "exported": false,
+  "views": [
+    "head-front.png",
+    "head-right.png",
+    "head-back.png",
+    "head-left.png",
+    "mounted-bow.png",
+    "mounted-side.png",
+    "mounted-full.png"
+  ]
+}

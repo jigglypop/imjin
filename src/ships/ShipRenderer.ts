@@ -54,7 +54,7 @@ import { useProcedural } from './build/mode';
 import { loadProcedural } from './build/procedural';
 import { equipment } from '../game/quality';
 import { emberGlow, weather } from './weather';
-import { freeAfterDraw } from '../render/dispose';
+import { disposeTree, freeAfterDraw } from '../render/dispose';
 import { PHASE_RANGE, SWAY_RANGE, TINT_RANGE } from './build/procedural';
 
 export type ShipModelSpec = {
@@ -93,9 +93,9 @@ export const LOD_COUNT = 3;
 
 /** What a phone can afford. `skipLod0` leaves the 2048 px near model out, `baseColorOnly` drops the normal and roughness maps. */
 export type ShipAssetOptions = { skipLod0: boolean; baseColorOnly: boolean; anisotropy: number };
-let assetOptions: ShipAssetOptions = { skipLod0: false, baseColorOnly: false, anisotropy: 16 };
 
-export type LodAsset = { geometry: BufferGeometry; source: MeshStandardMaterial };
+type ModelPart = { geometry: BufferGeometry; source: MeshStandardMaterial };
+export type LodAsset = ModelPart & { parts?: ModelPart[] };
 export type ModelAsset = { key: string; kind: ShipKind; variant: number; lods: LodAsset[]; bounds: Box3; anchors?: ShipAnchors };
 
 export const modelKey = (kind: ShipKind, variant: number) => `${kind}#${variant}`;
@@ -143,8 +143,8 @@ async function loadGltf(url: string) {
 }
 
 /** The mesh files of one model, nearest level first. Without LOD0 the first file is the 1024 px level. */
-async function loadScenes(base: string) {
-  if (!assetOptions.skipLod0) return Promise.all([loadGltf(`${base}.glb`), loadGltf(`${base}_lod1.glb`).catch(() => null), loadGltf(`${base}_lod2.glb`).catch(() => null)]);
+async function loadScenes(base: string, options: ShipAssetOptions) {
+  if (!options.skipLod0) return Promise.all([loadGltf(`${base}.glb`), loadGltf(`${base}_lod1.glb`).catch(() => null), loadGltf(`${base}_lod2.glb`).catch(() => null)]);
   const [lod1, lod2] = await Promise.all([loadGltf(`${base}_lod1.glb`).catch(() => null), loadGltf(`${base}_lod2.glb`).catch(() => null)]);
   if (lod1) return [lod1, lod2];
   return [await loadGltf(`${base}.glb`), lod2];
@@ -161,21 +161,60 @@ function trimMaterial(mat: MeshStandardMaterial) {
   }
 }
 
-async function loadModel(spec: ShipModelSpec): Promise<ModelAsset> {
+/** Exported in ship coordinates in Blender. Loading every required level first keeps the old head as a safe fallback. */
+async function loadDragonHead(options: ShipAssetOptions): Promise<LodAsset[] | null> {
+  const base = '/models/geobukseon_dragonhead_71';
+  const suffixes = options.skipLod0 ? ['_lod1', '_lod2'] : ['', '_lod1', '_lod2'];
+  try {
+    const loaded = await Promise.allSettled(suffixes.map((suffix) => loadGltf(`${base}${suffix}.glb`)));
+    const failed = loaded.find((result) => result.status === 'rejected');
+    if (failed) {
+      for (const result of loaded) if (result.status === 'fulfilled') disposeTree(result.value, true);
+      throw failed.reason;
+    }
+    const scenes = loaded.map((result) => (result as PromiseFulfilledResult<Group>).value);
+    const levels = scenes.map((scene) => {
+      const mesh = findMesh(scene);
+      const source = mesh.material as MeshStandardMaterial;
+      source.userData.shipAttachment = true;
+      source.userData.shipAnisotropy = options.anisotropy;
+      if (options.baseColorOnly) trimMaterial(source);
+      return { geometry: bake(mesh, mesh.matrixWorld), source };
+    });
+    return [0, 1, 2].map((level) => levels[options.skipLod0 ? Math.max(0, level - 1) : level]!);
+  } catch (error) {
+    console.warn('Dragon head unavailable; keeping the original complete ship.', error);
+    return null;
+  }
+}
+
+async function loadModel(spec: ShipModelSpec, options: ShipAssetOptions, isolated = false): Promise<ModelAsset> {
   if (useProcedural(spec.kind)) {
     // Built to SHIP_SPECS dimensions in ship space already: no orient/scale/waterline fit.
-    const p = await loadProcedural(spec.kind, spec.variant);
-    return { key: modelKey(spec.kind, spec.variant), kind: spec.kind, variant: spec.variant, lods: p.lods, bounds: p.lods[0]!.geometry.boundingBox!.clone(), anchors: p.anchors };
+    const head = spec.kind === 'geobukseon' ? await loadDragonHead(options) : null;
+    const p = await loadProcedural(spec.kind, spec.variant, !!head);
+    if (isolated) {
+      // Atlas textures outlive this scene; only a private material clone belongs to it.
+      const source = p.lods[0]!.source.clone();
+      source.userData.shipAnisotropy = options.anisotropy;
+      for (const lod of p.lods) lod.source = source;
+    }
+    const bounds = p.lods[0]!.geometry.boundingBox!.clone();
+    if (head) {
+      for (let level = 0; level < p.lods.length; level++) (p.lods[level] as LodAsset).parts = [head[level]!];
+      bounds.union(head[0]!.geometry.boundingBox!);
+    }
+    return { key: modelKey(spec.kind, spec.variant), kind: spec.kind, variant: spec.variant, lods: p.lods, bounds, anchors: p.anchors };
   }
   let base = spec.base;
   let scenes: (Group | null)[];
   try {
-    scenes = await loadScenes(base);
+    scenes = await loadScenes(base, options);
   } catch (err) {
     const fallback = FALLBACK_MODEL[spec.kind];
     if (!fallback) throw err;
     base = fallback;
-    scenes = await loadScenes(base);
+    scenes = await loadScenes(base, options);
     spec = { ...spec, axis: 'z', bow: 1, waterline: 0.27 };
   }
   const lod0 = findMesh(scenes[0]!);
@@ -195,10 +234,11 @@ async function loadModel(spec: ShipModelSpec): Promise<ModelAsset> {
     const mesh = findMesh(scene);
     const m = new Matrix4().multiplyMatrices(fix, new Matrix4().multiplyMatrices(orient, mesh.matrixWorld));
     const source = mesh.material as MeshStandardMaterial;
-    if (assetOptions.baseColorOnly) trimMaterial(source);
+    source.userData.shipAnisotropy = options.anisotropy;
+    if (options.baseColorOnly) trimMaterial(source);
     lods.push({ geometry: bake(mesh, m), source });
   }
-  if (assetOptions.baseColorOnly) {
+  if (options.baseColorOnly) {
     // The levels are simplified copies of one model with the same UVs, so the first one's colour map serves them all.
     // One texture and one shader program per model instead of one per level.
     const shared = lods[0]!.source.map;
@@ -216,14 +256,13 @@ async function loadModel(spec: ShipModelSpec): Promise<ModelAsset> {
 const modelCache = new Map<string, Promise<ModelAsset>>();
 
 export async function loadShipAssets(kinds: ShipKind[], options: ShipAssetOptions, onProgress?: (fraction: number) => void) {
-  assetOptions = options;
   const specs = SHIP_MODELS.filter((m) => kinds.includes(m.kind));
   let loaded = 0;
   const list = await Promise.all(
     specs.map((s) => {
       let model = modelCache.get(modelKey(s.kind, s.variant));
       if (!model) {
-        model = loadModel(s);
+        model = loadModel(s, options);
         modelCache.set(modelKey(s.kind, s.variant), model);
         model.catch(() => modelCache.delete(modelKey(s.kind, s.variant)));
       }
@@ -237,6 +276,27 @@ export async function loadShipAssets(kinds: ShipKind[], options: ShipAssetOption
   return Object.fromEntries(list.map((a) => [a.key, a])) as Record<string, ModelAsset>;
 }
 
+/** Separate renderers need fresh CPU geometry: uploading a battle asset may detach its arrays. */
+export async function loadSceneShipAssets(kinds: ShipKind[], options: ShipAssetOptions) {
+  const results = await Promise.allSettled(SHIP_MODELS.filter(s => kinds.includes(s.kind)).map(s => loadModel(s, options, true)));
+  const assets = Object.fromEntries(results.flatMap(r => r.status === 'fulfilled' ? [[r.value.key, r.value]] : [])) as Record<string, ModelAsset>;
+  const failed = results.find(r => r.status === 'rejected');
+  if (failed) { disposeSceneShipAssets(assets); throw failed.reason; }
+  return assets;
+}
+
+/** Scene-owned model geometry and GLTF textures, leaving the shared faction atlas untouched. */
+export function disposeSceneShipAssets(assets: Record<string, ModelAsset>) {
+  const levels = Object.values(assets).flatMap(a => a.lods.flatMap(l => [l, ...(l.parts ?? [])]));
+  for (const geometry of new Set(levels.map(l => l.geometry))) geometry.dispose();
+  const textures = new Set<Texture>();
+  for (const source of new Set(levels.map(l => l.source))) {
+    if (!source.userData.atlas) for (const value of Object.values(source)) if (value && (value as Texture).isTexture) textures.add(value as Texture);
+    source.dispose();
+  }
+  for (const texture of textures) texture.dispose();
+}
+
 /** Frees the models no longer in `keep`: their geometry and textures. Call once the batches that drew them are gone. */
 export async function releaseShipAssets(keep: Set<string>) {
   // Every dropped model leaves the cache at once: one that stayed in it while an earlier one was awaited could be
@@ -246,10 +306,11 @@ export async function releaseShipAssets(keep: Set<string>) {
   for (const [, pending] of dropped) {
     const asset = await pending.catch(() => null);
     if (!asset) continue;
-    for (const lod of asset.lods) {
-      lod.geometry.dispose();
-      for (const value of Object.values(lod.source)) if (value && (value as Texture).isTexture) (value as Texture).dispose();
-      lod.source.dispose();
+    const levels = asset.lods.flatMap((lod) => [lod, ...(lod.parts ?? [])]);
+    for (const geometry of new Set(levels.map((lod) => lod.geometry))) geometry.dispose();
+    for (const source of new Set(levels.map((lod) => lod.source))) {
+      for (const value of new Set(Object.values(source))) if (value && (value as Texture).isTexture) (value as Texture).dispose();
+      source.dispose();
     }
   }
 }
@@ -265,12 +326,13 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   if (src.normalMap && !atlas) {
     m.normalMap = src.normalMap;
     m.normalScale.copy(src.normalScale);
-    src.normalMap.anisotropy = assetOptions.anisotropy;
+    src.normalMap.anisotropy = src.userData.shipAnisotropy ?? equipment.anisotropy;
   }
   m.metalness = 0;
+  if (src.userData.shipAttachment) m.metalnessNode = src.metalnessMap ? texture(src.metalnessMap, uv()).b.mul(src.metalness) : float(src.metalness);
   m.roughness = 1;
   const map = src.map as Texture | null;
-  if (map) map.anisotropy = assetOptions.anisotropy;
+  if (map) map.anisotropy = src.userData.shipAnisotropy ?? equipment.anisotropy;
   const A: any = instancedDynamicBufferAttribute(a, 'vec4');
   const B: any = instancedDynamicBufferAttribute(b, 'vec4');
   const origin = A.xyz;
@@ -345,7 +407,8 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   return m;
 }
 
-type Batch = { mesh: InstancedMesh; a: InstancedBufferAttribute; b: InstancedBufferAttribute; c?: InstancedBufferAttribute; count: number; renderer?: WebGPURenderer; released?: boolean };
+type Batch = { mesh: InstancedMesh; a: InstancedBufferAttribute; b: InstancedBufferAttribute; c?: InstancedBufferAttribute; count: number; parts?: Batch[]; renderer?: WebGPURenderer; released?: boolean };
+const batchParts = (batch: Batch) => [batch, ...(batch.parts ?? [])];
 /** Most ships one model can show in cutaway; the engine picks no more than this many in all. */
 export const CUT_CAP = 12;
 
@@ -383,11 +446,15 @@ export class ShipRenderer {
       const old = previous[level]!;
       const batch = next[level]!;
       // add() can grow a batch midway through a frame, after other ships have already submitted their poses.
-      (batch.mesh.instanceMatrix.array as Float32Array).set(old.mesh.instanceMatrix.array);
-      (batch.a.array as Float32Array).set(old.a.array);
-      (batch.b.array as Float32Array).set(old.b.array);
-      batch.count = old.count;
-      batch.mesh.count = old.mesh.count;
+      const nextParts = batchParts(batch);
+      for (const [part, prior] of batchParts(old).entries()) {
+        const target = nextParts[part]!;
+        (target.mesh.instanceMatrix.array as Float32Array).set(prior.mesh.instanceMatrix.array);
+        (target.a.array as Float32Array).set(prior.a.array);
+        (target.b.array as Float32Array).set(prior.b.array);
+        target.count = prior.count;
+        target.mesh.count = prior.mesh.count;
+      }
       this.release(old);
     }
   }
@@ -410,8 +477,28 @@ export class ShipRenderer {
   }
 
   private release(batch: Batch) {
-    this.group.remove(batch.mesh);
-    if (!batch.released) (batch.mesh.material as MeshStandardNodeMaterial).dispose();
+    for (const part of batchParts(batch)) {
+      this.group.remove(part.mesh);
+      if (!part.released) (part.mesh.material as MeshStandardNodeMaterial).dispose();
+    }
+  }
+
+  private makeBatch(lod: LodAsset, cap: number, nominal: number, cut = false): Batch {
+    const mk = () => new InstancedBufferAttribute(new Float32Array(cap * 4), 4).setUsage(DynamicDrawUsage);
+    const a = mk();
+    const b = mk();
+    const c = cut ? mk() : undefined;
+    const mesh = new InstancedMesh(lod.geometry, createMaterial(lod.source, a, b, c), cap);
+    mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    mesh.count = 0;
+    mesh.frustumCulled = false;
+    mesh.castShadow = nominal < 2;
+    mesh.receiveShadow = nominal < 2;
+    freeAfterDraw(mesh);
+    this.group.add(mesh);
+    const batch = this.own({ mesh, a, b, c, count: 0 });
+    batch.parts = lod.parts?.map((part) => this.makeBatch(part, cap, nominal, cut));
+    return batch;
   }
 
   private buildKey(key: string) {
@@ -422,21 +509,9 @@ export class ShipRenderer {
       this.batches.set(
         key,
         asset.lods.map((lod, level) => {
-          const a = new InstancedBufferAttribute(new Float32Array(cap * 4), 4);
-          const b = new InstancedBufferAttribute(new Float32Array(cap * 4), 4);
-          a.setUsage(DynamicDrawUsage);
-          b.setUsage(DynamicDrawUsage);
-          const mesh = new InstancedMesh(lod.geometry, createMaterial(lod.source, a, b), cap);
-          mesh.instanceMatrix.setUsage(DynamicDrawUsage);
-          mesh.count = 0;
-          mesh.frustumCulled = false;
-          freeAfterDraw(mesh);
           // Shadows and shading from the two nearest of the three levels, counted as if the full set were there.
           const nominal = level + LOD_COUNT - asset.lods.length;
-          mesh.castShadow = nominal < 2;
-          mesh.receiveShadow = nominal < 2;
-          this.group.add(mesh);
-          return this.own({ mesh, a, b, count: 0 });
+          return this.makeBatch(lod, cap, nominal);
         }),
       );
     }
@@ -451,31 +526,14 @@ export class ShipRenderer {
   }
 
   begin() {
-    for (const list of this.batches.values()) for (const batch of list) batch.count = 0;
-    for (const batch of this.cuts.values()) batch.count = 0;
+    for (const batch of [...[...this.batches.values()].flat(), ...this.cuts.values()]) for (const part of batchParts(batch)) part.count = 0;
   }
 
   private cutBatch(key: string) {
     let batch = this.cuts.get(key);
     if (batch || !this.assets[key]) return batch;
     const lod = this.assets[key]!.lods[0]!;
-    const mk = () => {
-      const attr = new InstancedBufferAttribute(new Float32Array(CUT_CAP * 4), 4);
-      attr.setUsage(DynamicDrawUsage);
-      return attr;
-    };
-    const a = mk();
-    const b = mk();
-    const c = mk();
-    const mesh = new InstancedMesh(lod.geometry, createMaterial(lod.source, a, b, c), CUT_CAP);
-    mesh.instanceMatrix.setUsage(DynamicDrawUsage);
-    mesh.count = 0;
-    mesh.frustumCulled = false;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    freeAfterDraw(mesh);
-    this.group.add(mesh);
-    batch = this.own({ mesh, a, b, c, count: 0 });
+    batch = this.makeBatch(lod, CUT_CAP, 0, true);
     this.cuts.set(key, batch);
     return batch;
   }
@@ -488,23 +546,25 @@ export class ShipRenderer {
       batch = this.batches.get(key)?.[lod];
     }
     if (!batch || batch.count >= batch.mesh.instanceMatrix.count) return;
-    if (batch.c) (batch.c.array as Float32Array)[batch.count * 4] = cut!;
-    const i = batch.count++;
-    batch.mesh.setMatrixAt(i, matrix);
-    const A = batch.a.array as Float32Array;
-    const B = batch.b.array as Float32Array;
-    A[i * 4] = origin.x;
-    A[i * 4 + 1] = origin.y;
-    A[i * 4 + 2] = origin.z;
-    A[i * 4 + 3] = burn;
-    B[i * 4] = up.x;
-    B[i * 4 + 1] = up.y;
-    B[i * 4 + 2] = up.z;
-    B[i * 4 + 3] = flash;
+    for (const part of batchParts(batch)) {
+      if (part.c) (part.c.array as Float32Array)[part.count * 4] = cut!;
+      const i = part.count++;
+      part.mesh.setMatrixAt(i, matrix);
+      const A = part.a.array as Float32Array;
+      const B = part.b.array as Float32Array;
+      A[i * 4] = origin.x;
+      A[i * 4 + 1] = origin.y;
+      A[i * 4 + 2] = origin.z;
+      A[i * 4 + 3] = burn;
+      B[i * 4] = up.x;
+      B[i * 4 + 1] = up.y;
+      B[i * 4 + 2] = up.z;
+      B[i * 4 + 3] = flash;
+    }
   }
 
   end() {
-    for (const batch of [...[...this.batches.values()].flat(), ...this.cuts.values()]) {
+    for (const batch of [...[...this.batches.values()].flat(), ...this.cuts.values()].flatMap(batchParts)) {
       batch.mesh.count = batch.count;
       if (batch.count === 0) continue;
       batch.mesh.instanceMatrix.clearUpdateRanges();
