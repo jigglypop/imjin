@@ -41,6 +41,7 @@ import {
   vec3,
 } from 'three/tsl';
 import { type TerrainSpec } from './generate';
+import { DEFAULT_BIOME } from './region';
 import type { Structure } from './features';
 import type { TerrainQuality } from '../game/quality';
 import { disposeTree, freeAfterDraw, freeArray } from '../render/dispose';
@@ -83,6 +84,14 @@ export class Terrain {
   readonly rotation = uniform(new Vector2(1, 0));
   readonly sizeU = uniform(0);
   readonly season = uniform(0);
+  // The region's character, as uniforms so that every region shares one shader program. The defaults change nothing.
+  readonly tint = uniform(new Vector3(1, 1, 1));
+  /** Share of crowns that are broad-leaved; the trees read it. */
+  readonly broadleaf = uniform(0);
+  private readonly shoreTint = uniform(new Vector3(1, 1, 1));
+  private readonly dry = uniform(0);
+  private readonly shore = uniform(1);
+  private readonly rockLook = uniform(0);
   readonly heightTexture: DataTexture;
   readonly maskTexture: DataTexture;
   private readonly tiles: Mesh[];
@@ -92,6 +101,13 @@ export class Terrain {
 
   private constructor(readonly spec: TerrainSpec, readonly heights: Float32Array, readonly mask: Uint8Array, readonly structures: Structure[], quality: TerrainQuality, private readonly ground: Ground) {
     this.sizeU.value = spec.size;
+    const biome = spec.region?.biome ?? DEFAULT_BIOME;
+    this.tint.value.set(...biome.tint);
+    this.shoreTint.value.set(...biome.shoreTint);
+    this.broadleaf.value = biome.broadleaf;
+    this.dry.value = biome.dry;
+    this.shore.value = biome.shore;
+    this.rockLook.value = biome.rockLook;
     const mtex = new DataTexture(mask, spec.res, spec.res, RGBAFormat, UnsignedByteType);
     mtex.magFilter = LinearFilter;
     mtex.minFilter = LinearFilter;
@@ -124,7 +140,7 @@ export class Terrain {
     try {
       const loading = Promise.all([
         new Promise<{ heights: Float32Array; mask: Uint8Array; structures: Structure[] }>((resolve, reject) => {
-          worker.onmessage = (e) => resolve(e.data);
+          worker.onmessage = (e) => (e.data.error ? reject(new Error(e.data.error)) : resolve(e.data));
           worker.onerror = (e) => reject(e);
           worker.postMessage(spec);
         }),
@@ -320,16 +336,16 @@ export class Terrain {
     const dark = vec3(0.016, 0.032, 0.014);
     const mid = vec3(0.034, 0.058, 0.022);
     const light = vec3(0.062, 0.085, 0.032);
-    const forestBase = mix(mix(dark, mid, smoothstep(-0.6, 0.4, canopyNoise)), light, smoothstep(0.25, 0.85, crowns).mul(0.6));
+    const forestBase = mix(mix(dark, mid, smoothstep(-0.6, 0.4, canopyNoise)), light, smoothstep(0.25, 0.85, crowns).mul(0.6)).mul(this.tint);
     const leafDetail = texture(leaves, p.xz.mul(1 / 9)).rgb;
     const forest = forestBase.mul(leafDetail.mul(1.6).add(0.45));
-    const grassCol = texture(grass, p.xz.mul(1 / 160)).rgb.mul(0.85);
+    const grassCol = texture(grass, p.xz.mul(1 / 160)).rgb.mul(0.85).mul(this.tint);
     const rockCol = tri(rock, 1 / 70).mul(0.9);
     const cliffCol = tri(cliff, 1 / 30);
     const strata = h.mul(0.32).add(canopyNoise.mul(2.4)).sin().mul(0.08).add(0.92);
     const coastCol = tri(coastRocks, 1 / 14).mul(strata).mul(vec3(0.88, 0.92, 0.93));
-    const sandCol = texture(sand, p.xz.mul(1 / 12)).rgb.mul(vec3(1.0, 0.96, 0.88));
-    const beachW = float(1).sub(smoothstep(1.2, 5.5, h)).mul(float(1).sub(smoothstep(0.18, 0.4, slope)));
+    const sandCol = texture(sand, p.xz.mul(1 / 12)).rgb.mul(vec3(1.0, 0.96, 0.88)).mul(this.shoreTint);
+    const beachW = float(1).sub(smoothstep(1.2, 5.5, h.div(this.shore))).mul(float(1).sub(smoothstep(0.18, 0.4, slope)));
     const coastW = float(1).sub(smoothstep(4, 24, h)).mul(smoothstep(0.025, 0.16, slope));
     const cliffW = smoothstep(0.42, 0.68, slope);
     const peakW = smoothstep(330, 470, h).mul(float(1).sub(cliffW));
@@ -338,6 +354,8 @@ export class Terrain {
     const underwater = float(1).sub(smoothstep(-2.5, 0.6, h));
     let col = forest;
     col = mix(col, grassCol.mul(0.55).add(forest.mul(0.4)), grassW);
+    // Dry country: the greens turn to straw.
+    col = mix(col, col.mul(vec3(1.4, 1.22, 0.8)).add(vec3(0.02, 0.016, 0.004)), this.dry);
     col = mix(col, rockCol, peakW);
     col = mix(col, cliffCol, cliffW);
     col = mix(col, coastCol, coastW);
@@ -355,12 +373,16 @@ export class Terrain {
     const paddy = mix(mix(paddySummer, paddyAutumn, smoothstep(0.0, 0.7, this.season)), paddyWinter, smoothstep(0.7, 1.0, this.season));
     const fieldCol = mix(vec3(0.1, 0.08, 0.05), paddy, dikeX.mul(dikeZ));
     const fieldW = smoothstep(0.08, 0.5, mask.b).mul(float(1).sub(cliffW)).mul(float(1).sub(beachW));
-    col = mix(col, fieldCol, fieldW);
+    const wheat = mix(vec3(0.3, 0.24, 0.1), vec3(0.4, 0.32, 0.13), plotHash);
+    col = mix(col, mix(fieldCol, wheat.mul(dikeX.mul(dikeZ).mul(0.35).add(0.65)), this.dry), fieldW);
+    // Bare stone on the rocky ground the features pass found, over the woods and the grass.
+    const rockW = smoothstep(0.12, 0.55, mask.g).mul(this.rockLook).mul(float(1).sub(underwater));
+    col = mix(col, mix(coastCol, cliffCol, 0.4), rockW);
     const forestDensity = mask.r;
     const canopyBase = mix(vec3(0.012, 0.026, 0.011), vec3(0.03, 0.05, 0.018), smoothstep(-0.5, 0.6, canopyNoise));
     const canopyAutumn = mix(canopyBase, mix(vec3(0.16, 0.06, 0.015), vec3(0.2, 0.14, 0.03), smoothstep(-0.4, 0.5, crowns)), smoothstep(0.25, 0.7, this.season).mul(smoothstep(0.1, 0.6, crowns)).mul(0.6));
     const canopy = canopyAutumn.mul(smoothstep(0.1, 0.8, crowns).mul(0.5).add(0.75));
-    col = mix(col, canopy, smoothstep(0.15, 0.7, forestDensity).mul(forestW).mul(0.92));
+    col = mix(col, canopy.mul(this.tint), smoothstep(0.15, 0.7, forestDensity).mul(forestW).mul(0.92).mul(float(1).sub(rockW)));
     const wet = float(1).sub(smoothstep(0.2, 4, h)).mul(float(1).sub(underwater));
     m.colorNode = col.mul(mix(vec3(1), vec3(0.54, 0.62, 0.63), wet));
     m.roughnessNode = mix(float(0.94), float(0.32), wet).sub(cliffW.mul(0.08)).sub(forestW.mul(0.04)).max(0.25);

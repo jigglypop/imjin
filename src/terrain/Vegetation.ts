@@ -172,6 +172,8 @@ export class Vegetation {
     const h2 = hash(seed.add(uint(1)));
     const h3 = hash(seed.add(uint(2)));
     const h4 = hash(seed.add(uint(3)));
+    // A broad-leaved tree is wide and low, and its crown is a lighter green. The share is the region's; 0 leaves only pines.
+    const broad = varying(hash(seed.add(uint(4))).lessThan(t.broadleaf).select(float(1), float(0)));
     const px: any = cellX.add(h1).mul(cell);
     const pz: any = cellZ.add(h2).mul(cell);
     const uvT = vec2(px, pz).div(size).add(0.5);
@@ -187,6 +189,8 @@ export class Vegetation {
     const keepInner = inner > 0 ? d.greaterThan(h4.mul(0.2).add(0.88).mul(inner)) : float(1).greaterThan(0);
     const keep = keepDensity.and(keepOuter).and(keepInner).and(ground.greaterThan(2.5));
     const s: any = keep.select(mix(float(0.75), float(1.3), h4).mul(inner > 0 ? (cell > 15 ? 2.1 : 1.45) : 1), float(0));
+    const sTall = s.mul(float(1).sub(broad.mul(0.22)));
+    const sWide = s.mul(broad.mul(0.3).add(1));
     const rot = h1.mul(6.2831);
     const c = cos(rot);
     const sn = sin(rot);
@@ -196,15 +200,15 @@ export class Vegetation {
     const sway: any = sin(time.mul(1.3).add(px.mul(0.05)).add(h2.mul(6.28))).mul(0.18).mul(pg.y.div(14).pow(2)).mul(part);
     m.positionNode = Fn(() => {
       normalLocal.assign(vec3(normalGeometry.x.mul(c).sub(normalGeometry.z.mul(sn)), normalGeometry.y, normalGeometry.x.mul(sn).add(normalGeometry.z.mul(c))));
-      const lx = pg.x.mul(c).sub(pg.z.mul(sn)).mul(s);
-      const lz = pg.x.mul(sn).add(pg.z.mul(c)).mul(s);
-      return vec3(px.add(lx).add(sway), ground.sub(0.5).add(pg.y.mul(s)), pz.add(lz).add(sway.mul(0.6)));
+      const lx = pg.x.mul(c).sub(pg.z.mul(sn)).mul(sWide);
+      const lz = pg.x.mul(sn).add(pg.z.mul(c)).mul(sWide);
+      return vec3(px.add(lx).add(sway), ground.sub(0.5).add(pg.y.mul(sTall)), pz.add(lz).add(sway.mul(0.6)));
     })();
     const tint = varying(h3.mul(0.6).add(h2.mul(0.4)));
     const autumnPick = varying(smoothstep(0.62, 0.7, h1));
     const vPart = varying(part);
     const vAo = varying(ao);
-    const pineCol = mix(vec3(0.022, 0.05, 0.02), vec3(0.045, 0.075, 0.026), tint);
+    const pineCol = mix(mix(vec3(0.022, 0.05, 0.02), vec3(0.045, 0.075, 0.026), tint), mix(vec3(0.04, 0.085, 0.026), vec3(0.075, 0.12, 0.034), tint), broad).mul(t.tint);
     const broadAutumn = mix(vec3(0.28, 0.1, 0.02), vec3(0.32, 0.22, 0.03), tint);
     const winterBare = mix(vec3(0.07, 0.055, 0.04), vec3(0.09, 0.075, 0.05), tint);
     const seasonal = mix(mix(pineCol, broadAutumn, smoothstep(0.2, 0.7, t.season).mul(autumnPick)), winterBare, smoothstep(0.8, 1.0, t.season).mul(autumnPick));

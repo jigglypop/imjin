@@ -21,4 +21,12 @@ Assets and modifications:
 - grand_map.webp: shaded backdrop of the campaign hub and faction pick, built
   by scripts/build-grand-map.mjs from Terrarium tiles with korea_dem laid over
   where it reaches.
+- ../terrain/<region>.dem: the ground of the 25 faction-campaign region battles.
+  Each is a 16 km square of the same Terrarium tiles at zoom 13 (about 15.6 m
+  a pixel), centred on the region's marker, despiked and resampled to 1024 x 1024
+  half-metre heights by scripts/fetch-region-dem.mjs (src/terrain/regionDem.ts
+  reads them). The source has no sea depth: the sea is set to zero and the
+  game builds a seabed that deepens away from the shore, and adds small-scale
+  relief between the samples. Heights inland are the data's; the harbour,
+  anchorage and capture-point layout on them is a game design, not a survey.
 Port coordinates are approximate campaign markers, not measured harbour positions.

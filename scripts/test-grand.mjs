@@ -3,6 +3,7 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
+import { groundHeights } from './region-ground.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const server = await createServer({
@@ -33,7 +34,9 @@ const { generateHeightmap } = await load('/src/terrain/generate.ts');
 const { SIM_DT } = await load('/src/sim/battle.ts');
 
 // The land sampler of a region's terrain as the engine hands it to the builder: world coordinates, the map turned by `axis`.
+// Region windows are read from public/terrain, so they are built up front; the old shared maps are generated on demand.
 const heightmaps = new Map();
+for (const id of REGION_ORDER) heightmaps.set(REGION_SITES[id].terrain.seed + ':' + REGION_SITES[id].terrain.size, await groundHeights(load, REGION_SITES[id].terrain));
 function landOf(spec, axis = 0) {
   let h = heightmaps.get(spec.seed + ':' + spec.size);
   if (!h) heightmaps.set(spec.seed + ':' + spec.size, (h = generateHeightmap(spec)));

@@ -1,4 +1,5 @@
 import { createNoise2D } from './noise';
+import type { RegionGround } from './region';
 
 export type LandShape = {
   x: number;
@@ -21,6 +22,8 @@ export type TerrainSpec = {
   symmetric?: boolean;
   /** Ground kept clear of villages and trees, such as the shore works of capture points. */
   reserve?: { x: number; z: number; r: number }[];
+  /** A campaign region cut from real elevation data: its heights come from regionHeightmap, not from generateHeightmap. */
+  region?: RegionGround;
 };
 
 export const HANSAN_TERRAIN: TerrainSpec = {

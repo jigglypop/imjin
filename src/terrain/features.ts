@@ -1,5 +1,6 @@
 import { createNoise2D } from './noise';
 import type { TerrainSpec } from './generate';
+import { DEFAULT_BIOME } from './region';
 
 export type StructureType = 'choga' | 'giwa' | 'fortgate' | 'bongsu';
 export type Structure = { type: StructureType; x: number; z: number; y: number; rot: number; s: number };
@@ -23,6 +24,7 @@ const smooth = (a: number, b: number, x: number) => {
 
 export function computeFeatures(spec: TerrainSpec, heights: Float32Array): FeatureResult {
   const { size, res } = spec;
+  const biome = spec.region?.biome ?? DEFAULT_BIOME;
   const cell = size / res;
   const rand = mulberry32(spec.seed * 31 + 7);
   const noise = createNoise2D(spec.seed + 4242);
@@ -77,7 +79,7 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
   }
   candidates.sort((a, b) => b.score - a.score);
   const villages: { x: number; z: number; r: number }[] = [];
-  const maxVillages = 7;
+  const maxVillages = biome.villages;
   for (const c of candidates) {
     if (villages.length >= maxVillages) break;
     const w = toWorld(c.i, c.j);
@@ -89,15 +91,29 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
   const structures: Structure[] = [];
   const houses: { x: number; z: number }[] = [];
   for (const v of villages) {
-    const count = 9 + Math.floor(rand() * 16);
+    const count = Math.round((9 + Math.floor(rand() * 16)) * biome.houses);
     const radius = 70 + Math.sqrt(count) * 18;
     v.r = radius;
+    // A row of houses runs along the shore, so it needs the line the coast takes here.
+    const { i: vi, j: vj } = toCell(v.x, v.z);
+    const shoreA = Math.atan2(coastAt(vi, vj + 6) - coastAt(vi, vj - 6), coastAt(vi + 6, vj) - coastAt(vi - 6, vj)) + Math.PI / 2;
     let placed = 0;
     for (let tries = 0; tries < count * 14 && placed < count; tries += 1) {
       const a = rand() * Math.PI * 2;
       const r = Math.sqrt(rand()) * radius;
-      const x = v.x + Math.cos(a) * r;
-      const z = v.z + Math.sin(a) * r;
+      let x = v.x + Math.cos(a) * r;
+      let z = v.z + Math.sin(a) * r;
+      if (biome.layout === 'row') {
+        // The scatter stretched along the shore and squeezed across it.
+        const along = Math.cos(a) * r * 1.8;
+        const across = Math.sin(a) * r * 0.35;
+        x = v.x + Math.cos(shoreA) * along - Math.sin(shoreA) * across;
+        z = v.z + Math.sin(shoreA) * along + Math.cos(shoreA) * across;
+      } else if (biome.layout === 'grid') {
+        // Streets on a square grid, 22 m apart.
+        x = v.x + Math.round((x - v.x) / 22) * 22;
+        z = v.z + Math.round((z - v.z) / 22) * 22;
+      }
       const { i, j } = toCell(x, z);
       const h = H(i, j);
       if (h < 2 || h > 48) continue;
@@ -108,8 +124,10 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
       if (reserved(x, z)) continue;
       houses.push({ x, z });
       const downhill = Math.atan2(-g.gz, -g.gx);
-      const giwa = rand() < 0.2;
-      structures.push({ type: giwa ? 'giwa' : 'choga', x, z, y: h, rot: Math.round((downhill + (rand() - 0.5) * 0.6) / (Math.PI / 2)) * (Math.PI / 2) + (rand() - 0.5) * 0.25, s: 0.9 + rand() * 0.2 });
+      const giwa = rand() < biome.tiled;
+      const rot = Math.round((downhill + (rand() - 0.5) * 0.6) / (Math.PI / 2)) * (Math.PI / 2) + (rand() - 0.5) * 0.25;
+      // The houses of a gridded town all face the street.
+      structures.push({ type: giwa ? 'giwa' : 'choga', x, z, y: h, rot: biome.layout === 'grid' ? Math.round(rot / (Math.PI / 2)) * (Math.PI / 2) : rot, s: 0.9 + rand() * 0.2 });
       placed += 1;
     }
   }
@@ -127,7 +145,7 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
   peaks.sort((a, b) => b.h - a.h);
   const beacons: { x: number; z: number }[] = [];
   for (const p of peaks) {
-    if (beacons.length >= 3) break;
+    if (beacons.length >= biome.beacons) break;
     const w = toWorld(p.i, p.j);
     if (beacons.some((b) => Math.hypot(b.x - w.x, b.z - w.z) < 3500)) continue;
     beacons.push(w);
@@ -186,18 +204,23 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
       const u = (i + 0.5) / res;
       const v = (j + 0.5) / res;
       const patch = patchAt(u, v);
-      let forest = smooth(3.5, 11, h) * (1 - smooth(0.5, 0.95, g)) * (1 - smooth(400, 520, h)) * smooth(-0.42, -0.12, patch);
+      const sparse = (1 - biome.forest) * 0.8;
+      let forest = smooth(3.5, 11, h) * (1 - smooth(0.5, 0.95, g)) * (1 - smooth(biome.canopyLine, biome.canopyLine + 120, h)) * smooth(-0.42 + sparse, -0.12 + sparse, patch);
       const shore = h > -3.5 && h < 3.5 ? 1 - Math.abs(h) / 3.5 : 0;
-      const rocky = Math.max(shore * (0.25 + 0.75 * smooth(0.06, 0.35, g)) * smooth(-0.3, 0.4, noise(i * 0.08, j * 0.08)), smooth(0.85, 1.4, g) * (h > 0 ? 0.55 : 0));
+      const rocky = Math.min(1, biome.rocky * Math.max(shore * (0.25 + 0.75 * smooth(0.06, 0.35, g)) * smooth(-0.3, 0.4, noise(i * 0.08, j * 0.08)), smooth(0.85, 1.4, g) * (h > 0 ? 0.55 : 0)));
+      // Stone shows through the woods.
+      forest *= 1 - rocky * 0.7 * biome.rockLook;
       let field = 0;
       if (h > 1.5 && h < 42 && g < 0.11) {
         const w = toWorld(i, j);
         for (const vil of villages) {
           const d = Math.hypot(w.x - vil.x, w.z - vil.z);
-          if (d < vil.r + 330) field = Math.max(field, 1 - smooth(vil.r + 120, vil.r + 330, d));
+          if (d < vil.r + 330 * biome.fields) field = Math.max(field, 1 - smooth(vil.r + 120 * biome.fields, vil.r + 330 * biome.fields, d));
           if (d < vil.r + 30) forest = 0;
         }
       }
+      // Plains and tidal land are farmed well beyond the villages, wherever the ground is flat and a little above the water.
+      if (biome.plain > 0 && h > 1.5 && h < 30 && g < 0.06 && coastAt(i, j) > 50) field = Math.max(field, biome.plain * smooth(-0.55, -0.05, patch) * (1 - smooth(18, 30, h)));
       if (field > 0) forest *= Math.max(0, 1 - field * 2.6);
       if (beacons.length) {
         const w = toWorld(i, j);

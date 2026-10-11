@@ -441,7 +441,7 @@ try {
   const workers = [];
   globalThis.Worker = class {
     constructor() { this.terminated = 0; workers.push(this); }
-    postMessage() { queueMicrotask(() => globalThis.__workerFailure ? this.onerror(globalThis.__workerFailure) : this.onmessage({ data: { heights: new Float32Array(), mask: new Uint8Array(), structures: [] } })); }
+    postMessage() { queueMicrotask(() => globalThis.__workerFailure ? this.onerror(globalThis.__workerFailure) : this.onmessage({ data: globalThis.__workerMessage ?? { heights: new Float32Array(), mask: new Uint8Array(), structures: [] } })); }
     terminate() { this.terminated += 1; }
   };
   const quality = { texSize: 1024, anisotropy: 1 };
@@ -465,6 +465,11 @@ try {
     await assert.rejects(terrainModule.Terrain.load({}, quality), (error) => error === workerFailure);
     assert.equal(workers[2].terminated, 1);
     globalThis.__workerFailure = null;
+    // A region whose elevation window cannot be fetched reports it by message, since an async worker has no onerror for it.
+    globalThis.__workerMessage = { error: 'region ground yeosu: 404' };
+    await assert.rejects(terrainModule.Terrain.load({}, quality), /region ground yeosu: 404/);
+    assert.equal(workers[3].terminated, 1);
+    globalThis.__workerMessage = null;
   });
   const ships = await bundle('ship-capacity', `
     export { ShipRenderer, modelKey } from './src/ships/ShipRenderer.ts';

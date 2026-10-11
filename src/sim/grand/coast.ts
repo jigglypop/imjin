@@ -8,15 +8,17 @@ import type { TerrainSpec } from '../../terrain/generate';
 import { REGION_ORDER } from './regions';
 import type { RegionId } from './types';
 import layouts from './regionPoints.json';
+import windows from './regionWindows.json';
+import { DEFAULT_BIOME, type RegionBiome } from '../../terrain/region';
 import { environmentFor, type BattleEnvironment, type CoastalClimate } from '../environment';
 import { REGIONS } from './regions';
 
 /**
- * The coast each campaign region is fought on. A region borrows the real terrain of the nearest historical battle
- * (the same heightmap, so the player knows the shore), and its capture points lie along that coast: the defender's
- * port, the attacker's anchorage about a thousand metres out to sea, and one to three contested headlands and
- * waters between them. Regions the historical battles do not reach (the far shore at Nagoya, Shandong and Liaodong)
- * get a generic coast of their own.
+ * The coast each campaign region is fought on. A region with a window in regionWindows.json is cut from real elevation
+ * data around its marker (public/terrain/<id>.dem, see src/terrain/regionDem.ts), so every region has a shore of its own;
+ * one without borrows the generated terrain of the nearest historical battle. The capture points lie along that coast:
+ * the defender's port, the attacker's anchorage about a thousand metres out to sea, and one to three contested headlands
+ * and waters between them.
  *
  * The coordinates of the points come from `scripts/build-region-maps.mjs`, which walks each heightmap from the
  * anchors below and writes `regionPoints.json`: the points are fixed data (so the terrain can keep the ground around
@@ -313,7 +315,7 @@ function coastalPort(base: RegionId, name: string, hanja: string, dx = 0, dz = 0
   };
 }
 
-export const REGION_SITES: Record<RegionId, RegionSite> = {
+const COASTAL_SITES: Record<RegionId, RegionSite> = {
   ...BASE_REGION_SITES as Record<RegionId, RegionSite>,
   nokdo: coastalPort('yeosu', '녹도진', '鹿島鎭', -240, 120),
   balpo: coastalPort('yeosu', '발포진', '鉢浦鎭', 260, -120),
@@ -329,6 +331,61 @@ export const REGION_SITES: Record<RegionId, RegionSite> = {
   dadaepo: coastalPort('busan', '다대포', '多大浦', -300, 160),
   mokpo: coastalPort('myeongnyang', '목포진', '木浦鎭', 150, 200),
 };
+
+/** The south coast: evergreen hills, broad-leaved scrub in the folds, paddies in the valleys, a few tiled roofs. */
+const SOUTH: RegionBiome = { ...DEFAULT_BIOME, forest: 1, canopyLine: 420, rocky: 1, rockLook: 0.55, fields: 1.3, plain: 0.25, villages: 8, tiled: 0.15, broadleaf: 0.35, shore: 0.75 };
+/** Islands: dense dark evergreens over bare stone, fishing hamlets in the coves, almost no farmland. */
+const ISLAND: RegionBiome = { ...SOUTH, forest: 1.1, rocky: 1.35, rockLook: 0.9, fields: 0.6, plain: 0.05, villages: 4, houses: 0.7, layout: 'row', broadleaf: 0.45, beacons: 2 };
+/** The Japanese shore: cedar and laurel, tiled roofs, terraced paddies, villages laid out in rows. */
+const JAPAN: RegionBiome = { ...SOUTH, forest: 1.2, canopyLine: 480, tiled: 0.9, layout: 'row', broadleaf: 0.25, tint: [0.93, 1.02, 0.95], beacons: 1 };
+/** The Ming coast: a dry, open country of wheat and bare hills, walled villages on a grid, beacon towers on every height. */
+const NORTH: RegionBiome = { ...DEFAULT_BIOME, forest: 0.3, canopyLine: 260, rocky: 0.8, rockLook: 0.5, fields: 2.2, plain: 0.85, villages: 10, houses: 1.2, tiled: 0.85, layout: 'grid', beacons: 4, broadleaf: 0.7, tint: [1.12, 1.05, 0.8], dry: 0.7, shore: 1, shoreTint: [0.95, 0.88, 0.72] };
+
+/** How each region's ground is dressed. Anything not listed is the south coast. */
+const BIOMES: Partial<Record<RegionId, RegionBiome>> = {
+  yeosu: { ...SOUTH, forest: 0.85, villages: 11, houses: 1.3, tiled: 0.3, fields: 1.3 },
+  myeongnyang: { ...SOUTH, forest: 0.8, fields: 1.6, plain: 0.4, villages: 8 },
+  mokpo: { ...SOUTH, forest: 0.45, canopyLine: 300, rocky: 0.6, rockLook: 0.3, fields: 2, plain: 0.7, villages: 10, houses: 1.2, layout: 'row', broadleaf: 0.15, tint: [1.05, 1, 0.9], dry: 0.15, shore: 1.5, shoreTint: [0.78, 0.74, 0.66] },
+  noryang: { ...SOUTH, forest: 1.1, rocky: 1.2, rockLook: 0.8, villages: 5 },
+  sacheon: { ...SOUTH, forest: 0.8, fields: 1.8, plain: 0.5 },
+  hansan: { ...ISLAND },
+  geoje: { ...ISLAND, villages: 5, houses: 0.85 },
+  angolpo: { ...SOUTH, forest: 0.9, villages: 7 },
+  busan: { ...SOUTH, forest: 0.55, canopyLine: 360, villages: 12, houses: 1.5, tiled: 0.45, fields: 0.7, plain: 0.1, beacons: 4 },
+  tsushima: { ...JAPAN, forest: 1.3, rocky: 1.3, rockLook: 0.85, villages: 4, houses: 0.8 },
+  nagoya: { ...JAPAN, villages: 6, houses: 1.6, layout: 'grid', fields: 1.5, plain: 0.3, broadleaf: 0.4, tint: [0.95, 1.06, 0.95] },
+  shandong: { ...NORTH },
+  liaodong: { ...NORTH, forest: 0.22, canopyLine: 220, rocky: 1.2, rockLook: 0.9, fields: 1.2, plain: 0.5, villages: 6, broadleaf: 0.8, tint: [1.15, 1.05, 0.82], dry: 0.85 },
+  nokdo: { ...SOUTH, villages: 5, rocky: 1.1 },
+  balpo: { ...SOUTH, villages: 5, rocky: 1.1, fields: 1 },
+  bangdap: { ...ISLAND, villages: 5 },
+  dangpo: { ...SOUTH, villages: 6, forest: 0.9 },
+  danghangpo: { ...SOUTH, forest: 0.85, fields: 1.7, plain: 0.45, villages: 7 },
+  gabaeryang: { ...ISLAND, villages: 5 },
+  yeongdeungpo: { ...ISLAND, villages: 5 },
+  yulpo: { ...ISLAND, fields: 0.9, villages: 5 },
+  jangmunpo: { ...ISLAND, villages: 5 },
+  jepo: { ...SOUTH, tiled: 0.55, houses: 1.2, villages: 7 },
+  cheonseongpo: { ...ISLAND, villages: 5 },
+  dadaepo: { ...SOUTH, forest: 0.6, villages: 10, houses: 1.3, tiled: 0.4, fields: 0.8 },
+};
+
+/** A region cut from real elevation data (public/terrain/<id>.dem, scripts/fetch-region-dem.mjs): 16 km square around the port's marker. */
+function realGround(id: RegionId, index: number): TerrainSpec {
+  return { size: 16000, res: 2048, seed: 1700 + index, shapes: [], channels: [], region: { id, biome: BIOMES[id] ?? SOUTH } };
+}
+
+/**
+ * Every region with a window in regionWindows.json is fought on its real coast: the port is the marker's own water, and the
+ * attacker comes from the bearing of the broadest open sea. The others keep the borrowed historical terrain.
+ */
+export const REGION_SITES: Record<RegionId, RegionSite> = Object.fromEntries(
+  REGION_ORDER.map((id, index) => {
+    const site = COASTAL_SITES[id];
+    const win = (windows as Record<string, { seaward: number } | undefined>)[id];
+    return [id, win ? { ...site, terrain: realGround(id, index), port: { x: 0, z: 0 }, seaward: win.seaward, span: 1200 } : site];
+  }),
+) as Record<RegionId, RegionSite>;
 
 /** Home port of the attacker (seat 0) and of the defender (seat 1) in a region's list of points. */
 export const ATTACKER_HOME = 0;

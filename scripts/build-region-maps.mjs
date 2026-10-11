@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createServer } from 'vite';
 import sharp from 'sharp';
+import { groundHeights } from './region-ground.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -22,17 +23,16 @@ const check = args.includes('--check');
 const only = args.filter((a) => !a.startsWith('--'));
 const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
 const load = (p) => server.ssrLoadModule(p);
-const { generateHeightmap } = await load('/src/terrain/generate.ts');
 const { findSite, placeSlots, findSpawn } = await load('/src/sim/conquest.ts');
 const { REGION_SITES } = await load('/src/sim/grand/coast.ts');
 const { REGION_ORDER } = await load('/src/sim/grand/regions.ts');
 
 const FILE = join(root, 'src/sim/grand/regionPoints.json');
 const heightmaps = new Map();
-function landOf(spec) {
+async function landOf(spec) {
   let h = heightmaps.get(spec.seed + ':' + spec.size);
   if (!h) {
-    h = generateHeightmap(spec);
+    h = await groundHeights(load, spec);
     heightmaps.set(spec.seed + ':' + spec.size, h);
   }
   const { size, res } = spec;
@@ -103,6 +103,8 @@ function roomFor4(L, x, z, maxShore) {
 function homeSpot(L, x, z, reach, maxShore) {
   let best = null;
   for (const c of spiral(x, z, reach, 30)) {
+    // A candidate is never better than its own distance, and the spiral only moves outward.
+    if (best && Math.hypot(c.x - x, c.z - z) > best.d) break;
     if (!clear(L, c.x, c.z, 90)) continue;
     const site = findSite(L, c.x, c.z, R_HOME);
     if (!site || Math.hypot(site.x - c.x, site.z - c.z) > maxShore) continue;
@@ -112,6 +114,22 @@ function homeSpot(L, x, z, reach, maxShore) {
     if (d < 40) break;
   }
   return best;
+}
+
+/** The ports a coast has room for near a point, nearest first and at least 200 m apart: a window's marker may stand in a dead end, so the layout tries more than one. */
+function homeSpots(L, x, z, reach, maxShore, count) {
+  const found = [];
+  for (const c of spiral(x, z, reach, 30)) {
+    if (!clear(L, c.x, c.z, 90)) continue;
+    const site = findSite(L, c.x, c.z, R_HOME);
+    if (!site || Math.hypot(site.x - c.x, site.z - c.z) > maxShore) continue;
+    if (!roomFor4(L, c.x, c.z, maxShore)) continue;
+    found.push({ x: c.x, z: c.z, d: Math.hypot(c.x - x, c.z - z) + 0.5 * Math.hypot(site.x - c.x, site.z - c.z) });
+  }
+  found.sort((a, b) => a.d - b.d);
+  const apartSpots = [];
+  for (const f of found) if (apartSpots.every((o) => dist(o, f) >= 200)) apartSpots.push(f);
+  return apartSpots.slice(0, count);
 }
 
 /** How much of the straight line between two points is open water: the fleets sail it, so a point behind a headland would not be a fair prize. */
@@ -124,20 +142,33 @@ function wetShare(L, a, b) {
 
 function layout(id, L) {
   const site = REGION_SITES[id];
-  const defender = homeSpot(L, site.port.x, site.port.z, 1500, 300);
-  if (!defender) throw new Error(`${id}: no port with room for works near ${site.port.x},${site.port.z}`);
+  // A window cut from the real coast is centred on the port's marker, which may stand a little inland or in a dead end.
+  const defenders = site.terrain.region ? homeSpots(L, site.port.x, site.port.z, 3000, 300, 12) : [homeSpot(L, site.port.x, site.port.z, 1500, 300)].filter(Boolean);
+  if (!defenders.length) throw new Error(`${id}: no port with room for works near ${site.port.x},${site.port.z}`);
+  let failure;
+  for (const defender of defenders) {
+    try {
+      return layoutFrom(id, L, site, { ...defender });
+    } catch (e) {
+      failure ??= e;
+    }
+  }
+  throw failure;
+}
+
+function layoutFrom(id, L, site, defender) {
   // The attacker's anchorage: out toward the sea, as near the span as the shore allows, by a shore of its own.
   let attacker = null;
   // A shore of its own close by if there is one; failing that, the nearest shore the works can be built on.
   for (const maxShore of [420, 1000]) {
-    for (const turn of [0, 0.15, -0.15, 0.3, -0.3, 0.45, -0.45, 0.6, -0.6, 0.8, -0.8, 1, -1, 1.25, -1.25]) {
+    for (const turn of [0, 0.15, -0.15, 0.3, -0.3, 0.45, -0.45, 0.6, -0.6, 0.8, -0.8, 1, -1, 1.25, -1.25, 1.6, -1.6, 2, -2, 2.5, -2.5, Math.PI]) {
       for (const span of [0, 60, -60, 120, -120, 180, -180]) {
         const a = site.seaward + turn;
         const sp = site.span + span;
         const spot = homeSpot(L, defender.x + Math.cos(a) * sp, defender.z + Math.sin(a) * sp, 220, maxShore);
         if (!spot || wetShare(L, defender, spot) < 0.97) continue;
         const gap = dist(defender, spot);
-        if (gap < site.span * 0.85 || gap > site.span * 1.2) continue;
+        if (gap < site.span * 0.85 || gap > site.span * (site.terrain.region ? 1.15 : 1.2)) continue;
         attacker = spot;
         break;
       }
@@ -166,14 +197,18 @@ function layout(id, L) {
   // Both fleets must be able to sail straight to a point for it to be worth fighting over.
   const reachable = (c) => wetShare(L, attacker, c) >= 0.95 && wetShare(L, defender, c) >= 0.95;
   let centre = null;
-  for (const t of [0, 30, -30, 60, -60, 90, -90, 120, -120, 160, -160, 200, -200, 250, -250, 300, -300]) {
-    const c = onBisector(t);
-    if (clear(L, c.x, c.z, 110) && apart(c, R_CENTRE) && reachable(c)) {
-      centre = c;
-      break;
+  // A narrow strait has no room for the full ring of clear water, so the middle settles for less rather than none.
+  for (const room of [110, 70, 40]) {
+    for (const t of [0, 30, -30, 60, -60, 90, -90, 120, -120, 160, -160, 200, -200, 250, -250, 300, -300, 360, -360, 420, -420]) {
+      const c = onBisector(t);
+      if (clear(L, c.x, c.z, room) && apart(c, R_CENTRE) && reachable(c)) {
+        centre = c;
+        break;
+      }
     }
+    if (centre) break;
   }
-  if (!centre) throw new Error(`${id}: no open water for the middle`);
+  if (!centre) throw Object.assign(new Error(`${id}: no open water for the middle`), { partial: points });
   points.push({ role: 'centre', ...centre, r: R_CENTRE, value: 2 });
   // Flanks to either side of the middle: coastal water first (a headland to hold), then open water to fight over.
   for (const side of [-1, 1]) {
@@ -252,7 +287,7 @@ try {
 let failed = 0;
 for (const id of wanted) {
   const site = REGION_SITES[id];
-  const L = landOf(site.terrain);
+  const L = await landOf(site.terrain);
   try {
     const points = layout(id, L);
     result[id] = points;
@@ -262,7 +297,7 @@ for (const id of wanted) {
   } catch (e) {
     failed += 1;
     console.log(`FAIL ${e.message}`);
-    if (preview && e.partial) await render(id, L, site.terrain, e.partial, preview, site.port);
+    if (preview && e.partial) await render(id, L, site.terrain, e.partial, preview, e.partial[1] ?? site.port);
   }
 }
 if (check) {

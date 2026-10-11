@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
+import { groundHeights } from './region-ground.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const saved = new Map();
@@ -139,7 +140,9 @@ try {
     i18n.setLang('ko');
   });
 
+  // Region windows are read from public/terrain, so they are built up front.
   const heightmaps = new Map();
+  for (const id of regions.REGION_ORDER) heightmaps.set(`${REGION_MAPS[id].terrain.seed}:${REGION_MAPS[id].terrain.size}`, await groundHeights(load, REGION_MAPS[id].terrain));
   function landOf(spec, axis) {
     const key = `${spec.seed}:${spec.size}`;
     if (!heightmaps.has(key)) heightmaps.set(key, terrain.generateHeightmap(spec));
