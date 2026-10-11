@@ -66,7 +66,7 @@ export type QueueItem = { id: string; kind: ShipKind; left: number; total: numbe
 
 export type RegionState = {
   /** Fresh campaigns fund free guards by combat power; old saves retain their count-based guard rules. */
-  garrisonRule?: 'equal-power-v1';
+  garrisonRule?: 'equal-power-v1' | 'equal-power-v2';
   /** Unspent guard reinforcement power, carried between turns. */
   garrisonReserve?: number;
   owner: GrandFaction | null;
@@ -166,6 +166,8 @@ export type Grand = {
   victoryRules?: { kind: 'growth-v1'; initialControl: Record<GrandFaction, number>; target: number };
   /** Direct overseas expeditions in a three-way campaign; absent saves retain the original lane graph. */
   strategicLinks?: 'three-way-v1';
+  /** Campaigns begun after the forces were doubled (`TUNING.forceScale`); absent saves keep their fleets, guards and allowance. */
+  forces?: 'wide-v1';
   /** Fresh human-led allied campaigns shrink only their original computer ally. Absent old saves keep their rules. */
   allySupport?: { version: 'player-ally-v1'; faction: 'joseon' | 'ming'; reinforcementCarry: Partial<Record<ShipKind, number>> };
   seed: number;

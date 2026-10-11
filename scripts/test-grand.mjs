@@ -71,13 +71,13 @@ function playOut(g) {
 // Fresh guards share a power budget. Loading an old count-based region does not alter its ships or rule.
 {
   const g = newGrand('ming', 123), sample = structuredClone(g.regions.shandong);
-  check('new campaigns mark guard power rules without changing an old region', Object.values(g.regions).every((r) => r.garrisonRule === 'equal-power-v1') && (() => {
+  check('new campaigns mark guard power rules without changing an old region', Object.values(g.regions).every((r) => r.garrisonRule === 'equal-power-v2') && g.forces === 'wide-v1' && (() => {
     delete sample.garrisonRule; delete sample.garrisonReserve;
     const before = JSON.stringify(sample); garrisonCap('shandong', sample);
     return before === JSON.stringify(sample);
   })());
   const budgets = ['joseon', 'japan', 'ming'].map((f) => {
-    const r = { ...sample, owner: f, garrisonRule: 'equal-power-v1' }, power = shipDef(GARRISON_KIND[f]).strength;
+    const r = { ...sample, owner: f, garrisonRule: 'equal-power-v2' }, power = shipDef(GARRISON_KIND[f]).strength;
     return Math.abs(garrisonCap('shandong', r) * power - garrisonPowerBudget('shandong', r)) <= power * 0.5 + 1e-9;
   });
   check('all guard rosters buy the same power budget within one half of their hull denomination', budgets.every(Boolean));
@@ -86,7 +86,7 @@ function playOut(g) {
   g.events.pending = null;
   const r = g.regions.shandong; r.garrison = [];
   for (let i = 0; i < 6; i++) endTurn(g);
-  check('guard reinforcement carries fractional power between turns without gifting expensive boats every turn', Math.abs(listStrength(r.garrison) + r.garrisonReserve - 6 * shipDef(GARRISON_KIND.joseon).strength * TUNING.garrison.regen) < 1e-7);
+  check('guard reinforcement carries fractional power between turns without gifting expensive boats every turn', Math.abs(listStrength(r.garrison) + r.garrisonReserve - 6 * shipDef(GARRISON_KIND.joseon).strength * TUNING.garrison.regen * TUNING.forceScale) < 1e-7);
 }
 
 {
@@ -173,10 +173,10 @@ function playOut(g) {
     const g = newGrand(faction, 4801), r = g.regions[home];
     g.factions[faction].gold = 5000; g.factions[faction].unlocked.push('geobukseon');
     const yard = r.buildings.find((b) => b.kind === 'shipyard');
-    check(`${faction}: all new ship orders use the common 36-seconds-per-turn rate`, kinds.every((kind) => shipDef(kind).turns === Math.max(1, Math.ceil(shipSpec(kind).build / 36))));
-    check(`${faction}: completed yard levels provide 2, 3 and 4 parallel slots`, [1, 2, 3].every((level) => { yard.level = level; return queueSlots(r) === level + 1; }));
+    check(`${faction}: all new ship orders use the common ${TUNING.shipSecondsPerTurn}-seconds-per-turn rate`, kinds.every((kind) => shipDef(kind).turns === Math.max(1, Math.ceil(shipSpec(kind).build / TUNING.shipSecondsPerTurn))));
+    check(`${faction}: completed yard levels provide 4, 6 and 8 parallel slots`, [1, 2, 3].every((level) => { yard.level = level; return queueSlots(r) === (level + 1) * 2; }));
     yard.level = 1;
-    check(`${faction}: two fresh jobs fit a level-one yard and a third is rejected`, orders.orderRecruit(g, home, kinds.at(-1)).ok && orders.orderRecruit(g, home, kinds.at(-1)).ok && !orders.orderRecruit(g, home, kinds.at(-1)).ok);
+    check(`${faction}: four fresh jobs fit a level-one yard and a fifth is rejected`, [0, 1, 2, 3].every(() => orders.orderRecruit(g, home, kinds.at(-1)).ok) && !orders.orderRecruit(g, home, kinds.at(-1)).ok);
     for (const q of [...r.queue]) orders.cancelRecruit(g, home, q.id);
     const kind = kinds[0], oldTotal = Math.ceil(shipSpec(kind).build / 18);
     r.queue.push({ id: 'legacy-production', kind, left: oldTotal, total: oldTotal, paidGold: 300 });

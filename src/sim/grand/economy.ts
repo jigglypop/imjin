@@ -14,11 +14,11 @@ import { allyIncomeMultiplier } from './support';
 export const TUNING = {
   /** Campaign gold per point of catalog price. */
   goldPerCost: 0.45,
-  /** Seconds of catalog build time per campaign turn on the slipway. */
-  shipSecondsPerTurn: 36,
+  /** Seconds of catalog build time per campaign turn on the slipway (was 36: a panokseon took 2 turns, a turtle ship 3). */
+  shipSecondsPerTurn: 64,
   /** Campaign gold per point of a conquest building's price, and seconds of its build time per turn. */
   buildingGoldScale: 0.5,
-  buildingSecondsPerTurn: 30,
+  buildingSecondsPerTurn: 50,
   /** Gold per turn by region value. */
   income: { 1: 90, 2: 150, 3: 230 } as Record<1 | 2 | 3, number>,
   capitalBonus: 60,
@@ -34,17 +34,21 @@ export const TUNING = {
   levelCost: [1, 1.6, 2.2],
   /** Shipyard level to share of the ship price paid. */
   yardDiscount: [1, 0.9, 0.8],
-  repair: { hull: 0.06, hullCamp: 0.05, hullDock: 0.1, crew: 0.08, crewCamp: 0.06, crewDock: 0.08, supply: 0.25 },
+  repair: { hull: 0.1, hullCamp: 0.08, hullDock: 0.17, crew: 0.13, crewCamp: 0.1, crewDock: 0.13, supply: 0.25 },
   /** Per turn in enemy or neutral water, or on a long lane. */
   attrition: { supply: 0.1, crew: 0.03 },
   /** Cheap local boats that guard a region for free, and how fast they come back. */
   garrison: { base: 2, perValue: 1.5, perCamp: 2, regen: 1 },
+  /** How many times the old free forces a new campaign fields: opening fleets, port garrisons and scheduled reinforcements (`Grand.forces`). */
+  forceScale: 2,
+  /** Parallel slipways are (shipyard level + 1) times this. */
+  yardSlotScale: 2,
   /** Points in the end-of-war score. */
   score: { region: 10, strength: 1 / 250, gold: 1 / 500, credit: 1 / 250, captureCredit: 600 },
   /** Soft cap on ships in a fleet (merge limit); regions may hold any number. */
   fleetCap: Infinity,
   /** Turns a fleet that fought stays in port before it can sail again. */
-  restAfterBattle: 2,
+  restAfterBattle: 1,
   /** Turns at the start in which the computer navies do not attack. */
   openingPeace: 1,
   /** Free squadrons that arrive on a schedule: the war's reinforcements. */
@@ -60,9 +64,9 @@ export const TUNING = {
   faction: {
     // Fast-production development cohorts retain each navy's distinct expedition and opening holdings.
     joseon: { ...COMPETITIVE_FACTIONS.joseon, income: 1.0, label: '조선' },
-    // Japan funds two fronts; Ming's commercial bases finance its longer expedition to the expanded coast.
-    japan: { ...COMPETITIVE_FACTIONS.japan, income: 1.35, label: '일본' },
-    ming: { ...COMPETITIVE_FACTIONS.ming, income: 1.6, label: '명' },
+    // With doubled slipways and forces Japan's cheap hulls snowball, so its income comes down; Ming's bases finance the longer expedition.
+    japan: { ...COMPETITIVE_FACTIONS.japan, income: 0.93, label: '일본' },
+    ming: { ...COMPETITIVE_FACTIONS.ming, income: 2.0, label: '명' },
   } as Record<GrandFaction, { income: number; cost: number; power: number; label: string }>,
 };
 
@@ -83,7 +87,7 @@ export const BUILDING_DEFS: Record<BuildingKind, BuildingDef> = {
   shipyard: { kind: 'shipyard', label: '선소', ...conquestWork(450, 40) },
   battery: { kind: 'battery', label: '포대', ...conquestWork(500, 45) },
   dock: { kind: 'dock', label: '수리소', ...conquestWork(350, 35) },
-  granary: { kind: 'granary', label: '창고', baseGold: 300, baseTurns: 2 },
+  granary: { kind: 'granary', label: '창고', baseGold: 300, baseTurns: 1 },
   beacon: { kind: 'beacon', label: '봉수대', ...conquestWork(300, 25) },
 };
 
@@ -93,7 +97,8 @@ export const BUILDING_ORDER: readonly BuildingKind[] = ['camp', 'shipyard', 'bat
 export function buildingCost(kind: BuildingKind, level: number) {
   const def = BUILDING_DEFS[kind];
   const mul = TUNING.levelCost[Math.min(level, MAX_LEVEL) - 1] ?? 1;
-  return { gold: Math.round(def.baseGold * mul), turns: def.baseTurns + (level >= 3 ? 1 : 0) };
+  // The third level takes a turn longer, except the camp: every other work waits on it, so it is not made a bottleneck.
+  return { gold: Math.round(def.baseGold * mul), turns: def.baseTurns + (level >= 3 && kind !== 'camp' ? 1 : 0) };
 }
 
 /** Saved construction keeps its ordered duration, including pristine cancellation for pre-logistics saves. */
@@ -230,7 +235,8 @@ export function fleetGoldValue(g: Grand, f: GrandFaction): number {
 export function upkeepFree(g: Grand, f: GrandFaction): number {
   let free = TUNING.upkeepFree;
   for (const id of Object.keys(g.regions) as RegionId[]) if (g.regions[id].owner === f) free += TUNING.upkeepFreePerCamp * levelOf(g.regions[id], 'camp');
-  return free;
+  // Bigger navies are paid for like the old ones: the allowance grows with them.
+  return g.forces === 'wide-v1' ? free * TUNING.forceScale : free;
 }
 
 export function factionUpkeep(g: Grand, f: GrandFaction): number {
@@ -251,13 +257,15 @@ export function repairRates(r: RegionState): { hull: number; crew: number; suppl
   };
 }
 
-export const garrisonPowerBudget = (id: RegionId, r: RegionState) => Math.floor(TUNING.garrison.base + TUNING.garrison.perValue * REGIONS[id].value + TUNING.garrison.perCamp * levelOf(r, 'camp')) * shipDef(GARRISON_KIND.joseon).strength;
-export const garrisonCap = (id: RegionId, r: RegionState) => r.garrisonRule === 'equal-power-v1' && r.owner
+/** A port marked 'equal-power-v2' keeps `forceScale` times the guard of the original rule, which stays for saved ports. */
+export const guardScale = (r: RegionState) => (r.garrisonRule === 'equal-power-v2' ? TUNING.forceScale : 1);
+export const garrisonPowerBudget = (id: RegionId, r: RegionState) => Math.floor(guardScale(r) * (TUNING.garrison.base + TUNING.garrison.perValue * REGIONS[id].value + TUNING.garrison.perCamp * levelOf(r, 'camp'))) * shipDef(GARRISON_KIND.joseon).strength;
+export const garrisonCap = (id: RegionId, r: RegionState) => r.garrisonRule && r.owner
   ? Math.max(1, Math.round(garrisonPowerBudget(id, r) / shipDef(GARRISON_KIND[r.owner]).strength))
   : Math.floor(TUNING.garrison.base + TUNING.garrison.perValue * REGIONS[id].value + TUNING.garrison.perCamp * levelOf(r, 'camp'));
 
-/** Ships built at once, by shipyard level. */
-export const queueSlots = (r: RegionState) => levelOf(r, 'shipyard') > 0 ? levelOf(r, 'shipyard') + 1 : 0;
+/** Ships built at once, by shipyard level: 4, 6 and 8 (was 2, 3 and 4). */
+export const queueSlots = (r: RegionState) => levelOf(r, 'shipyard') > 0 ? (levelOf(r, 'shipyard') + 1) * TUNING.yardSlotScale : 0;
 
 /** Shore guns' worth in a fight, per battery level. A battery fires at everything that enters the port. */
 export const batteryStrength = (r: RegionState): number => {

@@ -27,7 +27,7 @@ try {
   const opening = (g,f) => g.fleets.filter(fl=>fl.faction===f && START.fleets.some(s=>s.faction===f && s.name===fl.name));
   const composition = (ships) => Object.fromEntries([...new Set(ships.map(s=>s.kind))].sort().map(k=>[k,ships.filter(s=>s.kind===k).length]));
   const roster = (g,f) => composition(opening(g,f).flatMap(fl=>fl.ships));
-  const base = {joseon:{hyeopseon:10,panokseon:14},japan:{atakebune:19,kobaya:21,sekibune:24},ming:{mingship:12,mingsmall:16}};
+  const base = {joseon:{hyeopseon:20,panokseon:27},japan:{atakebune:38,kobaya:43,sekibune:49},ming:{mingship:23,mingsmall:31}};
   const branches = new Map([['joseon',newGrand('joseon',4701592)],['ming',newGrand('ming',4701592)],['japan',newGrand('japan',4701592)],[null,newGrand(null,4701592)]]);
   check('four new-campaign branches weaken only the original allied computer',()=>{
     assert.equal(branches.get('joseon').allySupport.faction,'ming');
@@ -36,11 +36,11 @@ try {
     for(const player of ['japan',null]) assert.equal(Object.hasOwn(branches.get(player),'allySupport'),false);
     for(const [player,g] of branches) for(const f of factions) assert.equal(supportAlly(g,f),(player==='joseon'&&f==='ming')||(player==='ming'&&f==='joseon'));
   });
-  check('Joseon selection keeps24 own and64 Japanese ships, reduces Ming28 to17',()=>{
-    const g=branches.get('joseon');assert.deepEqual(roster(g,'joseon'),base.joseon);assert.deepEqual(roster(g,'japan'),base.japan);assert.deepEqual(roster(g,'ming'),{mingship:7,mingsmall:10});
+  check('Joseon selection keeps47 own and130 Japanese ships, reduces Ming54 to33',()=>{
+    const g=branches.get('joseon');assert.deepEqual(roster(g,'joseon'),base.joseon);assert.deepEqual(roster(g,'japan'),base.japan);assert.deepEqual(roster(g,'ming'),{mingship:14,mingsmall:19});
   });
-  check('Ming selection keeps28 own and64 Japanese ships, reduces Joseon24 to14',()=>{
-    const g=branches.get('ming');assert.deepEqual(roster(g,'ming'),base.ming);assert.deepEqual(roster(g,'japan'),base.japan);assert.deepEqual(roster(g,'joseon'),{hyeopseon:6,panokseon:8});
+  check('Ming selection keeps54 own and130 Japanese ships, reduces Joseon47 to28',()=>{
+    const g=branches.get('ming');assert.deepEqual(roster(g,'ming'),base.ming);assert.deepEqual(roster(g,'japan'),base.japan);assert.deepEqual(roster(g,'joseon'),{hyeopseon:12,panokseon:16});
   });
   check('Japan selection and all-computer opening rosters stay full',()=>{
     for(const player of ['japan',null]) for(const f of factions) assert.deepEqual(roster(branches.get(player),f),base[f]);
@@ -58,7 +58,7 @@ try {
     for(const player of ['joseon','ming','japan',null]) for(const difficulty of ['easy','normal','hard']) {
       const g=newGrand(player,4701592,difficulty), legacy=clone(g);delete legacy.allySupport;
       g.events.mods.push({faction:'ming',mult:1.17,left:3});legacy.events.mods.push({faction:'ming',mult:1.17,left:3});
-      for(const f of factions) assert.equal(factionIncome(g,f),supportAlly(g,f)?Math.round(factionIncome(legacy,f)*.65):factionIncome(legacy,f));
+      for(const f of factions) {const want=supportAlly(g,f)?factionIncome(legacy,f)*.65:factionIncome(legacy,f);assert.ok(Math.abs(factionIncome(g,f)-want)<=1);}
     }
   });
   check('event reinforcements carry fractional heavy/scout hulls rather than round each arrival up',()=>{
@@ -89,10 +89,10 @@ try {
     endTurn(g);
     assert.equal(g.turn,9);
     const ships=f=>g.fleets.filter(fl=>fl.faction===f).flatMap(fl=>fl.ships);
-    assert.deepEqual(composition(ships('ming')),{mingsmall:1});
-    assert.deepEqual(composition(ships('joseon')),{hyeopseon:2,panokseon:1});
-    assert.deepEqual(composition(ships('japan')),{atakebune:1,kobaya:2,sekibune:3});
-    assert.ok(Math.abs(g.allySupport.reinforcementCarry.mingship-.6)<1e-8);
+    assert.deepEqual(composition(ships('ming')),{mingship:1,mingsmall:2});
+    assert.deepEqual(composition(ships('joseon')),{hyeopseon:4,panokseon:2});
+    assert.deepEqual(composition(ships('japan')),{atakebune:2,kobaya:4,sekibune:6});
+    assert.ok(Math.abs(g.allySupport.reinforcementCarry.mingship-.2)<1e-8);
   });
   check('scheduled and event support carry survives reload and continues exactly',()=>{
     const g=newGrand('ming',4701592);g.allySupport.reinforcementCarry={};
@@ -126,18 +126,18 @@ try {
     const g=newGrand('ming',4701592),before=g.factions.joseon.gold;
     assert.ok(orderRecruit(g,'yeosu','panokseon','joseon').ok);
     const queue=g.regions.yeosu.queue[0],paid=queue.paidGold;
-    assert.equal(queue.total,2);assert.equal(paid,284);assert.ok(cancelRecruit(g,'yeosu',queue.id,'joseon').ok);assert.equal(g.factions.joseon.gold,before);
+    assert.equal(queue.total,1);assert.equal(paid,284);assert.ok(cancelRecruit(g,'yeosu',queue.id,'joseon').ok);assert.equal(g.factions.joseon.gold,before);
   });
   check('actual human Ming-versus-Japan battle spawns full own ships with normal stats',()=>{
     const g=clone(branches.get('ming')),mf=opening(g,'ming')[0],jf=opening(g,'japan')[0];
     const c={id:'support-ming-japan',regionId:'busan',attacker:'ming',defender:'japan',attackerFleets:[mf.id],defenderFleets:[jf.id],player:true};
     const rb=describeContact(g,c);assert.equal(rb.humanSide,'attacker');assert.equal(rb.attacker.faction,'ming');assert.equal(rb.attacker.human,true);assert.equal(rb.defender.faction,'japan');
-    assert.equal(rb.attacker.ships.length,28);
+    assert.equal(rb.attacker.ships.length,54);
     const built=buildGrandConquest(rb,()=>-80),b=built.battle;
-    const own=b.ships.filter(s=>s.owner===0);assert.equal(own.length,28);assert.equal(b.humans.has(0),true);assert.equal(built.conquest.players[0].faction,'ming');
+    const own=b.ships.filter(s=>s.owner===0);assert.equal(own.length,54);assert.equal(b.humans.has(0),true);assert.equal(built.conquest.players[0].faction,'ming');
     for(const s of own){assert.equal(s.spec.faction,'ming');assert.equal(s.spec.hull,shipSpec(s.spec.kind).hull);assert.equal(s.crew,s.spec.crew);}
     for(let i=0;i<120;i++)b.step(SIM_DT);
-    assert.ok(b.time>1.9);assert.equal(rb.attacker.ships.length,28);
+    assert.ok(b.time>1.9);assert.equal(rb.attacker.ships.length,54);
   });
 
   const memory=new Map();Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k)}});

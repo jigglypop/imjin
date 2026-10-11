@@ -9,6 +9,7 @@ import {
   factionIncome,
   factionUpkeep,
   garrisonCap,
+  guardScale,
   repairRates,
   shipDef,
   levelOf,
@@ -34,6 +35,7 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
   const g: Grand = {
     version: 1,
     balanceProfile: 'competitive-v1',
+    forces: 'wide-v1',
     seed,
     rng: makeRng(seed),
     player,
@@ -57,7 +59,7 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
   if (support) g.allySupport = support;
   for (const id of REGION_ORDER) {
     const owner = START.owners[id];
-    g.regions[id] = { owner, buildings: [], garrison: [], queue: [], unrest: 0, garrisonRule: 'equal-power-v1', garrisonReserve: 0 };
+    g.regions[id] = { owner, buildings: [], garrison: [], queue: [], unrest: 0, garrisonRule: 'equal-power-v2', garrisonReserve: 0 };
     for (const [kind, level] of Object.entries(START.buildings[id] ?? {}) as [BuildingKind, number][]) g.regions[id].buildings.push({ kind, level, upgradeLeft: 0, hp: 1 });
     const cap = garrisonCap(id, g.regions[id]);
     for (let i = 0; i < cap; i += 1) g.regions[id].garrison.push(spawnShip(g, GARRISON_KIND[owner]));
@@ -73,7 +75,7 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
       idle: 0,
     };
   }
-  const scale = Object.fromEntries(GRAND_FACTIONS.map((f) => [f, TUNING.startFleet[f] * (1 + spread * (2 * next(g.rng) - 1))])) as Record<GrandFaction, number>;
+  const scale = Object.fromEntries(GRAND_FACTIONS.map((f) => [f, TUNING.startFleet[f] * TUNING.forceScale * (1 + spread * (2 * next(g.rng) - 1))])) as Record<GrandFaction, number>;
   const scaled = START.fleets.map((s) => ({ ...s, ships: Object.fromEntries(Object.entries(s.ships).map(([k, n]) => [k, Math.floor(n * scale[s.faction])])) as Partial<Record<ShipKind, number>> }));
   // Round a navy's total once, then allocate the remaining hulls by fractional remainder. Rounding each fleet
   // separately made a tiny slider change add several expensive warships to only the navy with three fleets.
@@ -157,7 +159,7 @@ export function captureRegion(g: Grand, id: RegionId, taker: GrandFaction) {
   g.credit[taker] += REGIONS[id].value * TUNING.score.captureCredit;
   r.owner = by;
   r.garrison = [];
-  if (r.garrisonRule === 'equal-power-v1') r.garrisonReserve = 0;
+  if (r.garrisonRule) r.garrisonReserve = 0;
   r.queue = [];
   r.unrest = liberated ? 1 : TUNING.unrestTurns;
   r.buildings = r.buildings
@@ -446,6 +448,8 @@ function joinOrNewFleet(g: Grand, faction: GrandFaction, at: RegionId, unit: Shi
   g.fleets.push({ id: mintId(g, 'f'), faction, name: `${REGIONS[at].name} 신규 함대`, commanderId: null, ships: [unit], at, transit: null, route: [], from: at, rest: 0 }); // i18n-ignore: new fleet name; the UI translates the pattern
 }
 
+const scaleShips = (ships: Partial<Record<ShipKind, number>>, k: number) => Object.fromEntries(Object.entries(ships).map(([kind, n]) => [kind, n! * k])) as Partial<Record<ShipKind, number>>;
+
 function runEvents(g: Grand) {
   if (g.turn === TUNING.geobukseonTurn && g.factions.joseon.alive && !g.factions.joseon.unlocked.includes('geobukseon')) {
     g.factions.joseon.unlocked.push('geobukseon');
@@ -455,7 +459,7 @@ function runEvents(g: Grand) {
     const plan = TUNING.reinforce[f];
     if (!g.factions[f].alive || g.turn < plan.first || (g.turn - plan.first) % plan.every !== 0) continue;
     if (g.regions[plan.at].owner !== f) continue;
-    const ships = supportReinforcements(g, f, plan.ships);
+    const ships = supportReinforcements(g, f, g.forces === 'wide-v1' ? scaleShips(plan.ships, TUNING.forceScale) : plan.ships);
     if (!Object.values(ships).some((n) => n && n > 0)) continue;
     const fleet = spawnFleet(g, f, plan.at, f === 'japan' ? '후속 함대' : f === 'ming' ? '원군 함대' : '의병 함대', ships, null);
     note(g, '{navy}의 {fleet} {n}척이 {place}에 도착했습니다', { navy: navyName(f), fleet: fleet.name, n: fleet.ships.length, place: REGIONS[plan.at].name }, f === g.player ? 'good' : 'info');
@@ -560,10 +564,10 @@ function advanceTurn(g: Grand) {
     else {
       for (const u of r.garrison) u.hull = Math.min(1, u.hull + 0.2);
       const cap = garrisonCap(id, r);
-      if (r.garrisonRule === 'equal-power-v1') {
+      if (r.garrisonRule) {
         if (r.garrison.length >= cap) r.garrisonReserve = 0;
         else {
-          r.garrisonReserve = (r.garrisonReserve ?? 0) + shipDef(GARRISON_KIND.joseon).strength * TUNING.garrison.regen;
+          r.garrisonReserve = (r.garrisonReserve ?? 0) + shipDef(GARRISON_KIND.joseon).strength * TUNING.garrison.regen * guardScale(r);
           const kind = GARRISON_KIND[r.owner], price = shipDef(kind).strength;
           while (r.garrison.length < cap && r.garrisonReserve >= price) {
             r.garrisonReserve -= price;
