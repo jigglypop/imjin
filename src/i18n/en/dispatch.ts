@@ -1,4 +1,6 @@
 export const EN_DISPATCH: Record<string, string> = {
+  '박스 선택': 'Box select',
+  '박스 선택 켜짐: 끌어서 병력을 한꺼번에 고릅니다. 지도 이동은 두 손가락·휠·오른쪽 버튼·Space': 'Box select is on: drag to pick forces together. Pan with two fingers, the wheel, right-drag or Space.',
   '{n}명 승조원': '{n} crew',
   '함대·수비대 일괄 이동': 'Move fleets and garrisons',
   '함대 {n}개 · 함선 {ships}척 · 병력 {crew}명': '{n} fleets · {ships} ships · {crew} crew',

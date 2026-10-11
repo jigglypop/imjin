@@ -8,6 +8,7 @@ import { shipsText, turnsText } from './text';
 import type { FactionId, FleetView, RegionView, ReplayView } from './types';
 import type { MapScene } from './MapScene';
 import { DEM_RECT, groundElevation, MAP_TILT, mapProject } from './mapMath';
+import { boxBetween, markersInBox, type Marker } from './boxSelect';
 
 export interface MapInsets {
   top: number;
@@ -30,8 +31,10 @@ export interface GrandMapProps {
   insets?: MapInsets;
   /** Pans to this region when `nonce` changes. */
   focus?: { id: string; nonce: number } | null;
-  onSelectRegion?: (id: string) => void;
+  onSelectRegion?: (id: string, additive?: boolean) => void;
   onSelectFleet?: (id: string, additive?: boolean) => void;
+  /** A box dragged over the map: the own fleets and port garrisons inside it; `additive` keeps what is already picked. */
+  onBoxSelect?: (fleetIds: string[], portIds: string[], additive: boolean) => void;
   onBackground?: () => void;
   /** The turn that just closed, played over the map until it ends or is skipped. */
   replay?: ReplayView | null;
@@ -51,6 +54,16 @@ interface View {
 const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const MAX_ZOOM = 4.5;
 const TAP_SLOP = 8;
+const HINT_KEY = 'imjin.grand.boxhint';
+
+function boxHintSeen() {
+  try { return localStorage.getItem(HINT_KEY) === '1'; } catch { return false; }
+}
+
+/** Where a fleet badge sits on its port: stacked on the side away from the label, clear of the disc and its ring. */
+function badgeSpot(x: number, y: number, rad: number, labelSide: string | undefined, i: number) {
+  return { x: x + rad * 0.6, y: y + (labelSide === 't' ? 1 : -1) * (rad + 22 + i * 30) };
+}
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -71,6 +84,7 @@ export function GrandMap({
   focus,
   onSelectRegion,
   onSelectFleet,
+  onBoxSelect,
   onBackground,
   replay,
   reducedMotion = false,
@@ -96,6 +110,11 @@ export function GrandMap({
   const ready = useRef(false);
   const touched = useRef(false);
   const anim = useRef(0);
+  // Box select: a switch for plain drags, Ctrl/Cmd for a single drag. The rectangle is a DOM node moved by hand, so a drag never re-renders the map.
+  const [boxMode, setBoxMode] = useState(false);
+  const [hint, setHint] = useState(false);
+  const marqueeRef = useRef<HTMLDivElement>(null);
+  const spaceDown = useRef(false);
 
   const byId = useMemo(() => new Map(regions.map((r) => [r.id, r])), [regions]);
   const pos = useMemo(() => new Map(regions.map((r) => {
@@ -283,8 +302,27 @@ export function GrandMap({
     return () => el.removeEventListener('wheel', onWheel);
   }, [zoomAt]);
 
+  // Space held turns a box-select drag back into a pan.
+  useEffect(() => {
+    const key = (down: boolean) => (e: KeyboardEvent) => {
+      if (e.code !== 'Space') return;
+      spaceDown.current = down;
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (down && tag !== 'BUTTON' && tag !== 'INPUT' && tag !== 'TEXTAREA') e.preventDefault();
+    };
+    const [onDown, onUp] = [key(true), key(false)];
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup', onUp);
+    return () => { window.removeEventListener('keydown', onDown); window.removeEventListener('keyup', onUp); };
+  }, []);
+  useEffect(() => {
+    if (!hint) return;
+    const id = window.setTimeout(() => setHint(false), 7000);
+    return () => window.clearTimeout(id);
+  }, [hint]);
+
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const gesture = useRef({ moved: false, rotating: false, startX: 0, startY: 0, pinch: 0, angle: 0, mx: 0, my: 0 });
+  const gesture = useRef({ moved: false, rotating: false, boxing: false, startX: 0, startY: 0, pinch: 0, angle: 0, mx: 0, my: 0 });
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
@@ -294,11 +332,15 @@ export function GrandMap({
     const g = gesture.current;
     if (pointers.current.size === 1) {
       g.moved = false;
-      g.rotating = !!heights && (e.shiftKey || e.button === 2);
+      // Ctrl/Cmd (or the box switch, unless Space is held) draws a box; Shift then only means "add to the batch".
+      g.boxing = e.button === 0 && !!onBoxSelect && (e.ctrlKey || e.metaKey || (boxMode && !spaceDown.current));
+      g.rotating = !g.boxing && !!heights && (e.shiftKey || e.button === 2);
       g.startX = e.clientX;
       g.startY = e.clientY;
     } else {
       g.moved = true;
+      g.boxing = false;
+      if (marqueeRef.current) marqueeRef.current.style.display = 'none';
       const [a, b] = [...pointers.current.values()];
       g.pinch = Math.hypot(a!.x - b!.x, a!.y - b!.y);
       g.angle = Math.atan2(b!.y - a!.y, b!.x - a!.x);
@@ -347,12 +389,38 @@ export function GrandMap({
     const dx = e.clientX - p.x;
     const dy = e.clientY - p.y;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (g.boxing) {
+      const m = marqueeRef.current;
+      if (m) {
+        const r = boxBetween(g.startX - rect.left, g.startY - rect.top, e.clientX - rect.left, e.clientY - rect.top);
+        m.style.display = 'block';
+        m.style.transform = `translate3d(${r.x0}px, ${r.y0}px, 0)`;
+        m.style.width = `${r.x1 - r.x0}px`;
+        m.style.height = `${r.y1 - r.y0}px`;
+      }
+      return;
+    }
     if (g.rotating) {
       setPose((cur) => ({ tilt: clamp(cur.tilt + dy * 0.006, 0.3, 1.1), yaw: cur.yaw + dx * 0.006 }));
     } else setView((cur) => constrain({ ...cur, x: cur.x + dx, y: cur.y + dy }));
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
+    const g = gesture.current;
+    if (g.boxing) {
+      g.boxing = false;
+      if (marqueeRef.current) marqueeRef.current.style.display = 'none';
+      // A cancelled gesture (the system took the pointer) selects nothing.
+      if (g.moved && e.type === 'pointerup') {
+        const rect = rootRef.current!.getBoundingClientRect();
+        const box = boxBetween(g.startX - rect.left, g.startY - rect.top, e.clientX - rect.left, e.clientY - rect.top);
+        const fleetIds = markersInBox(box, ownBadges);
+        const portIds = markersInBox(box, ownPorts);
+        try { localStorage.setItem(HINT_KEY, '1'); } catch { /* private mode */ }
+        setHint(false);
+        onBoxSelect?.(fleetIds, portIds, e.shiftKey);
+      }
+    }
     pointers.current.delete(e.pointerId);
     if (pointers.current.size === 1) {
       const rest = [...pointers.current.values()][0]!;
@@ -383,7 +451,7 @@ export function GrandMap({
         if (distance <= nodeRadius(region) + 12 && distance < closest) { closest = distance; picked = region.id; }
       }
     }
-    onSelectRegion?.(picked);
+    onSelectRegion?.(picked, e.shiftKey || e.ctrlKey || e.metaKey);
   };
 
   const { w, h } = box;
@@ -417,6 +485,23 @@ export function GrandMap({
   }, [fleets]);
   const sailing = useMemo(() => fleets.filter((f) => f.transit && byId.has(f.transit.from) && byId.has(f.transit.to)), [fleets, byId]);
 
+  // The centres of what a box can take, in the same pixels the markers are placed with. Only the player's own forces count.
+  const ownBadges: Marker[] = [];
+  const ownPorts: Marker[] = [];
+  if (w > 0) {
+    for (const [rid, list] of fleetsAt) {
+      const r = byId.get(rid);
+      if (!r) continue;
+      list.forEach((f, i) => {
+        if (f.faction === me) ownBadges.push({ id: f.id, ...badgeSpot(px(rid), py(rid), nodeRadius(r), r.labelSide, i) });
+      });
+    }
+    for (const f of sailing) {
+      if (f.faction === me) ownBadges.push({ id: f.id, x: (px(f.transit!.from) + px(f.transit!.to)) / 2, y: (py(f.transit!.from) + py(f.transit!.to)) / 2 });
+    }
+    for (const r of regions) if (r.owner === me && r.garrison > 0 && pos.has(r.id)) ownPorts.push({ id: r.id, x: px(r.id), y: py(r.id) });
+  }
+
   const showLabel = (r: RegionView) => r.id === selectedRegionId || r.offMap || r.value >= 3 || zoomRatio >= 1.1 || (zoomRatio >= 0.85 && r.value >= 2);
 
   return (
@@ -426,6 +511,7 @@ export function GrandMap({
       data-relief={heights ? 'ready' : 'image'}
       data-tilt={activePose.tilt}
       data-yaw={activePose.yaw}
+      data-box={boxMode ? 'on' : 'off'}
       onContextMenu={(e) => e.preventDefault()}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -549,18 +635,17 @@ export function GrandMap({
           const y = py(rid);
           if (x < -80 || y < -120 || x > w + 80 || y > h + 80) return [];
           const rad = nodeRadius(r);
-          // The badges stack on the side of the node away from its label, clear of the disc and its ring.
-          const dir = r.labelSide === 't' ? 1 : -1;
           return list.map((f, i) => {
             const sel = f.id === selectedFleetId || !!selectedFleetIds?.has(f.id);
             const col = FACTION_INFO[f.faction].color;
             const mine = f.faction === me;
+            const spot = badgeSpot(x, y, rad, r.labelSide, i);
             return (
               <button
                 key={f.id}
                 type="button"
                 className={`gm-fleet${sel ? ' gm-fleet--sel' : ''}${mine ? '' : ' gm-fleet--foreign'}`}
-                style={{ transform: `translate3d(${x + rad * 0.6}px, ${y + dir * (rad + 22 + i * 30)}px, 0)`, ['--c' as string]: col }}
+                style={{ transform: `translate3d(${spot.x}px, ${spot.y}px, 0)`, ['--c' as string]: col }}
                 aria-label={t('{name}, 함선 {ships}', { name: f.name, ships: shipsText(f.ships.length) })}
                 aria-pressed={sel}
                 data-fleet={f.id}
@@ -613,6 +698,8 @@ export function GrandMap({
           onDone={() => onReplayDone?.()}
         />
       )}
+      <div ref={marqueeRef} className="gm__marquee" aria-hidden />
+      {hint && boxMode && <div className="gm__hint" role="status" style={{ left: 12 + insets.left, bottom: 68 + insets.bottom }}>{t('박스 선택 켜짐: 끌어서 병력을 한꺼번에 고릅니다. 지도 이동은 두 손가락·휠·오른쪽 버튼·Space')}</div>}
       <div
         className="gm__zoom"
         style={{ left: 12 + insets.left, bottom: 12 + insets.bottom }}
@@ -620,6 +707,18 @@ export function GrandMap({
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={(e) => e.stopPropagation()}
       >
+        <button
+          type="button"
+          className="g-glass gm__box"
+          aria-pressed={boxMode}
+          onClick={() => {
+            setBoxMode(!boxMode);
+            setHint(!boxMode && !boxHintSeen());
+          }}
+        >
+          <Icon name="select" />
+          {t('박스 선택')}
+        </button>
         <button type="button" className="g-glass g-icon-btn" aria-label={t('확대')} onClick={() => zoomAt(1.5, w / 2, h / 2)}>
           <Icon name="plus" />
         </button>

@@ -411,6 +411,49 @@
 }
 .gm__credits:hover { color: var(--ink); }
 
+/* The box-select switch: a pill that reads as lit while it is on, and stays on touch screens where the zoom buttons hide. */
+.grand .gm__box {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px 0 12px;
+  border-radius: 14px;
+  color: var(--ink);
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.grand .gm__box[aria-pressed='true'] {
+  background: var(--ink);
+  color: #0d1217;
+}
+.gm__hint {
+  position: absolute;
+  z-index: 6;
+  max-width: min(420px, calc(100% - 24px));
+  padding: 8px 12px;
+  border: 1px solid var(--glass-line);
+  border-radius: 12px;
+  background: rgba(14, 16, 20, 0.86);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+.gm__marquee {
+  position: absolute;
+  z-index: 5;
+  display: none;
+  border: 1.5px solid #f2d27a;
+  border-radius: 3px;
+  background: rgba(242, 210, 122, 0.14);
+  pointer-events: none;
+}
+.gm[data-box='on'] {
+  cursor: crosshair;
+}
+
 @media (pointer: coarse) {
   .grand .gm__zoom > .g-icon-btn {
     display: none;

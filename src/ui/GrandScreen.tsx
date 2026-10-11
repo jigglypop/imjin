@@ -180,7 +180,12 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
     return done;
   };
 
-  const selectRegion = (id: string) => {
+  const selectRegion = (id: string, additive = false) => {
+    // An own port is picked, not visited, when Shift/Ctrl/Cmd is held or when the open batch cannot sail there anyway.
+    const port = regions.find((r) => r.id === id);
+    if (port && port.owner === me && (additive || (batchOpen && !batchTargets?.includes(id as RegionId)))) {
+      if (port.garrison > 0 || additive) { pickForces([], [id], true); return; }
+    }
     if (batchOpen) {
       if (!picked) { say(t('먼저 출동할 함대나 수비대를 고르세요')); return; }
       if (!batchTargets?.length) { say(t('함께 갈 수 있는 목적지가 없습니다')); return; }
@@ -216,9 +221,10 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const togglePort = (id: string) => setPickedPorts((set) => { const next = new Set(set); next.has(id) ? next.delete(id) : next.add(id); return next; });
   /**
    * Adds fleets and port garrisons to the batch (or takes them out again when `toggle` is set). Anything that cannot
-   * sail is left out and said so; the batch opens even when nothing could be added. A drag-select hands its result here.
+   * sail is left out and said so; the batch opens even when nothing could be added. A drag-select hands its result here,
+   * replacing the batch unless it is additive.
    */
-  const pickForces = (fleetIds: readonly string[], portIds: readonly string[], toggle = false) => {
+  const pickForces = (fleetIds: readonly string[], portIds: readonly string[], toggle = false, replace = false) => {
     const ready = fleetIds.filter((id) => { const f = fleets.find((x) => x.id === id); return f && f.faction === me && forceReady(f); });
     const ports = portIds.filter((id) => regions.some((r) => r.id === id && r.owner === me && r.garrison > 0));
     if (!ready.length && !ports.length) { say(t('출동 가능한 병력이 없습니다')); return; }
@@ -229,8 +235,8 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
       for (const id of ids) (toggle && next.has(id) ? next.delete(id) : next.add(id));
       return next;
     };
-    setPickedFleets((set) => add(set, ready));
-    setPickedPorts((set) => add(set, ports));
+    setPickedFleets((set) => add(replace ? new Set() : set, ready));
+    setPickedPorts((set) => add(replace ? new Set() : set, ports));
   };
   const selectFleet = (id: string, additive = false) => {
     const f = fleets.find((x) => x.id === id);
@@ -349,6 +355,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         focus={focus}
         onSelectRegion={selectRegion}
         onSelectFleet={selectFleet}
+        onBoxSelect={(fleetIds, portIds, additive) => pickForces(fleetIds, portIds, false, !additive)}
         onBackground={() => {
           // A stray click on the sea must not lose a batch the player took time to pick: it ends with Esc or its own buttons.
           if (!moving && !batchOpen) closePanels();
