@@ -1,17 +1,18 @@
 import type { Battle } from './battle';
 import type { BuildingKind, Conquest } from './conquest';
 import type { CrewPlan, Order, Ship, ShipKind, Stance, AmmoMode, FireMode } from './types';
+import type { CoastalFormationKind } from './coastal-tactics';
 
 export type ShipPatch = Partial<{ fireMode: FireMode; ammo: AmmoMode; speedCap: number; stance: Stance; lights: boolean; repel: boolean }>;
-export type FormationKind = 'crane' | 'line' | 'column' | 'wedge';
+export type FormationKind = 'crane' | 'line' | 'column' | 'wedge' | CoastalFormationKind;
 
 /**
  * Everything a commander can tell the battle, in a form that can be sent over the network. A local battle applies
  * commands as they are issued; a multiplayer server applies them for the player who sent them.
  */
 export type Command =
-  | { type: 'orders'; list: { id: number; order: Order }[] }
-  | { type: 'order'; ids: number[]; order: Order }
+  | { type: 'orders'; list: { id: number; order: Order }[]; queue?: boolean }
+  | { type: 'order'; ids: number[]; order: Order; queue?: boolean }
   | { type: 'configure'; ids: number[]; patch: ShipPatch }
   | { type: 'volley'; ids: number[]; side: number }
   | { type: 'formation'; ids: number[]; kind: FormationKind; cx: number; cz: number }
@@ -20,7 +21,10 @@ export type Command =
   | { type: 'build'; point: number; building: BuildingKind }
   | { type: 'recruit'; point: number; kind: ShipKind }
   | { type: 'cancel'; point: number; index: number }
-  | { type: 'demolish'; point: number; slot: number };
+  | { type: 'demolish'; point: number; slot: number }
+  | { type: 'upgrade'; point: number; slot: number }
+  | { type: 'cancelUpgrade'; point: number; slot: number }
+  | { type: 'rally'; point: number; x: number; z: number };
 
 const ORDER_TYPES = new Set(['auto', 'move', 'attack', 'hold', 'anchor', 'slot', 'follow', 'broadside', 'bombard']);
 const finite = (...v: unknown[]) => v.every((x) => typeof x === 'number' && Number.isFinite(x));
@@ -54,19 +58,19 @@ export function applyCommand(b: Battle, owner: number, cmd: Command, conquest: C
   const mine = (ids: unknown) => (Array.isArray(ids) ? ids : []).filter((id): id is number => typeof id === 'number').filter((id) => isMine(b.get(id), owner, b));
   switch (cmd.type) {
     case 'orders': {
+      if (cmd.queue !== undefined && typeof cmd.queue !== 'boolean') return 0;
       let n = 0;
-      for (const item of Array.isArray(cmd.list) ? cmd.list.slice(0, 400) : []) {
-        if (!validOrder(item?.order) || !mine([item.id]).length) continue;
-        b.setOrder([item.id], item.order);
-        n += 1;
+      for (const item of Array.isArray(cmd.list) ? cmd.list : []) {
+        if (!validOrder(item?.order) || (cmd.queue === true && item.order.type !== 'move') || !mine([item.id]).length) continue;
+        n += b.setOrder([item.id], item.order, cmd.queue === true);
       }
       return n;
     }
     case 'order': {
-      if (!validOrder(cmd.order)) return 0;
+      if (cmd.queue !== undefined && typeof cmd.queue !== 'boolean') return 0;
+      if (!validOrder(cmd.order) || (cmd.queue === true && cmd.order.type !== 'move')) return 0;
       const ids = mine(cmd.ids);
-      b.setOrder(ids, cmd.order);
-      return ids.length;
+      return b.setOrder(ids, cmd.order, cmd.queue === true);
     }
     case 'configure': {
       const ids = mine(cmd.ids);
@@ -83,7 +87,7 @@ export function applyCommand(b: Battle, owner: number, cmd: Command, conquest: C
         for (const id of ids) {
           const s = b.get(id)!;
           const t = s.order.type;
-          if (t === 'hold' || t === 'slot' || t === 'move' || t === 'follow' || t === 'broadside' || t === 'bombard') s.order = { type: 'auto' };
+          if (t === 'hold' || t === 'slot' || t === 'move' || t === 'follow' || t === 'broadside' || t === 'bombard') b.setOrder([id], { type: 'auto' });
         }
       }
       return ids.length;
@@ -91,9 +95,12 @@ export function applyCommand(b: Battle, owner: number, cmd: Command, conquest: C
     case 'volley':
       return [0, 1, 2, 3].includes(cmd.side) ? b.volley(mine(cmd.ids), cmd.side) : 0;
     case 'formation': {
-      if (!['crane', 'line', 'column', 'wedge'].includes(cmd.kind) || !finite(cmd.cx, cmd.cz)) return 0;
+      if (!['crane', 'line', 'column', 'wedge', 'yeosu-wings', 'mokpo-depth'].includes(cmd.kind) || !finite(cmd.cx, cmd.cz)) return 0;
+      if ((cmd.kind === 'yeosu-wings' || cmd.kind === 'mokpo-depth') && b.coastalTactic !== cmd.kind) return 0;
       const ids = mine(cmd.ids);
-      b.formation(ids, cmd.kind, cmd.cx, cmd.cz);
+      const applied = b.formation(ids, cmd.kind, cmd.cx, cmd.cz);
+      if (applied === 0) return 0;
+      for (const id of ids) b.get(id)!.orderQueue = undefined;
       return ids.length;
     }
     case 'cut':
@@ -113,6 +120,12 @@ export function applyCommand(b: Battle, owner: number, cmd: Command, conquest: C
       return conquest?.cancel(owner, cmd.point, cmd.index) ? 1 : 0;
     case 'demolish':
       return conquest?.demolish(b, owner, cmd.point, cmd.slot) ? 1 : 0;
+    case 'upgrade':
+      return conquest?.upgrade(b, owner, cmd.point, cmd.slot) ? 1 : 0;
+    case 'cancelUpgrade':
+      return conquest?.cancelUpgrade(b, owner, cmd.point, cmd.slot) ? 1 : 0;
+    case 'rally':
+      return conquest?.setRally(owner, cmd.point, cmd.x, cmd.z) ? 1 : 0;
     default:
       return 0;
   }

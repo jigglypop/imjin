@@ -1,15 +1,16 @@
 import { t } from '../../i18n';
-import { SHIP_SPECS } from '../../sim/catalog';
+import { shipSpec } from '../../sim/competitive';
+import type { ShipKind } from '../../sim/types';
 import { buildingCost, buildingOf, dateLabel, garrisonCap, levelOf, netIncome, queueSlots, regionIncome } from '../../sim/grand/economy';
 import { buildMenu, recruitMenu, refitCost } from '../../sim/grand/orders';
-import { LANES, REGIONS, REGION_ORDER, START, type RegionDef } from '../../sim/grand/regions';
+import { REGIONS, REGION_ORDER, START, type RegionDef } from '../../sim/grand/regions';
 import type { BattleSummary } from '../../sim/grand/report';
 import { pendingCard, describeEffect } from '../../sim/grand/events';
 import type { TurnReplay } from '../../sim/grand/replay';
 import { MAX_TURNS, OBJECTIVE_HOLD, contactForces, objectiveProgress, objectiveText, oddsOfContact, previewContact, scoreOf } from '../../sim/grand/turn';
 import type { Fleet, Grand, GrandFaction, RegionId } from '../../sim/grand/types';
 import { MAX_LEVEL } from '../../sim/grand/types';
-import { allied, findRoute, fleetById, ownedBy, shipCount, visibleRegions } from '../../sim/grand/world';
+import { allied, findRoute, fleetById, fleetObserved, lanesOf, ownedBy, shipCount, visibleRegions } from '../../sim/grand/world';
 import type {
   BattlePreviewView,
   BattleResultView,
@@ -47,7 +48,7 @@ const PIN: Partial<Record<RegionId, { lon: number; lat: number }>> = {
   liaodong: { lon: 125.2, lat: 35.38 },
 };
 
-const LABEL: Record<RegionId, RegionView['labelSide']> = {
+const LABEL: Partial<Record<RegionId, RegionView['labelSide']>> = {
   myeongnyang: 'l',
   yeosu: 'b',
   noryang: 'l',
@@ -122,11 +123,12 @@ export function regionViews(g: Grand): RegionView[] {
       recruit,
       yard: own ? yard : [],
       yardIdle: yard.length > 0 && levelOf(r, 'shipyard') < 1,
-      garrison: r.garrison.length,
+      garrison: visible ? r.garrison.length : 0,
+      garrisonCrew: visible ? r.garrison.reduce((n, s) => n + Math.round(shipSpec(s.kind).crew * s.crew), 0) : 0,
       garrisonMax: garrisonCap(id, r),
       unrest: r.unrest,
-      adj: LANES[id].map((l) => l.to),
-      laneTurns: Object.fromEntries(LANES[id].map((l) => [l.to, l.turns])),
+      adj: lanesOf(g, id).map((l) => l.to),
+      laneTurns: Object.fromEntries(lanesOf(g, id).map((l) => [l.to, l.turns])),
       offMap: !!def.edge,
       seat: !!def.capitalOf,
       visible,
@@ -153,6 +155,7 @@ function fleetView(g: Grand, fl: Fleet): FleetView {
     transit: fl.transit ? { from: fl.transit.from, to: fl.transit.to, left: fl.transit.left } : undefined,
     route: [...fl.route],
     ships: fl.ships.map((s) => ({ id: s.id, kind: s.kind, hull: s.hull, crew: s.crew, supply: s.supply, name: tName(s.name) })),
+    crewCount: fl.ships.reduce((n, s) => n + Math.round(shipSpec(s.kind).crew * s.crew), 0),
     commander: commanderView(g, fl.faction, fl.commanderId),
     rest: fl.rest,
     refit: refitable ? refitCost(fl) : 0,
@@ -164,7 +167,7 @@ export function fleetViews(g: Grand): FleetView[] {
   const me = player(g);
   const seen = visibleRegions(g, me);
   return g.fleets
-    .filter((fl) => allied(g, me, fl.faction) || (fl.at ? seen.has(fl.at) : fl.transit ? seen.has(fl.transit.from) || seen.has(fl.transit.to) : false))
+    .filter((fl) => fleetObserved(g, me, fl, seen))
     .map((fl) => fleetView(g, fl));
 }
 
@@ -196,7 +199,7 @@ export function routeText(g: Grand, fl: Fleet): string | undefined {
   let at: RegionId = fl.at;
   let turns = 0;
   for (const next of fl.route) {
-    turns += LANES[at].find((l) => l.to === next)?.turns ?? 1;
+    turns += lanesOf(g, at).find((l) => l.to === next)?.turns ?? 1;
     at = next;
   }
   const dest = g.regions[at];
@@ -218,7 +221,7 @@ export function previewView(g: Grand, contactId: string): BattlePreviewView | nu
   const f = contactForces(g, c);
   const me = player(g);
   const region = g.regions[c.regionId];
-  const crewOf = (ships: { kind: keyof typeof SHIP_SPECS; crew: number }[]) => Math.round(ships.reduce((a, s) => a + SHIP_SPECS[s.kind].crew * s.crew, 0));
+  const crewOf = (ships: { kind: ShipKind; crew: number }[]) => Math.round(ships.reduce((a, s) => a + shipSpec(s.kind).crew * s.crew, 0));
   const leaderOf = (fleets: Fleet[]) => fleets.map((fl) => commanderView(g, fl.faction, fl.commanderId)).filter((x): x is CommanderView => !!x).sort((a, b) => b.level - a.level)[0];
   const youAttack = c.attacker === me || f.attackers.some((fl) => fl.faction === me);
   const youDefend = c.defender === me || f.defenders.some((fl) => fl.faction === me);
@@ -244,11 +247,16 @@ export function previewView(g: Grand, contactId: string): BattlePreviewView | nu
 export function objectiveView(g: Grand): ObjectiveView {
   const me = player(g);
   const p = objectiveProgress(g, me);
-  return { text: t(objectiveText(me)), have: p.have, need: p.need, hold: g.factions[me].objectiveHold, holdNeeded: OBJECTIVE_HOLD };
+  return { text: t(objectiveText(me, g)), have: p.have, need: p.need, hold: g.factions[me].objectiveHold, holdNeeded: OBJECTIVE_HOLD };
 }
 
 export function scoreViews(g: Grand): ScoreView[] {
-  return (['joseon', 'japan', 'ming'] as GrandFaction[]).map((f) => ({ faction: f, score: scoreOf(g, f), regions: ownedBy(g, f).length, ships: shipCount(g, f), alive: g.factions[f].alive }));
+  const me = player(g), seen = visibleRegions(g, me);
+  return (['joseon', 'japan', 'ming'] as GrandFaction[]).map((f) => {
+    const known = g.phase === 'over' || allied(g, me, f);
+    return { faction: f, score: known ? scoreOf(g, f) : null, observedOnly: !known, regions: ownedBy(g, f).length,
+      ships: known ? shipCount(g, f) : g.fleets.filter((fl) => fl.faction === f && fleetObserved(g, me, fl, seen)).reduce((n, fl) => n + fl.ships.length, 0), alive: g.factions[f].alive };
+  });
 }
 
 export function logLines(g: Grand, turn?: number, limit = 14): LogLineView[] {

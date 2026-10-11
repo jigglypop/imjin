@@ -1,5 +1,8 @@
 import { DataTexture, DataUtils, HalfFloatType, LinearFilter, RGBAFormat } from 'three/webgpu';
 
+/** A designed tidal eddy on the adapted map, not an observed real-world whirlpool location. */
+export type CurrentVortex = { x: number; z: number; r: number; spin: number; strength: number };
+
 export type CurrentSpec = {
   cx: number;
   cz: number;
@@ -10,6 +13,8 @@ export type CurrentSpec = {
   turnAt: number;
   slack: number;
   floodFirst: boolean;
+  /** Up to four explicit eddies per tide; the spin reverses when the tide reverses. Historical presets omit this. */
+  vortices?: readonly CurrentVortex[];
 };
 
 type Vortex = { x: number; z: number; r: number; spin: number; strength: number };
@@ -83,6 +88,16 @@ export class CurrentField {
   }
 
   private placeVortices() {
+    if (this.spec.vortices) {
+      for (const dir of [-1, 1]) {
+        const list = dir < 0 ? this.flood : this.ebb;
+        for (const v of this.spec.vortices.slice(0, 4)) {
+          if (![v.x, v.z, v.r, v.spin, v.strength].every(Number.isFinite) || v.r <= 0 || v.spin === 0 || v.strength <= 0 || this.land(v.x, v.z) >= -2) continue;
+          list.push({ x: v.x, z: v.z, r: Math.max(30, Math.min(300, v.r)), spin: Math.sign(v.spin) * dir, strength: Math.min(1.5, v.strength) });
+        }
+      }
+      return;
+    }
     let narrowest = 0;
     for (let i = 1; i < this.bins; i += 1) if (this.widths[i]! < this.widths[narrowest]!) narrowest = i;
     const alongN = -this.spec.reach + (narrowest + 0.5) * this.binSize;
@@ -147,7 +162,10 @@ export class CurrentField {
   vortexData(): number[] {
     const out: number[] = [];
     for (const list of [this.flood, this.ebb]) {
-      for (const v of list) {
+      // Ocean.ts addresses exactly four flood and four ebb records. Missing designed eddies are harmless zeroes.
+      for (let i = 0; i < 4; i += 1) {
+        const v = list[i];
+        if (!v) { out.push(0, 0, 1, 0); continue; }
         const w = this.toWorld(v.x, v.z);
         out.push(w.x, w.z, v.r, v.spin * v.strength);
       }

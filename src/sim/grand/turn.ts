@@ -14,13 +14,14 @@ import {
   levelOf,
   navyName,
 } from './economy';
-import { COMMANDERS, KOREA_COAST, LANES, REGION_ORDER, REGIONS, START } from './regions';
+import { COMMANDERS, KOREA_COAST, REGION_ORDER, REGIONS, START } from './regions';
 import { makeRng, next } from './rng';
 import type { BattleOutcome, BuildingKind, Contact, Fleet, Grand, GrandFaction, RegionId, ShipUnit } from './types';
 import { GRAND_FACTIONS } from './types';
-import { allied, atWar, fleetById, fleetStrength, mintId, note, ownedBy, passable, shipCount } from './world';
+import { allied, atWar, fleetById, fleetStrength, lanesOf, mintId, note, ownedBy, passable, shipCount } from './world';
 import { LEVEL_XP, SHIP_PREFIX, grantXp, spawnFleet, spawnShip } from './roster';
 import { fireEvents } from './events';
+import type { ShipKind } from '../types';
 
 export { MAX_TURNS, LEVEL_XP, spawnShip };
 
@@ -31,6 +32,7 @@ export { MAX_TURNS, LEVEL_XP, spawnShip };
 export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: Grand['difficulty'] = 'normal', spread = 0): Grand {
   const g: Grand = {
     version: 1,
+    balanceProfile: 'competitive-v1',
     seed,
     rng: makeRng(seed),
     player,
@@ -52,7 +54,7 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
   };
   for (const id of REGION_ORDER) {
     const owner = START.owners[id];
-    g.regions[id] = { owner, buildings: [], garrison: [], queue: [], unrest: 0 };
+    g.regions[id] = { owner, buildings: [], garrison: [], queue: [], unrest: 0, garrisonRule: 'equal-power-v1', garrisonReserve: 0 };
     for (const [kind, level] of Object.entries(START.buildings[id] ?? {}) as [BuildingKind, number][]) g.regions[id].buildings.push({ kind, level, upgradeLeft: 0, hp: 1 });
     const cap = garrisonCap(id, g.regions[id]);
     for (let i = 0; i < cap; i += 1) g.regions[id].garrison.push(spawnShip(g, GARRISON_KIND[owner]));
@@ -69,9 +71,20 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
     };
   }
   const scale = Object.fromEntries(GRAND_FACTIONS.map((f) => [f, TUNING.startFleet[f] * (1 + spread * (2 * next(g.rng) - 1))])) as Record<GrandFaction, number>;
-  for (const s of START.fleets) {
-    const ships = Object.fromEntries(Object.entries(s.ships).map(([k, n]) => [k, Math.round(n * scale[s.faction])]));
-    spawnFleet(g, s.faction, s.at, s.name, ships, s.commander);
+  const scaled = START.fleets.map((s) => ({ ...s, ships: Object.fromEntries(Object.entries(s.ships).map(([k, n]) => [k, Math.floor(n * scale[s.faction])])) as Partial<Record<ShipKind, number>> }));
+  // Round a navy's total once, then allocate the remaining hulls by fractional remainder. Rounding each fleet
+  // separately made a tiny slider change add several expensive warships to only the navy with three fleets.
+  for (const f of GRAND_FACTIONS) {
+    const kinds = new Set(START.fleets.filter((s) => s.faction === f).flatMap((s) => Object.keys(s.ships) as ShipKind[]));
+    for (const kind of kinds) {
+      const pieces = START.fleets.map((s, i) => ({ i, n: s.faction === f ? s.ships[kind] ?? 0 : 0 })).filter((s) => s.n > 0);
+      let left = Math.round(pieces.reduce((sum, s) => sum + s.n, 0) * scale[f]) - pieces.reduce((sum, s) => sum + (scaled[s.i]!.ships[kind] ?? 0), 0);
+      pieces.sort((a, b) => (b.n * scale[f] % 1) - (a.n * scale[f] % 1) || a.i - b.i);
+      for (const p of pieces) if (left-- > 0) scaled[p.i]!.ships[kind] = (scaled[p.i]!.ships[kind] ?? 0) + 1;
+    }
+  }
+  for (const s of scaled) {
+    spawnFleet(g, s.faction, s.at, s.name, s.ships, s.commander);
   }
   note(g, '조선, 일본, 명 세 진영이 남해의 물길을 두고 맞섭니다.');
   recordStats(g, 0, 0);
@@ -100,8 +113,8 @@ export function contactForces(g: Grand, c: Contact): { attacker: Force; defender
   };
 }
 
-function sail(fl: Fleet, from: RegionId, to: RegionId) {
-  const turns = LANES[from].find((l) => l.to === to)?.turns ?? 1;
+function sail(g: Grand, fl: Fleet, from: RegionId, to: RegionId) {
+  const turns = lanesOf(g, from).find((l) => l.to === to)?.turns ?? 1;
   fl.route = [];
   if (turns <= 1) {
     fl.at = to;
@@ -116,7 +129,7 @@ function sail(fl: Fleet, from: RegionId, to: RegionId) {
 /** A beaten fleet falls back to the port it came from, or to the nearest friendly one; with nowhere to go it is lost. */
 function retreat(g: Grand, fl: Fleet, from: RegionId) {
   const safe = (id: RegionId) => id !== from && passable(g, fl.faction, id) && !g.fleets.some((o) => o.at === id && atWar(g, o.faction, fl.faction));
-  const lanes = LANES[from].filter((l) => safe(l.to));
+  const lanes = lanesOf(g, from).filter((l) => safe(l.to));
   const home = fl.from && lanes.find((l) => l.to === fl.from);
   const mine = (id: RegionId) => (g.regions[id].owner === fl.faction ? 0 : 1);
   const choice = home ?? [...lanes].sort((a, b) => a.turns - b.turns || mine(a.to) - mine(b.to))[0];
@@ -126,7 +139,7 @@ function retreat(g: Grand, fl: Fleet, from: RegionId) {
     return;
   }
   for (const u of fl.ships) u.supply = Math.max(0.2, u.supply * 0.7);
-  sail(fl, from, choice.to);
+  sail(g, fl, from, choice.to);
 }
 
 /** The region changes hands. Its works are damaged, its queue is lost and its people are restless. */
@@ -140,6 +153,7 @@ export function captureRegion(g: Grand, id: RegionId, taker: GrandFaction) {
   g.credit[taker] += REGIONS[id].value * TUNING.score.captureCredit;
   r.owner = by;
   r.garrison = [];
+  if (r.garrisonRule === 'equal-power-v1') r.garrisonReserve = 0;
   r.queue = [];
   r.unrest = liberated ? 1 : TUNING.unrestTurns;
   r.buildings = r.buildings
@@ -288,7 +302,7 @@ function moveFleets(g: Grand) {
     const to = a.route[0];
     if (!to || !a.at || a.transit || a.rest > 0) continue;
     for (const b of g.fleets) {
-      if (b.at === to && b.route[0] === a.at && !b.transit && b.rest <= 0 && atWar(g, a.faction, b.faction) && LANES[a.at].find((l) => l.to === to)?.turns === 1) b.route = [];
+      if (b.at === to && b.route[0] === a.at && !b.transit && b.rest <= 0 && atWar(g, a.faction, b.faction) && lanesOf(g, a.at).find((l) => l.to === to)?.turns === 1) b.route = [];
     }
   }
   for (const fl of [...g.fleets]) {
@@ -308,7 +322,7 @@ function moveFleets(g: Grand) {
       fl.route = [];
       continue;
     }
-    const lane = LANES[fl.at].find((l) => l.to === to);
+    const lane = lanesOf(g, fl.at).find((l) => l.to === to);
     if (!lane) {
       fl.route = [];
       continue;
@@ -430,13 +444,24 @@ function runEvents(g: Grand) {
 /** What each faction must hold to win outright, and for how many turns in a row. */
 export const OBJECTIVE_HOLD = 2;
 
-export function objectiveText(f: GrandFaction): string {
-  if (f === 'joseon') return '남해안 포구 8곳과 쓰시마를 모두 차지하고 반년 동안 유지합니다.';
-  if (f === 'japan') return '한산도를 포함해 남해안 포구 8곳 중 6곳을 차지하고 반년 동안 유지합니다.';
+export function controlValue(g: Grand, f: GrandFaction): number {
+  return ownedBy(g, f).reduce((sum, id) => sum + REGIONS[id].value, 0);
+}
+
+/** Snapshot the opening territory once; losing and retaking the same port cannot farm objective progress. */
+export function growthVictoryRules(g: Grand): NonNullable<Grand['victoryRules']> {
+  return { kind: 'growth-v1', initialControl: Object.fromEntries(GRAND_FACTIONS.map((f) => [f, controlValue(g, f)])) as Record<GrandFaction, number>, target: Math.ceil(REGION_ORDER.reduce((sum, id) => sum + REGIONS[id].value, 0) / 4) };
+}
+
+export function objectiveText(f: GrandFaction, g?: Grand): string {
+  if (g?.victoryRules?.kind === 'growth-v1') return '시작 영토보다 점령 가치를 늘려 공통 목표를 달성하고 반년 동안 유지합니다.';
+  if (f === 'joseon') return '남해안의 모든 포구와 쓰시마를 차지하고 반년 동안 유지합니다.';
+  if (f === 'japan') return '한산도를 포함해 남해안 포구에서 두 곳을 제외한 나머지를 차지하고 반년 동안 유지합니다.';
   return '부산포와 함께 쓰시마나 나고야를 차지하고 반년 동안 유지합니다.';
 }
 
 export function objectiveMet(g: Grand, f: GrandFaction): boolean {
+  if (g.victoryRules?.kind === 'growth-v1') return controlValue(g, f) - g.victoryRules.initialControl[f] >= g.victoryRules.target;
   const own = (id: RegionId) => g.regions[id].owner === f;
   const coast = KOREA_COAST.filter(own).length;
   if (f === 'joseon') return coast === KOREA_COAST.length && own('tsushima');
@@ -446,6 +471,7 @@ export function objectiveMet(g: Grand, f: GrandFaction): boolean {
 
 /** Progress toward the objective as have/need, for the strategic map. */
 export function objectiveProgress(g: Grand, f: GrandFaction): { have: number; need: number } {
+  if (g.victoryRules?.kind === 'growth-v1') return { have: Math.max(0, controlValue(g, f) - g.victoryRules.initialControl[f]), need: g.victoryRules.target };
   const own = (id: RegionId) => g.regions[id].owner === f;
   const coast = KOREA_COAST.filter(own).length;
   if (f === 'joseon') return { have: coast + (own('tsushima') ? 1 : 0), need: KOREA_COAST.length + 1 };
@@ -454,8 +480,7 @@ export function objectiveProgress(g: Grand, f: GrandFaction): { have: number; ne
 }
 
 export function scoreOf(g: Grand, f: GrandFaction): number {
-  let s = 0;
-  for (const id of ownedBy(g, f)) s += REGIONS[id].value * TUNING.score.region;
+  let s = (controlValue(g, f) - (g.victoryRules?.initialControl[f] ?? 0)) * TUNING.score.region;
   for (const fl of g.fleets) if (fl.faction === f) s += fleetStrength(fl) * TUNING.score.strength;
   return Math.round(s + Math.max(0, g.factions[f].gold) * TUNING.score.gold + g.credit[f] * TUNING.score.credit);
 }
@@ -512,7 +537,19 @@ function advanceTurn(g: Grand) {
     if (r.unrest > 0) r.unrest -= 1;
     else {
       for (const u of r.garrison) u.hull = Math.min(1, u.hull + 0.2);
-      if (r.garrison.length < garrisonCap(id, r)) for (let i = 0; i < TUNING.garrison.regen && r.garrison.length < garrisonCap(id, r); i += 1) r.garrison.push(spawnShip(g, GARRISON_KIND[r.owner]));
+      const cap = garrisonCap(id, r);
+      if (r.garrisonRule === 'equal-power-v1') {
+        if (r.garrison.length >= cap) r.garrisonReserve = 0;
+        else {
+          r.garrisonReserve = (r.garrisonReserve ?? 0) + shipDef(GARRISON_KIND.joseon).strength * TUNING.garrison.regen;
+          const kind = GARRISON_KIND[r.owner], price = shipDef(kind).strength;
+          while (r.garrison.length < cap && r.garrisonReserve >= price) {
+            r.garrisonReserve -= price;
+            r.garrison.push(spawnShip(g, kind));
+          }
+          if (r.garrison.length >= cap) r.garrisonReserve = 0;
+        }
+      } else if (r.garrison.length < cap) for (let i = 0; i < TUNING.garrison.regen && r.garrison.length < cap; i += 1) r.garrison.push(spawnShip(g, GARRISON_KIND[r.owner]));
     }
   }
   // Fleets rest in friendly ports and wear down in foreign water.

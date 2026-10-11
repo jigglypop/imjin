@@ -20,7 +20,7 @@ export function clientMessage(value: unknown): ClientMsg | null {
   let valid = false;
   switch (value.t) {
     case 'hello':
-      valid = text(value.name, 256) && typeof value.v === 'number' && Number.isInteger(value.v) && (value.token === undefined || (typeof value.token === 'string' && /^[a-f0-9]{32}$/.test(value.token)));
+      valid = text(value.name, 256) && typeof value.v === 'number' && Number.isInteger(value.v) && (value.token === undefined || (typeof value.token === 'string' && /^[a-f0-9]{32}$/.test(value.token))) && (value.account === undefined || (typeof value.account === 'string' && /^[a-f0-9]{64}$/.test(value.account)));
       break;
     case 'create':
       valid = text(value.name, 256) && choice(value.battle);
@@ -40,6 +40,9 @@ export function clientMessage(value: unknown): ClientMsg | null {
     case 'quick':
       valid = choice(value.battle) && faction(value.faction);
       break;
+    case 'ranked':
+      valid = faction(value.faction);
+      break;
     case 'ping':
       valid = typeof value.at === 'number' && Number.isFinite(value.at);
       break;
@@ -54,6 +57,9 @@ export function clientMessage(value: unknown): ClientMsg | null {
     case 'leave':
     case 'start':
     case 'quickCancel':
+    case 'rankedCancel':
+    case 'rankedProfile':
+    case 'leaderboard':
     case 'rematch':
     case 'loaded':
       valid = true;

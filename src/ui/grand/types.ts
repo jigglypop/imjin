@@ -73,6 +73,7 @@ export interface RegionView {
   yardIdle: boolean;
   garrison: number;
   garrisonMax: number;
+  garrisonCrew: number;
   /** Turns of reduced income after a conquest. */
   unrest: number;
   /** Adjacent region ids: the sea lanes. */
@@ -123,6 +124,7 @@ export interface FleetView {
   /** The ordered route, next region first. Empty when idle. */
   route: string[];
   ships: ShipView[];
+  crewCount: number;
   commander?: CommanderView;
   /** Turns the fleet must still spend refitting after a fight. */
   rest: number;
@@ -193,7 +195,8 @@ export interface ObjectiveView {
 
 export interface ScoreView {
   faction: FactionId;
-  score: number;
+  score: number | null;
+  observedOnly?: boolean;
   regions: number;
   ships: number;
   alive: boolean;

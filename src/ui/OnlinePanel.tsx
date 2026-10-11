@@ -5,10 +5,12 @@ import { CONQUEST_MAPS, CONQUEST_ORDER, type ConquestMapId } from '../sim/maps';
 import { SCENARIOS, SCENARIO_ORDER, type ScenarioId } from '../sim/scenarios';
 import { FACTION_NAME, FACTION_SHORT } from '../sim/balance';
 import { FACTIONS, type Faction } from '../sim/types';
+import { COMPETITIVE_TRAITS } from '../sim/competitive';
 import { sound } from '../audio/Sound';
 import { t, useT } from '../i18n';
 import { Cross } from './icons';
 import { mountOnlineOverlay } from './OnlineOverlay';
+import { RankActions, RankResult, RANK_TIER } from './RankResult';
 import './online.css';
 
 mountOnlineOverlay();
@@ -17,7 +19,7 @@ const click = () => sound.click();
 
 // Plain functions: the components that call them use useT(), so they re-render when the language changes.
 export const battleTitle = (c: BattleChoice) => t(c.kind === 'scenario' ? SCENARIOS[c.id].title : CONQUEST_MAPS[c.map].title);
-export const battleKind = (c: BattleChoice) => (c.kind === 'scenario' ? t('역사 전투 1:1') : c.size === 4 ? t('쟁탈전 2:2') : t('쟁탈전 1:1'));
+export const battleKind = (c: BattleChoice) => (c.kind === 'scenario' ? t('역사 전투 1:1') : t(c.size === 4 ? '쟁탈전 2:2' : '쟁탈전 1:1'));
 /** The year of a scenario's date ('1592년 5월 7일'), the same digits in both languages. */
 const yearOf = (date: string) => date.match(/^\d+/)?.[0] ?? date;
 
@@ -74,7 +76,7 @@ function NavyPicker({ value, onChange, ming }: { value: Faction; onChange: (f: F
   return (
     <div className="on-navies">
       {FACTIONS.filter((f) => ming || f !== 'ming').map((f) => (
-        <button key={f} className={`on-navy ${value === f ? 'on-navy--on' : ''}`} onClick={() => onChange(f)}>
+        <button key={f} data-faction={f} aria-pressed={value === f} className={`on-navy ${value === f ? 'on-navy--on' : ''}`} onClick={() => onChange(f)}>
           <i className={`emblem emblem--${f}`} />
           <span>{t(FACTION_NAME[f])}</span>
         </button>
@@ -89,6 +91,7 @@ function Connect() {
   const name = useNet((s) => s.name);
   const error = useNet((s) => s.error);
   const retry = useNet((s) => s.retry);
+  const identityRejected = useNet((s) => s.identityRejected);
   const [nick, setNick] = useState(name);
   const busy = status === 'connecting';
   const go = () => {
@@ -98,7 +101,7 @@ function Connect() {
   return (
     <div className="cs net paper on">
       <div className="on-title">{t('접속')}</div>
-      <p className="on-lead">{t('다른 플레이어와 쟁탈전이나 역사 속 해전을 겨룹니다. 빈 자리는 컴퓨터가 맡습니다.')}</p>
+      <p className="on-lead">{t('다른 플레이어와 랭크전·쟁탈전·역사 속 해전을 겨룹니다.')}</p>
       <div className="on-row">
         <span className="on-label">{t('닉네임')}</span>
         <input className="on-input" value={nick} maxLength={16} placeholder={t('닉네임을 입력하세요')} onChange={(e) => setNick(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()} />
@@ -124,6 +127,11 @@ function Connect() {
           )}
         </div>
       )}
+      {identityRejected && <>
+        <span className="on-hint">{t('기존 점수를 이어가려면 복구코드를 복원하세요.')}</span>
+        <Recovery busy={busy} rejected />
+        <button className="chip on-new-account" disabled={busy} onClick={() => net.newAccount()}>{t('새 계정으로 시작')}</button>
+      </>}
     </div>
   );
 }
@@ -151,6 +159,83 @@ function RoomRow({ r }: { r: RoomSummary }) {
   );
 }
 
+function Recovery({ busy, rejected = false }: { busy: boolean; rejected?: boolean }) {
+  const t = useT();
+  const [revealed, setRevealed] = useState('');
+  const [code, setCode] = useState('');
+  const [error, setError] = useState(false);
+  return (
+    <details className="on-recovery" open={rejected || undefined} onToggle={(e) => { if (!e.currentTarget.open) setRevealed(''); }}>
+      <summary>{t('전적 복구')}</summary>
+      <div className="on-recovery-body">
+        {!rejected && <span className="on-hint">{t('전적은 이 브라우저에 저장된 계정에 연결됩니다. 복구코드로 다른 기기에서도 이어갈 수 있습니다.')}</span>}
+        {!rejected && <div className="on-row">
+          <button className="chip on-recovery-export" disabled={busy} onClick={() => setRevealed(net.exportAccount())}>{t(revealed ? '복구코드 다시 보기' : '복구코드 보기')}</button>
+          {revealed && <button className="chip" onClick={() => setRevealed('')}>{t('숨기기')}</button>}
+        </div>}
+        {revealed && <>
+          <span className="on-hint">{t('복구코드를 가진 사람은 이 전적을 사용할 수 있습니다. 안전하게 보관하세요.')}</span>
+          <textarea className="on-input on-recovery-code" readOnly value={revealed} aria-label={t('복구코드')} onFocus={(e) => e.currentTarget.select()} />
+        </>}
+        <div className="on-row">
+          <input className="on-input on-recovery-input" type="password" autoComplete="off" value={code} placeholder={t('복구코드')} aria-label={t('복구코드')} onChange={(e) => { setCode(e.target.value); setError(false); }} />
+          <button className="chip on-recovery-restore" disabled={busy || !code.trim()} onClick={() => {
+            if (!net.restoreAccount(code.trim())) setError(true);
+            else { setCode(''); setRevealed(''); setError(false); }
+          }}>{t('전적 복구')}</button>
+        </div>
+        {error && <span className="on-alert" role="alert">{t('복구코드를 확인하거나 대전을 마친 뒤 다시 시도하세요.')}</span>}
+      </div>
+    </details>
+  );
+}
+
+function RankedLobby({ navy, setNavy }: { navy: Faction; setNavy: (f: Faction) => void }) {
+  const t = useT();
+  const profile = useNet((s) => s.rankProfile);
+  const queue = useNet((s) => s.rankedQueue);
+  const board = useNet((s) => s.leaderboard);
+  const result = useNet((s) => s.rankResult);
+  const [now, setNow] = useState(Date.now());
+  const refresh = () => { net.refreshRank(); net.fetchLeaderboard(); };
+  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    if (!queue) return;
+    setNow(Date.now());
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [queue?.since]);
+  const waited = queue ? Math.max(0, Math.floor((now - queue.since) / 1000)) : 0;
+  return <>
+    <section className="on-card on-rank">
+      <div className="on-card-head"><b>{t('랭크전')}</b><span className="on-hint">{t('1:1 한려 쟁탈전 · 플레이어만')}</span></div>
+      {profile ? <div className="on-rank-profile">
+        <div className="on-rank-score"><strong>{profile.rating}</strong><span>{t(RANK_TIER[profile.tier])}</span></div>
+        <div className="on-rank-record"><span>{t('{win}승 {draw}무 {loss}패', { win: profile.wins, draw: profile.draws, loss: profile.losses })}</span>{profile.placementLeft > 0 && <span>{t('배치 {n}판 남음', { n: profile.placementLeft })}</span>}</div>
+      </div> : <div className="on-hint">{t('랭크 정보를 불러올 수 없습니다.')} <button className="chip" onClick={refresh}>{t('새로고침')}</button></div>}
+      {result && !queue && <RankResult />}
+      {queue ? <div className="on-searching on-rank-searching">
+        <span className="on-spinner" />
+        <span>{t('상대를 찾는 중 · {n}초', { n: waited })}<small>{t('검색 범위 ±{n}점', { n: queue.range })}</small></span>
+        <button className="chip on-rank-cancel" onClick={() => net.rankedCancel()}>{t('취소')}</button>
+      </div> : <>
+        <div className="on-row"><span className="on-label">{t('진영')}</span><NavyPicker value={navy} onChange={setNavy} ming /></div>
+        <span className="on-rank-trait">{t(COMPETITIVE_TRAITS[navy])}</span>
+        <div className="on-row"><span className="on-hint">{t('상대를 찾을 때까지 기다립니다. 컴퓨터로 대체하지 않습니다.')}</span><button className="ink-btn on-go on-rank-start" disabled={!profile} onClick={() => { click(); net.ranked(navy); }}>{t('랭크전 찾기')}</button></div>
+      </>}
+      <span className="on-hint">{t('같은 상대와는 1시간에 3판까지 대전합니다.')}</span>
+    </section>
+    <section className="on-card on-rank-board">
+      <div className="on-card-head"><b>{t('순위표')}</b><button className="chip" onClick={refresh}>{t('새로고침')}</button></div>
+      {board.length ? <div className="on-rank-table-wrap"><table className="on-rank-table">
+        <thead><tr><th>{t('순위')}</th><th>{t('장수')}</th><th>{t('등급')}</th><th>{t('점수')}</th><th className="on-rank-table-record">{t('전적')}</th></tr></thead>
+        <tbody>{board.map((p, i) => <tr key={p.id} className={p.id === profile?.id ? 'on-rank-table-me' : ''}><td>{i + 1}</td><td className="on-rank-player">{p.name}</td><td>{t(RANK_TIER[p.tier])}</td><td>{p.rating}</td><td className="on-rank-table-record">{t('{win}승 {draw}무 {loss}패', { win: p.wins, draw: p.draws, loss: p.losses })}</td></tr>)}</tbody>
+      </table></div> : <span className="on-hint">{t('아직 순위표에 등록된 장수가 없습니다.')}</span>}
+    </section>
+    <Recovery busy={!!queue} />
+  </>;
+}
+
 function Lobby() {
   const t = useT();
   const name = useNet((s) => s.name);
@@ -158,6 +243,8 @@ function Lobby() {
   const error = useNet((s) => s.error);
   const ping = useNet((s) => s.ping);
   const quick = useNet((s) => s.quick);
+  const rankedQueue = useNet((s) => s.rankedQueue);
+  const [tab, setTab] = useState<'ranked' | 'casual'>(() => useNet.getState().quick ? 'casual' : 'ranked');
   const [title, setTitle] = useState('');
   const [choice, setChoice] = useState<BattleChoice>({ kind: 'conquest', map: 'hallyeo', size: 2 });
   const [quickChoice, setQuickChoice] = useState<BattleChoice>({ kind: 'scenario', id: 'hansan' });
@@ -174,6 +261,7 @@ function Lobby() {
     const id = window.setInterval(() => setNow(Date.now()), 500);
     return () => window.clearInterval(id);
   }, [quick]);
+  useEffect(() => { if (rankedQueue) setTab('ranked'); else if (quick) setTab('casual'); }, [!!rankedQueue, !!quick]);
 
   const waited = quick ? Math.min(quick.seconds, Math.floor((now - quick.since) / 1000)) : 0;
   const safeNavy = quickChoice.kind === 'scenario' && navy === 'ming' ? 'joseon' : navy;
@@ -186,7 +274,11 @@ function Lobby() {
         </small>
       </div>
       {error && <div className="on-alert">{t(error)}</div>}
-
+      <div className="on-seg on-tabs" role="tablist" aria-label={t('대전 모드')}>
+        <button className={`on-seg-btn on-tab-ranked ${tab === 'ranked' ? 'on-seg-btn--on' : ''}`} role="tab" aria-selected={tab === 'ranked'} disabled={!!quick} onClick={() => setTab('ranked')}>{t('랭크전')}</button>
+        <button className={`on-seg-btn on-tab-casual ${tab === 'casual' ? 'on-seg-btn--on' : ''}`} role="tab" aria-selected={tab === 'casual'} disabled={!!rankedQueue} onClick={() => setTab('casual')}>{t('일반 대전')}</button>
+      </div>
+      {tab === 'ranked' ? <RankedLobby navy={navy} setNavy={setNavy} /> : <>
       <section className="on-card">
         <div className="on-card-head">
           <b>{t('빠른 대전')}</b>
@@ -261,6 +353,7 @@ function Lobby() {
           </button>
         </div>
       </section>
+      </>}
     </div>
   );
 }
@@ -272,7 +365,7 @@ function Seats({ room, me }: { room: RoomInfo; me: string }) {
   return (
     <div className="on-seats">
       {room.seats.map((s, i) => {
-        const editable = !duel && (s.client === me || (host && !s.client));
+        const editable = !room.ranked && !duel && (s.client === me || (host && !s.client));
         const label = s.client ? (s.client === me ? t('{name} (나)', { name: s.player }) : s.player || t('상대 장수')) : s.human ? t('빈 자리') : t('컴퓨터');
         return (
           <div key={i} className={`on-seat on-seat--${s.team} ${s.client === me ? 'on-seat--me' : ''}`}>
@@ -280,23 +373,23 @@ function Seats({ room, me }: { room: RoomInfo; me: string }) {
             <b>{label}</b>
             {s.away && <span className="on-tag on-tag--warn">{t('연결 끊김')}</span>}
             <div className="on-factions">
-              {(duel ? [s.team] : FACTIONS.filter((f) => f !== 'ming' || s.team === 'joseon')).map((f) => (
+              {(duel ? [s.team] : FACTIONS).map((f) => (
                 <button key={f} className={`on-faction ${s.faction === f ? 'on-faction--on' : ''}`} disabled={!editable} onClick={() => net.send({ t: 'seat', index: i, faction: f })} title={t(FACTION_NAME[f])}>
                   <i className={`emblem emblem--${f}`} />
                 </button>
               ))}
             </div>
-            {!s.client && s.human && (
+            {!room.ranked && !s.client && s.human && (
               <button className="chip" onClick={() => net.send({ t: 'take', index: i })}>
                 {t('자리 잡기')}
               </button>
             )}
-            {!s.client && host && (
+            {!room.ranked && !s.client && host && (
               <button className="chip" onClick={() => net.send({ t: 'seat', index: i, human: !s.human })}>
                 {s.human ? t('컴퓨터로 전환') : t('플레이어 자리로 전환')}
               </button>
             )}
-            {s.client && <span className={`on-tag ${s.ready || s.client === room.host ? 'on-tag--on' : ''}`}>{room.state === 'ended' ? (s.rematch ? t('재대결') : '') : s.client === room.host ? t('방장') : s.ready ? t('준비') : t('대기')}</span>}
+            {s.client && <span className={`on-tag ${s.ready || s.client === room.host ? 'on-tag--on' : ''}`}>{room.ranked ? t('랭크전') : room.state === 'ended' ? (s.rematch ? t('재대결') : '') : s.client === room.host ? t('방장') : s.ready ? t('준비') : t('대기')}</span>}
           </div>
         );
       })}
@@ -327,7 +420,7 @@ function Room({ room }: { room: RoomInfo }) {
   return (
     <div className="cs net paper on">
       <div className="on-title">
-        {room.quick ? t('{mode} · {title}', { mode: t('빠른 대전'), title: battleTitle(room.battle) }) : room.name} <code>{room.id}</code>
+        {room.ranked ? t('랭크전') : room.quick ? t('{mode} · {title}', { mode: t('빠른 대전'), title: battleTitle(room.battle) }) : room.name} <code>{room.id}</code>
         <small>
           {battleTitle(room.battle)} · {battleKind(room.battle)}
         </small>
@@ -335,6 +428,7 @@ function Room({ room }: { room: RoomInfo }) {
       {error && <div className="on-alert">{t(error)}</div>}
       {room.battle.kind === 'scenario' && room.state === 'lobby' && <p className="on-lead">{t('조선과 일본 중 한 자리를 맡습니다. 비어 있는 자리는 컴퓨터가 맡습니다.')}</p>}
       <Seats room={room} me={me} />
+      {room.ranked && room.state === 'ended' && <RankResult showOutcome />}
       <div className="on-chat" ref={log}>
         {chat.map((c, i) => (
           <div key={i}>
@@ -344,15 +438,15 @@ function Room({ room }: { room: RoomInfo }) {
       </div>
       <div className="on-row">
         <input className="on-input" value={line} maxLength={120} placeholder={t('메시지 입력')} onChange={(e) => setLine(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && say()} />
-        <button className="chip" onClick={() => net.send({ t: 'leave' })}>
-          {t('나가기')}
+        <button className="chip" title={room.ranked && room.state !== 'ended' ? t('기권하면 랭크 점수에 반영됩니다') : undefined} onClick={() => net.send({ t: 'leave' })}>
+          {t(room.ranked && room.state !== 'ended' ? '기권하고 대기실로' : '나가기')}
         </button>
-        {room.state === 'lobby' && !host && (
+        {!room.ranked && room.state === 'lobby' && !host && (
           <button className={`chip on-ready ${mine?.ready ? 'chip--on' : ''}`} onClick={() => net.send({ t: 'ready', ready: !mine?.ready })}>
             {mine?.ready ? t('준비 완료') : t('준비')}
           </button>
         )}
-        {room.state === 'lobby' && host && (
+        {!room.ranked && room.state === 'lobby' && host && (
           <button
             className="ink-btn on-go on-start"
             disabled={!canStart}
@@ -364,7 +458,8 @@ function Room({ room }: { room: RoomInfo }) {
             {t('전투 시작')}
           </button>
         )}
-        {room.state === 'ended' && (
+        {room.ranked && room.state === 'ended' && <RankActions />}
+        {!room.ranked && room.state === 'ended' && (
           <button className={`chip on-rematch ${mine?.rematch ? 'chip--on' : ''}`} disabled={!mine || mine.rematch} onClick={() => net.send({ t: 'rematch' })}>
             {mine?.rematch ? t('상대를 기다리는 중') : t('재대결')}
           </button>

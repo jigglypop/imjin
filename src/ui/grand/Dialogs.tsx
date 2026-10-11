@@ -9,7 +9,7 @@ import type { BattleResultView, EventView, FactionId, GameOverView, LogLineView,
 
 function Scores({ scores, me }: { scores: ScoreView[]; me: FactionId }) {
   const t = useT();
-  const top = Math.max(1, ...scores.map((s) => s.score));
+  const top = Math.max(1, ...scores.map((s) => s.score ?? 0));
   return (
     <ul className="g-list">
       {scores.map((s) => (
@@ -21,10 +21,10 @@ function Scores({ scores, me }: { scores: ScoreView[]; me: FactionId }) {
               {s.faction === me && <span className="g-row__kind">{t('우리 진영')}</span>}
               {!s.alive && <span className="g-row__kind">{t('패망')}</span>}
             </span>
-            <span className="g-row__sub">{t('포구 {ports} · 함선 {ships}', { ports: portsText(s.regions), ships: shipsText(s.ships) })}</span>
-            <Bar value={s.score / top} tone="tone" label={t('점수 {n}', { n: s.score })} />
+            <span className="g-row__sub">{t(s.observedOnly ? '포구 {ports} · 관측 함선 {ships}' : '포구 {ports} · 함선 {ships}', { ports: portsText(s.regions), ships: shipsText(s.ships) })}</span>
+            {s.score !== null && <Bar value={s.score / top} tone="tone" label={t('점수 {n}', { n: s.score })} />}
           </span>
-          <b className="g-score__num">{num(s.score)}</b>
+          <b className="g-score__num">{s.score === null ? '—' : num(s.score)}</b>
         </li>
       ))}
     </ul>

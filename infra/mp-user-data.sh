@@ -7,6 +7,7 @@ dnf install -y nodejs22 || dnf install -y nodejs
 NODE=$(command -v node-22 || command -v node)
 useradd --system --home /opt/imjin --shell /sbin/nologin imjin || true
 mkdir -p /opt/imjin && chown imjin:imjin /opt/imjin
+install -d -m 700 -o imjin -g imjin /opt/imjin/data
 curl -fsSL "https://caddyserver.com/api/download?os=linux&arch=arm64" -o /usr/local/bin/caddy
 chmod +x /usr/local/bin/caddy
 useradd --system --home /var/lib/caddy --shell /sbin/nologin caddy || true
@@ -39,7 +40,8 @@ Description=Imjin multiplayer server
 After=network-online.target
 [Service]
 User=imjin
-Environment=PORT=8787 NODE_OPTIONS=--max-old-space-size=1024
+Environment=PORT=8787 NODE_OPTIONS=--max-old-space-size=1024 RANKED_STORE=/opt/imjin/data/ranked.jsonl
+WorkingDirectory=/opt/imjin
 LimitNOFILE=65536
 ExecStart=$NODE /opt/imjin/server.cjs
 Restart=always

@@ -1,4 +1,4 @@
-import { SHIP_SPECS } from '../catalog';
+import { shipSpec } from '../competitive';
 import { batteryStrength, shipDef, type ShipDef } from './economy';
 import { forkRng, next, range, type Rng } from './rng';
 import type { BattleOutcome, BattleOutcomeShip, GrandFaction, RegionState, ShipUnit } from './types';
@@ -10,7 +10,7 @@ export const RESOLVE = {
   /** Round multipliers: gun, gun, melee, melee. */
   phases: ['gun', 'gun', 'melee', 'melee'] as const,
   /** The Japanese fight with the sword: extra weight in the boarding rounds. */
-  boardingBonus: { joseon: 1, japan: 1.22, ming: 1 } as Record<GrandFaction, number>,
+  boardingBonus: { joseon: 1, japan: 1, ming: 1 } as Record<GrandFaction, number>,
   commanderPerLevel: 0.05,
   defenderBonus: 1.03,
   campPerLevel: 0.04,
@@ -69,7 +69,7 @@ type Unit = {
 
 function unitOf(ship: ShipUnit, side: 0 | 1): Unit {
   const def = shipDef(ship.kind);
-  const spec = SHIP_SPECS[ship.kind];
+  const spec = shipSpec(ship.kind);
   const max = def.strength;
   return { ship, def, side, max, hp: max * ship.hull, start: max * ship.hull, crew: ship.crew, kills: 0, armor: spec.armor, shore: false };
 }

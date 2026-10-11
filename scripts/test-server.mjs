@@ -1,7 +1,9 @@
 // Local process regression: malformed clients must leave other players and the server alive.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +14,7 @@ const protocol = Number(/export const PROTOCOL = (\d+)/.exec(readFileSync(new UR
 const sockets = [];
 let server;
 let stderr = '';
+const storage = mkdtempSync(join(tmpdir(), 'imjin-server-regression-'));
 
 function run(script, args = []) {
   return new Promise((resolve, reject) => {
@@ -68,7 +71,7 @@ try {
   const { revision } = JSON.parse(readFileSync(new URL('../server/dist/build.json', import.meta.url), 'utf8'));
   server = spawn(process.execPath, ['server/dist/server.cjs'], {
     cwd: root,
-    env: { ...process.env, PORT: '0', FF_SPEED: '1' },
+    env: { ...process.env, PORT: '0', FF_SPEED: '1', RANKED_STORE: join(storage, 'ranked.jsonl') },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   server.stderr.on('data', (data) => stderr += data);
@@ -190,4 +193,6 @@ try {
     server.kill();
     await once(server, 'exit');
   }
+  if (!storage.startsWith(join(tmpdir(), 'imjin-server-regression-'))) throw new Error('unexpected temporary storage path');
+  rmSync(storage, { recursive: true, force: true });
 }

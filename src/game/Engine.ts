@@ -41,6 +41,9 @@ import { Clouds } from '../render/Clouds';
 const COVERAGE: Record<SkyPresetName, number> = { afternoon: 0.5, day: 0.42, sunset: 0.46, overcast: 0.78, night: 0.38 };
 import { WakeMap } from '../ocean/WakeMap';
 import { SEA_STATES, spectrumOf, waveField, type SeaStateName } from '../ocean/waves';
+import { combatValue, engagementRange } from '../sim/competitive';
+import { eventObserved, shipObserved } from '../sim/observation';
+import { pointVisible } from '../sim/visibility';
 import { FFTWaves } from '../ocean/FFTWaves';
 import { CUT_CAP, loadShipAssets, releaseShipAssets, type ModelAsset, type ShipAssetOptions } from '../ships/ShipRenderer';
 import { ShipViews } from '../ships/ShipViews';
@@ -48,18 +51,16 @@ import { Effects } from '../fx/Effects';
 import { Crew, crewAssets } from '../fx/Crew';
 import { Lanterns } from '../fx/Lanterns';
 import { Battle, SIM_DT } from '../sim/battle';
-import { GUN_SPECS } from '../sim/catalog';
 import { buildScenario, SCENARIOS, type FleetSpawn, type ScenarioId } from '../sim/scenarios';
 import { applyBalance, FACTION_NAME, FACTION_SHORT } from '../sim/balance';
 import { applyOutcome } from '../campaign/campaign';
 import { finishGrandBattle } from '../campaign/grand';
 import { outcomeOfBattle, type RegionBattle } from '../sim/grand/bridge';
 import { buildGrandConquest, grandAxis, grandInfo, shipOutcomes, worksAfter } from '../sim/grand/spawn';
-import { SHIP_SPECS } from '../sim/catalog';
 import { CurrentField } from '../sim/current';
 import { OWNER_OF, otherTeam, teamOf, type BattleEvent, type Faction, type Ship, type ShipKind, type Team } from '../sim/types';
 import { buildConquest, homeAxis, type ConquestMapId, type Seat } from '../sim/maps';
-import { BUILDING_ORDER, BUILDINGS, ROSTER, SHORT_NAME, type Conquest } from '../sim/conquest';
+import { BUILDING_ORDER, BUILDINGS, RANKED_OPTIONS, ROSTER, SHORT_NAME, buildingHp, upgradeCost, upgradeTime, type Conquest } from '../sim/conquest';
 import { applyCommand, type Command } from '../sim/commands';
 import { conquestInfo, scenarioInfo, type BattleInfo } from '../sim/info';
 import { ConquestView, preloadWorks } from '../conquest/ConquestView';
@@ -105,11 +106,11 @@ export type EngineOptions = {
 
 /** What the HUD calls a conquest battle: a campaign meeting is named for its region and month and fought on the region's own coast. */
 function conquestInfoOf(setup: ConquestSetup): BattleInfo {
-  return setup.grand ? grandInfo(setup.grand) : conquestInfo(setup.map);
+  return setup.grand ? grandInfo(setup.grand) : conquestInfo(setup.map, setup.seed, setup.ranked);
 }
 
 /** A conquest battle: the map, every seat, and which seat is the player's. `grand` is a faction campaign meeting played on its region's coast instead of a conquest map, with the campaign's own ships. */
-export type ConquestSetup = { seats: Seat[]; you: number; seed: number } & ({ map: ConquestMapId; grand?: undefined } | { grand: RegionBattle; map?: undefined });
+export type ConquestSetup = { seats: Seat[]; you: number; seed: number; ranked?: boolean } & ({ map: ConquestMapId; grand?: undefined } | { grand: RegionBattle; map?: undefined });
 
 /** Sends commands somewhere other than the local battle: a multiplayer server. */
 export interface CommandSink {
@@ -137,8 +138,6 @@ const GUN_STAGE = ['포구 닦기', '화약 넣기', '마개 다지기', '포탄
 /** Multipliers the player can pick. The approach before first contact runs at the largest. */
 export const SPEEDS = [1, 2, 4, 8, 16, 32, 64, 128] as const;
 const FAST_SPEED = SPEEDS[SPEEDS.length - 1];
-/** The approach ends when two hostile ships come this close (inside the computer's broadside range), or at the first shot. */
-const CONTACT_RANGE = 400;
 /**
  * Sim steps per frame are capped by count and by time, so high multipliers degrade gracefully on a slow device.
  * The time budget grows with the multiplier: at 16x and up the player wants the battle to move, not a smooth 60 fps.
@@ -701,7 +700,7 @@ export class Engine {
       this.phi = this.sink ? 0 : sunAz - Math.PI / 2 - (setup.grand ? grandAxis(setup.grand) : homeAxis(setup.map));
       this.terrain.setRotation(this.phi);
       const land = (x: number, z: number) => this.terrain.heightAt(x, z);
-      const built = setup.grand ? buildGrandConquest(setup.grand, land, this.phi) : buildConquest(setup.map, setup.seats, land, setup.seed, {}, this.phi);
+      const built = setup.grand ? buildGrandConquest(setup.grand, land, this.phi) : buildConquest(setup.map, setup.seats, land, setup.seed, setup.ranked ? RANKED_OPTIONS : {}, this.phi);
       this.battle = built.battle;
       this.conquest = built.conquest;
       this.owner = setup.you;
@@ -726,11 +725,11 @@ export class Engine {
     }
     this.minimap.team = this.team;
     this.battle.setSea(SEA_STATES[this.seaName]);
-    waveField.time = this.battle.time;
+    waveField.copyFrom(this.battle.waves);
     this.reported = false;
     setReport(null);
     this.battle.land = (x, z) => this.terrain.heightAt(x, z);
-    this.current = info.current ? new CurrentField(info.current, (x, z) => this.terrain.heightAtScenario(x, z), this.phi) : null;
+    this.current = setup ? this.battle.flow : info.current ? new CurrentField(info.current, (x, z) => this.terrain.heightAtScenario(x, z), this.phi) : null;
     this.battle.flow = this.current;
     const c = this.terrain.toWorld(info.view.tx, info.view.tz);
     this.battle.center = { x: c.x, z: c.z };
@@ -865,7 +864,8 @@ export class Engine {
     atmosphere.sunIrradiance.value.copy(info.sunIrradiance).multiplyScalar(scale);
     atmosphere.skyAmbient.value.copy(info.skyAmbient).multiplyScalar(scale);
     atmosphere.horizon.value.copy(info.horizon).multiplyScalar(scale);
-    atmosphere.fogDensity.value = preset.fogDensity;
+    const sight = this.battleInfo.environment?.visibility ?? 1;
+    atmosphere.fogDensity.value = Math.max(preset.fogDensity, sight < 0.6 ? 0.00075 : sight < 0.8 ? 0.00035 : 0);
     atmosphere.night.value = preset.night;
     const irr = info.sunIrradiance;
     const lum = Math.max(1e-4, 0.2126 * irr.x + 0.7152 * irr.y + 0.0722 * irr.z);
@@ -942,8 +942,8 @@ export class Engine {
   setSea(name: SeaStateName) {
     if (this.disposed || !this.ready) return;
     this.seaName = name;
-    waveField.setState(SEA_STATES[name]);
     this.battle.setSea(SEA_STATES[name]);
+    waveField.copyFrom(this.battle.waves);
     this.fft?.setSpectrum(spectrumOf(SEA_STATES[name]));
     this.publish(true);
   }
@@ -1047,7 +1047,11 @@ export class Engine {
     const setup = this.conquestSetup;
     if (!setup || !this.conquest) return hint;
     const c = this.conquest;
-    for (const seat of setup.seats) for (const kind of ROSTER[seat.faction]) hint.set(kind, (hint.get(kind) ?? 0) + Math.min(c.options.maxShips, Math.ceil(c.options.cap / SHIP_SPECS[kind].cost) + 4));
+    for (const seat of setup.seats) for (const kind of ROSTER[seat.faction]) {
+      const starting = this.battle.ships.filter((s) => s.owner === setup.seats.indexOf(seat) && s.spec.kind === kind).length;
+      const room = Number.isFinite(c.options.maxShips) ? Math.min(c.options.maxShips, Math.ceil(c.options.cap / this.battle.shipSpec(kind).cost) + 4) : starting + 16;
+      hint.set(kind, (hint.get(kind) ?? 0) + room);
+    }
     if (setup.grand) {
       for (const seat of [setup.grand.attacker, setup.grand.defender]) {
         for (const kind of new Set(seat.ships.map((s) => s.kind))) hint.set(kind, Math.max(hint.get(kind) ?? 0, seat.ships.filter((s) => s.kind === kind).length + 4));
@@ -1114,7 +1118,7 @@ export class Engine {
       if (this.accumulator > SIM_DT * 4) this.accumulator = 0;
     }
     this.lastScaled = scaled;
-    const events = this.battle.events;
+    const events = this.remote ? this.battle.events : this.battle.events.filter((e) => eventObserved(e, this.battle, this.conquest, this.team));
     this.views.cutaway.clear();
     for (const id of this.cutawayIds()) this.views.cutaway.set(id, this.cutaway);
     this.views.sync(this.battle, scaled, this.camera, this.assets);
@@ -1126,8 +1130,8 @@ export class Engine {
       this.crew.handle(events, this.battle);
       this.input.onEvents(events);
       for (const e of events) if (e.type === 'battery') this.fx.gun(e.x, e.y, e.z, e.dx, e.dy, e.dz, true);
-      this.battle.events = [];
     }
+    this.battle.events = [];
     if (this.battle.ended && !this.reported) this.finishCampaignBattle();
     this.director.update(dt);
     const follow = this.rts.followId ? this.views.worldOf(this.rts.followId) : null;
@@ -1140,7 +1144,10 @@ export class Engine {
     const tideSign = Math.abs(this.battle.tide) < 0.15 ? 0 : Math.sign(this.battle.tide);
     if (this.current && tideSign !== this.lastTide) {
       if (tideSign === 0) pushToast(t('물살이 잦아듭니다 · 곧 물길이 바뀝니다'));
-      else if (this.lastTide === 0) pushToast(t(tideSign > 0 ? '울돌목의 물길이 뒤집혔습니다 · 일본 함선이 밀려납니다' : '거센 물살이 일본 함선을 실어 옵니다'), (tideSign > 0) === (this.team === 'joseon') ? 'good' : 'bad');
+      else if (this.lastTide === 0) {
+        if (this.battle.profile === 'historical') pushToast(t(tideSign > 0 ? '울돌목의 물길이 뒤집혔습니다 · 일본 함선이 밀려납니다' : '거센 물살이 일본 함선을 실어 옵니다'), (tideSign > 0) === (this.team === 'joseon') ? 'good' : 'bad');
+        else pushToast(t('조류의 방향이 바뀌었습니다 · 항로와 회오리를 확인하세요'));
+      }
       this.lastTide = tideSign;
     }
     this.ocean.update(this.camera.position.x, this.camera.position.z);
@@ -1157,7 +1164,7 @@ export class Engine {
     this.updateSun();
     const el = this.renderer.domElement;
     this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.rts.cinematic && !this.battle.ended, this.team);
-    this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.rts.cinematic && !this.options.hideLabels && !this.battle.ended);
+    this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.rts.cinematic && !this.options.hideLabels && !this.battle.ended, this.battle);
     this.publishTimer -= dt;
     if (this.publishTimer <= 0) {
       this.publish();
@@ -1197,17 +1204,18 @@ export class Engine {
 
   private inContact() {
     const b = this.battle;
-    if (b.projectiles.length > 0) return true;
+    if (b.projectiles.some((p) => b.profile === 'historical' || p.team === this.team || pointVisible(b, this.team, p.x, p.z))) return true;
     const own: Ship[] = [];
     const foe: Ship[] = [];
     for (const s of b.ships) {
-      if (!s.alive || s.sinking > 0) continue;
+      if (!s.alive || s.sinking > 0 || !shipObserved(b, this.team, s)) continue;
       if (s.grappledWith) return true;
       (s.team === this.team ? own : foe).push(s);
     }
-    const r2 = CONTACT_RANGE * CONTACT_RANGE;
+    const range = engagementRange(b.profile, [...own, ...foe].map((s) => s.spec.kind));
+    const r2 = range * range;
     for (const a of own) for (const e of foe) if ((a.x - e.x) ** 2 + (a.z - e.z) ** 2 < r2) return true;
-    return own.length === 0 || foe.length === 0;
+    return own.length === 0 || (b.profile === 'historical' && foe.length === 0);
   }
 
   private minimapPoints() {
@@ -1265,7 +1273,7 @@ export class Engine {
     }
     if (k <= 0) return;
     for (const s of this.battle.ships) {
-      if (!s.alive) continue;
+      if (!s.alive || !shipObserved(this.battle, this.team, s)) continue;
       const L = s.spec.length;
       const B = s.spec.beam;
       const c = Math.cos(s.heading);
@@ -1375,7 +1383,7 @@ export class Engine {
       let selected = 0;
       for (const id of sq.shipIds) {
         const s = b.get(id);
-        if (!s || !b.isActive(s)) continue;
+        if (!s || !b.isActive(s) || !shipObserved(b, this.team, s)) continue;
         alive += 1;
         hull += s.hull / s.spec.hull;
         crew += s.crew / s.spec.crew;
@@ -1405,7 +1413,8 @@ export class Engine {
     const own = this.team;
     const enemy = this.enemyTeam;
     const strengthOwn = b.strength(own);
-    const strengthEnemy = b.strength(enemy);
+    const enemies = b.ships.filter((s) => s.team === enemy && b.isActive(s) && shipObserved(b, own, s));
+    const strengthEnemy = b.profile === 'historical' ? b.strength(enemy) : enemies.reduce((n, s) => n + combatValue(s.spec.kind, b.profile) * ((s.hull / s.spec.hull) * 0.6 + (s.crew / s.spec.crew) * 0.4), 0);
     const snapshot: GameSnapshot = {
       scenario: { id: info.id, title: info.title, hanja: info.hanja, date: info.date, place: info.place, season: info.season },
       mode: info.mode,
@@ -1414,11 +1423,12 @@ export class Engine {
       team: own,
       time: b.time,
       own: b.teamCount(own),
-      enemy: b.teamCount(enemy),
+      enemy: b.profile === 'historical' ? b.teamCount(enemy) : enemies.length,
+      observedEnemy: b.profile !== 'historical',
       ownTotal: b.initial[own],
       enemyTotal: b.initial[enemy],
       escaped: b.escaped[enemy],
-      balance: strengthOwn / Math.max(1, strengthOwn + strengthEnemy),
+      balance: this.conquest ? this.conquest.tickets[own] / Math.max(1, this.conquest.tickets[own] + this.conquest.tickets[enemy]) : strengthOwn / Math.max(1, strengthOwn + strengthEnemy),
       winner: b.winner,
       draw: b.draw,
       paused: this.paused,
@@ -1438,7 +1448,7 @@ export class Engine {
       night: b.night,
       tide: this.current
         ? {
-            label: t(Math.abs(b.tide) < 0.15 ? '정조 · 물살이 멎었습니다' : b.tide < 0 ? '밀물 · 일본 함선 쪽으로 흐릅니다' : '썰물 · 물길이 뒤집혔습니다'),
+            label: t(Math.abs(b.tide) < 0.15 ? '정조 · 물살이 멎었습니다' : b.profile === 'historical' ? b.tide < 0 ? '밀물 · 일본 함선 쪽으로 흐릅니다' : '썰물 · 물길이 뒤집혔습니다' : b.tide < 0 ? '밀물 · 항로별 물살에 주의하세요' : '썰물 · 조류의 방향이 바뀝니다'),
             knots: Math.round(this.current.peakSpeed(b.tide) * 1.944 * 10) / 10,
             dir: Math.sign(b.tide),
           }
@@ -1454,6 +1464,7 @@ export class Engine {
             crew: Math.round(primary.crew),
             maxCrew: primary.spec.crew,
             fire: primary.fire,
+            damageState: primary.damageState,
             activity: b.activityOf(primary.id),
             fireMode: primary.fireMode,
             ammo: primary.ammo,
@@ -1468,7 +1479,7 @@ export class Engine {
             arms: primary.spec.arms,
             owned: primary.owner === this.owner,
             guns: primary.guns.map((g) => {
-              const spec = GUN_SPECS[primary.spec.batteries[g.battery]!.gun];
+              const spec = b.gunSpec(primary.spec.kind, primary.spec.batteries[g.battery]!.gun);
               const need = spec.stages[g.stage] ?? 1;
               return {
                 label: spec.label,
@@ -1509,6 +1520,7 @@ export class Engine {
     const sideOf = (t: Team | null) => (t ? (t === this.team ? 'own' : 'foe') : 'none') as 'own' | 'foe' | 'none';
     const p = c.points[this.selectedPoint];
     const mine = !!p && p.owner === this.owner;
+    const observed = !!p && (c.teamOfPoint(p) === this.team || pointVisible(this.battle, this.team, p.x, p.z));
     return {
       tickets: { own: Math.max(0, Math.round(c.tickets[this.team])), foe: Math.max(0, Math.round(c.tickets[this.enemyTeam])), max: c.options.tickets },
       timeLeft: Math.max(0, c.options.timeLimit - this.battle.time),
@@ -1517,7 +1529,7 @@ export class Engine {
       fleetValue: fleet.value,
       cap: me.cap,
       ships: fleet.count,
-      maxShips: c.options.maxShips,
+      maxShips: c.shipLimit(this.owner),
       held: { own: c.held(this.team), foe: c.held(this.enemyTeam) },
       points: c.points.map((q) => ({ id: q.id, name: q.name, side: sideOf(c.teamOfPoint(q)), hold: q.hold, contested: q.contested })),
       selected: p
@@ -1531,11 +1543,15 @@ export class Engine {
             contested: p.contested,
             hold: p.hold,
             mine,
-            buildings: p.buildings.map((bd, slot) => (bd ? { slot, kind: bd.kind, label: BUILDINGS[bd.kind].label, progress: bd.progress, hp: bd.hp / BUILDINGS[bd.kind].hp } : null)),
-            queue: p.queue.map((q) => ({ kind: q.kind, label: SHORT_NAME[q.kind], left: Math.ceil(q.left), total: q.total })),
-            build: BUILDING_ORDER.map((kind) => ({ kind, label: BUILDINGS[kind].label, cost: BUILDINGS[kind].cost, desc: BUILDINGS[kind].desc, ok: mine && c.canBuild(this.owner, p.id, kind) })),
-            recruit: ROSTER[me.faction].map((kind) => ({ kind, label: SHORT_NAME[kind], cost: SHIP_SPECS[kind].cost, time: SHIP_SPECS[kind].build, ok: mine && c.canRecruit(this.battle, this.owner, p.id, kind) })),
-            shipyard: c.count(p, 'shipyard') > 0,
+            observed,
+            expanded: !!c.options.expanded,
+            buildings: p.buildings.map((bd, slot) => (observed && bd ? { slot, kind: bd.kind, label: BUILDINGS[bd.kind].label, progress: bd.progress, hp: bd.hp / buildingHp(bd.kind, bd.level), level: bd.level, upgradeLeft: Math.ceil(bd.upgradeLeft), upgradeTotal: bd.upgradeTotal, upgradeCost: bd.level < 3 ? upgradeCost(bd.kind, bd.level) : 0, upgradeTime: bd.level < 3 ? upgradeTime(bd.kind, bd.level) : 0, canUpgrade: mine && c.canUpgrade(this.owner, p.id, slot) } : null)),
+            queue: observed ? p.queue.map((q, i) => ({ kind: q.kind, label: SHORT_NAME[q.kind], left: Math.max(0, Math.ceil(q.left)), total: q.total, working: i < c.queueWorkers(p) })) : [],
+            build: BUILDING_ORDER.filter((kind) => c.options.expanded || kind !== 'camp').map((kind) => ({ kind, label: BUILDINGS[kind].label, cost: BUILDINGS[kind].cost, desc: BUILDINGS[kind].desc, ok: mine && c.canBuild(this.owner, p.id, kind) })),
+            recruit: ROSTER[me.faction].map((kind) => ({ kind, label: SHORT_NAME[kind], cost: this.battle.shipSpec(kind).cost, time: this.battle.shipSpec(kind).build, ok: mine && c.canRecruit(this.battle, this.owner, p.id, kind) })),
+            shipyard: observed && c.count(p, 'shipyard') > 0,
+            yardSlots: observed ? c.yardSlots(p) : 0,
+            rally: observed ? p.rally ?? null : null,
           }
         : null,
     };

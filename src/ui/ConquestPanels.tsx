@@ -43,11 +43,11 @@ export function ConquestBar({ c }: { c: ConquestSnapshot }) {
         <span className="cq-chip">
           <small>{t('군자금')}</small> <b>{won(c.funds)}</b> <em>{t('+{n}/분', { n: c.income })}</em>
         </span>
-        <span className="cq-chip" title={t('함대 전력과 상한')}>
-          <small>{t('전력')}</small> <b>{won(c.fleetValue)}</b> <em>/{won(c.cap)}</em>
+        <span className="cq-chip" title={t('함대 전력')}>
+          <small>{t('전력')}</small> <b>{won(c.fleetValue)}</b> {Number.isFinite(c.cap) && <em>/{won(c.cap)}</em>}
         </span>
-        <span className="cq-chip">
-          <small>{t('함선')}</small> <b>{c.ships}</b> <em>/{c.maxShips}</em>
+        <span className="cq-chip" title={!Number.isFinite(c.maxShips) ? t('함선 수 제한 없음') : undefined}>
+          <small>{t('함선')}</small> <b>{c.ships}</b> {Number.isFinite(c.maxShips) ? <em>/{c.maxShips}</em> : <small className="cq-unlimited">{t('제한 없음')}</small>}
         </span>
       </div>
     </div>
@@ -85,10 +85,25 @@ export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDet
           bd ? (
             <div key={i} className={`cq-work ${bd.progress < 1 ? 'cq-work--building' : ''}`} title={t(bd.label)}>
               <Icon name={bd.kind} size={20} />
-              <span>{t(bd.label)}</span>
+              <span>{t(bd.label)}{p.expanded && <small> · {t('{n}단계', { n: bd.level })}</small>}</span>
               <div className="cq-work-bar">
                 <i style={{ width: `${(bd.progress < 1 ? bd.progress : bd.hp) * 100}%` }} />
               </div>
+              {p.mine && p.expanded && bd.progress >= 1 && (
+                <div className="cq-upgrade">
+                  {bd.upgradeLeft > 0 ? (
+                    <>
+                      <span>{t('증축 중 · {n}초', { n: bd.upgradeLeft })}</span>
+                      <progress value={bd.upgradeTotal - bd.upgradeLeft} max={bd.upgradeTotal} />
+                      <button className="chip" onClick={() => engine.issue({ type: 'cancelUpgrade', point: p.id, slot: bd.slot })} title={t('남은 공사비의 70% 환급')}>{t('취소')}</button>
+                    </>
+                  ) : bd.level < 3 ? (
+                    <button className="chip cq-upgrade-btn" disabled={!bd.canUpgrade} title={t('증축 · {n}초', { n: bd.upgradeTime })} onClick={() => engine.issue({ type: 'upgrade', point: p.id, slot: bd.slot })}>
+                      {t('증축')} {won(bd.upgradeCost)}
+                    </button>
+                  ) : <span>{t('최종 단계')}</span>}
+                </div>
+              )}
               {p.mine && (
                 <button className="cq-x" title={t('철거 (비용 일부 환급)')} aria-label={t('{name} 철거', { name: t(bd.label) })} onClick={() => engine.issue({ type: 'demolish', point: p.id, slot: bd.slot })}>
                   <Icon name="x" size={12} />
@@ -97,7 +112,7 @@ export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDet
             </div>
           ) : (
             <div key={i} className="cq-work cq-work--empty">
-              {t('빈 터')}
+              {t(p.observed === false ? '미정찰' : '빈 터')}
             </div>
           ),
         )}
@@ -119,7 +134,7 @@ export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDet
       {p.mine && p.shipyard && (
         <>
           <div className="cq-label">
-            {t('함선 건조')} {p.queue.length ? '· ' + t('대기 {n}', { n: p.queue.length }) : ''}
+            {t('함선 건조')} {p.expanded ? '· ' + t('동시 {n}척', { n: p.yardSlots }) : ''} {p.queue.length ? '· ' + t('대기 {n}', { n: p.queue.length }) : ''}
           </div>
           <div className="cq-buttons">
             {p.recruit.map((r) => (
@@ -134,12 +149,16 @@ export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDet
               {p.queue.map((q, i) => (
                 <button key={i} className="cq-q" title={t('취소')} onClick={() => engine.issue({ type: 'cancel', point: p.id, index: i })}>
                   <span>{t(q.label)}</span>
-                  <i style={{ width: `${i === 0 ? (1 - q.left / q.total) * 100 : 0}%` }} />
-                  <small>{i === 0 ? t('{n}초', { n: q.left }) : t('대기')}</small>
+                  <i style={{ width: `${q.working ? (1 - q.left / q.total) * 100 : 0}%` }} />
+                  <small>{q.working ? t('{n}초', { n: q.left }) : t('대기')}</small>
                 </button>
               ))}
             </div>
           )}
+          {p.expanded && <div className="cq-rally">
+            <button className="chip cq-rally-set" onClick={() => { if (engine.input.beginRally(p.id)) onClose(); }}>{t('집결 지점 지정')}</button>
+            <small>{p.rally ? t('집결 지점 {x}, {z}', { x: Math.round(p.rally.x), z: Math.round(p.rally.z) }) : t('완성된 함선은 지정한 집결 지점으로 이동합니다')}</small>
+          </div>}
         </>
       )}
       {p.mine && !p.shipyard && <div className="cq-hint">{t('선소를 지으면 이 거점에서 함선을 건조할 수 있습니다.')}</div>}

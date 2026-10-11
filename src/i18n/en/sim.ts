@@ -79,7 +79,7 @@ export const EN_SIM: Record<string, string> = {
 
   // Conquest maps
   '섬이 흩어진 물길에 거점이 아홉 곳 있습니다. 거점을 차지하면 군자금이 들어오고, 선소에서 새 함선을 건조할 수 있습니다. 포대로 물길을 지키면서 적의 거점을 빼앗는 것이 승리의 열쇠입니다.': 'Nine capture points lie along a waterway scattered with islands. Holding a point brings in funds, and a shipyard builds new ships. Defending the channel with batteries while taking the enemy\'s points is the key to victory.',
-  '양쪽 육지 사이로 좁은 물길이 지나갑니다. 물길 한가운데의 거점을 차지한 쪽이 바다를 장악합니다. 함선이 방향을 바꿀 공간이 좁아, 진형과 포대의 위치가 승패를 좌우합니다.': 'A narrow channel runs between two shores. Whoever holds the capture point in the middle of the channel controls the sea. There is little room for ships to turn, so formations and the placement of batteries decide the battle.',
+  '좁은 중앙 물길과 양옆 포구에 거점이 일곱 곳 있습니다. 함포로 중앙을 막거나, 작은 함선을 옆 물길로 보내 포구를 빼앗을 수 있습니다. 진형과 측면 기동이 승패를 좌우합니다.': 'Seven capture points cover the narrow central channel and flanking ports. Hold the centre with cannon fire, or send small ships through the side lanes to take ports. Formation and flanking decide the battle.',
 
   // Factions
   '조선 수군': 'Joseon Navy',
@@ -293,7 +293,7 @@ export const EN_SIM: Record<string, string> = {
   '한려 쟁탈전': 'Hallyeo Conquest',
   '견내량 쟁탈전': 'Gyeonnaeryang Conquest',
   '한려 수도 · 거점 9곳': 'Hallyeo Waterway · 9 capture points',
-  '견내량 · 거점 5곳': 'Gyeonnaeryang · 5 capture points',
+  '견내량 · 거점 7곳': 'Gyeonnaeryang · 7 capture points',
   '1597년 여름': 'Summer 1597',
   '1592년 여름': 'Summer 1592',
   '서영': 'West Camp',

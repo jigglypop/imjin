@@ -11,6 +11,8 @@ export function tName(name: string): string {
   if (direct !== name) return direct;
   let m = /^(.+) (\d+)호$/.exec(name);
   if (m) return t('{name} {n}호', { name: tName(m[1]!), n: Number(m[2]) });
+  m = /^(.+) (\d+)함대$/.exec(name);
+  if (m) return t('{name} {n}함대', { name: tName(m[1]!), n: Number(m[2]) });
   m = /^(.+) 대장선$/.exec(name);
   if (m) return t('{name} 대장선', { name: tName(m[1]!) });
   m = /^(.+) (\d+)대$/.exec(name);

@@ -11,6 +11,9 @@ import { REGION_ORDER } from '../sim/grand/regions';
 import { autoResolveContact, endTurn, newGrand, type TurnReport } from '../sim/grand/turn';
 import type { BattleOutcome, BuildingKind, Grand, GrandFaction, RegionId, Result } from '../sim/grand/types';
 import { GRAND_FACTIONS } from '../sim/grand/types';
+import { migrateGrandBalance } from '../sim/grand/economy';
+import { orderDispatch, orderMobilize } from '../sim/grand/dispatch';
+import { migrateGrandRegions } from '../sim/grand/migration';
 import type { ShipKind } from '../sim/types';
 
 /**
@@ -33,9 +36,11 @@ function load(): Grand | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
+    migrateGrandRegions(parsed);
     if (!valid(parsed)) return null;
     // A war saved before the historical events existed goes on without the cards it never dealt.
     parsed.events ??= { done: {}, pending: null, flags: [], mods: [] };
+    migrateGrandBalance(parsed);
     return parsed;
   } catch {
     return null;
@@ -123,6 +128,8 @@ const guarded = (own: (g: Grand) => boolean, change: (g: Grand) => Result) => co
 
 /** Orders for the faction the player commands. Each returns whether it was accepted, and why not. */
 export const grandOrders = {
+  dispatch: (fleetIds: string[], portIds: RegionId[], dest: RegionId) => commit((g) => g.player ? orderDispatch(g, fleetIds, portIds, dest, g.player) : notYours),
+  mobilize: (region: RegionId) => guarded((g) => ownRegion(g, region), (g) => orderMobilize(g, region, g.player!)),
   move: (fleetId: string, dest: RegionId) => guarded((g) => ownFleet(g, fleetId), (g) => orderMove(g, fleetId, dest)),
   stop: (fleetId: string) => guarded((g) => ownFleet(g, fleetId), (g) => orderStop(g, fleetId)),
   build: (region: RegionId, kind: BuildingKind) => guarded((g) => ownRegion(g, region), (g) => orderBuild(g, region, kind)),

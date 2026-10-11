@@ -14,6 +14,7 @@ import {
   MeshStandardNodeMaterial,
   Vector3,
   type Texture,
+  type WebGPURenderer,
 } from 'three/webgpu';
 import {
   attribute,
@@ -344,7 +345,7 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   return m;
 }
 
-type Batch = { mesh: InstancedMesh; a: InstancedBufferAttribute; b: InstancedBufferAttribute; c?: InstancedBufferAttribute; count: number };
+type Batch = { mesh: InstancedMesh; a: InstancedBufferAttribute; b: InstancedBufferAttribute; c?: InstancedBufferAttribute; count: number; renderer?: WebGPURenderer; released?: boolean };
 /** Most ships one model can show in cutaway; the engine picks no more than this many in all. */
 export const CUT_CAP = 12;
 
@@ -375,11 +376,42 @@ export class ShipRenderer {
     const cap = this.capacity.get(key) ?? 0;
     if (count <= cap || !this.assets[key]) return;
     this.capacity.set(key, Math.max(count, cap * 2, 4));
-    for (const batch of this.batches.get(key) ?? []) {
-      this.group.remove(batch.mesh);
-      (batch.mesh.material as MeshStandardNodeMaterial).dispose();
-    }
+    const previous = this.batches.get(key) ?? [];
     this.buildKey(key);
+    const next = this.batches.get(key)!;
+    for (let level = 0; level < previous.length; level++) {
+      const old = previous[level]!;
+      const batch = next[level]!;
+      // add() can grow a batch midway through a frame, after other ships have already submitted their poses.
+      (batch.mesh.instanceMatrix.array as Float32Array).set(old.mesh.instanceMatrix.array);
+      (batch.a.array as Float32Array).set(old.a.array);
+      (batch.b.array as Float32Array).set(old.b.array);
+      batch.count = old.count;
+      batch.mesh.count = old.mesh.count;
+      this.release(old);
+    }
+  }
+
+  private own(batch: Batch) {
+    const uploaded = batch.mesh.onAfterRender;
+    batch.mesh.onAfterRender = (...args) => {
+      batch.renderer = args[0] as unknown as WebGPURenderer;
+      uploaded.apply(batch.mesh, args);
+    };
+    (batch.mesh.material as MeshStandardNodeMaterial).addEventListener('dispose', () => {
+      if (batch.released) return;
+      batch.released = true;
+      // Model geometry is shared and its CPU arrays may already be detached. Only this batch's buffers may die here.
+      const attributes = (batch.renderer as unknown as { _attributes?: { delete(attribute: unknown): void } } | undefined)?._attributes;
+      for (const attribute of [batch.mesh.instanceMatrix, batch.a, batch.b, ...(batch.c ? [batch.c] : [])]) attributes?.delete(attribute);
+      batch.mesh.dispose();
+    });
+    return batch;
+  }
+
+  private release(batch: Batch) {
+    this.group.remove(batch.mesh);
+    if (!batch.released) (batch.mesh.material as MeshStandardNodeMaterial).dispose();
   }
 
   private buildKey(key: string) {
@@ -404,7 +436,7 @@ export class ShipRenderer {
           mesh.castShadow = nominal < 2;
           mesh.receiveShadow = nominal < 2;
           this.group.add(mesh);
-          return { mesh, a, b, count: 0 };
+          return this.own({ mesh, a, b, count: 0 });
         }),
       );
     }
@@ -412,7 +444,7 @@ export class ShipRenderer {
 
   /** Frees the hull materials of every batch. The geometry and textures belong to the shared models. */
   dispose() {
-    for (const batch of [...[...this.batches.values()].flat(), ...this.cuts.values()]) (batch.mesh.material as MeshStandardNodeMaterial).dispose();
+    for (const batch of [...[...this.batches.values()].flat(), ...this.cuts.values()]) this.release(batch);
     this.batches.clear();
     this.cuts.clear();
     this.group.removeFromParent();
@@ -443,14 +475,18 @@ export class ShipRenderer {
     mesh.receiveShadow = true;
     freeAfterDraw(mesh);
     this.group.add(mesh);
-    batch = { mesh, a, b, c, count: 0 };
+    batch = this.own({ mesh, a, b, c, count: 0 });
     this.cuts.set(key, batch);
     return batch;
   }
 
   /** cut: height in ship space above which the hull is cut away, or undefined for the whole ship. */
   add(key: string, lod: number, matrix: Matrix4, origin: Vector3, up: Vector3, burn: number, flash: number, cut?: number) {
-    const batch = cut === undefined ? this.batches.get(key)?.[lod] : this.cutBatch(key);
+    let batch = cut === undefined ? this.batches.get(key)?.[lod] : this.cutBatch(key);
+    if (cut === undefined && (!batch || batch.count >= batch.mesh.instanceMatrix.count)) {
+      this.ensure(key, (batch?.count ?? 0) + 1);
+      batch = this.batches.get(key)?.[lod];
+    }
     if (!batch || batch.count >= batch.mesh.instanceMatrix.count) return;
     if (batch.c) (batch.c.array as Float32Array)[batch.count * 4] = cut!;
     const i = batch.count++;

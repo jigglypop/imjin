@@ -17,7 +17,8 @@ import {
 import { dot, float, normalView, positionViewDirection, pow, saturate, vec3 } from 'three/tsl';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Battle } from '../sim/battle';
-import type { GunType, Projectile } from '../sim/types';
+import type { GunType, Projectile, Team } from '../sim/types';
+import { shipObserved } from '../sim/observation';
 import type { ShipViews } from '../ships/ShipViews';
 import { waveField } from '../ocean/waves';
 import type { ParticleLayer, StreakLayer } from './ParticleLayer';
@@ -446,7 +447,7 @@ export class Munitions {
    * muzzle a beat apart, fan out round its line and come down near where it ends: on the target's deck as a burst of
    * fire, or in the sea as a splash.
    */
-  salvo(p: Projectile, remaining: number, peak: number, battle: Battle) {
+  salvo(p: Projectile, remaining: number, peak: number, battle: Battle, observer: Team = p.team) {
     const n = Math.min(this.cap - this.count, Math.max(1, Math.round(this.perShot * this.k)));
     if (n <= 0 || remaining < 0.3) return;
     const ex = p.x + p.vx * remaining;
@@ -467,7 +468,7 @@ export class Munitions {
       let ly = waveField.heightAt(lx, lz);
       // Does the rocket come down on an enemy deck? Ships are placed where they will be at that moment.
       for (const s of battle.ships) {
-        if (!s.alive || s.team === p.team || s.sinking > 0.5) continue;
+        if (!s.alive || s.team === p.team || s.sinking > 0.5 || !shipObserved(battle, observer, s)) continue;
         const c = Math.cos(s.heading);
         const sn = Math.sin(s.heading);
         const dx = lx - (s.x + c * s.speed * dur);
@@ -524,7 +525,7 @@ export class Munitions {
    * Flies the cosmetic rockets. `lay` is Effects' trail routine (the same smoke ribbon the sim's shells leave), called
    * with each rocket's trail and its screen scale.
    */
-  fly(dt: number, camX: number, camY: number, camZ: number, focal: number, lay: (t: Trail, x: number, y: number, z: number, ppm: number) => void) {
+  fly(dt: number, camX: number, camY: number, camZ: number, focal: number, lay: (t: Trail, x: number, y: number, z: number, ppm: number) => void, visible?: (x: number, z: number) => boolean) {
     for (let i = this.count - 1; i >= 0; i -= 1) {
       const t0 = this.t[i]!;
       const t = t0 + dt;
@@ -533,7 +534,7 @@ export class Munitions {
       const dur = this.dur[i]!;
       const s = t / dur;
       if (s >= 1) {
-        this.onLand?.(this.ex[i]!, this.ey[i]!, this.ez[i]!, this.hull[i] === 1);
+        if (!visible || visible(this.ex[i]!, this.ez[i]!)) this.onLand?.(this.ex[i]!, this.ey[i]!, this.ez[i]!, this.hull[i] === 1);
         this.drop(i);
         continue;
       }
@@ -560,7 +561,11 @@ export class Munitions {
       const px = bx + this.v.x;
       const py = by + this.v.y;
       const pz = bz + this.v.z;
-      if (first) this.launch(sx, sy, sz, ux, uy, uz, 1);
+      if (visible && !visible(px, pz)) {
+        const trail = this.trails[i]!; trail.x = px; trail.y = py; trail.z = pz;
+        continue;
+      }
+      if (first && (!visible || visible(sx, sz))) this.launch(sx, sy, sz, ux, uy, uz, 1);
       if (d < 3200) {
         this.rocket(px, py, pz, ux, uy, uz, 1.6 * this.size[i]!, ppm, dt);
         lay(this.trails[i]!, px, py, pz, ppm);

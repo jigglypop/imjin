@@ -1,5 +1,6 @@
 import type { Battle } from '../sim/battle';
-import type { AmmoType, Projectile } from '../sim/types';
+import type { AmmoType, Projectile, Team } from '../sim/types';
+import { shipObserved } from '../sim/observation';
 
 /**
  * How a shell is drawn. The sim flies shells at 120-150 m/s on the low-arc solution, so a 400 m shot rises barely ten
@@ -30,7 +31,7 @@ const smooth = (a: number, b: number, x: number) => {
 export const arcPeak = (ammo: AmmoType, range: number) => ARC[ammo] * range * smooth(15, 70, range);
 
 /** Seconds from now until the sim ends this shell: a hull, the shore or the sea, whichever it reaches first. */
-export function timeToImpact(p: Projectile, battle: Battle, sea: (x: number, z: number) => number, shipRate = 1): number {
+export function timeToImpact(p: Projectile, battle: Battle, sea: (x: number, z: number) => number, shipRate = 1, observer: Team = p.team): number {
   let t = fallTime(p.y, p.vy, 0.3);
   const w = Math.min(1.4, Math.max(-0.5, sea(p.x + p.vx * t, p.z + p.vz * t)));
   t = fallTime(p.y, p.vy, w);
@@ -60,7 +61,7 @@ export function timeToImpact(p: Projectile, battle: Battle, sea: (x: number, z: 
   }
   // Hulls: the sim's own box test, on ships moved along their heading.
   for (const s of battle.ships) {
-    if (!s.alive || s.team === p.team || s.sinking >= 0.6) continue;
+    if (!s.alive || s.team === p.team || s.sinking >= 0.6 || !shipObserved(battle, observer, s)) continue;
     const c = Math.cos(s.heading);
     const n = Math.sin(s.heading);
     const svx = c * s.speed * shipRate;

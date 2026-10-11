@@ -146,10 +146,12 @@
 }
 
 .on-picker {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
+
 
 .on-seg {
   display: inline-flex;
@@ -563,5 +565,179 @@
   .on-input,
   .on-select {
     font-size: 16px;
+  }
+}
+
+/* Rank uses the same lobby cards; the leaderboard scrolls without growing the whole menu. */
+.on-tabs .on-seg-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.on-rank-profile {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+
+.on-rank-score,
+.on-rank-record {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  font-size: var(--fs-13);
+  color: var(--ink-2);
+}
+
+.on-rank-score strong {
+  font-size: var(--fs-28);
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.on-rank-trait {
+  font-size: var(--fs-13);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.on-rank-start,
+.on-rank-board .on-card-head .chip {
+  margin-left: auto;
+}
+
+.on-rank-table-wrap {
+  max-height: 190px;
+  overflow: auto;
+  touch-action: pan-x pan-y;
+}
+
+.on-rank-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-13);
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+}
+
+.on-rank-table th,
+.on-rank-table td {
+  padding: 6px 8px;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+
+.on-rank-table th {
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.on-rank-player {
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.on-rank-table-me {
+  background: var(--accent-soft);
+}
+
+.on-recovery {
+  font-size: var(--fs-13);
+  color: var(--ink-2);
+}
+
+.on-recovery summary {
+  width: fit-content;
+  cursor: pointer;
+  padding: 6px 0;
+}
+
+.on-recovery-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+.on-recovery-code {
+  flex: none;
+  width: 100%;
+  min-height: 68px;
+  resize: vertical;
+  border-radius: var(--r-sm);
+  overflow-wrap: anywhere;
+}
+
+.rank-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 0;
+  font-size: var(--fs-13);
+  border-top: 1px solid var(--line);
+  width: 100%;
+}
+
+.rank-result-score {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rank-result-score b {
+  font-size: var(--fs-20);
+}
+
+.rank-delta--up {
+  color: var(--good);
+}
+
+.rank-delta--down {
+  color: var(--bad);
+}
+
+.rank-result-detail {
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.hud .result:has(.rank-result) {
+  max-height: 88dvh;
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .on-rank-table-record {
+    display: none;
+  }
+
+  .on-rank-table th,
+  .on-rank-table td {
+    padding: 6px 4px;
+  }
+
+  .on-rank-player {
+    max-width: 104px;
+  }
+
+  .on-rank-searching small {
+    display: block;
+    margin: 3px 0 0;
+  }
+
+  .on-overlay .on-lost {
+    width: min(92vw, 560px);
+    max-height: 88dvh;
+    overflow-y: auto;
+    padding: 24px 16px;
   }
 }

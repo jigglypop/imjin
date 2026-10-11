@@ -5,6 +5,8 @@ import { useT } from '../../i18n';
 import { FACTION_INFO, Icon, navyName } from './shared';
 import { shipsText, turnsText } from './text';
 import type { FactionId, FleetView, RegionView, ReplayView } from './types';
+import { ReliefScene } from './ReliefScene';
+import { reliefHeight, reliefProject, RELIEF_TILT } from './reliefMath';
 
 export interface MapInsets {
   top: number;
@@ -20,6 +22,7 @@ export interface GrandMapProps {
   me: FactionId;
   selectedRegionId?: string | null;
   selectedFleetId?: string | null;
+  selectedFleetIds?: ReadonlySet<string>;
   /** Regions the selected fleet may sail to: highlighted and pulsing. */
   moveTargets?: string[];
   /** Screen space covered by panels; a focused region is centred in the rest. */
@@ -27,7 +30,7 @@ export interface GrandMapProps {
   /** Pans to this region when `nonce` changes. */
   focus?: { id: string; nonce: number } | null;
   onSelectRegion?: (id: string) => void;
-  onSelectFleet?: (id: string) => void;
+  onSelectFleet?: (id: string, additive?: boolean) => void;
   onBackground?: () => void;
   /** The turn that just closed, played over the map until it ends or is skipped. */
   replay?: ReplayView | null;
@@ -54,13 +57,14 @@ function nodeRadius(r: RegionView) {
   return r.offMap ? 16 : 11 + r.value * 3;
 }
 
-/** Strategic map: image backdrop, sea lanes, region nodes, fleet tokens. Pan with a drag, zoom with wheel or pinch. */
+/** Strategic map: elevation mesh, sea lanes, region nodes and fleets share the same projection. */
 export function GrandMap({
   regions,
   fleets,
   me,
   selectedRegionId,
   selectedFleetId,
+  selectedFleetIds,
   moveTargets,
   insets = NO_INSETS,
   focus,
@@ -75,6 +79,12 @@ export function GrandMap({
 }: GrandMapProps) {
   const t = useT();
   const rootRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sceneRef = useRef<ReliefScene | null>(null);
+  const [heights, setHeights] = useState<Float32Array | null>(null);
+  const [pose, setPose] = useState({ tilt: RELIEF_TILT, yaw: 0 });
+  const [flat, setFlat] = useState(false);
+  const activePose = heights ? { tilt: flat ? 0 : pose.tilt, yaw: pose.yaw } : { tilt: 0, yaw: 0 };
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [view, setView] = useState<View>({ s: 1, x: 0, y: 0 });
   const viewRef = useRef(view);
@@ -88,7 +98,24 @@ export function GrandMap({
   const anim = useRef(0);
 
   const byId = useMemo(() => new Map(regions.map((r) => [r.id, r])), [regions]);
-  const pos = useMemo(() => new Map(regions.map((r) => [r.id, project(r.lon, r.lat)])), [regions]);
+  const pos = useMemo(() => new Map(regions.map((r) => {
+    const p = project(r.lon, r.lat);
+    return [r.id, heights ? reliefProject(p.u, p.v, r.offMap ? 0 : reliefHeight(heights, p.u, p.v), { tilt: flat ? 0 : pose.tilt, yaw: pose.yaw }) : p];
+  })), [regions, heights, pose.tilt, pose.yaw, flat]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const scene = new ReliefScene(canvas);
+    sceneRef.current = scene;
+    let cancelled = false;
+    void scene.init().then((data) => { if (!cancelled) setHeights(data); }).catch(() => {
+      if (!cancelled) { scene.dispose(); sceneRef.current = null; }
+    });
+    return () => { cancelled = true; scene.dispose(); sceneRef.current = null; };
+  }, []);
+
+  useEffect(() => { sceneRef.current?.update(view, activePose, box.w, box.h); }, [view, box.w, box.h, activePose.tilt, activePose.yaw]);
 
   const limits = useCallback(() => {
     const { w, h } = boxRef.current;
@@ -168,9 +195,9 @@ export function GrandMap({
     } else {
       setView((cur) => constrain(cur));
     }
-    // The opening view depends on the size only; later region updates must not re-centre it.
+    // Initial elevation and size changes lay out the opening view; later region updates must not re-centre it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [box]);
+  }, [box, heights]);
 
   useEffect(() => {
     if (!focus || !ready.current) return;
@@ -247,22 +274,24 @@ export function GrandMap({
   }, [zoomAt]);
 
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const gesture = useRef({ moved: false, startX: 0, startY: 0, pinch: 0, mx: 0, my: 0 });
+  const gesture = useRef({ moved: false, rotating: false, startX: 0, startY: 0, pinch: 0, angle: 0, mx: 0, my: 0 });
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
     touched.current = true;
     cancelAnimationFrame(anim.current);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const g = gesture.current;
     if (pointers.current.size === 1) {
       g.moved = false;
+      g.rotating = !!heights && (e.shiftKey || e.button === 2);
       g.startX = e.clientX;
       g.startY = e.clientY;
     } else {
       g.moved = true;
       const [a, b] = [...pointers.current.values()];
       g.pinch = Math.hypot(a!.x - b!.x, a!.y - b!.y);
+      g.angle = Math.atan2(b!.y - a!.y, b!.x - a!.x);
       g.mx = (a!.x + b!.x) / 2;
       g.my = (a!.y + b!.y) / 2;
     }
@@ -278,6 +307,11 @@ export function GrandMap({
       pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
       const [a, b] = [...pointers.current.values()];
       const dist = Math.hypot(a!.x - b!.x, a!.y - b!.y);
+      const angle = Math.atan2(b!.y - a!.y, b!.x - a!.x);
+      if (heights) {
+        const change = Math.atan2(Math.sin(angle - g.angle), Math.cos(angle - g.angle));
+        setPose((cur) => ({ ...cur, yaw: cur.yaw - change }));
+      }
       const mx = (a!.x + b!.x) / 2;
       const my = (a!.y + b!.y) / 2;
       const factor = g.pinch > 0 ? dist / g.pinch : 1;
@@ -290,6 +324,7 @@ export function GrandMap({
         return constrain({ s, x: px - (px - cur.x) * k + (mx - g.mx), y: py - (py - cur.y) * k + (my - g.my) });
       });
       g.pinch = dist;
+      g.angle = angle;
       g.mx = mx;
       g.my = my;
       return;
@@ -302,7 +337,10 @@ export function GrandMap({
     const dx = e.clientX - p.x;
     const dy = e.clientY - p.y;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    setView((cur) => constrain({ ...cur, x: cur.x + dx, y: cur.y + dy }));
+    if (g.rotating) {
+      setFlat(false);
+      setPose((cur) => ({ tilt: clamp(cur.tilt + dy * 0.006, 0.3, 1.1), yaw: cur.yaw + dx * 0.006 }));
+    } else setView((cur) => constrain({ ...cur, x: cur.x + dx, y: cur.y + dy }));
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
@@ -315,9 +353,28 @@ export function GrandMap({
     if (rootRef.current?.hasPointerCapture(e.pointerId)) rootRef.current.releasePointerCapture(e.pointerId);
   };
 
-  const tap = (fn?: () => void) => (e: React.MouseEvent) => {
+  const tap = (fn?: (additive: boolean) => void) => (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!gesture.current.moved) fn?.();
+    if (!gesture.current.moved) fn?.(e.shiftKey || e.ctrlKey || e.metaKey);
+  };
+
+  const tapRegion = (id: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (gesture.current.moved) return;
+    let picked = id;
+    // Dense ports have overlapping touch padding. Resolve the nearest visible disc, rather than the last DOM node.
+    // Keyboard activation has no pointer coordinate and keeps the focused port.
+    if (e.detail !== 0 && rootRef.current) {
+      const rect = rootRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left, y = e.clientY - rect.top;
+      let closest = Infinity;
+      for (const region of regions) {
+        const point = pos.get(region.id)!;
+        const distance = Math.hypot(x - (view.x + point.u * view.s), y - (view.y + point.v * view.s / MAP_ASPECT));
+        if (distance <= nodeRadius(region) + 12 && distance < closest) { closest = distance; picked = region.id; }
+      }
+    }
+    onSelectRegion?.(picked);
   };
 
   const { w, h } = box;
@@ -357,6 +414,10 @@ export function GrandMap({
     <div
       ref={rootRef}
       className="gm"
+      data-relief={heights ? 'ready' : 'flat'}
+      data-tilt={activePose.tilt}
+      data-yaw={activePose.yaw}
+      onContextMenu={(e) => e.preventDefault()}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -369,13 +430,14 @@ export function GrandMap({
         zoomAt(1.8, e.clientX - r.left, e.clientY - r.top);
       }}
     >
-      <img
+      <canvas ref={canvasRef} className="gm__relief" style={{ opacity: heights ? 1 : 0 }} aria-hidden />
+      {!heights && <img
         className="gm__img"
         src={MAP_IMAGE}
         alt=""
         draggable={false}
         style={{ width: s, height: mapH, transform: `translate3d(${view.x}px, ${view.y}px, 0)` }}
-      />
+      />}
       {w > 0 && (
         <svg className="gm__svg" width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden>
           <defs>
@@ -426,7 +488,7 @@ export function GrandMap({
                 const d = `M${sx} ${sy} Q${cx} ${cy} ${ex} ${ey}`;
                 const col = FACTION_INFO[f.faction].color;
                 return (
-                  <g key={`${f.id}-${i}`} className={f.id === selectedFleetId ? 'gm-arrow gm-arrow--sel' : 'gm-arrow'}>
+                  <g key={`${f.id}-${i}`} className={f.id === selectedFleetId || selectedFleetIds?.has(f.id) ? 'gm-arrow gm-arrow--sel' : 'gm-arrow'}>
                     <path d={d} className="gm-arrow__halo" />
                     <path d={d} className="gm-arrow__line" stroke={col} markerEnd={last ? `url(#gm-head-${f.faction})` : undefined} />
                   </g>
@@ -454,7 +516,7 @@ export function GrandMap({
               data-region={r.id}
               aria-label={`${r.name}, ${navyName(r.owner)}`}
               aria-pressed={sel}
-              onClick={tap(() => onSelectRegion?.(r.id))}
+              onClick={tapRegion(r.id)}
             >
               <span className="gm-node__disc">{r.offMap && <Icon name="portal" size="sm" />}</span>
               {showLabel(r) && <span className={`gm-node__label gm-node__label--${side}`}>{r.name}</span>}
@@ -481,7 +543,7 @@ export function GrandMap({
           // The badges stack on the side of the node away from its label, clear of the disc and its ring.
           const dir = r.labelSide === 't' ? 1 : -1;
           return list.map((f, i) => {
-            const sel = f.id === selectedFleetId;
+            const sel = f.id === selectedFleetId || !!selectedFleetIds?.has(f.id);
             const col = FACTION_INFO[f.faction].color;
             const mine = f.faction === me;
             return (
@@ -492,7 +554,8 @@ export function GrandMap({
                 style={{ transform: `translate3d(${x + rad * 0.6}px, ${y + dir * (rad + 22 + i * 30)}px, 0)`, ['--c' as string]: col }}
                 aria-label={t('{name}, 함선 {ships}', { name: f.name, ships: shipsText(f.ships.length) })}
                 aria-pressed={sel}
-                onClick={tap(() => onSelectFleet?.(f.id))}
+                data-fleet={f.id}
+                onClick={tap((additive) => onSelectFleet?.(f.id, additive))}
               >
                 <span className="gm-fleet__pill">
                   <Icon name="ship" size="sm" />
@@ -509,7 +572,7 @@ export function GrandMap({
           const x = (px(lane.from) + px(lane.to)) / 2;
           const y = (py(lane.from) + py(lane.to)) / 2;
           if (x < -80 || y < -80 || x > w + 80 || y > h + 80) return null;
-          const sel = f.id === selectedFleetId;
+          const sel = f.id === selectedFleetId || !!selectedFleetIds?.has(f.id);
           const mine = f.faction === me;
           return (
             <button
@@ -519,7 +582,8 @@ export function GrandMap({
               style={{ transform: `translate3d(${x}px, ${y}px, 0)`, ['--c' as string]: FACTION_INFO[f.faction].color }}
               aria-label={t('{name}, 항해 중, 함선 {ships}', { name: f.name, ships: shipsText(f.ships.length) })}
               aria-pressed={sel}
-              onClick={tap(() => onSelectFleet?.(f.id))}
+              data-fleet={f.id}
+              onClick={tap((additive) => onSelectFleet?.(f.id, additive))}
             >
               <span className="gm-fleet__pill">
                 <Icon name="ship" size="sm" />
@@ -553,7 +617,14 @@ export function GrandMap({
         <button type="button" className="g-glass g-icon-btn" aria-label={t('축소')} onClick={() => zoomAt(1 / 1.5, w / 2, h / 2)}>
           <Icon name="minus" />
         </button>
+        {heights && <div className="gm__terrain g-glass">
+          <button type="button" className="gm-mode" aria-pressed={!flat} onClick={() => setFlat((v) => !v)}>{t(flat ? '입체 지도' : '평면 보기')}</button>
+          <button type="button" className="gm-rotate-left" aria-label={t('지도 왼쪽 회전')} onClick={() => setPose((p) => ({ ...p, yaw: p.yaw - Math.PI / 12 }))}>↶</button>
+          <button type="button" className="gm-rotate-right" aria-label={t('지도 오른쪽 회전')} onClick={() => setPose((p) => ({ ...p, yaw: p.yaw + Math.PI / 12 }))}>↷</button>
+          <label>{t('기울기')}<input className="gm-tilt" type="range" min="18" max="63" value={Math.round(pose.tilt * 180 / Math.PI)} disabled={flat} aria-label={t('지도 기울기')} onChange={(e) => setPose((p) => ({ ...p, tilt: Number(e.target.value) * Math.PI / 180 }))} /></label>
+        </div>}
       </div>
+      <a className="gm__credits" href="/ui/TERRAIN-CREDITS.txt" target="_blank" rel="noreferrer" style={{ right: 12 + insets.right, bottom: 12 + insets.bottom }} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>DEM: Mapzen · USGS · NOAA</a>
     </div>
   );
 }

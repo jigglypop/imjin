@@ -8,6 +8,8 @@ import type { TerrainSpec } from '../../terrain/generate';
 import { REGION_ORDER } from './regions';
 import type { RegionId } from './types';
 import layouts from './regionPoints.json';
+import { environmentFor, type BattleEnvironment, type CoastalClimate } from '../environment';
+import { REGIONS } from './regions';
 
 /**
  * The coast each campaign region is fought on. A region borrows the real terrain of the nearest historical battle
@@ -62,7 +64,7 @@ const open = (seed: number, flip: number): TerrainSpec => ({
 
 const SCENARIO_TERRAIN = (id: ScenarioId) => SCENARIOS[id].terrain;
 
-export const REGION_SITES: Record<RegionId, RegionSite> = {
+const BASE_REGION_SITES: Partial<Record<RegionId, RegionSite>> = {
   myeongnyang: {
     scenario: 'myeongnyang',
     terrain: SCENARIO_TERRAIN('myeongnyang'),
@@ -293,6 +295,41 @@ export const REGION_SITES: Record<RegionId, RegionSite> = {
   },
 };
 
+/**
+ * New ports use the existing nearby coast terrain kits, with their own anchorage and point layout. The strategic
+ * marker is geographical; a tactical kit is an adapted battle area, not a surveyed reconstruction of that port.
+ * Only Dangpo names its corresponding historical scenario; borrowed coastlines never inherit a historical tide.
+ */
+function coastalPort(base: RegionId, name: string, hanja: string, dx = 0, dz = 0, scenario: ScenarioId | null = null): RegionSite {
+  const site = BASE_REGION_SITES[base]!;
+  return {
+    ...site,
+    scenario,
+    port: { x: site.port.x + dx, z: site.port.z + dz },
+    names: {
+      defender: [name, hanja], attacker: [`${name} 바깥 정박지`, `${hanja}外泊地`], centre: [`${name} 입구`, `${hanja}口`], // i18n-ignore: exact place-derived labels registered by EN_PORTS
+      flanks: [[`${name} 북쪽 수로`, `${hanja}北水路`], [`${name} 남쪽 수로`, `${hanja}南水路`]], // i18n-ignore: exact place-derived labels registered by EN_PORTS
+    },
+  };
+}
+
+export const REGION_SITES: Record<RegionId, RegionSite> = {
+  ...BASE_REGION_SITES as Record<RegionId, RegionSite>,
+  nokdo: coastalPort('yeosu', '녹도진', '鹿島鎭', -240, 120),
+  balpo: coastalPort('yeosu', '발포진', '鉢浦鎭', 260, -120),
+  bangdap: coastalPort('hansan', '방답진', '防踏鎭', 100, 100),
+  dangpo: coastalPort('yeosu', '당포', '唐浦', 60, 0, 'dangpo'),
+  danghangpo: coastalPort('angolpo', '당항포', '唐項浦', -900, 0),
+  gabaeryang: coastalPort('hansan', '오아포', '吾兒浦', 180, -100),
+  yeongdeungpo: coastalPort('geoje', '영등포', '永登浦', 300, 150),
+  yulpo: coastalPort('geoje', '율포', '栗浦', -300, -150),
+  jangmunpo: coastalPort('tsushima', '장문포', '長門浦', 200, 0),
+  jepo: coastalPort('angolpo', '제포', '薺浦', -300, 0),
+  cheonseongpo: coastalPort('angolpo', '천성진', '天城鎭', 380, -100),
+  dadaepo: coastalPort('busan', '다대포', '多大浦', -300, 160),
+  mokpo: coastalPort('myeongnyang', '목포진', '木浦鎭', 150, 200),
+};
+
 /** Home port of the attacker (seat 0) and of the defender (seat 1) in a region's list of points. */
 export const ATTACKER_HOME = 0;
 export const DEFENDER_HOME = 1;
@@ -307,6 +344,7 @@ export type RegionMap = MapLayout & {
   /** The terrain with the ground around the points kept clear. */
   terrain: TerrainSpec;
   current?: CurrentSpec;
+  climate: CoastalClimate;
   sky: SkyPresetName;
   sea: SeaStateName;
   foliage: number;
@@ -315,6 +353,24 @@ export type RegionMap = MapLayout & {
   /** Bearing from the attacker's anchorage to the defender's port in terrain coordinates, which turns the map to the light. */
   axis: number;
 };
+
+/** Designed gameplay speeds, not observations or reconstructions of real coastal tidal velocities. */
+const COASTAL_FLOW: Record<RegionId, number> = {
+  myeongnyang: 2.4, noryang: 1.8, yeosu: 1.0, sacheon: 0.6, hansan: 1.1, geoje: 0.8, angolpo: 1.25, busan: 0.75,
+  tsushima: 1.3, nagoya: 0.65, shandong: 0.45, liaodong: 0.4,
+  nokdo: 0.7, balpo: 0.65, bangdap: 1.2, dangpo: 0.75, danghangpo: 0.55, gabaeryang: 0.7,
+  yeongdeungpo: 1.05, yulpo: 0.85, jangmunpo: 0.6, jepo: 0.55, cheonseongpo: 1.4, dadaepo: 1.1, mokpo: 1.8,
+};
+
+function designedCurrent(id: RegionId, placed: Placed[], mid: { x: number; z: number }, axis: number): CurrentSpec {
+  const peak = COASTAL_FLOW[id];
+  const centres = placed.filter((p) => p.role === 'centre' || p.role === 'flank');
+  return {
+    cx: mid.x, cz: mid.z, angle: axis, peak, reach: 2400, narrows: 280,
+    turnAt: 300, slack: 80, floodFirst: true,
+    vortices: centres.map((p, i) => ({ x: p.x, z: p.z, r: id === 'mokpo' ? 170 : id === 'yeosu' ? 140 : 100 + i * 15, spin: i % 2 ? -1 : 1, strength: peak >= 1 ? 0.9 : 0.65 })),
+  };
+}
 
 function build(id: RegionId): RegionMap {
   const site = REGION_SITES[id];
@@ -332,9 +388,14 @@ function build(id: RegionId): RegionMap {
   const axis = a && d ? Math.atan2(d.z - a.z, d.x - a.x) : 0;
   const terrain: TerrainSpec = { ...site.terrain, reserve: placed.flatMap((p) => (p.site ? [{ x: p.site.x, z: p.site.z, r: 150 }] : [])) };
   const scenario = site.scenario ? SCENARIOS[site.scenario] : null;
-  // The tide runs through the strait the region lies on; the other coasts have none worth modelling.
-  const current = scenario?.current;
-  return { id, scenario: site.scenario, terrain, current, points, night: false, sky: site.sky, sea: site.sea, foliage: site.foliage, view: { tx: mid.x, tz: mid.z, dir: axis, dist: 1000, pitch: 0.3 }, axis };
+  // Keep the historical strait's written field; the other adapted coasts have explicitly designed game currents.
+  const current = scenario?.current ?? designedCurrent(id, placed, mid, axis);
+  const region = REGIONS[id];
+  const climate: CoastalClimate = region.terrain === 'strait' ? 'strait' : region.terrain === 'bay' ? 'sheltered' : region.terrain === 'open' ? 'offshore' : 'exposed';
+  return { id, scenario: site.scenario, terrain, current, climate, points, night: false, sky: site.sky, sea: site.sea, foliage: site.foliage, view: { tx: mid.x, tz: mid.z, dir: axis, dist: 1000, pitch: 0.3 }, axis };
 }
 
 export const REGION_MAPS: Record<RegionId, RegionMap> = Object.fromEntries(REGION_ORDER.map((id) => [id, build(id)])) as Record<RegionId, RegionMap>;
+
+/** A persistent meeting's seed gives the same weather, tide and nighttime on every load and rendering client. */
+export const regionEnvironment = (id: RegionId, seed: number): BattleEnvironment => environmentFor(REGION_MAPS[id], seed);

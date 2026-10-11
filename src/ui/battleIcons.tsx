@@ -53,6 +53,7 @@ const ICONS: Record<string, Parts[]> = {
   melee: [{ d: 'M5 19L18 6 M14 5.5h4.5V10 M19 19L6 6 M10 5.5H5.5V10 M4.5 17.5l2 2 M19.5 17.5l-2 2' }],
 
   // Shore works
+  camp: [{ d: 'M3 20h18 M4 20V10l8-6 8 6v10 M8 20v-6h8v6 M12 4V2h6v3h-6 M4 10h16' }],
   shipyard: [{ circles: [[12, 5, 2]] }, { d: 'M12 7v13 M8 11h8 M5 14c0 3.6 3 6 7 6s7-2.4 7-6 M3.8 15.5L5 14l1.5 1.5 M20.2 15.5L19 14l-1.5 1.5' }],
   battery: [{ d: 'M3.5 10h10.5a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H3.5z M16 9.5l5-2v9l-5-2 M6 19h8' }],
   magazine: [{ d: 'M4 8l8-4 8 4v10l-8 3-8-3z M4 8l8 3.5L20 8 M12 11.5V21' }],

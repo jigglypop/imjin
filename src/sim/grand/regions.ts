@@ -22,9 +22,12 @@ export type RegionDef = {
   /** The faction whose seat this region is, if any. Pays a capital bonus while that faction owns it. */
   capitalOf?: GrandFaction;
   blurb: string;
+  /** The record verifying an added port, independently of the game's starting owner. */
+  source?: { title: string; url: string };
 };
 
-export const REGION_ORDER: readonly RegionId[] = [
+/** Keep this order: old campaign battle seeds and saved routes use these original IDs. */
+export const LEGACY_REGION_ORDER: readonly RegionId[] = [
   'myeongnyang',
   'yeosu',
   'noryang',
@@ -38,6 +41,15 @@ export const REGION_ORDER: readonly RegionId[] = [
   'shandong',
   'liaodong',
 ];
+
+export const ADDED_PORTS = ['nokdo', 'balpo', 'bangdap', 'dangpo', 'danghangpo', 'gabaeryang', 'yeongdeungpo', 'yulpo', 'jangmunpo', 'jepo', 'cheonseongpo', 'dadaepo', 'mokpo'] as const satisfies readonly RegionId[];
+export const REGION_ORDER: readonly RegionId[] = [...LEGACY_REGION_ORDER, ...ADDED_PORTS];
+
+/** On loading an old save, a new port follows the surrounding region's present control. */
+export const PORT_EXPANSION_PARENT: Record<(typeof ADDED_PORTS)[number], RegionId> = {
+  nokdo: 'myeongnyang', balpo: 'yeosu', bangdap: 'yeosu', dangpo: 'hansan', danghangpo: 'sacheon', gabaeryang: 'geoje',
+  yeongdeungpo: 'geoje', yulpo: 'geoje', jangmunpo: 'geoje', jepo: 'angolpo', cheonseongpo: 'angolpo', dadaepo: 'busan', mokpo: 'myeongnyang',
+};
 
 export const REGIONS: Record<RegionId, RegionDef> = {
   myeongnyang: {
@@ -178,6 +190,71 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     korea: false,
     blurb: '압록강 너머에 있는 명의 북쪽 거점입니다.',
   },
+  nokdo: {
+    id: 'nokdo', name: '녹도진', hanja: '鹿島鎭', lon: 127.14, lat: 34.53, value: 1, terrain: 'bay', korea: true,
+    blurb: '고흥 녹동의 옛 수군진입니다. 전라좌수영으로 이어지는 서쪽 해로를 지킵니다.',
+    source: { title: '국립문화유산연구원: 녹도진성', url: 'https://portal.nrich.go.kr/kor/archeologyUsrView.do?idx=6671&menuIdx=799' },
+  },
+  balpo: {
+    id: 'balpo', name: '발포진', hanja: '鉢浦鎭', lon: 127.50, lat: 34.48, value: 1, terrain: 'bay', korea: true,
+    blurb: '고흥반도 남쪽의 수군진입니다. 이순신이 만호로 근무했던 포구입니다.',
+    source: { title: '한국학중앙연구원: 고흥 발포 만호성', url: 'https://encykorea.aks.ac.kr/Article/E0004076' },
+  },
+  bangdap: {
+    id: 'bangdap', name: '방답진', hanja: '防踏鎭', lon: 127.73, lat: 34.63, value: 1, terrain: 'island', korea: true,
+    blurb: '돌산 군내리의 전라좌수영 전초 기지입니다. 굴강에서 전선을 보호하고 출동시켰습니다.',
+    source: { title: '국가유산 해설문: 돌산군관청·방답진', url: 'https://dh.aks.ac.kr/~heritage/wiki/index.php/%EB%8F%8C%EC%82%B0%EA%B5%B0%EA%B4%80%EC%B2%AD' },
+  },
+  dangpo: {
+    id: 'dangpo', name: '당포', hanja: '唐浦', lon: 128.39, lat: 34.78, value: 1, terrain: 'bay', korea: true,
+    blurb: '통영 삼덕리의 수군진과 포구입니다. 당포해전이 벌어졌던 해안입니다.',
+    source: { title: '국가유산포털: 통영 당포성', url: 'https://www.heritage.go.kr/heri/cul/culSelectDetail.do?VdkVgwKey=23%2C00630000%2C38&pageNo=5_1_1_0' },
+  },
+  danghangpo: {
+    id: 'danghangpo', name: '당항포', hanja: '唐項浦', lon: 128.39, lat: 35.05, value: 1, terrain: 'bay', korea: true,
+    blurb: '고성 당항만 안쪽의 포구입니다. 조선 수군이 두 차례 해전을 치렀던 좁고 깊은 만입니다.',
+    source: { title: '한국관광공사: 당항포 대첩지', url: 'https://access.visitkorea.or.kr/opentour/detail.do?cotId=d4540eb1-7b9f-4dd9-86b9-7ac0ad62eb6e' },
+  },
+  gabaeryang: {
+    id: 'gabaeryang', name: '오아포·가배량', hanja: '吾兒浦·加背梁', lon: 128.58, lat: 34.81, value: 1, terrain: 'bay', korea: true,
+    blurb: '거제 남서쪽의 옛 오아포입니다. 경상우수영과 통제영이 자리했던 포구입니다.',
+    source: { title: '거제시: 가배량진성·오아포', url: 'https://www.geoje.go.kr/user/smarttour/view.geoje?basicSid=171&menuCd=DOM_000008503001000000' },
+  },
+  yeongdeungpo: {
+    id: 'yeongdeungpo', name: '영등포', hanja: '永登浦', lon: 128.70, lat: 35.03, value: 1, terrain: 'island', korea: true,
+    blurb: '거제 구영리에 남아 있는 옛 영등진의 포구입니다. 진해만과 거제 북쪽 바다를 잇습니다.',
+    source: { title: '국가유산포털: 거제 구영등성', url: 'https://www.heritage.go.kr/heri/cul/culSelectDetail.do?ccbaCpno=2333802050000&pageNo=1_1_1_1' },
+  },
+  yulpo: {
+    id: 'yulpo', name: '율포', hanja: '栗浦', lon: 128.66, lat: 35.00, value: 1, terrain: 'bay', korea: true,
+    blurb: '거제 율천리의 옛 율포진입니다. 거제 북부 포구와 진해만을 연결합니다.',
+    source: { title: '국가유산포털: 거제 구율포성', url: 'https://www.heritage.go.kr/heri/cul/culSelectDetail.do?ccbaCpno=2333802060000' },
+  },
+  jangmunpo: {
+    id: 'jangmunpo', name: '장문포', hanja: '長門浦', lon: 128.68, lat: 35.01, value: 1, terrain: 'bay', korea: true,
+    blurb: '거제 장목만의 길고 좁은 포구입니다. 난중일기에 수군의 진입과 해안 성곽이 기록되어 있습니다.',
+    source: { title: '거제시: 장문포 왜성·난중일기', url: 'https://www.geoje.go.kr/user/smarttour/view.geoje?basicSid=199&menuCd=' },
+  },
+  jepo: {
+    id: 'jepo', name: '제포', hanja: '薺浦', lon: 128.75, lat: 35.11, value: 1, terrain: 'bay', korea: true,
+    blurb: '웅천의 옛 포구입니다. 조선과 일본 사이의 선박 왕래가 실록에 기록되어 있습니다.',
+    source: { title: '조선왕조실록: 제포·부산포 선박 왕래', url: 'https://sillok.history.go.kr/id/wka_11608025_002' },
+  },
+  cheonseongpo: {
+    id: 'cheonseongpo', name: '천성진', hanja: '天城鎭', lon: 128.82, lat: 35.03, value: 1, terrain: 'island', korea: true,
+    blurb: '가덕도 서쪽 천성항의 수군진입니다. 거제 동북 해안과 진해만 동쪽을 지키던 기지입니다.',
+    source: { title: '부산박물관: 천성진성 발굴조사', url: 'https://museum.busan.go.kr/busan/reserchexp01/1577256?curPage=&srchBeginDt=&srchEndDt=&srchKey=&srchText=' },
+  },
+  dadaepo: {
+    id: 'dadaepo', name: '다대포', hanja: '多大浦', lon: 128.97, lat: 35.06, value: 1, terrain: 'bay', korea: true,
+    blurb: '낙동강 하구 동쪽의 수군진입니다. 부산포로 들어가는 남쪽 해로의 요충지입니다.',
+    source: { title: '부산교통공사: 다대포 수군진', url: 'https://www2.humetro.busan.kr/homepage/default/stationinfo/page/list01.do?S_LINE=&S_STATION=&menu_no=1001010201' },
+  },
+  mokpo: {
+    id: 'mokpo', name: '목포진', hanja: '木浦鎭', lon: 126.38, lat: 34.79, value: 1, terrain: 'strait', korea: true,
+    blurb: '영산강 하구를 지키던 수군진입니다. 실록에 병선 배치와 만호 파견이 기록되어 있습니다.',
+    source: { title: '조선왕조실록: 목포 병선 배치·만호 파견', url: 'https://sillok.history.go.kr/id/kda_12104015_002' },
+  },
 };
 
 /** The sea lanes. Every lane runs both ways; `edges` lists each once. */
@@ -196,6 +273,15 @@ const EDGES: [RegionId, RegionId, 1 | 2 | 3][] = [
   ['shandong', 'liaodong', 1],
   ['shandong', 'myeongnyang', 3],
   ['liaodong', 'myeongnyang', 3],
+  // Added coastal stages leave every existing saved direct sailing order usable.
+  ['myeongnyang', 'nokdo', 1], ['nokdo', 'balpo', 1], ['balpo', 'bangdap', 1], ['bangdap', 'yeosu', 1],
+  ['nokdo', 'yeosu', 2], ['balpo', 'yeosu', 1], ['bangdap', 'noryang', 1],
+  ['noryang', 'dangpo', 1], ['sacheon', 'dangpo', 1], ['dangpo', 'hansan', 1], ['dangpo', 'gabaeryang', 1], ['gabaeryang', 'geoje', 1], ['gabaeryang', 'hansan', 1],
+  ['sacheon', 'danghangpo', 1], ['danghangpo', 'yulpo', 1], ['danghangpo', 'jepo', 1],
+  ['geoje', 'yulpo', 1], ['yulpo', 'jangmunpo', 1], ['jangmunpo', 'yeongdeungpo', 1], ['yeongdeungpo', 'geoje', 1],
+  ['jangmunpo', 'angolpo', 1], ['yeongdeungpo', 'jepo', 1], ['jepo', 'angolpo', 1],
+  ['yeongdeungpo', 'cheonseongpo', 1], ['angolpo', 'cheonseongpo', 1], ['cheonseongpo', 'dadaepo', 1], ['dadaepo', 'busan', 1],
+  ['mokpo', 'myeongnyang', 1], ['mokpo', 'nokdo', 2], ['mokpo', 'shandong', 3],
 ];
 
 export const LANES: Record<RegionId, Lane[]> = (() => {
@@ -236,7 +322,7 @@ export const COMMANDERS: CommanderDef[] = [
   { id: 'deng', faction: 'ming', name: '등자룡', title: '수군 부총병', portrait: 'portrait_deng', level: 2 },
 ];
 
-/** Joseon holds the south-west coast, Japan the landing at Busan and its bases behind, and Ming sits far to the north-west. */
+/** Strategic starting positions, not simultaneous historical ownership of every port. */
 export const START: StartSetup = {
   owners: {
     myeongnyang: 'joseon',
@@ -251,6 +337,8 @@ export const START: StartSetup = {
     nagoya: 'japan',
     shandong: 'ming',
     liaodong: 'ming',
+    nokdo: 'joseon', balpo: 'joseon', bangdap: 'joseon', dangpo: 'joseon', gabaeryang: 'joseon', mokpo: 'joseon',
+    danghangpo: 'japan', yeongdeungpo: 'japan', yulpo: 'japan', jangmunpo: 'japan', jepo: 'japan', cheonseongpo: 'japan', dadaepo: 'japan',
   },
   buildings: {
     yeosu: { camp: 2, shipyard: 2, dock: 1 },
@@ -264,6 +352,8 @@ export const START: StartSetup = {
     nagoya: { camp: 2, shipyard: 2, dock: 1 },
     shandong: { camp: 2, shipyard: 2, dock: 1 },
     liaodong: { camp: 1, shipyard: 1 },
+    nokdo: { shipyard: 1 }, balpo: { battery: 1 }, bangdap: { camp: 1 }, gabaeryang: { dock: 1 }, mokpo: { beacon: 1 },
+    yeongdeungpo: { shipyard: 1 }, dadaepo: { battery: 1 }, cheonseongpo: { camp: 1 }, jepo: { dock: 1 },
   },
   fleets: [
     { faction: 'joseon', at: 'yeosu', name: '전라좌수영 본대', ships: { panokseon: 8, hyeopseon: 5 }, commander: 'yi' },

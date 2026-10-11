@@ -224,6 +224,7 @@ export class Ocean {
     const flowCenter = uniform(new Vector2(current?.centerWorld.x ?? 0, current?.centerWorld.z ?? 0));
     const flowExtent = uniform(current?.extent ?? 1);
     const vortexData = current?.vortexData() ?? [];
+    const designedEddies = !!current?.spec.vortices?.length;
     const vortices = uniformArray(Array.from({ length: 8 }, (_, i) => new Vector4(vortexData[i * 4] ?? 0, vortexData[i * 4 + 1] ?? 0, vortexData[i * 4 + 2] ?? 1, vortexData[i * 4 + 3] ?? 0)), 'vec4');
     const tide = this.tide;
 
@@ -409,6 +410,7 @@ export class Ocean {
       const speed = length(flow);
       const whirl = float(0).toVar();
       const core = float(0).toVar();
+      const eddyFoam = float(0).toVar();
       if (current) {
         const dir = flow.div(max(speed, 0.001));
         const along = dot(p0, dir);
@@ -426,13 +428,21 @@ export class Ocean {
           const breakup = texture(foamTex, p0.div(11).add(vec2(t.mul(0.013), t.mul(-0.009)))).r;
           const ring = smoothstep(v.z.mul(1.6), v.z.mul(0.35), r).mul(smoothstep(v.z.mul(0.03), v.z.mul(0.2), r));
           const k = abs(v.w).mul(abs(tide));
+          if (designedEddies) {
+            // Explicit regional eddies need readable foam arms even in moderate seas. Keep their tide direction,
+            // physical radius and slack-water disappearance, without adding this cue to historical presets.
+            const eddyRing = float(1).sub(smoothstep(v.z.mul(0.35), v.z.mul(1.6), r)).mul(smoothstep(v.z.mul(0.03), v.z.mul(0.2), r));
+            const patches = texture(foamTex, p0.div(150).add(vec2(t.mul(0.0015), t.mul(-0.0007)))).r;
+            const arm = sin(a.mul(3).add(log(r.add(1)).mul(7).mul(spin)).add(patches.mul(2.2)).sub(t.mul(2.4).mul(spin))).mul(0.5).add(0.5);
+            eddyFoam.addAssign(smoothstep(0.78, 0.98, arm).mul(smoothstep(0.38, 0.8, patches)).mul(eddyRing).mul(min(k, 1)).mul(0.68));
+          }
           whirl.addAssign(smoothstep(0.45, 0.95, spiral).mul(smoothstep(0.3, 0.85, breakup)).mul(ring).mul(k).mul(1.15));
           whirl.addAssign(smoothstep(0.7, 1, breakup).mul(ring).mul(k).mul(0.35));
           core.addAssign(smoothstep(v.z.mul(0.45), float(0), r).mul(k));
         });
       }
       const coverage = whitecap.mul(1.35).mul(shore).add(contact.mul(1.2)).add(wakeFoam.mul(1.15)).add(whirl).add(surf.mul(select(depthBelow.greaterThan(-0.5), float(1), float(0))));
-      const foam = saturate(coverage.sub(float(1).sub(pattern)).mul(3.2));
+      const foam = max(saturate(coverage.sub(float(1).sub(pattern)).mul(3.2)), eddyFoam.clamp(0, 0.82));
       const foamLight = atmosphere.skyAmbient.mul(0.95).add(atmosphere.sunIrradiance.mul(NoL.mul(0.6).add(0.25)).mul(1 / Math.PI)).add(lightDiffuse.mul(1 / Math.PI));
       color.assign(mix(color, vec3(0.93, 0.95, 0.96).mul(foamLight), foam.mul(0.92)));
       color.assign(color.mul(float(1).sub(core.clamp(0, 1).mul(0.35))));

@@ -679,6 +679,53 @@
 
 /* ---------------------------------------------------------------- orders */
 
+.fleet-groups {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  width: min(460px, calc(100% - 16px));
+  padding: 5px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fleet-group-tools { display: flex; align-items: center; gap: 4px; }
+.fleet-group-tools button, .fleet-group-name button {
+  min-height: 26px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-2);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: var(--fs-12);
+  cursor: pointer;
+}
+.fleet-group-tools button:disabled { opacity: 0.4; cursor: default; }
+.fleet-group-tools .fleet-route { margin-left: auto; display: flex; gap: 5px; }
+.fleet-group-tools .fleet-tool--on { color: var(--accent); border-color: var(--accent); }
+.fleet-group-grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; }
+.fleet-group {
+  min-width: 0;
+  min-height: 44px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.fleet-group span { display: flex; align-items: center; justify-content: space-around; gap: 2px; }
+.fleet-group kbd { color: var(--ink-3); font: inherit; font-size: var(--fs-11); }
+.fleet-group b { font-size: var(--fs-13); }
+.fleet-group small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-11); }
+.fleet-group--selected { color: var(--ink); border-color: var(--accent); background: rgba(194, 166, 116, 0.15); }
+.fleet-group--assign { border-style: dashed; }
+.fleet-group-name { display: flex; align-items: center; gap: 5px; font-size: var(--fs-12); }
+.fleet-group-name input { min-width: 0; flex: 1; padding: 5px; color: var(--ink); background: rgba(0, 0, 0, 0.2); border: 1px solid var(--line); border-radius: 4px; }
+.app--compact .fleet-groups { width: min(420px, calc(100% - 16px)); }
+
 .orders {
   width: clamp(300px, 24vw, 340px);
   flex: none;

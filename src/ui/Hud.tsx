@@ -16,6 +16,8 @@ import { tCommander, tName, tShips } from './battleNames';
 import { params } from './launch';
 import './hud.css';
 import { ControlsHelp, Tooltips, Tutorial, useTour } from './Tutorial';
+import { useNet } from '../net/NetClient';
+import { RankActions, RankResult } from './RankResult';
 
 const SEA_LABELS: Record<SeaStateName, string> = { calm: '잔잔', moderate: '보통', rough: '거침' };
 const ACTIVITY: Record<string, string> = {
@@ -123,6 +125,50 @@ function Card({ sq, compact, onClick, onDouble }: { sq: SquadronInfo; compact: b
 
 type OrderDef = { icon: string; label: string; key: string; tip: string; run: () => void; on?: boolean; disabled?: boolean };
 
+/** Always available, including when a phone folds the larger command sheet. */
+function FleetGroups({ engine }: { engine: Engine }) {
+  const t = useT();
+  const [assigning, setAssigning] = useState(false);
+  const [active, setActive] = useState(0);
+  const [editing, setEditing] = useState<number | null>(null);
+  const [name, setName] = useState('');
+  const input = engine.input;
+  const groups = input.getGroups();
+  const current = groups.find((g) => g.selected)?.index ?? active;
+  const ownSelected = [...engine.views.selected].some((id) => engine.isOwn(engine.battle.get(id)));
+  const queued = input.queuedWaypoints();
+  useEffect(() => { setAssigning(false); setEditing(null); setActive(0); }, [engine.battle]);
+  const saveName = () => {
+    if (editing !== null) input.renameGroup(editing, name);
+    setEditing(null);
+  };
+  return <div className="fleet-groups glass interactive" aria-label={t('지정 부대')}>
+    <div className="fleet-group-tools">
+      <button onClick={() => input.selectAll()} title="Ctrl+A">{t('전체 선택')}</button>
+      <button className={assigning ? 'fleet-tool--on' : ''} disabled={!ownSelected} onClick={() => setAssigning((v) => !v)} title={t('함선을 고른 뒤 지정할 부대를 누르세요')} aria-pressed={assigning}>{t(assigning ? '지정할 부대' : '부대 지정')}</button>
+      <button onClick={() => { setEditing(current); setName(groups[current]!.name); }}>{t('이름')}</button>
+      <button className={`fleet-route ${input.queueMoves ? 'fleet-tool--on' : ''}`} disabled={!ownSelected} onClick={() => input.toggleQueueMode()} aria-pressed={input.queueMoves} title={t('켜면 바다를 누를 때 이동 경로를 예약합니다 · Shift+우클릭도 가능')}>
+        {t('경로 예약')}{queued > 0 && <b>{queued}/16</b>}
+      </button>
+    </div>
+    <div className="fleet-group-grid">
+      {groups.map((g) => <button key={g.index} className={`fleet-group ${g.selected ? 'fleet-group--selected' : ''} ${assigning ? 'fleet-group--assign' : ''}`} data-group={g.index + 1} title={t('{name} · {n}척 · 두 번 누르면 시점 이동', { name: g.name, n: g.count })} aria-label={t('{name} · {n}척', { name: g.name, n: g.count })} onClick={(e) => {
+        setActive(g.index);
+        if (assigning || e.ctrlKey || e.metaKey || (g.count === 0 && ownSelected)) { input.assignGroup(g.index, e.shiftKey); setAssigning(false); }
+        else if (e.shiftKey) input.assignGroup(g.index, true);
+        else input.selectGroup(g.index);
+      }}>
+        <span><kbd>{g.index + 1}</kbd><b>{g.count}</b></span><small>{g.name}</small>
+      </button>)}
+    </div>
+    {editing !== null && <form className="fleet-group-name" onSubmit={(e) => { e.preventDefault(); saveName(); }}>
+      <label htmlFor="fleet-name">{t('부대 {n}', { n: editing + 1 })}</label>
+      <input id="fleet-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={16} autoFocus aria-label={t('부대 이름')} />
+      <button type="submit">{t('저장')}</button><button type="button" onClick={() => setEditing(null)}>{t('취소')}</button>
+    </form>}
+  </div>;
+}
+
 function Orders({ engine, p, night, selected, collapsed, onToggle }: { engine: Engine; p: PrimaryInfo | null; night: boolean; selected: number; collapsed: boolean; onToggle: () => void }) {
   const t = useT();
   const [tab, setTab] = useState<Tab>('form');
@@ -132,10 +178,11 @@ function Orders({ engine, p, night, selected, collapsed, onToggle }: { engine: E
     form: {
       title: '진형',
       items: [
-        { icon: 'crane', label: '학익진', key: '1', tip: 'crane', run: () => input.formation('crane') },
-        { icon: 'line', label: '일자진', key: '2', tip: 'line', run: () => input.formation('line') },
-        { icon: 'column', label: '장사진', key: '3', tip: 'column', run: () => input.formation('column') },
-        { icon: 'wedge', label: '첨자진', key: '4', tip: 'wedge', run: () => input.formation('wedge') },
+        { icon: 'crane', label: '학익진', key: 'Alt+1', tip: 'crane', run: () => input.formation('crane') },
+        { icon: 'line', label: '일자진', key: 'Alt+2', tip: 'line', run: () => input.formation('line') },
+        { icon: 'column', label: '장사진', key: 'Alt+3', tip: 'column', run: () => input.formation('column') },
+        { icon: 'wedge', label: '첨자진', key: 'Alt+4', tip: 'wedge', run: () => input.formation('wedge') },
+        ...(engine.battle.coastalTactic ? [{ icon: 'crane' as const, label: engine.battle.coastalTactic === 'yeosu-wings' ? '여수 분산익진' : '목포 수로종심진', key: '', tip: engine.battle.coastalTactic, run: () => input.formation(engine.battle.coastalTactic!) }] : []),
         { icon: 'scatter', label: '자유교전', key: 'G', tip: 'auto', run: () => input.auto() },
       ],
     },
@@ -152,9 +199,9 @@ function Orders({ engine, p, night, selected, collapsed, onToggle }: { engine: E
     move: {
       title: '기동',
       items: [
-        { icon: 'fast', label: '전속', key: '5', tip: 'speed.full', run: () => input.setSpeed(1), on: !!p && p.speedCap >= 1, disabled: none },
-        { icon: 'half', label: '반속', key: '6', tip: 'speed.half', run: () => input.setSpeed(0.6), on: !!p && p.speedCap >= 0.5 && p.speedCap < 1, disabled: none },
-        { icon: 'slow', label: '저속', key: '7', tip: 'speed.slow', run: () => input.setSpeed(0.3), on: !!p && p.speedCap > 0 && p.speedCap < 0.5, disabled: none },
+        { icon: 'fast', label: '전속', key: 'Alt+5', tip: 'speed.full', run: () => input.setSpeed(1), on: !!p && p.speedCap >= 1, disabled: none },
+        { icon: 'half', label: '반속', key: 'Alt+6', tip: 'speed.half', run: () => input.setSpeed(0.6), on: !!p && p.speedCap >= 0.5 && p.speedCap < 1, disabled: none },
+        { icon: 'slow', label: '저속', key: 'Alt+7', tip: 'speed.slow', run: () => input.setSpeed(0.3), on: !!p && p.speedCap > 0 && p.speedCap < 0.5, disabled: none },
         { icon: 'stop', label: '정지', key: 'H', tip: 'hold', run: () => input.hold(), disabled: none },
         // A toggle named for what the press does; it is lit while the ship runs dark.
         { icon: 'lantern', label: p && !p.lights ? '등불 켜기' : '등불 끄기', key: 'L', tip: 'lights', run: () => input.toggleLights(), on: !!p && !p.lights, disabled: !night },
@@ -225,6 +272,7 @@ function useHudInsets() {
       put('--bal-bottom', box('.hud .balance')?.bottom ?? null);
       put('--tl-right', box('.hud .hud-menu')?.right ?? null);
       put('--tr-left', box('.hud .dock')?.left ?? null);
+      put('--fleet-top', box('.hud .fleet-groups')?.top ?? null);
     };
     measure();
     const timer = window.setInterval(measure, 200);
@@ -232,7 +280,7 @@ function useHudInsets() {
     return () => {
       window.clearInterval(timer);
       window.removeEventListener('resize', measure);
-      for (const n of ['--bal-bottom', '--tl-right', '--tr-left']) root.removeProperty(n);
+      for (const n of ['--bal-bottom', '--tl-right', '--tr-left', '--fleet-top']) root.removeProperty(n);
     };
   }, []);
 }
@@ -355,6 +403,7 @@ function Detail({ engine, snap, p, portrait }: { engine: Engine; snap: GameSnaps
           <Stat label={t('선체')} value={p.hull} tone="hull" text={`${Math.round(p.hull * 100)}%`} />
           <Stat label={t('승조원')} value={p.crew / p.maxCrew} tone="crew" text={`${p.crew}`} />
           {p.fire > 0.02 && <Stat label={t('화재')} value={p.fire} tone="fire" text={`${Math.round(p.fire * 100)}%`} />}
+          {p.damageState && Object.entries(p.damageState).map(([kind, damage]) => damage > 0.015 && <Stat key={kind} label={t(kind === 'flooding' ? '침수' : kind === 'propulsion' ? '추진 손상' : '조타 손상')} value={damage} tone="fire" text={`${Math.round(damage * 100)}%`} />)}
           {p.guns.length > 0 && <GunLights guns={p.guns} />}
           <CrewPanel engine={engine} p={p} />
         </div>
@@ -409,6 +458,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const report = useUi((s) => s.report);
   const touchBox = useUi((s) => s.touchBox);
   const origin = useUi((s) => s.origin);
+  const rankedMatch = useNet((s) => s.rankedMatch);
   const tourActive = useTour((s) => s.active);
   const compact = useCompactLayout();
   const [showSettings, setShowSettings] = useState(false);
@@ -483,9 +533,9 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
           {t(snap.scenario.date)} · {t(snap.scenario.place)}
         </div>
         <div className="hud-menu">
-          <button className="mini-btn" onClick={onBack}>
-            <span className="long">{t(BACK_LABEL[origin].long)}</span>
-            <span className="short">{t(BACK_LABEL[origin].short)}</span>
+          <button className="mini-btn" onClick={onBack} title={rankedMatch && !ended ? t('기권하면 랭크 점수에 반영됩니다') : undefined}>
+            <span className="long">{t(rankedMatch && !ended ? '기권하고 대기실로' : BACK_LABEL[origin].long)}</span>
+            <span className="short">{t(rankedMatch && !ended ? '기권' : BACK_LABEL[origin].short)}</span>
           </button>
           <button className={`mini-btn ${showSettings ? 'mini-btn--on' : ''}`} onClick={() => setShowSettings((v) => !v)}>
             <Icon name="settings" size={16} />
@@ -523,12 +573,12 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
           </span>
           <span className="bal-side bal-side--foe">
             <b>{snap.enemy}</b>
-            <small>/{snap.enemyTotal}</small>
+            <small>{snap.observedEnemy ? t('관측') : `/${snap.enemyTotal}`}</small>
             <span className="bal-name">{sideName(enemyTeam)}</span>
             <i className="bal-mark" />
           </span>
         </div>
-        <div className="bal-bar" role="img" aria-label={t('전세 {side} {n}%', { side: snap.sides.own, n: Math.round(snap.balance * 100) })}>
+        <div className="bal-bar" role="img" aria-label={t(snap.conquest ? '기세 {side} {n}%' : '전세 {side} {n}%', { side: snap.sides.own, n: Math.round(snap.balance * 100) })}>
           <i style={{ flexBasis: `${snap.balance * 100}%` }} />
           <i />
         </div>
@@ -705,6 +755,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
         {/* Once the battle is decided the result card is the only thing to act on: no orders or cards behind it. */}
         {!ended && (
           <>
+            <FleetGroups engine={engine} />
             {p ? <Detail engine={engine} snap={snap} p={p} portrait={selectedSquad?.portrait ?? snap.squadrons.find((s) => s.selected)?.portrait ?? 'portrait_admiral'} /> : hintOpen && !tourActive && <Hint onClose={closeHint} />}
             <div className="cards">
               {own.map((sq) => (
@@ -747,6 +798,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
               </span>
             ))}
           </div>
+          {engine.remote && rankedMatch && <RankResult />}
           {report && (
             <div className="result-camp">
               <p>
@@ -778,9 +830,9 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                 {t('다시 시작')}
               </button>
             )}
-            <button className="ink-btn" onClick={onBack}>
+            {engine.remote && rankedMatch ? <RankActions /> : <button className="ink-btn" onClick={onBack}>
               {report ? t('군영으로') : t(BACK_LABEL[origin].long)}
-            </button>
+            </button>}
           </div>
         </div>
       )}

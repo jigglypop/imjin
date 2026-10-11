@@ -9,12 +9,13 @@ export interface TopBarProps {
   onMenu?: () => void;
   /** Opens the war status panel (objective, scores, log). */
   onStatus?: () => void;
+  onBatch?: () => void;
   /** Disables the end-turn button, e.g. while battles wait or the war is over. */
   busy?: boolean;
   endLabel?: string;
 }
 
-export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, busy, endLabel }: TopBarProps) {
+export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, busy, endLabel }: TopBarProps) {
   const t = useT();
   const net = treasury.income.gold;
   return (
@@ -34,6 +35,7 @@ export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, busy, endL
         </div>
       </div>
       <ul className="g-top__res" aria-label={t('재물')}>
+        {onBatch && <li><button type="button" className="g-btn g-btn--sm g-top__batch" disabled={busy} onClick={onBatch}>{t('일괄 이동')}</button></li>}
         <li className="g-res" title={t('은')}>
           <span className="g-res__glyph">
             <Icon name="coin" />

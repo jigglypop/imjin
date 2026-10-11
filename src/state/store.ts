@@ -35,6 +35,7 @@ export type PrimaryInfo = {
   crew: number;
   maxCrew: number;
   fire: number;
+  damageState?: { flooding: number; propulsion: number; steering: number };
   activity: string;
   guns: GunInfo[];
   fireMode: FireMode;
@@ -65,11 +66,15 @@ export type PointDetail = {
   contested: boolean;
   hold: number;
   mine: boolean;
-  buildings: ({ slot: number; kind: BuildingKind; label: string; progress: number; hp: number } | null)[];
-  queue: { kind: ShipKind; label: string; left: number; total: number }[];
+  observed?: boolean;
+  expanded: boolean;
+  buildings: ({ slot: number; kind: BuildingKind; label: string; progress: number; hp: number; level: number; upgradeLeft: number; upgradeTotal: number; upgradeCost: number; upgradeTime: number; canUpgrade: boolean } | null)[];
+  queue: { kind: ShipKind; label: string; left: number; total: number; working: boolean }[];
   build: { kind: BuildingKind; label: string; cost: number; desc: string; ok: boolean }[];
   recruit: { kind: ShipKind; label: string; cost: number; time: number; ok: boolean }[];
   shipyard: boolean;
+  yardSlots: number;
+  rally: { x: number; z: number } | null;
 };
 
 export type ConquestSnapshot = {
@@ -97,6 +102,7 @@ export type GameSnapshot = {
   time: number;
   own: number;
   enemy: number;
+  observedEnemy?: boolean;
   ownTotal: number;
   enemyTotal: number;
   /** Enemy ships that fled the battle. */

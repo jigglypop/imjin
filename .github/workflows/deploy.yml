@@ -47,30 +47,31 @@ jobs:
         run: |
           if [ -z "$INSTANCE" ]; then
             echo "::warning::MP_INSTANCE_ID is unset; checking protocol compatibility only. Server code changes require a configured deployment."
-            node scripts/check-mp-health.mjs --url=https://mp.imjin1592.com/health --protocol-only
+            node scripts/check-mp-health.mjs --url=https://mp.imjin1592.com/health --protocol-only --ranked
             exit 0
           fi
           npm run server:build
           aws s3 cp server/dist/server.cjs s3://imjin1592-deploy/server/server.cjs --only-show-errors
           CMD=$(aws ssm send-command --instance-ids "$INSTANCE" --document-name AWS-RunShellScript \
-            --parameters 'commands=["/usr/local/bin/imjin-deploy"]' --query Command.CommandId --output text)
+            --parameters 'commands=["install -d -m 700 -o imjin -g imjin /opt/imjin/data","/usr/local/bin/imjin-deploy"]' --query Command.CommandId --output text)
           aws ssm wait command-executed --command-id "$CMD" --instance-id "$INSTANCE"
           for i in 1 2 3 4 5 6; do
-            node scripts/check-mp-health.mjs --url=https://mp.imjin1592.com/health --revision="$GITHUB_SHA" && exit 0
+            node scripts/check-mp-health.mjs --url=https://mp.imjin1592.com/health --revision="$GITHUB_SHA" --ranked && exit 0
             sleep 5
           done
           echo "::error::multiplayer server did not confirm this revision and protocol"
           exit 1
 
       - name: Upload hashed bundles
-        run: aws s3 sync dist/assets "s3://$BUCKET/assets" --delete --cache-control "public,max-age=31536000,immutable"
+        # Keep earlier hashes: open tabs can load their battle chunk after the new index is published.
+        run: aws s3 sync dist/assets "s3://$BUCKET/assets" --cache-control "public,max-age=31536000,immutable"
 
       - name: Upload static assets
         run: |
-          aws s3 sync dist "s3://$BUCKET" --delete --size-only \
+          aws s3 sync dist "s3://$BUCKET" --delete \
             --exclude "index.html" --exclude "assets/*" --exclude "*.glb" --exclude "en" --exclude "en/" --exclude "en/index.html" \
             --cache-control "public,max-age=86400"
-          aws s3 sync dist "s3://$BUCKET" --size-only \
+          aws s3 sync dist "s3://$BUCKET" \
             --exclude "*" --include "*.glb" \
             --content-type "model/gltf-binary" --cache-control "public,max-age=86400"
 

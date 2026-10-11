@@ -1,14 +1,15 @@
 import type { Battle } from '../battle';
-import { GUN_SHOTS, SHIP_SPECS } from '../catalog';
-import { BUILDINGS, SHORT_NAME, type Building, type BuildingKind as WorkKind, type Conquest } from '../conquest';
+import { GUN_SHOTS } from '../catalog';
+import { buildingHp, SHORT_NAME, type Building, type BuildingKind as WorkKind, type Conquest } from '../conquest';
 import { buildConquestOn, wetSpot, type Seat } from '../maps';
 import { dateLabel } from './economy';
 import type { BattleInfo } from '../info';
 import type { LandSampler, Ship, Squadron } from '../types';
 import type { BridgeSeat, RegionBattle, RegionBattleBuilding } from './bridge';
-import { ATTACKER_HOME, DEFENDER_HOME, REGION_MAPS } from './coast';
+import { ATTACKER_HOME, DEFENDER_HOME, REGION_MAPS, regionEnvironment } from './coast';
 import { REGIONS } from './regions';
 import type { BattleOutcomeShip, BuildingKind } from './types';
+import { coastalTacticFor } from '../coastal-tactics';
 
 /**
  * Plays a campaign meeting as a conquest battle on the region's own coast (coast.ts). The two sides take the map's two
@@ -32,7 +33,11 @@ export function grandSeats(rb: RegionBattle): Seat[] {
 export const grandYou = (rb: RegionBattle) => (rb.humanSide === 'attacker' ? ATTACKER_SEAT : DEFENDER_SEAT);
 
 /** The coast a region battle is fought on. */
-export const grandMap = (rb: RegionBattle) => REGION_MAPS[rb.mapId];
+export const grandMap = (rb: RegionBattle) => {
+  const map = REGION_MAPS[rb.mapId];
+  const environment = regionEnvironment(rb.mapId, rb.seed);
+  return { ...map, ...environment, environment, coastalTactic: coastalTacticFor(rb.mapId) };
+};
 
 /** What the engine stages a region battle from: the real terrain of the region, its tide, sky and loading picture. */
 export function grandInfo(rb: RegionBattle): BattleInfo {
@@ -51,6 +56,8 @@ export function grandInfo(rb: RegionBattle): BattleInfo {
     night: m.night,
     terrain: m.terrain,
     current: m.current,
+    environment: m.environment,
+    coastalTactic: m.coastalTactic,
     view: m.view,
     foliage: m.foliage,
     art: m.scenario ?? undefined,
@@ -69,9 +76,9 @@ export function standingWorks(works: RegionBattleBuilding[]): RegionBattleBuildi
   for (const w of works) {
     if (w.kind === 'shipyard') out.push(w);
   }
-  // A battery of level n mounts n shore batteries, as many as the plots allow.
+  // Each campaign work becomes one shore work with its completed level intact.
   for (const w of works) {
-    if (w.kind === 'battery') for (let i = 0; i < w.level; i += 1) out.push(w);
+    if (w.kind === 'battery') out.push(w);
   }
   for (const w of works) {
     if (w.kind !== 'shipyard' && w.kind !== 'battery') out.push(w);
@@ -89,7 +96,8 @@ function stand(conquest: Conquest, slot: number, works: RegionBattleBuilding[]) 
     .slice(0, home.buildings.length)
     .forEach((w, i) => {
       const made = make(w.kind);
-      made.hp = BUILDINGS[w.kind].hp * Math.max(HP_FLOOR, Math.min(1, w.hp));
+      made.level = Math.max(1, Math.min(3, w.level)) as 1 | 2 | 3;
+      made.hp = buildingHp(w.kind, made.level) * Math.max(HP_FLOOR, Math.min(1, w.hp));
       home.buildings[i] = made;
     });
 }
@@ -108,7 +116,7 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
   const portrait = seat.leader?.portrait ?? DEFAULT_PORTRAIT[seat.faction];
   const commander = seat.leader ? `${seat.leader.title} ${seat.leader.name}` : `${seat.name} 수군`; // i18n-ignore: '조선 수군' and the others have English entries
   seat.ships.forEach((u, i) => {
-    const spec = SHIP_SPECS[u.kind];
+    const spec = b.shipSpec(u.kind);
     // A squadron holds six ships of one kind, the way the conquest raises them.
     const same = seat.ships.slice(0, i).filter((o) => o.kind === u.kind).length;
     const key = `${u.kind}:${Math.floor(same / 6)}`;
@@ -131,7 +139,7 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
     ship.hull = spec.hull * Math.max(0.05, u.hull);
     b.setCrew(ship, spec.crew * Math.max(0.05, u.crew));
     b.applySupply(ship, u.supply);
-    ship.mods = { ...u.mods };
+    for (const key of Object.keys(ship.mods) as (keyof typeof ship.mods)[]) ship.mods[key] *= u.mods[key];
     ship.campaignId = u.campaignId;
     ship.order = { type: 'hold' };
     sq.faction = seat.faction;
@@ -145,7 +153,7 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
 export function buildGrandConquest(rb: RegionBattle, land: LandSampler, axis = 0) {
   const o = rb.options;
   const map = grandMap(rb);
-  const built = buildConquestOn(map, grandSeats(rb), land, rb.seed, { tickets: o.tickets, timeLimit: o.timeLimit, cap: o.cap, maxShips: o.maxShips, tieWinner: rb.defender.team }, axis);
+  const built = buildConquestOn(map, grandSeats(rb), land, rb.seed, { expanded: true, tickets: o.tickets, timeLimit: o.timeLimit, cap: o.cap, maxShips: o.maxShips, tieWinner: rb.defender.team }, axis);
   const { battle, conquest } = built;
   // The arena is the stretch of water the two ports share, not the middle of the terrain.
   const ca = Math.cos(axis);
@@ -188,7 +196,7 @@ export function shipOutcomes(ships: readonly Ship[]): BattleOutcomeShip[] {
     });
 }
 
-const SOURCE_OF: Record<WorkKind, BuildingKind> = { shipyard: 'shipyard', battery: 'battery', magazine: 'granary', dock: 'dock', beacon: 'beacon' };
+const SOURCE_OF: Record<WorkKind, BuildingKind> = { camp: 'camp', shipyard: 'shipyard', battery: 'battery', magazine: 'granary', dock: 'dock', beacon: 'beacon' };
 
 /** The works of the defender's port that fell in the battle, and how worn the rest are. */
 export function worksAfter(rb: RegionBattle, conquest: Conquest): { razed: BuildingKind[]; damage: Partial<Record<BuildingKind, number>> } {
@@ -203,7 +211,7 @@ export function worksAfter(rb: RegionBattle, conquest: Conquest): { razed: Build
     for (let i = now.length; i < had.length; i += 1) razed.push(SOURCE_OF[kind]);
     // Works the computer raised during the fight are not the campaign's to count.
     if (!had.length || now.length < had.length) continue;
-    const worn = now.reduce((a, x) => a + Math.max(0, Math.max(HP_FLOOR, Math.min(1, had[0]!.hp)) - x.hp / BUILDINGS[kind].hp), 0) / now.length;
+    const worn = now.reduce((a, x) => a + Math.max(0, Math.max(HP_FLOOR, Math.min(1, had[0]!.hp)) - x.hp / buildingHp(kind, x.level)), 0) / now.length;
     if (worn > 0) damage[SOURCE_OF[kind]] = worn;
   }
   return { razed, damage };

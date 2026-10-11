@@ -1,10 +1,13 @@
 import { Battle } from './battle';
-import { SHIP_SPECS } from './catalog';
-import { Conquest, ROSTER, type ConquestOptions, type MapPoint } from './conquest';
+import { COMPETITIVE_PROFILE, shipSpec, type BalanceProfile } from './competitive';
+import { Conquest, DEFAULT_OPTIONS, ROSTER, type ConquestOptions, type MapPoint } from './conquest';
 import { teamOf, type Faction, type LandSampler, type ShipKind, type Team } from './types';
 import type { TerrainSpec } from '../terrain/generate';
 import type { SkyPresetName } from '../render/sky';
 import { SEA_STATES, type SeaStateName } from '../ocean/waves';
+import { CurrentField, type CurrentSpec } from './current';
+import { environmentFor, environmentWind, type BattleEnvironment, type CoastalClimate } from './environment';
+import type { CoastalFormationKind } from './coastal-tactics';
 
 export type ConquestMapId = 'hallyeo' | 'gyeonnaeryang';
 
@@ -19,6 +22,8 @@ export type ConquestMap = {
   sky: SkyPresetName;
   sea: SeaStateName;
   night: boolean;
+  current?: CurrentSpec;
+  climate?: CoastalClimate;
   /** 0 summer green to 1 winter, for the forests. */
   foliage: number;
   terrain: TerrainSpec;
@@ -61,10 +66,13 @@ export const GYEONNAERYANG_TERRAIN: TerrainSpec = {
   symmetric: true,
   shapes: [
     ...mirror([
-      { x: 0, z: -3800, rx: 9000, rz: 2900, rot: 0.02, peak: 520, rough: 1 },
-      { x: 300, z: -1150, rx: 700, rz: 400, rot: 0.1, peak: 160, rough: 0.9 },
-      { x: -1350, z: 260, rx: 260, rz: 160, rot: -0.3, peak: 80, rough: 0.7 },
+      { x: 0, z: -4200, rx: 9000, rz: 2550, rot: 0.02, peak: 520, rough: 1 },
+      // Three navigable approaches leave room to flank a gun line instead of feeding every ship into one firing lane.
+      { x: 300, z: -1150, rx: 500, rz: 290, rot: 0.1, peak: 160, rough: 0.9 },
+      { x: -1350, z: 260, rx: 180, rz: 120, rot: -0.3, peak: 80, rough: 0.7 },
     ]),
+    // A central reef breaks the uninterrupted cannon lane; both flanks remain navigable.
+    { x: 0, z: 0, rx: 200, rz: 150, rot: 0.6, peak: 50, rough: 0.6 },
   ],
   channels: [],
 };
@@ -102,20 +110,21 @@ export const CONQUEST_MAPS: Record<ConquestMapId, ConquestMap> = {
     id: 'gyeonnaeryang',
     title: '견내량 쟁탈전',
     hanja: '見乃梁爭奪戰',
-    place: '견내량 · 거점 5곳',
+    place: '견내량 · 거점 7곳',
     date: '1592년 여름',
     season: '여름',
-    summary: '양쪽 육지 사이로 좁은 물길이 지나갑니다. 물길 한가운데의 거점을 차지한 쪽이 바다를 장악합니다. 함선이 방향을 바꿀 공간이 좁아, 진형과 포대의 위치가 승패를 좌우합니다.',
+    summary: '좁은 중앙 물길과 양옆 포구에 거점이 일곱 곳 있습니다. 함포로 중앙을 막거나, 작은 함선을 옆 물길로 보내 포구를 빼앗을 수 있습니다. 진형과 측면 기동이 승패를 좌우합니다.',
     sky: 'day',
-    sea: 'calm',
+    sea: 'moderate',
     night: false,
     foliage: 0,
     terrain: GYEONNAERYANG_TERRAIN,
     seats: 2,
     points: [
-      ...pair({ name: '서영', hanja: '西營', x: -2700, z: -420, r: 260, value: 2, home: 0 }, '동영', '東營', 1),
-      ...pair({ name: '서섬 포구', hanja: '西島浦', x: -1350, z: -60, r: 220, value: 1 }, '동섬 포구', '東島浦'),
-      { name: '물길 중앙', hanja: '梁中', x: 0, z: 0, r: 320, value: 2 },
+      ...pair({ name: '서영', hanja: '西營', x: -2000, z: -1420, r: 260, value: 2, home: 0 }, '동영', '東營', 1),
+      ...pair({ name: '서섬 포구', hanja: '西島浦', x: -900, z: 400, r: 220, value: 1 }, '동섬 포구', '東島浦'),
+      ...pair({ name: '북쪽 포구', hanja: '北浦', x: -320, z: -1360, r: 220, value: 1 }, '남쪽 포구', '南浦'),
+      { name: '물길 중앙', hanja: '梁中', x: 0, z: 0, r: 360, value: 2 },
     ],
     view: { tx: 0, tz: 0, dir: 0, dist: 2000, pitch: 0.6 },
   },
@@ -128,30 +137,30 @@ export const CONQUEST_ORDER: ConquestMapId[] = ['hallyeo', 'gyeonnaeryang'];
 export type Seat = { name: string; faction: Faction; team: Team; human: boolean; fleet: ShipKind[] };
 
 /** Starting treasury for buying the opening fleet. What is not spent carries into the battle. */
-export const MUSTER_BUDGET = 5200;
+export const MUSTER_BUDGET = DEFAULT_OPTIONS.musterBudget ?? 15600;
+export const FLEET_MIX: Record<Faction, ShipKind[]> = {
+  joseon: ['panokseon', 'panokseon', 'geobukseon', 'panokseon', 'hyeopseon', 'panokseon', 'hyeopseon'],
+  japan: ['atakebune', 'sekibune', 'sekibune', 'kobaya', 'atakebune', 'sekibune', 'kobaya', 'sekibune'],
+  ming: ['mingship', 'mingsmall', 'mingship', 'mingsmall', 'mingsmall'],
+};
 
-export const fleetCost = (fleet: ShipKind[]) => fleet.reduce((a, k) => a + SHIP_SPECS[k].cost, 0);
+export const fleetCost = (fleet: ShipKind[], profile: BalanceProfile = COMPETITIVE_PROFILE) => fleet.reduce((a, k) => a + shipSpec(k, profile).cost, 0);
 
 /** The computer's opening fleet: the faction's usual mix, as much as the budget buys. */
-export function autoFleet(faction: Faction, budget = MUSTER_BUDGET): ShipKind[] {
-  const mix: Record<Faction, ShipKind[]> = {
-    joseon: ['panokseon', 'panokseon', 'geobukseon', 'panokseon', 'hyeopseon', 'panokseon', 'hyeopseon'],
-    japan: ['atakebune', 'sekibune', 'sekibune', 'kobaya', 'atakebune', 'sekibune', 'kobaya', 'sekibune'],
-    ming: ['mingship', 'mingsmall', 'mingship', 'mingsmall', 'mingsmall'],
-  };
+export function autoFleet(faction: Faction, budget = MUSTER_BUDGET, profile: BalanceProfile = COMPETITIVE_PROFILE, maxShips = Infinity): ShipKind[] {
   const out: ShipKind[] = [];
   let left = budget;
-  for (let i = 0; i < 40; i += 1) {
-    const kind = mix[faction][i % mix[faction].length]!;
-    if (SHIP_SPECS[kind].cost > left) {
-      const cheap = ROSTER[faction].filter((k) => SHIP_SPECS[k].cost <= left).sort((a, b) => SHIP_SPECS[a].cost - SHIP_SPECS[b].cost)[0];
+  for (let i = 0; i < maxShips; i += 1) {
+    const kind = FLEET_MIX[faction][i % FLEET_MIX[faction].length]!;
+    if (shipSpec(kind, profile).cost > left) {
+      const cheap = ROSTER[faction].filter((k) => shipSpec(k, profile).cost <= left).sort((a, b) => shipSpec(a, profile).cost - shipSpec(b, profile).cost)[0];
       if (!cheap) break;
       out.push(cheap);
-      left -= SHIP_SPECS[cheap].cost;
+      left -= shipSpec(cheap, profile).cost;
       continue;
     }
     out.push(kind);
-    left -= SHIP_SPECS[kind].cost;
+    left -= shipSpec(kind, profile).cost;
   }
   return out;
 }
@@ -176,14 +185,15 @@ export function wetSpot(land: LandSampler, x: number, z: number, placed: { x: nu
 
 /** Default seats: the player against the computer, or a 2-against-2. */
 export function defaultSeats(player: Faction, enemy: Faction, count = 2): Seat[] {
+  const fleet = (f: Faction) => autoFleet(f);
   const seats: Seat[] = [
-    { name: '아군 본대', faction: player, team: 'joseon', human: true, fleet: autoFleet(player) },
-    { name: '적 본대', faction: enemy, team: 'japan', human: false, fleet: autoFleet(enemy) },
+    { name: '아군 본대', faction: player, team: 'joseon', human: true, fleet: fleet(player) },
+    { name: '적 본대', faction: enemy, team: 'japan', human: false, fleet: fleet(enemy) },
   ];
   if (count === 4) {
     const ally: Faction = player === 'japan' ? 'japan' : player === 'ming' ? 'joseon' : 'ming';
-    seats.push({ name: '동맹군', faction: ally, team: 'joseon', human: false, fleet: autoFleet(ally) });
-    seats.push({ name: '적 별동대', faction: enemy, team: 'japan', human: false, fleet: autoFleet(enemy) });
+    seats.push({ name: '동맹군', faction: ally, team: 'joseon', human: false, fleet: fleet(ally) });
+    seats.push({ name: '적 별동대', faction: enemy, team: 'japan', human: false, fleet: fleet(enemy) });
   }
   return seats;
 }
@@ -208,24 +218,30 @@ export function buildConquest(id: ConquestMapId, seats: Seat[], land: LandSample
 }
 
 /** The capture points, light and sea of a battle. A campaign region's coast is a map too. */
-export type MapLayout = { points: MapPoint[]; night: boolean; sea?: SeaStateName };
+export type MapLayout = { points: MapPoint[]; night: boolean; sky?: SkyPresetName; sea?: SeaStateName; current?: CurrentSpec; climate?: CoastalClimate; environment?: BattleEnvironment; coastalTactic?: CoastalFormationKind };
 
 export function buildConquestOn<M extends MapLayout>(map: M, seats: Seat[], land: LandSampler, seed = 1592, options: Partial<ConquestOptions> = {}, axis = 0) {
-  const b = new Battle(seed);
-  b.setSea(SEA_STATES[map.sea ?? 'moderate']);
+  const profile = options.profile ?? COMPETITIVE_PROFILE;
+  const b = new Battle(seed, profile);
+  const ranked = options.maxShips === 36 && options.cap === 10000 && options.expanded === false;
+  b.coastalTactic = ranked || profile === 'historical' ? undefined : map.coastalTactic;
+  const environment = !ranked && map.environment ? map.environment : environmentFor({ sky: map.sky ?? 'afternoon', sea: map.sea ?? 'moderate', night: map.night, current: map.current, climate: map.climate }, seed, ranked || profile === 'historical');
+  b.setSea(SEA_STATES[environment.sea]);
   const players = seats.map((s, slot) => ({ slot, name: s.name, faction: s.faction, team: s.team, human: s.human }));
-  const leftovers = seats.map((s) => Math.max(0, MUSTER_BUDGET - fleetCost(s.fleet)));
   // A single player game turns the whole map about its centre to suit the light; the land sampler is turned to match.
   const ca = Math.cos(axis);
   const sa = Math.sin(axis);
   const points = map.points.map((p) => ({ ...p, x: p.x * ca - p.z * sa, z: p.x * sa + p.z * ca }));
   const conquest = new Conquest(points, players, land, options);
-  conquest.players.forEach((p, i) => (p.funds += leftovers[i]!));
   b.rules = conquest;
   b.land = land;
-  b.night = map.night;
+  b.night = environment.night;
+  b.visibilityScale = environment.visibility;
+  if (environment.current) b.flow = new CurrentField(environment.current, (x, z) => land(x * ca - z * sa, x * sa + z * ca), axis);
   b.retreatBelow = { joseon: 0, japan: 0 };
-  b.windDrift = 0;
+  const wind = environmentWind(environment, axis);
+  b.windAngle = wind.angle;
+  b.windDrift = wind.drift;
   b.humans = new Set(seats.flatMap((s, i) => (s.human ? [i] : [])));
   b.center = { x: 0, z: 0 };
   b.arenaRadius = 7600;
@@ -240,9 +256,19 @@ export function buildConquestOn<M extends MapLayout>(map: M, seats: Seat[], land
     const fx = Math.cos(toCentre);
     const fz = Math.sin(toCentre);
     const advance = Math.max(0, Math.hypot(home.spawn.x, home.spawn.z) - MUSTER_RADIUS);
-    const cols = 5;
+    const cols = conquest.options.expanded ? Math.min(12, Math.max(5, Math.ceil(Math.sqrt(seat.fleet.length * 1.2)))) : 5;
     let value = 0;
-    seat.fleet.filter((k) => (value += SHIP_SPECS[k].cost) <= conquest.players[slot]!.cap).forEach((kind, i) => {
+    const budget = options.musterBudget ?? DEFAULT_OPTIONS.musterBudget ?? MUSTER_BUDGET;
+    const opening: ShipKind[] = [];
+    for (const kind of seat.fleet) {
+      if (!ROSTER[seat.faction].includes(kind)) continue;
+      const price = shipSpec(kind, profile).cost;
+      if (opening.length >= conquest.shipLimit(slot) || value + price > Math.min(budget, conquest.players[slot]!.cap)) continue;
+      value += price;
+      opening.push(kind);
+    }
+    conquest.players[slot]!.funds += Math.max(0, budget - value);
+    opening.forEach((kind, i) => {
       const row = Math.floor(i / cols);
       const col = (i % cols) - (cols - 1) / 2;
       const spot = wetSpot(land, home.spawn.x + fx * (advance + 60 - row * 62) - fz * col * 58, home.spawn.z + fz * (advance + 60 - row * 62) + fx * col * 58, placed);

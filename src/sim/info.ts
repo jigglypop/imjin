@@ -4,6 +4,8 @@ import type { TerrainSpec } from '../terrain/generate';
 import type { SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
 import type { CurrentSpec } from './current';
+import { environmentFor, type BattleEnvironment } from './environment';
+import type { CoastalFormationKind } from './coastal-tactics';
 
 /** What the engine needs to stage a battle, whether one of the nine historical ones or a conquest map. */
 export type BattleInfo = {
@@ -19,6 +21,8 @@ export type BattleInfo = {
   night: boolean;
   terrain: TerrainSpec;
   current?: CurrentSpec;
+  environment?: BattleEnvironment;
+  coastalTactic?: CoastalFormationKind;
   view: { tx: number; tz: number; dir: number; dist: number; pitch: number };
   /** 0 summer green to 1 winter, for the forests. */
   foliage: number;
@@ -33,7 +37,8 @@ export function scenarioInfo(id: ScenarioId): BattleInfo {
   return { mode: 'scenario', id, art: id, title: s.title, hanja: s.hanja, date: s.date, place: s.place, season: s.season, sky: s.sky, sea: s.sea, night: s.night, terrain: s.terrain, current: s.current, view: s.view, foliage: FOLIAGE[id] ?? 0 };
 }
 
-export function conquestInfo(id: ConquestMapId): BattleInfo {
+export function conquestInfo(id: ConquestMapId, seed = 1592, ranked = false): BattleInfo {
   const m = CONQUEST_MAPS[id];
-  return { mode: 'conquest', id, title: m.title, hanja: m.hanja, date: m.date, place: m.place, season: m.season, sky: m.sky, sea: m.sea, night: m.night, terrain: m.terrain, view: m.view, foliage: m.foliage };
+  const environment = environmentFor(m, seed, ranked);
+  return { mode: 'conquest', id, title: m.title, hanja: m.hanja, date: m.date, place: m.place, season: m.season, sky: environment.sky, sea: environment.sea, night: environment.night, current: environment.current, environment, terrain: m.terrain, view: m.view, foliage: m.foliage };
 }

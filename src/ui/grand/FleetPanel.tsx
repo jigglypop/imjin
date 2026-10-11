@@ -123,7 +123,8 @@ export function FleetPanel({
           )}
         </p>
       )}
-      <div className="gk-stats gk-stats--3">
+      <div className="gk-stats gk-stats--2">
+        <div className="gk-stat"><span className="gk-stat__label">{t('병력')}</span><span className="gk-stat__value">{t('{n}명 승조원', { n: fleet.crewCount.toLocaleString() })}</span></div>
         <div className="gk-stat">
           <span className="gk-stat__label">{t('함선')}</span>
           <span className="gk-stat__value">{shipsText(fleet.ships.length)}</span>

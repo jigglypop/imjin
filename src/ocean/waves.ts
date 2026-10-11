@@ -33,11 +33,22 @@ export class WaveField {
   version = 0;
   /** No point of the surface is higher than this: the sum of every wave's amplitude. */
   crest = 0;
-  private readonly seed: number;
+  private seed: number;
 
   constructor(seed = 1592) {
     this.seed = seed;
     this.setState(SEA_STATES.rough);
+  }
+
+  /** Drawing uses the same seeded surface as the battle's projectile and hull calculations. */
+  copyFrom(source: WaveField) {
+    this.seed = source.seed;
+    this.state = source.state;
+    this.time = source.time;
+    this.crest = source.crest;
+    this.dirK.set(source.dirK);
+    this.ampQ.set(source.ampQ);
+    this.version += 1;
   }
 
   setState(state: SeaState) {

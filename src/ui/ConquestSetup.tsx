@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CONQUEST_MAPS, CONQUEST_ORDER, MUSTER_BUDGET, autoFleet, fleetCost, type ConquestMapId, type Seat } from '../sim/maps';
 import { ROSTER, SHORT_NAME } from '../sim/conquest';
-import { SHIP_SPECS } from '../sim/catalog';
+import { COMPETITIVE_TRAITS, shipSpec } from '../sim/competitive';
 import { FACTION_SHORT } from '../sim/balance';
 import { FACTIONS, type Faction, type ShipKind } from '../sim/types';
 import type { ConquestSetup } from '../game/Engine';
@@ -16,7 +16,7 @@ type Saved = { map: ConquestMapId; me: Faction; foe: Faction; ally: Faction; siz
 function load(): Saved {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Saved | null;
-    if (v && CONQUEST_MAPS[v.map] && FACTIONS.includes(v.me) && FACTIONS.includes(v.foe)) return { ...v, ally: FACTIONS.includes(v.ally) ? v.ally : 'ming', size: v.size === 4 ? 4 : 2 };
+    if (v && CONQUEST_MAPS[v.map] && FACTIONS.includes(v.me) && FACTIONS.includes(v.foe)) return { map: v.map, me: v.me, foe: v.foe, ally: FACTIONS.includes(v.ally) ? v.ally : 'ming', size: v.size === 4 ? 4 : 2 };
   } catch {
     // storage unavailable or old: defaults below
   }
@@ -38,15 +38,11 @@ const ROLE_NOTE: Record<ShipKind, string> = {
   atakebune: '조총 누각, 적 함선 도선',
   sekibune: '빠른 돌격선, 적 함선 도선',
   kobaya: '값싼 소형선, 거점 점령',
-  mingship: '불랑기포 속사, 대형선',
-  mingsmall: '불랑기포, 빠른 소형선',
+  mingship: '장거리 불랑기포, 집중 사격',
+  mingsmall: '원거리 지원포, 가벼운 선체',
 };
 
-const TRAIT: Record<Faction, string> = {
-  joseon: '총통의 화력과 튼튼한 판옥선이 강점입니다. 값이 비싸지만 함대전에 강합니다.',
-  japan: '조총과 적선에 올라타는 전술이 강점입니다. 함선이 싸고 빨라 거점을 먼저 차지할 수 있습니다.',
-  ming: '불랑기포의 빠른 장전과 큰 함선이 강점입니다. 함선 수가 적고 느립니다.',
-};
+const TRAIT = COMPETITIVE_TRAITS;
 
 function FactionPick({ value, onChange, label }: { value: Faction; onChange: (f: Faction) => void; label: string }) {
   const t = useT();
@@ -73,11 +69,12 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
   const setCfg = (patch: Partial<Saved>) => {
     sound.click();
     const next = { ...cfg, ...patch };
-    if (patch.me && patch.me !== cfg.me) setFleet(autoFleet(patch.me));
+    if (patch.me && patch.me !== cfg.me) setFleet(autoFleet(next.me));
     setCfgRaw(next);
     save(next);
   };
   const map = CONQUEST_MAPS[cfg.map];
+  const budget = MUSTER_BUDGET;
   const size = map.seats >= 4 ? cfg.size : 2;
   const cost = fleetCost(fleet);
   const counts = useMemo(() => {
@@ -85,10 +82,11 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
     for (const k of fleet) m.set(k, (m.get(k) ?? 0) + 1);
     return m;
   }, [fleet]);
-  const add = (k: ShipKind) => {
-    if (cost + SHIP_SPECS[k].cost > MUSTER_BUDGET) return;
+  const add = (k: ShipKind, count = 1) => {
+    const n = Math.min(count, Math.floor((budget - cost) / shipSpec(k).cost));
+    if (n <= 0) return;
     sound.click();
-    setFleet([...fleet, k]);
+    setFleet([...fleet, ...Array.from({ length: n }, () => k)]);
   };
   const remove = (k: ShipKind) => {
     const i = fleet.lastIndexOf(k);
@@ -121,6 +119,7 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
             ))}
           </div>
           <p className="cs-summary">{t(map.summary)}</p>
+          <p className="cs-summary cs-unlimited">{t('함선 수와 전력 제한 없음 · 군영과 선소를 증설해 함대를 운용합니다')}</p>
           <FactionPick label={t('내 진영')} value={cfg.me} onChange={(me) => setCfg({ me })} />
           <FactionPick label={t('상대')} value={cfg.foe} onChange={(foe) => setCfg({ foe })} />
           {map.seats >= 4 && (
@@ -144,10 +143,11 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
             <div className="cs-muster">
               <div className="cs-budget">
                 <div className="cs-budget-bar">
-                  <i style={{ width: `${(cost / MUSTER_BUDGET) * 100}%` }} />
+                  <i style={{ width: `${(cost / budget) * 100}%` }} />
                 </div>
                 <span>
-                  {cost.toLocaleString('ko-KR')} / {MUSTER_BUDGET.toLocaleString('ko-KR')} <small>{t('남은 금액은 군자금이 됩니다')}</small>
+                  {cost.toLocaleString('ko-KR')} / {budget.toLocaleString('ko-KR')} <small>{t('남은 금액은 군자금이 됩니다')}</small>
+                  <small>{t('출전 {n}척 · 건조로 계속 증원할 수 있습니다', { n: fleet.length })}</small>
                 </span>
               </div>
               <div className="cs-ships">
@@ -155,7 +155,7 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
                   <div key={k} className="cs-ship">
                     <div className="cs-ship-name">
                       <b>{t(SHORT_NAME[k])}</b>
-                      <small>{SHIP_SPECS[k].cost.toLocaleString('ko-KR')}</small>
+                      <small>{shipSpec(k).cost.toLocaleString('ko-KR')}</small>
                     </div>
                     <div className="cs-ship-note">{t(ROLE_NOTE[k])}</div>
                     <div className="cs-ship-count">
@@ -163,7 +163,7 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
                         <Minus size={16} />
                       </button>
                       <b>{counts.get(k) ?? 0}</b>
-                      <button onClick={() => add(k)} disabled={cost + SHIP_SPECS[k].cost > MUSTER_BUDGET} aria-label={t('{name} 늘리기', { name: t(SHORT_NAME[k]) })}>
+                      <button onClick={(e) => add(k, e.shiftKey ? 10 : 1)} disabled={cost + shipSpec(k).cost > budget} title={t('Shift 클릭: 10척 추가')} aria-label={t('{name} 늘리기', { name: t(SHORT_NAME[k]) })}>
                         <Plus size={16} />
                       </button>
                     </div>
@@ -184,7 +184,7 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
         </div>
       </div>
       <div className="select-foot">
-        <span className="select-result">{t('거점을 차지해 적의 기세를 먼저 꺾으면 승리합니다 · 제한 시간 30분')}</span>
+        <span className="select-result">{t('거점과 보급망을 장악해 승리합니다 · 제한 시간 {n}분', { n: 30 })}</span>
         <button className="ink-btn" disabled={!fleet.length} onClick={start}>
           {t('전투 시작')}
         </button>

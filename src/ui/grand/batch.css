@@ -1,0 +1,4 @@
+.g-batch-summary { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.g-batch-row { cursor: pointer; min-height: 48px; }
+.g-batch-row:has(input:disabled) { opacity: 0.6; cursor: default; }
+.g-batch .g-tools { flex-wrap: wrap; }

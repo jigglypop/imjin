@@ -14,10 +14,11 @@ export interface RegionPanelProps {
   onRecruit?: (regionId: string, kind: ShipClass) => void;
   onCancelRecruit?: (regionId: string, itemId: string) => void;
   onSelectFleet?: (fleetId: string) => void;
+  onMobilize?: (regionId: string) => void;
 }
 
 
-export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuild, onRecruit, onCancelRecruit, onSelectFleet }: RegionPanelProps) {
+export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuild, onRecruit, onCancelRecruit, onSelectFleet, onMobilize }: RegionPanelProps) {
   const t = useT();
   const own = region.owner === me;
   const seen = region.visible || own;
@@ -44,6 +45,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
       ) : (
         <>
           <div className="gk-stats gk-stats--2">
+            <Stat label={t('수비 병력')}>{t('{n}명 승조원', { n: region.garrisonCrew.toLocaleString() })}</Stat>
             <Stat label={t('중요도')}>
               <span className="g-stars" role="img" aria-label={`${region.value} / 3`}>
                 {[1, 2, 3].map((n) => (
@@ -64,6 +66,8 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
               </span>
             </Stat>
           </div>
+
+          {own && onMobilize && <button className="g-btn g-btn--sm g-port-mobilize" disabled={!region.garrison} onClick={() => onMobilize(region.id)}>{t('수비대 전체 출동')}</button>}
 
           <h3 className="g-section">
             {t('시설')} <span className="g-section__hint">{t('빈 부지 {n}곳', { n: region.freeSlots })}</span>

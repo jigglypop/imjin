@@ -1,0 +1,24 @@
+IMJIN terrain data
+
+Mapzen Terrain Tiles, accessed from the Registry of Open Data on AWS on 2026-10-11.
+https://registry.opendata.aws/terrain-tiles/
+https://github.com/tilezen/joerd/blob/master/docs/attribution.md
+
+Global SRTM and GMTED2010 elevations: U.S. Geological Survey.
+Global ETOPO1 elevations: U.S. Department of Commerce, NOAA, NESDIS, NCEI.
+These global U.S. government datasets are public-domain data. Source resolution
+varies; Terrain Tiles does not identify the contributing dataset for each pixel.
+This display is for a game and is not suitable for navigation or surveying.
+
+Assets and modifications:
+- korea_dem.webp: Terrarium elevation tiles, stitched and despiked by
+  scripts/fetch-dem.mjs. Retains encoded height data rather than a painted map.
+- grand_map.webp: shaded fallback image built by scripts/build-grand-map.mjs.
+- grand_relief.bin: the same Mercator frame and DEM override, resampled to
+  257 x 140 unsigned little-endian metre heights. Sea heights are clamped to zero.
+  Rebuild: node scripts/build-grand-map.mjs --relief-only
+- The 3D campaign view exaggerates vertical heights 20 times for readability.
+  Port coordinates are approximate campaign markers, not measured harbour positions.
+
+The geographic frame and generated grid metadata are committed as
+src/ui/grand/mapFrame.json and src/ui/grand/reliefMeta.json.

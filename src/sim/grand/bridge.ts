@@ -14,17 +14,17 @@ import type { BattleOutcome, BattleOutcomeShip, BuildingKind, Contact, Fleet, Gr
  * What the Engine integration has to do with a RegionBattle:
  *  - seat the two sides from `attacker` / `defender`. Each ship carries its `campaignId`, hull, crew, supply and
  *    `mods`, applied the way scenarios.ts spawnFleet does for the historical campaign;
- *  - play it on `mapId` with `options` (about 500 tickets, 12 minutes, at most `maxShips` per side);
+ *  - play it on `mapId` with `options` (about 500 tickets and 12 minutes, with every participating ship);
  *  - build `defenderBuildings` in the defender's home port before the first second;
  *  - when it ends, call `outcomeOfBattle` with the winning team, one entry per ship that has a campaignId (the shape
  *    of Engine.finishCampaignBattle's per-ship outcome) and the works razed, then `applyBattleResult`.
  */
 
-/** Ships a side brings into a 3D battle. The rest wait outside as a reserve and are untouched by it. */
-export const BATTLE_SHIP_CAP = 30;
+/** Ordinary campaign battles bring every participating ship into the 3D battle. */
+export const BATTLE_SHIP_CAP = Infinity;
 
 /** Works a conquest port can be given before the first second, by conquest kind. */
-export type PrebuiltKind = 'shipyard' | 'battery' | 'magazine' | 'dock' | 'beacon';
+export type PrebuiltKind = 'shipyard' | 'battery' | 'magazine' | 'dock' | 'beacon' | 'camp';
 
 export type RegionBattleBuilding = {
   kind: PrebuiltKind;
@@ -56,7 +56,7 @@ export type BridgeSeat = {
   human: boolean;
   /** Ships that fight, strongest first. */
   ships: BridgeShip[];
-  /** Ships beyond the battle's cap: they do not fight and are not changed by the result. */
+  /** Legacy reserve field: uncapped campaign meetings leave this empty. */
   reserve: BridgeShip[];
   leader: { name: string; title: string; portrait: string; level: number } | null;
 };
@@ -88,9 +88,8 @@ function modsFor(g: Grand, fl: Fleet | undefined, u: ShipUnit): ShipMods {
   const level = fl ? commanderLevel(g, fl) : 1;
   const vet = Math.min(1, u.kills / 12);
   const skill = 0.03 * (level - 1) + 0.04 * vet;
-  // The Japanese fight on the deck: a boarding bonus for the sword.
-  const boarding = u.kind === 'atakebune' || u.kind === 'sekibune' || u.kind === 'kobaya' ? 1.15 : 1;
-  return { reload: 1 + skill, accuracy: 1 + skill * 0.8, speed: 1, turn: 1, fire: 1, melee: (1 + skill) * boarding, defense: 1 + skill * 0.7 };
+  // The competitive ship already carries its navy's boarding rules; only experience belongs to this bridge.
+  return { reload: 1 + skill, accuracy: 1 + skill * 0.8, speed: 1, turn: 1, fire: 1, melee: 1 + skill, defense: 1 + skill * 0.7 };
 }
 
 function toBridge(g: Grand, fl: Fleet | undefined, u: ShipUnit): Worth {
@@ -108,16 +107,16 @@ function toBridge(g: Grand, fl: Fleet | undefined, u: ShipUnit): Worth {
   };
 }
 
-/** Splits a side into the strongest hulls that fight and a reserve that waits outside the port. */
+/** Every ship fights; strongest hulls lead the initial formation. */
 function seatShips(g: Grand, fleets: Fleet[], local: ShipUnit[] = []): { ships: BridgeShip[]; reserve: BridgeShip[]; worth: number } {
   const all = [...fleets.flatMap((fl) => fl.ships.map((u) => toBridge(g, fl, u))), ...local.map((u) => toBridge(g, undefined, u))];
   all.sort((a, b) => b.worth - a.worth);
   const plain = (list: Worth[]): BridgeShip[] => list.map(({ worth: _w, ...ship }) => ship);
-  return { ships: plain(all.slice(0, BATTLE_SHIP_CAP)), reserve: plain(all.slice(BATTLE_SHIP_CAP)), worth: all.slice(0, BATTLE_SHIP_CAP).reduce((a, s) => a + s.worth, 0) };
+  return { ships: plain(all), reserve: [], worth: all.reduce((a, s) => a + s.worth, 0) };
 }
 
 /** The conquest building each campaign work becomes when it stands in the defender's port. */
-const WORKS: Partial<Record<BuildingKind, PrebuiltKind>> = { shipyard: 'shipyard', battery: 'battery', dock: 'dock', beacon: 'beacon', granary: 'magazine' };
+const WORKS: Partial<Record<BuildingKind, PrebuiltKind>> = { camp: 'camp', shipyard: 'shipyard', battery: 'battery', dock: 'dock', beacon: 'beacon', granary: 'magazine' };
 
 function leaderOf(g: Grand, fleets: Fleet[]): BridgeSeat['leader'] {
   const best = [...fleets].sort((a, b) => commanderLevel(g, b) - commanderLevel(g, a))[0];
@@ -175,7 +174,7 @@ export function describeContact(g: Grand, c: Contact): RegionBattle {
       timeLimit: 12 * 60,
       // Reinforcements during the fight come from the yard; a port without one fights with what it has.
       startFunds: { attacker: 200, defender: levelOf(region, 'shipyard') > 0 ? 700 : 300 },
-      cap: Math.max(3000, Math.round(Math.max(atk.worth, dfn.worth) * 2.2)),
+      cap: Infinity,
       maxShips: BATTLE_SHIP_CAP,
     },
     battery: levelOf(region, 'battery'),

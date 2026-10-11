@@ -5,7 +5,7 @@ import type { ScenarioId } from '../sim/scenarios';
 import type { BattleEvent, CrewPlan, Faction, Ship, ShipKind, Squadron, Team } from '../sim/types';
 
 /** Bumped whenever client and server stop understanding each other. */
-export const PROTOCOL = 3;
+export const PROTOCOL = 4;
 export const SNAPSHOT_HZ = 10;
 /** How long a dropped player's fleet waits for them before the computer takes it over. */
 export const GRACE_SECONDS = 60;
@@ -20,25 +20,40 @@ export type BattleChoice = { kind: 'conquest'; map: ConquestMapId; size: 2 | 4 }
 
 /** `name` labels the seat (its side); `player` is who sits there. */
 export type RoomSeat = { name: string; player: string; faction: Faction; team: Team; human: boolean; client: string | null; ready: boolean; away: boolean; rematch: boolean };
-export type RoomInfo = { id: string; name: string; battle: BattleChoice; host: string; state: 'lobby' | 'battle' | 'ended'; quick: boolean; seats: RoomSeat[] };
-export type RoomSummary = { id: string; name: string; battle: BattleChoice; size: number; humans: number; open: number; state: RoomInfo['state'] };
+export type RoomInfo = { id: string; name: string; battle: BattleChoice; host: string; state: 'lobby' | 'battle' | 'ended'; quick: boolean; ranked?: boolean; seats: RoomSeat[] };
+export type RoomSummary = { id: string; name: string; battle: BattleChoice; size: number; humans: number; open: number; state: RoomInfo['state']; ranked?: boolean };
+
+export type RankTier = 'provisional' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'admiral';
+export type RankResult = 'win' | 'loss' | 'draw' | 'void';
+export type RankReason = 'battle' | 'forfeit' | 'disconnect' | 'load-timeout' | 'restart' | 'server-error';
+export type RankRecent = {
+  matchId: string; opponent: { id: string; name: string }; faction: Faction; opponentFaction: Faction;
+  map: ConquestMapId; result: RankResult; reason: RankReason; at: number; before: number; after: number; delta: number;
+};
+export type RankProfile = {
+  id: string; name: string; rating: number; wins: number; losses: number; draws: number; games: number;
+  placementLeft: number; tier: RankTier; recent: RankRecent[];
+};
+export type RankStanding = Pick<RankProfile, 'id' | 'name' | 'rating' | 'wins' | 'losses' | 'draws' | 'games' | 'tier'>;
 
 export type ShipMeta = { id: number; kind: ShipKind; name: string; squadron: number; flagship: boolean; variant: number; owner: number; team: Team };
 export type PointState = {
   owner: number;
   hold: number;
   contested: boolean;
-  buildings: ({ kind: BuildingKind; hp: number; progress: number } | null)[];
+  buildings: ({ kind: BuildingKind; hp: number; progress: number; level?: 1 | 2 | 3; upgradeLeft?: number; upgradeTotal?: number } | null)[];
+  rally?: { x: number; z: number } | null;
   queue: { kind: ShipKind; left: number; total: number }[];
 };
 export type ConquestState = {
   tickets: Record<Team, number>;
+  held?: Record<Team, number>;
   points: PointState[];
   players: { funds: number; income: number; sunk: number; lost: number; human: boolean }[];
 };
 
 export type ClientMsg =
-  | { t: 'hello'; name: string; v: number; token?: string }
+  | { t: 'hello'; name: string; v: number; token?: string; account?: string }
   | { t: 'list' }
   | { t: 'create'; name: string; battle: BattleChoice }
   | { t: 'join'; room: string }
@@ -49,6 +64,10 @@ export type ClientMsg =
   | { t: 'start' }
   | { t: 'quick'; battle: BattleChoice; faction: Faction }
   | { t: 'quickCancel' }
+  | { t: 'ranked'; faction: Faction }
+  | { t: 'rankedCancel' }
+  | { t: 'rankedProfile' }
+  | { t: 'leaderboard' }
   | { t: 'rematch' }
   /** The page has staged the battle; the server starts its clock once every seat has said so. */
   | { t: 'loaded' }
@@ -57,14 +76,18 @@ export type ClientMsg =
   | { t: 'ping'; at: number };
 
 export type ServerMsg =
-  | { t: 'welcome'; id: string; v: number; token: string; resumed: boolean }
+  | { t: 'welcome'; id: string; v: number; token: string; resumed: boolean; account: { id: string; token: string } | null; rank: RankProfile | null }
+  | { t: 'rank'; profile: RankProfile | null }
+  | { t: 'leaderboard'; players: RankStanding[] }
+  | { t: 'ranked'; state: 'searching' | 'idle'; since: number; range: number }
+  | { t: 'rankedResult'; matchId: string; result: RankResult; reason: RankReason; before: number; after: number; delta: number; profile: RankProfile }
   | { t: 'rooms'; rooms: RoomSummary[] }
   | { t: 'room'; room: RoomInfo | null }
-  | { t: 'error'; text: string; code?: 'version' | 'full' }
+  | { t: 'error'; text: string; code?: 'version' | 'full' | 'identity' | 'ranked' }
   /** A system line (`from` '알림') also carries its template as `key` and the values as `args`, for the client to translate. */
   | { t: 'chat'; from: string; text: string; key?: string; args?: Record<string, string | number> }
   /** `resume` is a rejoin of a battle already running: a client still drawing it just keeps going. */
-  | { t: 'start'; battle: BattleChoice; seats: Seat[]; you: number; seed: number; resume?: boolean }
+  | { t: 'start'; battle: BattleChoice; seats: Seat[]; you: number; seed: number; resume?: boolean; ranked?: boolean; matchId?: string }
   /** Server pace while the approach is skipped: `speed` is what the server manages, `target` what it asks for. 0 means the clock waits for pages still loading. */
   | { t: 'speed'; speed: number; target: number }
   | { t: 'quick'; state: 'searching' | 'idle'; seconds: number }
@@ -131,6 +154,8 @@ export type ShipFrame = {
   hold: boolean;
   speedCap: number;
   supply: number;
+  queuedWaypoints: number;
+  damageState: { flooding: number; propulsion: number; steering: number };
   /** Gun reload stages, only for the receiving player's own ships. */
   guns: { stage: number; t: number; ammo: number }[] | null;
 };
@@ -145,7 +170,7 @@ const SHIP = 64;
 export function encodeSnapshot(time: number, ships: readonly Ship[], owner: number, isActive: (s: Ship) => boolean): ArrayBuffer {
   const live = ships.filter((s) => s.alive);
   let gunBytes = 0;
-  for (const s of live) if (s.owner === owner && isActive(s)) gunBytes += 1 + s.guns.length * 4;
+  for (const s of live) if (s.owner === owner && isActive(s) && s.guns.length > 0) gunBytes += 1 + s.guns.length * 4;
   const buf = new ArrayBuffer(HEADER + live.length * SHIP + gunBytes);
   const d = new DataView(buf);
   d.setUint8(0, 1);
@@ -176,10 +201,14 @@ export function encodeSnapshot(time: number, ships: readonly Ship[], owner: numb
     d.setUint8(o + 47, Math.round(s.supply * 255));
     const own = s.owner === owner && isActive(s);
     d.setUint8(o + 48, own ? Math.min(255, s.guns.length) : 0);
+    d.setUint8(o + 49, own ? Math.min(16, s.orderQueue?.length ?? 0) : 0);
+    d.setUint8(o + 50, Math.round(Math.max(0, Math.min(1, s.damageState?.flooding ?? 0)) * 255));
+    d.setUint8(o + 51, Math.round(Math.max(0, Math.min(1, s.damageState?.propulsion ?? 0)) * 255));
+    d.setUint8(o + 52, Math.round(Math.max(0, Math.min(1, s.damageState?.steering ?? 0)) * 255));
     o += SHIP;
   }
   for (const s of live) {
-    if (!(s.owner === owner && isActive(s))) continue;
+    if (!(s.owner === owner && isActive(s)) || s.guns.length === 0) continue;
     d.setUint8(o, s.guns.length);
     o += 1;
     for (const g of s.guns) {
@@ -228,6 +257,8 @@ export function decodeSnapshot(buf: ArrayBuffer): { time: number; ships: ShipFra
       ammo: d.getUint8(o + 45),
       speedCap: d.getUint8(o + 46) / 255,
       supply: d.getUint8(o + 47) / 255,
+      queuedWaypoints: d.getUint8(o + 49),
+      damageState: { flooding: d.getUint8(o + 50) / 255, propulsion: d.getUint8(o + 51) / 255, steering: d.getUint8(o + 52) / 255 },
       guns: null,
     });
     gunCounts.push(d.getUint8(o + 48));

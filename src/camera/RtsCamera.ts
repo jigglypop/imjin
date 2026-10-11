@@ -93,7 +93,11 @@ export class RtsCamera {
   };
 
   private onKey = (e: KeyboardEvent) => {
-    if ((e.target as HTMLElement | null)?.tagName === 'INPUT') return;
+    const target = e.target as HTMLElement | null;
+    if (e.ctrlKey || e.metaKey || e.altKey || target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName ?? '')) {
+      this.keys.delete(e.code);
+      return;
+    }
     if (e.shiftKey) {
       this.keys.delete('KeyF');
       if (e.code === 'KeyF') return;

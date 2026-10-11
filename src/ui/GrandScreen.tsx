@@ -41,6 +41,8 @@ import { tt, turnsText } from './grand/text';
 import type { FactionId } from './grand/types';
 import { REGIONS } from '../sim/grand/regions';
 import { atWar } from '../sim/grand/world';
+import { dispatchTargets } from '../sim/grand/dispatch';
+import { FleetOrdersPanel } from './grand/FleetOrdersPanel';
 
 type Stage = 'hub' | 'pick' | 'map';
 
@@ -115,6 +117,9 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const [regionId, setRegionId] = useState<string | null>(null);
   const [fleetId, setFleetId] = useState<string | null>(null);
   const [moving, setMoving] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [pickedFleets, setPickedFleets] = useState<Set<string>>(new Set());
+  const [pickedPorts, setPickedPorts] = useState<Set<string>>(new Set());
   const [focus, setFocus] = useState<{ id: string; nonce: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [status, setStatus] = useState(false);
@@ -140,8 +145,8 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const region = regions.find((r) => r.id === regionId) ?? null;
   const fleet = fleets.find((f) => f.id === fleetId) ?? null;
   const simFleet = g.fleets.find((f) => f.id === fleetId);
-  const insets = useMapInsets(!!(region || fleet));
-  const targets = useMemo(() => (moving && simFleet ? moveTargets(g, simFleet) : undefined), [moving, simFleet, g]);
+  const insets = useMapInsets(!!(region || fleet || batchOpen));
+  const targets = useMemo(() => !moving ? undefined : batchOpen ? dispatchTargets(g, [...pickedFleets], [...pickedPorts] as RegionId[], me) : simFleet ? moveTargets(g, simFleet) : undefined, [moving, batchOpen, pickedFleets, pickedPorts, simFleet, g, me]);
   const pending = g.phase === 'battles' ? g.pending[0] : undefined;
   const eventCard = useMemo(() => (g.events.pending ? eventView(g) : null), [g, lang]);
   const turnReport = useMemo(() => (reported !== null ? turnReportView(g, reported) : null), [g, reported, lang]);
@@ -171,6 +176,12 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   };
 
   const selectRegion = (id: string) => {
+    if (batchOpen && moving) {
+      if (!targets?.includes(id as RegionId)) { say(t('그곳으로 가는 안전한 항로가 없습니다')); return; }
+      const res = grandOrders.dispatch([...pickedFleets], [...pickedPorts] as RegionId[], id as RegionId);
+      if (report(res)) { sound.campaign('move'); closePanels(); }
+      return;
+    }
     if (moving && fleet) {
       if (targets && !targets.includes(id as RegionId)) {
         say(t('그곳으로 가는 안전한 항로가 없습니다'));
@@ -194,9 +205,17 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
     flyTo(id);
   };
 
-  const selectFleet = (id: string) => {
+  const toggleFleet = (id: string) => setPickedFleets((set) => { const next = new Set(set); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  const togglePort = (id: string) => setPickedPorts((set) => { const next = new Set(set); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  const selectFleet = (id: string, additive = false) => {
     const f = fleets.find((x) => x.id === id);
     if (!f) return;
+    if (batchOpen || additive) {
+      if (f.faction === me && f.at && !f.transit && f.rest === 0 && !moving) {
+        setBatchOpen(true); toggleFleet(id); setFleetId(null); setRegionId(null);
+      }
+      return;
+    }
     setFleetId(id);
     setMoving(false);
     const place = f.at ?? f.transit?.from;
@@ -208,6 +227,8 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
     setRegionId(null);
     setFleetId(null);
     setMoving(false);
+    setBatchOpen(false);
+    setPickedFleets(new Set()); setPickedPorts(new Set());
   };
 
   const endTurn = () => {
@@ -280,6 +301,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         me={me}
         selectedRegionId={regionId}
         selectedFleetId={fleetId}
+        selectedFleetIds={batchOpen ? pickedFleets : undefined}
         moveTargets={targets}
         insets={insets}
         focus={focus}
@@ -303,11 +325,15 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         onEndTurn={endTurn}
         onMenu={() => setMenu(true)}
         onStatus={() => setStatus(true)}
+        onBatch={g.phase === 'orders' ? () => { closePanels(); setBatchOpen(true); } : undefined}
         busy={g.phase === 'over' || !!replay || !!g.events.pending}
         endLabel={g.phase === 'battles' ? t('전투 {n}건', { n: g.pending.length }) : t('턴 종료')}
       />
       <div className="g-dock">
-        {fleet ? (
+        {batchOpen ? <FleetOrdersPanel fleets={fleets.filter((f) => f.faction === me)} ports={regions.filter((p) => p.owner === me && p.garrison > 0)} selectedFleets={pickedFleets} selectedPorts={pickedPorts} moving={moving} onFleet={toggleFleet} onPort={togglePort} onAll={(all) => {
+          setPickedFleets(new Set(all ? fleets.filter((f) => f.faction === me && !!f.at && !f.transit && f.rest === 0).map((f) => f.id) : []));
+          setPickedPorts(new Set(all ? regions.filter((p) => p.owner === me && p.garrison > 0).map((p) => p.id) : []));
+        }} onMove={() => setMoving(true)} onCancel={() => setMoving(false)} onClose={closePanels} /> : fleet ? (
           <FleetPanel
             key={fleet.id + fleet.ships.length}
             fleet={fleet}
@@ -355,6 +381,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
             onRecruit={(id, kind) => ordered(grandOrders.recruit(id as RegionId, kind as ShipKind))}
             onCancelRecruit={(id, item) => report(grandOrders.cancelRecruit(id as RegionId, item), '주문을 취소하고 비용을 돌려받았습니다')}
             onSelectFleet={selectFleet}
+            onMobilize={(id) => { const res = grandOrders.mobilize(id as RegionId); if (res.ok && res.note) { setFleetId(res.note); setRegionId(null); } report(res, '수비대가 출동 함대에 승선했습니다'); }}
           />
         ) : null}
       </div>

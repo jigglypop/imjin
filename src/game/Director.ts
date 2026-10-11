@@ -3,7 +3,9 @@ import { atmosphere } from '../render/atmosphere';
 import type { RtsCamera } from '../camera/RtsCamera';
 import type { Battle } from '../sim/battle';
 import { t } from '../i18n';
-import type { BattleEvent, GunType, Projectile, Ship } from '../sim/types';
+import type { BattleEvent, GunType, Projectile, Ship, Team } from '../sim/types';
+import { shipObserved } from '../sim/observation';
+import { pointVisible } from '../sim/visibility';
 
 /**
  * Battle director. It watches the sim's events and does three things:
@@ -17,6 +19,7 @@ import type { BattleEvent, GunType, Projectile, Ship } from '../sim/types';
 /** The slice of the engine the director reads. */
 export interface DirectorHost {
   readonly battle: Battle;
+  readonly team: Team;
   readonly rts: RtsCamera;
   readonly camera: PerspectiveCamera;
   readonly remote: unknown;
@@ -271,7 +274,7 @@ export class Director {
       l.v *= Math.exp(-dt * 0.8);
       if (l.v < 0.05) this.load.delete(id);
     }
-    if (this.pending && (this.pending.ttl -= dt) <= 0) this.pending = null;
+    if (this.pending && ((this.pending.ttl -= dt) <= 0 || !this.canFrame(this.pending))) this.pending = null;
 
     this.fovKick *= Math.exp(-dt * 5);
     const fov = BASE_FOV + this.fovKick;
@@ -293,6 +296,7 @@ export class Director {
     }
     rts.followId = 0;
     if (this.shot) this.shot.age += dt;
+    if (this.shot && this.isOver(this.shot)) { this.shot = null; rts.rate = 1; }
     const p = this.pending;
     const s = this.shot;
     if (p) {
@@ -308,7 +312,7 @@ export class Director {
   }
 
   private offer(c: Candidate) {
-    if (!this.host.rts.cinematic) return;
+    if (!this.host.rts.cinematic || !this.canFrame(c)) return;
     if (!this.pending || c.priority > this.pending.priority) this.pending = c;
   }
 
@@ -329,7 +333,22 @@ export class Director {
   }
 
   private wantKill(x: number, z: number, level: 'hit' | 'ship') {
-    if (!this.kill || level === 'ship') this.kill = { x, z, level };
+    if (pointVisible(this.host.battle, this.host.team, x, z) && (!this.kill || level === 'ship')) this.kill = { x, z, level };
+  }
+
+  private sees(s: Ship | undefined): s is Ship {
+    return !!s && shipObserved(this.host.battle, this.host.team, s);
+  }
+
+  private canFrame(c: Pick<Candidate, 'ship' | 'other' | 'proj' | 'x' | 'z'>) {
+    const b = this.host.battle;
+    if (c.ship && !this.sees(b.get(c.ship))) return false;
+    if (c.other && !this.sees(b.get(c.other))) return false;
+    if (c.proj) {
+      const p = b.projectiles.find((q) => q.id === c.proj);
+      if (p && !pointVisible(b, this.host.team, p.x, p.z)) return false;
+    }
+    return !!c.ship || pointVisible(b, this.host.team, c.x, c.z);
   }
 
   /** Slow motion for a heavy hit, an explosion or a sinking that the camera is looking at (after any cut to it). */
@@ -350,6 +369,7 @@ export class Director {
   private isOver(s: Shot) {
     if (s.age >= s.max) return true;
     const b = this.host.battle;
+    if (!this.canFrame(s) || (s.landed && !pointVisible(b, this.host.team, s.landed.x, s.landed.z))) return true;
     switch (s.kind) {
       case 'shell':
         return !!s.landed && s.age - s.landed.at > 1.3;
@@ -372,7 +392,7 @@ export class Director {
 
   /** Starts a shot with an instant cut. */
   private cut(c: Candidate | null) {
-    if (!c) return;
+    if (!c || !this.canFrame(c)) return;
     const { rts, battle } = this.host;
     const ship = battle.get(c.ship);
     const L = ship?.spec.length ?? 30;
@@ -452,13 +472,13 @@ export class Director {
   private ambient(): Candidate | null {
     const b = this.host.battle;
     let best: { id: number; v: number; dx: number; dz: number } | null = null;
-    for (const [id, l] of this.load) if (l.v > 0.9 && b.isActive(b.get(id)) && (!best || l.v > best.v)) best = { id, v: l.v, dx: l.dx, dz: l.dz };
+    for (const [id, l] of this.load) if (l.v > 0.9 && this.sees(b.get(id)) && b.isActive(b.get(id)) && (!best || l.v > best.v)) best = { id, v: l.v, dx: l.dx, dz: l.dz };
     if (best && this.cooled('broadside', best.id, 8)) {
       const s = b.get(best.id)!;
       const n = Math.hypot(best.dx, best.dz) || 1;
       return { kind: 'broadside', priority: 3, ship: s.id, x: s.x, z: s.z, dx: best.dx / n, dz: best.dz / n, ttl: 1 };
     }
-    const active = b.ships.filter((s) => b.isActive(s));
+    const active = b.ships.filter((s) => b.isActive(s) && this.sees(s));
     const subject = active.sort((p, q) => q.lastHit - p.lastHit)[0];
     if (!subject) return null;
     return { kind: 'wide', priority: 1, ship: subject.id, x: subject.x, z: subject.z, dx: 0, dz: 0, ttl: 1 };
@@ -469,7 +489,7 @@ export class Director {
    * crowded fleet does not put the lens inside another hull. Angles near the wanted one are preferred.
    */
   private clearest(cx: number, cz: number, reach: number, yaw: number, ignore: number[]) {
-    const ships = this.host.battle.ships.filter((s) => s.alive && !ignore.includes(s.id) && Math.hypot(s.x - cx, s.z - cz) < reach + 60);
+    const ships = this.host.battle.ships.filter((s) => s.alive && this.sees(s) && !ignore.includes(s.id) && Math.hypot(s.x - cx, s.z - cz) < reach + 60);
     let best = yaw;
     let bestScore = -Infinity;
     for (const off of [0, 0.3, -0.3, 0.6, -0.6, 0.9, -0.9, 1.3, -1.3]) {
@@ -557,7 +577,7 @@ export class Director {
         const subject = ship;
         if (!subject) return;
         let other = battle.get(subject.targetId);
-        if (!other || !other.alive) other = this.nearestFoe(subject);
+        if (!this.sees(other) || !other.alive) other = this.nearestFoe(subject);
         if (other) {
           const dx = other.x - subject.x;
           const dz = other.z - subject.z;
@@ -578,7 +598,7 @@ export class Director {
     let best = Infinity;
     let found: Ship | undefined;
     for (const s of this.host.battle.ships) {
-      if (!s.alive || s.team === from.team) continue;
+      if (!s.alive || s.team === from.team || !this.sees(s)) continue;
       const d = Math.hypot(s.x - from.x, s.z - from.z);
       if (d < best) {
         best = d;
@@ -605,7 +625,7 @@ export class Director {
     const subject = battle.get(s.ship);
     if (!subject) return;
     let other = battle.get(subject.targetId);
-    if (!other || !other.alive) other = this.nearestFoe(subject);
+    if (!this.sees(other) || !other.alive) other = this.nearestFoe(subject);
     const sun = atmosphere.sunDir.value as Vector3;
     s.min = 5;
     s.max = 8 + Math.random() * 3;

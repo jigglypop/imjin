@@ -1,7 +1,6 @@
 import type { Battle } from '../sim/battle';
 import type { Command } from '../sim/commands';
 import type { Conquest } from '../sim/conquest';
-import { GUN_SPECS } from '../sim/catalog';
 import type { AmmoMode, BattleEvent, Order, Projectile, Stance, Team } from '../sim/types';
 import { AMMO_NAMES, decodeSnapshot, ORDER_NAMES, STANCE_NAMES, type ConquestState, type ServerMsg, type ShipFrame } from './protocol';
 import { net, type BattleListener } from './NetClient';
@@ -31,6 +30,8 @@ export class NetBattle implements BattleListener {
   /** Simulated seconds per real second at the server (it skips the approach fast). The playback clock runs at this pace. */
   private pace = 1;
   private announced = false;
+  private observationStarted = false;
+  private team: Team = 'joseon';
   private readonly shots = new Map<number, Projectile>();
   winner: Team | null = null;
   draw = false;
@@ -75,7 +76,7 @@ export class NetBattle implements BattleListener {
   }
 
   private applyMeta(b: Battle, msg: Extract<ServerMsg, { t: 'meta' }>) {
-    if (msg.squadrons.length) b.squadrons = msg.squadrons.map((q) => ({ ...q, shipIds: [...q.shipIds] }));
+    b.squadrons = msg.squadrons.map((q) => ({ ...q, shipIds: [...q.shipIds] }));
     for (const m of msg.ships) {
       let s = b.get(m.id);
       if (!s) {
@@ -98,6 +99,11 @@ export class NetBattle implements BattleListener {
   }
 
   advance(b: Battle, conquest: Conquest | null, dt: number) {
+    if (!this.observationStarted) {
+      this.team = conquest?.players[this.you]?.team ?? b.ships.find((s) => s.owner === this.you)?.team ?? 'joseon';
+      if (b.profile !== 'historical') for (const s of b.ships) s.observed = s.team === this.team;
+      this.observationStarted = true;
+    }
     for (const m of this.metas) this.applyMeta(b, m);
     this.metas.length = 0;
     if (this.state && conquest) {
@@ -152,10 +158,12 @@ export class NetBattle implements BattleListener {
     for (const s of b.ships) {
       const f = c.ships.get(s.id);
       if (!f) {
+        if (b.profile !== 'historical' && s.team !== this.team) { s.observed = false; continue; }
         if (s.alive && this.frames.length > 1) s.alive = false;
         continue;
       }
-      const p = a.ships.get(s.id) ?? f;
+      const p = s.observed === false ? f : a.ships.get(s.id) ?? f;
+      s.observed = true;
       s.alive = true;
       s.x = p.x + (f.x - p.x) * t;
       s.z = p.z + (f.z - p.z) * t;
@@ -178,6 +186,8 @@ export class NetBattle implements BattleListener {
       s.stance = (STANCE_NAMES[f.stance] ?? 'auto') as Stance;
       s.ammo = (AMMO_NAMES[f.ammo] ?? 'auto') as AmmoMode;
       s.speedCap = f.speedCap;
+      s.remoteQueueCount = f.queuedWaypoints;
+      if (b.profile !== 'historical') s.damageState = { ...f.damageState };
       s.supply = f.supply;
       const type = ORDER_NAMES[f.order] ?? 'auto';
       if (s.order.type !== type) s.order = { type, x: s.x, y: 0, z: s.z, targetId: f.targetId, leaderId: 0, dx: 0, dz: 0, face: s.heading, side: 0 } as unknown as Order;
@@ -186,7 +196,7 @@ export class NetBattle implements BattleListener {
           const gun = s.guns[i];
           if (!gun) return;
           gun.stage = g.stage;
-          gun.t = Math.min(g.t, GUN_SPECS[s.spec.batteries[gun.battery]!.gun].stages[g.stage] ?? 1);
+          gun.t = Math.min(g.t, b.gunSpec(s.spec.kind, s.spec.batteries[gun.battery]!.gun).stages[g.stage] ?? 1);
           gun.ammo = g.ammo;
         });
       }

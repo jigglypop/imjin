@@ -3,16 +3,15 @@
 // leading each side.
 import type { Battle } from '../src/sim/battle';
 import { applyBalance } from '../src/sim/balance';
-import type { Conquest } from '../src/sim/conquest';
+import { DEFAULT_OPTIONS, RANKED_OPTIONS, type Conquest } from '../src/sim/conquest';
 import { CurrentField } from '../src/sim/current';
 import { autoFleet, buildConquest, CONQUEST_MAPS, type ConquestMapId, type Seat } from '../src/sim/maps';
 import { buildScenario, SCENARIOS, type ScenarioId } from '../src/sim/scenarios';
 import type { Faction, LandSampler } from '../src/sim/types';
 import type { BattleChoice, RoomSeat } from '../src/net/protocol';
 import { SEA_STATES } from '../src/ocean/waves';
+import { engagementRange } from '../src/sim/competitive';
 
-/** An enemy this close (metres) ends the skipped approach. Same number as Engine.CONTACT_RANGE. */
-const CONTACT_RANGE = 400;
 
 export const DEFAULT_CHOICE: BattleChoice = { kind: 'conquest', map: 'hallyeo', size: 2 };
 
@@ -48,11 +47,11 @@ export function openSeats(c: BattleChoice): RoomSeat[] {
 export type Built = { battle: Battle; conquest: Conquest | null; seats: Seat[] };
 
 /** `human` says which seats are played by a person; the others are the computer's. In a duel the seat index is the owner. */
-export function buildBattle(choice: BattleChoice, land: LandSampler, seats: Pick<RoomSeat, 'faction' | 'team'>[], names: string[], human: boolean[], seed: number): Built {
+export function buildBattle(choice: BattleChoice, land: LandSampler, seats: Pick<RoomSeat, 'faction' | 'team'>[], names: string[], human: boolean[], seed: number, ranked = false): Built {
   if (choice.kind === 'conquest') {
-    const list: Seat[] = seats.map((s, i) => ({ name: names[i]!, faction: s.faction, team: s.team, human: human[i]!, fleet: autoFleet(s.faction) }));
-    const built = buildConquest(choice.map, list, land, seed);
-    built.battle.setSea(SEA_STATES[CONQUEST_MAPS[choice.map].sea]);
+    const rules = ranked ? RANKED_OPTIONS : DEFAULT_OPTIONS;
+    const list: Seat[] = seats.map((s, i) => ({ name: names[i]!, faction: s.faction, team: s.team, human: human[i]!, fleet: autoFleet(s.faction, rules.musterBudget, undefined, rules.maxShips) }));
+    const built = buildConquest(choice.map, list, land, seed, rules);
     return { battle: built.battle, conquest: built.conquest, seats: list };
   }
   const info = SCENARIOS[choice.id];
@@ -72,13 +71,14 @@ export function buildBattle(choice: BattleChoice, land: LandSampler, seats: Pick
 /** The same rule as Engine.inContact: a shot in the air, a grapple, an enemy within range, or one side gone. */
 export function inContact(b: Battle) {
   if (b.projectiles.length > 0) return true;
+  const range = engagementRange(b.profile, b.ships.filter((s) => b.isActive(s)).map((s) => s.spec.kind));
   let contact = false;
   for (const team of ['joseon', 'japan'] as const) {
     const own = b.activeOf(team);
     if (own.length === 0) return true;
     for (const s of own) {
       if (s.grappledWith) return true;
-      b.near(s.x, s.z, CONTACT_RANGE, (o) => {
+      b.near(s.x, s.z, range, (o) => {
         if (o.team !== s.team && b.isActive(o)) contact = true;
       });
       if (contact) return true;

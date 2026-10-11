@@ -22,18 +22,21 @@ import {
 import { abs, atan, attribute, float, fract, mix, positionLocal, sin, step, time, uniform, uv, vec3, vec4 } from 'three/tsl';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { BUILDINGS, type BuildingKind, type CapturePoint, type Conquest } from '../sim/conquest';
+import { BUILDINGS, buildingHp, type BuildingKind, type CapturePoint, type Conquest } from '../sim/conquest';
 import type { Faction, Team } from '../sim/types';
 import { equipment } from '../game/quality';
 import { RING_FOE, RING_OWN, RING_WARN } from '../ships/ringTones';
 import { iconSvg } from '../ui/battleIcons';
 import { getLang, t } from '../i18n';
+import type { Battle } from '../sim/battle';
+import { pointVisible } from '../sim/visibility';
 
 /** Footprint widths in metres. */
-const SIZE: Record<BuildingKind, number> = { shipyard: 30, battery: 24, magazine: 11, dock: 20, beacon: 17 };
-const FILE: Record<BuildingKind, string> = { shipyard: 'shipyard', battery: 'battery', magazine: 'magazine', dock: 'dock', beacon: 'bongsu' };
+const SIZE: Record<BuildingKind, number> = { shipyard: 30, battery: 24, magazine: 11, dock: 20, beacon: 17, camp: 24 };
+// A camp uses the game's existing tiled barracks/hall model, including its authored low-detail model.
+const FILE: Record<BuildingKind, string> = { shipyard: 'shipyard', battery: 'battery', magazine: 'magazine', dock: 'dock', beacon: 'bongsu', camp: 'giwa' };
 const NEAR = 650;
-const CAP = 64;
+const CAP = 256;
 
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
@@ -226,12 +229,13 @@ export class ConquestView {
     return team === playerTeam ? RING_OWN : RING_FOE;
   }
 
-  update(camera: PerspectiveCamera, width: number, height: number, playerTeam: Team, selected: number, showLabels: boolean) {
+  update(camera: PerspectiveCamera, width: number, height: number, playerTeam: Team, selected: number, showLabels: boolean, battle?: Battle) {
     const c = this.conquest;
     let flags = 0;
     const counts = new Map<InstancedMesh, number>();
     const cam = camera.position;
     c.points.forEach((p, i) => {
+      const observed = !battle || c.teamOfPoint(p) === playerTeam || pointVisible(battle, playerTeam, p.x, p.z);
       const st = this.ringState[i]!;
       // Neutral ring, filled clockwise by how far the side the hold favours has got.
       const towards: Team | null = p.hold > 0 ? 'joseon' : p.hold < 0 ? 'japan' : null;
@@ -242,7 +246,7 @@ export class ConquestView {
       st.contested.value = p.contested ? 1 : 0;
       // Shore works.
       p.buildings.forEach((bd, slot) => {
-        if (!bd) return;
+        if (!bd || !observed) return;
         const batch = this.batches.get(bd.kind);
         if (!batch) return;
         const spot = p.slots[slot]!;
@@ -251,13 +255,35 @@ export class ConquestView {
         const n = counts.get(mesh) ?? 0;
         if (n >= CAP) return;
         const grow = bd.progress >= 1 ? 1 : 0.12 + bd.progress * 0.88;
-        const ruin = bd.hp / BUILDINGS[bd.kind].hp;
+        const ruin = bd.hp / buildingHp(bd.kind, bd.level);
+        const upgrading = bd.upgradeTotal > 0 ? 1 - bd.upgradeLeft / bd.upgradeTotal : 0;
+        const extent = 1 + (bd.level - 1) * 0.07 + upgrading * 0.07;
         this.q.setFromAxisAngle(this.up, Math.PI / 2 - spot.rot);
         this.p.set(spot.x, this.heightAt(spot.x, spot.z) - (1 - grow) * 2 - (ruin < 0.35 ? 0.6 : 0), spot.z);
-        this.s.set(1, grow, 1);
+        this.s.set(extent, grow * extent, extent);
         this.m.compose(this.p, this.q, this.s).multiply(mesh.userData.base as Matrix4);
         mesh.setMatrixAt(n, this.m);
         counts.set(mesh, n + 1);
+        // Completed levels are marked by pennants beside the work; a raised pale pennant marks current construction.
+        if (bd.level > 1 || bd.upgradeLeft > 0) {
+          const owner = p.owner >= 0 ? c.player(p.owner) : undefined;
+          const total = bd.level + (bd.upgradeLeft > 0 ? 1 : 0);
+          for (let pennant = 0; pennant < total && flags < CAP; pennant += 1) {
+            const across = (pennant - (total - 1) / 2) * 3.6;
+            const fx = spot.x - Math.cos(spot.rot) * 10 + Math.cos(spot.rot + Math.PI / 2) * across;
+            const fz = spot.z - Math.sin(spot.rot) * 10 + Math.sin(spot.rot + Math.PI / 2) * across;
+            const inWork = pennant >= bd.level;
+            this.q.setFromAxisAngle(this.up, -spot.rot);
+            this.p.set(fx, this.heightAt(fx, fz), fz);
+            this.s.set(0.6, inWork ? 0.6 + upgrading * 0.3 : 0.85, 0.6);
+            this.m.compose(this.p, this.q, this.s);
+            this.poles.setMatrixAt(flags, this.m);
+            this.cloths.setMatrixAt(flags, this.m);
+            const col = inWork || !owner ? NEUTRAL : FLAG[owner.faction];
+            this.clothColor.setXYZ(flags, col.r, col.g, col.b);
+            flags += 1;
+          }
+        }
       });
       // Banner of the holder beside the first plot.
       const spot = p.slots[0];
@@ -287,7 +313,7 @@ export class ConquestView {
     this.poles.instanceMatrix.needsUpdate = true;
     this.cloths.instanceMatrix.needsUpdate = true;
     this.clothColor.needsUpdate = true;
-    this.updateLabels(camera, width, height, playerTeam, selected, showLabels);
+    this.updateLabels(camera, width, height, playerTeam, selected, showLabels, battle);
   }
 
   /** Bottom edge of the score panel and the span it covers, so labels never sit under it. Re-measured twice a second. */
@@ -307,7 +333,7 @@ export class ConquestView {
    * spot over the point, slides up out of the way of the labels already placed and out from under the top bar, and
    * fades with distance. A point that cannot be placed without covering a higher-priority one is hidden.
    */
-  private updateLabels(camera: PerspectiveCamera, width: number, height: number, playerTeam: Team, selected: number, show: boolean) {
+  private updateLabels(camera: PerspectiveCamera, width: number, height: number, playerTeam: Team, selected: number, show: boolean, battle?: Battle) {
     this.layer.style.display = show ? '' : 'none';
     if (!show) return;
     const c = this.conquest;
@@ -379,7 +405,8 @@ export class ConquestView {
       label.root.style.transform = `translate(${l.toFixed(1)}px, ${top.toFixed(1)}px) scale(${scale.toFixed(3)})`;
       const holder = c.teamOfPoint(p);
       const side = holder ? (holder === playerTeam ? 'own' : 'foe') : 'none';
-      const works = p.buildings.map((bd) => (bd ? `${bd.kind}${bd.progress < 1 ? '*' : ''}` : '')).join(',');
+      const observed = !battle || holder === playerTeam || pointVisible(battle, playerTeam, p.x, p.z);
+      const works = observed ? p.buildings.map((bd) => (bd ? `${bd.kind}:${bd.level}:${bd.progress < 1 ? '*' : ''}:${Math.ceil(bd.upgradeLeft)}` : '')).join(',') : '?';
       const key = `${getLang()}|${edge}|${side}|${p.contested}|${selected === p.id}|${works}|${p.queue.length}|${Math.round(Math.abs(p.hold) * 20)}`;
       if (key === label.last) continue;
       label.last = key;
@@ -388,7 +415,7 @@ export class ConquestView {
       label.fill.style.width = `${Math.round(Math.abs(p.hold) * 100)}%`;
       label.fill.className = p.hold === 0 ? '' : (p.hold > 0 ? 'joseon' : 'japan') === playerTeam ? 'own' : 'foe';
       label.works.innerHTML =
-        p.buildings.map((bd) => (bd ? `<span class="${bd.progress < 1 ? 'cpoint-wip' : ''}">${iconSvg(bd.kind, 13)}</span>` : '')).join('') + (p.queue.length ? '<em>' + t('함선 {n}', { n: p.queue.length }) + '</em>' : '');
+        observed ? p.buildings.map((bd) => (bd ? `<span class="${bd.progress < 1 || bd.upgradeLeft > 0 ? 'cpoint-wip' : ''}" title="${t(BUILDINGS[bd.kind].label)}${bd.level > 1 ? ` ${bd.level}` : ''}">${iconSvg(bd.kind, 13)}${bd.level > 1 ? `<small>${bd.level}</small>` : ''}${bd.upgradeLeft > 0 ? '↑' : ''}</span>` : '')).join('') + (p.queue.length ? '<em>' + t('함선 {n}', { n: p.queue.length }) + '</em>' : '') : '<em>' + t('미정찰') + '</em>';
     }
   }
 

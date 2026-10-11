@@ -90,9 +90,10 @@ export function App() {
     const from = lastScreen.current;
     lastScreen.current = screen;
     if (from !== 'online' || screen === 'online' || screen === 'battle') return;
-    const { room, quick } = useNet.getState();
+    const { room, quick, rankedQueue } = useNet.getState();
     if (quick) net.send({ t: 'quickCancel' });
-    if (room) net.send({ t: 'leave' });
+    if (rankedQueue) net.rankedCancel();
+    if (room || quick || rankedQueue) net.send({ t: 'leave' });
   }, [screen]);
 
   const begin = (next: LaunchBody, text: string, scenario?: ScenarioId) => {
@@ -117,7 +118,7 @@ export function App() {
     net.onStart = (msg) => {
       const remote = new NetBattle(msg.seed, msg.you);
       if (msg.battle.kind === 'conquest') {
-        startConquest({ map: msg.battle.map, seats: msg.seats, you: msg.you, seed: msg.seed }, remote);
+        startConquest({ map: msg.battle.map, seats: msg.seats, you: msg.you, seed: msg.seed, ranked: !!msg.ranked }, remote);
         return;
       }
       const id = msg.battle.id;

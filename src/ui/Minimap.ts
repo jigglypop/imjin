@@ -2,6 +2,7 @@ import type { Battle } from '../sim/battle';
 import type { Faction, Team } from '../sim/types';
 import { factionColor, withAlpha } from './tokens';
 import type { Terrain } from '../terrain/Terrain';
+import { shipObserved } from '../sim/observation';
 
 const SIZE = 320;
 
@@ -116,7 +117,7 @@ export class Minimap {
       ctx.stroke();
     }
     for (const s of battle.ships) {
-      if (!s.alive || s.sinking > 0) continue;
+      if (!s.alive || s.sinking > 0 || !shipObserved(battle, this.team, s)) continue;
       const [px, py] = toPx(s.x, s.z);
       if (px < 0 || py < 0 || px > SIZE || py > SIZE) continue;
       const sel = selected.has(s.id);

@@ -1,6 +1,5 @@
-import { LANES } from './regions';
 import type { Contact, Fleet, Grand, GrandFaction, RegionId } from './types';
-import { allied, visibleRegions } from './world';
+import { allied, lanesOf, visibleRegions } from './world';
 
 /**
  * What the closing turn did to the map, as the viewer saw it, for the strategic map to play back: where the fleets
@@ -30,10 +29,10 @@ export type TurnReplay = { turn: number; moves: ReplayMove[]; clashes: ReplayCla
 
 export const isEmpty = (r: TurnReplay) => !r.moves.length && !r.clashes.length && !r.changes.length;
 
-const spotOf = (fl: Fleet): Spot => {
+const spotOf = (fl: Fleet, g: Grand): Spot => {
   if (fl.at) return { at: fl.at };
   const t = fl.transit!;
-  const turns = LANES[t.from].find((l) => l.to === t.to)?.turns ?? 1;
+  const turns = lanesOf(g, t.from).find((l) => l.to === t.to)?.turns ?? 1;
   return { at: t.from, to: t.to, t: Math.min(1, Math.max(0, (turns - t.left) / turns)) };
 };
 
@@ -55,10 +54,10 @@ export function buildReplay(before: Grand, after: Grand, contacts: Contact[], vi
   const moves: ReplayMove[] = [];
   for (const fl of before.fleets) {
     const end = afterFleets.get(fl.id);
-    const path: Spot[] = [spotOf(fl)];
+    const path: Spot[] = [spotOf(fl, before)];
     const hit = clashAt.get(fl.id);
     if (hit) path.push({ at: hit });
-    if (end) path.push(spotOf(end));
+    if (end) path.push(spotOf(end, after));
     const trimmed = path.filter((p, i) => i === 0 || !same(p, path[i - 1]!));
     if (trimmed.length < 2) continue;
     const reaches = trimmed.some((p) => visible(p.at) || (p.to !== undefined && visible(p.to)));

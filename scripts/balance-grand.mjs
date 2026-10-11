@@ -5,7 +5,7 @@
 //   node scripts/balance-grand.mjs --sweep='startFleet.japan=1.4|1.7|2;faction.ming.income=1|1.2'    every combination, one line each
 //   node scripts/balance-grand.mjs --spread=0.1             perturb every navy's opening fleet by up to 10%, to see how stable the result is
 //   node scripts/balance-grand.mjs --fit=japan --seeds=300  find the fighting-power multiplier that gives that navy a third of the wars
-//   node scripts/balance-grand.mjs --catalog --odds         the ship table the campaign derives from SHIP_SPECS, and auto-resolve odds for a few matched fleets
+//   node scripts/balance-grand.mjs --catalog --odds         the competitive ship table and auto-resolve odds for a few matched fleets
 //   node scripts/balance-grand.mjs --no-events              the same wars without the scripted historical events (src/sim/grand/events.ts), to see what they shift
 //   node scripts/balance-grand.mjs --verbose                one line per game
 //   node scripts/balance-grand.mjs --trace=1592             one game turn by turn: gold (net), each region as owner+garrison[fleets], the log

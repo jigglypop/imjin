@@ -4,6 +4,7 @@ import type { Squadron, Team } from '../sim/types';
 import type { ShipViews } from '../ships/ShipViews';
 import { getLang, t } from '../i18n';
 import { tCommander, tName, tShips } from './battleNames';
+import { shipObserved } from '../sim/observation';
 
 type Banner = {
   root: HTMLDivElement;
@@ -121,7 +122,7 @@ export class SquadronBanners {
       let leader = battle.get(sq.leaderId);
       for (const id of sq.shipIds) {
         const s = battle.get(id);
-        if (!s || !battle.isActive(s)) continue;
+        if (!s || !battle.isActive(s) || !shipObserved(battle, team, s)) continue;
         x += s.x;
         z += s.z;
         top = Math.max(top, s.spec.height);
@@ -138,7 +139,7 @@ export class SquadronBanners {
         }
         continue;
       }
-      if (!leader || !battle.isActive(leader)) leader = undefined;
+      if (!leader || !battle.isActive(leader) || !shipObserved(battle, team, leader)) leader = undefined;
       const px = leader ? leader.x : x / alive;
       const pz = leader ? leader.z : z / alive;
       tmp.set(px, (leader ? views.heaveOf(leader.id) : 0) + top + 10, pz);

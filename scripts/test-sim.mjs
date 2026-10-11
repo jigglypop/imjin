@@ -167,7 +167,7 @@ try {
       const s = b.ships.find((s) => s.owner === 0);
       b.applySupply(s, 0);
       const home = c.homeOf(0);
-      home.buildings.push({ kind: 'magazine', hp: BUILDINGS.magazine.hp, progress: 1, reload: [] });
+      home.buildings.push({ kind: 'magazine', hp: BUILDINGS.magazine.hp, progress: 1, reload: [], level: 1, upgradeLeft: 0, upgradeTotal: 0 });
       for (let i = 0; i < hz; i += 1) b.step(1 / hz);
       close(s.supply, 0.01);
       for (const g of s.guns) close(g.ammo, GUN_SHOTS[s.spec.batteries[g.battery].gun] * 0.01);
@@ -214,6 +214,20 @@ try {
       assert.equal(snap(a), snap(z)); assert.equal(a.waves.time, a.time); assert.equal(z.waves.time, z.time);
     }
     assert.deepEqual(a.waves.state, SEA_STATES.rough);
+  });
+
+  await check('rendered competitive sea follows the battle seed across sea changes without sharing simulation state', () => {
+    const b = new Battle(97241, 'competitive-v1');
+    b.time = 42;
+    b.waves.time = b.time;
+    b.setSea(SEA_STATES.moderate);
+    waveField.copyFrom(b.waves);
+    const sample = (w) => [[0, 0], [110, -70], [-290, 150]].map(([x, z]) => w.heightAt(x, z, 42));
+    assert.deepEqual(sample(waveField), sample(b.waves));
+    waveField.setState(SEA_STATES.calm);
+    assert.deepEqual(b.waves.state, SEA_STATES.moderate);
+    b.setSea(SEA_STATES.calm);
+    assert.deepEqual(sample(waveField), sample(b.waves));
   });
 
   await check('scenario/map builders own the correct sea and projectile collisions follow local time', () => {
@@ -271,7 +285,7 @@ try {
     assert.equal(JSON.stringify({ points: c.points, players: c.players, events: b.events }), before);
     let funds = pl.funds;
     assert.equal(applyCommand(b, 0, { type: 'cancel', point: p.id, index: 0 }, c), 1);
-    assert.equal(pl.funds, funds + SHIP_SPECS.hyeopseon.cost); assert.equal(p.queue.length, 0);
+    assert.equal(pl.funds, funds + c.shipSpec('hyeopseon').cost); assert.equal(p.queue.length, 0);
     funds = pl.funds;
     assert.equal(applyCommand(b, 0, { type: 'demolish', point: p.id, slot: 0 }, c), 1);
     assert.equal(pl.funds, funds + Math.round(BUILDINGS.shipyard.cost * 0.25)); assert.equal(p.buildings[0], null);

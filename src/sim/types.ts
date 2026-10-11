@@ -127,6 +127,8 @@ export type Ship = {
   throttle: number;
   rudder: number;
   hull: number;
+  /** Competitive hull breaches and damaged machinery. Historical ships retain the original damage rules. */
+  damageState?: { flooding: number; propulsion: number; steering: number };
   /** Total crew, always the sum of roles. */
   crew: number;
   roles: CrewCounts;
@@ -135,12 +137,18 @@ export type Ship = {
   burn: number;
   morale: number;
   order: Order;
+  /** Waiting move orders, executed by the authoritative battle after the current destination. */
+  orderQueue?: Order[];
+  /** Own-ship queue size received by an online client; routes remain on the server. */
+  remoteQueueCount?: number;
   targetId: number;
   guns: GunState[];
   musketReload: number;
   grappledWith: number;
   grappleTime: number;
   alive: boolean;
+  /** Online observation, distinct from whether the last observed ship was alive. Undefined in local simulation. */
+  observed?: boolean;
   sinking: number;
   sinkRoll: number;
   sinkPitch: number;

@@ -65,10 +65,14 @@ async function check(name, test) {
 }
 
 try {
-  const { Engine, RtsCamera, Input, PerspectiveCamera: BattleCamera } = await bundle('engine', `
+  const { Engine, RtsCamera, Input, Director, Munitions, pointVisible, Battle: SimBattle, PerspectiveCamera: BattleCamera } = await bundle('engine', `
     export { Engine } from './src/game/Engine.ts';
     export { RtsCamera } from './src/camera/RtsCamera.ts';
     export { Input } from './src/game/Input.ts';
+    export { Battle } from './src/sim/battle.ts';
+    export { Director } from './src/game/Director.ts';
+    export { Munitions } from './src/fx/Projectiles.ts';
+    export { pointVisible } from './src/sim/visibility.ts';
     export { PerspectiveCamera } from 'three/webgpu';`, {
     'render/sky.ts': `export const SKY_PRESETS = Object.fromEntries(['afternoon','day','sunset','overcast','night'].map(name => [name,{name,night:0}]));
       export const loadSky = (...args) => globalThis.__renderSky(...args);`,
@@ -180,6 +184,101 @@ try {
     engine.update(0.1);
     assert.ok(received.fx > 0, 'residual effects must keep advancing after a result');
     assert.equal(reports, 1, 'a draw with no winner still produces the end report');
+  });
+
+  await check('hidden local events are consumed every frame and never replay after scouting', () => {
+    const battle = new SimBattle(99, 'competitive-v1');
+    battle.land = () => -100;
+    battle.addShip('panokseon', 0, 0, 0, 'Own', null);
+    const enemy = battle.addShip('atakebune', 3000, 0, 0, 'Hidden', null);
+    let effects = 0;
+    const seen = (events) => { effects += events.length; };
+    const engine = Object.assign(base(), {
+      battle, conquest: null, pageHidden: false, fpsFrames: 0, fpsTime: 0, speed: 1, paused: true,
+      fastForward: false, accumulator: 0, publishTimer: 10, minimapTimer: 10,
+      director: { timeFactor: () => 1, update() {}, feed: seen }, updateFastForward() {}, cutawayIds: () => [],
+      views: { cutaway: new Map(), sync() {} }, stampWakes() {},
+      rts: { followId: 0, update() {} }, ocean: { setTide() {}, update() {} },
+      sound: { setRoar() {}, tick() {}, update: seen }, fx: { update() {}, handle: seen },
+      crew: { update() {}, handle: seen }, input: { onEvents: seen }, lanterns: { update() {} },
+      crewView: () => ({}), updateSun() {}, skyName: 'afternoon', renderer: { domElement: {} },
+    });
+    for (let frame = 0; frame < 3; frame++) {
+      battle.events.push({ type: 'gun', ship: enemy.id });
+      engine.update(0.1);
+      assert.deepEqual(battle.events, [], 'discarded events cannot accumulate');
+    }
+    battle.addShip('hyeopseon', 2900, 0, 0, 'Scout', null);
+    battle.time += 0.25;
+    engine.update(0.1);
+    assert.equal(effects, 0, 'revealing a hull cannot replay its previous hidden volleys');
+    battle.events.push({ type: 'gun', ship: enemy.id });
+    engine.update(0.1);
+    assert.equal(effects, 5, 'new observed events reach the five consumers');
+  });
+
+  await check('cinematic camera and approach detection do not follow unseen hulls', () => {
+    const battle = new SimBattle(4, 'competitive-v1');
+    battle.land = () => -100;
+    const own = battle.addShip('panokseon', 0, 0, 0, 'Own', null);
+    const enemy = battle.addShip('atakebune', 3000, 800, 0, 'Hidden', null);
+    enemy.observed = false; enemy.lastHit = 999; own.targetId = enemy.id;
+    const camera = new BattleCamera();
+    const rts = new RtsCamera(camera); rts.cinematic = true;
+    const host = { battle, team: 'joseon', rts, camera, remote: null, paused: false, fastForward: false, speed: 1, fx: { liftOf: () => 0 } };
+    const director = new Director(host);
+    director.update(0.1);
+    assert.equal(director.shot.ship, own.id);
+    assert.equal(rts.goal.tx, own.x); assert.equal(rts.goal.tz, own.z);
+    enemy.observed = true; director.shot = null;
+    director.update(0.1);
+    assert.equal(director.shot.ship, enemy.id);
+    enemy.observed = false; enemy.x = 3500; enemy.z = 1400;
+    director.update(0.1);
+    assert.equal(director.shot.ship, own.id, 'an active shot ends immediately when its subject is lost');
+    assert.equal(rts.goal.tx, own.x); assert.equal(rts.goal.tz, own.z);
+    const engine = Object.assign(base(), { battle });
+    assert.equal(engine.inContact(), false);
+    battle.projectiles.push({ team: 'japan', x: 3000, z: 800 });
+    assert.equal(engine.inContact(), false, 'a hidden shot cannot end approach fast-forward');
+    battle.projectiles[0].x = 100; battle.projectiles[0].z = 0;
+    assert.equal(engine.inContact(), true);
+  });
+
+  await check('cosmetic rockets stop drawing and landing outside sight without a stale smoke bridge', () => {
+    const battle = new SimBattle(4, 'competitive-v1');
+    battle.land = () => -100;
+    const scout = battle.addShip('hyeopseon', 600, 0, 0, 'Scout', null);
+    battle.addShip('panokseon', 5000, 0, 0, 'Reserve', null);
+    const layer = { emit() {} };
+    const mun = new Munitions({ team: 'joseon', states: new Map() }, layer, layer, layer, 1);
+    let rockets = 0, landings = 0, trails = 0;
+    mun.rocket = () => { rockets++; }; mun.launch = () => {};
+    mun.onLand = () => { landings++; };
+    const shot = { id: 1, x: 800, y: 4, z: 0, vx: -100, vy: 0, vz: 0, team: 'japan', shooter: 0, damage: 0, crewDamage: 0, ammo: 'fire', gun: 'cheonja', fireChance: 0, age: 0, alive: true };
+    const visible = (x, z) => pointVisible(battle, 'joseon', x, z);
+    const fly = (dt, lay = () => { trails++; }) => mun.fly(dt, 600, 20, 0, 450, lay, visible);
+    assert.equal(visible(shot.x, shot.z), true);
+    mun.salvo(shot, 2, 10, battle, 'joseon');
+    assert.equal(mun.rocketsInFlight, 5);
+    scout.alive = false; battle.time += 0.25;
+    fly(1); fly(3);
+    assert.deepEqual([rockets, trails, landings, mun.rocketsInFlight], [0, 0, 0, 0]);
+    scout.alive = true; battle.time += 0.25;
+    mun.salvo(shot, 2, 10, battle, 'joseon');
+    scout.alive = false; battle.time += 0.25;
+    fly(1);
+    scout.alive = true; battle.time += 0.25;
+    fly(0.01, (trail, x, y, z) => {
+      trails++;
+      assert.ok(Math.hypot(trail.x - x, trail.y - y, trail.z - z) < 5, 'hidden time updates the trail origin');
+    });
+    assert.equal(trails, 5);
+    fly(3);
+    assert.equal(landings, 5, 'observed landings retain their effects');
+    const geometries = new Set(), materials = new Set();
+    mun.group.traverse((node) => { if (node.geometry) geometries.add(node.geometry); if (node.material) materials.add(node.material); });
+    for (const item of [...geometries, ...materials]) item.dispose();
   });
 
   await check('dispose during init frees partial resources and prevents installation', async () => {
@@ -326,6 +425,100 @@ try {
     await assert.rejects(terrainModule.Terrain.load({}, quality), (error) => error === workerFailure);
     assert.equal(workers[2].terminated, 1);
     globalThis.__workerFailure = null;
+  });
+  const ships = await bundle('ship-capacity', `
+    export { ShipRenderer, modelKey } from './src/ships/ShipRenderer.ts';
+    export { ShipViews } from './src/ships/ShipViews.ts';
+    export { Battle } from './src/sim/battle.ts';
+    export { BoxGeometry, Box3, MeshStandardMaterial, Texture, Matrix4, Vector3, PerspectiveCamera } from 'three/webgpu';`);
+  const model = () => {
+    const geometry = new ships.BoxGeometry(20, 6, 10);
+    const source = new ships.MeshStandardMaterial({ map: new ships.Texture() });
+    const key = ships.modelKey('kobaya', 0);
+    return { key, geometry, source, assets: { [key]: { key, kind: 'kobaya', variant: 0, bounds: new ships.Box3(), lods: [{ geometry, source }, { geometry, source }] } } };
+  };
+  const gpu = () => {
+    const deleted = [];
+    return { deleted, _attributes: { get: () => ({}), delete(attribute) { deleted.push(attribute); } } };
+  };
+  await check('ship batches grow during a frame without losing submitted poses or shared models', () => {
+    const { key, geometry, source, assets } = model();
+    let geometryDisposals = 0, textureDisposals = 0, sourceDisposals = 0;
+    geometry.addEventListener('dispose', () => geometryDisposals++);
+    source.map.addEventListener('dispose', () => textureDisposals++);
+    source.addEventListener('dispose', () => sourceDisposals++);
+    const renderer = new ships.ShipRenderer(assets, new Map([[key, 2]]));
+    const old = renderer.batches.get(key)[0];
+    const owner = gpu();
+    old.mesh.onAfterRender(owner);
+    let materialDisposals = 0, meshDisposals = 0;
+    old.mesh.material.addEventListener('dispose', () => materialDisposals++);
+    old.mesh.addEventListener('dispose', () => meshDisposals++);
+    const pose = (n) => new ships.Matrix4().makeTranslation(n * 10, n, -n);
+    const submit = (n) => renderer.add(key, 0, pose(n), new ships.Vector3(n, n + 1, n + 2), new ships.Vector3(0, 1, 0), n / 10, n / 20);
+    renderer.begin(); submit(1); submit(2); submit(3); renderer.end();
+    const next = renderer.batches.get(key)[0];
+    assert.notEqual(next.mesh, old.mesh);
+    assert.equal(next.mesh.geometry, geometry);
+    assert.equal(next.count, 3); assert.equal(next.mesh.count, 3);
+    assert.ok(next.mesh.instanceMatrix.count >= 3);
+    for (let n = 1; n <= 3; n++) {
+      const actual = new ships.Matrix4(); next.mesh.getMatrixAt(n - 1, actual);
+      assert.deepEqual(actual.elements, pose(n).elements);
+      assert.deepEqual([...next.a.array.slice((n - 1) * 4, (n - 1) * 4 + 3)], [n, n + 1, n + 2]);
+      assert.ok(Math.abs(next.a.array[(n - 1) * 4 + 3] - n / 10) < 1e-6);
+      assert.ok(Math.abs(next.b.array[(n - 1) * 4 + 3] - n / 20) < 1e-6);
+    }
+    assert.deepEqual(owner.deleted, [old.mesh.instanceMatrix, old.a, old.b]);
+    assert.equal(materialDisposals, 1); assert.equal(meshDisposals, 1);
+    next.mesh.onAfterRender(owner);
+    renderer.dispose(); renderer.dispose();
+    assert.equal(owner.deleted.length, 6, 'each uploaded owned attribute is released once');
+    assert.equal(materialDisposals, 1); assert.equal(meshDisposals, 1);
+    assert.equal(geometryDisposals + textureDisposals + sourceDisposals, 0);
+  });
+  await check('selection rings grow past 256, preserve poses and release only the retired matrix', () => {
+    const { assets } = model();
+    const views = new ships.ShipViews(assets, new ships.Battle(1), { maxLod0: 1, near: 500, mid: 1900, skipLod0: false, baseColorOnly: true });
+    const old = views.ringsOwn, owner = gpu();
+    old.onAfterRender(owner);
+    let meshDisposals = 0, materialDisposals = 0, geometryDisposals = 0;
+    old.addEventListener('dispose', () => meshDisposals++);
+    old.material.addEventListener('dispose', () => materialDisposals++);
+    old.geometry.addEventListener('dispose', () => geometryDisposals++);
+    const pose = new ships.Matrix4().makeTranslation(17, 3, 41);
+    old.setMatrixAt(0, pose); old.count = 1;
+    views.ensureRings(300, 0);
+    const next = views.ringsOwn, actual = new ships.Matrix4(); next.getMatrixAt(0, actual);
+    assert.notEqual(next, old); assert.ok(next.instanceMatrix.count >= 300);
+    assert.deepEqual(actual.elements, pose.elements);
+    assert.equal(next.count, 1); assert.equal(next.geometry, old.geometry); assert.equal(next.material, old.material);
+    assert.equal(views.ringsEnemy.instanceMatrix.count, 256);
+    assert.deepEqual(owner.deleted, [old.instanceMatrix]);
+    assert.equal(meshDisposals, 1); assert.equal(materialDisposals + geometryDisposals, 0);
+    next.onAfterRender(owner);
+    next.material.dispose(); views.releaseRing(next);
+    assert.deepEqual(owner.deleted, [old.instanceMatrix, next.instanceMatrix]);
+    assert.equal(meshDisposals, 1); assert.equal(materialDisposals, 1); assert.equal(geometryDisposals, 0);
+    views.renderer.dispose();
+  });
+  await check('real ship view sync draws 300 same-kind ships and all 300 selection rings', () => {
+    const { key, assets } = model();
+    const battle = new ships.Battle(1592, 'competitive-v1');
+    const squadron = battle.addSquadron('joseon', 'Own', '', '', '', 0);
+    const first = battle.addShip('kobaya', 0, 0, 0, 'Ship 0', squadron);
+    const views = new ships.ShipViews(assets, battle, { maxLod0: 1, near: 500, mid: 1900, skipLod0: false, baseColorOnly: true });
+    for (let i = 1; i < 300; i++) battle.addShip('kobaya', (i % 20 - 10) * 35, (Math.floor(i / 20) - 7) * 35, 0, `Ship ${i}`, squadron);
+    views.selected = new Set(battle.ships.map((s) => s.id));
+    views.selected.add(first.id);
+    const camera = new ships.PerspectiveCamera(60, 16 / 9, 1, 10000);
+    camera.position.set(0, 1500, 1500); camera.lookAt(0, 0, 0); camera.updateMatrixWorld();
+    views.sync(battle, 1 / 30, camera, assets);
+    assert.equal(views.renderer.stats()[key].reduce((n, count) => n + count, 0), 300);
+    assert.equal(views.ringsOwn.count, 300);
+    assert.ok(views.ringsOwn.instanceMatrix.count >= 300);
+    assert.equal(views.states.size, 300);
+    views.renderer.dispose();
   });
   console.log(`render: ${passed} regressions passed (CPU lifecycle/frame fixtures; no GPU)`);
 } finally {

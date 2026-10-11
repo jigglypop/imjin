@@ -1,6 +1,6 @@
 import { SHIP_SPECS } from '../catalog';
 import type { ShipKind } from '../types';
-import { BUILDING_DEFS, BUILDING_ORDER, TUNING, navyName, buildingCost, buildingOf, freeSlots, kindsOf, levelOf, queueSlots, shipDef, yardPrice, GATES } from './economy';
+import { BUILDING_DEFS, BUILDING_ORDER, TUNING, navyName, buildingCost, buildingOf, freeSlots, kindsOf, levelOf, queueSlots, shipDef, yardPrice, recruitRefund, GATES } from './economy';
 import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId, Result, ShipUnit } from './types';
 import { MAX_LEVEL, fail, ok, pairKey } from './types';
 import { allied, atWar, fleetById, findRoute, mintId, note } from './world';
@@ -116,7 +116,7 @@ export function orderRecruit(g: Grand, id: RegionId, kind: ShipKind): Result {
   if (g.factions[owner].gold < price) return fail('은이 부족합니다 ({gold}냥 필요)', { gold: price });
   g.factions[owner].gold -= price;
   const turns = shipDef(kind).turns;
-  r.queue.push({ id: mintId(g, 'q'), kind, left: turns, total: turns });
+  r.queue.push({ id: mintId(g, 'q'), kind, left: turns, total: turns, paidGold: price });
   return ok('{ship} · {turns}턴', { ship: SHIP_SPECS[kind].label, turns });
 }
 
@@ -127,7 +127,7 @@ export function cancelRecruit(g: Grand, id: RegionId, itemId: string): Result {
   const item = r.queue.find((q) => q.id === itemId);
   if (!item || !r.owner) return fail('해당 주문이 없습니다');
   if (item.left !== item.total) return fail('이미 건조가 시작되었습니다');
-  g.factions[r.owner].gold += yardPrice(item.kind, levelOf(r, 'shipyard'));
+  g.factions[r.owner].gold += recruitRefund(g, item, levelOf(r, 'shipyard'));
   r.queue.splice(r.queue.indexOf(item), 1);
   return ok();
 }

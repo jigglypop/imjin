@@ -17,6 +17,7 @@ try {
   if (health.ok !== true || health.protocol !== protocol || (!protocolOnly && health.revision !== revision)) {
     throw new Error(`expected protocol ${protocol} revision ${revision}; received protocol ${health.protocol} revision ${health.revision}`);
   }
+  if (Object.hasOwn(args, 'ranked') && health.rankedReady !== true) throw new Error('ranked persistence is unavailable');
   console.log(`multiplayer health verified: protocol ${protocol}${protocolOnly ? ' (server deployment is not configured)' : `, revision ${revision}`}`);
 } catch (error) {
   console.error(`multiplayer health failed: ${error.message}`);

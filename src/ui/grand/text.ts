@@ -12,12 +12,14 @@ import type { LogEntry, MsgParams } from '../../sim/grand/types';
  * Each template is a translation key; the part after {base} is what the name ends with. The last one is a detachment
  * of a save from before the rename.
  */
-const FLEET_TEMPLATES = ['{base} 신규 함대', '{base} 분견 함대', '{base} 분견대'];
+const FLEET_TEMPLATES = ['{base} 신규 함대', '{base} 분견 함대', '{base} 분견대', '{base} 출동 함대'];
 
 /** A name from the campaign's data (place, fleet, ship, officer, work) in the current language. */
 export function tName(name: string): string {
   const numbered = /^(.+) (\d+)호$/.exec(name);
   if (numbered) return t('{kind} {n}호', { kind: tName(numbered[1]!), n: numbered[2]! });
+  const fleet = /^(.+) (\d+)함대$/.exec(name);
+  if (fleet) return t('{name} {n}함대', { name: tName(fleet[1]!), n: fleet[2]! });
   for (const template of FLEET_TEMPLATES) {
     const ending = template.slice('{base}'.length);
     if (name.endsWith(ending) && name.length > ending.length) return t(template, { base: tName(name.slice(0, -ending.length)) });

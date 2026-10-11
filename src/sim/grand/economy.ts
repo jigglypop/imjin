@@ -1,12 +1,13 @@
 import { GUN_SPECS, SHIP_SPECS } from '../catalog';
+import { COMPETITIVE_FACTIONS, combatStats, shipSpec } from '../competitive';
 import type { ShipKind, ShipSpec } from '../types';
 import { REGIONS, slotsOf } from './regions';
-import type { BuildingKind, GBuilding, Grand, GrandFaction, RegionId, RegionState, ShipUnit } from './types';
+import type { BuildingKind, GBuilding, Grand, GrandFaction, QueueItem, RegionId, RegionState, ShipUnit } from './types';
 import { MAX_LEVEL } from './types';
 
 /**
  * Every number that turns the battle catalog into campaign money and time lives in TUNING. The ship stats themselves
- * (price, build seconds, hull, crew, guns) are read from SHIP_SPECS, so when the battle workstream retunes a ship
+ * (price, build seconds, hull, crew, guns) are read from the competitive profile, so when it retunes a ship
  * the campaign follows; this object is the only place the campaign adds its own opinion.
  */
 export const TUNING = {
@@ -40,26 +41,26 @@ export const TUNING = {
   /** Points in the end-of-war score. */
   score: { region: 10, strength: 1 / 250, gold: 1 / 500, credit: 1 / 250, captureCredit: 600 },
   /** Soft cap on ships in a fleet (merge limit); regions may hold any number. */
-  fleetCap: 24,
+  fleetCap: Infinity,
   /** Turns a fleet that fought stays in port before it can sail again. */
   restAfterBattle: 2,
   /** Turns at the start in which the computer navies do not attack. */
   openingPeace: 1,
   /** Free squadrons that arrive on a schedule: the war's reinforcements. */
   reinforce: {
-    joseon: { first: 8, every: 8, at: 'yeosu', ships: { hyeopseon: 4 } },
-    japan: { first: 6, every: 6, at: 'nagoya', ships: { atakebune: 3, sekibune: 4, kobaya: 4 } },
-    ming: { first: 8, every: 10, at: 'liaodong', ships: { mingship: 3, mingsmall: 4 } },
+    joseon: { first: 8, every: 8, at: 'yeosu', ships: { panokseon: 1, hyeopseon: 2 } },
+    japan: { first: 8, every: 8, at: 'nagoya', ships: { atakebune: 1, sekibune: 3, kobaya: 2 } },
+    ming: { first: 8, every: 8, at: 'liaodong', ships: { mingship: 1, mingsmall: 2 } },
   } as Record<GrandFaction, { first: number; every: number; at: RegionId; ships: Partial<Record<ShipKind, number>> }>,
-  /** Opening fleet size by navy, as a multiple of the table in regions.ts. The computer's fleets gather into one body since small groups no longer swap ports, which favoured the invaders; the Japanese start smaller to keep the three navies level. */
-  startFleet: { joseon: 1, japan: 0.8, ming: 1 } as Record<GrandFaction, number>,
+  /** Opening fleet scaling compensates for the expedition's travel and Japan facing two allied navies. */
+  startFleet: { joseon: 1.04, japan: 0.69, ming: 1.42 } as Record<GrandFaction, number>,
   /** Turn the first turtle ship can be built. */
   geobukseonTurn: 3,
   faction: {
-    joseon: { income: 1.2, cost: 1, power: 1, label: '조선' },
-    // Cheap hulls in numbers, strong boarders. The catalog measures a Japanese ship at about nine tenths of a Joseon one per price point.
-    japan: { income: 1, cost: 0.85, power: 0.94, label: '일본' },
-    ming: { income: 1.2, cost: 1, power: 1.05, label: '명' },
+    joseon: { ...COMPETITIVE_FACTIONS.joseon, label: '조선' },
+    // Japan funds two fronts; Ming's two commercial bases must finance its longer expedition to the expanded coast.
+    japan: { ...COMPETITIVE_FACTIONS.japan, income: 1.35, label: '일본' },
+    ming: { ...COMPETITIVE_FACTIONS.ming, income: 1.9, label: '명' },
   } as Record<GrandFaction, { income: number; cost: number; power: number; label: string }>,
 };
 
@@ -108,7 +109,7 @@ export type ShipDef = {
   gold: number;
   /** Turns on the slipway. */
   turns: number;
-  /** Fighting worth, in catalog price points scaled by how well that navy fights per point. */
+  /** Fighting worth derived from hull, weapons and crew, independent of its purchase price. */
   strength: number;
   /** Share of that worth spent in the gun phase of a fight; the rest is melee. */
   ranged: number;
@@ -127,7 +128,8 @@ export function rangedShare(spec: ShipSpec): number {
 }
 
 export function shipDef(kind: ShipKind): ShipDef {
-  const spec = SHIP_SPECS[kind];
+  const spec = shipSpec(kind);
+  const combat = combatStats(kind);
   const f = TUNING.faction[spec.faction];
   return {
     kind,
@@ -135,15 +137,15 @@ export function shipDef(kind: ShipKind): ShipDef {
     label: spec.label,
     gold: Math.max(10, Math.round(spec.cost * TUNING.goldPerCost * f.cost)),
     turns: Math.max(1, Math.ceil(spec.build / TUNING.shipSecondsPerTurn)),
-    strength: spec.cost * f.power,
-    ranged: rangedShare(spec),
+    strength: combat.value * f.power,
+    ranged: Math.max(0.2, Math.min(0.88, combat.ranged / (combat.ranged + combat.melee))),
     boardResist: spec.boardable ? 1 / Math.sqrt(Math.max(0.5, spec.deckDefense)) : 0.25,
   };
 }
 
 /** Ships a navy can build, cheapest first. */
 export const kindsOf = (faction: GrandFaction): ShipKind[] =>
-  (Object.keys(SHIP_SPECS) as ShipKind[]).filter((k) => SHIP_SPECS[k].faction === faction).sort((a, b) => SHIP_SPECS[a].cost - SHIP_SPECS[b].cost);
+  (Object.keys(SHIP_SPECS) as ShipKind[]).filter((k) => shipSpec(k).faction === faction).sort((a, b) => shipSpec(a).cost - shipSpec(b).cost);
 
 /** Ships that need a better shipyard and an unlock. */
 export const GATES: Partial<Record<ShipKind, { yard: number; unlock: boolean }>> = {
@@ -158,6 +160,21 @@ export const shipGold = (kind: ShipKind) => shipDef(kind).gold;
 
 /** Price at a shipyard of the given level (1..3). */
 export const yardPrice = (kind: ShipKind, yardLevel: number) => Math.round(shipGold(kind) * (TUNING.yardDiscount[Math.max(1, yardLevel) - 1] ?? 1));
+
+/** Refund the amount actually paid; pre-profile saves used the original catalog and Japanese yard discount. */
+export function recruitRefund(g: Grand, item: QueueItem, yardLevel: number): number {
+  if (item.paidGold !== undefined) return item.paidGold;
+  if (g.balanceProfile === 'competitive-v1') return yardPrice(item.kind, yardLevel);
+  const spec = SHIP_SPECS[item.kind];
+  const oldGold = Math.round(spec.cost * 0.45 * (spec.faction === 'japan' ? 0.85 : 1));
+  return Math.round(oldGold * ([1, 0.9, 0.8][Math.max(1, yardLevel) - 1] ?? 1));
+}
+
+/** Adopt the new rules without creating or erasing gold already committed to a saved build queue. */
+export function migrateGrandBalance(g: Grand): void {
+  for (const r of Object.values(g.regions)) for (const item of r.queue) item.paidGold ??= recruitRefund(g, item, levelOf(r, 'shipyard'));
+  g.balanceProfile = 'competitive-v1';
+}
 
 /** A ship's present fighting worth: strength scaled by hull and crew like the computer strategist's power(). */
 export function unitStrength(u: ShipUnit): number {
@@ -224,7 +241,10 @@ export function repairRates(r: RegionState): { hull: number; crew: number; suppl
   };
 }
 
-export const garrisonCap = (id: RegionId, r: RegionState) => Math.floor(TUNING.garrison.base + TUNING.garrison.perValue * REGIONS[id].value + TUNING.garrison.perCamp * levelOf(r, 'camp'));
+export const garrisonPowerBudget = (id: RegionId, r: RegionState) => Math.floor(TUNING.garrison.base + TUNING.garrison.perValue * REGIONS[id].value + TUNING.garrison.perCamp * levelOf(r, 'camp')) * shipDef(GARRISON_KIND.joseon).strength;
+export const garrisonCap = (id: RegionId, r: RegionState) => r.garrisonRule === 'equal-power-v1' && r.owner
+  ? Math.max(1, Math.round(garrisonPowerBudget(id, r) / shipDef(GARRISON_KIND[r.owner]).strength))
+  : Math.floor(TUNING.garrison.base + TUNING.garrison.perValue * REGIONS[id].value + TUNING.garrison.perCamp * levelOf(r, 'camp'));
 
 /** Ships built at once, by shipyard level. */
 export const queueSlots = (r: RegionState) => levelOf(r, 'shipyard');

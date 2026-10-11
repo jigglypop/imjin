@@ -15,6 +15,8 @@ import { CREW_RANGE } from './crewTypes';
 import type { WakeMap } from '../ocean/WakeMap';
 import { LIGHT_COUNT, pointLights } from '../render/lights';
 import type { ParticleQuality } from '../game/quality';
+import { shipObserved } from '../sim/observation';
+import { pointVisible } from '../sim/visibility';
 
 const OARS: Record<string, number> = { panokseon: 8, geobukseon: 8, atakebune: 13, sekibune: 11 };
 const MASTS: Record<string, number> = { panokseon: 2, geobukseon: 1, hyeopseon: 1, atakebune: 2, sekibune: 1, kobaya: 1, mingship: 3, mingsmall: 1 };
@@ -717,7 +719,7 @@ export class Effects {
     }
     const detail = dt < 0.25;
     for (const ship of battle.ships) {
-      if (!ship.alive || ship.sinking > 0 || ship.struck) continue;
+      if (!ship.alive || ship.sinking > 0 || ship.struck || !shipObserved(battle, this.views.team, ship)) continue;
       const speed = Math.abs(ship.speed);
       const L = ship.spec.length;
       let phase = this.strokes.get(ship.id) ?? Math.random();
@@ -793,7 +795,7 @@ export class Effects {
   private continuous(battle: Battle, dt: number) {
     if (dt > 0) this.rowing(battle, dt);
     for (const ship of battle.ships) {
-      if (!ship.alive) continue;
+      if (!ship.alive || !shipObserved(battle, this.views.team, ship)) continue;
       if (ship.spec.kind === 'geobukseon' && ship.sinking === 0) this.dragonSmoke(ship, dt);
       if (ship.sinking > 0) this.sinking(ship, dt);
       const burning = ship.fire > 0.02 || (ship.sinking > 0 && ship.sinking < 0.85);
@@ -884,7 +886,7 @@ export class Effects {
 
   /** Learns what the sim will do with a shell the first time it is seen: when it ends, and so how high its drawn arc peaks. */
   private planFlight(p: Projectile, battle: Battle, f: Flight, blend: number) {
-    const end = p.age + timeToImpact(p, battle, this.seaAt, this.shipRate);
+    const end = p.age + timeToImpact(p, battle, this.seaAt, this.shipRate, this.views.team);
     const peak = arcPeak(p.ammo, Math.hypot(p.vx, p.vz) * end);
     // Ships turn, drift and are steered after the plan was made: plan again as the shell flies and ease toward the new answer.
     f.end += (end - f.end) * blend;
@@ -917,6 +919,7 @@ export class Effects {
     this.crowd = crowd;
     this.mun.begin();
     for (const p of shells) {
+      if (p.team !== this.views.team && !pointVisible(battle, this.views.team, p.x, p.z)) continue;
       let f = this.flights.get(p.id);
       let fresh = false;
       if (!f) {
@@ -959,7 +962,7 @@ export class Effects {
         f.z = pz;
         if (kind === Shell.Rocket) {
           this.mun.launch(px, py, pz, ux, uy, uz, 1.3);
-          if (f.ghost < 0) this.mun.salvo(p, f.end - p.age, f.peak, battle);
+          if (f.ghost < 0) this.mun.salvo(p, f.end - p.age, f.peak, battle, this.views.team);
         } else if (kind === Shell.Lance) this.mun.launch(px, py, pz, ux, uy, uz, 0.7);
       }
       const d = Math.max(1, this.camPos.distanceTo(this.p.set(px, py, pz)));
@@ -991,7 +994,7 @@ export class Effects {
           this.mun.ball(px, py, pz, ux, uy, uz, sp, ppm, weight);
       }
     }
-    this.mun.fly(dt, this.camPos.x, this.camPos.y, this.camPos.z, focal, this.layRocket);
+    this.mun.fly(dt, this.camPos.x, this.camPos.y, this.camPos.z, focal, this.layRocket, (x, z) => pointVisible(battle, this.views.team, x, z));
     this.mun.stuck(dt, battle, this.camPos.x, this.camPos.y, this.camPos.z, focal);
     this.mun.end();
     if (this.flights.size > shells.length) {

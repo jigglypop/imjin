@@ -25,11 +25,12 @@ class Player {
     this.last = {};
     this.msgs = [];
     this.token = null;
+    this.account = undefined;
     this.waiters = [];
   }
-  connect(token) {
+  connect(token, account = this.account) {
     this.ws = new WebSocket(url);
-    this.ws.on('open', () => this.send({ t: 'hello', name: this.name, v: PROTOCOL, token }));
+    this.ws.on('open', () => this.send({ t: 'hello', name: this.name, v: PROTOCOL, token, account }));
     this.ws.on('message', (d, bin) => {
       if (bin) {
         this.snaps += 1;
@@ -39,7 +40,7 @@ class Player {
       const m = JSON.parse(String(d));
       this.msgs.push(m);
       this.last[m.t] = m;
-      if (m.t === 'welcome') this.token = m.token;
+      if (m.t === 'welcome') { this.token = m.token; this.account = m.account?.token; }
       this.waiters = this.waiters.filter((w) => !w(m));
     });
     return new Promise((resolve) => this.once((m) => m.t === 'welcome' && resolve(m)));
@@ -102,7 +103,7 @@ async function reconnect({ b, room }) {
   b.ws.terminate();
   await sleep(500);
   const again = new Player(b.name);
-  const welcome = await again.connect(token);
+  const welcome = await again.connect(token, b.account);
   check(welcome.resumed === true && welcome.id === b.last.welcome.id, 'reconnect: session resumed');
   const start = await again.once((m) => m.t === 'start', 5000);
   again.send({ t: 'loaded' });

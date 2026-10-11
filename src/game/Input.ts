@@ -5,10 +5,14 @@ import { BUILDINGS } from '../sim/conquest';
 import { setSelectionBox, pushToast, useUi } from '../state/store';
 import { t } from '../i18n';
 import { tName, tShips } from '../ui/battleNames';
+import { shipObserved } from '../sim/observation';
+import { pointVisible } from '../sim/visibility';
+import type { FormationKind } from '../sim/commands';
+import { COASTAL_TACTICS } from '../sim/coastal-tactics';
 
 const DRAG_THRESHOLD = 6;
 
-export const FORMATION_NAMES = { crane: '학익진', line: '일자진', column: '장사진', wedge: '첨자진' } as const;
+export const FORMATION_NAMES = { crane: '학익진', line: '일자진', column: '장사진', wedge: '첨자진', 'yeosu-wings': COASTAL_TACTICS['yeosu-wings'].label, 'mokpo-depth': COASTAL_TACTICS['mokpo-depth'].label } as const;
 export const AMMO_NAMES: Record<AmmoMode, string> = { auto: '기본탄', hull: '대장군전·철환 (선체 파괴)', crew: '조란환 (승조원 공격)', fire: '화전 (불화살)' };
 export const STANCE_NAMES: Record<Stance, string> = { auto: '자유교전', standoff: '원거리 포격 · 거리를 유지합니다', close: '근접 포격 · 바짝 붙어 쏩니다', ram: '들이받기 · 적 함선에 부딪칩니다', board: '백병전 돌입 · 적 함선에 올라탑니다' };
 
@@ -24,6 +28,12 @@ export class Input {
   private readonly screen = new Vector2();
   private lastClickTime = 0;
   private lastClickId = 0;
+  private groupBattle: Engine['battle'] | null = null;
+  private readonly groups = Array.from({ length: 8 }, () => ({ name: '', ids: [] as number[] }));
+  private lastGroup = -1;
+  private lastGroupTime = 0;
+  queueMoves = false;
+  private pendingRally = -1;
 
   constructor(private readonly engine: Engine) {}
 
@@ -37,6 +47,7 @@ export class Input {
   }
 
   detach() {
+    this.pendingRally = -1;
     const dom = this.dom;
     if (!dom) return;
     dom.removeEventListener('pointerdown', this.onDown);
@@ -65,7 +76,7 @@ export class Input {
     let best: Ship | undefined;
     let bestT = Infinity;
     for (const s of this.engine.battle.ships) {
-      if (!s.alive || s.sinking > 0.5) continue;
+      if (!s.alive || s.sinking > 0.5 || !shipObserved(this.engine.battle, this.engine.team, s)) continue;
       const c = Math.cos(s.heading);
       const n = Math.sin(s.heading);
       const ox = o.x - s.x;
@@ -132,7 +143,7 @@ export class Input {
       this.downX = e.clientX;
       this.downY = e.clientY;
     } else if (e.button === 2) {
-      this.command(e.clientX, e.clientY, e.shiftKey);
+      this.command(e.clientX, e.clientY, e.shiftKey || this.queueMoves);
     }
   };
 
@@ -177,6 +188,7 @@ export class Input {
    * Without a selection the tap only reminds the player to select a ship.
    */
   tap(clientX: number, clientY: number) {
+    if (this.resolveRally(clientX, clientY)) return;
     const ship = this.pickShip(clientX, clientY);
     if (this.engine.isOwn(ship)) {
       const now = performance.now();
@@ -195,13 +207,118 @@ export class Input {
       this.need([]);
       return;
     }
-    this.command(clientX, clientY, false);
+    this.command(clientX, clientY, this.queueMoves);
   }
 
   clearSelection() {
     this.engine.views.selected.clear();
     this.engine.rts.followId = 0;
     this.engine.publish(true);
+  }
+
+  /** Groups belong to this battle; changing scenarios must never reuse another fleet's ship ids. */
+  getGroups() {
+    if (this.groupBattle !== this.engine.battle) {
+      this.groupBattle = this.engine.battle;
+      for (const group of this.groups) { group.name = ''; group.ids = []; }
+      this.lastGroup = -1;
+      this.queueMoves = false;
+      this.pendingRally = -1;
+    }
+    const selected = this.selectedOwn();
+    return this.groups.map((group, index) => {
+      group.ids = group.ids.filter((id) => this.engine.isOwn(this.engine.battle.get(id)));
+      return { index, name: group.name || t('부대 {n}', { n: index + 1 }), count: group.ids.length, selected: group.ids.length > 0 && selected.length === group.ids.length && group.ids.every((id) => selected.includes(id)) };
+    });
+  }
+
+  assignGroup(index: number, additive = false) {
+    this.getGroups();
+    const group = this.groups[index];
+    const ids = this.selectedOwn();
+    if (!group || !this.need(ids)) return;
+    group.ids = additive ? [...new Set([...group.ids, ...ids])] : ids;
+    pushToast(t('부대 {n} 지정 · {ships}', { n: index + 1, ships: tShips(group.ids.length) }));
+    this.engine.publish(true);
+  }
+
+  renameGroup(index: number, name: string) {
+    this.getGroups();
+    const group = this.groups[index];
+    if (!group) return;
+    group.name = name.replace(/\s+/g, ' ').trim().slice(0, 16);
+    this.engine.publish(true);
+  }
+
+  selectGroup(index: number, focus = false) {
+    this.getGroups();
+    const group = this.groups[index];
+    if (!group?.ids.length) return;
+    const now = performance.now();
+    focus ||= this.lastGroup === index && now - this.lastGroupTime < 350;
+    this.lastGroup = index;
+    this.lastGroupTime = now;
+    this.engine.views.selected.clear();
+    for (const id of group.ids) this.engine.views.selected.add(id);
+    this.engine.rts.followId = 0;
+    if (focus) {
+      const ships = group.ids.map((id) => this.engine.battle.get(id)!);
+      const x = ships.reduce((sum, s) => sum + s.x, 0) / ships.length;
+      const z = ships.reduce((sum, s) => sum + s.z, 0) / ships.length;
+      const spread = Math.max(...ships.map((s) => Math.hypot(s.x - x, s.z - z)));
+      this.engine.rts.goal.tx = x;
+      this.engine.rts.goal.tz = z;
+      this.engine.rts.goal.distance = Math.min(this.engine.rts.goal.distance, Math.max(240, spread * 2.4));
+      this.engine.rts.cinematic = false;
+    }
+    this.engine.publish(true);
+  }
+
+  selectAll() {
+    this.engine.views.selected.clear();
+    for (const s of this.ownShips()) this.engine.views.selected.add(s.id);
+    this.engine.publish(true);
+  }
+
+  queuedWaypoints() {
+    return Math.max(0, ...this.selectedOwn().map((id) => {
+      const s = this.engine.battle.get(id)!;
+      return this.engine.remote ? s.remoteQueueCount ?? 0 : s.orderQueue?.length ?? 0;
+    }));
+  }
+
+  toggleQueueMode() {
+    this.queueMoves = !this.queueMoves;
+    this.engine.publish(true);
+  }
+
+  beginRally(point: number) {
+    this.getGroups();
+    const p = this.engine.conquest?.points[point];
+    if (!Number.isInteger(point) || !p || p.owner !== this.engine.owner) return false;
+    this.pendingRally = point;
+    pushToast(t('바다를 우클릭하거나 탭해 집결 지점을 지정하세요'));
+    this.engine.publish(true);
+    return true;
+  }
+
+  private resolveRally(clientX: number, clientY: number) {
+    this.getGroups();
+    if (this.pendingRally < 0) return false;
+    const point = this.pendingRally;
+    const owned = this.engine.conquest?.points[point]?.owner === this.engine.owner;
+    if (!owned) { this.pendingRally = -1; return true; }
+    const p = this.waterPoint(clientX, clientY);
+    if (!p) return true;
+    if (this.engine.battle.land(p.x, p.z) >= -2) {
+      pushToast(t('집결 지점은 바다에 지정하세요'));
+      return true;
+    }
+    this.engine.issue({ type: 'rally', point, x: p.x, z: p.z });
+    this.pendingRally = -1;
+    pushToast(t('집결 지점을 지정했습니다'));
+    this.engine.publish(true);
+    return true;
   }
 
   private onUp = (e: PointerEvent) => {
@@ -240,6 +357,7 @@ export class Input {
   }
 
   private command(clientX: number, clientY: number, queue: boolean) {
+    if (this.resolveRally(clientX, clientY)) return;
     const ids = this.selectedOwn();
     if (!ids.length) return;
     const b = this.engine.battle;
@@ -257,8 +375,7 @@ export class Input {
     }
     const p = this.waterPoint(clientX, clientY);
     if (!p) return;
-    void queue;
-    this.moveSelected(p.x, p.z);
+    this.moveSelected(p.x, p.z, queue);
   }
 
   /** An enemy shore work under the cursor, picked on screen within a few dozen pixels. */
@@ -270,7 +387,7 @@ export class Input {
     let bestD = 34;
     for (const p of c.points) {
       const team = c.teamOfPoint(p);
-      if (!team || team === this.engine.team) continue;
+      if (!team || team === this.engine.team || !pointVisible(this.engine.battle, this.engine.team, p.x, p.z)) continue;
       p.buildings.forEach((bd, i) => {
         if (!bd) return;
         const spot = p.slots[i]!;
@@ -286,7 +403,7 @@ export class Input {
     return best as { x: number; y: number; z: number; name: string } | null;
   }
 
-  moveSelected(tx: number, tz: number) {
+  moveSelected(tx: number, tz: number, queue = this.queueMoves) {
     const ids = this.selectedOwn();
     if (!ids.length) return;
     const b = this.engine.battle;
@@ -317,11 +434,13 @@ export class Input {
       const off = (col - (inRow - 1) / 2) * 48;
       return { id, order: { type: 'move' as const, x: tx + px * off - fx * row * 60, z: tz + pz * off - fz * row * 60 } };
     });
-    this.engine.issue({ type: 'orders', list });
+    this.engine.issue({ type: 'orders', list, queue });
+    if (queue) pushToast(t('이동 경로 예약 · 최대 16곳'));
+    this.engine.publish(true);
     this.engine.fx.spray.emit({ x: tx, y: 0.5, z: tz, vy: 2, life: 0.6, size0: 3, size1: 9, alpha: 0.5, r: 1, g: 0.85, b: 0.4, lift: -3 });
   }
 
-  formation(kind: 'crane' | 'line' | 'column' | 'wedge') {
+  formation(kind: FormationKind) {
     const b = this.engine.battle;
     let ids = this.selectedOwn();
     if (!ids.length) ids = this.ownShips().filter((s) => s.spec.kind !== 'geobukseon').map((s) => s.id);
@@ -329,12 +448,18 @@ export class Input {
     let ez = 0;
     let n = 0;
     for (const s of b.ships) {
-      if (s.team !== this.engine.enemyTeam || !b.isActive(s)) continue;
+      if (s.team !== this.engine.enemyTeam || !b.isActive(s) || !shipObserved(b, this.engine.team, s)) continue;
       ex += s.x;
       ez += s.z;
       n += 1;
     }
-    if (!n) return;
+    if (!n) {
+      const ships = ids.map((id) => b.get(id)).filter((s): s is Ship => !!s);
+      if (!ships.length) return;
+      ex = ships.reduce((v, s) => v + s.x + Math.cos(s.heading) * 1000, 0);
+      ez = ships.reduce((v, s) => v + s.z + Math.sin(s.heading) * 1000, 0);
+      n = ships.length;
+    }
     this.engine.issue({ type: 'formation', ids, kind, cx: ex / n, cz: ez / n });
     this.engine.sound.drums(kind === 'crane' ? 3 : 2);
     pushToast(t('{name|을/를} 펼칩니다', { name: t(FORMATION_NAMES[kind]) }));
@@ -407,7 +532,7 @@ export class Input {
     for (const id of ids) {
       const s = b.get(id)!;
       const target = b.get(s.targetId);
-      if (!b.isActive(target)) continue;
+      if (!b.isActive(target) || !shipObserved(b, this.engine.team, target)) continue;
       list.push({ id, order: { type: 'broadside' as const, targetId: target.id, side: b.sideToward(s, target.x, target.z) } });
     }
     this.engine.issue({ type: 'orders', list });
@@ -484,29 +609,27 @@ export class Input {
   }
 
   private onKey = (e: KeyboardEvent) => {
-    if ((e.target as HTMLElement | null)?.tagName === 'INPUT') return;
+    const target = e.target as HTMLElement | null;
+    if (target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName ?? '') || e.repeat) return;
+    const digit = /^Digit([1-8])$/.exec(e.code);
+    if (digit) {
+      e.preventDefault();
+      const index = Number(digit[1]) - 1;
+      if (e.ctrlKey || e.metaKey) this.assignGroup(index);
+      else if (e.altKey) {
+        if (index < 4) this.formation((['crane', 'line', 'column', 'wedge'] as const)[index]!);
+        else if (index < 7) this.setSpeed([1, 0.6, 0.3][index - 4]!);
+      } else if (e.shiftKey) this.assignGroup(index, true);
+      else this.selectGroup(index);
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyA') {
+      e.preventDefault();
+      this.selectAll();
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     switch (e.code) {
-      case 'Digit1':
-        this.formation('crane');
-        break;
-      case 'Digit2':
-        this.formation('line');
-        break;
-      case 'Digit3':
-        this.formation('column');
-        break;
-      case 'Digit4':
-        this.formation('wedge');
-        break;
-      case 'Digit5':
-        this.setSpeed(1);
-        break;
-      case 'Digit6':
-        this.setSpeed(0.6);
-        break;
-      case 'Digit7':
-        this.setSpeed(0.3);
-        break;
       case 'KeyZ':
         this.volley(0);
         break;
@@ -575,6 +698,7 @@ export class Input {
         this.engine.publish(true);
         break;
       case 'Escape':
+        this.pendingRally = -1;
         this.engine.views.selected.clear();
         this.engine.rts.followId = 0;
         this.engine.selectedPoint = -1;

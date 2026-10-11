@@ -1,8 +1,11 @@
 import { SEA_STATES, WaveField, type SeaState } from '../ocean/waves';
-import { GUN_SHOTS, GUN_SPECS, NO_MODS, SHIP_SPECS } from './catalog';
+import { GUN_SHOTS, GUN_SPECS } from './catalog';
+import { combatValue, shipGunSpec, shipMods, shipSpec, type BalanceProfile } from './competitive';
 import { ShipGrid } from './grid';
+import { isShipVisible } from './visibility';
 import { anchorsFor } from '../ships/anchors';
 import type { CurrentField } from './current';
+import { coastalFormationSlots, type CoastalFormationKind } from './coastal-tactics';
 import {
   OWNER_OF,
   TEAMS,
@@ -179,7 +182,7 @@ export class Battle {
   windDrift = 0.15;
   winner: Team | null = null;
   draw = false;
-  readonly waves = new WaveField();
+  readonly waves: WaveField;
   escaped = { joseon: 0, japan: 0 };
   initial = { joseon: 0, japan: 0 };
   /** A computer-led team turns and flees once its share of ships still fighting drops below this. 0 fights to the end. */
@@ -189,6 +192,8 @@ export class Battle {
   /** Balance runs: the computer also leads the human owners' ships. */
   autopilot = false;
   night = false;
+  /** Competitive weather scales every lookout equally; historical sight retains its original rules. */
+  visibilityScale = 1;
   current = { x: 0, z: 0 };
   land: LandSampler = () => -50;
   center = { x: 0, z: 0 };
@@ -204,6 +209,9 @@ export class Battle {
   private grappleLock = new Map<number, { on: number; until: number }>();
   /** Ships holding each boarded ship, by the boarded ship's id, as of the last step. */
   private boarders = new Map<number, number>();
+  /** Visible targets assigned to boarders. Limits crowding before the four-ship grapple limit applies. */
+  private boardingTargets = new Map<number, number>();
+  private boardingSlots = new Map<number, number>();
   private readonly gapA: number[] = [];
   private readonly gapB: number[] = [];
   private readonly grid = new ShipGrid(120);
@@ -223,9 +231,12 @@ export class Battle {
   private fleeSince = new Map<number, number>();
   /** Ship id to the time it lost sight of every enemy. */
   private searchSince = new Map<number, number>();
+  private firingLaneAt = -1;
+  private firingLanes = new Map<string, boolean>();
 
-  constructor(seed = 1592) {
+  constructor(seed = 1592, readonly profile: BalanceProfile = 'historical') {
     this.rand = mulberry32(seed);
+    this.waves = new WaveField(profile === 'historical' ? 1592 : seed ^ 0x51ea1592);
     this.setSea(SEA_STATES.moderate);
   }
 
@@ -243,6 +254,14 @@ export class Battle {
     return this.rand();
   }
 
+  shipSpec(kind: ShipKind) {
+    return shipSpec(kind, this.profile);
+  }
+
+  gunSpec(kind: ShipKind, gun: GunType) {
+    return shipGunSpec(kind, gun, this.profile);
+  }
+
   addSquadron(team: Team, name: string, commander: string, portrait: string, card: string, owner = -1) {
     const sq: Squadron = { id: this.squadrons.length + 1, team, faction: team, owner, name, commander, portrait, card, shipIds: [], leaderId: 0 };
     this.squadrons.push(sq);
@@ -250,7 +269,7 @@ export class Battle {
   }
 
   addShip(kind: ShipKind, x: number, z: number, heading: number, name: string, squadron: Squadron | null, flagship = false, variant = 0, id = 0): Ship {
-    const spec = SHIP_SPECS[kind];
+    const spec = this.shipSpec(kind);
     const guns: GunState[] = [];
     spec.batteries.forEach((b, bi) => {
       for (let i = 0; i < b.count; i += 1) {
@@ -278,6 +297,7 @@ export class Battle {
       throttle: 0.3,
       rudder: 0,
       hull: spec.hull,
+      damageState: this.profile === 'historical' ? undefined : { flooding: 0, propulsion: 0, steering: 0 },
       crew: spec.crew,
       roles: plan.map((p) => p * spec.crew) as CrewCounts,
       plan,
@@ -308,7 +328,7 @@ export class Battle {
       volleyTimer: 0,
       revealed: 0,
       repel: false,
-      mods: { ...NO_MODS },
+      mods: shipMods(kind, this.profile),
       supply: 1,
       campaignId: '',
     };
@@ -351,16 +371,33 @@ export class Battle {
     let v = 0;
     for (const s of this.ships) {
       if (s.team !== team || !this.isActive(s)) continue;
-      v += s.spec.hull * ((s.hull / s.spec.hull) * 0.6 + (s.crew / s.spec.crew) * 0.4);
+      const base = this.profile === 'historical' ? s.spec.hull : combatValue(s.spec.kind, this.profile);
+      v += base * ((s.hull / s.spec.hull) * 0.6 + (s.crew / s.spec.crew) * 0.4);
     }
     return v;
   }
 
-  setOrder(ids: number[], order: Order) {
+  setOrder(ids: number[], order: Order, queue = false) {
+    if (queue && order.type !== 'move') return 0;
+    let changed = 0;
     for (const id of ids) {
       const s = this.byId.get(id);
-      if (this.isActive(s)) s.order = order;
+      if (!this.isActive(s)) continue;
+      if (this.profile !== 'historical' && (order.type === 'attack' || order.type === 'broadside' || order.type === 'follow')) {
+        const target = this.byId.get(order.type === 'follow' ? order.leaderId : order.targetId);
+        if (!target || !isShipVisible(this, s.team, target.id)) continue;
+      }
+      if (queue && order.type === 'move' && s.order.type === 'move') {
+        const pending = s.orderQueue ??= [];
+        if (pending.length >= 16) continue;
+        pending.push({ ...order });
+      } else {
+        s.orderQueue = undefined;
+        s.order = { ...order };
+      }
+      changed += 1;
     }
+    return changed;
   }
 
   removeShips(pred: (s: Ship) => boolean) {
@@ -464,15 +501,18 @@ export class Battle {
     return lock.on === on;
   }
 
-  canSee(target: Ship, d: number) {
+  canSee(target: Ship, d: number, observerTeam?: Team) {
+    if (this.profile !== 'historical' && observerTeam) return isShipVisible(this, observerTeam, target.id);
     if (!this.night) return true;
     const range = target.lights ? 1900 : target.fire > 0.08 ? 1400 : target.revealed > 0 ? 900 : 260;
     return d <= range;
   }
 
-  formation(ids: number[], kind: 'crane' | 'line' | 'column' | 'wedge', cx: number, cz: number) {
+  coastalTactic?: CoastalFormationKind;
+
+  formation(ids: number[], kind: 'crane' | 'line' | 'column' | 'wedge' | CoastalFormationKind, cx: number, cz: number) {
     const ships = ids.map((id) => this.byId.get(id)).filter((s): s is Ship => this.isActive(s));
-    if (!ships.length) return;
+    if (!ships.length) return 0;
     let fx = 0;
     let fz = 0;
     for (const s of ships) {
@@ -483,7 +523,25 @@ export class Battle {
     fz /= ships.length;
     const toFleet = Math.atan2(fz - cz, fx - cx);
     const n = ships.length;
-    if (kind === 'crane') {
+    if (kind === 'yeosu-wings' || kind === 'mokpo-depth') {
+      const slots = coastalFormationSlots(kind, n, { x: fx, z: fz }, toFleet + Math.PI);
+      const placed: { x: number; z: number; r: number }[] = [];
+      const assigned: { s: Ship; x: number; z: number; face: number }[] = [];
+      for (let i = 0; i < n; i++) {
+        const s = ships[i]!, slot = slots[i]!, radius = Math.max(12, s.spec.length * 0.5);
+        const wet = (x: number, z: number) => this.land(x, z) < -2 && this.land(x + radius, z) < -1 && this.land(x - radius, z) < -1 && this.land(x, z + radius) < -1 && this.land(x, z - radius) < -1 && !placed.some((p) => hyp(x - p.x, z - p.z) < radius + p.r + 8);
+        let x = slot.x, z = slot.z, found = wet(x, z);
+        for (let ring = 1; !found && ring <= 100; ring++) for (let k = 0; k < 24; k++) {
+          const a = toFleet + (k / 24) * TAU;
+          const px = slot.x + Math.cos(a) * ring * 60, pz = slot.z + Math.sin(a) * ring * 60;
+          if (!wet(px, pz)) continue;
+          x = px; z = pz; found = true; break;
+        }
+        if (!found) return 0; // Keep the previous complete formation when this terrain cannot seat it.
+        placed.push({ x, z, r: radius }); assigned.push({ s, x, z, face: slot.face });
+      }
+      for (const a of assigned) a.s.order = { type: 'slot', x: a.x, z: a.z, face: a.face };
+    } else if (kind === 'crane') {
       const radius = Math.max(320, n * 32);
       const span = Math.min(2.6, 0.6 + n * 0.06);
       const slots = Array.from({ length: n }, (_, i) => {
@@ -536,6 +594,12 @@ export class Battle {
     this.active.joseon.length = 0;
     this.active.japan.length = 0;
     for (const s of this.ships) if (this.isActive(s)) this.active[s.team].push(s);
+    if (this.profile !== 'historical') {
+      this.boardingTargets.clear();
+      for (const s of this.ships) if (this.isActive(s) && boardsFirst(s) && s.targetId) {
+        this.boardingTargets.set(s.targetId, (this.boardingTargets.get(s.targetId) ?? 0) + 1);
+      }
+    }
     this.grid.rebuild(this.ships);
     this.checkRetreat();
     for (const s of this.ships) {
@@ -662,27 +726,55 @@ export class Battle {
 
   nearestEnemy(s: Ship, preferBoardable = false, within = Infinity) {
     const list = this.active[otherTeam(s.team)];
+    const spreadBoarders = this.profile !== 'historical' && preferBoardable && boardsFirst(s) && this.isAi(s);
+    const lightBoarder = spreadBoarders && s.spec.kind !== 'atakebune';
     let best: Ship | undefined;
     let bestScore = Infinity;
     for (const o of list) {
       const d = hyp(o.x - s.x, o.z - s.z);
-      if (d > within || !(this.lull >= STALL_AI || this.canSee(o, d))) continue;
+      if (d > within || !((this.profile === 'historical' && this.lull >= STALL_AI) || this.canSee(o, d, s.team))) continue;
       let score = d;
       if (preferBoardable && !o.spec.boardable) score += 700;
       if (o.id === s.targetId) score -= 60;
+      // Ming crews concentrate their long-range fire on a wounded hull instead of spreading it across the line.
+      if (this.profile !== 'historical' && s.spec.faction === 'ming') score -= 180 * (1 - o.hull / o.spec.hull);
       // Boarders gang up on a ship that is already held.
       if (boardsFirst(s)) score -= 40 * Math.min(2, this.boarders.get(o.id) ?? 0);
-      if (o.spec.kind === 'hyeopseon') score += 120;
+      if (spreadBoarders) {
+        const assigned = Math.max(0, (this.boardingTargets.get(o.id) ?? 0) - (s.targetId === o.id ? 1 : 0));
+        // Four crews can fight on one deck. Sending the whole navy at its bow jams the approach with friendly hulls.
+        score += assigned * 25 + Math.max(0, assigned - MAX_BOARDERS + 1) * 180;
+      }
+      // Fast small crews hunt escorts and scouts. An isolated boat should not ignore nearby prey to climb a
+      // fully manned gunship's high rail; heavy boarding ships still commit to that gun line.
+      if (lightBoarder) score += clamp(o.crew / Math.max(1, s.crew) - 1, -1, 5) * 100;
+      if (o.spec.kind === 'hyeopseon' && !lightBoarder) score += 120;
       if (score < bestScore) {
         bestScore = score;
         best = o;
       }
+    }
+    if (spreadBoarders && best?.id !== s.targetId) {
+      if (s.targetId) this.boardingTargets.set(s.targetId, Math.max(0, (this.boardingTargets.get(s.targetId) ?? 0) - 1));
+      if (best) this.boardingTargets.set(best.id, (this.boardingTargets.get(best.id) ?? 0) + 1);
+      this.boardingSlots.delete(s.id);
+    }
+    if (spreadBoarders && best && !this.boardingSlots.has(s.id)) {
+      const used = [0, 0, 0, 0];
+      for (const o of this.active[s.team]) if (o !== s && o.targetId === best.id) {
+        const slot = this.boardingSlots.get(o.id); if (slot !== undefined) used[slot]!++;
+      }
+      let slot = 0;
+      for (let i = 1; i < used.length; i++) if (used[i]! < used[slot]!) slot = i;
+      this.boardingSlots.set(s.id, slot);
     }
     return best;
   }
 
   /** The nearest enemy of a ship that has seen none for a while: after dark a fleet hunts by where the enemy last was. */
   private hunted(s: Ship, boardable = false) {
+    // Competitive commanders can search sea coordinates, but a lull never reveals hidden enemy coordinates.
+    if (this.profile !== 'historical') return undefined;
     const since = this.searchSince.get(s.id);
     if (since === undefined) {
       this.searchSince.set(s.id, this.time);
@@ -777,6 +869,7 @@ export class Battle {
       return;
     }
     if (s.grappledWith || this.boarders.has(s.id)) {
+      if (this.profile !== 'historical' && this.isAi(s) && boardsFirst(s)) this.boardingPlan(s, true);
       s.throttle = 0;
       s.rudder = 0;
       this.activity.set(s.id, 'boarding');
@@ -804,7 +897,10 @@ export class Battle {
     if (order.type === 'move') {
       const d = this.steerTo(s, order.x, order.z, 60);
       this.activity.set(s.id, 'moving');
-      if (d < 25) s.order = { type: 'hold' };
+      if (d < 25) {
+        s.order = s.orderQueue?.shift() ?? { type: 'hold' };
+        if (!s.orderQueue?.length) s.orderQueue = undefined;
+      }
       this.avoid(s);
       return;
     }
@@ -826,7 +922,7 @@ export class Battle {
     }
     if (order.type === 'follow') {
       const leader = this.byId.get(order.leaderId);
-      if (!this.isActive(leader)) {
+      if (!this.isActive(leader) || (this.profile !== 'historical' && !this.canSee(leader, hyp(leader.x - s.x, leader.z - s.z), s.team))) {
         s.order = { type: 'hold' };
         return;
       }
@@ -848,8 +944,9 @@ export class Battle {
     }
     if (order.type === 'broadside') {
       const target = this.byId.get(order.targetId);
-      if (!this.isActive(target)) {
+      if (!this.isActive(target) || (this.profile !== 'historical' && !this.canSee(target, hyp(target.x - s.x, target.z - s.z), s.team))) {
         s.order = { type: 'hold' };
+        if (this.profile !== 'historical') s.targetId = 0;
         return;
       }
       s.targetId = target.id;
@@ -858,15 +955,17 @@ export class Battle {
       return;
     }
     if (order.type === 'bombard') {
-      this.presentSide(s, order.x, order.z, this.sideToward(s, order.x, order.z), 280);
+      const range = this.profile === 'historical' ? 280 : Math.max(30, ...s.spec.batteries.map((battery) => this.gunSpec(s.spec.kind, battery.gun).range - 30));
+      this.presentSide(s, order.x, order.z, this.sideToward(s, order.x, order.z), range);
       this.avoid(s);
       return;
     }
     let target: Ship | undefined;
     if (order.type === 'attack') {
       target = this.byId.get(order.targetId);
-      if (!this.isActive(target)) {
+      if (!this.isActive(target) || (this.profile !== 'historical' && !this.canSee(target, hyp(target.x - s.x, target.z - s.z), s.team))) {
         s.order = { type: 'auto' };
+        if (this.profile !== 'historical') s.targetId = 0;
         target = undefined;
       }
     }
@@ -946,7 +1045,7 @@ export class Battle {
       if (o.team === s.team || !this.isActive(o) || !o.spec.boardable || !this.crippled(o)) return;
       if ((this.boarders.get(o.id) ?? 0) >= MAX_BOARDERS) return;
       const d = hyp(o.x - s.x, o.z - s.z);
-      if (d < bestD && this.canSee(o, d) && !this.guarded(o)) {
+      if (d < bestD && this.canSee(o, d, s.team) && !this.guarded(o)) {
         bestD = d;
         best = o;
       }
@@ -955,22 +1054,43 @@ export class Battle {
   }
 
   private thinkGunner(s: Ship, forced: Ship | undefined) {
-    const finish = forced ? undefined : this.finishTarget(s);
+    if (forced && this.profile !== 'historical' && !isShipVisible(this, s.team, forced.id)) forced = undefined;
+    let finish = forced ? undefined : this.finishTarget(s);
     const seen = forced ?? finish ?? this.nearestEnemy(s);
     if (seen) this.searchSince.delete(s.id);
-    const target = seen ?? this.hunted(s);
+    let target = seen ?? this.hunted(s);
     if (!target) {
       s.throttle = 0.12;
       s.rudder = 0;
+      if (this.profile !== 'historical') s.targetId = 0;
       this.activity.set(s.id, 'idle');
       return;
+    }
+    if (this.profile !== 'historical' && !forced && s.spec.kind !== 'geobukseon' && !this.clearFiringLane(s, target)) {
+      // Islands can hide the nearest hull while another enemy is already in an open firing lane.
+      // Keep that gun line instead of abandoning range to chase a target through the island.
+      const range = Math.max(0, ...s.spec.batteries.map((battery) => this.gunSpec(s.spec.kind, battery.gun).range));
+      let best: Ship | undefined, distance = range;
+      for (const foe of this.active[otherTeam(s.team)]) {
+        const d = hyp(foe.x - s.x, foe.z - s.z);
+        if (d < distance && this.canSee(foe, d, s.team) && this.clearFiringLane(s, foe)) { best = foe; distance = d; }
+      }
+      if (best) { target = best; finish = undefined; }
     }
     s.targetId = target.id;
     const dx = target.x - s.x;
     const dz = target.z - s.z;
     const d = hyp(dx, dz);
     const bearing = Math.atan2(dz, dx);
+    if (this.profile !== 'historical' && this.isAi(s) && !this.clearFiringLane(s, target)) {
+      // A mountain between two gun lines is not a target. Move around it before spending a broadside.
+      this.steerTo(s, target.x, target.z, 100, 1);
+      this.activity.set(s.id, 'moving');
+      return;
+    }
     const stance = s.stance;
+    const longRange = this.profile !== 'historical' && s.spec.faction === 'ming';
+    const preferredRange = longRange ? Math.max(380, ...s.spec.batteries.map((battery) => this.gunSpec(s.spec.kind, battery.gun).range - 30)) : 380;
     if (stance === 'board' || stance === 'ram' || finish) {
       const lead = Math.min(3, d / 8);
       this.steerTo(s, target.x + Math.cos(target.heading) * target.speed * lead, target.z + Math.sin(target.heading) * target.speed * lead, stance === 'ram' ? 10 : 14, 1);
@@ -978,7 +1098,7 @@ export class Battle {
       return;
     }
     if (stance === 'standoff' || stance === 'close') {
-      this.broadsideDuel(s, target, d, bearing, stance === 'close' ? 45 : 150, stance === 'close' ? 140 : 380);
+      this.broadsideDuel(s, target, d, bearing, stance === 'close' ? 45 : longRange ? 190 : 150, stance === 'close' ? 140 : preferredRange);
       return;
     }
     if (s.spec.kind === 'geobukseon') {
@@ -1004,7 +1124,7 @@ export class Battle {
       }
       return;
     }
-    this.broadsideDuel(s, target, d, bearing, 150, 380);
+    this.broadsideDuel(s, target, d, bearing, longRange ? 190 : 150, preferredRange);
   }
 
   private broadsideDuel(s: Ship, target: Ship, d: number, bearing: number, minRange: number, maxRange: number) {
@@ -1028,7 +1148,9 @@ export class Battle {
   }
 
   private thinkBoarder(s: Ship, forced: Ship | undefined) {
+    if (forced && this.profile !== 'historical' && !isShipVisible(this, s.team, forced.id)) forced = undefined;
     if (s.stance === 'standoff' || s.stance === 'close') {
+      if (this.profile !== 'historical' && this.isAi(s)) this.setPlan([s.id], [...s.spec.crewPlan] as CrewPlan);
       this.thinkGunner(s, forced);
       return;
     }
@@ -1037,15 +1159,38 @@ export class Battle {
     const target = seen ?? this.hunted(s, true);
     if (!target) {
       s.throttle = 0.2;
+      if (this.profile !== 'historical') s.targetId = 0;
       this.activity.set(s.id, 'idle');
       return;
     }
     s.targetId = target.id;
+    if (this.profile !== 'historical' && this.isAi(s)) this.boardingPlan(s, false);
     const d = hyp(target.x - s.x, target.z - s.z);
-    const lead = Math.min(4, d / Math.max(2, s.spec.maxSpeed));
-    const tx = target.x + Math.cos(target.heading) * target.speed * lead;
-    const tz = target.z + Math.sin(target.heading) * target.speed * lead;
-    if (!target.spec.boardable && d < 120) {
+    const lead = this.profile === 'historical' ? Math.min(4, d / Math.max(2, s.spec.maxSpeed)) : this.interceptLead(s, target);
+    let tx = target.x + Math.cos(target.heading) * target.speed * lead;
+    let tz = target.z + Math.sin(target.heading) * target.speed * lead;
+    if (this.profile !== 'historical' && d > 260 && d < 700) {
+      // Approach both quarters instead of feeding every fast hull into the same bow-on collision.
+      const index = this.squadrons[s.squadronId - 1]?.shipIds.indexOf(s.id) ?? s.id;
+      const wing = (index % 2 ? 1 : -1) * Math.min(160, d * 0.24);
+      const bearing = Math.atan2(target.z - s.z, target.x - s.x);
+      tx += Math.sin(bearing) * wing; tz -= Math.cos(bearing) * wing;
+    }
+    if (this.profile !== 'historical' && this.isAi(s) && target.spec.boardable && d <= 260) {
+      const slot = this.boardingSlots.get(s.id) ?? 0;
+      const along = (slot < 2 ? -1 : 1) * (target.spec.length * 0.5 + s.spec.length * 0.25);
+      const side = (slot % 2 ? -1 : 1) * ((target.spec.beam + s.spec.beam) * 0.5 + 5);
+      // Four grappling crews need four quarters of the hull, not the same point in the middle of its deck.
+      tx += Math.cos(target.heading) * along - Math.sin(target.heading) * side;
+      tz += Math.sin(target.heading) * along + Math.cos(target.heading) * side;
+    }
+    if (!target.spec.boardable && d < (this.profile === 'historical' ? 120 : 210)) {
+      if (this.profile !== 'historical' && s.guns.length) {
+        // A closed turtle deck defeats grapples, not the boarder's cannons. Bring a broadside to bear.
+        const bearing = Math.atan2(target.z - s.z, target.x - s.x);
+        this.broadsideDuel(s, target, d, bearing, 100, 210);
+        return;
+      }
       const away = Math.atan2(s.z - target.z, s.x - target.x);
       this.steerTo(s, target.x + Math.cos(away + 0.9) * 150, target.z + Math.sin(away + 0.9) * 150, 60, 1);
       this.activity.set(s.id, 'evading');
@@ -1054,10 +1199,41 @@ export class Battle {
     this.steerTo(s, tx, tz, 8, 1);
     // The fleet closes at the pace of its big ships, the leaders waiting for the rest, and rushes in together once inside
     // RUSH_RANGE, so the boats do not arrive one at a time into the whole enemy line's fire.
-    if (d > RUSH_RANGE && this.isAi(s)) s.throttle = Math.min(s.throttle, this.fleetPace(s, target, d));
+    const rush = this.profile === 'historical' ? RUSH_RANGE : 650;
+    if (d > rush && this.isAi(s)) s.throttle = Math.min(s.throttle, this.fleetPace(s, target, d));
     // Ease off at the last moment so the grapple holds; the rest of the way is flat out.
-    if (d < 90) s.throttle = Math.min(s.throttle, (GRAPPLE_SPEED.japan - 1 + Math.max(0, target.speed)) / s.spec.maxSpeed);
+    if (d < 90) {
+      // The grapple tests velocity along the attacker's heading. A target moving broadside does not increase
+      // the speed a boarder can safely approach at; using its full speed made fast boats overshoot every grapple.
+      const drift = this.profile === 'historical' ? Math.max(0, target.speed) : target.speed * Math.cos(s.heading - target.heading);
+      const maximum = s.spec.maxSpeed * (this.profile === 'historical' ? 1 : s.mods.speed);
+      s.throttle = Math.min(s.throttle, Math.max(0, GRAPPLE_SPEED.japan - 1 + drift) / maximum);
+    }
     this.activity.set(s.id, d < 200 ? 'charging' : 'moving');
+  }
+
+  /** Computer boarders use the same station presets a player can select: oars on approach, fighters after grappling. */
+  private boardingPlan(s: Ship, boarding: boolean) {
+    const role = boarding ? 3 : 0, base = s.spec.crewPlan;
+    const target = Math.min(0.85, base[role] + 0.2), rest = 1 - base[role];
+    this.setPlan([s.id], base.map((v, i) => i === role ? target : v * (1 - target) / rest) as CrewPlan);
+  }
+
+  /** Lead a visible ship's current course instead of following its stern around an endless pursuit circle. */
+  private interceptLead(s: Ship, target: Ship) {
+    const dx = target.x - s.x, dz = target.z - s.z;
+    const vx = Math.cos(target.heading) * target.speed, vz = Math.sin(target.heading) * target.speed;
+    const condition = s.damageState;
+    const drive = (1 - (condition?.propulsion ?? 0) * 0.55) * (1 - (condition?.flooding ?? 0) * 0.3);
+    const speed = Math.max(0.5, s.spec.maxSpeed * s.mods.speed * s.speedCap * (0.3 + 0.7 * this.rowing(s)) * (1 - s.fire * 0.35) * drive);
+    const a = vx * vx + vz * vz - speed * speed, b = 2 * (dx * vx + dz * vz), c = dx * dx + dz * dz;
+    let time = Infinity;
+    if (Math.abs(a) < 1e-9) { if (b < 0) time = -c / b; }
+    else {
+      const disc = b * b - 4 * a * c;
+      if (disc >= 0) for (const t of [(-b - Math.sqrt(disc)) / (2 * a), (-b + Math.sqrt(disc)) / (2 * a)]) if (t > 0) time = Math.min(time, t);
+    }
+    return Number.isFinite(time) ? Math.min(25, time) : Math.min(4, Math.sqrt(c) / speed);
   }
 
   /** Throttle that keeps a boarding ship level with the other boarders near it on the way to the same enemy. */
@@ -1123,12 +1299,14 @@ export class Battle {
     const crewFactor = 0.3 + 0.7 * this.rowing(s);
     const sinkingFactor = s.sinking > 0 || s.struck ? 0 : 1;
     const anchored = s.order.type === 'anchor' ? 0 : 1;
-    const target = s.throttle * s.speedCap * spec.maxSpeed * s.mods.speed * crewFactor * (1 - s.fire * 0.35) * sinkingFactor * anchored;
+    const condition = this.profile === 'historical' ? undefined : s.damageState;
+    const drive = (1 - (condition?.propulsion ?? 0) * 0.55) * (1 - (condition?.flooding ?? 0) * 0.3);
+    const target = s.throttle * s.speedCap * spec.maxSpeed * s.mods.speed * crewFactor * (1 - s.fire * 0.35) * sinkingFactor * anchored * drive;
     const rate = target > s.speed ? spec.accel : spec.accel * 1.6;
     s.speed += clamp(target - s.speed, -rate * dt, rate * dt);
     if (s.grappledWith || this.boarders.has(s.id)) s.speed *= Math.max(0, 1 - dt * 1.5);
     const steer = 0.4 + 0.6 * Math.min(1, Math.abs(s.speed) / spec.maxSpeed);
-    const desiredTurn = s.rudder * spec.turnRate * s.mods.turn * steer * Math.min(1, crewFactor) * sinkingFactor * anchored;
+    const desiredTurn = s.rudder * spec.turnRate * s.mods.turn * steer * Math.min(1, crewFactor) * sinkingFactor * anchored * (1 - (condition?.steering ?? 0) * 0.7);
     s.turn += (desiredTurn - s.turn) * Math.min(1, dt * 1.4);
     s.heading = wrapAngle(s.heading + s.turn * dt);
     const drift = anchored ? this.windDrift : 0;
@@ -1225,14 +1403,21 @@ export class Battle {
         const vbx = Math.cos(b.heading) * b.speed;
         const vbz = Math.sin(b.heading) * b.speed;
         const closing = (vax - vbx) * nx + (vaz - vbz) * nz;
-        if (closing > 1.2 && a.team !== b.team && this.time - a.lastHit > 0.5) {
+        const ramHit = this.profile === 'historical' ? a.lastHit : Math.max(a.lastHit, b.lastHit);
+        if (closing > 1.2 && a.team !== b.team && this.time - ramHit > 0.5) {
           const aHits = Math.max(0, vax * nx + vaz * nz);
           const bHits = Math.max(0, -(vbx * nx + vbz * nz));
           const toB = aHits * a.spec.ramPower * 5 * (1 - b.spec.armor);
           const toA = bHits * b.spec.ramPower * 5 * (1 - a.spec.armor);
-          this.damage(b, toB + closing * 1.5, a);
-          this.damage(a, toA + closing * (a.spec.kind === 'geobukseon' ? 0.3 : 1.2), b);
+          const bClosing = this.profile === 'historical' ? 1.5 : b.spec.kind === 'geobukseon' ? 0.3 : 1.2;
+          const damageB = toB + closing * bClosing;
+          const damageA = toA + closing * (a.spec.kind === 'geobukseon' ? 0.3 : 1.2);
+          this.damage(b, damageB, a);
+          this.damage(a, damageA, b);
+          this.impactDamage(b, damageB, -nx, -nz);
+          this.impactDamage(a, damageA, nx, nz);
           this.casualties(b, toB * 0.4, 'hull', false);
+          if (this.profile !== 'historical') this.casualties(a, toA * 0.4, 'hull', false);
           a.lastHit = this.time;
           b.lastHit = this.time;
           this.blow();
@@ -1240,8 +1425,15 @@ export class Battle {
           if (a.spec.kind === 'geobukseon') this.chargeTimer.set(a.id, 9);
           if (b.spec.kind === 'geobukseon') this.chargeTimer.set(b.id, 9);
         }
-        a.speed *= Math.max(0, 1 - dt * 2.5);
-        b.speed *= Math.max(0, 1 - dt * 2.5);
+        if (this.profile === 'historical') {
+          a.speed *= Math.max(0, 1 - dt * 2.5);
+          b.speed *= Math.max(0, 1 - dt * 2.5);
+        } else if (closing > 0) {
+          // Contact removes closing motion, not travel along the neighbouring hull. Multiplying both total speeds
+          // on every contact stopped parallel friendly columns and even slowed ships already separating.
+          a.speed -= closing * wa * (Math.cos(a.heading) * nx + Math.sin(a.heading) * nz);
+          b.speed += closing * wb * (Math.cos(b.heading) * nx + Math.sin(b.heading) * nz);
+        }
         this.tryGrapple(a, b);
       });
     }
@@ -1474,7 +1666,7 @@ export class Battle {
       const g = raw as AimedGun;
       if (g.ammo < 1 - 1e-9) continue;
       const battery = spec.batteries[g.battery]!;
-      const gun = GUN_SPECS[battery.gun];
+      const gun = this.gunSpec(spec.kind, battery.gun);
       const range = gun.range * rangeMul;
       if (g.stage < 4) {
         g.t += dt * crewFactor * s.mods.reload;
@@ -1544,7 +1736,7 @@ export class Battle {
     this.grid.query(s.x, s.z, spec.musketRange, (o) => {
       if (o.team === s.team || !this.isActive(o)) return;
       const d = hyp(o.x - s.x, o.z - s.z);
-      if (!this.canSee(o, d)) return;
+      if (!this.canSee(o, d, s.team)) return;
       if (d < best) {
         best = d;
         target = o;
@@ -1591,10 +1783,12 @@ export class Battle {
       const dz = o.z - s.z;
       const d = hyp(dx, dz);
       if (d > range || d < 8) return;
-      if (!this.canSee(o, d)) return;
+      if (!this.canSee(o, d, s.team)) return;
+      if (this.profile !== 'historical' && !this.clearFiringLane(s, o)) return;
       const c = (dx * sx + dz * sz) / d;
       if (c < cosArc) return;
-      const score = d - (o.id === s.targetId ? 80 : 0) - c * 40;
+      const focus = this.profile !== 'historical' && s.spec.faction === 'ming' ? 180 * (1 - o.hull / o.spec.hull) : 0;
+      const score = d - (o.id === s.targetId ? 80 : 0) - c * 40 - focus;
       if (score < bestScore) {
         bestScore = score;
         best = o;
@@ -1614,7 +1808,8 @@ export class Battle {
       const dz = o.z - s.z;
       const d = hyp(dx, dz);
       if (d > range) return;
-      if (!this.canSee(o, d)) return;
+      if (!this.canSee(o, d, s.team)) return;
+      if (this.profile !== 'historical' && !this.clearFiringLane(s, o)) return;
       if ((dx * fx + dz * fz) / d < Math.cos(0.35)) return;
       if (d < bestD) {
         bestD = d;
@@ -1622,6 +1817,26 @@ export class Battle {
       }
     });
     return best;
+  }
+
+  /** Approximate the low ballistic arc before aiming through an island; cached for one fifth of a second. */
+  private clearFiringLane(s: Ship, target: Ship) {
+    const tick = Math.floor(this.time * 5);
+    if (tick !== this.firingLaneAt) { this.firingLanes.clear(); this.firingLaneAt = tick; }
+    const key = s.id + ':' + target.id;
+    const previous = this.firingLanes.get(key);
+    if (previous !== undefined) return previous;
+    const distance = hyp(target.x - s.x, target.z - s.z);
+    const muzzle = Math.max(120, ...s.spec.batteries.map((b) => this.gunSpec(s.spec.kind, b.gun).muzzle));
+    const samples = Math.max(2, Math.ceil(distance / 65));
+    let clear = true;
+    for (let i = 1; i < samples; i++) {
+      const t = i / samples;
+      const height = (1 - t) * (s.spec.deck * 0.6 + 1) + t * target.spec.deck * 0.6 + GRAVITY * distance * distance / (2 * muzzle * muzzle) * t * (1 - t);
+      if (this.land(s.x + (target.x - s.x) * t, s.z + (target.z - s.z) * t) > height + 2) { clear = false; break; }
+    }
+    this.firingLanes.set(key, clear);
+    return clear;
   }
 
   /**
@@ -1655,8 +1870,9 @@ export class Battle {
     const target = targetId > 0 ? this.byId.get(targetId) : undefined;
     const blind = targetId < 0;
     if (!blind && !this.isActive(target)) return;
+    if (target && this.profile !== 'historical' && !isShipVisible(this, s.team, target.id)) return;
     const battery = s.spec.batteries[g.battery]!;
-    const gun = GUN_SPECS[battery.gun];
+    const gun = this.gunSpec(s.spec.kind, battery.gun);
     const sideGuns = s.guns.filter((x) => x.side === g.side);
     const slot = sideGuns.indexOf(g);
     const m = this.muzzle(s, g.side, slot, sideGuns.length);
@@ -1803,6 +2019,7 @@ export class Battle {
           this.damage(s, dmg, shooter);
           // A round above the bulwark sweeps the open deck; one through the planking kills below.
           const exposure: Exposure = p.ammo === 'grape' || p.y > s.spec.deck ? 'deck' : 'hull';
+          if (exposure === 'hull' && p.ammo !== 'arrow' && p.ammo !== 'grape') this.impactDamage(s, dmg, dx, dz);
           this.casualties(s, (p.crewDamage * (0.5 + this.rand())) / Math.max(1, s.spec.deckDefense * 0.8), exposure, false);
           if (this.rand() < p.fireChance) this.ignite(s, p.ammo === 'fire' ? 0.26 : 0.2);
           this.blow();
@@ -1820,10 +2037,10 @@ export class Battle {
     if (before < 0.05) this.events.push({ type: 'ignite', ship: s.id });
   }
 
-  private damage(s: Ship, amount: number, source?: Ship) {
+  private damage(s: Ship, amount: number, source?: Ship, combatHit = true) {
     if (s.sinking > 0 || !s.alive) return;
     s.hull -= amount;
-    s.lastHit = this.time;
+    if (combatHit) s.lastHit = this.time;
     if (s.hull <= 0) {
       s.hull = 0;
       s.sinking = 0.0001;
@@ -1835,10 +2052,28 @@ export class Battle {
     }
   }
 
+  /** A side breach admits water; a stern hit damages steering. The existing impact already accounts for speed and armour. */
+  private impactDamage(s: Ship, amount: number, dx: number, dz: number) {
+    if (this.profile === 'historical' || amount <= 0) return;
+    const state = s.damageState ??= { flooding: 0, propulsion: 0, steering: 0 };
+    const length = hyp(dx, dz) || 1;
+    const forward = clamp((dx * Math.cos(s.heading) + dz * Math.sin(s.heading)) / length, -1, 1);
+    const side = 1 - Math.abs(forward), stern = Math.max(0, -forward);
+    const severity = Math.min(1, amount / s.spec.hull);
+    state.flooding = Math.min(1, state.flooding + severity * (0.06 + side * 0.28));
+    state.propulsion = Math.min(1, state.propulsion + severity * (0.18 + side * 0.2));
+    state.steering = Math.min(1, state.steering + severity * (0.12 + stern * 0.4));
+  }
+
   /** Repairs and replacements at a dock. Fractions of the ship's full hull and crew per call. */
   mend(s: Ship, hull: number, crew: number) {
     if (!this.isActive(s)) return;
     s.hull = Math.min(s.spec.hull, s.hull + s.spec.hull * hull);
+    if (this.profile !== 'historical' && s.damageState && hull > 0) {
+      s.damageState.flooding = Math.max(0, s.damageState.flooding - hull * 2);
+      s.damageState.propulsion = Math.max(0, s.damageState.propulsion - hull);
+      s.damageState.steering = Math.max(0, s.damageState.steering - hull);
+    }
     const add = Math.min(s.spec.crew - s.crew, s.spec.crew * crew);
     if (add <= 0) return;
     for (let i = 0; i < 4; i += 1) s.roles[i] = s.roles[i]! + add * s.plan[i]!;
@@ -1856,6 +2091,16 @@ export class Battle {
   }
 
   private damageOverTime(s: Ship, dt: number) {
+    if (this.profile !== 'historical' && s.damageState && s.damageState.flooding > 0 && this.isActive(s)) {
+      const before = s.damageState.flooding;
+      const pump = Math.max(0, this.rowing(s)) * 0.015;
+      const after = before * Math.exp(-pump * dt);
+      // Integrate the water's damage over this step, so pumping and hull loss do not depend on update frequency.
+      const waterSeconds = pump > 0 ? (before - after) / pump : before * dt;
+      s.damageState.flooding = after;
+      // Pumping under shelter must not keep resetting the dock's recent-combat delay.
+      this.damage(s, s.spec.hull * 0.0015 * waterSeconds, undefined, false);
+    }
     if (s.fire > 0) {
       const crewRatio = s.crew / s.spec.crew;
       s.fire += dt * 0.018 * (1 + s.fire);

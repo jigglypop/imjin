@@ -19,7 +19,7 @@ const { planAi } = await load('/src/sim/grand/ai.ts');
 const orders = await load('/src/sim/grand/orders.ts');
 const bridge = await load('/src/sim/grand/bridge.ts');
 const { REGION_ORDER } = await load('/src/sim/grand/regions.ts');
-const { factionIncome, TUNING } = await load('/src/sim/grand/economy.ts');
+const { factionIncome, factionUpkeep, shipDef, TUNING, garrisonCap, garrisonPowerBudget, GARRISON_KIND, listStrength } = await load('/src/sim/grand/economy.ts');
 const turn = await load('/src/sim/grand/turn.ts');
 const spawn = await load('/src/sim/grand/spawn.ts');
 const { SHIP_SPECS } = await load('/src/sim/catalog.ts');
@@ -65,6 +65,39 @@ const check = (name, ok, detail = '') => {
 function playOut(g) {
   for (let guard = 0; guard < 60 && g.phase !== 'over'; guard += 1) endTurn(g);
   return g;
+}
+
+// Fresh guards share a power budget. Loading an old count-based region does not alter its ships or rule.
+{
+  const g = newGrand('ming', 123), sample = structuredClone(g.regions.shandong);
+  check('new campaigns mark guard power rules without changing an old region', Object.values(g.regions).every((r) => r.garrisonRule === 'equal-power-v1') && (() => {
+    delete sample.garrisonRule; delete sample.garrisonReserve;
+    const before = JSON.stringify(sample); garrisonCap('shandong', sample);
+    return before === JSON.stringify(sample);
+  })());
+  const budgets = ['joseon', 'japan', 'ming'].map((f) => {
+    const r = { ...sample, owner: f, garrisonRule: 'equal-power-v1' }, power = shipDef(GARRISON_KIND[f]).strength;
+    return Math.abs(garrisonCap('shandong', r) * power - garrisonPowerBudget('shandong', r)) <= power * 0.5 + 1e-9;
+  });
+  check('all guard rosters buy the same power budget within one half of their hull denomination', budgets.every(Boolean));
+  g.fleets = []; for (const f of ['joseon', 'japan']) g.factions[f].gold = -1e9;
+  for (const ev of events.EVENTS) g.events.done[ev.id] = -2;
+  g.events.pending = null;
+  const r = g.regions.shandong; r.garrison = [];
+  for (let i = 0; i < 6; i++) endTurn(g);
+  check('guard reinforcement carries fractional power between turns without gifting expensive boats every turn', Math.abs(listStrength(r.garrison) + r.garrisonReserve - 6 * shipDef(GARRISON_KIND.joseon).strength * TUNING.garrison.regen) < 1e-7);
+}
+
+{
+  const g = newGrand(null, 123), legacy = structuredClone(g), baseline = Object.fromEntries(['joseon', 'japan', 'ming'].map((f) => [f, turn.scoreOf(g, f)]));
+  g.victoryRules = turn.growthVictoryRules(g);
+  const initial = structuredClone(g.victoryRules);
+  check('common objective progress starts at zero and territory score subtracts each opening holding', ['joseon', 'japan', 'ming'].every((f) => turn.objectiveProgress(g, f).have === 0 && turn.scoreOf(g, f) === baseline[f] - initial.initialControl[f] * TUNING.score.region));
+  g.regions.busan.owner = 'ming'; g.regions.tsushima.owner = 'ming';
+  legacy.regions.busan.owner = 'ming'; legacy.regions.tsushima.owner = 'ming';
+  check('a legacy objective retains its original two ports while common objectives require net growth', turn.objectiveMet(legacy, 'ming') && !turn.objectiveMet(g, 'ming') && JSON.stringify(initial) === JSON.stringify(g.victoryRules));
+  const copy = JSON.parse(JSON.stringify(g)); playOut(g); playOut(copy);
+  check('common growth rules reload and continue deterministically', JSON.stringify(g) === JSON.stringify(copy));
 }
 
 // 1. Determinism and save/load.
@@ -170,7 +203,9 @@ function playOut(g) {
 {
   const g = newGrand(null, 3);
   const income = Object.fromEntries(['joseon', 'japan', 'ming'].map((f) => [f, factionIncome(g, f)]));
-  check(`opening incomes are close (${JSON.stringify(income)})`, Math.max(...Object.values(income)) / Math.min(...Object.values(income)) < 2.2);
+  // Geography and the number of ports differ. The war cohort measures outcomes; this guards a viable opening economy.
+  const main = { joseon: 'panokseon', japan: 'atakebune', ming: 'mingship' };
+  check(`each opening treasury can finance a main ship after upkeep (${JSON.stringify(income)})`, Object.entries(main).every(([f, kind]) => income[f] - factionUpkeep(g, f) >= shipDef(kind).gold));
 }
 
 // 6. Fixes and the 3D hand-off.
@@ -245,12 +280,13 @@ function playOut(g) {
   const ships = built.battle.ships;
   check('every campaign ship is in the battle and afloat', ships.length === rb.attacker.ships.length + rb.defender.ships.length && ships.every((s) => s.campaignId && land(s.x, s.z) < -4));
   const worn = ships.find((s) => s.campaignId === jp.ships[0].id);
-  check('hull, crew and name carry over', Math.abs(worn.hull / worn.spec.hull - 0.5) < 1e-6 && worn.name === jp.ships[0].name && Math.abs(built.battle.get(ships.find((s) => s.campaignId === jp.ships[1].id).id).crew / SHIP_SPECS[jp.ships[1].kind].crew - 0.4) < 1e-6);
+  const wornCrew = ships.find((s) => s.campaignId === jp.ships[1].id);
+  check('hull, crew and name carry over', Math.abs(worn.hull / worn.spec.hull - 0.5) < 1e-6 && worn.name === jp.ships[0].name && Math.abs(wornCrew.crew / wornCrew.spec.crew - 0.4) < 1e-6);
   check('the sides sit in their own seats and teams', ships.filter((s) => s.owner === 0).length === rb.attacker.ships.length && ships.every((s) => s.team === (s.owner === 0 ? rb.attacker.team : rb.defender.team)));
   const home = built.conquest.homeOf(1);
   const kinds = home.buildings.filter(Boolean).map((b) => b.kind);
   check(`the defender's port stands with its works (${kinds.join(',')})`, kinds.includes('shipyard') && kinds.includes('battery') && built.conquest.homeOf(0).buildings.every((b) => !b));
-  check('funds and options follow the description', built.conquest.players[0].funds === rb.options.startFunds.attacker && built.conquest.players[1].funds === rb.options.startFunds.defender && built.conquest.options.tickets === 500 && built.conquest.options.maxShips === 30);
+  check('funds and options follow the description with no ship or fleet-value cap', built.conquest.players[0].funds === rb.options.startFunds.attacker && built.conquest.players[1].funds === rb.options.startFunds.defender && built.conquest.options.tickets === 500 && built.conquest.options.maxShips === Infinity && built.conquest.options.cap === Infinity);
   check('the outcome lists one entry per campaign ship', spawn.shipOutcomes(ships).length === ships.length);
   check('untouched works are not razed', spawn.worksAfter(rb, built.conquest).razed.length === 0);
   const slot = home.buildings.findIndex((b) => b && b.kind === 'battery');
@@ -286,7 +322,7 @@ function playOut(g) {
     if (gap < 1000 || gap > 1400) bad.push(`${id}: ports ${gap.toFixed(0)} m apart`);
     const aground = built.battle.ships.filter((s) => land(s.x, s.z) > -4).length;
     if (aground) bad.push(`${id}: ${aground} ships aground`);
-    if (!!map.current !== (id === 'myeongnyang' || id === 'noryang')) bad.push(`${id}: tidal current ${!!map.current}`);
+    if (!map.current || !Number.isFinite(map.current.peak) || map.current.peak <= 0) bad.push(`${id}: no designed coastal current`);
     if (!map.terrain.reserve.length) bad.push(`${id}: shore works not kept clear`);
     const again = REGION_MAPS[id].points.map((p) => `${p.x},${p.z}`).join();
     if (again !== map.points.map((p) => `${p.x},${p.z}`).join()) bad.push(`${id}: map changes between reads`);
@@ -347,7 +383,17 @@ function playOut(g) {
     if (saved.events.pending) events.chooseEvent(saved, 1);
     if (copy.events.pending) events.chooseEvent(copy, 1);
   }
-  check('a reloaded war with its cards goes on identically', JSON.stringify(saved) === JSON.stringify(copy) && Object.keys(saved.events.done).length >= 4);
+  check('a reloaded war with its cards goes on identically', JSON.stringify(saved) === JSON.stringify(copy) && saved.events.done.busan_landing === 0);
+  // A war may end before the fourth scheduled card. Exercise the entire event calendar independently of that victory.
+  const calendar = newGrand('japan', 8), calendarCopy = JSON.parse(JSON.stringify(calendar));
+  events.chooseEvent(calendar, 0); events.chooseEvent(calendarCopy, 0);
+  for (const card of events.EVENTS) {
+    calendar.turn = card.turn; calendarCopy.turn = card.turn;
+    events.fireEvents(calendar); events.fireEvents(calendarCopy);
+    if (calendar.events.pending) events.chooseEvent(calendar, 1);
+    if (calendarCopy.events.pending) events.chooseEvent(calendarCopy, 1);
+  }
+  check('all scheduled cards remain identical after reload even when a war can end early', JSON.stringify(calendar) === JSON.stringify(calendarCopy) && Object.keys(calendar.events.done).length === events.EVENTS.length);
 
   // The path of Yi Sun-sin through 1597: taken off his fleet, and brought back by the next card.
   const yi = newGrand('joseon', 4);

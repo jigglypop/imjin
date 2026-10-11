@@ -14,6 +14,7 @@ import {
   Sphere,
   Vector3,
   type PerspectiveCamera,
+  type WebGPURenderer,
 } from 'three/webgpu';
 import { float, length, sin, smoothstep, time, uniform, uv, vec4 } from 'three/tsl';
 import type { Battle } from '../sim/battle';
@@ -23,6 +24,7 @@ import { LOD_COUNT, modelKey, ShipRenderer, type ModelAsset } from './ShipRender
 import type { ShipLodQuality } from '../game/quality';
 import { cutHeight, DECKS, mainDeck } from './decks';
 import { RING_FOE, RING_OWN } from './ringTones';
+import { shipObserved } from '../sim/observation';
 
 const MAX_PROPS = 600;
 
@@ -46,7 +48,7 @@ export type ViewState = {
   key: string;
 };
 
-const MAX_RINGS = 256;
+const INITIAL_RINGS = 256;
 
 export class ShipViews {
   readonly group = new Group();
@@ -63,8 +65,10 @@ export class ShipViews {
   private readonly e = new Euler(0, 0, 0, 'YZX');
   private readonly s1 = new Vector3(1, 1, 1);
   private readonly tmp = new Vector3();
-  private readonly ringsOwn: InstancedMesh;
-  private readonly ringsEnemy: InstancedMesh;
+  private ringsOwn: InstancedMesh;
+  private ringsEnemy: InstancedMesh;
+  private readonly ringRenderers = new WeakMap<InstancedMesh, WebGPURenderer>();
+  private readonly releasedRings = new WeakSet<InstancedMesh>();
   private readonly ringMatrix = new Matrix4();
   /** The distances of the nearest ships to the camera, ascending. */
   private readonly nearest: Float64Array;
@@ -93,8 +97,10 @@ export class ShipViews {
     this.group.add(this.renderer.group);
     const ringGeo = new RingGeometry(0.92, 1, 96, 1);
     ringGeo.rotateX(-Math.PI / 2);
-    this.ringsOwn = new InstancedMesh(ringGeo, this.makeRingMaterial(RING_OWN), MAX_RINGS);
-    this.ringsEnemy = new InstancedMesh(ringGeo, this.makeRingMaterial(RING_FOE), MAX_RINGS);
+    this.ringsOwn = new InstancedMesh(ringGeo, this.makeRingMaterial(RING_OWN), INITIAL_RINGS);
+    this.ringsEnemy = new InstancedMesh(ringGeo, this.makeRingMaterial(RING_FOE), INITIAL_RINGS);
+    (this.ringsOwn.material as MeshBasicNodeMaterial).addEventListener('dispose', () => this.releaseRing(this.ringsOwn));
+    (this.ringsEnemy.material as MeshBasicNodeMaterial).addEventListener('dispose', () => this.releaseRing(this.ringsEnemy));
     const wood = new MeshStandardNodeMaterial({ color: new Color(0.34, 0.24, 0.15), roughness: 0.9 });
     this.props = new InstancedMesh(new BoxGeometry(1, 1, 1), wood, MAX_PROPS);
     this.props.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -108,6 +114,7 @@ export class ShipViews {
       r.count = 0;
       r.frustumCulled = false;
       r.renderOrder = 4;
+      this.watchRing(r);
       this.group.add(r);
     }
   }
@@ -153,16 +160,56 @@ export class ShipViews {
     return m;
   }
 
+  private watchRing(mesh: InstancedMesh) {
+    mesh.onAfterRender = (renderer) => { this.ringRenderers.set(mesh, renderer as unknown as WebGPURenderer); };
+  }
+
+  private releaseRing(mesh: InstancedMesh) {
+    if (this.releasedRings.has(mesh)) return;
+    this.releasedRings.add(mesh);
+    const attributes = (this.ringRenderers.get(mesh) as unknown as { _attributes?: { delete(attribute: unknown): void } } | undefined)?._attributes;
+    attributes?.delete(mesh.instanceMatrix);
+    mesh.dispose();
+  }
+
+  private growRing(mesh: InstancedMesh, count: number) {
+    if (count <= mesh.instanceMatrix.count) return mesh;
+    const next = new InstancedMesh(mesh.geometry, mesh.material, Math.max(count, mesh.instanceMatrix.count * 2));
+    next.instanceMatrix.setUsage(DynamicDrawUsage);
+    (next.instanceMatrix.array as Float32Array).set(mesh.instanceMatrix.array);
+    next.count = mesh.count;
+    next.frustumCulled = false;
+    next.renderOrder = mesh.renderOrder;
+    this.watchRing(next);
+    this.group.add(next);
+    this.group.remove(mesh);
+    // The ring geometry and material are also used by the replacement; just retire the old matrix buffer and object.
+    this.releaseRing(mesh);
+    return next;
+  }
+
+  private ensureRings(own: number, enemy: number) {
+    this.ringsOwn = this.growRing(this.ringsOwn, own);
+    this.ringsEnemy = this.growRing(this.ringsEnemy, enemy);
+  }
+
   sync(battle: Battle, dt: number, camera: PerspectiveCamera, assets: Record<string, ModelAsset>) {
     this.projScreen.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.projScreen);
     this.need.clear();
+    let selectedOwn = 0;
+    let selectedEnemy = 0;
     for (const ship of battle.ships) {
-      if (!ship.alive) continue;
+      if (!ship.alive || !shipObserved(battle, this.team, ship)) continue;
       const key = this.states.get(ship.id)?.key ?? this.keyFor(ship, assets);
       this.need.set(key, (this.need.get(key) ?? 0) + 1);
+      if ((this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0) {
+        if (ship.team === this.team) selectedOwn++;
+        else selectedEnemy++;
+      }
     }
     for (const [key, n] of this.need) this.renderer.ensure(key, n);
+    this.ensureRings(selectedOwn, selectedEnemy);
     this.renderer.begin();
     let props = 0;
     let own = 0;
@@ -174,7 +221,7 @@ export class ShipViews {
     let found = 0;
     let alive = 0;
     for (const ship of battle.ships) {
-      if (!ship.alive) continue;
+      if (!ship.alive || !shipObserved(battle, this.team, ship)) continue;
       alive += 1;
       const dx = ship.x - cam.x;
       const dz = ship.z - cam.z;
@@ -191,6 +238,13 @@ export class ShipViews {
     if (alive > keep) near = Math.min(near, nearest[keep - 1]! + 1);
     for (const ship of battle.ships) {
       let v = this.states.get(ship.id);
+      if (!shipObserved(battle, this.team, ship)) {
+        if (v) v.visible = false;
+        this.states.delete(ship.id);
+        this.selected.delete(ship.id);
+        if (this.hovered === ship.id) this.hovered = 0;
+        continue;
+      }
       if (!ship.alive) {
         if (v) {
           this.states.delete(ship.id);
@@ -240,18 +294,16 @@ export class ShipViews {
       if (show) {
         const ring = ship.team === this.team ? this.ringsOwn : this.ringsEnemy;
         const index = ship.team === this.team ? own++ : enemy++;
-        if (index < MAX_RINGS) {
-          const scale = L * 0.62;
-          this.ringMatrix.makeScale(scale, scale, scale).setPosition(ship.x, v.heave + 0.35, ship.z);
-          ring.setMatrixAt(index, this.ringMatrix);
-        }
+        const scale = L * 0.62;
+        this.ringMatrix.makeScale(scale, scale, scale).setPosition(ship.x, v.heave + 0.35, ship.z);
+        ring.setMatrixAt(index, this.ringMatrix);
       }
     }
     this.renderer.end();
     this.props.count = props;
     this.props.instanceMatrix.needsUpdate = true;
-    this.ringsOwn.count = Math.min(own, MAX_RINGS);
-    this.ringsEnemy.count = Math.min(enemy, MAX_RINGS);
+    this.ringsOwn.count = own;
+    this.ringsEnemy.count = enemy;
     this.ringsOwn.instanceMatrix.needsUpdate = true;
     this.ringsEnemy.instanceMatrix.needsUpdate = true;
   }
@@ -324,6 +376,12 @@ export class ShipViews {
     let pitch = v.pitch - s.speed * 0.004;
     let roll = v.roll;
     let yaw = 0;
+    const flooding = s.damageState?.flooding ?? 0;
+    if (s.sinking === 0 && flooding > 0) {
+      heave -= flooding * Math.min(1.8, s.spec.deck * 0.5);
+      roll += (s.id % 2 ? 1 : -1) * flooding * 0.12;
+      pitch -= flooding * 0.035;
+    }
     if (s.sinking > 0) {
       // Driven only by the progress 0..1, so it plays the same whatever the sinking lasts. The hull lists over to
       // 50-70 degrees with a settling wobble, then the bow or the stern lifts and it slides under, turning a little.

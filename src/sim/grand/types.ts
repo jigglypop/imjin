@@ -16,7 +16,20 @@ export type RegionId =
   | 'tsushima'
   | 'nagoya'
   | 'shandong'
-  | 'liaodong';
+  | 'liaodong'
+  | 'nokdo'
+  | 'balpo'
+  | 'bangdap'
+  | 'dangpo'
+  | 'danghangpo'
+  | 'gabaeryang'
+  | 'yeongdeungpo'
+  | 'yulpo'
+  | 'jangmunpo'
+  | 'jepo'
+  | 'cheonseongpo'
+  | 'dadaepo'
+  | 'mokpo';
 
 export type BuildingKind = 'camp' | 'shipyard' | 'battery' | 'dock' | 'granary' | 'beacon';
 export const BUILDING_KINDS: readonly BuildingKind[] = ['camp', 'shipyard', 'battery', 'dock', 'granary', 'beacon'];
@@ -49,9 +62,13 @@ export type Fleet = {
   rest: number;
 };
 
-export type QueueItem = { id: string; kind: ShipKind; left: number; total: number };
+export type QueueItem = { id: string; kind: ShipKind; left: number; total: number; paidGold?: number };
 
 export type RegionState = {
+  /** Fresh campaigns fund free guards by combat power; old saves retain their count-based guard rules. */
+  garrisonRule?: 'equal-power-v1';
+  /** Unspent guard reinforcement power, carried between turns. */
+  garrisonReserve?: number;
   owner: GrandFaction | null;
   buildings: GBuilding[];
   garrison: ShipUnit[];
@@ -143,6 +160,12 @@ export type Victory = { faction: GrandFaction; kind: 'objective' | 'score' | 'el
 
 export type Grand = {
   version: 1;
+  /** Absent in saves made before the nonhistorical catalog was split from historical battles. */
+  balanceProfile?: 'competitive-v1';
+  /** New competitive campaigns compare territorial growth; absent saves retain their original objectives. */
+  victoryRules?: { kind: 'growth-v1'; initialControl: Record<GrandFaction, number>; target: number };
+  /** Direct overseas expeditions in a three-way campaign; absent saves retain the original lane graph. */
+  strategicLinks?: 'three-way-v1';
   seed: number;
   rng: Rng;
   /** The faction the human commands, or null when the computer plays all three (headless balance runs). */
@@ -170,6 +193,6 @@ export type Grand = {
 /** The answer to an order. `note` and `reason` are Korean templates; `params` fills their placeholders. */
 export type Result = { ok: true; note?: string; params?: MsgParams } | { ok: false; reason: string; params?: MsgParams };
 export const ok = (note?: string, params?: MsgParams): Result => (params ? { ok: true, note, params } : { ok: true, note });
-export const fail = (reason: string, params?: MsgParams): Result => (params ? { ok: false, reason, params } : { ok: false, reason });
+export const fail = (reason: string, params?: MsgParams): Extract<Result, { ok: false }> => (params ? { ok: false, reason, params } : { ok: false, reason });
 
 export const pairKey = (a: GrandFaction, b: GrandFaction): PairKey => (a < b ? `${a}:${b}` : `${b}:${a}`) as PairKey;

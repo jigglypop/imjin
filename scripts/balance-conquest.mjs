@@ -30,7 +30,11 @@ const server = await createServer({
 const load = (p) => server.ssrLoadModule(p);
 const battleModule = await load('/src/sim/battle.ts');
 const { SIM_DT } = battleModule;
+const { COMPETITIVE_PROFILE, engagementRange } = await load('/src/sim/competitive.ts');
 const { buildConquest, CONQUEST_MAPS, CONQUEST_ORDER, autoFleet } = await load('/src/sim/maps.ts');
+const { RANKED_OPTIONS, DEFAULT_OPTIONS } = await load('/src/sim/conquest.ts');
+const options = flag('ruleset', 'ordinary') === 'ranked' ? RANKED_OPTIONS : DEFAULT_OPTIONS;
+const openingFleet = (faction) => autoFleet(faction, options.musterBudget, COMPETITIVE_PROFILE, options.maxShips);
 const { generateHeightmap } = await load('/src/terrain/generate.ts');
 
 const maps = flag('map', null)?.split(',') ?? CONQUEST_ORDER;
@@ -73,10 +77,10 @@ function run(mapId, west, east, seed) {
   const map = CONQUEST_MAPS[mapId];
   const land = landOf(map.terrain);
   const seats = [
-    { name: 'west', faction: west, team: 'joseon', human: false, fleet: autoFleet(west) },
-    { name: 'east', faction: east, team: 'japan', human: false, fleet: autoFleet(east) },
+    { name: 'west', faction: west, team: 'joseon', human: false, fleet: openingFleet(west) },
+    { name: 'east', faction: east, team: 'japan', human: false, fleet: openingFleet(east) },
   ];
-  const { battle: b, conquest: c } = buildConquest(mapId, seats, land, seed, { timeLimit: minutes * 60 });
+  const { battle: b, conquest: c } = buildConquest(mapId, seats, land, seed, { ...options, timeLimit: minutes * 60 });
   if (verbose && seed === 1592) {
     for (const p of c.points) console.log(`  ${p.name.padEnd(8)} slots ${p.slots.length} spawn ${p.spawn.x.toFixed(0)},${p.spawn.z.toFixed(0)} land@spawn ${land(p.spawn.x, p.spawn.z).toFixed(1)}`);
   }
@@ -126,7 +130,7 @@ function run(mapId, west, east, seed) {
 /** Open-water fleet battle with equal budgets: cost-effectiveness of each navy without points or shipyards. */
 function duel(a, z, seed, budget, swap = false) {
   const { Battle } = battleModule;
-  const b = new Battle(seed);
+  const b = new Battle(seed, COMPETITIVE_PROFILE);
   b.land = () => -50;
   b.humans = new Set();
   b.retreatBelow = { joseon: 0, japan: 0 };
@@ -146,7 +150,7 @@ function duel(a, z, seed, budget, swap = false) {
   });
   // Ships lost by team, split into sunk by gunfire or fire and taken in a boarding fight.
   const lost = { joseon: { sunk: 0, taken: 0 }, japan: { sunk: 0, taken: 0 } };
-  while (!b.ended && b.time < 900) {
+  while (!b.ended && b.time < minutes * 60) {
     b.step(SIM_DT);
     for (const e of b.events) {
       const s = e.type === 'sinking' || e.type === 'struck' ? b.get(e.ship) : null;
@@ -156,18 +160,19 @@ function duel(a, z, seed, budget, swap = false) {
     b.events.length = 0;
   }
   const value = (team) => b.ships.filter((s) => s.team === team && b.isActive(s)).reduce((v, s) => v + s.spec.cost * (s.hull / s.spec.hull * 0.6 + s.crew / s.spec.crew * 0.4), 0);
-  return { lost, aWin: b.winner === 'joseon' || (!b.ended && value('joseon') > value('japan')), draw: b.draw || (!b.ended && value('joseon') === value('japan')), time: b.time, left: [value('joseon'), value('japan')].map(Math.round) };
+  return { lost, aWin: b.winner === 'joseon', draw: b.draw, timeout: !b.ended, time: b.time, left: [value('joseon'), value('japan')].map(Math.round) };
 }
 
-/** How far apart the fleets form up and how long they take to meet; first contact is an enemy within 400 m, a shot or a grapple. */
+/** How far apart fleets form up and how long they take to reach the first effective gun range, shot or grapple. */
 function pace(mapId, west, east, seed) {
   const map = CONQUEST_MAPS[mapId];
   const land = landOf(map.terrain);
   const seats = [
-    { name: 'west', faction: west, team: 'joseon', human: false, fleet: autoFleet(west) },
-    { name: 'east', faction: east, team: 'japan', human: false, fleet: autoFleet(east) },
+    { name: 'west', faction: west, team: 'joseon', human: false, fleet: openingFleet(west) },
+    { name: 'east', faction: east, team: 'japan', human: false, fleet: openingFleet(east) },
   ];
-  const { battle: b } = buildConquest(mapId, seats, land, seed, {});
+  const { battle: b } = buildConquest(mapId, seats, land, seed, options);
+  const contactRange = engagementRange(b.profile, b.ships.map((s) => s.spec.kind));
   const gap = () => {
     let min = Infinity;
     for (const a of b.activeOf('joseon')) for (const c of b.activeOf('japan')) min = Math.min(min, Math.hypot(a.x - c.x, a.z - c.z));
@@ -179,7 +184,7 @@ function pace(mapId, west, east, seed) {
   let contact = null;
   while (contact === null && !b.ended && b.time < 1200) {
     b.step(SIM_DT);
-    if (b.projectiles.length || b.ships.some((s) => s.grappledWith) || gap() < 400) contact = b.time;
+    if (b.projectiles.length || b.ships.some((s) => s.grappledWith) || gap() < contactRange) contact = b.time;
     b.events.length = 0;
   }
   return { start, aground, contact: contact ?? 1200 };
@@ -203,14 +208,15 @@ if (args.includes('--duel')) {
   const budget = Number(flag('budget', 5200));
   for (const [a, z] of matches) {
     const rows = [];
-    for (let k = 0; k < seeds; k += 1) rows.push(duel(a, z, 1592 + k * 31, budget, k % 2 === 1));
+    for (let k = 0; k < seeds; k += 1) for (const swap of [false, true]) rows.push(duel(a, z, 1592 + k * 31, budget, swap));
     const wins = rows.filter((r) => r.aWin).length;
     const draws = rows.filter((r) => r.draw).length;
+    const timeouts = rows.filter((r) => r.timeout).length;
     const minutesMean = rows.reduce((s, r) => s + r.time, 0) / rows.length / 60;
     // Losses are reported for the first faction and the second, whichever side of the field each started on.
     const sum = (f) => rows.reduce((t, r, k) => t + f(r, k % 2 === 1), 0);
     const loss = (kind) => (a_, z_) => [sum((r) => r.lost.joseon[kind]), sum((r) => r.lost.japan[kind])];
-    console.log(`duel ${a.padEnd(7)} vs ${z.padEnd(7)} ${pct(wins / rows.length)}${draws ? ` (${draws} draw)` : ''} · ${minutesMean.toFixed(1)} min · sunk ${a} ${loss('sunk')()[0]} / ${z} ${loss('sunk')()[1]} · taken ${a} ${loss('taken')()[0]} / ${z} ${loss('taken')()[1]}`);
+    console.log(`duel ${a.padEnd(7)} vs ${z.padEnd(7)} ${pct(wins / rows.length)}${draws ? ` (${draws} draw)` : ''}${timeouts ? ` (${timeouts} timeout)` : ''} · ${minutesMean.toFixed(1)} min · sunk ${a} ${loss('sunk')()[0]} / ${z} ${loss('sunk')()[1]} · taken ${a} ${loss('taken')()[0]} / ${z} ${loss('taken')()[1]}`);
     if (args.includes('--verbose')) console.log(`    left ${rows.map((r) => r.left.join('/')).join(' ')}`);
   }
   await server.close();
@@ -222,7 +228,7 @@ for (const mapId of maps) {
     for (let k = 0; k < seeds; k += 1) {
       const seed = 1592 + k * 101;
       const r1 = run(mapId, a, z, seed);
-      const r2 = run(mapId, z, a, seed + 7);
+      const r2 = run(mapId, z, a, seed);
       rows.push({ aWin: r1.westWin, ...r1, side: 'west' }, { aWin: r2.eastWin, ...r2, side: 'east' });
       if (verbose) {
         for (const r of [r1, r2]) console.log(`   ${mapId} ${r === r1 ? a + ' W' : z + ' W'} ${(r.time / 60).toFixed(1)}min tickets ${r.tickets.west}/${r.tickets.east} ships ${r.ships.west}/${r.ships.east} held ${r.held.west}/${r.held.east} built ${r.built} recruited ${r.recruited} caps ${r.captures} ${r.seconds.toFixed(0)}s`);

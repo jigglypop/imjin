@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { t } from '../i18n';
 import { pushToast } from '../state/store';
-import { GRACE_SECONDS, PROTOCOL, type BattleChoice, type ClientMsg, type RoomInfo, type RoomSummary, type ServerMsg } from './protocol';
+import { GRACE_SECONDS, PROTOCOL, type BattleChoice, type ClientMsg, type RankProfile, type RankStanding, type RoomInfo, type RoomSummary, type ServerMsg } from './protocol';
+import type { Faction } from '../sim/types';
 
 /** Where the multiplayer server listens. A local dev server is used when the page itself is local. */
 export const MP_URL: string =
@@ -23,9 +24,16 @@ type NetState = {
   chat: ChatLine[];
   /** Korean source text, translated where it is drawn (a language switch updates it). */
   error: string | null;
+  identityRejected: boolean;
   ping: number;
   /** Quick match: when the search began (client clock) and how long it waits for a person. */
   quick: { since: number; seconds: number } | null;
+  rankProfile: RankProfile | null;
+  rankedQueue: { since: number; range: number } | null;
+  leaderboard: RankStanding[];
+  rankResult: Extract<ServerMsg, { t: 'rankedResult' }> | null;
+  rankedMatch: boolean;
+  rankedMatchId: string | null;
   battle: BattlePhase;
   /** Server pace in the running battle: what it manages and what it asks for (the approach is skipped fast). */
   speed: { speed: number; target: number };
@@ -37,6 +45,8 @@ type NetState = {
 
 const NAME_KEY = 'imjin.name';
 const TOKEN_KEY = 'imjin.session';
+const ACCOUNT_KEY = 'imjin.ranked-account';
+const RECOVERY_PREFIX = 'imjin-rank-v1:';
 const STALE_MS = 9000;
 /** Close code the server uses when a newer connection takes over a session. */
 const REPLACED = 4001;
@@ -78,8 +88,15 @@ export const useNet = create<NetState>(() => ({
   room: null,
   chat: [],
   error: null,
+  identityRejected: false,
   ping: 0,
   quick: null,
+  rankProfile: null,
+  rankedQueue: null,
+  leaderboard: [],
+  rankResult: null,
+  rankedMatch: false,
+  rankedMatchId: null,
   battle: 'none',
   speed: NO_SPEED,
   retry: null,
@@ -96,11 +113,19 @@ export interface BattleListener {
 
 type StartMsg = Extract<ServerMsg, { t: 'start' }>;
 
+/** A timed-out seat may have been removed; its exact durable result still comes with the account profile. */
+function recoveredResult(profile: RankProfile | null, matchId: string | null) {
+  const receipt = matchId && profile?.recent.find((r) => r.matchId === matchId);
+  return receipt && profile ? { t: 'rankedResult' as const, matchId: receipt.matchId, result: receipt.result, reason: receipt.reason, before: receipt.before, after: receipt.after, delta: receipt.delta, profile } : null;
+}
+
 /**
  * The connection to the multiplayer server: lobby state lives in useNet, battle traffic goes to the listener.
  * The session token (kept per tab) lets a dropped line, or a reloaded page, take its seat back.
  */
 class NetClient {
+  /** A bearer credential stays in this browser; unlike the tab session it survives disconnects. */
+  private account = stored(ACCOUNT_KEY, 'local');
   private ws: WebSocket | null = null;
   private pingTimer = 0;
   private retryTimer = 0;
@@ -140,7 +165,7 @@ class NetClient {
     store(NAME_KEY, clean, 'local');
     useNet.setState({ name: clean });
     if (this.ws && this.ws.readyState <= WebSocket.OPEN) {
-      this.send({ t: 'hello', name: clean, v: PROTOCOL });
+      this.send({ t: 'hello', name: clean, v: PROTOCOL, account: this.account || undefined });
       return;
     }
     this.stopped = false;
@@ -163,8 +188,9 @@ class NetClient {
     ws.binaryType = 'arraybuffer';
     this.ws = ws;
     ws.onopen = () => {
+      if (this.ws !== ws) return;
       this.lastHeard = performance.now();
-      this.send({ t: 'hello', name: useNet.getState().name, v: PROTOCOL, token: stored(TOKEN_KEY, 'session') || undefined });
+      this.send({ t: 'hello', name: useNet.getState().name, v: PROTOCOL, token: stored(TOKEN_KEY, 'session') || undefined, account: this.account || undefined });
       window.clearInterval(this.pingTimer);
       this.pingTimer = window.setInterval(() => {
         // A line that has gone quiet without closing is cut so the reconnect can start.
@@ -173,6 +199,7 @@ class NetClient {
       }, 3000);
     };
     ws.onmessage = (e) => {
+      if (this.ws !== ws) return;
       this.lastHeard = performance.now();
       if (e.data instanceof ArrayBuffer) {
         this.listener?.snapshot(e.data);
@@ -188,8 +215,8 @@ class NetClient {
     };
     ws.onerror = () => undefined;
     ws.onclose = (e) => {
-      window.clearInterval(this.pingTimer);
       if (this.ws !== ws) return;
+      window.clearInterval(this.pingTimer);
       this.ws = null;
       // Another window took this seat over (a duplicated tab shares the token); fighting back would never end.
       if (e.code === REPLACED) {
@@ -207,7 +234,7 @@ class NetClient {
   /** The line is down: give up (never reached the server, or told to stop) or schedule the next attempt. */
   private failed(first: boolean, quiet: boolean) {
     if (this.stopped) {
-      useNet.setState({ status: 'idle', retry: null });
+      useNet.setState((s) => ({ status: s.status === 'error' ? 'error' : 'idle', retry: null }));
       return;
     }
     if (first) {
@@ -241,6 +268,7 @@ class NetClient {
       error: '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주시기 바랍니다.',
       room: null,
       quick: null,
+      rankedQueue: null,
       retry: null,
       battle: playing ? 'lost' : 'none',
       notice: playing ? '서버와의 연결이 끊어져 전투에서 물러났습니다.' : null,
@@ -262,25 +290,75 @@ class NetClient {
     this.lostAt = 0;
     window.clearTimeout(this.retryTimer);
     window.clearInterval(this.countdown);
+    window.clearInterval(this.pingTimer);
+    this.pingTimer = 0;
     store(TOKEN_KEY, '', 'session');
     this.ws?.close();
     this.ws = null;
-    useNet.setState({ status: 'idle', room: null, quick: null, retry: null, battle: 'none', speed: NO_SPEED });
+    this.pendingStart = null;
+    useNet.setState({ status: 'idle', room: null, quick: null, rankedQueue: null, retry: null, battle: 'none', rankedMatch: false, rankedMatchId: null, speed: NO_SPEED });
   }
 
   send(msg: ClientMsg) {
     // Leaving a room ends its battle for this player; the seat is not waiting for a return.
-    if (msg.t === 'leave') useNet.setState({ battle: 'none', notice: null, speed: NO_SPEED });
-    if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(msg));
+    if (msg.t === 'leave') {
+      this.pendingStart = null;
+      useNet.setState({ battle: 'none', rankedMatch: false, rankedMatchId: null, notice: null, speed: NO_SPEED });
+    }
+    if (this.ws?.readyState !== WebSocket.OPEN) return;
+    // Per-ship destinations grow with an uncapped fleet. Keep each command below the server's 64 KiB frame gate.
+    if (msg.t === 'cmd' && msg.cmd.type === 'orders' && msg.cmd.list.length > 512) {
+      for (let i = 0; i < msg.cmd.list.length; i += 512) this.ws.send(JSON.stringify({ t: 'cmd', cmd: { ...msg.cmd, list: msg.cmd.list.slice(i, i + 512) } }));
+      return;
+    }
+    this.ws.send(JSON.stringify(msg));
   }
 
   createRoom(name: string, battle: BattleChoice) {
     this.send({ t: 'create', name, battle });
   }
 
+  ranked(faction: Faction) {
+    if (useNet.getState().status !== 'online') return;
+    useNet.setState({ error: null, rankResult: null });
+    this.send({ t: 'ranked', faction });
+  }
+
+  rankedCancel() { this.send({ t: 'rankedCancel' }); }
+  refreshRank() { this.send({ t: 'rankedProfile' }); }
+  fetchLeaderboard() { this.send({ t: 'leaderboard' }); }
+
+  /** Keep this private: whoever has the recovery code can use this ranked account. */
+  exportAccount() { return this.account ? RECOVERY_PREFIX + this.account : ''; }
+
+  restoreAccount(code: string): boolean {
+    const value = code.trim().replace(/^imjin-rank-v1:/, '');
+    if (!/^[a-f0-9]{64}$/i.test(value) || useNet.getState().battle === 'playing' || useNet.getState().rankedQueue) return false;
+    this.send({ t: 'leave' });
+    this.disconnect();
+    this.account = value.toLowerCase();
+    store(ACCOUNT_KEY, this.account, 'local');
+    useNet.setState({ rankProfile: null, rankResult: null, leaderboard: [] });
+    this.connect(useNet.getState().name);
+    return true;
+  }
+
+  /** Only a rejected saved credential needs this escape hatch; ordinary disconnects keep the same account. */
+  newAccount(): boolean {
+    const state = useNet.getState();
+    if (!state.identityRejected || state.battle === 'playing' || state.rankedQueue) return false;
+    this.disconnect();
+    this.account = '';
+    store(ACCOUNT_KEY, '', 'local');
+    useNet.setState({ identityRejected: false, rankProfile: null, rankResult: null, leaderboard: [] });
+    this.connect(state.name);
+    return true;
+  }
+
   /** Back to the select screen after a battle is over or lost. */
   clearBattle() {
-    useNet.setState({ battle: 'none', notice: null, speed: NO_SPEED });
+    this.pendingStart = null;
+    useNet.setState({ battle: 'none', rankedMatch: false, rankedMatchId: null, notice: null, speed: NO_SPEED });
   }
 
   private receive(msg: ServerMsg) {
@@ -291,14 +369,23 @@ class NetClient {
         this.attempt = 0;
         window.clearInterval(this.countdown);
         store(TOKEN_KEY, msg.token, 'session');
+        // A storage outage on the server must never erase a valid saved account.
+        if (msg.account) {
+          this.account = msg.account.token;
+          store(ACCOUNT_KEY, this.account, 'local');
+        }
         const lostSeat = !msg.resumed && useNet.getState().battle === 'playing';
         useNet.setState((s) => ({
           status: 'online',
           id: msg.id,
           error: null,
+          identityRejected: false,
           retry: null,
           room: msg.resumed ? s.room : null,
           quick: msg.resumed ? s.quick : null,
+          rankedQueue: msg.resumed ? s.rankedQueue : null,
+          rankProfile: msg.rank,
+          rankResult: recoveredResult(msg.rank, s.rankedMatchId) ?? s.rankResult,
           battle: lostSeat ? 'lost' : s.battle,
           notice: lostSeat ? '연결이 오래 끊겨 자리를 잃고 전투에서 물러났습니다.' : s.notice,
         }));
@@ -311,11 +398,23 @@ class NetClient {
         useNet.setState({ room: msg.room });
         return;
       case 'error':
-        if (msg.code === 'version') {
+        if (msg.code === 'version' || msg.code === 'identity') {
           this.stopped = true;
           store(TOKEN_KEY, '', 'session');
         }
-        useNet.setState({ error: msg.text, ...(msg.code === 'version' ? { status: 'error' as const } : {}) });
+        useNet.setState({ error: msg.text, identityRejected: msg.code === 'identity', ...(['version', 'identity'].includes(msg.code ?? '') ? { status: 'error' as const, rankedQueue: null } : {}) });
+        return;
+      case 'rank':
+        useNet.setState((s) => ({ rankProfile: msg.profile, rankResult: recoveredResult(msg.profile, s.rankedMatchId) ?? s.rankResult }));
+        return;
+      case 'leaderboard':
+        useNet.setState({ leaderboard: msg.players });
+        return;
+      case 'ranked':
+        useNet.setState({ rankedQueue: msg.state === 'searching' ? { since: msg.since, range: msg.range } : null });
+        return;
+      case 'rankedResult':
+        useNet.setState({ rankProfile: msg.profile, rankResult: msg });
         return;
       case 'chat':
         {
@@ -332,10 +431,10 @@ class NetClient {
         useNet.setState({ quick: msg.state === 'searching' ? { since: Date.now(), seconds: msg.seconds } : null });
         return;
       case 'closed':
-        useNet.setState({ room: null, quick: null, battle: useNet.getState().battle === 'playing' ? 'lost' : 'none', notice: msg.reason });
+        useNet.setState({ room: null, quick: null, rankedQueue: null, battle: useNet.getState().battle === 'playing' ? 'lost' : 'none', notice: msg.reason });
         return;
       case 'start':
-        useNet.setState({ quick: null, notice: null });
+        useNet.setState((s) => ({ quick: null, rankedQueue: null, rankedMatch: !!msg.ranked, rankedMatchId: msg.matchId ?? null, rankResult: msg.resume ? s.rankResult : null, notice: null }));
         // A page still drawing this battle only needed its seat back. A different seed is a new battle (a rematch).
         if (msg.resume && this.listener?.seed === msg.seed) {
           useNet.setState({ battle: 'playing' });

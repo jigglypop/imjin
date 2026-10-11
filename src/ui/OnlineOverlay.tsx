@@ -3,22 +3,9 @@ import { createRoot } from 'react-dom/client';
 import { net, useNet } from '../net/NetClient';
 import { GRACE_SECONDS } from '../net/protocol';
 import { useT } from '../i18n';
-import { setScreen, useUi } from '../state/store';
+import { useUi } from '../state/store';
 import { sound } from '../audio/Sound';
-import type { Engine } from '../game/Engine';
-
-/** Back to the online lobby (the room, when it is kept). `leaveRoom` also gives up the seat; otherwise the room stays for a rematch. */
-function exitBattle(leaveRoom: boolean) {
-  const engine = (window as unknown as { __engine?: Engine }).__engine;
-  if (leaveRoom) net.send({ t: 'leave' });
-  else net.clearBattle();
-  if (engine) {
-    engine.leaveRemote();
-    engine.paused = true;
-  }
-  sound.setMode('select');
-  setScreen('online');
-}
+import { exitOnlineBattle, RankActions, RankResult } from './RankResult';
 
 /**
  * Online status drawn over the battle: the server's pace while it skips the approach (read only), the state of the
@@ -34,11 +21,12 @@ function OnlineOverlay() {
   const room = useNet((s) => s.room);
   const notice = useNet((s) => s.notice);
   const me = useNet((s) => s.id);
+  const ranked = useNet((s) => s.rankedMatch);
 
   // A rematch agreed in a room sends everyone back to it; a quick-match room restarts on its own.
   useEffect(() => {
-    if (battle === 'ended' && room?.state === 'lobby' && !room.quick && screen === 'battle') exitBattle(false);
-  }, [battle, room?.state, room?.quick, screen]);
+    if (battle === 'ended' && room?.state === 'lobby' && !room.quick && !room.ranked && screen === 'battle') exitOnlineBattle(false);
+  }, [battle, room?.state, room?.quick, room?.ranked, screen]);
 
   if (screen !== 'battle' || battle === 'none') return null;
   const mine = room?.seats.find((s) => s.client === me);
@@ -70,7 +58,7 @@ function OnlineOverlay() {
           </div>
         )}
       </div>
-      {battle === 'ended' && room && (
+      {battle === 'ended' && room && !ranked && (
         <div className="on-end paper">
           <span>
             {mine?.rematch ? t('재대결을 기다리고 있습니다 ({done}/{total})', { done: humans.filter((s) => s.rematch).length, total: humans.length }) : t('한 판 더 하시겠습니까?')}
@@ -78,7 +66,7 @@ function OnlineOverlay() {
           <button className={`chip ${mine?.rematch ? 'chip--on' : ''}`} disabled={!mine || mine.rematch} onClick={() => net.send({ t: 'rematch' })}>
             {t('재대결')}
           </button>
-          <button className="chip" onClick={() => exitBattle(false)}>
+          <button className="chip" onClick={() => exitOnlineBattle(false)}>
             {t('대기실로')}
           </button>
         </div>
@@ -86,15 +74,15 @@ function OnlineOverlay() {
       {battle === 'lost' && (
         <div className="on-lost paper">
           <b>{t(notice ?? '전투에서 물러났습니다.')}</b>
-          <button
+          {ranked ? <><RankResult showOutcome /><div className="result-actions"><RankActions /></div></> : <button
             className="ink-btn on-go"
             onClick={() => {
               click();
-              exitBattle(true);
+              exitOnlineBattle(true);
             }}
           >
             {t('대기실로')}
-          </button>
+          </button>}
         </div>
       )}
     </div>

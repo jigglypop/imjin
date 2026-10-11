@@ -1,15 +1,17 @@
-// Renders the strategic map backdrop for the faction campaign: public/ui/grand_map.webp.
+// Builds the campaign's real elevation grid and its flat fallback: grand_relief.bin and grand_map.webp.
 // Near-black sea with a lighter shelf and a shadow along the coast, slate land with subtle shaded relief and a pale
 // hairline coast, to sit under the black glass. Heights come from public/ui/korea_dem.webp where it reaches and from
 // terrarium tiles around it (Jeju, Kyushu, the Yellow Sea side), so the off-map edge nodes sit on a believable sea. The
 // frame is src/ui/grand/mapFrame.json, shared with src/ui/grand/projection.ts so node positions line up with the image.
 //   node scripts/build-grand-map.mjs
+//   node scripts/build-grand-map.mjs --relief-only
 import sharp from 'sharp';
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const OUT = join(ROOT, 'public', 'ui', 'grand_map.webp');
+const reliefOnly = process.argv.includes('--relief-only');
 const frame = JSON.parse(await readFile(join(ROOT, 'src/ui/grand/mapFrame.json'), 'utf8'));
 const dem = JSON.parse(await readFile(join(ROOT, 'src/select/demMeta.json'), 'utf8'));
 const Z = frame.zoom;
@@ -72,6 +74,7 @@ for (let ty = ty0; ty <= ty1; ty += 1) {
 }
 await Promise.all(jobs);
 if (missing) console.warn(`${missing} terrarium tiles unavailable: those areas render as open sea`);
+if (missing && reliefOnly) throw new Error('The relief map requires complete elevation tiles');
 
 const demRaw = await sharp(join(ROOT, 'public/ui/korea_dem.webp')).removeAlpha().raw().toBuffer();
 const demH = (ix, iy) => {
@@ -93,6 +96,24 @@ function heightAt(tx, ty) {
   }
   return bilinear((x, y) => big[y * bigW + x], (tx - tx0) * 256 - 0.5, (ty - ty0) * 256 - 0.5, bigW, bigH);
 }
+
+// The interactive strategic map uses the same geographic frame and elevations, without shipping full DEM tiles.
+const reliefWidth = 257;
+const reliefHeight = Math.round(reliefWidth * (fy1 - fy0) / (fx1 - fx0));
+const relief = Buffer.alloc(reliefWidth * reliefHeight * 2);
+let reliefMax = 0;
+let reliefLand = 0;
+for (let j = 0; j < reliefHeight; j++) for (let i = 0; i < reliefWidth; i++) {
+  const value = Math.round(Math.max(0, Math.min(6000, heightAt(fx0 + i / (reliefWidth - 1) * (fx1 - fx0), fy0 + j / (reliefHeight - 1) * (fy1 - fy0)))));
+  relief.writeUInt16LE(value, (j * reliefWidth + i) * 2);
+  reliefMax = Math.max(reliefMax, value);
+  if (value > 2) reliefLand++;
+}
+await mkdir(join(ROOT, 'public', 'ui'), { recursive: true });
+await writeFile(join(ROOT, 'public', 'ui', 'grand_relief.bin'), relief);
+await writeFile(join(ROOT, 'src', 'ui', 'grand', 'reliefMeta.json'), JSON.stringify({ width: reliefWidth, height: reliefHeight, metersAcross: (fx1 - fx0) * 40075016 * Math.cos(34.5 * Math.PI / 180) / 2 ** Z, maxHeight: reliefMax, landVertices: reliefLand, source: 'Terrarium elevation tiles with korea_dem override; same mapFrame as grand_map.webp' }, null, 2) + '\n');
+console.log('grand_relief', reliefWidth, reliefHeight, `${relief.length} bytes`, `peak ${reliefMax}m`);
+if (reliefOnly) process.exit(0);
 
 const hm = new Float32Array(W * H);
 for (let j = 0; j < H; j += 1) {

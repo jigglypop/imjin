@@ -6,6 +6,8 @@ import {
   buildingCost,
   buildingOf,
   freeSlots,
+  GARRISON_KIND,
+  garrisonCap,
   levelOf,
   listStrength,
   netIncome,
@@ -15,11 +17,11 @@ import {
   yardPrice,
 } from './economy';
 import { buildRequirement, orderBuild, commanderSuspended, orderCommander, orderMerge, orderMove, orderRecruit, orderRefit, recruitProblem, refitCost } from './orders';
-import { LANES, REGIONS } from './regions';
+import { REGIONS } from './regions';
 import { next, range } from './rng';
 import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId } from './types';
 import { BUILDING_KINDS, MAX_LEVEL } from './types';
-import { allied, atWar, defenceStrength, findRoute, fleetStrength, laneDistance, ownedBy } from './world';
+import { allied, atWar, defenceStrength, findRoute, fleetObserved, fleetStrength, laneDistance, lanesOf, ownedBy, visibleRegions } from './world';
 
 /**
  * The computer's three commanders. Each reads the same board and the same rules as the player; what differs is what
@@ -99,9 +101,10 @@ const enemiesOf = (g: Grand, f: GrandFaction) => (['joseon', 'japan', 'ming'] as
 /** Enemy strength that can be in a region by the end of this turn: already there, a lane away, or about to land. */
 export function threatTo(g: Grand, f: GrandFaction, id: RegionId): number {
   let t = 0;
+  const seen = visibleRegions(g, f);
   for (const fl of g.fleets) {
-    if (!atWar(g, fl.faction, f)) continue;
-    if (fl.at === id || fl.transit?.to === id || (fl.at && LANES[fl.at].some((l) => l.to === id && l.turns === 1))) t += fleetStrength(fl);
+    if (!atWar(g, fl.faction, f) || !fleetObserved(g, f, fl, seen)) continue;
+    if (fl.at === id || fl.transit?.to === id || (fl.at && lanesOf(g, fl.at).some((l) => l.to === id && l.turns === 1))) t += fleetStrength(fl);
   }
   return t;
 }
@@ -176,7 +179,7 @@ function bestWork(g: Grand, f: GrandFaction, budget: number, floor = 0.35): Work
   const turnsLeft = Math.max(0, MAX_TURNS - g.turn);
   const owned = ownedBy(g, f);
   const yards = owned.filter((id) => levelOf(g.regions[id], 'shipyard') > 0).length;
-  const enemyNear = (id: RegionId) => LANES[id].some((l) => g.regions[l.to].owner !== null && atWar(g, f, g.regions[l.to].owner!));
+  const enemyNear = (id: RegionId) => lanesOf(g, id).some((l) => g.regions[l.to].owner !== null && atWar(g, f, g.regions[l.to].owner!));
   let best: Work | null = null;
   for (const id of owned) {
     const r = g.regions[id];
@@ -238,38 +241,46 @@ function economy(g: Grand, f: GrandFaction) {
 // --- Fleets -----------------------------------------------------------------------------------------------------
 
 /** Value of taking a region, in region-value units. */
-function prize(g: Grand, f: GrandFaction, id: RegionId): number {
+function prize(g: Grand, f: GrandFaction, id: RegionId, seen: ReadonlySet<RegionId>): number {
   const def = REGIONS[id];
   let v = def.value + (AI[f].wanted[id] ?? 0);
   if (def.capitalOf && def.capitalOf !== f) v += 1.5;
   if (def.korea && f === 'japan') v += 0.6;
   if (def.korea && f !== 'japan') v += 0.4;
   const r = g.regions[id];
-  v += 0.4 * levelOf(r, 'shipyard') + 0.2 * levelOf(r, 'camp');
+  if (seen.has(id)) v += 0.4 * levelOf(r, 'shipyard') + 0.2 * levelOf(r, 'camp');
   return v;
 }
 
 /** What a defended region fields against an attack: its works, garrison, fleets, and the help one lane away. */
-function enemyDefence(g: Grand, id: RegionId): number {
+export function estimatedDefence(g: Grand, f: GrandFaction, id: RegionId, seen = visibleRegions(g, f)): number {
   const r = g.regions[id];
+  // An unscouted port is an estimate from public region value and the common guard rules. Never read its
+  // actual guards, works, fleet sizes or treasury. A scout replaces that estimate with observed defence.
+  if (!seen.has(id)) {
+    if (!r.owner) return 0;
+    const assumed = { owner: r.owner, buildings: [], garrison: [], queue: [], unrest: 0, garrisonRule: r.garrisonRule };
+    return garrisonCap(id, assumed) * shipDef(GARRISON_KIND[r.owner]).strength;
+  }
   let d = defenceStrength(g, id);
   if (!r.owner) return d;
-  for (const lane of LANES[id]) {
+  for (const lane of lanesOf(g, id)) {
     if (lane.turns !== 1) continue;
-    for (const fl of g.fleets) if (fl.at === lane.to && fl.faction !== r.owner && allied(g, fl.faction, r.owner)) d += fleetStrength(fl) * 0.5;
-    for (const fl of g.fleets) if (fl.at === lane.to && fl.faction === r.owner) d += fleetStrength(fl) * 0.6;
+    for (const fl of g.fleets) if (fl.at === lane.to && fleetObserved(g, f, fl, seen) && fl.faction !== r.owner && allied(g, fl.faction, r.owner)) d += fleetStrength(fl) * 0.5;
+    for (const fl of g.fleets) if (fl.at === lane.to && fleetObserved(g, f, fl, seen) && fl.faction === r.owner) d += fleetStrength(fl) * 0.6;
   }
   return d;
 }
 
 function nearestEnemyDistance(g: Grand, f: GrandFaction, from: RegionId): number {
   let best = Infinity;
-  for (const e of enemiesOf(g, f)) for (const id of ownedBy(g, e)) best = Math.min(best, laneDistance(from, id));
+  for (const e of enemiesOf(g, f)) for (const id of ownedBy(g, e)) best = Math.min(best, laneDistance(from, id, g));
   return best;
 }
 
 function fleetsPlan(g: Grand, f: GrandFaction) {
   const P = AI[f];
+  const seen = visibleRegions(g, f);
   // A navy that has not fought for a while grows bolder: the standoff has to end.
   const patience = Math.max(P.minPatience, 1 - P.impatience * g.factions[f].idle);
   // Small groups decide first, so they flow into the larger body and the larger one, seeing them coming, stays; two groups never swap ports.
@@ -288,7 +299,7 @@ function fleetsPlan(g: Grand, f: GrandFaction) {
     const joint = power + friends * 0.6;
     const threat = myPort ? threatTo(g, f, at) : 0;
     const sources = new Set<RegionId>();
-    for (const o of g.fleets) if (o.at && atWar(g, o.faction, f) && LANES[at].some((l) => l.to === o.at)) sources.add(o.at);
+    for (const o of g.fleets) if (o.at && atWar(g, o.faction, f) && fleetObserved(g, f, o, seen) && lanesOf(g, at).some((l) => l.to === o.at)) sources.add(o.at);
     const portDefence = myPort ? listStrength(here.garrison) + batteryStrength(here) : 0;
     const holdBack = Math.max(0, threat * P.guard * 1.1 - portDefence);
     // Pick the best target the fleet can reach in three turns.
@@ -298,9 +309,9 @@ function fleetsPlan(g: Grand, f: GrandFaction) {
       if (!route || route.turns > 3) continue;
       // Striking the enemy stack that threatens the port removes the danger; any other move leaves the port exposed.
       const force = myPort && !sources.has(t) ? Math.max(0, joint - holdBack) : joint;
-      const ratio = force / Math.max(1, enemyDefence(g, t));
+      const ratio = force / Math.max(1, estimatedDefence(g, f, t, seen));
       if (ratio < P.attackRatio * patience * (1 + 0.08 * (route.turns - 1))) continue;
-      const u = prize(g, f, t) - 0.35 * route.turns + Math.min(ratio, 3) * 0.2 + range(g.rng, 0, 0.1);
+      const u = prize(g, f, t, seen) - 0.35 * route.turns + Math.min(ratio, 3) * 0.2 + range(g.rng, 0, 0.1);
       if (!pick || u > pick.u) pick = { id: t, u };
     }
     const resting = myPort && avgHull(fleets) < P.restBelow && threat < power * 0.5;

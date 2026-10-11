@@ -6,6 +6,7 @@
 // contact is skipped at FF_SPEED.
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
+import { dirname, join } from 'node:path';
 import { isMainThread } from 'node:worker_threads';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { SIM_DT, type Battle } from '../src/sim/battle';
@@ -25,11 +26,13 @@ import {
   type ClientMsg,
   type RoomInfo,
   type ServerMsg,
-  type ShipMeta,
+  type RankReason,
 } from '../src/net/protocol';
 import { buildBattle, choiceKey, inContact, openSeats, sanitizeChoice, terrainOf, titleOf } from './battles';
 import { loadLand, terrainWorker } from './terrain';
 import { clientMessage } from './messages';
+import { RankedStore, rankRange, type RankMatch } from './ranked';
+import { observedEvent, observedMetadata, observedShips, observedState } from './observation';
 
 /** Set by build-server.mjs, so health identifies the bundle actually running. */
 declare const IMJIN_BUILD_REVISION: string;
@@ -52,6 +55,9 @@ const ORIGINS = ['https://imjin1592.com', 'https://www.imjin1592.com', ...(proce
 const originAllowed = (origin: string | undefined) => !origin || ORIGINS.includes(origin) || /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin);
 /** Pages take a while to load a battle; the clock waits for them this long. */
 const LOAD_SECONDS = 45;
+// Tests can shorten lifecycle deadlines without changing the production protocol's 60-second grace.
+const DISCONNECT_SECONDS = Number(process.env.GRACE_SECONDS ?? GRACE_SECONDS);
+const PAGE_LOAD_SECONDS = Number(process.env.LOAD_SECONDS ?? LOAD_SECONDS);
 const speedOf = (live: Live) => (live.ff ? FF_SPEED : BASE_SPEED);
 
 type Client = {
@@ -65,6 +71,7 @@ type Client = {
   /** Message budget of the connection (leaky bucket). */
   budget: number;
   budgetAt: number;
+  account: { id: string; token: string } | null;
 };
 type Live = {
   battle: Battle;
@@ -77,8 +84,7 @@ type Live = {
   flushes: number;
   lastFlush: number;
   events: BattleEvent[];
-  known: Set<number>;
-  squads: string;
+  observed: Map<string, { known: Map<number, string>; squads: string }>;
   endedAt: number;
   /** The approach is being skipped. */
   ff: boolean;
@@ -92,13 +98,17 @@ type Live = {
   paceSim: number;
   paceReal: number;
 };
-type Room = { info: RoomInfo; clients: Set<Client>; live: Live | null; building: boolean };
+type Room = { info: RoomInfo; clients: Set<Client>; live: Live | null; building: boolean; ranked?: { match: RankMatch; clients: [Client, Client]; settled: boolean } };
 type Quick = { c: Client; choice: BattleChoice; faction: Faction; since: number };
+type RankedEntry = { c: Client; faction: Faction; since: number };
 
 const byToken = new Map<string, Client>();
 const byId = new Map<string, Client>();
 const rooms = new Map<string, Room>();
 const queue: Quick[] = [];
+const rankedQueue: RankedEntry[] = [];
+let ranked: RankedStore | null = null;
+const accountCreation = new Map<string, { since: number; count: number }>();
 let tickMs = 0;
 
 const send = (c: Client, msg: ServerMsg) => {
@@ -132,7 +142,7 @@ const clean = (text: unknown, max: number) => String(text ?? '').replace(/[\u000
 
 function summary() {
   return [...rooms.values()]
-    .filter((r) => r.info.state !== 'ended' && !r.info.quick)
+    .filter((r) => r.info.state !== 'ended' && !r.info.quick && !r.info.ranked)
     .map((r) => ({
       id: r.info.id,
       name: r.info.name,
@@ -154,6 +164,10 @@ const pushRoom = (room: Room) => broadcast(room, { t: 'room', room: roomInfo(roo
 function leave(c: Client) {
   const room = c.room;
   if (!room) return;
+  if (room.ranked && !room.ranked.settled) {
+    const index = room.ranked.clients.indexOf(c);
+    if (index >= 0) finishRanked(room, (1 - index) as 0 | 1, 'forfeit');
+  }
   c.room = null;
   room.clients.delete(c);
   const i = room.info.seats.findIndex((s) => s.client === c.id);
@@ -184,6 +198,10 @@ function drop(c: Client) {
   if (c.grace) clearTimeout(c.grace);
   c.grace = null;
   dequeue(c);
+  if (c.room?.ranked && !c.room.ranked.settled) {
+    const index = c.room.ranked.clients.indexOf(c);
+    if (index >= 0) finishRanked(c.room, (1 - index) as 0 | 1, 'disconnect');
+  }
   leave(c);
   byToken.delete(c.token);
   byId.delete(c.id);
@@ -192,13 +210,103 @@ function drop(c: Client) {
 function dequeue(c: Client) {
   const i = queue.findIndex((q) => q.c === c);
   if (i >= 0) queue.splice(i, 1);
+  const ri = rankedQueue.findIndex((q) => q.c === c);
+  if (ri >= 0) {
+    rankedQueue.splice(ri, 1);
+    send(c, { t: 'ranked', state: 'idle', since: 0, range: 0 });
+  }
+}
+
+function finishRanked(room: Room, outcome: 0 | 1 | 'draw' | 'void', reason: RankReason) {
+  const context = room.ranked;
+  if (!context || context.settled) return;
+  try {
+    const results = ranked?.finish(context.match.id, outcome, reason);
+    if (!results) throw new Error('ranked result could not be committed');
+    for (const [index, message] of results.entries()) {
+      const accountId = context.match.players[index]!.id;
+      for (const c of byId.values()) if (c.account?.id === accountId) send(c, message);
+    }
+  } catch (error) {
+    console.error('ranked result storage failed', error instanceof Error ? error.message : 'unknown error');
+    broadcast(room, { t: 'error', code: 'ranked', text: '랭크 기록을 저장하지 못했습니다. 잠시 후 전적을 다시 확인해 주세요.' });
+    outcome = 'void';
+  }
+  context.settled = true;
+  const live = room.live;
+  const winner = outcome === 0 ? 'joseon' : outcome === 1 ? 'japan' : null;
+  if (live) {
+    live.endedAt = Date.now();
+    live.battle.winner = winner;
+    live.battle.draw = winner === null;
+    live.ff = false;
+  }
+  room.info.state = 'ended';
+  broadcast(room, { t: 'end', winner, draw: winner === null });
+  pushRoom(room);
+}
+
+function rankJoin(c: Client, faction: Faction) {
+  if (!ranked?.ready || !c.account) return send(c, { t: 'error', code: 'ranked', text: '랭크 대전을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.' });
+  const id = c.account.id;
+  if (ranked.activeMatch(id) || rankedQueue.some((q) => q.c.account?.id === id)) return send(c, { t: 'error', code: 'ranked', text: '이 계정은 이미 랭크 대전을 진행하거나 찾고 있습니다.' });
+  if (c.room?.ranked && !c.room.ranked.settled) return;
+  leave(c);
+  dequeue(c);
+  const since = Date.now();
+  rankedQueue.push({ c, faction, since });
+  send(c, { t: 'ranked', state: 'searching', since, range: rankRange(0) });
+  matchRanked();
+}
+
+function matchRanked() {
+  if (!ranked?.ready) {
+    for (const q of [...rankedQueue]) {
+      dequeue(q.c);
+      send(q.c, { t: 'error', code: 'ranked', text: '랭크 대전을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.' });
+    }
+    return;
+  }
+  const now = Date.now();
+  for (const q of [...rankedQueue]) {
+    if (!rankedQueue.includes(q) || !q.c.ws || !q.c.account) continue;
+    const rating = ranked.profile(q.c.account.id)?.rating;
+    if (rating === undefined) continue;
+    const range = rankRange(now - q.since);
+    send(q.c, { t: 'ranked', state: 'searching', since: q.since, range });
+    if (rooms.size >= MAX_ROOMS) continue;
+    const candidates = rankedQueue.filter((r) => r !== q && r.c.ws && r.c.account && ranked!.canPair(q.c.account!.id, r.c.account.id, now) && Math.abs(ranked!.profile(r.c.account.id)!.rating - rating) <= Math.min(range, rankRange(now - r.since)));
+    candidates.sort((a, b) => Math.abs(ranked!.profile(a.c.account!.id)!.rating - rating) - Math.abs(ranked!.profile(b.c.account!.id)!.rating - rating) || a.since - b.since);
+    const mate = candidates[0];
+    if (!mate) continue;
+    const entries: [RankedEntry, RankedEntry] = randomBytes(1)[0]! & 1 ? [q, mate] : [mate, q];
+    let match: RankMatch;
+    try { match = ranked.begin(entries.map((e) => ({ id: e.c.account!.id, faction: e.faction })) as RankMatch['players'], now, BUILD_REVISION); }
+    catch (error) { console.error('ranked match storage failed', error instanceof Error ? error.message : 'unknown error'); continue; }
+    for (const entry of entries) dequeue(entry.c);
+    const [a, b] = entries;
+    const room = newRoom(a.c, '랭크 대전', { kind: 'conquest', map: 'hallyeo', size: 2 }, false);
+    room.info.ranked = true;
+    room.ranked = { match, clients: [a.c, b.c], settled: false };
+    room.clients.add(b.c);
+    b.c.room = room;
+    for (const [i, entry] of entries.entries()) {
+      const seat = room.info.seats[i]!;
+      seat.client = entry.c.id;
+      seat.faction = entry.faction;
+      seat.human = true;
+      seat.ready = true;
+    }
+    pushRoom(room);
+    void start(room);
+  }
 }
 
 function sendStart(c: Client, room: Room, resume: boolean) {
   const live = room.live;
   if (!live) return;
   const you = room.info.seats.findIndex((s) => s.client === c.id);
-  send(c, { t: 'start', battle: room.info.battle, seats: live.seats, you: Math.max(0, you), seed: live.seed, resume });
+  send(c, { t: 'start', battle: room.info.battle, seats: live.seats, you: Math.max(0, you), seed: live.seed, resume, ...(room.ranked ? { ranked: true, matchId: room.ranked.match.id } : {}) });
 }
 
 async function start(room: Room) {
@@ -207,12 +315,12 @@ async function start(room: Room) {
   room.building = true;
   try {
     const land = await loadLand(terrainOf(info.battle));
-    if (rooms.get(info.id) !== room) return;
+    if (rooms.get(info.id) !== room || room.ranked?.settled) return;
     // Seats nobody took are played by the computer.
     for (const s of info.seats) if (!s.client) s.human = false;
     const names = info.seats.map((s, i) => (s.client ? (byId.get(s.client)?.name ?? s.name) : `컴퓨터 ${i + 1}`));
-    const seed = 1592 + Math.floor(Math.random() * 1e6);
-    const built = buildBattle(info.battle, land, info.seats, names, info.seats.map((s) => !!s.client), seed);
+    const seed = room.ranked?.match.seed ?? 1592 + Math.floor(Math.random() * 1e6);
+    const built = buildBattle(info.battle, land, info.seats, names, info.seats.map((s) => !!s.client), seed, !!room.ranked);
     const live: Live = {
       battle: built.battle,
       conquest: built.conquest,
@@ -223,13 +331,12 @@ async function start(room: Room) {
       flushes: 0,
       lastFlush: 0,
       events: [],
-      known: new Set(),
-      squads: '',
+      observed: new Map(),
       endedAt: 0,
       ff: FF_SPEED > 1,
       contactTimer: 0.5,
       waiting: new Set(info.seats.flatMap((x) => (x.client && byId.get(x.client)?.ws ? [x.client] : []))),
-      deadline: Date.now() + LOAD_SECONDS * 1000,
+      deadline: Date.now() + PAGE_LOAD_SECONDS * 1000,
       held: true,
       paceSim: 0,
       paceReal: 0,
@@ -245,29 +352,32 @@ async function start(room: Room) {
     sendSpeed(room, live);
   } catch (err) {
     console.error('start failed', err);
+    if (room.ranked) finishRanked(room, 'void', 'server-error');
     broadcast(room, { t: 'error', text: '전장을 준비하지 못했습니다. 잠시 후 다시 시도해 주시기 바랍니다.' });
   } finally {
     room.building = false;
   }
 }
 
-function metaMsg(live: Live, all: boolean): ServerMsg | null {
-  const ships: ShipMeta[] = [];
-  for (const s of live.battle.ships) {
-    if (!all && live.known.has(s.id)) continue;
-    live.known.add(s.id);
-    ships.push({ id: s.id, kind: s.spec.kind, name: s.name, squadron: s.squadronId, flagship: s.flagship, variant: s.variant, owner: s.owner, team: s.team });
-  }
-  const squads = JSON.stringify(live.battle.squadrons.map((q) => [q.id, q.shipIds.length, q.leaderId]));
-  if (!all && !ships.length && squads === live.squads) return null;
-  live.squads = squads;
-  return { t: 'meta', ships, squadrons: live.battle.squadrons };
+function metaMsg(live: Live, all: boolean, client: Client, room: Room): ServerMsg | null {
+  const seat = room.info.seats.findIndex((s) => s.client === client.id);
+  const team = room.info.seats[seat]?.team;
+  if (!team) return null;
+  let view = live.observed.get(client.id);
+  if (!view) { view = { known: new Map(), squads: '' }; live.observed.set(client.id, view); }
+  const observed = observedShips(live.battle, team);
+  const visibleIds = new Set(observed.map((s) => s.id));
+  const ships = observedMetadata(live.battle, team, view.known, all);
+  const squadrons = live.battle.squadrons.map((q) => ({ ...q, shipIds: q.shipIds.filter((id) => visibleIds.has(id)), leaderId: visibleIds.has(q.leaderId) ? q.leaderId : 0 })).filter((q) => q.shipIds.length > 0);
+  const squads = JSON.stringify(squadrons.map((q) => [q.id, q.shipIds, q.leaderId]));
+  if (!all && !ships.length && squads === view.squads) return null;
+  view.squads = squads;
+  return { t: 'meta', ships, squadrons };
 }
 
 /** Whether the battle clock is held back for pages still loading. */
 function holding(live: Live) {
   if (live.waiting.size && Date.now() < live.deadline) return true;
-  live.waiting.clear();
   return false;
 }
 
@@ -288,6 +398,10 @@ function resume(c: Client) {
   const room = c.room;
   if (!room) return;
   send(c, { t: 'room', room: roomInfo(room) });
+  if (room.ranked?.settled && c.account) {
+    const result = ranked?.result(room.ranked.match.id, c.account.id);
+    if (result) send(c, result);
+  }
   const live = room.live;
   if (!live) return;
   // A finished battle is not replayed: a page still on it learns the result, one in the lobby stays there.
@@ -296,14 +410,19 @@ function resume(c: Client) {
     return;
   }
   sendStart(c, room, true);
-  const meta = metaMsg(live, true);
+  const meta = metaMsg(live, true, c, room);
   if (meta) send(c, meta);
-  if (live.conquest) send(c, { t: 'state', conquest: live.conquest.state() });
+  if (live.conquest) { const team = room.info.seats.find((s) => s.client === c.id)?.team; if (team) send(c, { t: 'state', conquest: observedState(live.conquest, live.battle, team) }); }
   send(c, holding(live) ? { t: 'speed', speed: 0, target: 0 } : { t: 'speed', speed: speedOf(live), target: speedOf(live) });
 }
 
 function stepOnce(room: Room, live: Live) {
   live.battle.step(SIM_DT);
+  if (live.ff && live.battle.events.some((e) => e.type === 'gun' || e.type === 'shot')) {
+    live.ff = false;
+    live.time = Math.min(live.time, SIM_DT);
+    sendSpeed(room, live);
+  }
   for (const e of live.battle.events) if (SENT_EVENTS.has(e.type)) live.events.push(e);
   live.battle.events.length = 0;
   live.steps += 1;
@@ -311,6 +430,10 @@ function stepOnce(room: Room, live: Live) {
   if (speedOf(live) === 1 && live.steps % STEPS_PER_SNAPSHOT === 0) flush(room, live);
   if (live.battle.ended) {
     flush(room, live);
+    if (room.ranked) {
+      finishRanked(room, live.battle.draw ? 'draw' : live.battle.winner === 'joseon' ? 0 : 1, 'battle');
+      return;
+    }
     live.endedAt = Date.now();
     room.info.state = 'ended';
     if (live.ff) {
@@ -326,6 +449,10 @@ function tick(room: Room, dt: number, slice: number) {
   const live = room.live;
   if (!live || live.endedAt) return;
   if (live.held) {
+    if (room.ranked && live.waiting.size && Date.now() >= live.deadline) {
+      finishRanked(room, 'void', 'load-timeout');
+      return;
+    }
     if (holding(live)) return;
     live.held = false;
     sendSpeed(room, live);
@@ -358,18 +485,21 @@ function tick(room: Room, dt: number, slice: number) {
 function flush(room: Room, live: Live) {
   live.lastFlush = performance.now();
   live.flushes += 1;
-  const meta = metaMsg(live, false);
-  if (meta) broadcast(room, meta);
   // Small-arms casualties alone can run to hundreds a second in a big melee; the client needs only some.
   let casualties = 0;
   const events = live.events.filter((e) => e.type !== 'casualty' || (!e.melee && (casualties += 1) <= 40));
   live.events = [];
-  if (events.length) broadcast(room, { t: 'events', events });
   for (const c of room.clients) {
     const seat = room.info.seats.findIndex((s) => s.client === c.id);
-    sendBinary(c, encodeSnapshot(live.battle.time, live.battle.ships, seat, (s) => live.battle.isActive(s)));
+    const team = room.info.seats[seat]?.team;
+    if (!team) continue;
+    const meta = metaMsg(live, false, c, room);
+    if (meta) send(c, meta);
+    const seenEvents = events.filter((e) => observedEvent(e, live.battle, live.conquest, team));
+    if (seenEvents.length) send(c, { t: 'events', events: seenEvents });
+    sendBinary(c, encodeSnapshot(live.battle.time, observedShips(live.battle, team), seat, (s) => live.battle.isActive(s)));
+    if (live.conquest && live.flushes % 3 === 0) send(c, { t: 'state', conquest: observedState(live.conquest, live.battle, team) });
   }
-  if (live.conquest && live.flushes % 3 === 0) broadcast(room, { t: 'state', conquest: live.conquest.state() });
 }
 
 function newRoom(c: Client, name: string, choice: BattleChoice, quick: boolean): Room {
@@ -386,8 +516,9 @@ function matchRoom(entries: Quick[]) {
   const first = entries[0]!.c;
   const room = newRoom(first, `빠른 대전 · ${titleOf(choice)}`, choice, true);
   const seats = room.info.seats;
-  for (const q of entries) {
-    const index = teamOf(q.faction) === 'joseon' ? 0 : 1;
+  const ordered = choice.kind === 'conquest' && entries.length === 2 && (randomBytes(1)[0]! & 1) ? [...entries].reverse() : entries;
+  for (const [i, q] of ordered.entries()) {
+    const index = choice.kind === 'conquest' && ordered.length === 2 ? i : teamOf(q.faction) === 'joseon' ? 0 : 1;
     const s = seats[index]!;
     s.client = q.c.id;
     s.faction = q.faction;
@@ -409,7 +540,7 @@ function quickJoin(c: Client, msg: Extract<ClientMsg, { t: 'quick' }>) {
   let faction: Faction = FACTIONS.includes(msg.faction) ? msg.faction : 'joseon';
   // Only the Joseon and Japanese fleets sail a historical duel.
   if (choice.kind === 'scenario' && faction === 'ming') faction = 'joseon';
-  const mate = queue.find((q) => q.c !== c && choiceKey(q.choice) === choiceKey(choice) && teamOf(q.faction) !== teamOf(faction));
+  const mate = queue.find((q) => q.c !== c && choiceKey(q.choice) === choiceKey(choice) && (choice.kind === 'conquest' || teamOf(q.faction) !== teamOf(faction)));
   if (mate) {
     queue.splice(queue.indexOf(mate), 1);
     matchRoom([mate, { c, choice, faction, since: Date.now() }]);
@@ -436,6 +567,25 @@ function resetRoom(room: Room) {
 function handle(c: Client, msg: ClientMsg) {
   const room = c.room;
   switch (msg.t) {
+    case 'rankedProfile':
+      send(c, { t: 'rank', profile: c.account ? ranked?.profile(c.account.id) ?? null : null });
+      return;
+    case 'leaderboard':
+      send(c, { t: 'leaderboard', players: ranked?.leaderboard() ?? [] });
+      return;
+    case 'ranked':
+      rankJoin(c, msg.faction);
+      return;
+    case 'rankedCancel': {
+      if (room?.ranked && !room.ranked.settled) {
+        send(c, { t: 'error', code: 'ranked', text: '랭크 상대가 이미 정해졌습니다. 대기실에서 나가면 기권으로 처리됩니다.' });
+        return;
+      }
+      const i = rankedQueue.findIndex((q) => q.c === c);
+      if (i >= 0) rankedQueue.splice(i, 1);
+      send(c, { t: 'ranked', state: 'idle', since: 0, range: 0 });
+      return;
+    }
     case 'list':
       send(c, { t: 'rooms', rooms: summary() });
       return;
@@ -455,7 +605,7 @@ function handle(c: Client, msg: ClientMsg) {
     }
     case 'join': {
       const r = rooms.get(clean(msg.room, 8).toUpperCase());
-      if (!r || r.info.state !== 'lobby' || r.info.quick) return send(c, { t: 'error', text: '그 방에 들어갈 수 없습니다.' });
+      if (!r || r.info.state !== 'lobby' || r.info.quick || r.info.ranked) return send(c, { t: 'error', text: '그 방에 들어갈 수 없습니다.' });
       const open = r.info.seats.some((s) => s.human && !s.client);
       if (!open && !r.clients.has(c)) return send(c, { t: 'error', text: '방이 가득 찼습니다.' });
       leave(c);
@@ -483,7 +633,7 @@ function handle(c: Client, msg: ClientMsg) {
       send(c, { t: 'quick', state: 'idle', seconds: 0 });
       return;
     case 'take': {
-      if (!room || room.info.state !== 'lobby') return;
+      if (!room || room.info.ranked || room.info.state !== 'lobby') return;
       if (!Number.isInteger(msg.index) || msg.index < 0 || msg.index >= room.info.seats.length) return;
       const seat = room.info.seats[msg.index];
       if (!seat || !seat.human || seat.client) return;
@@ -497,7 +647,7 @@ function handle(c: Client, msg: ClientMsg) {
       return;
     }
     case 'seat': {
-      if (!room || room.info.state !== 'lobby') return;
+      if (!room || room.info.ranked || room.info.state !== 'lobby') return;
       if (!Number.isInteger(msg.index) || msg.index < 0 || msg.index >= room.info.seats.length) return;
       const seat = room.info.seats[msg.index];
       if (!seat) return;
@@ -506,14 +656,14 @@ function handle(c: Client, msg: ClientMsg) {
       if (!mine && !(host && !seat.client)) return;
       // A duel's sides are fixed: Joseon on seat 0, Japan on seat 1.
       // The Ming fleet sailed only with the Joseon side.
-      if (room.info.battle.kind === 'conquest' && msg.faction && FACTIONS.includes(msg.faction as Faction) && !(msg.faction === 'ming' && seat.team === 'japan')) seat.faction = msg.faction as Faction;
+      if (room.info.battle.kind === 'conquest' && msg.faction && FACTIONS.includes(msg.faction as Faction)) seat.faction = msg.faction as Faction;
       if (typeof msg.human === 'boolean' && host && !seat.client) seat.human = msg.human;
       for (const s of room.info.seats) s.ready = s.client === room.info.host ? s.ready : false;
       pushRoom(room);
       return;
     }
     case 'ready': {
-      if (!room || room.info.state !== 'lobby') return;
+      if (!room || room.info.ranked || room.info.state !== 'lobby') return;
       const seat = room.info.seats.find((s) => s.client === c.id);
       if (seat) seat.ready = !!msg.ready;
       pushRoom(room);
@@ -527,7 +677,7 @@ function handle(c: Client, msg: ClientMsg) {
       return;
     }
     case 'rematch': {
-      if (!room || room.info.state !== 'ended') return;
+      if (!room || room.info.ranked || room.info.state !== 'ended') return;
       const seat = room.info.seats.find((s) => s.client === c.id);
       if (!seat) return;
       seat.rematch = true;
@@ -564,13 +714,43 @@ function handle(c: Client, msg: ClientMsg) {
 }
 
 /** A connection says who it is. A known token takes its old seat back. */
-function attach(ws: WebSocket, msg: Extract<ClientMsg, { t: 'hello' }>): Client | null {
+function attach(ws: WebSocket, msg: Extract<ClientMsg, { t: 'hello' }>, address: string): Client | null {
   if (msg.v !== PROTOCOL) {
     ws.send(JSON.stringify({ t: 'error', code: 'version', text: '게임 버전이 서버와 다릅니다. 새로고침이 필요합니다.' } satisfies ServerMsg));
     ws.close();
     return null;
   }
   let c = typeof msg.token === 'string' ? byToken.get(msg.token) : undefined;
+  let account: Client['account'] = null;
+  const name = clean(msg.name, 16) || '무명';
+  if (ranked?.ready) {
+    if (!msg.account) {
+      let limit = accountCreation.get(address);
+      if (!limit || Date.now() - limit.since > 3600000) limit = { since: Date.now(), count: 0 };
+      if (limit.count >= 24) {
+        ws.send(JSON.stringify({ t: 'error', code: 'identity', text: '새 계정을 너무 자주 만들었습니다. 저장된 복원 코드로 접속하거나 잠시 후 다시 시도해 주세요.' } satisfies ServerMsg));
+        ws.close(4003, 'account creation limit');
+        return null;
+      }
+      accountCreation.set(address, limit);
+    }
+    try { account = ranked.account(msg.account, name); }
+    catch {
+      ws.send(JSON.stringify({ t: 'error', code: ranked.ready ? 'identity' : 'ranked', text: ranked.ready ? '복원 코드를 확인할 수 없습니다. 저장된 코드를 다시 확인해 주세요.' : '계정 저장소를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.' } satisfies ServerMsg));
+      ws.close(ranked.ready ? 4003 : 1011, 'account unavailable');
+      return null;
+    }
+    if (!msg.account) accountCreation.get(address)!.count++;
+  }
+  // Storage outages disable ranked play; an already authenticated tab can still recover its casual session.
+  if (!ranked?.ready && c?.account && msg.account === c.account.token) account = c.account;
+  if (c?.account && (account?.id !== c.account.id || msg.account !== c.account.token)) {
+    ws.send(JSON.stringify({ t: 'error', code: 'identity', text: '이 자리의 계정과 복원 코드가 일치하지 않습니다.' } satisfies ServerMsg));
+    ws.close(4003, 'account mismatch');
+    return null;
+  }
+  // The permanent credential can recover a ranked seat after a tab was closed, without its session token.
+  if (!c && account && ranked?.activeMatch(account.id)) c = [...byId.values()].find((other) => other.account?.id === account.id && other.room?.ranked && !other.room.ranked.settled);
   const resumed = !!c;
   if (c) {
     const old = c.ws;
@@ -584,14 +764,15 @@ function attach(ws: WebSocket, msg: Extract<ClientMsg, { t: 'hello' }>): Client 
       ws.close();
       return null;
     }
-    c = { id: randomBytes(6).toString('hex'), token: randomBytes(16).toString('hex'), name: '무명', ws: null, room: null, alive: true, grace: null, budget: 120, budgetAt: performance.now() };
+    c = { id: randomBytes(6).toString('hex'), token: randomBytes(16).toString('hex'), name: '무명', ws: null, room: null, alive: true, grace: null, budget: 120, budgetAt: performance.now(), account };
     byToken.set(c.token, c);
     byId.set(c.id, c);
   }
   c.ws = ws;
+  c.account = account;
   c.alive = true;
   c.name = clean(msg.name, 16) || c.name;
-  send(c, { t: 'welcome', id: c.id, v: PROTOCOL, token: c.token, resumed });
+  send(c, { t: 'welcome', id: c.id, v: PROTOCOL, token: c.token, resumed, account: c.account, rank: c.account ? ranked?.profile(c.account.id) ?? null : null });
   const seat = c.room?.info.seats.find((s) => s.client === c!.id);
   if (c.room && seat) {
     if (seat.away) {
@@ -614,18 +795,20 @@ function detach(c: Client) {
   dequeue(c);
   const room = c.room;
   const seat = room?.info.seats.find((s) => s.client === c.id);
-  if (!room || !seat || room.info.state === 'lobby') {
+  if (!room || !seat || (room.info.state === 'lobby' && !room.ranked)) {
     drop(c);
     return;
   }
   seat.away = true;
-  room.live?.waiting.delete(c.id);
-  notice(room, '{name}님의 연결이 끊어졌습니다. {n}초 동안 기다립니다.', { name: c.name, n: GRACE_SECONDS });
+  if (!room.ranked) room.live?.waiting.delete(c.id);
+  notice(room, '{name}님의 연결이 끊어졌습니다. {n}초 동안 기다립니다.', { name: c.name, n: DISCONNECT_SECONDS });
   pushRoom(room);
-  c.grace = setTimeout(() => drop(c), GRACE_SECONDS * 1000);
+  c.grace = setTimeout(() => drop(c), DISCONNECT_SECONDS * 1000);
 }
 
 function main() {
+  try { ranked = new RankedStore(process.env.RANKED_STORE ?? join(dirname(__filename), 'data', 'ranked.jsonl')); }
+  catch (error) { console.error('ranked unavailable', error instanceof Error ? error.message : 'unknown error'); }
   const http = createServer((req, res) => {
     if (req.url === '/health') {
       res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'cache-control': 'no-store' });
@@ -638,6 +821,8 @@ function main() {
           battles: [...rooms.values()].filter((r) => r.live && !r.live.endedAt).length,
           clients: byId.size,
           queue: queue.length,
+          rankedQueue: rankedQueue.length,
+          rankedReady: ranked?.ready === true,
           tickMs: Math.round(tickMs * 100) / 100,
           ffSpeed: FF_SPEED,
         }),
@@ -649,7 +834,11 @@ function main() {
   });
 
   const wss = new WebSocketServer({ server: http, path: '/ws', maxPayload: 64 * 1024, verifyClient: (info: { origin: string }) => originAllowed(info.origin || undefined) });
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, request) => {
+    // Only the local TLS proxy may supply the original address. A direct client cannot spoof this header.
+    const remote = request.socket.remoteAddress ?? 'unknown';
+    const forwarded = request.headers['x-forwarded-for'];
+    const address = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(remote) && typeof forwarded === 'string' ? forwarded.split(',').at(-1)!.trim() : remote;
     let c: Client | null = null;
     // Receiver errors (including maxPayload) belong to this connection, not the process.
     ws.on('error', () => ws.terminate());
@@ -667,21 +856,32 @@ function main() {
       const msg = clientMessage(raw);
       if (!msg) return;
       try {
+        // Introduced clients pay the same budget for hello/rename as for every other request.
+        if (c && c.ws === ws) {
+          const now = performance.now();
+          c.budget = Math.min(120, c.budget + ((now - c.budgetAt) / 1000) * 60);
+          c.budgetAt = now;
+          if (c.budget < 1) return;
+          c.budget -= 1;
+        }
         if (msg.t === 'hello') {
           // A second hello on the same connection only renames the player.
           if (c && c.ws === ws && msg.v === PROTOCOL) {
+            if (msg.account !== undefined && msg.account !== c.account?.token) {
+              send(c, { t: 'error', code: 'identity', text: '다른 계정으로 접속하려면 현재 연결을 먼저 닫아 주세요.' });
+              return;
+            }
             c.name = clean(msg.name, 16) || c.name;
+            if (ranked?.ready && c.account) {
+              ranked.account(c.account.token, c.name);
+              send(c, { t: 'rank', profile: ranked.profile(c.account.id) });
+            }
             send(c, { t: 'rooms', rooms: summary() });
-          } else c = attach(ws, msg) ?? c;
+          } else c = attach(ws, msg, address) ?? c;
           return;
         }
         // Not yet introduced, or a connection that was replaced by a newer one.
         if (!c || c.ws !== ws) return;
-        const now = performance.now();
-        c.budget = Math.min(120, c.budget + ((now - c.budgetAt) / 1000) * 60);
-        c.budgetAt = now;
-        if (c.budget < 1) return;
-        c.budget -= 1;
         handle(c, msg);
       } catch (err) {
         console.warn('client request failed', err);
@@ -708,6 +908,7 @@ function main() {
 
   // Quick match waits QUICK_SECONDS for a person, then the computer takes the other side.
   setInterval(() => {
+    matchRanked();
     const now = Date.now();
     for (const q of [...queue]) {
       if (now - q.since < QUICK_SECONDS * 1000) continue;
