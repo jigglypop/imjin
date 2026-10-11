@@ -9,8 +9,9 @@ import { summarizeBattle, type BattleSummary } from '../sim/grand/report';
 import { cancelBuild, cancelRecruit, orderAlliance, orderBuild, orderCommander, orderDeclareWar, orderDisband, orderMerge, orderMove, orderRecruit, orderRefit, orderSplit, orderStop } from '../sim/grand/orders';
 import { REGION_ORDER } from '../sim/grand/regions';
 import { autoResolveContact, endTurn, newGrand, type TurnReport } from '../sim/grand/turn';
-import type { BattleOutcome, BuildingKind, Grand, GrandFaction, RegionId, Result } from '../sim/grand/types';
-import { GRAND_FACTIONS } from '../sim/grand/types';
+import type { BattleOutcome, BuildingKind, Fleet, Grand, GrandFaction, RegionId, Result } from '../sim/grand/types';
+import { GRAND_FACTIONS, fail, ok } from '../sim/grand/types';
+import { fleetById } from '../sim/grand/world';
 import { migrateGrandBalance } from '../sim/grand/economy';
 import { orderDispatch, orderMobilize } from '../sim/grand/dispatch';
 import { migrateGrandRegions } from '../sim/grand/migration';
@@ -64,9 +65,11 @@ type GrandState = {
   reported: number | null;
   /** The campaign as it stood before the turn that just closed, and what that turn did, for the map to play back. Not saved. */
   replay: { before: Grand; moves: TurnReplay } | null;
+  /** Fleets sent with "merge on arrival", each with the port it sails for. Not saved: a reload forgets the wish, never a fleet. */
+  arrivalMerge: Record<string, RegionId>;
 };
 
-export const useGrand = create<GrandState>(() => ({ grand: load(), lastBattle: null, reported: null, replay: null }));
+export const useGrand = create<GrandState>(() => ({ grand: load(), lastBattle: null, reported: null, replay: null, arrivalMerge: {} }));
 
 export const dismissBattle = () => useGrand.setState({ lastBattle: null });
 export const dismissReport = () => useGrand.setState({ reported: null });
@@ -110,13 +113,13 @@ function commit(change: (g: Grand) => Result): Result {
 /** Starts a fresh campaign as the chosen navy, replacing any save. */
 export function startGrand(player: GrandFaction, difficulty: Grand['difficulty'] = 'normal', seed = Math.floor(Math.random() * 2147483647)): Grand {
   const g = newGrand(player, seed, difficulty);
-  useGrand.setState({ grand: g, lastBattle: null, reported: null, replay: null });
+  useGrand.setState({ grand: g, lastBattle: null, reported: null, replay: null, arrivalMerge: {} });
   save(g);
   return g;
 }
 
 export function abandonGrand() {
-  useGrand.setState({ grand: null, lastBattle: null, reported: null, replay: null });
+  useGrand.setState({ grand: null, lastBattle: null, reported: null, replay: null, arrivalMerge: {} });
   save(null);
 }
 
@@ -144,6 +147,85 @@ export const grandOrders = {
   declareWar: (a: GrandFaction, b: GrandFaction) => guarded((g) => a === g.player, (g) => orderDeclareWar(g, a, b)),
   alliance: (a: GrandFaction, b: GrandFaction) => guarded((g) => a === g.player, (g) => orderAlliance(g, a, b)),
 };
+
+/** A fleet that can join another now: docked in a port and done refitting (a merge hands the larger rest to the survivor). */
+const mergeable = (f: Fleet) => !!f.at && !f.transit && f.rest === 0;
+
+/**
+ * Merges every group of two or more mergeable fleets that lie in the same port, each into its largest fleet. Returns how
+ * many fleets were absorbed, and the reason the sim gave when a merge stopped (the size cap).
+ */
+function mergeGroups(g: Grand, fleets: readonly Fleet[]): { merged: number; blocked?: Extract<Result, { ok: false }> } {
+  const byPort = new Map<string, Fleet[]>();
+  for (const f of fleets) if (mergeable(f)) byPort.set(f.at!, [...(byPort.get(f.at!) ?? []), f]);
+  let merged = 0;
+  let blocked: Extract<Result, { ok: false }> | undefined;
+  for (const group of byPort.values()) {
+    const [keep, ...rest] = [...group].sort((a, b) => b.ships.length - a.ships.length);
+    for (const other of rest) {
+      const res = orderMerge(g, keep.id, other.id);
+      if (res.ok) merged += 1;
+      else blocked = res;
+    }
+  }
+  return { merged, blocked };
+}
+
+/** "모두 합류": the given own fleets that share a port become one fleet per port. */
+export const mergeFleets = (fleetIds: readonly string[]): Result =>
+  commit((g) => {
+    const fleets = [...new Set(fleetIds)].map((id) => fleetById(g, id));
+    if (fleets.some((f) => !f || f.faction !== g.player)) return notYours;
+    const { merged, blocked } = mergeGroups(g, fleets as Fleet[]);
+    if (merged) return ok('함대 {n}개를 합쳤습니다', { n: merged });
+    return blocked ?? fail('같은 포구에 정비를 마친 함대가 둘 이상 있어야 합칠 수 있습니다');
+  });
+
+/**
+ * Sends the selected fleets and garrisons to one region. With `mergeOnArrival` the fleets are remembered so that
+ * mergeArrived joins them once they lie together in that port; the saved campaign is not involved.
+ */
+export function dispatchForces(fleetIds: string[], portIds: RegionId[], dest: RegionId, mergeOnArrival: boolean): Result {
+  const known = new Set(useGrand.getState().grand?.fleets.map((f) => f.id));
+  const res = grandOrders.dispatch(fleetIds, portIds, dest);
+  if (!res.ok) return res;
+  // A garrison that sails becomes a new fleet; its id exists only now.
+  const sailed = useGrand.getState().grand?.fleets.filter((f) => !known.has(f.id)).map((f) => f.id) ?? [];
+  useGrand.setState((s) => {
+    const marks = { ...s.arrivalMerge };
+    for (const id of [...fleetIds, ...sailed]) {
+      if (mergeOnArrival) marks[id] = dest;
+      else delete marks[id];
+    }
+    return { arrivalMerge: marks };
+  });
+  return res;
+}
+
+/**
+ * Joins the fleets sent with "merge on arrival" that now lie together in their destination. A mark stays while a fleet of
+ * its group is still sailing or refitting, and goes once the group is gathered or gone. Returns the number absorbed.
+ */
+export function mergeArrived(): number {
+  const { grand: current, arrivalMerge } = useGrand.getState();
+  if (!current || current.phase !== 'orders' || !Object.keys(arrivalMerge).length) return 0;
+  const next = structuredClone(current);
+  const marks = { ...arrivalMerge };
+  let merged = 0;
+  const here = (f: Fleet, dest: string) => f.at === dest && !f.transit && !f.route.length;
+  for (const dest of new Set(Object.values(marks))) {
+    const ids = Object.keys(marks).filter((id) => marks[id] === dest);
+    merged += mergeGroups(next, ids.flatMap((id) => fleetById(next, id) ?? []).filter((f) => here(f, dest))).merged;
+    const left = ids.flatMap((id) => fleetById(next, id) ?? []);
+    // Everyone of the group is in port and refitted (or gone): the wish is spent.
+    if (left.every((f) => here(f, dest) && f.rest === 0)) for (const id of ids) delete marks[id];
+  }
+  if (merged) {
+    useGrand.setState({ grand: next, arrivalMerge: marks });
+    save(next);
+  } else if (Object.keys(marks).length !== Object.keys(arrivalMerge).length) useGrand.setState({ arrivalMerge: marks });
+  return merged;
+}
 
 /**
  * Ends the player's turn. The computer navies move, fleets sail, and every meeting that involves another navy is

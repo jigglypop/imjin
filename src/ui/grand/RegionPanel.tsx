@@ -15,6 +15,8 @@ export interface RegionPanelProps {
   onCancelRecruit?: (regionId: string, itemId: string) => void;
   onSelectFleet?: (fleetId: string) => void;
   onMobilize?: (regionId: string) => void;
+  /** Joins the given own fleets of this port into one. */
+  onMergeAll?: (fleetIds: string[]) => void;
 }
 /**
  * Which commander's camp art a port shows (public/ui/camps/<id>-L<level>.webp, scripts/generate-camp-art.mjs). A seat
@@ -60,11 +62,13 @@ function CampView({ region }: { region: RegionView }) {
   );
 }
 
-export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuild, onRecruit, onCancelRecruit, onSelectFleet, onMobilize }: RegionPanelProps) {
+export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuild, onRecruit, onCancelRecruit, onSelectFleet, onMobilize, onMergeAll }: RegionPanelProps) {
   const t = useT();
   const own = region.owner === me;
   const seen = region.visible || own;
   const building = new Set(region.works.map((w) => w.kind));
+  const mine = fleets.filter((f) => f.faction === me && !f.transit);
+  const ready = mine.filter((f) => f.rest === 0);
   return (
     <Sheet
       tone={region.owner}
@@ -218,6 +222,12 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
           )}
 
           <h3 className="g-section">{t('주둔 함대')}</h3>
+          {onMergeAll && mine.length > 1 && (
+            <div className="g-tools">
+              <button type="button" className="g-btn g-btn--sm" disabled={ready.length < 2} onClick={() => onMergeAll(ready.map((f) => f.id))}>{t('모두 합류 ({n})', { n: ready.length })}</button>
+              <span className="g-hint">{ready.length < 2 ? t('정비 중인 함대는 합칠 수 없습니다. 정비가 끝난 함대가 둘 이상 필요합니다.') : ready.length < mine.length ? t('정비 중인 함대는 제외하고 합칩니다.') : t('이 포구의 함대를 하나로 합칩니다.')}</span>
+            </div>
+          )}
           {fleets.length === 0 ? (
             <p className="g-hint">{t('주둔 중인 함대가 없습니다.')}</p>
           ) : (

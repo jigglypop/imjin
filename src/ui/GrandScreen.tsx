@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sound } from '../audio/Sound';
 import { t, useLang } from '../i18n';
-import { abandonGrand, autoResolveGrand, chooseGrandEvent, dismissBattle, dismissReplay, dismissReport, endGrandTurn, grandOrders, guideSeen, markGuideSeen, prepareGrandBattle, startGrand, useGrand } from '../campaign/grand';
+import { abandonGrand, autoResolveGrand, chooseGrandEvent, dismissBattle, dismissReplay, dismissReport, dispatchForces, endGrandTurn, grandOrders, guideSeen, markGuideSeen, mergeArrived, mergeFleets, prepareGrandBattle, startGrand, useGrand } from '../campaign/grand';
 import type { RegionBattle } from '../sim/grand/bridge';
 import type { BuildingKind as SimBuilding, Grand, GrandFaction, RegionId, Result } from '../sim/grand/types';
 import type { ShipKind } from '../sim/types';
@@ -42,7 +42,7 @@ import type { FactionId } from './grand/types';
 import { REGIONS } from '../sim/grand/regions';
 import { atWar } from '../sim/grand/world';
 import { dispatchTargets } from '../sim/grand/dispatch';
-import { FleetOrdersPanel } from './grand/FleetOrdersPanel';
+import { FleetOrdersPanel, forceReady } from './grand/FleetOrdersPanel';
 
 type Stage = 'hub' | 'pick' | 'map';
 
@@ -120,6 +120,8 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const [batchOpen, setBatchOpen] = useState(false);
   const [pickedFleets, setPickedFleets] = useState<Set<string>>(new Set());
   const [pickedPorts, setPickedPorts] = useState<Set<string>>(new Set());
+  const [mergeOnArrival, setMergeOnArrival] = useState(false);
+  const arrivalMerge = useGrand((s) => s.arrivalMerge);
   const [focus, setFocus] = useState<{ id: string; nonce: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [status, setStatus] = useState(false);
@@ -146,7 +148,10 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const fleet = fleets.find((f) => f.id === fleetId) ?? null;
   const simFleet = g.fleets.find((f) => f.id === fleetId);
   const insets = useMapInsets(!!(region || fleet || batchOpen));
-  const targets = useMemo(() => !moving ? undefined : batchOpen ? dispatchTargets(g, [...pickedFleets], [...pickedPorts] as RegionId[], me) : simFleet ? moveTargets(g, simFleet) : undefined, [moving, batchOpen, pickedFleets, pickedPorts, simFleet, g, me]);
+  const picked = pickedFleets.size + pickedPorts.size;
+  // A batch needs no "choose destination" step: whatever is picked lights up the regions all of it can reach.
+  const batchTargets = useMemo(() => (batchOpen && picked ? dispatchTargets(g, [...pickedFleets], [...pickedPorts] as RegionId[], me) : undefined), [batchOpen, picked, pickedFleets, pickedPorts, g, me]);
+  const targets = useMemo(() => (batchOpen ? batchTargets : moving && simFleet ? moveTargets(g, simFleet) : undefined), [batchOpen, batchTargets, moving, simFleet, g]);
   const pending = g.phase === 'battles' ? g.pending[0] : undefined;
   const eventCard = useMemo(() => (g.events.pending ? eventView(g) : null), [g, lang]);
   const turnReport = useMemo(() => (reported !== null ? turnReportView(g, reported) : null), [g, reported, lang]);
@@ -176,9 +181,11 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   };
 
   const selectRegion = (id: string) => {
-    if (batchOpen && moving) {
-      if (!targets?.includes(id as RegionId)) { say(t('그곳으로 가는 안전한 항로가 없습니다')); return; }
-      const res = grandOrders.dispatch([...pickedFleets], [...pickedPorts] as RegionId[], id as RegionId);
+    if (batchOpen) {
+      if (!picked) { say(t('먼저 출동할 함대나 수비대를 고르세요')); return; }
+      if (!batchTargets?.length) { say(t('함께 갈 수 있는 목적지가 없습니다')); return; }
+      if (!batchTargets.includes(id as RegionId)) { say(t('그곳으로 가는 안전한 항로가 없습니다')); return; }
+      const res = dispatchForces([...pickedFleets], [...pickedPorts] as RegionId[], id as RegionId, mergeOnArrival);
       if (report(res)) { sound.campaign('move'); closePanels(); }
       return;
     }
@@ -207,13 +214,32 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
 
   const toggleFleet = (id: string) => setPickedFleets((set) => { const next = new Set(set); next.has(id) ? next.delete(id) : next.add(id); return next; });
   const togglePort = (id: string) => setPickedPorts((set) => { const next = new Set(set); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  /**
+   * Adds fleets and port garrisons to the batch (or takes them out again when `toggle` is set). Anything that cannot
+   * sail is left out and said so; the batch opens even when nothing could be added. A drag-select hands its result here.
+   */
+  const pickForces = (fleetIds: readonly string[], portIds: readonly string[], toggle = false) => {
+    const ready = fleetIds.filter((id) => { const f = fleets.find((x) => x.id === id); return f && f.faction === me && forceReady(f); });
+    const ports = portIds.filter((id) => regions.some((r) => r.id === id && r.owner === me && r.garrison > 0));
+    if (!ready.length && !ports.length) { say(t('출동 가능한 병력이 없습니다')); return; }
+    if (fleetIds.length !== 1 && fleetIds.length !== ready.length) say(t('정비 중이거나 항해 중인 함대는 제외했습니다'));
+    setBatchOpen(true); setMoving(false); setFleetId(null); setRegionId(null);
+    const add = (set: Set<string>, ids: readonly string[]) => {
+      const next = new Set(set);
+      for (const id of ids) (toggle && next.has(id) ? next.delete(id) : next.add(id));
+      return next;
+    };
+    setPickedFleets((set) => add(set, ready));
+    setPickedPorts((set) => add(set, ports));
+  };
   const selectFleet = (id: string, additive = false) => {
     const f = fleets.find((x) => x.id === id);
     if (!f) return;
     if (batchOpen || additive) {
-      if (f.faction === me && f.at && !f.transit && f.rest === 0 && !moving) {
-        setBatchOpen(true); toggleFleet(id); setFleetId(null); setRegionId(null);
-      }
+      if (f.faction !== me) say(t('우리 진영의 함대만 고를 수 있습니다'));
+      else if (f.transit || !f.at) say(t('항해 중인 함대는 고를 수 없습니다'));
+      else if (f.rest > 0) say(t('정비 중인 함대는 고를 수 없습니다'));
+      else pickForces([id], [], true);
       return;
     }
     setFleetId(id);
@@ -230,6 +256,22 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
     setBatchOpen(false);
     setPickedFleets(new Set()); setPickedPorts(new Set());
   };
+
+  // Esc ends the batch (or a move being aimed), unless a dialog is on top of the map.
+  const dialogOpen = status || menu || !!lastBattle || !!replay || !!pending || !!g.events.pending;
+  useEffect(() => {
+    if (dialogOpen || !(batchOpen || moving)) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closePanels();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  // Fleets sent with "merge on arrival" join once they lie together in port, as soon as the closed turn has played back.
+  useEffect(() => {
+    if (replay || g.phase !== 'orders' || g.events.pending) return;
+    const n = mergeArrived();
+    if (n) say(t('도착한 함대 {n}개를 합쳤습니다', { n }));
+  }, [g, replay, arrivalMerge, say]);
 
   const endTurn = () => {
     if (g.phase === 'battles') {
@@ -308,7 +350,8 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         onSelectRegion={selectRegion}
         onSelectFleet={selectFleet}
         onBackground={() => {
-          if (!moving) closePanels();
+          // A stray click on the sea must not lose a batch the player took time to pick: it ends with Esc or its own buttons.
+          if (!moving && !batchOpen) closePanels();
         }}
         replay={replayData}
         reducedMotion={reduced}
@@ -330,10 +373,15 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         endLabel={g.phase === 'battles' ? t('전투 {n}건', { n: g.pending.length }) : t('턴 종료')}
       />
       <div className="g-dock">
-        {batchOpen ? <FleetOrdersPanel fleets={fleets.filter((f) => f.faction === me)} ports={regions.filter((p) => p.owner === me && p.garrison > 0)} selectedFleets={pickedFleets} selectedPorts={pickedPorts} moving={moving} onFleet={toggleFleet} onPort={togglePort} onAll={(all) => {
-          setPickedFleets(new Set(all ? fleets.filter((f) => f.faction === me && !!f.at && !f.transit && f.rest === 0).map((f) => f.id) : []));
+        {batchOpen ? <FleetOrdersPanel fleets={fleets.filter((f) => f.faction === me)} ports={regions.filter((p) => p.owner === me && p.garrison > 0)} selectedFleets={pickedFleets} selectedPorts={pickedPorts} mergeOnArrival={mergeOnArrival} noRoute={picked > 0 && !batchTargets?.length} onFleet={toggleFleet} onPort={togglePort} onAll={(all) => {
+          setPickedFleets(new Set(all ? fleets.filter((f) => f.faction === me && forceReady(f)).map((f) => f.id) : []));
           setPickedPorts(new Set(all ? regions.filter((p) => p.owner === me && p.garrison > 0).map((p) => p.id) : []));
-        }} onMove={() => setMoving(true)} onCancel={() => setMoving(false)} onClose={closePanels} /> : fleet ? (
+        }} onMergeOnArrival={setMergeOnArrival} onMergeAll={() => {
+          const res = mergeFleets([...pickedFleets]);
+          // Merged-away fleets are gone from the store; keep only the survivors picked.
+          if (res.ok) setPickedFleets((set) => new Set([...set].filter((id) => useGrand.getState().grand?.fleets.some((f) => f.id === id))));
+          report(res);
+        }} onClose={closePanels} /> : fleet ? (
           <FleetPanel
             key={fleet.id + fleet.ships.length}
             fleet={fleet}
@@ -381,6 +429,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
             onRecruit={(id, kind) => ordered(grandOrders.recruit(id as RegionId, kind as ShipKind))}
             onCancelRecruit={(id, item) => report(grandOrders.cancelRecruit(id as RegionId, item), '주문을 취소하고 비용을 돌려받았습니다')}
             onSelectFleet={selectFleet}
+            onMergeAll={(ids) => report(mergeFleets(ids))}
             onMobilize={(id) => { const res = grandOrders.mobilize(id as RegionId); if (res.ok && res.note) { setFleetId(res.note); setRegionId(null); } report(res, '수비대가 출동 함대에 승선했습니다'); }}
           />
         ) : null}
