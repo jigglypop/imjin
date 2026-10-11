@@ -89,7 +89,7 @@ try {
     for (const faction of ['joseon', 'japan', 'ming']) {
       const ordinary = fixture({}, faction), ranked = fixture(RANKED_OPTIONS, faction);
       for (const kind of ROSTER[faction]) {
-        close(ordinary.c.recruitTime(kind), ordinary.c.shipSpec(kind).build * 0.6);
+        close(ordinary.c.recruitTime(kind), Math.round(ordinary.c.shipSpec(kind).build * 0.36 * 10) / 10);
         close(ranked.c.recruitTime(kind), ranked.c.shipSpec(kind).build);
         assert.ok(ordinary.c.recruitIn(ordinary.b, 0, ordinary.p.id, kind));
         assert.ok(ranked.c.recruitIn(ranked.b, 0, ranked.p.id, kind));
@@ -97,9 +97,9 @@ try {
         close(ranked.p.queue.at(-1).total, ranked.c.shipSpec(kind).build);
       }
       for (const kind of Object.keys(BUILDINGS)) {
-        close(ordinary.c.buildTime(kind), BUILDINGS[kind].time * 0.6);
+        close(ordinary.c.buildTime(kind), BUILDINGS[kind].time * 0.36);
         close(ranked.c.buildTime(kind), BUILDINGS[kind].time);
-        close(ordinary.c.upgradeDuration(kind, 1), upgradeTime(kind, 1) * 0.6);
+        close(ordinary.c.upgradeDuration(kind, 1), upgradeTime(kind, 1) * 0.36);
       }
       assert.equal(ordinary.c.yardSlots(ordinary.p), 2);
       assert.equal(ranked.c.yardSlots(ranked.p), 1);

@@ -136,8 +136,8 @@ const BASE_INCOME = 60;
 const POINT_INCOME = 45;
 const CAPTURE_RATE = 0.025;
 const QUEUE_MAX = 5;
-/** Casual logistics uses faster work orders; ranked retains the catalog's original timings. */
-const CASUAL_WORK_TIME = 0.6;
+/** Casual logistics uses faster work orders (0.36 of the catalog time, was 0.6); ranked retains the catalog's original timings. */
+const CASUAL_WORK_TIME = 0.36;
 
 const dist2 = (ax: number, az: number, bx: number, bz: number) => (ax - bx) ** 2 + (az - bz) ** 2;
 
