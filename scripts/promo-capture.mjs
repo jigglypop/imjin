@@ -1,11 +1,13 @@
-// Records the shots of a vertical promo reel (1080x1920) from the running game: each shot loads a battle or screen, stages
-// it, and records the page through the DevTools screencast (JPEG frames with timestamps, encoded at a steady 30 fps).
-//   node scripts/promo-capture.mjs --url=http://127.0.0.1:5291/ --out=shots/promo [--only=turtle,rockets]
-// Writes <out>/<shot>.mp4 per shot. scripts/promo-edit.mjs cuts them into the reel.
+// Records the shots of a vertical promo reel from the running game at 2160x3840: each shot loads a battle or screen,
+// stages it, then renders it on a clock the script steps itself (30 fps, two 60 Hz steps a frame), grabbing every frame,
+// so nothing drops however long a 4K frame takes to draw. Frames go straight into ffmpeg.
+//   node scripts/promo-capture.mjs --url=http://127.0.0.1:5291/ --out=shots/promo/en [--only=turtle,rockets] [--lang=en]
+// Writes <out>/<shot>.mp4 per shot (near-lossless intermediates). scripts/promo-edit.mjs cuts them into the reel.
 import { chromium } from 'playwright-core';
-import { mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 
 const args = Object.fromEntries(
   process.argv.slice(2).map((a) => {
@@ -16,8 +18,43 @@ const args = Object.fromEntries(
 const base = args.url ?? 'http://127.0.0.1:5291/';
 const out = resolve(args.out ?? 'shots/promo');
 const only = args.only ? new Set(args.only.split(',')) : null;
+const lang = args.lang ?? 'en';
+// A phone-shaped page drawn at four device pixels per CSS pixel: 540x960 CSS is 2160x3840 on screen.
 const W = 540;
 const H = 960;
+const SCALE = 4;
+const FPS = 30;
+const SUB = 2;
+
+/**
+ * Runs before the page's own scripts: a clock the capture stops and steps. Until `enable()` the page runs on the real
+ * clock (loading, staging); after it, time only moves in `step()`, and frame callbacks only run there, so each frame is
+ * simulated and drawn at exactly its own moment.
+ */
+const VIRTUAL_TIME = `(() => {
+  const realNow = performance.now.bind(performance);
+  const dateBase = Date.now() - realNow();
+  const realRaf = window.requestAnimationFrame.bind(window);
+  const realCaf = window.cancelAnimationFrame.bind(window);
+  // offset keeps the clock running forward across a switch back to real time after the stepped clock ran ahead
+  const vt = { on: false, t: 0, offset: 0, queue: new Map(), next: 1e9 };
+  vt.enable = () => { if (vt.on) return; vt.t = realNow() + vt.offset; vt.on = true; };
+  vt.disable = () => {
+    if (!vt.on) return;
+    vt.offset = vt.t - realNow();
+    vt.on = false;
+    const q = vt.queue;
+    vt.queue = new Map();
+    for (const cb of q.values()) realRaf(cb);
+  };
+  vt.step = (ms) => { vt.t += ms; const q = vt.queue; vt.queue = new Map(); for (const cb of q.values()) cb(vt.t); };
+  vt.flush = () => new Promise((r) => realRaf(() => realRaf(r)));
+  performance.now = () => (vt.on ? vt.t : realNow() + vt.offset);
+  Date.now = () => Math.round(dateBase + performance.now());
+  window.requestAnimationFrame = (cb) => { if (!vt.on) return realRaf(cb); const id = vt.next++; vt.queue.set(id, cb); return id; };
+  window.cancelAnimationFrame = (id) => { if (!vt.queue.delete(id)) realCaf(id); };
+  window.__vt = vt;
+})();`;
 
 /** In the page: park every ship but a chosen pair, so one duel fills the frame. Returns the pair's names. */
 function stageDuel({ kindA, kindD, dist, ammo, reload, team }) {
@@ -106,7 +143,7 @@ const SHOTS = [
     // 13 against 133: from behind the Joseon line, the whole Japanese fleet filling the strait, pushing in.
     name: 'myeong_wide',
     url: '?scenario=myeongnyang&hud=0&lv=4&q=high&sky=sunset&sea=moderate',
-    seconds: 7,
+    seconds: 4,
     async setup(page) {
       await page.evaluate(() => {
         const e = window.__engine;
@@ -131,7 +168,7 @@ const SHOTS = [
     // A panokseon's broadside from just behind its guns: smoke, flashes and round shot arcing away.
     name: 'broadside',
     url: '?scenario=hansan&hud=0&lv=4&q=high&sky=sunset&sea=calm',
-    seconds: 8,
+    seconds: 3.5,
     async setup(page) {
       await page.evaluate(stageDuel, { kindA: 'panokseon', kindD: 'atakebune', dist: 230, ammo: 'auto', reload: 2.6, team: 'joseon' });
       const { cx, cz } = await page.evaluate(() => window.__duel);
@@ -196,7 +233,7 @@ const SHOTS = [
     // A singijeon rocket salvo seen from the side as it climbs and falls on the enemy.
     name: 'rockets',
     url: '?scenario=hansan&hud=0&lv=4&q=high&sky=sunset&sea=calm',
-    seconds: 8,
+    seconds: 5,
     async setup(page) {
       await page.evaluate(stageDuel, { kindA: 'panokseon', kindD: 'atakebune', dist: 240, ammo: 'fire', reload: 2.4, team: 'joseon' });
       const { cx, cz, dist } = await page.evaluate(() => window.__duel);
@@ -212,7 +249,7 @@ const SHOTS = [
     // Japanese crews grappling and climbing onto a panokseon.
     name: 'boarding',
     url: '?scenario=hansan&hud=0&lv=4&q=high&sky=sunset&sea=calm',
-    seconds: 8,
+    seconds: 4.2,
     async setup(page) {
       await page.evaluate(() => {
         const e = window.__engine;
@@ -278,7 +315,7 @@ const SHOTS = [
     // Noryang at night: lanterns, gun flashes and burning ships under the cinematic camera.
     name: 'night',
     url: '?scenario=noryang&hud=0&lv=4&q=high',
-    seconds: 16,
+    seconds: 12,
     async setup(page) {
       // let the approach run until the fleets meet, then the cinematic camera takes the fight
       await page.waitForFunction(() => window.__engine.approachOver, null, { timeout: 180000 });
@@ -296,7 +333,7 @@ const SHOTS = [
     // Myeongnyang under the cinematic camera, for spare cuts of the fight itself.
     name: 'myeong_fight',
     url: '?scenario=myeongnyang&hud=0&lv=4&q=high&sky=sunset&sea=moderate',
-    seconds: 14,
+    seconds: 11,
     async setup(page) {
       // let the approach run until the fleets meet, then the cinematic camera takes the fight
       await page.waitForFunction(() => window.__engine.approachOver, null, { timeout: 180000 });
@@ -313,86 +350,82 @@ const SHOTS = [
   {
     // The screens: title, the dark history map with its flags, the faction pick and the campaign map.
     name: 'ui',
-    url: '?lang=ko',
+    url: '',
     seconds: 0,
     ui: true,
   },
 ];
 
-async function record(page, dir, seconds, during) {
-  await rm(dir, { recursive: true, force: true });
-  await mkdir(dir, { recursive: true });
-  const cdp = await page.context().newCDPSession(page);
-  const frames = [];
-  let n = 0;
-  const pending = [];
-  cdp.on('Page.screencastFrame', (f) => {
-    const file = join(dir, `f${String(n).padStart(5, '0')}.jpg`);
-    n += 1;
-    frames.push({ file, t: f.metadata.timestamp });
-    pending.push(writeFile(file, Buffer.from(f.data, 'base64')));
-    cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => {});
-  });
-  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 94, maxWidth: W * 2, maxHeight: H * 2, everyNthFrame: 1 });
-  if (during) await during();
-  else await page.waitForTimeout(seconds * 1000);
-  await cdp.send('Page.stopScreencast');
-  await Promise.all(pending);
-  await cdp.detach();
-  return frames;
+/** An ffmpeg process that takes JPEG frames on stdin and writes a near-lossless H.264 intermediate. */
+function encoder(file) {
+  const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-', '-vf', 'format=yuv420p', '-c:v', 'libx264', '-preset', 'medium', '-crf', '8', file], { stdio: ['pipe', 'inherit', 'inherit'] });
+  return {
+    async frame(buf) {
+      if (!ff.stdin.write(buf)) await once(ff.stdin, 'drain');
+    },
+    async close() {
+      ff.stdin.end();
+      await once(ff, 'close');
+    },
+  };
 }
 
-/** Frames with their own timestamps into a steady 30 fps H.264 clip. */
-function encode(frames, file) {
-  const lines = [];
-  for (let i = 0; i < frames.length; i += 1) {
-    const dur = i + 1 < frames.length ? frames[i + 1].t - frames[i].t : 1 / 30;
-    lines.push(`file '${frames[i].file}'`, `duration ${Math.max(0.001, dur).toFixed(4)}`);
+/** Steps the page's clock frame by frame for `seconds`, grabbing each frame into the encoder. */
+async function capture(page, enc, seconds) {
+  await page.evaluate(() => window.__vt.enable());
+  const frames = Math.round(seconds * FPS);
+  for (let i = 0; i < frames; i += 1) {
+    await page.evaluate(async (sub) => {
+      for (let k = 0; k < sub; k += 1) window.__vt.step(1000 / (30 * sub));
+      await window.__vt.flush();
+    }, SUB);
+    await enc.frame(await page.screenshot({ type: 'jpeg', quality: 98 }));
   }
-  lines.push(`file '${frames[frames.length - 1].file}'`);
-  const list = `${file}.txt`;
-  return writeFile(list, lines.join('\n')).then(() => {
-    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-vf', `fps=30,scale=${W * 2}:${H * 2}:flags=lanczos,format=yuv420p`, '-c:v', 'libx264', '-crf', '15', '-preset', 'slow', file]);
-  });
+  // back on the real clock, so clicks and screen changes between captures run as they would for a player
+  await page.evaluate(() => window.__vt.disable());
+  return frames;
 }
 
 await mkdir(out, { recursive: true });
 const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--enable-unsafe-webgpu', '--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=metal'] });
 for (const shot of SHOTS) {
   if (only && !only.has(shot.name)) continue;
-  const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 2 });
+  const t0 = Date.now();
+  const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: SCALE });
   page.on('pageerror', (e) => console.log(`[${shot.name}] pageerror ${e.message}`));
-  await page.goto(base + shot.url, { waitUntil: 'domcontentloaded' });
-  let frames;
+  await page.addInitScript(VIRTUAL_TIME);
+  const sep = shot.url.includes('?') ? '&' : '?';
+  await page.goto(`${base}${shot.url}${sep}lang=${lang}&dpr=${SCALE}`, { waitUntil: 'domcontentloaded' });
+  const enc = encoder(join(out, `${shot.name}.mp4`));
+  let frames = 0;
   if (shot.ui) {
+    // The screens: title, the history map gliding to Myeongnyang, the faction campaign's first event.
     await page.waitForSelector('.mode-card', { timeout: 60000 });
     await page.waitForTimeout(2500);
-    frames = await record(page, join(out, shot.name), 0, async () => {
-      await page.waitForTimeout(3200);
-      await page.locator('.mode-card').nth(0).click();
-      await page.waitForTimeout(3600);
-      const tabs = page.locator('.hs-tab');
-      if ((await tabs.count()) > 7) await tabs.nth(7).click();
-      await page.waitForTimeout(3200);
-      await page.locator('.back-btn').first().click();
-      await page.waitForSelector('.mode-card', { timeout: 20000 });
-      await page.locator('.mode-card').nth(1).click();
-      await page.waitForTimeout(2600);
-      await page.getByRole('button', { name: /으로 시작/ }).first().click();
-      await page.waitForTimeout(2600);
-      const choice = page.locator('.g-choice, .gd-choice, button:has-text("비축")').first();
-      if (await choice.count()) await choice.click().catch(() => {});
-      await page.waitForTimeout(3400);
-    });
+    frames += await capture(page, enc, 3.4);
+    await page.locator('.mode-card').nth(0).click();
+    await page.waitForTimeout(1800);
+    frames += await capture(page, enc, 1.2);
+    const tabs = page.locator('.hs-tab');
+    if ((await tabs.count()) > 7) await tabs.nth(7).click();
+    await page.waitForTimeout(400);
+    frames += await capture(page, enc, 3.6);
+    await page.locator('.back-btn').first().click();
+    await page.waitForSelector('.mode-card', { timeout: 20000 });
+    await page.waitForTimeout(600);
+    await page.locator('.mode-card').nth(1).click();
+    await page.waitForTimeout(1500);
+    await page.getByRole('button', { name: lang === 'en' ? /^Play / : /으로 시작/ }).first().click();
+    await page.waitForTimeout(2200);
+    frames += await capture(page, enc, 3.2);
   } else {
     await page.waitForFunction(() => window.__ready === true, null, { timeout: 240000 });
     await page.waitForTimeout(1500);
     await shot.setup(page);
-    frames = await record(page, join(out, shot.name), shot.seconds);
+    frames = await capture(page, enc, shot.seconds);
   }
-  await encode(frames, join(out, `${shot.name}.mp4`));
-  const span = frames.length ? frames[frames.length - 1].t - frames[0].t : 0;
-  console.log(`${shot.name}: ${frames.length} frames over ${span.toFixed(1)} s (${(frames.length / Math.max(span, 0.001)).toFixed(1)} fps)`);
+  await enc.close();
+  console.log(`${shot.name}: ${frames} frames in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   await page.close();
 }
 await browser.close();
