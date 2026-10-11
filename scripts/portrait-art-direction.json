@@ -1,0 +1,194 @@
+{
+  "provider": "OpenAI imagegen tool",
+  "generatedAt": "2026-10-11",
+  "artDirection": "Original live-action naval film casting; weathered skin, cloth and metal; distinct Joseon, Sengoku Japan and late-Ming costumes. Artistic interpretations of historical commanders.",
+  "export": {
+    "width": 768,
+    "height": 768,
+    "format": "jpeg",
+    "quality": 88,
+    "progressive": true
+  },
+  "assets": [
+    {
+      "id": "portrait_admiral",
+      "faction": "joseon",
+      "file": "public/ui/portraits/portrait_admiral.jpg",
+      "sourceFile": "exec-1abd3ac2-a0a0-4ac7-9e14-70cb7ec078ac.png",
+      "sourceSha256": "31422ba4f3b7e1039b322e121043bac961171b0031d9b4fe77af10388ced8efd",
+      "sha256": "e5b7bac2b104f0972989f2651af71781c7bfef1f9c9e98e6fb45295dc152e025",
+      "bytes": 114862,
+      "prompt": "Use case: historical-scene. Asset type: square photographic commander portrait for a naval strategy game set in 1592, maximum detailed square output. ORIGINAL live-action casting portrait of a Korean Joseon naval captain, forty-five, short irregular black beard, serious mature face, low Korean iron tugu helmet with red plume, dark-indigo cloth brigandine. Helmet-to-upper-chest framing, centered large face readable at 60 pixels, complete helmet with a little margin. Serious period Korean sea-battle film production still, mood evocative of Myeongnyang, Hansan and Noryang. Grounded human proportions, actual imperfect sun-weathered skin and pores, salt-stained fabric, rubbed metal, subtle uneven whiskers, understated natural expression. Real late-sixteenth-century practical materials, no luxurious fantasy ornament. Desaturated blue-gray cannon haze and a very soft timber-warship background, natural cool overcast side daylight and a faint warm practical fire rim, subtle 35mm film grain, believable cinematic color grade, photographic skin tones and shallow depth of field. Clothing and helmet silhouette must clearly identify the named nation: Korea cloth brigandine and Korean tugu/jeollip; Japan wide kabuto/shikoro or jingasa, lacquer plates and cord lacing; Ming rounded Chinese steel helmet with thick red tassel, brick-red brigandine and lamellar metal. Original cast face, no contemporary actor copying. No painting, illustration, CGI-plastic skin, over-sharpening, glossy fantasy armor, giant decorative dragons, modern items, text, logo or border. Opaque background."
+    },
+    {
+      "id": "portrait_yi",
+      "faction": "joseon",
+      "file": "public/ui/portraits/portrait_yi.jpg",
+      "sourceFile": "exec-c63397f6-d67d-44ae-8ac7-1ef565fe4f4e.png",
+      "sourceSha256": "5ed5a239722d03d38b8814887ac8fc0d74832b842643dce6312feae156d42381",
+      "sha256": "73cc933e413cbaefc808d3231e88d52f0d09d038a24a41d6f297fd6ea743313d",
+      "bytes": 118374,
+      "prompt": "Use case: historical-scene. Asset type: square photographic commander portrait for a naval strategy game set in 1592, maximum detailed square output. ORIGINAL live-action casting portrait of a Korean Joseon naval commander Yi Sun-sin, about fifty, a long lean oval face, deeply observant eyes, a restrained thin moustache and long narrow beard streaked gray, sober calm resolve; worn oxblood cloth brigandine, low practical iron Korean tugu helmet with a modest dark-red horsehair plume and dark neck curtain. Helmet-to-upper-chest framing, centered large face readable at 60 pixels, complete helmet with a little margin. Serious period Korean sea-battle film production still, mood evocative of Myeongnyang, Hansan and Noryang. Grounded human proportions, actual imperfect sun-weathered skin and pores, salt-stained fabric, rubbed metal, subtle uneven whiskers, understated natural expression. Real late-sixteenth-century practical materials, no luxurious fantasy ornament. Desaturated blue-gray cannon haze and a very soft timber-warship background, natural cool overcast side daylight and a faint warm practical fire rim, subtle 35mm film grain, believable cinematic color grade, photographic skin tones and shallow depth of field. Clothing and helmet silhouette must clearly identify the named nation: Korea cloth brigandine and Korean tugu/jeollip; Japan wide kabuto/shikoro or jingasa, lacquer plates and cord lacing; Ming rounded Chinese steel helmet with thick red tassel, brick-red brigandine and lamellar metal. Original cast face, no contemporary actor copying. No painting, illustration, CGI-plastic skin, over-sharpening, glossy fantasy armor, giant decorative dragons, modern items, text, logo or border. Opaque background."
+    },
+    {
+      "id": "portrait_won",
+      "faction": "joseon",
+      "file": "public/ui/portraits/portrait_won.jpg",
+      "sourceFile": "exec-28cc7651-4211-41f1-9b04-dfc6669a5b4b.png",
+      "sourceSha256": "dfb120eccf7772964e2d4547d1ba8ab32b94cb4f0ee714b63e7efacc2e00b89d",
+      "sha256": "ba1b4bc842f569bbac5082a3e86bf3b983785ea6b76c31dea9eb3e8545b031ec",
+      "bytes": 105408,
+      "prompt": "A square live-action cinematic film still aboard a weathered sixteenth-century timber warship, with the real scenic BACKGROUND filling every corner: dark blurred wooden railings, layered blue-gray sea haze and indistinct rigging. Foreground: a heavyset Korean naval commander Won Gyun in his fifties, broad face, thick irregular black beard and tired stubborn expression; salt-worn dark-blue dujeonggap brigandine, low iron Korean tugu helmet, a modest red plume and dark cloth neck curtain. Head and upper chest visible, full helmet with margin, large centered face, eyes in upper third. Photographic imperfect sun-weathered human skin, quiet serious expression, salt-worn practical period armor and cloth, cool overcast side lighting with a subtle warm fire rim, desaturated historical naval epic cinema color grade, subtle 35mm film grain, shallow depth of field. For the Ming admiral emphasize the rounded Chinese helmet, thick short red tassel, red cape and red cotton brigandine as visibly different from Korean low pointed tugu and Japanese kabuto. Original cast face. Realistic photograph with full scenic background, no writing or border."
+    },
+    {
+      "id": "portrait_eokgi",
+      "faction": "joseon",
+      "file": "public/ui/portraits/portrait_eokgi.jpg",
+      "sourceFile": "exec-2ed7e10d-ac61-40de-a3ac-6282229e4366.png",
+      "sourceSha256": "faa0fb44d6325f7c47d54433b5c6678f6ef84ca2636531a27928a78edec70996",
+      "sha256": "b397d950c2f2ea824f5940cbb4148d045e48693755d07ce49973cfa5e16ddb59",
+      "bytes": 102666,
+      "prompt": "A square live-action cinematic film still aboard a weathered sixteenth-century timber warship, with the REAL BACKGROUND filling every corner: dark blurred wooden railings, layered blue-gray sea haze and indistinct rigging. Foreground: a Korean naval officer Yi Eok-gi about thirty, narrow refined face, fine moustache, alert clear eyes and reserved resolve; worn deep-teal Korean brigandine, practical low iron tugu helmet with a short dark plume and cloth neck curtain. Head and upper chest visible, full helmet with margin, large centered face, eyes in upper third. Photographic natural imperfect sun-weathered human skin, quiet serious expression, salt-worn armor and cloth, practical period costume, cool overcast side lighting and a subtle warm fire rim, desaturated Korean naval epic cinema color grade, subtle 35mm film grain, shallow depth of field. Original cast face. Grounded realistic photograph, full scenic background, no writing or border."
+    },
+    {
+      "id": "portrait_jeongun",
+      "faction": "joseon",
+      "file": "public/ui/portraits/portrait_jeongun.jpg",
+      "sourceFile": "exec-263da407-f7bb-4a20-a3a3-4c321e436d71.png",
+      "sourceSha256": "e346a03a61e0a46ca6843960a6c0c53aae88e3a23e4b16a4fb0f0332eecb8e39",
+      "sha256": "62f19eaa34d4f118ffec42bb22e92304fcc172214278e9e740da400231477b26",
+      "bytes": 106993,
+      "prompt": "A square live-action cinematic film still aboard a weathered sixteenth-century timber warship, with the REAL BACKGROUND filling every corner: dark blurred wooden railings, layered blue-gray sea haze and indistinct rigging. Foreground: a Korean ship captain Jeong Un in his late forties, rugged angular face, short coarse beard, a faint old healed cheek scar and intense attentive eyes; faded wine-red Korean brigandine, practical low iron tugu helmet and modest dark-red plume. Head and upper chest visible, full helmet with margin, large centered face, eyes in upper third. Photographic natural imperfect sun-weathered human skin, quiet serious expression, salt-worn armor and cloth, practical period costume, cool overcast side lighting and a subtle warm fire rim, desaturated Korean naval epic cinema color grade, subtle 35mm film grain, shallow depth of field. Original cast face. Grounded realistic photograph, full scenic background, no writing or border."
+    },
+    {
+      "id": "portrait_eo",
+      "faction": "joseon",
+      "file": "public/ui/portraits/portrait_eo.jpg",
+      "sourceFile": "exec-a2ec40c0-3570-40e9-a47b-e4823be94461.png",
+      "sourceSha256": "7c21d6a540279fbfb721f5351611462f315ca11b96b81db6f081a85cf66d4e95",
+      "sha256": "aa13b47b16fd03c9f20fbbdd1eac8fbe277ad035a2f6c22913455b34a17aa9c3",
+      "bytes": 105840,
+      "prompt": "A square live-action cinematic film still aboard a weathered sixteenth-century timber warship, with the REAL BACKGROUND filling every corner: dark blurred wooden railings, layered blue-gray sea haze and indistinct rigging. Foreground: a sixty-year-old Korean navigator Eo Yeong-dam, deeply weathered slender face, short gray beard and thoughtful sharp eyes; wide low black Korean military jeollip hat with a restrained feather, indigo cloth robe over practical worn armor. Head and upper chest visible, full helmet with margin, large centered face, eyes in upper third. Photographic natural imperfect sun-weathered human skin, quiet serious expression, salt-worn armor and cloth, practical period costume, cool overcast side lighting and a subtle warm fire rim, desaturated Korean naval epic cinema color grade, subtle 35mm film grain, shallow depth of field. Original cast face. Grounded realistic photograph, full scenic background, no writing or border."
+    },
+    {
+      "id": "portrait_kwon",
+      "faction": "joseon",
+      "file": "public/ui/portraits/portrait_kwon.jpg",
+      "sourceFile": "exec-b84a534a-7c73-40af-a7d1-14a4e7545a8f.png",
+      "sourceSha256": "474ee2ddab58f1bdc5f876a90636241876694fd204905961df8fa9992a950976",
+      "sha256": "9f7f51a2102eebb615d5043be5f1633b84d9bfdb6a8beebf3d6cce18596cb439",
+      "bytes": 95861,
+      "prompt": "A square live-action cinematic film still aboard a weathered sixteenth-century timber warship, with the real scenic BACKGROUND filling every corner: dark blurred wooden railings, layered blue-gray sea haze and indistinct rigging. Foreground: a Korean officer Gwon Jun in his forties, scholarly oval face, neat short black beard, quiet intelligent eyes; low black military jeollip hat, subdued dark-green Korean cloth brigandine with ordinary brass rivets. Head and upper chest visible, full helmet with margin, large centered face, eyes in upper third. Photographic imperfect sun-weathered human skin, quiet serious expression, salt-worn practical period armor and cloth, cool overcast side lighting with a subtle warm fire rim, desaturated historical naval epic cinema color grade, subtle 35mm film grain, shallow depth of field. For the Ming admiral emphasize the rounded Chinese helmet, thick short red tassel, red cape and red cotton brigandine as visibly different from Korean low pointed tugu and Japanese kabuto. Original cast face. Realistic photograph with full scenic background, no writing or border."
+    },
+    {
+      "id": "portrait_anwi",
+      "faction": "joseon",
+      "file": "public/ui/portraits/portrait_anwi.jpg",
+      "sourceFile": "exec-15138cbe-95ad-45e1-accc-94924f1e2fad.png",
+      "sourceSha256": "23aff7f7f1cd1641d8cec18b610079028c2e13486de0f53a93ba849fb4557ce4",
+      "sha256": "de8fca63a35093e3469a786102428b1fdd9e923ca92685f5fed3b93fd84d2e2e",
+      "bytes": 103953,
+      "prompt": "A square live-action cinematic film still aboard a weathered sixteenth-century timber warship, with the real scenic BACKGROUND filling every corner: dark blurred wooden railings, layered blue-gray sea haze and indistinct rigging. Foreground: a Korean ship captain An Wi in his forties, broad cheekbones, compact black beard, resilient concentrated expression; low Korean iron helmet with a modest red plume, worn charcoal and oxblood cloth brigandine. Head and upper chest visible, full helmet with margin, large centered face, eyes in upper third. Photographic imperfect sun-weathered human skin, quiet serious expression, salt-worn practical period armor and cloth, cool overcast side lighting with a subtle warm fire rim, desaturated historical naval epic cinema color grade, subtle 35mm film grain, shallow depth of field. For the Ming admiral emphasize the rounded Chinese helmet, thick short red tassel, red cape and red cotton brigandine as visibly different from Korean low pointed tugu and Japanese kabuto. Original cast face. Realistic photograph with full scenic background, no writing or border."
+    },
+    {
+      "id": "portrait_japan",
+      "faction": "japan",
+      "file": "public/ui/portraits/portrait_japan.jpg",
+      "sourceFile": "exec-77a7fda2-762f-4cb5-93e7-7f16ba9449cb.png",
+      "sourceSha256": "fbbf2111d7f5b07fe37236ef1de25ee262836d2a5b6eef7f5f1f7ceb1214f935",
+      "sha256": "4c6965ddcc50f29c4483674923867e4ef770ab3eae34b0eac07b3d6c1cb49093",
+      "bytes": 124376,
+      "prompt": "A square live-action Japanese Sengoku naval war film still on a timber warship, full scenic background of blurred dark rigging, wooden rails, blue-gray sea and cannon haze. Foreground: a Japanese Sengoku ship captain in his thirties, a lean salt-weathered face, short sparse moustache and hard attentive eyes; broad conical black iron jingasa hat, practical black lacquer tosei-gusoku cuirass and segmented shoulder guards laced with muted red cord. Strong unmistakable Japanese armor silhouette: lacquered layered tosei-gusoku plates, cord-laced shoulder guards, wide segmented neck guard, practical period helmet. Head and upper chest visible, full helmet with a little margin, large centered face and eyes in upper third. Original mature cast face, imperfect sun-weathered human skin, serious natural expression, salt-worn matte armor, natural cool overcast side lighting and faint warm fire rim, restrained desaturated epic cinema grade, subtle 35mm grain, shallow depth of field. Realistic photograph with a scenic background occupying the entire frame, no text or border."
+    },
+    {
+      "id": "portrait_wakisaka",
+      "faction": "japan",
+      "file": "public/ui/portraits/portrait_wakisaka.jpg",
+      "sourceFile": "exec-99906457-6fd7-4acb-9c0a-d5ea0568c3bf.png",
+      "sourceSha256": "a4dec02423fd6bbff2d0187e9fb4ae643bb53c204dcb285024e935973c1fbcc0",
+      "sha256": "8e0fb3f5ba81908ee6b8c66254bfe8720a7d3827a038491f3cdc97af5bdcddac",
+      "bytes": 119889,
+      "prompt": "A square live-action Japanese Sengoku naval war film still on a timber warship, full scenic background of blurred dark rigging, wooden rails, blue-gray sea and cannon haze. Foreground: a Japanese naval daimyo Wakisaka Yasuharu in his late thirties, sharp lean face, thin moustache and cool confident eyes; dark blue-black lacquer tosei-gusoku armor with restrained gold details, Japanese kabuto with a tall simple gilded crest and broad segmented shikoro neck guard, muted cord lacing. Strong unmistakable Japanese armor silhouette: lacquered layered tosei-gusoku plates, cord-laced shoulder guards, wide segmented neck guard, practical period helmet. Head and upper chest visible, full helmet with a little margin, large centered face and eyes in upper third. Original mature cast face, imperfect sun-weathered human skin, serious natural expression, salt-worn matte armor, natural cool overcast side lighting and faint warm fire rim, restrained desaturated epic cinema grade, subtle 35mm grain, shallow depth of field. Realistic photograph with a scenic background occupying the entire frame, no text or border."
+    },
+    {
+      "id": "portrait_todo",
+      "faction": "japan",
+      "file": "public/ui/portraits/portrait_todo.jpg",
+      "sourceFile": "exec-34c88eee-ab64-4977-9fbf-5dd73dd1f49a.png",
+      "sourceSha256": "2692d2ad48a8118673178fd83eca9e1b70d6e163906a85d068933009f87e9ca8",
+      "sha256": "b14a1b5889b7b5835420b7c0b2187ff84d0a62ded7ae3ea290091506337c324c",
+      "bytes": 116008,
+      "prompt": "A square live-action Japanese Sengoku naval war film still on a timber warship, full scenic background of blurred dark rigging, wooden rails, blue-gray sea and cannon haze. Foreground: a Japanese general Todo Takatora about forty, a long imposing face, a short rough beard and serious thoughtful expression; dark black lacquered cuirass, Japanese kabuto with a narrow tall pointed crest and large segmented shikoro neck guard, restrained indigo cord lacing. Strong unmistakable Japanese armor silhouette: lacquered layered tosei-gusoku plates, cord-laced shoulder guards, wide segmented neck guard, practical period helmet. Head and upper chest visible, full helmet with a little margin, large centered face and eyes in upper third. Original mature cast face, imperfect sun-weathered human skin, serious natural expression, salt-worn matte armor, natural cool overcast side lighting and faint warm fire rim, restrained desaturated epic cinema grade, subtle 35mm grain, shallow depth of field. Realistic photograph with a scenic background occupying the entire frame, no text or border."
+    },
+    {
+      "id": "portrait_kuki",
+      "faction": "japan",
+      "file": "public/ui/portraits/portrait_kuki.jpg",
+      "sourceFile": "exec-ab511614-817d-4139-97a5-8063563d23d1.png",
+      "sourceSha256": "0a7a908df24e4b4137bfde11c0a6663d2322d21bab70a64c3cbb20ecc6231886",
+      "sha256": "55785287442b9abfcaf4e96defe1100bb478e7b82c3e63192fb42ca5cd7dc29c",
+      "bytes": 123295,
+      "prompt": "A square live-action Japanese Sengoku naval war film still on a timber warship, full scenic background of blurred dark rigging, wooden rails, blue-gray sea and cannon haze. Foreground: a Japanese naval captain Kuki Yoshitaka in his fifties, windburnt cheeks, salt-and-pepper short beard, narrow watchful eyes; worn dark-red lacquer tosei-gusoku armor, a black Japanese kabuto with a restrained crescent crest, wide segmented neck guard and faded red lacing. Strong unmistakable Japanese armor silhouette: lacquered layered tosei-gusoku plates, cord-laced shoulder guards, wide segmented neck guard, practical period helmet. Head and upper chest visible, full helmet with a little margin, large centered face and eyes in upper third. Original mature cast face, imperfect sun-weathered human skin, serious natural expression, salt-worn matte armor, natural cool overcast side lighting and faint warm fire rim, restrained desaturated epic cinema grade, subtle 35mm grain, shallow depth of field. Realistic photograph with a scenic background occupying the entire frame, no text or border."
+    },
+    {
+      "id": "portrait_kato",
+      "faction": "japan",
+      "file": "public/ui/portraits/portrait_kato.jpg",
+      "sourceFile": "exec-6d13d4a9-fedd-4814-9485-7adf5131e0b7.png",
+      "sourceSha256": "c748bd6b04f7a672dfa74554a8f762ecc71e698842809dea1bd9fb8b3257c0dc",
+      "sha256": "0e96677f186f66cecca47afca1720af6a972ddafe240a9a1327ff9c38bbce40a",
+      "bytes": 115038,
+      "prompt": "A square live-action late-sixteenth-century naval war film still on a timber warship. Entire frame filled by the scenic background: blurred dark rigging, wooden rails, distant blue-gray sea and cannon haze. Foreground: a Japanese samurai commander Kato Yoshiaki about thirty, angular clean-shaven face, steady sharp eyes; blue-black lacquered tosei-gusoku armor, Japanese kabuto with a narrow long curved horn-like crest, segmented shikoro neck guard and muted brown lacing. Unmistakable Japanese Sengoku layered lacquered tosei-gusoku plates, cord-laced shoulder guards and a wide segmented shikoro neck guard. Full helmet and upper chest visible, large centered face, eyes upper third. Original cast face, imperfect sun-weathered human skin, natural serious expression, weathered practical matte period materials, cool overcast side lighting with subtle warm fire rim, desaturated historical naval epic cinema grade, slight 35mm film grain, shallow depth of field. Realistic full scenic photograph, no writing or border."
+    },
+    {
+      "id": "portrait_kurushima",
+      "faction": "japan",
+      "file": "public/ui/portraits/portrait_kurushima.jpg",
+      "sourceFile": "exec-bf6b89ee-88e5-49db-8479-6a4e4ad16998.png",
+      "sourceSha256": "8e4c52806bcf6b95aab9a8e4890863d1de71076bf301879811c75d00ee357558",
+      "sha256": "7ee940e8137bc10927345d95e8eb7e16b2893865b47d8cb0d30ce39e4405fa69",
+      "bytes": 119764,
+      "prompt": "A square live-action late-sixteenth-century naval war film still on a timber warship. Entire frame filled by the scenic background: blurred dark rigging, wooden rails, distant blue-gray sea and cannon haze. Foreground: a Japanese sea lord Kurushima Michifusa in his thirties, sun-browned broad face, sparse facial hair, tense attentive expression; dark charcoal and green lacquered armor, a Japanese kabuto with modest branching antler crests and broad segmented shikoro neck guard. Unmistakable Japanese Sengoku layered lacquered tosei-gusoku plates, cord-laced shoulder guards and a wide segmented shikoro neck guard. Full helmet and upper chest visible, large centered face, eyes upper third. Original cast face, imperfect sun-weathered human skin, natural serious expression, weathered practical matte period materials, cool overcast side lighting with subtle warm fire rim, desaturated historical naval epic cinema grade, slight 35mm film grain, shallow depth of field. Realistic full scenic photograph, no writing or border."
+    },
+    {
+      "id": "portrait_shimazu",
+      "faction": "japan",
+      "file": "public/ui/portraits/portrait_shimazu.jpg",
+      "sourceFile": "exec-a6af6b01-0b52-4799-b848-18c20458ea0e.png",
+      "sourceSha256": "2a376b3326e3420180f6baed8d09a91cb36cc4192a468cb87c6c56e9ac495486",
+      "sha256": "54bfbaf67100e84232285ba12c5705cae621e4341a93221a8840442358fb7d58",
+      "bytes": 129023,
+      "prompt": "A square live-action late-sixteenth-century naval war film still on a timber warship. Entire frame filled by the scenic background: blurred dark rigging, wooden rails, distant blue-gray sea and cannon haze. Foreground: a Japanese daimyo Shimazu Yoshihiro in his sixties, strong elderly face with a short graying moustache and beard, deeply focused eyes; worn black lacquered armor beneath an off-white practical jinbaori surcoat bearing a small understated cross-in-circle crest, low black kabuto with broad shikoro neck guard. Unmistakable Japanese Sengoku layered lacquered tosei-gusoku plates, cord-laced shoulder guards and a wide segmented shikoro neck guard. Full helmet and upper chest visible, large centered face, eyes upper third. Original cast face, imperfect sun-weathered human skin, natural serious expression, weathered practical matte period materials, cool overcast side lighting with subtle warm fire rim, desaturated historical naval epic cinema grade, slight 35mm film grain, shallow depth of field. Realistic full scenic photograph, no writing or border."
+    },
+    {
+      "id": "portrait_konishi",
+      "faction": "japan",
+      "file": "public/ui/portraits/portrait_konishi.jpg",
+      "sourceFile": "exec-2388653b-29b8-4489-bcad-d1fc10a6bf2a.png",
+      "sourceSha256": "8d444c1461b3840cae4b3b51e224361ac1ad826a68140bbf2c49cedba81de182",
+      "sha256": "83940393f077d243120102de68ec4a47079992f09631458dae0f3f429a56d39a",
+      "bytes": 120569,
+      "prompt": "A square live-action late-sixteenth-century naval war film still on a timber warship. Entire frame filled by the scenic background: blurred dark rigging, wooden rails, distant blue-gray sea and cannon haze. Foreground: a Japanese commander Konishi Yukinaga about forty, thoughtful long face, small thin moustache and measured shrewd eyes; charcoal-purple lacquered tosei-gusoku armor, a black Japanese kabuto with a restrained silver crescent crest, segmented shikoro neck guard. Unmistakable Japanese Sengoku layered lacquered tosei-gusoku plates, cord-laced shoulder guards and a wide segmented shikoro neck guard. Full helmet and upper chest visible, large centered face, eyes upper third. Original cast face, imperfect sun-weathered human skin, natural serious expression, weathered practical matte period materials, cool overcast side lighting with subtle warm fire rim, desaturated historical naval epic cinema grade, slight 35mm film grain, shallow depth of field. Realistic full scenic photograph, no writing or border."
+    },
+    {
+      "id": "portrait_chenlin",
+      "faction": "ming",
+      "file": "public/ui/portraits/portrait_chenlin.jpg",
+      "sourceFile": "exec-e2e18f62-adb2-4517-8f07-c76bada93688.png",
+      "sourceSha256": "cd19e030c4d19212f1de50184555ba1bce7f1af32ff84a6efde145c6c64e10b1",
+      "sha256": "33b1da215faf0501dadc14b2c57ff450731c89a7e8ac2d2604e210c87c5a09e8",
+      "bytes": 108460,
+      "prompt": "A square live-action cinematic film still aboard a weathered sixteenth-century timber warship, with the real scenic BACKGROUND filling every corner: dark blurred wooden railings, layered blue-gray sea haze and indistinct rigging. Foreground: a late-Ming Chinese naval admiral Chen Lin in his fifties, broad mature face with a full long dark beard and imposing thoughtful eyes; practical deep brick-red Ming cotton brigandine with straight organized rows of plain rivets, visible lamellar metal sections and a red shoulder cloak, rounded high steel Ming helmet with a short thick red tassel and segmented protective neck guard. Head and upper chest visible, full helmet with margin, large centered face, eyes in upper third. Photographic imperfect sun-weathered human skin, quiet serious expression, salt-worn practical period armor and cloth, cool overcast side lighting with a subtle warm fire rim, desaturated historical naval epic cinema color grade, subtle 35mm film grain, shallow depth of field. For the Ming admiral emphasize the rounded Chinese helmet, thick short red tassel, red cape and red cotton brigandine as visibly different from Korean low pointed tugu and Japanese kabuto. Original cast face. Realistic photograph with full scenic background, no writing or border."
+    },
+    {
+      "id": "portrait_deng",
+      "faction": "ming",
+      "file": "public/ui/portraits/portrait_deng.jpg",
+      "sourceFile": "exec-d618121e-d0bf-477f-817f-7ab7fb4199a2.png",
+      "sourceSha256": "cc1cb4f210e78d667167ddb5a37adc9d28593a1d10682aef2a86a47f68545ab8",
+      "sha256": "342e780d3e63fc0d58c7f4e30fab52f8d823bb1e878becb7ff3c0bdda89aeece",
+      "bytes": 121556,
+      "prompt": "A square live-action late-sixteenth-century naval war film still on a timber warship. Entire frame filled by the scenic background: blurred dark rigging, wooden rails, distant blue-gray sea and cannon haze. Foreground: an elderly late-Ming Chinese naval general Deng Zilong about seventy, lean deeply lined face, a long white beard, steady fierce eyes; weathered rust-red Ming brigandine over pale warm-gray cloth, straight organized rows of rivets and practical steel lamellar shoulder sections, rounded steel Ming helmet with a thick short red tassel and segmented neck guard. Very distinctive Chinese Ming helmet with a rounded high bowl and thick red tassel, red cloth brigandine and steel lamellar shoulders, pale inner garment; visibly Chinese Ming costume rather than Japanese kabuto or Korean tugu. Full helmet and upper chest visible, large centered face, eyes upper third. Original cast face, imperfect sun-weathered human skin, natural serious expression, weathered practical matte period materials, cool overcast side lighting with subtle warm fire rim, desaturated historical naval epic cinema grade, slight 35mm film grain, shallow depth of field. Realistic full scenic photograph, no writing or border."
+    }
+  ]
+}

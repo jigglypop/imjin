@@ -1,6 +1,6 @@
 import { SHIP_SPECS } from '../catalog';
 import type { ShipKind } from '../types';
-import { BUILDING_DEFS, BUILDING_ORDER, TUNING, navyName, buildingCost, buildingOf, freeSlots, kindsOf, levelOf, queueSlots, shipDef, yardPrice, recruitRefund, GATES } from './economy';
+import { BUILDING_DEFS, BUILDING_ORDER, TUNING, navyName, buildingCost, buildingWorkTotal, buildingOf, freeSlots, kindsOf, levelOf, queueSlots, shipDef, yardPrice, recruitRefund, GATES } from './economy';
 import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId, Result, ShipUnit } from './types';
 import { MAX_LEVEL, fail, ok, pairKey } from './types';
 import { allied, atWar, fleetById, findRoute, mintId, note } from './world';
@@ -65,8 +65,8 @@ export function orderBuild(g: Grand, id: RegionId, kind: BuildingKind): Result {
   const f = g.factions[owner];
   if (f.gold < cost.gold) return fail('은이 부족합니다 ({gold}냥 필요)', { gold: cost.gold });
   f.gold -= cost.gold;
-  if (have) have.upgradeLeft = cost.turns;
-  else r.buildings.push({ kind, level: 0, upgradeLeft: cost.turns, hp: 1 });
+  if (have) have.upgradeTotal = have.upgradeLeft = cost.turns;
+  else r.buildings.push({ kind, level: 0, upgradeLeft: cost.turns, upgradeTotal: cost.turns, hp: 1 });
   return ok('{work} {level}단계 · {turns}턴', { work: BUILDING_DEFS[kind].label, level, turns: cost.turns });
 }
 
@@ -78,10 +78,10 @@ export function cancelBuild(g: Grand, id: RegionId, kind: BuildingKind): Result 
   const b = buildingOf(r, kind);
   if (!b || !r.owner || b.upgradeLeft <= 0) return fail('취소할 공사가 없습니다');
   const cost = buildingCost(kind, b.level + 1);
-  if (b.upgradeLeft !== cost.turns) return fail('이미 시작된 공사입니다');
+  if (b.upgradeLeft !== buildingWorkTotal(b)) return fail('이미 시작된 공사입니다');
   g.factions[r.owner].gold += cost.gold;
   if (b.level === 0) r.buildings.splice(r.buildings.indexOf(b), 1);
-  else b.upgradeLeft = 0;
+  else b.upgradeTotal = b.upgradeLeft = 0;
   return ok();
 }
 

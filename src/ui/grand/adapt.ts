@@ -1,7 +1,7 @@
 import { t } from '../../i18n';
 import { shipSpec } from '../../sim/competitive';
 import type { ShipKind } from '../../sim/types';
-import { buildingCost, buildingOf, dateLabel, garrisonCap, levelOf, netIncome, queueSlots, regionIncome } from '../../sim/grand/economy';
+import { buildingWorkTotal, buildingOf, dateLabel, garrisonCap, levelOf, netIncome, queueSlots, regionIncome } from '../../sim/grand/economy';
 import { buildMenu, recruitMenu, refitCost } from '../../sim/grand/orders';
 import { REGIONS, REGION_ORDER, START, type RegionDef } from '../../sim/grand/regions';
 import type { BattleSummary } from '../../sim/grand/report';
@@ -97,7 +97,7 @@ export function regionViews(g: Grand): RegionView[] {
       }));
     const works = r.buildings
       .filter((b) => b.upgradeLeft > 0)
-      .map((b) => ({ id: b.kind, kind: b.kind, toLevel: b.level + 1, turnsLeft: b.upgradeLeft, cancelable: b.upgradeLeft === buildingCost(b.kind, b.level + 1).turns }));
+      .map((b) => ({ id: b.kind, kind: b.kind, toLevel: b.level + 1, turnsLeft: b.upgradeLeft, cancelable: b.upgradeLeft === buildingWorkTotal(b) }));
     const full = r.queue.length >= queueSlots(r);
     const recruit = own
       ? recruitMenu(g, id).map((m) => ({

@@ -16,7 +16,7 @@ import {
   type PerspectiveCamera,
   type WebGPURenderer,
 } from 'three/webgpu';
-import { float, length, sin, smoothstep, time, uniform, uv, vec4 } from 'three/tsl';
+import { float, length, smoothstep, uniform, uv, vec4 } from 'three/tsl';
 import type { Battle } from '../sim/battle';
 import type { Ship, ShipKind, Team } from '../sim/types';
 import { waveField } from '../ocean/waves';
@@ -95,7 +95,7 @@ export class ShipViews {
     this.nearest = new Float64Array(Math.max(1, lod.maxLod0));
     this.renderer = new ShipRenderer(assets, this.capacities(battle, assets, hint));
     this.group.add(this.renderer.group);
-    const ringGeo = new RingGeometry(0.92, 1, 96, 1);
+    const ringGeo = new RingGeometry(0.98, 1, 96, 1);
     ringGeo.rotateX(-Math.PI / 2);
     this.ringsOwn = new InstancedMesh(ringGeo, this.makeRingMaterial(RING_OWN), INITIAL_RINGS);
     this.ringsEnemy = new InstancedMesh(ringGeo, this.makeRingMaterial(RING_FOE), INITIAL_RINGS);
@@ -151,12 +151,10 @@ export class ShipViews {
     const m = new MeshBasicNodeMaterial();
     const c = uniform(color);
     const r = length(uv().sub(0.5));
-    const pulse = sin(time.mul(4)).mul(0.15).add(0.85);
-    m.colorNode = vec4(c.mul(1.25), 1);
-    m.opacityNode = float(0.85).mul(pulse).mul(smoothstep(0.0, 0.5, r).add(0.3));
+    m.colorNode = vec4(c, 1);
+    m.opacityNode = float(0.56).mul(smoothstep(0.46, 0.5, r));
     m.transparent = true;
     m.depthWrite = false;
-    m.fog = false;
     return m;
   }
 

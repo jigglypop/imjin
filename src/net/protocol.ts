@@ -41,7 +41,7 @@ export type PointState = {
   owner: number;
   hold: number;
   contested: boolean;
-  buildings: ({ kind: BuildingKind; hp: number; progress: number; level?: 1 | 2 | 3; upgradeLeft?: number; upgradeTotal?: number } | null)[];
+  buildings: ({ kind: BuildingKind; hp: number; progress: number; level?: 1 | 2 | 3; upgradeLeft?: number; upgradeTotal?: number; constructionTotal?: number } | null)[];
   rally?: { x: number; z: number } | null;
   queue: { kind: ShipKind; left: number; total: number }[];
 };

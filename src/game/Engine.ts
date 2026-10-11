@@ -15,7 +15,6 @@ import {
 } from 'three/webgpu';
 import {
   cameraPosition,
-  exp,
   float,
   fog,
   length,
@@ -34,6 +33,7 @@ import {
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { smaa } from 'three/addons/tsl/display/SMAANode.js';
 import { atmosphere } from '../render/atmosphere';
+import { seaFogAmount } from '../render/seaMist';
 import { loadSky, SKY_PRESETS, type LoadedSky, type SkyPresetName } from '../render/sky';
 import { Ocean } from '../ocean/Ocean';
 import { Clouds } from '../render/Clouds';
@@ -60,7 +60,7 @@ import { buildGrandConquest, grandAxis, grandInfo, shipOutcomes, worksAfter } fr
 import { CurrentField } from '../sim/current';
 import { OWNER_OF, otherTeam, teamOf, type BattleEvent, type Faction, type Ship, type ShipKind, type Team } from '../sim/types';
 import { buildConquest, homeAxis, type ConquestMapId, type Seat } from '../sim/maps';
-import { BUILDING_ORDER, BUILDINGS, RANKED_OPTIONS, ROSTER, SHORT_NAME, buildingHp, upgradeCost, upgradeTime, type Conquest } from '../sim/conquest';
+import { BUILDING_ORDER, BUILDINGS, RANKED_OPTIONS, ROSTER, SHORT_NAME, buildingHp, upgradeCost, type Conquest } from '../sim/conquest';
 import { applyCommand, type Command } from '../sim/commands';
 import { conquestInfo, scenarioInfo, type BattleInfo } from '../sim/info';
 import { ConquestView, preloadWorks } from '../conquest/ConquestView';
@@ -897,7 +897,7 @@ export class Engine {
     const fogDir = normalize(vec3(dir.x, 0.04, dir.z));
     this.fogEnv = pmremTexture(env, fogDir, float(0.45));
     const fogColor = vec3(this.fogEnv).mul(atmosphere.envIntensity);
-    const factor = float(1).sub(exp(dist.mul(atmosphere.fogDensity).negate()));
+    const factor = seaFogAmount(dist);
     this.scene.fogNode = fog(fogColor, factor);
   }
 
@@ -1278,20 +1278,9 @@ export class Engine {
     }
     if (k <= 0) return;
     for (const s of this.battle.ships) {
-      if (!s.alive || !shipObserved(this.battle, this.team, s)) continue;
+      if (!s.alive || !shipObserved(this.battle, this.team, s)) { w.forgetShip(s.id); continue; }
       const L = s.spec.length;
-      const B = s.spec.beam;
-      const c = Math.cos(s.heading);
-      const n = Math.sin(s.heading);
-      const f = Math.min(1.2, Math.abs(s.speed) / s.spec.maxSpeed);
-      if (f > 0.03) {
-        w.stamp(s.x - c * L * 0.52, s.z - n * L * 0.52, s.heading, B * 1.05, 0.012 * f * k, 2.2, 2.2);
-        w.stamp(s.x - c * L * 0.3, s.z - n * L * 0.3, s.heading, B * 1.2, 0.004 * f * k, 2.5, 3);
-        const bx = s.x + c * L * 0.45;
-        const bz = s.z + n * L * 0.45;
-        w.stamp(bx + n * B * 0.45, bz - c * B * 0.45, s.heading + 0.45, B * 0.6, 0.02 * f * k, 1.8, 1);
-        w.stamp(bx - n * B * 0.45, bz + c * B * 0.45, s.heading - 0.45, B * 0.6, 0.02 * f * k, 1.8, 1);
-      }
+      w.shipWake(s, scaled);
       if (s.sinking > 0) w.stamp(s.x, s.z, s.heading, L * 0.7, 0.03 * k, 1.6, 1.8);
       else if (s.fire > 0.3) w.stamp(s.x, s.z, s.heading, L * 0.6, 0.004 * k, 1.6, 0.6);
     }
@@ -1550,10 +1539,10 @@ export class Engine {
             mine,
             observed,
             expanded: !!c.options.expanded,
-            buildings: p.buildings.map((bd, slot) => (observed && bd ? { slot, kind: bd.kind, label: BUILDINGS[bd.kind].label, progress: bd.progress, hp: bd.hp / buildingHp(bd.kind, bd.level), level: bd.level, upgradeLeft: Math.ceil(bd.upgradeLeft), upgradeTotal: bd.upgradeTotal, upgradeCost: bd.level < 3 ? upgradeCost(bd.kind, bd.level) : 0, upgradeTime: bd.level < 3 ? upgradeTime(bd.kind, bd.level) : 0, canUpgrade: mine && c.canUpgrade(this.owner, p.id, slot) } : null)),
-            queue: observed ? p.queue.map((q, i) => ({ kind: q.kind, label: SHORT_NAME[q.kind], left: Math.max(0, Math.ceil(q.left)), total: q.total, working: i < c.queueWorkers(p) })) : [],
-            build: BUILDING_ORDER.filter((kind) => c.options.expanded || kind !== 'camp').map((kind) => ({ kind, label: BUILDINGS[kind].label, cost: BUILDINGS[kind].cost, desc: BUILDINGS[kind].desc, ok: mine && c.canBuild(this.owner, p.id, kind) })),
-            recruit: ROSTER[me.faction].map((kind) => ({ kind, label: SHORT_NAME[kind], cost: this.battle.shipSpec(kind).cost, time: this.battle.shipSpec(kind).build, ok: mine && c.canRecruit(this.battle, this.owner, p.id, kind) })),
+            buildings: p.buildings.map((bd, slot) => (observed && bd ? { slot, kind: bd.kind, label: BUILDINGS[bd.kind].label, progress: bd.progress, hp: bd.hp / buildingHp(bd.kind, bd.level), level: bd.level, upgradeLeft: bd.upgradeLeft, upgradeTotal: bd.upgradeTotal, upgradeCost: bd.level < 3 ? upgradeCost(bd.kind, bd.level) : 0, upgradeTime: bd.level < 3 ? c.upgradeDuration(bd.kind, bd.level) : 0, canUpgrade: mine && c.canUpgrade(this.owner, p.id, slot) } : null)),
+            queue: observed ? p.queue.map((q, i) => ({ kind: q.kind, label: SHORT_NAME[q.kind], left: Math.max(0, q.left / c.constructionRate(p.owner)), total: q.total / c.constructionRate(p.owner), working: i < c.queueWorkers(p) })) : [],
+            build: BUILDING_ORDER.filter((kind) => c.options.expanded || kind !== 'camp').map((kind) => ({ kind, label: BUILDINGS[kind].label, cost: BUILDINGS[kind].cost, time: c.buildTime(kind), desc: c.buildingDesc(kind), ok: mine && c.canBuild(this.owner, p.id, kind) })),
+            recruit: ROSTER[me.faction].map((kind) => ({ kind, label: SHORT_NAME[kind], cost: this.battle.shipSpec(kind).cost, time: Math.ceil(c.recruitTime(kind) / c.constructionRate(this.owner)), ok: mine && c.canRecruit(this.battle, this.owner, p.id, kind) })),
             shipyard: observed && c.count(p, 'shipyard') > 0,
             yardSlots: observed ? c.yardSlots(p) : 0,
             rally: observed ? p.rally ?? null : null,

@@ -126,8 +126,9 @@ function Card({ sq, compact, onClick, onDouble }: { sq: SquadronInfo; compact: b
 type OrderDef = { icon: string; label: string; key: string; tip: string; run: () => void; on?: boolean; disabled?: boolean };
 
 /** Always available, including when a phone folds the larger command sheet. */
-function FleetGroups({ engine }: { engine: Engine }) {
+function FleetGroups({ engine, compact }: { engine: Engine; compact: boolean }) {
   const t = useT();
+  const [open, setOpen] = useState(!compact);
   const [assigning, setAssigning] = useState(false);
   const [active, setActive] = useState(0);
   const [editing, setEditing] = useState<number | null>(null);
@@ -143,8 +144,14 @@ function FleetGroups({ engine }: { engine: Engine }) {
     setEditing(null);
   };
   return <div className="fleet-groups glass interactive" aria-label={t('지정 부대')}>
-    <div className="fleet-group-tools">
+    <div className="fleet-group-head">
+      <button className="fleet-group-toggle" aria-expanded={open} aria-controls="fleet-group-body" onClick={() => setOpen((v) => !v)}>
+        {t('지정 부대')} <Icon name={open ? 'chevronUp' : 'chevronDown'} size={14} />
+      </button>
       <button onClick={() => input.selectAll()} title="Ctrl+A">{t('전체 선택')}</button>
+    </div>
+    {open && <div className="fleet-group-body" id="fleet-group-body">
+    <div className="fleet-group-tools">
       <button className={assigning ? 'fleet-tool--on' : ''} disabled={!ownSelected} onClick={() => setAssigning((v) => !v)} title={t('함선을 고른 뒤 지정할 부대를 누르세요')} aria-pressed={assigning}>{t(assigning ? '지정할 부대' : '부대 지정')}</button>
       <button onClick={() => { setEditing(current); setName(groups[current]!.name); }}>{t('이름')}</button>
       <button className={`fleet-route ${input.queueMoves ? 'fleet-tool--on' : ''}`} disabled={!ownSelected} onClick={() => input.toggleQueueMode()} aria-pressed={input.queueMoves} title={t('켜면 바다를 누를 때 이동 경로를 예약합니다 · Shift+우클릭도 가능')}>
@@ -166,6 +173,7 @@ function FleetGroups({ engine }: { engine: Engine }) {
       <input id="fleet-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={16} autoFocus aria-label={t('부대 이름')} />
       <button type="submit">{t('저장')}</button><button type="button" onClick={() => setEditing(null)}>{t('취소')}</button>
     </form>}
+    </div>}
   </div>;
 }
 
@@ -272,7 +280,11 @@ function useHudInsets() {
       put('--bal-bottom', box('.hud .balance')?.bottom ?? null);
       put('--tl-right', box('.hud .hud-menu')?.right ?? null);
       put('--tr-left', box('.hud .dock')?.left ?? null);
-      put('--fleet-top', box('.hud .fleet-groups')?.top ?? null);
+      put('--tl-bottom', box('.hud .hud-menu')?.bottom ?? null);
+      const bottom = box('.hud .bottom')?.top ?? null;
+      put('--bottom-top', bottom);
+      // Conquest sheets use the former toolbar edge as their lower limit; it now follows the bottom cards.
+      put('--fleet-top', bottom);
     };
     measure();
     const timer = window.setInterval(measure, 200);
@@ -280,7 +292,7 @@ function useHudInsets() {
     return () => {
       window.clearInterval(timer);
       window.removeEventListener('resize', measure);
-      for (const n of ['--bal-bottom', '--tl-right', '--tr-left', '--fleet-top']) root.removeProperty(n);
+      for (const n of ['--bal-bottom', '--tl-right', '--tr-left', '--tl-bottom', '--bottom-top', '--fleet-top']) root.removeProperty(n);
     };
   }, []);
 }
@@ -502,8 +514,11 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
 
   if (!snap) return null;
   const own = snap.squadrons.filter((s) => s.faction === snap.faction);
-  const selectedSquad = own.find((s) => s.selected);
   const p = snap.primary;
+  const primaryShip = p ? engine.battle.get(p.id) : undefined;
+  const primaryFaction = primaryShip?.spec.faction ?? snap.faction;
+  const primaryPortrait = snap.squadrons.find((s) => s.id === primaryShip?.squadronId)?.portrait
+    ?? (primaryFaction === 'japan' ? 'portrait_japan' : primaryFaction === 'ming' ? 'portrait_chenlin' : 'portrait_admiral');
   const enemyTeam: Team = snap.team === 'joseon' ? 'japan' : 'joseon';
   const enemyFaction = snap.squadrons.find((s) => s.team === enemyTeam)?.faction ?? enemyTeam;
   const won = snap.winner === snap.team;
@@ -728,8 +743,10 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
 
       {compact && mapOn && <div className="minimap minimap--float" ref={minimapRef} />}
 
-      {isTouchDevice && !ended && (
-        <div className="touch-bar">
+      {!ended && (
+        <div className="selection-dock touch-bar">
+          <FleetGroups engine={engine} compact={compact} />
+          {isTouchDevice && <div className="selection-tools">
           <button className={`tool ${touchBox ? 'tool--on' : ''}`} onClick={() => setTouchBox(!touchBox)} data-tip="tool.box">
             <Icon name="box" size={19} />
             {t('박스')}
@@ -747,6 +764,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             <Icon name="deck" size={19} />
             {t(engine.cutaway ? DECK_LABEL[engine.cutaway]! : '선내')}
           </button>
+          </div>}
         </div>
       )}
 
@@ -755,8 +773,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
         {/* Once the battle is decided the result card is the only thing to act on: no orders or cards behind it. */}
         {!ended && (
           <>
-            <FleetGroups engine={engine} />
-            {p ? <Detail engine={engine} snap={snap} p={p} portrait={selectedSquad?.portrait ?? snap.squadrons.find((s) => s.selected)?.portrait ?? 'portrait_admiral'} /> : hintOpen && !tourActive && <Hint onClose={closeHint} />}
+            {p ? <Detail engine={engine} snap={snap} p={p} portrait={primaryPortrait} /> : hintOpen && !tourActive && <Hint onClose={closeHint} />}
             <div className="cards">
               {own.map((sq) => (
                 <Card key={sq.id} sq={sq} compact={compact} onClick={(e) => engine.selectSquadron(sq.id, e.shiftKey)} onDouble={() => engine.focusSquadron(sq.id)} />

@@ -97,6 +97,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
                     <span className={`g-row__sub${showCost && b.blocked ? ' g-row__sub--warn' : ''}`}>
                       {showCost ? (b.blocked ? b.blocked : t('{cost} · {turns}', { cost: costText(b.cost), turns: turnsText(b.turns) })) : busy ? t('{level}단계 공사 중 · {turns} 남음', { level: b.level + 1, turns: turnsText(b.upgradeLeft) }) : buildingDesc(b.kind)}
                     </span>
+                    {(showCost || busy) && <span className="g-row__sub">{buildingDesc(b.kind)}</span>}
                   </span>
                   {own && (
                     <button type="button" className="g-btn g-btn--sm" disabled={!can} title={why} onClick={() => onBuild?.(region.id, b.kind)}>

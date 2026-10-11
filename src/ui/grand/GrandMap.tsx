@@ -83,8 +83,7 @@ export function GrandMap({
   const sceneRef = useRef<ReliefScene | null>(null);
   const [heights, setHeights] = useState<Float32Array | null>(null);
   const [pose, setPose] = useState({ tilt: RELIEF_TILT, yaw: 0 });
-  const [flat, setFlat] = useState(false);
-  const activePose = heights ? { tilt: flat ? 0 : pose.tilt, yaw: pose.yaw } : { tilt: 0, yaw: 0 };
+  const activePose = heights ? pose : { tilt: 0, yaw: 0 };
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [view, setView] = useState<View>({ s: 1, x: 0, y: 0 });
   const viewRef = useRef(view);
@@ -100,8 +99,8 @@ export function GrandMap({
   const byId = useMemo(() => new Map(regions.map((r) => [r.id, r])), [regions]);
   const pos = useMemo(() => new Map(regions.map((r) => {
     const p = project(r.lon, r.lat);
-    return [r.id, heights ? reliefProject(p.u, p.v, r.offMap ? 0 : reliefHeight(heights, p.u, p.v), { tilt: flat ? 0 : pose.tilt, yaw: pose.yaw }) : p];
-  })), [regions, heights, pose.tilt, pose.yaw, flat]);
+    return [r.id, heights ? reliefProject(p.u, p.v, r.offMap ? 0 : reliefHeight(heights, p.u, p.v), pose) : p];
+  })), [regions, heights, pose.tilt, pose.yaw]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -267,7 +266,9 @@ export function GrandMap({
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const r = el.getBoundingClientRect();
-      zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0016)), e.clientX - r.left, e.clientY - r.top);
+      const pixels = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? r.height : 1);
+      const change = clamp(-pixels * (e.ctrlKey ? 0.01 : 0.0016), -1, 1);
+      zoomAt(Math.exp(change), e.clientX - r.left, e.clientY - r.top);
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
@@ -338,7 +339,6 @@ export function GrandMap({
     const dy = e.clientY - p.y;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (g.rotating) {
-      setFlat(false);
       setPose((cur) => ({ tilt: clamp(cur.tilt + dy * 0.006, 0.3, 1.1), yaw: cur.yaw + dx * 0.006 }));
     } else setView((cur) => constrain({ ...cur, x: cur.x + dx, y: cur.y + dy }));
   };
@@ -414,7 +414,7 @@ export function GrandMap({
     <div
       ref={rootRef}
       className="gm"
-      data-relief={heights ? 'ready' : 'flat'}
+      data-relief={heights ? 'ready' : 'image'}
       data-tilt={activePose.tilt}
       data-yaw={activePose.yaw}
       onContextMenu={(e) => e.preventDefault()}
@@ -617,12 +617,6 @@ export function GrandMap({
         <button type="button" className="g-glass g-icon-btn" aria-label={t('축소')} onClick={() => zoomAt(1 / 1.5, w / 2, h / 2)}>
           <Icon name="minus" />
         </button>
-        {heights && <div className="gm__terrain g-glass">
-          <button type="button" className="gm-mode" aria-pressed={!flat} onClick={() => setFlat((v) => !v)}>{t(flat ? '입체 지도' : '평면 보기')}</button>
-          <button type="button" className="gm-rotate-left" aria-label={t('지도 왼쪽 회전')} onClick={() => setPose((p) => ({ ...p, yaw: p.yaw - Math.PI / 12 }))}>↶</button>
-          <button type="button" className="gm-rotate-right" aria-label={t('지도 오른쪽 회전')} onClick={() => setPose((p) => ({ ...p, yaw: p.yaw + Math.PI / 12 }))}>↷</button>
-          <label>{t('기울기')}<input className="gm-tilt" type="range" min="18" max="63" value={Math.round(pose.tilt * 180 / Math.PI)} disabled={flat} aria-label={t('지도 기울기')} onChange={(e) => setPose((p) => ({ ...p, tilt: Number(e.target.value) * Math.PI / 180 }))} /></label>
-        </div>}
       </div>
       <a className="gm__credits" href="/ui/TERRAIN-CREDITS.txt" target="_blank" rel="noreferrer" style={{ right: 12 + insets.right, bottom: 12 + insets.bottom }} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>DEM: Mapzen · USGS · NOAA</a>
     </div>

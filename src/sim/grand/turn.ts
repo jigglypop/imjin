@@ -22,6 +22,7 @@ import { allied, atWar, fleetById, fleetStrength, lanesOf, mintId, note, ownedBy
 import { LEVEL_XP, SHIP_PREFIX, grantXp, spawnFleet, spawnShip } from './roster';
 import { fireEvents } from './events';
 import type { ShipKind } from '../types';
+import { newAllySupport, scaleAllyOpening, supportReinforcements } from './support';
 
 export { MAX_TURNS, LEVEL_XP, spawnShip };
 
@@ -52,6 +53,8 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
     victory: null,
     events: { done: {}, pending: null, flags: [], mods: [] },
   };
+  const support = newAllySupport(player);
+  if (support) g.allySupport = support;
   for (const id of REGION_ORDER) {
     const owner = START.owners[id];
     g.regions[id] = { owner, buildings: [], garrison: [], queue: [], unrest: 0, garrisonRule: 'equal-power-v1', garrisonReserve: 0 };
@@ -83,6 +86,7 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
       for (const p of pieces) if (left-- > 0) scaled[p.i]!.ships[kind] = (scaled[p.i]!.ships[kind] ?? 0) + 1;
     }
   }
+  scaleAllyOpening(g, scaled);
   for (const s of scaled) {
     spawnFleet(g, s.faction, s.at, s.name, s.ships, s.commander);
   }
@@ -335,6 +339,21 @@ function moveFleets(g: Grand) {
       fl.transit = { from, to, left: lane.turns - 1 };
     }
   }
+  // Multi-leg AI routes can become a two-port exchange after both groups arrive this turn.
+  // Keep the larger body in port so the smaller one can join it; player-written routes remain explicit orders.
+  for (let i = 0; i < g.fleets.length; i += 1) {
+    const a = g.fleets[i]!;
+    if (a.faction === g.player || !a.at || a.transit || a.rest > 0 || a.route.length !== 1) continue;
+    const ownerA = g.regions[a.at].owner;
+    if (!ownerA || !allied(g, a.faction, ownerA)) continue;
+    for (const b of g.fleets.slice(i + 1)) {
+      if (b.faction !== a.faction || !b.at || b.transit || b.rest > 0 || b.route.length !== 1 || a.at === b.at || a.route[0] !== b.at || b.route[0] !== a.at) continue;
+      const ownerB = g.regions[b.at].owner;
+      if (!ownerB || !allied(g, b.faction, ownerB)) continue;
+      const host = fleetStrength(a) >= fleetStrength(b) ? a : b;
+      host.route = [];
+    }
+  }
 }
 
 function findContacts(g: Grand): Contact[] {
@@ -436,7 +455,9 @@ function runEvents(g: Grand) {
     const plan = TUNING.reinforce[f];
     if (!g.factions[f].alive || g.turn < plan.first || (g.turn - plan.first) % plan.every !== 0) continue;
     if (g.regions[plan.at].owner !== f) continue;
-    const fleet = spawnFleet(g, f, plan.at, f === 'japan' ? '후속 함대' : f === 'ming' ? '원군 함대' : '의병 함대', plan.ships, null);
+    const ships = supportReinforcements(g, f, plan.ships);
+    if (!Object.values(ships).some((n) => n && n > 0)) continue;
+    const fleet = spawnFleet(g, f, plan.at, f === 'japan' ? '후속 함대' : f === 'ming' ? '원군 함대' : '의병 함대', ships, null);
     note(g, '{navy}의 {fleet} {n}척이 {place}에 도착했습니다', { navy: navyName(f), fleet: fleet.name, n: fleet.ships.length, place: REGIONS[plan.at].name }, f === g.player ? 'good' : 'info');
   }
 }
@@ -521,6 +542,7 @@ function advanceTurn(g: Grand) {
         if (b.upgradeLeft === 0) {
           b.level += 1;
           b.hp = 1;
+          b.upgradeTotal = 0;
           if (r.owner === g.player) note(g, '{place}의 {work} {level}단계가 완공되었습니다', { place: REGIONS[id].name, work: BUILDING_DEFS[b.kind].label, level: b.level }, 'good', 'built');
         }
       }

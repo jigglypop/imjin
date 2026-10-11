@@ -298,8 +298,9 @@ const PORTRAITS: [string, string][] = [
   ['고니시', 'portrait_konishi'],
 ];
 
-function portraitFor(team: Team, commander: string) {
+function portraitFor(team: Team, commander: string, kind: ShipKind) {
   for (const [name, portrait] of PORTRAITS) if (commander.includes(name)) return portrait;
+  if (kind.startsWith('ming')) return 'portrait_deng';
   return team === 'japan' ? 'portrait_japan' : 'portrait_admiral';
 }
 
@@ -363,7 +364,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     }
     return p;
   };
-  const squad = (team: Team, name: string, cmd: string, kind: ShipKind) => b.addSquadron(team, name, cmd, portraitFor(team, cmd), cardFor(kind));
+  const squad = (team: Team, name: string, cmd: string, kind: ShipKind) => b.addSquadron(team, name, cmd, portraitFor(team, cmd, kind), cardFor(kind));
   const ship = (sq: Squadron, kind: ShipKind, p: Spot, name: string, flagship = false, variant?: number) => {
     const r = kind === 'panokseon' || kind === 'geobukseon' || kind === 'atakebune' || kind === 'mingship' ? 22 : kind === 'sekibune' || kind === 'mingsmall' ? 15 : 9;
     const spot = settle(p, r);

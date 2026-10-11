@@ -32,6 +32,7 @@ try {
   const load = (p) => server.ssrLoadModule(p);
   const { Battle, SIM_DT } = await load('/src/sim/battle.ts');
   const { SHIP_SPECS, GUN_SHOTS, NO_MODS } = await load('/src/sim/catalog.ts');
+  const { anchorsFor, buildAnchorsFor, GEOBUK_SCALE, variantCount } = await load('/src/ships/anchors.ts');
   const { buildScenario, SCENARIOS } = await load('/src/sim/scenarios.ts');
   const { buildConquestOn, buildConquest, CONQUEST_MAPS } = await load('/src/sim/maps.ts');
   const { BUILDINGS } = await load('/src/sim/conquest.ts');
@@ -71,6 +72,31 @@ try {
     close(s.crew, 15); assert.equal(s.crew, sumRoles(s));
   });
 
+  await check('allied Ming portraits follow their own commander while retaining the shared battle seat', () => {
+    const historical = buildScenario('noryang', 0, 77, () => -50);
+    const mingSquads = historical.squadrons.filter((sq) => sq.shipIds.some((id) => historical.get(id)?.spec.faction === 'ming'));
+    assert.equal(mingSquads.length, 3);
+    assert.deepEqual(mingSquads.map((sq) => sq.portrait), ['portrait_chenlin', 'portrait_deng', 'portrait_deng']);
+
+    const g = newGrand('japan', 3);
+    const c = { id: 'allied-portraits', regionId: 'hansan', attacker: 'japan', defender: 'joseon', attackerFleets: g.fleets.filter((f) => f.faction === 'japan').map((f) => f.id), defenderFleets: g.fleets.filter((f) => f.faction !== 'japan').map((f) => f.id), player: true };
+    const rb = describeContact(g, c);
+    const ming = rb.defender.ships.find((u) => u.kind.startsWith('ming'));
+    assert.ok(ming?.leader?.portrait.startsWith('portrait_'));
+    const { battle } = buildGrandConquest(rb, () => -50);
+    const ship = battle.ships.find((s) => s.campaignId === ming.campaignId);
+    const sq = battle.squadrons.find((s) => s.id === ship.squadronId);
+    assert.equal(sq.portrait, ming.leader.portrait);
+    assert.equal(ship.owner, 1);
+    assert.equal(ship.team, rb.defender.team);
+    assert.equal(sq.faction, rb.defender.faction);
+    // Older battle descriptions have no per-fleet portrait metadata.
+    delete ming.leader;
+    const legacy = buildGrandConquest(rb, () => -50).battle;
+    const oldShip = legacy.ships.find((s) => s.campaignId === ming.campaignId);
+    assert.equal(legacy.squadrons.find((s) => s.id === oldShip.squadronId).portrait, 'portrait_deng');
+  });
+
   await check('all hulls conserve station totals through reassignment, casualties and dock recovery', () => {
     const b = new Battle(77);
     b.land = () => -50;
@@ -95,6 +121,73 @@ try {
       assert.deepEqual(s.plan, plan);
       b.setCrew(s, s.spec.crew * 2); close(s.crew, s.spec.crew);
       b.mend(s, 0, 1); close(s.crew, s.spec.crew);
+    }
+  });
+
+  function checkRotatedPort(b, s, port, scale) {
+    // The construction plan is in original metres, before the model's uniform enlargement.
+    // Transform the complete original shot origin, including its carriage clearance, once.
+    const lx = (port.pos[0] + port.dir[0] * 0.9) * scale;
+    const lz = (port.pos[2] + port.dir[2] * 0.9) * scale;
+    const c = Math.cos(s.heading), n = Math.sin(s.heading);
+    const raw = buildAnchorsFor(`${s.spec.kind}#${s.variant}`);
+    const count = raw.gunPorts.filter((g) => g.side === port.side).length;
+    const m = b.muzzle(s, port.side, port.index, count);
+    close(m.x, s.x + c * lx - n * lz);
+    close(m.y, port.pos[1] * scale);
+    close(m.z, s.z + n * lx + c * lz);
+    close(m.dx, c * port.dir[0] - n * port.dir[2]);
+    close(m.dz, n * port.dir[0] + c * port.dir[2]);
+  }
+
+  await check('rotated turtle-ship muzzles enlarge the complete original gun origin exactly once', () => {
+    const raw = buildAnchorsFor('geobukseon#0');
+    assert.deepEqual([...new Set(raw.gunPorts.map((g) => g.side))].sort(), [0, 1, 2]);
+    for (const profile of ['historical', 'competitive-v1']) {
+      const b = new Battle(97241, profile);
+      const s = b.addShip('geobukseon', 137, -291, 0, 'scaled ports', null);
+      for (const heading of [0, Math.PI / 3, -Math.PI / 2, Math.PI]) {
+        s.heading = heading;
+        for (const port of raw.gunPorts) checkRotatedPort(b, s, port, GEOBUK_SCALE);
+      }
+    }
+  });
+
+  await check('every other hull variant retains its original rotated muzzle clearance', () => {
+    for (const profile of ['historical', 'competitive-v1']) {
+      const b = new Battle(97241, profile);
+      for (const kind of Object.keys(SHIP_SPECS).filter((k) => k !== 'geobukseon')) {
+        for (let variant = 0; variant < variantCount(kind); variant += 1) {
+          const raw = buildAnchorsFor(`${kind}#${variant}`);
+          assert.ok(raw);
+          assert.equal(anchorsFor(`${kind}#${variant}`), raw);
+          const s = b.addShip(kind, -173, 317, 0, 'original ports', null, false, variant);
+          for (const heading of [0, Math.PI / 3, -Math.PI / 2, Math.PI]) {
+            s.heading = heading;
+            for (const port of raw.gunPorts) checkRotatedPort(b, s, port, 1);
+          }
+        }
+      }
+    }
+  });
+
+  await check('gun origin queries, including fallback ports, leave ships and the battle RNG unchanged', () => {
+    for (const profile of ['historical', 'competitive-v1']) {
+      const a = new Battle(97241, profile), control = new Battle(97241, profile);
+      for (const kind of Object.keys(SHIP_SPECS)) {
+        const s = a.addShip(kind, 137, -291, Math.PI / 3, 'query', null);
+        control.addShip(kind, s.x, s.z, s.heading, s.name, null);
+        const before = JSON.stringify(s);
+        const ports = anchorsFor(`${kind}#0`).gunPorts;
+        for (const port of ports) a.muzzle(s, port.side, port.index, ports.filter((g) => g.side === port.side).length);
+        for (const side of [0, 1, 2]) {
+          const m = a.muzzle(s, side, 999, 3);
+          assert.ok(Object.values(m).every(Number.isFinite));
+        }
+        assert.equal(JSON.stringify(s), before);
+      }
+      assert.deepEqual(a.ships, control.ships);
+      for (let i = 0; i < 16; i += 1) assert.equal(a.random(), control.random());
     }
   });
 

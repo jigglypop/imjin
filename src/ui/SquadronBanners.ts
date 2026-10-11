@@ -51,7 +51,7 @@ const PILL_H = 24;
 export class SquadronBanners {
   private readonly layer: HTMLDivElement;
   private readonly banners = new Map<number, Banner>();
-  private tools = { right: Infinity, top: 0, at: 0 };
+  private tools = { left: 0, right: Infinity, top: 0, dockTop: 0, dockBottom: 0, at: 0 };
   onSelect: ((id: number, additive: boolean) => void) | null = null;
 
   constructor(parent: HTMLElement) {
@@ -91,7 +91,7 @@ export class SquadronBanners {
     return banner;
   }
 
-  /** The right-hand tool column and the score panel, which pills stay clear of. Re-measured twice a second. */
+  /** The side dock and score panel, which pills stay clear of. Re-measured twice a second. */
   private safeArea(width: number) {
     const now = performance.now();
     if (now - this.tools.at > 500) {
@@ -101,7 +101,8 @@ export class SquadronBanners {
       };
       const touch = rect('.touch-bar');
       const balance = rect('.hud .balance');
-      this.tools = { right: touch ? touch.left - 6 : width, top: balance ? balance.bottom + 4 : 0, at: now };
+      const onLeft = touch && touch.left < width / 2;
+      this.tools = { left: onLeft ? touch.right + 6 : 0, right: touch && !onLeft ? touch.left - 6 : width, top: balance ? balance.bottom + 4 : 0, dockTop: touch?.top ?? 0, dockBottom: touch?.bottom ?? 0, at: now };
     }
     return this.tools;
   }
@@ -233,8 +234,12 @@ export class SquadronBanners {
       // Keep the pill on screen and out from under the tool column and the score panel.
       const w = Math.max(banner.root.offsetWidth, 44) * lead.scale;
       const h = (PILL_H + 12) * lead.scale;
-      const sx = Math.max(w / 2 + 4, Math.min(safe.right - w / 2, lead.sx));
-      const sy = Math.max(safe.top + h, lead.sy);
+      let sx = Math.max(w / 2 + 4, Math.min(width - w / 2 - 4, lead.sx));
+      let sy = Math.max(safe.top + h, lead.sy);
+      if (sy > safe.dockTop && sy - h < safe.dockBottom) {
+        if (w + 8 <= safe.right - safe.left) sx = Math.max(safe.left + w / 2 + 4, Math.min(safe.right - w / 2 - 4, sx));
+        else sy = Math.max(sy, safe.dockBottom + h + 4);
+      }
       banner.root.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px) translate(-50%, -100%) scale(${lead.scale.toFixed(3)})`;
     }
   }

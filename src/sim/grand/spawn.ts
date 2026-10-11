@@ -2,7 +2,7 @@ import type { Battle } from '../battle';
 import { GUN_SHOTS } from '../catalog';
 import { buildingHp, SHORT_NAME, type Building, type BuildingKind as WorkKind, type Conquest } from '../conquest';
 import { buildConquestOn, wetSpot, type Seat } from '../maps';
-import { dateLabel } from './economy';
+import { dateLabel, TUNING } from './economy';
 import type { BattleInfo } from '../info';
 import type { LandSampler, Ship, Squadron } from '../types';
 import type { BridgeSeat, RegionBattle, RegionBattleBuilding } from './bridge';
@@ -113,8 +113,6 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
   const fz = Math.sin(toFoe);
   const cols = Math.max(3, Math.min(8, Math.ceil(Math.sqrt(seat.ships.length * 1.3))));
   const squads = new Map<string, Squadron>();
-  const portrait = seat.leader?.portrait ?? DEFAULT_PORTRAIT[seat.faction];
-  const commander = seat.leader ? `${seat.leader.title} ${seat.leader.name}` : `${seat.name} 수군`; // i18n-ignore: '조선 수군' and the others have English entries
   seat.ships.forEach((u, i) => {
     const spec = b.shipSpec(u.kind);
     // A squadron holds six ships of one kind, the way the conquest raises them.
@@ -122,6 +120,9 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
     const key = `${u.kind}:${Math.floor(same / 6)}`;
     let sq = squads.get(key);
     if (!sq) {
+      const leader = u.leader ?? (spec.faction === seat.faction ? seat.leader : null);
+      const portrait = leader?.portrait ?? DEFAULT_PORTRAIT[spec.faction];
+      const commander = leader ? `${leader.title} ${leader.name}` : `${TUNING.faction[spec.faction].label} 수군`; // i18n-ignore: navy labels have English entries
       const index = [...squads.keys()].filter((k) => k.startsWith(`${u.kind}:`)).length + 1;
       const card = `card_${u.kind === 'hyeopseon' || u.kind.startsWith('ming') ? 'panokseon' : u.kind === 'kobaya' ? 'sekibune' : u.kind}`;
       sq = b.addSquadron(seat.team, `${SHORT_NAME[u.kind]} ${index}대`, commander, portrait, card, slot); // i18n-ignore: same squadron label as the conquest mode

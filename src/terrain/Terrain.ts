@@ -23,6 +23,7 @@ import {
 } from 'three/webgpu';
 import {
   abs,
+  bumpMap,
   float,
   max,
   mix,
@@ -325,13 +326,14 @@ export class Terrain {
     const grassCol = texture(grass, p.xz.mul(1 / 160)).rgb.mul(0.85);
     const rockCol = tri(rock, 1 / 70).mul(0.9);
     const cliffCol = tri(cliff, 1 / 30);
-    const coastCol = tri(coastRocks, 1 / 14);
+    const strata = h.mul(0.32).add(canopyNoise.mul(2.4)).sin().mul(0.08).add(0.92);
+    const coastCol = tri(coastRocks, 1 / 14).mul(strata).mul(vec3(0.88, 0.92, 0.93));
     const sandCol = texture(sand, p.xz.mul(1 / 12)).rgb.mul(vec3(1.0, 0.96, 0.88));
     const beachW = float(1).sub(smoothstep(1.2, 5.5, h)).mul(float(1).sub(smoothstep(0.18, 0.4, slope)));
-    const coastW = float(1).sub(smoothstep(3, 14, h)).mul(smoothstep(0.12, 0.35, slope));
+    const coastW = float(1).sub(smoothstep(4, 24, h)).mul(smoothstep(0.025, 0.16, slope));
     const cliffW = smoothstep(0.42, 0.68, slope);
     const peakW = smoothstep(330, 470, h).mul(float(1).sub(cliffW));
-    const forestW = smoothstep(3, 12, h).mul(float(1).sub(smoothstep(0.32, 0.55, slope))).mul(float(1).sub(peakW));
+    const forestW = smoothstep(3, 12, h).mul(float(1).sub(smoothstep(0.32, 0.55, slope))).mul(float(1).sub(peakW)).mul(float(1).sub(coastW.mul(0.85)));
     const grassW = smoothstep(0.2, 0.42, slope).mul(float(1).sub(cliffW)).mul(smoothstep(4, 16, h)).mul(0.8);
     const underwater = float(1).sub(smoothstep(-2.5, 0.6, h));
     let col = forest;
@@ -359,16 +361,15 @@ export class Terrain {
     const canopyAutumn = mix(canopyBase, mix(vec3(0.16, 0.06, 0.015), vec3(0.2, 0.14, 0.03), smoothstep(-0.4, 0.5, crowns)), smoothstep(0.25, 0.7, this.season).mul(smoothstep(0.1, 0.6, crowns)).mul(0.6));
     const canopy = canopyAutumn.mul(smoothstep(0.1, 0.8, crowns).mul(0.5).add(0.75));
     col = mix(col, canopy, smoothstep(0.15, 0.7, forestDensity).mul(forestW).mul(0.92));
-    const wet = float(1).sub(smoothstep(0.2, 2.5, h)).mul(float(1).sub(underwater));
-    m.colorNode = col.mul(mix(float(1), float(0.6), wet));
-    m.roughnessNode = mix(float(0.92), float(0.35), wet).sub(forestW.mul(0.05));
+    const wet = float(1).sub(smoothstep(0.2, 4, h)).mul(float(1).sub(underwater));
+    m.colorNode = col.mul(mix(vec3(1), vec3(0.54, 0.62, 0.63), wet));
+    m.roughnessNode = mix(float(0.94), float(0.32), wet).sub(cliffW.mul(0.08)).sub(forestW.mul(0.04)).max(0.25);
     m.metalness = 0;
-    const bump = crowns.mul(forestW).mul(0.6).add(canopyNoise.mul(0.3).mul(forestW));
-    m.normalNode = null;
+    // Reuse the shore rock texture, rather than loading another set of maps on phones.
+    m.normalNode = quality.noise >= 1 ? bumpMap(texture(coastRocks, vec2(p.x.add(p.z).mul(1 / 24), p.y.mul(1 / 18))).r, max(coastW, cliffW).mul(0.2)) : null;
     m.positionNode = null;
     void max;
     void vec2;
-    void bump;
     return m;
   }
 }

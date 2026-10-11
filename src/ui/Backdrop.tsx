@@ -7,7 +7,7 @@ const ART = '/ui/art/';
  * decoded, so the page itself never waits on it: until then the CSS mist gradient stands in.
  * Phones get the small file (tall art in portrait, a 1200 px wide cut in landscape).
  */
-export function Backdrop({ kind, id, calm = false }: { kind: 'menu' | 'loading'; id?: string; calm?: boolean }) {
+export function Backdrop({ kind, id, calm = false, cinematic = false }: { kind: 'menu' | 'loading'; id?: string; calm?: boolean; cinematic?: boolean }) {
   const [mounted, setMounted] = useState(false);
   const [on, setOn] = useState(false);
   const img = useRef<HTMLImageElement>(null);
@@ -20,13 +20,13 @@ export function Backdrop({ kind, id, calm = false }: { kind: 'menu' | 'loading';
     if (mounted && img.current?.complete && img.current.naturalWidth > 0) setOn(true);
   }, [mounted, id]);
   const menu = kind === 'menu' || !id;
-  const full = menu ? `${ART}menu_hero_wide.webp` : `${ART}loading_${id}.webp`;
-  const small = menu ? `${ART}menu_hero_wide_sm.webp` : `${ART}loading_${id}_sm.webp`;
+  const full = menu ? `${ART}${cinematic ? 'menu_battle_wide' : 'menu_hero_wide'}.webp` : `${ART}loading_${id}.webp`;
+  const small = menu ? cinematic ? full : `${ART}menu_hero_wide_sm.webp` : `${ART}loading_${id}_sm.webp`;
   return (
     <div className={`art-bg ${calm ? 'art-bg--calm' : ''} ${on ? 'art-bg--on' : ''}`} aria-hidden>
       {mounted && (
         <picture key={full}>
-          {menu && <source media="(max-aspect-ratio: 9/10)" srcSet={`${ART}menu_hero_tall.webp`} />}
+          {menu && <source media="(max-aspect-ratio: 9/10)" srcSet={`${ART}${cinematic ? 'menu_battle_tall' : 'menu_hero_tall'}.webp`} />}
           <source media="(max-width: 1100px), (max-height: 540px)" srcSet={small} />
           <img ref={img} src={full} alt="" decoding="async" fetchPriority="low" onLoad={() => setOn(true)} />
         </picture>

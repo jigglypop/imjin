@@ -45,6 +45,8 @@ export type BridgeShip = {
   supply: number;
   kills: number;
   fleetId: string | null;
+  /** Preserve each allied fleet's commander portrait inside a shared battle seat. */
+  leader?: BridgeSeat['leader'];
   /** Skill of the commander and the ship's veterancy, in the shape Ship.mods takes. */
   mods: ShipMods;
 };
@@ -102,6 +104,7 @@ function toBridge(g: Grand, fl: Fleet | undefined, u: ShipUnit): Worth {
     supply: u.supply,
     kills: u.kills,
     fleetId: fl?.id ?? null,
+    leader: fl ? leaderOf(g, [fl]) : null,
     mods: modsFor(g, fl, u),
     worth: shipGold(u.kind) * (0.35 + 0.65 * u.hull),
   };

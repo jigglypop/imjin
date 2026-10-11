@@ -1448,6 +1448,16 @@ export class Battle {
     return s.stance === 'board' || (s.stance !== 'standoff' && s.spec.kind !== 'geobukseon' && this.crippled(other));
   }
 
+  /** A direction that can hold a grapple, without choosing a crew or rolling a repulsion. */
+  private eligibleGrapple(attacker: Ship, defender: Ship, gap?: number) {
+    if (attacker.team === defender.team || !this.isActive(attacker) || !this.isActive(defender) || attacker.grappledWith || defender.grappledWith === attacker.id) return false;
+    if (!this.wantsBoard(attacker, defender) || !defender.spec.boardable || this.grappleLocked(attacker, defender.id) || (this.boarders.get(defender.id) ?? 0) >= MAX_BOARDERS) return false;
+    const boarder = boardsFirst(attacker);
+    if (gap !== undefined && gap >= (boarder ? GRAPPLE_REACH.japan : GRAPPLE_REACH.other)) return false;
+    const relative = Math.abs(attacker.speed - defender.speed * Math.cos(attacker.heading - defender.heading));
+    return relative <= (boarder ? GRAPPLE_SPEED.japan : GRAPPLE_SPEED.other);
+  }
+
   /** Smallest gap between the two hulls, from their three-circle outlines. Negative when they overlap. */
   private hullGap(a: Ship, b: Ship) {
     const ca = this.circles(a, this.gapA);
@@ -1469,23 +1479,31 @@ export class Battle {
       let best: Ship | undefined;
       let bestGap = GRAPPLE_REACH.japan;
       this.grid.query(s.x, s.z, s.spec.length * 0.5 + GRAPPLE_REACH.japan + 24, (o) => {
-        if (o.team === s.team || !this.isActive(o) || !o.spec.boardable || this.grappleLocked(s, o.id)) return;
+        if (o.team === s.team || !this.isActive(o)) return;
+        if (this.profile === 'historical' && (!o.spec.boardable || this.grappleLocked(s, o.id))) return;
         const gap = this.hullGap(s, o);
+        if (this.profile !== 'historical' && !this.eligibleGrapple(s, o, gap) && !this.eligibleGrapple(o, s, gap)) return;
         if (gap < bestGap) {
           bestGap = gap;
           best = o;
         }
       });
-      if (best) this.tryGrapple(s, best);
+      if (best) this.tryGrapple(s, best, bestGap);
     }
   }
 
-  private tryGrapple(a: Ship, b: Ship) {
+  private tryGrapple(a: Ship, b: Ship, gap?: number) {
     if (a.team === b.team) return;
     if (a.grappledWith === b.id || b.grappledWith === a.id) return;
-    const aWants = this.wantsBoard(a, b) && !a.grappledWith && !this.grappleLocked(a, b.id);
-    const bWants = this.wantsBoard(b, a) && !b.grappledWith && !this.grappleLocked(b, a.id);
+    let aWants = this.wantsBoard(a, b) && !a.grappledWith && !this.grappleLocked(a, b.id);
+    let bWants = this.wantsBoard(b, a) && !b.grappledWith && !this.grappleLocked(b, a.id);
     if (!aWants && !bWants) return;
+    if (this.profile !== 'historical') {
+      const aEligible = this.eligibleGrapple(a, b, gap), bEligible = this.eligibleGrapple(b, a, gap);
+      // Prefer a direction with space and safe speed. With neither available, retain contact's existing
+      // rejection path, including the casualties at a closed deck or a repelling crew.
+      if (aEligible || bEligible) { aWants = aEligible; bWants = bEligible; }
+    }
     // When both crews want to board, either may throw the first grapple.
     const attacker = aWants && bWants ? (this.rand() < 0.5 ? a : b) : aWants ? a : b;
     const defender = attacker === a ? b : a;

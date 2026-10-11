@@ -19,7 +19,8 @@ const { planAi } = await load('/src/sim/grand/ai.ts');
 const orders = await load('/src/sim/grand/orders.ts');
 const bridge = await load('/src/sim/grand/bridge.ts');
 const { REGION_ORDER } = await load('/src/sim/grand/regions.ts');
-const { factionIncome, factionUpkeep, shipDef, TUNING, garrisonCap, garrisonPowerBudget, GARRISON_KIND, listStrength } = await load('/src/sim/grand/economy.ts');
+const { factionIncome, factionUpkeep, shipDef, TUNING, garrisonCap, garrisonPowerBudget, GARRISON_KIND, listStrength, buildingCost, buildingWorkTotal, queueSlots, migrateGrandBalance } = await load('/src/sim/grand/economy.ts');
+const { shipSpec } = await load('/src/sim/competitive.ts');
 const turn = await load('/src/sim/grand/turn.ts');
 const spawn = await load('/src/sim/grand/spawn.ts');
 const { SHIP_SPECS } = await load('/src/sim/catalog.ts');
@@ -167,6 +168,33 @@ function playOut(g) {
 
 // 4. The battle bridge, played by a stand-in for the 3D engine, and auto-resolve.
 {
+  const navies = { joseon: { home: 'yeosu', kinds: ['panokseon', 'geobukseon', 'hyeopseon'] }, japan: { home: 'nagoya', kinds: ['atakebune', 'sekibune', 'kobaya'] }, ming: { home: 'liaodong', kinds: ['mingship', 'mingsmall'] } };
+  for (const [faction, { home, kinds }] of Object.entries(navies)) {
+    const g = newGrand(faction, 4801), r = g.regions[home];
+    g.factions[faction].gold = 5000; g.factions[faction].unlocked.push('geobukseon');
+    const yard = r.buildings.find((b) => b.kind === 'shipyard');
+    check(`${faction}: all new ship orders use the common 36-seconds-per-turn rate`, kinds.every((kind) => shipDef(kind).turns === Math.max(1, Math.ceil(shipSpec(kind).build / 36))));
+    check(`${faction}: completed yard levels provide 2, 3 and 4 parallel slots`, [1, 2, 3].every((level) => { yard.level = level; return queueSlots(r) === level + 1; }));
+    yard.level = 1;
+    check(`${faction}: two fresh jobs fit a level-one yard and a third is rejected`, orders.orderRecruit(g, home, kinds.at(-1)).ok && orders.orderRecruit(g, home, kinds.at(-1)).ok && !orders.orderRecruit(g, home, kinds.at(-1)).ok);
+    for (const q of [...r.queue]) orders.cancelRecruit(g, home, q.id);
+    const kind = kinds[0], oldTotal = Math.ceil(shipSpec(kind).build / 18);
+    r.queue.push({ id: 'legacy-production', kind, left: oldTotal, total: oldTotal, paidGold: 300 });
+    const reloaded = JSON.parse(JSON.stringify(g)); migrateGrandBalance(reloaded);
+    check(`${faction}: loading preserves existing ship left, total and amount paid`, JSON.stringify(reloaded.regions[home].queue) === JSON.stringify(r.queue));
+    const before = r.queue[0]; endTurn(g);
+    while (g.pending.length) autoResolveContact(g, g.pending[0].id);
+    check(`${faction}: an existing multi-turn ship advances exactly one old turn`, before.left === oldTotal - 1 && before.total === oldTotal);
+  }
+  const g = newGrand('joseon', 4802), r = g.regions.hansan;
+  r.buildings = [{ kind: 'dock', level: 0, upgradeLeft: 3, hp: 1 }];
+  check('an unstarted saved old building still cancels at its old three-turn duration', buildingWorkTotal(r.buildings[0]) === 3 && orders.cancelBuild(g, 'hansan', 'dock').ok);
+  r.buildings = [{ kind: 'dock', level: 0, upgradeLeft: 2, hp: 1 }];
+  check('a saved old partially worked building cannot become cancelable under the new two-turn rule', !orders.cancelBuild(g, 'hansan', 'dock').ok);
+  r.buildings = []; const gold = g.factions.joseon.gold;
+  check('a fresh work records its new duration and fully refunds only before the first turn', orders.orderBuild(g, 'hansan', 'dock').ok && r.buildings[0].upgradeTotal === buildingCost('dock', 1).turns && orders.cancelBuild(g, 'hansan', 'dock').ok && g.factions.joseon.gold === gold);
+}
+{
   const g = newGrand('joseon', 9);
   let played = 0;
   let auto = 0;
@@ -251,6 +279,16 @@ function playOut(g) {
 }
 {
   // The computer never swaps two fleets between two ports.
+  for (const player of [null, 'japan']) {
+    const g = newGrand(player, 4803), japan = g.fleets.filter((fl) => fl.faction === 'japan');
+    const small = japan[0], large = japan[1];
+    small.at = 'jepo'; small.route = ['angolpo', 'busan']; small.transit = null; small.rest = 0; small.ships = small.ships.slice(0, 1);
+    large.at = 'dadaepo'; large.route = ['busan', 'angolpo']; large.transit = null; large.rest = 0;
+    g.fleets = [small, large];
+    g.regions.busan.owner = g.regions.angolpo.owner = 'japan';
+    endTurn(g);
+    check(player ? 'player-written friendly routes remain intact when their final legs cross' : 'multi-leg computer routes consolidate instead of leaving opposite final legs', small.at === 'angolpo' && large.at === 'busan' && small.route[0] === 'busan' && (player ? large.route[0] === 'angolpo' : large.route.length === 0));
+  }
   let swaps = 0;
   for (let seed = 1; seed <= 4; seed += 1) {
     const g = newGrand(null, seed);

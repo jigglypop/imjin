@@ -220,9 +220,10 @@
 
 .toasts {
   position: absolute;
-  /* Below the left menu buttons (title, date and the two buttons end about 128px down), whatever the score panel's height. */
+  /* Beside the selection dock and below the top bars. */
   top: max(calc(var(--bal-bottom, calc(var(--sat) + 140px)) + 8px), calc(var(--sat) + 128px));
-  left: calc(var(--sal) + 24px);
+  left: calc(var(--sal) + 244px);
+  max-width: calc(100vw - var(--sal) - var(--sar) - 268px);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -680,20 +681,23 @@
 /* ---------------------------------------------------------------- orders */
 
 .fleet-groups {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 6px);
-  transform: translateX(-50%);
-  width: min(460px, calc(100% - 16px));
-  padding: 5px 6px;
+  min-height: 0;
+  width: 100%;
+  padding: 6px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
+.selection-dock .fleet-groups { background: var(--glass-solid); }
+.fleet-group-head { display: flex; gap: 4px; flex: none; }
+.fleet-group-toggle { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.fleet-group-body { display: flex; flex-direction: column; gap: 6px; }
 .fleet-group-tools { display: flex; align-items: center; gap: 4px; }
-.fleet-group-tools button, .fleet-group-name button {
-  min-height: 26px;
+.fleet-group-head button, .fleet-group-tools button, .fleet-group-name button {
+  min-height: 30px;
   border: 1px solid var(--line);
   background: transparent;
   color: var(--ink-2);
@@ -703,9 +707,10 @@
   cursor: pointer;
 }
 .fleet-group-tools button:disabled { opacity: 0.4; cursor: default; }
-.fleet-group-tools .fleet-route { margin-left: auto; display: flex; gap: 5px; }
+.fleet-group-tools button { flex: 1; white-space: nowrap; }
+.fleet-group-tools .fleet-route { display: flex; align-items: center; justify-content: center; gap: 4px; }
 .fleet-group-tools .fleet-tool--on { color: var(--accent); border-color: var(--accent); }
-.fleet-group-grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; }
+.fleet-group-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
 .fleet-group {
   min-width: 0;
   min-height: 44px;
@@ -724,7 +729,9 @@
 .fleet-group--assign { border-style: dashed; }
 .fleet-group-name { display: flex; align-items: center; gap: 5px; font-size: var(--fs-12); }
 .fleet-group-name input { min-width: 0; flex: 1; padding: 5px; color: var(--ink); background: rgba(0, 0, 0, 0.2); border: 1px solid var(--line); border-radius: 4px; }
-.app--compact .fleet-groups { width: min(420px, calc(100% - 16px)); }
+.app--compact .fleet-group-head button,
+.app--compact .fleet-group-tools button,
+.app--compact .fleet-group-name button { min-height: 44px; }
 
 .orders {
   width: clamp(300px, 24vw, 340px);
@@ -1034,31 +1041,43 @@
 }
 .move-order {
   position: absolute;
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 76px;
   color: #ffe58d;
   filter: drop-shadow(0 2px 2px #061018) drop-shadow(0 0 7px #ffe58d80);
 }
 .move-order svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.move-order__rim { fill: #091d3266; stroke: currentColor; stroke-width: 3; }
-.move-order__ticks { stroke: #fff; stroke-width: 3; stroke-linecap: round; }
-.move-order__dot { fill: #fff; stroke: #07151d; stroke-width: 2; }
+.move-order__base { fill: #081d32b3; stroke: currentColor; stroke-width: 2; }
+.move-order__mast-shadow { stroke: #071721; stroke-width: 6; stroke-linecap: round; }
+.move-order__mast { stroke: #fff6d1; stroke-width: 3; stroke-linecap: round; }
+.move-order__finial { fill: currentColor; stroke: #071721; stroke-width: 1.5; }
+.move-order__pennant { fill: currentColor; stroke: #193544; stroke-width: 1.5; }
+.move-order__emblem { fill: none; stroke: #6e4d0b; stroke-width: 2.5; stroke-linejoin: round; }
+.move-order__number { fill: #123749; font: 700 14px system-ui, sans-serif; text-anchor: middle; }
+.move-order__cloth { transform-origin: 20px 23px; animation: move-order-wave 1.3s ease-in-out infinite; }
 .move-order__pulse {
   position: absolute;
-  inset: 5px;
+  left: 0;
+  top: 61px;
+  width: 36px;
+  height: 14px;
   border: 2px solid currentColor;
   border-radius: 50%;
   animation: move-order-pulse 0.85s ease-out 3;
   opacity: 0;
 }
 .move-order--queued { color: #91edff; }
-.move-order--queued .move-order__rim { stroke-dasharray: 6 3; }
+.move-order--queued .move-order__mast { stroke: #e7faff; }
+@keyframes move-order-wave {
+  0%, 100% { transform: skewY(-3deg) scaleX(1); }
+  50% { transform: skewY(4deg) scaleX(.91); }
+}
 @keyframes move-order-pulse {
   from { transform: scale(0.55); opacity: 1; }
   to { transform: scale(1.45); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .move-order__pulse { animation: none; }
+  .move-order__pulse, .move-order__cloth { animation: none; }
 }
 
 .banners {
@@ -1211,14 +1230,19 @@
 
 .touch-bar {
   position: absolute;
-  top: 50%;
-  right: calc(var(--sar) + 8px);
-  transform: translateY(-50%);
+  top: max(calc(var(--tl-bottom, 116px) + 10px), calc(var(--bal-bottom, 144px) + 10px));
+  left: calc(var(--sal) + 22px);
+  width: 212px;
+  max-height: max(96px, calc(var(--bottom-top, calc(100dvh - 205px)) - max(var(--tl-bottom, 116px), var(--bal-bottom, 144px)) - 20px));
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   pointer-events: none;
 }
+
+.selection-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; flex: none; }
+.selection-tools .tool { width: auto; min-width: 0; height: 44px; gap: 2px; font-size: var(--fs-11); }
+.app--compact .selection-dock { left: calc(var(--sal) + 8px); width: 212px; }
 
 .touch-bar .tool {
   pointer-events: auto;
@@ -1229,8 +1253,7 @@
   z-index: 12;
   /* Below the score panel and the two toasts that stack under it, so a toast is never covered. */
   top: calc(var(--bal-bottom, calc(var(--sat) + 112px)) + 96px);
-  /* Left of the touch tools column, which would otherwise sit under it. */
-  right: calc(var(--sar) + 68px);
+  right: calc(var(--sar) + 8px);
   width: 116px;
   height: 116px;
   pointer-events: auto;
@@ -1313,8 +1336,9 @@
 
 .app--compact .toasts {
   top: calc(var(--bal-bottom, calc(var(--sat) + 110px)) + 6px);
-  left: calc(var(--sal) + 8px);
+  left: calc(var(--sal) + 232px);
   right: calc(var(--sar) + 8px);
+  max-width: none;
   gap: 6px;
   align-items: flex-start;
 }
@@ -1474,12 +1498,6 @@
   .app--compact .bottom--folded .orders {
     display: none;
   }
-
-  .app--compact .touch-bar {
-    top: calc(var(--sat) + 188px);
-    transform: none;
-  }
-
   /* One row of chips: the secondary figures (income, cap) are in the point and fleet details. */
   .app--compact .cq-chip em {
     display: none;
@@ -1577,8 +1595,8 @@
 
   .app--compact .toasts {
     top: calc(var(--bal-bottom, calc(var(--sat) + 50px)) + 6px);
-    right: auto;
-    max-width: 40vw;
+    right: calc(var(--sar) + 8px);
+    max-width: min(40vw, calc(100vw - var(--sal) - var(--sar) - 248px));
   }
 
   .app--compact .minimap--float {
@@ -1706,18 +1724,6 @@
   .app--compact .order kbd {
     display: none;
   }
-
-  .app--compact .touch-bar {
-    top: calc(var(--sat) + 70px);
-    transform: none;
-    gap: 6px;
-  }
-
-  .app--compact .touch-bar .tool {
-    width: 52px;
-    height: 44px;
-  }
-
   /* Below the score panel's real bottom edge and above the bottom band, scrolling inside when the works do not fit. */
   .app--compact .cq-point {
     top: calc(var(--bal-bottom, calc(var(--sat) + 100px)) + 8px);
@@ -1748,6 +1754,11 @@
   .app--compact:has(.hud .settings-body) .balance,
   .app--compact:has(.hud .settings-body) .toasts {
     visibility: hidden;
+  }
+  /* A port sheet uses the narrow phone's sea area; its close button restores the selection dock. */
+  .app--compact:has(.cq-point) .selection-dock {
+    visibility: hidden;
+    pointer-events: none;
   }
 }
 

@@ -55,12 +55,12 @@ try {
   function buildFinished(f, kind) {
     assert.ok(f.c.build(f.b, 0, f.p.id, kind));
     const slot = f.p.buildings.findIndex((bd) => bd?.kind === kind);
-    f.c.step(f.b, BUILDINGS[kind].time);
+    f.c.step(f.b, f.c.buildTime(kind));
     assert.equal(f.p.buildings[slot].progress, 1);
     return slot;
   }
   function upgradeFinished(f, slot) {
-    const time = upgradeTime(f.p.buildings[slot].kind, f.p.buildings[slot].level);
+    const time = f.c.upgradeDuration(f.p.buildings[slot].kind, f.p.buildings[slot].level);
     assert.ok(f.c.upgrade(f.b, 0, f.p.id, slot));
     f.c.step(f.b, time);
   }
@@ -85,6 +85,56 @@ try {
     f.c.step(f.b, 1); assert.equal(f.c.player(0).income, 105);
     addShips(f, 36); assert.equal(f.c.canRecruit(f.b, 0, f.p.id, 'hyeopseon'), false);
   });
+  check('every navy receives the same faster work factor and ranked retains original ship and building times', () => {
+    for (const faction of ['joseon', 'japan', 'ming']) {
+      const ordinary = fixture({}, faction), ranked = fixture(RANKED_OPTIONS, faction);
+      for (const kind of ROSTER[faction]) {
+        close(ordinary.c.recruitTime(kind), ordinary.c.shipSpec(kind).build * 0.6);
+        close(ranked.c.recruitTime(kind), ranked.c.shipSpec(kind).build);
+        assert.ok(ordinary.c.recruitIn(ordinary.b, 0, ordinary.p.id, kind));
+        assert.ok(ranked.c.recruitIn(ranked.b, 0, ranked.p.id, kind));
+        close(ordinary.p.queue.at(-1).total, ordinary.c.recruitTime(kind));
+        close(ranked.p.queue.at(-1).total, ranked.c.shipSpec(kind).build);
+      }
+      for (const kind of Object.keys(BUILDINGS)) {
+        close(ordinary.c.buildTime(kind), BUILDINGS[kind].time * 0.6);
+        close(ranked.c.buildTime(kind), BUILDINGS[kind].time);
+        close(ordinary.c.upgradeDuration(kind, 1), upgradeTime(kind, 1) * 0.6);
+      }
+      assert.equal(ordinary.c.yardSlots(ordinary.p), 2);
+      assert.equal(ranked.c.yardSlots(ranked.p), 1);
+    }
+  });
+  check('imported old ship, building and upgrade work keeps its ordered duration and progress', () => {
+    const f = fixture(), st = f.c.state(), kind = 'panokseon';
+    st.points[0].queue = [{ kind, left: 27, total: 54 }];
+    st.points[0].buildings[1] = { kind: 'dock', hp: BUILDINGS.dock.hp, progress: 0.5, level: 1, upgradeLeft: 0, upgradeTotal: 0 };
+    st.points[0].buildings[0].upgradeLeft = 20; st.points[0].buildings[0].upgradeTotal = 40;
+    f.c.applyState(st);
+    assert.deepEqual(f.p.queue[0], { kind, left: 27, total: 54 });
+    f.c.step(f.b, 1);
+    close(f.p.queue[0].left, 26); close(f.p.queue[0].total, 54);
+    close(f.p.buildings[1].progress, 0.5 + 1 / 35);
+    close(f.p.buildings[0].upgradeLeft, 19); close(f.p.buildings[0].upgradeTotal, 40);
+    const funds = f.c.player(0).funds;
+    assert.ok(f.c.cancel(0, f.p.id, 0));
+    assert.equal(f.c.player(0).funds, funds + Math.round(f.c.shipSpec(kind).cost * (0.5 + 0.5 * 26 / 54)));
+  });
+  check('ordinary camps favor crews and docks favor hulls while ranked dock recovery stays unchanged', () => {
+    for (const faction of ['joseon', 'japan', 'ming']) for (const ranked of [false, true]) {
+      const f = fixture(ranked ? RANKED_OPTIONS : {}, faction), kind = ROSTER[faction].at(-1);
+      buildFinished(f, 'dock');
+      const s = f.b.addShip(kind, f.p.x, f.p.z, 0, '', f.b.addSquadron('joseon', '', '', '', '', 0));
+      s.hull = s.spec.hull / 2; s.roles = s.roles.map((n) => n / 2); s.crew = s.spec.crew / 2; s.lastHit = -20;
+      f.b.grid.rebuild(f.b.ships); f.c.step(f.b, 1);
+      close(s.hull / s.spec.hull, 0.5 + (ranked ? 0.006 : 0.01));
+      close(s.crew / s.spec.crew, 0.5 + (ranked ? 0.004 : 0.002));
+      if (!ranked) {
+        buildFinished(f, 'camp'); s.hull = s.spec.hull / 2; s.roles = s.roles.map((n) => n * (s.spec.crew / 2) / s.crew); s.crew = s.spec.crew / 2;
+        f.c.step(f.b, 1); close(s.hull / s.spec.hull, 0.51); close(s.crew / s.spec.crew, 0.51);
+      }
+    }
+  });
   check('all three factions can construct a real fleet beyond 36 ships with the same expanded capacity', () => {
     for (const faction of ['joseon', 'japan', 'ming']) {
       const f = fixture({}, faction), kind = addShips(f, 36), total = f.c.shipSpec(kind).build;
@@ -102,14 +152,14 @@ try {
     assert.ok(f.c.build(f.b, 0, f.p.id, 'camp'));
     const slot = f.p.buildings.findIndex((bd) => bd?.kind === 'camp');
     assert.equal(f.c.shipLimit(0), Infinity); assert.equal(f.c.constructionRate(0), 1); assert.equal(f.c.canBuild(0, f.p.id, 'camp'), false);
-    f.c.step(f.b, BUILDINGS.camp.time / 2); assert.equal(f.c.constructionRate(0), 1);
+    f.c.step(f.b, f.c.buildTime('camp') / 2); assert.equal(f.c.constructionRate(0), 1);
     assert.equal(f.c.canUpgrade(0, f.p.id, slot), false);
-    f.c.step(f.b, BUILDINGS.camp.time / 2); assert.equal(f.c.constructionRate(0), 1.1);
+    f.c.step(f.b, f.c.buildTime('camp') / 2); assert.equal(f.c.constructionRate(0), 1.1);
     const funds = f.c.player(0).funds;
     assert.ok(f.c.upgrade(f.b, 0, f.p.id, slot));
     assert.equal(f.c.player(0).funds, funds - upgradeCost('camp', 1));
     assert.equal(f.c.upgrade(f.b, 0, f.p.id, slot), false);
-    f.c.step(f.b, upgradeTime('camp', 1) - 1); assert.equal(f.c.constructionRate(0), 1.1); assert.equal(f.p.buildings[slot].level, 1);
+    f.c.step(f.b, f.c.upgradeDuration('camp', 1) - 1); assert.equal(f.c.constructionRate(0), 1.1); assert.equal(f.p.buildings[slot].level, 1);
     f.c.step(f.b, 1); assert.equal(f.c.constructionRate(0), 1.2); assert.equal(f.p.buildings[slot].level, 2);
     assert.equal(f.p.buildings[slot].hp, buildingHp('camp', 2));
     upgradeFinished(f, slot); assert.equal(f.c.constructionRate(0), 1.3); assert.equal(f.c.shipLimit(0), Infinity);
@@ -129,20 +179,21 @@ try {
     assert.equal(f.c.canRecruit(f.b, 0, f.p.id, kind), true);
   });
   check('upgraded yards build ships concurrently and cancel every active job at its actual progress', () => {
-    const f = fixture(), kind = 'hyeopseon', total = f.c.shipSpec(kind).build, cost = f.c.shipSpec(kind).cost;
-    upgradeFinished(f, 0); assert.equal(f.c.yardSlots(f.p), 2);
-    for (let i = 0; i < 3; i++) assert.ok(f.c.recruitIn(f.b, 0, f.p.id, kind));
-    assert.equal(f.c.queueWorkers(f.p), 2); f.c.step(f.b, total / 2);
-    close(f.p.queue[0].left, total / 2); close(f.p.queue[1].left, total / 2); close(f.p.queue[2].left, total);
+    const f = fixture(), kind = 'hyeopseon', total = f.c.recruitTime(kind), cost = f.c.shipSpec(kind).cost;
+    upgradeFinished(f, 0); assert.equal(f.c.yardSlots(f.p), 3);
+    for (let i = 0; i < 4; i++) assert.ok(f.c.recruitIn(f.b, 0, f.p.id, kind));
+    assert.equal(f.c.queueWorkers(f.p), 3); f.c.step(f.b, total / 2);
+    for (let i = 0; i < 3; i++) close(f.p.queue[i].left, total / 2);
+    close(f.p.queue[3].left, total);
     const funds = f.c.player(0).funds;
     assert.ok(f.c.cancel(0, f.p.id, 1)); assert.equal(f.c.player(0).funds, funds + Math.round(cost * 0.75));
     assert.ok(f.c.recruitIn(f.b, 0, f.p.id, kind));
     f.c.step(f.b, total / 2);
-    assert.equal(f.b.ships.length, 1); assert.equal(f.p.queue.length, 2);
-    f.c.step(f.b, total + 21); assert.equal(f.b.ships.length, 3); assert.equal(f.p.queue.length, 0);
-    upgradeFinished(f, 0); assert.equal(f.c.yardSlots(f.p), 3);
-    for (let i = 0; i < 3; i++) assert.ok(f.c.recruitIn(f.b, 0, f.p.id, kind));
-    f.c.step(f.b, total + 21); assert.equal(f.b.ships.length, 6);
+    assert.equal(f.b.ships.length, 2); assert.equal(f.p.queue.length, 2);
+    f.c.step(f.b, total + 21); assert.equal(f.b.ships.length, 4); assert.equal(f.p.queue.length, 0);
+    upgradeFinished(f, 0); assert.equal(f.c.yardSlots(f.p), 4);
+    for (let i = 0; i < 4; i++) assert.ok(f.c.recruitIn(f.b, 0, f.p.id, kind));
+    f.c.step(f.b, total + 21); assert.equal(f.b.ships.length, 8);
   });
   check('rally coordinates are authorized water orders for real launched ships and survive network copies', () => {
     const f = fixture();
@@ -216,7 +267,7 @@ try {
       s.roles = s.roles.map((n) => n / 2); s.crew = s.spec.crew / 2; s.lastHit = -20;
       f.b.grid.rebuild(f.b.ships); assert.ok(f.c.recruitIn(f.b, 0, f.p.id, kind));
       const beforeCrew = s.crew, total = f.p.queue[0].total;
-      f.c.step(f.b, 1); close(s.crew - beforeCrew, s.spec.crew * 0.004); close(s.roles.reduce((a, n) => a + n, 0), s.crew);
+      f.c.step(f.b, 1); close(s.crew - beforeCrew, s.spec.crew * 0.008); close(s.roles.reduce((a, n) => a + n, 0), s.crew);
       close(f.p.queue[0].left, total - 1.1);
       s.lastHit = f.b.time; const underFireCrew = s.crew; f.c.step(f.b, 1); close(s.crew, underFireCrew);
       f.c.cancel(0, f.p.id, 0); upgradeFinished(f, slot); upgradeFinished(f, slot);

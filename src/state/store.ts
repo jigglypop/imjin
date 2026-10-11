@@ -70,7 +70,7 @@ export type PointDetail = {
   expanded: boolean;
   buildings: ({ slot: number; kind: BuildingKind; label: string; progress: number; hp: number; level: number; upgradeLeft: number; upgradeTotal: number; upgradeCost: number; upgradeTime: number; canUpgrade: boolean } | null)[];
   queue: { kind: ShipKind; label: string; left: number; total: number; working: boolean }[];
-  build: { kind: BuildingKind; label: string; cost: number; desc: string; ok: boolean }[];
+  build: { kind: BuildingKind; label: string; cost: number; time: number; desc: string; ok: boolean }[];
   recruit: { kind: ShipKind; label: string; cost: number; time: number; ok: boolean }[];
   shipyard: boolean;
   yardSlots: number;

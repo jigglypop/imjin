@@ -6,6 +6,7 @@ import { grantXp, spawnFleet } from './roster';
 import type { Commander, Grand, GrandFaction, MsgParams, RegionId, Result } from './types';
 import { GRAND_FACTIONS, fail, ok } from './types';
 import { note, ownedBy } from './world';
+import { supportReinforcements } from './support';
 
 /**
  * The scripted turning points of the war (진영 전역의 사건). Each is tied to a date, fires once when its turn begins
@@ -309,7 +310,10 @@ export function applyEffect(g: Grand, f: GrandFaction, e: Effect): void {
   }
   if (e.ships) {
     const at = portFor(g, f, e.ships.at);
-    if (at) spawnFleet(g, f, at, e.ships.name, e.ships.kinds, null);
+    if (at) {
+      const kinds = supportReinforcements(g, f, e.ships.kinds);
+      if (Object.values(kinds).some((n) => n && n > 0)) spawnFleet(g, f, at, e.ships.name, kinds, null);
+    }
   }
   if (e.income) g.events.mods.push({ faction: f, mult: e.income.mult, left: e.income.turns });
   if (e.suspend) {

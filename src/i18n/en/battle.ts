@@ -335,7 +335,7 @@ export const EN_BATTLE: Record<string, string> = {
   '시작하기': 'Start',
   '함대 고르기': 'Select a fleet',
   '아래 장수 패를 누르거나 바다의 함선을 클릭해 고릅니다. Shift+클릭으로 더하고, 끌어서 사각형을 그리면 여러 척을 한꺼번에 고를 수 있습니다.': 'Click a commander card below or a ship at sea to select it. Shift+click adds to the selection, and dragging a rectangle selects several ships at once.',
-  '아래 장수 패나 바다의 함선을 탭해 고릅니다. 오른쪽의 박스를 켜면 한 손가락으로 끌어 여러 척을 한꺼번에 고를 수 있습니다.': 'Tap a commander card below or a ship at sea to select it. Turn on Box at the right to drag with one finger and select several ships at once.',
+  '아래 장수 패나 바다의 함선을 탭해 고릅니다. 왼쪽의 박스를 켜면 한 손가락으로 끌어 여러 척을 한꺼번에 고를 수 있습니다.': 'Tap a commander card below or a ship at sea to select it. Turn on Box at the left to drag with one finger and select several ships at once.',
   '함선을 고른 뒤 빈 바다를 우클릭하면 그곳으로 이동합니다. 여러 척이면 줄을 맞춰 도착합니다.': 'Select ships, then right-click open sea to move there. A group arrives in formation.',
   '함선을 고른 뒤 빈 바다를 탭하면 그곳으로 이동합니다. 여러 척이면 줄을 맞춰 도착합니다.': 'Select ships, then tap open sea to move there. A group arrives in formation.',
   '공격': 'Attack',

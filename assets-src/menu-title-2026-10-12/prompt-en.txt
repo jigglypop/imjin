@@ -1,0 +1,8 @@
+Use case: logo-brand
+Asset type: original English title artwork for a historical naval strategy game's dark navy, fog and cannon-fire homepage.
+Primary request: dramatic hand-painted brush lettering with cinematic gravitas. Create only the title; the game renders its own moving 3D sea behind it.
+Text (verbatim): "THE IMJIN WAR"
+Composition: three centered lines: small "THE", large "IMJIN", large "WAR". Exact Latin spelling. Clear legible letters, compact monumental silhouette, generous transparent margin so every stroke is complete.
+Style/medium: confident broad dry-brush strokes, strong pressure variation, frayed bristle edges, sweeping tapered terminals, authentic handmade energy. Original title lettering for a sixteenth-century naval war game, not copied from a movie or existing logo.
+Color palette: luminous warm ivory ink, restrained natural pigment variation, suited to a near-black blue background.
+Constraints: genuine transparent alpha background. Only the exact English title. No Hangul, Chinese characters, seal, subtitle, scenery, ship, face, border, watermark, checkerboard illustration, paper sheet or fake glyphs. Do not add a background or drop shadow.

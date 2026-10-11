@@ -66,7 +66,7 @@ const STEPS: Step[] = [
     id: 'select',
     title: '함대 고르기',
     mouse: '아래 장수 패를 누르거나 바다의 함선을 클릭해 고릅니다. Shift+클릭으로 더하고, 끌어서 사각형을 그리면 여러 척을 한꺼번에 고를 수 있습니다.',
-    touch: '아래 장수 패나 바다의 함선을 탭해 고릅니다. 오른쪽의 박스를 켜면 한 손가락으로 끌어 여러 척을 한꺼번에 고를 수 있습니다.',
+    touch: '아래 장수 패나 바다의 함선을 탭해 고릅니다. 왼쪽의 박스를 켜면 한 손가락으로 끌어 여러 척을 한꺼번에 고를 수 있습니다.',
     target: () => '.cards .card',
   },
   {
@@ -197,6 +197,12 @@ function place(target: DOMRect | null, width: number, height: number, barBottom:
       else spots.push({ left: cx, top: below });
     }
   }
+  // A phone's side dock leaves useful space below it when a wide card cannot fit beside it.
+  const sideDock = rectOf('.selection-dock');
+  if (sideDock) spots.push(
+    { left: sideDock.right + 12, top: Math.max(barBottom + 12, sideDock.top) },
+    { left: (vw - width) / 2, top: sideDock.bottom + 12 },
+  );
   // Fallbacks along the top of the sea, then the middle of either side.
   spots.push({ left: 8, top: barBottom + 12 }, { left: (vw - width) / 2, top: barBottom + 12 }, { left: vw - width - edge, top: barBottom + 12 }, { left: 8, top: vh * 0.34 }, { left: vw - width - edge, top: vh * 0.34 });
   const clear: DOMRect[] = [];

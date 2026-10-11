@@ -19,7 +19,8 @@ export class MoveOrders {
     if (!queued) this.clear();
     const root = document.createElement('div');
     root.className = `move-order${queued ? ' move-order--queued' : ''}`;
-    root.innerHTML = '<i class="move-order__pulse"></i><svg viewBox="0 0 60 60"><circle class="move-order__rim" cx="30" cy="30" r="18"/><path class="move-order__ticks" d="M30 3v12M30 45v12M3 30h12M45 30h12"/><circle class="move-order__dot" cx="30" cy="30" r="4"/></svg>';
+    const number = queued ? this.marks.length + 1 : null;
+    root.innerHTML = `<i class="move-order__pulse"></i><svg viewBox="0 0 64 76"><ellipse class="move-order__base" cx="18" cy="68" rx="13" ry="4"/><path class="move-order__mast-shadow" d="M18 9v59"/><path class="move-order__mast" d="M18 9v59"/><circle class="move-order__finial" cx="18" cy="8" r="3"/><g class="move-order__cloth"><path class="move-order__pennant" d="M20 13C32 5 40 18 56 11L49 23L56 34C40 42 33 27 20 33Z"/>${number === null ? '<path class="move-order__emblem" d="m29 16 9 7-9 6"/>' : `<text class="move-order__number" x="35" y="28">${number}</text>`}</g></svg>`;
     this.layer.appendChild(root);
     this.marks.push({ root, x, z, at: performance.now() });
     if (this.marks.length > 16) this.marks.shift()!.root.remove();
@@ -37,7 +38,8 @@ export class MoveOrders {
       const visible = !hidden && this.engine.screenPosition(mark.x, y, mark.z, this.screen);
       mark.root.style.display = visible ? '' : 'none';
       if (visible) {
-        mark.root.style.transform = `translate(${this.screen.x - 30}px, ${this.screen.y - 30}px)`;
+        // The mast's foot, rather than the centre of the icon, marks the clicked water coordinate.
+        mark.root.style.transform = `translate(${this.screen.x - 18}px, ${this.screen.y - 68}px)`;
         mark.root.style.opacity = String(Math.min(1, (8000 - age) / 1500));
       }
       return true;

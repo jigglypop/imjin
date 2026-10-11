@@ -31,6 +31,10 @@ function generated(): Record<string, string> {
 }
 
 export const EN_CAMPAIGN: Record<string, string> = {
+  '단계마다 유지비 면제 한도 +500은, 매 턴 선체 +5%·승조원 +6%. 수비대를 강화하고 상위 선소·포대·수리소를 열어줍니다.': 'Each level adds 500 silver of upkeep allowance and 5% hull / 6% crew recovery per turn. Strengthens the garrison and unlocks upgraded shipyards, batteries and docks.',
+  '1·2·3단계에서 동시에 2·3·4척을 건조하며 함선 가격은 100%·90%·80%입니다. 신규 함선은 1~3턴에 완성됩니다.': 'Levels 1/2/3 build 2/3/4 ships at once, at 100%/90%/80% of their price. New ships finish in 1–3 turns.',
+  '단계마다 방어 전력 +420. 손상되면 전력이 줄어듭니다. 직접 지휘하는 전투에도 같은 단계와 손상으로 배치됩니다.': 'Each level adds 420 defensive power. Damage reduces its power. Directly commanded battles preserve the same level and damage.',
+  '단계마다 머무는 함선의 선체를 매 턴 10%, 승조원을 8% 추가 회복합니다. 즉시 재정비 명령도 사용할 수 있습니다.': 'Each level adds 10% hull and 8% crew recovery per turn for docked ships. Also enables immediate refit orders.',
   ...generated(),
   ...REGION_NAMES,
 
@@ -440,6 +444,8 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '어려움': 'Hard',
   '적 진영의 수입이 10% 줄어듭니다.': 'Enemy income is 10% lower.',
   '모든 진영이 같은 조건입니다.': 'Every faction plays by the same rules.',
+  '난이도에 따른 소득 보정이 없습니다.': 'No difficulty adjustment to income.',
+  '동맹 {navy}: 시작 함대·무료 함대 증원을 약 40%, 소득을 35% 줄입니다.': 'Ally {navy}: about 40% fewer starting ships and free fleet reinforcements, 35% lower income.',
   '적 진영의 수입이 15% 늘어납니다.': 'Enemy income is 15% higher.',
   '시작 포구 {ports} · 함대 {fleets}': 'Starts with {ports} · {fleets}',
   '{name|으로/로} 시작': 'Play {name}',

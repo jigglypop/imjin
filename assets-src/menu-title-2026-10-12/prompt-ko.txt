@@ -1,0 +1,8 @@
+Use case: logo-brand
+Asset type: original Korean title artwork for a historical naval strategy game's dark navy, fog and cannon-fire homepage.
+Primary request: hand-painted, forceful Korean brush calligraphy with cinematic gravitas. Create only the title; the game renders its own moving 3D sea behind it.
+Text (verbatim): "임진왜란"
+Composition: two balanced rows, exactly "임진" on the top row and "왜란" on the bottom row. Read left to right. Four complete, correct, unmistakably legible Hangul syllables. Keep a generous transparent margin around every stroke. No stroke clipped by the canvas.
+Style/medium: authentic broad dry-brush strokes, strong pressure variation, frayed bristle texture, assertive slashing terminals, handmade asymmetry. Compact monumental composition. Original lettering, not a copy of any film's logo.
+Color palette: luminous warm ivory ink, restrained natural pigment variation, suited to a near-black blue background.
+Constraints: genuine transparent alpha background. Only the four title syllables. No seal, subtitle, Latin letters, scenery, ship, face, border, watermark, checkerboard illustration, paper sheet or fake glyphs. Do not add a background or drop shadow.

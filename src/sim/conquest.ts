@@ -66,7 +66,7 @@ const BATTERY_GUNS: Record<Faction, { gun: GunType; count: number; reload: numbe
   ming: { gun: 'folangji', count: 4, reload: 7.5 },
 };
 
-export type Building = { kind: BuildingKind; hp: number; progress: number; reload: number[]; level: BuildingLevel; upgradeLeft: number; upgradeTotal: number };
+export type Building = { kind: BuildingKind; hp: number; progress: number; reload: number[]; level: BuildingLevel; upgradeLeft: number; upgradeTotal: number; constructionTotal?: number };
 export type QueueItem = { kind: ShipKind; left: number; total: number };
 export type Spot = { x: number; y: number; z: number; rot: number };
 
@@ -136,6 +136,8 @@ const BASE_INCOME = 60;
 const POINT_INCOME = 45;
 const CAPTURE_RATE = 0.025;
 const QUEUE_MAX = 5;
+/** Casual logistics uses faster work orders; ranked retains the catalog's original timings. */
+const CASUAL_WORK_TIME = 0.6;
 
 const dist2 = (ax: number, az: number, bx: number, bz: number) => (ax - bx) ** 2 + (az - bz) ** 2;
 
@@ -273,7 +275,7 @@ export class Conquest implements BattleRules {
         owner: p.owner,
         hold: Math.round(p.hold * 1000) / 1000,
         contested: p.contested,
-        buildings: p.buildings.map((b) => (b ? { kind: b.kind, hp: Math.round(b.hp), progress: Math.round(b.progress * 1000) / 1000, level: b.level, upgradeLeft: Math.round(b.upgradeLeft * 10) / 10, upgradeTotal: b.upgradeTotal } : null)),
+        buildings: p.buildings.map((b) => (b ? { kind: b.kind, hp: Math.round(b.hp), progress: Math.round(b.progress * 1000) / 1000, level: b.level, upgradeLeft: Math.round(b.upgradeLeft * 10) / 10, upgradeTotal: b.upgradeTotal, constructionTotal: b.constructionTotal } : null)),
         queue: p.queue.map((q) => ({ kind: q.kind, left: Math.round(q.left * 10) / 10, total: q.total })),
         rally: p.rally ? { ...p.rally } : undefined,
       })),
@@ -294,7 +296,7 @@ export class Conquest implements BattleRules {
       p.contested = ps.contested;
       p.buildings = p.slots.map((_, k) => {
         const b = ps.buildings[k];
-        return b ? { kind: b.kind, hp: b.hp, progress: b.progress, reload: [], level: b.level ?? 1, upgradeLeft: b.upgradeLeft ?? 0, upgradeTotal: b.upgradeTotal ?? 0 } : null;
+        return b ? { kind: b.kind, hp: b.hp, progress: b.progress, reload: [], level: b.level ?? 1, upgradeLeft: b.upgradeLeft ?? 0, upgradeTotal: b.upgradeTotal ?? 0, constructionTotal: b.constructionTotal } : null;
       });
       p.queue = ps.queue.map((q) => ({ ...q }));
       p.rally = ps.rally ? { ...ps.rally } : undefined;
@@ -325,7 +327,7 @@ export class Conquest implements BattleRules {
   private newBuilding(kind: BuildingKind, done = false): Building {
     const spec = BUILDINGS[kind];
     const guns = kind === 'battery' ? (this.options.expanded ? 8 : 5) : 0;
-    return { kind, hp: spec.hp, progress: done ? 1 : 0, reload: Array.from({ length: guns }, (_, i) => 2 + i * 1.7), level: 1, upgradeLeft: 0, upgradeTotal: 0 };
+    return { kind, hp: spec.hp, progress: done ? 1 : 0, reload: Array.from({ length: guns }, (_, i) => 2 + i * 1.7), level: 1, upgradeLeft: 0, upgradeTotal: 0, constructionTotal: this.buildTime(kind) };
   }
 
   /** Value and count of the ships the player commands, afloat and on the slipways. */
@@ -361,8 +363,20 @@ export class Conquest implements BattleRules {
 
   shipLimit(_owner: number) { return this.options.maxShips; }
 
-  yardSlots(p: CapturePoint) { return this.levels(p, 'shipyard'); }
+  yardSlots(p: CapturePoint) { return this.levels(p, 'shipyard') + (this.options.expanded ? this.count(p, 'shipyard') : 0); }
   queueWorkers(p: CapturePoint) { return Math.min(p.queue.length, this.yardSlots(p)); }
+  /** Work is recorded when ordered, so imported queues retain their original total and refund progress. */
+  recruitTime(kind: ShipKind) { return Math.round(this.shipSpec(kind).build * (this.options.expanded ? CASUAL_WORK_TIME : 1) * 10) / 10; }
+  buildTime(kind: BuildingKind) { return BUILDINGS[kind].time * (this.options.expanded ? CASUAL_WORK_TIME : 1); }
+  upgradeDuration(kind: BuildingKind, level: number) { return upgradeTime(kind, level) * (this.options.expanded ? CASUAL_WORK_TIME : 1); }
+  buildingDesc(kind: BuildingKind) {
+    if (!this.options.expanded) return BUILDINGS[kind].desc;
+    if (kind === 'shipyard') return '1·2·3단계에서 동시에 2·3·4척을 건조합니다. 대기열은 동시 건조 칸마다 5척입니다';
+    if (kind === 'battery') return '증축마다 화포 1문, 화포 기본 사거리의 8%, 재장전 속도와 피해 15%가 늘어납니다. 손상되면 재장전이 느려집니다';
+    if (kind === 'dock') return '피격 후 8초가 지나면 단계마다 선체를 초당 1%, 승조원을 초당 0.2% 회복합니다';
+    if (kind === 'camp') return '피격 후 8초가 지나면 단계마다 승조원을 초당 0.8% 충원합니다. 모든 선소의 건조 속도는 단계마다 10%, 최대 60% 빨라집니다';
+    return BUILDINGS[kind].desc;
+  }
   constructionRate(owner: number) {
     const camps = this.points.reduce((n, p) => n + (p.owner === owner ? this.levels(p, 'camp') : 0), 0);
     return 1 + Math.min(0.6, camps * 0.1);
@@ -378,7 +392,7 @@ export class Conquest implements BattleRules {
     if (!this.canUpgrade(owner, pointId, slot)) return false;
     const bd = this.points[pointId]!.buildings[slot]!;
     this.players[owner]!.funds -= upgradeCost(bd.kind, bd.level);
-    bd.upgradeTotal = bd.upgradeLeft = upgradeTime(bd.kind, bd.level);
+    bd.upgradeTotal = bd.upgradeLeft = this.upgradeDuration(bd.kind, bd.level);
     return true;
   }
 
@@ -448,7 +462,8 @@ export class Conquest implements BattleRules {
     if (!this.canRecruit(b, owner, pointId, kind)) return false;
     const spec = this.shipSpec(kind);
     this.players[owner]!.funds -= spec.cost;
-    this.points[pointId]!.queue.push({ kind, left: spec.build, total: spec.build });
+    const time = this.recruitTime(kind);
+    this.points[pointId]!.queue.push({ kind, left: time, total: time });
     return true;
   }
 
@@ -552,7 +567,8 @@ export class Conquest implements BattleRules {
       p.buildings.forEach((bd) => {
         if (!bd) return;
         if (bd.progress < 1) {
-          bd.progress = Math.min(1, bd.progress + dt / BUILDINGS[bd.kind].time);
+          // Older state has no recorded duration and finishes at its original pace.
+          bd.progress = Math.min(1, bd.progress + dt / (bd.constructionTotal ?? BUILDINGS[bd.kind].time));
           if (bd.progress >= 1) b.events.push({ type: 'built', point: p.id, building: bd.kind, owner: p.owner });
         } else if (bd.upgradeLeft > 0) {
           bd.upgradeLeft = Math.max(0, bd.upgradeLeft - dt);
@@ -578,7 +594,7 @@ export class Conquest implements BattleRules {
         item.left -= dt * this.constructionRate(p.owner);
         if (item.left > 0 || b.ships.filter((s) => s.owner === p.owner && b.isActive(s)).length >= this.shipLimit(p.owner)) return;
         // Extra slipways launch side by side when the adjacent water is navigable.
-        const offset = worker === 0 ? 0 : (worker === 1 ? -42 : 42);
+        const offset = worker === 0 ? 0 : Math.ceil(worker / 2) * (worker % 2 ? -42 : 42);
         let x = p.spawn.x - Math.sin(p.spawn.heading) * offset;
         let z = p.spawn.z + Math.cos(p.spawn.heading) * offset;
         if (this.land(x, z) > -7) { x = p.spawn.x; z = p.spawn.z; }
@@ -636,8 +652,8 @@ export class Conquest implements BattleRules {
       if (!docks && !mags && !beacon && !camps) continue;
       b.near(p.x, p.z, p.r * 1.2, (s) => {
         if (s.team !== pl.team || !b.isActive(s)) return;
-        if (docks && b.time - s.lastHit > 8) b.mend(s, dt * 0.006 * docks, dt * 0.004 * docks);
-        if (camps && b.time - s.lastHit > 8) b.mend(s, 0, dt * 0.004 * camps);
+        if (docks && b.time - s.lastHit > 8) b.mend(s, dt * (this.options.expanded ? 0.01 : 0.006) * docks, dt * (this.options.expanded ? 0.002 : 0.004) * docks);
+        if (camps && b.time - s.lastHit > 8) b.mend(s, 0, dt * (this.options.expanded ? 0.008 : 0.004) * camps);
         if (mags) b.resupply(s, dt * 0.01 * mags);
       });
       if (beacon && b.night) {

@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "source": "Actual isolated WebGPU naval battle; no raster-generated backdrop",
+  "sourceFile": "src/ui/menuBattleScene.ts",
+  "sourceSha256": "7f68a785f3a95dd5ba78b63255143b6df06d53d172f8428e6271f9fa08db7b24",
+  "assetLoaderFile": "src/ships/ShipRenderer.ts",
+  "assetLoaderSha256": "7098abd5dd623b4ddd842b2596a97037910abf6642adaa16f1a7103ac4daf2e2",
+  "renderer": "WebGPUBackend",
+  "ships": 26,
+  "captureDate": "2026-10-12",
+  "posters": [
+    {
+      "file": "public/ui/art/menu_battle_wide.webp",
+      "sha256": "031fbc3394a61b85af8c54abac9b1d32a02ee789eae9b4950e87480d7cc27d54",
+      "width": 1440,
+      "height": 900,
+      "nativePixels": [
+        1440,
+        900
+      ],
+      "simulationSeconds": 6.366733333333336,
+      "gunEvents": 117,
+      "cycle": 0,
+      "uiRemoved": true,
+      "format": "webp",
+      "quality": 92
+    },
+    {
+      "file": "public/ui/art/menu_battle_tall.webp",
+      "sha256": "acd5cb7932398fde9c93785c383c3fdca6ea0560f61ab02234749ca0231f671d",
+      "width": 390,
+      "height": 844,
+      "nativePixels": [
+        390,
+        844
+      ],
+      "simulationSeconds": 6.133433333333336,
+      "gunEvents": 117,
+      "cycle": 0,
+      "uiRemoved": true,
+      "format": "webp",
+      "quality": 92
+    }
+  ],
+  "reproduction": "Open a frozen local build with ?menuqa=1, wait for window.__menuScene.info().ready, let it run about six simulated seconds, pause(true), hide .menu-inner/.menu-masthead/.menu-foot/.menu-shade, and capture at the specified viewport. Encode the canvas frame as WebP quality 92. Runtime variation in frame timing can change individual smoke/shot positions.",
+  "note": "The recurring 3D scene remains the primary background. Posters are used before graphics are ready, for reduced motion/save-data and on graphics initialization failure. The renderer caps its native canvas width at 1600 pixels.",
+  "runtimeSourceSha256": "0d22f8941ca89cc305d51b735f24516350765899fcf44c43ebb3e2963780e35e",
+  "nonVisualChangesSinceCapture": [
+    "Menu-only squadron debug labels changed to ASCII for strict localization audit; scene geometry, lighting, camera and simulation are unchanged."
+  ]
+}

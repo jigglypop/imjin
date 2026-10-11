@@ -36,7 +36,7 @@ export const BUILDING_KINDS: readonly BuildingKind[] = ['camp', 'shipyard', 'bat
 export const MAX_LEVEL = 3;
 
 /** A work in a region. `level` is what stands now; while `upgradeLeft` counts down the next level is going up. */
-export type GBuilding = { kind: BuildingKind; level: number; upgradeLeft: number; hp: number };
+export type GBuilding = { kind: BuildingKind; level: number; upgradeLeft: number; hp: number; upgradeTotal?: number };
 
 /** One hull of the persistent fleet. hull, crew and supply are fractions of the ship's full value, like campaign.ts. */
 export type ShipUnit = { id: string; kind: ShipKind; name: string; hull: number; crew: number; supply: number; kills: number };
@@ -166,6 +166,8 @@ export type Grand = {
   victoryRules?: { kind: 'growth-v1'; initialControl: Record<GrandFaction, number>; target: number };
   /** Direct overseas expeditions in a three-way campaign; absent saves retain the original lane graph. */
   strategicLinks?: 'three-way-v1';
+  /** Fresh human-led allied campaigns shrink only their original computer ally. Absent old saves keep their rules. */
+  allySupport?: { version: 'player-ally-v1'; faction: 'joseon' | 'ming'; reinforcementCarry: Partial<Record<ShipKind, number>> };
   seed: number;
   rng: Rng;
   /** The faction the human commands, or null when the computer plays all three (headless balance runs). */

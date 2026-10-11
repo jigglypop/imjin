@@ -399,42 +399,6 @@
   margin-left: env(safe-area-inset-left);
   margin-bottom: env(safe-area-inset-bottom);
 }
-.gm__terrain {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 12px;
-}
-.gm__terrain button {
-  min-width: 38px;
-  min-height: 38px;
-  padding: 0 9px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ink);
-  cursor: pointer;
-  font: inherit;
-  font-size: 13px;
-}
-.gm__terrain button:hover,
-.gm__terrain button:focus-visible {
-  background: rgba(255, 255, 255, 0.1);
-}
-.gm__terrain label {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 0 8px;
-  color: var(--muted);
-  font-size: 10px;
-}
-.gm__terrain input {
-  width: 84px;
-  margin: 0;
-  accent-color: #b8cba6;
-}
 .gm__credits {
   position: absolute;
   z-index: 6;
@@ -451,7 +415,6 @@
   .grand .gm__zoom > .g-icon-btn {
     display: none;
   }
-  .gm__terrain button { min-height: 44px; min-width: 42px; }
   .gm__credits { transform: translateY(-56px); }
 }
 
@@ -1380,6 +1343,15 @@
   font-weight: 500;
   word-break: keep-all;
   color: var(--ink);
+}
+.g-pick__ally {
+  max-width: 1080px;
+  margin: 14px auto 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+  text-wrap: balance;
 }
 /* One quiet glass bar as wide as the cards: difficulty, what it means, and the start button on a single row. */
 .g-pick__foot {

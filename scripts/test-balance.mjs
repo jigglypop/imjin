@@ -426,6 +426,99 @@ try {
     b.boardingSlots.set(s.id, 1); s.alive = false;
     b.step(0); assert.equal(b.boardingSlots.size, 0);
   });
+  const grappleFixture = (profile = COMPETITIVE_PROFILE, seed = 97241, closestKind = 'panokseon') => {
+    const b = new Battle(seed, profile); b.land = () => -50; b.time = 10;
+    const own = b.addSquadron('joseon', '', '', '', '', 0), foe = b.addSquadron('japan', '', '', '', '', 1);
+    const a = b.addShip('sekibune', 0, 0, 0, '', own), closest = b.addShip(closestKind, 0, 0, 0, '', foe), next = b.addShip('panokseon', 0, 0, 0, '', foe);
+    closest.z = (a.spec.beam + closest.spec.beam) * 0.5 + 4;
+    next.z = -((a.spec.beam + next.spec.beam) * 0.5 + 8);
+    a.stance = 'board'; closest.stance = next.stance = 'standoff';
+    const hold = (target, count) => {
+      const sq = target.team === own.team ? foe : own;
+      const width = (target.spec.beam + shipSpec('sekibune', profile).beam) * 0.5 + 1;
+      for (let i = 0; i < count; i++) {
+        const offset = [[0, width], [0, -width], [(target.spec.length + shipSpec('sekibune', profile).length) * 0.5 + 1, 0], [-((target.spec.length + shipSpec('sekibune', profile).length) * 0.5 + 1), 0]][i];
+        const h = b.addShip('sekibune', target.x + offset[0], target.z + offset[1], 0, '', sq);
+        h.grappledWith = target.id; h.grappleTime = 2;
+      }
+      b.boarders.set(target.id, count);
+    };
+    const ready = () => {
+      for (const s of b.ships) { s.speed = 0; s.repel = false; }
+      b.active = { joseon: b.ships.filter((s) => s.team === 'joseon' && b.isActive(s)), japan: b.ships.filter((s) => s.team === 'japan' && b.isActive(s)) };
+      b.grid.rebuild(b.ships); b.events.length = 0;
+    };
+    return { b, a, closest, next, hold, ready };
+  };
+  check('boarding reach skips a full deck but uses the closest deck when its fourth place is free', () => {
+    for (const count of [3, 4]) {
+      const { b, a, closest, next, hold, ready } = grappleFixture(); hold(closest, count); ready();
+      assert.equal(b.ships.filter((s) => b.isActive(s) && s.grappledWith === closest.id).length, count);
+      assert.ok(Math.abs(b.hullGap(a, closest) - 4) < 1e-9); assert.ok(Math.abs(b.hullGap(a, next) - 8) < 1e-9);
+      b.reachGrapples();
+      const target = count === 4 ? next : closest;
+      assert.equal(a.grappledWith, target.id);
+      assert.equal(b.events.filter((e) => e.type === 'board' && e.a === a.id && e.b === target.id).length, 1);
+      assert.equal(b.boarders.get(closest.id), 4); assert.equal(b.boarders.get(next.id) ?? 0, count === 4 ? 1 : 0);
+    }
+  });
+  check('boarding reach skips locked, closed and unsafe-speed targets without expanding other navies reach', () => {
+    for (const reason of ['locked', 'closed', 'speed']) {
+      const { b, a, closest, next, ready } = grappleFixture(COMPETITIVE_PROFILE, 97241, reason === 'closed' ? 'geobukseon' : 'panokseon'); ready();
+      if (reason === 'locked') b.lockGrapple(a, closest.id);
+      if (reason === 'speed') closest.speed = 7;
+      b.reachGrapples(); assert.equal(a.grappledWith, next.id, reason);
+    }
+    const { b, a, closest, ready } = grappleFixture(); ready();
+    a.stance = 'standoff'; closest.stance = 'board'; b.reachGrapples();
+    assert.equal(closest.grappledWith, 0); assert.equal(b.events.filter((e) => e.type === 'board').length, 0);
+  });
+  check('Japanese mirrors use the available boarding direction and respect its own speed and lock', () => {
+    for (const fullTarget of ['a', 'closest']) {
+      const { b, a, closest, hold, ready } = grappleFixture(COMPETITIVE_PROFILE, 97241, 'sekibune'); closest.stance = 'board';
+      hold(fullTarget === 'a' ? a : closest, 4); ready();
+      b.rand = () => { throw new Error('Only one eligible direction needs no tie-break roll'); };
+      b.tryGrapple(a, closest);
+      const attacker = fullTarget === 'a' ? a : closest, defender = attacker === a ? closest : a;
+      assert.equal(attacker.grappledWith, defender.id); assert.equal(defender.grappledWith, 0);
+      assert.equal(b.boarders.get(fullTarget === 'a' ? a.id : closest.id), 4);
+    }
+    for (const reason of ['speed', 'locked']) {
+      const { b, a, closest, ready } = grappleFixture(COMPETITIVE_PROFILE, 97241, 'sekibune'); closest.stance = 'board'; ready();
+      if (reason === 'speed') { a.speed = 8; closest.speed = 2; closest.heading = Math.PI / 2; }
+      else b.lockGrapple(a, closest.id);
+      b.tryGrapple(a, closest); assert.equal(closest.grappledWith, a.id, reason); assert.equal(a.grappledWith, 0);
+    }
+  });
+  check('a reverse non-Japanese grapple keeps its shorter throwing reach', () => {
+    const { b, a, closest, ready } = grappleFixture(); ready();
+    b.setCrew(a, a.spec.crew * 0.2); closest.stance = 'board';
+    assert.ok(b.wantsBoard(a, closest) && b.wantsBoard(closest, a));
+    b.rand = () => { throw new Error('The other navy cannot throw from a four-metre gap'); };
+    b.reachGrapples(); assert.equal(a.grappledWith, closest.id); assert.equal(closest.grappledWith, 0);
+  });
+  check('contact rejection still injures boarders at closed and repelling decks', () => {
+    for (const profile of [COMPETITIVE_PROFILE, 'historical']) for (const repel of [false, true]) {
+      const { b, a, closest, ready } = grappleFixture(profile, 97241, 'geobukseon'); ready(); closest.repel = repel;
+      const crew = a.crew; let rolls = 0; b.rand = () => { rolls++; return 0.1; };
+      b.tryGrapple(a, closest);
+      assert.equal(a.grappledWith, 0); assert.ok(Math.abs(crew - a.crew - (repel ? 2 : 3)) < 1e-9);
+      assert.equal(rolls, repel ? 1 : 0);
+      assert.equal(b.events.some((e) => e.type === 'repelled'), repel);
+    }
+  });
+  check('historical capacity rejection and seeded mirror outcomes retain their original random sequence', () => {
+    const full = grappleFixture('historical'); full.hold(full.closest, 4); full.ready(); full.b.reachGrapples();
+    assert.equal(full.a.grappledWith, 0); assert.equal(full.b.boarders.get(full.next.id) ?? 0, 0);
+    for (const seed of [2, 7, 23, 92, 1592, 97241]) {
+      const actual = grappleFixture('historical', seed, 'sekibune'), control = grappleFixture('historical', seed, 'sekibune');
+      for (const f of [actual, control]) { f.closest.stance = 'board'; f.hold(f.closest, 4); f.ready(); }
+      const choice = control.b.rand(), following = control.b.rand(); actual.b.tryGrapple(actual.a, actual.closest);
+      assert.equal(actual.a.grappledWith, 0);
+      assert.equal(actual.closest.grappledWith, choice < 0.5 ? 0 : actual.a.id);
+      assert.equal(actual.b.rand(), following, 'historical coin and subsequent random draw');
+    }
+  });
 } finally { await server.close(); }
 console.log(failed ? `${failed} failed` : 'all passed');
 process.exitCode = failed ? 1 : 0;

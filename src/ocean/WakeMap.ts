@@ -32,8 +32,10 @@ import {
   vec2,
   vec4,
 } from 'three/tsl';
+import type { Ship } from '../sim/types';
 
-const MAX_STAMPS = 2048;
+// One batched pass still serves the whole navy, including the uncapped fleets.
+const MAX_STAMPS = 8192;
 
 export class WakeMap {
   readonly resolution: number;
@@ -51,6 +53,8 @@ export class WakeMap {
   private readonly b: InstancedBufferAttribute;
   private readonly mesh: Mesh;
   private count = 0;
+  private readonly trails = new Map<number, { x: number; z: number; heading: number }>();
+  private resetPending = true;
   private renderer: WebGPURenderer | null = null;
   /** The texture nodes that read the finished map, per ocean. A battle that is thrown away takes its own out. */
   private readonly sampleNodes = new Map<object, ReturnType<typeof texture>[]>();
@@ -139,6 +143,7 @@ export class WakeMap {
   }
 
   dispose() {
+    this.trails.clear();
     for (const rt of this.targets) rt.dispose();
     (this.quad.material as MeshBasicNodeMaterial).dispose();
     this.mesh.geometry.dispose();
@@ -152,6 +157,48 @@ export class WakeMap {
 
   setCenter(x: number, z: number) {
     this.center.value.set(x, z);
+    this.trails.clear();
+    this.resetPending = true;
+  }
+
+  /** Losing sight of a hull must not join its last known position to an unseen journey. */
+  forgetShip(id: number) {
+    this.trails.delete(id);
+  }
+
+  /** Stamps along the travelled curve, so a turning fleet leaves distinct paths rather than isolated stern blobs. */
+  shipWake(ship: Ship, dt: number) {
+    const { id, x, z, spec } = ship;
+    const fraction = Math.min(1.2, Math.abs(ship.speed) / spec.maxSpeed);
+    if (dt <= 0) return;
+    if (fraction <= 0.03) { this.forgetShip(id); return; }
+    const heading = ship.heading + (ship.speed < 0 ? Math.PI : 0);
+    const previous = this.trails.get(id);
+    const travelled = previous ? Math.hypot(x - previous.x, z - previous.z) : 0;
+    const continuous = previous && travelled <= Math.max(spec.beam * 6, Math.abs(ship.speed) * dt * 3 + 4);
+    const steps = continuous ? Math.min(3, Math.max(1, Math.ceil(travelled / Math.max(2, spec.beam * 0.4)))) : 1;
+    const deltaHeading = previous ? Math.atan2(Math.sin(heading - previous.heading), Math.cos(heading - previous.heading)) : 0;
+    const intensity = fraction * dt * 60 / steps;
+    for (let i = 1; i <= steps; i += 1) {
+      const u = i / steps;
+      const px = continuous ? previous.x + (x - previous.x) * u : x;
+      const pz = continuous ? previous.z + (z - previous.z) * u : z;
+      const h = continuous ? previous.heading + deltaHeading * u : heading;
+      const c = Math.cos(h), n = Math.sin(h);
+      const sternX = px - c * spec.length * 0.54, sternZ = pz - n * spec.length * 0.54;
+      this.stamp(sternX, sternZ, h, spec.beam * 0.78, 0.014 * intensity, 2.8, 2.4);
+      for (const side of [-1, 1]) {
+        const aft = spec.length * 0.15, width = spec.beam * 0.8;
+        this.stamp(sternX - c * aft - n * width * side, sternZ - n * aft + c * width * side, h - side * 0.36, spec.beam * 0.5, 0.008 * intensity, 3.4, 1.4);
+      }
+    }
+    const c = Math.cos(heading), n = Math.sin(heading);
+    const bowX = x + c * spec.length * 0.45, bowZ = z + n * spec.length * 0.45;
+    const turn = Math.max(-0.3, Math.min(0.3, ship.turn * Math.abs(ship.speed) * 3));
+    for (const side of [-1, 1]) {
+      this.stamp(bowX - n * spec.beam * 0.43 * side, bowZ + c * spec.beam * 0.43 * side, heading - side * 0.58, spec.beam * 0.43, 0.014 * fraction * dt * 60 * (1 + side * turn), 2.5, 0.8);
+    }
+    this.trails.set(id, { x, z, heading });
   }
 
   stamp(x: number, z: number, rot: number, size: number, intensity: number, stretch = 1, turbulence = 1) {
@@ -175,7 +222,8 @@ export class WakeMap {
     if (dt <= 0 && this.count === 0) return;
     const src = this.targets[this.current]!;
     const dst = this.targets[1 - this.current]!;
-    this.fade.value.set(Math.exp(-dt / 7), Math.exp(-dt / 22), 1);
+    if (this.resetPending) { this.fade.value.set(0, 0, 0); this.resetPending = false; }
+    else this.fade.value.set(Math.exp(-dt / 8), Math.exp(-dt / 24), 1);
     this.prevNode.value = src.texture;
     const prevTarget = renderer.getRenderTarget();
     const prevAutoClear = renderer.autoClear;

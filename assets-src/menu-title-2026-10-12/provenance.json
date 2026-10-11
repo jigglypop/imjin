@@ -1,0 +1,59 @@
+{
+  "generated": "2026-10-12",
+  "provider": "OpenAI Images API",
+  "execution": "bundled imagegen CLI generate",
+  "modelRequested": "gpt-image-2.5-sunburst",
+  "quality": "high",
+  "size": "1024x1536",
+  "background": "transparent",
+  "imagesPerLanguage": 1,
+  "generationRequests": 2,
+  "sourceImagesPreserved": true,
+  "processing": "transparent margin crop; lossless WebP; no recoloring or compositing",
+  "assets": [
+    {
+      "language": "ko",
+      "source": "assets-src/menu-title-2026-10-12/title-ko-gpt-image-2.5.png",
+      "prompt": "assets-src/menu-title-2026-10-12/prompt-ko.txt",
+      "target": "public/ui/art/menu_title_ko.webp",
+      "input": {
+        "width": 1024,
+        "height": 1536,
+        "sha256": "b4c812900071dab0a3d5798373e43dd40e0c387d962e3bbeb4559e8366e02a8a"
+      },
+      "crop": {
+        "left": 20,
+        "top": 214,
+        "width": 1004,
+        "height": 1154
+      },
+      "output": {
+        "bytes": 1084218,
+        "sha256": "f935c8d5c85282aafa31cf08b82736d69fedae679b1eff8a88a2d1b4df8ca2b9"
+      },
+      "promptSha256": "5c13eab29b7b3462738f192aa3f8fe9be156d532e07773f89585d33427832fef"
+    },
+    {
+      "language": "en",
+      "source": "assets-src/menu-title-2026-10-12/title-en-gpt-image-2.5.png",
+      "prompt": "assets-src/menu-title-2026-10-12/prompt-en.txt",
+      "target": "public/ui/art/menu_title_en.webp",
+      "input": {
+        "width": 1024,
+        "height": 1536,
+        "sha256": "9046bcbdc445b898e125c1f42a825d1fd8ae45d8cb2c924519585fab0aee38fe"
+      },
+      "crop": {
+        "left": 0,
+        "top": 252,
+        "width": 1024,
+        "height": 1052
+      },
+      "output": {
+        "bytes": 1075584,
+        "sha256": "dd03ad74dac0b335b98350c30cdd0c9948e0b3662c8d07af638e8b54ecc5d96a"
+      },
+      "promptSha256": "a15ce11354f0504a498bc68e48f9e0bf70a1e8cec80bfcc1f7899b9dd5090719"
+    }
+  ]
+}

@@ -57,6 +57,7 @@ import {
   viewportSharedTexture,
 } from 'three/tsl';
 import { atmosphere } from '../render/atmosphere';
+import { seaFogAmount } from '../render/seaMist';
 import { WAVE_COUNT, type WaveField } from './waves';
 import { createDetailNormalTexture, createFoamTexture } from './detailNormals';
 import type { WakeMap } from './WakeMap';
@@ -451,7 +452,7 @@ export class Ocean {
       const fogNode = pmremTexture(this.envTexture, horizonDir, float(0.45));
       pmremNodes.push(fogNode);
       const fogColor = vec3(fogNode).mul(atmosphere.envIntensity);
-      const fogAmount = float(1).sub(exp(dist.mul(atmosphere.fogDensity).negate()));
+      const fogAmount = seaFogAmount(dist);
       color.assign(mix(color, fogColor, clamp(fogAmount, 0, 1)));
       const finalColor = min(color, vec3(sunLuma.mul(4).add(60)));
       return mix(finalColor, vec3(wakeFoam, wakeTurb, wakeEdge.mul(0.2)), this.debugWake);

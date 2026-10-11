@@ -65,13 +65,14 @@ async function check(name, test) {
 }
 
 try {
-  const { Engine, RtsCamera, Input, Director, Munitions, pointVisible, Battle: SimBattle, PerspectiveCamera: BattleCamera } = await bundle('engine', `
+  const { Engine, RtsCamera, Input, Director, Munitions, WakeMap, pointVisible, Battle: SimBattle, PerspectiveCamera: BattleCamera } = await bundle('engine', `
     export { Engine } from './src/game/Engine.ts';
     export { RtsCamera } from './src/camera/RtsCamera.ts';
     export { Input } from './src/game/Input.ts';
     export { Battle } from './src/sim/battle.ts';
     export { Director } from './src/game/Director.ts';
     export { Munitions } from './src/fx/Projectiles.ts';
+    export { WakeMap } from './src/ocean/WakeMap.ts';
     export { pointVisible } from './src/sim/visibility.ts';
     export { PerspectiveCamera } from 'three/webgpu';`, {
     'render/sky.ts': `export const SKY_PRESETS = Object.fromEntries(['afternoon','day','sunset','overcast','night'].map(name => [name,{name,night:0}]));
@@ -215,6 +216,45 @@ try {
     battle.events.push({ type: 'gun', ship: enemy.id });
     engine.update(0.1);
     assert.equal(effects, 5, 'new observed events reach the five consumers');
+  });
+
+  await check('motion wakes skip hidden hulls, forget unseen journeys and freeze while paused', () => {
+    const battle = new SimBattle(24, 'competitive-v1');
+    battle.land = () => -100;
+    const own = battle.addShip('panokseon', 0, 0, 0, 'Own', null);
+    const enemy = battle.addShip('atakebune', 3000, 0, 0, 'Hidden', null);
+    own.speed = enemy.speed = 3;
+    enemy.observed = false;
+    const wake = new WakeMap(64);
+    const engine = Object.assign(base(), { battle, wake });
+    const stamps = [];
+    const stamp = wake.stamp.bind(wake);
+    wake.stamp = (...args) => { stamps.push(args); stamp(...args); };
+    engine.stampWakes([], 1 / 60);
+    assert.ok(stamps.length > 0, 'a moving observed ship leaves a wake');
+    assert.ok(stamps.every(([x]) => Math.abs(x) < 100), 'unseen hulls contribute no stamp positions');
+    assert.equal(wake.trails.has(enemy.id), false);
+    enemy.x = 200; enemy.observed = true;
+    engine.stampWakes([], 1 / 60);
+    assert.equal(wake.trails.get(enemy.id).x, 200);
+    enemy.x = 350; enemy.observed = false;
+    stamps.length = 0;
+    engine.stampWakes([], 1 / 60);
+    assert.ok(stamps.every(([x]) => Math.abs(x) < 100));
+    assert.equal(wake.trails.has(enemy.id), false, 'last known hull position cannot track a hidden journey');
+    enemy.x = 700; enemy.observed = true;
+    stamps.length = 0;
+    engine.stampWakes([], 1 / 60);
+    assert.ok(stamps.every(([x]) => Math.abs(x) < 100 || Math.abs(x - enemy.x) < 100), 're-observation never draws a connecting wake through unseen water');
+    const previous = { ...wake.trails.get(enemy.id) };
+    stamps.length = 0;
+    enemy.x += 10;
+    engine.stampWakes([], 0);
+    assert.equal(stamps.length, 0, 'pause adds no moving foam');
+    assert.deepEqual(wake.trails.get(enemy.id), previous);
+    wake.setCenter(1000, 1000);
+    assert.equal(wake.trails.size, 0, 'a new battle cannot reuse the previous fleet paths');
+    wake.dispose();
   });
 
   await check('cinematic camera and approach detection do not follow unseen hulls', () => {

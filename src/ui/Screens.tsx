@@ -7,6 +7,8 @@ import { setScreen, type Screen } from '../state/store';
 import { Backdrop } from './Backdrop';
 import { ChevronLeft, Sliders, Speaker, SpeakerOff } from './icons';
 import { ControlsHelp } from './Tutorial';
+import { MenuBattleBackdrop } from './MenuBattleBackdrop';
+import './menu-cinematic.css';
 
 const go = (screen: Screen) => () => {
   sound.click();
@@ -40,43 +42,43 @@ const MODES: { screen: Screen; art: string; title: string; desc: string; brief: 
 
 export function MainMenu() {
   const t = useT();
+  const lang = useLang();
+  const title = t('임진왜란');
+  const [titleReady, setTitleReady] = useState<Partial<Record<Lang, boolean>>>({});
   return (
-    <section className="screen menu">
-      <Backdrop kind="menu" />
-      <header className="screen-top">
+    <section className="screen menu menu--cinematic">
+      <Backdrop kind="menu" cinematic />
+      <MenuBattleBackdrop />
+      <div className="menu-shade" aria-hidden="true" />
+      <header className="screen-top menu-masthead">
+        <span className="menu-date" aria-hidden="true">1592 <i /> 1598</span>
         <button className="back-btn" onClick={go('settings')}>
           <Sliders /> {t('설정')}
         </button>
       </header>
       <div className="menu-inner">
-        <div className="wordmark">
-          <div className="wordmark-kicker">壬辰倭亂 · 1592–1598</div>
-          <h1 className="wordmark-title">임진왜란</h1>
-          <div className="wordmark-en">The Imjin War</div>
-        </div>
-        <div>
-          <div className="mode-grid">
-            {MODES.map((m) => (
-              <button key={m.screen} className="mode-card" onClick={go(m.screen)}>
-                <img
-                  className="mode-art"
-                  src={`/ui/art/${m.art}_sm.webp`}
-                  srcSet={`/ui/art/${m.art}_sm.webp 600w, /ui/art/${m.art}.webp 1200w`}
-                  sizes="132px"
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                />
-                <span className="mode-title">{t(m.title)}</span>
-                <span className="mode-desc">
-                  <span className="long">{t(m.desc)}</span>
-                  <span className="brief">{t(m.brief)}</span>
-                </span>
-              </button>
-            ))}
+        <div className={`wordmark wordmark--${lang}`}>
+          <div className="wordmark-kicker" aria-hidden="true">{lang === 'ko' ? '壬 辰 倭 亂' : 'NAVAL STRATEGY'}</div>
+          <div className="menu-title-lockup">
+            <h1 className={`wordmark-title wordmark-title--art ${titleReady[lang] ? 'wordmark-title--loaded' : ''}`} aria-label={title}>
+              <img key={lang} className="menu-title-art" src={`/ui/art/menu_title_${lang}.webp`} alt={title} width={lang === 'ko' ? 1004 : 1024} height={lang === 'ko' ? 1154 : 1052} decoding="async" fetchPriority="high" onLoad={() => setTitleReady(s => ({ ...s, [lang]: true }))} onError={() => setTitleReady(s => ({ ...s, [lang]: false }))} />
+              <span className="menu-title-fallback" aria-hidden="true">{title}</span>
+            </h1>
+            {lang === 'ko' && <span className="menu-seal" aria-hidden="true">海<br />戰</span>}
           </div>
+          <div className="wordmark-en" aria-hidden="true">{lang === 'ko' ? 'THE IMJIN WAR' : '1592 — 1598'}</div>
+        </div>
+        <div className="menu-play">
+          <button className="menu-primary" data-mode="faction" onClick={go('faction')}>
+            <span className="menu-primary-copy"><strong>{t('진영 전역')}</strong><small>{t('한 나라로 남해안 점령')}</small></span>
+            <span className="menu-arrow" aria-hidden="true">↗</span>
+          </button>
+          <nav className="menu-modes" aria-label={t('전투 선택')}>
+            {MODES.filter(m=>m.screen!=='faction').map(m=><button key={m.screen} data-mode={m.screen} onClick={go(m.screen)}><span>{t(m.title)}</span><span className="menu-mode-arrow" aria-hidden="true">↗</span></button>)}
+          </nav>
         </div>
       </div>
+      <footer className="menu-foot" aria-hidden="true"><span>{lang === 'ko' ? '南 海' : 'THE SOUTHERN SEA'}</span><span>{lang === 'ko' ? '壬辰 · 海戰' : '1592 — 1598'}</span></footer>
     </section>
   );
 }

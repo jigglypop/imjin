@@ -4,6 +4,7 @@ import {
   Color,
   CylinderGeometry,
   DoubleSide,
+  Float32BufferAttribute,
   Group,
   InstancedBufferAttribute,
   InstancedMesh,
@@ -13,19 +14,17 @@ import {
   MeshStandardNodeMaterial,
   PlaneGeometry,
   Quaternion,
-  RingGeometry,
   Vector3,
   type Material,
   type Object3D,
   type PerspectiveCamera,
 } from 'three/webgpu';
-import { abs, atan, attribute, float, fract, mix, positionLocal, sin, step, time, uniform, uv, vec3, vec4 } from 'three/tsl';
+import { attribute, positionLocal, sin, time, vec3 } from 'three/tsl';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { BUILDINGS, buildingHp, type BuildingKind, type CapturePoint, type Conquest } from '../sim/conquest';
 import type { Faction, Team } from '../sim/types';
 import { equipment } from '../game/quality';
-import { RING_FOE, RING_OWN, RING_WARN } from '../ships/ringTones';
 import { iconSvg } from '../ui/battleIcons';
 import { getLang, t } from '../i18n';
 import type { Battle } from '../sim/battle';
@@ -91,13 +90,12 @@ const NEUTRAL = new Color('#d9dcdf');
 type Label = { root: HTMLDivElement; name: HTMLElement; bar: HTMLElement; fill: HTMLElement; works: HTMLElement; last: string };
 
 /**
- * The capture points of a conquest battle: a thin ring on the water that fills as a point changes hands, the shore
- * works on land, a banner in the holder's colours, and a small glass label with the name, the hold and the works.
+ * Ports are marked by the holder's banner on shore and a small label with the hold and the works.
+ * A picked port gets quiet corners around its coastal standard; the capture radius stays in the simulation.
  */
 export class ConquestView {
   readonly group = new Group();
-  private readonly rings: Mesh[] = [];
-  private readonly ringState: { color: ReturnType<typeof uniform>; hold: ReturnType<typeof uniform>; capture: ReturnType<typeof uniform>; selected: ReturnType<typeof uniform>; contested: ReturnType<typeof uniform> }[] = [];
+  private readonly selectionMarker: Mesh;
   private readonly batches = new Map<BuildingKind, { near: InstancedMesh; far: InstancedMesh }>();
   private disposed = false;
   private readonly poles: InstancedMesh;
@@ -120,7 +118,8 @@ export class ConquestView {
     private readonly heightAt: (x: number, z: number) => number,
     parent: HTMLElement,
   ) {
-    for (const p of conquest.points) this.addRing(p);
+    this.selectionMarker = this.makeSelectionMarker();
+    this.group.add(this.selectionMarker);
     const poleGeo = new CylinderGeometry(0.18, 0.24, 14, 6);
     poleGeo.translate(0, 7, 0);
     this.poles = new InstancedMesh(poleGeo, new MeshStandardNodeMaterial({ color: 0x3a2a1c, roughness: 0.9 }), CAP);
@@ -172,32 +171,24 @@ export class ConquestView {
     );
   }
 
-  private addRing(p: CapturePoint) {
-    const geo = new RingGeometry(0.986, 1, 192, 1);
-    geo.rotateX(-Math.PI / 2);
-    const color = uniform(new Color(1, 1, 1));
-    const capture = uniform(new Color(1, 1, 1));
-    const hold = uniform(0);
-    const selected = uniform(0);
-    const contested = uniform(0);
-    const mat = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
-    // The ring fills clockwise in the capturing side's tone as the hold moves away from the holder.
-    const c = uv().sub(0.5);
-    const angle = fract(atan(c.y, c.x).div(Math.PI * 2).add(0.25));
-    const filled = step(angle, abs(hold));
-    const base = mix(color, capture, filled);
-    const pulse = sin(time.mul(7)).mul(0.5).add(0.5);
-    const rgb = mix(base, vec3(RING_WARN.r, RING_WARN.g, RING_WARN.b), contested.mul(pulse).mul(0.7));
-    mat.colorNode = vec4(rgb, 1);
-    mat.opacityNode = float(0.6).add(selected.mul(0.3)).add(contested.mul(pulse).mul(0.15));
-    mat.fog = false;
-    const mesh = new Mesh(geo, mat);
-    mesh.scale.setScalar(p.r);
-    mesh.position.set(p.x, 1.4, p.z);
-    mesh.renderOrder = 3;
-    this.group.add(mesh);
-    this.rings.push(mesh);
-    this.ringState.push({ color, hold, capture, selected, contested });
+  private makeSelectionMarker() {
+    const vertices: number[] = [];
+    const half = 8, arm = 3.5, width = 0.4;
+    const strip = (x0: number, z0: number, x1: number, z1: number) => {
+      vertices.push(x0, 0, z0, x1, 0, z1, x1, 0, z0, x0, 0, z0, x0, 0, z1, x1, 0, z1);
+    };
+    for (const x of [-1, 1]) for (const z of [-1, 1]) {
+      const edgeX = x * half, edgeZ = z * half;
+      strip(Math.min(edgeX, edgeX - x * arm), Math.min(edgeZ, edgeZ - z * width), Math.max(edgeX, edgeX - x * arm), Math.max(edgeZ, edgeZ - z * width));
+      strip(Math.min(edgeX, edgeX - x * width), Math.min(edgeZ, edgeZ - z * arm), Math.max(edgeX, edgeX - x * width), Math.max(edgeZ, edgeZ - z * arm));
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
+    geometry.computeBoundingSphere();
+    const material = new MeshBasicNodeMaterial({ color: 0xd5cebb, transparent: true, opacity: 0.55, depthWrite: false, side: DoubleSide });
+    const mesh = new Mesh(geometry, material);
+    mesh.visible = false;
+    return mesh;
   }
 
   private addLabel(p: CapturePoint): Label {
@@ -224,26 +215,14 @@ export class ConquestView {
     return { root, name, bar, fill, works, last: '' };
   }
 
-  private teamColor(team: Team | null, playerTeam: Team) {
-    if (!team) return NEUTRAL;
-    return team === playerTeam ? RING_OWN : RING_FOE;
-  }
-
   update(camera: PerspectiveCamera, width: number, height: number, playerTeam: Team, selected: number, showLabels: boolean, battle?: Battle) {
     const c = this.conquest;
     let flags = 0;
     const counts = new Map<InstancedMesh, number>();
     const cam = camera.position;
-    c.points.forEach((p, i) => {
+    this.selectionMarker.visible = false;
+    c.points.forEach((p) => {
       const observed = !battle || c.teamOfPoint(p) === playerTeam || pointVisible(battle, playerTeam, p.x, p.z);
-      const st = this.ringState[i]!;
-      // Neutral ring, filled clockwise by how far the side the hold favours has got.
-      const towards: Team | null = p.hold > 0 ? 'joseon' : p.hold < 0 ? 'japan' : null;
-      (st.color.value as Color).copy(NEUTRAL);
-      (st.capture.value as Color).copy(this.teamColor(towards, playerTeam));
-      st.hold.value = Math.abs(p.hold);
-      st.selected.value = selected === p.id ? 1 : 0;
-      st.contested.value = p.contested ? 1 : 0;
       // Shore works.
       p.buildings.forEach((bd, slot) => {
         if (!bd || !observed) return;
@@ -290,6 +269,11 @@ export class ConquestView {
       if (spot && flags < CAP) {
         const fx = spot.x - Math.cos(spot.rot) * 4 + Math.cos(spot.rot + Math.PI / 2) * 14;
         const fz = spot.z - Math.sin(spot.rot) * 4 + Math.sin(spot.rot + Math.PI / 2) * 14;
+        if (selected === p.id) {
+          this.selectionMarker.position.set(fx, this.heightAt(fx, fz) + 0.25, fz);
+          this.selectionMarker.rotation.y = -spot.rot;
+          this.selectionMarker.visible = true;
+        }
         this.q.setFromAxisAngle(this.up, -spot.rot);
         this.p.set(fx, this.heightAt(fx, fz) - 0.3, fz);
         this.s.set(1, 1, 1);
@@ -419,13 +403,13 @@ export class ConquestView {
     }
   }
 
-  /** Frees the rings, banners and instance buffers. The building models stay cached for the next battle. */
+  /** Frees the marker, banners and instance buffers. The building models stay cached for the next battle. */
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
     this.onSelect = null;
     this.layer.remove();
-    for (const mesh of [...this.rings, this.poles, this.cloths]) {
+    for (const mesh of [this.selectionMarker, this.poles, this.cloths]) {
       mesh.geometry.dispose();
       (mesh.material as Material).dispose();
     }

@@ -93,7 +93,7 @@ export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDet
                 <div className="cq-upgrade">
                   {bd.upgradeLeft > 0 ? (
                     <>
-                      <span>{t('증축 중 · {n}초', { n: bd.upgradeLeft })}</span>
+                      <span>{t('증축 중 · {n}초', { n: Math.ceil(bd.upgradeLeft) })}</span>
                       <progress value={bd.upgradeTotal - bd.upgradeLeft} max={bd.upgradeTotal} />
                       <button className="chip" onClick={() => engine.issue({ type: 'cancelUpgrade', point: p.id, slot: bd.slot })} title={t('남은 공사비의 70% 환급')}>{t('취소')}</button>
                     </>
@@ -125,7 +125,7 @@ export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDet
               <button key={b.kind} className="chip cq-buy" disabled={!b.ok} title={t(b.desc)} onClick={() => engine.issue({ type: 'build', point: p.id, building: b.kind })}>
                 <Icon name={b.kind} size={16} />
                 {t(b.label)}
-                <small>{won(b.cost)}</small>
+                <small>{won(b.cost)} · {t('{n}초', { n: b.time })}</small>
               </button>
             ))}
           </div>
@@ -150,7 +150,7 @@ export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDet
                 <button key={i} className="cq-q" title={t('취소')} onClick={() => engine.issue({ type: 'cancel', point: p.id, index: i })}>
                   <span>{t(q.label)}</span>
                   <i style={{ width: `${q.working ? (1 - q.left / q.total) * 100 : 0}%` }} />
-                  <small>{q.working ? t('{n}초', { n: q.left }) : t('대기')}</small>
+                  <small>{q.working ? t('{n}초', { n: Math.ceil(q.left) }) : t('대기')}</small>
                 </button>
               ))}
             </div>
