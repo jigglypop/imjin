@@ -134,11 +134,29 @@
   height: 100%;
   pointer-events: none;
 }
+.gm-land {
+  /* Territory: a soft pool of the owner's tone, so the ink map still shows through. */
+  pointer-events: none;
+}
 .gm-lane {
-  stroke: rgba(235, 240, 245, 0.24);
-  stroke-width: 1.5;
-  stroke-dasharray: 1 6;
+  fill: none;
+  stroke: rgba(235, 240, 245, 0.3);
+  stroke-width: 1.6;
+  stroke-dasharray: 5 6;
   stroke-linecap: round;
+}
+.gm-lane__glow {
+  fill: none;
+  stroke: rgba(242, 210, 122, 0.3);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+.gm-lane__dir {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .gm-lane.front {
   stroke: rgba(207, 150, 134, 0.72);
@@ -150,8 +168,8 @@
 }
 .gm-lane.hot {
   stroke: var(--ink);
-  stroke-width: 2.4;
-  stroke-dasharray: 8 6;
+  stroke-width: 2.6;
+  stroke-dasharray: 9 6;
 }
 .gm-arrow__halo {
   fill: none;
@@ -220,13 +238,99 @@
   box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.26), 0 1px 4px rgba(0, 0, 0, 0.4);
   transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
-/* The faction's tone sits in the middle as a dot; a seat of power wears a second ring. */
-.gm-node__disc::before {
+/* The faction's crest sits in the middle; a seat of power wears a second ring. */
+.gm-node__disc .gk-crest {
+  border-radius: 50%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.gm-node__disc:empty::before {
   content: '';
   width: 46%;
   height: 46%;
   border-radius: 50%;
   background: var(--c);
+}
+/* The camp's level in roman numerals on the medallion's lower right, and a pennant of the fleet standing in the port. */
+.gm-node__lv {
+  position: absolute;
+  left: calc(var(--r) * 0.55);
+  top: calc(var(--r) * 0.45);
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--c);
+  color: #0d1217;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
+}
+.gm-node__banner {
+  position: absolute;
+  left: calc(var(--r) * -0.9);
+  top: calc(var(--r) * -1.9);
+  width: 3px;
+  height: 17px;
+  background: #e8eef2;
+  pointer-events: none;
+}
+.gm-node__banner::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 11px;
+  height: 8px;
+  background: var(--b);
+  clip-path: polygon(0 0, 100% 0, 78% 50%, 100% 100%, 0 100%);
+}
+/* The player's own ports carry a gold ring so they read apart from rivals at any distance. */
+.gm-node--own .gm-node__disc {
+  box-shadow: 0 0 0 2.5px rgba(242, 210, 122, 0.85), 0 1px 5px rgba(0, 0, 0, 0.5);
+}
+.gm-node--own.gm-node--seat .gm-node__disc {
+  box-shadow: 0 0 0 2.5px rgba(242, 210, 122, 0.85), 0 0 0 5px var(--c), 0 1px 5px rgba(0, 0, 0, 0.5);
+}
+.gm-node__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 4px 3px;
+  border-radius: 8px;
+  background: rgba(14, 16, 20, 0.82);
+  border: 1px solid color-mix(in srgb, var(--c) 70%, transparent);
+  text-shadow: none;
+}
+.gm-node__card > span {
+  max-width: 104px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gm-node__card img {
+  display: block;
+  width: 104px;
+  height: auto;
+  aspect-ratio: 1024 / 683;
+  border-radius: 5px;
+  background: #1a2128;
+}
+.gm-node--card {
+  z-index: 3;
+}
+@media (pointer: coarse) {
+  .gm-node__card img {
+    width: 76px;
+  }
+}
+.gm-node__card.gm-node__label--l,
+.gm-node__card.gm-node__label--r {
+  top: 0;
+  transform: translateY(-50%);
 }
 .gm-node--seat .gm-node__disc {
   box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.26), 0 0 0 4px var(--c), 0 1px 4px rgba(0, 0, 0, 0.4);

@@ -1,5 +1,6 @@
 import { useT } from '../../i18n';
 import { BUILDINGS, Bar, Chip, FactionMark, Icon, Sheet, Stat, buildingDesc, buildingName, costText, goldText, navyName, shipName, signed } from './shared';
+import { campArt } from './campArt';
 import { turnsText } from './text';
 import type { BuildingKind, FactionId, FleetView, RegionView, ShipClass } from './types';
 
@@ -18,24 +19,6 @@ export interface RegionPanelProps {
   /** Joins the given own fleets of this port into one. */
   onMergeAll?: (fleetIds: string[]) => void;
 }
-/**
- * Which commander's camp art a port shows (public/ui/camps/<id>-L<level>.webp, scripts/generate-camp-art.mjs). A seat
- * keeps its own picture only while its own navy holds it; any other owner gets that navy's shared camp.
- */
-const CAMP_SEAT: Record<string, [art: string, faction: FactionId]> = {
-  yeosu: ['yi', 'joseon'], geoje: ['won', 'joseon'], myeongnyang: ['eokgi', 'joseon'], hansan: ['kwon', 'joseon'],
-  nokdo: ['jeongun', 'joseon'], bangdap: ['eo', 'joseon'], mokpo: ['anwi', 'joseon'],
-  busan: ['wakisaka', 'japan'], angolpo: ['kuki', 'japan'], nagoya: ['kato', 'japan'], tsushima: ['konishi', 'japan'],
-  dadaepo: ['todo', 'japan'], cheonseongpo: ['kurushima', 'japan'], jepo: ['shimazu', 'japan'],
-  liaodong: ['chenlin', 'ming'], shandong: ['deng', 'ming'],
-};
-const SHARED_CAMP: Record<FactionId, string> = { joseon: 'admiral', japan: 'japan', ming: 'deng' };
-
-const campArt = (regionId: string, owner: FactionId) => {
-  const seat = CAMP_SEAT[regionId];
-  return seat && seat[1] === owner ? seat[0] : SHARED_CAMP[owner];
-};
-
 /** The bird's-eye view of the port's camp at the level it has reached; nothing until the first camp stands. */
 function CampView({ region }: { region: RegionView }) {
   const t = useT();

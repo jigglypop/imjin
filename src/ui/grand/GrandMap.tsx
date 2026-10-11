@@ -3,7 +3,8 @@ import { MAP_ASPECT, project } from './projection';
 import { flatMap } from '../siteMap';
 import { ReplayLayer } from './Replay';
 import { useT } from '../../i18n';
-import { FACTION_INFO, Icon, navyName } from './shared';
+import { FACTION_INFO, FactionCrest, Icon, navyName } from './shared';
+import { campArt, campImage, campLevel } from './campArt';
 import { shipsText, turnsText } from './text';
 import type { FactionId, FleetView, RegionView, ReplayView } from './types';
 import type { MapScene } from './MapScene';
@@ -63,6 +64,16 @@ function boxHintSeen() {
 /** Where a fleet badge sits on its port: stacked on the side away from the label, clear of the disc and its ring. */
 function badgeSpot(x: number, y: number, rad: number, labelSide: string | undefined, i: number) {
   return { x: x + rad * 0.6, y: y + (labelSide === 't' ? 1 : -1) * (rad + 22 + i * 30) };
+}
+
+const ROMAN = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'];
+/** Phones show camp pictures only this far in; desktops from a closer-than-open view. */
+const CARD_ZOOM = coarsePointer() ? 2.6 : 1.5;
+/** At most this many pictures are mounted at once, nearest the centre first: each decodes to about 2.8 MB (4 on phones). */
+const MAX_CARDS = coarsePointer() ? 4 : 8;
+
+function coarsePointer() {
+  try { return window.matchMedia('(pointer: coarse)').matches; } catch { return false; }
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -504,6 +515,16 @@ export function GrandMap({
 
   const showLabel = (r: RegionView) => r.id === selectedRegionId || r.offMap || r.value >= 3 || zoomRatio >= 1.1 || (zoomRatio >= 0.85 && r.value >= 2);
 
+  // Camp pictures only close up, and only the few nearest the centre of the screen.
+  const cards = new Set<string>();
+  if (w > 0 && zoomRatio >= CARD_ZOOM) {
+    const near = regions
+      .filter((r) => r.owner && !r.offMap && pos.has(r.id) && campLevel(r) > 0 && px(r.id) > 0 && px(r.id) < w && py(r.id) > 0 && py(r.id) < h)
+      .map((r) => ({ id: r.id, d: Math.hypot(px(r.id) - w / 2, py(r.id) - h / 2) }))
+      .sort((p, q) => p.d - q.d);
+    for (const n of near.slice(0, MAX_CARDS)) cards.add(n.id);
+  }
+
   return (
     <div
       ref={rootRef}
@@ -537,24 +558,56 @@ export function GrandMap({
         <svg className="gm__svg" width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden>
           <defs>
             {(Object.keys(FACTION_INFO) as FactionId[]).map((id) => (
+              <radialGradient key={`land-${id}`} id={`gm-land-${id}`}>
+                <stop offset="0" style={{ stopColor: FACTION_INFO[id].color }} stopOpacity="0.42" />
+                <stop offset="0.55" style={{ stopColor: FACTION_INFO[id].color }} stopOpacity="0.2" />
+                <stop offset="1" style={{ stopColor: FACTION_INFO[id].color }} stopOpacity="0" />
+              </radialGradient>
+            ))}
+            {(Object.keys(FACTION_INFO) as FactionId[]).map((id) => (
               <marker key={id} id={`gm-head-${id}`} viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto">
                 <path d="M0 0 L10 5 L0 10 z" fill={FACTION_INFO[id].color} />
               </marker>
             ))}
           </defs>
+          {regions.filter((r) => r.owner && !r.offMap && pos.has(r.id)).map((r) => {
+            const rad = view.s * (0.028 + 0.011 * campLevel(r));
+            return <circle key={`land-${r.id}`} className="gm-land" cx={px(r.id)} cy={py(r.id)} r={rad} fill={`url(#gm-land-${r.owner})`} />;
+          })}
           {lanes.map(({ a, b }) => {
-            const hot = targets.has(a.id) || targets.has(b.id) ? (selectedFleet && (selectedFleet.at === a.id || selectedFleet.at === b.id) ? 'hot' : '') : '';
+            const from = selectedFleet && selectedFleet.at === a.id ? a : selectedFleet && selectedFleet.at === b.id ? b : null;
+            const hot = from && (targets.has(a.id) || targets.has(b.id));
             const front = a.owner !== b.owner && a.owner && b.owner ? 'front' : '';
             const off = a.offMap || b.offMap ? 'off' : '';
-            return <line key={`${a.id}-${b.id}`} className={`gm-lane ${hot} ${front} ${off}`} x1={px(a.id)} y1={py(a.id)} x2={px(b.id)} y2={py(b.id)} />;
+            const [ax, ay, bx, by] = [px(a.id), py(a.id), px(b.id), py(b.id)];
+            const len = Math.hypot(bx - ax, by - ay) || 1;
+            const bend = Math.min(28, len * 0.09);
+            const cx = (ax + bx) / 2 - ((by - ay) / len) * bend;
+            const cy = (ay + by) / 2 + ((bx - ax) / len) * bend;
+            const d = `M${ax} ${ay} Q${cx} ${cy} ${bx} ${by}`;
+            // The curve's midpoint and its heading there; the mark points away from the port the selected force is in.
+            const mx = (ax + bx) / 4 + cx / 2;
+            const my = (ay + by) / 4 + cy / 2;
+            const turn = (Math.atan2(by - ay, bx - ax) * 180) / Math.PI + (from === b ? 180 : 0);
+            return (
+              <g key={`${a.id}-${b.id}`}>
+                {hot && <path className="gm-lane__glow" d={d} />}
+                <path className={`gm-lane ${hot ? 'hot' : ''} ${front} ${off}`} d={d} />
+                {hot && <path className="gm-lane__dir" d="M-5 -5 L3 0 L-5 5" transform={`translate(${mx} ${my}) rotate(${turn})`} />}
+              </g>
+            );
           })}
           {lanes
             .filter(({ a, b }) => (a.laneTurns?.[b.id] ?? 1) > 1)
-            .map(({ a, b }) => (
-              <text key={`t-${a.id}-${b.id}`} className="gm-lane-turns" x={(px(a.id) + px(b.id)) / 2} y={(py(a.id) + py(b.id)) / 2 - 7} textAnchor="middle">
-                {turnsText(a.laneTurns?.[b.id] ?? 1)}
-              </text>
-            ))}
+            .map(({ a, b }) => {
+              const len = Math.hypot(px(b.id) - px(a.id), py(b.id) - py(a.id)) || 1;
+              const bend = Math.min(28, len * 0.09) / 2;
+              return (
+                <text key={`t-${a.id}-${b.id}`} className="gm-lane-turns" x={(px(a.id) + px(b.id)) / 2 - ((py(b.id) - py(a.id)) / len) * bend} y={(py(a.id) + py(b.id)) / 2 + ((px(b.id) - px(a.id)) / len) * bend - 7} textAnchor="middle">
+                  {turnsText(a.laneTurns?.[b.id] ?? 1)}
+                </text>
+              );
+            })}
           {fleets
             .filter((f) => f.at && f.route.length)
             .flatMap((f) => {
@@ -602,19 +655,32 @@ export function GrandMap({
           const tgt = targets.has(r.id);
           const col = r.owner ? FACTION_INFO[r.owner].color : '#8a939c';
           const side = r.labelSide ?? 'b';
+          const level = campLevel(r);
+          const own = r.owner === me;
+          const card = r.owner && cards.has(r.id) ? campArt(r.id, r.owner) : null;
+          const garrisoned = fleetsAt.get(r.id);
           return (
             <button
               key={r.id}
               type="button"
-              className={`gm-node${sel ? ' gm-node--sel' : ''}${tgt ? ' gm-node--target' : ''}${r.offMap ? ' gm-node--off' : ''}${r.seat ? ' gm-node--seat' : ''}${r.owner ? '' : ' gm-node--neutral'}${r.visible ? '' : ' gm-node--fog'}`}
+              className={`gm-node${sel ? ' gm-node--sel' : ''}${tgt ? ' gm-node--target' : ''}${r.offMap ? ' gm-node--off' : ''}${r.seat ? ' gm-node--seat' : ''}${r.owner ? '' : ' gm-node--neutral'}${own ? ' gm-node--own' : ''}${card ? ' gm-node--card' : ''}${r.visible ? '' : ' gm-node--fog'}`}
               style={{ transform: `translate3d(${x}px, ${y}px, 0)`, ['--r' as string]: `${rad}px`, ['--c' as string]: col }}
               data-region={r.id}
               aria-label={`${r.name}, ${navyName(r.owner)}`}
               aria-pressed={sel}
               onClick={tapRegion(r.id)}
             >
-              <span className="gm-node__disc">{r.offMap && <Icon name="portal" size="sm" />}</span>
-              {showLabel(r) && <span className={`gm-node__label gm-node__label--${side}`}>{r.name}</span>}
+              <span className="gm-node__disc">
+                {r.offMap ? <Icon name="portal" size="sm" /> : r.owner && <FactionCrest faction={r.owner} size={Math.round(rad * 1.5)} />}
+              </span>
+              {level > 0 && <span className="gm-node__lv" aria-hidden>{ROMAN[level] ?? level}</span>}
+              {garrisoned && <span className="gm-node__banner" style={{ ['--b' as string]: FACTION_INFO[garrisoned[0]!.faction].color }} aria-hidden />}
+              {card ? (
+                <span className={`gm-node__label gm-node__card gm-node__label--${side}`}>
+                  <img src={campImage(card, level)} width={104} height={69} alt="" loading="lazy" decoding="async" draggable={false} />
+                  <span>{r.name}</span>
+                </span>
+              ) : showLabel(r) && <span className={`gm-node__label gm-node__label--${side}`}>{r.name}</span>}
               <span className="gm-tip">
                 <b>
                   {r.name} <i>{r.hanja}</i>
