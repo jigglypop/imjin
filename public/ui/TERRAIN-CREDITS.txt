@@ -13,12 +13,12 @@ This display is for a game and is not suitable for navigation or surveying.
 Assets and modifications:
 - korea_dem.webp: Terrarium elevation tiles, stitched and despiked by
   scripts/fetch-dem.mjs. Retains encoded height data rather than a painted map.
-- grand_map.webp: shaded fallback image built by scripts/build-grand-map.mjs.
-- grand_relief.bin: the same Mercator frame and DEM override, resampled to
-  257 x 140 unsigned little-endian metre heights. Sea heights are clamped to zero.
-  Rebuild: node scripts/build-grand-map.mjs --relief-only
-- The 3D campaign view exaggerates vertical heights 20 times for readability.
-  Port coordinates are approximate campaign markers, not measured harbour positions.
-
-The geographic frame and generated grid metadata are committed as
-src/ui/grand/mapFrame.json and src/ui/grand/reliefMeta.json.
+  The historical-battle select screen and the faction campaign map both draw
+  this one file as 3D relief (src/select/terrain.ts), with the heights
+  exaggerated 4.2 times for readability.
+- map_south.webp: the same DEM window baked flat by scripts/build-ui-map.mjs,
+  drawn on phones in place of the 3D relief.
+- grand_map.webp: shaded backdrop of the campaign hub and faction pick, built
+  by scripts/build-grand-map.mjs from Terrarium tiles with korea_dem laid over
+  where it reaches.
+Port coordinates are approximate campaign markers, not measured harbour positions.

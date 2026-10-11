@@ -1,5 +1,7 @@
 import meta from '../select/demMeta.json';
 import type { ScenarioId } from '../sim/scenarios';
+import { isPhone, isTouchOnly } from '../game/device';
+import { params } from './launch';
 
 // The same lon/lat -> map uv projection as src/select/SelectScene.ts, without importing three.js: phones draw the
 // static map (/ui/map_south.webp, baked from the same DEM window) and place markers with this.
@@ -25,6 +27,9 @@ export function siteUV(id: ScenarioId) {
   const s = SITES[id];
   return { u: (lonToX(s.lon) - meta.x0) / (meta.x1 - meta.x0), v: (latToY(s.lat) - meta.y0) / (meta.y1 - meta.y0) };
 }
+
+/** Phones and touch-only tablets draw the flat map image instead of the 3D relief (`?map=static` forces it). */
+export const flatMap = isPhone || isTouchOnly || params.get('map') === 'static';
 
 /** Marker label: the battle's name without the generic suffix or prefix (Korean "옥포 해전", English "Battle of Okpo"). */
 export const shortTitle = (title: string) =>

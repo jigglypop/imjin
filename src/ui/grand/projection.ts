@@ -1,8 +1,8 @@
 import frame from './mapFrame.json';
 
-// The strategic map image (public/ui/grand_map.webp) is the korea_dem Web Mercator frame at zoom 10, widened to
-// mapFrame.json. This is the same projection as siteUV in src/select/SelectScene.ts (lon/lat to tile x/y), normalised
-// to the wider frame instead of the DEM bounds.
+// The campaign frame (mapFrame.json) is the select screen's Web Mercator DEM window widened to hold the off-map ports. It is
+// the same projection as siteUV in src/select/SelectScene.ts (lon/lat to tile x/y), normalised to the wider frame; mapMath.ts
+// places the DEM inside it.
 const lonToX = (lon: number) => ((lon + 180) / 360) * 2 ** frame.zoom;
 const latToY = (lat: number) => {
   const r = (lat * Math.PI) / 180;
@@ -14,7 +14,7 @@ const x1 = lonToX(frame.east);
 const y0 = latToY(frame.north);
 const y1 = latToY(frame.south);
 
-/** Width / height of the map image. */
+/** Width / height of the frame. */
 export const MAP_ASPECT = (x1 - x0) / (y1 - y0);
 export const MAP_IMAGE = '/ui/grand_map.webp';
 

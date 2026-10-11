@@ -4,26 +4,23 @@ import {
   Color,
   CylinderGeometry,
   DataTexture,
-  DataUtils,
   DoubleSide,
   Group,
-  HalfFloatType,
-  LinearFilter,
   Mesh,
   MeshBasicNodeMaterial,
   NoToneMapping,
   PerspectiveCamera,
   PlaneGeometry,
-  RedFormat,
   Scene,
   SRGBColorSpace,
-  TextureLoader,
   Vector2,
   Vector3,
   type WebGPURenderer,
 } from 'three/webgpu';
-import { abs, clamp, cos, dot, float, fract, fwidth, max, mix, normalize, positionLocal, positionWorld, sin, smoothstep, texture, uniform, uv, vec2, vec3 } from 'three/tsl';
+import { cos, float, positionLocal, sin, texture, uniform, uv, vec3 } from 'three/tsl';
 import meta from './demMeta.json';
+import { demHeightAtUV, MAP_H, MAP_W, MIST_HEX, V_SCALE } from './demFrame';
+import { buildTerrain, loadDem } from './terrain';
 import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import { playableFactions } from '../sim/balance';
 import type { Faction } from '../sim/types';
@@ -41,15 +38,6 @@ export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
   noryang: { lon: 127.87, lat: 34.94 },
 };
 
-const MAP_W = 100;
-/** The fog the map fades into at its edge; the screen's CSS veil (.hs-vignette) uses the same colour. */
-const MIST_HEX = '#0d1217';
-const EXAGGERATION = 4.2;
-
-/** A colour written in sRGB, as the node graph works in linear light. */
-const srgb = (r: number, g: number, b: number) => vec3(...[r, g, b].map((v) => (v / 255) ** 2.2) as [number, number, number]);
-const MIST = srgb(13, 18, 23);
-
 const lonToX = (lon: number) => ((lon + 180) / 360) * 2 ** meta.zoom;
 const latToY = (lat: number) => {
   const r = (lat * Math.PI) / 180;
@@ -59,38 +47,6 @@ const latToY = (lat: number) => {
 export function siteUV(id: ScenarioId) {
   const s = SITES[id];
   return { u: (lonToX(s.lon) - meta.x0) / (meta.x1 - meta.x0), v: (latToY(s.lat) - meta.y0) / (meta.y1 - meta.y0) };
-}
-
-async function loadHeights(signal: AbortSignal) {
-  signal.throwIfAborted();
-  const img = await new TextureLoader().loadAsync('/ui/korea_dem.webp');
-  try {
-    signal.throwIfAborted();
-    const source = img.image as HTMLImageElement | ImageBitmap;
-    const w = meta.width;
-    const h = meta.height;
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-    ctx.drawImage(source as CanvasImageSource, 0, 0);
-    const px = ctx.getImageData(0, 0, w, h).data;
-    const heights = new Float32Array(w * h);
-    const half = new Uint16Array(w * h);
-    for (let i = 0; i < w * h; i += 1) {
-      const v = px[i * 4]! * 256 + px[i * 4 + 1]! + px[i * 4 + 2]! / 256 - 32768;
-      heights[i] = v;
-      half[i] = DataUtils.toHalfFloat(v);
-    }
-    const tex = new DataTexture(half, w, h, RedFormat, HalfFloatType);
-    tex.magFilter = LinearFilter;
-    tex.minFilter = LinearFilter;
-    tex.flipY = false;
-    tex.needsUpdate = true;
-    return { heights, tex };
-  } finally {
-    img.dispose();
-  }
 }
 
 // War-table flags for the sides of the selected battle, pinned into the map around the site: Joseon and Ming to the
@@ -288,7 +244,6 @@ export class SelectScene {
   readonly scene = new Scene();
   readonly camera: PerspectiveCamera;
   private heights: Float32Array | null = null;
-  private readonly mapH = (MAP_W * meta.height) / meta.width;
   private readonly target = new Vector3();
   private readonly goal = new Vector3();
   private dist = 40;
@@ -326,11 +281,11 @@ export class SelectScene {
   async init(initial: ScenarioId) {
     this.loading.signal.throwIfAborted();
     this.renderer.toneMapping = NoToneMapping;
-    const { heights, tex } = await loadHeights(this.loading.signal);
+    const { heights, tex } = await loadDem(this.loading.signal);
     this.loading.signal.throwIfAborted();
     this.demTexture = tex;
     this.heights = heights;
-    this.scene.add(this.buildMap(tex));
+    this.scene.add(buildTerrain(tex, this.segments));
     for (const faction of ['joseon', 'ming', 'japan'] as Faction[]) {
       const flag = this.makeFlag(faction);
       this.flags.push(flag);
@@ -433,7 +388,7 @@ export class SelectScene {
     const mx = -dx * k;
     const mz = (-dy * k) / Math.max(0.35, Math.sin(this.pitch));
     this.goal.x = Math.max(-MAP_W / 2, Math.min(MAP_W / 2, this.goal.x + mx * c + mz * s));
-    this.goal.z = Math.max(-this.mapH / 2, Math.min(this.mapH / 2, this.goal.z - mx * s + mz * c));
+    this.goal.z = Math.max(-MAP_H / 2, Math.min(MAP_H / 2, this.goal.z - mx * s + mz * c));
     this.goal.y = this.groundAt(this.goal.x, this.goal.z);
   };
 
@@ -453,70 +408,14 @@ export class SelectScene {
     return (this.dom ?? this.renderer.domElement).clientHeight || window.innerHeight;
   }
 
-  private buildMap(demTex: DataTexture) {
-    const segments = this.segments;
-    const geo = new PlaneGeometry(MAP_W, this.mapH, segments, Math.round((segments * meta.height) / meta.width));
-    geo.rotateX(-Math.PI / 2);
-    const vScale = (EXAGGERATION * MAP_W) / (meta.width * meta.metersPerPixel);
-    const m = new MeshBasicNodeMaterial();
-    const fUV = vec2(uv().x, float(1).sub(uv().y));
-    const hV = texture(demTex, fUV).level(float(0)).r;
-    // The relief settles to flat sea at the map's border, so no land stands cut off against the mist there.
-    const rim = smoothstep(0, 0.07, uv().x).mul(smoothstep(1, 0.93, uv().x)).mul(smoothstep(0, 0.09, uv().y)).mul(smoothstep(1, 0.91, uv().y));
-    m.positionNode = positionLocal.add(vec3(0, max(hV, 0).mul(vScale).mul(rim), 0));
-    const texel = vec2(1 / meta.width, 1 / meta.height);
-    const h = texture(demTex, fUV).r;
-    const hx = texture(demTex, fUV.add(vec2(texel.x, 0))).r.sub(texture(demTex, fUV.sub(vec2(texel.x, 0))).r);
-    const hz = texture(demTex, fUV.add(vec2(0, texel.y))).r.sub(texture(demTex, fUV.sub(vec2(0, texel.y))).r);
-    const metersPerTexel = meta.metersPerPixel;
-    const shadeK = float(EXAGGERATION * 0.55);
-    const n = normalize(vec3(hx.mul(shadeK).negate().div(metersPerTexel * 2), 1, hz.mul(shadeK).negate().div(metersPerTexel * 2)));
-    const L = normalize(vec3(-0.55, 0.62, -0.55));
-    const lit = clamp(dot(n, L), 0, 1);
-    const slope = float(1).sub(n.y);
-    // A dark chart under the black glass, in the same palette as the campaign map (scripts/build-grand-map.mjs) and the
-    // phone map (scripts/build-ui-map.mjs): slate land with soft relief, a near-black sea lighter on the shelf, a pale hairline coast.
-    const land = h.greaterThan(0);
-    const hi = smoothstep(0, 900, h).mul(0.6);
-    const lum = clamp(float(0.86).add(lit.sub(0.62).mul(1.5)).sub(slope.mul(0.55)), 0.35, 1.04);
-    const stone = mix(srgb(70, 77, 84), srgb(96, 103, 109), hi);
-    const shadowTint = srgb(28, 33, 38);
-    const band = abs(fract(h.div(250)).sub(0.5));
-    const contour = smoothstep(0.47, 0.5, band.add(fwidth(h.div(250)).mul(0.6))).mul(smoothstep(80, 200, h)).mul(0.1);
-    const landColor = mix(mix(shadowTint, stone, lum), srgb(118, 132, 146), contour);
-    const depth = h.negate().max(0);
-    const seaShelf = mix(srgb(28, 40, 51), srgb(15, 22, 29), smoothstep(0, 80, depth));
-    const seaShadow = float(1).sub(smoothstep(0, 14, depth)).mul(0.1);
-    const waves = sin(positionWorld.z.mul(5.2).add(sin(positionWorld.x.mul(0.9)).mul(1.4))).mul(0.5).add(0.5);
-    const waveLines = smoothstep(0.94, 1, waves).mul(0.03).mul(smoothstep(30, 400, depth));
-    const seaColor = seaShelf.mul(float(1).sub(seaShadow).sub(waveLines));
-    const coastW = fwidth(h).mul(1.3).add(2);
-    const coast = float(1).sub(smoothstep(0, coastW, abs(h)));
-    const base = land.select(landColor, seaColor);
-    const withCoast = mix(base, srgb(118, 132, 146), coast.mul(0.6));
-    const edge = smoothstep(0, 0.08, uv().x).mul(smoothstep(1, 0.92, uv().x)).mul(smoothstep(0, 0.1, uv().y)).mul(smoothstep(1, 0.9, uv().y));
-    m.colorNode = mix(MIST, withCoast, edge);
-    const mesh = new Mesh(geo, m);
-    mesh.frustumCulled = false;
-    return mesh;
-  }
-
-  heightAtUV(u: number, v: number) {
-    if (!this.heights) return 0;
-    const x = Math.max(0, Math.min(meta.width - 1, Math.round(u * (meta.width - 1))));
-    const y = Math.max(0, Math.min(meta.height - 1, Math.round(v * (meta.height - 1))));
-    return this.heights[y * meta.width + x]!;
-  }
-
   private groundAt(x: number, z: number) {
-    const vScale = (EXAGGERATION * MAP_W) / (meta.width * meta.metersPerPixel);
-    return Math.max(0, this.heightAtUV(x / MAP_W + 0.5, z / this.mapH + 0.5)) * vScale;
+    return this.heights ? Math.max(0, demHeightAtUV(this.heights, x / MAP_W + 0.5, z / MAP_H + 0.5)) * V_SCALE : 0;
   }
 
   worldOf(id: ScenarioId, out = new Vector3()) {
     const { u, v } = siteUV(id);
     const x = (u - 0.5) * MAP_W;
-    const z = (v - 0.5) * this.mapH;
+    const z = (v - 0.5) * MAP_H;
     return out.set(x, this.groundAt(x, z), z);
   }
 

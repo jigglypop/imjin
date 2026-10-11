@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { MAP_ASPECT, MAP_IMAGE, project } from './projection';
+import { MAP_ASPECT, project } from './projection';
+import { flatMap } from '../siteMap';
 import { ReplayLayer } from './Replay';
 import { useT } from '../../i18n';
 import { FACTION_INFO, Icon, navyName } from './shared';
 import { shipsText, turnsText } from './text';
 import type { FactionId, FleetView, RegionView, ReplayView } from './types';
-import { ReliefScene } from './ReliefScene';
-import { reliefHeight, reliefProject, RELIEF_TILT } from './reliefMath';
+import type { MapScene } from './MapScene';
+import { DEM_RECT, groundElevation, MAP_TILT, mapProject } from './mapMath';
 
 export interface MapInsets {
   top: number;
@@ -80,9 +81,9 @@ export function GrandMap({
   const t = useT();
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const sceneRef = useRef<ReliefScene | null>(null);
+  const sceneRef = useRef<MapScene | null>(null);
   const [heights, setHeights] = useState<Float32Array | null>(null);
-  const [pose, setPose] = useState({ tilt: RELIEF_TILT, yaw: 0 });
+  const [pose, setPose] = useState({ tilt: MAP_TILT, yaw: 0 });
   const activePose = heights ? pose : { tilt: 0, yaw: 0 };
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [view, setView] = useState<View>({ s: 1, x: 0, y: 0 });
@@ -99,19 +100,26 @@ export function GrandMap({
   const byId = useMemo(() => new Map(regions.map((r) => [r.id, r])), [regions]);
   const pos = useMemo(() => new Map(regions.map((r) => {
     const p = project(r.lon, r.lat);
-    return [r.id, heights ? reliefProject(p.u, p.v, r.offMap ? 0 : reliefHeight(heights, p.u, p.v), pose) : p];
+    return [r.id, heights ? mapProject(p.u, p.v, r.offMap ? 0 : groundElevation(heights, p.u, p.v), pose) : p];
   })), [regions, heights, pose.tilt, pose.yaw]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const scene = new ReliefScene(canvas);
-    sceneRef.current = scene;
+    // Phones keep the flat image, as the select screen does, and never load the renderer.
+    if (!canvas || flatMap) return;
     let cancelled = false;
-    void scene.init().then((data) => { if (!cancelled) setHeights(data); }).catch(() => {
-      if (!cancelled) { scene.dispose(); sceneRef.current = null; }
-    });
-    return () => { cancelled = true; scene.dispose(); sceneRef.current = null; };
+    let scene: MapScene | null = null;
+    void import('./MapScene')
+      .then(({ MapScene: Scene }) => {
+        if (cancelled) return;
+        scene = new Scene(canvas);
+        sceneRef.current = scene;
+        return scene.init().then((data) => { if (!cancelled) setHeights(data); });
+      })
+      .catch(() => {
+        if (!cancelled) { scene?.dispose(); sceneRef.current = null; }
+      });
+    return () => { cancelled = true; scene?.dispose(); sceneRef.current = null; };
   }, []);
 
   useEffect(() => { sceneRef.current?.update(view, activePose, box.w, box.h); }, [view, box.w, box.h, activePose.tilt, activePose.yaw]);
@@ -120,7 +128,8 @@ export function GrandMap({
     const { w, h } = boxRef.current;
     const cover = Math.max(w, h * MAP_ASPECT);
     const contain = Math.min(w, h * MAP_ASPECT);
-    return { min: contain * 0.92, max: cover * MAX_ZOOM, cover };
+    // The terrain covers only part of the frame (the rest is mist for the off-map ports): open wide enough to fill the screen with it.
+    return { min: contain * 0.92, max: cover * MAX_ZOOM, cover, open: Math.max(cover, w / DEM_RECT.w) };
   }, []);
 
   const constrain = useCallback(
@@ -190,7 +199,7 @@ export function GrandMap({
       const pts = mine.map((r) => pos.get(r.id)!);
       const u = pts.length ? pts.reduce((a, p) => a + p.u, 0) / pts.length : 0.45;
       const v = pts.length ? pts.reduce((a, p) => a + p.v, 0) / pts.length : 0.4;
-      setView(centred(u, v, limits().cover));
+      setView(centred(u, v, limits().open));
     } else {
       setView((cur) => constrain(cur));
     }
@@ -380,8 +389,8 @@ export function GrandMap({
   const { w, h } = box;
   const { s } = view;
   const mapH = s / MAP_ASPECT;
-  const cover = box.w ? limits().cover : 1;
-  const zoomRatio = s / cover;
+  const openZoom = box.w ? limits().open : 1;
+  const zoomRatio = s / openZoom;
   const px = (id: string) => view.x + pos.get(id)!.u * s;
   const py = (id: string) => view.y + pos.get(id)!.v * mapH;
 
@@ -433,10 +442,10 @@ export function GrandMap({
       <canvas ref={canvasRef} className="gm__relief" style={{ opacity: heights ? 1 : 0 }} aria-hidden />
       {!heights && <img
         className="gm__img"
-        src={MAP_IMAGE}
+        src="/ui/map_south.webp"
         alt=""
         draggable={false}
-        style={{ width: s, height: mapH, transform: `translate3d(${view.x}px, ${view.y}px, 0)` }}
+        style={{ width: s * DEM_RECT.w, height: mapH * DEM_RECT.h, transform: `translate3d(${view.x + DEM_RECT.u * s}px, ${view.y + DEM_RECT.v * mapH}px, 0)` }}
       />}
       {w > 0 && (
         <svg className="gm__svg" width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden>
