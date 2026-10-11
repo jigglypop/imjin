@@ -7,6 +7,8 @@ import { createServer } from 'vite';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const storage = new Map();
+// Node 24 exposes the host's navigator.language; make the fixture's initial locale explicit.
+storage.set('imjin.lang', 'ko');
 globalThis.localStorage = {
   getItem: (key) => storage.get(key) ?? null,
   setItem: (key, value) => storage.set(key, String(value)),
@@ -35,6 +37,7 @@ try {
   const { BUILDINGS } = await load('/src/sim/conquest.ts');
   const { applyCommand } = await load('/src/sim/commands.ts');
   const { SEA_STATES, waveField } = await load('/src/ocean/waves.ts');
+  const { setLang } = await load('/src/i18n/index.ts');
   const campaign = await load('/src/campaign/campaign.ts');
   const { newGrand } = await load('/src/sim/grand/turn.ts');
   const { describeContact, winnerOfBattle } = await load('/src/sim/grand/bridge.ts');
@@ -123,14 +126,18 @@ try {
     assert.equal(campaign.useCampaign.getState().campaign.squads[0].ships.length, 1);
   });
 
-  await check('campaign draws save a neutral result and retain the legacy defeat retry/reward policy', () => {
+  for (const locale of [
+    { lang: 'ko', defeat: '패전했습니다. 함대를 정비한 뒤 다시 싸울 수 있습니다.', draw: '무승부입니다. 함대를 정비한 뒤 다시 싸울 수 있습니다.', defeatLabel: '패배', drawLabel: '무승부' },
+    { lang: 'en', defeat: 'Defeated. Refit the fleet and try again.', draw: 'A draw. Refit the fleet, then try again.', defeatLabel: 'Defeat', drawLabel: 'Draw' },
+  ]) await check(`campaign draws save a neutral result and retain the legacy defeat retry/reward policy (${locale.lang})`, () => {
+    setLang(locale.lang);
     const outcome = { id: 'okpo', win: false, enemySunk: 2, enemyEscaped: 0, ships: [] };
     campaign.resetCampaign();
     const lost = campaign.applyOutcome(outcome);
     const legacy = JSON.parse(storage.get('imjin.campaign.v1'));
     assert.equal(lost.draw, undefined); assert.equal(legacy.history[0].draw, undefined);
-    assert.ok(lost.events.some((event) => event.includes('패전했습니다')));
-    assert.ok(legacy.log[0].includes('패배'));
+    assert.deepEqual(lost.events, [locale.defeat]);
+    assert.ok(legacy.log[0].includes(`: ${locale.defeatLabel} ·`));
     const { battle: b } = fixture({ timeLimit: SIM_DT }); b.step(SIM_DT);
     assert.equal(b.draw, true);
     campaign.resetCampaign();
@@ -140,9 +147,9 @@ try {
     assert.equal(c.step, 0); assert.equal(campaign.currentBattle(c), 'okpo'); assert.equal(campaign.campaignOver(c), false);
     assert.equal(c.history[0].win, false); assert.equal(c.history[0].draw, true);
     assert.deepEqual(c.resources, legacy.resources); assert.deepEqual(report.loot, lost.loot); assert.deepEqual(report.xp, lost.xp);
-    assert.ok(report.events.some((event) => event.includes('무승부입니다') && event.includes('다시 싸울 수 있습니다')));
-    assert.ok(report.events.every((event) => !event.includes('패전했습니다')));
-    assert.ok(c.log[0].includes('무승부')); assert.ok(!c.log[0].includes('패배'));
+    assert.deepEqual(report.events, [locale.draw]);
+    assert.ok(!report.events.includes(locale.defeat));
+    assert.ok(c.log[0].includes(`: ${locale.drawLabel} ·`)); assert.ok(!c.log[0].includes(`: ${locale.defeatLabel} ·`));
     assert.deepEqual(JSON.parse(storage.get('imjin.campaign.v1')), c);
     assert.equal(buildScenario('okpo', 0, 77, () => -50, campaign.fleetSpawn(c)).ships.filter((s) => s.campaignId).length, 43);
     // A contradictory caller cannot grant the victory policy to a draw.
@@ -151,6 +158,7 @@ try {
     assert.equal(conflict.win, false); assert.equal(campaign.useCampaign.getState().campaign.step, 0);
     assert.deepEqual(conflict.loot, lost.loot);
   });
+  setLang('ko');
 
   await check('one second of magazine service supplies exactly one percent at 1/20/30/60 Hz', () => {
     const results = [];
