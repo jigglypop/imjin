@@ -32,7 +32,7 @@ try {
   const load = (p) => server.ssrLoadModule(p);
   const { Battle, SIM_DT } = await load('/src/sim/battle.ts');
   const { SHIP_SPECS, GUN_SHOTS, NO_MODS } = await load('/src/sim/catalog.ts');
-  const { anchorsFor, buildAnchorsFor, GEOBUK_SCALE, variantCount } = await load('/src/ships/anchors.ts');
+  const { anchorsFor, buildAnchorsFor, GEOBUK_SCALE, MODEL_ALIAS, modelScale, variantCount } = await load('/src/ships/anchors.ts');
   const { buildScenario, SCENARIOS } = await load('/src/sim/scenarios.ts');
   const { buildConquestOn, buildConquest, CONQUEST_MAPS } = await load('/src/sim/maps.ts');
   const { BUILDINGS } = await load('/src/sim/conquest.ts');
@@ -130,7 +130,7 @@ try {
     const lx = (port.pos[0] + port.dir[0] * 0.9) * scale;
     const lz = (port.pos[2] + port.dir[2] * 0.9) * scale;
     const c = Math.cos(s.heading), n = Math.sin(s.heading);
-    const raw = buildAnchorsFor(`${s.spec.kind}#${s.variant}`);
+    const raw = anchorsFor(`${s.spec.kind}#${s.variant}`);
     const count = raw.gunPorts.filter((g) => g.side === port.side).length;
     const m = b.muzzle(s, port.side, port.index, count);
     close(m.x, s.x + c * lx - n * lz);
@@ -158,13 +158,15 @@ try {
       const b = new Battle(97241, profile);
       for (const kind of Object.keys(SHIP_SPECS).filter((k) => k !== 'geobukseon')) {
         for (let variant = 0; variant < variantCount(kind); variant += 1) {
-          const raw = buildAnchorsFor(`${kind}#${variant}`);
+          // A kind drawn with another kind's model has that model's ports, enlarged or shrunk to its own length.
+          const k = MODEL_ALIAS[kind] ? modelScale(kind) : 1;
+          const raw = MODEL_ALIAS[kind] ? anchorsFor(`${kind}#${variant}`) : buildAnchorsFor(`${kind}#${variant}`);
           assert.ok(raw);
           assert.equal(anchorsFor(`${kind}#${variant}`), raw);
           const s = b.addShip(kind, -173, 317, 0, 'original ports', null, false, variant);
           for (const heading of [0, Math.PI / 3, -Math.PI / 2, Math.PI]) {
             s.heading = heading;
-            for (const port of raw.gunPorts) checkRotatedPort(b, s, port, 1);
+            for (const port of raw.gunPorts) checkRotatedPort(b, s, { ...port, pos: port.pos.map((v) => v / k) }, k);
           }
         }
       }

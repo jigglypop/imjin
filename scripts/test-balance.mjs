@@ -194,7 +194,7 @@ try {
     const b = new Battle(23, COMPETITIVE_PROFILE), ai = new Strategist(0);
     b.addShip('sekibune', 0, 0, 0, '', b.addSquadron('joseon', '', '', '', '', 0));
     const me = { faction: 'japan', funds: 120 }, bought = [];
-    const fixture = { player: () => me, shipSpec, canRecruit: () => true, recruitIn: (_b, _owner, _point, kind) => { bought.push(kind); return true; } };
+    const fixture = { player: () => me, shipSpec, options: RANKED_OPTIONS, canRecruit: () => true, recruitIn: (_b, _owner, _point, kind) => { bought.push(kind); return true; } };
     ai.frontline = (_c, yards) => yards;
     ai.recruit(b, fixture, [{ id: 0, queue: [] }]);
     assert.deepEqual(bought, [], 'An 85-cost boat must not consume savings for the missing 470-cost main ship.');
@@ -215,8 +215,9 @@ try {
     me.funds = shipSpec('geobukseon').cost; ai.recruit(b, c, [p]);
     assert.equal(p.queue[0].kind, 'geobukseon');
     assert.ok(c.cancel(0, p.id, 0));
+    // The turtle ship no longer fits under the cap, so the next most missing kind of the expanded doctrine is bought.
     me.funds = 2000; me.cap = c.fleet(b, 0).value + shipSpec('panokseon').cost;
-    ai.recruit(b, c, [p]); assert.equal(p.queue[0].kind, 'panokseon');
+    ai.recruit(b, c, [p]); assert.equal(p.queue[0].kind, 'pojakseon');
   });
   check('scouts keep safe objectives instead of chasing a gunship 450m away, in every faction', () => {
     for (const kind of ['hyeopseon', 'kobaya', 'mingsmall']) {

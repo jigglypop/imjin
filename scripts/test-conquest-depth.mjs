@@ -13,7 +13,7 @@ function check(name, run) { try { run(); console.log('ok   ' + name); } catch (e
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} != ${b}`);
 try {
   const { Battle, SIM_DT } = await server.ssrLoadModule('/src/sim/battle.ts');
-  const { Conquest, BUILDINGS, upgradeCost, upgradeTime, buildingHp, ROSTER, DEFAULT_OPTIONS, RANKED_OPTIONS } = await server.ssrLoadModule('/src/sim/conquest.ts');
+  const { Conquest, BUILDINGS, upgradeCost, upgradeTime, buildingHp, ROSTER, RANKED_ROSTER, DEFAULT_OPTIONS, RANKED_OPTIONS } = await server.ssrLoadModule('/src/sim/conquest.ts');
   const { COMPETITIVE_PROFILE } = await server.ssrLoadModule('/src/sim/competitive.ts');
   const { buildConquest, autoFleet, CONQUEST_ORDER } = await server.ssrLoadModule('/src/sim/maps.ts');
   const { buildBattle, sanitizeChoice, DEFAULT_CHOICE, choiceKey } = await server.ssrLoadModule('/server/battles.ts');
@@ -72,7 +72,7 @@ try {
   }
   function addShips(f, count, owner = 0) {
     const pl = f.c.player(owner), sq = f.b.addSquadron(pl.team, '', '', '', '', owner);
-    const kind = ROSTER[pl.faction].at(-1);
+    const kind = RANKED_ROSTER[pl.faction].at(-1);
     for (let i = 0; i < count; i++) {
       const s = f.b.addShip(kind, (owner ? 2500 : -2500) + i * 40, 0, 0, '', sq);
       s.order = { type: 'hold' }; s.fireMode = 'hold';
@@ -98,8 +98,10 @@ try {
         close(ordinary.c.recruitTime(kind), Math.round(ordinary.c.shipSpec(kind).build * 0.36 * 10) / 10);
         close(ranked.c.recruitTime(kind), ranked.c.shipSpec(kind).build);
         assert.ok(ordinary.c.recruitIn(ordinary.b, 0, ordinary.p.id, kind));
-        assert.ok(ranked.c.recruitIn(ranked.b, 0, ranked.p.id, kind));
         close(ordinary.p.queue.at(-1).total, ordinary.c.recruitTime(kind));
+        // A ranked match offers only its own three kinds.
+        if (!RANKED_ROSTER[faction].includes(kind)) { assert.equal(ranked.c.canRecruit(ranked.b, 0, ranked.p.id, kind), false); continue; }
+        assert.ok(ranked.c.recruitIn(ranked.b, 0, ranked.p.id, kind));
         close(ranked.p.queue.at(-1).total, ranked.c.shipSpec(kind).build);
       }
       for (const kind of Object.keys(BUILDINGS)) {
@@ -128,7 +130,7 @@ try {
   });
   check('ordinary camps favor crews and docks favor hulls while ranked dock recovery stays unchanged', () => {
     for (const faction of ['joseon', 'japan', 'ming']) for (const ranked of [false, true]) {
-      const f = fixture(ranked ? RANKED_OPTIONS : {}, faction), kind = ROSTER[faction].at(-1);
+      const f = fixture(ranked ? RANKED_OPTIONS : {}, faction), kind = RANKED_ROSTER[faction].at(-1);
       buildFinished(f, 'dock');
       const s = f.b.addShip(kind, f.p.x, f.p.z, 0, '', f.b.addSquadron('joseon', '', '', '', '', 0));
       s.hull = s.spec.hull / 2; s.roles = s.roles.map((n) => n / 2); s.crew = s.spec.crew / 2; s.lastHit = -20;
@@ -268,7 +270,7 @@ try {
   });
   check('naval camps replenish actual crew stations and speed construction up to a symmetric 60% bonus', () => {
     for (const faction of ['joseon', 'japan', 'ming']) {
-      const f = fixture({}, faction), slot = buildFinished(f, 'camp'), kind = ROSTER[faction].at(-1);
+      const f = fixture({}, faction), slot = buildFinished(f, 'camp'), kind = RANKED_ROSTER[faction].at(-1);
       const s = f.b.addShip(kind, f.p.x, f.p.z, 0, '', f.b.addSquadron('joseon', '', '', '', '', 0));
       s.roles = s.roles.map((n) => n / 2); s.crew = s.spec.crew / 2; s.lastHit = -20;
       f.b.grid.rebuild(f.b.ships); assert.ok(f.c.recruitIn(f.b, 0, f.p.id, kind));
@@ -423,7 +425,7 @@ try {
     for (const size of [150, 300]) for (const faction of ['joseon', 'japan', 'ming']) {
       const f = fixture({}, faction);
       for (const owner of [0, 1]) {
-        const home = f.c.homeOf(owner), kind = ROSTER[faction].at(-1);
+        const home = f.c.homeOf(owner), kind = RANKED_ROSTER[faction].at(-1);
         assert.equal(f.c.shipLimit(owner), Infinity);
         const sq = f.b.addSquadron(owner ? 'japan' : 'joseon', '', '', '', '', owner);
         for (let n = 0; n < size - 1; n++) {
