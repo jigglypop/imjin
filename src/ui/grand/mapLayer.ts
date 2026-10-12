@@ -1,18 +1,19 @@
 import {
   AmbientLight, BoxGeometry, BufferAttribute, BufferGeometry, Color, DirectionalLight, DoubleSide, Float32BufferAttribute, Group, HemisphereLight,
-  InstancedMesh, Material, Matrix4, MeshBasicMaterial, MeshStandardMaterial, Quaternion, Vector3, type Mesh, type Object3D, type Texture,
+  InstancedMesh, LOD, Material, Matrix4, MeshBasicMaterial, MeshStandardMaterial, Quaternion, Vector3, type Camera, type Mesh, type Object3D,
+  type OrthographicCamera, type Texture,
 } from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { disposeTree } from '../../render/dispose';
 import { MAP_ASPECT } from './projection';
-import { buildKit } from './mapKits';
-import { anchorage, faceSea, flagSpot, formation, MODEL_KINDS, pointAlong, SETTLEMENT_RADIUS, SHIP_CAP, settlementPieces, WATER_KINDS, type FleetSpec, type MapWorld, type Piece, type PieceKind, type SailSpec, type SettlementSpec } from './mapWorld';
+import { buildCampKit, type KitLod } from './campKits';
+import { anchorage, faceSea, flagSpot, formation, pointAlong, SETTLEMENT_RADIUS, SHIP_CAP, settlementPieces, WATER_KINDS, type FleetSpec, type MapWorld, type Piece, type PieceKind, type SailSpec, type SettlementSpec } from './mapWorld';
 import type { FactionId } from './types';
 
-// The 3D layer of the campaign map: Joseon camps built from the battle terrain's village models (their low level, about
-// 800 triangles each), Japanese and Ming camps from the procedural kits in mapKits, and a few hulls where a fleet lies or
-// sails, all instanced, so the whole layer is a few dozen draw calls.
+// The 3D layer of the campaign map: every navy's camps built from the procedural kits in campKits (tiled roofs from the
+// ships' roof generators, a close and a far level of detail) and a few hulls where a fleet lies or sails, all instanced,
+// so the whole layer is a few dozen draw calls.
 
 const R = SETTLEMENT_RADIUS;
 /** Longest hull dimension in frame units. */
@@ -29,8 +30,39 @@ const SHIP_FLAG = { pole: 0.75, w: 0.42, h: 0.28 };
 const SHIP_FILES: Record<FactionId, string> = { joseon: 'panokseon_a_lod2', japan: 'sekibune_v2_lod2', ming: 'mingsmall_lod2' };
 /** Banner cloth and the owner's ring, by navy; saturated so it reads against the dark relief from the opening view. */
 const BANNER: Record<FactionId, string> = { joseon: '#3f8cff', japan: '#e8452c', ming: '#f0b72a' };
-const WALL_TONE: Record<'palisade' | 'stone', string> = { palisade: '#6b5238', stone: '#a9a49a' };
-const WALL_SHAPE: Record<'palisade' | 'stone', { height: number; thickness: number }> = { palisade: { height: 0.06, thickness: 0.035 }, stone: { height: 0.11, thickness: 0.055 } };
+/**
+ * The camps' close-up kits show once the view is at most this many frame units across (a camp then spans about 50 pixels
+ * of a desktop window); wider views draw the far kits, the same outlines in about a third of the triangles.
+ */
+const NEAR_VIEW = 0.5;
+
+/** The camps' two levels of detail: three calls `update` with the camera before it draws the children. */
+class KitLevels extends LOD {
+  readonly near = new Group();
+  readonly far = new Group();
+
+  constructor() {
+    super();
+    this.add(this.near, this.far);
+  }
+
+  override update(camera: Camera) {
+    const c = camera as OrthographicCamera;
+    this.near.visible = !c.isOrthographicCamera || (c.right - c.left) / c.zoom <= NEAR_VIEW;
+    this.far.visible = !this.near.visible;
+  }
+}
+
+/** A kit as geometry: positions, normals and vertex colours, indexed. */
+function kitGeometry(kind: PieceKind, lod: KitLod) {
+  const kit = buildCampKit(kind, lod);
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(kit.position, 3));
+  geometry.setAttribute('normal', new Float32BufferAttribute(kit.normal, 3));
+  geometry.setAttribute('color', new Float32BufferAttribute(kit.color, 3));
+  geometry.setIndex(new BufferAttribute(kit.position.length / 3 < 65536 ? Uint16Array.from(kit.index) : kit.index, 1));
+  return geometry;
+}
 
 type Model = { geometry: BufferGeometry; material: Material; height: number };
 /** A flag's cloth: its centre and size in frame units. */
@@ -108,7 +140,8 @@ export class MapLayer {
   private readonly lights = { sun: new DirectionalLight('#ffe9cf', 2.1), sky: new HemisphereLight('#cfdcec', '#2b3036', 1.5), fill: new AmbientLight('#ffffff', 0.35) };
   private readonly models = new Map<string, Promise<Model | null>>();
   private readonly loaded = new Map<string, Model>();
-  private readonly kits = new Map<PieceKind, BufferGeometry>();
+  private readonly kits = new Map<PieceKind, [BufferGeometry, BufferGeometry]>();
+  private readonly levels = new KitLevels();
   private readonly built: InstancedMesh[] = [];
   private shared: Shared | null = null;
   private flags: { mesh: InstancedMesh; spots: FlagSpot[] } | null = null;
@@ -116,7 +149,6 @@ export class MapLayer {
   private flagSpots: FlagSpot[] = [];
   private flagColors: Color[] = [];
   private poleMatrices: Matrix4[] = [];
-  private owned: { dispose(): void }[] = [];
   private sailors: Sailors | null = null;
   private world: MapWorld | null = null;
   private shipTotal = 0;
@@ -128,7 +160,7 @@ export class MapLayer {
   private disposed = false;
 
   constructor(private readonly ground: (u: number, v: number) => number, private readonly onChange: () => void) {
-    this.group.add(this.lights.sun, this.lights.sky, this.lights.fill);
+    this.group.add(this.lights.sun, this.lights.sky, this.lights.fill, this.levels);
     this.lights.sun.position.set(-0.55, 0.9, 0.5);
   }
 
@@ -173,7 +205,6 @@ export class MapLayer {
     if (!world || this.disposed) return;
     const mine = ++this.generation;
     const wanted = new Map<string, string>();
-    for (const s of world.settlements) for (const p of settlementPieces(s.level, s.owner)) if (MODEL_KINDS.has(p.kind)) wanted.set(p.kind, `/models/env/${p.kind}_lod1.glb`);
     for (const f of world.fleets) wanted.set(f.faction, `/models/${SHIP_FILES[f.faction]}.glb`);
     for (const s of world.sails) wanted.set(s.faction, `/models/${SHIP_FILES[s.faction]}.glb`);
     await Promise.all([...wanted].map(([key, url]) => this.model(key, url)));
@@ -198,17 +229,15 @@ export class MapLayer {
     this.poleMatrices = [];
     this.sailors = null;
     this.shipTotal = 0;
-    for (const m of this.owned) m.dispose();
-    this.owned = [];
   }
 
-  private add(geometry: BufferGeometry, material: Material, matrices: Matrix4[], colors?: Color[]) {
+  private add(geometry: BufferGeometry, material: Material, matrices: Matrix4[], colors?: Color[], parent: Object3D = this.group) {
     if (!matrices.length) return null;
     const mesh = new InstancedMesh(geometry, material, matrices.length);
     matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
     colors?.forEach((c, i) => mesh.setColorAt(i, c));
     mesh.frustumCulled = false;
-    this.group.add(mesh);
+    parent.add(mesh);
     this.built.push(mesh);
     return mesh;
   }
@@ -220,7 +249,7 @@ export class MapLayer {
       const arm = (side: number) => [0, 0, -0.47, side * 0.3, 0, -1.3, side * 0.21, 0, -1.3];
       wakeGeometry.setAttribute('position', new Float32BufferAttribute([...arm(1), ...arm(-1)], 3));
       this.shared = {
-        kit: new MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0 }),
+        kit: new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 }),
         wake: new MeshBasicMaterial({ color: '#eef4f7', transparent: true, opacity: 0.5, depthWrite: false, side: DoubleSide }),
         wakeGeometry,
         box: new BoxGeometry(1, 1, 1),
@@ -231,11 +260,12 @@ export class MapLayer {
     return this.shared;
   }
 
+  /** A kind's close and far geometry, built on first use and shared by every camp after. */
   private kit(kind: PieceKind) {
     let g = this.kits.get(kind);
     if (!g) {
-      g = buildKit(kind) ?? undefined;
-      if (g) this.kits.set(kind, g);
+      g = [kitGeometry(kind, 0), kitGeometry(kind, 1)];
+      this.kits.set(kind, g);
     }
     return g;
   }
@@ -307,31 +337,15 @@ export class MapLayer {
         const here = groundAt(x, z);
         const y = WATER_KINDS.has(p.kind) ? 0 : here > 0 ? here : base;
         const q = new Quaternion().setFromAxisAngle(up, p.rot);
-        if (p.kind === 'palisade' || p.kind === 'stone') {
-          const shape = WALL_SHAPE[p.kind];
-          const h = shape.height * R;
-          bucket(p.kind).push(new Matrix4().compose(new Vector3(x, y + h / 2 - R * 0.02, z), q, new Vector3(p.size * R, h, shape.thickness * R)));
-          return;
-        }
         const size = p.size * R;
         bucket(p.kind).push(new Matrix4().compose(new Vector3(x, y - R * 0.02, z), q, new Vector3(size, size, size)));
       }
     }
+    // One instanced draw per kind and level of detail; the levels object shows one of the two.
     for (const [kind, matrices] of byKind) {
-      if (kind === 'palisade' || kind === 'stone') continue;
-      const model = MODEL_KINDS.has(kind) ? this.loaded.get(kind) : null;
-      if (model) this.add(model.geometry, model.material, matrices);
-      else {
-        const geometry = this.kit(kind);
-        if (geometry) this.add(geometry, this.resources.kit, matrices);
-      }
-    }
-    for (const tone of ['palisade', 'stone'] as const) {
-      const matrices = byKind.get(tone);
-      if (!matrices) continue;
-      const material = new MeshStandardMaterial({ color: WALL_TONE[tone], roughness: 0.95, metalness: 0 });
-      this.owned.push(material);
-      this.add(this.resources.box, material, matrices);
+      const [near, far] = this.kit(kind);
+      this.add(near, this.resources.kit, matrices, undefined, this.levels.near);
+      this.add(far, this.resources.kit, matrices, undefined, this.levels.far);
     }
     this.add(this.resources.box, this.resources.cloth, curbM, curbColors);
   }
@@ -471,7 +485,7 @@ export class MapLayer {
     }
     this.loaded.clear();
     this.models.clear();
-    for (const g of this.kits.values()) g.dispose();
+    for (const pair of this.kits.values()) for (const g of pair) g.dispose();
     this.kits.clear();
     if (this.shared) for (const resource of Object.values(this.shared)) resource.dispose();
     this.shared = null;

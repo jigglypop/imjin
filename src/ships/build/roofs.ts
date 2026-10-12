@@ -19,6 +19,10 @@ export type SkirtOpts = {
   lift: number;
   concave: number;
   fascia: number;
+  /** Segments up the slope and along the eave in place of the LOD's, for a small building with a tight triangle budget. */
+  seg?: [number, number];
+  /** Cap tiles on the hip ridges (default on); a tier of a stacked keep goes without to stay inside its budget. */
+  hips?: boolean;
 };
 
 export type RoofPaints = { tile: Paint; trim: Paint; cap: Paint };
@@ -33,8 +37,8 @@ const fascia = (ctx: Ctx, trim: Paint, eave: V3[], depth: number, out: V3, len: 
 /** Roof between two rectangles: the lower eave and the wall of the tier above. */
 export function skirtRoof(ctx: Ctx, p: RoofPaints, o: SkirtOpts) {
   const b = ctx.b;
-  const nS = byLod(ctx, 5, 3, 1);
-  const nE = byLod(ctx, 14, 8, 4);
+  const nS = o.seg?.[0] ?? byLod(ctx, 5, 3, 1);
+  const nE = o.seg?.[1] ?? byLod(ctx, 14, 8, 4);
   const { cx, hx, hz, ihx, ihz } = o;
   const eaveY = (c: number) => o.y + o.lift * Math.pow(c, 3);
   type Side = { e0: V3; e1: V3; i0: V3; i1: V3; out: V3 };
@@ -76,7 +80,7 @@ export function skirtRoof(ctx: Ctx, p: RoofPaints, o: SkirtOpts) {
       grid(b, dark, S, { flip: sn[1] > 0 });
     }
   }
-  if (ctx.lod < 2) {
+  if (ctx.lod < 2 && o.hips !== false) {
     // hip ridges with a cap tile each
     const corners: [V3, V3][] = [
       [[cx - ihx, 0, ihz], [cx - hx, 0, hz]],
@@ -108,13 +112,15 @@ export type GableOpts = {
   lift: number;
   concave: number;
   fascia: number;
+  /** Segments up the slope and along the eave in place of the LOD's. */
+  seg?: [number, number];
 };
 
 /** Gabled roof along x with plaster gable ends, barge boards and a ridge. Returns the ridge ends and height. */
 export function gableRoof(ctx: Ctx, p: RoofPaints, plaster: Paint, o: GableOpts) {
   const b = ctx.b;
-  const nS = byLod(ctx, 6, 3, 2);
-  const nE = byLod(ctx, 14, 8, 3);
+  const nS = o.seg?.[0] ?? byLod(ctx, 6, 3, 2);
+  const nE = o.seg?.[1] ?? byLod(ctx, 14, 8, 3);
   const gx = o.wx + o.over;
   const gz = o.wz + o.over;
   const eaveY = (c: number) => o.y + o.lift * Math.pow(c, 3);
@@ -182,12 +188,14 @@ export type IrimoyaOpts = {
   hafu: number;
   gable: number;
   lift: number;
+  /** Segment overrides for the hip skirt and the gable roof, [slope, eave] each. */
+  seg?: { skirt: [number, number]; gable: [number, number] };
 };
 
 /** Irimoya: a hip skirt carrying a plaster band and a gabled roof. */
 export function irimoyaRoof(ctx: Ctx, p: RoofPaints, plaster: Paint, o: IrimoyaOpts) {
-  skirtRoof(ctx, p, { cx: o.cx, hx: o.hx, hz: o.hz, ihx: o.wx, ihz: o.wz, y: o.y, rise: o.skirt, lift: o.lift, concave: 1.6, fascia: 0.34 });
+  skirtRoof(ctx, p, { cx: o.cx, hx: o.hx, hz: o.hz, ihx: o.wx, ihz: o.wz, y: o.y, rise: o.skirt, lift: o.lift, concave: 1.6, fascia: 0.34, seg: o.seg?.skirt });
   const y0 = o.y + o.skirt;
   box(ctx.b, plaster, [o.cx - o.wx, y0 - 0.06, -o.wz], [o.cx + o.wx, y0 + o.hafu, o.wz], { grain: 0 });
-  return gableRoof(ctx, p, plaster, { cx: o.cx, wx: o.wx, wz: o.wz, over: 0.7, y: y0 + o.hafu, rise: o.gable, lift: o.lift * 0.8, concave: 1.5, fascia: 0.3 });
+  return gableRoof(ctx, p, plaster, { cx: o.cx, wx: o.wx, wz: o.wz, over: 0.7, y: y0 + o.hafu, rise: o.gable, lift: o.lift * 0.8, concave: 1.5, fascia: 0.3, seg: o.seg?.gable });
 }
