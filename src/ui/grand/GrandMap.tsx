@@ -10,7 +10,8 @@ import type { FactionId, FleetView, RegionView, ReplayView } from './types';
 import type { MapScene } from './MapScene';
 import { DEM_RECT, groundElevation, MAP_TILT, mapProject } from './mapMath';
 import { boxBetween, markersInBox, type Marker } from './boxSelect';
-import { buildWorld } from './mapWorld';
+import { buildWorld, transitSpot, type IsSea } from './mapWorld';
+import { cardRect, pickCards } from './cardLayout';
 
 export interface MapInsets {
   top: number;
@@ -72,6 +73,9 @@ const ROMAN = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'];
 const CARD_ZOOM = coarsePointer() ? 2.6 : 1.5;
 /** At most this many pictures are mounted at once, nearest the centre first: each decodes to about 2.8 MB (4 on phones). */
 const MAX_CARDS = coarsePointer() ? 4 : 8;
+/** What a card takes on screen, picture and name with their padding: the cards that would overlap are not all shown. */
+const CARD_W = coarsePointer() ? 88 : 116;
+const CARD_H = coarsePointer() ? 80 : 98;
 
 function coarsePointer() {
   try { return window.matchMedia('(pointer: coarse)').matches; } catch { return false; }
@@ -125,6 +129,7 @@ export function GrandMap({
   // Box select: a switch for plain drags, Ctrl/Cmd for a single drag. The rectangle is a DOM node moved by hand, so a drag never re-renders the map.
   const [boxMode, setBoxMode] = useState(false);
   const [hint, setHint] = useState(false);
+  const [hovered, setHovered] = useState<string | null>(null);
   const marqueeRef = useRef<HTMLDivElement>(null);
   const spaceDown = useRef(false);
 
@@ -156,7 +161,8 @@ export function GrandMap({
   useEffect(() => { sceneRef.current?.update(view, activePose, box.w, box.h); }, [view, box.w, box.h, activePose.tilt, activePose.yaw]);
 
   // Camps and ships stand in the 3D scene under the overlay; only what they are made of is handed over, never a pointer target.
-  const world = useMemo(() => buildWorld(regions, fleets), [regions, fleets]);
+  const isSea = useMemo<IsSea | undefined>(() => (heights ? (u, v) => groundElevation(heights, u, v) <= 0 : undefined), [heights]);
+  const world = useMemo(() => buildWorld(regions, fleets, replay ?? null, isSea), [regions, fleets, replay, isSea]);
   useEffect(() => { if (heights) sceneRef.current?.setWorld(world); }, [heights, world]);
 
   const limits = useCallback(() => {
@@ -500,6 +506,13 @@ export function GrandMap({
     return m;
   }, [fleets]);
   const sailing = useMemo(() => fleets.filter((f) => f.transit && byId.has(f.transit.from) && byId.has(f.transit.to)), [fleets, byId]);
+  /** Where a fleet on a lane stands, in the map's pixels: the middle of its 3D ships, on the ground they ride on. */
+  const lanePoint = (f: FleetView) => {
+    const lane = f.transit!;
+    const spot = transitSpot(byId.get(lane.from)!, byId.get(lane.to)!, lane.left, isSea);
+    const p = heights ? mapProject(spot.u, spot.v, groundElevation(heights, spot.u, spot.v), pose) : spot;
+    return { x: view.x + p.u * s, y: view.y + p.v * mapH };
+  };
 
   // The centres of what a box can take, in the same pixels the markers are placed with. Only the player's own forces count.
   const ownBadges: Marker[] = [];
@@ -513,21 +526,34 @@ export function GrandMap({
       });
     }
     for (const f of sailing) {
-      if (f.faction === me) ownBadges.push({ id: f.id, x: (px(f.transit!.from) + px(f.transit!.to)) / 2, y: (py(f.transit!.from) + py(f.transit!.to)) / 2 });
+      if (f.faction === me) ownBadges.push({ id: f.id, ...lanePoint(f) });
     }
     for (const r of regions) if (r.owner === me && r.garrison > 0 && pos.has(r.id)) ownPorts.push({ id: r.id, x: px(r.id), y: py(r.id) });
   }
 
   const showLabel = (r: RegionView) => r.id === selectedRegionId || r.offMap || r.value >= 3 || zoomRatio >= 1.1 || (zoomRatio >= 0.85 && r.value >= 2);
 
-  // Camp pictures only close up, and only the few nearest the centre of the screen.
+  // Camp pictures only close up, never over one another nor over another port's disc: the selected port first, then the
+  // hovered, then the player's own, then the rest, each by camp level. A port whose card does not fit keeps its label and
+  // level badge.
   const cards = new Set<string>();
   if (w > 0 && zoomRatio >= CARD_ZOOM) {
-    const near = regions
+    const candidates = regions
       .filter((r) => r.owner && !r.offMap && pos.has(r.id) && campLevel(r) > 0 && px(r.id) > 0 && px(r.id) < w && py(r.id) > 0 && py(r.id) < h)
-      .map((r) => ({ id: r.id, d: Math.hypot(px(r.id) - w / 2, py(r.id) - h / 2) }))
-      .sort((p, q) => p.d - q.d);
-    for (const n of near.slice(0, MAX_CARDS)) cards.add(n.id);
+      .map((r) => ({
+        id: r.id,
+        own: r.owner === me,
+        level: campLevel(r),
+        distance: Math.hypot(px(r.id) - w / 2, py(r.id) - h / 2),
+        rect: cardRect(px(r.id), py(r.id), nodeRadius(r), r.labelSide ?? 'b', CARD_W, CARD_H),
+      }));
+    const discs = regions
+      .filter((r) => pos.has(r.id) && px(r.id) > -40 && px(r.id) < w + 40 && py(r.id) > -40 && py(r.id) < h + 40)
+      .map((r) => {
+        const rad = nodeRadius(r);
+        return { id: r.id, rect: { x0: px(r.id) - rad, y0: py(r.id) - rad, x1: px(r.id) + rad, y1: py(r.id) + rad } };
+      });
+    for (const id of pickCards(candidates, selectedRegionId, hovered, MAX_CARDS, discs)) cards.add(id);
   }
 
   return (
@@ -564,8 +590,9 @@ export function GrandMap({
           <defs>
             {(Object.keys(FACTION_INFO) as FactionId[]).map((id) => (
               <radialGradient key={`land-${id}`} id={`gm-land-${id}`}>
-                <stop offset="0" style={{ stopColor: FACTION_INFO[id].color }} stopOpacity="0.42" />
-                <stop offset="0.55" style={{ stopColor: FACTION_INFO[id].color }} stopOpacity="0.2" />
+                {/* Over the relief the camp in the middle carries the owner's ring and flag: a lighter centre leaves it its contrast. */}
+                <stop offset="0" style={{ stopColor: FACTION_INFO[id].color }} stopOpacity={heights ? 0.12 : 0.42} />
+                <stop offset="0.55" style={{ stopColor: FACTION_INFO[id].color }} stopOpacity={heights ? 0.17 : 0.2} />
                 <stop offset="1" style={{ stopColor: FACTION_INFO[id].color }} stopOpacity="0" />
               </radialGradient>
             ))}
@@ -674,6 +701,8 @@ export function GrandMap({
               aria-label={`${r.name}, ${navyName(r.owner)}`}
               aria-pressed={sel}
               onClick={tapRegion(r.id)}
+              onPointerEnter={() => setHovered(r.id)}
+              onPointerLeave={() => setHovered((cur) => (cur === r.id ? null : cur))}
             >
               <span className="gm-node__disc">
                 {r.offMap ? <Icon name="portal" size="sm" /> : r.owner && <FactionCrest faction={r.owner} size={Math.round(rad * 1.5)} />}
@@ -733,9 +762,7 @@ export function GrandMap({
         })}
       {w > 0 &&
         sailing.map((f) => {
-          const lane = f.transit!;
-          const x = (px(lane.from) + px(lane.to)) / 2;
-          const y = (py(lane.from) + py(lane.to)) / 2;
+          const { x, y } = lanePoint(f);
           if (x < -80 || y < -80 || x > w + 80 || y > h + 80) return null;
           const sel = f.id === selectedFleetId || !!selectedFleetIds?.has(f.id);
           const mine = f.faction === me;
@@ -767,6 +794,7 @@ export function GrandMap({
           onPhase={(phase) => onReplayPhase?.(phase)}
           onBeat={(kind) => onReplayBeat?.(kind)}
           onDone={() => onReplayDone?.()}
+          onSail={(share, time) => sceneRef.current?.setSail(share, time)}
         />
       )}
       <div ref={marqueeRef} className="gm__marquee" aria-hidden />

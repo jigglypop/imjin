@@ -71,6 +71,11 @@ export class MapScene {
     this.layer?.set(world);
   }
 
+  /** The closed turn's ships along their way: `share` of the sailing done, `time` the replay's clock. */
+  setSail(share: number, time: number) {
+    this.layer?.setSail(share, time);
+  }
+
   update(view: MapView, pose: MapPose, width: number, height: number) {
     if (this.disposed) return;
     this.view = view;

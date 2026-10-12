@@ -22,6 +22,8 @@ export interface ReplayLayerProps {
   /** A clash or capture shows: the screen plays its sound. */
   onBeat: (kind: 'clash' | 'capture') => void;
   onDone: () => void;
+  /** Called on every frame with how far the sailing has got (0 to 1) and the replay's clock (0 to 1.2), for the map's 3D ships. */
+  onSail?: (share: number, time: number) => void;
 }
 
 /** Where the sailing ends and the clashes begin, as shares of the whole. */
@@ -80,13 +82,13 @@ function along(points: Pt[], u: number): { upTo: Pt[]; head: Pt; angle: number }
   return { upTo, head, angle };
 }
 
-export function ReplayLayer({ replay, at, top, reduced, onPhase, onBeat, onDone }: ReplayLayerProps) {
+export function ReplayLayer({ replay, at, top, reduced, onPhase, onBeat, onDone, onSail }: ReplayLayerProps) {
   const t = useT();
   const [p, setP] = useState(0);
   const length = replayLength(replay, reduced);
   const fired = useRef({ clash: false, change: false, done: false });
-  const cb = useRef({ onPhase, onBeat, onDone });
-  cb.current = { onPhase, onBeat, onDone };
+  const cb = useRef({ onPhase, onBeat, onDone, onSail });
+  cb.current = { onPhase, onBeat, onDone, onSail };
 
   useEffect(() => {
     let raf = 0;
@@ -94,6 +96,7 @@ export function ReplayLayer({ replay, at, top, reduced, onPhase, onBeat, onDone 
     const step = (now: number) => {
       const t = (now - t0) / 1000 / length;
       setP(Math.min(1.2, t));
+      cb.current.onSail?.(reduced ? 1 : ease(clamp01(t / SAIL_END)), Math.min(1.2, t));
       if (t >= 1 + HOLD / length) {
         if (!fired.current.done) {
           fired.current.done = true;
@@ -105,7 +108,7 @@ export function ReplayLayer({ replay, at, top, reduced, onPhase, onBeat, onDone 
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [length]);
+  }, [length, reduced]);
 
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
