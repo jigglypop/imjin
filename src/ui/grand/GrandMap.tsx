@@ -10,6 +10,7 @@ import type { FactionId, FleetView, RegionView, ReplayView } from './types';
 import type { MapScene } from './MapScene';
 import { DEM_RECT, groundElevation, MAP_TILT, mapProject } from './mapMath';
 import { boxBetween, markersInBox, type Marker } from './boxSelect';
+import { buildWorld } from './mapWorld';
 
 export interface MapInsets {
   top: number;
@@ -153,6 +154,10 @@ export function GrandMap({
   }, []);
 
   useEffect(() => { sceneRef.current?.update(view, activePose, box.w, box.h); }, [view, box.w, box.h, activePose.tilt, activePose.yaw]);
+
+  // Camps and ships stand in the 3D scene under the overlay; only what they are made of is handed over, never a pointer target.
+  const world = useMemo(() => buildWorld(regions, fleets), [regions, fleets]);
+  useEffect(() => { if (heights) sceneRef.current?.setWorld(world); }, [heights, world]);
 
   const limits = useCallback(() => {
     const { w, h } = boxRef.current;

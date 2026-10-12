@@ -5,7 +5,9 @@ import { disposeTree } from '../../render/dispose';
 import { MAP_H, MIST_HEX } from '../../select/demFrame';
 import { buildTerrain, loadDem } from '../../select/terrain';
 import { MAP_ASPECT } from './projection';
-import { DEM_RECT, MESH_SCALE, mapFrustum, type MapPose, type MapView } from './mapMath';
+import { DEM_RECT, MESH_SCALE, groundElevation, mapFrustum, type MapPose, type MapView } from './mapMath';
+import { MapLayer } from './mapLayer';
+import type { MapWorld } from './mapWorld';
 
 /** The select screen's terrain under the campaign's overlay: one small scene, rendered only when the view changes. */
 export class MapScene {
@@ -20,6 +22,8 @@ export class MapScene {
   private frame = 0;
   private terrain: Group | null = null;
   private demTexture: DataTexture | null = null;
+  private layer: MapLayer | null = null;
+  private world: MapWorld | null = null;
   private width = 0;
   private height = 0;
   private view: MapView = { s: 1, x: 0, y: 0 };
@@ -52,9 +56,19 @@ export class MapScene {
     this.terrain.scale.set(MESH_SCALE, MESH_SCALE, DEM_RECT.h / MAP_ASPECT / MAP_H);
     this.terrain.position.set(DEM_RECT.u + DEM_RECT.w / 2 - 0.5, 0, (DEM_RECT.v + DEM_RECT.h / 2 - 0.5) / MAP_ASPECT);
     this.scene.add(this.terrain);
+    // Camps and ships stand on the same ground the overlay's markers read; they arrive when their models have loaded.
+    this.layer = new MapLayer((u, v) => groundElevation(heights, u, v), () => this.invalidate());
+    this.scene.add(this.layer.group);
+    if (this.world) this.layer.set(this.world);
     this.ready = true;
     this.invalidate();
     return heights;
+  }
+
+  /** What stands on the terrain: a camp where the owner has built one, ships where a fleet lies. */
+  setWorld(world: MapWorld) {
+    this.world = world;
+    this.layer?.set(world);
   }
 
   update(view: MapView, pose: MapPose, width: number, height: number) {
@@ -79,6 +93,7 @@ export class MapScene {
       this.camera.lookAt(0, 0, 0);
       this.camera.updateProjectionMatrix();
       this.scene.rotation.y = this.pose.yaw;
+      this.layer?.setYaw(this.pose.yaw);
       this.renderer.render(this.scene, this.camera);
     });
   }
@@ -90,6 +105,8 @@ export class MapScene {
     this.abort.abort();
     cancelAnimationFrame(this.frame);
     this.frame = 0;
+    this.layer?.dispose();
+    this.layer = null;
     disposeTree(this.scene);
     this.demTexture?.dispose();
     this.demTexture = null;
