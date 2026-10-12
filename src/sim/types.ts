@@ -118,7 +118,29 @@ export type GunState = {
   ammo: number;
 };
 
-export type ShipMods = { reload: number; accuracy: number; speed: number; turn: number; fire: number; melee: number; defense: number };
+/**
+ * Skill multipliers of a ship. The optional ones come only from a campaign commander's ability (grand/commanders.ts)
+ * and are absent everywhere else, so historical, ranked and online battles never read anything but 1 from them.
+ */
+export type ShipMods = {
+  reload: number;
+  accuracy: number;
+  speed: number;
+  turn: number;
+  fire: number;
+  melee: number;
+  defense: number;
+  /** Reload during the first minute after the battle's first blow. */
+  opening?: number;
+  /** Damage of the ship's ram. */
+  ram?: number;
+  /** Growth and damage of a fire aboard. */
+  burn?: number;
+  /** Gun range. */
+  range?: number;
+  /** Shot carried into the battle. */
+  ammo?: number;
+};
 
 export type Ship = {
   id: number;

@@ -1,5 +1,6 @@
 import { shipSpec } from '../competitive';
 import { batteryStrength, shipDef, type ShipDef } from './economy';
+import type { ResolveEdge } from './commanders';
 import { forkRng, next, range, type Rng } from './rng';
 import type { BattleOutcome, BattleOutcomeShip, GrandFaction, RegionState, ShipUnit } from './types';
 
@@ -34,6 +35,8 @@ export type Force = {
   leader: number;
   /** The port's works, for the defender. */
   region?: RegionState;
+  /** The commanders' abilities by ship id (commanders.ts `fleetEdges`); a ship without one fights at 1. */
+  edges?: Record<string, ResolveEdge>;
 };
 
 export type ResolveInput = {
@@ -65,13 +68,16 @@ type Unit = {
   kills: number;
   armor: number;
   shore: boolean;
+  edge: ResolveEdge;
 };
 
-function unitOf(ship: ShipUnit, side: 0 | 1): Unit {
+const PLAIN: ResolveEdge = { gun: 1, opening: 1, melee: 1, guard: 1 };
+
+function unitOf(ship: ShipUnit, side: 0 | 1, edge: ResolveEdge = PLAIN): Unit {
   const def = shipDef(ship.kind);
   const spec = shipSpec(ship.kind);
   const max = def.strength;
-  return { ship, def, side, max, hp: max * ship.hull, start: max * ship.hull, crew: ship.crew, kills: 0, armor: spec.armor, shore: false };
+  return { ship, def, side, max, hp: max * ship.hull, start: max * ship.hull, crew: ship.crew, kills: 0, armor: spec.armor, shore: false, edge };
 }
 
 function shoreUnit(region: RegionState, side: 0 | 1): Unit | null {
@@ -79,7 +85,7 @@ function shoreUnit(region: RegionState, side: 0 | 1): Unit | null {
   if (max <= 0) return null;
   const hp = batteryStrength(region);
   const def: ShipDef = { kind: 'panokseon', faction: 'joseon', label: '포대', gold: 0, turns: 0, strength: max, ranged: 1, boardResist: 1 };
-  return { ship: null, def, side, max, hp, start: hp, crew: 1, kills: 0, armor: 0.3, shore: true };
+  return { ship: null, def, side, max, hp, start: hp, crew: 1, kills: 0, armor: 0.3, shore: true, edge: PLAIN };
 }
 
 const livingHp = (u: Unit[]) => u.reduce((a, x) => a + Math.max(0, x.hp), 0);
@@ -113,7 +119,7 @@ function applyDamage(targets: Unit[], dmg: number, phase: 'gun' | 'melee', attac
       }
       const t = live[i]!;
       if (t.hp <= 0) continue;
-      const resist = phase === 'gun' ? 1 - t.armor : t.def.boardResist;
+      const resist = phase === 'gun' ? (1 - t.armor) * t.edge.guard : t.def.boardResist;
       const dealt = Math.min(t.hp, each * range(rng, 0.5, 1.5) * resist);
       t.hp -= dealt;
       spent += resist > 0 ? dealt / resist : each;
@@ -130,8 +136,8 @@ function applyDamage(targets: Unit[], dmg: number, phase: 'gun' | 'melee', attac
 
 export function autoResolve(input: ResolveInput): ResolveResult {
   const rng = forkRng(input.seed, ...input.tags);
-  const A = input.attacker.ships.map((s) => unitOf(s, 0));
-  const D = input.defender.ships.map((s) => unitOf(s, 1));
+  const A = input.attacker.ships.map((s) => unitOf(s, 0, input.attacker.edges?.[s.id]));
+  const D = input.defender.ships.map((s) => unitOf(s, 1, input.defender.edges?.[s.id]));
   let shoreD: Unit | null = null;
   if (input.defender.region) {
     shoreD = shoreUnit(input.defender.region, 1);
@@ -155,7 +161,8 @@ export function autoResolve(input: ResolveInput): ResolveResult {
       for (const u of mine) {
         if (u.shore && phase === 'melee') continue;
         let o = output(u, phase, u.crew, u.hp / u.max);
-        if (phase === 'melee') o *= RESOLVE.boardingBonus[u.def.faction];
+        if (phase === 'melee') o *= RESOLVE.boardingBonus[u.def.faction] * u.edge.melee;
+        else o *= u.edge.gun * (round === 0 ? u.edge.opening : 1);
         sum += o;
       }
       let mul = 1 + RESOLVE.commanderPerLevel * (leader - 1);

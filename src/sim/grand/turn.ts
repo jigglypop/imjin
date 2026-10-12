@@ -16,6 +16,7 @@ import {
   navyName,
 } from './economy';
 import { COMMANDERS, KOREA_COAST, REGION_ORDER, REGIONS, START } from './regions';
+import { campaignMultiplier, fleetEdges, plunderer, reinforceExtra, restDelta } from './commanders';
 import { makeRng, next } from './rng';
 import type { BattleOutcome, BuildingKind, Contact, Fleet, Grand, GrandFaction, RegionId, ShipUnit } from './types';
 import { GRAND_FACTIONS } from './types';
@@ -112,8 +113,8 @@ export function contactForces(g: Grand, c: Contact): { attacker: Force; defender
   const region = g.regions[c.regionId];
   const garrison = region.owner === c.defender ? region.garrison : [];
   return {
-    attacker: { ships: attackers.flatMap((f) => f.ships), leader: Math.max(1, ...attackers.map((f) => commanderLevel(g, f))) },
-    defender: { ships: [...defenders.flatMap((f) => f.ships), ...garrison], leader: Math.max(1, ...defenders.map((f) => commanderLevel(g, f))), region: region.owner === c.defender ? region : undefined },
+    attacker: { ships: attackers.flatMap((f) => f.ships), leader: Math.max(1, ...attackers.map((f) => commanderLevel(g, f))), edges: fleetEdges(g, attackers) },
+    defender: { ships: [...defenders.flatMap((f) => f.ships), ...garrison], leader: Math.max(1, ...defenders.map((f) => commanderLevel(g, f))), region: region.owner === c.defender ? region : undefined, edges: fleetEdges(g, defenders) },
     attackers,
     defenders,
   };
@@ -148,8 +149,11 @@ function retreat(g: Grand, fl: Fleet, from: RegionId) {
   sail(g, fl, from, choice.to);
 }
 
-/** The region changes hands. Its works are damaged, its queue is lost and its people are restless. */
-export function captureRegion(g: Grand, id: RegionId, taker: GrandFaction) {
+/**
+ * The region changes hands. Its works are damaged, its queue is lost and its people are restless. `fleets` are the
+ * fleets that took it: a commander among them whose ability plunders marks the port for his navy.
+ */
+export function captureRegion(g: Grand, id: RegionId, taker: GrandFaction, fleets: readonly Fleet[] = []) {
   const r = g.regions[id];
   const prev = r.owner;
   // An ally that drives the enemy out of a port hands it back to the navy it was taken from.
@@ -158,6 +162,9 @@ export function captureRegion(g: Grand, id: RegionId, taker: GrandFaction) {
   const by = liberated ? rightful : taker;
   g.credit[taker] += REGIONS[id].value * TUNING.score.captureCredit;
   r.owner = by;
+  const seizer = by === taker ? plunderer(g, fleets.filter((fl) => fl.faction === taker)) : undefined;
+  if (seizer) r.seizedBy = seizer;
+  else delete r.seizedBy;
   r.garrison = [];
   if (r.garrisonRule) r.garrisonReserve = 0;
   r.queue = [];
@@ -237,12 +244,13 @@ export function applyContactOutcome(g: Grand, c: Contact, outcome: BattleOutcome
     { place: REGIONS[c.regionId].name, navy: navyName(winner), a: TUNING.faction[c.attacker].label, lostA, d: TUNING.faction[c.defender].label, lostD },
     !mine ? 'info' : winner === g.player ? 'good' : 'bad',
   );
-  // The turn closes right after the fight and takes one off, so the rest is counted from the next turn.
-  for (const f of [...attackers, ...defenders]) f.rest = TUNING.restAfterBattle + 1;
+  // The turn closes right after the fight and takes one off, so the rest is counted from the next turn. A commander
+  // can shorten it, never below that turn.
+  for (const f of [...attackers, ...defenders]) f.rest = Math.max(1, TUNING.restAfterBattle + 1 + restDelta(g, f));
   if (attackerWon) {
     for (const f of defenders) if (g.fleets.includes(f)) retreat(g, f, c.regionId);
     for (const f of attackers) if (g.fleets.includes(f)) f.route = [];
-    captureRegion(g, c.regionId, c.attacker);
+    captureRegion(g, c.regionId, c.attacker, attackers.filter((f) => g.fleets.includes(f)));
   } else {
     for (const f of attackers) if (g.fleets.includes(f)) retreat(g, f, c.regionId);
   }
@@ -381,7 +389,7 @@ function findContacts(g: Grand): Contact[] {
     const hasDefence = defenders.length > 0 || r.garrison.length > 0 || levelOf(r, 'battery') > 0;
     if (!hasDefence) {
       for (const f of attackers) f.route = [];
-      captureRegion(g, id, primary);
+      captureRegion(g, id, primary, attackers);
       continue;
     }
     const player = g.player !== null && [primary, owner, ...attackers.map((f) => f.faction), ...defenders.map((f) => f.faction)].includes(g.player);
@@ -461,7 +469,12 @@ function runEvents(g: Grand) {
     const plan = TUNING.reinforce[f];
     if (!g.factions[f].alive || g.turn < plan.first || (g.turn - plan.first) % plan.every !== 0) continue;
     if (g.regions[plan.at].owner !== f) continue;
-    const ships = supportReinforcements(g, f, g.forces === 'wide-v1' ? scaleShips(plan.ships, TUNING.forceScale) : plan.ships);
+    const wave = g.forces === 'wide-v1' ? scaleShips(plan.ships, TUNING.forceScale) : { ...plan.ships };
+    // A living commander may add hulls of the wave's first kind (chenlin's 대군).
+    const extra = reinforceExtra(g, f);
+    const lead = Object.keys(plan.ships)[0] as ShipKind | undefined;
+    if (extra && lead) wave[lead] = (wave[lead] ?? 0) + extra;
+    const ships = supportReinforcements(g, f, wave);
     if (!Object.values(ships).some((n) => n && n > 0)) continue;
     const fleet = spawnFleet(g, f, plan.at, f === 'japan' ? '후속 함대' : f === 'ming' ? '원군 함대' : '의병 함대', ships, null);
     note(g, '{navy}의 {fleet} {n}척이 {place}에 도착했습니다', { navy: navyName(f), fleet: fleet.name, n: fleet.ships.length, place: REGIONS[plan.at].name }, f === g.player ? 'good' : 'info');
@@ -549,6 +562,7 @@ function advanceTurn(g: Grand) {
           b.level += 1;
           b.hp = 1;
           b.upgradeTotal = 0;
+          delete b.paidGold;
           if (r.owner === g.player) note(g, '{place}의 {work} {level}단계가 완공되었습니다', { place: REGIONS[id].name, work: BUILDING_DEFS[b.kind].label, level: b.level }, 'good', 'built');
         }
       }
@@ -590,10 +604,12 @@ function advanceTurn(g: Grand) {
     const r = g.regions[fl.at];
     if (r.owner && allied(g, fl.faction, r.owner)) {
       const rate = repairRates(r);
+      const repair = campaignMultiplier(g, fl, 'repair');
+      const resupply = campaignMultiplier(g, fl, 'resupply');
       for (const u of fl.ships) {
-        u.hull = Math.min(1, u.hull + rate.hull);
-        u.crew = Math.min(1, u.crew + rate.crew);
-        u.supply = Math.min(1, u.supply + rate.supply);
+        u.hull = Math.min(1, u.hull + rate.hull * repair);
+        u.crew = Math.min(1, u.crew + rate.crew * repair * resupply);
+        u.supply = Math.min(1, u.supply + rate.supply * resupply);
       }
     } else {
       for (const u of fl.ships) {

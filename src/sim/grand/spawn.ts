@@ -4,7 +4,7 @@ import { buildingHp, SHORT_NAME, type Building, type BuildingKind as WorkKind, t
 import { buildConquestOn, wetSpot, type Seat } from '../maps';
 import { dateLabel, TUNING } from './economy';
 import type { BattleInfo } from '../info';
-import type { LandSampler, Ship, Squadron } from '../types';
+import type { LandSampler, Ship, ShipMods, Squadron } from '../types';
 import type { BridgeSeat, RegionBattle, RegionBattleBuilding } from './bridge';
 import { ATTACKER_HOME, DEFENDER_HOME, REGION_MAPS, regionEnvironment } from './coast';
 import { REGIONS } from './regions';
@@ -103,6 +103,24 @@ function stand(conquest: Conquest, slot: number, works: RegionBattleBuilding[]) 
     });
 }
 
+const BASE_MODS = ['reload', 'accuracy', 'speed', 'turn', 'fire', 'melee', 'defense'] as const satisfies readonly (keyof ShipMods)[];
+const ABILITY_MODS = ['opening', 'ram', 'burn', 'range', 'ammo'] as const satisfies readonly (keyof ShipMods)[];
+
+/**
+ * Berths of a fleet that starts in the crane wing (학익진): a shallow arc whose wings reach toward the enemy, the
+ * flagship in the middle and the others filling outward one wing at a time. `ahead` is toward the foe, `side` across.
+ */
+function craneBerths(n: number): { ahead: number; side: number }[] {
+  // A very large fleet keeps the arc within the stretch of water the two ports share; the berths then crowd and
+  // wetSpot moves the overflow to the nearest free water.
+  const half = Math.min(900, Math.max(140, n * 30));
+  return Array.from({ length: n }, (_, i) => {
+    const rank = Math.ceil(i / 2);
+    const s = n <= 1 ? 0 : Math.min(1, rank / Math.ceil((n - 1) / 2)) * (i % 2 === 1 ? -1 : 1);
+    return { ahead: 40 + s * s * half * 0.7, side: s * half };
+  });
+}
+
 function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat, land: LandSampler, placed: { x: number; z: number }[]) {
   const home = conquest.homeOf(slot);
   const foe = conquest.homeOf(slot === ATTACKER_SEAT ? DEFENDER_SEAT : ATTACKER_SEAT);
@@ -114,6 +132,7 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
   const fz = Math.sin(toFoe);
   const cols = Math.max(3, Math.min(8, Math.ceil(Math.sqrt(seat.ships.length * 1.3))));
   const squads = new Map<string, Squadron>();
+  const crane = seat.formation === 'crane' ? craneBerths(seat.ships.length) : null;
   seat.ships.forEach((u, i) => {
     const spec = b.shipSpec(u.kind);
     // A squadron holds six ships of one kind, the way the conquest raises them.
@@ -130,9 +149,9 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
       sq.faction = seat.faction;
       squads.set(key, sq);
     }
-    const row = Math.floor(i / cols);
-    const col = (i % cols) - (cols - 1) / 2;
-    const spot = wetSpot(land, home.x + fx * (60 - row * 62) - fz * col * 58, home.z + fz * (60 - row * 62) + fx * col * 58, placed);
+    const ahead = crane ? crane[i]!.ahead : 60 - Math.floor(i / cols) * 62;
+    const col = crane ? crane[i]!.side : ((i % cols) - (cols - 1) / 2) * 58;
+    const spot = wetSpot(land, home.x + fx * ahead - fz * col, home.z + fz * ahead + fx * col, placed);
     placed.push(spot);
     const { x, z } = spot;
     const flagship = i === 0 && !!seat.leader;
@@ -140,7 +159,10 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
     ship.hull = spec.hull * Math.max(0.05, u.hull);
     b.setCrew(ship, spec.crew * Math.max(0.05, u.crew));
     b.applySupply(ship, u.supply);
-    for (const key of Object.keys(ship.mods) as (keyof typeof ship.mods)[]) ship.mods[key] *= u.mods[key];
+    for (const key of BASE_MODS) ship.mods[key] *= u.mods[key];
+    for (const key of ABILITY_MODS) if (u.mods[key] !== undefined) ship.mods[key] = u.mods[key];
+    // A commander who carries more shot loads it above the magazine's usual fill.
+    if (u.mods.ammo) for (const g of ship.guns) g.ammo *= u.mods.ammo;
     ship.campaignId = u.campaignId;
     ship.order = { type: 'hold' };
     sq.faction = seat.faction;

@@ -893,6 +893,35 @@
   padding: 0 12px;
   white-space: nowrap;
 }
+.g-top__idle {
+  min-height: 44px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+.g-top__cycle {
+  gap: 2px;
+}
+.g-top__cycle .g-btn {
+  min-height: 44px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+/* The key that does the same as a button. Touch screens have no keyboard, so the hint is left out there. */
+.g-kbd {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 5px;
+  border: 1px solid currentColor;
+  font: inherit;
+  font-size: 11px;
+  line-height: 16px;
+  opacity: 0.65;
+}
+@media (hover: none) {
+  .g-kbd {
+    display: none;
+  }
+}
 .g-top__auto b {
   margin-left: 4px;
   opacity: 0.6;
@@ -1688,6 +1717,24 @@
 }
 .g-leader-add {
   margin-top: 12px;
+}
+/* A commander's ability: its name as a small tag, then the line that says what it does. */
+.g-ability {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ink-2);
+}
+.g-ability b {
+  margin-right: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--fill);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
 }
 .g-tools {
   display: flex;
@@ -2611,5 +2658,24 @@
   .gm-flip__chip,
   .g-guide__ring {
     animation: none;
+  }
+}
+
+/* Phones: the fleet cycle buttons stand for Tab and Shift+Tab, which a phone has no keys for, so they make room for the
+   idle-fleet button; in portrait the three order buttons share one row above the treasury. */
+@media (orientation: portrait) and (max-width: 820px), (max-height: 540px) and (orientation: landscape) {
+  .g-top__res .g-top__cycle {
+    display: none;
+  }
+}
+@media (orientation: portrait) and (max-width: 820px) {
+  .g-top__res {
+    grid-template-columns: repeat(3, auto);
+  }
+  .g-top__res .g-res {
+    grid-column: span 2;
+  }
+  .g-top__res .g-btn {
+    padding: 0 8px;
   }
 }

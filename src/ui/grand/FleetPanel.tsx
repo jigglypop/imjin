@@ -147,6 +147,11 @@ export function FleetPanel({
             <span className="g-row__sub">
               {fleet.commander.title} · Lv.{fleet.commander.level}
             </span>
+            {fleet.commander.ability && (
+              <span className="g-ability">
+                <b>{fleet.commander.ability.name}</b> {fleet.commander.ability.text}
+              </span>
+            )}
           </span>
           {own && docked && officers.length > 0 && (
             <button type="button" className="g-btn g-btn--sm" aria-expanded={choosing} onClick={() => setChoosing((c) => !c)}>
@@ -181,6 +186,11 @@ export function FleetPanel({
                   {officer.name} <span className="g-row__kind">Lv.{officer.level}</span>
                 </span>
                 <span className="g-row__sub">{leads ? t('{fleet} 지휘 중', { fleet: leads }) : officer.title}</span>
+                {officer.ability && (
+                  <span className="g-ability">
+                    <b>{officer.ability.name}</b> {officer.ability.text}
+                  </span>
+                )}
               </span>
               <span className="g-chev" aria-hidden>
                 <Icon name="chev" />

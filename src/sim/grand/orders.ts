@@ -1,7 +1,7 @@
 import { SHIP_SPECS } from '../catalog';
 import type { ShipKind } from '../types';
-import { BUILDING_DEFS, BUILDING_ORDER, TUNING, navyName, buildingCost, buildingWorkTotal, buildingOf, freeSlots, kindsOf, levelOf, queueSlots, shipDef, yardPrice, recruitRefund, GATES } from './economy';
-import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId, Result, ShipUnit } from './types';
+import { BUILDING_DEFS, BUILDING_ORDER, TUNING, navyName, buildTerms, buildingCost, buildingWorkTotal, buildingOf, freeSlots, kindsOf, levelOf, queueSlots, shipDef, yardPrice, recruitRefund, GATES } from './economy';
+import type { BuildingKind, Fleet, GBuilding, Grand, GrandFaction, RegionId, Result, ShipUnit } from './types';
 import { MAX_LEVEL, fail, ok, pairKey } from './types';
 import { allied, atWar, fleetById, findRoute, mintId, note } from './world';
 
@@ -61,12 +61,16 @@ export function orderBuild(g: Grand, id: RegionId, kind: BuildingKind): Result {
   if (!have && freeSlots(id, r) <= 0) return fail('빈 부지가 없습니다');
   const need = buildRequirement(g, id, kind, level);
   if (need) return fail(need);
-  const cost = buildingCost(kind, level);
+  const cost = buildTerms(g, id, kind, level);
   const f = g.factions[owner];
   if (f.gold < cost.gold) return fail('은이 부족합니다 ({gold}냥 필요)', { gold: cost.gold });
   f.gold -= cost.gold;
+  const b: GBuilding = have ?? { kind, level: 0, upgradeLeft: cost.turns, upgradeTotal: cost.turns, hp: 1 };
   if (have) have.upgradeTotal = have.upgradeLeft = cost.turns;
-  else r.buildings.push({ kind, level: 0, upgradeLeft: cost.turns, upgradeTotal: cost.turns, hp: 1 });
+  else r.buildings.push(b);
+  // A price lowered by a commander is kept, so a cancel refunds what was paid even after he sails away.
+  if (cost.gold !== buildingCost(kind, level).gold) b.paidGold = cost.gold;
+  else delete b.paidGold;
   return ok('{work} {level}단계 · {turns}턴', { work: BUILDING_DEFS[kind].label, level, turns: cost.turns });
 }
 
@@ -79,7 +83,8 @@ export function cancelBuild(g: Grand, id: RegionId, kind: BuildingKind): Result 
   if (!b || !r.owner || b.upgradeLeft <= 0) return fail('취소할 공사가 없습니다');
   const cost = buildingCost(kind, b.level + 1);
   if (b.upgradeLeft !== buildingWorkTotal(b)) return fail('이미 시작된 공사입니다');
-  g.factions[r.owner].gold += cost.gold;
+  g.factions[r.owner].gold += b.paidGold ?? cost.gold;
+  delete b.paidGold;
   if (b.level === 0) r.buildings.splice(r.buildings.indexOf(b), 1);
   else b.upgradeTotal = b.upgradeLeft = 0;
   return ok();
@@ -264,7 +269,7 @@ export function buildMenu(g: Grand, id: RegionId): BuildOption[] {
   return BUILDING_ORDER.map((kind) => {
     const have = buildingOf(r, kind);
     const next = (have?.level ?? 0) + 1;
-    const cost = buildingCost(kind, Math.min(next, MAX_LEVEL));
+    const cost = buildTerms(g, id, kind, Math.min(next, MAX_LEVEL));
     let problem: string | null = null;
     if (have && have.upgradeLeft > 0) problem = '공사 중';
     else if (next > MAX_LEVEL) problem = '최고 단계';

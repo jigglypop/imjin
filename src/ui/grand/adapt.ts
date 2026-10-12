@@ -8,7 +8,8 @@ import type { BattleSummary } from '../../sim/grand/report';
 import { pendingCard, describeEffect } from '../../sim/grand/events';
 import type { TurnReplay } from '../../sim/grand/replay';
 import { MAX_TURNS, OBJECTIVE_HOLD, contactForces, objectiveProgress, objectiveText, oddsOfContact, previewContact, scoreOf } from '../../sim/grand/turn';
-import type { Fleet, Grand, GrandFaction, RegionId } from '../../sim/grand/types';
+import type { Commander, Fleet, Grand, GrandFaction, RegionId } from '../../sim/grand/types';
+import { abilityOf } from '../../sim/grand/commanders';
 import { MAX_LEVEL } from '../../sim/grand/types';
 import { allied, findRoute, fleetById, fleetObserved, lanesOf, ownedBy, shipCount, visibleRegions } from '../../sim/grand/world';
 import type {
@@ -139,9 +140,16 @@ export function regionViews(g: Grand): RegionView[] {
   });
 }
 
+const abilityView = (id: string): CommanderView['ability'] => {
+  const a = abilityOf(id);
+  return a ? { name: t(a.name), text: t(a.text) } : undefined;
+};
+
+const officerView = (c: Commander): CommanderView => ({ id: c.id, name: t(c.name), title: t(c.title), level: c.level, portrait: c.portrait, ability: abilityView(c.id) });
+
 const commanderView = (g: Grand, faction: GrandFaction, id: string | null): CommanderView | undefined => {
   const c = id ? g.factions[faction].commanders.find((x) => x.id === id) : undefined;
-  return c && c.alive ? { id: c.id, name: t(c.name), title: t(c.title), level: c.level, portrait: c.portrait } : undefined;
+  return c && c.alive ? officerView(c) : undefined;
 };
 
 function fleetView(g: Grand, fl: Fleet): FleetView {
@@ -189,7 +197,7 @@ export function officersFor(g: Grand, fleetId: string): { officer: CommanderView
     .flatMap((c) => {
       const holder = g.fleets.find((f) => f.commanderId === c.id);
       if (holder && holder.id !== fl.id && holder.at !== fl.at) return [];
-      return [{ officer: { id: c.id, name: t(c.name), title: t(c.title), level: c.level, portrait: c.portrait }, leads: holder && holder.id !== fl.id ? tName(holder.name) : undefined }];
+      return [{ officer: officerView(c), leads: holder && holder.id !== fl.id ? tName(holder.name) : undefined }];
     });
 }
 
@@ -231,13 +239,15 @@ export function previewView(g: Grand, contactId: string): BattlePreviewView | nu
     ...(p.battery ? [t('포대 {n}단계', { n: p.battery })] : []),
     ...(camp ? [t('군영 {n}단계', { n: camp })] : []),
   ];
+  // The abilities the commanders bring to this fight, by name: the full line is on each fleet's panel.
+  const abilities = (fleets: Fleet[]) => [...new Set(fleets.flatMap((fl) => commanderView(g, fl.faction, fl.commanderId)?.ability?.name ?? []))];
   const notes = [t(TERRAIN_NOTE[REGIONS[c.regionId].terrain])];
   if (p.attackerShips > 30 || p.defenderShips > 30) notes.push(t('직접 지휘하는 전투에는 한쪽에서 가장 강한 함선 30척까지 참전합니다.'));
   return {
     regionId: c.regionId,
     regionName: t(REGIONS[c.regionId].name),
-    attacker: { faction: c.attacker, leader: leaderOf(f.attackers), name: names(f.attackers, t('공격 함대')), ships: p.attackerShips, crew: crewOf(f.attacker.ships), power: Math.round(p.attacker), bonuses: [] },
-    defender: { faction: c.defender, leader: leaderOf(f.defenders), name: names(f.defenders, t('{place} 수비대', { place: t(REGIONS[c.regionId].name) })), ships: p.defenderShips, crew: crewOf(f.defender.ships), power: Math.round(p.defender), bonuses: defenderBonus },
+    attacker: { faction: c.attacker, leader: leaderOf(f.attackers), name: names(f.attackers, t('공격 함대')), ships: p.attackerShips, crew: crewOf(f.attacker.ships), power: Math.round(p.attacker), bonuses: abilities(f.attackers) },
+    defender: { faction: c.defender, leader: leaderOf(f.defenders), name: names(f.defenders, t('{place} 수비대', { place: t(REGIONS[c.regionId].name) })), ships: p.defenderShips, crew: crewOf(f.defender.ships), power: Math.round(p.defender), bonuses: [...abilities(f.defenders), ...defenderBonus] },
     winChance: oddsOfContact(g, contactId) ?? 0.5,
     you: youAttack ? 'attacker' : youDefend ? 'defender' : null,
     notes,

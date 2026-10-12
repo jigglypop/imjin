@@ -3,7 +3,7 @@ import {
   MAX_TURNS,
   TUNING,
   batteryStrength,
-  buildingCost,
+  buildTerms,
   buildingOf,
   BUILDING_DEFS,
   factionUpkeep,
@@ -194,7 +194,7 @@ function bestWork(g: Grand, f: GrandFaction, budget: number, floor = 0.35, dice:
       const level = (have?.level ?? 0) + 1;
       if (level > MAX_LEVEL || (!have && freeSlots(id, r) <= 0)) continue;
       if (buildRequirement(g, id, kind, level)) continue;
-      const cost = buildingCost(kind, level);
+      const cost = buildTerms(g, id, kind, level);
       if (cost.gold > budget || st.gold - cost.gold < reserve) continue;
       let u = 0;
       if (kind === 'granary') {

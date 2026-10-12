@@ -51,7 +51,15 @@ export const BUILDING_KINDS: readonly BuildingKind[] = ['camp', 'shipyard', 'bat
 export const MAX_LEVEL = 3;
 
 /** A work in a region. `level` is what stands now; while `upgradeLeft` counts down the next level is going up. */
-export type GBuilding = { kind: BuildingKind; level: number; upgradeLeft: number; hp: number; upgradeTotal?: number };
+export type GBuilding = {
+  kind: BuildingKind;
+  level: number;
+  upgradeLeft: number;
+  hp: number;
+  upgradeTotal?: number;
+  /** Silver paid for the level going up, refunded on a cancel (a commander's ability may have lowered it). Absent in older saves: the list price. */
+  paidGold?: number;
+};
 
 /** One hull of the persistent fleet. hull, crew and supply are fractions of the ship's full value, like campaign.ts. */
 export type ShipUnit = { id: string; kind: ShipKind; name: string; hull: number; crew: number; supply: number; kills: number };
@@ -90,6 +98,8 @@ export type RegionState = {
   queue: QueueItem[];
   /** Turns of reduced income left after a conquest. */
   unrest: number;
+  /** The commander whose fleet took the port, when his ability raises its silver (commanders.ts `plunder`). Cleared when it changes hands again. */
+  seizedBy?: string;
 };
 
 export type FactionState = {

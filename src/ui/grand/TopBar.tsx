@@ -10,15 +10,21 @@ export interface TopBarProps {
   /** Opens the war status panel (objective, scores, log). */
   onStatus?: () => void;
   onBatch?: () => void;
+  /** Picks every idle fleet of the player's in port into the batch ("유휴 함대 선택"). */
+  onIdle?: () => void;
+  /** Selects the next (1) or previous (-1) fleet of the player's: the buttons of Tab and Shift+Tab. */
+  onCycle?: (step: 1 | -1) => void;
   /** The automatic-building switch: its state and the flip. Omitted, no switch is drawn. */
   autoWorks?: boolean;
   onAutoWorks?: (on: boolean) => void;
   /** Disables the end-turn button, e.g. while battles wait or the war is over. */
   busy?: boolean;
   endLabel?: string;
+  /** Enter ends the turn now: the button shows the key. */
+  endKey?: boolean;
 }
 
-export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, autoWorks, onAutoWorks, busy, endLabel }: TopBarProps) {
+export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, onIdle, onCycle, autoWorks, onAutoWorks, busy, endLabel, endKey }: TopBarProps) {
   const t = useT();
   const net = treasury.income.gold;
   return (
@@ -38,6 +44,17 @@ export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, a
         </div>
       </div>
       <ul className="g-top__res" aria-label={t('재물')}>
+        {onCycle && (
+          <li className="g-top__cycle">
+            <button type="button" className="g-btn g-btn--sm" disabled={busy} aria-label={t('이전 함대')} title={t('이전 함대 (Shift+Tab)')} onClick={() => onCycle(-1)}>
+              ‹
+            </button>
+            <button type="button" className="g-btn g-btn--sm" disabled={busy} title={t('다음 함대 (Tab)')} onClick={() => onCycle(1)}>
+              {t('다음 함대')} <kbd className="g-kbd">Tab</kbd>
+            </button>
+          </li>
+        )}
+        {onIdle && <li><button type="button" className="g-btn g-btn--sm g-top__idle" disabled={busy} title={t('포구에 머물며 항로가 없는 우리 함대를 모두 골라 한 번에 보냅니다.')} onClick={onIdle}>{t('유휴 함대 선택')}</button></li>}
         {onBatch && <li><button type="button" className="g-btn g-btn--sm g-top__batch" disabled={busy} onClick={onBatch}>{t('일괄 이동')}</button></li>}
         {onAutoWorks && (
           <li>
@@ -70,6 +87,7 @@ export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, a
       </ul>
       <button type="button" className="g-btn g-btn--primary g-top__end" disabled={busy} onClick={onEndTurn}>
         {endLabel ?? t('턴 종료')}
+        {endKey && <kbd className="g-kbd">Enter</kbd>}
       </button>
     </header>
   );

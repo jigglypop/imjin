@@ -2,6 +2,7 @@ import type { ShipKind, ShipMods, Team } from '../types';
 import { teamOf } from '../types';
 import { TUNING, buildingOf, levelOf, shipGold } from './economy';
 import { REGION_ORDER, REGIONS, type Terrain } from './regions';
+import { abilityOf, battleMods, fleetCommander } from './commanders';
 import { mix32 } from './rng';
 import { applyContactOutcome, commanderLevel, contactForces, settlePending } from './turn';
 import type { BattleOutcome, BattleOutcomeShip, BuildingKind, Contact, Fleet, Grand, GrandFaction, RegionId, ShipUnit } from './types';
@@ -61,6 +62,8 @@ export type BridgeSeat = {
   /** Legacy reserve field: uncapped campaign meetings leave this empty. */
   reserve: BridgeShip[];
   leader: { name: string; title: string; portrait: string; level: number } | null;
+  /** The formation a commander's ability lays the seat out in before the first second (yi's crane wing). */
+  formation?: 'crane';
 };
 
 export type RegionBattle = {
@@ -90,9 +93,17 @@ function modsFor(g: Grand, fl: Fleet | undefined, u: ShipUnit): ShipMods {
   const level = fl ? commanderLevel(g, fl) : 1;
   const vet = Math.min(1, u.kills / 12);
   const skill = 0.03 * (level - 1) + 0.04 * vet;
-  // The competitive ship already carries its navy's boarding rules; only experience belongs to this bridge.
-  return { reload: 1 + skill, accuracy: 1 + skill * 0.8, speed: 1, turn: 1, fire: 1, melee: 1 + skill, defense: 1 + skill * 0.7 };
+  // The competitive ship already carries its navy's boarding rules; experience and the commander's ability belong to this bridge.
+  const mods: ShipMods = { reload: 1 + skill, accuracy: 1 + skill * 0.8, speed: 1, turn: 1, fire: 1, melee: 1 + skill, defense: 1 + skill * 0.7 };
+  const ability = battleMods(fl ? fleetCommander(g, fl)?.id : undefined);
+  if (ability.reload) mods.reload *= ability.reload;
+  if (ability.melee) mods.melee *= ability.melee;
+  return { ...ability, ...mods };
 }
+
+/** A seat starts in the crane wing when any of its fleets is led by a commander whose ability calls for it. */
+const formationOf = (g: Grand, fleets: Fleet[]): BridgeSeat['formation'] => fleets.map((fl) => abilityOf(fleetCommander(g, fl)?.id)?.battle.formation).find((f) => f);
+const withFormation = (formation: BridgeSeat['formation']) => (formation ? { formation } : {});
 
 function toBridge(g: Grand, fl: Fleet | undefined, u: ShipUnit): Worth {
   return {
@@ -169,8 +180,8 @@ export function describeContact(g: Grand, c: Contact): RegionBattle {
     terrain: def.terrain,
     humanSide: humanAttacker ? 'attacker' : 'defender',
     seed: mix32(g.seed ^ mix32(g.turn * 131 + REGION_ORDER.indexOf(c.regionId))) || 1592,
-    attacker: { name: TUNING.faction[c.attacker].label, faction: c.attacker, team: teams.attacker, human: humanAttacker, ships: atk.ships, reserve: atk.reserve, leader: leaderOf(g, forces.attackers) },
-    defender: { name: TUNING.faction[c.defender].label, faction: c.defender, team: teams.defender, human: anyHuman && !humanAttacker, ships: dfn.ships, reserve: dfn.reserve, leader: leaderOf(g, forces.defenders) },
+    attacker: { name: TUNING.faction[c.attacker].label, faction: c.attacker, team: teams.attacker, human: humanAttacker, ships: atk.ships, reserve: atk.reserve, leader: leaderOf(g, forces.attackers), ...withFormation(formationOf(g, forces.attackers)) },
+    defender: { name: TUNING.faction[c.defender].label, faction: c.defender, team: teams.defender, human: anyHuman && !humanAttacker, ships: dfn.ships, reserve: dfn.reserve, leader: leaderOf(g, forces.defenders), ...withFormation(formationOf(g, forces.defenders)) },
     defenderBuildings: works,
     options: {
       tickets: 500,

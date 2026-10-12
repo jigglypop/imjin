@@ -227,6 +227,8 @@ export class Battle {
   /** When a blow last landed: a hit, a ram, a grapple or a man cut down in a melee. */
   private lastBlow = 0;
   private blows = 0;
+  /** When the first blow landed, -1 before it: a campaign commander's opening bonus lasts a minute from here. */
+  private firstBlow = -1;
   /** Seconds since the last blow, once the opening is over; 0 while the fleets are still closing. */
   private lull = 0;
   private strengthAt = -10;
@@ -1462,8 +1464,8 @@ export class Battle {
         if (closing > 1.2 && a.team !== b.team && this.time - ramHit > 0.5) {
           const aHits = Math.max(0, vax * nx + vaz * nz);
           const bHits = Math.max(0, -(vbx * nx + vbz * nz));
-          const toB = aHits * a.spec.ramPower * 5 * (1 - b.spec.armor);
-          const toA = bHits * b.spec.ramPower * 5 * (1 - a.spec.armor);
+          const toB = aHits * a.spec.ramPower * (a.mods.ram ?? 1) * 5 * (1 - b.spec.armor);
+          const toA = bHits * b.spec.ramPower * (b.mods.ram ?? 1) * 5 * (1 - a.spec.armor);
           const bClosing = this.profile === 'historical' ? 1.5 : b.spec.kind === 'geobukseon' ? 0.3 : 1.2;
           const damageB = toB + closing * bClosing;
           const damageA = toA + closing * (a.spec.kind === 'geobukseon' ? 0.3 : 1.2);
@@ -1587,6 +1589,7 @@ export class Battle {
   }
 
   private blow() {
+    if (this.firstBlow < 0) this.firstBlow = this.time;
     this.lastBlow = this.time;
     this.blows += 1;
   }
@@ -1720,7 +1723,12 @@ export class Battle {
   }
 
   private rangeFactor(s: Ship) {
-    return s.ammo === 'crew' ? 0.72 : s.ammo === 'fire' ? 0.85 : 1;
+    return (s.ammo === 'crew' ? 0.72 : s.ammo === 'fire' ? 0.85 : 1) * (s.mods.range ?? 1);
+  }
+
+  /** A campaign commander's opening bonus to reload: from the start until a minute after the first blow. */
+  private openingReload(s: Ship) {
+    return s.mods.opening && (this.firstBlow < 0 || this.time - this.firstBlow < 60) ? s.mods.opening : 1;
   }
 
   private weapons(s: Ship, dt: number) {
@@ -1743,7 +1751,7 @@ export class Battle {
       const gun = this.gunSpec(spec.kind, battery.gun);
       const range = gun.range * rangeMul;
       if (g.stage < 4) {
-        g.t += dt * crewFactor * s.mods.reload;
+        g.t += dt * crewFactor * s.mods.reload * this.openingReload(s);
         const need = gun.stages[g.stage]!;
         if (g.t >= need) {
           g.t -= need;
@@ -2178,11 +2186,12 @@ export class Battle {
     }
     if (s.fire > 0) {
       const crewRatio = s.crew / s.spec.crew;
-      s.fire += dt * 0.018 * (1 + s.fire) * (s.spec.fireResist ?? 1);
+      const burn = s.mods.burn ?? 1;
+      s.fire += dt * 0.018 * (1 + s.fire) * (s.spec.fireResist ?? 1) * burn;
       if (!s.struck && s.sinking === 0) s.fire -= dt * 0.045 * crewRatio * (0.4 + this.rand() * 1.2);
       s.fire = clamp(s.fire, 0, 1);
       s.burn = Math.min(1, s.burn + dt * s.fire * 0.025);
-      if (s.sinking === 0) this.damage(s, dt * s.fire * 1.6);
+      if (s.sinking === 0) this.damage(s, dt * s.fire * 1.6 * burn);
       this.casualties(s, dt * s.fire * 0.4, 'all', false);
       if (s.fire > 0.75 && this.rand() < dt * 0.012 && s.sinking === 0) {
         this.events.push({ type: 'explode', ship: s.id, x: s.x, y: s.spec.deck, z: s.z });

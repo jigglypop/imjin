@@ -5,6 +5,7 @@ import { REGIONS, slotsOf } from './regions';
 import type { BuildingKind, GBuilding, Grand, GrandFaction, QueueItem, RegionId, RegionState, ShipUnit } from './types';
 import { MAX_LEVEL } from './types';
 import { allyIncomeMultiplier } from './support';
+import { abilityOf, portBuilder } from './commanders';
 
 /**
  * Every number that turns the battle catalog into campaign money and time lives in TUNING. The ship stats themselves
@@ -105,6 +106,18 @@ export function buildingCost(kind: BuildingKind, level: number) {
   const mul = TUNING.levelCost[Math.min(level, MAX_LEVEL) - 1] ?? 1;
   // The third level takes a turn longer, except the camp: every other work waits on it, so it is not made a bottleneck.
   return { gold: Math.round(def.baseGold * mul), turns: def.baseTurns + (level >= 3 && kind !== 'camp' ? 1 : 0) };
+}
+
+/**
+ * Price and turns of raising a work in a port now: the list terms, shortened and cheapened by the best builder among
+ * the owner's commanders who lie there (kwon's 축성). The player and the computer order through this alike.
+ */
+export function buildTerms(g: Grand, id: RegionId, kind: BuildingKind, level: number) {
+  const list = buildingCost(kind, level);
+  const owner = g.regions[id].owner;
+  if (!owner) return list;
+  const { buildCost, buildTurns } = portBuilder(g, id, owner);
+  return { gold: Math.round(list.gold * buildCost), turns: Math.max(1, list.turns + buildTurns) };
 }
 
 /** Saved construction keeps its ordered duration, including pristine cancellation for pre-logistics saves. */
@@ -222,6 +235,8 @@ export function regionIncome(g: Grand, id: RegionId): number {
   let gold = TUNING.income[def.value];
   gold *= 1 + TUNING.granaryBonus * levelOf(r, 'granary') + TUNING.beaconBonus * levelOf(r, 'beacon');
   gold *= TUNING.faction[r.owner].income * difficultyIncome(g, r.owner);
+  // A port taken by a plundering commander (kato's 약탈) yields more for as long as it stays in his navy's hands.
+  if (r.seizedBy) gold *= abilityOf(r.seizedBy)?.campaign.plunder ?? 1;
   if (r.unrest > 0) gold *= TUNING.unrestIncome;
   if (def.capitalOf === r.owner) gold += TUNING.capitalBonus;
   return Math.round(gold);

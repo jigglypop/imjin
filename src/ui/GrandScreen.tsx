@@ -245,6 +245,13 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
     setPickedFleets((set) => add(replace ? new Set() : set, ready));
     setPickedPorts((set) => add(replace ? new Set() : set, ports));
   };
+  const showFleet = (f: (typeof fleets)[number]) => {
+    setFleetId(f.id);
+    setMoving(false);
+    const place = f.at ?? f.transit?.from;
+    setRegionId(place ?? null);
+    if (place) flyTo(place);
+  };
   const selectFleet = (id: string, additive = false) => {
     const f = fleets.find((x) => x.id === id);
     if (!f) return;
@@ -255,11 +262,25 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
       else pickForces([id], [], true);
       return;
     }
-    setFleetId(id);
-    setMoving(false);
-    const place = f.at ?? f.transit?.from;
-    setRegionId(place ?? null);
-    if (place) flyTo(place);
+    showFleet(f);
+  };
+  /** Tab and Shift+Tab: the next or previous fleet of ours that lies in a port, in the order of the fleet list. */
+  const cycleFleet = (step: 1 | -1) => {
+    const mine = fleets.filter((f) => f.faction === me && f.at && !f.transit);
+    if (!mine.length) { say(t('고를 수 있는 함대가 없습니다')); return; }
+    const at = mine.findIndex((f) => f.id === fleetId);
+    const next = mine[at < 0 ? (step > 0 ? 0 : mine.length - 1) : (at + step + mine.length) % mine.length]!;
+    setBatchOpen(false);
+    setPickedFleets(new Set()); setPickedPorts(new Set());
+    showFleet(next);
+  };
+  /** "유휴 함대 선택": every fleet of ours in port with no route and no rest goes into the batch, ready to be sent at once. */
+  const pickIdle = () => {
+    const idle = fleets.filter((f) => f.faction === me && forceReady(f) && !f.route.length);
+    if (!idle.length) { say(t('출동할 수 있는 유휴 함대가 없습니다')); return; }
+    sound.click();
+    pickForces(idle.map((f) => f.id), [], false, true);
+    say(t('유휴 함대 {n}개를 골랐습니다', { n: idle.length }));
   };
 
   const closePanels = () => {
@@ -298,6 +319,28 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
     setPreviewHidden(false);
     endGrandTurn();
   };
+
+  // Tab / Shift+Tab walk the fleets and Enter ends the turn, on the map itself: not while a dialog or the turn's summary is
+  // up, not in a text field, and Enter not on a focused button or link, which it already presses.
+  const summaryOpen = !!turnReport && !over && g.phase === 'orders';
+  const canEnd = g.phase === 'orders' && !dialogOpen && !summaryOpen && !over;
+  useEffect(() => {
+    if (dialogOpen || summaryOpen || over) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.repeat || e.altKey || e.ctrlKey || e.metaKey || (e.key !== 'Tab' && e.key !== 'Enter')) return;
+      const el = e.target instanceof HTMLElement ? e.target : null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        cycleFleet(e.shiftKey ? -1 : 1);
+      } else if (canEnd && !e.shiftKey && !(el && /^(BUTTON|A)$/.test(el.tagName))) {
+        e.preventDefault();
+        endTurn();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   const fight = () => {
     if (!pending) return;
@@ -385,8 +428,11 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         autoWorks={!!g.autoWorks}
         onAutoWorks={g.phase === 'orders' ? (on) => { sound.click(); report(grandOrders.autoWorks(on), on ? '자동 건설을 켰습니다' : '자동 건설을 껐습니다'); } : undefined}
         onBatch={g.phase === 'orders' ? () => { closePanels(); setBatchOpen(true); } : undefined}
+        onIdle={g.phase === 'orders' ? pickIdle : undefined}
+        onCycle={g.phase !== 'over' ? (step) => { sound.click(); cycleFleet(step); } : undefined}
         busy={g.phase === 'over' || !!replay || !!g.events.pending}
         endLabel={g.phase === 'battles' ? t('전투 {n}건', { n: g.pending.length }) : t('턴 종료')}
+        endKey={canEnd}
       />
       <div className="g-dock">
         {batchOpen ? <FleetOrdersPanel fleets={fleets.filter((f) => f.faction === me)} ports={regions.filter((p) => p.owner === me && p.garrison > 0)} selectedFleets={pickedFleets} selectedPorts={pickedPorts} mergeOnArrival={mergeOnArrival} noRoute={picked > 0 && !batchTargets?.length} onFleet={toggleFleet} onPort={togglePort} onAll={(all) => {

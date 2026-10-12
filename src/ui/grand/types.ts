@@ -114,6 +114,8 @@ export interface CommanderView {
   title: string;
   level: number;
   portrait: string;
+  /** The commander's signature ability: its name and the one line that says what it does. */
+  ability?: { name: string; text: string };
 }
 
 export interface FleetView {
