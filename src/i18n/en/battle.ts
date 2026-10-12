@@ -185,6 +185,10 @@ export const EN_BATTLE: Record<string, string> = {
   '다시 시작': 'Restart',
   '연출': 'Cinematics',
   '연출 카메라': 'Cinematic camera',
+  '카메라 흔들림': 'Camera shake',
+  '약하게': 'Light',
+  '강하게': 'Strong',
+  '발포하고 폭발할 때 화면이 떨리고 늘었다 줄어드는 정도입니다. 큰 해전에서 어지러우면 줄이거나 끄세요.': 'How much the picture shakes and pulses when guns fire and ships explode. Turn it down or off if a big battle makes you dizzy.',
   '슬로모션': 'Slow motion',
 
   // ---- result

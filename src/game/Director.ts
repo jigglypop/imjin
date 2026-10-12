@@ -4,6 +4,7 @@ import type { RtsCamera } from '../camera/RtsCamera';
 import type { Battle } from '../sim/battle';
 import { t } from '../i18n';
 import type { BattleEvent, GunType, Projectile, Ship, Team } from '../sim/types';
+import { cameraFeel } from '../camera/feel';
 import { shipObserved } from '../sim/observation';
 import { pointVisible } from '../sim/visibility';
 
@@ -42,6 +43,12 @@ export const SHOT_LABEL: Record<ShotKind, string> = {
 };
 
 const BASE_FOV = 42;
+/** The field-of-view punch of a near big gun: degrees at the muzzle, how far it reaches (metres), and the quiet time before the next. */
+const KICK_SIZE = 1;
+const KICK_REACH = 110;
+const KICK_GAP = 0.9;
+/** The most trauma gunfire alone adds to the camera shake (an explosion or a ram may go past it). */
+export const AMBIENT_SHAKE = 0.45;
 /** Slow motion plays at this absolute battle speed whatever the speed setting is. */
 const SLOW_SPEED = 0.25;
 const SLOW_IN = 0.12;
@@ -108,6 +115,7 @@ export class Director {
   private slowReadyAt = 0;
   private clock = 0;
   private fovKick = 0;
+  private lastKick = -99;
   private fovApplied = BASE_FOV;
 
   private shot: Shot | null = null;
@@ -172,9 +180,14 @@ export class Director {
       switch (e.type) {
         case 'gun': {
           const d = Math.hypot(e.x - cam.x, e.z - cam.z);
-          if (e.big && !fast) this.fovKick = Math.min(3.2, this.fovKick + 1.1 / (1 + (d / 120) ** 2));
-          // Extra thump for the big guns, on top of what the effects layer already adds.
-          if (e.big) rts.shake(0.4 / (1 + (d / 70) ** 2));
+          // One punch for a near big gun, not one per gun: added up, a fleet's volleys kept the field of view off its
+          // resting value for most of a fight and the whole picture pumped in and out two or three times a second.
+          if (e.big && !fast && d < KICK_REACH && this.fovKick < 0.1 && this.clock - this.lastKick >= KICK_GAP) {
+            this.fovKick = KICK_SIZE / (1 + (d / 80) ** 2);
+            this.lastKick = this.clock;
+          }
+          // Extra thump for the big guns, on top of what the effects layer already adds; gunfire never shakes past AMBIENT_SHAKE.
+          if (e.big) rts.shake(0.4 / (1 + (d / 70) ** 2), AMBIENT_SHAKE);
           const l = this.load.get(e.ship) ?? { v: 0, dx: 0, dz: 0, heavy: false };
           l.v += e.big ? 1.2 : 0.7;
           l.dx = e.dx;
@@ -276,8 +289,8 @@ export class Director {
     }
     if (this.pending && ((this.pending.ttl -= dt) <= 0 || !this.canFrame(this.pending))) this.pending = null;
 
-    this.fovKick *= Math.exp(-dt * 5);
-    const fov = BASE_FOV + this.fovKick;
+    this.fovKick *= Math.exp(-dt * 7);
+    const fov = BASE_FOV + this.fovKick * cameraFeel.punch();
     if (Math.abs(fov - this.fovApplied) > 0.01 || (this.fovKick < 0.01 && this.fovApplied !== BASE_FOV)) {
       this.fovApplied = this.fovKick < 0.01 ? BASE_FOV : fov;
       camera.fov = this.fovApplied;

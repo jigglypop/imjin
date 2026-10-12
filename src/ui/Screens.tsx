@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { sound } from '../audio/Sound';
 import { isIOS } from '../game/device';
+import { cameraFeel, FEEL_CHOICES, FEEL_LABEL, type CameraFeel } from '../camera/feel';
 import { EQUIPMENT_LABEL, equipment, forceWebGL, saveEquipmentSetting, saveWebgpuOptIn, webgpuOptIn, type EquipmentSetting } from '../game/quality';
 import { setLang, useLang, useT, type Lang } from '../i18n';
 import { setScreen, type Screen } from '../state/store';
@@ -114,6 +115,7 @@ export function SettingsScreen() {
   const lang = useLang();
   const [muted, setMuted] = useState(sound.muted);
   const [music, setMusic] = useState(sound.musicOn);
+  const [feel, setFeel] = useState<CameraFeel>(cameraFeel.get());
   const choose = (next: EquipmentSetting) => {
     if (next === equipment.setting) return;
     saveEquipmentSetting(next);
@@ -192,6 +194,25 @@ export function SettingsScreen() {
             </div>
           </Row>
           <p className="settings-hint">{t('자동은 기기에 맞춰 고릅니다. 화면이 끊기거나 꺼지면 스마트폰으로 바꿔 보는 것이 좋습니다.')}</p>
+          <Row title={t('카메라 흔들림')} hint={t('발포하고 폭발할 때 화면이 떨리고 늘었다 줄어드는 정도입니다. 큰 해전에서 어지러우면 줄이거나 끄세요.')}>
+            <div className="seg seg--set" role="radiogroup" aria-label={t('카메라 흔들림')}>
+              {FEEL_CHOICES.map((k) => (
+                <button
+                  key={k}
+                  role="radio"
+                  aria-checked={feel === k}
+                  className={feel === k ? 'on' : ''}
+                  onClick={() => {
+                    sound.click();
+                    cameraFeel.set(k);
+                    setFeel(k);
+                  }}
+                >
+                  {t(FEEL_LABEL[k])}
+                </button>
+              ))}
+            </div>
+          </Row>
           {isIOS && (
             <>
               <Row title={t('WebGPU 사용 (실험)')} hint={t('현재 {name}. 바꾸면 페이지를 다시 불러옵니다.', { name: forceWebGL ? 'WebGL2' : 'WebGPU' })}>

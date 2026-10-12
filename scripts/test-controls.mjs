@@ -24,9 +24,9 @@ const check = (name, fn) => {
   catch (error) { failures += 1; console.error(`FAIL ${name}`, error); }
 };
 try {
-  const built = await build({ stdin: { contents: "export {Input} from './src/game/Input'; export {Battle} from './src/sim/battle'; export {applyCommand} from './src/sim/commands'; export {RtsCamera} from './src/camera/RtsCamera'; export {PerspectiveCamera} from 'three/webgpu'; export {tName as battleName} from './src/ui/battleNames'; export {tName as grandName} from './src/ui/grand/text'; export {numbered,fleetNo} from './src/i18n/names'; export {setLang} from './src/i18n';", resolveDir: root }, bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent' });
+  const built = await build({ stdin: { contents: "export {Input} from './src/game/Input'; export {Battle} from './src/sim/battle'; export {applyCommand} from './src/sim/commands'; export {RtsCamera} from './src/camera/RtsCamera'; export {Director, AMBIENT_SHAKE} from './src/game/Director'; export {cameraFeel} from './src/camera/feel'; export {PerspectiveCamera} from 'three/webgpu'; export {tName as battleName} from './src/ui/battleNames'; export {tName as grandName} from './src/ui/grand/text'; export {numbered,fleetNo} from './src/i18n/names'; export {setLang} from './src/i18n';", resolveDir: root }, bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent' });
   await writeFile(bundled, built.outputFiles[0].contents);
-  const { Input, Battle, applyCommand, RtsCamera, PerspectiveCamera, battleName, grandName, numbered, fleetNo, setLang } = await import(pathToFileURL(bundled).href);
+  const { Input, Battle, applyCommand, RtsCamera, Director, AMBIENT_SHAKE, cameraFeel, PerspectiveCamera, battleName, grandName, numbered, fleetNo, setLang } = await import(pathToFileURL(bundled).href);
   globalThis.setTimeout = (fn, delay, ...args) => { const timer = realTimeout(fn, delay, ...args); timers.push(timer); return timer; };
   const setup = () => {
     const battle = new Battle(1592, 'competitive-v1');
@@ -155,6 +155,50 @@ try {
     engine.views.selected = new Set([a.id]); hit = undefined; input.pickWorks = () => ({ x: 1, y: 2, z: 3, name: 'Fort' }); click();
     assert.deepEqual(commands[1], { type: 'order', ids: [a.id], order: { type: 'bombard', x: 1, y: 2, z: 3 } });
     input.pickWorks = () => null; click(); assert.equal(commands.length, 2); assert.equal(engine.views.selected.size, 0);
+  });
+  check('gunfire cannot shake the camera past its cap, and an explosion still can', () => {
+    const camera = new RtsCamera(new PerspectiveCamera());
+    for (let i = 0; i < 200; i++) camera.shake(0.3, AMBIENT_SHAKE);
+    assert.ok(camera.shakeAmount <= AMBIENT_SHAKE + 1e-9, String(camera.shakeAmount));
+    camera.shake(1.1);
+    assert.ok(camera.shakeAmount > AMBIENT_SHAKE + 0.5, 'a big event goes past the cap');
+    const thrown = camera.shakeAmount;
+    camera.shake(0.2, AMBIENT_SHAKE);
+    assert.equal(camera.shakeAmount, thrown, 'a capped call never lowers what a big event left');
+  });
+  check('the shake setting scales the offsets and Off leaves the camera still', () => {
+    const pose = (feel) => {
+      cameraFeel.set(feel);
+      const camera = new PerspectiveCamera(), rts = new RtsCamera(camera);
+      rts.setPose({ tx: 0, tz: 0, yaw: 0.4, pitch: 0.5, distance: 80 });
+      rts.update(1 / 60, null); const rest = camera.position.clone(), restQuat = camera.quaternion.clone();
+      rts.shake(1); rts.update(1 / 60, null);
+      return { move: camera.position.distanceTo(rest), turn: camera.quaternion.angleTo(restQuat) };
+    };
+    try {
+      const off = pose('off'), low = pose('low'), full = pose('full');
+      assert.ok(off.move < 1e-9 && off.turn < 1e-9, 'off does not shake');
+      assert.ok(low.turn > 0 && low.turn < full.turn, `light ${low.turn} is gentler than full ${full.turn}`);
+    } finally { cameraFeel.set('low'); }
+  });
+  check('the field-of-view punch comes once per near big gun, not once per gun', () => {
+    const camera = new PerspectiveCamera(); camera.position.set(0, 20, 0);
+    const host = { battle: { get: () => undefined, ships: [], time: 0 }, team: 'joseon', rts: new RtsCamera(camera), camera, remote: null, paused: false, fastForward: false, speed: 1, fx: { liftOf: () => 0 } };
+    const director = new Director(host);
+    const volley = (n) => Array.from({ length: n }, (_, i) => ({ type: 'gun', ship: 100 + i, x: 15, y: 5, z: 10, dx: 1, dz: 0, big: true, gun: 'cheonja' }));
+    director.feed(volley(60));
+    assert.ok(director.fovKick > 0 && director.fovKick <= 1.0 + 1e-9, `a whole volley kicks ${director.fovKick} degrees at most`);
+    const first = director.fovKick;
+    director.feed(volley(60));
+    assert.equal(director.fovKick, first, 'more guns in the same moment add nothing');
+    director.clock = 0.5; director.fovKick = 0; director.feed(volley(5));
+    assert.equal(director.fovKick, 0, 'a second punch waits for the quiet time');
+    director.clock = 2; director.feed(volley(5));
+    assert.ok(director.fovKick > 0, 'and comes after it');
+    const farCamera = new PerspectiveCamera(); farCamera.position.set(900, 20, 0);
+    const far = new Director({ ...host, camera: farCamera });
+    far.feed(volley(10));
+    assert.equal(far.fovKick, 0, 'a gun far from the camera does not punch it');
   });
   check('camera ignores Ctrl+A and editable targets while ordinary A still pans', () => {
     const camera = new RtsCamera(new PerspectiveCamera());

@@ -66,7 +66,7 @@ import { conquestInfo, scenarioInfo, type BattleInfo } from '../sim/info';
 import { ConquestView, preloadWorks } from '../conquest/ConquestView';
 import type { NetBattle } from '../net/NetBattle';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
-import { Director } from './Director';
+import { AMBIENT_SHAKE, Director } from './Director';
 import { AutoBuild } from './autoBuild';
 import { Input } from './Input';
 import { TouchControls } from './Touch';
@@ -400,7 +400,7 @@ export class Engine {
       this.scene.add(this.views.group);
       this.fx = new Effects(this.views, { lights: this.eq.lights, particles: { keep: LEVELS[this.level]!.particleKeep, sort: true } });
       this.fx.wake = this.wake;
-      this.fx.onShake = (k) => this.rts.shake(k);
+      this.fx.onShake = (k) => this.rts.shake(k, AMBIENT_SHAKE);
       this.fx.onCue = (kind, x, y, z, size) => this.sound.cue(kind, x, y, z, size);
       this.scene.add(this.fx.group);
       this.crew = new Crew(this.views);

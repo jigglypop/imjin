@@ -1,5 +1,6 @@
 import { MathUtils, PerspectiveCamera, Vector3 } from 'three/webgpu';
 import { waveField } from '../ocean/waves';
+import { cameraFeel } from './feel';
 
 export type CameraPose = { tx: number; tz: number; yaw: number; pitch: number; distance: number };
 
@@ -149,10 +150,12 @@ export class RtsCamera {
 
   /**
    * Adds trauma. The offset grows with its square, so a pile of small shots stays a tremor while one big gun or a
-   * magazine going up really throws the camera. The caller has already attenuated `amount` by distance.
+   * magazine going up really throws the camera. The caller has already attenuated `amount` by distance. Gunfire passes
+   * a low `cap`: in a big fight a gun goes off every few frames, and without it the trauma never settles and the
+   * picture trembles the whole time; only an explosion or a ram may throw the camera past it.
    */
-  shake(amount: number) {
-    this.shakeAmount = Math.min(1.6, this.shakeAmount + amount);
+  shake(amount: number, cap = 1.6) {
+    this.shakeAmount = Math.max(this.shakeAmount, Math.min(cap, this.shakeAmount + amount));
   }
 
   update(dt: number, followTarget: Vector3 | null) {
@@ -202,7 +205,7 @@ export class RtsCamera {
     this.camera.lookAt(this.target.x, lookY, this.target.z);
     if (this.shakeAmount > 0.002) {
       this.shakeClock += dt;
-      const a = this.shakeAmount * this.shakeAmount;
+      const a = this.shakeAmount * this.shakeAmount * cameraFeel.shake();
       const t = this.shakeClock;
       // Angular jitter reads the same at any zoom; the positional part is scaled by distance so a far camera still moves.
       const reach = 0.25 + Math.min(1, this.distance / 120) * 0.75;

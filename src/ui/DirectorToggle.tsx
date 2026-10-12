@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Engine } from '../game/Engine';
 import { isTouchDevice } from '../game/device';
+import { cameraFeel, FEEL_CHOICES, FEEL_LABEL } from '../camera/feel';
 import { useT } from '../i18n';
 
 /** Repaints a few times a second: the director lives in the engine and changes without React knowing. */
@@ -33,6 +34,14 @@ export function DirectorSettings({ engine }: { engine: Engine }) {
             {keys && ' (V)'}
           </button>
         )}
+      </div>
+      <div className="settings-label">{t('카메라 흔들림')}</div>
+      <div className="chips">
+        {FEEL_CHOICES.map((k) => (
+          <button key={k} className={`chip ${cameraFeel.get() === k ? 'chip--on' : ''}`} aria-pressed={cameraFeel.get() === k} onClick={() => cameraFeel.set(k)}>
+            {t(FEEL_LABEL[k])}
+          </button>
+        ))}
       </div>
     </div>
   );
