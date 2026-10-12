@@ -3,7 +3,7 @@ import { sound } from '../audio/Sound';
 import { t, useLang } from '../i18n';
 import { abandonGrand, autoResolveGrand, chooseGrandEvent, dismissBattle, dismissReplay, dismissReport, dispatchForces, endGrandTurn, grandOrders, guideSeen, markGuideSeen, mergeArrived, mergeFleets, prepareGrandBattle, startGrand, useGrand } from '../campaign/grand';
 import type { RegionBattle } from '../sim/grand/bridge';
-import type { BuildingKind as SimBuilding, Grand, GrandFaction, RegionId, Result } from '../sim/grand/types';
+import type { BuildingKind as SimBuilding, Grand, RegionId, Result } from '../sim/grand/types';
 import type { ShipKind } from '../sim/types';
 import { setScreen } from '../state/store';
 import { BattlePreview } from './grand/BattlePreview';
@@ -43,6 +43,7 @@ import { REGIONS } from '../sim/grand/regions';
 import { atWar } from '../sim/grand/world';
 import { dispatchTargets } from '../sim/grand/dispatch';
 import { FleetOrdersPanel, forceReady } from './grand/FleetOrdersPanel';
+import { portClick } from './grand/clickTarget';
 
 type Stage = 'hub' | 'pick' | 'map';
 
@@ -56,8 +57,8 @@ const prefersReducedMotion = () => typeof matchMedia === 'function' && matchMedi
 /** The four steps of the first-turn guide (Korean source text); the screen fills in what each one points at. */
 const GUIDE_STEPS: Omit<GuideStepView, 'target'>[] = [
   { title: '1. 포구 선택', text: '지도의 포구를 눌러 수비대와 수입, 시설을 확인합니다. 표지의 색은 그 포구를 가진 진영을 뜻합니다.' },
-  { title: '2. 시설 건설', text: '군영(수리, 유지비 면제 한도)이나 선소(함선 건조)를 지을 수 있습니다. 은은 바로 차감되고 몇 턴 뒤에 완공됩니다. 선소가 있으면 함선도 주문할 수 있습니다.' },
-  { title: '3. 함대 이동', text: "함대 표지를 눌러 선택하고 '이동'을 누른 뒤, 강조된 포구를 누릅니다. 적의 포구를 고르면 공격합니다." },
+  { title: '2. 시설 건설', text: "군영(수리, 유지비 면제 한도)이나 선소(함선 건조)를 지을 수 있습니다. 은은 바로 차감되고 몇 턴 뒤에 완공됩니다. 선소가 있으면 함선도 주문할 수 있습니다. 새 전역은 위쪽의 '자동 건설'이 켜진 채 시작해 턴을 마칠 때 알아서 짓습니다. 직접 고르려면 끄세요." },
+  { title: '3. 함대 이동', text: "함대 표지를 눌러 선택하면 공격할 수 있는 적의 포구가 강조되고, 그 포구를 한 번 누르면 바로 공격합니다. 우리 편 포구로 옮기려면 '이동'을 누른 뒤 포구를 고릅니다." },
   { title: '4. 턴 종료', text: "명령을 마치면 '턴 종료'를 누릅니다. 한 턴은 석 달입니다. 턴이 끝나면 모든 함대의 움직임이 지도에 재생되고 결과가 나옵니다." },
 ];
 
@@ -151,7 +152,11 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const picked = pickedFleets.size + pickedPorts.size;
   // A batch needs no "choose destination" step: whatever is picked lights up the regions all of it can reach.
   const batchTargets = useMemo(() => (batchOpen && picked ? dispatchTargets(g, [...pickedFleets], [...pickedPorts] as RegionId[], me) : undefined), [batchOpen, picked, pickedFleets, pickedPorts, g, me]);
-  const targets = useMemo(() => (batchOpen ? batchTargets : moving && simFleet ? moveTargets(g, simFleet) : undefined), [batchOpen, batchTargets, moving, simFleet, g]);
+  // A ready fleet of ours that is selected strikes an enemy port with one click: those ports light up without the move mode.
+  const reachable = useMemo(() => (!batchOpen && simFleet && simFleet.faction === me ? moveTargets(g, simFleet) : undefined), [batchOpen, simFleet, me, g]);
+  const hostilePort = useCallback((id: string) => { const owner = g.regions[id as RegionId]?.owner; return !!owner && atWar(g, me, owner); }, [g, me]);
+  const strikes = useMemo(() => (reachable?.length && !moving ? reachable.filter(hostilePort) : undefined), [reachable, moving, hostilePort]);
+  const targets = useMemo(() => (batchOpen ? batchTargets : moving ? reachable : strikes), [batchOpen, batchTargets, moving, reachable, strikes]);
   const pending = g.phase === 'battles' ? g.pending[0] : undefined;
   const eventCard = useMemo(() => (g.events.pending ? eventView(g) : null), [g, lang]);
   const turnReport = useMemo(() => (reported !== null ? turnReportView(g, reported) : null), [g, reported, lang]);
@@ -194,23 +199,25 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
       if (report(res)) { sound.campaign('move'); closePanels(); }
       return;
     }
-    if (moving && fleet) {
-      if (targets && !targets.includes(id as RegionId)) {
+    if (fleet) {
+      const click = portClick({ moving, reachable: reachable ?? (moving ? [] : undefined), hostile: hostilePort(id), port: id });
+      if (click === 'blocked') {
         say(t('그곳으로 가는 안전한 항로가 없습니다'));
         return;
       }
-      const res = grandOrders.move(fleet.id, id as RegionId);
-      if (res.ok) {
-        const dest = regions.find((r) => r.id === id)!;
-        // Only a region of a faction at war with the player is attacked: an ally's port is simply entered.
-        const hostile = dest.owner !== null && atWar(g, me, dest.owner as GrandFaction);
-        const turns = turnsText(Number(res.ok ? res.params?.turns : 1) || 1);
-        say(hostile ? t('{fleet}: {place|을/를} 공격합니다 ({turns})', { fleet: fleet.name, place: dest.name, turns }) : t('{fleet}: {place|으로/로} 이동합니다 ({turns})', { fleet: fleet.name, place: dest.name, turns }));
-        sound.campaign('move');
-        setMoving(false);
-        advanceGuide(2);
-      } else say(tt(res.reason, res.params));
-      return;
+      if (click === 'order') {
+        const res = grandOrders.move(fleet.id, id as RegionId);
+        if (res.ok) {
+          const dest = regions.find((r) => r.id === id)!;
+          // Only a region of a faction at war with the player is attacked: an ally's port is simply entered.
+          const turns = turnsText(Number(res.params?.turns) || 1);
+          say(hostilePort(id) ? t('{fleet}: {place|을/를} 공격합니다 ({turns})', { fleet: fleet.name, place: dest.name, turns }) : t('{fleet}: {place|으로/로} 이동합니다 ({turns})', { fleet: fleet.name, place: dest.name, turns }));
+          sound.campaign('move');
+          setMoving(false);
+          advanceGuide(2);
+        } else say(tt(res.reason, res.params));
+        return;
+      }
     }
     setRegionId(id);
     setFleetId(null);
@@ -375,6 +382,8 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         onEndTurn={endTurn}
         onMenu={() => setMenu(true)}
         onStatus={() => setStatus(true)}
+        autoWorks={!!g.autoWorks}
+        onAutoWorks={g.phase === 'orders' ? (on) => { sound.click(); report(grandOrders.autoWorks(on), on ? '자동 건설을 켰습니다' : '자동 건설을 껐습니다'); } : undefined}
         onBatch={g.phase === 'orders' ? () => { closePanels(); setBatchOpen(true); } : undefined}
         busy={g.phase === 'over' || !!replay || !!g.events.pending}
         endLabel={g.phase === 'battles' ? t('전투 {n}건', { n: g.pending.length }) : t('턴 종료')}

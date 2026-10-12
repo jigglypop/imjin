@@ -187,6 +187,8 @@ export type Grand = {
   allySupport?: { version: 'player-ally-v1'; faction: 'joseon' | 'ming'; reinforcementCarry: Partial<Record<ShipKind, number>> };
   seed: number;
   rng: Rng;
+  /** The player's "자동 건설": works and upgrades are ordered for the player's ports when a turn ends. Absent in older saves, which means off. */
+  autoWorks?: boolean;
   /** The faction the human commands, or null when the computer plays all three (headless balance runs). */
   player: GrandFaction | null;
   difficulty: 'easy' | 'normal' | 'hard';

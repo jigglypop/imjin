@@ -113,6 +113,8 @@ function commit(change: (g: Grand) => Result): Result {
 /** Starts a fresh campaign as the chosen navy, replacing any save. */
 export function startGrand(player: GrandFaction, difficulty: Grand['difficulty'] = 'normal', seed = Math.floor(Math.random() * 2147483647)): Grand {
   const g = newGrand(player, seed, difficulty);
+  // A new war builds its camps and works by itself; the top bar's switch turns that off (saves made earlier stay as they were).
+  g.autoWorks = true;
   useGrand.setState({ grand: g, lastBattle: null, reported: null, replay: null, arrivalMerge: {} });
   save(g);
   return g;
@@ -146,6 +148,8 @@ export const grandOrders = {
   disband: (fleetId: string, shipId: string) => guarded((g) => ownFleet(g, fleetId), (g) => orderDisband(g, fleetId, shipId)),
   declareWar: (a: GrandFaction, b: GrandFaction) => guarded((g) => a === g.player, (g) => orderDeclareWar(g, a, b)),
   alliance: (a: GrandFaction, b: GrandFaction) => guarded((g) => a === g.player, (g) => orderAlliance(g, a, b)),
+  /** Switches the player's automatic building on or off; saved with the war. */
+  autoWorks: (on: boolean) => commit((g) => { g.autoWorks = on; return ok(); }),
 };
 
 /** A fleet that can join another now: docked in a port and done refitting (a merge hands the larger rest to the survivor). */

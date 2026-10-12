@@ -10,12 +10,15 @@ export interface TopBarProps {
   /** Opens the war status panel (objective, scores, log). */
   onStatus?: () => void;
   onBatch?: () => void;
+  /** The automatic-building switch: its state and the flip. Omitted, no switch is drawn. */
+  autoWorks?: boolean;
+  onAutoWorks?: (on: boolean) => void;
   /** Disables the end-turn button, e.g. while battles wait or the war is over. */
   busy?: boolean;
   endLabel?: string;
 }
 
-export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, busy, endLabel }: TopBarProps) {
+export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, autoWorks, onAutoWorks, busy, endLabel }: TopBarProps) {
   const t = useT();
   const net = treasury.income.gold;
   return (
@@ -36,6 +39,19 @@ export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, b
       </div>
       <ul className="g-top__res" aria-label={t('재물')}>
         {onBatch && <li><button type="button" className="g-btn g-btn--sm g-top__batch" disabled={busy} onClick={onBatch}>{t('일괄 이동')}</button></li>}
+        {onAutoWorks && (
+          <li>
+            <button
+              type="button"
+              className={`g-btn g-btn--sm g-top__auto${autoWorks ? ' g-top__auto--on' : ''}`}
+              aria-pressed={!!autoWorks}
+              title={t('켜 두면 턴을 마칠 때 군영과 시설을 은이 남는 만큼 알아서 짓고 올립니다. 함선은 짓지 않습니다.')}
+              onClick={() => onAutoWorks(!autoWorks)}
+            >
+              {t('자동 건설')} <b>{autoWorks ? t('켜짐') : t('꺼짐')}</b>
+            </button>
+          </li>
+        )}
         <li className="g-res" title={t('은')}>
           <span className="g-res__glyph">
             <Icon name="coin" />

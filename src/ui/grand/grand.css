@@ -888,6 +888,22 @@
   min-height: 44px;
   padding: 0 16px;
 }
+.g-top__auto {
+  min-height: 44px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+.g-top__auto b {
+  margin-left: 4px;
+  opacity: 0.6;
+}
+.g-top__auto--on {
+  border-color: var(--good-ink, currentColor);
+}
+.g-top__auto--on b {
+  opacity: 1;
+  color: var(--good-ink, inherit);
+}
 
 /* ---------- panels: bottom sheet in portrait, side panel otherwise ---------- */
 

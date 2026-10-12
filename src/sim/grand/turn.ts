@@ -1,4 +1,4 @@
-import { planAi } from './ai';
+import { autoWorks, planAi } from './ai';
 import { autoResolve, previewStrength, type Force, type ResolveResult } from './autoresolve';
 import {
   BUILDING_DEFS,
@@ -402,6 +402,7 @@ export type TurnReport = { pending: Contact[]; finished: boolean; contacts: Cont
 export function endTurn(g: Grand): TurnReport {
   if (g.phase !== 'orders') return { pending: g.pending, finished: g.phase === 'over', contacts: [] };
   for (const f of GRAND_FACTIONS) if (g.factions[f].alive && f !== g.player) planAi(g, f);
+  if (g.autoWorks && g.player && g.factions[g.player].alive) autoWorks(g, g.player);
   for (const fl of g.fleets) fl.from = fl.at ?? fl.transit?.from ?? null;
   moveFleets(g);
   const contacts = findContacts(g);

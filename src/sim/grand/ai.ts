@@ -5,6 +5,8 @@ import {
   batteryStrength,
   buildingCost,
   buildingOf,
+  BUILDING_DEFS,
+  factionUpkeep,
   freeSlots,
   GARRISON_KIND,
   garrisonCap,
@@ -18,10 +20,10 @@ import {
 } from './economy';
 import { buildRequirement, orderBuild, commanderSuspended, orderCommander, orderMerge, orderMove, orderRecruit, orderRefit, recruitProblem, refitCost } from './orders';
 import { REGIONS } from './regions';
-import { next, range } from './rng';
+import { forkRng, next, range, type Rng } from './rng';
 import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId } from './types';
 import { BUILDING_KINDS, MAX_LEVEL } from './types';
-import { allied, atWar, defenceStrength, findRoute, fleetObserved, fleetStrength, laneDistance, lanesOf, ownedBy, visibleRegions } from './world';
+import { allied, atWar, defenceStrength, findRoute, fleetObserved, fleetStrength, laneDistance, lanesOf, note, ownedBy, visibleRegions } from './world';
 
 /**
  * The computer's three commanders. Each reads the same board and the same rules as the player; what differs is what
@@ -173,7 +175,7 @@ function recruit(g: Grand, f: GrandFaction, spendLimit: number) {
 
 type Work = { id: RegionId; kind: BuildingKind; level: number; gold: number; score: number };
 
-function bestWork(g: Grand, f: GrandFaction, budget: number, floor = 0.35): Work | null {
+function bestWork(g: Grand, f: GrandFaction, budget: number, floor = 0.35, dice: Rng = g.rng, reserve = AI[f].reserve): Work | null {
   const P = AI[f];
   const st = g.factions[f];
   const turnsLeft = Math.max(0, MAX_TURNS - g.turn);
@@ -193,7 +195,7 @@ function bestWork(g: Grand, f: GrandFaction, budget: number, floor = 0.35): Work
       if (level > MAX_LEVEL || (!have && freeSlots(id, r) <= 0)) continue;
       if (buildRequirement(g, id, kind, level)) continue;
       const cost = buildingCost(kind, level);
-      if (cost.gold > budget || st.gold - cost.gold < P.reserve) continue;
+      if (cost.gold > budget || st.gold - cost.gold < reserve) continue;
       let u = 0;
       if (kind === 'granary') {
         const gain = regionIncome(g, id) * (TUNING.granaryBonus / (1 + TUNING.granaryBonus * (level - 1)));
@@ -214,7 +216,7 @@ function bestWork(g: Grand, f: GrandFaction, budget: number, floor = 0.35): Work
         u = border ? 0.7 : 0.3;
       }
       u *= P.works[kind] * (def.value >= 2 ? 1 : 0.85);
-      const score = (u / cost.gold) * 400 + range(g.rng, 0, 0.02);
+      const score = (u / cost.gold) * 400 + range(dice, 0, 0.02);
       if (score > floor && (!best || score > best.score)) best = { id, kind, level, gold: cost.gold, score };
     }
   }
@@ -236,6 +238,35 @@ function economy(g: Grand, f: GrandFaction) {
     const w = bestWork(g, f, st.gold - P.reserve - 300, 0.1);
     if (!w || !orderBuild(g, w.id, w.kind).ok) break;
   }
+}
+
+/** Most works the player's auto-build starts in one turn: a few steady orders, not a spree that empties the treasury. */
+export const AUTO_WORK_CAP = 2;
+
+/** Silver auto-build leaves untouched: next turn's upkeep, and never less than this floor, so the fleet is always paid. */
+export const AUTO_WORK_FLOOR = 150;
+
+export function autoWorkReserve(g: Grand, f: GrandFaction): number {
+  return Math.max(AUTO_WORK_FLOOR, factionUpkeep(g, f));
+}
+
+/**
+ * The player's "자동 건설": the computer's choice of works (camp first where a yard or a front needs it, then yards,
+ * batteries, docks, granaries) for the faction's own ports, with no ships. It keeps a reserve, places at most
+ * AUTO_WORK_CAP orders and rolls its jitter from a fork of the seed, so the campaign's own dice are not touched.
+ * Each order goes through orderBuild, so camp levels, one work per kind, free plots and prices apply as usual.
+ */
+export function autoWorks(g: Grand, f: GrandFaction): number {
+  const dice = forkRng(g.seed, g.turn, 0x5eed);
+  const reserve = autoWorkReserve(g, f);
+  let placed = 0;
+  while (placed < AUTO_WORK_CAP) {
+    const w = bestWork(g, f, g.factions[f].gold - reserve, 0.1, dice, reserve);
+    if (!w || !orderBuild(g, w.id, w.kind).ok) break;
+    note(g, '자동 건설: {place}의 {work} {level}단계 ({gold}냥)', { place: REGIONS[w.id].name, work: BUILDING_DEFS[w.kind].label, level: w.level, gold: w.gold }, 'good', 'built');
+    placed += 1;
+  }
+  return placed;
 }
 
 // --- Fleets -----------------------------------------------------------------------------------------------------

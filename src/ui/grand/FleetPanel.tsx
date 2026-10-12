@@ -110,7 +110,7 @@ export function FleetPanel({
         ) : undefined
       }
     >
-      {moving && <p className="g-banner">{t('지도에서 강조된 포구 중 목적지를 고릅니다. 적의 포구를 고르면 공격합니다.')}</p>}
+      {moving ? <p className="g-banner">{t('지도에서 강조된 포구 중 목적지를 고릅니다. 적의 포구를 고르면 공격합니다.')}</p> : own && canMove && <p className="g-hint">{t('강조된 적의 포구를 한 번 누르면 바로 공격합니다. 우리 편 포구로 옮기려면 이동을 누르세요.')}</p>}
       {fleet.transit && <p className="g-hint">{t('항해 중입니다. {turns} 뒤에 도착합니다.', { turns: turnsText(fleet.transit.left) })}</p>}
       {fleet.rest > 0 && !fleet.transit && <p className="g-hint">{t('전투 후 정비 중입니다. {turns} 동안 출항할 수 없습니다.', { turns: turnsText(fleet.rest) })}</p>}
       {routeText && !moving && (

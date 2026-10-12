@@ -655,10 +655,18 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '1. 포구 선택': '1. Select a port',
   '지도의 포구를 눌러 수비대와 수입, 시설을 확인합니다. 표지의 색은 그 포구를 가진 진영을 뜻합니다.': "Tap a port on the map to see its garrison, income and facilities. A marker's color shows which faction holds the port.",
   '2. 시설 건설': '2. Build facilities',
-  '군영(수리, 유지비 면제 한도)이나 선소(함선 건조)를 지을 수 있습니다. 은은 바로 차감되고 몇 턴 뒤에 완공됩니다. 선소가 있으면 함선도 주문할 수 있습니다.':
-    'You can build a camp (repairs, upkeep allowance) or a shipyard (ship building). Silver is deducted at once and the work finishes a few turns later. With a shipyard you can also order ships.',
+  "군영(수리, 유지비 면제 한도)이나 선소(함선 건조)를 지을 수 있습니다. 은은 바로 차감되고 몇 턴 뒤에 완공됩니다. 선소가 있으면 함선도 주문할 수 있습니다. 새 전역은 위쪽의 '자동 건설'이 켜진 채 시작해 턴을 마칠 때 알아서 짓습니다. 직접 고르려면 끄세요.":
+    'You can build a camp (repairs, upkeep allowance) or a shipyard (ship building). Silver is deducted at once and the work finishes a few turns later. With a shipyard you can also order ships. Auto-build at the top starts on in a new war and builds for you when the turn ends; switch it off to choose yourself.',
   '3. 함대 이동': '3. Move a fleet',
-  "함대 표지를 눌러 선택하고 '이동'을 누른 뒤, 강조된 포구를 누릅니다. 적의 포구를 고르면 공격합니다.": 'Tap a fleet marker, press Move, then tap a highlighted port. Choosing an enemy port attacks it.',
+  "함대 표지를 눌러 선택하면 공격할 수 있는 적의 포구가 강조되고, 그 포구를 한 번 누르면 바로 공격합니다. 우리 편 포구로 옮기려면 '이동'을 누른 뒤 포구를 고릅니다.": 'Tap a fleet marker and the enemy ports it can strike light up; tap one once to attack at once. To move to a friendly port, press Move, then tap the port.',
+  '자동 건설': 'Auto-build',
+  '켜짐': 'On',
+  '꺼짐': 'Off',
+  '켜 두면 턴을 마칠 때 군영과 시설을 은이 남는 만큼 알아서 짓고 올립니다. 함선은 짓지 않습니다.': 'While on, ending a turn builds and upgrades camps and works for you as far as the silver allows. It never builds ships.',
+  '자동 건설을 켰습니다': 'Auto-build is on',
+  '자동 건설을 껐습니다': 'Auto-build is off',
+  '자동 건설: {place}의 {work} {level}단계 ({gold}냥)': 'Auto-build: {place} {work} level {level} ({gold} silver)',
+  '강조된 적의 포구를 한 번 누르면 바로 공격합니다. 우리 편 포구로 옮기려면 이동을 누르세요.': 'Tap a highlighted enemy port once to attack at once. To move to a friendly port, press Move.',
   '4. 턴 종료': '4. End the turn',
   "명령을 마치면 '턴 종료'를 누릅니다. 한 턴은 석 달입니다. 턴이 끝나면 모든 함대의 움직임이 지도에 재생되고 결과가 나옵니다.": 'When your orders are done, press End turn. A turn is three months. Afterward every fleet’s movement plays on the map and the results follow.',
 };
