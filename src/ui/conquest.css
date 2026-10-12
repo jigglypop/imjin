@@ -296,6 +296,23 @@
   }
 }
 
+/* A phone on its side: the fleet column is narrow and short, so the up to seven kinds of a navy go two to a row. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .cs-ships {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .cs-ship {
+    padding: 8px 10px;
+  }
+
+  .cs-ship-count button {
+    width: 36px;
+    height: 32px;
+  }
+}
+
 .cs-trait {
   font-size: var(--fs-13);
   line-height: 1.5;

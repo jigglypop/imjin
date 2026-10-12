@@ -89,10 +89,11 @@ const pct = (n, of) => `${Math.round((n / of) * 100)}%`.padStart(4);
 if (args.includes('--catalog') || args.includes('--odds')) {
   const { shipDef } = await load('/src/sim/grand/economy.ts');
   const { autoResolve } = await load('/src/sim/grand/autoresolve.ts');
+  const { SHIP_SPECS } = await load('/src/sim/catalog.ts');
   if (args.includes('--catalog')) {
-    for (const k of ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall']) {
+    for (const k of Object.keys(SHIP_SPECS)) {
       const d = shipDef(k);
-      console.log(`${k.padEnd(11)} gold ${String(d.gold).padStart(4)}  turns ${d.turns}  strength ${String(Math.round(d.strength)).padStart(5)}  gun share ${d.ranged.toFixed(2)}  boarding resist ${d.boardResist.toFixed(2)}`);
+      console.log(`${k.padEnd(15)} gold ${String(d.gold).padStart(4)}  turns ${d.turns}  strength ${String(Math.round(d.strength)).padStart(5)}  gun share ${d.ranged.toFixed(2)}  boarding resist ${d.boardResist.toFixed(2)}`);
     }
   }
   if (args.includes('--odds')) {

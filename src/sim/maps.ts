@@ -144,16 +144,22 @@ export const RANKED_FLEET_MIX: Record<Faction, ShipKind[]> = {
   japan: ['atakebune', 'sekibune', 'sekibune', 'kobaya', 'atakebune', 'sekibune', 'kobaya', 'sekibune'],
   ming: ['mingship', 'mingsmall', 'mingship', 'mingsmall', 'mingsmall'],
 };
-/** The opening mix under the expanded rules: the same fleets with a few of the size tiers and a lookout among them. */
+/**
+ * The opening mix under the expanded rules: the same fleets with some of the new size tiers among them. The support
+ * craft are left to the computer's recruiting, so a fleet does not open with a swarm of fishing boats.
+ */
 export const FLEET_MIX: Record<Faction, ShipKind[]> = {
-  joseon: ['panokseon', 'panokseon', 'geobukseon', 'panokseon', 'hyeopseon', 'panokseon', 'hyeopseon', 'sahuseon', 'pojakseon'],
+  joseon: ['panokseon', 'panokseon', 'geobukseon', 'panokseon', 'hyeopseon', 'panokseon', 'hyeopseon'],
   japan: ['atakebune', 'sekibune', 'sekibune', 'kobaya', 'sogantaek', 'sekibune', 'kobaya', 'daegwanseon', 'atakebune', 'sekibune'],
   ming: ['mingship', 'mingsmall', 'mingship', 'mingsmall', 'haechangseon', 'mingsmall', 'hoseon'],
 };
 
 export const fleetCost = (fleet: ShipKind[], profile: BalanceProfile = COMPETITIVE_PROFILE) => fleet.reduce((a, k) => a + shipSpec(k, profile).cost, 0);
 
-/** The computer's opening fleet: the faction's usual mix, as much as the budget buys. A ranked fleet (`expanded` false) keeps to the ranked kinds. */
+/**
+ * The computer's opening fleet: the faction's usual mix, as much as the budget buys, the change spent on the cheapest
+ * kind of the mix. A ranked fleet (`expanded` false) keeps to the ranked mix.
+ */
 export function autoFleet(faction: Faction, budget = MUSTER_BUDGET, profile: BalanceProfile = COMPETITIVE_PROFILE, maxShips = Infinity, expanded = true): ShipKind[] {
   const out: ShipKind[] = [];
   const mix = (expanded ? FLEET_MIX : RANKED_FLEET_MIX)[faction];
@@ -161,7 +167,7 @@ export function autoFleet(faction: Faction, budget = MUSTER_BUDGET, profile: Bal
   for (let i = 0; i < maxShips; i += 1) {
     const kind = mix[i % mix.length]!;
     if (shipSpec(kind, profile).cost > left) {
-      const cheap = rosterOf(faction, expanded).filter((k) => shipSpec(k, profile).cost <= left).sort((a, b) => shipSpec(a, profile).cost - shipSpec(b, profile).cost)[0];
+      const cheap = mix.filter((k) => shipSpec(k, profile).cost <= left).sort((a, b) => shipSpec(a, profile).cost - shipSpec(b, profile).cost)[0];
       if (!cheap) break;
       out.push(cheap);
       left -= shipSpec(cheap, profile).cost;
