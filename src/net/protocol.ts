@@ -5,7 +5,7 @@ import type { ScenarioId } from '../sim/scenarios';
 import type { BattleEvent, CrewPlan, Faction, Ship, ShipKind, Squadron, Team } from '../sim/types';
 
 /** Bumped whenever client and server stop understanding each other. */
-export const PROTOCOL = 4;
+export const PROTOCOL = 5;
 export const SNAPSHOT_HZ = 10;
 /** How long a dropped player's fleet waits for them before the computer takes it over. */
 export const GRACE_SECONDS = 60;
@@ -98,7 +98,11 @@ export type ServerMsg =
   | { t: 'end'; winner: Team | null; draw: boolean }
   | { t: 'pong'; at: number };
 
-export const KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
+export const KINDS: ShipKind[] = [
+  'panokseon', 'geobukseon', 'hyeopseon', 'sahuseon', 'pojakseon',
+  'atakebune', 'sekibune', 'kobaya', 'daeantaek', 'sogantaek', 'daegwanseon', 'byeongnyangseon',
+  'mingship', 'mingsmall', 'gwangseon', 'haechangseon', 'hoseon',
+];
 const ORDERS = ['auto', 'move', 'attack', 'hold', 'anchor', 'slot', 'follow', 'broadside', 'bombard'] as const;
 const STANCES = ['auto', 'standoff', 'close', 'ram', 'board'] as const;
 const AMMOS = ['auto', 'hull', 'crew', 'fire'] as const;

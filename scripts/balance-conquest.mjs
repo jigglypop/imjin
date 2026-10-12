@@ -34,7 +34,7 @@ const { COMPETITIVE_PROFILE, engagementRange } = await load('/src/sim/competitiv
 const { buildConquest, CONQUEST_MAPS, CONQUEST_ORDER, autoFleet } = await load('/src/sim/maps.ts');
 const { RANKED_OPTIONS, DEFAULT_OPTIONS } = await load('/src/sim/conquest.ts');
 const options = flag('ruleset', 'ordinary') === 'ranked' ? RANKED_OPTIONS : DEFAULT_OPTIONS;
-const openingFleet = (faction) => autoFleet(faction, options.musterBudget, COMPETITIVE_PROFILE, options.maxShips);
+const openingFleet = (faction) => autoFleet(faction, options.musterBudget, COMPETITIVE_PROFILE, options.maxShips, options.expanded);
 const { generateHeightmap } = await load('/src/terrain/generate.ts');
 
 const maps = flag('map', null)?.split(',') ?? CONQUEST_ORDER;

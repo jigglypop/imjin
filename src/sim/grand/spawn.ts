@@ -10,6 +10,7 @@ import { ATTACKER_HOME, DEFENDER_HOME, REGION_MAPS, regionEnvironment } from './
 import { REGIONS } from './regions';
 import type { BattleOutcomeShip, BuildingKind } from './types';
 import { coastalTacticFor } from '../coastal-tactics';
+import { cardOf } from '../../ships/anchors';
 
 /**
  * Plays a campaign meeting as a conquest battle on the region's own coast (coast.ts). The two sides take the map's two
@@ -124,8 +125,7 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
       const portrait = leader?.portrait ?? DEFAULT_PORTRAIT[spec.faction];
       const commander = leader ? `${leader.title} ${leader.name}` : `${TUNING.faction[spec.faction].label} 수군`; // i18n-ignore: navy labels have English entries
       const index = [...squads.keys()].filter((k) => k.startsWith(`${u.kind}:`)).length + 1;
-      const card = `card_${u.kind === 'hyeopseon' || u.kind.startsWith('ming') ? 'panokseon' : u.kind === 'kobaya' ? 'sekibune' : u.kind}`;
-      sq = b.addSquadron(seat.team, `${SHORT_NAME[u.kind]} ${index}대`, commander, portrait, card, slot); // i18n-ignore: same squadron label as the conquest mode
+      sq = b.addSquadron(seat.team, `${SHORT_NAME[u.kind]} ${index}대`, commander, portrait, cardOf(u.kind), slot); // i18n-ignore: same squadron label as the conquest mode
       // A squadron of an allied navy (Ming beside Joseon) is listed with the seat that commands it.
       sq.faction = seat.faction;
       squads.set(key, sq);

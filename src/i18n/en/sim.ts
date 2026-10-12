@@ -258,6 +258,15 @@ export const EN_SIM: Record<string, string> = {
   '세키부네': 'Sekibune',
   '고바야': 'Kobaya',
   '명 전선': 'Ming war junk',
+  '사후선': 'Sahuseon picket boat',
+  '포작선': 'Pojakseon fishing boat',
+  '대안택선': 'Great atakebune',
+  '소안택선': 'Small atakebune',
+  '대관선': 'Great sekibune',
+  '병량선': 'Supply transport',
+  '명 광선': 'Ming Guang junk',
+  '명 해창선': 'Ming Haicang junk',
+  '명 호선': 'Ming Hu boat',
 
   // Guns
   '천자총통': 'Cheonja cannon',
@@ -366,6 +375,7 @@ const LINES: [string, number][] = [
   ['좌수영', 22], ['우수영', 25], ['중위', 10], ['경상우수영', 34], ['경상', 4], ['선봉', 8], ['신조 판옥선', 20],
   // The kinds, for ships a player builds or recruits
   ['판옥선', 99], ['거북선', 99], ['협선', 99], ['아타케부네', 99], ['세키부네', 99], ['고바야', 99], ['명 전선', 99], ['명 사선', 99],
+  ['사후선', 99], ['포작선', 99], ['대안택선', 99], ['소안택선', 99], ['대관선', 99], ['병량선', 99], ['명 광선', 99], ['명 해창선', 99], ['명 호선', 99],
 ];
 for (const [ko, max] of LINES) shipNames(ko, EN_SIM[ko] ?? ko, max);
 
@@ -380,7 +390,7 @@ waves('부산포 정박', 'Busanpo Anchored Group', 1, 12, 40);
 waves('사쓰마', 'Satsuma Group', 5, 20, 25);
 
 // Fleets a seat raises in a conquest battle, one per kind of ship: "판옥선 2함대".
-for (const ko of ['판옥선', '거북선', '협선', '아타케부네', '세키부네', '고바야', '명 전선', '명 사선']) {
+for (const ko of ['판옥선', '거북선', '협선', '아타케부네', '세키부네', '고바야', '명 전선', '명 사선', '사후선', '포작선', '대안택선', '소안택선', '대관선', '병량선', '명 광선', '명 해창선', '명 호선']) {
   for (let n = 1; n <= 12; n += 1) EN_SIM[`${ko} ${n}함대`] = `${EN_SIM[ko]} Fleet ${n}`;
 }
 

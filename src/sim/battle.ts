@@ -1,9 +1,9 @@
 import { SEA_STATES, WaveField, type SeaState } from '../ocean/waves';
-import { GUN_SHOTS, GUN_SPECS } from './catalog';
+import { GUN_SHOTS, GUN_SPECS, isUnarmed } from './catalog';
 import { combatValue, shipGunSpec, shipMods, shipSpec, type BalanceProfile } from './competitive';
 import { ShipGrid } from './grid';
 import { isShipVisible } from './visibility';
-import { anchorsFor, GEOBUK_SCALE } from '../ships/anchors';
+import { anchorScale, anchorsFor } from '../ships/anchors';
 import type { CurrentField } from './current';
 import { coastalFormationSlots, type CoastalFormationKind } from './coastal-tactics';
 import {
@@ -70,6 +70,8 @@ const FINISH_SAFE = 220;
 /** How far a computer-led tender looks for a friend to keep beside, and how close it stays. */
 const TENDER_SEEK = 500;
 const TENDER_STAY = 50;
+/** An unarmed boat runs from an enemy this close. */
+const UNARMED_RUN = 400;
 /** Share of the crew left below which a boarded ship is taken. */
 const CAPTURE_CREW = 0.08;
 // Stalemates. A battle always ends. Once the first blow has landed, a lull in which no shot hits, no ram strikes and no
@@ -978,9 +980,26 @@ export class Battle {
         target = undefined;
       }
     }
-    if (boardsFirst(s)) this.thinkBoarder(s, target);
+    if (isUnarmed(s.spec)) this.thinkUnarmed(s);
+    else if (boardsFirst(s)) this.thinkBoarder(s, target);
     else this.thinkGunner(s, target);
     this.avoid(s);
+  }
+
+  /** An unarmed boat has nothing to attack with: it runs from a close enemy, else keeps beside a friend it can tend, else waits. */
+  private thinkUnarmed(s: Ship) {
+    const foe = this.nearestEnemy(s, false, UNARMED_RUN);
+    if (foe) {
+      const away = Math.atan2(s.z - foe.z, s.x - foe.x);
+      this.steerTo(s, s.x + Math.cos(away) * 200, s.z + Math.sin(away) * 200, 60, 1);
+      this.activity.set(s.id, 'evading');
+      return;
+    }
+    if (this.escortTender(s)) return;
+    s.throttle = 0.12;
+    s.rudder = 0;
+    if (this.profile !== 'historical') s.targetId = 0;
+    this.activity.set(s.id, 'idle');
   }
 
   /** The broadside that needs the smaller turn to bear on a point. */
@@ -1476,6 +1495,7 @@ export class Battle {
   }
 
   private wantsBoard(s: Ship, other: Ship) {
+    if (isUnarmed(s.spec)) return false;
     if (boardsFirst(s)) return s.stance !== 'standoff' && s.stance !== 'close';
     return s.stance === 'board' || (s.stance !== 'standoff' && s.spec.kind !== 'geobukseon' && this.crippled(other));
   }
@@ -1905,7 +1925,7 @@ export class Battle {
     const port = anchors?.gunPorts.find((g) => g.side === side && g.index === slot);
     if (port) {
       // Ship space has +X forward and +Z across the beam; the shot starts a little past the muzzle of the carriage gun.
-      const out = 0.9 * (spec.kind === 'geobukseon' ? GEOBUK_SCALE : 1);
+      const out = 0.9 * anchorScale(spec.kind);
       const lx = port.pos[0] + port.dir[0] * out;
       const lz = port.pos[2] + port.dir[2] * out;
       return { x: s.x + c * lx - n * lz, y: port.pos[1], z: s.z + n * lx + c * lz, dx: c * port.dir[0] - n * port.dir[2], dz: n * port.dir[0] + c * port.dir[2] };
@@ -2088,7 +2108,7 @@ export class Battle {
 
   private ignite(s: Ship, amount: number) {
     const before = s.fire;
-    s.fire = Math.min(1, s.fire + amount);
+    s.fire = Math.min(1, s.fire + amount * (s.spec.fireResist ?? 1));
     if (before < 0.05) this.events.push({ type: 'ignite', ship: s.id });
   }
 
@@ -2158,7 +2178,7 @@ export class Battle {
     }
     if (s.fire > 0) {
       const crewRatio = s.crew / s.spec.crew;
-      s.fire += dt * 0.018 * (1 + s.fire);
+      s.fire += dt * 0.018 * (1 + s.fire) * (s.spec.fireResist ?? 1);
       if (!s.struck && s.sinking === 0) s.fire -= dt * 0.045 * crewRatio * (0.4 + this.rand() * 1.2);
       s.fire = clamp(s.fire, 0, 1);
       s.burn = Math.min(1, s.burn + dt * s.fire * 0.025);

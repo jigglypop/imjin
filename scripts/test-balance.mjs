@@ -16,7 +16,7 @@ try {
   const { COMPETITIVE_PROFILE, COMPETITIVE_FACTIONS, shipSpec, shipMods, combatValue, engagementRange } = await load('competitive');
   const { buildScenario, SCENARIOS } = await load('scenarios');
   const { buildConquest, autoFleet, fleetCost, CONQUEST_ORDER } = await load('maps');
-  const { ROSTER, RANKED_OPTIONS, DEFAULT_OPTIONS } = await load('conquest');
+  const { RANKED_ROSTER, RANKED_OPTIONS, DEFAULT_OPTIONS } = await load('conquest');
   const { Strategist } = await load('strategy');
   const { shipDef, TUNING, factionIncome, migrateGrandBalance } = await load('grand/economy');
   const { newGrand } = await load('grand/turn');
@@ -291,14 +291,14 @@ try {
   });
   check('all factions keep equal opening resources, including change, on both conquest maps', () => {
     for (const id of CONQUEST_ORDER) for (const faction of factions) {
-      const fleet = autoFleet(faction, 5200, COMPETITIVE_PROFILE, 36);
-      assert.ok(fleet.length <= 36); assert.ok(fleet.every((k) => ROSTER[faction].includes(k)));
+      const fleet = autoFleet(faction, 5200, COMPETITIVE_PROFILE, 36, false);
+      assert.ok(fleet.length <= 36); assert.ok(fleet.every((k) => RANKED_ROSTER[faction].includes(k)));
       const seats = [false, true].map((human, i) => ({ name: '', faction, team: i ? 'japan' : 'joseon', human, fleet }));
       const { battle, conquest } = buildConquest(id, seats, () => -50, 77, RANKED_OPTIONS);
       assert.equal(battle.profile, COMPETITIVE_PROFILE);
       for (const p of conquest.players) assert.equal(conquest.fleet(battle, p.slot).value + p.funds, 5200 + 1200);
       assert.equal(fleetCost(fleet), fleet.reduce((s, k) => s + shipSpec(k).cost, 0));
-      const p = conquest.homeOf(0), kind = ROSTER[faction][0], funds = conquest.player(0).funds;
+      const p = conquest.homeOf(0), kind = RANKED_ROSTER[faction][0], funds = conquest.player(0).funds;
       conquest.player(0).funds += 1000;
       assert.ok(conquest.recruitIn(battle, 0, p.id, kind));
       assert.equal(conquest.player(0).funds, funds + 1000 - shipSpec(kind).cost);

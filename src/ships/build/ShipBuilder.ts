@@ -17,7 +17,7 @@ import { buildPanokseon } from './panokseon';
 export const LOD_LEVELS: Lod[] = [0, 1, 2];
 
 /** Kinds whose procedural model is finished and replaces the legacy GLB. */
-export const isProcedural = (kind: ShipKind) => PROCEDURAL_KINDS.includes(kind);
+export const isProcedural = (kind: ShipKind) => (PROCEDURAL_KINDS as readonly ShipKind[]).includes(kind);
 
 export type BuiltShip = { lods: MeshData[]; anchors: ShipAnchors; faction: Faction };
 

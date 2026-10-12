@@ -14,7 +14,7 @@ import {
 } from 'three/webgpu';
 import { cameraPosition, float, instanceIndex, instancedDynamicBufferAttribute, length, mx_noise_float, pow, smoothstep, time, uv, vec3, vec4 } from 'three/tsl';
 import type { Battle } from '../sim/battle';
-import type { ShipKind } from '../sim/types';
+import { anchorsFor, byModel, type ModelKind } from '../ships/anchors';
 import type { ShipViews } from '../ships/ShipViews';
 
 const CAPACITY = 4000;
@@ -27,7 +27,7 @@ const FADE_OFF = 0.6;
 const LIGHT_RANGE = 700;
 const LIGHT_BUDGET = 24;
 
-const POINTS: Record<ShipKind, [number, number, number][]> = {
+const POINTS: Record<ModelKind, [number, number, number][]> = {
   panokseon: [
     [0.42, 1.6, 0.42],
     [0.42, 1.6, -0.42],
@@ -175,8 +175,8 @@ export class Lanterns {
         const v = this.views.states.get(ship.id);
         if (!v || !v.visible) continue;
         // Modelled ships carry their lantern hooks in ship space; the legacy ones use fractions of their size.
-        const anchors = this.views.assets?.[v.key]?.anchors;
-        const legacy = POINTS[ship.spec.kind];
+        const anchors = this.views.assets?.[v.key]?.anchors ? anchorsFor(v.anchors) : undefined;
+        const legacy = byModel(POINTS, ship.spec.kind);
         const deck = DECK[v.key] ?? ship.spec.deck;
         const ddx = ship.x - cam.x;
         const ddz = ship.z - cam.z;

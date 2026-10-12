@@ -12,7 +12,8 @@ const check = (name, fn) => { try { fn(); console.log('ok   ' + name); } catch (
 try {
   const { Battle } = await load('battle');
   const { COMPETITIVE_PROFILE } = await load('competitive');
-  const { visibleShips, isShipVisible, pointVisible, SCOUT_KINDS } = await load('visibility');
+  const { visibleShips, isShipVisible, pointVisible, sightRange, MAIN_SIGHT, SCOUT_SIGHT } = await load('visibility');
+  const { SHIP_SPECS } = await load('catalog');
   const { buildConquest } = await load('maps');
   const { RANKED_OPTIONS } = await load('conquest');
   const { Strategist } = await load('strategy');
@@ -25,9 +26,23 @@ try {
     b.active = { joseon: [a], japan: [z] };
     return { b, a, z, own, enemy };
   };
+  check('each kind sees as far as its spec says: the old scouts 1600 m, the main ships 900 m', () => {
+    const scouts = Object.keys(SHIP_SPECS).filter((k) => sightRange(SHIP_SPECS[k]) >= SCOUT_SIGHT);
+    assert.deepEqual(scouts, ['hyeopseon', 'sahuseon', 'kobaya', 'mingsmall']);
+    for (const kind of ['panokseon', 'geobukseon', 'atakebune', 'sekibune', 'mingship']) assert.equal(sightRange(SHIP_SPECS[kind]), MAIN_SIGHT, kind);
+    for (const kind of ['hyeopseon', 'kobaya', 'mingsmall']) assert.equal(sightRange(SHIP_SPECS[kind]), 1600, kind);
+    assert.equal(sightRange(SHIP_SPECS.sahuseon), 2200); assert.equal(sightRange(SHIP_SPECS.pojakseon), 1300); assert.equal(sightRange(SHIP_SPECS.daeantaek), 1300);
+  });
+  check('a lookout sees an enemy just inside its sight and not one just beyond it', () => {
+    for (const [kind, near, far] of [['sahuseon', 2150, 2250], ['hyeopseon', 1550, 1650], ['pojakseon', 1250, 1350], ['panokseon', 850, 950]]) {
+      const { b, a, z } = fixture(); a.alive = false; b.active.joseon = [];
+      const scout = b.addShip(kind, 0, 0, 0, '', b.addSquadron('joseon', '', '', '', '', 2));
+      z.x = near; b.time += 0.25; assert.equal(isShipVisible(b, scout.team, z.id), true, kind + ' near');
+      z.x = far; b.time += 0.25; assert.equal(isShipVisible(b, scout.team, z.id), false, kind + ' far');
+    }
+  });
   check('all three navies have a scout that shares longer sight with the whole team', () => {
-    assert.deepEqual([...SCOUT_KINDS], ['hyeopseon', 'kobaya', 'mingsmall']);
-    for (const kind of SCOUT_KINDS) {
+    for (const kind of ['hyeopseon', 'kobaya', 'mingsmall']) {
       const { b, a, z } = fixture();
       assert.equal(isShipVisible(b, a.team, z.id), false); assert.equal(pointVisible(b, a.team, z.x, z.z), false);
       const scout = b.addShip(kind, 0, 0, 0, '', b.addSquadron('joseon', '', '', '', '', 2));

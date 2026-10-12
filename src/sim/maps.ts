@@ -1,6 +1,6 @@
 import { Battle } from './battle';
 import { COMPETITIVE_PROFILE, shipSpec, type BalanceProfile } from './competitive';
-import { Conquest, DEFAULT_OPTIONS, ROSTER, type ConquestOptions, type MapPoint } from './conquest';
+import { Conquest, DEFAULT_OPTIONS, rosterOf, type ConquestOptions, type MapPoint } from './conquest';
 import { teamOf, type Faction, type LandSampler, type ShipKind, type Team } from './types';
 import type { TerrainSpec } from '../terrain/generate';
 import type { SkyPresetName } from '../render/sky';
@@ -138,22 +138,30 @@ export type Seat = { name: string; faction: Faction; team: Team; human: boolean;
 
 /** Starting treasury for buying the opening fleet. What is not spent carries into the battle. */
 export const MUSTER_BUDGET = DEFAULT_OPTIONS.musterBudget ?? 15600;
-export const FLEET_MIX: Record<Faction, ShipKind[]> = {
+/** The opening mix of a ranked fleet, from the kinds a ranked match offers. */
+export const RANKED_FLEET_MIX: Record<Faction, ShipKind[]> = {
   joseon: ['panokseon', 'panokseon', 'geobukseon', 'panokseon', 'hyeopseon', 'panokseon', 'hyeopseon'],
   japan: ['atakebune', 'sekibune', 'sekibune', 'kobaya', 'atakebune', 'sekibune', 'kobaya', 'sekibune'],
   ming: ['mingship', 'mingsmall', 'mingship', 'mingsmall', 'mingsmall'],
 };
+/** The opening mix under the expanded rules: the same fleets with a few of the size tiers and a lookout among them. */
+export const FLEET_MIX: Record<Faction, ShipKind[]> = {
+  joseon: ['panokseon', 'panokseon', 'geobukseon', 'panokseon', 'hyeopseon', 'panokseon', 'hyeopseon', 'sahuseon', 'pojakseon'],
+  japan: ['atakebune', 'sekibune', 'sekibune', 'kobaya', 'sogantaek', 'sekibune', 'kobaya', 'daegwanseon', 'atakebune', 'sekibune'],
+  ming: ['mingship', 'mingsmall', 'mingship', 'mingsmall', 'haechangseon', 'mingsmall', 'hoseon'],
+};
 
 export const fleetCost = (fleet: ShipKind[], profile: BalanceProfile = COMPETITIVE_PROFILE) => fleet.reduce((a, k) => a + shipSpec(k, profile).cost, 0);
 
-/** The computer's opening fleet: the faction's usual mix, as much as the budget buys. */
-export function autoFleet(faction: Faction, budget = MUSTER_BUDGET, profile: BalanceProfile = COMPETITIVE_PROFILE, maxShips = Infinity): ShipKind[] {
+/** The computer's opening fleet: the faction's usual mix, as much as the budget buys. A ranked fleet (`expanded` false) keeps to the ranked kinds. */
+export function autoFleet(faction: Faction, budget = MUSTER_BUDGET, profile: BalanceProfile = COMPETITIVE_PROFILE, maxShips = Infinity, expanded = true): ShipKind[] {
   const out: ShipKind[] = [];
+  const mix = (expanded ? FLEET_MIX : RANKED_FLEET_MIX)[faction];
   let left = budget;
   for (let i = 0; i < maxShips; i += 1) {
-    const kind = FLEET_MIX[faction][i % FLEET_MIX[faction].length]!;
+    const kind = mix[i % mix.length]!;
     if (shipSpec(kind, profile).cost > left) {
-      const cheap = ROSTER[faction].filter((k) => shipSpec(k, profile).cost <= left).sort((a, b) => shipSpec(a, profile).cost - shipSpec(b, profile).cost)[0];
+      const cheap = rosterOf(faction, expanded).filter((k) => shipSpec(k, profile).cost <= left).sort((a, b) => shipSpec(a, profile).cost - shipSpec(b, profile).cost)[0];
       if (!cheap) break;
       out.push(cheap);
       left -= shipSpec(cheap, profile).cost;
@@ -261,7 +269,7 @@ export function buildConquestOn<M extends MapLayout>(map: M, seats: Seat[], land
     const budget = options.musterBudget ?? DEFAULT_OPTIONS.musterBudget ?? MUSTER_BUDGET;
     const opening: ShipKind[] = [];
     for (const kind of seat.fleet) {
-      if (!ROSTER[seat.faction].includes(kind)) continue;
+      if (!rosterOf(seat.faction, conquest.options.expanded).includes(kind)) continue;
       const price = shipSpec(kind, profile).cost;
       if (opening.length >= conquest.shipLimit(slot) || value + price > Math.min(budget, conquest.players[slot]!.cap)) continue;
       value += price;

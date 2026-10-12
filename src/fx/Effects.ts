@@ -8,7 +8,7 @@ import { DebrisField, Piece } from './Debris';
 import { gunClass } from './gunClass';
 import { arcPeak, timeToImpact } from './flight';
 import { Munitions, Shell, shellKind, type ShellKind, type Trail } from './Projectiles';
-import { anchorsFor } from '../ships/anchors';
+import { anchorsFor, byModel, modelKind } from '../ships/anchors';
 import { DECKS, mainDeck } from '../ships/decks';
 import { planSinking, type CueKind, type SinkCue } from './sinkPlan';
 import { CREW_RANGE } from './crewTypes';
@@ -527,7 +527,7 @@ export class Effects {
   private beginSink(ship: Ship) {
     let st = this.sinks.get(ship.id);
     if (!st) {
-      st = { plan: planSinking(ship.id, MASTS[ship.spec.kind] ?? 1, ship.spec.length), next: 0, bubbles: 0, slick: 0, bubbleUntil: 0 };
+      st = { plan: planSinking(ship.id, MASTS[modelKind(ship.spec.kind)] ?? 1, ship.spec.length), next: 0, bubbles: 0, slick: 0, bubbleUntil: 0 };
       this.sinks.set(ship.id, st);
     }
     return st;
@@ -613,7 +613,7 @@ export class Effects {
         break;
       }
       case 'mast': {
-        const i = Math.floor(rnd(0, Math.min(MAST_AT.length, MASTS[ship.spec.kind] ?? 1)));
+        const i = Math.floor(rnd(0, Math.min(MAST_AT.length, MASTS[modelKind(ship.spec.kind)] ?? 1)));
         this.views.localToWorld(id, MAST_AT[i]! * L, this.deckOf(ship) + ship.spec.height * 0.45, 0, this.p);
         const len = ship.spec.height * rnd(0.7, 1.1);
         // The snapped mast topples toward the low side and takes a spar or two with it.
@@ -748,7 +748,7 @@ export class Effects {
         for (let i = 0; i < 5; i += 1) this.spray.emit({ x: bx, y: h + 0.3, z: bz, vx: c * speed * 0.6 + n * side * rnd(1.5, 4), vy: rnd(1.5, 4.5) * f, vz: n * speed * 0.6 - c * side * rnd(1.5, 4), life: rnd(0.6, 1.2), size0: 0.6, size1: rnd(1.6, 2.6), alpha: 0.6, r: 0.95, g: 0.97, b: 1, drag: 0.6, lift: -9.8, wind: 0.2 });
       }
       if (!stroke) continue;
-      const oars = OARS[ship.spec.kind] ?? 8;
+      const oars = OARS[modelKind(ship.spec.kind)] ?? 8;
       // Past 250 m the oars read as one blur: every other one is enough, and no wake is stamped for them.
       const near = dist < 250;
       const skip = near ? 1 : 2;
@@ -768,7 +768,7 @@ export class Effects {
   /** Height of the deck flames and smoke rise from: the fighting deck of an open ship, the hull's rim under the turtle's roof. */
   private deckOf(ship: Ship) {
     const kind = ship.spec.kind;
-    return DECKS[kind].open ? mainDeck(`${kind}#${ship.variant}`, kind, ship.spec.deck) : ship.spec.deck;
+    return byModel(DECKS, kind).open ? mainDeck(`${kind}#${ship.variant}`, kind, ship.spec.deck) : ship.spec.deck;
   }
 
   /**

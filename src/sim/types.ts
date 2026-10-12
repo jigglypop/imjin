@@ -6,7 +6,10 @@
 export type Team = 'joseon' | 'japan';
 export const TEAMS: readonly Team[] = ['joseon', 'japan'];
 export const otherTeam = (t: Team): Team => (t === 'joseon' ? 'japan' : 'joseon');
-export type ShipKind = 'panokseon' | 'geobukseon' | 'hyeopseon' | 'atakebune' | 'sekibune' | 'kobaya' | 'mingship' | 'mingsmall';
+export type ShipKind =
+  | 'panokseon' | 'geobukseon' | 'hyeopseon' | 'sahuseon' | 'pojakseon'
+  | 'atakebune' | 'sekibune' | 'kobaya' | 'daeantaek' | 'sogantaek' | 'daegwanseon' | 'byeongnyangseon'
+  | 'mingship' | 'mingsmall' | 'gwangseon' | 'haechangseon' | 'hoseon';
 export type Faction = 'joseon' | 'japan' | 'ming';
 export const FACTIONS: readonly Faction[] = ['joseon', 'japan', 'ming'];
 /** The Ming fleet fights on the Joseon side. */
@@ -81,6 +84,12 @@ export type ShipSpec = {
   build: number;
   /** A small boat that tops up friends beside it (expanded conquest rules only). Rates are per second, as a share of the served ship's full value. */
   tender?: { range: number; capacity: number; hull: number; crew: number; ammo: number };
+  /** Lookout range in metres in the competitive rules; a kind without it sees as far as a main ship does. */
+  sight?: number;
+  /** Weight of the ship in a capture circle; without it a hull under 16 m counts 0.35 and a larger one 1. */
+  capture?: number;
+  /** Share of a new fire, and of its spread, that takes hold on this ship (curtains and wet straw); 1 without it. */
+  fireResist?: number;
 };
 
 export type FireMode = 'free' | 'hold';

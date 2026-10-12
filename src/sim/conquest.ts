@@ -2,10 +2,10 @@ import type { Battle, BattleRules } from './battle';
 import { GUN_SPECS } from './catalog';
 import { COMPETITIVE_PROFILE, shipSpec, type BalanceProfile } from './competitive';
 import { Strategist } from './strategy';
-import { variantFor } from '../ships/anchors';
+import { cardOf, variantFor } from '../ships/anchors';
 import { fleetNo, numbered } from '../i18n/names';
 import type { ConquestState } from '../net/protocol';
-import { otherTeam, TEAMS, type Faction, type GunType, type LandSampler, type Ship, type ShipKind, type Squadron, type Team } from './types';
+import { otherTeam, TEAMS, type Faction, type GunType, type LandSampler, type Ship, type ShipKind, type ShipSpec, type Squadron, type Team } from './types';
 
 export type BuildingKind = 'shipyard' | 'battery' | 'magazine' | 'dock' | 'beacon' | 'camp';
 export type BuildingLevel = 1 | 2 | 3;
@@ -33,12 +33,24 @@ export function buildingHp(kind: BuildingKind, level: number) {
   return BUILDINGS[kind].hp * (1 + (level - 1) * 0.3);
 }
 
-/** Ships each navy can build. */
-export const ROSTER: Record<Faction, ShipKind[]> = {
+/** Ships each navy can build in a ranked match: the kinds its competitive balance was settled on. */
+export const RANKED_ROSTER: Record<Faction, ShipKind[]> = {
   joseon: ['panokseon', 'geobukseon', 'hyeopseon'],
   japan: ['atakebune', 'sekibune', 'kobaya'],
   ming: ['mingship', 'mingsmall'],
 };
+
+/** Ships each navy can build under the expanded rules (casual battles and the campaign): the size tiers and support craft as well. */
+export const ROSTER: Record<Faction, ShipKind[]> = {
+  joseon: ['panokseon', 'geobukseon', 'hyeopseon', 'pojakseon', 'sahuseon'],
+  japan: ['daeantaek', 'atakebune', 'sogantaek', 'daegwanseon', 'sekibune', 'kobaya', 'byeongnyangseon'],
+  ming: ['gwangseon', 'mingship', 'haechangseon', 'mingsmall', 'hoseon'],
+};
+
+export const rosterOf = (faction: Faction, expanded: boolean | undefined) => (expanded ? ROSTER : RANKED_ROSTER)[faction];
+
+/** How much a ship counts in a capture circle: a small boat holds a point at a third of a warship's weight. */
+export const captureWeight = (spec: ShipSpec) => spec.capture ?? (spec.length < 16 ? 0.35 : 1);
 
 /** Captains' portraits for the squadrons a seat raises, in turn. */
 const PORTRAITS: Record<Faction, string[]> = {
@@ -57,6 +69,15 @@ export const SHORT_NAME: Record<ShipKind, string> = {
   kobaya: '고바야',
   mingship: '명 전선',
   mingsmall: '명 사선',
+  sahuseon: '사후선',
+  pojakseon: '포작선',
+  daeantaek: '대안택선',
+  sogantaek: '소안택선',
+  daegwanseon: '대관선',
+  byeongnyangseon: '병량선',
+  gwangseon: '명 광선',
+  haechangseon: '명 해창선',
+  hoseon: '명 호선',
 };
 
 /** Shore guns by navy: count, gun and seconds between rounds. */
@@ -451,7 +472,7 @@ export class Conquest implements BattleRules {
     if (!Number.isInteger(owner) || owner < 0 || !Number.isInteger(pointId) || pointId < 0) return false;
     const p = this.points[pointId];
     const pl = this.players[owner];
-    if (!p || !pl || p.owner !== owner || !ROSTER[pl.faction].includes(kind)) return false;
+    if (!p || !pl || p.owner !== owner || !rosterOf(pl.faction, this.options.expanded).includes(kind)) return false;
     if (!this.count(p, 'shipyard') || p.queue.length >= QUEUE_MAX * this.yardSlots(p)) return false;
     const f = this.fleet(b, owner);
     if (f.value + this.shipSpec(kind).cost > pl.cap || f.count >= this.shipLimit(owner)) return false;
@@ -510,7 +531,7 @@ export class Conquest implements BattleRules {
       const bySlot = new Map<number, number>();
       b.near(p.x, p.z, p.r, (s) => {
         if (!b.isActive(s)) return;
-        const w = s.spec.length < 16 ? 0.35 : 1;
+        const w = captureWeight(s.spec);
         counts[s.team] += w;
         bySlot.set(s.owner, (bySlot.get(s.owner) ?? 0) + w);
       });
@@ -631,8 +652,7 @@ export class Conquest implements BattleRules {
     const all = b.squadrons.filter((sq) => sq.owner === pl.slot).length;
     const portraits = PORTRAITS[pl.faction];
     const portrait = portraits[all % portraits.length]!;
-    const card = `card_${kind === 'hyeopseon' || kind.startsWith('ming') ? 'panokseon' : kind === 'kobaya' ? 'sekibune' : kind}`;
-    return b.addSquadron(pl.team, fleetNo(label, index), pl.name, portrait, card, pl.slot);
+    return b.addSquadron(pl.team, fleetNo(label, index), pl.name, portrait, cardOf(kind), pl.slot);
   }
 
   get tenders() {
@@ -814,7 +834,7 @@ export class Conquest implements BattleRules {
     for (const t of TEAMS) {
       if (b.activeOf(t).length > 0) continue;
       const seats = this.players.filter((p) => p.team === t);
-      const rebuilding = seats.some((pl) => this.points.some((p) => p.owner === pl.slot && (p.queue.length > 0 || (this.count(p, 'shipyard') > 0 && pl.funds >= Math.min(...ROSTER[pl.faction].map((k) => this.shipSpec(k).cost))))));
+      const rebuilding = seats.some((pl) => this.points.some((p) => p.owner === pl.slot && (p.queue.length > 0 || (this.count(p, 'shipyard') > 0 && pl.funds >= Math.min(...rosterOf(pl.faction, this.options.expanded).map((k) => this.shipSpec(k).cost))))));
       if (!rebuilding && b.time > 5) defeated.push(t);
     }
     if (defeated.length === 2) return tie();

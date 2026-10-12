@@ -60,7 +60,7 @@ import { buildGrandConquest, grandAxis, grandInfo, shipOutcomes, worksAfter } fr
 import { CurrentField } from '../sim/current';
 import { OWNER_OF, otherTeam, teamOf, type BattleEvent, type Faction, type Ship, type ShipKind, type Team } from '../sim/types';
 import { buildConquest, homeAxis, type ConquestMapId, type Seat } from '../sim/maps';
-import { BUILDING_ORDER, BUILDINGS, RANKED_OPTIONS, ROSTER, SHORT_NAME, buildingHp, upgradeCost, type Conquest } from '../sim/conquest';
+import { BUILDING_ORDER, BUILDINGS, RANKED_OPTIONS, ROSTER, rosterOf, SHORT_NAME, buildingHp, upgradeCost, type Conquest } from '../sim/conquest';
 import { applyCommand, type Command } from '../sim/commands';
 import { conquestInfo, scenarioInfo, type BattleInfo } from '../sim/info';
 import { ConquestView, preloadWorks } from '../conquest/ConquestView';
@@ -119,7 +119,7 @@ export interface CommandSink {
   send(cmd: Command): void;
 }
 
-/** Every kind there is: the gallery shows them all. A battle loads only the kinds it uses. */
+/** Every kind with a model of its own: the gallery shows them all. A battle loads only the models of the kinds it uses. */
 const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
 
 /** Lets the browser paint the loading bar before the next stretch of blocking work (a timer covers a hidden tab, where frames never come). */
@@ -1057,7 +1057,7 @@ export class Engine {
     const setup = this.conquestSetup;
     if (!setup || !this.conquest) return hint;
     const c = this.conquest;
-    for (const seat of setup.seats) for (const kind of ROSTER[seat.faction]) {
+    for (const seat of setup.seats) for (const kind of rosterOf(seat.faction, c.options.expanded)) {
       const starting = this.battle.ships.filter((s) => s.owner === setup.seats.indexOf(seat) && s.spec.kind === kind).length;
       const room = Number.isFinite(c.options.maxShips) ? Math.min(c.options.maxShips, Math.ceil(c.options.cap / this.battle.shipSpec(kind).cost) + 4) : starting + 16;
       hint.set(kind, (hint.get(kind) ?? 0) + room);
@@ -1556,7 +1556,7 @@ export class Engine {
             buildings: p.buildings.map((bd, slot) => (observed && bd ? { slot, kind: bd.kind, label: BUILDINGS[bd.kind].label, progress: bd.progress, hp: bd.hp / buildingHp(bd.kind, bd.level), level: bd.level, upgradeLeft: bd.upgradeLeft, upgradeTotal: bd.upgradeTotal, upgradeCost: bd.level < 3 ? upgradeCost(bd.kind, bd.level) : 0, upgradeTime: bd.level < 3 ? c.upgradeDuration(bd.kind, bd.level) : 0, canUpgrade: mine && c.canUpgrade(this.owner, p.id, slot) } : null)),
             queue: observed ? p.queue.map((q, i) => ({ kind: q.kind, label: SHORT_NAME[q.kind], left: Math.max(0, q.left / c.constructionRate(p.owner)), total: q.total / c.constructionRate(p.owner), working: i < c.queueWorkers(p) })) : [],
             build: BUILDING_ORDER.filter((kind) => c.options.expanded || kind !== 'camp').map((kind) => ({ kind, label: BUILDINGS[kind].label, cost: BUILDINGS[kind].cost, time: c.buildTime(kind), desc: c.buildingDesc(kind), ok: mine && c.canBuild(this.owner, p.id, kind) })),
-            recruit: ROSTER[me.faction].map((kind) => ({ kind, label: SHORT_NAME[kind], cost: this.battle.shipSpec(kind).cost, time: Math.ceil(c.recruitTime(kind) / c.constructionRate(this.owner)), ok: mine && c.canRecruit(this.battle, this.owner, p.id, kind) })),
+            recruit: rosterOf(me.faction, c.options.expanded).map((kind) => ({ kind, label: SHORT_NAME[kind], cost: this.battle.shipSpec(kind).cost, time: Math.ceil(c.recruitTime(kind) / c.constructionRate(this.owner)), ok: mine && c.canRecruit(this.battle, this.owner, p.id, kind) })),
             shipyard: observed && c.count(p, 'shipyard') > 0,
             yardSlots: observed ? c.yardSlots(p) : 0,
             rally: observed ? p.rally ?? null : null,

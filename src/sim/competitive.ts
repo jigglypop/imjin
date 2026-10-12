@@ -27,6 +27,17 @@ export const COMPETITIVE_UNITS: Record<ShipKind, UnitBalance> = {
   kobaya: { spec: { hull: 32, crew: 30, maxSpeed: 8.1, melee: 1.15, cost: 85, build: 14 }, mods: { reload: 1.1, accuracy: 0.95, melee: 1.1 } },
   mingship: { spec: { hull: 170, crew: 185, armor: 0.1, maxSpeed: 4.6, turnRate: 0.12, deckDefense: 1.55, cost: 680, build: 53 }, mods: { reload: 0.8, accuracy: 1.15 }, range: 1.35, damage: 0.85 },
   mingsmall: { spec: { hull: 60, crew: 54, armor: 0.04, maxSpeed: 6.1, deckDefense: 1.1, cost: 255, build: 28 }, mods: { reload: 0.9, accuracy: 1.1 }, range: 1.25, damage: 0.9 },
+  // The kinds below are offered only under the expanded rules (casual conquest and the campaign); ranked keeps the eight above.
+  // Unarmed craft are priced for their service (sight, a tender's supply), not for a combat value they do not have.
+  sahuseon: { spec: { cost: 45, build: 8 } },
+  pojakseon: { spec: { cost: 35, build: 6 }, mods: { reload: 1.1 } },
+  sogantaek: { spec: { maxSpeed: 5.9, accel: 0.48, turnRate: 0.17, armor: 0.13, melee: 1.12, cost: 290, build: 26 }, mods: { reload: 1.1, accuracy: 0.95, melee: 1.1 }, damage: 1.8 },
+  daeantaek: { spec: { hull: 270, crew: 280, maxSpeed: 4.8, armor: 0.2, melee: 1.12, cost: 680, build: 50 }, mods: { reload: 1.1, accuracy: 0.95, melee: 1.1 }, damage: 1.8 },
+  daegwanseon: { spec: { maxSpeed: 8, cost: 230, build: 24 }, mods: { reload: 1.1, accuracy: 0.95, melee: 1.1 } },
+  byeongnyangseon: { spec: { cost: 150, build: 16 } },
+  gwangseon: { spec: { armor: 0.24, maxSpeed: 4.2, turnRate: 0.11, cost: 950, build: 80 }, mods: { reload: 0.8, accuracy: 1.15 }, range: 1.35, damage: 0.85 },
+  haechangseon: { spec: { armor: 0.07, maxSpeed: 5.2, cost: 420, build: 40 }, mods: { reload: 0.85, accuracy: 1.12 }, range: 1.3, damage: 0.88 },
+  hoseon: { spec: { hull: 42, crew: 38, cost: 185, build: 20 }, mods: { reload: 0.9, accuracy: 1.1 }, range: 1.25, damage: 0.9 },
 };
 
 /** The three treasuries earn the same base income; cheap boarding ships are not discounted a second time. */

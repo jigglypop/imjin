@@ -40,8 +40,8 @@ try {
   const tick = (f, seconds) => { for (let t = 0; t < seconds; t += SIM_DT) { f.b.time += SIM_DT; f.b.grid.rebuild(f.b.ships); f.c.step(f.b, SIM_DT); } };
   const frac = (s) => [s.hull / s.spec.hull, s.crew / s.spec.crew, s.supply];
 
-  check('only the hyeopseon carries the trait', () => {
-    for (const [kind, s] of Object.entries(SHIP_SPECS)) assert.equal(!!s.tender, kind === 'hyeopseon', kind);
+  check('only the hyeopseon and the Japanese transport carry the trait', () => {
+    for (const [kind, s] of Object.entries(SHIP_SPECS)) assert.equal(!!s.tender, kind === 'hyeopseon' || kind === 'byeongnyangseon', kind);
   });
   check('a tender restores hull, crew and supply at the spec rates', () => {
     const f = fixture(), t = f.ship('hyeopseon', 0, 0, 0), s = f.ship('panokseon', 50, 0);

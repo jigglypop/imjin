@@ -1,3 +1,5 @@
+import { SHIP_SPECS } from '../catalog';
+import { SCOUT_SIGHT, sightRange } from '../visibility';
 import { listStrength, batteryStrength } from './economy';
 import { LANES, REGION_ORDER, REGIONS, type Lane } from './regions';
 import type { Fleet, Grand, GrandFaction, LogEntry, MsgParams, RegionId, ShipUnit } from './types';
@@ -131,7 +133,7 @@ export function visibleRegions(g: Grand, f: GrandFaction): Set<RegionId> {
     reach(id, beacon ? Math.min(3, 1 + beacon.level) : 0);
   }
   for (const fleet of g.fleets) if (allied(g, f, fleet.faction)) {
-    const scout = fleet.ships.some((s) => s.hull > 0 && s.crew > 0 && ['hyeopseon', 'kobaya', 'mingsmall'].includes(s.kind));
+    const scout = fleet.ships.some((s) => s.hull > 0 && s.crew > 0 && sightRange(SHIP_SPECS[s.kind]) >= SCOUT_SIGHT);
     if (fleet.at) reach(fleet.at, scout ? 2 : 1);
     else if (fleet.transit) { reach(fleet.transit.from, scout ? 1 : 0); reach(fleet.transit.to, scout ? 1 : 0); }
   }

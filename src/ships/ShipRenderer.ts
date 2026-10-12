@@ -49,7 +49,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import type { ShipKind } from '../sim/types';
 import { SHIP_SPECS } from '../sim/catalog';
-import type { ShipAnchors } from './anchors';
+import { modelKind, type ShipAnchors } from './anchors';
 import { useProcedural } from './build/mode';
 import { loadProcedural } from './build/procedural';
 import { equipment } from '../game/quality';
@@ -255,8 +255,14 @@ async function loadModel(spec: ShipModelSpec, options: ShipAssetOptions, isolate
 // Loaded models are shared by every battle of the page. A later battle only loads the kinds it adds.
 const modelCache = new Map<string, Promise<ModelAsset>>();
 
+/** The models a set of kinds is drawn with: a kind drawn with another's model loads that one, once. */
+const modelsFor = (kinds: ShipKind[]) => {
+  const models = new Set(kinds.map(modelKind));
+  return SHIP_MODELS.filter((m) => models.has(modelKind(m.kind)));
+};
+
 export async function loadShipAssets(kinds: ShipKind[], options: ShipAssetOptions, onProgress?: (fraction: number) => void) {
-  const specs = SHIP_MODELS.filter((m) => kinds.includes(m.kind));
+  const specs = modelsFor(kinds);
   let loaded = 0;
   const list = await Promise.all(
     specs.map((s) => {
@@ -278,7 +284,7 @@ export async function loadShipAssets(kinds: ShipKind[], options: ShipAssetOption
 
 /** Separate renderers need fresh CPU geometry: uploading a battle asset may detach its arrays. */
 export async function loadSceneShipAssets(kinds: ShipKind[], options: ShipAssetOptions) {
-  const results = await Promise.allSettled(SHIP_MODELS.filter(s => kinds.includes(s.kind)).map(s => loadModel(s, options, true)));
+  const results = await Promise.allSettled(modelsFor(kinds).map(s => loadModel(s, options, true)));
   const assets = Object.fromEntries(results.flatMap(r => r.status === 'fulfilled' ? [[r.value.key, r.value]] : [])) as Record<string, ModelAsset>;
   const failed = results.find(r => r.status === 'rejected');
   if (failed) { disposeSceneShipAssets(assets); throw failed.reason; }

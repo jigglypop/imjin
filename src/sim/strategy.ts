@@ -1,15 +1,31 @@
 import type { Battle } from './battle';
 import { combatValue } from './competitive';
-import { BUILDINGS, ROSTER, upgradeCost, type BuildingKind, type CapturePoint, type Conquest } from './conquest';
+import { isUnarmed } from './catalog';
+import { BUILDINGS, rosterOf, upgradeCost, type BuildingKind, type CapturePoint, type Conquest } from './conquest';
 import { otherTeam, type Faction, type Ship, type ShipKind } from './types';
 import { isShipVisible, pointVisible } from './visibility';
 
-/** The shares of each navy's fleet value the computer aims for. */
-const DOCTRINE: Record<Faction, Partial<Record<ShipKind, number>>> = {
+/** The shares of each navy's fleet value the computer aims for in a ranked match. */
+const RANKED_DOCTRINE: Record<Faction, Partial<Record<ShipKind, number>>> = {
   joseon: { panokseon: 0.6, geobukseon: 0.22, hyeopseon: 0.18 },
   japan: { atakebune: 0.42, sekibune: 0.44, kobaya: 0.14 },
   ming: { mingship: 0.6, mingsmall: 0.4 },
 };
+/**
+ * The same under the expanded rules, where the size tiers and support craft are on offer too. They take small shares,
+ * so the fleets keep the character the balance was tuned on; the transport is never bought for a fight, only the lookout.
+ */
+const DOCTRINE: Record<Faction, Partial<Record<ShipKind, number>>> = {
+  joseon: { panokseon: 0.56, geobukseon: 0.2, hyeopseon: 0.14, pojakseon: 0.06, sahuseon: 0.04 },
+  japan: { daeantaek: 0.08, atakebune: 0.3, sogantaek: 0.08, daegwanseon: 0.08, sekibune: 0.34, kobaya: 0.12 },
+  ming: { gwangseon: 0.08, mingship: 0.48, haechangseon: 0.1, mingsmall: 0.28, hoseon: 0.06 },
+};
+const doctrineOf = (c: Conquest, faction: Faction) => (c.options.expanded ? DOCTRINE : RANKED_DOCTRINE)[faction];
+
+/** Unarmed craft keep this far from the nearest enemy and run from one that comes closer. */
+const UNARMED_CLEAR = 400;
+/** A lookout holds station this far ahead of the main body, toward the enemy. */
+const LOOKOUT_AHEAD = 450;
 
 const THINK = 2;
 const CLUSTER = 520;
@@ -73,7 +89,7 @@ const homeOrFirst = (c: Conquest, slot: number, owned: CapturePoint[]) => c.home
 
 /** The price of the navy's main ship, the one the computer buys most of: what a human's auto-build leaves in the treasury. */
 export function worksReserve(c: Conquest, slot: number) {
-  const want = DOCTRINE[c.player(slot)!.faction];
+  const want = doctrineOf(c, c.player(slot)!.faction);
   const main = (Object.keys(want) as ShipKind[]).reduce((best, k) => (want[k]! > want[best]! ? k : best));
   return c.shipSpec(main).cost;
 }
@@ -81,7 +97,7 @@ export function worksReserve(c: Conquest, slot: number) {
 /** The fleet already holds as much as the cap leaves room for, so the treasury goes to works instead of ships. */
 function isFull(c: Conquest, slot: number, fleetValue: number) {
   const me = c.player(slot)!;
-  return fleetValue > me.cap - Math.min(...ROSTER[me.faction].map((k) => c.shipSpec(k).cost));
+  return fleetValue > me.cap - Math.min(...rosterOf(me.faction, c.options.expanded).map((k) => c.shipSpec(k).cost));
 }
 
 /** Points nearest the enemy home first. */
@@ -229,7 +245,7 @@ export class Strategist {
 
   private recruit(b: Battle, c: Conquest, yards: CapturePoint[]) {
     const me = c.player(this.slot)!;
-    const want = DOCTRINE[me.faction];
+    const want = doctrineOf(c, me.faction);
     const have = new Map<ShipKind, number>();
     let total = 0;
     const add = (k: ShipKind) => {
@@ -266,6 +282,7 @@ export class Strategist {
     const foes = clusters(b.activeOf(otherTeam(team)).filter((s) => isShipVisible(b, team, s.id)));
     const docks = c.points.filter((p) => c.teamOfPoint(p) === team && c.count(p, 'dock'));
     const fit: Ship[] = [];
+    const unarmed: Ship[] = [];
     for (const s of ships) {
       // A regrouping speed limit lasts only until the next decision; a boarding rush uses the ship's full speed.
       s.speedCap = 1;
@@ -275,12 +292,17 @@ export class Strategist {
         else if (s.order.type !== 'hold') s.order = { type: 'hold' };
         continue;
       }
-      fit.push(s);
+      // Unarmed craft never join the fighting body or a raid: they keep with the fleet out of the enemy's reach.
+      (isUnarmed(s.spec) ? unarmed : fit).push(s);
     }
-    if (!fit.length) return;
+    if (!fit.length) {
+      this.shelter(c, unarmed, foes);
+      return;
+    }
     let raiderCost = 0;
     const raiderBudget = fit.reduce((sum, s) => sum + s.spec.cost, 0) * 0.15;
     const raiders = fit.filter((s) => {
+      // Raiders are the armed small boats (fit holds only armed ships).
       if (!(s.spec.length < 16 || (b.profile !== 'historical' && s.spec.kind === 'mingsmall')) || raiderCost + s.spec.cost > raiderBudget) return false;
       raiderCost += s.spec.cost;
       return true;
@@ -300,6 +322,63 @@ export class Strategist {
     }
     this.lead(c, body, foes);
     if (main.length) this.raid(b, c, raiders, foes);
+    this.escort(b, unarmed, body, foes);
+  }
+
+  /** The enemy ship nearest to a point, among those observed, with its distance. */
+  private nearestFoe(foes: Cluster[], x: number, z: number) {
+    let best: Ship | undefined, distance = Infinity;
+    for (const f of foes) for (const e of f.ships) {
+      const d = Math.hypot(e.x - x, e.z - z);
+      if (d < distance) { best = e; distance = d; }
+    }
+    return { foe: best, distance };
+  }
+
+  /** Runs from an enemy closer than UNARMED_CLEAR. Returns whether it had to. */
+  private evade(s: Ship, foes: Cluster[]) {
+    const { foe, distance } = this.nearestFoe(foes, s.x, s.z);
+    if (!foe || distance >= UNARMED_CLEAR) return false;
+    const away = Math.atan2(s.z - foe.z, s.x - foe.x);
+    this.go(s, s.x + Math.cos(away) * 300, s.z + Math.sin(away) * 300);
+    return true;
+  }
+
+  /**
+   * Unarmed craft keep with the main body: a lookout (no tender trait) holds station ahead of it toward the enemy, a
+   * transport keeps behind it and tends the ships that need it. Neither comes within UNARMED_CLEAR of an enemy.
+   */
+  private escort(b: Battle, unarmed: Ship[], body: Ship[], foes: Cluster[]) {
+    if (!unarmed.length) return;
+    const at = centroid(body);
+    const front = foes.length ? foes.reduce((p, q) => (Math.hypot(q.x - at.x, q.z - at.z) < Math.hypot(p.x - at.x, p.z - at.z) ? q : p)) : null;
+    const toward = front ? Math.atan2(front.z - at.z, front.x - at.x) : this.axis;
+    const ahead = { x: at.x + Math.cos(toward) * LOOKOUT_AHEAD, z: at.z + Math.sin(toward) * LOOKOUT_AHEAD };
+    const behind = { x: at.x - Math.cos(toward) * 150, z: at.z - Math.sin(toward) * 150 };
+    // The station ahead is given up for the one behind the body when it would put the lookout in the enemy's reach.
+    const lookout = this.nearestFoe(foes, ahead.x, ahead.z).distance < UNARMED_CLEAR + 100 ? behind : ahead;
+    for (const s of unarmed) {
+      s.speedCap = 1;
+      if (this.evade(s, foes)) continue;
+      if (s.spec.tender && body.some((o) => b.tenderNeed(o) > 0.15 && Math.hypot(o.x - s.x, o.z - s.z) < 500)) {
+        // The battle's tender escort takes it beside the neediest friend; it still runs from a close enemy there.
+        if (s.order.type !== 'auto') s.order = { type: 'auto' };
+        continue;
+      }
+      const station = s.spec.tender ? behind : lookout;
+      if (Math.hypot(station.x - s.x, station.z - s.z) < 60) {
+        if (s.order.type !== 'hold') s.order = { type: 'hold' };
+      } else this.go(s, station.x, station.z);
+    }
+  }
+
+  /** Unarmed craft without a fleet to keep with fall back on a safe port, or stay clear of the enemy where they are. */
+  private shelter(c: Conquest, unarmed: Ship[], foes: Cluster[]) {
+    for (const s of unarmed) {
+      s.speedCap = 1;
+      if (this.evade(s, foes)) continue;
+      if (!this.retreat(c, [s], s) && s.order.type !== 'hold') s.order = { type: 'hold' };
+    }
   }
 
   private engaged(s: Ship, foes: Cluster[], r: number) {

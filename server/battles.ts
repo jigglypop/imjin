@@ -50,7 +50,7 @@ export type Built = { battle: Battle; conquest: Conquest | null; seats: Seat[] }
 export function buildBattle(choice: BattleChoice, land: LandSampler, seats: Pick<RoomSeat, 'faction' | 'team'>[], names: string[], human: boolean[], seed: number, ranked = false): Built {
   if (choice.kind === 'conquest') {
     const rules = ranked ? RANKED_OPTIONS : DEFAULT_OPTIONS;
-    const list: Seat[] = seats.map((s, i) => ({ name: names[i]!, faction: s.faction, team: s.team, human: human[i]!, fleet: autoFleet(s.faction, rules.musterBudget, undefined, rules.maxShips) }));
+    const list: Seat[] = seats.map((s, i) => ({ name: names[i]!, faction: s.faction, team: s.team, human: human[i]!, fleet: autoFleet(s.faction, rules.musterBudget, undefined, rules.maxShips, rules.expanded) }));
     const built = buildConquest(choice.map, list, land, seed, rules);
     return { battle: built.battle, conquest: built.conquest, seats: list };
   }

@@ -23,6 +23,7 @@ import { waveField } from '../ocean/waves';
 import { LOD_COUNT, modelKey, ShipRenderer, type ModelAsset } from './ShipRenderer';
 import type { ShipLodQuality } from '../game/quality';
 import { cutHeight, DECKS, mainDeck } from './decks';
+import { byModel, modelKind, modelScale } from './anchors';
 import { RING_FOE, RING_OWN } from './ringTones';
 import { shipObserved } from '../sim/observation';
 
@@ -45,7 +46,13 @@ export type ViewState = {
   lod: number;
   visible: boolean;
   sampleTimer: number;
+  /** The model drawn (an entry of the assets), kind#variant of the model's own kind. */
   key: string;
+  /**
+   * The ship's own kind#variant, for its anchors and deck layout. A kind drawn with another kind's model differs from
+   * `key`: its anchors are the model's scaled to the ship, as the sim's are, and the mesh is scaled at draw time only.
+   */
+  anchors: string;
 };
 
 const INITIAL_RINGS = 256;
@@ -73,6 +80,8 @@ export class ShipViews {
   /** The distances of the nearest ships to the camera, ascending. */
   private readonly nearest: Float64Array;
   private readonly sFlag = new Vector3(1.12, 1.12, 1.12);
+  /** The matrix a ship's mesh is drawn with: its view matrix with an aliased model's scale. */
+  private readonly drawMatrix = new Matrix4();
   private readonly need = new Map<string, number>();
   /** Ships drawn in cutaway, by level (1 roofs off, 2 walls off, 3 down to the rowers' deck). */
   cutaway = new Map<number, number>();
@@ -126,14 +135,14 @@ export class ShipViews {
       caps.set(key, (caps.get(key) ?? 0) + 1);
     }
     for (const [kind, n] of hint) {
-      for (const key of Object.keys(assets)) if (assets[key]!.kind === kind) caps.set(key, Math.max(caps.get(key) ?? 0, n));
+      for (const key of Object.keys(assets)) if (assets[key]!.kind === modelKind(kind)) caps.set(key, Math.max(caps.get(key) ?? 0, n));
     }
     return caps;
   }
 
   private keyFor(s: Ship, assets: Record<string, ModelAsset>) {
-    const key = modelKey(s.spec.kind, s.variant);
-    return assets[key] ? key : modelKey(s.spec.kind, 0);
+    const key = modelKey(modelKind(s.spec.kind), s.variant);
+    return assets[key] ? key : modelKey(modelKind(s.spec.kind), 0);
   }
 
   reset(assets: Record<string, ModelAsset>, battle: Battle, hint: Map<ShipKind, number> = new Map()) {
@@ -264,7 +273,9 @@ export class ShipViews {
           visible: true,
           sampleTimer: 0,
           key: this.keyFor(ship, assets),
+          anchors: '',
         };
+        v.anchors = `${ship.spec.kind}#${v.key.split('#')[1]}`;
         this.states.set(ship.id, v);
       }
       const L = ship.spec.length;
@@ -282,11 +293,13 @@ export class ShipViews {
       }
       this.updateTransform(ship, v, dt, dist);
       const level = this.cutaway.get(ship.id) ?? 0;
-      const main = level ? mainDeck(v.key, ship.spec.kind, ship.spec.deck) : 0;
-      const cut = level ? cutHeight(level, main, DECKS[ship.spec.kind]) : undefined;
+      const main = level ? mainDeck(v.anchors, ship.spec.kind, ship.spec.deck) : 0;
+      const cut = level ? cutHeight(level, main, byModel(DECKS, ship.spec.kind)) : undefined;
+      const scale = modelScale(ship.spec.kind);
       // A model loaded without its near level has fewer levels: the nearest one it has serves the closer ranges.
       const have = assets[v.key]?.lods.length ?? LOD_COUNT;
-      if (v.visible) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, v.matrix, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), v.flash, cut);
+      const draw = scale === 1 ? v.matrix : this.drawMatrix.copy(v.matrix).scale(this.tmp.setScalar(scale));
+      if (v.visible) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), v.flash, cut);
       if (level === 3 && v.visible) props = this.interior(ship, v, main, props);
       const show = (this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0;
       if (show) {
@@ -321,7 +334,7 @@ export class ShipViews {
 
   /** The rowers' deck under a cut-away main deck: floor, posts holding up the deck above, and the oar looms. */
   private interior(s: Ship, v: ViewState, main: number, i: number) {
-    const plan = DECKS[s.spec.kind];
+    const plan = byModel(DECKS, s.spec.kind);
     if (plan.oarDrop <= 0) return i;
     const L = s.spec.length;
     const B = s.spec.beam;

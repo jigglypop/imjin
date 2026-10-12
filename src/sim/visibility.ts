@@ -1,11 +1,12 @@
 import type { Battle } from './battle';
 import type { Conquest } from './conquest';
-import type { Ship, ShipKind, Team } from './types';
+import type { Ship, ShipSpec, Team } from './types';
 
-/** Each navy has a fast scouting craft; extra sight never changes its weapons or durability. */
-export const SCOUT_KINDS: ReadonlySet<ShipKind> = new Set(['hyeopseon', 'kobaya', 'mingsmall']);
 export const MAIN_SIGHT = 900;
+/** The sight of the scouting boats; a campaign fleet with one aboard watches two sea regions ahead. */
 export const SCOUT_SIGHT = 1600;
+/** Scouting craft carry their own lookout range (ShipSpec.sight); extra sight never changes weapons or durability. */
+export const sightRange = (spec: ShipSpec) => spec.sight ?? MAIN_SIGHT;
 const CELL = 500;
 const NIGHT_SHARE = 0.4;
 
@@ -61,7 +62,7 @@ function sightOf(b: Battle): Sight {
   const sight: Sight = { tick, count: b.ships.length, night: b.night, scale, land: b.land, rules: b.rules, teams: { joseon: fresh(), japan: fresh() } };
   for (const s of b.ships) {
     sight.teams[s.team].ships.add(s.id);
-    if (b.isActive(s)) addObserver(b, sight.teams[s.team], { x: s.x, z: s.z, height: s.spec.deck + 4, range: (SCOUT_KINDS.has(s.spec.kind) ? SCOUT_SIGHT : MAIN_SIGHT) * scale, beacon: false });
+    if (b.isActive(s)) addObserver(b, sight.teams[s.team], { x: s.x, z: s.z, height: s.spec.deck + 4, range: sightRange(s.spec) * scale, beacon: false });
   }
   const c = b.rules as Conquest | null;
   if (c && Array.isArray(c.points) && Array.isArray(c.players)) {

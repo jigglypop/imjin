@@ -34,7 +34,10 @@ export interface WorkView {
   cancelable: boolean;
 }
 
-export type ShipClass = 'panokseon' | 'geobukseon' | 'hyeopseon' | 'atakebune' | 'sekibune' | 'kobaya' | 'mingship' | 'mingsmall';
+export type ShipClass =
+  | 'panokseon' | 'geobukseon' | 'hyeopseon' | 'sahuseon' | 'pojakseon'
+  | 'atakebune' | 'sekibune' | 'kobaya' | 'daeantaek' | 'sogantaek' | 'daegwanseon' | 'byeongnyangseon'
+  | 'mingship' | 'mingsmall' | 'gwangseon' | 'haechangseon' | 'hoseon';
 
 export interface RecruitView {
   kind: ShipClass;

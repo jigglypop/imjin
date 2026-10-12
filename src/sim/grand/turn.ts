@@ -452,9 +452,10 @@ function joinOrNewFleet(g: Grand, faction: GrandFaction, at: RegionId, unit: Shi
 const scaleShips = (ships: Partial<Record<ShipKind, number>>, k: number) => Object.fromEntries(Object.entries(ships).map(([kind, n]) => [kind, n! * k])) as Partial<Record<ShipKind, number>>;
 
 function runEvents(g: Grand) {
-  if (g.turn === TUNING.geobukseonTurn && g.factions.joseon.alive && !g.factions.joseon.unlocked.includes('geobukseon')) {
-    g.factions.joseon.unlocked.push('geobukseon');
-    note(g, '나대용이 거북선을 완성했습니다. 선소 2단계에서 건조할 수 있습니다.', undefined, g.player === 'joseon' ? 'good' : 'info');
+  for (const u of TUNING.unlocks) {
+    if (g.turn !== u.turn || !g.factions[u.faction].alive || g.factions[u.faction].unlocked.includes(u.kind)) continue;
+    g.factions[u.faction].unlocked.push(u.kind);
+    note(g, u.note, undefined, g.player === u.faction ? 'good' : 'info');
   }
   for (const f of GRAND_FACTIONS) {
     const plan = TUNING.reinforce[f];

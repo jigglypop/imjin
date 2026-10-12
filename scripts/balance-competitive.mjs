@@ -40,7 +40,7 @@ const load = (p) => server.ssrLoadModule('/src/sim/' + p + '.ts');
 const { Battle, SIM_DT } = await load('battle');
 const { shipSpec, shipMods, shipGunSpec, COMPETITIVE_UNITS, COMPETITIVE_APPRAISAL, combatStats, COMPETITIVE_PROFILE } = await load('competitive');
 const { autoFleet, buildConquest, CONQUEST_MAPS, fleetCost, FLEET_MIX } = await load('maps');
-const { ROSTER, RANKED_OPTIONS, DEFAULT_OPTIONS } = await load('conquest');
+const { rosterOf, RANKED_OPTIONS, DEFAULT_OPTIONS } = await load('conquest');
 // The benchmark must not silently change when the general skirmish economy changes.
 const battleOptions = ruleset === 'ranked' ? RANKED_OPTIONS : DEFAULT_OPTIONS;
 const { autoResolve } = await load('grand/autoresolve');
@@ -87,8 +87,8 @@ function landOf(spec) {
 }
 
 function fleet(faction, composition, money = budget, price = (kind) => shipSpec(kind).cost) {
-  if (composition === 'default' && price('panokseon') === shipSpec('panokseon').cost) return autoFleet(faction, money, COMPETITIVE_PROFILE, battleOptions.maxShips);
-  const kinds = [...ROSTER[faction]].sort((a, b) => price(a) - price(b));
+  if (composition === 'default' && price('panokseon') === shipSpec('panokseon').cost) return autoFleet(faction, money, COMPETITIVE_PROFILE, battleOptions.maxShips, battleOptions.expanded);
+  const kinds = [...rosterOf(faction, battleOptions.expanded)].sort((a, b) => price(a) - price(b));
   const mix = composition === 'heavy' ? [kinds.at(-1)] : composition === 'mobile' ? [kinds[0]] : FLEET_MIX[faction];
   const out = []; let left = money;
   for (let i = 0; i < Math.min(battleOptions.maxShips, Math.floor(money / price(kinds[0])) + 1); i++) {

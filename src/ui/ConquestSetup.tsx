@@ -40,6 +40,15 @@ const ROLE_NOTE: Record<ShipKind, string> = {
   kobaya: '값싼 소형선, 거점 점령',
   mingship: '장거리 불랑기포, 집중 사격',
   mingsmall: '원거리 지원포, 가벼운 선체',
+  sahuseon: '무장 없는 척후선: 가장 멀리 보고 적을 피합니다',
+  pojakseon: '징발한 어선: 아주 싸고 거점을 지킬 수 있습니다',
+  daeantaek: '누각 대장선: 큰 선체·조총, 불에 강합니다',
+  sogantaek: '중형 누각선: 대통과 조총, 아타케부네보다 쌉니다',
+  daegwanseon: '빠른 대형 돌격선, 적 함선 도선',
+  byeongnyangseon: '무장 없는 수송선: 가까운 아군 4척의 병력·탄약을 보급합니다',
+  gwangseon: '철력목 대형선: 단단한 선체, 충돌에 강합니다 (조선 파견 기록 없음)',
+  haechangseon: '중형 전선: 불랑기포 4문 (조선 파견 기록 없음)',
+  hoseon: '빠른 소형선: 불랑기포, 거점 습격',
 };
 
 const TRAIT = COMPETITIVE_TRAITS;

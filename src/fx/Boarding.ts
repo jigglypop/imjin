@@ -1261,7 +1261,7 @@ export class Boarding {
 
   /** A place on the target ship, in its own frame, for an arrow from (sx, sz): in the planks of the deck or in the wall facing the shooter. */
   private hitPoint(target: Ship, sx: number, sz: number) {
-    const key = this.views.states.get(target.id)?.key ?? `${target.spec.kind}#0`;
+    const key = this.views.states.get(target.id)?.anchors ?? `${target.spec.kind}#0`;
     const lay = layoutFor(key, target.spec.kind, target.spec.length, target.spec.beam);
     const main = mainDeck(key, target.spec.kind, target.spec.deck);
     const c = Math.cos(target.heading);

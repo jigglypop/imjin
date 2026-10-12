@@ -835,8 +835,73 @@ function scaledAnchors(a: ShipAnchors, scale: number): ShipAnchors {
   };
 }
 
+/** The kinds with a procedural model of their own. */
+export type ModelKind = 'panokseon' | 'geobukseon' | 'hyeopseon' | 'atakebune' | 'sekibune' | 'kobaya' | 'mingship' | 'mingsmall';
+
+/**
+ * Kinds drawn, until they get silhouettes of their own, with the model of their nearest relative of the same navy,
+ * enlarged or shrunk uniformly to their own length. The renderer draws them from the relative's GPU data (one copy
+ * serves both) with the scale in the instance matrix; their anchors are the relative's, scaled the same way.
+ */
+export const MODEL_ALIAS: Record<Exclude<ShipKind, ModelKind>, ModelKind> = {
+  sahuseon: 'hyeopseon',
+  pojakseon: 'hyeopseon',
+  daeantaek: 'atakebune',
+  sogantaek: 'atakebune',
+  daegwanseon: 'sekibune',
+  byeongnyangseon: 'sekibune',
+  gwangseon: 'mingship',
+  haechangseon: 'mingship',
+  hoseon: 'mingsmall',
+};
+
+/** The kind whose model draws this kind. */
+export const modelKind = (kind: ShipKind): ModelKind => (MODEL_ALIAS as Partial<Record<ShipKind, ModelKind>>)[kind] ?? (kind as ModelKind);
+/** Uniform scale from the model's ship space to this kind's: 1 for a kind drawn with its own model. */
+export const modelScale = (kind: ShipKind) => SHIP_SPECS[kind].length / SHIP_SPECS[modelKind(kind)].length;
+/** A table kept per model, read for any kind. */
+export const byModel = <T>(table: Record<ModelKind, T>, kind: ShipKind): T => table[modelKind(kind)];
+/** How much larger a kind's runtime anchors are than its construction plan: the turtle ship's enlargement, or an alias's scale. */
+export const anchorScale = (kind: ShipKind) => (kind === 'geobukseon' ? GEOBUK_SCALE : modelScale(kind));
+
+/** The portrait card of a squadron of this kind: the nearest of the four ship cards. */
+export function cardOf(kind: ShipKind) {
+  const model = modelKind(kind);
+  return `card_${model === 'hyeopseon' || SHIP_SPECS[kind].faction === 'ming' ? 'panokseon' : model === 'kobaya' ? 'sekibune' : model}`;
+}
+
+const aliasRegistry = new Map<string, ShipAnchors>();
+
+/**
+ * An aliased kind's anchors: its model's, scaled, with its own guns placed on the model's ports of the same side.
+ * More guns than ports share them, fewer take ports spread from stern to bow, so every shot leaves a drawn gun.
+ */
+function aliasAnchors(kind: ShipKind, model: ShipAnchors): ShipAnchors {
+  const scaled = scaledAnchors(model, modelScale(kind));
+  const slots = gunSlots(kind);
+  const gunPorts: GunPort[] = [];
+  for (const side of [0, 1, 2] as const) {
+    const ports = scaled.gunPorts.filter((g) => g.side === side).sort((p, q) => p.index - q.index);
+    const guns = slots[side]!;
+    if (!ports.length) continue;
+    guns.forEach((gun, index) => {
+      const at = guns.length <= 1 ? Math.round((ports.length - 1) / 2) : Math.round((index * (ports.length - 1)) / (guns.length - 1));
+      gunPorts.push({ ...ports[at]!, index, gun });
+    });
+  }
+  return { ...scaled, gunPorts };
+}
+
 /** Runtime anchors: match the uniformly enlarged geometry, including cannon, crew, oars and smoke. */
 export function anchorsFor(key: string): ShipAnchors | undefined {
+  const [kind, variant] = key.split('#') as [ShipKind, string | undefined];
+  const model = (MODEL_ALIAS as Partial<Record<ShipKind, ModelKind>>)[kind];
+  if (model) {
+    let a = aliasRegistry.get(key);
+    const base = a ? undefined : anchorsFor(`${model}#${variant ?? 0}`);
+    if (!a && base) { a = aliasAnchors(kind, base); aliasRegistry.set(key, a); }
+    return a;
+  }
   const raw = buildAnchorsFor(key);
   if (!raw || !key.startsWith('geobukseon#')) return raw;
   let a = scaledRegistry.get(key);
@@ -863,14 +928,17 @@ export function buildAnchorsFor(key: string): ShipAnchors | undefined {
   return a;
 }
 
-export const PROCEDURAL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
-/** How many models a kind has. */
-export const variantCount = (kind: ShipKind) => (kind === 'panokseon' ? PANOK_PLANS.length : kind === 'atakebune' ? ATAKE_PLANS.length : kind === 'sekibune' ? SEKI_PLANS.length : 1);
+export const PROCEDURAL_KINDS: ModelKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
+/** How many models a kind has: an aliased kind has its model's. */
+export function variantCount(kind: ShipKind) {
+  const model = modelKind(kind);
+  return model === 'panokseon' ? PANOK_PLANS.length : model === 'atakebune' ? ATAKE_PLANS.length : model === 'sekibune' ? SEKI_PLANS.length : 1;
+}
 
 /** Model variant of the i-th ship of a kind in a fleet: the flagship keeps the first, the rest alternate through the others. */
 export function variantFor(kind: ShipKind, i: number, flagship = false) {
   const n = variantCount(kind);
   if (n === 1) return 0;
-  if (kind === 'panokseon') return flagship ? 0 : 1 + (i % 2);
+  if (modelKind(kind) === 'panokseon') return flagship ? 0 : 1 + (i % 2);
   return i % n;
 }

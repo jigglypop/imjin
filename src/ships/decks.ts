@@ -1,5 +1,5 @@
 import type { ShipKind } from '../sim/types';
-import { ATAKE_PLANS, ATAKE_TURRET, HYEOP_PLAN, KOBAYA_PLAN, MING_PLAN, MINGSMALL_PLAN, PANOK_PLANS, SEKI_PLANS, anchorsFor } from './anchors';
+import { ATAKE_PLANS, ATAKE_TURRET, HYEOP_PLAN, KOBAYA_PLAN, MING_PLAN, MINGSMALL_PLAN, PANOK_PLANS, SEKI_PLANS, anchorsFor, byModel, modelKind, modelScale, type ModelKind } from './anchors';
 import { useProcedural } from './build/mode';
 
 /**
@@ -36,7 +36,8 @@ export type DeckPlan = {
   oars: number;
 };
 
-export const DECKS: Record<ShipKind, DeckPlan> = {
+/** Per model; read it for a ship with byModel, as a kind drawn with another's model shares its deck plan. */
+export const DECKS: Record<ModelKind, DeckPlan> = {
   panokseon: { oarDrop: 1.9, open: true, length: 0.66, beam: 0.72, command: { x: -0.12, up: 3.2 }, figures: { oar: 24, gun: 14, shot: 12, melee: 8 }, oars: 8 },
   geobukseon: { oarDrop: 2.5, open: false, length: 0.62, beam: 0.62, command: null, figures: { oar: 20, gun: 12, shot: 2, melee: 4 }, oars: 8 },
   hyeopseon: { oarDrop: 0, open: true, length: 0.6, beam: 0.5, command: null, figures: { oar: 8, gun: 2, shot: 2, melee: 1 }, oars: 4 },
@@ -89,7 +90,7 @@ export type DeckLayout = {
 
 const layouts = new Map<string, DeckLayout>();
 
-function obstaclesFor(kind: ShipKind, variant: number): Obstacle[] {
+function obstaclesFor(kind: ModelKind, variant: number): Obstacle[] {
   if (kind === 'atakebune') {
     const p = ATAKE_PLANS[variant] ?? ATAKE_PLANS[0]!;
     const out: Obstacle[] = [{ x: p.cx, z: 0, hx: p.tiers[0]!.hx, hz: p.tiers[0]!.hz }];
@@ -105,7 +106,7 @@ function obstaclesFor(kind: ShipKind, variant: number): Obstacle[] {
   return [];
 }
 
-function railUpFor(kind: ShipKind, variant: number, main: number) {
+function railUpFor(kind: ModelKind, variant: number, main: number) {
   if (kind === 'panokseon') return (PANOK_PLANS[variant] ?? PANOK_PLANS[0]!).parapet;
   if (kind === 'atakebune') return (ATAKE_PLANS[variant] ?? ATAKE_PLANS[0]!).parapet;
   if (kind === 'sekibune') return (SEKI_PLANS[variant] ?? SEKI_PLANS[0]!).parapet;
@@ -121,10 +122,12 @@ export function layoutFor(key: string, kind: ShipKind, length: number, beam: num
   const cached = layouts.get(key);
   if (cached) return cached;
   const variant = Number(key.split('#')[1] ?? 0);
-  const plan = DECKS[kind];
+  const plan = byModel(DECKS, kind);
   const a = useProcedural(kind) ? anchorsFor(key) : undefined;
   let out: DeckLayout;
   if (a) {
+    // The plans are in the model's metres; a kind drawn with another's model has its anchors, and so its deck, scaled.
+    const model = modelKind(kind), k = modelScale(kind);
     const sides: [number[], number[]] = [[], []];
     for (const g of a.gunPorts) if (g.side < 2) sides[g.side as 0 | 1].push(g.pos[0]);
     sides[0].sort((p, q) => p - q);
@@ -135,8 +138,8 @@ export function layoutFor(key: string, kind: ShipKind, length: number, beam: num
       x0: a.deckBounds.x0,
       x1: a.deckBounds.x1,
       edge: (x) => Math.max(0.8, a.deckBounds.halfBeam(x)),
-      railUp: railUpFor(kind, variant, a.mainDeck),
-      obstacles: obstaclesFor(kind, variant),
+      railUp: railUpFor(model, variant, a.mainDeck / k) * k,
+      obstacles: obstaclesFor(model, variant).map((o) => ({ x: o.x * k, z: o.z * k, hx: o.hx * k, hz: o.hz * k })),
       oarDrop: a.oarDeck === null ? 0 : a.mainDeck - a.oarDeck,
       guns: sides[0].length + sides[1].length > 0 ? sides : null,
       command: a.commandDeck ? { x: a.commandDeck[0], up: a.commandDeck[1] - a.mainDeck } : null,

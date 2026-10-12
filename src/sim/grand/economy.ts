@@ -59,8 +59,12 @@ export const TUNING = {
   } as Record<GrandFaction, { first: number; every: number; at: RegionId; ships: Partial<Record<ShipKind, number>> }>,
   /** Allied campaign train/development cohorts account for unequal opening holdings and expedition travel. */
   startFleet: { joseon: 0.98, japan: 0.74, ming: 1.95 } as Record<GrandFaction, number>,
-  /** Turn the first turtle ship can be built. */
-  geobukseonTurn: 3,
+  /** Ships a navy can build only once their design is ready (GATES `unlock`): the turn, and the news it brings. */
+  unlocks: [
+    { faction: 'joseon', kind: 'geobukseon', turn: 3, note: '나대용이 거북선을 완성했습니다. 선소 2단계에서 건조할 수 있습니다.' },
+    { faction: 'japan', kind: 'daeantaek', turn: 3, note: '구키 요시타카가 누각 대장선 대안택선을 완성했습니다. 선소 3단계에서 건조할 수 있습니다.' },
+    { faction: 'ming', kind: 'gwangseon', turn: 6, note: '광둥의 철력목 전선 광선의 설계가 전해졌습니다. 선소 3단계에서 건조할 수 있습니다.' },
+  ] as { faction: GrandFaction; kind: ShipKind; turn: number; note: string }[],
   faction: {
     // Fast-production development cohorts retain each navy's distinct expedition and opening holdings.
     // Joseon opens with twenty-two ports and their standing garrisons to Japan's sixteen, so its income per port is the lowest.
@@ -167,7 +171,11 @@ export const kindsOf = (faction: GrandFaction): ShipKind[] =>
 /** Ships that need a better shipyard and an unlock. */
 export const GATES: Partial<Record<ShipKind, { yard: number; unlock: boolean }>> = {
   geobukseon: { yard: 2, unlock: true },
+  daeantaek: { yard: 3, unlock: true },
+  sogantaek: { yard: 2, unlock: false },
+  gwangseon: { yard: 3, unlock: true },
   mingship: { yard: 1, unlock: false },
+  haechangseon: { yard: 1, unlock: false },
 };
 
 /** The local boat each navy leaves to guard a port. */

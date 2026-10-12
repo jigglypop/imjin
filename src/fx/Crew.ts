@@ -3,6 +3,7 @@ import type { Battle } from '../sim/battle';
 import type { BattleEvent, Ship, Team } from '../sim/types';
 import type { ShipViews } from '../ships/ShipViews';
 import { DECKS, blocked, layoutFor, mainDeck, type DeckLayout, type DeckPlan } from '../ships/decks';
+import { byModel } from '../ships/anchors';
 import { equipment } from '../game/quality';
 import { beginCrew, crewTime, endCrew, loadCrew, pushCrew, type Clip, type ClipName, type CrewAsset, type CrewKey } from './crewModels';
 import { disposeTree } from '../render/dispose';
@@ -145,9 +146,9 @@ export class Crew {
 
   private roster(ship: Ship): Roster {
     let r = this.rosters.get(ship.id);
-    const key = this.views.states.get(ship.id)?.key ?? `${ship.spec.kind}#0`;
+    const key = this.views.states.get(ship.id)?.anchors ?? `${ship.spec.kind}#0`;
     if (r && r.key === key) return r;
-    const plan = DECKS[ship.spec.kind];
+    const plan = byModel(DECKS, ship.spec.kind);
     const figures = { oar: plan.figures.oar, gun: plan.figures.gun, shot: Math.round(plan.figures.shot * FIGHTERS), melee: Math.round(plan.figures.melee * FIGHTERS) };
     const layout = layoutFor(key, ship.spec.kind, ship.spec.length, ship.spec.beam);
     r = {

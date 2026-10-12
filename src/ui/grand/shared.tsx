@@ -69,6 +69,15 @@ export const SHIP_NAME: Record<ShipClass, string> = {
   kobaya: '고바야',
   mingship: '명 대형선',
   mingsmall: '명 소형선',
+  sahuseon: '사후선',
+  pojakseon: '포작선',
+  daeantaek: '대안택선',
+  sogantaek: '소안택선',
+  daegwanseon: '대관선',
+  byeongnyangseon: '병량선',
+  gwangseon: '명 광선',
+  haechangseon: '명 해창선',
+  hoseon: '명 호선',
 };
 
 export const shipName = (kind: ShipClass) => t(SHIP_NAME[kind]);

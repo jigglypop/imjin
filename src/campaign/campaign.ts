@@ -162,6 +162,15 @@ const KIND_COST: Record<ShipKind, { hull: number; crew: number; supply: number }
   kobaya: { hull: 0.2, crew: 0.2, supply: 0.1 },
   mingship: { hull: 1, crew: 1, supply: 1 },
   mingsmall: { hull: 0.4, crew: 0.4, supply: 0.3 },
+  sahuseon: { hull: 0.1, crew: 0.05, supply: 0 },
+  pojakseon: { hull: 0.15, crew: 0.1, supply: 0.05 },
+  daeantaek: { hull: 1.3, crew: 1.2, supply: 1.2 },
+  sogantaek: { hull: 0.7, crew: 0.6, supply: 0.6 },
+  daegwanseon: { hull: 0.6, crew: 0.6, supply: 0.5 },
+  byeongnyangseon: { hull: 0.5, crew: 0.3, supply: 0.2 },
+  gwangseon: { hull: 1.3, crew: 1, supply: 1 },
+  haechangseon: { hull: 0.6, crew: 0.6, supply: 0.6 },
+  hoseon: { hull: 0.3, crew: 0.3, supply: 0.2 },
 };
 
 export function repairCost(c: Campaign) {
