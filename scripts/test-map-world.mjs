@@ -17,7 +17,7 @@ try {
     bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent',
   });
   const path = join(temporary, 'map-world.mjs'); await writeFile(path, bundled.outputFiles[0].contents);
-  const { settlementPieces, faceSea, buildWorld, anchorage, hullsFor, hash, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, WALL_KINDS, WATER_KINDS, SHIP_CAP, flagSpot, formation, transitShare, transitSpot, pointAlong, buildSails, cardRect, overlaps, pickCards } = await import(pathToFileURL(path).href);
+  const { settlementPieces, faceSea, buildWorld, anchorage, campTier, hullsFor, hash, HULL_LENGTH, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, WALL_KINDS, WATER_KINDS, SHIP_CAP, flagSpot, formation, transitShare, transitSpot, pointAlong, buildSails, cardRect, overlaps, pickCards } = await import(pathToFileURL(path).href);
   const kinds = (level) => new Set(settlementPieces(level).map((p) => p.kind));
   const buildings = (level) => settlementPieces(level).filter((p) => !WALL_KINDS.has(p.kind)).length;
 
@@ -82,6 +82,8 @@ try {
   check('a squadron is drawn with a few hulls, never more than five', () => {
     assert.deepEqual([0, 1, 2, 3, 10, 30, 400].map(hullsFor), [0, 1, 2, 2, 3, 5, 5]);
     for (let n = 1; n < 60; n++) assert.ok(hullsFor(n + 1) >= hullsFor(n));
+    // A camp's model tier: one per level up to the third, the top two levels sharing the largest.
+    assert.deepEqual([1, 2, 3, 4].map(campTier), [1, 2, 3, 3]);
   });
   check('ships anchor on water when there is some and still get a berth when there is none', () => {
     const east = (x) => x > 1;
@@ -93,7 +95,47 @@ try {
     }
     assert.equal(anchorage(3, 5, () => false).length, 3);
     assert.deepEqual(anchorage(3, 5, east), anchorage(3, 5, east), 'deterministic');
+    assert.deepEqual(anchorage(0, 5, east), []);
     assert.notEqual(hash('yeosu'), hash('busan'));
+  });
+  check('a squadron at anchor lies in tidy rows off the port, all one heading, every hull afloat bow to stern', () => {
+    // Open sea to the south (positive z) beyond a coast one radius off the port.
+    const south = (x, z) => z > 1;
+    for (const count of [1, 3, 5]) {
+      const spots = anchorage(count, 11, south);
+      assert.equal(new Set(spots.map((s) => s.rot.toFixed(6))).size, 1, `${count}: one heading`);
+      for (const s of spots) for (const k of [-0.5, 0, 0.5]) {
+        assert.ok(south(s.x + Math.sin(s.rot) * k * HULL_LENGTH, s.z + Math.cos(s.rot) * k * HULL_LENGTH), `${count}: hull afloat`);
+      }
+      // Bows out to sea, and hulls a beam or more apart.
+      assert.ok(Math.cos(spots[0].rot) > 0.7, `${count}: bows face the open sea`);
+      spots.forEach((a, i) => spots.slice(i + 1).forEach((b) => assert.ok(Math.hypot(a.x - b.x, a.z - b.z) >= HULL_LENGTH * 0.45, `${count}: ${i} crowds another`)));
+      assert.ok(Math.max(...spots.map((s) => Math.hypot(s.x, s.z))) < 5, `${count}: close to its port`);
+    }
+    // A camp's docks and ships already at anchor are kept clear of.
+    const camp = { x: 0, z: 2.5, r: 1.9 };
+    const clear = anchorage(5, 11, south, [camp]);
+    assert.ok(clear.every((s) => Math.hypot(s.x - camp.x, s.z - camp.z) >= camp.r), 'clear of the camp');
+  });
+  check('every navy at a port gets its own berths, the owner\'s first, clear of the camp', () => {
+    const regions = [region('a', 127.7, 34.7)];
+    const p = project(127.7, 34.7);
+    // Water everywhere south of the port.
+    const isSea = (u, v) => v > p.v + SETTLEMENT_RADIUS * MAP_ASPECT * 0.5;
+    const world = buildWorld(regions, [fleet('f1', 'a', 20, 'japan'), fleet('f2', 'a', 9)], null, isSea);
+    const first = world.fleets.find((f) => f.faction === 'joseon'), second = world.fleets.find((f) => f.faction === 'japan');
+    const nearest = (f) => Math.min(...f.berths.map((b) => Math.hypot(b.x, b.z)));
+    assert.ok(nearest(first) <= nearest(second), 'the owner berths first, nearest its port');
+    assert.equal(first.berths.length, first.count);
+    assert.equal(second.berths.length, second.count);
+    const camp = world.settlements[0];
+    const cx = (camp.u - p.u) / SETTLEMENT_RADIUS, cz = (camp.v - p.v) / MAP_ASPECT / SETTLEMENT_RADIUS;
+    for (const f of world.fleets) for (const b of f.berths) {
+      assert.ok(isSea(p.u + b.x * SETTLEMENT_RADIUS, p.v + b.z * SETTLEMENT_RADIUS * MAP_ASPECT), 'on the water');
+      assert.ok(Math.hypot(b.x - cx, b.z - cz) >= 1.9, 'clear of the camp');
+    }
+    for (const a of first.berths) for (const b of second.berths) assert.ok(Math.hypot(a.x - b.x, a.z - b.z) >= HULL_LENGTH * 0.8, 'the two squadrons do not share water');
+    assert.deepEqual(buildWorld(regions, [fleet('f1', 'a', 3)]).fleets[0].berths, [], 'no berths without the sea');
   });
   const NAVIES = ['joseon', 'japan', 'ming'];
   const names = (faction, level) => new Set(settlementPieces(level, faction).map((p) => p.kind));
@@ -205,6 +247,19 @@ try {
     assert.equal(buildWorld(regions, [fleet('f', null, 2, 'joseon', { transit: { from: 'a', to: 'b', left: 2 } })], null, (u) => island(u)).fleets[0].u, off.u, 'the world takes the same spot');
     const allLand = transitSpot(a, b, 2, () => false);
     assert.ok(Math.abs(allLand.u - mid) < 1e-12 && allLand.share === 0.5, 'no water anywhere: it keeps its place');
+    // The campaign may say how far along the lane a fleet got: anywhere on it, a little off both ports.
+    assert.equal(transitSpot(a, b, 2, undefined, 0.3).share, 0.3);
+    assert.equal(transitSpot(a, b, 2, undefined, 0).share, 0.08);
+    assert.equal(transitSpot(a, b, 2, undefined, 1).share, 0.92);
+    const sailed = buildWorld(regions, [fleet('f', null, 2, 'joseon', { transit: { from: 'a', to: 'b', left: 2, progress: 0.2 } })]).fleets[0];
+    assert.ok(Math.abs(sailed.u - (pa.u + (pb.u - pa.u) * 0.2)) < 1e-12, 'the world takes the progress');
+    // Two navies meeting half way, one from each end: drawn apart, not on top of each other.
+    const met = buildWorld(regions, [
+      fleet('f', null, 4, 'joseon', { transit: { from: 'a', to: 'b', left: 1, progress: 0.5 } }),
+      fleet('g', null, 4, 'japan', { transit: { from: 'b', to: 'a', left: 1, progress: 0.5 } }),
+    ]).fleets;
+    const apart = Math.hypot(met[0].u - met[1].u, (met[0].v - met[1].v) / MAP_ASPECT);
+    assert.ok(apart >= SETTLEMENT_RADIUS * HULL_LENGTH * 3 - 1e-12, `meeting squadrons ${apart} apart`);
   });
   check('a squadron rides in a wedge behind its leader, hulls clear of each other and at most two hulls deep', () => {
     assert.deepEqual(formation(0), []);

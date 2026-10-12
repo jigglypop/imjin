@@ -6,12 +6,12 @@ import { useT } from '../../i18n';
 import { FACTION_INFO, FactionCrest, Icon, navyName } from './shared';
 import { campArt, campImage, campLevel } from './campArt';
 import { shipsText, turnsText } from './text';
-import type { FactionId, FleetView, RegionView, ReplayView } from './types';
+import type { FactionId, FleetView, MarchRouteView, RegionView, ReplayView, SpotView } from './types';
 import type { MapScene } from './MapScene';
 import { DEM_RECT, groundElevation } from './mapMath';
 import { clampState, frameAll, panBy, projectFrame, screenFrame, turn, zoomAt as zoomCameraAt, type CameraState } from './worldCamera';
 import { boxBetween, markersInBox, type Marker } from './boxSelect';
-import { buildWorld, transitSpot, type IsSea } from './mapWorld';
+import { buildWorld, HULL_LENGTH, laneSpot, SETTLEMENT_RADIUS, type IsSea } from './mapWorld';
 import { cardRect, pickCards } from './cardLayout';
 
 export interface MapInsets {
@@ -31,6 +31,12 @@ export interface GrandMapProps {
   selectedFleetIds?: ReadonlySet<string>;
   /** Regions the selected fleet may sail to: highlighted and pulsing. */
   moveTargets?: string[];
+  /** March rules: the turns the selected fleet needs to reach each port, drawn as a ring coloured by them. */
+  reach?: Record<string, number>;
+  /** March rules: the way the selected fleet is ordered to sail, turn by turn. */
+  route?: MarchRouteView | null;
+  /** March rules: the way the selected fleet would sail to a port, shown while the pointer is over that port. */
+  routeFor?: (portId: string) => MarchRouteView | null;
   /** Screen space covered by panels; a focused region is centred in the rest. */
   insets?: MapInsets;
   /** Pans to this region when `nonce` changes. */
@@ -77,7 +83,7 @@ function boxHintSeen() {
   try { return localStorage.getItem(HINT_KEY) === '1'; } catch { return false; }
 }
 
-/** Where a fleet badge sits on its port: stacked on the side away from the label, clear of the disc and its ring. */
+/** Where a fleet badge sits on its port in the flat map: stacked on the side away from the label, clear of the disc and its ring. */
 function badgeSpot(x: number, y: number, rad: number, labelSide: string | undefined, i: number) {
   return { x: x + rad * 0.6, y: y + (labelSide === 't' ? 1 : -1) * (rad + 22 + i * 30) };
 }
@@ -101,6 +107,10 @@ function nodeRadius(r: RegionView) {
   return r.offMap ? 16 : 11 + r.value * 3;
 }
 
+/** The movement range's colours, as on a campaign map: this turn green, the next yellow, later orange. */
+const TURN_TONES = ['#86d97a', '#efd25c', '#f0954a'];
+const turnTone = (turn: number) => TURN_TONES[Math.min(TURN_TONES.length, Math.max(1, turn)) - 1]!;
+
 /** Strategic map: elevation mesh, sea lanes, region nodes and fleets share the same projection. */
 export function GrandMap({
   regions,
@@ -110,6 +120,9 @@ export function GrandMap({
   selectedFleetId,
   selectedFleetIds,
   moveTargets,
+  reach,
+  route,
+  routeFor,
   insets = NO_INSETS,
   focus,
   onSelectRegion,
@@ -440,7 +453,7 @@ export function GrandMap({
   const gesture = useRef({ moved: false, rotating: false, boxing: false, startX: 0, startY: 0, pinch: 0, angle: 0, mx: 0, my: 0 });
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
+    if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 1 && e.button !== 2) return;
     touched.current = true;
     cancelAnimationFrame(anim.current);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -449,7 +462,8 @@ export function GrandMap({
       g.moved = false;
       // Ctrl/Cmd (or the box switch, unless Space is held) draws a box; Shift then only means "add to the batch".
       g.boxing = e.button === 0 && !!onBoxSelect && (e.ctrlKey || e.metaKey || (boxMode && !spaceDown.current));
-      g.rotating = !g.boxing && !!heights && (e.shiftKey || e.button === 2);
+      // The right or the middle button, or Shift or Alt with the left, turns the view sideways and tips it up and down.
+      g.rotating = !g.boxing && !!heights && (e.shiftKey || e.altKey || e.button === 1 || e.button === 2);
       g.startX = e.clientX;
       g.startY = e.clientY;
     } else {
@@ -596,8 +610,12 @@ export function GrandMap({
   if (w > 0) for (const r of regions) { const f = frames.get(r.id)!; spots.set(r.id, place(f.u, f.v, f.e)); }
   const px = (id: string) => spots.get(id)!.x;
   const py = (id: string) => spots.get(id)!.y;
-  /** Nearer things draw over farther ones. */
-  const layer = (id: string) => (inWorld ? Math.round((2 - Math.min(2, spots.get(id)?.depth ?? 1)) * 400) : undefined);
+  /** Nearer things draw over farther ones, from 0 to 800; the hovered and the selected port come in front of them all. */
+  const layer = (id: string) => {
+    if (id === hovered) return 802;
+    if (id === selectedRegionId) return 801;
+    return inWorld ? Math.round((2 - Math.min(2, spots.get(id)?.depth ?? 1)) * 400) : undefined;
+  };
 
   const targets = useMemo(() => new Set(moveTargets ?? []), [moveTargets]);
   const selectedFleet = fleets.find((f) => f.id === selectedFleetId);
@@ -621,30 +639,58 @@ export function GrandMap({
     return m;
   }, [fleets]);
   const sailing = useMemo(() => fleets.filter((f) => f.transit && byId.has(f.transit.from) && byId.has(f.transit.to)), [fleets, byId]);
-  /** Where a fleet on a lane stands, in the map's pixels: the middle of its 3D ships, on the ground they ride on. */
+  /**
+   * Where a fleet on a lane stands, in the map's pixels: the middle of its 3D ships, on the ground they ride on; its pill
+   * floats just over their mastheads (`pill`), and `depth` orders it among the other marks.
+   */
   const lanePoint = (f: FleetView) => {
-    const lane = f.transit!;
-    const spot = transitSpot(byId.get(lane.from)!, byId.get(lane.to)!, lane.left, isSea);
+    // The world's spot, which keeps squadrons meeting on a lane apart; the lane's own before the world has the sea.
+    const spot = groups.get(f.id) ?? laneSpot(f, byId, isSea)!;
     const at = place(spot.u, spot.v, heights ? groundElevation(heights, spot.u, spot.v) : 0);
-    return { x: at.x, y: at.y };
+    // A squadron under way is about two hulls deep: the mastheads of its rear rank stand this far over its middle.
+    const lift = inWorld ? at.y - place(spot.u, spot.v, SETTLEMENT_RADIUS * HULL_LENGTH * 1.6).y : 0;
+    return { x: at.x, y: at.y, pill: at.y - lift - (inWorld ? 16 : 0), depth: at.depth };
   };
-
-  // The centres of what a box can take, in the same pixels the markers are placed with. Only the player's own forces count.
-  const ownBadges: Marker[] = [];
-  const ownPorts: Marker[] = [];
-  if (w > 0) {
-    for (const [rid, list] of fleetsAt) {
-      const r = byId.get(rid);
-      if (!r) continue;
-      list.forEach((f, i) => {
-        if (f.faction === me) ownBadges.push({ id: f.id, ...badgeSpot(px(rid), py(rid), nodeRadius(r), r.labelSide, i) });
-      });
-    }
-    for (const f of sailing) {
-      if (f.faction === me) ownBadges.push({ id: f.id, ...lanePoint(f) });
-    }
-    for (const r of regions) if (r.owner === me && r.garrison > 0 && spots.get(r.id)?.ok) ownPorts.push({ id: r.id, x: px(r.id), y: py(r.id) });
+  /** The 3D squadrons by key: a port's navy (`port/faction`) at anchor, a fleet's id under way. */
+  const groups = new Map(mapWorld.fleets.map((g) => [g.key, g]));
+  // The port discs and labels on screen, which a fleet's pill must not cover.
+  const marks: { x0: number; y0: number; x1: number; y1: number }[] = [];
+  if (w > 0) for (const r of regions) {
+    const sp = spots.get(r.id);
+    if (!sp?.ok || sp.x < -80 || sp.y < -80 || sp.x > w + 80 || sp.y > h + 80) continue;
+    const rad = nodeRadius(r) + 3;
+    marks.push({ x0: sp.x - rad, y0: sp.y - rad, x1: sp.x + rad, y1: sp.y + rad });
+    // A label is about 6 px a character wide, a line tall, on its side of the disc.
+    const side = r.labelSide ?? 'b', half = r.name.length * 6.5 + 4;
+    if (side === 'b') marks.push({ x0: sp.x - half, y0: sp.y + rad, x1: sp.x + half, y1: sp.y + rad + 18 });
+    else if (side === 't') marks.push({ x0: sp.x - half, y0: sp.y - rad - 18, x1: sp.x + half, y1: sp.y - rad });
+    else if (side === 'l') marks.push({ x0: sp.x - rad - 2 * half, y0: sp.y - 9, x1: sp.x - rad, y1: sp.y + 9 });
+    else marks.push({ x0: sp.x + rad, y0: sp.y - 9, x1: sp.x + rad + 2 * half, y1: sp.y + 9 });
   }
+  /**
+   * Where a fleet's pill sits at its port: over the 3D ships that stand for it (or under them when that covers a port's
+   * disc or label), the fleets of one navy stacked; in the flat map, or with no ships drawn, beside the port's disc.
+   */
+  const portBadge = (r: RegionView, list: FleetView[], f: FleetView) => {
+    const group = inWorld ? groups.get(`${r.id}/${f.faction}`) : undefined;
+    if (!group?.berths.length) return badgeSpot(px(r.id), py(r.id), nodeRadius(r), r.labelSide, list.indexOf(f));
+    const k = list.filter((o) => o.faction === f.faction).indexOf(f);
+    // The squadron's outline on screen, from its waterlines to its mastheads.
+    let x0 = Infinity, x1 = -Infinity, top = Infinity, bottom = -Infinity;
+    for (const b of group.berths) {
+      const u = group.u + b.x * SETTLEMENT_RADIUS, v = group.v + b.z * SETTLEMENT_RADIUS * MAP_ASPECT;
+      const low = place(u, v, 0), high = place(u, v, SETTLEMENT_RADIUS * HULL_LENGTH * 0.75);
+      x0 = Math.min(x0, low.x); x1 = Math.max(x1, low.x);
+      top = Math.min(top, high.y); bottom = Math.max(bottom, low.y);
+    }
+    const x = (x0 + x1) / 2;
+    const covers = (y: number) => marks.some((m) => x + 34 > m.x0 && x - 34 < m.x1 && y + 14 > m.y0 && y - 14 < m.y1);
+    // The whole stack goes under the ships when over them it would cover a mark and under them it would not.
+    const n = list.filter((o) => o.faction === f.faction).length;
+    const stack = (y0: number, dir: number) => Array.from({ length: n }, (_, i) => y0 + dir * i * 30);
+    const under = stack(top - 18, -1).some(covers) && !stack(bottom + 18, 1).some(covers);
+    return { x, y: under ? bottom + 18 + k * 30 : top - 18 - k * 30 };
+  };
 
   const showLabel = (r: RegionView) => r.id === selectedRegionId || r.offMap || r.value >= 3 || zoomRatio >= 1.1 || (zoomRatio >= 0.85 && r.value >= 2);
 
@@ -670,6 +716,46 @@ export function GrandMap({
       });
     for (const id of pickCards(candidates, selectedRegionId, hovered, MAX_CARDS, discs)) cards.add(id);
   }
+  // A pill keeps off the cards shown as well.
+  for (const id of cards) { const r = byId.get(id)!; marks.push(cardRect(px(id), py(id), nodeRadius(r), r.labelSide ?? 'b', CARD_W, CARD_H)); }
+
+  // The centres of what a box can take, in the same pixels the markers are placed with. Only the player's own forces count.
+  const ownBadges: Marker[] = [];
+  const ownPorts: Marker[] = [];
+  if (w > 0) {
+    for (const [rid, list] of fleetsAt) {
+      const r = byId.get(rid);
+      if (!r) continue;
+      for (const f of list) if (f.faction === me) ownBadges.push({ id: f.id, ...portBadge(r, list, f) });
+    }
+    for (const f of sailing) {
+      if (f.faction === me) { const at = lanePoint(f); ownBadges.push({ id: f.id, x: at.x, y: at.pill }); }
+    }
+    for (const r of regions) if (r.owner === me && r.garrison > 0 && spots.get(r.id)?.ok) ownPorts.push({ id: r.id, x: px(r.id), y: py(r.id) });
+  }
+
+  // The movement line: the way to the port under the pointer when the selected fleet can go there, else the way it is ordered.
+  const hoverRoute = useMemo(() => (hovered && routeFor && reach?.[hovered] !== undefined ? routeFor(hovered) : null), [hovered, routeFor, reach]);
+  const shownRoute = hoverRoute ?? route ?? null;
+  /** A spot of a route on the screen: a port, or a share of the way along a lane; where the fleet lies at sea, its own pill. */
+  const spotAt = (sp: SpotView, first: boolean): { x: number; y: number; port?: RegionView } | null => {
+    if (first && sp.to && selectedFleet?.transit) {
+      const at = lanePoint(selectedFleet);
+      return { x: at.x, y: at.y };
+    }
+    const a = frames.get(sp.at);
+    if (!a) return null;
+    if (!sp.to) {
+      const p = spots.get(sp.at);
+      return p?.ok ? { x: p.x, y: p.y, port: byId.get(sp.at) } : null;
+    }
+    const b = frames.get(sp.to);
+    if (!b) return null;
+    const k = sp.t ?? 0.5;
+    const p = place(a.u + (b.u - a.u) * k, a.v + (b.v - a.v) * k, 0);
+    return p.ok ? { x: p.x, y: p.y } : null;
+  };
+  const routeLegs = w > 0 && shownRoute ? shownRoute.legs.map((leg, k) => leg.map((sp, i) => spotAt(sp, k === 0 && i === 0)).filter((p) => !!p)) : [];
 
   return (
     <div
@@ -680,6 +766,8 @@ export function GrandMap({
       data-yaw={inWorld ? cam.yaw : 0}
       data-box={boxMode ? 'on' : 'off'}
       onContextMenu={(e) => e.preventDefault()}
+      // A middle-button press would start the browser's auto-scroll instead of turning the map.
+      onMouseDown={(e) => { if (e.button === 1) e.preventDefault(); }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -759,7 +847,7 @@ export function GrandMap({
               );
             })}
           {fleets
-            .filter((f) => f.at && f.route.length)
+            .filter((f) => f.at && f.route.length && !(shownRoute && f.id === selectedFleetId))
             .flatMap((f) => {
               const stops = [f.at!, ...f.route].filter((id) => byId.has(id) && spots.get(id)?.ok);
               return stops.slice(1).map((to, i) => {
@@ -793,8 +881,19 @@ export function GrandMap({
                 );
               });
             })}
+          {routeLegs.map((pts, k) => {
+            if (pts.length < 2) return null;
+            const points = pts.map((p) => `${p.x},${p.y}`).join(' ');
+            return (
+              <g key={`route-${k}`} className="gm-route">
+                <polyline className="gm-route__halo" points={points} />
+                <polyline className="gm-route__line" points={points} stroke={turnTone(k + 1)} />
+              </g>
+            );
+          })}
         </svg>
       )}
+      <div className="gm__marks">
       {w > 0 &&
         regions.map((r) => {
           const x = px(r.id);
@@ -809,6 +908,7 @@ export function GrandMap({
           const own = r.owner === me;
           const card = r.owner && cards.has(r.id) ? campArt(r.id, r.owner) : null;
           const garrisoned = fleetsAt.get(r.id);
+          const turns = reach?.[r.id];
           return (
             <button
               key={r.id}
@@ -822,29 +922,42 @@ export function GrandMap({
               onPointerEnter={() => setHovered(r.id)}
               onPointerLeave={() => setHovered((cur) => (cur === r.id ? null : cur))}
             >
+              {turns !== undefined && <span className="gm-node__reach" style={{ ['--t' as string]: turnTone(turns) }} data-turns={Math.min(3, turns)} aria-hidden />}
+              {r.siege && <span className="gm-node__siege" style={{ ['--s' as string]: FACTION_INFO[r.siege.by].color }} aria-hidden />}
               <span className="gm-node__disc">
                 {r.offMap ? <Icon name="portal" size="sm" /> : r.owner && <FactionCrest faction={r.owner} size={Math.round(rad * 1.5)} />}
               </span>
+              {r.siege && (
+                <span className={`gm-node__siegetag gm-node__siegetag--${side === 't' ? 'b' : 't'}`} style={{ ['--s' as string]: FACTION_INFO[r.siege.by].color }}>
+                  {t('봉쇄 {n}/{m}', { n: r.siege.turns, m: r.siege.hold })}
+                </span>
+              )}
               {level > 0 && <span className="gm-node__lv" aria-hidden>{ROMAN[level] ?? level}</span>}
               {garrisoned && <span className="gm-node__banner" style={{ ['--b' as string]: FACTION_INFO[garrisoned[0]!.faction].color }} aria-hidden />}
-              {card ? (
-                <span className={`gm-node__label gm-node__card gm-node__label--${side}`}>
-                  <img src={campImage(card, level)} width={104} height={69} alt="" loading="lazy" decoding="async" draggable={false} />
-                  <span>{r.name}</span>
-                </span>
-              ) : showLabel(r) && <span className={`gm-node__label gm-node__label--${side}`}>{r.name}</span>}
-              <span className="gm-tip">
-                <b>
-                  {r.name} <i>{r.hanja}</i>
-                </b>
-                <span>
-                  {navyName(r.owner)}
-                  {' · ' + (r.offMap ? t('본토 기지') : r.visible ? t('수비대 {ships}', { ships: shipsText(r.garrison) }) : t('시야 밖'))}
-                </span>
-              </span>
+              {!card && showLabel(r) && <span className={`gm-node__label gm-node__label--${side}`}>{r.name}</span>}
             </button>
           );
         })}
+      </div>
+      {/* The city cards stand over every disc and label: a card is placed where it hides no other port's disc. */}
+      <div className="gm__cards">
+        {w > 0 &&
+          [...cards].map((id) => {
+            const r = byId.get(id);
+            if (!r?.owner || !spots.get(id)?.ok) return null;
+            const card = campArt(r.id, r.owner);
+            return (
+              <span key={id} className="gm-pin" style={{ transform: `translate3d(${px(id)}px, ${py(id)}px, 0)`, zIndex: layer(id), ['--r' as string]: `${nodeRadius(r)}px`, ['--c' as string]: FACTION_INFO[r.owner].color }}>
+                <span className={`gm-node__label gm-node__card gm-node__label--${r.labelSide ?? 'b'}`}>
+                  <img src={campImage(card, campLevel(r))} width={104} height={69} alt="" loading="lazy" decoding="async" draggable={false} />
+                  <span>{r.name}</span>
+                </span>
+              </span>
+            );
+          })}
+      </div>
+      {/* The fleets' pills over the cards: they are placed clear of the discs and labels, and a card must not hide one. */}
+      <div className="gm__fleets">
       {w > 0 &&
         [...fleetsAt.entries()].flatMap(([rid, list]) => {
           const r = byId.get(rid);
@@ -852,18 +965,17 @@ export function GrandMap({
           const x = px(rid);
           const y = py(rid);
           if (!spots.get(rid)?.ok || x < -80 || y < -120 || x > w + 80 || y > h + 80) return [];
-          const rad = nodeRadius(r);
-          return list.map((f, i) => {
+          return list.map((f) => {
             const sel = f.id === selectedFleetId || !!selectedFleetIds?.has(f.id);
             const col = FACTION_INFO[f.faction].color;
             const mine = f.faction === me;
-            const spot = badgeSpot(x, y, rad, r.labelSide, i);
+            const spot = portBadge(r, list, f);
             return (
               <button
                 key={f.id}
                 type="button"
                 className={`gm-fleet${sel ? ' gm-fleet--sel' : ''}${mine ? '' : ' gm-fleet--foreign'}`}
-                style={{ transform: `translate3d(${spot.x}px, ${spot.y}px, 0)`, zIndex: layer(rid), ['--c' as string]: col }}
+                style={{ transform: `translate3d(${spot.x}px, ${spot.y}px, 0)`, zIndex: sel ? 803 : layer(rid), ['--c' as string]: col }}
                 aria-label={t('{name}, 함선 {ships}', { name: f.name, ships: shipsText(f.ships.length) })}
                 aria-pressed={sel}
                 data-fleet={f.id}
@@ -880,7 +992,7 @@ export function GrandMap({
         })}
       {w > 0 &&
         sailing.map((f) => {
-          const { x, y } = lanePoint(f);
+          const { x, pill: y, depth } = lanePoint(f);
           if (x < -80 || y < -80 || x > w + 80 || y > h + 80) return null;
           const sel = f.id === selectedFleetId || !!selectedFleetIds?.has(f.id);
           const mine = f.faction === me;
@@ -889,7 +1001,7 @@ export function GrandMap({
               key={f.id}
               type="button"
               className={`gm-fleet gm-fleet--sailing${sel ? ' gm-fleet--sel' : ''}${mine ? '' : ' gm-fleet--foreign'}`}
-              style={{ transform: `translate3d(${x}px, ${y}px, 0)`, ['--c' as string]: FACTION_INFO[f.faction].color }}
+              style={{ transform: `translate3d(${x}px, ${y}px, 0)`, zIndex: sel ? 803 : inWorld ? Math.round((2 - Math.min(2, depth)) * 400) : undefined, ['--c' as string]: FACTION_INFO[f.faction].color }}
               aria-label={t('{name}, 항해 중, 함선 {ships}', { name: f.name, ships: shipsText(f.ships.length) })}
               aria-pressed={sel}
               data-fleet={f.id}
@@ -903,6 +1015,49 @@ export function GrandMap({
             </button>
           );
         })}
+      </div>
+      {/* Where each turn of the movement line ends: a numbered mark at sea, or beside the port's disc; the last one says how long and what for. */}
+      <div className="gm__route">
+        {shownRoute &&
+          routeLegs.map((pts, k) => {
+            const end = pts[pts.length - 1];
+            if (!end || pts.length < 2) return null;
+            const last = k === routeLegs.length - 1;
+            const off = end.port ? nodeRadius(end.port) * 0.78 : 0;
+            const goal = shownRoute.siege ? t('봉쇄') : shownRoute.hostile ? t('공격') : '';
+            return (
+              <span key={k} className={`gm-step${end.port ? ' gm-step--port' : ''}${last ? ' gm-step--end' : ''}`} style={{ transform: `translate3d(${end.x + off}px, ${end.y + off}px, 0)`, ['--t' as string]: turnTone(k + 1) }}>
+                <b>{k + 1}</b>
+                {last && <span className="gm-step__tag">{goal ? `${turnsText(shownRoute.turns)} · ${goal}` : turnsText(shownRoute.turns)}</span>}
+              </span>
+            );
+          })}
+      </div>
+      {/* One tip, for the port under the pointer, over everything else on the map. */}
+      <div className="gm__tips">
+        {(() => {
+          const r = hovered ? byId.get(hovered) : undefined;
+          if (!r || !spots.get(r.id)?.ok) return null;
+          return (
+            <span className="gm-pin" style={{ transform: `translate3d(${px(r.id)}px, ${py(r.id)}px, 0)`, ['--r' as string]: `${nodeRadius(r)}px` }}>
+              <span className="gm-tip">
+                <b>
+                  {r.name} <i>{r.hanja}</i>
+                </b>
+                <span>
+                  {navyName(r.owner)}
+                  {' · ' + (r.offMap ? t('본토 기지') : r.visible ? t('수비대 {ships}', { ships: shipsText(r.garrison) }) : t('시야 밖'))}
+                </span>
+                {hoverRoute && hoverRoute.dest === r.id && (
+                  <span className="gm-tip__route" style={{ ['--t' as string]: turnTone(hoverRoute.turns) }}>
+                    {t('{turns} · {km}km', { turns: turnsText(hoverRoute.turns), km: hoverRoute.km })}
+                  </span>
+                )}
+              </span>
+            </span>
+          );
+        })()}
+      </div>
       {w > 0 && replay && (
         <ReplayLayer
           replay={replay}
@@ -946,6 +1101,13 @@ export function GrandMap({
             </button>
             <button type="button" className="g-glass g-icon-btn" aria-label={t('시점 기울이기')} title={t('눕혔다 세우기 (오른쪽 버튼으로 끌기)')} onClick={() => flyCam(clampState({ ...camRef.current, pitch: camRef.current.pitch > 0.7 ? 0.36 : 1.05 }))}>
               ⇕
+            </button>
+            {/* The compass shows where north lies as the view turns; a press brings north back up. */}
+            <button type="button" className="g-glass g-icon-btn gm__compass" aria-label={t('북쪽으로 되돌리기')} title={t('북쪽으로 되돌리기 · 오른쪽이나 가운데 버튼, 또는 Shift를 누르고 끌면 가로·세로로 돌아갑니다')} onClick={() => flyCam(clampState({ ...camRef.current, yaw: 0, pitch: OPEN_PITCH }))}>
+              <svg viewBox="0 0 24 24" width="20" height="20" style={{ transform: `rotate(${(cam.yaw * 180) / Math.PI}deg)` }} aria-hidden>
+                <path d="M12 2.5 15.2 12 12 10.4 8.8 12Z" fill="#e8452c" />
+                <path d="M12 21.5 8.8 12 12 13.6 15.2 12Z" fill="currentColor" opacity="0.55" />
+              </svg>
             </button>
           </>
         )}

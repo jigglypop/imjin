@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sound } from '../audio/Sound';
 import { t, useLang } from '../i18n';
-import { abandonGrand, autoResolveGrand, chooseGrandEvent, dismissBattle, dismissReplay, dismissReport, dispatchForces, endGrandTurn, grandOrders, guideSeen, markGuideSeen, mergeArrived, mergeFleets, prepareGrandBattle, startGrand, useGrand } from '../campaign/grand';
+import { abandonGrand, autoResolveGrand, besiegeGrand, chooseGrandEvent, dismissBattle, dismissReplay, dismissReport, dispatchForces, endGrandTurn, grandOrders, guideSeen, markGuideSeen, mergeArrived, mergeFleets, prepareGrandBattle, startGrand, useGrand, withdrawGrand } from '../campaign/grand';
 import type { RegionBattle } from '../sim/grand/bridge';
 import type { BuildingKind as SimBuilding, Grand, RegionId, Result } from '../sim/grand/types';
 import type { ShipKind } from '../sim/types';
@@ -19,11 +19,14 @@ import {
   factionOptions,
   fleetViews,
   logLines,
+  marchRouteView,
   moveTargets,
   objectiveView,
   officersFor,
   overView,
+  plannedRoute,
   previewView,
+  reachTurns,
   regionViews,
   relationViews,
   replayView,
@@ -61,6 +64,11 @@ const GUIDE_STEPS: Omit<GuideStepView, 'target'>[] = [
   { title: '3. 함대 이동', text: "함대 표지를 눌러 선택하면 공격할 수 있는 적의 포구가 강조되고, 그 포구를 한 번 누르면 바로 공격합니다. 우리 편 포구로 옮기려면 '이동'을 누른 뒤 포구를 고릅니다." },
   { title: '4. 턴 종료', text: "명령을 마치면 '턴 종료'를 누릅니다. 한 턴은 석 달입니다. 턴이 끝나면 모든 함대의 움직임이 지도에 재생되고 결과가 나옵니다." },
 ];
+/** The third step under the march rules, where a fleet's range and its stops along the way are drawn on the map. */
+const MARCH_GUIDE_STEP: Omit<GuideStepView, 'target'> = {
+  title: '3. 함대 이동',
+  text: "함대를 고르면 닿는 포구에 고리가 생깁니다(초록 이번 턴, 노랑 다음 턴, 주황 그 뒤). 포구 위에 올리면 턴마다 멈출 곳이 번호로 보이고, 적의 포구는 누르면 공격하며 우리 편 포구는 '이동'을 누른 뒤 고릅니다. '강행군'은 이번 턴만 더 멀리 가지만 공격할 수 없습니다.",
+};
 
 /**
  * The faction campaign screen: continue or begin a war, then the strategic map with its panels. The campaign itself
@@ -122,6 +130,8 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const [pickedFleets, setPickedFleets] = useState<Set<string>>(new Set());
   const [pickedPorts, setPickedPorts] = useState<Set<string>>(new Set());
   const [mergeOnArrival, setMergeOnArrival] = useState(false);
+  // March rules: a hostile port the selected fleet is sent to is blockaded rather than stormed.
+  const [siegeOnArrival, setSiegeOnArrival] = useState(false);
   const arrivalMerge = useGrand((s) => s.arrivalMerge);
   const [focus, setFocus] = useState<{ id: string; nonce: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -155,7 +165,12 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   // A ready fleet of ours that is selected strikes an enemy port with one click: those ports light up without the move mode.
   const reachable = useMemo(() => (!batchOpen && simFleet && simFleet.faction === me ? moveTargets(g, simFleet) : undefined), [batchOpen, simFleet, me, g]);
   const hostilePort = useCallback((id: string) => { const owner = g.regions[id as RegionId]?.owner; return !!owner && atWar(g, me, owner); }, [g, me]);
-  const strikes = useMemo(() => (reachable?.length && !moving ? reachable.filter(hostilePort) : undefined), [reachable, moving, hostilePort]);
+  // March rules: the turns to every port the fleet can reach, drawn as the coloured range, and its way there turn by turn.
+  const reach = useMemo(() => (g.march && reachable && simFleet && !replay ? reachTurns(g, simFleet) : undefined), [g, reachable, simFleet, replay]);
+  const route = useMemo(() => (g.march && simFleet && simFleet.faction === me && !batchOpen && !replay ? plannedRoute(g, simFleet) : null), [g, simFleet, me, batchOpen, replay]);
+  const routeFor = useCallback((id: string) => (simFleet ? marchRouteView(g, simFleet, id as RegionId, siegeOnArrival) : null), [g, simFleet, siegeOnArrival]);
+  // With the range drawn, only the enemy ports within this turn's sailing pulse; the farther ones still take a click.
+  const strikes = useMemo(() => (reachable?.length && !moving ? reachable.filter((id) => hostilePort(id) && (!reach || reach[id]! <= 1)) : undefined), [reachable, moving, hostilePort, reach]);
   const targets = useMemo(() => (batchOpen ? batchTargets : moving ? reachable : strikes), [batchOpen, batchTargets, moving, reachable, strikes]);
   const pending = g.phase === 'battles' ? g.pending[0] : undefined;
   const eventCard = useMemo(() => (g.events.pending ? eventView(g) : null), [g, lang]);
@@ -206,12 +221,14 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         return;
       }
       if (click === 'order') {
-        const res = grandOrders.move(fleet.id, id as RegionId);
+        const siege = !!g.march && siegeOnArrival && hostilePort(id);
+        const res = grandOrders.move(fleet.id, id as RegionId, siege);
         if (res.ok) {
           const dest = regions.find((r) => r.id === id)!;
           // Only a region of a faction at war with the player is attacked: an ally's port is simply entered.
           const turns = turnsText(Number(res.params?.turns) || 1);
-          say(hostilePort(id) ? t('{fleet}: {place|을/를} 공격합니다 ({turns})', { fleet: fleet.name, place: dest.name, turns }) : t('{fleet}: {place|으로/로} 이동합니다 ({turns})', { fleet: fleet.name, place: dest.name, turns }));
+          const vars = { fleet: fleet.name, place: dest.name, turns };
+          say(siege ? t('{fleet}: {place|을/를} 봉쇄하러 갑니다 ({turns})', vars) : hostilePort(id) ? t('{fleet}: {place|을/를} 공격합니다 ({turns})', vars) : t('{fleet}: {place|으로/로} 이동합니다 ({turns})', vars));
           sound.campaign('move');
           setMoving(false);
           advanceGuide(2);
@@ -255,6 +272,17 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
       else pickForces([id], [], true);
       return;
     }
+    // March rules: with a fleet of ours selected, an enemy fleet is chased, into its port or along its lane.
+    if (g.march && fleet && fleet.faction === me && fleet.rest === 0 && f.faction !== me && atWar(g, me, f.faction)) {
+      const res = grandOrders.intercept(fleet.id, f.id);
+      if (res.ok) {
+        say(t('{fleet}: {target|을/를} 추격합니다 ({turns})', { fleet: fleet.name, target: f.name, turns: turnsText(Number(res.params?.turns) || 1) }));
+        sound.campaign('move');
+        setMoving(false);
+      } else say(tt(res.reason, res.params));
+      return;
+    }
+    if (id !== fleetId) setSiegeOnArrival(!!f.march?.besieging);
     setFleetId(id);
     setMoving(false);
     const place = f.at ?? f.transit?.from;
@@ -326,7 +354,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
     fleet && fleet.faction === me ? (moving ? undefined : '[data-guide="move"]') : '.gm-fleet:not(.gm-fleet--foreign) .gm-fleet__pill',
     '.g-top__end',
   ];
-  const guideSteps: GuideStepView[] = GUIDE_STEPS.map((st, i) => ({ title: t(st.title), text: t(st.text), target: guideTargets[i] }));
+  const guideSteps: GuideStepView[] = GUIDE_STEPS.map((st, i) => (g.march && i === 2 ? MARCH_GUIDE_STEP : st)).map((st, i) => ({ title: t(st.title), text: t(st.text), target: guideTargets[i] }));
   const guideHidden = !!(replay || g.events.pending || status || menu || lastBattle || pending || over);
 
   // Sounds of the campaign's own beats: a finished work, the card of a turning point, the end of a fight or of the war.
@@ -358,6 +386,9 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         selectedFleetId={fleetId}
         selectedFleetIds={batchOpen ? pickedFleets : undefined}
         moveTargets={targets}
+        reach={reach}
+        route={route}
+        routeFor={g.march && reach ? routeFor : undefined}
         insets={insets}
         focus={focus}
         onSelectRegion={selectRegion}
@@ -420,6 +451,19 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
             }}
             onCommander={(id, cmd) => report(grandOrders.commander(id, cmd), cmd ? '지휘관을 임명했습니다' : '지휘관을 해임했습니다')}
             onRefit={(id) => report(grandOrders.refit(id), '정비를 마쳤습니다')}
+            nameOf={(id) => regions.find((r) => r.id === id)?.name ?? id}
+            siegeOnArrival={siegeOnArrival}
+            onSiegeOnArrival={(on) => {
+              setSiegeOnArrival(on);
+              // A fleet already bound for an enemy port changes how it arrives there at once.
+              const dest = fleet.march?.dest;
+              if (dest?.hostile && fleet.route.length) report(grandOrders.move(fleet.id, dest.id as RegionId, on), on ? '도착하면 봉쇄합니다' : '도착하면 공격합니다');
+            }}
+            onStance={(id, stance) => {
+              sound.click();
+              report(grandOrders.stance(id, stance), stance === 'march' ? '강행군으로 바꿨습니다' : '일반 항해로 바꿨습니다');
+            }}
+            onAssault={(id, on) => report(grandOrders.assault(id, on), on ? '턴을 마치면 포구를 강습합니다' : '봉쇄를 이어 갑니다')}
             onDisband={(id, ships) => {
               let sold = 0;
               for (const s of ships) {
@@ -467,6 +511,14 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
           onAuto={() => {
             sound.click();
             autoResolveGrand(pending!.id);
+          }}
+          onBesiege={() => {
+            sound.click();
+            report(besiegeGrand(pending!.id), '봉쇄를 시작했습니다');
+          }}
+          onWithdraw={() => {
+            sound.click();
+            report(withdrawGrand(pending!.id), '함대가 싸움에서 물러났습니다');
           }}
         />
       )}

@@ -26,6 +26,72 @@ export interface FleetPanelProps {
   onCommander?: (fleetId: string, commanderId: string | null) => void;
   onRefit?: (fleetId: string) => void;
   onDisband?: (fleetId: string, shipIds: string[]) => void;
+  /** A port's name by id, for a fleet at sea between two ports. */
+  nameOf?: (regionId: string) => string;
+  /** March rules: a hostile port the fleet is sent to is blockaded instead of stormed. */
+  siegeOnArrival?: boolean;
+  onSiegeOnArrival?: (on: boolean) => void;
+  onStance?: (fleetId: string, stance: 'normal' | 'march') => void;
+  onAssault?: (fleetId: string, on: boolean) => void;
+}
+
+/** March rules: the fleet's sailing this turn (distance, stance), how it ends at a hostile port, and the blockade it keeps up. */
+function MarchBlock({ fleet, canMove, siegeOnArrival, onSiegeOnArrival, onStance, onAssault }: Pick<FleetPanelProps, 'fleet' | 'siegeOnArrival' | 'onSiegeOnArrival' | 'onStance' | 'onAssault'> & { canMove: boolean }) {
+  const t = useT();
+  const m = fleet.march!;
+  const forced = m.stance === 'march';
+  const siege = m.siege;
+  return (
+    <div className="g-march">
+      <div className="g-march__row">
+        <span className="g-march__label">{t('행동력')}</span>
+        <b className="g-march__km">
+          {t('{km}km/턴', { km: forced ? m.reach.forced : m.reach.normal })}
+          {m.winter && <span className="g-march__winter" title={t('겨울: 행동력 −20%, 바다 위 함대 보급 소모 증가')}>{t('겨울 −20%')}</span>}
+        </b>
+        <span className="g-level g-level--sm" role="radiogroup" aria-label={t('항해 태세')}>
+          {(['normal', 'march'] as const).map((s) => (
+            <button key={s} type="button" role="radio" aria-checked={m.stance === s} className={`g-level__opt${m.stance === s ? ' g-level__opt--on' : ''}`} disabled={(!canMove || (s === 'march' && !!m.marchBlocked)) && s !== m.stance} title={s === 'march' ? m.marchBlocked : undefined} onClick={() => m.stance !== s && onStance?.(fleet.id, s)}>
+              {s === 'normal' ? t('일반') : t('강행군')}
+            </button>
+          ))}
+        </span>
+      </div>
+      <p className="g-hint">
+        {forced
+          ? t('강행군: 이번 턴에만 1.5배 멀리 갑니다. 공격하거나 적의 포구로 들어갈 수 없고, 도중에 붙잡히면 지친 채 싸웁니다.')
+          : t('강행군을 고르면 이번 턴에만 {km}km까지 가지만 공격할 수 없습니다.', { km: m.reach.forced })}
+      </p>
+      {siege ? (
+        <div className="g-march__siege">
+          <div className="g-march__row">
+            <span className="g-march__label">{t('봉쇄 중')}</span>
+            <b>{t('{n}/{m}턴', { n: siege.turns, m: siege.hold })}</b>
+            <Bar value={siege.turns / Math.max(1, siege.hold)} tone="warn" label={t('봉쇄 {n}/{m}', { n: siege.turns, m: siege.hold })} />
+          </div>
+          <p className="g-hint">{t('포구는 수입과 함선 건조가 멈췄고 수비대가 굶주립니다. {turns} 더 버티면 항복합니다.', { turns: turnsText(Math.max(1, siege.hold - siege.turns)) })}</p>
+          <label className="g-row g-batch-row">
+            <input className="g-check" type="checkbox" checked={m.assault} onChange={(e) => onAssault?.(fleet.id, e.target.checked)} />
+            <span className="g-row__main">
+              <span className="g-row__title">{t('강습 명령')}</span>
+              <span className="g-row__sub">{t('턴을 마치면 기다리지 않고 포구를 공격합니다')}</span>
+            </span>
+          </label>
+        </div>
+      ) : (
+        canMove &&
+        !forced && (
+          <label className="g-row g-batch-row">
+            <input className="g-check" type="checkbox" checked={!!siegeOnArrival} onChange={(e) => onSiegeOnArrival?.(e.target.checked)} />
+            <span className="g-row__main">
+              <span className="g-row__title">{t('도착하면 봉쇄')}</span>
+              <span className="g-row__sub">{t('적의 포구를 강습하지 않고 둘러싸 굶깁니다. 수입과 건조가 멈추고 몇 턴 뒤 항복합니다')}</span>
+            </span>
+          </label>
+        )
+      )}
+    </div>
+  );
 }
 
 export function FleetPanel({
@@ -46,6 +112,11 @@ export function FleetPanel({
   onCommander,
   onRefit,
   onDisband,
+  nameOf,
+  siegeOnArrival,
+  onSiegeOnArrival,
+  onStance,
+  onAssault,
 }: FleetPanelProps) {
   const t = useT();
   const own = fleet.faction === me;
@@ -66,7 +137,9 @@ export function FleetPanel({
   const docked = fleet.at !== null;
   // A fleet keeps at least one ship, so splitting everything off is not offered.
   const canSplit = own && docked && picked.size > 0 && picked.size < fleet.ships.length;
-  const canMove = own && docked && fleet.rest === 0;
+  // Under the march rules a fleet at sea can be sent on, or turned back.
+  const canMove = own && (docked || !!fleet.march) && fleet.rest === 0;
+  const sea = fleet.transit && nameOf ? { from: nameOf(fleet.transit.from), to: nameOf(fleet.transit.to) } : null;
   const avg = (pick: (s: FleetView['ships'][number]) => number) => fleet.ships.reduce((a, s) => a + pick(s), 0) / Math.max(1, fleet.ships.length);
 
   return (
@@ -110,8 +183,28 @@ export function FleetPanel({
         ) : undefined
       }
     >
-      {moving ? <p className="g-banner">{t('지도에서 강조된 포구 중 목적지를 고릅니다. 적의 포구를 고르면 공격합니다.')}</p> : own && canMove && <p className="g-hint">{t('강조된 적의 포구를 한 번 누르면 바로 공격합니다. 우리 편 포구로 옮기려면 이동을 누르세요.')}</p>}
-      {fleet.transit && <p className="g-hint">{t('항해 중입니다. {turns} 뒤에 도착합니다.', { turns: turnsText(fleet.transit.left) })}</p>}
+      {moving ? (
+        <p className="g-banner">{fleet.march ? t('고리가 있는 포구 중 목적지를 고릅니다. 포구 위에 올리면 턴마다 어디까지 가는지 보입니다.') : t('지도에서 강조된 포구 중 목적지를 고릅니다. 적의 포구를 고르면 공격합니다.')}</p>
+      ) : (
+        own &&
+        canMove && (
+          <p className="g-hint">
+            {fleet.march
+              ? t('고리 색은 닿는 턴입니다: 초록 이번 턴, 노랑 다음 턴, 주황 그 뒤. 적의 포구를 누르면 공격하고, 적 함대를 누르면 추격합니다.')
+              : t('강조된 적의 포구를 한 번 누르면 바로 공격합니다. 우리 편 포구로 옮기려면 이동을 누르세요.')}
+          </p>
+        )
+      )}
+      {fleet.transit &&
+        (fleet.march && sea ? (
+          <p className="g-hint">
+            {fleet.route.length
+              ? t('{from|과/와} {to} 사이 바다 위에 있습니다. 다음 턴에 항해를 이어 갑니다.', sea)
+              : t('{from|과/와} {to} 사이 바다 위에 멈춰 있습니다. 새 목적지를 고르거나 되돌아갈 수 있습니다.', sea)}
+          </p>
+        ) : (
+          <p className="g-hint">{t('항해 중입니다. {turns} 뒤에 도착합니다.', { turns: turnsText(fleet.transit.left) })}</p>
+        ))}
       {fleet.rest > 0 && !fleet.transit && <p className="g-hint">{t('전투 후 정비 중입니다. {turns} 동안 출항할 수 없습니다.', { turns: turnsText(fleet.rest) })}</p>}
       {routeText && !moving && (
         <p className="g-note g-route">
@@ -123,6 +216,7 @@ export function FleetPanel({
           )}
         </p>
       )}
+      {own && fleet.march && <MarchBlock fleet={fleet} canMove={canMove} siegeOnArrival={siegeOnArrival} onSiegeOnArrival={onSiegeOnArrival} onStance={onStance} onAssault={onAssault} />}
       <div className="gk-stats gk-stats--2">
         <div className="gk-stat"><span className="gk-stat__label">{t('병력')}</span><span className="gk-stat__value">{t('{n}명 승조원', { n: fleet.crewCount.toLocaleString() })}</span></div>
         <div className="gk-stat">

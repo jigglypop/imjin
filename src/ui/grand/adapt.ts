@@ -4,13 +4,14 @@ import type { ShipKind } from '../../sim/types';
 import { buildingWorkTotal, buildingOf, dateLabel, garrisonCap, levelOf, netIncome, queueSlots, regionIncome } from '../../sim/grand/economy';
 import { buildMenu, recruitMenu, refitCost } from '../../sim/grand/orders';
 import { REGIONS, REGION_ORDER, START, type RegionDef } from '../../sim/grand/regions';
-import type { BattleSummary } from '../../sim/grand/report';
+import { GRADE_TEXT, type BattleSummary } from '../../sim/grand/report';
 import { pendingCard, describeEffect } from '../../sim/grand/events';
 import type { TurnReplay } from '../../sim/grand/replay';
-import { MAX_TURNS, OBJECTIVE_HOLD, contactForces, objectiveProgress, objectiveText, oddsOfContact, previewContact, scoreOf } from '../../sim/grand/turn';
+import { MAX_TURNS, OBJECTIVE_HOLD, besiegeProblem, contactForces, objectiveProgress, objectiveText, oddsOfContact, previewContact, scoreOf } from '../../sim/grand/turn';
+import { MARCH, fleetReach, marchDistances, marchRoute, marchStops, marching, transitShare, turnsFor, winterTurn } from '../../sim/grand/march';
 import type { Fleet, Grand, GrandFaction, RegionId } from '../../sim/grand/types';
 import { MAX_LEVEL } from '../../sim/grand/types';
-import { allied, findRoute, fleetById, fleetObserved, lanesOf, ownedBy, shipCount, visibleRegions } from '../../sim/grand/world';
+import { allied, findRoute, fleetById, fleetObserved, lanesOf, ownedBy, passable, shipCount, visibleRegions } from '../../sim/grand/world';
 import type {
   BattlePreviewView,
   BattleResultView,
@@ -23,11 +24,14 @@ import type {
   FactionId,
   FleetView,
   LogLineView,
+  MarchFleetView,
+  MarchRouteView,
   ObjectiveView,
   RegionView,
   RelationView,
   ReplayView,
   ScoreView,
+  SpotView,
   TreasuryView,
   TurnReportView,
   TurnView,
@@ -128,13 +132,16 @@ export function regionViews(g: Grand): RegionView[] {
       garrisonMax: garrisonCap(id, r),
       unrest: r.unrest,
       adj: lanesOf(g, id).map((l) => l.to),
-      laneTurns: Object.fromEntries(lanesOf(g, id).map((l) => [l.to, l.turns])),
+      // Under the march rules a lane takes as long as the fleet's sailing makes it, so the map labels no lane with turns.
+      laneTurns: marching(g) ? undefined : Object.fromEntries(lanesOf(g, id).map((l) => [l.to, l.turns])),
       offMap: !!def.edge,
       seat: !!def.capitalOf,
       visible,
       labelSide: LABEL[id],
       note: t(def.blurb),
       freeSlots: Math.max(0, 2 + def.value - r.buildings.length),
+      // A blockade shows wherever the player can see the port, and always to the navy keeping it up.
+      siege: r.siege && (visible || r.siege.by === me) ? { by: r.siege.by, turns: r.siege.turns, hold: r.siege.hold } : undefined,
     };
   });
 }
@@ -144,6 +151,26 @@ const commanderView = (g: Grand, faction: GrandFaction, id: string | null): Comm
   return c && c.alive ? { id: c.id, name: t(c.name), title: t(c.title), level: c.level, portrait: c.portrait } : undefined;
 };
 
+/** What the march rules add to a fleet: its distance per turn in either stance, its stance, its blockade and where its orders end. */
+function marchView(g: Grand, fl: Fleet): MarchFleetView | undefined {
+  if (!marching(g)) return undefined;
+  const normal = fleetReach(g, { ...fl, stance: 'normal' });
+  const dest = fl.route[fl.route.length - 1] ?? (fl.besieging && fl.at ? fl.at : undefined);
+  const s = fl.besieging && fl.at ? g.regions[fl.at].siege : undefined;
+  // The same reasons orderStance gives, so the button is off instead of answering with a refusal.
+  const blocked = fl.at && !passable(g, fl.faction, fl.at) ? '적의 포구 앞에서는 강행군할 수 없습니다' : dest && !passable(g, fl.faction, dest) ? '강행군 중에는 공격할 수 없습니다' : undefined;
+  return {
+    reach: { normal: Math.round(normal), forced: Math.round(normal * MARCH.forced) },
+    stance: fl.stance ?? 'normal',
+    winter: winterTurn(g.turn),
+    besieging: !!fl.besieging,
+    assault: !!fl.assault,
+    siege: s ? { turns: s.turns, hold: s.hold } : undefined,
+    dest: dest ? { id: dest, hostile: !passable(g, fl.faction, dest) } : undefined,
+    marchBlocked: blocked && fl.stance !== 'march' ? t(blocked) : undefined,
+  };
+}
+
 function fleetView(g: Grand, fl: Fleet): FleetView {
   const r = fl.at ? g.regions[fl.at] : null;
   const refitable = !!r && !!r.owner && allied(g, fl.faction, r.owner) && (levelOf(r, 'camp') > 0 || levelOf(r, 'dock') > 0);
@@ -152,13 +179,14 @@ function fleetView(g: Grand, fl: Fleet): FleetView {
     faction: fl.faction,
     name: tName(fl.name),
     at: fl.at,
-    transit: fl.transit ? { from: fl.transit.from, to: fl.transit.to, left: fl.transit.left } : undefined,
+    transit: fl.transit ? { from: fl.transit.from, to: fl.transit.to, left: fl.transit.left, progress: marching(g) ? transitShare(g, fl.transit) : undefined } : undefined,
     route: [...fl.route],
     ships: fl.ships.map((s) => ({ id: s.id, kind: s.kind, hull: s.hull, crew: s.crew, supply: s.supply, name: tName(s.name) })),
     crewCount: fl.ships.reduce((n, s) => n + Math.round(shipSpec(s.kind).crew * s.crew), 0),
     commander: commanderView(g, fl.faction, fl.commanderId),
     rest: fl.rest,
     refit: refitable ? refitCost(fl) : 0,
+    march: marchView(g, fl),
   };
 }
 
@@ -172,7 +200,7 @@ export function fleetViews(g: Grand): FleetView[] {
 }
 
 export function turnView(g: Grand): TurnView {
-  return { turn: g.turn, maxTurns: MAX_TURNS, date: t(dateLabel(g.turn)), faction: player(g) };
+  return { turn: g.turn, maxTurns: MAX_TURNS, date: t(dateLabel(g.turn)), faction: player(g), winter: marching(g) && winterTurn(g.turn) };
 }
 
 export function treasuryView(g: Grand): TreasuryView {
@@ -195,6 +223,7 @@ export function officersFor(g: Grand, fleetId: string): { officer: CommanderView
 
 /** Where the fleet's ordered route leads, in place names with the turns it takes. */
 export function routeText(g: Grand, fl: Fleet): string | undefined {
+  if (marching(g)) return marchRouteText(g, fl);
   if (!fl.at || !fl.route.length) return undefined;
   let at: RegionId = fl.at;
   let turns = 0;
@@ -208,10 +237,82 @@ export function routeText(g: Grand, fl: Fleet): string | undefined {
   return hostile ? t('{route} · {turns} · 공격', { route, turns: turnsText(turns) }) : t('{route} · {turns}', { route, turns: turnsText(turns) });
 }
 
-/** Regions a docked fleet can be ordered to: every one with a safe route, hostile ports included as the last stop. */
+/** March rules: the route in place names, the turns it takes at the fleet's sailing, and whether it ends in an attack or a blockade. */
+function marchRouteText(g: Grand, fl: Fleet): string | undefined {
+  if (!fl.route.length || (!fl.at && !fl.transit)) return undefined;
+  const turns = turnsText(Math.max(1, marchStops(g, fl, fl.route).length));
+  const route = fl.route.map((id) => t(REGIONS[id].name)).join(' → ');
+  if (passable(g, fl.faction, fl.route[fl.route.length - 1]!)) return t('{route} · {turns}', { route, turns });
+  return fl.besieging ? t('{route} · {turns} · 봉쇄', { route, turns }) : t('{route} · {turns} · 공격', { route, turns });
+}
+
+/**
+ * Regions a fleet can be ordered to: every one with a safe route, hostile ports included as the last stop. Under the
+ * march rules a fleet at sea may be sent on too, and a fleet on a forced march cannot make for a hostile port.
+ */
 export function moveTargets(g: Grand, fl: Fleet): RegionId[] {
+  if (marching(g)) {
+    if (fl.rest > 0 || (!fl.at && !fl.transit)) return [];
+    const { dist } = marchDistances(g, fl);
+    return REGION_ORDER.filter((id) => id !== fl.at && dist.has(id) && (fl.stance !== 'march' || passable(g, fl.faction, id)));
+  }
   if (!fl.at || fl.transit || fl.rest > 0) return [];
   return REGION_ORDER.filter((id) => id !== fl.at && findRoute(g, fl.faction, fl.at!, id));
+}
+
+/** March rules: the turns the fleet needs to reach each port it can be sent to, for the map's coloured range. */
+export function reachTurns(g: Grand, fl: Fleet): Record<string, number> {
+  const { dist } = marchDistances(g, fl);
+  return Object.fromEntries(moveTargets(g, fl).map((id) => [id, turnsFor(g, fl, dist.get(id)!)]));
+}
+
+/** Where a fleet lies now, as a spot on the map. */
+function spotOf(g: Grand, fl: Fleet): SpotView | null {
+  if (fl.at) return { at: fl.at };
+  return fl.transit ? { at: fl.transit.from, to: fl.transit.to, t: transitShare(g, fl.transit) } : null;
+}
+
+/**
+ * The way along `path` cut at the end of each turn (march rules), for the map's movement line: every leg starts where
+ * the turn before ended, runs through the ports it calls at, and ends in port or at sea where `marchStops` has it.
+ */
+function routeLegs(g: Grand, fl: Fleet, path: readonly RegionId[]): SpotView[][] {
+  let from = spotOf(g, fl);
+  if (!from) return [];
+  const legs: SpotView[][] = [];
+  let i = 0;
+  for (const stop of marchStops(g, fl, path)) {
+    const leg: SpotView[] = [from];
+    if ('at' in stop) {
+      const end = path.indexOf(stop.at, i);
+      for (; i <= end; i += 1) leg.push({ at: path[i]! });
+    } else {
+      const end = path.indexOf(stop.to, i);
+      for (; i < end; i += 1) leg.push({ at: path[i]! });
+      leg.push({ at: stop.from, to: stop.to, t: stop.t });
+    }
+    legs.push(leg);
+    from = leg[leg.length - 1]!;
+  }
+  return legs;
+}
+
+/** March rules: how the fleet would sail to `dest`, turn by turn; `siege` when it is to blockade a hostile port there. */
+export function marchRouteView(g: Grand, fl: Fleet, dest: RegionId, siege = false): MarchRouteView | null {
+  const route = marchRoute(g, fl, dest);
+  if (!route || !route.path.length) return null;
+  const hostile = !passable(g, fl.faction, dest);
+  const legs = routeLegs(g, fl, route.path);
+  return { dest, turns: legs.length || route.turns, km: Math.round(route.km), hostile, siege: hostile && siege, legs };
+}
+
+/** March rules: the route the fleet has been ordered to sail, turn by turn, or null when it has no orders. */
+export function plannedRoute(g: Grand, fl: Fleet): MarchRouteView | null {
+  const dest = fl.route[fl.route.length - 1];
+  if (!marching(g) || !dest) return null;
+  const legs = routeLegs(g, fl, fl.route);
+  const hostile = !passable(g, fl.faction, dest);
+  return { dest, turns: legs.length, km: Math.round(marchRoute(g, fl, dest)?.km ?? 0), hostile, siege: hostile && !!fl.besieging, legs };
 }
 
 export function previewView(g: Grand, contactId: string): BattlePreviewView | null {
@@ -226,13 +327,21 @@ export function previewView(g: Grand, contactId: string): BattlePreviewView | nu
   const youAttack = c.attacker === me || f.attackers.some((fl) => fl.faction === me);
   const youDefend = c.defender === me || f.defenders.some((fl) => fl.faction === me);
   const names = (fleets: Fleet[], fallback: string) => (fleets.length ? fleets.map((fl) => tName(fl.name)).join(' + ') : fallback);
-  const camp = levelOf(region, 'camp');
+  // Out at sea the port's works take no part.
+  const camp = c.sea ? 0 : levelOf(region, 'camp');
   const defenderBonus = [
     ...(p.battery ? [t('포대 {n}단계', { n: p.battery })] : []),
     ...(camp ? [t('군영 {n}단계', { n: camp })] : []),
   ];
   const notes = [t(TERRAIN_NOTE[REGIONS[c.regionId].terrain])];
-  if (p.attackerShips > 30 || p.defenderShips > 30) notes.push(t('직접 지휘하는 전투에는 한쪽에서 가장 강한 함선 30척까지 참전합니다.'));
+  if (c.siege) notes.push(t('봉쇄된 포구를 구하러 온 함대가 봉쇄 함대와 싸웁니다.'));
+  const joined = new Set(c.reinforcements ?? []);
+  const helpers = (ids: string[]) => ids.filter((id) => joined.has(id)).flatMap((id) => fleetById(g, id) ?? []).map((fl) => tName(fl.name));
+  const mineIn = [...c.attackerFleets, ...c.defenderFleets].some((id) => fleetById(g, id)?.faction === me);
+  // A fight for a port can become a blockade while no enemy fleet lies in the port, and only by the navy that attacks.
+  // The same test the order makes, so the button shows only when the blockade would be accepted and would hold.
+  const besiegeable = besiegeProblem(g, c, me) === null;
+  if (marching(g) && mineIn) notes.push(c.sea ? t('퇴각하면 보급을 일부 잃고 물러납니다.') : t('퇴각하면 보급을 일부 잃고 물러납니다. 지킬 병력이 남지 않은 포구는 적에게 넘어갑니다.'));
   return {
     regionId: c.regionId,
     regionName: t(REGIONS[c.regionId].name),
@@ -241,6 +350,11 @@ export function previewView(g: Grand, contactId: string): BattlePreviewView | nu
     winChance: oddsOfContact(g, contactId) ?? 0.5,
     you: youAttack ? 'attacker' : youDefend ? 'defender' : null,
     notes,
+    sea: !!c.sea,
+    relief: !!c.siege,
+    reinforcements: { attacker: helpers(c.attackerFleets), defender: helpers(c.defenderFleets) },
+    canBesiege: marching(g) && besiegeable,
+    canWithdraw: marching(g) && mineIn,
   };
 }
 
@@ -329,14 +443,18 @@ export function resultView(s: BattleSummary): BattleResultView {
   const place = t(s.regionName);
   const loser = s.winner === 'attacker' ? s.defender : s.attacker;
   const winnerNavy = t(NAVY[winnerSide.faction]);
+  // The march rules grade a win as the log tells it (대승, 신승 ...); a loss stays a loss.
+  const win = s.grade ? t(GRADE_TEXT[s.grade]) : t('승리');
   return {
-    regionName: place,
+    regionName: s.atSea ? t('{place} 앞바다', { place }) : place,
     played: s.played,
     won,
-    headline: won === null ? t('교전 종료') : won ? t('승리') : t('패배'),
-    outcome: s.captured
-      ? t('{winner|이/가} {place|을/를} 차지했습니다. {loser|은/는} 후퇴했습니다.', { winner: winnerNavy, place, loser: t(NAVY[loser.faction]) })
-      : t('{winner|이/가} {place|을/를} 지켜 냈습니다. 공격 함대는 후퇴했습니다.', { winner: winnerNavy, place }),
+    headline: won === null ? t('교전 종료') : won ? win : t('패배'),
+    outcome: s.atSea
+      ? t('{winner|이/가} {place} 앞바다에서 {loser|을/를} 물리쳤습니다. 패한 함대는 물러났습니다.', { winner: winnerNavy, place, loser: t(NAVY[loser.faction]) })
+      : s.captured
+        ? t('{winner|이/가} {place|을/를} 차지했습니다. {loser|은/는} 후퇴했습니다.', { winner: winnerNavy, place, loser: t(NAVY[loser.faction]) })
+        : t('{winner|이/가} {place|을/를} 지켜 냈습니다. 공격 함대는 후퇴했습니다.', { winner: winnerNavy, place }),
     sides: [
       { role: '공격', faction: s.attacker.faction, ships: s.attacker.ships, lost: s.attacker.lost, kills: s.attacker.kills, you: you('attacker') },
       { role: '수비', faction: s.defender.faction, ships: s.defender.ships, lost: s.defender.lost, kills: s.defender.kills, you: you('defender') },

@@ -588,7 +588,6 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '{place} 수비대': '{place} garrison',
   '포대 {n}단계': 'Battery level {n}',
   '군영 {n}단계': 'Camp level {n}',
-  '직접 지휘하는 전투에는 한쪽에서 가장 강한 함선 30척까지 참전합니다.': 'In a battle you command yourself, each side fields its 30 strongest ships.',
   '이번 턴에 진행할 전투가 {n}건 있습니다.': '{n} battles are waiting this turn.',
   '{place} 전투 결과': '{place} battle result',
   '전투 결과': 'Battle result',

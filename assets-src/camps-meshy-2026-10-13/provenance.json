@@ -1,0 +1,2009 @@
+{
+  "schema": "imjin.camps-meshy.v1",
+  "purpose": "Faction camp models for the 3D campaign map (진영 전역): joseon, japan and ming navies at camp tiers 1-3.",
+  "images": {
+    "provider": "OpenAI Images API",
+    "model": "gpt-image-2.5-sunburst",
+    "size": "1024x1024",
+    "quality": "high",
+    "background": "transparent",
+    "output_format": "png",
+    "requestBudget": 20,
+    "style": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border.",
+    "factions": {
+      "joseon": "Joseon Korean navy, 1592: grey ceramic-tiled roofs with gracefully upturned eaves and white mortar ridges, white lime-plaster walls framed by dark brown timber, grey granite and rammed-earth walls, plain blue and plain white cloth banners with no emblem.",
+      "japan": "Sengoku Japanese navy, 1592, in the style of a wajo coastal fortress: white plaster walls standing on steeply sloped fitted grey stone bases, black and dark grey tiled roofs with curved gables, dark timber, plain white and plain red cloth nobori banners with no emblem or symbol of any kind.",
+      "ming": "Ming Chinese navy, 1598: grey brick walls with crenellated battlements, red-lacquered timber gate towers with yellow-glazed tiled roofs, grey stone, grey-tiled barracks, plain red and plain yellow cloth banners with no emblem."
+    },
+    "tiers": {
+      "joseon-1": "TIER 1, a modest new camp: a ring of sharpened upright log palisade with one simple timber gate around a small earthen yard, two small thatched huts and one small grey-tiled hut, a tall pole with a plain blue banner, and a short timber jetty on the waterfront side.",
+      "joseon-2": "TIER 2, a walled naval station: a continuous wall of grey granite blocks topped with a white plastered parapet, a gate with a small grey-tiled gate pavilion, a wooden watchtower, two long grey-tiled barracks and a storehouse inside, plain blue and white banners, and a broad timber pier on the waterfront side.",
+      "joseon-3": "TIER 3, a fortress port: high grey granite fortress walls with crenellated white parapets and four corner towers with small tiled pavilions, a fortified gate, in the centre a large Joseon command hall on a raised stone platform with many dark red pillars and a huge grey hip-and-gable tiled roof with upturned eaves, tiled barracks, bronze cannon emplacements on the ramparts, and a long straight stone quay along the waterfront side with a roofed boathouse dock, empty, no ship.",
+      "japan-1": "TIER 1, a modest new camp: a ring of sharpened upright log palisade partly hung with plain white cloth curtain screens, one simple gate, three white canvas tents and a small dark-roofed timber hut around a small yard, tall plain white and plain red nobori banners, and a short timber jetty on the waterfront side.",
+      "japan-2": "TIER 2, a walled naval station: a wall of white plaster on a sloped fitted stone base with dark tiled coping, a gate with a white plaster turret over it, a two-storey white corner turret (yagura) with black tiled roofs, two dark-tiled barracks and a storehouse inside, plain white and red banners, and a timber pier on the waterfront side.",
+      "japan-3": "TIER 3, a fortress port (wajo): tiers of steeply sloped stone walls topped with white plaster walls, white two-storey corner turrets, a fortified gate, in the centre a tall four-storey white tenshu keep with black tiled roofs and curved gables, dark-tiled barracks, cannon emplacements on the walls, plain white and red banners, and a long straight stone quay along the waterfront side with a roofed dock, empty, no ship.",
+      "ming-1": "TIER 1, a modest new camp: a square palisade of sharpened upright logs with one simple gate around a small earthen yard, a tall square wooden watchtower, three canvas tents and a small grey-tiled hut, plain red and plain yellow banners, and a short timber jetty on the waterfront side.",
+      "ming-2": "TIER 2, a walled naval station: a square grey brick wall with crenellated battlements, a gate with a red-lacquered gate tower under a yellow-glazed tiled roof, a brick watchtower at one corner, two grey-tiled barracks and a storehouse inside, plain red and yellow banners, and a timber pier on the waterfront side.",
+      "ming-3": "TIER 3, a fortress port: a square fortress of high grey brick walls with crenellated battlements and four square corner towers, over the main gate a great two-storey red-lacquered gate tower with double yellow-glazed tiled roofs, grey-tiled barracks and a yellow-roofed hall inside, cannon emplacements on the walls, plain red and yellow banners, and a long straight stone quay along the waterfront side with a roofed dock, empty, no ship."
+    },
+    "grow": "The reference image is the previous tier of this very camp. Keep exactly its rendering style, lighting, camera angle, base size and shape, colour palette and transparent background, and keep the waterfront on the same left-front side; rebuild the camp on that base as follows. "
+  },
+  "meshy": {
+    "provider": "Meshy",
+    "endpoint": "https://api.meshy.ai/openapi/v1/image-to-3d",
+    "apiModel": "meshy-7.1",
+    "creditsPerTask": 30,
+    "hardCreditCeiling": 400,
+    "maxChargedAttemptsPerModel": 2,
+    "pricingSource": "https://docs.meshy.ai/en/api/pricing",
+    "pricingVerifiedAt": "2026-10-13",
+    "pricingNote": "meshy-7.1 mesh with 2K texture: 30 credits; failed tasks are refunded",
+    "texturePrompts": {
+      "joseon": "Joseon Korean naval camp, stylised realistic hand-painted look: grey ceramic roof tiles with white mortar ridges, white lime-plaster walls, dark brown timber, grey granite blocks, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain blue and plain white cloth banners.",
+      "japan": "Sengoku Japanese naval fortress, stylised realistic hand-painted look: black and dark grey roof tiles, bright white plaster walls, dark timber, grey fitted stone bases, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain white and plain red cloth banners.",
+      "ming": "Ming Chinese naval fort, stylised realistic hand-painted look: grey brick walls and battlements, red-lacquered timber, yellow-glazed roof tiles on the gate towers, grey roof tiles on the barracks, grey stone, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain red and plain yellow cloth banners."
+    },
+    "textureTail": " Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+    "textureTier": {
+      "1": " Sharpened log palisade, small huts and tents.",
+      "2": " Stone or brick walls, tiled barracks.",
+      "3": " Fortress walls, corner towers, dark bronze cannons, stone quay."
+    },
+    "balance": [
+      {
+        "at": "2026-10-12T18:15:40.110Z",
+        "balance": 1242,
+        "label": "before"
+      },
+      {
+        "at": "2026-10-12T19:01:49.096Z",
+        "balance": 942,
+        "label": "after"
+      }
+    ]
+  },
+  "imageRequests": [
+    {
+      "n": 1,
+      "id": "joseon-1",
+      "variant": 1,
+      "kind": "generate",
+      "from": null,
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Joseon Korean navy, 1592: grey ceramic-tiled roofs with gracefully upturned eaves and white mortar ridges, white lime-plaster walls framed by dark brown timber, grey granite and rammed-earth walls, plain blue and plain white cloth banners with no emblem. TIER 1, a modest new camp: a ring of sharpened upright log palisade with one simple timber gate around a small earthen yard, two small thatched huts and one small grey-tiled hut, a tall pole with a plain blue banner, and a short timber jetty on the waterfront side.",
+      "extra": null,
+      "requestedAt": "2026-10-12T18:15:45.110Z",
+      "status": "done",
+      "finishedAt": "2026-10-12T18:16:25.359Z",
+      "file": "assets-src/camps-meshy-2026-10-13/candidates/joseon-1-v1.png",
+      "sha256": "53fba400c79360c6e9c039dba89e4868ddfacb4d1bf61a726b22245378722fd7",
+      "bytes": 1478917,
+      "revisedPrompt": null,
+      "usage": {
+        "input_tokens": 421,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 421
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2177
+      },
+      "chosen": true
+    },
+    {
+      "n": 2,
+      "id": "japan-1",
+      "variant": 1,
+      "kind": "generate",
+      "from": null,
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Sengoku Japanese navy, 1592, in the style of a wajo coastal fortress: white plaster walls standing on steeply sloped fitted grey stone bases, black and dark grey tiled roofs with curved gables, dark timber, plain white and plain red cloth nobori banners with no emblem or symbol of any kind. TIER 1, a modest new camp: a ring of sharpened upright log palisade partly hung with plain white cloth curtain screens, one simple gate, three white canvas tents and a small dark-roofed timber hut around a small yard, tall plain white and plain red nobori banners, and a short timber jetty on the waterfront side.",
+      "extra": null,
+      "requestedAt": "2026-10-12T18:15:45.133Z",
+      "status": "done",
+      "finishedAt": "2026-10-12T18:16:25.836Z",
+      "file": "assets-src/camps-meshy-2026-10-13/candidates/japan-1-v1.png",
+      "sha256": "39022e9a8e08148d83f3ebf40acbb2784deba951e90e7132806d4be674a2003d",
+      "bytes": 1564936,
+      "revisedPrompt": null,
+      "usage": {
+        "input_tokens": 437,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 437
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2193
+      },
+      "chosen": true
+    },
+    {
+      "n": 3,
+      "id": "ming-1",
+      "variant": 1,
+      "kind": "generate",
+      "from": null,
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Ming Chinese navy, 1598: grey brick walls with crenellated battlements, red-lacquered timber gate towers with yellow-glazed tiled roofs, grey stone, grey-tiled barracks, plain red and plain yellow cloth banners with no emblem. TIER 1, a modest new camp: a square palisade of sharpened upright logs with one simple gate around a small earthen yard, a tall square wooden watchtower, three canvas tents and a small grey-tiled hut, plain red and plain yellow banners, and a short timber jetty on the waterfront side.",
+      "extra": null,
+      "requestedAt": "2026-10-12T18:15:45.136Z",
+      "status": "done",
+      "finishedAt": "2026-10-12T18:16:22.361Z",
+      "file": "assets-src/camps-meshy-2026-10-13/candidates/ming-1-v1.png",
+      "sha256": "e26b853cc230275994eb145f38c6885c574a090c6730c3814238e6a799825f11",
+      "bytes": 1521619,
+      "revisedPrompt": null,
+      "usage": {
+        "input_tokens": 420,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 420
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2176
+      },
+      "chosen": true
+    },
+    {
+      "n": 4,
+      "id": "joseon-2",
+      "variant": 1,
+      "kind": "edit",
+      "from": {
+        "id": "joseon-1",
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/joseon-1.png",
+        "sha256": "de77ceefd6fba31d4b1a782723e7afa9c55a32e60d00fb35f92d013e6c96abb9"
+      },
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Joseon Korean navy, 1592: grey ceramic-tiled roofs with gracefully upturned eaves and white mortar ridges, white lime-plaster walls framed by dark brown timber, grey granite and rammed-earth walls, plain blue and plain white cloth banners with no emblem. The reference image is the previous tier of this very camp. Keep exactly its rendering style, lighting, camera angle, base size and shape, colour palette and transparent background, and keep the waterfront on the same left-front side; rebuild the camp on that base as follows. TIER 2, a walled naval station: a continuous wall of grey granite blocks topped with a white plastered parapet, a gate with a small grey-tiled gate pavilion, a wooden watchtower, two long grey-tiled barracks and a storehouse inside, plain blue and white banners, and a broad timber pier on the waterfront side.",
+      "extra": null,
+      "requestedAt": "2026-10-12T18:18:22.427Z",
+      "status": "failed",
+      "error": "network: fetch failed (connection dropped before a response; cause not recorded by the first script version)",
+      "billable": "unknown, counted",
+      "chosen": true
+    },
+    {
+      "n": 5,
+      "id": "japan-2",
+      "variant": 1,
+      "kind": "edit",
+      "from": {
+        "id": "japan-1",
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/japan-1.png",
+        "sha256": "917f6b994e6fe3a5f2ed5ee21ae27dec71415130af3de31c77a2b66593f358fc"
+      },
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Sengoku Japanese navy, 1592, in the style of a wajo coastal fortress: white plaster walls standing on steeply sloped fitted grey stone bases, black and dark grey tiled roofs with curved gables, dark timber, plain white and plain red cloth nobori banners with no emblem or symbol of any kind. The reference image is the previous tier of this very camp. Keep exactly its rendering style, lighting, camera angle, base size and shape, colour palette and transparent background, and keep the waterfront on the same left-front side; rebuild the camp on that base as follows. TIER 2, a walled naval station: a wall of white plaster on a sloped fitted stone base with dark tiled coping, a gate with a white plaster turret over it, a two-storey white corner turret (yagura) with black tiled roofs, two dark-tiled barracks and a storehouse inside, plain white and red banners, and a timber pier on the waterfront side.",
+      "extra": null,
+      "requestedAt": "2026-10-12T18:18:22.443Z",
+      "status": "failed",
+      "error": "network: fetch failed (connection dropped before a response; cause not recorded by the first script version)",
+      "billable": "unknown, counted",
+      "chosen": true
+    },
+    {
+      "n": 6,
+      "id": "ming-2",
+      "variant": 1,
+      "kind": "edit",
+      "from": {
+        "id": "ming-1",
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/ming-1.png",
+        "sha256": "b1bd2183ced11ebe952dfd93ce82620300f114ba86d5a95dcdf98d94457a6270"
+      },
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Ming Chinese navy, 1598: grey brick walls with crenellated battlements, red-lacquered timber gate towers with yellow-glazed tiled roofs, grey stone, grey-tiled barracks, plain red and plain yellow cloth banners with no emblem. The reference image is the previous tier of this very camp. Keep exactly its rendering style, lighting, camera angle, base size and shape, colour palette and transparent background, and keep the waterfront on the same left-front side; rebuild the camp on that base as follows. TIER 2, a walled naval station: a square grey brick wall with crenellated battlements, a gate with a red-lacquered gate tower under a yellow-glazed tiled roof, a brick watchtower at one corner, two grey-tiled barracks and a storehouse inside, plain red and yellow banners, and a timber pier on the waterfront side.",
+      "extra": null,
+      "requestedAt": "2026-10-12T18:18:22.445Z",
+      "status": "done",
+      "finishedAt": "2026-10-12T18:19:02.142Z",
+      "file": "assets-src/camps-meshy-2026-10-13/candidates/ming-2-v1.png",
+      "sha256": "0a83b720ce5a8b42d63d7789661b2d91a76e37da9a273fbdfcc8e0fa41358276",
+      "bytes": 1608512,
+      "revisedPrompt": null,
+      "usage": {
+        "input_tokens": 1518,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 494
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3274
+      },
+      "chosen": true
+    },
+    {
+      "n": 7,
+      "id": "joseon-2",
+      "variant": 2,
+      "kind": "edit",
+      "from": {
+        "id": "joseon-1",
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/joseon-1.png",
+        "sha256": "de77ceefd6fba31d4b1a782723e7afa9c55a32e60d00fb35f92d013e6c96abb9"
+      },
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Joseon Korean navy, 1592: grey ceramic-tiled roofs with gracefully upturned eaves and white mortar ridges, white lime-plaster walls framed by dark brown timber, grey granite and rammed-earth walls, plain blue and plain white cloth banners with no emblem. The reference image is the previous tier of this very camp. Keep exactly its rendering style, lighting, camera angle, base size and shape, colour palette and transparent background, and keep the waterfront on the same left-front side; rebuild the camp on that base as follows. TIER 2, a walled naval station: a continuous wall of grey granite blocks topped with a white plastered parapet, a gate with a small grey-tiled gate pavilion, a wooden watchtower, two long grey-tiled barracks and a storehouse inside, plain blue and white banners, and a broad timber pier on the waterfront side.",
+      "extra": null,
+      "requestedAt": "2026-10-12T18:19:23.039Z",
+      "status": "failed",
+      "error": "network: fetch failed UND_ERR_SOCKET (failed 0.24 s after start, during the upload)",
+      "billable": false,
+      "chosen": false
+    },
+    {
+      "n": 8,
+      "id": "japan-2",
+      "variant": 2,
+      "kind": "edit",
+      "from": {
+        "id": "japan-1",
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/japan-1.png",
+        "sha256": "917f6b994e6fe3a5f2ed5ee21ae27dec71415130af3de31c77a2b66593f358fc"
+      },
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Sengoku Japanese navy, 1592, in the style of a wajo coastal fortress: white plaster walls standing on steeply sloped fitted grey stone bases, black and dark grey tiled roofs with curved gables, dark timber, plain white and plain red cloth nobori banners with no emblem or symbol of any kind. The reference image is the previous tier of this very camp. Keep exactly its rendering style, lighting, camera angle, base size and shape, colour palette and transparent background, and keep the waterfront on the same left-front side; rebuild the camp on that base as follows. TIER 2, a walled naval station: a wall of white plaster on a sloped fitted stone base with dark tiled coping, a gate with a white plaster turret over it, a two-storey white corner turret (yagura) with black tiled roofs, two dark-tiled barracks and a storehouse inside, plain white and red banners, and a timber pier on the waterfront side.",
+      "extra": null,
+      "requestedAt": "2026-10-12T18:19:23.059Z",
+      "status": "failed",
+      "error": "network: fetch failed UND_ERR_SOCKET (failed 0.24 s after start, during the upload)",
+      "billable": false,
+      "chosen": false
+    },
+    {
+      "n": 9,
+      "id": "joseon-2",
+      "variant": 1,
+      "kind": "edit",
+      "from": {
+        "id": "joseon-1",
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/joseon-1.png",
+        "sha256": "de77ceefd6fba31d4b1a782723e7afa9c55a32e60d00fb35f92d013e6c96abb9",
+        "upload": "WebP quality 92 of that file",
+        "uploadSha256": "338cc882da0a1961c33ce10dcdb44774a6d4f6870f5ee44e766de6cb26f0f947"
+      },
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Joseon Korean navy, 1592: grey ceramic-tiled roofs with gracefully upturned eaves and white mortar ridges, white lime-plaster walls framed by dark brown timber, grey granite and rammed-earth walls, plain blue and plain white cloth banners with no emblem. The reference image is the previous tier of this very camp. Keep exactly its rendering style, lighting, camera angle, base size and shape, colour palette and transparent background, and keep the waterfront on the same left-front side; rebuild the camp on that base as follows. TIER 2, a walled naval station: a continuous wall of grey granite blocks topped with a white plastered parapet, a gate with a small grey-tiled gate pavilion, a wooden watchtower, two long grey-tiled barracks and a storehouse inside, plain blue and white banners, and a broad timber pier on the waterfront side.",
+      "extra": null,
+      "requestedAt": "2026-10-12T18:20:35.949Z",
+      "status": "done",
+      "finishedAt": "2026-10-12T18:21:16.673Z",
+      "file": "assets-src/camps-meshy-2026-10-13/candidates/joseon-2-v1.png",
+      "sha256": "e2b19762fbeb6e7cc1713ce1e7353b2793205dfa69d3f3284a75e580b5ee33cb",
+      "bytes": 1522403,
+      "revisedPrompt": null,
+      "usage": {
+        "input_tokens": 1516,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 492
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3272
+      },
+      "chosen": true
+    },
+    {
+      "n": 10,
+      "id": "japan-2",
+      "variant": 1,
+      "kind": "edit",
+      "from": {
+        "id": "japan-1",
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/japan-1.png",
+        "sha256": "917f6b994e6fe3a5f2ed5ee21ae27dec71415130af3de31c77a2b66593f358fc",
+        "upload": "WebP quality 92 of that file",
+        "uploadSha256": "12519457b4d8371bb1582ddcc9ea9718e4a6e939d36073864e8249f049abb40e"
+      },
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Sengoku Japanese navy, 1592, in the style of a wajo coastal fortress: white plaster walls standing on steeply sloped fitted grey stone bases, black and dark grey tiled roofs with curved gables, dark timber, plain white and plain red cloth nobori banners with no emblem or symbol of any kind. The reference image is the previous tier of this very camp. Keep exactly its rendering style, lighting, camera angle, base size and shape, colour palette and transparent background, and keep the waterfront on the same left-front side; rebuild the camp on that base as follows. TIER 2, a walled naval station: a wall of white plaster on a sloped fitted stone base with dark tiled coping, a gate with a white plaster turret over it, a two-storey white corner turret (yagura) with black tiled roofs, two dark-tiled barracks and a storehouse inside, plain white and red banners, and a timber pier on the waterfront side.",
+      "extra": null,
+      "requestedAt": "2026-10-12T18:20:35.984Z",
+      "status": "done",
+      "finishedAt": "2026-10-12T18:21:18.274Z",
+      "file": "assets-src/camps-meshy-2026-10-13/candidates/japan-2-v1.png",
+      "sha256": "7a99e42a576e7b42a44efad9524310f6d8ad266798b21ae166295d875f41eb4f",
+      "bytes": 1596696,
+      "revisedPrompt": null,
+      "usage": {
+        "input_tokens": 1535,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 511
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3291
+      },
+      "chosen": true
+    },
+    {
+      "n": 11,
+      "id": "joseon-3",
+      "variant": 1,
+      "kind": "edit",
+      "from": {
+        "id": "joseon-2",
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/joseon-2.png",
+        "sha256": "1ea8078953618516904f0f03d77f99cdaf64f5311c513b86f004a73cb1d144cf",
+        "upload": "WebP quality 92 of that file",
+        "uploadSha256": "6b2997efad098e8049d6cd2ddce52bfd5d945ce35cb2d1cbd0e1bc61455e0ca4"
+      },
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Joseon Korean navy, 1592: grey ceramic-tiled roofs with gracefully upturned eaves and white mortar ridges, white lime-plaster walls framed by dark brown timber, grey granite and rammed-earth walls, plain blue and plain white cloth banners with no emblem. The reference image is the previous tier of this very camp. Keep exactly its rendering style, lighting, camera angle, base size and shape, colour palette and transparent background, and keep the waterfront on the same left-front side; rebuild the camp on that base as follows. TIER 3, a fortress port: high grey granite fortress walls with crenellated white parapets and four corner towers with small tiled pavilions, a fortified gate, in the centre a large Joseon command hall on a raised stone platform with many dark red pillars and a huge grey hip-and-gable tiled roof with upturned eaves, tiled barracks, bronze cannon emplacements on the ramparts, and a long straight stone quay along the waterfront side with a roofed boathouse dock, empty, no ship.",
+      "extra": null,
+      "requestedAt": "2026-10-12T18:25:00.820Z",
+      "status": "done",
+      "finishedAt": "2026-10-12T18:25:44.230Z",
+      "file": "assets-src/camps-meshy-2026-10-13/candidates/joseon-3-v1.png",
+      "sha256": "9bf07c410f691f93157020300d28dd02e66884dab3f5d723cfd83fc21c375ae8",
+      "bytes": 1653815,
+      "revisedPrompt": null,
+      "usage": {
+        "input_tokens": 1552,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 528
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3308
+      },
+      "chosen": true
+    },
+    {
+      "n": 12,
+      "id": "ming-3",
+      "variant": 1,
+      "kind": "edit",
+      "from": {
+        "id": "ming-2",
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/ming-2.png",
+        "sha256": "e487dd1a9ee4b5482ed20b31691cc379089e098ae1b7ae33fae679a9512623f4",
+        "upload": "WebP quality 92 of that file",
+        "uploadSha256": "cbacd4a28de76c740a94d291fca8e65a734bed0a62a2a371cdb53b030a85bba1"
+      },
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Ming Chinese navy, 1598: grey brick walls with crenellated battlements, red-lacquered timber gate towers with yellow-glazed tiled roofs, grey stone, grey-tiled barracks, plain red and plain yellow cloth banners with no emblem. The reference image is the previous tier of this very camp. Keep exactly its rendering style, lighting, camera angle, base size and shape, colour palette and transparent background, and keep the waterfront on the same left-front side; rebuild the camp on that base as follows. TIER 3, a fortress port: a square fortress of high grey brick walls with crenellated battlements and four square corner towers, over the main gate a great two-storey red-lacquered gate tower with double yellow-glazed tiled roofs, grey-tiled barracks and a yellow-roofed hall inside, cannon emplacements on the walls, plain red and yellow banners, and a long straight stone quay along the waterfront side with a roofed dock, empty, no ship.",
+      "extra": null,
+      "requestedAt": "2026-10-12T18:25:00.856Z",
+      "status": "done",
+      "finishedAt": "2026-10-12T18:25:40.799Z",
+      "file": "assets-src/camps-meshy-2026-10-13/candidates/ming-3-v1.png",
+      "sha256": "7116bad2f30790aba294515defcbab57f0cb6a1cf5d6a5a190ee58a07e606490",
+      "bytes": 1550953,
+      "revisedPrompt": null,
+      "usage": {
+        "input_tokens": 1542,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 518
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3298
+      },
+      "chosen": true
+    },
+    {
+      "n": 13,
+      "id": "japan-3",
+      "variant": 1,
+      "kind": "edit",
+      "from": {
+        "id": "japan-2",
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/japan-2.png",
+        "sha256": "65a1996ac7d8309cf6249aa3fe4e2e8749c8fcd9f21a11b05922d0117d88c91e",
+        "upload": "WebP quality 92 of that file",
+        "uploadSha256": "61c3e6e288d4cb0603a3c7d253660b2b2c0e02d363a011623d4256c7a1351ac7"
+      },
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Sengoku Japanese navy, 1592, in the style of a wajo coastal fortress: white plaster walls standing on steeply sloped fitted grey stone bases, black and dark grey tiled roofs with curved gables, dark timber, plain white and plain red cloth nobori banners with no emblem or symbol of any kind. The reference image is the previous tier of this very camp. Keep exactly its rendering style, lighting, camera angle, base size and shape, colour palette and transparent background, and keep the waterfront on the same left-front side; rebuild the camp on that base as follows. TIER 3, a fortress port (wajo): tiers of steeply sloped stone walls topped with white plaster walls, white two-storey corner turrets, a fortified gate, in the centre a tall four-storey white tenshu keep with black tiled roofs and curved gables, dark-tiled barracks, cannon emplacements on the walls, plain white and red banners, and a long straight stone quay along the waterfront side with a roofed dock, empty, no ship.",
+      "extra": null,
+      "requestedAt": "2026-10-12T18:25:00.860Z",
+      "status": "done",
+      "finishedAt": "2026-10-12T18:25:41.897Z",
+      "file": "assets-src/camps-meshy-2026-10-13/candidates/japan-3-v1.png",
+      "sha256": "8b1fc780d115388c5a95220c2e3f993a6c8f2c2aa24753beeb28a8ca0b23bd2e",
+      "bytes": 1746955,
+      "revisedPrompt": null,
+      "usage": {
+        "input_tokens": 1552,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 528
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3308
+      },
+      "chosen": false
+    },
+    {
+      "n": 14,
+      "id": "japan-3",
+      "variant": 2,
+      "kind": "edit",
+      "from": {
+        "id": "japan-2",
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/japan-2.png",
+        "sha256": "65a1996ac7d8309cf6249aa3fe4e2e8749c8fcd9f21a11b05922d0117d88c91e",
+        "upload": "WebP quality 92 of that file",
+        "uploadSha256": "61c3e6e288d4cb0603a3c7d253660b2b2c0e02d363a011623d4256c7a1351ac7"
+      },
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One compact sixteenth-century naval camp modelled as a single object standing on its own thin, flat ground base of packed earth and short grass, only a few centimetres thick, with softly bevelled edges, the base about as deep as it is wide. Camera: high three-quarter view about 40 degrees above the horizon, looking at one corner of the base so two sides are visible; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game building, chunky simplified architecture with large clearly readable roofs and strong clean colours that still read when the model is tiny on screen; no fine clutter, no small props. The waterfront is on ONE side only: the left-front edge of the base, where the jetty or quay projects out toward the lower left of the picture, its deck level with the base. Transparent background. Nothing beyond the base: no water, no sea, no terrain or trees outside the base, no ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Sengoku Japanese navy, 1592, in the style of a wajo coastal fortress: white plaster walls standing on steeply sloped fitted grey stone bases, black and dark grey tiled roofs with curved gables, dark timber, plain white and plain red cloth nobori banners with no emblem or symbol of any kind. The reference image is the previous tier of this very camp. Keep exactly its rendering style, lighting, camera angle, base size and shape, colour palette and transparent background, and keep the waterfront on the same left-front side; rebuild the camp on that base as follows. TIER 3, a fortress port (wajo): tiers of steeply sloped stone walls topped with white plaster walls, white two-storey corner turrets, a fortified gate, in the centre a tall four-storey white tenshu keep with black tiled roofs and curved gables, dark-tiled barracks, cannon emplacements on the walls, plain white and red banners, and a long straight stone quay along the waterfront side with a roofed dock, empty, no ship. The tenshu keep is the unmistakable centrepiece: it stands alone in the middle of the inner courtyard on its own high sloped stone base, with four stacked white plaster storeys under four black tiled roofs with curved gables, each storey smaller than the one below, and it is clearly the tallest structure, at least twice the height of the corner turrets, its full height visible from this angle. Keep the rest simple: turrets at the four corners of the wall, only two small barracks along the walls, a few cannons on the walls, and the long stone quay with its roofed dock along the left-front edge.",
+      "extra": "The tenshu keep is the unmistakable centrepiece: it stands alone in the middle of the inner courtyard on its own high sloped stone base, with four stacked white plaster storeys under four black tiled roofs with curved gables, each storey smaller than the one below, and it is clearly the tallest structure, at least twice the height of the corner turrets, its full height visible from this angle. Keep the rest simple: turrets at the four corners of the wall, only two small barracks along the walls, a few cannons on the walls, and the long stone quay with its roofed dock along the left-front edge.",
+      "requestedAt": "2026-10-12T18:40:34.395Z",
+      "status": "done",
+      "finishedAt": "2026-10-12T18:41:16.105Z",
+      "file": "assets-src/camps-meshy-2026-10-13/candidates/japan-3-v2.png",
+      "sha256": "b058ccbe3c2c2e32908c6aa96f5c07bb9f9ee0f58609107807de21e6a7b92352",
+      "bytes": 1557722,
+      "revisedPrompt": null,
+      "usage": {
+        "input_tokens": 1683,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 659
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3439
+      },
+      "chosen": true
+    }
+  ],
+  "models": {
+    "joseon-1": {
+      "faction": "joseon",
+      "tier": 1,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/joseon-1.png",
+        "sha256": "de77ceefd6fba31d4b1a782723e7afa9c55a32e60d00fb35f92d013e6c96abb9",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/joseon-1-v1.png",
+        "sourceSha256": "53fba400c79360c6e9c039dba89e4868ddfacb4d1bf61a726b22245378722fd7",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 1,
+        "chosenBy": "agent review (delegated by the owner brief)",
+        "note": "Thatched and tiled huts in a log palisade, blue banner, stone quay edge and jetty at the left-front; clean silhouette.",
+        "chosenAt": "2026-10-12T18:17:49.478Z"
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a13156-0446-7592-87cb-de4bd3bf01eb",
+          "createdAt": "2026-10-12T18:18:03.419Z",
+          "request": {
+            "ai_model": "meshy-7.1",
+            "model_type": "standard",
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "should_remesh": true,
+            "topology": "triangle",
+            "target_polycount": 12000,
+            "target_formats": [
+              "glb"
+            ],
+            "texture_prompt": "Joseon Korean naval camp, stylised realistic hand-painted look: grey ceramic roof tiles with white mortar ridges, white lime-plaster walls, dark brown timber, grey granite blocks, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain blue and plain white cloth banners. Sharpened log palisade, small huts and tents. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "image_enhancement": false,
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "de77ceefd6fba31d4b1a782723e7afa9c55a32e60d00fb35f92d013e6c96abb9",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/joseon-1.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/joseon-1-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 30,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-12T18:18:09.866Z",
+          "task": {
+            "id": "01a13156-0446-7592-87cb-de4bd3bf01eb",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791829089120,
+            "started_at": 1791829089130,
+            "finished_at": 1791829167166,
+            "consumed_credits": 30
+          },
+          "checkedAt": "2026-10-12T18:21:23.671Z",
+          "original": {
+            "file": "assets-src/camps-meshy-2026-10-13/originals/joseon-1-a1.glb",
+            "sha256": "d01696e52d0b4625ebb9f0d6e1da3a240b3d2c6ddd616000d2ad8790981d9000",
+            "bytes": 4840568,
+            "downloadedAt": "2026-10-12T18:21:24.134Z"
+          }
+        }
+      ]
+    },
+    "joseon-2": {
+      "faction": "joseon",
+      "tier": 2,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/joseon-2.png",
+        "sha256": "1ea8078953618516904f0f03d77f99cdaf64f5311c513b86f004a73cb1d144cf",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/joseon-2-v1.png",
+        "sourceSha256": "e2b19762fbeb6e7cc1713ce1e7353b2793205dfa69d3f3284a75e580b5ee33cb",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 9,
+        "chosenBy": "agent review (delegated by the owner brief)",
+        "note": "Granite base with white plastered parapet and tiled coping, tiled gate pavilion, timber watchtower, long tiled barracks and storehouse, blue and white banners, pier at the left-front.",
+        "chosenAt": "2026-10-12T18:21:38.620Z"
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a1315c-2e12-74e2-b14e-a7a0b209232b",
+          "createdAt": "2026-10-12T18:24:47.112Z",
+          "request": {
+            "ai_model": "meshy-7.1",
+            "model_type": "standard",
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "should_remesh": true,
+            "topology": "triangle",
+            "target_polycount": 12000,
+            "target_formats": [
+              "glb"
+            ],
+            "texture_prompt": "Joseon Korean naval camp, stylised realistic hand-painted look: grey ceramic roof tiles with white mortar ridges, white lime-plaster walls, dark brown timber, grey granite blocks, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain blue and plain white cloth banners. Stone or brick walls, tiled barracks. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "image_enhancement": false,
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "1ea8078953618516904f0f03d77f99cdaf64f5311c513b86f004a73cb1d144cf",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/joseon-2.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/joseon-2-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 30,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-12T18:24:51.940Z",
+          "task": {
+            "id": "01a1315c-2e12-74e2-b14e-a7a0b209232b",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791829491177,
+            "started_at": 1791829491182,
+            "finished_at": 1791829562761,
+            "consumed_credits": 30
+          },
+          "checkedAt": "2026-10-12T18:26:17.411Z",
+          "original": {
+            "file": "assets-src/camps-meshy-2026-10-13/originals/joseon-2-a1.glb",
+            "sha256": "18814a7425a3d27a1fe02bfe69a0b1490a0013e77a7706461cfec87766b83493",
+            "bytes": 4852396,
+            "downloadedAt": "2026-10-12T18:26:17.837Z"
+          }
+        }
+      ]
+    },
+    "joseon-3": {
+      "faction": "joseon",
+      "tier": 3,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/joseon-3.png",
+        "sha256": "bd81485efb5d8b18d627c18ac31819eb1684138e5f74ca8d6c80b32f4d3c3f26",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/joseon-3-v1.png",
+        "sourceSha256": "9bf07c410f691f93157020300d28dd02e66884dab3f5d723cfd83fc21c375ae8",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 11,
+        "chosenBy": "agent review (delegated by the owner brief)",
+        "note": "Granite fortress with white crenellated parapets, tiled corner pavilions, command hall with red pillars on a stone platform under a great grey hip-and-gable roof, tiled barracks, bronze cannons, long stone quay with a roofed boathouse at the left-front, blue and white banners.",
+        "chosenAt": "2026-10-12T18:26:02.999Z"
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a1315d-5848-7407-818d-75f37eb1f60d",
+          "createdAt": "2026-10-12T18:26:03.669Z",
+          "request": {
+            "ai_model": "meshy-7.1",
+            "model_type": "standard",
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "should_remesh": true,
+            "topology": "triangle",
+            "target_polycount": 15000,
+            "target_formats": [
+              "glb"
+            ],
+            "texture_prompt": "Joseon Korean naval camp, stylised realistic hand-painted look: grey ceramic roof tiles with white mortar ridges, white lime-plaster walls, dark brown timber, grey granite blocks, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain blue and plain white cloth banners. Fortress walls, corner towers, dark bronze cannons, stone quay. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "image_enhancement": false,
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "bd81485efb5d8b18d627c18ac31819eb1684138e5f74ca8d6c80b32f4d3c3f26",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/joseon-3.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/joseon-3-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 30,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-12T18:26:07.898Z",
+          "task": {
+            "id": "01a1315d-5848-7407-818d-75f37eb1f60d",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791829567181,
+            "started_at": 1791829567184,
+            "finished_at": 1791829642520,
+            "consumed_credits": 30
+          },
+          "checkedAt": "2026-10-12T18:35:10.986Z",
+          "original": {
+            "file": "assets-src/camps-meshy-2026-10-13/originals/joseon-3-a1.glb",
+            "sha256": "39b16bd3fba185c9f9597c5bd6a2264f8d2b2a3b92f784fd9e9fe4db95e45bf7",
+            "bytes": 5651308,
+            "downloadedAt": "2026-10-12T18:35:11.454Z"
+          }
+        }
+      ]
+    },
+    "japan-1": {
+      "faction": "japan",
+      "tier": 1,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/japan-1.png",
+        "sha256": "917f6b994e6fe3a5f2ed5ee21ae27dec71415130af3de31c77a2b66593f358fc",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/japan-1-v1.png",
+        "sourceSha256": "39022e9a8e08148d83f3ebf40acbb2784deba951e90e7132806d4be674a2003d",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 2,
+        "chosenBy": "agent review (delegated by the owner brief)",
+        "note": "Log palisade with white curtain screens on a stone base, tents, dark-roofed hut and gate, plain red and white nobori, jetty at the left-front.",
+        "chosenAt": "2026-10-12T18:17:49.709Z"
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a13156-1c57-75c9-9424-b8b563630d30",
+          "createdAt": "2026-10-12T18:18:09.870Z",
+          "request": {
+            "ai_model": "meshy-7.1",
+            "model_type": "standard",
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "should_remesh": true,
+            "topology": "triangle",
+            "target_polycount": 12000,
+            "target_formats": [
+              "glb"
+            ],
+            "texture_prompt": "Sengoku Japanese naval fortress, stylised realistic hand-painted look: black and dark grey roof tiles, bright white plaster walls, dark timber, grey fitted stone bases, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain white and plain red cloth banners. Sharpened log palisade, small huts and tents. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "image_enhancement": false,
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "917f6b994e6fe3a5f2ed5ee21ae27dec71415130af3de31c77a2b66593f358fc",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/japan-1.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/japan-1-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 30,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-12T18:18:15.379Z",
+          "task": {
+            "id": "01a13156-1c57-75c9-9424-b8b563630d30",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791829094660,
+            "started_at": 1791829094665,
+            "finished_at": 1791829172790,
+            "consumed_credits": 30
+          },
+          "checkedAt": "2026-10-12T18:21:24.951Z",
+          "original": {
+            "file": "assets-src/camps-meshy-2026-10-13/originals/japan-1-a1.glb",
+            "sha256": "83c15ba297eeb464dbfb42649fb05d22161cce1d6c290f81ccea3bd8bfd9f274",
+            "bytes": 5016156,
+            "downloadedAt": "2026-10-12T18:21:25.345Z"
+          }
+        }
+      ]
+    },
+    "japan-2": {
+      "faction": "japan",
+      "tier": 2,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/japan-2.png",
+        "sha256": "65a1996ac7d8309cf6249aa3fe4e2e8749c8fcd9f21a11b05922d0117d88c91e",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/japan-2-v1.png",
+        "sourceSha256": "7a99e42a576e7b42a44efad9524310f6d8ad266798b21ae166295d875f41eb4f",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 10,
+        "chosenBy": "agent review (delegated by the owner brief)",
+        "note": "Sloped stone base under white plaster walls with dark tiled coping, gate turret, two-storey corner yagura, dark-tiled barracks and storehouse, plain red and white nobori, pier at the left-front.",
+        "chosenAt": "2026-10-12T18:21:38.853Z"
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a1315c-3eed-7078-ab01-d73b537c1deb",
+          "createdAt": "2026-10-12T18:24:51.945Z",
+          "request": {
+            "ai_model": "meshy-7.1",
+            "model_type": "standard",
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "should_remesh": true,
+            "topology": "triangle",
+            "target_polycount": 12000,
+            "target_formats": [
+              "glb"
+            ],
+            "texture_prompt": "Sengoku Japanese naval fortress, stylised realistic hand-painted look: black and dark grey roof tiles, bright white plaster walls, dark timber, grey fitted stone bases, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain white and plain red cloth banners. Stone or brick walls, tiled barracks. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "image_enhancement": false,
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "65a1996ac7d8309cf6249aa3fe4e2e8749c8fcd9f21a11b05922d0117d88c91e",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/japan-2.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/japan-2-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 30,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-12T18:24:56.041Z",
+          "task": {
+            "id": "01a1315c-3eed-7078-ab01-d73b537c1deb",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791829495304,
+            "started_at": 1791829495307,
+            "finished_at": 1791829564733,
+            "consumed_credits": 30
+          },
+          "checkedAt": "2026-10-12T18:26:19.057Z",
+          "original": {
+            "file": "assets-src/camps-meshy-2026-10-13/originals/japan-2-a1.glb",
+            "sha256": "afe6af73ce51e46e9dba85a65f7fbfa77db3c648db95a3b2637c5bcd0e34d164",
+            "bytes": 4874936,
+            "downloadedAt": "2026-10-12T18:26:19.359Z"
+          }
+        }
+      ]
+    },
+    "japan-3": {
+      "faction": "japan",
+      "tier": 3,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/japan-3.png",
+        "sha256": "a16fb9ebe1eeea25e2d8085d799a3765e46e1a024c471ae300a6fd072a5e4e79",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/japan-3-v2.png",
+        "sourceSha256": "b058ccbe3c2c2e32908c6aa96f5c07bb9f9ee0f58609107807de21e6a7b92352",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 2,
+        "request": 14,
+        "chosenBy": "agent review (delegated by the owner brief)",
+        "note": "Retry concept: a four-storey white tenshu with black curved-gable roofs standing alone in the centre on its own high stone base, clearly the tallest structure; corner turrets, two barracks, cannons, quay with a roofed dock at the left-front, plain red and white nobori.",
+        "chosenAt": "2026-10-12T18:41:27.074Z"
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a1315d-67a3-77da-bbd0-d464965d118a",
+          "createdAt": "2026-10-12T18:26:07.903Z",
+          "request": {
+            "ai_model": "meshy-7.1",
+            "model_type": "standard",
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "should_remesh": true,
+            "topology": "triangle",
+            "target_polycount": 15000,
+            "target_formats": [
+              "glb"
+            ],
+            "texture_prompt": "Sengoku Japanese naval fortress, stylised realistic hand-painted look: black and dark grey roof tiles, bright white plaster walls, dark timber, grey fitted stone bases, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain white and plain red cloth banners. Fortress walls, corner towers, dark bronze cannons, stone quay. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "image_enhancement": false,
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "a3338077969f00486e89371abf0bd06a45081aee714fc00ddad468f061dcb8df",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/japan-3.png as chosen then (conceptHistory[0]: prepared from candidates/japan-3-v1.png); the file now holds the retry concept",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/japan-3-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 30,
+          "rejectionReason": "The tier's defining building is missing: Meshy rebuilt the tenshu keep at the back edge as a squat two-to-three-roof hall no taller than the corner turrets, so at map size tier 3 reads as tier 2 with more turrets (checked from low and oblique views, shots/s1013/camps-meshy/originals/rejected-japan-3-a1.png).",
+          "submittedAt": "2026-10-12T18:26:13.047Z",
+          "task": {
+            "id": "01a1315d-67a3-77da-bbd0-d464965d118a",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791829572302,
+            "started_at": 1791829572307,
+            "finished_at": 1791829641110,
+            "consumed_credits": 30
+          },
+          "checkedAt": "2026-10-12T18:35:12.588Z",
+          "original": {
+            "file": "assets-src/camps-meshy-2026-10-13/originals/japan-3-a1.glb",
+            "sha256": "0b79ecda306bf5865b627a2589e200d7f2210cfaec4dee503ebeae3759d38a19",
+            "bytes": 5156464,
+            "downloadedAt": "2026-10-12T18:35:13.037Z"
+          },
+          "rejectedAt": "2026-10-12T18:41:26.861Z"
+        },
+        {
+          "number": 2,
+          "status": "SUCCEEDED",
+          "taskId": "01a1316b-6fb7-7243-b5c0-e203cb05ebb1",
+          "createdAt": "2026-10-12T18:41:27.203Z",
+          "request": {
+            "ai_model": "meshy-7.1",
+            "model_type": "standard",
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "should_remesh": true,
+            "topology": "triangle",
+            "target_polycount": 15000,
+            "target_formats": [
+              "glb"
+            ],
+            "texture_prompt": "Sengoku Japanese naval fortress, stylised realistic hand-painted look: black and dark grey roof tiles, bright white plaster walls, dark timber, grey fitted stone bases, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain white and plain red cloth banners. Fortress walls, corner towers, dark bronze cannons, stone quay. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "image_enhancement": false,
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "a16fb9ebe1eeea25e2d8085d799a3765e46e1a024c471ae300a6fd072a5e4e79",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/japan-3.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/japan-3-v2.png",
+            "imageVariant": 2
+          },
+          "consumedCredits": 30,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-12T18:41:29.701Z",
+          "task": {
+            "id": "01a1316b-6fb7-7243-b5c0-e203cb05ebb1",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791830488916,
+            "started_at": 1791830488925,
+            "finished_at": 1791830567168,
+            "consumed_credits": 30
+          },
+          "checkedAt": "2026-10-12T18:45:05.222Z",
+          "original": {
+            "file": "assets-src/camps-meshy-2026-10-13/originals/japan-3-a2.glb",
+            "sha256": "4f3d06de2b69aaf04dc7e9d761aa426b65ec2d034dd960410c208fd5a8217bc5",
+            "bytes": 5019044,
+            "downloadedAt": "2026-10-12T18:45:05.604Z"
+          }
+        }
+      ],
+      "conceptHistory": [
+        {
+          "file": "assets-src/camps-meshy-2026-10-13/concepts/japan-3.png",
+          "sha256": "a3338077969f00486e89371abf0bd06a45081aee714fc00ddad468f061dcb8df",
+          "source": "assets-src/camps-meshy-2026-10-13/candidates/japan-3-v1.png",
+          "sourceSha256": "8b1fc780d115388c5a95220c2e3f993a6c8f2c2aa24753beeb28a8ca0b23bd2e",
+          "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+          "variant": 1,
+          "request": 13,
+          "chosenBy": "agent review (delegated by the owner brief)",
+          "note": "Sloped stone walls under white plaster, corner turrets, multi-storey white tenshu with black roofs and gables, dark-tiled barracks, cannon platforms, stone quay with a roofed dock at the left-front, plain red and white nobori.",
+          "replacedAt": "2026-10-12T18:41:27.074Z",
+          "rederivable": "The candidate is kept locally (git-ignored); the same preparation reproduces sha256 a3338077... exactly (checked)."
+        }
+      ]
+    },
+    "ming-1": {
+      "faction": "ming",
+      "tier": 1,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/ming-1.png",
+        "sha256": "b1bd2183ced11ebe952dfd93ce82620300f114ba86d5a95dcdf98d94457a6270",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/ming-1-v1.png",
+        "sourceSha256": "e26b853cc230275994eb145f38c6885c574a090c6730c3814238e6a799825f11",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 3,
+        "chosenBy": "agent review (delegated by the owner brief)",
+        "note": "Square log palisade, timber watchtower with a yellow roof, tents, grey-tiled brick hut, plain red and yellow banners, jetty at the left-front.",
+        "chosenAt": "2026-10-12T18:17:49.953Z"
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a13156-31e0-77dc-98d5-437fdc6ba843",
+          "createdAt": "2026-10-12T18:18:15.383Z",
+          "request": {
+            "ai_model": "meshy-7.1",
+            "model_type": "standard",
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "should_remesh": true,
+            "topology": "triangle",
+            "target_polycount": 12000,
+            "target_formats": [
+              "glb"
+            ],
+            "texture_prompt": "Ming Chinese naval fort, stylised realistic hand-painted look: grey brick walls and battlements, red-lacquered timber, yellow-glazed roof tiles on the gate towers, grey roof tiles on the barracks, grey stone, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain red and plain yellow cloth banners. Sharpened log palisade, small huts and tents. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "image_enhancement": false,
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "b1bd2183ced11ebe952dfd93ce82620300f114ba86d5a95dcdf98d94457a6270",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/ming-1.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/ming-1-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 30,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-12T18:18:18.961Z",
+          "task": {
+            "id": "01a13156-31e0-77dc-98d5-437fdc6ba843",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791829098247,
+            "started_at": 1791829098253,
+            "finished_at": 1791829173015,
+            "consumed_credits": 30
+          },
+          "checkedAt": "2026-10-12T18:21:26.161Z",
+          "original": {
+            "file": "assets-src/camps-meshy-2026-10-13/originals/ming-1-a1.glb",
+            "sha256": "5ebc468c59b27c1533034800bd06c7e2e5c1242bd28370a829d9810f422c5d04",
+            "bytes": 4774476,
+            "downloadedAt": "2026-10-12T18:21:26.570Z"
+          }
+        }
+      ]
+    },
+    "ming-2": {
+      "faction": "ming",
+      "tier": 2,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/ming-2.png",
+        "sha256": "e487dd1a9ee4b5482ed20b31691cc379089e098ae1b7ae33fae679a9512623f4",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/ming-2-v1.png",
+        "sourceSha256": "0a83b720ce5a8b42d63d7789661b2d91a76e37da9a273fbdfcc8e0fa41358276",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 6,
+        "chosenBy": "agent review (delegated by the owner brief)",
+        "note": "Square crenellated grey brick wall, red gate tower and brick watchtower with yellow-glazed roofs, grey-tiled barracks, plain red and yellow banners, jetty at the left-front; same base as ming-1.",
+        "chosenAt": "2026-10-12T18:20:35.705Z"
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a1315c-4ef3-77ea-b05d-f3bbc4642a34",
+          "createdAt": "2026-10-12T18:24:56.046Z",
+          "request": {
+            "ai_model": "meshy-7.1",
+            "model_type": "standard",
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "should_remesh": true,
+            "topology": "triangle",
+            "target_polycount": 12000,
+            "target_formats": [
+              "glb"
+            ],
+            "texture_prompt": "Ming Chinese naval fort, stylised realistic hand-painted look: grey brick walls and battlements, red-lacquered timber, yellow-glazed roof tiles on the gate towers, grey roof tiles on the barracks, grey stone, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain red and plain yellow cloth banners. Stone or brick walls, tiled barracks. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "image_enhancement": false,
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "e487dd1a9ee4b5482ed20b31691cc379089e098ae1b7ae33fae679a9512623f4",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/ming-2.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/ming-2-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 30,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-12T18:25:00.574Z",
+          "task": {
+            "id": "01a1315c-4ef3-77ea-b05d-f3bbc4642a34",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791829499793,
+            "started_at": 1791829499795,
+            "finished_at": 1791829556254,
+            "consumed_credits": 30
+          },
+          "checkedAt": "2026-10-12T18:26:20.379Z",
+          "original": {
+            "file": "assets-src/camps-meshy-2026-10-13/originals/ming-2-a1.glb",
+            "sha256": "9020f1af08664d5ed2d86a206f03954a97e4582518d29ede3181e88b39f6522d",
+            "bytes": 4368968,
+            "downloadedAt": "2026-10-12T18:26:20.740Z"
+          }
+        }
+      ]
+    },
+    "ming-3": {
+      "faction": "ming",
+      "tier": 3,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/ming-3.png",
+        "sha256": "e64aea5e7d8b4fecdbaba0965e9da668845d601550b6c2ace17ffe3fb0c5ffc0",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/ming-3-v1.png",
+        "sourceSha256": "7116bad2f30790aba294515defcbab57f0cb6a1cf5d6a5a190ee58a07e606490",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 12,
+        "chosenBy": "agent review (delegated by the owner brief)",
+        "note": "Square crenellated grey brick fortress with corner towers, two-storey red gate tower with double yellow-glazed roofs, yellow-roofed hall, grey-tiled barracks, cannons, long stone quay with a roofed dock at the left-front, plain red and yellow banners.",
+        "chosenAt": "2026-10-12T18:26:03.497Z"
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a1315d-7bbd-71a4-bf2e-89bc58172d0d",
+          "createdAt": "2026-10-12T18:26:13.053Z",
+          "request": {
+            "ai_model": "meshy-7.1",
+            "model_type": "standard",
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "should_remesh": true,
+            "topology": "triangle",
+            "target_polycount": 15000,
+            "target_formats": [
+              "glb"
+            ],
+            "texture_prompt": "Ming Chinese naval fort, stylised realistic hand-painted look: grey brick walls and battlements, red-lacquered timber, yellow-glazed roof tiles on the gate towers, grey roof tiles on the barracks, grey stone, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain red and plain yellow cloth banners. Fortress walls, corner towers, dark bronze cannons, stone quay. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "image_enhancement": false,
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "e64aea5e7d8b4fecdbaba0965e9da668845d601550b6c2ace17ffe3fb0c5ffc0",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/ming-3.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/ming-3-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 30,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-12T18:26:16.836Z",
+          "task": {
+            "id": "01a1315d-7bbd-71a4-bf2e-89bc58172d0d",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791829576089,
+            "started_at": 1791829576094,
+            "finished_at": 1791829641201,
+            "consumed_credits": 30
+          },
+          "checkedAt": "2026-10-12T18:35:14.143Z",
+          "original": {
+            "file": "assets-src/camps-meshy-2026-10-13/originals/ming-3-a1.glb",
+            "sha256": "ef9b78fedd7b9c1cd131f05201a13a5251d5106598ef585f4e545cc441deb06f",
+            "bytes": 4987676,
+            "downloadedAt": "2026-10-12T18:35:14.552Z"
+          }
+        }
+      ]
+    }
+  },
+  "shipped": {
+    "builtBy": "node scripts/build-camp-models.mjs",
+    "builtAt": "2026-10-12T19:08:52.150Z",
+    "convention": "glTF y up; waterfront (pier or quay) faces -z; base on y = 0; centred on x and z; the longer horizontal side is 1 unit",
+    "levels": [
+      {
+        "name": "near",
+        "suffix": "",
+        "trianglesByTier": [
+          3000,
+          3500,
+          3900
+        ],
+        "range": [
+          2500,
+          4000
+        ],
+        "bake": 2048,
+        "size": 1024,
+        "quality": 86,
+        "uvMargin": 0.003,
+        "cageExtrusion": 0.01,
+        "maxRayDistance": 0.04
+      },
+      {
+        "name": "far",
+        "suffix": "_far",
+        "trianglesByTier": [
+          700,
+          800,
+          880
+        ],
+        "range": [
+          600,
+          900
+        ],
+        "bake": 512,
+        "size": 256,
+        "quality": 90,
+        "uvMargin": 0.008,
+        "cageExtrusion": 0.025,
+        "maxRayDistance": 0.08
+      }
+    ],
+    "bake": {
+      "samples": 4,
+      "angleLimit": 70,
+      "smoothAngle": 40
+    },
+    "undersideBelow": 0.004,
+    "totalBytes": 2512588,
+    "files": 18,
+    "models": {
+      "joseon-1": {
+        "original": {
+          "file": "assets-src/camps-meshy-2026-10-13/originals/joseon-1-a1.glb",
+          "sha256": "d01696e52d0b4625ebb9f0d6e1da3a240b3d2c6ddd616000d2ad8790981d9000",
+          "taskId": "01a13156-0446-7592-87cb-de4bd3bf01eb",
+          "triangles": 11832
+        },
+        "turnDegrees": 180,
+        "scaleFromOriginal": 0.5261106280661495,
+        "normalisedSize": [
+          0.814046229718135,
+          0.44806733740491783,
+          0.9999999999999999
+        ],
+        "undersideTrianglesDropped": 72,
+        "blender": "5.2.1 LTS",
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_joseon_1.glb",
+            "bytes": 236036,
+            "sha256": "633780f5d0fc4c001e134c56a91d9fe6c5d40e5bfcaf3a6d40e8249cc966baac",
+            "triangles": 3004,
+            "vertices": 5211,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 1024,
+              "format": "webp",
+              "bytes": 154594,
+              "quality": 86,
+              "bakedAt": 2048
+            },
+            "bounds": {
+              "min": [
+                -0.407,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.407,
+                0.4481,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 11760,
+            "simplifiedTo": 3004,
+            "simplificationError": 0.009752010926604271,
+            "bakedCoverage": 0.4598360061645508
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_joseon_1_far.glb",
+            "bytes": 35860,
+            "sha256": "1341a0953b937b7c25cd8c063cca414fac3bbc9b5a3b59ab2c813c881ceae856",
+            "triangles": 681,
+            "vertices": 1315,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 13182,
+              "quality": 90,
+              "bakedAt": 512
+            },
+            "bounds": {
+              "min": [
+                -0.407,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.407,
+                0.4481,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 11760,
+            "simplifiedTo": 681,
+            "simplificationError": 0.02514946460723877,
+            "bakedCoverage": 0.4118614196777344
+          }
+        ]
+      },
+      "joseon-2": {
+        "original": {
+          "file": "assets-src/camps-meshy-2026-10-13/originals/joseon-2-a1.glb",
+          "sha256": "18814a7425a3d27a1fe02bfe69a0b1490a0013e77a7706461cfec87766b83493",
+          "taskId": "01a1315c-2e12-74e2-b14e-a7a0b209232b",
+          "triangles": 11678
+        },
+        "turnDegrees": 180,
+        "scaleFromOriginal": 0.5270761670391161,
+        "normalisedSize": [
+          0.8513075919982217,
+          0.34729992318113784,
+          1
+        ],
+        "undersideTrianglesDropped": 23,
+        "blender": "5.2.1 LTS",
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_joseon_2.glb",
+            "bytes": 237048,
+            "sha256": "c32bb69a973b3833935ca31ee75bf093d7d3557251b86905dbfe2ab743454f62",
+            "triangles": 3413,
+            "vertices": 5384,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 1024,
+              "format": "webp",
+              "bytes": 153028,
+              "quality": 86,
+              "bakedAt": 2048
+            },
+            "bounds": {
+              "min": [
+                -0.4257,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4257,
+                0.3473,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 11655,
+            "simplifiedTo": 3413,
+            "simplificationError": 0.009914938360452652,
+            "bakedCoverage": 0.42495012283325195
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_joseon_2_far.glb",
+            "bytes": 39196,
+            "sha256": "72ae56ba97f73ac910ec8c31e27c52e7b3b1c375016262d9447312c2fbb4e051",
+            "triangles": 790,
+            "vertices": 1284,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 16220,
+              "quality": 90,
+              "bakedAt": 512
+            },
+            "bounds": {
+              "min": [
+                -0.4257,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4257,
+                0.3473,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 11655,
+            "simplifiedTo": 790,
+            "simplificationError": 0.02530737593770027,
+            "bakedCoverage": 0.3667411804199219
+          }
+        ]
+      },
+      "joseon-3": {
+        "original": {
+          "file": "assets-src/camps-meshy-2026-10-13/originals/joseon-3-a1.glb",
+          "sha256": "39b16bd3fba185c9f9597c5bd6a2264f8d2b2a3b92f784fd9e9fe4db95e45bf7",
+          "taskId": "01a1315d-5848-7407-818d-75f37eb1f60d",
+          "triangles": 14736
+        },
+        "turnDegrees": 0,
+        "scaleFromOriginal": 0.5280999575183569,
+        "normalisedSize": [
+          0.9096014179350095,
+          0.3256723783953523,
+          1
+        ],
+        "undersideTrianglesDropped": 20,
+        "blender": "5.2.1 LTS",
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_joseon_3.glb",
+            "bytes": 277348,
+            "sha256": "536d0360c28451c107b067d76f194434a5060db56e56266b60eb716abb84e628",
+            "triangles": 3963,
+            "vertices": 7255,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 1024,
+              "format": "webp",
+              "bytes": 166948,
+              "quality": 86,
+              "bakedAt": 2048
+            },
+            "bounds": {
+              "min": [
+                -0.4548,
+                0.0002,
+                -0.5
+              ],
+              "max": [
+                0.4548,
+                0.3257,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 14716,
+            "simplifiedTo": 3963,
+            "simplificationError": 0.00894876103848219,
+            "bakedCoverage": 0.3578462600708008
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_joseon_3_far.glb",
+            "bytes": 44180,
+            "sha256": "bb7a4ba145afd6a583a200896920f8a7e11dde0d58c91a832c852d02e8586442",
+            "triangles": 894,
+            "vertices": 1599,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 16730,
+              "quality": 90,
+              "bakedAt": 512
+            },
+            "bounds": {
+              "min": [
+                -0.4548,
+                0.0002,
+                -0.5
+              ],
+              "max": [
+                0.4548,
+                0.3257,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 14716,
+            "simplifiedTo": 894,
+            "simplificationError": 0.024844501167535782,
+            "bakedCoverage": 0.3077583312988281
+          }
+        ]
+      },
+      "japan-1": {
+        "original": {
+          "file": "assets-src/camps-meshy-2026-10-13/originals/japan-1-a1.glb",
+          "sha256": "83c15ba297eeb464dbfb42649fb05d22161cce1d6c290f81ccea3bd8bfd9f274",
+          "taskId": "01a13156-1c57-75c9-9424-b8b563630d30",
+          "triangles": 11850
+        },
+        "turnDegrees": 180,
+        "scaleFromOriginal": 0.5259525906413244,
+        "normalisedSize": [
+          0.689290320493394,
+          0.35964902105955776,
+          0.9999999999999999
+        ],
+        "undersideTrianglesDropped": 26,
+        "blender": "5.2.1 LTS",
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_japan_1.glb",
+            "bytes": 269900,
+            "sha256": "659b8368d301c85988674484f6012b6ccdc2c33830037ae13d888ce6545ff77f",
+            "triangles": 3046,
+            "vertices": 5593,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 1024,
+              "format": "webp",
+              "bytes": 183766,
+              "quality": 86,
+              "bakedAt": 2048
+            },
+            "bounds": {
+              "min": [
+                -0.3446,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.3446,
+                0.3597,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 11824,
+            "simplifiedTo": 3046,
+            "simplificationError": 0.008513323962688446,
+            "bakedCoverage": 0.4446587562561035
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_japan_1_far.glb",
+            "bytes": 40284,
+            "sha256": "38cc06fc9be50ced4ea6523db72f106d912a6f05ea3f2d47d96690c46eddfbb6",
+            "triangles": 698,
+            "vertices": 1321,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 17306,
+              "quality": 90,
+              "bakedAt": 512
+            },
+            "bounds": {
+              "min": [
+                -0.3446,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.3446,
+                0.3597,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 11824,
+            "simplifiedTo": 698,
+            "simplificationError": 0.022571437060832977,
+            "bakedCoverage": 0.4312477111816406
+          }
+        ]
+      },
+      "japan-2": {
+        "original": {
+          "file": "assets-src/camps-meshy-2026-10-13/originals/japan-2-a1.glb",
+          "sha256": "afe6af73ce51e46e9dba85a65f7fbfa77db3c648db95a3b2637c5bcd0e34d164",
+          "taskId": "01a1315c-3eed-7078-ab01-d73b537c1deb",
+          "triangles": 11092
+        },
+        "turnDegrees": 180,
+        "scaleFromOriginal": 0.526294217108925,
+        "normalisedSize": [
+          0.7556126530706099,
+          0.38855139577847647,
+          1
+        ],
+        "undersideTrianglesDropped": 4,
+        "blender": "5.2.1 LTS",
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_japan_2.glb",
+            "bytes": 242344,
+            "sha256": "584291cbb48564cf54b9d26b4facac7e6672cd0007dd23db3f56964ee670bc36",
+            "triangles": 3503,
+            "vertices": 5979,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 1024,
+              "format": "webp",
+              "bytes": 150498,
+              "quality": 86,
+              "bakedAt": 2048
+            },
+            "bounds": {
+              "min": [
+                -0.3778,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.3778,
+                0.3886,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 11088,
+            "simplifiedTo": 3503,
+            "simplificationError": 0.006904721725732088,
+            "bakedCoverage": 0.4011373519897461
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_japan_2_far.glb",
+            "bytes": 40044,
+            "sha256": "097b28b3d8fe3895447919e25af709dde67f19b08693a5349ea44440c177eda1",
+            "triangles": 804,
+            "vertices": 1409,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 15456,
+              "quality": 90,
+              "bakedAt": 512
+            },
+            "bounds": {
+              "min": [
+                -0.3778,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.3778,
+                0.3886,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 11088,
+            "simplifiedTo": 804,
+            "simplificationError": 0.020601730793714523,
+            "bakedCoverage": 0.3253173828125
+          }
+        ]
+      },
+      "japan-3": {
+        "original": {
+          "file": "assets-src/camps-meshy-2026-10-13/originals/japan-3-a2.glb",
+          "sha256": "4f3d06de2b69aaf04dc7e9d761aa426b65ec2d034dd960410c208fd5a8217bc5",
+          "taskId": "01a1316b-6fb7-7243-b5c0-e203cb05ebb1",
+          "triangles": 14195
+        },
+        "turnDegrees": 180,
+        "scaleFromOriginal": 0.5259857834867608,
+        "normalisedSize": [
+          0.9328415689267012,
+          0.5152051418469177,
+          1
+        ],
+        "undersideTrianglesDropped": 32,
+        "blender": "5.2.1 LTS",
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_japan_3.glb",
+            "bytes": 248012,
+            "sha256": "622b4b25ab67dcb9a2b2db4ce878ed70278b26559daffbd40b66d8b5f44b1f9d",
+            "triangles": 3914,
+            "vertices": 6506,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 1024,
+              "format": "webp",
+              "bytes": 147356,
+              "quality": 86,
+              "bakedAt": 2048
+            },
+            "bounds": {
+              "min": [
+                -0.4664,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4664,
+                0.5152,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 14163,
+            "simplifiedTo": 3914,
+            "simplificationError": 0.0071868314407765865,
+            "bakedCoverage": 0.35998082160949707
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_japan_3_far.glb",
+            "bytes": 42984,
+            "sha256": "dd06a6926252fe4b7ea5a3652eae889eceb9fa459efac4e447824101d5722cfd",
+            "triangles": 880,
+            "vertices": 1467,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 17458,
+              "quality": 90,
+              "bakedAt": 512
+            },
+            "bounds": {
+              "min": [
+                -0.4664,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4664,
+                0.5152,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 14163,
+            "simplifiedTo": 880,
+            "simplificationError": 0.021981071680784225,
+            "bakedCoverage": 0.3108634948730469
+          }
+        ]
+      },
+      "ming-1": {
+        "original": {
+          "file": "assets-src/camps-meshy-2026-10-13/originals/ming-1-a1.glb",
+          "sha256": "5ebc468c59b27c1533034800bd06c7e2e5c1242bd28370a829d9810f422c5d04",
+          "taskId": "01a13156-31e0-77dc-98d5-437fdc6ba843",
+          "triangles": 11651
+        },
+        "turnDegrees": 180,
+        "scaleFromOriginal": 0.5281886567240113,
+        "normalisedSize": [
+          0.8331690209330587,
+          0.43824280000797133,
+          1
+        ],
+        "undersideTrianglesDropped": 6,
+        "blender": "5.2.1 LTS",
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_ming_1.glb",
+            "bytes": 224644,
+            "sha256": "13590b00f859ee9f006aeb9c77eaf3fc0b9c688c80f47af1d3c19562e4b00627",
+            "triangles": 3057,
+            "vertices": 5647,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 1024,
+              "format": "webp",
+              "bytes": 138084,
+              "quality": 86,
+              "bakedAt": 2048
+            },
+            "bounds": {
+              "min": [
+                -0.4166,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4166,
+                0.4383,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 11645,
+            "simplifiedTo": 3057,
+            "simplificationError": 0.008691413328051567,
+            "bakedCoverage": 0.4367716312408447
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_ming_1_far.glb",
+            "bytes": 36120,
+            "sha256": "d5435f6794915c0c8554c3eec64e47460c6256c01318d2fa58176dc17ae30a15",
+            "triangles": 706,
+            "vertices": 1436,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 11990,
+              "quality": 90,
+              "bakedAt": 512
+            },
+            "bounds": {
+              "min": [
+                -0.4166,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4166,
+                0.4383,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 11645,
+            "simplifiedTo": 706,
+            "simplificationError": 0.027824031189084053,
+            "bakedCoverage": 0.3637199401855469
+          }
+        ]
+      },
+      "ming-2": {
+        "original": {
+          "file": "assets-src/camps-meshy-2026-10-13/originals/ming-2-a1.glb",
+          "sha256": "9020f1af08664d5ed2d86a206f03954a97e4582518d29ede3181e88b39f6522d",
+          "taskId": "01a1315c-4ef3-77ea-b05d-f3bbc4642a34",
+          "triangles": 11413
+        },
+        "turnDegrees": 180,
+        "scaleFromOriginal": 0.5260657900187004,
+        "normalisedSize": [
+          0.7288120770883879,
+          0.3443036983200007,
+          0.9999999999999999
+        ],
+        "undersideTrianglesDropped": 79,
+        "blender": "5.2.1 LTS",
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_ming_2.glb",
+            "bytes": 198192,
+            "sha256": "b29dcb42cf02c6a3373ea929e6b2790e230ae42063f7e214b402b109eface65e",
+            "triangles": 3413,
+            "vertices": 5234,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 1024,
+              "format": "webp",
+              "bytes": 119030,
+              "quality": 86,
+              "bakedAt": 2048
+            },
+            "bounds": {
+              "min": [
+                -0.3644,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.3644,
+                0.3443,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 11334,
+            "simplifiedTo": 3413,
+            "simplificationError": 0.0076865036971867085,
+            "bakedCoverage": 0.49193882942199707
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_ming_2_far.glb",
+            "bytes": 36400,
+            "sha256": "f5bc464fd20de0a5f56ed63728d38c175849b6e41382b259d6a0680871168d8c",
+            "triangles": 803,
+            "vertices": 1534,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 10188,
+              "quality": 90,
+              "bakedAt": 512
+            },
+            "bounds": {
+              "min": [
+                -0.3644,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.3644,
+                0.3443,
+                0.5
+              ]
+            },
+            "simplifiedFrom": 11334,
+            "simplifiedTo": 803,
+            "simplificationError": 0.02133624628186226,
+            "bakedCoverage": 0.3556022644042969
+          }
+        ]
+      },
+      "ming-3": {
+        "original": {
+          "file": "assets-src/camps-meshy-2026-10-13/originals/ming-3-a1.glb",
+          "sha256": "ef9b78fedd7b9c1cd131f05201a13a5251d5106598ef585f4e545cc441deb06f",
+          "taskId": "01a1315d-7bbd-71a4-bf2e-89bc58172d0d",
+          "triangles": 14368
+        },
+        "turnDegrees": 0,
+        "scaleFromOriginal": 0.5261690543693704,
+        "normalisedSize": [
+          0.9999999999999999,
+          0.368737157212033,
+          0.8934555410592868
+        ],
+        "undersideTrianglesDropped": 72,
+        "blender": "5.2.1 LTS",
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_ming_3.glb",
+            "bytes": 225868,
+            "sha256": "f2fb67e8a2aa6b53bcc2aa2ba63a47ff24a3113c8b5f08be41a2b80d22681549",
+            "triangles": 3912,
+            "vertices": 6705,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 1024,
+              "format": "webp",
+              "bytes": 124282,
+              "quality": 86,
+              "bakedAt": 2048
+            },
+            "bounds": {
+              "min": [
+                -0.5,
+                0,
+                -0.4467
+              ],
+              "max": [
+                0.5,
+                0.3687,
+                0.4467
+              ]
+            },
+            "simplifiedFrom": 14296,
+            "simplifiedTo": 3912,
+            "simplificationError": 0.007683523930609226,
+            "bakedCoverage": 0.39414238929748535
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_ming_3_far.glb",
+            "bytes": 38128,
+            "sha256": "d5f00f258d6e47b7b4e96a5eff72bf36be2575e47f78e02606c61f175a7a4197",
+            "triangles": 860,
+            "vertices": 1510,
+            "meshes": 1,
+            "materials": 1,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 12348,
+              "quality": 90,
+              "bakedAt": 512
+            },
+            "bounds": {
+              "min": [
+                -0.5,
+                0,
+                -0.4467
+              ],
+              "max": [
+                0.5,
+                0.3687,
+                0.4467
+              ]
+            },
+            "simplifiedFrom": 14296,
+            "simplifiedTo": 860,
+            "simplificationError": 0.0227699913084507,
+            "bakedCoverage": 0.3243980407714844
+          }
+        ]
+      }
+    }
+  }
+}

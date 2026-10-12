@@ -94,6 +94,8 @@ export interface RegionView {
   note?: string;
   /** Open building plots. */
   freeSlots: number;
+  /** March rules: a blockade lies off the port; it gives up after `hold` turns, `turns` have passed. */
+  siege?: { by: FactionId; turns: number; hold: number };
 }
 
 export interface ShipView {
@@ -122,8 +124,11 @@ export interface FleetView {
   name: string;
   /** Region the fleet lies in, or null on a lane. */
   at: string | null;
-  /** Lane a fleet in transit sails: where it left, where it goes, turns left. */
-  transit?: { from: string; to: string; left: number };
+  /**
+   * Lane a fleet in transit sails: where it left, where it goes, turns left. Under the march rules `progress` is the
+   * share of the lane already sailed (0..1): the fleet may lie anywhere on it.
+   */
+  transit?: { from: string; to: string; left: number; progress?: number };
   /** The ordered route, next region first. Empty when idle. */
   route: string[];
   ships: ShipView[];
@@ -133,6 +138,37 @@ export interface FleetView {
   rest: number;
   /** Gold to bring the fleet in port back to full, 0 when it needs nothing or cannot. */
   refit: number;
+  /** Set when the campaign uses the march rules: the fleet's distance per turn and how it sails this turn. */
+  march?: MarchFleetView;
+}
+
+export interface MarchFleetView {
+  /** Km the fleet sails in a turn in each stance. */
+  reach: { normal: number; forced: number };
+  stance: 'normal' | 'march';
+  /** It is winter: the reach above is already cut by it. */
+  winter: boolean;
+  /** It blockades (or sails to blockade) a hostile port instead of storming it. */
+  besieging: boolean;
+  /** A blockading fleet ordered to storm the port when the turn ends. */
+  assault: boolean;
+  /** The blockade it keeps up, when it lies off the port. */
+  siege?: { turns: number; hold: number };
+  /** Where its orders end and whether that port is hostile (an attack or a blockade), when it has orders. */
+  dest?: { id: string; hostile: boolean };
+  /** Why the forced march cannot be chosen now (it lies off an enemy port, or its orders end in an attack). */
+  marchBlocked?: string;
+}
+
+/** March rules: the way a fleet would sail to `dest`, one leg per turn, each leg a list of spots from where the last turn ended. */
+export interface MarchRouteView {
+  dest: string;
+  turns: number;
+  km: number;
+  /** The destination is held by an enemy: the voyage ends in an attack or a blockade. */
+  hostile: boolean;
+  siege: boolean;
+  legs: SpotView[][];
 }
 
 export interface TreasuryView {
@@ -147,6 +183,8 @@ export interface TurnView {
   /** Display date, e.g. "1592년 5월". */
   date: string;
   faction: FactionId;
+  /** March rules: a winter turn, when fleets sail shorter and lose supply at sea. */
+  winter?: boolean;
 }
 
 export interface BattleSideView {
@@ -172,6 +210,15 @@ export interface BattlePreviewView {
   /** Which side the player commands, or none when only allies fight. */
   you: 'attacker' | 'defender' | null;
   notes?: string[];
+  /** March rules: a meeting out at sea off `regionName`, not a fight for the port. */
+  sea?: boolean;
+  /** March rules: a fleet comes to relieve the port from a blockade. */
+  relief?: boolean;
+  /** Names of the fleets from neighbouring ports that join each side. */
+  reinforcements?: { attacker: string[]; defender: string[] };
+  /** The player may turn the assault into a blockade, or pull its fleets out of the fight. */
+  canBesiege?: boolean;
+  canWithdraw?: boolean;
 }
 
 export interface FactionOption {
@@ -267,7 +314,8 @@ export interface SpotView {
 /** What the turn that just closed did to the map, for the replay layer. */
 export interface ReplayView {
   moves: { id: string; faction: FactionId; name: string; ships: number; path: SpotView[]; lost: boolean }[];
-  clashes: { regionId: string; attacker: FactionId; defender: FactionId; waiting: boolean }[];
+  /** Where fleets fought: at a port, or out at sea at `sea` (march rules). */
+  clashes: { regionId: string; attacker: FactionId; defender: FactionId; waiting: boolean; sea?: SpotView }[];
   changes: { regionId: string; from: Owner; to: FactionId }[];
 }
 

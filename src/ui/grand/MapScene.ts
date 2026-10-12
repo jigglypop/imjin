@@ -1,14 +1,15 @@
-import { BackSide, Color, Fog, Group, Mesh, MeshBasicNodeMaterial, PerspectiveCamera, Scene, SphereGeometry, WebGPURenderer, type DataTexture } from 'three/webgpu';
-import { mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
+import { BackSide, BufferAttribute, BufferGeometry, Color, Fog, Group, Mesh, MeshBasicNodeMaterial, PerspectiveCamera, Scene, SphereGeometry, WebGPURenderer, type DataTexture } from 'three/webgpu';
+import { attribute, mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
 import { equipment, forceWebGL } from '../../game/quality';
 import { tuneWebGLBackend } from '../../render/webglBackend';
 import { disposeTree } from '../../render/dispose';
 import { MAP_H, V_SCALE } from '../../select/demFrame';
-import { buildSea, buildTerrain, loadDem } from '../../select/terrain';
+import { buildSea, buildTerrain, cloudShade, loadDem, worldClock } from '../../select/terrain';
 import { MAP_ASPECT } from './projection';
 import { DEM_RECT, MESH_SCALE, groundElevation } from './mapMath';
 import { MapLayer } from './mapLayer';
 import { TreeLayer } from './worldTrees';
+import { buildFarLand } from './farLand';
 import type { MapWorld } from './mapWorld';
 import { eyeOf, FAR, FOV, NEAR, worldX, worldZ, type CameraState, type ScreenFrame } from './worldCamera';
 import { SKY_HORIZON, SKY_MIDDLE, SKY_ZENITH, WORLD_HAZE } from './worldLook';
@@ -18,6 +19,9 @@ import { SKY_HORIZON, SKY_MIDDLE, SKY_ZENITH, WORLD_HAZE } from './worldLook';
  * even when the player does nothing. A still picture reads as a stalled game.
  */
 const FRAME_MS = 33;
+const motionQuery = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+const reducedMotion = () => !!motionQuery?.matches;
+
 /** Fog: it starts a little beyond the target and is solid well past the whole frame, so distant ridges and coasts stay readable in a soft haze. */
 const fogNear = (distance: number) => distance * 1.1 + 0.05;
 const fogFar = (distance: number) => distance * 3.4 + 1.1;
@@ -29,6 +33,7 @@ export class MapScene {
   readonly renderer: WebGPURenderer;
   ready = false;
   private readonly abort = new AbortController();
+  private readonly born = performance.now();
   private disposed = false;
   private initialized = false;
   private rendererReleased = false;
@@ -71,14 +76,17 @@ export class MapScene {
     this.demTexture = tex;
     // The mesh is built in the select screen's units; the group fits it to its rectangle of the campaign frame.
     this.terrain = new Group();
-    this.terrain.add(buildTerrain(tex, equipment.select.mapSegments, { haze: WORLD_HAZE }));
+    this.terrain.add(buildTerrain(tex, equipment.select.mapSegments, true));
     this.terrain.scale.set(MESH_SCALE, MESH_SCALE, DEM_RECT.h / MAP_ASPECT / MAP_H);
     this.terrain.position.set(DEM_RECT.u + DEM_RECT.w / 2 - 0.5, 0, (DEM_RECT.v + DEM_RECT.h / 2 - 0.5) / MAP_ASPECT);
     this.scene.add(this.terrain);
-    // The ocean round the DEM, centred on the campaign frame and a hair under the terrain's own sea.
-    const sea = buildSea({ haze: WORLD_HAZE }, worldZ(DEM_RECT.v));
-    sea.position.set(0, -0.00004, 0);
+    // The ocean round the DEM, wide enough to reach the far plane from anywhere the camera goes, so the fog, not an edge,
+    // ends it at the horizon. It lies far enough under the terrain's own sea (about 60 m of the relief's scale) that the
+    // depth buffer still tells the two apart from the widest view; seen from above, the step at the DEM's edge is not.
+    const sea = buildSea(2 * (FAR + 2));
+    sea.position.set(0, -0.0005, 0);
     this.scene.add(sea);
+    this.scene.add(this.buildFarLand(heights));
     this.sky = this.buildSky();
     this.scene.add(this.sky);
     // Camps and ships stand on the same ground the overlay's markers read; they arrive when their models have loaded.
@@ -93,6 +101,21 @@ export class MapScene {
     this.ready = true;
     this.start();
     return heights;
+  }
+
+  /** The mainland north of the DEM, on to the horizon (farLand.ts). */
+  private buildFarLand(heights: Float32Array) {
+    const { position, color, index } = buildFarLand(heights);
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new BufferAttribute(position, 3));
+    geometry.setAttribute('color', new BufferAttribute(color, 3));
+    geometry.setIndex(new BufferAttribute(index, 1));
+    // Its baked colours under the same drifting cloud shadows as the terrain.
+    const material = new MeshBasicNodeMaterial();
+    material.colorNode = attribute('color', 'vec3').mul(cloudShade(0.32));
+    const mesh = new Mesh(geometry, material);
+    mesh.frustumCulled = false;
+    return mesh;
   }
 
   /** A dome that follows the eye: the haze at the horizon, deepening to blue overhead, with the sun's warm glow low in the north-west. */
@@ -168,7 +191,11 @@ export class MapScene {
     this.fog.near = fogNear(cam.distance);
     this.fog.far = fogFar(cam.distance);
     this.sky?.position.copy(camera.position);
-    this.layer?.setView(cam.yaw);
+    // The ambient clock stands still for a player who asks for reduced motion.
+    const clock = reducedMotion() ? 0 : (performance.now() - this.born) / 1000;
+    worldClock.value = clock;
+    this.layer?.setView(cam.yaw, cam.distance);
+    this.layer?.tick(clock);
     this.trees?.update(cam);
     this.renderer.render(this.scene, camera);
   }

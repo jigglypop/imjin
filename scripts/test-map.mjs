@@ -42,13 +42,13 @@ try {
       api.onResolve({ filter: /^three\/webgpu$/ }, () => ({ path: 'map-three', namespace: 'map-fixture' }));
       api.onResolve({ filter: /^three\/tsl$/ }, () => ({ path: 'map-tsl', namespace: 'map-fixture' }));
       api.onLoad({ filter: /^map-three$/, namespace: 'map-fixture' }, () => ({ contents: `export * from 'three'; import { MeshBasicMaterial } from 'three'; export const MeshBasicNodeMaterial = MeshBasicMaterial; export const WebGPURenderer = globalThis.__MapRenderer;`, resolveDir: root }));
-      api.onLoad({ filter: /^map-tsl$/, namespace: 'map-fixture' }, () => ({ contents: `const any = () => new Proxy(function () {}, { get: (_, key) => (key === Symbol.toPrimitive ? () => 0 : any()), apply: () => any() }); export const mix = any(), positionLocal = any(), smoothstep = any(), vec3 = any();` }));
+      api.onLoad({ filter: /^map-tsl$/, namespace: 'map-fixture' }, () => ({ contents: `const any = () => new Proxy(function () {}, { get: (_, key) => (key === Symbol.toPrimitive ? () => 0 : any()), apply: () => any() }); export const abs = any(), attribute = any(), float = any(), mix = any(), mx_noise_float = any(), positionLocal = any(), positionWorld = any(), smoothstep = any(), uniform = any(), uv = any(), vec3 = any();` }));
       api.onLoad({ filter: /[\\/]game[\\/]quality\.ts$/ }, () => ({ contents: 'export const equipment={select:{antialias:false,mapSegments:8},tier:"low"}; export const forceWebGL=true;', loader: 'ts' }));
       api.onLoad({ filter: /[\\/]game[\\/]device\.ts$/ }, () => ({ contents: 'export const isPhone=false; export const isTouchOnly=false;', loader: 'ts' }));
       api.onLoad({ filter: /[\\/]ui[\\/]launch\.ts$/ }, () => ({ contents: 'export const params=new URLSearchParams("");', loader: 'ts' }));
       api.onLoad({ filter: /[\\/]render[\\/]webglBackend\.ts$/ }, () => ({ contents: 'export const tuneWebGLBackend=()=>{};', loader: 'ts' }));
       // The terrain material is TSL; the lifecycle is what is tested here, with a plain mesh standing in.
-      api.onLoad({ filter: /[\\/]select[\\/]terrain\.ts$/ }, () => ({ contents: `import { Mesh, PlaneGeometry, MeshBasicMaterial } from 'three'; export const loadDem = (signal) => globalThis.__loadDem(signal); export const buildTerrain = () => new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial()); export const buildSea = () => new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial());`, loader: 'ts' }));
+      api.onLoad({ filter: /[\\/]select[\\/]terrain\.ts$/ }, () => ({ contents: `import { Mesh, PlaneGeometry, MeshBasicMaterial } from 'three'; export const loadDem = (signal) => globalThis.__loadDem(signal); export const buildTerrain = () => new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial()); export const buildSea = () => new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial()); export const worldClock = { value: 0 }; export const cloudShade = () => ({ mul: () => ({}) });`, loader: 'ts' }));
     } }],
   });
   const path = join(temporary, 'actual-map.mjs'); await writeFile(path, bundled.outputFiles[0].contents);

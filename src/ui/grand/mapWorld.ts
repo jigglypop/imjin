@@ -104,6 +104,9 @@ function ming(level: number): Piece[] {
   return pieces;
 }
 
+/** The camp model tier (1 to 3) of a camp level: the top two levels share the largest model. */
+export const campTier = (level: number) => Math.max(1, Math.min(3, level));
+
 /** Where the owner's flag stands in an unturned camp, in settlement radii: the centre unless a keep or the great hall is there. */
 export function flagSpot(level: number, faction: FactionId): [number, number] {
   if (faction === 'japan' && level >= 3) return [0.52, -0.12];
@@ -172,10 +175,24 @@ export function faceSea(pieces: Piece[], seed: number, isSea: (x: number, z: num
 }
 
 export interface SettlementSpec { id: string; u: number; v: number; owner: FactionId; level: number }
-export interface FleetSpec { key: string; u: number; v: number; faction: FactionId; count: number; seed: number; /** Bow direction in frame units, or null at anchor. */ heading: { du: number; dv: number } | null }
+export interface FleetSpec {
+  key: string; u: number; v: number; faction: FactionId; count: number; seed: number;
+  /** Bow direction in frame units, or null at anchor. */
+  heading: { du: number; dv: number } | null;
+  /** At anchor: each hull's berth, in settlement radii from (u, v) with its bow heading; empty when the sea is not known. */
+  berths: Berth[];
+}
+/** A hull at anchor: its place in settlement radii from the port and its heading (from +z towards +x). */
+export interface Berth { x: number; z: number; rot: number }
 /** A fleet that sailed during the closed turn, for the 3D ships to follow: its way as points in map units (x east, z south) and how many hulls. */
 export interface SailSpec { key: string; faction: FactionId; count: number; points: { x: number; z: number }[]; lost: boolean }
 export interface MapWorld { settlements: SettlementSpec[]; fleets: FleetSpec[]; sails: SailSpec[] }
+
+/**
+ * A hull's length in settlement radii: a ship reads as a ship beside a camp, about a quarter of the camp's width, and a
+ * squadron of five at anchor still fits in a cove.
+ */
+export const HULL_LENGTH = 0.55;
 
 /** At most this many hulls over the whole map, whatever the fleets: the layer stops adding ships here. */
 export const SHIP_CAP = 140;
@@ -198,13 +215,17 @@ export function transitShare(left: number, turns: number | undefined) {
 /** Frame point to "is this open water", for keeping ships off the islands a straight lane crosses. */
 export type IsSea = (u: number, v: number) => boolean;
 
+/** A fleet on a lane is kept at least this share of the lane off either port, so its ships clear the port's disc. */
+const LANE_MARGIN = 0.08;
+
 /**
- * Where the lane between two ports has the fleet that left `from` for `to`, and the share it has sailed. With `isSea` the
- * spot moves to the nearest open water, along the lane (never closer than 15% to either port) or up to two camp radii
- * to its side, so the hulls do not stand on an island the straight lane crosses; the map's marker takes the same spot.
+ * Where the lane between two ports has the fleet that left `from` for `to`, and the share it has sailed: `progress` when
+ * the campaign says how far it got (kept a little off both ports), otherwise the share its turns give. With `isSea` the
+ * spot moves to the nearest open water, along the lane (never closer than the margin to either port) or up to two camp
+ * radii to its side, so the hulls do not stand on an island the straight lane crosses; the map's marker takes the same spot.
  */
-export function transitSpot(from: RegionView, to: RegionView, left: number, isSea?: IsSea) {
-  const want = transitShare(left, from.laneTurns?.[to.id]);
+export function transitSpot(from: RegionView, to: RegionView, left: number, isSea?: IsSea, progress?: number) {
+  const want = progress === undefined ? transitShare(left, from.laneTurns?.[to.id]) : Math.min(1 - LANE_MARGIN, Math.max(LANE_MARGIN, progress));
   const pa = project(from.lon, from.lat), pb = project(to.lon, to.lat);
   // Along and across the lane in frame units, where v is MAP_ASPECT times shorter than u.
   const lu = pb.u - pa.u, lz = (pb.v - pa.v) / MAP_ASPECT;
@@ -214,7 +235,7 @@ export function transitSpot(from: RegionView, to: RegionView, left: number, isSe
   if (isSea) {
     for (let step = -35; step <= 35; step += 1) {
       const share = want + step * 0.02;
-      if (share < 0.15 || share > 0.85) continue;
+      if (share < LANE_MARGIN || share > 1 - LANE_MARGIN) continue;
       for (let k = -4; k <= 4; k += 1) {
         const side = k * SETTLEMENT_RADIUS * 0.5;
         const cost = Math.abs(share - want) * length + Math.abs(side);
@@ -252,17 +273,76 @@ export function buildWorld(regions: RegionView[], fleets: FleetView[], replay: R
       const g = groups.get(key);
       if (g) { g.ships += f.ships.length; continue; }
       const p = project(r.lon, r.lat);
-      groups.set(key, { key, u: p.u, v: p.v, faction: f.faction, count: 0, seed: hash(key), heading: null, ships: f.ships.length });
+      groups.set(key, { key, u: p.u, v: p.v, faction: f.faction, count: 0, seed: hash(key), heading: null, berths: [], ships: f.ships.length });
     } else if (f.transit) {
-      const a = byId.get(f.transit.from), b = byId.get(f.transit.to);
-      if (!a || !b) continue;
-      const spot = transitSpot(a, b, f.transit.left, isSea);
-      groups.set(f.id, { key: f.id, u: spot.u, v: spot.v, faction: f.faction, count: 0, seed: hash(f.id), heading: { du: spot.du, dv: spot.dv }, ships: f.ships.length });
+      const spot = laneSpot(f, byId, isSea);
+      if (!spot) continue;
+      groups.set(f.id, { key: f.id, u: spot.u, v: spot.v, faction: f.faction, count: 0, seed: hash(f.id), heading: { du: spot.du, dv: spot.dv }, berths: [], ships: f.ships.length });
     }
   }
   const out: FleetSpec[] = [];
   for (const { ships, ...g } of groups.values()) out.push({ ...g, count: hullsFor(ships) });
+  if (isSea) berthFleets(out, byId, settlements, isSea);
+  keepApart(out, isSea);
   return { settlements, fleets: out, sails: replay ? buildSails(replay, byId) : [] };
+}
+
+/**
+ * Squadrons that stopped on their lanes close to each other (two navies meeting at sea) are drawn apart, so their ships
+ * and markers do not lie on top of one another: each moves half the shortfall away from the other, onto water if it can.
+ */
+function keepApart(fleets: FleetSpec[], isSea?: IsSea) {
+  const gap = SETTLEMENT_RADIUS * HULL_LENGTH * 3;
+  const sailing = fleets.filter((f) => f.heading);
+  for (let i = 0; i < sailing.length; i += 1) for (let j = i + 1; j < sailing.length; j += 1) {
+    const a = sailing[i]!, b = sailing[j]!;
+    const dx = b.u - a.u, dz = (b.v - a.v) / MAP_ASPECT, d = Math.hypot(dx, dz);
+    if (d >= gap) continue;
+    // Apart along the line between them; on the very same spot, across the first one's lane.
+    const h = a.heading!, l = Math.hypot(h.du, h.dv / MAP_ASPECT) || 1;
+    const [ux, uz] = d > 1e-9 ? [dx / d, dz / d] : [h.dv / MAP_ASPECT / l, -h.du / l];
+    const shift = (gap - d) / 2;
+    for (const [f, sign] of [[a, -1], [b, 1]] as const) {
+      const u = f.u + sign * ux * shift, v = f.v + sign * uz * shift * MAP_ASPECT;
+      if (!isSea || isSea(u, v)) { f.u = u; f.v = v; }
+    }
+  }
+}
+
+/** Where a fleet in transit stands on its lane (see `transitSpot`), or null when a port of its lane is unknown. */
+export function laneSpot(f: FleetView, byId: Map<string, RegionView>, isSea?: IsSea) {
+  const lane = f.transit;
+  const a = lane && byId.get(lane.from), b = lane && byId.get(lane.to);
+  if (!lane || !a || !b) return null;
+  // How far along the lane the campaign has it, when it says so: a fleet may stop anywhere on its way.
+  return transitSpot(a, b, lane.left, isSea, lane.progress);
+}
+
+/**
+ * Berths for every squadron at anchor. The port's owner chooses first, so a besieger anchors off the port beside it;
+ * every hull stays clear of the camp's docks and of the hulls already berthed there.
+ */
+function berthFleets(fleets: FleetSpec[], byId: Map<string, RegionView>, settlements: SettlementSpec[], isSea: IsSea) {
+  const camps = new Map(settlements.map((s) => [s.id, s]));
+  const byPort = new Map<string, FleetSpec[]>();
+  for (const f of fleets) {
+    if (f.heading) continue;
+    const port = f.key.slice(0, f.key.lastIndexOf('/'));
+    byPort.set(port, [...(byPort.get(port) ?? []), f]);
+  }
+  for (const [port, list] of byPort) {
+    const owner = byId.get(port)?.owner;
+    list.sort((a, b) => Number(b.faction === owner) - Number(a.faction === owner));
+    const { u, v } = list[0]!;
+    const camp = camps.get(port);
+    // The camp and its docks reach about two radii from its centre.
+    const avoid: Circle[] = camp ? [{ x: (camp.u - u) / SETTLEMENT_RADIUS, z: (camp.v - v) / MAP_ASPECT / SETTLEMENT_RADIUS, r: 1.9 }] : [];
+    const seaAt = (x: number, z: number) => isSea(u + x * SETTLEMENT_RADIUS, v + z * SETTLEMENT_RADIUS * MAP_ASPECT);
+    for (const f of list) {
+      f.berths = anchorage(f.count, f.seed, seaAt, avoid);
+      for (const b of f.berths) avoid.push({ x: b.x, z: b.z, r: HULL_LENGTH * 0.8 });
+    }
+  }
 }
 
 /** The ways the closed turn's fleets sailed, as points on the map. A move whose ports are not on the map is left out. */
@@ -316,26 +396,55 @@ export function formation(count: number): { along: number; across: number }[] {
   return out;
 }
 
+/** A circle in settlement radii that a hull at anchor keeps out of. */
+export interface Circle { x: number; z: number; r: number }
+
 /**
- * Anchorage spots for a squadron around a port, in settlement radii: on open water when `isSea` knows any, spread over
- * the arc facing the dock; otherwise on the ring itself.
+ * Berths for a squadron of `count` round a port, in settlement radii from it: rows of up to three hulls abreast, all
+ * heading the same way, bows out to sea, the nearest open water first. Every hull needs water under its bow, middle and
+ * stern and stays out of the `avoid` circles (the camp's docks, ships already there). Of the headings that fit at the
+ * same distance the one with the most open sea beyond wins, so the squadron lies off the port's sea side; ties go to
+ * the seed. A port with no such water close by (a river mouth, a cove) still gets its ships, ringed just off its disc.
  */
-export function anchorage(count: number, seed: number, isSea: (x: number, z: number) => boolean): { x: number; z: number; rot: number }[] {
-  const spots: { x: number; z: number; rot: number }[] = [];
-  const first = (seed % 12) / 12 * Math.PI * 2;
-  for (let ring = 0; ring < 3 && spots.length < count; ring += 1) {
-    const radius = 1.7 + ring * 0.6;
-    for (let i = 0; i < 12 && spots.length < count; i += 1) {
-      const a = first + (i / 12) * Math.PI * 2;
-      const x = Math.cos(a) * radius, z = Math.sin(a) * radius;
-      // A ship needs water under its whole length: probe the bow and the stern as well.
-      if (isSea(x, z) && isSea(x * 1.15, z * 1.15)) spots.push({ x, z, rot: a + Math.PI / 2 + ((seed >> i) & 1 ? 0.35 : -0.35) });
+export function anchorage(count: number, seed: number, isSea: (x: number, z: number) => boolean, avoid: Circle[] = []): Berth[] {
+  if (count < 1) return [];
+  const L = HULL_LENGTH;
+  const layout = Array.from({ length: count }, (_, k) => {
+    const row = Math.floor(k / 3), inRow = Math.min(3, count - row * 3);
+    return { out: row * L * 1.25, across: ((k % 3) - (inRow - 1) / 2) * L * 0.5 };
+  });
+  const clear = (x: number, z: number) => isSea(x, z) && avoid.every((c) => Math.hypot(x - c.x, z - c.z) >= c.r);
+  const DIRECTIONS = 16;
+  const place = (a: number, d: number) => {
+    const dx = Math.cos(a), dz = Math.sin(a);
+    return layout.map((o) => ({ x: dx * (d + o.out) - dz * o.across, z: dz * (d + o.out) + dx * o.across, rot: Math.atan2(dx, dz) }));
+  };
+  // How open the sea is beyond a heading: water probes in a fan out to four radii.
+  const open = (a: number) => {
+    let n = 0;
+    for (const r of [2, 3, 4]) for (const s of [-0.35, 0, 0.35]) if (isSea(Math.cos(a + s) * r, Math.sin(a + s) * r)) n += 1;
+    return n / 9;
+  };
+  let best: { spots: Berth[]; cost: number } | null = null;
+  for (let i = 0; i < DIRECTIONS; i += 1) {
+    const a = (((i + seed) % DIRECTIONS) / DIRECTIONS) * Math.PI * 2;
+    const openness = open(a);
+    for (let d = 1.5; d <= 4.6; d += 0.2) {
+      // Never cheaper than what is already found: the nearest berth first, the more open sea at the same distance.
+      const cost = d - openness * 0.6;
+      if (best && cost >= best.cost) break;
+      const spots = place(a, d);
+      const fits = spots.every((p) => {
+        const fx = Math.sin(p.rot) * L * 0.5, fz = Math.cos(p.rot) * L * 0.5;
+        return clear(p.x, p.z) && clear(p.x + fx, p.z + fz) && clear(p.x - fx, p.z - fz);
+      });
+      if (fits) { best = { spots, cost }; break; }
     }
   }
-  // A port with no open water close by (a river mouth, a cove) still gets its ships, ringed just outside the dock.
-  for (let i = spots.length; i < count; i += 1) {
-    const a = first + (i / Math.max(count, 1)) * Math.PI * 2;
-    spots.push({ x: Math.cos(a) * 1.7, z: Math.sin(a) * 1.7, rot: a + Math.PI / 2 });
-  }
-  return spots;
+  if (best) return best.spots;
+  const first = ((seed % 12) / 12) * Math.PI * 2;
+  return Array.from({ length: count }, (_, i) => {
+    const a = first + (i / count) * Math.PI * 2;
+    return { x: Math.cos(a) * 1.7, z: Math.sin(a) * 1.7, rot: a + Math.PI / 2 };
+  });
 }

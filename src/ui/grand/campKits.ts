@@ -19,7 +19,7 @@ export interface KitMesh { position: Float32Array; normal: Float32Array; color: 
 
 const linear = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
 /** A flat vertex colour from an sRGB hex, `k` darkening or lightening it. */
-function paint(hex: string, k = 1): Paint {
+export function paint(hex: string, k = 1): Paint {
   const n = parseInt(hex.slice(1), 16);
   return new Paint(0, 1, 0, [linear(((n >> 16) & 255) / 255) * k, linear(((n >> 8) & 255) / 255) * k, linear((n & 255) / 255) * k]);
 }

@@ -204,6 +204,49 @@
   }
 }
 
+/* The overlay in four layers, each its own stacking context, so the depth order inside one never reaches another:
+   port discs and labels by distance (z-index 0 to 800, the hovered and the selected port above them), the city cards
+   over those, the fleets' pills over the cards (placed clear of discs and labels), the hover tip over everything on the
+   map. The map's own controls and the replay come after. */
+.gm__marks,
+.gm__cards,
+.gm__fleets,
+.gm__route,
+.gm__tips {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  pointer-events: none;
+}
+.gm__marks {
+  z-index: 1;
+}
+.gm__cards {
+  z-index: 2;
+}
+.gm__fleets {
+  z-index: 3;
+}
+/* The turn marks of the movement line come after the fleets' pills, so a pill never hides where a turn ends. */
+.gm__route {
+  z-index: 3;
+}
+.gm__tips {
+  z-index: 4;
+}
+.gm__marks > *,
+.gm__fleets > * {
+  pointer-events: auto;
+}
+/* A zero-size anchor at a port for what is drawn beside it outside its button (its card, its tip). */
+.gm-pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
 .gm-node {
   position: absolute;
   left: 0;
@@ -322,9 +365,6 @@
   border-radius: 5px;
   background: #1a2128;
 }
-.gm-node--card {
-  z-index: 3;
-}
 @media (pointer: coarse) {
   .gm-node__card img {
     width: 76px;
@@ -358,6 +398,119 @@
 .gm-node--target .gm-node__disc {
   border-color: var(--accent);
   animation: gm-pulse 1.3s ease-out infinite;
+}
+/*
+ * March rules: the selected fleet's range. A thin ring round each port it can reach, green this turn, yellow the next,
+ * orange later; the later rings are fainter so the near ones read first.
+ */
+.gm-node__reach {
+  position: absolute;
+  left: calc(var(--r) * -1 - 5px);
+  top: calc(var(--r) * -1 - 5px);
+  width: calc(var(--r) * 2 + 10px);
+  height: calc(var(--r) * 2 + 10px);
+  border-radius: 50%;
+  border: 3.5px solid var(--t);
+  box-shadow: 0 0 0 2px rgba(9, 12, 16, 0.85), inset 0 0 0 1.5px rgba(9, 12, 16, 0.75), 0 0 10px var(--t);
+  pointer-events: none;
+}
+.gm-node__reach[data-turns='3'] {
+  border-width: 2.5px;
+  box-shadow: 0 0 0 2px rgba(9, 12, 16, 0.75), inset 0 0 0 1px rgba(9, 12, 16, 0.6);
+  opacity: 0.75;
+}
+/* A blockaded port: a dashed ring in the blockading navy's colour and a small tag with the turns it has held out. */
+.gm-node__siege {
+  position: absolute;
+  left: calc(var(--r) * -1 - 9px);
+  top: calc(var(--r) * -1 - 9px);
+  width: calc(var(--r) * 2 + 18px);
+  height: calc(var(--r) * 2 + 18px);
+  border-radius: 50%;
+  border: 4px dashed var(--s);
+  filter: drop-shadow(0 0 1px #0b0f13) drop-shadow(0 0 2px #0b0f13);
+  pointer-events: none;
+}
+.gm-node__siegetag {
+  position: absolute;
+  left: 0;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--s);
+  background: rgba(14, 16, 20, 0.9);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.gm-node__siegetag--t {
+  bottom: calc(var(--r) + 12px);
+}
+.gm-node__siegetag--b {
+  top: calc(var(--r) + 12px);
+}
+/* The movement line, one colour per turn, and the numbered mark where each turn ends. */
+.gm-route__halo {
+  fill: none;
+  stroke: rgba(9, 12, 16, 0.8);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.gm-route__line {
+  fill: none;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.gm-step {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+.gm-step b {
+  position: absolute;
+  left: -10px;
+  top: -10px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #10151a;
+  border: 2px solid var(--t);
+  color: var(--t);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+.gm-step--end b {
+  background: var(--t);
+  color: #10151a;
+}
+.gm-step__tag {
+  position: absolute;
+  left: 14px;
+  top: -10px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: rgba(14, 16, 20, 0.92);
+  border: 1px solid var(--t);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.gm-tip__route {
+  color: var(--t);
+  font-weight: 700;
 }
 .gm-node--sel {
   z-index: 4;
@@ -424,10 +577,7 @@
   color: var(--ink-3);
 }
 @media (hover: hover) {
-  .gm-node:hover {
-    z-index: 8;
-  }
-  .gm-node:hover .gm-tip {
+  .gm-tip {
     display: grid;
   }
 }
@@ -838,6 +988,21 @@
 .g-top__date span {
   font-size: 12px;
   color: var(--ink-2);
+}
+/* March rules: a winter turn, marked beside the date and on a fleet's movement. */
+.grand .g-top__date .g-top__winter,
+.g-march__winter {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid #9cc4e4;
+  color: #cfe6f7;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 17px;
+  vertical-align: 2px;
+  cursor: help;
 }
 .g-top__res {
   display: flex;
@@ -2261,6 +2426,100 @@
 .g-level__hint {
   font-size: 13px;
   color: var(--ink-3);
+}
+
+.g-level--sm .g-level__opt {
+  white-space: nowrap;
+  min-height: 30px;
+  min-width: 0;
+  padding: 0 12px;
+  font-size: 13px;
+}
+.g-level__opt:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* March rules in the fleet panel: the distance per turn with the stance beside it, then the blockade. */
+.g-march {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+}
+.g-march__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.g-march__label {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.g-march__km {
+  margin-right: auto;
+  white-space: nowrap;
+  font-size: 15px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.g-march .g-hint {
+  margin: 0;
+}
+.g-march__siege {
+  display: grid;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.g-march__siege .g-march__row > b {
+  font-size: 14px;
+}
+.g-march__siege .g-march__row > :last-child {
+  flex: 1;
+}
+/* Reinforcements listed under a side of the pre-battle screen, and a blockade on a port's panel. */
+.g-bside__help {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.g-bside__help b {
+  color: var(--tone, var(--ink));
+  font-weight: 700;
+}
+.g-siege {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1.5px dashed var(--s);
+  background: rgba(255, 255, 255, 0.03);
+}
+.g-siege__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.g-siege__head b {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.g-siege p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+/* The pre-battle screen has up to five choices: they wrap onto a second row rather than squeeze. */
+.g-actions--wrap {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
 }
 
 /* ---------- the closed turn played back on the map ---------- */

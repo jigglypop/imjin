@@ -1,5 +1,5 @@
 import { useT } from '../../i18n';
-import { BUILDINGS, Bar, Chip, FactionMark, Icon, Sheet, Stat, buildingDesc, buildingName, costText, goldText, navyName, shipName, signed } from './shared';
+import { BUILDINGS, Bar, Chip, FACTION_INFO, FactionMark, Icon, Sheet, Stat, buildingDesc, buildingName, costText, goldText, navyName, shipName, signed } from './shared';
 import { campArt } from './campArt';
 import { turnsText } from './text';
 import type { BuildingKind, FactionId, FleetView, RegionView, ShipClass } from './types';
@@ -33,7 +33,7 @@ function CampView({ region }: { region: RegionView }) {
         key={`${art}-${level}`}
         className="g-camp__img"
         src={`/ui/camps/${art}-L${level}.webp`}
-        alt={`${region.name} ${t('군영 {n}단계', { n: level })}`}
+        alt={t('{place} 군영 {n}단계', { place: region.name, n: level })}
         width={1024}
         height={683}
         decoding="async"
@@ -42,6 +42,32 @@ function CampView({ region }: { region: RegionView }) {
         {rising ? t('{level}단계 공사 중 · {turns} 남음', { level: level + 1, turns: turnsText(camp.upgradeLeft) }) : t('군영 {n}단계', { n: level })}
       </figcaption>
     </figure>
+  );
+}
+
+/**
+ * March rules: a blockade lying off the port, whoever keeps it up. The port earns and builds nothing while it lasts, and
+ * its garrison gives up when the turns run out.
+ */
+function SiegeView({ region, me }: { region: RegionView; me: FactionId }) {
+  const t = useT();
+  const s = region.siege!;
+  const left = turnsText(Math.max(1, s.hold - s.turns));
+  const ours = s.by === me;
+  return (
+    <div className="g-siege" style={{ ['--s' as string]: FACTION_INFO[s.by].color }}>
+      <div className="g-siege__head">
+        <FactionMark faction={s.by} />
+        {ours ? t('우리 함대가 봉쇄 중') : t('{navy}의 봉쇄', { navy: navyName(s.by) })}
+        <b>{t('{n}/{m}턴', { n: s.turns, m: s.hold })}</b>
+      </div>
+      <Bar value={s.turns / Math.max(1, s.hold)} tone={ours ? 'good' : 'bad'} label={t('봉쇄 {n}/{m}', { n: s.turns, m: s.hold })} />
+      <p>
+        {region.owner === me
+          ? t('수입과 함선 건조가 멈췄고 수비대가 굶주립니다. {turns} 안에 구원 함대를 보내지 않으면 항복합니다.', { turns: left })
+          : t('수입과 함선 건조가 멈췄고 수비대가 굶주립니다. {turns} 뒤에 항복합니다.', { turns: left })}
+      </p>
+    </div>
   );
 }
 
@@ -74,6 +100,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
       ) : (
         <>
           <CampView region={region} />
+          {region.siege && <SiegeView region={region} me={me} />}
 
           <div className="gk-stats gk-stats--2">
             <Stat label={t('수비 병력')}>{t('{n}명 승조원', { n: region.garrisonCrew.toLocaleString() })}</Stat>
@@ -93,6 +120,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
                   <Icon name="coin" size="sm" />
                   {t('은 {n}', { n: signed(region.income) })}
                 </Chip>
+                {region.siege && <Chip tone="warn">{t('봉쇄 · 수입 없음')}</Chip>}
                 {region.unrest > 0 && <Chip tone="warn">{t('민심 불안 {turns} · 수입 절반', { turns: turnsText(region.unrest) })}</Chip>}
               </span>
             </Stat>

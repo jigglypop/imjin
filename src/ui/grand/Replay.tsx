@@ -199,10 +199,11 @@ export function ReplayLayer({ replay, at, top, reduced, onPhase, onBeat, onDone,
         );
       })}
       {p >= CLASH_AT &&
-        replay.clashes.map((c) => {
-          const pos = at(c.regionId);
+        replay.clashes.map((c, i) => {
+          // A meeting out at sea pops where the fleets closed on their lane, not in the port it is named after.
+          const pos = c.sea ? resolve(c.sea, at) : at(c.regionId);
           return pos ? (
-            <div key={c.regionId} className="gm-clash" style={{ transform: `translate3d(${pos.x}px, ${pos.y - 4}px, 0)` }}>
+            <div key={`${c.regionId}:${i}`} className="gm-clash" style={{ transform: `translate3d(${pos.x}px, ${pos.y - 4}px, 0)` }}>
               <span className="gm-clash__icon" title={t('전투')}>
                 <Icon name="swords" />
               </span>

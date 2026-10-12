@@ -9,11 +9,14 @@ export interface BattlePreviewProps {
   onFight?: () => void;
   onAuto?: () => void;
   onCancel?: () => void;
+  /** March rules: the attack becomes a blockade, or the player's fleets pull out of the fight. */
+  onBesiege?: () => void;
+  onWithdraw?: () => void;
   /** Label of the button that closes the preview, e.g. 나중에. */
   cancelLabel?: string;
 }
 
-function Side({ side, role, share }: { side: BattleSideView; role: string; share: number }) {
+function Side({ side, role, share, help = [] }: { side: BattleSideView; role: string; share: number; help?: string[] }) {
   const t = useT();
   return (
     <div className="g-bside" style={toneStyle(side.faction)}>
@@ -57,6 +60,11 @@ function Side({ side, role, share }: { side: BattleSideView; role: string; share
           ))}
         </ul>
       )}
+      {help.length > 0 && (
+        <p className="g-bside__help">
+          <b>{t('증원')}</b> {help.join(', ')}
+        </p>
+      )}
     </div>
   );
 }
@@ -71,7 +79,7 @@ function percent(p: number) {
 }
 
 /** Pre-battle summary: both sides' strength as a tug-of-war bar, then fight it out in 3D or let the numbers decide. */
-export function BattlePreview({ battle, onFight, onAuto, onCancel, cancelLabel }: BattlePreviewProps) {
+export function BattlePreview({ battle, onFight, onAuto, onCancel, onBesiege, onWithdraw, cancelLabel }: BattlePreviewProps) {
   const t = useT();
   const { attacker, defender } = battle;
   const total = Math.max(1, attacker.power + defender.power);
@@ -100,8 +108,8 @@ export function BattlePreview({ battle, onFight, onAuto, onCancel, cancelLabel }
         <span className="g-sheet__handle g-sheet__handle--static" aria-hidden />
         <header className="g-sheet__head">
           <div className="g-sheet__titles">
-            <div className="g-sheet__eyebrow">{t('전투 준비')}</div>
-            <h2 className="g-sheet__title">{t('{place} 해전', { place: battle.regionName })}</h2>
+            <div className="g-sheet__eyebrow">{battle.sea ? t('전투 준비 · 바다 위에서 마주침') : battle.relief ? t('전투 준비 · 봉쇄 구원') : t('전투 준비')}</div>
+            <h2 className="g-sheet__title">{battle.sea ? t('{place} 앞바다 해전', { place: battle.regionName }) : t('{place} 해전', { place: battle.regionName })}</h2>
           </div>
           <button type="button" className="g-icon-btn" aria-label={t('닫기')} onClick={onCancel}>
             <Icon name="close" />
@@ -109,11 +117,11 @@ export function BattlePreview({ battle, onFight, onAuto, onCancel, cancelLabel }
         </header>
         <div className="g-sheet__body">
           <div className="g-versus">
-            <Side side={attacker} role={battle.you === 'attacker' ? t('공격 · 우리 측') : t('공격')} share={aShare} />
+            <Side side={attacker} role={battle.you === 'attacker' ? t('공격 · 우리 측') : t('공격')} share={aShare} help={battle.reinforcements?.attacker} />
             <span className="g-versus__vs" aria-hidden>
               VS
             </span>
-            <Side side={defender} role={battle.you === 'defender' ? t('수비 · 우리 측') : t('수비')} share={1 - aShare} />
+            <Side side={defender} role={battle.you === 'defender' ? t('수비 · 우리 측') : t('수비')} share={1 - aShare} help={battle.reinforcements?.defender} />
           </div>
 
           <div className="g-power" role="img" aria-label={t('전력 비 {a} 대 {d}', { a: Math.round(aShare * 100), d: Math.round((1 - aShare) * 100) })}>
@@ -155,13 +163,23 @@ export function BattlePreview({ battle, onFight, onAuto, onCancel, cancelLabel }
               </div>
             </div>
           ) : (
-            <div className="g-actions">
+            <div className={`g-actions${battle.canBesiege || battle.canWithdraw ? ' g-actions--wrap' : ''}`}>
               <button type="button" className="g-btn g-btn--primary" onClick={onFight}>
-                {t('전투 시작')}
+                {t('직접 지휘')}
               </button>
               <button type="button" className="g-btn" onClick={() => (risky ? setSure(true) : onAuto?.())}>
                 {t('자동 전투')}
               </button>
+              {battle.canBesiege && onBesiege && (
+                <button type="button" className="g-btn" title={t('강습하지 않고 포구를 둘러싸 굶깁니다')} onClick={onBesiege}>
+                  {t('봉쇄')}
+                </button>
+              )}
+              {battle.canWithdraw && onWithdraw && (
+                <button type="button" className="g-btn g-btn--danger" title={t('싸우지 않고 물러납니다')} onClick={onWithdraw}>
+                  {t('퇴각')}
+                </button>
+              )}
               <button type="button" className="g-btn g-btn--ghost" onClick={onCancel}>
                 {cancelLabel ?? t('취소')}
               </button>

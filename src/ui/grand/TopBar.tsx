@@ -31,7 +31,14 @@ export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, a
         )}
         <FactionMark faction={turn.faction} size="md" />
         <div className="g-top__date">
-          <b>{turn.date}</b>
+          <b>
+            {turn.date}
+            {turn.winter && (
+              <span className="g-top__winter" title={t('겨울: 행동력 −20%, 바다 위 함대 보급 소모 증가')}>
+                {t('겨울')}
+              </span>
+            )}
+          </b>
           <span>
             {t('{navy} · {turn} / {max}턴', { navy: navyName(turn.faction), turn: turn.turn, max: turn.maxTurns })}
           </span>

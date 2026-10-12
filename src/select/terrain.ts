@@ -11,7 +11,7 @@ import {
   RedFormat,
   TextureLoader,
 } from 'three/webgpu';
-import { abs, cameraPosition, clamp, dot, float, fract, fwidth, max, mix, mx_noise_float, normalize, positionLocal, positionWorld, pow, sin, smoothstep, texture, time, uv, vec2, vec3 } from 'three/tsl';
+import { abs, cameraPosition, clamp, dot, float, fract, fwidth, max, mix, mx_noise_float, normalize, positionLocal, positionWorld, pow, sin, smoothstep, texture, time, uniform, uv, vec2, vec3 } from 'three/tsl';
 import meta from './demMeta.json';
 import { EXAGGERATION, MAP_H, MAP_W, MIST_HEX, V_SCALE } from './demFrame';
 
@@ -58,6 +58,24 @@ export async function loadDem(signal: AbortSignal) {
 }
 
 /**
+ * The campaign world's ambient clock in seconds: what drifts on its own (cloud shadows, camp smoke) moves with it. The
+ * map's scene sets it every frame and holds it still for a player who asks for reduced motion.
+ */
+export const worldClock = uniform(0);
+
+/**
+ * How much light reaches the ground under the drifting clouds at a world position: 1 in the sun, down to `depth` under
+ * a cloud. Two scales of noise, a few camps across, sliding slowly east and a little south.
+ */
+export function cloudShade(depth: number) {
+  const drift = worldClock.mul(0.012);
+  const x = positionWorld.x, z = positionWorld.z;
+  const cover = mx_noise_float(vec3(x.mul(6).sub(drift), 0.7, z.mul(6).sub(drift.mul(0.35)))).mul(0.7)
+    .add(mx_noise_float(vec3(x.mul(17).sub(drift.mul(1.6)), 2.1, z.mul(17))).mul(0.3));
+  return float(1).sub(smoothstep(0.16, 0.34, cover).mul(depth));
+}
+
+/**
  * The water of the campaign world as one colour node: turquoise shallows to deep blue by `depth` (metres), a swell that
  * moves, a sky reflection at grazing angles and sun glints. It reads world positions, so the terrain's own sea and the plane
  * of sea round it match exactly where they meet.
@@ -75,41 +93,37 @@ function worldSea(depth: Node<'float'>) {
   const sunWorld = normalize(vec3(-0.55, 0.62, -0.55));
   const glint = pow(clamp(dot(normalize(view.add(sunWorld)), vec3(0, 1, 0)), 0, 1), 220).mul(smoothstep(0.1, 0.5, swell)).mul(2.6);
   const sky = pow(float(1).sub(clamp(view.y, 0, 1)), 3).mul(0.45);
-  return mix(water.mul(float(0.9).add(swell.mul(0.22))), srgb(150, 188, 214), sky).add(vec3(1, 0.93, 0.78).mul(glint));
+  return mix(water.mul(float(0.9).add(swell.mul(0.22))).mul(cloudShade(0.26)), srgb(150, 188, 214), sky).add(vec3(1, 0.93, 0.78).mul(glint));
 }
 
 /**
- * The sea round the DEM: a big plane at sea level with the same water, so the map has an ocean to its west, east and
- * south. North of the DEM (`northZ`, a world z) the plane is haze: the Korean mainland going on, out of sight.
+ * The sea round the DEM: a plane at sea level with the same water, so the map has an ocean on every side out to the
+ * horizon, where the fog has made it the haze of the sky. `size` is its side in world units, wider than the camera sees.
  */
-export function buildSea(look: WorldLook, northZ: number) {
+export function buildSea(size: number) {
   const m = new MeshBasicNodeMaterial();
-  const haze = new Color(look.haze);
-  m.colorNode = mix(vec3(haze.r, haze.g, haze.b), worldSea(float(400)), smoothstep(northZ - 0.03, northZ + 0.01, positionWorld.z));
-  const mesh = new Mesh(new PlaneGeometry(12, 12).rotateX(-Math.PI / 2), m);
+  m.colorNode = worldSea(float(400));
+  const mesh = new Mesh(new PlaneGeometry(size, size).rotateX(-Math.PI / 2), m);
   mesh.frustumCulled = false;
   mesh.renderOrder = -2;
   return mesh;
 }
 
-/** The campaign world's daylight: the haze the far land and sea fade into, as the fog and the sky's horizon colour too. */
-export interface WorldLook {
-  haze: string;
-}
-
 /**
- * The terrain mesh, MAP_W x MAP_H units centred on the origin; land stands up, the sea is flat. With a `look` it is the
+ * The terrain mesh, MAP_W x MAP_H units centred on the origin; land stands up, the sea is flat. As the `world` it is the
  * campaign's 3D world instead of the select screen's ink chart: sunlit green land with forest, fields, rock and beaches,
  * and a sea that goes from turquoise shallows to deep blue, with a moving sheen, sun glints and foam along the coast.
  */
-export function buildTerrain(demTex: DataTexture, segments: number, look?: WorldLook) {
+export function buildTerrain(demTex: DataTexture, segments: number, world = false) {
   const geo = new PlaneGeometry(MAP_W, MAP_H, segments, Math.round((segments * meta.height) / meta.width));
   geo.rotateX(-Math.PI / 2);
   const m = new MeshBasicNodeMaterial();
   const fUV = vec2(uv().x, float(1).sub(uv().y));
   const hV = texture(demTex, fUV).level(float(0)).r;
-  // The relief settles to flat sea at the map's border, so no land stands cut off against the mist there.
-  const rim = smoothstep(0, 0.07, uv().x).mul(smoothstep(1, 0.93, uv().x)).mul(smoothstep(0, 0.09, uv().y)).mul(smoothstep(1, 0.91, uv().y));
+  // The relief settles to flat sea at the map's border, so no land stands cut off against the mist there. The campaign's
+  // world carries the mainland on north of the DEM (farLand.ts), so there the north edge keeps its relief.
+  const northRim = world ? float(1) : smoothstep(1, 0.91, uv().y);
+  const rim = smoothstep(0, 0.07, uv().x).mul(smoothstep(1, 0.93, uv().x)).mul(smoothstep(0, 0.09, uv().y)).mul(northRim);
   m.positionNode = positionLocal.add(vec3(0, max(hV, 0).mul(V_SCALE).mul(rim), 0));
   const texel = vec2(1 / meta.width, 1 / meta.height);
   const h = texture(demTex, fUV).r;
@@ -143,8 +157,7 @@ export function buildTerrain(demTex: DataTexture, segments: number, look?: World
   const base = land.select(landColor, seaColor);
   const withCoast = mix(base, srgb(118, 132, 146), coast.mul(0.6));
   const edge = smoothstep(0, 0.08, uv().x).mul(smoothstep(1, 0.92, uv().x)).mul(smoothstep(0, 0.1, uv().y)).mul(smoothstep(1, 0.9, uv().y));
-  if (look) {
-    const haze = new Color(look.haze);
+  if (world) {
     const sunLocal = normalize(vec3(-0.55, 0.62, -0.55));
     // Light on the ground: the sun's share plus a sky ambient, so the shaded sides keep their colour.
     const sunShare = clamp(dot(n, sunLocal), 0, 1);
@@ -160,15 +173,14 @@ export function buildTerrain(demTex: DataTexture, segments: number, look?: World
     const bare = smoothstep(0.16, 0.4, slope).max(smoothstep(650, 1500, h).mul(0.8));
     const rock = mix(srgb(112, 102, 90), srgb(158, 150, 138), smoothstep(600, 1700, h).add(fine.mul(0.3)));
     const beach = float(1).sub(smoothstep(0.6, 3.2, h));
-    const landWorld = mix(mix(ground, rock, bare), srgb(196, 178, 138), beach).mul(lightOn);
+    const landWorld = mix(mix(ground, rock, bare), srgb(196, 178, 138), beach).mul(lightOn).mul(cloudShade(0.32));
     // The sea: the DEM's seabed gives the depth; its west, east and south edges melt into the deep sea of the plane round it.
     const sea = worldSea(depth);
     const surf = coast.mul(float(0.75).add(sin(time.mul(1.3).add(positionLocal.x.mul(11)).add(positionLocal.z.mul(7))).mul(0.2))).mul(0.5);
     const worldColor = mix(land.select(landWorld, sea), srgb(236, 244, 244), surf);
-    const seaEdge = smoothstep(0, 0.1, uv().x).mul(smoothstep(1, 0.9, uv().x)).mul(smoothstep(0, 0.12, uv().y));
-    const toSea = mix(worldSea(float(400)), worldColor, seaEdge);
-    // The north edge is the Korean mainland going on: it fades into the haze.
-    m.colorNode = mix(vec3(haze.r, haze.g, haze.b), toSea, smoothstep(1, 0.9, uv().y));
+    // The north edge's water melts into it too (the land there runs on into farLand.ts), so no shelf ends in a straight line.
+    const seaEdge = smoothstep(0, 0.1, uv().x).mul(smoothstep(1, 0.9, uv().x)).mul(smoothstep(0, 0.12, uv().y)).mul(land.select(float(1), smoothstep(1, 0.95, uv().y)));
+    m.colorNode = mix(worldSea(float(400)), worldColor, seaEdge);
   } else {
     m.colorNode = mix(MIST, withCoast, edge);
   }
