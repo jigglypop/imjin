@@ -25,7 +25,9 @@ try {
   const { REGION_MAPS } = await server.ssrLoadModule('/src/sim/grand/coast.ts');
   const { generateHeightmap } = await server.ssrLoadModule('/src/terrain/generate.ts');
   const { encodeSnapshot, decodeSnapshot } = await server.ssrLoadModule('/src/net/protocol.ts');
-  const { Strategist } = await server.ssrLoadModule('/src/sim/strategy.ts');
+  const { Strategist, planWorks, planFoundation, worksReserve } = await server.ssrLoadModule('/src/sim/strategy.ts');
+  const { AutoBuild } = await server.ssrLoadModule('/src/game/autoBuild.ts');
+  const { applyCommand } = await server.ssrLoadModule('/src/sim/commands.ts');
   // Region windows are read from public/terrain, so they are built up front.
   const grounds = new Map();
   for (const m of Object.values(REGION_MAPS)) grounds.set(m.terrain, await groundHeights((p) => server.ssrLoadModule(p), m.terrain));
@@ -302,6 +304,50 @@ try {
     new Strategist(0).economy(ranked.b, ranked.c);
     assert.ok(ranked.p.buildings.every((bd) => bd?.kind !== 'camp'));
     assert.ok(ranked.p.buildings.every((bd) => !bd || bd.level === 1 && bd.upgradeLeft === 0));
+  });
+  check('the works planner names what the computer commander builds, changes nothing itself, and plans a camp first on request', () => {
+    const f = fixture(), brain = new Strategist(0);
+    for (let n = 0; n < 2; n++) assert.ok(f.c.recruitIn(f.b, 0, f.p.id, 'hyeopseon'));
+    f.c.player(0).funds = 5000;
+    const before = JSON.stringify([f.c.players, f.c.points.map((p) => p.buildings)]);
+    const order = planWorks(f.b, f.c, 0);
+    assert.deepEqual(order, { type: 'build', point: f.p.id, building: 'camp' });
+    assert.equal(JSON.stringify([f.c.players, f.c.points.map((p) => p.buildings)]), before);
+    brain.economy(f.b, f.c);
+    assert.ok(f.p.buildings.some((bd) => bd?.kind === 'camp' && bd.progress === 0));
+    f.c.step(f.b, BUILDINGS.camp.time); addShips(f, 40); f.c.player(0).funds = 5000;
+    const up = planWorks(f.b, f.c, 0), slot = f.p.buildings.findIndex((bd) => bd?.kind === 'camp');
+    assert.deepEqual(up, { type: 'upgrade', point: f.p.id, slot });
+    brain.economy(f.b, f.c); assert.ok(f.p.buildings[slot].upgradeLeft > 0);
+    // Without backed-up slipways the computer waits, and a player's auto-build does not.
+    const calm = fixture(); calm.c.player(0).funds = 5000;
+    assert.equal(planFoundation(calm.b, calm.c, 0).order, null);
+    assert.deepEqual(planWorks(calm.b, calm.c, 0, { eager: true }), { type: 'build', point: calm.p.id, building: 'camp' });
+    // Nothing is planned for a seat without a point, and a ranked seat has no camps to plan.
+    calm.c.points.forEach((p) => { if (p.owner === 0) p.owner = 1; });
+    assert.equal(planWorks(calm.b, calm.c, 0, { eager: true }), null);
+    const ranked = fixture(RANKED_OPTIONS); ranked.c.player(0).funds = 5000;
+    assert.notEqual(planWorks(ranked.b, ranked.c, 0, { eager: true })?.building, 'camp');
+  });
+  check('auto-build orders one work per period, only as ordinary commands, and keeps the price of the main ship in the treasury', () => {
+    const f = fixture(), auto = new AutoBuild(), sent = [];
+    const keep = worksReserve(f.c, 0); assert.equal(keep, SHIP_SPECS.panokseon.cost);
+    const issue = (cmd) => { sent.push(cmd); return applyCommand(f.b, 0, cmd, f.c); };
+    f.c.player(0).funds = 100000;
+    for (let t = 0; t < 40; t++) { f.b.time = t * 0.5; auto.tick(f.b, f.c, 0, issue); }
+    // 20 simulated seconds, one plan every two: no more than ten orders, none outside a plan.
+    assert.ok(sent.length > 3 && sent.length <= 10, String(sent.length));
+    assert.ok(sent.every((cmd) => cmd.type === 'build' || cmd.type === 'upgrade'));
+    f.b.time = 20.5; assert.equal(auto.tick(f.b, f.c, 0, issue), null);
+    // The reserve holds at every funding level: after any order the treasury still buys the main ship.
+    for (let funds = 0; funds <= 6000; funds += 50) {
+      const g = fixture(), gAuto = new AutoBuild(); g.c.player(0).funds = funds; g.b.time = 0;
+      if (gAuto.tick(g.b, g.c, 0, (cmd) => applyCommand(g.b, 0, cmd, g.c))) assert.ok(g.c.player(0).funds >= keep, `funds ${funds} left ${g.c.player(0).funds}`);
+    }
+    const none = fixture(), noneAuto = new AutoBuild(); none.c.player(0).funds = keep + 100;
+    assert.equal(noneAuto.tick(none.b, none.c, 0, () => assert.fail('ordered with the treasury nearly empty')), null);
+    // A finished battle stops it.
+    const done = fixture(), doneAuto = new AutoBuild(); done.b.draw = true; assert.equal(doneAuto.tick(done.b, done.c, 0, () => assert.fail('ordered after the end')), null);
   });
   check('upgraded batteries add guns and effective damage without changing level-one shore fire', () => {
     const f = fixture(), slot = buildFinished(f, 'battery'), bd = f.p.buildings[slot];

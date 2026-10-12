@@ -142,6 +142,20 @@ try {
     input.beginRally(0); battle.land = () => 10; input.tap(30, 30); assert.equal(commands.length, 2);
     engine.conquest.points[0].owner = 1; input.tap(30, 30); assert.equal(commands.length, 2);
   });
+  check('a left-click on an enemy ship attacks with the selection and only inspects it with none', () => {
+    const { engine, input, a, b, c, d } = setup();
+    const commands = []; engine.issue = (cmd) => { commands.push(cmd); return 1; };
+    let hit = d; input.pickShip = () => hit; input.pickWorks = () => null;
+    const click = (modifiers = {}) => { input.onDown({ pointerType: 'mouse', button: 0, clientX: 5, clientY: 5, altKey: false }); input.onUp({ pointerType: 'mouse', button: 0, clientX: 5, clientY: 5, shiftKey: false, ctrlKey: false, metaKey: false, ...modifiers }); };
+    click(); assert.equal(commands.length, 0); assert.deepEqual([...engine.views.selected], [d.id]);
+    engine.views.selected = new Set([a.id, b.id]); click();
+    assert.deepEqual(commands, [{ type: 'order', ids: [a.id, b.id], order: { type: 'attack', targetId: d.id } }]); assert.deepEqual([...engine.views.selected], [a.id, b.id]);
+    click({ shiftKey: true }); click({ ctrlKey: true }); assert.equal(commands.length, 1);
+    engine.views.selected = new Set([a.id]); hit = c; click(); assert.equal(commands.length, 1); assert.deepEqual([...engine.views.selected], [c.id]);
+    engine.views.selected = new Set([a.id]); hit = undefined; input.pickWorks = () => ({ x: 1, y: 2, z: 3, name: 'Fort' }); click();
+    assert.deepEqual(commands[1], { type: 'order', ids: [a.id], order: { type: 'bombard', x: 1, y: 2, z: 3 } });
+    input.pickWorks = () => null; click(); assert.equal(commands.length, 2); assert.equal(engine.views.selected.size, 0);
+  });
   check('camera ignores Ctrl+A and editable targets while ordinary A still pans', () => {
     const camera = new RtsCamera(new PerspectiveCamera());
     camera.onKey({ code: 'KeyA', ctrlKey: true, target: { tagName: 'DIV' } }); assert.equal(camera.keys.has('KeyA'), false);

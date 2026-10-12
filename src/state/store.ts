@@ -155,9 +155,11 @@ type UiState = {
   /** A renderer or engine failure that stops the battle from starting. */
   fatal: string | null;
   touchBox: boolean;
+  /** "자동 건설": the conquest panel switch that has the player's works ordered automatically. Off at the start of every battle. */
+  autoBuild: boolean;
 };
 
-export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingScenario: null, report: null, toasts: [], box: null, screen: 'menu', origin: 'select', fatal: null, touchBox: false }));
+export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingScenario: null, report: null, toasts: [], box: null, screen: 'menu', origin: 'select', fatal: null, touchBox: false, autoBuild: false }));
 
 let lastJson = '';
 export function publish(snapshot: GameSnapshot, force = false) {
@@ -180,6 +182,10 @@ export function setSelectionBox(box: SelectionBox) {
 
 export function setTouchBox(touchBox: boolean) {
   useUi.setState({ touchBox });
+}
+
+export function setAutoBuild(autoBuild: boolean) {
+  useUi.setState({ autoBuild });
 }
 
 /** `scenario` null clears the loading card's artwork; undefined keeps the one shown. */

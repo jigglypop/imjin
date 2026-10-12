@@ -339,6 +339,10 @@ export class Input {
       this.boxSelect(Math.min(this.downX, e.clientX), Math.min(this.downY, e.clientY), Math.max(this.downX, e.clientX), Math.max(this.downY, e.clientY), e.shiftKey);
       return;
     }
+    // One click attacks: with ships of ours selected, a plain click on an enemy ship or shore work orders the strike.
+    // Shift and Ctrl keep their selecting meaning, and without a selection the click only inspects the enemy.
+    const own = this.selectedOwn();
+    if (own.length && !e.shiftKey && !e.ctrlKey && !e.metaKey && this.strikeAt(e.clientX, e.clientY, own)) return;
     const ship = this.pickShip(e.clientX, e.clientY);
     const now = performance.now();
     if (ship && ship.id === this.lastClickId && now - this.lastClickTime < 350) {
@@ -364,23 +368,28 @@ export class Input {
     return this.engine.battle.ships.filter((s) => this.engine.isOwn(s));
   }
 
-  private command(clientX: number, clientY: number, queue: boolean) {
-    if (this.resolveRally(clientX, clientY)) return;
-    const ids = this.selectedOwn();
-    if (!ids.length) return;
-    const b = this.engine.battle;
+  /** Attack the hostile ship or bombard the enemy shore work under the cursor with the given ships. False when there is neither. */
+  private strikeAt(clientX: number, clientY: number, ids: number[]) {
     const target = this.pickShip(clientX, clientY);
-    if (target && target.team === this.engine.enemyTeam && b.isActive(target)) {
+    if (target && target.team === this.engine.enemyTeam && this.engine.battle.isActive(target)) {
       this.engine.issue({ type: 'order', ids, order: { type: 'attack', targetId: target.id } });
       pushToast(t('공격 명령 · {name} · {ships}', { name: tName(target.name), ships: tShips(ids.length) }));
-      return;
+      return true;
     }
     const works = this.pickWorks(clientX, clientY);
     if (works) {
       this.engine.issue({ type: 'order', ids, order: { type: 'bombard', x: works.x, y: works.y, z: works.z } });
       pushToast(t('포격 명령 · {name} · {ships}', { name: t(works.name), ships: tShips(ids.length) }));
-      return;
+      return true;
     }
+    return false;
+  }
+
+  private command(clientX: number, clientY: number, queue: boolean) {
+    if (this.resolveRally(clientX, clientY)) return;
+    const ids = this.selectedOwn();
+    if (!ids.length) return;
+    if (this.strikeAt(clientX, clientY, ids)) return;
     const p = this.waterPoint(clientX, clientY);
     if (!p) return;
     this.moveSelected(p.x, p.z, queue);

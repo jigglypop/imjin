@@ -67,12 +67,13 @@ import { ConquestView, preloadWorks } from '../conquest/ConquestView';
 import type { NetBattle } from '../net/NetBattle';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
 import { Director } from './Director';
+import { AutoBuild } from './autoBuild';
 import { Input } from './Input';
 import { TouchControls } from './Touch';
 import { AdaptiveQuality } from './adaptive';
 import { equipment, LEVELS, levelSetting, saveLevelSetting, startLevel, type LevelSetting, type OceanQuality, type TerrainQuality } from './quality';
 import { t } from '../i18n';
-import { failBattle, publish, pushToast, setLoading, setProgress, setReport, type GameSnapshot } from '../state/store';
+import { failBattle, publish, pushToast, setAutoBuild, setLoading, setProgress, setReport, useUi, type GameSnapshot } from '../state/store';
 import { SquadronBanners } from '../ui/SquadronBanners';
 import { MoveOrders } from '../ui/MoveOrders';
 import { sound } from '../audio/Sound';
@@ -207,6 +208,7 @@ export class Engine {
   private fogEnv!: ReturnType<typeof pmremTexture>;
   private accumulator = 0;
   private publishTimer = 0;
+  private readonly autoBuild = new AutoBuild();
   private fpsFrames = 0;
   private fpsTime = 0;
   private lastScaled = 0;
@@ -971,6 +973,10 @@ export class Engine {
     this.remote = remote;
     this.sink = remote;
     this.conquestSetup = setup;
+    // Auto-build is a choice for one match. It starts on in a battle played alone and off in a ranked or online one, where the
+    // player opts in (the online client has not been run against a live server with it on, and ranked is played by hand).
+    setAutoBuild(!setup.ranked && !remote);
+    this.autoBuild.reset();
     this.faction = setup.seats[setup.you]!.faction;
     await this.stage(conquestInfoOf(setup));
   }
@@ -1170,6 +1176,14 @@ export class Engine {
     this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.rts.cinematic && !this.battle.ended, this.team);
     this.moveOrders?.update();
     this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.rts.cinematic && !this.options.hideLabels && !this.battle.ended, this.battle);
+    if (this.conquest && !this.paused && useUi.getState().autoBuild) {
+      const order = this.autoBuild.tick(this.battle, this.conquest, this.owner, (cmd) => this.issue(cmd));
+      if (order) {
+        const point = this.conquest.points[order.point]!;
+        const kind = order.type === 'build' ? order.building : point.buildings[order.slot]!.kind;
+        pushToast(t(order.type === 'build' ? '자동 건설: {work} 건설 · {point}' : '자동 건설: {work} 증축 · {point}', { work: t(BUILDINGS[kind].label), point: t(point.name) }));
+      }
+    }
     this.publishTimer -= dt;
     if (this.publishTimer <= 0) {
       this.publish();

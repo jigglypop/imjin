@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Engine } from '../game/Engine';
-import type { ConquestSnapshot, PointDetail, PrimaryInfo } from '../state/store';
+import { setAutoBuild, useUi, type ConquestSnapshot, type PointDetail, type PrimaryInfo } from '../state/store';
+import { useNet } from '../net/NetClient';
 import type { CrewPlan } from '../sim/types';
 import { useT } from '../i18n';
 import { Icon } from './battleIcons';
@@ -57,6 +58,9 @@ export function ConquestBar({ c }: { c: ConquestSnapshot }) {
 /** The picked capture point: holder, shore works, and the slipway for the player's own points. */
 export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDetail; onClose: () => void }) {
   const t = useT();
+  const autoBuild = useUi((s) => s.autoBuild);
+  // Ranked rooms are played with the player's own hands only.
+  const ranked = useNet((s) => s.rankedMatch);
   const holdPct = Math.round(Math.abs(p.hold) * 100);
   return (
     <aside className="cq-point glass interactive">
@@ -120,6 +124,11 @@ export function PointPanel({ engine, p, onClose }: { engine: Engine; p: PointDet
       {p.mine && (
         <>
           <div className="cq-label">{t('건설')}</div>
+          {!ranked && (
+            <button className={`chip cq-auto ${autoBuild ? 'chip--on' : ''}`} aria-pressed={autoBuild} title={t('군영·선소·포대 같은 시설을 군자금이 넉넉할 때 알아서 짓고 증축합니다. 함선 건조 자금은 남겨 둡니다')} onClick={() => setAutoBuild(!autoBuild)}>
+              {t('자동 건설')} <small>{t(autoBuild ? '켬' : '끔')}</small>
+            </button>
+          )}
           <div className="cq-buttons">
             {p.build.map((b) => (
               <button key={b.kind} className="chip cq-buy" disabled={!b.ok} title={t(b.desc)} onClick={() => engine.issue({ type: 'build', point: p.id, building: b.kind })}>

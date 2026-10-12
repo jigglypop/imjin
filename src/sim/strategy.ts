@@ -1,6 +1,6 @@
 import type { Battle } from './battle';
 import { combatValue } from './competitive';
-import { BUILDINGS, ROSTER, type BuildingKind, type CapturePoint, type Conquest } from './conquest';
+import { BUILDINGS, ROSTER, upgradeCost, type BuildingKind, type CapturePoint, type Conquest } from './conquest';
 import { otherTeam, type Faction, type Ship, type ShipKind } from './types';
 import { isShipVisible, pointVisible } from './visibility';
 
@@ -59,6 +59,119 @@ function clusters(ships: readonly Ship[]): Cluster[] {
   return out;
 }
 
+/** A shore-work order for the seat's own points, in the shape of the matching Command. */
+export type WorkOrder = { type: 'build'; point: number; building: BuildingKind } | { type: 'upgrade'; point: number; slot: number };
+
+/**
+ * How the works planner is asked. `keep` is silver that must remain after the order, so a ship order is never starved;
+ * `eager` plans camps without waiting for the shipyards to back up. The computer plans with neither.
+ */
+export type WorkOptions = { keep?: number; eager?: boolean };
+
+const ownedBy = (c: Conquest, slot: number) => c.points.filter((p) => p.owner === slot);
+const homeOrFirst = (c: Conquest, slot: number, owned: CapturePoint[]) => c.homeOf(slot) ?? owned[0]!;
+
+/** The price of the navy's main ship, the one the computer buys most of: what a human's auto-build leaves in the treasury. */
+export function worksReserve(c: Conquest, slot: number) {
+  const want = DOCTRINE[c.player(slot)!.faction];
+  const main = (Object.keys(want) as ShipKind[]).reduce((best, k) => (want[k]! > want[best]! ? k : best));
+  return c.shipSpec(main).cost;
+}
+
+/** The fleet already holds as much as the cap leaves room for, so the treasury goes to works instead of ships. */
+function isFull(c: Conquest, slot: number, fleetValue: number) {
+  const me = c.player(slot)!;
+  return fleetValue > me.cap - Math.min(...ROSTER[me.faction].map((k) => c.shipSpec(k).cost));
+}
+
+/** Points nearest the enemy home first. */
+function frontOf(c: Conquest, slot: number, points: CapturePoint[]) {
+  const team = c.player(slot)!.team;
+  const foe = c.points.find((p) => p.home >= 0 && c.player(p.home)?.team !== team);
+  if (!foe) return points;
+  return [...points].sort((a, b) => Math.hypot(a.x - foe.x, a.z - foe.z) - Math.hypot(b.x - foe.x, b.z - foe.z));
+}
+
+function pickBuild(c: Conquest, slot: number, kind: BuildingKind, at: CapturePoint[], reserve: number, keep: number): WorkOrder | null {
+  const funds = c.player(slot)!.funds;
+  for (const p of at) {
+    if (funds - reserve - keep < BUILDINGS[kind].cost) return null;
+    if (c.canBuild(slot, p.id, kind)) return { type: 'build', point: p.id, building: kind };
+  }
+  return null;
+}
+
+function pickUpgrade(c: Conquest, slot: number, kind: BuildingKind, at: CapturePoint[], keep: number): WorkOrder | null {
+  const funds = c.player(slot)!.funds;
+  for (const p of at) {
+    const i = p.buildings.findIndex((bd) => bd?.kind === kind && bd.progress >= 1 && bd.level < 3 && bd.upgradeLeft <= 0);
+    if (i >= 0 && c.canUpgrade(slot, p.id, i) && funds - keep >= upgradeCost(kind, p.buildings[i]!.level)) return { type: 'upgrade', point: p.id, slot: i };
+  }
+  return null;
+}
+
+/**
+ * The first half of the works plan, before ships are recruited: a first shipyard, then in casual battles the camps and
+ * shipyard levels that a backed-up slipway calls for. `end` is set when there is no shipyard yet, so nothing after it applies.
+ * Pure: it reads the state and names the order, it changes nothing.
+ */
+export function planFoundation(b: Battle, c: Conquest, slot: number, opts: WorkOptions = {}): { order: WorkOrder | null; end: boolean } {
+  const me = c.player(slot)!;
+  const owned = ownedBy(c, slot);
+  const keep = opts.keep ?? 0;
+  const yards = owned.filter((p) => p.buildings.some((bd) => bd?.kind === 'shipyard'));
+  if (!yards.length) return { order: pickBuild(c, slot, 'shipyard', [homeOrFirst(c, slot, owned), ...owned], 0, keep), end: true };
+  if (c.options.expanded) {
+    // Camps support an uncapped fleet's crews and slipways; they never gate ordinary recruitment.
+    const campLevels = owned.reduce((n, p) => n + c.levels(p, 'camp'), 0);
+    const jobs = yards.reduce((n, p) => n + p.queue.length, 0);
+    const wornCrew = b.ships.some((s) => s.owner === slot && b.isActive(s) && s.crew < s.spec.crew * 0.75);
+    if (campLevels < 6 && (opts.eager || (me.funds > 1200 && (jobs >= 2 || wornCrew || c.fleet(b, slot).count >= 40)))) {
+      const order = pickUpgrade(c, slot, 'camp', owned, keep) ?? pickBuild(c, slot, 'camp', [homeOrFirst(c, slot, owned), ...owned], 700, keep);
+      if (order) return { order, end: false };
+    }
+    if (me.funds > 2000 && yards.some((p) => p.queue.length >= c.yardSlots(p))) {
+      const order = pickUpgrade(c, slot, 'shipyard', yards, keep);
+      if (order) return { order, end: false };
+    }
+  }
+  return { order: null, end: false };
+}
+
+/**
+ * The second half, after recruitment: batteries on the exposed front, a dock, a magazine, a second shipyard, a beacon.
+ * `full` is read before recruiting, as the queue it adds would otherwise count against the cap.
+ */
+export function planDefence(b: Battle, c: Conquest, slot: number, full: boolean, opts: WorkOptions = {}): WorkOrder | null {
+  const me = c.player(slot)!;
+  const owned = ownedBy(c, slot);
+  const keep = opts.keep ?? 0;
+  const yards = owned.filter((p) => p.buildings.some((bd) => bd?.kind === 'shipyard'));
+  if (!yards.length || !(me.funds > 900 || full)) return null;
+  const front = frontOf(c, slot, owned);
+  const exposed = front.filter((p) => p.home < 0 && !p.buildings.some((bd) => bd?.kind === 'battery'));
+  const damaged = b.ships.some((s) => s.owner === slot && b.isActive(s) && s.hull < s.spec.hull * 0.6);
+  return pickBuild(c, slot, 'battery', exposed.slice(0, 2), full ? 0 : 250, keep)
+    ?? (damaged && !owned.some((p) => c.count(p, 'dock')) ? pickBuild(c, slot, 'dock', [c.homeOf(slot) ?? front[front.length - 1]!, ...front.slice().reverse()], 200, keep) : null)
+    ?? (!owned.some((p) => c.count(p, 'magazine')) ? pickBuild(c, slot, 'magazine', [...front].reverse(), 300, keep) : null)
+    ?? (me.funds > 1500 && yards.length < 2 ? pickBuild(c, slot, 'shipyard', front.filter((p) => p.home < 0), 400, keep) : null)
+    ?? (me.funds > 1300 || full ? pickBuild(c, slot, 'beacon', front, full ? 0 : 500, keep) : null);
+}
+
+/** The next work a human's auto-build should order, or null: foundation first, then defence. */
+export function planWorks(b: Battle, c: Conquest, slot: number, opts: WorkOptions = {}): WorkOrder | null {
+  if (!c.player(slot) || !ownedBy(c, slot).length) return null;
+  const first = planFoundation(b, c, slot, opts);
+  if (first.order || first.end) return first.order;
+  return planDefence(b, c, slot, isFull(c, slot, c.fleet(b, slot).value), opts);
+}
+
+/** Carry an order out on the conquest directly, as the computer commander does; a human's order goes through a Command. */
+function executeWork(b: Battle, c: Conquest, slot: number, order: WorkOrder) {
+  if (order.type === 'build') c.build(b, slot, order.point, order.building);
+  else c.upgrade(b, slot, order.point, order.slot);
+}
+
 /**
  * The computer commander of one seat in a conquest battle. It spends the treasury on ships and shore works, keeps
  * its fleet together as a main body that hunts weaker enemy groups, defends threatened points and otherwise takes
@@ -88,7 +201,7 @@ export class Strategist {
   }
 
   private mine(c: Conquest) {
-    return c.points.filter((p) => p.owner === this.slot);
+    return ownedBy(c, this.slot);
   }
 
   private enemyHome(c: Conquest) {
@@ -98,59 +211,20 @@ export class Strategist {
 
   /** Points nearest the enemy first. */
   private frontline(c: Conquest, points: CapturePoint[]) {
-    const foe = this.enemyHome(c);
-    if (!foe) return points;
-    return [...points].sort((a, b) => Math.hypot(a.x - foe.x, a.z - foe.z) - Math.hypot(b.x - foe.x, b.z - foe.z));
+    return frontOf(c, this.slot, points);
   }
 
   private economy(b: Battle, c: Conquest) {
-    const me = c.player(this.slot)!;
     const owned = this.mine(c);
     if (!owned.length) return;
     const yards = owned.filter((p) => p.buildings.some((bd) => bd?.kind === 'shipyard'));
-    const fleet = c.fleet(b, this.slot);
-    const full = fleet.value > me.cap - Math.min(...ROSTER[me.faction].map((k) => c.shipSpec(k).cost));
-    const tryBuild = (kind: BuildingKind, at: CapturePoint[], reserve = 0) => {
-      for (const p of at) {
-        if (me.funds - reserve < BUILDINGS[kind].cost) return false;
-        if (c.canBuild(this.slot, p.id, kind) && c.build(b, this.slot, p.id, kind)) return true;
-      }
-      return false;
-    };
-    if (!yards.length) {
-      tryBuild('shipyard', [c.homeOf(this.slot) ?? owned[0]!, ...owned]);
-      return;
-    }
-    if (c.options.expanded) {
-      // Camps support an uncapped fleet's crews and slipways; they never gate ordinary recruitment.
-      const campLevels = owned.reduce((n, p) => n + c.levels(p, 'camp'), 0);
-      const jobs = yards.reduce((n, p) => n + p.queue.length, 0);
-      const wornCrew = b.ships.some((s) => s.owner === this.slot && b.isActive(s) && s.crew < s.spec.crew * 0.75);
-      if (campLevels < 6 && me.funds > 1200 && (jobs >= 2 || wornCrew || fleet.count >= 40)) {
-        for (const p of owned) {
-          const slot = p.buildings.findIndex((bd) => bd?.kind === 'camp' && bd.progress >= 1 && bd.level < 3 && bd.upgradeLeft <= 0);
-          if (slot >= 0 && c.upgrade(b, this.slot, p.id, slot)) return;
-        }
-        if (tryBuild('camp', [c.homeOf(this.slot) ?? owned[0]!, ...owned], 700)) return;
-      }
-      if (me.funds > 2000 && yards.some((p) => p.queue.length >= c.yardSlots(p))) {
-        for (const p of yards) {
-          const slot = p.buildings.findIndex((bd) => bd?.kind === 'shipyard' && bd.progress >= 1 && bd.level < 3 && bd.upgradeLeft <= 0);
-          if (slot >= 0 && c.upgrade(b, this.slot, p.id, slot)) return;
-        }
-      }
-    }
+    const full = isFull(c, this.slot, c.fleet(b, this.slot).value);
+    const foundation = planFoundation(b, c, this.slot);
+    if (foundation.order) executeWork(b, c, this.slot, foundation.order);
+    if (foundation.order || foundation.end) return;
     if (!full) this.recruit(b, c, yards);
-    const front = this.frontline(c, owned);
-    if (me.funds > 900 || full) {
-      const exposed = front.filter((p) => p.home < 0 && !p.buildings.some((bd) => bd?.kind === 'battery'));
-      if (tryBuild('battery', exposed.slice(0, 2), full ? 0 : 250)) return;
-      const damaged = b.ships.some((s) => s.owner === this.slot && b.isActive(s) && s.hull < s.spec.hull * 0.6);
-      if (damaged && !owned.some((p) => c.count(p, 'dock')) && tryBuild('dock', [c.homeOf(this.slot) ?? front[front.length - 1]!, ...front.slice().reverse()], 200)) return;
-      if (!owned.some((p) => c.count(p, 'magazine')) && tryBuild('magazine', [...front].reverse(), 300)) return;
-      if (me.funds > 1500 && yards.length < 2 && tryBuild('shipyard', front.filter((p) => p.home < 0), 400)) return;
-      if (me.funds > 1300 || full) tryBuild('beacon', front, full ? 0 : 500);
-    }
+    const order = planDefence(b, c, this.slot, full);
+    if (order) executeWork(b, c, this.slot, order);
   }
 
   private recruit(b: Battle, c: Conquest, yards: CapturePoint[]) {
