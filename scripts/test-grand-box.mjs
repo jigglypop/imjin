@@ -1,5 +1,5 @@
-// The hit test of the campaign map's drag-select box: pure geometry on the markers' own pixels, checked on a flat,
-// a zoomed and a rotated view of real ports.
+// The hit test of the campaign map's drag-select box: pure geometry on the markers' own pixels, checked on an overview,
+// a close, a rotated and a half-turned view of the world camera, with real ports.
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
@@ -8,12 +8,13 @@ let failed = 0;
 const check = (name, fn) => { try { fn(); console.log('PASS ' + name); } catch (e) { failed++; console.error('FAIL ' + name, e); } };
 try {
   const { boxBetween, markersInBox } = await vite.ssrLoadModule('/src/ui/grand/boxSelect.ts');
-  const { mapProject, MAP_TILT } = await vite.ssrLoadModule('/src/ui/grand/mapMath.ts');
-  const { MAP_ASPECT, project } = await vite.ssrLoadModule('/src/ui/grand/projection.ts');
+  const { projectFrame, screenFrame } = await vite.ssrLoadModule('/src/ui/grand/worldCamera.ts');
+  const { project } = await vite.ssrLoadModule('/src/ui/grand/projection.ts');
   const { REGIONS } = await vite.ssrLoadModule('/src/sim/grand/regions.ts');
   const ports = ['yeosu', 'hansan', 'noryang', 'busan', 'sacheon'].map((id) => ({ id, ...project(REGIONS[id].lon, REGIONS[id].lat) }));
-  // The same arithmetic GrandMap uses for px() and py().
-  const place = (view, pose) => ports.map((p) => { const q = mapProject(p.u, p.v, 0, pose); return { id: p.id, x: view.x + q.u * view.s, y: view.y + q.v * (view.s / MAP_ASPECT) }; });
+  // The same projection GrandMap places its markers with.
+  const screen = screenFrame(1600, 900, { top: 0, right: 0, bottom: 0, left: 0 });
+  const place = (cam) => ports.map((p) => { const q = projectFrame(cam, screen, p.u, p.v, 0); return { id: p.id, x: q.x, y: q.y }; });
   const around = (ms, ids, pad = 6) => {
     const mine = ms.filter((m) => ids.includes(m.id));
     return boxBetween(Math.min(...mine.map((m) => m.x)) - pad, Math.min(...mine.map((m) => m.y)) - pad, Math.max(...mine.map((m) => m.x)) + pad, Math.max(...mine.map((m) => m.y)) + pad);
@@ -31,14 +32,14 @@ try {
     assert.deepEqual(markersInBox({ x0: 10, y0: 10, x1: 10, y1: 10 }, ms), ['a']);
     assert.deepEqual(markersInBox({ x0: 0, y0: 0, x1: 50, y1: 50 }, []), []);
   });
-  for (const [label, view, pose] of [
-    ['an overview', { s: 1200, x: -120, y: -60 }, { tilt: MAP_TILT, yaw: 0 }],
-    ['a zoomed view', { s: 4800, x: -2600, y: -900 }, { tilt: MAP_TILT, yaw: 0 }],
-    ['a rotated view', { s: 3000, x: -1200, y: -700 }, { tilt: 0.8, yaw: 1.1 }],
-    ['a view turned half way round', { s: 2000, x: -500, y: -300 }, { tilt: 0.5, yaw: Math.PI }],
+  for (const [label, cam] of [
+    ['an overview', { u: 0.58, v: 0.5, distance: 0.9, yaw: 0, pitch: 0.9 }],
+    ['a close view', { u: 0.6, v: 0.52, distance: 0.12, yaw: 0, pitch: 0.7 }],
+    ['a rotated view', { u: 0.6, v: 0.5, distance: 0.4, yaw: 1.1, pitch: 0.8 }],
+    ['a view turned half way round', { u: 0.6, v: 0.5, distance: 0.5, yaw: Math.PI, pitch: 0.5 }],
   ]) {
     check(`the box selects exactly the ports drawn inside it on ${label}`, () => {
-      const ms = place(view, pose);
+      const ms = place(cam);
       for (const ids of [['yeosu'], ['yeosu', 'hansan'], ['yeosu', 'hansan', 'noryang'], ['busan']]) {
         const box = around(ms, ids);
         const expected = ms.filter((m) => m.x >= box.x0 && m.x <= box.x1 && m.y >= box.y0 && m.y <= box.y1).map((m) => m.id);
@@ -49,9 +50,9 @@ try {
     });
   }
   check('rotating the view changes which ports a fixed screen box catches', () => {
-    const view = { s: 3000, x: -1200, y: -700 };
-    const flat = place(view, { tilt: MAP_TILT, yaw: 0 });
-    const turned = place(view, { tilt: MAP_TILT, yaw: 1.4 });
+    const cam = { u: 0.6, v: 0.5, distance: 0.4, yaw: 0, pitch: 0.8 };
+    const flat = place(cam);
+    const turned = place({ ...cam, yaw: 1.4 });
     const box = around(flat, ['yeosu', 'hansan']);
     assert.ok(markersInBox(box, flat).includes('yeosu'));
     assert.notDeepEqual(markersInBox(box, turned), markersInBox(box, flat));
