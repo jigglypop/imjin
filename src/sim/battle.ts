@@ -67,6 +67,9 @@ const PARAPET_SHARE = 0.6;
 const FINISH_CREW = 0.35;
 /** A beaten ship is only worth closing on with none of its fleet within this many metres. */
 const FINISH_SAFE = 220;
+/** How far a computer-led tender looks for a friend to keep beside, and how close it stays. */
+const TENDER_SEEK = 500;
+const TENDER_STAY = 50;
 /** Share of the crew left below which a boarded ship is taken. */
 const CAPTURE_CREW = 0.08;
 // Stalemates. A battle always ends. Once the first blow has landed, a lull in which no shot hits, no ram strikes and no
@@ -169,6 +172,8 @@ export interface BattleRules {
   impact?(b: Battle, x: number, y: number, z: number, damage: number, team: Team): void;
   /** Overrides the default end, which is one side having no ships left. */
   decide?(b: Battle): Team | 'draw' | null;
+  /** Tenders (ShipSpec.tender) top up their friends under these rules, and the computer's tenders go looking for them. */
+  tenders?: boolean;
 }
 
 export class Battle {
@@ -1057,6 +1062,32 @@ export class Battle {
     return best;
   }
 
+  /** How much a ship has lost of hull, crew and supply, each as a share of full. A tender serves the largest first. */
+  tenderNeed(o: Ship) {
+    return (1 - o.hull / o.spec.hull) + (1 - o.crew / o.spec.crew) + (1 - o.supply);
+  }
+
+  /** A computer-led tender with no order keeps beside the neediest friend near it. Returns whether it did. */
+  private escortTender(s: Ship) {
+    if (!s.spec.tender || !this.rules?.tenders || s.order.type !== 'auto' || !this.isAi(s)) return false;
+    let best: Ship | undefined;
+    let bestNeed = 0.05;
+    this.grid.query(s.x, s.z, TENDER_SEEK, (o) => {
+      if (o === s || o.team !== s.team || !this.isActive(o) || o.spec.tender || hyp(o.x - s.x, o.z - s.z) > TENDER_SEEK) return;
+      const need = this.tenderNeed(o);
+      if (need > bestNeed) {
+        bestNeed = need;
+        best = o;
+      }
+    });
+    if (!best) return false;
+    const d = hyp(best.x - s.x, best.z - s.z);
+    if (d < TENDER_STAY) this.face(s, best.heading, Math.min(1, best.speed / s.spec.maxSpeed + 0.05));
+    else this.steerTo(s, best.x, best.z, TENDER_STAY * 2, 1);
+    this.activity.set(s.id, 'moving');
+    return true;
+  }
+
   private thinkGunner(s: Ship, forced: Ship | undefined) {
     if (forced && this.profile !== 'historical' && !isShipVisible(this, s.team, forced.id)) forced = undefined;
     let finish = forced ? undefined : this.finishTarget(s);
@@ -1064,6 +1095,7 @@ export class Battle {
     if (seen) this.searchSince.delete(s.id);
     let target = seen ?? this.hunted(s);
     if (!target) {
+      if (this.escortTender(s)) return;
       s.throttle = 0.12;
       s.rudder = 0;
       if (this.profile !== 'historical') s.targetId = 0;
@@ -1122,7 +1154,7 @@ export class Battle {
       if (d < 240) {
         this.steerTo(s, s.x - Math.cos(bearing) * 150, s.z - Math.sin(bearing) * 150, 60, 1);
         this.activity.set(s.id, 'evading');
-      } else {
+      } else if (!this.escortTender(s)) {
         this.face(s, bearing + Math.PI / 2, 0.15);
         this.activity.set(s.id, 'idle');
       }

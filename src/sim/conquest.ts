@@ -635,8 +635,34 @@ export class Conquest implements BattleRules {
     return b.addSquadron(pl.team, fleetNo(label, index), pl.name, portrait, card, pl.slot);
   }
 
+  get tenders() {
+    return !!this.options.expanded;
+  }
+
+  /** Tenders top up the friends beside them. A ship takes from one tender only, so a crowd of tenders cannot make it immortal. */
+  private tend(b: Battle, dt: number) {
+    const served = new Set<number>();
+    for (const t of b.ships) {
+      const spec = t.spec.tender;
+      if (!spec || !b.isActive(t)) continue;
+      const wanted: { s: Ship; need: number; d: number }[] = [];
+      b.near(t.x, t.z, spec.range, (s) => {
+        if (s === t || s.team !== t.team || !b.isActive(s) || served.has(s.id) || b.time - s.lastHit <= 8) return;
+        const need = b.tenderNeed(s);
+        if (need > 0) wanted.push({ s, need, d: Math.hypot(s.x - t.x, s.z - t.z) });
+      });
+      wanted.sort((p, q) => q.need - p.need || p.d - q.d || p.s.id - q.s.id);
+      for (const { s } of wanted.slice(0, spec.capacity)) {
+        served.add(s.id);
+        b.mend(s, dt * spec.hull, dt * spec.crew);
+        b.resupply(s, dt * spec.ammo);
+      }
+    }
+  }
+
   /** Shore batteries, docks, magazines and beacons. */
   private services(b: Battle, dt: number) {
+    if (this.tenders) this.tend(b, dt);
     for (const p of this.points) {
       if (p.owner < 0) continue;
       const pl = this.players[p.owner]!;

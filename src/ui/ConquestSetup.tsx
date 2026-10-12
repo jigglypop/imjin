@@ -34,7 +34,7 @@ function save(v: Saved) {
 const ROLE_NOTE: Record<ShipKind, string> = {
   panokseon: '천·지자총통, 튼튼한 선체',
   geobukseon: '충돌 돌격, 적의 도선 불가',
-  hyeopseon: '빠른 정찰선, 거점 점령',
+  hyeopseon: '정찰·보급: 가까운 아군 3척의 승조원·탄약·선체를 회복합니다',
   atakebune: '조총 누각, 적 함선 도선',
   sekibune: '빠른 돌격선, 적 함선 도선',
   kobaya: '값싼 소형선, 거점 점령',

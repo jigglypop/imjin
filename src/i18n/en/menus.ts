@@ -84,7 +84,7 @@ export const EN_MENUS: Record<string, string> = {
   '거점을 차지해 적의 기세를 먼저 꺾으면 승리합니다 · 제한 시간 30분': "Capture points and break the enemy's momentum first to win · 30 minute limit",
   '천·지자총통, 튼튼한 선체': 'Cheonja and Jija cannons, sturdy hull',
   '충돌 돌격, 적의 도선 불가': 'Ramming charge, cannot be boarded',
-  '빠른 정찰선, 거점 점령': 'Fast scout, captures points',
+  '정찰·보급: 가까운 아군 3척의 승조원·탄약·선체를 회복합니다': 'Scout and tender: restores crew, ammunition and hull of up to 3 friendly ships nearby',
   '조총 누각, 적 함선 도선': 'Arquebus tower, boards enemy ships',
   '빠른 돌격선, 적 함선 도선': 'Fast raider, boards enemy ships',
   '값싼 소형선, 거점 점령': 'Cheap small boat, captures points',

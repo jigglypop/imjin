@@ -79,6 +79,8 @@ export type ShipSpec = {
   /** Conquest battles: price in funds, and seconds on the slipway. */
   cost: number;
   build: number;
+  /** A small boat that tops up friends beside it (expanded conquest rules only). Rates are per second, as a share of the served ship's full value. */
+  tender?: { range: number; capacity: number; hull: number; crew: number; ammo: number };
 };
 
 export type FireMode = 'free' | 'hold';

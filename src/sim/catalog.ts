@@ -188,6 +188,7 @@ export const SHIP_SPECS: Record<ShipKind, ShipSpec> = {
     crewPlan: [0.6, 0.1, 0.2, 0.1],
     cost: 140,
     build: 19,
+    tender: { range: 90, capacity: 3, hull: 0.0025, crew: 0.005, ammo: 0.008 },
   },
   atakebune: {
     kind: 'atakebune',
