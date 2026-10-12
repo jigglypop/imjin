@@ -45,7 +45,7 @@ export function MainMenu() {
   const t = useT();
   const lang = useLang();
   const title = t('임진왜란');
-  const [titleReady, setTitleReady] = useState<Partial<Record<Lang, boolean>>>({});
+  const [titleReady, setTitleReady] = useState(false);
   return (
     <section className="screen menu menu--cinematic">
       <Backdrop kind="menu" cinematic />
@@ -61,10 +61,15 @@ export function MainMenu() {
         <div className={`wordmark wordmark--${lang}`}>
           <div className="wordmark-kicker" aria-hidden="true">{lang === 'ko' ? '壬 辰 倭 亂' : 'NAVAL STRATEGY'}</div>
           <div className="menu-title-lockup">
-            <h1 className={`wordmark-title wordmark-title--art ${titleReady[lang] ? 'wordmark-title--loaded' : ''}`} aria-label={title}>
-              <img key={lang} className="menu-title-art" src={`/ui/art/menu_title_${lang}.webp`} alt={title} width={lang === 'ko' ? 1501 : 1024} height={lang === 'ko' ? 599 : 1052} decoding="async" fetchPriority="high" onLoad={() => setTitleReady(s => ({ ...s, [lang]: true }))} onError={() => setTitleReady(s => ({ ...s, [lang]: false }))} />
-              <span className="menu-title-fallback" aria-hidden="true">{title}</span>
-            </h1>
+            {/* The Korean title is set in type like a film poster; the English one is a lettered picture. */}
+            {lang === 'ko' ? (
+              <h1 className="wordmark-title wordmark-title--poster">{title}</h1>
+            ) : (
+              <h1 className={`wordmark-title wordmark-title--art ${titleReady ? 'wordmark-title--loaded' : ''}`} aria-label={title}>
+                <img className="menu-title-art" src="/ui/art/menu_title_en.webp" alt={title} width={1024} height={1052} decoding="async" fetchPriority="high" onLoad={() => setTitleReady(true)} onError={() => setTitleReady(false)} />
+                <span className="menu-title-fallback" aria-hidden="true">{title}</span>
+              </h1>
+            )}
             {lang === 'ko' && <span className="menu-seal" aria-hidden="true">海<br />戰</span>}
           </div>
           <div className="wordmark-en" aria-hidden="true">{lang === 'ko' ? 'THE IMJIN WAR' : '1592 — 1598'}</div>

@@ -5,9 +5,10 @@ import sharp from 'sharp';
 const directory = 'assets-src/menu-title-2026-10-12';
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const assets = [];
-// The Korean title is one horizontal line (the first, two-row version is kept in the folder as history).
-const files = { ko: ['title-ko-oneline-gpt-image-2.5.png', 'prompt-ko-oneline.txt'], en: ['title-en-gpt-image-2.5.png', 'prompt-en.txt'] };
-for (const language of ['ko', 'en']) {
+// Only the English title is a picture now; the Korean one is set in type (src/ui/menu-cinematic.css). The Korean
+// lettering this script once installed is kept in the folder as history.
+const files = { en: ['title-en-gpt-image-2.5.png', 'prompt-en.txt'] };
+for (const language of ['en']) {
   const source = `${directory}/${files[language][0]}`;
   const prompt = `${directory}/${files[language][1]}`;
   const target = `public/ui/art/menu_title_${language}.webp`;
@@ -25,8 +26,6 @@ for (const language of ['ko', 'en']) {
   const left = Math.max(0, x0 - pad), top = Math.max(0, y0 - pad);
   const crop = { left, top, width: Math.min(info.width, x1 + pad + 1) - left, height: Math.min(info.height, y1 + pad + 1) - top };
   await sharp(original).extract(crop).webp({ lossless: true, effort: 6 }).toFile(target);
-  // The same crop as a PNG with its alpha channel, for compositing outside the game (the trailer).
-  if (language === 'ko') await sharp(original).extract(crop).png().toFile(`${directory}/title-ko-oneline-final.png`);
   const output = await readFile(target);
   assets.push({ language, source, prompt, target, input: { width: info.width, height: info.height, sha256: sha256(original) }, crop,
     output: { bytes: output.length, sha256: sha256(output) }, promptSha256: sha256(await readFile(prompt)) });

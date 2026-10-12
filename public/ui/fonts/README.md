@@ -1,7 +1,7 @@
-# Menu lettering fallback
+# Menu title lettering
 
-`imjin-menu-brush.woff2` contains only the four glyphs in `임진왜란`. It is a renamed subset of [Nanum Brush Script](https://github.com/google/fonts/tree/main/ofl/nanumbrushscript), distributed under the included SIL Open Font License. The subset's internal family is `ImjinMenuBrush`; it does not use the reserved font names.
+`imjin-title-dohyeon.woff2` contains only the four glyphs in `임진왜란`. It is a subset of [Do Hyeon](https://github.com/google/fonts/tree/main/ofl/dohyeon) (BM DOHYEON by Woowa Brothers), distributed under the included SIL Open Font License (`OFL-DoHyeon.txt`). The family has no reserved font names and a single weight; the menu thickens it with a text stroke of its own colour.
 
-Source: `NanumBrushScript-Regular.ttf`, SHA-256 `27ceaf578c96f594cdf07fe0181b251790acbb746a164e45c1f6473f89911a31`.
+Source: `DoHyeon-Regular.ttf` from google/fonts, SHA-256 `35644be7f28e0a68a447b1f7af351dcde5674b870f24f7b5f43e26d00b4ab653`.
 
-Reproduction: use FontTools `subset` with `--text=임진왜란 --flavor=woff2`, then set name IDs 1, 2, 3, 4, and 6 to the new family and `Regular` before saving. Keep the original copyright and license entries. The generated bitmap wordmark is the main menu's primary title; this small font remains its readable fallback.
+Reproduction: `python -m fontTools.subset DoHyeon-Regular.ttf --text=임진왜란 --flavor=woff2 --layout-features='*' --name-IDs='*' --name-languages='*' --output-file=imjin-title-dohyeon.woff2`. The copyright and license name entries are kept.
