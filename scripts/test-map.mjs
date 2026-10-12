@@ -48,7 +48,7 @@ try {
       api.onLoad({ filter: /[\\/]ui[\\/]launch\.ts$/ }, () => ({ contents: 'export const params=new URLSearchParams("");', loader: 'ts' }));
       api.onLoad({ filter: /[\\/]render[\\/]webglBackend\.ts$/ }, () => ({ contents: 'export const tuneWebGLBackend=()=>{};', loader: 'ts' }));
       // The terrain material is TSL; the lifecycle is what is tested here, with a plain mesh standing in.
-      api.onLoad({ filter: /[\\/]select[\\/]terrain\.ts$/ }, () => ({ contents: `import { Mesh, PlaneGeometry, MeshBasicMaterial } from 'three'; export const loadDem = (signal) => globalThis.__loadDem(signal); export const buildTerrain = () => new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial()); export const buildSea = () => new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial()); export const worldClock = { value: 0 }; export const cloudShade = () => ({ mul: () => ({}) });`, loader: 'ts' }));
+      api.onLoad({ filter: /[\\/]select[\\/]terrain\.ts$/ }, () => ({ contents: `import { Mesh, PlaneGeometry, MeshBasicMaterial } from 'three'; export const loadDem = (signal) => globalThis.__loadDem(signal); export const buildTerrain = () => new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial()); export const buildSea = () => new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial()); export const worldClock = { value: 0 }; export const buildFarLandMaterial = () => new MeshBasicMaterial();`, loader: 'ts' }));
     } }],
   });
   const path = join(temporary, 'actual-map.mjs'); await writeFile(path, bundled.outputFiles[0].contents);

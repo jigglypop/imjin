@@ -11,7 +11,7 @@ import {
   RedFormat,
   TextureLoader,
 } from 'three/webgpu';
-import { abs, cameraPosition, clamp, dot, float, fract, fwidth, max, mix, mx_noise_float, normalize, positionLocal, positionWorld, pow, sin, smoothstep, texture, time, uniform, uv, vec2, vec3 } from 'three/tsl';
+import { abs, attribute, cameraPosition, mx_noise_vec3, clamp, dot, float, fract, fwidth, max, mix, mx_noise_float, normalize, positionLocal, positionWorld, pow, sin, smoothstep, texture, time, uniform, uv, vec2, vec3 } from 'three/tsl';
 import meta from './demMeta.json';
 import { EXAGGERATION, MAP_H, MAP_W, MIST_HEX, V_SCALE } from './demFrame';
 
@@ -109,6 +109,69 @@ export function buildSea(size: number) {
   return mesh;
 }
 
+const texel = vec2(1 / meta.width, 1 / meta.height);
+/** Metres of the DEM at `fUV` (u east, v south). */
+const demHeight = (demTex: DataTexture, fUV: Node<'vec2'>) => texture(demTex, fUV).r;
+/**
+ * The DEM's shading normal at `fUV`: its slopes in metres per metre, steepened so the relief reads at map scale. With
+ * `southward` -1 the DEM is read mirrored north to south (farLand.ts carries it on past its north edge that way).
+ */
+function demNormal(demTex: DataTexture, fUV: Node<'vec2'>, southward: Node<'float'> | number = 1) {
+  const hx = texture(demTex, fUV.add(vec2(texel.x, 0))).r.sub(texture(demTex, fUV.sub(vec2(texel.x, 0))).r);
+  const hz = texture(demTex, fUV.add(vec2(0, texel.y))).r.sub(texture(demTex, fUV.sub(vec2(0, texel.y))).r).mul(southward);
+  const shadeK = float(EXAGGERATION * 0.55);
+  return normalize(vec3(hx.mul(shadeK).negate().div(meta.metersPerPixel * 2), 1, hz.mul(shadeK).negate().div(meta.metersPerPixel * 2)));
+}
+
+/**
+ * The campaign world's land at `h` metres with shading normal `n`: sunlit fields, woods, rock and beaches under the
+ * drifting cloud shadows. `local` is the position in the terrain mesh's own frame (map units), where the noise that
+ * breaks the colours up into woods and fields runs, so the far land coloured with it matches the DEM exactly.
+ */
+function worldLand(h: Node<'float'>, n: Node<'vec3'>, local: Node<'vec3'>) {
+  const slope = float(1).sub(n.y);
+  const sunLocal = normalize(vec3(-0.55, 0.62, -0.55));
+  // Light on the ground: the sun's share plus a sky ambient, so the shaded sides keep their colour.
+  const sunShare = clamp(dot(n, sunLocal), 0, 1);
+  const lightOn = mix(float(0.5), float(1.15), sunShare);
+  // Noise at three scales breaks the colours up into woods, fields and bare ground.
+  const broad = mx_noise_float(vec3(local.x.mul(0.7), 0, local.z.mul(0.7))).mul(0.5).add(0.5);
+  const medium = mx_noise_float(vec3(local.x.mul(3.1), 1.7, local.z.mul(3.1))).mul(0.5).add(0.5);
+  const fine = mx_noise_float(vec3(local.x.mul(13), 3.3, local.z.mul(13))).mul(0.5).add(0.5);
+  const grass = mix(srgb(124, 152, 84), srgb(168, 172, 100), medium);
+  const forest = mix(srgb(40, 76, 48), srgb(62, 98, 58), fine.mul(0.6).add(medium.mul(0.4)));
+  const woody = smoothstep(0.32, 0.62, broad.mul(0.7).add(medium.mul(0.3))).max(smoothstep(60, 220, h));
+  const ground = mix(grass, forest, woody);
+  const bare = smoothstep(0.16, 0.4, slope).max(smoothstep(650, 1500, h).mul(0.8));
+  const rock = mix(srgb(112, 102, 90), srgb(158, 150, 138), smoothstep(600, 1700, h).add(fine.mul(0.3)));
+  const beach = float(1).sub(smoothstep(0.6, 3.2, h));
+  return mix(mix(ground, rock, bare), srgb(196, 178, 138), beach).mul(lightOn).mul(cloudShade(0.32));
+}
+
+/**
+ * The far land's material (farLand.ts): the world's land colour, as the terrain's. Near the DEM it reads the DEM itself,
+ * mirrored past the north edge just as the far land's heights are, so colour and relief run on across the join pixel for
+ * pixel; farther north it blends into the hills' own heights and normals by the vertices' `blend`.
+ */
+export function buildFarLandMaterial(demTex: DataTexture, shear: number) {
+  const m = new MeshBasicNodeMaterial();
+  const local = attribute('local', 'vec2');
+  const ahead = local.y.div(MAP_H).add(0.5);
+  const north = ahead.negate().max(0);
+  const fUV = vec2(local.x.div(MAP_W).add(0.5).sub(north.mul(shear)), abs(ahead));
+  const southward = ahead.lessThan(0).select(float(-1), float(1));
+  const blend = attribute('blend', 'float');
+  const h = mix(demHeight(demTex, fUV), attribute('hills', 'float'), blend);
+  // The hills' mesh is coarser than the DEM's 160 m texels: a little noise in their normal gives them the same grain.
+  const grain = mx_noise_vec3(vec3(local.x.mul(9), 0.4, local.y.mul(9))).mul(0.5)
+    .add(mx_noise_vec3(vec3(local.x.mul(27), 1.9, local.y.mul(27))).mul(0.32))
+    .add(mx_noise_vec3(vec3(local.x.mul(81), 3.7, local.y.mul(81))).mul(0.2));
+  const hillNormal = attribute('hillNormal', 'vec3').add(vec3(grain.x, 0, grain.z));
+  const n = normalize(mix(demNormal(demTex, fUV, southward), hillNormal, blend));
+  m.colorNode = worldLand(h, n, vec3(local.x, 0, local.y));
+  return m;
+}
+
 /**
  * The terrain mesh, MAP_W x MAP_H units centred on the origin; land stands up, the sea is flat. As the `world` it is the
  * campaign's 3D world instead of the select screen's ink chart: sunlit green land with forest, fields, rock and beaches,
@@ -121,17 +184,14 @@ export function buildTerrain(demTex: DataTexture, segments: number, world = fals
   const fUV = vec2(uv().x, float(1).sub(uv().y));
   const hV = texture(demTex, fUV).level(float(0)).r;
   // The relief settles to flat sea at the map's border, so no land stands cut off against the mist there. The campaign's
-  // world carries the mainland on north of the DEM (farLand.ts), so there the north edge keeps its relief.
+  // world carries the mainland on north of the DEM (farLand.ts), so there the north edge keeps its relief, and its west and
+  // east edges only ease the land down in the last few texels: wide rims would flatten Haenam and Ulsan into the sea.
   const northRim = world ? float(1) : smoothstep(1, 0.91, uv().y);
-  const rim = smoothstep(0, 0.07, uv().x).mul(smoothstep(1, 0.93, uv().x)).mul(smoothstep(0, 0.09, uv().y)).mul(northRim);
+  const side = world ? 0.006 : 0.07;
+  const rim = smoothstep(0, side, uv().x).mul(smoothstep(1, 1 - side, uv().x)).mul(smoothstep(0, 0.09, uv().y)).mul(northRim);
   m.positionNode = positionLocal.add(vec3(0, max(hV, 0).mul(V_SCALE).mul(rim), 0));
-  const texel = vec2(1 / meta.width, 1 / meta.height);
-  const h = texture(demTex, fUV).r;
-  const hx = texture(demTex, fUV.add(vec2(texel.x, 0))).r.sub(texture(demTex, fUV.sub(vec2(texel.x, 0))).r);
-  const hz = texture(demTex, fUV.add(vec2(0, texel.y))).r.sub(texture(demTex, fUV.sub(vec2(0, texel.y))).r);
-  const metersPerTexel = meta.metersPerPixel;
-  const shadeK = float(EXAGGERATION * 0.55);
-  const n = normalize(vec3(hx.mul(shadeK).negate().div(metersPerTexel * 2), 1, hz.mul(shadeK).negate().div(metersPerTexel * 2)));
+  const h = demHeight(demTex, fUV);
+  const n = demNormal(demTex, fUV);
   const L = normalize(vec3(-0.55, 0.62, -0.55));
   const lit = clamp(dot(n, L), 0, 1);
   const slope = float(1).sub(n.y);
@@ -158,28 +218,15 @@ export function buildTerrain(demTex: DataTexture, segments: number, world = fals
   const withCoast = mix(base, srgb(118, 132, 146), coast.mul(0.6));
   const edge = smoothstep(0, 0.08, uv().x).mul(smoothstep(1, 0.92, uv().x)).mul(smoothstep(0, 0.1, uv().y)).mul(smoothstep(1, 0.9, uv().y));
   if (world) {
-    const sunLocal = normalize(vec3(-0.55, 0.62, -0.55));
-    // Light on the ground: the sun's share plus a sky ambient, so the shaded sides keep their colour.
-    const sunShare = clamp(dot(n, sunLocal), 0, 1);
-    const lightOn = mix(float(0.5), float(1.15), sunShare);
-    // Noise at three scales breaks the colours up into woods, fields and bare ground.
-    const broad = mx_noise_float(vec3(positionLocal.x.mul(0.7), 0, positionLocal.z.mul(0.7))).mul(0.5).add(0.5);
-    const medium = mx_noise_float(vec3(positionLocal.x.mul(3.1), 1.7, positionLocal.z.mul(3.1))).mul(0.5).add(0.5);
-    const fine = mx_noise_float(vec3(positionLocal.x.mul(13), 3.3, positionLocal.z.mul(13))).mul(0.5).add(0.5);
-    const grass = mix(srgb(124, 152, 84), srgb(168, 172, 100), medium);
-    const forest = mix(srgb(40, 76, 48), srgb(62, 98, 58), fine.mul(0.6).add(medium.mul(0.4)));
-    const woody = smoothstep(0.32, 0.62, broad.mul(0.7).add(medium.mul(0.3))).max(smoothstep(60, 220, h));
-    const ground = mix(grass, forest, woody);
-    const bare = smoothstep(0.16, 0.4, slope).max(smoothstep(650, 1500, h).mul(0.8));
-    const rock = mix(srgb(112, 102, 90), srgb(158, 150, 138), smoothstep(600, 1700, h).add(fine.mul(0.3)));
-    const beach = float(1).sub(smoothstep(0.6, 3.2, h));
-    const landWorld = mix(mix(ground, rock, bare), srgb(196, 178, 138), beach).mul(lightOn).mul(cloudShade(0.32));
+    const landWorld = worldLand(h, n, positionLocal);
     // The sea: the DEM's seabed gives the depth; its west, east and south edges melt into the deep sea of the plane round it.
     const sea = worldSea(depth);
     const surf = coast.mul(float(0.75).add(sin(time.mul(1.3).add(positionLocal.x.mul(11)).add(positionLocal.z.mul(7))).mul(0.2))).mul(0.5);
     const worldColor = mix(land.select(landWorld, sea), srgb(236, 244, 244), surf);
-    // The north edge's water melts into it too (the land there runs on into farLand.ts), so no shelf ends in a straight line.
-    const seaEdge = smoothstep(0, 0.1, uv().x).mul(smoothstep(1, 0.9, uv().x)).mul(smoothstep(0, 0.12, uv().y)).mul(land.select(float(1), smoothstep(1, 0.95, uv().y)));
+    // Only the water melts into the open sea at the DEM's sides and north edge (the land there runs on into farLand.ts or
+    // reaches the edge as it does), so no shelf ends in a straight line and no coast is washed out.
+    const waterEdge = smoothstep(0, 0.1, uv().x).mul(smoothstep(1, 0.9, uv().x)).mul(smoothstep(1, 0.95, uv().y));
+    const seaEdge = smoothstep(0, 0.12, uv().y).mul(land.select(float(1), waterEdge));
     m.colorNode = mix(worldSea(float(400)), worldColor, seaEdge);
   } else {
     m.colorNode = mix(MIST, withCoast, edge);

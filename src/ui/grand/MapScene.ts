@@ -1,15 +1,15 @@
 import { BackSide, BufferAttribute, BufferGeometry, Color, Fog, Group, Mesh, MeshBasicNodeMaterial, PerspectiveCamera, Scene, SphereGeometry, WebGPURenderer, type DataTexture } from 'three/webgpu';
-import { attribute, mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
+import { mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
 import { equipment, forceWebGL } from '../../game/quality';
 import { tuneWebGLBackend } from '../../render/webglBackend';
 import { disposeTree } from '../../render/dispose';
 import { MAP_H, V_SCALE } from '../../select/demFrame';
-import { buildSea, buildTerrain, cloudShade, loadDem, worldClock } from '../../select/terrain';
+import { buildFarLandMaterial, buildSea, buildTerrain, loadDem, worldClock } from '../../select/terrain';
 import { MAP_ASPECT } from './projection';
 import { DEM_RECT, MESH_SCALE, groundElevation } from './mapMath';
 import { MapLayer } from './mapLayer';
 import { TreeLayer } from './worldTrees';
-import { buildFarLand } from './farLand';
+import { buildFarLand, MIRROR_SHEAR, type FarLand } from './farLand';
 import type { MapWorld } from './mapWorld';
 import { eyeOf, FAR, FOV, NEAR, worldX, worldZ, type CameraState, type ScreenFrame } from './worldCamera';
 import { SKY_HORIZON, SKY_MIDDLE, SKY_ZENITH, WORLD_HAZE } from './worldLook';
@@ -86,13 +86,15 @@ export class MapScene {
     const sea = buildSea(2 * (FAR + 2));
     sea.position.set(0, -0.0005, 0);
     this.scene.add(sea);
-    this.scene.add(this.buildFarLand(heights));
+    const far = buildFarLand(heights);
+    this.scene.add(this.buildFarLand(far, tex));
     this.sky = this.buildSky();
     this.scene.add(this.sky);
     // Camps and ships stand on the same ground the overlay's markers read; they arrive when their models have loaded.
     this.layer = new MapLayer((u, v) => groundElevation(heights, u, v), () => this.start());
     this.scene.add(this.layer.group);
-    this.trees = new TreeLayer((u, v) => groundElevation(heights, u, v), V_SCALE * MESH_SCALE);
+    // Trees stand on the far land north of the DEM too, so the woods run on across the join.
+    this.trees = new TreeLayer((u, v) => (v < DEM_RECT.v ? far.heightAt(u, v) : groundElevation(heights, u, v)), V_SCALE * MESH_SCALE);
     this.scene.add(this.trees.group);
     if (this.world) {
       this.layer.set(this.world);
@@ -104,16 +106,16 @@ export class MapScene {
   }
 
   /** The mainland north of the DEM, on to the horizon (farLand.ts). */
-  private buildFarLand(heights: Float32Array) {
-    const { position, color, index } = buildFarLand(heights);
+  private buildFarLand(far: FarLand, demTex: DataTexture) {
     const geometry = new BufferGeometry();
-    geometry.setAttribute('position', new BufferAttribute(position, 3));
-    geometry.setAttribute('color', new BufferAttribute(color, 3));
-    geometry.setIndex(new BufferAttribute(index, 1));
-    // Its baked colours under the same drifting cloud shadows as the terrain.
-    const material = new MeshBasicNodeMaterial();
-    material.colorNode = attribute('color', 'vec3').mul(cloudShade(0.32));
-    const mesh = new Mesh(geometry, material);
+    geometry.setAttribute('position', new BufferAttribute(far.position, 3));
+    geometry.setAttribute('local', new BufferAttribute(far.local, 2));
+    geometry.setAttribute('hills', new BufferAttribute(far.hills, 1));
+    geometry.setAttribute('hillNormal', new BufferAttribute(far.hillNormal, 3));
+    geometry.setAttribute('blend', new BufferAttribute(far.blend, 1));
+    geometry.setIndex(new BufferAttribute(far.index, 1));
+    // Coloured by the terrain's own shader, so the join with the DEM does not show.
+    const mesh = new Mesh(geometry, buildFarLandMaterial(demTex, MIRROR_SHEAR));
     mesh.frustumCulled = false;
     return mesh;
   }
