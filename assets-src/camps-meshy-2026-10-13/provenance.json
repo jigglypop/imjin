@@ -59,6 +59,11 @@
         "at": "2026-10-12T19:01:49.096Z",
         "balance": 942,
         "label": "after"
+      },
+      {
+        "at": "2026-10-12T23:45:25.172Z",
+        "balance": 942,
+        "label": "after the angular rebuild (local only, no Meshy tasks)"
       }
     ]
   },
@@ -1188,55 +1193,63 @@
   },
   "shipped": {
     "builtBy": "node scripts/build-camp-models.mjs",
-    "builtAt": "2026-10-12T19:08:52.150Z",
+    "builtAt": "2026-10-12T23:47:47.559Z",
     "convention": "glTF y up; waterfront (pier or quay) faces -z; base on y = 0; centred on x and z; the longer horizontal side is 1 unit",
+    "method": "low-poly rebuild from the top-down heightmap (scripts/camp-shape.mjs): planar facets, vertical walls, banner cards; the original colour baked on in Blender",
     "levels": [
       {
         "name": "near",
         "suffix": "",
-        "trianglesByTier": [
-          3000,
-          3500,
-          3900
-        ],
-        "range": [
-          2500,
-          4000
-        ],
-        "bake": 2048,
-        "size": 1024,
-        "quality": 86,
-        "uvMargin": 0.003,
-        "cageExtrusion": 0.01,
-        "maxRayDistance": 0.04
+        "budget": 1200,
+        "shape": {
+          "grids": [
+            256,
+            192,
+            160
+          ],
+          "maxTol": 3,
+          "creaseTol": 0.02,
+          "maxBump": 0.04,
+          "minArea": 12,
+          "poles": true
+        },
+        "bake": 1024,
+        "size": 512,
+        "quality": 88,
+        "uvMargin": 0.004,
+        "cageExtrusion": 0.04,
+        "maxRayDistance": 0.1
       },
       {
         "name": "far",
         "suffix": "_far",
-        "trianglesByTier": [
-          700,
-          800,
-          880
-        ],
-        "range": [
-          600,
-          900
-        ],
+        "budget": 350,
+        "shape": {
+          "grids": [
+            128,
+            96,
+            80,
+            64
+          ],
+          "maxTol": 5,
+          "creaseTol": 0.03,
+          "maxBump": 0.04,
+          "minArea": 16,
+          "poles": false
+        },
         "bake": 512,
         "size": 256,
         "quality": 90,
         "uvMargin": 0.008,
-        "cageExtrusion": 0.025,
-        "maxRayDistance": 0.08
+        "cageExtrusion": 0.04,
+        "maxRayDistance": 0.1
       }
     ],
     "bake": {
       "samples": 4,
-      "angleLimit": 70,
-      "smoothAngle": 40
+      "angleLimit": 66
     },
-    "undersideBelow": 0.004,
-    "totalBytes": 2512588,
+    "totalBytes": 886964,
     "files": 18,
     "models": {
       "joseon-1": {
@@ -1247,80 +1260,95 @@
           "triangles": 11832
         },
         "turnDegrees": 180,
-        "scaleFromOriginal": 0.5261106280661495,
-        "normalisedSize": [
-          0.814046229718135,
-          0.44806733740491783,
-          0.9999999999999999
-        ],
-        "undersideTrianglesDropped": 72,
+        "cards": {
+          "cloth": 1,
+          "pole": 1
+        },
         "blender": "5.2.1 LTS",
         "levels": [
           {
             "level": "near",
             "path": "public/models/camps/camp_joseon_1.glb",
-            "bytes": 236036,
-            "sha256": "633780f5d0fc4c001e134c56a91d9fe6c5d40e5bfcaf3a6d40e8249cc966baac",
-            "triangles": 3004,
-            "vertices": 5211,
+            "bytes": 72736,
+            "sha256": "afdd80bfbbf602af75eddfc72ce95bb8c328aba251a09940b9e21b3d09ca9e46",
+            "triangles": 1179,
+            "vertices": 2139,
             "meshes": 1,
             "materials": 1,
             "texture": {
-              "size": 1024,
+              "size": 512,
               "format": "webp",
-              "bytes": 154594,
-              "quality": 86,
-              "bakedAt": 2048
+              "bytes": 49126,
+              "quality": 88,
+              "bakedAt": 1024
             },
             "bounds": {
               "min": [
-                -0.407,
+                -0.4043,
                 0,
                 -0.5
               ],
               "max": [
-                0.407,
+                0.4043,
                 0.4481,
                 0.5
               ]
             },
-            "simplifiedFrom": 11760,
-            "simplifiedTo": 3004,
-            "simplificationError": 0.009752010926604271,
-            "bakedCoverage": 0.4598360061645508
+            "shape": {
+              "grid": 256,
+              "regions": 79,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 12,
+                "bumpArea": 351,
+                "bumpHeight": 0.03993000000000001,
+                "tol": 1.728,
+                "creaseTol": 0.02
+              }
+            },
+            "bakedCoverage": 0.4073820114135742
           },
           {
             "level": "far",
             "path": "public/models/camps/camp_joseon_1_far.glb",
-            "bytes": 35860,
-            "sha256": "1341a0953b937b7c25cd8c063cca414fac3bbc9b5a3b59ab2c813c881ceae856",
-            "triangles": 681,
-            "vertices": 1315,
+            "bytes": 23728,
+            "sha256": "57919232b95fd8f102a41eb5d16f98fd783ae3b7d4d92cc0972ff0ad952985cd",
+            "triangles": 324,
+            "vertices": 591,
             "meshes": 1,
             "materials": 1,
             "texture": {
               "size": 256,
               "format": "webp",
-              "bytes": 13182,
+              "bytes": 14484,
               "quality": 90,
               "bakedAt": 512
             },
             "bounds": {
               "min": [
-                -0.407,
+                -0.4043,
                 0,
                 -0.5
               ],
               "max": [
-                0.407,
+                0.4043,
                 0.4481,
                 0.5
               ]
             },
-            "simplifiedFrom": 11760,
-            "simplifiedTo": 681,
-            "simplificationError": 0.02514946460723877,
-            "bakedCoverage": 0.4118614196777344
+            "shape": {
+              "grid": 128,
+              "regions": 32,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 16,
+                "bumpArea": 456,
+                "bumpHeight": 0.04,
+                "tol": 2.0736,
+                "creaseTol": 0.03
+              }
+            },
+            "bakedCoverage": 0.3734931945800781
           }
         ]
       },
@@ -1332,80 +1360,95 @@
           "triangles": 11678
         },
         "turnDegrees": 180,
-        "scaleFromOriginal": 0.5270761670391161,
-        "normalisedSize": [
-          0.8513075919982217,
-          0.34729992318113784,
-          1
-        ],
-        "undersideTrianglesDropped": 23,
+        "cards": {
+          "cloth": 2,
+          "pole": 11
+        },
         "blender": "5.2.1 LTS",
         "levels": [
           {
             "level": "near",
             "path": "public/models/camps/camp_joseon_2.glb",
-            "bytes": 237048,
-            "sha256": "c32bb69a973b3833935ca31ee75bf093d7d3557251b86905dbfe2ab743454f62",
-            "triangles": 3413,
-            "vertices": 5384,
+            "bytes": 70328,
+            "sha256": "74dfe3631f10f4aac650fef5edca25a3e2dbbd3bc91f5caa1ae72971a780cb8e",
+            "triangles": 1023,
+            "vertices": 1876,
             "meshes": 1,
             "materials": 1,
             "texture": {
-              "size": 1024,
+              "size": 512,
               "format": "webp",
-              "bytes": 153028,
-              "quality": 86,
-              "bakedAt": 2048
+              "bytes": 48670,
+              "quality": 88,
+              "bakedAt": 1024
             },
             "bounds": {
               "min": [
-                -0.4257,
+                -0.4258,
                 0,
                 -0.5
               ],
               "max": [
-                0.4257,
-                0.3473,
+                0.4258,
+                0.3335,
                 0.5
               ]
             },
-            "simplifiedFrom": 11655,
-            "simplifiedTo": 3413,
-            "simplificationError": 0.009914938360452652,
-            "bakedCoverage": 0.42495012283325195
+            "shape": {
+              "grid": 256,
+              "regions": 96,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 12,
+                "bumpArea": 456,
+                "bumpHeight": 0.04,
+                "tol": 2.0736,
+                "creaseTol": 0.02
+              }
+            },
+            "bakedCoverage": 0.3409156799316406
           },
           {
             "level": "far",
             "path": "public/models/camps/camp_joseon_2_far.glb",
-            "bytes": 39196,
-            "sha256": "72ae56ba97f73ac910ec8c31e27c52e7b3b1c375016262d9447312c2fbb4e051",
-            "triangles": 790,
-            "vertices": 1284,
+            "bytes": 26308,
+            "sha256": "2a15586ae789e44372f652fc758fbbaa4f5a90829272a80533f9e0ea3d24bf52",
+            "triangles": 345,
+            "vertices": 645,
             "meshes": 1,
             "materials": 1,
             "texture": {
               "size": 256,
               "format": "webp",
-              "bytes": 16220,
+              "bytes": 16020,
               "quality": 90,
               "bakedAt": 512
             },
             "bounds": {
               "min": [
-                -0.4257,
+                -0.4258,
                 0,
                 -0.5
               ],
               "max": [
-                0.4257,
-                0.3473,
+                0.4258,
+                0.3335,
                 0.5
               ]
             },
-            "simplifiedFrom": 11655,
-            "simplifiedTo": 790,
-            "simplificationError": 0.02530737593770027,
-            "bakedCoverage": 0.3667411804199219
+            "shape": {
+              "grid": 128,
+              "regions": 35,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 16,
+                "bumpArea": 4839,
+                "bumpHeight": 0.04,
+                "tol": 5,
+                "creaseTol": 0.03
+              }
+            },
+            "bakedCoverage": 0.3412895202636719
           }
         ]
       },
@@ -1417,80 +1460,95 @@
           "triangles": 14736
         },
         "turnDegrees": 0,
-        "scaleFromOriginal": 0.5280999575183569,
-        "normalisedSize": [
-          0.9096014179350095,
-          0.3256723783953523,
-          1
-        ],
-        "undersideTrianglesDropped": 20,
+        "cards": {
+          "cloth": 0,
+          "pole": 5
+        },
         "blender": "5.2.1 LTS",
         "levels": [
           {
             "level": "near",
             "path": "public/models/camps/camp_joseon_3.glb",
-            "bytes": 277348,
-            "sha256": "536d0360c28451c107b067d76f194434a5060db56e56266b60eb716abb84e628",
-            "triangles": 3963,
-            "vertices": 7255,
+            "bytes": 85180,
+            "sha256": "a51450c078388e66d3d20cbdb58fed61f792fb22046c3c9f95e3ce79943dc030",
+            "triangles": 1160,
+            "vertices": 2105,
             "meshes": 1,
             "materials": 1,
             "texture": {
-              "size": 1024,
+              "size": 512,
               "format": "webp",
-              "bytes": 166948,
-              "quality": 86,
-              "bakedAt": 2048
+              "bytes": 58804,
+              "quality": 88,
+              "bakedAt": 1024
             },
             "bounds": {
               "min": [
-                -0.4548,
-                0.0002,
+                -0.4583,
+                0,
                 -0.5
               ],
               "max": [
-                0.4548,
-                0.3257,
+                0.4583,
+                0.3163,
                 0.5
               ]
             },
-            "simplifiedFrom": 14716,
-            "simplifiedTo": 3963,
-            "simplificationError": 0.00894876103848219,
-            "bakedCoverage": 0.3578462600708008
+            "shape": {
+              "grid": 192,
+              "regions": 123,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 12,
+                "bumpArea": 8178,
+                "bumpHeight": 0.04,
+                "tol": 3,
+                "creaseTol": 0.02
+              }
+            },
+            "bakedCoverage": 0.4113292694091797
           },
           {
             "level": "far",
             "path": "public/models/camps/camp_joseon_3_far.glb",
-            "bytes": 44180,
-            "sha256": "bb7a4ba145afd6a583a200896920f8a7e11dde0d58c91a832c852d02e8586442",
-            "triangles": 894,
-            "vertices": 1599,
+            "bytes": 26668,
+            "sha256": "cd329dbbb9345835f07716b20f969dca281d4608611a09355c46c89ced91f8f0",
+            "triangles": 331,
+            "vertices": 598,
             "meshes": 1,
             "materials": 1,
             "texture": {
               "size": 256,
               "format": "webp",
-              "bytes": 16730,
+              "bytes": 16890,
               "quality": 90,
               "bakedAt": 512
             },
             "bounds": {
               "min": [
-                -0.4548,
-                0.0002,
+                -0.4583,
+                0,
                 -0.5
               ],
               "max": [
-                0.4548,
-                0.3257,
+                0.4583,
+                0.3163,
                 0.5
               ]
             },
-            "simplifiedFrom": 14716,
-            "simplifiedTo": 894,
-            "simplificationError": 0.024844501167535782,
-            "bakedCoverage": 0.3077583312988281
+            "shape": {
+              "grid": 96,
+              "regions": 35,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 16,
+                "bumpArea": 1303,
+                "bumpHeight": 0.04,
+                "tol": 4.299816959999999,
+                "creaseTol": 0.03
+              }
+            },
+            "bakedCoverage": 0.3168067932128906
           }
         ]
       },
@@ -1502,80 +1560,95 @@
           "triangles": 11850
         },
         "turnDegrees": 180,
-        "scaleFromOriginal": 0.5259525906413244,
-        "normalisedSize": [
-          0.689290320493394,
-          0.35964902105955776,
-          0.9999999999999999
-        ],
-        "undersideTrianglesDropped": 26,
+        "cards": {
+          "cloth": 6,
+          "pole": 16
+        },
         "blender": "5.2.1 LTS",
         "levels": [
           {
             "level": "near",
             "path": "public/models/camps/camp_japan_1.glb",
-            "bytes": 269900,
-            "sha256": "659b8368d301c85988674484f6012b6ccdc2c33830037ae13d888ce6545ff77f",
-            "triangles": 3046,
-            "vertices": 5593,
+            "bytes": 84592,
+            "sha256": "2155d2135dc91cc17842e13466b2c938b14d36267b6c01e635beb8e27507ef4c",
+            "triangles": 1162,
+            "vertices": 2170,
             "meshes": 1,
             "materials": 1,
             "texture": {
-              "size": 1024,
+              "size": 512,
               "format": "webp",
-              "bytes": 183766,
-              "quality": 86,
-              "bakedAt": 2048
+              "bytes": 58116,
+              "quality": 88,
+              "bakedAt": 1024
             },
             "bounds": {
               "min": [
-                -0.3446,
+                -0.349,
                 0,
                 -0.5
               ],
               "max": [
-                0.3446,
-                0.3597,
+                0.349,
+                0.361,
                 0.5
               ]
             },
-            "simplifiedFrom": 11824,
-            "simplifiedTo": 3046,
-            "simplificationError": 0.008513323962688446,
-            "bakedCoverage": 0.4446587562561035
+            "shape": {
+              "grid": 256,
+              "regions": 115,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 12,
+                "bumpArea": 456,
+                "bumpHeight": 0.04,
+                "tol": 2.0736,
+                "creaseTol": 0.02
+              }
+            },
+            "bakedCoverage": 0.39287281036376953
           },
           {
             "level": "far",
             "path": "public/models/camps/camp_japan_1_far.glb",
-            "bytes": 40284,
-            "sha256": "38cc06fc9be50ced4ea6523db72f106d912a6f05ea3f2d47d96690c46eddfbb6",
-            "triangles": 698,
-            "vertices": 1321,
+            "bytes": 27368,
+            "sha256": "f7b79599ab9350396ee804749e87965c31cc08785c5b8397edc06a2787c460a1",
+            "triangles": 314,
+            "vertices": 566,
             "meshes": 1,
             "materials": 1,
             "texture": {
               "size": 256,
               "format": "webp",
-              "bytes": 17306,
+              "bytes": 18008,
               "quality": 90,
               "bakedAt": 512
             },
             "bounds": {
               "min": [
-                -0.3446,
+                -0.349,
                 0,
                 -0.5
               ],
               "max": [
-                0.3446,
-                0.3597,
+                0.349,
+                0.361,
                 0.5
               ]
             },
-            "simplifiedFrom": 11824,
-            "simplifiedTo": 698,
-            "simplificationError": 0.022571437060832977,
-            "bakedCoverage": 0.4312477111816406
+            "shape": {
+              "grid": 96,
+              "regions": 32,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 16,
+                "bumpArea": 1002,
+                "bumpHeight": 0.04,
+                "tol": 3.5831807999999996,
+                "creaseTol": 0.03
+              }
+            },
+            "bakedCoverage": 0.3797798156738281
           }
         ]
       },
@@ -1587,80 +1660,95 @@
           "triangles": 11092
         },
         "turnDegrees": 180,
-        "scaleFromOriginal": 0.526294217108925,
-        "normalisedSize": [
-          0.7556126530706099,
-          0.38855139577847647,
-          1
-        ],
-        "undersideTrianglesDropped": 4,
+        "cards": {
+          "cloth": 6,
+          "pole": 10
+        },
         "blender": "5.2.1 LTS",
         "levels": [
           {
             "level": "near",
             "path": "public/models/camps/camp_japan_2.glb",
-            "bytes": 242344,
-            "sha256": "584291cbb48564cf54b9d26b4facac7e6672cd0007dd23db3f56964ee670bc36",
-            "triangles": 3503,
-            "vertices": 5979,
+            "bytes": 73184,
+            "sha256": "d1be33ff8ec4800d3fce554c0e48f719dc0d2e793860d207d45abfae2114ae37",
+            "triangles": 943,
+            "vertices": 1616,
             "meshes": 1,
             "materials": 1,
             "texture": {
-              "size": 1024,
+              "size": 512,
               "format": "webp",
-              "bytes": 150498,
-              "quality": 86,
-              "bakedAt": 2048
+              "bytes": 52996,
+              "quality": 88,
+              "bakedAt": 1024
             },
             "bounds": {
               "min": [
-                -0.3778,
+                -0.3804,
                 0,
                 -0.5
               ],
               "max": [
-                0.3778,
-                0.3886,
+                0.3804,
+                0.3901,
                 0.5
               ]
             },
-            "simplifiedFrom": 11088,
-            "simplifiedTo": 3503,
-            "simplificationError": 0.006904721725732088,
-            "bakedCoverage": 0.4011373519897461
+            "shape": {
+              "grid": 256,
+              "regions": 70,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 12,
+                "bumpArea": 160,
+                "bumpHeight": 0.03,
+                "tol": 1,
+                "creaseTol": 0.02
+              }
+            },
+            "bakedCoverage": 0.44998931884765625
           },
           {
             "level": "far",
             "path": "public/models/camps/camp_japan_2_far.glb",
-            "bytes": 40044,
-            "sha256": "097b28b3d8fe3895447919e25af709dde67f19b08693a5349ea44440c177eda1",
-            "triangles": 804,
-            "vertices": 1409,
+            "bytes": 25748,
+            "sha256": "27e14648c3393a925134f33599108e76cf74bd98cdd319f8cf6cee147e8ae357",
+            "triangles": 334,
+            "vertices": 606,
             "meshes": 1,
             "materials": 1,
             "texture": {
               "size": 256,
               "format": "webp",
-              "bytes": 15456,
+              "bytes": 16452,
               "quality": 90,
               "bakedAt": 512
             },
             "bounds": {
               "min": [
-                -0.3778,
+                -0.3804,
                 0,
                 -0.5
               ],
               "max": [
-                0.3778,
-                0.3886,
+                0.3804,
+                0.3901,
                 0.5
               ]
             },
-            "simplifiedFrom": 11088,
-            "simplifiedTo": 804,
-            "simplificationError": 0.020601730793714523,
-            "bakedCoverage": 0.3253173828125
+            "shape": {
+              "grid": 128,
+              "regions": 35,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 16,
+                "bumpArea": 2863,
+                "bumpHeight": 0.04,
+                "tol": 5,
+                "creaseTol": 0.03
+              }
+            },
+            "bakedCoverage": 0.37282562255859375
           }
         ]
       },
@@ -1672,80 +1760,95 @@
           "triangles": 14195
         },
         "turnDegrees": 180,
-        "scaleFromOriginal": 0.5259857834867608,
-        "normalisedSize": [
-          0.9328415689267012,
-          0.5152051418469177,
-          1
-        ],
-        "undersideTrianglesDropped": 32,
+        "cards": {
+          "cloth": 5,
+          "pole": 8
+        },
         "blender": "5.2.1 LTS",
         "levels": [
           {
             "level": "near",
             "path": "public/models/camps/camp_japan_3.glb",
-            "bytes": 248012,
-            "sha256": "622b4b25ab67dcb9a2b2db4ce878ed70278b26559daffbd40b66d8b5f44b1f9d",
-            "triangles": 3914,
-            "vertices": 6506,
+            "bytes": 81700,
+            "sha256": "1929f85d79913852165d92102d5ad2864eeff2bfaeb9238958a4680f0ab894e0",
+            "triangles": 1120,
+            "vertices": 2001,
             "meshes": 1,
             "materials": 1,
             "texture": {
-              "size": 1024,
+              "size": 512,
               "format": "webp",
-              "bytes": 147356,
-              "quality": 86,
-              "bakedAt": 2048
+              "bytes": 56486,
+              "quality": 88,
+              "bakedAt": 1024
             },
             "bounds": {
               "min": [
-                -0.4664,
+                -0.4687,
                 0,
                 -0.5
               ],
               "max": [
-                0.4664,
-                0.5152,
+                0.4687,
+                0.5106,
                 0.5
               ]
             },
-            "simplifiedFrom": 14163,
-            "simplifiedTo": 3914,
-            "simplificationError": 0.0071868314407765865,
-            "bakedCoverage": 0.35998082160949707
+            "shape": {
+              "grid": 192,
+              "regions": 110,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 12,
+                "bumpArea": 456,
+                "bumpHeight": 0.04,
+                "tol": 2.0736,
+                "creaseTol": 0.02
+              }
+            },
+            "bakedCoverage": 0.4276714324951172
           },
           {
             "level": "far",
             "path": "public/models/camps/camp_japan_3_far.glb",
-            "bytes": 42984,
-            "sha256": "dd06a6926252fe4b7ea5a3652eae889eceb9fa459efac4e447824101d5722cfd",
-            "triangles": 880,
-            "vertices": 1467,
+            "bytes": 25484,
+            "sha256": "962763045989a1ba19ca6537cd055f374a4d2fc17c9e8e0815e936d3ad308012",
+            "triangles": 307,
+            "vertices": 546,
             "meshes": 1,
             "materials": 1,
             "texture": {
               "size": 256,
               "format": "webp",
-              "bytes": 17458,
+              "bytes": 16838,
               "quality": 90,
               "bakedAt": 512
             },
             "bounds": {
               "min": [
-                -0.4664,
+                -0.4687,
                 0,
                 -0.5
               ],
               "max": [
-                0.4664,
-                0.5152,
+                0.4687,
+                0.5106,
                 0.5
               ]
             },
-            "simplifiedFrom": 14163,
-            "simplifiedTo": 880,
-            "simplificationError": 0.021981071680784225,
-            "bakedCoverage": 0.3108634948730469
+            "shape": {
+              "grid": 64,
+              "regions": 27,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 16,
+                "bumpArea": 456,
+                "bumpHeight": 0.04,
+                "tol": 2.0736,
+                "creaseTol": 0.03
+              }
+            },
+            "bakedCoverage": 0.3773345947265625
           }
         ]
       },
@@ -1757,30 +1860,27 @@
           "triangles": 11651
         },
         "turnDegrees": 180,
-        "scaleFromOriginal": 0.5281886567240113,
-        "normalisedSize": [
-          0.8331690209330587,
-          0.43824280000797133,
-          1
-        ],
-        "undersideTrianglesDropped": 6,
+        "cards": {
+          "cloth": 5,
+          "pole": 12
+        },
         "blender": "5.2.1 LTS",
         "levels": [
           {
             "level": "near",
             "path": "public/models/camps/camp_ming_1.glb",
-            "bytes": 224644,
-            "sha256": "13590b00f859ee9f006aeb9c77eaf3fc0b9c688c80f47af1d3c19562e4b00627",
-            "triangles": 3057,
-            "vertices": 5647,
+            "bytes": 70184,
+            "sha256": "b4580f56a690a54056ac630efa4dacf4ddd24946cafce8352bf303b841c88706",
+            "triangles": 1069,
+            "vertices": 1958,
             "meshes": 1,
             "materials": 1,
             "texture": {
-              "size": 1024,
+              "size": 512,
               "format": "webp",
-              "bytes": 138084,
-              "quality": 86,
-              "bakedAt": 2048
+              "bytes": 46180,
+              "quality": 88,
+              "bakedAt": 1024
             },
             "bounds": {
               "min": [
@@ -1790,28 +1890,37 @@
               ],
               "max": [
                 0.4166,
-                0.4383,
+                0.4126,
                 0.5
               ]
             },
-            "simplifiedFrom": 11645,
-            "simplifiedTo": 3057,
-            "simplificationError": 0.008691413328051567,
-            "bakedCoverage": 0.4367716312408447
+            "shape": {
+              "grid": 256,
+              "regions": 103,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 12,
+                "bumpArea": 456,
+                "bumpHeight": 0.04,
+                "tol": 2.0736,
+                "creaseTol": 0.02
+              }
+            },
+            "bakedCoverage": 0.3876972198486328
           },
           {
             "level": "far",
             "path": "public/models/camps/camp_ming_1_far.glb",
-            "bytes": 36120,
-            "sha256": "d5435f6794915c0c8554c3eec64e47460c6256c01318d2fa58176dc17ae30a15",
-            "triangles": 706,
-            "vertices": 1436,
+            "bytes": 24144,
+            "sha256": "7611b770d17b55c6aec8f255aa6fa36686acd48b02bcc3db087f17ff5f228cb1",
+            "triangles": 349,
+            "vertices": 624,
             "meshes": 1,
             "materials": 1,
             "texture": {
               "size": 256,
               "format": "webp",
-              "bytes": 11990,
+              "bytes": 14588,
               "quality": 90,
               "bakedAt": 512
             },
@@ -1823,14 +1932,23 @@
               ],
               "max": [
                 0.4166,
-                0.4383,
+                0.4126,
                 0.5
               ]
             },
-            "simplifiedFrom": 11645,
-            "simplifiedTo": 706,
-            "simplificationError": 0.027824031189084053,
-            "bakedCoverage": 0.3637199401855469
+            "shape": {
+              "grid": 128,
+              "regions": 34,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 16,
+                "bumpArea": 1303,
+                "bumpHeight": 0.04,
+                "tol": 4.299816959999999,
+                "creaseTol": 0.03
+              }
+            },
+            "bakedCoverage": 0.35294342041015625
           }
         ]
       },
@@ -1842,80 +1960,95 @@
           "triangles": 11413
         },
         "turnDegrees": 180,
-        "scaleFromOriginal": 0.5260657900187004,
-        "normalisedSize": [
-          0.7288120770883879,
-          0.3443036983200007,
-          0.9999999999999999
-        ],
-        "undersideTrianglesDropped": 79,
+        "cards": {
+          "cloth": 2,
+          "pole": 8
+        },
         "blender": "5.2.1 LTS",
         "levels": [
           {
             "level": "near",
             "path": "public/models/camps/camp_ming_2.glb",
-            "bytes": 198192,
-            "sha256": "b29dcb42cf02c6a3373ea929e6b2790e230ae42063f7e214b402b109eface65e",
-            "triangles": 3413,
-            "vertices": 5234,
+            "bytes": 60828,
+            "sha256": "9bca3a06c931a4ba2271e9db0f1526eb50a2feabeaf1793813719bdd49fc8e1a",
+            "triangles": 1196,
+            "vertices": 2069,
             "meshes": 1,
             "materials": 1,
             "texture": {
-              "size": 1024,
+              "size": 512,
               "format": "webp",
-              "bytes": 119030,
-              "quality": 86,
-              "bakedAt": 2048
+              "bytes": 37928,
+              "quality": 88,
+              "bakedAt": 1024
             },
             "bounds": {
               "min": [
-                -0.3644,
+                -0.3652,
                 0,
                 -0.5
               ],
               "max": [
-                0.3644,
-                0.3443,
+                0.3652,
+                0.3609,
                 0.5
               ]
             },
-            "simplifiedFrom": 11334,
-            "simplifiedTo": 3413,
-            "simplificationError": 0.0076865036971867085,
-            "bakedCoverage": 0.49193882942199707
+            "shape": {
+              "grid": 256,
+              "regions": 90,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 12,
+                "bumpArea": 160,
+                "bumpHeight": 0.03,
+                "tol": 1,
+                "creaseTol": 0.02
+              }
+            },
+            "bakedCoverage": 0.4221916198730469
           },
           {
             "level": "far",
             "path": "public/models/camps/camp_ming_2_far.glb",
-            "bytes": 36400,
-            "sha256": "f5bc464fd20de0a5f56ed63728d38c175849b6e41382b259d6a0680871168d8c",
-            "triangles": 803,
-            "vertices": 1534,
+            "bytes": 19848,
+            "sha256": "7bd42468888b1524aa0686fee08833f9fe55505d16698f729f94582c706379f4",
+            "triangles": 340,
+            "vertices": 577,
             "meshes": 1,
             "materials": 1,
             "texture": {
               "size": 256,
               "format": "webp",
-              "bytes": 10188,
+              "bytes": 10784,
               "quality": 90,
               "bakedAt": 512
             },
             "bounds": {
               "min": [
-                -0.3644,
+                -0.3652,
                 0,
                 -0.5
               ],
               "max": [
-                0.3644,
-                0.3443,
+                0.3652,
+                0.3609,
                 0.5
               ]
             },
-            "simplifiedFrom": 11334,
-            "simplifiedTo": 803,
-            "simplificationError": 0.02133624628186226,
-            "bakedCoverage": 0.3556022644042969
+            "shape": {
+              "grid": 128,
+              "regions": 28,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 16,
+                "bumpArea": 771,
+                "bumpHeight": 0.04,
+                "tol": 2.9859839999999997,
+                "creaseTol": 0.03
+              }
+            },
+            "bakedCoverage": 0.358062744140625
           }
         ]
       },
@@ -1927,61 +2060,67 @@
           "triangles": 14368
         },
         "turnDegrees": 0,
-        "scaleFromOriginal": 0.5261690543693704,
-        "normalisedSize": [
-          0.9999999999999999,
-          0.368737157212033,
-          0.8934555410592868
-        ],
-        "undersideTrianglesDropped": 72,
+        "cards": {
+          "cloth": 0,
+          "pole": 9
+        },
         "blender": "5.2.1 LTS",
         "levels": [
           {
             "level": "near",
             "path": "public/models/camps/camp_ming_3.glb",
-            "bytes": 225868,
-            "sha256": "f2fb67e8a2aa6b53bcc2aa2ba63a47ff24a3113c8b5f08be41a2b80d22681549",
-            "triangles": 3912,
-            "vertices": 6705,
+            "bytes": 67048,
+            "sha256": "fe449e00cc4efdde3b213b84938bf06dd660d5c8b84953acffb1d4967d3f0360",
+            "triangles": 1191,
+            "vertices": 2122,
             "meshes": 1,
             "materials": 1,
             "texture": {
-              "size": 1024,
+              "size": 512,
               "format": "webp",
-              "bytes": 124282,
-              "quality": 86,
-              "bakedAt": 2048
+              "bytes": 40166,
+              "quality": 88,
+              "bakedAt": 1024
             },
             "bounds": {
               "min": [
                 -0.5,
                 0,
-                -0.4467
+                -0.4427
               ],
               "max": [
                 0.5,
-                0.3687,
-                0.4467
+                0.3626,
+                0.4427
               ]
             },
-            "simplifiedFrom": 14296,
-            "simplifiedTo": 3912,
-            "simplificationError": 0.007683523930609226,
-            "bakedCoverage": 0.39414238929748535
+            "shape": {
+              "grid": 192,
+              "regions": 121,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 12,
+                "bumpArea": 1002,
+                "bumpHeight": 0.04,
+                "tol": 3,
+                "creaseTol": 0.02
+              }
+            },
+            "bakedCoverage": 0.4018440246582031
           },
           {
             "level": "far",
             "path": "public/models/camps/camp_ming_3_far.glb",
-            "bytes": 38128,
-            "sha256": "d5f00f258d6e47b7b4e96a5eff72bf36be2575e47f78e02606c61f175a7a4197",
-            "triangles": 860,
-            "vertices": 1510,
+            "bytes": 21888,
+            "sha256": "1b7d986c70478ec46fa7c13d1fd03ce3397b5c03d686a6a0d6ff84326e4b0df8",
+            "triangles": 343,
+            "vertices": 601,
             "meshes": 1,
             "materials": 1,
             "texture": {
               "size": 256,
               "format": "webp",
-              "bytes": 12348,
+              "bytes": 12316,
               "quality": 90,
               "bakedAt": 512
             },
@@ -1989,18 +2128,27 @@
               "min": [
                 -0.5,
                 0,
-                -0.4467
+                -0.4427
               ],
               "max": [
                 0.5,
-                0.3687,
-                0.4467
+                0.3626,
+                0.4427
               ]
             },
-            "simplifiedFrom": 14296,
-            "simplifiedTo": 860,
-            "simplificationError": 0.0227699913084507,
-            "bakedCoverage": 0.3243980407714844
+            "shape": {
+              "grid": 64,
+              "regions": 36,
+              "settings": {
+                "eps": 0.005,
+                "minArea": 16,
+                "bumpArea": 771,
+                "bumpHeight": 0.04,
+                "tol": 2.9859839999999997,
+                "creaseTol": 0.03
+              }
+            },
+            "bakedCoverage": 0.3865470886230469
           }
         ]
       }

@@ -1,9 +1,9 @@
 """Unwraps and bakes the levels of one Meshy camp (scripts/build-camp-models.mjs runs this). Never contacts a provider.
 
 The build hands over the original already turned and normalised (the bake source, with Meshy's own UVs and texture) and
-each level already simplified (positions only). Meshy's atlas gives nearly every triangle its own island, so a level
-cannot keep those UVs: each is unwrapped afresh and the original's colour is baked onto it (Cycles, selected to active).
-The bake target starts as a magenta sentinel with zero alpha, so the build can tell texels no ray reached.
+each level as rebuilt low-poly geometry with its flat normals, which are kept as they are. Each level is unwrapped and
+the original's colour is baked onto it (Cycles, selected to active). The bake target starts as a magenta sentinel with
+zero alpha, so the build can tell texels no ray reached.
 """
 import bpy, json, math, sys
 import numpy as np
@@ -54,7 +54,6 @@ for level in job['levels']:
     bpy.ops.uv.smart_project(angle_limit=math.radians(job['angleLimit']), island_margin=0.0, area_weight=0.0, correct_aspect=True, scale_to_bounds=False)
     bpy.ops.uv.pack_islands(rotate=True, margin_method='FRACTION', margin=level['margin'], shape_method='CONCAVE')
     bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.object.shade_smooth_by_angle(angle=math.radians(job['smoothAngle']))
 
     size = level['bake']
     image = bpy.data.images.new(level['name'] + '_bake', size, size, alpha=True)

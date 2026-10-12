@@ -206,6 +206,41 @@ try {
   page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}`));
   await page.goto(`http://127.0.0.1:${PORT}/shots/s1013/camps-meshy/page/index.html`);
   await page.waitForFunction(() => window.ready === true, null, { timeout: 60000 });
+  if (args.compare) {
+    // Earlier files (kept in `--compare=<dir>`) beside the shipped ones: close up and at the map's sizes, both levels.
+    const look = [
+      { name: 'close', yaw: 35, pitch: 50, px: 380, w: 520, h: 390 },
+      { name: '150 px', yaw: 35, pitch: 50, px: 150, w: 260, h: 190 },
+      { name: '80 px', yaw: 35, pitch: 45, px: 80, w: 140, h: 104, zoom: 3 },
+      { name: '40 px', yaw: 35, pitch: 55, px: 40, w: 72, h: 54, zoom: 4 },
+    ];
+    const overview = [];
+    for (const id of IDS) {
+      const rows = [];
+      for (const suffix of ['', '_far']) {
+        const file = `camp_${id.replace('-', '_')}${suffix}.glb`;
+        const shots = {};
+        for (const [side, url] of [['old', `/${args.compare}/${file}`], ['new', `/models/camps/${file}`]]) {
+          shots[side] = [];
+          for (const v of look) {
+            const info = await page.evaluate((o) => window.view(o), { url, normalize: false, ...v });
+            shots[side].push({ png: await page.locator('canvas').screenshot(), info });
+          }
+        }
+        const tris = (side) => `${shots[side][0].info.triangles} tris, ${shots[side][0].info.textures.join(' ')}`;
+        rows.push(await row([{ ...shots.old[0], text: `${file} before · ${tris('old')}` }, { ...shots.new[0], text: `${file} now · ${tris('new')}` }]));
+        rows.push(await row(look.slice(1).flatMap((v, k) => ['old', 'new'].map((side) => ({ ...shots[side][k + 1], zoom: v.zoom ?? 1, text: `${side === 'old' ? 'before' : 'now'} · ${v.name}${v.zoom ? ` ×${v.zoom}` : ''}` })))));
+        if (!suffix) overview.push(...['old', 'new'].map((side) => ({ ...shots[side][1], text: `${id} ${side === 'old' ? 'before' : 'now'} · 150 px` })));
+      }
+      const out = join(OUT, `compare-${id}.png`);
+      await stack(rows, out);
+      console.log('sheet', out.slice(ROOT.length));
+    }
+    const rows = [];
+    for (let i = 0; i < overview.length; i += 6) rows.push(await row(overview.slice(i, i + 6)));
+    await stack(rows, join(OUT, 'compare-overview-150px.png'));
+    console.log('sheet', join(OUT, 'compare-overview-150px.png').slice(ROOT.length));
+  } else {
   const shipped = args.originals ? await shippedSources() : {};
   const sets = args.originals
     ? [['original', (id) => ({
@@ -247,6 +282,7 @@ try {
     console.log('sheet', file.slice(ROOT.length));
   }
   await writeFile(join(OUT, `${args.originals ? 'original-' : ''}review.json`), JSON.stringify(report, null, 2) + '\n');
+  }
   if (logs.length) console.log(logs.slice(-20).join('\n'));
 } finally {
   await browser.close();

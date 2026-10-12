@@ -2,10 +2,10 @@
 // provenance.json there keeps their hashes and Meshy task ids). Local only: it never submits a paid job.
 //
 // Each camp is turned so its waterfront faces -z, stands on y = 0, is centred on x/z and is one unit along its longer
-// horizontal side. Meshy's UV atlas gives nearly every triangle its own island, so no level can keep those UVs: here the
-// geometry is welded, the never-seen underside of the base dropped and each level simplified with meshoptimizer; Blender
-// (scripts/blender/camp-lods.py) unwraps each level afresh and bakes the original's colour onto it; here again the texels
-// no ray reached are filled from their neighbours, the bake is downscaled to WebP and the file meshopt-compressed.
+// horizontal side. Its levels are not decimated scans but low-poly architecture rebuilt from the original's top-down
+// heightmap (scripts/camp-shape.mjs): planar facets, straight edges, vertical walls, banners as flat cards. Blender
+// (scripts/blender/camp-lods.py) unwraps each level and bakes the original's colour onto it; here again the texels no ray
+// reached are filled from their neighbours, the bake is downscaled to WebP and the file meshopt-compressed.
 //
 //   node scripts/build-camp-models.mjs [--only=joseon-1,ming-3] [--keep]     --keep leaves the intermediates in a temp dir
 // Needs Blender 5.x: set CAMPS_BLENDER when it is not at the default path.
@@ -18,8 +18,9 @@ import { fileURLToPath } from 'node:url';
 import { Document, NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS, EXTTextureWebP } from '@gltf-transform/extensions';
 import { meshopt, prune, reorder } from '@gltf-transform/functions';
-import { MeshoptDecoder, MeshoptEncoder, MeshoptSimplifier } from 'meshoptimizer';
+import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
 import sharp from 'sharp';
+import { campCards, campShape } from './camp-shape.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const PKG = join(ROOT, 'assets-src/camps-meshy-2026-10-13');
@@ -41,26 +42,40 @@ const RECIPE = {
 };
 
 /**
- * The shipped levels: triangles by tier, the bake and shipped texture sizes, the UV island margin as a share of the
- * atlas, and how far the bake's rays start outside the level's surface and may travel (model units).
+ * The shipped levels. `shape` is how scripts/camp-shape.mjs cuts the level: heightmap sizes tried in turn until the
+ * budget fits, the largest edge tolerance in pixels, how much a step may be and still count as a crease, the highest a
+ * compact bump may stand and still be flattened, the smallest region, and whether banner poles stay (far away only
+ * the cloth reads). Then the bake and shipped texture sizes, the UV island margin as a share of the atlas, and how far
+ * the bake's rays start outside the level's surface and may travel (model units): far enough to reach a wall under its
+ * eaves and the tops of flattened merlons.
  */
 const LEVELS = [
-  { name: 'near', suffix: '', triangles: [3000, 3500, 3900], range: [2500, 4000], bake: 2048, size: 1024, quality: 86, margin: 0.003, cage: 0.01, ray: 0.04 },
-  { name: 'far', suffix: '_far', triangles: [700, 800, 880], range: [600, 900], bake: 512, size: 256, quality: 90, margin: 0.008, cage: 0.025, ray: 0.08 },
+  { name: 'near', suffix: '', budget: 1200, shape: { grids: [256, 192, 160], maxTol: 3, creaseTol: 0.02, maxBump: 0.04, minArea: 12, poles: true },
+    bake: 1024, size: 512, quality: 88, margin: 0.004, cage: 0.04, ray: 0.1 },
+  { name: 'far', suffix: '_far', budget: 350, shape: { grids: [128, 96, 80, 64], maxTol: 5, creaseTol: 0.03, maxBump: 0.04, minArea: 16, poles: false },
+    bake: 512, size: 256, quality: 90, margin: 0.008, cage: 0.04, ray: 0.1 },
 ];
-/** Faces lower than this whose normal points down are the base's underside. */
-const UNDERSIDE = 0.004;
-const BAKE = { samples: 4, angleLimit: 70, smoothAngle: 40 };
+
+/** A level's shape: the finest heightmap of its list that fits the budget. */
+function levelShape(P, I, level, cards) {
+  const { grids, poles, ...rest } = level.shape;
+  let last;
+  for (const grid of grids) {
+    try {
+      return { ...campShape(P, I, { budget: level.budget, grid, cards: poles ? cards : cards.filter((c) => c.kind === 'cloth'), ...rest }), grid };
+    } catch (error) { last = error; }
+  }
+  throw last;
+}
+const BAKE = { samples: 4, angleLimit: 66 };
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const rel = (path) => path.slice(ROOT.length).replace(/\\/g, '/').replace(/^\//, '');
 await MeshoptDecoder.ready;
 await MeshoptEncoder.ready;
-await MeshoptSimplifier.ready;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptDecoder, 'meshopt.encoder': MeshoptEncoder });
 
 // ---------- geometry ----------
-
 /** The original's only primitive with its node transform applied, turned by `turn` degrees about +y and normalised. */
 function normalise(doc, turn) {
   const nodes = doc.getRoot().listNodes().filter((n) => n.getMesh());
@@ -92,95 +107,49 @@ function normalise(doc, turn) {
   if (q) normal.setArray(q);
   node.setMatrix([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
   for (const other of doc.getRoot().listNodes()) if (other !== node) other.setMatrix([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-  return { prim, scale: k, size: [(hi[0] - lo[0]) * k, (hi[1] - lo[1]) * k, (hi[2] - lo[2]) * k] };
+  return prim;
 }
 
-/** One vertex per position (Meshy splits every vertex along its UV seams), without the base's underside. */
-function weld(prim) {
-  const p = prim.getAttribute('POSITION').getArray(), index = prim.getIndices().getArray();
-  const bits = new Uint32Array(p.buffer, p.byteOffset, p.length);
-  const ids = new Map(), remap = new Uint32Array(p.length / 3), out = [];
-  for (let i = 0; i < remap.length; i += 1) {
-    const key = `${bits[i * 3]},${bits[i * 3 + 1]},${bits[i * 3 + 2]}`;
-    let id = ids.get(key);
-    if (id === undefined) { id = out.length / 3; ids.set(key, id); out.push(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]); }
-    remap[i] = id;
-  }
-  const positions = new Float32Array(out), kept = [];
-  let underside = 0;
-  for (let t = 0; t < index.length; t += 3) {
-    const [a, b, c] = [remap[index[t]], remap[index[t + 1]], remap[index[t + 2]]];
-    if (a === b || b === c || a === c) continue;
-    const P = (i, j) => positions[i * 3 + j];
-    const e1 = [P(b, 0) - P(a, 0), P(b, 1) - P(a, 1), P(b, 2) - P(a, 2)], e2 = [P(c, 0) - P(a, 0), P(c, 1) - P(a, 1), P(c, 2) - P(a, 2)];
-    const ny = e1[2] * e2[0] - e1[0] * e2[2], len = Math.hypot(e1[1] * e2[2] - e1[2] * e2[1], ny, e1[0] * e2[1] - e1[1] * e2[0]);
-    if (P(a, 1) < UNDERSIDE && P(b, 1) < UNDERSIDE && P(c, 1) < UNDERSIDE && ny < -0.5 * len) { underside += 1; continue; }
-    kept.push(a, b, c);
-  }
-  return { positions, indices: new Uint32Array(kept), underside };
+/** The bounds of triangles [a, b, c, normal]. */
+function bounds(tris) {
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const t of tris) for (let k = 0; k < 3; k += 1) for (let a = 0; a < 3; a += 1) { lo[a] = Math.min(lo[a], t[k][a]); hi[a] = Math.max(hi[a], t[k][a]); }
+  return { lo, hi };
 }
 
 /**
- * meshoptimizer's collapse simplification to about `target` triangles, the vertices it no longer uses dropped. The six
- * extreme vertices are locked, so every level keeps the original's frame and the levels swap without a jump. The
- * simplifier can stop well short of the count it is asked for, so the request is corrected until the result lands
- * within 3% of the target. Regularize trades a little accuracy for evenly shaped triangles: a sliver gets a sub-texel
- * strip of the atlas and shows as a dark line across a courtyard.
+ * Maps triangles from the box `from` onto the box `to` axis by axis, then moves them by `shift` and scales by `scale`.
+ * A level's outline sits a little inside the original's, so the near level's own box sets the frame, and the far level
+ * is stretched onto it (by under a percent) so the two swap in place.
  */
-function simplify({ positions, indices }, target) {
-  const extreme = new Uint8Array(positions.length / 3), lock = new Uint8Array(extreme.length);
-  for (let axis = 0; axis < 3; axis += 1) {
-    let lo = 0, hi = 0;
-    for (let i = 0; i < extreme.length; i += 1) {
-      if (positions[i * 3 + axis] < positions[lo * 3 + axis]) lo = i;
-      if (positions[i * 3 + axis] > positions[hi * 3 + axis]) hi = i;
-    }
-    extreme[lo] = extreme[hi] = 1;
-  }
-  // A locked vertex alone can still be orphaned when its neighbours collapse together; locking its whole fan keeps it.
-  for (let t = 0; t < indices.length; t += 3) {
-    if (extreme[indices[t]] || extreme[indices[t + 1]] || extreme[indices[t + 2]]) lock[indices[t]] = lock[indices[t + 1]] = lock[indices[t + 2]] = 1;
-  }
-  const none = new Float32Array(lock.length);
-  // Thin double-sided cloth collapses into pairs of triangles on the same three vertices; the material is double-sided,
-  // so one of each pair is enough (Blender's import would drop it anyway).
-  const single = (out) => {
-    const seen = new Set(), kept = [];
-    for (let t = 0; t < out.length; t += 3) {
-      const key = [out[t], out[t + 1], out[t + 2]].sort((a, b) => a - b).join(',');
-      if (!seen.has(key)) { seen.add(key); kept.push(out[t], out[t + 1], out[t + 2]); }
-    }
-    return kept;
-  };
-  let ask = target, best = null;
-  for (let tries = 0; tries < 8; tries += 1) {
-    const [raw, error] = MeshoptSimplifier.simplifyWithAttributes(indices, positions, 3, none, 1, [0], lock, Math.round(ask) * 3, 1, ['Regularize']);
-    const result = [single(raw), error], got = result[0].length / 3;
-    if (!best || Math.abs(got - target) < Math.abs(best[0].length / 3 - target)) best = result;
-    if (Math.abs(got - target) <= target * 0.03) break;
-    ask *= target / got;
-  }
-  const [out, error] = best;
-  const remap = new Map(), p = [];
-  const index = Uint32Array.from(out, (i) => {
-    if (!remap.has(i)) { remap.set(i, p.length / 3); p.push(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]); }
-    return remap.get(i);
-  });
-  return { positions: new Float32Array(p), indices: index, error: error * MeshoptSimplifier.getScale(positions, 3) };
+function place(tris, from, to, shift, scale) {
+  const map = (p) => p.map((v, a) => (to.lo[a] + ((v - from.lo[a]) * (to.hi[a] - to.lo[a])) / (from.hi[a] - from.lo[a] || 1) + shift[a]) * scale);
+  return tris.map(([a, b, c, n]) => [map(a), map(b), map(c), n]);
 }
 
-async function writeMesh(file, { positions, indices }) {
+/**
+ * A level's triangles as a GLB for Blender to unwrap and bake. Corners with the same position and normal share a vertex,
+ * so each flat facet is one connected surface (one UV island) while the edges between facets stay hard.
+ */
+async function writeLevel(file, tris) {
+  const ids = new Map(), pos = [], nor = [], index = [];
+  for (const [a, b, c, n] of tris) for (const p of [a, b, c]) {
+    const key = `${p.map((v) => v.toFixed(6))}|${n.map((v) => v.toFixed(4))}`;
+    let id = ids.get(key);
+    if (id === undefined) { id = pos.length / 3; ids.set(key, id); pos.push(...p); nor.push(...n); }
+    index.push(id);
+  }
   const doc = new Document();
   const buffer = doc.createBuffer();
   const prim = doc.createPrimitive()
-    .setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(positions).setBuffer(buffer))
-    .setIndices(doc.createAccessor().setType('SCALAR').setArray(indices).setBuffer(buffer));
+    .setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(new Float32Array(pos)).setBuffer(buffer))
+    .setAttribute('NORMAL', doc.createAccessor().setType('VEC3').setArray(new Float32Array(nor)).setBuffer(buffer))
+    .setIndices(doc.createAccessor().setType('SCALAR').setArray(new Uint32Array(index)).setBuffer(buffer));
   doc.createScene().addChild(doc.createNode('camp').setMesh(doc.createMesh('camp').addPrimitive(prim)));
   await io.write(file, doc);
 }
 
 // ---------- texture ----------
-
 /**
  * The baked texels as RGB with every texel no ray reached (the bake's sentinel, alpha 0) filled from the nearest baked
  * ones through a push-pull pyramid, so neither filtering nor mipmaps ever pull in the empty atlas.
@@ -232,7 +201,6 @@ const shipped = { ...(provenance.shipped?.models ?? {}) };
 try {
   for (const [id, recipe] of Object.entries(RECIPE)) {
     if (only && !only.includes(id)) continue;
-    const tier = Number(id.split('-')[1]);
     const attempt = provenance.models[id]?.attempts.find((a) => a.number === recipe.attempt);
     if (!attempt?.original) throw new Error(`${id}: attempt ${recipe.attempt} has no downloaded original in provenance.json`);
     const source = join(ROOT, attempt.original.file);
@@ -240,19 +208,24 @@ try {
     if (sha256(readFileSync(source)) !== attempt.original.sha256) throw new Error(`${id}: ${attempt.original.file} does not match its recorded hash`);
 
     const doc = await io.read(source);
-    const { prim, scale, size } = normalise(doc, recipe.turn);
+    const prim = normalise(doc, recipe.turn);
+    const P = prim.getAttribute('POSITION').getArray(), I = prim.getIndices().getArray();
+    const cards = campCards(P, I);
+    const shapes = LEVELS.map((level) => levelShape(P, I, level, cards));
+    // The near level's box sets the frame; the original (the bake source) moves with it.
+    const box = bounds(shapes[0].tris);
+    const scale = 1 / Math.max(box.hi[0] - box.lo[0], box.hi[2] - box.lo[2]);
+    const shift = [-(box.lo[0] + box.hi[0]) / 2, -box.lo[1], -(box.lo[2] + box.hi[2]) / 2];
+    const moved = Float32Array.from(P, (v, i) => (v + shift[i % 3]) * scale);
+    prim.getAttribute('POSITION').setArray(moved);
     const high = join(temp, `${id}-high.glb`);
     await io.write(high, doc);
-    const welded = weld(prim);
+
     const name = `camp_${id.replace('-', '_')}`;
-    const job = { high, samples: BAKE.samples, angleLimit: BAKE.angleLimit, smoothAngle: BAKE.smoothAngle, report: join(temp, `${id}-blender.json`), levels: [] };
-    const simplified = {};
-    for (const level of LEVELS) {
-      const target = level.triangles[tier - 1];
-      const low = simplify(welded, target);
-      simplified[level.name] = { triangles: low.indices.length / 3, error: low.error };
+    const job = { high, samples: BAKE.samples, angleLimit: BAKE.angleLimit, report: join(temp, `${id}-blender.json`), levels: [] };
+    for (const [i, level] of LEVELS.entries()) {
       const mesh = join(temp, `${id}-${level.name}-mesh.glb`);
-      await writeMesh(mesh, low);
+      await writeLevel(mesh, place(shapes[i].tris, bounds(shapes[i].tris), box, shift, scale));
       job.levels.push({ name: name + level.suffix, mesh, bake: level.bake, margin: level.margin, cageExtrusion: level.cage, maxRayDistance: level.ray,
         png: join(temp, `${id}-${level.name}-bake.png`), glb: join(temp, `${id}-${level.name}-baked.glb`) });
     }
@@ -280,11 +253,12 @@ try {
       await out.transform(prune(), reorder({ encoder: MeshoptEncoder, level: 'high' }), meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
       const file = join(OUT, `${spec.name}.glb`);
       await io.write(file, out);
-      levels.push({ ...(await inspect(file, level)), simplifiedFrom: welded.indices.length / 3, simplifiedTo: simplified[level.name].triangles, simplificationError: simplified[level.name].error, bakedCoverage: fill.coverage });
+      levels.push({ ...(await inspect(file, level)), shape: { grid: shapes[i].grid, regions: shapes[i].regions, settings: shapes[i].settings }, bakedCoverage: fill.coverage });
     }
     shipped[id] = {
-      original: { file: attempt.original.file, sha256: attempt.original.sha256, taskId: attempt.taskId, triangles: prim.getIndices().getCount() / 3 },
-      turnDegrees: recipe.turn, scaleFromOriginal: scale, normalisedSize: size, undersideTrianglesDropped: welded.underside, blender: blender.blender, levels,
+      original: { file: attempt.original.file, sha256: attempt.original.sha256, taskId: attempt.taskId, triangles: I.length / 3 },
+      turnDegrees: recipe.turn, cards: { cloth: cards.filter((c) => c.kind === 'cloth').length, pole: cards.filter((c) => c.kind === 'pole').length },
+      blender: blender.blender, levels,
     };
     console.log(`${id}: ${levels.map((l) => `${l.path.split('/').pop()} ${l.triangles} tris ${l.texture.size}px ${(l.bytes / 1024).toFixed(0)} KB`).join(', ')}`);
   }
@@ -293,7 +267,7 @@ try {
   else rmSync(temp, { recursive: true, force: true });
 }
 
-/** What a shipped file holds, checked against the conventions: one mesh, one material, the triangle range, the frame. */
+/** What a shipped file holds, checked against the conventions: one mesh, one material, the budget, the frame. */
 async function inspect(file, level) {
   const doc = await io.read(file);
   const root = doc.getRoot();
@@ -310,7 +284,7 @@ async function inspect(file, level) {
   const image = textures[0].getImage(), meta = await sharp(image).metadata();
   const problems = [];
   if (meshes.length !== 1 || prims.length !== 1 || root.listMaterials().length !== 1 || textures.length !== 1) problems.push('not one mesh, primitive, material and texture');
-  if (triangles < level.range[0] || triangles > level.range[1]) problems.push(`${triangles} triangles outside ${level.range.join('-')}`);
+  if (triangles > level.budget) problems.push(`${triangles} triangles over ${level.budget}`);
   if (meta.width !== level.size || meta.height !== level.size) problems.push(`texture ${meta.width}x${meta.height}`);
   if (Math.abs(lo[1]) > 0.002 || Math.abs(Math.max(hi[0] - lo[0], hi[2] - lo[2]) - 1) > 0.004 || Math.abs(lo[0] + hi[0]) > 0.004 || Math.abs(lo[2] + hi[2]) > 0.004) problems.push(`frame ${lo.map((n) => n.toFixed(3))} .. ${hi.map((n) => n.toFixed(3))}`);
   if (problems.length) throw new Error(`${rel(file)}: ${problems.join('; ')}`);
@@ -323,8 +297,9 @@ const files = Object.values(shipped).flatMap((s) => s.levels);
 provenance.shipped = {
   builtBy: 'node scripts/build-camp-models.mjs', builtAt: new Date().toISOString(),
   convention: 'glTF y up; waterfront (pier or quay) faces -z; base on y = 0; centred on x and z; the longer horizontal side is 1 unit',
-  levels: LEVELS.map(({ name, suffix, triangles, range, bake, size, quality, margin, cage, ray }) => ({ name, suffix, trianglesByTier: triangles, range, bake, size, quality, uvMargin: margin, cageExtrusion: cage, maxRayDistance: ray })),
-  bake: BAKE, undersideBelow: UNDERSIDE,
+  method: 'low-poly rebuild from the top-down heightmap (scripts/camp-shape.mjs): planar facets, vertical walls, banner cards; the original colour baked on in Blender',
+  levels: LEVELS.map(({ name, suffix, budget, shape, bake, size, quality, margin, cage, ray }) => ({ name, suffix, budget, shape, bake, size, quality, uvMargin: margin, cageExtrusion: cage, maxRayDistance: ray })),
+  bake: BAKE,
   totalBytes: files.reduce((n, f) => n + f.bytes, 0), files: files.length,
   models: Object.fromEntries(Object.keys(RECIPE).filter((id) => shipped[id]).map((id) => [id, shipped[id]])),
 };

@@ -118,7 +118,7 @@ try {
         assert.ok(Math.abs(lo[1]) < 0.01, `${file}: lowest point ${lo[1]}`);
         assert.ok(Math.abs(lo[0] + hi[0]) < 0.02 && Math.abs(lo[2] + hi[2]) < 0.02, `${file}: centred`);
         const tris = (j.meshes[0].primitives[0].indices !== undefined ? j.accessors[j.meshes[0].primitives[0].indices].count : acc.count) / 3;
-        assert.ok(far ? tris <= 1000 : tris <= 4500, `${file}: ${tris} triangles`);
+        assert.ok(far ? tris <= 350 : tris <= 1200, `${file}: ${tris} triangles`);
         extents.push([...lo, ...hi].map((v) => v.toFixed(2)).join());
       }
       assert.equal(extents[0], extents[1], `${f} ${tier}: close and far share one frame, so they swap in place`);
