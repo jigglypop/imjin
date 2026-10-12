@@ -1067,17 +1067,6 @@
 .move-order--queued { color: #91edff; filter: drop-shadow(0 2px 2px #061018) drop-shadow(0 0 6px #91edff66); }
 .move-order--queued .move-order__mast { stroke: #e7faff; }
 .move-order--queued .move-order__pennant { stroke: #17586e; }
-/* Rally point: a taller crimson banner that stays up as long as the port keeps its rally point. */
-.move-order--rally { width: 76px; height: 98px; color: #f5cd62; filter: drop-shadow(0 2px 2px #061018) drop-shadow(0 0 8px #f5cd6280); }
-.move-order--rally svg { transform-origin: 20px 90px; animation-iteration-count: 1; }
-.move-order__ring--rally { stroke-width: 2.4; animation: move-order-hover 2.6s ease-in-out infinite; }
-.move-order__ring--outer { animation-delay: 1.3s; }
-.move-order__crossbar { stroke: #f5cd62; stroke-width: 2.4; stroke-linecap: round; }
-.move-order__banner { stroke: #f5cd62; stroke-width: 2.2; stroke-linejoin: round; }
-.move-order__hem { fill: none; stroke: #f5cd62; stroke-opacity: 0.8; stroke-width: 1.3; stroke-linecap: round; }
-.move-order__crest { fill: #f5cd62; stroke: #5a3d08; stroke-width: 1.2; }
-.move-order__crest-inner { fill: #a62a20; }
-.move-order__cloth--rally { transform-origin: 22px 36px; animation-duration: 1.7s; }
 @keyframes move-order-raise {
   from { transform: scaleY(0.05) translateY(6px); opacity: 0; }
   to { transform: none; opacity: 1; }
@@ -1089,10 +1078,6 @@
 @keyframes move-order-ripple {
   from { transform: scale(0.4); opacity: 1; }
   to { transform: scale(1.7); opacity: 0; }
-}
-@keyframes move-order-hover {
-  0% { transform: scale(0.7); opacity: 0.9; }
-  100% { transform: scale(1.5); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .move-order svg, .move-order__ring, .move-order__cloth { animation: none; }

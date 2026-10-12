@@ -2,13 +2,13 @@ import { Vector2 } from 'three/webgpu';
 import type { Engine } from '../game/Engine';
 import { isTouchDevice } from '../game/device';
 
-/** Where the mast stands in each flag's viewBox: the marker is pinned by its foot, not by its centre. */
-const FOOT = { move: { x: 18, y: 68 }, rally: { x: 20, y: 90 } };
+/** Where the mast stands in the flag's viewBox: the marker is pinned by its foot, not by its centre. */
+const FOOT = { x: 18, y: 68 };
 const LIFETIME = 8000;
 /** A move flag goes once every ship it was issued to is this close; the flag only marks where they are heading. */
 const ARRIVED = 150;
 
-type Mark = { root: HTMLDivElement; x: number; z: number; at: number; foot: { x: number; y: number }; ids: number[] };
+type Mark = { root: HTMLDivElement; x: number; z: number; at: number; ids: number[] };
 
 /**
  * The cloth hangs from two shared gradients: SVG paint servers are looked up by id, so a marker that carries its own
@@ -17,7 +17,6 @@ type Mark = { root: HTMLDivElement; x: number; z: number; at: number; foot: { x:
 const DEFS = `<svg class="move-orders__defs" width="0" height="0" aria-hidden="true"><defs>
 <linearGradient id="mo-gold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff0b0"/><stop offset=".45" stop-color="#f2c04c"/><stop offset="1" stop-color="#b8821f"/></linearGradient>
 <linearGradient id="mo-sky" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e3fbff"/><stop offset=".45" stop-color="#8ee4f6"/><stop offset="1" stop-color="#3b97b4"/></linearGradient>
-<linearGradient id="mo-red" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d9503f"/><stop offset=".5" stop-color="#a62a20"/><stop offset="1" stop-color="#6a1712"/></linearGradient>
 </defs></svg>`;
 
 /** Swallow-tailed cloth with its hoist at x = 20; the lines are the folds that give it a wind-blown surface. */
@@ -29,18 +28,11 @@ function moveFlag(queuedNumber: number | null) {
   return `<svg viewBox="0 0 64 76"><ellipse class="move-order__ring" cx="18" cy="68" rx="13" ry="4"/><path class="move-order__mast-shadow" d="M18 9v59"/><path class="move-order__mast" d="M18 9v59"/><circle class="move-order__finial" cx="18" cy="8" r="3"/><g class="move-order__cloth"><path class="move-order__pennant" fill="url(#${paint})" d="${PENNANT}"/>${FOLDS}${queuedNumber === null ? '<path class="move-order__emblem" d="m27 17 9 6-9 6"/>' : `<text class="move-order__number" x="35" y="27">${queuedNumber}</text>`}</g></svg>`;
 }
 
-/** A taller crimson banner with a gold hem and a drum-and-ring crest, so a rally point never reads as a move order. */
-function rallyFlag() {
-  return `<svg viewBox="0 0 76 98"><ellipse class="move-order__ring move-order__ring--rally" cx="20" cy="90" rx="17" ry="5.5"/><ellipse class="move-order__ring move-order__ring--rally move-order__ring--outer" cx="20" cy="90" rx="17" ry="5.5"/><path class="move-order__mast-shadow" d="M20 12v78"/><path class="move-order__mast" d="M20 12v78"/><path class="move-order__crossbar" d="M20 17h8"/><circle class="move-order__finial" cx="20" cy="10" r="3.6"/><g class="move-order__cloth move-order__cloth--rally"><path class="move-order__banner" fill="url(#mo-red)" d="M22 19C34 14 48 22 70 17L58 34L70 52C48 57 34 48 22 54Z"/><path class="move-order__hem" d="M24.5 22C35 18 47 25 65 21.5M24.5 51C35 47 47 54 65 49"/><path class="move-order__fold" d="M33 17C35 28 33 42 35 52M50 22C52 31 50 42 52 55"/><circle class="move-order__crest" cx="40" cy="36" r="8"/><path class="move-order__crest-inner" d="M40 31.5a4.5 4.5 0 1 1 0 9a2.25 2.25 0 1 1 0-4.5a2.25 2.25 0 1 0 0-4.5Z"/></g></svg>`;
-}
-
 /** Screen-sized feedback stays readable above waves at any camera distance. */
 export class MoveOrders {
   private readonly layer = document.createElement('div');
   private readonly screen = new Vector2();
   private marks: Mark[] = [];
-  /** One standing banner per own port that has a rally point, keyed by point id. */
-  private rallies = new Map<number, Mark & { key: string }>();
 
   constructor(private readonly engine: Engine, parent: HTMLElement) {
     this.layer.className = 'move-orders';
@@ -55,7 +47,7 @@ export class MoveOrders {
     root.className = `move-order${queued ? ' move-order--queued' : ''}`;
     root.innerHTML = moveFlag(queued ? this.marks.length + 1 : null);
     this.layer.appendChild(root);
-    this.marks.push({ root, x, z, at: performance.now(), foot: FOOT.move, ids });
+    this.marks.push({ root, x, z, at: performance.now(), ids });
     if (this.marks.length > 16) this.marks.shift()!.root.remove();
     this.update();
   }
@@ -71,20 +63,20 @@ export class MoveOrders {
     const distance = Math.hypot(cam.x - mark.x, cam.y - y, cam.z - mark.z);
     // Phones keep a larger floor: a finger-sized screen cannot read a 40 px flag.
     const scale = Math.max(isTouchDevice ? 0.95 : 0.8, Math.min(1.3, 1000 / distance));
-    mark.root.style.transformOrigin = `${mark.foot.x}px ${mark.foot.y}px`;
-    mark.root.style.transform = `translate(${this.screen.x - mark.foot.x}px, ${this.screen.y - mark.foot.y}px) scale(${scale.toFixed(3)})`;
-    return this.underHud(this.screen.x, this.screen.y, scale, mark) ? 0.15 : 1;
+    mark.root.style.transformOrigin = `${FOOT.x}px ${FOOT.y}px`;
+    mark.root.style.transform = `translate(${this.screen.x - FOOT.x}px, ${this.screen.y - FOOT.y}px) scale(${scale.toFixed(3)})`;
+    return this.underHud(this.screen.x, this.screen.y, scale) ? 0.15 : 1;
   }
 
   /** True when a HUD panel covers the flag cloth or its foot, so the flag steps back instead of fighting the panel. */
-  private underHud(x: number, y: number, scale: number, mark: Mark) {
+  private underHud(x: number, y: number, scale: number) {
     const canvas = this.engine.renderer.domElement;
     const rect = canvas.getBoundingClientRect();
     const probe = (px: number, py: number) => {
       const top = document.elementsFromPoint(rect.left + px, rect.top + py).find((el) => !this.layer.contains(el) && !el.closest('.cpoints, .banners'));
       return !!top && top !== canvas;
     };
-    return probe(x, y) || probe(x + 20 * scale, y - (mark.foot.y - 26) * scale);
+    return probe(x, y) || probe(x + 20 * scale, y - (FOOT.y - 26) * scale);
   }
 
   private arrived(mark: Mark) {
@@ -108,34 +100,6 @@ export class MoveOrders {
       if (shown) mark.root.style.opacity = String(Math.min(1, (LIFETIME - age) / 1500) * shown);
       return true;
     });
-    this.updateRallies(hidden);
-  }
-
-  private updateRallies(hidden: boolean) {
-    const c = this.engine.conquest;
-    const live = new Set<number>();
-    for (const p of c?.points ?? []) {
-      if (!p.rally || p.owner !== this.engine.owner) continue;
-      live.add(p.id);
-      const key = `${p.rally.x.toFixed(1)},${p.rally.z.toFixed(1)}`;
-      let mark = this.rallies.get(p.id);
-      if (mark && mark.key !== key) { mark.root.remove(); this.rallies.delete(p.id); mark = undefined; }
-      if (!mark) {
-        const root = document.createElement('div');
-        root.className = 'move-order move-order--rally';
-        root.innerHTML = rallyFlag();
-        this.layer.appendChild(root);
-        mark = { root, x: p.rally.x, z: p.rally.z, at: performance.now(), foot: FOOT.rally, ids: [], key };
-        this.rallies.set(p.id, mark);
-      }
-      const shown = this.place(mark, hidden);
-      if (shown) mark.root.style.opacity = String(shown);
-    }
-    for (const [id, mark] of this.rallies) {
-      if (live.has(id)) continue;
-      mark.root.remove();
-      this.rallies.delete(id);
-    }
   }
 
   clear() {
@@ -145,8 +109,6 @@ export class MoveOrders {
 
   dispose() {
     this.clear();
-    this.rallies.forEach((mark) => mark.root.remove());
-    this.rallies.clear();
     this.layer.remove();
   }
 }

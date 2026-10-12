@@ -64,6 +64,7 @@ import { BUILDING_ORDER, BUILDINGS, RANKED_OPTIONS, ROSTER, rosterOf, SHORT_NAME
 import { applyCommand, type Command } from '../sim/commands';
 import { conquestInfo, scenarioInfo, type BattleInfo } from '../sim/info';
 import { ConquestView, preloadWorks } from '../conquest/ConquestView';
+import { RallyStandards } from '../conquest/RallyStandards';
 import type { NetBattle } from '../net/NetBattle';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
 import { AMBIENT_SHAKE, Director } from './Director';
@@ -191,6 +192,7 @@ export class Engine {
   conquest: Conquest | null = null;
   conquestSetup: ConquestSetup | null = null;
   conquestView: ConquestView | null = null;
+  private rallies: RallyStandards | null = null;
   /** The capture point picked in the conquest panel, or -1. */
   selectedPoint = -1;
   /** Set by a multiplayer session: commands go to the server instead of the local battle. */
@@ -697,6 +699,8 @@ export class Engine {
       this.scene.remove(this.conquestView.group);
     }
     this.conquestView = null;
+    this.rallies?.dispose();
+    this.rallies = null;
     this.conquest = null;
     this.selectedPoint = -1;
     const setup = this.conquestSetup;
@@ -715,6 +719,8 @@ export class Engine {
       this.conquestView.onSelect = (id) => this.selectPoint(id);
       this.scene.add(this.conquestView.group);
       this.conquestLoad = this.conquestView.load();
+      this.rallies = new RallyStandards();
+      this.scene.add(this.rallies.group);
     } else {
       // A duel on the server keeps the map unturned and is built from the server's seed, so ship ids and positions
       // match; the server's snapshots then drive every ship.
@@ -1048,6 +1054,8 @@ export class Engine {
     this.current?.texture.dispose();
     this.conquestView?.dispose();
     this.conquestView = null;
+    this.rallies?.dispose();
+    this.rallies = null;
     this.crew?.dispose();
   }
 
@@ -1175,6 +1183,9 @@ export class Engine {
     const el = this.renderer.domElement;
     this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.rts.cinematic && !this.battle.ended, this.team);
     this.moveOrders?.update();
+    if (this.rallies && this.conquest) {
+      this.rallies.update(this.conquest.points, this.owner, this.conquest.player(this.owner)?.faction ?? this.team, waveField, this.battle.windAngle, this.camera.position, this.battle.ended, dt, SKY_PRESETS[this.skyName].night);
+    }
     this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.rts.cinematic && !this.options.hideLabels && !this.battle.ended, this.battle);
     if (this.conquest && !this.paused && useUi.getState().autoBuild) {
       const order = this.autoBuild.tick(this.battle, this.conquest, this.owner, (cmd) => this.issue(cmd));
