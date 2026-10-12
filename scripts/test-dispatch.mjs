@@ -75,7 +75,7 @@ try {
     g.fleets[0].ships[0].kind = 'hyeopseon'; assert.ok(visibleRegions(g, 'joseon').has(b));
     g.fleets[0].ships[0].crew = 0; assert.equal(visibleRegions(g, 'joseon').has(b), false);
     g.fleets = []; g.regions.yeosu.buildings = [{ kind: 'beacon', level: 1 }]; assert.ok(visibleRegions(g, 'joseon').has(b));
-    assert.equal(Object.keys(REGIONS).length, 25);
+    assert.equal(Object.keys(REGIONS).length, 40);
   });
 } finally { await vite.close(); }
 process.exitCode = failed ? 1 : 0;

@@ -63,10 +63,12 @@ export const TUNING = {
   geobukseonTurn: 3,
   faction: {
     // Fast-production development cohorts retain each navy's distinct expedition and opening holdings.
-    joseon: { ...COMPETITIVE_FACTIONS.joseon, income: 1.0, label: '조선' },
-    // With doubled slipways and forces Japan's cheap hulls snowball, so its income comes down; Ming's bases finance the longer expedition.
-    japan: { ...COMPETITIVE_FACTIONS.japan, income: 0.93, label: '일본' },
-    ming: { ...COMPETITIVE_FACTIONS.ming, income: 2.0, label: '명' },
+    // Joseon opens with twenty-two ports and their standing garrisons to Japan's sixteen, so its income per port is the lowest.
+    joseon: { ...COMPETITIVE_FACTIONS.joseon, income: 0.7, label: '조선' },
+    // Japan has fewer ports to pay for its cheap hulls than before the coast had forty regions, so it earns more from each.
+    japan: { ...COMPETITIVE_FACTIONS.japan, income: 1.18, label: '일본' },
+    // Ming's bases finance the longer expedition.
+    ming: { ...COMPETITIVE_FACTIONS.ming, income: 2.3, label: '명' },
   } as Record<GrandFaction, { income: number; cost: number; power: number; label: string }>,
 };
 

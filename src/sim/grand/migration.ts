@@ -1,5 +1,5 @@
 import { GARRISON_KIND, garrisonCap } from './economy';
-import { ADDED_PORTS, LEGACY_REGION_ORDER, PORT_EXPANSION_PARENT, START } from './regions';
+import { ADDED_PORTS, LEGACY_REGION_ORDER, PORT_EXPANSION_PARENT, REGIONS, START } from './regions';
 import { spawnShip } from './roster';
 import type { BuildingKind, Grand, RegionState } from './types';
 import { GRAND_FACTIONS } from './types';
@@ -13,7 +13,8 @@ const regionState = (value: unknown): value is RegionState => {
 /**
  * Expand an otherwise complete v1 save before its full REGION_ORDER validation. Existing holdings, ships, routes,
  * queues, treasury, battle outcomes and RNG are untouched. New ports follow current surrounding control, not a
- * reset to the opening front; unowned surroundings stay unowned. Returns the number of ports actually added.
+ * reset to the opening front; unowned surroundings stay unowned. A save with growth rules counts each new port into its
+ * owner's starting holding, so only later conquests advance the objective. Returns the number of ports actually added.
  */
 export function migrateGrandRegions(raw: unknown): number {
   if (!raw || typeof raw !== 'object') return 0;
@@ -46,6 +47,8 @@ export function migrateGrandRegions(raw: unknown): number {
     for (const [kind, level] of Object.entries(START.buildings[id] ?? {}) as [BuildingKind, number][]) r.buildings.push({ kind, level, upgradeLeft: 0, hp: 1 });
     g.regions[id] = r;
     if (owner) for (let i = 0; i < garrisonCap(id, r); i += 1) r.garrison.push(spawnShip(g, GARRISON_KIND[owner]));
+    // A port that comes with the save is part of what its owner already held, not growth toward the objective.
+    if (owner && g.victoryRules?.initialControl) g.victoryRules.initialControl[owner] += REGIONS[id].value;
   }
   return missing.length;
 }

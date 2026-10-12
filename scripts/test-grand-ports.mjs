@@ -22,7 +22,7 @@ try {
     load('/src/sim/grand/bridge.ts'), load('/src/sim/grand/roster.ts'), load('/src/terrain/generate.ts'), load('/src/i18n/index.ts'),
     load('/src/ui/grand/text.ts'), load('/src/sim/grand/dispatch.ts'), load('/src/sim/environment.ts'),
   ]);
-  const { ADDED_PORTS, LEGACY_REGION_ORDER, REGION_ORDER, REGIONS, LANES, KOREA_COAST, PORT_EXPANSION_PARENT } = regions;
+  const { ADDED_PORTS, LEGACY_REGION_ORDER, REGION_ORDER, REGIONS, LANES, KOREA_COAST, PORT_EXPANSION_PARENT, START } = regions;
   const { newGrand, endTurn } = turn;
   const { migrateGrandRegions } = migration;
   const { REGION_MAPS } = coast;
@@ -34,13 +34,15 @@ try {
   const legacyFields = (g) => ({ ...g, nextId: 0, regions: Object.fromEntries(LEGACY_REGION_ORDER.map((id) => [id, g.regions[id]])) });
   const idsOf = (g) => [...Object.values(g.regions).flatMap((r) => [...r.garrison.map((s) => s.id), ...r.queue.map((q) => q.id)]), ...g.fleets.flatMap((f) => [f.id, ...f.ships.map((s) => s.id)])];
 
-  await check('25 connected regions retain all 12 legacy IDs; every added coastal port has a cited record', () => {
+  await check('40 connected regions retain all 12 legacy IDs; every added coastal port has a cited record', () => {
     assert.deepEqual(LEGACY_REGION_ORDER, ['myeongnyang', 'yeosu', 'noryang', 'sacheon', 'hansan', 'geoje', 'angolpo', 'busan', 'tsushima', 'nagoya', 'shandong', 'liaodong']);
     assert.deepEqual(REGION_ORDER.slice(0, 12), LEGACY_REGION_ORDER);
-    assert.equal(REGION_ORDER.length, 25); assert.equal(new Set(REGION_ORDER).size, 25); assert.equal(KOREA_COAST.length, 21);
+    assert.equal(REGION_ORDER.length, 40); assert.equal(new Set(REGION_ORDER).size, 40); assert.equal(KOREA_COAST.length, 36);
+    // Appended, never reordered: battle seeds use the index in this list.
+    assert.deepEqual(REGION_ORDER.slice(12, 25), ['nokdo', 'balpo', 'bangdap', 'dangpo', 'danghangpo', 'gabaeryang', 'yeongdeungpo', 'yulpo', 'jangmunpo', 'jepo', 'cheonseongpo', 'dadaepo', 'mokpo']);
     const reached = new Set(['yeosu']), todo = ['yeosu'];
     while (todo.length) for (const lane of LANES[todo.shift()]) if (!reached.has(lane.to)) { reached.add(lane.to); todo.push(lane.to); }
-    assert.equal(reached.size, 25);
+    assert.equal(reached.size, 40);
     for (const id of REGION_ORDER) {
       assert.equal(new Set(LANES[id].map((l) => l.to)).size, LANES[id].length, `${id}: duplicate lane`);
       for (const lane of LANES[id]) assert(LANES[lane.to].some((back) => back.to === id && back.turns === lane.turns), `${id}: one-way lane`);
@@ -49,6 +51,15 @@ try {
       assert(REGIONS[id].korea); assert.equal(REGIONS[id].value, 1); assert(REGIONS[id].source?.title);
       assert.equal(new URL(REGIONS[id].source.url).protocol, 'https:');
     }
+    // The second expansion: each new port has two to four lanes, the Busan east-coast chain reaches the rest only through Busan,
+    // and a parent is listed before its child so a migrated save always finds the parent's owner.
+    for (const id of ADDED_PORTS.slice(13)) {
+      assert(LANES[id].length >= 2 && LANES[id].length <= 4, `${id}: ${LANES[id].length} lanes`);
+      assert(ADDED_PORTS.indexOf(PORT_EXPANSION_PARENT[id]) < ADDED_PORTS.indexOf(id), `${id}: parent after child`);
+    }
+    for (const id of ['gijang', 'seosaengpo', 'ulsan']) for (const lane of LANES[id]) assert(['busan', 'gijang', 'seosaengpo', 'ulsan'].includes(lane.to), `${id}: lane to ${lane.to}`);
+    const holds = (f) => ADDED_PORTS.filter((id) => START.owners[id] === f).length;
+    assert.deepEqual([holds('joseon'), holds('japan')], [16, 12]);
   });
 
   await check('new ports have real income, standing garrisons, working shipyards and finite campaign upkeep', () => {
@@ -111,6 +122,29 @@ try {
     const reloaded = JSON.parse(expanded); assert.equal(migrateGrandRegions(reloaded), 0); assert.equal(JSON.stringify(reloaded), expanded);
   });
 
+  await check('migrated ports join the starting holdings of a save with growth rules, so they never count as progress toward the objective', () => {
+    for (const keep of [0, 13]) {
+      const g = legacySave();
+      if (keep) for (const id of ADDED_PORTS.slice(0, keep)) g.regions[id] = newGrand('joseon', 591).regions[id];
+      // What the older game wrote: the opening holdings of the regions that save had, counted by value.
+      const held = (f) => Object.entries(g.regions).filter(([, r]) => r.owner === f).reduce((sum, [id]) => sum + REGIONS[id].value, 0);
+      g.victoryRules = { kind: 'growth-v1', initialControl: { joseon: held('joseon'), japan: held('japan'), ming: held('ming') }, target: 9 };
+      const target = g.victoryRules.target, before = structuredClone(g.victoryRules.initialControl);
+      assert.equal(migrateGrandRegions(g), ADDED_PORTS.length - keep);
+      for (const f of ['joseon', 'japan', 'ming']) {
+        assert.equal(g.victoryRules.initialControl[f], turn.controlValue(g, f), `${keep}: ${f} opening holding`);
+        assert(g.victoryRules.initialControl[f] >= before[f]);
+        assert.equal(turn.objectiveProgress(g, f).have, 0, `${keep}: ${f} starts at zero progress`);
+      }
+      assert.equal(g.victoryRules.target, target);
+      // Taking an enemy port afterwards still counts.
+      const free = ADDED_PORTS.find((id) => g.regions[id].owner === 'japan');
+      g.regions[free].owner = 'joseon';
+      assert.equal(turn.objectiveProgress(g, 'joseon').have, REGIONS[free].value);
+    }
+    const plain = legacySave(); migrateGrandRegions(plain); assert.equal(plain.victoryRules, undefined);
+  });
+
   await check('partially expanded saves add only missing ports, while incomplete legacy maps are never repaired', () => {
     const g = legacySave();
     const kept = { owner: 'ming', buildings: [], garrison: [roster.spawnShip(g, 'mingsmall', 0.3, 0.4)], queue: [], unrest: 2 };
@@ -127,14 +161,14 @@ try {
     const { useGrand } = await load('/src/campaign/grand.ts');
     const loaded = useGrand.getState().grand;
     assert(loaded, 'the previous campaign must survive load()');
-    assert.equal(Object.keys(loaded.regions).length, 25); assert.deepEqual(loaded.fleets.map((f) => f.ships), ships); assert.deepEqual(loaded.rng, rng);
+    assert.equal(Object.keys(loaded.regions).length, 40); assert.deepEqual(loaded.fleets.map((f) => f.ships), ships); assert.deepEqual(loaded.rng, rng);
   });
 
   await check('every new region, blurb, capture point, generated fleet and battle title displays in English', () => {
     i18n.setLang('en');
     for (const id of ADDED_PORTS) {
       const def = REGIONS[id];
-      const texts = [def.name, def.blurb, `${def.name} 해전`, `${def.name} 신규 함대`, `${def.name} 출동 함대`, ...REGION_MAPS[id].points.map((p) => p.name)];
+      const texts = [def.name, def.blurb, `${def.name} 해전`, `${def.name} 신규 함대`, `${def.name} 출동 함대`, ...REGION_MAPS[id].points.map((p) => p.name), REGIONS[id].source.title];
       for (const text of texts) assert(!/[가-힣]/.test(names.tName(text)), `${id}: untranslated ${text}`);
     }
     i18n.setLang('ko');
@@ -155,7 +189,7 @@ try {
       return (h[z * res + x] + (h[z * res + x + 1] - h[z * res + x]) * tx) * (1 - tz) + (h[(z + 1) * res + x] + (h[(z + 1) * res + x + 1] - h[(z + 1) * res + x]) * tx) * tz;
     };
   }
-  await check('all thirteen new port battles spawn persistent ships in deep water and preserve shore levels at rotated terrain anchors', () => {
+  await check('all new port battles spawn persistent ships in deep water and preserve shore levels at rotated terrain anchors', () => {
     for (const id of ADDED_PORTS) {
       const g = newGrand('joseon', 519);
       const jp = g.fleets.find((f) => f.faction === 'japan'), jo = g.fleets.find((f) => f.faction === 'joseon');

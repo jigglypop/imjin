@@ -107,10 +107,10 @@
     {"role":"flank","x":-390,"z":-1549,"r":220,"value":1}
   ],
   "yulpo": [
-    {"role":"attacker","x":280,"z":-1190,"r":260,"value":2,"site":{"x":670,"z":-1190}},
-    {"role":"defender","x":0,"z":0,"r":260,"value":2,"site":{"x":80,"z":190}},
-    {"role":"centre","x":140,"z":-595,"r":340,"value":2,"site":{"x":660,"z":-750}},
-    {"role":"flank","x":-405,"z":-723,"r":220,"value":1,"site":{"x":-590,"z":-650}}
+    {"role":"attacker","x":4010,"z":-440,"r":260,"value":2,"site":{"x":3760,"z":-110}},
+    {"role":"defender","x":2990,"z":-240,"r":260,"value":2,"site":{"x":3170,"z":-60}},
+    {"role":"centre","x":3500,"z":-340,"r":340,"value":2,"site":{"x":3580,"z":-150}},
+    {"role":"flank","x":3392,"z":-890,"r":220,"value":1,"site":{"x":3470,"z":-150}}
   ],
   "jangmunpo": [
     {"role":"attacker","x":-810,"z":-3080,"r":260,"value":2,"site":{"x":-420,"z":-3230}},
@@ -139,5 +139,90 @@
     {"role":"defender","x":640,"z":940,"r":260,"value":2,"site":{"x":450,"z":860}},
     {"role":"centre","x":115,"z":1285,"r":340,"value":2,"site":{"x":0,"z":1000}},
     {"role":"flank","x":423,"z":1753,"r":220,"value":1,"site":{"x":690,"z":2160}}
+  ],
+  "gogeumdo": [
+    {"role":"attacker","x":370,"z":-2130,"r":260,"value":2,"site":{"x":510,"z":-2190}},
+    {"role":"defender","x":730,"z":-1170,"r":260,"value":2,"site":{"x":640,"z":-950}},
+    {"role":"centre","x":550,"z":-1650,"r":340,"value":2,"site":{"x":270,"z":-1530}}
+  ],
+  "hoeryeongpo": [
+    {"role":"attacker","x":860,"z":1200,"r":260,"value":2,"site":{"x":1280,"z":1200}},
+    {"role":"defender","x":180,"z":30,"r":260,"value":2,"site":{"x":10,"z":-40}},
+    {"role":"centre","x":520,"z":615,"r":340,"value":2,"site":{"x":900,"z":460}}
+  ],
+  "eoranpo": [
+    {"role":"attacker","x":-1300,"z":-60,"r":260,"value":2,"site":{"x":-540,"z":530}},
+    {"role":"defender","x":-130,"z":-80,"r":260,"value":2,"site":{"x":30,"z":-80}},
+    {"role":"centre","x":-715,"z":-70,"r":340,"value":2,"site":{"x":-450,"z":440}}
+  ],
+  "ijin": [
+    {"role":"attacker","x":420,"z":2190,"r":260,"value":2,"site":{"x":70,"z":2410}},
+    {"role":"defender","x":690,"z":900,"r":260,"value":2,"site":{"x":820,"z":770}},
+    {"role":"centre","x":555,"z":1545,"r":340,"value":2,"site":{"x":790,"z":730}},
+    {"role":"flank","x":-228,"z":1381,"r":220,"value":1,"site":{"x":-380,"z":1230}},
+    {"role":"flank","x":1103,"z":1660,"r":220,"value":1,"site":{"x":1440,"z":1380}}
+  ],
+  "garipo": [
+    {"role":"attacker","x":1550,"z":920,"r":260,"value":2,"site":{"x":1160,"z":920}},
+    {"role":"defender","x":740,"z":150,"r":260,"value":2,"site":{"x":600,"z":210}},
+    {"role":"centre","x":1145,"z":535,"r":340,"value":2,"site":{"x":980,"z":700}},
+    {"role":"flank","x":1572,"z":86,"r":220,"value":1,"site":{"x":2160,"z":-480}}
+  ],
+  "yeodo": [
+    {"role":"attacker","x":1530,"z":430,"r":260,"value":2,"site":{"x":1570,"z":840}},
+    {"role":"defender","x":480,"z":-250,"r":260,"value":2,"site":{"x":410,"z":-420}},
+    {"role":"centre","x":1005,"z":90,"r":340,"value":2,"site":{"x":850,"z":470}},
+    {"role":"flank","x":1309,"z":-380,"r":220,"value":1,"site":{"x":690,"z":-530}}
+  ],
+  "waegyo": [
+    {"role":"attacker","x":3700,"z":210,"r":260,"value":2,"site":{"x":3840,"z":270}},
+    {"role":"defender","x":2820,"z":-380,"r":260,"value":2,"site":{"x":3080,"z":-490}},
+    {"role":"centre","x":3260,"z":-85,"r":340,"value":2,"site":{"x":3260,"z":-390}},
+    {"role":"flank","x":2948,"z":380,"r":220,"value":1,"site":{"x":2430,"z":680}}
+  ],
+  "mijo": [
+    {"role":"attacker","x":-800,"z":1160,"r":260,"value":2,"site":{"x":-730,"z":1330}},
+    {"role":"defender","x":320,"z":970,"r":260,"value":2,"site":{"x":470,"z":820}},
+    {"role":"centre","x":-235,"z":1095,"r":340,"value":2,"site":{"x":-290,"z":970}}
+  ],
+  "namhaeseonso": [
+    {"role":"attacker","x":-210,"z":-1320,"r":260,"value":2,"site":{"x":-460,"z":-990}},
+    {"role":"defender","x":60,"z":-230,"r":260,"value":2,"site":{"x":-30,"z":-140}},
+    {"role":"centre","x":-75,"z":-775,"r":340,"value":2,"site":{"x":-290,"z":-560}}
+  ],
+  "gyeonnaeryang": [
+    {"role":"attacker","x":0,"z":1080,"r":260,"value":2,"site":{"x":-90,"z":1300}},
+    {"role":"defender","x":50,"z":-80,"r":260,"value":2,"site":{"x":-120,"z":-10}},
+    {"role":"centre","x":25,"z":500,"r":340,"value":2,"site":{"x":300,"z":500}}
+  ],
+  "happo": [
+    {"role":"attacker","x":630,"z":420,"r":260,"value":2,"site":{"x":350,"z":700}},
+    {"role":"defender","x":80,"z":-500,"r":260,"value":2,"site":{"x":-70,"z":-350}},
+    {"role":"centre","x":355,"z":-40,"r":340,"value":2,"site":{"x":-20,"z":-200}},
+    {"role":"flank","x":836,"z":-327,"r":220,"value":1,"site":{"x":1170,"z":-330}}
+  ],
+  "jukdo": [
+    {"role":"attacker","x":-280,"z":1150,"r":260,"value":2,"site":{"x":80,"z":1150}},
+    {"role":"defender","x":30,"z":-10,"r":260,"value":2,"site":{"x":250,"z":80}},
+    {"role":"centre","x":-125,"z":570,"r":340,"value":2,"site":{"x":140,"z":830}}
+  ],
+  "gijang": [
+    {"role":"attacker","x":630,"z":1460,"r":260,"value":2,"site":{"x":380,"z":1130}},
+    {"role":"defender","x":860,"z":270,"r":260,"value":2,"site":{"x":680,"z":90}},
+    {"role":"centre","x":745,"z":865,"r":340,"value":2,"site":{"x":580,"z":700}},
+    {"role":"flank","x":1295,"z":971,"r":220,"value":1,"site":{"x":560,"z":670}}
+  ],
+  "seosaengpo": [
+    {"role":"attacker","x":3280,"z":-1640,"r":260,"value":2,"site":{"x":2940,"z":-1780}},
+    {"role":"defender","x":2620,"z":-670,"r":260,"value":2,"site":{"x":2360,"z":-560}},
+    {"role":"centre","x":2950,"z":-1155,"r":340,"value":2,"site":{"x":2590,"z":-1570}},
+    {"role":"flank","x":3413,"z":-840,"r":220,"value":1}
+  ],
+  "ulsan": [
+    {"role":"attacker","x":320,"z":1130,"r":260,"value":2,"site":{"x":40,"z":1410}},
+    {"role":"defender","x":-80,"z":-30,"r":260,"value":2,"site":{"x":-340,"z":-140}},
+    {"role":"centre","x":120,"z":550,"r":340,"value":2,"site":{"x":-450,"z":850}},
+    {"role":"flank","x":-353,"z":713,"r":220,"value":1,"site":{"x":-460,"z":820}},
+    {"role":"flank","x":876,"z":289,"r":220,"value":1,"site":{"x":1060,"z":210}}
   ]
 }

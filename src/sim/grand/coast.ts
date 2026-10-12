@@ -330,6 +330,21 @@ const COASTAL_SITES: Record<RegionId, RegionSite> = {
   cheonseongpo: coastalPort('angolpo', '천성진', '天城鎭', 380, -100),
   dadaepo: coastalPort('busan', '다대포', '多大浦', -300, 160),
   mokpo: coastalPort('myeongnyang', '목포진', '木浦鎭', 150, 200),
+  gogeumdo: coastalPort('yeosu', '고금도', '古今島'),
+  hoeryeongpo: coastalPort('yeosu', '회령포', '會寧浦'),
+  eoranpo: coastalPort('myeongnyang', '어란포', '於蘭浦'),
+  ijin: coastalPort('myeongnyang', '이진', '梨津'),
+  garipo: coastalPort('yeosu', '가리포진', '加里浦鎭'),
+  yeodo: coastalPort('yeosu', '여도진', '呂島鎭'),
+  waegyo: coastalPort('yeosu', '순천 왜교', '順天倭橋'),
+  mijo: coastalPort('hansan', '미조항진', '彌助項鎭'),
+  namhaeseonso: coastalPort('noryang', '선소포', '船所浦'),
+  gyeonnaeryang: coastalPort('hansan', '견내량', '見乃梁'),
+  happo: coastalPort('angolpo', '합포', '合浦'),
+  jukdo: coastalPort('busan', '김해 죽도', '金海竹島'),
+  gijang: coastalPort('busan', '기장 죽성', '機張竹城'),
+  seosaengpo: coastalPort('busan', '서생포', '西生浦'),
+  ulsan: coastalPort('busan', '울산 도산', '蔚山島山'),
 };
 
 /** The south coast: evergreen hills, broad-leaved scrub in the folds, paddies in the valleys, a few tiled roofs. */
@@ -367,6 +382,21 @@ const BIOMES: Partial<Record<RegionId, RegionBiome>> = {
   jangmunpo: { ...ISLAND, villages: 5 },
   jepo: { ...SOUTH, tiled: 0.55, houses: 1.2, villages: 7 },
   cheonseongpo: { ...ISLAND, villages: 5 },
+  gogeumdo: { ...ISLAND, villages: 5, fields: 0.9 },
+  hoeryeongpo: { ...SOUTH, forest: 0.8, fields: 1.6, plain: 0.4, villages: 7 },
+  eoranpo: { ...SOUTH, villages: 6, rocky: 1.1 },
+  ijin: { ...SOUTH, forest: 0.7, fields: 1.5, plain: 0.35, villages: 7 },
+  garipo: { ...ISLAND, villages: 5, fields: 0.8 },
+  yeodo: { ...SOUTH, villages: 6, fields: 1.2 },
+  waegyo: { ...SOUTH, forest: 0.75, fields: 1.8, plain: 0.5, villages: 8, tiled: 0.3 },
+  mijo: { ...ISLAND, villages: 5, fields: 0.9 },
+  namhaeseonso: { ...SOUTH, forest: 0.9, fields: 1, villages: 6 },
+  gyeonnaeryang: { ...ISLAND, rocky: 1.3, villages: 4 },
+  happo: { ...SOUTH, forest: 0.55, canopyLine: 360, villages: 11, houses: 1.4, tiled: 0.5, fields: 0.8, plain: 0.15 },
+  jukdo: { ...SOUTH, forest: 0.4, canopyLine: 300, rocky: 0.6, rockLook: 0.3, fields: 2, plain: 0.7, villages: 9, houses: 1.1, layout: 'row', broadleaf: 0.15, shore: 1.5, shoreTint: [0.78, 0.74, 0.66] },
+  gijang: { ...SOUTH, villages: 7, houses: 1.1, tiled: 0.35 },
+  seosaengpo: { ...SOUTH, forest: 1, villages: 6, tiled: 0.3 },
+  ulsan: { ...SOUTH, forest: 0.7, fields: 1.5, plain: 0.4, villages: 9, houses: 1.3, tiled: 0.4 },
   dadaepo: { ...SOUTH, forest: 0.6, villages: 10, houses: 1.3, tiled: 0.4, fields: 0.8 },
 };
 
@@ -417,6 +447,8 @@ const COASTAL_FLOW: Record<RegionId, number> = {
   tsushima: 1.3, nagoya: 0.65, shandong: 0.45, liaodong: 0.4,
   nokdo: 0.7, balpo: 0.65, bangdap: 1.2, dangpo: 0.75, danghangpo: 0.55, gabaeryang: 0.7,
   yeongdeungpo: 1.05, yulpo: 0.85, jangmunpo: 0.6, jepo: 0.55, cheonseongpo: 1.4, dadaepo: 1.1, mokpo: 1.8,
+  gogeumdo: 0.9, hoeryeongpo: 0.6, eoranpo: 0.8, ijin: 0.9, garipo: 1, yeodo: 0.7, waegyo: 0.5, mijo: 1, namhaeseonso: 0.6, gyeonnaeryang: 1.6,
+  happo: 0.45, jukdo: 0.5, gijang: 0.8, seosaengpo: 0.8, ulsan: 0.6,
 };
 
 function designedCurrent(id: RegionId, placed: Placed[], mid: { x: number; z: number }, axis: number): CurrentSpec {

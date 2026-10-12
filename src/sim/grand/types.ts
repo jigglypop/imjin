@@ -29,7 +29,22 @@ export type RegionId =
   | 'jepo'
   | 'cheonseongpo'
   | 'dadaepo'
-  | 'mokpo';
+  | 'mokpo'
+  | 'gogeumdo'
+  | 'hoeryeongpo'
+  | 'eoranpo'
+  | 'ijin'
+  | 'garipo'
+  | 'yeodo'
+  | 'waegyo'
+  | 'mijo'
+  | 'namhaeseonso'
+  | 'gyeonnaeryang'
+  | 'happo'
+  | 'jukdo'
+  | 'gijang'
+  | 'seosaengpo'
+  | 'ulsan';
 
 export type BuildingKind = 'camp' | 'shipyard' | 'battery' | 'dock' | 'granary' | 'beacon';
 export const BUILDING_KINDS: readonly BuildingKind[] = ['camp', 'shipyard', 'battery', 'dock', 'granary', 'beacon'];

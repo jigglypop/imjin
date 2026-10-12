@@ -42,13 +42,16 @@ export const LEGACY_REGION_ORDER: readonly RegionId[] = [
   'liaodong',
 ];
 
-export const ADDED_PORTS = ['nokdo', 'balpo', 'bangdap', 'dangpo', 'danghangpo', 'gabaeryang', 'yeongdeungpo', 'yulpo', 'jangmunpo', 'jepo', 'cheonseongpo', 'dadaepo', 'mokpo'] as const satisfies readonly RegionId[];
+export const ADDED_PORTS = ['nokdo', 'balpo', 'bangdap', 'dangpo', 'danghangpo', 'gabaeryang', 'yeongdeungpo', 'yulpo', 'jangmunpo', 'jepo', 'cheonseongpo', 'dadaepo', 'mokpo',
+  'gogeumdo', 'hoeryeongpo', 'eoranpo', 'ijin', 'garipo', 'yeodo', 'waegyo', 'mijo', 'namhaeseonso', 'gyeonnaeryang', 'happo', 'jukdo', 'gijang', 'seosaengpo', 'ulsan'] as const satisfies readonly RegionId[];
 export const REGION_ORDER: readonly RegionId[] = [...LEGACY_REGION_ORDER, ...ADDED_PORTS];
 
-/** On loading an old save, a new port follows the surrounding region's present control. */
+/** On loading an old save, a new port follows the surrounding region's present control. A parent is always listed before its child. */
 export const PORT_EXPANSION_PARENT: Record<(typeof ADDED_PORTS)[number], RegionId> = {
   nokdo: 'myeongnyang', balpo: 'yeosu', bangdap: 'yeosu', dangpo: 'hansan', danghangpo: 'sacheon', gabaeryang: 'geoje',
   yeongdeungpo: 'geoje', yulpo: 'geoje', jangmunpo: 'geoje', jepo: 'angolpo', cheonseongpo: 'angolpo', dadaepo: 'busan', mokpo: 'myeongnyang',
+  gogeumdo: 'nokdo', hoeryeongpo: 'nokdo', eoranpo: 'myeongnyang', ijin: 'myeongnyang', garipo: 'nokdo', yeodo: 'balpo', waegyo: 'yeosu', mijo: 'noryang',
+  namhaeseonso: 'noryang', gyeonnaeryang: 'hansan', happo: 'angolpo', jukdo: 'busan', gijang: 'busan', seosaengpo: 'busan', ulsan: 'busan',
 };
 
 export const REGIONS: Record<RegionId, RegionDef> = {
@@ -226,7 +229,7 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     source: { title: '국가유산포털: 거제 구영등성', url: 'https://www.heritage.go.kr/heri/cul/culSelectDetail.do?ccbaCpno=2333802050000&pageNo=1_1_1_1' },
   },
   yulpo: {
-    id: 'yulpo', name: '율포', hanja: '栗浦', lon: 128.66, lat: 35.00, value: 1, terrain: 'bay', korea: true,
+    id: 'yulpo', name: '율포', hanja: '栗浦', lon: 128.69, lat: 34.97, value: 1, terrain: 'bay', korea: true,
     blurb: '거제 율천리의 옛 율포진입니다. 거제 북부 포구와 진해만을 연결합니다.',
     source: { title: '국가유산포털: 거제 구율포성', url: 'https://www.heritage.go.kr/heri/cul/culSelectDetail.do?ccbaCpno=2333802060000' },
   },
@@ -255,6 +258,81 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     blurb: '영산강 하구를 지키던 수군진입니다. 실록에 병선 배치와 만호 파견이 기록되어 있습니다.',
     source: { title: '조선왕조실록: 목포 병선 배치·만호 파견', url: 'https://sillok.history.go.kr/id/kda_12104015_002' },
   },
+  gogeumdo: {
+    id: 'gogeumdo', name: '고금도', hanja: '古今島', lon: 126.85, lat: 34.40, value: 1, terrain: 'island', korea: true,
+    blurb: '완도 고금면의 섬입니다. 정유재란 말인 1598년 이순신이 수군을 옮겨 본영을 두었고 진린의 명 수군이 합류했습니다.',
+    source: { title: '한국학중앙연구원: 묘당도 이충무공 유적', url: 'https://encykorea.aks.ac.kr/Article/E0018851' },
+  },
+  hoeryeongpo: {
+    id: 'hoeryeongpo', name: '회령포', hanja: '會寧浦', lon: 126.94, lat: 34.48, value: 1, terrain: 'bay', korea: true,
+    blurb: '장흥 회진의 포구입니다. 정유재란 때 삼도수군통제사로 복귀한 이순신이 1597년 이곳에서 남은 전선을 넘겨받았습니다.',
+    source: { title: '위키백과: 회진항', url: 'https://ko.wikipedia.org/wiki/%ED%9A%8C%EC%A7%84%ED%95%AD' },
+  },
+  eoranpo: {
+    id: 'eoranpo', name: '어란포', hanja: '於蘭浦', lon: 126.47, lat: 34.35, value: 1, terrain: 'bay', korea: true,
+    blurb: '해남 송지 어란리의 포구입니다. 1597년 이순신의 함대가 벽파진으로 가는 길에 이곳에 나타난 일본 전투선을 물리쳤습니다.',
+    source: { title: '한국학중앙연구원: 명량대첩', url: 'https://encykorea.aks.ac.kr/Article/E0018250' },
+  },
+  ijin: {
+    id: 'ijin', name: '이진', hanja: '梨津', lon: 126.62, lat: 34.40, value: 1, terrain: 'bay', korea: true,
+    blurb: '해남 북평 이진리의 옛 수군진 포구입니다. 이진 진영이 있던 곳으로, 정유재란 때 왜군에 맞서 싸운 곳이라고 전합니다.',
+    source: { title: '한국학중앙연구원: 해남군', url: 'https://encykorea.aks.ac.kr/Article/E0062451' },
+  },
+  garipo: {
+    id: 'garipo', name: '가리포진', hanja: '加里浦鎭', lon: 126.76, lat: 34.32, value: 1, terrain: 'island', korea: true,
+    blurb: '완도의 옛 가리포진입니다. 1475년 성을 쌓고 1522년 첨사를 두었으며, 임진왜란 때 가리포 첨사가 이순신 휘하에서 여러 해전에 나섰습니다.',
+    source: { title: '한국학중앙연구원: 완도군', url: 'https://encykorea.aks.ac.kr/Article/E0038961' },
+  },
+  yeodo: {
+    id: 'yeodo', name: '여도진', hanja: '呂島鎭', lon: 127.47, lat: 34.66, value: 1, terrain: 'bay', korea: true,
+    blurb: '고흥 점암 여호리의 옛 수군진입니다. 전라좌수영 소속 만호진으로, 1592년 옥포해전에 여도 권관이 좌척후장으로 참전했습니다.',
+    source: { title: '한국학중앙연구원: 고흥 여도진 성지', url: 'https://encykorea.aks.ac.kr/Article/E0004080' },
+  },
+  waegyo: {
+    id: 'waegyo', name: '순천 왜교', hanja: '順天倭橋', lon: 127.58, lat: 34.91, value: 1, terrain: 'bay', korea: true,
+    blurb: '순천 신성리의 바닷가 포구입니다. 훗날 이곳에 왜성이 서고, 1598년 가을 이순신과 진린의 수군이 육군과 함께 공격했으나 함락하지 못했습니다.',
+    source: { title: '한국학중앙연구원: 순천왜성', url: 'https://encykorea.aks.ac.kr/Article/E0032256' },
+  },
+  mijo: {
+    id: 'mijo', name: '미조항진', hanja: '彌助項鎭', lon: 128.03, lat: 34.71, value: 1, terrain: 'island', korea: true,
+    blurb: '남해도 남쪽 끝 미조리의 옛 수군첨사진입니다. 1486년 첨사진을 두었고, 정유재란 명량해전에서는 미조항 첨사가 중군장을 맡았습니다.',
+    source: { title: '한국학중앙연구원: 남해군', url: 'https://encykorea.aks.ac.kr/Article/E0012272' },
+  },
+  namhaeseonso: {
+    id: 'namhaeseonso', name: '선소포', hanja: '船所浦', lon: 127.91, lat: 34.85, value: 1, terrain: 'bay', korea: true,
+    blurb: '남해읍 선소리의 포구입니다. 훗날 1597년 11월 천남대에 일본군이 성을 쌓고 주둔했습니다.',
+    source: { title: '위키백과: 남해 선소왜성', url: 'https://ko.wikipedia.org/wiki/%EB%82%A8%ED%95%B4_%EC%84%A0%EC%86%8C%EC%99%9C%EC%84%B1' },
+  },
+  gyeonnaeryang: {
+    id: 'gyeonnaeryang', name: '견내량', hanja: '見乃梁', lon: 128.47, lat: 34.88, value: 1, terrain: 'strait', korea: true,
+    blurb: '거제와 통영 사이의 좁은 해협입니다. 1592년 이곳에 머물던 일본 전선 70여 척을 이순신이 한산도 앞바다로 끌어내 격파했습니다.',
+    source: { title: '한국학중앙연구원: 한산도대첩', url: 'https://encykorea.aks.ac.kr/Article/E0061676' },
+  },
+  happo: {
+    id: 'happo', name: '합포', hanja: '合浦', lon: 128.58, lat: 35.21, value: 1, terrain: 'bay', korea: true,
+    blurb: '마산만 안쪽 산호동 앞바다의 옛 합포입니다. 1592년 합포해전에서 조선 수군이 일본 전선 5척을 불태웠습니다.',
+    source: { title: '한국학중앙연구원: 합포해전', url: 'https://encykorea.aks.ac.kr/Article/E0062376' },
+  },
+  jukdo: {
+    id: 'jukdo', name: '김해 죽도', hanja: '金海竹島', lon: 128.90, lat: 35.20, value: 1, terrain: 'bay', korea: true,
+    blurb: '낙동강 하류와 김해강이 만나는 섬입니다. 1592년 4월 구로다 나가마사의 제3군이 이곳에 상륙했습니다.',
+    source: { title: '한국학중앙연구원: 김해성전투', url: 'https://encykorea.aks.ac.kr/Article/E0010983' },
+  },
+  gijang: {
+    id: 'gijang', name: '기장 죽성', hanja: '機張竹城', lon: 129.24, lat: 35.24, value: 1, terrain: 'bay', korea: true,
+    blurb: '부산 동쪽 죽성만의 포구입니다. 훗날 일본군이 이곳을 서생포와 부산을 잇는 보급 거점으로 삼았습니다.',
+    source: { title: '한국학중앙연구원: 기장 죽성리성', url: 'https://encykorea.aks.ac.kr/Article/E0008407' },
+  },
+  seosaengpo: {
+    id: 'seosaengpo', name: '서생포', hanja: '西生浦', lon: 129.33, lat: 35.39, value: 1, terrain: 'bay', korea: true,
+    blurb: '울주 회야강 어귀의 포구입니다. 만호진이 일본군에게 넘어간 뒤 가토 기요마사가 주둔했고, 1594년 사명대사가 이곳에서 강화 회담을 했습니다.',
+    source: { title: '위키백과: 서생포 만호진성', url: 'https://ko.wikipedia.org/wiki/%EC%84%9C%EC%83%9D%ED%8F%AC_%EB%A7%8C%ED%98%B8%EC%A7%84%EC%84%B1' },
+  },
+  ulsan: {
+    id: 'ulsan', name: '울산 도산', hanja: '蔚山島山', lon: 129.36, lat: 35.55, value: 1, terrain: 'bay', korea: true,
+    blurb: '태화강 가의 도산 포구입니다. 훗날 이곳에 일본군이 성을 쌓았고, 조선·명 연합군이 두 차례 포위했으나 함락하지 못했습니다.',
+    source: { title: '한국학중앙연구원: 울산왜성', url: 'https://encykorea.aks.ac.kr/Article/E0040485' },
+  },
 };
 
 /** The sea lanes. Every lane runs both ways; `edges` lists each once. */
@@ -282,6 +360,17 @@ const EDGES: [RegionId, RegionId, 1 | 2 | 3][] = [
   ['jangmunpo', 'angolpo', 1], ['yeongdeungpo', 'jepo', 1], ['jepo', 'angolpo', 1],
   ['yeongdeungpo', 'cheonseongpo', 1], ['angolpo', 'cheonseongpo', 1], ['cheonseongpo', 'dadaepo', 1], ['dadaepo', 'busan', 1],
   ['mokpo', 'myeongnyang', 1], ['mokpo', 'nokdo', 2], ['mokpo', 'shandong', 3],
+  // The Wando islands and the south Haenam coast, between Myeongnyang and Nokdo.
+  ['eoranpo', 'myeongnyang', 1], ['eoranpo', 'ijin', 1], ['ijin', 'myeongnyang', 1], ['ijin', 'garipo', 1], ['garipo', 'gogeumdo', 1],
+  ['gogeumdo', 'hoeryeongpo', 1], ['gogeumdo', 'nokdo', 1], ['hoeryeongpo', 'nokdo', 1],
+  // The Goheung peninsula, Suncheon bay and Namhae island.
+  ['yeodo', 'balpo', 1], ['yeodo', 'bangdap', 1], ['yeodo', 'waegyo', 1], ['waegyo', 'yeosu', 1], ['waegyo', 'noryang', 1],
+  ['mijo', 'yeosu', 1], ['mijo', 'dangpo', 1], ['mijo', 'namhaeseonso', 1], ['namhaeseonso', 'noryang', 1], ['namhaeseonso', 'sacheon', 1],
+  // The Gyeongsang coast: the strait east of Hansan, the head of Masan Bay and the Busan side ports.
+  ['gyeonnaeryang', 'hansan', 1], ['gyeonnaeryang', 'dangpo', 1], ['gyeonnaeryang', 'yulpo', 1],
+  ['happo', 'jepo', 1], ['happo', 'angolpo', 1], ['happo', 'yulpo', 1],
+  ['jukdo', 'angolpo', 1], ['jukdo', 'dadaepo', 1], ['jukdo', 'busan', 1],
+  ['gijang', 'busan', 1], ['gijang', 'seosaengpo', 1], ['seosaengpo', 'ulsan', 1], ['ulsan', 'busan', 2],
 ];
 
 export const LANES: Record<RegionId, Lane[]> = (() => {
@@ -339,6 +428,8 @@ export const START: StartSetup = {
     liaodong: 'ming',
     nokdo: 'joseon', balpo: 'joseon', bangdap: 'joseon', dangpo: 'joseon', gabaeryang: 'joseon', mokpo: 'joseon',
     danghangpo: 'japan', yeongdeungpo: 'japan', yulpo: 'japan', jangmunpo: 'japan', jepo: 'japan', cheonseongpo: 'japan', dadaepo: 'japan',
+    gogeumdo: 'joseon', hoeryeongpo: 'joseon', eoranpo: 'joseon', ijin: 'joseon', garipo: 'joseon', yeodo: 'joseon', waegyo: 'joseon', mijo: 'joseon', namhaeseonso: 'joseon', gyeonnaeryang: 'joseon',
+    happo: 'japan', jukdo: 'japan', gijang: 'japan', seosaengpo: 'japan', ulsan: 'japan',
   },
   buildings: {
     yeosu: { camp: 2, shipyard: 2, dock: 1 },
@@ -354,6 +445,7 @@ export const START: StartSetup = {
     liaodong: { camp: 1, shipyard: 1 },
     nokdo: { shipyard: 1 }, balpo: { battery: 1 }, bangdap: { camp: 1 }, gabaeryang: { dock: 1 }, mokpo: { beacon: 1 },
     yeongdeungpo: { shipyard: 1 }, dadaepo: { battery: 1 }, cheonseongpo: { camp: 1 }, jepo: { dock: 1 },
+    garipo: { camp: 1 }, yeodo: { battery: 1 }, waegyo: { dock: 1 }, happo: { battery: 1 }, jukdo: { camp: 1 }, gijang: { dock: 1 },
   },
   fleets: [
     { faction: 'joseon', at: 'yeosu', name: '전라좌수영 본대', ships: { panokseon: 8, hyeopseon: 5 }, commander: 'yi' },
