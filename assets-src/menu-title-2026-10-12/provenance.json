@@ -4,34 +4,35 @@
   "execution": "bundled imagegen CLI generate",
   "modelRequested": "gpt-image-2.5-sunburst",
   "quality": "high",
-  "size": "1024x1536",
+  "size": "1024x1536 (en, first ko); 1536x1024 (ko one line)",
   "background": "transparent",
   "imagesPerLanguage": 1,
-  "generationRequests": 2,
+  "generationRequests": 5,
+  "generationNotes": "Requests 1-2: en and the first two-row ko (title-ko-gpt-image-2.5.png, superseded). Requests 3-5: three one-line ko candidates in candidates-oneline/; cand1 was chosen after a visual check of all syllables and is copied to title-ko-oneline-gpt-image-2.5.png.",
   "sourceImagesPreserved": true,
   "processing": "transparent margin crop; lossless WebP; no recoloring or compositing",
   "assets": [
     {
       "language": "ko",
-      "source": "assets-src/menu-title-2026-10-12/title-ko-gpt-image-2.5.png",
-      "prompt": "assets-src/menu-title-2026-10-12/prompt-ko.txt",
+      "source": "assets-src/menu-title-2026-10-12/title-ko-oneline-gpt-image-2.5.png",
+      "prompt": "assets-src/menu-title-2026-10-12/prompt-ko-oneline.txt",
       "target": "public/ui/art/menu_title_ko.webp",
       "input": {
-        "width": 1024,
-        "height": 1536,
-        "sha256": "b4c812900071dab0a3d5798373e43dd40e0c387d962e3bbeb4559e8366e02a8a"
+        "width": 1536,
+        "height": 1024,
+        "sha256": "79fa39a1a209c08eb0cfa07501a4928fdaea667d1f0ee5f326d35bfb9d4220af"
       },
       "crop": {
-        "left": 20,
-        "top": 214,
-        "width": 1004,
-        "height": 1154
+        "left": 35,
+        "top": 242,
+        "width": 1501,
+        "height": 599
       },
       "output": {
-        "bytes": 1084218,
-        "sha256": "f935c8d5c85282aafa31cf08b82736d69fedae679b1eff8a88a2d1b4df8ca2b9"
+        "bytes": 749852,
+        "sha256": "6e059339cc74399b823f69fd13c839b0e9f0d9125a8225e2016131cc924bc2e5"
       },
-      "promptSha256": "5c13eab29b7b3462738f192aa3f8fe9be156d532e07773f89585d33427832fef"
+      "promptSha256": "15ac70b42ae12a4d17a78c8aad8f41d8641127a36fcba88cc86ad54d6148a520"
     },
     {
       "language": "en",

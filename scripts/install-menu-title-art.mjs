@@ -5,9 +5,11 @@ import sharp from 'sharp';
 const directory = 'assets-src/menu-title-2026-10-12';
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const assets = [];
+// The Korean title is one horizontal line (the first, two-row version is kept in the folder as history).
+const files = { ko: ['title-ko-oneline-gpt-image-2.5.png', 'prompt-ko-oneline.txt'], en: ['title-en-gpt-image-2.5.png', 'prompt-en.txt'] };
 for (const language of ['ko', 'en']) {
-  const source = `${directory}/title-${language}-gpt-image-2.5.png`;
-  const prompt = `${directory}/prompt-${language}.txt`;
+  const source = `${directory}/${files[language][0]}`;
+  const prompt = `${directory}/${files[language][1]}`;
   const target = `public/ui/art/menu_title_${language}.webp`;
   const original = await readFile(source);
   const { data, info } = await sharp(original).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -23,13 +25,16 @@ for (const language of ['ko', 'en']) {
   const left = Math.max(0, x0 - pad), top = Math.max(0, y0 - pad);
   const crop = { left, top, width: Math.min(info.width, x1 + pad + 1) - left, height: Math.min(info.height, y1 + pad + 1) - top };
   await sharp(original).extract(crop).webp({ lossless: true, effort: 6 }).toFile(target);
+  // The same crop as a PNG with its alpha channel, for compositing outside the game (the trailer).
+  if (language === 'ko') await sharp(original).extract(crop).png().toFile(`${directory}/title-ko-oneline-final.png`);
   const output = await readFile(target);
   assets.push({ language, source, prompt, target, input: { width: info.width, height: info.height, sha256: sha256(original) }, crop,
     output: { bytes: output.length, sha256: sha256(output) }, promptSha256: sha256(await readFile(prompt)) });
 }
 await writeFile(`${directory}/provenance.json`, `${JSON.stringify({
   generated: '2026-10-12', provider: 'OpenAI Images API', execution: 'bundled imagegen CLI generate',
-  modelRequested: 'gpt-image-2.5-sunburst', quality: 'high', size: '1024x1536', background: 'transparent', imagesPerLanguage: 1,
-  generationRequests: 2, sourceImagesPreserved: true, processing: 'transparent margin crop; lossless WebP; no recoloring or compositing', assets,
+  modelRequested: 'gpt-image-2.5-sunburst', quality: 'high', size: '1024x1536 (en, first ko); 1536x1024 (ko one line)', background: 'transparent', imagesPerLanguage: 1,
+  generationRequests: 5,
+  generationNotes: 'Requests 1-2: en and the first two-row ko (title-ko-gpt-image-2.5.png, superseded). Requests 3-5: three one-line ko candidates in candidates-oneline/; cand1 was chosen after a visual check of all syllables and is copied to title-ko-oneline-gpt-image-2.5.png.', sourceImagesPreserved: true, processing: 'transparent margin crop; lossless WebP; no recoloring or compositing', assets,
 }, null, 2)}\n`);
 console.log(JSON.stringify(assets.map(({ language, crop, output }) => ({ language, crop, ...output })), null, 2));

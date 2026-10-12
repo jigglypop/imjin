@@ -47,5 +47,29 @@
   "runtimeSourceSha256": "0d22f8941ca89cc305d51b735f24516350765899fcf44c43ebb3e2963780e35e",
   "nonVisualChangesSinceCapture": [
     "Menu-only squadron debug labels changed to ASCII for strict localization audit; scene geometry, lighting, camera and simulation are unchanged."
-  ]
+  ],
+  "koreanTitle": {
+    "file": "public/ui/art/menu_title_ko.webp",
+    "layout": "one horizontal line \"임진왜란\" (replaces the two-row version)",
+    "route": "OpenAI Images gpt-image-2.5-sunburst, quality high, transparent background, 1536x1024",
+    "prompt": "assets-src/menu-title-2026-10-12/prompt-ko-oneline.txt",
+    "promptSha256": "15ac70b42ae12a4d17a78c8aad8f41d8641127a36fcba88cc86ad54d6148a520",
+    "requests": 3,
+    "candidates": "assets-src/menu-title-2026-10-12/candidates-oneline/cand1-3.png",
+    "chosen": "cand1",
+    "source": "assets-src/menu-title-2026-10-12/title-ko-oneline-gpt-image-2.5.png",
+    "sourceSha256": "79fa39a1a209c08eb0cfa07501a4928fdaea667d1f0ee5f326d35bfb9d4220af",
+    "cropBox": {
+      "left": 35,
+      "top": 242,
+      "width": 1501,
+      "height": 599
+    },
+    "outputSize": {
+      "width": 1501,
+      "height": 599
+    },
+    "outputSha256": "6e059339cc74399b823f69fd13c839b0e9f0d9125a8225e2016131cc924bc2e5",
+    "alphaPng": "assets-src/menu-title-2026-10-12/title-ko-oneline-final.png"
+  }
 }

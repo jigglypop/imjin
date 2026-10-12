@@ -23,3 +23,5 @@ assets-src/dragonhead-*/ship-builder.mjs
 assets-src/dragonhead-*/meshes/dragonhead-fitted-lod*.glb
 assets-src/dragonhead-*/renders/
 assets-src/dragonhead-*/props.provider-private.json
+# Rejected title candidates stay local; the chosen source and the final PNG are tracked.
+assets-src/menu-title-*/candidates*/
