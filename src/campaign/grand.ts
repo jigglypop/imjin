@@ -6,10 +6,10 @@ import { t } from '../i18n';
 import { tName } from '../ui/grand/text';
 import { applyBattleResult, describeBattle, type BridgeSeat, type RegionBattle } from '../sim/grand/bridge';
 import { summarizeBattle, type BattleSummary } from '../sim/grand/report';
-import { cancelBuild, cancelRecruit, orderAlliance, orderBuild, orderCommander, orderDeclareWar, orderDisband, orderMerge, orderMove, orderRecruit, orderRefit, orderSplit, orderStop } from '../sim/grand/orders';
+import { cancelBuild, cancelRecruit, orderAlliance, orderAssault, orderBuild, orderCommander, orderDeclareWar, orderDisband, orderIntercept, orderMerge, orderMove, orderRecruit, orderRefit, orderSplit, orderStance, orderStop } from '../sim/grand/orders';
 import { REGION_ORDER } from '../sim/grand/regions';
-import { autoResolveContact, endTurn, newGrand, type TurnReport } from '../sim/grand/turn';
-import type { BattleOutcome, BuildingKind, Fleet, Grand, GrandFaction, RegionId, Result } from '../sim/grand/types';
+import { autoResolveContact, besiegeContact, endTurn, newGrand, withdrawContact, type TurnReport } from '../sim/grand/turn';
+import type { BattleOutcome, BuildingKind, Fleet, Grand, GrandFaction, RegionId, Result, Stance } from '../sim/grand/types';
 import { GRAND_FACTIONS, fail, ok } from '../sim/grand/types';
 import { fleetById } from '../sim/grand/world';
 import { migrateGrandBalance } from '../sim/grand/economy';
@@ -135,7 +135,13 @@ const guarded = (own: (g: Grand) => boolean, change: (g: Grand) => Result) => co
 export const grandOrders = {
   dispatch: (fleetIds: string[], portIds: RegionId[], dest: RegionId) => commit((g) => g.player ? orderDispatch(g, fleetIds, portIds, dest, g.player) : notYours),
   mobilize: (region: RegionId) => guarded((g) => ownRegion(g, region), (g) => orderMobilize(g, region, g.player!)),
-  move: (fleetId: string, dest: RegionId) => guarded((g) => ownFleet(g, fleetId), (g) => orderMove(g, fleetId, dest)),
+  move: (fleetId: string, dest: RegionId, siege = false) => guarded((g) => ownFleet(g, fleetId), (g) => orderMove(g, fleetId, dest, siege)),
+  /** March rules: chase a hostile fleet into its port or along its lane. */
+  intercept: (fleetId: string, targetId: string) => guarded((g) => ownFleet(g, fleetId), (g) => orderIntercept(g, fleetId, targetId)),
+  /** March rules: this turn's stance, normal or the forced march. */
+  stance: (fleetId: string, stance: Stance) => guarded((g) => ownFleet(g, fleetId), (g) => orderStance(g, fleetId, stance)),
+  /** March rules: a blockading fleet storms the port when the turn ends, or keeps up the blockade. */
+  assault: (fleetId: string, on: boolean) => guarded((g) => ownFleet(g, fleetId), (g) => orderAssault(g, fleetId, on)),
   stop: (fleetId: string) => guarded((g) => ownFleet(g, fleetId), (g) => orderStop(g, fleetId)),
   build: (region: RegionId, kind: BuildingKind) => guarded((g) => ownRegion(g, region), (g) => orderBuild(g, region, kind)),
   cancelBuild: (region: RegionId, kind: BuildingKind) => guarded((g) => ownRegion(g, region), (g) => cancelBuild(g, region, kind)),
@@ -242,7 +248,7 @@ export function endGrandTurn(): TurnReport | null {
   if (!current || current.phase !== 'orders' || current.events.pending) return null;
   const next = structuredClone(current);
   const report = endTurn(next);
-  const moves = buildReplay(current, next, report.contacts, current.player ?? 'joseon');
+  const moves = buildReplay(current, next, report.contacts, current.player ?? 'joseon', report.routes);
   useGrand.setState({ grand: next, reported: current.turn, replay: isEmpty(moves) ? null : { before: current, moves } });
   save(next);
   return report;
@@ -250,6 +256,12 @@ export function endGrandTurn(): TurnReport | null {
 
 /** The player's answer to the historical event that waits (0 or 1). */
 export const chooseGrandEvent = (index: number): Result => commit((g) => chooseEvent(g, index));
+
+/** March rules: a waiting assault on a port becomes a blockade of it instead. */
+export const besiegeGrand = (contactId: string): Result => commit((g) => (g.player ? besiegeContact(g, contactId, g.player) : notYours));
+
+/** March rules: the player's fleets in a waiting fight withdraw from it before it is fought. */
+export const withdrawGrand = (contactId: string): Result => commit((g) => (g.player ? withdrawContact(g, contactId, g.player) : notYours));
 
 /** Settles a waiting meeting by arithmetic. */
 export function autoResolveGrand(contactId: string): ResolveResult | null {

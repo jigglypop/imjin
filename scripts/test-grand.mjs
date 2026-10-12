@@ -160,7 +160,8 @@ function playOut(g) {
   const item = yeosu.queue[0];
   check('a fresh order is cancelled for the full price', orders.cancelRecruit(g, 'yeosu', item.id).ok && g.factions.joseon.gold === before);
   const fleet = g.fleets.find((f) => f.faction === 'joseon' && f.at === 'yeosu');
-  check('a fleet sails to a far port', orders.orderMove(g, fleet.id, 'busan').ok && fleet.route.length === 4);
+  // The march rules take the shortest way in km, which is not the fewest lanes: what matters is that it ends at Busan.
+  check('a fleet sails to a far port', orders.orderMove(g, fleet.id, 'busan').ok && fleet.route.length >= 4 && fleet.route.at(-1) === 'busan');
   check('a fleet cannot sail through an enemy port', orders.orderMove(g, fleet.id, 'tsushima').ok === false);
   check('no road to the far shore for an invader', (() => { const j = g.fleets.find((f) => f.faction === 'japan'); return orders.orderMove(g, j.id, 'shandong').ok === false; })());
   const first = g.fleets.find((f) => f.faction === 'joseon' && f.at === 'yeosu');
@@ -263,9 +264,11 @@ function playOut(g) {
   check('a ship ordered at a razed shipyard does not advance', item.left === item.total && g.regions.yeosu.queue.length === 1);
 }
 {
-  // A beaten fleet falls back along the lane in as many turns as the lane is long.
-  const lane = (from, to, owner, relation) => {
+  // Under the lane rules a beaten fleet falls back along the lane in as many turns as the lane is long; under the march
+  // rules it falls straight back into the port.
+  const lane = (from, to, owner, relation, march = false) => {
     const g = newGrand('joseon', 7);
+    if (!march) delete g.march;
     if (relation) g.relations[relation] = 'war';
     const fl = g.fleets.find((f) => f.faction === 'ming');
     fl.at = from === 'myeongnyang' ? 'myeongnyang' : 'busan';
@@ -279,11 +282,15 @@ function playOut(g) {
   };
   const far = lane('myeongnyang', 'shandong', 'ming', 'joseon:ming');
   check('a retreat along a three turn lane takes three turns', far.transit && far.transit.left === 2);
+  const home = lane('myeongnyang', 'shandong', 'ming', 'joseon:ming', true);
+  check('under the march rules a beaten fleet falls straight back into port', home.at === 'shandong' && home.transit === null);
 }
 {
   // The computer never swaps two fleets between two ports.
   for (const player of [null, 'japan']) {
+    // The lane rules' fix for crossing final legs; the march rules sail both legs in one turn.
     const g = newGrand(player, 4803), japan = g.fleets.filter((fl) => fl.faction === 'japan');
+    delete g.march;
     const small = japan[0], large = japan[1];
     small.at = 'jepo'; small.route = ['angolpo', 'busan']; small.transit = null; small.rest = 0; small.ships = small.ships.slice(0, 1);
     large.at = 'dadaepo'; large.route = ['busan', 'angolpo']; large.transit = null; large.rest = 0;

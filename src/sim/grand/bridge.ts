@@ -3,6 +3,7 @@ import { teamOf } from '../types';
 import { TUNING, buildingOf, levelOf, shipGold } from './economy';
 import { REGION_ORDER, REGIONS, type Terrain } from './regions';
 import { mix32 } from './rng';
+import { MARCH } from './march';
 import { applyContactOutcome, commanderLevel, contactForces, settlePending } from './turn';
 import type { BattleOutcome, BattleOutcomeShip, BuildingKind, Contact, Fleet, Grand, GrandFaction, RegionId, ShipUnit } from './types';
 
@@ -90,8 +91,10 @@ function modsFor(g: Grand, fl: Fleet | undefined, u: ShipUnit): ShipMods {
   const level = fl ? commanderLevel(g, fl) : 1;
   const vet = Math.min(1, u.kills / 12);
   const skill = 0.03 * (level - 1) + 0.04 * vet;
+  // A crew caught on a forced march is tired: slower at the guns and in the boarding.
+  const tired = fl?.stance === 'march' ? MARCH.tired : 1;
   // The competitive ship already carries its navy's boarding rules; only experience belongs to this bridge.
-  return { reload: 1 + skill, accuracy: 1 + skill * 0.8, speed: 1, turn: 1, fire: 1, melee: 1 + skill, defense: 1 + skill * 0.7 };
+  return { reload: (1 + skill) * tired, accuracy: 1 + skill * 0.8, speed: 1, turn: 1, fire: 1, melee: (1 + skill) * tired, defense: 1 + skill * 0.7 };
 }
 
 function toBridge(g: Grand, fl: Fleet | undefined, u: ShipUnit): Worth {
@@ -148,10 +151,12 @@ export function describeContact(g: Grand, c: Contact): RegionBattle {
   const region = g.regions[c.regionId];
   const def = REGIONS[c.regionId];
   const teams = teamsFor(c.attacker, c.defender);
+  // A meeting out at sea is fought in the waters of the nearer port, without its guard boats, guns or works.
+  const home = !c.sea && region.owner === c.defender;
   const atk = seatShips(g, forces.attackers);
-  const dfn = seatShips(g, forces.defenders, region.owner === c.defender ? region.garrison : []);
+  const dfn = seatShips(g, forces.defenders, home ? region.garrison : []);
   const works: RegionBattleBuilding[] = [];
-  if (region.owner === c.defender) {
+  if (home) {
     for (const b of region.buildings) {
       const kind = WORKS[b.kind];
       if (kind && b.level > 0) works.push({ kind, level: b.level, hp: b.hp, source: b.kind });
@@ -176,12 +181,12 @@ export function describeContact(g: Grand, c: Contact): RegionBattle {
       tickets: 500,
       timeLimit: 12 * 60,
       // Reinforcements during the fight come from the yard; a port without one fights with what it has.
-      startFunds: { attacker: 200, defender: levelOf(region, 'shipyard') > 0 ? 700 : 300 },
+      startFunds: { attacker: 200, defender: home && levelOf(region, 'shipyard') > 0 ? 700 : 300 },
       cap: Infinity,
       maxShips: BATTLE_SHIP_CAP,
     },
-    battery: levelOf(region, 'battery'),
-    batteryHp: buildingOf(region, 'battery')?.hp ?? 0,
+    battery: home ? levelOf(region, 'battery') : 0,
+    batteryHp: home ? buildingOf(region, 'battery')?.hp ?? 0 : 0,
   };
 }
 

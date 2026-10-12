@@ -9,7 +9,8 @@
 //   node scripts/balance-grand.mjs --no-events              the same wars without the scripted historical events (src/sim/grand/events.ts), to see what they shift
 //   node scripts/balance-grand.mjs --verbose                one line per game
 //   node scripts/balance-grand.mjs --trace=1592             one game turn by turn: gold (net), each region as owner+garrison[fleets], the log
-// Game rules are in src/sim/grand/*. --set and --sweep reach TUNING (economy.ts) by dotted path, and AI (ai.ts) with an "ai." prefix.
+// Game rules are in src/sim/grand/*. --set and --sweep reach TUNING (economy.ts) by dotted path, AI (ai.ts) with an "ai." prefix
+// and the march rules' MARCH (march.ts) with a "march." prefix.
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
@@ -35,6 +36,7 @@ const load = (p) => server.ssrLoadModule(p);
 const { newGrand, endTurn, MAX_TURNS, scoreOf } = await load('/src/sim/grand/turn.ts');
 const { TUNING, netIncome } = await load('/src/sim/grand/economy.ts');
 const { AI } = await load('/src/sim/grand/ai.ts');
+const { MARCH } = await load('/src/sim/grand/march.ts');
 const { REGION_ORDER } = await load('/src/sim/grand/regions.ts');
 const { EVENTS } = await load('/src/sim/grand/events.ts');
 if (args.includes('--no-events')) for (const e of EVENTS) e.cards = {};
@@ -45,8 +47,9 @@ const tag = { joseon: 'J', japan: 'N', ming: 'M' };
 
 function setPath(path, raw) {
   const parts = path.split('.');
-  let target = parts[0] === 'ai' ? AI : TUNING;
-  const keys = parts[0] === 'ai' ? parts.slice(1) : parts;
+  const roots = { ai: AI, march: MARCH };
+  let target = roots[parts[0]] ?? TUNING;
+  const keys = roots[parts[0]] ? parts.slice(1) : parts;
   for (const k of keys.slice(0, -1)) target = target[k];
   target[keys[keys.length - 1]] = Number.isNaN(Number(raw)) ? raw : Number(raw);
 }

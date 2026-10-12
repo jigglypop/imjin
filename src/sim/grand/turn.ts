@@ -10,6 +10,8 @@ import {
   factionUpkeep,
   garrisonCap,
   guardScale,
+  listStrength,
+  batteryStrength,
   repairRates,
   shipDef,
   levelOf,
@@ -17,13 +19,15 @@ import {
 } from './economy';
 import { COMMANDERS, KOREA_COAST, REGION_ORDER, REGIONS, START } from './regions';
 import { makeRng, next } from './rng';
-import type { BattleOutcome, BuildingKind, Contact, Fleet, Grand, GrandFaction, RegionId, ShipUnit } from './types';
-import { GRAND_FACTIONS } from './types';
+import type { BattleOutcome, BuildingKind, Contact, Fleet, Grand, GrandFaction, RegionId, Result, ShipUnit } from './types';
+import { GRAND_FACTIONS, fail, ok } from './types';
 import { allied, atWar, fleetById, fleetStrength, lanesOf, mintId, note, ownedBy, passable, shipCount } from './world';
 import { LEVEL_XP, SHIP_PREFIX, grantXp, spawnFleet, spawnShip } from './roster';
 import { fireEvents } from './events';
 import type { ShipKind } from '../types';
 import { newAllySupport, scaleAllyOpening, supportReinforcements } from './support';
+import { MARCH, laneKm, marchFleets, marching, winterTurn, type SeaMeeting } from './march';
+import { battleGrade, GRADE_TEXT } from './report';
 
 export { MAX_TURNS, LEVEL_XP, spawnShip };
 
@@ -36,6 +40,7 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
     version: 1,
     balanceProfile: 'competitive-v1',
     forces: 'wide-v1',
+    march: 'tw-v1',
     seed,
     rng: makeRng(seed),
     player,
@@ -110,10 +115,13 @@ export function contactForces(g: Grand, c: Contact): { attacker: Force; defender
   const attackers = c.attackerFleets.flatMap((id) => fleetById(g, id) ?? []);
   const defenders = c.defenderFleets.flatMap((id) => fleetById(g, id) ?? []);
   const region = g.regions[c.regionId];
-  const garrison = region.owner === c.defender ? region.garrison : [];
+  // Out at sea neither the port's guard boats nor its guns take part.
+  const home = !c.sea && region.owner === c.defender;
+  // A side caught on a forced march fights tired.
+  const morale = (list: Fleet[]) => (list.some((f) => f.stance === 'march') ? MARCH.tired : 1);
   return {
-    attacker: { ships: attackers.flatMap((f) => f.ships), leader: Math.max(1, ...attackers.map((f) => commanderLevel(g, f))) },
-    defender: { ships: [...defenders.flatMap((f) => f.ships), ...garrison], leader: Math.max(1, ...defenders.map((f) => commanderLevel(g, f))), region: region.owner === c.defender ? region : undefined },
+    attacker: { ships: attackers.flatMap((f) => f.ships), leader: Math.max(1, ...attackers.map((f) => commanderLevel(g, f))), morale: morale(attackers) },
+    defender: { ships: [...defenders.flatMap((f) => f.ships), ...(home ? region.garrison : [])], leader: Math.max(1, ...defenders.map((f) => commanderLevel(g, f))), region: home ? region : undefined, morale: morale(defenders) },
     attackers,
     defenders,
   };
@@ -122,7 +130,10 @@ export function contactForces(g: Grand, c: Contact): { attacker: Force; defender
 function sail(g: Grand, fl: Fleet, from: RegionId, to: RegionId) {
   const turns = lanesOf(g, from).find((l) => l.to === to)?.turns ?? 1;
   fl.route = [];
-  if (turns <= 1) {
+  fl.besieging = false;
+  fl.assault = false;
+  // Under the march rules a beaten fleet falls straight back into the port, as an army retreats a short way.
+  if (turns <= 1 || marching(g)) {
     fl.at = to;
     fl.transit = null;
   } else {
@@ -138,7 +149,8 @@ function retreat(g: Grand, fl: Fleet, from: RegionId) {
   const lanes = lanesOf(g, from).filter((l) => safe(l.to));
   const home = fl.from && lanes.find((l) => l.to === fl.from);
   const mine = (id: RegionId) => (g.regions[id].owner === fl.faction ? 0 : 1);
-  const choice = home ?? [...lanes].sort((a, b) => a.turns - b.turns || mine(a.to) - mine(b.to))[0];
+  const length = (to: RegionId, turns: number) => (marching(g) ? laneKm(g, from, to) : turns);
+  const choice = home ?? [...lanes].sort((a, b) => length(a.to, a.turns) - length(b.to, b.turns) || mine(a.to) - mine(b.to))[0];
   if (!choice) {
     note(g, '{fleet|이/가} 퇴로를 잃고 전멸했습니다', { fleet: fl.name }, fl.faction === g.player ? 'bad' : 'info');
     g.fleets.splice(g.fleets.indexOf(fl), 1);
@@ -148,10 +160,41 @@ function retreat(g: Grand, fl: Fleet, from: RegionId) {
   sail(g, fl, from, choice.to);
 }
 
+/** A fleet beaten out at sea falls back to the lane end it came from, else the other end, else on from the one behind it. */
+function retreatAtSea(g: Grand, fl: Fleet) {
+  const t = fl.transit;
+  if (!t) {
+    if (fl.at) retreat(g, fl, fl.at);
+    return;
+  }
+  const end = seaRefuge(g, fl);
+  for (const u of fl.ships) u.supply = Math.max(0.2, u.supply * 0.7);
+  fl.route = [];
+  fl.besieging = false;
+  fl.assault = false;
+  if (end) {
+    fl.transit = null;
+    fl.at = end;
+    return;
+  }
+  // Hemmed in at both ends, it stays out at sea, drawn back a little toward where it came from, and waits for orders.
+  t.sailed = Math.max(0.5, (t.sailed ?? 0) - 5);
+}
+
+/** A port a beaten fleet can fall back to: friendly or open water with no hostile fleet in it. */
+const refuge = (g: Grand, fl: Fleet, id: RegionId) => passable(g, fl.faction, id) && !g.fleets.some((o) => o.at === id && atWar(g, o.faction, fl.faction));
+
+/** The end of its lane a fleet at sea falls back to: the one it came from first. */
+const seaRefuge = (g: Grand, fl: Fleet) => (fl.transit ? [fl.transit.from, fl.transit.to].find((id) => refuge(g, fl, id)) : undefined);
+
+/** Whether a fleet in a port fight at `from` has a port to fall back to; one at sea can always pull back on its lane. */
+const canFallBack = (g: Grand, fl: Fleet, from: RegionId) => !!fl.transit || lanesOf(g, from).some((l) => l.to !== from && refuge(g, fl, l.to));
+
 /** The region changes hands. Its works are damaged, its queue is lost and its people are restless. */
 export function captureRegion(g: Grand, id: RegionId, taker: GrandFaction) {
   const r = g.regions[id];
   const prev = r.owner;
+  delete r.siege;
   // An ally that drives the enemy out of a port hands it back to the navy it was taken from.
   const rightful = START.owners[id];
   const liberated = rightful !== taker && g.factions[rightful].alive && allied(g, taker, rightful);
@@ -185,11 +228,16 @@ function giveXp(g: Grand, fl: Fleet, kills: number, won: boolean) {
 export function applyContactOutcome(g: Grand, c: Contact, outcome: BattleOutcome): void {
   const { attackers, defenders } = contactForces(g, c);
   const region = g.regions[c.regionId];
+  const home = !c.sea && region.owner === c.defender;
   for (const f of [c.attacker, c.defender, ...attackers.map((x) => x.faction), ...defenders.map((x) => x.faction)]) g.factions[f].idle = -1;
   const byId = new Map(outcome.ships.map((s) => [s.campaignId, s]));
   const kills = new Map<string, number>();
   let lostA = 0;
   let lostD = 0;
+  // Each side's worth before the fight, for the grade of the win.
+  const worth = (list: ShipUnit[]) => list.reduce((s, u) => s + shipDef(u.kind).strength * u.hull, 0);
+  const startA = worth(attackers.flatMap((f) => f.ships));
+  const startD = worth([...defenders.flatMap((f) => f.ships), ...(home ? region.garrison : [])]);
   // Strength each side lost, which is the other side's credit toward a score.
   const worn = { a: 0, d: 0 };
   const settle = (list: ShipUnit[], side: 'a' | 'd', fleetId: string | null) =>
@@ -211,7 +259,7 @@ export function applyContactOutcome(g: Grand, c: Contact, outcome: BattleOutcome
     });
   for (const f of attackers) f.ships = settle(f.ships, 'a', f.id);
   for (const f of defenders) f.ships = settle(f.ships, 'd', f.id);
-  if (region.owner === c.defender) region.garrison = settle(region.garrison, 'd', null);
+  if (home) region.garrison = settle(region.garrison, 'd', null);
   const attackerWon = outcome.winner === 'attacker';
   const credit = (to: GrandFaction[], amount: number) => {
     for (const f of to) g.credit[f] += amount / to.length;
@@ -219,32 +267,46 @@ export function applyContactOutcome(g: Grand, c: Contact, outcome: BattleOutcome
   credit([...new Set([c.defender, ...defenders.map((x) => x.faction)])], worn.a);
   credit([...new Set([c.attacker, ...attackers.map((x) => x.faction)])], worn.d);
   for (const f of [...attackers, ...defenders]) giveXp(g, f, kills.get(f.id) ?? 0, (attackerWon ? attackers : defenders).includes(f));
-  // The works take the damage the fight did to them.
-  for (const kind of outcome.razed) downgrade(region, kind);
-  for (const [kind, loss] of Object.entries(outcome.damage ?? {}) as [BuildingKind, number][]) {
-    const b = buildingOf(region, kind);
-    if (!b || loss <= 0) continue;
-    b.hp -= loss;
-    if (b.hp <= 0.15) downgrade(region, kind);
+  // The works take the damage the fight did to them; out at sea there are none.
+  if (!c.sea) {
+    for (const kind of outcome.razed) downgrade(region, kind);
+    for (const [kind, loss] of Object.entries(outcome.damage ?? {}) as [BuildingKind, number][]) {
+      const b = buildingOf(region, kind);
+      if (!b || loss <= 0) continue;
+      b.hp -= loss;
+      if (b.hp <= 0.15) downgrade(region, kind);
+    }
   }
   dropEmpty(g);
   g.pending = g.pending.filter((p) => p.id !== c.id);
   const mine = g.player === c.attacker || g.player === c.defender;
   const winner = attackerWon ? c.attacker : c.defender;
-  note(
-    g,
-    '{place} 해전에서 {navy|이/가} 승리했습니다 (손실: {a} {lostA}척 · {d} {lostD}척)',
-    { place: REGIONS[c.regionId].name, navy: navyName(winner), a: TUNING.faction[c.attacker].label, lostA, d: TUNING.faction[c.defender].label, lostD },
-    !mine ? 'info' : winner === g.player ? 'good' : 'bad',
-  );
+  const params = { place: REGIONS[c.regionId].name, navy: navyName(winner), a: TUNING.faction[c.attacker].label, lostA, d: TUNING.faction[c.defender].label, lostD };
+  const tone = !mine ? 'info' : winner === g.player ? 'good' : 'bad';
+  if (marching(g)) {
+    const grade = attackerWon ? battleGrade(startA, worn.a, startD, worn.d) : battleGrade(startD, worn.d, startA, worn.a);
+    const text = c.sea ? '{place} 앞바다에서 {navy|이/가} {grade|을/를} 거두었습니다 (손실: {a} {lostA}척 · {d} {lostD}척)' : '{place} 해전에서 {navy|이/가} {grade|을/를} 거두었습니다 (손실: {a} {lostA}척 · {d} {lostD}척)';
+    note(g, text, { ...params, grade: GRADE_TEXT[grade] }, tone);
+  } else note(g, '{place} 해전에서 {navy|이/가} 승리했습니다 (손실: {a} {lostA}척 · {d} {lostD}척)', params, tone);
   // The turn closes right after the fight and takes one off, so the rest is counted from the next turn.
   for (const f of [...attackers, ...defenders]) f.rest = TUNING.restAfterBattle + 1;
+  // Fleets that joined from a neighbouring port fought from where they lay and stay there, win or lose.
+  const joined = new Set(c.reinforcements ?? []);
+  const fallBack = (f: Fleet) => {
+    if (!g.fleets.includes(f) || joined.has(f.id)) return;
+    if (c.sea) retreatAtSea(g, f);
+    else retreat(g, f, c.regionId);
+  };
   if (attackerWon) {
-    for (const f of defenders) if (g.fleets.includes(f)) retreat(g, f, c.regionId);
-    for (const f of attackers) if (g.fleets.includes(f)) f.route = [];
-    captureRegion(g, c.regionId, c.attacker);
+    for (const f of defenders) fallBack(f);
+    for (const f of attackers) if (g.fleets.includes(f)) {
+      f.route = [];
+      f.besieging = false;
+      f.assault = false;
+    }
+    if (!c.sea) captureRegion(g, c.regionId, c.attacker);
   } else {
-    for (const f of attackers) if (g.fleets.includes(f)) retreat(g, f, c.regionId);
+    for (const f of attackers) fallBack(f);
   }
 }
 
@@ -390,22 +452,240 @@ function findContacts(g: Grand): Contact[] {
   return out;
 }
 
+/** Turns a blockaded port holds out: longer with a granary's stores and behind a strong camp. */
+export const holdOf = (r: Grand['regions'][RegionId]) => MARCH.holdBase + levelOf(r, 'granary') + (levelOf(r, 'camp') >= 2 ? 1 : 0);
+
+/**
+ * Under the march rules: the meetings at sea first (they happened on the way), then the ports. A fleet lying idle in a
+ * port within `MARCH.reinforce` km of a fight joins whichever side it is allied to, and is marked a reinforcement. Fleets
+ * that only blockade a port fight nobody until a fleet of the port's side comes in or they are ordered to storm it.
+ */
+function findMarchContacts(g: Grand, meetings: SeaMeeting[]): Contact[] {
+  const out: Contact[] = [];
+  const busy = new Set<string>();
+  // Fleets that have a fight of their own this turn, where they lie, are nobody's reinforcement.
+  for (const m of meetings) for (const id of m.fleets) busy.add(id);
+  for (const id of REGION_ORDER) {
+    const here = g.fleets.filter((f) => f.at === id);
+    const owner = g.regions[id].owner;
+    if (here.some((a) => (owner && atWar(g, a.faction, owner)) || here.some((b) => atWar(g, a.faction, b.faction)))) for (const f of here) busy.add(f.id);
+  }
+  /**
+   * The idle fleets near a fight that come to it: `near` lists the ports round it with their km to the fight, `power` the
+   * strength each side has there already. A side's neighbours join only when, with them, it has a fighting chance:
+   * nobody sails out to be sunk beside a lost cause.
+   */
+  const helpers = (near: [RegionId, number][], attacker: GrandFaction, defender: GrandFaction, power: { a: number; d: number }) => {
+    let a: Fleet[] = [];
+    let d: Fleet[] = [];
+    for (const f of g.fleets) {
+      if (!f.at || busy.has(f.id) || f.route.length || f.besieging) continue;
+      if (!near.some(([id, km]) => f.at === id && km <= MARCH.reinforce)) continue;
+      // A fleet still refitting after a fight defends its neighbours but does not sail out to attack.
+      if (allied(g, f.faction, attacker) && atWar(g, f.faction, defender) && f.rest <= 0) a.push(f);
+      else if (allied(g, f.faction, defender) && atWar(g, f.faction, attacker)) d.push(f);
+    }
+    const sum = (list: Fleet[]) => list.reduce((s, f) => s + fleetStrength(f), 0);
+    if (power.a + sum(a) < (power.d + sum(d)) * MARCH.join) a = [];
+    if (power.d + sum(d) < (power.a + sum(a)) * MARCH.join) d = [];
+    for (const f of [...a, ...d]) busy.add(f.id);
+    return { a, d };
+  };
+  const strongest = (fleets: Fleet[]) => {
+    const power = new Map<GrandFaction, number>();
+    for (const f of fleets) power.set(f.faction, (power.get(f.faction) ?? 0) + fleetStrength(f));
+    return [...power.entries()].sort((a, b) => b[1] - a[1] || GRAND_FACTIONS.indexOf(a[0]) - GRAND_FACTIONS.indexOf(b[0]))[0]?.[0];
+  };
+  const involves = (factions: GrandFaction[]) => g.player !== null && factions.includes(g.player);
+
+  for (const m of meetings) {
+    const fleets = m.fleets.flatMap((id) => fleetById(g, id) ?? []);
+    // The navy that sailed into the meeting with the most behind it attacks; the strongest of its enemies there defends.
+    const attacker = strongest(fleets.filter((f) => m.movers.includes(f.id))) ?? strongest(fleets);
+    if (!attacker) continue;
+    const defender = strongest(fleets.filter((f) => atWar(g, f.faction, attacker)));
+    if (!defender) continue;
+    const attackers = fleets.filter((f) => allied(g, f.faction, attacker) && atWar(g, f.faction, defender));
+    const defenders = fleets.filter((f) => allied(g, f.faction, defender) && atWar(g, f.faction, attacker));
+    const km = laneKm(g, m.from, m.to);
+    const extra = helpers([[m.from, m.t * km], [m.to, (1 - m.t) * km]], attacker, defender, { a: attackers.reduce((s, f) => s + fleetStrength(f), 0), d: defenders.reduce((s, f) => s + fleetStrength(f), 0) });
+    const all = [...attackers, ...defenders, ...extra.a, ...extra.d];
+    out.push({
+      id: `${g.turn}:sea${out.length}:${m.from}`,
+      regionId: m.t < 0.5 ? m.from : m.to,
+      attacker,
+      defender,
+      attackerFleets: [...attackers, ...extra.a].map((f) => f.id),
+      defenderFleets: [...defenders, ...extra.d].map((f) => f.id),
+      player: involves([attacker, defender, ...all.map((f) => f.faction)]),
+      sea: { from: m.from, to: m.to, t: m.t },
+      reinforcements: [...extra.a, ...extra.d].map((f) => f.id),
+    });
+  }
+
+  for (const id of REGION_ORDER) {
+    const here = g.fleets.filter((f) => f.at === id);
+    if (!here.length) continue;
+    const r = g.regions[id];
+    if (!r.owner) {
+      r.owner = here[0]!.faction;
+      continue;
+    }
+    const owner = r.owner;
+    const hostile = here.filter((f) => atWar(g, f.faction, owner));
+    if (!hostile.length) continue;
+    const primary = strongest(hostile)!;
+    const attackers = hostile.filter((f) => allied(g, f.faction, primary));
+    for (const f of hostile) if (!attackers.includes(f) && g.fleets.includes(f)) retreat(g, f, id);
+    const defenders = here.filter((f) => allied(g, f.faction, owner));
+    const hasDefence = defenders.length > 0 || r.garrison.length > 0 || levelOf(r, 'battery') > 0;
+    if (!hasDefence) {
+      for (const f of attackers) {
+        f.route = [];
+        f.besieging = false;
+        f.assault = false;
+      }
+      captureRegion(g, id, primary);
+      continue;
+    }
+    // Blockaders without an order to storm lie off the port: the blockade begins or goes on, and nobody fights. A
+    // blockade holds only while it outweighs what the port can throw at it; against a stronger garrison it is a fight.
+    const bottled = attackers.reduce((a, f) => a + fleetStrength(f), 0) >= (listStrength(r.garrison) + batteryStrength(r)) * MARCH.sally;
+    if (!defenders.length && bottled && attackers.every((f) => f.besieging && !f.assault)) {
+      if (!r.siege || !allied(g, r.siege.by, primary)) {
+        r.siege = { by: primary, turns: 0, hold: holdOf(r) };
+        note(g, '{navy|이/가} {place|을/를} 봉쇄했습니다', { navy: navyName(primary), place: REGIONS[id].name }, owner === g.player ? 'bad' : primary === g.player ? 'good' : 'info');
+      }
+      for (const f of attackers) f.route = [];
+      continue;
+    }
+    const extra = helpers(lanesOf(g, id).map((l) => [l.to, laneKm(g, id, l.to)] as [RegionId, number]), primary, owner, {
+      a: attackers.reduce((s, f) => s + fleetStrength(f), 0),
+      d: defenders.reduce((s, f) => s + fleetStrength(f), 0) + listStrength(r.garrison) + batteryStrength(r),
+    });
+    const all = [...attackers, ...defenders, ...extra.a, ...extra.d];
+    out.push({
+      id: `${g.turn}:${id}`,
+      regionId: id,
+      attacker: primary,
+      defender: owner,
+      attackerFleets: [...attackers, ...extra.a].map((f) => f.id),
+      defenderFleets: [...defenders, ...extra.d].map((f) => f.id),
+      player: involves([primary, owner, ...all.map((f) => f.faction)]),
+      reinforcements: [...extra.a, ...extra.d].map((f) => f.id),
+      siege: !!r.siege,
+    });
+  }
+  return out;
+}
+
+/** Why `faction` cannot turn this waiting assault into a blockade, or null when it can. */
+export function besiegeProblem(g: Grand, c: Contact, faction: GrandFaction): string | null {
+  if (!marching(g) || c.sea || c.siege) return '봉쇄할 수 없는 전투입니다';
+  if (!allied(g, faction, c.attacker) || !atWar(g, faction, c.defender)) return '공격하는 쪽만 봉쇄할 수 있습니다';
+  if (c.defenderFleets.some((id) => fleetById(g, id)?.at === c.regionId)) return '적 함대가 지키는 포구는 봉쇄할 수 없습니다';
+  const r = g.regions[c.regionId];
+  const blockaders = c.attackerFleets.flatMap((id) => fleetById(g, id) ?? []).filter((f) => f.at === c.regionId);
+  if (blockaders.reduce((a, f) => a + fleetStrength(f), 0) < (listStrength(r.garrison) + batteryStrength(r)) * MARCH.sally) return '봉쇄하기에는 수비대가 너무 강합니다';
+  return null;
+}
+
+/** Turns a waiting assault on a port into a blockade: the attacking fleets lie off the port and nobody fights there now. */
+export function besiegeContact(g: Grand, contactId: string, faction: GrandFaction): Result {
+  const c = g.pending.find((p) => p.id === contactId);
+  if (!c) return fail('해당 전투가 없습니다');
+  const problem = besiegeProblem(g, c, faction);
+  if (problem) return fail(problem);
+  const r = g.regions[c.regionId];
+  for (const id of c.attackerFleets) {
+    const f = fleetById(g, id);
+    if (!f || f.at !== c.regionId) continue;
+    f.besieging = true;
+    f.assault = false;
+    f.route = [];
+  }
+  r.siege = { by: c.attacker, turns: 0, hold: holdOf(r) };
+  note(g, '{navy|이/가} {place|을/를} 봉쇄했습니다', { navy: navyName(c.attacker), place: REGIONS[c.regionId].name }, c.defender === g.player ? 'bad' : c.attacker === g.player ? 'good' : 'info');
+  g.pending = g.pending.filter((p) => p.id !== c.id);
+  settlePending(g);
+  return ok();
+}
+
+/**
+ * The fleets of `faction`'s side in a waiting fight withdraw from it before it is fought, losing some supply. An attack
+ * then simply ends; a port whose defending fleets leave is held by its garrison and guns alone, or falls if it has none.
+ */
+export function withdrawContact(g: Grand, contactId: string, faction: GrandFaction): Result {
+  const c = g.pending.find((p) => p.id === contactId);
+  if (!c) return fail('해당 전투가 없습니다');
+  const side = allied(g, faction, c.attacker) && atWar(g, faction, c.defender) ? 'attacker' : 'defender';
+  const ids = side === 'attacker' ? c.attackerFleets : c.defenderFleets;
+  const leaving = ids.flatMap((id) => fleetById(g, id) ?? []).filter((f) => f.faction === faction);
+  if (!leaving.length) return fail('물러날 함대가 없습니다');
+  const joined = new Set(c.reinforcements ?? []);
+  // Withdrawing must not sink a fleet that would otherwise have fought: every one needs somewhere to fall back to.
+  if (leaving.some((f) => !joined.has(f.id) && !canFallBack(g, f, c.regionId))) return fail('물러날 곳이 없습니다');
+  const gone = new Set(leaving.map((f) => f.id));
+  for (const f of leaving) {
+    if (joined.has(f.id)) continue;
+    if (c.sea) retreatAtSea(g, f);
+    else retreat(g, f, c.regionId);
+  }
+  note(g, '{navy|이/가} {place} 싸움에서 물러났습니다', { navy: navyName(faction), place: REGIONS[c.regionId].name }, faction === g.player ? 'bad' : 'info');
+  if (side === 'attacker') c.attackerFleets = c.attackerFleets.filter((id) => !gone.has(id));
+  else c.defenderFleets = c.defenderFleets.filter((id) => !gone.has(id));
+  c.reinforcements = c.reinforcements?.filter((id) => !gone.has(id));
+  const region = g.regions[c.regionId];
+  const guarded = !c.sea && region.owner === c.defender && (region.garrison.length > 0 || levelOf(region, 'battery') > 0);
+  const attackersLeft = c.attackerFleets.some((id) => fleetById(g, id));
+  const defendersLeft = c.defenderFleets.some((id) => fleetById(g, id)) || guarded;
+  if (!attackersLeft || !defendersLeft) {
+    g.pending = g.pending.filter((p) => p.id !== c.id);
+    // Nobody is left to hold the port: it falls without a fight.
+    if (attackersLeft && !c.sea) {
+      for (const id of c.attackerFleets) {
+        const f = fleetById(g, id);
+        if (!f || f.at !== c.regionId) continue;
+        f.route = [];
+        f.besieging = false;
+        f.assault = false;
+      }
+      captureRegion(g, c.regionId, c.attacker);
+    }
+  } else {
+    // A fight the player is no longer part of is settled at once, by the numbers, like any other between computer navies.
+    const sides = [c.attacker, c.defender, ...[...c.attackerFleets, ...c.defenderFleets].flatMap((id) => fleetById(g, id)?.faction ?? [])];
+    c.player = g.player !== null && sides.includes(g.player);
+    if (!c.player) applyContactOutcome(g, c, resolveContact(g, c).outcome);
+  }
+  settlePending(g);
+  return ok();
+}
+
 const isOver = (g: Grand) => g.phase === 'over';
 
-/** What the closing turn did: the meetings still waiting for the player, and every meeting it brought about (for the map's replay). */
-export type TurnReport = { pending: Contact[]; finished: boolean; contacts: Contact[] };
+/**
+ * What the closing turn did: the meetings still waiting for the player, every meeting it brought about, and the route
+ * each fleet was sailing on once every navy had given its orders (for the map's replay).
+ */
+export type TurnReport = { pending: Contact[]; finished: boolean; contacts: Contact[]; routes: Record<string, RegionId[]> };
 
 /**
  * Ends the player's turn: the computer factions give their orders, every fleet sails one lane, and the meetings that
  * result are fought. Meetings that involve the player wait in `g.pending`; when none is left the turn closes.
  */
 export function endTurn(g: Grand): TurnReport {
-  if (g.phase !== 'orders') return { pending: g.pending, finished: g.phase === 'over', contacts: [] };
+  if (g.phase !== 'orders') return { pending: g.pending, finished: g.phase === 'over', contacts: [], routes: {} };
   for (const f of GRAND_FACTIONS) if (g.factions[f].alive && f !== g.player) planAi(g, f);
   if (g.autoWorks && g.player && g.factions[g.player].alive) autoWorks(g, g.player);
   for (const fl of g.fleets) fl.from = fl.at ?? fl.transit?.from ?? null;
-  moveFleets(g);
-  const contacts = findContacts(g);
+  const routes = Object.fromEntries(g.fleets.map((fl) => [fl.id, [...fl.route]]));
+  let contacts: Contact[];
+  if (marching(g)) contacts = findMarchContacts(g, marchFleets(g));
+  else {
+    moveFleets(g);
+    contacts = findContacts(g);
+  }
   const waiting: Contact[] = [];
   for (const c of contacts) {
     // A fleet may have been bounced or lost by an earlier meeting this turn.
@@ -417,10 +697,10 @@ export function endTurn(g: Grand): TurnReport {
   g.pending = waiting;
   if (waiting.length) {
     g.phase = 'battles';
-    return { pending: waiting, finished: false, contacts };
+    return { pending: waiting, finished: false, contacts, routes };
   }
   advanceTurn(g);
-  return { pending: [], finished: isOver(g), contacts };
+  return { pending: [], finished: isOver(g), contacts, routes };
 }
 
 // --- The turn closes --------------------------------------------------------------------------------------------
@@ -539,6 +819,7 @@ function checkVictory(g: Grand) {
 }
 
 function advanceTurn(g: Grand) {
+  if (marching(g)) holdSieges(g);
   // Works and ships under construction.
   for (const id of REGION_ORDER) {
     const r = g.regions[id];
@@ -553,7 +834,8 @@ function advanceTurn(g: Grand) {
         }
       }
     }
-    if (!r.owner) continue;
+    // A blockaded port builds no ships and raises no guard boats.
+    if (!r.owner || r.siege) continue;
     // A shipyard that is razed or still in its foundations builds nothing: the queue waits.
     for (const q of levelOf(r, 'shipyard') > 0 ? [...r.queue] : []) {
       q.left -= 1;
@@ -584,7 +866,9 @@ function advanceTurn(g: Grand) {
   for (const fl of g.fleets) {
     if (fl.rest > 0) fl.rest -= 1;
     if (!fl.at) {
-      for (const u of fl.ships) u.supply = Math.max(0.15, u.supply - 0.04);
+      // Under the march rules a winter spent out at sea costs more.
+      const lost = 0.04 + (marching(g) && winterTurn(g.turn) ? MARCH.winterSupply : 0);
+      for (const u of fl.ships) u.supply = Math.max(0.15, u.supply - lost);
       continue;
     }
     const r = g.regions[fl.at];
@@ -616,6 +900,11 @@ function advanceTurn(g: Grand) {
     }
   }
   g.events.mods = g.events.mods.map((m) => ({ ...m, left: m.left - 1 })).filter((m) => m.left > 0);
+  // A stance and an order to storm are for one turn.
+  for (const fl of g.fleets) {
+    delete fl.stance;
+    delete fl.assault;
+  }
   runEvents(g);
   recordStats(g, g.fought, g.turn, paid);
   checkVictory(g);
@@ -623,6 +912,39 @@ function advanceTurn(g: Grand) {
     g.turn += 1;
     g.phase = 'orders';
     fireEvents(g);
+  }
+}
+
+/**
+ * The blockades go on or end: a port no blockader lies off any more is free; otherwise its garrison goes hungry, its
+ * guns wear the blockaders down, and when it has held out as long as it can it gives up to the blockading navy.
+ */
+function holdSieges(g: Grand) {
+  for (const id of REGION_ORDER) {
+    const r = g.regions[id];
+    const s = r.siege;
+    if (!s) continue;
+    const owner = r.owner;
+    const blockaders = owner ? g.fleets.filter((f) => f.at === id && f.besieging && atWar(g, f.faction, owner)) : [];
+    if (!owner || !blockaders.length) {
+      delete r.siege;
+      continue;
+    }
+    s.turns += 1;
+    for (const u of r.garrison) {
+      u.crew = Math.max(0.2, u.crew - MARCH.starve.crew);
+      u.supply = Math.max(0.1, u.supply - MARCH.starve.supply);
+    }
+    const guns = levelOf(r, 'battery');
+    if (guns) for (const f of blockaders) for (const u of f.ships) u.hull = Math.max(0.25, u.hull - MARCH.shoreFire * guns);
+    if (s.turns < s.hold) continue;
+    const taker = blockaders.some((f) => f.faction === s.by) ? s.by : blockaders[0]!.faction;
+    note(g, '{place}의 수비대가 봉쇄를 견디지 못하고 항복했습니다', { place: REGIONS[id].name }, owner === g.player ? 'bad' : taker === g.player ? 'good' : 'info');
+    for (const f of blockaders) {
+      f.besieging = false;
+      f.assault = false;
+    }
+    captureRegion(g, id, taker);
   }
 }
 

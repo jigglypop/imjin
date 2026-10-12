@@ -80,7 +80,9 @@ try {
   });
 
   await check('a fleet really sails Nokdo → Balpo → Bangdap over two closing turns', () => {
+    // One lane a turn is the lane rules'; under the march rules the voyage is measured in km (test-grand-march).
     const g = newGrand('joseon', 515);
+    delete g.march;
     const fl = g.fleets.find((f) => f.faction === 'joseon');
     g.fleets = [fl]; fl.at = 'nokdo'; fl.from = 'nokdo';
     assert.deepEqual(world.findRoute(g, 'joseon', 'nokdo', 'bangdap'), { path: ['balpo', 'bangdap'], turns: 2 });

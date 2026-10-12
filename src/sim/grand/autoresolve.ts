@@ -34,6 +34,8 @@ export type Force = {
   leader: number;
   /** The port's works, for the defender. */
   region?: RegionState;
+  /** Fighting worth multiplier for the whole side: below 1 for a force caught tired on a forced march. */
+  morale?: number;
 };
 
 export type ResolveInput = {
@@ -158,7 +160,7 @@ export function autoResolve(input: ResolveInput): ResolveResult {
         if (phase === 'melee') o *= RESOLVE.boardingBonus[u.def.faction];
         sum += o;
       }
-      let mul = 1 + RESOLVE.commanderPerLevel * (leader - 1);
+      let mul = (1 + RESOLVE.commanderPerLevel * (leader - 1)) * ((defending ? input.defender.morale : input.attacker.morale) ?? 1);
       if (defending) mul *= RESOLVE.defenderBonus * (1 + RESOLVE.campPerLevel * camp);
       if (phase === 'melee') {
         const n = mine.filter((u) => !u.shore).length;

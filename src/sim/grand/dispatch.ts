@@ -1,7 +1,8 @@
 import { REGIONS, REGION_ORDER } from './regions';
-import { findRoute, fleetById, mintId } from './world';
+import { findRoute, fleetById, mintId, passable } from './world';
 import type { Fleet, Grand, GrandFaction, RegionId, Result } from './types';
 import { fail, ok } from './types';
+import { marchRoute, marching } from './march';
 
 type Plan = { fleet?: Fleet; port?: RegionId; path: RegionId[]; turns: number };
 type Planned = { ok: true; plans: Plan[] } | Extract<Result, { ok: false }>;
@@ -17,8 +18,15 @@ function planDispatch(g: Grand, fleetIds: readonly string[], portIds: readonly R
     const fleet = fleetById(g, id);
     if (!fleet) return fail('해당 함대가 없습니다');
     if (fleet.faction !== faction) return fail('우리 진영의 것이 아닙니다');
-    if (!fleet.at || fleet.transit) return fail('항해 중인 함대는 항로를 바꿀 수 없습니다');
     if (fleet.rest > 0) return fail('전투 후 정비 중입니다');
+    if (marching(g)) {
+      const route = marchRoute(g, fleet, dest);
+      if (!route) return fail('그곳으로 가는 안전한 항로가 없습니다');
+      if (fleet.stance === 'march' && !passable(g, faction, dest)) return fail('강행군 중에는 공격할 수 없습니다');
+      plans.push({ fleet, path: route.path, turns: route.turns });
+      continue;
+    }
+    if (!fleet.at || fleet.transit) return fail('항해 중인 함대는 항로를 바꿀 수 없습니다');
     const route = findRoute(g, faction, fleet.at, dest);
     if (!route) return fail('그곳으로 가는 안전한 항로가 없습니다');
     plans.push({ fleet, ...route });
@@ -28,7 +36,10 @@ function planDispatch(g: Grand, fleetIds: readonly string[], portIds: readonly R
     if (!region) return fail('해당 포구가 없습니다');
     if (region.owner !== faction) return fail('우리 진영의 것이 아닙니다');
     if (!region.garrison.length) return fail('출동할 수비대가 없습니다');
-    const route = findRoute(g, faction, port, dest);
+    // The guard boats sail at their own pace once aboard: plan their way as the fleet they will become.
+    const route = marching(g)
+      ? marchRoute(g, { id: '', faction, name: '', commanderId: null, ships: region.garrison, at: port, transit: null, route: [], from: port, rest: 0 }, dest)
+      : findRoute(g, faction, port, dest);
     if (!route) return fail('그곳으로 가는 안전한 항로가 없습니다');
     plans.push({ port, ...route });
   }
@@ -44,7 +55,11 @@ export function orderDispatch(g: Grand, fleets: readonly string[], ports: readon
   const planned = planDispatch(g, fleets, ports, dest, faction);
   if (!planned.ok) return planned;
   for (const p of planned.plans) {
-    if (p.fleet) { p.fleet.route = [...p.path]; continue; }
+    if (p.fleet) {
+      p.fleet.route = [...p.path];
+      p.fleet.besieging = false;
+      continue;
+    }
     const port = p.port!;
     const region = g.regions[port];
     const fleet: Fleet = { id: mintId(g, 'f'), faction, name: `${REGIONS[port].name} 출동 함대`, commanderId: null, ships: region.garrison, at: port, transit: null, route: [...p.path], from: port, rest: 0 }; // i18n-ignore: place-derived name translated by tName

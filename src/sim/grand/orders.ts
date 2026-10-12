@@ -1,9 +1,10 @@
 import { SHIP_SPECS } from '../catalog';
 import type { ShipKind } from '../types';
 import { BUILDING_DEFS, BUILDING_ORDER, TUNING, navyName, buildingCost, buildingWorkTotal, buildingOf, freeSlots, kindsOf, levelOf, queueSlots, shipDef, yardPrice, recruitRefund, GATES } from './economy';
-import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId, Result, ShipUnit } from './types';
+import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId, Result, ShipUnit, Stance } from './types';
 import { MAX_LEVEL, fail, ok, pairKey } from './types';
-import { allied, atWar, fleetById, findRoute, mintId, note } from './world';
+import { allied, atWar, fleetById, findRoute, mintId, note, passable } from './world';
+import { laneKm, marchDistances, marchRoute, marching, transitShare, turnsFor } from './march';
 
 /**
  * Everything a commander can order, for the player and the computer alike. An order that is allowed takes effect now:
@@ -12,11 +13,16 @@ import { allied, atWar, fleetById, findRoute, mintId, note } from './world';
 
 const noOrders = (g: Grand): Result | null => (g.phase !== 'orders' ? fail('지금은 명령을 내릴 수 없습니다') : null);
 
-export function orderMove(g: Grand, fleetId: string, dest: RegionId): Result {
+/**
+ * Sends a fleet to `dest`. Under the march rules a fleet at sea may be sent on or turned back, and `siege` makes a fleet
+ * bound for a hostile port blockade it on arrival instead of storming it.
+ */
+export function orderMove(g: Grand, fleetId: string, dest: RegionId, siege = false): Result {
   const bad = noOrders(g);
   if (bad) return bad;
   const fl = fleetById(g, fleetId);
   if (!fl) return fail('해당 함대가 없습니다');
+  if (marching(g)) return marchOrder(g, fl, dest, siege);
   if (fl.transit) return fail('항해 중인 함대는 항로를 바꿀 수 없습니다');
   if (fl.rest > 0) return fail('전투 후 정비 중입니다');
   if (!fl.at) return fail('함대가 항해 중입니다');
@@ -28,6 +34,91 @@ export function orderMove(g: Grand, fleetId: string, dest: RegionId): Result {
   if (!route) return fail('그곳으로 가는 안전한 항로가 없습니다');
   fl.route = route.path;
   return ok('{turns}턴', { turns: route.turns });
+}
+
+function marchOrder(g: Grand, fl: Fleet, dest: RegionId, siege: boolean): Result {
+  if (fl.rest > 0) return fail('전투 후 정비 중입니다');
+  if (fl.at === dest) {
+    fl.route = [];
+    return ok('제자리에 머뭅니다');
+  }
+  const route = marchRoute(g, fl, dest);
+  if (!route) return fail('그곳으로 가는 안전한 항로가 없습니다');
+  const hostile = !passable(g, fl.faction, dest);
+  if (hostile && fl.stance === 'march') return fail('강행군 중에는 공격할 수 없습니다');
+  fl.route = route.path;
+  fl.besieging = hostile && siege;
+  fl.assault = false;
+  return ok('{turns}턴', { turns: route.turns });
+}
+
+/**
+ * Sends a fleet after a hostile fleet (march rules): into the port where it lies, or along the lane it is sailing so the
+ * way runs through it and the two meet where they close.
+ */
+export function orderIntercept(g: Grand, fleetId: string, targetId: string): Result {
+  const bad = noOrders(g);
+  if (bad) return bad;
+  const fl = fleetById(g, fleetId);
+  const target = fleetById(g, targetId);
+  if (!fl || !target) return fail('해당 함대가 없습니다');
+  if (!marching(g)) return fail('이 전역에서는 쓸 수 없는 명령입니다');
+  if (!atWar(g, fl.faction, target.faction)) return fail('적 함대가 아닙니다');
+  if (fl.rest > 0) return fail('전투 후 정비 중입니다');
+  if (fl.stance === 'march') return fail('강행군 중에는 공격할 수 없습니다');
+  if (target.at) return marchOrder(g, fl, target.at, false);
+  const t = target.transit;
+  if (!t) return fail('해당 함대가 없습니다');
+  const km = laneKm(g, t.from, t.to);
+  const theirs = transitShare(g, t) * km;
+  let path: RegionId[];
+  let distance: number;
+  const mine = fl.transit;
+  if (mine && ((mine.from === t.from && mine.to === t.to) || (mine.from === t.to && mine.to === t.from))) {
+    // Already on its lane: head for the end that lies beyond it.
+    const ours = mine.from === t.from ? transitShare(g, mine) * km : km - transitShare(g, mine) * km;
+    path = [theirs >= ours ? t.to : t.from];
+    distance = Math.abs(theirs - ours);
+  } else {
+    const { dist } = marchDistances(g, fl);
+    const [near, far] = (dist.get(t.from) ?? Infinity) <= (dist.get(t.to) ?? Infinity) ? [t.from, t.to] : [t.to, t.from];
+    const toNear = marchRoute(g, fl, near);
+    if (!toNear || !passable(g, fl.faction, near)) return fail('그곳으로 가는 안전한 항로가 없습니다');
+    path = [...toNear.path, far];
+    distance = toNear.km + (near === t.from ? theirs : km - theirs);
+  }
+  fl.route = path;
+  fl.besieging = false;
+  fl.assault = false;
+  return ok('{turns}턴', { turns: turnsFor(g, fl, distance) });
+}
+
+/** The fleet's stance for this turn (march rules): the forced march sails half again as far but cannot attack. */
+export function orderStance(g: Grand, fleetId: string, stance: Stance): Result {
+  const bad = noOrders(g);
+  if (bad) return bad;
+  const fl = fleetById(g, fleetId);
+  if (!fl) return fail('해당 함대가 없습니다');
+  if (!marching(g)) return fail('이 전역에서는 쓸 수 없는 명령입니다');
+  if (stance === 'march') {
+    const dest = fl.route[fl.route.length - 1];
+    if (fl.at && !passable(g, fl.faction, fl.at)) return fail('적의 포구 앞에서는 강행군할 수 없습니다');
+    if (dest && !passable(g, fl.faction, dest)) return fail('강행군 중에는 공격할 수 없습니다');
+  }
+  if (stance === 'normal') delete fl.stance;
+  else fl.stance = stance;
+  return ok();
+}
+
+/** A fleet blockading a port storms it when the turn ends (or, with `on` false, keeps up the blockade). */
+export function orderAssault(g: Grand, fleetId: string, on = true): Result {
+  const bad = noOrders(g);
+  if (bad) return bad;
+  const fl = fleetById(g, fleetId);
+  if (!fl || !fl.at || !fl.besieging || passable(g, fl.faction, fl.at)) return fail('봉쇄 중인 함대가 아닙니다');
+  if (on) fl.assault = true;
+  else delete fl.assault;
+  return ok();
 }
 
 export function orderStop(g: Grand, fleetId: string): Result {
@@ -142,6 +233,10 @@ export function orderMerge(g: Grand, keepId: string, otherId: string): Result {
   if (a.ships.length + b.ships.length > TUNING.fleetCap) return fail('한 함대는 최대 {n}척입니다', { n: TUNING.fleetCap });
   a.ships.push(...b.ships);
   a.rest = Math.max(a.rest, b.rest);
+  // March rules: merged blockaders keep up the blockade (and an order to storm), and the stance is kept only if both share it.
+  if (b.besieging) a.besieging = true;
+  if (b.assault) a.assault = true;
+  if (a.stance !== b.stance) delete a.stance;
   if (!a.commanderId) a.commanderId = b.commanderId;
   g.fleets.splice(g.fleets.indexOf(b), 1);
   a.route = [];
@@ -158,6 +253,10 @@ export function orderSplit(g: Grand, fleetId: string, shipIds: string[]): Result
   if (take.length >= fl.ships.length) return fail('함선을 전부 나눌 수는 없습니다');
   fl.ships = fl.ships.filter((s) => !shipIds.includes(s.id));
   const next: Fleet = { id: mintId(g, 'f'), faction: fl.faction, name: `${fl.name} 분견 함대`, commanderId: null, ships: take, at: fl.at, transit: null, route: [], from: fl.from, rest: fl.rest }; // i18n-ignore: detachment name; the UI translates the pattern
+  // A detachment of a blockading fleet keeps up the blockade (and its order to storm) instead of turning it into an assault.
+  if (fl.besieging) next.besieging = true;
+  if (fl.assault) next.assault = true;
+  if (fl.stance) next.stance = fl.stance;
   g.fleets.push(next);
   return ok(next.id);
 }

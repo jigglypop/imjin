@@ -58,7 +58,15 @@ export type ShipUnit = { id: string; kind: ShipKind; name: string; hull: number;
 
 export type Commander = { id: string; faction: GrandFaction; name: string; title: string; portrait: string; level: number; xp: number; alive: boolean };
 
-export type Transit = { from: RegionId; to: RegionId; left: number };
+/**
+ * A fleet between two ports. Under the lane rules `left` counts the turns still to sail. Under the march rules
+ * (`Grand.march`) the fleet can stop anywhere at sea: `sailed` is the distance in km already covered from `from`
+ * toward `to`, and `left` is kept as the turns the rest would take at the fleet's pace, for display.
+ */
+export type Transit = { from: RegionId; to: RegionId; left: number; sailed?: number };
+
+/** How a fleet sails this turn under the march rules: `march` is the forced march, farther but unable to start a fight. */
+export type Stance = 'normal' | 'march';
 
 export type Fleet = {
   id: string;
@@ -75,6 +83,12 @@ export type Fleet = {
   from: RegionId | null;
   /** Turns the fleet must still spend refitting after a fight before it can sail. */
   rest: number;
+  /** March rules: the stance for the coming turn (absent means normal). Reset when the turn closes. */
+  stance?: Stance;
+  /** March rules: at the hostile port it sails for (or lies at) the fleet blockades instead of storming (the port's `siege`). */
+  besieging?: boolean;
+  /** March rules: a blockading fleet ordered to storm the port when the turn ends. */
+  assault?: boolean;
 };
 
 export type QueueItem = { id: string; kind: ShipKind; left: number; total: number; paidGold?: number };
@@ -90,6 +104,11 @@ export type RegionState = {
   queue: QueueItem[];
   /** Turns of reduced income left after a conquest. */
   unrest: number;
+  /**
+   * March rules: a blockade by `by`'s fleets lying off the port. The port earns nothing and builds nothing; after
+   * `hold` turns its garrison gives up. `turns` counts the turns it has lasted.
+   */
+  siege?: { by: GrandFaction; turns: number; hold: number };
 };
 
 export type FactionState = {
@@ -120,6 +139,15 @@ export type Contact = {
   defenderFleets: string[];
   /** True when a fleet of the player's faction is on either side, so the player decides how it is settled. */
   player: boolean;
+  /**
+   * March rules: a meeting out at sea on the lane between `from` and `to`, `t` of the way along. `regionId` is then the
+   * nearer port, whose waters the battle is fought in; no garrison, battery or port changes hands.
+   */
+  sea?: { from: RegionId; to: RegionId; t: number };
+  /** March rules: fleets that were not in the meeting but lay close enough to join it (either side). */
+  reinforcements?: string[];
+  /** March rules: the defending port is under blockade by the attacker. */
+  siege?: boolean;
 };
 
 export type BattleOutcomeShip = { campaignId: string; alive: boolean; hull: number; crew: number; supply: number; kills: number };
@@ -183,6 +211,12 @@ export type Grand = {
   strategicLinks?: 'three-way-v1';
   /** Campaigns begun after the forces were doubled (`TUNING.forceScale`); absent saves keep their fleets, guards and allowance. */
   forces?: 'wide-v1';
+  /**
+   * The march rules (Total War-like): fleets have a distance they can sail each turn and may cross several ports or
+   * stop at sea, hostile fleets meet where their ways cross, nearby fleets reinforce a fight, ports can be blockaded.
+   * Absent saves keep the lane rules, one lane a turn.
+   */
+  march?: 'tw-v1';
   /** Fresh human-led allied campaigns shrink only their original computer ally. Absent old saves keep their rules. */
   allySupport?: { version: 'player-ally-v1'; faction: 'joseon' | 'ming'; reinforcementCarry: Partial<Record<ShipKind, number>> };
   seed: number;

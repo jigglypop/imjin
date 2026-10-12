@@ -18,12 +18,13 @@ import {
   shipDef,
   yardPrice,
 } from './economy';
-import { buildRequirement, orderBuild, commanderSuspended, orderCommander, orderMerge, orderMove, orderRecruit, orderRefit, recruitProblem, refitCost } from './orders';
+import { buildRequirement, orderAssault, orderBuild, commanderSuspended, orderCommander, orderMerge, orderMove, orderRecruit, orderRefit, orderStance, recruitProblem, refitCost } from './orders';
 import { REGIONS } from './regions';
 import { forkRng, next, range, type Rng } from './rng';
 import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId } from './types';
 import { BUILDING_KINDS, MAX_LEVEL } from './types';
-import { allied, atWar, defenceStrength, findRoute, fleetObserved, fleetStrength, laneDistance, lanesOf, note, ownedBy, visibleRegions } from './world';
+import { allied, atWar, defenceStrength, findRoute, fleetObserved, fleetStrength, laneDistance, lanesOf, note, ownedBy, passable, visibleRegions } from './world';
+import { MARCH, fleetReach, laneKm, marchDistances, marchRoute, marching } from './march';
 
 /**
  * The computer's three commanders. Each reads the same board and the same rules as the player; what differs is what
@@ -51,7 +52,12 @@ export type Personality = {
   minPatience: number;
   /** Average hull below which a fleet in a friendly port rests instead of sailing out. */
   restBelow: number;
+  /** What the commander does differently under the march rules, where a fight draws in the fleets lying near it. */
+  march?: Partial<Omit<Personality, 'march'>>;
 };
+
+/** A navy's personality in this war: the march rules may change some of its numbers. */
+export const personality = (g: Grand, f: GrandFaction): Personality => (marching(g) && AI[f].march ? { ...AI[f], ...AI[f].march } : AI[f]);
 
 export const AI: Record<GrandFaction, Personality> = {
   // Defends with guns and docks, strikes when it has the better of it.
@@ -67,6 +73,9 @@ export const AI: Record<GrandFaction, Personality> = {
     impatience: 0.03,
     minPatience: 0.7,
     restBelow: 0.7,
+    // An attack on the Japanese anchorages round Busan meets every fleet lying in them: waiting for a safer margin only
+    // gives the invader time to gather more.
+    march: { attackRatio: 1.1 },
   },
   // Invades: many cheap hulls, bold attacks, little patience for walls.
   japan: {
@@ -100,8 +109,34 @@ export const AI: Record<GrandFaction, Personality> = {
 
 const enemiesOf = (g: Grand, f: GrandFaction) => (['joseon', 'japan', 'ming'] as const).filter((o) => atWar(g, f, o));
 
+/**
+ * The enemy strength each region can see arrive this turn under the march rules. It is asked for again and again while a
+ * navy plans, so it is kept until a fleet moves, a ship is lost or launched, or a relation changes.
+ */
+const marchThreats = new WeakMap<Grand, { key: string; threat: Map<RegionId, number> }>();
+
+function marchThreat(g: Grand, f: GrandFaction): Map<RegionId, number> {
+  let key = [g.turn, f, g.relations['japan:joseon'], g.relations['japan:ming'], g.relations['joseon:ming']].join(':');
+  for (const fl of g.fleets) {
+    const t = fl.transit;
+    key += '|' + fl.id + ':' + fl.ships.length + ':' + (fl.at ?? (t ? t.from + '>' + t.to + ':' + t.sailed : ''));
+  }
+  const cached = marchThreats.get(g);
+  if (cached?.key === key) return cached.threat;
+  const threat = new Map<RegionId, number>();
+  const seen = visibleRegions(g, f);
+  for (const fl of g.fleets) {
+    if (!atWar(g, fl.faction, f) || !fleetObserved(g, f, fl, seen)) continue;
+    const reach = fleetReach(g, fl);
+    for (const [id, km] of marchDistances(g, fl, reach).dist) if (km <= reach) threat.set(id, (threat.get(id) ?? 0) + fleetStrength(fl));
+  }
+  marchThreats.set(g, { key, threat });
+  return threat;
+}
+
 /** Enemy strength that can be in a region by the end of this turn: already there, a lane away, or about to land. */
 export function threatTo(g: Grand, f: GrandFaction, id: RegionId): number {
+  if (marching(g)) return marchThreat(g, f).get(id) ?? 0;
   let t = 0;
   const seen = visibleRegions(g, f);
   for (const fl of g.fleets) {
@@ -109,6 +144,21 @@ export function threatTo(g: Grand, f: GrandFaction, id: RegionId): number {
     if (fl.at === id || fl.transit?.to === id || (fl.at && lanesOf(g, fl.at).some((l) => l.to === id && l.turns === 1))) t += fleetStrength(fl);
   }
   return t;
+}
+
+/** Turns the slowest of `fleets` (lying together) needs to reach `to`, or null when one of them has no way there. */
+function turnsTo(g: Grand, fleets: Fleet[], to: RegionId): number | null {
+  if (!marching(g)) {
+    const at = fleets[0]?.at;
+    return at ? findRoute(g, fleets[0]!.faction, at, to)?.turns ?? null : null;
+  }
+  let worst = 0;
+  for (const fl of fleets) {
+    const route = marchRoute(g, fl, to);
+    if (!route) return null;
+    worst = Math.max(worst, route.turns);
+  }
+  return worst;
 }
 
 function idleGroups(g: Grand, f: GrandFaction): Map<RegionId, Fleet[]> {
@@ -140,7 +190,7 @@ function fleetShares(g: Grand, f: GrandFaction): Map<ShipKind, number> {
 }
 
 function recruit(g: Grand, f: GrandFaction, spendLimit: number) {
-  const P = AI[f];
+  const P = personality(g, f);
   const st = g.factions[f];
   const shares = fleetShares(g, f);
   const yards = ownedBy(g, f).filter((id) => levelOf(g.regions[id], 'shipyard') > 0 && g.regions[id].queue.length < queueSlots(g.regions[id]));
@@ -175,8 +225,8 @@ function recruit(g: Grand, f: GrandFaction, spendLimit: number) {
 
 type Work = { id: RegionId; kind: BuildingKind; level: number; gold: number; score: number };
 
-function bestWork(g: Grand, f: GrandFaction, budget: number, floor = 0.35, dice: Rng = g.rng, reserve = AI[f].reserve): Work | null {
-  const P = AI[f];
+function bestWork(g: Grand, f: GrandFaction, budget: number, floor = 0.35, dice: Rng = g.rng, reserve = personality(g, f).reserve): Work | null {
+  const P = personality(g, f);
   const st = g.factions[f];
   const turnsLeft = Math.max(0, MAX_TURNS - g.turn);
   const owned = ownedBy(g, f);
@@ -224,7 +274,7 @@ function bestWork(g: Grand, f: GrandFaction, budget: number, floor = 0.35, dice:
 }
 
 function economy(g: Grand, f: GrandFaction) {
-  const P = AI[f];
+  const P = personality(g, f);
   const st = g.factions[f];
   let works = st.gold * P.worksShare;
   for (let i = 0; i < 4; i += 1) {
@@ -274,7 +324,7 @@ export function autoWorks(g: Grand, f: GrandFaction): number {
 /** Value of taking a region, in region-value units. */
 function prize(g: Grand, f: GrandFaction, id: RegionId, seen: ReadonlySet<RegionId>): number {
   const def = REGIONS[id];
-  let v = def.value + (AI[f].wanted[id] ?? 0);
+  let v = def.value + (personality(g, f).wanted[id] ?? 0);
   if (def.capitalOf && def.capitalOf !== f) v += 1.5;
   if (def.korea && f === 'japan') v += 0.6;
   if (def.korea && f !== 'japan') v += 0.4;
@@ -295,10 +345,25 @@ export function estimatedDefence(g: Grand, f: GrandFaction, id: RegionId, seen =
   }
   let d = defenceStrength(g, id);
   if (!r.owner) return d;
+  // Under the march rules the fleets lying close enough reinforce the fight for certain; under the lane rules a fleet a lane
+  // away only may come.
+  const march = marching(g);
   for (const lane of lanesOf(g, id)) {
-    if (lane.turns !== 1) continue;
-    for (const fl of g.fleets) if (fl.at === lane.to && fleetObserved(g, f, fl, seen) && fl.faction !== r.owner && allied(g, fl.faction, r.owner)) d += fleetStrength(fl) * 0.5;
-    for (const fl of g.fleets) if (fl.at === lane.to && fleetObserved(g, f, fl, seen) && fl.faction === r.owner) d += fleetStrength(fl) * 0.6;
+    if (march ? laneKm(g, id, lane.to) > MARCH.reinforce : lane.turns !== 1) continue;
+    for (const fl of g.fleets) if (fl.at === lane.to && fleetObserved(g, f, fl, seen) && fl.faction !== r.owner && allied(g, fl.faction, r.owner)) d += fleetStrength(fl) * (march ? 0.9 : 0.5);
+    for (const fl of g.fleets) if (fl.at === lane.to && fleetObserved(g, f, fl, seen) && fl.faction === r.owner) d += fleetStrength(fl) * (march ? 0.9 : 0.6);
+  }
+  return d;
+}
+
+/** What a blockade of the port would have to face: the fleets in and close round it, not its garrison or guns. */
+function fleetDefence(g: Grand, f: GrandFaction, id: RegionId, seen: Set<RegionId>): number {
+  const owner = g.regions[id].owner;
+  if (!owner) return 0;
+  let d = 0;
+  for (const fl of g.fleets) {
+    if (!fl.at || !allied(g, fl.faction, owner) || !atWar(g, fl.faction, f) || !fleetObserved(g, f, fl, seen)) continue;
+    if (fl.at === id || lanesOf(g, id).some((l) => l.to === fl.at && laneKm(g, id, l.to) <= MARCH.reinforce)) d += fleetStrength(fl);
   }
   return d;
 }
@@ -310,7 +375,7 @@ function nearestEnemyDistance(g: Grand, f: GrandFaction, from: RegionId): number
 }
 
 function fleetsPlan(g: Grand, f: GrandFaction) {
-  const P = AI[f];
+  const P = personality(g, f);
   const seen = visibleRegions(g, f);
   // A navy that has not fought for a while grows bolder: the standoff has to end.
   const patience = Math.max(P.minPatience, 1 - P.impatience * g.factions[f].idle);
@@ -319,10 +384,23 @@ function fleetsPlan(g: Grand, f: GrandFaction) {
   const groups = [...idleGroups(g, f)].sort((a, b) => strength(a[1]) - strength(b[1]));
   // The first turn is a lull: the player gets one turn to see the board before any computer navy attacks.
   const targets = g.turn <= TUNING.openingPeace ? [] : enemiesOf(g, f).flatMap((e) => ownedBy(g, e));
+  const march = marching(g);
+  // Our ports under blockade call for relief: the blockaders lie in them, so sailing in brings on the fight.
+  const besieged = march ? ownedBy(g, f).filter((id) => g.regions[id].siege) : [];
+  if (march) for (const fl of g.fleets) {
+    // A fleet left at sea without orders (it won a fight out there) makes for the nearest friendly port.
+    if (fl.faction !== f || !fl.transit || fl.route.length || fl.rest > 0) continue;
+    const ports = [...marchDistances(g, fl).dist].filter(([id]) => g.regions[id].owner !== null && allied(g, f, g.regions[id].owner!)).sort((a, b) => a[1] - b[1]);
+    if (ports[0]) orderMove(g, fl.id, ports[0][0]);
+  }
   for (const [at, fleets] of groups) {
     const here = g.regions[at];
     const power = fleets.reduce((a, fl) => a + fleetStrength(fl), 0);
     const myPort = here.owner !== null && allied(g, f, here.owner);
+    if (march && !myPort && fleets.some((fl) => fl.besieging)) {
+      holdBlockade(g, f, at, fleets, power, patience, seen);
+      continue;
+    }
     // Put the fleet right before it fights, if the port can do it.
     if (myPort && avgHull(fleets) < 0.85) for (const fl of fleets) if (g.factions[f].gold - refitCost(fl) > P.reserve + 120) orderRefit(g, fl.id);
     // Friends in the same port fight beside us, though they may choose otherwise.
@@ -334,20 +412,40 @@ function fleetsPlan(g: Grand, f: GrandFaction) {
     const portDefence = myPort ? listStrength(here.garrison) + batteryStrength(here) : 0;
     const holdBack = Math.max(0, threat * P.guard * 1.1 - portDefence);
     // Pick the best target the fleet can reach in three turns.
-    let pick: { id: RegionId; u: number } | null = null;
+    let pick: { id: RegionId; u: number; siege: boolean } | null = null;
     for (const t of targets) {
-      const route = findRoute(g, f, at, t);
-      if (!route || route.turns > 3) continue;
+      const turns = turnsTo(g, fleets, t);
+      if (turns === null || turns > 3) continue;
       // Striking the enemy stack that threatens the port removes the danger; any other move leaves the port exposed.
       const force = myPort && !sources.has(t) ? Math.max(0, joint - holdBack) : joint;
       const ratio = force / Math.max(1, estimatedDefence(g, f, t, seen));
-      if (ratio < P.attackRatio * patience * (1 + 0.08 * (route.turns - 1))) continue;
-      const u = prize(g, f, t, seen) - 0.35 * route.turns + Math.min(ratio, 3) * 0.2 + range(g.rng, 0, 0.1);
-      if (!pick || u > pick.u) pick = { id: t, u };
+      const bar = P.attackRatio * patience * (1 + 0.08 * (turns - 1));
+      if (ratio >= bar) {
+        const u = prize(g, f, t, seen) - 0.35 * turns + Math.min(ratio, 3) * 0.2 + range(g.rng, 0, 0.1);
+        if (!pick || u > pick.u) pick = { id: t, u, siege: false };
+        continue;
+      }
+      // Too strong to storm, but no fleet near enough to lift a blockade and a garrison too weak to drive it off: starve
+      // it out instead. Slower, so worth less.
+      const afloat = fleetDefence(g, f, t, seen);
+      if (!march || turns > 2 || force < Math.max(1, afloat) * bar * 1.15 || force < Math.max(0, estimatedDefence(g, f, t, seen) - afloat) * MARCH.sally * 1.2) continue;
+      if (g.fleets.some((o) => o.at === t && atWar(g, o.faction, f) && fleetObserved(g, f, o, seen))) continue;
+      const u = prize(g, f, t, seen) - 0.35 * turns - 0.6 + range(g.rng, 0, 0.1);
+      if (!pick || u > pick.u) pick = { id: t, u, siege: true };
+    }
+    // Our own ports under blockade come first when the fleet can beat the blockaders.
+    for (const t of besieged) {
+      const turns = turnsTo(g, fleets, t);
+      if (turns === null || turns > 2) continue;
+      const blockaders = g.fleets.filter((o) => o.at === t && atWar(g, o.faction, f)).reduce((a, o) => a + fleetStrength(o), 0);
+      const ratio = joint / Math.max(1, blockaders);
+      if (ratio < P.attackRatio * patience * 0.9) continue;
+      const u = prize(g, f, t, seen) + 1 - 0.35 * turns + range(g.rng, 0, 0.1);
+      if (!pick || u > pick.u) pick = { id: t, u, siege: false };
     }
     const resting = myPort && avgHull(fleets) < P.restBelow && threat < power * 0.5;
     if (pick && !resting) {
-      for (const fl of fleets) orderMove(g, fl.id, pick.id);
+      for (const fl of fleets) orderMove(g, fl.id, pick.id, pick.siege);
       continue;
     }
     if (resting || threat > 0) continue;
@@ -355,8 +453,28 @@ function fleetsPlan(g: Grand, f: GrandFaction) {
     const front = stagingPort(g, f, at, fleets);
     // A group already ordered from that port to this one has the same idea: one of the two stays, so they do not swap.
     const swapping = front !== null && g.fleets.some((o) => o.faction === f && o.at === front && o.route[o.route.length - 1] === at);
-    if (front && front !== at && !swapping) for (const fl of fleets) orderMove(g, fl.id, front);
+    if (front && front !== at && !swapping) for (const fl of fleets) {
+      orderMove(g, fl.id, front);
+      // Under the march rules a long way through our own water is made on a forced march.
+      if (march && (turnsTo(g, [fl], front) ?? 0) > 1) orderStance(g, fl.id, 'march');
+    }
   }
+}
+
+/**
+ * A blockade the navy keeps up off an enemy port: storm it once the fleet is strong enough, give it up when a stronger
+ * enemy can come to its relief this turn, otherwise sit tight and let the garrison starve.
+ */
+function holdBlockade(g: Grand, f: GrandFaction, at: RegionId, fleets: Fleet[], power: number, patience: number, seen: Set<RegionId>) {
+  const P = personality(g, f);
+  const ratio = power / Math.max(1, estimatedDefence(g, f, at, seen));
+  if (ratio >= P.attackRatio * patience) {
+    for (const fl of fleets) if (fl.besieging) orderAssault(g, fl.id);
+    return;
+  }
+  if (threatTo(g, f, at) <= power * 1.1) return;
+  const home = [...marchDistances(g, fleets[0]!).dist].filter(([id]) => id !== at && passable(g, f, id) && g.regions[id].owner !== null).sort((a, b) => a[1] - b[1])[0];
+  if (home) for (const fl of fleets) orderMove(g, fl.id, home[0]);
 }
 
 /** Idle fleets of one port are joined into the larger ones, so a stream of new hulls does not become a crowd of single ships. */

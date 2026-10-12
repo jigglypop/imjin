@@ -27,7 +27,8 @@ try {
       if (invalid === 'missing') fleet = 'does-not-exist';
       if (invalid === 'enemy') f.faction = 'japan';
       if (invalid === 'resting') f.rest = 1;
-      if (invalid === 'sailing') f.transit = { from: 'yeosu', to: 'noryang', left: 1, total: 1 };
+      // Only the lane rules keep a fleet at sea on its course; under the march rules it may be sent anywhere.
+      if (invalid === 'sailing') { f.transit = { from: 'yeosu', to: 'noryang', left: 1, total: 1 }; delete g.march; }
       if (invalid === 'empty-port') g.regions.yeosu.garrison = [];
       if (invalid === 'foreign-port') g.regions.yeosu.owner = 'japan';
       if (invalid === 'phase') g.phase = 'battles';

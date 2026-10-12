@@ -11,7 +11,8 @@ try {
   const { lanesOf, findRoute } = await server.ssrLoadModule('/src/sim/grand/world.ts');
   const { LANES } = await server.ssrLoadModule('/src/sim/grand/regions.ts');
   const before = JSON.stringify(LANES);
-  const g = newGrand('japan', 77); g.relations['joseon:ming'] = 'war';
+  // Lane-rule saves: the expedition graph and its retreat over the three-turn lane.
+  const g = newGrand('japan', 77); delete g.march; g.relations['joseon:ming'] = 'war';
   const fl = g.fleets.find((f) => f.faction === 'japan' && f.at === 'nagoya');
   assert.equal(lanesOf(g, 'nagoya'), LANES.nagoya);
   assert.equal(findRoute(g, 'japan', 'nagoya', 'shandong'), null);

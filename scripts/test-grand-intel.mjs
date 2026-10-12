@@ -77,6 +77,8 @@ try {
   });
   check('optional expedition lanes share map orders, three-turn sailing, replay progress and exact reload', () => {
     const g = newGrand('ming', 701);
+    // The lane rules' three-turn crossing; the march rules are covered by test-grand-march.
+    delete g.march;
     g.turn = 3; g.phase = 'orders'; g.events.pending = null;
     assert.equal(lanesOf(g, 'shandong'), LANES.shandong, 'legacy graph keeps its original array');
     assert.equal(lanesOf(g, 'shandong').some((l) => l.to === 'nagoya'), false);

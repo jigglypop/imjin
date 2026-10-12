@@ -65,6 +65,12 @@ export const TUNING = {
     { faction: 'japan', kind: 'daeantaek', turn: 3, note: '구키 요시타카가 누각 대장선 대안택선을 완성했습니다. 선소 3단계에서 건조할 수 있습니다.' },
     { faction: 'ming', kind: 'gwangseon', turn: 6, note: '광둥의 철력목 전선 광선의 설계가 전해졌습니다. 선소 3단계에서 건조할 수 있습니다.' },
   ] as { faction: GrandFaction; kind: ShipKind; turn: number; note: string }[],
+  /**
+   * Under the march rules (`Grand.march`) a fight draws in the fleets lying near it, which favours the navy with the most
+   * hulls in the densest anchorages (Japan round Busan), and winter slows the long crossing from China: these replace
+   * `faction.*.income` there (tuned on 300 computer wars, scripts/balance-grand.mjs).
+   */
+  marchIncome: { joseon: 1.1, japan: 1.0, ming: 2.7 } as Record<GrandFaction, number>,
   faction: {
     // Fast-production development cohorts retain each navy's distinct expedition and opening holdings.
     // Joseon opens with twenty-two ports and their standing garrisons to Japan's sixteen, so its income per port is the lowest.
@@ -217,11 +223,12 @@ export function difficultyIncome(g: Grand, f: GrandFaction): number {
 
 export function regionIncome(g: Grand, id: RegionId): number {
   const r = g.regions[id];
-  if (!r.owner) return 0;
+  // A blockaded port trades nothing (march rules).
+  if (!r.owner || r.siege) return 0;
   const def = REGIONS[id];
   let gold = TUNING.income[def.value];
   gold *= 1 + TUNING.granaryBonus * levelOf(r, 'granary') + TUNING.beaconBonus * levelOf(r, 'beacon');
-  gold *= TUNING.faction[r.owner].income * difficultyIncome(g, r.owner);
+  gold *= (g.march ? TUNING.marchIncome[r.owner] : TUNING.faction[r.owner].income) * difficultyIncome(g, r.owner);
   if (r.unrest > 0) gold *= TUNING.unrestIncome;
   if (def.capitalOf === r.owner) gold += TUNING.capitalBonus;
   return Math.round(gold);
