@@ -1,0 +1,40 @@
+{
+  "schema": "imjin.world-models-ledger.v1",
+  "ceilingCredits": 240,
+  "creditsPerTask": 30,
+  "entries": [
+    {
+      "asset": "wajo",
+      "attempt": 1,
+      "date": "2026-10-12T13:34:47.673Z",
+      "status": "submitted",
+      "taskId": "01a13052-9778-733f-90d9-cd4ce3453ea7",
+      "prompt": "A Japanese wajo castle fort built during the Imjin War (1592-1598) on the Korean coast: a tall sloped dry-stone ishigaki platform of large grey fitted stones, on it a three-tier white-plaster castle keep (tenshu) with dark grey tiled gabled roofs and curved eaves, a surrounding low stone wall topped with a white plaster parapet, two small corner turrets (yagura) with dark tiled roofs, and one gate with a tiled roof at the front. Single isolated game asset, a compact diorama of one settlement standing on a plain flat square-ish ground base of packed earth, seen from above at about 45 degrees in a three-quarter view, the whole object and its base fully visible and centered with a generous margin, stylized-realistic game-ready 3D model render, chunky readable forms and a strong silhouette, no tiny details, weathered natural materials, muted palette of grey stone, warm timber, straw and dark tile with only small accents of colour, soft even studio lighting, plain pure white background, no water, no people, no animals, no text, no watermark, no border.",
+      "imageModel": "gpt-image-2.5-sunburst",
+      "referenceImage": "images/wajo.png",
+      "referenceSha256": "0af68a763b54ca3d9eb9289696b43caf4e0c116c1abc5ce25cded838c290c7f7",
+      "request": {
+        "ai_model": "meshy-7.1",
+        "model_type": "standard",
+        "should_texture": true,
+        "enable_pbr": true,
+        "texture_resolution": "2k",
+        "should_remesh": true,
+        "topology": "triangle",
+        "target_polycount": 20000,
+        "target_formats": [
+          "glb"
+        ],
+        "moderation": true,
+        "image_enhancement": false,
+        "texture_prompt": "Grey weathered granite stone base, white lime plaster walls, dark charcoal grey ceramic roof tiles, dark brown timber, matte aged materials, no baked shadows."
+      },
+      "creditsBefore": 272,
+      "creditsAfter": 242,
+      "consumedCredits": null,
+      "glb": null,
+      "glbSha256": null,
+      "rejectionReason": ""
+    }
+  ]
+}
