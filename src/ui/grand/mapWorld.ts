@@ -8,25 +8,20 @@ import type { FactionId, FleetView, RegionView, ReplayView, SpotView } from './t
 /** A settlement's radius in frame units: a camp covers about this much ground. */
 export const SETTLEMENT_RADIUS = 0.013;
 
-/** Joseon pieces are the battle terrain's models (walls are boxes); `wa_` pieces are Japanese, `mg_` Ming, `pier` serves both. */
+/** Unprefixed pieces are Joseon, `wa_` Japanese, `mg_` Ming, `pier` serves both; every kind is a procedural kit (campKits). */
 export type PieceKind =
-  | 'choga' | 'giwa' | 'fortgate' | 'bongsu' | 'battery' | 'dock' | 'magazine' | 'shipyard' | 'palisade' | 'stone'
+  | 'choga' | 'giwa' | 'hall' | 'fortgate' | 'bongsu' | 'battery' | 'dock' | 'magazine' | 'shipyard' | 'palisade' | 'stone'
   | 'pier' | 'wa_fence' | 'wa_tent' | 'wa_banner' | 'wa_wall' | 'wa_gate' | 'wa_tower' | 'wa_keep3' | 'wa_keep4' | 'wa_yard'
   | 'mg_palisade' | 'mg_watch' | 'mg_flag' | 'mg_brick' | 'mg_gate' | 'mg_corner' | 'mg_platform' | 'mg_beacon' | 'mg_yard';
 /** The kinds that are one stretch of wall: they make a camp's ring and do not count as buildings. */
 export const WALL_KINDS: ReadonlySet<PieceKind> = new Set<PieceKind>(['palisade', 'stone', 'wa_fence', 'wa_wall', 'mg_palisade', 'mg_brick']);
 /** The kinds that stand in the water, not on the ground beside it. */
 export const WATER_KINDS: ReadonlySet<PieceKind> = new Set<PieceKind>(['dock', 'shipyard', 'pier', 'wa_yard', 'mg_yard']);
-/** The kinds the battle terrain's models draw; every other kind is built in mapKits. */
-export const MODEL_KINDS: ReadonlySet<PieceKind> = new Set<PieceKind>(['choga', 'giwa', 'fortgate', 'bongsu', 'battery', 'dock', 'magazine', 'shipyard']);
 /** One building of a settlement: offset from its centre and size, both in settlement radii; `rot` turns it about the vertical axis. */
 export interface Piece { kind: PieceKind; x: number; z: number; rot: number; size: number }
 
 const WALL_RADIUS = 0.92;
 const WALL_SEGMENTS = 16;
-
-/** Where the huts and roofs stand inside the wall, in the order they are added as the camp grows. */
-const INNER: [number, number][] = [[-0.38, -0.22], [0.3, -0.38], [0.08, 0.34], [-0.42, 0.3], [0.48, 0.16], [-0.04, -0.6]];
 
 /** The wall is a ring of segments; a gap at `gate` (radians) is left for the gate when there is one. */
 function ring(kind: PieceKind, gate: number | null): Piece[] {
@@ -41,7 +36,10 @@ function ring(kind: PieceKind, gate: number | null): Piece[] {
 }
 
 const at = (kind: PieceKind, angle: number, radius: number, size: number, face = angle): Piece => ({ kind, x: Math.cos(angle) * radius, z: Math.sin(angle) * radius, rot: -face + Math.PI / 2, size });
-const inner = (kind: PieceKind, i: number, size: number, rot: number): Piece => ({ kind, x: INNER[i]![0], z: INNER[i]![1], rot, size });
+/** A building at (x, z) turned so its front looks at the camp's centre. */
+const facingIn = (kind: PieceKind, x: number, z: number, size: number): Piece => ({ kind, x, z, rot: Math.atan2(-x, -z), size });
+/** A building at (x, z) turned by `rot`. */
+const stand = (kind: PieceKind, x: number, z: number, rot: number, size: number): Piece => ({ kind, x, z, rot, size });
 
 /** The side of a camp that wants water: dock and battery stand here (the gate is on the opposite side). */
 export const SEA_SIDE = Math.PI;
@@ -70,19 +68,22 @@ const corners = (kind: PieceKind, half: number, size: number): Piece[] =>
  * plaster wall with a gate round a three-tier keep; at the top a four-tier keep and a shipyard.
  */
 function japan(level: number): Piece[] {
-  const tents = [inner('wa_tent', 0, 0.5, 0.3), inner('wa_tent', 1, 0.5, -0.5), inner('wa_tent', 2, 0.5, 1.2)];
-  const banners = [at('wa_banner', 2.2, 0.8, 0.28), at('wa_banner', -2.0, 0.8, 0.28)];
+  const tents = [facingIn('wa_tent', 0.22, -0.55, 0.42), facingIn('wa_tent', 0.22, 0.55, 0.42), facingIn('wa_tent', -0.3, -0.58, 0.42)];
+  const banners = [at('wa_banner', 2.6, 0.78, 0.28), at('wa_banner', -2.6, 0.78, 0.28)];
+  const tower = stand('wa_tower', -0.28, 0.54, 0.1, 0.38);
+  const pier = at('pier', SEA_SIDE, 1.4, 0.85);
   if (level === 1) return [...ring('wa_fence', null), ...tents, ...banners];
-  if (level === 2) return [...ring('wa_fence', null), ...tents, ...banners, inner('wa_tower', 3, 0.55, 0.1), at('pier', SEA_SIDE, 1.35, 0.85)];
+  if (level === 2) return [...ring('wa_fence', null), ...tents, ...banners, tower, pier];
   const pieces: Piece[] = [
     ...ring('wa_wall', 0),
     at('wa_gate', 0, WALL_RADIUS, 0.85),
-    ...tents, ...banners, at('wa_banner', 0.8, 0.8, 0.28), at('wa_banner', -0.8, 0.8, 0.28),
-    inner('wa_tower', 3, 0.55, 0.1),
-    { kind: level >= 4 ? 'wa_keep4' : 'wa_keep3', x: 0, z: 0, rot: 0.2, size: 0.66 },
-    at('pier', SEA_SIDE, 1.4, 0.85),
+    ...tents, ...banners, stand('wa_banner', 0.55, 0.3, Math.PI / 2, 0.28), stand('wa_banner', 0.55, -0.3, Math.PI / 2, 0.28),
+    tower,
+    // The keep stands at the back of the yard and looks at the gate.
+    stand(level >= 4 ? 'wa_keep4' : 'wa_keep3', -0.3, 0, Math.PI / 2, 0.62),
+    pier,
   ];
-  if (level >= 4) pieces.push(at('wa_yard', SEA_SIDE - 0.7, 1.45, 0.9), inner('wa_tower', 5, 0.55, -0.2), at('wa_tower', SEA_SIDE + 0.9, 0.85, 0.5));
+  if (level >= 4) pieces.push(at('wa_yard', SEA_SIDE - 0.7, 1.45, 0.9), at('wa_tower', -0.8, WALL_RADIUS, 0.38));
   return pieces;
 }
 
@@ -92,51 +93,56 @@ function japan(level: number): Piece[] {
  */
 function ming(level: number): Piece[] {
   const half = level >= 4 ? 1 : 0.8;
-  const flags = [inner('mg_flag', 4, 0.5, 0.6), inner('mg_flag', 5, 0.5, -0.4)];
-  const watch = inner('mg_watch', 1, 0.6, 0.3);
+  const flags = [stand('mg_flag', 0.3, -0.5, 0.6, 0.5), stand('mg_flag', -0.1, 0.55, -0.4, 0.5)];
+  const watch = stand('mg_watch', -0.3, -0.35, 0.3, 0.55);
   if (level === 1) return [...square('mg_palisade', half, false), watch, ...flags];
   const pieces: Piece[] = [...square('mg_brick', half, true), at('mg_gate', 0, half, 0.85), watch, ...flags, at('pier', SEA_SIDE, half + 0.55, 0.85)];
   if (level === 2) return pieces;
-  pieces.push(...corners('mg_corner', half, 0.46), inner('mg_beacon', 0, 0.5, 0), { kind: 'mg_platform', x: -0.45, z: 0.4, rot: -Math.PI / 2, size: 0.5 });
-  if (level >= 4) pieces.push(at('mg_yard', SEA_SIDE - 0.75, 1.5, 0.9));
+  // The guns look out over the water, the beacon stands where the yard is open.
+  pieces.push(...corners('mg_corner', half, 0.46), stand('mg_beacon', 0.3, 0.3, 0, 0.45), stand('mg_platform', -0.5, 0.3,-Math.PI / 2, 0.5));
+  if (level >= 4) pieces.push(at('mg_yard', SEA_SIDE - 0.45, 1.55, 0.9));
   return pieces;
 }
 
-/** Where the owner's flag stands in an unturned camp, in settlement radii: the centre unless a keep is there. */
+/** Where the owner's flag stands in an unturned camp, in settlement radii: the centre unless a keep or the great hall is there. */
 export function flagSpot(level: number, faction: FactionId): [number, number] {
-  return faction === 'japan' && level >= 3 ? [0.52, -0.12] : [0, 0];
+  if (faction === 'japan' && level >= 3) return [0.52, -0.12];
+  return faction === 'joseon' && level >= 4 ? [0.24, 0] : [0, 0];
 }
 
 /**
- * The pieces of a camp of this level and owner, before it is turned to face the sea. Each navy has its own look. A Joseon
- * camp is a palisade and a few huts, then tiled roofs and a dock, then a stone wall with a gate, two beacon towers and a
- * battery, then a shipyard and a second battery. In every look a higher level has at least the parts of the lower one.
+ * A Joseon camp: a palisade round three thatched huts; then two tiled houses and a pier with a boat shed; then a stone wall
+ * with a gatehouse, two beacon mounds, a battery and a powder store; at the top a great hall facing the gate across the
+ * yard, a shipyard and a second battery. The gate looks away from the sea, the water works stand on the sea side.
+ */
+function joseon(level: number): Piece[] {
+  const huts = [facingIn('choga', -0.44, -0.5, 0.36), facingIn('choga', -0.62, 0, 0.36), facingIn('choga', -0.44, 0.5, 0.36)];
+  const houses: Piece[] = [{ kind: 'giwa', x: 0.3, z: -0.5, rot: 0, size: 0.48 }, { kind: 'giwa', x: 0.3, z: 0.5, rot: Math.PI, size: 0.48 }];
+  const dock = at('dock', SEA_SIDE, 1.38, 0.85);
+  if (level === 1) return [...ring('palisade', null), ...huts];
+  if (level === 2) return [...ring('palisade', null), ...huts, ...houses, dock];
+  const pieces: Piece[] = [
+    ...ring('stone', 0),
+    at('fortgate', 0, WALL_RADIUS, 0.7),
+    at('bongsu', 1.15, WALL_RADIUS, 0.32), at('bongsu', -1.15, WALL_RADIUS, 0.32),
+    ...huts, ...houses,
+    facingIn('magazine', -0.06, -0.72, 0.3),
+    dock,
+    at('battery', SEA_SIDE + 0.62, 1.3, 0.6),
+  ];
+  if (level >= 4) pieces.push({ kind: 'hall', x: -0.2, z: 0, rot: Math.PI / 2, size: 0.56 }, at('shipyard', SEA_SIDE - 0.72, 1.45, 0.95), at('battery', SEA_SIDE + 1.3, 1.22, 0.6));
+  return pieces;
+}
+
+/**
+ * The pieces of a camp of this level and owner, before it is turned to face the sea. Each navy has its own look, and in
+ * every look a higher level has at least the buildings of the lower one.
  */
 export function settlementPieces(level: number, faction: FactionId = 'joseon'): Piece[] {
   if (level < 1) return [];
   if (faction === 'japan') return japan(level);
   if (faction === 'ming') return ming(level);
-  if (level === 1) return [...ring('palisade', null), inner('choga', 0, 0.45, 0.3), inner('choga', 1, 0.45, -0.5), inner('choga', 2, 0.45, 1.2)];
-  if (level === 2) {
-    return [
-      ...ring('palisade', null),
-      inner('choga', 0, 0.45, 0.3), inner('choga', 1, 0.45, -0.5), inner('choga', 2, 0.45, 1.2),
-      inner('giwa', 3, 0.62, 0.1), inner('giwa', 4, 0.62, -0.2),
-      at('dock', SEA_SIDE, 1.35, 0.85),
-    ];
-  }
-  const pieces: Piece[] = [
-    ...ring('stone', 0),
-    at('fortgate', 0, WALL_RADIUS, 0.85),
-    at('bongsu', Math.PI / 2, WALL_RADIUS, 0.5), at('bongsu', -Math.PI / 2, WALL_RADIUS, 0.5),
-    inner('choga', 0, 0.45, 0.3), inner('choga', 1, 0.45, -0.5),
-    inner('giwa', 2, 0.62, 1.2), inner('giwa', 3, 0.62, 0.1), inner('giwa', 4, 0.62, -0.2),
-    inner('magazine', 5, 0.55, 0),
-    at('dock', SEA_SIDE, 1.4, 0.85),
-    at('battery', SEA_SIDE + 0.62, 1.3, 0.65),
-  ];
-  if (level >= 4) pieces.push(at('shipyard', SEA_SIDE - 0.7, 1.45, 0.9), at('battery', SEA_SIDE - 0.2, 1.4, 0.65));
-  return pieces;
+  return joseon(level);
 }
 
 /** Cheap string hash (FNV-1a) so each camp keeps its own turn and flag spot between renders. */

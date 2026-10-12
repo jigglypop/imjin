@@ -17,7 +17,7 @@ try {
     bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent',
   });
   const path = join(temporary, 'map-world.mjs'); await writeFile(path, bundled.outputFiles[0].contents);
-  const { settlementPieces, faceSea, buildWorld, anchorage, hullsFor, hash, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, WALL_KINDS, WATER_KINDS, MODEL_KINDS, SHIP_CAP, flagSpot, formation, transitShare, transitSpot, pointAlong, buildSails, cardRect, overlaps, pickCards } = await import(pathToFileURL(path).href);
+  const { settlementPieces, faceSea, buildWorld, anchorage, hullsFor, hash, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, WALL_KINDS, WATER_KINDS, SHIP_CAP, flagSpot, formation, transitShare, transitSpot, pointAlong, buildSails, cardRect, overlaps, pickCards } = await import(pathToFileURL(path).href);
   const kinds = (level) => new Set(settlementPieces(level).map((p) => p.kind));
   const buildings = (level) => settlementPieces(level).filter((p) => !WALL_KINDS.has(p.kind)).length;
 
@@ -134,11 +134,13 @@ try {
     const gate = settlementPieces(2, 'ming').find((p) => p.kind === 'mg_gate');
     assert.ok(settlementPieces(2, 'ming').filter((p) => p.kind === 'mg_brick').every((p) => Math.hypot(p.x - gate.x, p.z - gate.z) > 0.25), 'no wall in the gateway');
   });
-  check('Joseon camps keep the battle models and the other navies use none of them', () => {
+  check('Joseon camps add a great hall at the top and share no building with the other navies but the pier', () => {
     assert.deepEqual(settlementPieces(3), settlementPieces(3, 'joseon'));
+    assert.ok(names('joseon', 4).has('hall') && !names('joseon', 3).has('hall'));
+    assert.equal(settlementPieces(4).filter((p) => p.kind === 'battery').length, 2, 'a second battery at the top');
+    assert.ok(Math.hypot(...flagSpot(4, 'joseon')) > 0.2, 'the flag stands in the yard before the hall');
     for (let level = 1; level <= 4; level++) {
-      for (const k of names('joseon', level)) assert.ok(MODEL_KINDS.has(k) || WALL_KINDS.has(k), `joseon ${k}`);
-      for (const f of ['japan', 'ming']) for (const k of names(f, level)) assert.ok(!MODEL_KINDS.has(k), `${f} ${k} is not a Joseon model`);
+      for (const f of ['japan', 'ming']) for (const k of names(f, level)) assert.ok(k === 'pier' || !names('joseon', 4).has(k), `${f} ${k} is not a Joseon building`);
     }
     for (const k of ['dock', 'shipyard', 'pier', 'wa_yard', 'mg_yard']) assert.ok(WATER_KINDS.has(k), k);
   });
