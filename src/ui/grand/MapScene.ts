@@ -1,18 +1,29 @@
-import { Color, Group, OrthographicCamera, Scene, WebGPURenderer, type DataTexture } from 'three/webgpu';
+import { BackSide, Color, Fog, Group, Mesh, MeshBasicNodeMaterial, PerspectiveCamera, Scene, SphereGeometry, WebGPURenderer, type DataTexture } from 'three/webgpu';
+import { mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
 import { equipment, forceWebGL } from '../../game/quality';
 import { tuneWebGLBackend } from '../../render/webglBackend';
 import { disposeTree } from '../../render/dispose';
-import { MAP_H, MIST_HEX } from '../../select/demFrame';
-import { buildTerrain, loadDem } from '../../select/terrain';
+import { MAP_H, V_SCALE } from '../../select/demFrame';
+import { buildSea, buildTerrain, loadDem } from '../../select/terrain';
 import { MAP_ASPECT } from './projection';
-import { DEM_RECT, MESH_SCALE, groundElevation, mapFrustum, type MapPose, type MapView } from './mapMath';
+import { DEM_RECT, MESH_SCALE, groundElevation } from './mapMath';
 import { MapLayer } from './mapLayer';
+import { TreeLayer } from './worldTrees';
 import type { MapWorld } from './mapWorld';
+import { eyeOf, FAR, FOV, NEAR, worldX, worldZ, type CameraState, type ScreenFrame } from './worldCamera';
+import { SKY_HORIZON, SKY_MIDDLE, SKY_ZENITH, WORLD_HAZE } from './worldLook';
 
-/** The select screen's terrain under the campaign's overlay: one small scene, rendered only when the view changes. */
+/** The sea's slow loop: the time between frames while the view rests, and how long the view must rest before it starts. */
+const IDLE_FRAME = 125;
+const REST = 1200;
+/** Fog: it starts a little beyond the target and is solid well past the whole frame, so distant ridges and coasts stay readable in a soft haze. */
+const fogNear = (distance: number) => distance * 1.1 + 0.05;
+const fogFar = (distance: number) => distance * 3.4 + 1.1;
+
+/** The campaign's world: the select screen's terrain under a free perspective camera, with a sea, fog and a sky. Drawn on demand while the view changes and slowly while idle. */
 export class MapScene {
   readonly scene = new Scene();
-  readonly camera = new OrthographicCamera(-1, 1, 1, -1, 0.01, 8);
+  readonly camera = new PerspectiveCamera((FOV * 180) / Math.PI, 1, NEAR, FAR);
   readonly renderer: WebGPURenderer;
   ready = false;
   private readonly abort = new AbortController();
@@ -23,17 +34,24 @@ export class MapScene {
   private terrain: Group | null = null;
   private demTexture: DataTexture | null = null;
   private layer: MapLayer | null = null;
+  private trees: TreeLayer | null = null;
   private world: MapWorld | null = null;
+  private sky: Mesh | null = null;
+  private readonly fog = new Fog(WORLD_HAZE, 0.5, 2);
   private width = 0;
   private height = 0;
-  private view: MapView = { s: 1, x: 0, y: 0 };
-  private pose: MapPose = { tilt: 0, yaw: 0 };
+  private cam: CameraState = { u: 0.5, v: 0.5, distance: 0.7, yaw: 0, pitch: 0.75 };
+  private screen: ScreenFrame = { w: 0, h: 0, cx: 0, cy: 0 };
+  /** When the view last changed, and the timer of the sea's slow loop. */
+  private lastChange = 0;
+  private idle = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new WebGPURenderer({ canvas, antialias: equipment.select.antialias, powerPreference: 'low-power', forceWebGL });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, equipment.tier === 'low' ? 1.25 : 1.5));
-    this.scene.background = new Color(MIST_HEX);
-    this.camera.up.set(0, 0, -1);
+    this.scene.background = new Color(WORLD_HAZE);
+    this.scene.fog = this.fog;
+    document.addEventListener('visibilitychange', this.onVisible);
   }
 
   /** Resolves with the DEM's metre heights, which the overlay reads to lift each marker onto the ground. */
@@ -52,23 +70,50 @@ export class MapScene {
     this.demTexture = tex;
     // The mesh is built in the select screen's units; the group fits it to its rectangle of the campaign frame.
     this.terrain = new Group();
-    this.terrain.add(buildTerrain(tex, equipment.select.mapSegments));
+    this.terrain.add(buildTerrain(tex, equipment.select.mapSegments, { haze: WORLD_HAZE }));
     this.terrain.scale.set(MESH_SCALE, MESH_SCALE, DEM_RECT.h / MAP_ASPECT / MAP_H);
     this.terrain.position.set(DEM_RECT.u + DEM_RECT.w / 2 - 0.5, 0, (DEM_RECT.v + DEM_RECT.h / 2 - 0.5) / MAP_ASPECT);
     this.scene.add(this.terrain);
+    // The ocean round the DEM, centred on the campaign frame and a hair under the terrain's own sea.
+    const sea = buildSea({ haze: WORLD_HAZE }, worldZ(DEM_RECT.v));
+    sea.position.set(0, -0.00004, 0);
+    this.scene.add(sea);
+    this.sky = this.buildSky();
+    this.scene.add(this.sky);
     // Camps and ships stand on the same ground the overlay's markers read; they arrive when their models have loaded.
     this.layer = new MapLayer((u, v) => groundElevation(heights, u, v), () => this.invalidate());
     this.scene.add(this.layer.group);
-    if (this.world) this.layer.set(this.world);
+    this.trees = new TreeLayer((u, v) => groundElevation(heights, u, v), V_SCALE * MESH_SCALE);
+    this.scene.add(this.trees.group);
+    if (this.world) {
+      this.layer.set(this.world);
+      this.trees.setClearings(this.world.settlements);
+    }
     this.ready = true;
     this.invalidate();
     return heights;
+  }
+
+  /** A dome that follows the eye: the haze at the horizon, deepening to blue overhead, with the sun's warm glow low in the north-west. */
+  private buildSky() {
+    const material = new MeshBasicNodeMaterial({ side: BackSide, depthWrite: false, fog: false });
+    const rgb = (hex: string) => { const c = new Color(hex); return vec3(c.r, c.g, c.b); };
+    const up = positionLocal.y.max(0);
+    const dome = mix(mix(rgb(SKY_HORIZON), rgb(SKY_MIDDLE), smoothstep(0, 0.28, up)), rgb(SKY_ZENITH), smoothstep(0.22, 0.85, up));
+    const toSun = positionLocal.normalize().dot(vec3(-0.55, 0.62, -0.55).normalize());
+    material.colorNode = dome.add(vec3(1, 0.86, 0.62).mul(toSun.max(0).pow(14).mul(0.5)));
+    const sky = new Mesh(new SphereGeometry(1, 24, 12), material);
+    sky.scale.setScalar(FAR * 0.9);
+    sky.renderOrder = -10;
+    sky.frustumCulled = false;
+    return sky;
   }
 
   /** What stands on the terrain: a camp where the owner has built one, ships where a fleet lies. */
   setWorld(world: MapWorld) {
     this.world = world;
     this.layer?.set(world);
+    this.trees?.setClearings(world.settlements);
   }
 
   /** The closed turn's ships along their way: `share` of the sailing done, `time` the replay's clock. */
@@ -76,32 +121,66 @@ export class MapScene {
     this.layer?.setSail(share, time);
   }
 
-  update(view: MapView, pose: MapPose, width: number, height: number) {
+  /** Where the camera looks from and the screen it draws to; the next frame shows it. */
+  update(cam: CameraState, screen: ScreenFrame) {
     if (this.disposed) return;
-    this.view = view;
-    this.pose = pose;
-    if (width !== this.width || height !== this.height) {
-      this.width = width;
-      this.height = height;
-      this.renderer.setSize(Math.max(1, width), Math.max(1, height), false);
+    this.cam = cam;
+    this.screen = screen;
+    this.lastChange = performance.now();
+    if (screen.w !== this.width || screen.h !== this.height) {
+      this.width = screen.w;
+      this.height = screen.h;
+      this.renderer.setSize(Math.max(1, screen.w), Math.max(1, screen.h), false);
     }
     this.invalidate();
   }
 
   private invalidate() {
     if (!this.ready || this.disposed || this.frame) return;
+    clearTimeout(this.idle);
+    this.idle = 0;
     this.frame = requestAnimationFrame(() => {
       this.frame = 0;
       if (this.disposed || !this.terrain || this.width < 1 || this.height < 1) return;
-      Object.assign(this.camera, mapFrustum(this.view, this.width, this.height));
-      this.camera.position.set(0, Math.cos(this.pose.tilt) * 2, Math.sin(this.pose.tilt) * 2);
-      this.camera.lookAt(0, 0, 0);
-      this.camera.updateProjectionMatrix();
-      this.scene.rotation.y = this.pose.yaw;
-      this.layer?.setYaw(this.pose.yaw);
-      this.renderer.render(this.scene, this.camera);
+      this.draw();
+      this.settle();
     });
   }
+
+  private draw() {
+    const { cam, screen, camera } = this;
+    const eye = eyeOf(cam);
+    camera.position.set(eye[0], eye[1], eye[2]);
+    camera.lookAt(worldX(cam.u), 0, worldZ(cam.v));
+    camera.aspect = screen.w / screen.h;
+    // The target is drawn at (cx, cy), the middle of what the panels leave free: shift the picture by the difference.
+    camera.setViewOffset(screen.w, screen.h, screen.w / 2 - screen.cx, screen.h / 2 - screen.cy, screen.w, screen.h);
+    camera.updateProjectionMatrix();
+    this.fog.near = fogNear(cam.distance);
+    this.fog.far = fogFar(cam.distance);
+    this.sky?.position.copy(camera.position);
+    this.layer?.setView(cam.yaw);
+    this.trees?.update(cam);
+    this.renderer.render(this.scene, camera);
+  }
+
+  /**
+   * The swell and the coast's foam are driven by time, so a still scene would freeze them. While the view moves the
+   * frames come with it; once it has rested a moment a slow loop redraws about eight times a second, and it stops while the
+   * page is hidden.
+   */
+  private settle() {
+    if (this.disposed || this.frame || this.idle || document.hidden) return;
+    const wait = Math.max(IDLE_FRAME, REST - (performance.now() - this.lastChange));
+    this.idle = setTimeout(() => {
+      this.idle = 0;
+      this.invalidate();
+    }, wait);
+  }
+
+  private readonly onVisible = () => {
+    if (!document.hidden) this.invalidate();
+  };
 
   dispose() {
     if (this.disposed) return;
@@ -110,12 +189,18 @@ export class MapScene {
     this.abort.abort();
     cancelAnimationFrame(this.frame);
     this.frame = 0;
+    clearTimeout(this.idle);
+    this.idle = 0;
+    document.removeEventListener('visibilitychange', this.onVisible);
     this.layer?.dispose();
     this.layer = null;
+    this.trees?.dispose();
+    this.trees = null;
     disposeTree(this.scene);
     this.demTexture?.dispose();
     this.demTexture = null;
     this.terrain = null;
+    this.sky = null;
     if (this.initialized) this.releaseRenderer();
   }
 

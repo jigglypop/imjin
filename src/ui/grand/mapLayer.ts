@@ -132,12 +132,11 @@ export class MapLayer {
     this.lights.sun.position.set(-0.55, 0.9, 0.5);
   }
 
-  /** Keeps the light where it is on screen while the map turns, and every flag's cloth facing the camera. */
-  setYaw(yaw: number) {
+  /** Turns every flag's cloth to face the camera, which looks at the map from `yaw` (0 from the south, positive towards the east). */
+  setView(yaw: number) {
     if (Math.abs(yaw - this.yaw) < 1e-4 && !this.stale) return;
     this.yaw = yaw;
     this.stale = false;
-    this.lights.sun.position.set(-0.55, 0.9, 0.5).applyAxisAngle(new Vector3(0, 1, 0), -yaw);
     if (this.sailors) this.placeSailors();
     const flags = this.flags;
     if (!flags) return;
@@ -185,7 +184,7 @@ export class MapLayer {
     this.buildFlags();
     this.buildSailors(world.sails);
     this.stale = true;
-    this.setYaw(this.yaw);
+    this.setView(this.yaw);
     this.onChange();
   }
 
@@ -242,7 +241,7 @@ export class MapLayer {
 
   /** A flag's cloth turned to face the camera. */
   private cloth(s: FlagSpot) {
-    return new Matrix4().compose(new Vector3(s.x, s.y, s.z), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), -this.yaw), new Vector3(s.w, s.h, R * 0.02));
+    return new Matrix4().compose(new Vector3(s.x, s.y, s.z), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), this.yaw), new Vector3(s.w, s.h, R * 0.02));
   }
 
   private pole(base: Vector3, height: number) {

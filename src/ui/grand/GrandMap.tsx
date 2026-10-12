@@ -8,7 +8,8 @@ import { campArt, campImage, campLevel } from './campArt';
 import { shipsText, turnsText } from './text';
 import type { FactionId, FleetView, RegionView, ReplayView } from './types';
 import type { MapScene } from './MapScene';
-import { DEM_RECT, groundElevation, MAP_TILT, mapProject } from './mapMath';
+import { DEM_RECT, groundElevation } from './mapMath';
+import { clampState, frameAll, panBy, projectFrame, screenFrame, turn, zoomAt as zoomCameraAt, type CameraState } from './worldCamera';
 import { boxBetween, markersInBox, type Marker } from './boxSelect';
 import { buildWorld, transitSpot, type IsSea } from './mapWorld';
 import { cardRect, pickCards } from './cardLayout';
@@ -57,6 +58,19 @@ interface View {
 const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const MAX_ZOOM = 4.5;
 const TAP_SLOP = 8;
+/** The free camera: how far it stands at the opening, how close a focused port is shown, and the opening pitch (radians above the horizon). */
+const OPEN_DISTANCE = 0.55;
+const FOCUS_DISTANCE = 0.3;
+const OPEN_PITCH = 0.78;
+
+/** Where a place on the map is on the screen, whichever view draws it. `scale` is pixels per frame unit there, `ok` that it is in front of the camera. */
+interface Spot {
+  x: number;
+  y: number;
+  scale: number;
+  depth: number;
+  ok: boolean;
+}
 const HINT_KEY = 'imjin.grand.boxhint';
 
 function boxHintSeen() {
@@ -113,8 +127,11 @@ export function GrandMap({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<MapScene | null>(null);
   const [heights, setHeights] = useState<Float32Array | null>(null);
-  const [pose, setPose] = useState({ tilt: MAP_TILT, yaw: 0 });
-  const activePose = heights ? pose : { tilt: 0, yaw: 0 };
+  // With the DEM loaded (desktop and tablet) the map is a 3D world seen by a free camera; before that, and on phones, a flat image with a pan and zoom.
+  const inWorld = !!heights;
+  const [cam, setCam] = useState<CameraState>({ u: 0.5, v: 0.5, distance: OPEN_DISTANCE, yaw: 0, pitch: OPEN_PITCH });
+  const camRef = useRef(cam);
+  camRef.current = cam;
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [view, setView] = useState<View>({ s: 1, x: 0, y: 0 });
   const viewRef = useRef(view);
@@ -134,10 +151,14 @@ export function GrandMap({
   const spaceDown = useRef(false);
 
   const byId = useMemo(() => new Map(regions.map((r) => [r.id, r])), [regions]);
-  const pos = useMemo(() => new Map(regions.map((r) => {
+  /** Each port in frame coordinates with the height of its ground. */
+  const frames = useMemo(() => new Map(regions.map((r) => {
     const p = project(r.lon, r.lat);
-    return [r.id, heights ? mapProject(p.u, p.v, r.offMap ? 0 : groundElevation(heights, p.u, p.v), pose) : p];
-  })), [regions, heights, pose.tilt, pose.yaw]);
+    return [r.id, { u: p.u, v: p.v, e: heights && !r.offMap ? groundElevation(heights, p.u, p.v) : 0 }];
+  })), [regions, heights]);
+  const screen = useMemo(() => screenFrame(box.w, box.h, insets), [box.w, box.h, insets.top, insets.right, insets.bottom, insets.left]);
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -158,12 +179,12 @@ export function GrandMap({
     return () => { cancelled = true; scene?.dispose(); sceneRef.current = null; };
   }, []);
 
-  useEffect(() => { sceneRef.current?.update(view, activePose, box.w, box.h); }, [view, box.w, box.h, activePose.tilt, activePose.yaw]);
+  useEffect(() => { if (inWorld) sceneRef.current?.update(cam, screen); }, [inWorld, cam, screen]);
 
   // Camps and ships stand in the 3D scene under the overlay; only what they are made of is handed over, never a pointer target.
   const isSea = useMemo<IsSea | undefined>(() => (heights ? (u, v) => groundElevation(heights, u, v) <= 0 : undefined), [heights]);
-  const world = useMemo(() => buildWorld(regions, fleets, replay ?? null, isSea), [regions, fleets, replay, isSea]);
-  useEffect(() => { if (heights) sceneRef.current?.setWorld(world); }, [heights, world]);
+  const mapWorld = useMemo(() => buildWorld(regions, fleets, replay ?? null, isSea), [regions, fleets, replay, isSea]);
+  useEffect(() => { if (heights) sceneRef.current?.setWorld(mapWorld); }, [heights, mapWorld]);
 
   const limits = useCallback(() => {
     const { w, h } = boxRef.current;
@@ -218,6 +239,28 @@ export function GrandMap({
     anim.current = requestAnimationFrame(step);
   }, []);
 
+  /** The world camera glides to `target`: its place, distance and pitch ease out, its turn takes the short way round. */
+  const flyCam = useCallback((target: CameraState) => {
+    touched.current = true;
+    cancelAnimationFrame(anim.current);
+    const from = camRef.current;
+    const t0 = performance.now();
+    const turnBy = Math.atan2(Math.sin(target.yaw - from.yaw), Math.cos(target.yaw - from.yaw));
+    const step = (now: number) => {
+      const t = clamp((now - t0) / 460, 0, 1);
+      const e = 1 - (1 - t) ** 3;
+      setCam({
+        u: from.u + (target.u - from.u) * e,
+        v: from.v + (target.v - from.v) * e,
+        distance: from.distance * (target.distance / from.distance) ** e,
+        yaw: from.yaw + turnBy * e,
+        pitch: from.pitch + (target.pitch - from.pitch) * e,
+      });
+      if (t < 1) anim.current = requestAnimationFrame(step);
+    };
+    anim.current = requestAnimationFrame(step);
+  }, []);
+
   // Size of the container; the first measurement lays out the opening view on the player's own coast.
   useLayoutEffect(() => {
     const el = rootRef.current;
@@ -237,10 +280,16 @@ export function GrandMap({
       // Ming starts with ports off the map only: open on those (the limits keep them at the edge) rather than on a coast that is not theirs.
       const owned = regions.filter((r) => r.owner === me);
       const mine = owned.some((r) => !r.offMap) ? owned.filter((r) => !r.offMap) : owned;
-      const pts = mine.map((r) => pos.get(r.id)!);
+      const pts = mine.map((r) => frames.get(r.id)!);
       const u = pts.length ? pts.reduce((a, p) => a + p.u, 0) / pts.length : 0.45;
       const v = pts.length ? pts.reduce((a, p) => a + p.v, 0) / pts.length : 0.4;
-      setView(centred(u, v, limits().open));
+      if (inWorld) {
+        // The player's coast fills the opening view from a high oblique angle; never closer than a regional view.
+        const framed = frameAll(pts, { u, v, distance: OPEN_DISTANCE, yaw: 0, pitch: OPEN_PITCH }, screenRef.current, 130);
+        setCam(clampState({ ...framed, distance: clamp(framed.distance, 0.34, 0.9) }));
+      } else setView(centred(u, v, limits().open));
+    } else if (inWorld) {
+      setCam((cur) => clampState(cur));
     } else {
       setView((cur) => constrain(cur));
     }
@@ -250,9 +299,10 @@ export function GrandMap({
 
   useEffect(() => {
     if (!focus || !ready.current) return;
-    const p = pos.get(focus.id);
+    const p = frames.get(focus.id);
     if (!p) return;
-    flyTo(centred(p.u, p.v, Math.max(viewRef.current.s, limits().cover)));
+    if (inWorld) flyCam(clampState({ ...camRef.current, u: p.u, v: p.v, distance: Math.min(camRef.current.distance, FOCUS_DISTANCE) }));
+    else flyTo(centred(p.u, p.v, Math.max(viewRef.current.s, limits().cover)));
     // Only a new nonce re-centres; layout changes alone must not yank the map.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus?.nonce]);
@@ -261,8 +311,8 @@ export function GrandMap({
 
   // Closing or opening a panel changes how far the map may slide: keep it inside the new limits.
   useEffect(() => {
-    if (ready.current) setView((cur) => constrain(cur));
-  }, [insets.top, insets.right, insets.bottom, insets.left, constrain]);
+    if (ready.current && !inWorld) setView((cur) => constrain(cur));
+  }, [insets.top, insets.right, insets.bottom, insets.left, constrain, inWorld]);
 
   // The camera follows the action: when what the replay shows lies partly off screen, the map pans (and zooms out a little) to take it in.
   useEffect(() => {
@@ -274,12 +324,21 @@ export function GrandMap({
     if (!ids.size) for (const id of spots(replay.moves)) ids.add(id);
     // A fleet that reaches one of them comes into frame from where it set out.
     for (const m of replay.moves) if (m.path.some((spot) => ids.has(spot.at))) for (const id of spots([m])) ids.add(id);
-    const pts = [...ids].flatMap((id) => pos.get(id) ?? []);
+    const pts = [...ids].flatMap((id) => frames.get(id) ?? []);
     if (!pts.length) return;
     const { w, h } = boxRef.current;
     const ins = insetsRef.current;
-    const cur = viewRef.current;
     const pad = 56;
+    if (inWorld) {
+      const here = camRef.current, sf = screenRef.current;
+      const inside = pts.every((p) => {
+        const at = projectFrame(here, sf, p.u, p.v, p.e);
+        return at.depth > 0 && at.x >= ins.left + pad && at.x <= w - ins.right - pad && at.y >= ins.top + pad && at.y <= h - ins.bottom - pad;
+      });
+      if (!inside) flyCam(frameAll(pts, here, sf, pad + 24));
+      return;
+    }
+    const cur = viewRef.current;
     const seen = pts.every((p) => {
       const x = cur.x + p.u * cur.s;
       const y = cur.y + (p.v * cur.s) / MAP_ASPECT;
@@ -299,6 +358,10 @@ export function GrandMap({
     (factor: number, px: number, py: number) => {
       touched.current = true;
       cancelAnimationFrame(anim.current);
+      if (inWorld) {
+        setCam((cur) => zoomCameraAt(cur, screenRef.current, px, py, factor));
+        return;
+      }
       setView((cur) => {
         const { min, max } = limits();
         const s = clamp(cur.s * factor, min, max);
@@ -306,7 +369,7 @@ export function GrandMap({
         return constrain({ s, x: px - (px - cur.x) * k, y: py - (py - cur.y) * k });
       });
     },
-    [constrain, limits],
+    [constrain, limits, inWorld],
   );
 
   // Wheel and trackpad pinch (ctrlKey) zoom around the cursor; needs a non-passive listener to stop page zoom.
@@ -337,6 +400,36 @@ export function GrandMap({
     window.addEventListener('keyup', onUp);
     return () => { window.removeEventListener('keydown', onDown); window.removeEventListener('keyup', onUp); };
   }, []);
+  // The keyboard flies the world camera: arrows or WASD move over the ground in the direction the view faces, Q and E turn it, R and F tip it.
+  useEffect(() => {
+    if (!inWorld) return;
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.ctrlKey || e.metaKey || e.altKey) return;
+      const c = camRef.current;
+      const step = c.distance * 0.09;
+      // The ground ahead of the view and to its right, in world units; a frame point's v is the world z times the frame's aspect.
+      const ahead = { x: -Math.sin(c.yaw), z: -Math.cos(c.yaw) }, right = { x: Math.cos(c.yaw), z: -Math.sin(c.yaw) };
+      let move = { x: 0, z: 0 }, dyaw = 0, dpitch = 0;
+      switch (e.code) {
+        case 'ArrowUp': case 'KeyW': move = ahead; break;
+        case 'ArrowDown': case 'KeyS': move = { x: -ahead.x, z: -ahead.z }; break;
+        case 'ArrowRight': case 'KeyD': move = right; break;
+        case 'ArrowLeft': case 'KeyA': move = { x: -right.x, z: -right.z }; break;
+        case 'KeyQ': dyaw = -0.12; break;
+        case 'KeyE': dyaw = 0.12; break;
+        case 'KeyR': dpitch = 0.05; break;
+        case 'KeyF': dpitch = -0.05; break;
+        default: return;
+      }
+      e.preventDefault();
+      touched.current = true;
+      cancelAnimationFrame(anim.current);
+      setCam((cur) => turn(clampState({ ...cur, u: cur.u + move.x * step, v: cur.v + move.z * step * MAP_ASPECT }), dyaw, dpitch));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [inWorld]);
   useEffect(() => {
     if (!hint) return;
     const id = window.setTimeout(() => setHint(false), 7000);
@@ -382,21 +475,25 @@ export function GrandMap({
       const [a, b] = [...pointers.current.values()];
       const dist = Math.hypot(a!.x - b!.x, a!.y - b!.y);
       const angle = Math.atan2(b!.y - a!.y, b!.x - a!.x);
-      if (heights) {
-        const change = Math.atan2(Math.sin(angle - g.angle), Math.cos(angle - g.angle));
-        setPose((cur) => ({ ...cur, yaw: cur.yaw - change }));
-      }
       const mx = (a!.x + b!.x) / 2;
       const my = (a!.y + b!.y) / 2;
       const factor = g.pinch > 0 ? dist / g.pinch : 1;
-      setView((cur) => {
-        const { min, max } = limits();
-        const s = clamp(cur.s * factor, min, max);
-        const k = s / cur.s;
-        const px = g.mx - rect.left;
-        const py = g.my - rect.top;
-        return constrain({ s, x: px - (px - cur.x) * k + (mx - g.mx), y: py - (py - cur.y) * k + (my - g.my) });
-      });
+      if (inWorld) {
+        // Two fingers: the ground between them follows them, the pinch zooms about them, a twist turns the view.
+        const change = Math.atan2(Math.sin(angle - g.angle), Math.cos(angle - g.angle));
+        const from = { x: g.mx - rect.left, y: g.my - rect.top };
+        const to = { x: mx - rect.left, y: my - rect.top };
+        setCam((cur) => turn(zoomCameraAt(panBy(cur, screenRef.current, from, to), screenRef.current, to.x, to.y, factor), change, 0));
+      } else {
+        setView((cur) => {
+          const { min, max } = limits();
+          const s = clamp(cur.s * factor, min, max);
+          const k = s / cur.s;
+          const px = g.mx - rect.left;
+          const py = g.my - rect.top;
+          return constrain({ s, x: px - (px - cur.x) * k + (mx - g.mx), y: py - (py - cur.y) * k + (my - g.my) });
+        });
+      }
       g.pinch = dist;
       g.angle = angle;
       g.mx = mx;
@@ -423,7 +520,11 @@ export function GrandMap({
       return;
     }
     if (g.rotating) {
-      setPose((cur) => ({ tilt: clamp(cur.tilt + dy * 0.006, 0.3, 1.1), yaw: cur.yaw + dx * 0.006 }));
+      // Dragging the near side of the map to the right turns it about the point in the middle; dragging down tips the view over.
+      setCam((cur) => turn(cur, -dx * 0.006, dy * 0.005));
+    } else if (inWorld) {
+      const from = { x: e.clientX - dx - rect.left, y: e.clientY - dy - rect.top }, to = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      setCam((cur) => panBy(cur, screenRef.current, from, to));
     } else setView((cur) => constrain({ ...cur, x: cur.x + dx, y: cur.y + dy }));
   };
 
@@ -468,8 +569,9 @@ export function GrandMap({
       const x = e.clientX - rect.left, y = e.clientY - rect.top;
       let closest = Infinity;
       for (const region of regions) {
-        const point = pos.get(region.id)!;
-        const distance = Math.hypot(x - (view.x + point.u * view.s), y - (view.y + point.v * view.s / MAP_ASPECT));
+        const point = spots.get(region.id);
+        if (!point?.ok) continue;
+        const distance = Math.hypot(x - point.x, y - point.y);
         if (distance <= nodeRadius(region) + 12 && distance < closest) { closest = distance; picked = region.id; }
       }
     }
@@ -480,9 +582,22 @@ export function GrandMap({
   const { s } = view;
   const mapH = s / MAP_ASPECT;
   const openZoom = box.w ? limits().open : 1;
-  const zoomRatio = s / openZoom;
-  const px = (id: string) => view.x + pos.get(id)!.u * s;
-  const py = (id: string) => view.y + pos.get(id)!.v * mapH;
+  // How close the view is compared with its opening: labels and city cards appear as it passes thresholds.
+  const zoomRatio = inWorld ? OPEN_DISTANCE / cam.distance : s / openZoom;
+  /** A map point on the screen: through the free camera in the world, through the flat image's offset and scale otherwise. */
+  const place = (u: number, v: number, e: number): Spot => {
+    if (inWorld) {
+      const p = projectFrame(cam, screen, u, v, e);
+      return { x: p.x, y: p.y, scale: p.scale, depth: p.depth, ok: p.depth > 0 };
+    }
+    return { x: view.x + u * s, y: view.y + v * mapH, scale: s, depth: 1, ok: true };
+  };
+  const spots = new Map<string, Spot>();
+  if (w > 0) for (const r of regions) { const f = frames.get(r.id)!; spots.set(r.id, place(f.u, f.v, f.e)); }
+  const px = (id: string) => spots.get(id)!.x;
+  const py = (id: string) => spots.get(id)!.y;
+  /** Nearer things draw over farther ones. */
+  const layer = (id: string) => (inWorld ? Math.round((2 - Math.min(2, spots.get(id)?.depth ?? 1)) * 400) : undefined);
 
   const targets = useMemo(() => new Set(moveTargets ?? []), [moveTargets]);
   const selectedFleet = fleets.find((f) => f.id === selectedFleetId);
@@ -510,8 +625,8 @@ export function GrandMap({
   const lanePoint = (f: FleetView) => {
     const lane = f.transit!;
     const spot = transitSpot(byId.get(lane.from)!, byId.get(lane.to)!, lane.left, isSea);
-    const p = heights ? mapProject(spot.u, spot.v, groundElevation(heights, spot.u, spot.v), pose) : spot;
-    return { x: view.x + p.u * s, y: view.y + p.v * mapH };
+    const at = place(spot.u, spot.v, heights ? groundElevation(heights, spot.u, spot.v) : 0);
+    return { x: at.x, y: at.y };
   };
 
   // The centres of what a box can take, in the same pixels the markers are placed with. Only the player's own forces count.
@@ -528,7 +643,7 @@ export function GrandMap({
     for (const f of sailing) {
       if (f.faction === me) ownBadges.push({ id: f.id, ...lanePoint(f) });
     }
-    for (const r of regions) if (r.owner === me && r.garrison > 0 && pos.has(r.id)) ownPorts.push({ id: r.id, x: px(r.id), y: py(r.id) });
+    for (const r of regions) if (r.owner === me && r.garrison > 0 && spots.get(r.id)?.ok) ownPorts.push({ id: r.id, x: px(r.id), y: py(r.id) });
   }
 
   const showLabel = (r: RegionView) => r.id === selectedRegionId || r.offMap || r.value >= 3 || zoomRatio >= 1.1 || (zoomRatio >= 0.85 && r.value >= 2);
@@ -539,7 +654,7 @@ export function GrandMap({
   const cards = new Set<string>();
   if (w > 0 && zoomRatio >= CARD_ZOOM) {
     const candidates = regions
-      .filter((r) => r.owner && !r.offMap && pos.has(r.id) && campLevel(r) > 0 && px(r.id) > 0 && px(r.id) < w && py(r.id) > 0 && py(r.id) < h)
+      .filter((r) => r.owner && !r.offMap && spots.get(r.id)?.ok && campLevel(r) > 0 && px(r.id) > 0 && px(r.id) < w && py(r.id) > 0 && py(r.id) < h)
       .map((r) => ({
         id: r.id,
         own: r.owner === me,
@@ -548,7 +663,7 @@ export function GrandMap({
         rect: cardRect(px(r.id), py(r.id), nodeRadius(r), r.labelSide ?? 'b', CARD_W, CARD_H),
       }));
     const discs = regions
-      .filter((r) => pos.has(r.id) && px(r.id) > -40 && px(r.id) < w + 40 && py(r.id) > -40 && py(r.id) < h + 40)
+      .filter((r) => spots.get(r.id)?.ok && px(r.id) > -40 && px(r.id) < w + 40 && py(r.id) > -40 && py(r.id) < h + 40)
       .map((r) => {
         const rad = nodeRadius(r);
         return { id: r.id, rect: { x0: px(r.id) - rad, y0: py(r.id) - rad, x1: px(r.id) + rad, y1: py(r.id) + rad } };
@@ -561,8 +676,8 @@ export function GrandMap({
       ref={rootRef}
       className="gm"
       data-relief={heights ? 'ready' : 'image'}
-      data-tilt={activePose.tilt}
-      data-yaw={activePose.yaw}
+      data-tilt={inWorld ? cam.pitch : 0}
+      data-yaw={inWorld ? cam.yaw : 0}
       data-box={boxMode ? 'on' : 'off'}
       onContextMenu={(e) => e.preventDefault()}
       onPointerDown={onPointerDown}
@@ -602,11 +717,14 @@ export function GrandMap({
               </marker>
             ))}
           </defs>
-          {regions.filter((r) => r.owner && !r.offMap && pos.has(r.id)).map((r) => {
-            const rad = view.s * (0.028 + 0.011 * campLevel(r));
-            return <circle key={`land-${r.id}`} className="gm-land" cx={px(r.id)} cy={py(r.id)} r={rad} fill={`url(#gm-land-${r.owner})`} />;
+          {regions.filter((r) => r.owner && !r.offMap && spots.get(r.id)?.ok).map((r) => {
+            const sp = spots.get(r.id)!;
+            const rad = sp.scale * (0.028 + 0.011 * campLevel(r));
+            // On the ground a disc is seen flattened by the view's pitch.
+            return <ellipse key={`land-${r.id}`} className="gm-land" cx={sp.x} cy={sp.y} rx={rad} ry={inWorld ? rad * Math.max(0.4, Math.sin(cam.pitch)) : rad} fill={`url(#gm-land-${r.owner})`} />;
           })}
           {lanes.map(({ a, b }) => {
+            if (!spots.get(a.id)?.ok || !spots.get(b.id)?.ok) return null;
             const from = selectedFleet && selectedFleet.at === a.id ? a : selectedFleet && selectedFleet.at === b.id ? b : null;
             const hot = from && (targets.has(a.id) || targets.has(b.id));
             const front = a.owner !== b.owner && a.owner && b.owner ? 'front' : '';
@@ -630,7 +748,7 @@ export function GrandMap({
             );
           })}
           {lanes
-            .filter(({ a, b }) => (a.laneTurns?.[b.id] ?? 1) > 1)
+            .filter(({ a, b }) => (a.laneTurns?.[b.id] ?? 1) > 1 && spots.get(a.id)?.ok && spots.get(b.id)?.ok)
             .map(({ a, b }) => {
               const len = Math.hypot(px(b.id) - px(a.id), py(b.id) - py(a.id)) || 1;
               const bend = Math.min(28, len * 0.09) / 2;
@@ -643,7 +761,7 @@ export function GrandMap({
           {fleets
             .filter((f) => f.at && f.route.length)
             .flatMap((f) => {
-              const stops = [f.at!, ...f.route].filter((id) => byId.has(id));
+              const stops = [f.at!, ...f.route].filter((id) => byId.has(id) && spots.get(id)?.ok);
               return stops.slice(1).map((to, i) => {
                 const from = stops[i]!;
                 const last = i === stops.length - 2;
@@ -681,7 +799,7 @@ export function GrandMap({
         regions.map((r) => {
           const x = px(r.id);
           const y = py(r.id);
-          if (x < -80 || y < -80 || x > w + 80 || y > h + 80) return null;
+          if (!spots.get(r.id)?.ok || x < -80 || y < -80 || x > w + 80 || y > h + 80) return null;
           const rad = nodeRadius(r);
           const sel = r.id === selectedRegionId;
           const tgt = targets.has(r.id);
@@ -696,7 +814,7 @@ export function GrandMap({
               key={r.id}
               type="button"
               className={`gm-node${sel ? ' gm-node--sel' : ''}${tgt ? ' gm-node--target' : ''}${r.offMap ? ' gm-node--off' : ''}${r.seat ? ' gm-node--seat' : ''}${r.owner ? '' : ' gm-node--neutral'}${own ? ' gm-node--own' : ''}${card ? ' gm-node--card' : ''}${r.visible ? '' : ' gm-node--fog'}`}
-              style={{ transform: `translate3d(${x}px, ${y}px, 0)`, ['--r' as string]: `${rad}px`, ['--c' as string]: col }}
+              style={{ transform: `translate3d(${x}px, ${y}px, 0)`, zIndex: layer(r.id), ['--r' as string]: `${rad}px`, ['--c' as string]: col }}
               data-region={r.id}
               aria-label={`${r.name}, ${navyName(r.owner)}`}
               aria-pressed={sel}
@@ -733,7 +851,7 @@ export function GrandMap({
           if (!r) return [];
           const x = px(rid);
           const y = py(rid);
-          if (x < -80 || y < -120 || x > w + 80 || y > h + 80) return [];
+          if (!spots.get(rid)?.ok || x < -80 || y < -120 || x > w + 80 || y > h + 80) return [];
           const rad = nodeRadius(r);
           return list.map((f, i) => {
             const sel = f.id === selectedFleetId || !!selectedFleetIds?.has(f.id);
@@ -745,7 +863,7 @@ export function GrandMap({
                 key={f.id}
                 type="button"
                 className={`gm-fleet${sel ? ' gm-fleet--sel' : ''}${mine ? '' : ' gm-fleet--foreign'}`}
-                style={{ transform: `translate3d(${spot.x}px, ${spot.y}px, 0)`, ['--c' as string]: col }}
+                style={{ transform: `translate3d(${spot.x}px, ${spot.y}px, 0)`, zIndex: layer(rid), ['--c' as string]: col }}
                 aria-label={t('{name}, 함선 {ships}', { name: f.name, ships: shipsText(f.ships.length) })}
                 aria-pressed={sel}
                 data-fleet={f.id}
@@ -788,7 +906,7 @@ export function GrandMap({
       {w > 0 && replay && (
         <ReplayLayer
           replay={replay}
-          at={(id) => (pos.has(id) ? { x: px(id), y: py(id) } : null)}
+          at={(id) => (spots.get(id)?.ok ? { x: px(id), y: py(id) } : null)}
           top={insets.top + 6}
           reduced={reducedMotion}
           onPhase={(phase) => onReplayPhase?.(phase)}
@@ -818,6 +936,19 @@ export function GrandMap({
           <Icon name="select" />
           {t('박스 선택')}
         </button>
+        {inWorld && (
+          <>
+            <button type="button" className="g-glass g-icon-btn" aria-label={t('왼쪽으로 돌리기')} title={t('왼쪽으로 돌리기 (Q)')} onClick={() => flyCam({ ...camRef.current, yaw: camRef.current.yaw - Math.PI / 6 })}>
+              ⟲
+            </button>
+            <button type="button" className="g-glass g-icon-btn" aria-label={t('오른쪽으로 돌리기')} title={t('오른쪽으로 돌리기 (E)')} onClick={() => flyCam({ ...camRef.current, yaw: camRef.current.yaw + Math.PI / 6 })}>
+              ⟳
+            </button>
+            <button type="button" className="g-glass g-icon-btn" aria-label={t('시점 기울이기')} title={t('눕혔다 세우기 (오른쪽 버튼으로 끌기)')} onClick={() => flyCam(clampState({ ...camRef.current, pitch: camRef.current.pitch > 0.7 ? 0.36 : 1.05 }))}>
+              ⇕
+            </button>
+          </>
+        )}
         <button type="button" className="g-glass g-icon-btn" aria-label={t('확대')} onClick={() => zoomAt(1.5, w / 2, h / 2)}>
           <Icon name="plus" />
         </button>
