@@ -17,6 +17,8 @@ globalThis.document = { hidden: false, addEventListener() {}, removeEventListene
 globalThis.requestAnimationFrame = (fn) => { frames.set(++rafId, fn); return rafId; };
 globalThis.cancelAnimationFrame = (id) => frames.delete(id);
 const draw = () => { const pending = [...frames.values()]; frames.clear(); pending.forEach((fn) => fn(0)); };
+// The scene draws on a steady timer (about thirty frames a second): wait past one frame for it to show a change.
+const nextFrame = () => new Promise((resolve) => setTimeout(resolve, 60));
 globalThis.__MapRenderer = class {
   init() { return initGate?.promise ?? Promise.resolve(); }
   setPixelRatio() {}
@@ -91,7 +93,7 @@ try {
   await check('a terrain point of the real scene projects where its marker is drawn', async () => {
     const scene = new MapScene({}); const grid = await scene.init();
     const cam = { u: 0.55, v: 0.45, distance: 0.45, yaw: 0.3, pitch: 0.78 }, screen = screenFrame(1600, 900, { top: 0, right: 0, bottom: 0, left: 0 });
-    scene.update(cam, screen); draw();
+    scene.update(cam, screen); await nextFrame();
     for (const id of ['hansan', 'myeongnyang', 'busan']) {
       const local = siteUV(id), frame = project(SITES[id].lon, SITES[id].lat);
       const ground = Math.max(0, grid[Math.round(local.v * 1038) * 2048 + Math.round(local.u * 2047)]);
@@ -111,17 +113,23 @@ try {
     await assert.rejects(initializing, (error) => error.name === 'AbortError'); initGate = null;
     assert.equal(releases, before + 1); assert.equal(demLoads, beforeLoads); assert.equal(scene.scene.children.length, 0);
   });
-  await check('terrain renders only on change and frees owned geometry, material, texture and renderer once', async () => {
+  await check('terrain keeps drawing while visible and frees owned geometry, material, texture and renderer once on dispose', async () => {
     const before = releases, texBefore = textureFrees, scene = new MapScene({}); await scene.init();
     const mesh = scene.scene.children[0].children[0];
     let geometries = 0, materials = 0;
     mesh.geometry.addEventListener('dispose', () => geometries++); mesh.material.addEventListener('dispose', () => materials++);
-    const beforeDraws = renders, screen = screenFrame(1920, 1080, { top: 0, right: 0, bottom: 0, left: 0 }); scene.update({ u: 0.5, v: 0.4, distance: 0.5, yaw: 0.4, pitch: 0.7 }, screen);
+    const screen = screenFrame(1920, 1080, { top: 0, right: 0, bottom: 0, left: 0 });
+    const beforeDraws = renders;
+    scene.update({ u: 0.5, v: 0.4, distance: 0.5, yaw: 0.4, pitch: 0.7 }, screen);
+    await nextFrame();
+    assert.ok(renders > beforeDraws, 'the world draws while it is on screen');
     scene.update({ u: 0.51, v: 0.4, distance: 0.5, yaw: 0.4, pitch: 0.7 }, screen);
-    assert.equal(frames.size, 1); draw(); assert.equal(renders, beforeDraws + 1); draw(); assert.equal(renders, beforeDraws + 1);
-    scene.update({ u: 0.52, v: 0.4, distance: 0.5, yaw: 0.4, pitch: 0.7 }, screen);
-    scene.dispose(); scene.dispose(); draw();
-    assert.ok(geometries >= 1 && materials >= 1); assert.equal(textureFrees, texBefore + 1); assert.equal(releases, before + 1); assert.equal(frames.size, 0);
+    await nextFrame();
+    const beforeDispose = renders;
+    scene.dispose(); scene.dispose();
+    await nextFrame();
+    assert.equal(renders, beforeDispose, 'nothing draws after dispose');
+    assert.ok(geometries >= 1 && materials >= 1); assert.equal(textureFrees, texBefore + 1); assert.equal(releases, before + 1);
   });
   await check('a DEM that arrives after disposal is discarded before the terrain is built', async () => {
     demGate = defer(); const before = releases;

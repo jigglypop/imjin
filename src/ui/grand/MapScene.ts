@@ -13,14 +13,16 @@ import type { MapWorld } from './mapWorld';
 import { eyeOf, FAR, FOV, NEAR, worldX, worldZ, type CameraState, type ScreenFrame } from './worldCamera';
 import { SKY_HORIZON, SKY_MIDDLE, SKY_ZENITH, WORLD_HAZE } from './worldLook';
 
-/** The sea's slow loop: the time between frames while the view rests, and how long the view must rest before it starts. */
-const IDLE_FRAME = 125;
-const REST = 1200;
+/**
+ * The world is drawn about thirty times a second while it is on screen, so the sea, the swell and the light keep moving
+ * even when the player does nothing. A still picture reads as a stalled game.
+ */
+const FRAME_MS = 33;
 /** Fog: it starts a little beyond the target and is solid well past the whole frame, so distant ridges and coasts stay readable in a soft haze. */
 const fogNear = (distance: number) => distance * 1.1 + 0.05;
 const fogFar = (distance: number) => distance * 3.4 + 1.1;
 
-/** The campaign's world: the select screen's terrain under a free perspective camera, with a sea, fog and a sky. Drawn on demand while the view changes and slowly while idle. */
+/** The campaign's world: the select screen's terrain under a free perspective camera, with a sea, fog and a sky. Redrawn on a steady timer while visible and paused while the page is hidden. */
 export class MapScene {
   readonly scene = new Scene();
   readonly camera = new PerspectiveCamera((FOV * 180) / Math.PI, 1, NEAR, FAR);
@@ -30,7 +32,7 @@ export class MapScene {
   private disposed = false;
   private initialized = false;
   private rendererReleased = false;
-  private frame = 0;
+  private timer = 0;
   private terrain: Group | null = null;
   private demTexture: DataTexture | null = null;
   private layer: MapLayer | null = null;
@@ -42,9 +44,8 @@ export class MapScene {
   private height = 0;
   private cam: CameraState = { u: 0.5, v: 0.5, distance: 0.7, yaw: 0, pitch: 0.75 };
   private screen: ScreenFrame = { w: 0, h: 0, cx: 0, cy: 0 };
-  /** When the view last changed, and the timer of the sea's slow loop. */
-  private lastChange = 0;
-  private idle = 0;
+  /** A camera that moves on its own (the faction pick screen's backdrop), given the time in milliseconds. */
+  private drift: ((now: number) => CameraState) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new WebGPURenderer({ canvas, antialias: equipment.select.antialias, powerPreference: 'low-power', forceWebGL });
@@ -81,7 +82,7 @@ export class MapScene {
     this.sky = this.buildSky();
     this.scene.add(this.sky);
     // Camps and ships stand on the same ground the overlay's markers read; they arrive when their models have loaded.
-    this.layer = new MapLayer((u, v) => groundElevation(heights, u, v), () => this.invalidate());
+    this.layer = new MapLayer((u, v) => groundElevation(heights, u, v), () => this.start());
     this.scene.add(this.layer.group);
     this.trees = new TreeLayer((u, v) => groundElevation(heights, u, v), V_SCALE * MESH_SCALE);
     this.scene.add(this.trees.group);
@@ -90,7 +91,7 @@ export class MapScene {
       this.trees.setClearings(this.world.settlements);
     }
     this.ready = true;
-    this.invalidate();
+    this.start();
     return heights;
   }
 
@@ -126,26 +127,34 @@ export class MapScene {
     if (this.disposed) return;
     this.cam = cam;
     this.screen = screen;
-    this.lastChange = performance.now();
     if (screen.w !== this.width || screen.h !== this.height) {
       this.width = screen.w;
       this.height = screen.h;
       this.renderer.setSize(Math.max(1, screen.w), Math.max(1, screen.h), false);
     }
-    this.invalidate();
   }
 
-  private invalidate() {
-    if (!this.ready || this.disposed || this.frame) return;
-    clearTimeout(this.idle);
-    this.idle = 0;
-    this.frame = requestAnimationFrame(() => {
-      this.frame = 0;
-      if (this.disposed || !this.terrain || this.width < 1 || this.height < 1) return;
-      this.draw();
-      this.settle();
-    });
+  /** The camera is chosen by `view` every frame instead of by `update` (the faction pick screen drifts over the coast). */
+  animate(view: (now: number) => CameraState) {
+    this.drift = view;
+    this.start();
   }
+
+  /** Starts the frame timer if it is not running. A hidden page keeps it stopped until the page is shown again. */
+  private start() {
+    if (this.timer || !this.ready || this.disposed || document.hidden) return;
+    this.timer = setTimeout(this.tick, 0);
+  }
+
+  private readonly tick = () => {
+    this.timer = 0;
+    if (this.disposed || !this.ready || document.hidden) return;
+    if (this.width >= 1 && this.height >= 1 && this.terrain) {
+      if (this.drift) this.cam = this.drift(performance.now());
+      this.draw();
+    }
+    this.timer = setTimeout(this.tick, FRAME_MS);
+  };
 
   private draw() {
     const { cam, screen, camera } = this;
@@ -164,22 +173,8 @@ export class MapScene {
     this.renderer.render(this.scene, camera);
   }
 
-  /**
-   * The swell and the coast's foam are driven by time, so a still scene would freeze them. While the view moves the
-   * frames come with it; once it has rested a moment a slow loop redraws about eight times a second, and it stops while the
-   * page is hidden.
-   */
-  private settle() {
-    if (this.disposed || this.frame || this.idle || document.hidden) return;
-    const wait = Math.max(IDLE_FRAME, REST - (performance.now() - this.lastChange));
-    this.idle = setTimeout(() => {
-      this.idle = 0;
-      this.invalidate();
-    }, wait);
-  }
-
   private readonly onVisible = () => {
-    if (!document.hidden) this.invalidate();
+    if (!document.hidden) this.start();
   };
 
   dispose() {
@@ -187,10 +182,8 @@ export class MapScene {
     this.disposed = true;
     this.ready = false;
     this.abort.abort();
-    cancelAnimationFrame(this.frame);
-    this.frame = 0;
-    clearTimeout(this.idle);
-    this.idle = 0;
+    clearTimeout(this.timer);
+    this.timer = 0;
     document.removeEventListener('visibilitychange', this.onVisible);
     this.layer?.dispose();
     this.layer = null;

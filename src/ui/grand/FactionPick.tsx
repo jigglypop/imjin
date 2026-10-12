@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { MAP_IMAGE } from './projection';
 import { useT } from '../../i18n';
+import { flatMap } from '../siteMap';
 import { Chip, FACTION_INFO, FactionCrest, Icon } from './shared';
+import { PickBackdrop } from './PickBackdrop';
 import { fleetsText, portsText } from './text';
 import type { FactionId, FactionOption } from './types';
 
@@ -30,6 +32,7 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
   const chosen = options.find((o) => o.id === sel);
   return (
     <div className="g-pick" style={{ ['--backdrop' as string]: `url(${MAP_IMAGE})` }}>
+      {!flatMap && <PickBackdrop />}
       <div className="g-pick__scroll">
         <div className="g-pick__inner">
           <header className="g-pick__head">

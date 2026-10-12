@@ -99,6 +99,9 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
+  /* The map's nodes and cards are layered by distance (up to z-index 800). Isolating the map keeps every one of them
+     below the panels that sit beside it, so a port never comes forward over the open panel. */
+  isolation: isolate;
   touch-action: none;
   /* The terrain fades to this tone (the select screen's mist) along its edges, so its rectangle never shows. */
   background: #0d1217;
@@ -1382,6 +1385,15 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(rgba(8, 12, 18, 0.5), rgba(8, 12, 18, 0.76));
+}
+/* The live world behind the pick: under the shade and the cards, above the still backdrop. */
+.g-pick > .g-pick__world {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  display: block;
 }
 .g-pick > * {
   position: relative;
