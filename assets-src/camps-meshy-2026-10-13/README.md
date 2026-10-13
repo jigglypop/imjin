@@ -1,5 +1,9 @@
 # Campaign camps from Meshy (2026-10-13)
 
+**No longer shipped (2026-10-14).** The owner rejected these models (mushy, each camp on its own ground slab); the
+campaign map's camps are built from procedural buildings on gpt-image atlases instead (`src/ui/grand/campBuildings.ts`,
+`src/ui/grand/buildingAtlas.json`). `public/models/camps/` and the scripts below are gone; this record stays.
+
 Nine camp models for the 3D faction campaign map (진영 전역): the joseon, japan and ming navies at camp tiers 1–3, each
 with a near and a far level of detail, in `public/models/camps/`. Each camp started as one Meshy Image-to-3D model made
 from one concept image. The shipped files are not decimated scans. They are low-poly architecture rebuilt from those

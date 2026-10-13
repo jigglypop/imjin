@@ -8,8 +8,7 @@ import {
   varying, vec2, vec3,
 } from 'three/tsl';
 import { worldClock } from '../../select/terrain';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import demMeta from '../../select/demMeta.json';
 import { disposeTree } from '../../render/dispose';
 import { SHIP_SPECS } from '../../sim/catalog';
 import type { ShipKind } from '../../sim/types';
@@ -18,18 +17,21 @@ import { ATLAS, atlasFiles } from '../../ships/build/atlas';
 import { TINT_RANGE, toGeometry } from '../../ships/build/pack';
 import { weather } from '../../ships/weather';
 import { MAP_ASPECT } from './projection';
-import { buildCampKit, type KitMesh } from './campKits';
-import { buildBoatKit, buildShipKit } from './shipKits';
-import { campTier, faceSea, flagSpot, formation, HULL_LENGTH, pointAlong, SETTLEMENT_RADIUS, SHIP_CAP, settlementPieces, WATER_KINDS, type FleetSpec, type MapWorld, type Piece, type PieceKind, type SailSpec, type SettlementSpec } from './mapWorld';
+import { DEM_RECT } from './mapMath';
+import { buildCampBuilding } from './campBuildings';
+import { campMaterial } from './campMaterial';
+import { FOOTPRINT, METRES_PER_RADIUS, navyOf, WALL_KINDS, WATER_KINDS, type PieceKind } from './campPieces';
+import { buildBoatKit, buildShipKit, type KitMesh } from './shipKits';
+import { formation, HULL_LENGTH, pointAlong, SETTLEMENT_RADIUS, SHIP_CAP, type FleetSpec, type MapWorld, type Piece, type SailSpec, type SettlementSpec } from './mapWorld';
 import type { FactionId, ShipClass } from './types';
 
-// The 3D layer of the campaign map: every navy's camps as the models made for them (public/models/camps, one per navy
-// and camp tier, a close and a far level of detail; assets-src/camps-meshy-2026-10-13/README.md) and, where a fleet lies
-// or sails, the battle's own ships of the kinds it has (src/ships/build, its middle and far levels, the battle's atlas
-// and weathering), all instanced, so the whole layer is a few dozen draw calls. A camp whose model does not load is
-// built from the procedural kits in campKits instead, and a ship that cannot be built is its navy's kit ship (shipKits),
-// so a port is never left empty. Between turns the world keeps living: smoke rises from the larger camps and fishing
-// boats drift off the coasts.
+// The 3D layer of the campaign map: every port's places (mapWorld.ts) built from the settlement buildings
+// (campBuildings.ts, made like the battle's ships on each navy's texture atlas) standing on the drawn ground, the yards,
+// lanes and fields they leave bare laid over it, and, where a fleet lies or sails, the battle's own ships of the kinds it
+// has (src/ships/build, its middle and far levels, the battle's atlas and weathering). All instanced, one draw per kind
+// and level of detail, so the whole layer is a few dozen draw calls; a ship that cannot be built is its navy's kit ship
+// (shipKits). Between turns the world keeps living: smoke rises from the larger camps and towns and fishing boats drift
+// off the coasts.
 
 const R = SETTLEMENT_RADIUS;
 /** The longest hull's length in frame units. */
@@ -59,72 +61,17 @@ const PLUME = { w: R * 0.42, h: R * 1.4 };
 /** Banner cloth and the owner's ring, by navy; saturated so it reads against the dark relief from the opening view. */
 const BANNER: Record<FactionId, string> = { joseon: '#3f8cff', japan: '#e8452c', ming: '#f0b72a' };
 /**
- * The camps' close models show once the camera stands at most this far from what it looks at (a camp is then over about
- * 100 pixels across on a desktop window); farther views draw the far models, the same outlines in a quarter of the
- * triangles with a quarter-size texture.
+ * The buildings' close models show once the camera stands at most this far from what it looks at (a camp is then over
+ * about 160 pixels across on a desktop window); farther views draw the far models, the same outlines in about a third of
+ * the triangles.
  */
 const NEAR_DISTANCE = 0.3;
-/**
- * A camp model's longer side, in settlement radii, and the least it shrinks to between close neighbours. Kept compact so a
- * camp marks its port without spreading over the coast round it.
- */
-const CAMP_SPAN = 1.35;
-const CAMP_SPAN_MIN = 0.95;
-
-const loader = new GLTFLoader();
-loader.setMeshoptDecoder(MeshoptDecoder);
-
-/** A camp model: its geometry in model units (longer side 1, the waterfront towards -z), its material and its height. */
-type CampModel = { geometry: BufferGeometry; material: MeshStandardMaterial; width: number; depth: number; height: number };
-
-const campUrl = (faction: FactionId, tier: number, far: boolean) => `/models/camps/camp_${faction}_${tier}${far ? '_far' : ''}.glb`;
-
-const toFloat = (attr: BufferAttribute, size: number) => {
-  const out = new Float32Array(attr.count * size);
-  for (let i = 0; i < attr.count; i += 1) for (let c = 0; c < size; c += 1) out[i * size + c] = attr.getComponent(i, c);
-  return new Float32BufferAttribute(out, size);
-};
-
-const freeCamp = (m: CampModel) => {
-  m.geometry.dispose();
-  for (const value of Object.values(m.material)) if (value && (value as Texture).isTexture) (value as Texture).dispose();
-  m.material.dispose();
-};
-
-/**
- * A camp file's one mesh as float geometry in the file's frame. Its positions are quantised with the dequantising scale
- * on the node, so they are read through the node's world matrix; the frame is kept as it is (no turning: a camp's
- * waterfront is -z whichever of its sides is longer).
- */
-async function loadCamp(url: string): Promise<CampModel | null> {
-  try {
-    const gltf = await loader.loadAsync(url);
-    gltf.scene.updateMatrixWorld(true);
-    let mesh: Mesh | null = null;
-    gltf.scene.traverse((o: Object3D) => { if (!mesh && (o as Mesh).isMesh) mesh = o as Mesh; });
-    const found = mesh as Mesh | null;
-    if (!found) return null;
-    const src = found.geometry;
-    const geometry = new BufferGeometry();
-    for (const [name, size] of [['position', 3], ['normal', 3], ['uv', 2]] as const) {
-      const attr = src.getAttribute(name) as BufferAttribute | undefined;
-      if (attr) geometry.setAttribute(name, toFloat(attr, size));
-    }
-    if (src.index) geometry.setIndex(src.index);
-    geometry.applyMatrix4(found.matrixWorld);
-    src.dispose();
-    geometry.computeBoundingBox();
-    const size = geometry.boundingBox!.getSize(new Vector3());
-    const material = found.material as MeshStandardMaterial;
-    // The bake is the whole look: a matte surface lit by the map's sun and sky, a touch brighter so it holds in the haze.
-    material.roughness = 0.9;
-    material.metalness = 0;
-    material.color.setScalar(1.12);
-    return { geometry, material, width: size.x, depth: size.z, height: size.y };
-  } catch {
-    return null;
-  }
-}
+/** Yards, lanes and fields float this far over the drawn ground (frame units), so the relief never shows through them. */
+const DECAL_LIFT = R * 0.005;
+/** The packed earth of a camp's yard by navy, the lanes' earth, and a paddy's and a dry field's two shades. */
+const YARD: Record<FactionId, string> = { joseon: '#b4a07c', japan: '#c4bba6', ming: '#a89c86' };
+const LANE = '#bba57f';
+const FIELD = { paddy: ['#86a04a', '#9cb25a'], dry: ['#a79a58', '#8f8248'] } as const;
 
 /** The battle's ship builder, loaded with the first fleet: the map needs the battle's code only for its ships. */
 let builder: Promise<typeof import('../../ships/build/ShipBuilder')> | null = null;
@@ -264,6 +211,94 @@ function ringMaterial(width: UniformNode<'float', number>) {
   return m;
 }
 
+/**
+ * The ground places leave bare, laid over the drawn relief as one mesh: a camp's packed yard, the lanes between houses and
+ * out to the camp's gate, the striped fields. Every vertex sits on the ground a little lifted, close enough to its
+ * neighbours to follow it, and carries its own alpha, so a yard or a lane fades into the land at its edges instead of
+ * ending in a line.
+ */
+class Decals {
+  private readonly position: number[] = [];
+  private readonly color: number[] = [];
+  private readonly index: number[] = [];
+  constructor(private readonly groundAt: (x: number, z: number) => number) {}
+
+  private vert(x: number, z: number, c: Color, a: number) {
+    this.position.push(x, this.groundAt(x, z) + DECAL_LIFT, z);
+    this.color.push(c.r, c.g, c.b, a);
+    return this.position.length / 3 - 1;
+  }
+
+  private quad(a: number, b: number, c: number, d: number) {
+    this.index.push(a, b, c, a, c, d);
+  }
+
+  /** A round patch of radius r at (x, z), solid inside and fading out over its outer third. */
+  disc(x: number, z: number, r: number, hex: string) {
+    const c = new Color(hex), seg = 28;
+    const rows = ([[0.001, 0.8], [0.4, 0.8], [0.72, 0.72], [1, 0]] as const).map(([k, a]) =>
+      Array.from({ length: seg }, (_, j) => this.vert(x + Math.cos((j / seg) * Math.PI * 2) * r * k, z + Math.sin((j / seg) * Math.PI * 2) * r * k, c, a)));
+    for (let i = 0; i + 1 < rows.length; i += 1) for (let j = 0; j < seg; j += 1) this.quad(rows[i]![j]!, rows[i]![(j + 1) % seg]!, rows[i + 1]![(j + 1) % seg]!, rows[i + 1]![j]!);
+  }
+
+  /** A lane w wide along a polyline, cut every so often so it follows the ground, its edges soft. */
+  lane(points: { x: number; z: number }[], w: number, hex: string) {
+    const c = new Color(hex);
+    const steps: { x: number; z: number; nx: number; nz: number }[] = [];
+    for (let i = 0; i + 1 < points.length; i += 1) {
+      const a = points[i]!, b = points[i + 1]!, l = Math.hypot(b.x - a.x, b.z - a.z);
+      if (l < 1e-9) continue;
+      const n = Math.max(1, Math.ceil(l / (w * 0.9)));
+      for (let k = i === 0 ? 0 : 1; k <= n; k += 1) steps.push({ x: a.x + ((b.x - a.x) * k) / n, z: a.z + ((b.z - a.z) * k) / n, nx: -(b.z - a.z) / l, nz: (b.x - a.x) / l });
+    }
+    const across = [[-1, 0], [-0.45, 0.85], [0.45, 0.85], [1, 0]] as const;
+    let last: number[] | null = null;
+    for (const p of steps) {
+      const row = across.map(([k, a]) => this.vert(p.x + p.nx * w * k, p.z + p.nz * w * k, c, a));
+      if (last) for (let j = 0; j < 3; j += 1) this.quad(last[j]!, last[j + 1]!, row[j + 1]!, row[j]!);
+      last = row;
+    }
+  }
+
+  /** A field of half sizes hx by hz at a point, turned by rot: stripes of crop along its length, a paddy greener. */
+  field(at: { x: number; z: number }, hx: number, hz: number, rot: number, paddy: boolean) {
+    const shades = (paddy ? FIELD.paddy : FIELD.dry).map((h) => new Color(h));
+    const c = Math.cos(rot), s = Math.sin(rot), stripes = 5, cuts = 3;
+    const point = (u: number, w: number) => ({ x: at.x + u * c - w * s, z: at.z + u * s + w * c });
+    for (let i = 0; i < stripes; i += 1) {
+      const w0 = -hz + (2 * hz * i) / stripes, w1 = -hz + (2 * hz * (i + 1)) / stripes;
+      let last: number[] | null = null;
+      for (let k = 0; k <= cuts; k += 1) {
+        const u = -hx + (2 * hx * k) / cuts;
+        const row = [w0, w1].map((w) => {
+          const q = point(u, w);
+          return this.vert(q.x, q.z, shades[i % 2]!, 0.92);
+        });
+        if (last) this.quad(last[0]!, last[1]!, row[1]!, row[0]!);
+        last = row;
+      }
+    }
+  }
+
+  geometry() {
+    if (!this.index.length) return null;
+    const g = new BufferGeometry();
+    g.setAttribute('position', new Float32BufferAttribute(this.position, 3));
+    g.setAttribute('color', new Float32BufferAttribute(this.color, 4));
+    g.setIndex(this.index);
+    return g;
+  }
+}
+
+/** The decals' material: their own colours and alpha, unlit like the drawn ground, pulled a little forward in the depth test. */
+function decalMaterial() {
+  const m = new MeshBasicNodeMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: DoubleSide });
+  m.polygonOffset = true;
+  m.polygonOffsetFactor = -1;
+  m.polygonOffsetUnits = -2;
+  return m;
+}
+
 /** Camps and ships standing on the map terrain; `ground` gives the terrain height in frame units at a frame point. */
 export class MapLayer {
   readonly group = new Group();
@@ -276,10 +311,14 @@ export class MapLayer {
   /** Each navy's ship material and its atlas, made with its first ship. */
   private readonly shipMaterials = new Map<FactionId, Promise<{ material: MeshStandardNodeMaterial; map: Texture }>>();
   private readonly readyMaterials: { material: MeshStandardNodeMaterial; map: Texture }[] = [];
-  private readonly kits = new Map<PieceKind, [BufferGeometry, BufferGeometry]>();
-  /** Camp models by file, loaded when a world first needs them; null when a file failed (that camp is built from kits). */
-  private readonly camps = new Map<string, Promise<CampModel | null>>();
-  private readonly loadedCamps = new Map<string, CampModel | null>();
+  /** Each building kind's close and far geometry and how deep its footing reaches (radii), built when a world first needs it. */
+  private readonly kits = new Map<PieceKind, { near: BufferGeometry; far: BufferGeometry; footing: number }>();
+  /** Each navy's building material and its atlas, loaded when a world first needs it; null when its atlas failed to load. */
+  private readonly campMaterials = new Map<FactionId, Promise<{ material: Material; textures: Texture[] } | null>>();
+  private readonly readyCampMaterials = new Map<FactionId, { material: Material; textures: Texture[] }>();
+  /** The yards, lanes and fields laid over the ground: one mesh, rebuilt with the world. */
+  private decals: Mesh | null = null;
+  private decalMaterial: MeshBasicNodeMaterial | null = null;
   /** What the close and the far view show: the camps' two levels of detail. */
   private readonly near = new Group();
   private readonly far = new Group();
@@ -424,27 +463,65 @@ export class MapLayer {
     return p;
   }
 
-  /** A camp file's model, loaded on first use; a model that arrives after the layer is gone is freed at once. */
-  private camp(url: string) {
-    let p = this.camps.get(url);
+  /**
+   * A navy's building material, loaded on first use; one that arrives after the layer is gone is freed at once. Should its
+   * atlas fail to load, that navy's buildings are left out rather than the whole layer.
+   */
+  private campMaterial(navy: FactionId) {
+    let p = this.campMaterials.get(navy);
     if (!p) {
-      p = loadCamp(url).then((m) => {
-        if (this.disposed) { if (m) freeCamp(m); return null; }
-        this.loadedCamps.set(url, m);
+      p = campMaterial(navy).then((m) => {
+        if (this.disposed) { m.material.dispose(); for (const t of m.textures) t.dispose(); } else this.readyCampMaterials.set(navy, m);
         return m;
-      });
-      this.camps.set(url, p);
+      }, () => null);
+      this.campMaterials.set(navy, p);
     }
     return p;
+  }
+
+  /** A building kind's geometry, built on first use and shared by every place after. */
+  private kit(kind: PieceKind) {
+    let k = this.kits.get(kind);
+    if (!k) {
+      const [near, far] = buildCampBuilding(kind);
+      let low = 0;
+      for (let i = 1; i < near.position.length; i += 3) low = Math.min(low, near.position[i]!);
+      k = { near: toGeometry(near), far: toGeometry(far), footing: -low };
+      this.kits.set(kind, k);
+    }
+    return k;
+  }
+
+  /**
+   * The ground under a frame point as drawn: bilinear between the four DEM texels round it (the drawn facets' own plane),
+   * from `ground`'s samples at the texels themselves; off the DEM, `ground` as it is.
+   */
+  private surface(u: number, v: number) {
+    const W = demMeta.width, H = demMeta.height;
+    const x = ((u - DEM_RECT.u) / DEM_RECT.w) * (W - 1), y = ((v - DEM_RECT.v) / DEM_RECT.h) * (H - 1);
+    if (x < 0 || y < 0 || x > W - 1 || y > H - 1) return this.ground(u, v);
+    const x0 = Math.min(W - 2, Math.floor(x)), y0 = Math.min(H - 2, Math.floor(y)), fx = x - x0, fy = y - y0;
+    const at = (i: number, j: number) => this.ground(DEM_RECT.u + (i / (W - 1)) * DEM_RECT.w, DEM_RECT.v + (j / (H - 1)) * DEM_RECT.h);
+    const top = at(x0, y0) + (at(x0 + 1, y0) - at(x0, y0)) * fx, bottom = at(x0, y0 + 1) + (at(x0 + 1, y0 + 1) - at(x0, y0 + 1)) * fx;
+    return top + (bottom - top) * fy;
   }
 
   private async rebuild() {
     const world = this.world;
     if (!world || this.disposed) return;
     const mine = ++this.generation;
-    const urls = new Set(world.settlements.flatMap((s) => [false, true].map((far) => campUrl(s.owner, campTier(s.level), far))));
+    const pieces = new Set(world.settlements.flatMap((s) => s.pieces.map((p) => p.kind)));
     const kinds = new Set([...world.fleets.flatMap((f) => (f.kinds.length ? f.kinds : [MAIN_SHIP[f.faction]])), ...world.sails.map((s) => MAIN_SHIP[s.faction])]);
-    await Promise.all([...[...urls].map((url) => this.camp(url)), ...[...kinds].map((kind) => this.shipModel(kind))]);
+    const navies = new Set([...pieces].map(navyOf));
+    const loading = Promise.all([...[...navies].map((navy) => this.campMaterial(navy)), ...[...kinds].map((kind) => this.shipModel(kind))]);
+    // The buildings one kind per task while the atlases load, so a new world does not hold the page up in one piece.
+    for (const kind of pieces) {
+      if (this.kits.has(kind)) continue;
+      await new Promise((resolve) => setTimeout(resolve));
+      if (this.disposed || mine !== this.generation) return;
+      this.kit(kind);
+    }
+    await loading;
     // A newer world or a dispose while the models were arriving makes this build stale.
     if (this.disposed || mine !== this.generation) return;
     this.clear();
@@ -461,11 +538,13 @@ export class MapLayer {
   private clear() {
     for (const mesh of this.built) { mesh.removeFromParent(); mesh.dispose(); }
     this.built.length = 0;
-    if (this.ring) {
-      this.ring.removeFromParent();
-      this.ring.geometry.dispose();
-      this.ring = null;
+    for (const mesh of [this.ring, this.decals]) {
+      if (!mesh) continue;
+      mesh.removeFromParent();
+      mesh.geometry.dispose();
     }
+    this.ring = null;
+    this.decals = null;
     this.flags = null;
     this.flagSet = { spots: [], colors: [], poles: [] };
     this.smoke = null;
@@ -507,15 +586,6 @@ export class MapLayer {
     return this.shared;
   }
 
-  /** A kind's close and far geometry, built on first use and shared by every camp after. */
-  private kit(kind: PieceKind) {
-    let g = this.kits.get(kind);
-    if (!g) {
-      g = [kitGeometry(buildCampKit(kind, 0)), kitGeometry(buildCampKit(kind, 1))];
-      this.kits.set(kind, g);
-    }
-    return g;
-  }
 
   /** A flag's cloth turned to face the camera. */
   private cloth(s: FlagSpot) {
@@ -590,72 +660,42 @@ export class MapLayer {
     this.ring = mesh;
   }
 
+  /**
+   * Every place's buildings as instances of their kinds, each standing on the drawn ground: a building on its footing at
+   * the height that buries none of it and leaves none of its footing in the air; a stretch of wall sheared along its run so
+   * it climbs and falls with the ground from one end to the other, sunk where the ground dips under its middle; a work in
+   * the water at sea level. Then the yards, lanes and fields, the camps' flags, rings and smoke, the towns' smoke and the
+   * fishing boats.
+   */
   private buildSettlements(list: SettlementSpec[]) {
     const byKind = new Map<PieceKind, Matrix4[]>();
-    const byModel = new Map<string, Matrix4[]>();
-    const up = new Vector3(0, 1, 0);
-    const loaded = this.loadedCamps;
     const rings: Ring[] = [];
     const smoke: Vector3[] = [];
     const boats: Boat[] = [];
-    const bucket = (key: PieceKind) => {
-      let b = byKind.get(key);
-      if (!b) byKind.set(key, (b = []));
-      return b;
-    };
-    const groundAt = (x: number, z: number) => this.ground(x + 0.5, z * MAP_ASPECT + 0.5);
+    const groundAt = (x: number, z: number) => this.surface(x + 0.5, z * MAP_ASPECT + 0.5);
+    const decals = new Decals(groundAt);
     for (const s of list) {
       const cx = s.u - 0.5, cz = (s.v - 0.5) / MAP_ASPECT;
-      const seaAt = (x: number, z: number) => groundAt(cx + x * R, cz + z * R) <= 0;
-      let base = groundAt(cx, cz);
-      for (const [dx, dz] of [[0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]] as const) base = Math.max(base, groundAt(cx + dx * R, cz + dz * R));
       const seed = [...s.id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
-      const { pieces, turn } = faceSea(settlementPieces(s.level, s.owner), seed, seaAt);
-      const ringColor = new Color(BANNER[s.owner]);
-      const tier = campTier(s.level);
-      const nearUrl = campUrl(s.owner, tier, false), farUrl = campUrl(s.owner, tier, true);
-      const model = loaded.get(nearUrl);
-      let ring = RING_RADIUS;
-      if (model && loaded.get(farUrl)) {
-        // The kits' dock side is -x after the turn; the model's waterfront is -z, so a quarter turn more brings it round.
-        const angle = Math.PI / 2 - turn;
-        // Two ports a camp apart (Yeosu and Bangdap) would run their camps together: each then keeps to its own side.
-        const nearest = Math.min(...list.filter((o) => o !== s).map((o) => Math.hypot(o.u - s.u, (o.v - s.v) / MAP_ASPECT)));
-        const span = Math.max(CAMP_SPAN_MIN, Math.min(CAMP_SPAN, (nearest / R) * 0.75));
-        const size = span * R;
-        const cos = Math.cos(angle), sin = Math.sin(angle);
-        /** A point of the model's footprint, in model units, on the map. */
-        const at = (lx: number, lz: number) => ({ x: cx + (lx * cos + lz * sin) * size, z: cz + (-lx * sin + lz * cos) * size });
-        // It stands on the land under its footprint, between the highest ground there and the mean, sunk by about its
-        // ground slab so the slab's edge and its open underside do not show on a slope; the waterfront over the water does
-        // not lift it.
-        const land: number[] = [];
-        for (const fx of [-0.35, 0, 0.35]) for (const fz of [-0.35, 0, 0.35]) {
-          const q = at(fx * model.width, fz * model.depth);
-          const e = groundAt(q.x, q.z);
-          if (e > 0) land.push(e);
-        }
-        const top = land.length ? Math.max(...land) : 0, mean = land.length ? land.reduce((a, b) => a + b, 0) / land.length : 0;
-        const y = top * 0.6 + mean * 0.4 - R * 0.08;
-        const matrix = new Matrix4().compose(new Vector3(cx, y, cz), new Quaternion().setFromAxisAngle(up, angle), new Vector3(size, size, size));
-        for (const url of [nearUrl, farUrl]) {
-          let b = byModel.get(url);
-          if (!b) byModel.set(url, (b = []));
-          b.push(matrix);
-        }
-        ring = Math.max(RING_RADIUS, (Math.hypot(model.width, model.depth) / 2) * span + 0.06);
-        // A larger camp's smoke rises from inside its walls, from about the height of its roofs.
-        if (tier >= 2) {
-          const c = at(-0.12 * model.width, 0.12 * model.depth);
-          smoke.push(new Vector3(c.x, y + model.height * size * 0.45, c.z));
-        }
-      } else {
-        for (const p of pieces) placePiece(p);
-        const [fx, fz] = flagSpot(s.level, s.owner);
-        const flagBase = new Vector3(cx + (fx * Math.cos(turn) - fz * Math.sin(turn)) * R, base - R * 0.02, cz + (fx * Math.sin(turn) + fz * Math.cos(turn)) * R);
-        this.flag(flagBase, poleHeight(s.level), R * (0.4 + 0.03 * s.level), R * (0.26 + 0.02 * s.level), ringColor);
-        if (tier >= 2) smoke.push(new Vector3(cx, base + R * 0.25, cz));
+      for (const p of s.pieces) {
+        let b = byKind.get(p.kind);
+        if (!b) byKind.set(p.kind, (b = []));
+        b.push(this.stand(p, cx + p.x * R, cz + p.z * R, groundAt));
       }
+      // The ground the place leaves bare: its yard, its lanes, its fields.
+      const at = (q: { x: number; z: number }) => ({ x: cx + q.x * R, z: cz + q.z * R });
+      if (s.grounds.yard > 0) decals.disc(cx, cz, s.grounds.yard * R, YARD[s.owner ?? 'joseon']);
+      for (const lane of s.grounds.lanes) decals.lane(lane.map(at), R * 0.05, LANE);
+      for (const f of s.grounds.fields) decals.field(at(f), f.hx * R, f.hz * R, f.rot, f.paddy);
+      // A large town's hearths smoke too.
+      if (s.kind === 'town' && s.pieces.filter((p) => p.kind === 'giwa' || p.kind === 'choga' || p.kind === 'wa_house').length >= 10) smoke.push(new Vector3(cx, groundAt(cx, cz) + R * 0.2, cz));
+      if (s.kind !== 'camp' || !s.owner) continue;
+      const ringColor = new Color(BANNER[s.owner]);
+      // The owner's flag flies inside the gate, over the roofs; a larger camp's smoke rises from its yard.
+      const flag = s.flag ?? { x: 0, z: 0 };
+      const fx = cx + flag.x * R, fz = cz + flag.z * R;
+      this.flag(new Vector3(fx, groundAt(fx, fz) - R * 0.02, fz), poleHeight(s.level), R * (0.4 + 0.03 * s.level), R * (0.26 + 0.02 * s.level), ringColor);
+      if (s.level >= 2) smoke.push(new Vector3(cx - flag.x * R * 0.5, groundAt(cx, cz) + R * 0.25, cz - flag.z * R * 0.5));
       // Fishing boats off its coast: two spots of open water a little beyond the camp, each roomy enough to circle in.
       for (let k = 0; k < 2 && boats.length < BOAT_CAP; k += 1) {
         for (let tries = 0; tries < 12; tries += 1) {
@@ -668,27 +708,22 @@ export class MapLayer {
           break;
         }
       }
-      // The owner's ring on the land round the camp, in the banner's colour, so whose it is reads from afar.
-      rings.push({ x: cx, z: cz, r: ring * R, color: ringColor });
-
-      function placePiece(p: Piece) {
-        const x = cx + p.x * R, z = cz + p.z * R;
-        const here = groundAt(x, z);
-        const y = WATER_KINDS.has(p.kind) ? 0 : here > 0 ? here : base;
-        const q = new Quaternion().setFromAxisAngle(up, p.rot);
-        const size = p.size * R;
-        bucket(p.kind).push(new Matrix4().compose(new Vector3(x, y - R * 0.02, z), q, new Vector3(size, size, size)));
-      }
+      // The owner's ring on the land just outside the camp's wall, in the banner's colour, so whose it is reads from afar.
+      rings.push({ x: cx, z: cz, r: Math.max(RING_RADIUS * 0.6, s.grounds.yard + 0.3) * R, color: ringColor });
     }
-    // One instanced draw per model file, and per kit kind and level of detail; `setView` shows the close or the far set.
-    for (const [url, matrices] of byModel) {
-      const m = loaded.get(url)!;
-      this.add(m.geometry, m.material, matrices, undefined, url.endsWith('_far.glb') ? this.far : this.near);
-    }
+    // One instanced draw per kind and level of detail; `setView` shows the close or the far set.
     for (const [kind, matrices] of byKind) {
-      const [near, far] = this.kit(kind);
-      this.add(near, this.resources.kit, matrices, undefined, this.near);
-      this.add(far, this.resources.kit, matrices, undefined, this.far);
+      const kit = this.kit(kind), material = this.readyCampMaterials.get(navyOf(kind))?.material;
+      if (!material) continue;
+      this.add(kit.near, material, matrices, undefined, this.near);
+      this.add(kit.far, material, matrices, undefined, this.far);
+    }
+    const geometry = decals.geometry();
+    if (geometry) {
+      const material = (this.decalMaterial ??= decalMaterial());
+      this.decals = new Mesh(geometry, material);
+      this.decals.frustumCulled = false;
+      this.group.add(this.decals);
     }
     this.buildRing(rings, groundAt);
     const { plume, smoke: smokeMat, boat, kit } = this.resources;
@@ -696,6 +731,29 @@ export class MapLayer {
     if (plumes) this.smoke = { mesh: plumes, spots: smoke };
     const fishing = this.add(boat, kit, boats.map(() => new Matrix4()));
     if (fishing) this.boats = { mesh: fishing, list: boats };
+  }
+
+  /** The instance matrix of a piece at (x, z) in frame units: turned, scaled from radii and standing on the ground. */
+  private stand(p: Piece, x: number, z: number, groundAt: (x: number, z: number) => number) {
+    const turn = new Matrix4().makeRotationY(p.rot);
+    if (WALL_KINDS.has(p.kind)) {
+      // Its run from end to end: local x goes to (cos rot, -sin rot).
+      const len = (p.len ?? 1) * R, dx = Math.cos(p.rot) * len, dz = -Math.sin(p.rot) * len;
+      const a = groundAt(x - dx / 2, z - dz / 2), b = groundAt(x + dx / 2, z + dz / 2);
+      let dip = 0;
+      for (const t of [0.25, 0.5, 0.75]) dip = Math.max(dip, a + (b - a) * t - groundAt(x + dx * (t - 0.5), z + dz * (t - 0.5)));
+      const sink = Math.max(0, dip - this.kit(p.kind).footing * R * 0.8);
+      return new Matrix4().makeTranslation(x, (a + b) / 2 - sink, z).multiply(turn).multiply(new Matrix4().makeShear((b - a) / len, 0, 0, 0, 0, 0)).multiply(new Matrix4().makeScale(len, R, R));
+    }
+    const scale = new Matrix4().makeScale(R, R, R);
+    if (WATER_KINDS.has(p.kind)) return new Matrix4().makeTranslation(x, 0, z).multiply(turn).multiply(scale);
+    const [fx, fz] = FOOTPRINT[p.kind].map((metres) => (metres / METRES_PER_RADIUS) * R * 0.8);
+    const c = Math.cos(p.rot), s = Math.sin(p.rot);
+    const heights = [[0, 0], [-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, w]) => groundAt(x + u! * fx * c + w! * fz * s, z - u! * fx * s + w! * fz * c));
+    const lo = Math.min(...heights), hi = Math.max(...heights);
+    // On a slope it is set at the high side unless that leaves its footing short of the ground on the low side.
+    const y = Math.min(hi, lo + this.kit(p.kind).footing * R * 0.85);
+    return new Matrix4().makeTranslation(x, y, z).multiply(turn).multiply(scale);
   }
 
   /** A hull `length` long at (x, z) heading `angle` (from +z towards +x), `sink` ship heights under its waterline. */
@@ -824,11 +882,13 @@ export class MapLayer {
     for (const m of this.readyMaterials) { m.material.dispose(); m.map.dispose(); }
     this.readyMaterials.length = 0;
     this.shipMaterials.clear();
-    for (const pair of this.kits.values()) for (const g of pair) g.dispose();
+    for (const k of this.kits.values()) { k.near.dispose(); k.far.dispose(); }
     this.kits.clear();
-    for (const m of this.loadedCamps.values()) if (m) freeCamp(m);
-    this.loadedCamps.clear();
-    this.camps.clear();
+    for (const m of this.readyCampMaterials.values()) { m.material.dispose(); for (const t of m.textures) t.dispose(); }
+    this.readyCampMaterials.clear();
+    this.campMaterials.clear();
+    this.decalMaterial?.dispose();
+    this.decalMaterial = null;
     if (this.shared) for (const resource of Object.values(this.shared)) resource.dispose();
     this.shared = null;
     disposeTree(this.group, true);
