@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { parseRoute, pickEdition } from '../routes';
 import { josa, type JosaPair } from '../sim/grand/josa';
 import { EN } from './en';
 
@@ -28,18 +29,16 @@ function stored(): Lang | null {
   }
 }
 
+// An address under imjin1592.com/en is the English edition: it opens in English whatever was chosen before, and /ko
+// likewise in Korean. The router then writes the language into the address (src/router.ts).
 function initialLang(): Lang {
-  if (typeof location !== 'undefined') {
-    const p = new URLSearchParams(location.search).get('lang');
-    if (p === 'ko' || p === 'en') return p;
-    // imjin1592.com/en is the English edition's address: it opens in English whatever was chosen before.
-    if (/^\/en(\/(index\.html)?)?$/.test(location.pathname)) return 'en';
-  }
-  const s = typeof localStorage !== 'undefined' ? stored() : null;
-  if (s) return s;
-  // First visit: Korean for Korean browsers, English for everyone else.
-  const nav = typeof navigator !== 'undefined' ? navigator.language || '' : 'ko';
-  return nav.toLowerCase().startsWith('ko') ? 'ko' : 'en';
+  const here = typeof location !== 'undefined' ? location : null;
+  return pickEdition(
+    here ? new URLSearchParams(here.search).get('lang') : null,
+    here ? parseRoute(here.pathname).edition : null,
+    typeof localStorage !== 'undefined' ? stored() : null,
+    typeof navigator !== 'undefined' ? navigator.language || '' : 'ko',
+  );
 }
 
 export const useLangStore = create<{ lang: Lang }>(() => ({ lang: initialLang() }));

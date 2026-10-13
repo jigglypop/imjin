@@ -1,9 +1,8 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ConquestSetup } from './game/Engine';
 import type { RegionBattle } from './sim/grand/bridge';
 import { net, useNet } from './net/NetClient';
 import { NetBattle } from './net/NetBattle';
-import { OnlinePanel } from './ui/OnlinePanel';
 import { setFatal, setLoading, setOrigin, setScreen, useUi } from './state/store';
 import { SCENARIOS, type ScenarioId } from './sim/scenarios';
 import type { Faction } from './sim/types';
@@ -14,18 +13,36 @@ import { isIOS, isPhone, isTouchDevice } from './game/device';
 import { installTouchGuard } from './game/ios';
 import { battleReady, clearLoading, markLoading, recovery, type ResumeLaunch } from './game/recovery';
 import { useCompactLayout } from './ui/useCompactLayout';
-import { ConquestSetupPanel } from './ui/ConquestSetup';
-import { HistoryScreen } from './ui/HistoryScreen';
 import { ErrorBoundary, FatalNotice } from './ui/ErrorBoundary';
 import { Loading } from './ui/Loading';
 import { RecoveryNotice } from './ui/RecoveryNotice';
 import { MainMenu, ScreenFrame, SettingsScreen } from './ui/Screens';
 import { startScenario, urlLaunch, type Launch, type LaunchBody } from './ui/launch';
-import { GrandScreen } from './ui/GrandScreen';
+import { screenChunks, startRouter } from './router';
 
-// The battle (three.js, engine, HUD) is its own chunk: the menu paints without parsing it.
+// The battle (three.js, engine, HUD) is its own chunk: the menu paints without parsing it. So is each screen below the
+// menu (router.ts lists them).
 const loadBattle = () => import('./ui/BattleView');
 const BattleView = lazy(loadBattle);
+const GrandScreen = lazy(() => screenChunks.faction().then((m) => ({ default: m.GrandScreen })));
+const HistoryScreen = lazy(() => screenChunks.select().then((m) => ({ default: m.HistoryScreen })));
+const ConquestSetupPanel = lazy(() => screenChunks.skirmish().then((m) => ({ default: m.ConquestSetupPanel })));
+const OnlinePanel = lazy(() => screenChunks.online().then((m) => ({ default: m.OnlinePanel })));
+
+/**
+ * Code from a chunk of its own. A screen that draws its own frame shows an empty frame with its title until the code
+ * arrives, so the header and the back button are there at once; a panel inside a frame shows nothing meanwhile. If the
+ * chunk cannot be fetched that stays, and the back button still works. (An empty fragment rather than null: without a
+ * fallback the error boundary reports a fatal battle notice.)
+ */
+function Chunk({ frame, children }: { frame?: string; children: ReactNode }) {
+  const standIn = frame ? <ScreenFrame title={frame} /> : <></>;
+  return (
+    <ErrorBoundary fallback={standIn}>
+      <Suspense fallback={standIn}>{children}</Suspense>
+    </ErrorBoundary>
+  );
+}
 
 let seq = 1;
 
@@ -51,26 +68,21 @@ useUi.subscribe((state, previous) => {
 });
 if (isIOS) installTouchGuard();
 
-// Test hooks (?scenario=, ?conquest=) skip the menu and boot straight into the battle.
+// The address opens its screen (/campaign, /en/conquest); test hooks (?scenario=, ?conquest=) skip the menu and boot
+// straight into the battle.
 const firstLaunch = urlLaunch();
-useUi.setState({ screen: firstLaunch ? 'battle' : 'menu' });
+startRouter(!!firstLaunch);
 if (firstLaunch) markLoading(resumable(firstLaunch));
 
 export function App() {
-  const lang = useLang();
+  // A language switch redraws every screen, including parts that call t() directly.
+  useLang();
   const screen = useUi((s) => s.screen);
   const fatal = useUi((s) => s.fatal);
   const compact = useCompactLayout();
   const [launch, setLaunch] = useState<Launch | null>(firstLaunch);
   const lastScenario = useRef<ScenarioId>(startScenario);
   const [notice, setNotice] = useState(recovery.step > 0);
-
-  // The page title, the description and the home-screen name follow the language.
-  useEffect(() => {
-    document.title = t('임진왜란');
-    document.querySelector('meta[name="description"]')?.setAttribute('content', t('1592, 조선 수군의 바다. 3D 해전 전략 게임.'));
-    document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', t('임진왜란'));
-  }, [lang]);
 
   // Fetch the battle chunk in the background once a screen that can start a battle opens.
   // The menu itself stays light, and phones wait until a mode is chosen.
@@ -116,6 +128,9 @@ export function App() {
   // a historical scenario fought as a duel.
   useEffect(() => {
     net.onStart = (msg) => {
+      // A battle resumed after a reload never opened the online screen: its chunk also mounts the overlay that shows
+      // the connection and the end of the battle.
+      void screenChunks.online();
       const remote = new NetBattle(msg.seed, msg.you);
       if (msg.battle.kind === 'conquest') {
         startConquest({ map: msg.battle.map, seats: msg.seats, you: msg.you, seed: msg.seed, ranked: !!msg.ranked }, remote);
@@ -159,16 +174,28 @@ export function App() {
         </ErrorBoundary>
       )}
       {screen === 'menu' && <MainMenu />}
-      {screen === 'select' && <HistoryScreen initial={lastScenario.current} onStart={startHistory} />}
-      {screen === 'faction' && <GrandScreen onBattle={startGrandBattle} />}
+      {screen === 'select' && (
+        <Chunk frame="역사 전투">
+          <HistoryScreen initial={lastScenario.current} onStart={startHistory} />
+        </Chunk>
+      )}
+      {screen === 'faction' && (
+        <Chunk frame="진영 전역">
+          <GrandScreen onBattle={startGrandBattle} />
+        </Chunk>
+      )}
       {screen === 'skirmish' && (
         <ScreenFrame title="쟁탈전">
-          <ConquestSetupPanel onStart={startConquest} />
+          <Chunk>
+            <ConquestSetupPanel onStart={startConquest} />
+          </Chunk>
         </ScreenFrame>
       )}
       {screen === 'online' && (
         <ScreenFrame title="온라인 대전">
-          <OnlinePanel />
+          <Chunk>
+            <OnlinePanel />
+          </Chunk>
         </ScreenFrame>
       )}
       {screen === 'settings' && <SettingsScreen />}
