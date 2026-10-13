@@ -15,6 +15,7 @@ import { SHIP_SPECS } from '../../sim/catalog';
 import type { ShipKind } from '../../sim/types';
 import { modelKind } from '../../ships/anchors';
 import { ATLAS, atlasFiles } from '../../ships/build/atlas';
+import { TINT_RANGE, toGeometry } from '../../ships/build/pack';
 import { weather } from '../../ships/weather';
 import { MAP_ASPECT } from './projection';
 import { buildCampKit, type KitMesh } from './campKits';
@@ -126,8 +127,8 @@ async function loadCamp(url: string): Promise<CampModel | null> {
 }
 
 /** The battle's ship builder, loaded with the first fleet: the map needs the battle's code only for its ships. */
-let builder: Promise<[typeof import('../../ships/build/ShipBuilder'), typeof import('../../ships/build/procedural')]> | null = null;
-const shipBuilder = () => (builder ??= Promise.all([import('../../ships/build/ShipBuilder'), import('../../ships/build/procedural')]));
+let builder: Promise<typeof import('../../ships/build/ShipBuilder')> | null = null;
+const shipBuilder = () => (builder ??= import('../../ships/build/ShipBuilder'));
 
 /**
  * A battle ship as the battle's own builder makes it: its middle level (banners, gun ports) for the close view and its far
@@ -135,7 +136,7 @@ const shipBuilder = () => (builder ??= Promise.all([import('../../ships/build/Sh
  * and the turn and scale into the kits' frame: bow +z, one unit long, centred along its length and beam.
  */
 async function shipLevels(kind: ShipKind) {
-  const [{ buildShip }, { toGeometry }] = await shipBuilder();
+  const { buildShip } = await shipBuilder();
   // One kind per task, so building a world's ships does not hold the page up in one piece.
   await new Promise((resolve) => setTimeout(resolve));
   const built = buildShip(kind, 0);
@@ -153,7 +154,7 @@ async function shipLevels(kind: ShipKind) {
  * naming its atlas cell and repeating that cell's tile, shaded by the tint and occlusion the builder baked in and worn by
  * the battle's weathering; lit by the map's sun and sky like the camps.
  */
-async function shipMaterial(faction: FactionId, tintRange: number) {
+async function shipMaterial(faction: FactionId) {
   const map = await new TextureLoader().loadAsync(atlasFiles(faction, true).albedo);
   map.colorSpace = SRGBColorSpace;
   // The atlas is addressed with v pointing down the image, as in the battle.
@@ -171,7 +172,7 @@ async function shipMaterial(faction: FactionId, tintRange: number) {
   const local = vec2(fract(U.x), float(1).sub(fract(U.y))).mul(usable).add(ATLAS.pad / ATLAS.cell);
   const at = vec2(cell.mod(ATLAS.grid), cell.div(ATLAS.grid).floor()).add(local).div(ATLAS.grid);
   const k = usable / ATLAS.grid;
-  const tint: any = varying(shade.xyz.mul(shade.xyz).mul(tintRange));
+  const tint: any = varying(shade.xyz.mul(shade.xyz).mul(TINT_RANGE));
   const color = texture(map, at).grad(dFdx(U).mul(k), dFdy(U).mul(k)).rgb.mul(tint);
   const cloth = surf.equal(1).or(surf.equal(4));
   const worn = weather({ color, surf, soot: mat.w, shipY: positionGeometry.y, rough: select(cloth, float(0.95), float(0.8)), detail: false });
@@ -395,7 +396,7 @@ export class MapLayer {
   private shipMaterial(faction: FactionId) {
     let p = this.shipMaterials.get(faction);
     if (!p) {
-      p = shipBuilder().then(([, { TINT_RANGE }]) => shipMaterial(faction, TINT_RANGE)).then((m) => {
+      p = shipMaterial(faction).then((m) => {
         if (this.disposed) { m.material.dispose(); m.map.dispose(); } else this.readyMaterials.push(m);
         return m;
       });

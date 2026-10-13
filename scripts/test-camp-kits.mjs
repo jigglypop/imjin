@@ -20,11 +20,11 @@ const check = (name, test) => { test(); passed++; console.log(`ok - ${name}`); }
 const BUDGET = { near: 600, far: 200, camp: 4000 };
 try {
   const bundled = await build({
-    stdin: { contents: `export * from './src/ui/grand/campKits.ts'; export * from './src/ui/grand/mapWorld.ts'; export * from './src/ui/grand/shipKits.ts'; export { buildShip } from './src/ships/build/ShipBuilder.ts'; export { modelKind, PROCEDURAL_KINDS } from './src/ships/anchors.ts'; export { SHIP_SPECS } from './src/sim/catalog.ts';`, resolveDir: root },
+    stdin: { contents: `export * from './src/ui/grand/campKits.ts'; export * from './src/ui/grand/mapWorld.ts'; export * from './src/ui/grand/shipKits.ts'; export { buildShip } from './src/ships/build/ShipBuilder.ts'; export { modelKind, PROCEDURAL_KINDS } from './src/ships/anchors.ts'; export { SHIP_SPECS } from './src/sim/catalog.ts'; export * as buildings from './src/ui/grand/campBuildings.ts'; export * as pieces from './src/ui/grand/campPieces.ts';`, resolveDir: root },
     bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent',
   });
   const path = join(temporary, 'camp-kits.mjs'); await writeFile(path, bundled.outputFiles[0].contents);
-  const { buildCampKit, buildShipKit, KIT_KINDS, settlementPieces, WALL_KINDS, buildShip, modelKind, PROCEDURAL_KINDS, SHIP_SPECS } = await import(pathToFileURL(path).href);
+  const { buildCampKit, buildShipKit, KIT_KINDS, settlementPieces, WALL_KINDS, buildShip, modelKind, PROCEDURAL_KINDS, SHIP_SPECS, buildings, pieces } = await import(pathToFileURL(path).href);
   const NAVIES = ['joseon', 'japan', 'ming'];
   const kits = new Map(KIT_KINDS.map((kind) => [kind, [buildCampKit(kind, 0), buildCampKit(kind, 1)]]));
   const tris = (m) => m.index.length / 3;
@@ -211,6 +211,70 @@ try {
       };
       const [lo, hi] = [count(level), count(level + 1)];
       for (const [kind, n] of lo) assert.ok((hi.get(kind) ?? 0) + (hi.get(UPGRADE[kind]) ?? 0) >= n, `${f} ${level + 1} keeps its ${kind}`);
+    }
+  });
+  // The settlements' buildings, made like the battle's ships: procedural parts on each navy's texture atlas.
+  const atlas = JSON.parse(readFileSync(join(root, 'src/ui/grand/buildingAtlas.json'), 'utf8'));
+  const built = new Map(buildings.KIT_KINDS.map((kind) => [kind, buildings.buildCampBuilding(kind)]));
+  check('every settlement kind has a building close up and far away, inside its triangle budget', () => {
+    assert.deepEqual([...built.keys()].sort(), Object.keys(pieces.FOOTPRINT).sort());
+    for (const [kind, [near, far]] of built) {
+      assert.ok(tris(near) > 0 && tris(near) <= 1500, `${kind} close: ${tris(near)} triangles`);
+      assert.ok(tris(far) > 0 && tris(far) <= Math.max(0.45 * tris(near), 80), `${kind} far: ${tris(far)} of ${tris(near)} triangles`);
+    }
+  });
+  check("every vertex of a building is finite, inside its footprint, reaches below the ground and names a cell of its navy's atlas", () => {
+    for (const [kind, meshes] of built) {
+      const slots = atlas.factions[pieces.navyOf(kind)];
+      const [fx, fz] = pieces.FOOTPRINT[kind];
+      const hx = pieces.WALL_KINDS.has(kind) ? 0.5 : fx / pieces.METRES_PER_RADIUS, hz = fz / pieces.METRES_PER_RADIUS;
+      for (const m of meshes) {
+        const n = m.position.length / 3;
+        for (const [key, size] of [['normal', 3], ['uv', 2], ['color', 3], ['mat', 2], ['sway', 2]]) assert.equal(m[key].length, n * size, `${kind} ${key}`);
+        let ground = Infinity;
+        for (let i = 0; i < n; i++) {
+          const [x, y, z] = [m.position[i * 3], m.position[i * 3 + 1], m.position[i * 3 + 2]];
+          assert.ok([x, y, z, m.uv[i * 2], m.uv[i * 2 + 1]].every(Number.isFinite), `${kind} vertex ${i}`);
+          assert.ok(Math.abs(x) <= hx + 1e-6 && Math.abs(z) <= hz + 1e-6, `${kind} vertex ${i} at ${x.toFixed(3)}, ${z.toFixed(3)} leaves its footprint`);
+          assert.ok(Math.abs(Math.hypot(m.normal[i * 3], m.normal[i * 3 + 1], m.normal[i * 3 + 2]) - 1) < 1e-3, `${kind} normal ${i}`);
+          const cell = Math.round(m.mat[i * 2]), slot = slots[cell];
+          assert.ok(slot, `${kind} vertex ${i} names cell ${cell}`);
+          // A picture (a door, a gate, a banner) is laid once over its face: its uv never wraps into the next repeat.
+          if (!slot.tile) assert.ok(m.uv[i * 2] >= 0 && m.uv[i * 2] <= 1 && m.uv[i * 2 + 1] >= 0 && m.uv[i * 2 + 1] <= 1, `${kind} picture ${slot.name} uv`);
+          for (let c = 0; c < 3; c++) assert.ok(m.color[i * 3 + c] > 0 && m.color[i * 3 + c] <= 4, `${kind} tint ${i}`);
+          ground = Math.min(ground, y);
+        }
+        assert.ok(ground < 0, `${kind} reaches below the ground, so it never floats on a slope`);
+        for (const v of m.index) assert.ok(v < n, `${kind} index`);
+      }
+    }
+  });
+  check("a building's faces are wound the way its normals point", () => {
+    for (const [kind, meshes] of built) for (const m of meshes) {
+      const p = m.position, nn = m.normal;
+      let against = 0;
+      for (let t = 0; t < m.index.length; t += 3) {
+        const [a, b, c] = [m.index[t] * 3, m.index[t + 1] * 3, m.index[t + 2] * 3];
+        const e1 = [p[b] - p[a], p[b + 1] - p[a + 1], p[b + 2] - p[a + 2]], e2 = [p[c] - p[a], p[c + 1] - p[a + 1], p[c + 2] - p[a + 2]];
+        const f = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+        if (Math.hypot(...f) < 1e-12) continue;
+        const mean = [0, 1, 2].map((k) => nn[a + k] + nn[b + k] + nn[c + k]);
+        if (f[0] * mean[0] + f[1] * mean[1] + f[2] * mean[2] <= 0) against++;
+      }
+      assert.equal(against, 0, `${kind}: ${against} triangles face against their normals`);
+    }
+  });
+  check('a stretch of wall runs the whole unit along x, so a ring of them closes', () => {
+    for (const kind of pieces.WALL_KINDS) for (const m of built.get(kind)) {
+      let lo = Infinity, hi = -Infinity;
+      for (let i = 0; i < m.position.length; i += 3) { lo = Math.min(lo, m.position[i]); hi = Math.max(hi, m.position[i]); }
+      assert.ok(lo <= -0.495 && hi >= 0.495, `${kind} ${lo} ${hi}`);
+    }
+  });
+  check('building a kind twice gives the same numbers', () => {
+    for (const kind of ['hall', 'wa_keep4', 'mg_gate', 'choga']) {
+      const [a, b] = [buildings.buildCampBuilding(kind), buildings.buildCampBuilding(kind)];
+      for (const lod of [0, 1]) for (const key of ['position', 'normal', 'uv', 'color', 'mat', 'index']) assert.deepEqual(a[lod][key], b[lod][key], `${kind} ${lod} ${key}`);
     }
   });
   console.log(`${passed} camp kit regressions passed`);

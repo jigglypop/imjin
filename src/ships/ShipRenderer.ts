@@ -55,7 +55,7 @@ import { loadProcedural } from './build/procedural';
 import { equipment } from '../game/quality';
 import { emberGlow, weather } from './weather';
 import { disposeTree, freeAfterDraw } from '../render/dispose';
-import { PHASE_RANGE, SWAY_RANGE, TINT_RANGE } from './build/procedural';
+import { PHASE_RANGE, SWAY_RANGE, TINT_RANGE } from './build/pack';
 
 export type ShipModelSpec = {
   kind: ShipKind;
