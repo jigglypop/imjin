@@ -82,10 +82,10 @@ function pageHtml(base: string, { screen, edition, path }: RoutePage): string {
   meta('name', 'twitter:title', title);
   meta('name', 'twitter:description', preview);
   if (en) {
-    meta('property', 'og:image', `${SITE}/og-en.jpg`);
-    meta('property', 'og:image:secure_url', `${SITE}/og-en.jpg`);
-    meta('property', 'og:image:alt', 'The Imjin War · panokseon and a turtle ship sailing through the mist');
-    meta('name', 'twitter:image', `${SITE}/og-en.jpg`);
+    meta('property', 'og:image', `${SITE}/og-geobukseon-en.jpg`);
+    meta('property', 'og:image:secure_url', `${SITE}/og-geobukseon-en.jpg`);
+    meta('property', 'og:image:alt', 'The Imjin War · a dragon-headed turtle ship ploughing through rough seas at sunset');
+    meta('name', 'twitter:image', `${SITE}/og-geobukseon-en.jpg`);
     meta('name', 'apple-mobile-web-app-title', english('임진왜란'));
   }
   return html;
