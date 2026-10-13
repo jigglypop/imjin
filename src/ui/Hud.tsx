@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { SPEEDS, type Engine } from '../game/Engine';
 import { AMMO_NAMES } from '../game/Input';
-import { isTouchDevice } from '../game/device';
+import { isTouchDevice, isTouchOnly } from '../game/device';
 import { EQUIPMENT_LABEL, equipment, saveEquipmentSetting, type EquipmentSetting } from '../game/quality';
 import { SKY_PRESETS, type SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
@@ -95,7 +95,8 @@ function Card({ sq, compact, onClick, onDouble }: { sq: SquadronInfo; compact: b
   const t = useT();
   const lang = useLang();
   return (
-    <button className={`card f-${sq.faction} ${sq.selected ? 'card--selected' : ''} ${sq.alive === 0 ? 'card--dead' : ''}`} onClick={onClick} onDoubleClick={onDouble} aria-label={`${tName(sq.name)} · ${tCommander(sq.commander)}`} data-tip="card">
+    // The simplified layout shows only the portrait and the count: the explanation is headed by the fleet's name.
+    <button className={`card f-${sq.faction} ${sq.selected ? 'card--selected' : ''} ${sq.alive === 0 ? 'card--dead' : ''}`} onClick={onClick} onDoubleClick={onDouble} aria-label={`${tName(sq.name)} · ${tCommander(sq.commander)}`} data-tip="card" data-tip-title={`${tName(sq.name)} · ${tCommander(sq.commander)}`}>
       <img src={`/ui/portraits/${sq.portrait}.jpg`} alt="" />
       <div className="card-flags">
         {sq.burning > 0 && (
@@ -125,10 +126,12 @@ function Card({ sq, compact, onClick, onDouble }: { sq: SquadronInfo; compact: b
 
 type OrderDef = { icon: string; label: string; key: string; tip: string; run: () => void; on?: boolean; disabled?: boolean };
 
-/** Always available, including when a phone folds the larger command sheet. */
-function FleetGroups({ engine, compact }: { engine: Engine; compact: boolean }) {
+/**
+ * Always available, including when a phone folds the larger command sheet. The simplified layout shows a slim strip
+ * instead: only the groups that hold ships, every slot while the player is choosing one to assign.
+ */
+function FleetGroups({ engine, open, onToggle, slim }: { engine: Engine; open: boolean; onToggle: () => void; slim: boolean }) {
   const t = useT();
-  const [open, setOpen] = useState(!compact);
   const [assigning, setAssigning] = useState(false);
   const [active, setActive] = useState(0);
   const [editing, setEditing] = useState<number | null>(null);
@@ -143,9 +146,43 @@ function FleetGroups({ engine, compact }: { engine: Engine; compact: boolean }) 
     if (editing !== null) input.renameGroup(editing, name);
     setEditing(null);
   };
+  const groupButton = (g: (typeof groups)[number]) => (
+    <button key={g.index} className={`fleet-group ${g.selected ? 'fleet-group--selected' : ''} ${assigning ? 'fleet-group--assign' : ''}`} data-group={g.index + 1} title={t('{name} · {n}척 · 두 번 누르면 시점 이동', { name: g.name, n: g.count })} aria-label={t('{name} · {n}척', { name: g.name, n: g.count })} onClick={(e) => {
+      setActive(g.index);
+      if (assigning || e.ctrlKey || e.metaKey || (g.count === 0 && ownSelected)) { input.assignGroup(g.index, e.shiftKey); setAssigning(false); }
+      else if (e.shiftKey) input.assignGroup(g.index, true);
+      else input.selectGroup(g.index);
+    }}>
+      <span><kbd>{g.index + 1}</kbd><b>{g.count}</b></span>{!slim && <small>{g.name}</small>}
+    </button>
+  );
+  const route = (
+    <button className={`fleet-route ${input.queueMoves ? 'fleet-tool--on' : ''}`} disabled={!ownSelected} onClick={() => input.toggleQueueMode()} aria-pressed={input.queueMoves} title={t('켜면 바다를 누를 때 이동 경로를 예약합니다 · Shift+우클릭도 가능')}>
+      {t('경로 예약')}{queued > 0 && <b>{queued}/16</b>}
+    </button>
+  );
+  if (slim) {
+    const shown = assigning ? groups : groups.filter((g) => g.count > 0);
+    return <div className="fleet-groups fleet-groups--slim glass interactive" aria-label={t('지정 부대')}>
+      <div className="fleet-slim-head">
+        <button className="fleet-group-toggle" aria-expanded={open} onClick={onToggle} title={t(open ? '지정 부대 접기' : '지정 부대 펼치기')}>
+          {t('부대')} <Icon name={open ? 'chevronUp' : 'chevronDown'} size={14} />
+        </button>
+        {open && <>
+          <button onClick={() => input.selectAll()} title="Ctrl+A">{t('전체 선택')}</button>
+          <button className={`fleet-add ${assigning ? 'fleet-tool--on' : ''}`} disabled={!ownSelected && !assigning} onClick={() => setAssigning((v) => !v)} aria-pressed={assigning} aria-label={t(assigning ? '지정할 부대' : '부대 지정')} title={t('함선을 고른 뒤 지정할 부대를 누르세요')}>
+            <Icon name="plus" size={14} />
+          </button>
+          {/* A finger has no Shift+right-click: the route toggle stays within reach. */}
+          {isTouchDevice && route}
+        </>}
+      </div>
+      {open && shown.length > 0 && <div className="fleet-slim">{shown.map(groupButton)}</div>}
+    </div>;
+  }
   return <div className="fleet-groups glass interactive" aria-label={t('지정 부대')}>
     <div className="fleet-group-head">
-      <button className="fleet-group-toggle" aria-expanded={open} aria-controls="fleet-group-body" onClick={() => setOpen((v) => !v)}>
+      <button className="fleet-group-toggle" aria-expanded={open} aria-controls="fleet-group-body" onClick={onToggle}>
         {t('지정 부대')} <Icon name={open ? 'chevronUp' : 'chevronDown'} size={14} />
       </button>
       <button onClick={() => input.selectAll()} title="Ctrl+A">{t('전체 선택')}</button>
@@ -154,19 +191,10 @@ function FleetGroups({ engine, compact }: { engine: Engine; compact: boolean }) 
     <div className="fleet-group-tools">
       <button className={assigning ? 'fleet-tool--on' : ''} disabled={!ownSelected} onClick={() => setAssigning((v) => !v)} title={t('함선을 고른 뒤 지정할 부대를 누르세요')} aria-pressed={assigning}>{t(assigning ? '지정할 부대' : '부대 지정')}</button>
       <button onClick={() => { setEditing(current); setName(groups[current]!.name); }}>{t('이름')}</button>
-      <button className={`fleet-route ${input.queueMoves ? 'fleet-tool--on' : ''}`} disabled={!ownSelected} onClick={() => input.toggleQueueMode()} aria-pressed={input.queueMoves} title={t('켜면 바다를 누를 때 이동 경로를 예약합니다 · Shift+우클릭도 가능')}>
-        {t('경로 예약')}{queued > 0 && <b>{queued}/16</b>}
-      </button>
+      {route}
     </div>
     <div className="fleet-group-grid">
-      {groups.map((g) => <button key={g.index} className={`fleet-group ${g.selected ? 'fleet-group--selected' : ''} ${assigning ? 'fleet-group--assign' : ''}`} data-group={g.index + 1} title={t('{name} · {n}척 · 두 번 누르면 시점 이동', { name: g.name, n: g.count })} aria-label={t('{name} · {n}척', { name: g.name, n: g.count })} onClick={(e) => {
-        setActive(g.index);
-        if (assigning || e.ctrlKey || e.metaKey || (g.count === 0 && ownSelected)) { input.assignGroup(g.index, e.shiftKey); setAssigning(false); }
-        else if (e.shiftKey) input.assignGroup(g.index, true);
-        else input.selectGroup(g.index);
-      }}>
-        <span><kbd>{g.index + 1}</kbd><b>{g.count}</b></span><small>{g.name}</small>
-      </button>)}
+      {groups.map(groupButton)}
     </div>
     {editing !== null && <form className="fleet-group-name" onSubmit={(e) => { e.preventDefault(); saveName(); }}>
       <label htmlFor="fleet-name">{t('부대 {n}', { n: editing + 1 })}</label>
@@ -177,9 +205,12 @@ function FleetGroups({ engine, compact }: { engine: Engine; compact: boolean }) 
   </div>;
 }
 
-function Orders({ engine, p, night, selected, collapsed, onToggle }: { engine: Engine; p: PrimaryInfo | null; night: boolean; selected: number; collapsed: boolean; onToggle: () => void }) {
+/**
+ * The order tabs. The open tab is kept by the HUD, so folding the panel away and back does not lose it. `onToggle` folds
+ * the grid on a phone and the whole panel on a wide screen.
+ */
+function Orders({ engine, p, night, selected, tab, setTab, collapsed, onToggle }: { engine: Engine; p: PrimaryInfo | null; night: boolean; selected: number; tab: Tab; setTab: (tab: Tab) => void; collapsed: boolean; onToggle: () => void }) {
   const t = useT();
-  const [tab, setTab] = useState<Tab>('form');
   const input = engine.input;
   const none = selected === 0;
   const tabs: Record<Tab, { title: string; items: OrderDef[] }> = {
@@ -305,15 +336,19 @@ const BACK_LABEL: Record<BattleOrigin, { long: string; short: string }> = {
   faction: { long: '전역 지도', short: '전역' },
 };
 
-/** Pause and speed. Wide layouts show every multiplier; compact ones show one button that cycles through them. */
-function SpeedControl({ engine, snap, compact }: { engine: Engine; snap: GameSnapshot; compact: boolean }) {
+/**
+ * Pause and speed. The full layout shows every multiplier; the simplified one steps down and up beside the speed it is
+ * at; a phone shows one button that cycles through them.
+ */
+function SpeedControl({ engine, snap, variant }: { engine: Engine; snap: GameSnapshot; variant: 'all' | 'step' | 'cycle' }) {
   const t = useT();
   const setSpeed = (s: number) => {
     engine.speed = s;
     engine.paused = false;
     engine.publish(true);
   };
-  const next = SPEEDS[(SPEEDS.findIndex((s) => s === snap.speed) + 1) % SPEEDS.length]!;
+  const at = SPEEDS.findIndex((s) => s === snap.speed);
+  const next = SPEEDS[(at + 1) % SPEEDS.length]!;
   return (
     <>
       <button
@@ -327,10 +362,22 @@ function SpeedControl({ engine, snap, compact }: { engine: Engine; snap: GameSna
       >
         <Icon name={snap.paused ? 'play' : 'pause'} size={16} />
       </button>
-      {compact ? (
+      {variant === 'cycle' ? (
         <button aria-label={t('배속 바꾸기')} data-tip="speed" onClick={() => setSpeed(next)}>
           {snap.speed}×
         </button>
+      ) : variant === 'step' ? (
+        <>
+          <button className="speed-step" aria-label={t('느리게')} data-tip="speed" disabled={at <= 0} onClick={() => setSpeed(SPEEDS[at - 1]!)}>
+            <Icon name="chevronLeft" size={14} />
+          </button>
+          <span className={`speed-now ${snap.paused ? '' : 'on'}`} data-tip="speed">
+            {snap.speed}×
+          </span>
+          <button className="speed-step" aria-label={t('빠르게')} data-tip="speed" disabled={at >= SPEEDS.length - 1} onClick={() => setSpeed(SPEEDS[at + 1]!)}>
+            <Icon name="chevronRight" size={14} />
+          </button>
+        </>
       ) : (
         SPEEDS.map((s) => (
           <button key={s} className={!snap.paused && snap.speed === s ? 'on' : ''} data-tip="speed" onClick={() => setSpeed(s)}>
@@ -433,6 +480,54 @@ function readHint(): boolean {
   }
 }
 
+/**
+ * How much of the HUD stands over the sea. Simplified is the default, so the battle shows between slim side panels; full
+ * is the HUD with every label; folded leaves only edge tabs, each of which brings its panel back.
+ */
+type Layout = 'full' | 'simple' | 'fold';
+const LAYOUTS: Layout[] = ['full', 'simple', 'fold'];
+const LAYOUT_LABEL: Record<Layout, string> = { full: '전체', simple: '간소화', fold: '접기' };
+const LAYOUT_ICON: Record<Layout, string> = { full: 'hudFull', simple: 'hudSimple', fold: 'hudFold' };
+const LAYOUT_KEY = 'imjin.hud.layout';
+
+/** The parts a player folds on their own: the group panel, the minimap with the ship panel, the commander cards, the orders. */
+type Part = 'groups' | 'map' | 'cards' | 'orders';
+type Folds = Record<Part, boolean>;
+
+function readLayout(): Layout {
+  try {
+    const stored = localStorage.getItem(LAYOUT_KEY);
+    return LAYOUTS.find((l) => l === stored) ?? 'simple';
+  } catch {
+    return 'simple';
+  }
+}
+
+const foldsOf = (layout: Layout): Folds => {
+  const all = layout === 'fold';
+  return { groups: all, map: all, cards: all, orders: all };
+};
+
+/** A folded part's tab along the bottom edge, where the part stood. */
+function FoldTab({ label, title, onOpen, children }: { label: string; title: string; onOpen: () => void; children?: React.ReactNode }) {
+  return (
+    <button className="fold-tab" onClick={onOpen} aria-expanded={false} aria-label={title} title={title}>
+      <Icon name="chevronUp" size={14} />
+      {label}
+      {children}
+    </button>
+  );
+}
+
+/** The small button on an open part that folds it to its tab. */
+function FoldButton({ title, className, onFold }: { title: string; className: string; onFold: () => void }) {
+  return (
+    <button className={`fold-btn ${className}`} onClick={onFold} aria-expanded={true} aria-label={title} title={title}>
+      <Icon name="chevronDown" size={14} />
+    </button>
+  );
+}
+
 /** The short reminder shown while nothing is selected. The player can close it for good. */
 function Hint({ onClose }: { onClose: () => void }) {
   const t = useT();
@@ -477,13 +572,44 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   // The minimap is always on in the wide layout. On phones it opens as a floating panel from the menu.
   const [mapOn, setMapOn] = useState(false);
   const [ordersCollapsed, setOrdersCollapsed] = useState(false);
-  // Portrait phones fold the detail and orders away to leave the sea in view. Short phones start folded.
-  const [sheetFolded, setSheetFolded] = useState(() => innerHeight < 760);
+  const [ordersTab, setOrdersTab] = useState<Tab>('form');
+  // The chosen layout and the parts folded under it. Choosing a layout resets every fold to it; a tab or a fold button
+  // changes one part and the layout stays as chosen.
+  const [view, setView] = useState(() => {
+    const layout = readLayout();
+    // A phone starts with its group panel shut, as it always has.
+    return { layout, folds: { ...foldsOf(layout), groups: compact || layout === 'fold' } };
+  });
+  // Portrait phones fold the detail and orders away to leave the sea in view. Short phones start folded, and so does
+  // every phone under the folded layout.
+  const [sheetFolded, setSheetFolded] = useState(() => innerHeight < 760 || view.layout === 'fold');
   const [hintOpen, setHintOpen] = useState(readHint);
   const [perf, setPerf] = useState(readPerf);
   const minimapRef = useRef<HTMLDivElement | null>(null);
   const wasTour = useRef(false);
   useHudInsets();
+  const wide = !compact;
+  // The tour points at the cards, the orders and the speed control: every part stays open while it runs.
+  const folded = (part: Part) => wide && !tourActive && view.folds[part];
+  const groupsOpen = compact ? !view.folds.groups : !folded('groups');
+  const slim = wide && view.layout !== 'full';
+  const mapFolded = folded('map');
+  const setFold = (part: Part, fold: boolean) => setView((v) => ({ ...v, folds: { ...v.folds, [part]: fold } }));
+  const changeLayout = (layout: Layout) => {
+    setView((v) => ({ layout, folds: { ...foldsOf(layout), groups: compact ? v.folds.groups : layout === 'fold' } }));
+    // A phone has one fold of its own, the command sheet: the folded layout folds it and the others open it.
+    if (compact) setSheetFolded(layout === 'fold');
+    try {
+      localStorage.setItem(LAYOUT_KEY, layout);
+    } catch {
+      // The choice then lasts for this battle only.
+    }
+  };
+  const cycleLayout = () => {
+    const next = LAYOUTS[(LAYOUTS.indexOf(view.layout) + 1) % LAYOUTS.length]!;
+    changeLayout(next);
+    return next;
+  };
   const closeHint = () => {
     setHintOpen(false);
     try {
@@ -502,9 +628,23 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
     }
   };
 
+  // A folded minimap is unmounted, and the engine stops drawing it.
   useEffect(() => {
     engine.minimap.mount(minimapRef.current);
-  }, [engine, snap?.scenario.id, compact, mapOn]);
+  }, [engine, snap?.scenario.id, compact, mapOn, mapFolded]);
+
+  // ` (left of 1) cycles the layout: every letter is already an order or a camera key.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (e.code !== 'Backquote' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName ?? '')) return;
+      e.preventDefault();
+      pushToast(tr('지휘 패널 · {layout}', { layout: tr(LAYOUT_LABEL[cycleLayout()]) }));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [view.layout, compact]);
 
   // The tour says what the bottom-left hint says, so the hint is retired once the tour has been read.
   useEffect(() => {
@@ -541,7 +681,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
         { label: '소요 시간', value: formatTime(snap.time) },
       ];
   return (
-    <div className="hud" style={{ '--own-fc': `var(--${snap.faction})`, '--enemy-fc': `var(--${enemyFaction})` } as React.CSSProperties}>
+    <div className={`hud${slim ? ' hud--slim' : ''}`} style={{ '--own-fc': `var(--${snap.faction})`, '--enemy-fc': `var(--${enemyFaction})` } as React.CSSProperties}>
       <div className="hud-title">
         <div className="hud-title-main">{t(snap.scenario.title)}</div>
         <div className="hud-title-sub">
@@ -556,6 +696,13 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             <Icon name="settings" size={16} />
             {t('설정')}
           </button>
+          {/* A phone folds its command sheet from the dock instead. */}
+          {wide && (
+            <button className="mini-btn hud-layout-btn" onClick={cycleLayout} aria-label={t('지휘 패널 · {layout} · ` 키로 바꿉니다', { layout: t(LAYOUT_LABEL[view.layout]) })} title={t('지휘 패널 · {layout} · ` 키로 바꿉니다', { layout: t(LAYOUT_LABEL[view.layout]) })}>
+              <Icon name={LAYOUT_ICON[view.layout]} size={16} />
+              <span>{t(LAYOUT_LABEL[view.layout])}</span>
+            </button>
+          )}
           {compact && (
             <button className={`mini-btn ${mapOn ? 'mini-btn--on' : ''}`} onClick={() => setMapOn((v) => !v)}>
               <Icon name="map" size={16} />
@@ -699,7 +846,17 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             </section>
             <section className="settings-sec">
               <div className="settings-label">{t('화면 표시')}</div>
-              <div className="chips">
+              <div className="chips" role="group" aria-label={t('지휘 패널')}>
+                {LAYOUTS.map((k) => (
+                  <button key={k} className={`chip ${view.layout === k ? 'chip--on' : ''}`} aria-pressed={view.layout === k} onClick={() => changeLayout(k)}>
+                    {t(LAYOUT_LABEL[k])}
+                  </button>
+                ))}
+              </div>
+              <div className="settings-hint">
+                {t(compact ? '좁은 화면에서는 접기를 고르면 아래 지휘 시트를 접습니다.' : isTouchOnly ? '전투 장면을 가리는 지휘 패널을 줄이거나 접습니다.' : '전투 장면을 가리는 지휘 패널을 줄이거나 접습니다. ` 키로도 바꿉니다.')}
+              </div>
+              <div className="chips settings-row">
                 <button className={`chip ${perf ? 'chip--on' : ''}`} aria-pressed={perf} onClick={togglePerf}>
                   {t('성능 표시')}
                 </button>
@@ -745,55 +902,87 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
 
       {!ended && (
         <div className="selection-dock touch-bar">
-          <FleetGroups engine={engine} compact={compact} />
+          <FleetGroups engine={engine} open={groupsOpen} onToggle={() => setFold('groups', groupsOpen)} slim={slim} />
           {isTouchDevice && <div className="selection-tools">
-          <button className={`tool ${touchBox ? 'tool--on' : ''}`} onClick={() => setTouchBox(!touchBox)} data-tip="tool.box">
+          <button className={`tool ${touchBox ? 'tool--on' : ''}`} onClick={() => setTouchBox(!touchBox)} aria-label={t('박스')} data-tip="tool.box">
             <Icon name="box" size={19} />
-            {t('박스')}
+            <span>{t('박스')}</span>
           </button>
-          <button className="tool" onClick={() => engine.input.clearSelection()} aria-disabled={snap.selectedCount === 0 || undefined} data-tip="tool.clear">
+          <button className="tool" onClick={() => engine.input.clearSelection()} aria-disabled={snap.selectedCount === 0 || undefined} aria-label={t('해제')} data-tip="tool.clear">
             <Icon name="clear" size={19} />
-            {t('해제')}
+            <span>{t('해제')}</span>
           </button>
-          <button className={`tool ${snap.following ? 'tool--on' : ''}`} onClick={() => snap.selectedCount > 0 && engine.input.followSelected()} aria-disabled={snap.selectedCount === 0 || undefined} data-tip="tool.follow">
+          <button className={`tool ${snap.following ? 'tool--on' : ''}`} onClick={() => snap.selectedCount > 0 && engine.input.followSelected()} aria-disabled={snap.selectedCount === 0 || undefined} aria-label={t('추적')} data-tip="tool.follow">
             <Icon name="follow" size={19} />
-            {t('추적')}
+            <span>{t('추적')}</span>
           </button>
           {/* The crew panel with the cutaway chip is hidden on phones, so the deck view needs its own button. */}
-          <button className={`tool ${engine.cutaway ? 'tool--on' : ''}`} onClick={() => (snap.selectedCount > 0 || engine.cutaway) && engine.toggleCutaway()} aria-disabled={(snap.selectedCount === 0 && !engine.cutaway) || undefined} data-tip="tool.deck">
+          <button className={`tool ${engine.cutaway ? 'tool--on' : ''}`} onClick={() => (snap.selectedCount > 0 || engine.cutaway) && engine.toggleCutaway()} aria-disabled={(snap.selectedCount === 0 && !engine.cutaway) || undefined} aria-label={t(engine.cutaway ? DECK_LABEL[engine.cutaway]! : '선내')} data-tip="tool.deck">
             <Icon name="deck" size={19} />
-            {t(engine.cutaway ? DECK_LABEL[engine.cutaway]! : '선내')}
+            <span>{t(engine.cutaway ? DECK_LABEL[engine.cutaway]! : '선내')}</span>
           </button>
           </div>}
         </div>
       )}
 
       <div className={`bottom ${sheetFolded ? 'bottom--folded' : ''}`}>
-        {!compact && <div className="minimap" ref={minimapRef} />}
+        {wide && (mapFolded ? (
+          <FoldTab label={t('지도')} title={t('지도와 함선 정보 펼치기')} onOpen={() => setFold('map', false)} />
+        ) : (
+          <div className="map-wrap">
+            <div className="minimap" ref={minimapRef} />
+            <FoldButton className="map-fold" title={t('지도와 함선 정보 접기')} onFold={() => setFold('map', true)} />
+          </div>
+        ))}
         {/* Once the battle is decided the result card is the only thing to act on: no orders or cards behind it. */}
         {!ended && (
           <>
-            {p ? <Detail engine={engine} snap={snap} p={p} portrait={primaryPortrait} /> : hintOpen && !tourActive && <Hint onClose={closeHint} />}
-            <div className="cards">
-              {own.map((sq) => (
-                <Card key={sq.id} sq={sq} compact={compact} onClick={(e) => engine.selectSquadron(sq.id, e.shiftKey)} onDouble={() => engine.focusSquadron(sq.id)} />
-              ))}
-            </div>
-            {/* A landscape phone's settings sheet reaches down over the orders. */}
-            <div className={`orders glass interactive ${ordersCollapsed ? 'orders--collapsed' : ''}`} style={showSettings && compact ? { visibility: 'hidden' } : undefined}>
-              <Orders engine={engine} p={p} night={snap.night} selected={snap.selectedCount} collapsed={ordersCollapsed} onToggle={() => setOrdersCollapsed((v) => !v)} />
-              {!compact && !engine.remote && (
-                <div className="speed">
-                  <SpeedControl engine={engine} snap={snap} compact={false} />
-                </div>
+            {!mapFolded && (p ? <Detail engine={engine} snap={snap} p={p} portrait={primaryPortrait} /> : hintOpen && !tourActive && !slim && <Hint onClose={closeHint} />)}
+            <div className="cards-wrap">
+              {folded('cards') ? (
+                <FoldTab label={t('장수 패 {n}', { n: own.length })} title={t('장수 패 펼치기')} onOpen={() => setFold('cards', false)} />
+              ) : (
+                <>
+                  <div className="cards">
+                    {own.map((sq) => (
+                      <Card key={sq.id} sq={sq} compact={compact} onClick={(e) => engine.selectSquadron(sq.id, e.shiftKey)} onDouble={() => engine.focusSquadron(sq.id)} />
+                    ))}
+                  </div>
+                  {wide && <FoldButton className="cards-fold" title={t('장수 패 접기')} onFold={() => setFold('cards', true)} />}
+                </>
               )}
             </div>
+            {folded('orders') ? (
+              <FoldTab label={t('명령')} title={t('명령 펼치기')} onOpen={() => setFold('orders', false)}>
+                {/* The speed control folds away with the orders: the tab keeps saying how fast the battle runs. */}
+                {!engine.remote && <b className="fold-tab-speed">{snap.paused ? <Icon name="pause" size={12} /> : `${snap.speed}×`}</b>}
+              </FoldTab>
+            ) : (
+              // A landscape phone's settings sheet reaches down over the orders.
+              <div className={`orders glass interactive ${compact && ordersCollapsed ? 'orders--collapsed' : ''}`} style={showSettings && compact ? { visibility: 'hidden' } : undefined}>
+                <Orders
+                  engine={engine}
+                  p={p}
+                  night={snap.night}
+                  selected={snap.selectedCount}
+                  tab={ordersTab}
+                  setTab={setOrdersTab}
+                  collapsed={compact && ordersCollapsed}
+                  onToggle={compact ? () => setOrdersCollapsed((v) => !v) : () => setFold('orders', true)}
+                />
+                {wide && !engine.remote && (
+                  <div className={`speed${slim ? ' speed--step' : ''}`}>
+                    <SpeedControl engine={engine} snap={snap} variant={slim ? 'step' : 'all'} />
+                  </div>
+                )}
+              </div>
+            )}
             {compact && (
               <div className="dock interactive">
                 <button className="dock-fold" aria-expanded={!sheetFolded} onClick={() => setSheetFolded((v) => !v)}>
                   {t('지휘')} <Icon name={sheetFolded ? 'chevronUp' : 'chevronDown'} size={14} />
                 </button>
-                {!engine.remote && <SpeedControl engine={engine} snap={snap} compact />}
+                {!engine.remote && <SpeedControl engine={engine} snap={snap} variant="cycle" />}
               </div>
             )}
           </>

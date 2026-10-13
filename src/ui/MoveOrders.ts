@@ -1,37 +1,60 @@
 import { Vector2 } from 'three/webgpu';
 import type { Engine } from '../game/Engine';
 import { isTouchDevice } from '../game/device';
+import type { Faction } from '../sim/types';
 
-/** Where the mast stands in each flag's viewBox: the marker is pinned by its foot, not by its centre. */
-const FOOT = { move: { x: 18, y: 68 }, rally: { x: 20, y: 90 } };
+type Point = { x: number; y: number };
+type Shape = { foot: Point; cloth: Point };
+
+/** Where the pole stands and where the cloth hangs in each flag's viewBox: a flag is pinned by its foot and steps back behind a panel that covers its cloth. */
+const SHAPE: Record<'move' | 'rally', Shape> = {
+  move: { foot: { x: 9, y: 53 }, cloth: { x: 19, y: 18 } },
+  rally: { foot: { x: 10, y: 79 }, cloth: { x: 24, y: 29 } },
+};
 const LIFETIME = 8000;
 /** A move flag goes once every ship it was issued to is this close; the flag only marks where they are heading. */
 const ARRIVED = 150;
 
-type Mark = { root: HTMLDivElement; x: number; z: number; at: number; foot: { x: number; y: number }; ids: number[] };
+type Mark = { root: HTMLDivElement; x: number; z: number; at: number; shape: Shape; ids: number[] };
+
+/** A small triangular pennant: a destination needs a mark on the water, not a banner over the ships. */
+const PENNANT = 'M9.8 9C17.8 7.6 27 13.2 37 19.6C27.2 20.8 18.2 25.2 9.8 28Z';
+/** The rally banner: a square-cut standard whose free edges ripple a little in the wind. */
+const BANNER = 'M11 12.5C19.5 11.4 29 13.6 38.5 12.2C37.6 23 39.2 35 38 45.6C29 47 19.5 44.6 11 46Z';
+/** Spear-head finials, the leaf-shaped tip of a Korean flagpole, and the tassel tied under the banner's. */
+const SPEAR = { move: 'M9 .6C9.96 2.28 10.32 4.08 10.02 5.4L9 6.6 7.98 5.4C7.68 4.08 8.04 2.28 9 .6Z', rally: 'M10 .4C11.28 2.64 11.76 5.04 11.36 6.8L10 8.4 8.64 6.8C8.24 5.04 8.72 2.64 10 .4Z' };
+const TASSEL = 'M10 8.6C8.5 9.6 7.9 11.5 8.3 13.6C8.9 12.8 9.6 13 10 14.2C10.4 13 11.1 12.8 11.7 13.6C12.1 11.5 11.5 9.6 10 8.6Z';
 
 /**
- * The cloth hangs from two shared gradients: SVG paint servers are looked up by id, so a marker that carries its own
- * copy would lose its paint the moment an older marker holding the same id left the page.
+ * Cloth folds and the border clips are shared: SVG paint servers and clip paths are looked up by id, so a flag that
+ * carried its own copy would lose them the moment an older flag holding the same id left the page. The border is the
+ * outline stroked twice as wide as it shows and clipped to the cloth, so it lies inside the edge like a sewn band.
  */
 const DEFS = `<svg class="move-orders__defs" width="0" height="0" aria-hidden="true"><defs>
-<linearGradient id="mo-gold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff0b0"/><stop offset=".45" stop-color="#f2c04c"/><stop offset="1" stop-color="#b8821f"/></linearGradient>
-<linearGradient id="mo-sky" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e3fbff"/><stop offset=".45" stop-color="#8ee4f6"/><stop offset="1" stop-color="#3b97b4"/></linearGradient>
-<linearGradient id="mo-red" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d9503f"/><stop offset=".5" stop-color="#a62a20"/><stop offset="1" stop-color="#6a1712"/></linearGradient>
+<linearGradient id="mo-folds" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".3" stop-color="#fff" stop-opacity="0"/><stop offset=".52" stop-color="#000" stop-opacity=".24"/><stop offset=".7" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
+<clipPath id="mo-pennant"><path d="${PENNANT}"/></clipPath>
+<clipPath id="mo-banner"><path d="${BANNER}"/></clipPath>
 </defs></svg>`;
 
-/** Swallow-tailed cloth with its hoist at x = 20; the lines are the folds that give it a wind-blown surface. */
-const PENNANT = 'M20 12C30 8 44 16 58 11L47 22L58 33C44 29 31 36 20 32Z';
-const FOLDS = '<path class="move-order__fold" d="M30 11.5C31 18 30 26 31 33M42 15C43 20 42 26 43 30"/>';
+/** 令, the character on a Joseon or Ming command flag, drawn as strokes on a 20-unit square so no font has to carry it. */
+const REI = 'M10 1.2C7.9 4.4 4.9 7 1.2 8.6M10 1.2C12.1 4.4 15.1 7 18.8 8.6M7.4 9.9H12.6M7 12.9H14.4V17.2L12.9 16.5M7 12.9V19.8';
+/** Kato Kiyomasa's snake's-eye crest: a Japanese mark as plain as 令 is for the others. */
+const JANOME = 'M24.65 24.45a4.65 4.65 0 1 1 0 9.3a4.65 4.65 0 1 1 0-9.3Z';
 
-function moveFlag(queuedNumber: number | null) {
-  const paint = queuedNumber === null ? 'mo-gold' : 'mo-sky';
-  return `<svg viewBox="0 0 64 76"><ellipse class="move-order__ring" cx="18" cy="68" rx="13" ry="4"/><path class="move-order__mast-shadow" d="M18 9v59"/><path class="move-order__mast" d="M18 9v59"/><circle class="move-order__finial" cx="18" cy="8" r="3"/><g class="move-order__cloth"><path class="move-order__pennant" fill="url(#${paint})" d="${PENNANT}"/>${FOLDS}${queuedNumber === null ? '<path class="move-order__emblem" d="m27 17 9 6-9 6"/>' : `<text class="move-order__number" x="35" y="27">${queuedNumber}</text>`}</g></svg>`;
+/** The dyed field, its border, then what is painted on it, all under the shading of the folds. */
+function cloth(path: string, clip: string, inner = '') {
+  return `<path class="move-order__field" d="${path}"/><path class="move-order__border" d="${path}" clip-path="url(#${clip})"/>${inner}<path d="${path}" fill="url(#mo-folds)"/>`;
 }
 
-/** A taller crimson banner with a gold hem and a drum-and-ring crest, so a rally point never reads as a move order. */
-function rallyFlag() {
-  return `<svg viewBox="0 0 76 98"><ellipse class="move-order__ring move-order__ring--rally" cx="20" cy="90" rx="17" ry="5.5"/><ellipse class="move-order__ring move-order__ring--rally move-order__ring--outer" cx="20" cy="90" rx="17" ry="5.5"/><path class="move-order__mast-shadow" d="M20 12v78"/><path class="move-order__mast" d="M20 12v78"/><path class="move-order__crossbar" d="M20 17h8"/><circle class="move-order__finial" cx="20" cy="10" r="3.6"/><g class="move-order__cloth move-order__cloth--rally"><path class="move-order__banner" fill="url(#mo-red)" d="M22 19C34 14 48 22 70 17L58 34L70 52C48 57 34 48 22 54Z"/><path class="move-order__hem" d="M24.5 22C35 18 47 25 65 21.5M24.5 51C35 47 47 54 65 49"/><path class="move-order__fold" d="M33 17C35 28 33 42 35 52M50 22C52 31 50 42 52 55"/><circle class="move-order__crest" cx="40" cy="36" r="8"/><path class="move-order__crest-inner" d="M40 31.5a4.5 4.5 0 1 1 0 9a2.25 2.25 0 1 1 0-4.5a2.25 2.25 0 1 0 0-4.5Z"/></g></svg>`;
+function moveFlag(queuedNumber: number | null) {
+  const number = queuedNumber === null ? '' : `<text class="move-order__number" x="18" y="22.6">${queuedNumber}</text>`;
+  return `<svg viewBox="0 0 42 58"><ellipse class="move-order__ring" cx="9" cy="53" rx="9" ry="2.8"/><path class="move-order__pole" d="M9 6.4V53"/><path class="move-order__gloss" d="M8.45 8.5V52"/><path class="move-order__finial" d="${SPEAR.move}"/><g class="move-order__cloth">${cloth(PENNANT, 'mo-pennant', number)}</g></svg>`;
+}
+
+/** Taller than a move flag and square-cut, with a tassel under the spear head and the navy's mark on the cloth. */
+function rallyFlag(faction: Faction) {
+  const mark = faction === 'japan' ? `<path class="move-order__mark move-order__mark--ring" d="${JANOME}"/>` : `<path class="move-order__mark" d="${REI}" transform="translate(15.85 19.86) scale(.88)"/>`;
+  return `<svg viewBox="0 0 52 84"><ellipse class="move-order__ring move-order__ring--rally" cx="10" cy="79" rx="12" ry="3.6"/><ellipse class="move-order__ring move-order__ring--rally move-order__ring--outer" cx="10" cy="79" rx="12" ry="3.6"/><path class="move-order__pole move-order__pole--rally" d="M10 8.4V79"/><path class="move-order__gloss" d="M9.3 11V78"/><path class="move-order__tassel" d="${TASSEL}"/><path class="move-order__finial" d="${SPEAR.rally}"/><g class="move-order__cloth move-order__cloth--rally">${cloth(BANNER, 'mo-banner', mark)}</g></svg>`;
 }
 
 /** Screen-sized feedback stays readable above waves at any camera distance. */
@@ -52,10 +75,10 @@ export class MoveOrders {
   show(x: number, z: number, queued: boolean, ids: number[] = []) {
     if (!queued) this.clear();
     const root = document.createElement('div');
-    root.className = `move-order${queued ? ' move-order--queued' : ''}`;
+    root.className = `move-order move-order--${this.engine.faction}${queued ? ' move-order--queued' : ''}`;
     root.innerHTML = moveFlag(queued ? this.marks.length + 1 : null);
     this.layer.appendChild(root);
-    this.marks.push({ root, x, z, at: performance.now(), foot: FOOT.move, ids });
+    this.marks.push({ root, x, z, at: performance.now(), shape: SHAPE.move, ids });
     if (this.marks.length > 16) this.marks.shift()!.root.remove();
     this.update();
   }
@@ -71,8 +94,9 @@ export class MoveOrders {
     const distance = Math.hypot(cam.x - mark.x, cam.y - y, cam.z - mark.z);
     // Phones keep a larger floor: a finger-sized screen cannot read a 40 px flag.
     const scale = Math.max(isTouchDevice ? 0.95 : 0.8, Math.min(1.3, 1000 / distance));
-    mark.root.style.transformOrigin = `${mark.foot.x}px ${mark.foot.y}px`;
-    mark.root.style.transform = `translate(${this.screen.x - mark.foot.x}px, ${this.screen.y - mark.foot.y}px) scale(${scale.toFixed(3)})`;
+    const { foot } = mark.shape;
+    mark.root.style.transformOrigin = `${foot.x}px ${foot.y}px`;
+    mark.root.style.transform = `translate(${this.screen.x - foot.x}px, ${this.screen.y - foot.y}px) scale(${scale.toFixed(3)})`;
     return this.underHud(this.screen.x, this.screen.y, scale, mark) ? 0.15 : 1;
   }
 
@@ -84,7 +108,8 @@ export class MoveOrders {
       const top = document.elementsFromPoint(rect.left + px, rect.top + py).find((el) => !this.layer.contains(el) && !el.closest('.cpoints, .banners'));
       return !!top && top !== canvas;
     };
-    return probe(x, y) || probe(x + 20 * scale, y - (mark.foot.y - 26) * scale);
+    const { foot, cloth } = mark.shape;
+    return probe(x, y) || probe(x + (cloth.x - foot.x) * scale, y + (cloth.y - foot.y) * scale);
   }
 
   private arrived(mark: Mark) {
@@ -122,10 +147,10 @@ export class MoveOrders {
       if (mark && mark.key !== key) { mark.root.remove(); this.rallies.delete(p.id); mark = undefined; }
       if (!mark) {
         const root = document.createElement('div');
-        root.className = 'move-order move-order--rally';
-        root.innerHTML = rallyFlag();
+        root.className = `move-order move-order--rally move-order--${this.engine.faction}`;
+        root.innerHTML = rallyFlag(this.engine.faction);
         this.layer.appendChild(root);
-        mark = { root, x: p.rally.x, z: p.rally.z, at: performance.now(), foot: FOOT.rally, ids: [], key };
+        mark = { root, x: p.rally.x, z: p.rally.z, at: performance.now(), shape: SHAPE.rally, ids: [], key };
         this.rallies.set(p.id, mark);
       }
       const shown = this.place(mark, hidden);

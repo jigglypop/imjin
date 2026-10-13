@@ -41,6 +41,11 @@ const ICONS: Record<string, Parts[]> = {
   deck: [{ d: 'M12 4l9 5-9 5-9-5z M3 13.5l9 5 9-5' }],
   map: [{ d: 'M3 6.5l6-2.5 6 2.5 6-2.5v13.5l-6 2.5-6-2.5-6 2.5z M9 4v13.5 M15 6.5V20' }],
   settings: [{ d: 'M4 7h9 M19 7h1 M4 17h1 M11 17h9' }, { circles: [[16, 7, 2.5], [8, 17, 2.5]] }],
+  // The HUD layouts: the screen with its side panels whole, slimmed down to the corners, or folded to edge tabs.
+  hudFull: [{ rect: [3, 5, 18, 14, 2.5] }, { d: 'M8 5v14 M16 5v14' }],
+  hudSimple: [{ rect: [3, 5, 18, 14, 2.5] }, { d: 'M7 13v6 M17 13v6 M3 13h4 M17 13h4' }],
+  hudFold: [{ rect: [3, 5, 18, 14, 2.5] }, { d: 'M3 12h2 M19 12h2 M11 19v-1.5h2V19' }],
+  plus: [{ d: 'M12 5.5v13 M5.5 12h13' }],
   x: [{ d: 'M6 6l12 12 M18 6L6 18' }],
   chevronDown: [{ d: 'M6 9.5l6 6 6-6' }],
   chevronLeft: [{ d: 'M14.5 6l-6 6 6 6' }],
