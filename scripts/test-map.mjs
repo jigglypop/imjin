@@ -39,7 +39,7 @@ try {
     plugins: [{ name: 'no-gpu', setup(api) {
       api.onResolve({ filter: /^three\/webgpu$/ }, () => ({ path: 'map-three', namespace: 'map-fixture' }));
       api.onResolve({ filter: /^three\/tsl$/ }, () => ({ path: 'map-tsl', namespace: 'map-fixture' }));
-      api.onLoad({ filter: /^map-three$/, namespace: 'map-fixture' }, () => ({ contents: `export * from 'three'; import { MeshBasicMaterial, MeshStandardMaterial } from 'three'; export const MeshBasicNodeMaterial = MeshBasicMaterial; export const MeshStandardNodeMaterial = MeshStandardMaterial;`, resolveDir: root }));
+      api.onLoad({ filter: /^map-three$/, namespace: 'map-fixture' }, () => ({ contents: `export * from 'three'; import { MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial } from 'three'; export const MeshBasicNodeMaterial = MeshBasicMaterial; export const MeshLambertNodeMaterial = MeshLambertMaterial; export const MeshStandardNodeMaterial = MeshStandardMaterial;`, resolveDir: root }));
       api.onLoad({ filter: /^map-tsl$/, namespace: 'map-fixture' }, () => ({ contents: `const node = () => new Proxy(function () {}, { get: (_, key) => (key === Symbol.toPrimitive ? () => 0 : node()), apply: () => node() }); export const ${tslNames.map((name) => `${name} = node()`).join(', ')};` }));
       api.onLoad({ filter: /[\\/]game[\\/]quality\.ts$/ }, () => ({ contents: 'export const equipment={select:{antialias:false,mapSegments:8},tier:"low"}; export const forceWebGL=true;', loader: 'ts' }));
       api.onLoad({ filter: /[\\/]game[\\/]device\.ts$/ }, () => ({ contents: 'export const isPhone=false; export const isTouchOnly=false;', loader: 'ts' }));
