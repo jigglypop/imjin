@@ -1,18 +1,15 @@
-import { BackSide, BufferAttribute, BufferGeometry, Color, Fog, Group, Mesh, MeshBasicNodeMaterial, PerspectiveCamera, Scene, SphereGeometry, WebGPURenderer, type DataTexture } from 'three/webgpu';
-import { mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
+import { Color, Fog, PerspectiveCamera, Scene, WebGPURenderer } from 'three/webgpu';
 import { equipment, forceWebGL } from '../../game/quality';
 import { tuneWebGLBackend } from '../../render/webglBackend';
 import { disposeTree } from '../../render/dispose';
-import { MAP_H, V_SCALE } from '../../select/demFrame';
-import { buildFarLandMaterial, buildSea, buildTerrain, loadDem, worldClock } from '../../select/terrain';
-import { MAP_ASPECT } from './projection';
-import { DEM_RECT, MESH_SCALE, groundElevation } from './mapMath';
+import { V_SCALE } from '../../select/demFrame';
+import { worldClock } from '../../select/terrain';
+import { MESH_SCALE, groundElevation } from './mapMath';
 import { MapLayer } from './mapLayer';
 import { TreeLayer } from './worldTrees';
-import { buildFarLand, MIRROR_SHEAR, type FarLand } from './farLand';
 import type { MapWorld } from './mapWorld';
 import { eyeOf, FAR, FOV, NEAR, worldX, worldZ, type CameraState, type ScreenFrame } from './worldCamera';
-import { SKY_HORIZON, SKY_MIDDLE, SKY_ZENITH, WORLD_HAZE } from './worldLook';
+import { loadGround, type WorldGround } from './worldGround';
 
 /**
  * The world is drawn about thirty times a second while it is on screen, so the sea, the swell and the light keep moving
@@ -22,11 +19,7 @@ const FRAME_MS = 33;
 const motionQuery = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 const reducedMotion = () => !!motionQuery?.matches;
 
-/** Fog: it starts a little beyond the target and is solid well past the whole frame, so distant ridges and coasts stay readable in a soft haze. */
-const fogNear = (distance: number) => distance * 1.1 + 0.05;
-const fogFar = (distance: number) => distance * 3.4 + 1.1;
-
-/** The campaign's world: the select screen's terrain under a free perspective camera, with a sea, fog and a sky. Redrawn on a steady timer while visible and paused while the page is hidden. */
+/** The campaign's world: its ground (worldGround.ts) under a free perspective camera, with camps, ships and trees. Redrawn on a steady timer while visible and paused while the page is hidden. */
 export class MapScene {
   readonly scene = new Scene();
   readonly camera = new PerspectiveCamera((FOV * 180) / Math.PI, 1, NEAR, FAR);
@@ -38,13 +31,12 @@ export class MapScene {
   private initialized = false;
   private rendererReleased = false;
   private timer = 0;
-  private terrain: Group | null = null;
-  private demTexture: DataTexture | null = null;
+  private ground: WorldGround | null = null;
   private layer: MapLayer | null = null;
   private trees: TreeLayer | null = null;
   private world: MapWorld | null = null;
-  private sky: Mesh | null = null;
-  private readonly fog = new Fog(WORLD_HAZE, 0.5, 2);
+  /** Its colour is the ground's haze, set when the ground has loaded. */
+  private readonly fog = new Fog(0, 0.5, 2);
   private width = 0;
   private height = 0;
   private cam: CameraState = { u: 0.5, v: 0.5, distance: 0.7, yaw: 0, pitch: 0.75 };
@@ -55,12 +47,10 @@ export class MapScene {
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new WebGPURenderer({ canvas, antialias: equipment.select.antialias, powerPreference: 'low-power', forceWebGL });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, equipment.tier === 'low' ? 1.25 : 1.5));
-    this.scene.background = new Color(WORLD_HAZE);
-    this.scene.fog = this.fog;
     document.addEventListener('visibilitychange', this.onVisible);
   }
 
-  /** Resolves with the DEM's metre heights, which the overlay reads to lift each marker onto the ground. */
+  /** Resolves with the ground's metre heights, which the overlay reads to lift each marker onto the ground. */
   async init() {
     const signal = this.abort.signal;
     await this.renderer.init();
@@ -68,33 +58,18 @@ export class MapScene {
     if (this.disposed) this.releaseRenderer();
     signal.throwIfAborted();
     tuneWebGLBackend(this.renderer);
-    const { heights, tex } = await loadDem(signal);
-    if (signal.aborted) {
-      tex.dispose();
-      signal.throwIfAborted();
-    }
-    this.demTexture = tex;
-    // The mesh is built in the select screen's units; the group fits it to its rectangle of the campaign frame.
-    this.terrain = new Group();
-    this.terrain.add(buildTerrain(tex, equipment.select.mapSegments, true));
-    this.terrain.scale.set(MESH_SCALE, MESH_SCALE, DEM_RECT.h / MAP_ASPECT / MAP_H);
-    this.terrain.position.set(DEM_RECT.u + DEM_RECT.w / 2 - 0.5, 0, (DEM_RECT.v + DEM_RECT.h / 2 - 0.5) / MAP_ASPECT);
-    this.scene.add(this.terrain);
-    // The ocean round the DEM, wide enough to reach the far plane from anywhere the camera goes, so the fog, not an edge,
-    // ends it at the horizon. It lies far enough under the terrain's own sea (about 60 m of the relief's scale) that the
-    // depth buffer still tells the two apart from the widest view; seen from above, the step at the DEM's edge is not.
-    const sea = buildSea(2 * (FAR + 2));
-    sea.position.set(0, -0.0005, 0);
-    this.scene.add(sea);
-    const far = buildFarLand(heights);
-    this.scene.add(this.buildFarLand(far, tex));
-    this.sky = this.buildSky();
-    this.scene.add(this.sky);
+    const ground = await loadGround(signal);
+    this.ground = ground;
+    const { heights } = ground;
+    this.scene.add(ground.group);
+    this.scene.background = new Color(ground.haze);
+    this.fog.color.set(ground.haze);
+    this.scene.fog = this.fog;
     // Camps and ships stand on the same ground the overlay's markers read; they arrive when their models have loaded.
     this.layer = new MapLayer((u, v) => groundElevation(heights, u, v), () => this.start());
     this.scene.add(this.layer.group);
     // Trees stand on the far land north of the DEM too, so the woods run on across the join.
-    this.trees = new TreeLayer((u, v) => (v < DEM_RECT.v ? far.heightAt(u, v) : groundElevation(heights, u, v)), V_SCALE * MESH_SCALE);
+    this.trees = new TreeLayer((u, v) => ground.heightAt(u, v), V_SCALE * MESH_SCALE);
     this.scene.add(this.trees.group);
     if (this.world) {
       this.layer.set(this.world);
@@ -103,36 +78,6 @@ export class MapScene {
     this.ready = true;
     this.start();
     return heights;
-  }
-
-  /** The mainland north of the DEM, on to the horizon (farLand.ts). */
-  private buildFarLand(far: FarLand, demTex: DataTexture) {
-    const geometry = new BufferGeometry();
-    geometry.setAttribute('position', new BufferAttribute(far.position, 3));
-    geometry.setAttribute('local', new BufferAttribute(far.local, 2));
-    geometry.setAttribute('hills', new BufferAttribute(far.hills, 1));
-    geometry.setAttribute('hillNormal', new BufferAttribute(far.hillNormal, 3));
-    geometry.setAttribute('blend', new BufferAttribute(far.blend, 1));
-    geometry.setIndex(new BufferAttribute(far.index, 1));
-    // Coloured by the terrain's own shader, so the join with the DEM does not show.
-    const mesh = new Mesh(geometry, buildFarLandMaterial(demTex, MIRROR_SHEAR));
-    mesh.frustumCulled = false;
-    return mesh;
-  }
-
-  /** A dome that follows the eye: the haze at the horizon, deepening to blue overhead, with the sun's warm glow low in the north-west. */
-  private buildSky() {
-    const material = new MeshBasicNodeMaterial({ side: BackSide, depthWrite: false, fog: false });
-    const rgb = (hex: string) => { const c = new Color(hex); return vec3(c.r, c.g, c.b); };
-    const up = positionLocal.y.max(0);
-    const dome = mix(mix(rgb(SKY_HORIZON), rgb(SKY_MIDDLE), smoothstep(0, 0.28, up)), rgb(SKY_ZENITH), smoothstep(0.22, 0.85, up));
-    const toSun = positionLocal.normalize().dot(vec3(-0.55, 0.62, -0.55).normalize());
-    material.colorNode = dome.add(vec3(1, 0.86, 0.62).mul(toSun.max(0).pow(14).mul(0.5)));
-    const sky = new Mesh(new SphereGeometry(1, 24, 12), material);
-    sky.scale.setScalar(FAR * 0.9);
-    sky.renderOrder = -10;
-    sky.frustumCulled = false;
-    return sky;
   }
 
   /** What stands on the terrain: a camp where the owner has built one, ships where a fleet lies. */
@@ -174,7 +119,7 @@ export class MapScene {
   private readonly tick = () => {
     this.timer = 0;
     if (this.disposed || !this.ready || document.hidden) return;
-    if (this.width >= 1 && this.height >= 1 && this.terrain) {
+    if (this.width >= 1 && this.height >= 1 && this.ground) {
       if (this.drift) this.cam = this.drift(performance.now());
       this.draw();
     }
@@ -190,12 +135,13 @@ export class MapScene {
     // The target is drawn at (cx, cy), the middle of what the panels leave free: shift the picture by the difference.
     camera.setViewOffset(screen.w, screen.h, screen.w / 2 - screen.cx, screen.h / 2 - screen.cy, screen.w, screen.h);
     camera.updateProjectionMatrix();
-    this.fog.near = fogNear(cam.distance);
-    this.fog.far = fogFar(cam.distance);
-    this.sky?.position.copy(camera.position);
+    const fog = this.ground!.fog(cam.distance);
+    this.fog.near = fog.near;
+    this.fog.far = fog.far;
     // The ambient clock stands still for a player who asks for reduced motion.
     const clock = reducedMotion() ? 0 : (performance.now() - this.born) / 1000;
     worldClock.value = clock;
+    this.ground!.update(camera.position, cam, clock);
     this.layer?.setView(cam.yaw, cam.distance);
     this.layer?.tick(clock);
     this.trees?.update(cam);
@@ -218,11 +164,9 @@ export class MapScene {
     this.layer = null;
     this.trees?.dispose();
     this.trees = null;
+    this.ground?.dispose();
+    this.ground = null;
     disposeTree(this.scene);
-    this.demTexture?.dispose();
-    this.demTexture = null;
-    this.terrain = null;
-    this.sky = null;
     if (this.initialized) this.releaseRenderer();
   }
 
