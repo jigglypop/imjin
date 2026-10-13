@@ -17,7 +17,7 @@ try {
     bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent',
   });
   const path = join(temporary, 'map-world.mjs'); await writeFile(path, bundled.outputFiles[0].contents);
-  const { settlementPieces, faceSea, buildWorld, anchorage, campTier, hullsFor, hash, HULL_LENGTH, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, WALL_KINDS, WATER_KINDS, SHIP_CAP, flagSpot, formation, transitShare, transitSpot, pointAlong, buildSails, cardRect, overlaps, pickCards } = await import(pathToFileURL(path).href);
+  const { settlementPieces, faceSea, buildWorld, anchorage, campTier, hullsFor, drawnKinds, hash, HULL_LENGTH, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, WALL_KINDS, WATER_KINDS, SHIP_CAP, flagSpot, formation, transitShare, transitSpot, pointAlong, buildSails, cardRect, overlaps, pickCards } = await import(pathToFileURL(path).href);
   const kinds = (level) => new Set(settlementPieces(level).map((p) => p.kind));
   const buildings = (level) => settlementPieces(level).filter((p) => !WALL_KINDS.has(p.kind)).length;
 
@@ -78,6 +78,16 @@ try {
     assert.ok(world.fleets[0].heading === null && world.fleets[2].heading.du > 0);
     const [pa, pb] = [project(127.7, 34.7), project(128.4, 35.0)];
     assert.ok(Math.abs(world.fleets[2].u - (pa.u + pb.u) / 2) < 1e-12 && Math.abs(world.fleets[2].v - (pa.v + pb.v) / 2) < 1e-12);
+  });
+  check('a squadron is drawn as its own kinds, the largest first, each about as often as it sails', () => {
+    const many = (n, kind) => Array.from({ length: n }, () => kind);
+    assert.deepEqual(drawnKinds([...many(7, 'panokseon'), ...many(3, 'geobukseon')], 3), ['geobukseon', 'panokseon', 'panokseon']);
+    assert.deepEqual(drawnKinds(['kobaya', 'atakebune', 'sekibune'], 3), ['atakebune', 'sekibune', 'kobaya']);
+    assert.deepEqual(drawnKinds([], 2), []);
+    assert.deepEqual(drawnKinds([undefined], 1), [], 'ships of unknown kind draw nothing: the layer takes the navy\'s usual ship');
+    const port = buildWorld([region('a', 127.7, 34.7)], [fleet('f1', 'a', 0, 'japan', { ships: [{ kind: 'kobaya' }, { kind: 'atakebune' }] }), fleet('f2', 'a', 0, 'japan', { ships: [{ kind: 'sekibune' }] })]);
+    assert.deepEqual(port.fleets[0].kinds, ['atakebune', 'kobaya'], 'the fleets of a navy in one port are drawn together, picked across their sizes');
+    assert.equal(port.fleets[0].kinds.length, port.fleets[0].count);
   });
   check('a squadron is drawn with a few hulls, never more than five', () => {
     assert.deepEqual([0, 1, 2, 3, 10, 30, 400].map(hullsFor), [0, 1, 2, 2, 3, 5, 5]);

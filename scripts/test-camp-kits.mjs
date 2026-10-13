@@ -1,7 +1,8 @@
 // The campaign map's camps and ships: every navy and camp tier has its camp model at both levels of detail in the frame
 // the map places it in; the procedural kits a camp falls back to build at both levels inside their triangle budget, a
 // whole camp stays inside its budget, each navy's map ship is one unit long, bow forward and afloat, inside its budget, the shapes are sound (finite, inside their footprint, faces wound the way their normals point),
-// building is repeatable, and every navy's camp only gains parts as it grows. Pure geometry, no GPU.
+// building is repeatable, every navy's camp only gains parts as it grows, and every ship kind is drawn as the battle's
+// own procedural ship, whose far level the map uses. Pure geometry, no GPU.
 import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
@@ -19,11 +20,11 @@ const check = (name, test) => { test(); passed++; console.log(`ok - ${name}`); }
 const BUDGET = { near: 600, far: 200, camp: 4000 };
 try {
   const bundled = await build({
-    stdin: { contents: `export * from './src/ui/grand/campKits.ts'; export * from './src/ui/grand/mapWorld.ts'; export * from './src/ui/grand/shipKits.ts';`, resolveDir: root },
+    stdin: { contents: `export * from './src/ui/grand/campKits.ts'; export * from './src/ui/grand/mapWorld.ts'; export * from './src/ui/grand/shipKits.ts'; export { buildShip } from './src/ships/build/ShipBuilder.ts'; export { modelKind, PROCEDURAL_KINDS } from './src/ships/anchors.ts'; export { SHIP_SPECS } from './src/sim/catalog.ts';`, resolveDir: root },
     bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent',
   });
   const path = join(temporary, 'camp-kits.mjs'); await writeFile(path, bundled.outputFiles[0].contents);
-  const { buildCampKit, buildShipKit, KIT_KINDS, settlementPieces, WALL_KINDS } = await import(pathToFileURL(path).href);
+  const { buildCampKit, buildShipKit, KIT_KINDS, settlementPieces, WALL_KINDS, buildShip, modelKind, PROCEDURAL_KINDS, SHIP_SPECS } = await import(pathToFileURL(path).href);
   const NAVIES = ['joseon', 'japan', 'ming'];
   const kits = new Map(KIT_KINDS.map((kind) => [kind, [buildCampKit(kind, 0), buildCampKit(kind, 1)]]));
   const tris = (m) => m.index.length / 3;
@@ -146,6 +147,19 @@ try {
     // The navies differ in their colours, not only in their outlines.
     const tint = (f) => { const m = buildShipKit(f); return m.color.reduce((a, v) => a + v, 0); };
     assert.equal(new Set(NAVIES.map((f) => tint(f).toFixed(3))).size, 3);
+  });
+  check('every ship kind is the battle\'s procedural ship on the map, its far level light and in ship space', () => {
+    for (const kind of Object.keys(SHIP_SPECS)) assert.ok(PROCEDURAL_KINDS.includes(modelKind(kind)), `${kind} is drawn by the battle's builder`);
+    for (const kind of PROCEDURAL_KINDS) {
+      const far = buildShip(kind, 0).lods[2];
+      const tris = far.index.length / 3;
+      assert.ok(tris > 0 && tris <= 900, `${kind} far level: ${tris} triangles`);
+      // Ship space, which the map turns into its own frame: the length along x, the keel under the waterline at y = 0.
+      const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+      for (let i = 0; i < far.position.length; i++) { lo[i % 3] = Math.min(lo[i % 3], far.position[i]); hi[i % 3] = Math.max(hi[i % 3], far.position[i]); }
+      assert.ok(hi[0] - lo[0] > 2 * (hi[2] - lo[2]), `${kind} lies along x`);
+      assert.ok(lo[1] < 0 && hi[1] > 0, `${kind} floats on y = 0`);
+    }
   });
   check('building a kit twice gives the same numbers', () => {
     for (const kind of KIT_KINDS) for (const lod of [0, 1]) {

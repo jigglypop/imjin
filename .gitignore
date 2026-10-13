@@ -29,3 +29,6 @@ assets-src/menu-title-*/candidates*/
 # each; provenance.json keeps their hashes and task ids). Chosen concepts are tracked.
 assets-src/camps-meshy-*/candidates/
 assets-src/camps-meshy-*/originals/
+# Campaign map models (Meshy Smart Topology): the same, rejected concepts, previews and the Meshy originals stay local.
+assets-src/map-models-*/candidates/
+assets-src/map-models-*/originals/

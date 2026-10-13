@@ -1,28 +1,41 @@
 import {
   AmbientLight, BoxGeometry, BufferAttribute, BufferGeometry, Color, DirectionalLight, DoubleSide, Float32BufferAttribute, Group, HemisphereLight,
-  InstancedMesh, Material, Matrix4, MeshBasicMaterial, MeshBasicNodeMaterial, MeshStandardMaterial, PlaneGeometry, Quaternion, Vector3, type Mesh,
-  type Object3D, type Texture,
+  InstancedMesh, LinearMipmapLinearFilter, Material, Matrix4, MeshBasicMaterial, MeshBasicNodeMaterial, MeshStandardMaterial, MeshStandardNodeMaterial,
+  PlaneGeometry, Quaternion, SRGBColorSpace, TextureLoader, Vector3, type Mesh, type Object3D, type Texture,
 } from 'three/webgpu';
-import { abs, float, mix, mx_noise_float, positionWorld, smoothstep, uv, vec3 } from 'three/tsl';
+import { abs, attribute, dFdx, dFdy, float, fract, mix, mx_noise_float, positionGeometry, positionWorld, select, smoothstep, texture, uv, varying, vec2, vec3 } from 'three/tsl';
 import { worldClock } from '../../select/terrain';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { disposeTree } from '../../render/dispose';
+import { SHIP_SPECS } from '../../sim/catalog';
+import type { ShipKind } from '../../sim/types';
+import { modelKind } from '../../ships/anchors';
+import { ATLAS, atlasFiles } from '../../ships/build/atlas';
+import { weather } from '../../ships/weather';
 import { MAP_ASPECT } from './projection';
 import { buildCampKit, type KitMesh } from './campKits';
 import { buildBoatKit, buildShipKit } from './shipKits';
 import { campTier, faceSea, flagSpot, formation, HULL_LENGTH, pointAlong, SETTLEMENT_RADIUS, SHIP_CAP, settlementPieces, WATER_KINDS, type FleetSpec, type MapWorld, type Piece, type PieceKind, type SailSpec, type SettlementSpec } from './mapWorld';
-import type { FactionId } from './types';
+import type { FactionId, ShipClass } from './types';
 
 // The 3D layer of the campaign map: every navy's camps as the models made for them (public/models/camps, one per navy
-// and camp tier, a close and a far level of detail; assets-src/camps-meshy-2026-10-13/README.md), each navy's map ship
-// (shipKits) where a fleet lies or sails, all instanced, so the whole layer is a few dozen draw calls. A camp whose model
-// does not load is built from the procedural kits in campKits instead, so a port is never left empty. Between turns the
-// world keeps living: smoke rises from the larger camps and fishing boats drift off the coasts.
+// and camp tier, a close and a far level of detail; assets-src/camps-meshy-2026-10-13/README.md) and, where a fleet lies
+// or sails, the battle's own ships of the kinds it has (src/ships/build, its middle and far levels, the battle's atlas
+// and weathering), all instanced, so the whole layer is a few dozen draw calls. A camp whose model does not load is
+// built from the procedural kits in campKits instead, and a ship that cannot be built is its navy's kit ship (shipKits),
+// so a port is never left empty. Between turns the world keeps living: smoke rises from the larger camps and fishing
+// boats drift off the coasts.
 
 const R = SETTLEMENT_RADIUS;
-/** A hull's length in frame units. */
+/** The longest hull's length in frame units. */
 const SHIP_LENGTH = R * HULL_LENGTH;
+/** Ships this long in metres or longer (a panokseon, an atakebune) are SHIP_LENGTH on the map; shorter kinds in proportion. */
+const FULL_LENGTH = 40;
+/** A hull of this kind's length in frame units. */
+const shipLength = (kind: ShipClass) => SHIP_LENGTH * Math.min(1, SHIP_SPECS[kind].length / FULL_LENGTH);
+/** The ship a navy's squadron is drawn with when the kinds of its ships are not known (a replay's sailings). */
+const MAIN_SHIP: Record<FactionId, ShipClass> = { joseon: 'panokseon', japan: 'atakebune', ming: 'mingship' };
 /** Frame units of a flag pole above the ground, by camp level (a higher camp flies from a taller mast). */
 const poleHeight = (level: number) => R * (0.6 + 0.12 * Math.min(level, 4));
 /** The owner's ring round a camp: its radius in settlement radii and how many curb stones it is made of. */
@@ -106,6 +119,61 @@ async function loadCamp(url: string): Promise<CampModel | null> {
   }
 }
 
+/** The battle's ship builder, loaded with the first fleet: the map needs the battle's code only for its ships. */
+let builder: Promise<[typeof import('../../ships/build/ShipBuilder'), typeof import('../../ships/build/procedural')]> | null = null;
+const shipBuilder = () => (builder ??= Promise.all([import('../../ships/build/ShipBuilder'), import('../../ships/build/procedural')]));
+
+/**
+ * A battle ship as the battle's own builder makes it: its middle level (banners, gun ports) for the close view and its far
+ * level for the rest, both in ship space (bow +x, the waterline on y = 0, metres, which the battle's weathering reads),
+ * and the turn and scale into the kits' frame: bow +z, one unit long, centred along its length and beam.
+ */
+async function shipLevels(kind: ShipKind) {
+  const [{ buildShip }, { toGeometry }] = await shipBuilder();
+  // One kind per task, so building a world's ships does not hold the page up in one piece.
+  await new Promise((resolve) => setTimeout(resolve));
+  const built = buildShip(kind, 0);
+  const near = toGeometry(built.lods[1]!), far = toGeometry(built.lods[2]!);
+  const box = far.boundingBox!;
+  const length = box.max.x - box.min.x;
+  const fix = new Matrix4().makeScale(1 / length, 1 / length, 1 / length)
+    .multiply(new Matrix4().makeTranslation((box.min.z + box.max.z) / 2, 0, -(box.min.x + box.max.x) / 2))
+    .multiply(new Matrix4().makeRotationY(-Math.PI / 2));
+  return { near, far, fix, height: box.max.y / length };
+}
+
+/**
+ * A navy's ship material: the battle's atlas (its 1k colour map only) read the way the battle reads it, each vertex
+ * naming its atlas cell and repeating that cell's tile, shaded by the tint and occlusion the builder baked in and worn by
+ * the battle's weathering; lit by the map's sun and sky like the camps.
+ */
+async function shipMaterial(faction: FactionId, tintRange: number) {
+  const map = await new TextureLoader().loadAsync(atlasFiles(faction, true).albedo);
+  map.colorSpace = SRGBColorSpace;
+  // The atlas is addressed with v pointing down the image, as in the battle.
+  map.flipY = false;
+  map.minFilter = LinearMipmapLinearFilter;
+  const material = new MeshStandardNodeMaterial({ roughness: 0.85, metalness: 0 });
+  // Packed bytes, see procedural.ts: mat = (atlas cell * 16 + surface class, sway phase, soot), color.xyz = the sqrt-coded tint.
+  const U: any = uv();
+  const mat: any = attribute('mat', 'vec4');
+  const shade: any = attribute('color', 'vec4');
+  const cellSurf = mat.x.mul(255).add(0.5).floor();
+  const cell = cellSurf.div(16).floor();
+  const surf = cellSurf.sub(cell.mul(16));
+  const usable = (ATLAS.cell - ATLAS.pad * 2) / ATLAS.cell;
+  const local = vec2(fract(U.x), float(1).sub(fract(U.y))).mul(usable).add(ATLAS.pad / ATLAS.cell);
+  const at = vec2(cell.mod(ATLAS.grid), cell.div(ATLAS.grid).floor()).add(local).div(ATLAS.grid);
+  const k = usable / ATLAS.grid;
+  const tint: any = varying(shade.xyz.mul(shade.xyz).mul(tintRange));
+  const color = texture(map, at).grad(dFdx(U).mul(k), dFdy(U).mul(k)).rgb.mul(tint);
+  const cloth = surf.equal(1).or(surf.equal(4));
+  const worn = weather({ color, surf, soot: mat.w, shipY: positionGeometry.y, rough: select(cloth, float(0.95), float(0.8)), detail: false });
+  material.colorNode = worn.color;
+  material.roughnessNode = worn.rough;
+  return { material, map };
+}
+
 /** A kit as geometry: positions, normals and vertex colours, indexed. */
 function kitGeometry(kit: KitMesh) {
   const geometry = new BufferGeometry();
@@ -116,8 +184,11 @@ function kitGeometry(kit: KitMesh) {
   return geometry;
 }
 
-/** A navy's ship as geometry, and its height over its length (for sinking it). */
-type Model = { geometry: BufferGeometry; height: number };
+/**
+ * A ship model: its close and far geometry, its material, `fix` taking its geometry into the kits' frame (bow +z, one unit
+ * long) and its height over its length there (for sinking it).
+ */
+type ShipModel = { near: BufferGeometry; far: BufferGeometry; material: Material; fix: Matrix4; height: number };
 /** A flag's cloth: its centre and size in frame units. */
 type FlagSpot = { x: number; y: number; z: number; w: number; h: number };
 
@@ -125,8 +196,9 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
 /** The fleets that sail during a replay: a few hulls each along its way, put in place by `setSail`. */
 interface Sailors {
-  slots: { faction: FactionId; index: number; sail: SailSpec; along: number; across: number }[];
-  meshes: Map<FactionId, InstancedMesh>;
+  slots: { model: ShipModel; length: number; index: number; sail: SailSpec; along: number; across: number }[];
+  /** Each model's close and far instances. */
+  meshes: Map<ShipModel, InstancedMesh[]>;
   wake: InstancedMesh;
 }
 
@@ -172,7 +244,14 @@ function smokeMaterial() {
 export class MapLayer {
   readonly group = new Group();
   private readonly lights = { sun: new DirectionalLight('#ffe9cf', 2.1), sky: new HemisphereLight('#cfdcec', '#2b3036', 1.5), fill: new AmbientLight('#ffffff', 0.35) };
-  private readonly ships = new Map<FactionId, Model>();
+  /** A navy's kit ship, built when a battle ship could not be. */
+  private readonly kitShips = new Map<FactionId, ShipModel>();
+  /** The battle ships by the kind they are built as, made when a world first needs them; null when one failed. */
+  private readonly shipModels = new Map<ShipKind, Promise<ShipModel | null>>();
+  private readonly builtShips = new Map<ShipKind, ShipModel | null>();
+  /** Each navy's ship material and its atlas, made with its first ship. */
+  private readonly shipMaterials = new Map<FactionId, Promise<{ material: MeshStandardNodeMaterial; map: Texture }>>();
+  private readonly readyMaterials: { material: MeshStandardNodeMaterial; map: Texture }[] = [];
   private readonly kits = new Map<PieceKind, [BufferGeometry, BufferGeometry]>();
   /** Camp models by file, loaded when a world first needs them; null when a file failed (that camp is built from kits). */
   private readonly camps = new Map<string, Promise<CampModel | null>>();
@@ -267,16 +346,53 @@ export class MapLayer {
     this.onChange();
   }
 
-  /** A navy's ship, built on first use and shared by all its hulls after. */
-  private ship(faction: FactionId): Model {
-    let m = this.ships.get(faction);
+  /**
+   * The model a hull of `kind` is drawn with: the battle's own ship once built (the rebuild waits for it; an aliased kind
+   * takes its model's), else the navy's kit ship, built on first use.
+   */
+  private ship(faction: FactionId, kind: ShipClass): ShipModel {
+    const built = this.builtShips.get(modelKind(kind));
+    if (built) return built;
+    let m = this.kitShips.get(faction);
     if (!m) {
       const geometry = kitGeometry(buildShipKit(faction));
       geometry.computeBoundingBox();
-      m = { geometry, height: geometry.boundingBox!.max.y };
-      this.ships.set(faction, m);
+      m = { near: geometry, far: geometry, material: this.resources.kit, fix: new Matrix4(), height: geometry.boundingBox!.max.y };
+      this.kitShips.set(faction, m);
     }
     return m;
+  }
+
+  /** A navy's ship material, made on first use; one that arrives after the layer is gone is freed at once. */
+  private shipMaterial(faction: FactionId) {
+    let p = this.shipMaterials.get(faction);
+    if (!p) {
+      p = shipBuilder().then(([, { TINT_RANGE }]) => shipMaterial(faction, TINT_RANGE)).then((m) => {
+        if (this.disposed) { m.material.dispose(); m.map.dispose(); } else this.readyMaterials.push(m);
+        return m;
+      });
+      this.shipMaterials.set(faction, p);
+    }
+    return p;
+  }
+
+  /** The battle ship a kind is drawn with, built on first use; null when it could not be (that kind is the kit ship). */
+  private shipModel(kind: ShipClass) {
+    const key = modelKind(kind);
+    let p = this.shipModels.get(key);
+    if (!p) {
+      p = Promise.all([shipLevels(key), this.shipMaterial(SHIP_SPECS[key].faction)]).then(([levels, { material }]) => {
+        if (this.disposed) { levels.near.dispose(); levels.far.dispose(); return null; }
+        const m = { ...levels, material };
+        this.builtShips.set(key, m);
+        return m;
+      }, () => {
+        this.builtShips.set(key, null);
+        return null;
+      });
+      this.shipModels.set(key, p);
+    }
+    return p;
   }
 
   /** A camp file's model, loaded on first use; a model that arrives after the layer is gone is freed at once. */
@@ -298,7 +414,8 @@ export class MapLayer {
     if (!world || this.disposed) return;
     const mine = ++this.generation;
     const urls = new Set(world.settlements.flatMap((s) => [false, true].map((far) => campUrl(s.owner, campTier(s.level), far))));
-    await Promise.all([...urls].map((url) => this.camp(url)));
+    const kinds = new Set([...world.fleets.flatMap((f) => (f.kinds.length ? f.kinds : [MAIN_SHIP[f.faction]])), ...world.sails.map((s) => MAIN_SHIP[s.faction])]);
+    await Promise.all([...[...urls].map((url) => this.camp(url)), ...[...kinds].map((kind) => this.shipModel(kind))]);
     // A newer world or a dispose while the models were arriving makes this build stale.
     if (this.disposed || mine !== this.generation) return;
     this.clear();
@@ -530,17 +647,17 @@ export class MapLayer {
     if (fishing) this.boats = { mesh: fishing, list: boats };
   }
 
-  /** A hull at (x, z) heading `angle` (from +z towards +x), `sink` ship heights under its waterline. */
-  private hull(model: Model, x: number, z: number, angle: number, sink = 0) {
-    const y = this.ground(x + 0.5, z * MAP_ASPECT + 0.5) - model.height * SHIP_LENGTH * sink;
-    return new Matrix4().compose(new Vector3(x, y, z), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), angle), new Vector3(SHIP_LENGTH, SHIP_LENGTH, SHIP_LENGTH));
+  /** A hull `length` long at (x, z) heading `angle` (from +z towards +x), `sink` ship heights under its waterline. */
+  private hull(model: ShipModel, x: number, z: number, angle: number, length: number, sink = 0) {
+    const y = this.ground(x + 0.5, z * MAP_ASPECT + 0.5) - model.height * length * sink;
+    return new Matrix4().compose(new Vector3(x, y, z), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), angle), new Vector3(length, length, length)).multiply(model.fix);
   }
 
-  /** The wake behind a hull at (x, z) heading `angle`, `grow` of its full length; none where the hull crosses land. */
-  private wake(x: number, z: number, angle: number, grow: number) {
+  /** The wake behind a hull `length` long at (x, z) heading `angle`, `grow` of its full length; none where the hull crosses land. */
+  private wake(x: number, z: number, angle: number, grow: number, length: number) {
     const ground = this.ground(x + 0.5, z * MAP_ASPECT + 0.5);
     const k = ground > 0 ? 0 : Math.max(0.001, grow);
-    return new Matrix4().compose(new Vector3(x, ground + R * 0.004, z), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), angle), new Vector3(SHIP_LENGTH * k, SHIP_LENGTH, SHIP_LENGTH * k));
+    return new Matrix4().compose(new Vector3(x, ground + R * 0.004, z), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), angle), new Vector3(length * k, length, length * k));
   }
 
   /** Where the hull of a squadron rides: `o` hull lengths from (x, z) along and across its heading `angle`. */
@@ -550,14 +667,20 @@ export class MapLayer {
   }
 
   private buildShips(list: FleetSpec[]) {
-    const per = new Map<FactionId, Matrix4[]>();
+    const per = new Map<ShipModel, Matrix4[]>();
     const wakes: Matrix4[] = [];
+    /** The squadron's `i`th hull at (x, z) heading `angle`, as its own kind; its length on the map. */
+    const place = (f: FleetSpec, i: number, x: number, z: number, angle: number) => {
+      const kind = f.kinds[i] ?? MAIN_SHIP[f.faction];
+      const model = this.ship(f.faction, kind), length = shipLength(kind);
+      let matrices = per.get(model);
+      if (!matrices) per.set(model, (matrices = []));
+      matrices.push(this.hull(model, x, z, angle, length));
+      return length;
+    };
     for (const f of list) {
       if (this.shipTotal >= SHIP_CAP) break;
-      const model = this.ship(f.faction);
       const cx = f.u - 0.5, cz = (f.v - 0.5) / MAP_ASPECT;
-      const matrices = per.get(f.faction) ?? [];
-      per.set(f.faction, matrices);
       if (f.heading) {
         // A fleet on its lane: a wedge round its place on the lane (the marker sits on its middle), each hull with a wake.
         // In a narrow strait the wedge closes up until every hull, bow and stern, is on the water (or as close as it gets).
@@ -566,35 +689,40 @@ export class MapLayer {
         const wedgeAt = (k: number) => formation(f.count).map((o) => MapLayer.offset(cx, cz, angle, { along: (o.along - middle) * k, across: o.across * k }));
         const afloat = (p: { x: number; z: number }) => [-0.5, 0, 0.5].every((s) => this.ground(p.x + Math.sin(angle) * s * SHIP_LENGTH + 0.5, (p.z + Math.cos(angle) * s * SHIP_LENGTH) * MAP_ASPECT + 0.5) <= 0);
         const wedge = [1, 0.8, 0.6].map(wedgeAt).find((spots) => spots.every(afloat)) ?? wedgeAt(0.5);
-        for (const { x, z } of wedge) {
-          if (this.shipTotal >= SHIP_CAP) break;
+        for (let i = 0; i < wedge.length && this.shipTotal < SHIP_CAP; i += 1) {
+          const { x, z } = wedge[i]!;
           this.shipTotal += 1;
-          matrices.push(this.hull(model, x, z, angle));
-          wakes.push(this.wake(x, z, angle, 1));
+          wakes.push(this.wake(x, z, angle, 1, place(f, i, x, z, angle)));
         }
         continue;
       }
-      for (const b of f.berths) {
-        if (this.shipTotal >= SHIP_CAP) break;
+      for (let i = 0; i < f.berths.length && this.shipTotal < SHIP_CAP; i += 1) {
+        const b = f.berths[i]!;
         this.shipTotal += 1;
-        matrices.push(this.hull(model, cx + b.x * R, cz + b.z * R, b.rot));
+        place(f, i, cx + b.x * R, cz + b.z * R, b.rot);
       }
     }
-    for (const [faction, matrices] of per) this.add(this.ship(faction).geometry, this.resources.kit, matrices);
+    // One instanced draw per ship model, close or far.
+    for (const [model, matrices] of per) {
+      this.add(model.near, model.material, matrices, undefined, this.near);
+      this.add(model.far, model.material, matrices, undefined, this.far);
+    }
     this.add(this.resources.wakeGeometry, this.resources.wake, wakes);
   }
 
   /** Hulls for the closed turn's sailings, in what is left of the ship cap; `setSail` puts them along their way. */
   private buildSailors(sails: SailSpec[]) {
     const slots: Sailors['slots'] = [];
-    const counts = new Map<FactionId, number>();
+    const counts = new Map<ShipModel, number>();
     for (const sail of sails) {
+      const kind = MAIN_SHIP[sail.faction];
+      const model = this.ship(sail.faction, kind), length = shipLength(kind);
       for (const o of formation(sail.count)) {
         if (this.shipTotal >= SHIP_CAP) break;
         this.shipTotal += 1;
-        const index = counts.get(sail.faction) ?? 0;
-        counts.set(sail.faction, index + 1);
-        slots.push({ faction: sail.faction, index, sail, along: o.along, across: o.across });
+        const index = counts.get(model) ?? 0;
+        counts.set(model, index + 1);
+        slots.push({ model, length, index, sail, along: o.along, across: o.across });
       }
     }
     if (!slots.length) {
@@ -602,15 +730,15 @@ export class MapLayer {
       this.sailTime = 0;
       return;
     }
-    const meshes = new Map<FactionId, InstancedMesh>();
-    const make = (geometry: BufferGeometry, material: Material, count: number) => {
+    const meshes = new Map<ShipModel, InstancedMesh[]>();
+    const make = (geometry: BufferGeometry, material: Material, count: number, parent: Object3D = this.group) => {
       const mesh = new InstancedMesh(geometry, material, count);
       mesh.frustumCulled = false;
-      this.group.add(mesh);
+      parent.add(mesh);
       this.built.push(mesh);
       return mesh;
     };
-    for (const [faction, count] of counts) meshes.set(faction, make(this.ship(faction).geometry, this.resources.kit, count));
+    for (const [model, count] of counts) meshes.set(model, [make(model.near, model.material, count, this.near), make(model.far, model.material, count, this.far)]);
     const { wakeGeometry, wake } = this.resources;
     this.sailors = { slots, meshes, wake: make(wakeGeometry, wake, slots.length) };
     this.placeSailors();
@@ -622,23 +750,29 @@ export class MapLayer {
     // A lost fleet goes under in the replay's last stretch.
     const sinking = clamp01((this.sailTime - 0.85) / 0.15);
     sailors.slots.forEach((slot, i) => {
-      const model = this.ship(slot.faction);
       const head = pointAlong(slot.sail.points, this.sailShare);
       const { x, z } = MapLayer.offset(head.x, head.z, head.angle, slot);
       const lost = slot.sail.lost ? sinking : 0;
-      sailors.meshes.get(slot.faction)!.setMatrixAt(slot.index, this.hull(model, x, z, head.angle, lost * 1.2));
+      const matrix = this.hull(slot.model, x, z, head.angle, slot.length, lost * 1.2);
+      for (const mesh of sailors.meshes.get(slot.model)!) mesh.setMatrixAt(slot.index, matrix);
       // The wake grows as the ship gets under way and is gone once it sinks.
-      sailors.wake.setMatrixAt(i, this.wake(x, z, head.angle, lost > 0.3 ? 0 : clamp01(this.sailShare * 8)));
+      sailors.wake.setMatrixAt(i, this.wake(x, z, head.angle, lost > 0.3 ? 0 : clamp01(this.sailShare * 8), slot.length));
     });
-    for (const mesh of [...sailors.meshes.values(), sailors.wake]) mesh.instanceMatrix.needsUpdate = true;
+    for (const mesh of [...[...sailors.meshes.values()].flat(), sailors.wake]) mesh.instanceMatrix.needsUpdate = true;
   }
 
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
     this.clear();
-    for (const m of this.ships.values()) m.geometry.dispose();
-    this.ships.clear();
+    for (const m of this.kitShips.values()) m.near.dispose();
+    this.kitShips.clear();
+    for (const m of this.builtShips.values()) { m?.near.dispose(); m?.far.dispose(); }
+    this.builtShips.clear();
+    this.shipModels.clear();
+    for (const m of this.readyMaterials) { m.material.dispose(); m.map.dispose(); }
+    this.readyMaterials.length = 0;
+    this.shipMaterials.clear();
     for (const pair of this.kits.values()) for (const g of pair) g.dispose();
     this.kits.clear();
     for (const m of this.loadedCamps.values()) if (m) freeCamp(m);

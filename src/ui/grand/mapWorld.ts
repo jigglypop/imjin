@@ -1,6 +1,7 @@
+import { SHIP_SPECS } from '../../sim/catalog';
 import { MAP_ASPECT, project } from './projection';
 import { campLevel } from './campArt';
-import type { FactionId, FleetView, RegionView, ReplayView, SpotView } from './types';
+import type { FactionId, FleetView, RegionView, ReplayView, ShipClass, SpotView } from './types';
 
 // What stands on the campaign map besides the terrain: a settlement at every camp and a few ships where a fleet lies.
 // Pure layout, no three.js (MapScene turns it into instances), so the shape of each camp level can be tested alone.
@@ -177,6 +178,8 @@ export function faceSea(pieces: Piece[], seed: number, isSea: (x: number, z: num
 export interface SettlementSpec { id: string; u: number; v: number; owner: FactionId; level: number }
 export interface FleetSpec {
   key: string; u: number; v: number; faction: FactionId; count: number; seed: number;
+  /** The kind of each of its `count` hulls, the largest first; empty when its ships' kinds are not known. */
+  kinds: ShipClass[];
   /** Bow direction in frame units, or null at anchor. */
   heading: { du: number; dv: number } | null;
   /** At anchor: each hull's berth, in settlement radii from (u, v) with its bow heading; empty when the sea is not known. */
@@ -199,6 +202,16 @@ export const SHIP_CAP = 140;
 
 /** How many hulls a force is drawn with: a few for a small squadron, never more than five. */
 export const hullsFor = (ships: number) => (ships < 1 ? 0 : Math.min(5, Math.ceil(Math.sqrt(ships / 1.5))));
+
+/**
+ * The kinds a force's `count` hulls are drawn as: picked evenly from its ships ordered largest first, so the flagship
+ * leads and each kind shows about as often as it sails. None when no ship's kind is known.
+ */
+export function drawnKinds(kinds: ShipClass[], count: number): ShipClass[] {
+  const known = kinds.filter((k) => SHIP_SPECS[k]).sort((a, b) => SHIP_SPECS[b].length - SHIP_SPECS[a].length);
+  if (!known.length) return [];
+  return Array.from({ length: count }, (_, i) => known[Math.floor(((i + 0.5) * known.length) / count)]!);
+}
 
 /** Which way (east, south) a camp is shifted from its port marker, by the side the label takes. */
 const LABEL_AWAY: Record<'b' | 't' | 'l' | 'r', [number, number]> = { b: [0, -1], t: [0, 1], l: [1, 0], r: [-1, 0] };
@@ -263,25 +276,29 @@ export function buildWorld(regions: RegionView[], fleets: FleetView[], replay: R
     const [dx, dz] = LABEL_AWAY[r.labelSide ?? 'b'];
     settlements.push({ id: r.id, u: p.u + dx * SETTLEMENT_RADIUS * 1.1, v: p.v + dz * SETTLEMENT_RADIUS * 1.1 * MAP_ASPECT, owner: r.owner, level });
   }
-  const groups = new Map<string, FleetSpec & { ships: number }>();
+  const groups = new Map<string, FleetSpec & { ships: ShipClass[] }>();
   for (const f of fleets) {
     if (!f.ships.length) continue;
+    const ships = f.ships.map((s) => s.kind);
     if (f.at) {
       const r = byId.get(f.at);
       if (!r) continue;
       const key = `${f.at}/${f.faction}`;
       const g = groups.get(key);
-      if (g) { g.ships += f.ships.length; continue; }
+      if (g) { g.ships.push(...ships); continue; }
       const p = project(r.lon, r.lat);
-      groups.set(key, { key, u: p.u, v: p.v, faction: f.faction, count: 0, seed: hash(key), heading: null, berths: [], ships: f.ships.length });
+      groups.set(key, { key, u: p.u, v: p.v, faction: f.faction, count: 0, kinds: [], seed: hash(key), heading: null, berths: [], ships });
     } else if (f.transit) {
       const spot = laneSpot(f, byId, isSea);
       if (!spot) continue;
-      groups.set(f.id, { key: f.id, u: spot.u, v: spot.v, faction: f.faction, count: 0, seed: hash(f.id), heading: { du: spot.du, dv: spot.dv }, berths: [], ships: f.ships.length });
+      groups.set(f.id, { key: f.id, u: spot.u, v: spot.v, faction: f.faction, count: 0, kinds: [], seed: hash(f.id), heading: { du: spot.du, dv: spot.dv }, berths: [], ships });
     }
   }
   const out: FleetSpec[] = [];
-  for (const { ships, ...g } of groups.values()) out.push({ ...g, count: hullsFor(ships) });
+  for (const { ships, ...g } of groups.values()) {
+    const count = hullsFor(ships.length);
+    out.push({ ...g, count, kinds: drawnKinds(ships, count) });
+  }
   if (isSea) berthFleets(out, byId, settlements, isSea);
   keepApart(out, isSea);
   return { settlements, fleets: out, sails: replay ? buildSails(replay, byId) : [] };
