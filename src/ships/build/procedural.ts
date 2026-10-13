@@ -23,7 +23,7 @@ export const PHASE_RANGE = 40;
 const unorm = (x: number) => Math.max(0, Math.min(255, Math.round(x * 255)));
 const snorm = (x: number) => Math.max(-127, Math.min(127, Math.round(x * 127)));
 
-function toGeometry(d: MeshData) {
+export function toGeometry(d: MeshData) {
   const count = d.position.length / 3;
   const geo = new Float32Array(count * 5);
   const nrm = new Int8Array(count * 4);

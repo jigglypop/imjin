@@ -1,0 +1,1893 @@
+{
+  "schema": "imjin.map-models.v1",
+  "purpose": "Clean low-poly camp and ship models for the 3D campaign map (진영 전역): joseon, japan and ming camps at tiers 1-3 and one map ship per navy.",
+  "images": {
+    "provider": "OpenAI Images API",
+    "model": "gpt-image-2.5-sunburst",
+    "size": "1024x1024",
+    "quality": "high",
+    "background": "transparent",
+    "output_format": "png",
+    "requestBudget": 8,
+    "shipStyle": "A single isolated 3D game-asset render made for image-to-3D conversion. One sixteenth-century East Asian wooden warship modelled as a single object, shown whole from the keel to the top of the masts, standing on nothing. Camera: high three-quarter view about 35 degrees above the horizon, from the side and a little ahead of the ship, so the whole length of the hull, its deck and its sails are visible; the bow points to the lower left of the picture and the stern to the upper right; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game unit, chunky simplified shapes with thick masts and sails set full and bellied, large clearly readable forms and strong clean colours that still read when the ship is tiny on screen; no fine clutter, no rigging lines, no ropes, no oars, no anchors, no small props. Transparent background. No water, no sea, no waves, no wake, no stand or base, no other ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border.",
+    "ships": {
+      "ship-joseon": "Joseon Korean panokseon, 1592: a broad, flat two-level wooden hull with a square transom stern and a blunt square bow; the lower hull of dark brown timber, and above it a full-length upper deck enclosed all round by a high wall of plain light-brown wooden shield planks with small square gun ports; a small command pavilion with a grey tiled hip roof standing on the upper deck towards the stern; two masts carrying large square tan cloth sails; plain blue cloth banners at the mastheads and at the stern, with no emblem.",
+      "ship-japan": "Japanese atakebune, 1592: a long wooden hull of dark timber carrying a large box-like fortified superstructure along most of its length, its walls white plaster panels framed by black timber with small square gun ports, and on top of it towards the stern a small two-storey turret with black tiled roofs; one tall central mast carrying one large square sail of plain cream cloth; plain red and plain white nobori banners standing along the upper rail, with no emblem or symbol of any kind.",
+      "ship-ming": "Ming Chinese war junk, 1598: a sturdy wooden hull of red-lacquered timber with a flat transom bow and a high raised stern castle with red rails, two masts carrying tall battened junk sails of red-brown cloth stiffened by dark horizontal battens; plain yellow and plain red cloth banners at the mastheads and at the stern, with no emblem."
+    },
+    "camps": "not generated again: the nine concepts chosen for assets-src/camps-meshy-2026-10-13 (their concepts/<id>.png and .txt) go to Meshy as they are"
+  },
+  "meshy": {
+    "provider": "Meshy",
+    "endpoint": "https://api.meshy.ai/openapi/v1/image-to-3d",
+    "modelType": "smart-topology",
+    "apiModel": "meshy-t2",
+    "creditsPerTask": 15,
+    "hardCreditCeiling": 300,
+    "maxChargedAttemptsPerModel": 2,
+    "pricingSource": "https://docs.meshy.ai/en/api/pricing",
+    "pricingVerifiedAt": "2026-10-14",
+    "pricingNote": "meshy-t2 (Smart Topology) mesh with 2K texture: 15 credits, mesh only 5; a failed task reports 0 consumed credits (refunded)",
+    "polycount": {
+      "1": 1200,
+      "2": 1600,
+      "3": 2000,
+      "ship": 500
+    },
+    "shipTexturePrompts": {
+      "ship-joseon": "Joseon Korean panokseon warship, stylised realistic hand-painted look: dark brown timber hull, lighter weathered brown shield-plank walls, grey roof tiles on the command pavilion, tan cloth sails, plain blue cloth banners.",
+      "ship-japan": "Japanese atakebune warship, stylised realistic hand-painted look: dark timber hull, bright white plaster walls framed by black timber, black roof tiles, plain cream cloth sail, plain red and plain white cloth banners.",
+      "ship-ming": "Ming Chinese war junk, stylised realistic hand-painted look: red-lacquered timber hull and stern castle, dark brown deck, red-brown cloth sails with dark battens, plain yellow and plain red cloth banners."
+    },
+    "textureTail": " Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+    "campTexturePrompts": "as assets-src/camps-meshy-2026-10-13 told meshy-7.1: its meshy.texturePrompts[faction] + textureTier[tier] + textureTail (also in concepts/<id>.txt there)",
+    "balance": [
+      {
+        "at": "2026-10-13T15:19:50.157Z",
+        "balance": 673,
+        "label": "before"
+      },
+      {
+        "at": "2026-10-13T16:12:43.315Z",
+        "balance": 493,
+        "label": "after"
+      }
+    ]
+  },
+  "imageRequests": [
+    {
+      "n": 1,
+      "id": "ship-joseon",
+      "variant": 1,
+      "kind": "generate",
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One sixteenth-century East Asian wooden warship modelled as a single object, shown whole from the keel to the top of the masts, standing on nothing. Camera: high three-quarter view about 35 degrees above the horizon, from the side and a little ahead of the ship, so the whole length of the hull, its deck and its sails are visible; the bow points to the lower left of the picture and the stern to the upper right; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game unit, chunky simplified shapes with thick masts and sails set full and bellied, large clearly readable forms and strong clean colours that still read when the ship is tiny on screen; no fine clutter, no rigging lines, no ropes, no oars, no anchors, no small props. Transparent background. No water, no sea, no waves, no wake, no stand or base, no other ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Joseon Korean panokseon, 1592: a broad, flat two-level wooden hull with a square transom stern and a blunt square bow; the lower hull of dark brown timber, and above it a full-length upper deck enclosed all round by a high wall of plain light-brown wooden shield planks with small square gun ports; a small command pavilion with a grey tiled hip roof standing on the upper deck towards the stern; two masts carrying large square tan cloth sails; plain blue cloth banners at the mastheads and at the stern, with no emblem.",
+      "extra": null,
+      "requestedAt": "2026-10-13T15:19:58.171Z",
+      "status": "done",
+      "finishedAt": "2026-10-13T15:20:46.888Z",
+      "file": "assets-src/map-models-2026-10-14/candidates/ship-joseon-v1.png",
+      "sha256": "b02a3d5450ec190001a5ee884cd256e4ff9f5007eb307661e841a7f42e3da371",
+      "bytes": 1494959,
+      "revisedPrompt": null,
+      "usage": {
+        "input_tokens": 415,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 415
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2171
+      },
+      "chosen": true
+    },
+    {
+      "n": 2,
+      "id": "ship-japan",
+      "variant": 1,
+      "kind": "generate",
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One sixteenth-century East Asian wooden warship modelled as a single object, shown whole from the keel to the top of the masts, standing on nothing. Camera: high three-quarter view about 35 degrees above the horizon, from the side and a little ahead of the ship, so the whole length of the hull, its deck and its sails are visible; the bow points to the lower left of the picture and the stern to the upper right; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game unit, chunky simplified shapes with thick masts and sails set full and bellied, large clearly readable forms and strong clean colours that still read when the ship is tiny on screen; no fine clutter, no rigging lines, no ropes, no oars, no anchors, no small props. Transparent background. No water, no sea, no waves, no wake, no stand or base, no other ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Japanese atakebune, 1592: a long wooden hull of dark timber carrying a large box-like fortified superstructure along most of its length, its walls white plaster panels framed by black timber with small square gun ports, and on top of it towards the stern a small two-storey turret with black tiled roofs; one tall central mast carrying one large square sail of plain cream cloth; plain red and plain white nobori banners standing along the upper rail, with no emblem or symbol of any kind.",
+      "extra": null,
+      "requestedAt": "2026-10-13T15:19:58.191Z",
+      "status": "done",
+      "finishedAt": "2026-10-13T15:20:42.020Z",
+      "file": "assets-src/map-models-2026-10-14/candidates/ship-japan-v1.png",
+      "sha256": "7e75a9fb1a711edc580d62a00c94cbda08c470c9765e045cd3dce44560c73e1c",
+      "bytes": 1413788,
+      "revisedPrompt": null,
+      "usage": {
+        "input_tokens": 401,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 401
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2157
+      },
+      "chosen": true
+    },
+    {
+      "n": 3,
+      "id": "ship-ming",
+      "variant": 1,
+      "kind": "generate",
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1024x1024",
+      "quality": "high",
+      "background": "transparent",
+      "output_format": "png",
+      "prompt": "A single isolated 3D game-asset render made for image-to-3D conversion. One sixteenth-century East Asian wooden warship modelled as a single object, shown whole from the keel to the top of the masts, standing on nothing. Camera: high three-quarter view about 35 degrees above the horizon, from the side and a little ahead of the ship, so the whole length of the hull, its deck and its sails are visible; the bow points to the lower left of the picture and the stern to the upper right; the whole model is centred and completely inside the frame with a generous empty margin all round. Lighting: soft, even, shadowless studio light from all sides, no cast shadows, no dark ambient-occlusion halos. Look: clean stylised realism like a premium historical strategy-game unit, chunky simplified shapes with thick masts and sails set full and bellied, large clearly readable forms and strong clean colours that still read when the ship is tiny on screen; no fine clutter, no rigging lines, no ropes, no oars, no anchors, no small props. Transparent background. No water, no sea, no waves, no wake, no stand or base, no other ships or boats, no people, no animals. Absolutely no text, letters, characters, numbers, logos, emblems or crests anywhere, no rising-sun flag, no sunburst, no watermark, no border. Ming Chinese war junk, 1598: a sturdy wooden hull of red-lacquered timber with a flat transom bow and a high raised stern castle with red rails, two masts carrying tall battened junk sails of red-brown cloth stiffened by dark horizontal battens; plain yellow and plain red cloth banners at the mastheads and at the stern, with no emblem.",
+      "extra": null,
+      "requestedAt": "2026-10-13T15:19:58.194Z",
+      "status": "done",
+      "finishedAt": "2026-10-13T15:20:48.656Z",
+      "file": "assets-src/map-models-2026-10-14/candidates/ship-ming-v1.png",
+      "sha256": "b8fe7e98bade379a7678422a6715c13e48c8221505d07f6d83855990ead3179f",
+      "bytes": 1476724,
+      "revisedPrompt": null,
+      "usage": {
+        "input_tokens": 378,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 378
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2134
+      },
+      "chosen": true
+    }
+  ],
+  "models": {
+    "joseon-1": {
+      "kind": "camp",
+      "faction": "joseon",
+      "tier": 1,
+      "polycount": 1200,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/joseon-1.png",
+        "sha256": "de77ceefd6fba31d4b1a782723e7afa9c55a32e60d00fb35f92d013e6c96abb9",
+        "prompts": "assets-src/camps-meshy-2026-10-13/concepts/joseon-1.txt",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/joseon-1-v1.png",
+        "sourceSha256": "53fba400c79360c6e9c039dba89e4868ddfacb4d1bf61a726b22245378722fd7",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 1,
+        "chosenIn": "assets-src/camps-meshy-2026-10-13",
+        "chosenAt": "2026-10-12T18:17:49.478Z",
+        "note": "Thatched and tiled huts in a log palisade, blue banner, stone quay edge and jetty at the left-front; clean silhouette."
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a135dc-e6e2-7349-941c-52c870c79468",
+          "createdAt": "2026-10-13T15:23:51.614Z",
+          "request": {
+            "ai_model": "meshy-t2",
+            "model_type": "smart-topology",
+            "topology": "triangle",
+            "target_polycount": 1200,
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "texture_prompt": "Joseon Korean naval camp, stylised realistic hand-painted look: grey ceramic roof tiles with white mortar ridges, white lime-plaster walls, dark brown timber, grey granite blocks, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain blue and plain white cloth banners. Sharpened log palisade, small huts and tents. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "target_formats": [
+              "glb"
+            ],
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "de77ceefd6fba31d4b1a782723e7afa9c55a32e60d00fb35f92d013e6c96abb9",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/joseon-1.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/joseon-1-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 15,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-13T15:23:54.475Z",
+          "task": {
+            "id": "01a135dc-e6e2-7349-941c-52c870c79468",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791905034211,
+            "started_at": 1791905034219,
+            "finished_at": 1791905073347,
+            "consumed_credits": 15
+          },
+          "checkedAt": "2026-10-13T15:24:54.194Z",
+          "original": {
+            "file": "assets-src/map-models-2026-10-14/originals/joseon-1-a1.glb",
+            "sha256": "4343922ed4d0f7dcdd0c81f9282026871ac338542354c3e8a17c0c433646176c",
+            "bytes": 3506848,
+            "downloadedAt": "2026-10-13T15:24:54.551Z"
+          },
+          "baseColor": {
+            "file": "assets-src/map-models-2026-10-14/originals/joseon-1-a1-base_color.png",
+            "sha256": "95584cc10ebb8900c8edd09c652fd92a290f45df67da83121d330772ad34b22e",
+            "bytes": 5656186
+          }
+        }
+      ]
+    },
+    "joseon-2": {
+      "kind": "camp",
+      "faction": "joseon",
+      "tier": 2,
+      "polycount": 1600,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/joseon-2.png",
+        "sha256": "1ea8078953618516904f0f03d77f99cdaf64f5311c513b86f004a73cb1d144cf",
+        "prompts": "assets-src/camps-meshy-2026-10-13/concepts/joseon-2.txt",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/joseon-2-v1.png",
+        "sourceSha256": "e2b19762fbeb6e7cc1713ce1e7353b2793205dfa69d3f3284a75e580b5ee33cb",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 9,
+        "chosenIn": "assets-src/camps-meshy-2026-10-13",
+        "chosenAt": "2026-10-12T18:21:38.620Z",
+        "note": "Granite base with white plastered parapet and tiled coping, tiled gate pavilion, timber watchtower, long tiled barracks and storehouse, blue and white banners, pier at the left-front."
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a135dc-f0cc-7334-b726-07e45d391bde",
+          "createdAt": "2026-10-13T15:23:54.483Z",
+          "request": {
+            "ai_model": "meshy-t2",
+            "model_type": "smart-topology",
+            "topology": "triangle",
+            "target_polycount": 1600,
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "texture_prompt": "Joseon Korean naval camp, stylised realistic hand-painted look: grey ceramic roof tiles with white mortar ridges, white lime-plaster walls, dark brown timber, grey granite blocks, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain blue and plain white cloth banners. Stone or brick walls, tiled barracks. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "target_formats": [
+              "glb"
+            ],
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "1ea8078953618516904f0f03d77f99cdaf64f5311c513b86f004a73cb1d144cf",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/joseon-2.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/joseon-2-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 15,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-13T15:23:57.929Z",
+          "task": {
+            "id": "01a135dc-f0cc-7334-b726-07e45d391bde",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791905037656,
+            "started_at": 1791905037659,
+            "finished_at": 1791905076551,
+            "consumed_credits": 15
+          },
+          "checkedAt": "2026-10-13T15:24:56.479Z",
+          "original": {
+            "file": "assets-src/map-models-2026-10-14/originals/joseon-2-a1.glb",
+            "sha256": "63a43fbd351ec8958dee5303ca57a2024c253e36cb338516fe2b00dbe6f0c752",
+            "bytes": 3360084,
+            "downloadedAt": "2026-10-13T15:24:57.019Z"
+          },
+          "baseColor": {
+            "file": "assets-src/map-models-2026-10-14/originals/joseon-2-a1-base_color.png",
+            "sha256": "37bdfab2407ace0c70f4083aac6000493fb17a3a8d546a25a475315e6043c996",
+            "bytes": 4853730
+          }
+        }
+      ]
+    },
+    "joseon-3": {
+      "kind": "camp",
+      "faction": "joseon",
+      "tier": 3,
+      "polycount": 2000,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/joseon-3.png",
+        "sha256": "bd81485efb5d8b18d627c18ac31819eb1684138e5f74ca8d6c80b32f4d3c3f26",
+        "prompts": "assets-src/camps-meshy-2026-10-13/concepts/joseon-3.txt",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/joseon-3-v1.png",
+        "sourceSha256": "9bf07c410f691f93157020300d28dd02e66884dab3f5d723cfd83fc21c375ae8",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 11,
+        "chosenIn": "assets-src/camps-meshy-2026-10-13",
+        "chosenAt": "2026-10-12T18:26:02.999Z",
+        "note": "Granite fortress with white crenellated parapets, tiled corner pavilions, command hall with red pillars on a stone platform under a great grey hip-and-gable roof, tiled barracks, bronze cannons, long stone quay with a roofed boathouse at the left-front, blue and white banners."
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a135da-b933-710b-ad07-be784da01c08",
+          "createdAt": "2026-10-13T15:21:28.884Z",
+          "request": {
+            "ai_model": "meshy-t2",
+            "model_type": "smart-topology",
+            "topology": "triangle",
+            "target_polycount": 2000,
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "texture_prompt": "Joseon Korean naval camp, stylised realistic hand-painted look: grey ceramic roof tiles with white mortar ridges, white lime-plaster walls, dark brown timber, grey granite blocks, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain blue and plain white cloth banners. Fortress walls, corner towers, dark bronze cannons, stone quay. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "target_formats": [
+              "glb"
+            ],
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "bd81485efb5d8b18d627c18ac31819eb1684138e5f74ca8d6c80b32f4d3c3f26",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/joseon-3.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/joseon-3-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 15,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-13T15:21:31.673Z",
+          "task": {
+            "id": "01a135da-b933-710b-ad07-be784da01c08",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791904891395,
+            "started_at": 1791904891404,
+            "finished_at": 1791904924553,
+            "consumed_credits": 15
+          },
+          "checkedAt": "2026-10-13T15:23:00.214Z",
+          "original": {
+            "file": "assets-src/map-models-2026-10-14/originals/joseon-3-a1.glb",
+            "sha256": "678a0d952c6e0014f0cab6d047c97baa36708073fbeaa4356d207390aba36d39",
+            "bytes": 3741480,
+            "downloadedAt": "2026-10-13T15:23:00.631Z"
+          },
+          "baseColor": {
+            "file": "assets-src/map-models-2026-10-14/originals/joseon-3-a1-base_color.png",
+            "sha256": "192c466070a6a885d762783393e97d0646ca374c7d2b5457f924c52d84dd45a3",
+            "bytes": 6072278
+          }
+        }
+      ]
+    },
+    "japan-1": {
+      "kind": "camp",
+      "faction": "japan",
+      "tier": 1,
+      "polycount": 1200,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/japan-1.png",
+        "sha256": "917f6b994e6fe3a5f2ed5ee21ae27dec71415130af3de31c77a2b66593f358fc",
+        "prompts": "assets-src/camps-meshy-2026-10-13/concepts/japan-1.txt",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/japan-1-v1.png",
+        "sourceSha256": "39022e9a8e08148d83f3ebf40acbb2784deba951e90e7132806d4be674a2003d",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 2,
+        "chosenIn": "assets-src/camps-meshy-2026-10-13",
+        "chosenAt": "2026-10-12T18:17:49.709Z",
+        "note": "Log palisade with white curtain screens on a stone base, tents, dark-roofed hut and gate, plain red and white nobori, jetty at the left-front."
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a135dc-fe46-741c-9d2c-f3d17e3a531f",
+          "createdAt": "2026-10-13T15:23:57.935Z",
+          "request": {
+            "ai_model": "meshy-t2",
+            "model_type": "smart-topology",
+            "topology": "triangle",
+            "target_polycount": 1200,
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "texture_prompt": "Sengoku Japanese naval fortress, stylised realistic hand-painted look: black and dark grey roof tiles, bright white plaster walls, dark timber, grey fitted stone bases, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain white and plain red cloth banners. Sharpened log palisade, small huts and tents. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "target_formats": [
+              "glb"
+            ],
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "917f6b994e6fe3a5f2ed5ee21ae27dec71415130af3de31c77a2b66593f358fc",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/japan-1.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/japan-1-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 15,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-13T15:24:00.961Z",
+          "task": {
+            "id": "01a135dc-fe46-741c-9d2c-f3d17e3a531f",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791905040692,
+            "started_at": 1791905040697,
+            "finished_at": 1791905082643,
+            "consumed_credits": 15
+          },
+          "checkedAt": "2026-10-13T15:24:58.363Z",
+          "original": {
+            "file": "assets-src/map-models-2026-10-14/originals/japan-1-a1.glb",
+            "sha256": "6f5c142084b2a3c8f52d02cd3f6ac3b31a499396031ace430fd746ce06883a04",
+            "bytes": 3195280,
+            "downloadedAt": "2026-10-13T15:24:58.645Z"
+          },
+          "baseColor": {
+            "file": "assets-src/map-models-2026-10-14/originals/japan-1-a1-base_color.png",
+            "sha256": "5a2d5a12d41b802a59d85ec404acf85d242f855d4f4322c5197ea3e399c3985e",
+            "bytes": 6220493
+          }
+        }
+      ]
+    },
+    "japan-2": {
+      "kind": "camp",
+      "faction": "japan",
+      "tier": 2,
+      "polycount": 1600,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/japan-2.png",
+        "sha256": "65a1996ac7d8309cf6249aa3fe4e2e8749c8fcd9f21a11b05922d0117d88c91e",
+        "prompts": "assets-src/camps-meshy-2026-10-13/concepts/japan-2.txt",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/japan-2-v1.png",
+        "sourceSha256": "7a99e42a576e7b42a44efad9524310f6d8ad266798b21ae166295d875f41eb4f",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 10,
+        "chosenIn": "assets-src/camps-meshy-2026-10-13",
+        "chosenAt": "2026-10-12T18:21:38.853Z",
+        "note": "Sloped stone base under white plaster walls with dark tiled coping, gate turret, two-storey corner yagura, dark-tiled barracks and storehouse, plain red and white nobori, pier at the left-front."
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a135dd-0a23-7067-8a28-799af47a9d19",
+          "createdAt": "2026-10-13T15:24:00.967Z",
+          "request": {
+            "ai_model": "meshy-t2",
+            "model_type": "smart-topology",
+            "topology": "triangle",
+            "target_polycount": 1600,
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "texture_prompt": "Sengoku Japanese naval fortress, stylised realistic hand-painted look: black and dark grey roof tiles, bright white plaster walls, dark timber, grey fitted stone bases, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain white and plain red cloth banners. Stone or brick walls, tiled barracks. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "target_formats": [
+              "glb"
+            ],
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "65a1996ac7d8309cf6249aa3fe4e2e8749c8fcd9f21a11b05922d0117d88c91e",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/japan-2.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/japan-2-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 15,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-13T15:24:04.325Z",
+          "task": {
+            "id": "01a135dd-0a23-7067-8a28-799af47a9d19",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791905044065,
+            "started_at": 1791905044069,
+            "finished_at": 1791905085275,
+            "consumed_credits": 15
+          },
+          "checkedAt": "2026-10-13T15:24:59.979Z",
+          "original": {
+            "file": "assets-src/map-models-2026-10-14/originals/japan-2-a1.glb",
+            "sha256": "af8e6ade635ca073d78bb1383de506c6b9e8108beefa61fb9f393c290579c923",
+            "bytes": 2823420,
+            "downloadedAt": "2026-10-13T15:25:00.276Z"
+          },
+          "baseColor": {
+            "file": "assets-src/map-models-2026-10-14/originals/japan-2-a1-base_color.png",
+            "sha256": "f71b880bafa29e4577cf9572a2b883e048756a8d6d1bbfe256f3f492183f408d",
+            "bytes": 5387389
+          }
+        }
+      ]
+    },
+    "japan-3": {
+      "kind": "camp",
+      "faction": "japan",
+      "tier": 3,
+      "polycount": 2000,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/japan-3.png",
+        "sha256": "a16fb9ebe1eeea25e2d8085d799a3765e46e1a024c471ae300a6fd072a5e4e79",
+        "prompts": "assets-src/camps-meshy-2026-10-13/concepts/japan-3.txt",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/japan-3-v2.png",
+        "sourceSha256": "b058ccbe3c2c2e32908c6aa96f5c07bb9f9ee0f58609107807de21e6a7b92352",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 2,
+        "request": 14,
+        "chosenIn": "assets-src/camps-meshy-2026-10-13",
+        "chosenAt": "2026-10-12T18:41:27.074Z",
+        "note": "Retry concept: a four-storey white tenshu with black curved-gable roofs standing alone in the centre on its own high stone base, clearly the tallest structure; corner turrets, two barracks, cannons, quay with a roofed dock at the left-front, plain red and white nobori."
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a135dd-1747-746c-a071-e2daa4ac83a3",
+          "createdAt": "2026-10-13T15:24:04.332Z",
+          "request": {
+            "ai_model": "meshy-t2",
+            "model_type": "smart-topology",
+            "topology": "triangle",
+            "target_polycount": 2000,
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "texture_prompt": "Sengoku Japanese naval fortress, stylised realistic hand-painted look: black and dark grey roof tiles, bright white plaster walls, dark timber, grey fitted stone bases, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain white and plain red cloth banners. Fortress walls, corner towers, dark bronze cannons, stone quay. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "target_formats": [
+              "glb"
+            ],
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "a16fb9ebe1eeea25e2d8085d799a3765e46e1a024c471ae300a6fd072a5e4e79",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/japan-3.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/japan-3-v2.png",
+            "imageVariant": 2
+          },
+          "consumedCredits": 15,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-13T15:24:06.764Z",
+          "task": {
+            "id": "01a135dd-1747-746c-a071-e2daa4ac83a3",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791905046409,
+            "started_at": 1791905046415,
+            "finished_at": 1791905089027,
+            "consumed_credits": 15
+          },
+          "checkedAt": "2026-10-13T15:25:01.794Z",
+          "original": {
+            "file": "assets-src/map-models-2026-10-14/originals/japan-3-a1.glb",
+            "sha256": "d2bb88dd7e46b5538db21cfddd46f474de0bae8bb6c79fd685b053a1725501d0",
+            "bytes": 3292172,
+            "downloadedAt": "2026-10-13T15:25:02.196Z"
+          },
+          "baseColor": {
+            "file": "assets-src/map-models-2026-10-14/originals/japan-3-a1-base_color.png",
+            "sha256": "b26faa8d5637a9d0f550bb42f413c552983979953560bc9187f3ebc11e5c98ad",
+            "bytes": 6250416
+          }
+        }
+      ]
+    },
+    "ming-1": {
+      "kind": "camp",
+      "faction": "ming",
+      "tier": 1,
+      "polycount": 1200,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/ming-1.png",
+        "sha256": "b1bd2183ced11ebe952dfd93ce82620300f114ba86d5a95dcdf98d94457a6270",
+        "prompts": "assets-src/camps-meshy-2026-10-13/concepts/ming-1.txt",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/ming-1-v1.png",
+        "sourceSha256": "e26b853cc230275994eb145f38c6885c574a090c6730c3814238e6a799825f11",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 3,
+        "chosenIn": "assets-src/camps-meshy-2026-10-13",
+        "chosenAt": "2026-10-12T18:17:49.953Z",
+        "note": "Square log palisade, timber watchtower with a yellow roof, tents, grey-tiled brick hut, plain red and yellow banners, jetty at the left-front."
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a135dd-20cb-73ab-9e01-8b1f497399ce",
+          "createdAt": "2026-10-13T15:24:06.771Z",
+          "request": {
+            "ai_model": "meshy-t2",
+            "model_type": "smart-topology",
+            "topology": "triangle",
+            "target_polycount": 1200,
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "texture_prompt": "Ming Chinese naval fort, stylised realistic hand-painted look: grey brick walls and battlements, red-lacquered timber, yellow-glazed roof tiles on the gate towers, grey roof tiles on the barracks, grey stone, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain red and plain yellow cloth banners. Sharpened log palisade, small huts and tents. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "target_formats": [
+              "glb"
+            ],
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "b1bd2183ced11ebe952dfd93ce82620300f114ba86d5a95dcdf98d94457a6270",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/ming-1.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/ming-1-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 15,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-13T15:24:09.597Z",
+          "task": {
+            "id": "01a135dd-20cb-73ab-9e01-8b1f497399ce",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791905049300,
+            "started_at": 1791905049303,
+            "finished_at": 1791905090184,
+            "consumed_credits": 15
+          },
+          "checkedAt": "2026-10-13T15:25:03.549Z",
+          "original": {
+            "file": "assets-src/map-models-2026-10-14/originals/ming-1-a1.glb",
+            "sha256": "39eedde257b7c025a0920d6756e064b6d2fc72e90a3dd427a195c1238152c918",
+            "bytes": 3241044,
+            "downloadedAt": "2026-10-13T15:25:04.045Z"
+          },
+          "baseColor": {
+            "file": "assets-src/map-models-2026-10-14/originals/ming-1-a1-base_color.png",
+            "sha256": "bc5169d400e31f6ef471beb9ac4763d8c57e47562647eb836ba0d7e6b368af3e",
+            "bytes": 6839960
+          }
+        }
+      ]
+    },
+    "ming-2": {
+      "kind": "camp",
+      "faction": "ming",
+      "tier": 2,
+      "polycount": 1600,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/ming-2.png",
+        "sha256": "e487dd1a9ee4b5482ed20b31691cc379089e098ae1b7ae33fae679a9512623f4",
+        "prompts": "assets-src/camps-meshy-2026-10-13/concepts/ming-2.txt",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/ming-2-v1.png",
+        "sourceSha256": "0a83b720ce5a8b42d63d7789661b2d91a76e37da9a273fbdfcc8e0fa41358276",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 6,
+        "chosenIn": "assets-src/camps-meshy-2026-10-13",
+        "chosenAt": "2026-10-12T18:20:35.705Z",
+        "note": "Square crenellated grey brick wall, red gate tower and brick watchtower with yellow-glazed roofs, grey-tiled barracks, plain red and yellow banners, jetty at the left-front; same base as ming-1."
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a135dd-2bde-708d-a8fe-71accce700cf",
+          "createdAt": "2026-10-13T15:24:09.605Z",
+          "request": {
+            "ai_model": "meshy-t2",
+            "model_type": "smart-topology",
+            "topology": "triangle",
+            "target_polycount": 1600,
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "texture_prompt": "Ming Chinese naval fort, stylised realistic hand-painted look: grey brick walls and battlements, red-lacquered timber, yellow-glazed roof tiles on the gate towers, grey roof tiles on the barracks, grey stone, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain red and plain yellow cloth banners. Stone or brick walls, tiled barracks. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "target_formats": [
+              "glb"
+            ],
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "e487dd1a9ee4b5482ed20b31691cc379089e098ae1b7ae33fae679a9512623f4",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/ming-2.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/ming-2-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 15,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-13T15:24:13.134Z",
+          "task": {
+            "id": "01a135dd-2bde-708d-a8fe-71accce700cf",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791905052867,
+            "started_at": 1791905052873,
+            "finished_at": 1791905093439,
+            "consumed_credits": 15
+          },
+          "checkedAt": "2026-10-13T15:25:05.825Z",
+          "original": {
+            "file": "assets-src/map-models-2026-10-14/originals/ming-2-a1.glb",
+            "sha256": "168e54b298d98fcdafb7342910bfc0ba25e427b7b8035c978fc3e35e77470aa1",
+            "bytes": 2846952,
+            "downloadedAt": "2026-10-13T15:25:06.107Z"
+          },
+          "baseColor": {
+            "file": "assets-src/map-models-2026-10-14/originals/ming-2-a1-base_color.png",
+            "sha256": "4a3b91d7902622a4b9ab3314e5b028b6ba25ed0aa9138539d66f93b14585ac85",
+            "bytes": 5798300
+          }
+        }
+      ]
+    },
+    "ming-3": {
+      "kind": "camp",
+      "faction": "ming",
+      "tier": 3,
+      "polycount": 2000,
+      "concept": {
+        "file": "assets-src/camps-meshy-2026-10-13/concepts/ming-3.png",
+        "sha256": "e64aea5e7d8b4fecdbaba0965e9da668845d601550b6c2ace17ffe3fb0c5ffc0",
+        "prompts": "assets-src/camps-meshy-2026-10-13/concepts/ming-3.txt",
+        "source": "assets-src/camps-meshy-2026-10-13/candidates/ming-3-v1.png",
+        "sourceSha256": "7116bad2f30790aba294515defcbab57f0cb6a1cf5d6a5a190ee58a07e606490",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 12,
+        "chosenIn": "assets-src/camps-meshy-2026-10-13",
+        "chosenAt": "2026-10-12T18:26:03.497Z",
+        "note": "Square crenellated grey brick fortress with corner towers, two-storey red gate tower with double yellow-glazed roofs, yellow-roofed hall, grey-tiled barracks, cannons, long stone quay with a roofed dock at the left-front, plain red and yellow banners."
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a135dd-3a2a-7236-b67c-4b6e81110c8a",
+          "createdAt": "2026-10-13T15:24:13.243Z",
+          "request": {
+            "ai_model": "meshy-t2",
+            "model_type": "smart-topology",
+            "topology": "triangle",
+            "target_polycount": 2000,
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "texture_prompt": "Ming Chinese naval fort, stylised realistic hand-painted look: grey brick walls and battlements, red-lacquered timber, yellow-glazed roof tiles on the gate towers, grey roof tiles on the barracks, grey stone, packed light-brown earth ground with short green grass at the edges, weathered grey-brown timber decks, plain red and plain yellow cloth banners. Fortress walls, corner towers, dark bronze cannons, stone quay. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "target_formats": [
+              "glb"
+            ],
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "e64aea5e7d8b4fecdbaba0965e9da668845d601550b6c2ace17ffe3fb0c5ffc0",
+            "imageFile": "assets-src/camps-meshy-2026-10-13/concepts/ming-3.png",
+            "imageSource": "assets-src/camps-meshy-2026-10-13/candidates/ming-3-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 15,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-13T15:24:15.976Z",
+          "task": {
+            "id": "01a135dd-3a2a-7236-b67c-4b6e81110c8a",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791905055697,
+            "started_at": 1791905055702,
+            "finished_at": 1791905093433,
+            "consumed_credits": 15
+          },
+          "checkedAt": "2026-10-13T15:25:07.444Z",
+          "original": {
+            "file": "assets-src/map-models-2026-10-14/originals/ming-3-a1.glb",
+            "sha256": "348182cb4e845f9bf992e11544ffc0594efd8ed704c60b2c16009d3fa313ae7d",
+            "bytes": 3436440,
+            "downloadedAt": "2026-10-13T15:25:07.957Z"
+          },
+          "baseColor": {
+            "file": "assets-src/map-models-2026-10-14/originals/ming-3-a1-base_color.png",
+            "sha256": "14518ad31c7a25b51909a7c560f49d003ecbd2f8bef5d6f97cd0fe58994e70f5",
+            "bytes": 5281906
+          }
+        }
+      ]
+    },
+    "ship-joseon": {
+      "kind": "ship",
+      "faction": "joseon",
+      "polycount": 500,
+      "concept": {
+        "file": "assets-src/map-models-2026-10-14/candidates/concepts/ship-joseon.png",
+        "sha256": "22559c7de0a7fdbedca094bf328cb657605292496f6f729209e26b1d012502dd",
+        "source": "assets-src/map-models-2026-10-14/candidates/ship-joseon-v1.png",
+        "sourceSha256": "b02a3d5450ec190001a5ee884cd256e4ff9f5007eb307661e841a7f42e3da371",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 1,
+        "chosenBy": "agent review (delegated by the owner brief)",
+        "note": "Two-level hull under a full shield-plank wall with gun ports, tiled command pavilion aft, two tan sails, plain blue banners; bow to the lower left, chunky clean shapes.",
+        "chosenAt": "2026-10-13T15:21:17.697Z"
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a135da-c2f8-71a6-89de-f8a2b948a731",
+          "createdAt": "2026-10-13T15:21:31.679Z",
+          "request": {
+            "ai_model": "meshy-t2",
+            "model_type": "smart-topology",
+            "topology": "triangle",
+            "target_polycount": 500,
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "texture_prompt": "Joseon Korean panokseon warship, stylised realistic hand-painted look: dark brown timber hull, lighter weathered brown shield-plank walls, grey roof tiles on the command pavilion, tan cloth sails, plain blue cloth banners. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "target_formats": [
+              "glb"
+            ],
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "22559c7de0a7fdbedca094bf328cb657605292496f6f729209e26b1d012502dd",
+            "imageFile": "assets-src/map-models-2026-10-14/candidates/concepts/ship-joseon.png",
+            "imageSource": "assets-src/map-models-2026-10-14/candidates/ship-joseon-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 15,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-13T15:21:35.327Z",
+          "task": {
+            "id": "01a135da-c2f8-71a6-89de-f8a2b948a731",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791904895018,
+            "started_at": 1791904895022,
+            "finished_at": 1791904920448,
+            "consumed_credits": 15
+          },
+          "checkedAt": "2026-10-13T15:23:01.848Z",
+          "original": {
+            "file": "assets-src/map-models-2026-10-14/originals/ship-joseon-a1.glb",
+            "sha256": "9778242477d8a928fe18810b45190b78257a952147da44f375a4f1888a77dac7",
+            "bytes": 2583204,
+            "downloadedAt": "2026-10-13T15:23:02.210Z"
+          },
+          "baseColor": {
+            "file": "assets-src/map-models-2026-10-14/originals/ship-joseon-a1-base_color.png",
+            "sha256": "04d61e2fdca4a627343c95f250d77c734ef7b4aafde3920cef13ccabe623102f",
+            "bytes": 4965138
+          }
+        }
+      ]
+    },
+    "ship-japan": {
+      "kind": "ship",
+      "faction": "japan",
+      "polycount": 500,
+      "concept": {
+        "file": "assets-src/map-models-2026-10-14/candidates/concepts/ship-japan.png",
+        "sha256": "dae6d9bebaaa5fd68dd176f336cefda08999273ceae4093d60336ba7b0962828",
+        "source": "assets-src/map-models-2026-10-14/candidates/ship-japan-v1.png",
+        "sourceSha256": "7e75a9fb1a711edc580d62a00c94cbda08c470c9765e045cd3dce44560c73e1c",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 2,
+        "chosenBy": "agent review (delegated by the owner brief)",
+        "note": "Dark hull with a white-plaster and black-timber fortified upper works, a two-storey tiled turret aft, one large cream square sail, plain red and white nobori; bow to the lower left.",
+        "chosenAt": "2026-10-13T15:21:18.022Z"
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a135dd-44e8-73a3-b7bc-e4995123b694",
+          "createdAt": "2026-10-13T15:24:16.017Z",
+          "request": {
+            "ai_model": "meshy-t2",
+            "model_type": "smart-topology",
+            "topology": "triangle",
+            "target_polycount": 500,
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "texture_prompt": "Japanese atakebune warship, stylised realistic hand-painted look: dark timber hull, bright white plaster walls framed by black timber, black roof tiles, plain cream cloth sail, plain red and plain white cloth banners. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "target_formats": [
+              "glb"
+            ],
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "dae6d9bebaaa5fd68dd176f336cefda08999273ceae4093d60336ba7b0962828",
+            "imageFile": "assets-src/map-models-2026-10-14/candidates/concepts/ship-japan.png",
+            "imageSource": "assets-src/map-models-2026-10-14/candidates/ship-japan-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 15,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-13T15:24:19.795Z",
+          "task": {
+            "id": "01a135dd-44e8-73a3-b7bc-e4995123b694",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791905059497,
+            "started_at": 1791905059502,
+            "finished_at": 1791905093236,
+            "consumed_credits": 15
+          },
+          "checkedAt": "2026-10-13T15:25:09.240Z",
+          "original": {
+            "file": "assets-src/map-models-2026-10-14/originals/ship-japan-a1.glb",
+            "sha256": "88807fcb1f74b1fd248d4db3b4fa75c7dc5ffeb24032a4eb71b2a7353f81bfd8",
+            "bytes": 2526832,
+            "downloadedAt": "2026-10-13T15:25:09.521Z"
+          },
+          "baseColor": {
+            "file": "assets-src/map-models-2026-10-14/originals/ship-japan-a1-base_color.png",
+            "sha256": "b13913664da9767bf02dad961e38fedcb5f0b80ece20b65237b60c4e6bcfbe65",
+            "bytes": 5110901
+          }
+        }
+      ]
+    },
+    "ship-ming": {
+      "kind": "ship",
+      "faction": "ming",
+      "polycount": 500,
+      "concept": {
+        "file": "assets-src/map-models-2026-10-14/candidates/concepts/ship-ming.png",
+        "sha256": "a15ab939f5f0e111cad7c72b80dc4457dccc6af688532f69c1495e09033f96cf",
+        "source": "assets-src/map-models-2026-10-14/candidates/ship-ming-v1.png",
+        "sourceSha256": "b8fe7e98bade379a7678422a6715c13e48c8221505d07f6d83855990ead3179f",
+        "processing": "alpha below 32 (the faint glow the model paints round banners) cleared, alpha from 224 opaque, colour composited over white, so the image reads the same whether or not alpha is honoured",
+        "variant": 1,
+        "request": 3,
+        "chosenBy": "agent review (delegated by the owner brief)",
+        "note": "Red-lacquered junk with a high stern castle, two battened red-brown junk sails, plain yellow and red banners; bow to the lower left.",
+        "chosenAt": "2026-10-13T15:21:18.294Z"
+      },
+      "attempts": [
+        {
+          "number": 1,
+          "status": "SUCCEEDED",
+          "taskId": "01a135dd-53b2-7189-bb9d-adbeac7abad1",
+          "createdAt": "2026-10-13T15:24:19.801Z",
+          "request": {
+            "ai_model": "meshy-t2",
+            "model_type": "smart-topology",
+            "topology": "triangle",
+            "target_polycount": 500,
+            "should_texture": true,
+            "enable_pbr": false,
+            "texture_resolution": "2k",
+            "texture_prompt": "Ming Chinese war junk, stylised realistic hand-painted look: red-lacquered timber hull and stern castle, dark brown deck, red-brown cloth sails with dark battens, plain yellow and plain red cloth banners. Matte surfaces, even soft lighting, no baked shadows, no text, no letters, no emblems, no logos.",
+            "target_formats": [
+              "glb"
+            ],
+            "moderation": true,
+            "multi_view_thumbnails": true,
+            "imageSha256": "a15ab939f5f0e111cad7c72b80dc4457dccc6af688532f69c1495e09033f96cf",
+            "imageFile": "assets-src/map-models-2026-10-14/candidates/concepts/ship-ming.png",
+            "imageSource": "assets-src/map-models-2026-10-14/candidates/ship-ming-v1.png",
+            "imageVariant": 1
+          },
+          "consumedCredits": 15,
+          "rejectionReason": "",
+          "submittedAt": "2026-10-13T15:24:24.965Z",
+          "task": {
+            "id": "01a135dd-53b2-7189-bb9d-adbeac7abad1",
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "created_at": 1791905064578,
+            "started_at": 1791905064584,
+            "finished_at": 1791905098094,
+            "consumed_credits": 15
+          },
+          "checkedAt": "2026-10-13T15:25:10.930Z",
+          "original": {
+            "file": "assets-src/map-models-2026-10-14/originals/ship-ming-a1.glb",
+            "sha256": "67abfd6657adaec9fec0c3d0788de195208fea40e32b37411b2f7ac51ffc3829",
+            "bytes": 2692032,
+            "downloadedAt": "2026-10-13T15:25:11.160Z"
+          },
+          "baseColor": {
+            "file": "assets-src/map-models-2026-10-14/originals/ship-ming-a1-base_color.png",
+            "sha256": "0d8753c98a745d21b0e136a04d3a51e1e4def06150bee3dddc2d562c5ee5869c",
+            "bytes": 5211792
+          }
+        }
+      ]
+    }
+  },
+  "outcome": {
+    "decidedAt": "2026-10-14",
+    "shipped": false,
+    "summary": "Rejected by the owner: nothing from this package ships. public/models/camps keeps its earlier files and public/models/ships-map was never shipped.",
+    "camps": "The whole-camp models stand on their own square ground slabs and read as toy dioramas, mushy close up. The camps are to be built from separate buildings on the terrain instead.",
+    "ships": "Dropped for the battle's own ships: the campaign map now draws the procedural battle ships (src/ships/build) of the kinds each fleet has.",
+    "spent": {
+      "meshyTasks": 12,
+      "meshyCredits": 180,
+      "meshyBalanceBefore": 673,
+      "meshyBalanceAfter": 493,
+      "openaiImageRequests": 3
+    }
+  },
+  "reviewBuild": {
+    "note": "Built locally for review only (scripts/build-map-models.mjs, not kept); none of these files ships.",
+    "builtBy": "node scripts/build-map-models.mjs",
+    "builtAt": "2026-10-13T16:12:27.852Z",
+    "convention": {
+      "camp": "glTF y up; waterfront (pier or quay) faces -z; lowest point on y = 0; centred on x and z; the longer horizontal side is 1 unit; near and far share one frame",
+      "ship": "glTF y up; bow towards +z; one unit long along z; centred on x and z; the waterline on y = 0 (the keel below it)"
+    },
+    "method": "Meshy Smart Topology meshes as made (turned, normalised, a camp slab's underside dropped, normals remade from the faces); far camp levels by meshoptimizer; the base colour filled outside its UV islands and downscaled to WebP",
+    "levels": {
+      "camp": [
+        {
+          "name": "near",
+          "suffix": "",
+          "budget": 2200,
+          "share": 1,
+          "size": 512,
+          "quality": 88
+        },
+        {
+          "name": "far",
+          "suffix": "_far",
+          "budget": 800,
+          "share": 0.3333333333333333,
+          "size": 256,
+          "quality": 90
+        }
+      ],
+      "ship": [
+        {
+          "name": "map",
+          "suffix": "",
+          "budget": 600,
+          "share": 1,
+          "size": 512,
+          "quality": 88
+        }
+      ]
+    },
+    "smoothDegrees": 35,
+    "islandPad": 2,
+    "totalBytes": 1428792,
+    "files": 21,
+    "models": {
+      "joseon-1": {
+        "kind": "camp",
+        "attempt": 1,
+        "taskId": "01a135dc-e6e2-7349-941c-52c870c79468",
+        "original": {
+          "file": "assets-src/map-models-2026-10-14/originals/joseon-1-a1.glb",
+          "sha256": "4343922ed4d0f7dcdd0c81f9282026871ac338542354c3e8a17c0c433646176c",
+          "triangles": 1182,
+          "vertices": 1738
+        },
+        "baseColor": {
+          "from": "assets-src/map-models-2026-10-14/originals/joseon-1-a1-base_color.png",
+          "size": 2048,
+          "atlasCovered": 0.606
+        },
+        "turnDegrees": 180,
+        "undersideDropped": 3,
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_joseon_1.glb",
+            "bytes": 103908,
+            "sha256": "aa6062f1c6ae8290de62e0c2e828829fb1655b4c6f8698a2cd57a459a3c5bf5f",
+            "triangles": 1179,
+            "vertices": 2639,
+            "texture": {
+              "size": 512,
+              "format": "webp",
+              "bytes": 62006,
+              "quality": 88
+            },
+            "bounds": {
+              "min": [
+                -0.4456,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4456,
+                0.5516,
+                0.5
+              ]
+            }
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_joseon_1_far.glb",
+            "bytes": 41608,
+            "sha256": "a83dfa53607ebadf90ded08e88fdaf903328865c7bcbe7f275c63d821567898e",
+            "triangles": 393,
+            "vertices": 1009,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 23564,
+              "quality": 90
+            },
+            "bounds": {
+              "min": [
+                -0.4456,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4456,
+                0.5516,
+                0.5
+              ]
+            },
+            "simplified": {
+              "error": 0.04,
+              "flags": [
+                "Permissive"
+              ]
+            }
+          }
+        ]
+      },
+      "joseon-2": {
+        "kind": "camp",
+        "attempt": 1,
+        "taskId": "01a135dc-f0cc-7334-b726-07e45d391bde",
+        "original": {
+          "file": "assets-src/map-models-2026-10-14/originals/joseon-2-a1.glb",
+          "sha256": "63a43fbd351ec8958dee5303ca57a2024c253e36cb338516fe2b00dbe6f0c752",
+          "triangles": 1598,
+          "vertices": 2349
+        },
+        "baseColor": {
+          "from": "assets-src/map-models-2026-10-14/originals/joseon-2-a1-base_color.png",
+          "size": 2048,
+          "atlasCovered": 0.535
+        },
+        "turnDegrees": 180,
+        "undersideDropped": 94,
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_joseon_2.glb",
+            "bytes": 110912,
+            "sha256": "a48da77ca83942c02ff18e3204ef2f668db86ef9880964f2e1e6f29b3f98c3e0",
+            "triangles": 1504,
+            "vertices": 3377,
+            "texture": {
+              "size": 512,
+              "format": "webp",
+              "bytes": 59610,
+              "quality": 88
+            },
+            "bounds": {
+              "min": [
+                -0.4514,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4514,
+                0.3364,
+                0.5
+              ]
+            }
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_joseon_2_far.glb",
+            "bytes": 46016,
+            "sha256": "1714b0a21c2ad9ced2efc894a38122a7a1e038005bc286cca7ec42f8511a2da6",
+            "triangles": 501,
+            "vertices": 1399,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 22956,
+              "quality": 90
+            },
+            "bounds": {
+              "min": [
+                -0.4514,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4514,
+                0.3364,
+                0.5
+              ]
+            },
+            "simplified": {
+              "error": 0.02,
+              "flags": [
+                "Permissive"
+              ]
+            }
+          }
+        ]
+      },
+      "joseon-3": {
+        "kind": "camp",
+        "attempt": 1,
+        "taskId": "01a135da-b933-710b-ad07-be784da01c08",
+        "original": {
+          "file": "assets-src/map-models-2026-10-14/originals/joseon-3-a1.glb",
+          "sha256": "678a0d952c6e0014f0cab6d047c97baa36708073fbeaa4356d207390aba36d39",
+          "triangles": 1766,
+          "vertices": 2618
+        },
+        "baseColor": {
+          "from": "assets-src/map-models-2026-10-14/originals/joseon-3-a1-base_color.png",
+          "size": 2048,
+          "atlasCovered": 0.685
+        },
+        "turnDegrees": 180,
+        "undersideDropped": 76,
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_joseon_3.glb",
+            "bytes": 138608,
+            "sha256": "1296f4fdde3a72c092803367e4d9759c6bf473e1db8e4826b783eb29dd0896da",
+            "triangles": 1690,
+            "vertices": 4153,
+            "texture": {
+              "size": 512,
+              "format": "webp",
+              "bytes": 76300,
+              "quality": 88
+            },
+            "bounds": {
+              "min": [
+                -0.4881,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4881,
+                0.4323,
+                0.5
+              ]
+            }
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_joseon_3_far.glb",
+            "bytes": 53916,
+            "sha256": "7aa41abcedcc619a0185ef417bfc0ef4859b3b768eb565fff88477ccdee70710",
+            "triangles": 562,
+            "vertices": 1559,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 28698,
+              "quality": 90
+            },
+            "bounds": {
+              "min": [
+                -0.4881,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4881,
+                0.4323,
+                0.5
+              ]
+            },
+            "simplified": {
+              "error": 0.04,
+              "flags": []
+            }
+          }
+        ]
+      },
+      "japan-1": {
+        "kind": "camp",
+        "attempt": 1,
+        "taskId": "01a135dc-fe46-741c-9d2c-f3d17e3a531f",
+        "original": {
+          "file": "assets-src/map-models-2026-10-14/originals/japan-1-a1.glb",
+          "sha256": "6f5c142084b2a3c8f52d02cd3f6ac3b31a499396031ace430fd746ce06883a04",
+          "triangles": 1025,
+          "vertices": 1770
+        },
+        "baseColor": {
+          "from": "assets-src/map-models-2026-10-14/originals/japan-1-a1-base_color.png",
+          "size": 2048,
+          "atlasCovered": 0.813
+        },
+        "turnDegrees": 180,
+        "undersideDropped": 32,
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_japan_1.glb",
+            "bytes": 84968,
+            "sha256": "884c68d4e6a1562fb03d23c8e7d5bccf287259eab6d012fd2f729cdbb8571a80",
+            "triangles": 993,
+            "vertices": 1860,
+            "texture": {
+              "size": 512,
+              "format": "webp",
+              "bytes": 55106,
+              "quality": 88
+            },
+            "bounds": {
+              "min": [
+                -0.4314,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4314,
+                0.4639,
+                0.5
+              ]
+            }
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_japan_1_far.glb",
+            "bytes": 32932,
+            "sha256": "59c08c722257b056d36a1583cc629aa66e3997aae1c951db252fee52054309a6",
+            "triangles": 332,
+            "vertices": 737,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 19514,
+              "quality": 90
+            },
+            "bounds": {
+              "min": [
+                -0.4314,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4314,
+                0.4639,
+                0.5
+              ]
+            },
+            "simplified": {
+              "error": 0.02,
+              "flags": [
+                "Permissive"
+              ]
+            }
+          }
+        ]
+      },
+      "japan-2": {
+        "kind": "camp",
+        "attempt": 1,
+        "taskId": "01a135dd-0a23-7067-8a28-799af47a9d19",
+        "original": {
+          "file": "assets-src/map-models-2026-10-14/originals/japan-2-a1.glb",
+          "sha256": "af8e6ade635ca073d78bb1383de506c6b9e8108beefa61fb9f393c290579c923",
+          "triangles": 1405,
+          "vertices": 2456
+        },
+        "baseColor": {
+          "from": "assets-src/map-models-2026-10-14/originals/japan-2-a1-base_color.png",
+          "size": 2048,
+          "atlasCovered": 0.733
+        },
+        "turnDegrees": 270,
+        "undersideDropped": 37,
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_japan_2.glb",
+            "bytes": 84324,
+            "sha256": "6733552cebacefee2b986bf4530bc23c3b8ba5e7eb8cb37baf6ac4ef55a60682",
+            "triangles": 1368,
+            "vertices": 2613,
+            "texture": {
+              "size": 512,
+              "format": "webp",
+              "bytes": 43542,
+              "quality": 88
+            },
+            "bounds": {
+              "min": [
+                -0.4283,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4283,
+                0.4266,
+                0.5
+              ]
+            }
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_japan_2_far.glb",
+            "bytes": 34096,
+            "sha256": "13e3c27279e725ade9a3738fe25e75b2e8e54b60c388e2b7ada26d2115b6a2eb",
+            "triangles": 456,
+            "vertices": 1032,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 16340,
+              "quality": 90
+            },
+            "bounds": {
+              "min": [
+                -0.4283,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4283,
+                0.4266,
+                0.5
+              ]
+            },
+            "simplified": {
+              "error": 0.02,
+              "flags": [
+                "Permissive"
+              ]
+            }
+          }
+        ]
+      },
+      "japan-3": {
+        "kind": "camp",
+        "attempt": 1,
+        "taskId": "01a135dd-1747-746c-a071-e2daa4ac83a3",
+        "original": {
+          "file": "assets-src/map-models-2026-10-14/originals/japan-3-a1.glb",
+          "sha256": "d2bb88dd7e46b5538db21cfddd46f474de0bae8bb6c79fd685b053a1725501d0",
+          "triangles": 1895,
+          "vertices": 3385
+        },
+        "baseColor": {
+          "from": "assets-src/map-models-2026-10-14/originals/japan-3-a1-base_color.png",
+          "size": 2048,
+          "atlasCovered": 0.869
+        },
+        "turnDegrees": 270,
+        "undersideDropped": 44,
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_japan_3.glb",
+            "bytes": 117092,
+            "sha256": "72b5bac2337f5af268e14bd309d9fe1175a83fb0a63492e85a5fe381cbca3c4b",
+            "triangles": 1851,
+            "vertices": 3622,
+            "texture": {
+              "size": 512,
+              "format": "webp",
+              "bytes": 61882,
+              "quality": 88
+            },
+            "bounds": {
+              "min": [
+                -0.5,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.5,
+                0.5234,
+                0.5
+              ]
+            }
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_japan_3_far.glb",
+            "bytes": 46956,
+            "sha256": "f320aafbdaabb4ee84ed1b710ab5aebc205a584781438bb5a2391183a107fcce",
+            "triangles": 642,
+            "vertices": 1450,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 22846,
+              "quality": 90
+            },
+            "bounds": {
+              "min": [
+                -0.5,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.5,
+                0.5234,
+                0.5
+              ]
+            },
+            "simplified": {
+              "error": 0.02,
+              "flags": [
+                "Permissive"
+              ]
+            }
+          }
+        ]
+      },
+      "ming-1": {
+        "kind": "camp",
+        "attempt": 1,
+        "taskId": "01a135dd-20cb-73ab-9e01-8b1f497399ce",
+        "original": {
+          "file": "assets-src/map-models-2026-10-14/originals/ming-1-a1.glb",
+          "sha256": "39eedde257b7c025a0920d6756e064b6d2fc72e90a3dd427a195c1238152c918",
+          "triangles": 1075,
+          "vertices": 1820
+        },
+        "baseColor": {
+          "from": "assets-src/map-models-2026-10-14/originals/ming-1-a1-base_color.png",
+          "size": 2048,
+          "atlasCovered": 0.914
+        },
+        "turnDegrees": 270,
+        "undersideDropped": 32,
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_ming_1.glb",
+            "bytes": 78240,
+            "sha256": "29b58fc5baa5a395a528e184bfbf552366d483624ecda5bf02910c5db8a6247b",
+            "triangles": 1043,
+            "vertices": 2008,
+            "texture": {
+              "size": 512,
+              "format": "webp",
+              "bytes": 46160,
+              "quality": 88
+            },
+            "bounds": {
+              "min": [
+                -0.4684,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4684,
+                0.4523,
+                0.5
+              ]
+            }
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_ming_1_far.glb",
+            "bytes": 28656,
+            "sha256": "d9ce0dbc932f6b34bb46ba3ed6c0848b8f778e0a930e7e757ec6a79d1a5bee4a",
+            "triangles": 346,
+            "vertices": 805,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 14052,
+              "quality": 90
+            },
+            "bounds": {
+              "min": [
+                -0.4684,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4684,
+                0.4523,
+                0.5
+              ]
+            },
+            "simplified": {
+              "error": 0.02,
+              "flags": [
+                "Permissive"
+              ]
+            }
+          }
+        ]
+      },
+      "ming-2": {
+        "kind": "camp",
+        "attempt": 1,
+        "taskId": "01a135dd-2bde-708d-a8fe-71accce700cf",
+        "original": {
+          "file": "assets-src/map-models-2026-10-14/originals/ming-2-a1.glb",
+          "sha256": "168e54b298d98fcdafb7342910bfc0ba25e427b7b8035c978fc3e35e77470aa1",
+          "triangles": 1613,
+          "vertices": 2678
+        },
+        "baseColor": {
+          "from": "assets-src/map-models-2026-10-14/originals/ming-2-a1-base_color.png",
+          "size": 2048,
+          "atlasCovered": 0.712
+        },
+        "turnDegrees": 270,
+        "undersideDropped": 42,
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_ming_2.glb",
+            "bytes": 76392,
+            "sha256": "ece71567ee804a0109709b1aba91847c32606b648231a28301898cfc73a83c09",
+            "triangles": 1571,
+            "vertices": 2953,
+            "texture": {
+              "size": 512,
+              "format": "webp",
+              "bytes": 30026,
+              "quality": 88
+            },
+            "bounds": {
+              "min": [
+                -0.4612,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4612,
+                0.3881,
+                0.5
+              ]
+            }
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_ming_2_far.glb",
+            "bytes": 31032,
+            "sha256": "b17cee9d39420553f01643df5c4313f9f0f5a1e72bfcd2354d2e0df036b5c65d",
+            "triangles": 522,
+            "vertices": 1152,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 10840,
+              "quality": 90
+            },
+            "bounds": {
+              "min": [
+                -0.4612,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.4612,
+                0.3881,
+                0.5
+              ]
+            },
+            "simplified": {
+              "error": 0.02,
+              "flags": [
+                "Permissive"
+              ]
+            }
+          }
+        ]
+      },
+      "ming-3": {
+        "kind": "camp",
+        "attempt": 1,
+        "taskId": "01a135dd-3a2a-7236-b67c-4b6e81110c8a",
+        "original": {
+          "file": "assets-src/map-models-2026-10-14/originals/ming-3-a1.glb",
+          "sha256": "348182cb4e845f9bf992e11544ffc0594efd8ed704c60b2c16009d3fa313ae7d",
+          "triangles": 1982,
+          "vertices": 2639
+        },
+        "baseColor": {
+          "from": "assets-src/map-models-2026-10-14/originals/ming-3-a1-base_color.png",
+          "size": 2048,
+          "atlasCovered": 0.591
+        },
+        "turnDegrees": 270,
+        "undersideDropped": 52,
+        "levels": [
+          {
+            "level": "near",
+            "path": "public/models/camps/camp_ming_3.glb",
+            "bytes": 121504,
+            "sha256": "ee7201689598c7539ec8b701a77b8467b5348855fdec2b5f2e111d6fa4d27832",
+            "triangles": 1930,
+            "vertices": 4271,
+            "texture": {
+              "size": 512,
+              "format": "webp",
+              "bytes": 57178,
+              "quality": 88
+            },
+            "bounds": {
+              "min": [
+                -0.5,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.5,
+                0.3196,
+                0.5
+              ]
+            }
+          },
+          {
+            "level": "far",
+            "path": "public/models/camps/camp_ming_3_far.glb",
+            "bytes": 49088,
+            "sha256": "ab67d8111a673552e69327f7e5a022774ff4a5d42c635adc2fa5a12337231c79",
+            "triangles": 642,
+            "vertices": 1704,
+            "texture": {
+              "size": 256,
+              "format": "webp",
+              "bytes": 21126,
+              "quality": 90
+            },
+            "bounds": {
+              "min": [
+                -0.5,
+                0,
+                -0.5
+              ],
+              "max": [
+                0.5,
+                0.3196,
+                0.5
+              ]
+            },
+            "simplified": {
+              "error": 0.04,
+              "flags": []
+            }
+          }
+        ]
+      },
+      "ship-joseon": {
+        "kind": "ship",
+        "attempt": 1,
+        "taskId": "01a135da-c2f8-71a6-89de-f8a2b948a731",
+        "original": {
+          "file": "assets-src/map-models-2026-10-14/originals/ship-joseon-a1.glb",
+          "sha256": "9778242477d8a928fe18810b45190b78257a952147da44f375a4f1888a77dac7",
+          "triangles": 473,
+          "vertices": 678
+        },
+        "baseColor": {
+          "from": "assets-src/map-models-2026-10-14/originals/ship-joseon-a1-base_color.png",
+          "size": 2048,
+          "atlasCovered": 0.699
+        },
+        "turnDegrees": 90,
+        "waterline": 0.035,
+        "levels": [
+          {
+            "level": "map",
+            "path": "public/models/ships-map/joseon.glb",
+            "bytes": 46684,
+            "sha256": "5820cf415d77c35666d8af9b33098f8314d6514e1521f5fbfd04a9d4df197e61",
+            "triangles": 473,
+            "vertices": 739,
+            "texture": {
+              "size": 512,
+              "format": "webp",
+              "bytes": 32986,
+              "quality": 88
+            },
+            "bounds": {
+              "min": [
+                -0.2185,
+                -0.035,
+                -0.5
+              ],
+              "max": [
+                0.2185,
+                0.755,
+                0.5
+              ]
+            }
+          }
+        ]
+      },
+      "ship-japan": {
+        "kind": "ship",
+        "attempt": 1,
+        "taskId": "01a135dd-44e8-73a3-b7bc-e4995123b694",
+        "original": {
+          "file": "assets-src/map-models-2026-10-14/originals/ship-japan-a1.glb",
+          "sha256": "88807fcb1f74b1fd248d4db3b4fa75c7dc5ffeb24032a4eb71b2a7353f81bfd8",
+          "triangles": 387,
+          "vertices": 577
+        },
+        "baseColor": {
+          "from": "assets-src/map-models-2026-10-14/originals/ship-japan-a1-base_color.png",
+          "size": 2048,
+          "atlasCovered": 0.706
+        },
+        "turnDegrees": 90,
+        "waterline": 0.035,
+        "levels": [
+          {
+            "level": "map",
+            "path": "public/models/ships-map/japan.glb",
+            "bytes": 49920,
+            "sha256": "794a842f0ff5998fc345d4d5f0170c0563984f617b4bade1ea3735de71e71230",
+            "triangles": 387,
+            "vertices": 619,
+            "texture": {
+              "size": 512,
+              "format": "webp",
+              "bytes": 37908,
+              "quality": 88
+            },
+            "bounds": {
+              "min": [
+                -0.2704,
+                -0.035,
+                -0.5
+              ],
+              "max": [
+                0.2704,
+                0.7395,
+                0.5
+              ]
+            }
+          }
+        ]
+      },
+      "ship-ming": {
+        "kind": "ship",
+        "attempt": 1,
+        "taskId": "01a135dd-53b2-7189-bb9d-adbeac7abad1",
+        "original": {
+          "file": "assets-src/map-models-2026-10-14/originals/ship-ming-a1.glb",
+          "sha256": "67abfd6657adaec9fec0c3d0788de195208fea40e32b37411b2f7ac51ffc3829",
+          "triangles": 473,
+          "vertices": 775
+        },
+        "baseColor": {
+          "from": "assets-src/map-models-2026-10-14/originals/ship-ming-a1-base_color.png",
+          "size": 2048,
+          "atlasCovered": 0.722
+        },
+        "turnDegrees": 90,
+        "waterline": 0.035,
+        "levels": [
+          {
+            "level": "map",
+            "path": "public/models/ships-map/ming.glb",
+            "bytes": 51940,
+            "sha256": "7f389a54a3d97b03638f01c28e6b91c9ed2ff6739463a2480296332ca6d5723e",
+            "triangles": 473,
+            "vertices": 849,
+            "texture": {
+              "size": 512,
+              "format": "webp",
+              "bytes": 36372,
+              "quality": 88
+            },
+            "bounds": {
+              "min": [
+                -0.1651,
+                -0.035,
+                -0.5
+              ],
+              "max": [
+                0.1651,
+                0.7953,
+                0.5
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

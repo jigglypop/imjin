@@ -2,6 +2,8 @@
 // 3D world takes to appear, then GPU frames, GPU time per frame, draw calls and triangles, and main-thread frame times
 // while the map rests, pans, turns and zooms. The GPU is shared with whatever else runs, so compare runs back to back.
 // Usage: node scripts/probe-grand.mjs [--url=http://127.0.0.1:5291/] [--size=1920x1080] [--dpr=1] [--uncapped] [--shots=<dir>] [--tag=<name>]
+//   [--also=busan,fleet:0]   with --shots, one more close-up over each of these ports (or the Nth fleet marker) at the end
+//   [--block=<url glob>]     requests that fail, to see a fallback
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
@@ -68,6 +70,8 @@ try {
     requestAnimationFrame(tick);
     try { new PerformanceObserver((list) => { for (const e of list.getEntries()) log.long.push([e.startTime, e.duration]); }).observe({ type: 'longtask', buffered: true }); } catch { /* not supported */ }
   }, save);
+  // A failed download, to see the map's fallbacks (for example --block=**/models/ships-map/**).
+  if (args.block) await page.route(args.block, (route) => route.abort());
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await page.locator('.menu-primary[data-mode="faction"]').click({ timeout: 60000 });
   const start = await page.evaluate(() => performance.now());
@@ -146,6 +150,21 @@ try {
     for (let i = 0; i < 40; i += 1) { await page.keyboard.press('KeyW'); await page.waitForTimeout(30); }
     await page.waitForTimeout(1500);
     await shot('4-north');
+  }
+  // More close-ups for the screenshots: out to the whole coast, then in over each port named by --also (no measuring).
+  for (const id of args.also ? args.also.split(',') : []) {
+    await page.mouse.move(cx, cy);
+    for (let i = 0; i < 40; i += 1) { await page.mouse.wheel(0, 60); await page.waitForTimeout(25); }
+    await page.waitForTimeout(800);
+    // `fleet:N` closes in on the Nth fleet marker instead of a port, nearer still.
+    const fleet = id.startsWith('fleet:') ? Number(id.slice(6)) : -1;
+    const node = fleet >= 0 ? page.locator('.gm-fleet').nth(fleet) : page.locator(`.gm-node[data-region="${id}"] .gm-node__disc`);
+    const b = (await node.count()) ? await node.boundingBox() : null;
+    if (!b) { console.log(`no marker for ${id}`); continue; }
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    for (let i = 0; i < (fleet >= 0 ? 34 : 26); i += 1) { await page.mouse.wheel(0, -60); await page.waitForTimeout(25); }
+    await page.waitForTimeout(1500);
+    await shot(`5-${id.replace(':', '')}`);
   }
   console.log(errors.slice(0, 8).join('\n') || 'no page errors');
 } finally {
