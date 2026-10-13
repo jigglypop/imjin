@@ -1,18 +1,25 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { MAP_ASPECT, project } from './projection';
 import { flatMap } from '../siteMap';
+import { ErrorBoundary } from '../ErrorBoundary';
 import { ReplayLayer } from './Replay';
 import { useT } from '../../i18n';
 import { FACTION_INFO, FactionCrest, Icon, navyName } from './shared';
 import { campArt, campImage, campLevel } from './campArt';
 import { shipsText, turnsText } from './text';
 import type { FactionId, FleetView, MarchRouteView, RegionView, ReplayView, SpotView } from './types';
-import type { MapScene } from './MapScene';
+import type { WorldControls, WorldView } from './WorldCanvas';
 import { DEM_RECT, groundElevation } from './mapMath';
 import { clampState, frameAll, panBy, projectFrame, screenFrame, turn, zoomAt as zoomCameraAt, type CameraState } from './worldCamera';
+import { CameraMotion, KEY_ACTIONS } from './cameraMotion';
 import { boxBetween, markersInBox, type Marker } from './boxSelect';
 import { buildWorld, HULL_LENGTH, laneSpot, SETTLEMENT_RADIUS, type IsSea } from './mapWorld';
 import { cardRect, pickCards } from './cardLayout';
+
+// The 3D world needs three.js and r3f: it is loaded on demand, and phones and touch-only tablets (flatMap), which keep the
+// flat image, never load it.
+const WorldCanvas = lazy(() => import('./WorldCanvas'));
 
 export interface MapInsets {
   top: number;
@@ -137,14 +144,20 @@ export function GrandMap({
 }: GrandMapProps) {
   const t = useT();
   const rootRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const sceneRef = useRef<MapScene | null>(null);
+  const world = useRef<WorldControls | null>(null);
   const [heights, setHeights] = useState<Float32Array | null>(null);
+  const [worldFailed, setWorldFailed] = useState(false);
   // With the DEM loaded (desktop and tablet) the map is a 3D world seen by a free camera; before that, and on phones, a flat image with a pan and zoom.
   const inWorld = !!heights;
+  // The world camera lives in `camRef`: input moves it at once, and once per display frame the 3D view's frame callback
+  // steps what moves on its own (`motion`), draws it and hands it to the overlay (`cam`) in the same frame, so the markers
+  // never trail the ground and the map renders at most once a frame however many events arrive.
   const [cam, setCam] = useState<CameraState>({ u: 0.5, v: 0.5, distance: OPEN_DISTANCE, yaw: 0, pitch: OPEN_PITCH });
   const camRef = useRef(cam);
-  camRef.current = cam;
+  const shownCam = useRef(cam);
+  const [motion] = useState(() => new CameraMotion());
+  /** The opening view has been laid out on the world: until then the 3D view draws nothing. */
+  const opened = useRef(false);
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [view, setView] = useState<View>({ s: 1, x: 0, y: 0 });
   const viewRef = useRef(view);
@@ -173,31 +186,29 @@ export function GrandMap({
   const screenRef = useRef(screen);
   screenRef.current = screen;
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    // Phones keep the flat image, as the select screen does, and never load the renderer.
-    if (!canvas || flatMap) return;
-    let cancelled = false;
-    let scene: MapScene | null = null;
-    void import('./MapScene')
-      .then(({ MapScene: Scene }) => {
-        if (cancelled) return;
-        scene = new Scene(canvas);
-        sceneRef.current = scene;
-        return scene.init().then((data) => { if (!cancelled) setHeights(data); });
-      })
-      .catch(() => {
-        if (!cancelled) { scene?.dispose(); sceneRef.current = null; }
-      });
-    return () => { cancelled = true; scene?.dispose(); sceneRef.current = null; };
+  /** The world camera moves to `next`; the overlay and the 3D view show it at the next display frame. */
+  const moveCam = useCallback((next: CameraState) => {
+    camRef.current = next;
+    world.current?.redraw();
   }, []);
 
-  useEffect(() => { if (inWorld) sceneRef.current?.update(cam, screen); }, [inWorld, cam, screen]);
+  // The panels' insets or the window's size changed: the target is drawn in the middle of the new free area.
+  useEffect(() => {
+    world.current?.redraw();
+  }, [screen]);
 
   // Camps and ships stand in the 3D scene under the overlay; only what they are made of is handed over, never a pointer target.
   const isSea = useMemo<IsSea | undefined>(() => (heights ? (u, v) => groundElevation(heights, u, v) <= 0 : undefined), [heights]);
   const mapWorld = useMemo(() => buildWorld(regions, fleets, replay ?? null, isSea), [regions, fleets, replay, isSea]);
-  useEffect(() => { if (heights) sceneRef.current?.setWorld(mapWorld); }, [heights, mapWorld]);
+  const onWorldReady = useCallback((data: Float32Array) => {
+    // The world opens on the player's own coast even if the flat image was moved while it loaded.
+    touched.current = false;
+    setHeights(data);
+  }, []);
+  const onWorldError = useCallback(() => setWorldFailed(true), []);
+  const onWorldControls = useCallback((controls: WorldControls | null) => {
+    world.current = controls;
+  }, []);
 
   const limits = useCallback(() => {
     const { w, h } = boxRef.current;
@@ -255,24 +266,14 @@ export function GrandMap({
   /** The world camera glides to `target`: its place, distance and pitch ease out, its turn takes the short way round. */
   const flyCam = useCallback((target: CameraState) => {
     touched.current = true;
-    cancelAnimationFrame(anim.current);
-    const from = camRef.current;
-    const t0 = performance.now();
-    const turnBy = Math.atan2(Math.sin(target.yaw - from.yaw), Math.cos(target.yaw - from.yaw));
-    const step = (now: number) => {
-      const t = clamp((now - t0) / 460, 0, 1);
-      const e = 1 - (1 - t) ** 3;
-      setCam({
-        u: from.u + (target.u - from.u) * e,
-        v: from.v + (target.v - from.v) * e,
-        distance: from.distance * (target.distance / from.distance) ** e,
-        yaw: from.yaw + turnBy * e,
-        pitch: from.pitch + (target.pitch - from.pitch) * e,
-      });
-      if (t < 1) anim.current = requestAnimationFrame(step);
-    };
-    anim.current = requestAnimationFrame(step);
-  }, []);
+    motion.glideTo(camRef.current, target, performance.now());
+    world.current?.redraw();
+  }, [motion]);
+  /** A button's glide, measured from where the camera is going: a second press before the first glide ends adds to it. */
+  const glideOn = (change: (to: CameraState) => Partial<CameraState>) => {
+    const to = motion.destination(camRef.current);
+    flyCam({ ...to, ...change(to) });
+  };
 
   // Size of the container; the first measurement lays out the opening view on the player's own coast.
   useLayoutEffect(() => {
@@ -299,10 +300,12 @@ export function GrandMap({
       if (inWorld) {
         // The player's coast fills the opening view from a high oblique angle; never closer than a regional view.
         const framed = frameAll(pts, { u, v, distance: OPEN_DISTANCE, yaw: 0, pitch: OPEN_PITCH }, screenRef.current, 130);
-        setCam(clampState({ ...framed, distance: clamp(framed.distance, 0.34, 0.9) }));
+        opened.current = true;
+        moveCam(clampState({ ...framed, distance: clamp(framed.distance, 0.34, 0.9) }));
       } else setView(centred(u, v, limits().open));
     } else if (inWorld) {
-      setCam((cur) => clampState(cur));
+      opened.current = true;
+      moveCam(clampState(camRef.current));
     } else {
       setView((cur) => constrain(cur));
     }
@@ -372,7 +375,9 @@ export function GrandMap({
       touched.current = true;
       cancelAnimationFrame(anim.current);
       if (inWorld) {
-        setCam((cur) => zoomCameraAt(cur, screenRef.current, px, py, factor));
+        // The world eases to the new distance, the ground under (px, py) staying under it.
+        motion.zoomBy(camRef.current, factor, px, py, performance.now());
+        world.current?.redraw();
         return;
       }
       setView((cur) => {
@@ -382,7 +387,7 @@ export function GrandMap({
         return constrain({ s, x: px - (px - cur.x) * k, y: py - (py - cur.y) * k });
       });
     },
-    [constrain, limits, inWorld],
+    [constrain, limits, inWorld, motion],
   );
 
   // Wheel and trackpad pinch (ctrlKey) zoom around the cursor; needs a non-passive listener to stop page zoom.
@@ -413,49 +418,76 @@ export function GrandMap({
     window.addEventListener('keyup', onUp);
     return () => { window.removeEventListener('keydown', onDown); window.removeEventListener('keyup', onUp); };
   }, []);
-  // The keyboard flies the world camera: arrows or WASD move over the ground in the direction the view faces, Q and E turn it, R and F tip it.
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const gesture = useRef({ moved: false, rotating: false, boxing: false, startX: 0, startY: 0, pinch: 0, angle: 0, mx: 0, my: 0 });
+
+  // The keyboard flies the world camera while a key is held: arrows or WASD glide over the ground in the direction the view
+  // faces, Q and E turn it, R and F tip it. Keys typed into a field, and shortcuts with Ctrl, Cmd or Alt, are not the camera's.
   useEffect(() => {
     if (!inWorld) return;
-    const onKey = (e: KeyboardEvent) => {
+    const onDown = (e: KeyboardEvent) => {
+      const action = KEY_ACTIONS[e.code];
       const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.ctrlKey || e.metaKey || e.altKey) return;
-      const c = camRef.current;
-      const step = c.distance * 0.09;
-      // The ground ahead of the view and to its right, in world units; a frame point's v is the world z times the frame's aspect.
-      const ahead = { x: -Math.sin(c.yaw), z: -Math.cos(c.yaw) }, right = { x: Math.cos(c.yaw), z: -Math.sin(c.yaw) };
-      let move = { x: 0, z: 0 }, dyaw = 0, dpitch = 0;
-      switch (e.code) {
-        case 'ArrowUp': case 'KeyW': move = ahead; break;
-        case 'ArrowDown': case 'KeyS': move = { x: -ahead.x, z: -ahead.z }; break;
-        case 'ArrowRight': case 'KeyD': move = right; break;
-        case 'ArrowLeft': case 'KeyA': move = { x: -right.x, z: -right.z }; break;
-        case 'KeyQ': dyaw = -0.12; break;
-        case 'KeyE': dyaw = 0.12; break;
-        case 'KeyR': dpitch = 0.05; break;
-        case 'KeyF': dpitch = -0.05; break;
-        default: return;
-      }
+      if (!action || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.ctrlKey || e.metaKey || e.altKey) return;
       e.preventDefault();
       touched.current = true;
-      cancelAnimationFrame(anim.current);
-      setCam((cur) => turn(clampState({ ...cur, u: cur.u + move.x * step, v: cur.v + move.z * step * MAP_ASPECT }), dyaw, dpitch));
+      motion.key(action, true, e.timeStamp);
+      world.current?.redraw();
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [inWorld]);
+    const onUp = (e: KeyboardEvent) => {
+      const action = KEY_ACTIONS[e.code];
+      if (!action) return;
+      motion.key(action, false, e.timeStamp);
+      world.current?.redraw();
+    };
+    // A window that loses the focus never hears the keys or the button let go: everything stops where it is.
+    const onBlur = () => {
+      motion.halt();
+      pointers.current.clear();
+      gesture.current.boxing = false;
+      if (marqueeRef.current) marqueeRef.current.style.display = 'none';
+      world.current?.redraw();
+    };
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup', onUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onDown);
+      window.removeEventListener('keyup', onUp);
+      window.removeEventListener('blur', onBlur);
+      motion.halt();
+    };
+  }, [inWorld, motion]);
   useEffect(() => {
     if (!hint) return;
     const id = window.setTimeout(() => setHint(false), 7000);
     return () => window.clearTimeout(id);
   }, [hint]);
 
-  const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const gesture = useRef({ moved: false, rotating: false, boxing: false, startX: 0, startY: 0, pinch: 0, angle: 0, mx: 0, my: 0 });
+  /**
+   * One frame of the 3D view: whatever moves the camera on its own takes its step, the overlay is rendered with the camera
+   * at once (inside this animation frame), and the view draws the same camera. Further frames are wanted while it moves or
+   * a drag is under way.
+   */
+  const frameView = useCallback((now: number): WorldView | null => {
+    if (!opened.current) return null;
+    const screen = screenRef.current;
+    const next = motion.step(camRef.current, screen, now);
+    camRef.current = next;
+    if (next !== shownCam.current) {
+      shownCam.current = next;
+      flushSync(() => setCam(next));
+    }
+    const g = gesture.current;
+    return { cam: next, screen, more: motion.moving || (g.moved && !g.boxing && pointers.current.size > 0) };
+  }, [motion]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 1 && e.button !== 2) return;
     touched.current = true;
     cancelAnimationFrame(anim.current);
+    // A press stops a glide, the coast after a drag and the wheel's zoom at once.
+    motion.stop();
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const g = gesture.current;
     if (pointers.current.size === 1) {
@@ -497,7 +529,8 @@ export function GrandMap({
         const change = Math.atan2(Math.sin(angle - g.angle), Math.cos(angle - g.angle));
         const from = { x: g.mx - rect.left, y: g.my - rect.top };
         const to = { x: mx - rect.left, y: my - rect.top };
-        setCam((cur) => turn(zoomCameraAt(panBy(cur, screenRef.current, from, to), screenRef.current, to.x, to.y, factor), change, 0));
+        const sf = screenRef.current;
+        moveCam(turn(zoomCameraAt(panBy(camRef.current, sf, from, to), sf, to.x, to.y, factor), change, 0));
       } else {
         setView((cur) => {
           const { min, max } = limits();
@@ -535,15 +568,23 @@ export function GrandMap({
     }
     if (g.rotating) {
       // Dragging the near side of the map to the right turns it about the point in the middle; dragging down tips the view over.
-      setCam((cur) => turn(cur, -dx * 0.006, dy * 0.005));
+      moveCam(turn(camRef.current, -dx * 0.006, dy * 0.005));
+      motion.track(camRef.current, e.timeStamp);
     } else if (inWorld) {
+      // The ground under the pointer follows it exactly.
       const from = { x: e.clientX - dx - rect.left, y: e.clientY - dy - rect.top }, to = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      setCam((cur) => panBy(cur, screenRef.current, from, to));
+      moveCam(panBy(camRef.current, screenRef.current, from, to));
+      motion.track(camRef.current, e.timeStamp);
     } else setView((cur) => constrain({ ...cur, x: cur.x + dx, y: cur.y + dy }));
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
     const g = gesture.current;
+    // The last finger or button off a drag over the world: the view coasts on a little, unless the player asks for reduced motion.
+    if (inWorld && e.type === 'pointerup' && g.moved && !g.boxing && pointers.current.size === 1 && pointers.current.has(e.pointerId)) {
+      motion.release(camRef.current, e.timeStamp, !reducedMotion);
+      world.current?.redraw();
+    }
     if (g.boxing) {
       g.boxing = false;
       if (marqueeRef.current) marqueeRef.current.style.display = 'none';
@@ -780,7 +821,14 @@ export function GrandMap({
         zoomAt(1.8, e.clientX - r.left, e.clientY - r.top);
       }}
     >
-      <canvas ref={canvasRef} className="gm__relief" style={{ opacity: heights ? 1 : 0 }} aria-hidden />
+      {/* A world that cannot start (no WebGPU or WebGL2, a failed download) leaves the flat image, which shows until the world is ready. */}
+      {!flatMap && !worldFailed && (
+        <ErrorBoundary fallback={<></>}>
+          <Suspense fallback={null}>
+            <WorldCanvas className="gm__relief" view={frameView} world={heights ? mapWorld : null} onReady={onWorldReady} onError={onWorldError} onControls={onWorldControls} />
+          </Suspense>
+        </ErrorBoundary>
+      )}
       {!heights && <img
         className="gm__img"
         src="/ui/map_south.webp"
@@ -1067,7 +1115,7 @@ export function GrandMap({
           onPhase={(phase) => onReplayPhase?.(phase)}
           onBeat={(kind) => onReplayBeat?.(kind)}
           onDone={() => onReplayDone?.()}
-          onSail={(share, time) => sceneRef.current?.setSail(share, time)}
+          onSail={(share, time) => world.current?.setSail(share, time)}
         />
       )}
       <div ref={marqueeRef} className="gm__marquee" aria-hidden />
@@ -1093,17 +1141,17 @@ export function GrandMap({
         </button>
         {inWorld && (
           <>
-            <button type="button" className="g-glass g-icon-btn" aria-label={t('왼쪽으로 돌리기')} title={t('왼쪽으로 돌리기 (Q)')} onClick={() => flyCam({ ...camRef.current, yaw: camRef.current.yaw - Math.PI / 6 })}>
+            <button type="button" className="g-glass g-icon-btn" aria-label={t('왼쪽으로 돌리기')} title={t('왼쪽으로 돌리기 (Q)')} onClick={() => glideOn((d) => ({ yaw: d.yaw - Math.PI / 4 }))}>
               ⟲
             </button>
-            <button type="button" className="g-glass g-icon-btn" aria-label={t('오른쪽으로 돌리기')} title={t('오른쪽으로 돌리기 (E)')} onClick={() => flyCam({ ...camRef.current, yaw: camRef.current.yaw + Math.PI / 6 })}>
+            <button type="button" className="g-glass g-icon-btn" aria-label={t('오른쪽으로 돌리기')} title={t('오른쪽으로 돌리기 (E)')} onClick={() => glideOn((d) => ({ yaw: d.yaw + Math.PI / 4 }))}>
               ⟳
             </button>
-            <button type="button" className="g-glass g-icon-btn" aria-label={t('시점 기울이기')} title={t('눕혔다 세우기 (오른쪽 버튼으로 끌기)')} onClick={() => flyCam(clampState({ ...camRef.current, pitch: camRef.current.pitch > 0.7 ? 0.36 : 1.05 }))}>
+            <button type="button" className="g-glass g-icon-btn" aria-label={t('시점 기울이기')} title={t('눕혔다 세우기 (오른쪽 버튼으로 끌기)')} onClick={() => glideOn((d) => ({ pitch: d.pitch > 0.7 ? 0.36 : 1.05 }))}>
               ⇕
             </button>
             {/* The compass shows where north lies as the view turns; a press brings north back up. */}
-            <button type="button" className="g-glass g-icon-btn gm__compass" aria-label={t('북쪽으로 되돌리기')} title={t('북쪽으로 되돌리기 · 오른쪽이나 가운데 버튼, 또는 Shift를 누르고 끌면 가로·세로로 돌아갑니다')} onClick={() => flyCam(clampState({ ...camRef.current, yaw: 0, pitch: OPEN_PITCH }))}>
+            <button type="button" className="g-glass g-icon-btn gm__compass" aria-label={t('북쪽으로 되돌리기')} title={t('북쪽으로 되돌리기 · 오른쪽이나 가운데 버튼, 또는 Shift를 누르고 끌면 가로·세로로 돌아갑니다')} onClick={() => glideOn(() => ({ yaw: 0, pitch: OPEN_PITCH }))}>
               <svg viewBox="0 0 24 24" width="20" height="20" style={{ transform: `rotate(${(cam.yaw * 180) / Math.PI}deg)` }} aria-hidden>
                 <path d="M12 2.5 15.2 12 12 10.4 8.8 12Z" fill="#e8452c" />
                 <path d="M12 21.5 8.8 12 12 13.6 15.2 12Z" fill="currentColor" opacity="0.55" />
