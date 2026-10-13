@@ -1,0 +1,27 @@
+{
+  "created": "2026-10-13T17:55:36.323Z",
+  "renderer": "the game itself (src/game/Engine.ts), no image generation or painting",
+  "url": "http://127.0.0.1:5345/?scenario=hansan&hud=0&lv=4&q=high&dpr=2&paused=1&sky=sunset&clouds=0",
+  "pose": {
+    "stage": 2.4,
+    "yaw": -0.6,
+    "pitch": 0.05,
+    "distance": 60,
+    "ahead": 10,
+    "shift": -9,
+    "fov": 32
+  },
+  "scene": {
+    "ship": 54,
+    "x": 579.0955041576433,
+    "z": 200.8691043052787,
+    "heading": 3.071883585093911,
+    "sunAz": 0.6718835850939109,
+    "backend": "webgpu"
+  },
+  "size": [
+    2400,
+    1260
+  ],
+  "sha256": "e930d3bba0cfac098e4de0685e65ff0182763518da56389383651670e406b924"
+}
