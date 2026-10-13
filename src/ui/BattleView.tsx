@@ -9,6 +9,7 @@ import { sound } from '../audio/Sound';
 import { isIOS } from '../game/device';
 import { forceWebGL } from '../game/quality';
 import { clearLoading } from '../game/recovery';
+import { onBattleBack } from '../router';
 import { failBattle, setLoading, setScreen, useUi } from '../state/store';
 import { Hud } from './Hud';
 import { conquestOf, hideHud, params, startScenario, type Launch } from './launch';
@@ -176,6 +177,8 @@ export default function BattleView({ launch }: { launch: Launch }) {
     sound.setMode('select');
     setScreen(origin);
   };
+  // The browser's back button leaves the battle the same way, then opens the screen of the address it lands on.
+  useEffect(() => onBattleBack(back));
 
   // The engine sets the pixel ratio for each quality level, so the canvas only starts at the device ratio.
   // The canvas stops drawing while a menu is open, so the menu gets the whole GPU.

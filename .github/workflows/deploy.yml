@@ -68,20 +68,25 @@ jobs:
 
       - name: Upload static assets
         run: |
+          # The pages (index.html and one per address) are uploaded below under keys of their own: keep them out of the delete.
+          pages=$(node scripts/route-pages.mjs)
+          excludes=()
+          while read -r file key; do excludes+=(--exclude "$key"); done <<< "$pages"
           aws s3 sync dist "s3://$BUCKET" --delete \
-            --exclude "index.html" --exclude "assets/*" --exclude "*.glb" --exclude "en" --exclude "en/" --exclude "en/index.html" \
+            --exclude "assets/*" --exclude "*.glb" "${excludes[@]}" \
             --cache-control "public,max-age=86400"
           aws s3 sync dist "s3://$BUCKET" \
             --exclude "*" --include "*.glb" \
             --content-type "model/gltf-binary" --cache-control "public,max-age=86400"
 
-      - name: Upload index
+      - name: Upload pages
         run: |
-          aws s3 cp dist/index.html "s3://$BUCKET/index.html" --content-type "text/html; charset=utf-8" --cache-control "no-cache"
-          # The English edition answers at /en, /en/ and /en/index.html (the origin has no directory index).
-          aws s3 cp dist/en/index.html "s3://$BUCKET/en/index.html" --content-type "text/html; charset=utf-8" --cache-control "no-cache"
-          aws s3api put-object --bucket "$BUCKET" --key en --body dist/en/index.html --content-type "text/html; charset=utf-8" --cache-control "no-cache" >/dev/null
-          aws s3api put-object --bucket "$BUCKET" --key en/ --body dist/en/index.html --content-type "text/html; charset=utf-8" --cache-control "no-cache" >/dev/null
+          # Every address (/, /campaign, /en/conquest, ... from src/routes.ts) answers at <path>, <path>/ and
+          # <path>/index.html: the origin has no directory index.
+          pages=$(node scripts/route-pages.mjs)
+          while read -r file key; do
+            aws s3api put-object --bucket "$BUCKET" --key "$key" --body "dist/$file" --content-type "text/html; charset=utf-8" --cache-control "no-cache" >/dev/null
+          done <<< "$pages"
 
       - name: Invalidate CDN
         run: aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION" --paths "/*"

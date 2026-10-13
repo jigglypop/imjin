@@ -4,6 +4,7 @@ import { isIOS } from '../game/device';
 import { cameraFeel, FEEL_CHOICES, FEEL_LABEL, type CameraFeel } from '../camera/feel';
 import { EQUIPMENT_LABEL, equipment, forceWebGL, saveEquipmentSetting, saveWebgpuOptIn, webgpuOptIn, type EquipmentSetting } from '../game/quality';
 import { setLang, useLang, useT, type Lang } from '../i18n';
+import { prefetchScreen } from '../router';
 import { setScreen, type Screen } from '../state/store';
 import { Backdrop } from './Backdrop';
 import { ChevronLeft, Sliders, Speaker, SpeakerOff } from './icons';
@@ -16,8 +17,14 @@ const go = (screen: Screen) => () => {
   setScreen(screen);
 };
 
-/** Header with a back button to the menu, for every screen below the main menu. */
-export function ScreenFrame({ title, children, actions, className = '' }: { title: string; children: ReactNode; actions?: ReactNode; className?: string }) {
+/** A mode button starts downloading its screen as soon as it is pointed at, focused or pressed. */
+const mode = (screen: Screen) => {
+  const prefetch = () => prefetchScreen(screen);
+  return { onPointerEnter: prefetch, onFocus: prefetch, onPointerDown: prefetch, onClick: go(screen) };
+};
+
+/** Header with a back button to the menu, for every screen below the main menu. Without children it is the empty frame shown while a screen's code downloads. */
+export function ScreenFrame({ title, children, actions, className = '' }: { title: string; children?: ReactNode; actions?: ReactNode; className?: string }) {
   const t = useT();
   return (
     <section className={`screen ${className}`}>
@@ -75,12 +82,12 @@ export function MainMenu() {
           <div className="wordmark-en" aria-hidden="true">{lang === 'ko' ? 'THE IMJIN WAR' : '1592 — 1598'}</div>
         </div>
         <div className="menu-play">
-          <button className="menu-primary" data-mode="faction" onClick={go('faction')}>
+          <button className="menu-primary" data-mode="faction" {...mode('faction')}>
             <span className="menu-primary-copy"><strong>{t('진영 전역')}</strong><small>{t('한 나라로 남해안 점령')}</small></span>
             <span className="menu-arrow" aria-hidden="true">↗</span>
           </button>
           <nav className="menu-modes" aria-label={t('전투 선택')}>
-            {MODES.filter(m=>m.screen!=='faction').map(m=><button key={m.screen} data-mode={m.screen} onClick={go(m.screen)}><span>{t(m.title)}</span><span className="menu-mode-arrow" aria-hidden="true">↗</span></button>)}
+            {MODES.filter(m=>m.screen!=='faction').map(m=><button key={m.screen} data-mode={m.screen} {...mode(m.screen)}><span>{t(m.title)}</span><span className="menu-mode-arrow" aria-hidden="true">↗</span></button>)}
           </nav>
         </div>
       </div>
@@ -152,6 +159,7 @@ export function SettingsScreen() {
                   onClick={() => {
                     if (lang === l.lang) return;
                     sound.click();
+                    // Stored for the next visit; the router moves the address to the other edition (/settings, /en/settings).
                     setLang(l.lang);
                   }}
                 >
