@@ -10,16 +10,22 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const temporary = await mkdtemp(join(tmpdir(), 'imjin-map-'));
 const defer = () => { let resolve; const promise = new Promise((yes) => { resolve = yes; }); return { promise, resolve }; };
-let textureFrees = 0, demLoads = 0;
+let texturesMade = 0, demLoads = 0;
 globalThis.window = { devicePixelRatio: 1 };
 globalThis.document = { hidden: false, addEventListener() {}, removeEventListener() {} };
 // The real DEM, decoded the way terrain.ts decodes it.
 const { data, info } = await sharp(join(root, 'public/ui/korea_dem.webp')).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
 const heights = new Float32Array(info.width * info.height);
 for (let i = 0; i < heights.length; i++) heights[i] = data[i * 4] * 256 + data[i * 4 + 1] + data[i * 4 + 2] / 256 - 32768;
-// `lateAbort` stands for a DEM decoded in the moment the world was disposed: loadDem hands its texture over anyway.
+// `lateAbort` stands for a DEM decoded in the moment the world was disposed: loadDem hands its heights over anyway. A
+// texture is made only when asked for, as terrain.ts does; the campaign asks for the heights alone.
 let demGate = null, lateAbort = false;
-globalThis.__loadDem = async (signal) => { demLoads++; await demGate?.promise; if (!lateAbort) signal.throwIfAborted(); return { heights: heights.slice(), tex: { dispose: () => { textureFrees++; } } }; };
+globalThis.__loadDem = async (signal, options) => {
+  demLoads++; await demGate?.promise; if (!lateAbort) signal.throwIfAborted();
+  const texture = options?.texture !== false;
+  if (texture) texturesMade++;
+  return { heights: heights.slice(), tex: texture ? { dispose() {} } : null };
+};
 // The land's asset (public/ui/grand_terrain.bin) is read from disk as the page would fetch it.
 globalThis.fetch = async (url, { signal } = {}) => {
   signal?.throwIfAborted();
@@ -45,7 +51,7 @@ try {
       api.onLoad({ filter: /[\\/]game[\\/]device\.ts$/ }, () => ({ contents: 'export const isPhone=false; export const isTouchOnly=false;', loader: 'ts' }));
       api.onLoad({ filter: /[\\/]ui[\\/]launch\.ts$/ }, () => ({ contents: 'export const params=new URLSearchParams("");', loader: 'ts' }));
       // The DEM comes from the decoded file above, without a canvas.
-      api.onLoad({ filter: /[\\/]select[\\/]terrain\.ts$/ }, () => ({ contents: `import { uniform } from 'three/tsl'; export const worldClock = uniform(0); export const loadDem = (signal) => globalThis.__loadDem(signal);`, loader: 'ts' }));
+      api.onLoad({ filter: /[\\/]select[\\/]terrain\.ts$/ }, () => ({ contents: `import { uniform } from 'three/tsl'; export const worldClock = uniform(0); export const loadDem = (signal, options) => globalThis.__loadDem(signal, options);`, loader: 'ts' }));
     } }],
   });
   const path = join(temporary, 'actual-map.mjs'); await writeFile(path, bundled.outputFiles[0].contents);
@@ -127,7 +133,7 @@ try {
     world.dispose();
   });
   await check('dispose frees the ground and the layers once, leaves the scene empty and readies no frame after', async () => {
-    const before = textureFrees, { scene, world } = open();
+    const { scene, world } = open();
     await world.load();
     const parts = meshes(scene);
     assert.ok(parts.length >= 4, 'land, sea, far land and sky');
@@ -137,18 +143,18 @@ try {
       (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).forEach((m) => m.addEventListener('dispose', () => materials++));
     }
     world.dispose(); world.dispose();
-    assert.equal(geometries, parts.length); assert.ok(materials >= parts.length); assert.equal(textureFrees, before + 1);
+    assert.equal(geometries, parts.length); assert.ok(materials >= parts.length); assert.equal(texturesMade, 0, 'the campaign asks the DEM for its heights only');
     assert.equal(scene.children.length, 0); assert.equal(scene.fog, null); assert.equal(scene.background, null);
     const camera = new PerspectiveCamera();
     world.frame(camera, { u: 0.5, v: 0.4, distance: 0.5, yaw: 0.4, pitch: 0.7 }, screenFrame(1600, 900, { top: 0, right: 0, bottom: 0, left: 0 }), 0);
     assert.equal(world.ready, false); assert.equal(camera.position.length(), 0, 'nothing is drawn after dispose');
   });
-  for (const late of [false, true]) await check(late ? 'a DEM texture handed over after disposal is freed before the ground is built' : 'a DEM that arrives after disposal is discarded before the ground is built', async () => {
-    demGate = defer(); lateAbort = late; const before = textureFrees, beforeLoads = demLoads;
+  for (const late of [false, true]) await check(late ? 'a DEM handed over in the moment of disposal is discarded before the ground is built' : 'a DEM that arrives after disposal is discarded before the ground is built', async () => {
+    demGate = defer(); lateAbort = late; const beforeLoads = demLoads;
     const { scene, world } = open(); const loading = world.load();
     await new Promise((resolve) => setImmediate(resolve)); world.dispose(); demGate.resolve(); demGate = null;
     await assert.rejects(loading, (error) => error.name === 'AbortError'); lateAbort = false;
-    assert.equal(demLoads, beforeLoads + 1); assert.equal(textureFrees, before + (late ? 1 : 0));
+    assert.equal(demLoads, beforeLoads + 1); assert.equal(texturesMade, 0);
     assert.equal(scene.children.length, 0); assert.equal(world.ready, false);
   });
   shown.world.dispose();

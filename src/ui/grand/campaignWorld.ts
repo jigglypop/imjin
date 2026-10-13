@@ -1,4 +1,4 @@
-import { Color, Fog, Group, type PerspectiveCamera, type Scene } from 'three/webgpu';
+import { Color, Fog, Group, type BufferAttribute, type InstancedMesh, type InterleavedBufferAttribute, type Mesh, type Object3D, type PerspectiveCamera, type Scene } from 'three/webgpu';
 import { V_SCALE } from '../../select/demFrame';
 import { worldClock } from '../../select/terrain';
 import { MESH_SCALE, groundElevation } from './mapMath';
@@ -8,11 +8,28 @@ import { loadGround, type WorldGround } from './worldGround';
 import type { MapWorld } from './mapWorld';
 import { eyeOf, FAR, FOV, NEAR, worldX, worldZ, type CameraState, type ScreenFrame } from './worldCamera';
 
+/** Compiles the shaders and pipelines of everything in the scene without holding up the frames: the renderer's compileAsync. */
+export type Compile = () => Promise<void>;
+
+/** What a mesh's pipeline depends on beyond the scene it is in: its material, the layout of its vertices and its instancing. */
+function pipelineKey(mesh: Mesh) {
+  const { geometry } = mesh;
+  const layout = Object.keys(geometry.attributes).sort().map((name) => {
+    const a = geometry.attributes[name] as BufferAttribute | InterleavedBufferAttribute;
+    const packing = 'isInterleavedBufferAttribute' in a ? `@${a.data.stride}+${a.offset}` : '';
+    return `${name}:${a.itemSize}${a.normalized ? 'n' : ''}${a.array?.constructor.name ?? ''}${packing}`;
+  });
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  const instanced = (mesh as InstancedMesh).isInstancedMesh ? ((mesh as InstancedMesh).instanceColor ? 'colours' : 'instances') : '';
+  return `${materials.map((m) => m.uuid).join('+')}|${layout.join(',')}|${geometry.index ? 'indexed' : ''}|${instanced}`;
+}
+
 /**
  * The campaign's 3D world in a scene someone else draws (WorldCanvas): the ground (worldGround.ts), the camps and ships
  * standing on it (MapLayer) and the trees round the camera's target (TreeLayer). It owns no renderer and no timer; the
  * page draws it with `frame` and is told through `onChange` when something it shows has changed on its own (a model has
- * loaded, the ships have sailed on).
+ * loaded, the ships have sailed on). With `compile` nothing is drawn before its shaders are ready: compiling them on the
+ * first frame that draws them held the GPU process up for up to a second (the ships' material alone took 0.9 s on D3D11).
  */
 export class CampaignWorld {
   /** True once the ground has loaded and until the world is disposed: `frame` places the camera and the world draws. */
@@ -25,8 +42,13 @@ export class CampaignWorld {
   private layer: MapLayer | null = null;
   private trees: TreeLayer | null = null;
   private world: MapWorld | null = null;
+  /** The pipelines compiled so far, by `pipelineKey`, and each mesh's key. */
+  private readonly compiled = new Set<string>();
+  private readonly keys = new WeakMap<Mesh, string>();
+  /** Compiles run one after another: the last one asked for. */
+  private compiling: Promise<void> = Promise.resolve();
 
-  constructor(private readonly scene: Scene, private readonly onChange: () => void) {
+  constructor(private readonly scene: Scene, private readonly onChange: () => void, private readonly compile?: Compile) {
     scene.add(this.root);
   }
 
@@ -45,14 +67,81 @@ export class CampaignWorld {
     this.scene.fog = this.fog;
     this.root.add(ground.group);
     // Camps and ships stand on the same ground the overlay's markers read; they arrive when their models have loaded.
-    this.layer = new MapLayer((u, v) => groundElevation(ground.heights, u, v), this.onChange);
+    this.layer = new MapLayer((u, v) => groundElevation(ground.heights, u, v), () => this.layerChanged());
     this.root.add(this.layer.group);
     this.trees = new TreeLayer((u, v) => ground.heightAt(u, v), V_SCALE * MESH_SCALE);
     this.root.add(this.trees.group);
     if (this.world) this.show(this.world);
+    // The first frame finds the ground's shaders ready, and the trees' too, though none is planted until the camera is close.
+    await this.warm();
+    signal.throwIfAborted();
     this.ready = true;
     this.onChange();
     return ground.heights;
+  }
+
+  /**
+   * The camps and ships have changed. A mesh whose pipeline is not compiled yet (the first camps and ships, a camp model
+   * that arrives later) is held back until it is, and the close and the far camps are compiled together, so neither the
+   * first frames nor the first close view stop to compile. The rest, the same materials in new batches, show at once.
+   */
+  private layerChanged() {
+    const layer = this.layer;
+    if (layer && this.compile) {
+      const fresh: Mesh[] = [];
+      layer.group.traverse((o) => {
+        const mesh = o as Mesh;
+        if (mesh.isMesh && mesh.visible && !this.compiled.has(this.keyOf(mesh))) fresh.push(mesh);
+      });
+      if (fresh.length) {
+        for (const mesh of fresh) mesh.visible = false;
+        void this.warm().then(() => {
+          for (const mesh of fresh) mesh.visible = true;
+          if (!this.disposed) this.onChange();
+        });
+      }
+    }
+    this.onChange();
+  }
+
+  private keyOf(mesh: Mesh) {
+    let key = this.keys.get(mesh);
+    if (key === undefined) this.keys.set(mesh, (key = pipelineKey(mesh)));
+    return key;
+  }
+
+  /**
+   * Compiles everything the world holds, shown or not: the close and the far camps, the trees before any is planted, a
+   * mesh held back. The renderer gathers what to compile the moment it is asked, so everything is put in view for just
+   * that moment and put back before any frame is drawn. Compiles run one after another.
+   */
+  private warm(): Promise<void> {
+    const run = async () => {
+      if (!this.compile || this.disposed) return;
+      const objects: Object3D[] = [];
+      this.root.traverse((o) => { objects.push(o); });
+      const kept = objects.map((o) => [o.visible, o.frustumCulled] as const);
+      let done: Promise<void>;
+      try {
+        for (const o of objects) {
+          o.visible = true;
+          o.frustumCulled = false;
+        }
+        done = this.compile();
+      } finally {
+        objects.forEach((o, i) => {
+          o.visible = kept[i]![0];
+          o.frustumCulled = kept[i]![1];
+        });
+      }
+      try {
+        await done;
+      } catch {
+        // What fails to compile ahead is compiled by the first frame that draws it, as it would be without this.
+      }
+      for (const o of objects) if ((o as Mesh).isMesh) this.compiled.add(this.keyOf(o as Mesh));
+    };
+    return (this.compiling = this.compiling.then(run));
   }
 
   /** What stands on the terrain: a camp where the owner has built one, ships where a fleet lies. */

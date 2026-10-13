@@ -25,8 +25,13 @@ const srgb = (r: number, g: number, b: number) => vec3(...[r, g, b].map((v) => (
 const mistColor = new Color(MIST_HEX);
 const MIST = vec3(mistColor.r, mistColor.g, mistColor.b);
 
-/** Decodes /ui/korea_dem.webp into metre heights (for picking the ground) and the half-float texture the mesh reads. */
-export async function loadDem(signal: AbortSignal) {
+/**
+ * Decodes /ui/korea_dem.webp into metre heights (for picking the ground) and the half-float texture the mesh reads. The
+ * campaign world draws its own facets from the heights alone and passes `{ texture: false }`, so no texture is made.
+ */
+export function loadDem(signal: AbortSignal): Promise<{ heights: Float32Array; tex: DataTexture }>;
+export function loadDem(signal: AbortSignal, options: { texture: false }): Promise<{ heights: Float32Array; tex: null }>;
+export async function loadDem(signal: AbortSignal, { texture = true }: { texture?: boolean } = {}): Promise<{ heights: Float32Array; tex: DataTexture | null }> {
   signal.throwIfAborted();
   const img = await new TextureLoader().loadAsync('/ui/korea_dem.webp');
   try {
@@ -41,12 +46,10 @@ export async function loadDem(signal: AbortSignal) {
     ctx.drawImage(source as CanvasImageSource, 0, 0);
     const px = ctx.getImageData(0, 0, w, h).data;
     const heights = new Float32Array(w * h);
+    for (let i = 0; i < w * h; i += 1) heights[i] = px[i * 4]! * 256 + px[i * 4 + 1]! + px[i * 4 + 2]! / 256 - 32768;
+    if (!texture) return { heights, tex: null };
     const half = new Uint16Array(w * h);
-    for (let i = 0; i < w * h; i += 1) {
-      const v = px[i * 4]! * 256 + px[i * 4 + 1]! + px[i * 4 + 2]! / 256 - 32768;
-      heights[i] = v;
-      half[i] = DataUtils.toHalfFloat(v);
-    }
+    for (let i = 0; i < w * h; i += 1) half[i] = DataUtils.toHalfFloat(heights[i]!);
     const tex = new DataTexture(half, w, h, RedFormat, HalfFloatType);
     tex.magFilter = LinearFilter;
     tex.minFilter = LinearFilter;

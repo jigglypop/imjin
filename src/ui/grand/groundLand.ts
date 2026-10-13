@@ -2,7 +2,7 @@ import { BufferAttribute, BufferGeometry, Mesh, MeshBasicNodeMaterial } from 'th
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { freeAfterDraw } from '../../render/dispose';
 import { V_SCALE } from '../../select/demFrame';
-import { faceColor } from './groundPalette';
+import { faceColor, groundSlopes, type Facet } from './groundPalette';
 import { DEM_RECT, MESH_SCALE } from './mapMath';
 import { worldX, worldZ } from './worldCamera';
 
@@ -32,6 +32,8 @@ export async function fetchLand(signal: AbortSignal) {
 /** The land's mesh and its north edge, where the far land (farLand.ts) joins it. */
 export interface GroundLand {
   readonly mesh: Mesh;
+  /** The drawn facets, nine floats each (x, y, z of three corners, y in frame units), for the sea to bake its coasts from before the first draw frees them (freeAfterDraw). */
+  readonly facets: Float32Array;
   /** Every vertex of the DEM's north row, west to east: its frame u and its height in metres. */
   readonly seam: { u: Float32Array; metres: Float32Array };
   dispose(): void;
@@ -86,6 +88,8 @@ export async function buildLand(buffer: ArrayBuffer, heights: Float32Array): Pro
   const triangles = header.triangles;
   const position = new Float32Array(triangles * 9);
   const color = new Float32Array(triangles * 9);
+  const slopes = groundSlopes(index, world, n);
+  const facet: Facet = { metres: 0, nx: 0, ny: 1, nz: 0, x: 0, z: 0, size: 0, slope: 0, shore: false };
   for (let t = 0; t < triangles; t += 1) {
     const a = index[t * 3]!;
     let b = index[t * 3 + 1]!, c = index[t * 3 + 2]!;
@@ -104,10 +108,17 @@ export async function buildLand(buffer: ArrayBuffer, heights: Float32Array): Pro
       position[o + k + 1] = world[v * 3 + 1]!;
       position[o + k + 2] = world[v * 3 + 2]!;
     }
-    // A facet that reaches under the sea plane averages to a few metres or less: the palette's beach.
-    const height = (metres[a]! + metres[b]! + metres[c]!) / 3;
-    const cx = (position[o]! + position[o + 3]! + position[o + 6]!) / 3, cz = (position[o + 2]! + position[o + 5]! + position[o + 8]!) / 3;
-    faceColor(height, nx / length, ny / length, nz / length, cx, cz, color, o);
+    // A facet with a corner under the sea plane draws a stretch of the coast: where it lies flat, the palette's beach.
+    facet.metres = (metres[a]! + metres[b]! + metres[c]!) / 3;
+    facet.nx = nx / length;
+    facet.ny = ny / length;
+    facet.nz = nz / length;
+    facet.x = (position[o]! + position[o + 3]! + position[o + 6]!) / 3;
+    facet.z = (position[o + 2]! + position[o + 5]! + position[o + 8]!) / 3;
+    facet.size = Math.max(Math.abs(ux), Math.abs(vx), Math.abs(ux - vx), Math.abs(uz), Math.abs(vz), Math.abs(uz - vz));
+    facet.slope = slopes[t]!;
+    facet.shore = metres[a]! <= 0 || metres[b]! <= 0 || metres[c]! <= 0;
+    faceColor(facet, color, o);
     color.copyWithin(o + 3, o, o + 3);
     color.copyWithin(o + 6, o, o + 3);
   }
@@ -130,6 +141,7 @@ export async function buildLand(buffer: ArrayBuffer, heights: Float32Array): Pro
   freeAfterDraw(mesh);
   return {
     mesh,
+    facets: position,
     seam,
     dispose() {
       geometry.dispose();

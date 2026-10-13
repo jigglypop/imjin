@@ -48,9 +48,8 @@ function buildSky() {
 
 /** Loads the DEM and builds the ground; rejects with the signal's AbortError when aborted, having freed what it made. */
 export async function loadGround(signal: AbortSignal): Promise<WorldGround> {
-  const [dem, bytes] = await Promise.all([loadDem(signal), fetchLand(signal)]);
-  // The half-float texture is the select screen's relief; this world draws the facets instead.
-  dem.tex.dispose();
+  // Only the heights: the half-float texture is the select screen's relief, and this world draws its facets instead.
+  const [dem, bytes] = await Promise.all([loadDem(signal, { texture: false }), fetchLand(signal)]);
   signal.throwIfAborted();
   const { heights } = dem;
   const made: { dispose(): void }[] = [];
@@ -58,10 +57,11 @@ export async function loadGround(signal: AbortSignal): Promise<WorldGround> {
     const land = await buildLand(bytes, heights);
     made.push(land);
     signal.throwIfAborted();
-    const sea = buildSea(heights);
-    made.push(sea);
     const far = buildFarLandMesh(heights, land.seam);
     made.push(far);
+    // The sea's shallows and surf follow the coasts the facets of both draw.
+    const sea = buildSea(heights, [land.facets, far.facets]);
+    made.push(sea);
     const sky = buildSky();
     made.push({ dispose: () => { sky.geometry.dispose(); sky.material.dispose(); } });
     // The land is drawn before the sea plane, so the depth test discards the water wherever land stands above it.

@@ -49,10 +49,38 @@ const RESIZE = { scroll: false };
 /** Nothing casts a shadow. Said outright, because r3f's default picks a shadow map type WebGPURenderer no longer has and warns about. */
 const NO_SHADOWS = { enabled: false, type: PCFShadowMap };
 
+type Builder = { getUniformBufferLimit(): number };
+type Backend = { isWebGPUBackend?: boolean; createNodeBuilder(object: { isInstancedMesh?: boolean } | null, renderer: unknown): Builder };
+type Pipelines = { _releasePipeline(pipeline: object): void; _releaseProgram(program: object): void };
+
+/**
+ * Lets the map's batches of one material share their shaders and pipeline, as the battle's WebGL path does
+ * (render/webglBackend.ts). three writes a small InstancedMesh's matrices into a uniform array whose name and length are
+ * part of the shader, so each batch of camps or ships compiled shaders and a pipeline of its own, and since the map
+ * builds new batches whenever the campaign changes, every order recompiled about fifteen: a quarter of a second in the
+ * GPU process. Read from vertex attributes, the matrices leave the shader the same for every batch of one material. And
+ * three forgets a pipeline and its shaders the moment nothing draws with them, which freeing the old batches before the
+ * new ones are drawn always brings about: this renderer keeps them while it lives, a few dozen.
+ */
+function shareCompiled(renderer: WebGPURenderer) {
+  const backend = renderer.backend as unknown as Backend;
+  const pipelines = (renderer as unknown as { _pipelines?: Pipelines })._pipelines;
+  if (!backend.isWebGPUBackend || !pipelines) return;
+  const create = backend.createNodeBuilder.bind(backend);
+  backend.createNodeBuilder = (object, r) => {
+    const builder = create(object, r);
+    if (object?.isInstancedMesh) builder.getUniformBufferLimit = () => 0;
+    return builder;
+  };
+  pipelines._releasePipeline = () => undefined;
+  pipelines._releaseProgram = () => undefined;
+}
+
 export async function createRenderer(props: { canvas: HTMLCanvasElement | OffscreenCanvas }) {
   const renderer = new WebGPURenderer({ canvas: props.canvas as HTMLCanvasElement, antialias: equipment.select.antialias, powerPreference: 'high-performance', forceWebGL });
   await renderer.init();
   tuneWebGLBackend(renderer);
+  shareCompiled(renderer);
   return renderer;
 }
 
@@ -96,6 +124,7 @@ function usePageVisible() {
 export function World({ view, world, onReady, onError, onControls }: WorldProps) {
   const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
+  const get = useThree((s) => s.get);
   const ref = useRef<CampaignWorld | null>(null);
   const [ready, setReady] = useState(false);
   const reduced = useReducedMotion();
@@ -105,7 +134,12 @@ export function World({ view, world, onReady, onError, onControls }: WorldProps)
   const born = useRef(frameTime());
 
   useEffect(() => {
-    const campaign = new CampaignWorld(scene, () => invalidate());
+    // Shaders are compiled away from the frames, for the camera the frames draw with.
+    const compile = () => {
+      const { gl, camera } = get();
+      return (gl as unknown as WebGPURenderer).compileAsync(scene, camera);
+    };
+    const campaign = new CampaignWorld(scene, () => invalidate(), compile);
     ref.current = campaign;
     let live = true;
     campaign
@@ -124,7 +158,7 @@ export function World({ view, world, onReady, onError, onControls }: WorldProps)
       ref.current = null;
       campaign.dispose();
     };
-  }, [scene, invalidate]);
+  }, [scene, invalidate, get]);
 
   useEffect(() => {
     if (!onControls) return;
