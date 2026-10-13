@@ -350,7 +350,8 @@ export function Tutorial({ engine, compact }: { engine: Engine; compact: boolean
 
 // ---------------------------------------------------------------- tooltips
 
-type Shown = { id: string; rect: DOMRect; key: string; touch: boolean };
+/** `title` is the control's own name (data-tip-title) when the explanation is shared by many, like the commander cards. */
+type Shown = { id: string; rect: DOMRect; key: string; title?: string; touch: boolean };
 
 const HOVER_MS = 380;
 const PRESS_MS = 420;
@@ -383,7 +384,7 @@ export function Tooltips() {
       const id = el.dataset.tip!;
       if (!TIPS[id]) return;
       anchor = el;
-      setShown({ id, rect: el.getBoundingClientRect(), key: el.querySelector('kbd')?.textContent ?? '', touch: fromTouch });
+      setShown({ id, rect: el.getBoundingClientRect(), key: el.querySelector('kbd')?.textContent ?? '', title: el.dataset.tipTitle, touch: fromTouch });
     };
 
     const onOver = (e: PointerEvent) => {
@@ -495,7 +496,7 @@ export function Tooltips() {
   return (
     <div className="tip" role="tooltip" style={style}>
       <div className="tip-title">
-        {t(tip.title)}
+        {shown.title ?? t(tip.title)}
         {key && <kbd>{key}</kbd>}
       </div>
       <p>{t(tip.what)}</p>
@@ -555,6 +556,7 @@ const KEYS: { title: string; rows: [string, string][] }[] = [
       ['O', '선택한 함선 추적'],
       ['Shift+F', '선내 단면 (누를 때마다 층이 바뀝니다)'],
       ['I', '이름표 켜기 · 끄기'],
+      ['`', '지휘 패널 전체 · 간소화 · 접기'],
       ['Space', '일시정지'],
       ['M', '소리 켜기 · 끄기'],
     ],
