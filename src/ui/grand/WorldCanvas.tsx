@@ -1,6 +1,6 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
-import { PCFShadowMap, WebGPURenderer, type PerspectiveCamera } from 'three/webgpu';
+import { PCFShadowMap, WebGPURenderer, type Mesh, type Object3D, type PerspectiveCamera } from 'three/webgpu';
 import { equipment, forceWebGL } from '../../game/quality';
 import { tuneWebGLBackend } from '../../render/webglBackend';
 import { CampaignWorld } from './campaignWorld';
@@ -134,10 +134,16 @@ export function World({ view, world, onReady, onError, onControls }: WorldProps)
   const born = useRef(frameTime());
 
   useEffect(() => {
-    // Shaders are compiled away from the frames, for the camera the frames draw with.
-    const compile = () => {
+    // Shaders are compiled away from the frames, for the camera the frames draw with, each mesh on its own: one
+    // compileAsync works through its meshes one pipeline at a time, while these compile side by side on the GPU
+    // process's workers. The meshes are gathered, and every compile started, before this returns.
+    const compile = async () => {
       const { gl, camera } = get();
-      return (gl as unknown as WebGPURenderer).compileAsync(scene, camera);
+      const meshes: Object3D[] = [];
+      scene.traverseVisible((o) => {
+        if ((o as Mesh).isMesh) meshes.push(o);
+      });
+      await Promise.all(meshes.map((mesh) => (gl as unknown as WebGPURenderer).compileAsync(mesh, camera, scene)));
     };
     const campaign = new CampaignWorld(scene, () => invalidate(), compile);
     ref.current = campaign;

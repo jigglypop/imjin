@@ -22,7 +22,7 @@ const HOLD = 1.12;
 const REACH = 72;
 /** Cells along a tile's side. */
 const TILE = 16;
-/** Milliseconds a frame may spend working out new tiles. */
+/** Milliseconds a frame may spend on the trees: working out new tiles and laying the trees of the ready ones. */
 const BUDGET_MS = 3;
 /** Tiles kept for reuse; the ones used longest ago go first. */
 const KEEP = 900;
@@ -103,6 +103,8 @@ export class TreeLayer {
   private anchor = { x: Number.NaN, z: Number.NaN };
   private complete = false;
   private assemblies = 0;
+  /** How long laying the trees took the last time (ms): the planting leaves it room within the budget. */
+  private layMs = 0;
   private disposed = false;
 
   constructor(private readonly ground: (u: number, v: number) => number, private readonly perMetre: number) {
@@ -155,12 +157,14 @@ export class TreeLayer {
       }
     }
     needed.sort((a, b) => a.distance - b.distance || a.key - b.key);
-    const start = performance.now();
-    let ready = 0;
+    // At least one new tile a frame, so the planting always gets on, however long laying the trees takes.
+    const start = performance.now(), budget = BUDGET_MS - this.layMs;
+    let ready = 0, planted = 0;
     for (const tile of needed) {
       if (!this.tiles.has(tile.key)) {
-        if (ready > 0 && performance.now() - start > BUDGET_MS) break;
+        if (planted > 0 && performance.now() - start > budget) break;
         this.tiles.set(tile.key, { trees: this.plant(want, tile.i, tile.j), used: 0 });
+        planted += 1;
       }
       ready += 1;
     }
@@ -170,7 +174,9 @@ export class TreeLayer {
     this.level = want;
     this.complete = complete;
     this.anchor = { x, z };
+    const laying = performance.now();
     this.assemble(needed.slice(0, ready), reach, x, z);
+    this.layMs = performance.now() - laying;
     return true;
   }
 
