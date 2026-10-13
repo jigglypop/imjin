@@ -3,7 +3,7 @@ import { campLevel } from './campArt';
 import type { FactionId, FleetView, RegionView, ReplayView, SpotView } from './types';
 
 // What stands on the campaign map besides the terrain: a settlement at every camp and a few ships where a fleet lies.
-// Pure layout, no three.js (MapScene turns it into instances), so the shape of each camp level can be tested alone.
+// Pure layout, no three.js (mapLayer.ts turns it into instances), so the shape of each camp level can be tested alone.
 
 /** A settlement's radius in frame units: a camp covers about this much ground. */
 export const SETTLEMENT_RADIUS = 0.013;

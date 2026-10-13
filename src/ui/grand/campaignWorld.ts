@@ -96,7 +96,8 @@ export class CampaignWorld {
     ground.update(camera.position, cam, clock);
     this.layer?.setView(cam.yaw, cam.distance);
     this.layer?.tick(clock);
-    this.trees?.update(cam);
+    // Trees are planted a few tiles a frame: while some are still to come the page draws on, even with no ambient frames.
+    if (this.trees?.update(cam)) this.onChange();
   }
 
   /** Frees the ground, the layers and everything they made; a load still under way is abandoned. */

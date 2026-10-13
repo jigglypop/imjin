@@ -138,6 +138,15 @@ try {
   await measure('close-idle', () => page.waitForTimeout(3000));
   await shot('3-close');
   await measure('close-pan', async () => { await drag('left', -300, 120); });
+  if (shots) {
+    // A low view north across the DEM's north edge, where the far land joins it: back out, tip down, glide north.
+    await page.mouse.move(cx, cy);
+    for (let i = 0; i < 22; i += 1) { await page.mouse.wheel(0, 60); await page.waitForTimeout(25); }
+    for (let i = 0; i < 12; i += 1) { await page.keyboard.press('KeyF'); await page.waitForTimeout(30); }
+    for (let i = 0; i < 40; i += 1) { await page.keyboard.press('KeyW'); await page.waitForTimeout(30); }
+    await page.waitForTimeout(1500);
+    await shot('4-north');
+  }
   console.log(errors.slice(0, 8).join('\n') || 'no page errors');
 } finally {
   await browser.close();

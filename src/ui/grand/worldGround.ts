@@ -1,12 +1,12 @@
-import { BackSide, BufferAttribute, BufferGeometry, Color, Group, Mesh, MeshBasicNodeMaterial, SphereGeometry, type DataTexture } from 'three/webgpu';
+import { BackSide, Color, Group, Mesh, MeshBasicNodeMaterial, SphereGeometry } from 'three/webgpu';
 import { mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
-import { equipment } from '../../game/quality';
-import { disposeTree } from '../../render/dispose';
-import { MAP_H } from '../../select/demFrame';
-import { buildFarLandMaterial, buildSea, buildTerrain, loadDem } from '../../select/terrain';
-import { MAP_ASPECT } from './projection';
-import { DEM_RECT, MESH_SCALE, groundElevation } from './mapMath';
-import { buildFarLand, MIRROR_SHEAR, type FarLand } from './farLand';
+import demMeta from '../../select/demMeta.json';
+import { V_SCALE } from '../../select/demFrame';
+import { loadDem } from '../../select/terrain';
+import { buildFarLandMesh } from './farLand';
+import { buildLand, fetchLand } from './groundLand';
+import { buildSea } from './groundSea';
+import { DEM_RECT, MESH_SCALE } from './mapMath';
 import { FAR, type CameraState } from './worldCamera';
 import { SKY_HORIZON, SKY_MIDDLE, SKY_ZENITH, WORLD_HAZE } from './worldLook';
 
@@ -14,7 +14,10 @@ import { SKY_HORIZON, SKY_MIDDLE, SKY_ZENITH, WORLD_HAZE } from './worldLook';
 export interface WorldGround {
   /** Everything the ground draws; added to the scene once. */
   readonly group: Group;
-  /** The DEM's metre heights (row-major, demMeta.width x demMeta.height), which groundElevation (mapMath.ts) reads to set markers, camps and ships on the ground. */
+  /**
+   * The DEM's metre heights (row-major, demMeta.width x demMeta.height), which groundElevation (mapMath.ts) reads to set
+   * markers, camps and ships on the ground. Land reads as the facets draw it (groundLand.ts), so all of them stand on it.
+   */
   readonly heights: Float32Array;
   /** The haze colour as a CSS hex string: the scene background and the fog colour. */
   readonly haze: string;
@@ -28,23 +31,8 @@ export interface WorldGround {
   dispose(): void;
 }
 
-/** The mainland north of the DEM, on to the horizon (farLand.ts). */
-function farLandMesh(far: FarLand, demTex: DataTexture) {
-  const geometry = new BufferGeometry();
-  geometry.setAttribute('position', new BufferAttribute(far.position, 3));
-  geometry.setAttribute('local', new BufferAttribute(far.local, 2));
-  geometry.setAttribute('hills', new BufferAttribute(far.hills, 1));
-  geometry.setAttribute('hillNormal', new BufferAttribute(far.hillNormal, 3));
-  geometry.setAttribute('blend', new BufferAttribute(far.blend, 1));
-  geometry.setIndex(new BufferAttribute(far.index, 1));
-  // Coloured by the terrain's own shader, so the join with the DEM does not show.
-  const mesh = new Mesh(geometry, buildFarLandMaterial(demTex, MIRROR_SHEAR));
-  mesh.frustumCulled = false;
-  return mesh;
-}
-
 /** A dome that follows the eye: the haze at the horizon, deepening to blue overhead, with the sun's warm glow low in the north-west. */
-function skyDome() {
+function buildSky() {
   const material = new MeshBasicNodeMaterial({ side: BackSide, depthWrite: false, fog: false });
   const rgb = (hex: string) => { const c = new Color(hex); return vec3(c.r, c.g, c.b); };
   const up = positionLocal.y.max(0);
@@ -60,46 +48,58 @@ function skyDome() {
 
 /** Loads the DEM and builds the ground; rejects with the signal's AbortError when aborted, having freed what it made. */
 export async function loadGround(signal: AbortSignal): Promise<WorldGround> {
-  const { heights, tex } = await loadDem(signal);
-  if (signal.aborted) {
-    tex.dispose();
+  const [dem, bytes] = await Promise.all([loadDem(signal), fetchLand(signal)]);
+  // The half-float texture is the select screen's relief; this world draws the facets instead.
+  dem.tex.dispose();
+  signal.throwIfAborted();
+  const { heights } = dem;
+  const made: { dispose(): void }[] = [];
+  try {
+    const land = await buildLand(bytes, heights);
+    made.push(land);
     signal.throwIfAborted();
+    const sea = buildSea(heights);
+    made.push(sea);
+    const far = buildFarLandMesh(heights, land.seam);
+    made.push(far);
+    const sky = buildSky();
+    made.push({ dispose: () => { sky.geometry.dispose(); sky.material.dispose(); } });
+    // The land is drawn before the sea plane, so the depth test discards the water wherever land stands above it.
+    land.mesh.renderOrder = -1;
+    far.mesh.renderOrder = -1;
+    sea.mesh.renderOrder = 0;
+    const group = new Group();
+    group.add(sky, land.mesh, far.mesh, sea.mesh);
+    const W = demMeta.width, H = demMeta.height;
+    const lift = V_SCALE * MESH_SCALE;
+    return {
+      group,
+      heights,
+      haze: WORLD_HAZE,
+      heightAt(u, v) {
+        if (v < DEM_RECT.v) return far.heightAt(u, v);
+        const x = ((u - DEM_RECT.u) / DEM_RECT.w) * (W - 1), y = ((v - DEM_RECT.v) / DEM_RECT.h) * (H - 1);
+        if (x < 0 || y < 0 || x > W - 1 || y > H - 1) return 0;
+        // Bilinear between the four texels round the point: on a facet that is the facet's own plane.
+        const x0 = Math.min(W - 2, Math.floor(x)), y0 = Math.min(H - 2, Math.floor(y));
+        const fx = x - x0, fy = y - y0, i = y0 * W + x0;
+        const top = heights[i]! + (heights[i + 1]! - heights[i]!) * fx;
+        const bottom = heights[i + W]! + (heights[i + W + 1]! - heights[i + W]!) * fx;
+        return Math.max(0, top + (bottom - top) * fy) * lift;
+      },
+      // It starts a little beyond the target and is solid well past the whole frame, so distant ridges and coasts stay readable in a soft haze.
+      fog: (distance) => ({ near: distance * 1.1 + 0.05, far: distance * 3.4 + 1.1 }),
+      update(eye) {
+        sky.position.set(eye.x, eye.y, eye.z);
+      },
+      dispose() {
+        for (const part of made) part.dispose();
+        made.length = 0;
+        group.removeFromParent();
+      },
+    };
+  } catch (error) {
+    for (const part of made) part.dispose();
+    throw error;
   }
-  const group = new Group();
-  // The mesh is built in the select screen's units; the group fits it to its rectangle of the campaign frame.
-  const terrain = new Group();
-  terrain.add(buildTerrain(tex, equipment.select.mapSegments, true));
-  terrain.scale.set(MESH_SCALE, MESH_SCALE, DEM_RECT.h / MAP_ASPECT / MAP_H);
-  terrain.position.set(DEM_RECT.u + DEM_RECT.w / 2 - 0.5, 0, (DEM_RECT.v + DEM_RECT.h / 2 - 0.5) / MAP_ASPECT);
-  group.add(terrain);
-  // The ocean round the DEM, wide enough to reach the far plane from anywhere the camera goes, so the fog, not an edge,
-  // ends it at the horizon. It lies far enough under the terrain's own sea (about 60 m of the relief's scale) that the
-  // depth buffer still tells the two apart from the widest view; seen from above, the step at the DEM's edge is not.
-  const sea = buildSea(2 * (FAR + 2));
-  sea.position.set(0, -0.0005, 0);
-  group.add(sea);
-  const far = buildFarLand(heights);
-  group.add(farLandMesh(far, tex));
-  const sky = skyDome();
-  group.add(sky);
-  let disposed = false;
-  return {
-    group,
-    heights,
-    haze: WORLD_HAZE,
-    // Trees stand on the far land north of the DEM too, so the woods run on across the join.
-    heightAt: (u, v) => (v < DEM_RECT.v ? far.heightAt(u, v) : groundElevation(heights, u, v)),
-    // The fog starts a little beyond the target and is solid well past the whole frame, so distant ridges and coasts stay
-    // readable in a soft haze.
-    fog: (distance) => ({ near: distance * 1.1 + 0.05, far: distance * 3.4 + 1.1 }),
-    update(eye) {
-      sky.position.set(eye.x, eye.y, eye.z);
-    },
-    dispose() {
-      if (disposed) return;
-      disposed = true;
-      disposeTree(group);
-      tex.dispose();
-    },
-  };
 }
