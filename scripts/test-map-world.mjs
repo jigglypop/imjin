@@ -1,5 +1,6 @@
-// The campaign map's 3D layer: what each camp level is made of for each navy, how a camp turns to the sea, where fleets stand
-// and sail, and which city cards fit on screen. Pure layout, no GPU.
+// The campaign map's 3D layer: what each camp level is made of for each navy, how a camp turns to the sea, how a port's
+// camp, town and works are laid out on its coast, where fleets stand and sail, and which city cards fit on screen. Pure
+// layout, no GPU.
 import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
@@ -13,58 +14,116 @@ let passed = 0;
 const check = (name, test) => { test(); passed++; console.log(`ok - ${name}`); };
 try {
   const bundled = await build({
-    stdin: { contents: `export * from './src/ui/grand/mapWorld.ts'; export * from './src/ui/grand/cardLayout.ts'; export { project, MAP_ASPECT } from './src/ui/grand/projection.ts';`, resolveDir: root },
+    stdin: { contents: `export * from './src/ui/grand/mapWorld.ts'; export * from './src/ui/grand/cardLayout.ts'; export { project, MAP_ASPECT } from './src/ui/grand/projection.ts'; export { WALL_KINDS, WATER_KINDS, FOOTPRINT, METRES_PER_RADIUS } from './src/ui/grand/campPieces.ts';`, resolveDir: root },
     bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent',
   });
   const path = join(temporary, 'map-world.mjs'); await writeFile(path, bundled.outputFiles[0].contents);
-  const { settlementPieces, faceSea, buildWorld, anchorage, campTier, hullsFor, drawnKinds, hash, HULL_LENGTH, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, WALL_KINDS, WATER_KINDS, SHIP_CAP, flagSpot, formation, transitShare, transitSpot, pointAlong, buildSails, cardRect, overlaps, pickCards } = await import(pathToFileURL(path).href);
+  const { settlementPieces, faceSea, buildWorld, layoutSettlements, townPlan, townSize, workKind, anchorage, hullsFor, drawnKinds, hash, HULL_LENGTH, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, SHIP_CAP, formation, transitShare, transitSpot, pointAlong, buildSails, cardRect, overlaps, pickCards, WALL_KINDS, WATER_KINDS, FOOTPRINT, METRES_PER_RADIUS } = await import(pathToFileURL(path).href);
   const kinds = (level) => new Set(settlementPieces(level).map((p) => p.kind));
   const buildings = (level) => settlementPieces(level).filter((p) => !WALL_KINDS.has(p.kind)).length;
 
-  check('a camp grows with its level and keeps what it had', () => {
+  check('a Joseon camp grows from a stockade to a walled base and keeps what it had', () => {
     assert.deepEqual(settlementPieces(0), []);
-    assert.deepEqual([...kinds(1)].sort(), ['choga', 'palisade']);
-    assert.ok(kinds(2).has('giwa') && kinds(2).has('dock') && kinds(2).has('palisade') && !kinds(2).has('stone'));
-    for (const k of ['stone', 'fortgate', 'bongsu', 'battery', 'magazine', 'dock']) assert.ok(kinds(3).has(k), k);
-    assert.ok(!kinds(3).has('palisade') && !kinds(3).has('shipyard') && kinds(4).has('shipyard'));
+    assert.deepEqual([...kinds(1)].sort(), ['choga', 'giwa', 'jo_banner', 'jo_gate', 'palisade']);
+    assert.ok(kinds(2).has('jo_tower') && kinds(2).has('pier') && kinds(2).has('palisade') && !kinds(2).has('stone'));
+    for (const k of ['stone', 'fortgate', 'hall', 'magazine', 'pier']) assert.ok(kinds(3).has(k), k);
+    assert.ok(!kinds(3).has('palisade') && !kinds(3).has('jo_gate') && kinds(4).has('jeongja'));
     for (let level = 1; level < 4; level++) assert.ok(buildings(level + 1) > buildings(level), `level ${level + 1} has more buildings`);
-    assert.equal(buildings(1), 3);
   });
-  check('a gate stays open in the stone wall and the pieces stay near their camp', () => {
+  check('a gate stays open in the wall and every piece stays near its camp', () => {
     const gate = settlementPieces(3).find((p) => p.kind === 'fortgate');
     const wall = settlementPieces(3).filter((p) => p.kind === 'stone');
-    assert.ok(wall.every((p) => Math.hypot(p.x - gate.x, p.z - gate.z) > 0.3), 'no wall in the gateway');
-    for (let level = 1; level <= 4; level++) for (const p of settlementPieces(level)) assert.ok(Math.hypot(p.x, p.z) <= 1.6, `${level} ${p.kind}`);
+    assert.ok(wall.every((p) => Math.hypot(p.x - gate.x, p.z - gate.z) > 0.25), 'no wall in the gateway');
+    for (let level = 1; level <= 4; level++) for (const p of settlementPieces(level)) assert.ok(Math.hypot(p.x, p.z) <= 1.3, `${level} ${p.kind}`);
   });
-  check('a camp turns its dock to open water and the turn keeps every distance', () => {
+  check('a camp turns its landing to open water and the turn keeps every distance', () => {
     const pieces = settlementPieces(3);
     // Sea only to the north-east of the camp (negative z, positive x).
     const sea = (x, z) => z < -0.9 && x > 0.3;
     const turned = faceSea(pieces, 3, sea);
-    const dock = turned.pieces.find((p) => p.kind === 'dock');
-    assert.ok(sea(dock.x, dock.z) || sea(dock.x * 1.5, dock.z * 1.5), 'the dock faces the water');
+    const pier = turned.pieces.find((p) => p.kind === 'pier');
+    assert.ok(sea(pier.x, pier.z) || sea(pier.x * 1.5, pier.z * 1.5), 'the landing faces the water');
     pieces.forEach((p, i) => assert.ok(Math.abs(Math.hypot(p.x, p.z) - Math.hypot(turned.pieces[i].x, turned.pieces[i].z)) < 1e-9));
     assert.deepEqual(faceSea(pieces, 3, sea), turned, 'the same seed turns the same way');
-    // With no sea at all, neighbouring camps still differ by their hash.
     const none = () => false;
-    assert.notEqual(faceSea(pieces, 1, none).turn, faceSea(pieces, 2, none).turn);
+    assert.notEqual(faceSea(pieces, 1, none).turn, faceSea(pieces, 2, none).turn, 'with no sea, neighbouring camps still differ');
     assert.equal(SEA_SIDE, Math.PI);
   });
-  const region = (id, lon, lat, extra = {}) => ({ id, lon, lat, owner: 'joseon', offMap: false, labelSide: 'b', buildings: [{ kind: 'camp', level: 2, maxLevel: 4 }], ...extra });
+  check('a town has its houses, garden walls, tree and fields, larger for a richer port or a seat', () => {
+    const sizes = [1, 2, 3].map((v) => townSize(v, false));
+    assert.ok(sizes[0].houses < sizes[1].houses && sizes[1].houses < sizes[2].houses && townSize(2, true).houses > sizes[1].houses);
+    for (const { houses, tiled, pavilion } of [...sizes, townSize(2, true)]) {
+      const plan = townPlan(houses, tiled, 7, false, pavilion);
+      const homes = plan.pieces.filter((p) => p.kind === 'choga' || p.kind === 'giwa');
+      assert.equal(homes.length, houses);
+      assert.equal(homes.filter((p) => p.kind === 'giwa').length, tiled);
+      assert.ok(plan.pieces.filter((p) => p.kind === 'doldam').length >= houses, 'every house has its garden walls');
+      assert.equal(plan.pieces.filter((p) => p.kind === 'tree').length, 1);
+      assert.equal(plan.pieces.some((p) => p.kind === 'jeongja'), pavilion);
+      assert.ok(plan.grounds.fields.length >= 2 && plan.grounds.lanes.length >= 1);
+      assert.ok(plan.radius > 0.5 && plan.radius < 1.4, `a town reaches ${plan.radius}`);
+    }
+    assert.deepEqual(townPlan(5, 1, 7), townPlan(5, 1, 7), 'the same seed builds the same town');
+    assert.ok(townPlan(5, 1, 7, true).pieces.every((p) => p.kind !== 'choga' && p.kind !== 'giwa'), 'a Japanese village has its own houses');
+    assert.equal(workKind('battery', 'japan'), 'wa_battery');
+    assert.equal(workKind('beacon', null), 'jo_beacon', "a port nobody holds keeps Korea's own");
+  });
+  const region = (id, lon, lat, extra = {}) => ({ id, lon, lat, owner: 'joseon', value: 1, offMap: false, labelSide: 'b', buildings: [{ kind: 'camp', level: 2, maxLevel: 4 }], ...extra });
   const fleet = (id, at, ships, faction = 'joseon', extra = {}) => ({ id, faction, at, route: [], ships: Array.from({ length: ships }, () => ({})), ...extra });
-  check('settlements are made for built, owned, on-map camps only, and stand away from the label', () => {
+  check('every on-map port has its town; a camp only where an owner built one', () => {
     const regions = [
       region('a', 127.7, 34.7), region('b', 127.8, 34.75, { labelSide: 'l' }),
       region('c', 127.9, 34.8, { buildings: [] }), region('d', 128, 34.8, { owner: null }), region('e', 128.1, 34.8, { offMap: true }),
       region('f', 128.2, 34.8, { buildings: [{ kind: 'camp', level: 9, maxLevel: 3 }] }),
     ];
     const { settlements } = buildWorld(regions, []);
-    assert.deepEqual(settlements.map((s) => s.id), ['a', 'b', 'f']);
-    assert.equal(settlements[2].level, 3, 'the level is clamped to what the camp can reach');
-    const a = project(127.7, 34.7), b = project(127.8, 34.75);
-    assert.ok(Math.abs(settlements[0].u - a.u) < 1e-12 && settlements[0].v < a.v, 'label below: the camp is north of the marker');
-    assert.ok(settlements[1].u > b.u && Math.abs(settlements[1].v - b.v) < 1e-12, 'label left: the camp is east of the marker');
-    assert.ok(Math.abs((a.v - settlements[0].v) / MAP_ASPECT - SETTLEMENT_RADIUS * 1.1) < 1e-12);
+    assert.deepEqual(settlements.filter((s) => s.kind === 'camp').map((s) => s.id).sort(), ['a', 'b', 'f']);
+    assert.deepEqual(settlements.filter((s) => s.kind === 'town').map((s) => s.region).sort(), ['a', 'b', 'c', 'd', 'f']);
+    assert.equal(settlements.find((s) => s.id === 'f').level, 3, 'the level is clamped to what the camp can reach');
+    const a = project(127.7, 34.7), camp = settlements.find((s) => s.id === 'a');
+    assert.ok(camp.v < a.v, 'with no sea known, a camp stands on the side away from its label');
+  });
+  // A coast: land north of a gently wavy shore a radius or so south of the ports, sea south of it with an island in it.
+  const P0 = project(127.7, 34.72);
+  const coastSea = (u, v) => {
+    const shore = P0.v + SETTLEMENT_RADIUS * MAP_ASPECT * (1.3 + 0.35 * Math.sin(((u - P0.u) / SETTLEMENT_RADIUS) * 0.9));
+    const island = Math.hypot(u - P0.u - 6 * SETTLEMENT_RADIUS, (v - P0.v) / MAP_ASPECT - 3.2 * SETTLEMENT_RADIUS) < 0.9 * SETTLEMENT_RADIUS;
+    return v > shore && !island;
+  };
+  const coastal = [
+    region('p1', 127.7, 34.72, { value: 2, seat: true, buildings: [{ kind: 'camp', level: 3, maxLevel: 3 }, { kind: 'battery', level: 1, maxLevel: 3 }, { kind: 'shipyard', level: 2, maxLevel: 3 }, { kind: 'beacon', level: 1, maxLevel: 3 }] }),
+    region('p2', 127.81, 34.73, { owner: 'japan', buildings: [{ kind: 'camp', level: 2, maxLevel: 3 }, { kind: 'dock', level: 1, maxLevel: 3 }, { kind: 'granary', level: 1, maxLevel: 3 }] }),
+    region('p3', 127.93, 34.72, { owner: 'ming', value: 3, buildings: [{ kind: 'camp', level: 4, maxLevel: 4 }] }),
+    region('p4', 128.03, 34.73, { buildings: [] }),
+  ];
+  const R = SETTLEMENT_RADIUS;
+  const onLand = (s, p) => {
+    const [fx, fz] = FOOTPRINT[p.kind];
+    const hx = p.len !== undefined ? p.len / 2 : fx / METRES_PER_RADIUS, hz = fz / METRES_PER_RADIUS, c = Math.cos(p.rot), sn = Math.sin(p.rot);
+    return [[-1, -1], [1, -1], [1, 1], [-1, 1], [0, 0]].every(([u, w]) => !coastSea(s.u + (p.x + u * hx * c + w * hz * sn) * R, s.v + (p.z - u * hx * sn + w * hz * c) * R * MAP_ASPECT));
+  };
+  check('on a coast every building stands on land, every landing and slip across the shore, every work by its owner', () => {
+    const places = layoutSettlements(coastal, coastSea);
+    for (const s of places) for (const p of s.pieces) {
+      if (!WATER_KINDS.has(p.kind)) { assert.ok(onLand(s, p), `${s.id} ${p.kind} at ${p.x.toFixed(2)},${p.z.toFixed(2)} stands in the water`); continue; }
+      const dx = Math.sin(p.rot), dz = Math.cos(p.rot), half = FOOTPRINT[p.kind][1] / METRES_PER_RADIUS;
+      const at = (k) => coastSea(s.u + (p.x + dx * half * k) * R, s.v + (p.z + dz * half * k) * R * MAP_ASPECT);
+      assert.ok(!at(-0.85) && at(0.95), `${s.id} ${p.kind} runs from the shore out over the water`);
+    }
+    const kindsAt = (id) => new Set(places.filter((s) => s.region === id).flatMap((s) => s.pieces.map((p) => p.kind)));
+    for (const k of ['jo_battery', 'jo_yard', 'jo_beacon']) assert.ok(kindsAt('p1').has(k), `p1 has its ${k}`);
+    for (const k of ['wa_dock', 'wa_granary']) assert.ok(kindsAt('p2').has(k), `p2 has its ${k}`);
+    assert.ok(places.some((s) => s.id === 'p1/beacon'), 'the beacon stands apart on its hill');
+    assert.deepEqual(layoutSettlements(coastal, coastSea), places, 'the same ports lay out the same way');
+  });
+  check("no place of one port stands on another's", () => {
+    const places = layoutSettlements(coastal, coastSea);
+    for (const a of places) for (const b of places) {
+      if (a === b) continue;
+      const d = Math.hypot(a.u - b.u, (a.v - b.v) / MAP_ASPECT) / R;
+      // Places keep apart by their reach when they were laid out; a work added to a place afterwards may lean over its edge.
+      assert.ok(d > Math.min(a.radius, b.radius), `${a.id} and ${b.id} are ${d.toFixed(2)} apart`);
+    }
   });
   check('fleets in a port are one group per navy, sailing ones sit mid-lane with a heading', () => {
     const regions = [region('a', 127.7, 34.7), region('b', 128.4, 35.0)];
@@ -92,8 +151,6 @@ try {
   check('a squadron is drawn with a few hulls, never more than five', () => {
     assert.deepEqual([0, 1, 2, 3, 10, 30, 400].map(hullsFor), [0, 1, 2, 2, 3, 5, 5]);
     for (let n = 1; n < 60; n++) assert.ok(hullsFor(n + 1) >= hullsFor(n));
-    // A camp's model tier: one per level up to the third, the top two levels sharing the largest.
-    assert.deepEqual([1, 2, 3, 4].map(campTier), [1, 2, 3, 3]);
   });
   check('ships anchor on water when there is some and still get a berth when there is none', () => {
     const east = (x) => x > 1;
@@ -138,11 +195,12 @@ try {
     assert.ok(nearest(first) <= nearest(second), 'the owner berths first, nearest its port');
     assert.equal(first.berths.length, first.count);
     assert.equal(second.berths.length, second.count);
-    const camp = world.settlements[0];
-    const cx = (camp.u - p.u) / SETTLEMENT_RADIUS, cz = (camp.v - p.v) / MAP_ASPECT / SETTLEMENT_RADIUS;
     for (const f of world.fleets) for (const b of f.berths) {
       assert.ok(isSea(p.u + b.x * SETTLEMENT_RADIUS, p.v + b.z * SETTLEMENT_RADIUS * MAP_ASPECT), 'on the water');
-      assert.ok(Math.hypot(b.x - cx, b.z - cz) >= 1.9, 'clear of the camp');
+      for (const place of world.settlements) {
+        const cx = (place.u - p.u) / SETTLEMENT_RADIUS, cz = (place.v - p.v) / MAP_ASPECT / SETTLEMENT_RADIUS;
+        assert.ok(Math.hypot(b.x - cx, b.z - cz) >= place.radius, `clear of ${place.id}`);
+      }
     }
     for (const a of first.berths) for (const b of second.berths) assert.ok(Math.hypot(a.x - b.x, a.z - b.z) >= HULL_LENGTH * 0.8, 'the two squadrons do not share water');
     assert.deepEqual(buildWorld(regions, [fleet('f1', 'a', 3)]).fleets[0].berths, [], 'no berths without the sea');
@@ -165,36 +223,28 @@ try {
   });
   check('Japanese camps grow from a curtain camp to a four-tier keep', () => {
     assert.deepEqual([...names('japan', 1)].sort(), ['wa_banner', 'wa_fence', 'wa_tent']);
-    for (const k of ['wa_tower', 'pier']) assert.ok(names('japan', 2).has(k) && !names('japan', 1).has(k), k);
+    for (const k of ['wa_tower', 'wa_hall', 'pier']) assert.ok(names('japan', 2).has(k) && !names('japan', 1).has(k), k);
     for (const k of ['wa_wall', 'wa_gate', 'wa_keep3']) assert.ok(names('japan', 3).has(k), k);
     assert.ok(!names('japan', 3).has('wa_fence') && !names('japan', 3).has('wa_keep4'));
-    assert.ok(names('japan', 4).has('wa_keep4') && names('japan', 4).has('wa_yard') && !names('japan', 4).has('wa_keep3'));
+    assert.ok(names('japan', 4).has('wa_keep4') && !names('japan', 4).has('wa_keep3'));
     assert.equal(settlementPieces(4, 'japan').filter((p) => p.kind === 'wa_keep4').length, 1);
     const gate = settlementPieces(3, 'japan').find((p) => p.kind === 'wa_gate');
-    assert.ok(settlementPieces(3, 'japan').filter((p) => p.kind === 'wa_wall').every((p) => Math.hypot(p.x - gate.x, p.z - gate.z) > 0.3), 'no wall in the gateway');
-    assert.ok(Math.hypot(...flagSpot(3, 'japan')) > 0.4 && flagSpot(3, 'joseon').every((v) => v === 0), 'the flag stands clear of the keep');
+    assert.ok(settlementPieces(3, 'japan').filter((p) => p.kind === 'wa_wall').every((p) => Math.hypot(p.x - gate.x, p.z - gate.z) > 0.25), 'no wall in the gateway');
   });
-  check('Ming camps grow from a palisade to a walled yard', () => {
-    assert.deepEqual([...names('ming', 1)].sort(), ['mg_flag', 'mg_palisade', 'mg_watch']);
-    for (const k of ['mg_brick', 'mg_gate', 'pier']) assert.ok(names('ming', 2).has(k), k);
+  check('Ming camps grow from a stockade to a walled yard with bastions', () => {
+    assert.deepEqual([...names('ming', 1)].sort(), ['mg_flag', 'mg_palisade', 'mg_tent', 'mg_watch']);
+    for (const k of ['mg_brick', 'mg_gate', 'mg_barracks', 'pier']) assert.ok(names('ming', 2).has(k), k);
     assert.ok(!names('ming', 2).has('mg_palisade') && !names('ming', 2).has('mg_corner'));
-    for (const k of ['mg_corner', 'mg_platform', 'mg_beacon']) assert.ok(names('ming', 3).has(k), k);
+    for (const k of ['mg_corner', 'mg_hall']) assert.ok(names('ming', 3).has(k), k);
     assert.equal(settlementPieces(3, 'ming').filter((p) => p.kind === 'mg_corner').length, 4);
-    assert.ok(names('ming', 4).has('mg_yard'));
     const reach = (level) => Math.max(...settlementPieces(level, 'ming').filter((p) => p.kind === 'mg_brick').map((p) => Math.max(Math.abs(p.x), Math.abs(p.z))));
-    assert.ok(reach(4) > reach(3) + 0.15, 'the level-4 yard is larger');
+    assert.ok(reach(4) > reach(3) + 0.1, 'the level-4 yard is larger');
     const gate = settlementPieces(2, 'ming').find((p) => p.kind === 'mg_gate');
-    assert.ok(settlementPieces(2, 'ming').filter((p) => p.kind === 'mg_brick').every((p) => Math.hypot(p.x - gate.x, p.z - gate.z) > 0.25), 'no wall in the gateway');
+    assert.ok(settlementPieces(2, 'ming').filter((p) => p.kind === 'mg_brick').every((p) => Math.hypot(p.x - gate.x, p.z - gate.z) > 0.2), 'no wall in the gateway');
   });
-  check('Joseon camps add a great hall at the top and share no building with the other navies but the pier', () => {
-    assert.deepEqual(settlementPieces(3), settlementPieces(3, 'joseon'));
-    assert.ok(names('joseon', 4).has('hall') && !names('joseon', 3).has('hall'));
-    assert.equal(settlementPieces(4).filter((p) => p.kind === 'battery').length, 2, 'a second battery at the top');
-    assert.ok(Math.hypot(...flagSpot(4, 'joseon')) > 0.2, 'the flag stands in the yard before the hall');
-    for (let level = 1; level <= 4; level++) {
-      for (const f of ['japan', 'ming']) for (const k of names(f, level)) assert.ok(k === 'pier' || !names('joseon', 4).has(k), `${f} ${k} is not a Joseon building`);
-    }
-    for (const k of ['dock', 'shipyard', 'pier', 'wa_yard', 'mg_yard']) assert.ok(WATER_KINDS.has(k), k);
+  check('the navies share no camp building but the landing, and the water kinds are the landings and slips', () => {
+    for (let level = 1; level <= 4; level++) for (const f of ['japan', 'ming']) for (const k of names(f, level)) assert.ok(k === 'pier' || !names('joseon', 4).has(k), `${f} ${k} is not a Joseon building`);
+    for (const k of ['pier', 'jo_dock', 'wa_yard', 'mg_yard']) assert.ok(WATER_KINDS.has(k), k);
   });
   const rect = (x0, y0, x1, y1) => ({ x0, y0, x1, y1 });
   const cand = (id, x, y, extra = {}) => ({ id, own: false, level: 2, distance: 0, rect: rect(x, y, x + 100, y + 90), ...extra });

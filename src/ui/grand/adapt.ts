@@ -136,6 +136,7 @@ export function regionViews(g: Grand): RegionView[] {
       laneTurns: marching(g) ? undefined : Object.fromEntries(lanesOf(g, id).map((l) => [l.to, l.turns])),
       offMap: !!def.edge,
       seat: !!def.capitalOf,
+      korea: def.korea,
       visible,
       labelSide: LABEL[id],
       note: t(def.blurb),

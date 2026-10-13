@@ -1,13 +1,15 @@
-// Ship texture atlases: generate per-cell textures with the OpenAI image API (gpt-image), composite one atlas per faction
-// with sharp, derive normal and roughness maps from the albedo, write public/textures/ships/*.
+// Texture atlases of the ships and of the campaign map's buildings: generate per-cell textures with the OpenAI image API
+// (gpt-image), composite one atlas per faction with sharp, derive normal and roughness maps from the albedo, write
+// public/textures/ships/* or, with --set=buildings, public/textures/buildings/*.
 //
-//   node scripts/ship-textures.mjs generate [--faction=joseon,japan,ming] [--only=slot,slot] [--n=1] [--model=gpt-image-2] [--jobs=8]
-//   node scripts/ship-textures.mjs compose  [--faction=...] [--pick=joseon/hull_plank:2,...]
-//   node scripts/ship-textures.mjs patch    --faction=joseon --only=slot,slot   (recompose just those cells into the published atlas)
-//   node scripts/ship-textures.mjs all      (generate then compose)
+//   node scripts/ship-textures.mjs generate [--set=buildings] [--faction=joseon,japan,ming] [--only=slot,slot] [--n=1] [--model=gpt-image-2] [--jobs=8]
+//   node scripts/ship-textures.mjs compose  [--set=buildings] [--faction=...] [--pick=joseon/hull_plank:2,...]
+//   node scripts/ship-textures.mjs patch    [--set=buildings] --faction=joseon --only=slot,slot   (recompose just those cells into the published atlas)
+//   node scripts/ship-textures.mjs all      [--set=buildings] (generate then compose)
 //
-// Layout, prompts and per-cell material hints live in src/ships/build/atlasLayout.json (shared with the game code).
-// Raw API output is cached in assets-src/textures-ships/<faction>/<slot>[__<flag>]_<n>.png (gitignored); existing files are skipped.
+// Layout, prompts and per-cell material hints live in src/ships/build/atlasLayout.json and src/ui/grand/buildingAtlas.json
+// (shared with the game code). Raw API output is cached in assets-src/textures-<set>/<faction>/<slot>[__<flag>]_<n>.png
+// (gitignored); existing files are skipped.
 import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
@@ -34,9 +36,20 @@ const MODEL = args.model ?? process.env.SHIP_TEX_MODEL ?? 'gpt-image-2';
 const QUALITY = args.quality ?? 'high';
 const N = Number(args.n ?? 1);
 const JOBS = Number(args.jobs ?? 8);
-const CACHE = process.env.SHIP_TEX_CACHE ?? join(ROOT, 'assets-src', 'textures-ships');
-const OUT = join(ROOT, 'public', 'textures', 'ships');
-const layout = JSON.parse(await readFile(join(ROOT, 'src/ships/build/atlasLayout.json'), 'utf8'));
+/**
+ * The two atlas sets. A ship is seen at every distance in a battle and gets a 2048 px set plus a 1k one for phones; the
+ * campaign map's buildings are never more than a few hundred pixels across, so 1024 px is their only size.
+ * `sizes`: albedo, normal and roughness widths and the file suffix of each published set.
+ */
+const SETS = {
+  ships: { layout: 'src/ships/build/atlasLayout.json', cache: process.env.SHIP_TEX_CACHE ?? join(ROOT, 'assets-src', 'textures-ships'), out: 'ships', sizes: [[2048, 1024, 512, ''], [1024, 512, 256, '_1k']] },
+  buildings: { layout: 'src/ui/grand/buildingAtlas.json', cache: join(ROOT, 'assets-src', 'textures-buildings'), out: 'buildings', sizes: [[1024, 512, 256, '']] },
+};
+const SET = SETS[args.set ?? 'ships'];
+if (!SET) throw new Error(`no texture set ${args.set} (ships, buildings)`);
+const CACHE = SET.cache;
+const OUT = join(ROOT, 'public', 'textures', SET.out);
+const layout = JSON.parse(await readFile(join(ROOT, SET.layout), 'utf8'));
 const factions = (args.faction ?? Object.keys(layout.factions).join(',')).split(',');
 const only = args.only ? new Set(args.only.split(',')) : null;
 const picks = Object.fromEntries((args.pick ?? '').split(',').filter(Boolean).map((p) => p.split(':')));
@@ -280,14 +293,11 @@ async function compose(faction, patch = false) {
   await mkdir(OUT, { recursive: true });
   // Payload budget: albedo carries the detail; normal and roughness are smooth and survive at lower resolution.
   const resized = (buf, w) => (w === dim ? buf : sharp(buf, { raw: { width: dim, height: dim, channels: 3 } }).resize(w, w, { kernel: 'lanczos3' }).raw().toBuffer());
-  const outputs = [
-    ['albedo', albedo, 2048, 74, ''],
-    ['normal', normal, 1024, 70, ''],
-    ['rough', rough, 512, 55, ''],
-    ['albedo', albedo, 1024, 72, '_1k'],
-    ['normal', normal, 512, 66, '_1k'],
-    ['rough', rough, 256, 50, '_1k'],
-  ];
+  const outputs = SET.sizes.flatMap(([a, n, r, sfx]) => [
+    ['albedo', albedo, a, a > 1024 ? 74 : 72, sfx],
+    ['normal', normal, n, n > 512 ? 70 : 66, sfx],
+    ['rough', rough, r, r > 256 ? 55 : 50, sfx],
+  ]);
   for (const [kind, buf, w, quality, sfx] of outputs) await writeWebp(await resized(buf, w), w, join(OUT, `${faction}_${kind}${sfx}.webp`), { quality });
   // Contact sheet for review.
   await sharp(albedo, { raw: { width: dim, height: dim, channels: 3 } })

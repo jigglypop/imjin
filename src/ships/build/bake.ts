@@ -1,8 +1,10 @@
 /**
- * Baked grime for the procedural ships, pure CPU like the rest of the builder. The near model is voxelised once and
- * every vertex of every LOD samples that grid around its normal: crevices, joints, the underside of eaves and the
- * deck below a sail get darker (ambient occlusion folded into the vertex tint). Vertices near a gun port or the
- * dragon's mouth also get a soot amount the material turns into a scorch.
+ * Baked grime for the procedural ships and the campaign map's buildings, pure CPU like the rest of the builder. The
+ * near model is voxelised once and every vertex of every LOD samples that grid around its normal: crevices, joints, the
+ * underside of eaves and the deck below a sail get darker (ambient occlusion folded into the vertex tint). Vertices near
+ * a ship's gun port or the dragon's mouth also get a soot amount the material turns into a scorch. A building stands on
+ * the ground, which shades the foot of its walls: everything under its `ground` height counts as solid; and its occlusion
+ * is `light`er than a ship's, so a lime wall under deep eaves stays white.
  */
 import type { ShipAnchors } from '../anchors';
 import type { MeshData } from './parts';
@@ -14,7 +16,7 @@ const DIST = [0.42, 0.85, 1.5];
 const WEIGHT = [1, 0.7, 0.45];
 const TILT = 0.6;
 
-type Grid = { min: [number, number, number]; n: [number, number, number]; cell: number; occ: Uint8Array };
+type Grid = { min: [number, number, number]; n: [number, number, number]; cell: number; occ: Uint8Array; ground: number };
 
 function voxelise(m: MeshData): Grid {
   const p = m.position;
@@ -57,10 +59,11 @@ function voxelise(m: MeshData): Grid {
       }
     }
   }
-  return { min, n, cell, occ };
+  return { min, n, cell, occ, ground: -Infinity };
 }
 
 const hit = (g: Grid, x: number, y: number, z: number) => {
+  if (y < g.ground) return 1;
   const ix = Math.floor((x - g.min[0]) / g.cell);
   const iy = Math.floor((y - g.min[1]) / g.cell);
   const iz = Math.floor((z - g.min[2]) / g.cell);
@@ -84,10 +87,14 @@ function sootSources(anchors: ShipAnchors) {
 /** Soot (0..1) rides in the fraction of the surface class in `mat`, scaled by this: one vertex attribute less for the GPU to hold. */
 export const SOOT_STEP = 0.4;
 
-/** Multiplies the vertex tint of every LOD by the occlusion of the near model and adds the soot to the surface class. */
-export function bakeGrime(lods: MeshData[], anchors: ShipAnchors) {
+/**
+ * Multiplies the vertex tint of every LOD by the occlusion of the near model and adds a ship's soot to the surface class;
+ * a building passes the ground it stands on and how much lighter its occlusion is instead of anchors.
+ */
+export function bakeGrime(lods: MeshData[], anchors: ShipAnchors | null, building?: { ground: number; light: number }) {
   const grid = voxelise(lods[0]!);
-  const sources = sootSources(anchors);
+  grid.ground = building?.ground ?? -Infinity;
+  const sources = anchors ? sootSources(anchors) : [];
   const dirs: [number, number, number][] = [];
   for (const m of lods) {
     const { position: p, normal: nr, color: col, mat } = m;
@@ -126,7 +133,8 @@ export function bakeGrime(lods: MeshData[], anchors: ShipAnchors) {
           if (!hit(grid, p[i * 3]! + d[0] * r, p[i * 3 + 1]! + d[1] * r, p[i * 3 + 2]! + d[2] * r)) open += WEIGHT[k]!;
         }
       }
-      const ao = 0.4 + 0.6 * Math.pow(open / total, 1.4);
+      const shade = 0.4 + 0.6 * Math.pow(open / total, 1.4);
+      const ao = building ? shade + (1 - shade) * building.light : shade;
       col[i * 3]! *= ao;
       col[i * 3 + 1]! *= ao;
       col[i * 3 + 2]! *= ao;

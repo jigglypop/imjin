@@ -87,6 +87,8 @@ export interface RegionView {
   offMap?: boolean;
   /** The seat of a navy (its capital): drawn with a second ring. */
   seat?: boolean;
+  /** False for a port outside Korea (Tsushima): its town on the map is a Japanese village. */
+  korea?: boolean;
   /** The player's side can see what is there; a region out of sight shows only its owner. */
   visible: boolean;
   /** Where the label sits relative to the node. */

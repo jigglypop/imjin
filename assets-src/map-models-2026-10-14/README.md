@@ -5,8 +5,8 @@ Smart Topology (`meshy-t2`): the joseon, japan and ming camps at tiers 1–3, ea
 ship per navy. **The owner rejected all of them on 2026-10-14, so nothing from this package ships.**
 
 - **Camps.** Each whole-camp model stands on its own square ground slab and reads as a toy diorama, mushy close up.
-  `public/models/camps/` keeps its earlier files (`assets-src/camps-meshy-2026-10-13/`); the camps are to be built from
-  separate buildings standing on the terrain instead.
+  The camps are built from separate procedural buildings standing on the terrain instead (`src/ui/grand/campBuildings.ts`);
+  the earlier Meshy camps (`assets-src/camps-meshy-2026-10-13/`) left the map with them.
 - **Ships.** Dropped for the battle's own ships: the campaign map now draws the procedural battle ships
   (`src/ships/build`) of the kinds each fleet has (`src/ui/grand/mapLayer.ts`). `public/models/ships-map/` was never
   shipped.

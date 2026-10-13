@@ -1,14 +1,24 @@
-import { MeshBuilder, box, cloth, cylinder, grid, pennant, polygon, rotY, xlate, type Paint, type V3 } from '../../ships/build/parts';
-import { paint, type KitMesh } from './campKits';
+import { MeshBuilder, Paint, box, cloth, cylinder, grid, pennant, polygon, rotY, xlate, type V3 } from '../../ships/build/parts';
 import type { FactionId } from './types';
 
-// The ships of the campaign map: one small model per navy, built from the battle ships' parts like the camps are, with
-// colours in the vertices so all of a navy's hulls are one instanced draw. They are map pieces rather than scale models:
-// a hull with its deckhouse, masts a little taller than life and sails set, so a squadron reads as ships from the
-// strategic view. The navy shows in the sails (Joseon pale blue cloth, Japanese cream with a red band, Ming ochre
-// battened junk sails) and in a long pennant of the navy's colour streaming aft from the mainmast. Pure TS, tested in node.
+// The ships of the campaign map when a battle ship cannot be built, and its fishing boats: one small model per navy from
+// the battle ships' parts, colours in the vertices so all of a navy's hulls are one instanced draw. They are map pieces
+// rather than scale models: a hull with its deckhouse, masts a little taller than life and sails set, so a squadron reads
+// as ships from the strategic view. The navy shows in the sails (Joseon pale blue cloth, Japanese cream with a red band,
+// Ming ochre battened junk sails) and in a long pennant of the navy's colour streaming aft from the mainmast. Pure TS,
+// tested in node.
 //
 // A model is built in metres with its bow towards +z and its waterline at y = 0, then scaled so its length is one unit.
+
+/** A kit's triangles: positions in units, normals and linear vertex colours, and the index. */
+export interface KitMesh { position: Float32Array; normal: Float32Array; color: Float32Array; index: Uint32Array }
+
+const linear = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+/** A flat vertex colour from an sRGB hex. */
+function paint(hex: string): Paint {
+  const n = parseInt(hex.slice(1), 16);
+  return new Paint(0, 1, 0, [linear(((n >> 16) & 255) / 255), linear(((n >> 8) & 255) / 255), linear((n & 255) / 255)]);
+}
 
 /** The navy's colour, the same as the camps' banners and owner rings. */
 const BANNER: Record<FactionId, string> = { joseon: '#3f8cff', japan: '#e8452c', ming: '#f0b72a' };

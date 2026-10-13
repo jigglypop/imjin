@@ -1,181 +1,566 @@
 import { SHIP_SPECS } from '../../sim/catalog';
 import { MAP_ASPECT, project } from './projection';
 import { campLevel } from './campArt';
-import type { FactionId, FleetView, RegionView, ReplayView, ShipClass, SpotView } from './types';
+import { FOOTPRINT, METRES_PER_RADIUS, WALL_KINDS, WATER_KINDS, type PieceKind } from './campPieces';
+import type { BuildingKind, FactionId, FleetView, RegionView, ReplayView, ShipClass, SpotView } from './types';
 
-// What stands on the campaign map besides the terrain: a settlement at every camp and a few ships where a fleet lies.
-// Pure layout, no three.js (mapLayer.ts turns it into instances), so the shape of each camp level can be tested alone.
+// What stands on the campaign map besides the terrain: at every port a Korean town, the camp of the navy that holds it
+// and the works it has built, standing round each other on the land like the districts of a Civilization city; and a
+// few ships where a fleet lies. Pure layout, no three.js (mapLayer.ts turns it into instances), so every camp level and
+// town can be tested alone.
 
 /** A settlement's radius in frame units: a camp covers about this much ground. */
 export const SETTLEMENT_RADIUS = 0.013;
 
-/** Unprefixed pieces are Joseon, `wa_` Japanese, `mg_` Ming, `pier` serves both; every kind is a procedural kit (campKits). */
-export type PieceKind =
-  | 'choga' | 'giwa' | 'hall' | 'fortgate' | 'bongsu' | 'battery' | 'dock' | 'magazine' | 'shipyard' | 'palisade' | 'stone'
-  | 'pier' | 'wa_fence' | 'wa_tent' | 'wa_banner' | 'wa_wall' | 'wa_gate' | 'wa_tower' | 'wa_keep3' | 'wa_keep4' | 'wa_yard'
-  | 'mg_palisade' | 'mg_watch' | 'mg_flag' | 'mg_brick' | 'mg_gate' | 'mg_corner' | 'mg_platform' | 'mg_beacon' | 'mg_yard';
-/** The kinds that are one stretch of wall: they make a camp's ring and do not count as buildings. */
-export const WALL_KINDS: ReadonlySet<PieceKind> = new Set<PieceKind>(['palisade', 'stone', 'wa_fence', 'wa_wall', 'mg_palisade', 'mg_brick']);
-/** The kinds that stand in the water, not on the ground beside it. */
-export const WATER_KINDS: ReadonlySet<PieceKind> = new Set<PieceKind>(['dock', 'shipyard', 'pier', 'wa_yard', 'mg_yard']);
-/** One building of a settlement: offset from its centre and size, both in settlement radii; `rot` turns it about the vertical axis. */
-export interface Piece { kind: PieceKind; x: number; z: number; rot: number; size: number }
+/**
+ * One building of a place: its offset from the place's centre in settlement radii, turned by `rot` about the vertical
+ * (its front, +z, then looks towards (sin rot, cos rot)); a stretch of wall runs `len` radii along its own x.
+ */
+export interface Piece { kind: PieceKind; x: number; z: number; rot: number; len?: number }
 
-const WALL_RADIUS = 0.92;
-const WALL_SEGMENTS = 16;
+/** A field by a town: its centre and half sizes in radii, its turn, a wet rice paddy or a dry field. */
+export interface Field { x: number; z: number; hx: number; hz: number; rot: number; paddy: boolean }
 
-/** The wall is a ring of segments; a gap at `gate` (radians) is left for the gate when there is one. */
-function ring(kind: PieceKind, gate: number | null): Piece[] {
-  const pieces: Piece[] = [];
-  const length = ((2 * Math.PI * WALL_RADIUS) / WALL_SEGMENTS) * 1.06;
-  for (let i = 0; i < WALL_SEGMENTS; i += 1) {
-    const a = (i / WALL_SEGMENTS) * Math.PI * 2;
-    if (gate !== null && Math.abs(Math.atan2(Math.sin(a - gate), Math.cos(a - gate))) < 0.2) continue;
-    pieces.push({ kind, x: Math.cos(a) * WALL_RADIUS, z: Math.sin(a) * WALL_RADIUS, rot: -a + Math.PI / 2, size: length });
-  }
-  return pieces;
+/** What a place leaves bare on the ground, in radii from its centre: its packed-earth yard, its lanes and its fields. */
+export interface Grounds { yard: number; lanes: { x: number; z: number }[][]; fields: Field[] }
+
+/**
+ * One place on the land: a port's camp (its id is the region's), its town (`<region>/town`) or its beacon on the hill
+ * above it (`<region>/beacon`), with its pieces laid out round (u, v) and already turned to the sea. `radius` is how far
+ * in radii its pieces reach; the camp's `flag` is where its owner's flag flies.
+ */
+export interface SettlementSpec {
+  id: string;
+  region: string;
+  kind: 'camp' | 'town' | 'beacon';
+  u: number;
+  v: number;
+  owner: FactionId | null;
+  /** The camp's level; 0 for a town or a beacon. */
+  level: number;
+  radius: number;
+  pieces: Piece[];
+  grounds: Grounds;
+  flag?: { x: number; z: number };
 }
 
-const at = (kind: PieceKind, angle: number, radius: number, size: number, face = angle): Piece => ({ kind, x: Math.cos(angle) * radius, z: Math.sin(angle) * radius, rot: -face + Math.PI / 2, size });
-/** A building at (x, z) turned so its front looks at the camp's centre. */
-const facingIn = (kind: PieceKind, x: number, z: number, size: number): Piece => ({ kind, x, z, rot: Math.atan2(-x, -z), size });
-/** A building at (x, z) turned by `rot`. */
-const stand = (kind: PieceKind, x: number, z: number, rot: number, size: number): Piece => ({ kind, x, z, rot, size });
+const m = (metres: number) => metres / METRES_PER_RADIUS;
+/** A building at (x, z) whose front looks towards `face` (0 east, pi / 2 south). */
+const put = (kind: PieceKind, x: number, z: number, face: number): Piece => ({ kind, x, z, rot: Math.PI / 2 - face });
 
-/** The side of a camp that wants water: dock and battery stand here (the gate is on the opposite side). */
+/** The side of an unturned camp that looks out to sea: its pier stands here, its gate on the opposite side (angle 0). */
 export const SEA_SIDE = Math.PI;
 
-/** The four sides of a square wall `half` radii out, in segments as long as the round ones; the east side leaves a gap for a gate. */
-function square(kind: PieceKind, half: number, gate: boolean): Piece[] {
-  const pieces: Piece[] = [];
-  const count = Math.round(half * 5);
-  const length = ((2 * half) / count) * 1.06;
-  for (let side = 0; side < 4; side += 1) {
-    const a = (side * Math.PI) / 2;
-    for (let i = 0; i < count; i += 1) {
-      const along = -half + ((i + 0.5) * 2 * half) / count;
-      if (gate && side === 0 && Math.abs(along) < 0.3) continue;
-      pieces.push({ kind, x: Math.cos(a) * half - Math.sin(a) * along, z: Math.sin(a) * half + Math.cos(a) * along, rot: Math.PI / 2 - a, size: length });
+/**
+ * A ring of `n` stretches of wall of radius r round the centre, `gap` radii left open at the gate (angle 0). Each
+ * stretch runs chord to chord a little long, so the ring has no gaps at its joints.
+ */
+function ring(kind: PieceKind, r: number, n: number, gap: number): Piece[] {
+  const g = gap > 0 ? gap / (2 * r) : 0, span = Math.PI * 2 - 2 * g;
+  return Array.from({ length: n }, (_, i) => {
+    const a0 = g + (span * i) / n, a1 = g + (span * (i + 1)) / n, a = (a0 + a1) / 2, half = (a1 - a0) / 2;
+    const rr = r * Math.cos(half);
+    return { kind, x: Math.cos(a) * rr, z: Math.sin(a) * rr, rot: Math.PI / 2 - a, len: 2 * r * Math.sin(half) * 1.06 };
+  });
+}
+
+/** The four sides of a square wall `h` radii out, about `n` stretches a side, the east side open `gap` radii at the gate. */
+function square(kind: PieceKind, h: number, n: number, gap: number): Piece[] {
+  const out: Piece[] = [];
+  for (let s = 0; s < 4; s += 1) {
+    const a = (s * Math.PI) / 2, ca = Math.cos(a), sa = Math.sin(a);
+    const runs: [number, number][] = s === 0 && gap > 0 ? [[-h, -gap / 2], [gap / 2, h]] : [[-h, h]];
+    for (const [t0, t1] of runs) {
+      const k = Math.max(1, Math.round((n * (t1 - t0)) / (2 * h)));
+      for (let i = 0; i < k; i += 1) {
+        const t = t0 + ((t1 - t0) * (i + 0.5)) / k;
+        out.push({ kind, x: ca * h - sa * t, z: sa * h + ca * t, rot: Math.PI / 2 - a, len: ((t1 - t0) / k) * 1.04 });
+      }
     }
   }
-  return pieces;
+  return out;
 }
 
-const corners = (kind: PieceKind, half: number, size: number): Piece[] =>
-  [[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([sx, sz]) => ({ kind, x: sx! * half, z: sz! * half, rot: 0, size }));
+/** The landing on the sea side, its seaward end out from the wall. */
+const pierAt = (r: number) => put('pier', -(r + m(FOOTPRINT.pier[1])), 0, SEA_SIDE);
+
+/** A camp before it is turned to the sea: what it is made of, how far it reaches and where its flag flies. */
+export interface CampPlan { pieces: Piece[]; radius: number; flag: { x: number; z: number } }
 
 /**
- * A wajo: a curtain camp of cloth fences, tents and tall banners; a white watch tower and a pier; then a stone-based
- * plaster wall with a gate round a three-tier keep; at the top a four-tier keep and a shipyard.
+ * A Joseon naval camp: a log stockade round an office and huts; then a watchtower, more houses and a landing; then a
+ * granite wall with its white parapet and a gate pavilion round the commander's hall, barracks, a powder store and
+ * banners; at the top a wider wall, a pavilion in the hall's garden and a second tower.
  */
-function japan(level: number): Piece[] {
-  const tents = [facingIn('wa_tent', 0.22, -0.55, 0.42), facingIn('wa_tent', 0.22, 0.55, 0.42), facingIn('wa_tent', -0.3, -0.58, 0.42)];
-  const banners = [at('wa_banner', 2.6, 0.78, 0.28), at('wa_banner', -2.6, 0.78, 0.28)];
-  const tower = stand('wa_tower', -0.28, 0.54, 0.1, 0.38);
-  const pier = at('pier', SEA_SIDE, 1.4, 0.85);
-  if (level === 1) return [...ring('wa_fence', null), ...tents, ...banners];
-  if (level === 2) return [...ring('wa_fence', null), ...tents, ...banners, tower, pier];
-  const pieces: Piece[] = [
-    ...ring('wa_wall', 0),
-    at('wa_gate', 0, WALL_RADIUS, 0.85),
-    ...tents, ...banners, stand('wa_banner', 0.55, 0.3, Math.PI / 2, 0.28), stand('wa_banner', 0.55, -0.3, Math.PI / 2, 0.28),
-    tower,
-    // The keep stands at the back of the yard and looks at the gate.
-    stand(level >= 4 ? 'wa_keep4' : 'wa_keep3', -0.3, 0, Math.PI / 2, 0.62),
-    pier,
+function joseonCamp(level: number): CampPlan {
+  const S = Math.PI / 2;
+  if (level === 1) return {
+    radius: 0.6, flag: { x: 0.3, z: 0.2 },
+    pieces: [...ring('palisade', 0.55, 11, m(7.8)), put('jo_gate', 0.55, 0, 0), put('giwa', -0.2, 0, 0), put('choga', 0.12, -0.3, S), put('choga', 0.12, 0.3, -S), put('jo_banner', 0.34, -0.22, Math.PI)],
+  };
+  if (level === 2) return {
+    radius: 0.73, flag: { x: 0.38, z: -0.1 },
+    pieces: [
+      ...ring('palisade', 0.68, 13, m(7.8)), put('jo_gate', 0.68, 0, 0), pierAt(0.68),
+      put('giwa', -0.28, 0, 0), put('giwa', 0.06, -0.42, S), put('choga', 0.06, 0.42, -S), put('choga', 0.38, -0.32, S),
+      put('jo_tower', -0.32, 0.4, 0), put('jo_banner', 0.42, 0.24, Math.PI),
+    ],
+  };
+  const r = level === 3 ? 0.84 : 0.98, n = level === 3 ? 18 : 21;
+  const pieces = [
+    ...ring('stone', r, n, m(15)), put('fortgate', r, 0, 0), pierAt(r),
+    put('hall', -0.3, 0, 0), put('giwa', 0.18, -0.5, S), put('giwa', 0.18, 0.5, -S), put('choga', 0.52, -0.3, S), put('choga', 0.52, 0.3, -S),
+    put('magazine', -0.5, 0.38, 0), put('jo_tower', -0.5, -0.4, 0), put('jo_banner', 0.6, -0.16, Math.PI), put('jo_banner', 0.6, 0.16, Math.PI),
   ];
-  if (level >= 4) pieces.push(at('wa_yard', SEA_SIDE - 0.7, 1.45, 0.9), at('wa_tower', -0.8, WALL_RADIUS, 0.38));
-  return pieces;
+  if (level >= 4) pieces.push(put('jeongja', -0.02, 0.28, -S), put('jo_tower', 0.3, 0.72, -S), put('giwa', -0.62, 0.0, 0));
+  // The gatehouse stands out of the ring by its depth.
+  return { radius: r + 0.15, flag: { x: 0.66, z: 0 }, pieces };
 }
 
 /**
- * A Ming fort: a square palisade with a wooden watch tower and flags; a brick wall with merlons, a square gate tower and
- * a pier; corner towers, a cannon platform and a beacon; at the top a larger yard and a shipyard.
+ * A Japanese camp (wajo): curtains round tents and nobori; then a residence hall, a turret and a landing; then a stone-
+ * based plaster wall with a turret gate round a three-tier keep, barracks and a corner turret; at the top a four-tier
+ * keep and a second hall and turret.
  */
-function ming(level: number): Piece[] {
-  const half = level >= 4 ? 1 : 0.8;
-  const flags = [stand('mg_flag', 0.3, -0.5, 0.6, 0.5), stand('mg_flag', -0.1, 0.55, -0.4, 0.5)];
-  const watch = stand('mg_watch', -0.3, -0.35, 0.3, 0.55);
-  if (level === 1) return [...square('mg_palisade', half, false), watch, ...flags];
-  const pieces: Piece[] = [...square('mg_brick', half, true), at('mg_gate', 0, half, 0.85), watch, ...flags, at('pier', SEA_SIDE, half + 0.55, 0.85)];
-  if (level === 2) return pieces;
-  // The guns look out over the water, the beacon stands where the yard is open.
-  pieces.push(...corners('mg_corner', half, 0.46), stand('mg_beacon', 0.3, 0.3, 0, 0.45), stand('mg_platform', -0.5, 0.3,-Math.PI / 2, 0.5));
-  if (level >= 4) pieces.push(at('mg_yard', SEA_SIDE - 0.45, 1.55, 0.9));
-  return pieces;
-}
-
-/** The camp model tier (1 to 3) of a camp level: the top two levels share the largest model. */
-export const campTier = (level: number) => Math.max(1, Math.min(3, level));
-
-/** Where the owner's flag stands in an unturned camp, in settlement radii: the centre unless a keep or the great hall is there. */
-export function flagSpot(level: number, faction: FactionId): [number, number] {
-  if (faction === 'japan' && level >= 3) return [0.52, -0.12];
-  return faction === 'joseon' && level >= 4 ? [0.24, 0] : [0, 0];
-}
-
-/**
- * A Joseon camp: a palisade round three thatched huts; then two tiled houses and a pier with a boat shed; then a stone wall
- * with a gatehouse, two beacon mounds, a battery and a powder store; at the top a great hall facing the gate across the
- * yard, a shipyard and a second battery. The gate looks away from the sea, the water works stand on the sea side.
- */
-function joseon(level: number): Piece[] {
-  const huts = [facingIn('choga', -0.44, -0.5, 0.36), facingIn('choga', -0.62, 0, 0.36), facingIn('choga', -0.44, 0.5, 0.36)];
-  const houses: Piece[] = [{ kind: 'giwa', x: 0.3, z: -0.5, rot: 0, size: 0.48 }, { kind: 'giwa', x: 0.3, z: 0.5, rot: Math.PI, size: 0.48 }];
-  const dock = at('dock', SEA_SIDE, 1.38, 0.85);
-  if (level === 1) return [...ring('palisade', null), ...huts];
-  if (level === 2) return [...ring('palisade', null), ...huts, ...houses, dock];
-  const pieces: Piece[] = [
-    ...ring('stone', 0),
-    at('fortgate', 0, WALL_RADIUS, 0.7),
-    at('bongsu', 1.15, WALL_RADIUS, 0.32), at('bongsu', -1.15, WALL_RADIUS, 0.32),
-    ...huts, ...houses,
-    facingIn('magazine', -0.06, -0.72, 0.3),
-    dock,
-    at('battery', SEA_SIDE + 0.62, 1.3, 0.6),
+function japanCamp(level: number): CampPlan {
+  const S = Math.PI / 2;
+  if (level === 1) return {
+    radius: 0.58, flag: { x: 0.05, z: 0 },
+    pieces: [
+      ...ring('wa_fence', 0.55, 11, 0.2), put('wa_tent', -0.25, -0.2, 0), put('wa_tent', -0.25, 0.2, 0), put('wa_tent', 0.05, -0.3, 0), put('wa_tent', 0.05, 0.3, 0),
+      put('wa_banner', 0.34, -0.24, Math.PI), put('wa_banner', 0.34, 0.24, Math.PI),
+    ],
+  };
+  if (level === 2) return {
+    radius: 0.71, flag: { x: 0.36, z: 0.05 },
+    pieces: [
+      ...ring('wa_fence', 0.68, 13, 0.22), pierAt(0.68), put('wa_hall', -0.3, 0, 0), put('wa_tent', 0.1, -0.42, 0), put('wa_tent', 0.1, 0.42, 0), put('wa_tent', 0.38, -0.32, 0),
+      put('wa_tent', -0.05, -0.2, 0),
+      put('wa_tower', -0.26, 0.36, 0), put('wa_banner', 0.44, 0.26, Math.PI), put('wa_banner', 0.44, -0.08, Math.PI),
+    ],
+  };
+  const r = level === 3 ? 0.84 : 0.98, n = level === 3 ? 16 : 19;
+  const pieces = [
+    ...ring('wa_wall', r, n, m(17.2)), put('wa_gate', r, 0, 0), pierAt(r),
+    put(level >= 4 ? 'wa_keep4' : 'wa_keep3', -0.3, 0, 0), put('wa_hall', 0.2, -0.48, S), put('wa_tower', -0.45, 0.4, 0),
+    put('wa_tent', 0.22, 0.44, 0), put('wa_tent', 0.5, 0.3, 0), put('wa_tent', 0, 0.25, 0), put('wa_tent', 0.3, -0.2, 0),
+    put('wa_banner', 0.58, -0.2, Math.PI), put('wa_banner', 0.58, 0.14, Math.PI),
   ];
-  if (level >= 4) pieces.push({ kind: 'hall', x: -0.2, z: 0, rot: Math.PI / 2, size: 0.56 }, at('shipyard', SEA_SIDE - 0.72, 1.45, 0.95), at('battery', SEA_SIDE + 1.3, 1.22, 0.6));
-  return pieces;
+  if (level >= 4) pieces.push(put('wa_hall', -0.58, -0.36, 0), put('wa_tower', 0.25, 0.66, -S));
+  return { radius: r + 0.14, flag: { x: 0.62, z: -0.02 }, pieces };
 }
 
 /**
- * The pieces of a camp of this level and owner, before it is turned to face the sea. Each navy has its own look, and in
- * every look a higher level has at least the buildings of the lower one.
+ * A Ming fort: a square stockade round a watchtower, tents and flags; then a brick wall with its gate tower round two
+ * barracks and a landing; then a larger square with corner bastions round the yamen hall; at the top a larger yard
+ * still with a third barracks.
  */
-export function settlementPieces(level: number, faction: FactionId = 'joseon'): Piece[] {
-  if (level < 1) return [];
-  if (faction === 'japan') return japan(level);
-  if (faction === 'ming') return ming(level);
-  return joseon(level);
+function mingCamp(level: number): CampPlan {
+  const S = Math.PI / 2;
+  if (level === 1) return {
+    radius: 0.72, flag: { x: 0.25, z: 0.02 },
+    pieces: [
+      ...square('mg_palisade', 0.5, 3, 0.2), put('mg_watch', -0.28, -0.28, 0), put('mg_tent', -0.25, 0.2, 0), put('mg_tent', 0.12, -0.26, 0),
+      put('mg_tent', 0.12, 0.26, 0), put('mg_flag', 0.32, 0.24, Math.PI),
+    ],
+  };
+  const h = level === 2 ? 0.6 : level === 3 ? 0.75 : 0.88, n = level === 2 ? 3 : level === 3 ? 4 : 5;
+  const pieces = [...square('mg_brick', h, n, m(16.4)), put('mg_gate', h, 0, 0), pierAt(h)];
+  if (level === 2) {
+    pieces.push(
+      put('mg_barracks', -0.05, -0.36, S), put('mg_barracks', -0.05, 0.36, -S), put('mg_watch', -0.4, 0, 0), put('mg_flag', 0.38, -0.24, Math.PI),
+      put('mg_tent', 0.38, 0.24, 0), put('mg_tent', -0.18, -0.12, 0), put('mg_tent', -0.18, 0.12, 0),
+    );
+    return { radius: h * Math.SQRT2 + 0.06, flag: { x: 0.4, z: 0.02 }, pieces };
+  }
+  pieces.push(
+    ...[[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([sx, sz]) => put('mg_corner', sx! * h, sz! * h, 0)),
+    put('mg_hall', -0.3, 0, 0), put('mg_barracks', 0.2, -0.47, S), put('mg_barracks', 0.2, 0.47, -S), put('mg_watch', -0.48, 0.46, 0),
+    put('mg_tent', 0.1, -0.2, 0), put('mg_tent', 0.1, 0.2, 0), put('mg_tent', -0.5, -0.45, 0),
+    put('mg_flag', 0.56, -0.2, Math.PI), put('mg_flag', 0.56, 0.2, Math.PI),
+  );
+  if (level >= 4) pieces.push(put('mg_barracks', -0.3, -0.68, S), put('mg_tent', 0.62, -0.5, 0), put('mg_tent', 0.62, 0.5, 0));
+  // The corner bastions stand out of the square's corners.
+  return { radius: (h + 0.12) * Math.SQRT2, flag: { x: 0.6, z: 0.02 }, pieces };
 }
 
-/** Cheap string hash (FNV-1a) so each camp keeps its own turn and flag spot between renders. */
+/**
+ * The camp of a level (1 to 4) and navy, unturned: its sea side looks west (SEA_SIDE). Every navy's camp has its own
+ * look, and a higher level keeps every building of the one below it (a keep grows a tier, a stockade becomes a wall).
+ */
+export function campPlan(level: number, navy: FactionId): CampPlan {
+  if (navy === 'japan') return japanCamp(level);
+  if (navy === 'ming') return mingCamp(level);
+  return joseonCamp(level);
+}
+
+/** The pieces of a camp of this level and owner, unturned; none below level 1. */
+export const settlementPieces = (level: number, navy: FactionId = 'joseon'): Piece[] => (level < 1 ? [] : campPlan(level, navy).pieces);
+
+/** Cheap string hash (FNV-1a) so each place keeps its own turn and its town its own houses between renders. */
 export function hash(text: string) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i += 1) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
   return h >>> 0;
 }
 
-/**
- * Turns a camp so its dock side looks at the most open sea. `isSea` takes an offset in settlement radii; of eight
- * candidate turns the one with the most sea around the dock wins, ties go to the hash so neighbouring camps differ.
- */
-export function faceSea(pieces: Piece[], seed: number, isSea: (x: number, z: number) => boolean): { pieces: Piece[]; turn: number } {
-  let best = 0, bestScore = -1;
-  for (let k = 0; k < 8; k += 1) {
-    const turn = (((k + seed) % 8) / 8) * Math.PI * 2;
-    let score = 0;
-    for (const probe of [1.3, 1.7, 2.2]) for (const spread of [-0.5, 0, 0.5]) {
-      const a = SEA_SIDE + turn + spread;
-      if (isSea(Math.cos(a) * probe, Math.sin(a) * probe)) score += 1;
-    }
-    if (score > bestScore) { bestScore = score; best = turn; }
-  }
-  const c = Math.cos(best), s = Math.sin(best);
-  return { turn: best, pieces: pieces.map((p) => ({ ...p, x: p.x * c - p.z * s, z: p.x * s + p.z * c, rot: p.rot - best })) };
+/** A small deterministic random stream from a seed (mulberry32). */
+function stream(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-export interface SettlementSpec { id: string; u: number; v: number; owner: FactionId; level: number }
+/** A town before it is placed: its pieces and grounds round its centre (its +x looks towards the camp) and its reach. */
+export interface TownPlan { pieces: Piece[]; grounds: Grounds; radius: number }
+
+/** How many houses a port's town has, and how many of them are tiled, by the region's value and whether it is a seat. */
+export function townSize(value: number, seat: boolean) {
+  const houses = [5, 8, 11][Math.max(0, Math.min(2, value - 1))]! + (seat ? 2 : 0);
+  return { houses, tiled: [1, 2, 4][Math.max(0, Math.min(2, value - 1))]! + (seat ? 1 : 0), pavilion: value >= 3 || seat };
+}
+
+/**
+ * A Korean town: thatched houses and a few tiled ones along one lane (two in a larger town), each facing the lane across
+ * its front yard inside stone garden walls, the village's old tree and pavilion where the lane comes in from the camp
+ * (+x), fields beyond the last houses. A Japanese village (Tsushima) has its own houses. The seed shuffles which plot
+ * gets which house and turns each a little, so no two towns are alike.
+ */
+export function townPlan(houses: number, tiled: number, seed: number, japanese = false, pavilion = false): TownPlan {
+  const rnd = stream(seed);
+  const lanes = houses > 6 ? [-0.42, 0.42] : [0];
+  const xs = [0, -0.38, 0.38];
+  // Plots: the middle of each lane first, both sides, then outwards; a larger town fills its second lane in turn.
+  const plots: { x: number; lane: number; side: 1 | -1 }[] = [];
+  for (const xi of [0, 1, 2]) for (const side of [1, -1] as const) for (let l = 0; l < lanes.length; l += 1) plots.push({ x: xs[xi]!, lane: lanes[l]!, side });
+  for (let i = plots.length - 1; i > 0; i -= 1) {
+    // A light shuffle: neighbours trade places, so the centre still fills first.
+    if (rnd() < 0.35) [plots[i], plots[i - 1]] = [plots[i - 1]!, plots[i]!];
+  }
+  const pieces: Piece[] = [];
+  const walls = new Map<string, Piece>();
+  const wall = (x: number, z: number, along: 'x' | 'z', len: number) => {
+    const key = `${along}${x.toFixed(3)},${z.toFixed(3)}`;
+    if (!walls.has(key)) walls.set(key, { kind: 'doldam', x, z, rot: along === 'x' ? 0 : Math.PI / 2, len });
+  };
+  const used = plots.slice(0, Math.min(houses, plots.length));
+  used.forEach((p, i) => {
+    const kind: PieceKind = japanese ? 'wa_house' : i < tiled ? 'giwa' : 'choga';
+    const z = p.lane + p.side * 0.24;
+    // The house faces the lane: a plot north of the lane looks south.
+    pieces.push({ kind, x: p.x + (rnd() - 0.5) * 0.04, z, rot: (p.side > 0 ? Math.PI : 0) + (rnd() - 0.5) * 0.12 });
+    wall(p.x, p.lane + p.side * 0.385, 'x', 0.38);
+    for (const sx of [-1, 1]) wall(p.x + sx * 0.19, p.lane + p.side * 0.235, 'z', 0.3);
+  });
+  pieces.push(...walls.values());
+  // Where the lane comes in from the camp: the village tree, and the pavilion of a larger town.
+  const mid = lanes.length > 1 ? 0 : -0.14;
+  pieces.push(put('tree', 0.64, mid, 0));
+  if (pavilion) pieces.push(put('jeongja', 0.66, mid + (lanes.length > 1 ? 0.24 : 0.36), Math.PI));
+  // Fields beyond the far end of each lane.
+  const fields: Field[] = [];
+  for (const lane of lanes) for (const side of [-1, 1]) fields.push({ x: -0.82, z: lane + side * 0.15, hx: 0.14, hz: 0.12, rot: (rnd() - 0.5) * 0.1, paddy: rnd() < 0.6 });
+  const roads = lanes.map((z) => [{ x: -0.62, z }, { x: 0.8, z }]);
+  if (lanes.length > 1) roads.push([{ x: 0.58, z: lanes[0]! }, { x: 0.58, z: lanes[1]! }]);
+  let radius = 0;
+  for (const p of pieces) {
+    const [hx, hz] = FOOTPRINT[p.kind];
+    radius = Math.max(radius, Math.hypot(Math.abs(p.x) + (p.len ?? m(hx)) / 2 + m(hz), Math.abs(p.z) + m(hz)));
+  }
+  for (const f of fields) radius = Math.max(radius, Math.hypot(Math.abs(f.x) + f.hx, Math.abs(f.z) + f.hz));
+  return { pieces, grounds: { yard: 0, lanes: roads, fields }, radius };
+}
+
+/** The works a region can build and the kind each is drawn as for a navy. */
+const WORKS: Partial<Record<BuildingKind, Record<FactionId, PieceKind>>> = {
+  battery: { joseon: 'jo_battery', japan: 'wa_battery', ming: 'mg_battery' },
+  shipyard: { joseon: 'jo_yard', japan: 'wa_yard', ming: 'mg_yard' },
+  dock: { joseon: 'jo_dock', japan: 'wa_dock', ming: 'mg_dock' },
+  granary: { joseon: 'jo_granary', japan: 'wa_granary', ming: 'mg_granary' },
+  beacon: { joseon: 'jo_beacon', japan: 'wa_beacon', ming: 'mg_beacon' },
+};
+/** The piece a region's work is drawn as, in the style of whoever holds the port (Korea's own while nobody does). */
+export const workKind = (work: BuildingKind, owner: FactionId | null): PieceKind | null => WORKS[work]?.[owner ?? 'joseon'] ?? null;
+
+/** Frame point to "is this open water". */
+export type IsSea = (u: number, v: number) => boolean;
+
+/** Which way (east, south) a port's places are shifted from its marker, by the side the label takes. */
+const LABEL_AWAY: Record<'b' | 't' | 'l' | 'r', [number, number]> = { b: [0, -1], t: [0, 1], l: [1, 0], r: [-1, 0] };
+
+/** Turns a place's pieces by `turn` (its x towards its z) round its centre. */
+export function turnPieces(pieces: Piece[], turn: number): Piece[] {
+  const c = Math.cos(turn), s = Math.sin(turn);
+  return pieces.map((p) => ({ ...p, x: p.x * c - p.z * s, z: p.x * s + p.z * c, rot: p.rot - turn }));
+}
+
+/**
+ * The turn that puts a camp's sea side towards the most open water, with `sea` taking an offset in radii: of sixteen
+ * turns the one with the most water off its sea side wins, ties going to the seed so neighbouring camps differ. Also
+ * how much water it found, out of nine probes.
+ */
+function seaTurn(r: number, seed: number, sea: (x: number, z: number) => boolean) {
+  let best = { turn: ((seed % 16) / 16) * Math.PI * 2, score: -1 };
+  for (let k = 0; k < 16; k += 1) {
+    const turn = (((k + seed) % 16) / 16) * Math.PI * 2;
+    let score = 0;
+    for (const d of [r + 0.15, r + 0.45, r + 0.9]) for (const spread of [-0.35, 0, 0.35]) {
+      const a = SEA_SIDE + turn + spread;
+      if (sea(Math.cos(a) * d, Math.sin(a) * d)) score += 1;
+    }
+    if (score > best.score) best = { turn, score };
+  }
+  return best;
+}
+
+/** Turns a camp's pieces so its sea side looks at the most open sea; the same seed always turns the same way. */
+export function faceSea(pieces: Piece[], seed: number, isSea: (x: number, z: number) => boolean): { pieces: Piece[]; turn: number } {
+  const { turn } = seaTurn(1, seed, isSea);
+  return { turn, pieces: turnPieces(pieces, turn) };
+}
+
+/** The corners of a piece's footprint in radii, on the place whose centre is (cx, cz). */
+function corners(p: Piece, cx = 0, cz = 0): [number, number][] {
+  const [fx, fz] = FOOTPRINT[p.kind];
+  const hx = p.len !== undefined ? p.len / 2 : m(fx), hz = m(fz);
+  const c = Math.cos(p.rot), s = Math.sin(p.rot);
+  // Local x goes to (cos rot, -sin rot), local z to (sin rot, cos rot).
+  return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, w]) => [cx + p.x + u! * hx * c + w! * hz * s, cz + p.z - u! * hx * s + w! * hz * c]);
+}
+
+/** Ground already taken: a disc in radii. */
+interface Disc { x: number; z: number; r: number }
+
+/** A port as the layout sees it: its region, its marker in radii (x east, z south) and the way its places lean from it. */
+interface Port { r: RegionView; x: number; z: number; ax: number; az: number; seed: number; level: number }
+
+/** Probe points of a disc: its centre and two rings, in radii from it. */
+const probes = (r: number) => [[0, 0], ...[0.45, 0.88].flatMap((k) => Array.from({ length: 10 }, (_, i) => [Math.cos((i / 10) * Math.PI * 2 + k) * r * k, Math.sin((i / 10) * Math.PI * 2 + k) * r * k]))] as [number, number][];
+
+/** A step of the spiral of candidate spots round a preferred one: distances `ds`, `n` directions each. */
+function* spiral(x: number, z: number, ds: number[], n: number) {
+  for (const d of ds) for (let i = 0; i < (d === 0 ? 1 : n); i += 1) {
+    const a = (i / n) * Math.PI * 2 + d * 1.7;
+    yield { x: x + Math.cos(a) * d, z: z + Math.sin(a) * d, d };
+  }
+}
+
+/**
+ * Every on-map port's places: its camp, when its owner has built one, on the coast by the port with its sea side and pier
+ * towards the open water; its Korean town beside the camp on the land side, its lane running to the camp's gate; the
+ * works it has built round them (battery on the shore looking out to sea, shipyard and dock on the waterline, granary by
+ * the town) and its beacon on the high ground inland. Larger camps choose first. Every place stands on land and keeps
+ * clear of every other port's; without `isSea` (before the relief has loaded) each simply stands by its port.
+ */
+export function layoutSettlements(regions: RegionView[], isSea?: IsSea): SettlementSpec[] {
+  const R = SETTLEMENT_RADIUS;
+  const sea = (x: number, z: number) => !!isSea && isSea(x * R, z * R * MAP_ASPECT);
+  const land = (x: number, z: number) => !isSea || !isSea(x * R, z * R * MAP_ASPECT);
+  const landShare = (x: number, z: number, r: number) => {
+    const list = probes(r);
+    return list.filter(([dx, dz]) => land(x + dx, z + dz)).length / list.length;
+  };
+  const taken: Disc[] = [];
+  const free = (x: number, z: number, r: number) => taken.every((o) => Math.hypot(x - o.x, z - o.z) >= r + o.r);
+  const ports: Port[] = regions.filter((r) => !r.offMap).map((r) => {
+    const p = project(r.lon, r.lat);
+    const [ax, az] = LABEL_AWAY[r.labelSide ?? 'b'];
+    return { r, x: p.u / R, z: p.v / MAP_ASPECT / R, ax, az, seed: hash(r.id), level: r.owner ? campLevel(r) : 0 };
+  });
+  const out: SettlementSpec[] = [];
+  const place = (id: string, region: string, kind: SettlementSpec['kind'], x: number, z: number, owner: FactionId | null, level: number, pieces: Piece[], grounds: Grounds, flag?: { x: number; z: number }) => {
+    const radius = pieces.reduce((n, p) => Math.max(n, ...corners(p).map(([cx, cz]) => Math.hypot(cx, cz))), 0.2);
+    const spec: SettlementSpec = { id, region, kind, u: x * R, v: z * R * MAP_ASPECT, owner, level, radius, pieces, grounds, flag };
+    out.push(spec);
+    return spec;
+  };
+  const camps = new Map<string, { x: number; z: number; turn: number; r: number; spec: SettlementSpec }>();
+  // Camps, the highest level first.
+  const withCamps = ports.filter((p) => p.level > 0).sort((a, b) => b.level - a.level || b.r.value - a.r.value);
+  for (const port of withCamps) {
+    const plan = campPlan(port.level, port.r.owner!);
+    const r = plan.radius;
+    const want = { x: port.x + port.ax * 1.1, z: port.z + port.az * 1.1 };
+    let best: { x: number; z: number; turn: number; cost: number } | null = null;
+    if (isSea) {
+      for (const strict of [true, false]) {
+        for (const c of spiral(want.x, want.z, [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.25, 1.5, 1.8], 16)) {
+          if (!free(c.x, c.z, r + 0.04)) continue;
+          const ground = landShare(c.x, c.z, r * 0.88);
+          if (ground < (strict ? 0.95 : 0.7)) continue;
+          const t = seaTurn(r, port.seed, (dx, dz) => sea(c.x + dx, c.z + dz));
+          if (t.score < (strict ? 3 : 1)) continue;
+          const cost = c.d + (9 - t.score) * 0.05 + (1 - ground) * 2;
+          if (!best || cost < best.cost) best = { x: c.x, z: c.z, turn: t.turn, cost };
+        }
+        if (best) break;
+      }
+    }
+    const spot = best ?? { ...want, turn: seaTurn(r, port.seed, (dx, dz) => sea(want.x + dx, want.z + dz)).turn };
+    let pieces = turnPieces(plan.pieces, spot.turn);
+    // The ring opens where the shore cuts into it, and the pier reaches from the shore out over the water.
+    pieces = pieces.filter((p) => !WALL_KINDS.has(p.kind) || corners(p, spot.x, spot.z).every(([cx, cz]) => land(cx, cz)));
+    pieces = pieces.flatMap((p) => (WATER_KINDS.has(p.kind) ? shore(p, spot.x, spot.z, land) : [p]));
+    const c = Math.cos(spot.turn), s = Math.sin(spot.turn);
+    const flag = { x: plan.flag.x * c - plan.flag.z * s, z: plan.flag.x * s + plan.flag.z * c };
+    const spec = place(port.r.id, port.r.id, 'camp', spot.x, spot.z, port.r.owner, port.level, pieces, { yard: r - 0.14, lanes: [], fields: [] }, flag);
+    taken.push({ x: spot.x, z: spot.z, r });
+    camps.set(port.r.id, { x: spot.x, z: spot.z, turn: spot.turn, r, spec });
+  }
+  // Towns, the larger first; each by its camp's gate when it has one, else by its port.
+  const byValue = [...ports].sort((a, b) => b.r.value - a.r.value || Number(!!b.r.seat) - Number(!!a.r.seat));
+  for (const port of byValue) {
+    const camp = camps.get(port.r.id);
+    const size = townSize(port.r.value, !!port.r.seat);
+    let town: { plan: TownPlan; x: number; z: number; cost: number } | null = null;
+    for (let houses = size.houses; houses >= 3 && !town; houses -= 2) {
+      const plan = townPlan(houses, Math.min(size.tiled, houses - 2), port.seed, port.r.korea === false, size.pavilion && houses === size.houses);
+      const rt = plan.radius;
+      const spots = camp
+        ? [...spiral(camp.x, camp.z, [0.06, 0.35, 0.7, 1.1, 1.6, 2.2].map((d) => camp.r + rt + d), 20)].map((c) => ({ ...c, d: c.d - camp.r - rt }))
+        : [...spiral(port.x + port.ax * 0.9, port.z + port.az * 0.9, [0, 0.25, 0.5, 0.8, 1.1, 1.5, 1.9, 2.4, 3.0], 16)];
+      for (const c of spots) {
+        if (!free(c.x, c.z, rt + 0.03)) continue;
+        const ground = landShare(c.x, c.z, rt * 0.92);
+        if (ground < 0.8) continue;
+        // Beside the camp: best on its land side, by its gate (the camp's angle 0 after its turn).
+        const gate = camp ? Math.abs(Math.atan2(Math.sin(Math.atan2(c.z - camp.z, c.x - camp.x) - camp.turn), Math.cos(Math.atan2(c.z - camp.z, c.x - camp.x) - camp.turn))) : 0;
+        const cost = c.d + gate * 0.35 + (1 - ground) * 1.5;
+        if (!town || cost < town.cost) town = { plan, x: c.x, z: c.z, cost };
+      }
+      if (!isSea && !town) town = { plan, x: spots[0]!.x, z: spots[0]!.z, cost: 0 };
+    }
+    if (!town) continue;
+    // The town looks towards its camp (or its port): its lane comes in from there.
+    const to = camp ?? { x: port.x, z: port.z };
+    const turn = Math.atan2(to.z - town.z, to.x - town.x);
+    const keep = turnPieces(town.plan.pieces, turn).filter((p) => corners(p, town!.x, town!.z).every(([cx, cz]) => land(cx, cz)));
+    const c = Math.cos(turn), s = Math.sin(turn);
+    const rotate = (q: { x: number; z: number }) => ({ x: q.x * c - q.z * s, z: q.x * s + q.z * c });
+    const lanes = town.plan.grounds.lanes.map((lane) => lane.map(rotate));
+    if (camp) {
+      // A lane from the town's end out to the camp's gate.
+      const gate = { x: camp.x + Math.cos(camp.turn) * (camp.r + 0.05) - town.x, z: camp.z + Math.sin(camp.turn) * (camp.r + 0.05) - town.z };
+      lanes.push([rotate({ x: 0.8, z: 0 }), gate]);
+    }
+    const fields = town.plan.grounds.fields.map((f) => ({ ...f, ...rotate(f), rot: f.rot + turn })).filter((f) => land(town!.x + f.x, town!.z + f.z));
+    place(`${port.r.id}/town`, port.r.id, 'town', town.x, town.z, port.r.owner, 0, keep, { yard: 0, lanes, fields });
+    taken.push({ x: town.x, z: town.z, r: town.plan.radius });
+  }
+  // Works, round the camp (or the town when there is none), in the style of whoever holds the port.
+  for (const port of ports) {
+    const camp = camps.get(port.r.id);
+    const base = camp?.spec ?? out.find((s) => s.id === `${port.r.id}/town`);
+    if (!base) continue;
+    const bx = base.u / R, bz = base.v / R / MAP_ASPECT;
+    // Round a camp the works stand just outside its wall (its landing reaches further out over the water).
+    const reach = camp ? camp.r : base.radius;
+    for (const b of port.r.buildings) {
+      if (b.kind === 'camp' || b.level < 1) continue;
+      const kind = workKind(b.kind, port.r.owner);
+      if (!kind) continue;
+      const work = placeWork(kind, b.kind, port.seed, bx, bz, reach, { sea, land, free, isSea: !!isSea });
+      if (!work) continue;
+      taken.push({ x: work.x, z: work.z, r: work.r });
+      if (b.kind === 'beacon') place(`${port.r.id}/beacon`, port.r.id, 'beacon', work.x, work.z, port.r.owner, 0, [{ ...work.piece, x: 0, z: 0 }], { yard: 0, lanes: [], fields: [] });
+      else {
+        base.pieces.push({ ...work.piece, x: work.x - bx, z: work.z - bz });
+        base.radius = Math.max(base.radius, Math.hypot(work.x - bx, work.z - bz) + work.r);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * A water piece slid along its own axis until its landward end stands on the shore and its far end over the water, or
+ * left out when no such place is near (a landing cannot stand inland).
+ */
+function shore(p: Piece, cx: number, cz: number, land: (x: number, z: number) => boolean): Piece[] {
+  const half = m(FOOTPRINT[p.kind][1]);
+  const dx = Math.sin(p.rot), dz = Math.cos(p.rot);
+  for (let k = 0; k <= 24; k += 1) {
+    const shift = (k % 2 ? -1 : 1) * Math.ceil(k / 2) * 0.05;
+    const x = p.x + dx * shift, z = p.z + dz * shift;
+    const back = land(cx + x - dx * half * 0.85, cz + z - dz * half * 0.85);
+    const front = !land(cx + x + dx * half * 0.6, cz + z + dz * half * 0.6) && !land(cx + x + dx * half * 0.95, cz + z + dz * half * 0.95);
+    if (back && front) return [{ ...p, x, z }];
+  }
+  return [];
+}
+
+/**
+ * Where a work of `kind` stands round a place of radius `r` at (bx, bz), in radii: a battery on the land at the shore,
+ * its guns towards the water; a shipyard or dock across the waterline; a granary on the land close by; a beacon on the
+ * most inland ground within a couple of radii. Null when nothing fits.
+ */
+function placeWork(kind: PieceKind, work: BuildingKind, seed: number, bx: number, bz: number, r: number,
+  o: { sea: (x: number, z: number) => boolean; land: (x: number, z: number) => boolean; free: (x: number, z: number, r: number) => boolean; isSea: boolean }) {
+  const [fx, fz] = FOOTPRINT[kind];
+  const reach = Math.hypot(m(fx), m(fz));
+  const onLand = (p: Piece, x: number, z: number) => corners({ ...p, x: 0, z: 0 }, x, z).every(([cx, cz]) => o.land(cx, cz));
+  let best: { x: number; z: number; piece: Piece; cost: number } | null = null;
+  const n = 24;
+  for (let i = 0; i < n; i += 1) {
+    const a = ((i + (seed % n)) / n) * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
+    let piece = put(kind, 0, 0, work === 'granary' || work === 'beacon' ? a + Math.PI : a);
+    if (work === 'shipyard' || work === 'dock') {
+      // Out along the ray to the first water, the piece across the waterline there.
+      for (let d = r + 0.05; d <= r + 1.3; d += 0.05) {
+        if (o.isSea && !o.sea(bx + ca * d, bz + sa * d)) continue;
+        const half = m(fz), x = bx + ca * (d + half * 0.1), z = bz + sa * (d + half * 0.1);
+        const ok = !o.isSea || (o.land(x - ca * half * 0.85, z - sa * half * 0.85) && o.sea(x + ca * half * 0.6, z + sa * half * 0.6) && o.sea(x + ca * half * 0.95, z + sa * half * 0.95));
+        if (ok && o.free(x, z, reach * 0.62)) {
+          const cost = d - r;
+          if (!best || cost < best.cost) best = { x, z, piece, cost };
+        }
+        break;
+      }
+      continue;
+    }
+    for (const extra of work === 'beacon' ? [0.9, 1.3, 1.7, 2.1] : [0.06, 0.25, 0.45]) {
+      const d = r + reach + extra, x = bx + ca * d, z = bz + sa * d;
+      let cost = extra;
+      if (work === 'battery') {
+        // On the shore, its guns turned to the nearest open water.
+        let aim = { face: a, ahead: 0 };
+        for (let k = 0; k < 8; k += 1) {
+          const f = (k / 8) * Math.PI * 2, ahead = [0.2, 0.4, 0.6].filter((q) => o.sea(x + Math.cos(f) * (m(fz) + q), z + Math.sin(f) * (m(fz) + q))).length;
+          if (ahead > aim.ahead) aim = { face: f, ahead };
+        }
+        if (o.isSea && aim.ahead < 1) continue;
+        piece = put(kind, 0, 0, aim.face);
+        cost += (3 - aim.ahead) * 0.3;
+      }
+      if (!o.free(x, z, reach) || !onLand(piece, x, z)) continue;
+      if (work === 'beacon') {
+        // High ground: as far from the water as the ring allows.
+        const inland = [0.5, 0.9].reduce((nn, k) => nn + Array.from({ length: 8 }, (_, j) => o.land(x + Math.cos(j * 0.785) * k, z + Math.sin(j * 0.785) * k)).filter(Boolean).length, 0);
+        cost -= inland * 0.12;
+      }
+      if (!best || cost < best.cost) best = { x, z, piece, cost };
+      break;
+    }
+  }
+  return best ? { ...best, r: reach } : null;
+}
+
+/**
+ * The last layout and what it was made from: buildWorld runs whenever a fleet moves, and the places only change with
+ * the ports (owner, camp, works) or with the relief.
+ */
+let memo: { key: string; isSea?: IsSea; settlements: SettlementSpec[] } | null = null;
+function settled(regions: RegionView[], isSea?: IsSea) {
+  const key = JSON.stringify(regions.map((r) => [r.id, r.owner, r.lon, r.lat, r.value, r.seat, r.korea, r.offMap, r.labelSide, r.buildings.map((b) => [b.kind, b.level, b.maxLevel])]));
+  if (!memo || memo.key !== key || memo.isSea !== isSea) memo = { key, isSea, settlements: layoutSettlements(regions, isSea) };
+  return memo.settlements;
+}
+
 export interface FleetSpec {
   key: string; u: number; v: number; faction: FactionId; count: number; seed: number;
   /** The kind of each of its `count` hulls, the largest first; empty when its ships' kinds are not known. */
@@ -213,9 +598,6 @@ export function drawnKinds(kinds: ShipClass[], count: number): ShipClass[] {
   return Array.from({ length: count }, (_, i) => known[Math.floor(((i + 0.5) * known.length) / count)]!);
 }
 
-/** Which way (east, south) a camp is shifted from its port marker, by the side the label takes. */
-const LABEL_AWAY: Record<'b' | 't' | 'l' | 'r', [number, number]> = { b: [0, -1], t: [0, 1], l: [1, 0], r: [-1, 0] };
-
 /**
  * How far along its lane a fleet in transit is, kept off both ports so it stays clear of their discs: the share of the
  * lane's turns already sailed, or the middle when the lane's length is unknown.
@@ -224,9 +606,6 @@ export function transitShare(left: number, turns: number | undefined) {
   if (!turns || turns < 1) return 0.5;
   return Math.min(0.75, Math.max(0.25, (turns - left) / turns));
 }
-
-/** Frame point to "is this open water", for keeping ships off the islands a straight lane crosses. */
-export type IsSea = (u: number, v: number) => boolean;
 
 /** A fleet on a lane is kept at least this share of the lane off either port, so its ships clear the port's disc. */
 const LANE_MARGIN = 0.08;
@@ -262,20 +641,12 @@ export function transitSpot(from: RegionView, to: RegionView, left: number, isSe
 }
 
 /**
- * Settlements for every owned camp, ships for every fleet in port (one group per faction) or on a lane (kept off land when
- * `isSea` is given), and the closed turn's sailings.
+ * The ports' places (camps, towns and beacons, see layoutSettlements), ships for every fleet in port (one group per
+ * faction) or on a lane (kept off land when `isSea` is given), and the closed turn's sailings.
  */
 export function buildWorld(regions: RegionView[], fleets: FleetView[], replay: ReplayView | null = null, isSea?: IsSea): MapWorld {
   const byId = new Map(regions.map((r) => [r.id, r]));
-  const settlements: SettlementSpec[] = [];
-  for (const r of regions) {
-    const level = campLevel(r);
-    if (!r.owner || r.offMap || level < 1) continue;
-    const p = project(r.lon, r.lat);
-    // The camp stands on the side away from the port's label and picture, so the DOM card never hides it.
-    const [dx, dz] = LABEL_AWAY[r.labelSide ?? 'b'];
-    settlements.push({ id: r.id, u: p.u + dx * SETTLEMENT_RADIUS * 1.1, v: p.v + dz * SETTLEMENT_RADIUS * 1.1 * MAP_ASPECT, owner: r.owner, level });
-  }
+  const settlements = settled(regions, isSea);
   const groups = new Map<string, FleetSpec & { ships: ShipClass[] }>();
   for (const f of fleets) {
     if (!f.ships.length) continue;
@@ -337,10 +708,10 @@ export function laneSpot(f: FleetView, byId: Map<string, RegionView>, isSea?: Is
 
 /**
  * Berths for every squadron at anchor. The port's owner chooses first, so a besieger anchors off the port beside it;
- * every hull stays clear of the camp's docks and of the hulls already berthed there.
+ * every hull stays clear of the port's places (the camp with its landing, the town, the works on the waterline) and of
+ * the hulls already berthed there.
  */
 function berthFleets(fleets: FleetSpec[], byId: Map<string, RegionView>, settlements: SettlementSpec[], isSea: IsSea) {
-  const camps = new Map(settlements.map((s) => [s.id, s]));
   const byPort = new Map<string, FleetSpec[]>();
   for (const f of fleets) {
     if (f.heading) continue;
@@ -351,9 +722,7 @@ function berthFleets(fleets: FleetSpec[], byId: Map<string, RegionView>, settlem
     const owner = byId.get(port)?.owner;
     list.sort((a, b) => Number(b.faction === owner) - Number(a.faction === owner));
     const { u, v } = list[0]!;
-    const camp = camps.get(port);
-    // The camp and its docks reach about two radii from its centre.
-    const avoid: Circle[] = camp ? [{ x: (camp.u - u) / SETTLEMENT_RADIUS, z: (camp.v - v) / MAP_ASPECT / SETTLEMENT_RADIUS, r: 1.9 }] : [];
+    const avoid: Circle[] = settlements.filter((s) => s.region === port).map((s) => ({ x: (s.u - u) / SETTLEMENT_RADIUS, z: (s.v - v) / MAP_ASPECT / SETTLEMENT_RADIUS, r: s.radius + 0.1 }));
     const seaAt = (x: number, z: number) => isSea(u + x * SETTLEMENT_RADIUS, v + z * SETTLEMENT_RADIUS * MAP_ASPECT);
     for (const f of list) {
       f.berths = anchorage(f.count, f.seed, seaAt, avoid);
