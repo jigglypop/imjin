@@ -1,61 +1,73 @@
+import { BufferAttribute, BufferGeometry, Mesh, MeshBasicNodeMaterial } from 'three/webgpu';
 import meta from '../../select/demMeta.json';
-import { demHeightAtUV, EXAGGERATION, MAP_H, MAP_W, V_SCALE } from '../../select/demFrame';
+import { demHeightAtUV, V_SCALE } from '../../select/demFrame';
+import { freeAfterDraw } from '../../render/dispose';
+import { faceColor } from './groundPalette';
 import { DEM_RECT, MESH_SCALE } from './mapMath';
 import { MAP_ASPECT } from './projection';
 
-// The Korean mainland north of the DEM, out to the horizon, so the world has no edge where the terrain rectangle ends.
+// The Korean mainland north of the DEM, out to the horizon, so the world has no edge where the DEM ends: flat facets
+// coloured by the DEM's own palette (groundPalette.ts), coarser the farther north they lie, until the haze takes them.
 // Next to the DEM's north edge the relief is the DEM's own north band mirrored, so ridges and valleys run on across the
-// join at the same height; within about twenty kilometres hills take over between a west and an east coast that start
-// where the DEM's own coasts meet its edge. Pure TS (no three.js): it returns the mesh's arrays and what the terrain's
-// shader needs to colour it exactly as it colours the DEM (terrain.ts, `buildFarLandMaterial`), and the ground height the
-// trees stand on.
+// join at the same height; within about thirty kilometres hills take over between a west and an east coast that start
+// where the DEM's own coasts meet its edge. Its south row is the north edge of the DEM's facets (groundLand.ts), vertex
+// for vertex, so the two meet without a step or a gap. The sea's shallows (groundSea.ts) read the same relief.
 
-/** Frame units of height per metre, the same as the terrain's. */
+/** Frame units of height per metre, the same as the DEM's facets. */
 const UNIT = V_SCALE * MESH_SCALE;
-/** World z of the DEM's north edge; the land runs from a little inside it to this far north of it. */
+/** World z of the DEM's north edge, where the far land starts. */
 const NORTH_Z = (DEM_RECT.v - 0.5) / MAP_ASPECT;
-// Deep enough that its north end is lost in the fog from the farthest the camera may stand.
+/** How far north the land runs, in world units: its end is lost in the fog from the farthest the camera may stand. */
 const DEPTH = 9;
-const OVERLAP = 0.012;
-/** The land's east-west span in frame u: past the peninsula's coasts on both sides, where it is sea. */
-const U0 = 0.2, U1 = 0.93;
-const COLUMNS = 400, ROWS = 480;
+/** The land's east-west span in frame u: from the DEM's west edge to past the peninsula's east coast, where it is sea. */
+const U0 = DEM_RECT.u, U1 = 0.93;
+/**
+ * Rows of vertices: the first this far north of the join (about four DEM texels, as fine as the DEM's facets there), each
+ * farther one deeper than the last by GROWTH. A row's columns are WIDE times its depth apart, at least MIN_COLUMNS.
+ */
+const FIRST_ROW = 0.0013, GROWTH = 1.05, WIDE = 1.15, MIN_COLUMNS = 24;
 /**
  * The mirrored DEM is sheared east as it goes north, by this many DEM widths per DEM height, so the band past the edge
  * is not a recognisable reflection of the mountains south of it (the shear is nothing at the edge itself).
  */
-export const MIRROR_SHEAR = 0.25;
-/** How far north (frame units) the mirrored DEM gives way to the hills: from `BLEND[0]` to `BLEND[1]`. */
+const SHEAR = 0.25;
+/** How far north (world units) the mirrored DEM gives way to the hills: from `BLEND[0]` to `BLEND[1]`. */
 const BLEND = [0.015, 0.1] as const;
-/** Where the terrain mesh sits in the world: its centre and the world units per unit of its own (map) frame. */
-const TERRAIN = { x: DEM_RECT.u + DEM_RECT.w / 2 - 0.5, z: (DEM_RECT.v + DEM_RECT.h / 2 - 0.5) / MAP_ASPECT, sx: MESH_SCALE, sz: DEM_RECT.h / MAP_ASPECT / MAP_H };
-/** Ground metres per world unit east-west and north-south, for slopes in the terrain's own measure. */
-const METRES = { x: (meta.width * meta.metersPerPixel) / (MAP_W * TERRAIN.sx), z: (meta.height * meta.metersPerPixel) / (MAP_H * TERRAIN.sz) };
-/** The terrain's shading steepness (terrain.ts): slopes in metres per metre times this. */
-const SHADE = EXAGGERATION * 0.55;
+/** As the DEM's facets: land stands at least LAND_MIN metres above the sea plane and the sea floor lies 3 to 40 m under it. */
+const LAND_MIN = 1.5, SEA_MIN = 3, SEA_MAX = 40;
+
+const smooth = (a: number, b: number, x: number) => {
+  const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+/** A cheap deterministic hash of two integers into 0..1. */
+function hash(a: number, b: number) {
+  let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
 
 /** A smooth hash noise in [0, 1], value noise on a grid with a smoothstep blend. */
 function noise(x: number, z: number) {
   const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz;
-  const h = (a: number, b: number) => {
-    const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
-    return n - Math.floor(n);
-  };
   const sx = fx * fx * (3 - 2 * fx), sz = fz * fz * (3 - 2 * fz);
-  const top = h(ix, iz) + (h(ix + 1, iz) - h(ix, iz)) * sx;
-  const bottom = h(ix, iz + 1) + (h(ix + 1, iz + 1) - h(ix, iz + 1)) * sx;
-  return top + (bottom - top) * sz;
+  const a = hash(ix, iz), b = hash(ix + 1, iz), c = hash(ix, iz + 1), d = hash(ix + 1, iz + 1);
+  return a + (b - a) * sx + (c - a) * sz + (a - b - c + d) * sx * sz;
 }
 
 /**
  * Ridged hills, in metres: sharp crests and soft valleys a few kilometres apart, in ranges and basins tens of kilometres
- * across, as the country north of the coast is (most of it under 500 m, ridges to about 1500 m).
+ * across, as the country north of the coast is (most of it under 500 m, ridges to about 1500 m). `cell` is the spacing of
+ * the vertices that sample it: an octave less than about six of them across would only break the facets into a speckle
+ * of light and shade, so it gives way to its mean.
  */
-function hills(x: number, z: number) {
+function hills(x: number, z: number, cell: number) {
   let sum = 0, amp = 1, freq = 34, norm = 0;
   for (let i = 0; i < 4; i += 1) {
-    const n = 1 - Math.abs(noise(x * freq + i * 17.3, z * freq - i * 9.1) * 2 - 1);
-    sum += n * n * amp;
+    const keep = smooth(0.25, 0.125, cell * freq);
+    const n = keep > 0 ? 1 - Math.abs(noise(x * freq + i * 17.3, z * freq - i * 9.1) * 2 - 1) : 0;
+    sum += (keep * n * n + (1 - keep) * 0.4) * amp;
     norm += amp;
     amp *= 0.5;
     freq *= 2.1;
@@ -64,11 +76,6 @@ function hills(x: number, z: number) {
   // Valleys run down near sea level, as the DEM's do, so fields fill them and woods the slopes.
   return (sum / norm) ** 2.1 * (300 + 1500 * range * range) + 8;
 }
-
-const smoothstep = (a: number, b: number, x: number) => {
-  const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
 
 /**
  * How far a coast strays east or west at `z`, up to about `amount` frame units: broad bays and headlands with smaller coves
@@ -95,100 +102,258 @@ function seamCoasts(heights: Float32Array) {
   return a < b ? { west: u(a), east: u(b) } : { west: 0.28, east: 0.835 };
 }
 
-export interface FarLand {
-  position: Float32Array;
-  /** The terrain mesh's own frame (map units) at each vertex: the terrain shader's noise and DEM lookups run in it. */
-  local: Float32Array;
-  /** The hills' own height in metres and their shading normal, which the shader blends in over the mirrored DEM's. */
-  hills: Float32Array;
-  hillNormal: Float32Array;
-  /** 0 where the mirrored DEM shows, 1 where the hills do. */
-  blend: Float32Array;
-  index: Uint32Array;
-  /** Ground height in frame units at a frame point north of the DEM (0 on the water), for the trees. */
-  heightAt: (u: number, v: number) => number;
+/**
+ * The DEM's north band under a 5 x 5 box blur, sampled bilinearly at (lu, lv) of the DEM: the mirror reads it, so vertices
+ * kilometres apart sample the land's shape and not its single texels.
+ */
+function northBand(heights: Float32Array) {
+  const W = meta.width, H = meta.height;
+  const rows = Math.min(H, Math.ceil(((BLEND[1] * MAP_ASPECT) / DEM_RECT.h) * (H - 1)) + 4);
+  const across = new Float32Array(W * rows), band = new Float32Array(W * rows);
+  const R = 2, span = 2 * R + 1;
+  for (let y = 0; y < rows; y += 1) {
+    const row = y * W;
+    let sum = 0;
+    for (let k = -R; k <= R; k += 1) sum += heights[row + Math.max(0, k)]!;
+    for (let x = 0; x < W; x += 1) {
+      across[row + x] = sum / span;
+      sum += heights[row + Math.min(W - 1, x + R + 1)]! - heights[row + Math.max(0, x - R)]!;
+    }
+  }
+  // Down the columns a row at a time, with a running sum for each column, so the memory is read in order.
+  const column = new Float32Array(W);
+  for (let k = -R; k <= R; k += 1) {
+    const row = Math.min(rows - 1, Math.max(0, k)) * W;
+    for (let x = 0; x < W; x += 1) column[x] += across[row + x]!;
+  }
+  for (let y = 0; y < rows; y += 1) {
+    const add = Math.min(rows - 1, y + R + 1) * W, drop = Math.max(0, y - R) * W, row = y * W;
+    for (let x = 0; x < W; x += 1) {
+      band[row + x] = column[x]! / span;
+      column[x] += across[add + x]! - across[drop + x]!;
+    }
+  }
+  return (lu: number, lv: number) => {
+    const x = Math.max(0, Math.min(W - 1.001, lu * (W - 1))), y = Math.max(0, Math.min(rows - 1.001, lv * (H - 1)));
+    const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0, i = y0 * W + x0;
+    const top = band[i]! + (band[i + 1]! - band[i]!) * fx;
+    const bottom = band[i + W]! + (band[i + W + 1]! - band[i + W]!) * fx;
+    return top + (bottom - top) * fy;
+  };
 }
 
-/** The far land's mesh in world units (x east, y up, z south). `heights` are the DEM's metres. */
-export function buildFarLand(heights: Float32Array): FarLand {
-  const count = (COLUMNS + 1) * (ROWS + 1);
-  const position = new Float32Array(count * 3);
-  const local = new Float32Array(count * 2);
-  const hillsH = new Float32Array(count);
-  const hillNormal = new Float32Array(count * 3);
-  const blend = new Float32Array(count);
-  const metres = new Float32Array(count);
+/** The far land's height in metres (below 0 is sea) at frame u and world z north of the DEM, for vertices `cell` apart. */
+export type FarRelief = (u: number, z: number, cell: number) => number;
+
+const reliefs = new WeakMap<Float32Array, FarRelief>();
+
+/**
+ * The relief north of the DEM, made once per set of DEM heights: its mesh and the sea's shallows (groundSea.ts) both read
+ * it, so the drawn coasts and the water beside them agree.
+ */
+export function farRelief(heights: Float32Array): FarRelief {
+  const known = reliefs.get(heights);
+  if (known) return known;
   const coasts = seamCoasts(heights);
-  // Rows close together at the seam, where the DEM's detail has to carry on, and wide apart in the haze.
-  const rowZ = (j: number) => NORTH_Z + OVERLAP - (OVERLAP + DEPTH) * (j / ROWS) ** 2.6;
-  const colU = (i: number) => U0 + ((U1 - U0) * i) / COLUMNS;
-  for (let j = 0; j <= ROWS; j += 1) {
-    const z = rowZ(j);
+  const band = northBand(heights);
+  // Callers walk the land a row at a time: the coasts of the last row asked for are kept.
+  let rowZ = Number.NaN, west = 0, east = 0;
+  const relief: FarRelief = (u, z, cell) => {
     const north = NORTH_Z - z;
-    // The coasts start where the DEM's do and settle on the peninsula's, the west near 126.4 E, the east near 129.4 E.
-    const settle = smoothstep(0, 0.8, north);
-    const west = coasts.west + (0.28 - coasts.west) * settle + wander(z, 4.2, 0.07) * settle - Math.max(0, north) * 0.006;
-    const east = coasts.east + (0.835 - coasts.east) * settle + wander(z, 9.7, 0.045) * settle;
-    for (let i = 0; i <= COLUMNS; i += 1) {
-      const u = colU(i);
-      const x = u - 0.5;
-      // The DEM's own height inside it while the two overlap, mirrored (and sheared) north of its edge, sea outside its sides.
-      const lv = Math.min(1, (Math.abs(z - NORTH_Z) * MAP_ASPECT) / DEM_RECT.h);
-      const lu = (u - DEM_RECT.u) / DEM_RECT.w - (north > 0 ? lv * MIRROR_SHEAR : 0);
-      const inside = lu >= 0 && lu <= 1;
-      const mirrored = inside ? demHeightAtUV(heights, lu, lv) : -60;
-      const land = smoothstep(west - 0.012, west + 0.02, u) * smoothstep(east + 0.012, east - 0.02, u);
-      const far = hills(x, z) * land - 80 * (1 - land);
-      const t = inside ? smoothstep(BLEND[0], BLEND[1], north) : 1;
-      const h = mirrored + (far - mirrored) * t;
-      const k = j * (COLUMNS + 1) + i;
-      metres[k] = h;
-      hillsH[k] = far;
-      blend[k] = t;
-      local[k * 2] = (x - TERRAIN.x) / TERRAIN.sx;
-      local[k * 2 + 1] = (z - TERRAIN.z) / TERRAIN.sz;
-      // Where it overlaps the DEM it lies a hair under it, so the terrain's own surface shows there.
-      const under = north < 0 ? 0.0003 : 0;
-      position[k * 3] = x;
-      // Water lies well under the sea plane, which draws it; land stands on the relief's own scale.
-      position[k * 3 + 1] = (h > 0 ? h * UNIT : Math.min(h * UNIT, -0.0012)) - under;
-      position[k * 3 + 2] = z;
+    if (z !== rowZ) {
+      rowZ = z;
+      // The coasts start where the DEM's do and settle on the peninsula's, the west near 126.4 E, the east near 129.4 E.
+      const settle = smooth(0, 0.8, north);
+      west = coasts.west + (0.28 - coasts.west) * settle + wander(z, 4.2, 0.07) * settle - Math.max(0, north) * 0.006;
+      east = coasts.east + (0.835 - coasts.east) * settle + wander(z, 9.7, 0.045) * settle;
     }
-  }
-  // The hills' shading normal, by the terrain's own rule: slopes in metres per metre, steepened by its shading factor.
-  const at = (i: number, j: number) => hillsH[Math.min(ROWS, Math.max(0, j)) * (COLUMNS + 1) + Math.min(COLUMNS, Math.max(0, i))]!;
-  const dx = ((U1 - U0) / COLUMNS) * METRES.x;
-  for (let j = 0; j <= ROWS; j += 1) {
-    const dz = (rowZ(Math.max(0, j - 1)) - rowZ(Math.min(ROWS, j + 1))) * METRES.z || 1;
-    for (let i = 0; i <= COLUMNS; i += 1) {
-      // East and south slopes: z runs south, rows run north.
-      const sx = (at(i + 1, j) - at(i - 1, j)) / (2 * dx), sz = (at(i, j - 1) - at(i, j + 1)) / dz;
-      const n = [-sx * SHADE, 1, -sz * SHADE];
-      const len = Math.hypot(n[0]!, n[1]!, n[2]!);
-      const k = (j * (COLUMNS + 1) + i) * 3;
-      hillNormal[k] = n[0]! / len;
-      hillNormal[k + 1] = n[1]! / len;
-      hillNormal[k + 2] = n[2]! / len;
-    }
-  }
-  const index = new Uint32Array(COLUMNS * ROWS * 6);
-  let o = 0;
-  for (let j = 0; j < ROWS; j += 1) {
-    for (let i = 0; i < COLUMNS; i += 1) {
-      const a = j * (COLUMNS + 1) + i, b = a + 1, c = a + COLUMNS + 1, d = c + 1;
-      // Rows run north, columns east: (a, b, c) winds counter-clockwise seen from above.
-      index.set([a, b, c, b, d, c], o);
-      o += 6;
-    }
-  }
-  const heightAt = (u: number, v: number) => {
-    const z = (v - 0.5) / MAP_ASPECT;
-    const fi = ((u - U0) / (U1 - U0)) * COLUMNS, fj = ROWS * Math.max(0, (NORTH_Z + OVERLAP - z) / (OVERLAP + DEPTH)) ** (1 / 2.6);
-    if (fi < 0 || fi > COLUMNS || fj > ROWS) return 0;
-    const i = Math.min(COLUMNS - 1, Math.floor(fi)), j = Math.min(ROWS - 1, Math.floor(fj)), a = fi - i, b = fj - j;
-    const m = (ii: number, jj: number) => metres[jj * (COLUMNS + 1) + ii]!;
-    const h = (m(i, j) * (1 - a) + m(i + 1, j) * a) * (1 - b) + (m(i, j + 1) * (1 - a) + m(i + 1, j + 1) * a) * b;
-    return Math.max(0, h) * UNIT;
+    // The DEM's own height mirrored (and sheared) north of its edge; sea outside its sides.
+    const lv = Math.min(1, (Math.abs(north) * MAP_ASPECT) / DEM_RECT.h);
+    const lu = (u - DEM_RECT.u) / DEM_RECT.w - (north > 0 ? lv * SHEAR : 0);
+    const inside = lu >= 0 && lu <= 1;
+    const t = inside ? smooth(BLEND[0], BLEND[1], north) : 1;
+    const mirrored = inside ? band(lu, lv) : -60;
+    if (t === 0) return mirrored;
+    const land = smooth(west - 0.012, west + 0.02, u) * smooth(east + 0.012, east - 0.02, u);
+    const far = land > 0 ? hills(u - 0.5, z, cell) * land - 80 * (1 - land) : -80;
+    return mirrored + (far - mirrored) * t;
   };
-  return { position, local, hills: hillsH, hillNormal, blend, index, heightAt };
+  reliefs.set(heights, relief);
+  return relief;
+}
+
+/** The spacing of the far land's vertices `north` world units north of the DEM's edge: its rows deepen as they go. */
+export const farCell = (north: number) => (FIRST_ROW + Math.max(0, north) * (GROWTH - 1)) * WIDE;
+
+/** A height as the facets draw it: land a little above the sea plane at least, the sea floor a little under it. */
+const drawn = (metres: number) => (metres > 0 ? Math.max(LAND_MIN, metres) : -Math.min(SEA_MAX, Math.max(SEA_MIN, -metres)));
+
+interface Row {
+  /** World units north of the DEM's edge. */
+  north: number;
+  u: Float32Array;
+  metres: Float32Array;
+}
+
+/** A row's height in metres at frame u, linear between its vertices. */
+function rowAt(row: Row, u: number) {
+  const n = row.u.length - 1;
+  if (u <= row.u[0]! || u >= row.u[n]!) return u <= row.u[0]! ? row.metres[0]! : row.metres[n]!;
+  let i = 0, hi = n;
+  while (hi - i > 1) {
+    const mid = (i + hi) >> 1;
+    if (row.u[mid]! <= u) i = mid;
+    else hi = mid;
+  }
+  const t = (u - row.u[i]!) / (row.u[i + 1]! - row.u[i]! || 1);
+  return row.metres[i]! + (row.metres[i + 1]! - row.metres[i]!) * t;
+}
+
+/**
+ * The far land's mesh in world units (x east, y up, z south). `heights` are the DEM's metres; `seam` is every vertex on
+ * the north edge of the DEM's facets, west to east: its frame u and its height in metres.
+ */
+export function buildFarLandMesh(heights: Float32Array, seam: { u: Float32Array; metres: Float32Array }) {
+  const relief = farRelief(heights);
+  const rows: Row[] = [];
+  // The seam, carried on with sea to the far land's own west and east ends where the DEM's facets stop short of them.
+  {
+    const u: number[] = [], metres: number[] = [];
+    const pad = (FIRST_ROW * WIDE) / GROWTH;
+    for (let x = U0; x < seam.u[0]! - pad * 0.5; x += pad) { u.push(x); metres.push(drawn(relief(x, NORTH_Z, pad))); }
+    for (let i = 0; i < seam.u.length; i += 1) { u.push(seam.u[i]!); metres.push(seam.metres[i]!); }
+    const last = seam.u[seam.u.length - 1]!;
+    const extra = Math.ceil((U1 - last) / pad);
+    for (let k = 1; k <= extra; k += 1) {
+      const x = last + ((U1 - last) * k) / extra;
+      u.push(x);
+      metres.push(drawn(relief(x, NORTH_Z, pad)));
+    }
+    rows.push({ north: 0, u: Float32Array.from(u), metres: Float32Array.from(metres) });
+  }
+  for (let north = 0, step = FIRST_ROW; north < DEPTH; step *= GROWTH) {
+    north = Math.min(DEPTH, north + step);
+    const z = NORTH_Z - north;
+    const columns = Math.max(MIN_COLUMNS, Math.round((U1 - U0) / (step * WIDE)));
+    const cell = (U1 - U0) / columns;
+    const u = new Float32Array(columns + 1), metres = new Float32Array(columns + 1);
+    for (let i = 0; i <= columns; i += 1) {
+      // Every vertex but the two ends strays a little east or west, so the facets do not line up as a grid.
+      u[i] = U0 + cell * (i + (i > 0 && i < columns ? (hash(i, rows.length) - 0.5) * 0.7 : 0));
+      metres[i] = drawn(relief(u[i]!, z, cell));
+    }
+    rows.push({ north, u, metres });
+  }
+
+  // Zip each row to the next, west to east, always advancing on the side whose next vertex lies farther west. Triangles
+  // wholly under water are left out: the opaque sea plane covers them.
+  const triangles: number[] = [];
+  const offsets: number[] = [];
+  let vertices = 0;
+  for (const row of rows) {
+    offsets.push(vertices);
+    vertices += row.u.length;
+  }
+  for (let r = 0; r + 1 < rows.length; r += 1) {
+    const a = rows[r]!, b = rows[r + 1]!, oa = offsets[r]!, ob = offsets[r + 1]!;
+    let i = 0, k = 0;
+    const na = a.u.length - 1, nb = b.u.length - 1;
+    while (i < na || k < nb) {
+      const stepA = i < na && (k >= nb || a.u[i + 1]! <= b.u[k + 1]!);
+      const third = stepA ? [oa + i + 1, a.metres[i + 1]!] : [ob + k + 1, b.metres[k + 1]!];
+      if (a.metres[i]! > 0 || b.metres[k]! > 0 || third[1]! > 0) triangles.push(oa + i, third[0]!, ob + k);
+      if (stepA) i += 1;
+      else k += 1;
+    }
+  }
+
+  const world = new Float32Array(vertices * 3), metres = new Float32Array(vertices);
+  rows.forEach((row, r) => {
+    const z = NORTH_Z - row.north;
+    for (let i = 0; i < row.u.length; i += 1) {
+      const v = offsets[r]! + i;
+      metres[v] = row.metres[i]!;
+      world[v * 3] = row.u[i]! - 0.5;
+      world[v * 3 + 1] = row.metres[i]! * UNIT;
+      world[v * 3 + 2] = z;
+    }
+  });
+
+  // One colour per facet, by the DEM's palette: three vertices of their own each, so nothing is interpolated across it.
+  const count = triangles.length / 3;
+  const sample = new Float32Array(3);
+  const position = new Float32Array(count * 9);
+  const color = new Float32Array(count * 9);
+  for (let t = 0; t < count; t += 1) {
+    const a = triangles[t * 3]!;
+    let b = triangles[t * 3 + 1]!, c = triangles[t * 3 + 2]!;
+    const ux = world[b * 3]! - world[a * 3]!, uy = world[b * 3 + 1]! - world[a * 3 + 1]!, uz = world[b * 3 + 2]! - world[a * 3 + 2]!;
+    const vx = world[c * 3]! - world[a * 3]!, vy = world[c * 3 + 1]! - world[a * 3 + 1]!, vz = world[c * 3 + 2]! - world[a * 3 + 2]!;
+    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    // Front faces look up: three.js takes a counter-clockwise triangle as facing the viewer.
+    if (ny < 0) {
+      [b, c] = [c, b];
+      nx = -nx; ny = -ny; nz = -nz;
+    }
+    const length = Math.hypot(nx, ny, nz) || 1;
+    const o = t * 9;
+    for (const [k, v] of [[0, a], [3, b], [6, c]] as const) {
+      position[o + k] = world[v * 3]!;
+      position[o + k + 1] = world[v * 3 + 1]!;
+      position[o + k + 2] = world[v * 3 + 2]!;
+    }
+    const height = (Math.max(0, metres[a]!) + Math.max(0, metres[b]!) + Math.max(0, metres[c]!)) / 3;
+    const cx = (position[o]! + position[o + 3]! + position[o + 6]!) / 3, cz = (position[o + 2]! + position[o + 5]! + position[o + 8]!) / 3;
+    const n = [nx / length, ny / length, nz / length] as const;
+    faceColor(height, n[0], n[1], n[2], cx, cz, color, o);
+    // The palette's patches of field and wood are a few kilometres across: a facet much larger than that would take a
+    // random one of them and the far land would read as a quilt. It takes the mean of the ground it covers instead,
+    // sampled halfway to each corner; facets as small as the DEM's near the join keep their own colour as the DEM's do.
+    const spread = smooth(0.003, 0.012, Math.max(Math.abs(position[o]! - position[o + 3]!), Math.abs(position[o]! - position[o + 6]!), Math.abs(position[o + 2]! - position[o + 5]!), Math.abs(position[o + 2]! - position[o + 8]!)));
+    if (spread > 0) {
+      let r = color[o]!, g = color[o + 1]!, bl = color[o + 2]!;
+      for (const k of [0, 3, 6]) {
+        faceColor(height, n[0], n[1], n[2], (cx + position[o + k]!) / 2, (cz + position[o + k + 2]!) / 2, sample, 0);
+        r += sample[0]!; g += sample[1]!; bl += sample[2]!;
+      }
+      color[o] += (r / 4 - color[o]!) * spread;
+      color[o + 1] += (g / 4 - color[o + 1]!) * spread;
+      color[o + 2] += (bl / 4 - color[o + 2]!) * spread;
+    }
+    color.copyWithin(o + 3, o, o + 3);
+    color.copyWithin(o + 6, o, o + 3);
+  }
+
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new BufferAttribute(position, 3));
+  geometry.setAttribute('color', new BufferAttribute(color, 3));
+  // Culled by its bounds, which must be known before the first draw frees the arrays.
+  geometry.computeBoundingSphere();
+  const material = new MeshBasicNodeMaterial({ vertexColors: true });
+  const mesh = new Mesh(geometry, material);
+  freeAfterDraw(mesh);
+
+  const north = rows.map((row) => row.north);
+  return {
+    mesh,
+    /** Ground height in frame units at a frame point north of the DEM (0 on the water), for the trees. */
+    heightAt(u: number, v: number) {
+      const d = NORTH_Z - (v - 0.5) / MAP_ASPECT;
+      if (u < U0 || u > U1 || d < 0 || d >= DEPTH) return 0;
+      let lo = 0, hi = north.length - 1;
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (north[mid]! <= d) lo = mid;
+        else hi = mid;
+      }
+      const t = (d - north[lo]!) / (north[hi]! - north[lo]!);
+      const h = rowAt(rows[lo]!, u) * (1 - t) + rowAt(rows[hi]!, u) * t;
+      return Math.max(0, h) * UNIT;
+    },
+    dispose() {
+      geometry.dispose();
+      material.dispose();
+      mesh.removeFromParent();
+    },
+  };
 }
