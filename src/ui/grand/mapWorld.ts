@@ -27,7 +27,7 @@ export interface Grounds { yard: number; lanes: { x: number; z: number }[][]; fi
 /**
  * One place on the land: a port's camp (its id is the region's), its town (`<region>/town`) or its beacon on the hill
  * above it (`<region>/beacon`), with its pieces laid out round (u, v) and already turned to the sea. `radius` is how far
- * in radii its pieces reach; the camp's `flag` is where its owner's flag flies.
+ * in radii its pieces reach.
  */
 export interface SettlementSpec {
   id: string;
@@ -41,7 +41,6 @@ export interface SettlementSpec {
   radius: number;
   pieces: Piece[];
   grounds: Grounds;
-  flag?: { x: number; z: number };
 }
 
 const m = (metres: number) => metres / METRES_PER_RADIUS;
@@ -84,8 +83,8 @@ function square(kind: PieceKind, h: number, n: number, gap: number): Piece[] {
 /** The landing on the sea side, its seaward end out from the wall. */
 const pierAt = (r: number) => put('pier', -(r + m(FOOTPRINT.pier[1])), 0, SEA_SIDE);
 
-/** A camp before it is turned to the sea: what it is made of, how far it reaches and where its flag flies. */
-export interface CampPlan { pieces: Piece[]; radius: number; flag: { x: number; z: number } }
+/** A camp before it is turned to the sea: what it is made of and how far it reaches. */
+export interface CampPlan { pieces: Piece[]; radius: number }
 
 /**
  * A Joseon naval camp: a log stockade round an office and huts; then a watchtower, more houses and a landing; then a
@@ -95,11 +94,11 @@ export interface CampPlan { pieces: Piece[]; radius: number; flag: { x: number; 
 function joseonCamp(level: number): CampPlan {
   const S = Math.PI / 2;
   if (level === 1) return {
-    radius: 0.6, flag: { x: 0.3, z: 0.2 },
+    radius: 0.6,
     pieces: [...ring('palisade', 0.55, 11, m(7.8)), put('jo_gate', 0.55, 0, 0), put('giwa', -0.2, 0, 0), put('choga', 0.12, -0.3, S), put('choga', 0.12, 0.3, -S), put('jo_banner', 0.34, -0.22, Math.PI)],
   };
   if (level === 2) return {
-    radius: 0.73, flag: { x: 0.38, z: -0.1 },
+    radius: 0.73,
     pieces: [
       ...ring('palisade', 0.68, 13, m(7.8)), put('jo_gate', 0.68, 0, 0), pierAt(0.68),
       put('giwa', -0.28, 0, 0), put('giwa', 0.06, -0.42, S), put('choga', 0.06, 0.42, -S), put('choga', 0.38, -0.32, S),
@@ -114,7 +113,7 @@ function joseonCamp(level: number): CampPlan {
   ];
   if (level >= 4) pieces.push(put('jeongja', -0.02, 0.28, -S), put('jo_tower', 0.3, 0.72, -S), put('giwa', -0.62, 0.0, 0));
   // The gatehouse stands out of the ring by its depth.
-  return { radius: r + 0.15, flag: { x: 0.66, z: 0 }, pieces };
+  return { radius: r + 0.15, pieces };
 }
 
 /**
@@ -125,14 +124,14 @@ function joseonCamp(level: number): CampPlan {
 function japanCamp(level: number): CampPlan {
   const S = Math.PI / 2;
   if (level === 1) return {
-    radius: 0.58, flag: { x: 0.05, z: 0 },
+    radius: 0.58,
     pieces: [
       ...ring('wa_fence', 0.55, 11, 0.2), put('wa_tent', -0.25, -0.2, 0), put('wa_tent', -0.25, 0.2, 0), put('wa_tent', 0.05, -0.3, 0), put('wa_tent', 0.05, 0.3, 0),
       put('wa_banner', 0.34, -0.24, Math.PI), put('wa_banner', 0.34, 0.24, Math.PI),
     ],
   };
   if (level === 2) return {
-    radius: 0.71, flag: { x: 0.36, z: 0.05 },
+    radius: 0.71,
     pieces: [
       ...ring('wa_fence', 0.68, 13, 0.22), pierAt(0.68), put('wa_hall', -0.3, 0, 0), put('wa_tent', 0.1, -0.42, 0), put('wa_tent', 0.1, 0.42, 0), put('wa_tent', 0.38, -0.32, 0),
       put('wa_tent', -0.05, -0.2, 0),
@@ -147,7 +146,7 @@ function japanCamp(level: number): CampPlan {
     put('wa_banner', 0.58, -0.2, Math.PI), put('wa_banner', 0.58, 0.14, Math.PI),
   ];
   if (level >= 4) pieces.push(put('wa_hall', -0.58, -0.36, 0), put('wa_tower', 0.25, 0.66, -S));
-  return { radius: r + 0.14, flag: { x: 0.62, z: -0.02 }, pieces };
+  return { radius: r + 0.14, pieces };
 }
 
 /**
@@ -158,7 +157,7 @@ function japanCamp(level: number): CampPlan {
 function mingCamp(level: number): CampPlan {
   const S = Math.PI / 2;
   if (level === 1) return {
-    radius: 0.72, flag: { x: 0.25, z: 0.02 },
+    radius: 0.72,
     pieces: [
       ...square('mg_palisade', 0.5, 3, 0.2), put('mg_watch', -0.28, -0.28, 0), put('mg_tent', -0.25, 0.2, 0), put('mg_tent', 0.12, -0.26, 0),
       put('mg_tent', 0.12, 0.26, 0), put('mg_flag', 0.32, 0.24, Math.PI),
@@ -171,7 +170,7 @@ function mingCamp(level: number): CampPlan {
       put('mg_barracks', -0.05, -0.36, S), put('mg_barracks', -0.05, 0.36, -S), put('mg_watch', -0.4, 0, 0), put('mg_flag', 0.38, -0.24, Math.PI),
       put('mg_tent', 0.38, 0.24, 0), put('mg_tent', -0.18, -0.12, 0), put('mg_tent', -0.18, 0.12, 0),
     );
-    return { radius: h * Math.SQRT2 + 0.06, flag: { x: 0.4, z: 0.02 }, pieces };
+    return { radius: h * Math.SQRT2 + 0.06, pieces };
   }
   pieces.push(
     ...[[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([sx, sz]) => put('mg_corner', sx! * h, sz! * h, 0)),
@@ -181,7 +180,7 @@ function mingCamp(level: number): CampPlan {
   );
   if (level >= 4) pieces.push(put('mg_barracks', -0.3, -0.68, S), put('mg_tent', 0.62, -0.5, 0), put('mg_tent', 0.62, 0.5, 0));
   // The corner bastions stand out of the square's corners.
-  return { radius: (h + 0.12) * Math.SQRT2, flag: { x: 0.6, z: 0.02 }, pieces };
+  return { radius: (h + 0.12) * Math.SQRT2, pieces };
 }
 
 /**
@@ -373,9 +372,9 @@ export function layoutSettlements(regions: RegionView[], isSea?: IsSea): Settlem
     return { r, x: p.u / R, z: p.v / MAP_ASPECT / R, ax, az, seed: hash(r.id), level: r.owner ? campLevel(r) : 0 };
   });
   const out: SettlementSpec[] = [];
-  const place = (id: string, region: string, kind: SettlementSpec['kind'], x: number, z: number, owner: FactionId | null, level: number, pieces: Piece[], grounds: Grounds, flag?: { x: number; z: number }) => {
+  const place = (id: string, region: string, kind: SettlementSpec['kind'], x: number, z: number, owner: FactionId | null, level: number, pieces: Piece[], grounds: Grounds) => {
     const radius = pieces.reduce((n, p) => Math.max(n, ...corners(p).map(([cx, cz]) => Math.hypot(cx, cz))), 0.2);
-    const spec: SettlementSpec = { id, region, kind, u: x * R, v: z * R * MAP_ASPECT, owner, level, radius, pieces, grounds, flag };
+    const spec: SettlementSpec = { id, region, kind, u: x * R, v: z * R * MAP_ASPECT, owner, level, radius, pieces, grounds };
     out.push(spec);
     return spec;
   };
@@ -406,9 +405,8 @@ export function layoutSettlements(regions: RegionView[], isSea?: IsSea): Settlem
     // The ring opens where the shore cuts into it, and the pier reaches from the shore out over the water.
     pieces = pieces.filter((p) => !WALL_KINDS.has(p.kind) || corners(p, spot.x, spot.z).every(([cx, cz]) => land(cx, cz)));
     pieces = pieces.flatMap((p) => (WATER_KINDS.has(p.kind) ? shore(p, spot.x, spot.z, land) : [p]));
-    const c = Math.cos(spot.turn), s = Math.sin(spot.turn);
-    const flag = { x: plan.flag.x * c - plan.flag.z * s, z: plan.flag.x * s + plan.flag.z * c };
-    const spec = place(port.r.id, port.r.id, 'camp', spot.x, spot.z, port.r.owner, port.level, pieces, { yard: r - 0.14, lanes: [], fields: [] }, flag);
+    // The packed yard inside the wall, short of it so the wall stands on grass.
+    const spec = place(port.r.id, port.r.id, 'camp', spot.x, spot.z, port.r.owner, port.level, pieces, { yard: r * 0.62, lanes: [], fields: [] });
     taken.push({ x: spot.x, z: spot.z, r });
     camps.set(port.r.id, { x: spot.x, z: spot.z, turn: spot.turn, r, spec });
   }

@@ -1,5 +1,5 @@
 import {
-  AmbientLight, BoxGeometry, BufferAttribute, BufferGeometry, Color, DirectionalLight, DoubleSide, Float32BufferAttribute, Group, HemisphereLight,
+  AmbientLight, BufferAttribute, BufferGeometry, Color, DirectionalLight, DoubleSide, Float32BufferAttribute, Group, HemisphereLight,
   InstancedMesh, LinearMipmapLinearFilter, Material, Matrix4, Mesh, MeshBasicMaterial, MeshBasicNodeMaterial, MeshStandardMaterial,
   MeshStandardNodeMaterial, PlaneGeometry, Quaternion, SRGBColorSpace, TextureLoader, Vector3, type Object3D, type Texture, type UniformNode,
 } from 'three/webgpu';
@@ -42,8 +42,6 @@ const FULL_LENGTH = 40;
 const shipLength = (kind: ShipClass) => SHIP_LENGTH * Math.min(1, SHIP_SPECS[kind].length / FULL_LENGTH);
 /** The ship a navy's squadron is drawn with when the kinds of its ships are not known (a replay's sailings). */
 const MAIN_SHIP: Record<FactionId, ShipClass> = { joseon: 'panokseon', japan: 'atakebune', ming: 'mingship' };
-/** Frame units of a flag pole above the ground, by camp level (a higher camp flies from a taller mast). */
-const poleHeight = (level: number) => R * (0.6 + 0.12 * Math.min(level, 4));
 /** The owner's ring round a camp: its least radius in settlement radii and how many straight pieces its strip is made of. */
 const RING_RADIUS = 1.12;
 const RING_SEGMENTS = 128;
@@ -58,8 +56,8 @@ const BOAT_LENGTH = R * 0.2;
 const BOAT_CAP = 28;
 /** A smoke plume's width and height in frame units. */
 const PLUME = { w: R * 0.42, h: R * 1.4 };
-/** Banner cloth and the owner's ring, by navy; saturated so it reads against the dark relief from the opening view. */
-const BANNER: Record<FactionId, string> = { joseon: '#3f8cff', japan: '#e8452c', ming: '#f0b72a' };
+/** The owner's ring by navy; saturated so it reads against the dark relief from the opening view. */
+const OWNER_COLOR: Record<FactionId, string> = { joseon: '#3f8cff', japan: '#e8452c', ming: '#f0b72a' };
 /**
  * The buildings' close models show once the camera stands at most this far from what it looks at (a camp is then over
  * about 160 pixels across on a desktop window); farther views draw the far models, the same outlines in about a third of
@@ -69,7 +67,7 @@ const NEAR_DISTANCE = 0.3;
 /** Yards, lanes and fields float this far over the drawn ground (frame units), so the relief never shows through them. */
 const DECAL_LIFT = R * 0.005;
 /** The packed earth of a camp's yard by navy, the lanes' earth, and a paddy's and a dry field's two shades. */
-const YARD: Record<FactionId, string> = { joseon: '#b4a07c', japan: '#c4bba6', ming: '#a89c86' };
+const YARD: Record<FactionId, string> = { joseon: '#9c8865', japan: '#968d7a', ming: '#928671' };
 const LANE = '#bba57f';
 const FIELD = { paddy: ['#86a04a', '#9cb25a'], dry: ['#a79a58', '#8f8248'] } as const;
 
@@ -143,8 +141,6 @@ function kitGeometry(kit: KitMesh) {
  * long) and its height over its length there (for sinking it).
  */
 type ShipModel = { near: BufferGeometry; far: BufferGeometry; material: Material; fix: Matrix4; height: number };
-/** A flag's cloth: its centre and size in frame units. */
-type FlagSpot = { x: number; y: number; z: number; w: number; h: number };
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -157,11 +153,11 @@ interface Sailors {
 }
 
 /**
- * The kit material (camps and ships), the wake's geometry and material, what flags are made of, the fishing boat, the
- * smoke plume and the owners' ring: made on first use and kept across rebuilds.
+ * The kit material (ships), the wake's geometry and material, the fishing boat, the smoke plume and the owners' ring:
+ * made on first use and kept across rebuilds.
  */
 interface Shared {
-  kit: MeshStandardMaterial; wake: MeshBasicMaterial; wakeGeometry: BufferGeometry; box: BoxGeometry; pole: MeshStandardMaterial; cloth: MeshBasicMaterial;
+  kit: MeshStandardMaterial; wake: MeshBasicMaterial; wakeGeometry: BufferGeometry;
   boat: BufferGeometry; plume: PlaneGeometry; smoke: MeshBasicNodeMaterial; ring: MeshBasicNodeMaterial;
 }
 
@@ -233,10 +229,13 @@ class Decals {
     this.index.push(a, b, c, a, c, d);
   }
 
-  /** A round patch of radius r at (x, z), solid inside and fading out over its outer third. */
+  /**
+   * A round patch of radius r at (x, z), solid inside and fading out over its outer third. Its rings stand an eighth of
+   * the radius apart: with fewer, a knoll inside the yard rose through the patch as a green blot.
+   */
   disc(x: number, z: number, r: number, hex: string) {
     const c = new Color(hex), seg = 28;
-    const rows = ([[0.001, 0.8], [0.4, 0.8], [0.72, 0.72], [1, 0]] as const).map(([k, a]) =>
+    const rows = ([[0.001, 0.55], [0.14, 0.55], [0.27, 0.55], [0.4, 0.55], [0.56, 0.5], [0.72, 0.45], [0.86, 0.22], [1, 0]] as const).map(([k, a]) =>
       Array.from({ length: seg }, (_, j) => this.vert(x + Math.cos((j / seg) * Math.PI * 2) * r * k, z + Math.sin((j / seg) * Math.PI * 2) * r * k, c, a)));
     for (let i = 0; i + 1 < rows.length; i += 1) for (let j = 0; j < seg; j += 1) this.quad(rows[i]![j]!, rows[i]![(j + 1) % seg]!, rows[i + 1]![(j + 1) % seg]!, rows[i + 1]![j]!);
   }
@@ -326,12 +325,6 @@ export class MapLayer {
   private distance = 1;
   private readonly built: InstancedMesh[] = [];
   private shared: Shared | null = null;
-  private flags: { mesh: InstancedMesh; spots: FlagSpot[] } | null = null;
-  /**
-   * The flags of camps built from the kits, gathered while a build places them and made into instances at its end. A camp
-   * model flies its owner's banners itself, so it gets none.
-   */
-  private flagSet = { spots: [] as FlagSpot[], colors: [] as Color[], poles: [] as Matrix4[] };
   /** The owners' rings round every camp, one mesh; its half width follows the camera's distance. */
   private ring: Mesh | null = null;
   private readonly ringWidth = uniform(ringHalfWidth(1));
@@ -354,8 +347,8 @@ export class MapLayer {
   }
 
   /**
-   * Turns every flag's cloth to face the camera, which looks at the map from `yaw` (0 from the south, positive towards the
-   * east), and shows the camps' close or far models by the camera's `distance` from what it looks at.
+   * Turns the smoke to face the camera, which looks at the map from `yaw` (0 from the south, positive towards the east),
+   * and shows the buildings' close or far models by the camera's `distance` from what it looks at.
    */
   setView(yaw: number, distance: number) {
     this.distance = distance;
@@ -366,12 +359,7 @@ export class MapLayer {
     this.yaw = yaw;
     this.stale = false;
     if (this.sailors) this.placeSailors();
-    const flags = this.flags;
-    if (flags) {
-      flags.spots.forEach((s, i) => flags.mesh.setMatrixAt(i, this.cloth(s)));
-      flags.mesh.instanceMatrix.needsUpdate = true;
-    }
-    // The smoke strips turn to face the camera too.
+    // The smoke strips turn to face the camera.
     const smoke = this.smoke;
     if (smoke) {
       const q = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), this.yaw), size = new Vector3(PLUME.w, PLUME.h, 1);
@@ -527,7 +515,6 @@ export class MapLayer {
     this.clear();
     this.buildSettlements(world.settlements);
     this.buildShips(world.fleets);
-    this.buildFlags();
     this.buildSailors(world.sails);
     this.stale = true;
     this.placeBoats();
@@ -545,8 +532,6 @@ export class MapLayer {
     }
     this.ring = null;
     this.decals = null;
-    this.flags = null;
-    this.flagSet = { spots: [], colors: [], poles: [] };
     this.smoke = null;
     this.boats = null;
     this.sailors = null;
@@ -574,9 +559,6 @@ export class MapLayer {
         kit: new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 }),
         wake: new MeshBasicMaterial({ color: '#eef4f7', transparent: true, opacity: 0.35, depthWrite: false, side: DoubleSide }),
         wakeGeometry,
-        box: new BoxGeometry(1, 1, 1),
-        pole: new MeshStandardMaterial({ color: '#2a211a', roughness: 0.9 }),
-        cloth: new MeshBasicMaterial({ color: '#ffffff' }),
         boat: kitGeometry(buildBoatKit()),
         plume: plumeGeometry(),
         smoke: smokeMaterial(),
@@ -586,36 +568,6 @@ export class MapLayer {
     return this.shared;
   }
 
-
-  /** A flag's cloth turned to face the camera. */
-  private cloth(s: FlagSpot) {
-    return new Matrix4().compose(new Vector3(s.x, s.y, s.z), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), this.yaw), new Vector3(s.w, s.h, R * 0.02));
-  }
-
-  private pole(base: Vector3, height: number) {
-    return new Matrix4().compose(new Vector3(base.x, base.y + height / 2, base.z), new Quaternion(), new Vector3(R * 0.03, height, R * 0.03));
-  }
-
-  /** The cloth `w` by `h` flying from the top of a pole `height` tall at `base`. */
-  private clothSpot(base: Vector3, height: number, w: number, h: number): FlagSpot {
-    return { x: base.x + w / 2, y: base.y + height - h * 0.65, z: base.z, w, h };
-  }
-
-  /** A pole and its cloth, made into instances by `buildFlags`. */
-  private flag(base: Vector3, height: number, w: number, h: number, color: Color) {
-    const set = this.flagSet;
-    set.poles.push(this.pole(base, height));
-    set.spots.push(this.clothSpot(base, height, w, h));
-    set.colors.push(color);
-  }
-
-  private buildFlags() {
-    const { box, pole, cloth } = this.resources;
-    const set = this.flagSet;
-    this.add(box, pole, set.poles);
-    const mesh = this.add(box, cloth, set.spots.map(() => new Matrix4()), set.colors);
-    if (mesh) this.flags = { mesh, spots: set.spots };
-  }
 
   /**
    * The owners' rings as one strip: RING_SEGMENTS points round each camp, each on the ground halfway between the mean
@@ -664,8 +616,8 @@ export class MapLayer {
    * Every place's buildings as instances of their kinds, each standing on the drawn ground: a building on its footing at
    * the height that buries none of it and leaves none of its footing in the air; a stretch of wall sheared along its run so
    * it climbs and falls with the ground from one end to the other, sunk where the ground dips under its middle; a work in
-   * the water at sea level. Then the yards, lanes and fields, the camps' flags, rings and smoke, the towns' smoke and the
-   * fishing boats.
+   * the water at sea level. Then the yards, lanes and fields, the camps' rings and smoke, the towns' smoke and the fishing
+   * boats.
    */
   private buildSettlements(list: SettlementSpec[]) {
     const byKind = new Map<PieceKind, Matrix4[]>();
@@ -690,12 +642,9 @@ export class MapLayer {
       // A large town's hearths smoke too.
       if (s.kind === 'town' && s.pieces.filter((p) => p.kind === 'giwa' || p.kind === 'choga' || p.kind === 'wa_house').length >= 10) smoke.push(new Vector3(cx, groundAt(cx, cz) + R * 0.2, cz));
       if (s.kind !== 'camp' || !s.owner) continue;
-      const ringColor = new Color(BANNER[s.owner]);
-      // The owner's flag flies inside the gate, over the roofs; a larger camp's smoke rises from its yard.
-      const flag = s.flag ?? { x: 0, z: 0 };
-      const fx = cx + flag.x * R, fz = cz + flag.z * R;
-      this.flag(new Vector3(fx, groundAt(fx, fz) - R * 0.02, fz), poleHeight(s.level), R * (0.4 + 0.03 * s.level), R * (0.26 + 0.02 * s.level), ringColor);
-      if (s.level >= 2) smoke.push(new Vector3(cx - flag.x * R * 0.5, groundAt(cx, cz) + R * 0.25, cz - flag.z * R * 0.5));
+      // A camp flies its own banners (its kits); the owner's ring says whose it is. A larger camp's smoke rises from its yard.
+      const ringColor = new Color(OWNER_COLOR[s.owner]);
+      if (s.level >= 2) smoke.push(new Vector3(cx, groundAt(cx, cz) + R * 0.25, cz));
       // Fishing boats off its coast: two spots of open water a little beyond the camp, each roomy enough to circle in.
       for (let k = 0; k < 2 && boats.length < BOAT_CAP; k += 1) {
         for (let tries = 0; tries < 12; tries += 1) {
