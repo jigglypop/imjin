@@ -38,12 +38,13 @@ const N = Number(args.n ?? 1);
 const JOBS = Number(args.jobs ?? 8);
 /**
  * The two atlas sets. A ship is seen at every distance in a battle and gets a 2048 px set plus a 1k one for phones; the
- * campaign map's buildings are never more than a few hundred pixels across, so 1024 px is their only size.
- * `sizes`: albedo, normal and roughness widths and the file suffix of each published set.
+ * campaign map's buildings are never more than a few hundred pixels across, so 1024 px is their only size, and their
+ * matte material needs no roughness map. `sizes`: albedo, normal and roughness widths (0: not published) and the file
+ * suffix of each published set.
  */
 const SETS = {
   ships: { layout: 'src/ships/build/atlasLayout.json', cache: process.env.SHIP_TEX_CACHE ?? join(ROOT, 'assets-src', 'textures-ships'), out: 'ships', sizes: [[2048, 1024, 512, ''], [1024, 512, 256, '_1k']] },
-  buildings: { layout: 'src/ui/grand/buildingAtlas.json', cache: join(ROOT, 'assets-src', 'textures-buildings'), out: 'buildings', sizes: [[1024, 512, 256, '']] },
+  buildings: { layout: 'src/ui/grand/buildingAtlas.json', cache: join(ROOT, 'assets-src', 'textures-buildings'), out: 'buildings', sizes: [[1024, 512, 0, '']] },
 };
 const SET = SETS[args.set ?? 'ships'];
 if (!SET) throw new Error(`no texture set ${args.set} (ships, buildings)`);
@@ -262,7 +263,8 @@ async function writeWebp(raw, width, file, opts) {
 /** The published atlas of a faction as full-size raw planes, so single cells can be swapped without the other raw images. */
 async function loadPublished(faction, dim) {
   const plane = (kind) => sharp(join(OUT, `${faction}_${kind}.webp`)).resize(dim, dim, { kernel: 'lanczos3' }).removeAlpha().raw().toBuffer();
-  return { albedo: await plane('albedo'), normal: await plane('normal'), rough: await plane('rough') };
+  const published = SET.sizes[0][2] > 0;
+  return { albedo: await plane('albedo'), normal: await plane('normal'), rough: published ? await plane('rough') : Buffer.alloc(dim * dim * 3) };
 }
 
 async function compose(faction, patch = false) {
@@ -297,7 +299,7 @@ async function compose(faction, patch = false) {
     ['albedo', albedo, a, a > 1024 ? 74 : 72, sfx],
     ['normal', normal, n, n > 512 ? 70 : 66, sfx],
     ['rough', rough, r, r > 256 ? 55 : 50, sfx],
-  ]);
+  ]).filter(([, , w]) => w > 0);
   for (const [kind, buf, w, quality, sfx] of outputs) await writeWebp(await resized(buf, w), w, join(OUT, `${faction}_${kind}${sfx}.webp`), { quality });
   // Contact sheet for review.
   await sharp(albedo, { raw: { width: dim, height: dim, channels: 3 } })

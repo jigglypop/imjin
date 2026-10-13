@@ -48,5 +48,5 @@ export function bannerPaint(navy: FactionId, flag: string, tint: [number, number
 /** The atlas files of a navy's buildings. */
 export const buildingAtlasFiles = (navy: FactionId) => {
   const base = `/textures/buildings/${navy}`;
-  return { albedo: `${base}_albedo.webp`, normal: `${base}_normal.webp`, rough: `${base}_rough.webp` };
+  return { albedo: `${base}_albedo.webp`, normal: `${base}_normal.webp` };
 };
