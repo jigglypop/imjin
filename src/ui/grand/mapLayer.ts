@@ -1,9 +1,12 @@
 import {
   AmbientLight, BoxGeometry, BufferAttribute, BufferGeometry, Color, DirectionalLight, DoubleSide, Float32BufferAttribute, Group, HemisphereLight,
-  InstancedMesh, LinearMipmapLinearFilter, Material, Matrix4, MeshBasicMaterial, MeshBasicNodeMaterial, MeshStandardMaterial, MeshStandardNodeMaterial,
-  PlaneGeometry, Quaternion, SRGBColorSpace, TextureLoader, Vector3, type Mesh, type Object3D, type Texture,
+  InstancedMesh, LinearMipmapLinearFilter, Material, Matrix4, Mesh, MeshBasicMaterial, MeshBasicNodeMaterial, MeshStandardMaterial,
+  MeshStandardNodeMaterial, PlaneGeometry, Quaternion, SRGBColorSpace, TextureLoader, Vector3, type Object3D, type Texture, type UniformNode,
 } from 'three/webgpu';
-import { abs, attribute, dFdx, dFdy, float, fract, mix, mx_noise_float, positionGeometry, positionWorld, select, smoothstep, texture, uv, varying, vec2, vec3 } from 'three/tsl';
+import {
+  abs, attribute, dFdx, dFdy, float, fract, mix, mx_noise_float, positionGeometry, positionLocal, positionWorld, select, smoothstep, texture, uniform, uv,
+  varying, vec2, vec3,
+} from 'three/tsl';
 import { worldClock } from '../../select/terrain';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
@@ -38,11 +41,14 @@ const shipLength = (kind: ShipClass) => SHIP_LENGTH * Math.min(1, SHIP_SPECS[kin
 const MAIN_SHIP: Record<FactionId, ShipClass> = { joseon: 'panokseon', japan: 'atakebune', ming: 'mingship' };
 /** Frame units of a flag pole above the ground, by camp level (a higher camp flies from a taller mast). */
 const poleHeight = (level: number) => R * (0.6 + 0.12 * Math.min(level, 4));
-/** The owner's ring round a camp: its radius in settlement radii and how many curb stones it is made of. */
+/** The owner's ring round a camp: its least radius in settlement radii and how many straight pieces its strip is made of. */
 const RING_RADIUS = 1.12;
-const RING_STONES = 28;
-/** Close up the ring is a dashed line of low markers hugging the ground: this many round a camp. */
-const RING_MARKS = 64;
+const RING_SEGMENTS = 128;
+/**
+ * The ring strip's half width in frame units: about a pixel and a half on a desktop window from afar, so it reads as one
+ * thin line at every distance, and never less than this share of a settlement radius close up.
+ */
+const ringHalfWidth = (distance: number) => Math.max(R * 0.008, distance * 0.0007);
 /** A fishing boat's length in frame units: a third of a warship's, so the two are never confused. */
 const BOAT_LENGTH = R * 0.2;
 /** At most this many fishing boats on the whole map, two off each camp's coast. */
@@ -203,13 +209,16 @@ interface Sailors {
 }
 
 /**
- * The kit material (camps and ships), the wake's geometry and material, what flags are made of, the fishing boat and the
- * smoke plume: made on first use and kept across rebuilds.
+ * The kit material (camps and ships), the wake's geometry and material, what flags are made of, the fishing boat, the
+ * smoke plume and the owners' ring: made on first use and kept across rebuilds.
  */
 interface Shared {
   kit: MeshStandardMaterial; wake: MeshBasicMaterial; wakeGeometry: BufferGeometry; box: BoxGeometry; pole: MeshStandardMaterial; cloth: MeshBasicMaterial;
-  boat: BufferGeometry; plume: PlaneGeometry; smoke: MeshBasicNodeMaterial;
+  boat: BufferGeometry; plume: PlaneGeometry; smoke: MeshBasicNodeMaterial; ring: MeshBasicNodeMaterial;
 }
+
+/** A camp's ring: its centre and radius in frame units and its owner's colour. */
+type Ring = { x: number; z: number; r: number; color: Color };
 
 /** A fishing boat circling slowly round a spot of open water: centre and radius in frame units, where it is on the circle and which way it goes. */
 type Boat = { x: number; z: number; r: number; phase: number; dir: 1 | -1; speed: number };
@@ -240,6 +249,20 @@ function smokeMaterial() {
   return m;
 }
 
+/**
+ * The owners' rings: a flat strip whose centre line lies on the ground, spread to `width` on either side and lifted a
+ * little in the shader, so `setView` keeps it a thin line at any distance without rebuilding it. It is pulled towards the
+ * camera in the depth test, so where the drawn relief rises a little above the sampled heights it still shows.
+ */
+function ringMaterial(width: UniformNode<'float', number>) {
+  const m = new MeshBasicNodeMaterial({ vertexColors: true, side: DoubleSide });
+  m.positionNode = positionLocal.add(attribute('side', 'vec3').mul(width)).add(vec3(0, width.mul(0.4), 0));
+  m.polygonOffset = true;
+  m.polygonOffsetFactor = -2;
+  m.polygonOffsetUnits = -4;
+  return m;
+}
+
 /** Camps and ships standing on the map terrain; `ground` gives the terrain height in frame units at a frame point. */
 export class MapLayer {
   readonly group = new Group();
@@ -263,12 +286,15 @@ export class MapLayer {
   private distance = 1;
   private readonly built: InstancedMesh[] = [];
   private shared: Shared | null = null;
-  private flags: { mesh: InstancedMesh; spots: FlagSpot[] }[] = [];
+  private flags: { mesh: InstancedMesh; spots: FlagSpot[] } | null = null;
   /**
-   * The camps' flags, gathered while a build places them and made into instances at its end: `far` only from afar (a camp
-   * model flies its own banners close up), `all` at every distance (a camp built from the kits has none of its own).
+   * The flags of camps built from the kits, gathered while a build places them and made into instances at its end. A camp
+   * model flies its owner's banners itself, so it gets none.
    */
-  private flagSets = { far: { spots: [] as FlagSpot[], colors: [] as Color[], poles: [] as Matrix4[] }, all: { spots: [] as FlagSpot[], colors: [] as Color[], poles: [] as Matrix4[] } };
+  private flagSet = { spots: [] as FlagSpot[], colors: [] as Color[], poles: [] as Matrix4[] };
+  /** The owners' rings round every camp, one mesh; its half width follows the camera's distance. */
+  private ring: Mesh | null = null;
+  private readonly ringWidth = uniform(ringHalfWidth(1));
   private smoke: { mesh: InstancedMesh; spots: Vector3[] } | null = null;
   private boats: { mesh: InstancedMesh; list: Boat[] } | null = null;
   private clock = 0;
@@ -295,11 +321,13 @@ export class MapLayer {
     this.distance = distance;
     this.near.visible = distance <= NEAR_DISTANCE;
     this.far.visible = !this.near.visible;
+    this.ringWidth.value = ringHalfWidth(distance);
     if (Math.abs(yaw - this.yaw) < 1e-4 && !this.stale) return;
     this.yaw = yaw;
     this.stale = false;
     if (this.sailors) this.placeSailors();
-    for (const flags of this.flags) {
+    const flags = this.flags;
+    if (flags) {
       flags.spots.forEach((s, i) => flags.mesh.setMatrixAt(i, this.cloth(s)));
       flags.mesh.instanceMatrix.needsUpdate = true;
     }
@@ -432,8 +460,13 @@ export class MapLayer {
   private clear() {
     for (const mesh of this.built) { mesh.removeFromParent(); mesh.dispose(); }
     this.built.length = 0;
-    this.flags = [];
-    for (const set of Object.values(this.flagSets)) { set.spots = []; set.colors = []; set.poles = []; }
+    if (this.ring) {
+      this.ring.removeFromParent();
+      this.ring.geometry.dispose();
+      this.ring = null;
+    }
+    this.flags = null;
+    this.flagSet = { spots: [], colors: [], poles: [] };
     this.smoke = null;
     this.boats = null;
     this.sailors = null;
@@ -467,6 +500,7 @@ export class MapLayer {
         boat: kitGeometry(buildBoatKit()),
         plume: plumeGeometry(),
         smoke: smokeMaterial(),
+        ring: ringMaterial(this.ringWidth),
       };
     }
     return this.shared;
@@ -496,9 +530,9 @@ export class MapLayer {
     return { x: base.x + w / 2, y: base.y + height - h * 0.65, z: base.z, w, h };
   }
 
-  /** A pole and its cloth, made into instances by `buildFlags`; a `farOnly` flag shows only in the far view. */
-  private flag(base: Vector3, height: number, w: number, h: number, color: Color, farOnly: boolean) {
-    const set = farOnly ? this.flagSets.far : this.flagSets.all;
+  /** A pole and its cloth, made into instances by `buildFlags`. */
+  private flag(base: Vector3, height: number, w: number, h: number, color: Color) {
+    const set = this.flagSet;
     set.poles.push(this.pole(base, height));
     set.spots.push(this.clothSpot(base, height, w, h));
     set.colors.push(color);
@@ -506,11 +540,53 @@ export class MapLayer {
 
   private buildFlags() {
     const { box, pole, cloth } = this.resources;
-    for (const [set, parent] of [[this.flagSets.far, this.far], [this.flagSets.all, this.group]] as const) {
-      this.add(box, pole, set.poles, undefined, parent);
-      const mesh = this.add(box, cloth, set.spots.map(() => new Matrix4()), set.colors, parent);
-      if (mesh) this.flags.push({ mesh, spots: set.spots });
+    const set = this.flagSet;
+    this.add(box, pole, set.poles);
+    const mesh = this.add(box, cloth, set.spots.map(() => new Matrix4()), set.colors);
+    if (mesh) this.flags = { mesh, spots: set.spots };
+  }
+
+  /**
+   * The owners' rings as one strip: RING_SEGMENTS points round each camp, each on the ground halfway between the mean
+   * and the highest of five heights round it (the sampled heights step from texel to texel, and the strip should neither
+   * cut into a ridge nor hang over a hollow). The shader spreads each point to both edges along `side`. A piece with
+   * either end over the water is left out, so the ring ends at the shore instead of floating over the sea.
+   */
+  private buildRing(rings: Ring[], groundAt: (x: number, z: number) => number) {
+    const position: number[] = [], side: number[] = [], color: number[] = [], index: number[] = [];
+    const d = R * 0.03;
+    for (const ring of rings) {
+      const first = position.length / 3;
+      const land: boolean[] = [];
+      for (let i = 0; i < RING_SEGMENTS; i += 1) {
+        const a = (i / RING_SEGMENTS) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+        const x = ring.x + c * ring.r, z = ring.z + s * ring.r;
+        const heights = [[0, 0], [d, 0], [-d, 0], [0, d], [0, -d]].map(([dx, dz]) => groundAt(x + dx, z + dz));
+        land.push(heights[0] > 0);
+        const y = (Math.max(...heights) + heights.reduce((n, h) => n + h, 0) / heights.length) / 2;
+        for (const k of [-1, 1]) {
+          position.push(x, y, z);
+          side.push(c * k, 0, s * k);
+          color.push(ring.color.r, ring.color.g, ring.color.b);
+        }
+      }
+      for (let i = 0; i < RING_SEGMENTS; i += 1) {
+        const j = (i + 1) % RING_SEGMENTS;
+        if (!land[i] || !land[j]) continue;
+        const a = first + i * 2, b = first + j * 2;
+        index.push(a, b, a + 1, a + 1, b, b + 1);
+      }
     }
+    if (!index.length) return;
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new Float32BufferAttribute(position, 3));
+    geometry.setAttribute('side', new Float32BufferAttribute(side, 3));
+    geometry.setAttribute('color', new Float32BufferAttribute(color, 3));
+    geometry.setIndex(index);
+    const mesh = new Mesh(geometry, this.resources.ring);
+    mesh.frustumCulled = false;
+    this.group.add(mesh);
+    this.ring = mesh;
   }
 
   private buildSettlements(list: SettlementSpec[]) {
@@ -518,10 +594,7 @@ export class MapLayer {
     const byModel = new Map<string, Matrix4[]>();
     const up = new Vector3(0, 1, 0);
     const loaded = this.loadedCamps;
-    const curbM: Matrix4[] = [];
-    const curbColors: Color[] = [];
-    const markM: Matrix4[] = [];
-    const markColors: Color[] = [];
+    const rings: Ring[] = [];
     const smoke: Vector3[] = [];
     const boats: Boat[] = [];
     const bucket = (key: PieceKind) => {
@@ -529,9 +602,9 @@ export class MapLayer {
       if (!b) byKind.set(key, (b = []));
       return b;
     };
+    const groundAt = (x: number, z: number) => this.ground(x + 0.5, z * MAP_ASPECT + 0.5);
     for (const s of list) {
       const cx = s.u - 0.5, cz = (s.v - 0.5) / MAP_ASPECT;
-      const groundAt = (x: number, z: number) => this.ground(x + 0.5, z * MAP_ASPECT + 0.5);
       const seaAt = (x: number, z: number) => groundAt(cx + x * R, cz + z * R) <= 0;
       let base = groundAt(cx, cz);
       for (const [dx, dz] of [[0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]] as const) base = Math.max(base, groundAt(cx + dx * R, cz + dz * R));
@@ -569,10 +642,6 @@ export class MapLayer {
           if (!b) byModel.set(url, (b = []));
           b.push(matrix);
         }
-        // The owner's flag flies from a mast at the land-side corner, just outside the walls, above the roofs.
-        const f = at(0.5 * model.width + 0.04, 0.5 * model.depth + 0.04);
-        const flagGround = Math.max(groundAt(f.x, f.z), 0);
-        this.flag(new Vector3(f.x, flagGround, f.z), y + model.height * size - flagGround + R * 0.3, R * (0.3 + 0.02 * s.level), R * (0.2 + 0.015 * s.level), ringColor, true);
         ring = Math.max(RING_RADIUS, (Math.hypot(model.width, model.depth) / 2) * span + 0.06);
         // A larger camp's smoke rises from inside its walls, from about the height of its roofs.
         if (tier >= 2) {
@@ -583,7 +652,7 @@ export class MapLayer {
         for (const p of pieces) placePiece(p);
         const [fx, fz] = flagSpot(s.level, s.owner);
         const flagBase = new Vector3(cx + (fx * Math.cos(turn) - fz * Math.sin(turn)) * R, base - R * 0.02, cz + (fx * Math.sin(turn) + fz * Math.cos(turn)) * R);
-        this.flag(flagBase, poleHeight(s.level), R * (0.4 + 0.03 * s.level), R * (0.26 + 0.02 * s.level), ringColor, false);
+        this.flag(flagBase, poleHeight(s.level), R * (0.4 + 0.03 * s.level), R * (0.26 + 0.02 * s.level), ringColor);
         if (tier >= 2) smoke.push(new Vector3(cx, base + R * 0.25, cz));
       }
       // Fishing boats off its coast: two spots of open water a little beyond the camp, each roomy enough to circle in.
@@ -598,26 +667,8 @@ export class MapLayer {
           break;
         }
       }
-      // The owner's ring: curb stones on the land round the camp, in the banner's colour, so whose it is reads from afar.
-      const stone = ((2 * Math.PI * ring) / RING_STONES) * 1.1 * R;
-      for (let i = 0; i < RING_STONES; i += 1) {
-        const a = (i / RING_STONES) * Math.PI * 2;
-        const x = cx + Math.cos(a) * ring * R, z = cz + Math.sin(a) * ring * R;
-        const here = groundAt(x, z);
-        if (here <= 0) continue;
-        curbM.push(new Matrix4().compose(new Vector3(x, here, z), new Quaternion().setFromAxisAngle(up, -a + Math.PI / 2), new Vector3(stone, R * 0.1, R * 0.08)));
-        curbColors.push(ringColor);
-      }
-      // Close up the same ring is a dashed line of low markers on the land, fine beside the camp's own walls.
-      const mark = ((2 * Math.PI * ring) / RING_MARKS) * 0.35 * R;
-      for (let i = 0; i < RING_MARKS; i += 1) {
-        const a = (i / RING_MARKS) * Math.PI * 2;
-        const x = cx + Math.cos(a) * ring * R, z = cz + Math.sin(a) * ring * R;
-        const here = groundAt(x, z);
-        if (here <= 0) continue;
-        markM.push(new Matrix4().compose(new Vector3(x, here + R * 0.005, z), new Quaternion().setFromAxisAngle(up, -a + Math.PI / 2), new Vector3(mark, R * 0.03, R * 0.02)));
-        markColors.push(ringColor);
-      }
+      // The owner's ring on the land round the camp, in the banner's colour, so whose it is reads from afar.
+      rings.push({ x: cx, z: cz, r: ring * R, color: ringColor });
 
       function placePiece(p: Piece) {
         const x = cx + p.x * R, z = cz + p.z * R;
@@ -638,8 +689,7 @@ export class MapLayer {
       this.add(near, this.resources.kit, matrices, undefined, this.near);
       this.add(far, this.resources.kit, matrices, undefined, this.far);
     }
-    this.add(this.resources.box, this.resources.cloth, curbM, curbColors, this.far);
-    this.add(this.resources.box, this.resources.cloth, markM, markColors, this.near);
+    this.buildRing(rings, groundAt);
     const { plume, smoke: smokeMat, boat, kit } = this.resources;
     const plumes = this.add(plume, smokeMat, smoke.map(() => new Matrix4()));
     if (plumes) this.smoke = { mesh: plumes, spots: smoke };
