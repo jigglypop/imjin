@@ -16,6 +16,7 @@ import { CameraMotion, KEY_ACTIONS } from './cameraMotion';
 import { boxBetween, markersInBox, type Marker } from './boxSelect';
 import { buildWorld, HULL_LENGTH, laneSpot, SETTLEMENT_RADIUS, type IsSea } from './mapWorld';
 import { cardRect, pickCards } from './cardLayout';
+import { cutCurve } from './screenPath';
 
 // The 3D world needs three.js and r3f: it is loaded on demand, and phones and touch-only tablets (flatMap), which keep the
 // flat image, never load it.
@@ -113,6 +114,11 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 function nodeRadius(r: RegionView) {
   return r.offMap ? 16 : 11 + r.value * 3;
 }
+
+/** How far past the screen's edges a lane or a fleet's way is still drawn, px: wider than its stroke, its caps and an arrowhead. */
+const SCREEN_MARGIN = 48;
+/** The length of .gm-arrow__line's dash pattern (8 on, 6 off): a cut way starts on a whole one, so its flowing dashes do not jump. */
+const ARROW_DASH = 14;
 
 /** The movement range's colours, as on a campaign map: this turn green, the next yellow, later orange. */
 const TURN_TONES = ['#86d97a', '#efd25c', '#f0954a'];
@@ -634,6 +640,8 @@ export function GrandMap({
   };
 
   const { w, h } = box;
+  // Lanes and ways are cut to this before they are drawn (screenPath.ts).
+  const onScreen = { x0: -SCREEN_MARGIN, y0: -SCREEN_MARGIN, x1: w + SCREEN_MARGIN, y1: h + SCREEN_MARGIN };
   const { s } = view;
   const mapH = s / MAP_ASPECT;
   const openZoom = box.w ? limits().open : 1;
@@ -870,15 +878,16 @@ export function GrandMap({
             const bend = Math.min(28, len * 0.09);
             const cx = (ax + bx) / 2 - ((by - ay) / len) * bend;
             const cy = (ay + by) / 2 + ((bx - ax) / len) * bend;
-            const d = `M${ax} ${ay} Q${cx} ${cy} ${bx} ${by}`;
+            const cut = cutCurve({ x: ax, y: ay }, { x: cx, y: cy }, { x: bx, y: by }, onScreen);
+            if (!cut) return null;
             // The curve's midpoint and its heading there; the mark points away from the port the selected force is in.
             const mx = (ax + bx) / 4 + cx / 2;
             const my = (ay + by) / 4 + cy / 2;
             const turn = (Math.atan2(by - ay, bx - ax) * 180) / Math.PI + (from === b ? 180 : 0);
             return (
               <g key={`${a.id}-${b.id}`}>
-                {hot && <path className="gm-lane__glow" d={d} />}
-                <path className={`gm-lane ${hot ? 'hot' : ''} ${front} ${off}`} d={d} />
+                {hot && <path className="gm-lane__glow" d={cut.d} />}
+                <path className={`gm-lane ${hot ? 'hot' : ''} ${front} ${off}`} d={cut.d} strokeDashoffset={cut.skipped || undefined} />
                 {hot && <path className="gm-lane__dir" d="M-5 -5 L3 0 L-5 5" transform={`translate(${mx} ${my}) rotate(${turn})`} />}
               </g>
             );
@@ -919,12 +928,13 @@ export function GrandMap({
                 const bend = Math.min(40, len * 0.14);
                 const cx = (sx + ex) / 2 - uy * bend;
                 const cy = (sy + ey) / 2 + ux * bend;
-                const d = `M${sx} ${sy} Q${cx} ${cy} ${ex} ${ey}`;
+                const cut = cutCurve({ x: sx, y: sy }, { x: cx, y: cy }, { x: ex, y: ey }, onScreen, ARROW_DASH);
+                if (!cut) return null;
                 const col = FACTION_INFO[f.faction].color;
                 return (
                   <g key={`${f.id}-${i}`} className={f.id === selectedFleetId || selectedFleetIds?.has(f.id) ? 'gm-arrow gm-arrow--sel' : 'gm-arrow'}>
-                    <path d={d} className="gm-arrow__halo" />
-                    <path d={d} className="gm-arrow__line" stroke={col} markerEnd={last ? `url(#gm-head-${f.faction})` : undefined} />
+                    <path d={cut.d} className="gm-arrow__halo" />
+                    <path d={cut.d} className="gm-arrow__line" stroke={col} markerEnd={last && cut.end ? `url(#gm-head-${f.faction})` : undefined} />
                   </g>
                 );
               });
