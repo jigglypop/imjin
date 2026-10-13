@@ -29,7 +29,7 @@ function pipelineKey(mesh: Mesh) {
  * standing on it (MapLayer) and the trees round the camera's target (TreeLayer). It owns no renderer and no timer; the
  * page draws it with `frame` and is told through `onChange` when something it shows has changed on its own (a model has
  * loaded, the ships have sailed on). With `compile` nothing is drawn before its shaders are ready: compiling them on the
- * first frame that draws them held the GPU process up for up to a second (the ships' material alone took 0.9 s on D3D11).
+ * first frame that draws them held the GPU process up for up to a second (Edge took 0.9 s over the ships' material).
  */
 export class CampaignWorld {
   /** True once the ground has loaded and until the world is disposed: `frame` places the camera and the world draws. */
@@ -42,6 +42,8 @@ export class CampaignWorld {
   private layer: MapLayer | null = null;
   private trees: TreeLayer | null = null;
   private world: MapWorld | null = null;
+  /** The world on show, written out, to tell a world that changes nothing from one that does. */
+  private worldKey = '';
   /** The pipelines compiled so far, by `pipelineKey`, and each mesh's key. */
   private readonly compiled = new Set<string>();
   private readonly keys = new WeakMap<Mesh, string>();
@@ -141,11 +143,19 @@ export class CampaignWorld {
       }
       for (const o of objects) if ((o as Mesh).isMesh) this.compiled.add(this.keyOf(o as Mesh));
     };
-    return (this.compiling = this.compiling.then(run));
+    // A compile that cannot even start leaves the shaders to the frames that draw them; the compiles after it still run.
+    return (this.compiling = this.compiling.then(run).catch(() => undefined));
   }
 
-  /** What stands on the terrain: a camp where the owner has built one, ships where a fleet lies. */
+  /**
+   * What stands on the terrain: a camp where the owner has built one, ships where a fleet lies. The page builds a new
+   * world at every change of the campaign, an order or a toggle, though most change nothing on the map; such a world is
+   * not handed on, as the layer would build every batch anew and the frame that first draws them would take 150 ms.
+   */
   setWorld(world: MapWorld) {
+    const key = JSON.stringify(world);
+    if (key === this.worldKey) return;
+    this.worldKey = key;
     this.world = world;
     if (this.ready) this.show(world);
   }

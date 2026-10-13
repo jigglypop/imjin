@@ -11,7 +11,7 @@ import { shipsText, turnsText } from './text';
 import type { FactionId, FleetView, MarchRouteView, RegionView, ReplayView, SpotView } from './types';
 import type { WorldControls, WorldView } from './WorldCanvas';
 import { DEM_RECT, groundElevation } from './mapMath';
-import { clampState, frameAll, panBy, projectFrame, screenFrame, turn, zoomAt as zoomCameraAt, type CameraState } from './worldCamera';
+import { clampState, frameAll, NEAR, panBy, projectFrame, screenFrame, turn, zoomAt as zoomCameraAt, type CameraState } from './worldCamera';
 import { CameraMotion, KEY_ACTIONS } from './cameraMotion';
 import { boxBetween, markersInBox, type Marker } from './boxSelect';
 import { buildWorld, HULL_LENGTH, laneSpot, SETTLEMENT_RADIUS, type IsSea } from './mapWorld';
@@ -651,7 +651,8 @@ export function GrandMap({
   const place = (u: number, v: number, e: number): Spot => {
     if (inWorld) {
       const p = projectFrame(cam, screen, u, v, e);
-      return { x: p.x, y: p.y, scale: p.scale, depth: p.depth, ok: p.depth > 0 };
+      // In front of the near plane, as the 3D view draws it: a point just in front of the eye has no place on the screen.
+      return { x: p.x, y: p.y, scale: p.scale, depth: p.depth, ok: p.depth > NEAR };
     }
     return { x: view.x + u * s, y: view.y + v * mapH, scale: s, depth: 1, ok: true };
   };
@@ -865,7 +866,9 @@ export function GrandMap({
             const sp = spots.get(r.id)!;
             const rad = sp.scale * (0.028 + 0.011 * campLevel(r));
             // On the ground a disc is seen flattened by the view's pitch.
-            return <ellipse key={`land-${r.id}`} className="gm-land" cx={sp.x} cy={sp.y} rx={rad} ry={inWorld ? rad * Math.max(0.4, Math.sin(cam.pitch)) : rad} fill={`url(#gm-land-${r.owner})`} />;
+            const ry = inWorld ? rad * Math.max(0.4, Math.sin(cam.pitch)) : rad;
+            if (sp.x + rad < 0 || sp.x - rad > w || sp.y + ry < 0 || sp.y - ry > h) return null;
+            return <ellipse key={`land-${r.id}`} className="gm-land" cx={sp.x} cy={sp.y} rx={rad} ry={ry} fill={`url(#gm-land-${r.owner})`} />;
           })}
           {lanes.map(({ a, b }) => {
             if (!spots.get(a.id)?.ok || !spots.get(b.id)?.ok) return null;
@@ -1051,7 +1054,8 @@ export function GrandMap({
       {w > 0 &&
         sailing.map((f) => {
           const { x, pill: y, depth } = lanePoint(f);
-          if (x < -80 || y < -80 || x > w + 80 || y > h + 80) return null;
+          // Written so that a point with no place on the screen (behind the eye) is left out as well.
+          if (!(x >= -80 && y >= -80 && x <= w + 80 && y <= h + 80)) return null;
           const sel = f.id === selectedFleetId || !!selectedFleetIds?.has(f.id);
           const mine = f.faction === me;
           return (

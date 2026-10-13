@@ -56,9 +56,9 @@ try {
   });
   const path = join(temporary, 'actual-map.mjs'); await writeFile(path, bundled.outputFiles[0].contents);
   const { CampaignWorld, DEM_RECT, MESH_SCALE, groundElevation, MAP_ASPECT, project, siteUV, SITES, V_SCALE, Vector3, PerspectiveCamera, Scene, Mesh, projectFrame, screenFrame, worldX, worldZ } = await import(pathToFileURL(path).href);
-  /** A world on its own scene, as WorldCanvas makes one inside r3f's, with what it asked to redraw counted. */
-  const open = () => {
-    const scene = new Scene(), world = new CampaignWorld(scene, () => { world.changes = (world.changes ?? 0) + 1; });
+  /** A world on its own scene, as WorldCanvas makes one inside r3f's, with what it asked to redraw counted; `compile` stands for the renderer's compileAsync. */
+  const open = (compile) => {
+    const scene = new Scene(), world = new CampaignWorld(scene, () => { world.changes = (world.changes ?? 0) + 1; }, compile);
     return { scene, world };
   };
   /** Every mesh the world's ground and layers put in the scene. */
@@ -130,6 +130,57 @@ try {
     assert.equal(world.ready, true); assert.ok(world.changes >= 1, 'a loaded ground asks for a frame');
     world.frame(camera, cam, screen, 1.5);
     assert.ok(camera.position.length() > 0); assert.ok(scene.fog && scene.fog.far > scene.fog.near && scene.background);
+    world.dispose();
+  });
+  await check('the ground and the trees are compiled before the first frame, all of it in view while the renderer gathers it', async () => {
+    const calls = [];
+    const { scene, world } = open(async () => {
+      const objects = [];
+      scene.traverse((o) => objects.push(o));
+      calls.push({ hidden: objects.filter((o) => !o.visible).length, culled: objects.filter((o) => o.isMesh && o.frustumCulled).length, ready: world.ready, meshes: meshes(scene).length });
+    });
+    await world.load();
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0], { hidden: 0, culled: 0, ready: false, meshes: calls[0].meshes });
+    assert.ok(calls[0].meshes >= 5, 'land, sea, far land, sky and trees');
+    const trees = meshes(scene).find((m) => m.isInstancedMesh);
+    assert.equal(trees.visible, false, 'the trees are hidden again until the camera comes close');
+    assert.ok(meshes(scene).some((m) => m.frustumCulled), 'culling is back');
+    world.dispose();
+  });
+  await check('a new batch of camps or ships is held back until its pipeline is compiled; another of the same kind is not', async () => {
+    let gate = null;
+    const { scene, world } = open(() => gate?.promise ?? Promise.resolve());
+    await world.load();
+    gate = defer();
+    const batch = new Mesh();
+    world.layer.group.add(batch);
+    world.layerChanged();
+    assert.equal(batch.visible, false, 'held back while it compiles');
+    const changes = world.changes;
+    gate.resolve();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(batch.visible, true);
+    assert.ok(world.changes > changes, 'a frame is asked for once it shows');
+    const again = new Mesh(batch.geometry, batch.material);
+    world.layer.group.add(again);
+    world.layerChanged();
+    assert.equal(again.visible, true, 'the same material and vertex layout need no compile');
+    world.dispose();
+    assert.equal(scene.children.length, 0);
+  });
+  await check('a world that changes nothing on the map is not built again', async () => {
+    const { world } = open();
+    await world.load();
+    let builds = 0;
+    world.layer.set = () => { builds++; };
+    const settlement = { id: 'yeosu', u: 0.4, v: 0.5, owner: 'joseon', level: 2 };
+    const make = (level) => ({ settlements: [{ ...settlement, level }], fleets: [], sails: [] });
+    world.setWorld(make(2));
+    world.setWorld(make(2));
+    assert.equal(builds, 1);
+    world.setWorld(make(3));
+    assert.equal(builds, 2);
     world.dispose();
   });
   await check('dispose frees the ground and the layers once, leaves the scene empty and readies no frame after', async () => {
