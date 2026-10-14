@@ -5,7 +5,7 @@ import type { ScenarioId } from '../sim/scenarios';
 import type { BattleEvent, CrewPlan, Faction, Ship, ShipKind, Squadron, Team } from '../sim/types';
 
 /** Bumped whenever client and server stop understanding each other. */
-export const PROTOCOL = 5;
+export const PROTOCOL = 6;
 export const SNAPSHOT_HZ = 10;
 /** How long a dropped player's fleet waits for them before the computer takes it over. */
 export const GRACE_SECONDS = 60;
@@ -131,6 +131,8 @@ export const SENT_EVENTS = new Set<BattleEvent['type']>([
   'built',
   'razed',
   'battery',
+  // A commander's ability: its timers reach the squadron cards, and its banner and ring the screen.
+  'ability',
 ]);
 
 export type ShipFrame = {

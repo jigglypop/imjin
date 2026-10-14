@@ -248,6 +248,7 @@ export function buildConquestOn<M extends MapLayout>(map: M, seats: Seat[], land
   const points = map.points.map((p) => ({ ...p, x: p.x * ca - p.z * sa, z: p.x * sa + p.z * ca }));
   const conquest = new Conquest(points, players, land, options);
   b.rules = conquest;
+  b.abilities = options.abilities !== false;
   b.land = land;
   b.night = environment.night;
   b.visibilityScale = environment.visibility;

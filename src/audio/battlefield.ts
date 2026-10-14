@@ -73,7 +73,7 @@ export class Battlefield {
   private nextFlush = 0;
   private nextBarrage = 0;
   /** Context times before which another sound of that kind is held back: a pass, a blow, a flame or a drum a moment ago masks the next. */
-  private readonly gate = { whoosh: 0, hiss: 0, melee: 0, ignite: 0, drum: 0, cue: 0 };
+  private readonly gate = { whoosh: 0, hiss: 0, melee: 0, ignite: 0, drum: 0, cue: 0, ability: 0 };
   /** Context time of the last voice the player could hear from the near field or the far flush. */
   private lastAudible = -99;
   private camera: Pick<PerspectiveCamera, 'position' | 'quaternion'> | null = null;
@@ -550,6 +550,17 @@ export class Battlefield {
         const at = now + s.delay;
         // A short slice of the bank's splintering plank, high and quick, makes a blow; the synthesised clack is the stand-in.
         if (!this.sample('impact_wood', at, { gain: loud(s.gain) * 0.3, pan: s.pan, rate: rnd(1.3, 1.7), cutoff: Math.max(900, s.muffle), index: 1, offset: rnd(0, 0.15), dur: 0.3 }, 0.5)) voices.clack(at, s.gain * 0.4, s.pan);
+      } else if (e.type === 'ability') {
+        // A commander's signal: a quickening roll of the war drums from his flagship. Drums carry, so even a far
+        // flagship's roll is heard, softer and later.
+        if (now < this.gate.ability) continue;
+        this.gate.ability = now + 1.5;
+        const s = this.spatial(camera, e.x, 4, e.z);
+        const gain = Math.max(0.35, Math.min(1, s.gain * 1.6));
+        [0, 0.34, 0.6, 0.8, 0.98].forEach((after, i) => {
+          const at = now + s.delay + after;
+          if (!this.sample('drum', at, { gain: gain * (0.7 + i * 0.08), pan: s.pan * 0.6, wet: 0.25, rate: 0.95 + i * 0.02 }, 0)) this.voices.drum(at);
+        });
       } else if (e.type === 'volley') {
         // The drum that calls a volley: one stroke every second or so however many ships order one.
         if (now < this.gate.drum || Math.random() > keep) continue;

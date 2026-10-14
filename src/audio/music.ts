@@ -110,18 +110,21 @@ export class Bed {
 
   /**
    * Books the drums that start before `until` (context time). A phrase is two or three strokes a little under a second
-   * apart, then a long silence; a battle has them seldom and softer, since the real ones are in the guns.
+   * apart, then a long silence; a battle has them seldom and softer, since the real ones are in the guns. `heat` is how
+   * hard the battle is being fought (0 to 1): a hot fight quickens the drums, with more strokes and shorter silences.
    */
-  schedule(until: number, mode: Mode) {
+  schedule(until: number, mode: Mode, heat = 0) {
     // The scheduler is not called while music is off, so a slot can be long past by the time it is turned back on:
     // start the next phrase a little ahead instead of playing every missed one at once.
     if (this.nextDrum === 0 || this.nextDrum < this.ctx.currentTime) this.nextDrum = this.ctx.currentTime + 4 + Math.random() * 4;
     while (this.nextDrum < until) {
       const t = this.nextDrum;
       const battle = mode === 'battle';
-      const strokes = battle ? 1 : Math.random() < 0.5 ? 2 : 3;
-      for (let i = 0; i < strokes; i += 1) this.drum(t + i * (0.75 + Math.random() * 0.1), (battle ? 0.18 : 0.3) * (1 - i * 0.22));
-      this.nextDrum = t + (battle ? 6 + Math.random() * 6 : 9 + Math.random() * 8);
+      const hot = battle ? Math.max(0, Math.min(1, heat)) : 0;
+      const strokes = battle ? 1 + Math.round(hot * 2) : Math.random() < 0.5 ? 2 : 3;
+      const gap = 0.75 - hot * 0.3;
+      for (let i = 0; i < strokes; i += 1) this.drum(t + i * (gap + Math.random() * 0.1), (battle ? 0.18 + hot * 0.08 : 0.3) * (1 - i * 0.18));
+      this.nextDrum = t + (battle ? (6 + Math.random() * 6) * (1 - hot * 0.6) : 9 + Math.random() * 8);
     }
   }
 }

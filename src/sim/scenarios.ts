@@ -18,6 +18,7 @@ import type { SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
 import type { CurrentSpec } from './current';
 import { echelon, flagshipOf, numbered } from '../i18n/names';
+import { commanderAbility } from './abilities';
 
 export type ScenarioId = 'okpo' | 'sacheon' | 'dangpo' | 'hansan' | 'angolpo' | 'busan' | 'chilcheon' | 'myeongnyang' | 'noryang';
 
@@ -364,7 +365,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     }
     return p;
   };
-  const squad = (team: Team, name: string, cmd: string, kind: ShipKind) => b.addSquadron(team, name, cmd, portraitFor(team, cmd, kind), cardFor(kind));
+  const squad = (team: Team, name: string, cmd: string, kind: ShipKind) => b.addSquadron(team, name, cmd, portraitFor(team, cmd, kind), cardFor(kind), -1, commanderAbility(cmd, id));
   const ship = (sq: Squadron, kind: ShipKind, p: Spot, name: string, flagship = false, variant?: number) => {
     const r = kind === 'panokseon' || kind === 'geobukseon' || kind === 'atakebune' || kind === 'mingship' ? 22 : kind === 'sekibune' || kind === 'mingsmall' ? 15 : 9;
     const spot = settle(p, r);
@@ -659,7 +660,7 @@ function spawnFleet(b: Battle, fleet: FleetSpawn, axis: number, land: LandFn) {
   let offset = -total / 2;
   const taken: { x: number; z: number }[] = [];
   for (const bl of blocks) {
-    const squad = b.addSquadron('joseon', bl.sq.name, bl.sq.commander, bl.sq.portrait, bl.sq.ships.some((x) => x.kind === 'geobukseon') && bl.sq.ships.every((x) => x.kind === 'geobukseon') ? 'card_geobukseon' : 'card_panokseon');
+    const squad = b.addSquadron('joseon', bl.sq.name, bl.sq.commander, bl.sq.portrait, bl.sq.ships.some((x) => x.kind === 'geobukseon') && bl.sq.ships.every((x) => x.kind === 'geobukseon') ? 'card_geobukseon' : 'card_panokseon', -1, commanderAbility(bl.sq.commander));
     const mid = offset + bl.width / 2;
     bl.sq.ships.forEach((spec, i) => {
       const row = Math.floor(i / bl.cols);

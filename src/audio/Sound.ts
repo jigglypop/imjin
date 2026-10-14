@@ -121,7 +121,7 @@ export class Sound {
     this.bed.start();
     this.applyMode(true);
     window.setInterval(() => {
-      if (ctx.state === 'running' && this.musicOn) this.bed?.schedule(ctx.currentTime + 0.5, this.mode);
+      if (ctx.state === 'running' && this.musicOn) this.bed?.schedule(ctx.currentTime + 0.5, this.mode, this.field?.intensity ?? 0);
       // After a phone call or another app's audio the context can come back 'interrupted' with no gesture to resume it.
       if (ctx.state !== 'running' && !document.hidden && performance.now() - this.lastWake > 2000) this.wake();
     }, 250);

@@ -29,11 +29,12 @@ function lineOfSight(b: Battle, o: Observer, x: number, z: number, height: numbe
   return true;
 }
 
-function observed(b: Battle, sight: TeamSight, x: number, z: number, height: number, exposure = 0): boolean {
+/** `stealth` scales every lookout's range against this target: a squadron in ambush is seen late. */
+function observed(b: Battle, sight: TeamSight, x: number, z: number, height: number, exposure = 0, stealth = 1): boolean {
   const cell = sight.cells.get(`${Math.floor(x / CELL)},${Math.floor(z / CELL)}`);
   if (!cell) return false;
   for (const o of cell) {
-    const range = b.night && !o.beacon ? Math.max(o.range * NIGHT_SHARE, exposure) : o.range;
+    const range = (b.night && !o.beacon ? Math.max(o.range * NIGHT_SHARE, exposure) : o.range) * stealth;
     const dx = x - o.x, dz = z - o.z, squared = dx * dx + dz * dz;
     if (squared > range * range) continue;
     if (lineOfSight(b, o, x, z, height, Math.sqrt(squared))) return true;
@@ -82,7 +83,7 @@ function sightOf(b: Battle): Sight {
     }
   }
   for (const team of ['joseon', 'japan'] as const) for (const s of b.ships) {
-    if (s.team !== team && s.alive && observed(b, sight.teams[team], s.x, s.z, s.spec.deck + 3, exposedRange(s) * scale)) sight.teams[team].ships.add(s.id);
+    if (s.team !== team && s.alive && observed(b, sight.teams[team], s.x, s.z, s.spec.deck + 3, exposedRange(s) * scale, s.boost?.stealth ?? 1)) sight.teams[team].ships.add(s.id);
   }
   caches.set(b, sight);
   return sight;

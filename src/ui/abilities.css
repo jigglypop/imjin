@@ -1,0 +1,438 @@
+/* Commander abilities: a row of seals above the commander cards, and the banner a used ability raises. */
+
+.abilities {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  margin-bottom: 14px;
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+  z-index: 3;
+}
+
+.ability {
+  --gold: #d9b871;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ability-seal {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 38%, #2a2620 0%, #15130f 70%);
+  box-shadow: 0 0 0 2px rgba(217, 184, 113, 0.55), 0 6px 16px rgba(0, 0, 0, 0.45);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+/* The cooldown: a dark sweep that shrinks clockwise as the seal comes back. */
+.ability-seal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(rgba(6, 8, 10, 0.78) calc(var(--cd) * 360deg), transparent 0);
+  pointer-events: none;
+}
+
+.ability-glyph {
+  font-family: var(--font-title);
+  font-size: 27px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--gold);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.ability-wait {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-15);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--on-dark);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.ability-face {
+  position: absolute;
+  right: -5px;
+  bottom: -3px;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 2px var(--sea-0);
+}
+
+.ability-key {
+  position: absolute;
+  left: -6px;
+  top: -6px;
+  z-index: 2;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font: 600 10px/1.3 var(--font-ui);
+  color: var(--ink-2);
+  background: var(--glass-solid);
+  box-shadow: 0 0 0 1px var(--line-2);
+}
+
+.ability-name {
+  font-size: var(--fs-12);
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--on-dark-2);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* While the ability runs, a thin gold bar under the name empties. */
+.ability-run {
+  width: 40px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--gold) calc(var(--run) * 100%), rgba(255, 255, 255, 0.12) 0);
+  opacity: 0;
+}
+
+.ability--ready .ability-seal {
+  animation: ability-ready 2.4s ease-in-out infinite;
+}
+
+.ability--ready:hover .ability-seal,
+.ability--ready:focus-visible .ability-seal {
+  transform: translateY(-3px) scale(1.05);
+}
+
+.ability--on .ability-seal {
+  box-shadow: 0 0 0 2px var(--gold), 0 0 18px 4px rgba(217, 184, 113, 0.55), 0 6px 16px rgba(0, 0, 0, 0.45);
+  animation: ability-on 1.2s ease-in-out infinite;
+}
+
+.ability--on .ability-run {
+  opacity: 1;
+}
+
+.ability--on .ability-name {
+  color: var(--gold);
+}
+
+.ability--cool .ability-glyph {
+  opacity: 0.45;
+}
+
+.ability--cool .ability-seal {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14), 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+.ability--lost {
+  cursor: default;
+  filter: grayscale(1) brightness(0.55);
+}
+
+@keyframes ability-ready {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(217, 184, 113, 0.55), 0 6px 16px rgba(0, 0, 0, 0.45); }
+  50% { box-shadow: 0 0 0 2px rgba(217, 184, 113, 0.9), 0 0 12px 2px rgba(217, 184, 113, 0.3), 0 6px 16px rgba(0, 0, 0, 0.45); }
+}
+
+@keyframes ability-on {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+.ability-tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 250px;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm, 8px);
+  text-align: left;
+  font-size: var(--fs-12);
+  line-height: 1.45;
+  color: var(--ink-2);
+  background: var(--glass-solid);
+  box-shadow: var(--shadow), 0 0 0 1px var(--glass-line);
+  pointer-events: none;
+}
+
+.ability-tip b {
+  font-size: var(--fs-15);
+  color: var(--ink);
+}
+
+.ability-tip b span {
+  margin-left: 4px;
+  font-family: var(--font-title);
+  font-weight: 400;
+  color: var(--gold);
+}
+
+.ability-tip-who {
+  color: var(--ink-3);
+}
+
+.ability-tip-meta {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (hover: hover) {
+  .ability:hover .ability-tip,
+  .ability:focus-visible .ability-tip {
+    display: flex;
+  }
+}
+
+/* Phones: smaller seals without the name, and no hotkeys to show. */
+.app--compact .abilities {
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.app--compact .ability-seal {
+  width: 44px;
+  height: 44px;
+}
+
+.app--compact .ability-glyph {
+  font-size: 23px;
+}
+
+.app--compact .ability-name,
+.app--touch .ability-key {
+  display: none;
+}
+
+.app--compact .ability-run {
+  width: 32px;
+}
+
+/* The banner. */
+.ability-banners {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: max(84px, 15vh);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.ability-banner {
+  --tone: #d9b871;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 64px;
+  background: linear-gradient(90deg, transparent, rgba(10, 10, 9, 0.78) 22%, rgba(10, 10, 9, 0.78) 78%, transparent);
+  animation: ability-banner 2.8s ease forwards;
+}
+
+.ability-banner::before,
+.ability-banner::after {
+  content: '';
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--tone), transparent);
+}
+
+.ability-banner::before {
+  top: 0;
+}
+
+.ability-banner::after {
+  bottom: 0;
+}
+
+.ability-banner--foe {
+  --tone: #d88a72;
+}
+
+.ability-banner-hanja {
+  font-family: var(--font-title);
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.08em;
+  color: var(--tone);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+}
+
+.ability-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ability-banner-text b {
+  font-family: var(--font-title);
+  font-size: 22px;
+  color: var(--on-dark);
+}
+
+.ability-banner-text span {
+  font-size: var(--fs-13);
+  color: var(--on-dark-2);
+}
+
+.app--compact .ability-banners {
+  top: max(64px, 12vh);
+}
+
+.app--compact .ability-banner {
+  padding: 6px 36px;
+  gap: 10px;
+}
+
+.app--compact .ability-banner-hanja {
+  font-size: 30px;
+}
+
+.app--compact .ability-banner-text b {
+  font-size: 17px;
+}
+
+@keyframes ability-banner {
+  0% { opacity: 0; transform: translateY(-8px) scaleX(0.92); }
+  10% { opacity: 1; transform: none; }
+  78% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ability--ready .ability-seal,
+  .ability--on .ability-seal {
+    animation: none;
+  }
+}
+
+/* Flagship and streak callouts: the same banner, a little lower so an ability's banner and a kill can share the top. */
+.feed-callouts {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: max(150px, 25vh);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.feed-callout--small {
+  padding: 4px 44px;
+}
+
+.feed-callout--small .ability-banner-hanja {
+  font-size: 30px;
+}
+
+.feed-callout--small .ability-banner-text b {
+  font-size: 17px;
+}
+
+.app--compact .feed-callouts {
+  top: max(118px, 22vh);
+}
+
+/* The medal on the result card, and the bonus objectives beside it. */
+.medals {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 4px 0 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.medal {
+  --metal: #d9b871;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-title);
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a140a;
+  background: radial-gradient(circle at 35% 30%, #fff6 0, transparent 40%), var(--metal);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.35), 0 0 0 5px var(--metal), 0 6px 18px rgba(0, 0, 0, 0.5);
+  animation: medal-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.medal--silver {
+  --metal: #c9cfd6;
+}
+
+.medal--bronze {
+  --metal: #b98559;
+}
+
+.medal-goals {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: var(--fs-13);
+  color: var(--ink-3);
+}
+
+.medal-goals i {
+  display: inline-block;
+  width: 16px;
+  font-style: normal;
+}
+
+.medal-goal--done {
+  color: var(--ink);
+}
+
+.medal-goal--done i {
+  color: var(--good);
+}
+
+.medal-name {
+  margin-top: 2px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+@keyframes medal-in {
+  from { opacity: 0; transform: scale(0.4) rotate(-20deg); }
+  to { opacity: 1; transform: none; }
+}

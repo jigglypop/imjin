@@ -2,6 +2,7 @@ import type { Battle } from './battle';
 import type { BuildingKind, Conquest } from './conquest';
 import type { CrewPlan, Order, Ship, ShipKind, Stance, AmmoMode, FireMode } from './types';
 import type { CoastalFormationKind } from './coastal-tactics';
+import { useAbility } from './abilities';
 
 export type ShipPatch = Partial<{ fireMode: FireMode; ammo: AmmoMode; speedCap: number; stance: Stance; lights: boolean; repel: boolean }>;
 export type FormationKind = 'crane' | 'line' | 'column' | 'wedge' | CoastalFormationKind;
@@ -24,7 +25,9 @@ export type Command =
   | { type: 'demolish'; point: number; slot: number }
   | { type: 'upgrade'; point: number; slot: number }
   | { type: 'cancelUpgrade'; point: number; slot: number }
-  | { type: 'rally'; point: number; x: number; z: number };
+  | { type: 'rally'; point: number; x: number; z: number }
+  /** The commander of one of the owner's squadrons uses his ability (sim/abilities.ts). */
+  | { type: 'ability'; squadron: number };
 
 const ORDER_TYPES = new Set(['auto', 'move', 'attack', 'hold', 'anchor', 'slot', 'follow', 'broadside', 'bombard']);
 const finite = (...v: unknown[]) => v.every((x) => typeof x === 'number' && Number.isFinite(x));
@@ -126,6 +129,11 @@ export function applyCommand(b: Battle, owner: number, cmd: Command, conquest: C
       return conquest?.cancelUpgrade(b, owner, cmd.point, cmd.slot) ? 1 : 0;
     case 'rally':
       return conquest?.setRally(owner, cmd.point, cmd.x, cmd.z) ? 1 : 0;
+    case 'ability': {
+      // Only the squadron's own commander can call on it; cooldown and a living flagship are checked by useAbility.
+      const sq = typeof cmd.squadron === 'number' ? b.squadron(cmd.squadron) : undefined;
+      return sq && sq.owner === owner && useAbility(b, sq) ? 1 : 0;
+    }
     default:
       return 0;
   }

@@ -135,6 +135,13 @@ export class NetBattle implements BattleListener {
       else if (e.type === 'removed') {
         const s = b.get(e.ship);
         if (s) s.alive = false;
+      } else if (e.type === 'ability') {
+        // The client's squadron list holds only what it can see, so it is found by id rather than by index.
+        const sq = b.squadrons.find((q) => q.id === e.squadron);
+        if (sq) {
+          sq.abilityUntil = e.until;
+          sq.abilityReady = e.ready;
+        }
       }
     }
     for (const p of this.shots.values()) {

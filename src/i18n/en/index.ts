@@ -10,6 +10,7 @@ import { EN_CONTROLS } from './controls';
 import { EN_PORTS } from './ports';
 import { EN_DISPATCH } from './dispatch';
 import { EN_MARCH } from './march';
+import { EN_ABILITIES } from './abilities';
 
 /** Every English string, keyed by its Korean source text. Areas are split so parallel work does not collide. */
-export const EN: Record<string, string> = { ...EN_COMMON, ...EN_SIM, ...EN_MENUS, ...EN_BATTLE, ...EN_CAMPAIGN, ...EN_ONLINE, ...EN_EXPANSION, ...EN_CONQUEST_DEPTH, ...EN_CONTROLS, ...EN_PORTS, ...EN_DISPATCH, ...EN_MARCH };
+export const EN: Record<string, string> = { ...EN_COMMON, ...EN_SIM, ...EN_MENUS, ...EN_BATTLE, ...EN_CAMPAIGN, ...EN_ONLINE, ...EN_EXPANSION, ...EN_CONQUEST_DEPTH, ...EN_CONTROLS, ...EN_PORTS, ...EN_DISPATCH, ...EN_MARCH, ...EN_ABILITIES };

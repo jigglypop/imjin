@@ -1,3 +1,5 @@
+import type { AbilityId, Boost } from './abilities';
+
 /**
  * The two sides of a battle. The names are the historical defaults: in the nine battles the Joseon side carries the
  * Ming fleet as well. In a conquest battle either side may be led by any faction, so code that means "which navy"
@@ -182,6 +184,8 @@ export type Ship = {
   campaignId: string;
   /** Left the arena alive while retreating (alive is false then, but the ship was not lost). */
   fled?: boolean;
+  /** What the commander abilities running now do to this ship (sim/abilities.ts); undefined when none reaches it. */
+  boost?: Boost;
 };
 
 export type Squadron = {
@@ -197,6 +201,10 @@ export type Squadron = {
   card: string;
   shipIds: number[];
   leaderId: number;
+  /** The commander's ability (sim/abilities.ts), the battle time it runs until and the time it can be used again. */
+  ability?: AbilityId;
+  abilityUntil?: number;
+  abilityReady?: number;
 };
 
 export type Projectile = {
@@ -241,6 +249,8 @@ export type BattleEvent =
   | { type: 'captured'; point: number; owner: number; from: number }
   | { type: 'built'; point: number; building: string; owner: number }
   | { type: 'razed'; point: number; building: string }
+  /** A commander used his squadron's ability; `ship` is the flagship it centres on, `until` and `ready` as on the Squadron. */
+  | { type: 'ability'; squadron: number; ability: AbilityId; ship: number; x: number; z: number; until: number; ready: number }
   | { type: 'battery'; point: number; x: number; y: number; z: number; dx: number; dy: number; dz: number };
 
 export type LandSampler = (x: number, z: number) => number;

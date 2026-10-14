@@ -18,6 +18,8 @@ import './hud.css';
 import { ControlsHelp, Tooltips, Tutorial, useTour } from './Tutorial';
 import { useNet } from '../net/NetClient';
 import { RankActions, RankResult } from './RankResult';
+import { AbilityTray } from './Abilities';
+import { BattleFeed, BattleMedals } from './BattleFeed';
 
 const SEA_LABELS: Record<SeaStateName, string> = { calm: '잔잔', moderate: '보통', rough: '거침' };
 const ACTIVITY: Record<string, string> = {
@@ -939,6 +941,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
           <>
             {!mapFolded && (p ? <Detail engine={engine} snap={snap} p={p} portrait={primaryPortrait} /> : hintOpen && !tourActive && !slim && <Hint onClose={closeHint} />)}
             <div className="cards-wrap">
+              <AbilityTray engine={engine} snap={snap} />
               {folded('cards') ? (
                 <FoldTab label={t('장수 패 {n}', { n: own.length })} title={t('장수 패 펼치기')} onOpen={() => setFold('cards', false)} />
               ) : (
@@ -991,6 +994,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
 
       {!ended && <Tutorial engine={engine} compact={compact} />}
       <Tooltips />
+      <BattleFeed engine={engine} snap={snap} />
 
       {ended && (
         <div className={`result glass result--${snap.draw ? 'draw' : won ? 'win' : 'loss'}`}>
@@ -1004,6 +1008,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
               </span>
             ))}
           </div>
+          <BattleMedals engine={engine} snap={snap} />
           {engine.remote && rankedMatch && <RankResult />}
           {report && (
             <div className="result-camp">

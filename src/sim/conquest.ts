@@ -2,6 +2,7 @@ import type { Battle, BattleRules } from './battle';
 import { GUN_SPECS } from './catalog';
 import { COMPETITIVE_PROFILE, shipSpec, type BalanceProfile } from './competitive';
 import { Strategist } from './strategy';
+import { navyAbility } from './abilities';
 import { cardOf, variantFor } from '../ships/anchors';
 import { fleetNo, numbered } from '../i18n/names';
 import type { ConquestState } from '../net/protocol';
@@ -145,13 +146,15 @@ export type ConquestOptions = {
   expanded?: boolean;
   incomeScale?: number;
   musterBudget?: number;
+  /** Commander abilities (sim/abilities.ts); off in ranked rooms, whose balance was settled without them. */
+  abilities?: boolean;
   /** A campaign port holds for its defender on a tie. Ordinary skirmishes end in a draw. */
   tieWinner?: Team;
 };
 /** Ordinary conquest and campaign fleets are uncapped, like the written historical battles. */
 export const DEFAULT_OPTIONS: ConquestOptions = { profile: COMPETITIVE_PROFILE, tickets: 3000, timeLimit: 30 * 60, startFunds: 3600, cap: Infinity, maxShips: Infinity, expanded: true, incomeScale: 3, musterBudget: 15600 };
 /** The sole fixed fleet limit belongs to competitive ranked one-versus-one rooms. */
-export const RANKED_OPTIONS: ConquestOptions = { profile: COMPETITIVE_PROFILE, tickets: 1000, timeLimit: 30 * 60, startFunds: 1200, cap: 10000, maxShips: 36, expanded: false, incomeScale: 1, musterBudget: 5200 };
+export const RANKED_OPTIONS: ConquestOptions = { profile: COMPETITIVE_PROFILE, tickets: 1000, timeLimit: 30 * 60, startFunds: 1200, cap: 10000, maxShips: 36, expanded: false, incomeScale: 1, musterBudget: 5200, abilities: false };
 
 const BASE_INCOME = 60;
 const POINT_INCOME = 45;
@@ -652,7 +655,7 @@ export class Conquest implements BattleRules {
     const all = b.squadrons.filter((sq) => sq.owner === pl.slot).length;
     const portraits = PORTRAITS[pl.faction];
     const portrait = portraits[all % portraits.length]!;
-    return b.addSquadron(pl.team, fleetNo(label, index), pl.name, portrait, cardOf(kind), pl.slot);
+    return b.addSquadron(pl.team, fleetNo(label, index), pl.name, portrait, cardOf(kind), pl.slot, this.options.abilities === false ? undefined : navyAbility(pl.faction, kind));
   }
 
   get tenders() {

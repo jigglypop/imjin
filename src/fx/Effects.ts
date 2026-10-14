@@ -17,6 +17,7 @@ import { LIGHT_COUNT, pointLights } from '../render/lights';
 import type { ParticleQuality } from '../game/quality';
 import { shipObserved } from '../sim/observation';
 import { pointVisible } from '../sim/visibility';
+import { ABILITIES, abilityAnchor, abilityTargets } from '../sim/abilities';
 
 const OARS: Record<string, number> = { panokseon: 8, geobukseon: 8, atakebune: 13, sekibune: 11 };
 const MASTS: Record<string, number> = { panokseon: 2, geobukseon: 1, hyeopseon: 1, atakebune: 2, sekibune: 1, kobaya: 1, mingship: 3, mingsmall: 1 };
@@ -48,6 +49,11 @@ type LightSource = {
 type Flight = { x: number; y: number; z: number; seen: number; end: number; peak: number; next: number; ghost: number; ref: Projectile | null; kind: ShellKind; seed: number };
 /** Seconds a shell the sim ended early takes to settle from its lifted arc onto the sim's point. */
 const SETTLE = 0.12;
+/** Seconds a commander's ring takes to spread over the water, and the stamps that draw one ring. */
+const RING_TIME = 1.6;
+const RING_STAMPS = 140;
+/** The signal smoke each ability sends up from its flagship, as r, g, b. */
+const SIGNAL: Record<string, [number, number, number]> = { fire_arrows: [0.55, 0.16, 0.08], smoke: [0.9, 0.9, 0.88], ambush: [0.25, 0.27, 0.3], tide: [0.42, 0.55, 0.6] };
 /** A ship going down: its script and the running parts of the sinking effects. */
 type SinkState = { plan: SinkCue[]; next: number; bubbles: number; slick: number; bubbleUntil: number };
 
@@ -155,6 +161,7 @@ export class Effects {
   /** A new battle starts on this engine: ship and shell ids restart, so the old battle's per-id state must not carry over. */
   newBattle() {
     this.emitAccum.clear();
+    this.rings.length = 0;
     this.dragon.clear();
     this.strokes.clear();
     this.sinks.clear();
@@ -211,8 +218,88 @@ export class Effects {
           this.dragon.delete(e.ship);
           this.finishSink(e.ship, battle);
           break;
+        case 'ability':
+          this.ability(e, battle);
+          break;
         default:
           break;
+      }
+    }
+  }
+
+  /** Rings on the water spreading from a flagship whose commander has called on his ability; `bursts` counts the mist rings thrown up so far. */
+  private rings: { x: number; z: number; r: number; age: number; bursts: number }[] = [];
+
+  /**
+   * A commander's ability: a ring of foam spreads from the flagship over the water it reaches (the squadron, or the
+   * radius of an area ability), a warm flash lights the flagship and a column of signal smoke goes up from its deck.
+   */
+  private ability(e: Extract<BattleEvent, { type: 'ability' }>, battle: Battle) {
+    const ship = battle.get(e.ship);
+    const x = ship?.x ?? e.x;
+    const z = ship?.z ?? e.z;
+    const area = ABILITIES[e.ability].area;
+    let r = typeof area === 'number' ? area : 60;
+    if (area === 'squadron') {
+      const sq = battle.squadrons.find((q) => q.id === e.squadron);
+      for (const id of sq?.shipIds ?? []) {
+        const o = battle.get(id);
+        if (o && battle.isActive(o)) r = Math.max(r, Math.sqrt((o.x - x) ** 2 + (o.z - z) ** 2) + 40);
+      }
+      r = Math.min(r, 360);
+    }
+    this.rings.push({ x, z, r, age: 0, bursts: 0 });
+    this.light(x, 14, z, 14000, 1.4, 1, 0.78, 0.42, 320);
+    if (!ship) return;
+    const [cr, cg, cb] = SIGNAL[e.ability] ?? [0.62, 0.46, 0.22];
+    for (let i = 0; i < this.n(14); i += 1) {
+      this.views.localToWorld(ship.id, rnd(-0.1, 0.1) * ship.spec.length, this.deckOf(ship) + 2, rnd(-0.2, 0.2) * ship.spec.beam, this.p);
+      this.smoke.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: rnd(-0.8, 0.8), vy: rnd(4, 9), vz: rnd(-0.8, 0.8), life: rnd(6, 10), size0: rnd(2, 3), size1: rnd(9, 15), alpha: 0.7, r: cr, g: cg, b: cb, drag: 0.9, lift: 0.5, wind: 1, heat: 0.1 });
+    }
+  }
+
+  /** The spreading rings, and the smoke screen laid around a squadron while its commander's smoke lasts. */
+  private abilityAuras(battle: Battle, dt: number) {
+    for (let i = this.rings.length - 1; i >= 0; i -= 1) {
+      const ring = this.rings[i]!;
+      ring.age += dt;
+      if (ring.age >= RING_TIME) {
+        this.rings.splice(i, 1);
+        continue;
+      }
+      // Three rings, each stamped in place for a few frames: a ring stamped every frame as it grew would leave radial
+      // streaks behind it, and one frame's foam is too faint to read.
+      const burst = Math.min(2, Math.floor(ring.age / 0.4));
+      const radius = ring.r * [0.4, 0.72, 1][burst]!;
+      if (ring.age - burst * 0.4 < 0.15) {
+        const stamps = Math.min(RING_STAMPS, Math.ceil((Math.PI * 2 * radius) / 14));
+        const strength = [0.5, 0.42, 0.34][burst]! * Math.min(2, dt * 60);
+        for (let k = 0; k < stamps; k += 1) {
+          const a = (k / stamps) * Math.PI * 2;
+          this.wake?.stamp(ring.x + Math.cos(a) * radius, ring.z + Math.sin(a) * radius, a + Math.PI / 2, 9, strength, 2, 1.3);
+        }
+      }
+      if (ring.bursts > burst) continue;
+      ring.bursts += 1;
+      const sprays = this.n(Math.min(64, 20 + radius * 0.12));
+      // Foam alone is lost among the whitecaps of a lively sea: low spray marks the ring as well.
+      for (let k = 0; k < sprays; k += 1) {
+        const a = (k / sprays) * Math.PI * 2 + rnd(-0.03, 0.03);
+        const px = ring.x + Math.cos(a) * radius;
+        const pz = ring.z + Math.sin(a) * radius;
+        this.spray.emit({ x: px, y: waveField.heightAt(px, pz) + 0.3, z: pz, vx: Math.cos(a) * rnd(1, 3), vy: rnd(1, 2.6), vz: Math.sin(a) * rnd(1, 3), life: rnd(1.4, 2.2), size0: 2.5, size1: rnd(7, 11), alpha: 0.5, r: 0.94, g: 0.96, b: 0.97, drag: 1, lift: -1.5 });
+      }
+    }
+    if (dt <= 0) return;
+    for (const sq of battle.squadrons) {
+      if (sq.ability !== 'smoke' || !(battle.time < (sq.abilityUntil ?? 0))) continue;
+      const anchor = abilityAnchor(battle, sq);
+      if (!anchor || !shipObserved(battle, this.views.team, anchor)) continue;
+      // Banks of smoke drift along each ship it covers, low over the water.
+      for (const ship of abilityTargets(battle, sq, anchor)) {
+        if (Math.random() > dt * 2.5 * this.k) continue;
+        const h = waveField.heightAt(ship.x, ship.z);
+        this.smoke.emit({ x: ship.x + rnd(-20, 20), y: h + 3, z: ship.z + rnd(-20, 20), vx: rnd(-1, 1), vy: rnd(0.3, 1), vz: rnd(-1, 1), life: rnd(10, 16), size0: rnd(8, 12), size1: rnd(30, 46), alpha: 0.5, r: 0.86, g: 0.86, b: 0.84, drag: 0.7, lift: 0.08, wind: 1 });
       }
     }
   }
@@ -794,6 +881,7 @@ export class Effects {
 
   private continuous(battle: Battle, dt: number) {
     if (dt > 0) this.rowing(battle, dt);
+    this.abilityAuras(battle, dt);
     for (const ship of battle.ships) {
       if (!ship.alive || !shipObserved(battle, this.views.team, ship)) continue;
       if (ship.spec.kind === 'geobukseon' && ship.sinking === 0) this.dragonSmoke(ship, dt);

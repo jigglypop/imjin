@@ -6,6 +6,7 @@ import { isShipVisible } from './visibility';
 import { anchorScale, anchorsFor } from '../ships/anchors';
 import type { CurrentField } from './current';
 import { coastalFormationSlots, type CoastalFormationKind } from './coastal-tactics';
+import { applyAbilities, boostOf, thinkAbilities, type AbilityId } from './abilities';
 import {
   OWNER_OF,
   TEAMS,
@@ -206,6 +207,8 @@ export class Battle {
   center = { x: 0, z: 0 };
   arenaRadius = 6000;
   rules: BattleRules | null = null;
+  /** Whether commanders may use their abilities (sim/abilities.ts). Ranked rooms play without them. */
+  abilities = true;
   private byId = new Map<number, Ship>();
   private nextId = 1;
   private nextProjectile = 1;
@@ -269,8 +272,14 @@ export class Battle {
     return shipGunSpec(kind, gun, this.profile);
   }
 
-  addSquadron(team: Team, name: string, commander: string, portrait: string, card: string, owner = -1) {
+  /** `ability` is the commander's ability (sim/abilities.ts); a squadron without one has none to use. */
+  addSquadron(team: Team, name: string, commander: string, portrait: string, card: string, owner = -1, ability?: AbilityId) {
     const sq: Squadron = { id: this.squadrons.length + 1, team, faction: team, owner, name, commander, portrait, card, shipIds: [], leaderId: 0 };
+    if (ability) {
+      sq.ability = ability;
+      sq.abilityReady = 0;
+      sq.abilityUntil = 0;
+    }
     this.squadrons.push(sq);
     return sq;
   }
@@ -362,6 +371,11 @@ export class Battle {
 
   isActive(s: Ship | undefined): s is Ship {
     return !!s && s.alive && s.sinking === 0 && !s.struck;
+  }
+
+  /** How many enemy ships held this ship by grapple at the last step. */
+  boardedBy(id: number) {
+    return this.boarders.get(id) ?? 0;
   }
 
   activityOf(id: number): ShipActivity {
@@ -512,7 +526,7 @@ export class Battle {
     if (this.profile !== 'historical' && observerTeam) return isShipVisible(this, observerTeam, target.id);
     if (!this.night) return true;
     const range = target.lights ? 1900 : target.fire > 0.08 ? 1400 : target.revealed > 0 ? 900 : 260;
-    return d <= range;
+    return d <= range * boostOf(target, 'stealth');
   }
 
   coastalTactic?: CoastalFormationKind;
@@ -613,6 +627,8 @@ export class Battle {
     }
     this.grid.rebuild(this.ships);
     this.checkRetreat();
+    if (this.abilities) thinkAbilities(this);
+    applyAbilities(this);
     for (const s of this.ships) {
       if (!s.alive) continue;
       s.thinkTimer -= dt;
@@ -1261,7 +1277,7 @@ export class Battle {
       // The grapple tests velocity along the attacker's heading. A target moving broadside does not increase
       // the speed a boarder can safely approach at; using its full speed made fast boats overshoot every grapple.
       const drift = this.profile === 'historical' ? Math.max(0, target.speed) : target.speed * Math.cos(s.heading - target.heading);
-      const maximum = s.spec.maxSpeed * (this.profile === 'historical' ? 1 : s.mods.speed);
+      const maximum = s.spec.maxSpeed * (this.profile === 'historical' ? 1 : s.mods.speed) * boostOf(s, 'speed');
       s.throttle = Math.min(s.throttle, Math.max(0, GRAPPLE_SPEED.japan - 1 + drift) / maximum);
     }
     this.activity.set(s.id, d < 200 ? 'charging' : 'moving');
@@ -1280,7 +1296,7 @@ export class Battle {
     const vx = Math.cos(target.heading) * target.speed, vz = Math.sin(target.heading) * target.speed;
     const condition = s.damageState;
     const drive = (1 - (condition?.propulsion ?? 0) * 0.55) * (1 - (condition?.flooding ?? 0) * 0.3);
-    const speed = Math.max(0.5, s.spec.maxSpeed * s.mods.speed * s.speedCap * (0.3 + 0.7 * this.rowing(s)) * (1 - s.fire * 0.35) * drive);
+    const speed = Math.max(0.5, s.spec.maxSpeed * s.mods.speed * boostOf(s, 'speed') * s.speedCap * (0.3 + 0.7 * this.rowing(s)) * (1 - s.fire * 0.35) * drive);
     const a = vx * vx + vz * vz - speed * speed, b = 2 * (dx * vx + dz * vz), c = dx * dx + dz * dz;
     let time = Infinity;
     if (Math.abs(a) < 1e-9) { if (b < 0) time = -c / b; }
@@ -1356,17 +1372,23 @@ export class Battle {
     const anchored = s.order.type === 'anchor' ? 0 : 1;
     const condition = this.profile === 'historical' ? undefined : s.damageState;
     const drive = (1 - (condition?.propulsion ?? 0) * 0.55) * (1 - (condition?.flooding ?? 0) * 0.3);
-    const target = s.throttle * s.speedCap * spec.maxSpeed * s.mods.speed * crewFactor * (1 - s.fire * 0.35) * sinkingFactor * anchored * drive;
+    const target = s.throttle * s.speedCap * spec.maxSpeed * s.mods.speed * boostOf(s, 'speed') * crewFactor * (1 - s.fire * 0.35) * sinkingFactor * anchored * drive;
     const rate = target > s.speed ? spec.accel : spec.accel * 1.6;
     s.speed += clamp(target - s.speed, -rate * dt, rate * dt);
     if (s.grappledWith || this.boarders.has(s.id)) s.speed *= Math.max(0, 1 - dt * 1.5);
     const steer = 0.4 + 0.6 * Math.min(1, Math.abs(s.speed) / spec.maxSpeed);
-    const desiredTurn = s.rudder * spec.turnRate * s.mods.turn * steer * Math.min(1, crewFactor) * sinkingFactor * anchored * (1 - (condition?.steering ?? 0) * 0.7);
+    const desiredTurn = s.rudder * spec.turnRate * s.mods.turn * boostOf(s, 'turn') * steer * Math.min(1, crewFactor) * sinkingFactor * anchored * (1 - (condition?.steering ?? 0) * 0.7);
     s.turn += (desiredTurn - s.turn) * Math.min(1, dt * 1.4);
     s.heading = wrapAngle(s.heading + s.turn * dt);
     const drift = anchored ? this.windDrift : 0;
-    const flow = this.flow ? this.flow.velocity(s.x, s.z, this.tide) : this.current;
+    let flow = this.flow ? this.flow.velocity(s.x, s.z, this.tide) : this.current;
     const set = s.order.type === 'anchor' ? 0.15 : 1;
+    const against = flow.x * Math.cos(s.heading) + flow.z * Math.sin(s.heading);
+    if (s.boost && against < 0) {
+      // A pilot who knows the tide keeps out of the worst of a current against the ship's course.
+      const keep = (1 - s.boost.flow) * against;
+      flow = { x: flow.x - Math.cos(s.heading) * keep, z: flow.z - Math.sin(s.heading) * keep };
+    }
     const nx = s.x + Math.cos(s.heading) * s.speed * dt + (Math.cos(this.windAngle) * drift + flow.x * set) * dt;
     const nz = s.z + Math.sin(s.heading) * s.speed * dt + (Math.sin(this.windAngle) * drift + flow.z * set) * dt;
     if (this.flow && (flow.x || flow.z)) {
@@ -1462,11 +1484,11 @@ export class Battle {
         if (closing > 1.2 && a.team !== b.team && this.time - ramHit > 0.5) {
           const aHits = Math.max(0, vax * nx + vaz * nz);
           const bHits = Math.max(0, -(vbx * nx + vbz * nz));
-          const toB = aHits * a.spec.ramPower * 5 * (1 - b.spec.armor);
-          const toA = bHits * b.spec.ramPower * 5 * (1 - a.spec.armor);
+          const toB = aHits * a.spec.ramPower * 5 * (1 - b.spec.armor) * boostOf(a, 'ram');
+          const toA = bHits * b.spec.ramPower * 5 * (1 - a.spec.armor) * boostOf(b, 'ram');
           const bClosing = this.profile === 'historical' ? 1.5 : b.spec.kind === 'geobukseon' ? 0.3 : 1.2;
-          const damageB = toB + closing * bClosing;
-          const damageA = toA + closing * (a.spec.kind === 'geobukseon' ? 0.3 : 1.2);
+          const damageB = (toB + closing * bClosing) * boostOf(b, 'armor');
+          const damageA = (toA + closing * (a.spec.kind === 'geobukseon' ? 0.3 : 1.2)) * boostOf(a, 'armor');
           this.damage(b, damageB, a);
           this.damage(a, damageA, b);
           this.impactDamage(b, damageB, -nx, -nz);
@@ -1644,14 +1666,14 @@ export class Battle {
       const d = this.byId.get(id)!;
       const power = attackers.map((a) => {
         const shock = 1 + SHOCK_BONUS * Math.max(0, 1 - a.grappleTime / SHOCK_TIME);
-        return this.boardStrength(a) * a.spec.melee * a.mods.melee * shock;
+        return this.boardStrength(a) * a.spec.melee * a.mods.melee * boostOf(a, 'melee') * shock;
       });
       const total = power.reduce((sum, v) => sum + v, 0);
       const deck = attackers.reduce((sum, a) => sum + a.spec.deck, 0) / attackers.length;
       // Looking down from a high deck on men climbing up from a low one is worth something.
       const height = clamp(1 + 0.05 * (d.spec.deck - deck), 0.85, 1.25);
       const parapet = 1 + (d.spec.deckDefense - 1) * PARAPET_SHARE;
-      const def = this.boardStrength(d) * d.spec.melee * parapet * height * d.mods.defense * (d.repel ? 1.3 : 1);
+      const def = this.boardStrength(d) * d.spec.melee * parapet * height * d.mods.defense * boostOf(d, 'defense') * (d.repel ? 1.3 : 1);
       this.casualties(d, total * MELEE_RATE * dt * (0.6 + this.rand() * 0.8), 'melee', true);
       attackers.forEach((a, i) => this.casualties(a, def * (power[i]! / Math.max(1e-6, total)) * MELEE_RATE * dt * (0.6 + this.rand() * 0.8), 'melee', true));
       if (d.crew < d.spec.crew * CAPTURE_CREW) {
@@ -1743,7 +1765,7 @@ export class Battle {
       const gun = this.gunSpec(spec.kind, battery.gun);
       const range = gun.range * rangeMul;
       if (g.stage < 4) {
-        g.t += dt * crewFactor * s.mods.reload;
+        g.t += dt * crewFactor * s.mods.reload * boostOf(s, 'reload');
         const need = gun.stages[g.stage]!;
         if (g.t >= need) {
           g.t -= need;
@@ -1803,7 +1825,7 @@ export class Battle {
     const spec = s.spec;
     const strength = this.musketry(s);
     if (strength <= 0.02) return;
-    s.musketReload = Math.max(0, s.musketReload - dt * (0.5 + 0.5 * Math.min(1, strength)) * s.mods.reload);
+    s.musketReload = Math.max(0, s.musketReload - dt * (0.5 + 0.5 * Math.min(1, strength)) * s.mods.reload * boostOf(s, 'reload'));
     if (s.musketReload > 0) return;
     let target: Ship | undefined;
     let best = spec.musketRange;
@@ -1818,7 +1840,7 @@ export class Battle {
     });
     if (!target) return;
     const t = target as Ship;
-    const accuracy = (1 - (best / spec.musketRange) * 0.6) * s.mods.accuracy;
+    const accuracy = (1 - (best / spec.musketRange) * 0.6) * s.mods.accuracy * boostOf(s, 'accuracy') * boostOf(t, 'evade');
     const close = best < CLOSE_RANGE && boardsFirst(s);
     const loss = (spec.musketPower * strength * (2.5 + this.rand() * 4) * accuracy * (close ? CLOSE_LOSS : 1)) / t.spec.deckDefense;
     this.casualties(t, loss, 'deck', false);
@@ -1979,8 +2001,8 @@ export class Battle {
       ammo = 'fire';
       spreadMul = 1.15;
     }
-    const morale = (0.6 + 0.4 * (s.crew / s.spec.crew)) * s.mods.accuracy;
-    this.launch(m, aim, gun.type, s.team, s.id, { damage, crewDamage, ammo, spreadMul, morale, fireChance: Math.min(0.85, fireChance * s.mods.fire) });
+    const morale = (0.6 + 0.4 * (s.crew / s.spec.crew)) * s.mods.accuracy * boostOf(s, 'accuracy') * (target ? boostOf(target, 'evade') : 1);
+    this.launch(m, aim, gun.type, s.team, s.id, { damage, crewDamage, ammo, spreadMul, morale, fireChance: Math.min(0.85, fireChance * s.mods.fire * boostOf(s, 'fire')) });
     s.revealed = 4;
     g.ammo = Math.max(0, g.ammo - 1);
   }
@@ -2090,7 +2112,7 @@ export class Battle {
           if (p.y > top || p.y < -1.2) return;
           p.alive = false;
           const shooter = this.byId.get(p.shooter);
-          const dmg = p.damage * (1 - s.spec.armor) * (0.7 + this.rand() * 0.6);
+          const dmg = p.damage * (1 - s.spec.armor) * boostOf(s, 'armor') * (0.7 + this.rand() * 0.6);
           this.damage(s, dmg, shooter);
           // A round above the bulwark sweeps the open deck; one through the planking kills below.
           const exposure: Exposure = p.ammo === 'grape' || p.y > s.spec.deck ? 'deck' : 'hull';
@@ -2179,7 +2201,7 @@ export class Battle {
     if (s.fire > 0) {
       const crewRatio = s.crew / s.spec.crew;
       s.fire += dt * 0.018 * (1 + s.fire) * (s.spec.fireResist ?? 1);
-      if (!s.struck && s.sinking === 0) s.fire -= dt * 0.045 * crewRatio * (0.4 + this.rand() * 1.2);
+      if (!s.struck && s.sinking === 0) s.fire -= dt * 0.045 * crewRatio * boostOf(s, 'douse') * (0.4 + this.rand() * 1.2);
       s.fire = clamp(s.fire, 0, 1);
       s.burn = Math.min(1, s.burn + dt * s.fire * 0.025);
       if (s.sinking === 0) this.damage(s, dt * s.fire * 1.6);
