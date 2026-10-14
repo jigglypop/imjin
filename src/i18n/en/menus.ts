@@ -7,6 +7,7 @@ export const EN_MENUS: Record<string, string> = {
   '{name} 해전 준비 중': 'Preparing the battle of {name}',
 
   // Main menu
+  '나라를 지킨 바다': 'The sea that held a kingdom',
   '명량, 한산도 등 임진왜란 해전 아홉 곳을 직접 지휘합니다.': 'Command nine naval battles of the Imjin War, from Myeongnyang to Hansando.',
   '명량, 한산도 등 아홉 해전': 'Nine battles, Myeongnyang to Hansando',
   '조선, 명, 일본 중 한 나라를 골라 남해안의 포구를 차례로 차지합니다.': 'Pick Joseon, Ming or Japan and take the ports of the southern coast one by one.',
