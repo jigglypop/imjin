@@ -308,7 +308,9 @@ function useHudInsets() {
         const r = document.querySelector(sel)?.getBoundingClientRect();
         return r && r.width > 0 && r.height > 0 ? r : null;
       };
-      put('--bal-bottom', box('.hud .balance')?.bottom ?? null);
+      // The score panel's fold pull hangs below its edge: what sits under the panel stays clear of it too.
+      const balance = box('.hud .balance');
+      put('--bal-bottom', balance ? Math.max(balance.bottom, box('.hud .balance-fold')?.bottom ?? 0) : null);
       put('--tl-right', box('.hud .hud-menu')?.right ?? null);
       put('--tr-left', box('.hud .dock')?.left ?? null);
       put('--tl-bottom', box('.hud .hud-menu')?.bottom ?? null);
@@ -490,9 +492,34 @@ const LAYOUT_LABEL: Record<Layout, string> = { full: '전체', simple: '간소�
 const LAYOUT_ICON: Record<Layout, string> = { full: 'hudFull', simple: 'hudSimple', fold: 'hudFold' };
 const LAYOUT_KEY = 'imjin.hud.layout';
 
-/** The parts a player folds on their own: the group panel, the minimap with the ship panel, the commander cards, the orders. */
-type Part = 'groups' | 'map' | 'cards' | 'orders';
+/**
+ * The parts a player folds on their own: the score panel, the title with its menu, the group panel, the minimap with the
+ * ship panel, the commander cards, the orders.
+ */
+type Part = 'score' | 'title' | 'groups' | 'map' | 'cards' | 'orders';
 type Folds = Record<Part, boolean>;
+
+/** The two top parts keep their fold from battle to battle, as the layout does; the others start from the layout each time. */
+const TOP_KEYS = { score: 'imjin.hud.score', title: 'imjin.hud.title' } as const;
+type TopPart = keyof typeof TOP_KEYS;
+
+function readTopFold(part: TopPart, layout: Layout): boolean {
+  try {
+    const stored = localStorage.getItem(TOP_KEYS[part]);
+    if (stored === 'fold' || stored === 'open') return stored === 'fold';
+  } catch {
+    // Without storage the layout decides, as on a first visit.
+  }
+  return layout === 'fold';
+}
+
+function saveTopFold(part: TopPart, fold: boolean) {
+  try {
+    localStorage.setItem(TOP_KEYS[part], fold ? 'fold' : 'open');
+  } catch {
+    // The fold then lasts for this battle only.
+  }
+}
 
 function readLayout(): Layout {
   try {
@@ -505,7 +532,7 @@ function readLayout(): Layout {
 
 const foldsOf = (layout: Layout): Folds => {
   const all = layout === 'fold';
-  return { groups: all, map: all, cards: all, orders: all };
+  return { score: all, title: all, groups: all, map: all, cards: all, orders: all };
 };
 
 /** A folded part's tab along the bottom edge, where the part stood. */
@@ -519,12 +546,33 @@ function FoldTab({ label, title, onOpen, children }: { label: string; title: str
   );
 }
 
-/** The small button on an open part that folds it to its tab. */
-function FoldButton({ title, className, onFold }: { title: string; className: string; onFold: () => void }) {
+/** The small button on an open part that folds it to its tab, its chevron pointing to the edge the part folds into. */
+function FoldButton({ title, className, onFold, edge = 'bottom' }: { title: string; className: string; onFold: () => void; edge?: 'top' | 'bottom' }) {
   return (
     <button className={`fold-btn ${className}`} onClick={onFold} aria-expanded={true} aria-label={title} title={title}>
-      <Icon name="chevronDown" size={14} />
+      <Icon name={edge === 'top' ? 'chevronUp' : 'chevronDown'} size={14} />
     </button>
+  );
+}
+
+/**
+ * All that stands over the battle while the HUD is hidden to watch it: one faint button in the corner that brings the HUD
+ * back, and the first time a short reminder beside it that fades.
+ */
+function HudReveal({ hint, onShow }: { hint: boolean; onShow: () => void }) {
+  const t = useT();
+  const label = t(isTouchOnly ? 'UI 다시 표시' : 'UI 다시 표시 · Shift+H');
+  return (
+    <div className="hud-reveal">
+      {hint && (
+        <div className="hud-reveal-hint glass" role="status">
+          {t(isTouchOnly ? '버튼을 누르면 다시 표시합니다' : 'Shift+H 키 또는 버튼으로 다시 표시')}
+        </div>
+      )}
+      <button className="hud-reveal-btn" onClick={onShow} aria-label={label} title={label}>
+        <Icon name="eye" size={18} />
+      </button>
+    </div>
   );
 }
 
@@ -578,8 +626,12 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const [view, setView] = useState(() => {
     const layout = readLayout();
     // A phone starts with its group panel shut, as it always has.
-    return { layout, folds: { ...foldsOf(layout), groups: compact || layout === 'fold' } };
+    return { layout, folds: { ...foldsOf(layout), groups: compact || layout === 'fold', score: readTopFold('score', layout), title: readTopFold('title', layout) } };
   });
+  // Hidden to watch the fight. It is not stored: every battle starts with the HUD in view.
+  const [hidden, setHidden] = useState(false);
+  const [revealHint, setRevealHint] = useState(false);
+  const revealHinted = useRef(false);
   // Portrait phones fold the detail and orders away to leave the sea in view. Short phones start folded, and so does
   // every phone under the folded layout.
   const [sheetFolded, setSheetFolded] = useState(() => innerHeight < 760 || view.layout === 'fold');
@@ -594,9 +646,33 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const groupsOpen = compact ? !view.folds.groups : !folded('groups');
   const slim = wide && view.layout !== 'full';
   const mapFolded = folded('map');
-  const setFold = (part: Part, fold: boolean) => setView((v) => ({ ...v, folds: { ...v.folds, [part]: fold } }));
+  // The score panel and the title fold on a phone too, where they cover the most sea. The title stays open while the
+  // settings sheet it opened is up, so the button that closes the sheet stays where it was.
+  const scoreFolded = !tourActive && view.folds.score;
+  const titleFolded = !tourActive && view.folds.title && !showSettings;
+  const ended = !!snap && (!!snap.winner || snap.draw);
+  // A decided battle shows its result card, and the tour points at the panels: neither waits behind a hidden HUD.
+  const hiddenNow = hidden && !ended && !tourActive;
+  const setFold = (part: Part, fold: boolean) => {
+    setView((v) => ({ ...v, folds: { ...v.folds, [part]: fold } }));
+    if (part === 'score' || part === 'title') saveTopFold(part, fold);
+  };
+  const hideHud = () => {
+    setHidden(true);
+    setShowSettings(false);
+    if (!revealHinted.current) {
+      revealHinted.current = true;
+      setRevealHint(true);
+    }
+  };
+  const showHud = () => {
+    setHidden(false);
+    setRevealHint(false);
+  };
   const changeLayout = (layout: Layout) => {
     setView((v) => ({ layout, folds: { ...foldsOf(layout), groups: compact ? v.folds.groups : layout === 'fold' } }));
+    saveTopFold('score', layout === 'fold');
+    saveTopFold('title', layout === 'fold');
     // A phone has one fold of its own, the command sheet: the folded layout folds it and the others open it.
     if (compact) setSheetFolded(layout === 'fold');
     try {
@@ -628,10 +704,51 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
     }
   };
 
-  // A folded minimap is unmounted, and the engine stops drawing it.
+  // A folded or hidden minimap is unmounted, and the engine stops drawing it.
   useEffect(() => {
     engine.minimap.mount(minimapRef.current);
-  }, [engine, snap?.scenario.id, compact, mapOn, mapFolded]);
+  }, [engine, snap?.scenario.id, compact, mapOn, mapFolded, hiddenNow]);
+
+  // The name tags over the water hide with the HUD; the engine then skips them each frame.
+  useEffect(() => {
+    engine.hudHidden = hiddenNow;
+    return () => {
+      engine.hudHidden = false;
+    };
+  }, [engine, hiddenNow]);
+
+  // A battle that ends while hidden, a restart or a new battle, and the tour bring the HUD back for good.
+  useEffect(() => {
+    if (ended || tourActive) showHud();
+  }, [ended, tourActive]);
+  useEffect(showHud, [engine.battle]);
+
+  // The reminder of how to bring the HUD back is read once and fades.
+  useEffect(() => {
+    if (!revealHint) return;
+    const timer = window.setTimeout(() => setRevealHint(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [revealHint]);
+
+  // Shift+H hides the HUD and brings it back (H alone stops the ships). Esc also brings it back; it is caught before the
+  // input sees it, so the selection survives.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName ?? '')) return;
+      if (e.code === 'KeyH' && e.shiftKey) {
+        e.preventDefault();
+        if (hiddenNow) showHud();
+        else if (!ended && !tourActive) hideHud();
+      } else if (e.code === 'Escape' && hiddenNow) {
+        e.stopPropagation();
+        showHud();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [hiddenNow, ended, tourActive]);
 
   // ` (left of 1) cycles the layout: every letter is already an order or a camera key.
   useEffect(() => {
@@ -662,7 +779,6 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const enemyTeam: Team = snap.team === 'joseon' ? 'japan' : 'joseon';
   const enemyFaction = snap.squadrons.find((s) => s.team === enemyTeam)?.faction ?? enemyTeam;
   const won = snap.winner === snap.team;
-  const ended = !!snap.winner || snap.draw;
   // A phone's score panel has room for the navy's name only.
   const sideName = (team: Team) => {
     const name = teamName(snap, team);
@@ -680,317 +796,360 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
         { label: '손실', value: tShips(snap.ownTotal - snap.own) },
         { label: '소요 시간', value: formatTime(snap.time) },
       ];
+  const hideLabel = t(isTouchOnly ? 'UI 숨기기' : 'UI 숨기기 · Shift+H');
+  const selectBox = box && <div className="select-box" style={{ left: Math.min(box.x0, box.x1), top: Math.min(box.y0, box.y1), width: Math.abs(box.x1 - box.x0), height: Math.abs(box.y1 - box.y0) }} />;
+  // The tour stays as it is: the HUD cannot be hidden while it points at the panels.
+  const hideButton = !ended && !tourActive && (
+    <button className={`mini-btn hud-hide-btn${titleFolded ? ' mini-btn--icon' : ''}`} onClick={hideHud} aria-label={hideLabel} title={hideLabel}>
+      <Icon name="eyeOff" size={16} />
+      {!titleFolded && <span>{t('UI 숨기기')}</span>}
+    </button>
+  );
   return (
-    <div className={`hud${slim ? ' hud--slim' : ''}`} style={{ '--own-fc': `var(--${snap.faction})`, '--enemy-fc': `var(--${enemyFaction})` } as React.CSSProperties}>
-      <div className="hud-title">
-        <div className="hud-title-main">{t(snap.scenario.title)}</div>
-        <div className="hud-title-sub">
-          {t(snap.scenario.date)} · {t(snap.scenario.place)}
-        </div>
-        <div className="hud-menu">
-          <button className="mini-btn" onClick={onBack} title={rankedMatch && !ended ? t('기권하면 랭크 점수에 반영됩니다') : undefined}>
-            <span className="long">{t(rankedMatch && !ended ? '기권하고 대기실로' : BACK_LABEL[origin].long)}</span>
-            <span className="short">{t(rankedMatch && !ended ? '기권' : BACK_LABEL[origin].short)}</span>
-          </button>
-          <button className={`mini-btn ${showSettings ? 'mini-btn--on' : ''}`} onClick={() => setShowSettings((v) => !v)}>
-            <Icon name="settings" size={16} />
-            {t('설정')}
-          </button>
-          {/* A phone folds its command sheet from the dock instead. */}
-          {wide && (
-            <button className="mini-btn hud-layout-btn" onClick={cycleLayout} aria-label={t('지휘 패널 · {layout} · ` 키로 바꿉니다', { layout: t(LAYOUT_LABEL[view.layout]) })} title={t('지휘 패널 · {layout} · ` 키로 바꿉니다', { layout: t(LAYOUT_LABEL[view.layout]) })}>
-              <Icon name={LAYOUT_ICON[view.layout]} size={16} />
-              <span>{t(LAYOUT_LABEL[view.layout])}</span>
-            </button>
+    <div className={`hud${slim ? ' hud--slim' : ''}${titleFolded ? ' hud--title-folded' : ''}`} style={{ '--own-fc': `var(--${snap.faction})`, '--enemy-fc': `var(--${enemyFaction})` } as React.CSSProperties}>
+      {hiddenNow ? (
+        <>
+          {selectBox}
+          <HudReveal hint={revealHint} onShow={showHud} />
+        </>
+      ) : (
+        <>
+          {titleFolded ? (
+            <div className="hud-title hud-title--folded">
+              <div className="hud-menu">
+                <button className="mini-btn mini-btn--icon" onClick={() => setFold('title', false)} aria-expanded={false} aria-label={t('메뉴 펼치기')} title={t('메뉴 펼치기')}>
+                  <Icon name="menu" size={16} />
+                </button>
+                {hideButton}
+              </div>
+            </div>
+          ) : (
+            <div className="hud-title">
+              <div className="hud-title-main">{t(snap.scenario.title)}</div>
+              <div className="hud-title-sub">
+                {t(snap.scenario.date)} · {t(snap.scenario.place)}
+              </div>
+              <div className="hud-menu">
+                <button className="mini-btn" onClick={onBack} title={rankedMatch && !ended ? t('기권하면 랭크 점수에 반영됩니다') : undefined}>
+                  <span className="long">{t(rankedMatch && !ended ? '기권하고 대기실로' : BACK_LABEL[origin].long)}</span>
+                  <span className="short">{t(rankedMatch && !ended ? '기권' : BACK_LABEL[origin].short)}</span>
+                </button>
+                <button className={`mini-btn ${showSettings ? 'mini-btn--on' : ''}`} onClick={() => setShowSettings((v) => !v)}>
+                  <Icon name="settings" size={16} />
+                  {t('설정')}
+                </button>
+                {/* A phone folds its command sheet from the dock instead. */}
+                {wide && (
+                  <button className="mini-btn hud-layout-btn" onClick={cycleLayout} aria-label={t('지휘 패널 · {layout} · ` 키로 바꿉니다', { layout: t(LAYOUT_LABEL[view.layout]) })} title={t('지휘 패널 · {layout} · ` 키로 바꿉니다', { layout: t(LAYOUT_LABEL[view.layout]) })}>
+                    <Icon name={LAYOUT_ICON[view.layout]} size={16} />
+                    <span>{t(LAYOUT_LABEL[view.layout])}</span>
+                  </button>
+                )}
+                {compact && (
+                  <button className={`mini-btn ${mapOn ? 'mini-btn--on' : ''}`} onClick={() => setMapOn((v) => !v)}>
+                    <Icon name="map" size={16} />
+                    {t('지도')}
+                  </button>
+                )}
+                {engine.campaign && !ended && (
+                  <button className="mini-btn" onClick={() => engine.endBattle()}>
+                    {t('철수')}
+                  </button>
+                )}
+                {hideButton}
+                <FoldButton className="title-fold" edge="top" title={t('메뉴 접기')} onFold={() => setFold('title', true)} />
+              </div>
+            </div>
           )}
-          {compact && (
-            <button className={`mini-btn ${mapOn ? 'mini-btn--on' : ''}`} onClick={() => setMapOn((v) => !v)}>
-              <Icon name="map" size={16} />
-              {t('지도')}
+
+          {scoreFolded ? (
+            <button className="balance balance--pill glass" onClick={() => setFold('score', false)} aria-expanded={false} aria-label={t('전황 펼치기')} title={t('전황 펼치기')}>
+              <i className="bal-mark bal-mark--own" />
+              <b>{snap.own}</b>
+              <span className="bal-pill-time">{formatTime(snap.time)}</span>
+              <b>{snap.enemy}</b>
+              <i className="bal-mark bal-mark--foe" />
+              <Icon name="chevronDown" size={14} />
             </button>
-          )}
-          {engine.campaign && !ended && (
-            <button className="mini-btn" onClick={() => engine.endBattle()}>
-              {t('철수')}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className={`balance glass${snap.conquest ? ' balance--cq' : ''}`}>
-        <div className="bal-row">
-          <span className="bal-side bal-side--own">
-            <i className="bal-mark" />
-            <span className="bal-name">{sideName(snap.team)}</span>
-            <b>{snap.own}</b>
-            <small>/{snap.ownTotal}</small>
-          </span>
-          <span className="bal-time">
-            {formatTime(snap.time)}
-            {perf && (
-              <span className="fps">
-                {snap.fps}fps · {t(LEVEL_LABEL[snap.level] ?? '')}
-              </span>
-            )}
-          </span>
-          <span className="bal-side bal-side--foe">
-            <b>{snap.enemy}</b>
-            <small>{snap.observedEnemy ? t('관측') : `/${snap.enemyTotal}`}</small>
-            <span className="bal-name">{sideName(enemyTeam)}</span>
-            <i className="bal-mark" />
-          </span>
-        </div>
-        <div className="bal-bar" role="img" aria-label={t(snap.conquest ? '기세 {side} {n}%' : '전세 {side} {n}%', { side: snap.sides.own, n: Math.round(snap.balance * 100) })}>
-          <i style={{ flexBasis: `${snap.balance * 100}%` }} />
-          <i />
-        </div>
-        {snap.conquest && <ConquestBar c={snap.conquest} />}
-        {snap.tide && (
-          <div className={`tide tide--${snap.tide.dir < 0 ? 'flood' : snap.tide.dir > 0 ? 'ebb' : 'slack'}`}>
-            <span className="tide-arrow">{snap.tide.dir < 0 ? <Icon name="chevronLeft" size={12} /> : snap.tide.dir > 0 ? <Icon name="chevronRight" size={12} /> : '·'}</span>
-            {t('물살 {knots}노트 · {label}', { knots: snap.tide.knots, label: snap.tide.label })}
-          </div>
-        )}
-      </div>
-
-      {snap.conquest?.selected && <PointPanel engine={engine} p={snap.conquest.selected} onClose={() => engine.selectPoint(snap.conquest!.selected!.id)} />}
-
-      <ShotLabel engine={engine} />
-
-      <div className="toasts">
-        {toasts.map((toast) => (
-          <div key={toast.id} className={`toast glass toast--${toast.tone}`}>
-            <i className="toast-dot" />
-            {toast.text}
-          </div>
-        ))}
-      </div>
-
-      {showSettings && (
-        <aside className="settings">
-          <div className="settings-body glass" style={{ maxHeight: compact ? 'calc(100dvh - 120px)' : 'calc(100dvh - 250px)', overflowY: 'auto' }}>
-            <DirectorSettings engine={engine} />
-            <section className="settings-sec">
-              <div className="settings-label">{t('하늘')}</div>
-              <div className="chips">
-                {(Object.keys(SKY_PRESETS) as SkyPresetName[]).map((k) => (
-                  <button key={k} className={`chip ${snap.sky === k ? 'chip--on' : ''}`} onClick={() => void engine.setSky(k).catch(() => pushToast(t('하늘을 불러오지 못했습니다'), 'bad'))}>
-                    {t(SKY_PRESETS[k].label)}
-                  </button>
-                ))}
+          ) : (
+            <div className={`balance glass${snap.conquest ? ' balance--cq' : ''}`}>
+              <div className="bal-row">
+                <span className="bal-side bal-side--own">
+                  <i className="bal-mark" />
+                  <span className="bal-name">{sideName(snap.team)}</span>
+                  <b>{snap.own}</b>
+                  <small>/{snap.ownTotal}</small>
+                </span>
+                <span className="bal-time">
+                  {formatTime(snap.time)}
+                  {perf && (
+                    <span className="fps">
+                      {snap.fps}fps · {t(LEVEL_LABEL[snap.level] ?? '')}
+                    </span>
+                  )}
+                </span>
+                <span className="bal-side bal-side--foe">
+                  <b>{snap.enemy}</b>
+                  <small>{snap.observedEnemy ? t('관측') : `/${snap.enemyTotal}`}</small>
+                  <span className="bal-name">{sideName(enemyTeam)}</span>
+                  <i className="bal-mark" />
+                </span>
               </div>
-            </section>
-            <section className="settings-sec">
-              <div className="settings-label">{t('파도')}</div>
-              <div className="chips">
-                {(Object.keys(SEA_LABELS) as SeaStateName[]).map((k) => (
-                  <button key={k} className={`chip ${snap.sea === k ? 'chip--on' : ''}`} onClick={() => engine.setSea(k)}>
-                    {t(SEA_LABELS[k])}
-                  </button>
-                ))}
+              <div className="bal-bar" role="img" aria-label={t(snap.conquest ? '기세 {side} {n}%' : '전세 {side} {n}%', { side: snap.sides.own, n: Math.round(snap.balance * 100) })}>
+                <i style={{ flexBasis: `${snap.balance * 100}%` }} />
+                <i />
               </div>
-            </section>
-            <section className="settings-sec">
-              <div className="settings-label">
-                {t('화질')} <small>{snap.levelAuto ? t('자동 · 지금 {level}', { level: t(LEVEL_LABEL[snap.level] ?? '') }) : t(LEVEL_LABEL[snap.level] ?? '')}</small>
-              </div>
-              <div className="chips">
-                <button className={`chip ${snap.levelAuto ? 'chip--on' : ''}`} onClick={() => engine.setQualityLevel('auto')}>
-                  {t('자동')}
-                </button>
-                {LEVEL_LABEL.map((label, i) => (
-                  <button key={label} className={`chip ${!snap.levelAuto && snap.level === i ? 'chip--on' : ''}`} onClick={() => engine.setQualityLevel(i)}>
-                    {t(label)}
-                  </button>
-                ))}
-              </div>
-              <div className="settings-hint">{t('자동은 프레임에 맞춰 화질을 올리고 내립니다.')}</div>
-            </section>
-            <section className="settings-sec">
-              <div className="settings-label">
-                {t('기기 등급')} <small>{t(EQUIPMENT_LABEL[equipment.setting])}</small>
-              </div>
-              <div className="chips">
-                {EQUIPMENT_CHOICES.map((k) => (
-                  <button key={k} className={`chip ${equipment.setting === k ? 'chip--on' : ''}`} onClick={() => changeEquipment(k)}>
-                    {t(EQUIPMENT_LABEL[k])}
-                  </button>
-                ))}
-              </div>
-              <div className="settings-hint">{t('바꾸면 페이지를 다시 불러오며 전투가 처음부터 시작됩니다.')}</div>
-            </section>
-            <section className="settings-sec">
-              <div className="settings-label">{t('소리')}</div>
-              <div className="chips">
-                <button
-                  className={`chip ${!snap.muted ? 'chip--on' : ''}`}
-                  aria-pressed={!snap.muted}
-                  onClick={() => {
-                    engine.sound.setMuted(!engine.sound.muted);
-                    engine.publish(true);
-                  }}
-                >
-                  {t(snap.muted ? '소리 꺼짐' : '소리 켜짐')}
-                </button>
-                <button
-                  className={`chip ${engine.sound.musicOn ? 'chip--on' : ''}`}
-                  aria-pressed={engine.sound.musicOn}
-                  onClick={() => {
-                    engine.sound.setMusic(!engine.sound.musicOn);
-                    engine.publish(true);
-                  }}
-                >
-                  {t(engine.sound.musicOn ? '배경음악 켜짐' : '배경음악 꺼짐')}
-                </button>
-              </div>
-            </section>
-            <section className="settings-sec">
-              <div className="settings-label">{t('화면 표시')}</div>
-              <div className="chips" role="group" aria-label={t('지휘 패널')}>
-                {LAYOUTS.map((k) => (
-                  <button key={k} className={`chip ${view.layout === k ? 'chip--on' : ''}`} aria-pressed={view.layout === k} onClick={() => changeLayout(k)}>
-                    {t(LAYOUT_LABEL[k])}
-                  </button>
-                ))}
-              </div>
-              <div className="settings-hint">
-                {t(compact ? '좁은 화면에서는 접기를 고르면 아래 지휘 시트를 접습니다.' : isTouchOnly ? '전투 장면을 가리는 지휘 패널을 줄이거나 접습니다.' : '전투 장면을 가리는 지휘 패널을 줄이거나 접습니다. ` 키로도 바꿉니다.')}
-              </div>
-              <div className="chips settings-row">
-                <button className={`chip ${perf ? 'chip--on' : ''}`} aria-pressed={perf} onClick={togglePerf}>
-                  {t('성능 표시')}
-                </button>
-              </div>
-            </section>
-            <section className="settings-sec">
-              <div className="settings-label">{t('언어')}</div>
-              <div className="chips">
-                {(['ko', 'en'] as const).map((l) => (
-                  <button
-                    key={l}
-                    className={`chip ${lang === l ? 'chip--on' : ''}`}
-                    aria-pressed={lang === l}
-                    onClick={() => {
-                      setLang(l);
-                      // The engine words some of what the HUD shows (side names, gun stages) when it publishes.
-                      engine.publish(true);
-                    }}
-                  >
-                    {l === 'ko' ? '한국어' : 'English'}
-                  </button>
-                ))}
-              </div>
-            </section>
-            {origin !== 'faction' && !engine.remote && !engine.campaign && (
-              <section className="settings-sec">
-                <div className="settings-label">{t('전투')}</div>
-                <div className="chips">
-                  <button className="chip" onClick={() => engine.restart()}>
-                    {t('다시 시작')}
-                  </button>
+              {snap.conquest && <ConquestBar c={snap.conquest} />}
+              {snap.tide && (
+                <div className={`tide tide--${snap.tide.dir < 0 ? 'flood' : snap.tide.dir > 0 ? 'ebb' : 'slack'}`}>
+                  <span className="tide-arrow">{snap.tide.dir < 0 ? <Icon name="chevronLeft" size={12} /> : snap.tide.dir > 0 ? <Icon name="chevronRight" size={12} /> : '·'}</span>
+                  {t('물살 {knots}노트 · {label}', { knots: snap.tide.knots, label: snap.tide.label })}
                 </div>
-              </section>
-            )}
-            <ControlsHelp onReplay={() => setShowSettings(false)} />
+              )}
+              <FoldButton className="balance-fold" edge="top" title={t('전황 접기')} onFold={() => setFold('score', true)} />
+            </div>
+          )}
+
+          {snap.conquest?.selected && <PointPanel engine={engine} p={snap.conquest.selected} onClose={() => engine.selectPoint(snap.conquest!.selected!.id)} />}
+
+          <ShotLabel engine={engine} />
+
+          <div className="toasts">
+            {toasts.map((toast) => (
+              <div key={toast.id} className={`toast glass toast--${toast.tone}`}>
+                <i className="toast-dot" />
+                {toast.text}
+              </div>
+            ))}
           </div>
-        </aside>
-      )}
 
-      {box && <div className="select-box" style={{ left: Math.min(box.x0, box.x1), top: Math.min(box.y0, box.y1), width: Math.abs(box.x1 - box.x0), height: Math.abs(box.y1 - box.y0) }} />}
-
-      {compact && mapOn && <div className="minimap minimap--float" ref={minimapRef} />}
-
-      {!ended && (
-        <div className="selection-dock touch-bar">
-          <FleetGroups engine={engine} open={groupsOpen} onToggle={() => setFold('groups', groupsOpen)} slim={slim} />
-          {isTouchDevice && <div className="selection-tools">
-          <button className={`tool ${touchBox ? 'tool--on' : ''}`} onClick={() => setTouchBox(!touchBox)} aria-label={t('박스')} data-tip="tool.box">
-            <Icon name="box" size={19} />
-            <span>{t('박스')}</span>
-          </button>
-          <button className="tool" onClick={() => engine.input.clearSelection()} aria-disabled={snap.selectedCount === 0 || undefined} aria-label={t('해제')} data-tip="tool.clear">
-            <Icon name="clear" size={19} />
-            <span>{t('해제')}</span>
-          </button>
-          <button className={`tool ${snap.following ? 'tool--on' : ''}`} onClick={() => snap.selectedCount > 0 && engine.input.followSelected()} aria-disabled={snap.selectedCount === 0 || undefined} aria-label={t('추적')} data-tip="tool.follow">
-            <Icon name="follow" size={19} />
-            <span>{t('추적')}</span>
-          </button>
-          {/* The crew panel with the cutaway chip is hidden on phones, so the deck view needs its own button. */}
-          <button className={`tool ${engine.cutaway ? 'tool--on' : ''}`} onClick={() => (snap.selectedCount > 0 || engine.cutaway) && engine.toggleCutaway()} aria-disabled={(snap.selectedCount === 0 && !engine.cutaway) || undefined} aria-label={t(engine.cutaway ? DECK_LABEL[engine.cutaway]! : '선내')} data-tip="tool.deck">
-            <Icon name="deck" size={19} />
-            <span>{t(engine.cutaway ? DECK_LABEL[engine.cutaway]! : '선내')}</span>
-          </button>
-          </div>}
-        </div>
-      )}
-
-      <div className={`bottom ${sheetFolded ? 'bottom--folded' : ''}`}>
-        {wide && (mapFolded ? (
-          <FoldTab label={t('지도')} title={t('지도와 함선 정보 펼치기')} onOpen={() => setFold('map', false)} />
-        ) : (
-          <div className="map-wrap">
-            <div className="minimap" ref={minimapRef} />
-            <FoldButton className="map-fold" title={t('지도와 함선 정보 접기')} onFold={() => setFold('map', true)} />
-          </div>
-        ))}
-        {/* Once the battle is decided the result card is the only thing to act on: no orders or cards behind it. */}
-        {!ended && (
-          <>
-            {!mapFolded && (p ? <Detail engine={engine} snap={snap} p={p} portrait={primaryPortrait} /> : hintOpen && !tourActive && !slim && <Hint onClose={closeHint} />)}
-            <div className="cards-wrap">
-              {folded('cards') ? (
-                <FoldTab label={t('장수 패 {n}', { n: own.length })} title={t('장수 패 펼치기')} onOpen={() => setFold('cards', false)} />
-              ) : (
-                <>
-                  <div className="cards">
-                    {own.map((sq) => (
-                      <Card key={sq.id} sq={sq} compact={compact} onClick={(e) => engine.selectSquadron(sq.id, e.shiftKey)} onDouble={() => engine.focusSquadron(sq.id)} />
+          {showSettings && (
+            <aside className="settings">
+              <div className="settings-body glass" style={{ maxHeight: compact ? 'calc(100dvh - 120px)' : 'calc(100dvh - 250px)', overflowY: 'auto' }}>
+                <DirectorSettings engine={engine} />
+                <section className="settings-sec">
+                  <div className="settings-label">{t('하늘')}</div>
+                  <div className="chips">
+                    {(Object.keys(SKY_PRESETS) as SkyPresetName[]).map((k) => (
+                      <button key={k} className={`chip ${snap.sky === k ? 'chip--on' : ''}`} onClick={() => void engine.setSky(k).catch(() => pushToast(t('하늘을 불러오지 못했습니다'), 'bad'))}>
+                        {t(SKY_PRESETS[k].label)}
+                      </button>
                     ))}
                   </div>
-                  {wide && <FoldButton className="cards-fold" title={t('장수 패 접기')} onFold={() => setFold('cards', true)} />}
-                </>
-              )}
+                </section>
+                <section className="settings-sec">
+                  <div className="settings-label">{t('파도')}</div>
+                  <div className="chips">
+                    {(Object.keys(SEA_LABELS) as SeaStateName[]).map((k) => (
+                      <button key={k} className={`chip ${snap.sea === k ? 'chip--on' : ''}`} onClick={() => engine.setSea(k)}>
+                        {t(SEA_LABELS[k])}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+                <section className="settings-sec">
+                  <div className="settings-label">
+                    {t('화질')} <small>{snap.levelAuto ? t('자동 · 지금 {level}', { level: t(LEVEL_LABEL[snap.level] ?? '') }) : t(LEVEL_LABEL[snap.level] ?? '')}</small>
+                  </div>
+                  <div className="chips">
+                    <button className={`chip ${snap.levelAuto ? 'chip--on' : ''}`} onClick={() => engine.setQualityLevel('auto')}>
+                      {t('자동')}
+                    </button>
+                    {LEVEL_LABEL.map((label, i) => (
+                      <button key={label} className={`chip ${!snap.levelAuto && snap.level === i ? 'chip--on' : ''}`} onClick={() => engine.setQualityLevel(i)}>
+                        {t(label)}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="settings-hint">{t('자동은 프레임에 맞춰 화질을 올리고 내립니다.')}</div>
+                </section>
+                <section className="settings-sec">
+                  <div className="settings-label">
+                    {t('기기 등급')} <small>{t(EQUIPMENT_LABEL[equipment.setting])}</small>
+                  </div>
+                  <div className="chips">
+                    {EQUIPMENT_CHOICES.map((k) => (
+                      <button key={k} className={`chip ${equipment.setting === k ? 'chip--on' : ''}`} onClick={() => changeEquipment(k)}>
+                        {t(EQUIPMENT_LABEL[k])}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="settings-hint">{t('바꾸면 페이지를 다시 불러오며 전투가 처음부터 시작됩니다.')}</div>
+                </section>
+                <section className="settings-sec">
+                  <div className="settings-label">{t('소리')}</div>
+                  <div className="chips">
+                    <button
+                      className={`chip ${!snap.muted ? 'chip--on' : ''}`}
+                      aria-pressed={!snap.muted}
+                      onClick={() => {
+                        engine.sound.setMuted(!engine.sound.muted);
+                        engine.publish(true);
+                      }}
+                    >
+                      {t(snap.muted ? '소리 꺼짐' : '소리 켜짐')}
+                    </button>
+                    <button
+                      className={`chip ${engine.sound.musicOn ? 'chip--on' : ''}`}
+                      aria-pressed={engine.sound.musicOn}
+                      onClick={() => {
+                        engine.sound.setMusic(!engine.sound.musicOn);
+                        engine.publish(true);
+                      }}
+                    >
+                      {t(engine.sound.musicOn ? '배경음악 켜짐' : '배경음악 꺼짐')}
+                    </button>
+                  </div>
+                </section>
+                <section className="settings-sec">
+                  <div className="settings-label">{t('화면 표시')}</div>
+                  <div className="chips" role="group" aria-label={t('지휘 패널')}>
+                    {LAYOUTS.map((k) => (
+                      <button key={k} className={`chip ${view.layout === k ? 'chip--on' : ''}`} aria-pressed={view.layout === k} onClick={() => changeLayout(k)}>
+                        {t(LAYOUT_LABEL[k])}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="settings-hint">
+                    {t(compact ? '좁은 화면에서는 접기를 고르면 아래 지휘 시트를 접습니다.' : isTouchOnly ? '전투 장면을 가리는 지휘 패널을 줄이거나 접습니다.' : '전투 장면을 가리는 지휘 패널을 줄이거나 접습니다. ` 키로도 바꿉니다.')}
+                  </div>
+                  <div className="chips settings-row">
+                    <button className={`chip ${perf ? 'chip--on' : ''}`} aria-pressed={perf} onClick={togglePerf}>
+                      {t('성능 표시')}
+                    </button>
+                  </div>
+                </section>
+                <section className="settings-sec">
+                  <div className="settings-label">{t('언어')}</div>
+                  <div className="chips">
+                    {(['ko', 'en'] as const).map((l) => (
+                      <button
+                        key={l}
+                        className={`chip ${lang === l ? 'chip--on' : ''}`}
+                        aria-pressed={lang === l}
+                        onClick={() => {
+                          setLang(l);
+                          // The engine words some of what the HUD shows (side names, gun stages) when it publishes.
+                          engine.publish(true);
+                        }}
+                      >
+                        {l === 'ko' ? '한국어' : 'English'}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+                {origin !== 'faction' && !engine.remote && !engine.campaign && (
+                  <section className="settings-sec">
+                    <div className="settings-label">{t('전투')}</div>
+                    <div className="chips">
+                      <button className="chip" onClick={() => engine.restart()}>
+                        {t('다시 시작')}
+                      </button>
+                    </div>
+                  </section>
+                )}
+                <ControlsHelp onReplay={() => setShowSettings(false)} />
+              </div>
+            </aside>
+          )}
+
+          {selectBox}
+
+          {compact && mapOn && <div className="minimap minimap--float" ref={minimapRef} />}
+
+          {!ended && (
+            <div className="selection-dock touch-bar">
+              <FleetGroups engine={engine} open={groupsOpen} onToggle={() => setFold('groups', groupsOpen)} slim={slim} />
+              {isTouchDevice && <div className="selection-tools">
+              <button className={`tool ${touchBox ? 'tool--on' : ''}`} onClick={() => setTouchBox(!touchBox)} aria-label={t('박스')} data-tip="tool.box">
+                <Icon name="box" size={19} />
+                <span>{t('박스')}</span>
+              </button>
+              <button className="tool" onClick={() => engine.input.clearSelection()} aria-disabled={snap.selectedCount === 0 || undefined} aria-label={t('해제')} data-tip="tool.clear">
+                <Icon name="clear" size={19} />
+                <span>{t('해제')}</span>
+              </button>
+              <button className={`tool ${snap.following ? 'tool--on' : ''}`} onClick={() => snap.selectedCount > 0 && engine.input.followSelected()} aria-disabled={snap.selectedCount === 0 || undefined} aria-label={t('추적')} data-tip="tool.follow">
+                <Icon name="follow" size={19} />
+                <span>{t('추적')}</span>
+              </button>
+              {/* The crew panel with the cutaway chip is hidden on phones, so the deck view needs its own button. */}
+              <button className={`tool ${engine.cutaway ? 'tool--on' : ''}`} onClick={() => (snap.selectedCount > 0 || engine.cutaway) && engine.toggleCutaway()} aria-disabled={(snap.selectedCount === 0 && !engine.cutaway) || undefined} aria-label={t(engine.cutaway ? DECK_LABEL[engine.cutaway]! : '선내')} data-tip="tool.deck">
+                <Icon name="deck" size={19} />
+                <span>{t(engine.cutaway ? DECK_LABEL[engine.cutaway]! : '선내')}</span>
+              </button>
+              </div>}
             </div>
-            {folded('orders') ? (
-              <FoldTab label={t('명령')} title={t('명령 펼치기')} onOpen={() => setFold('orders', false)}>
-                {/* The speed control folds away with the orders: the tab keeps saying how fast the battle runs. */}
-                {!engine.remote && <b className="fold-tab-speed">{snap.paused ? <Icon name="pause" size={12} /> : `${snap.speed}×`}</b>}
-              </FoldTab>
+          )}
+
+          <div className={`bottom ${sheetFolded ? 'bottom--folded' : ''}`}>
+            {wide && (mapFolded ? (
+              <FoldTab label={t('지도')} title={t('지도와 함선 정보 펼치기')} onOpen={() => setFold('map', false)} />
             ) : (
-              // A landscape phone's settings sheet reaches down over the orders.
-              <div className={`orders glass interactive ${compact && ordersCollapsed ? 'orders--collapsed' : ''}`} style={showSettings && compact ? { visibility: 'hidden' } : undefined}>
-                <Orders
-                  engine={engine}
-                  p={p}
-                  night={snap.night}
-                  selected={snap.selectedCount}
-                  tab={ordersTab}
-                  setTab={setOrdersTab}
-                  collapsed={compact && ordersCollapsed}
-                  onToggle={compact ? () => setOrdersCollapsed((v) => !v) : () => setFold('orders', true)}
-                />
-                {wide && !engine.remote && (
-                  <div className={`speed${slim ? ' speed--step' : ''}`}>
-                    <SpeedControl engine={engine} snap={snap} variant={slim ? 'step' : 'all'} />
+              <div className="map-wrap">
+                <div className="minimap" ref={minimapRef} />
+                <FoldButton className="map-fold" title={t('지도와 함선 정보 접기')} onFold={() => setFold('map', true)} />
+              </div>
+            ))}
+            {/* Once the battle is decided the result card is the only thing to act on: no orders or cards behind it. */}
+            {!ended && (
+              <>
+                {!mapFolded && (p ? <Detail engine={engine} snap={snap} p={p} portrait={primaryPortrait} /> : hintOpen && !tourActive && !slim && <Hint onClose={closeHint} />)}
+                <div className="cards-wrap">
+                  {folded('cards') ? (
+                    <FoldTab label={t('장수 패 {n}', { n: own.length })} title={t('장수 패 펼치기')} onOpen={() => setFold('cards', false)} />
+                  ) : (
+                    <>
+                      <div className="cards">
+                        {own.map((sq) => (
+                          <Card key={sq.id} sq={sq} compact={compact} onClick={(e) => engine.selectSquadron(sq.id, e.shiftKey)} onDouble={() => engine.focusSquadron(sq.id)} />
+                        ))}
+                      </div>
+                      {wide && <FoldButton className="cards-fold" title={t('장수 패 접기')} onFold={() => setFold('cards', true)} />}
+                    </>
+                  )}
+                </div>
+                {folded('orders') ? (
+                  <FoldTab label={t('명령')} title={t('명령 펼치기')} onOpen={() => setFold('orders', false)}>
+                    {/* The speed control folds away with the orders: the tab keeps saying how fast the battle runs. */}
+                    {!engine.remote && <b className="fold-tab-speed">{snap.paused ? <Icon name="pause" size={12} /> : `${snap.speed}×`}</b>}
+                  </FoldTab>
+                ) : (
+                  // A landscape phone's settings sheet reaches down over the orders.
+                  <div className={`orders glass interactive ${compact && ordersCollapsed ? 'orders--collapsed' : ''}`} style={showSettings && compact ? { visibility: 'hidden' } : undefined}>
+                    <Orders
+                      engine={engine}
+                      p={p}
+                      night={snap.night}
+                      selected={snap.selectedCount}
+                      tab={ordersTab}
+                      setTab={setOrdersTab}
+                      collapsed={compact && ordersCollapsed}
+                      onToggle={compact ? () => setOrdersCollapsed((v) => !v) : () => setFold('orders', true)}
+                    />
+                    {wide && !engine.remote && (
+                      <div className={`speed${slim ? ' speed--step' : ''}`}>
+                        <SpeedControl engine={engine} snap={snap} variant={slim ? 'step' : 'all'} />
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
+                {compact && (
+                  <div className="dock interactive">
+                    <button className="dock-fold" aria-expanded={!sheetFolded} onClick={() => setSheetFolded((v) => !v)}>
+                      {t('지휘')} <Icon name={sheetFolded ? 'chevronUp' : 'chevronDown'} size={14} />
+                    </button>
+                    {!engine.remote && <SpeedControl engine={engine} snap={snap} variant="cycle" />}
+                  </div>
+                )}
+              </>
             )}
-            {compact && (
-              <div className="dock interactive">
-                <button className="dock-fold" aria-expanded={!sheetFolded} onClick={() => setSheetFolded((v) => !v)}>
-                  {t('지휘')} <Icon name={sheetFolded ? 'chevronUp' : 'chevronDown'} size={14} />
-                </button>
-                {!engine.remote && <SpeedControl engine={engine} snap={snap} variant="cycle" />}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
 
       {!ended && <Tutorial engine={engine} compact={compact} />}
-      <Tooltips />
+      {!hiddenNow && <Tooltips />}
 
       {ended && (
         <div className={`result glass result--${snap.draw ? 'draw' : won ? 'win' : 'loss'}`}>

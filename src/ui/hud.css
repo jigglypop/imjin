@@ -68,15 +68,36 @@
   display: none;
 }
 
-/* Below 1280 px the score panel comes close to the menu: the layout button keeps its icon only. */
+/* Below 1280 px the score panel comes close to the menu: the layout and hide buttons keep their icons only. */
 @media (max-width: 1279px) {
-  .hud-layout-btn span {
+  .hud-layout-btn span,
+  .hud-hide-btn span {
     display: none;
   }
 
-  .hud-layout-btn .ico {
+  .hud-layout-btn .ico,
+  .hud-hide-btn .ico {
     margin-right: 0;
   }
+}
+
+/* The title folded to one menu button, with the hide button beside it. */
+.hud-title--folded .hud-menu {
+  margin-top: 0;
+}
+
+.hud .hud-menu .mini-btn.mini-btn--icon {
+  width: 36px;
+  padding: 0;
+}
+
+.mini-btn--icon .ico {
+  margin-right: 0;
+}
+
+.hud-menu .title-fold {
+  align-self: center;
+  margin-left: 2px;
 }
 
 /* ---------------------------------------------------------------- score panel */
@@ -207,6 +228,73 @@
   flex: 1 1 0;
   min-width: 0;
   background: var(--enemy-fc, var(--japan));
+}
+
+/* The score panel's fold: a short pull under the middle of its lower edge, like the cards' pull above theirs. */
+.fold-btn.balance-fold {
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  width: 44px;
+  height: 16px;
+  border-radius: 8px;
+  transform: translateX(-50%);
+}
+
+.app--touch .fold-btn.balance-fold {
+  bottom: -11px;
+  width: 52px;
+  height: 22px;
+}
+
+/* Folded: the two counts and the clock on one line, the whole pill opening the panel again. */
+.hud .balance.balance--pill {
+  width: auto;
+  height: 34px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 12px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.balance--pill:hover {
+  background: var(--glass-hi);
+}
+
+.balance--pill b {
+  font-size: var(--fs-15);
+  color: var(--ink);
+}
+
+.bal-pill-time {
+  font-size: var(--fs-13);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.balance--pill .bal-mark {
+  height: 14px;
+}
+
+.balance--pill .bal-mark--own {
+  background: var(--own-fc, var(--joseon));
+}
+
+.balance--pill .bal-mark--foe {
+  background: var(--enemy-fc, var(--japan));
+}
+
+.balance--pill .ico {
+  margin-left: -2px;
+  color: var(--ink-3);
+}
+
+.app--touch .hud .balance.balance--pill {
+  height: 40px;
 }
 
 .tide {
@@ -1312,6 +1400,27 @@
   animation: hud-drop 0.15s ease-out;
 }
 
+/* The top parts drop in from the top edge they fold into. `translate` composes with the score panel's own centring
+   transform instead of replacing it. */
+@keyframes hud-top-in {
+  from {
+    opacity: 0;
+    translate: 0 -6px;
+  }
+}
+
+.hud-title,
+.hud .balance {
+  animation: hud-top-in 0.15s ease-out;
+}
+
+/* The panels below follow the top bars' real edges (measured into the --tl-bottom and --bal-bottom variables), so they
+   glide up and down when a top part folds instead of jumping. */
+.touch-bar,
+.toasts {
+  transition: top 0.15s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .app:not(.app--compact) .hud .map-wrap,
   .app:not(.app--compact) .hud .cards,
@@ -1319,7 +1428,87 @@
   .fold-tab,
   .app:not(.app--compact) .fleet-group-body,
   .fleet-slim-head > :not(.fleet-group-toggle),
-  .fleet-slim {
+  .fleet-slim,
+  .hud-title,
+  .hud .balance {
+    animation: none;
+  }
+
+  .touch-bar,
+  .toasts {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------- the HUD hidden to watch the fight (Hud `HudReveal`) */
+
+/* In the lower right corner, inside the safe areas, where a right thumb rests on a phone. */
+.hud-reveal {
+  position: absolute;
+  right: calc(var(--sar) + 16px);
+  bottom: calc(var(--sab) + 16px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hud-reveal-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--glass-line);
+  border-radius: 50%;
+  background: rgba(12, 14, 18, 0.45);
+  color: var(--ink);
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.hud-reveal-btn:hover,
+.hud-reveal-btn:focus-visible {
+  opacity: 1;
+  background: var(--glass-solid);
+}
+
+.app--touch .hud-reveal-btn {
+  width: 48px;
+  height: 48px;
+}
+
+.hud-reveal-hint {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: var(--fs-13);
+  white-space: nowrap;
+  animation: hud-reveal-hint 4s ease forwards;
+}
+
+@keyframes hud-reveal-hint {
+  0% {
+    opacity: 0;
+  }
+
+  8%,
+  75% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-reveal-btn {
+    transition: none;
+  }
+
+  /* The reminder still leaves after its four seconds (Hud's timer); it only does not fade. */
+  .hud-reveal-hint {
     animation: none;
   }
 }
@@ -1736,6 +1925,26 @@
   display: inline;
 }
 
+/* A phone's menu row has no room for the hide button's name. */
+.app--compact .hud-hide-btn span {
+  display: none;
+}
+
+.app--compact .hud-menu .mini-btn.hud-hide-btn {
+  width: 36px;
+  padding: 0;
+}
+
+.app--compact .hud-hide-btn .ico {
+  margin-right: 0;
+}
+
+/* Folded, the menu button stands alone in the top left corner instead of at the end of the title's grid. */
+.app--compact .hud-title--folded {
+  right: auto;
+  display: block;
+}
+
 .app--compact .hud .balance {
   top: calc(var(--sat) + 52px);
   left: calc(var(--sal) + 8px);
@@ -1748,6 +1957,22 @@
 
 .app--compact .bal-row {
   gap: 8px;
+}
+
+/* Folded, the pill keeps to its own width in the middle of the span the panel would cover. */
+.app--compact .hud .balance.balance--pill {
+  width: fit-content;
+  margin-inline: auto;
+  padding: 0 10px 0 12px;
+  gap: 8px;
+}
+
+/* In portrait, with the title folded to its menu button, the score panel moves up beside it. */
+@media (orientation: portrait) {
+  .app--compact .hud--title-folded .balance {
+    top: calc(var(--sat) + 8px);
+    left: calc(var(--tl-right, 92px) + 8px);
+  }
 }
 
 .app--compact .bal-side b {

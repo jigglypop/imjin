@@ -45,6 +45,10 @@ const ICONS: Record<string, Parts[]> = {
   hudFull: [{ rect: [3, 5, 18, 14, 2.5] }, { d: 'M8 5v14 M16 5v14' }],
   hudSimple: [{ rect: [3, 5, 18, 14, 2.5] }, { d: 'M7 13v6 M17 13v6 M3 13h4 M17 13h4' }],
   hudFold: [{ rect: [3, 5, 18, 14, 2.5] }, { d: 'M3 12h2 M19 12h2 M11 19v-1.5h2V19' }],
+  // The folded title block, and the HUD hidden to watch the fight or shown again.
+  menu: [{ d: 'M4.5 7h15 M4.5 12h15 M4.5 17h15' }],
+  eye: [{ d: 'M2.5 12C5 7.5 8.3 5.5 12 5.5s7 2 9.5 6.5c-2.5 4.5-5.8 6.5-9.5 6.5S5 16.5 2.5 12z' }, { circles: [[12, 12, 3]] }],
+  eyeOff: [{ d: 'M9.9 5.8A9.6 9.6 0 0 1 12 5.5c3.7 0 7 2 9.5 6.5a15 15 0 0 1-2.3 3.1 M14.1 18.2a9.6 9.6 0 0 1-2.1.3c-3.7 0-7-2-9.5-6.5a15 15 0 0 1 2.3-3.1 M4 4l16 16' }],
   plus: [{ d: 'M12 5.5v13 M5.5 12h13' }],
   x: [{ d: 'M6 6l12 12 M18 6L6 18' }],
   chevronDown: [{ d: 'M6 9.5l6 6 6-6' }],
