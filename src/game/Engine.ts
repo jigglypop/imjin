@@ -172,6 +172,8 @@ export class Engine {
   readonly minimap = new Minimap();
   private minimapTimer = 0;
   showLabels = true;
+  /** Set by the HUD while the player has hidden it to watch the fight: the name tags over the water go with it. */
+  hudHidden = false;
   speed = 1;
   paused = false;
   /** Fast-forward the approach: run at FAST_SPEED until the fleets are in gun range, then drop back to `speed`. */
@@ -1173,9 +1175,9 @@ export class Engine {
     this.lanterns.update(this.battle, this.camera, this.battle.night || SKY_PRESETS[this.skyName].night > 0.5);
     this.updateSun();
     const el = this.renderer.domElement;
-    this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.rts.cinematic && !this.battle.ended, this.team);
+    this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.hudHidden && !this.rts.cinematic && !this.battle.ended, this.team);
     this.moveOrders?.update();
-    this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.rts.cinematic && !this.options.hideLabels && !this.battle.ended, this.battle);
+    this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.hudHidden && !this.rts.cinematic && !this.options.hideLabels && !this.battle.ended, this.battle);
     if (this.conquest && !this.paused && useUi.getState().autoBuild) {
       const order = this.autoBuild.tick(this.battle, this.conquest, this.owner, (cmd) => this.issue(cmd));
       if (order) {
