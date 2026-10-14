@@ -180,7 +180,7 @@ export function App() {
         </Chunk>
       )}
       {screen === 'faction' && (
-        <Chunk frame="진영 전역">
+        <Chunk frame="캠페인">
           <GrandScreen onBattle={startGrandBattle} />
         </Chunk>
       )}

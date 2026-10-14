@@ -35,7 +35,7 @@ passed through `t()` where they are shown.
 |---|---|
 | 임진왜란 / 壬辰倭亂 (the game's title) | The Imjin War |
 | 역사 전투 | Historical Battles |
-| 진영 전역 | Faction Campaign |
+| 캠페인 | Faction Campaign |
 | 쟁탈전 | Conquest |
 | 온라인 대전 | Online Battle |
 | 1592 전역 (연속 전투) | 1592 Campaign |

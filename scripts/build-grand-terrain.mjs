@@ -1,4 +1,4 @@
-// The ground of the faction campaign's 3D world (진영 전역) as a triangulated irregular network: the select screen's DEM
+// The ground of the faction campaign's 3D world (캠페인) as a triangulated irregular network: the select screen's DEM
 // (public/ui/korea_dem.webp, src/select/demMeta.json) cut into a few tens of thousands of flat facets, dense along the
 // coasts and the ridges and sparse on flat ground and open sea, written to public/ui/grand_terrain.bin for
 // src/ui/grand/worldGround.ts. The game itself keeps reading the DEM's own heights (groundElevation in mapMath.ts); this

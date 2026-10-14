@@ -808,7 +808,7 @@ function checkVictory(g: Grand) {
   const done = (faction: GrandFaction, kind: 'objective' | 'score' | 'elimination') => {
     g.victory = { faction, kind, turn: g.turn };
     g.phase = 'over';
-    note(g, '{navy|이/가} 전역에서 승리했습니다', { navy: navyName(faction) }, faction === g.player ? 'good' : 'bad');
+    note(g, '{navy|이/가} 캠페인에서 승리했습니다', { navy: navyName(faction) }, faction === g.player ? 'good' : 'bad');
   };
   if (g.player && !g.factions[g.player].alive) return done(best(alive.length ? alive : [g.player]), 'elimination');
   const objective = alive.find((f) => g.factions[f].objectiveHold >= OBJECTIVE_HOLD);

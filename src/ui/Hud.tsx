@@ -333,7 +333,7 @@ const BACK_LABEL: Record<BattleOrigin, { long: string; short: string }> = {
   select: { long: '전투 선택', short: '전투 선택' },
   skirmish: { long: '쟁탈전', short: '쟁탈전' },
   online: { long: '대전 대기실', short: '대기실' },
-  faction: { long: '전역 지도', short: '전역' },
+  faction: { long: '캠페인 지도', short: '캠페인' },
 };
 
 /**

@@ -43,7 +43,7 @@ export function ScreenFrame({ title, children, actions, className = '' }: { titl
 
 const MODES: { screen: Screen; art: string; title: string; desc: string; brief: string }[] = [
   { screen: 'select', art: 'mode_history', title: '역사 전투', desc: '명량, 한산도 등 임진왜란 해전 아홉 곳을 직접 지휘합니다.', brief: '명량, 한산도 등 아홉 해전' },
-  { screen: 'faction', art: 'mode_campaign', title: '진영 전역', desc: '조선, 명, 일본 중 한 나라를 골라 남해안의 포구를 차례로 차지합니다.', brief: '한 나라로 남해안 점령' },
+  { screen: 'faction', art: 'mode_campaign', title: '캠페인', desc: '조선, 명, 일본 중 한 나라를 골라 남해안의 포구를 차례로 차지합니다.', brief: '한 나라로 남해안 점령' },
   { screen: 'skirmish', art: 'mode_skirmish', title: '쟁탈전', desc: '거점을 차지해 적의 기세를 꺾는 전투입니다. 함대를 직접 꾸려 출전합니다.', brief: '거점을 차지하는 함대전' },
   { screen: 'online', art: 'mode_online', title: '온라인 대전', desc: '다른 플레이어와 실시간으로 겨룹니다.', brief: '실시간 대전' },
 ];
@@ -83,7 +83,7 @@ export function MainMenu() {
         </div>
         <div className="menu-play">
           <button className="menu-primary" data-mode="faction" {...mode('faction')}>
-            <span className="menu-primary-copy"><strong>{t('진영 전역')}</strong><small>{t('한 나라로 남해안 점령')}</small></span>
+            <span className="menu-primary-copy"><strong>{t('캠페인')}</strong><small>{t('한 나라로 남해안 점령')}</small></span>
             <span className="menu-arrow" aria-hidden="true">↗</span>
           </button>
           <nav className="menu-modes" aria-label={t('전투 선택')}>

@@ -490,7 +490,7 @@ export function overView(g: Grand): GameOverView | null {
           : t('{navy|은/는} 맞서던 모든 진영을 물리쳤습니다.', { navy });
   return {
     won,
-    headline: won ? t('전역 승리') : t('전역 패배'),
+    headline: won ? t('캠페인 승리') : t('캠페인 패배'),
     text,
     turn: v.turn,
     scores: scoreViews(g),

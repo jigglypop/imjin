@@ -18,7 +18,7 @@ import { migrateGrandRegions } from '../sim/grand/migration';
 import type { ShipKind } from '../sim/types';
 
 /**
- * The faction campaign ("진영 전역"), kept apart from the linear 1592 campaign in campaign.ts. The game itself is the
+ * The faction campaign ("캠페인"), kept apart from the linear 1592 campaign in campaign.ts. The game itself is the
  * pure state in sim/grand; this store holds the one save, writes it after every change and hands the UI the commands.
  * The state is a plain object that is cloned before each command, so a command that fails leaves the save untouched.
  */
@@ -100,7 +100,7 @@ export const hasGrandSave = () => useGrand.getState().grand !== null;
 /** Runs a change on a copy of the campaign and keeps it only when the change succeeded. */
 function commit(change: (g: Grand) => Result): Result {
   const current = useGrand.getState().grand;
-  if (!current) return { ok: false, reason: '진행 중인 전역이 없습니다' };
+  if (!current) return { ok: false, reason: '진행 중인 캠페인이 없습니다' };
   const next = structuredClone(current);
   const result = change(next);
   if (result.ok) {

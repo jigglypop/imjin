@@ -1,5 +1,5 @@
 /**
- * English for the Faction Campaign (진영 전역): its screens, the campaign's rules text, the war's log, the historical
+ * English for the Faction Campaign (캠페인): its screens, the campaign's rules text, the war's log, the historical
  * events and the names it shows. Keyed by the exact Korean source text; see ../index.ts and ../GLOSSARY.md.
  */
 
@@ -210,7 +210,7 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '공사 중': 'Building',
   '최고 단계': 'Max level',
   '은이 부족합니다': 'Not enough silver',
-  '진행 중인 전역이 없습니다': 'No campaign in progress',
+  '진행 중인 캠페인이 없습니다': 'No campaign in progress',
   '우리 진영의 것이 아닙니다': 'Not yours to command',
   '대응할 사건이 없습니다': 'No event to answer',
   '없는 선택지입니다': 'No such choice',
@@ -241,7 +241,7 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '광둥의 철력목 전선 광선의 설계가 전해졌습니다. 선소 3단계에서 건조할 수 있습니다.': 'The design of the Guang junk, the ironwood warship of Guangdong, has arrived. It can be built at a level 3 shipyard.',
   '{navy}의 {fleet} {n}척이 {place}에 도착했습니다': 'The {navy} sent reinforcements to {place}: {fleet}, {n} ships',
   '{navy|은/는} 모든 포구를 잃고 패망했습니다': 'The {navy} lost every port and has fallen',
-  '{navy|이/가} 전역에서 승리했습니다': 'The {navy} won the campaign',
+  '{navy|이/가} 캠페인에서 승리했습니다': 'The {navy} won the campaign',
   '{place}의 {work} {level}단계가 완공되었습니다': '{place}: {work} level {level} is complete',
   '{place}에서 {ship|이/가} 완성되었습니다': '{place}: {ship} is complete',
   '{navy}: 은이 부족해 함선 {n}척이 이탈했습니다': 'The {navy} ran out of silver and {n} ships deserted',
@@ -444,8 +444,8 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '점수 {n}': 'Score {n}',
 
   // Faction pick and hub
-  '진영 전역': 'Faction Campaign',
-  '진영 전역 · 1592': 'Faction Campaign · 1592',
+  '캠페인': 'Campaign',
+  '캠페인 · 1592': 'Campaign · 1592',
   '진영 선택': 'Choose a faction',
   '진영': 'Faction',
   '난이도': 'Difficulty',
@@ -475,12 +475,12 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '먼 출전 거리': 'Long way to the front',
   '이미 패망한 진영': 'Fallen faction',
   '{date} · {turn} / {max}턴 · 난이도 {level}': '{date} · Turn {turn} / {max} · {level}',
-  '이 전역은 종료되었습니다.': 'This campaign has ended.',
+  '이 캠페인은 종료되었습니다.': 'This campaign has ended.',
   '진행할 전투가 {n}건 있습니다.': 'Battles waiting: {n}.',
   '결과 보기': 'View result',
   '이어서 하기': 'Continue',
   '저장을 지우고 새로 시작': 'Delete save and start over',
-  '새 전역': 'New campaign',
+  '새 캠페인': 'New campaign',
 
   // Top bar and map
   '{navy} · {turn} / {max}턴': '{navy} · Turn {turn} / {max}',
@@ -637,10 +637,10 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '사건 보상 · 손실': 'Event gains and losses',
   '현재 보유 은': 'Silver now',
   '{date} · 역사 사건': '{date} · Historical event',
-  '전역 종료': 'Campaign over',
-  '{turn}턴 · 전역 종료': 'Turn {turn} · Campaign over',
-  '전역 승리': 'Campaign victory',
-  '전역 패배': 'Campaign defeat',
+  '캠페인 종료': 'Campaign over',
+  '{turn}턴 · 캠페인 종료': 'Turn {turn} · Campaign over',
+  '캠페인 승리': 'Campaign victory',
+  '캠페인 패배': 'Campaign defeat',
   '{navy|은/는} 모든 포구를 잃고 패망했습니다.': 'The {navy} lost every port and has fallen.',
   '{me|과/와} {navy|이/가} 함께 목표를 달성하고 유지했습니다.': 'The {me} and the {navy} together reached the objective and held it.',
   '{me|과/와} {navy|이/가} 함께 마지막 턴에 가장 높은 점수를 얻었습니다.': 'The {me} and the {navy} together took the highest score on the final turn.',
@@ -649,12 +649,12 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '{navy|이/가} 마지막 턴에 가장 높은 점수를 얻었습니다.': 'The {navy} took the highest score on the final turn.',
   '{navy|은/는} 맞서던 모든 진영을 물리쳤습니다.': 'The {navy} defeated every opposing faction.',
   '지도 보기': 'View map',
-  '전역 메뉴': 'Campaign menu',
+  '캠페인 메뉴': 'Campaign menu',
   '지도로 돌아가기': 'Back to map',
   '메인 메뉴 (진행 상황은 저장됩니다)': 'Main menu (progress is saved)',
-  '전역 포기': 'Abandon campaign',
-  '전역 포기 확인': 'Confirm abandon',
-  '포기하면 저장된 전역이 삭제되며 되돌릴 수 없습니다.': 'Abandoning deletes the saved campaign. This cannot be undone.',
+  '캠페인 포기': 'Abandon campaign',
+  '캠페인 포기 확인': 'Confirm abandon',
+  '포기하면 저장된 캠페인이 삭제되며 되돌릴 수 없습니다.': 'Abandoning deletes the saved campaign. This cannot be undone.',
 
   // First-turn guide
   '시작 안내': 'Getting started',
@@ -665,7 +665,7 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '1. 포구 선택': '1. Select a port',
   '지도의 포구를 눌러 수비대와 수입, 시설을 확인합니다. 표지의 색은 그 포구를 가진 진영을 뜻합니다.': "Tap a port on the map to see its garrison, income and facilities. A marker's color shows which faction holds the port.",
   '2. 시설 건설': '2. Build facilities',
-  "군영(수리, 유지비 면제 한도)이나 선소(함선 건조)를 지을 수 있습니다. 은은 바로 차감되고 몇 턴 뒤에 완공됩니다. 선소가 있으면 함선도 주문할 수 있습니다. 새 전역은 위쪽의 '자동 건설'이 켜진 채 시작해 턴을 마칠 때 알아서 짓습니다. 직접 고르려면 끄세요.":
+  "군영(수리, 유지비 면제 한도)이나 선소(함선 건조)를 지을 수 있습니다. 은은 바로 차감되고 몇 턴 뒤에 완공됩니다. 선소가 있으면 함선도 주문할 수 있습니다. 새 캠페인은 위쪽의 '자동 건설'이 켜진 채 시작해 턴을 마칠 때 알아서 짓습니다. 직접 고르려면 끄세요.":
     'You can build a camp (repairs, upkeep allowance) or a shipyard (ship building). Silver is deducted at once and the work finishes a few turns later. With a shipyard you can also order ships. Auto-build at the top starts on in a new war and builds for you when the turn ends; switch it off to choose yourself.',
   '3. 함대 이동': '3. Move a fleet',
   "함대 표지를 눌러 선택하면 공격할 수 있는 적의 포구가 강조되고, 그 포구를 한 번 누르면 바로 공격합니다. 우리 편 포구로 옮기려면 '이동'을 누른 뒤 포구를 고릅니다.": 'Tap a fleet marker and the enemy ports it can strike light up; tap one once to attack at once. To move to a friendly port, press Move, then tap the port.',
