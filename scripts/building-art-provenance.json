@@ -1,0 +1,484 @@
+{
+  "provider": "OpenAI Images API",
+  "model": "gpt-image-2",
+  "quality": "medium",
+  "size": "1024x1024",
+  "generatedAt": "2026-10-14",
+  "note": "Level 1 from text; levels 2 and 3 are edits of the level below. Exported as WebP, 384 px square.",
+  "style": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst.",
+  "factions": {
+    "joseon": "Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem.",
+    "japan": "Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking.",
+    "ming": "Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem."
+  },
+  "cards": [
+    {
+      "id": "joseon-camp",
+      "faction": "joseon",
+      "kind": "camp",
+      "label": "군영",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/joseon-camp-L1.webp",
+          "bytes": 9318,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. LEVEL 1, a modest first version: a naval command post: a small timber command hall on a stone platform inside a palisade, a flagpole and a drum stand in a swept yard. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/joseon-camp-L2.webp",
+          "bytes": 11002,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a sturdier wall with a gate tower, a second hall and a row of barracks, more banners. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/joseon-camp-L3.webp",
+          "bytes": 11670,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a fortified headquarters: a continuous stone wall with corner towers, a grand two-storey command hall, many barracks, an assembly ground with ranks of tiny soldiers, lanterns lit everywhere. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "joseon-shipyard",
+      "faction": "joseon",
+      "kind": "shipyard",
+      "label": "선소",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/joseon-shipyard-L1.webp",
+          "bytes": 9140,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. LEVEL 1, a modest first version: a shipyard: one wooden slipway on a shingle beach with the half-planked hull of a broad flat-bottomed Korean warship on it, timber props, stacked pine logs and a carpenters' shed. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/joseon-shipyard-L2.webp",
+          "bytes": 11102,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a second slipway with another hull, a roofed timber shed over the slipways, a log-hauling crane and a sawpit. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/joseon-shipyard-L3.webp",
+          "bytes": 13782,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a great shipyard: three slipways under long roofed sheds, a large nearly finished warship on the main slipway, a stone launching quay, many workers, lanterns. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "joseon-battery",
+      "faction": "joseon",
+      "kind": "battery",
+      "label": "포대",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/joseon-battery-L1.webp",
+          "bytes": 7950,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. LEVEL 1, a modest first version: a shore battery: a low earthen and fieldstone gun platform on a headland with two bronze Korean cannons (cheonja chongtong) on wooden carriages pointing out to sea, powder chests. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/joseon-battery-L2.webp",
+          "bytes": 9372,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a taller stone rampart with crenellations, four cannons in embrasures and a roofed powder store. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/joseon-battery-L3.webp",
+          "bytes": 11246,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a great coastal fortress battery: a curved stone bastion with many cannons in tiers, a tower, gun smoke drifting, braziers lit. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "joseon-dock",
+      "faction": "joseon",
+      "kind": "dock",
+      "label": "수리소",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/joseon-dock-L1.webp",
+          "bytes": 8824,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. LEVEL 1, a modest first version: a repair dock: a broad Korean warship hauled up on a timber cradle at the water's edge with its side partly opened, carpenters, a tar cauldron steaming over a fire, stacked planks. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/joseon-dock-L2.webp",
+          "bytes": 9876,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a stone-lined dry dock basin holding the ship, a roofed workshop, rope and sail stores. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/joseon-dock-L3.webp",
+          "bytes": 11492,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a large stone dry dock with a timber gate, two ships under repair, cranes, a forge glowing, many lanterns. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "joseon-granary",
+      "faction": "joseon",
+      "kind": "granary",
+      "label": "창고",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/joseon-granary-L1.webp",
+          "bytes": 11470,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. LEVEL 1, a modest first version: a storehouse: a raised wooden granary with a tiled roof on stone posts, stacked straw rice sacks and a few wooden gunpowder kegs in front. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/joseon-granary-L2.webp",
+          "bytes": 14042,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a second storehouse, a walled yard, carts and more stacked sacks and kegs. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/joseon-granary-L3.webp",
+          "bytes": 15250,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a large walled depot: a row of great storehouses, a separate guarded powder magazine behind an earth bank, mountains of sacks, lanterns. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "joseon-beacon",
+      "faction": "joseon",
+      "kind": "beacon",
+      "label": "봉수대",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/joseon-beacon-L1.webp",
+          "bytes": 8224,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. LEVEL 1, a modest first version: a beacon station (bongsudae) on a rocky hilltop: a round stone mound with a small signal fire burning in one stone chimney pit, a guard hut, thin smoke rising. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/joseon-beacon-L2.webp",
+          "bytes": 9110,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a taller tower with a lookout platform, two fires burning, a low wall around it. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/joseon-beacon-L3.webp",
+          "bytes": 8980,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Joseon Korea, 1590s: grey ceramic-tiled roofs with gently upturned eaves, white plastered walls and dark timber frames, grey fieldstone, plain blue and white cloth banners without any emblem. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a great beacon fortress: a tall stone tower with five fire pits blazing, a walled compound and a column of smoke rising high into the dusk sky. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "japan-camp",
+      "faction": "japan",
+      "kind": "camp",
+      "label": "군영",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/japan-camp-L1.webp",
+          "bytes": 9996,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. LEVEL 1, a modest first version: a naval command post: a small black-timbered command hall with a curtain enclosure (jinmaku) of plain white cloth on poles, a flagpole in a swept yard. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/japan-camp-L2.webp",
+          "bytes": 12468,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a sturdier wall with a gate tower, a second hall and a row of barracks, more banners. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/japan-camp-L3.webp",
+          "bytes": 14868,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a fortified headquarters: a continuous stone wall with corner towers, a grand two-storey command hall, many barracks, an assembly ground with ranks of tiny soldiers, lanterns lit everywhere. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "japan-shipyard",
+      "faction": "japan",
+      "kind": "shipyard",
+      "label": "선소",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/japan-shipyard-L1.webp",
+          "bytes": 9952,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. LEVEL 1, a modest first version: a shipyard: one wooden slipway on a sandy beach with the half-planked hull of a boxy Japanese warship on it, timber props, stacked cedar logs and a carpenters' shed. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/japan-shipyard-L2.webp",
+          "bytes": 11616,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a second slipway with another hull, a roofed timber shed over the slipways, a log-hauling crane and a sawpit. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/japan-shipyard-L3.webp",
+          "bytes": 13752,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a great shipyard: three slipways under long roofed sheds, a large nearly finished warship on the main slipway, a stone launching quay, many workers, lanterns. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "japan-battery",
+      "faction": "japan",
+      "kind": "battery",
+      "label": "포대",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/japan-battery-L1.webp",
+          "bytes": 9162,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. LEVEL 1, a modest first version: a shore battery: a battered stone wall on a headland with loopholes and two bronze cannons on wooden blocks pointing out to sea, plain white banners. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/japan-battery-L2.webp",
+          "bytes": 10586,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a taller stone rampart with crenellations, four cannons in embrasures and a roofed powder store. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/japan-battery-L3.webp",
+          "bytes": 13398,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a great coastal fortress battery: a curved stone bastion with many cannons in tiers, a tower, gun smoke drifting, braziers lit. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "japan-dock",
+      "faction": "japan",
+      "kind": "dock",
+      "label": "수리소",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/japan-dock-L1.webp",
+          "bytes": 13270,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. LEVEL 1, a modest first version: a repair dock: a Japanese warship hauled up on a timber cradle at the water's edge with its side partly opened, carpenters, a tar cauldron steaming over a fire, stacked planks. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/japan-dock-L2.webp",
+          "bytes": 14378,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a stone-lined dry dock basin holding the ship, a roofed workshop, rope and sail stores. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/japan-dock-L3.webp",
+          "bytes": 14070,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a large stone dry dock with a timber gate, two ships under repair, cranes, a forge glowing, many lanterns. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "japan-granary",
+      "faction": "japan",
+      "kind": "granary",
+      "label": "창고",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/japan-granary-L1.webp",
+          "bytes": 9014,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. LEVEL 1, a modest first version: a storehouse: a white-plastered kura storehouse with a dark tiled roof, stacked straw rice bales and a few gunpowder kegs in front. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/japan-granary-L2.webp",
+          "bytes": 11486,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a second storehouse, a walled yard, carts and more stacked sacks and kegs. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/japan-granary-L3.webp",
+          "bytes": 12212,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a large walled depot: a row of great storehouses, a separate guarded powder magazine behind an earth bank, mountains of sacks, lanterns. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "japan-beacon",
+      "faction": "japan",
+      "kind": "beacon",
+      "label": "봉수대",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/japan-beacon-L1.webp",
+          "bytes": 8352,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. LEVEL 1, a modest first version: a signal post on a rocky hilltop: a wooden watchtower (yagura) with a fire basket burning on top, a guard hut, thin smoke rising. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/japan-beacon-L2.webp",
+          "bytes": 8994,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a taller tower with a lookout platform, two fires burning, a low wall around it. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/japan-beacon-L3.webp",
+          "bytes": 8896,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Sengoku Japan, 1590s: black-lacquered timber, white plastered walls, dark grey tiled roofs, steep battered stone walls, plain white cloth banners without any emblem or marking. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a great beacon fortress: a tall stone tower with five fire pits blazing, a walled compound and a column of smoke rising high into the dusk sky. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "ming-camp",
+      "faction": "ming",
+      "kind": "camp",
+      "label": "군영",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/ming-camp-L1.webp",
+          "bytes": 8270,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. LEVEL 1, a modest first version: a naval command post: a small red-pillared yamen hall with a glazed roof inside a low brick wall, a flagpole in a paved yard. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/ming-camp-L2.webp",
+          "bytes": 10176,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a sturdier wall with a gate tower, a second hall and a row of barracks, more banners. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/ming-camp-L3.webp",
+          "bytes": 10898,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a fortified headquarters: a continuous stone wall with corner towers, a grand two-storey command hall, many barracks, an assembly ground with ranks of tiny soldiers, lanterns lit everywhere. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "ming-shipyard",
+      "faction": "ming",
+      "kind": "shipyard",
+      "label": "선소",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/ming-shipyard-L1.webp",
+          "bytes": 11238,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. LEVEL 1, a modest first version: a shipyard: one wooden slipway on a mud bank with the half-built hull of a Chinese junk on it, timber props, stacked logs and a carpenters' shed. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/ming-shipyard-L2.webp",
+          "bytes": 12362,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a second slipway with another hull, a roofed timber shed over the slipways, a log-hauling crane and a sawpit. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/ming-shipyard-L3.webp",
+          "bytes": 14114,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a great shipyard: three slipways under long roofed sheds, a large nearly finished warship on the main slipway, a stone launching quay, many workers, lanterns. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "ming-battery",
+      "faction": "ming",
+      "kind": "battery",
+      "label": "포대",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/ming-battery-L1.webp",
+          "bytes": 9582,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. LEVEL 1, a modest first version: a shore battery: a grey brick bastion on a headland with two breech-loading Chinese cannons (folangji) on wooden stands pointing out to sea, powder chests. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/ming-battery-L2.webp",
+          "bytes": 11040,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a taller stone rampart with crenellations, four cannons in embrasures and a roofed powder store. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/ming-battery-L3.webp",
+          "bytes": 12450,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a great coastal fortress battery: a curved stone bastion with many cannons in tiers, a tower, gun smoke drifting, braziers lit. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "ming-dock",
+      "faction": "ming",
+      "kind": "dock",
+      "label": "수리소",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/ming-dock-L1.webp",
+          "bytes": 10734,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. LEVEL 1, a modest first version: a repair dock: a Chinese junk hauled up on a timber cradle at the water's edge with its side partly opened, carpenters, a tar cauldron steaming over a fire, stacked planks. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/ming-dock-L2.webp",
+          "bytes": 11526,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a stone-lined dry dock basin holding the ship, a roofed workshop, rope and sail stores. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/ming-dock-L3.webp",
+          "bytes": 13800,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a large stone dry dock with a timber gate, two ships under repair, cranes, a forge glowing, many lanterns. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "ming-granary",
+      "faction": "ming",
+      "kind": "granary",
+      "label": "창고",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/ming-granary-L1.webp",
+          "bytes": 10420,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. LEVEL 1, a modest first version: a storehouse: a brick granary with a glazed roof, stacked grain sacks and a few gunpowder kegs in front. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/ming-granary-L2.webp",
+          "bytes": 12512,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a second storehouse, a walled yard, carts and more stacked sacks and kegs. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/ming-granary-L3.webp",
+          "bytes": 11210,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a large walled depot: a row of great storehouses, a separate guarded powder magazine behind an earth bank, mountains of sacks, lanterns. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "ming-beacon",
+      "faction": "ming",
+      "kind": "beacon",
+      "label": "봉수대",
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/buildings/ming-beacon-L1.webp",
+          "bytes": 7588,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. LEVEL 1, a modest first version: a beacon tower (fenghuotai) on a rocky hilltop: a square rammed-earth and brick tower with a signal fire burning on top, a guard hut, thin smoke rising. Small and simple, a lot of empty dark ground around it."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/buildings/ming-beacon-L2.webp",
+          "bytes": 9046,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. Grow this very same structure into LEVEL 2 on the identical site, identical camera angle and identical framing: a taller tower with a lookout platform, two fires burning, a low wall around it. Keep the palette, the vignette and the composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/buildings/ming-beacon-L3.webp",
+          "bytes": 9936,
+          "prompt": "Square card illustration for a historical strategy game, like the building cards of a Total War settlement panel. One single structure seen from above at a three-quarter oblique angle (about 40 degrees down), centred and large, filling about two thirds of the square, on a small patch of ground or shore; the surroundings fade softly into dark misty shadow toward all four edges and corners, a vignette with no hard border. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy water, dark pines, warm lantern and fire light, soft mist; the structure itself is clearly lit by warm torchlight with a cool moonlit rim so its shape reads at a small size, fine film grain, rich but desaturated colours. Painterly realism like a concept painting for a historical naval epic. Tiny figures are dark unrecognizable silhouettes, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no frame, no UI, no modern objects, no rising-sun flag, no sunburst. Ming China, 1590s: grey brick walls, red lacquered timber, yellow and green glazed tiled roofs with sweeping ridges, plain red and yellow cloth banners without any emblem. Grow this very same structure into LEVEL 3 on the identical site, identical camera angle and identical framing: a great beacon fortress: a tall stone tower with five fire pits blazing, a walled compound and a column of smoke rising high into the dusk sky. Keep the palette, the vignette and the composition exactly as they are."
+        }
+      ]
+    }
+  ]
+}

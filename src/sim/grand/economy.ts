@@ -285,10 +285,12 @@ export const garrisonCap = (id: RegionId, r: RegionState) => r.garrisonRule && r
 export const queueSlots = (r: RegionState) => levelOf(r, 'shipyard') > 0 ? (levelOf(r, 'shipyard') + 1) * TUNING.yardSlotScale : 0;
 
 /** Shore guns' worth in a fight, per battery level. A battery fires at everything that enters the port. */
+export const BATTERY_PER_LEVEL = 420;
+/** A battery's worth now: its level, less what damage has taken from it. */
 export const batteryStrength = (r: RegionState): number => {
   const b = buildingOf(r, 'battery');
   if (!b || b.level <= 0) return 0;
-  return b.level * 420 * (0.4 + 0.6 * b.hp);
+  return b.level * BATTERY_PER_LEVEL * (0.4 + 0.6 * b.hp);
 };
 
 /** Year and month (1..12) at the start of a turn. */

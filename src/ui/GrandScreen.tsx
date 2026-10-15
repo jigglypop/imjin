@@ -484,7 +484,10 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
             fleets={here}
             me={me}
             onClose={closePanels}
-            onBuild={(id, kind) => ordered(grandOrders.build(id as RegionId, kind as SimBuilding))}
+            onBuild={(id, kind) => {
+              // A work ordered gets the carpenters' knock the finished work gets, on top of the order's click.
+              if (ordered(grandOrders.build(id as RegionId, kind as SimBuilding))) sound.campaign('built');
+            }}
             onCancelBuild={(id, kind) => report(grandOrders.cancelBuild(id as RegionId, kind as SimBuilding), '공사를 취소하고 비용을 돌려받았습니다')}
             onRecruit={(id, kind) => ordered(grandOrders.recruit(id as RegionId, kind as ShipKind))}
             onCancelRecruit={(id, item) => report(grandOrders.cancelRecruit(id as RegionId, item), '주문을 취소하고 비용을 돌려받았습니다')}

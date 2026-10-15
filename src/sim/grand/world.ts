@@ -112,6 +112,9 @@ export const defenceStrength = (g: Grand, id: RegionId) => {
   return listStrength(d.ships) + d.shore;
 };
 
+/** Sea lanes a port sees past its own waters with a beacon of this level (0 = none). */
+export const beaconSight = (level: number) => (level > 0 ? Math.min(3, 1 + level) : 0);
+
 /** Ports report their own waters. A sailing scout observes two sea lanes; a main fleet observes one. */
 export function visibleRegions(g: Grand, f: GrandFaction): Set<RegionId> {
   const seen = new Set<RegionId>();
@@ -129,8 +132,7 @@ export function visibleRegions(g: Grand, f: GrandFaction): Set<RegionId> {
     const r = g.regions[id];
     const mine = r.owner !== null && allied(g, f, r.owner);
     if (!mine) continue;
-    const beacon = r.buildings.find((b) => b.kind === 'beacon' && b.level > 0);
-    reach(id, beacon ? Math.min(3, 1 + beacon.level) : 0);
+    reach(id, beaconSight(r.buildings.find((b) => b.kind === 'beacon')?.level ?? 0));
   }
   for (const fleet of g.fleets) if (allied(g, f, fleet.faction)) {
     const scout = fleet.ships.some((s) => s.hull > 0 && s.crew > 0 && sightRange(SHIP_SPECS[s.kind]) >= SCOUT_SIGHT);

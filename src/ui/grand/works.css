@@ -1,0 +1,784 @@
+/* The port's works and slipways as cards (PortWorks.tsx): gilt-edged paintings whose state is drawn on the card, and
+   one drawer under the grid for the card picked. Scoped under .grand like the rest of the campaign kit. */
+
+.grand .g-works,
+.grand .g-yard {
+  --gilt: #c9a35c;
+  --gilt-hi: #f2d99b;
+  --gilt-dim: rgba(201, 163, 92, 0.34);
+  --gilt-ink: #1c1407;
+  --card-ink: #f4ecd8;
+}
+
+.g-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.g-wgrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* --- A card ------------------------------------------------------------------------------------------------- */
+
+.g-wcard {
+  position: relative;
+  min-width: 0;
+}
+.grand .g-wcard__main {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  padding: 0;
+  border: 1px solid var(--gilt-dim);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0a0e14;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.38);
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.18s ease, border-color 0.18s ease;
+}
+/* A fine inner gilt line: the frame of a painted card. */
+.g-wcard__main::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(242, 217, 155, 0.16);
+  border-radius: 7px;
+  pointer-events: none;
+}
+.g-wcard__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.04);
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.3s ease;
+}
+.g-wcard__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(4, 7, 11, 0) 42%, rgba(4, 7, 11, 0.94) 100%);
+  pointer-events: none;
+}
+.g-wcard__glyph {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(6, 9, 13, 0.66);
+  border: 1px solid var(--gilt-dim);
+  color: var(--gilt-hi);
+}
+.g-wcard__foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 8px 8px;
+}
+.g-wcard__name {
+  color: var(--card-ink);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  overflow-wrap: anywhere;
+}
+.g-wpips {
+  display: inline-flex;
+  gap: 5px;
+  padding-left: 1px;
+}
+.g-wpips i {
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg);
+  border: 1px solid rgba(242, 217, 155, 0.5);
+  background: rgba(0, 0, 0, 0.35);
+}
+.g-wpips i.on {
+  border-color: var(--gilt-hi);
+  background: linear-gradient(135deg, #fbe9b5, #b98b3e);
+  box-shadow: 0 0 5px rgba(246, 222, 160, 0.55);
+}
+
+@media (hover: hover) {
+  .grand .g-wcard__main:hover:not(:disabled) {
+    transform: translateY(-2px);
+    border-color: var(--gilt);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.48), 0 0 0 1px rgba(242, 217, 155, 0.2);
+  }
+  .g-wcard__main:hover .g-wcard__art {
+    transform: scale(1.1);
+  }
+}
+.grand .g-wcard__main:active:not(:disabled) {
+  transform: translateY(0) scale(0.965);
+  transition-duration: 0.06s;
+}
+.grand .g-wcard__main:focus-visible {
+  outline: 2px solid var(--gilt-hi);
+  outline-offset: 2px;
+}
+
+/* The picked card: a brighter gilt edge and a warm glow. */
+.grand .g-wcard--on .g-wcard__main,
+.grand .g-wcard--on .g-wcard__main:hover:not(:disabled) {
+  border-color: var(--gilt-hi);
+  box-shadow: 0 0 0 1px var(--gilt-hi), 0 0 18px rgba(242, 200, 120, 0.42), 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* States, drawn on the picture. Not built: a faded plate of the first level; one that can be ordered warms on hover. */
+.g-wcard--none .g-wcard__art {
+  filter: grayscale(0.85) brightness(0.5);
+}
+.g-wcard--none.g-wcard--can .g-wcard__art {
+  filter: grayscale(0.45) brightness(0.72);
+}
+@media (hover: hover) {
+  .g-wcard--none.g-wcard--can .g-wcard__main:hover .g-wcard__art {
+    filter: none;
+  }
+}
+.g-wcard--locked .g-wcard__art {
+  filter: grayscale(1) brightness(0.38);
+}
+.g-wcard--short .g-wcard__art {
+  filter: grayscale(0.6) brightness(0.55);
+}
+/* Going up: the level it will reach, dimmed under scaffold hatching, with the ring of the turns done. */
+.g-wcard--rising .g-wcard__art {
+  filter: brightness(0.5) saturate(0.65);
+}
+.g-wcard--rising .g-wcard__main::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(-45deg, rgba(242, 217, 155, 0.08) 0 6px, transparent 6px 14px);
+  pointer-events: none;
+}
+.g-wcard--max .g-wcard__main {
+  border-color: var(--gilt);
+}
+.g-wcard--max .g-wcard__main::after {
+  border-color: rgba(242, 217, 155, 0.42);
+}
+
+.g-wcard__badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(6, 9, 13, 0.74);
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+}
+.g-wcard__badge--coin {
+  color: var(--warn);
+  border-color: rgba(200, 184, 138, 0.5);
+}
+/* The last level: a gilt star in the corner. */
+.g-wcard__crown {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, #fff0c2, #c08f3f 70%);
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  filter: drop-shadow(0 0 4px rgba(246, 222, 160, 0.7));
+}
+
+/* The quick order in the corner: a gilt coin with an arrow, for players who know what they want. */
+.grand .g-wcard__quick {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(255, 240, 200, 0.7);
+  border-radius: 50%;
+  background: linear-gradient(180deg, #f6e2a8, #c39745);
+  color: var(--gilt-ink);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  transition: transform 0.12s ease, box-shadow 0.15s ease;
+}
+.grand .g-wcard__quick .g-ico {
+  stroke: currentColor;
+  stroke-width: 2.4;
+}
+@media (hover: hover) {
+  .grand .g-wcard__quick:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgba(246, 222, 160, 0.65), 0 2px 6px rgba(0, 0, 0, 0.5);
+  }
+}
+.grand .g-wcard__quick:active {
+  transform: scale(0.9);
+}
+@media (pointer: coarse) {
+  /* A finger needs more than the drawn coin: the hit area reaches past it. */
+  .grand .g-wcard__quick::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+  }
+}
+
+/* An open plot: dashed gilt ground with a plus. */
+.grand .g-wcard--plot .g-wcard__main {
+  border: 1px dashed rgba(242, 217, 155, 0.4);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(242, 217, 155, 0.1), transparent 62%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.025) 0 8px, transparent 8px 16px),
+    #0b0f15;
+  box-shadow: none;
+}
+.grand .g-wcard--plot .g-wcard__main::after {
+  display: none;
+}
+.grand .g-wcard--plot .g-wcard__main:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.g-wcard__plus {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid var(--gilt-dim);
+  color: var(--gilt-hi);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+@media (hover: hover) {
+  .g-wcard--plot .g-wcard__main:hover:not(:disabled) .g-wcard__plus {
+    transform: translate(-50%, -50%) scale(1.08);
+    background: rgba(242, 217, 155, 0.12);
+  }
+}
+.g-wcard--plot .g-wcard__name {
+  color: var(--ink-3);
+  font-weight: 500;
+  text-align: center;
+}
+
+/* The pick strip of the plot drawer: small square cards. */
+.grand .g-wcard--small .g-wcard__main {
+  aspect-ratio: 1;
+}
+.g-wcard--small .g-wcard__name {
+  font-size: 12px;
+}
+.g-wcard--small .g-wcard__glyph {
+  display: none;
+}
+.g-wcard--small .g-wcard__foot {
+  padding: 0 6px 6px;
+}
+
+/* Ships: square plates with the price at the foot. */
+.grand .g-wcard--ship .g-wcard__main {
+  aspect-ratio: 1;
+}
+.g-wcard__cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--gilt-hi);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.g-wcard__cost--short {
+  color: var(--bad);
+}
+
+/* The ring of turns done, round the turns left. */
+.g-ring {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(5, 8, 12, 0.6);
+}
+.g-ring svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+.g-ring circle {
+  fill: none;
+  stroke-width: 3;
+}
+.g-ring__track {
+  stroke: rgba(255, 255, 255, 0.16);
+}
+.g-ring__fill {
+  stroke: var(--gilt-hi);
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px rgba(246, 222, 160, 0.6));
+  transition: stroke-dasharray 0.6s ease;
+}
+.g-ring b {
+  position: relative;
+  color: var(--card-ink);
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A flourish when a work is ordered or a level is done: a gilt pulse and a sweep of light across the picture. */
+.g-wcard--flash .g-wcard__main {
+  animation: g-wpulse 1.2s ease-out;
+}
+.g-wcard--flash .g-wcard__main::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 236, 190, 0.5) 48%, transparent 64%);
+  transform: translateX(-120%);
+  animation: g-wsweep 0.9s ease-out 0.1s;
+  pointer-events: none;
+}
+@keyframes g-wpulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 222, 150, 0.85), 0 4px 12px rgba(0, 0, 0, 0.38);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(255, 222, 150, 0), 0 4px 12px rgba(0, 0, 0, 0.38);
+  }
+}
+@keyframes g-wsweep {
+  to {
+    transform: translateX(120%);
+  }
+}
+
+/* --- The drawer --------------------------------------------------------------------------------------------- */
+
+.g-wdetail {
+  margin-top: 10px;
+  border: 1px solid var(--gilt-dim);
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #151a21, #0c0f14);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(242, 217, 155, 0.12);
+  animation: g-wopen 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  scroll-margin: 12px;
+}
+@keyframes g-wopen {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+.g-wdetail__hero {
+  position: relative;
+  height: 168px;
+  overflow: hidden;
+}
+.g-wdetail__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 45%;
+  animation: g-wart 0.6s ease-out;
+}
+@keyframes g-wart {
+  from {
+    opacity: 0.4;
+    transform: scale(1.06);
+  }
+}
+.g-wdetail__hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(12, 15, 20, 0) 40%, rgba(12, 15, 20, 0.96) 100%);
+}
+.g-wdetail__titles {
+  position: absolute;
+  z-index: 1;
+  left: 14px;
+  right: 56px;
+  bottom: 10px;
+}
+.g-wdetail__eyebrow {
+  display: block;
+  color: var(--gilt-hi);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.g-wdetail__title {
+  margin: 2px 0 0;
+  color: var(--card-ink);
+  font-family: var(--font-title);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+.grand .g-wdetail__close {
+  position: absolute;
+  z-index: 1;
+  top: 6px;
+  right: 6px;
+  background: rgba(6, 9, 13, 0.6);
+}
+.g-wdetail__body {
+  display: grid;
+  gap: 10px;
+  padding: 4px 14px 12px;
+}
+.g-wdetail__role {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.g-wfx {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.g-wfx th,
+.g-wfx td {
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+.g-wfx thead th {
+  border-top: 0;
+  padding-top: 0;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 600;
+}
+.g-wfx tbody th {
+  padding-right: 10px;
+  color: var(--ink-3);
+  font-weight: 500;
+  text-align: left;
+  white-space: normal;
+}
+.g-wfx td {
+  padding-left: 10px;
+  color: var(--ink);
+}
+.g-wfx td.g-wfx__up {
+  color: var(--gilt-hi);
+  font-weight: 650;
+}
+.g-wopens {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.g-wopens__label {
+  flex-basis: 100%;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 600;
+}
+.g-wopens__chip {
+  padding: 3px 9px;
+  border: 1px solid var(--gilt-dim);
+  border-radius: 999px;
+  background: rgba(242, 217, 155, 0.07);
+  color: var(--gilt-hi);
+  font-size: 12px;
+  font-weight: 550;
+}
+.g-wdetail__why {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--warn);
+  font-size: 13px;
+  font-weight: 550;
+}
+.g-wdetail__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.2);
+}
+.g-wprice {
+  display: inline-flex;
+  gap: 6px;
+}
+.g-wprice__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.g-wprice__chip--short {
+  color: var(--bad);
+}
+.grand .g-btn.g-wdetail__go {
+  flex: 1 0 auto;
+  min-width: 120px;
+  background: linear-gradient(180deg, #f6e2a8, #c39745);
+  color: var(--gilt-ink);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.grand .g-btn.g-wdetail__go .g-ico {
+  stroke-width: 2.4;
+}
+.grand .g-btn.g-wdetail__go:hover:not(:disabled) {
+  background: linear-gradient(180deg, #fbebbd, #d0a552);
+  box-shadow: 0 0 16px rgba(246, 222, 160, 0.45), 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.grand .g-btn.g-wdetail__go:disabled {
+  background: var(--fill-2);
+  color: var(--ink-3);
+  box-shadow: none;
+}
+.g-wdetail__progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.g-wdetail__progress small {
+  display: block;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 500;
+}
+.g-wdetail__progress .g-ring {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  width: 40px;
+  height: 40px;
+}
+
+/* The plot drawer: the works that can go up, then the detail of the one picked. */
+.g-wpick {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--gilt-dim);
+  border-radius: 12px;
+  background: rgba(242, 217, 155, 0.03);
+  animation: g-wopen 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.g-wpick__head {
+  margin: 0 0 8px;
+  color: var(--gilt-hi);
+  font-size: 12px;
+  font-weight: 600;
+}
+.g-wpick__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 6px;
+}
+.g-wpick .g-wdetail {
+  margin-top: 10px;
+}
+
+/* --- Ships -------------------------------------------------------------------------------------------------- */
+
+.g-yslots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.g-yslot {
+  position: relative;
+  aspect-ratio: 1;
+  border: 1px solid var(--gilt-dim);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0a0e14;
+}
+.g-yslot__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.6) saturate(0.7);
+}
+.g-yslot__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 50%, rgba(4, 7, 11, 0.92));
+}
+.g-yslot .g-ring {
+  top: 42%;
+  width: 34px;
+  height: 34px;
+}
+.g-yslot .g-ring b {
+  font-size: 13px;
+}
+.g-yslot__name {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 3px;
+  overflow: hidden;
+  color: var(--card-ink);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.g-yslot--idle .g-ring__fill {
+  stroke: var(--ink-3);
+}
+.g-yslot--free {
+  display: grid;
+  place-items: center;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  border-style: dashed;
+  border-color: rgba(242, 217, 155, 0.22);
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.025) 0 6px, transparent 6px 12px), #0b0f15;
+}
+.grand .g-yslot__cancel {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(6, 9, 13, 0.75);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.grand .g-yslot__cancel:hover {
+  color: var(--ink);
+  background: rgba(207, 150, 134, 0.4);
+}
+@media (pointer: coarse) {
+  .grand .g-yslot__cancel::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+  }
+}
+.g-yslot--flash {
+  animation: g-wpulse 1.2s ease-out;
+}
+
+.g-sstats {
+  display: grid;
+  gap: 7px;
+}
+.g-sstat {
+  display: grid;
+  grid-template-columns: minmax(64px, auto) 1fr minmax(56px, auto);
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.g-sstat__label {
+  color: var(--ink-3);
+}
+.g-sstat__bar {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+.g-sstat__bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #a07a36, var(--gilt-hi));
+  transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.g-sstat__value {
+  color: var(--ink);
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .g-works *,
+  .g-works *::before,
+  .g-yard *,
+  .g-yard *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* A phone on its side has little height: a shorter picture leaves room for the numbers and the order. */
+@media (max-height: 540px) {
+  .g-wdetail__hero {
+    height: 116px;
+  }
+}

@@ -1,5 +1,6 @@
 import { useT } from '../../i18n';
-import { BUILDINGS, Bar, Chip, FACTION_INFO, FactionMark, Icon, Sheet, Stat, buildingDesc, buildingName, costText, goldText, navyName, shipName, signed } from './shared';
+import { Bar, Chip, FACTION_INFO, FactionMark, Icon, Sheet, Stat, navyName, shipName, signed } from './shared';
+import { ShipYard, WorkSlots } from './PortWorks';
 import { campArt } from './campArt';
 import { turnsText } from './text';
 import type { BuildingKind, FactionId, FleetView, RegionView, ShipClass } from './types';
@@ -75,7 +76,6 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
   const t = useT();
   const own = region.owner === me;
   const seen = region.visible || own;
-  const building = new Set(region.works.map((w) => w.kind));
   const mine = fleets.filter((f) => f.faction === me && !f.transit);
   const ready = mine.filter((f) => f.rest === 0);
   return (
@@ -128,109 +128,9 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
 
           {own && onMobilize && <button className="g-btn g-btn--sm g-port-mobilize" disabled={!region.garrison} onClick={() => onMobilize(region.id)}>{t('수비대 전체 출동')}</button>}
 
-          <h3 className="g-section">
-            {t('시설')} <span className="g-section__hint">{t('빈 부지 {n}곳', { n: region.freeSlots })}</span>
-          </h3>
-          <ul className="g-list" data-guide="build">
-            {region.buildings.map((b) => {
-              const info = BUILDINGS[b.kind];
-              const busy = building.has(b.kind);
-              const maxed = b.maxLevel <= b.level;
-              const showCost = own && !maxed && !busy;
-              const can = own && b.buildable && !maxed && !busy;
-              const why = maxed ? t('최고 단계') : busy ? t('공사 중') : (b.blocked ?? '');
-              return (
-                <li key={b.kind} className="g-row">
-                  <span className="g-glyph" aria-hidden>
-                    <Icon name={info.icon} />
-                  </span>
-                  <span className="g-row__main">
-                    <span className="g-row__title">
-                      {buildingName(b.kind)}
-                      <span className="g-pips" aria-label={t('{level} / {max}단계', { level: b.level, max: b.maxLevel })}>
-                        {Array.from({ length: b.maxLevel }, (_, i) => (
-                          <i key={i} className={i < b.level ? 'on' : ''} />
-                        ))}
-                      </span>
-                    </span>
-                    <span className={`g-row__sub${showCost && b.blocked ? ' g-row__sub--warn' : ''}`}>
-                      {showCost ? (b.blocked ? b.blocked : t('{cost} · {turns}', { cost: costText(b.cost), turns: turnsText(b.turns) })) : busy ? t('{level}단계 공사 중 · {turns} 남음', { level: b.level + 1, turns: turnsText(b.upgradeLeft) }) : buildingDesc(b.kind)}
-                    </span>
-                    {(showCost || busy) && <span className="g-row__sub">{buildingDesc(b.kind)}</span>}
-                  </span>
-                  {own && (
-                    <button type="button" className="g-btn g-btn--sm" disabled={!can} title={why} onClick={() => onBuild?.(region.id, b.kind)}>
-                      {maxed ? t('최대') : busy ? t('공사 중') : b.level === 0 ? t('건설') : t('증축')}
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          {region.owner && region.buildings.length + region.freeSlots > 0 && <WorkSlots region={region} own={own} onBuild={onBuild} onCancelBuild={onCancelBuild} />}
 
-          {region.works.length > 0 && (
-            <>
-              <h3 className="g-section">{t('공사 현황')}</h3>
-              <ul className="g-list">
-                {region.works.map((q) => (
-                  <li key={q.id} className="g-row">
-                    <span className="g-glyph g-glyph--accent" aria-hidden>
-                      <Icon name={BUILDINGS[q.kind].icon} />
-                    </span>
-                    <span className="g-row__main">
-                      <span className="g-row__title">
-                        {t('{work} {level}단계', { work: buildingName(q.kind), level: q.toLevel })}
-                      </span>
-                      <span className="g-row__sub">{t('{turns} 남음', { turns: turnsText(q.turnsLeft) })}</span>
-                    </span>
-                    {own && q.cancelable && (
-                      <button type="button" className="g-btn g-btn--ghost g-btn--sm" onClick={() => onCancelBuild?.(region.id, q.kind)}>
-                        {t('취소')}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-
-          {own && (region.recruit.length > 0 || region.yard.length > 0) && (
-            <>
-              <h3 className="g-section">
-                {t('함선 건조')} <span className="g-section__hint">{region.yardIdle ? t('선소가 완공되어야 건조가 시작됩니다') : t('주문 즉시 은이 차감됩니다')}</span>
-              </h3>
-              {region.yard.length > 0 && (
-                <ul className="g-list g-list--tight">
-                  {region.yard.map((q) => (
-                    <li key={q.id} className="g-row">
-                      <span className="g-row__main">
-                        <span className="g-row__title">{q.name}</span>
-                        <span className="g-row__sub">{region.yardIdle ? t('선소 없음 · 대기 중') : t('{turns} 뒤 완성', { turns: turnsText(q.turnsLeft) })}</span>
-                      </span>
-                      {q.cancelable && (
-                        <button type="button" className="g-btn g-btn--ghost g-btn--sm" onClick={() => onCancelRecruit?.(region.id, q.id)}>
-                          {t('취소')}
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <ul className="g-list">
-                {region.recruit.map((r) => (
-                  <li key={r.kind} className="g-row">
-                    <span className="g-row__main">
-                      <span className="g-row__title">{r.name}</span>
-                      <span className={`g-row__sub${r.blocked ? ' g-row__sub--warn' : ''}`}>{r.blocked ?? t('{cost} · {turns}', { cost: goldText(r.cost), turns: turnsText(r.turns) })}</span>
-                    </span>
-                    <button type="button" className="g-btn g-btn--sm" disabled={!!r.blocked} title={r.blocked} onClick={() => onRecruit?.(region.id, r.kind)}>
-                      {t('건조')}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+          {own && (region.recruit.length > 0 || region.yard.length > 0) && <ShipYard region={region} onRecruit={onRecruit} onCancelRecruit={onCancelRecruit} />}
 
           <h3 className="g-section">{t('주둔 함대')}</h3>
           {onMergeAll && mine.length > 1 && (

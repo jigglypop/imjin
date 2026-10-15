@@ -31,10 +31,6 @@ function generated(): Record<string, string> {
 }
 
 export const EN_CAMPAIGN: Record<string, string> = {
-  '단계마다 유지비 면제 한도 +500은, 매 턴 선체 +5%·승조원 +6%. 수비대를 강화하고 상위 선소·포대·수리소를 열어줍니다.': 'Each level adds 500 silver of upkeep allowance and 5% hull / 6% crew recovery per turn. Strengthens the garrison and unlocks upgraded shipyards, batteries and docks.',
-  '1·2·3단계에서 동시에 2·3·4척을 건조하며 함선 가격은 100%·90%·80%입니다. 신규 함선은 1~3턴에 완성됩니다.': 'Levels 1/2/3 build 2/3/4 ships at once, at 100%/90%/80% of their price. New ships finish in 1–3 turns.',
-  '단계마다 방어 전력 +420. 손상되면 전력이 줄어듭니다. 직접 지휘하는 전투에도 같은 단계와 손상으로 배치됩니다.': 'Each level adds 420 defensive power. Damage reduces its power. Directly commanded battles preserve the same level and damage.',
-  '단계마다 머무는 함선의 선체를 매 턴 10%, 승조원을 8% 추가 회복합니다. 즉시 재정비 명령도 사용할 수 있습니다.': 'Each level adds 10% hull and 8% crew recovery per turn for docked ships. Also enables immediate refit orders.',
   ...generated(),
   ...REGION_NAMES,
 
@@ -136,8 +132,6 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '함선을 건조합니다. 단계가 오르면 동시에 지을 수 있는 함선이 늘고 값이 내려갑니다.': 'Builds ships. Each level adds a build slot and lowers prices.',
   '적이 쳐들어오면 먼저 포격합니다. 직접 지휘하는 전투에도 그대로 배치됩니다.': 'Fires first on attackers. It also stands in battles you command yourself.',
   '머무는 함선의 선체와 승조원을 빠르게 회복합니다.': 'Quickly restores the hull and crew of ships in port.',
-  '단계마다 수입이 25% 늘고, 전투에서는 화약고가 됩니다.': 'Each level adds 25% income, and in battle it serves as a powder magazine.',
-  '두 항로 앞까지 적 함대가 보이고 수입이 5% 늘어납니다.': 'Shows enemy fleets up to two lanes away and adds 5% income.',
 
   // Terrain
   '좁은 해협입니다. 큰 배가 방향을 바꾸기 어려워 수비하는 쪽이 유리합니다.': 'A narrow strait. Big ships struggle to turn, which favors the defender.',
@@ -509,7 +503,6 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '은 {n}': 'Silver {n}',
   '민심 불안 {turns} · 수입 절반': 'Unrest for {turns} · half income',
   '시설': 'Facilities',
-  '빈 부지 {n}곳': 'Free plots: {n}',
   '{level} / {max}단계': 'Level {level} / {max}',
   '{cost} · {turns}': '{cost} · {turns}',
   '{route} · {turns}': '{route} · {turns}',
@@ -518,7 +511,6 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '최대': 'Max',
   '건설': 'Build',
   '증축': 'Upgrade',
-  '공사 현황': 'Construction',
   '{work} {level}단계': '{work} level {level}',
   '{turns} 남음': '{turns} left',
   '함선 건조': 'Shipbuilding',

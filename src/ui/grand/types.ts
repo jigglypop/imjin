@@ -20,8 +20,22 @@ export interface BuildingView {
   /** False when something blocks the build (not owned, queue busy, treasury short): `blocked` says why. */
   buildable: boolean;
   blocked?: string;
-  /** Turns left on the level going up now, 0 when idle. */
+  /** Turns left on the level going up now, 0 when idle, and the turns that level takes in all. */
   upgradeLeft: number;
+  upgradeTotal: number;
+  /** The treasury is all that stops the build: the card shows a coin, not a lock. */
+  short?: boolean;
+  /** What the work does now and what the next level adds, from the campaign's rules (workEffects.ts). */
+  effects: WorkEffectView[];
+  /** What the next level opens: works, ships, orders. */
+  opens: string[];
+}
+
+export interface WorkEffectView {
+  label: string;
+  now: string;
+  /** Null when the work is at its last level. */
+  next: string | null;
 }
 
 export interface WorkView {
@@ -30,6 +44,7 @@ export interface WorkView {
   kind: BuildingKind;
   toLevel: number;
   turnsLeft: number;
+  total: number;
   /** A work that has not had a turn of labour can be called off with the price back. */
   cancelable: boolean;
 }
@@ -46,6 +61,20 @@ export interface RecruitView {
   turns: number;
   /** Why the ship cannot be ordered now, if it cannot. */
   blocked?: string;
+  /** The treasury or a full slipway is all that stops the order: the ship can be built here. */
+  short?: boolean;
+  stats: ShipStatsView;
+}
+
+/** A ship class's sheet for its card, from the competitive profile the campaign fights with. */
+export interface ShipStatsView {
+  hull: number;
+  crew: number;
+  guns: number;
+  /** Top speed in knots. */
+  knots: number;
+  /** Fighting worth in the campaign's unit (shipDef strength). */
+  power: number;
 }
 
 export interface YardItemView {
@@ -74,6 +103,8 @@ export interface RegionView {
   yard: YardItemView[];
   /** The slipway is idle because the shipyard is gone or still going up. */
   yardIdle: boolean;
+  /** Ships the shipyard builds at once (0 without one). */
+  yardSlots: number;
   garrison: number;
   garrisonMax: number;
   garrisonCrew: number;

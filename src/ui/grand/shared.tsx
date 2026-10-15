@@ -33,6 +33,9 @@ const ICONS = {
   portal: 'M7 17L17 7M9 7h8v8',
   select: 'M4 4h3M10.5 4h3M17 4h3v3M20 10.5v3M20 17v3h-3M13.5 20h-3M7 20H4v-3M4 13.5v-3M4 7V4',
   list: 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01',
+  lock: 'M8 11V8a4 4 0 0 1 8 0v3M6 11h12v9H6zM12 14.5v2',
+  up: 'M12 19V6M6.5 11.5L12 6l5.5 5.5',
+  clock: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8v4.5l3 2',
 } as const;
 
 export type IconName = keyof typeof ICONS;
@@ -46,18 +49,26 @@ export function Icon({ name, size }: { name: IconName; size?: 'sm' | 'lg' }) {
   );
 }
 
-/** Korean source text: show a work's name and help through buildingName / buildingDesc. */
+/**
+ * Korean source text: show a work's name and role through buildingName / buildingDesc. The role says what the work is
+ * for, without numbers: the detail card reads those from the rules (workEffects.ts).
+ */
 export const BUILDINGS: Record<BuildingKind, { name: string; icon: IconName; desc: string }> = {
-  camp: { name: '군영', icon: 'camp', desc: '단계마다 유지비 면제 한도 +500은, 매 턴 선체 +5%·승조원 +6%. 수비대를 강화하고 상위 선소·포대·수리소를 열어줍니다.' },
-  shipyard: { name: '선소', icon: 'shipyard', desc: '1·2·3단계에서 동시에 2·3·4척을 건조하며 함선 가격은 100%·90%·80%입니다. 신규 함선은 1~3턴에 완성됩니다.' },
-  battery: { name: '포대', icon: 'battery', desc: '단계마다 방어 전력 +420. 손상되면 전력이 줄어듭니다. 직접 지휘하는 전투에도 같은 단계와 손상으로 배치됩니다.' },
-  dock: { name: '수리소', icon: 'dock', desc: '단계마다 머무는 함선의 선체를 매 턴 10%, 승조원을 8% 추가 회복합니다. 즉시 재정비 명령도 사용할 수 있습니다.' },
-  granary: { name: '창고', icon: 'granary', desc: '단계마다 수입이 25% 늘고, 전투에서는 화약고가 됩니다.' },
-  beacon: { name: '봉수대', icon: 'beacon', desc: '두 항로 앞까지 적 함대가 보이고 수입이 5% 늘어납니다.' },
+  camp: { name: '군영', icon: 'camp', desc: '포구의 본영입니다. 머무는 함선을 고치고 수군의 유지비를 덜어 주며, 수비대를 늘리고 다른 시설의 상위 단계를 엽니다.' },
+  shipyard: { name: '선소', icon: 'shipyard', desc: '함선을 짓는 곳입니다. 단계가 오르면 한 번에 더 많은 배를 더 싸게 짓고, 큰 배를 건조할 수 있습니다.' },
+  battery: { name: '포대', icon: 'battery', desc: '포구로 들어오는 모든 적에게 포를 쏩니다. 손상되면 전력이 줄고, 직접 지휘하는 전투에도 같은 단계와 손상으로 배치됩니다.' },
+  dock: { name: '수리소', icon: 'dock', desc: '머무는 함선의 선체와 승조원을 더 빨리 회복시키고, 함대를 즉시 재정비할 수 있게 합니다.' },
+  granary: { name: '창고', icon: 'granary', desc: '포구의 수입을 늘리고 봉쇄를 더 오래 버티게 합니다. 전투에서는 화약고가 됩니다.' },
+  beacon: { name: '봉수대', icon: 'beacon', desc: '먼 바다의 적 함대를 미리 보게 하고 수입을 조금 늘립니다.' },
 };
 
 export const buildingName = (kind: BuildingKind) => t(BUILDINGS[kind].name);
 export const buildingDesc = (kind: BuildingKind) => t(BUILDINGS[kind].desc);
+
+/** A work's card art for its navy (scripts/generate-building-art.mjs): the level it shows, or the first level of a work not built yet. */
+export const workArt = (faction: FactionId, kind: BuildingKind, level: number) => `/ui/buildings/${faction}-${kind}-L${Math.max(1, Math.min(3, level))}.webp`;
+/** A ship class's card art (scripts/generate-ship-card-art.mjs). */
+export const shipArt = (kind: ShipClass) => `/ui/ships/${kind}.webp`;
 
 /** Korean source text: show a ship's class through shipName. */
 export const SHIP_NAME: Record<ShipClass, string> = {
@@ -85,7 +96,7 @@ export const shipName = (kind: ShipClass) => t(SHIP_NAME[kind]);
 /** A number with thousands separators the way the current language writes them. */
 export const num = (n: number) => n.toLocaleString(getLang() === 'ko' ? 'ko-KR' : 'en-US');
 
-export const goldText = (gold: number) => t('{gold}냥', { gold });
+export const goldText = (gold: number | string) => t('{gold}냥', { gold });
 
 export function costText(cost: Partial<Resources>) {
   return cost.gold ? goldText(cost.gold) : '';

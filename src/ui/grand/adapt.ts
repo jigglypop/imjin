@@ -1,7 +1,7 @@
 import { t } from '../../i18n';
 import { shipSpec } from '../../sim/competitive';
 import type { ShipKind } from '../../sim/types';
-import { buildingWorkTotal, buildingOf, dateLabel, garrisonCap, levelOf, netIncome, queueSlots, regionIncome } from '../../sim/grand/economy';
+import { buildingWorkTotal, buildingOf, dateLabel, shipDef, garrisonCap, levelOf, netIncome, queueSlots, regionIncome } from '../../sim/grand/economy';
 import { buildMenu, recruitMenu, refitCost } from '../../sim/grand/orders';
 import { REGIONS, REGION_ORDER, START, type RegionDef } from '../../sim/grand/regions';
 import { GRADE_TEXT, type BattleSummary } from '../../sim/grand/report';
@@ -31,6 +31,7 @@ import type {
   RelationView,
   ReplayView,
   ScoreView,
+  ShipStatsView,
   SpotView,
   TreasuryView,
   TurnReportView,
@@ -38,6 +39,7 @@ import type {
 } from './types';
 import { SHIP_NAME, buildingName } from './shared';
 import { logText, tName, tt, turnsText } from './text';
+import { workEffects } from './workEffects';
 
 /**
  * Maps the campaign state onto the plain view models the UI kit draws. Nothing here changes the campaign; every
@@ -76,6 +78,18 @@ const TERRAIN_NOTE: Record<RegionDef['terrain'], string> = {
 
 const player = (g: Grand): GrandFaction => g.player ?? 'joseon';
 
+/** A ship class's card sheet: the competitive profile's hull, crew and guns, its top speed in knots and the campaign's worth of it. */
+function shipStats(kind: ShipKind): ShipStatsView {
+  const spec = shipSpec(kind);
+  return {
+    hull: spec.hull,
+    crew: spec.crew,
+    guns: spec.batteries.reduce((n, b) => n + b.count, 0),
+    knots: Math.round(spec.maxSpeed * 1.944 * 10) / 10,
+    power: Math.round(shipDef(kind).strength),
+  };
+}
+
 export function regionViews(g: Grand): RegionView[] {
   const me = player(g);
   const seen = visibleRegions(g, me);
@@ -89,19 +103,25 @@ export function regionViews(g: Grand): RegionView[] {
     const gold = r.owner ? g.factions[r.owner].gold : 0;
     const buildings: BuildingView[] = menu
       .filter((m) => own || m.level > 0)
-      .map((m) => ({
-        kind: m.kind,
-        level: m.level,
-        maxLevel: MAX_LEVEL,
-        cost: { gold: m.gold },
-        turns: m.turns,
-        buildable: !m.problem,
-        blocked: m.problem ? t(m.problem) : undefined,
-        upgradeLeft: buildingOf(r, m.kind)?.upgradeLeft ?? 0,
-      }));
+      .map((m) => {
+        const b = buildingOf(r, m.kind);
+        return {
+          kind: m.kind,
+          level: m.level,
+          maxLevel: MAX_LEVEL,
+          cost: { gold: m.gold },
+          turns: m.turns,
+          buildable: !m.problem,
+          blocked: m.problem ? t(m.problem) : undefined,
+          short: m.problem === '은이 부족합니다',
+          upgradeLeft: b?.upgradeLeft ?? 0,
+          upgradeTotal: b && b.upgradeLeft > 0 ? buildingWorkTotal(b) : 0,
+          ...workEffects(g, id, m.kind),
+        };
+      });
     const works = r.buildings
       .filter((b) => b.upgradeLeft > 0)
-      .map((b) => ({ id: b.kind, kind: b.kind, toLevel: b.level + 1, turnsLeft: b.upgradeLeft, cancelable: b.upgradeLeft === buildingWorkTotal(b) }));
+      .map((b) => ({ id: b.kind, kind: b.kind, toLevel: b.level + 1, turnsLeft: b.upgradeLeft, total: buildingWorkTotal(b), cancelable: b.upgradeLeft === buildingWorkTotal(b) }));
     const full = r.queue.length >= queueSlots(r);
     const recruit = own
       ? recruitMenu(g, id).map((m) => ({
@@ -110,6 +130,8 @@ export function regionViews(g: Grand): RegionView[] {
           cost: m.gold,
           turns: m.turns,
           blocked: m.problem ? t(m.problem) : full ? t('건조 칸이 모두 찼습니다') : gold < m.gold ? t('은이 부족합니다') : undefined,
+          short: !m.problem && (full || gold < m.gold),
+          stats: shipStats(m.kind),
         }))
       : [];
     const yard = r.queue.map((q) => ({ id: q.id, kind: q.kind, name: t(SHIP_NAME[q.kind]), turnsLeft: q.left, total: q.total, cancelable: q.left === q.total }));
@@ -127,6 +149,7 @@ export function regionViews(g: Grand): RegionView[] {
       recruit,
       yard: own ? yard : [],
       yardIdle: yard.length > 0 && levelOf(r, 'shipyard') < 1,
+      yardSlots: own ? queueSlots(r) : 0,
       garrison: visible ? r.garrison.length : 0,
       garrisonCrew: visible ? r.garrison.reduce((n, s) => n + Math.round(shipSpec(s.kind).crew * s.crew), 0) : 0,
       garrisonMax: garrisonCap(id, r),
