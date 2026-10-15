@@ -72,7 +72,7 @@ function wobble(x: number, z: number) {
 }
 
 export interface HeroGroundMeshes {
-  patch: BufferGeometry | null; laid: BufferGeometry | null; shade: BufferGeometry | null;
+  patch: BufferGeometry | null; laid: BufferGeometry | null; shade: BufferGeometry | null; water: BufferGeometry | null;
   /** The patch's ground at a point of the site's frame: its height, how wooded it is, how open. */
   sample(x: number, z: number): { h: number; wood: number; open: number };
 }
@@ -186,6 +186,26 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
     patch.idx.push(a, d, c, a, c, b);
   }
 
+  // The water round the camp deepened to the sea of the painted coasts: a veil of deep blue over the map's bright sea,
+  // thin over the shallows so the surf still shows, gone at the patch's edge.
+  const water = new Streams();
+  const deep = lin(28, 70, 104);
+  const wi = new Int32Array(n * n).fill(-1);
+  const wetVert = (k: number) => {
+    if (wi[k]! < 0) {
+      const i = k % n, j = (k - i) / n;
+      const x = -R + i * STEP, z = -R + j * STEP;
+      const edge = R - Math.max(Math.abs(x), Math.abs(z)) + wobble(x, z) * 6;
+      wi[k] = water.vert(x, 0.12, z, deep, (H[k]! < 0 ? 0.3 + 0.38 * smooth(0, -0.7, H[k]!) : 0) * smooth(4, FADE + 10, edge), [0, 0, 0, 0], 0);
+    }
+    return wi[k]!;
+  };
+  for (let j = 0; j + 1 < n; j += 1) for (let i = 0; i + 1 < n; i += 1) {
+    const a = j * n + i, b = a + 1, c = a + n + 1, d = a + n;
+    if (Math.min(H[a]!, H[b]!, H[c]!, H[d]!) > 0.05) continue;
+    water.idx.push(wetVert(a), wetVert(d), wetVert(c), wetVert(a), wetVert(c), wetVert(b));
+  }
+
   // What is laid on the ground: the pads' tops, then yards and fields, then lanes over them.
   const laid = new Streams();
   const ground = (x: number, z: number) => {
@@ -289,7 +309,7 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
     const i = Math.max(0, Math.min(n - 1, Math.round((x + R) / STEP))), j = Math.max(0, Math.min(n - 1, Math.round((z + R) / STEP)));
     return { h: ground(x, z) - LIFT, wood: woods[j * n + i]!, open: open[j * n + i]! };
   };
-  return { patch: patch.geometry(), laid: laid.geometry(), shade: shade.geometry(), sample };
+  return { patch: patch.geometry(), laid: laid.geometry(), shade: shade.geometry(), water: water.geometry(), sample };
 }
 
 function smooth(a: number, b: number, x: number) {
@@ -300,7 +320,7 @@ function smooth(a: number, b: number, x: number) {
 /** The ground textures the patch is worked from: the battle's own ground (src/terrain), 1k. */
 const TEXTURES = ['aerial_grass_rock', 'aerial_rocks_02', 'coast_sand_01', 'forest_leaves_02'] as const;
 
-export interface HeroGroundLook { ground: MeshBasicNodeMaterial; laid: MeshBasicNodeMaterial; shade: MeshBasicNodeMaterial; textures: Texture[] }
+export interface HeroGroundLook { ground: MeshBasicNodeMaterial; laid: MeshBasicNodeMaterial; shade: MeshBasicNodeMaterial; water: MeshBasicNodeMaterial; textures: Texture[] }
 
 /**
  * The ground's materials: the vertex colour (the land's palette with its light) carrying the detail of the ground
@@ -364,5 +384,11 @@ export async function heroGroundLook(): Promise<HeroGroundLook> {
   shade.polygonOffset = true;
   shade.polygonOffsetFactor = -3;
   shade.polygonOffsetUnits = -6;
-  return { ground: make({ transparent: true, depthWrite: true, offset: 0 }), laid: make({ transparent: true, depthWrite: false, offset: 2 }), shade, textures };
+  const water = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
+  water.colorNode = vec4(col.rgb, 1);
+  water.opacityNode = col.a;
+  water.polygonOffset = true;
+  water.polygonOffsetFactor = -2;
+  water.polygonOffsetUnits = -4;
+  return { ground: make({ transparent: true, depthWrite: true, offset: 0 }), laid: make({ transparent: true, depthWrite: false, offset: 2 }), shade, water, textures };
 }

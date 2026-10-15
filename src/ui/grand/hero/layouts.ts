@@ -1,5 +1,5 @@
 import type { FactionId } from '../types';
-import { Plan, rect, seeded, type BodyLook, type Colour, type P2 } from './plan';
+import { inside, Plan, rect, seeded, type BodyLook, type Colour, type P2 } from './plan';
 
 // The hero camps as laid out for the painted targets (assets-src/camps-hero-2026-10-16): Yeosu, the Jeolla Left Naval
 // Command, a granite-walled compound on one levelled terrace behind its quay; Busan, the wajo, the coastal hill cut into
@@ -33,11 +33,12 @@ function joGate(m: Plan, x: number, z: number, rot: number, y: number, h: number
 }
 
 /** The level a pad over an outline stands at: the highest ground under it, a little above the sea at least. */
-function fillLevel(m: Plan, poly: readonly P2[], least: number) {
-  let hi = least;
-  const xs = poly.map((p) => p[0]), zs = poly.map((p) => p[1]);
-  for (let x = Math.min(...xs); x <= Math.max(...xs); x += 3) for (let z = Math.min(...zs); z <= Math.max(...zs); z += 3) hi = Math.max(hi, m.natural(x, z));
-  return hi + 0.25;
+export function fillLevel(m: Plan, poly: readonly P2[], least: number) {
+  const xs = poly.map((p) => p[0]), zs = poly.map((p) => p[1]), h: number[] = [];
+  for (let x = Math.min(...xs); x <= Math.max(...xs); x += 3) for (let z = Math.min(...zs); z <= Math.max(...zs); z += 3) if (inside(poly, x, z)) h.push(m.natural(x, z));
+  h.sort((a, b) => a - b);
+  // The ground under most of it: a knoll at one corner is let stand in the yard rather than raise the whole pad on a cliff.
+  return Math.max(least, h[Math.floor(h.length * 0.85)] ?? least) + 0.25;
 }
 
 /** The highest ground under a footprint and the lowest, for standing a building level on a slope. */

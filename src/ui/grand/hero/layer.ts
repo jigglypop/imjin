@@ -156,7 +156,7 @@ export class HeroLayer {
 
   private groundLook() {
     this.look ??= heroGroundLook().then((m) => {
-      if (this.disposed) { for (const x of [m.ground, m.laid, m.shade]) x.dispose(); for (const t of m.textures) t.dispose(); } else this.lookReady = m;
+      if (this.disposed) { for (const x of [m.ground, m.laid, m.shade, m.water]) x.dispose(); for (const t of m.textures) t.dispose(); } else this.lookReady = m;
       return m;
     }, () => null);
     return this.look;
@@ -198,6 +198,7 @@ export class HeroLayer {
         add(ground.patch, look.ground, group, 1);
         add(ground.laid, look.laid, group, 2);
         add(ground.shade, look.shade, group, 3);
+        add(ground.water, look.water, group, 2);
       }
       const leaves = await (this.trees ??= treeMaterial().then((m) => {
         if (this.disposed) { m.material.dispose(); m.texture.dispose(); } else this.treeLook = m;
@@ -261,6 +262,7 @@ export class HeroLayer {
       const g = buildHeroGround(site, plan, this.drawn);
       // A village stands on the land as drawn: only a camp's pad needs the smooth ground round it.
       if (t.town) g.patch?.dispose();
+      g.water?.dispose();
       for (const k of ['patch', 'laid', 'shade'] as const) {
         if (t.town && k === 'patch') continue;
         const geo = g[k];
@@ -323,7 +325,7 @@ export class HeroLayer {
     for (const m of this.ready) { m.material.dispose(); for (const t of m.textures) t.dispose(); }
     this.ready.length = 0;
     const look = this.lookReady;
-    if (look) { for (const x of [look.ground, look.laid, look.shade]) x.dispose(); for (const t of look.textures) t.dispose(); }
+    if (look) { for (const x of [look.ground, look.laid, look.shade, look.water]) x.dispose(); for (const t of look.textures) t.dispose(); }
     this.lookReady = null;
     if (this.treeLook) { this.treeLook.material.dispose(); this.treeLook.texture.dispose(); }
     this.treeLook = null;

@@ -1,5 +1,5 @@
 import type { FactionId } from '../types';
-import { joTier1, waFieldCamp } from './layouts';
+import { fillLevel, joTier1, waFieldCamp } from './layouts';
 import { rect, type BodyLook, type Colour, type P2, type Piece, type Plan, type RoofStyle, type WallLook } from './plan';
 
 // Every other camp on the map built to the hero camps' rules (layouts.ts), by navy and level: a compound on one levelled
@@ -28,16 +28,9 @@ class Frame {
   poly(pts: readonly P2[]) {
     return pts.map(([a, b]) => this.P(a, b));
   }
-  /** The level a pad over `pts` stands at: the highest ground under it, a little above the sea at least. */
+  /** The level a pad over `pts` stands at (layouts.ts fillLevel). */
   level(pts: readonly P2[]) {
-    let hi = 0.8;
-    const [x0, x1] = [Math.min(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[0]))];
-    const [z0, z1] = [Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[1]))];
-    for (let a = x0; a <= x1; a += 3) for (let b = z0; b <= z1; b += 3) {
-      const [x, z] = this.P(a, b);
-      hi = Math.max(hi, this.m.natural(x, z));
-    }
-    return hi + 0.25;
+    return fillLevel(this.m, this.poly(pts), 0.8);
   }
   bldg(a: number, b: number, turn: number, y: number, w: number, d: number, look: BodyLook, o: { wallH?: number; rise?: number; overhang?: number; style?: RoofStyle; base?: number } = {}) {
     const [x, z] = this.P(a, b);
