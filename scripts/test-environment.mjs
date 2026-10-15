@@ -1,5 +1,6 @@
 // Deterministic game weather and designed tidal eddies; these checks make no real-world ocean prediction claims.
 import assert from 'node:assert/strict';
+import { DataUtils } from 'three/webgpu';
 import { createServer } from 'vite';
 import { fileURLToPath } from 'node:url';
 
@@ -59,8 +60,19 @@ try {
       const data = field.vortexData(); assert.equal(data.length, 32);
       assert.deepEqual(data.slice(4, 16), [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0]);
       near(data[3], -0.9); near(data[19], 0.9);
-      const size = baked.image.width, mid = (size / 2) * size * 4 + (size / 2) * 4;
-      assert([...baked.image.data.slice(mid, mid + 4)].some((value) => value !== 0));
+      // The sea samples texel centres across `extent` around `centerWorld` and reads RG while the tide is below zero
+      // (flood) and BA while it is above (ebb). The centre texel and one beside it lie in the eddy and a third along the
+      // strait off the diagonal, so a bake that swapped the tides, flipped or transposed the rows or misplaced the square
+      // would no longer hold the simulation's flow there.
+      const size = baked.image.width;
+      for (const [i, j] of [[96, 96], [150, 100], [90, 101]]) {
+        const wx = field.centerWorld.x + ((i + 0.5) / size - 0.5) * field.extent;
+        const wz = field.centerWorld.z + ((j + 0.5) / size - 0.5) * field.extent;
+        const f = field.velocity(wx, wz, -1), e = field.velocity(wx, wz, 1);
+        assert(Math.hypot(f.x, f.z) > 0.1 && Math.hypot(f.x - e.x, f.z - e.z) > 0.1);
+        const o = (j * size + i) * 4;
+        assert.deepEqual([...baked.image.data.slice(o, o + 4)], [f.x, f.z, e.x, e.z].map((v) => DataUtils.toHalfFloat(v)));
+      }
     } finally { baked.dispose(); }
   });
 
