@@ -232,6 +232,8 @@ export class Battle {
   center = { x: 0, z: 0 };
   arenaRadius = 6000;
   rules: BattleRules | null = null;
+  /** Where each side's computer-led ships make for when they see no enemy, if the battle gives it one (the maneuver rules). */
+  objectives: Partial<Record<Team, { x: number; z: number }>> = {};
   /** The battle depth rules this battle was built with (depth.ts); null keeps the rules from before them. */
   depth: DepthRules | null = null;
   private moraleRules: Morale | null = null;
@@ -1506,7 +1508,7 @@ export class Battle {
     if (seen) this.searchSince.delete(s.id);
     let target = seen ?? this.hunted(s);
     if (!target) {
-      if (this.escortTender(s)) return;
+      if (this.escortTender(s) || this.seekObjective(s)) return;
       s.throttle = 0.12;
       s.rudder = 0;
       if (this.profile !== 'historical') s.targetId = 0;
@@ -1634,6 +1636,7 @@ export class Battle {
     if (seen) this.searchSince.delete(s.id);
     const target = seen ?? this.hunted(s, true);
     if (!target) {
+      if (this.seekObjective(s)) return;
       s.throttle = 0.2;
       if (this.profile !== 'historical') s.targetId = 0;
       this.activity.set(s.id, 'idle');
@@ -1685,6 +1688,20 @@ export class Battle {
       s.throttle = Math.min(s.throttle, Math.max(0, GRAPPLE_SPEED.japan - 1 + drift) / maximum);
     }
     this.activity.set(s.id, d < 200 ? 'charging' : 'moving');
+  }
+
+  /**
+   * A computer-led ship that sees no enemy makes for what its side came to do, when the battle names it (the maneuver
+   * rules): at Noryang the Japanese fleet's way west through the strait to Suncheon, into whatever waits for it in the dark.
+   */
+  private seekObjective(s: Ship) {
+    const goal = this.objectives[s.team];
+    if (!goal || !this.maneuvers || !this.isAi(s) || s.order.type !== 'auto') return false;
+    if (hyp(goal.x - s.x, goal.z - s.z) < 300) return false;
+    this.steerTo(s, goal.x, goal.z, 200, Math.min(1, FLEET_PACE / s.spec.maxSpeed));
+    this.avoid(s);
+    this.activity.set(s.id, 'moving');
+    return true;
   }
 
   /** Computer boarders use the same station presets a player can select: oars on approach, fighters after grappling. */

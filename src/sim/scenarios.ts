@@ -10,7 +10,7 @@ import {
   DANGPO_TERRAIN,
   HANSAN_TERRAIN,
   MYEONGNYANG_TERRAIN,
-  NORYANG_TERRAIN,
+  NORYANG_BATTLE_TERRAIN,
   OKPO_TERRAIN,
   SACHEON_TERRAIN,
   type TerrainSpec,
@@ -264,7 +264,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     sky: 'night',
     sea: 'rough',
     night: true,
-    terrain: NORYANG_TERRAIN,
+    terrain: NORYANG_BATTLE_TERRAIN,
     current: { cx: 0, cz: 0, angle: 0, peak: 1.9, reach: 4600, narrows: 480, turnAt: 480, slack: 70, floodFirst: true },
     joseon: YI_TONGJE,
     japan: { name: '시마즈 요시히로', title: '사쓰마 번주', figure: 'fig_shimazu', portrait: 'portrait_shimazu', banner: '島津' },
@@ -614,13 +614,17 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     line(sqChen, 'mingship', grid(-2500, 650, head, 16, 4, 66, 60, 10, rand), '명 수군 본대', 0);
     line(sqDeng, 'mingship', grid(-1900, 520, head, 14, 4, 66, 60, 10, rand), '명 수군 선봉', 0);
     line(sqSha, 'mingsmall', grid(-3200, 900, head, 33, 6, 40, 36, 10, rand), '명 사선대');
+    // The Japanese column comes on from the east still short of the strait's waist, so the allies have the time to
+    // choose where to meet it: at the narrows, from both shores, as on the night.
     for (let q = 0; q < 20; q += 1) {
       const lead = LEADS[q];
       const sq = squad('japan', lead ? lead.squad : echelon('사쓰마', q + 1), lead ? lead.name : '일본 장수', q % 4 === 0 ? 'atakebune' : 'sekibune');
       const kindOf = mix(0.22, 0.6);
-      grid(-550 + q * 300, (q % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, numbered(sq.name, i + 1), i === 0));
+      grid(2200 + q * 170, (q % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, numbered(sq.name, i + 1), i === 0));
     }
     b.retreatBelow.japan =0.55;
+    // Shimazu came to break through to Konishi at Suncheon, west of the strait: unopposed, his column keeps going.
+    b.objectives.japan = { x: -5200, z: 200 };
   }
   if (fleet) spawnFleet(b, fleet, axis, land);
   return b;

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { SPEEDS, type Engine } from '../game/Engine';
-import { AMMO_NAMES } from '../game/Input';
+import { AMMO_NAMES, MANEUVER_NAMES } from '../game/Input';
+import type { ManeuverKind } from '../sim/maneuvers';
 import { isTouchDevice, isTouchOnly } from '../game/device';
 import { EQUIPMENT_LABEL, equipment, saveEquipmentSetting, type EquipmentSetting } from '../game/quality';
 import { SKY_PRESETS, type SkyPresetName } from '../render/sky';
@@ -263,6 +264,10 @@ function Orders({ engine, p, night, selected, drum, tab, setTab, collapsed, onTo
   const t = useT();
   const input = engine.input;
   const none = selected === 0;
+  // Squadron maneuvers under the maneuver rules: a button arms one, and the selection carries it out once drawn on the sea.
+  const maneuvers = !!engine.battle.maneuvers && !engine.remote;
+  const placing = input.placing?.kind;
+  const maneuver = (kind: ManeuverKind, icon: string, key: string): OrderDef => ({ icon, label: MANEUVER_NAMES[kind], key, tip: `maneuver.${kind}`, run: () => input.beginManeuver(kind), on: placing === kind, disabled: none });
   const tabs: Record<Tab, { title: string; items: OrderDef[] }> = {
     form: {
       title: '진형',
@@ -280,6 +285,7 @@ function Orders({ engine, p, night, selected, drum, tab, setTab, collapsed, onTo
       items: [
         { icon: 'portVolley', label: '좌현 일제', key: 'Z', tip: 'volley.port', run: () => input.volley(0), disabled: none },
         { icon: 'starboardVolley', label: '우현 일제', key: 'X', tip: 'volley.starboard', run: () => input.volley(1), disabled: none },
+        { icon: 'volleyBoth', label: '양현 일제', key: 'Shift+Z', tip: 'volley.both', run: () => input.volley(3), disabled: none },
         { icon: p?.fireMode === 'hold' ? 'hold' : 'aim', label: p?.fireMode === 'hold' ? '사격 중지' : '자유 사격', key: 'Y', tip: 'fire', run: () => input.toggleFire(), on: p?.fireMode === 'hold' },
         { icon: 'shot', label: p ? AMMO_SHORT[p.ammo] : '탄종', key: 'T', tip: 'ammo', run: () => input.cycleAmmo(), on: !!p && p.ammo !== 'auto' },
         { icon: 'broadside', label: '측면 정렬', key: 'U', tip: 'broadside', run: () => input.presentBroadside(), disabled: none },
@@ -294,6 +300,7 @@ function Orders({ engine, p, night, selected, drum, tab, setTab, collapsed, onTo
         { icon: 'stop', label: '정지', key: 'H', tip: 'hold', run: () => input.hold(), disabled: none },
         // A toggle named for what the press does; it is lit while the ship runs dark.
         { icon: 'lantern', label: p && !p.lights ? '등불 켜기' : '등불 끄기', key: 'L', tip: 'lights', run: () => input.toggleLights(), on: !!p && !p.lights, disabled: !night },
+        ...(maneuvers ? [maneuver('breach', 'breach', 'D'), maneuver('pincer', 'pincer', 'W'), maneuver('lure', 'lure', 'A'), maneuver('pursue', 'pursue', 'F')] : []),
       ],
     },
     tactic: {
@@ -306,6 +313,16 @@ function Orders({ engine, p, night, selected, drum, tab, setTab, collapsed, onTo
         { icon: 'repel', label: '백병전 방어', key: 'P', tip: 'repel', run: () => input.repel(), on: !!p && p.repel, disabled: none },
         // Under the battle depth rules the selection's squadron leader beats the rally drum; it rests between beats.
         ...(drum !== undefined ? [{ icon: 'drum', label: '재집결', key: 'Shift+R', tip: 'drum', run: () => input.drum(), on: !!drum?.beating, disabled: none || !drum || drum.wait > 0, wait: drum && drum.wait > 0 ? drum.wait : undefined }] : []),
+        ...(maneuvers
+          ? [
+              maneuver('ambush', 'ambush', 'Q'),
+              maneuver('encircle', 'encircle', 'E'),
+              ...(placing === 'encircle' ? [{ icon: 'scatter', label: input.placing?.open ? '한쪽 열림' : '한쪽 열기', key: 'Shift+O', tip: 'maneuver.open', run: () => input.toggleOpenSide(), on: !!input.placing?.open }] : []),
+              maneuver('blockade', 'blockade', 'S'),
+              { icon: 'advance', label: '진군 북', key: 'Shift+E', tip: 'signal.advance', run: () => input.signal('advance') },
+              { icon: 'withdraw', label: '퇴각 징', key: 'Shift+S', tip: 'signal.withdraw', run: () => input.signal('withdraw'), disabled: none },
+            ]
+          : []),
       ],
     },
   };

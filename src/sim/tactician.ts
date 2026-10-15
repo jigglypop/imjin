@@ -75,15 +75,21 @@ export class Tactician {
     // Every commander sends ships after a broken enemy.
     if (this.pursue(owner, team, free)) return;
     if (plans.some((p) => p.kind !== 'pursue')) return;
+    const gunners = free.filter((s) => !boardsFirstKind(s) && s.spec.kind !== 'hyeopseon' && m.temper(b.squadron(s.squadronId)) !== 'rash');
+    if (gunners.length < 4 || this.engaged(gunners)) return;
+    const temper = this.temperOf(gunners);
+    // An ally a person leads has laid an ambush: the computer's squadrons lie in wait at the same place, from their side.
+    const shared = this.alliedAmbush(owner, team);
+    if (shared && temper !== 'rash' && this.ready(owner, 'ambush')) {
+      this.order(owner, gunners, 'ambush', shared.x0, shared.z0, shared.x0 + shared.r, shared.z0);
+      return;
+    }
     const group = this.enemyGroup(team, free);
     if (!group) return;
-    const gunners = free.filter((s) => !boardsFirstKind(s) && s.spec.kind !== 'hyeopseon' && m.temper(b.squadron(s.squadronId)) !== 'rash');
-    if (gunners.length < 4) return;
     const fleet = centroid(gunners);
     const d = Math.hypot(group.x - fleet.x, group.z - fleet.z);
     // In contact already: each ship fights its own fight.
-    if (d < CRANE_NEAR || this.engaged(gunners)) return;
-    const temper = this.temperOf(gunners);
+    if (d < CRANE_NEAR) return;
     const closing = (group.vx * (fleet.x - group.x) + group.vz * (fleet.z - group.z)) / Math.max(1, d) > 0.5;
     if (b.night && temper !== 'rash' && closing && d > 1300 && this.ready(owner, 'ambush')) {
       const zone = this.narrows(group, fleet);
@@ -136,6 +142,14 @@ export class Tactician {
     const m = this.b.maneuvers!;
     const spot0 = m.wetSpot(x0, z0);
     if (applyCommand(this.b, owner, { type: 'maneuver', ids: ships.map((s) => s.id), kind, x0: spot0.x, z0: spot0.z, x1, z1 })) this.track(owner, kind);
+  }
+
+  /** A waiting ambush laid by a person on the same side. */
+  private alliedAmbush(owner: number, team: Team) {
+    for (const p of this.b.maneuvers!.plans.values()) {
+      if (p.owner !== owner && p.team === team && p.kind === 'ambush' && p.phase !== 'striking' && p.phase !== 'done' && !this.b.isAi(this.b.get(p.ids[0]!)!)) return p;
+    }
+    return null;
   }
 
   /** Remembers the plan just ordered, to know when it ends. */
@@ -246,7 +260,7 @@ export class Tactician {
 
   /**
    * Where the enemy's way to the fleet runs narrowest: along the line from the enemy to the fleet, the point with the
-   * least water across it, not too close to either. Null when the water is open all the way.
+   * least water across it, a kilometre or more ahead of the enemy. Null when the water is open all the way.
    */
   private narrows(group: Group, fleet: { x: number; z: number }) {
     const b = this.b;
@@ -257,7 +271,8 @@ export class Tactician {
     const uz = dz / d;
     let best: { x: number; z: number } | null = null;
     let bestW = Infinity;
-    for (let t = 500; t <= d - 400; t += 100) {
+    // Far enough ahead of the enemy that the ships are in their places, dark, before it comes in.
+    for (let t = 1000; t <= d - 400; t += 100) {
       const x = group.x + ux * t;
       const z = group.z + uz * t;
       if (!b.isWater(x, z)) continue;

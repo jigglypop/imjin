@@ -4,7 +4,7 @@ import { SCENARIOS, type ScenarioId } from '../scenarios';
 import type { MapLayout } from '../maps';
 import type { SeaStateName } from '../../ocean/waves';
 import type { SkyPresetName } from '../../render/sky';
-import type { TerrainSpec } from '../../terrain/generate';
+import { NORYANG_TERRAIN, type TerrainSpec } from '../../terrain/generate';
 import { REGION_ORDER } from './regions';
 import type { RegionId } from './types';
 import layouts from './regionPoints.json';
@@ -107,7 +107,8 @@ const BASE_REGION_SITES: Partial<Record<RegionId, RegionSite>> = {
   },
   noryang: {
     scenario: 'noryang',
-    terrain: SCENARIO_TERRAIN('noryang'),
+    // The strait without the battle's Gwaneumpo: the region's capture points were measured on it.
+    terrain: NORYANG_TERRAIN,
     port: { x: 800, z: 0 },
     seaward: Math.PI,
     span: 1300,

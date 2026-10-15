@@ -132,6 +132,16 @@ export function watch(b, team) {
     }
     return false;
   };
+  // The gun's own target, as the battle lays it, for the shots through friendly hulls.
+  const fire = b.fireGun;
+  b.fireGun = function (s, g, targetId) {
+    const t = targetId > 0 ? b.get(targetId) : undefined;
+    if (s.team === team && t && b.isActive(t)) {
+      m.shots += 1;
+      if (blocked(s, t)) m.masked += 1;
+    }
+    return fire.call(this, s, g, targetId);
+  };
   let lastSample = 0;
   return {
     m,
@@ -141,12 +151,6 @@ export function watch(b, team) {
       for (const e of b.events) {
         if (e.type === 'gun') {
           gunShip = e.ship;
-          const s = b.get(e.ship);
-          if (s?.team === team) {
-            const target = b.get(s.targetId);
-            m.shots += 1;
-            if (target && b.isActive(target) && blocked(s, target)) m.masked += 1;
-          }
         } else if (e.type === 'shot') {
           if (gunShip) shooterOf.set(e.id, gunShip);
           gunShip = 0;

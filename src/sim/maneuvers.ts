@@ -53,6 +53,7 @@ export type Plan = {
   cz: number;
   r: number;
   face: number;
+  /** A ring's span in radians; a sprung ambush's radius when it sprang. */
   span: number;
   /** Per ship: the bearing from the frame centre and the rank, fixed when the ring is laid out. */
   layout: Map<number, { a: number; rank: number }>;
@@ -101,6 +102,8 @@ const CUT_LAG = 8;
 /** Ambush: the zone's rim is this far inside the stations, and an enemy this close to an ambusher finds it. */
 const AMBUSH_STANDOFF = 110;
 const AMBUSH_FOUND = 200;
+/** Ambushes laid this close together spring together: the first one's guns are the signal. */
+const AMBUSH_JOIN = 1200;
 /** A sprung ambush: hits in the first seconds catch crews not at their stations. */
 export const SURPRISE_TIME = 10;
 export const SURPRISE_CREW = 1.5;
@@ -270,7 +273,9 @@ export class Maneuvers {
         // lie on both sides of it. Guns held and lanterns out until it springs.
         plan.r = clamp(hyp(x1 - x0, z1 - z0), 150, 900);
         const ring = plan.r + AMBUSH_STANDOFF;
+        // Stations already held by the side's other waiting plans are not handed out again.
         const taken: Slot[] = [];
+        for (const other of this.plans.values()) if (other !== plan && other.team === plan.team && other.phase !== 'striking') taken.push(...other.stations.values());
         const sorted = [...ships].sort((p, q) => Math.atan2(p.z - z0, p.x - x0) - Math.atan2(q.z - z0, q.x - x0));
         for (const s of sorted) {
           const a = Math.atan2(s.z - z0, s.x - x0);
@@ -334,6 +339,7 @@ export class Maneuvers {
           });
         });
         plan.r = 320;
+        b.configure(plan.ids, { fireMode: 'free' });
         return true;
       }
       case 'breach': {
@@ -354,6 +360,7 @@ export class Maneuvers {
         plan.cx = x0;
         plan.cz = z0;
         plan.face = plan.kind === 'crane' ? Math.atan2(fleet.z - z0, fleet.x - x0) : Math.atan2(z1 - z0, x1 - x0);
+        b.configure(plan.ids, { fireMode: 'free' });
         return true;
       }
       case 'blockade': {
@@ -541,6 +548,11 @@ export class Maneuvers {
       if (b.time - s.lastHit < 1) return s;
       if (this.enemyWithin(s, AMBUSH_FOUND)) return s;
     }
+    // The guns of a friend's ambush close by are the signal for this one too.
+    for (const other of this.plans.values()) {
+      if (other === plan || other.team !== plan.team || other.kind !== 'ambush' || other.phase !== 'striking') continue;
+      if (hyp(other.x0 - plan.x0, other.z0 - plan.z0) < AMBUSH_JOIN) return this.members(other)[0] ?? null;
+    }
     return null;
   }
 
@@ -559,11 +571,17 @@ export class Maneuvers {
         plan.cx = plan.x0;
         plan.cz = plan.z0;
         plan.r += AMBUSH_STANDOFF;
+        // The radius it sprang at: its stations' bearings were spaced for it.
+        plan.span = plan.r;
         for (const s of ships) {
           const st = plan.stations.get(s.id);
           plan.layout.set(s.id, { a: st ? Math.atan2(st.z - plan.z0, st.x - plan.x0) : Math.atan2(s.z - plan.z0, s.x - plan.x0), rank: 0 });
         }
         this.surprise.set(plan.id, b.time + SURPRISE_TIME);
+        // Guns run out and every broadside that bears goes off at once.
+        const ids = ships.map((s) => s.id);
+        b.configure(ids, { fireMode: 'free' });
+        b.volley(ids, 3);
       }
       if (plan.kind === 'pincer') {
         // The target is what lies between the two wings, held from now on by the frame.
@@ -714,23 +732,27 @@ export class Maneuvers {
     const b = this.b;
     const reach = plan.r + 250;
     // The enemies within the ring's reach are what it closes on: its centre follows theirs, so the wings come round them.
+    // A sprung ambush closes only on what came into it, and does not follow the rest of a column back the way it came.
+    const grip = plan.kind === 'ambush' ? plan.r : reach;
     let x = 0;
     let z = 0;
     let n = 0;
+    let near = false;
     b.near(plan.cx, plan.cz, reach, (o) => {
       if (o.team === plan.team || !b.isActive(o) || o.moraleState === 'routing') return;
+      near = true;
+      if ((o.x - plan.cx) ** 2 + (o.z - plan.cz) ** 2 > grip * grip) return;
       x += o.x;
       z += o.z;
       n += 1;
     });
-    const near = n > 0;
     const dt = PLAN_TICK;
     if (near) plan.contact = b.time;
     if (n) {
       x /= n;
       z /= n;
       let extent = 0;
-      b.near(x, z, reach, (o) => {
+      b.near(x, z, grip, (o) => {
         if (o.team !== plan.team && b.isActive(o) && o.moraleState !== 'routing') extent = Math.max(extent, hyp(o.x - x, o.z - z));
       });
       const dx = x - plan.cx;
@@ -742,7 +764,7 @@ export class Maneuvers {
         plan.cz += (dz / d) * step;
       }
       // A sprung ambush keeps its bearings round the zone, so it closes no further than its stations can crowd.
-      const inner = Math.max(clamp(Math.min(extent, 350) + 170, 220, 520), plan.kind === 'ambush' ? plan.layoutR * 0.7 : 0);
+      const inner = Math.max(clamp(Math.min(extent, 350) + 170, 220, 520), plan.kind === 'ambush' ? plan.span * 0.7 : 0);
       if (plan.r > inner) plan.r = Math.max(inner, plan.r - CLOSE_RATE * dt);
     } else if (!near && b.time - plan.contact > IDLE_RELEASE) {
       this.release(plan, ships);
@@ -796,26 +818,42 @@ export class Maneuvers {
         this.volleyAt.set(s.id, b.time);
         b.volley([s.id], 3);
       }
-      // Enemies the column passes between and their leader are cut off from it.
+      // Enemies the column passes between and their squadron's leader, or their admiral, are cut off from them.
       b.near(s.x, s.z, 450, (o) => {
         if (o.team === s.team || !b.isActive(o)) return;
         const sq = b.squadron(o.squadronId);
         const leader = sq ? b.get(sq.leaderId) : undefined;
-        if (!leader || leader === o || !b.isActive(leader)) return;
-        const lx = leader.x - o.x;
-        const lz = leader.z - o.z;
-        const len2 = lx * lx + lz * lz;
-        if (len2 < 100 * 100) return;
-        const t = ((s.x - o.x) * lx + (s.z - o.z) * lz) / len2;
-        if (t < 0.1 || t > 0.9) return;
-        const px = o.x + lx * t - s.x;
-        const pz = o.z + lz * t - s.z;
-        if (px * px + pz * pz > CUT_NEAR * CUT_NEAR) return;
+        if (!this.between(s, o, leader) && !this.between(s, o, this.admiral(o))) return;
         const was = this.cut.has(o.id);
         this.cut.set(o.id, { until: b.time + CUT_TIME, by: s.id });
         if (!was) b.events.push({ type: 'cutoff', ship: o.id, by: s.id });
       });
     }
+  }
+
+  /** Whether ship `s` lies across the line from `o` to its commander `c`. */
+  private between(s: Ship, o: Ship, c: Ship | undefined) {
+    if (!c || c === o || !this.b.isActive(c)) return false;
+    const lx = c.x - o.x;
+    const lz = c.z - o.z;
+    const len2 = lx * lx + lz * lz;
+    if (len2 < 100 * 100 || len2 > 3000 * 3000) return false;
+    const t = ((s.x - o.x) * lx + (s.z - o.z) * lz) / len2;
+    if (t < 0.05 || t > 0.95) return false;
+    const px = o.x + lx * t - s.x;
+    const pz = o.z + lz * t - s.z;
+    return px * px + pz * pz <= CUT_NEAR * CUT_NEAR;
+  }
+
+  /** The admiral of a ship's navy: the leader of the navy's first squadron, while that ship is a flagship. */
+  private admiral(o: Ship) {
+    const b = this.b;
+    for (const sq of b.squadrons) {
+      if (sq.faction !== o.spec.faction || sq.team !== o.team) continue;
+      const leader = b.get(sq.leaderId);
+      return leader?.flagship ? leader : undefined;
+    }
+    return undefined;
   }
 
   private breachLegs(plan: Plan) {
