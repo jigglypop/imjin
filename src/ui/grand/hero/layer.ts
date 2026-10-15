@@ -24,6 +24,8 @@ import { placeBoulders, plantTrees, treeMaterial, treeMeshes } from './trees';
 
 /** The camera distance under which the hero camps show their close models (frame units). */
 const NEAR = 0.2;
+/** The camera distance under which they show their woods: as far as the map's own trees are planted (worldTrees.ts). */
+const WOODS = 0.3;
 
 /** A hero site as the world shows it: which camp, which towns, and what the layer must leave out for it. */
 export interface HeroUse {
@@ -110,6 +112,8 @@ interface Built {
   group: Group;
   near: Group;
   far: Group;
+  /** The camp's own woods: hidden from afar, as the map's trees are (worldTrees.ts), where the ground draws them. */
+  woods: Group;
   geometries: BufferGeometry[];
   ships: { kind: Moored['kind']; u: number; v: number; rot: number }[];
   smoke: { u: number; v: number; y: number }[];
@@ -198,9 +202,11 @@ export class HeroLayer {
       const leaves = (this.treeLook ??= treeMaterial(this.land.details[3]!));
       const seed = Math.round(use.site.u * 1e6);
       const trees = treeMeshes([...plantTrees(plan, use.site.reach, ground.sample, seed, use.avoid), ...placeBoulders(plan, use.site.reach, ground.sample, seed)], leaves);
+      const woods = new Group();
+      group.add(woods);
       for (const t of trees) {
         geometries.push(t.geometry);
-        group.add(t);
+        woods.add(t);
       }
       meshes.forEach((m) => {
         const mat = mats[[...navies].indexOf(m.navy)]?.material;
@@ -210,7 +216,7 @@ export class HeroLayer {
       });
       const at = (x: number, z: number) => siteUV(use.site, x, z);
       const b: Built = {
-        key: use.key, group, near, far, geometries,
+        key: use.key, group, near, far, woods, geometries,
         ships: plan.ships.map((s) => ({ kind: s.kind, ...at(s.x, s.z), rot: s.rot })),
         smoke: plan.smoke.map(([x, y, z]) => ({ ...at(x, z), y: y * MODEL_METRE })),
       };
@@ -277,7 +283,7 @@ export class HeroLayer {
       add(toGeometry(n.data()), mat, near);
       add(toGeometry(f.data()), mat, far);
     }
-    this.built.set(key, { key, group, near, far, geometries, ships: [], smoke });
+    this.built.set(key, { key, group, near, far, woods: new Group(), geometries, ships: [], smoke });
     this.group.add(group);
   }
 
@@ -292,6 +298,7 @@ export class HeroLayer {
     for (const b of this.built.values()) {
       b.near.visible = distance <= NEAR;
       b.far.visible = !b.near.visible;
+      b.woods.visible = distance <= WOODS;
     }
   }
 
