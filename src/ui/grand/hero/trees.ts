@@ -22,8 +22,8 @@ function lightOf(nx: number, ny: number, nz: number) {
 }
 
 /** A lumpy ball of leaves at (cx, cy, cz) of radius r, smooth normals, its vertices pushed in and out a little. */
-function blob(pos: number[], col: number[], cx: number, cy: number, cz: number, r: number, leaf: Color, seed: number, near = true) {
-  const rings = near ? 3 : 2, seg = 6, rnd = seeded(seed);
+function blob(pos: number[], col: number[], cx: number, cy: number, cz: number, r: number, leaf: Color, seed: number) {
+  const rings = 3, seg = 6, rnd = seeded(seed);
   const grid: number[][] = [];
   for (let i = 0; i <= rings; i += 1) {
     const a = -Math.PI / 2 + (i / rings) * Math.PI;
@@ -68,7 +68,7 @@ function trunk(pos: number[], col: number[], r: number, y0: number, y1: number) 
   return idx;
 }
 
-/** How finely a tree is built: `near` for the close views, `far` (about a third of the triangles) for the farther ones. */
+/** How finely a tree is built: `near` for the close views, `far` (no trunk, fewer masses: about half the triangles) for the farther ones. */
 export type TreeDetail = 'near' | 'far';
 
 /** A broadleaf tree one unit tall: a trunk under three masses of leaves, or two from afar. */
@@ -77,9 +77,9 @@ function broadleaf(detail: TreeDetail) {
   const near = detail === 'near';
   const idx = [
     ...(near ? trunk(pos, col, 0.05, -0.1, 0.45) : []),
-    ...blob(pos, col, 0.02, 0.62, 0.02, 0.31, leaf, 1, near),
-    ...blob(pos, col, -0.13, 0.48, -0.06, 0.24, leaf.clone().multiplyScalar(0.9), 3, near),
-    ...(near ? blob(pos, col, 0.14, 0.5, 0.08, 0.2, leaf.clone().multiplyScalar(1.06), 5, near) : []),
+    ...blob(pos, col, 0.02, 0.62, 0.02, 0.31, leaf, 1),
+    ...blob(pos, col, -0.13, 0.48, -0.06, 0.24, leaf.clone().multiplyScalar(0.9), 3),
+    ...(near ? blob(pos, col, 0.14, 0.5, 0.08, 0.2, leaf.clone().multiplyScalar(1.06), 5) : []),
   ];
   return geometry(pos, col, idx);
 }
@@ -117,7 +117,7 @@ function redPine(detail: TreeDetail) {
   const idx = near ? [...trunk(pos, col, 0.035, -0.1, 0.72)] : [];
   const tuft = (cx: number, cy: number, cz: number, r: number, shade: number, seed: number) => {
     const start = pos.length / 3;
-    const made = blob(pos, col, cx, cy, cz, r, needles.clone().multiplyScalar(shade), seed, near);
+    const made = blob(pos, col, cx, cy, cz, r, needles.clone().multiplyScalar(shade), seed);
     // Flattened to a tuft: half as deep as it is wide.
     for (let v = start; v < pos.length / 3; v += 1) pos[v * 3 + 1] = cy + (pos[v * 3 + 1]! - cy) * 0.5;
     return made;

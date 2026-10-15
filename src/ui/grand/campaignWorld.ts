@@ -3,8 +3,8 @@ import { V_SCALE } from '../../select/demFrame';
 import { worldClock } from '../../select/terrain';
 import { MESH_SCALE, groundElevation } from './mapMath';
 import { MapLayer } from './mapLayer';
-import { heroClearings } from './hero/layer';
-import { rawMetres } from './hero/site';
+import { heroClearings, heroUses, tierUses } from './hero/layer';
+import { heroEnabled, rawMetres } from './hero/site';
 import { TreeLayer } from './worldTrees';
 import { loadGround, type WorldGround } from './worldGround';
 import { clearingRadius, type MapWorld } from './mapWorld';
@@ -176,7 +176,13 @@ export class CampaignWorld {
 
   private show(world: MapWorld) {
     this.layer?.set(world);
-    this.trees?.setClearings([...world.settlements.map((s) => ({ u: s.u, v: s.v, r: clearingRadius(s) })), ...heroClearings(world)]);
+    // Camps and towns built to the hero camps' rules (hero/layer.ts) keep the trees off their own pads and houses only,
+    // so the woods come up to them as the land's look draws them; the rest keep their whole clearing.
+    const drawn = (u: number, v: number) => rawMetres(this.ground!.heights, u, v);
+    const heroes = heroEnabled() ? heroUses(world) : [];
+    const tiers = new Set(heroEnabled() ? [...heroes.flatMap((h) => [...h.replaces]), ...tierUses(world, heroes).map((t) => t.id)] : []);
+    const kept = world.settlements.filter((s) => !tiers.has(s.id));
+    this.trees?.setClearings([...kept.map((s) => ({ u: s.u, v: s.v, r: clearingRadius(s) })), ...heroClearings(world, drawn)]);
   }
 
   /** The closed turn's ships along their way: `share` of the sailing done, `time` the replay's clock. */

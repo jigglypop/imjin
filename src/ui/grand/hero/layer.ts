@@ -235,14 +235,7 @@ export class HeroLayer {
       // One camp a task, so a world of camps does not hold the page up in one piece.
       await new Promise((resolve) => setTimeout(resolve));
       if (this.disposed) return;
-      const site: HeroSite = { id: t.id, navy: t.navy, u: t.u, v: t.v, reach: 56 };
-      const natural = (x: number, z: number) => { const p = siteUV(site, x, z); return this.drawn(p.u, p.v) * ELEVATION_MODEL; };
-      const plan = new Plan({ natural, water: (x, z) => natural(x, z) <= 0.02 }, t.navy);
-      if (t.town) {
-        town(plan, 0, 0, t.town.houses, t.town.seed, 'joseon');
-        // Whose the town is, by the owner's banner at its end.
-        if (t.town.owner) plan.banner(-6, -4, Math.max(0.3, natural(-6, -4)), 9, t.town.owner === 'japan' ? 'red' : t.town.owner === 'ming' ? 'yellow' : 'blue', 1.6, 2.4, 0, t.town.owner === 'japan' ? 'nobori' : 'flag');
-      } else tierCamp(plan, t.navy, t.level, 0, 0);
+      const { site, plan } = tierPlan(t, this.drawn);
       const dx = (t.u - 0.5) / MODEL_METRE, dz = (t.v - 0.5) / (MODEL_METRE * MAP_ASPECT);
       for (const m of buildHero(plan)) {
         let pair = merges.get(m.navy);
@@ -324,21 +317,52 @@ export class HeroLayer {
   }
 }
 
-/** The ground the map's trees keep off at the hero sites a world shows: every pad, every compound and village (frame units). */
-export function heroClearings(world: MapWorld): { u: number; v: number; r: number }[] {
+/**
+ * Another camp or town of the map laid out in its own frame on the drawn land: `drawn(u, v)` is the drawn land's height
+ * in metres at a frame point.
+ */
+function tierPlan(t: TierUse, drawn: (u: number, v: number) => number) {
+  const site: HeroSite = { id: t.id, navy: t.navy, u: t.u, v: t.v, reach: 56 };
+  const natural = (x: number, z: number) => { const p = siteUV(site, x, z); return drawn(p.u, p.v) * ELEVATION_MODEL; };
+  const plan = new Plan({ natural, water: (x, z) => natural(x, z) <= 0.02 }, t.navy);
+  if (t.town) {
+    town(plan, 0, 0, t.town.houses, t.town.seed, 'joseon');
+    // Whose the town is, by the owner's banner at its end.
+    if (t.town.owner) plan.banner(-6, -4, Math.max(0.3, natural(-6, -4)), 9, t.town.owner === 'japan' ? 'red' : t.town.owner === 'ming' ? 'yellow' : 'blue', 1.6, 2.4, 0, t.town.owner === 'japan' ? 'nobori' : 'flag');
+  } else tierCamp(plan, t.navy, t.level, 0, 0);
+  return { site, plan };
+}
+
+/** The clearings of a plan laid out at a site: every pad and every compound and village (frame units). */
+function planClearings(site: HeroSite, plan: Plan, out: { u: number; v: number; r: number }[]) {
+  const disc = (x: number, z: number, r: number) => out.push({ ...siteUV(site, x, z), r: r * MODEL_METRE });
+  for (const [x, z, r] of plan.clear) disc(x, z, r);
+  for (const pad of plan.pads) {
+    const cx = pad.poly.reduce((s, p) => s + p[0], 0) / pad.poly.length, cz = pad.poly.reduce((s, p) => s + p[1], 0) / pad.poly.length;
+    disc(cx, cz, Math.max(...pad.poly.map((p) => Math.hypot(p[0] - cx, p[1] - cz))) + 3);
+  }
+  // Houses stand on the land as drawn, off any pad: each keeps its own few metres.
+  for (const { piece: p } of plan.pieces) if (p.kind === 'bldg') disc(p.x, p.z, Math.max(p.w, p.d) / 2 + 2);
+}
+
+/**
+ * The ground the map's trees keep off where the hero camps' rules build (frame units): at the hero sites a world shows,
+ * their whole patch (they plant their own woods, trees.ts); at every other camp and town (`drawn` as for HeroLayer), its
+ * pads, compounds and houses, so the woods come up to them as the land's look draws them.
+ */
+export function heroClearings(world: MapWorld, drawn: (u: number, v: number) => number): { u: number; v: number; r: number }[] {
   if (!heroEnabled()) return [];
   const out: { u: number; v: number; r: number }[] = [];
-  for (const use of heroUses(world)) {
+  const heroes = heroUses(world);
+  for (const use of heroes) {
     const plan = heroPlan(use);
     if (!plan) continue;
-    const disc = (x: number, z: number, r: number) => out.push({ ...siteUV(use.site, x, z), r: r * MODEL_METRE });
-    // The camp plants its own woods over its patch (trees.ts): the map's keep off it.
-    disc(0, 0, use.site.reach - 10);
-    for (const [x, z, r] of plan.clear) disc(x, z, r);
-    for (const pad of plan.pads) {
-      const cx = pad.poly.reduce((s, p) => s + p[0], 0) / pad.poly.length, cz = pad.poly.reduce((s, p) => s + p[1], 0) / pad.poly.length;
-      disc(cx, cz, Math.max(...pad.poly.map((p) => Math.hypot(p[0] - cx, p[1] - cz))) + 3);
-    }
+    out.push({ ...siteUV(use.site, 0, 0), r: (use.site.reach - 10) * MODEL_METRE });
+    planClearings(use.site, plan, out);
+  }
+  for (const t of tierUses(world, heroes)) {
+    const { site, plan } = tierPlan(t, drawn);
+    planClearings(site, plan, out);
   }
   return out;
 }
