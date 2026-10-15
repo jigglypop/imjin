@@ -520,7 +520,9 @@ export class Ocean {
       const lace = saturate(coverage.sub(float(1).sub(pattern)).mul(1.9)).mul(mix(float(0.55), float(1), bubbles));
       const foam = max(lace, eddyFoam.clamp(0, 0.82));
       const foamLight = atmosphere.skyAmbient.mul(0.95).add(sunLit.mul(NoL.mul(0.6).add(0.25)).mul(1 / Math.PI)).add(lightDiffuse.mul(1 / Math.PI));
-      color.assign(mix(color, vec3(0.93, 0.95, 0.96).mul(foamLight), foam.mul(0.92)));
+      // Under the moon the foam is grey-blue, not a lamp: the night grade lifts bright pixels, so the paint itself is dimmer.
+      const foamPaint = mix(vec3(0.93, 0.95, 0.96), vec3(0.62, 0.68, 0.76), atmosphere.night);
+      color.assign(mix(color, foamPaint.mul(foamLight), foam.mul(0.92)));
       color.assign(color.mul(float(1).sub(core.clamp(0, 1).mul(0.35))));
 
       const fogColor = vec3(sky.horizon(V.negate())).mul(atmosphere.envIntensity);
