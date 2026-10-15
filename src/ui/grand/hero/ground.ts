@@ -111,7 +111,7 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
           if (seen[k]! < 0 && H[k]! <= 0) { seen[k] = start; stack.push(k); }
         }
       }
-      if (cells.length < 90) for (const c of cells) H[c] = 0.12;
+      if (cells.length < 90) for (const c of cells) H[c] = 0.3;
     }
   }
   // Smoothed twice over its neighbours: the DEM's metre texels draw a coast in steps, the patch draws it as a line.
@@ -134,6 +134,15 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
   for (let j = 0; j < n; j += 1) for (let i = 0; i < n; i += 1) H[j * n + i] = Math.min(H[j * n + i]!, cutAt(plan.pads, -R + i * STEP, -R + j * STEP) - 0.15);
   const at = (i: number, j: number) => H[Math.max(0, Math.min(n - 1, j)) * n + Math.max(0, Math.min(n - 1, i))]!;
 
+  // Whether open water lies within three cells: only there is low flat ground a beach.
+  const shore = new Uint8Array(n * n);
+  for (let j = 0; j < n; j += 1) for (let i = 0; i < n; i += 1) {
+    if (H[j * n + i]! > 0) continue;
+    for (let dj = -3; dj <= 3; dj += 1) for (let di = -3; di <= 3; di += 1) {
+      const ii = i + di, jj = j + dj;
+      if (ii >= 0 && jj >= 0 && ii < n && jj < n) shore[jj * n + ii] = 1;
+    }
+  }
   const patch = new Streams();
   const facet: Facet = { metres: 0, nx: 0, ny: 1, nz: 0, x: 0, z: 0, size: STEP * MODEL_METRE, slope: 0, shore: false };
   const rgb = new Float32Array(3);
@@ -156,7 +165,7 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
       faceColor(facet, rgb, 0);
       // Which ground textures show: rock on the steep cuts and crags, sand on the flat shore, woodland floor on the wooded slopes, grass elsewhere.
       const rock = smooth(0.85, 1.6, slope);
-      const sand = (1 - smooth(0.02, 0.16, h)) * (1 - smooth(0.45, 0.9, slope));
+      const sand = shore[j * n + i] ? (1 - smooth(0.02, 0.16, h)) * (1 - smooth(0.45, 0.9, slope)) : 0;
       const wood = Math.max(smooth(0.3, 0.6, slope), smooth(70, 190, facet.metres)) * (1 - rock) * (1 - sand);
       w[0] = Math.max(0, 1 - rock - sand - wood); w[1] = rock; w[2] = sand; w[3] = wood;
       woods[j * n + i] = wood;

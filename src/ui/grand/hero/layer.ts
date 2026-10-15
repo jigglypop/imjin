@@ -71,13 +71,17 @@ export function heroUses(world: MapWorld): HeroUse[] {
 const houses = (s: SettlementSpec) => s.pieces.filter((p) => p.kind === 'choga' || p.kind === 'giwa' || p.kind === 'wa_house').length;
 
 /** Another camp of the map, built to the hero camps' rules by its navy and level (tiers.ts). */
-export interface TierUse { id: string; u: number; v: number; navy: FactionId; level: number }
+export interface TierUse { id: string; u: number; v: number; navy: FactionId; level: number; town?: { houses: number; seed: number; owner: FactionId | null } }
 
 /** The camps a world shows that no hero site draws. */
 export function tierUses(world: MapWorld, heroes: HeroUse[]): TierUse[] {
   const taken = new Set(heroes.flatMap((h) => [...h.replaces]));
-  return world.settlements.filter((s) => s.kind === 'camp' && s.owner && s.level >= 1 && !taken.has(s.id))
-    .map((s) => ({ id: s.id, u: s.u, v: s.v, navy: s.owner!, level: Math.min(3, s.level) }));
+  const camps = world.settlements.filter((s) => s.kind === 'camp' && s.owner && s.level >= 1 && !taken.has(s.id))
+    .map((s): TierUse => ({ id: s.id, u: s.u, v: s.v, navy: s.owner!, level: Math.min(3, s.level) }));
+  // Every town too, as a village of houses at their own size along its street.
+  const towns = world.settlements.filter((s) => s.kind === 'town' && !taken.has(s.id))
+    .map((s): TierUse => ({ id: s.id, u: s.u, v: s.v, navy: 'joseon', level: 0, town: { houses: houses(s), seed: [...s.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 1000, owner: s.owner } }));
+  return [...camps, ...towns];
 }
 
 /** A hero site's plan: its camp's layout and its villages. */
@@ -239,10 +243,14 @@ export class HeroLayer {
       // One camp a task, so a world of camps does not hold the page up in one piece.
       await new Promise((resolve) => setTimeout(resolve));
       if (this.disposed) return;
-      const site: HeroSite = { id: t.id, navy: t.navy, u: t.u, v: t.v, reach: 64 };
+      const site: HeroSite = { id: t.id, navy: t.navy, u: t.u, v: t.v, reach: 56 };
       const natural = (x: number, z: number) => { const p = siteUV(site, x, z); return this.drawn(p.u, p.v) * ELEVATION_MODEL; };
       const plan = new Plan({ natural, water: (x, z) => natural(x, z) <= 0.02 }, t.navy);
-      tierCamp(plan, t.navy, t.level, 0, 0);
+      if (t.town) {
+        town(plan, 0, 0, t.town.houses, t.town.seed, 'joseon');
+        // Whose the town is, by the owner's banner at its end.
+        if (t.town.owner) plan.banner(-6, -4, Math.max(0.3, natural(-6, -4)), 9, t.town.owner === 'japan' ? 'red' : t.town.owner === 'ming' ? 'yellow' : 'blue', 1.6, 2.4, 0, t.town.owner === 'japan' ? 'nobori' : 'flag');
+      } else tierCamp(plan, t.navy, t.level, 0, 0);
       const dx = (t.u - 0.5) / MODEL_METRE, dz = (t.v - 0.5) / (MODEL_METRE * MAP_ASPECT);
       for (const m of buildHero(plan)) {
         let pair = merges.get(m.navy);
@@ -251,7 +259,10 @@ export class HeroLayer {
         pair[1].stamp(m.far, dx, 0, dz, 0);
       }
       const g = buildHeroGround(site, plan, this.drawn);
+      // A village stands on the land as drawn: only a camp's pad needs the smooth ground round it.
+      if (t.town) g.patch?.dispose();
       for (const k of ['patch', 'laid', 'shade'] as const) {
+        if (t.town && k === 'patch') continue;
         const geo = g[k];
         if (geo) grounds[k].push(geo.translate(dx, 0, dz));
       }
