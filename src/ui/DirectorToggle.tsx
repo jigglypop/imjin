@@ -27,6 +27,12 @@ export function DirectorSettings({ engine }: { engine: Engine }) {
           {t('연출 카메라')}
           {keys && ' (C)'}
         </button>
+        <button className={`chip ${engine.cinema.documentary ? 'chip--on' : ''}`} aria-pressed={engine.cinema.documentary} onClick={() => engine.cinema.setDocumentary(!engine.cinema.documentary)}>
+          {t('다큐멘터리 모드')}
+        </button>
+        <button className={`chip ${engine.cinema.intros ? 'chip--on' : ''}`} aria-pressed={engine.cinema.intros} onClick={() => engine.cinema.setIntros(!engine.cinema.intros)}>
+          {t('전투 영상')}
+        </button>
         {/* Slow motion never runs in a multiplayer battle, so the switch would do nothing there. */}
         {!engine.remote && (
           <button className={`chip ${d.slowMo ? 'chip--on' : ''}`} onClick={() => d.toggleSlowMo()}>
