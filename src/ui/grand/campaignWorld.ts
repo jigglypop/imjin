@@ -3,6 +3,8 @@ import { V_SCALE } from '../../select/demFrame';
 import { worldClock } from '../../select/terrain';
 import { MESH_SCALE, groundElevation } from './mapMath';
 import { MapLayer } from './mapLayer';
+import { heroClearings } from './hero/layer';
+import { rawMetres } from './hero/site';
 import { TreeLayer } from './worldTrees';
 import { loadGround, type WorldGround } from './worldGround';
 import { clearingRadius, type MapWorld } from './mapWorld';
@@ -72,7 +74,7 @@ export class CampaignWorld {
     this.scene.fog = this.fog;
     this.root.add(ground.group);
     // Camps and ships stand on the same ground the overlay's markers read; they arrive when their models have loaded.
-    this.layer = new MapLayer((u, v) => groundElevation(ground.heights, u, v), () => this.layerChanged());
+    this.layer = new MapLayer((u, v) => groundElevation(ground.heights, u, v), () => this.layerChanged(), (u, v) => rawMetres(ground.heights, u, v));
     this.root.add(this.layer.group);
     this.trees = new TreeLayer((u, v) => ground.heightAt(u, v), V_SCALE * MESH_SCALE);
     this.root.add(this.trees.group);
@@ -174,7 +176,7 @@ export class CampaignWorld {
 
   private show(world: MapWorld) {
     this.layer?.set(world);
-    this.trees?.setClearings(world.settlements.map((s) => ({ u: s.u, v: s.v, r: clearingRadius(s) })));
+    this.trees?.setClearings([...world.settlements.map((s) => ({ u: s.u, v: s.v, r: clearingRadius(s) })), ...heroClearings(world)]);
   }
 
   /** The closed turn's ships along their way: `share` of the sailing done, `time` the replay's clock. */
