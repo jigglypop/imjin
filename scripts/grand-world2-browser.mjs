@@ -1,6 +1,7 @@
-// The campaign map as a map: every navy's own camps at levels 1-4, readable settlements and non-overlapping city cards,
-// ships on their lanes and a replay with ships sailing, plus the wheel/drag frame rate, the idle GPU submit count, the
-// GPU objects left after the campaign closes and a phone that must keep the flat map. Windows Edge + D3D11.
+// The campaign map as a map: every navy's own camps at levels 1-3, readable settlements and non-overlapping city cards,
+// ships on their lanes and a replay with ships sailing, plus the wheel/drag frame rate, the frames drawn at rest (the
+// ambient thirty a second, none under reduced motion), the GPU objects left after the campaign closes and a phone that
+// must keep the flat map. Windows Edge + D3D11.
 // Usage: node scripts/grand-world2-browser.mjs --url=http://127.0.0.1:5345/ [--out=shots/grand-world2-2026-10-12] [--only=default,camps,replay,phone]
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -32,9 +33,9 @@ const campaign = (camps, extra) => {
 };
 // The first view's war: the player's Yeosu 3, Noryang 2, Bangdap 1; Busan 3 and Angolpo 2 on the other side.
 const opening = campaign([['yeosu', 3], ['noryang', 2], ['bangdap', 1], ['busan', 3], ['angolpo', 2], ['geoje', 2]]);
-// One navy's camps from level 4 down along the south coast.
-const COAST = ['yeosu', 'noryang', 'bangdap', 'sacheon'];
-const of = (faction) => campaign(COAST.map((id, i) => [id, 4 - i, faction]));
+// One navy's camps from level 3 down along the south coast.
+const COAST = ['yeosu', 'noryang', 'bangdap'];
+const of = (faction) => campaign(COAST.map((id, i) => [id, 3 - i, faction]));
 await vite.close();
 
 const browser = await chromium.launch({ channel: 'msedge', headless: true, args: ['--enable-unsafe-webgpu', '--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=d3d11'] });
@@ -46,9 +47,11 @@ const open = async (save, contextOptions) => {
   await page.addInitScript((data) => {
     localStorage.setItem('imjin.grand.v1', JSON.stringify(data));
     localStorage.setItem('imjin.grand.guide.v1', '1');
-    // Counts every GPU submit, so a map that renders on demand shows zero while nothing moves, and the buffers and
-    // textures alive on each device (a destroyed device frees all of its own), so a closed map shows nothing left behind.
+    // Counts every GPU submit and every frame the 3D view presents (each asks its canvas for a texture once), so a map
+    // at rest shows it draws only its ambient frames, and the buffers and textures alive on each device (a destroyed
+    // device frees all of its own), so a closed map shows nothing left behind.
     window.__submits = 0;
+    window.__drawn = 0;
     window.__devices = [];
     // A slow-motion switch for the replay: animation frames see time pass `__slow` times slower from when it is set.
     const frame = window.requestAnimationFrame.bind(window);
@@ -58,6 +61,10 @@ const open = async (save, contextOptions) => {
     if (window.GPUQueue) {
       const submit = GPUQueue.prototype.submit;
       GPUQueue.prototype.submit = function (...a) { window.__submits += 1; return submit.apply(this, a); };
+    }
+    if (window.GPUCanvasContext) {
+      const texture = GPUCanvasContext.prototype.getCurrentTexture;
+      GPUCanvasContext.prototype.getCurrentTexture = function (...a) { window.__drawn += 1; return texture.apply(this, a); };
     }
     if (window.GPUAdapter) {
       const request = GPUAdapter.prototype.requestDevice;
@@ -88,14 +95,30 @@ const open = async (save, contextOptions) => {
 };
 const center = async (loc) => { const b = await loc.boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
 const submits = (page) => page.evaluate(() => window.__submits);
-/** Frames the page painted and GPU submits made while `action` runs. */
+const drawn = (page) => page.evaluate(() => window.__drawn);
+/** Frames the page painted, GPU submits made and frames the 3D view drew while `action` runs. */
 const measure = async (page, action) => {
   await page.evaluate(() => { window.__frames = 0; window.__run = true; const tick = () => { window.__frames += 1; if (window.__run) requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
-  const s0 = await submits(page), t0 = Date.now();
+  const s0 = await submits(page), d0 = await drawn(page), t0 = Date.now();
   await action();
   const ms = Date.now() - t0;
   const frames = await page.evaluate(() => { window.__run = false; return window.__frames; });
-  return { fps: Math.round((frames * 1000) / ms), submits: (await submits(page)) - s0, ms };
+  return { fps: Math.round((frames * 1000) / ms), submits: (await submits(page)) - s0, drawn: (await drawn(page)) - d0, ms };
+};
+/**
+ * The map at rest, as WorldCanvas has it: about thirty ambient frames a second (AMBIENT_MS) so the sea, the smoke and
+ * the boats keep moving, never every display frame; and for a player who asks for reduced motion, nothing at all.
+ */
+const atRest = async (page, what, ms = 3000) => {
+  const idle = await measure(page, () => page.waitForTimeout(ms));
+  const rate = (idle.drawn * 1000) / idle.ms;
+  console.log(`${what}: ${rate.toFixed(1)} frames a second at rest, ${idle.submits} submits`);
+  assert.ok(rate >= 10 && rate <= 36, `${what}: the map draws its ambient frames at rest, not every display frame (${rate.toFixed(1)}/s)`);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.waitForTimeout(300);
+  const still = await measure(page, () => page.waitForTimeout(1500));
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  assert.equal(still.drawn, 0, `${what}: with reduced motion the map draws nothing while nothing moves`);
 };
 /** Wheel in on a port until it fills the view (the camp stands beside it), then park the mouse on empty map. */
 const zoomTo = async (page, id, ticks, outAfter = 0) => {
@@ -114,9 +137,7 @@ try {
     const page = await open(opening, { viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
     assert.equal(await page.locator('.gm').getAttribute('data-relief'), 'ready');
     await shot(page, 'after-1-default');
-    const idle = await measure(page, () => page.waitForTimeout(3000));
-    console.log('idle 3 s:', idle);
-    assert.equal(idle.submits, 0, 'the map renders on demand: nothing is drawn while nothing moves');
+    await atRest(page, 'the opening view');
     const yeosu = await center(page.locator('.gm-node[data-region="yeosu"] .gm-node__disc'));
     await page.mouse.move(yeosu.x, yeosu.y);
     for (let i = 0; i < 6; i++) { await page.mouse.wheel(0, -60); await page.waitForTimeout(16); }
@@ -137,7 +158,7 @@ try {
       await page.mouse.up();
     });
     console.log('drag:', drag);
-    assert.equal((await measure(page, () => page.waitForTimeout(1500))).submits, 0, 'idle again after the interaction');
+    await atRest(page, 'after the wheel and the drag', 1500);
     await zoomTo(page, 'yeosu', 30);
     await shot(page, 'after-3-close-joseon');
     await zoomTo(page, 'busan', 40, 70);
@@ -161,15 +182,13 @@ try {
       await shot(page, `camps-${faction}-0-default`);
       await zoomTo(page, 'noryang', 36);
       await shot(page, `camps-${faction}-1-levels`);
-      // Level 4 (Yeosu) and level 1 (Sacheon) at the closest zoom.
+      // Each level at the closest zoom: Yeosu 3, Noryang 2, Bangdap 1.
       await zoomTo(page, 'yeosu', 26, 70);
-      await shot(page, `camps-${faction}-2-level4`);
-      await zoomTo(page, 'sacheon', 26, 70);
-      await shot(page, `camps-${faction}-3-level1`);
-      await zoomTo(page, 'bangdap', 26, 70);
-      await shot(page, `camps-${faction}-4-level2`);
+      await shot(page, `camps-${faction}-2-level3`);
       await zoomTo(page, 'noryang', 26, 70);
-      await shot(page, `camps-${faction}-5-level3`);
+      await shot(page, `camps-${faction}-3-level2`);
+      await zoomTo(page, 'bangdap', 26, 70);
+      await shot(page, `camps-${faction}-4-level1`);
       await page.context().close();
     }
   }
@@ -193,7 +212,7 @@ try {
     await page.mouse.move(8, 450);
     await page.waitForTimeout(900);
     await shot(page, 'replay-1-transit-close');
-    assert.equal((await measure(page, () => page.waitForTimeout(3000))).submits, 0, 'ships on a lane do not keep the map drawing');
+    await atRest(page, 'with ships on their lanes');
     await zoomTo(page, 'noryang', 0, 16);
     // The replay runs about two seconds: the closed turn's in slow motion (six times slower) for pictures of the ships
     // under way, then the next turn's at its own pace for the frame rate.
@@ -213,7 +232,7 @@ try {
       console.log('replay at its own pace:', await measure(page, () => page.locator('.gm-replay').waitFor({ state: 'detached', timeout: 20000 })));
     }
     await page.waitForTimeout(1500);
-    assert.equal((await measure(page, () => page.waitForTimeout(3000))).submits, 0, 'idle again once the replay has ended');
+    await atRest(page, 'once the replay has ended');
     await page.context().close();
   }
 
