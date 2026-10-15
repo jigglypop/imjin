@@ -106,13 +106,12 @@ const AMBUSH_STANDOFF = 110;
 const AMBUSH_FOUND = 200;
 /** Ambushes laid this close together spring together: the first one's guns are the signal. */
 const AMBUSH_JOIN = 1200;
-/**
- * An ambush springs on an enemy within reach of its guns when that enemy is within AMBUSH_DEEP of its radius from the
- * centre, or within reach of stations whose bearings from it are more than AMBUSH_CROSS radians apart.
- */
-const AMBUSH_DEEP = 0.5;
+/** An ambush springs on an enemy within reach of stations whose bearings from it are more than this many radians apart. */
 const AMBUSH_CROSS = 1.75;
-/** An ambush leaves its rim open this many radians either side of the bearing of the enemy within ENTRY_LOOK. */
+/**
+ * An ambush leaves its rim open this many radians either side of the bearing of the enemy within ENTRY_LOOK, and of
+ * the bearing across from it.
+ */
 const ENTRY_GAP = 0.6;
 const ENTRY_LOOK = 8000;
 /** A sprung ambush: hits in the first seconds catch crews not at their stations. */
@@ -210,7 +209,7 @@ export class Maneuvers {
   private targetsAt = -1;
   private readonly targeted = new Map<number, number>();
   /** Routing crews: the heading they chose and when, and how long they have been trapped. */
-  private readonly runs = new Map<number, { h: number; at: number; open: number; trapped: number }>();
+  private readonly runs = new Map<number, { h: number; at: number; open: number; trapped: number; haven: boolean }>();
   /** Where each squadron started, for cautious commanders who keep near it. */
   private homes: Map<number, { x: number; z: number }> | null = null;
   private readonly tactician: Tactician;
@@ -308,8 +307,9 @@ export class Maneuvers {
         // Stations already held by the side's other waiting plans are not handed out again.
         const taken: Slot[] = [];
         for (const other of this.plans.values()) if (other !== plan && other.team === plan.team && other.phase !== 'striking') taken.push(...other.stations.values());
-        // The rim the enemy comes in by is left open, the mouth of the bag: a station there would meet the enemy's van
-        // head on before anything had come into the zone between the two sides.
+        // The rim the enemy comes in by and the one across from it are left open, the ships lying on the two sides of
+        // its way as on both shores of a narrows: a station across its way would meet the van head on, before anything
+        // had come in between the two sides.
         const foe = this.enemyCentroid({ x: x0, z: z0 }, ENTRY_LOOK, plan.team);
         const entry = foe && hyp(foe.x - x0, foe.z - z0) > plan.r ? Math.atan2(foe.z - z0, foe.x - x0) : null;
         const sorted = [...ships].sort((p, q) => Math.atan2(p.z - z0, p.x - x0) - Math.atan2(q.z - z0, q.x - x0));
@@ -581,18 +581,22 @@ export class Maneuvers {
   /** The first enemy to find an ambush: one inside its zone, one close to an ambusher, or a shot landing on one. */
   private ambushTrigger(plan: Plan, ships: Ship[]): Ship | null {
     const b = this.b;
-    // An enemy inside the zone either deep in it or within reach of the guns on two sides of it at once: a van just
-    // inside the mouth is let come on until the first volley can take it from both sides, as at a narrows.
+    // An enemy inside the zone within reach of the guns on two sides of it at once, this ambush's or a friend's lying in
+    // wait at the same place: a van just inside the mouth is let come on until the first volley takes it from both
+    // sides, as at a narrows.
+    const guns = [...ships];
+    for (const other of this.plans.values()) {
+      if (other !== plan && other.team === plan.team && other.kind === 'ambush' && (other.phase === 'forming' || other.phase === 'waiting') && hyp(other.x0 - plan.x0, other.z0 - plan.z0) < AMBUSH_JOIN) guns.push(...this.members(other));
+    }
     let found: Ship | null = null;
     b.near(plan.x0, plan.z0, plan.r, (o) => {
       if (found || o.team === plan.team || !b.isActive(o) || !b.canSee(o, hyp(o.x - plan.x0, o.z - plan.z0), plan.team)) return;
-      const deep = (o.x - plan.x0) ** 2 + (o.z - plan.z0) ** 2 < (plan.r * AMBUSH_DEEP) ** 2;
       let side: number | null = null;
-      for (const s of ships) {
+      for (const s of guns) {
         const reach = this.range(s) * 0.85;
         if ((o.x - s.x) ** 2 + (o.z - s.z) ** 2 >= reach * reach) continue;
         const a = Math.atan2(s.z - o.z, s.x - o.x);
-        if (deep || (side !== null && Math.abs(wrapAngle(a - side)) > AMBUSH_CROSS)) {
+        if (side !== null && Math.abs(wrapAngle(a - side)) > AMBUSH_CROSS) {
           found = o;
           return;
         }
@@ -1284,7 +1288,7 @@ export class Maneuvers {
     if (!run || b.time - run.at >= ROUT_LOOK) {
       const pick = this.chooseRun(s, run?.h ?? s.heading, !inside);
       if (!run) {
-        run = { h: pick.h, at: b.time, open: pick.open, trapped: 0 };
+        run = { h: pick.h, at: b.time, open: pick.open, trapped: 0, haven: inside || pick.haven };
         this.runs.set(s.id, run);
       } else {
         const elapsed = b.time - run.at;
@@ -1292,6 +1296,7 @@ export class Maneuvers {
         run.h = pick.h;
         run.at = b.time;
         run.open = pick.open;
+        run.haven = inside || pick.haven;
       }
     }
     // Inside the haven the crew makes for its innermost water and lies there; it gives up only if the enemy follows it in.
@@ -1302,6 +1307,11 @@ export class Maneuvers {
 
   forgetRun(id: number) {
     this.runs.delete(id);
+  }
+
+  /** Whether a routing crew is lying in its side's haven or, its way home barred, running for it. */
+  havenBound(s: Ship) {
+    return this.runs.get(s.id)?.haven ?? false;
   }
 
   /**
@@ -1369,7 +1379,7 @@ export class Maneuvers {
         best = k;
       }
     }
-    return { h: (best / 16) * TAU, open: open[best]! };
+    return { h: (best / 16) * TAU, open: open[best]!, haven: haven !== null };
   }
 
   /** The bearing of the side's haven for a crew whose way home is barred (see chooseRun), else null. */
@@ -1510,7 +1520,7 @@ export class Maneuvers {
     for (let k = 0; k < 40; k += 1) {
       const da = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (SPACING / r) * 0.5;
       if (Math.abs(da) > turn) break;
-      if (mouth !== null && Math.abs(wrapAngle(a + da - mouth)) < ENTRY_GAP) continue;
+      if (mouth !== null && (Math.abs(wrapAngle(a + da - mouth)) < ENTRY_GAP || Math.abs(wrapAngle(a + da - mouth - Math.PI)) < ENTRY_GAP)) continue;
       for (const dr of [0, -60, 60, -120, 120]) {
         const rr = Math.max(80, r + dr);
         const x = cx + Math.cos(a + da) * rr;

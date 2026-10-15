@@ -129,6 +129,12 @@ const BROKEN_GRACE = 45;
 /** Under the maneuver rules the winner may keep running a broken fleet down this long while it is still in reach. */
 const PURSUIT_GRACE = 240;
 const PURSUIT_REACH = 900;
+/**
+ * A broken side's crews lying in their haven or running for it are fought out up to this long after the side broke,
+ * while an enemy still fighting is within HAVEN_PURSUIT of one: the fleet bottled up in a bay at dawn.
+ */
+const HAVEN_GRACE = 900;
+const HAVEN_PURSUIT = 1800;
 /** A target with this many of its friends within PACKED_RANGE is worth fire arrows: the fire will spread (the depth rules). */
 const PACKED_RANGE = 120;
 const PACKED_SHIPS = 2;
@@ -813,22 +819,31 @@ export class Battle {
       }
       this.brokenSince[team] ??= this.time;
       const since = this.time - this.brokenSince[team]!;
-      if (since >= BROKEN_GRACE && (since >= PURSUIT_GRACE || !this.maneuvers || !this.inReach(team))) out = out ? 'draw' : team;
+      if (since < BROKEN_GRACE) continue;
+      // Crews bottled up in their haven, or running for it with the enemy after them, are fought out a while longer.
+      const bottled = !!this.maneuvers && since < HAVEN_GRACE && this.bottled(team);
+      if (!bottled && (since >= PURSUIT_GRACE || !this.maneuvers || !this.inReach(team))) out = out ? 'draw' : team;
     }
     return out;
   }
 
   /** Whether any running ship of a broken side still has an enemy close enough to run it down. */
-  private inReach(team: Team) {
+  private inReach(team: Team, reach = PURSUIT_REACH, only?: (s: Ship) => boolean) {
     for (const s of this.active[team]) {
-      if (s.moraleState !== 'routing') continue;
+      if (s.moraleState !== 'routing' || (only && !only(s))) continue;
       let near = false;
-      this.grid.query(s.x, s.z, PURSUIT_REACH, (o) => {
-        if (!near && o.team !== team && this.isActive(o) && o.moraleState !== 'routing' && (o.x - s.x) ** 2 + (o.z - s.z) ** 2 < PURSUIT_REACH * PURSUIT_REACH) near = true;
+      this.grid.query(s.x, s.z, reach, (o) => {
+        if (!near && o.team !== team && this.isActive(o) && o.moraleState !== 'routing' && (o.x - s.x) ** 2 + (o.z - s.z) ** 2 < reach * reach) near = true;
       });
       if (near) return true;
     }
     return false;
+  }
+
+  /** Whether a running crew of the side lies in its haven, or runs for it, with an enemy still fighting after it. */
+  private bottled(team: Team) {
+    const m = this.maneuverRules;
+    return !!m && !!this.havens[team] && this.inReach(team, HAVEN_PURSUIT, (s) => m.havenBound(s));
   }
 
   /** Whether a computer-led fleet has given up the field and is running for home. */
