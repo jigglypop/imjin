@@ -1,4 +1,4 @@
-// Campaign map (진영 전역) performance on desktop WebGPU (Edge + D3D11 on Windows, Chrome + Metal on macOS): how long the
+// Campaign map (캠페인) performance on desktop WebGPU (Edge + D3D11 on Windows, Chrome + Metal on macOS): how long the
 // 3D world takes to appear and how the page draws in the seconds after (`settle`), then GPU frames, GPU time per frame,
 // draw calls and triangles, main-thread frame times and the render pipelines compiled in a frame (`syncPipelines`, each
 // a stall of the GPU process) or ahead of it (`asyncPipelines`) while the map rests, pans, turns and zooms, and when the

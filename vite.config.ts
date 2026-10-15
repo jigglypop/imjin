@@ -10,7 +10,7 @@ const SITE = 'https://imjin1592.com';
 /** What search results and link previews say about each screen's page. Korean is the source. */
 const DESCRIPTIONS: Record<Exclude<RouteScreen, 'menu'>, Record<Edition, string>> = {
   faction: {
-    ko: '조선, 명, 일본 중 한 나라를 골라 남해안의 포구를 차례로 차지하는 턴제 전역입니다. 함대가 만나면 3D 해전으로 직접 싸울 수 있습니다.',
+    ko: '조선, 명, 일본 중 한 나라를 골라 남해안의 포구를 차례로 차지하는 턴제 캠페인입니다. 함대가 만나면 3D 해전으로 직접 싸울 수 있습니다.',
     en: "A turn-based campaign: lead Joseon, Ming or Japan and take the ports of Korea's south coast one by one. When fleets meet, you can fight the battle yourself in 3D.",
   },
   skirmish: {

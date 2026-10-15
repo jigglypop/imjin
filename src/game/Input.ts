@@ -684,7 +684,8 @@ export class Input {
         this.auto();
         break;
       case 'KeyH':
-        this.hold();
+        // Shift+H hides the HUD (Hud.tsx), so it must not also stop the ships.
+        if (!e.shiftKey) this.hold();
         break;
       case 'KeyC':
         this.engine.director.toggleCinematic();

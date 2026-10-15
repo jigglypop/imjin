@@ -62,7 +62,7 @@ export function orderIntercept(g: Grand, fleetId: string, targetId: string): Res
   const fl = fleetById(g, fleetId);
   const target = fleetById(g, targetId);
   if (!fl || !target) return fail('해당 함대가 없습니다');
-  if (!marching(g)) return fail('이 전역에서는 쓸 수 없는 명령입니다');
+  if (!marching(g)) return fail('이 캠페인에서는 쓸 수 없는 명령입니다');
   if (!atWar(g, fl.faction, target.faction)) return fail('적 함대가 아닙니다');
   if (fl.rest > 0) return fail('전투 후 정비 중입니다');
   if (fl.stance === 'march') return fail('강행군 중에는 공격할 수 없습니다');
@@ -99,7 +99,7 @@ export function orderStance(g: Grand, fleetId: string, stance: Stance): Result {
   if (bad) return bad;
   const fl = fleetById(g, fleetId);
   if (!fl) return fail('해당 함대가 없습니다');
-  if (!marching(g)) return fail('이 전역에서는 쓸 수 없는 명령입니다');
+  if (!marching(g)) return fail('이 캠페인에서는 쓸 수 없는 명령입니다');
   if (stance === 'march') {
     const dest = fl.route[fl.route.length - 1];
     if (fl.at && !passable(g, fl.faction, fl.at)) return fail('적의 포구 앞에서는 강행군할 수 없습니다');

@@ -43,7 +43,7 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
               </button>
             )}
             <div>
-              <div className="g-sheet__eyebrow">{t('진영 전역 · 1592')}</div>
+              <div className="g-sheet__eyebrow">{t('캠페인 · 1592')}</div>
               <h1 className="g-pick__title">{t('진영 선택')}</h1>
             </div>
           </header>

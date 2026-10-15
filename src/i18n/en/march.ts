@@ -24,7 +24,7 @@ export const EN_MARCH: Record<string, string> = {
   '적 함대가 지키는 포구는 봉쇄할 수 없습니다': 'A port guarded by an enemy fleet cannot be blockaded',
   '물러날 함대가 없습니다': 'There is no fleet to withdraw',
   '강행군 중에는 공격할 수 없습니다': 'A fleet on a forced march cannot attack',
-  '이 전역에서는 쓸 수 없는 명령입니다': 'This order is not available in this campaign',
+  '이 캠페인에서는 쓸 수 없는 명령입니다': 'This order is not available in this campaign',
   '적 함대가 아닙니다': 'That is not an enemy fleet',
   '적의 포구 앞에서는 강행군할 수 없습니다': 'A fleet off an enemy port cannot force march',
   '봉쇄 중인 함대가 아닙니다': 'This fleet is not blockading a port',

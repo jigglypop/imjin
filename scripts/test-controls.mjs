@@ -71,6 +71,11 @@ try {
     key('Digit6', { altKey: true }); assert.equal(a.speedCap, 0.6);
     key('Digit7', { ctrlKey: true }); assert.equal(input.getGroups()[6].count, 1);
   });
+  check('H stops the selection; Shift+H is the HUD toggle and leaves the orders alone', () => {
+    const { engine, key, a } = setup(); engine.views.selected.add(a.id);
+    const before = JSON.stringify(a.order); key('KeyH', { shiftKey: true }); assert.equal(JSON.stringify(a.order), before);
+    key('KeyH'); assert.equal(a.order.type, 'hold');
+  });
   check('Shift right-click and touch queue mode send real queued formation destinations', () => {
     const { engine, input, a, b } = setup(); engine.views.selected = new Set([a.id, b.id]);
     input.pickShip = () => undefined; input.pickWorks = () => null; input.waterPoint = () => ({ x: 800, z: 400 });

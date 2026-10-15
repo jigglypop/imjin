@@ -7,6 +7,21 @@
   font-display: block;
   unicode-range: U+C784,U+C9C4,U+C65C,U+B780;
 }
+/* The English title, the years and the English billing: Cinzel, Roman inscriptional capitals in the manner of the
+   faces on historical epics' posters, with small capitals for lower case. Printable ASCII plus a few marks, 26 KB. */
+@font-face {
+  font-family: 'Imjin Roman';
+  src: url('/ui/fonts/imjin-title-cinzel.woff2') format('woff2');
+  font-weight: 400 900;
+  font-display: block;
+}
+/* The Korean tagline, the hanja and the seal: Noto Serif KR cut to the eighteen characters the lockup sets. */
+@font-face {
+  font-family: 'Imjin Serif';
+  src: url('/ui/fonts/imjin-serif-notoserifkr.woff2') format('woff2');
+  font-weight: 200 900;
+  font-display: block;
+}
 
 .menu--cinematic { --menu-brass:#bba77e; background:#07121b; }
 .menu--cinematic .art-bg img { object-position:50% 50%; }
@@ -15,30 +30,46 @@
 .menu-battle--ready { opacity:1; }
 .menu-battle canvas { display:block; width:100%; height:100%; }
 .menu-shade { position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(3,8,13,.2),rgba(3,8,13,.04) 38%,rgba(3,8,13,.48) 70%,#040b11 100%),linear-gradient(90deg,rgba(3,8,13,.35),transparent 72%); }
-.menu--cinematic .screen-top.menu-masthead { position:absolute; inset:0 0 auto; padding:calc(var(--sat) + 28px) calc(var(--sar) + 40px) 0 calc(var(--sal) + 40px); justify-content:space-between; }
-.menu-date { display:flex; align-items:center; gap:12px; font-size:11px; color:var(--menu-brass); letter-spacing:.18em; }
-.menu-date i { width:32px; height:1px; background:var(--menu-brass); opacity:.5; }
+.menu--cinematic .screen-top.menu-masthead { position:absolute; inset:0 0 auto; padding:calc(var(--sat) + 28px) calc(var(--sar) + 40px) 0 calc(var(--sal) + 40px); justify-content:flex-end; }
 .menu--cinematic .back-btn { background:transparent; border-color:rgba(210,190,148,.24); border-radius:2px; font-size:12px; min-height:40px; gap:8px; color:#d9d8d2; }
 .menu--cinematic .back-btn:hover { background:rgba(193,171,126,.12); }
 .menu--cinematic .menu-inner { width:100%; margin:0; padding:80px 24px 76px; gap:30px; align-items:center; justify-content:flex-end; overflow-y:auto; }
-.menu--cinematic .wordmark { position:relative; margin-bottom:auto; margin-top:3dvh; gap:12px; }
-.menu--cinematic .wordmark-kicker { font-size:10px; letter-spacing:.25em; padding-left:.25em; color:#c2bba9; font-weight:400; }
+
+/* The title lockup. --t is the Korean title's size; every other part of the lockup, in both editions, is a fraction
+   of it, so the poster keeps its proportions from a phone on its side to an ultrawide screen. The letter-spaced
+   lines give back their trailing tracking with a negative right margin, so they stay centred. */
+.menu--cinematic .wordmark { --t:clamp(112px,13dvh,168px); position:relative; margin:3dvh 0 auto; gap:0; }
+.wordmark-tagline { margin:0 -.5em calc(var(--t)*.17) 0; font-family:'Imjin Serif',var(--font-title); font-weight:300; font-size:max(11px,calc(var(--t)*.115)); line-height:1; letter-spacing:.5em; white-space:nowrap; color:rgba(255,255,255,.74); text-shadow:0 1px 14px rgba(3,8,13,.8); animation:wordmark-track 2.4s cubic-bezier(.2,.6,.2,1) .5s both; }
+.wordmark--en .wordmark-tagline { margin-right:-.42em; font-family:'Imjin Roman',serif; font-weight:400; font-size:max(9px,calc(var(--t)*.088)); letter-spacing:.42em; text-transform:uppercase; }
 .menu-title-lockup { position:relative; }
-.menu--cinematic .wordmark-title { display:flex; flex-direction:column; align-items:center; font-family:var(--font-title); font-size:clamp(120px,13.4dvh,172px); font-weight:400; line-height:.79; letter-spacing:-.035em; padding:0; background:none; color:#efeadb; filter:drop-shadow(0 2px 1px #071018) drop-shadow(0 6px 20px rgba(3,8,13,.65)); transform:rotate(-3deg); }
-.menu--cinematic .wordmark-title span:last-child { margin-left:15px; }
-.menu--cinematic .wordmark-title--art { position:relative; width:clamp(225px,20vw,280px); height:clamp(240px,30dvh,290px); font-size:54px; line-height:1.05; letter-spacing:0; }
+.menu--cinematic .wordmark-title { margin:0; padding:0; background:none; letter-spacing:0; color:#fff; animation:wordmark-in 1.8s ease-out both; }
 /* A poster's title: Do Hyeon has one weight, its heaviest, and a stroke in its own colour thickens it further; the
    syllables are pulled together until they nearly touch. The negative tracking also trails after the last
-   syllable, so the right padding gives it back and the word stays centred. */
-.menu--cinematic .wordmark-title--poster { display:block; font-family:'Imjin Title',var(--font-title); font-size:clamp(112px,13dvh,168px); font-weight:400; line-height:.9; letter-spacing:-.04em; padding:0 .04em 0 0; white-space:nowrap; color:#f1ead6; -webkit-text-stroke:.036em #f1ead6; paint-order:stroke fill; transform:none; filter:drop-shadow(0 3px 0 #08121a) drop-shadow(0 12px 30px rgba(3,8,13,.72)); }
-.wordmark-title--poster + .menu-seal { right:-44px; }
-.menu-title-art { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:0; }
-.wordmark-title--loaded .menu-title-art { opacity:1; }
-.menu--cinematic .menu-title-fallback { margin:0!important; max-width:100%; height:100%; display:flex; align-items:center; text-align:center; overflow-wrap:anywhere; }
-.wordmark-title--loaded .menu-title-fallback { visibility:hidden; }
-.wordmark--en .menu-title-fallback { font-family:var(--font-title); font-size:44px; font-weight:700; text-transform:uppercase; }
-.menu-seal { position:absolute; right:-35px; bottom:22px; width:32px; height:44px; display:grid; place-content:center; background:#863a30; color:#e0c2a4; font-family:var(--font-title); font-size:14px; line-height:1.2; transform:rotate(5deg); clip-path:polygon(3% 2%,94% 0,100% 7%,97% 96%,6% 100%,0 94%); box-shadow:0 0 0 2px #863a30; }
-.menu--cinematic .wordmark-en { color:#d5cfbf; font-size:10px; font-weight:400; letter-spacing:.44em; padding-left:.44em; margin-top:16px; }
+   syllable, so the right padding gives it back and the word stays centred. It is a translucent white over the
+   battle rather than an opaque cream plate; the opacity is on the whole word, so the stroke and the fill do not
+   overlap into a brighter outline. */
+.menu--cinematic .wordmark-title--poster { display:block; font-family:'Imjin Title',var(--font-title); font-size:var(--t); font-weight:400; line-height:.9; letter-spacing:-.04em; padding:0 .04em 0 0; white-space:nowrap; -webkit-text-stroke:.022em #fff; paint-order:stroke fill; opacity:.72; filter:drop-shadow(0 2px 12px rgba(3,8,13,.4)); }
+/* The hanja run down beside the title like a poster's vertical line, and the seal is its stamp on the other side. */
+.wordmark-hanja { position:absolute; right:100%; top:50%; margin-right:calc(var(--t)*.17); transform:translateY(-50%); writing-mode:vertical-rl; font-family:'Imjin Serif',var(--font-title); font-weight:400; font-size:max(9px,calc(var(--t)*.118)); line-height:1; letter-spacing:.34em; color:rgba(255,255,255,.62); text-shadow:0 1px 12px rgba(3,8,13,.8); animation:wordmark-in 2s ease-out .8s both; }
+.menu-seal { position:absolute; right:calc(var(--t)*-.29); bottom:calc(var(--t)*.13); width:calc(var(--t)*.2); height:calc(var(--t)*.28); display:grid; place-content:center; background:#863a30; color:#e0c2a4; font-family:'Imjin Serif',var(--font-title); font-weight:600; font-size:calc(var(--t)*.088); line-height:1.2; transform:rotate(5deg); clip-path:polygon(3% 2%,94% 0,100% 7%,97% 96%,6% 100%,0 94%); box-shadow:0 0 0 2px #863a30; animation:wordmark-in 1s ease-out 1.6s both; }
+/* The English title: THE between hairlines over IMJIN WAR in wide capitals, in the Korean title's translucent white. */
+.menu--cinematic .wordmark-title--roman { display:flex; flex-direction:column; align-items:center; font-family:'Imjin Roman',serif; line-height:1; text-transform:uppercase; opacity:.72; filter:drop-shadow(0 2px 12px rgba(3,8,13,.45)); }
+.wordmark-the { display:flex; align-items:center; gap:.9em; margin-bottom:calc(var(--t)*.07); font-size:calc(var(--t)*.125); font-weight:500; letter-spacing:.62em; }
+.wordmark-the::before, .wordmark-the::after { content:''; width:2.4em; height:1px; background:currentColor; opacity:.7; }
+.wordmark-the::after { margin-left:-.62em; }
+.wordmark-name { margin-right:-.07em; font-size:calc(var(--t)*.5); font-weight:600; letter-spacing:.07em; white-space:nowrap; }
+.wordmark-dates { display:flex; align-items:center; gap:calc(var(--t)*.13); margin-top:calc(var(--t)*.2); font-family:'Imjin Roman',serif; font-weight:500; font-size:max(10px,calc(var(--t)*.088)); line-height:1; color:var(--menu-brass); white-space:nowrap; text-shadow:0 1px 10px rgba(3,8,13,.8); animation:wordmark-in 1.6s ease-out 1.2s both; }
+.wordmark-dates span { letter-spacing:.32em; margin-right:-.32em; }
+.wordmark-dates i { width:calc(var(--t)*.62); height:1px; background:linear-gradient(90deg,transparent,rgba(187,167,126,.7)); }
+.wordmark-dates i:last-child { transform:scaleX(-1); }
+/* The English edition's secondary mark: the hanja and the Korean title, small, as on an international poster. */
+.wordmark-mark { display:flex; align-items:center; gap:calc(var(--t)*.11); margin-top:calc(var(--t)*.16); line-height:1; color:#fff; opacity:.6; animation:wordmark-in 1.6s ease-out 1.4s both; }
+.wordmark-mark span { font-family:'Imjin Serif',var(--font-title); font-weight:400; font-size:max(10px,calc(var(--t)*.09)); letter-spacing:.3em; }
+.wordmark-mark span::after { content:''; display:inline-block; width:1px; height:1.1em; margin-left:max(0px,calc(var(--t)*.11 - .3em)); vertical-align:middle; background:currentColor; opacity:.5; }
+.wordmark-mark b { font-family:'Imjin Title',var(--font-title); font-weight:400; font-size:max(14px,calc(var(--t)*.15)); letter-spacing:-.04em; }
+@keyframes wordmark-in { from { opacity:0; } }
+@keyframes wordmark-track { from { opacity:0; letter-spacing:1em; margin-right:-1em; } }
+
 .menu-play { width:min(430px,100%); display:flex; flex-direction:column; gap:17px; }
 .menu-primary { position:relative; display:flex; justify-content:space-between; align-items:center; width:100%; padding:18px 23px; min-height:78px; color:#151817; border:1px solid #d3c4a2; border-radius:1px; background:linear-gradient(120deg,#e8dec5,#cfbc96); cursor:pointer; box-shadow:0 5px 30px rgba(0,0,0,.24); transition:background .2s,transform .2s; }
 .menu-primary:hover { background:#f1e7d1; transform:translateY(-2px); }
@@ -52,43 +83,41 @@
 .menu-modes button:hover { color:#fff5db; background:rgba(211,188,145,.08); }
 .menu-mode-arrow { color:#a99675; font-size:17px; }
 .menu--cinematic button:focus-visible { outline:2px solid #ead8ab; outline-offset:5px; }
-.menu-foot { position:absolute; bottom:calc(var(--sab) + 20px); left:calc(var(--sal) + 40px); right:calc(var(--sar) + 40px); display:flex; justify-content:space-between; color:#7b827f; font-size:9px; letter-spacing:.22em; pointer-events:none; }
+/* The billing block at the foot of the poster: each navy's commanders, small and muted, a group never split. */
+.menu-billing { position:absolute; bottom:calc(var(--sab) + 22px); left:calc(var(--sal) + 40px); right:calc(var(--sar) + 40px); display:flex; flex-wrap:wrap; justify-content:center; gap:5px 26px; color:rgba(214,210,198,.5); font-size:10px; line-height:1.3; letter-spacing:.12em; pointer-events:none; }
+.menu-billing span { white-space:nowrap; }
+.menu-billing b { margin-right:1em; font-weight:500; font-size:9px; color:var(--menu-brass); opacity:.8; }
+.menu-billing--en { font-family:'Imjin Roman',serif; font-size:9px; letter-spacing:.14em; text-transform:uppercase; }
+.menu-billing--en b { font-size:8px; }
 
 @media (min-width:950px) {
   .menu--cinematic .menu-inner { width:58%; padding-bottom:100px; }
   .menu--cinematic .wordmark { margin-top:5dvh; }
   .menu-play { margin-top:4dvh; }
   .menu-shade { background:linear-gradient(180deg,rgba(3,8,13,.2),transparent 30%,rgba(3,8,13,.35) 72%,#040b11 100%),linear-gradient(90deg,rgba(3,8,13,.5),rgba(3,8,13,.15) 50%,transparent 75%); }
+  /* Under the column of the title and the buttons, as the base of the poster. */
+  .menu-billing { right:auto; left:calc(var(--sal) + 24px); width:calc(58% - var(--sal) - 48px); }
 }
 @media (max-width:600px) {
   .menu--cinematic .screen-top.menu-masthead { padding:calc(var(--sat) + 18px) calc(var(--sar) + 21px) 0 calc(var(--sal) + 21px); }
   .menu--cinematic .menu-inner { padding:70px calc(var(--sar) + 24px) calc(var(--sab) + 72px) calc(var(--sal) + 24px); gap:20px; }
-  .menu--cinematic .wordmark { margin-top:2dvh; }
-  .menu--cinematic .wordmark-title { font-size:clamp(115px,15dvh,142px); }
-  .menu--cinematic .wordmark-title--art { width:230px; height:clamp(240px,30dvh,270px); }
-  .menu--cinematic .wordmark-title--poster { font-size:clamp(84px,24vw,112px); }
+  .menu--cinematic .wordmark { --t:clamp(76px,21vw,112px); margin-top:2dvh; }
   .menu-primary { min-height:75px; padding:16px 20px; }
   .menu-modes button { gap:8px; font-size:11px; padding:16px 4px; }
-  .menu-foot { left:24px; right:24px; font-size:8px; }
+  .menu-billing { left:24px; right:24px; bottom:calc(var(--sab) + 16px); gap:3px 16px; font-size:8px; }
+  .menu-billing b { font-size:7px; }
   .menu-shade { background:linear-gradient(180deg,rgba(3,8,13,.24),rgba(3,8,13,.04) 42%,rgba(3,8,13,.28) 60%,#040b11 100%); }
 }
 @media (orientation:landscape) and (max-height:540px) {
   .menu--cinematic .menu-inner { display:flex; width:54%; justify-content:center; padding:48px 24px 20px; gap:18px; }
-  .menu--cinematic .wordmark { margin:0; gap:7px; }
-  .menu--cinematic .wordmark-title { font-size:72px; }
-  .menu--cinematic .wordmark-title--art { width:138px; height:144px; }
-  .menu--cinematic .wordmark-title--poster { font-size:66px; }
-  .wordmark-title--poster + .menu-seal { right:-30px; }
-  .wordmark--en .menu-title-fallback { font-size:26px; }
-  .menu--cinematic .wordmark-kicker { display:none; }
-  .menu--cinematic .wordmark-en { margin-top:4px; font-size:8px; }
+  .menu--cinematic .wordmark { --t:62px; margin:0; }
+  .menu-seal { box-shadow:0 0 0 1px #863a30; }
   .menu-primary { min-height:52px; padding:9px 15px; }
   .menu-primary strong { font-size:15px; }
   .menu-primary small { font-size:10px; }
   .menu-play { gap:8px; margin:0; }
   .menu-modes button { min-height:40px; padding:7px 3px; font-size:10px; gap:5px; }
-  .menu-seal { right:-25px; width:23px; height:34px; font-size:10px; bottom:6px; }
-  .menu-foot { display:none; }
+  .menu-billing { display:none; }
 }
 @media (prefers-reduced-motion:reduce) {
   .menu-battle { display:none; }

@@ -43,47 +43,55 @@ export function ScreenFrame({ title, children, actions, className = '' }: { titl
 
 const MODES: { screen: Screen; art: string; title: string; desc: string; brief: string }[] = [
   { screen: 'select', art: 'mode_history', title: '역사 전투', desc: '명량, 한산도 등 임진왜란 해전 아홉 곳을 직접 지휘합니다.', brief: '명량, 한산도 등 아홉 해전' },
-  { screen: 'faction', art: 'mode_campaign', title: '진영 전역', desc: '조선, 명, 일본 중 한 나라를 골라 남해안의 포구를 차례로 차지합니다.', brief: '한 나라로 남해안 점령' },
+  { screen: 'faction', art: 'mode_campaign', title: '캠페인', desc: '조선, 명, 일본 중 한 나라를 골라 남해안의 포구를 차례로 차지합니다.', brief: '한 나라로 남해안 점령' },
   { screen: 'skirmish', art: 'mode_skirmish', title: '쟁탈전', desc: '거점을 차지해 적의 기세를 꺾는 전투입니다. 함대를 직접 꾸려 출전합니다.', brief: '거점을 차지하는 함대전' },
   { screen: 'online', art: 'mode_online', title: '온라인 대전', desc: '다른 플레이어와 실시간으로 겨룹니다.', brief: '실시간 대전' },
+];
+
+/** The poster's billing block: the war's commanders, set like a film's cast under the buttons. */
+const BILLING: { side: string; names: string[] }[] = [
+  { side: '조선', names: ['이순신', '원균', '이억기', '권준'] },
+  { side: '명', names: ['진린', '등자룡'] },
+  { side: '일본', names: ['와키자카 야스하루', '구키 요시타카', '구루시마 미치후사'] },
 ];
 
 export function MainMenu() {
   const t = useT();
   const lang = useLang();
   const title = t('임진왜란');
-  const [titleReady, setTitleReady] = useState(false);
   return (
     <section className="screen menu menu--cinematic">
       <Backdrop kind="menu" cinematic />
       <MenuBattleBackdrop />
       <div className="menu-shade" aria-hidden="true" />
       <header className="screen-top menu-masthead">
-        <span className="menu-date" aria-hidden="true">1592 <i /> 1598</span>
         <button className="back-btn" onClick={go('settings')}>
           <Sliders /> {t('설정')}
         </button>
       </header>
       <div className="menu-inner">
+        {/* A film poster's title lockup: the tagline above, the title, the years between hairlines. Every part is
+            sized from the title's --t, so the lockup scales as one piece. */}
         <div className={`wordmark wordmark--${lang}`}>
-          <div className="wordmark-kicker" aria-hidden="true">{lang === 'ko' ? '壬 辰 倭 亂' : 'NAVAL STRATEGY'}</div>
-          <div className="menu-title-lockup">
-            {/* The Korean title is set in type like a film poster; the English one is a lettered picture. */}
-            {lang === 'ko' ? (
+          <p className="wordmark-tagline">{t('나라를 지킨 바다')}</p>
+          {lang === 'ko' ? (
+            <div className="menu-title-lockup">
+              <span className="wordmark-hanja" aria-hidden="true">壬辰倭亂</span>
               <h1 className="wordmark-title wordmark-title--poster">{title}</h1>
-            ) : (
-              <h1 className={`wordmark-title wordmark-title--art ${titleReady ? 'wordmark-title--loaded' : ''}`} aria-label={title}>
-                <img className="menu-title-art" src="/ui/art/menu_title_en.webp" alt={title} width={1024} height={1052} decoding="async" fetchPriority="high" onLoad={() => setTitleReady(true)} onError={() => setTitleReady(false)} />
-                <span className="menu-title-fallback" aria-hidden="true">{title}</span>
-              </h1>
-            )}
-            {lang === 'ko' && <span className="menu-seal" aria-hidden="true">海<br />戰</span>}
-          </div>
-          <div className="wordmark-en" aria-hidden="true">{lang === 'ko' ? 'THE IMJIN WAR' : '1592 — 1598'}</div>
+              <span className="menu-seal" aria-hidden="true">海<br />戰</span>
+            </div>
+          ) : (
+            <h1 className="wordmark-title wordmark-title--roman" aria-label={title}>
+              <span className="wordmark-the" aria-hidden="true">The</span>
+              <span className="wordmark-name" aria-hidden="true">Imjin War</span>
+            </h1>
+          )}
+          <div className="wordmark-dates" aria-hidden="true"><i /><span>1592 — 1598</span><i /></div>
+          {lang === 'en' && <div className="wordmark-mark" aria-hidden="true"><span>壬辰倭亂</span><b>임진왜란</b></div>}
         </div>
         <div className="menu-play">
           <button className="menu-primary" data-mode="faction" {...mode('faction')}>
-            <span className="menu-primary-copy"><strong>{t('진영 전역')}</strong><small>{t('한 나라로 남해안 점령')}</small></span>
+            <span className="menu-primary-copy"><strong>{t('캠페인')}</strong><small>{t('한 나라로 남해안 점령')}</small></span>
             <span className="menu-arrow" aria-hidden="true">↗</span>
           </button>
           <nav className="menu-modes" aria-label={t('전투 선택')}>
@@ -91,7 +99,9 @@ export function MainMenu() {
           </nav>
         </div>
       </div>
-      <footer className="menu-foot" aria-hidden="true"><span>{lang === 'ko' ? '南 海' : 'THE SOUTHERN SEA'}</span><span>{lang === 'ko' ? '壬辰 · 海戰' : '1592 — 1598'}</span></footer>
+      <footer className={`menu-billing menu-billing--${lang}`} aria-hidden="true">
+        {BILLING.map((group) => <span key={group.side}><b>{t(group.side)}</b>{group.names.map((name) => t(name)).join(' · ')}</span>)}
+      </footer>
     </section>
   );
 }

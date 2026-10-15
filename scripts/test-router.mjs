@@ -179,10 +179,10 @@ async function page(url, { stored = null, language = 'ko-KR', battle = false } =
 
 await check('startup: the address opens its screen and is rewritten to its one form in the language on screen', async () => {
   const cases = [
-    ['/campaign', {}, '/campaign', 'faction', '진영 전역 · 임진왜란'],
-    ['/ko/campaign/', {}, '/campaign', 'faction', '진영 전역 · 임진왜란'],
+    ['/campaign', {}, '/campaign', 'faction', '캠페인 · 임진왜란'],
+    ['/ko/campaign/', {}, '/campaign', 'faction', '캠페인 · 임진왜란'],
     ['/ko', { stored: 'en' }, '/', 'menu', '임진왜란'],
-    ['/campaign', { stored: 'en' }, '/en/campaign', 'faction', 'Faction Campaign · The Imjin War'],
+    ['/campaign', { stored: 'en' }, '/en/campaign', 'faction', 'Campaign · The Imjin War'],
     ['/online', { language: 'en-US' }, '/en/online', 'online', 'Online Battle · The Imjin War'],
     ['/en/conquest', { stored: 'ko' }, '/en/conquest', 'skirmish', 'Conquest · The Imjin War'],
     ['/en/', {}, '/en', 'menu', 'The Imjin War'],
@@ -209,7 +209,7 @@ await check('opening a screen pushes its address once; back and forward open the
   const p = await page('/');
   p.setScreen('faction');
   assert.deepEqual(p.entries(), ['/', '/campaign']);
-  assert.equal(p.title(), '진영 전역 · 임진왜란');
+  assert.equal(p.title(), '캠페인 · 임진왜란');
   p.setScreen('faction');
   assert.equal(p.calls.push, 1, 'the same screen again makes no entry');
   p.setScreen('menu');
@@ -219,7 +219,7 @@ await check('opening a screen pushes its address once; back and forward open the
   assert.equal(p.screen(), 'menu');
   p.history.back();
   assert.equal(p.screen(), 'faction');
-  assert.equal(p.title(), '진영 전역 · 임진왜란');
+  assert.equal(p.title(), '캠페인 · 임진왜란');
   p.history.forward();
   p.history.forward();
   assert.equal(p.screen(), 'online');

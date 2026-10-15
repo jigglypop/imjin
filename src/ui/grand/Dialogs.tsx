@@ -65,7 +65,7 @@ export function StatusPanel({ me, objective, scores, relations, log, canOrder, o
   const [sure, setSure] = useState<FactionId | null>(null);
   const progress = objective.need ? objective.have / objective.need : 0;
   return (
-    <Modal label={t('전황')} eyebrow={t('진영 전역')} title={t('전황')} onClose={onClose} tone={me}>
+    <Modal label={t('전황')} eyebrow={t('캠페인')} title={t('전황')} onClose={onClose} tone={me}>
       <h3 className="g-section g-section--first">{t('목표')}</h3>
       <p className="g-note">{objective.text}</p>
       <div className="g-goal">
@@ -321,14 +321,14 @@ export function GameOver({ over, me, onView, onNew, onMenu }: GameOverProps) {
   const t = useT();
   return (
     <Modal
-      label={t('전역 종료')}
-      eyebrow={t('{turn}턴 · 전역 종료', { turn: over.turn })}
+      label={t('캠페인 종료')}
+      eyebrow={t('{turn}턴 · 캠페인 종료', { turn: over.turn })}
       tone={me}
       title={<span className={`g-verdict g-verdict--${over.won ? 'win' : 'loss'}`}>{over.headline}</span>}
       footer={
         <div className="g-actions">
           <button type="button" className="g-btn g-btn--primary" onClick={onNew}>
-            {t('새 전역')}
+            {t('새 캠페인')}
           </button>
           <button type="button" className="g-btn" onClick={onView}>
             {t('지도 보기')}
@@ -356,7 +356,7 @@ export function GrandMenu({ onClose, onStatus, onLeave, onAbandon }: MenuProps) 
   const t = useT();
   const [sure, setSure] = useState(false);
   return (
-    <Modal label={t('전역 메뉴')} eyebrow={t('진영 전역')} title={t('메뉴')} onClose={onClose}>
+    <Modal label={t('캠페인 메뉴')} eyebrow={t('캠페인')} title={t('메뉴')} onClose={onClose}>
       <div className="g-menu">
         <button type="button" className="g-btn g-btn--block" onClick={onClose}>
           {t('지도로 돌아가기')}
@@ -369,14 +369,14 @@ export function GrandMenu({ onClose, onStatus, onLeave, onAbandon }: MenuProps) 
         </button>
         {sure ? (
           <button type="button" className="g-btn g-btn--block g-btn--danger" onClick={onAbandon}>
-            {t('전역 포기 확인')}
+            {t('캠페인 포기 확인')}
           </button>
         ) : (
           <button type="button" className="g-btn g-btn--block g-btn--ghost" onClick={() => setSure(true)}>
-            {t('전역 포기')}
+            {t('캠페인 포기')}
           </button>
         )}
-        {sure && <p className="g-hint">{t('포기하면 저장된 전역이 삭제되며 되돌릴 수 없습니다.')}</p>}
+        {sure && <p className="g-hint">{t('포기하면 저장된 캠페인이 삭제되며 되돌릴 수 없습니다.')}</p>}
       </div>
     </Modal>
   );
@@ -400,7 +400,7 @@ export function Hub({ save, onContinue, onNew, onBack }: HubProps) {
         {t('메뉴')}
       </button>
       <section className="g-glass g-hub__card" style={toneStyle(save.faction)}>
-        <div className="g-sheet__eyebrow">{t('진영 전역 · 1592')}</div>
+        <div className="g-sheet__eyebrow">{t('캠페인 · 1592')}</div>
         <h1 className="g-hub__title">
           <FactionCrest faction={save.faction} size={56} />
           <span>
@@ -422,7 +422,7 @@ export function Hub({ save, onContinue, onNew, onBack }: HubProps) {
             <dd>{num(save.gold)}</dd>
           </div>
         </dl>
-        {save.over ? <p className="g-hint">{t('이 전역은 종료되었습니다.')}</p> : save.waiting > 0 ? <p className="g-banner">{t('진행할 전투가 {n}건 있습니다.', { n: save.waiting })}</p> : null}
+        {save.over ? <p className="g-hint">{t('이 캠페인은 종료되었습니다.')}</p> : save.waiting > 0 ? <p className="g-banner">{t('진행할 전투가 {n}건 있습니다.', { n: save.waiting })}</p> : null}
         <div className="g-hub__actions">
           <button type="button" className="g-btn g-btn--primary g-btn--lg" onClick={onContinue}>
             {save.over ? t('결과 보기') : t('이어서 하기')}
@@ -433,7 +433,7 @@ export function Hub({ save, onContinue, onNew, onBack }: HubProps) {
             </button>
           ) : (
             <button type="button" className="g-btn g-btn--lg" onClick={() => setSure(true)}>
-              {t('새 전역')}
+              {t('새 캠페인')}
             </button>
           )}
         </div>

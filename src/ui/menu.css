@@ -309,17 +309,7 @@
   text-align: center;
 }
 
-/* A film-poster title card: the hanja and the years as a quiet line above, the name in the one serif on the page,
-   the English name spaced out below. The logo stays Korean in both languages. */
-.wordmark-kicker {
-  font-size: var(--fs-13);
-  font-weight: 500;
-  letter-spacing: 0.42em;
-  padding-left: 0.42em;
-  color: var(--ink-3);
-  text-shadow: 0 1px 10px rgba(4, 8, 14, 0.8);
-}
-
+/* The title's base; the menu's poster lockup (menu-cinematic.css) sets the rest. */
 .wordmark-title {
   margin: 0;
   font-family: var(--font-title);
@@ -333,16 +323,6 @@
   background-clip: text;
   color: transparent;
   filter: drop-shadow(0 2px 18px rgba(4, 8, 14, 0.75)) drop-shadow(0 1px 2px rgba(4, 8, 14, 0.6));
-}
-
-.wordmark-en {
-  font-size: var(--fs-12);
-  font-weight: 600;
-  letter-spacing: 0.5em;
-  padding-left: 0.5em;
-  text-transform: uppercase;
-  color: var(--ink-2);
-  text-shadow: 0 1px 10px rgba(4, 8, 14, 0.8);
 }
 
 .mode-grid {
@@ -1724,12 +1704,6 @@
 
   .wordmark-title {
     font-size: clamp(34px, 6vw, 52px);
-  }
-
-  .wordmark-kicker,
-  .wordmark-en {
-    letter-spacing: 0.3em;
-    padding-left: 0.3em;
   }
 
   .mode-grid {

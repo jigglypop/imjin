@@ -10,7 +10,7 @@ export type Edition = 'ko' | 'en';
 /** Each screen's address in the Korean edition, and its name (Korean source text, translated through t()). */
 export const ROUTES: readonly { screen: RouteScreen; slug: string; name: string }[] = [
   { screen: 'menu', slug: '', name: '임진왜란' },
-  { screen: 'faction', slug: 'campaign', name: '진영 전역' },
+  { screen: 'faction', slug: 'campaign', name: '캠페인' },
   { screen: 'skirmish', slug: 'conquest', name: '쟁탈전' },
   { screen: 'select', slug: 'battles', name: '역사 전투' },
   { screen: 'online', slug: 'online', name: '온라인 대전' },

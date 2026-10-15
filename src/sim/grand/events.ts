@@ -9,7 +9,7 @@ import { note, ownedBy } from './world';
 import { supportReinforcements } from './support';
 
 /**
- * The scripted turning points of the war (진영 전역의 사건). Each is tied to a date, fires once when its turn begins
+ * The scripted turning points of the war (캠페인의 사건). Each is tied to a date, fires once when its turn begins
  * and gives each navy a card with a short text and two ways to answer. The player picks; the computer navies pick with a
  * generator forked from the campaign seed and the event, so the same war always unfolds the same way and the choice
  * does not disturb any other roll. What a choice does is a plain `Effect` (a purse, a squadron, a commander's rank, a
