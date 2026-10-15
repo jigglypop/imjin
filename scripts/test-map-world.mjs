@@ -18,7 +18,7 @@ try {
     bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent',
   });
   const path = join(temporary, 'map-world.mjs'); await writeFile(path, bundled.outputFiles[0].contents);
-  const { settlementPieces, faceSea, buildWorld, layoutSettlements, townPlan, townSize, workKind, anchorage, hullsFor, drawnKinds, hash, HULL_LENGTH, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, SHIP_CAP, formation, transitShare, transitSpot, pointAlong, buildSails, cardRect, overlaps, pickCards, WALL_KINDS, WATER_KINDS, FOOTPRINT, METRES_PER_RADIUS } = await import(pathToFileURL(path).href);
+  const { settlementPieces, faceSea, buildWorld, layoutSettlements, dryStretches, townPlan, townSize, workKind, anchorage, hullsFor, drawnKinds, hash, HULL_LENGTH, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, SHIP_CAP, formation, transitShare, transitSpot, pointAlong, buildSails, cardRect, overlaps, pickCards, WALL_KINDS, WATER_KINDS, FOOTPRINT, METRES_PER_RADIUS } = await import(pathToFileURL(path).href);
   const kinds = (level) => new Set(settlementPieces(level).map((p) => p.kind));
   const buildings = (level) => settlementPieces(level).filter((p) => !WALL_KINDS.has(p.kind)).length;
 
@@ -114,7 +114,23 @@ try {
     for (const k of ['jo_battery', 'jo_yard', 'jo_beacon']) assert.ok(kindsAt('p1').has(k), `p1 has its ${k}`);
     for (const k of ['wa_dock', 'wa_granary']) assert.ok(kindsAt('p2').has(k), `p2 has its ${k}`);
     assert.ok(places.some((s) => s.id === 'p1/beacon'), 'the beacon stands apart on its hill');
+    for (const s of places) for (const lane of s.grounds.lanes) for (let i = 1; i < lane.length; i++) for (let t = 0; t <= 1; t += 0.05) {
+      const x = lane[i - 1].x + (lane[i].x - lane[i - 1].x) * t, z = lane[i - 1].z + (lane[i].z - lane[i - 1].z) * t;
+      assert.ok(!coastSea(s.u + x * R, s.v + z * R * MAP_ASPECT), `${s.id}: a lane runs over the water at ${x.toFixed(2)},${z.toFixed(2)}`);
+    }
     assert.deepEqual(layoutSettlements(coastal, coastSea), places, 'the same ports lay out the same way');
+  });
+  check('a lane stops at the water and goes on where the land comes back', () => {
+    // A channel across the lane between x = 1 and x = 1.6.
+    const land = (x) => x < 1 || x > 1.6;
+    const runs = dryStretches([{ x: 0, z: 0 }, { x: 3, z: 0 }], 0, 0, land);
+    assert.equal(runs.length, 2);
+    assert.deepEqual(runs.map((r) => r.length), [2, 2], 'a straight stretch is its two ends');
+    assert.ok(runs.every((r) => r.every((p) => land(p.x))));
+    assert.ok(runs[0][0].x === 0 && runs[0][1].x > 0.94 && runs[1][0].x < 1.66 && runs[1][1].x === 3, 'cut where the water starts and ends');
+    assert.deepEqual(dryStretches([{ x: 0, z: 0 }, { x: 1, z: 0 }, { x: 1, z: 1 }], 0, 0, () => true), [[{ x: 0, z: 0 }, { x: 1, z: 0 }, { x: 1, z: 1 }]], 'its corners are kept');
+    assert.deepEqual(dryStretches([{ x: 0, z: 0 }, { x: 3, z: 0 }], 0, 0, (x) => x > 1.5 && x < 1.6), [], 'a sliver of land draws no lane');
+    assert.deepEqual(dryStretches([{ x: 2, z: 0 }, { x: 3, z: 0 }], -2, 0, (x) => x < 0.5), [[{ x: 2, z: 0 }, { x: 2.45, z: 0 }]], 'tested where the place stands');
   });
   check("no place of one port stands on another's", () => {
     const places = layoutSettlements(coastal, coastSea);

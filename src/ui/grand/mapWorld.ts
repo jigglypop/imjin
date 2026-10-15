@@ -288,6 +288,40 @@ export type IsSea = (u: number, v: number) => boolean;
 /** Which way (east, south) a port's places are shifted from its marker, by the side the label takes. */
 const LABEL_AWAY: Record<'b' | 't' | 'l' | 'r', [number, number]> = { b: [0, -1], t: [0, 1], l: [1, 0], r: [-1, 0] };
 
+/** How far apart a lane is tested for water, and the shortest stretch of one worth drawing, in radii. */
+const LANE_STEP = 0.05;
+const LANE_LEAST = 0.15;
+
+/**
+ * The stretches of a lane that run over land, the lane's points in radii from a place at (cx, cz): a lane stops at the
+ * first point of it found on the water and goes on where the land comes back, so no lane is drawn across a bay. A
+ * stretch shorter than LANE_LEAST is left out.
+ */
+export function dryStretches(lane: { x: number; z: number }[], cx: number, cz: number, land: (x: number, z: number) => boolean) {
+  const runs: { x: number; z: number }[][] = [];
+  let run: { x: number; z: number }[] = [];
+  for (let i = 0; i + 1 < lane.length; i += 1) {
+    const a = lane[i]!, b = lane[i + 1]!;
+    const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / LANE_STEP));
+    for (let k = i === 0 ? 0 : 1; k <= n; k += 1) {
+      const p = { x: a.x + ((b.x - a.x) * k) / n, z: a.z + ((b.z - a.z) * k) / n };
+      if (land(cx + p.x, cz + p.z)) run.push(p);
+      else if (run.length) {
+        runs.push(run);
+        run = [];
+      }
+    }
+  }
+  if (run.length) runs.push(run);
+  const length = (r: { x: number; z: number }[]) => r.reduce((n, p, j) => (j ? n + Math.hypot(p.x - r[j - 1]!.x, p.z - r[j - 1]!.z) : 0), 0);
+  // Each stretch keeps its ends and the lane's corners; the points tested in between lie on its straight runs.
+  return runs.filter((r) => length(r) >= LANE_LEAST).map((r) => r.filter((p, j) => {
+    if (j === 0 || j === r.length - 1) return true;
+    const a = r[j - 1]!, b = r[j + 1]!;
+    return Math.abs((p.x - a.x) * (b.z - p.z) - (p.z - a.z) * (b.x - p.x)) > 1e-9;
+  }));
+}
+
 /** Turns a place's pieces by `turn` (its x towards its z) round its centre. */
 export function turnPieces(pieces: Piece[], turn: number): Piece[] {
   const c = Math.cos(turn), s = Math.sin(turn);
@@ -436,12 +470,13 @@ export function layoutSettlements(regions: RegionView[], isSea?: IsSea): Settlem
     const keep = turnPieces(town.plan.pieces, turn).filter((p) => corners(p, town!.x, town!.z).every(([cx, cz]) => land(cx, cz)));
     const c = Math.cos(turn), s = Math.sin(turn);
     const rotate = (q: { x: number; z: number }) => ({ x: q.x * c - q.z * s, z: q.x * s + q.z * c });
-    const lanes = town.plan.grounds.lanes.map((lane) => lane.map(rotate));
+    const drawn = town.plan.grounds.lanes.map((lane) => lane.map(rotate));
     if (camp) {
       // A lane from the town's end out to the camp's gate.
       const gate = { x: camp.x + Math.cos(camp.turn) * (camp.r + 0.05) - town.x, z: camp.z + Math.sin(camp.turn) * (camp.r + 0.05) - town.z };
-      lanes.push([rotate({ x: 0.8, z: 0 }), gate]);
+      drawn.push([rotate({ x: 0.8, z: 0 }), gate]);
     }
+    const lanes = drawn.flatMap((lane) => dryStretches(lane, town!.x, town!.z, land));
     const fields = town.plan.grounds.fields.map((f) => ({ ...f, ...rotate(f), rot: f.rot + turn })).filter((f) => land(town!.x + f.x, town!.z + f.z));
     place(`${port.r.id}/town`, port.r.id, 'town', town.x, town.z, port.r.owner, 0, keep, { yard: 0, lanes, fields });
     taken.push({ x: town.x, z: town.z, r: town.plan.radius });
