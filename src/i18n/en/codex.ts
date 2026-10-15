@@ -132,7 +132,6 @@ export const EN_CODEX: Record<string, string> = {
   '정원은 5명으로, 키잡이 1명과 격군 4명입니다.': 'Its crew was five: a helmsman and four oarsmen.',
   '1744년 『속대전』에는 전국 군선 776척 가운데 318척이 사후선이었습니다.': 'The Sokdaejeon of 1744 lists 318 sahuseon among the 776 warships of the kingdom.',
   '밑판 길이는 21척 6촌(『전라우수영지』) 또는 24척(『여암전서』)입니다.': 'Its bottom plank was 21 cheok 6 chon (Jeolla Usuyeongji) or 24 cheok (Yeoam Jeonseo) long.',
-  '임진왜란': 'Imjin War',
   '징발한 어선': 'Requisitioned fishing boat',
   '전복을 따는 포작인의 배를 수군이 징발한 것입니다. 직접 싸우기보다 정찰과 연락, 짐 나르기를 맡았습니다.': "Boats of the abalone divers (pojak), requisitioned by the navy. Rather than fighting, they scouted, carried messages and hauled supplies.",
   '1592년 첫 출전 함대 85척 가운데 46척이 포작선이었습니다 (『임진장초』).': '46 of the 85 boats of the first sortie in 1592 were pojakseon (Imjin Jangcho).',
