@@ -17,6 +17,8 @@ export type Command =
   | { type: 'volley'; ids: number[]; side: number }
   | { type: 'formation'; ids: number[]; kind: FormationKind; cx: number; cz: number }
   | { type: 'cut'; ids: number[] }
+  /** The squadrons of these ships beat the drum to steady and rally their ships (the depth rules). */
+  | { type: 'drum'; ids: number[] }
   | { type: 'plan'; ids: number[]; plan: CrewPlan }
   | { type: 'build'; point: number; building: BuildingKind }
   | { type: 'recruit'; point: number; kind: ShipKind }
@@ -105,6 +107,8 @@ export function applyCommand(b: Battle, owner: number, cmd: Command, conquest: C
     }
     case 'cut':
       return b.cutGrapples(mine(cmd.ids));
+    case 'drum':
+      return b.drum(mine(cmd.ids));
     case 'plan': {
       const plan = cmd.plan;
       if (!Array.isArray(plan) || plan.length !== 4 || !finite(...plan)) return 0;

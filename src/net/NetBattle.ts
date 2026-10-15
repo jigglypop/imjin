@@ -135,7 +135,7 @@ export class NetBattle implements BattleListener {
       else if (e.type === 'removed') {
         const s = b.get(e.ship);
         if (s) s.alive = false;
-      }
+      } else if (e.type === 'drum') b.morale?.heard(e.ship);
     }
     for (const p of this.shots.values()) {
       // The exact parabola for the step, so a long frame (the fast approach) lands where many short sim steps would;
@@ -189,6 +189,8 @@ export class NetBattle implements BattleListener {
       s.remoteQueueCount = f.queuedWaypoints;
       if (b.profile !== 'historical') s.damageState = { ...f.damageState };
       s.supply = f.supply;
+      s.morale = f.morale;
+      s.moraleState = f.moraleState;
       const type = ORDER_NAMES[f.order] ?? 'auto';
       if (s.order.type !== type) s.order = { type, x: s.x, y: 0, z: s.z, targetId: f.targetId, leaderId: 0, dx: 0, dz: 0, face: s.heading, side: 0 } as unknown as Order;
       if (f.guns) {
