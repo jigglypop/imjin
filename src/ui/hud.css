@@ -2516,13 +2516,24 @@
     font-size: var(--fs-13);
   }
 
+  /* The maneuvers make a tab longer than one row: on a phone the row scrolls sideways instead of growing. */
   .app--compact .orders-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    display: flex;
     gap: 2px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .app--compact .orders-grid::-webkit-scrollbar {
+    display: none;
   }
 
   .app--compact .order {
     gap: 0;
+    flex: 0 0 18.5%;
+    scroll-snap-align: start;
   }
 
   .app--compact .order-icon {

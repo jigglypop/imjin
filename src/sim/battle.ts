@@ -1818,7 +1818,7 @@ export class Battle {
     const holding = this.maneuverRules?.holding(s) ?? false;
     const drift = anchored ? this.windDrift * (holding ? 0.3 : 1) : 0;
     const flow = this.flow ? this.flow.velocity(s.x, s.z, this.tide) : this.current;
-    const set = s.order.type === 'anchor' ? 0.15 : holding ? 0.3 : 1;
+    const set = s.order.type === 'anchor' || holding ? 0.15 : 1;
     const nx = s.x + Math.cos(s.heading) * s.speed * dt + (Math.cos(this.windAngle) * drift + flow.x * set) * dt;
     const nz = s.z + Math.sin(s.heading) * s.speed * dt + (Math.sin(this.windAngle) * drift + flow.z * set) * dt;
     if (this.flow && (flow.x || flow.z)) {

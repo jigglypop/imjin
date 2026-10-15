@@ -158,6 +158,8 @@ export class TacticalOverlay {
       case 'breach':
       case 'lure':
         drew = this.arrowLine(plan.x0, plan.z0, plan.x1, plan.z1, false);
+        lx = (plan.x0 + plan.x1) / 2;
+        lz = (plan.z0 + plan.z1) / 2;
         break;
       case 'blockade':
         drew = this.arrowLine(plan.x0, plan.z0, plan.x1, plan.z1, true);
@@ -197,7 +199,15 @@ export class TacticalOverlay {
       drew = this.circle(p.x0, p.z0, Math.max(40, r), toward + open, toward + Math.PI * 2 - open);
     } else drew = this.arrowLine(p.x0, p.z0, p.x1, p.z1, p.kind === 'pincer' || p.kind === 'blockade');
     ctx.setLineDash([]);
-    if (drew) this.label(p.x0, p.z0, t(MANEUVER_NAMES[p.kind]), WARN);
+    if (drew && p.kind === 'pincer') {
+      // The two wings close from the ends of the line on what lies at its middle.
+      const mx = (p.x0 + p.x1) / 2;
+      const mz = (p.z0 + p.z1) / 2;
+      ctx.lineWidth = 3;
+      this.arrowLine(p.x0, p.z0, p.x0 + (mx - p.x0) * 0.55, p.z0 + (mz - p.z0) * 0.55, false);
+      this.arrowLine(p.x1, p.z1, p.x1 + (mx - p.x1) * 0.55, p.z1 + (mz - p.z1) * 0.55, false);
+    }
+    if (drew) this.label((p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2, t(MANEUVER_NAMES[p.kind]), WARN);
     return drew;
   }
 

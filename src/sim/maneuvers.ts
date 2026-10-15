@@ -216,7 +216,7 @@ export class Maneuvers {
    */
   order(owner: number, ids: number[], kind: ManeuverKind, x0: number, z0: number, x1: number, z1: number, open = false): Plan | null {
     const b = this.b;
-    const ships = ids.map((id) => b.get(id)).filter((s): s is Ship => b.isActive(s) && s.moraleState !== 'routing');
+    let ships = ids.map((id) => b.get(id)).filter((s): s is Ship => b.isActive(s) && s.moraleState !== 'routing');
     if (!ships.length) return null;
     const team = ships[0]!.team;
     const plan: Plan = {
@@ -246,17 +246,27 @@ export class Maneuvers {
       layoutR: 0,
     };
     // A ship leaves whatever plan it was in for the new one.
+    const before = new Map(ships.map((s) => [s.id, { order: s.order, queue: s.orderQueue }]));
     for (const s of ships) {
       s.order = { type: 'maneuver', plan: plan.id };
       s.orderQueue = undefined;
       this.onStation.delete(s.id);
     }
     this.plans.set(plan.id, plan);
-    if (!this.lay(plan, ships)) {
-      for (const s of ships) s.order = { type: 'auto' };
+    const laid = this.lay(plan, ships);
+    for (const s of ships) {
+      if (laid && plan.ids.includes(s.id)) continue;
+      const was = before.get(s.id)!;
+      s.order = was.order.type === 'maneuver' ? { type: 'auto' } : was.order;
+      s.orderQueue = was.queue;
+    }
+    if (!laid) {
       this.plans.delete(plan.id);
       return null;
     }
+    ships = ships.filter((s) => plan.ids.includes(s.id));
+    // A ring has its stations from the moment it is ordered, not from the plan's next look.
+    if (plan.kind === 'crane' || plan.kind === 'encircle') this.layRing(plan, ships);
     this.hear(plan, ships);
     this.announce(plan);
     return plan;
@@ -279,12 +289,17 @@ export class Maneuvers {
         const sorted = [...ships].sort((p, q) => Math.atan2(p.z - z0, p.x - x0) - Math.atan2(q.z - z0, q.x - x0));
         for (const s of sorted) {
           const a = Math.atan2(s.z - z0, s.x - x0);
-          const spot = this.wetNear(x0, z0, a, ring, taken);
+          // A rim crowded or run aground on that side: the ship lies in a rank further back on its own side instead,
+          // and only then further round the rim, where the enemy might come on it before it comes into the zone.
+          let spot: Slot | null = null;
+          for (const turn of [0.6, Math.PI]) for (let rank = 0; rank < 5 && !spot; rank += 1) spot = this.wetNear(x0, z0, a, ring + rank * RANK_GAP, taken, turn);
           if (!spot) continue;
           taken.push(spot);
           plan.stations.set(s.id, spot);
         }
         if (!plan.stations.size) return false;
+        // A ship with no water to wait in keeps its old orders.
+        plan.ids = plan.ids.filter((id) => plan.stations.has(id));
         b.configure(plan.ids, { fireMode: 'hold', ...(b.night ? { lights: false } : {}) });
         return true;
       }
@@ -486,7 +501,8 @@ export class Maneuvers {
         if (plan.phase === 'forming' && ships.every((s) => this.onStation.has(s.id) || waited > 120)) this.setPhase(plan, 'waiting', null);
         if (plan.phase === 'forming' || plan.phase === 'waiting') {
           const trigger = this.ambushTrigger(plan, ships);
-          if (trigger || (ai && waited > AI_WAIT)) {
+          // The computer gives up waiting after a while, unless it lies in wait beside a person's ambush: theirs is the call.
+          if (trigger || (ai && waited > AI_WAIT && !this.besideHuman(plan))) {
             this.setPhase(plan, 'striking', trigger ?? this.signaller(ships));
             break;
           }
@@ -539,9 +555,18 @@ export class Maneuvers {
   /** The first enemy to find an ambush: one inside its zone, one close to an ambusher, or a shot landing on one. */
   private ambushTrigger(plan: Plan, ships: Ship[]): Ship | null {
     const b = this.b;
+    // An enemy inside the zone and within reach of the guns of the ships on its side: the zone's far rim is out of range
+    // of the stations on the near one, and the first volley is the one that counts.
     let found: Ship | null = null;
     b.near(plan.x0, plan.z0, plan.r, (o) => {
-      if (!found && o.team !== plan.team && b.isActive(o) && b.canSee(o, hyp(o.x - plan.x0, o.z - plan.z0), plan.team)) found = o;
+      if (found || o.team === plan.team || !b.isActive(o) || !b.canSee(o, hyp(o.x - plan.x0, o.z - plan.z0), plan.team)) return;
+      for (const s of ships) {
+        const reach = this.range(s) * 0.85;
+        if ((o.x - s.x) ** 2 + (o.z - s.z) ** 2 < reach * reach) {
+          found = o;
+          return;
+        }
+      }
     });
     if (found) return found;
     for (const s of ships) {
@@ -554,6 +579,17 @@ export class Maneuvers {
       if (hyp(other.x0 - plan.x0, other.z0 - plan.z0) < AMBUSH_JOIN) return this.members(other)[0] ?? null;
     }
     return null;
+  }
+
+  /** Whether a person's ambush on the same side is waiting close by. */
+  private besideHuman(plan: Plan) {
+    const b = this.b;
+    for (const other of this.plans.values()) {
+      if (other === plan || other.team !== plan.team || other.kind !== 'ambush' || other.phase === 'striking' || other.phase === 'done') continue;
+      const first = b.get(other.ids[0] ?? 0);
+      if (first && !b.isAi(first) && hyp(other.x0 - plan.x0, other.z0 - plan.z0) < AMBUSH_JOIN) return true;
+    }
+    return false;
   }
 
   /** Changes a plan's phase. Each ship hears it after its delay from `from`, the ship that gave the signal. */
@@ -578,10 +614,10 @@ export class Maneuvers {
           plan.layout.set(s.id, { a: st ? Math.atan2(st.z - plan.z0, st.x - plan.x0) : Math.atan2(s.z - plan.z0, s.x - plan.x0), rank: 0 });
         }
         this.surprise.set(plan.id, b.time + SURPRISE_TIME);
-        // Guns run out and every broadside that bears goes off at once.
+        // Guns run out and every broadside with an enemy in reach goes off at once.
         const ids = ships.map((s) => s.id);
         b.configure(ids, { fireMode: 'free' });
-        b.volley(ids, 3);
+        b.volley(ships.filter((s) => this.enemyWithin(s, this.range(s))).map((s) => s.id), 3);
       }
       if (plan.kind === 'pincer') {
         // The target is what lies between the two wings, held from now on by the frame.
@@ -860,7 +896,8 @@ export class Maneuvers {
     const len = hyp(plan.x1 - plan.x0, plan.z1 - plan.z0) || 1;
     const ux = (plan.x1 - plan.x0) / len;
     const uz = (plan.z1 - plan.z0) / len;
-    return [{ x: plan.x0, z: plan.z0 }, { x: plan.x1, z: plan.z1 }, this.wetSpot(plan.x1 + ux * 350, plan.z1 + uz * 350)];
+    // Ends drawn on the shore are taken at the nearest water a column can pass.
+    return [this.wetSpot(plan.x0, plan.z0), this.wetSpot(plan.x1, plan.z1), this.wetSpot(plan.x1 + ux * 350, plan.z1 + uz * 350)];
   }
 
   private columnLead(plan: Plan) {
@@ -1402,9 +1439,10 @@ export class Maneuvers {
   }
 
   /** A station on a circle near a bearing, on water and clear of the stations already taken. */
-  private wetNear(cx: number, cz: number, a: number, r: number, taken: Slot[]): Slot | null {
+  private wetNear(cx: number, cz: number, a: number, r: number, taken: Slot[], turn = Math.PI): Slot | null {
     for (let k = 0; k < 40; k += 1) {
       const da = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (SPACING / r) * 0.5;
+      if (Math.abs(da) > turn) break;
       for (const dr of [0, -60, 60, -120, 120]) {
         const rr = Math.max(80, r + dr);
         const x = cx + Math.cos(a + da) * rr;
