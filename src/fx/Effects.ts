@@ -303,7 +303,7 @@ export class Effects {
       this.fire.emit({ x, y, z, vx: dx * sp + rnd(-4, 4), vy: dy * sp + rnd(0, 5), vz: dz * sp + rnd(-4, 4), life: rnd(0.4, 1), size0: 0.25, size1: 0.08, heat: 1, drag: 1, lift: -6, wind: 0.2 });
     }
     // The jet: dense, yellowish-grey powder smoke shot out of the bore and stopped by the air within ten metres or so.
-    for (let i = 0; i < Math.round(4 + 3 * w); i += 1) {
+    for (let i = 0; i < Math.round(3 + 3 * w); i += 1) {
       const sp = rnd(22, 48) * (0.8 + 0.4 * w);
       const tone = rnd(0.56, 0.66);
       this.smoke.emit({ x: x + dx * 0.9, y: y + dy * 0.9, z: z + dz * 0.9, vx: dx * sp + rnd(-1.5, 1.5), vy: dy * sp + rnd(-0.5, 1.5), vz: dz * sp + rnd(-1.5, 1.5), life: rnd(9, 15), size0: rnd(1.4, 2) * scale, size1: rnd(8, 12) * scale, alpha: rnd(0.62, 0.78), r: tone, g: tone * 0.97, b: tone * 0.9, drag: 3.4, lift: 0.14, wind: 1, spin: 0.25, growth: 5 });
@@ -319,7 +319,7 @@ export class Effects {
     // The cloud the jet rolls over into: puffs of every size round its first metres, swelling as much up and sideways
     // as along the bore, rising slowly and rolling as they grow, lasting long enough that the next guns of a broadside
     // fire into the smoke of the first.
-    const puffs = Math.round(8 + 8 * w);
+    const puffs = Math.round(5 + 6 * w);
     for (let i = 0; i < puffs; i += 1) {
       const along = rnd(0.5, 8) * scale;
       const sp = rnd(2, 14) * scale;
@@ -331,7 +331,7 @@ export class Effects {
         vx: dx * sp + rnd(-3.5, 3.5),
         vy: dy * sp + rnd(-0.5, 3),
         vz: dz * sp + rnd(-3.5, 3.5),
-        life: rnd(20, 34),
+        life: rnd(16, 28),
         size0: rnd(1.2, 2.6) * scale,
         size1: rnd(10, 19) * scale,
         alpha: rnd(0.4, 0.62),
@@ -348,7 +348,7 @@ export class Effects {
     // The blast ring: smoke thrown out sideways round the bore and slowed at once.
     const px = -dz;
     const pz = dx;
-    const ring = Math.round(5 + 4 * w);
+    const ring = Math.round(4 + 3 * w);
     for (let i = 0; i < ring; i += 1) {
       const a = ((i + Math.random() * 0.6) / ring) * Math.PI * 2;
       const sp = rnd(8, 14) * scale;
@@ -366,7 +366,7 @@ export class Effects {
       this.spray.emit({ x: cx + Math.cos(a) * 1.2, y: h + 0.2, z: cz + Math.sin(a) * 1.2, vx: Math.cos(a) * out + dx * 4, vy: rnd(0.6, 2.2), vz: Math.sin(a) * out + dz * 4, life: rnd(0.6, 1), size0: 0.5, size1: rnd(1.8, 3) * (0.7 + 0.5 * w), alpha: 0.45, r: 0.92, g: 0.95, b: 0.97, drag: 2.2, lift: -9.8, wind: 0.3 });
     }
     this.wake?.stamp(cx, cz, Math.atan2(dz, dx), 6 + 6 * w, 0.35 + 0.35 * w, 1, 1.2);
-    this.shakeAt(x, y, z, 0.2 + 0.4 * w, 45);
+    this.shakeAt(x, y, z, 0.12 + 0.25 * w, 20);
     // The flash lights the hull, the water and the smoke for a few frames: warm, close and gone. At night the eye has
     // opened up for it, so the same light is the brightest thing on the water.
     this.light(x + dx * 2.5, y + 0.8, z + dz * 2.5, 700 + 1600 * w, 0.09, 1, 0.66, 0.36, 30 + 30 * w, 30);
@@ -464,9 +464,12 @@ export class Effects {
     const sh = shell ? Math.hypot(shell.vx, shell.vz) || 1 : 1;
     const bx = shell ? -shell.vx / sh : 0;
     const bz = shell ? -shell.vz / sh : 0;
-    this.splinters(x, y, z, this.n((6 + damage * 0.8) * power), power, bx, bz);
+    this.splinters(x, y, z, this.n((6 + damage * 0.8) * power), power, bx, bz, ammo === 'arrow' ? 0.7 : 0.45);
+    // A great arrow breaks whole boards out of the side, half a metre to a metre and a half long.
+    if (ammo === 'arrow') for (let i = 0; i < this.n(2 + damage * 0.08); i += 1) this.debris.spawn(Piece.Plank, x, y, z, bx * rnd(2, 6) + rnd(-2, 2), rnd(2, 6), bz * rnd(2, 6) + rnd(-2, 2), rnd(0.6, 1.5), rnd(0.18, 0.3), rnd(0.04, 0.07), rnd(14, 22), 1.2);
     this.fire.emit({ x: x + bx * 0.6, y, z: z + bz * 0.6, life: 0.07, size0: 1.3 * power, size1: 2.6 * power, heat: 1, drag: 4, wind: 0 });
-    this.sparks(x, y, z, 4 + damage * 0.35, 16, 14);
+    // Wood does not spark: the few there are come off the nails and iron fittings the shot tears through.
+    this.sparks(x, y, z, ammo === 'arrow' ? 2 + damage * 0.1 : 3 + damage * 0.2, 16, 14);
     // Pale dust off the torn planks and a darker puff of powder and wood smoke, both blown out of the hole.
     for (let i = 0; i < 4; i += 1) {
       this.smoke.emit({ x: x + bx * 0.8, y, z: z + bz * 0.8, vx: bx * rnd(2, 6) + rnd(-2.5, 2.5), vy: rnd(0.6, 3), vz: bz * rnd(2, 6) + rnd(-2.5, 2.5), life: rnd(2.5, 4.5), size0: 0.9, size1: rnd(4.5, 7.5) * power, alpha: 0.42, r: 0.6, g: 0.55, b: 0.5, drag: 1.8, lift: 0.18, wind: 0.8 });
@@ -486,12 +489,13 @@ export class Effects {
   }
 
   /**
-   * Splinters of a shot hole: mostly small, dark tarred pieces, some pale torn grain, a board now and then. Most fly
-   * back out of the struck face (bx, bz), the rest through the hull; none higher than a mast.
+   * Splinters of a shot hole: mostly small, dark tarred pieces, some pale torn grain, a board now and then. `out` of
+   * them fly back out of the struck face (bx, bz), the rest on through the hull: a ball drives most of its splinters
+   * inboard, where they did the killing; a great arrow smashes more of the face it strikes. None goes higher than a mast.
    */
-  private splinters(x: number, y: number, z: number, count: number, power: number, bx: number, bz: number) {
+  private splinters(x: number, y: number, z: number, count: number, power: number, bx: number, bz: number, out: number) {
     for (let i = 0; i < count; i += 1) {
-      const back = bx === 0 && bz === 0 ? 0 : Math.random() < 0.7 ? 1 : -0.6;
+      const back = bx === 0 && bz === 0 ? 0 : Math.random() < out ? 1 : -0.6;
       const sp = rnd(3, 10) * power;
       const vx = bx * back * sp + rnd(-3, 3);
       const vz = bz * back * sp + rnd(-3, 3);
