@@ -19,28 +19,28 @@ export type KitLod = 0 | 1;
 
 // ---------- looks ----------
 
-const koreanRoof = (k: Kit, official = false): RoofLook => ({
+export const koreanRoof = (k: Kit, official = false): RoofLook => ({
   tile: k.P('giwa'), edge: k.P('giwa', { tint: [0.72, 0.72, 0.75] }), under: official ? k.P('dancheong') : k.P('timber', { tint: [1.15, 1.1, 1.05] }),
   ridge: k.P('ridge'), gable: official ? k.P('dancheong', { tint: [0.9, 0.9, 0.9] }) : k.P('plaster', { tint: [0.95, 0.93, 0.9] }), ends: 'curl',
 });
-const japaneseRoof = (k: Kit): RoofLook => ({
+export const japaneseRoof = (k: Kit): RoofLook => ({
   tile: k.P('kawara'), edge: k.P('kawara', { tint: [0.8, 0.8, 0.83] }), under: k.P('plaster', { tint: [0.9, 0.9, 0.9] }),
   ridge: k.P('ridge'), gable: k.P('plaster'), ends: 'fish', end: k.P('gold'),
 });
-const mingRoof = (k: Kit, glazed = false): RoofLook => ({
+export const mingRoof = (k: Kit, glazed = false): RoofLook => ({
   tile: k.P(glazed ? 'glazed' : 'tiles'), edge: k.P(glazed ? 'glazed' : 'tiles', { tint: [0.74, 0.72, 0.7] }), under: k.P('beam'),
   ridge: k.P('ridge', glazed ? { tint: [1.08, 0.98, 0.78] } : {}), gable: k.P('lacquer'), ends: 'hook',
 });
 /** Openings read as shadow: the timber cell darkened almost to black. */
-const shadow = (k: Kit) => k.P('timber', { tint: [0.13, 0.12, 0.11] });
+export const shadow = (k: Kit) => k.P('timber', { tint: [0.13, 0.12, 0.11] });
 
 /** Runs `fn` turned by `angle` about the vertical and moved to (x, y, z). */
-const at = (k: Kit, x: number, y: number, z: number, angle: number, fn: () => void) => k.b.with(compose(xlate(x, y, z), rotY(angle)), fn);
+export const at = (k: Kit, x: number, y: number, z: number, angle: number, fn: () => void) => k.b.with(compose(xlate(x, y, z), rotY(angle)), fn);
 
 // ---------- shared parts ----------
 
 /** A gabled tile coping along x from x0 to x1 on a wall top at y, spanning z0..z1, `h` high. */
-function coping(k: Kit, tile: Paint, end: Paint, x0: number, x1: number, y: number, z0: number, z1: number, h: number) {
+export function coping(k: Kit, tile: Paint, end: Paint, x0: number, x1: number, y: number, z0: number, z1: number, h: number) {
   const zm = (z0 + z1) / 2, s = Math.hypot(h, (z1 - z0) / 2);
   face(k, tile, [[x0, y, z1], [x1, y, z1], [x1, y + h, zm], [x0, y + h, zm]], [0, 1, 1], [[x0, 0], [x1, 0], [x1, s], [x0, s]]);
   face(k, tile, [[x1, y, z0], [x0, y, z0], [x0, y + h, zm], [x1, y + h, zm]], [0, 1, -1], [[-x1, 0], [-x0, 0], [-x0, s], [-x1, s]]);
@@ -52,7 +52,7 @@ function coping(k: Kit, tile: Paint, end: Paint, x0: number, x1: number, y: numb
  * with `n` merlons rising from it, each with a tile coping when `cap` is given and a loophole facing +z. Far away it is
  * one band.
  */
-function crenels(k: Kit, body: Paint, cap: Paint | null, x0: number, x1: number, y: number, z0: number, z1: number, n: number, o: { base: number; top: number; gap: number; hole?: boolean }) {
+export function crenels(k: Kit, body: Paint, cap: Paint | null, x0: number, x1: number, y: number, z0: number, z1: number, n: number, o: { base: number; top: number; gap: number; hole?: boolean }) {
   if (!k.near) {
     block(k, body, [x0, y - 0.05, z0], [x1, y + o.top, z1]);
     if (cap) coping(k, cap, body, x0, x1, y + o.top, z0 - 0.12, z1 + 0.12, 0.26);
@@ -79,7 +79,7 @@ function rampart(k: Kit, p: Paint, top: Paint, y: number, outFoot: number, outTo
 }
 
 /** A cannon on its carriage at (x, y), its muzzle at z, firing along +z; far away just the barrel. */
-function cannon(k: Kit, x: number, y: number, z: number, carriage: Paint, bronze: Paint) {
+export function cannon(k: Kit, x: number, y: number, z: number, carriage: Paint, bronze: Paint) {
   if (!k.near) {
     cylinder(k.b, bronze, [x, y + 0.6, z - 2.6], [x, y + 0.6, z + 0.15], 0.34, 0.26, 3, false);
     return;
@@ -89,14 +89,14 @@ function cannon(k: Kit, x: number, y: number, z: number, carriage: Paint, bronze
 }
 
 /** A flagpole at x with a banner flying towards +x from its top, both faces of the cloth drawn. */
-function banner(k: Kit, pole: Paint, cloth_: Paint, x: number, height: number, w: number, h: number) {
+export function banner(k: Kit, pole: Paint, cloth_: Paint, x: number, height: number, w: number, h: number) {
   column(k, pole, x, 0, 0.09, 0.07, -0.5, height, k.near ? 6 : 4, true);
   if (k.near) spike(k.b, pole, [x, height, 0], [0, 1, 0], 0.13, 0.42, 4);
   cloth(k.b, cloth_, [x + 0.07, height - 0.25, 0], [w, 0, 0], [0, -h, 0], { nu: k.near ? 3 : 1, nv: 1, wave: k.near ? 0.12 : 0 });
 }
 
 /** A tall Japanese nobori: a pole with an arm across its top and the long cloth hanging from both, `s` times its usual size. */
-function nobori(k: Kit, pole: Paint, cloth_: Paint, x: number, s = 1) {
+export function nobori(k: Kit, pole: Paint, cloth_: Paint, x: number, s = 1) {
   column(k, pole, x, 0, 0.08 * s, 0.06 * s, -0.5, 7.6 * s, k.near ? 6 : 4, true);
   block(k, pole, [x, 7.2 * s, -0.05 * s], [x + 1.02 * s, 7.32 * s, 0.05 * s], 0);
   cloth(k.b, cloth_, [x + 0.08 * s, 7.2 * s, 0], [0.9 * s, 0, 0], [0, -4.6 * s, 0], { nu: 1, nv: k.near ? 3 : 1, wave: k.near ? 0.07 * s : 0 });
@@ -115,7 +115,7 @@ function standard(k: Kit, flag: Paint, foot: Paint) {
 }
 
 /** A stake of a stockade from below the ground to `h`, `w` thick, sharpened to a point when `point`. */
-function stake(k: Kit, p: Paint, x: number, w: number, h: number, point: boolean) {
+export function stake(k: Kit, p: Paint, x: number, w: number, h: number, point: boolean) {
   post(k, p, x, 0, w, -0.6, h);
   const r = w / 2;
   if (!point) { block(k, p, [x - r, h, -r], [x + r, h + 0.01, r], NY); return; }
@@ -131,7 +131,7 @@ function stake(k: Kit, p: Paint, x: number, w: number, h: number, point: boolean
  * A hull on the stocks: keel, ribs bent from it and a few strakes, `len` long and `beam` wide, its keel at y on a slip
  * that sinks `drop` metres from bow (+z) to stern. `flat` widens the floor (a junk's) and `square` the ends.
  */
-function hullFrame(k: Kit, timber: Paint, plank: Paint, len: number, beam: number, depth: number, y: number, drop: number, o: { flat?: number; square?: number } = {}) {
+export function hullFrame(k: Kit, timber: Paint, plank: Paint, len: number, beam: number, depth: number, y: number, drop: number, o: { flat?: number; square?: number } = {}) {
   const yAt = (z: number) => y - (z / len) * drop;
   const half = (z: number) => (beam / 2) * Math.pow(Math.max(0.02, 1 - Math.pow(Math.abs(z) / (len / 2), 2 + (o.square ?? 0) * 4)), 0.5);
   block(k, timber, [-0.22, yAt(0) - 0.25, -len / 2], [0.22, yAt(0) + 0.15, len / 2], NY);
@@ -280,7 +280,7 @@ function fortGate(k: Kit) {
  * A gate block 2W by 2D by H with an arched passage `a` either side of its axis, springing at `spring`: two piers, the
  * vault, the masonry over it and the closed doors inside. Far away one block with the arch drawn dark on both faces.
  */
-function arched(k: Kit, stone: Paint, gate: Paint, W: number, D: number, H: number, a: number, spring: number) {
+export function arched(k: Kit, stone: Paint, gate: Paint, W: number, D: number, H: number, a: number, spring: number) {
   const crown = spring + a;
   if (!k.near) {
     block(k, stone, [-W, -2.2, -D], [W, H, D]);
@@ -480,7 +480,7 @@ function waTower(k: Kit) {
 }
 
 /** The black boarding (shitami-itabari) round the lower part of a castle storey `hx` by `hz`, from y0 to y1. */
-function boardsBelow(k: Kit, hx: number, hz: number, y0: number, y1: number) {
+export function boardsBelow(k: Kit, hx: number, hz: number, y0: number, y1: number) {
   const boards = k.P('boards');
   walls(k, boards, rect(-hx - 0.03, -hz - 0.03, hx + 0.03, hz + 0.03), y0, y1);
 }
@@ -692,7 +692,7 @@ function tree(k: Kit) {
 }
 
 /** A low-poly round clump of leaves, flattened a little, darker underneath. */
-function crown(k: Kit, p: Paint, cx: number, cy: number, cz: number, r: number) {
+export function crown(k: Kit, p: Paint, cx: number, cy: number, cz: number, r: number) {
   const rows = k.near ? 4 : 3, seg = k.near ? 7 : 5;
   const P: V3[][] = [];
   for (let i = 0; i <= rows; i += 1) {
