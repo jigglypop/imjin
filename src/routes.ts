@@ -91,7 +91,7 @@ export function pickEdition(query: string | null, path: Edition | null, stored: 
  * dropped from the address once the player moves to another screen, so a reload does not start the battle again.
  * Every other parameter (lang, q, lv, webgl, map, hud, dpr, sky, sea, paused and the other switches) stays.
  */
-export const LAUNCH_PARAMS: readonly string[] = ['scenario', 'side', 'conquest', 'me', 'foe', 'size', 'seed', 'gallery', 'cam', 'follow', 'dist', 'pitch', 'yaw', 'warm', 'cine', 'tutorial'];
+export const LAUNCH_PARAMS: readonly string[] = ['scenario', 'side', 'conquest', 'me', 'foe', 'size', 'seed', 'gallery', 'kind', 'cam', 'follow', 'dist', 'pitch', 'yaw', 'warm', 'cine', 'tutorial'];
 
 /** `search` ('' or '?a=1&b=2') without the named parameters. The rest keeps its exact spelling and order. */
 export function withoutParams(search: string, names: readonly string[]): string {
