@@ -125,7 +125,6 @@ export class Effects {
     this.mun.onLand = this.onRocketLand;
     this.blaze = new ShipFires({
       views,
-      smoke: this.smoke,
       spray: this.spray,
       streaks: this.streaks,
       debris: this.debris,

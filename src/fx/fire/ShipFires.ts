@@ -6,6 +6,7 @@ import { waveField } from '../../ocean/waves';
 import type { ParticleLayer, StreakLayer } from '../ParticleLayer';
 import { Piece, type DebrisField } from '../Debris';
 import { FlameLayer } from './FlameLayer';
+import { SmokeColumn } from './SmokeColumn';
 import { burnSites, Site, type BurnSite } from './sites';
 
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
@@ -19,7 +20,6 @@ export type FireLight = (x: number, y: number, z: number, intensity: number, dis
 
 export type ShipFiresOptions = {
   views: ShipViews;
-  smoke: ParticleLayer;
   spray: ParticleLayer;
   streaks: StreakLayer;
   debris: DebrisField;
@@ -69,6 +69,7 @@ const PYRE_LIFE = 55;
 export class ShipFires {
   readonly group = new Group();
   readonly flames: FlameLayer;
+  readonly plume: SmokeColumn;
   private readonly blazes = new Map<number, Blaze>();
   private readonly pyres: Pyre[] = [];
   private readonly lastHit = new Map<number, { x: number; y: number; z: number; t: number }>();
@@ -81,9 +82,10 @@ export class ShipFires {
   private windZ = 1.6;
 
   constructor(private readonly o: ShipFiresOptions) {
-    this.flames = new FlameLayer(Math.round(2600 * o.tier));
+    this.flames = new FlameLayer(Math.round(1400 * o.tier));
+    this.plume = new SmokeColumn(Math.round(3600 * o.tier));
     this.siteCount = Math.round(30 * Math.max(0.5, o.tier));
-    this.group.add(this.flames.sprite);
+    this.group.add(this.plume.sprite, this.flames.sprite);
   }
 
   setKeep(keep: number) {
@@ -95,6 +97,7 @@ export class ShipFires {
     this.pyres.length = 0;
     this.lastHit.clear();
     this.flames.clear();
+    this.plume.clear();
   }
 
   /** Ship space of a world point on a ship, from its position, heading and heave (its pitch and roll are small here). */
@@ -133,10 +136,10 @@ export class ShipFires {
     let best = 0;
     for (let i = 1; i < b.sites.length; i += 1) if (b.dist[i]! < b.dist[best]!) best = i;
     const s = b.sites[best]!;
-    for (let i = 0; i < 4; i += 1) this.flames.emit({ ship: id, site: best, x: s.x + rnd(-0.8, 0.8), y: s.y, z: s.z + rnd(-0.6, 0.6), leanX: 0, leanZ: 0, height: rnd(2.5, 4.5), width: rnd(1.4, 2.2), life: rnd(0.4, 0.8), heat: 1, rise: 2.5 });
+    for (let i = 0; i < 4; i += 1) this.flames.emit({ ship: id, site: best, x: s.x + rnd(-0.8, 0.8), y: s.y, z: s.z + rnd(-0.6, 0.6), leanX: 0, leanZ: 0, height: rnd(1.6, 2.6), width: rnd(1.2, 1.8), life: rnd(0.4, 0.8), heat: 1, alpha: 0.8, rise: 2 });
     this.o.views.localToWorld(id, s.x, s.y + 1, s.z, this.p);
     this.sparks(this.p.x, this.p.y, this.p.z, 14, 9);
-    this.o.light(this.p.x, this.p.y + 2, this.p.z, 14000, 200, 1, 0.5, 0.18);
+    this.o.light(this.p.x, this.p.y + 2, this.p.z, 9000, 180, 1, 0.5, 0.18);
   }
 
   private blazeOf(ship: Ship) {
@@ -235,32 +238,33 @@ export class ShipFires {
     const k = this.keep;
     const c = Math.cos(ship.heading);
     const n = Math.sin(ship.heading);
-    // Flames: a few tongues a second from every burning place, more the harder it burns.
-    b.flameAcc = Math.min(40, b.flameAcc + total * 6 * k * detail * Math.min(1, room * 2.5) * dt);
+    // Flames: low and mostly inside the smoke. What shows of the fire is its light: a bed of glow along the burning
+    // timbers with short tongues licking out of it, and out of the gun ports.
+    b.flameAcc = Math.min(30, b.flameAcc + total * 3.2 * k * detail * Math.min(1, room * 2.5) * dt);
     while (b.flameAcc >= 1) {
       b.flameAcc -= 1;
       const i = hot[Math.floor(Math.random() * hot.length)]!;
       const s = b.sites[i]!;
       const heat = b.heat[i]!;
-      const tall = s.kind === Site.Upper || s.kind === Site.Rig ? 1.25 : s.kind === Site.Port ? 0.7 : 1;
-      const bed = Math.random() < 0.18;
-      const height = (bed ? rnd(1, 1.8) : (1.3 + 4.6 * heat) * rnd(0.65, 1.3)) * s.size * tall * scale * (detail < 1 ? grow * 1.3 : 1);
-      const width = bed ? height * rnd(1.2, 1.7) : height * rnd(0.3, 0.46);
+      const bed = Math.random() < 0.4;
+      const height = (bed ? rnd(0.6, 1.1) : (0.5 + 1.7 * heat) * rnd(0.6, 1.2)) * s.size * scale * (detail < 1 ? grow : 1);
+      const width = bed ? height * rnd(1.6, 2.4) : height * rnd(0.45, 0.65);
       // A gun port's flames billow out of the hull and then rise; the rest lean only with the wind.
       const ox = (s.outX * c - s.outZ * n) * 0.9;
       const oz = (s.outX * n + s.outZ * c) * 0.9;
-      this.flames.emit({ ship: ship.id, site: i, x: s.x + rnd(-1, 1), y: s.y, z: s.z + rnd(-0.6, 0.6), leanX: ox, leanZ: oz, height, width, life: bed ? rnd(0.8, 1.4) : rnd(0.5, 1.1), heat: heat * rnd(0.75, 1), alpha: bed ? 0.45 : 0.8, rise: rnd(0.6, 2) });
+      this.flames.emit({ ship: ship.id, site: i, x: s.x + rnd(-1, 1), y: s.y - 0.15, z: s.z + rnd(-0.6, 0.6), leanX: ox, leanZ: oz, height, width, life: bed ? rnd(0.8, 1.4) : rnd(0.4, 0.9), heat: heat * rnd(0.7, 1), alpha: bed ? 0.5 : 0.75, rise: rnd(0.4, 1.2) });
     }
-    // Smoke: a column from the flames' tips, black-brown and lit from below while it is low. A small fire smoulders grey.
-    b.smokeAcc = Math.min(8, b.smokeAcc + (2 + 10 * level) * k * dt);
-    const sooty = smooth(0.15, 0.5, level);
+    // Smoke: the most of what a burning ship shows. Thick black-brown billows pour off the burning timbers, close over
+    // the flames, rise in a column lit orange from below and lean off downwind. A small fire smoulders grey.
+    const sooty = smooth(0.15, 0.55, level);
+    const pour = (4 + 22 * level) * k * Math.max(0.5, this.o.tier) * Math.min(1, this.plume.room * 3);
+    b.smokeAcc = Math.min(10, b.smokeAcc + pour * dt);
     while (b.smokeAcc >= 1) {
       b.smokeAcc -= 1;
       const i = hot[Math.floor(Math.random() * hot.length)]!;
       const s = b.sites[i]!;
-      views.localToWorld(ship.id, s.x, s.y + 2 + 3 * b.heat[i]!, s.z, this.q);
-      const g = 0.27 - 0.2 * sooty;
-      this.o.smoke.emit({ x: this.q.x, y: this.q.y, z: this.q.z, vx: rnd(-0.6, 0.6), vy: rnd(4.5, 7.5) * (0.6 + 0.4 * level), vz: rnd(-0.6, 0.6), life: rnd(18, 28), size0: rnd(2, 3) * scale, size1: rnd(12, 20) * (0.55 + 0.6 * level) * scale, alpha: 0.5 + 0.25 * sooty, r: g * 1.12, g: g * 1.0, b: g * 0.88, drag: 0.3, lift: 0.9, wind: 0.85, heat: 0.4 + 0.6 * level, spin: 0.15 });
+      views.localToWorld(ship.id, s.x + rnd(-1, 1), s.y + 0.8 + 1.2 * b.heat[i]!, s.z + rnd(-0.8, 0.8), this.q);
+      this.plume.emit({ x: this.q.x, y: this.q.y, z: this.q.z, vx: rnd(-0.8, 0.8), vy: rnd(4, 7) * (0.6 + 0.4 * level), vz: rnd(-0.8, 0.8), life: rnd(26, 36) * (0.7 + 0.3 * level), size0: rnd(4, 7) * scale, size1: rnd(30, 50) * (0.5 + 0.7 * level) * scale, alpha: 0.6 + 0.38 * sooty, shade: 0.24 - 0.17 * sooty, glow: b.heat[i]! * (0.5 + 0.5 * level), baseY: s.y, drag: 0.35, lift: 1.1 + 0.4 * level, wind: 0.8 });
     }
     // Sparks and embers going up in the heat and drifting off downwind.
     b.emberAcc = Math.min(20, b.emberAcc + (2 + 16 * level) * k * dt);
@@ -285,16 +289,22 @@ export class ShipFires {
         this.sparks(this.q.x, this.q.y, this.q.z, 8, 5);
       }
     }
-    // Firelight: one flickering light at the fire's heart, on the water and the hulls around.
+    // Firelight: one flickering light for the whole fire. It stands off the hull on the side the camera looks from, at
+    // deck height: inside the upper works it burnt the roofs over it white, out here it lights the hull side, the water
+    // and the ships around as a big fire seen through its smoke does.
     const t = waveField.time + ship.id * 1.37;
     const flicker = 0.78 + 0.12 * Math.sin(t * 9.1) + 0.07 * Math.sin(t * 23.3 + 1.1) + 0.06 * (Math.random() - 0.5);
-    this.o.light(b.cx, b.cy + 4 + 2 * level, b.cz, 3500 * level * scale * flicker, 120 + 60 * level, 1, 0.46 + 0.05 * flicker, 0.15);
+    const tx = this.cam.x - b.cx;
+    const tz = this.cam.z - b.cz;
+    const off = (ship.spec.beam * 0.5 + 7) / (Math.hypot(tx, tz) || 1);
+    // It grows with the fire much faster than the fire itself: a blaze lights the water a hundred metres round.
+    this.o.light(b.cx + tx * off, b.cy + 1.5, b.cz + tz * off, (300 + 2600 * Math.pow(level, 1.5)) * scale * flicker, 120 + 120 * level, 1, 0.42 + 0.06 * flicker, 0.13);
   }
 
   /** Steam bursting off where burning timber meets the sea: white, fast and short-lived, with a hiss. */
   private steam(x: number, y: number, z: number, size: number) {
     const count = Math.max(2, Math.round((3 + 6 * size) * this.keep));
-    for (let i = 0; i < count; i += 1) this.o.smoke.emit({ x: x + rnd(-1, 1), y: y + rnd(0, 0.6), z: z + rnd(-1, 1), vx: rnd(-1.2, 1.2), vy: rnd(3, 7), vz: rnd(-1.2, 1.2), life: rnd(4, 8), size0: rnd(1.2, 2.2), size1: rnd(7, 13) * (0.6 + 0.4 * size), alpha: 0.55, r: 0.9, g: 0.91, b: 0.92, drag: 0.9, lift: 0.7, wind: 0.8 });
+    for (let i = 0; i < count; i += 1) this.plume.emit({ x: x + rnd(-1, 1), y: y + rnd(0, 0.6), z: z + rnd(-1, 1), vx: rnd(-1.2, 1.2), vy: rnd(3, 7), vz: rnd(-1.2, 1.2), life: rnd(5, 9), size0: rnd(1.5, 2.5), size1: rnd(9, 16) * (0.6 + 0.4 * size), alpha: 0.6, shade: 0.95, glow: 0, baseY: y, drag: 0.9, lift: 0.8, wind: 0.8 });
     for (let i = 0; i < 4; i += 1) this.o.spray.emit({ x, y, z, vx: rnd(-1, 1), vy: rnd(1.5, 4), vz: rnd(-1, 1), life: rnd(0.8, 1.5), size0: 0.6, size1: rnd(1.5, 2.5), alpha: 0.6, r: 0.95, g: 0.97, b: 1, drag: 1, lift: -6, wind: 0.2 });
     this.o.steam?.(x, y, z, Math.min(1, size));
   }
@@ -351,6 +361,7 @@ export class ShipFires {
     // Flames live in seconds on screen: at high battle speeds a frame spans seconds and they would only flicker.
     const vt = Math.min(dt, 0.1);
     this.flames.update(vt, windX, windZ, this.anchor);
+    this.plume.update(dt, windX, windZ, camera);
     for (const [id, b] of this.blazes) if (b.level <= 0 && b.heat.every((h) => h < 0.05)) this.blazes.delete(id);
   }
 
@@ -387,15 +398,15 @@ export class ShipFires {
     while (p.smokeAcc >= 1) {
       p.smokeAcc -= 1;
       const j = Math.floor(Math.random() * (p.flot.length / 3)) * 3;
-      const g = 0.1 + 0.22 * (1 - left);
-      this.o.smoke.emit({ x: p.flot[j]!, y: h + 1.5, z: p.flot[j + 1]!, vx: rnd(-0.5, 0.5), vy: rnd(3, 5.5) * (0.5 + 0.5 * left), vz: rnd(-0.5, 0.5), life: rnd(18, 28), size0: rnd(2, 3), size1: rnd(14, 24) * Math.sqrt(p.L / 40) * (0.5 + 0.5 * left), alpha: 0.35 + 0.4 * left * p.heat, r: g * 1.1, g, b: g * 0.9, drag: 0.3, lift: 0.8, wind: 0.85, heat: 0.6 * fade });
+      const g = 0.08 + 0.25 * (1 - left);
+      this.plume.emit({ x: p.flot[j]!, y: h + 1.2, z: p.flot[j + 1]!, vx: rnd(-0.5, 0.5), vy: rnd(3, 5.5) * (0.5 + 0.5 * left), vz: rnd(-0.5, 0.5), life: rnd(20, 30), size0: rnd(3, 4), size1: rnd(18, 30) * Math.sqrt(p.L / 40) * (0.5 + 0.5 * left), alpha: 0.35 + 0.5 * left * p.heat, shade: g, glow: fade, baseY: h, drag: 0.35, lift: 1, wind: 0.85 });
     }
     // Steam off the spot where the hull went under, for the first seconds.
     if (p.age < 6) {
       p.steamAcc += (6 - p.age) * 1.2 * this.keep * dt;
       while (p.steamAcc >= 1) {
         p.steamAcc -= 1;
-        this.o.smoke.emit({ x: p.x + rnd(-0.3, 0.3) * p.L, y: h + 0.3, z: p.z + rnd(-0.3, 0.3) * p.L, vx: rnd(-1, 1), vy: rnd(2, 5), vz: rnd(-1, 1), life: rnd(5, 9), size0: rnd(1.5, 2.5), size1: rnd(8, 14), alpha: 0.45, r: 0.88, g: 0.89, b: 0.9, drag: 0.9, lift: 0.6, wind: 0.9 });
+        this.plume.emit({ x: p.x + rnd(-0.3, 0.3) * p.L, y: h + 0.3, z: p.z + rnd(-0.3, 0.3) * p.L, vx: rnd(-1, 1), vy: rnd(2, 5), vz: rnd(-1, 1), life: rnd(6, 10), size0: rnd(2, 3), size1: rnd(10, 16), alpha: 0.5, shade: 0.92, glow: 0, baseY: h, drag: 0.9, lift: 0.7, wind: 0.9 });
       }
     }
   }
@@ -403,6 +414,6 @@ export class ShipFires {
   stats() {
     let sites = 0;
     for (const b of this.blazes.values()) for (const h of b.heat) if (h >= 0.05) sites += 1;
-    return { ships: this.blazes.size, sites, flames: this.flames.count, pyres: this.pyres.length };
+    return { ships: this.blazes.size, sites, flames: this.flames.count, plume: this.plume.count, pyres: this.pyres.length };
   }
 }
