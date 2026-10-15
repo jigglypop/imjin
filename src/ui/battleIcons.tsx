@@ -2,7 +2,8 @@
 // (dots are filled), everything else is drawn as outlines. The same paths feed React (`Icon`) and the DOM labels that
 // ConquestView builds by hand (`iconSvg`).
 
-type Parts = { d?: string; dots?: [number, number][]; circles?: [number, number, number][]; rect?: [number, number, number, number, number]; dash?: string };
+/** `fill` is a shape filled in the icon's colour rather than outlined. */
+type Parts = { d?: string; fill?: string; dots?: [number, number][]; circles?: [number, number, number][]; rect?: [number, number, number, number, number]; dash?: string };
 
 const ICONS: Record<string, Parts[]> = {
   // Formations: dots, the fleet seen from above with the enemy ahead (up)
@@ -60,6 +61,10 @@ const ICONS: Record<string, Parts[]> = {
   skip: [{ d: 'M5 6l7 6-7 6 M12 6l7 6-7 6' }],
   flame: [{ d: 'M12 3c.7 3.6 5 5.4 5 10a5 5 0 0 1-10 0c0-2.2 1.2-3.6 2.4-5 .4 1.4 1.1 2.1 2.1 2.2C11 7.8 10.8 5.6 12 3z' }],
   melee: [{ d: 'M5 19L18 6 M14 5.5h4.5V10 M19 19L6 6 M10 5.5H5.5V10 M4.5 17.5l2 2 M19.5 17.5l-2 2' }],
+  // A crew's nerve: shaken (a warning stroke), running (the flag of a crew giving up the fight), and the drum that rallies it.
+  waver: [{ d: 'M12 5.5v8.5' }, { dots: [[12, 18.5]] }],
+  rout: [{ d: 'M6 21.5L9.6 3.2' }, { fill: 'M9.8 3.6c2.9-1.5 5.3 1.4 8.6.1l-1.7 7.1c-3.2 1.3-5.6-1.6-8.5-.1z' }],
+  drum: [{ d: 'M5 10c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3z M5 10v5.5c0 1.7 3.1 3 7 3s7-1.3 7-3V10 M8.2 3.5l2.6 3.2 M15.8 3.5l-2.6 3.2' }],
 
   // Shore works
   camp: [{ d: 'M3 20h18 M4 20V10l8-6 8 6v10 M8 20v-6h8v6 M12 4V2h6v3h-6 M4 10h16' }],
@@ -77,6 +82,26 @@ function parts(name: string) {
   return ICONS[name] ?? [];
 }
 
+/** An icon's strokes and filled dots as canvas paths on its 24 px grid, for marks drawn straight onto a canvas. */
+export function iconPaths(name: string): { stroke: Path2D; fill: Path2D } {
+  const stroke = new Path2D();
+  const fill = new Path2D();
+  for (const p of parts(name)) {
+    if (p.d) stroke.addPath(new Path2D(p.d));
+    if (p.fill) fill.addPath(new Path2D(p.fill));
+    if (p.rect) stroke.roundRect(p.rect[0], p.rect[1], p.rect[2], p.rect[3], p.rect[4]);
+    for (const [cx, cy, r] of p.circles ?? []) {
+      stroke.moveTo(cx + r, cy);
+      stroke.arc(cx, cy, r, 0, Math.PI * 2);
+    }
+    for (const [cx, cy] of p.dots ?? []) {
+      fill.moveTo(cx + 1.65, cy);
+      fill.arc(cx, cy, 1.65, 0, Math.PI * 2);
+    }
+  }
+  return { stroke, fill };
+}
+
 /** An inline icon sized by `size`, coloured by the text colour. */
 export function Icon({ name, size = 20, className }: { name: string; size?: number; className?: string }) {
   return (
@@ -84,6 +109,7 @@ export function Icon({ name, size = 20, className }: { name: string; size?: numb
       {parts(name).map((p, i) => (
         <g key={i}>
           {p.d && <path d={p.d} strokeDasharray={p.dash} />}
+          {p.fill && <path d={p.fill} fill="currentColor" stroke="none" />}
           {p.rect && <rect x={p.rect[0]} y={p.rect[1]} width={p.rect[2]} height={p.rect[3]} rx={p.rect[4]} strokeDasharray={p.dash} />}
           {p.circles?.map(([cx, cy, r], j) => <circle key={j} cx={cx} cy={cy} r={r} />)}
           {p.dots?.map(([cx, cy], j) => <circle key={j} cx={cx} cy={cy} r={1.65} fill="currentColor" stroke="none" />)}
@@ -100,6 +126,7 @@ export function iconSvg(name: string, size = 14) {
       const dash = p.dash ? ` stroke-dasharray="${p.dash}"` : '';
       return [
         p.d ? `<path d="${p.d}"${dash}/>` : '',
+        p.fill ? `<path d="${p.fill}" fill="currentColor" stroke="none"/>` : '',
         p.rect ? `<rect x="${p.rect[0]}" y="${p.rect[1]}" width="${p.rect[2]}" height="${p.rect[3]}" rx="${p.rect[4]}"${dash}/>` : '',
         ...(p.circles ?? []).map(([cx, cy, r]) => `<circle cx="${cx}" cy="${cy}" r="${r}"/>`),
         ...(p.dots ?? []).map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="1.65" fill="currentColor" stroke="none"/>`),

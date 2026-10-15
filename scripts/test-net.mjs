@@ -38,7 +38,7 @@ const vite = await createServer({
 try {
   const { NetBattle } = await vite.ssrLoadModule('/src/net/NetBattle.ts');
   const { Battle } = await vite.ssrLoadModule('/src/sim/battle.ts');
-  const { PROTOCOL, encodeSnapshot, decodeSnapshot } = await vite.ssrLoadModule('/src/net/protocol.ts');
+  const { PROTOCOL, SENT_EVENTS, encodeSnapshot, decodeSnapshot } = await vite.ssrLoadModule('/src/net/protocol.ts');
   const { net, useNet } = await vite.ssrLoadModule('/src/net/NetClient.ts');
 
   net.connect('Navigator');
@@ -155,6 +155,25 @@ try {
   own.damageState = { flooding: 0.4, propulsion: 0.2, steering: 0.6 };
   const damage = decodeSnapshot(encodeSnapshot(13, authoritative.ships, own.owner, (s) => authoritative.isActive(s))).ships.find((s) => s.id === own.id).damageState;
   for (const key of Object.keys(damage)) assert.ok(Math.abs(damage[key] - own.damageState[key]) <= 1 / 255);
+  const { MORALE_STATES } = await vite.ssrLoadModule('/src/sim/types.ts');
+  own.struck = false;
+  own.lights = true;
+  own.repel = true;
+  own.fireMode = 'hold';
+  for (const [i, state] of MORALE_STATES.entries()) {
+    own.moraleState = state;
+    own.morale = 0.17 + i * 0.2;
+    const nerve = decodeSnapshot(encodeSnapshot(13.5, authoritative.ships, own.owner, (s) => authoritative.isActive(s))).ships.find((s) => s.id === own.id);
+    assert.equal(nerve.moraleState, state, 'the morale state shares the flags byte without disturbing the other flags');
+    assert.ok(Math.abs(nerve.morale - own.morale) <= 1 / 255);
+    assert.deepEqual([nerve.struck, nerve.lights, nerve.repel, nerve.hold], [false, true, true, true]);
+  }
+  own.moraleState = 'wavering';
+  own.morale = 0.37;
+  own.repel = false;
+  own.fireMode = 'free';
+  for (const type of ['morale', 'leader', 'broken', 'drum']) assert.ok(SENT_EVENTS.has(type), `${type} events reach the clients`);
+  console.log('ok: morale and its state ride in the 64-byte ship record and the depth events are sent');
 
   const puppet = new Battle(1594);
   puppet.addShip('panokseon', 0, 0, 0, 'own', null);
@@ -166,6 +185,20 @@ try {
   assert.equal(puppet.get(enemy.id).x, enemy.x);
   assert.equal(puppet.get(own.id).guns[0].ammo, 17);
   assert.equal(puppet.get(own.id).remoteQueueCount, 2);
+  remote.snapshot(encodeSnapshot(12.6, authoritative.ships, own.owner, (s) => authoritative.isActive(s)));
+  remote.advance(puppet, null, 0);
+  assert.equal(puppet.get(own.id).moraleState, 'wavering');
+  assert.ok(Math.abs(puppet.get(own.id).morale - 0.37) <= 1 / 255, 'the client copies the nerve of the server crews');
+  const { DEPTH_V1 } = await vite.ssrLoadModule('/src/sim/depth.ts');
+  const drummed = new Battle(1596);
+  drummed.depth = DEPTH_V1;
+  const squadron = drummed.addSquadron('joseon', 'sq', 'cmd', '', '', 0);
+  const leader = drummed.addShip('panokseon', 0, 0, 0, 'leader', squadron);
+  const listener = new NetBattle(1596, 0);
+  listener.message({ t: 'events', events: [{ type: 'drum', ship: leader.id }] });
+  listener.advance(drummed, null, 0);
+  assert.ok(drummed.morale.drumWait(squadron.id) > 0, 'a drum beaten on the server rests on the client too, for the order button');
+  listener.dispose();
 
   own.x = 999;
   const incompatible = encodeSnapshot(20, authoritative.ships, own.owner, (ship) => authoritative.isActive(ship));

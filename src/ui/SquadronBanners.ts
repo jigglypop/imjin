@@ -5,13 +5,17 @@ import type { ShipViews } from '../ships/ShipViews';
 import { getLang, t } from '../i18n';
 import { tCommander, tName, tShips } from './battleNames';
 import { shipObserved } from '../sim/observation';
+import { iconSvg } from './battleIcons';
 
 type Banner = {
   root: HTMLDivElement;
   name: HTMLElement;
   bar: HTMLElement;
   count: HTMLElement;
+  nerve: HTMLElement;
   lastHull: number;
+  /** The nerve mark now shown: running, wavering or none (the battle depth rules). */
+  lastNerve: string;
   lastCount: number;
   lastState: string;
   /** Text now shown in the name and count, so the DOM is touched only when it changes. */
@@ -27,7 +31,7 @@ type Banner = {
 };
 
 /** Where a squadron's pill would sit this frame, before overlapping ones are merged. */
-type Spot = { sq: Squadron; banner: Banner; sx: number; sy: number; scale: number; alive: number; hull: number; selected: number; far: boolean };
+type Spot = { sq: Squadron; banner: Banner; sx: number; sy: number; scale: number; alive: number; hull: number; selected: number; far: boolean; wavering: number; routing: number };
 
 /** Commanders that are a role or a seat, not a person: the squadron's own name says more. */
 const ROLE = /(협선장|척후장|돌격장|유격장|왜장|중군|장수|휘하|수군|본대|별동대|동맹군)$|^이름 없는/;
@@ -69,17 +73,20 @@ export class SquadronBanners {
     name.className = 'sqb-name';
     const count = document.createElement('b');
     count.className = 'sqb-count';
+    const nerve = document.createElement('span');
+    nerve.className = 'sqb-nerve';
+    nerve.hidden = true;
     const bar = document.createElement('i');
     const barWrap = document.createElement('div');
     barWrap.className = 'sqb-bar';
     barWrap.appendChild(bar);
-    pill.append(name, count, barWrap);
+    pill.append(name, nerve, count, barWrap);
     const pole = document.createElement('div');
     pole.className = 'sqb-pole';
     root.append(pill, pole);
     // In a battle between two fleets of the same navy, the rim tells friend from foe.
     root.classList.add(own ? 'sqb--own' : 'sqb--foe');
-    const banner: Banner = { root, name, bar, count, lastHull: -1, lastCount: -1, lastState: '', lastName: '', lastCountText: '', lastSelected: false, far: false, lang: '', ownWidth: 90, group: [sq.id] };
+    const banner: Banner = { root, name, bar, count, nerve, lastNerve: '', lastHull: -1, lastCount: -1, lastState: '', lastName: '', lastCountText: '', lastSelected: false, far: false, lang: '', ownWidth: 90, group: [sq.id] };
     root.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       if (e.button !== 0) return;
@@ -120,6 +127,8 @@ export class SquadronBanners {
       let alive = 0;
       let hull = 0;
       let selected = 0;
+      let wavering = 0;
+      let routing = 0;
       let leader = battle.get(sq.leaderId);
       for (const id of sq.shipIds) {
         const s = battle.get(id);
@@ -129,6 +138,8 @@ export class SquadronBanners {
         top = Math.max(top, s.spec.height);
         hull += s.hull / s.spec.hull;
         alive += 1;
+        if (s.moraleState === 'wavering') wavering += 1;
+        else if (s.moraleState === 'routing') routing += 1;
         if (views.selected.has(id)) selected += 1;
       }
       const banner = this.banners.get(sq.id) ?? this.create(sq, sq.team === team);
@@ -163,7 +174,7 @@ export class SquadronBanners {
       const scale = Math.max(0.7, Math.min(1.08, 900 / Math.max(dist, 1)));
       // A distant fleet shows only its ship count: a name at this size cannot be read and only crowds the others.
       const far = dist > 1500;
-      spots.push({ sq, banner, sx: (tmp.x * 0.5 + 0.5) * width, sy: (-tmp.y * 0.5 + 0.5) * height, scale, alive, hull: hull / alive, selected, far });
+      spots.push({ sq, banner, sx: (tmp.x * 0.5 + 0.5) * width, sy: (-tmp.y * 0.5 + 0.5) * height, scale, alive, hull: hull / alive, selected, far, wavering, routing });
     }
 
     // Overlapping pills of one side collapse into the one with the most ships (the selected one first).
@@ -224,6 +235,17 @@ export class SquadronBanners {
       if (countText !== banner.lastCountText) {
         banner.count.textContent = countText;
         banner.lastCountText = countText;
+        resized = true;
+      }
+      // A third of the pill's ships running marks it red, a third shaken marks it amber (the battle depth rules).
+      const routing = members.reduce((a, s) => a + s.routing, 0);
+      const shaken = routing + members.reduce((a, s) => a + s.wavering, 0);
+      const nerve = routing * 3 >= total ? 'rout' : shaken * 3 >= total ? 'waver' : '';
+      if (nerve !== banner.lastNerve) {
+        banner.lastNerve = nerve;
+        banner.nerve.hidden = !nerve;
+        banner.nerve.className = `sqb-nerve${nerve ? ` sqb-nerve--${nerve}` : ''}`;
+        banner.nerve.innerHTML = nerve ? iconSvg(nerve, 12) : '';
         resized = true;
       }
       if (resized && !merged) banner.ownWidth = Math.max(44, banner.root.offsetWidth);

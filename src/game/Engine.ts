@@ -19,6 +19,7 @@ import {
   mix,
   pass,
   positionWorld,
+  renderGroup,
   renderOutput,
   smoothstep,
   uniform,
@@ -55,6 +56,7 @@ import { finishGrandBattle } from '../campaign/grand';
 import { outcomeOfBattle, type RegionBattle } from '../sim/grand/bridge';
 import { buildGrandConquest, grandAxis, shipOutcomes, worksAfter } from '../sim/grand/spawn';
 import { CurrentField } from '../sim/current';
+import { DEPTH_V1 } from '../sim/depth';
 import { OWNER_OF, otherTeam, teamOf, type BattleEvent, type Faction, type Ship, type ShipKind, type Team } from '../sim/types';
 import { buildConquest, homeAxis, type ConquestMapId, type Seat } from '../sim/maps';
 import { BUILDING_ORDER, BUILDINGS, RANKED_OPTIONS, ROSTER, rosterOf, SHORT_NAME, buildingHp, upgradeCost, type Conquest } from '../sim/conquest';
@@ -70,9 +72,10 @@ import { TouchControls } from './Touch';
 import { AdaptiveQuality } from './adaptive';
 import { equipment, LEVELS, levelSetting, saveLevelSetting, startLevel, type LevelSetting, type OceanQuality, type TerrainQuality } from './quality';
 import { t } from '../i18n';
-import { failBattle, publish, pushToast, setAutoBuild, setLoading, setProgress, setReport, useUi, type GameSnapshot } from '../state/store';
+import { failBattle, publish, pushToast, setAutoBuild, setLoading, setProgress, setReport, useUi, type FleetMorale, type GameSnapshot } from '../state/store';
 import { SquadronBanners } from '../ui/SquadronBanners';
 import { MoveOrders } from '../ui/MoveOrders';
+import { TacticalOverlay } from '../ui/TacticalOverlay';
 import { sound } from '../audio/Sound';
 import { Terrain } from '../terrain/Terrain';
 import { Vegetation } from '../terrain/Vegetation';
@@ -160,6 +163,9 @@ export class Engine {
   input!: Input;
   banners: SquadronBanners | null = null;
   moveOrders: MoveOrders | null = null;
+  tacticalOverlay: TacticalOverlay | null = null;
+  /** Each fleet's state as last told to the player, and the state it has been in since `since` (battle seconds). */
+  private fleetCalls = { own: { shown: 'steady', pending: 'steady', since: 0 }, foe: { shown: 'steady', pending: 'steady', since: 0 } };
   readonly sound = sound;
   readonly minimap = new Minimap();
   private minimapTimer = 0;
@@ -202,7 +208,7 @@ export class Engine {
   /** Every node that reads the sky view: the background, the fog, the sea's haze and the clouds'. Made before the first sky. */
   private skyView: SkyView | null = null;
   /** The sun's colour times its intensity, which the light's colour node reads (see init). */
-  private readonly sunLight = uniform(new Color());
+  private readonly sunLight = uniform(new Color()).setGroup(renderGroup);
   private accumulator = 0;
   private publishTimer = 0;
   private readonly autoBuild = new AutoBuild();
@@ -417,6 +423,7 @@ export class Engine {
       this.input = new Input(this);
       this.input.attach(r.domElement);
       this.moveOrders = new MoveOrders(this, document.querySelector('.app') ?? document.body);
+      this.tacticalOverlay = new TacticalOverlay(this, document.querySelector('.app') ?? document.body);
       this.touch = new TouchControls(this);
       this.touch.attach(r.domElement);
       this.rts.attach(r.domElement);
@@ -705,7 +712,9 @@ export class Engine {
       this.phi = this.sink ? 0 : sunAz - Math.PI / 2 - (setup.grand ? grandAxis(setup.grand) : homeAxis(setup.map));
       this.terrain.setRotation(this.phi);
       const land = (x: number, z: number) => this.terrain.heightAt(x, z);
-      const built = setup.grand ? buildGrandConquest(setup.grand, land, this.phi) : buildConquest(setup.map, setup.seats, land, setup.seed, setup.ranked ? RANKED_OPTIONS : {}, this.phi);
+      // A battle against the computer here runs the depth rules; an online room's server keeps the rules it was built with.
+      const options = setup.ranked ? RANKED_OPTIONS : this.sink ? {} : { depth: DEPTH_V1.version };
+      const built = setup.grand ? buildGrandConquest(setup.grand, land, this.phi) : buildConquest(setup.map, setup.seats, land, setup.seed, options, this.phi);
       this.battle = built.battle;
       this.conquest = built.conquest;
       this.owner = setup.you;
@@ -732,6 +741,7 @@ export class Engine {
     this.battle.setSea(SEA_STATES[this.seaName]);
     waveField.copyFrom(this.battle.waves);
     this.reported = false;
+    this.fleetCalls = { own: { shown: 'steady', pending: 'steady', since: 0 }, foe: { shown: 'steady', pending: 'steady', since: 0 } };
     setReport(null);
     this.battle.land = (x, z) => this.terrain.heightAt(x, z);
     this.current = setup ? this.battle.flow : info.current ? new CurrentField(info.current, (x, z) => this.terrain.heightAtScenario(x, z), this.phi) : null;
@@ -1174,6 +1184,8 @@ export class Engine {
     const el = this.renderer.domElement;
     this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.hudHidden && !this.rts.cinematic && !this.battle.ended, this.team);
     this.moveOrders?.update();
+    const overlay = !this.hudHidden && !this.rts.cinematic && !this.battle.ended;
+    this.tacticalOverlay?.update(overlay, overlay && this.showLabels);
     this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.hudHidden && !this.rts.cinematic && !this.options.hideLabels && !this.battle.ended, this.battle);
     if (this.conquest && !this.paused && useUi.getState().autoBuild) {
       const order = this.autoBuild.tick(this.battle, this.conquest, this.owner, (cmd) => this.issue(cmd));
@@ -1381,6 +1393,7 @@ export class Engine {
   publish(force = false) {
     const b = this.battle;
     const info = this.battleInfo;
+    const morale = b.morale;
     const squadrons = b.squadrons.map((sq) => {
       let alive = 0;
       let hull = 0;
@@ -1388,16 +1401,24 @@ export class Engine {
       let burning = 0;
       let boarding = 0;
       let selected = 0;
+      let nerve = 0;
+      let wavering = 0;
+      let routing = 0;
       for (const id of sq.shipIds) {
         const s = b.get(id);
         if (!s || !b.isActive(s) || !shipObserved(b, this.team, s)) continue;
         alive += 1;
         hull += s.hull / s.spec.hull;
         crew += s.crew / s.spec.crew;
+        nerve += s.morale;
+        if (s.moraleState === 'wavering') wavering += 1;
+        else if (s.moraleState === 'routing') routing += 1;
         if (s.fire > 0.05) burning += 1;
         if (s.grappledWith || b.ships.some((o) => o.grappledWith === s.id)) boarding += 1;
         if (this.views.selected.has(s.id)) selected += 1;
       }
+      const leader = b.get(sq.leaderId);
+      const drum = morale && sq.team === this.team && b.isActive(leader) && leader.moraleState !== 'routing' ? { wait: Math.ceil(morale.drumWait(sq.id)), beating: (morale.drums.get(sq.id)?.until ?? 0) > b.time } : null;
       return {
         id: sq.id,
         team: sq.team,
@@ -1414,6 +1435,10 @@ export class Engine {
         burning,
         boarding,
         selected: alive > 0 && selected === alive,
+        morale: alive ? nerve / alive : 0,
+        wavering,
+        routing,
+        drum,
       };
     });
     const primary = [...this.views.selected].map((id) => b.get(id)).find((s) => !!s && s.alive);
@@ -1421,6 +1446,8 @@ export class Engine {
     const enemy = this.enemyTeam;
     const strengthOwn = b.strength(own);
     const enemies = b.ships.filter((s) => s.team === enemy && b.isActive(s) && shipObserved(b, own, s));
+    // Enemy crews still running when the battle is decided got away: the result counts them as fled, not as afloat.
+    const running = b.ended && morale ? b.ships.filter((s) => s.team === enemy && s.moraleState === 'routing' && b.isActive(s) && shipObserved(b, own, s)).length : 0;
     const strengthEnemy = b.profile === 'historical' ? b.strength(enemy) : enemies.reduce((n, s) => n + combatValue(s.spec.kind, b.profile) * ((s.hull / s.spec.hull) * 0.6 + (s.crew / s.spec.crew) * 0.4), 0);
     const snapshot: GameSnapshot = {
       scenario: { id: info.id, title: info.title, hanja: info.hanja, date: info.date, place: info.place, season: info.season },
@@ -1430,11 +1457,11 @@ export class Engine {
       team: own,
       time: b.time,
       own: b.teamCount(own),
-      enemy: b.profile === 'historical' ? b.teamCount(enemy) : enemies.length,
+      enemy: (b.profile === 'historical' ? b.teamCount(enemy) : enemies.length) - running,
       observedEnemy: b.profile !== 'historical',
       ownTotal: b.initial[own],
       enemyTotal: b.initial[enemy],
-      escaped: b.escaped[enemy],
+      escaped: b.escaped[enemy] + running,
       balance: this.conquest ? this.conquest.tickets[own] / Math.max(1, this.conquest.tickets[own] + this.conquest.tickets[enemy]) : strengthOwn / Math.max(1, strengthOwn + strengthEnemy),
       winner: b.winner,
       draw: b.draw,
@@ -1453,6 +1480,7 @@ export class Engine {
       muted: this.sound.muted,
       selectedCount: this.views.selected.size,
       night: b.night,
+      morale: morale ? { own: this.fleetMorale(own), foe: this.fleetMorale(enemy) } : null,
       tide: this.current
         ? {
             label: t(Math.abs(b.tide) < 0.15 ? '정조 · 물살이 멎었습니다' : b.profile === 'historical' ? b.tide < 0 ? '밀물 · 일본 함선 쪽으로 흐릅니다' : '썰물 · 물길이 뒤집혔습니다' : b.tide < 0 ? '밀물 · 항로별 물살에 주의하세요' : '썰물 · 조류의 방향이 바뀝니다'),
@@ -1480,6 +1508,8 @@ export class Engine {
             lights: primary.lights,
             repel: primary.repel,
             grappled: !!primary.grappledWith || b.ships.some((o) => o.grappledWith === primary.id),
+            morale: primary.morale,
+            moraleState: primary.moraleState,
             roles: primary.roles.map((r) => Math.round(r)),
             plan: [...primary.plan],
             defaultPlan: [...primary.spec.crewPlan],
@@ -1501,7 +1531,48 @@ export class Engine {
         : null,
       conquest: this.conquestSnapshot(),
     };
+    if (snapshot.morale) this.announceFleets(snapshot.morale);
     publish(snapshot, force);
+  }
+
+  /** Tells the player when either fleet as a whole wavers, breaks or steadies again, once the change has held two seconds. */
+  private announceFleets(m: { own: FleetMorale; foe: FleetMorale }) {
+    const now = this.battle.time;
+    for (const side of ['own', 'foe'] as const) {
+      const f = this.fleetCalls[side];
+      const state = m[side].state;
+      if (state !== f.pending) {
+        f.pending = state;
+        f.since = now;
+      }
+      if (state === f.shown || now - f.since < 2 || this.battle.ended) continue;
+      const before = f.shown;
+      f.shown = state;
+      const own = side === 'own';
+      if (state === 'broken') pushToast(t(own ? '아군 함대가 무너졌습니다 · 대부분의 함선이 달아납니다' : '적 함대가 무너져 달아납니다'), own ? 'bad' : 'good');
+      else if (state === 'shaken' && before === 'steady') pushToast(t(own ? '아군 함대 동요 · 북을 울려 다잡으세요' : '적 함대 동요'), own ? 'bad' : 'good');
+      else if (state === 'steady') pushToast(t(own ? '아군 함대가 전열을 되찾았습니다' : '적 함대가 전열을 되찾았습니다'), own ? 'good' : 'bad');
+    }
+  }
+
+  /** A fleet's nerve as the player can see it: the ships it has in view, under the battle depth rules. */
+  private fleetMorale(team: Team): FleetMorale {
+    const b = this.battle;
+    let n = 0;
+    let level = 0;
+    let shaken = 0;
+    let running = 0;
+    // The ships themselves, not the battle's step lists: an online client's battle is never stepped.
+    for (const s of b.ships) {
+      if (s.team !== team || !b.isActive(s) || !shipObserved(b, this.team, s)) continue;
+      n += 1;
+      level += s.morale;
+      if (s.moraleState === 'routing') running += 1;
+      else if (s.moraleState !== 'steady') shaken += 1;
+    }
+    if (!n) return { level: 0, shaken: 0, running: 0, state: 'steady' };
+    const out = { level: level / n, shaken: shaken / n, running: running / n };
+    return { ...out, state: out.running >= 0.6 ? 'broken' : out.level < 0.5 || out.shaken + out.running >= 0.3 ? 'shaken' : 'steady' };
   }
 
   /** Display names for the two sides, the player's first. */
@@ -1616,6 +1687,8 @@ export class Engine {
     this.banners?.clear();
     this.moveOrders?.dispose();
     this.moveOrders = null;
+    this.tacticalOverlay?.dispose();
+    this.tacticalOverlay = null;
     this.releasePixelRatio?.();
     this.releasePixelRatio = null;
     this.minimap.onPick = null;

@@ -2,10 +2,10 @@ import type { Command } from '../sim/commands';
 import type { BuildingKind } from '../sim/conquest';
 import type { ConquestMapId, Seat } from '../sim/maps';
 import type { ScenarioId } from '../sim/scenarios';
-import type { BattleEvent, CrewPlan, Faction, Ship, ShipKind, Squadron, Team } from '../sim/types';
+import { MORALE_STATES, type BattleEvent, type CrewPlan, type Faction, type MoraleState, type Ship, type ShipKind, type Squadron, type Team } from '../sim/types';
 
 /** Bumped whenever client and server stop understanding each other. */
-export const PROTOCOL = 5;
+export const PROTOCOL = 6;
 export const SNAPSHOT_HZ = 10;
 /** How long a dropped player's fleet waits for them before the computer takes it over. */
 export const GRACE_SECONDS = 60;
@@ -131,6 +131,11 @@ export const SENT_EVENTS = new Set<BattleEvent['type']>([
   'built',
   'razed',
   'battery',
+  // The battle depth rules: a crew's nerve, a lost leader, a broken fleet and the drum, for the marks and the callouts.
+  'morale',
+  'leader',
+  'broken',
+  'drum',
 ]);
 
 export type ShipFrame = {
@@ -160,6 +165,8 @@ export type ShipFrame = {
   supply: number;
   queuedWaypoints: number;
   damageState: { flooding: number; propulsion: number; steering: number };
+  morale: number;
+  moraleState: MoraleState;
   /** Gun reload stages, only for the receiving player's own ships. */
   guns: { stage: number; t: number; ammo: number }[] | null;
 };
@@ -195,7 +202,8 @@ export function encodeSnapshot(time: number, ships: readonly Ship[], owner: numb
     d.setUint8(o + 34, Math.round(s.fire * 255));
     d.setUint8(o + 35, Math.round(s.burn * 255));
     d.setUint16(o + 36, Math.round(s.sinking * 65535), true);
-    d.setUint8(o + 38, (s.struck ? 1 : 0) | (s.lights ? 2 : 0) | (s.repel ? 4 : 0) | (s.fireMode === 'hold' ? 8 : 0));
+    // Bits 4 and 5 carry the crew's morale state (MORALE_STATES).
+    d.setUint8(o + 38, (s.struck ? 1 : 0) | (s.lights ? 2 : 0) | (s.repel ? 4 : 0) | (s.fireMode === 'hold' ? 8 : 0) | (Math.max(0, MORALE_STATES.indexOf(s.moraleState)) << 4));
     d.setUint16(o + 39, s.grappledWith, true);
     d.setUint16(o + 41, s.targetId, true);
     d.setUint8(o + 43, ORDERS.indexOf(s.order.type));
@@ -209,6 +217,7 @@ export function encodeSnapshot(time: number, ships: readonly Ship[], owner: numb
     d.setUint8(o + 50, Math.round(Math.max(0, Math.min(1, s.damageState?.flooding ?? 0)) * 255));
     d.setUint8(o + 51, Math.round(Math.max(0, Math.min(1, s.damageState?.propulsion ?? 0)) * 255));
     d.setUint8(o + 52, Math.round(Math.max(0, Math.min(1, s.damageState?.steering ?? 0)) * 255));
+    d.setUint8(o + 53, Math.round(Math.max(0, Math.min(1, s.morale)) * 255));
     o += SHIP;
   }
   for (const s of live) {
@@ -263,6 +272,8 @@ export function decodeSnapshot(buf: ArrayBuffer): { time: number; ships: ShipFra
       supply: d.getUint8(o + 47) / 255,
       queuedWaypoints: d.getUint8(o + 49),
       damageState: { flooding: d.getUint8(o + 50) / 255, propulsion: d.getUint8(o + 51) / 255, steering: d.getUint8(o + 52) / 255 },
+      morale: d.getUint8(o + 53) / 255,
+      moraleState: MORALE_STATES[(flags >> 4) & 3]!,
       guns: null,
     });
     gunCounts.push(d.getUint8(o + 48));

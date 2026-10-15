@@ -1,6 +1,7 @@
 import type { Battle } from '../battle';
 import { GUN_SHOTS } from '../catalog';
 import { buildingHp, SHORT_NAME, type Building, type BuildingKind as WorkKind, type Conquest } from '../conquest';
+import { DEPTH_V1 } from '../depth';
 import { buildConquestOn, wetSpot, type Seat } from '../maps';
 import { dateLabel, TUNING } from './economy';
 import type { BattleInfo } from '../info';
@@ -154,7 +155,7 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
 export function buildGrandConquest(rb: RegionBattle, land: LandSampler, axis = 0) {
   const o = rb.options;
   const map = grandMap(rb);
-  const built = buildConquestOn(map, grandSeats(rb), land, rb.seed, { expanded: true, tickets: o.tickets, timeLimit: o.timeLimit, cap: o.cap, maxShips: o.maxShips, tieWinner: rb.defender.team }, axis);
+  const built = buildConquestOn(map, grandSeats(rb), land, rb.seed, { expanded: true, tickets: o.tickets, timeLimit: o.timeLimit, cap: o.cap, maxShips: o.maxShips, tieWinner: rb.defender.team, depth: DEPTH_V1.version }, axis);
   const { battle, conquest } = built;
   // The arena is the stretch of water the two ports share, not the middle of the terrain.
   const ca = Math.cos(axis);

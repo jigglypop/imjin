@@ -40,8 +40,8 @@ export type Handicap = {
 };
 
 /** What a Japanese player gets over the computer's crews wherever the battle is not already theirs. */
-const JAPAN_EDGE: Mods = { reload: 1.2, accuracy: 1.15, speed: 1.1, melee: 1.3, defense: 1.3, fire: 1.5 };
-const JOSEON_SLACK: Mods = { reload: 0.65, accuracy: 0.65 };
+const JAPAN_EDGE: Mods = { reload: 1.2, accuracy: 1.15, speed: 1.1, melee: 1.3, defense: 1.3, fire: 1.5, morale: 1.3 };
+const JOSEON_SLACK: Mods = { reload: 0.65, accuracy: 0.65, morale: 0.85 };
 
 const HANDICAPS: Partial<Record<ScenarioId, Partial<Record<Faction, Handicap>>>> = {
   okpo: { japan: { own: JAPAN_EDGE, enemy: JOSEON_SLACK, enemyFleet: 0.5, difficulty: '보통' } },
