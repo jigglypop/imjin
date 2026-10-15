@@ -5,6 +5,7 @@ import type { Faction } from '../sim/types';
 import { sound } from '../audio/Sound';
 import { CAMPAIGN_ORDER, campaignOver, currentBattle, setMode, useCampaign } from '../campaign/campaign';
 import { isPhone, isTouchOnly } from '../game/device';
+import { BattleArt } from './BattleArt';
 import { CampaignPanel } from './CampaignPanel';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Check, ChevronDown, ChevronLeft, Cross } from './icons';
@@ -145,6 +146,7 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
         </div>
       </div>
       <div className="hs-brief glass">
+        <BattleArt id={id} className="hs-brief-art" sizes="(max-width: 900px) 100vw, 800px" />
         <div className="hs-brief-wrap">
           <div className="hs-brief-scroll" ref={briefRef} data-more={more} onScroll={measure}>
             <div className="select-date">

@@ -3,7 +3,7 @@ import type { SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
 import type { AmmoMode, CrewPlan, Faction, FireMode, ShipKind, SmallArms, Stance, Team } from '../sim/types';
 import type { BuildingKind } from '../sim/conquest';
-import type { ScenarioId } from '../sim/scenarios';
+import type { BattleCard } from '../sim/info';
 import type { Report } from '../campaign/campaign';
 
 export type SquadronInfo = {
@@ -148,7 +148,8 @@ type UiState = {
   snapshot: GameSnapshot | null;
   loading: string | null;
   progress: number;
-  loadingScenario: ScenarioId | null;
+  /** The battle being built, for the loading screen's picture and title. */
+  loadingBattle: BattleCard | null;
   report: Report | null;
   toasts: Toast[];
   box: SelectionBox;
@@ -162,7 +163,7 @@ type UiState = {
   autoBuild: boolean;
 };
 
-export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingScenario: null, report: null, toasts: [], box: null, screen: 'menu', origin: 'select', fatal: null, touchBox: false, autoBuild: false }));
+export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingBattle: null, report: null, toasts: [], box: null, screen: 'menu', origin: 'select', fatal: null, touchBox: false, autoBuild: false }));
 
 let lastJson = '';
 export function publish(snapshot: GameSnapshot, force = false) {
@@ -191,12 +192,12 @@ export function setAutoBuild(autoBuild: boolean) {
   useUi.setState({ autoBuild });
 }
 
-/** `scenario` null clears the loading card's artwork; undefined keeps the one shown. */
-export function setLoading(text: string | null, progress?: number, scenario?: ScenarioId | null) {
+/** `battle` null clears the loading screen's picture and title; undefined keeps the ones shown. */
+export function setLoading(text: string | null, progress?: number, battle?: BattleCard | null) {
   useUi.setState((s) => ({
     loading: text,
     progress: text === null ? 1 : progress ?? s.progress,
-    loadingScenario: scenario !== undefined ? scenario : s.loadingScenario,
+    loadingBattle: battle !== undefined ? battle : s.loadingBattle,
   }));
 }
 

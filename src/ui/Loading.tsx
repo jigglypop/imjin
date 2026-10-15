@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { SCENARIOS } from '../sim/scenarios';
+import { commanderOf, FACTION_NAME, forcesOf, playableFactions } from '../sim/balance';
+import type { Faction } from '../sim/types';
 import { useT } from '../i18n';
 import { useUi } from '../state/store';
 import { Backdrop } from './Backdrop';
@@ -14,30 +15,54 @@ const QUOTES: [string, string][] = [
   ['一夫當逕 足懼千夫', '한 사람이 길목을 지키면 천 명도 두렵게 할 수 있다'],
 ];
 
+/** The allies first, the invader last, as on the history screen. */
+const ORDER: Faction[] = ['joseon', 'ming', 'japan'];
+
+/**
+ * The battle loading screen: a still from the battle itself (or from the historical battle fought on the same coast)
+ * drifting slowly closer, its name, date and place, the navies of a historical battle, the progress and a quotation.
+ */
 export function Loading() {
   const t = useT();
   const loading = useUi((s) => s.loading);
   const progress = useUi((s) => s.progress);
-  const sid = useUi((s) => s.loadingScenario);
+  const battle = useUi((s) => s.loadingBattle);
   const [quote] = useState(() => QUOTES[Math.floor(Math.random() * QUOTES.length)]!);
   if (!loading) return null;
-  const info = sid ? SCENARIOS[sid] : null;
   const pct = Math.round(Math.max(0, Math.min(1, progress)) * 100);
+  const sid = battle?.scenario;
+  const sides = sid ? [...playableFactions(sid)].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b)) : [];
+  const where = [battle?.date, battle?.place].filter((x): x is string => !!x).map((x) => t(x)).join(' · ');
   return (
-    <div className={`loading${info?.night ? ' loading--night' : ''}`} role="status">
-      <Backdrop kind="loading" id={sid ?? undefined} />
-      <div className="loading-card glass">
-        <div className="loading-title">{t(info?.title ?? '임진왜란')}</div>
-        <div className="loading-bar">
-          <div className="loading-fill" style={{ width: `${pct}%` }} />
-        </div>
-        <div className="loading-meta">
-          <span>{t(loading)}</span>
-          <b>{pct}%</b>
-        </div>
-        <div className="loading-quote">
-          <span>{t(quote[1])}</span>
-          <strong>{quote[0]}</strong>
+    <div className={`loading${battle?.night ? ' loading--night' : ''}`} role="status">
+      {battle && <Backdrop key={battle.art} kind="loading" id={battle.art} />}
+      <figure className="loading-quote">
+        <blockquote>{t(quote[1])}</blockquote>
+        <figcaption>{quote[0]}</figcaption>
+      </figure>
+      <div className="loading-body">
+        {battle?.hanja && <div className="loading-hanja">{battle.hanja}</div>}
+        <div className="loading-title">{t(battle?.title ?? '임진왜란')}</div>
+        {where && <div className="loading-where">{where}</div>}
+        {sid && (
+          <div className="loading-forces">
+            {sides.map((f) => (
+              <div key={f} className={`loading-force loading-force--${f}`}>
+                <b>{t(FACTION_NAME[f])}</b>
+                <span>{t(commanderOf(sid, f).name)}</span>
+                <small>{t(forcesOf(sid, f))}</small>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="loading-progress">
+          <div className="loading-bar">
+            <div className="loading-fill" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="loading-meta">
+            <span>{t(loading)}</span>
+            <b>{pct}%</b>
+          </div>
         </div>
       </div>
     </div>

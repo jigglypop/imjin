@@ -1,0 +1,218 @@
+[
+ {
+  "scenario": "okpo",
+  "file": "okpo.jpg",
+  "candidate": "okpo_1_shoulder-r",
+  "url": "http://127.0.0.1:5312/?scenario=okpo&hud=0&lv=4&q=high",
+  "pose": {
+   "tx": 275.96,
+   "tz": -466.08,
+   "yaw": -3.37,
+   "pitch": 0.06,
+   "distance": 236
+  },
+  "simTime": 422,
+  "framing": "shoulder-r",
+  "ship": "좌수영 5호",
+  "target": "옥포 정박 3진 1호",
+  "gap": 235,
+  "viewport": [
+   2560,
+   1440
+  ],
+  "backend": "WebGPU (Edge, D3D11), desktop high tier, level 4",
+  "date": "2026-10-15"
+ },
+ {
+  "scenario": "sacheon",
+  "file": "sacheon.jpg",
+  "candidate": "sacheon_t1_side",
+  "url": "http://127.0.0.1:5312/?scenario=sacheon&hud=0&lv=4&q=high",
+  "pose": {
+   "tx": 1282.61,
+   "tz": -1465.09,
+   "yaw": -0.79,
+   "pitch": 0.08,
+   "distance": 150
+  },
+  "simTime": 339,
+  "framing": "side",
+  "ship": "거북선 1호",
+  "target": "사천 선창 대선 4호",
+  "gap": 141,
+  "viewport": [
+   2560,
+   1440
+  ],
+  "backend": "WebGPU (Edge, D3D11), desktop high tier, level 4",
+  "date": "2026-10-15"
+ },
+ {
+  "scenario": "dangpo",
+  "file": "dangpo.jpg",
+  "candidate": "dangpo_t1_shoulder-r",
+  "url": "http://127.0.0.1:5312/?scenario=dangpo&hud=0&lv=4&q=high",
+  "pose": {
+   "tx": 1329.17,
+   "tz": -444.37,
+   "yaw": -0.59,
+   "pitch": 0.06,
+   "distance": 208
+  },
+  "simTime": 325,
+  "framing": "shoulder-r",
+  "ship": "거북선 1호",
+  "target": "구루시마 대장선단 2호",
+  "gap": 219,
+  "viewport": [
+   2560,
+   1440
+  ],
+  "backend": "WebGPU (Edge, D3D11), desktop high tier, level 4",
+  "date": "2026-10-15"
+ },
+ {
+  "scenario": "hansan",
+  "file": "hansan.jpg",
+  "candidate": "hansan_0_shoulder-l",
+  "url": "http://127.0.0.1:5312/?scenario=hansan&hud=0&lv=4&q=high",
+  "pose": {
+   "tx": 1357.12,
+   "tz": -212.84,
+   "yaw": 3.12,
+   "pitch": 0.06,
+   "distance": 217
+  },
+  "simTime": 173,
+  "framing": "shoulder-l",
+  "ship": "거북선 2호",
+  "target": "중선 후위 1호",
+  "gap": 237,
+  "viewport": [
+   2560,
+   1440
+  ],
+  "backend": "WebGPU (Edge, D3D11), desktop high tier, level 4",
+  "date": "2026-10-15"
+ },
+ {
+  "scenario": "angolpo",
+  "file": "angolpo.jpg",
+  "candidate": "angolpo_1_shoulder-l",
+  "url": "http://127.0.0.1:5312/?scenario=angolpo&hud=0&lv=4&q=high",
+  "pose": {
+   "tx": 791.7,
+   "tz": -383.14,
+   "yaw": 3.21,
+   "pitch": 0.06,
+   "distance": 273
+  },
+  "simTime": 287,
+  "framing": "shoulder-l",
+  "ship": "좌수영 7호",
+  "target": "안골포 중소선 11호",
+  "gap": 229,
+  "viewport": [
+   2560,
+   1440
+  ],
+  "backend": "WebGPU (Edge, D3D11), desktop high tier, level 4",
+  "date": "2026-10-15"
+ },
+ {
+  "scenario": "busan",
+  "file": "busan.jpg",
+  "candidate": "busan_0_shoulder-r",
+  "url": "http://127.0.0.1:5312/?scenario=busan&hud=0&lv=4&q=high",
+  "pose": {
+   "tx": -849.36,
+   "tz": -910.29,
+   "yaw": -3.32,
+   "pitch": 0.06,
+   "distance": 440
+  },
+  "simTime": 187,
+  "framing": "shoulder-r",
+  "ship": "선봉 3호",
+  "target": "부산포 정박 5진 3호",
+  "gap": 244,
+  "viewport": [
+   2560,
+   1440
+  ],
+  "backend": "WebGPU (Edge, D3D11), desktop high tier, level 4",
+  "date": "2026-10-15"
+ },
+ {
+  "scenario": "chilcheon",
+  "file": "chilcheon.jpg",
+  "candidate": "chilcheon_1_shoulder-r",
+  "url": "http://127.0.0.1:5312/?scenario=chilcheon&hud=0&lv=4&q=high",
+  "pose": {
+   "tx": 2244,
+   "tz": 1207,
+   "yaw": -2.41,
+   "pitch": 0.06,
+   "distance": 159
+  },
+  "simTime": 214,
+  "framing": "shoulder-r",
+  "ship": "거북선 1호",
+  "target": "도도 선봉 33호",
+  "gap": 108,
+  "viewport": [
+   2560,
+   1440
+  ],
+  "backend": "WebGPU (Edge, D3D11), desktop high tier, level 4",
+  "date": "2026-10-15"
+ },
+ {
+  "scenario": "myeongnyang",
+  "file": "myeongnyang.jpg",
+  "candidate": "myeongnyang_4_side",
+  "url": "http://127.0.0.1:5312/?scenario=myeongnyang&hud=0&lv=4&q=high",
+  "pose": {
+   "tx": -1818.95,
+   "tz": 1098.12,
+   "yaw": 0.05,
+   "pitch": 0.08,
+   "distance": 338
+  },
+  "simTime": 686,
+  "framing": "side",
+  "ship": "남은 함대 1호",
+  "target": "와키자카 대 20호",
+  "gap": 208,
+  "viewport": [
+   2560,
+   1440
+  ],
+  "backend": "WebGPU (Edge, D3D11), desktop high tier, level 4",
+  "date": "2026-10-15"
+ },
+ {
+  "scenario": "noryang",
+  "file": "noryang.jpg",
+  "candidate": "noryang_3_shoulder-r",
+  "url": "http://127.0.0.1:5312/?scenario=noryang&hud=0&lv=4&q=high",
+  "pose": {
+   "tx": -1454.27,
+   "tz": -260.33,
+   "yaw": -2.98,
+   "pitch": 0.06,
+   "distance": 226
+  },
+  "simTime": 247,
+  "framing": "shoulder-r",
+  "ship": "명 수군 선봉 대장선",
+  "target": "시마즈 대 6호",
+  "gap": 258,
+  "viewport": [
+   2560,
+   1440
+  ],
+  "backend": "WebGPU (Edge, D3D11), desktop high tier, level 4",
+  "date": "2026-10-15"
+ }
+]

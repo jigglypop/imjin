@@ -924,13 +924,81 @@
   background: var(--glass-sheet);
 }
 
+.battle-art {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.battle-art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.battle-art img.on {
+  opacity: 1;
+}
+
+/* The battle's own still across the head of the brief: clear behind the date and name, darkening under the account
+   and fading into the glass, so the type over it stays legible and the card has no hard edge. */
+.hs-brief {
+  /* The band at the top of the brief where the picture shows clear. */
+  --hs-hero: clamp(76px, 11vh, 120px);
+}
+
+/* A strip across the horizon, where the ships are, rather than the whole frame: most of a still is sea and sky. */
+.hs-brief-art {
+  z-index: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--hs-hero) + 150px);
+  max-height: 100%;
+  -webkit-mask-image: linear-gradient(#000 55%, transparent 100%);
+  mask-image: linear-gradient(#000 55%, transparent 100%);
+}
+
+.hs-brief-art img {
+  object-position: 50% 58%;
+}
+
+.hs-brief-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(14, 16, 20, 0.5) 0%, rgba(14, 16, 20, 0) 55%),
+    linear-gradient(180deg, rgba(14, 16, 20, 0) 0%, rgba(14, 16, 20, 0.1) calc(var(--hs-hero) - 30px), rgba(14, 16, 20, 0.62) calc(var(--hs-hero) + 40px), rgba(14, 16, 20, 0.88) 100%);
+}
+
+.hs-brief-wrap,
+.hs-foot {
+  position: relative;
+  z-index: 1;
+}
+
+.hs-brief .select-date,
+.hs-brief h2 {
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.7);
+}
+
+.hs-brief .select-date {
+  color: var(--ink-2);
+}
+
 .hs-brief-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
-  padding: var(--sp-5) var(--sp-5) var(--sp-3);
+  /* Room at the top for the picture to show above the name. */
+  padding: var(--hs-hero) var(--sp-5) var(--sp-3);
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
@@ -1092,78 +1160,202 @@
 
 /* ---------------------------------------------------------------- loading */
 
+/* A still from the battle fills the screen and drifts slowly closer; the name, the navies and the bar sit at the foot on a dark fall-off. */
 .loading {
   position: absolute;
   inset: 0;
   z-index: 50;
   height: 100dvh;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: calc(var(--sat) + 16px) calc(var(--sar) + 24px) calc(var(--sab) + 16px) calc(var(--sal) + 24px);
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: calc(var(--sat) + 24px) calc(var(--sar) + 48px) calc(var(--sab) + 40px) calc(var(--sal) + 48px);
   color: var(--ink);
   line-height: 1.45;
+  overflow: hidden;
   background: radial-gradient(120% 90% at 50% 30%, var(--sea-2), var(--sea-0) 80%);
 }
 
-/* The battle's own picture shows through; only a dark wash sits over it, the card carries the text. */
 .loading .art-bg img {
   object-position: 50% 50%;
+  transform-origin: 55% 45%;
+  animation: loading-push 40s cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
+@keyframes loading-push {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.14);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading .art-bg img {
+    animation: none;
+    transform: none;
+  }
+}
+
+/* Light at the top for the quotation, the picture clear through the middle, dark at the foot for the type. */
 .loading .art-bg::after {
-  background: radial-gradient(70% 60% at 50% 50%, rgba(8, 12, 18, 0.3), rgba(8, 12, 18, 0.55) 100%);
+  background:
+    linear-gradient(180deg, rgba(6, 9, 13, 0.55) 0%, rgba(6, 9, 13, 0) 22%, rgba(6, 9, 13, 0) 44%, rgba(6, 9, 13, 0.72) 74%, rgba(6, 9, 13, 0.92) 100%),
+    linear-gradient(90deg, rgba(6, 9, 13, 0.5) 0%, rgba(6, 9, 13, 0) 55%);
 }
 
-.loading-card {
-  position: relative;
+/* A night battle's picture is already dark: the middle stays clear, only the foot darkens for the type. */
+.loading--night .art-bg::after {
+  background:
+    linear-gradient(180deg, rgba(4, 8, 14, 0.4) 0%, rgba(4, 8, 14, 0) 22%, rgba(4, 8, 14, 0) 50%, rgba(4, 8, 14, 0.6) 78%, rgba(4, 8, 14, 0.86) 100%);
+}
+
+.loading-quote {
+  position: absolute;
   z-index: 2;
-  width: min(440px, 100%);
-  padding: var(--sp-6) var(--sp-5) var(--sp-5);
+  top: calc(var(--sat) + 28px);
+  right: calc(var(--sar) + 48px);
+  max-width: min(420px, 50vw);
+  margin: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
   gap: 6px;
-  text-align: center;
-  background: var(--glass-sheet);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-align: right;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
 }
 
-/* A night battle's picture is already dark: the wash is lighter so it does not turn to black. */
-.loading--night .art-bg::after {
-  background: radial-gradient(70% 60% at 50% 50%, rgba(6, 12, 22, 0.12), rgba(6, 12, 22, 0.4) 100%);
+.loading-quote blockquote {
+  margin: 0;
+  font-size: var(--fs-15);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.loading-quote figcaption {
+  font-family: var(--hanja);
+  font-size: var(--fs-12);
+  letter-spacing: 0.2em;
+  color: var(--ink-3);
+}
+
+.loading-body {
+  position: relative;
+  z-index: 2;
+  width: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.55);
+  animation: loading-rise 0.7s ease-out both;
+}
+
+@keyframes loading-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-body {
+    animation: none;
+  }
 }
 
 .loading-hanja {
   font-family: var(--hanja);
-  font-weight: 400;
   font-size: var(--fs-13);
-  letter-spacing: 0.4em;
-  padding-left: 0.4em;
+  letter-spacing: 0.42em;
   white-space: nowrap;
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
 .loading-title {
-  font-size: var(--fs-24);
+  font-size: clamp(32px, 3.4vw + 12px, 54px);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: #fff;
+}
+
+.loading-where {
+  margin-top: 4px;
+  font-size: var(--fs-15);
+  color: var(--ink-2);
+}
+
+/* The navies side by side, each under a thin bar of its colour: who led it and what it brought. */
+.loading-forces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3) var(--sp-6);
+  margin-top: var(--sp-4);
+}
+
+.loading-force {
+  --bar: var(--ink-3);
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 12px;
+  border-left: 3px solid var(--bar);
+  font-size: var(--fs-13);
+  color: var(--ink-2);
+}
+
+.loading-force--joseon {
+  --bar: var(--joseon);
+}
+
+.loading-force--japan {
+  --bar: var(--japan);
+}
+
+.loading-force--ming {
+  --bar: var(--ming);
+}
+
+.loading-force b {
+  font-size: var(--fs-12);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+
+.loading-force span {
+  font-size: var(--fs-17);
+  font-weight: 600;
   color: var(--ink);
+}
+
+.loading-force small {
+  font-size: var(--fs-13);
+  color: var(--ink-2);
+}
+
+.loading-progress {
+  margin-top: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .loading-bar {
   width: 100%;
-  height: 4px;
-  margin-top: var(--sp-4);
+  height: 3px;
   border-radius: 999px;
-  background: var(--fill-2);
+  background: rgba(255, 255, 255, 0.16);
   overflow: hidden;
 }
 
 .loading-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--accent);
+  background: linear-gradient(90deg, rgba(238, 241, 243, 0.7), #fff);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
   transition: width 0.35s ease-out;
 }
 
@@ -1173,7 +1365,7 @@
   align-items: baseline;
   width: 100%;
   font-size: var(--fs-13);
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
 .loading-meta b {
@@ -1183,30 +1375,28 @@
   color: var(--ink);
 }
 
-.loading-quote {
-  margin-top: var(--sp-4);
-  padding-top: var(--sp-3);
-  width: 100%;
-  border-top: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  text-align: center;
-}
+/* Phones upright: the quotation runs across the top, the navies share the width. */
+@media (max-width: 700px), (orientation: portrait) and (max-width: 900px) {
+  .loading {
+    padding: calc(var(--sat) + 20px) calc(var(--sar) + 20px) calc(var(--sab) + 28px) calc(var(--sal) + 20px);
+  }
 
-.loading-quote span {
-  font-size: var(--fs-15);
-  line-height: 1.45;
-  color: var(--ink-2);
-}
+  .loading-quote {
+    left: calc(var(--sal) + 20px);
+    right: calc(var(--sar) + 20px);
+    max-width: none;
+    align-items: flex-start;
+    text-align: left;
+  }
 
-.loading-quote strong {
-  font-family: var(--hanja);
-  font-weight: 400;
-  font-size: var(--fs-12);
-  letter-spacing: 0.16em;
-  color: var(--ink-3);
+  .loading-forces {
+    gap: var(--sp-3) var(--sp-4);
+  }
+
+  .loading-force {
+    min-width: 0;
+    flex: 1 1 40%;
+  }
 }
 
 .loading-error {
@@ -1613,8 +1803,12 @@
     transform: none;
   }
 
+  .hs-brief {
+    --hs-hero: 84px;
+  }
+
   .hs-brief-scroll {
-    padding: var(--sp-4) var(--sp-4) var(--sp-2);
+    padding: var(--hs-hero) var(--sp-4) var(--sp-2);
     gap: var(--sp-2);
   }
 
@@ -1804,8 +1998,12 @@
     font-size: var(--fs-13);
   }
 
+  .hs-brief {
+    --hs-hero: 36px;
+  }
+
   .hs-brief-scroll {
-    padding: var(--sp-3) var(--sp-4) var(--sp-2);
+    padding: var(--hs-hero) var(--sp-4) var(--sp-2);
     gap: var(--sp-2);
   }
 
@@ -1832,17 +2030,20 @@
     min-width: 0;
   }
 
-  .loading-card {
-    width: min(420px, 100%);
-    padding: var(--sp-4) var(--sp-5);
+  .loading {
+    padding: calc(var(--sat) + 12px) calc(var(--sar) + 24px) calc(var(--sab) + 16px) calc(var(--sal) + 24px);
   }
 
   .loading-title {
-    font-size: var(--fs-20);
+    font-size: 28px;
   }
 
-  .loading-bar {
+  .loading-forces {
     margin-top: var(--sp-2);
+  }
+
+  .loading-progress {
+    margin-top: var(--sp-3);
   }
 
   .loading-quote {

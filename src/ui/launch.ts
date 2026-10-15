@@ -1,6 +1,7 @@
 import type { ConquestSetup, EngineOptions } from '../game/Engine';
 import type { RegionBattle } from '../sim/grand/bridge';
-import { grandSeats, grandYou } from '../sim/grand/spawn';
+import { grandInfo, grandSeats, grandYou } from '../sim/grand/spawn';
+import { battleCard, conquestInfo, scenarioInfo, type BattleCard } from '../sim/info';
 import type { NetBattle } from '../net/NetBattle';
 import { playableFactions } from '../sim/balance';
 import { CONQUEST_MAPS, defaultSeats, type ConquestMapId } from '../sim/maps';
@@ -27,6 +28,14 @@ export function conquestOf(launch: LaunchBody): ConquestSetup | undefined {
     return { seats: grandSeats(rb), you: grandYou(rb), seed: rb.seed, grand: rb };
   }
   return undefined;
+}
+
+/** What the loading screen shows of a launch from its first frame, before the engine's chunk has arrived. */
+export function battleCardOf(launch: LaunchBody): BattleCard {
+  if (launch.kind === 'scenario') return battleCard(scenarioInfo(launch.id));
+  if (launch.kind === 'grand') return battleCard(grandInfo(launch.battle));
+  const { setup } = launch;
+  return battleCard(setup.grand ? grandInfo(setup.grand) : conquestInfo(setup.map, setup.seed, setup.ranked));
 }
 
 const paramScenario = params.get('scenario') as ScenarioId | null;

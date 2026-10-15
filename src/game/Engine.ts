@@ -62,7 +62,7 @@ import { OWNER_OF, otherTeam, teamOf, type BattleEvent, type Faction, type Ship,
 import { buildConquest, homeAxis, type ConquestMapId, type Seat } from '../sim/maps';
 import { BUILDING_ORDER, BUILDINGS, RANKED_OPTIONS, ROSTER, rosterOf, SHORT_NAME, buildingHp, upgradeCost, type Conquest } from '../sim/conquest';
 import { applyCommand, type Command } from '../sim/commands';
-import { conquestInfo, scenarioInfo, type BattleInfo } from '../sim/info';
+import { battleCard, conquestInfo, scenarioInfo, type BattleInfo } from '../sim/info';
 import { ConquestView, preloadWorks } from '../conquest/ConquestView';
 import type { NetBattle } from '../net/NetBattle';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
@@ -365,7 +365,7 @@ export class Engine {
       this.camera.updateProjectionMatrix();
       waveField.setState(SEA_STATES[this.seaName]);
       const info = this.battleInfo;
-      setLoading(t('바다와 하늘을 준비하는 중'), 0.03, info.art ?? null);
+      setLoading(t('바다와 하늘을 준비하는 중'), 0.03, battleCard(info));
       // The files download while the cloud and wake shaders build, so neither waits for the other.
       const loading = this.loadAssets(0.03, task);
       // The asset promise may fail while the shared programs are being built.
@@ -985,7 +985,7 @@ export class Engine {
     const task = this.beginLoad();
     try {
       this.battleInfo = info;
-      setLoading(t('{title} 준비 중', { title: t(info.title) }), 0.04, info.art ?? null);
+      setLoading(t('{title} 준비 중', { title: t(info.title) }), 0.04, battleCard(info));
       this.skyName = info.sky;
       this.seaName = info.sea;
       waveField.setState(SEA_STATES[this.seaName]);

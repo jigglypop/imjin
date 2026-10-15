@@ -3,7 +3,7 @@ import { GUN_SHOTS } from '../catalog';
 import { buildingHp, SHORT_NAME, type Building, type BuildingKind as WorkKind, type Conquest } from '../conquest';
 import { buildConquestOn, wetSpot, type Seat } from '../maps';
 import { dateLabel, TUNING } from './economy';
-import type { BattleInfo } from '../info';
+import { artFor, type BattleInfo } from '../info';
 import type { LandSampler, Ship, Squadron } from '../types';
 import type { BridgeSeat, RegionBattle, RegionBattleBuilding } from './bridge';
 import { ATTACKER_HOME, DEFENDER_HOME, REGION_MAPS, regionEnvironment } from './coast';
@@ -61,7 +61,7 @@ export function grandInfo(rb: RegionBattle): BattleInfo {
     coastalTactic: m.coastalTactic,
     view: m.view,
     foliage: m.foliage,
-    art: m.scenario ?? undefined,
+    art: artFor(m.terrain, m.night, m.scenario),
   };
 }
 
