@@ -3,8 +3,9 @@ import type { Ship } from './types';
 
 /** A fire this large throws sparks and burning pitch onto the hulls around it. */
 const SPREAD_FROM = 0.4;
-/** Hull-to-hull gap in metres beyond which nothing reaches. */
+/** Hull-to-hull gap in metres beyond which nothing reaches across the wind; a full wind carries sparks twice as far downwind. */
 const SPREAD_REACH = 45;
+const DOWNWIND_REACH = 1;
 /** Chance per second that a full fire catches an alongside hull in a crosswind. */
 const SPREAD_RATE = 0.1;
 /** A ship under way can sheer off from a burning neighbour; one lying still cannot. */
@@ -35,19 +36,21 @@ export class FireSpread {
     // The budget refills with battle time, whichever ship is looked at.
     this.budget = Math.min(SPREAD_BUDGET, this.budget + (b.time - this.at) * SPREAD_BUDGET);
     this.at = b.time;
-    const wind = DOWNWIND * Math.min(1, b.waves.state.wind / WIND_FULL);
+    const wind = Math.min(1, b.waves.state.wind / WIND_FULL);
     const wx = Math.cos(b.windAngle);
     const wz = Math.sin(b.windAngle);
-    const reach = s.spec.length * 0.5 + SPREAD_REACH + 20;
-    b.near(s.x, s.z, reach, (o) => {
+    const look = s.spec.length * 0.5 + SPREAD_REACH * (1 + DOWNWIND_REACH) + 20;
+    b.near(s.x, s.z, look, (o) => {
       if (o === s || !o.alive || o.sinking > 0 || o.fire > 0.6 || this.budget < 1) return;
       const dx = o.x - s.x;
       const dz = o.z - s.z;
       const d = Math.sqrt(dx * dx + dz * dz) || 1;
       const gap = d - (s.spec.length + o.spec.length) * 0.35;
-      if (gap > SPREAD_REACH) return;
-      const closeness = 1 - Math.max(0, gap) / SPREAD_REACH;
-      const downwind = 1 + wind * ((dx * wx + dz * wz) / d);
+      const along = (dx * wx + dz * wz) / d;
+      const reach = SPREAD_REACH * (1 + DOWNWIND_REACH * wind * Math.max(0, along));
+      if (gap > reach) return;
+      const closeness = 1 - Math.max(0, gap) / reach;
+      const downwind = 1 + DOWNWIND * wind * along;
       const chance = SPREAD_RATE * s.fire * closeness * downwind * (Math.abs(o.speed) > UNDER_WAY ? UNDER_WAY_SHARE : 1) * dt;
       if (b.random() >= chance) return;
       this.budget -= 1;

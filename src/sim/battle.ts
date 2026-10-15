@@ -129,8 +129,8 @@ const HUMAN_HOLD = 0.8;
 /** What a crew's state leaves of its ship's weight in the battle's balance: a running ship hardly counts. */
 const NERVE_WEIGHT: Record<MoraleState, number> = { steady: 1, wavering: 0.8, rallying: 0.6, routing: 0.25 };
 /** A target with this many of its friends within PACKED_RANGE is worth fire arrows: the fire will spread (the depth rules). */
-const PACKED_RANGE = 90;
-const PACKED_SHIPS = 3;
+const PACKED_RANGE = 120;
+const PACKED_SHIPS = 2;
 
 /** Boarders close in at FLEET_PACE (m/s) while farther than this from their enemy, then go flat out together. */
 const RUSH_RANGE = 450;
