@@ -1,5 +1,7 @@
 /** English for the ship codex (src/ui/codex) and the battle's close look, keyed by the exact Korean source text. See ../index.ts. */
 export const EN_CODEX: Record<string, string> = {
+  // The battle's close look
+  '도감에서 자세히 보기': 'Study this ship in the codex',
   // The screen
   '함선 목록': 'Ships',
   '장면': 'Scene',

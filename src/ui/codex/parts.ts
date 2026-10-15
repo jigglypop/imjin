@@ -147,7 +147,8 @@ export function deckViews(kind: ShipKind, variant = 0): DeckView[] {
   const model = modelKind(kind);
   if (model === 'geobukseon') {
     const ridge = a.fireSpots[2] ?? a.fireSpots[0]!;
-    return [{ label: '덮개 위', eye: [ridge[0], ridge[1] + EYE + 0.3, 0], yaw: 0 }];
+    // Off the centreline: the mast stands there and would fill the view.
+    return [{ label: '덮개 위', eye: [ridge[0], ridge[1] + EYE + 0.3, 2.2], yaw: 0 }];
   }
   const views: DeckView[] = [];
   if (a.commandDeck && OPEN_COMMAND.includes(model)) views.push({ label: '지휘소', eye: [a.commandDeck[0], a.commandDeck[1] + EYE, 0], yaw: 0 });

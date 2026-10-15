@@ -567,6 +567,25 @@
   gap: 3px;
 }
 
+.detail-codex {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--ink-2, inherit);
+  cursor: pointer;
+}
+
+.detail-codex:hover,
+.detail-codex:focus-visible {
+  color: var(--ink, #fff);
+  border-color: var(--ink-2);
+}
+
 .detail-body {
   display: flex;
   flex-direction: column;

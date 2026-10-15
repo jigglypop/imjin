@@ -36,6 +36,8 @@ export type PrimaryInfo = {
   id: number;
   name: string;
   kind: string;
+  /** The ship's kind id, for opening it in the ship codex. */
+  shipKind: ShipKind;
   team: Team;
   hull: number;
   crew: number;
