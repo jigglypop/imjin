@@ -39,7 +39,7 @@ const SUN_RADIUS = 0.0047;
 const MOON_RADIUS = 0.0046;
 
 /** Where a unit direction falls in a sky view (see buildSkyView): azimuth across, sqrt-spaced elevation up. */
-export function skyViewUV(dir: Node) {
+function skyViewUV(dir: Node) {
   const u = atan(dir.z, dir.x).mul(1 / (2 * Math.PI)).add(0.5);
   const el = asin(clamp(dir.y, -1, 1));
   const s = sqrt(min(abs(el).mul(2 / Math.PI), 1));
@@ -47,8 +47,8 @@ export function skyViewUV(dir: Node) {
 }
 
 /**
- * The texture nodes that read a sky view. A battle that brings a sky of a different size swaps its texture into every
- * one of them; a sky of the same size is written into the same texture and nothing changes here.
+ * The texture nodes that read a sky view. The first sky is swapped into every one of them in place of the stand-in the
+ * clouds were built with; later skies are written into that same texture and nothing changes here.
  */
 export class SkyView {
   private readonly nodes: Node[] = [];
