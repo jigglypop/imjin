@@ -135,8 +135,7 @@ export class HeroLayer {
   private readonly materials = new Map<FactionId, Promise<{ material: MeshBasicNodeMaterial; textures: Texture[] } | null>>();
   private readonly ready: { material: Material; textures: Texture[] }[] = [];
   private lookReady: HeroGroundLook | null = null;
-  private trees: Promise<{ material: MeshBasicNodeMaterial; texture: Texture }> | null = null;
-  private treeLook: { material: MeshBasicNodeMaterial; texture: Texture } | null = null;
+  private treeLook: MeshBasicNodeMaterial | null = null;
   private disposed = false;
 
   /** `drawn(u, v)` is the drawn land's height in metres at a frame point, negative under the sea; `land` the land's look. */
@@ -196,13 +195,9 @@ export class HeroLayer {
         add(ground.shade, look.shade, group, 3);
         add(ground.water, look.water, group, 2);
       }
-      const leaves = await (this.trees ??= treeMaterial().then((m) => {
-        if (this.disposed) { m.material.dispose(); m.texture.dispose(); } else this.treeLook = m;
-        return m;
-      }));
-      if (this.disposed) return;
+      const leaves = (this.treeLook ??= treeMaterial(this.land.details[3]!));
       const seed = Math.round(use.site.u * 1e6);
-      const trees = treeMeshes([...plantTrees(plan, use.site.reach, ground.sample, seed, use.avoid), ...placeBoulders(plan, use.site.reach, ground.sample, seed)], leaves.material);
+      const trees = treeMeshes([...plantTrees(plan, use.site.reach, ground.sample, seed, use.avoid), ...placeBoulders(plan, use.site.reach, ground.sample, seed)], leaves);
       for (const t of trees) {
         geometries.push(t.geometry);
         group.add(t);
@@ -323,7 +318,7 @@ export class HeroLayer {
     const look = this.lookReady;
     if (look) for (const x of [look.ground, look.laid, look.shade, look.water]) x.dispose();
     this.lookReady = null;
-    if (this.treeLook) { this.treeLook.material.dispose(); this.treeLook.texture.dispose(); }
+    this.treeLook?.dispose();
     this.treeLook = null;
     this.group.removeFromParent();
   }

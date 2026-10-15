@@ -108,11 +108,35 @@ export interface LocalGround {
   w?: any;
 }
 
+/** The country at a point as the land's look draws it (`LandLook.coverAt`): 0..1 shares, the slope and the height. */
+export interface Cover {
+  wood: number;
+  rock: number;
+  /** Rock that is a crag or a ridge, not a shore. */
+  crag: number;
+  sand: number;
+  farm: number;
+  slope: number;
+  metres: number;
+  /** The broad districts' wander, -0.5..0.5, for what stands on the land to vary by it as the land does. */
+  wander: number;
+}
+
+const smooth = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
 export interface LandLook {
   /** The bake (landBake.ts) over the DEM, the noise and the close-up ground textures. */
   readonly textures: Texture[];
   /** The ground textures alone, for what is laid on the hero camps' ground (hero/ground.ts). */
   readonly details: Texture[];
+  /**
+   * The country at frame point (u, v) as the shader works it out from the bake and the noise (the same rules, on the CPU),
+   * for the trees and rocks standing on it. Over the DEM only; elsewhere open sea.
+   */
+  coverAt(u: number, v: number): Cover;
   /** The land's colour, lit, at the drawn point: the DEM's from the bake, or a hero patch's faded in over it. */
   color(local?: LocalGround): any;
   dispose(): void;
@@ -139,6 +163,7 @@ export async function loadLandLook(metres: Float32Array, signal: AbortSignal): P
   bakeTex.generateMipmaps = true;
   bakeTex.needsUpdate = true;
   const noise = noiseTexture();
+  const noiseData = noise.image.data as Uint8Array;
   const textures = [bakeTex, noise, ...details];
   if (signal.aborted) {
     for (const t of textures) t.dispose();
@@ -167,7 +192,7 @@ export async function loadLandLook(metres: Float32Array, signal: AbortSignal): P
     const wander: any = broad.mul(0.65).add(stand.mul(0.35)).sub(0.5);
     const rag: any = fine.sub(0.5).add(stand.sub(0.5).mul(0.6));
 
-    // Woods on the slopes and the hills, their edges ragged; bare rock on the steepest faces and the high ridges; sand
+    // Woods on the slopes and the hills, their edges ragged (coverAt above follows the same rules for the trees); bare rock on the steepest faces and the high ridges; sand
     // and mud on the low flat shores; farmland on the low flat ground; grass and scrub elsewhere.
     const woodsAt = max(smoothstep(0.26, 0.55, slope.add(wander.mul(0.22))), smoothstep(70, 190, metres.add(wander.mul(90))));
     let wood: any = smoothstep(0.38, 0.62, woodsAt.add(rag.mul(0.45)));
@@ -237,9 +262,46 @@ export async function loadLandLook(metres: Float32Array, signal: AbortSignal): P
     return ground.mul(grain).mul(light);
   };
 
+  // The noise as the shader samples it: bilinear, wrapping, one channel.
+  const noiseAt = (mx: number, mz: number, scale: number, channel: number) => {
+    const fx = (mx / scale) * NOISE - 0.5, fz = (mz / scale) * NOISE - 0.5;
+    const ix = Math.floor(fx), iz = Math.floor(fz), tx = fx - ix, tz = fz - iz;
+    const at = (i: number, j: number) => noiseData[(((j % NOISE) + NOISE) % NOISE * NOISE + (((i % NOISE) + NOISE) % NOISE)) * 4 + channel]! / 255;
+    const top = at(ix, iz) + (at(ix + 1, iz) - at(ix, iz)) * tx, bottom = at(ix, iz + 1) + (at(ix + 1, iz + 1) - at(ix, iz + 1)) * tx;
+    return top + (bottom - top) * tz;
+  };
+  const NONE: Cover = { wood: 0, rock: 0, crag: 0, sand: 0, farm: 0, slope: 0, metres: 0, wander: 0 };
+  const coverAt = (u: number, v: number): Cover => {
+    const tx = ((u - DEM_RECT.u) / DEM_RECT.w) * (W - 1), ty = ((v - DEM_RECT.v) / DEM_RECT.h) * (H - 1);
+    if (!(tx >= 0 && ty >= 0 && tx <= W - 1 && ty <= H - 1)) return NONE;
+    const x0 = Math.min(W - 2, Math.floor(tx)), y0 = Math.min(H - 2, Math.floor(ty)), fx = tx - x0, fy = ty - y0;
+    const read = (c: number) => {
+      const k = (y0 * W + x0) * 4 + c, r = W * 4;
+      const top = baked[k]! + (baked[k + 4]! - baked[k]!) * fx, bottom = baked[k + r]! + (baked[k + r + 4]! - baked[k + r]!) * fx;
+      return (top + (bottom - top) * fy) / 255;
+    };
+    const slope = read(2) * SLOPE_RANGE, a = read(3), metres = a * a * HEIGHT_RANGE;
+    const mx = (u - 0.5) / MODEL_METRE, mz = (v - 0.5) / MAP_ASPECT / MODEL_METRE;
+    const broad = noiseAt(mx, mz, 800, 0) * 0.6 + noiseAt(mx, mz, 1330, 0) * 0.4;
+    const stand = noiseAt(mx, mz, 400, 1), fine = noiseAt(mx, mz, 128, 2);
+    const wander = broad * 0.65 + stand * 0.35 - 0.5, rag = fine - 0.5 + (stand - 0.5) * 0.6;
+    // The shader's rules (`color` below), step for step.
+    const woodsAt = Math.max(smooth(0.26, 0.55, slope + wander * 0.22), smooth(70, 190, metres + wander * 90));
+    let wood = smooth(0.38, 0.62, woodsAt + rag * 0.45);
+    const shoreRock = (1 - smooth(3, 12, metres + rag * 5)) * smooth(0.22, 0.45, slope + rag * 0.2);
+    const crag = Math.max(smooth(1.5, 2.3, slope + rag * 0.5), smooth(1050, 1500, metres + wander * 150 + rag * 80));
+    let rock = Math.max(crag, shoreRock);
+    const sand = (1 - smooth(1.5, 5.5, metres + rag * 4)) * (1 - smooth(0.12, 0.35, slope));
+    const farm = (1 - smooth(18, 60, metres + wander * 40)) * (1 - smooth(0.1, 0.26, slope + rag * 0.06));
+    rock *= 1 - sand;
+    wood *= (1 - rock) * (1 - sand);
+    return { wood, rock, crag: crag * (1 - sand), sand, farm, slope, metres, wander };
+  };
+
   return {
     textures,
     details,
+    coverAt,
     color,
     dispose() {
       for (const t of textures) t.dispose();
