@@ -20,7 +20,7 @@ const args = Object.fromEntries(
   }),
 );
 const url = args.url ?? 'http://127.0.0.1:5311/';
-const prefix = args.prefix ?? '/Users/yeomdonghwan/Desktop/imjin/shots/progress/crew_probe';
+const prefix = args.prefix ?? 'shots/crew_probe';
 const shots = Number(args.shots ?? 4);
 const step = Number(args.step ?? 2500);
 await mkdir(dirname(prefix), { recursive: true });
@@ -188,7 +188,7 @@ for (let i = 0; i < shots; i += 1) {
     const rD = e.crew.rosters.get(d);
     const alive = rD ? rD.members.map((l) => l.filter((m) => m.dying < 0 && !m.gone).length) : null;
     const awayA = e.crew.rosters.get(a)?.members.map((l) => l.filter((m) => m.away).length);
-    return { t: Math.round(b.time), grapple: sa.grappledWith, crewA: Math.round(sa.crew), crewD: Math.round(sd.crew), struckD: sd.struck, struckA: sa.struck, figs: states.join('/'), capture: [...bo.captures.values()].map((c) => `${c.id}:${c.win}`).join(','), aliveD: alive?.join(','), awayA: awayA?.join(','), fallen: bo.fallen.filter((f) => f.used).length, arrows: bo.arrows.filter((f) => f.used).length, props: bo.nProps, sprites: bo.sprites.filter((f) => f.used).length, drawn: [...e.crew.assets].map(([k, x]) => `${k}:${x.lods.map((l) => l.count).join('/')}`).join(' ') };
+    return { t: Math.round(b.time), grapple: sa.grappledWith, crewA: Math.round(sa.crew), crewD: Math.round(sd.crew), struckD: sd.struck, struckA: sa.struck, figs: states.join('/'), capture: [...bo.captures.values()].map((c) => `${c.id}:${c.win}`).join(','), aliveD: alive?.join(','), awayA: awayA?.join(','), fallen: bo.fallen.filter((f) => f.used).length, arrows: bo.arrows.flying, stuck: bo.arrows.stuckCount, props: bo.nProps, puffs: bo.puffs.pool.filter((f) => f.used).length, drawn: [...e.crew.assets].map(([k, x]) => `${k}:${x.lods.map((l) => l.count).join('/')}`).join(' ') };
   });
   const out = `${prefix}_${String(i).padStart(2, '0')}.png`;
   await page.screenshot({ path: out });
