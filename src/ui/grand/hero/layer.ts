@@ -1,4 +1,4 @@
-import { Group, Mesh, type BufferGeometry, type Material, type MeshBasicNodeMaterial, type Texture } from 'three/webgpu';
+import { Group, Mesh, type MeshBasicNodeMaterial, type BufferGeometry, type InstancedMesh, type Material, type Texture } from 'three/webgpu';
 import { attribute, normalLocal, positionLocal, sin, vec3 } from 'three/tsl';
 import { worldClock } from '../../../select/terrain';
 import { SWAY_RANGE, toGeometry } from '../../../ships/build/pack';
@@ -12,6 +12,7 @@ import { LAYOUTS, town } from './layouts';
 import { Plan, type Moored } from './plan';
 import { HERO_SITES, heroEnabled, MODEL_METRE, siteUV, siteXZ, type HeroSite } from './site';
 import { heroGroundOf } from './terrain';
+import { plantTrees, treeMaterial, treeMeshes } from './trees';
 
 // The hero camps on the campaign map (see site.ts): for each hero site whose camp its own navy holds, the camp of the
 // layouts, the villages of the towns round it, and the ground they stand on, built when the world first shows them and
@@ -28,6 +29,8 @@ export interface HeroUse {
   replaces: Set<string>;
   /** The towns drawn as villages: (x, z) in the site's frame, how many houses, a seed. */
   towns: { x: number; z: number; houses: number; seed: number }[];
+  /** The map's other places on the site's ground (x, z, radius in model metres): no tree grows over them. */
+  avoid: [number, number, number][];
   key: string;
 }
 
@@ -38,16 +41,19 @@ export function heroUses(world: MapWorld): HeroUse[] {
     const camp = world.settlements.find((s) => s.kind === 'camp' && s.region === site.id);
     if (!camp || camp.owner !== site.navy || !heroGroundOf(site.id)) continue;
     const replaces = new Set<string>([camp.id]);
-    const towns: HeroUse['towns'] = [];
+    const towns: HeroUse['towns'] = [], avoid: HeroUse['avoid'] = [];
     for (const s of world.settlements) {
       if (s.region === site.id && s.kind === 'beacon') replaces.add(s.id);
-      if (s.kind !== 'town') continue;
       const { x, z } = siteXZ(site, s.u, s.v);
-      if (Math.max(Math.abs(x), Math.abs(z)) > site.reach - 30) continue;
+      if (Math.max(Math.abs(x), Math.abs(z)) > site.reach + 40) continue;
+      if (s.kind !== 'town' || Math.max(Math.abs(x), Math.abs(z)) > site.reach - 30) {
+        if (!replaces.has(s.id)) avoid.push([x, z, s.radius * 40 + 6]);
+        continue;
+      }
       replaces.add(s.id);
       towns.push({ x, z, houses: houses(s), seed: [...s.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 1000 });
     }
-    out.push({ site, replaces, towns, key: JSON.stringify([site.id, towns]) });
+    out.push({ site, replaces, towns, avoid, key: JSON.stringify([site.id, towns, avoid]) });
   }
   return out;
 }
@@ -100,6 +106,8 @@ export class HeroLayer {
   private readonly ready: { material: Material; textures: Texture[] }[] = [];
   private look: Promise<HeroGroundLook | null> | null = null;
   private lookReady: HeroGroundLook | null = null;
+  private trees: Promise<{ material: MeshBasicNodeMaterial; texture: Texture }> | null = null;
+  private treeLook: { material: MeshBasicNodeMaterial; texture: Texture } | null = null;
   private disposed = false;
 
   /** `drawn(u, v)` is the drawn land's height in metres at a frame point, negative under the sea. */
@@ -161,6 +169,16 @@ export class HeroLayer {
         add(ground.laid, look.laid, group, 2);
         add(ground.shade, look.shade, group, 3);
       }
+      const leaves = await (this.trees ??= treeMaterial().then((m) => {
+        if (this.disposed) { m.material.dispose(); m.texture.dispose(); } else this.treeLook = m;
+        return m;
+      }));
+      if (this.disposed) return;
+      const trees = treeMeshes(plantTrees(plan, use.site.reach, ground.sample, use.site.u * 1e6, use.avoid), leaves.material);
+      for (const t of trees) {
+        geometries.push(t.geometry);
+        group.add(t);
+      }
       meshes.forEach((m) => {
         const mat = mats[[...navies].indexOf(m.navy)]?.material;
         if (!mat) return;
@@ -194,6 +212,7 @@ export class HeroLayer {
 
   private drop(key: string, b: Built) {
     b.group.removeFromParent();
+    b.group.traverse((o) => { if ((o as InstancedMesh).isInstancedMesh) (o as InstancedMesh).dispose(); });
     for (const g of b.geometries) g.dispose();
     this.built.delete(key);
   }
@@ -207,6 +226,8 @@ export class HeroLayer {
     const look = this.lookReady;
     if (look) { for (const x of [look.ground, look.laid, look.shade]) x.dispose(); for (const t of look.textures) t.dispose(); }
     this.lookReady = null;
+    if (this.treeLook) { this.treeLook.material.dispose(); this.treeLook.texture.dispose(); }
+    this.treeLook = null;
     this.group.removeFromParent();
   }
 }
@@ -219,6 +240,8 @@ export function heroClearings(world: MapWorld): { u: number; v: number; r: numbe
     const plan = heroPlan(use);
     if (!plan) continue;
     const disc = (x: number, z: number, r: number) => out.push({ ...siteUV(use.site, x, z), r: r * MODEL_METRE });
+    // The camp plants its own woods over its patch (trees.ts): the map's keep off it.
+    disc(0, 0, use.site.reach - 10);
     for (const [x, z, r] of plan.clear) disc(x, z, r);
     for (const pad of plan.pads) {
       const cx = pad.poly.reduce((s, p) => s + p[0], 0) / pad.poly.length, cz = pad.poly.reduce((s, p) => s + p[1], 0) / pad.poly.length;

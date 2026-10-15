@@ -2,7 +2,7 @@ import {
   BufferAttribute, BufferGeometry, DoubleSide, LinearMipmapLinearFilter, MeshBasicNodeMaterial, RepeatWrapping, SRGBColorSpace, ShapeUtils,
   TextureLoader, Vector2, type Texture,
 } from 'three/webgpu';
-import { attribute, float, floor, fract, mix, mx_noise_float, positionLocal, smoothstep, texture, vec2, vec3, vec4 } from 'three/tsl';
+import { attribute, float, floor, fract, fwidth, mix, mx_noise_float, positionLocal, smoothstep, texture, vec2, vec3, vec4 } from 'three/tsl';
 import { faceColor, SKY_LIGHT, SUN_DIRECTION, SUN_LIGHT, type Facet } from '../groundPalette';
 import { MAP_ASPECT } from '../projection';
 import type { P2, Plan, Surface } from './plan';
@@ -71,7 +71,11 @@ function wobble(x: number, z: number) {
   return Math.sin(x * 0.11 + Math.sin(z * 0.07) * 2.1) * 0.6 + Math.sin(z * 0.13 + x * 0.05) * 0.4;
 }
 
-export interface HeroGroundMeshes { patch: BufferGeometry | null; laid: BufferGeometry | null; shade: BufferGeometry | null }
+export interface HeroGroundMeshes {
+  patch: BufferGeometry | null; laid: BufferGeometry | null; shade: BufferGeometry | null;
+  /** The patch's ground at a point of the site's frame: its height, how wooded it is, how open. */
+  sample(x: number, z: number): { h: number; wood: number; open: number };
+}
 
 /**
  * Builds a camp's ground. `drawn(u, v)` is the drawn land's height in metres at a frame point (negative under the sea),
@@ -112,6 +116,7 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
   const facet: Facet = { metres: 0, nx: 0, ny: 1, nz: 0, x: 0, z: 0, size: STEP * MODEL_METRE, slope: 0, shore: false };
   const rgb = new Float32Array(3);
   const w: number[] = [0, 0, 0, 0];
+  const woods = new Float32Array(n * n), open = new Float32Array(n * n);
   for (let j = 0; j < n; j += 1) {
     for (let i = 0; i < n; i += 1) {
       const x = -R + i * STEP, z = -R + j * STEP, h = at(i, j);
@@ -132,11 +137,13 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
       const sand = (1 - smooth(0.02, 0.16, h)) * (1 - smooth(0.45, 0.9, slope));
       const wood = Math.max(smooth(0.3, 0.6, slope), smooth(70, 190, facet.metres)) * (1 - rock) * (1 - sand);
       w[0] = Math.max(0, 1 - rock - sand - wood); w[1] = rock; w[2] = sand; w[3] = wood;
+      woods[j * n + i] = wood;
+      open[j * n + i] = w[0];
       const edge = R - Math.max(Math.abs(x), Math.abs(z)) + wobble(x, z) * 6;
       // Well inside the patch the land's bright map colours calm to the colours of real ground: a little less green, warmer.
       const inner = smooth(FADE, FADE + 35, edge);
       const grey = rgb[0]! * 0.3 + rgb[1]! * 0.55 + rgb[2]! * 0.15;
-      for (let k = 0; k < 3; k += 1) rgb[k] = rgb[k]! + (grey * [1.08, 0.98, 0.8][k]! - rgb[k]!) * inner * 0.38;
+      for (let k = 0; k < 3; k += 1) rgb[k] = rgb[k]! + (grey * [1.1, 1.0, 0.7][k]! - rgb[k]!) * inner * 0.22;
       patch.vert(x, h + LIFT, z, rgb, smooth(2, FADE, edge), w, 0, inner);
     }
   }
@@ -247,7 +254,11 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
       shade.idx.push(a, b, B, a, B, A);
     }
   }
-  return { patch: patch.geometry(), laid: laid.geometry(), shade: shade.geometry() };
+  const sample = (x: number, z: number) => {
+    const i = Math.max(0, Math.min(n - 1, Math.round((x + R) / STEP))), j = Math.max(0, Math.min(n - 1, Math.round((z + R) / STEP)));
+    return { h: ground(x, z) - LIFT, wood: woods[j * n + i]!, open: open[j * n + i]! };
+  };
+  return { patch: patch.geometry(), laid: laid.geometry(), shade: shade.geometry(), sample };
 }
 
 function smooth(a: number, b: number, x: number) {
@@ -282,7 +293,7 @@ export async function heroGroundLook(): Promise<HeroGroundLook> {
     // The fine grain with a little of the broad one, so no tiling shows; half colour, half grain, as a texture's own hue
     // would fight the palette.
     const grain = a.mul(b.pow(vec3(0.35)));
-    return mix(vec3(grain.dot(vec3(0.3, 0.55, 0.15))), grain, 0.45);
+    return mix(vec3(grain.dot(vec3(0.3, 0.55, 0.15))), grain, 0.3);
   };
   const w: any = attribute('w', 'vec4');
   const k2: any = attribute('pave', 'vec2');
@@ -290,8 +301,11 @@ export async function heroGroundLook(): Promise<HeroGroundLook> {
   const col: any = attribute('color', 'vec4');
   const mixed = detail(textures[0]!, 7).mul(w.x).add(detail(textures[1]!, 6).mul(w.y)).add(detail(textures[2]!, 4.5).mul(w.z)).add(detail(textures[3]!, 5).mul(w.w));
   const total = w.x.add(w.y).add(w.z).add(w.w).max(0.001);
-  // The grain shows fully inside the patch and fades with it, so the patch's edge meets the land's plain facets.
-  const grain: any = mix(vec3(1), mixed.div(total).pow(vec3(1.35)), inner.mul(0.55).add(0.4));
+  // The grain shows fully inside the patch and fades with it, so the patch's edge meets the land's plain facets; and it
+  // fades as the camera draws back, before a pixel covers so much ground that the textures' repeats show as a quilt.
+  const footprint = fwidth(p).length();
+  const near = float(1).sub(smoothstep(0.3, 0.7, footprint));
+  const grain: any = mix(vec3(1), mixed.div(total), inner.mul(0.5).add(0.35).mul(near));
   // Paving: slabs in running courses, each its own shade, joints dark.
   const slab = vec2(1.3, 0.75);
   const row = floor(p.y.div(slab.y));

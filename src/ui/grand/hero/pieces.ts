@@ -38,7 +38,7 @@ function roofLook(k: Kit, look: BodyLook): RoofLook | null {
   switch (look) {
     case 'jo_red': return weathered(koreanRoof(k, true));
     case 'jo_lime': case 'jo_store': case 'jo_house': case 'jo_shed': case 'jo_granary': return weathered(koreanRoof(k));
-    case 'wa_lime': case 'wa_shed': return weathered(japaneseRoof(k), 0.75);
+    case 'wa_lime': case 'wa_shed': return weathered(japaneseRoof(k), 0.58);
     case 'wa_house': {
       const reed = k.P('thatch');
       return { tile: reed, edge: reed.tinted([0.7, 0.66, 0.6]), under: k.P('timber'), ridge: k.P('boards'), gable: k.P('timber') };
@@ -214,7 +214,7 @@ function yagura(k: Kit, p: Extract<Piece, { kind: 'yagura' }>) {
   boardsBelow(k, hx, hz, 0.3, 1.2);
   if (storeys === 1) for (const sz of [1, -1] as const) picture(k, k.P('door'), -Math.min(1.4, hx * 0.5), Math.min(1.4, hx * 0.5), 0.3, 2.3, sz * hz, sz);
   if (k.near) for (const sz of [1, -1] as const) for (const x of [-hx * 0.55, hx * 0.55]) picture(k, k.P('window'), x - 0.45, x + 0.45, 1.6, 2.3, sz * hz, sz);
-  const look = weathered(japaneseRoof(k), 0.75);
+  const look = weathered(japaneseRoof(k), 0.58);
   if (storeys > 1) {
     roofOver(k, look, w, d, 2.6, 1.0, 0.7, 'hip', { curl: 0.06, sag: 1.25 });
     const ux = hx * 0.72, uz = hz * 0.72;
@@ -239,7 +239,7 @@ function tenshu(k: Kit) {
       pictureX(k, k.P('window'), -0.55, 0.55, top - 1.5, top - 0.6, sz * hx, sz);
     }
     const last = i === tiers.length - 1;
-    const look = weathered(japaneseRoof(k), 0.75);
+    const look = weathered(japaneseRoof(k), 0.58);
     roofOver(k, last ? look : { ...look, ends: undefined }, w, d, top, rise, 1.1, last ? 'hipgable' : 'hip', { curl: 0.08, sag: 1.3 });
     if (i === 0) for (const sz of [1, -1]) at(k, 0, top + 0.45, sz * (hz + 0.3), sz > 0 ? PI / 2 : -PI / 2, () => roof(k, { ...look, ends: undefined }, {
       ex: 1.1, ez: 1.4, y: 0, top: 1.3, form: 'gable', lift: 0.12, sag: 1.2, edge: 0.22, overhang: 0.5, verge: 0.25, ridgeW: 0.28, ridgeH: 0.22, rows: 2, cols: 2, trims: false,
