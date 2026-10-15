@@ -1048,6 +1048,9 @@
   .codex {
     --cx-dossier: min(360px, 40vw);
   }
+  .cx-scene-btn {
+    margin-right: calc(var(--cx-dossier) + 12px);
+  }
   .cx-top {
     padding: calc(var(--sat) + 8px) calc(var(--sar) + 12px) 0 calc(var(--sal) + 12px);
   }
@@ -1151,6 +1154,12 @@
     z-index: 7;
     flex-direction: column;
     align-items: flex-end;
+  }
+}
+/* On phones the numbers carry the parts and only the picked one shows its name; five labels on a ship this small overlap. */
+@media (max-width: 900px) and (orientation: portrait), (orientation: landscape) and (max-height: 540px) {
+  .cx-pin:not(.cx-pin--on) span {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
