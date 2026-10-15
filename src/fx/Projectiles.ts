@@ -364,7 +364,9 @@ export class Munitions {
     const len = Math.max(speed / 40, TRACER_PX / ppm);
     const width = Math.max(2 * r, TRACER_WIDTH_PX / ppm);
     const heat = 1 - 0.5 * smooth(0.1, 1.2, age);
-    this.streaks.put(x, y, z, ux, uy, uz, len, width, 1, 0.3 + 0.22 * heat, 0.08 + 0.1 * heat, (0.5 + 0.4 * heat) * strength);
+    // Close by the blur is long and the eye sees the dark ball in it: the glow is kept for the shot seen from afar.
+    const near = 1 - 0.5 * smooth(40, 200, (speed / 40) * ppm);
+    this.streaks.put(x, y, z, ux, uy, uz, len, width, 1, 0.3 + 0.22 * heat, 0.08 + 0.1 * heat, (0.5 + 0.4 * heat) * strength * near);
   }
 
   /** A round shot: the iron ball at its gun's calibre and its tracer. */

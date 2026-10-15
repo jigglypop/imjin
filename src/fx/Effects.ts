@@ -350,9 +350,9 @@ export class Effects {
     }
     this.wake?.stamp(cx, cz, Math.atan2(dz, dx), 6 + 6 * w, 0.35 + 0.35 * w, 1, 1.2);
     this.shakeAt(x, y, z, 0.2 + 0.4 * w, 45);
-    // The flash lights the hull, the water and the smoke for a few frames: warm, close and gone. At night it is the
-    // brightest thing on the water, and the eye has opened up for it.
-    this.light(x + dx * 2.5, y + 0.8, z + dz * 2.5, (700 + 1600 * w) * (1 + 1.5 * this.night), 0.09, 1, 0.66, 0.36, 30 + 30 * w, 30);
+    // The flash lights the hull, the water and the smoke for a few frames: warm, close and gone. At night the eye has
+    // opened up for it, so the same light is the brightest thing on the water.
+    this.light(x + dx * 2.5, y + 0.8, z + dz * 2.5, 700 + 1600 * w, 0.09, 1, 0.66, 0.36, 30 + 30 * w, 30);
   }
 
   /** Far volleys only: where the crew is drawn its shooters make their own flashes and smoke, and a bow makes none. */
@@ -425,7 +425,7 @@ export class Effects {
       this.smoke.emit({ x, y: y + 0.5, z, vx: rnd(-2, 2), vy: rnd(1, 3.5), vz: rnd(-2, 2), life: rnd(3, 6), size0: 0.9, size1: rnd(3.5, 6) * scale, alpha: 0.4, r: 0.4, g: 0.38, b: 0.35, drag: 1.4, lift: 0.3, wind: 0.8 });
     }
     this.sparks(x, y + 0.3, z, 12 * scale, 14, 14);
-    this.light(x, y + 1, z, 45 * scale, 0.14, 1, 0.6, 0.25, 35);
+    this.light(x, y + 1, z, 20 * scale, 0.14, 1, 0.6, 0.25, 22);
   }
 
   /**
@@ -455,7 +455,7 @@ export class Effects {
       this.smoke.emit({ x: x + bx * 0.8, y, z: z + bz * 0.8, vx: bx * rnd(2, 6) + rnd(-2.5, 2.5), vy: rnd(0.6, 3), vz: bz * rnd(2, 6) + rnd(-2.5, 2.5), life: rnd(2.5, 4.5), size0: 0.9, size1: rnd(4.5, 7.5) * power, alpha: 0.42, r: 0.6, g: 0.55, b: 0.5, drag: 1.8, lift: 0.18, wind: 0.8 });
     }
     for (let i = 0; i < 3; i += 1) {
-      this.smoke.emit({ x, y: y + 0.4, z, vx: bx * rnd(1, 4) + rnd(-1.5, 1.5), vy: rnd(1, 3.5), vz: bz * rnd(1, 4) + rnd(-1.5, 1.5), life: rnd(4, 7), size0: 1.1, size1: rnd(6, 9) * power, alpha: 0.42, r: 0.36, g: 0.34, b: 0.32, drag: 1.4, lift: 0.35, wind: 1, heat: i === 0 ? 0.35 : 0 });
+      this.smoke.emit({ x, y: y + 0.4, z, vx: bx * rnd(1, 4) + rnd(-1.5, 1.5), vy: rnd(1, 3.5), vz: bz * rnd(1, 4) + rnd(-1.5, 1.5), life: rnd(4, 7), size0: 1.1, size1: rnd(6, 9) * power, alpha: 0.6, r: 0.22, g: 0.21, b: 0.2, drag: 1.4, lift: 0.35, wind: 1, heat: i === 0 ? 0.35 : 0 });
     }
     for (let i = 0; i < 4; i += 1) {
       this.fire.emit({ x, y, z, vx: bx * rnd(4, 10) + rnd(-6, 6), vy: rnd(2, 9), vz: bz * rnd(4, 10) + rnd(-6, 6), life: rnd(0.25, 0.6), size0: 0.2, size1: 0.07, heat: 1, drag: 1.5, lift: -8 });
@@ -463,7 +463,7 @@ export class Effects {
     if (ammo === 'fire') {
       for (let i = 0; i < 10; i += 1) this.fire.emit({ x: x + rnd(-1, 1), y: y + rnd(0, 1.5), z: z + rnd(-1, 1), vx: rnd(-2, 2), vy: rnd(2, 6), vz: rnd(-2, 2), life: rnd(0.5, 1.2), size0: rnd(1.2, 2.4), size1: rnd(2.6, 4.2), heat: rnd(0.6, 1), drag: 1.5, lift: 2.5, wind: 0.5 });
     }
-    this.light(x + bx * 1.5, y + 0.8, z + bz * 1.5, ammo === 'fire' ? 40 : 20, 0.12, 1, 0.6, 0.3, 30, 20);
+    this.light(x + bx * 1.5, y + 0.8, z + bz * 1.5, ammo === 'fire' ? 24 : 12, 0.1, 1, 0.6, 0.3, 16, 20);
     this.shakeAt(x, y, z, 0.3 + damage * 0.02, 60);
     if (battle && (damage >= 8 || ammo === 'arrow' || ammo === 'fire')) this.smoulder(ship, x, y, z, ammo === 'fire' ? 1.3 : Math.min(1.2, damage / 10), battle);
   }
@@ -521,7 +521,7 @@ export class Effects {
         this.fire.emit({ x: this.p.x + rnd(-0.3, 0.3), y: this.p.y + rnd(-0.2, 0.2), z: this.p.z + rnd(-0.3, 0.3), vx: rnd(-0.4, 0.4), vy: rnd(1, 2.5), vz: rnd(-0.4, 0.4), life: rnd(0.35, 0.7), size0: 0.7 * m.size, size1: rnd(1.2, 1.9) * m.size, heat: rnd(0.6, 1), drag: 1.5, lift: 2, wind: 0.5, alpha: 0.85, rot: rnd(-0.15, 0.15), spin: 0.05 });
         if (Math.random() < 0.45) this.smoke.emit({ x: this.p.x, y: this.p.y + 0.8, z: this.p.z, vx: rnd(-0.4, 0.4), vy: rnd(1.2, 2.4), vz: rnd(-0.4, 0.4), life: rnd(5, 9), size0: 0.8, size1: rnd(4, 7) * m.size, alpha: 0.4 * dying, r: 0.22, g: 0.2, b: 0.19, drag: 0.8, lift: 0.5, wind: 1, heat: 0.3 });
       }
-      this.sources.push({ x: this.p.x, y: this.p.y + 1, z: this.p.z, intensity: 25 * m.size * dying * (0.8 + Math.random() * 0.4), decay: 1, r: 1, g: 0.5, b: 0.2, age: 0, life: 1, dist: 30, once: true });
+      this.sources.push({ x: this.p.x, y: this.p.y + 1, z: this.p.z, intensity: 8 * m.size * dying * (0.8 + Math.random() * 0.4), decay: 1, r: 1, g: 0.5, b: 0.2, age: 0, life: 1, dist: 14, once: true });
     }
   }
 
@@ -534,7 +534,7 @@ export class Effects {
       this.debris.spawn(Piece.Chunk, x, y + 0.5, z, rnd(-6, 6), rnd(5, 13), rnd(-6, 6), s, s, s, rnd(6, 12));
     }
     this.sparks(x, y + 0.3, z, 8, 12, 14);
-    this.light(x, y + 1, z, 45, 0.1, 1, 0.62, 0.3, 35);
+    this.light(x, y + 1, z, 20, 0.1, 1, 0.62, 0.3, 22);
   }
 
   /**
