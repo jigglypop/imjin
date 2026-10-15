@@ -45,7 +45,7 @@ try {
     plugins: [{ name: 'no-gpu', setup(api) {
       api.onResolve({ filter: /^three\/webgpu$/ }, () => ({ path: 'map-three', namespace: 'map-fixture' }));
       api.onResolve({ filter: /^three\/tsl$/ }, () => ({ path: 'map-tsl', namespace: 'map-fixture' }));
-      api.onLoad({ filter: /^map-three$/, namespace: 'map-fixture' }, () => ({ contents: `export * from 'three'; import { MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial } from 'three'; export const MeshBasicNodeMaterial = MeshBasicMaterial; export const MeshLambertNodeMaterial = MeshLambertMaterial; export const MeshStandardNodeMaterial = MeshStandardMaterial;`, resolveDir: root }));
+      api.onLoad({ filter: /^map-three$/, namespace: 'map-fixture' }, () => ({ contents: `export * from 'three'; import { MeshBasicMaterial, MeshStandardMaterial } from 'three'; export const MeshBasicNodeMaterial = MeshBasicMaterial; export const MeshStandardNodeMaterial = MeshStandardMaterial;`, resolveDir: root }));
       api.onLoad({ filter: /^map-tsl$/, namespace: 'map-fixture' }, () => ({ contents: `const node = () => new Proxy(function () {}, { get: (_, key) => (key === Symbol.toPrimitive ? () => 0 : node()), apply: () => node() }); export const ${tslNames.map((name) => `${name} = node()`).join(', ')};` }));
       api.onLoad({ filter: /[\\/]game[\\/]quality\.ts$/ }, () => ({ contents: 'export const equipment={select:{antialias:false,mapSegments:8},tier:"low"}; export const forceWebGL=true;', loader: 'ts' }));
       api.onLoad({ filter: /[\\/]game[\\/]device\.ts$/ }, () => ({ contents: 'export const isPhone=false; export const isTouchOnly=false;', loader: 'ts' }));
@@ -174,7 +174,7 @@ try {
     await world.load();
     let builds = 0;
     world.layer.set = () => { builds++; };
-    const settlement = { id: 'yeosu', u: 0.4, v: 0.5, owner: 'joseon', level: 2 };
+    const settlement = { id: 'yeosu', region: 'yeosu', kind: 'camp', u: 0.4, v: 0.5, owner: 'joseon', level: 2, radius: 0.8, pieces: [], grounds: { yard: 0.5, lanes: [], fields: [] } };
     const make = (level) => ({ settlements: [{ ...settlement, level }], fleets: [], sails: [] });
     world.setWorld(make(2));
     world.setWorld(make(2));

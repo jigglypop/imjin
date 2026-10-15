@@ -11,10 +11,10 @@ import { shipsText, turnsText } from './text';
 import type { FactionId, FleetView, MarchRouteView, RegionView, ReplayView, SpotView } from './types';
 import type { WorldControls, WorldView } from './WorldCanvas';
 import { DEM_RECT, groundElevation } from './mapMath';
-import { clampState, frameAll, NEAR, panBy, projectFrame, screenFrame, turn, zoomAt as zoomCameraAt, type CameraState } from './worldCamera';
+import { clampState, frameAll, NEAR, OPEN_PITCH, panBy, projectFrame, screenFrame, turn, zoomAt as zoomCameraAt, zoomPitch, type CameraState } from './worldCamera';
 import { CameraMotion, KEY_ACTIONS } from './cameraMotion';
 import { boxBetween, markersInBox, type Marker } from './boxSelect';
-import { buildWorld, HULL_LENGTH, laneSpot, SETTLEMENT_RADIUS, type IsSea } from './mapWorld';
+import { buildWorld, HULL_LENGTH, laneSpot, SETTLEMENT_RADIUS, type IsSea, type SettlementSpec } from './mapWorld';
 import { cardRect, pickCards } from './cardLayout';
 import { cutCurve } from './screenPath';
 
@@ -62,6 +62,28 @@ export interface GrandMapProps {
   onReplayDone?: () => void;
 }
 
+/** What review scripts read and set on the 3D map (scripts/review-settlements.mjs), as window.__engine is for a battle. */
+export interface MapHook {
+  camera(): CameraState;
+  /** Puts the camera where `c` says at once, stopping whatever was moving it. */
+  setCamera(c: Partial<CameraState>): void;
+  /** The ports as the map shows them, and the places laid out on them. */
+  regions(): RegionView[];
+  layout(): SettlementSpec[];
+  /** The ground as drawn: the DEM's metre heights, which groundElevation reads. */
+  heights(): Float32Array;
+  /** Where a frame point on the ground is on the screen, in CSS pixels. */
+  place(u: number, v: number): { x: number; y: number };
+  /** The world is still readying what it was last given: a picture taken now may miss part of it. */
+  busy(): boolean;
+}
+
+declare global {
+  interface Window {
+    __map?: MapHook;
+  }
+}
+
 interface View {
   /** Displayed width of the whole map image in px; the height follows from the aspect. */
   s: number;
@@ -72,10 +94,9 @@ interface View {
 const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const MAX_ZOOM = 4.5;
 const TAP_SLOP = 8;
-/** The free camera: how far it stands at the opening, how close a focused port is shown, and the opening pitch (radians above the horizon). */
+/** The free camera: how far it stands at the opening and how close a focused port is shown; its pitch follows its distance (zoomPitch). */
 const OPEN_DISTANCE = 0.55;
 const FOCUS_DISTANCE = 0.3;
-const OPEN_PITCH = 0.78;
 
 /** Where a place on the map is on the screen, whichever view draws it. `scale` is pixels per frame unit there, `ok` that it is in front of the camera. */
 interface Spot {
@@ -216,6 +237,31 @@ export function GrandMap({
     world.current = controls;
   }, []);
 
+  // The review scripts' hook, while the 3D world is up.
+  useEffect(() => {
+    if (!heights) return;
+    const hook: MapHook = {
+      camera: () => camRef.current,
+      setCamera: (c) => {
+        touched.current = true;
+        motion.halt();
+        moveCam(clampState({ ...camRef.current, ...c }));
+      },
+      regions: () => regions,
+      layout: () => mapWorld.settlements,
+      heights: () => heights,
+      place: (u, v) => {
+        const p = projectFrame(camRef.current, screenRef.current, u, v, groundElevation(heights, u, v));
+        return { x: p.x, y: p.y };
+      },
+      busy: () => world.current?.busy() ?? true,
+    };
+    window.__map = hook;
+    return () => {
+      if (window.__map === hook) delete window.__map;
+    };
+  }, [heights, regions, mapWorld, motion, moveCam]);
+
   const limits = useCallback(() => {
     const { w, h } = boxRef.current;
     const cover = Math.max(w, h * MAP_ASPECT);
@@ -306,8 +352,9 @@ export function GrandMap({
       if (inWorld) {
         // The player's coast fills the opening view from a high oblique angle; never closer than a regional view.
         const framed = frameAll(pts, { u, v, distance: OPEN_DISTANCE, yaw: 0, pitch: OPEN_PITCH }, screenRef.current, 130);
+        const distance = clamp(framed.distance, 0.34, 0.9);
         opened.current = true;
-        moveCam(clampState({ ...framed, distance: clamp(framed.distance, 0.34, 0.9) }));
+        moveCam(clampState({ ...framed, distance, pitch: zoomPitch(distance) }));
       } else setView(centred(u, v, limits().open));
     } else if (inWorld) {
       opened.current = true;
@@ -323,7 +370,11 @@ export function GrandMap({
     if (!focus || !ready.current) return;
     const p = frames.get(focus.id);
     if (!p) return;
-    if (inWorld) flyCam(clampState({ ...camRef.current, u: p.u, v: p.v, distance: Math.min(camRef.current.distance, FOCUS_DISTANCE) }));
+    if (inWorld) {
+      // Coming in on a port tilts the view as the wheel would.
+      const c = camRef.current, distance = Math.min(c.distance, FOCUS_DISTANCE);
+      flyCam(clampState({ ...c, u: p.u, v: p.v, distance, pitch: c.pitch + zoomPitch(distance) - zoomPitch(c.distance) }));
+    }
     else flyTo(centred(p.u, p.v, Math.max(viewRef.current.s, limits().cover)));
     // Only a new nonce re-centres; layout changes alone must not yank the map.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1161,11 +1212,11 @@ export function GrandMap({
             <button type="button" className="g-glass g-icon-btn" aria-label={t('오른쪽으로 돌리기')} title={t('오른쪽으로 돌리기 (E)')} onClick={() => glideOn((d) => ({ yaw: d.yaw + Math.PI / 4 }))}>
               ⟳
             </button>
-            <button type="button" className="g-glass g-icon-btn" aria-label={t('시점 기울이기')} title={t('눕혔다 세우기 (오른쪽 버튼으로 끌기)')} onClick={() => glideOn((d) => ({ pitch: d.pitch > 0.7 ? 0.36 : 1.05 }))}>
+            <button type="button" className="g-glass g-icon-btn" aria-label={t('시점 기울이기')} title={t('눕혔다 세우기 (오른쪽 버튼으로 끌기)')} onClick={() => glideOn((d) => ({ pitch: d.pitch > 0.55 ? 0.36 : 1.05 }))}>
               ⇕
             </button>
             {/* The compass shows where north lies as the view turns; a press brings north back up. */}
-            <button type="button" className="g-glass g-icon-btn gm__compass" aria-label={t('북쪽으로 되돌리기')} title={t('북쪽으로 되돌리기 · 오른쪽이나 가운데 버튼, 또는 Shift를 누르고 끌면 가로·세로로 돌아갑니다')} onClick={() => glideOn(() => ({ yaw: 0, pitch: OPEN_PITCH }))}>
+            <button type="button" className="g-glass g-icon-btn gm__compass" aria-label={t('북쪽으로 되돌리기')} title={t('북쪽으로 되돌리기 · 오른쪽이나 가운데 버튼, 또는 Shift를 누르고 끌면 가로·세로로 돌아갑니다')} onClick={() => glideOn((d) => ({ yaw: 0, pitch: zoomPitch(d.distance) }))}>
               <svg viewBox="0 0 24 24" width="20" height="20" style={{ transform: `rotate(${(cam.yaw * 180) / Math.PI}deg)` }} aria-hidden>
                 <path d="M12 2.5 15.2 12 12 10.4 8.8 12Z" fill="#e8452c" />
                 <path d="M12 21.5 8.8 12 12 13.6 15.2 12Z" fill="currentColor" opacity="0.55" />

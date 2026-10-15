@@ -20,6 +20,8 @@ export interface WorldControls {
   redraw(): void;
   /** The closed turn's ships along their way: `share` of the sailing done, `time` the replay's clock. */
   setSail(share: number, time: number): void;
+  /** Whether the world is still readying what it was last given (see CampaignWorld.busy). */
+  busy(): boolean;
 }
 
 export interface WorldProps {
@@ -168,7 +170,7 @@ export function World({ view, world, onReady, onError, onControls }: WorldProps)
 
   useEffect(() => {
     if (!onControls) return;
-    onControls({ redraw: () => invalidate(), setSail: (share, time) => ref.current?.setSail(share, time) });
+    onControls({ redraw: () => invalidate(), setSail: (share, time) => ref.current?.setSail(share, time), busy: () => ref.current?.busy ?? true });
     return () => onControls(null);
   }, [onControls, invalidate]);
 

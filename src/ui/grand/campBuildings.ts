@@ -95,11 +95,23 @@ function banner(k: Kit, pole: Paint, cloth_: Paint, x: number, height: number, w
   cloth(k.b, cloth_, [x + 0.07, height - 0.25, 0], [w, 0, 0], [0, -h, 0], { nu: k.near ? 3 : 1, nv: 1, wave: k.near ? 0.12 : 0 });
 }
 
-/** A tall Japanese nobori: a pole with an arm across its top and the long cloth hanging from both. */
-function nobori(k: Kit, pole: Paint, cloth_: Paint, x: number) {
-  column(k, pole, x, 0, 0.08, 0.06, -0.5, 7.6, k.near ? 6 : 4, true);
-  block(k, pole, [x, 7.2, -0.05], [x + 1.02, 7.32, 0.05], 0);
-  cloth(k.b, cloth_, [x + 0.08, 7.2, 0], [0.9, 0, 0], [0, -4.6, 0], { nu: 1, nv: k.near ? 3 : 1, wave: k.near ? 0.07 : 0 });
+/** A tall Japanese nobori: a pole with an arm across its top and the long cloth hanging from both, `s` times its usual size. */
+function nobori(k: Kit, pole: Paint, cloth_: Paint, x: number, s = 1) {
+  column(k, pole, x, 0, 0.08 * s, 0.06 * s, -0.5, 7.6 * s, k.near ? 6 : 4, true);
+  block(k, pole, [x, 7.2 * s, -0.05 * s], [x + 1.02 * s, 7.32 * s, 0.05 * s], 0);
+  cloth(k.b, cloth_, [x + 0.08 * s, 7.2 * s, 0], [0.9 * s, 0, 0], [0, -4.6 * s, 0], { nu: 1, nv: k.near ? 3 : 1, wave: k.near ? 0.07 * s : 0 });
+}
+
+/**
+ * The standard of the navy that holds a place: a tall pole on a stone foot flying a great flag of the navy's colour, a
+ * size larger than a camp's own banners, so whose the place is reads from across a bay.
+ */
+function standard(k: Kit, flag: Paint, foot: Paint) {
+  const timber = k.P('timber');
+  batter(k, foot, foot, -1.9, 0, 0.65, 0.65, 0.5, 0.5, -1.4, 0.5);
+  column(k, timber, -1.9, 0, 0.19, 0.13, 0.3, 16, k.near ? 6 : 4, true);
+  if (k.near) spike(k.b, timber, [-1.9, 16, 0], [0, 1, 0], 0.22, 0.7, 4);
+  cloth(k.b, flag, [-1.75, 15.6, 0], [4.4, 0, 0], [0, -3.3, 0], { nu: k.near ? 5 : 1, nv: 1, wave: k.near ? 0.3 : 0 });
 }
 
 /** A stake of a stockade from below the ground to `h`, `w` thick, sharpened to a point when `point`. */
@@ -728,7 +740,6 @@ const KITS: Record<PieceKind, (k: Kit) => void> = {
   palisade, stone: stoneWall, jo_gate: joGate, fortgate: fortGate, hall, giwa, choga, magazine, jo_tower: joTower, jo_banner: joBanner,
   wa_fence: waFence, wa_wall: waWall, wa_gate: waGate, wa_tower: waTower,
   wa_keep3: (k) => waKeep(k, [[10.4, 8.4, 4.6], [8.0, 6.4, 4.0], [5.8, 4.6, 3.6]]),
-  wa_keep4: (k) => waKeep(k, [[11.2, 9.2, 4.6], [8.8, 7.2, 4.0], [6.6, 5.4, 3.6], [4.8, 3.8, 3.2]]),
   wa_tent: waTent, wa_banner: waBanner, wa_hall: waHall,
   mg_palisade: mgPalisade, mg_brick: mgBrick, mg_gate: mgGate, mg_corner: mgCorner, mg_watch: mgWatch, mg_barracks: mgBarracks, mg_hall: mgHall,
   mg_flag: mgFlag, mg_tent: mgTent,
@@ -754,6 +765,14 @@ const KITS: Record<PieceKind, (k: Kit) => void> = {
     roof(k, mingRoof(k), { ex: 5.4, ez: 3.9, y: 4.05, top: 6.6, form: 'hip', lift: 0.45, sag: 1.35, edge: 0.32, overhang: 1.1, ridgeW: 0.55, ridgeH: 0.46, rows: 2, cols: 5 });
   },
   jo_beacon: joBeacon, wa_beacon: waBeacon,
+  jo_standard: (k) => standard(k, bannerPaint('joseon', 'blue'), k.P('granite')),
+  // Japan's is a great nobori, red with the white crest.
+  wa_standard: (k) => {
+    const ishigaki = k.P('ishigaki');
+    batter(k, ishigaki, ishigaki, -0.6, 0, 0.65, 0.65, 0.5, 0.5, -1.4, 0.5);
+    nobori(k, k.P('timber'), bannerPaint('japan', 'red'), -0.6, 2);
+  },
+  mg_standard: (k) => standard(k, bannerPaint('ming', 'yellow'), k.P('stone')),
   mg_beacon: (k) => {
     const brick = k.P('brick');
     batter(k, brick, brick.tinted([1.05, 1.05, 1.05]), 0, 0, 3.4, 3.4, 2.7, 2.7, -2.0, 7.0);

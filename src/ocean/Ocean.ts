@@ -66,6 +66,7 @@ import type { Terrain } from '../terrain/Terrain';
 import { pointLights } from '../render/lights';
 import type { SkyView } from '../render/skyDome';
 import { CASCADES, type FFTWaves } from './FFTWaves';
+import { bakeCurrent } from './currentTexture';
 import { SeaFields } from './seaFields';
 import { weatherMap } from '../render/cloudNoise';
 import { sunThroughClouds } from '../render/cloudShadow';
@@ -157,6 +158,8 @@ export class Ocean {
   private readonly pmremNodes: ReturnType<typeof pmremTexture>[] = [];
   /** Each refraction depth lookup clones a framebuffer-sized depth texture that three never frees. */
   private readonly depthNodes: ReturnType<typeof viewportDepthTexture>[] = [];
+  /** The battle's current baked for this surface. */
+  private readonly currentMap: Texture | null;
   private waveVersion = -1;
 
   constructor(
@@ -234,6 +237,8 @@ export class Ocean {
     const pmremNodes = this.pmremNodes;
     const depthNodes = this.depthNodes;
 
+    const currentMap = current && bakeCurrent(current);
+    this.currentMap = currentMap;
     const flowCenter = uniform(new Vector2(current?.centerWorld.x ?? 0, current?.centerWorld.z ?? 0));
     const flowExtent = uniform(current?.extent ?? 1);
     const vortexData = current?.vortexData() ?? [];
@@ -245,10 +250,10 @@ export class Ocean {
     const colorFor = (refraction: boolean) => Fn(() => {
       const p0 = vP0;
       const flow = vec2(0, 0).toVar();
-      if (current) {
+      if (currentMap) {
         const fuv = p0.sub(flowCenter).div(flowExtent).add(0.5);
         const inside = step(0, fuv.x).mul(step(fuv.x, 1)).mul(step(0, fuv.y)).mul(step(fuv.y, 1));
-        const f: any = texture(current.texture, fuv);
+        const f: any = texture(currentMap, fuv);
         flow.assign(select(tide.lessThan(0), f.xy.mul(tide.negate()), f.zw.mul(tide)).mul(inside));
       }
       const FLOW_T = 5;
@@ -553,11 +558,12 @@ export class Ocean {
     for (const node of this.pmremNodes) node.value = envTexture;
   }
 
-  /** Frees the mesh and both surface materials. The wave textures are cached for the next battle. */
+  /** Frees the mesh, both surface materials and the baked current. The wave textures are cached for the next battle. */
   dispose() {
     this.mesh.geometry.dispose();
     this.matPlain.dispose();
     this.matRefract?.dispose();
+    this.currentMap?.dispose();
     // Each reflection node owns a PMREM generator with its own render targets.
     for (const node of this.pmremNodes) node.dispose();
     this.pmremNodes.length = 0;

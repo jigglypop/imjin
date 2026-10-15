@@ -29,7 +29,8 @@ const saved = new Map(Object.keys(fixture).map((key) => [key, Object.getOwnPrope
 for (const [key, value] of Object.entries(fixture)) Object.defineProperty(globalThis, key, { value, configurable: true, writable: true });
 const vite = await createServer({
   root: fileURLToPath(new URL('..', import.meta.url)),
-  server: { middlewareMode: true, hmr: false },
+  configFile: false,
+  server: { middlewareMode: true, hmr: false, watch: null },
   appType: 'custom',
   logLevel: 'error',
 });

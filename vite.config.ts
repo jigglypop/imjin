@@ -1,11 +1,26 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, normalizePath, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { EN_COMMON } from './src/i18n/en/common.js';
 import { routeName, routePages, routePath, type Edition, type RoutePage, type RouteScreen } from './src/routes.js';
 
 const SITE = 'https://imjin1592.com';
+
+/**
+ * Folders the dev server does not watch: the agents' worktrees (.claude) and the screenshots (shots) hold tens of
+ * gigabytes, and crawling them slowed every module load to tens of seconds. The game imports nothing from any of them.
+ * The patterns are absolute so that a dev server started inside a worktree, which itself lives under .claude, still
+ * watches its own files.
+ */
+const UNWATCHED = ['.claude', 'shots', 'assets-src', 'dist', 'server/dist'].map((dir) => `${normalizePath(join(import.meta.dirname, dir))}/**`);
+
+/**
+ * Each checkout keeps its own optimized-dependency cache. Worktrees reach node_modules through a symlink, so the default
+ * node_modules/.vite was one cache for every dev server: one server re-optimizing replaced the files another server's
+ * open page still asked for, and that page failed with "504 Outdated Optimize Dep".
+ */
+const CACHE_DIR = join(import.meta.dirname, '.vite');
 
 /** What search results and link previews say about each screen's page. Korean is the source. */
 const DESCRIPTIONS: Record<Exclude<RouteScreen, 'menu'>, Record<Edition, string>> = {
@@ -118,6 +133,7 @@ function routePagesPlugin(): Plugin {
 
 export default defineConfig({
   plugins: [react(), routePagesPlugin()],
-  server: { port: 5291, host: '127.0.0.1', strictPort: true },
+  cacheDir: CACHE_DIR,
+  server: { port: 5291, host: '127.0.0.1', strictPort: true, watch: { ignored: UNWATCHED } },
   build: { target: ['es2022', 'safari16'], chunkSizeWarningLimit: 4000 },
 });

@@ -4,7 +4,7 @@ import { createServer } from 'vite';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
 const load = (path) => server.ssrLoadModule(path);
 let failures = 0;
 const check = (name, fn) => {
@@ -99,8 +99,7 @@ try {
     assert.equal(ranked.coastalTactic, undefined);
     const map = { ...coast.REGION_MAPS.yeosu, coastalTactic: coastalTacticFor('yeosu') };
     const local = maps.buildConquestOn(map, seats, () => -100, 1).battle;
-    try { assert.equal(local.coastalTactic, 'yeosu-wings'); }
-    finally { local.flow?.texture.dispose(); }
+    assert.equal(local.coastalTactic, 'yeosu-wings');
   });
 
   check('terrain adjustment keeps 300 commanded hulls in water and reserves separate berths', () => {
