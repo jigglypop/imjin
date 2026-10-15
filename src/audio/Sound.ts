@@ -44,6 +44,8 @@ export class Sound {
   /** iOS decodes the sample bank only once the first battle is up, so the decode does not add to the load's memory peak. */
   private samplesAllowed = !isIOS;
   private samplesRequested = false;
+  /** A cutscene is playing: the bed rises like a film score and its far drums play at the menu's strength. */
+  private cinemaOn = false;
 
   constructor() {
     // iOS only lets a context start from touchend or click, not from touchstart, and an interruption (a call, another
@@ -121,7 +123,7 @@ export class Sound {
     this.bed.start();
     this.applyMode(true);
     window.setInterval(() => {
-      if (ctx.state === 'running' && this.musicOn) this.bed?.schedule(ctx.currentTime + 0.5, this.mode);
+      if (ctx.state === 'running' && this.musicOn) this.bed?.schedule(ctx.currentTime + 0.5, this.cinemaOn ? 'select' : this.mode);
       // After a phone call or another app's audio the context can come back 'interrupted' with no gesture to resume it.
       if (ctx.state !== 'running' && !document.hidden && performance.now() - this.lastWake > 2000) this.wake();
     }, 250);
@@ -140,6 +142,22 @@ export class Sound {
     const level = LEVELS[this.mode];
     this.music.gain.setTargetAtTime(this.musicOn ? level.music : 0, t, tc);
     this.ambience.gain.setTargetAtTime(level.ambience, t, tc);
+  }
+
+  /**
+   * A cutscene starts or changes (`hush` 0..1: how far the guns and the sea go down under the bed) or ends (null).
+   * A deep hush falls fast, as the sound drops away at the moment a film slows down; everything else eases.
+   */
+  cinema(hush: number | null) {
+    const ctx = this.ctx;
+    if (!ctx || !this.music || !this.ambience || !this.sfx) return;
+    this.cinemaOn = hush !== null;
+    const t = ctx.currentTime;
+    const level = LEVELS[this.mode];
+    const h = hush ?? 0;
+    this.music.gain.setTargetAtTime(this.musicOn ? (hush === null ? level.music : Math.max(level.music, 0.62)) : 0, t, 0.9);
+    this.sfx.gain.setTargetAtTime(1 - h * 0.9, t, h > 0.8 ? 0.06 : 0.7);
+    this.ambience.gain.setTargetAtTime(level.ambience * (1 - h * 0.7), t, h > 0.8 ? 0.1 : 0.7);
   }
 
   setRoar(level: number) {

@@ -1,6 +1,9 @@
 import type { Battle } from '../sim/battle';
 import type { Ship, Team } from '../sim/types';
 
+/** The colour a name card or a fleet label wears: the Ming fleet sails on the Joseon team but under its own flag. */
+export type Side = 'joseon' | 'japan' | 'ming';
+
 /**
  * The language cutscenes are written in. A scene is a list of shots played one after another and, on its own clock,
  * captions and sound cues. Every camera position is relative to something in the running battle (a ship, a fleet, the
@@ -54,8 +57,8 @@ export type Caption = { at: number; dur: number } & (
   | { kind: 'title'; title: string; hanja?: string; sub?: string; eyebrow?: string }
   | { kind: 'doc'; head: string; hanja?: string; body: string; tag?: string; source?: string }
   | { kind: 'line'; who: string; role?: string; portrait: string; text: string; hanja?: string; source?: string }
-  | { kind: 'card'; who: string; hanja?: string; role: string; portrait: string; team: Team }
-  | { kind: 'label'; target: Target; text: string; sub?: string; team: Team }
+  | { kind: 'card'; who: string; hanja?: string; role: string; portrait: string; side: Side }
+  | { kind: 'label'; target: Target; text: string; sub?: string; side: Side }
   | { kind: 'quote'; text: string; hanja: string; source: string }
 );
 

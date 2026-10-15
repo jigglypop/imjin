@@ -90,6 +90,7 @@ try {
     conquestSetup: null, faction: 'joseon', scene: { add() {} }, options: {}, minimap: {},
     rts: { detach() {} }, camera: { position: { x: 0, y: 0, z: 0 } }, renderer: { dispose: () => Promise.resolve() },
     wake: { dispose() {} }, publish() {},
+    cinema: { speed: (s) => s, update: () => false, feed() {}, begin() {}, onCommand() {}, covering: false, grade: 0, depthOfField: { aperture: 0, focus: 100 } },
   });
 
   await check('F tilts only the camera; Shift+F changes cutaway once and clears held F', () => {

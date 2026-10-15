@@ -12,6 +12,7 @@ import { clearLoading } from '../game/recovery';
 import { onBattleBack } from '../router';
 import { failBattle, setLoading, setScreen, useUi } from '../state/store';
 import { Hud } from './Hud';
+import { CinemaOverlay } from './CinemaOverlay';
 import { conquestOf, hideHud, params, startScenario, type Launch } from './launch';
 
 declare global {
@@ -195,6 +196,7 @@ export default function BattleView({ launch }: { launch: Launch }) {
         <Game launch={launch} onEngine={setEngine} />
       </Canvas>
       {engine && !hideHud && screen === 'battle' && <Hud engine={engine} onBack={back} />}
+      {engine && screen === 'battle' && <CinemaOverlay engine={engine} />}
     </>
   );
 }

@@ -68,4 +68,13 @@ export const nearestFoe = (of: Pick): Pick => (ctx) => {
   return best;
 };
 
+/** Every ship the picks find, as one group: a frame that holds two fleets, or two flagships. */
+export const group = (...picks: Pick[]): Pick => (ctx) => {
+  const ships = picks.flatMap((p) => {
+    const got = p(ctx);
+    return got ? (Array.isArray(got) ? got : [got]) : [];
+  });
+  return ships.length ? ships : undefined;
+};
+
 export const at = (pick: Pick, frame?: Target['frame']): Target => ({ pick, frame });
