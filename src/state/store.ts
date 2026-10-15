@@ -138,9 +138,10 @@ export type Toast = { id: number; text: string; tone: 'info' | 'good' | 'bad'; a
 export type SelectionBox = { x0: number; y0: number; x1: number; y1: number } | null;
 /**
  * menu: mode cards. select: the nine historical battles. faction: the faction campaign. skirmish and online: setup
- * screens. Every screen but the battle has an address (src/routes.ts), which src/router.ts keeps in step with this.
+ * screens. codex: the ship codex. Every screen but the battle has an address (src/routes.ts), which src/router.ts keeps
+ * in step with this.
  */
-export type Screen = 'menu' | 'select' | 'faction' | 'skirmish' | 'online' | 'settings' | 'battle';
+export type Screen = 'menu' | 'select' | 'faction' | 'skirmish' | 'online' | 'settings' | 'codex' | 'battle';
 /** Screens a battle can be started from, so the HUD back button returns to where the player came from. */
 export type BattleOrigin = 'select' | 'skirmish' | 'online' | 'faction';
 

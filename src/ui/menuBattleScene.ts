@@ -1,7 +1,7 @@
 import {
   ACESFilmicToneMapping, DataTexture, DirectionalLight, FogExp2,
   HemisphereLight, PerspectiveCamera, RedFormat, FloatType, Scene, Vector2, Vector3,
-  Vector4, WebGPURenderer,
+  WebGPURenderer,
 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
 import { Battle } from '../sim/battle';
@@ -13,49 +13,15 @@ import { Ocean } from '../ocean/Ocean';
 import { WakeMap } from '../ocean/WakeMap';
 import { WaveField, waveField, SEA_STATES } from '../ocean/waves';
 import { atmosphere } from '../render/atmosphere';
-import { pointLights } from '../render/lights';
 import { loadSky, SKY_PRESETS, type LoadedSky } from '../render/sky';
 import { disposeTree } from '../render/dispose';
 import { equipment, forceWebGL } from '../game/quality';
 import type { Terrain } from '../terrain/Terrain';
+import { RenderLease } from './renderLease';
 
 const CYCLE = 40;
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 const ease = (x: number) => { const t=clamp(x); return t*t*(3-2*t); };
-
-/** Shared render uniforms are borrowed only during a synchronous frame, never across await. */
-class RenderLease {
-  private waves = new WaveField();
-  private vectors = new Map<string, Vector3>();
-  private scalars = new Map<string, number>();
-  private positions = pointLights.pos.map(() => new Vector4());
-  private colors = pointLights.col.map(() => new Vector4());
-  run<T>(apply: () => void, frame: () => T): T {
-    this.waves.copyFrom(waveField);
-    const version = waveField.version;
-    for (const [key, node] of Object.entries(atmosphere)) {
-      if (typeof node.value === 'number') this.scalars.set(key, node.value);
-      else {
-        let saved = this.vectors.get(key);
-        if (!saved) { saved = new Vector3(); this.vectors.set(key, saved); }
-        saved.copy(node.value);
-      }
-    }
-    pointLights.pos.forEach((v,i) => this.positions[i]!.copy(v));
-    pointLights.col.forEach((v,i) => this.colors[i]!.copy(v));
-    try { apply(); return frame(); }
-    finally {
-      waveField.copyFrom(this.waves);
-      waveField.version = version;
-      for (const [key, node] of Object.entries(atmosphere)) {
-        if (typeof node.value === 'number') node.value = this.scalars.get(key)!;
-        else node.value.copy(this.vectors.get(key)!);
-      }
-      pointLights.pos.forEach((v,i) => v.copy(this.positions[i]!));
-      pointLights.col.forEach((v,i) => v.copy(this.colors[i]!));
-    }
-  }
-}
 
 export class MenuBattleScene {
   private renderer?: WebGPURenderer;

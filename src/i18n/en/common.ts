@@ -6,6 +6,7 @@ export const EN_COMMON: Record<string, string> = {
   '캠페인': 'Campaign',
   '쟁탈전': 'Conquest',
   '온라인 대전': 'Online Battle',
+  '함선 도감': 'Ship Codex',
 
   // Navigation and actions
   '뒤로': 'Back',

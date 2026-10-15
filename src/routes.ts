@@ -3,7 +3,7 @@
 // those pages (scripts/route-pages.mjs). No imports: the Vite config and plain Node scripts load this file as it is.
 
 /** The screens with an address. A battle has none: it opens over the screen it was started from. */
-export type RouteScreen = 'menu' | 'faction' | 'skirmish' | 'select' | 'online' | 'settings';
+export type RouteScreen = 'menu' | 'faction' | 'skirmish' | 'select' | 'online' | 'settings' | 'codex';
 /** The Korean edition is unprefixed; the English one lives under /en. */
 export type Edition = 'ko' | 'en';
 
@@ -15,6 +15,7 @@ export const ROUTES: readonly { screen: RouteScreen; slug: string; name: string 
   { screen: 'select', slug: 'battles', name: '역사 전투' },
   { screen: 'online', slug: 'online', name: '온라인 대전' },
   { screen: 'settings', slug: 'settings', name: '설정' },
+  { screen: 'codex', slug: 'ships', name: '함선 도감' },
 ];
 
 const BY_SLUG = new Map(ROUTES.map((r) => [r.slug, r.screen]));
