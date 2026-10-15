@@ -19,6 +19,7 @@ import { shipObserved } from '../sim/observation';
 import { pointVisible } from '../sim/visibility';
 import { disposeTree } from '../render/dispose';
 import { ShipFires } from './fire/ShipFires';
+import { Scars, type HitLook } from './Scars';
 
 const OARS: Record<string, number> = { panokseon: 8, geobukseon: 8, atakebune: 13, sekibune: 11 };
 const MASTS: Record<string, number> = { panokseon: 2, geobukseon: 1, hyeopseon: 1, atakebune: 2, sekibune: 1, kobaya: 1, mingship: 3, mingsmall: 1 };
@@ -78,6 +79,8 @@ export class Effects {
   private readonly depth: ReturnType<typeof particleDepth> | null;
   private readonly debris: DebrisField;
   private readonly mun: Munitions;
+  /** What the fight leaves on the ships until they sink: holes, embedded arrows, broken boards, torn sails. */
+  readonly scars: Scars;
   /** Burning ships: flames on the hull, the smoke column, embers, steam, the wreck burning on after (src/fx/fire). */
   readonly blaze: ShipFires;
   private readonly camPos = new Vector3();
@@ -134,9 +137,11 @@ export class Effects {
     this.debris = new DebrisField(Math.round(900 * this.tier));
     // Lights past the active count stay dark so the surface shader's light loop adds nothing for them.
     for (let i = this.lightCount; i < LIGHT_COUNT; i += 1) this.lightPos[i]!.w = 0;
-    this.mun = new Munitions(views, this.smoke, this.fire, this.streaks, this.tier);
+    this.mun = new Munitions(this.smoke, this.fire, this.streaks, this.tier);
     this.mun.setKeep(this.k);
     this.mun.onLand = this.onRocketLand;
+    this.scars = new Scars(views, this.mun, this.smoke, this.fire);
+    this.scars.setKeep(this.k);
     this.blaze = new ShipFires({
       views,
       spray: this.spray,
@@ -157,7 +162,7 @@ export class Effects {
       this.lights.push(l);
       this.group.add(l);
     }
-    this.group.add(this.smoke.sprite, this.fire.sprite, this.spray.sprite, this.streaks.sprite, this.debris.group, this.mun.group, this.blaze.group);
+    this.group.add(this.smoke.sprite, this.fire.sprite, this.spray.sprite, this.streaks.sprite, this.debris.group, this.mun.group, this.scars.group, this.blaze.group);
   }
 
   /** Frees the meshes, the sprites and the depth copy, whose texture is the clone made for the scene pass on its first frame. */
@@ -174,6 +179,7 @@ export class Effects {
     this.spray.setKeep(keep);
     this.streaks.setKeep(keep);
     this.mun.setKeep(this.k);
+    this.scars.setKeep(this.k);
     this.blaze.setKeep(this.k);
   }
 
@@ -201,6 +207,7 @@ export class Effects {
     this.flights.clear();
     this.ghosts.length = 0;
     this.mun.clear();
+    this.scars.clear();
     this.blaze.clear();
   }
 
@@ -219,8 +226,9 @@ export class Effects {
           break;
         case 'hit': {
           const shell = this.flights.get(e.proj)?.ref ?? null;
-          this.hit(e.x, e.y, e.z, e.damage, e.ammo, shell ? shellKind(shell.ammo, shell.gun) : e.ammo === 'fire' ? Shell.Hiya : Shell.Ball, e.ship, shell, battle);
-          if (shell && (e.ammo === 'arrow' || e.ammo === 'fire')) this.stickArrow(e.ship, e.x, e.y, e.z, shell, battle);
+          const ship = battle.get(e.ship);
+          const look = ship ? this.scarHit(ship, e.x, e.y, e.z, e.ammo, shell) : null;
+          this.hit(e.x, e.y, e.z, e.damage, e.ammo, shell ? shellKind(shell.ammo, shell.gun) : e.ammo === 'fire' ? Shell.Hiya : Shell.Ball, e.ship, shell, battle, look);
           this.blaze.hit(e.ship, e.x, e.y, e.z, e.ammo, battle);
           // A brief lift of the struck hull, enough to find it from afar; the splinters and smoke tell the rest.
           this.views.flash(e.ship, Math.min(0.3, 0.12 + e.damage * 0.012));
@@ -252,6 +260,7 @@ export class Effects {
         }
         case 'removed':
           this.dragon.delete(e.ship);
+          this.scars.removed(e.ship);
           this.blaze.removed(e.ship, battle);
           this.finishSink(e.ship, battle);
           break;
@@ -419,22 +428,55 @@ export class Effects {
     }
   }
 
-  /** An arrow that struck a hull stays in it for a while. */
-  private stickArrow(ship: number, x: number, y: number, z: number, shell: Projectile, battle: Battle) {
-    const kind = shellKind(shell.ammo, shell.gun);
-    if (kind !== Shell.Heavy && kind !== Shell.Hiya) return;
-    const sp = Math.hypot(shell.vx, shell.vy, shell.vz) || 1;
-    this.mun.stick(ship, x, y, z, shell.vx / sp, shell.vy / sp, shell.vz / sp, shell.gun, kind === Shell.Heavy ? 0 : 1, battle);
+  /**
+   * Leaves the marks of a hit (Scars) and tells how it looked: the shell's line comes from its flight when it was seen,
+   * else straight in toward the ship's middle at a round shot's speed.
+   */
+  private scarHit(ship: Ship, x: number, y: number, z: number, ammo: AmmoType, shell: Projectile | null): HitLook {
+    let dx: number;
+    let dy = 0;
+    let dz: number;
+    let speed: number;
+    if (shell) {
+      speed = Math.hypot(shell.vx, shell.vy, shell.vz) || 1;
+      dx = shell.vx / speed;
+      dy = shell.vy / speed;
+      dz = shell.vz / speed;
+    } else {
+      const l = Math.hypot(ship.x - x, ship.z - z) || 1;
+      dx = (ship.x - x) / l;
+      dz = (ship.z - z) / l;
+      speed = 120;
+    }
+    const gun: GunType = shell ? shell.gun : ammo === 'arrow' ? 'jija' : ammo === 'grape' ? 'hwangja' : ammo === 'fire' ? (ship.spec.faction === 'japan' ? 'hyeonja' : 'ozutsu') : 'hyeonja';
+    return this.scars.hit(ship, x, y, z, dx, dy, dz, speed, ammo, gun, shell ? shell.age * speed : 150);
   }
 
-  /** A rocket came down on a deck, or into the sea beside the ship: the rockets of a salvo that the sim does not count. */
-  private readonly onRocketLand = (x: number, y: number, z: number, hull: boolean) => {
-    if (!hull) {
+  /** A matchlock ball into the wall of a ship within the crew's range (Boarding draws the shot). */
+  musketMark(target: Ship, sx: number, sz: number) {
+    this.scars.musket(target, sx, sz);
+  }
+
+  /** The persistent marks, for the probes. */
+  scarStats() {
+    return this.scars.stats();
+  }
+
+  /**
+   * A rocket of a salvo came down on a deck, or into the sea beside the ship: the rockets the sim does not count. One
+   * that came down on a ship stays in it, burning, often in a sail.
+   */
+  private readonly onRocketLand = (x: number, y: number, z: number, ship: number, ux: number, uy: number, uz: number) => {
+    if (!ship) {
       this.splash(x, z, 0.4);
       return;
     }
     this.rocketBurst(x, y, z, 0.7);
+    const target = this.battleRef?.get(ship);
+    if (target && target.alive) this.scars.rocket(target, x, y, z, ux, uy, uz);
   };
+  /** The battle of the last frame, for the salvo's landing hook. */
+  private battleRef: Battle | null = null;
 
   /** A rocket's charge going off on a hit: small puffs of fire, sparks and a bit of dark smoke, no splinters to speak of. */
   private rocketBurst(x: number, y: number, z: number, scale: number) {
@@ -454,7 +496,7 @@ export class Effects {
    * of the face that was struck and some through the far side; a puff of wood dust and dark powder smoke; a brief flash
    * and a few sparks off the iron. A heavy hit (a great arrow, a big ball, a fire shot) leaves the hole smouldering.
    */
-  hit(x: number, y: number, z: number, damage: number, ammo: AmmoType = 'ball', kind: ShellKind = Shell.Ball, ship = 0, shell: Projectile | null = null, battle?: Battle) {
+  hit(x: number, y: number, z: number, damage: number, ammo: AmmoType = 'ball', kind: ShellKind = Shell.Ball, ship = 0, shell: Projectile | null = null, battle?: Battle, look: HitLook | null = null) {
     // A rocket arrow bursts in small puffs of fire, a fire arrow (hiya) leaves a bit of flame: neither tears the planking like a shot.
     if (kind === Shell.Rocket || kind === Shell.Lance) {
       this.shatter(x, y, z, this.n(3 + damage * 0.5), 0.55, 6);
@@ -462,36 +504,93 @@ export class Effects {
       this.shakeAt(x, y, z, 0.12 + damage * 0.01, 60);
       return;
     }
-    // A heavy arrow (daejanggun-jeon) is a log of oak with an iron head: more timber, bigger pieces.
-    const power = ammo === 'arrow' ? 1.3 : 1;
-    // The way back out of the struck face, toward where the shot came from.
+    // Where the shell met the planks and the way back out of the struck face: the surface's normal where the model was
+    // found, else back toward where the shot came from.
     const sh = shell ? Math.hypot(shell.vx, shell.vz) || 1 : 1;
-    const bx = shell ? -shell.vx / sh : 0;
-    const bz = shell ? -shell.vz / sh : 0;
-    this.splinters(x, y, z, this.n((6 + damage * 0.8) * power), power, bx, bz, ammo === 'arrow' ? 0.7 : 0.45);
-    // A great arrow breaks whole boards out of the side, half a metre to a metre and a half long.
-    if (ammo === 'arrow') for (let i = 0; i < this.n(2 + damage * 0.08); i += 1) this.debris.spawn(Piece.Plank, x, y, z, bx * rnd(2, 6) + rnd(-2, 2), rnd(2, 6), bz * rnd(2, 6) + rnd(-2, 2), rnd(0.6, 1.5), rnd(0.18, 0.3), rnd(0.04, 0.07), rnd(14, 22), 1.2);
-    this.fire.emit({ x: x + bx * 0.6, y, z: z + bz * 0.6, life: 0.07, size0: 1.3 * power, size1: 2.6 * power, heat: 1, drag: 4, wind: 0 });
+    let bx = shell ? -shell.vx / sh : 0;
+    let bz = shell ? -shell.vz / sh : 0;
+    if (look?.ok) {
+      x = look.x;
+      y = look.y;
+      z = look.z;
+      const nl = Math.hypot(look.nx, look.nz);
+      if (nl > 0.3) {
+        bx = look.nx / nl;
+        bz = look.nz / nl;
+      }
+    }
+    const result = look?.ok ? look.result : ammo === 'arrow' ? 'pierce' : ammo === 'grape' ? 'embed' : 'pierce';
+    if (ammo === 'grape') {
+      this.pellets(x, y, z, bx, bz, damage, result === 'pierce');
+      this.shakeAt(x, y, z, 0.12 + damage * 0.01, 50);
+      return;
+    }
+    // A great arrow is a log of thorn wood sheathed in iron: what it smashes it throws out as whole boards. A ball goes
+    // through and drives its splinters inboard, where they did the killing; a shot that only lodges throws little.
+    const arrow = ammo === 'arrow';
+    const through = result === 'smash' || result === 'pierce';
+    const power = result === 'smash' ? 1.5 : arrow ? 1.15 : through ? 1 : result === 'spall' ? 0.75 : 0.45;
+    const out = result === 'smash' ? 0.72 : arrow ? 0.5 : through ? 0.4 : result === 'spall' ? 0.3 : 0.85;
+    const count = result === 'glance' ? 4 : result === 'embed' || result === 'stick' ? 3 + damage * 0.15 : (6 + damage * 0.8) * power;
+    this.splinters(x, y, z, this.n(count), Math.min(1.3, power), bx, bz, out);
+    // Whole planks out of a breach, half a metre to a metre and a half long, a strake's width and thickness.
+    if (result === 'smash') {
+      for (let i = 0; i < this.n(2 + Math.min(2, damage * 0.1)); i += 1) {
+        this.debris.spawn(Piece.Plank, x + rnd(-0.3, 0.3), y + rnd(-0.3, 0.3), z + rnd(-0.3, 0.3), bx * rnd(2, 7) + rnd(-2, 2), rnd(2, 7), bz * rnd(2, 7) + rnd(-2, 2), rnd(0.6, 1.5), rnd(0.5, 0.65), rnd(0.9, 1.15), rnd(16, 26), 1.2);
+      }
+    }
+    // The flash of the burning wad that followed the shot in and of the iron striking; a lodged ball or arrow barely shows it.
+    if (through || result === 'spall') this.fire.emit({ x: x + bx * 0.6, y, z: z + bz * 0.6, life: 0.07, size0: 1.3 * power, size1: 2.6 * power, heat: 1, drag: 4, wind: 0 });
     // Wood does not spark: the few there are come off the nails and iron fittings the shot tears through.
-    this.sparks(x, y, z, ammo === 'arrow' ? 2 + damage * 0.1 : 3 + damage * 0.2, 16, 14);
+    if (through) this.sparks(x, y, z, arrow ? 2 + damage * 0.1 : 3 + damage * 0.2, 16, 14);
     // Pale dust off the torn planks and a darker puff of powder and wood smoke, both blown out of the hole.
     // A heavier blow throws a bigger cloud: a cheonja's arrow or ball against a light gun's.
     const burst = power * (0.8 + Math.min(0.6, damage / 30));
-    for (let i = 0; i < 5; i += 1) {
+    const dust = through ? 5 : 2;
+    for (let i = 0; i < dust; i += 1) {
       this.smoke.emit({ x: x + bx * 0.8, y, z: z + bz * 0.8, vx: bx * rnd(3, 8) + rnd(-3, 3), vy: rnd(0.6, 3.5), vz: bz * rnd(3, 8) + rnd(-3, 3), life: rnd(2.5, 4.5), size0: 1.1, size1: rnd(5, 9) * burst, alpha: 0.5, r: 0.6, g: 0.55, b: 0.5, drag: 1.8, lift: 0.18, wind: 0.8 });
     }
-    for (let i = 0; i < 3; i += 1) {
-      this.smoke.emit({ x, y: y + 0.4, z, vx: bx * rnd(1, 4) + rnd(-1.5, 1.5), vy: rnd(1, 3.5), vz: bz * rnd(1, 4) + rnd(-1.5, 1.5), life: rnd(4, 7), size0: 1.3, size1: rnd(7, 11) * burst, alpha: 0.7, r: 0.16, g: 0.15, b: 0.14, growth: 4, drag: 1.4, lift: 0.35, wind: 1, heat: i === 0 ? 0.35 : 0 });
-    }
-    for (let i = 0; i < 4; i += 1) {
-      this.fire.emit({ x, y, z, vx: bx * rnd(4, 10) + rnd(-6, 6), vy: rnd(2, 9), vz: bz * rnd(4, 10) + rnd(-6, 6), life: rnd(0.25, 0.6), size0: 0.2, size1: 0.07, heat: 1, drag: 1.5, lift: -8 });
+    if (through) {
+      for (let i = 0; i < 3; i += 1) {
+        this.smoke.emit({ x, y: y + 0.4, z, vx: bx * rnd(1, 4) + rnd(-1.5, 1.5), vy: rnd(1, 3.5), vz: bz * rnd(1, 4) + rnd(-1.5, 1.5), life: rnd(4, 7), size0: 1.3, size1: rnd(7, 11) * burst, alpha: 0.7, r: 0.16, g: 0.15, b: 0.14, growth: 4, drag: 1.4, lift: 0.35, wind: 1, heat: i === 0 ? 0.35 : 0 });
+      }
+      for (let i = 0; i < 4; i += 1) {
+        this.fire.emit({ x, y, z, vx: bx * rnd(4, 10) + rnd(-6, 6), vy: rnd(2, 9), vz: bz * rnd(4, 10) + rnd(-6, 6), life: rnd(0.25, 0.6), size0: 0.2, size1: 0.07, heat: 1, drag: 1.5, lift: -8 });
+      }
     }
     if (ammo === 'fire') {
       for (let i = 0; i < 10; i += 1) this.fire.emit({ x: x + rnd(-1, 1), y: y + rnd(0, 1.5), z: z + rnd(-1, 1), vx: rnd(-2, 2), vy: rnd(2, 6), vz: rnd(-2, 2), life: rnd(0.5, 1.2), size0: rnd(1.2, 2.4), size1: rnd(2.6, 4.2), heat: rnd(0.6, 1), drag: 1.5, lift: 2.5, wind: 0.5 });
     }
-    this.light(x + bx * 1.5, y + 0.8, z + bz * 1.5, ammo === 'fire' ? 24 : 12, 0.1, 1, 0.6, 0.3, 16, 20);
-    this.shakeAt(x, y, z, 0.3 + damage * 0.02, 60);
-    if (battle && (damage >= 8 || ammo === 'arrow' || ammo === 'fire')) this.smoulder(ship, x, y, z, ammo === 'fire' ? 1.3 : Math.min(1.2, damage / 10), battle);
+    if (through || ammo === 'fire') this.light(x + bx * 1.5, y + 0.8, z + bz * 1.5, ammo === 'fire' ? 24 : 12, 0.1, 1, 0.6, 0.3, 16, 20);
+    this.shakeAt(x, y, z, (through ? 0.3 : 0.12) + damage * 0.02, 60);
+    // The wad that followed the shot in burns on in the splintered wood of a breach or a hole.
+    if (battle && ((through && (damage >= 8 || arrow)) || ammo === 'fire')) this.smoulder(ship, x, y, z, ammo === 'fire' ? 1.3 : Math.min(1.2, damage / 10), battle);
+  }
+
+  /**
+   * A load of small shot (the joran-hwan, iron shot, a hudun's lead) arriving as a pattern a few metres across: dust and
+   * chips jump from a dozen points of the wall at once, few pieces bigger than a hand; through thin Japanese boards some
+   * pass on inboard. It does not open the hull: what it kills is the men behind the wall.
+   */
+  private pellets(x: number, y: number, z: number, bx: number, bz: number, damage: number, through: boolean) {
+    const sx = -bz;
+    const sz = bx;
+    const points = this.n(6 + damage * 0.4);
+    const boost = Math.min(2, this.zoomBoost(x, y, z));
+    for (let i = 0; i < points; i += 1) {
+      const a = rnd(-1.3, 1.3);
+      const h = rnd(-0.5, 0.6);
+      const px = x + sx * a + bx * 0.05;
+      const py = y + h;
+      const pz = z + sz * a + bz * 0.05;
+      this.smoke.emit({ x: px, y: py, z: pz, vx: bx * rnd(1.5, 4) + rnd(-0.6, 0.6), vy: rnd(0.2, 1.2), vz: bz * rnd(1.5, 4) + rnd(-0.6, 0.6), life: rnd(1.2, 2.4), size0: 0.25, size1: rnd(1.1, 1.9), alpha: 0.45, r: 0.62, g: 0.56, b: 0.48, drag: 2, lift: 0.1, wind: 0.6 });
+      if (Math.random() < 0.6) this.debris.spawn(Piece.Splinter, px, py, pz, bx * rnd(2, 6) + rnd(-1.5, 1.5), rnd(1, 4), bz * rnd(2, 6) + rnd(-1.5, 1.5), rnd(0.12, 0.3), rnd(0.5, 1), rnd(0.5, 1), rnd(6, 10), 1.6);
+      if (through && Math.random() < 0.5) this.debris.spawn(Piece.Splinter, px, py, pz, -bx * rnd(2, 5), rnd(0.5, 2.5), -bz * rnd(2, 5), rnd(0.1, 0.25), rnd(0.5, 1), rnd(0.5, 1), rnd(6, 10), 1.6);
+    }
+    // A few sparks where iron meets the iron of the guns' port frames and the wall's nails.
+    for (let i = 0; i < this.n(3); i += 1) {
+      this.streaks.emit({ x: x + sx * rnd(-1, 1), y: y + rnd(-0.4, 0.5), z: z + sz * rnd(-1, 1), vx: bx * rnd(2, 8) + rnd(-3, 3), vy: rnd(1, 5), vz: bz * rnd(2, 8) + rnd(-3, 3), life: rnd(0.12, 0.3), minLen: 0.2, stretch: 0.03, width: 0.06 * boost, r: 1, g: rnd(0.55, 0.75), b: 0.25, gravity: 14, drag: 0.5 });
+    }
   }
 
   /**
@@ -1011,6 +1110,7 @@ export class Effects {
 
   update(battle: Battle, dt: number, camera: Camera) {
     this.rowCam = camera;
+    this.battleRef = battle;
     this.continuous(battle, dt);
     this.smouldering(battle, dt);
     this.camPos.copy(camera.position);
@@ -1111,7 +1211,7 @@ export class Effects {
       }
     }
     this.mun.fly(dt, this.camPos.x, this.camPos.y, this.camPos.z, focal, this.layRocket, (x, z) => pointVisible(battle, this.views.team, x, z));
-    this.mun.stuck(dt, battle, this.camPos.x, this.camPos.y, this.camPos.z, focal);
+    this.scars.update(dt, battle, this.camPos.x, this.camPos.y, this.camPos.z, focal);
     this.mun.end();
     if (this.flights.size > shells.length) {
       for (const [id, f] of this.flights) {
