@@ -44,6 +44,10 @@ const DESCRIPTIONS: Record<Exclude<RouteScreen, 'menu'>, Record<Edition, string>
     ko: '표시 언어, 소리, 기기 등급, 카메라 흔들림 설정과 조작 안내입니다.',
     en: 'Language, sound, device tier and camera shake settings, and the controls.',
   },
+  codex: {
+    ko: '판옥선과 거북선, 아타케부네와 명의 복선까지 임진왜란의 함선을 3D로 돌려 보고 갑판에 올라 봅니다. 제원, 사료, 실제 크기 비교가 함께 있습니다.',
+    en: 'Turn the ships of the Imjin War around in 3D and step aboard, from the panokseon and the turtle ship to the atakebune and the Ming war junk, with their specifications, sources and a true-scale comparison.',
+  },
 };
 
 /** The English front page (imjin1592.com/en). The Korean one is index.html as written. */

@@ -1600,6 +1600,7 @@ export class Engine {
             id: primary.id,
             name: primary.name,
             kind: primary.spec.label,
+            shipKind: primary.spec.kind,
             team: primary.team,
             hull: primary.hull / primary.spec.hull,
             crew: Math.round(primary.crew),

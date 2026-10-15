@@ -15,6 +15,7 @@ export const screenChunks = {
   select: () => import('./ui/HistoryScreen'),
   skirmish: () => import('./ui/ConquestSetup'),
   online: () => import('./ui/OnlinePanel'),
+  codex: () => import('./ui/codex/CodexScreen'),
 };
 
 export function prefetchScreen(screen: Screen) {
