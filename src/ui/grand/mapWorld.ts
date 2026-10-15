@@ -192,6 +192,16 @@ export function campPlan(level: number, navy: FactionId): CampPlan {
 /** The pieces of a camp of this level and owner, unturned; none below level 1. */
 export const settlementPieces = (level: number, navy: FactionId = 'joseon'): Piece[] => (level < 1 ? [] : campPlan(level, navy).pieces);
 
+/** Trees keep this far beyond a place's buildings and fields, in radii: about six metres. */
+const CLEARANCE = 0.15;
+
+/** How far round its centre a place keeps the ground clear of trees, in frame units: its buildings, its fields and a margin. */
+export function clearingRadius(s: SettlementSpec) {
+  let reach = s.radius;
+  for (const f of s.grounds.fields) reach = Math.max(reach, Math.hypot(f.x, f.z) + Math.hypot(f.hx, f.hz));
+  return (reach + CLEARANCE) * SETTLEMENT_RADIUS;
+}
+
 /** Cheap string hash (FNV-1a) so each place keeps its own turn and its town its own houses between renders. */
 export function hash(text: string) {
   let h = 2166136261;

@@ -174,7 +174,7 @@ try {
     await world.load();
     let builds = 0;
     world.layer.set = () => { builds++; };
-    const settlement = { id: 'yeosu', u: 0.4, v: 0.5, owner: 'joseon', level: 2 };
+    const settlement = { id: 'yeosu', region: 'yeosu', kind: 'camp', u: 0.4, v: 0.5, owner: 'joseon', level: 2, radius: 0.8, pieces: [], grounds: { yard: 0.5, lanes: [], fields: [] } };
     const make = (level) => ({ settlements: [{ ...settlement, level }], fleets: [], sails: [] });
     world.setWorld(make(2));
     world.setWorld(make(2));

@@ -5,7 +5,7 @@ import { MESH_SCALE, groundElevation } from './mapMath';
 import { MapLayer } from './mapLayer';
 import { TreeLayer } from './worldTrees';
 import { loadGround, type WorldGround } from './worldGround';
-import type { MapWorld } from './mapWorld';
+import { clearingRadius, type MapWorld } from './mapWorld';
 import { eyeOf, FAR, FOV, NEAR, worldX, worldZ, type CameraState, type ScreenFrame } from './worldCamera';
 
 /** Compiles the shaders and pipelines of everything in the scene without holding up the frames: the renderer's compileAsync. */
@@ -174,7 +174,7 @@ export class CampaignWorld {
 
   private show(world: MapWorld) {
     this.layer?.set(world);
-    this.trees?.setClearings(world.settlements);
+    this.trees?.setClearings(world.settlements.map((s) => ({ u: s.u, v: s.v, r: clearingRadius(s) })));
   }
 
   /** The closed turn's ships along their way: `share` of the sailing done, `time` the replay's clock. */

@@ -18,7 +18,7 @@ try {
     bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent',
   });
   const path = join(temporary, 'map-world.mjs'); await writeFile(path, bundled.outputFiles[0].contents);
-  const { settlementPieces, faceSea, buildWorld, layoutSettlements, dryStretches, townPlan, townSize, workKind, anchorage, hullsFor, drawnKinds, hash, HULL_LENGTH, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, SHIP_CAP, formation, transitShare, transitSpot, pointAlong, buildSails, cardRect, overlaps, pickCards, WALL_KINDS, WATER_KINDS, FOOTPRINT, METRES_PER_RADIUS } = await import(pathToFileURL(path).href);
+  const { settlementPieces, faceSea, buildWorld, layoutSettlements, dryStretches, clearingRadius, townPlan, townSize, workKind, anchorage, hullsFor, drawnKinds, hash, HULL_LENGTH, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, SHIP_CAP, formation, transitShare, transitSpot, pointAlong, buildSails, cardRect, overlaps, pickCards, WALL_KINDS, WATER_KINDS, FOOTPRINT, METRES_PER_RADIUS } = await import(pathToFileURL(path).href);
   const kinds = (level) => new Set(settlementPieces(level).map((p) => p.kind));
   const buildings = (level) => settlementPieces(level).filter((p) => !WALL_KINDS.has(p.kind)).length;
 
@@ -119,6 +119,15 @@ try {
       assert.ok(!coastSea(s.u + x * R, s.v + z * R * MAP_ASPECT), `${s.id}: a lane runs over the water at ${x.toFixed(2)},${z.toFixed(2)}`);
     }
     assert.deepEqual(layoutSettlements(coastal, coastSea), places, 'the same ports lay out the same way');
+  });
+  check("a place keeps the trees off its buildings and fields, and a larger place keeps them farther off", () => {
+    for (const s of layoutSettlements(coastal, coastSea)) {
+      const r = clearingRadius(s) / R;
+      assert.ok(r > s.radius, `${s.id}: its buildings`);
+      for (const f of s.grounds.fields) assert.ok(Math.hypot(f.x, f.z) + Math.hypot(f.hx, f.hz) < r, `${s.id}: its fields`);
+    }
+    const camp = (level) => layoutSettlements([region('a', 127.7, 34.7, { buildings: [{ kind: 'camp', level, maxLevel: 3 }] })]).find((s) => s.kind === 'camp');
+    assert.ok(clearingRadius(camp(1)) < clearingRadius(camp(3)) * 0.8, 'a stockade clears less ground than a walled fort');
   });
   check('a lane stops at the water and goes on where the land comes back', () => {
     // A channel across the lane between x = 1 and x = 1.6.

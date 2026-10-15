@@ -26,8 +26,6 @@ const TILE = 16;
 const BUDGET_MS = 3;
 /** Tiles kept for reuse; the ones used longest ago go first. */
 const KEEP = 900;
-/** No tree within this of a camp (frame units), so the camp reads. */
-const CLEARING = 0.0175;
 /** Floats kept per tree: x, ground height, z, height, width and the tint's red, green and blue. */
 const STRIDE = 8;
 
@@ -96,7 +94,7 @@ export class TreeLayer {
   private readonly mesh: InstancedMesh;
   private readonly material = new MeshBasicNodeMaterial({ vertexColors: true });
   private readonly geometry = pine();
-  private clearings: { u: number; v: number }[] = [];
+  private clearings: { u: number; v: number; r: number }[] = [];
   private readonly tiles = new Map<number, Tile>();
   private level = -1;
   /** Where the trees on show were laid round, in world x and z, and whether every tile they need was ready. */
@@ -117,8 +115,11 @@ export class TreeLayer {
     this.group.add(this.mesh);
   }
 
-  /** Where camps stand: no trees round them, so the camp reads. Frame coordinates. */
-  setClearings(points: { u: number; v: number }[]) {
+  /**
+   * Where the settlements stand: no tree within `r` (world units) of a frame point (u, v), so a camp or a town reads and
+   * a small one is not left in a wide clearing.
+   */
+  setClearings(points: { u: number; v: number; r: number }[]) {
     this.clearings = points;
     this.complete = false;
     this.anchor = { x: Number.NaN, z: Number.NaN };
@@ -223,7 +224,7 @@ export class TreeLayer {
   private assemble(tiles: { key: number }[], reach: number, cx: number, cz: number) {
     const array = this.mesh.instanceMatrix.array as Float32Array;
     const colors = this.mesh.instanceColor!.array as Float32Array;
-    const clear = this.clearings.map((p) => ({ x: worldX(p.u), z: worldZ(p.v) })).filter((p) => Math.hypot(p.x - cx, p.z - cz) < reach + CLEARING);
+    const clear = this.clearings.map((p) => ({ x: worldX(p.u), z: worldZ(p.v), r: p.r })).filter((p) => Math.hypot(p.x - cx, p.z - cz) < reach + p.r);
     const stamp = (this.assemblies += 1);
     let n = 0;
     for (const { key } of tiles) {
@@ -234,7 +235,7 @@ export class TreeLayer {
         const x = trees[t]!, z = trees[t + 2]!;
         const dist = Math.hypot(x - cx, z - cz);
         if (dist > reach) continue;
-        if (clear.some((p) => Math.hypot(x - p.x, z - p.z) < CLEARING)) continue;
+        if (clear.some((p) => Math.hypot(x - p.x, z - p.z) < p.r)) continue;
         // Trees thin out to nothing at the edge of the planted disc, so it does not end in a line.
         const fade = Math.min(1, (reach - dist) / (reach * 0.3));
         const tall = trees[t + 3]! * fade, wide = trees[t + 4]! * fade;
