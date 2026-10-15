@@ -136,6 +136,15 @@ const PACKED_SHIPS = 2;
 /** Boarders close in at FLEET_PACE (m/s) while farther than this from their enemy, then go flat out together. */
 const RUSH_RANGE = 450;
 const FLEET_PACE = 5;
+/**
+ * A fleet with somewhere to be (the battle's objective, under the maneuver rules) turns aside only for an enemy within
+ * PRESS_NEAR, or one lying ahead across its course: up to PRESS_AHEAD on along it and PRESS_WIDE to either side of it.
+ * Within OBJECTIVE_REACHED of the objective a ship has got through and leaves the battle.
+ */
+const PRESS_NEAR = 260;
+const PRESS_AHEAD = 650;
+const PRESS_WIDE = 200;
+const OBJECTIVE_REACHED = 350;
 /** Boarders look for company within this many metres, and wait for the others when this far ahead of them. */
 const FLEET_REACH = 800;
 const FLEET_SLACK = 70;
@@ -234,6 +243,11 @@ export class Battle {
   rules: BattleRules | null = null;
   /** Where each side's computer-led ships make for when they see no enemy, if the battle gives it one (the maneuver rules). */
   objectives: Partial<Record<Team, { x: number; z: number }>> = {};
+  /**
+   * A shore the side holds, if the battle has one (the maneuver rules): a broken crew whose way home is barred runs for
+   * it when it lies that way, and waits there, inside, instead of running on.
+   */
+  havens: Partial<Record<Team, { x: number; z: number }>> = {};
   /** The battle depth rules this battle was built with (depth.ts); null keeps the rules from before them. */
   depth: DepthRules | null = null;
   private moraleRules: Morale | null = null;
@@ -945,19 +959,22 @@ export class Battle {
     });
   }
 
-  nearestEnemy(s: Ship, preferBoardable = false, within = Infinity) {
+  /** `onCourse`: a ship pressing on for its side's objective looks only at the enemies in its way (`offCourse`). */
+  nearestEnemy(s: Ship, preferBoardable = false, within = Infinity, onCourse = false) {
     const list = this.active[otherTeam(s.team)];
     const spreadBoarders = this.profile !== 'historical' && preferBoardable && boardsFirst(s) && this.isAi(s);
     const lightBoarder = spreadBoarders && s.spec.kind !== 'atakebune';
     let best: Ship | undefined;
     let bestScore = Infinity;
     const maneuvers = this.maneuvers;
+    const pressing = onCourse && this.pressing(s);
     // A rash or bold commander's boarders keep after a ship that turns away from them: the lure works on them.
     const chased = maneuvers && boardsFirst(s) && this.isAi(s) ? this.byId.get(s.targetId) : undefined;
-    if (chased && chased.team !== s.team && maneuvers!.chases(s, chased) && hyp(chased.x - s.x, chased.z - s.z) <= within) return chased;
+    if (chased && chased.team !== s.team && maneuvers!.chases(s, chased) && hyp(chased.x - s.x, chased.z - s.z) <= within && !(pressing && this.offCourse(s, chased))) return chased;
     for (const o of list) {
       const d = hyp(o.x - s.x, o.z - s.z);
       if (d > within || !((this.profile === 'historical' && this.lull >= STALL_AI) || this.canSee(o, d, s.team))) continue;
+      if (pressing && this.offCourse(s, o)) continue;
       let score = d;
       if (maneuvers) {
         // Fire spread over the enemy line and drawn to a ship already under fire from another quarter, not a firing
@@ -1356,7 +1373,8 @@ export class Battle {
       }
       this.steerTo(s, run.x, run.z, 40, 1);
       this.avoid(s);
-      this.getAway(s);
+      // Inside its side's haven a crew lies up under the friendly shore instead of slipping away.
+      if (!run.haven) this.getAway(s);
       return;
     }
     let r = this.refuges.get(s.id);
@@ -1504,9 +1522,9 @@ export class Battle {
     if (forced && this.profile !== 'historical' && !isShipVisible(this, s.team, forced.id)) forced = undefined;
     const shaken = this.shaken(s);
     let finish = forced || shaken ? undefined : this.finishTarget(s);
-    const seen = forced ?? finish ?? this.nearestEnemy(s);
+    const seen = forced ?? finish ?? this.nearestEnemy(s, false, Infinity, true);
     if (seen) this.searchSince.delete(s.id);
-    let target = seen ?? this.hunted(s);
+    let target = seen ?? (this.pressing(s) ? undefined : this.hunted(s));
     if (!target) {
       if (this.escortTender(s) || this.seekObjective(s)) return;
       s.throttle = 0.12;
@@ -1632,9 +1650,9 @@ export class Battle {
       this.thinkGunner(s, forced);
       return;
     }
-    const seen = forced ?? this.nearestEnemy(s, true);
+    const seen = forced ?? this.nearestEnemy(s, true, Infinity, true);
     if (seen) this.searchSince.delete(s.id);
-    const target = seen ?? this.hunted(s, true);
+    const target = seen ?? (this.pressing(s) ? undefined : this.hunted(s, true));
     if (!target) {
       if (this.seekObjective(s)) return;
       s.throttle = 0.2;
@@ -1696,12 +1714,40 @@ export class Battle {
    */
   private seekObjective(s: Ship) {
     const goal = this.objectives[s.team];
-    if (!goal || !this.maneuvers || !this.isAi(s) || s.order.type !== 'auto') return false;
-    if (hyp(goal.x - s.x, goal.z - s.z) < 300) return false;
+    if (!goal || !this.maneuvers || !this.isAi(s) || s.order.type !== 'auto' || this.retreating[s.team]) return false;
+    if (hyp(goal.x - s.x, goal.z - s.z) < OBJECTIVE_REACHED) {
+      // Through: the ship has done what it came for and is gone from the fight, like one that got away.
+      s.alive = false;
+      s.fled = true;
+      this.escaped[s.team] += 1;
+      this.events.push({ type: 'removed', ship: s.id });
+      this.leave(s);
+      return true;
+    }
     this.steerTo(s, goal.x, goal.z, 200, Math.min(1, FLEET_PACE / s.spec.maxSpeed));
     this.avoid(s);
     this.activity.set(s.id, 'moving');
     return true;
+  }
+
+  /** Whether a computer-led ship is on its way to its side's objective, and so fights only what bars the way. */
+  private pressing(s: Ship) {
+    const goal = this.objectives[s.team];
+    return !!goal && !!this.maneuvers && this.isAi(s) && s.order.type === 'auto' && !this.retreating[s.team] && s.moraleState === 'steady';
+  }
+
+  /** An enemy neither close aboard nor ahead across the course to the objective: a ship pressing on passes it by. */
+  private offCourse(s: Ship, o: Ship) {
+    const goal = this.objectives[s.team]!;
+    const dx = o.x - s.x;
+    const dz = o.z - s.z;
+    if (dx * dx + dz * dz < PRESS_NEAR * PRESS_NEAR) return false;
+    const gx = goal.x - s.x;
+    const gz = goal.z - s.z;
+    const gd = hyp(gx, gz) || 1;
+    const along = (dx * gx + dz * gz) / gd;
+    const across = Math.abs(dx * gz - dz * gx) / gd;
+    return !(along > 0 && along < PRESS_AHEAD && across < PRESS_WIDE);
   }
 
   /** Computer boarders use the same station presets a player can select: oars on approach, fighters after grappling. */

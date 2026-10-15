@@ -127,6 +127,17 @@ const ROUT_LOOK = 3;
 const TRAPPED_OPEN = 300;
 const TRAPPED_FOE = 500;
 const TRAPPED = 15;
+/**
+ * A crew with enemies still fighting between it and home (BARRED_SHIPS of them within BARRED_RANGE, inside BARRED_CONE
+ * radians of the way home) or cut off runs for its side's haven within HAVEN_REACH, the pull weighing about as much as
+ * open water dead ahead; within HAVEN_IN of the haven it is in.
+ */
+const BARRED_RANGE = 900;
+const BARRED_CONE = 1;
+const BARRED_SHIPS = 2;
+const HAVEN_REACH = 4200;
+const HAVEN_IN = 650;
+const HAVEN_PULL = 1;
 /** Crews of a rash or bold commander chase a fleeing ship this far; a cautious one leaves its anchorage no further than WANDER. */
 const CHASE = 1400;
 const WANDER = 900;
@@ -1246,11 +1257,13 @@ export class Maneuvers {
    * enemy and clear of jammed friends and of enemy hulls. Water it cannot see the end of looks like the open sea, so a
    * wide bay mouth draws a panicking fleet in as readily as the way home; inside, the water runs out.
    */
-  routeOf(s: Ship): { x: number; z: number; trapped: boolean } {
+  routeOf(s: Ship): { x: number; z: number; trapped: boolean; haven: boolean } {
     const b = this.b;
     let run = this.runs.get(s.id);
+    const haven = b.havens[s.team];
+    const inside = !!haven && hyp(haven.x - s.x, haven.z - s.z) < HAVEN_IN;
     if (!run || b.time - run.at >= ROUT_LOOK) {
-      const pick = this.chooseRun(s, run?.h ?? s.heading);
+      const pick = this.chooseRun(s, run?.h ?? s.heading, inside ? null : this.havenPull(s));
       if (!run) {
         run = { h: pick.h, at: b.time, open: pick.open, trapped: 0 };
         this.runs.set(s.id, run);
@@ -1262,15 +1275,40 @@ export class Maneuvers {
         run.open = pick.open;
       }
     }
+    // Inside the haven the crew makes for its innermost water and lies there; it gives up only if the enemy follows it in.
+    if (inside) return { x: haven.x, z: haven.z, trapped: run.trapped >= TRAPPED, haven: true };
     const reach = Math.max(120, Math.min(400, run.open));
-    return { x: s.x + Math.cos(run.h) * reach, z: s.z + Math.sin(run.h) * reach, trapped: run.trapped >= TRAPPED };
+    return { x: s.x + Math.cos(run.h) * reach, z: s.z + Math.sin(run.h) * reach, trapped: run.trapped >= TRAPPED, haven: false };
   }
 
   forgetRun(id: number) {
     this.runs.delete(id);
   }
 
-  private chooseRun(s: Ship, current: number) {
+  /**
+   * The bearing of the side's haven for a crew whose way home is barred, when the haven is near enough to run for: cut
+   * off from its leader by a column breaking through, or with enemies still fighting between it and where its squadron
+   * came from. Null when the way home is open, so a crew with the sea behind it runs home.
+   */
+  private havenPull(s: Ship): number | null {
+    const b = this.b;
+    const haven = b.havens[s.team];
+    if (!haven || hyp(haven.x - s.x, haven.z - s.z) > HAVEN_REACH) return null;
+    let barred = this.cut.has(s.id);
+    const home = this.homes?.get(s.squadronId);
+    if (!barred && home) {
+      const toward = Math.atan2(home.z - s.z, home.x - s.x);
+      let n = 0;
+      b.near(s.x, s.z, BARRED_RANGE, (o) => {
+        if (o.team === s.team || !b.isActive(o) || o.moraleState === 'routing') return;
+        if (Math.abs(wrapAngle(Math.atan2(o.z - s.z, o.x - s.x) - toward)) < BARRED_CONE) n += 1;
+      });
+      barred = n >= BARRED_SHIPS;
+    }
+    return barred ? Math.atan2(haven.z - s.z, haven.x - s.x) : null;
+  }
+
+  private chooseRun(s: Ship, current: number, haven: number | null) {
     const b = this.b;
     const sight = b.night ? ROUT_SIGHT_NIGHT : ROUT_SIGHT_DAY;
     let tx = 0;
@@ -1317,6 +1355,7 @@ export class Maneuvers {
         if (along > 0 && Math.abs((o.z - s.z) * c - (o.x - s.x) * n) < 160) foe += 1;
       }
       score -= 0.12 * Math.min(6, jam) + 0.3 * Math.min(4, foe);
+      if (haven !== null) score += HAVEN_PULL * Math.cos(h - haven);
       if (Math.abs(wrapAngle(h - current)) < 0.2) score *= 1.1;
       if (score > bestScore) {
         bestScore = score;

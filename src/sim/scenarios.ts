@@ -332,6 +332,8 @@ const LEADS = [
   { squad: '소 대', name: '소 요시토시' },
   { squad: '데라자와 대', name: '데라자와 마사나리' },
 ];
+/** Where each Noryang squadron sails in the column, from the head: the other houses lead, Shimazu sixth. */
+const COLUMN_SLOT = [5, 0, 1, 2, 3, 4, ...Array.from({ length: 14 }, (_, i) => 6 + i)];
 
 export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: LandFn = () => -50, fleet?: FleetSpawn) {
   const b = new Battle(seed);
@@ -615,15 +617,21 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     line(sqSha, 'mingsmall', grid(-3200, 900, head, 33, 6, 40, 36, 10, rand), '명 사선대');
     // The Japanese column comes on from the east still short of the strait's waist, so the allies have the time to
     // choose where to meet it: at the narrows, from both shores, as on the night.
+    // Shimazu's own squadron is made first, so his flagship is the fleet's admiral, but sails in the middle of the
+    // column behind a van of the other houses: a column cut behind its van leaves the van without him.
     for (let q = 0; q < 20; q += 1) {
       const lead = LEADS[q];
+      const at = COLUMN_SLOT[q] ?? q;
       const sq = squad('japan', lead ? lead.squad : echelon('사쓰마', q + 1), lead ? lead.name : '일본 장수', q % 4 === 0 ? 'atakebune' : 'sekibune');
       const kindOf = mix(0.22, 0.6);
-      grid(2200 + q * 170, (q % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, numbered(sq.name, i + 1), i === 0));
+      grid(2200 + at * 170, (at % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, numbered(sq.name, i + 1), i === 0));
     }
     b.retreatBelow.japan =0.55;
     // Shimazu came to break through to Konishi at Suncheon, west of the strait: unopposed, his column keeps going.
     b.objectives.japan = { x: -5200, z: 200 };
+    // The Japanese held Namhae island (a castle at Seonso): crews that could not get home ran for its shore, and
+    // Gwaneumpo's bay on its north-west coast was the nearest water under it.
+    b.havens.japan = { x: -2900, z: 3250 };
   }
   if (fleet) spawnFleet(b, fleet, axis, land);
   return b;

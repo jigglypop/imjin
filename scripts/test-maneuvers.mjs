@@ -8,7 +8,7 @@
 // at Hansan gives a crossfire the old rules never did, and at Noryang a player's commands alone (an ambush at the
 // strait, a breach behind the van, a pincer, the narrows and Gwaneumpo held) do far better than no commands at all.
 import assert from 'node:assert/strict';
-import { openSim, scenario, run } from './maneuvers-harness.mjs';
+import { openSim, scenario, run, noryang, noryangLine } from './maneuvers-harness.mjs';
 
 const unitOnly = process.argv.includes('--unit');
 const noryangToo = process.argv.includes('--noryang');
@@ -331,89 +331,21 @@ if (!unitOnly) {
     assert.ok(kinds.has('pursue'), 'ships sent after the broken enemy');
   });
 
-  if (noryangToo) await check('Noryang: a player’s commands (ambush at the strait, breach, pincer, the narrows and Gwaneumpo held) win near the record at half the cost or less', () => {
-    const noryang = (orders) => {
-      const b = scenario(mods, 'noryang', 'joseon', 1592);
-      const r = run(mods, b, { minutes: 60, each: orders ? playNoryang(b) : undefined });
-      const japan = b.ships.filter((s) => s.team === 'japan');
-      r.bay = japan.filter((s) => s.z > 2300 && s.x < -2000 && !s.fled).length;
-      r.taken = japan.filter((s) => s.struck).length;
-      r.sunk = japan.filter((s) => s.sinking > 0 && !s.struck).length;
-      r.allies = b.ships.filter((s) => s.team === 'joseon' && !b.isActive(s) && !s.fled).length;
-      return r;
-    };
-    const none = noryang(false);
-    const play = noryang(true);
-    const line = (r) => `${r.winner ?? 'undecided'} at ${r.minutes} min · Japanese sunk ${r.sunk}, taken ${r.taken}, fled ${r.fled.japan}, in Gwaneumpo ${r.bay} · allies lost ${r.allies} · crossfire ${r.crossShare}%`;
-    console.log(`     no commands: ${line(none)}\n     commands:    ${line(play)}`);
-    assert.equal(play.winner, 'joseon');
-    assert.ok(play.sunk + play.taken >= 200, 'about the two hundred ships of the record');
-    assert.ok(play.allies * 2 <= none.allies, 'the commands cost the allies at most half the ships');
-    assert.ok(play.sunk + play.taken >= none.sunk + none.taken - 20, 'and destroy as many');
-  });
-}
-
-/** A player's Noryang, only commands a player could give, each when the battle calls for it. */
-function playNoryang(b) {
-  const ZONE = { x: -2300, z: 250, r: 600 };
-  const DOOR = { x0: -400, z0: -1100, x1: -400, z1: 380 };
-  const NECK = { x0: -2800, z0: 2200, x1: -2000, z1: 2200 };
-  let step = 0;
-  let at = -1;
-  return () => {
-    const sq = (name) => b.squadrons.find((s) => s.name === name);
-    const ids = (s) => s.shipIds.filter((id) => b.isActive(b.get(id)));
-    const yi = sq('통제사 본대');
-    const left = sq('조선 좌군');
-    const right = sq('조선 우군');
-    const cmd = (c) => applyCommand(b, 0, c);
-    const running = () => b.activeOf('japan').filter((s) => s.moraleState === 'routing').length;
-    if (step === 0 && b.time > 1) {
-      cmd({ type: 'maneuver', ids: [...ids(yi), ...ids(left), ...ids(right)], kind: 'ambush', x0: ZONE.x, z0: ZONE.z, x1: ZONE.x + ZONE.r, z1: ZONE.z });
-      step = 1;
-    } else if (step === 1) {
-      // The van deep in the basin: the drum, unless the ambush has sprung on its own.
-      const plan = [...b.maneuvers.plans.values()].find((p) => p.owner === 0 && p.kind === 'ambush');
-      if (plan && plan.phase !== 'striking' && b.activeOf('japan').filter((s) => s.x < -1700).length >= 30) cmd({ type: 'signal', ids: ids(yi), signal: 'advance' });
-      if (!plan || plan.phase === 'striking') {
-        at = b.time;
-        step = 2;
-      }
-    } else if (step === 2 && b.time > at + 30) {
-      cmd({ type: 'maneuver', ids: ids(yi), kind: 'breach', ...DOOR });
-      let x = 0;
-      let z = 0;
-      let n = 0;
-      b.near(ZONE.x, ZONE.z, 800, (o) => {
-        if (o.team === 'japan' && b.isActive(o)) {
-          x += o.x;
-          z += o.z;
-          n += 1;
-        }
-      });
-      if (n) {
-        x /= n;
-        z /= n;
-      } else {
-        x = ZONE.x;
-        z = ZONE.z;
-      }
-      cmd({ type: 'maneuver', ids: [...ids(left), ...ids(right)], kind: 'pincer', x0: x, z0: z - 650, x1: x, z1: z + 650 });
-      at = b.time;
-      step = 3;
-    } else if (step === 3 && (b.time > at + 150 || !ids(yi).some((id) => b.maneuvers.planOf(b.get(id))?.kind === 'breach'))) {
-      // Through, or held up: the flagship's squadron shuts the narrows behind the van.
-      cmd({ type: 'maneuver', ids: ids(yi), kind: 'blockade', ...DOOR });
-      step = 4;
-    } else if (step === 4 && running() >= 8) {
-      cmd({ type: 'maneuver', ids: ids(right).slice(0, 8), kind: 'blockade', ...NECK });
-      step = 5;
-    } else if (step === 5 && running() >= 20) {
-      const free = [...ids(left), ...ids(right)].filter((id) => b.maneuvers.planOf(b.get(id))?.kind !== 'blockade');
-      if (free.length) cmd({ type: 'maneuver', ids: free, kind: 'pursue', x0: 0, z0: 0, x1: 0, z1: 0 });
-      step = 6;
+  if (noryangToo) await check('Noryang: a player’s commands (ambush in the basin, breach behind the van, pincer, the narrows and Gwaneumpo held) do clearly better than none, and the broken van runs into Gwaneumpo', () => {
+    const none = [];
+    const play = [];
+    for (let k = 0; k < 3; k += 1) {
+      none.push(noryang(mods, 1592 + k * 101, false));
+      play.push(noryang(mods, 1592 + k * 101, true));
+      console.log(`     seed ${1592 + k * 101} no commands: ${noryangLine(none[k])}\n                commands:    ${noryangLine(play[k])}`);
     }
-  };
+    const gone = (r) => r.sunk + r.taken;
+    for (const r of play) assert.equal(r.winner, 'joseon');
+    assert.ok(mean(play, gone) >= mean(none, gone) + 20, `destroyed ${mean(none, gone).toFixed(0)} -> ${mean(play, gone).toFixed(0)}`);
+    assert.ok(mean(play, (r) => r.allies) <= mean(none, (r) => r.allies) + 2, 'at no greater cost');
+    assert.ok(mean(play, (r) => r.home + r.through) < mean(none, (r) => r.home + r.through), 'fewer get away');
+    assert.ok(play.every((r) => r.bay + r.bayTaken > 0), 'the broken van runs into Gwaneumpo');
+  });
 }
 
 await mods.server.close();

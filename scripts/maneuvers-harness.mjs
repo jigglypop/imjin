@@ -209,6 +209,105 @@ export function run(mods, b, { minutes = 30, team = 'joseon', each } = {}) {
   return { winner: b.winner, draw: b.draw, minutes: +(b.time / 60).toFixed(1), lost: { joseon: lost('joseon'), japan: lost('japan') }, fled: { ...b.escaped }, left: { joseon: b.activeOf('joseon').length, japan: b.activeOf('japan').length }, ...w.summary() };
 }
 
+/** Gwaneumpo: the dead-end bay behind its neck on Namhae's north-west shore (NORYANG_BATTLE_TERRAIN). */
+export const inGwaneumpo = (s) => s.z > 2450 && s.x < -2000 && s.x > -3900;
+
+/**
+ * Noryang played to its end, with a player's commands (`playNoryang`) or none, and what became of the Japanese fleet:
+ * sunk, taken, fled home east or through to Suncheon west, still inside Gwaneumpo at the end, and with `trace` where it
+ * was every two minutes.
+ */
+export function noryang(mods, seed, orders, { minutes = 60, trace = false } = {}) {
+  const b = scenario(mods, 'noryang', 'joseon', seed);
+  const play = orders ? playNoryang(b, mods.cmd.applyCommand) : undefined;
+  let next = 0;
+  const r = run(mods, b, {
+    minutes,
+    each: () => {
+      play?.();
+      if (!trace || b.time < next) return;
+      next += 120;
+      const live = b.activeOf('japan');
+      const n = (f) => live.filter(f).length;
+      console.log(`  ${(b.time / 60).toFixed(0).padStart(3)} min · japan east ${n((s) => s.x > 600)} strait ${n((s) => s.x <= 600 && s.x > -600)} west ${n((s) => s.x <= -600 && !inGwaneumpo(s))} bay ${n(inGwaneumpo)} routing ${n((s) => s.moraleState === 'routing')} fled ${b.escaped.japan} · allies ${b.activeOf('joseon').length}${play ? ` · step ${play.step()}` : ''}`);
+    },
+  });
+  const japan = b.ships.filter((s) => s.team === 'japan');
+  r.bay = japan.filter((s) => inGwaneumpo(s) && b.isActive(s)).length;
+  r.bayTaken = japan.filter((s) => inGwaneumpo(s) && (s.struck || s.sinking > 0)).length;
+  r.taken = japan.filter((s) => s.struck).length;
+  r.sunk = japan.filter((s) => s.sinking > 0 && !s.struck).length;
+  r.home = japan.filter((s) => s.fled && s.x > -1500).length;
+  r.through = japan.filter((s) => s.fled && s.x <= -1500).length;
+  r.allies = b.ships.filter((s) => s.team === 'joseon' && !b.isActive(s) && !s.fled).length;
+  return r;
+}
+
+export const noryangLine = (r) => `${r.winner ?? 'undecided'} at ${r.minutes} min · Japanese sunk ${r.sunk}, taken ${r.taken}, fled home ${r.home}, through west ${r.through}, in Gwaneumpo ${r.bay} (+${r.bayTaken} sunk or taken there) · allies lost ${r.allies} · crossfire ${r.crossShare}%`;
+
+/**
+ * A player's Noryang, only commands a player could give, each when the battle calls for it: the whole Joseon fleet lies
+ * in wait, dark, in the western basin the relief must cross; the drum when the van is deep in it; the flagship's squadron
+ * breaks through behind the van while the two wings close on it; the flagship's squadron then shuts the narrows, a
+ * detachment shuts Gwaneumpo's mouth once the broken van has run into it, and the rest run down the fugitives.
+ */
+export function playNoryang(b, applyCommand) {
+  const ZONE = { x: -2300, z: 250, r: 600 };
+  // Behind the van: across the western end of the narrows, north to south.
+  const CUT = { x0: -1000, z0: -800, x1: -1000, z1: 900 };
+  // The narrows where they are narrowest, from the mainland to the island.
+  const DOOR = { x0: 200, z0: -820, x1: 200, z1: 280 };
+  const NECK = { x0: -2750, z0: 2350, x1: -2150, z1: 2350 };
+  let step = 0;
+  let at = -1;
+  const tick = () => {
+    const sq = (name) => b.squadrons.find((s) => s.name === name);
+    const ids = (s) => s.shipIds.filter((id) => b.isActive(b.get(id)));
+    const yi = sq('통제사 본대');
+    const left = sq('조선 좌군');
+    const right = sq('조선 우군');
+    const cmd = (c) => applyCommand(b, 0, c);
+    const japan = b.activeOf('japan');
+    if (step === 0 && b.time > 1) {
+      cmd({ type: 'maneuver', ids: [...ids(yi), ...ids(left), ...ids(right)], kind: 'ambush', x0: ZONE.x, z0: ZONE.z, x1: ZONE.x + ZONE.r, z1: ZONE.z });
+      step = 1;
+    } else if (step === 1) {
+      // The van deep in the basin: the drum, unless the ambush has sprung on its own.
+      const plan = [...b.maneuvers.plans.values()].find((p) => p.owner === 0 && p.kind === 'ambush');
+      if (plan && plan.phase !== 'striking' && japan.filter((s) => s.x < -1700).length >= 40) cmd({ type: 'signal', ids: ids(yi), signal: 'advance' });
+      if (!plan || plan.phase === 'striking') {
+        at = b.time;
+        step = 2;
+      }
+    } else if (step === 2 && b.time > at + 20) {
+      cmd({ type: 'maneuver', ids: ids(yi), kind: 'breach', ...CUT });
+      const van = japan.filter((s) => s.x < -1300);
+      const x = van.length ? van.reduce((v, s) => v + s.x, 0) / van.length : ZONE.x;
+      const z = van.length ? van.reduce((v, s) => v + s.z, 0) / van.length : ZONE.z;
+      cmd({ type: 'maneuver', ids: [...ids(left), ...ids(right)], kind: 'pincer', x0: x, z0: z - 650, x1: x, z1: z + 650 });
+      at = b.time;
+      step = 3;
+    } else if (step === 3 && (b.time > at + 150 || !ids(yi).some((id) => b.maneuvers.planOf(b.get(id))?.kind === 'breach'))) {
+      // Through, or held up: the flagship's squadron shuts the narrows behind the van.
+      cmd({ type: 'maneuver', ids: ids(yi), kind: 'blockade', ...DOOR });
+      step = 4;
+    } else if (step === 4 && japan.filter((s) => s.z > 2300 && s.x < -2000).length >= 10) {
+      cmd({ type: 'maneuver', ids: ids(right).slice(0, 8), kind: 'blockade', ...NECK });
+      step = 5;
+    } else if (step >= 4 && step < 6 && japan.filter((s) => s.moraleState === 'routing').length >= 20) {
+      const free = [...ids(left), ...ids(right)].filter((id) => b.maneuvers.planOf(b.get(id))?.kind !== 'blockade');
+      if (free.length) cmd({ type: 'maneuver', ids: free, kind: 'pursue', x0: 0, z0: 0, x1: 0, z1: 0 });
+      step = step === 5 ? 6 : 7;
+    } else if (step === 7 && japan.filter((s) => s.z > 2300 && s.x < -2000).length >= 10) {
+      cmd({ type: 'maneuver', ids: ids(right).slice(0, 8), kind: 'blockade', ...NECK });
+      step = 6;
+    }
+  };
+  tick.step = () => step;
+  return tick;
+}
+
+
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
   const flag = (k, d) => args.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3) ?? d;
@@ -217,6 +316,20 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const mode = flag('mode', 'auto');
   const minutes = Number(flag('minutes', 25));
   const mods = await openSim();
+  if (id === 'noryang') {
+    // node scripts/maneuvers-harness.mjs noryang [--seeds=3] [--seed0=1592] [--orders=both|on|off] [--trace]
+    const which = flag('orders', 'both');
+    const modes = which === 'both' ? [false, true] : [which === 'on'];
+    for (let k = 0; k < seeds; k += 1) {
+      const seed = Number(flag('seed0', 1592)) + k * 101;
+      for (const orders of modes) {
+        const r = noryang(mods, seed, orders, { minutes: Number(flag('minutes', 60)), trace: args.includes('--trace') });
+        console.log(`seed ${seed} ${orders ? 'commands' : 'none    '}: ${noryangLine(r)}`);
+      }
+    }
+    await mods.server.close();
+    process.exit(0);
+  }
   const all = [];
   for (let k = 0; k < seeds; k += 1) {
     const b = scenario(mods, id, 'joseon', 1592 + k * 101);
