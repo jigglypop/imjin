@@ -10,6 +10,9 @@ export interface TopBarProps {
   /** Opens the war status panel (objective, scores, log). */
   onStatus?: () => void;
   onBatch?: () => void;
+  /** Opens the characters panel (인물); `officersBadge` counts officers with points to spend and cards waiting. */
+  onOfficers?: () => void;
+  officersBadge?: number;
   /** The automatic-building switch: its state and the flip. Omitted, no switch is drawn. */
   autoWorks?: boolean;
   onAutoWorks?: (on: boolean) => void;
@@ -18,7 +21,7 @@ export interface TopBarProps {
   endLabel?: string;
 }
 
-export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, autoWorks, onAutoWorks, busy, endLabel }: TopBarProps) {
+export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, onOfficers, officersBadge = 0, autoWorks, onAutoWorks, busy, endLabel }: TopBarProps) {
   const t = useT();
   const net = treasury.income.gold;
   return (
@@ -67,6 +70,14 @@ export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, a
           <b className="g-res__val">{num(treasury.stock.gold)}</b>
           <span className={`g-res__net${net < 0 ? ' g-res__net--neg' : ''}`}>{signed(net)}</span>
         </li>
+        {onOfficers && (
+          <li>
+            <button type="button" className="g-btn g-btn--sm g-top__officers" onClick={onOfficers}>
+              {t('인물')}
+              {officersBadge > 0 && <span className="g-top__officers-n">{officersBadge}</span>}
+            </button>
+          </li>
+        )}
         {onStatus && (
           <li>
             <button type="button" className="g-btn g-btn--sm g-top__status" onClick={onStatus}>

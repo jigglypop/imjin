@@ -56,7 +56,55 @@ export type GBuilding = { kind: BuildingKind; level: number; upgradeLeft: number
 /** One hull of the persistent fleet. hull, crew and supply are fractions of the ship's full value, like campaign.ts. */
 export type ShipUnit = { id: string; kind: ShipKind; name: string; hull: number; crew: number; supply: number; kills: number };
 
-export type Commander = { id: string; faction: GrandFaction; name: string; title: string; portrait: string; level: number; xp: number; alive: boolean };
+export type Commander = {
+  id: string;
+  faction: GrandFaction;
+  name: string;
+  title: string;
+  portrait: string;
+  level: number;
+  xp: number;
+  alive: boolean;
+  /** The officers' rules (officers.ts): stats, traits, skills, wounds, where he waits. Absent until a save is migrated. */
+  officer?: OfficerInfo;
+};
+
+/** What the officers' rules keep about a commander. Static facts of a historical figure (bio, ability) live in officerData.ts. */
+export type OfficerInfo = {
+  /** 統率 lead, 戰術 war, 軍政 admin, 1..10. */
+  stats: [number, number, number];
+  traits: string[];
+  /** Skill tree nodes taken (officerData.ts SKILLS); the unspent points are his level less these. */
+  skills: string[];
+  /** The port he waits at while he neither commands a fleet nor serves in one. */
+  at: RegionId | null;
+  /** Turns he is still out of action: wounded, or held by the enemy after his flagship was taken. */
+  wounded: number;
+  captive: number;
+  /** For the traits a career earns: battles fought and won, heroic wins, turns of blockade kept up, turns idle in port. */
+  record: { battles: number; won: number; heroic: number; sieges: number; idle: number };
+  origin: 'history' | 'hired' | 'ranks';
+  /** The romanised name of a generated officer (a historical one is translated through the dictionary). */
+  nameEn?: string;
+  /** The line under a generated officer's name, a Korean template. */
+  bio?: { text: string; params?: MsgParams };
+};
+
+/** A man offered to a navy (등용): a ready officer record, his price, the camp he waits at and the turns he will wait. */
+export type OfficerCandidate = { id: string; officer: Commander; cost: number; at: RegionId; left: number };
+
+/**
+ * A card for the player (천거): an officer `by` puts a man forward, or (`trust`) the court asks how far to trust one
+ * already serving. Unanswered cards are declined when the turn closes.
+ */
+export type OfficerOffer = { id: string; kind: 'recommend' | 'trust'; by: string | null; who: string; candidate?: OfficerCandidate };
+
+export type OfficerBoard = {
+  /** Historical figures already brought into the war, and the dated cards already dealt. */
+  arrived: string[];
+  candidates: Record<GrandFaction, OfficerCandidate[]>;
+  offers: OfficerOffer[];
+};
 
 /**
  * A fleet between two ports. Under the lane rules `left` counts the turns still to sail. Under the march rules
@@ -89,6 +137,8 @@ export type Fleet = {
   besieging?: boolean;
   /** March rules: a blockading fleet ordered to storm the port when the turn ends. */
   assault?: boolean;
+  /** Officers serving under the commander (부관), by id; their seats grow with his rank (officers.ts). */
+  lieutenants?: string[];
 };
 
 export type QueueItem = { id: string; kind: ShipKind; left: number; total: number; paidGold?: number };
@@ -243,6 +293,8 @@ export type Grand = {
   stats: TurnStat[];
   victory: Victory | null;
   events: EventState;
+  /** The officers' recruits and cards (officers.ts); absent until the save is migrated. */
+  officers?: OfficerBoard;
 };
 
 /** The answer to an order. `note` and `reason` are Korean templates; `params` fills their placeholders. */

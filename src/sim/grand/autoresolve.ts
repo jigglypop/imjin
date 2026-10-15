@@ -36,6 +36,8 @@ export type Force = {
   region?: RegionState;
   /** Fighting worth multiplier for the whole side: below 1 for a force caught tired on a forced march. */
   morale?: number;
+  /** What the side's officers add (officers.ts): shares on the whole side, on the gun and boarding rounds, and on the pursuit. */
+  bonus?: { power: number; gun: number; melee: number; pursuit: number };
 };
 
 export type ResolveInput = {
@@ -161,6 +163,8 @@ export function autoResolve(input: ResolveInput): ResolveResult {
         sum += o;
       }
       let mul = (1 + RESOLVE.commanderPerLevel * (leader - 1)) * ((defending ? input.defender.morale : input.attacker.morale) ?? 1);
+      const bonus = (defending ? input.defender : input.attacker).bonus;
+      if (bonus) mul *= 1 + Math.max(-0.1, Math.min(0.2, bonus.power + (phase === 'gun' ? bonus.gun : bonus.melee)));
       if (defending) mul *= RESOLVE.defenderBonus * (1 + RESOLVE.campPerLevel * camp);
       if (phase === 'melee') {
         const n = mine.filter((u) => !u.shore).length;
@@ -186,7 +190,7 @@ export function autoResolve(input: ResolveInput): ResolveResult {
   const winner = attackerWon ? A : D;
   const lw = side(loser).filter((u) => !u.shore);
   // The pursuit: the fleeing ships are caught by the winner's fast ships.
-  const chase = side(winner).filter((u) => !u.shore).reduce((a, u) => a + u.max * (0.35 + 0.65 * (u.hp / u.max)) * 0.6, 0) * RESOLVE.pursuit * range(rng, 0.8, 1.2);
+  const chase = side(winner).filter((u) => !u.shore).reduce((a, u) => a + u.max * (0.35 + 0.65 * (u.hp / u.max)) * 0.6, 0) * RESOLVE.pursuit * range(rng, 0.8, 1.2) * (1 + ((attackerWon ? input.attacker : input.defender).bonus?.pursuit ?? 0));
   if (lw.length && chase > 0) applyDamage(lw, chase, 'gun', side(winner), rng);
 
   const ships: BattleOutcomeShip[] = [];

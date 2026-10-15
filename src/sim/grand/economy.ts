@@ -5,6 +5,7 @@ import { REGIONS, slotsOf } from './regions';
 import type { BuildingKind, GBuilding, Grand, GrandFaction, QueueItem, RegionId, RegionState, ShipUnit } from './types';
 import { MAX_LEVEL } from './types';
 import { allyIncomeMultiplier } from './support';
+import { fleetBonus, portIncomeBonus } from './officerEffects';
 
 /**
  * Every number that turns the battle catalog into campaign money and time lives in TUNING. The ship stats themselves
@@ -230,6 +231,8 @@ export function regionIncome(g: Grand, id: RegionId): number {
   gold *= 1 + TUNING.granaryBonus * levelOf(r, 'granary') + TUNING.beaconBonus * levelOf(r, 'beacon');
   gold *= (g.march ? TUNING.marchIncome[r.owner] : TUNING.faction[r.owner].income) * difficultyIncome(g, r.owner);
   if (r.unrest > 0) gold *= TUNING.unrestIncome;
+  // An officer lying in the port who knows how to run it (둔전, 축성, a named steward) adds his share.
+  gold *= 1 + portIncomeBonus(g, id);
   if (def.capitalOf === r.owner) gold += TUNING.capitalBonus;
   return Math.round(gold);
 }
@@ -245,7 +248,12 @@ export function factionIncome(g: Grand, f: GrandFaction): number {
 /** Gold value of every ship the faction has afloat or on the slipways (garrisons are free). */
 export function fleetGoldValue(g: Grand, f: GrandFaction): number {
   let v = 0;
-  for (const fl of g.fleets) if (fl.faction === f) for (const u of fl.ships) v += shipGold(u.kind);
+  for (const fl of g.fleets) {
+    if (fl.faction !== f) continue;
+    // Thrifty officers (절검, 청렴) pay less for their fleet; a greedy one more.
+    const cut = g.officers ? fleetBonus(g, fl).upkeep : 0;
+    for (const u of fl.ships) v += shipGold(u.kind) * (1 - cut);
+  }
   return v;
 }
 

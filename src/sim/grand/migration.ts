@@ -1,5 +1,6 @@
 import { GARRISON_KIND, garrisonCap } from './economy';
 import { ADDED_PORTS, LEGACY_REGION_ORDER, PORT_EXPANSION_PARENT, REGIONS, START } from './regions';
+import { ensureOfficers } from './officers';
 import { spawnShip } from './roster';
 import type { BuildingKind, Grand, RegionState } from './types';
 import { GRAND_FACTIONS } from './types';
@@ -51,4 +52,16 @@ export function migrateGrandRegions(raw: unknown): number {
     if (owner && g.victoryRules?.initialControl) g.victoryRules.initialControl[owner] += REGIONS[id].value;
   }
   return missing.length;
+}
+
+/**
+ * Gives a save made before the officers (officers.ts) its roster: officer records for its commanders, the named figures
+ * present at the start, an empty board of recruits and cards. The figures whose dates have passed arrive at the next
+ * turn. Nothing else in the save changes. Returns whether anything was added.
+ */
+export function migrateGrandOfficers(raw: unknown): boolean {
+  const g = raw as Grand;
+  if (!g || typeof g !== 'object' || g.officers || !GRAND_FACTIONS.every((f) => Array.isArray(g.factions?.[f]?.commanders))) return false;
+  ensureOfficers(g);
+  return true;
 }

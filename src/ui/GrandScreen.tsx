@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sound } from '../audio/Sound';
 import { t, useLang } from '../i18n';
-import { abandonGrand, autoResolveGrand, besiegeGrand, chooseGrandEvent, dismissBattle, dismissReplay, dismissReport, dispatchForces, endGrandTurn, grandOrders, guideSeen, markGuideSeen, mergeArrived, mergeFleets, prepareGrandBattle, startGrand, useGrand, withdrawGrand } from '../campaign/grand';
+import { abandonGrand, officerOrders, autoResolveGrand, besiegeGrand, chooseGrandEvent, dismissBattle, dismissReplay, dismissReport, dispatchForces, endGrandTurn, grandOrders, guideSeen, markGuideSeen, mergeArrived, mergeFleets, prepareGrandBattle, startGrand, useGrand, withdrawGrand } from '../campaign/grand';
 import type { RegionBattle } from '../sim/grand/bridge';
 import type { BuildingKind as SimBuilding, Grand, RegionId, Result } from '../sim/grand/types';
 import type { ShipKind } from '../sim/types';
@@ -46,6 +46,10 @@ import { REGIONS } from '../sim/grand/regions';
 import { atWar } from '../sim/grand/world';
 import { dispatchTargets } from '../sim/grand/dispatch';
 import { FleetOrdersPanel, forceReady } from './grand/FleetOrdersPanel';
+import { CharacterSheet, OfferCard, OfficersPanel } from './grand/Officers';
+import { candidateViews, learnOfficerNames, officerBadge, officerView, offerView, promoteViews, rosterViews, seatsView, skillTree } from './grand/officersAdapt';
+import { OFFICERS } from '../sim/grand/officerData';
+import { officerById } from '../sim/grand/officerEffects';
 import { portClick } from './grand/clickTarget';
 
 type Stage = 'hub' | 'pick' | 'map';
@@ -54,6 +58,24 @@ const toMenu = () => {
   sound.click();
   setScreen('menu');
 };
+
+const RANKS_KEY = 'imjin.grand.ranks.v1';
+
+/**
+ * Whether an officer has risen since the player last opened his sheet, remembering his level now. Per viewer, in this
+ * browser only: losing it just shows the promotion banner once more or not at all.
+ */
+function risen(id: string, level: number): boolean {
+  try {
+    const seen = JSON.parse(localStorage.getItem(RANKS_KEY) ?? '{}') as Record<string, number>;
+    const was = seen[id];
+    seen[id] = level;
+    localStorage.setItem(RANKS_KEY, JSON.stringify(seen));
+    return was !== undefined && level > was;
+  } catch {
+    return false;
+  }
+}
 
 const prefersReducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -143,6 +165,8 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const [reduced] = useState(prefersReducedMotion);
   const [guideOn, setGuideOn] = useState(() => g.turn === 1 && g.phase === 'orders' && !guideSeen());
   const [guideStep, setGuideStep] = useState(0);
+  const [officersOpen, setOfficersOpen] = useState(false);
+  const [sheet, setSheet] = useState<{ id: string; celebrate: boolean } | null>(null);
   const toastTimer = useRef(0);
 
   // While the closed turn plays back, the map still shows the turn before: its fleets are drawn by the replay, and the
@@ -177,6 +201,11 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const turnReport = useMemo(() => (reported !== null ? turnReportView(g, reported) : null), [g, reported, lang]);
   const preview = useMemo(() => (pending ? previewView(g, pending.id) : null), [g, pending, lang]);
   const over = g.phase === 'over' ? overView(g) : null;
+  // The officers (sim/grand/officers.ts): the generated men's names read in English too, the card waiting, the sheet open.
+  learnOfficerNames(g);
+  const offer = useMemo(() => offerView(g), [g, lang]);
+  const sheetOfficer = sheet ? officerById(g, me, sheet.id) : undefined;
+  const openOfficer = (id: string) => setSheet({ id, celebrate: risen(id, officerById(g, me, id)?.level ?? 1) });
 
   const say = useCallback((text: string) => {
     setToast(text);
@@ -413,6 +442,8 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         onEndTurn={endTurn}
         onMenu={() => setMenu(true)}
         onStatus={() => setStatus(true)}
+        onOfficers={() => { sound.click(); setOfficersOpen(true); }}
+        officersBadge={officerBadge(g)}
         autoWorks={!!g.autoWorks}
         onAutoWorks={g.phase === 'orders' ? (on) => { sound.click(); report(grandOrders.autoWorks(on), on ? '자동 건설을 켰습니다' : '자동 건설을 껐습니다'); } : undefined}
         onBatch={g.phase === 'orders' ? () => { closePanels(); setBatchOpen(true); } : undefined}
@@ -450,6 +481,9 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
               report(res, '함대를 나누었습니다');
             }}
             onCommander={(id, cmd) => report(grandOrders.commander(id, cmd), cmd ? '지휘관을 임명했습니다' : '지휘관을 해임했습니다')}
+            seats={simFleet ? seatsView(g, simFleet) : undefined}
+            onLieutenant={(id, officer, on) => report(officerOrders.lieutenant(id, officer, on), on ? '부관을 임명했습니다' : '부관을 내렸습니다')}
+            onOfficer={openOfficer}
             onRefit={(id) => report(grandOrders.refit(id), '정비를 마쳤습니다')}
             nameOf={(id) => regions.find((r) => r.id === id)?.name ?? id}
             siegeOnArrival={siegeOnArrival}
@@ -524,7 +558,49 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
       )}
       {lastBattle && <BattleResult result={resultView(lastBattle)} onClose={dismissBattle} />}
       {!lastBattle && !replay && eventCard && <EventCard event={eventCard} me={me} onChoose={(i) => chooseGrandEvent(i)} />}
-      {!lastBattle && !replay && !eventCard && turnReport && !over && g.phase === 'orders' && <TurnSummary report={turnReport} onClose={dismissReport} />}
+      {!lastBattle && !replay && !eventCard && offer && g.phase === 'orders' && (
+        <OfferCard
+          key={offer.id}
+          offer={offer}
+          gold={gold}
+          onAnswer={(accept) => {
+            sound.click();
+            report(officerOrders.answer(offer.id, accept), accept ? (offer.kind === 'trust' ? '이순신을 믿고 맡겼습니다' : '천거를 받아들였습니다') : '천거를 사양했습니다');
+          }}
+        />
+      )}
+      {!lastBattle && !replay && !eventCard && !offer && turnReport && !over && g.phase === 'orders' && <TurnSummary report={turnReport} onClose={dismissReport} />}
+      {officersOpen && (
+        <OfficersPanel
+          me={me}
+          roster={rosterViews(g, me)}
+          candidates={candidateViews(g, me)}
+          promotes={promoteViews(g, me)}
+          gold={gold}
+          promoteCost={OFFICERS.promoteCost}
+          canOrder={g.phase === 'orders'}
+          onOpen={openOfficer}
+          onHire={(id) => { if (report(officerOrders.hire(id))) sound.click(); }}
+          onPromote={(fleetId, shipId) => { if (report(officerOrders.promote(fleetId, shipId))) sound.click(); }}
+          onClose={() => setOfficersOpen(false)}
+        />
+      )}
+      {sheet && sheetOfficer && (
+        <CharacterSheet
+          key={sheet.id}
+          officer={officerView(g, sheetOfficer)}
+          tree={skillTree(g, me, sheet.id)}
+          own={sheetOfficer.faction === me}
+          canOrder={g.phase !== 'over'}
+          celebrate={sheet.celebrate}
+          onSpend={(skill) => {
+            const ok = report(officerOrders.skill(sheet.id, skill));
+            if (ok) sound.campaign('built');
+            return ok;
+          }}
+          onClose={() => setSheet(null)}
+        />
+      )}
       {!lastBattle && !replay && over && !overSeen && (
         <GameOver
           over={over}

@@ -128,6 +128,7 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
       sq = b.addSquadron(seat.team, `${SHORT_NAME[u.kind]} ${index}대`, commander, portrait, cardOf(u.kind), slot); // i18n-ignore: same squadron label as the conquest mode
       // A squadron of an allied navy (Ming beside Joseon) is listed with the seat that commands it.
       sq.faction = seat.faction;
+      if (leader?.ability) sq.ability = leader.ability;
       squads.set(key, sq);
     }
     const row = Math.floor(i / cols);

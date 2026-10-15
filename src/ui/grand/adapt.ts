@@ -1,4 +1,6 @@
 import { t } from '../../i18n';
+import { officerReady } from '../../sim/grand/officerEffects';
+import { rankOf } from '../../sim/grand/officers';
 import { shipSpec } from '../../sim/competitive';
 import type { ShipKind } from '../../sim/types';
 import { buildingWorkTotal, buildingOf, dateLabel, garrisonCap, levelOf, netIncome, queueSlots, regionIncome } from '../../sim/grand/economy';
@@ -149,7 +151,7 @@ export function regionViews(g: Grand): RegionView[] {
 
 const commanderView = (g: Grand, faction: GrandFaction, id: string | null): CommanderView | undefined => {
   const c = id ? g.factions[faction].commanders.find((x) => x.id === id) : undefined;
-  return c && c.alive ? { id: c.id, name: t(c.name), title: t(c.title), level: c.level, portrait: c.portrait } : undefined;
+  return c && c.alive ? { id: c.id, name: t(c.name), title: t(c.title || rankOf(c)), level: c.level, portrait: c.portrait } : undefined;
 };
 
 /** What the march rules add to a fleet: its distance per turn in either stance, its stance, its blockade and where its orders end. */
@@ -214,11 +216,11 @@ export function officersFor(g: Grand, fleetId: string): { officer: CommanderView
   const fl = fleetById(g, fleetId);
   if (!fl) return [];
   return g.factions[fl.faction].commanders
-    .filter((c) => c.alive)
+    .filter((c) => officerReady(c))
     .flatMap((c) => {
       const holder = g.fleets.find((f) => f.commanderId === c.id);
       if (holder && holder.id !== fl.id && holder.at !== fl.at) return [];
-      return [{ officer: { id: c.id, name: t(c.name), title: t(c.title), level: c.level, portrait: c.portrait }, leads: holder && holder.id !== fl.id ? tName(holder.name) : undefined }];
+      return [{ officer: { id: c.id, name: t(c.name), title: t(c.title || rankOf(c)), level: c.level, portrait: c.portrait }, leads: holder && holder.id !== fl.id ? tName(holder.name) : undefined }];
     });
 }
 

@@ -197,6 +197,8 @@ export type Squadron = {
   card: string;
   shipIds: number[];
   leaderId: number;
+  /** The commander's battle ability from the faction campaign (sim/grand/officerData.ts BattleAbility), as data; absent elsewhere. */
+  ability?: string;
 };
 
 export type Projectile = {

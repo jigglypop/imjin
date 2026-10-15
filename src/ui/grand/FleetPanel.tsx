@@ -3,6 +3,8 @@ import { useT } from '../../i18n';
 import { Bar, Chip, FactionMark, Icon, Sheet, goldText, navyName, shipName } from './shared';
 import { shipsText, turnsText } from './text';
 import type { CommanderView, FactionId, FleetView } from './types';
+import { LieutenantSeats } from './Officers';
+import type { SeatsView } from './officersAdapt';
 
 export interface FleetPanelProps {
   fleet: FleetView;
@@ -24,6 +26,10 @@ export interface FleetPanelProps {
   onMerge?: (fleetId: string, otherId: string) => void;
   onSplit?: (fleetId: string, shipIds: string[]) => void;
   onCommander?: (fleetId: string, commanderId: string | null) => void;
+  /** The commander's lieutenant seats (부관), and the officers' orders: seat or unseat one, open a character sheet. */
+  seats?: SeatsView;
+  onLieutenant?: (fleetId: string, officerId: string, on: boolean) => void;
+  onOfficer?: (officerId: string) => void;
   onRefit?: (fleetId: string) => void;
   onDisband?: (fleetId: string, shipIds: string[]) => void;
   /** A port's name by id, for a fleet at sea between two ports. */
@@ -110,6 +116,9 @@ export function FleetPanel({
   onMerge,
   onSplit,
   onCommander,
+  seats,
+  onLieutenant,
+  onOfficer,
   onRefit,
   onDisband,
   nameOf,
@@ -235,7 +244,9 @@ export function FleetPanel({
 
       {fleet.commander ? (
         <div className="g-leader">
-          <img src={`/ui/portraits/${fleet.commander.portrait}.jpg`} alt="" width={44} height={44} />
+          <button type="button" className="g-leader__face" onClick={() => onOfficer?.(fleet.commander!.id)} aria-label={fleet.commander.name}>
+            <img src={`/ui/portraits/${fleet.commander.portrait}.jpg`} alt="" width={44} height={44} />
+          </button>
           <span className="g-row__main">
             <span className="g-row__title">{fleet.commander.name}</span>
             <span className="g-row__sub">
@@ -294,6 +305,17 @@ export function FleetPanel({
             </button>
           )}
         </div>
+      )}
+
+      {seats && (
+        <LieutenantSeats
+          seats={seats}
+          own={own}
+          docked={docked}
+          onAdd={(id) => onLieutenant?.(fleet.id, id, true)}
+          onRemove={(id) => onLieutenant?.(fleet.id, id, false)}
+          onOpen={(id) => onOfficer?.(id)}
+        />
       )}
 
       {merging && mergeWith.length > 0 && (

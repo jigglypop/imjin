@@ -4,7 +4,8 @@ import { mintId, note } from './world';
 
 /** Making ships, fleets and commander experience: what the turn, the starting setup and the historical events share. */
 
-export const LEVEL_XP = [0, 120, 320, 600, 1000, 1500];
+/** Experience at each level; the seventh is the top of every navy's ranks (officerData.ts RANKS). */
+export const LEVEL_XP = [0, 120, 320, 600, 1000, 1500, 2100];
 
 export const SHIP_PREFIX: Record<ShipKind, string> = {
   panokseon: '판옥선',
@@ -39,11 +40,11 @@ export function spawnFleet(g: Grand, faction: GrandFaction, at: RegionId, name: 
   return fleet;
 }
 
-/** Adds experience to a commander and promotes him as far as it carries him. */
-export function grantXp(g: Grand, faction: GrandFaction, cmd: Commander, xp: number): void {
+/** Adds experience to a commander and promotes him as far as it carries him. `quiet` keeps the promotion out of the log. */
+export function grantXp(g: Grand, faction: GrandFaction, cmd: Commander, xp: number, quiet = false): void {
   cmd.xp += xp;
   while (cmd.level < LEVEL_XP.length && cmd.xp >= LEVEL_XP[cmd.level]!) {
     cmd.level += 1;
-    note(g, '{name}의 레벨이 {level|으로/로} 올랐습니다', { name: cmd.name, level: String(cmd.level) }, faction === g.player ? 'good' : 'info');
+    if (!quiet) note(g, '{name}의 레벨이 {level|으로/로} 올랐습니다', { name: cmd.name, level: String(cmd.level) }, faction === g.player ? 'good' : 'info');
   }
 }

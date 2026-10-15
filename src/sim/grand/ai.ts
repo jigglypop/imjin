@@ -18,6 +18,8 @@ import {
   shipDef,
   yardPrice,
 } from './economy';
+import { officerReady } from './officerEffects';
+import { planOfficers } from './officers';
 import { buildRequirement, orderAssault, orderBuild, commanderSuspended, orderCommander, orderMerge, orderMove, orderRecruit, orderRefit, orderStance, recruitProblem, refitCost } from './orders';
 import { REGIONS } from './regions';
 import { forkRng, next, range, type Rng } from './rng';
@@ -513,7 +515,7 @@ function stagingPort(g: Grand, f: GrandFaction, from: RegionId, moving: Fleet[])
 
 /** Fleets without a commander get the best officer who has none. */
 function assignCommanders(g: Grand, f: GrandFaction) {
-  const free = g.factions[f].commanders.filter((c) => c.alive && !commanderSuspended(g, c.id) && !g.fleets.some((fl) => fl.commanderId === c.id)).sort((a, b) => b.level - a.level);
+  const free = g.factions[f].commanders.filter((c) => officerReady(c) && !commanderSuspended(g, c.id) && !g.fleets.some((fl) => fl.commanderId === c.id)).sort((a, b) => b.level - a.level);
   const bare = g.fleets.filter((fl) => fl.faction === f && !fl.commanderId).sort((a, b) => b.ships.length - a.ships.length);
   for (const fl of bare) {
     const c = free.shift();
@@ -528,6 +530,7 @@ export function planAi(g: Grand, f: GrandFaction) {
   next(g.rng);
   consolidate(g, f);
   assignCommanders(g, f);
+  planOfficers(g, f);
   economy(g, f);
   fleetsPlan(g, f);
 }

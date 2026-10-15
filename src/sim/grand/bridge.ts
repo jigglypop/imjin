@@ -4,6 +4,9 @@ import { TUNING, buildingOf, levelOf, shipGold } from './economy';
 import { REGION_ORDER, REGIONS, type Terrain } from './regions';
 import { mix32 } from './rng';
 import { MARCH } from './march';
+import { FIGURE_BY_ID } from './officerData';
+import { fleetBonus } from './officerEffects';
+import { rankOf } from './officers';
 import { applyContactOutcome, commanderLevel, contactForces, settlePending } from './turn';
 import type { BattleOutcome, BattleOutcomeShip, BuildingKind, Contact, Fleet, Grand, GrandFaction, RegionId, ShipUnit } from './types';
 
@@ -61,7 +64,8 @@ export type BridgeSeat = {
   ships: BridgeShip[];
   /** Legacy reserve field: uncapped campaign meetings leave this empty. */
   reserve: BridgeShip[];
-  leader: { name: string; title: string; portrait: string; level: number } | null;
+  /** `ability` is the commander's 3D battle ability (officerData.ts BattleAbility), carried as data for the battle to use. */
+  leader: { name: string; title: string; portrait: string; level: number; ability?: string } | null;
 };
 
 export type RegionBattle = {
@@ -93,8 +97,20 @@ function modsFor(g: Grand, fl: Fleet | undefined, u: ShipUnit): ShipMods {
   const skill = 0.03 * (level - 1) + 0.04 * vet;
   // A crew caught on a forced march is tired: slower at the guns and in the boarding.
   const tired = fl?.stance === 'march' ? MARCH.tired : 1;
-  // The competitive ship already carries its navy's boarding rules; only experience belongs to this bridge.
-  return { reload: (1 + skill) * tired, accuracy: 1 + skill * 0.8, speed: 1, turn: 1, fire: 1, melee: (1 + skill) * tired, defense: 1 + skill * 0.7 };
+  // The fleet's officers (officers.ts): their traits, skills and abilities, already capped per fleet.
+  const b = fl && g.officers ? fleetBonus(g, fl) : null;
+  const o = (v: number) => 1 + Math.max(-0.1, Math.min(0.15, v));
+  const gun = b ? b.gun + b.power * 0.5 : 0;
+  // The competitive ship already carries its navy's boarding rules; only experience and the officers belong to this bridge.
+  return {
+    reload: (1 + skill) * tired * o(gun),
+    accuracy: (1 + skill * 0.8) * o(gun * 0.8),
+    speed: o(b?.speed ?? 0),
+    turn: o(b?.turn ?? 0),
+    fire: o(b?.fire ?? 0),
+    melee: (1 + skill) * tired * o(b ? b.melee + b.power * 0.5 : 0),
+    defense: (1 + skill * 0.7) * o(b ? b.defense + b.power * 0.5 : 0),
+  };
 }
 
 function toBridge(g: Grand, fl: Fleet | undefined, u: ShipUnit): Worth {
@@ -127,7 +143,10 @@ const WORKS: Partial<Record<BuildingKind, PrebuiltKind>> = { camp: 'camp', shipy
 function leaderOf(g: Grand, fleets: Fleet[]): BridgeSeat['leader'] {
   const best = [...fleets].sort((a, b) => commanderLevel(g, b) - commanderLevel(g, a))[0];
   const cmd = best?.commanderId ? g.factions[best.faction].commanders.find((c) => c.id === best.commanderId) : undefined;
-  return cmd?.alive ? { name: cmd.name, title: cmd.title, portrait: cmd.portrait, level: cmd.level } : null;
+  if (!cmd?.alive) return null;
+  // Only a named figure has his own battle ability, and only as the fleet's commander.
+  const ability = cmd.officer?.origin === 'history' ? FIGURE_BY_ID.get(cmd.id)?.ability.battle : undefined;
+  return { name: cmd.name, title: cmd.title || rankOf(cmd), portrait: cmd.portrait, level: cmd.level, ...(ability ? { ability } : {}) };
 }
 
 /**

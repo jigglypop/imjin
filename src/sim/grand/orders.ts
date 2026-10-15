@@ -5,6 +5,8 @@ import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId, Result, ShipUn
 import { MAX_LEVEL, fail, ok, pairKey } from './types';
 import { allied, atWar, fleetById, findRoute, mintId, note, passable } from './world';
 import { laneKm, marchDistances, marchRoute, marching, transitShare, turnsFor } from './march';
+import { beforeCommand, fitLieutenants, mergeOfficers } from './officers';
+import { shipPriceCut } from './officerEffects';
 
 /**
  * Everything a commander can order, for the player and the computer alike. An order that is allowed takes effect now:
@@ -195,6 +197,9 @@ export function recruitProblem(g: Grand, id: RegionId, kind: ShipKind): string |
   return null;
 }
 
+/** What a ship costs at a port: the yard's price, less a shipbuilder officer's cut when one lies there (나대용, 구키). */
+export const shipPrice = (g: Grand, id: RegionId, kind: ShipKind) => Math.round(yardPrice(kind, levelOf(g.regions[id], 'shipyard')) * (1 - shipPriceCut(g, id, kind)));
+
 export function orderRecruit(g: Grand, id: RegionId, kind: ShipKind): Result {
   const bad = noOrders(g);
   if (bad) return bad;
@@ -203,7 +208,7 @@ export function orderRecruit(g: Grand, id: RegionId, kind: ShipKind): Result {
   const r = g.regions[id];
   const owner = r.owner!;
   if (r.queue.length >= queueSlots(r)) return fail('건조 칸이 모두 찼습니다');
-  const price = yardPrice(kind, levelOf(r, 'shipyard'));
+  const price = shipPrice(g, id, kind);
   if (g.factions[owner].gold < price) return fail('은이 부족합니다 ({gold}냥 필요)', { gold: price });
   g.factions[owner].gold -= price;
   const turns = shipDef(kind).turns;
@@ -238,6 +243,7 @@ export function orderMerge(g: Grand, keepId: string, otherId: string): Result {
   if (b.assault) a.assault = true;
   if (a.stance !== b.stance) delete a.stance;
   if (!a.commanderId) a.commanderId = b.commanderId;
+  mergeOfficers(g, a, b);
   g.fleets.splice(g.fleets.indexOf(b), 1);
   a.route = [];
   return ok();
@@ -281,7 +287,10 @@ export function orderCommander(g: Grand, fleetId: string, commanderId: string | 
     if (from && from.id !== fl.id && from.at !== fl.at) return fail('지휘관이 다른 포구에 있습니다');
     for (const other of g.fleets) if (other.commanderId === commanderId) other.commanderId = null;
   }
+  const why = beforeCommand(g, fl, commanderId);
+  if (why) return fail(why);
   fl.commanderId = commanderId;
+  fitLieutenants(g, fl);
   return ok();
 }
 
@@ -350,8 +359,7 @@ export function orderAlliance(g: Grand, a: GrandFaction, b: GrandFaction): Resul
 export function recruitMenu(g: Grand, id: RegionId): { kind: ShipKind; gold: number; turns: number; problem: string | null }[] {
   const owner = g.regions[id].owner;
   if (!owner) return [];
-  const yard = Math.max(1, levelOf(g.regions[id], 'shipyard'));
-  return kindsOf(owner).map((kind) => ({ kind, gold: yardPrice(kind, yard), turns: shipDef(kind).turns, problem: recruitProblem(g, id, kind) }));
+  return kindsOf(owner).map((kind) => ({ kind, gold: shipPrice(g, id, kind), turns: shipDef(kind).turns, problem: recruitProblem(g, id, kind) }));
 }
 
 export type BuildOption = { kind: BuildingKind; level: number; next: number; gold: number; turns: number; building: boolean; problem: string | null };

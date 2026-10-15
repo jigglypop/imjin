@@ -22,7 +22,9 @@ import { makeRng, next } from './rng';
 import type { BattleOutcome, BuildingKind, Contact, Fleet, Grand, GrandFaction, RegionId, Result, ShipUnit } from './types';
 import { GRAND_FACTIONS, fail, ok } from './types';
 import { allied, atWar, fleetById, fleetStrength, lanesOf, mintId, note, ownedBy, passable, shipCount } from './world';
-import { LEVEL_XP, SHIP_PREFIX, grantXp, spawnFleet, spawnShip } from './roster';
+import { LEVEL_XP, SHIP_PREFIX, spawnFleet, spawnShip } from './roster';
+import { officersAfterBattle, officersTurn } from './officers';
+import { fleetBonus } from './officerEffects';
 import { fireEvents } from './events';
 import type { ShipKind } from '../types';
 import { newAllySupport, scaleAllyOpening, supportReinforcements } from './support';
@@ -100,6 +102,7 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
   note(g, '조선, 일본, 명 세 진영이 남해의 물길을 두고 맞섭니다.');
   recordStats(g, 0, 0);
   fireEvents(g);
+  officersTurn(g);
   return g;
 }
 
@@ -111,6 +114,22 @@ export const commanderLevel = (g: Grand, fl: Fleet) => {
   return c?.alive ? c.level : 1;
 };
 
+/** The officers' bonus of one side of a fight: each fleet's, weighted by its ships (officers.ts). */
+function sideBonus(g: Grand, fleets: Fleet[]): Force['bonus'] {
+  const n = fleets.reduce((a, f) => a + f.ships.length, 0);
+  if (!n || !g.officers || ((globalThis as any).process?.env?.OFFX ?? '').includes('resolve')) return undefined; // TEMPX
+  const out = { power: 0, gun: 0, melee: 0, pursuit: 0 };
+  for (const f of fleets) {
+    const b = fleetBonus(g, f);
+    const w = f.ships.length / n;
+    out.power += (b.power + b.defense * 0.5) * w;
+    out.gun += b.gun * w;
+    out.melee += b.melee * w;
+    out.pursuit += b.pursuit * w;
+  }
+  return out;
+}
+
 export function contactForces(g: Grand, c: Contact): { attacker: Force; defender: Force; attackers: Fleet[]; defenders: Fleet[] } {
   const attackers = c.attackerFleets.flatMap((id) => fleetById(g, id) ?? []);
   const defenders = c.defenderFleets.flatMap((id) => fleetById(g, id) ?? []);
@@ -120,8 +139,8 @@ export function contactForces(g: Grand, c: Contact): { attacker: Force; defender
   // A side caught on a forced march fights tired.
   const morale = (list: Fleet[]) => (list.some((f) => f.stance === 'march') ? MARCH.tired : 1);
   return {
-    attacker: { ships: attackers.flatMap((f) => f.ships), leader: Math.max(1, ...attackers.map((f) => commanderLevel(g, f))), morale: morale(attackers) },
-    defender: { ships: [...defenders.flatMap((f) => f.ships), ...(home ? region.garrison : [])], leader: Math.max(1, ...defenders.map((f) => commanderLevel(g, f))), region: home ? region : undefined, morale: morale(defenders) },
+    attacker: { ships: attackers.flatMap((f) => f.ships), leader: Math.max(1, ...attackers.map((f) => commanderLevel(g, f))), morale: morale(attackers), bonus: sideBonus(g, attackers) },
+    defender: { ships: [...defenders.flatMap((f) => f.ships), ...(home ? region.garrison : [])], leader: Math.max(1, ...defenders.map((f) => commanderLevel(g, f))), region: home ? region : undefined, morale: morale(defenders), bonus: sideBonus(g, defenders) },
     attackers,
     defenders,
   };
@@ -218,12 +237,6 @@ function dropEmpty(g: Grand) {
   g.fleets = g.fleets.filter((f) => f.ships.length > 0);
 }
 
-function giveXp(g: Grand, fl: Fleet, kills: number, won: boolean) {
-  const cmd = commanderOf(g, fl);
-  if (!cmd || !cmd.alive) return;
-  grantXp(g, fl.faction, cmd, 25 + kills * 8 + (won ? 50 : 0));
-}
-
 /** The one way a battle, played or auto-resolved, changes the campaign. */
 export function applyContactOutcome(g: Grand, c: Contact, outcome: BattleOutcome): void {
   const { attackers, defenders } = contactForces(g, c);
@@ -232,6 +245,7 @@ export function applyContactOutcome(g: Grand, c: Contact, outcome: BattleOutcome
   for (const f of [c.attacker, c.defender, ...attackers.map((x) => x.faction), ...defenders.map((x) => x.faction)]) g.factions[f].idle = -1;
   const byId = new Map(outcome.ships.map((s) => [s.campaignId, s]));
   const kills = new Map<string, number>();
+  const sizes = new Map([...attackers, ...defenders].map((f) => [f.id, f.ships.length]));
   let lostA = 0;
   let lostD = 0;
   // Each side's worth before the fight, for the grade of the win.
@@ -266,7 +280,8 @@ export function applyContactOutcome(g: Grand, c: Contact, outcome: BattleOutcome
   };
   credit([...new Set([c.defender, ...defenders.map((x) => x.faction)])], worn.a);
   credit([...new Set([c.attacker, ...attackers.map((x) => x.faction)])], worn.d);
-  for (const f of [...attackers, ...defenders]) giveXp(g, f, kills.get(f.id) ?? 0, (attackerWon ? attackers : defenders).includes(f));
+  const grade = attackerWon ? battleGrade(startA, worn.a, startD, worn.d) : battleGrade(startD, worn.d, startA, worn.a);
+  officersAfterBattle(g, [...attackers, ...defenders], { sizes, kills, winners: attackerWon ? attackers : defenders, grade });
   // The works take the damage the fight did to them; out at sea there are none.
   if (!c.sea) {
     for (const kind of outcome.razed) downgrade(region, kind);
@@ -284,7 +299,6 @@ export function applyContactOutcome(g: Grand, c: Contact, outcome: BattleOutcome
   const params = { place: REGIONS[c.regionId].name, navy: navyName(winner), a: TUNING.faction[c.attacker].label, lostA, d: TUNING.faction[c.defender].label, lostD };
   const tone = !mine ? 'info' : winner === g.player ? 'good' : 'bad';
   if (marching(g)) {
-    const grade = attackerWon ? battleGrade(startA, worn.a, startD, worn.d) : battleGrade(startD, worn.d, startA, worn.a);
     const text = c.sea ? '{place} 앞바다에서 {navy|이/가} {grade|을/를} 거두었습니다 (손실: {a} {lostA}척 · {d} {lostD}척)' : '{place} 해전에서 {navy|이/가} {grade|을/를} 거두었습니다 (손실: {a} {lostA}척 · {d} {lostD}척)';
     note(g, text, { ...params, grade: GRADE_TEXT[grade] }, tone);
   } else note(g, '{place} 해전에서 {navy|이/가} 승리했습니다 (손실: {a} {lostA}척 · {d} {lostD}척)', params, tone);
@@ -867,16 +881,18 @@ function advanceTurn(g: Grand) {
     if (fl.rest > 0) fl.rest -= 1;
     if (!fl.at) {
       // Under the march rules a winter spent out at sea costs more.
-      const lost = 0.04 + (marching(g) && winterTurn(g.turn) ? MARCH.winterSupply : 0);
+      const lost = (0.04 + (marching(g) && winterTurn(g.turn) ? MARCH.winterSupply : 0)) * (1 - fleetBonus(g, fl).supply);
       for (const u of fl.ships) u.supply = Math.max(0.15, u.supply - lost);
       continue;
     }
     const r = g.regions[fl.at];
     if (r.owner && allied(g, fl.faction, r.owner)) {
       const rate = repairRates(r);
+      // A fleet's officers who know how to mend ships (수선, 장인) speed up the hull and crew recovery.
+      const mend = 1 + fleetBonus(g, fl).repair;
       for (const u of fl.ships) {
-        u.hull = Math.min(1, u.hull + rate.hull);
-        u.crew = Math.min(1, u.crew + rate.crew);
+        u.hull = Math.min(1, u.hull + rate.hull * mend);
+        u.crew = Math.min(1, u.crew + rate.crew * mend);
         u.supply = Math.min(1, u.supply + rate.supply);
       }
     } else {
@@ -912,6 +928,7 @@ function advanceTurn(g: Grand) {
     g.turn += 1;
     g.phase = 'orders';
     fireEvents(g);
+    officersTurn(g);
   }
 }
 

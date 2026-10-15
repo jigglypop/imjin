@@ -14,7 +14,8 @@ import { GRAND_FACTIONS, fail, ok } from '../sim/grand/types';
 import { fleetById } from '../sim/grand/world';
 import { migrateGrandBalance } from '../sim/grand/economy';
 import { orderDispatch, orderMobilize } from '../sim/grand/dispatch';
-import { migrateGrandRegions } from '../sim/grand/migration';
+import { migrateGrandOfficers, migrateGrandRegions } from '../sim/grand/migration';
+import { answerOffer, orderHire, orderLieutenant, orderPromote, orderSkill } from '../sim/grand/officers';
 import type { ShipKind } from '../sim/types';
 
 /**
@@ -42,6 +43,7 @@ function load(): Grand | null {
     // A war saved before the historical events existed goes on without the cards it never dealt.
     parsed.events ??= { done: {}, pending: null, flags: [], mods: [] };
     migrateGrandBalance(parsed);
+    migrateGrandOfficers(parsed);
     return parsed;
   } catch {
     return null;
@@ -156,6 +158,15 @@ export const grandOrders = {
   alliance: (a: GrandFaction, b: GrandFaction) => guarded((g) => a === g.player, (g) => orderAlliance(g, a, b)),
   /** Switches the player's automatic building on or off; saved with the war. */
   autoWorks: (on: boolean) => commit((g) => { g.autoWorks = on; return ok(); }),
+};
+
+/** Orders for the player's officers (sim/grand/officers.ts): skill points, recruits, cards, lieutenants, men from the ranks. */
+export const officerOrders = {
+  skill: (officerId: string, skillId: string) => commit((g) => (g.player ? orderSkill(g, g.player, officerId, skillId) : notYours)),
+  hire: (candidateId: string) => commit((g) => (g.player ? orderHire(g, g.player, candidateId) : notYours)),
+  answer: (offerId: string, accept: boolean) => commit((g) => answerOffer(g, offerId, accept)),
+  lieutenant: (fleetId: string, officerId: string, on: boolean) => guarded((g) => ownFleet(g, fleetId), (g) => orderLieutenant(g, fleetId, officerId, on)),
+  promote: (fleetId: string, shipId: string) => guarded((g) => ownFleet(g, fleetId), (g) => orderPromote(g, fleetId, shipId)),
 };
 
 /** A fleet that can join another now: docked in a port and done refitting (a merge hands the larger rest to the survivor). */
