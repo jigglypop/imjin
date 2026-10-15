@@ -208,6 +208,17 @@ await check('maneuver commands are checked like any other: kinds, numbers, owner
   void foe;
 });
 
+await check('the same seed and the same maneuvers give the same battle, the computer’s commanders included', () => {
+  const play = () => {
+    const { b, own, foe } = sea({ seed: 11, humans: [], own: [row('panokseon', -900, -300, 6, 0, 90), row('panokseon', -900, 400, 5, 0, 90)], foe: [row('sekibune', 900, 0, 8, 40, 50, Math.PI), row('atakebune', 1300, 200, 6, 40, 50, Math.PI)] });
+    for (const s of [...own.flat(), ...foe.flat()]) s.order = { type: 'auto' };
+    applyCommand(b, 0, { type: 'maneuver', ids: own[0].map((s) => s.id), kind: 'pincer', x0: 600, z0: -500, x1: 600, z1: 600 });
+    steps(b, 240);
+    return b.ships.map((s) => `${s.id}:${s.x.toFixed(3)},${s.z.toFixed(3)},${s.hull.toFixed(3)},${s.order.type}`).join('|');
+  };
+  assert.equal(play(), play());
+});
+
 await check('the protocol carries the maneuver order and sends the maneuver, signal and cut-off events', () => {
   const { b, own } = sea({ own: [row('panokseon', 0, 0, 2, 0, 70)] });
   applyCommand(b, 0, { type: 'maneuver', ids: own[0].map((s) => s.id), kind: 'blockade', x0: 0, z0: -200, x1: 0, z1: 200 });
