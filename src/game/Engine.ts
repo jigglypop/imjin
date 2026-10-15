@@ -9,6 +9,9 @@ import {
   Scene,
   Vector2,
   Vector3,
+  type InstancedMesh,
+  type Object3D,
+  type Sprite,
   type WebGPURenderer,
 } from 'three/webgpu';
 import {
@@ -70,7 +73,7 @@ import { AutoBuild } from './autoBuild';
 import { Input } from './Input';
 import { TouchControls } from './Touch';
 import { AdaptiveQuality } from './adaptive';
-import { equipment, LEVELS, levelSetting, saveLevelSetting, startLevel, type LevelSetting, type OceanQuality, type TerrainQuality } from './quality';
+import { CPU_STEP_MAX, CPU_STEPS, equipment, LEVELS, levelSetting, saveLevelSetting, startLevel, type LevelSetting, type OceanQuality, type TerrainQuality } from './quality';
 import { t } from '../i18n';
 import { failBattle, publish, pushToast, setAutoBuild, setLoading, setProgress, setReport, useUi, type FleetMorale, type GameSnapshot } from '../state/store';
 import { SquadronBanners } from '../ui/SquadronBanners';
@@ -238,6 +241,11 @@ export class Engine {
   private dprOverride: number | null = null;
   private gpuMs: number | null = null;
   private gpuProbe = false;
+  /** The step of CPU_STEPS the frame-rate controller holds: what it gave up because the main thread was the limit. */
+  private cpuStep = CPU_STEP_MAX;
+  /** Main-thread time of the last frame, update and render, in ms; `updateMs` is its update part. */
+  private cpuMs: number | null = null;
+  private updateMs = 0;
   private touch: TouchControls | null = null;
   private disposed = false;
   private loading: LoadTask | null = null;
@@ -456,7 +464,10 @@ export class Engine {
       sound.setMode('battle');
       await this.prewarm(0.78, task);
       this.checkLoad(task);
-      this.adaptive = new AdaptiveQuality(this.level, levelSetting === 'auto', (l) => this.applyLevel(l), this.eq.maxLevel);
+      this.adaptive = new AdaptiveQuality(this.level, levelSetting === 'auto', (l) => this.applyLevel(l), this.eq.maxLevel, (step) => {
+        this.cpuStep = step;
+        this.applyCpuStep();
+      });
       this.applyLevel(this.level);
       setProgress(1);
       this.resetApproach();
@@ -608,39 +619,104 @@ export class Engine {
   }
 
   /**
-   * Builds every program and pass before the battle shows, so none compiles on the first frames as a hitch. WebGPU
-   * builds its pipelines in parallel behind compileAsync, which reports progress. On WebGL the driver compiles one
-   * program at a time, and compileAsync takes twice as long as rendering the scene would, so the whole pipeline is
-   * rendered once part by part (ground, sea and sky, ships and crew), each step moving the loading bar. Last comes
-   * the render with everything, and with the refracting ocean if a level can reach it. `from` is where the bar starts.
+   * Builds every program and pass before the battle shows, so none compiles on the first frames as a hitch. The whole
+   * pipeline is rendered once part by part (ground, sea and sky, ships and crew), each step moving the loading bar, then
+   * with the refracting ocean if a level can reach it. On WebGL the driver compiles one program at a time inside those
+   * renders. On WebGPU they only start their pipelines (renderAhead), which the GPU process compiles side by side while
+   * the next part is prepared; the bar then follows them to the end. `from` is where the bar starts.
    */
   private async prewarm(from: number, task: LoadTask) {
-    const r = this.renderer;
-    const webgpu = !!(r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend;
+    const webgpu = !!(this.renderer.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend;
     setLoading(t('화면 효과를 준비하는 중'), from);
     await Promise.all([this.worksLoad, this.conquestLoad]);
     this.checkLoad(task);
     // The land is drawn in tiles that the camera culls. All of them draw during warm-up, so the terrain program is built here
-    // and not when land first comes into view.
+    // and not when land first comes into view. So do the batches hidden while they are empty.
     this.terrain.setCulling(false);
-    if (webgpu) {
-      await r.compileAsync(this.scene, this.camera, null, (e) => {
-        if (!task.controller.signal.aborted) setProgress(from + 0.16 * (e.loaded / Math.max(1, e.total)));
-      });
-    } else {
-      await this.compileByParts(from, task);
+    const hideIdle = this.showIdle();
+    try {
+      // The sea's FFT runs its compute passes ahead of the scene; their pipelines are built here, not in the first frame.
+      this.fft?.update(this.renderer, waveField.time);
+      await this.compileByParts(from, task, webgpu);
+      this.checkLoad(task);
+      setLoading(t('첫 화면을 준비하는 중'), from + 0.2);
+      await settle();
+      this.checkLoad(task);
+      await this.primeOcean(webgpu, task, from + 0.2);
+      this.checkLoad(task);
+    } finally {
+      hideIdle();
     }
-    this.checkLoad(task);
-    setLoading(t('첫 화면을 준비하는 중'), from + 0.2);
-    await settle();
-    this.checkLoad(task);
-    this.primeOcean();
     this.terrain.setCulling(true);
     setProgress(from + 0.22);
   }
 
-  /** Renders the pipeline once per group of the scene, letting the loading bar move between the blocking renders. */
-  private async compileByParts(from: number, task: LoadTask) {
+  /**
+   * Shows, for the loading renders, the batches their owners hide while they hold nothing to draw (ships of a model at a
+   * range nobody is at, lanterns by day), so their pipelines are built with the rest and not in the frame that first
+   * fills them. Returns what hides them again.
+   */
+  private showIdle() {
+    const idle: Object3D[] = [];
+    this.scene.traverse((o) => {
+      if (o.visible || !((o as InstancedMesh).isInstancedMesh || (o as Sprite).isSprite) || (o as InstancedMesh).count > 0) return;
+      o.visible = true;
+      idle.push(o);
+    });
+    return () => {
+      for (const o of idle) o.visible = false;
+    };
+  }
+
+  /** Pipelines the loading renders have started on WebGPU and not yet waited for. */
+  private compiling: Promise<void>[] = [];
+
+  /**
+   * One render of the pipeline while loading. On WebGPU a pipeline it lacks is started with createRenderPipelineAsync and
+   * its object left undrawn this once: the GPU process compiles such pipelines side by side, while a render that makes
+   * its own compiles them one after another before it can finish. compileAsync is no substitute: it compiles for the
+   * canvas, while the battle draws its scene one level down into the post-processing pass's multisampled target, so none
+   * of what it compiled was what the frames drew, and the first frame compiled all of it again.
+   * Only what the battle's camera and the sun's shadow camera draw may wait: that is drawn again every frame. A pass run
+   * once with a camera of its own (the sky turned into a cube, the environment's blurred levels) must draw now.
+   */
+  private renderAhead(webgpu: boolean) {
+    if (!webgpu) {
+      this.pipeline.render();
+      return;
+    }
+    type RenderObject = { camera: unknown };
+    const cache = (this.renderer as unknown as { _pipelines: { getForRender(renderObject: RenderObject, promises?: Promise<void>[] | null): unknown } })._pipelines;
+    const getForRender = cache.getForRender;
+    const framed = (o: RenderObject) => o.camera === this.camera || o.camera === this.sun.shadow.camera;
+    cache.getForRender = (renderObject, promises) => getForRender.call(cache, renderObject, promises ?? (framed(renderObject) ? this.compiling : null));
+    try {
+      this.pipeline.render();
+    } finally {
+      cache.getForRender = getForRender;
+    }
+  }
+
+  /** Waits for the pipelines the loading renders started, the bar going from `from` to `to` as they finish. */
+  private async compiled(from: number, to: number, task: LoadTask) {
+    const pending = this.compiling;
+    this.compiling = [];
+    let done = 0;
+    await Promise.all(
+      pending.map((p) =>
+        p.then(() => {
+          done += 1;
+          if (!task.controller.signal.aborted) setProgress(from + (to - from) * (done / pending.length));
+        }),
+      ),
+    );
+  }
+
+  /**
+   * Renders the pipeline once per group of the scene, letting the loading bar move between the blocking renders. On WebGPU
+   * the renders only start the pipelines, which are waited for at the end.
+   */
+  private async compileByParts(from: number, task: LoadTask, webgpu: boolean) {
     const clouds = this.clouds?.mesh;
     const works = this.conquestView?.group;
     const parts = [this.terrain.group, this.ocean.mesh, clouds, this.views.group, this.crew.group, this.fx.group, this.lanterns.group, works].filter((o): o is NonNullable<typeof o> => !!o);
@@ -655,9 +731,12 @@ export class Engine {
       await settle();
       this.checkLoad(task);
       parts.forEach((o) => (o.visible = show.includes(o)));
-      this.pipeline.render();
+      this.renderAhead(webgpu);
       parts.forEach((o, i) => (o.visible = visible[i]!));
     }
+    if (!webgpu) return;
+    setLoading(t('화면 효과를 준비하는 중'), from + 0.15);
+    await this.compiled(from + 0.15, from + 0.2, task);
   }
 
   private terrainQuality(): TerrainQuality {
@@ -669,11 +748,19 @@ export class Engine {
   }
 
   /**
-   * Renders the whole pipeline once with the ocean the first level will use, and once more with the refracting ocean if
-   * a level can reach it. A tier that stops below the refraction levels never builds that variant at all.
+   * Renders the whole pipeline once with the refracting ocean if a level can reach it, and once with the plain one: the
+   * frames either level starts with. A tier that stops below the refraction levels never builds that variant at all. On
+   * WebGPU the refracting ocean's pipelines are started ahead and waited for first. `from` is where the bar stands.
    */
-  private primeOcean() {
-    if (this.eq.maxLevel >= 3 || this.level >= 3) {
+  private async primeOcean(webgpu: boolean, task: LoadTask, from: number) {
+    const refracts = this.eq.maxLevel >= 3 || this.level >= 3;
+    if (webgpu && refracts) {
+      this.ocean.setRefraction(true);
+      this.renderAhead(true);
+      await this.compiled(from, from + 0.02, task);
+      this.checkLoad(task);
+    }
+    if (refracts) {
       this.ocean.setRefraction(true);
       this.pipeline.render();
     }
@@ -1097,6 +1184,7 @@ export class Engine {
 
   update(frameDt: number) {
     if (!this.ready || this.pageHidden) return;
+    const started = performance.now();
     this.fpsFrames += 1;
     this.fpsTime += frameDt;
     if (this.fpsTime >= 1) {
@@ -1111,7 +1199,7 @@ export class Engine {
     const speed = base * this.director.timeFactor(base);
     // Above 4x the frame rate is set by the simulation's share of each frame, not by the GPU, so it says nothing
     // about which quality level the device can hold.
-    if (this.remote || this.paused || speed <= 4) this.adaptive?.update(frameDt, this.gpuMs);
+    if (this.remote || this.paused || speed <= 4) this.adaptive?.update(frameDt, this.gpuMs, this.cpuMs);
     const requested = this.paused ? 0 : dt * speed;
     let scaled = this.remote ? dt : 0;
     if (this.remote) {
@@ -1210,6 +1298,7 @@ export class Engine {
       if (this.minimap.visible) this.minimap.draw(this.battle, this.views.selected, this.rts.target.x, this.rts.target.z, this.rts.yaw, this.minimapPoints());
       this.minimapTimer = 0.1;
     }
+    this.updateMs = performance.now() - started;
   }
 
   /**
@@ -1338,6 +1427,7 @@ export class Engine {
 
   render() {
     if (!this.ready || this.pageHidden) return;
+    const started = performance.now();
     this.wake.update(this.renderer, this.lastScaled);
     this.fft?.update(this.renderer, waveField.time);
     this.frame += 1;
@@ -1347,6 +1437,7 @@ export class Engine {
     if (this.clouds && this.frame % this.cloudEvery === 0) this.clouds.render(this.renderer, this.camera);
     this.pipeline.render();
     this.probeGpu();
+    this.cpuMs = this.updateMs + performance.now() - started;
   }
 
   /**
@@ -1378,13 +1469,20 @@ export class Engine {
     this.renderer.setPixelRatio(this.pixelRatio());
     this.clouds?.setQuality(L.cloud);
     this.cloudEvery = L.cloud.every;
-    this.shadowEvery = L.shadowEvery;
-    this.fx?.setParticleKeep(L.particleKeep);
+    this.applyCpuStep();
     this.vegetation?.setLite(L.vegetationLite);
     this.ocean?.setRefraction(L.refraction);
     this.bloomNode?.setResolutionScale(L.bloomResolution);
     if (this.bloomNode) this.bloomNode.strength.value = L.bloomStrength;
     this.publish(true);
+  }
+
+  /** The particles and shadow redraws the level allows, less what the CPU step gives up. */
+  private applyCpuStep() {
+    const L = LEVELS[this.level]!;
+    const step = CPU_STEPS[this.cpuStep]!;
+    this.shadowEvery = Math.max(L.shadowEvery, step.shadowEvery);
+    this.fx?.setParticleKeep(Math.max(LEVELS[0]!.particleKeep, L.particleKeep * step.particles));
   }
 
   /** From the settings panel. 'auto' hands control back to the frame-rate controller. */
@@ -1399,6 +1497,9 @@ export class Engine {
     const b = this.battle;
     const info = this.battleInfo;
     const morale = b.morale;
+    // Ships a grapple was thrown at, gathered once: asking the whole fleet for each ship cost 400,000 comparisons in Busan.
+    const held = new Set<number>();
+    for (const o of b.ships) if (o.grappledWith) held.add(o.grappledWith);
     const squadrons = b.squadrons.map((sq) => {
       let alive = 0;
       let hull = 0;
@@ -1419,7 +1520,7 @@ export class Engine {
         if (s.moraleState === 'wavering') wavering += 1;
         else if (s.moraleState === 'routing') routing += 1;
         if (s.fire > 0.05) burning += 1;
-        if (s.grappledWith || b.ships.some((o) => o.grappledWith === s.id)) boarding += 1;
+        if (s.grappledWith || held.has(s.id)) boarding += 1;
         if (this.views.selected.has(s.id)) selected += 1;
       }
       const leader = b.get(sq.leaderId);
@@ -1512,7 +1613,7 @@ export class Engine {
             stance: primary.stance,
             lights: primary.lights,
             repel: primary.repel,
-            grappled: !!primary.grappledWith || b.ships.some((o) => o.grappledWith === primary.id),
+            grappled: !!primary.grappledWith || held.has(primary.id),
             morale: primary.morale,
             moraleState: primary.moraleState,
             roles: primary.roles.map((r) => Math.round(r)),

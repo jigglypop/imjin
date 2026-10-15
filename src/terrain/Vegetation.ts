@@ -4,7 +4,6 @@ import {
   Float32BufferAttribute,
   Group,
   Box3,
-  DynamicDrawUsage,
   Frustum,
   IcosahedronGeometry,
   InstancedBufferAttribute,
@@ -154,8 +153,8 @@ export class Vegetation {
   private ring(variants: { full: BufferGeometry; lite: BufferGeometry }, cell: number, grid: number, inner: number, shadows: boolean): Ring {
     // Only cells that can hold a tree are drawn. The cells come from the CPU, so the GPU does not run the vertex
     // shader of a whole crown for every cell of the grid, most of which lie in the sea or outside the screen.
+    // Static: gather() marks the cells it wrote when the view moves, so they go up once then and not whole in every pass.
     const cells = new InstancedBufferAttribute(new Float32Array(grid * grid * 2), 2);
-    cells.setUsage(DynamicDrawUsage);
     const full = instancedGeometry(variants.full, cells);
     const lite = instancedGeometry(variants.lite, cells);
     const center = uniform(new Vector2());
