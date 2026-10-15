@@ -3,8 +3,8 @@
 // plays the same plan against a clock to render sinking.wav.
 
 export type SinkCueKind = 'groan' | 'crack' | 'blast' | 'mast' | 'wreck' | 'bubbles' | 'plunge';
-/** The plan plus the moment the hull finally slips under and is removed. */
-export type CueKind = SinkCueKind | 'gone';
+/** The plan plus the moment the hull finally slips under and is removed, and burning timber hissing into the sea. */
+export type CueKind = SinkCueKind | 'gone' | 'steam';
 
 export type SinkCue = {
   /** Sinking progress at which the cue fires. */

@@ -130,6 +130,7 @@ export class Effects {
       debris: this.debris,
       tier: this.tier,
       light: (x, y, z, intensity, dist, r, g, b) => this.sources.push({ x, y, z, intensity, decay: 1, r, g, b, age: 0, life: 1, dist, once: true }),
+      steam: (x, y, z, size) => this.cue('steam', x, y, z, size),
     });
     this.blaze.setKeep(this.k);
     for (let i = 0; i < this.lightCount; i += 1) {
