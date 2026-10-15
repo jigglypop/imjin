@@ -99,6 +99,58 @@ function pine() {
   return geometry(pos, col, idx);
 }
 
+/** A boulder one unit across: a squat, knobbly granite lump, lit like the land. */
+function boulder() {
+  const pos: number[] = [], col: number[] = [], idx: number[] = [], stone = lin('#9a958c'), rnd = seeded(7);
+  const rings = 3, seg = 7, grid: number[][] = [];
+  for (let i = 0; i <= rings; i += 1) {
+    const a = -0.35 + (i / rings) * (Math.PI / 2 + 0.35);
+    const row: number[] = [];
+    for (let j = 0; j < seg; j += 1) {
+      const b = (j / seg) * Math.PI * 2;
+      const k = i === rings ? 0.3 : 0.75 + rnd.next() * 0.5;
+      const nx = Math.cos(a) * Math.cos(b), ny = Math.sin(a), nz = Math.cos(a) * Math.sin(b);
+      const L = lightOf(nx, ny, nz), ao = 0.6 + 0.4 * Math.max(0, ny);
+      pos.push(nx * 0.5 * k, Math.max(-0.2, ny) * 0.55 * (i === rings ? 1 : k), nz * 0.5 * k);
+      col.push(stone.r * L[0]! * ao, stone.g * L[1]! * ao, stone.b * L[2]! * ao);
+      row.push(pos.length / 3 - 1);
+    }
+    grid.push(row);
+  }
+  for (let i = 0; i < rings; i += 1) for (let j = 0; j < seg; j += 1) {
+    const a = grid[i]![j]!, b = grid[i]![(j + 1) % seg]!, c = grid[i + 1]![(j + 1) % seg]!, d = grid[i + 1]![j]!;
+    idx.push(a, c, b, a, d, c);
+  }
+  return geometry(pos, col, idx);
+}
+
+/**
+ * Granite boulders along the shore, in ones and twos and threes, where the land meets the water, off the quays, slips
+ * and piers and clear of the ships (kind 2 spots).
+ */
+export function placeBoulders(plan: Plan, reach: number, groundAt: (x: number, z: number) => { h: number }, seed: number): TreeSpot[] {
+  const rnd = seeded(seed + 17), out: TreeSpot[] = [];
+  const step = 2.6;
+  const ships = plan.ships.map((s): [number, number] => [s.x, s.z]);
+  for (let z = -reach + 8; z <= reach - 8; z += step) for (let x = -reach + 8; x <= reach - 8; x += step) {
+    const px = x + (rnd.next() - 0.5) * step, pz = z + (rnd.next() - 0.5) * step;
+    const h = groundAt(px, pz).h;
+    if (h < -0.25 || h > 0.7) continue;
+    let wet = 0;
+    for (let k = 0; k < 6; k += 1) if (groundAt(px + Math.cos(k * 1.05) * 4, pz + Math.sin(k * 1.05) * 4).h < -0.05) wet += 1;
+    if (!wet || wet > 4 || rnd.next() > 0.32) continue;
+    if (plan.pads.some((pad) => outside(pad.poly, px, pz) < 3) || plan.flats.some((f) => outside(f.poly, px, pz) < 3)) continue;
+    if (ships.some(([sx, sz]) => Math.hypot(px - sx, pz - sz) < 14)) continue;
+    if (plan.pieces.some(({ piece: p }) => p.kind === 'box' && p.look === 'pier' && Math.hypot(px - p.x, pz - p.z) < Math.max(p.w, p.d) / 2 + 3)) continue;
+    const n = 1 + Math.floor(rnd.next() * 3);
+    for (let i = 0; i < n; i += 1) {
+      const bx = px + (rnd.next() - 0.5) * 3, bz = pz + (rnd.next() - 0.5) * 3;
+      out.push([bx, groundAt(bx, bz).h - 0.25, bz, 1.2 + rnd.next() * 2.4, 2, 0.8 + rnd.next() * 0.35]);
+    }
+  }
+  return out;
+}
+
 function geometry(pos: number[], col: number[], idx: number[]) {
   const g = new BufferGeometry();
   g.setAttribute('position', new Float32BufferAttribute(pos, 3));
@@ -113,7 +165,7 @@ function geometry(pos: number[], col: number[], idx: number[]) {
  */
 export function plantTrees(plan: Plan, reach: number, groundAt: (x: number, z: number) => { h: number; wood: number; open: number }, seed: number, avoid: [number, number, number][] = []): TreeSpot[] {
   const rnd = seeded(seed), out: TreeSpot[] = [];
-  const step = 3.2;
+  const step = 2.8;
   const keepOff: [number, number, number][] = [...plan.clear, ...plan.ships.map((s): [number, number, number] => [s.x, s.z, 13]), ...avoid];
   for (const { piece: p } of plan.pieces) if ('x' in p && 'z' in p) keepOff.push([p.x, p.z, p.kind === 'bldg' ? Math.max(p.w, p.d) / 2 + 3 : 4]);
   const lanes = plan.strips.flatMap((s) => s.line.slice(1).map((b, i) => ({ a: s.line[i]!, b, r: s.width / 2 + 2.5 })));
@@ -135,14 +187,14 @@ export function plantTrees(plan: Plan, reach: number, groundAt: (x: number, z: n
     if (keepOff.some(([cx, cz, r]) => Math.hypot(px - cx, pz - cz) < r)) continue;
     if (plan.flats.some((f) => outside(f.poly, px, pz) < 2) || nearLane(px, pz)) continue;
     const pineShare = Math.min(0.85, 0.25 + g.h * 0.06);
-    out.push([px, g.h - 0.2, pz, 7.5 + rnd.next() * 5.5, rnd.next() < pineShare ? 1 : 0, 0.82 + rnd.next() * 0.3]);
+    out.push([px, g.h - 0.2, pz, 5.5 + rnd.next() * 4.5, rnd.next() < pineShare ? 1 : 0, 0.78 + rnd.next() * 0.34]);
   }
   return out;
 }
 
 /** The trees as two instanced meshes (broadleaf, pine) in the site's frame. */
 export function treeMeshes(spots: TreeSpot[], material: MeshBasicNodeMaterial) {
-  const shapes = [broadleaf(), pine()];
+  const shapes = [broadleaf(), pine(), boulder()];
   return shapes.map((shape, kind) => {
     const list = spots.filter((s) => s[4] === kind);
     if (!list.length) { shape.dispose(); return null; }
@@ -151,8 +203,8 @@ export function treeMeshes(spots: TreeSpot[], material: MeshBasicNodeMaterial) {
     let maxR = 0;
     list.forEach(([x, y, z, h, , shade], i) => {
       q.setFromAxisAngle(up, (x * 12.9898 + z * 78.233) % (Math.PI * 2));
-      const w = h * (kind ? 0.85 : 1.15);
-      m.compose(new Vector3(x, y, z), q, new Vector3(w, h, w));
+      const w = kind === 2 ? h : h * (kind ? 0.85 : 1.15) * (0.85 + ((x * 3.7 + z * 1.3) % 0.3));
+      m.compose(new Vector3(x, y, z), q, new Vector3(w, kind === 2 ? h * (0.6 + ((z * 2.3) % 0.5)) : h, w));
       mesh.setMatrixAt(i, m);
       mesh.setColorAt(i, c.setRGB(shade, shade * (0.97 + ((x * 7.1) % 0.06)), shade * 0.95));
       maxR = Math.max(maxR, Math.hypot(x, z) + h);
@@ -175,7 +227,8 @@ export async function treeMaterial() {
   const m = new MeshBasicNodeMaterial({ vertexColors: true });
   const p: any = positionLocal;
   const mean = texture(t, vec2(0.5, 0.5)).level(float(12)).rgb.dot(vec3(0.3, 0.55, 0.15)).max(0.02);
-  const leaves = texture(t, p.xy.add(p.zy.mul(0.7)).mul(2.3)).rgb.dot(vec3(0.3, 0.55, 0.15)).div(mean);
+  const a = texture(t, p.xy.mul(6.1)).rgb.dot(vec3(0.3, 0.55, 0.15)), b = texture(t, p.zy.mul(5.3).add(vec2(0.31, 0.57))).rgb.dot(vec3(0.3, 0.55, 0.15));
+  const leaves = a.mul(b).sqrt().div(mean);
   // The vertex colours and each tree's tint multiply in after this (vertexColors, instanceColor).
   m.colorNode = vec3(leaves.pow(1.3).mul(0.85).add(0.15));
   return { material: m, texture: t };

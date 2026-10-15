@@ -12,7 +12,7 @@ import { joTier1, LAYOUTS, town, waFieldCamp } from './layouts';
 import { Plan, type Moored } from './plan';
 import { HERO_SITES, heroEnabled, MODEL_METRE, siteUV, siteXZ, type HeroSite } from './site';
 import { heroGroundOf } from './terrain';
-import { plantTrees, treeMaterial, treeMeshes } from './trees';
+import { placeBoulders, plantTrees, treeMaterial, treeMeshes } from './trees';
 
 // The hero camps on the campaign map (see site.ts): for each hero site whose camp its own navy holds, the camp of the
 // layouts, the villages of the towns round it, and the ground they stand on, built when the world first shows them and
@@ -187,7 +187,8 @@ export class HeroLayer {
         return m;
       }));
       if (this.disposed) return;
-      const trees = treeMeshes(plantTrees(plan, use.site.reach, ground.sample, use.site.u * 1e6, use.avoid), leaves.material);
+      const seed = Math.round(use.site.u * 1e6);
+      const trees = treeMeshes([...plantTrees(plan, use.site.reach, ground.sample, seed, use.avoid), ...placeBoulders(plan, use.site.reach, ground.sample, seed)], leaves.material);
       for (const t of trees) {
         geometries.push(t.geometry);
         group.add(t);
