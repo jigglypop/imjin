@@ -19,6 +19,7 @@ import {
   mix,
   pass,
   positionWorld,
+  renderGroup,
   renderOutput,
   smoothstep,
   uniform,
@@ -207,7 +208,7 @@ export class Engine {
   /** Every node that reads the sky view: the background, the fog, the sea's haze and the clouds'. Made before the first sky. */
   private skyView: SkyView | null = null;
   /** The sun's colour times its intensity, which the light's colour node reads (see init). */
-  private readonly sunLight = uniform(new Color());
+  private readonly sunLight = uniform(new Color()).setGroup(renderGroup);
   private accumulator = 0;
   private publishTimer = 0;
   private readonly autoBuild = new AutoBuild();
