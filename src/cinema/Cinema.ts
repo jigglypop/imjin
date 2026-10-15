@@ -85,6 +85,8 @@ export class Cinema implements RigHost {
   private quietUntil = 0;
   private endedAt = -1;
   private outroDone = false;
+  /** Openings already shown on this page: a restart goes straight to the battle. */
+  private readonly opened = new Set<string>();
   private letter = 0;
   private gradeLevel = 0;
   private pose: CameraPose | null = null;
@@ -207,7 +209,10 @@ export class Cinema implements RigHost {
     if (this.documentary && !this.host.remote) this.host.rts.cinematic = true;
     const key = this.host.scenarioKey();
     const intro = key ? INTROS[key] : undefined;
-    if (intro && this.intros && !automated()) this.play(intro);
+    if (intro && this.intros && !automated() && !this.opened.has(intro.id)) {
+      this.opened.add(intro.id);
+      this.play(intro);
+    }
   }
 
   /** Plays a scene now (also the hook the screenshot scripts use: `__engine.cinema.play('noryang-outro')`). */

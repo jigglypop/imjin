@@ -113,8 +113,14 @@
 
 /* Phones: smaller gutters, the name card under the top bar, no hover controls to wait for. */
 .app--compact .cine { --cine-gutter: 16px; }
-.app--compact .cine-card { width: 128px; }
-.app--compact .cine-controls { opacity: 0.85; bottom: calc(var(--cine-bar, 0px) + 8px); }
+.app--compact .cine-card { width: 170px; padding: 0 0 8px 16px; top: calc(var(--cine-bar, 0px) + 10px); }
+.app--compact .cine-portrait--large { width: 58px; margin: 0 0 6px auto; }
+.app--compact .cine-card-name b { font-size: 16px; }
+.app--compact .cine-card-role { font-size: 11px; padding-top: 5px; margin-top: 4px; }
+.app--compact .cine-doc { padding: 10px 12px; }
+/* Phones: the controls sit in the top bar, out of the captions' way; touch has no keys to name. */
+.app--compact .cine-controls { opacity: 0.85; top: max(6px, calc(var(--cine-bar, 0px) * 0.5 - 15px)); bottom: auto; }
+.app--touch .cine-button kbd { display: none; }
 .app--compact .cine-lower { bottom: calc(var(--cine-bar, 0px) + 40px); }
 @media (prefers-reduced-motion: reduce) {
   .cine * { animation: none !important; }
