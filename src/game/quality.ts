@@ -134,6 +134,20 @@ const BASE_LEVELS: Level[] = [
   { label: '높음', dprCap: 1.5, cloud: { steps: 48, lightSteps: 4, divisor: 2, every: 1 }, particleKeep: 1, vegetationLite: false, shadowEvery: 1, refraction: true, bloomResolution: 0.5, bloomStrength: 0.22 },
   { label: '가장 높음', dprCap: 2, cloud: { steps: 64, lightSteps: 4, divisor: 2, every: 1 }, particleKeep: 1.25, vegetationLite: false, shadowEvery: 1, refraction: true, bloomResolution: 0.5, bloomStrength: 0.26 },
 ];
+/**
+ * What the frame-rate controller gives up when the main thread, not the GPU, holds the frame rate down: part of the smoke
+ * and fire (every particle is moved and sent to the GPU each frame) and redraws of the shadow map (its pass walks every
+ * shadow caster a second time). Each step applies on top of the level. Lowering the level would cost resolution and
+ * effects, which only spare the GPU. The last step gives up nothing.
+ */
+export type CpuStep = { particles: number; shadowEvery: number };
+export const CPU_STEPS: CpuStep[] = [
+  { particles: 0.5, shadowEvery: 3 },
+  { particles: 0.75, shadowEvery: 2 },
+  { particles: 1, shadowEvery: 1 },
+];
+export const CPU_STEP_MAX = CPU_STEPS.length - 1;
+
 // After a second crash in a row the resolution drops below every level's own cap.
 const RECOVERY_DPR_CAP = 0.6;
 export const LEVELS: Level[] = recovery.step >= 2 ? BASE_LEVELS.map((l) => ({ ...l, dprCap: Math.min(l.dprCap, RECOVERY_DPR_CAP) })) : BASE_LEVELS;
