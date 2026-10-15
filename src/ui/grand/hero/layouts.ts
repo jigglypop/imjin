@@ -428,7 +428,8 @@ export function village(m: Plan, cx: number, cz: number, n: number, rot: number,
   const rnd = seeded(seed);
   const c = Math.cos(rot), s = Math.sin(rot);
   const placed: P2[] = [];
-  for (let i = 0; i < n; i += 1) {
+  // Twice as many lots as houses wanted: those on water, too steep or too high are passed over.
+  for (let i = 0; i < n * 2 && placed.length < n; i += 1) {
     const side = i % 2 === 0 ? 1 : -1;
     const al = (Math.floor(i / 2) - n / 4) * 11 * spread + rnd.uniform(-1.5, 1.5);
     const across = side * (6.5 + rnd.uniform(0, 3.5)) * spread;

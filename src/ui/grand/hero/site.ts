@@ -56,8 +56,8 @@ export function rawMetres(heights: Float32Array, u: number, v: number) {
   return top + (bottom - top) * fy;
 }
 
-/** Whether the campaign map draws the hero camps: `?hero=1` while they are built, `?hero=0` shows the old kits. */
+/** Whether the campaign map draws the hero camps: on in the browser, `?hero=0` shows the old kits for comparison. */
 export function heroEnabled() {
   if (typeof location === 'undefined') return false;
-  return new URLSearchParams(location.search).get('hero') === '1';
+  return new URLSearchParams(location.search).get('hero') !== '0';
 }

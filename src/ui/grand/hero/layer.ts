@@ -8,7 +8,7 @@ import type { MapWorld, SettlementSpec } from '../mapWorld';
 import type { FactionId } from '../types';
 import { buildHero } from './build';
 import { buildHeroGround, heroGroundLook, type HeroGroundLook } from './ground';
-import { LAYOUTS, town } from './layouts';
+import { joTier1, LAYOUTS, town, waFieldCamp } from './layouts';
 import { Plan, type Moored } from './plan';
 import { HERO_SITES, heroEnabled, MODEL_METRE, siteUV, siteXZ, type HeroSite } from './site';
 import { heroGroundOf } from './terrain';
@@ -29,6 +29,8 @@ export interface HeroUse {
   replaces: Set<string>;
   /** The towns drawn as villages: (x, z) in the site's frame, how many houses, a seed. */
   towns: { x: number; z: number; houses: number; seed: number }[];
+  /** Other navies' small camps on the site's ground, built to the same rules (x, z, their navy, their level). */
+  camps: { x: number; z: number; navy: FactionId; level: number }[];
   /** The map's other places on the site's ground (x, z, radius in model metres): no tree grows over them. */
   avoid: [number, number, number][];
   key: string;
@@ -41,11 +43,17 @@ export function heroUses(world: MapWorld): HeroUse[] {
     const camp = world.settlements.find((s) => s.kind === 'camp' && s.region === site.id);
     if (!camp || camp.owner !== site.navy || !heroGroundOf(site.id)) continue;
     const replaces = new Set<string>([camp.id]);
-    const towns: HeroUse['towns'] = [], avoid: HeroUse['avoid'] = [];
+    const towns: HeroUse['towns'] = [], avoid: HeroUse['avoid'] = [], camps: HeroUse['camps'] = [];
     for (const s of world.settlements) {
       if (s.region === site.id && s.kind === 'beacon') replaces.add(s.id);
       const { x, z } = siteXZ(site, s.u, s.v);
       if (Math.max(Math.abs(x), Math.abs(z)) > site.reach + 40) continue;
+      // A small camp of another port on this ground is built to the hero camps' rules too.
+      if (s.kind === 'camp' && s.owner && s.region !== site.id && s.level <= 2 && Math.max(Math.abs(x), Math.abs(z)) < site.reach - 28) {
+        replaces.add(s.id);
+        camps.push({ x, z, navy: s.owner, level: s.level });
+        continue;
+      }
       if (s.kind !== 'town' || Math.max(Math.abs(x), Math.abs(z)) > site.reach - 30) {
         if (!replaces.has(s.id)) avoid.push([x, z, s.radius * 40 + 6]);
         continue;
@@ -53,7 +61,7 @@ export function heroUses(world: MapWorld): HeroUse[] {
       replaces.add(s.id);
       towns.push({ x, z, houses: houses(s), seed: [...s.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 1000 });
     }
-    out.push({ site, replaces, towns, avoid, key: JSON.stringify([site.id, towns, avoid]) });
+    out.push({ site, replaces, towns, camps, avoid, key: JSON.stringify([site.id, towns, camps, avoid]) });
   }
   return out;
 }
@@ -66,6 +74,11 @@ export function heroPlan(use: HeroUse): Plan | null {
   if (!ground) return null;
   const plan = new Plan(ground, use.site.navy);
   LAYOUTS[use.site.id]!(plan);
+  for (const c of use.camps) {
+    if (plan.at(c.x, c.z) !== plan.natural(c.x, c.z)) continue;
+    if (c.navy === 'japan') waFieldCamp(plan, c.x, c.z, 0);
+    else joTier1(plan, c.x, c.z, 0);
+  }
   for (const t of use.towns) {
     // Off the camp's pads and clear of its works.
     if (plan.at(t.x, t.z) !== plan.natural(t.x, t.z)) continue;

@@ -22,7 +22,7 @@ function lightOf(nx: number, ny: number, nz: number) {
 
 /** A lumpy ball of leaves at (cx, cy, cz) of radius r, smooth normals, its vertices pushed in and out a little. */
 function blob(pos: number[], col: number[], cx: number, cy: number, cz: number, r: number, leaf: Color, seed: number) {
-  const rings = 4, seg = 7, rnd = seeded(seed);
+  const rings = 3, seg = 6, rnd = seeded(seed);
   const grid: number[][] = [];
   for (let i = 0; i <= rings; i += 1) {
     const a = -Math.PI / 2 + (i / rings) * Math.PI;
@@ -72,9 +72,8 @@ function broadleaf() {
   const pos: number[] = [], col: number[] = [], leaf = lin('#3f6328');
   const idx = [
     ...trunk(pos, col, 0.05, -0.1, 0.45),
-    ...blob(pos, col, 0, 0.62, 0, 0.3, leaf, 1),
-    ...blob(pos, col, 0.17, 0.48, 0.08, 0.22, leaf.clone().multiplyScalar(0.92), 2),
-    ...blob(pos, col, -0.15, 0.5, -0.1, 0.23, leaf.clone().multiplyScalar(1.05), 3),
+    ...blob(pos, col, 0.02, 0.62, 0.02, 0.31, leaf, 1),
+    ...blob(pos, col, -0.13, 0.48, -0.06, 0.24, leaf.clone().multiplyScalar(0.9), 3),
   ];
   return geometry(pos, col, idx);
 }
@@ -82,7 +81,7 @@ function broadleaf() {
 /** A pine one unit tall: a trunk and three stacked skirts of needles narrowing to the top. */
 function pine() {
   const pos: number[] = [], col: number[] = [], needles = lin('#24462a'), idx = [...trunk(pos, col, 0.04, -0.1, 0.3)];
-  const seg = 7;
+  const seg = 6;
   for (const [y0, y1, r] of [[0.18, 0.62, 0.3], [0.42, 0.85, 0.23], [0.66, 1.0, 0.15]] as const) {
     const base = pos.length / 3;
     for (let j = 0; j < seg; j += 1) {
@@ -114,7 +113,7 @@ function geometry(pos: number[], col: number[], idx: number[]) {
  */
 export function plantTrees(plan: Plan, reach: number, groundAt: (x: number, z: number) => { h: number; wood: number; open: number }, seed: number, avoid: [number, number, number][] = []): TreeSpot[] {
   const rnd = seeded(seed), out: TreeSpot[] = [];
-  const step = 3.6;
+  const step = 3.2;
   const keepOff: [number, number, number][] = [...plan.clear, ...plan.ships.map((s): [number, number, number] => [s.x, s.z, 13]), ...avoid];
   for (const { piece: p } of plan.pieces) if ('x' in p && 'z' in p) keepOff.push([p.x, p.z, p.kind === 'bldg' ? Math.max(p.w, p.d) / 2 + 3 : 4]);
   const lanes = plan.strips.flatMap((s) => s.line.slice(1).map((b, i) => ({ a: s.line[i]!, b, r: s.width / 2 + 2.5 })));
@@ -130,7 +129,7 @@ export function plantTrees(plan: Plan, reach: number, groundAt: (x: number, z: n
     if (edge < 6) continue;
     const g = groundAt(px, pz);
     if (g.h < 0.25) continue;
-    const want = g.wood * 0.95 + g.open * Math.max(0, grove(px, pz) - 0.35) * 1.4;
+    const want = Math.min(1, g.wood * 1.3) + g.open * Math.max(0, grove(px, pz) - 0.2) * 1.6;
     if (rnd.next() > want * Math.min(1, edge / 30)) continue;
     if (plan.pads.some((pad) => outside(pad.poly, px, pz) < 4)) continue;
     if (keepOff.some(([cx, cz, r]) => Math.hypot(px - cx, pz - cz) < r)) continue;

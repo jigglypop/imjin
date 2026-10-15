@@ -143,7 +143,7 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
       // Well inside the patch the land's bright map colours calm to the colours of real ground: a little less green, warmer.
       const inner = smooth(FADE, FADE + 35, edge);
       const grey = rgb[0]! * 0.3 + rgb[1]! * 0.55 + rgb[2]! * 0.15;
-      for (let k = 0; k < 3; k += 1) rgb[k] = rgb[k]! + (grey * [1.1, 1.0, 0.7][k]! - rgb[k]!) * inner * 0.22;
+      for (let k = 0; k < 3; k += 1) rgb[k] = rgb[k]! + (grey * [1.1, 1.0, 0.7][k]! - rgb[k]!) * inner * 0.1;
       patch.vert(x, h + LIFT, z, rgb, smooth(2, FADE, edge), w, 0, inner);
     }
   }
