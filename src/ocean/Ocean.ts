@@ -510,7 +510,10 @@ export class Ocean {
         });
       }
       const coverage = whitecap.mul(1.35).mul(shore).add(contact.mul(1.2)).add(wakeFoam.mul(1.15)).add(whirl).add(surf.mul(select(depthBelow.greaterThan(-0.5), float(1), float(0))));
-      const foam = max(saturate(coverage.sub(float(1).sub(pattern)).mul(3.2)), eddyFoam.clamp(0, 0.82));
+      // Foam is lace, not paint: a soft edge into the lattice of the pattern, and bubbles that let the water show through.
+      const bubbles = texture(foamTex, p0.mul(1 / 1.1).add(N.xz.mul(0.05)).add(vec2(t.mul(0.02), t.mul(-0.013)))).r;
+      const lace = saturate(coverage.sub(float(1).sub(pattern)).mul(1.9)).mul(mix(float(0.55), float(1), bubbles));
+      const foam = max(lace, eddyFoam.clamp(0, 0.82));
       const foamLight = atmosphere.skyAmbient.mul(0.95).add(sunLit.mul(NoL.mul(0.6).add(0.25)).mul(1 / Math.PI)).add(lightDiffuse.mul(1 / Math.PI));
       color.assign(mix(color, vec3(0.93, 0.95, 0.96).mul(foamLight), foam.mul(0.92)));
       color.assign(color.mul(float(1).sub(core.clamp(0, 1).mul(0.35))));
