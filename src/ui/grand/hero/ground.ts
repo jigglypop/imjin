@@ -355,7 +355,7 @@ export async function heroGroundLook(): Promise<HeroGroundLook> {
   // The grain shows fully inside the patch and fades with it, so the patch's edge meets the land's plain facets; and it
   // fades as the camera draws back, before a pixel covers so much ground that the textures' repeats show as a quilt.
   const footprint = fwidth(p).length();
-  const near = float(1).sub(smoothstep(0.3, 0.7, footprint));
+  const near = float(1).sub(smoothstep(0.17, 0.38, footprint));
   const grain: any = mix(vec3(1), mixed.div(total), inner.mul(0.5).add(0.35).mul(near));
   // Paving: slabs in running courses, each its own shade, joints dark.
   const slab = vec2(1.3, 0.75);
