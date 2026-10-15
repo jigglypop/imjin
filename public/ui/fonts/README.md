@@ -25,3 +25,9 @@ The Korean tagline, the hanja and the seal: only `나라를지킨바다壬辰倭
 Source: `NotoSerifKR[wght].ttf` from google/fonts, SHA-256 `11f8d5de6f1b79195efba3828aaa2ec95c1178f5ae976fb23c8d53250a9938f3`.
 
 Reproduction: `python -m fontTools.subset "NotoSerifKR[wght].ttf" --text=나라를지킨바다壬辰倭亂海戰朝鮮明日本 --flavor=woff2 --layout-features='*' --name-IDs='*' --name-languages='*' --output-file=imjin-serif-notoserifkr.woff2`.
+
+## Do Hyeon: `imjin-routes-dohyeon.woff2`
+
+The screens' names on the loading screens (`index.html`, `src/ui/routeLoading.ts`), set in the title's face: only the glyphs of `캠페인 쟁탈전 역사 전투 온라인 대전 설정` (src/routes.ts) beyond the four in `임진왜란`, 2.6 KB. Same source and licence as `imjin-title-dohyeon.woff2`. Renaming a screen means cutting the subset again with the new name.
+
+Reproduction: `python -m fontTools.subset DoHyeon-Regular.ttf --text=캠페인쟁탈전역사투온라대설정 --flavor=woff2 --layout-features='*' --name-IDs='*' --name-languages='*' --output-file=imjin-routes-dohyeon.woff2`.

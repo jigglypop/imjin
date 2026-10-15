@@ -6,6 +6,14 @@ export const EN_COMMON: Record<string, string> = {
   '캠페인': 'Campaign',
   '쟁탈전': 'Conquest',
   '온라인 대전': 'Online Battle',
+  // The menu's tagline, and the line under each mode's name on its loading screen and link-preview card
+  // (src/routes.ts; the build reads these for the pages' boot screens, see vite.config.ts)
+  '나라를 지킨 바다': 'The sea that held a kingdom',
+  '한 나라를 이끌고 남해안의 포구를 차지하라': "Lead one nation and take the ports of Korea's south coast",
+  '거점을 지켜 적의 기세를 꺾어라': "Hold the ports and break the enemy's will",
+  '옥포에서 노량까지, 아홉 해전을 직접 지휘하라': 'From Okpo to Noryang: command nine naval battles',
+  '다른 제독과 실시간으로 겨루는 해전': 'Naval battles in real time against other admirals',
+  '소리 · 화질 · 언어 · 조작 안내': 'Sound · graphics · language · controls',
 
   // Navigation and actions
   '뒤로': 'Back',

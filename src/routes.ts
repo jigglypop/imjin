@@ -7,14 +7,17 @@ export type RouteScreen = 'menu' | 'faction' | 'skirmish' | 'select' | 'online' 
 /** The Korean edition is unprefixed; the English one lives under /en. */
 export type Edition = 'ko' | 'en';
 
-/** Each screen's address in the Korean edition, and its name (Korean source text, translated through t()). */
-export const ROUTES: readonly { screen: RouteScreen; slug: string; name: string }[] = [
-  { screen: 'menu', slug: '', name: '임진왜란' },
-  { screen: 'faction', slug: 'campaign', name: '캠페인' },
-  { screen: 'skirmish', slug: 'conquest', name: '쟁탈전' },
-  { screen: 'select', slug: 'battles', name: '역사 전투' },
-  { screen: 'online', slug: 'online', name: '온라인 대전' },
-  { screen: 'settings', slug: 'settings', name: '설정' },
+/**
+ * Each screen's address in the Korean edition, its name and the line its loading screen and link-preview card show
+ * under the name (Korean source text, translated through t()).
+ */
+export const ROUTES: readonly { screen: RouteScreen; slug: string; name: string; line: string }[] = [
+  { screen: 'menu', slug: '', name: '임진왜란', line: '나라를 지킨 바다' },
+  { screen: 'faction', slug: 'campaign', name: '캠페인', line: '한 나라를 이끌고 남해안의 포구를 차지하라' },
+  { screen: 'skirmish', slug: 'conquest', name: '쟁탈전', line: '거점을 지켜 적의 기세를 꺾어라' },
+  { screen: 'select', slug: 'battles', name: '역사 전투', line: '옥포에서 노량까지, 아홉 해전을 직접 지휘하라' },
+  { screen: 'online', slug: 'online', name: '온라인 대전', line: '다른 제독과 실시간으로 겨루는 해전' },
+  { screen: 'settings', slug: 'settings', name: '설정', line: '소리 · 화질 · 언어 · 조작 안내' },
 ];
 
 const BY_SLUG = new Map(ROUTES.map((r) => [r.slug, r.screen]));
@@ -27,6 +30,16 @@ export function isRouteScreen(screen: string): screen is RouteScreen {
 /** The screen's name: Korean source text for t(). */
 export function routeName(screen: RouteScreen): string {
   return BY_SCREEN.get(screen)!.name;
+}
+
+/** The line under a screen's name on its loading screen and link-preview card: Korean source text for t(). */
+export function routeLine(screen: RouteScreen): string {
+  return BY_SCREEN.get(screen)!.line;
+}
+
+/** The slug of a screen's address ('' for the menu): the name of its loading art and link-preview card. */
+export function routeSlug(screen: RouteScreen): string {
+  return BY_SCREEN.get(screen)!.slug;
 }
 
 /** The address of a screen in one edition: /campaign and /en/campaign; the menu is / and /en. */

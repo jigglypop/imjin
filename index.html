@@ -6,7 +6,8 @@
     <title>임진왜란 · The Imjin War</title>
     <meta name="description" content="1592, 조선 수군의 바다. 3D 해전 전략 게임. A 3D naval strategy game about the Imjin War." />
     <!-- Link previews (KakaoTalk, iMessage, Slack, X): crawlers read these tags without running the app. The image is
-         public/og-geobukseon.jpg (the game's turtle ship at sunset), rendered by scripts/build-og-image.mjs. -->
+         public/og-menu.jpg (the game's turtle ship at sunset), rendered by scripts/build-og-image.mjs; every other page
+         has its own card (vite.config.ts). -->
     <link rel="canonical" href="https://imjin1592.com/" />
     <link rel="alternate" hreflang="ko" href="https://imjin1592.com/" />
     <link rel="alternate" hreflang="en" href="https://imjin1592.com/en" />
@@ -16,8 +17,8 @@
     <meta property="og:title" content="임진왜란 · The Imjin War" />
     <meta property="og:description" content="13척으로 133척을 막아 낸 바다. 임진왜란의 해전을 브라우저에서 직접 지휘하는 3D 전략 게임입니다." />
     <meta property="og:url" content="https://imjin1592.com/" />
-    <meta property="og:image" content="https://imjin1592.com/og-geobukseon.jpg" />
-    <meta property="og:image:secure_url" content="https://imjin1592.com/og-geobukseon.jpg" />
+    <meta property="og:image" content="https://imjin1592.com/og-menu.jpg" />
+    <meta property="og:image:secure_url" content="https://imjin1592.com/og-menu.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -27,7 +28,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="임진왜란 · The Imjin War" />
     <meta name="twitter:description" content="13척으로 133척을 막아 낸 바다. 임진왜란의 해전을 브라우저에서 직접 지휘하는 3D 전략 게임입니다." />
-    <meta name="twitter:image" content="https://imjin1592.com/og-geobukseon.jpg" />
+    <meta name="twitter:image" content="https://imjin1592.com/og-menu.jpg" />
     <meta name="theme-color" content="#050b13" />
     <meta name="color-scheme" content="dark" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -44,16 +45,128 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@700&display=swap" media="print" onload="this.media = 'all'" />
+    <!-- The page's loading art, for phones and for larger screens. The build names each page's own (vite.config.ts). -->
+    <link rel="preload" as="image" href="/ui/art/route_menu_sm.webp" media="(max-width: 900px), (max-height: 540px)" />
+    <link rel="preload" as="image" href="/ui/art/route_menu.webp" media="(min-width: 901px) and (min-height: 541px)" />
     <style>
       html,
       body {
         margin: 0;
         background: #050b13;
       }
+      /* The loading screen (#boot below): this page's own while the app's code arrives, then each screen's while its
+         code does (src/ui/routeLoading.ts). It is set like the menu's film-poster title: the screen's name in Do Hyeon
+         (Korean) or Cinzel (English), the small 壬辰倭亂 | 임진왜란 mark above, its line and a hairline of progress below.
+         It appears only after 150 ms, so a quick load never flashes it. */
+      @font-face {
+        font-family: 'Imjin Title';
+        src: url('/ui/fonts/imjin-title-dohyeon.woff2') format('woff2');
+        font-display: block;
+        unicode-range: U+C784, U+C9C4, U+C65C, U+B780;
+      }
+      @font-face {
+        font-family: 'Imjin Title';
+        src: url('/ui/fonts/imjin-routes-dohyeon.woff2') format('woff2');
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'Imjin Roman';
+        src: url('/ui/fonts/imjin-title-cinzel.woff2') format('woff2');
+        font-weight: 400 900;
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'Imjin Serif';
+        src: url('/ui/fonts/imjin-serif-notoserifkr.woff2') format('woff2');
+        font-weight: 200 900;
+        font-display: block;
+      }
+      .rload { --t: clamp(84px, 11vw, 150px); position: fixed; inset: 0; z-index: 45; overflow: hidden; background: #050b13; color: #fff; opacity: 0; animation: rload-in 0.35s ease 0.15s forwards; font-family: 'Pretendard Variable', Pretendard, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
+      .rload[hidden] { display: none; }
+      .rload--out { animation: rload-out 0.4s ease forwards; }
+      .rload__art { position: absolute; inset: 0; background: #050b13 var(--art) 50% 50% / cover no-repeat; animation: rload-drift 14s ease-out both; }
+      .rload__shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(4, 9, 15, 0.84), rgba(4, 9, 15, 0.55) 34%, rgba(4, 9, 15, 0.1) 62%, rgba(4, 9, 15, 0)), linear-gradient(180deg, rgba(4, 9, 15, 0.3), rgba(4, 9, 15, 0) 30%, rgba(4, 9, 15, 0) 62%, rgba(4, 9, 15, 0.7)); }
+      .rload__poster { position: absolute; left: calc(env(safe-area-inset-left) + 7vw); top: 0; bottom: 0; width: min(640px, 50vw); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+      .rload__mark { display: flex; align-items: center; gap: calc(var(--t) * 0.11); margin-bottom: calc(var(--t) * 0.2); line-height: 1; opacity: 0.74; white-space: nowrap; }
+      .rload__hanja { font-family: 'Imjin Serif', serif; font-size: calc(var(--t) * 0.11); letter-spacing: 0.3em; }
+      .rload__ko { font-family: 'Imjin Title', sans-serif; font-weight: 400; font-size: calc(var(--t) * 0.17); letter-spacing: -0.04em; }
+      .rload__hanja + .rload__ko::before { content: ''; display: inline-block; width: 1px; height: 0.8em; margin-right: calc(var(--t) * 0.11); vertical-align: -0.05em; background: currentColor; opacity: 0.5; }
+      .rload__en { display: none; align-items: center; gap: 0.9em; font-family: 'Imjin Roman', serif; font-weight: 500; font-size: calc(var(--t) * 0.1); letter-spacing: 0.42em; margin-right: -0.42em; text-transform: uppercase; }
+      .rload__en::before, .rload__en::after { content: ''; width: 2.4em; height: 1px; background: currentColor; opacity: 0.7; }
+      .rload[data-lang='en'] .rload__hanja, .rload[data-lang='en'] .rload__ko { display: none; }
+      .rload[data-lang='en'] .rload__en { display: flex; }
+      .rload[data-route='menu'] .rload__ko, .rload[data-route='menu'] .rload__en { display: none; }
+      .rload[data-lang='en'][data-route='menu'] .rload__hanja { display: inline; }
+      .rload__name { margin: 0; font-family: 'Imjin Title', sans-serif; font-weight: 400; font-size: var(--t); line-height: 0.95; letter-spacing: -0.04em; padding-right: 0.04em; white-space: nowrap; -webkit-text-stroke: 0.022em #fff; paint-order: stroke fill; opacity: 0.82; filter: drop-shadow(0 2px 14px rgba(3, 8, 13, 0.6)); }
+      .rload[data-lang='en'] .rload__name { font-family: 'Imjin Roman', serif; font-weight: 600; font-size: calc(var(--t) * 0.42); letter-spacing: 0.07em; margin-right: -0.07em; padding: 0; -webkit-text-stroke: 0; text-transform: uppercase; white-space: normal; text-wrap: balance; }
+      .rload__line { margin: calc(var(--t) * 0.2) 0 0; max-width: 30em; font-size: max(14px, calc(var(--t) * 0.13)); font-weight: 500; line-height: 1.5; letter-spacing: 0.06em; color: rgba(255, 255, 255, 0.86); text-shadow: 0 1px 12px rgba(3, 8, 13, 0.95); word-break: keep-all; text-wrap: balance; }
+      .rload[data-lang='en'] .rload__line { font-family: 'Imjin Roman', serif; font-weight: 600; font-size: max(11px, calc(var(--t) * 0.1)); letter-spacing: 0.14em; text-transform: uppercase; }
+      .rload__bar { position: relative; width: calc(var(--t) * 1.6); height: 1px; margin-top: calc(var(--t) * 0.3); overflow: hidden; background: rgba(187, 167, 126, 0.28); }
+      .rload__bar i { position: absolute; inset: 0 auto 0 0; width: 34%; background: linear-gradient(90deg, transparent, #d9c591, transparent); animation: rload-bar 1.5s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+      @media (max-width: 900px), (max-height: 540px) {
+        .rload__art { background-image: var(--art-sm); }
+      }
+      /* A phone upright: the art's centre stays in view and the poster stands at the foot, across the screen. */
+      @media (max-width: 600px) {
+        .rload { --t: clamp(72px, 22vw, 104px); }
+        .rload__shade { background: linear-gradient(180deg, rgba(4, 9, 15, 0.25), rgba(4, 9, 15, 0) 30%, rgba(4, 9, 15, 0.55) 58%, rgba(4, 9, 15, 0.9)); }
+        .rload__poster { left: 24px; right: 24px; width: auto; top: auto; bottom: calc(env(safe-area-inset-bottom) + 10vh); }
+      }
+      /* A phone on its side: a smaller title on the left. */
+      @media (max-height: 540px) {
+        .rload { --t: clamp(56px, 17vh, 88px); }
+      }
+      @keyframes rload-in { to { opacity: 1; } }
+      @keyframes rload-out { from { opacity: 1; } to { opacity: 0; } }
+      @keyframes rload-drift { from { transform: scale(1.06); } to { transform: scale(1); } }
+      @keyframes rload-bar { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+      @media (prefers-reduced-motion: reduce) {
+        .rload__art, .rload__bar i { animation: none; }
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="boot" class="rload" data-route="menu" data-lang="ko" aria-hidden="true">
+      <div class="rload__art"></div>
+      <div class="rload__shade"></div>
+      <div class="rload__poster">
+        <div class="rload__mark"><span class="rload__hanja">壬辰倭亂</span><b class="rload__ko">임진왜란</b><span class="rload__en">The Imjin War</span></div>
+        <h1 class="rload__name">임진왜란</h1>
+        <p class="rload__line">나라를 지킨 바다</p>
+        <div class="rload__bar"><i></i></div>
+      </div>
+    </div>
+    <script>
+      // The loading screen names the page in the address before the app runs, so a link to /campaign opens on the
+      // campaign's: its language as the app will pick it (src/routes.ts pickEdition), its name, line and art. The build
+      // fills in each page's names (vite.config.ts); the app takes the screen over from here (src/ui/routeLoading.ts).
+      (function () {
+        var names = /*route-names*/ null;
+        var boot = document.getElementById('boot');
+        var parts = location.pathname.replace(/\/index\.html$/, '').split('/').filter(Boolean);
+        var edition = parts[0] === 'en' || parts[0] === 'ko' ? parts.shift() : null;
+        // An unknown path opens the menu, as the router does.
+        var slug = parts.length === 1 && names && names[parts[0]] ? parts[0] : '';
+        var query = new URLSearchParams(location.search).get('lang');
+        var stored = null;
+        try {
+          stored = localStorage.getItem('imjin.lang');
+        } catch (e) {}
+        var lang = query === 'ko' || query === 'en' ? query : edition || (stored === 'ko' || stored === 'en' ? stored : (navigator.language || '').toLowerCase().indexOf('ko') === 0 ? 'ko' : 'en');
+        var art = '/ui/art/route_' + (slug || 'menu');
+        boot.style.setProperty('--art', 'url(' + art + '.webp)');
+        boot.style.setProperty('--art-sm', 'url(' + art + '_sm.webp)');
+        boot.dataset.route = slug || 'menu';
+        boot.dataset.lang = lang;
+        boot.dataset.since = String(performance.now());
+        var text = names && names[slug] && names[slug][lang];
+        if (text) {
+          boot.querySelector('.rload__name').textContent = text[0];
+          boot.querySelector('.rload__line').textContent = text[1];
+        }
+      })();
+    </script>
     <script>
       // iOS Safari pinch-zooms the page through gesture events even when touch-action is none.
       ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (type) {

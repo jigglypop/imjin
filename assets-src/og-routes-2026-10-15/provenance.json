@@ -1,0 +1,87 @@
+{
+  "renderer": "the game itself (src/game/Engine.ts, src/ui/grand), no image generation or painting",
+  "stills": {
+    "campaign": {
+      "created": "2026-10-14T16:55:02.279Z",
+      "size": [
+        2400,
+        1260
+      ],
+      "url": "http://127.0.0.1:5313/campaign?lang=ko&hud=1&lv=4&q=high&dpr=2",
+      "staged": null,
+      "sha256": "49f03ecf554bdfeef1c339e4c55cb3f072859ab931c3c6f238ad9bbbf40954af"
+    },
+    "conquest": {
+      "created": "2026-10-14T16:56:43.895Z",
+      "size": [
+        2400,
+        1260
+      ],
+      "url": "http://127.0.0.1:5313/?conquest=hallyeo&me=joseon&foe=japan&size=2&sky=afternoon&sea=moderate&hud=1&lv=4&q=high&dpr=2",
+      "staged": {
+        "pose": {
+          "tx": -1497.7945319579621,
+          "tz": 1284.013181192273,
+          "yaw": -0.7086991240031663,
+          "pitch": 0.24,
+          "distance": 330
+        }
+      },
+      "sha256": "5f071498f4ea09791e571ad2d66c9c8318074d11e9b472ac325e22f3dfb5baa1"
+    },
+    "battles": {
+      "created": "2026-10-14T17:14:36.841Z",
+      "size": [
+        2400,
+        1260
+      ],
+      "url": "http://127.0.0.1:5313/?scenario=myeongnyang&sky=sunset&sea=moderate&hud=0&hud=1&lv=4&q=high&dpr=2",
+      "staged": {
+        "pose": {
+          "tx": -2813.351533267751,
+          "tz": -592.2051174181174,
+          "yaw": -2.841290233371429,
+          "pitch": 0.22,
+          "distance": 500
+        }
+      },
+      "sha256": "e5b8572a171b7e655f9ee67fd0bc47cbc80d94d0695b6db54b51e2da518ceac9"
+    },
+    "online": {
+      "created": "2026-10-14T16:59:06.955Z",
+      "size": [
+        2400,
+        1260
+      ],
+      "url": "http://127.0.0.1:5313/?scenario=hansan&sky=afternoon&sea=moderate&hud=0&hud=1&lv=4&q=high&dpr=2",
+      "staged": {
+        "pose": {
+          "tx": 604.6590262243329,
+          "tz": 1030.706738654162,
+          "yaw": 1.25,
+          "pitch": 0.1,
+          "distance": 210
+        }
+      },
+      "sha256": "a29b1ef940f5cdddf9a3ed9d3e038d357041706aa8b3f66dda76a0b57d700def"
+    },
+    "settings": {
+      "created": "2026-10-14T17:02:17.095Z",
+      "size": [
+        2400,
+        1260
+      ],
+      "url": "http://127.0.0.1:5313/?scenario=hansan&sky=afternoon&sea=calm&hud=0&hud=1&lv=4&q=high&dpr=2",
+      "staged": {
+        "pose": {
+          "tx": 606.498498109296,
+          "tz": 1013.0671814965282,
+          "yaw": 2.5,
+          "pitch": 0.08,
+          "distance": 90
+        }
+      },
+      "sha256": "5030b1460096bd463d941b8decbbd738bd37d1b433aef87644c08a76ac5aff02"
+    }
+  }
+}

@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { EN_COMMON } from './src/i18n/en/common.js';
-import { routeName, routePages, routePath, type Edition, type RoutePage, type RouteScreen } from './src/routes.js';
+import { ROUTES, parseRoute, routeName, routePages, routePath, routeSlug, type Edition, type RoutePage, type RouteScreen } from './src/routes.js';
 
 const SITE = 'https://imjin1592.com';
 
@@ -45,7 +45,48 @@ function english(ko: string): string {
   return text;
 }
 
-const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+/**
+ * What each page's link-preview card shows (public/og-<slug>.jpg and -en.jpg, scripts/build-og-image.mjs), for screen
+ * readers and for previews that cannot show it.
+ */
+const CARD_ALT: Record<RouteScreen, Record<Edition, string>> = {
+  menu: {
+    ko: '임진왜란 · 노을 진 남해의 거친 파도를 헤치는 용머리 거북선',
+    en: 'The Imjin War · a dragon-headed turtle ship ploughing through rough seas at sunset',
+  },
+  faction: {
+    ko: '캠페인 · 진영과 함대가 펼쳐진 남해안의 3D 지도',
+    en: "Campaign · the 3D map of Korea's south coast with its camps and fleets",
+  },
+  skirmish: {
+    ko: '쟁탈전 · 본거지 앞바다에서 포격을 주고받는 두 함대',
+    en: 'Conquest · two fleets trading fire off a home port',
+  },
+  select: {
+    ko: '역사 전투 · 노을 진 명량 해협을 메운 일본 함대와 맞선 조선 수군',
+    en: 'Historical Battles · the Joseon fleet facing the Japanese fleet that fills the Myeongnyang strait at sunset',
+  },
+  online: {
+    ko: '온라인 대전 · 가까이 붙어 포격을 주고받는 두 함대',
+    en: 'Online Battle · two fleets trading broadsides at close range',
+  },
+  settings: {
+    ko: '설정 · 잔잔한 남해를 나아가는 판옥선',
+    en: 'Settings · a panokseon under way on a calm sea',
+  },
+};
+
+/** A page's link-preview card. A changed picture needs a new file name: KakaoTalk keeps an image by its URL for days. */
+const cardUrl = (screen: RouteScreen, edition: Edition) => `${SITE}/og-${routeSlug(screen) || 'menu'}${edition === 'en' ? '-en' : ''}.jpg`;
+
+/** The names and lines the boot screen in index.html shows for each page, by slug, in both languages. */
+const BOOT_NAMES = JSON.stringify(Object.fromEntries(ROUTES.map((r) => [r.slug, { ko: [r.name, r.line], en: [english(r.name), english(r.line)] }])));
+
+/** The page's own loading art in index.html's preload links. */
+const withArt = (html: string, screen: RouteScreen) =>
+  html.replace(/\/ui\/art\/route_[a-z]+(_sm)?\.webp/g, (_, sm: string | undefined) => `/ui/art/route_${routeSlug(screen) || 'menu'}${sm ?? ''}.webp`);
+
+const escapeHtml =(text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /** index.html (the Korean front page) rewritten for another page: its language, address and preview texts. */
 function pageHtml(base: string, { screen, edition, path }: RoutePage): string {
@@ -81,14 +122,13 @@ function pageHtml(base: string, { screen, edition, path }: RoutePage): string {
   meta('property', 'og:locale:alternate', en ? 'ko_KR' : 'en_US');
   meta('name', 'twitter:title', title);
   meta('name', 'twitter:description', preview);
-  if (en) {
-    meta('property', 'og:image', `${SITE}/og-geobukseon-en.jpg`);
-    meta('property', 'og:image:secure_url', `${SITE}/og-geobukseon-en.jpg`);
-    meta('property', 'og:image:alt', 'The Imjin War · a dragon-headed turtle ship ploughing through rough seas at sunset');
-    meta('name', 'twitter:image', `${SITE}/og-geobukseon-en.jpg`);
-    meta('name', 'apple-mobile-web-app-title', english('임진왜란'));
-  }
-  return html;
+  const card = cardUrl(screen, edition);
+  meta('property', 'og:image', card);
+  meta('property', 'og:image:secure_url', card);
+  meta('property', 'og:image:alt', CARD_ALT[screen][edition]);
+  meta('name', 'twitter:image', card);
+  if (en) meta('name', 'apple-mobile-web-app-title', english('임진왜란'));
+  return withArt(html, screen);
 }
 
 /**
@@ -96,6 +136,21 @@ function pageHtml(base: string, { screen, edition, path }: RoutePage): string {
  * language and link-preview tags, so a shared link previews in its own language and the app opens on that screen. The
  * deploy uploads each page under the keys scripts/route-pages.mjs lists.
  */
+/**
+ * index.html in the dev server and the build: the boot screen gets every page's names, and in the dev server the page
+ * asked for preloads its own loading art (the build writes each page's in pageHtml).
+ */
+function bootScreenPlugin(): Plugin {
+  return {
+    name: 'boot-screen',
+    transformIndexHtml(html, ctx) {
+      const named = html.replace('/*route-names*/ null', BOOT_NAMES);
+      if (named === html) throw new Error('boot screen: /*route-names*/ null not found in index.html');
+      return ctx.server && ctx.originalUrl ? withArt(named, parseRoute(new URL(ctx.originalUrl, SITE).pathname).screen) : named;
+    },
+  };
+}
+
 function routePagesPlugin(): Plugin {
   let outDir = 'dist';
   return {
@@ -117,7 +172,7 @@ function routePagesPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), routePagesPlugin()],
+  plugins: [react(), bootScreenPlugin(), routePagesPlugin()],
   server: { port: 5291, host: '127.0.0.1', strictPort: true },
   build: { target: ['es2022', 'safari16'], chunkSizeWarningLimit: 4000 },
 });

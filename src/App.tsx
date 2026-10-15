@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { ConquestSetup } from './game/Engine';
 import type { RegionBattle } from './sim/grand/bridge';
 import { net, useNet } from './net/NetClient';
@@ -19,6 +19,8 @@ import { RecoveryNotice } from './ui/RecoveryNotice';
 import { MainMenu, ScreenFrame, SettingsScreen } from './ui/Screens';
 import { startScenario, urlLaunch, type Launch, type LaunchBody } from './ui/launch';
 import { screenChunks, startRouter } from './router';
+import { routeName, type RouteScreen } from './routes';
+import { releaseBoot, holdRouteLoading } from './ui/routeLoading';
 
 // The battle (three.js, engine, HUD) is its own chunk: the menu paints without parsing it. So is each screen below the
 // menu (router.ts lists them).
@@ -30,18 +32,25 @@ const ConquestSetupPanel = lazy(() => screenChunks.skirmish().then((m) => ({ def
 const OnlinePanel = lazy(() => screenChunks.online().then((m) => ({ default: m.OnlinePanel })));
 
 /**
- * Code from a chunk of its own. A screen that draws its own frame shows an empty frame with its title until the code
- * arrives, so the header and the back button are there at once; a panel inside a frame shows nothing meanwhile. If the
- * chunk cannot be fetched that stays, and the back button still works. (An empty fragment rather than null: without a
- * fallback the error boundary reports a fatal battle notice.)
+ * Code from a chunk of its own. While it downloads the screen's loading screen shows (src/ui/routeLoading.ts: its art,
+ * name and line, after 150 ms so a cached chunk never flashes it) and fades into the screen when the code arrives. Under
+ * it a screen that draws its own frame (`framed`) has an empty frame with its title, so if the chunk cannot be fetched
+ * the header and the back button stay; a panel inside a frame shows nothing. (An empty fragment rather than null:
+ * without a fallback the error boundary reports a fatal battle notice.)
  */
-function Chunk({ frame, children }: { frame?: string; children: ReactNode }) {
-  const standIn = frame ? <ScreenFrame title={frame} /> : <></>;
+function Chunk({ screen, framed, children }: { screen: RouteScreen; framed?: boolean; children: ReactNode }) {
+  const standIn = framed ? <ScreenFrame title={routeName(screen)} /> : <></>;
   return (
     <ErrorBoundary fallback={standIn}>
-      <Suspense fallback={standIn}>{children}</Suspense>
+      <Suspense fallback={<RouteWait screen={screen}>{standIn}</RouteWait>}>{children}</Suspense>
     </ErrorBoundary>
   );
+}
+
+/** Holds the screen's loading screen for as long as Suspense shows this in its place. */
+function RouteWait({ screen, children }: { screen: RouteScreen; children: ReactNode }) {
+  useLayoutEffect(() => holdRouteLoading(screen), [screen]);
+  return children;
 }
 
 let seq = 1;
@@ -83,6 +92,9 @@ export function App() {
   const [launch, setLaunch] = useState<Launch | null>(firstLaunch);
   const lastScenario = useRef<ScenarioId>(startScenario);
   const [notice, setNotice] = useState(recovery.step > 0);
+
+  // The page's boot screen gives way once a screen is drawn; a screen still waiting for its code holds it (Chunk).
+  useEffect(() => releaseBoot(), [screen]);
 
   // Fetch the battle chunk in the background once a screen that can start a battle opens.
   // The menu itself stays light, and phones wait until a mode is chosen.
@@ -175,25 +187,25 @@ export function App() {
       )}
       {screen === 'menu' && <MainMenu />}
       {screen === 'select' && (
-        <Chunk frame="역사 전투">
+        <Chunk screen="select" framed>
           <HistoryScreen initial={lastScenario.current} onStart={startHistory} />
         </Chunk>
       )}
       {screen === 'faction' && (
-        <Chunk frame="캠페인">
+        <Chunk screen="faction" framed>
           <GrandScreen onBattle={startGrandBattle} />
         </Chunk>
       )}
       {screen === 'skirmish' && (
         <ScreenFrame title="쟁탈전">
-          <Chunk>
+          <Chunk screen="skirmish">
             <ConquestSetupPanel onStart={startConquest} />
           </Chunk>
         </ScreenFrame>
       )}
       {screen === 'online' && (
         <ScreenFrame title="온라인 대전">
-          <Chunk>
+          <Chunk screen="online">
             <OnlinePanel />
           </Chunk>
         </ScreenFrame>
