@@ -1,8 +1,9 @@
 // UI art generator (gpt-image-2). Re-runnable: raw PNGs are cached in assets-src/ui-art/ (gitignored)
-// and never regenerated unless --force. Output: public/ui/art/*.webp + manifest.json.
+// and never regenerated unless --force. Output: public/ui/art/*.webp + manifest.json. The battles' loading pictures
+// are scenes from the game itself, made by scripts/build-battle-art.mjs.
 //
 //   node scripts/ui-art.mjs                    generate everything missing, then convert
-//   node scripts/ui-art.mjs --only hansan      one id (hero_wide, mode_history, emblem_ming, hansan, ...)
+//   node scripts/ui-art.mjs --only emblem_ming one id (menu_hero_wide, mode_history, emblem_ming, ...)
 //   node scripts/ui-art.mjs --only mode        every id that starts with the text
 //   node scripts/ui-art.mjs --force            regenerate even if cached
 //   node scripts/ui-art.mjs --convert          skip the API, only (re)convert cached raws
@@ -61,8 +62,6 @@ const HIGHKEY =
   ' High-key grade: the whole frame is bright, pearly white and pale grey-blue like a sumi-e wash on white paper, luminance mostly above 80 percent, no dark areas, no black, ships as soft muted grey-brown silhouettes dissolving into white fog, restrained and desaturated.';
 const AIRY =
   ' Overall tonality is airy and relatively bright with luminous pale mist, lifted shadows and pearly sky so that white translucent panels laid over it stay legible.';
-const DARK =
-  ' Overall tonality is moody and low-key with deep blue-black water, but with a readable mid-tone and a few glowing highlights, never pure black.';
 
 // ---------- items ----------
 const items = [];
@@ -123,58 +122,6 @@ add({
     'Emblem of the Ming dynasty navy: an imperial yellow and vermilion circular badge with a bold stylized coiled Chinese dragon medallion in the center, cloud scrolls, ' +
     'imperial gold, vermilion and deep teal accents.' + EMBLEM_STYLE,
 });
-
-// Scenario loading backgrounds. Scene text follows src/sim/scenarios.ts (place, date, season, description).
-const SCENES = {
-  okpo: {
-    tone: AIRY,
-    p: 'Okpo Bay, Geoje island, 7 May 1592, late spring afternoon, rough sea. The first sortie of the Joseon navy. A bay with a small fishing village burning with smoke columns on the shore, about fifty Japanese ships anchored in the cove ' +
-      'looting the village, while a disciplined line of Joseon panokseon enters the bay under calm command, cannon flashes and smoke, choppy blue-green water.',
-  },
-  sacheon: {
-    tone: AIRY,
-    p: 'Sacheon harbor quay, 29 May 1592, early summer, bright day, the tide rising. A Japanese stronghold on a hill above a small wharf with moored ships and matchlock gunmen on the slope. ' +
-      'For the first time in history a Joseon turtle ship surges toward the quay, dragon head belching smoke, spiked armored roof, panokseon following behind, rising tide.',
-  },
-  dangpo: {
-    tone: AIRY,
-    p: 'Dangpo anchorage near Tongyeong, 2 June 1592, summer afternoon. About twenty Japanese ships moored at a pier; a tall multi-storey Japanese flagship with a red parasol on the upper deck. ' +
-      'A Joseon turtle ship rams the flagship while panokseon fire cannons, arrows fly, wooden splinters and smoke.',
-  },
-  hansan: {
-    tone: AIRY,
-    p: 'Hansan Island open sea off the Gyeonnaeryang strait, 8 July 1592, summer afternoon. The crane-wing formation (hak-ik-jin): a huge Joseon fleet of panokseon arranged in a crescent curving like the outspread wings of a crane, ' +
-      'enclosing a crowd of Japanese atakebune in open water, cannon smoke, burning Japanese ships, green islets beyond.',
-  },
-  angolpo: {
-    tone: AIRY,
-    p: 'Angolpo, Jinhae, 10 July 1592, overcast summer sky. A narrow shallow inlet where Japanese ships are packed deep inside the cove beneath shore batteries; Joseon panokseon take turns firing cannons at the cove mouth then withdrawing. ' +
-      'Grey overcast sky, sheets of smoke, steep wooded hills.',
-  },
-  busan: {
-    tone: AIRY,
-    p: 'Busanpo harbor, 1 September 1592, autumn day. A vast Japanese fleet moored in dense rows in the harbor of the enemy home base, hundreds of masts and banners along the shore under tiled-roof fortifications and wooden palisades. ' +
-      'Joseon panokseon column storms into the harbor in a long line, burning Japanese ships billow smoke, golden autumn light.',
-  },
-  chilcheon: {
-    tone: DARK,
-    p: 'Chilcheonryang strait, Geoje, 16 July 1597, the hour before dawn, a night defeat. Dark water, a Joseon fleet at anchor with lanterns snuffed, hundreds of Japanese ships closing in from all sides in the darkness with torches, ' +
-      'fire arrows arcing, several Joseon panokseon already burning and sinking, orange fire reflections on black water. Tragic, desperate mood.',
-  },
-  myeongnyang: {
-    tone: AIRY,
-    p: 'Myeongnyang strait (Uldolmok), 16 September 1597, autumn, overcast. A very narrow strait between steep hills with violent whirlpool currents and white water racing through. A single Joseon flagship panokseon stands alone in the foreground ' +
-      'facing a swarm of one hundred thirty Japanese ships crowding the narrows, some spun round by the whirlpools, grey light, determined heroic atmosphere.',
-  },
-  noryang: {
-    tone: DARK,
-    p: 'Noryang strait near Gwaneumpo, 19 November 1598, the last night of the war, before dawn, winter. A large night battle lit by fires: burning ships, torches, fire arrows and cannon flashes illuminating Joseon, Ming and Japanese warships ' +
-      'in a narrow strait between dark hills, orange flames reflected on black water, embers in the smoky air, epic and solemn.',
-  },
-};
-for (const [id, s] of Object.entries(SCENES)) {
-  add({ id, kind: 'loading', variants: [''], gen: [1632, 912], out: [1600, 900], small: [800, 450], q: 72, prompt: FILM + s.p + s.tone + ' Leave the center-bottom area a little calmer for a loading bar.' + CLEAN });
-}
 
 // ---------- helpers ----------
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -256,8 +203,8 @@ async function convert(it, manifest) {
   const src = rawPath(it, v);
   if (!existsSync(src)) {
     // Raws are not kept in git. A missing small copy can still be cut from the shipped full-size file.
-    const main = join(OUT, `${it.kind === 'loading' ? 'loading_' : ''}${it.id}.webp`);
-    const smallName = `${it.kind === 'loading' ? 'loading_' : ''}${it.id}_sm.webp`;
+    const main = join(OUT, `${it.id}.webp`);
+    const smallName = `${it.id}_sm.webp`;
     if (it.small && existsSync(main) && !existsSync(join(OUT, smallName))) {
       const sm = await sharp(main).resize(it.small[0], it.small[1], { fit: 'cover', kernel: 'lanczos3' }).webp(it.kind === 'emblem' ? { quality: 88, alphaQuality: 100 } : { quality: it.q - 2, effort: 5 }).toBuffer();
       await writeFile(join(OUT, smallName), sm);
@@ -268,7 +215,6 @@ async function convert(it, manifest) {
   }
   const buf = await readFile(src);
   const files = {};
-  const prefix = it.kind === 'loading' ? 'loading_' : '';
   if (it.kind === 'emblem') {
     const png = await matteEmblem(buf, it.out[0]);
     await writeFile(join(OUT, `${it.id}.webp`), await sharp(png).webp({ quality: 88, alphaQuality: 100 }).toBuffer());
@@ -281,12 +227,12 @@ async function convert(it, manifest) {
     }
   } else {
     const main = await sharp(buf).resize(it.out[0], it.out[1], { fit: 'cover', kernel: 'lanczos3' }).webp({ quality: it.q, effort: 5 }).toBuffer();
-    await writeFile(join(OUT, `${prefix}${it.id}.webp`), main);
-    files.file = `${prefix}${it.id}.webp`; files.size = it.out; files.bytes = main.length;
+    await writeFile(join(OUT, `${it.id}.webp`), main);
+    files.file = `${it.id}.webp`; files.size = it.out; files.bytes = main.length;
     if (it.small) {
       const sm = await sharp(buf).resize(it.small[0], it.small[1], { fit: 'cover', kernel: 'lanczos3' }).webp({ quality: it.q - 2, effort: 5 }).toBuffer();
-      await writeFile(join(OUT, `${prefix}${it.id}_sm.webp`), sm);
-      files.small = `${prefix}${it.id}_sm.webp`; files.smallSize = it.small; files.smallBytes = sm.length;
+      await writeFile(join(OUT, `${it.id}_sm.webp`), sm);
+      files.small = `${it.id}_sm.webp`; files.smallSize = it.small; files.smallBytes = sm.length;
     }
   }
   manifest[it.id] = { kind: it.kind, ...files, prompt: it.prompt, model: MODELS[0], generated: sizeStr(it), ...(it.variants.length > 1 ? { pick: v } : {}) };

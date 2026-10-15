@@ -6,8 +6,10 @@
 import { webkit, chromium, devices } from 'playwright-core';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+// fileURLToPath, not URL.pathname: on Windows the pathname is /C:/..., which join turned into C:\C:\... for the shots.
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, ...v] = a.replace(/^--/, '').split('='); return [k, v.join('=') || 'true']; }));
 const url = args.url ?? 'http://127.0.0.1:5291/?scenario=hansan';
 const deviceName = args.device ?? 'iPhone 15 Pro';
