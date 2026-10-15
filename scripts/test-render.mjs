@@ -83,7 +83,7 @@ try {
     'fx/Crew.ts': 'export const crewAssets = () => Promise.resolve(new Map()); export class Crew { group = {}; dispose() {} }',
     'terrain/Structures.ts': 'export const preloadStructures = () => Promise.resolve(); export class Structures {}',
     'conquest/ConquestView.ts': 'export const preloadWorks = () => Promise.resolve(); export class ConquestView {}',
-    'ships/ShipRenderer.ts': 'export const CUT_CAP = 1, LOD_COUNT = 3; export const modelKey = (kind) => kind; export class ShipRenderer {} export const loadShipAssets = () => Promise.resolve({}); export const releaseShipAssets = () => Promise.resolve();',
+    'ships/ShipRenderer.ts': 'export const CUT_CAP = 1, LOD_COUNT = 3; export const modelKey = (kind) => kind; export const packFlash = (flash) => flash; export class ShipRenderer {} export const loadShipAssets = () => Promise.resolve({}); export const releaseShipAssets = () => Promise.resolve();',
   });
   const base = () => Object.assign(Object.create(Engine.prototype), {
     disposed: false, ready: true, loading: null, skyLoading: null, sky: null, eq: { skySize: 'small' },
@@ -293,7 +293,7 @@ try {
     const scout = battle.addShip('hyeopseon', 600, 0, 0, 'Scout', null);
     battle.addShip('panokseon', 5000, 0, 0, 'Reserve', null);
     const layer = { emit() {} };
-    const mun = new Munitions({ team: 'joseon', states: new Map() }, layer, layer, layer, 1);
+    const mun = new Munitions(layer, layer, layer, 1);
     let rockets = 0, landings = 0, trails = 0;
     mun.rocket = () => { rockets++; }; mun.launch = () => {};
     mun.onLand = () => { landings++; };

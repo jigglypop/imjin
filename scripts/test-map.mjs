@@ -30,8 +30,10 @@ globalThis.__loadDem = async (signal, options) => {
 globalThis.fetch = async (url, { signal } = {}) => {
   signal?.throwIfAborted();
   const bytes = await readFile(join(root, 'public', String(url)));
-  return { ok: true, status: 200, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
+  return { ok: true, status: 200, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), blob: async () => new Blob([bytes]) };
 };
+// The ground's detail textures are decoded as the page would; here only their size matters.
+globalThis.createImageBitmap = async (_blob, options) => ({ width: options?.resizeWidth ?? 1, height: options?.resizeHeight ?? 1, close() {} });
 // Every TSL name, each a node that accepts any use: the ground's materials are built but never compiled here. The names
 // come from esbuild's view of the module, so three.js is not loaded a second time beside the bundle's own copy.
 const tslExports = await build({ stdin: { contents: `export * from 'three/tsl';`, resolveDir: root }, bundle: true, write: false, metafile: true, format: 'esm', platform: 'node', outdir: temporary, logLevel: 'silent' });
@@ -103,7 +105,8 @@ try {
   await check('the drawn land stands where the markers do and projects where they are drawn', () => {
     const cam = { u: 0.55, v: 0.45, distance: 0.45, yaw: 0.3, pitch: 0.78 }, screen = screenFrame(1600, 900, { top: 0, right: 0, bottom: 0, left: 0 });
     const camera = placed(cam, screen);
-    const land = meshes(shown.scene).find((o) => o.geometry?.attributes.color && o.geometry.attributes.position.count / 3 > 50000);
+    // The land is one indexed mesh of about 111k facets; nothing else on the map comes near that.
+    const land = meshes(shown.scene).find((o) => o.geometry?.index && o.geometry.index.count / 3 > 50000);
     assert.ok(land, 'the land has its facets');
     const position = land.geometry.attributes.position;
     let checked = 0;

@@ -6,11 +6,13 @@ import {
   ConeGeometry,
   CylinderGeometry,
   DynamicDrawUsage,
+  ExtrudeGeometry,
   Group,
   InstancedMesh,
   Matrix4,
   MeshStandardNodeMaterial,
   Quaternion,
+  Shape,
   SphereGeometry,
   Vector3,
 } from 'three/webgpu';
@@ -19,8 +21,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Battle } from '../sim/battle';
 import type { GunType, Projectile, Team } from '../sim/types';
 import { shipObserved } from '../sim/observation';
-import type { ShipViews } from '../ships/ShipViews';
 import { waveField } from '../ocean/waves';
+import { equipment } from '../game/quality';
 import type { ParticleLayer, StreakLayer } from './ParticleLayer';
 
 /**
@@ -48,7 +50,11 @@ export type Trail = { x: number; y: number; z: number };
 const MAX_NEAR = 400;
 const MAX_FAR = 900;
 const MAX_HEAVY = 300;
-const MAX_STUCK = 72;
+/**
+ * Arrows and balls left standing in the ships (src/fx/Scars.ts), in all and per ship, by device class: they stay until
+ * the ship sinks, so the oldest on a ship gives way when it is full.
+ */
+export const EMBEDDED = { high: { all: 200, ship: 14 }, medium: { all: 120, ship: 10 }, low: { all: 48, ship: 6 } }[equipment.tier];
 const BALL_NEAR_PX = 4.5;
 /** Below this radius in pixels an iron ball is not drawn at all: its tracer carries it. */
 const BALL_MIN_PX = 0.35;
@@ -62,7 +68,7 @@ const TRACER_WIDTH_PX = 2.2;
  * jija 10.5, hyeonja 7.5, hwangja and seungja 4), a 100-monme lead ball for the Japanese o-zutsu, a folangji ball, and
  * the large stone or lead ball a hudun puts over its small shot (bore about two Ming inches).
  */
-const CALIBRE: Record<GunType, number> = { cheonja: 0.125, jija: 0.1, hyeonja: 0.07, hwangja: 0.035, seungja: 0.035, ozutsu: 0.04, folangji: 0.044, hudun: 0.06 };
+export const CALIBRE: Record<GunType, number> ={ cheonja: 0.125, jija: 0.1, hyeonja: 0.07, hwangja: 0.035, seungja: 0.035, ozutsu: 0.04, folangji: 0.044, hudun: 0.06 };
 /** Grape: the "bird's egg" iron shot of the cheonja and jija, the small iron shot of the lighter guns, the hudun's lead. */
 const pellet = (gun: GunType) => (gun === 'cheonja' || gun === 'jija' ? 0.022 : gun === 'hudun' ? 0.0145 : 0.016);
 
@@ -96,9 +102,10 @@ function assemble(parts: Part[]): BufferGeometry {
   return mergeGeometries(geos)!;
 }
 
-/** A cylinder lying along x from x0 to x1. */
+/** A cylinder lying along x from x0 (radius r0) to x1 (radius r1). */
 const rod = (r0: number, r1: number, x0: number, x1: number, seg = 8) => {
-  const g = new CylinderGeometry(r1, r0, x1 - x0, seg);
+  // Turned a quarter about z, the cylinder's top (+y) points to -x: its top radius is the one at x0.
+  const g = new CylinderGeometry(r0, r1, x1 - x0, seg);
   g.rotateZ(Math.PI / 2);
   g.translate((x0 + x1) / 2, 0, 0);
   return g;
@@ -128,46 +135,72 @@ const FEATHER: [number, number, number] = [0.34, 0.3, 0.23];
 const PAPER: [number, number, number] = [0.33, 0.26, 0.16];
 const CORD: [number, number, number] = [0.16, 0.1, 0.06];
 
-/** Three iron vanes 120 degrees apart, each a thin plate standing out from the shaft between radius r0 and r1. */
-const vanes = (x0: number, x1: number, r0: number, r1: number): BufferGeometry[] => {
-  const out: BufferGeometry[] = [];
+/**
+ * Three iron vanes 120 degrees apart, each a forged plate `thick` thick set into the shaft at radius r0 and standing
+ * out to r1, its leading edge swept back by `sweep` at the tip. `edge` is the bright strip of its leading edge.
+ */
+const vanes = (x0: number, x1: number, r0: number, r1: number, sweep: number, thick: number, body: [number, number, number], edge: [number, number, number]): Part[] => {
+  const out: Part[] = [];
+  const plate = (a: number, b: number, c: number, d: number) => {
+    // The plate's outline in (along the shaft, out from it): root from a to b, tip from c to d.
+    const s = new Shape();
+    s.moveTo(a, r0);
+    s.lineTo(b, r0);
+    s.lineTo(d, r1);
+    s.lineTo(c, r1);
+    s.closePath();
+    const g = new ExtrudeGeometry(s, { depth: thick, bevelEnabled: false });
+    g.translate(0, 0, -thick / 2);
+    return g;
+  };
   for (let i = 0; i < 3; i += 1) {
-    const f = new BoxGeometry(x1 - x0, r1 - r0, 0.004);
-    f.translate((x0 + x1) / 2, (r0 + r1) / 2, 0);
-    f.rotateX((i * 2 * Math.PI) / 3);
-    out.push(f);
+    const turn = (i * 2 * Math.PI) / 3;
+    const f = plate(x0, x1, x0, x1 - sweep);
+    f.rotateX(turn);
+    out.push({ geo: f, color: body });
+    // The leading edge, filed bright, a little proud of the plate on both faces so it reads on the dark iron.
+    const e = new BoxGeometry(0.012, Math.hypot(r1 - r0, sweep), thick * 1.6);
+    e.rotateZ(Math.atan2(sweep, r1 - r0));
+    e.translate(x1 - sweep / 2 - 0.006, (r0 + r1) / 2, 0);
+    e.rotateX(turn);
+    out.push({ geo: e, color: edge });
   }
   return out;
 };
 
 /** Thorn wood, pale reddish brown, of the shaft of a gun arrow. */
 const THORN: [number, number, number] = [0.26, 0.14, 0.08];
-/** Blackened forged iron of its sleeve, bands, head and vanes, darker than the wood by enough to read in the sun. */
+/** Blackened forged iron of its sleeve, bands and head, darker than the wood by enough to read in the sun. */
 const FORGED: [number, number, number] = [0.03, 0.03, 0.033];
+/** The vanes: forged plate worn grey by loading through the bore, and their filed leading edges. */
+const VANE: [number, number, number] = [0.12, 0.115, 0.11];
+const VANE_EDGE: [number, number, number] = [0.3, 0.29, 0.27];
 
 /**
  * A gun arrow at the measures of the jija's janggun-jeon in the Yungwon pilbi (1813), which match the arrow kept by the
  * Kuki family: 1.92 m, 9.4 cm thick, a forged iron sleeve over its front 0.51 m, a socketed four-sided iron head of
- * 10.4 cm, three iron vanes of 35 cm held by four iron bands at the tail. The vanes may stand no wider than the bore,
- * since the arrow is loaded down the muzzle. The origin is the middle of the shaft; the other guns' arrows are this
- * one stretched (ARROW_FORM).
+ * 10.4 cm, three iron vanes of 35 cm held by four iron bands at the tail. The vanes may stand no wider than the bore
+ * (10.5 cm for the jija), since the arrow is loaded down the muzzle: the shaft tapers to about 5.6 cm under them, so
+ * they stand out 2.5 cm, 5 mm plates with a swept, filed leading edge. The origin is the middle of the shaft; the other
+ * guns' arrows are this one stretched (ARROW_FORM).
  */
-function heavyGeometry() {
+export function heavyGeometry() {
   const parts: Part[] = [
-    { geo: rod(0.033, 0.045, -0.96, 0.32, 10), color: THORN },
+    { geo: rod(0.028, 0.034, -0.96, -0.55, 10), color: THORN },
+    { geo: rod(0.034, 0.045, -0.55, 0.32, 10), color: THORN },
     { geo: rod(0.047, 0.047, 0.3, 0.83, 10), color: FORGED },
     ...[0.34, 0.56, 0.79].map((x) => ({ geo: rod(0.051, 0.051, x, x + 0.025, 10), color: FORGED })),
     { geo: rod(0.03, 0.03, 0.82, 0.86, 8), color: FORGED },
     { geo: spike(0.045, 0.856, 0.96, 4), color: FORGED },
-    ...vanes(-0.95, -0.6, 0.03, 0.052).map((geo) => ({ geo, color: FORGED })),
-    ...[-0.94, -0.83, -0.72, -0.62].map((x) => ({ geo: rod(0.037, 0.037, x, x + 0.018, 8), color: FORGED })),
+    ...vanes(-0.95, -0.6, 0.027, 0.0525, 0.07, 0.005, VANE, VANE_EDGE),
+    ...[-0.94, -0.83, -0.72, -0.62].map((x) => ({ geo: rod(0.032, 0.032, x, x + 0.018, 8), color: FORGED })),
   ];
   return assemble(parts);
 }
 
 /** The model's length and the janggun-jeon's thickness it is built at, in metres. */
-const ARROW_LEN = 1.92;
-const ARROW_GIRTH = 0.094;
+export const ARROW_LEN = 1.92;
+export const ARROW_GIRTH = 0.094;
 
 /**
  * Each gun's arrow (weapons table): length and thickness in metres. Cheonja: the daejanggun-jeon, 2.1 m by 10.5 cm (its
@@ -175,10 +208,10 @@ const ARROW_GIRTH = 0.094;
  * leather-vaned piryeong chajung-jeon, 1.31 m by 3.5 cm; the small guns' wooden arrows about 1.2 m.
  */
 const ARROW_FORM: Partial<Record<GunType, [number, number]>> = { cheonja: [2.1, 0.105], jija: [1.92, 0.094], hyeonja: [1.32, 0.046], hwangja: [1.31, 0.035] };
-const arrowForm = (gun: GunType): [number, number] => ARROW_FORM[gun] ?? [1.2, 0.035];
+export const arrowForm = (gun: GunType): [number, number] => ARROW_FORM[gun] ?? [1.2, 0.035];
 
 /** A Japanese fire arrow: a thin shaft, a small head and a charred bundle of tow bound behind it. About 1 unit long. */
-function hiyaGeometry() {
+export function hiyaGeometry() {
   const parts: Part[] = [
     { geo: rod(0.011, 0.011, -0.5, 0.42, 6), color: WOOD },
     { geo: spike(0.022, 0.4, 0.52, 6), color: IRON },
@@ -188,24 +221,31 @@ function hiyaGeometry() {
   return assemble(parts);
 }
 
-/** A rocket arrow: a paper tube of black powder tied to the front of the shaft, an iron head, feathers behind. About 1.2 units long. */
-function rocketGeometry() {
+/**
+ * A rocket arrow at the proportions of the middle singijeon (중신기전) of the Gukjo orye seorye: a bamboo shaft 1.38 m
+ * long, a paper motor 19.6 cm long and 2.7 cm thick bound to its front, a small paper charge (so-balhwa) ahead of the
+ * motor, a small iron head, feathers behind. The Ming fire arrow is the same build, a little longer. 1.22 units long:
+ * drawn at 1.13 it is the singijeon's true size.
+ */
+export function rocketGeometry() {
   const parts: Part[] = [
-    { geo: rod(0.012, 0.012, -0.5, 0.56, 6), color: WOOD },
-    { geo: rod(0.05, 0.05, 0.05, 0.4, 10), color: PAPER },
-    { geo: rod(0.054, 0.054, 0.09, 0.115, 10), color: CORD },
-    { geo: rod(0.054, 0.054, 0.3, 0.325, 10), color: CORD },
-    { geo: spike(0.052, 0.4, 0.5, 10), color: PAPER },
-    { geo: spike(0.026, 0.54, 0.72, 6), color: IRON },
-    ...fins(-0.44, 0.2, 0.09, 2).map((geo) => ({ geo, color: FEATHER })),
+    { geo: rod(0.0058, 0.0058, -0.5, 0.6, 6), color: WOOD },
+    { geo: rod(0.012, 0.012, 0.2, 0.373, 10), color: PAPER },
+    { geo: rod(0.0135, 0.0135, 0.212, 0.224, 10), color: CORD },
+    { geo: rod(0.0135, 0.0135, 0.35, 0.362, 10), color: CORD },
+    { geo: rod(0.014, 0.014, 0.373, 0.425, 10), color: PAPER },
+    { geo: spike(0.014, 0.425, 0.455, 10), color: PAPER },
+    { geo: spike(0.008, 0.6, 0.72, 4), color: IRON },
+    ...fins(-0.46, 0.16, 0.035, 2).map((geo) => ({ geo, color: FEATHER })),
   ];
   return assemble(parts);
 }
 
-/** Where a rocket's flame leaves it, in model units from its origin. */
-const NOZZLE = 0.05;
+/** Where a rocket's flame leaves it, in model units from its origin: the rear of the motor. */
+const NOZZLE = 0.2;
 
-type SalvoHook = (x: number, y: number, z: number, hull: boolean) => void;
+/** A salvo rocket comes down at (x, y, z) travelling along (ux, uy, uz): on the deck of `ship`, or in the sea for 0. */
+type SalvoHook = (x: number, y: number, z: number, ship: number, ux: number, uy: number, uz: number) => void;
 
 export class Munitions {
   readonly group = new Group();
@@ -240,30 +280,15 @@ export class Munitions {
   private readonly peak: Float32Array;
   private readonly seed: Float32Array;
   private readonly size: Float32Array;
-  private readonly hull: Uint8Array;
+  /** The ship a rocket comes down on, 0 for the sea. */
+  private readonly hull: Int32Array;
   private readonly trails: Trail[];
-  /** Arrows sticking in hulls: the ship, the hit in that ship's frame, the direction, and how long they stay. */
-  private nStuck = 0;
-  private readonly kShip = new Int32Array(MAX_STUCK);
-  private readonly kLx = new Float32Array(MAX_STUCK);
-  private readonly kLy = new Float32Array(MAX_STUCK);
-  private readonly kLz = new Float32Array(MAX_STUCK);
-  private readonly kYaw = new Float32Array(MAX_STUCK);
-  private readonly kHeading = new Float32Array(MAX_STUCK);
-  private readonly kPitch = new Float32Array(MAX_STUCK);
-  private readonly kScale = new Float32Array(MAX_STUCK);
-  /** A gun arrow's thickness scale against its length scale (kScale); 1 for a fire arrow. */
-  private readonly kGirth = new Float32Array(MAX_STUCK);
-  private readonly kAge = new Float32Array(MAX_STUCK);
-  private readonly kLife = new Float32Array(MAX_STUCK);
-  private readonly kKind = new Uint8Array(MAX_STUCK);
   private k = 1;
   /** Rockets per sim fire shot, by equipment class. */
   private readonly perShot: number;
   onLand: SalvoHook | null = null;
 
   constructor(
-    private readonly views: ShipViews,
     private readonly smoke: ParticleLayer,
     private readonly fire: ParticleLayer,
     private readonly streaks: StreakLayer,
@@ -277,12 +302,14 @@ export class Munitions {
       return m;
     };
     const ironMat = iron();
-    this.near = new InstancedMesh(new SphereGeometry(1, 22, 15), ironMat, MAX_NEAR);
+    // Each mesh has room for what is in flight and for what is left standing in the ships.
+    const stay = EMBEDDED.all;
+    this.near = new InstancedMesh(new SphereGeometry(1, 22, 15), ironMat, MAX_NEAR + stay);
     this.far = new InstancedMesh(new SphereGeometry(1, 8, 6), ironMat, MAX_FAR);
     const wood = () => new MeshStandardNodeMaterial({ vertexColors: true, roughness: 0.72, metalness: 0.05, emissive: new Color(0.025, 0.016, 0.008) });
-    this.heavy = new InstancedMesh(heavyGeometry(), wood(), MAX_HEAVY + MAX_STUCK);
-    this.hiya = new InstancedMesh(hiyaGeometry(), wood(), MAX_HEAVY + MAX_STUCK);
-    this.rockets = new InstancedMesh(rocketGeometry(), wood(), Math.round(240 * tier) + 60);
+    this.heavy = new InstancedMesh(heavyGeometry(), wood(), MAX_HEAVY + stay);
+    this.hiya = new InstancedMesh(hiyaGeometry(), wood(), MAX_HEAVY + stay);
+    this.rockets = new InstancedMesh(rocketGeometry(), wood(), Math.round(240 * tier) + 60 + stay);
     for (const mesh of [this.near, this.far, this.heavy, this.hiya, this.rockets]) {
       mesh.instanceMatrix.setUsage(DynamicDrawUsage);
       mesh.count = 0;
@@ -303,7 +330,7 @@ export class Munitions {
     this.peak = f();
     this.seed = f();
     this.size = f();
-    this.hull = new Uint8Array(this.cap);
+    this.hull = new Int32Array(this.cap);
     this.trails = Array.from({ length: this.cap }, () => ({ x: 0, y: 0, z: 0 }));
     this.perShot = tier >= 1 ? 5 : tier >= 0.7 ? 3 : 2;
   }
@@ -312,20 +339,14 @@ export class Munitions {
     this.k = k;
   }
 
-  /** A new battle: shell ids restart, and the arrows of the last one are gone with its ships. */
+  /** A new battle: shell ids restart. */
   clear() {
     this.count = 0;
-    this.nStuck = 0;
   }
 
   /** Cosmetic rockets in the air or waiting their turn (the probes read it). */
   get rocketsInFlight() {
     return this.count;
-  }
-
-  /** Arrows sticking in hulls now (the probes read it). */
-  get stuckArrows() {
-    return this.nStuck;
   }
 
   // ---- Per frame -------------------------------------------------------------------------------------------------
@@ -340,7 +361,41 @@ export class Munitions {
     this.heavy.count = this.nHeavy;
     this.hiya.count = this.nHiya;
     this.rockets.count = this.nRocket;
-    for (const mesh of [this.near, this.far, this.heavy, this.hiya, this.rockets]) mesh.instanceMatrix.needsUpdate = true;
+    // An empty mesh is not drawn at all, and a full one sends only the instances in use.
+    for (const mesh of [this.near, this.far, this.heavy, this.hiya, this.rockets]) {
+      mesh.visible = mesh.count > 0;
+      if (!mesh.visible) continue;
+      mesh.instanceMatrix.clearUpdateRanges();
+      mesh.instanceMatrix.addUpdateRange(0, mesh.count * 16);
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+  }
+
+  // ---- Left in the ships (Scars hands them over each frame) -------------------------------------------------------
+
+  private aim(x: number, y: number, z: number, ux: number, uy: number, uz: number, sx: number, sy: number) {
+    this.q.setFromUnitVectors(this.xAxis, this.v.set(ux, uy, uz));
+    return this.m.compose(this.p.set(x, y, z), this.q, this.s.set(sx, sy, sy));
+  }
+
+  /** A gun arrow standing in a hull: its origin, the line it points along, the length and girth scales of the model. */
+  putHeavy(x: number, y: number, z: number, ux: number, uy: number, uz: number, sl: number, sg: number) {
+    if (this.nHeavy < this.heavy.instanceMatrix.count) this.heavy.setMatrixAt(this.nHeavy++, this.aim(x, y, z, ux, uy, uz, sl, sg));
+  }
+
+  putHiya(x: number, y: number, z: number, ux: number, uy: number, uz: number, sc: number) {
+    if (this.nHiya < this.hiya.instanceMatrix.count) this.hiya.setMatrixAt(this.nHiya++, this.aim(x, y, z, ux, uy, uz, sc, sc));
+  }
+
+  putRocket(x: number, y: number, z: number, ux: number, uy: number, uz: number, sc: number) {
+    if (this.nRocket < this.rockets.instanceMatrix.count) this.rockets.setMatrixAt(this.nRocket++, this.aim(x, y, z, ux, uy, uz, sc, sc));
+  }
+
+  /** An iron ball lodged in the planks, at its true size. */
+  putLodged(x: number, y: number, z: number, r: number) {
+    if (this.nNear >= this.near.instanceMatrix.count) return;
+    this.m.makeScale(r, r, r).setPosition(x, y, z);
+    this.near.setMatrixAt(this.nNear++, this.m);
   }
 
   // ---- Round shot -------------------------------------------------------------------------------------------------
@@ -429,7 +484,8 @@ export class Munitions {
   /** A Japanese fire arrow: a thin arrow with a burning bundle at its head. */
   fireArrow(x: number, y: number, z: number, ux: number, uy: number, uz: number, ppm: number) {
     if (this.nHiya >= MAX_HEAVY) return;
-    const sc = Math.max(1.2, Math.min(2, 4 / ppm));
+    // True size (about 0.9 m) up close, up to 1.6 times that from afar.
+    const sc = Math.max(0.9, Math.min(1.44, 4 / ppm));
     this.q.setFromUnitVectors(this.xAxis, this.v.set(ux, uy, uz));
     this.m.compose(this.p.set(x, y, z), this.q, this.s.set(sc, sc, sc));
     this.hiya.setMatrixAt(this.nHiya++, this.m);
@@ -545,7 +601,7 @@ export class Munitions {
         const along = dx * c + dz * sn;
         const across = -dx * sn + dz * c;
         if (Math.abs(along) < s.spec.length * 0.45 && Math.abs(across) < s.spec.beam * 0.42) {
-          hull = 1;
+          hull = s.id;
           ly = s.spec.deck + 0.6;
           break;
         }
@@ -603,7 +659,14 @@ export class Munitions {
       const dur = this.dur[i]!;
       const s = t / dur;
       if (s >= 1) {
-        if (!visible || visible(this.ex[i]!, this.ez[i]!)) this.onLand?.(this.ex[i]!, this.ey[i]!, this.ez[i]!, this.hull[i] === 1);
+        if (!visible || visible(this.ex[i]!, this.ez[i]!)) {
+          // Coming down along the end of its arc.
+          const vx = (this.ex[i]! - this.sx[i]!) / dur;
+          const vz = (this.ez[i]! - this.sz[i]!) / dur;
+          const vy = (this.ey[i]! - this.sy[i]!) / dur - (4 * this.peak[i]!) / dur;
+          const sp = Math.hypot(vx, vy, vz) || 1;
+          this.onLand?.(this.ex[i]!, this.ey[i]!, this.ez[i]!, this.hull[i]!, vx / sp, vy / sp, vz / sp);
+        }
         this.drop(i);
         continue;
       }
@@ -636,97 +699,8 @@ export class Munitions {
       }
       if (first && (!visible || visible(sx, sz))) this.launch(sx, sy, sz, ux, uy, uz, 1);
       if (d < 3200) {
-        this.rocket(px, py, pz, ux, uy, uz, 1.6 * this.size[i]!, ppm, dt);
+        this.rocket(px, py, pz, ux, uy, uz, 1.13 * this.size[i]!, ppm, dt);
         lay(this.trails[i]!, px, py, pz, ppm);
-      }
-    }
-  }
-
-  // ---- Arrows stuck in a hull -------------------------------------------------------------------------------------
-
-  /** An arrow that struck a ship stays in the planks for a while, riding with the hull. */
-  stick(shipId: number, x: number, y: number, z: number, ux: number, uy: number, uz: number, gun: GunType, kind: 0 | 1, battle: Battle) {
-    const ship = battle.get(shipId);
-    const at = this.views.worldOf(shipId);
-    if (!ship || !at) return;
-    let i = this.nStuck;
-    if (i >= MAX_STUCK) {
-      // The oldest goes first: shift nothing, just overwrite the one closest to leaving.
-      let best = 0;
-      for (let j = 1; j < MAX_STUCK; j += 1) if (this.kLife[j]! - this.kAge[j]! < this.kLife[best]! - this.kAge[best]!) best = j;
-      i = best;
-    } else this.nStuck += 1;
-    const c = Math.cos(ship.heading);
-    const n = Math.sin(ship.heading);
-    const dx = x - at.x;
-    const dz = z - at.z;
-    this.kShip[i] = shipId;
-    this.kLx[i] = dx * c + dz * n;
-    this.kLz[i] = -dx * n + dz * c;
-    this.kLy[i] = y - at.y;
-    this.kYaw[i] = Math.atan2(uz, ux);
-    this.kHeading[i] = ship.heading;
-    this.kPitch[i] = Math.asin(Math.max(-1, Math.min(1, uy)));
-    const [len, girth] = arrowForm(gun);
-    this.kScale[i] = kind === 0 ? len / ARROW_LEN : 1.6;
-    this.kGirth[i] = kind === 0 ? girth / ARROW_GIRTH / (len / ARROW_LEN) : 1;
-    this.kAge[i] = 0;
-    this.kLife[i] = kind === 0 ? rnd(14, 22) : rnd(5, 8);
-    this.kKind[i] = kind;
-  }
-
-  /** Draws the stuck arrows and retires old ones and those of ships that are gone. */
-  stuck(dt: number, battle: Battle, camX: number, camY: number, camZ: number, focal: number) {
-    for (let i = this.nStuck - 1; i >= 0; i -= 1) {
-      const age = (this.kAge[i] = this.kAge[i]! + dt);
-      const ship = battle.get(this.kShip[i]!);
-      const left = this.kLife[i]! - age;
-      if (!ship || !ship.alive || ship.sinking > 0.6 || left <= 0) {
-        const last = --this.nStuck;
-        if (i !== last) {
-          this.kShip[i] = this.kShip[last]!;
-          this.kLx[i] = this.kLx[last]!;
-          this.kLy[i] = this.kLy[last]!;
-          this.kLz[i] = this.kLz[last]!;
-          this.kYaw[i] = this.kYaw[last]!;
-          this.kHeading[i] = this.kHeading[last]!;
-          this.kPitch[i] = this.kPitch[last]!;
-          this.kScale[i] = this.kScale[last]!;
-          this.kGirth[i] = this.kGirth[last]!;
-          this.kAge[i] = this.kAge[last]!;
-          this.kLife[i] = this.kLife[last]!;
-          this.kKind[i] = this.kKind[last]!;
-        }
-        continue;
-      }
-      const heavy = this.kKind[i] === 0;
-      if (heavy ? this.nHeavy >= MAX_HEAVY + MAX_STUCK : this.nHiya >= MAX_HEAVY + MAX_STUCK) continue;
-      this.views.localToWorld(this.kShip[i]!, this.kLx[i]!, this.kLy[i]!, this.kLz[i]!, this.p);
-      const d = Math.max(1, Math.hypot(this.p.x - camX, this.p.y - camY, this.p.z - camZ));
-      const yaw = this.kYaw[i]! + (ship.heading - this.kHeading[i]!);
-      const pit = this.kPitch[i]!;
-      const cp = Math.cos(pit);
-      const ux = Math.cos(yaw) * cp;
-      const uy = Math.sin(pit);
-      const uz = Math.sin(yaw) * cp;
-      // Grows a little from afar, as in flight; leaves by shrinking into the planks.
-      const k = this.kScale[i]!;
-      const sc = (heavy ? k * Math.min(1.6, Math.max(1, 8 / (ARROW_LEN * k * (focal / d)))) : Math.max(k, Math.min(k * 1.6, 4 / ((focal / d) * 1.2)))) * smooth(0, 0.8, left);
-      // The origin sits back from the hit so that the head is buried: a gun arrow goes in to a little under half its
-      // length, the rest and its vanes standing out of the planks.
-      const back = (heavy ? 0.1 : 0.24) * sc;
-      const ox = this.p.x - ux * back;
-      const oy = this.p.y - uy * back;
-      const oz = this.p.z - uz * back;
-      this.q.setFromUnitVectors(this.xAxis, this.v.set(ux, uy, uz));
-      const sg = sc * this.kGirth[i]!;
-      this.m.compose(this.p.set(ox, oy, oz), this.q, this.s.set(sc, sg, sg));
-      if (heavy) this.heavy.setMatrixAt(this.nHeavy++, this.m);
-      else {
-        this.hiya.setMatrixAt(this.nHiya++, this.m);
-        if (Math.random() < Math.min(1, 6 * dt)) {
-          this.fire.emit({ x: ox, y: oy + 0.2, z: oz, vy: 1.2, life: rnd(0.3, 0.6), size0: 0.5, size1: 0.2, heat: 1, drag: 1, lift: 1.5 });
-        }
       }
     }
   }

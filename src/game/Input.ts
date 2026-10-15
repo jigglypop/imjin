@@ -564,7 +564,7 @@ export class Input {
    */
   beginManeuver(kind: ManeuverKind) {
     const ids = this.selectedOwn();
-    if (!this.need(ids) || !this.engine.battle.maneuvers) return;
+    if (!this.need(ids) || !this.engine.battle?.maneuvers) return;
     if (kind === 'pursue') {
       const s = this.engine.battle.get(ids[0]!)!;
       const n = this.engine.issue({ type: 'maneuver', ids, kind, x0: s.x, z0: s.z, x1: s.x, z1: s.z });
@@ -670,7 +670,7 @@ export class Input {
   /** A flagship's signal to the whole fleet: the drum springs the waiting maneuvers and opens fire, the gong falls back. */
   signal(kind: SignalKind) {
     const ids = this.commandIds(true);
-    if (!this.need(ids) || !this.engine.battle.maneuvers) return;
+    if (!this.need(ids) || !this.engine.battle?.maneuvers) return;
     const n = this.engine.issue({ type: 'signal', ids, signal: kind });
     if (kind === 'advance') this.engine.sound.drums(3);
     pushToast(n ? t(kind === 'advance' ? '{name} · 매복과 대기 중인 기동이 일제히 나섭니다' : '{name} · 함선들이 물러납니다', { name: t(SIGNAL_NAMES[kind]) }) : t('신호를 받을 함선이 없습니다'), n ? 'good' : 'info');
@@ -949,7 +949,7 @@ export class Input {
 
   /** The maneuver keys, under the maneuver rules: Q ambush, W pincer, E ring, D breach, S blockade, A lure, F pursuit, Shift+E the drum, Shift+S the gong. */
   private maneuverKey(e: KeyboardEvent) {
-    if (!this.engine.battle.maneuvers) return false;
+    if (!this.engine.battle?.maneuvers) return false;
     const plain: Record<string, ManeuverKind> = { KeyQ: 'ambush', KeyW: 'pincer', KeyE: 'encircle', KeyD: 'breach', KeyS: 'blockade', KeyA: 'lure', KeyF: 'pursue' };
     if (e.shiftKey && e.code === 'KeyE') this.signal('advance');
     else if (e.shiftKey && e.code === 'KeyS') this.signal('withdraw');
