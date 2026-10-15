@@ -62,10 +62,10 @@
 .cine-line-hanja { margin-top: 5px; }
 
 /* A name card at the right, as a documentary introduces its figures. */
-.cine-card { position: absolute; right: var(--cine-gutter); top: calc(var(--cine-bar, 0px) + max(24px, 6vh)); width: clamp(170px, 15vw, 230px); text-align: right; animation: cine-slide 1.1s cubic-bezier(.2, .7, .2, 1) both; text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9); }
+.cine-card { position: absolute; right: var(--cine-gutter); top: calc(var(--cine-bar, 0px) + max(24px, 6vh)); width: clamp(190px, 17vw, 270px); padding: 0 0 12px 28px; text-align: right; background: radial-gradient(120% 70% at 100% 85%, rgba(4, 7, 10, 0.62), rgba(4, 7, 10, 0) 70%); animation: cine-slide 1.1s cubic-bezier(.2, .7, .2, 1) both; text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9); }
 .cine-portrait--large { width: 100%; aspect-ratio: 4 / 5; display: block; margin-bottom: 12px; }
 .cine-card-name { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
-.cine-card-name b { font-family: var(--cine-ko); font-weight: 700; font-size: clamp(20px, 1.9vw, 30px); letter-spacing: 0.06em; }
+.cine-card-name b { font-family: var(--cine-ko); font-weight: 700; font-size: clamp(18px, 1.7vw, 27px); letter-spacing: 0.04em; white-space: nowrap; }
 .cine-card-role { margin-top: 6px; padding-top: 7px; border-top: 2px solid var(--side, var(--cine-brass)); font-family: var(--cine-ko); font-size: clamp(11.5px, 0.95vw, 14.5px); line-height: 1.5; color: rgba(243, 241, 236, 0.84); word-break: keep-all; }
 .cine-card--joseon { --side: var(--joseon); }
 .cine-card--japan { --side: var(--japan); }
@@ -99,6 +99,8 @@
 .cine-button { pointer-events: auto; font: 500 12px var(--font-ui); letter-spacing: 0.06em; color: rgba(255, 255, 255, 0.86); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.22); padding: 6px 10px; cursor: pointer; }
 .cine-button:hover { background: rgba(255, 255, 255, 0.14); }
 .cine-button kbd { font: inherit; opacity: 0.6; margin-left: 4px; }
+.cine-controls--doc { opacity: 0.8; align-items: center; }
+.cine-doc-mark { font: 600 11px var(--font-ui); letter-spacing: 0.3em; color: rgba(255, 255, 255, 0.55); margin-right: 6px; }
 .cine-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(255, 255, 255, 0.06); }
 .cine-progress div { height: 100%; background: rgba(201, 179, 132, 0.55); transform-origin: 0 50%; transform: scaleX(0); }
 .cine-held { position: absolute; top: calc(var(--cine-bar, 0px) + 18px); left: 50%; transform: translateX(-50%); font: 600 12px var(--font-ui); letter-spacing: 0.4em; color: rgba(255, 255, 255, 0.8); }

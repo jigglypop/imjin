@@ -3,6 +3,7 @@ export const EN_CINEMA: Record<string, string> = {
   // Settings and controls
   '다큐멘터리 모드': 'Documentary mode',
   '전투 영상': 'Battle films',
+  '직접 지휘': 'Take command',
 
   // Tags of the documentary captions
   '결과': 'Outcome',
@@ -128,7 +129,7 @@ export const EN_CINEMA: Record<string, string> = {
   '화약고 폭발': 'Magazine explosion',
   '불이 화약에 닿으면 배가 한순간에 터져 나간다.': 'When fire reaches the powder, a ship is torn apart in an instant.',
   '시마즈의 대장선': 'Shimazu’s flagship',
-  '일본 측 기록에서 시마즈의 배는 갈고리에 걸려 위태로웠으나 휘하 장수들이 구해 내어 달아났다.': 'In the Japanese records Shimazu’s ship was caught by grapnels and in danger, but his captains cut it free and he escaped.',
+  '역사에서 시마즈는 살아 돌아갔다. 일본 측 기록에 따르면 그의 배는 갈고리에 걸려 위태로웠으나 휘하 장수들이 구해 냈다.': 'In history Shimazu got away. By the Japanese records his ship was caught by grapnels and in danger, but his captains rescued it.',
   '대장선을 잃다': 'The flagship is lost',
   '지휘하던 배를 잃은 함대는 신호를 받지 못해 크게 흔들린다.': 'With its command ship gone, the fleet receives no signals and wavers badly.',
   '적 대장선이 쓰러지다': 'The enemy flagship falls',

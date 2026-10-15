@@ -25,7 +25,7 @@ function shipShots(ctx: SceneContext, slow?: number): Shot[] {
   const L = LEN(s);
   const side = ctx.event % 2 ? 1 : -1;
   return [
-    { dur: 4.6, cam: { type: 'orbit', at: at(eventShip), yaw: [side * 1.25, side * 0.95], pitch: [0.07, 0.09], dist: [L * 2.8, L * 2.2], lift: 4 }, fov: 30, slow, aperture: 0.5 },
+    { dur: 4.6, cam: { type: 'orbit', at: at(eventShip), yaw: [side * 1.25, side * 0.95], pitch: [0.08, 0.1], dist: [L * 3.4, L * 2.8], lift: 4 }, fov: 30, slow, aperture: 0.5 },
     { dur: 3.6, cam: { type: 'orbit', at: at(eventShip, { toward: nearestFoe(eventShip) }), yaw: [side * 2.2, side * 2.0], pitch: [0.16, 0.2], dist: [L * 6, L * 6.8], lift: 6 }, fov: 34 },
   ];
 }
@@ -107,7 +107,7 @@ export function beatFor(e: BattleEvent, ctx: SceneContext, scenario: ScenarioId 
       const s = b.get(e.ship);
       if (!s) return null;
       if (scenario === 'noryang' && s.team === 'japan') {
-        return beat('shimazu', 8, 0, { tag: '전황', head: '시마즈의 대장선', body: '일본 측 기록에서 시마즈의 배는 갈고리에 걸려 위태로웠으나 휘하 장수들이 구해 내어 달아났다.', source: '일본 측 기록 『정한록』' }, shipShots({ ...ctx, event: e.ship }, 0.4), true, e.ship);
+        return beat('shimazu', 8, 0, { tag: '전황', head: '시마즈의 대장선', body: '역사에서 시마즈는 살아 돌아갔다. 일본 측 기록에 따르면 그의 배는 갈고리에 걸려 위태로웠으나 휘하 장수들이 구해 냈다.', source: '일본 측 기록 『정한록』' }, shipShots({ ...ctx, event: e.ship }, 0.4), true, e.ship);
       }
       const own = s.team === ctx.team;
       return beat(`leader-${s.team}`, 8, 0, own ? { tag: '전황', head: '대장선을 잃다', body: '지휘하던 배를 잃은 함대는 신호를 받지 못해 크게 흔들린다.' } : { tag: '전황', head: '적 대장선이 쓰러지다', body: '적의 지휘선이 싸움에서 빠졌다. 신호를 잃은 적 함대가 흔들린다.' }, shipShots({ ...ctx, event: e.ship }, 0.4), true, e.ship);

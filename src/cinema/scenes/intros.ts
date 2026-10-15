@@ -1,4 +1,4 @@
-import { at, commander, first, flagship, fleet } from '../subjects';
+import { at, commander, first, flagship, fleet, group } from '../subjects';
 import type { Scene } from '../types';
 
 /** The shorter openings of Hansan and Myeongnyang, from Yi's own reports and diary (src/cinema/SOURCES.md). */
@@ -15,7 +15,7 @@ export const HANSAN_INTRO: Scene = {
     // Ahead of the Japanese fleet as it comes out after the decoys, looking back at it.
     { dur: 9, cam: { type: 'orbit', at: at(japan, { toward: joseon }), yaw: [0.16, 0.32], pitch: [0.035, 0.05], dist: [560, 470], lift: 10 }, fov: 32 },
     // The crane's wing from above.
-    { dur: 11, cam: { type: 'orbit', at: at(fleet('joseon'), { toward: japan }), yaw: [Math.PI + 0.12, Math.PI + 0.02], pitch: [1.0, 1.12], dist: [2500, 2150] }, fov: 38 },
+    { dur: 11, cam: { type: 'orbit', at: at(group(joseon, japan), { toward: japan }), yaw: [Math.PI + 0.12, Math.PI + 0.02], pitch: [0.95, 1.05], dist: [3200, 2850] }, fov: 38 },
     { dur: 6, cam: { type: 'track', at: at(yi), from: [-36, -1.6, 23], to: [-27, -1.2, 18], look: [-5, 5.5, 0] }, fov: 30, tilt: 0.04, aperture: 0.7 },
     { dur: 8.5, cam: { type: 'orbit', at: at(yi, { toward: japan }), yaw: [Math.PI + 0.32, Math.PI + 0.16], pitch: [0.05, 0.07], dist: [95, 125], lift: [6, 10] }, fov: 30 },
   ],

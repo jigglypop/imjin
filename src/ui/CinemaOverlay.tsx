@@ -146,11 +146,12 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
   }, [cinema]);
 
   const covering = cinema.covering;
+  const filming = cinema.filming;
   useEffect(() => {
     const app = document.querySelector('.app');
-    app?.classList.toggle('app--cinema', covering);
+    app?.classList.toggle('app--cinema', covering || filming);
     return () => app?.classList.remove('app--cinema');
-  }, [covering]);
+  }, [covering, filming]);
 
   useEffect(() => {
     if (!covering) return;
@@ -220,6 +221,14 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
           )}
           <button className="cine-button" onClick={() => cinema.skip()}>
             {t('건너뛰기')} <kbd>Esc</kbd>
+          </button>
+        </div>
+      )}
+      {filming && (
+        <div className="cine-controls cine-controls--doc">
+          <span className="cine-doc-mark">{t('다큐멘터리 모드')}</span>
+          <button className="cine-button" onClick={() => cinema.takeCommand()}>
+            {t('직접 지휘')} <kbd>C</kbd>
           </button>
         </div>
       )}

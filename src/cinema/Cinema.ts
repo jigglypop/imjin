@@ -127,6 +127,17 @@ export class Cinema implements RigHost {
     return !!this.running?.camera;
   }
 
+  /** The documentary camera is filming the battle: the HUD steps aside until the player takes the camera back. */
+  get filming() {
+    return this.documentary && !this.host.remote && this.host.rts.cinematic && !this.covering && !this.host.battle.ended;
+  }
+
+  /** The player takes command: the documentary camera stops; its captions go on. */
+  takeCommand() {
+    this.host.rts.cinematic = false;
+    this.version += 1;
+  }
+
   get held() {
     return !!this.running?.player.held;
   }
@@ -330,7 +341,7 @@ export class Cinema implements RigHost {
       }
       if (r.player.done) this.finish(r.kind === 'cutscene');
     }
-    const wantLetter = this.covering || (this.documentary && !this.host.remote && this.host.rts.cinematic) ? 1 : 0;
+    const wantLetter = this.covering || this.filming ? 1 : 0;
     this.letter += (wantLetter - this.letter) * (1 - Math.exp(-dt * 3));
     const wantGrade = this.covering ? 1 : wantLetter * 0.7;
     this.gradeLevel += (wantGrade - this.gradeLevel) * (1 - Math.exp(-dt * 2));
