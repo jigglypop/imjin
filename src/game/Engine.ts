@@ -90,6 +90,7 @@ import { disposeTree } from '../render/dispose';
 import { tuneWebGLBackend } from '../render/webglBackend';
 
 import { Minimap } from '../ui/Minimap';
+import { DamageGallery, MunitionsGallery, damageBattle, damagePose, type GalleryKind } from './galleries';
 
 const params = new URLSearchParams(location.search);
 
@@ -99,7 +100,8 @@ export type EngineOptions = {
   sea?: SeaStateName;
   pose?: CameraPose;
   warmup?: number;
-  gallery?: boolean;
+  /** An inspection gallery instead of a battle (galleries.ts). */
+  gallery?: GalleryKind;
   cinematic?: boolean;
   hideLabels?: boolean;
   follow?: { id: number; distance: number; pitch: number; yaw: number };
@@ -180,6 +182,9 @@ export class Engine {
   hudHidden = false;
   speed = 1;
   paused = false;
+  /** The inspection galleries' own parts, when the page is one (galleries.ts). */
+  private damageGallery: DamageGallery | null = null;
+  private munitionsGallery: MunitionsGallery | null = null;
   /** Fast-forward the approach: run at FAST_SPEED until the fleets are in gun range, then drop back to `speed`. */
   autoFast = true;
   /** The approach is being fast-forwarded right now. */
@@ -993,7 +998,31 @@ export class Engine {
   }
 
   private setupGallery() {
+    if (this.options.gallery === 'damage') {
+      const only = params.get('kind') as ShipKind | null;
+      const kinds = only && ALL_KINDS.includes(only) ? [only] : ALL_KINDS;
+      const b = damageBattle(kinds);
+      this.battle = b;
+      this.views.reset(this.assets, b);
+      this.damageGallery = new DamageGallery(b, this.views, this.fx);
+      this.rts.setPose(this.options.pose ?? damagePose(kinds, 0));
+      return;
+    }
     const b = new Battle(7);
+    if (this.options.gallery === 'munitions') {
+      this.munitionsGallery = new MunitionsGallery();
+      this.scene.add(this.munitionsGallery.group);
+      // A panokseon moored behind the rack, for the scale of things.
+      const s = b.addShip('panokseon', 0, -38, 0, 'panokseon', null, false, 1);
+      s.speed = 0;
+      s.team = 'joseon';
+      s.order = { type: 'hold' };
+      b.land = () => -50;
+      this.battle = b;
+      this.views.reset(this.assets, b);
+      this.rts.setPose(this.options.pose ?? { tx: 0, tz: 0, yaw: Math.PI / 2, pitch: 0.42, distance: 9.5 });
+      return;
+    }
     const keys = Object.keys(this.assets);
     keys.forEach((key, i) => {
       const asset = this.assets[key]!;
@@ -1289,6 +1318,7 @@ export class Engine {
     this.views.cutaway.clear();
     for (const id of this.cutawayIds()) this.views.cutaway.set(id, this.cutaway);
     this.views.sync(this.battle, scaled, this.camera, this.assets);
+    this.damageGallery?.tick();
     this.stampWakes(events, scaled);
     if (events.length) {
       this.sound.update(events, this.battle, this.camera, scaled);
@@ -1874,6 +1904,7 @@ export class Engine {
     this.views?.renderer.dispose();
     if (this.views) disposeTree(this.views.group);
     this.fx?.dispose();
+    this.munitionsGallery?.dispose();
     if (this.lanterns) disposeTree(this.lanterns.group);
     this.pipeline?.dispose();
     this.sky?.view.dispose();

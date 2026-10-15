@@ -2,6 +2,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
 import { PerspectiveCamera, WebGPURenderer } from 'three/webgpu';
 import { Engine, type EngineOptions } from '../game/Engine';
+import type { GalleryKind } from '../game/galleries';
 import { net } from '../net/NetClient';
 import { SKY_PRESETS, type SkyPresetName } from '../render/sky';
 import { SEA_STATES, type SeaStateName } from '../ocean/waves';
@@ -23,6 +24,9 @@ declare global {
   }
 }
 
+/** `?gallery=1` is the line of ship models; `munitions` and `damage` the inspection galleries. */
+const galleryOf = (v: string | null): GalleryKind | undefined => (v === '1' ? 'ships' : v === 'munitions' || v === 'damage' ? v : undefined);
+
 function readOptions(launch: Launch): EngineOptions {
   const sky = params.get('sky') as SkyPresetName | null;
   const sea = params.get('sea') as SeaStateName | null;
@@ -34,7 +38,7 @@ function readOptions(launch: Launch): EngineOptions {
     sea: sea && sea in SEA_STATES ? sea : undefined,
     pose: cam && cam.length === 5 ? { tx: cam[0]!, tz: cam[1]!, yaw: cam[2]!, pitch: cam[3]!, distance: cam[4]! } : undefined,
     warmup: Number(params.get('warm') ?? 0),
-    gallery: params.get('gallery') === '1',
+    gallery: galleryOf(params.get('gallery')),
     cinematic: params.get('cine') === '1',
     hideLabels: params.get('hud') === '0',
     campaign: launch.kind === 'scenario' ? launch.campaign : undefined,

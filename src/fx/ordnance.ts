@@ -110,8 +110,9 @@ export type Outcome = 'smash' | 'pierce' | 'spall' | 'embed' | 'stick' | 'glance
 /**
  * The energy-density model of the weapons table: depth (cm) = E cos(angle) / (area x deformation) / k, checked against
  * an 18-pounder through oak (109 cm, recorded about 110) and the 2005 matchlock firing into hinoki (3.6 cm). A great
- * arrow of ten kilograms or more that goes through with energy to spare breaks the planks out (the dispatches'
- * "撞破其船"); a heavy ball does the same above three kilograms.
+ * arrow of ten kilograms or more that goes through thin planking with energy to spare breaks the planks out (the
+ * dispatches' "撞破其船": the Japanese hulls and every shield wall); a heavy ball does the same above three kilograms.
+ * The four-chi pine of a panokseon it punches through instead, keeping most of its energy (the weapons table).
  */
 export function outcome(model: 'arrow' | 'ball', mass: number, diameter: number, deform: number, speed: number, cos: number, T: number, k: number, japanese: boolean): { result: Outcome; depth: number; energy: number } {
   const energy = 0.5 * mass * speed * speed;
@@ -119,7 +120,7 @@ export function outcome(model: 'arrow' | 'ball', mass: number, diameter: number,
   const area = Math.PI * (diameter * 50) ** 2;
   const depth = (energy * cos) / (area * deform) / k;
   const heavy = model === 'arrow' ? mass >= 10 : mass >= 3;
-  if (heavy && depth >= 1.2 * T && energy >= (japanese ? 35000 : 60000)) return { result: 'smash', depth, energy };
+  if (heavy && T <= 8 && depth >= 1.2 * T && energy >= (japanese ? 35000 : 60000)) return { result: 'smash', depth, energy };
   if (depth >= 1.2 * T) return { result: 'pierce', depth, energy };
   if (depth >= 0.8 * T) return { result: 'spall', depth, energy };
   return { result: model === 'arrow' ? 'stick' : 'embed', depth, energy };

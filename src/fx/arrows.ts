@@ -46,7 +46,7 @@ const Z_AXIS = new Vector3(0, 0, 1);
  * One arrow in unit length along -z from its tip at the origin: a square shaft, an iron head and three feathers.
  * The instance matrix scales it, so the same mesh serves flight and rest.
  */
-function arrowGeometry() {
+export function arrowGeometry() {
   const pos: number[] = [];
   const col: number[] = [];
   const idx: number[] = [];

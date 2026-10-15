@@ -1,5 +1,5 @@
 import { Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardNodeMaterial, PlaneGeometry, DynamicDrawUsage, Vector3 } from 'three/webgpu';
-import { abs, float, floor, fract, Fn, If, instancedBufferAttribute, length, max, min, mix, select, sin, smoothstep, texture, uv, vec2, vec3, vec4 } from 'three/tsl';
+import { abs, float, floor, fract, instancedBufferAttribute, length, max, min, mix, select, sin, smoothstep, texture, uv, vec2, vec3 } from 'three/tsl';
 import type { Battle } from '../sim/battle';
 import type { AmmoType, GunType, Ship } from '../sim/types';
 import type { ShipViews } from '../ships/ShipViews';
@@ -62,8 +62,10 @@ export type HitLook = {
 };
 
 /**
- * The decal material: a quad shaded by kind from the shared noise texture (src/fx/particleNoise.ts, sampled up front so
- * the branches hold no texture reads). The quad's x runs along the planks, so holes tear with the grain.
+ * The decal material: a quad shaded by kind from the shared noise texture (src/fx/particleNoise.ts). Every kind's
+ * shape is worked out and the instance's kind picks one, with no branches: the marks are few and small on screen, and
+ * a branch per kind kept nodes built in one branch from reaching another. The quad's x runs along the planks, so
+ * holes and splinters tear with the grain.
  */
 function decalMaterial(data: InstancedBufferAttribute) {
   const m = new MeshStandardNodeMaterial({ roughness: 0.92, metalness: 0 });
@@ -75,110 +77,99 @@ function decalMaterial(data: InstancedBufferAttribute) {
   const S: any = instancedBufferAttribute(data, 'vec4');
   const kind: any = floor(S.x);
   const amount: any = fract(S.x);
-  const seed = S.y;
+  const seed: any = S.y;
   const size: any = vec2(S.z, S.w);
-  // Metres from the centre of the mark.
+  // Metres from the centre of the mark, and the same in halves of the quad (-1..1).
   const q: any = uv().sub(0.5).mul(size);
+  const rel: any = uv().sub(0.5).mul(2);
   const tex = particleNoise();
+  // Hand-sized lumps, foot-sized patches, and fibres: noise stretched four times along the grain.
   const fine: any = texture(tex, q.mul(2.4).add(vec2(seed, seed.mul(1.7))));
-  const grain: any = texture(tex, q.mul(vec2(1.1, 13)).add(vec2(seed.mul(0.37), seed)));
   const coarse: any = texture(tex, q.mul(0.8).add(vec2(seed.mul(2.3), seed.mul(0.61))));
+  const fibre: any = texture(tex, q.mul(vec2(2, 8)).add(vec2(seed.mul(0.37), seed)));
   const hash = (a: any, b: any) => fract(sin(a.mul(12.9898).add(b.mul(78.233)).add(seed.mul(3.17))).mul(43758.5453));
-  const dark = vec3(0.016, 0.013, 0.011);
-  const torn = mix(vec3(0.3, 0.21, 0.13), vec3(0.6, 0.46, 0.3), grain.g);
-  const soot = vec3(0.03, 0.027, 0.025);
-  const shade = Fn(() => {
-    const col = vec3(0).toVar();
-    const a = float(0).toVar();
-    If(kind.equal(Scar.Hole), () => {
-      // A round hole a third of the quad across, longer along the grain, its edge torn ragged; pale splinters torn
-      // out along the planks round it, and the powder's smudge (amount) on a shot hole.
-      const D = min(size.x, size.y).div(3.2);
-      const e = q.div(vec2(1.2, 0.85));
-      const r = length(e).div(D.mul(0.5));
-      const rr = r.add(fine.r.sub(0.5).mul(0.9));
-      const core = float(1).sub(smoothstep(0.9, 1.0, rr));
-      const reach = float(1).add(smoothstep(0.35, 0.75, grain.g).mul(1.1)).add(fine.g.mul(0.35));
-      const splinter = float(1).sub(smoothstep(reach.sub(0.12), reach, rr));
-      const smudge = float(1).sub(smoothstep(0.9, 2.7, r.add(coarse.b.sub(0.5).mul(0.9)))).mul(amount);
-      col.assign(mix(mix(soot, torn, splinter), dark, core));
-      a.assign(max(max(core, splinter), smudge.mul(0.7)));
-    })
-      .ElseIf(kind.equal(Scar.Smash), () => {
-        // Planks broken out: each strake of the breach has its own gap, longest in the middle rows, with splintered
-        // ends; the seams between the strakes cracked open round it.
-        const ph = float(0.24);
-        const row = floor(q.y.div(ph));
-        const rel = q.y.div(size.y.mul(0.5));
-        const lift = hash(row, float(1.3));
-        const shift = hash(row, float(7.1)).sub(0.5).mul(0.22).mul(size.x);
-        const gap = size.x.mul(0.42).mul(float(1).sub(rel.mul(rel)).max(0).pow(0.6)).mul(lift.mul(0.45).add(0.55));
-        const end = abs(q.x.sub(shift)).sub(gap).sub(grain.r.sub(0.5).mul(0.2));
-        const hole = float(1).sub(smoothstep(-0.02, 0.0, end)).mul(float(1).sub(smoothstep(0.86, 0.95, abs(rel))));
-        const split = float(1).sub(smoothstep(0.0, fine.a.mul(0.12).add(0.06), end)).mul(smoothstep(0.35, 0.6, grain.g).add(0.25).min(1));
-        const seamY = abs(fract(q.y.div(ph)).sub(0.5));
-        const seam = smoothstep(0.44, 0.49, seamY).mul(float(1).sub(smoothstep(0.0, 0.5, end.div(size.x)))).mul(0.8);
-        col.assign(mix(mix(soot, torn, split), dark, hole));
-        a.assign(max(max(hole, split.mul(float(1).sub(smoothstep(0.86, 1.0, abs(rel))))), seam));
-      })
-      .ElseIf(kind.equal(Scar.Gouge), () => {
-        // Torn grain where a shot glanced or an arrow split the face: pale, fibrous, a dark crease down the middle.
-        const r = length(q.div(size.mul(0.5)));
-        const body = float(1).sub(smoothstep(0.55, 1.0, r.add(grain.g.sub(0.5).mul(0.9))));
-        const crease = float(1).sub(smoothstep(0.0, 0.22, abs(q.y).div(size.y.mul(0.5)))).mul(body);
-        col.assign(mix(torn, dark, crease.mul(0.85)));
-        a.assign(body);
-      })
-      .ElseIf(kind.lessThan(Scar.Scorch), () => {
-        // A shield or plank wall peppered by a load of small shot: in cells of a hand's breadth, a hit in as many as
-        // the density gives, each a dark hole through a thin board (Pellets) or a pale dent and a grey smear of lead
-        // in a thick one (Chips); a faint scuff of splinters over the whole patch.
-        const through = kind.equal(Scar.Pellets);
-        const c = select3(through, 0.13, 0.17);
-        const cell: any = floor(q.div(c));
-        const f: any = fract(q.div(c)).sub(0.5);
-        const on: any = select(hash(cell.x, cell.y).lessThan(amount), float(1), float(0));
-        const o = vec2(hash(cell.x.add(3.1), cell.y), hash(cell.x, cell.y.add(5.7))).sub(0.5).mul(0.5);
-        const d = length(f.sub(o)).mul(c);
-        const hr = select3(through, 0.012, 0.008);
-        const ragged = fine.r.sub(0.5).mul(0.006);
-        const core = float(1).sub(smoothstep(hr.mul(0.85), hr, d.add(ragged))).mul(on);
-        const ring = float(1).sub(smoothstep(hr.mul(1.6), hr.mul(2.6), d.add(ragged))).mul(on);
-        const edge = length(q.div(size.mul(0.5)));
-        const scuff = float(1).sub(smoothstep(0.5, 1.0, edge.add(coarse.r.sub(0.5).mul(0.8)))).mul(amount).mul(0.22);
-        const lead = vec3(0.3, 0.3, 0.31);
-        col.assign(mix(torn, select(through, dark, lead), core));
-        a.assign(max(max(core, ring.mul(0.85)), scuff).mul(float(1).sub(smoothstep(0.92, 1.0, edge))));
-      })
-      .ElseIf(kind.equal(Scar.Scorch), () => {
-        // Soot and char round a fire arrow or a burnt patch: black in the middle, brown at the fringe.
-        const r = length(q.div(size.mul(0.5))).add(coarse.r.sub(0.5).mul(0.7)).add(fine.b.sub(0.5).mul(0.25));
-        const s = float(1).sub(smoothstep(0.25, 1.0, r));
-        col.assign(mix(vec3(0.09, 0.06, 0.04), vec3(0.018, 0.016, 0.015), smoothstep(0.3, 0.8, s)));
-        a.assign(s.mul(0.9));
-      })
-      .Else(() => {
-        // A shield board knocked out of the wall: a dark gap where it stood, the broken stumps of the board jagged
-        // top and bottom, the torn ends pale.
-        const rel = q.div(size.mul(0.5));
-        const top = float(0.62).sub(fine.g.mul(0.38)).add(grain.r.sub(0.5).mul(0.14));
-        const bottom = float(-0.7).add(fine.r.mul(0.32)).add(grain.b.sub(0.5).mul(0.14));
-        const inY = smoothstep(bottom.sub(0.02), bottom, rel.y).mul(float(1).sub(smoothstep(top, top.add(0.02), rel.y)));
-        const inX = float(1).sub(smoothstep(0.9, 0.95, abs(rel.x)));
-        const hole = inY.mul(inX);
-        const stump = float(1).sub(smoothstep(0.0, 0.1, min(abs(rel.y.sub(top)), abs(rel.y.sub(bottom))))).mul(inX).mul(smoothstep(0.3, 0.6, grain.g));
-        col.assign(mix(torn, dark, hole));
-        a.assign(max(hole, stump));
-      });
-    return vec4(col, a);
-  })();
-  m.colorNode = shade.xyz;
-  m.opacityNode = shade.w;
+  const one = float(1);
+  // Into the hull's dark; fresh-torn pine or cedar, pale against the tarred and weathered face; powder soot.
+  const dark = vec3(0.014, 0.011, 0.009);
+  const torn: any = mix(vec3(0.34, 0.24, 0.14), vec3(0.62, 0.48, 0.32), fibre.g);
+  const soot = vec3(0.035, 0.032, 0.03);
+  // Splinters standing out of a torn edge in fingers along the grain.
+  const fingers = smoothstep(0.38, 0.62, fibre.r);
+
+  // Hole: a hole a third of the quad across, a little longer along the grain, its edge ragged; the face torn away in
+  // pale splinters round it, further along the grain than across; the powder's smudge (amount) round a shot hole.
+  const D = min(size.x, size.y).div(3.2);
+  const hr0: any = length(q.div(vec2(1.15, 0.9))).div(D.mul(0.5));
+  const hCore = one.sub(smoothstep(0.92, 1.0, hr0.add(fine.r.sub(0.5).mul(0.5))));
+  const hFringe = one.sub(smoothstep(0.9, 1.0, length(q.div(vec2(2.1, 1.05).mul(D.mul(0.5)))).add(coarse.g.sub(0.5).mul(0.5)).sub(fingers.mul(0.35))));
+  const hSmudge = one.sub(smoothstep(1.2, 3.0, hr0.add(coarse.b.sub(0.5).mul(0.9)))).mul(amount);
+  const holeCol = mix(mix(soot, torn, hFringe), dark, hCore);
+  const holeA = max(max(hCore, hFringe.mul(0.95)), hSmudge.mul(0.7));
+
+  // Smash: planks broken out. Each strake of the breach has its own gap, longest in the middle rows, its ends
+  // splintered; the seams between the strakes split open along the breach.
+  const ph = float(0.22);
+  const row = floor(q.y.div(ph));
+  const sLen = hash(row, float(1.3));
+  const sShift = hash(row, float(7.1)).sub(0.5).mul(0.2).mul(size.x);
+  const sGap = size.x.mul(0.4).mul(one.sub(rel.y.mul(rel.y)).max(0).pow(0.5)).mul(sLen.mul(0.5).add(0.5));
+  const sEnd = abs(q.x.sub(sShift)).sub(sGap).sub(fine.r.sub(0.5).mul(0.1));
+  const sIn = one.sub(smoothstep(0.82, 0.9, abs(rel.y)));
+  const sHole = one.sub(smoothstep(-0.015, 0.0, sEnd)).mul(sIn);
+  const sSplit = one.sub(smoothstep(0.0, fine.a.mul(0.1).add(0.07), sEnd.sub(fingers.mul(0.06)))).mul(sIn);
+  const sToSeam = min(fract(q.y.div(ph)), one.sub(fract(q.y.div(ph)))).mul(ph);
+  const sSeam = one.sub(smoothstep(0.006, 0.016, sToSeam)).mul(one.sub(smoothstep(0.0, 0.35, sEnd))).mul(0.85);
+  const smashCol = mix(mix(soot, torn, sSplit), dark, max(sHole, sSeam));
+  const smashA = max(max(sHole, sSplit), sSeam);
+
+  // Gouge: torn grain where a shot glanced off or lodged, or an arrow split the face: pale and fibrous, a dark crease
+  // along the middle.
+  const gBody = one.sub(smoothstep(0.7, 1.0, length(rel).add(coarse.r.sub(0.5).mul(0.5)).sub(fingers.mul(0.25))));
+  const gCrease = one.sub(smoothstep(0.0, 0.25, abs(rel.y).add(fine.g.sub(0.5).mul(0.15)))).mul(one.sub(smoothstep(0.5, 0.8, abs(rel.x))));
+  const gougeCol = mix(torn, dark, gCrease.mul(0.85));
+
+  // Pellets and chips: a wall peppered by a load of small shot. In cells of a hand's breadth, a hit in as many as the
+  // density gives: a dark hole through a thin board in its ring of splinters (Pellets), or a pale dent with a grey
+  // smear of lead in a thick one (Chips); here and there a strip of the face torn off along the grain, and a scuff of
+  // splinters over the patch that reads from afar.
+  const through: any = kind.equal(Scar.Pellets);
+  const c = select(through, float(0.12), float(0.16));
+  const cell: any = floor(q.div(c));
+  const f: any = fract(q.div(c)).sub(0.5);
+  const pOn = select(hash(cell.x, cell.y).lessThan(amount.mul(1.3)), one, float(0));
+  const pOff: any = vec2(hash(cell.x.add(3.1), cell.y), hash(cell.x, cell.y.add(5.7))).sub(0.5).mul(0.5);
+  const pd = length(f.sub(pOff)).mul(c).add(fine.r.sub(0.5).mul(0.008));
+  const pr = select(through, float(0.014), float(0.009));
+  const pCore = one.sub(smoothstep(pr.mul(0.8), pr, pd)).mul(pOn);
+  const pRing = one.sub(smoothstep(pr.mul(1.6), pr.mul(3), pd)).mul(pOn);
+  const strip = smoothstep(0.66, 0.72, fibre.b).mul(select(hash(cell.x.add(9.2), cell.y).lessThan(amount.mul(0.5)), one, float(0)));
+  const pEdge = length(rel);
+  const pScuff = one.sub(smoothstep(0.45, 1.0, pEdge.add(coarse.r.sub(0.5).mul(0.8)))).mul(amount.mul(0.3).add(0.08));
+  const pelletCol = mix(torn, select(through, dark, vec3(0.3, 0.3, 0.31)), pCore);
+  const pelletA = max(max(pCore, pRing.mul(0.9)), max(strip.mul(0.85), pScuff)).mul(one.sub(smoothstep(0.92, 1.0, pEdge)));
+
+  // Scorch: charred wood round a fire arrow, black in the middle with grey ash on it, brown where the heat only
+  // browned the face.
+  const sc = one.sub(smoothstep(0.2, 1.0, length(rel).add(coarse.r.sub(0.5).mul(0.6)).add(fine.b.sub(0.5).mul(0.25))));
+  const ash = smoothstep(0.55, 0.7, coarse.g).mul(smoothstep(0.35, 0.6, sc));
+  const scorchCol = mix(mix(vec3(0.13, 0.08, 0.045), vec3(0.016, 0.014, 0.013), smoothstep(0.25, 0.7, sc)), vec3(0.3, 0.29, 0.28), ash.mul(0.7));
+
+  // Board out: a shield board knocked out of the wall, a dark gap where it stood, the broken stumps jagged top and
+  // bottom with their torn ends pale.
+  const bTop = float(0.6).sub(fine.g.mul(0.4)).add(fingers.mul(0.1));
+  const bBottom = float(-0.72).add(fine.r.mul(0.34)).sub(fingers.mul(0.1));
+  const bInX = one.sub(smoothstep(0.9, 0.94, abs(rel.x)));
+  const bHole = smoothstep(bBottom.sub(0.015), bBottom, rel.y).mul(one.sub(smoothstep(bTop, bTop.add(0.015), rel.y))).mul(bInX);
+  const bStump = one.sub(smoothstep(0.0, 0.09, min(abs(rel.y.sub(bTop)), abs(rel.y.sub(bBottom))))).mul(bInX);
+  const boardCol = mix(torn, dark, bHole);
+  const boardA = max(bHole, bStump.mul(0.95));
+
+  const pick = (h: any, sm: any, g: any, p: any, s: any, b: any) =>
+    select(kind.equal(Scar.Hole), h, select(kind.equal(Scar.Smash), sm, select(kind.equal(Scar.Gouge), g, select(kind.lessThan(Scar.Scorch), p, select(kind.equal(Scar.Scorch), s, b)))));
+  m.colorNode = pick(holeCol, smashCol, gougeCol, pelletCol, scorchCol, boardCol);
+  m.opacityNode = pick(holeA, smashA, gBody, pelletA, sc.mul(0.95), boardA);
   return m;
 }
-
-/** A float chosen by a boolean node (TSL's select on two constants). */
-const select3 = (b: any, x: number, y: number): any => select(b, float(x), float(y));
 
 export class Scars {
   readonly group = new Group();
@@ -221,7 +212,7 @@ export class Scars {
     private readonly smoke: ParticleLayer,
     private readonly fire: ParticleLayer,
   ) {
-    this.data = new InstancedBufferAttribute(this.dData, 4);
+    this.data = new InstancedBufferAttribute(new Float32Array(CAPS.decals * 4), 4);
     this.data.setUsage(DynamicDrawUsage);
     this.mesh = new InstancedMesh(new PlaneGeometry(1, 1), decalMaterial(this.data), CAPS.decals);
     this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -349,8 +340,8 @@ export class Scars {
     const by = nz * tx - nx * tz;
     const bz = nx * ty - ny * tx;
     const sc = s.scale;
-    // A centimetre proud of the planks, and the polygon offset does the rest.
-    const lift = 0.012;
+    // Proud of the planks by enough to clear the painted shield boards nailed on them; the polygon offset does the rest.
+    const lift = 0.04;
     const o = i * 16;
     const L = this.dLocal;
     L[o] = tx * w * sc;
@@ -647,8 +638,8 @@ export class Scars {
     const w = s.walls;
     const py = w ? rnd(s.boardY[0], s.boardY[1]) : s.hull.deck - rnd(0.1, 0.8);
     const st = this.st;
-    // Straight in from the shooter's side.
-    if (!strike(s, px, py, side * 0.2, 0, 0, -side, st)) return;
+    // Straight in from the shooter's side, from outside the hull.
+    if (!strike(s, px, py, side * s.hull.beam, 0, 0, -side, st)) return;
     const j = this.near(ship.id, Scar.Chips, s, st.x, st.y, st.z, 1.2);
     if (j >= 0) this.dData[j * 4] = Scar.Chips + Math.min(0.9, (this.dData[j * 4]! % 1) + 0.04);
     else this.decal(ship.id, s, Scar.Chips, st.x, st.y, st.z, st.nx, st.ny, st.nz, 1.6, Math.min(1.1, w ? s.boardY[1] - s.boardY[0] + 0.1 : 0.9), 0.08);

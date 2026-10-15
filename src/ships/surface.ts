@@ -49,6 +49,8 @@ export type ShipSurface = {
   boardY: [number, number];
   /** Side planking in centimetres (the weapons table: panokseon "並厚四寸", the others estimated). */
   plank: number;
+  /** Painted or planked bands standing proud of the hull (hullBand in the builders): heights and how far out. */
+  skin: [number, number, number][];
 };
 
 const sheerAt = (rise: number, L: number, x: number, pow: number) => rise * Math.pow(Math.abs((2 * x) / L), pow);
@@ -81,7 +83,7 @@ const run = (x0: number, x1: number, pitch: number) => {
 function build(model: string): ShipSurface | null {
   const [kind, v] = model.split('#') as [ShipKind, string | undefined];
   const variant = Number(v ?? 0);
-  const plain = { blocks: [] as Block[], sails: [] as SailPlane[], roof: false, boards: [] as number[], boardW: 1, boardY: [0, 0] as [number, number] };
+  const plain = { blocks: [] as Block[], sails: [] as SailPlane[], roof: false, boards: [] as number[], boardW: 1, boardY: [0, 0] as [number, number], skin: [] as [number, number, number][] };
   if (kind === 'panokseon') {
     const plan = PANOK_PLANS[variant] ?? PANOK_PLANS[0]!;
     const h = plan.hull;
@@ -103,10 +105,12 @@ function build(model: string): ShipSurface | null {
       boardW: 1.7,
       boardY: [deck + 0.28, deck + plan.parapet - 0.27],
       plank: 12,
+      skin: [[plan.storey, deck, 0.1]],
     };
   }
   if (kind === 'geobukseon') {
-    return { ...plain, hull: GEOBUK_PLAN.hull, walls: null, roof: true, scale: anchorScale('geobukseon'), plank: 12 };
+    const top = GEOBUK_PLAN.hull.deck;
+    return { ...plain, hull: GEOBUK_PLAN.hull, walls: null, roof: true, scale: anchorScale('geobukseon'), plank: 12, skin: [[0.45, top - 0.62, 0.09], [top - 0.62, top, 0.12]] };
   }
   if (kind === 'hyeopseon') {
     const h = HYEOP_PLAN.hull;
@@ -131,6 +135,7 @@ function build(model: string): ShipSurface | null {
       boardW: 1.1,
       boardY: [deck, deck + plan.parapet],
       plank: 7,
+      skin: [[0.2, 1.45, 0.07], [1.45, deck, 0.05]],
     };
   }
   if (kind === 'sekibune') {
@@ -150,6 +155,7 @@ function build(model: string): ShipSurface | null {
       boardW: 1,
       boardY: [deck, deck + plan.parapet],
       plank: 6,
+      skin: variant === 0 ? [[0.85, deck, 0.04]] : [],
     };
   }
   if (kind === 'kobaya') {
@@ -172,6 +178,7 @@ function build(model: string): ShipSurface | null {
       boardW: 1.4,
       boardY: [deck, deck + plan.parapet],
       plank: 10,
+      skin: [[0.5, deck - 0.75, 0.05], [deck - 0.75, deck, 0.08]],
     };
   }
   if (kind === 'mingsmall') {
@@ -191,6 +198,7 @@ function build(model: string): ShipSurface | null {
       boardW: 1.2,
       boardY: [deck, deck + plan.parapet],
       plank: 8,
+      skin: [[0.28, deck - 0.5, 0.05], [deck - 0.5, deck, 0.08]],
     };
   }
   return null;
@@ -220,6 +228,13 @@ export type PartId = (typeof Part)[keyof typeof Part];
 /** Where a shell met the surface: the point and outward normal in plan metres, the part, and the wall board (or -1). */
 export type Strike = { x: number; y: number; z: number; nx: number; ny: number; nz: number; part: PartId; board: number };
 
+/** How far a proud band stands out of the hull at height y. */
+function skinAt(s: ShipSurface, y: number) {
+  let off = 0;
+  for (const b of s.skin) if (y >= b[0] && y <= b[1] && b[2] > off) off = b[2];
+  return off;
+}
+
 /** Which solid holds a point, or -1: 0 hull (deck from above), 1 wall, 2 castle block, 3 turtle roof. */
 function inside(s: ShipSurface, x: number, y: number, z: number) {
   const h = s.hull;
@@ -227,7 +242,7 @@ function inside(s: ShipSurface, x: number, y: number, z: number) {
   if (Math.abs(x) > L / 2) return -1;
   const az = Math.abs(z);
   const top = hullTop(h, x);
-  if (y <= top) return az <= sideAt(h, x, y) ? 0 : -1;
+  if (y <= top) return az <= sideAt(h, x, y) + skinAt(s, y) ? 0 : -1;
   if (s.roof) return az <= sideAt(h, x, top) + 0.45 && y <= geobukRoofY(GEOBUK_PLAN, x, z) ? 3 : -1;
   for (const b of s.blocks) if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1 && az <= b.hz) return 2;
   const w = s.walls;
@@ -244,14 +259,16 @@ function inside(s: ShipSurface, x: number, y: number, z: number) {
  * line passes the model by (a shot the sim's box caught over an open deck).
  */
 export function strike(s: ShipSurface, px: number, py: number, pz: number, dx: number, dy: number, dz: number, out: Strike) {
-  const back = 6;
   const step = 0.1;
+  let back = 6;
+  // Start outside the model: a point well inside a wide hull needs the line walked further back.
+  while (back < 18 && inside(s, px - dx * back, py - dy * back, pz - dz * back) >= 0) back += 1;
   let x = px - dx * back;
   let y = py - dy * back;
   let z = pz - dz * back;
   let solid = -1;
   let i = 0;
-  const n = Math.round((back * 2 + 4) / step);
+  const n = Math.round((back + 10) / step);
   for (; i < n; i += 1) {
     solid = inside(s, x, y, z);
     if (solid >= 0) break;
@@ -280,7 +297,7 @@ export function strike(s: ShipSurface, px: number, py: number, pz: number, dx: n
   const e = 0.05;
   if (solid === 0) {
     const top = hullTop(h, x);
-    if (y > top - 0.08 && Math.abs(z) < sideAt(h, x, top) - 0.15) {
+    if (y > top - 0.08 && Math.abs(z) < sideAt(h, x, top) + skinAt(s, y) - 0.15) {
       // Came down on the deck.
       out.nx = 0;
       out.ny = 1;
