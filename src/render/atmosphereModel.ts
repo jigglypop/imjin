@@ -48,6 +48,11 @@ export type AtmosphereSpec = {
 
 /** Share of the light a thick deck passes downward, diffused, of what it holds back from the direct beam. */
 const DECK_TRANSMIT = 0.35;
+/**
+ * Colour of the light under a deck, luminance one: the sunlight on its top with the clear sky's blue light mixed in,
+ * scattered evenly by the droplets. Overcast daylight is cooler than sunlight.
+ */
+export const DECK_TINT: Rgb = [0.92, 0.99, 1.12];
 
 /** Extinction per metre at sea level for green light: what the scene's fog density should match. */
 export function seaLevelExtinction(haze: number) {
@@ -304,8 +309,9 @@ export class Atmosphere {
     const direct = this.direct;
     // Isotropic light from a sky-wide source above: half of it is scattered toward any one direction.
     const fill = this.diffuse * 0.5;
-    const fillR = fill / SOLAR[0];
-    const fillB = fill / SOLAR[2];
+    const fillR = (fill * DECK_TINT[0]) / SOLAR[0];
+    const fillG = fill * DECK_TINT[1];
+    const fillB = (fill * DECK_TINT[2]) / SOLAR[2];
     let T0 = 1;
     let T1 = 1;
     let T2 = 1;
@@ -338,7 +344,7 @@ export class Atmosphere {
       const s1 = Math.exp(-e1 * dt);
       const s2 = Math.exp(-e2 * dt);
       const in0 = ((RAYLEIGH[0] * ray * phaseR + mie * phaseM) * ts[0] + (RAYLEIGH[0] * ray + mie) * ms[0]) * direct + (RAYLEIGH[0] * ray + mie) * fillR;
-      const in1 = ((RAYLEIGH[1] * ray * phaseR + mie * phaseM) * ts[1] + (RAYLEIGH[1] * ray + mie) * ms[1]) * direct + (RAYLEIGH[1] * ray + mie) * fill;
+      const in1 = ((RAYLEIGH[1] * ray * phaseR + mie * phaseM) * ts[1] + (RAYLEIGH[1] * ray + mie) * ms[1]) * direct + (RAYLEIGH[1] * ray + mie) * fillG;
       const in2 = ((RAYLEIGH[2] * ray * phaseR + mie * phaseM) * ts[2] + (RAYLEIGH[2] * ray + mie) * ms[2]) * direct + (RAYLEIGH[2] * ray + mie) * fillB;
       l0 += (T0 * in0 * (1 - s0)) / e0;
       l1 += (T1 * in1 * (1 - s1)) / e1;

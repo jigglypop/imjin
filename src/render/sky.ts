@@ -1,6 +1,6 @@
 import { ClampToEdgeWrapping, DataTexture, DataUtils, EquirectangularReflectionMapping, HalfFloatType, LinearFilter, RepeatWrapping, RGBAFormat, Vector3 } from 'three/webgpu';
 import type { SkyInfo } from './atmosphere';
-import { Atmosphere, buildSkyView, hazeForFog, sampleSkyView, type Rgb } from './atmosphereModel';
+import { Atmosphere, buildSkyView, DECK_TINT, hazeForFog, sampleSkyView, type Rgb } from './atmosphereModel';
 import { coverAt, sampleWeather } from './cloudNoise';
 
 export type SkyPresetName = 'afternoon' | 'day' | 'sunset' | 'overcast' | 'night';
@@ -87,10 +87,14 @@ function cloudSheet(preset: SkyPreset, atmosphere: Atmosphere, sky: Rgb, dir: Rg
   // forward scattering.
   const g = 0.6;
   const hg = (1 - g * g) / (4 * Math.PI * Math.pow(1 + g * g - 2 * g * cosT, 1.5));
-  const lit = (Math.max(0.05, L[1]) * (0.3 + 0.3 * (1 - cover))) / Math.PI + hg * 0.35 * (1 - cover * 0.7);
+  const diffuse = (Math.max(0.05, L[1]) * (0.3 + 0.3 * (1 - cover))) / Math.PI;
+  const glow = hg * 0.35 * (1 - cover * 0.7);
   const haze = Math.exp(-d * preset.fogDensity * 0.45);
+  const sunLum = lum(sun);
   for (let k = 0; k < 3; k += 1) {
-    const base = sun[k]! * lit + zenith[k]! * 0.6;
+    // What the droplets pass down has the clear sky's blue light on the layer's top mixed into the sunlight.
+    const under = sun[k]! * 0.8 + sunLum * DECK_TINT[k]! * 0.2;
+    const base = under * diffuse + sun[k]! * glow + zenith[k]! * 0.6;
     const seen = sky[k]! + (base - sky[k]!) * haze;
     out[k] = sky[k]! + (seen - sky[k]!) * alpha;
   }

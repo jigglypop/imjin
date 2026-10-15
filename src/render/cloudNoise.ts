@@ -1,4 +1,4 @@
-import { Data3DTexture, DataTexture, LinearFilter, RepeatWrapping, RGBAFormat, UnsignedByteType } from 'three/webgpu';
+import { Data3DTexture, DataTexture, LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, RGBAFormat, UnsignedByteType } from 'three/webgpu';
 
 function mulberry32(seed: number) {
   let a = seed >>> 0;
@@ -207,14 +207,23 @@ export function sampleWeather(x: number, z: number, channel: 0 | 1) {
   return top + (bottom - top) * fy;
 }
 
-export function createWeatherMap() {
+let weatherTexture: DataTexture | null = null;
+
+/**
+ * The weather map as a texture, made once and shared: the clouds read where they are from it, and the sea the gusts,
+ * wave groups and cloud shadows that keep it from repeating. Like the sea's detail textures, it is kept for the next battle.
+ */
+export function weatherMap() {
+  if (weatherTexture) return weatherTexture;
   const tex = new DataTexture(weatherData(), WEATHER_SIZE, WEATHER_SIZE, RGBAFormat, UnsignedByteType);
   tex.wrapS = RepeatWrapping;
   tex.wrapT = RepeatWrapping;
   tex.magFilter = LinearFilter;
-  tex.minFilter = LinearFilter;
-  tex.generateMipmaps = false;
+  // The sea reads the fields toward the horizon at a few metres a texel: mip levels keep them from shimmering there.
+  tex.minFilter = LinearMipmapLinearFilter;
+  tex.generateMipmaps = true;
   tex.needsUpdate = true;
+  weatherTexture = tex;
   return tex;
 }
 

@@ -1,4 +1,4 @@
-import { Vector3 } from 'three/webgpu';
+import { Vector2, Vector3 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
 
 export const atmosphere = {
@@ -9,9 +9,14 @@ export const atmosphere = {
   fogDensity: uniform(0.00009),
   fogHeightFalloff: uniform(0.0025),
   envIntensity: uniform(1),
-  waterDeep: uniform(new Vector3(0.006, 0.03, 0.05)),
-  waterScatter: uniform(new Vector3(0.02, 0.11, 0.1)),
+  /** Coastal water of the south coast: plankton and silt make it a dark blue-green, not the blue of the open ocean. */
+  waterDeep: uniform(new Vector3(0.0045, 0.024, 0.033)),
+  waterScatter: uniform(new Vector3(0.017, 0.09, 0.074)),
   night: uniform(0),
+  /** Cover of the cloud layer (0 when no clouds are drawn), its middle height, and how far the wind has carried it. */
+  cloudCover: uniform(0),
+  cloudHeight: uniform(2400),
+  cloudDrift: uniform(new Vector2()),
 };
 
 export type SkyInfo = {

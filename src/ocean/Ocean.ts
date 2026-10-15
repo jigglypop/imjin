@@ -46,6 +46,7 @@ import {
   sin,
   cos,
   smoothstep,
+  sqrt,
   texture,
   uniform,
   uniformArray,
@@ -65,10 +66,15 @@ import type { Terrain } from '../terrain/Terrain';
 import { pointLights } from '../render/lights';
 import type { SkyView } from '../render/skyDome';
 import { CASCADES, type FFTWaves } from './FFTWaves';
+import { SeaFields } from './seaFields';
+import { weatherMap } from '../render/cloudNoise';
 import type { CurrentField } from '../sim/current';
 
 /** Mesh density and shading cost for the ocean. `lights` is how many point lights the surface shades. */
 export type OceanRenderQuality = { segments: number; lights: number };
+
+/** Mean square slope of the ripple texture as the Gerstner surface lays it on, for the far water it fades from. */
+const DETAIL_SLOPE_VARIANCE = 0.025;
 
 // The wave detail and foam textures depend only on the wind direction, and take a few hundred milliseconds to fill on
 // the main thread. A second battle reuses them.
@@ -181,7 +187,9 @@ export class Ocean {
     const terrainUV = (xz: any) => vec2(xz.x.mul(tRot.x).add(xz.y.mul(tRot.y)), xz.x.mul(tRot.y).negate().add(xz.y.mul(tRot.x))).div(tSize).add(0.5);
     const seabedV = texture(terrain.heightTexture, terrainUV(worldXZ)).level(float(0)).r;
     const shoreV = smoothstep(0.5, 22.0, seabedV.negate());
-    const gust = (xz: any, level: any) => texture(detailTex, xz.mul(1 / 530).add(vec2(uTime.mul(0.0021), uTime.mul(-0.0013)))).level(level).z.mul(1.25).sub(0.05).clamp(0.45, 1.3);
+    const fields = new SeaFields(weatherMap(), uTime, waves.state.windAngle);
+    // How strongly each FFT cascade is drawn here: wave groups swell and ebb the longest, gusts roughen the shorter ones.
+    const cascadeWeight = (c: number, gust: any, groups: any) => (c === 0 ? mix(float(0.72), float(1.22), groups) : mix(float(0.5), float(1.4), gust));
     const displacement = Fn(() => {
       const dx = float(0).toVar();
       const dy = float(0).toVar();
@@ -198,13 +206,14 @@ export class Ocean {
       });
       if (fft) {
         const vSpacing = vertexDistance.mul(spacing).add(0.03);
-        const g = gust(worldXZ, float(0));
+        const g = fields.gust(worldXZ, float(0));
+        const groups = fields.groups(worldXZ, float(0));
         for (let c = 0; c < 2; c += 1) {
           const L = CASCADES[c]!.size;
           const texel = L / fft.n;
           const lod = max(log2(vSpacing.mul(2.2).div(texel)), 0);
           const d: any = texture(fft.displacement[c]!, worldXZ.div(L)).level(lod);
-          const w = c === 0 ? float(1) : g;
+          const w = cascadeWeight(c, g, groups);
           dx.addAssign(d.x.mul(w));
           dy.addAssign(d.y.mul(w));
           dz.addAssign(d.z.mul(w));
@@ -282,28 +291,55 @@ export class Ocean {
       const dzz = szz.negate().toVar();
       const dxz = sxz.negate().toVar();
       const t = uTime;
+      const g = fields.gust(p0);
+      const groups = fields.groups(p0);
+      // Mean square slope of the waves too small for this pixel. Filtering averages their slopes away; what is lost
+      // widens the highlight instead, so far water is glossy and its sun path broad rather than glittering with aliasing.
+      const lost = float(0).toVar();
+      // The finest cascade's compression, kept apart: ripples a hand long wrinkle the foam but do not break into it.
+      const fineXX = float(0).toVar();
+      const fineZZ = float(0).toVar();
       if (fft) {
-        const g = gust(p0, float(0));
+        const spread = sqrt(max(fw.x.mul(fw.y), 1e-8)).mul(2);
+        const variance = [fft.slopeVariance.x, fft.slopeVariance.y, fft.slopeVariance.z];
         for (let c = 0; c < CASCADES.length; c += 1) {
-          const L = CASCADES[c]!.size;
+          const cascade = CASCADES[c]!;
+          const L = cascade.size;
           const der: any = sampleFlow(fft.derivatives[c]!, L);
-          const disp: any = sampleFlow(fft.displacement[c]!, L);
-          const w: any = c === 0 ? float(1) : c === 1 ? g : g.mul(this.detailStrength);
+          const w: any = c === 2 ? cascadeWeight(c, g, groups).mul(this.detailStrength) : cascadeWeight(c, g, groups);
           dyx.addAssign(der.x.mul(w));
           dyz.addAssign(der.y.mul(w));
           dxx.addAssign(der.z.mul(w));
           dzz.addAssign(der.w.mul(w));
-          dxz.addAssign(disp.w.mul(w));
+          if (c === 2) {
+            fineXX.assign(der.z.mul(w));
+            fineZZ.assign(der.w.mul(w));
+          }
+          // The shear of the short cascades is second order in the normal and the whitecaps; leaving their displacement
+          // maps out keeps the surface within the sixteen textures a shader stage may sample, with a tidal current and
+          // refraction both on.
+          if (c === 0) dxz.addAssign(sampleFlow(fft.displacement[c]!, L).w.mul(w));
+          // The cascade's waves span an octave range; the ones shorter than the pixel are lost.
+          const longest = (2 * Math.PI) / cascade.kLow;
+          const share = saturate(log2(spread.div(cascade.minWave)).div(Math.log2(longest / cascade.minWave)));
+          lost.addAssign(variance[c]!.mul(w).mul(w).mul(share));
         }
       } else {
+        // Two scales of ripple at unrelated angles, a third laid over the first where the wave groups run, so the
+        // texture's tile never lines up into a pattern; gusts roughen it.
         const uv1 = p0.mul(1 / 21).add(vec2(t.mul(0.011), t.mul(0.006)));
+        const uv1b = vec2(p0.x.mul(0.28).sub(p0.y.mul(0.96)), p0.x.mul(0.96).add(p0.y.mul(0.28))).mul(1 / 33).add(vec2(t.mul(0.004), t.mul(-0.009)));
         const uv2 = vec2(p0.x.mul(0.8).sub(p0.y.mul(0.6)), p0.x.mul(0.6).add(p0.y.mul(0.8))).mul(1 / 6.7).add(vec2(t.mul(-0.019), t.mul(0.014)));
-        const d1 = texture(detailTex, uv1).xy.mul(2).sub(1);
+        const blend = smoothstep(0.25, 0.75, groups);
+        const keep = float(1).div(sqrt(blend.mul(blend).add(float(1).sub(blend).mul(float(1).sub(blend)))));
+        const d1 = mix(texture(detailTex, uv1).xy, texture(detailTex, uv1b).xy, blend).mul(2).sub(1).mul(keep);
         const d2 = texture(detailTex, uv2).xy.mul(2).sub(1);
         const near = float(1).sub(smoothstep(30, 1400, dist));
-        const slope = d1.mul(0.2).add(d2.mul(0.13)).mul(near).mul(this.detailStrength);
+        const strength = this.detailStrength.mul(mix(float(0.55), float(1.35), g));
+        const slope = d1.mul(0.2).add(d2.mul(0.13)).mul(near).mul(strength);
         dyx.addAssign(slope.x);
         dyz.addAssign(slope.y);
+        lost.addAssign(float(1).sub(near).mul(strength).mul(strength).mul(DETAIL_SLOPE_VARIANCE));
       }
       const seabed = texture(terrain.heightTexture, terrainUV(p0)).r;
       const depthBelow = seabed.negate();
@@ -317,6 +353,8 @@ export class Ocean {
       const iz = float(1).add(dzz);
       const jacobian = ix.mul(iz).sub(dxz.mul(dxz));
       const nGeom = normalize(vec3(dyz.mul(dxz).sub(iz.mul(dyx)), max(jacobian, 0.05), dxz.mul(dyx).sub(dyz.mul(ix))));
+      // Where the swell and the longer waves fold over: whitecaps crown their crests.
+      const breaking = ix.sub(fineXX.mul(shore)).mul(iz.sub(fineZZ.mul(shore))).sub(dxz.mul(dxz));
 
       const wakeUV = vec2(p0.x.sub(wake.center.x).div(wake.extentU).add(0.5), p0.y.sub(wake.center.y).div(wake.extentU).add(0.5));
       const wakeEdge = smoothstep(0.0, 0.03, wakeUV.x).mul(smoothstep(1.0, 0.97, wakeUV.x)).mul(smoothstep(0.0, 0.03, wakeUV.y)).mul(smoothstep(1.0, 0.97, wakeUV.y));
@@ -333,7 +371,10 @@ export class Ocean {
       const fresnel = float(0.02).add(float(0.98).mul(pow(float(1).sub(NoV), 5)));
       const R = reflect(V.negate(), N);
       const Rc = normalize(vec3(R.x, max(R.y, 0.025), R.z));
-      const roughEnv = mix(float(0.03), float(0.2), smoothstep(40, 5000, dist)).add(lostSlope.mul(0.6)).min(0.45);
+      // The sky's reflection blurs with a share of the lost slope only: at grazing angles the far water keeps mirroring
+      // the bright horizon, as the waves' backs hide the steepest slopes from a low eye.
+      const envBase = mix(float(0.03), float(0.16), smoothstep(40, 5000, dist)).add(lostSlope.mul(0.6)).min(0.45);
+      const roughEnv = pow(pow(envBase, 4).add(lost.mul(0.35)), 0.25).min(0.55);
       const reflNode = pmremTexture(this.envTexture, Rc, roughEnv);
       pmremNodes.push(reflNode);
       const reflection = vec3(reflNode).mul(atmosphere.envIntensity);
@@ -343,12 +384,14 @@ export class Ocean {
       const NoH = saturate(dot(N, H));
       const NoL = saturate(dot(N, L));
       const VoH = saturate(dot(V, H));
-      const roughSpec = mix(float(0.05), float(0.16), smoothstep(20, 3500, dist)).add(lostSlope.mul(0.8)).min(0.5);
-      const a2 = roughSpec.mul(roughSpec).mul(roughSpec).mul(roughSpec);
+      const roughSpec = mix(float(0.05), float(0.1), smoothstep(20, 3500, dist)).add(lostSlope.mul(0.8)).min(0.5);
+      const a2 = roughSpec.mul(roughSpec).mul(roughSpec).mul(roughSpec).add(lost).min(0.5);
       const dDen = NoH.mul(NoH).mul(a2.sub(1)).add(1);
       const D = a2.div(dDen.mul(dDen).mul(Math.PI));
       const Fs = float(0.02).add(float(0.98).mul(pow(float(1).sub(VoH), 5)));
-      const spec = atmosphere.sunIrradiance.mul(D.mul(Fs).mul(NoL).div(max(NoV, 0.12).mul(4)));
+      // The sun is cut off under the clouds' shadows, which drift over the sea with the wind.
+      const sunLit = atmosphere.sunIrradiance.mul(fields.sunThrough(p0)).toVar();
+      const spec = sunLit.mul(D.mul(Fs).mul(NoL).div(max(NoV, 0.12).mul(4)));
       const lightSpec = vec3(0).toVar();
       const lightDiffuse = vec3(0).toVar();
       const aL = float(0.09).mul(float(0.09)).mul(float(0.09)).mul(float(0.09));
@@ -375,8 +418,8 @@ export class Ocean {
       const thin = pow(saturate(float(0.5).sub(dot(L, N).mul(0.5))), 2);
       const scatterAmount = crest.mul(backLit).mul(thin).mul(2.6).add(pow(NoV, 2).mul(0.25));
       const sunLuma = dot(atmosphere.sunIrradiance, vec3(0.2126, 0.7152, 0.0722));
-      const scatter = atmosphere.waterScatter.mul(atmosphere.sunIrradiance).mul(scatterAmount).mul(0.18);
-      const body = atmosphere.waterDeep.mul(atmosphere.skyAmbient.mul(4.2).add(atmosphere.sunIrradiance.mul(NoL.mul(0.25).add(0.12)))).add(scatter).add(atmosphere.waterScatter.mul(atmosphere.skyAmbient).mul(crest.mul(0.35).add(wakeTurb.mul(1.6))));
+      const scatter = atmosphere.waterScatter.mul(sunLit).mul(scatterAmount).mul(0.18);
+      const body = atmosphere.waterDeep.mul(atmosphere.skyAmbient.mul(4.2).add(sunLit.mul(NoL.mul(0.25).add(0.12)))).add(scatter).add(atmosphere.waterScatter.mul(atmosphere.skyAmbient).mul(crest.mul(0.35).add(wakeTurb.mul(1.6))));
 
       const shallowTint = float(1).sub(smoothstep(1.5, 14, depthBelow));
       // Refraction and contact foam read the scene colour and depth behind the surface. That costs a framebuffer
@@ -408,7 +451,8 @@ export class Ocean {
       const foamUV = p0.mul(1 / 14).add(N.xz.mul(0.25)).add(vec2(t.mul(0.004), t.mul(-0.003)));
       const foamUV2 = p0.mul(1 / 4.3).add(N.xz.mul(0.12)).sub(vec2(t.mul(0.011), t.mul(0.004)));
       const pattern = texture(foamTex, foamUV).r.mul(0.62).add(texture(foamTex, foamUV2).r.mul(0.38));
-      const whitecap = saturate(float(0.82).sub(jacobian).mul(2.4)).mul(this.whitecaps);
+      // Whitecaps break where the gusts blow: in clusters that come and go, not as an even sprinkling.
+      const whitecap = saturate(float(0.86).sub(breaking).mul(2.4)).mul(this.whitecaps).mul(mix(float(0.4), float(1.6), g));
       const surf = float(1).sub(smoothstep(0.0, 4.5, depthBelow)).mul(sin(depthBelow.mul(2.2).sub(t.mul(1.6))).mul(0.35).add(0.75));
       const speed = length(flow);
       const whirl = float(0).toVar();
@@ -446,7 +490,7 @@ export class Ocean {
       }
       const coverage = whitecap.mul(1.35).mul(shore).add(contact.mul(1.2)).add(wakeFoam.mul(1.15)).add(whirl).add(surf.mul(select(depthBelow.greaterThan(-0.5), float(1), float(0))));
       const foam = max(saturate(coverage.sub(float(1).sub(pattern)).mul(3.2)), eddyFoam.clamp(0, 0.82));
-      const foamLight = atmosphere.skyAmbient.mul(0.95).add(atmosphere.sunIrradiance.mul(NoL.mul(0.6).add(0.25)).mul(1 / Math.PI)).add(lightDiffuse.mul(1 / Math.PI));
+      const foamLight = atmosphere.skyAmbient.mul(0.95).add(sunLit.mul(NoL.mul(0.6).add(0.25)).mul(1 / Math.PI)).add(lightDiffuse.mul(1 / Math.PI));
       color.assign(mix(color, vec3(0.93, 0.95, 0.96).mul(foamLight), foam.mul(0.92)));
       color.assign(color.mul(float(1).sub(core.clamp(0, 1).mul(0.35))));
 

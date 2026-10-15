@@ -49,7 +49,7 @@ import {
   vec4,
 } from 'three/tsl';
 import { atmosphere } from './atmosphere';
-import { CLOUD_WIND, createCloudNoise, createWeatherMap, WEATHER_SPAN } from './cloudNoise';
+import { createCloudNoise, weatherMap, WEATHER_SPAN } from './cloudNoise';
 import type { CloudSpec } from './sky';
 import type { SkyView } from './skyDome';
 
@@ -95,7 +95,6 @@ export class Clouds {
   private readonly marchedVP = uniform(new Matrix4());
   private readonly blend = uniform(1);
   private readonly frameU = uniform(0);
-  private readonly wind = uniform(new Vector2());
   private quality: CloudQuality;
   private frames = 0;
   private historyValid = false;
@@ -120,7 +119,7 @@ export class Clouds {
     const stepsU = this.stepsU;
     const lightStepsU = this.lightStepsU;
     this.noise = createCloudNoise(64);
-    this.weather = createWeatherMap();
+    this.weather = weatherMap();
     const noise = this.noise;
     const weather = this.weather;
     for (const rt of [this.current, this.history]) {
@@ -133,14 +132,14 @@ export class Clouds {
     const top = this.top;
     const thick = top.sub(base);
     const t = this.time;
-    const drift = vec3(this.wind.x, 0, this.wind.y);
+    const drift = vec3(atmosphere.cloudDrift.x, 0, atmosphere.cloudDrift.y);
     // Decks (high cover) keep their tops level; scattered clouds pile up into rounded heads over flat bases.
     const deck = smoothstep(0.6, 0.9, this.coverage);
     // As coverAt in cloudNoise.ts: scattered clouds swing between gaps and masses, a deck only thins.
     const spread = float(1.1).sub(deck.mul(0.6));
     const shape = (p: Node, detail: boolean, far: Node) => {
       const h = p.y.sub(base).div(thick);
-      const w = texture(weather, p.xz.sub(drift.xz).div(WEATHER_SPAN));
+      const w = texture(weather, p.xz.sub(drift.xz).div(WEATHER_SPAN)).level(float(0));
       const cover = clamp(this.coverage.add(w.r.sub(0.5).mul(spread)), 0, 1);
       const crown = mix(mix(0.5, 1, w.g), float(0.95), deck);
       const profile = smoothstep(0, 0.07, h).mul(smoothstep(crown, crown.mul(mix(0.35, 0.75, deck)), h));
@@ -187,7 +186,8 @@ export class Clouds {
         const sunLight = atmosphere.sunIrradiance;
         const zenith = vec3(sky.at(vec3(0, 1, 0))).mul(atmosphere.envIntensity);
         const ambientTop = max(zenith.mul(2.2), atmosphere.skyAmbient.mul(1.1));
-        const ambientBase = atmosphere.skyAmbient.mul(0.55);
+        // Under a deck the underside is what the sky's average is made of; a lone cloud's base sees the darker sea.
+        const ambientBase = atmosphere.skyAmbient.mul(mix(float(0.55), float(1), deck));
         const lightStep = float(LIGHT_SPAN).div(lightStepsU.mul(lightStepsU));
         Loop(maxSteps, ({ i }) => {
           If(trans.greaterThan(0.01).and(float(i).lessThan(stepsU)), () => {
@@ -327,7 +327,6 @@ export class Clouds {
   dispose() {
     for (const rt of [this.current, this.history]) rt.dispose();
     this.noise.dispose();
-    this.weather.dispose();
     this.marcher.geometry.dispose();
     (this.marcher.material as MeshBasicNodeMaterial).dispose();
     (this.copy.material as MeshBasicNodeMaterial).dispose();
@@ -336,9 +335,9 @@ export class Clouds {
     this.mesh.removeFromParent();
   }
 
+  /** `time` is battle time: the wind carries the layer (atmosphere.cloudDrift, set by the engine) and the wisps evolve with it. */
   update(camera: { x: number; y: number; z: number }, time: number) {
     this.mesh.position.set(camera.x, camera.y, camera.z);
     this.time.value = time;
-    (this.wind.value as Vector2).set(CLOUD_WIND.x * time, CLOUD_WIND.y * time);
   }
 }

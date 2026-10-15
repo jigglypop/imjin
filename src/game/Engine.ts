@@ -33,6 +33,7 @@ import { loadSky, SKY_PRESETS, viewTexture, type LoadedSky, type SkyPresetName }
 import { SkyView } from '../render/skyDome';
 import { Ocean } from '../ocean/Ocean';
 import { Clouds } from '../render/Clouds';
+import { CLOUD_WIND } from '../render/cloudNoise';
 import { WakeMap } from '../ocean/WakeMap';
 import { SEA_STATES, spectrumOf, waveField, type SeaStateName } from '../ocean/waves';
 import { combatValue, engagementRange } from '../sim/competitive';
@@ -879,6 +880,9 @@ export class Engine {
     if (this.fx) this.fx.night = preset.night;
     if (this.ocean) this.ocean.setEnvironment(sky.environment);
     this.clouds?.setLayer(preset.clouds);
+    // The sea is shaded by the clouds that are drawn, and by none when they are off.
+    atmosphere.cloudCover.value = this.clouds ? preset.clouds.coverage : 0;
+    atmosphere.cloudHeight.value = (preset.clouds.base + preset.clouds.top) * 0.5;
     this.placeholderSky?.dispose();
     this.placeholderSky = null;
     // A reused sky keeps its textures. Only a sky that came in new textures frees the ones it replaces.
@@ -1139,6 +1143,7 @@ export class Engine {
     if (this.rts.followId && !follow) this.rts.followId = 0;
     this.rts.update(dt, follow);
     this.ocean.setTide(this.battle.tide);
+    atmosphere.cloudDrift.value.set(CLOUD_WIND.x * waveField.time, CLOUD_WIND.y * waveField.time);
     this.clouds?.update(this.camera.position, waveField.time);
     if (this.skyView) this.skyView.time.value += dt;
     this.vegetation?.update(this.camera);
