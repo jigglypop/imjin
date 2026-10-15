@@ -49,9 +49,9 @@ Some files are played in more than one way: `sink_1` also in slices of 1.4 to 4.
 | horn_1.mp3 | 3.5 s | 28 KB | Conch horn (nagak, horagai): one long blast of a conch shell, rising and falling like a breath. | 78974 |
 | horn_2.mp3 | 3.6 s | 29 KB | Second conch blast from another recording, a higher shell. | 64830 |
 | horn_3.mp3 | 3.6 s | 29 KB | Third conch blast, lower and rougher. | 528598 |
-| warcry_1.mp3 | 3.6 s | 29 KB | War cry (hamseong): a crowd yelling as it charges. | 764267 |
-| warcry_2.mp3 | 4.2 s | 33 KB | War cry: the crowd slowed 14 % with a screaming man on top, so no word stays readable. | 763940, 563011 |
-| warcry_3.mp3 | 3.5 s | 28 KB | War cry: a screaming charge with the crowd behind it. Also cut into short slices for men shouting on deck. | 563011, 764267 |
+| warcry_1.mp3 | 3.6 s | 29 KB | War cry (hamseong): a crowd roaring as it surges, no word in it. | 449915 |
+| warcry_2.mp3 | 3.4 s | 27 KB | War cry: a drawn-out shouting crowd with a man's wordless yell on top. | 130568, 396230 |
+| warcry_3.mp3 | 3.5 s | 28 KB | War cry: a studio roar with a shouting crowd behind it. Also cut into short slices for men shouting on deck. | 265554, 130568 |
 | cheer_1.mp3 | 3.2 s | 25 KB | Cheer: a crowd roar swelling and falling. | 267249 |
 | cheer_2.mp3 | 3.2 s | 26 KB | Cheer: a small crowd cheering, longer. | 264377 |
 | clash_1.mp3 | 2.1 s | 17 KB | Blades clashing in a boarding fight: several blows of steel on steel, the top taken off. | 568790 |
@@ -76,6 +76,7 @@ All licences: Creative Commons 0 (http://creativecommons.org/publicdomain/zero/1
 | 78974 | Conch.wav | RoofDog | https://freesound.org/people/RoofDog/sounds/78974/ |
 | 125348 | civl war canon fire.wav | adeluc4 | https://freesound.org/people/adeluc4/sounds/125348/ |
 | 125932 | reenactment2.aif | alienistcog | https://freesound.org/people/alienistcog/sounds/125932/ |
+| 130568 | RoaringCrowd.wav | benfree | https://freesound.org/people/benfree/sounds/130568/ |
 | 182822 | Artillery Shots.flac | qubodup | https://freesound.org/people/qubodup/sounds/182822/ |
 | 183450 | Wood Crack 5 | utsuru | https://freesound.org/people/utsuru/sounds/183450/ |
 | 183452 | Wood Crack 2 | utsuru | https://freesound.org/people/utsuru/sounds/183452/ |
@@ -91,12 +92,15 @@ All licences: Creative Commons 0 (http://creativecommons.org/publicdomain/zero/1
 | 257752 | Wooden Ship Break | Kodack | https://freesound.org/people/Kodack/sounds/257752/ |
 | 259300 | Huge Explosion | unfa | https://freesound.org/people/unfa/sounds/259300/ |
 | 264377 | small crowd cheering | HowardV | https://freesound.org/people/HowardV/sounds/264377/ |
+| 265554 | Studio roar | AugustSandberg | https://freesound.org/people/AugustSandberg/sounds/265554/ |
 | 267249 | BerlinGameScene.com Crowd Cheer 1 | BerlinGameScene | https://freesound.org/people/BerlinGameScene/sounds/267249/ |
 | 274223 | War Drum Loop | PearceWilsonKing | https://freesound.org/people/PearceWilsonKing/sounds/274223/ |
 | 394180 | Arrow Loose and Flyby | saturdaysoundguy | https://freesound.org/people/saturdaysoundguy/sounds/394180/ |
+| 396230 | Elf Male Warcry.wav | zatar | https://freesound.org/people/zatar/sounds/396230/ |
 | 423959 | Bubbling | pillwave | https://freesound.org/people/pillwave/sounds/423959/ |
 | 438846 | G54-27-Oars Rowing.wav | craigsmith | https://freesound.org/people/craigsmith/sounds/438846/ |
 | 442773 | Big Water Splash | qubodup | https://freesound.org/people/qubodup/sounds/442773/ |
+| 449915 | crowd roar.WAV | jonsept | https://freesound.org/people/jonsept/sounds/449915/ |
 | 474121 | volley of arrows01.wav | mcaseydesign | https://freesound.org/people/mcaseydesign/sounds/474121/ |
 | 476225 | Huge Distant Explosion | Fission9 | https://freesound.org/people/Fission9/sounds/476225/ |
 | 487146 | R29-34-Big Object Falls and Crashes in Room.wav | craigsmith | https://freesound.org/people/craigsmith/sounds/487146/ |
@@ -107,7 +111,6 @@ All licences: Creative Commons 0 (http://creativecommons.org/publicdomain/zero/1
 | 538795 | old musket bang.wav | bruno.auzet | https://freesound.org/people/bruno.auzet/sounds/538795/ |
 | 539823 | Bubbles 001.wav | ristooooo1 | https://freesound.org/people/ristooooo1/sounds/539823/ |
 | 553886 | Smash Sound Effect / Smash/knock wood | sukondi | https://freesound.org/people/sukondi/sounds/553886/ |
-| 563011 | People screaming in agony when charging into battle | florianreichelt | https://freesound.org/people/florianreichelt/sounds/563011/ |
 | 568790 | sword against sword.wav | Fenodyrie | https://freesound.org/people/Fenodyrie/sounds/568790/ |
 | 583348 | Rock Splash | Fission9 | https://freesound.org/people/Fission9/sounds/583348/ |
 | 585744 | Foley_Natural_Water_Jump_Mono.wav | Nox_Sound | https://freesound.org/people/Nox_Sound/sounds/585744/ |
@@ -119,8 +122,6 @@ All licences: Creative Commons 0 (http://creativecommons.org/publicdomain/zero/1
 | 705629 | Destruction_misc1.wav | AirwaveXV | https://freesound.org/people/AirwaveXV/sounds/705629/ |
 | 708196 | Swords Hitting Each Other: 2 Swords clashing, fighting one another, hitting each other. Recorded with ZoomH6, with rifle microphone, EQ was used to reduce background noise. | RileyB711 | https://freesound.org/people/RileyB711/sounds/708196/ |
 | 723974 | Wooden Door breaks | Saladsounds | https://freesound.org/people/Saladsounds/sounds/723974/ |
-| 763940 | CRWDBatl_Crowd Yells Charge, Continues_ShaneVincent_GSC24_BIN-AmbeoVR.wav | ShangusBurger | https://freesound.org/people/ShangusBurger/sounds/763940/ |
-| 764267 | CRWDBatl_Crowd Yells Charge, Continues_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | https://freesound.org/people/ShangusBurger/sounds/764267/ |
 | 764048 | CRWDBatl_Crowd Grunting, Exerting, Metered, Rowing_ShaneVincent_GSC24_FUMA-AmbeoVR.wav | ShangusBurger | https://freesound.org/people/ShangusBurger/sounds/764048/ |
 | 803159 | Temple Gong 2 | kerozenne | https://freesound.org/people/kerozenne/sounds/803159/ |
 | 841529 | arrows clattering | Fenodyrie | https://freesound.org/people/Fenodyrie/sounds/841529/ |

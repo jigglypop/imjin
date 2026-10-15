@@ -480,13 +480,16 @@ def build_command():
         x = dsp.lp(dsp.hp(_cut(name, a, b, 120, 900), 90, 2), 2400, 2)
         x = dsp.reverb(x, dsp.make_ir(1.4, 1.0, 0.4, lp_hz=3000, length=1.5, seed=330 + k), wet_db=-10)
         D[f'horn_{k}'] = x
-    # War cries: a crowd charging and a single screaming man, slowed or sped so no word stays readable.
-    crowd = dsp.hp(_cut('764267', 1.0, 4.6, 150, 800), 120, 2)
-    crowd2 = dsp.hp(dsp.rate(_cut('763940', 1.0, 4.6, 150, 800), 0.86), 120, 2)
-    scream = dsp.hp(_cut('563011', 0.8, 4.2, 150, 800), 120, 2)
+    # War cries: roaring crowds with a man's wordless yell on top. No source holds a word: a concert crowd roaring, a
+    # drawn-out "ahh" shout and a studio roar, so nothing here is a language to translate.
+    crowd = dsp.hp(_cut('449915', 3.6, 7.2, 150, 800), 120, 2)
+    crowd2 = dsp.hp(_cut('130568', 1.0, 4.4, 150, 800), 120, 2)
+    crowd3 = dsp.hp(dsp.rate(_cut('130568', 10.0, 13.6, 150, 800), 1.08), 120, 2)
+    yell = dsp.hp(_cut('396230', 0.45, 3.2, 100, 700), 120, 2)
+    roar = dsp.hp(_cut('265554', 0.0, 2.9, 20, 600), 120, 2)
     D['warcry_1'] = crowd
-    D['warcry_2'] = dsp.mix_at(crowd2.copy(), dsp.rate(scream, 1.12), 0.0, 0.45)
-    D['warcry_3'] = dsp.mix_at(scream*0.8, dsp.rate(crowd, 1.1), 0.2, 0.6)
+    D['warcry_2'] = dsp.mix_at(crowd2.copy(), dsp.rate(yell, 0.92), 0.2, 0.55)
+    D['warcry_3'] = dsp.mix_at(roar*0.8, crowd3, 0.2, 0.6)
     # Cheers: a short roar swelling and falling, and a longer one from a small crowd.
     D['cheer_1'] = dsp.hp(_cut('267249', 0.1, 3.4, 60, 900), 150, 2)
     D['cheer_2'] = dsp.hp(_cut('264377', 3.0, 6.2, 400, 1000), 150, 2)
