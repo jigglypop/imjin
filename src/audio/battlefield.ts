@@ -706,7 +706,7 @@ export class Battlefield {
           this.gate.clash = now + 1.1;
           this.sample('clash', at, { gain: loud(s.gain) * 0.8, pan: s.pan + rnd(-0.1, 0.1), rate: rnd(0.95, 1.08), cutoff: Math.max(1500, s.muffle), wet: 0.15, dest: this.commandBus }, 0.5);
         }
-        this.shout(s, at, 0.55);
+        this.shout(s, at, 0.4);
         if (e.type === 'casualty' && e.count >= 2 && now >= this.gate.over && Math.random() < 0.35) {
           this.gate.over = now + 0.9;
           this.sample('overboard', at + 0.2, { gain: loud(s.gain) * 0.8, pan: s.pan + rnd(-0.2, 0.2), rate: rnd(0.9, 1.1), cutoff: Math.max(1200, s.muffle), dest: this.commandBus }, 0.4);
