@@ -271,7 +271,7 @@ export class Effects {
     // and briefer than the last; a heavy charge throws a last bloom further out.
     for (let i = 0; i < 3; i += 1) {
       const at = 0.6 + i * 1.1 * scale;
-      this.fire.emit({ x: x + dx * at, y: y + dy * at, z: z + dz * at, vx: dx * 24, vy: dy * 24, vz: dz * 24, life: rnd(0.04, 0.07) + i * 0.015, size0: (1 + i * 0.8) * scale, size1: (2.4 + i * 1.8) * scale, alpha: 1, heat: 1 - i * 0.1, drag: 9, wind: 0 });
+      this.fire.emit({ x: x + dx * at, y: y + dy * at, z: z + dz * at, vx: dx * 24, vy: dy * 24, vz: dz * 24, life: rnd(0.04, 0.07) + i * 0.015, size0: (1.3 + i * 0.9) * scale, size1: (3 + i * 2) * scale, alpha: 1, heat: 1 - i * 0.1, drag: 9, wind: 0 });
     }
     if (w > 0.6) this.fire.emit({ x: x + dx * 4.5, y: y + dy * 4.5 + 0.3, z: z + dz * 4.5, vx: dx * 18, vy: dy * 18 + 1, vz: dz * 18, life: rnd(0.09, 0.13), size0: 3.4 * scale, size1: 6.5 * scale, alpha: 0.5, heat: 0.85, drag: 6, wind: 0 });
     // Grains of powder still burning, flung out in a narrow fan; a few fall smouldering to the water.
@@ -289,7 +289,7 @@ export class Effects {
     for (let i = 0; i < Math.round(4 + 3 * w); i += 1) {
       const sp = rnd(22, 48) * (0.8 + 0.4 * w);
       const tone = rnd(0.56, 0.66);
-      this.smoke.emit({ x: x + dx * 0.9, y: y + dy * 0.9, z: z + dz * 0.9, vx: dx * sp + rnd(-1.5, 1.5), vy: dy * sp + rnd(-0.5, 1.5), vz: dz * sp + rnd(-1.5, 1.5), life: rnd(7, 12), size0: rnd(1.4, 2) * scale, size1: rnd(6, 9) * scale, alpha: rnd(0.6, 0.75), r: tone, g: tone * 0.97, b: tone * 0.9, drag: 3.4, lift: 0.14, wind: 1, spin: 0.25 });
+      this.smoke.emit({ x: x + dx * 0.9, y: y + dy * 0.9, z: z + dz * 0.9, vx: dx * sp + rnd(-1.5, 1.5), vy: dy * sp + rnd(-0.5, 1.5), vz: dz * sp + rnd(-1.5, 1.5), life: rnd(9, 15), size0: rnd(1.4, 2) * scale, size1: rnd(8, 12) * scale, alpha: rnd(0.62, 0.78), r: tone, g: tone * 0.97, b: tone * 0.9, drag: 3.4, lift: 0.14, wind: 1, spin: 0.25, growth: 5 });
     }
     // The billow: the hot gas of the charge swelling to several metres within the first second, a short life so that it
     // grows fast; by the time it thins out the slower cloud has taken its place.
@@ -302,9 +302,9 @@ export class Effects {
     // The cloud the jet rolls over into: puffs of every size round its first metres, swelling as much up and sideways
     // as along the bore, rising slowly and rolling as they grow, lasting long enough that the next guns of a broadside
     // fire into the smoke of the first.
-    const puffs = Math.round(7 + 7 * w);
+    const puffs = Math.round(8 + 8 * w);
     for (let i = 0; i < puffs; i += 1) {
-      const along = rnd(0.5, 6) * scale;
+      const along = rnd(0.5, 8) * scale;
       const sp = rnd(2, 14) * scale;
       const tone = rnd(0.62, 0.76);
       this.smoke.emit({
@@ -314,10 +314,10 @@ export class Effects {
         vx: dx * sp + rnd(-3.5, 3.5),
         vy: dy * sp + rnd(-0.5, 3),
         vz: dz * sp + rnd(-3.5, 3.5),
-        life: rnd(16, 30),
+        life: rnd(20, 34),
         size0: rnd(1.2, 2.6) * scale,
-        size1: rnd(7, 15) * scale,
-        alpha: rnd(0.38, 0.6),
+        size1: rnd(10, 19) * scale,
+        alpha: rnd(0.4, 0.62),
         r: tone,
         g: tone * 0.985,
         b: tone * 0.96,
@@ -325,6 +325,7 @@ export class Effects {
         lift: rnd(0.08, 0.24),
         wind: 1,
         spin: 0.18,
+        growth: 7,
       });
     }
     // The blast ring: smoke thrown out sideways round the bore and slowed at once.
@@ -334,7 +335,7 @@ export class Effects {
     for (let i = 0; i < ring; i += 1) {
       const a = ((i + Math.random() * 0.6) / ring) * Math.PI * 2;
       const sp = rnd(8, 14) * scale;
-      this.smoke.emit({ x: x + dx * 1.6, y: y + dy * 1.6, z: z + dz * 1.6, vx: px * Math.cos(a) * sp + dx * 5, vy: Math.sin(a) * sp * 0.7 + 0.4, vz: pz * Math.cos(a) * sp + dz * 5, life: rnd(2.5, 4.5), size0: 0.9 * scale, size1: rnd(4, 6) * scale, alpha: 0.4, r: 0.76, g: 0.75, b: 0.72, drag: 3, lift: 0.12, wind: 1 });
+      this.smoke.emit({ x: x + dx * 1.6, y: y + dy * 1.6, z: z + dz * 1.6, vx: px * Math.cos(a) * sp + dx * 5, vy: Math.sin(a) * sp * 0.7 + 0.4, vz: pz * Math.cos(a) * sp + dz * 5, life: rnd(2.5, 4.5), size0: 0.9 * scale, size1: rnd(5, 8) * scale, alpha: 0.42, r: 0.76, g: 0.75, b: 0.72, drag: 3, lift: 0.12, wind: 1, growth: 4 });
     }
     // The blast slaps the sea under the muzzle: a ring of spray running outward and a flattened, frothy patch.
     const h = waveField.heightAt(x, z, waveField.time, 6);
@@ -351,7 +352,7 @@ export class Effects {
     this.shakeAt(x, y, z, 0.2 + 0.4 * w, 45);
     // The flash lights the hull, the water and the smoke for a few frames: warm, close and gone. At night it is the
     // brightest thing on the water, and the eye has opened up for it.
-    this.light(x + dx * 2.5, y + 0.8, z + dz * 2.5, (90 + 150 * w) * (1 + 1.5 * this.night), 0.08, 1, 0.66, 0.36, 40 + 30 * w, 30);
+    this.light(x + dx * 2.5, y + 0.8, z + dz * 2.5, (700 + 1600 * w) * (1 + 1.5 * this.night), 0.09, 1, 0.66, 0.36, 30 + 30 * w, 30);
   }
 
   /** Far volleys only: where the crew is drawn its shooters make their own flashes and smoke, and a bow makes none. */
@@ -972,7 +973,7 @@ export class Effects {
     }
     // Shot leaves only a faint wisp of its burning wad: a thin grey thread along the arc, gone in a second or so. Each
     // puff starts wider than the gap to the next, so the thread never breaks up into beads.
-    this.smoke.emit({ x, y, z, vx: rnd(-0.2, 0.2), vy: rnd(0, 0.3), vz: rnd(-0.2, 0.2), life: rnd(0.8, 1.4), size0: (1.6 + 0.3 * weight) * k, size1: (rnd(2.2, 2.6) + 0.6 * weight) * k, alpha: 0.05 + 0.04 * weight, r: 0.84, g: 0.84, b: 0.83, drag: 1.4, lift: 0.08, wind: 0.6 });
+    this.smoke.emit({ x, y, z, vx: rnd(-0.2, 0.2), vy: rnd(0, 0.3), vz: rnd(-0.2, 0.2), life: rnd(0.6, 1.1), size0: 1.3 * k, size1: (rnd(1.8, 2.1) + 0.4 * weight) * k, alpha: 0.035 + 0.03 * weight, r: 0.84, g: 0.84, b: 0.83, drag: 1.4, lift: 0.08, wind: 0.6 });
   }
 
   /**
@@ -1099,7 +1100,7 @@ export class Effects {
       }
       switch (kind) {
         case Shell.Heavy:
-          this.mun.heavyArrow(px, py, pz, ux, uy, uz, sp, ppm, p.gun, p.age);
+          this.mun.heavyArrow(px, py, pz, ux, uy, uz, sp, ppm, p.gun, p.age, p.id);
           break;
         case Shell.Hiya:
           this.mun.fireArrow(px, py, pz, ux, uy, uz, ppm);

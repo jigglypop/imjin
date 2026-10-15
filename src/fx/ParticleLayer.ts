@@ -82,6 +82,11 @@ export type EmitOptions = {
   heat?: number;
   /** Spray only: how much taller than wide the sprite starts (0 is round); it relaxes to round as the water falls. */
   stretch?: number;
+  /**
+   * How fast the size goes from size0 to size1: the exponent of 1 - (1 - t)^k over the life. 2.2 by default; gun smoke
+   * uses more, swelling to most of its size in the first second and then hanging there for the rest of its life.
+   */
+  growth?: number;
   drag?: number;
   lift?: number;
   spin?: number;
@@ -106,6 +111,7 @@ export class ParticleLayer {
   private readonly life: Float32Array;
   private readonly s0: Float32Array;
   private readonly s1: Float32Array;
+  private readonly gk: Float32Array;
   private readonly a0: Float32Array;
   private readonly rot: Float32Array;
   private readonly spin: Float32Array;
@@ -144,6 +150,7 @@ export class ParticleLayer {
     this.life = f();
     this.s0 = f();
     this.s1 = f();
+    this.gk = f();
     this.a0 = f();
     this.rot = f();
     this.spin = f();
@@ -310,6 +317,7 @@ export class ParticleLayer {
     this.life[i] = o.life;
     this.s0[i] = o.size0;
     this.s1[i] = o.size1;
+    this.gk[i] = o.growth ?? 2.2;
     this.a0[i] = o.alpha ?? 1;
     this.rot[i] = o.rot ?? Math.random() * Math.PI * 2;
     this.spin[i] = (Math.random() - 0.5) * (o.spin ?? 0.4);
@@ -336,6 +344,7 @@ export class ParticleLayer {
     this.life[i] = this.life[last]!;
     this.s0[i] = this.s0[last]!;
     this.s1[i] = this.s1[last]!;
+    this.gk[i] = this.gk[last]!;
     this.a0[i] = this.a0[last]!;
     this.rot[i] = this.rot[last]!;
     this.spin[i] = this.spin[last]!;
@@ -421,7 +430,7 @@ export class ParticleLayer {
     for (let k = 0; k < n; k += 1) {
       const i = this.order[k]!;
       const t = this.age[i]! / this.life[i]!;
-      const grow = 1 - Math.pow(1 - t, 2.2);
+      const grow = 1 - Math.pow(1 - t, this.gk[i]!);
       const size = this.s0[i]! + (this.s1[i]! - this.s0[i]!) * grow;
       const fadeIn = Math.min(1, this.age[i]! / Math.min(0.15, this.life[i]! * 0.2));
       const fadeOut = this.kind === 'fire' ? Math.pow(1 - t, 1.3) : 1 - t * t;
