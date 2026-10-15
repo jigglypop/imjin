@@ -150,18 +150,20 @@ try {
     assert.equal(broken.length, 1);
     assert.equal(broken[0].team, 'japan');
     assert.ok(z.every((s) => !b.isActive(s) || s.moraleState === 'routing'));
-    steps(b, 22);
-    assert.equal(b.winner, 'joseon', 'a side mostly running for 20 s has lost the field');
+    steps(b, 40);
+    assert.equal(b.winner, null, 'the winner has 45 s to run the fleeing ships down');
+    steps(b, 7);
+    assert.equal(b.winner, 'joseon', 'a side mostly running for 45 s has lost the field');
   });
 
-  check('a fleet a person leads breaks too, a little later than the computer would', () => {
+  check('a fleet a person leads breaks at its line too', () => {
     const { b, a } = duel({ humans: [0], joseon: ['panokseon', 'panokseon', 'panokseon', 'panokseon', 'panokseon'] });
-    b.retreatBelow.joseon = 0.7;
+    b.retreatBelow.joseon = 0.5;
     steps(b, 61);
     b.morale.shock(a[1], 1);
     b.morale.shock(a[2], 1);
     steps(b, 1);
-    assert.equal(b.isRetreating('joseon'), false, '3 of 5 fighting is above 0.7 x 0.8');
+    assert.equal(b.isRetreating('joseon'), false, '3 of 5 fighting is above 0.5');
     b.morale.shock(a[3], 1);
     steps(b, 1);
     assert.equal(b.isRetreating('joseon'), true, '2 of 5 is under it');
@@ -200,8 +202,8 @@ try {
       b.windAngle = Math.PI / 2;
       z[0].x = z[1].x = z[2].x = 3000;
       z[0].z = 0; z[1].z = 22; z[2].z = 400;
-      z[0].fire = 0.9;
-      const seen = events(b, 25, 'ignite');
+      z[0].fire = 1;
+      const seen = events(b, 45, 'ignite');
       if (seen.some((e) => e.ship === z[1].id && e.from === z[0].id)) caught += 1;
       if (seen.some((e) => e.ship === z[2].id)) far += 1;
     }
@@ -237,6 +239,31 @@ try {
     const before = conquest.tickets.joseon;
     steps(b, 3);
     assert.ok(before - conquest.tickets.joseon >= conquest.options.tickets * 0.02, `${before - conquest.tickets.joseon}`);
+  });
+
+  check('a conquest fleet beaten down to a remnant is swept from the sea; a port that only ever had a few ships is not', () => {
+    const map = { night: false, sea: 'calm', points: [
+      { name: 'west', hanja: '', x: -1500, z: 0, r: 250, value: 1, home: 0 },
+      { name: 'east', hanja: '', x: 1500, z: 0, r: 250, value: 1, home: 1 },
+    ] };
+    const seats = (west) => [
+      { name: 'west', faction: 'joseon', team: 'joseon', human: true, fleet: west },
+      { name: 'east', faction: 'japan', team: 'japan', human: true, fleet: ['atakebune', 'atakebune', 'atakebune'] },
+    ];
+    const hold = (b) => { for (const s of b.ships) { s.order = { type: 'anchor' }; s.fireMode = 'hold'; } };
+    const beaten = buildConquestOn(map, seats(['panokseon', 'panokseon', 'panokseon']), () => -50, 9, { depth: 'depth-v1' }).battle;
+    hold(beaten);
+    steps(beaten, 30);
+    for (const s of beaten.ships) if (s.team === 'joseon') { s.hull = s.spec.hull * 0.05; beaten.setCrew(s, s.spec.crew * 0.05); }
+    // The remnant keeps its nerve, so neither a rout nor the tickets decide this: only the sweep can.
+    beaten.morale.memo.clear();
+    steps(beaten, 330);
+    assert.ok(beaten.ships.every((s) => s.moraleState === 'steady'));
+    assert.equal(beaten.winner, 'japan', 'under a third of the foe and half of what it had, for 45 s after the opening');
+    const small = buildConquestOn(map, seats(['hyeopseon']), () => -50, 9, { depth: 'depth-v1' }).battle;
+    hold(small);
+    steps(small, 360);
+    assert.equal(small.winner, null);
   });
 } finally {
   await server.close();

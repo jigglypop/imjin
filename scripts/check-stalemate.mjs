@@ -3,6 +3,7 @@
 //   node scripts/check-stalemate.mjs                           every scenario, every playable side, 2 seeds, 65 sim minutes
 //   node scripts/check-stalemate.mjs hansan --side=joseon --seeds=4 --minutes=30 --verbose
 //   node scripts/check-stalemate.mjs --conquest                the capture-point maps instead, with an idle player
+//   node scripts/check-stalemate.mjs --classic                 the rules from before the battle depth rules (ranked and online conquest)
 // Exits 1 when a battle is still undecided at the limit. The server runs the same simulation, so this guards multiplayer too.
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -21,6 +22,7 @@ const seeds = Number(flag('seeds', 2));
 const minutes = Number(flag('minutes', 65));
 const sides = flag('side', null)?.split(',') ?? null;
 const verbose = args.includes('--verbose');
+const classic = args.includes('--classic');
 const trace = args.includes('--trace');
 
 const server = await createServer({
@@ -39,6 +41,7 @@ const { applyBalance, playableFactions } = await load('/src/sim/balance.ts');
 const { teamOf } = await load('/src/sim/types.ts');
 const { generateHeightmap } = await load('/src/terrain/generate.ts');
 const { CurrentField } = await load('/src/sim/current.ts');
+const { DEPTH_V1 } = await load('/src/sim/depth.ts');
 
 const cacheDir = join(root, 'node_modules', '.cache', 'balance');
 mkdirSync(cacheDir, { recursive: true });
@@ -82,6 +85,7 @@ function run(id, faction, seed) {
   b.center = { x: info.view.tx, z: info.view.tz };
   b.arenaRadius = 5200;
   applyBalance(b, id, faction);
+  if (classic) b.depth = null;
   // autopilot stays off: the player's ships keep the orders the scenario gave them, as when nobody touches the controls.
   const started = performance.now();
   let shots = 0;
@@ -92,7 +96,9 @@ function run(id, faction, seed) {
       for (const t of ['joseon', 'japan']) for (const s of b.activeOf(t)) kinds[`${t}:${s.order.type}/${b.activityOf(s.id)}`] = (kinds[`${t}:${s.order.type}/${b.activityOf(s.id)}`] ?? 0) + 1;
       const dry = { joseon: 0, japan: 0 };
       for (const t of ['joseon', 'japan']) for (const s of b.activeOf(t)) if (s.guns.length && s.guns.every((g) => g.ammo <= 0)) dry[t] += 1;
-      console.log(`  t=${(b.time / 60).toFixed(0)}m shots ${shots} dry ${dry.joseon}/${dry.japan} grapples ${b.ships.filter((s) => s.grappledWith).length} ${JSON.stringify(kinds)}`);
+      // Crews wavering and running on each side, under the depth rules.
+      const nerve = ['joseon', 'japan'].map((t) => `${b.activeOf(t).filter((s) => s.moraleState === 'wavering').length}w${b.activeOf(t).filter((s) => s.moraleState === 'routing').length}r`).join('/');
+      console.log(`  t=${(b.time / 60).toFixed(0)}m shots ${shots} dry ${dry.joseon}/${dry.japan} grapples ${b.ships.filter((s) => s.grappledWith).length} nerve ${nerve} ${JSON.stringify(kinds)}`);
     }
     if (trace && Math.floor(b.time / SIM_DT) % Math.round(600 / SIM_DT) === 0) {
       for (const t of ['joseon', 'japan']) {
@@ -123,7 +129,8 @@ function runConquest(mapId, faction, seed) {
     { name: 'player', faction, team: 'joseon', human: true, fleet: autoFleet(faction) },
     { name: 'computer', faction: foe, team: 'japan', human: false, fleet: autoFleet(foe) },
   ];
-  const { battle: b, conquest } = buildConquest(mapId, seats, land, seed, {});
+  // A battle against the computer runs the depth rules; ranked and online rooms the classic ones.
+  const { battle: b, conquest } = buildConquest(mapId, seats, land, seed, classic ? {} : { depth: DEPTH_V1.version });
   const started = performance.now();
   while (!b.ended && b.time < conquest.options.timeLimit + 5) {
     b.step(SIM_DT);
@@ -148,7 +155,7 @@ if (args.includes('--conquest')) {
   await server.close();
   process.exit(bad ? 1 : 0);
 }
-console.log(`passive player · seeds ${seeds} · limit ${minutes} sim min`);
+console.log(`passive player · ${classic ? 'classic rules' : 'depth rules'} · seeds ${seeds} · limit ${minutes} sim min`);
 for (const id of list) {
   for (const faction of playableFactions(id)) {
     if (sides && !sides.includes(faction)) continue;

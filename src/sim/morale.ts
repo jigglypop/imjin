@@ -1,6 +1,6 @@
 import type { Battle } from './battle';
 import { combatValue } from './competitive';
-import type { Faction, MoraleState, Ship, Team } from './types';
+import type { Faction, MoraleState, Ship, ShipKind, Team } from './types';
 
 /** Seconds between two looks at one crew. The fleet is spread over the steps, so the cost per step stays flat. */
 export const MORALE_TICK = 0.5;
@@ -22,6 +22,8 @@ const QUIET = 20;
 const QUIET_RANGE = 600;
 /** A boarded crew this shaken gives the ship up. */
 export const SURRENDER = 0.12;
+/** What a crew's state leaves of its ship's weight in the battle's balance: a running ship hardly counts. */
+export const NERVE_WEIGHT: Record<MoraleState, number> = { steady: 1, wavering: 0.8, rallying: 0.6, routing: 0.25 };
 
 // What wears a crew down. Losses are per share of the full crew or hull lost; the rest are per second.
 const LOSS_CREW = 0.9;
@@ -35,8 +37,8 @@ const ODDS_DRAIN = 0.025;
 const ODDS_HIGH = 0.65;
 const ODDS_GAIN = 0.006;
 /** Friends running nearby, each, and at most. */
-const RUNNING_NEAR = 0.004;
-const RUNNING_MAX = 0.02;
+const RUNNING_NEAR = 0.0015;
+const RUNNING_MAX = 0.006;
 /** Foes on three sides within this range: the crane closing around a ship. */
 const RING_RANGE = 350;
 const RING_DRAIN = 0.02;
@@ -78,7 +80,7 @@ const dist2 = (a: Ship, b: Ship) => (a.x - b.x) ** 2 + (a.z - b.z) ** 2;
  * nearby, the loss of its commander and bad odds wear it down; its commander's presence, the drum, good odds, a quiet
  * spell and experience restore it. Below one line a crew wavers: it loads and aims worse and the computer's ships
  * hold back. Below another it routs: it stops fighting and runs for its own side or the nearest shore, until its
- * commander, the drum or a quiet spell rallies it. A fleet whose ships are all running has lost the field.
+ * commander, the drum or a quiet spell rallies it. A fleet most of whose ships are running has lost the field.
  */
 export class Morale {
   private readonly memo = new Map<number, Memo>();
@@ -89,6 +91,10 @@ export class Morale {
   /** The admiral of each navy: the leader of its first squadron, when that ship is a flagship. */
   private admirals: Partial<Record<Faction, number>> | null = null;
   private drumCheck = 0;
+  /** Fighting value of each kind of ship, looked up once: the looks ask for it hundreds of times a step in a big battle. */
+  private readonly kinds = new Map<ShipKind, number>();
+  /** Each side's broken verdict and when it was reached, so a battle asking every step does not count its fleet every step. */
+  private readonly verdicts: Record<Team, { at: number; broken: boolean }> = { joseon: { at: -1, broken: false }, japan: { at: -1, broken: false } };
 
   constructor(private readonly b: Battle) {}
 
@@ -150,7 +156,12 @@ export class Morale {
 
   /** A ship's fighting value as it stands. */
   private value(o: Ship) {
-    return combatValue(o.spec.kind, this.b.profile) * ((o.hull / o.spec.hull) * 0.6 + (o.crew / o.spec.crew) * 0.4);
+    let base = this.kinds.get(o.spec.kind);
+    if (base === undefined) {
+      base = combatValue(o.spec.kind, this.b.profile);
+      this.kinds.set(o.spec.kind, base);
+    }
+    return base * ((o.hull / o.spec.hull) * 0.6 + (o.crew / o.spec.crew) * 0.4);
   }
 
   /** What a ship weighs in the odds around it: little while it runs. */
@@ -367,9 +378,11 @@ export class Morale {
     return s.morale < WAVER ? 0.55 + 0.9 * s.morale : 1;
   }
 
-  /** Whether a fleet has broken: most of what it still has afloat is running, or what still fights is swamped. */
+  /** Whether a fleet has broken: most of what it still has afloat, by fighting value, is running. Counted every MORALE_TICK. */
   broken(team: Team) {
     const b = this.b;
+    const verdict = this.verdicts[team];
+    if (verdict.at >= 0 && b.time - verdict.at < MORALE_TICK) return verdict.broken;
     let running = 0;
     let all = 0;
     for (const s of b.activeOf(team)) {
@@ -377,6 +390,8 @@ export class Morale {
       all += w;
       if (s.moraleState === 'routing') running += w;
     }
-    return all > 0 && running / all >= 0.6;
+    verdict.at = b.time;
+    verdict.broken = all > 0 && running / all >= 0.6;
+    return verdict.broken;
   }
 }
