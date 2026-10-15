@@ -16,7 +16,7 @@ const out = args.out ?? 'shots/grand-world2-2026-10-12';
 const only = new Set((args.only ?? 'default,camps,replay,phone').split(','));
 await mkdir(out, { recursive: true });
 
-const vite = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+const vite = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
 const { newGrand } = await vite.ssrLoadModule('/src/sim/grand/turn.ts');
 /** A war on turn 1 with the given camp levels and owners, optionally with fleets sent sailing. */
 const campaign = (camps, extra) => {

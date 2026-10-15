@@ -14,7 +14,7 @@ globalThis.localStorage = {
   setItem: (key, value) => storage.set(key, String(value)),
   removeItem: (key) => storage.delete(key),
 };
-const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
 let failed = 0;
 async function check(name, run) {
   try {

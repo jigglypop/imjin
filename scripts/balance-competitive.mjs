@@ -35,7 +35,7 @@ const startSeed = Number(flag('seed0', cohort === 'holdout' ? 3141592 : cohort =
 const factions = ['joseon', 'japan', 'ming'];
 const pairs = flag('match', 'joseon:japan,joseon:ming,japan:ming,joseon:joseon,japan:japan,ming:ming').split(',').map((s) => s.split(':'));
 if (!Number.isInteger(seeds) || seeds < 1 || !Number.isFinite(budget) || budget <= 0 || !Number.isFinite(cap) || cap <= 0) throw new Error('Seeds, budget and minutes must be positive finite values; seeds must be an integer.');
-const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
 const load = (p) => server.ssrLoadModule('/src/sim/' + p + '.ts');
 const { Battle, SIM_DT } = await load('battle');
 const { shipSpec, shipMods, shipGunSpec, COMPETITIVE_UNITS, COMPETITIVE_APPRAISAL, combatStats, COMPETITIVE_PROFILE } = await load('competitive');
