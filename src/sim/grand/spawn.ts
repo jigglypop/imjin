@@ -6,7 +6,7 @@ import { dateLabel, TUNING } from './economy';
 import type { BattleInfo } from '../info';
 import type { LandSampler, Ship, Squadron } from '../types';
 import type { BridgeSeat, RegionBattle, RegionBattleBuilding } from './bridge';
-import { ATTACKER_HOME, DEFENDER_HOME, REGION_MAPS, regionEnvironment } from './coast';
+import { ATTACKER_HOME, DEFENDER_HOME, REGION_MAPS, regionArt, regionEnvironment } from './coast';
 import { REGIONS } from './regions';
 import type { BattleOutcomeShip, BuildingKind } from './types';
 import { coastalTacticFor } from '../coastal-tactics';
@@ -61,7 +61,7 @@ export function grandInfo(rb: RegionBattle): BattleInfo {
     coastalTactic: m.coastalTactic,
     view: m.view,
     foliage: m.foliage,
-    art: m.scenario ?? undefined,
+    art: regionArt(rb.mapId) ?? undefined,
   };
 }
 

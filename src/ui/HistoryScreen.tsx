@@ -5,7 +5,9 @@ import type { Faction } from '../sim/types';
 import { sound } from '../audio/Sound';
 import { CAMPAIGN_ORDER, campaignOver, currentBattle, setMode, useCampaign } from '../campaign/campaign';
 import { isPhone, isTouchOnly } from '../game/device';
+import { prefetchLoading } from './Backdrop';
 import { CampaignPanel } from './CampaignPanel';
+import { ShareButton } from './share';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Check, ChevronDown, ChevronLeft, Cross } from './icons';
 import { params } from './launch';
@@ -95,6 +97,11 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
     if (el.firstElementChild) watch.observe(el.firstElementChild);
     return () => watch.disconnect();
   }, [id, inCampaign, effective, measure]);
+  // The loading page's picture downloads while the briefing is read, once the player has stayed on a battle a moment.
+  useEffect(() => {
+    const wait = window.setTimeout(() => prefetchLoading(id), 500);
+    return () => window.clearTimeout(wait);
+  }, [id]);
   const flat = <StaticMap id={id} onSelect={setId} />;
   return (
     <section className="screen hs">
@@ -201,6 +208,7 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
                 {t('군영')}
               </button>
             )}
+            <ShareButton id={id} line={t(s.hook)} />
             <button className="ink-btn" disabled={!playable} onClick={() => onStart(id, inCampaign, effective)}>
               {inCampaign && campaign && campaignOver(campaign) ? t('완료') : t('전투 시작')}
             </button>

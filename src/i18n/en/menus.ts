@@ -55,9 +55,7 @@ export const EN_MENUS: Record<string, string> = {
   '죽고자 하면 살 것이요, 살고자 하면 죽을 것이다': 'Seek death and you shall live; seek life and you shall die.',
   '가벼이 움직이지 말고, 태산같이 무겁게 행동하라': 'Do not move rashly. Stand as still and heavy as a mountain.',
   '신에게는 아직 열두 척의 배가 남아 있사옵니다': 'Your servant still has twelve ships.',
-  '호남이 없으면 나라도 없다': 'Without Honam, there is no nation.',
   '싸움이 급하니 나의 죽음을 알리지 말라': 'The battle is at its height. Do not announce my death.',
-  '한 사람이 길목을 지키면 천 명도 두렵게 할 수 있다': 'One man holding the pass can strike fear into a thousand.',
 
   // Notices
   '메모리가 부족해 이전 전투가 종료되었습니다. 이번에는 가벼운 설정으로 실행합니다.': 'The previous battle closed because the device ran out of memory. This one runs on lighter settings.',
