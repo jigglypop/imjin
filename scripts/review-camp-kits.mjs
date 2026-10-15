@@ -122,7 +122,7 @@ await mkdir(PAGE, { recursive: true });
 await mkdir(OUT, { recursive: true });
 await writeFile(join(PAGE, 'review.js'), PAGE_JS);
 await writeFile(join(PAGE, 'index.html'), PAGE_HTML);
-const server = await createServer({ configFile: false, root: ROOT, logLevel: 'error', server: { port: PORT, strictPort: true, host: '127.0.0.1' } });
+const server = await createServer({ configFile: false, root: ROOT, logLevel: 'error', server: { port: PORT, strictPort: true, host: '127.0.0.1', watch: null } });
 await server.listen();
 const browser = await chromium.launch({
   channel: process.platform === 'win32' ? 'msedge' : 'chrome', headless: true,

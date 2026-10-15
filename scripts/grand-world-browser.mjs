@@ -14,7 +14,7 @@ const out = args.out ?? 'shots/grand-world-2026-10-12';
 await mkdir(out, { recursive: true });
 
 // A war on turn 1 where the camps stand at every level: the player's Yeosu 3, Noryang 2, Bangdap 1; Busan 3 and Angolpo 2 on the other side.
-const vite = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+const vite = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
 const { newGrand } = await vite.ssrLoadModule('/src/sim/grand/turn.ts');
 const g = newGrand('joseon', 551);
 g.phase = 'orders'; g.events.pending = null;
