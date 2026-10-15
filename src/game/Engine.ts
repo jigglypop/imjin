@@ -59,7 +59,7 @@ import { finishGrandBattle } from '../campaign/grand';
 import { outcomeOfBattle, type RegionBattle } from '../sim/grand/bridge';
 import { buildGrandConquest, grandAxis, grandInfo, shipOutcomes, worksAfter } from '../sim/grand/spawn';
 import { CurrentField } from '../sim/current';
-import { DEPTH_V1 } from '../sim/depth';
+import { DEPTH_LATEST } from '../sim/depth';
 import { OWNER_OF, otherTeam, teamOf, type BattleEvent, type Faction, type Ship, type ShipKind, type Team } from '../sim/types';
 import { buildConquest, homeAxis, type ConquestMapId, type Seat } from '../sim/maps';
 import { BUILDING_ORDER, BUILDINGS, RANKED_OPTIONS, ROSTER, rosterOf, SHORT_NAME, buildingHp, upgradeCost, type Conquest } from '../sim/conquest';
@@ -805,7 +805,7 @@ export class Engine {
       this.terrain.setRotation(this.phi);
       const land = (x: number, z: number) => this.terrain.heightAt(x, z);
       // A battle against the computer here runs the depth rules; an online room's server keeps the rules it was built with.
-      const options = setup.ranked ? RANKED_OPTIONS : this.sink ? {} : { depth: DEPTH_V1.version };
+      const options = setup.ranked ? RANKED_OPTIONS : this.sink ? {} : { depth: DEPTH_LATEST.version };
       const built = setup.grand ? buildGrandConquest(setup.grand, land, this.phi) : buildConquest(setup.map, setup.seats, land, setup.seed, options, this.phi);
       this.battle = built.battle;
       this.conquest = built.conquest;

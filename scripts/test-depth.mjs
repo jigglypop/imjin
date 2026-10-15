@@ -12,7 +12,7 @@ const check = (name, fn) => { try { fn(); console.log('ok   ' + name); } catch (
 try {
   const load = (p) => server.ssrLoadModule(p);
   const { Battle, SIM_DT } = await load('/src/sim/battle.ts');
-  const { DEPTH_V1 } = await load('/src/sim/depth.ts');
+  const { DEPTH_V1, DEPTH_V2, DEPTH_LATEST } = await load('/src/sim/depth.ts');
   const { buildScenario, SCENARIO_ORDER } = await load('/src/sim/scenarios.ts');
   const { buildConquest, buildConquestOn, autoFleet } = await load('/src/sim/maps.ts');
   const { DEFAULT_OPTIONS, RANKED_OPTIONS } = await load('/src/sim/conquest.ts');
@@ -43,8 +43,8 @@ try {
     return out;
   };
 
-  check('historical battles, conquest against the computer and the campaign carry depth-v1; ranked and online rooms do not', () => {
-    for (const id of SCENARIO_ORDER) assert.equal(buildScenario(id, 0, 3).depth, DEPTH_V1);
+  check('historical battles, conquest against the computer and the campaign carry the newest depth rules; ranked and online rooms none', () => {
+    for (const id of SCENARIO_ORDER) assert.equal(buildScenario(id, 0, 3).depth, DEPTH_LATEST);
     const seats = [
       { name: 'a', faction: 'joseon', team: 'joseon', human: true, fleet: autoFleet('joseon') },
       { name: 'b', faction: 'japan', team: 'japan', human: false, fleet: autoFleet('japan') },
@@ -54,6 +54,7 @@ try {
     assert.equal(buildConquest('hallyeo', seats, flat, 3, DEFAULT_OPTIONS).battle.depth, null);
     assert.equal(buildConquest('hallyeo', seats, flat, 3, RANKED_OPTIONS).battle.depth, null, 'ranked keeps the rules it was calibrated with');
     assert.equal(buildConquest('hallyeo', seats, flat, 3, { depth: 'depth-v1' }).battle.depth, DEPTH_V1);
+    assert.equal(buildConquest('hallyeo', seats, flat, 3, { depth: 'depth-v2' }).battle.depth, DEPTH_V2);
     assert.ok(newGrand, 'the campaign module loads');
   });
 

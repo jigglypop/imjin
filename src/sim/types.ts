@@ -1,3 +1,5 @@
+import type { ManeuverKind, ManeuverPhase, SignalKind } from './maneuvers';
+
 /**
  * The two sides of a battle. The names are the historical defaults: in the nine battles the Joseon side carries the
  * Ming fleet as well. In a conquest battle either side may be led by any faction, so code that means "which navy"
@@ -105,7 +107,9 @@ export type Order =
   | { type: 'slot'; x: number; z: number; face: number }
   | { type: 'follow'; leaderId: number; dx: number; dz: number }
   | { type: 'broadside'; targetId: number; side: Side }
-  | { type: 'bombard'; x: number; y: number; z: number };
+  | { type: 'bombard'; x: number; y: number; z: number }
+  /** Following a tactical maneuver (maneuvers.ts); only the maneuver command gives it. */
+  | { type: 'maneuver'; plan: number };
 
 export type GunState = {
   battery: number;
@@ -263,6 +267,12 @@ export type BattleEvent =
   /** A computer-led fleet broke and turned for home; `ship` is one of its ships, for observation. */
   | { type: 'broken'; ship: number; team: Team }
   /** A squadron leader beat the drum to steady and rally the ships around it. */
-  | { type: 'drum'; ship: number };
+  | { type: 'drum'; ship: number }
+  /** A tactical maneuver changed phase (maneuvers.ts); `ship` is one of its ships, for observation. */
+  | { type: 'maneuver'; plan: number; kind: ManeuverKind; phase: ManeuverPhase; ship: number; team: Team }
+  /** A flagship signalled: the drum to advance, or the gong to fall back. */
+  | { type: 'signal'; ship: number; signal: SignalKind }
+  /** A ship was cut off from its squadron's leader by an enemy breaking through between them. */
+  | { type: 'cutoff'; ship: number; by: number };
 
 export type LandSampler = (x: number, z: number) => number;

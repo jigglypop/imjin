@@ -10,6 +10,7 @@ import type { DepthRules } from './depth';
 import { FireSpread } from './fire';
 import { MORALE_TICK, Morale, NERVE_WEIGHT, SURRENDER } from './morale';
 import { COHESION_AIM, Tactics, WAKE_SPEED } from './tactics';
+import { Maneuvers, SURPRISE_CREW, SURPRISE_SHOCK } from './maneuvers';
 import {
   OWNER_OF,
   TEAMS,
@@ -125,6 +126,9 @@ const REFUGE_AGAIN = 20;
  * winner's chance to run the fleeing ships down.
  */
 const BROKEN_GRACE = 45;
+/** Under the maneuver rules the winner may keep running a broken fleet down this long while it is still in reach. */
+const PURSUIT_GRACE = 240;
+const PURSUIT_REACH = 900;
 /** A target with this many of its friends within PACKED_RANGE is worth fire arrows: the fire will spread (the depth rules). */
 const PACKED_RANGE = 120;
 const PACKED_SHIPS = 2;
@@ -233,6 +237,7 @@ export class Battle {
   private moraleRules: Morale | null = null;
   private tacticsRules: Tactics | null = null;
   private fireRules: FireSpread | null = null;
+  private maneuverRules: Maneuvers | null = null;
   private depthTurn = 0;
   /** Each side's starting place, which its running ships head back past. */
   private homes: Record<Team, { x: number; z: number }> | null = null;
@@ -301,6 +306,12 @@ export class Battle {
   get fireSpread(): FireSpread | null {
     if (!this.depth?.fireSpread) return null;
     return (this.fireRules ??= new FireSpread(this));
+  }
+
+  /** Squadron maneuvers, station keeping, command radius and open-water routs, while the depth rules have them. */
+  get maneuvers(): Maneuvers | null {
+    if (!this.depth?.maneuvers) return null;
+    return (this.maneuverRules ??= new Maneuvers(this));
   }
 
   /** Each battle owns its sea; rendering and other battles cannot change its collisions. */
@@ -577,6 +588,7 @@ export class Battle {
 
   canSee(target: Ship, d: number, observerTeam?: Team) {
     if (this.profile !== 'historical' && observerTeam) return isShipVisible(this, observerTeam, target.id);
+    if (observerTeam && observerTeam !== target.team && this.maneuverRules?.hidden(target, d)) return false;
     if (!this.night) return true;
     const range = target.lights ? 1900 : target.fire > 0.08 ? 1400 : target.revealed > 0 ? 900 : 260;
     return d <= range;
@@ -680,11 +692,14 @@ export class Battle {
     }
     this.grid.rebuild(this.ships);
     this.checkRetreat();
+    const maneuvers = this.maneuvers;
+    maneuvers?.step(dt);
     for (const s of this.ships) {
       if (!s.alive) continue;
       s.thinkTimer -= dt;
       if (s.thinkTimer <= 0) {
-        s.thinkTimer += THINK_INTERVAL;
+        // A computer-led crew cut off from its leader is slow to make up its mind.
+        s.thinkTimer += maneuvers?.isCut(s) && this.isAi(s) ? THINK_INTERVAL * 3 : THINK_INTERVAL;
         this.think(s);
         this.avoidLand(s);
       }
@@ -781,9 +796,23 @@ export class Battle {
         continue;
       }
       this.brokenSince[team] ??= this.time;
-      if (this.time - this.brokenSince[team]! >= BROKEN_GRACE) out = out ? 'draw' : team;
+      const since = this.time - this.brokenSince[team]!;
+      if (since >= BROKEN_GRACE && (since >= PURSUIT_GRACE || !this.maneuvers || !this.inReach(team))) out = out ? 'draw' : team;
     }
     return out;
+  }
+
+  /** Whether any running ship of a broken side still has an enemy close enough to run it down. */
+  private inReach(team: Team) {
+    for (const s of this.active[team]) {
+      if (s.moraleState !== 'routing') continue;
+      let near = false;
+      this.grid.query(s.x, s.z, PURSUIT_REACH, (o) => {
+        if (!near && o.team !== team && this.isActive(o) && o.moraleState !== 'routing' && (o.x - s.x) ** 2 + (o.z - s.z) ** 2 < PURSUIT_REACH * PURSUIT_REACH) near = true;
+      });
+      if (near) return true;
+    }
+    return false;
   }
 
   /** Whether a computer-led fleet has given up the field and is running for home. */
@@ -805,6 +834,7 @@ export class Battle {
    */
   routed(s: Ship) {
     this.refuges.delete(s.id);
+    this.maneuverRules?.forgetRun(s.id);
     this.fleeSince.delete(s.id);
     if (this.isAi(s)) {
       if (s.order.type !== 'auto') s.order = { type: 'auto' };
@@ -919,10 +949,21 @@ export class Battle {
     const lightBoarder = spreadBoarders && s.spec.kind !== 'atakebune';
     let best: Ship | undefined;
     let bestScore = Infinity;
+    const maneuvers = this.maneuvers;
+    // A rash or bold commander's boarders keep after a ship that turns away from them: the lure works on them.
+    const chased = maneuvers && boardsFirst(s) && this.isAi(s) ? this.byId.get(s.targetId) : undefined;
+    if (chased && chased.team !== s.team && maneuvers!.chases(s, chased) && hyp(chased.x - s.x, chased.z - s.z) <= within) return chased;
     for (const o of list) {
       const d = hyp(o.x - s.x, o.z - s.z);
       if (d > within || !((this.profile === 'historical' && this.lull >= STALL_AI) || this.canSee(o, d, s.team))) continue;
       let score = d;
+      if (maneuvers) {
+        // Fire spread over the enemy line and drawn to a ship already under fire from another quarter, not a firing
+        // squad of the whole fleet on one hull; a cautious commander's crews do not leave their anchorage to chase.
+        if (!boardsFirst(s) && this.tactics?.crossing(o, s)) score -= 120;
+        score += Math.max(0, maneuvers.crowd(o) - (o.id === s.targetId ? 4 : 3)) * 30;
+        if (this.isAi(s) && maneuvers.tethered(s, o)) score += 2000;
+      }
       if (preferBoardable && !o.spec.boardable) score += 700;
       if (o.id === s.targetId) score -= 60;
       // Ming crews concentrate their long-range fire on a wounded hull instead of spreading it across the line.
@@ -976,6 +1017,7 @@ export class Battle {
     let best: Ship | undefined;
     let bestD = Infinity;
     for (const o of this.active[otherTeam(s.team)]) {
+      if (this.maneuverRules?.hidden(o, Infinity)) continue;
       const d = hyp(o.x - s.x, o.z - s.z) + (boardable && !o.spec.boardable ? 700 : 0);
       if (d < bestD) {
         bestD = d;
@@ -985,7 +1027,7 @@ export class Battle {
     return best;
   }
 
-  private steerTo(s: Ship, tx: number, tz: number, arrive: number, maxThrottle = 1) {
+  steerTo(s: Ship, tx: number, tz: number, arrive: number, maxThrottle = 1) {
     const dx = tx - s.x;
     const dz = tz - s.z;
     const dist = hyp(dx, dz);
@@ -996,14 +1038,19 @@ export class Battle {
     return dist;
   }
 
-  private face(s: Ship, heading: number, throttle = 0.25) {
+  face(s: Ship, heading: number, throttle = 0.25) {
     const diff = wrapAngle(heading - s.heading);
     s.rudder = clamp(diff * 2.8, -1, 1);
     s.throttle = Math.abs(diff) > 0.25 ? Math.max(throttle, 0.3) : throttle;
     return Math.abs(diff);
   }
 
-  private isWater(x: number, z: number) {
+  /** Records what a ship is doing, for the HUD and the camera. */
+  act(s: Ship, activity: ShipActivity) {
+    this.activity.set(s.id, activity);
+  }
+
+  isWater(x: number, z: number) {
     return this.land(x, z) < DRAFT - 1;
   }
 
@@ -1032,13 +1079,24 @@ export class Battle {
     s.throttle = 0.15;
   }
 
-  private avoid(s: Ship) {
+  /**
+   * Steers clear of hulls in the way. `friendsOnly` lets a ship that means to close with the enemy (a breach, a chase)
+   * go through it. Under the maneuver rules friends give way by the rule of the road instead of each swerving at the
+   * last moment, which tangled packed fleets: a ship meeting a friend head on, or with one crossing from its starboard
+   * side, turns to starboard and eases off; one overtaking slows behind the other instead of cutting across it.
+   */
+  avoid(s: Ship, friendsOnly = false) {
     const cos = Math.cos(s.heading);
     const sin = Math.sin(s.heading);
     const range = s.spec.length * 1.8 + 20;
+    const road = !!this.depth?.maneuvers;
     this.grid.query(s.x, s.z, range + 40, (o) => {
       if (o === s || !o.alive || o.id === s.grappledWith) return;
-      if (s.team !== o.team && (boardsFirst(s) || s.stance === 'board' || s.stance === 'ram' || this.crippled(o))) return;
+      if (s.team !== o.team && (friendsOnly || boardsFirst(s) || s.stance === 'board' || s.stance === 'ram' || this.crippled(o))) return;
+      if (road && o.team === s.team) {
+        this.giveWay(s, o, cos, sin);
+        return;
+      }
       if (s.spec.kind === 'geobukseon' && o.team !== s.team) return;
       const dx = o.x - s.x;
       const dz = o.z - s.z;
@@ -1053,6 +1111,35 @@ export class Battle {
       s.rudder = clamp(s.rudder - Math.sign(lz || 1) * 1.2 * closeness, -1, 1);
       s.throttle *= 1 - 0.6 * closeness;
     });
+  }
+
+  /** The rule of the road between two friends (the maneuver rules). */
+  private giveWay(s: Ship, o: Ship, cos: number, sin: number) {
+    const dx = o.x - s.x;
+    const dz = o.z - s.z;
+    const lx = dx * cos + dz * sin;
+    const lz = -dx * sin + dz * cos;
+    const reach = (s.spec.length + o.spec.length) * 0.75 + 15 + Math.max(0, s.speed) * 6;
+    if (lx < -s.spec.length * 0.3 || lx > reach || Math.abs(lz) > (s.spec.beam + o.spec.beam) * 0.75 + 12) return;
+    const rel = wrapAngle(o.heading - s.heading);
+    const closeness = 1 - clamp(lx / reach, 0, 1);
+    if (lx < s.spec.length * 0.5) {
+      // Alongside: sheer off it.
+      s.rudder = clamp(s.rudder - Math.sign(lz || 1) * 0.9, -1, 1);
+      return;
+    }
+    if (Math.abs(rel) < 0.6 && o.speed > 0.5) {
+      // Overtaking or following: keep station behind it.
+      s.throttle = Math.min(s.throttle, clamp(o.speed / Math.max(0.1, s.spec.maxSpeed) - 0.1, 0, 1) + (1 - closeness) * 0.3);
+      return;
+    }
+    // Positive rudder turns toward positive lz, the starboard hand here. Meeting head on, or with a friend crossing
+    // from starboard, a ship turns to starboard and passes astern of it; one crossing from port holds on unless that
+    // friend lies still in its way.
+    if (lz >= -4 || Math.abs(rel) > 2.4 || o.speed < 0.5) {
+      s.rudder = clamp(s.rudder + 1.1 * closeness, -1, 1);
+      s.throttle *= 1 - 0.6 * closeness;
+    }
   }
 
   private think(s: Ship) {
@@ -1084,6 +1171,7 @@ export class Battle {
     this.stir(s);
     this.wake(s);
     const order = s.order;
+    if (order.type === 'maneuver' && this.maneuvers?.drive(s)) return;
     if (order.type === 'anchor') {
       s.throttle = 0;
       s.rudder = 0;
@@ -1104,6 +1192,11 @@ export class Battle {
         if (!s.orderQueue?.length) s.orderQueue = undefined;
       }
       this.avoid(s);
+      return;
+    }
+    if (order.type === 'slot' && this.maneuvers) {
+      // Station keeping: stop on the station and turn there, fighting from it once the enemy is in range.
+      this.maneuvers.station(s, order.x, order.z, order.face, this.maneuvers.range(s));
       return;
     }
     if (order.type === 'slot') {
@@ -1231,7 +1324,10 @@ export class Battle {
       this.fleeSince.set(s.id, since);
     }
     const fled = this.time - since;
-    if (hyp(s.x - this.center.x, s.z - this.center.z) > this.arenaRadius || fled > FLEE_GONE || this.clearOfEnemy(s, fled > FLEE_CLEAR ? ESCAPE_NEAR : ESCAPE_CLEAR)) {
+    // Under the maneuver rules a running ship is not lifted off the sea while the enemy can still reach it: it gets
+    // away off the field or out of sight of every enemy, so a fleet can be run down or penned in a bay.
+    const gone = this.maneuverRules ? this.clearOfEnemy(s, fled > FLEE_CLEAR ? 1500 : ESCAPE_CLEAR) : fled > FLEE_GONE || this.clearOfEnemy(s, fled > FLEE_CLEAR ? ESCAPE_NEAR : ESCAPE_CLEAR);
+    if (hyp(s.x - this.center.x, s.z - this.center.z) > this.arenaRadius || gone) {
       s.alive = false;
       s.fled = true;
       this.escaped[s.team] += 1;
@@ -1246,6 +1342,21 @@ export class Battle {
    * ship unless it rallies first; at a port it waits to rally.
    */
   private rout(s: Ship) {
+    const maneuvers = this.maneuvers;
+    if (maneuvers && !this.rules?.refuge) {
+      // Under the maneuver rules a running crew steers for the open water it can see (maneuvers.routeOf), which can
+      // be the mouth of a dead-end bay; there, or aground with the enemy on it, it gives itself up.
+      this.activity.set(s.id, 'fleeing');
+      const run = maneuvers.routeOf(s);
+      if (run.trapped || (s.aground >= ABANDON_AGROUND * 2 && !this.clearOfEnemy(s, 600))) {
+        this.strike(s, this.nearestEnemy(s, false, 900)?.id ?? 0);
+        return;
+      }
+      this.steerTo(s, run.x, run.z, 40, 1);
+      this.avoid(s);
+      this.getAway(s);
+      return;
+    }
     let r = this.refuges.get(s.id);
     // A port can change hands while a ship runs for it: the choice is looked at again now and then.
     if (!r || (r.port && this.time - r.at > REFUGE_AGAIN)) {
@@ -1320,6 +1431,7 @@ export class Battle {
     this.rules?.lost?.(this, s);
     this.morale?.lost(s);
     this.tactics?.forget(s.id);
+    this.maneuverRules?.forget(s.id);
     this.refuges.delete(s.id);
   }
 
@@ -1462,7 +1574,7 @@ export class Battle {
     this.broadsideDuel(s, target, d, bearing, longRange ? 190 : 150, preferredRange);
   }
 
-  private broadsideDuel(s: Ship, target: Ship, d: number, bearing: number, minRange: number, maxRange: number) {
+  broadsideDuel(s: Ship, target: Ship, d: number, bearing: number, minRange: number, maxRange: number) {
     if (d < minRange) {
       const away = bearing + Math.PI;
       const side = wrapAngle(away - s.heading) > 0 ? 1 : -1;
@@ -1563,7 +1675,7 @@ export class Battle {
     this.steerTo(s, tx, tz, 8, 1);
     // The fleet closes at the pace of its big ships, the leaders waiting for the rest, and rushes in together once inside
     // RUSH_RANGE, so the boats do not arrive one at a time into the whole enemy line's fire.
-    if (d > this.rushRange() && this.isAi(s)) s.throttle = Math.min(s.throttle, this.fleetPace(s, target, d));
+    if (d > this.rushRange() && this.isAi(s) && !this.maneuverRules?.chases(s, target)) s.throttle = Math.min(s.throttle, this.fleetPace(s, target, d));
     // Ease off at the last moment so the grapple holds; the rest of the way is flat out.
     if (d < 90) {
       // The grapple tests velocity along the attacker's heading. A target moving broadside does not increase
@@ -1608,17 +1720,23 @@ export class Battle {
   private fleetPace(s: Ship, target: Ship, d: number) {
     let n = 0;
     let sum = 0;
+    let squares = 0;
     this.grid.query(s.x, s.z, FLEET_REACH, (o) => {
       if (o === s || o.team !== s.team || !boardsFirst(o) || o.grappledWith || !this.isActive(o)) return;
       // Only AI boarders under way for the same enemy set the pace; held, anchored, human-led or stuck ships never stall the rest.
       if (!this.isAi(o) || o.order.type !== 'auto' || o.targetId !== target.id || o.speed < 0.5) return;
       if ((o.x - s.x) ** 2 + (o.z - s.z) ** 2 > FLEET_REACH * FLEET_REACH) return;
-      sum += hyp(o.x - target.x, o.z - target.z);
+      const away = hyp(o.x - target.x, o.z - target.z);
+      sum += away;
+      squares += away * away;
       n += 1;
     });
     const ahead = n ? sum / n - d : 0;
-    if (ahead <= FLEET_SLACK) this.paceWait.delete(s.id);
-    if (ahead > FLEET_SLACK && this.lull < STALL_AI) {
+    // Under the maneuver rules a ship waits only when it is ahead of the pack's body, not merely of its middle: half of
+    // a big fleet was always ahead of the middle and the whole of it crawled toward the enemy.
+    const slack = this.depth?.maneuvers && n ? Math.max(FLEET_SLACK, Math.sqrt(Math.max(0, squares / n - (sum / n) ** 2))) : FLEET_SLACK;
+    if (ahead <= slack) this.paceWait.delete(s.id);
+    if (ahead > slack && this.lull < STALL_AI) {
       // The others may be held up for good, on a shoal or behind a wreck: after a while a boarder goes in without them.
       const w = this.paceWait.get(s.id) ?? { wait: 0, until: 0 };
       if (this.time < w.until) return 1;
@@ -1630,7 +1748,7 @@ export class Battle {
       this.paceWait.set(s.id, w);
       return 0.15;
     }
-    return ahead < -FLEET_SLACK ? 1 : FLEET_PACE / s.spec.maxSpeed;
+    return ahead < -slack ? 1 : FLEET_PACE / s.spec.maxSpeed;
   }
 
   /** Rowers at their oars against the ship's usual complement. Above 1 with extra hands on the oars. */
@@ -1679,9 +1797,11 @@ export class Battle {
     const desiredTurn = s.rudder * spec.turnRate * s.mods.turn * steer * Math.min(1, crewFactor) * sinkingFactor * anchored * (1 - (condition?.steering ?? 0) * 0.7);
     s.turn += (desiredTurn - s.turn) * Math.min(1, dt * 1.4);
     s.heading = wrapAngle(s.heading + s.turn * dt);
-    const drift = anchored ? this.windDrift : 0;
+    // A ship holding a station rows against the wind and the stream as one at anchor rides them out.
+    const holding = this.maneuverRules?.holding(s) ?? false;
+    const drift = anchored ? this.windDrift * (holding ? 0.3 : 1) : 0;
     const flow = this.flow ? this.flow.velocity(s.x, s.z, this.tide) : this.current;
-    const set = s.order.type === 'anchor' ? 0.15 : 1;
+    const set = s.order.type === 'anchor' ? 0.15 : holding ? 0.3 : 1;
     const nx = s.x + Math.cos(s.heading) * s.speed * dt + (Math.cos(this.windAngle) * drift + flow.x * set) * dt;
     const nz = s.z + Math.sin(s.heading) * s.speed * dt + (Math.sin(this.windAngle) * drift + flow.z * set) * dt;
     if (this.flow && (flow.x || flow.z)) {
@@ -1795,7 +1915,9 @@ export class Battle {
           if (a.spec.kind === 'geobukseon') this.chargeTimer.set(a.id, 9);
           if (b.spec.kind === 'geobukseon') this.chargeTimer.set(b.id, 9);
         }
-        if (this.profile === 'historical') {
+        // Under the maneuver rules friends brushing past each other keep their way, as in the competitive rules: a
+        // fleet packed hull to hull otherwise stopped dead and held back every ship pacing itself on it.
+        if (this.profile === 'historical' && !(this.depth?.maneuvers && a.team === b.team)) {
           a.speed *= Math.max(0, 1 - dt * 2.5);
           b.speed *= Math.max(0, 1 - dt * 2.5);
         } else if (closing > 0) {
@@ -2181,6 +2303,8 @@ export class Battle {
       if (this.profile !== 'historical' && !this.clearFiringLane(s, o)) return;
       const c = (dx * sx + dz * sz) / d;
       if (c < cosArc) return;
+      // Under the maneuver rules a gun is not fired through a friend's hull.
+      if (this.maneuverRules && !this.maneuverRules.clear(s, o)) return;
       const focus = this.profile !== 'historical' && s.spec.faction === 'ming' ? 180 * (1 - o.hull / o.spec.hull) : 0;
       const score = d - (o.id === s.targetId ? 80 : 0) - c * 40 - focus;
       if (score < bestScore) {
@@ -2205,6 +2329,7 @@ export class Battle {
       if (!this.canSee(o, d, s.team)) return;
       if (this.profile !== 'historical' && !this.clearFiringLane(s, o)) return;
       if ((dx * fx + dz * fz) / d < Math.cos(0.35)) return;
+      if (this.maneuverRules && !this.maneuverRules.clear(s, o)) return;
       if (d < bestD) {
         bestD = d;
         best = o;
@@ -2414,12 +2539,15 @@ export class Battle {
           const shooter = this.byId.get(p.shooter);
           // Down the keel line, or from a second quarter at once: the depth rules' raking and crossfire.
           const angle = this.tactics?.hit(s, p.shooter, p.ammo, p.vx, p.vz);
+          // The first volley of a sprung ambush catches the crews off their stations.
+          const surprise = this.maneuverRules?.surprised(shooter) ? SURPRISE_CREW : 1;
+          if (surprise > 1) this.morale?.shock(s, SURPRISE_SHOCK);
           const dmg = p.damage * (1 - s.spec.armor) * (0.7 + this.rand() * 0.6) * (angle?.hull ?? 1);
           this.damage(s, dmg, shooter);
           // A round above the bulwark sweeps the open deck; one through the planking kills below.
           const exposure: Exposure = p.ammo === 'grape' || p.y > s.spec.deck ? 'deck' : 'hull';
           if (exposure === 'hull' && p.ammo !== 'arrow' && p.ammo !== 'grape') this.impactDamage(s, dmg, dx, dz);
-          this.casualties(s, ((p.crewDamage * (0.5 + this.rand())) / Math.max(1, s.spec.deckDefense * 0.8)) * (angle?.crew ?? 1), exposure, false);
+          this.casualties(s, ((p.crewDamage * (0.5 + this.rand())) / Math.max(1, s.spec.deckDefense * 0.8)) * (angle?.crew ?? 1) * surprise, exposure, false);
           if (this.rand() < p.fireChance) this.ignite(s, p.ammo === 'fire' ? 0.26 : 0.2);
           this.blow();
           const hit: Extract<BattleEvent, { type: 'hit' }> = { type: 'hit', ship: s.id, proj: p.id, x: p.x, y: p.y, z: p.z, damage: dmg, ammo: p.ammo };

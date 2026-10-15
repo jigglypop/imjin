@@ -41,7 +41,7 @@ const { applyBalance, playableFactions } = await load('/src/sim/balance.ts');
 const { teamOf } = await load('/src/sim/types.ts');
 const { generateHeightmap } = await load('/src/terrain/generate.ts');
 const { CurrentField } = await load('/src/sim/current.ts');
-const { DEPTH_V1 } = await load('/src/sim/depth.ts');
+const { DEPTH_LATEST } = await load('/src/sim/depth.ts');
 
 const cacheDir = join(root, 'node_modules', '.cache', 'balance');
 mkdirSync(cacheDir, { recursive: true });
@@ -130,7 +130,7 @@ function runConquest(mapId, faction, seed) {
     { name: 'computer', faction: foe, team: 'japan', human: false, fleet: autoFleet(foe) },
   ];
   // A battle against the computer runs the depth rules; ranked and online rooms the classic ones.
-  const { battle: b, conquest } = buildConquest(mapId, seats, land, seed, classic ? {} : { depth: DEPTH_V1.version });
+  const { battle: b, conquest } = buildConquest(mapId, seats, land, seed, classic ? {} : { depth: DEPTH_LATEST.version });
   const started = performance.now();
   while (!b.ended && b.time < conquest.options.timeLimit + 5) {
     b.step(SIM_DT);

@@ -192,7 +192,7 @@ export class NetBattle implements BattleListener {
       s.morale = f.morale;
       s.moraleState = f.moraleState;
       const type = ORDER_NAMES[f.order] ?? 'auto';
-      if (s.order.type !== type) s.order = { type, x: s.x, y: 0, z: s.z, targetId: f.targetId, leaderId: 0, dx: 0, dz: 0, face: s.heading, side: 0 } as unknown as Order;
+      if (s.order.type !== type) s.order = { type, x: s.x, y: 0, z: s.z, targetId: f.targetId, leaderId: 0, dx: 0, dz: 0, face: s.heading, side: 0, plan: 0 } as unknown as Order;
       if (f.guns) {
         f.guns.forEach((g, i) => {
           const gun = s.guns[i];
