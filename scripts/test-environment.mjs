@@ -1,5 +1,6 @@
 // Deterministic game weather and designed tidal eddies; these checks make no real-world ocean prediction claims.
 import assert from 'node:assert/strict';
+import { DataUtils } from 'three/webgpu';
 import { createServer } from 'vite';
 import { fileURLToPath } from 'node:url';
 
@@ -19,6 +20,7 @@ try {
   ]);
   const { environmentFor, environmentWind } = environment;
   const { CurrentField } = current;
+  const { bakeCurrent } = await load('/src/ocean/currentTexture.ts');
   const spec = { cx: 0, cz: 0, angle: 0, peak: 1.8, reach: 2000, narrows: 280, turnAt: 300, slack: 80, floodFirst: true };
   const channel = (x, z) => Math.abs(z) < 350 ? -100 : 40;
   const base = { sky: 'afternoon', sea: 'moderate', night: false, climate: 'sheltered', current: spec };
@@ -49,7 +51,7 @@ try {
   });
 
   check('designed eddies reverse circulation across slack tide and use correct flood/ebb texture slots', () => {
-    const field = new CurrentField({ ...spec, vortices: [{ x: 0, z: 0, r: 120, spin: 1, strength: 0.9 }] }, channel, 0);
+    const field = new CurrentField({ ...spec, vortices: [{ x: 0, z: 0, r: 120, spin: 1, strength: 0.9 }] }, channel, 0), baked = bakeCurrent(field);
     try {
       const flood = field.velocity(100, 0, -1), ebb = field.velocity(100, 0, 1);
       assert(Math.abs(ebb.z) > 1); near(flood.x, -ebb.x); near(flood.z, -ebb.z);
@@ -58,29 +60,36 @@ try {
       const data = field.vortexData(); assert.equal(data.length, 32);
       assert.deepEqual(data.slice(4, 16), [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0]);
       near(data[3], -0.9); near(data[19], 0.9);
-      const mid = (field.size / 2) * field.size * 4 + (field.size / 2) * 4;
-      assert([...field.texture.image.data.slice(mid, mid + 4)].some((value) => value !== 0));
-    } finally { field.texture.dispose(); }
+      // The sea samples texel centres across `extent` around `centerWorld` and reads RG while the tide is below zero
+      // (flood) and BA while it is above (ebb). The centre texel and one beside it lie in the eddy and a third along the
+      // strait off the diagonal, so a bake that swapped the tides, flipped or transposed the rows or misplaced the square
+      // would no longer hold the simulation's flow there.
+      const size = baked.image.width;
+      for (const [i, j] of [[96, 96], [150, 100], [90, 101]]) {
+        const wx = field.centerWorld.x + ((i + 0.5) / size - 0.5) * field.extent;
+        const wz = field.centerWorld.z + ((j + 0.5) / size - 0.5) * field.extent;
+        const f = field.velocity(wx, wz, -1), e = field.velocity(wx, wz, 1);
+        assert(Math.hypot(f.x, f.z) > 0.1 && Math.hypot(f.x - e.x, f.z - e.z) > 0.1);
+        const o = (j * size + i) * 4;
+        assert.deepEqual([...baked.image.data.slice(o, o + 4)], [f.x, f.z, e.x, e.z].map((v) => DataUtils.toHalfFloat(v)));
+      }
+    } finally { baked.dispose(); }
   });
 
   check('current velocity, eddy positions and wind rotate together with the map', () => {
     const vortices = [{ x: 200, z: 100, r: 100, spin: -1, strength: 0.6 }];
     const a = new CurrentField({ ...spec, vortices }, channel, 0), b = new CurrentField({ ...spec, vortices }, channel, Math.PI / 2);
-    try {
-      const straight = a.velocity(300, 100, 1), turned = b.velocity(-100, 300, 1);
-      near(turned.x, -straight.z); near(turned.z, straight.x);
-      const data = b.vortexData(); near(data[0], -100); near(data[1], 200);
-      const e = environmentFor(base, 17), wind = environmentWind(e, Math.PI / 2);
-      near(Math.cos(wind.angle) * wind.drift, -e.wind.z); near(Math.sin(wind.angle) * wind.drift, e.wind.x);
-    } finally { a.texture.dispose(); b.texture.dispose(); }
+    const straight = a.velocity(300, 100, 1), turned = b.velocity(-100, 300, 1);
+    near(turned.x, -straight.z); near(turned.z, straight.x);
+    const data = b.vortexData(); near(data[0], -100); near(data[1], 200);
+    const e = environmentFor(base, 17), wind = environmentWind(e, Math.PI / 2);
+    near(Math.cos(wind.angle) * wind.drift, -e.wind.z); near(Math.sin(wind.angle) * wind.drift, e.wind.x);
   });
 
   check('invalid, zero-spin, dry and missing eddies produce finite harmless padding', () => {
     const field = new CurrentField({ ...spec, vortices: [{ x: 0, z: 0, r: -1, spin: 1, strength: 1 }, { x: 0, z: 0, r: 50, spin: 0, strength: 1 }, { x: NaN, z: 0, r: 50, spin: 1, strength: 1 }, { x: 0, z: 400, r: 50, spin: 1, strength: 1 }] }, channel, 0);
-    try {
-      assert.deepEqual(field.vortexData(), Array.from({ length: 8 }, () => [0, 0, 1, 0]).flat());
-      assert(Object.values(field.velocity(0, 0, 1)).every(Number.isFinite));
-    } finally { field.texture.dispose(); }
+    assert.deepEqual(field.vortexData(), Array.from({ length: 8 }, () => [0, 0, 1, 0]).flat());
+    assert(Object.values(field.velocity(0, 0, 1)).every(Number.isFinite));
   });
 
   check('historical strait current presets stay intact; Yeosu and Mokpo have distinct designed eddies', () => {
@@ -101,12 +110,10 @@ try {
       const seed = 1592, layout = maps.CONQUEST_MAPS[map];
       const e = environmentFor(layout, seed);
       const casual = maps.buildConquest(map, seats, () => -100, seed).battle;
-      try {
-        assert.equal(casual.night, e.night); near(casual.visibilityScale, e.visibility);
-        near(casual.windDrift, Math.hypot(e.wind.x, e.wind.z));
-        assert.equal(casual.waves.state.wind, ({ calm: 6.5, moderate: 10.5, rough: 13.5 })[e.sea]);
-        assert.equal(!!casual.flow, !!e.current);
-      } finally { casual.flow?.texture.dispose(); }
+      assert.equal(casual.night, e.night); near(casual.visibilityScale, e.visibility);
+      near(casual.windDrift, Math.hypot(e.wind.x, e.wind.z));
+      assert.equal(casual.waves.state.wind, ({ calm: 6.5, moderate: 10.5, rough: 13.5 })[e.sea]);
+      assert.equal(!!casual.flow, !!e.current);
       const ranked = maps.buildConquest(map, seats, () => -100, seed, options.RANKED_OPTIONS).battle;
       assert.equal(ranked.night, layout.night); assert.equal(ranked.visibilityScale, 1); assert.equal(ranked.windDrift, 0); assert.equal(ranked.flow, null);
       assert.equal(ranked.waves.state.wind, ({ calm: 6.5, moderate: 10.5, rough: 13.5 })[layout.sea]);
@@ -121,14 +128,12 @@ try {
     for (const map of Object.keys(maps.CONQUEST_MAPS)) for (const ranked of [false, true]) for (const seed of [2, 7, 1592]) {
       const local = maps.buildConquest(map, seats, () => -100, seed, ranked ? options.RANKED_OPTIONS : {}).battle;
       const remote = serverBattles.buildBattle({ kind: 'conquest', map, size: 2 }, () => -100, seats, ['A', 'B'], [true, true], seed, ranked).battle;
-      try {
-        assert.equal(remote.night, local.night); near(remote.visibilityScale, local.visibilityScale);
-        near(remote.windAngle, local.windAngle); near(remote.windDrift, local.windDrift);
-        assert.equal(!!remote.flow, !!local.flow);
-        assert.deepEqual(Array.from(remote.waves.dirK), Array.from(local.waves.dirK));
-        assert.deepEqual(Array.from(remote.waves.ampQ), Array.from(local.waves.ampQ));
-        if (local.flow) assert.deepEqual(remote.flow.velocity(150, 30, -1), local.flow.velocity(150, 30, -1));
-      } finally { local.flow?.texture.dispose(); remote.flow?.texture.dispose(); }
+      assert.equal(remote.night, local.night); near(remote.visibilityScale, local.visibilityScale);
+      near(remote.windAngle, local.windAngle); near(remote.windDrift, local.windDrift);
+      assert.equal(!!remote.flow, !!local.flow);
+      assert.deepEqual(Array.from(remote.waves.dirK), Array.from(local.waves.dirK));
+      assert.deepEqual(Array.from(remote.waves.ampQ), Array.from(local.waves.ampQ));
+      if (local.flow) assert.deepEqual(remote.flow.velocity(150, 30, -1), local.flow.velocity(150, 30, -1));
     }
   });
 

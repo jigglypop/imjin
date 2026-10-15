@@ -218,7 +218,6 @@ try {
       for (let step = 0; step < 60; step++) battle.step(1 / 30);
       assert(battle.ships.every((s) => Number.isFinite(s.x) && Number.isFinite(s.z)), id);
       assert.equal(battle.ships.filter((s) => s.campaignId).length, rb.attacker.ships.length + rb.defender.ships.length);
-      battle.flow?.texture.dispose();
     }
   });
 

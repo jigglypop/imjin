@@ -33,9 +33,9 @@ async function stop() {
   child = null;
   for (const ws of sockets.splice(0)) ws.terminate();
 }
-async function start(path) {
+async function start(path, env = {}) {
   serverErrors = '';
-  child = spawn(process.execPath, ['server/dist/server.cjs'], { cwd: root, env: { ...process.env, PORT: '0', FF_SPEED: '1', GRACE_SECONDS: '1.2', LOAD_SECONDS: '0.7', RANKED_STORE: path }, stdio: ['ignore', 'pipe', 'pipe'] });
+  child = spawn(process.execPath, ['server/dist/server.cjs'], { cwd: root, env: { ...process.env, PORT: '0', FF_SPEED: '1', GRACE_SECONDS: '1.2', LOAD_SECONDS: '0.7', RANKED_STORE: path, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
   child.stderr.on('data', (data) => serverErrors += data);
   const port = await new Promise((resolve, reject) => {
     let output = '';
@@ -291,6 +291,21 @@ try {
   await casual.next((m) => m.t === 'room' && m.room?.state === 'lobby');
   assert.deepEqual(readFileSync(journal), corruptServerJournal);
   console.log('ok: corrupted committed storage disables only ranked play and never resets the journal');
+
+  // Every ranked room has this name, so each ranked battle on this server throws on its first step. Loading is given
+  // time enough that the match ends by the fault, not by a page that was slow to load.
+  await stop();
+  await start(join(temporary, 'fault.jsonl'), { FAULT_ROOM: '랭크 대전', LOAD_SECONDS: '10' });
+  host = await connect('랭크 병'); guest = await connect('랭크 정');
+  started = await pair(host, guest);
+  host.send({ t: 'loaded' }); guest.send({ t: 'loaded' });
+  const [faultA, faultB] = await Promise.all([host.next((m) => m.t === 'rankedResult'), guest.next((m) => m.t === 'rankedResult')]);
+  for (const r of [faultA, faultB]) { assert.equal(r.matchId, started.matchId); assert.equal(r.reason, 'server-error'); assert.equal(r.result, 'void'); assert.equal(r.delta, 0); assert.equal(r.profile.games, 0); }
+  for (const player of [host, guest]) assert.equal((await player.next((m) => m.t === 'closed')).reason, '서버 오류로 전투를 이어갈 수 없어 방이 닫혔습니다.');
+  const afterFault = await health();
+  assert.equal(afterFault.failedRooms, 1); assert.equal(afterFault.rooms, 0); assert.equal(afterFault.rankedReady, true);
+  assert.notEqual((await pair(host, guest)).matchId, started.matchId); // Neither account is left in the voided match.
+  console.log('ok: a ranked battle that throws is voided for both players without a game or a rating change, and both can queue again');
   console.log('ranked regression passed');
 } finally {
   store?.close();
