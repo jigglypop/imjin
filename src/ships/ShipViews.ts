@@ -21,7 +21,7 @@ import type { Ship, ShipKind, Team } from '../sim/types';
 import { waveField } from '../ocean/waves';
 import { LOD_COUNT, modelKey, ShipRenderer, type ModelAsset } from './ShipRenderer';
 import type { ShipLodQuality } from '../game/quality';
-import { cutHeight, DECKS, layoutFor, mainDeck } from './decks';
+import { cutHeight, DECKS, mainDeck } from './decks';
 import { byModel, modelKind, modelScale } from './anchors';
 import { RING_FOE, RING_OWN } from './ringTones';
 import { shipObserved } from '../sim/observation';
@@ -334,16 +334,14 @@ export class ShipViews {
   /** The rowers' deck under a cut-away main deck: floor, posts holding up the deck above, and the oar looms. */
   private interior(s: Ship, v: ViewState, main: number, i: number) {
     const plan = byModel(DECKS, s.spec.kind);
+    if (plan.oarDrop <= 0) return i;
     const L = s.spec.length;
     const B = s.spec.beam;
-    // The rowers' floor the crews stand on: the model's own where it has a plan, so the timber meets their feet.
-    const drop = layoutFor(v.anchors, s.spec.kind, L, B).oarDrop;
-    if (drop <= 0) return i;
-    const floor = main - drop;
+    const floor = main - plan.oarDrop;
     this.tmp.setFromMatrixPosition(v.matrix);
     v.matrix.decompose(this.tmp, this.shipQ, this.propScale);
     i = this.prop(v, i, -0.02 * L, floor - 0.15, 0, L * 0.8, 0.3, B * 0.74);
-    for (const x of [-0.3, -0.1, 0.1, 0.3]) for (const z of [-0.18, 0.18]) i = this.prop(v, i, x * L, floor + drop * 0.45 - 0.2, z * B, 0.35, drop * 0.9 - 0.4, 0.35);
+    for (const x of [-0.3, -0.1, 0.1, 0.3]) for (const z of [-0.18, 0.18]) i = this.prop(v, i, x * L, floor + plan.oarDrop * 0.45 - 0.2, z * B, 0.35, plan.oarDrop * 0.9 - 0.4, 0.35);
     const per = plan.oars;
     for (let k = 0; k < per; k += 1) {
       const x = (-0.36 + (0.7 * (k + 0.5)) / per) * L;
