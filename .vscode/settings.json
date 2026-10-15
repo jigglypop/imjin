@@ -1,0 +1,21 @@
+{
+  "files.watcherExclude": {
+    "**/.claude/worktrees/**": true,
+    "**/shots/**": true,
+    "**/assets-src/**": true,
+    "**/dist/**": true,
+    "**/server/dist/**": true,
+    "**/.vite/**": true,
+    "**/node_modules/**": true
+  },
+  "search.exclude": {
+    "**/.claude/worktrees": true,
+    "**/shots": true,
+    "**/dist": true,
+    "**/server/dist": true,
+    "**/.vite": true
+  },
+  "typescript.tsserver.watchOptions": {
+    "excludeDirectories": ["**/.claude/worktrees", "**/shots", "**/node_modules", "**/.vite"]
+  }
+}
