@@ -448,7 +448,8 @@ export class Scars {
       if (d > reach + s.boardW / 2) continue;
       const before = w[base + i]!;
       if (before >= 1) continue;
-      const after = before + amount * (d <= s.boardW / 2 ? 1 : 0.45);
+      // The board struck takes it all, its neighbours within the blow less.
+      const after = before + amount * (d <= s.boardW / 2 + reach * 0.5 ? 1 : 0.45);
       w[base + i] = after;
       if (after < 1) continue;
       const g = 0.05;

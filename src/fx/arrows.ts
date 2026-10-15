@@ -4,17 +4,29 @@ import type { ShipViews } from '../ships/ShipViews';
 import { waveField } from '../ocean/waves';
 import { equipment } from '../game/quality';
 import { PUFF, type PuffField } from './puffs';
+import { strike, surfaceFor, Part, type Strike } from '../ships/surface';
+import type { ShipKind } from '../sim/types';
 
-/** Arrows in the air and arrows standing in decks and hulls, by device tier. */
+/**
+ * Arrows in the air, and arrows standing in decks and hulls in all and per ship, by device tier. A stuck arrow stays
+ * until its ship has gone down; a ship full of them gives up its oldest.
+ */
 const FLYING = { high: 72, medium: 44, low: 22 }[equipment.tier];
-const STUCK = { high: 240, medium: 120, low: 56 }[equipment.tier];
-/** Seconds a stuck arrow stays before it is gone (the last second shrinks it away). */
-const STAY = { high: 16, medium: 12, low: 8 }[equipment.tier];
+const STUCK = { high: 480, medium: 240, low: 96 }[equipment.tier];
+const STUCK_PER_SHIP = { high: 32, medium: 20, low: 12 }[equipment.tier];
 const G = 9.81;
-/** Arrows in the game are longer than a real arrow so they read from the battle camera: metres in flight and in the wood. */
-const LEN_FLY = 2.1;
-const LEN_STUCK = 1.45;
-const THICK = 2.4;
+/**
+ * A war arrow (jangjeon) at its true size: 0.85 m of bamboo about 9 mm thick. From afar it may grow to 1.6 times that
+ * length, and its shaft is drawn at least a pixel and a third wide, so a volley still reads as a rain of lines.
+ */
+const LENGTH = 0.85;
+const SHAFT = 0.009;
+/** The model's shaft is this wide for a unit scale. */
+const MODEL_SHAFT = 0.036;
+/** Pixels per metre at one metre for the battle camera (900 px tall view, 42 degrees). */
+const FOCAL = 1170;
+/** How far the head of a stuck arrow is in the planks: two or three centimetres of pine (the weapons table). */
+const SUNK = 0.03;
 
 type Arrow = {
   used: boolean;
@@ -130,6 +142,7 @@ export class ArrowField {
   private readonly sd = new Vector3();
   private readonly q = new Quaternion();
   private readonly inv = new Matrix4();
+  private readonly hit: Strike = { x: 0, y: 0, z: 0, nx: 0, ny: 1, nz: 0, part: Part.Hull, board: -1 };
 
   constructor(
     private readonly views: ShipViews,
@@ -257,10 +270,9 @@ export class ArrowField {
           continue;
         }
         this.p.set(x, y, z);
-        const d = Math.hypot(x - cam.x, y - cam.y, z - cam.z);
-        const grow = 1 + Math.min(1.4, Math.max(0, (d - 50) / 110));
-        len = LEN_FLY * grow;
-        sx = THICK * grow;
+        const ppm = FOCAL / Math.max(1, Math.hypot(x - cam.x, y - cam.y, z - cam.z));
+        len = LENGTH * Math.min(1.6, Math.max(1, 10 / (LENGTH * ppm)));
+        sx = Math.max(SHAFT, 1.3 / ppm) / MODEL_SHAFT;
         sy = sx;
         sz = len;
         this.d.set(a.dx, a.dy, a.dz);
@@ -270,24 +282,22 @@ export class ArrowField {
           this.stick(a);
         }
       } else {
-        const age = this.time - a.born;
-        if (age > STAY || !this.endpoint(a, this.p)) {
+        // Gone with its ship; kept, but not drawn, while the ship is out of view.
+        if (!this.endpoint(a, this.p)) {
           a.used = false;
           this.stuckCount -= 1;
           continue;
         }
-        // The shaft stands out of the wood at the angle it arrived, which rides with the ship.
         const st = this.views.states.get(a.tid)!;
+        if (!st.visible) continue;
+        // The shaft stands out of the wood at the angle it arrived, which rides with the ship.
         this.d.set(a.dx, a.dy, a.dz).transformDirection(st.matrix);
-        const d = Math.hypot(this.p.x - cam.x, this.p.y - cam.y, this.p.z - cam.z);
-        const grow = 1 + Math.min(1.1, Math.max(0, (d - 50) / 130));
-        const fade = Math.min(1, (STAY - age) / 1.2);
-        len = LEN_STUCK * grow * fade;
-        sx = THICK * grow * fade;
+        const ppm = FOCAL / Math.max(1, Math.hypot(this.p.x - cam.x, this.p.y - cam.y, this.p.z - cam.z));
+        len = LENGTH * Math.min(1.6, Math.max(1, 10 / (LENGTH * ppm)));
+        sx = Math.max(SHAFT, 1.3 / ppm) / MODEL_SHAFT;
         sy = sx;
         sz = len;
-        // The head is sunk in a little.
-        this.p.addScaledVector(this.d, LEN_STUCK * 0.22);
+        this.p.addScaledVector(this.d, SUNK);
       }
       this.q.setFromUnitVectors(Z_AXIS, this.d);
       const qx = this.q.x;
@@ -327,17 +337,42 @@ export class ArrowField {
     }
     this.mesh.count = n;
     this.mesh.visible = n > 0;
+    if (n === 0) return;
+    this.mesh.instanceMatrix.clearUpdateRanges();
+    this.mesh.instanceMatrix.addUpdateRange(0, n * 16);
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 
   /** The arrow lands: it keeps the direction it came in with, in the ship's frame, and a little dust jumps from the wood. */
   private stick(a: Arrow) {
+    // A ship already bristling with arrows gives up its oldest.
+    let own = 0;
+    let oldest: Arrow | null = null;
+    for (const o of this.pool) {
+      if (!o.used || !o.stuck || o.tid !== a.tid) continue;
+      own += 1;
+      if (!oldest || o.born < oldest.born) oldest = o;
+    }
+    if (oldest && own >= STUCK_PER_SHIP) {
+      oldest.used = false;
+      this.stuckCount -= 1;
+    }
     const st = this.views.states.get(a.tid)!;
     this.inv.copy(st.matrix).invert();
     this.sd.set(a.dx, a.dy, a.dz).transformDirection(this.inv);
     a.dx = this.sd.x;
     a.dy = this.sd.y;
     a.dz = this.sd.z;
+    // Into the planks the arrow's line meets (the aim point is only near the wall or the deck).
+    const surface = surfaceFor(st.key, st.anchors.split('#')[0] as ShipKind);
+    if (surface) {
+      const k = surface.scale;
+      if (strike(surface, a.tx / k, a.ty / k, a.tz / k, a.dx, a.dy, a.dz, this.hit)) {
+        a.tx = this.hit.x * k;
+        a.ty = this.hit.y * k;
+        a.tz = this.hit.z * k;
+      }
+    }
     a.stuck = true;
     a.born = this.time;
     this.stuckCount += 1;

@@ -170,6 +170,11 @@ export class Crew {
   /** The rosters of ships close enough to draw this frame. */
   private readonly live: Roster[] = [];
   private readonly boarding: Boarding;
+
+  /** Where a matchlock ball the crews fire strikes its target (Effects leaves its mark). */
+  set onMusket(hook: ((target: Ship, sx: number, sz: number) => void) | null) {
+    this.boarding.onMusket = hook;
+  }
   private readonly gear = new DeckGear();
   /** When a ship last lost men in a melee, so a death can be told from a death by shot. */
   private readonly meleeAt = new Map<number, number>();

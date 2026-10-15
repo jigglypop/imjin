@@ -432,6 +432,7 @@ export class Engine {
       this.fx.onCue = (kind, x, y, z, size) => this.sound.cue(kind, x, y, z, size);
       this.scene.add(this.fx.group);
       this.crew = new Crew(this.views);
+      this.crew.onMusket = (target, sx, sz) => this.fx.musketMark(target, sx, sz);
       this.scene.add(this.crew.group);
       this.lanterns = new Lanterns(this.views);
       this.lanterns.onLight = (x, y, z, i) => this.fx.lantern(x, y, z, i);
@@ -1197,6 +1198,7 @@ export class Engine {
       this.views.team = this.team;
       void releaseShipAssets(new Set(Object.keys(this.assets)));
       this.crew = new Crew(this.views);
+      this.crew.onMusket = (target, sx, sz) => this.fx.musketMark(target, sx, sz);
       this.scene.add(this.crew.group);
       this.banners?.clear();
       this.sound.newBattle();
