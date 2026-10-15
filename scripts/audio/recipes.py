@@ -506,4 +506,7 @@ def build_command():
         a2 = dsp.mix_at(a2, dsp.rate(fly, r), t, g)
     a2 = dsp.mix_at(a2, dsp.lp(patter, 6000, 1), 0.7, 0.55)
     D['arrows_2'] = dsp.hp(a2, 200, 2)
+    # Oars: the stroke of a galley's rowers, two metered grunts of a rowing crew and a pair of oars dipping.
+    for k, (name, a, b) in enumerate([('764048', 1.15, 2.55), ('764048', 2.6, 3.95), ('438846', 4.9, 6.4)], 1):
+        D[f'oars_{k}'] = dsp.lp(dsp.hp(_cut(name, a, b, 15, 260), 90, 2), 6500, 1)
     return D

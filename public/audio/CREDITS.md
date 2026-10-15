@@ -2,9 +2,9 @@
 
 Battle sound samples for the game, built from Freesound recordings that are all released under **Creative Commons 0** (CC0 1.0, public domain dedication: no attribution required). The licence shown on every source page was checked ("Creative Commons 0") before the recording was used. Credit is given here anyway.
 
-49 files, mono, 44.1 kHz, MP3 (96 kbps CBR; the fleet-command sounds, which are voices and noise, 64 kbps), about 1.5 MB in total. No recording is used raw: each file is an edit, pitch change, layering and reverb of the sources below, with a synthesized 30-95 Hz sub-bass thump added to the guns and explosions, a synthetic outdoor reverb tail, and a limiter. Loudness is normalized per class (max momentary loudness, EBU R128, LUFS-M): heavy guns -13.5, broadsides -12, explosions -11.5, medium guns -15, wood impacts -15, small guns -17, splashes -18, far booms -19, musket volleys -20, sinking -20, creak -24; peaks are limited to -1.5 dBFS before encoding (decoded MP3 true peaks stay below -1.3 dBFS).
+52 files, mono, 44.1 kHz, MP3 (96 kbps CBR; the fleet-command sounds, which are voices and noise, 64 kbps), about 1.6 MB in total. No recording is used raw: each file is an edit, pitch change, layering and reverb of the sources below, with a synthesized 30-95 Hz sub-bass thump added to the guns and explosions, a synthetic outdoor reverb tail, and a limiter. Loudness is normalized per class (max momentary loudness, EBU R128, LUFS-M): heavy guns -13.5, broadsides -12, explosions -11.5, medium guns -15, wood impacts -15, small guns -17, splashes -18, far booms -19, musket volleys -20, sinking -20, creak -24; peaks are limited to -1.5 dBFS before encoding (decoded MP3 true peaks stay below -1.3 dBFS).
 
-The fleet-command sounds (buk, taiko, gong, horn, warcry, cheer, clash, overboard, arrows) are likewise edits of the sources below: slowed or sped so no word stays readable, low-passed or high-passed, given a short hall, and normalised per class (buk -17, taiko -16, gong -21, horn -22, warcry -23, cheer -24, clash -21, overboard -23, arrows -25 LUFS-M). Every source page was opened and its licence read as Creative Commons 0 before use.
+The fleet-command sounds (buk, taiko, gong, horn, warcry, cheer, clash, overboard, arrows, oars) are likewise edits of the sources below: slowed or sped so no word stays readable, low-passed or high-passed, given a short hall, and normalised per class (buk -17, taiko -16, gong -21, horn -22, warcry -23, cheer -24, clash -21, overboard -23, arrows -25, oars -26 LUFS-M). Every source page was opened and its licence read as Creative Commons 0 before use.
 
 Some files are played in more than one way: `sink_1` also in slices of 1.4 to 4.5 s (with fades) for the bubbles and the last gulp of a sinking ship, a short high-pitched slice of `impact_wood_2` for blows in a melee, and short slices of `warcry_3` for men shouting on deck. No other recording is used; the synthesised fallback voices make no sound that is not noise or a low thump.
 
@@ -61,6 +61,9 @@ Some files are played in more than one way: `sink_1` also in slices of 1.4 to 4.
 | overboard_2.mp3 | 2.5 s | 20 KB | Second plunge, softer. | 585744 |
 | arrows_1.mp3 | 2.7 s | 21 KB | A low volley of arrows in flight. | 474121 |
 | arrows_2.mp3 | 2.9 s | 23 KB | Arrows loosed in a ragged volley: four flybys at different pitches with the patter of shafts landing. | 394180, 841529 |
+| oars_1.mp3 | 1.4 s | 11 KB | Oars (galley rowers): one metered stroke of a rowing crew, the grunt of the pull and the sweep of the blades. | 764048 |
+| oars_2.mp3 | 1.3 s | 11 KB | The next stroke of the same crew. | 764048 |
+| oars_3.mp3 | 1.5 s | 12 KB | Oars dipping and creaking in their pins, two strokes. | 438846 |
 
 ## Sources
 
@@ -92,6 +95,7 @@ All licences: Creative Commons 0 (http://creativecommons.org/publicdomain/zero/1
 | 274223 | War Drum Loop | PearceWilsonKing | https://freesound.org/people/PearceWilsonKing/sounds/274223/ |
 | 394180 | Arrow Loose and Flyby | saturdaysoundguy | https://freesound.org/people/saturdaysoundguy/sounds/394180/ |
 | 423959 | Bubbling | pillwave | https://freesound.org/people/pillwave/sounds/423959/ |
+| 438846 | G54-27-Oars Rowing.wav | craigsmith | https://freesound.org/people/craigsmith/sounds/438846/ |
 | 442773 | Big Water Splash | qubodup | https://freesound.org/people/qubodup/sounds/442773/ |
 | 474121 | volley of arrows01.wav | mcaseydesign | https://freesound.org/people/mcaseydesign/sounds/474121/ |
 | 476225 | Huge Distant Explosion | Fission9 | https://freesound.org/people/Fission9/sounds/476225/ |
@@ -117,6 +121,7 @@ All licences: Creative Commons 0 (http://creativecommons.org/publicdomain/zero/1
 | 723974 | Wooden Door breaks | Saladsounds | https://freesound.org/people/Saladsounds/sounds/723974/ |
 | 763940 | CRWDBatl_Crowd Yells Charge, Continues_ShaneVincent_GSC24_BIN-AmbeoVR.wav | ShangusBurger | https://freesound.org/people/ShangusBurger/sounds/763940/ |
 | 764267 | CRWDBatl_Crowd Yells Charge, Continues_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | https://freesound.org/people/ShangusBurger/sounds/764267/ |
+| 764048 | CRWDBatl_Crowd Grunting, Exerting, Metered, Rowing_ShaneVincent_GSC24_FUMA-AmbeoVR.wav | ShangusBurger | https://freesound.org/people/ShangusBurger/sounds/764048/ |
 | 803159 | Temple Gong 2 | kerozenne | https://freesound.org/people/kerozenne/sounds/803159/ |
 | 841529 | arrows clattering | Fenodyrie | https://freesound.org/people/Fenodyrie/sounds/841529/ |
 | 854206 | Volley Rifle Fire 5 | qubodup | https://freesound.org/people/qubodup/sounds/854206/ |
