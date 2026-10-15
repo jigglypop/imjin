@@ -26,20 +26,32 @@
 // The header of the asset records these and the SHA-256 of the source DEM; the build is deterministic, so rerunning it
 // on the same DEM reproduces the file byte for byte.
 //
+// The settlements' pads (public/ui/grand_sites.json, solved by scripts/build-grand-sites.mjs) are levelled into the land
+// before it is fitted: flat at their height inside each pad and PAD.margin texels beyond it, so the ground under anything
+// built there reads flat however it is sampled, then eased back into the land over a bank as wide as the step needs. Land
+// within PAD.guard texels of the sea is never touched, so no coastline moves, nor is low land outside a pad (under
+// PAD.contour metres), so a pad on a coastal flat rises as a terrace instead of tilting the flat round it. Pads and banks
+// are fitted far closer than the rest of the land (PAD.flatRelief, PAD.bankRelief), and the header lists the pads.
+//
 // Format (little-endian): "IMJT", u32 version, u32 header length, header JSON (padded to 4 bytes), then three streams,
 // each a u32 byte length and its bytes padded to 4: the vertices (meshopt vertex codec, 8 bytes each: u16 x, u16 y,
-// i16 height dm, u16 0), the kept triangles (meshopt index codec, u32 indices, counter-clockwise from above) and the
-// seam (every vertex on the DEM's north row, west to east: u16 x, i16 height dm).
+// i16 height dm, u16 ground: 0 the land's own, 1 a pad's bank, 2 a pad), the kept triangles (meshopt index codec, u32
+// indices, counter-clockwise from above) and the seam (every vertex on the DEM's north row, west to east: u16 x, i16
+// height dm).
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { build } from 'esbuild';
 import sharp from 'sharp';
 import { MeshoptEncoder } from 'meshoptimizer';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const SOURCE = 'public/ui/korea_dem.webp';
 const OUT = 'public/ui/grand_terrain.bin';
+const SITES = 'public/ui/grand_sites.json';
 const VERSION = 1;
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, ...v] = a.replace(/^--/, '').split('='); return [k, v.length ? v.join('=') : 'true']; }));
@@ -54,6 +66,14 @@ const PARAMS = {
   blur: num('blur', 16),
   spike: 300,
 };
+/**
+ * How pads are levelled, in texels and metres: the flat reaches `margin` texels past a pad's outline; the bank beyond is
+ * a texel wide and one more per `bankRun` metres of step, up to `bankMax`; land within `guard` texels of the sea, and land
+ * outside a pad under `contour` metres, keeps its height; a pad is fitted to `flatRelief` metres and a bank to `bankRelief`.
+ */
+export const PAD = { margin: 1.5, bankRun: 25, bankMax: 8, guard: 3, contour: 4, flatRelief: 0.5, bankRelief: 3 };
+/** What a texel's ground is, as the vertices carry it: the land's own, a pad's bank or a pad. */
+const OWN = 0, BANK = 1, FLAT = 2;
 
 /** Heights in metres, as terrain.ts decodes them. */
 export async function readDem() {
@@ -236,7 +256,88 @@ function prepare(W, H, source) {
   return { land, target, filled, fixed, clean: heights };
 }
 
-const orient = (ax, ay, bx, by, cx, cy) => (bx - cx) * (ay - cy) - (by - cy) * (ax - cx);
+/** The land as the build fits it, before any pad: what a texel must be drawn as and the height it should be drawn at. */
+export function prepareTerrain(dem) {
+  return prepare(dem.width, dem.height, dem.heights);
+}
+
+/** Texels within PAD.guard texels of the sea, along both axes and the diagonals: no pad or bank may touch them. */
+export function seaGuard(W, H, land) {
+  const r = PAD.guard;
+  const near = new Uint8Array(W * H), out = new Uint8Array(W * H);
+  const sum = new Int32Array(Math.max(W, H) + 1);
+  for (let y = 0; y < H; y += 1) {
+    for (let x = 0; x < W; x += 1) sum[x + 1] = sum[x] + (land[y * W + x] === SEA ? 1 : 0);
+    for (let x = 0; x < W; x += 1) near[y * W + x] = sum[Math.min(W, x + r + 1)] - sum[Math.max(0, x - r)] > 0 ? 1 : 0;
+  }
+  for (let x = 0; x < W; x += 1) {
+    for (let y = 0; y < H; y += 1) sum[y + 1] = sum[y] + near[y * W + x];
+    for (let y = 0; y < H; y += 1) out[y * W + x] = sum[Math.min(H, y + r + 1)] - sum[Math.max(0, y - r)] > 0 ? 1 : 0;
+  }
+  return out;
+}
+
+/** Distance from (x, y) to a polygon's outline, negative inside it. */
+function polygonDistance(poly, x, y) {
+  let d = Infinity, inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i, i += 1) {
+    const [ax, ay] = poly[j], [bx, by] = poly[i];
+    if ((ay > y) !== (by > y) && x < ((bx - ax) * (y - ay)) / (by - ay) + ax) inside = !inside;
+    const dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy;
+    const t = l > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l)) : 0;
+    d = Math.min(d, Math.hypot(x - ax - dx * t, y - ay - dy * t));
+  }
+  return inside ? -d : d;
+}
+
+/**
+ * Levels the pads into `target` (metres) and returns each texel's ground (OWN, BANK or FLAT). Every pad's flat is laid
+ * before any bank, so no bank eats into a neighbouring pad; where two banks meet, the one that pulls the texel hardest
+ * wins. Pads are { h0 metres, poly texels }.
+ */
+function levelPads(W, H, land, target, pads) {
+  const ground = new Uint8Array(W * H);
+  if (!pads.length) return ground;
+  const guard = seaGuard(W, H, land);
+  const own = Float32Array.from(target);
+  const reach = PAD.margin + PAD.bankMax + 1;
+  const boxes = pads.map(({ poly }) => {
+    const xs = poly.map((p) => p[0]), ys = poly.map((p) => p[1]);
+    return {
+      x0: Math.max(0, Math.floor(Math.min(...xs) - reach)), x1: Math.min(W - 1, Math.ceil(Math.max(...xs) + reach)),
+      y0: Math.max(0, Math.floor(Math.min(...ys) - reach)), y1: Math.min(H - 1, Math.ceil(Math.max(...ys) + reach)),
+    };
+  });
+  const open = (i) => land[i] !== SEA && !guard[i];
+  pads.forEach((pad, k) => {
+    const { x0, x1, y0, y1 } = boxes[k];
+    for (let y = y0; y <= y1; y += 1) for (let x = x0; x <= x1; x += 1) {
+      const i = y * W + x;
+      if (open(i) && polygonDistance(pad.poly, x, y) <= PAD.margin) { target[i] = pad.h0; ground[i] = FLAT; }
+    }
+  });
+  const weight = new Float32Array(W * H), toward = new Float32Array(W * H);
+  pads.forEach((pad, k) => {
+    const { x0, x1, y0, y1 } = boxes[k];
+    for (let y = y0; y <= y1; y += 1) for (let x = x0; x <= x1; x += 1) {
+      const i = y * W + x;
+      if (ground[i] === FLAT || !open(i) || own[i] <= PAD.contour) continue;
+      const d = polygonDistance(pad.poly, x, y) - PAD.margin;
+      const width = Math.min(PAD.bankMax, 1 + Math.abs(own[i] - pad.h0) / PAD.bankRun);
+      if (d >= width) continue;
+      const w = 1 - smoothstep(0, width, d);
+      if (w > weight[i]) { weight[i] = w; toward[i] = pad.h0; }
+    }
+  });
+  for (let i = 0; i < W * H; i += 1) {
+    if (weight[i] <= 0) continue;
+    target[i] = own[i] + (toward[i] - own[i]) * weight[i];
+    ground[i] = BANK;
+  }
+  return ground;
+}
+
+const orient =(ax, ay, bx, by, cx, cy) => (bx - cx) * (ay - cy) - (by - cy) * (ax - cx);
 
 function inCircle(ax, ay, bx, by, cx, cy, px, py) {
   const dx = ax - px, dy = ay - py, ex = bx - px, ey = by - py, fx = cx - px, fy = cy - py;
@@ -249,12 +350,14 @@ function inCircle(ax, ay, bx, by, cx, cy, px, py) {
  * (the opposite half-edge of each side, -1 on the border); a binary heap orders them by the error of their worst texel.
  */
 class Refiner {
-  constructor(W, H, land, target) {
+  constructor(W, H, land, target, ground) {
     this.W = W;
     this.H = H;
     this.land = land;
     this.target = target;
-    this.invRelief = 1 / PARAMS.relief;
+    this.ground = ground;
+    /** The inverse of the height budget by what a texel's ground is (OWN, BANK, FLAT). */
+    this.invRelief = [1 / PARAMS.relief, 1 / PAD.bankRelief, 1 / PAD.flatRelief];
     this.coords = [];
     this.triangles = [];
     this.halfedges = [];
@@ -315,7 +418,7 @@ class Refiner {
 
   /** Walks the texels inside a triangle with edge functions and finds the one of largest error. */
   measure(p0x, p0y, p1x, p1y, p2x, p2y, t) {
-    const { W, land, target, invRelief } = this;
+    const { W, land, target, ground, invRelief } = this;
     const miss = PARAMS.miss;
     const minX = Math.min(p0x, p1x, p2x), minY = Math.min(p0y, p1y, p2y);
     const maxX = Math.max(p0x, p1x, p2x), maxY = Math.max(p0y, p1y, p2y);
@@ -341,10 +444,10 @@ class Refiner {
           let e;
           const kind = land[i];
           if (kind) {
-            e = Math.abs(z - target[i]) * invRelief;
+            e = Math.abs(z - target[i]) * invRelief[ground[i]];
             if (z <= MARGIN && kind === LAND) e += miss;
           } else {
-            e = z >= -MARGIN ? miss + (z + MARGIN) * invRelief : 0;
+            e = z >= -MARGIN ? miss + (z + MARGIN) * invRelief[OWN] : 0;
           }
           if (e > worst) { worst = e; wx = x; wy = y; }
         } else if (inside) {
@@ -505,11 +608,15 @@ class Refiner {
   }
 }
 
-/** Builds the mesh and returns the asset's bytes and what it is made of. */
-export async function buildGrandTerrain(dem) {
+/**
+ * Builds the mesh with `pads` levelled in ({ site, id, h0 metres, poly texels }, sitePads) and returns the asset's bytes
+ * and what it is made of.
+ */
+export async function buildGrandTerrain(dem, pads = []) {
   const { width: W, height: H, heights } = dem;
   const { land, target, filled, fixed, clean } = prepare(W, H, heights);
-  const refiner = new Refiner(W, H, land, target);
+  const ground = levelPads(W, H, land, target, pads);
+  const refiner = new Refiner(W, H, land, target, ground);
   while (refiner.maxError() > 1) refiner.refine();
   const { coords, triangles } = refiner;
   const height = (v) => target[coords[2 * v + 1] * W + coords[2 * v]];
@@ -534,7 +641,7 @@ export async function buildGrandTerrain(dem) {
     vertices[o] = coords[2 * v];
     vertices[o + 1] = coords[2 * v + 1];
     vertices[o + 2] = Math.round(height(v) * 10) & 0xffff;
-    vertices[o + 3] = 0;
+    vertices[o + 3] = ground[coords[2 * v + 1] * W + coords[2 * v]];
   }
   // The seam: every vertex of the north row, kept or not, west to east.
   const seam = [];
@@ -556,6 +663,10 @@ export async function buildGrandTerrain(dem) {
     heightScale: 0.1,
     params: PARAMS,
   };
+  if (pads.length) {
+    header.pad = PAD;
+    header.pads = pads.map((p) => ({ site: p.site, id: p.id, h0: Math.round(p.h0 * 10) / 10, poly: p.poly.map(([x, y]) => [Math.round(x * 100) / 100, Math.round(y * 100) / 100]) }));
+  }
   const pad4 = (n) => (n + 3) & ~3;
   const json = new TextEncoder().encode(JSON.stringify(header));
   const streams = [vertexStream, indexStream, new Uint8Array(seamBytes.buffer)];
@@ -572,7 +683,61 @@ export async function buildGrandTerrain(dem) {
     out.set(bytes, o + 4);
     o += 4 + pad4(bytes.length);
   }
-  return { bytes: out, header, refiner, land, target, filled, fixed, clean };
+  return { bytes: out, header, refiner, land, target, ground, kept, filled, fixed, clean };
+}
+
+/**
+ * The DEM's heights in metres as the campaign map holds them once the land is drawn (groundLand.ts, drawHeights): every
+ * texel under a drawn facet takes the facet's height at the heights the asset stores; land texels no drawn facet covers
+ * read -1, sunk under the sea plane; the sea keeps the DEM's own depths.
+ */
+export function drawnHeights(dem, built) {
+  const { width: W, height: H } = dem;
+  const { refiner: { coords }, kept } = built;
+  const out = Float32Array.from(dem.heights);
+  for (let i = 0; i < W * H; i += 1) if (out[i] > 0) out[i] = -1;
+  // The asset's own heights: whole decimetres in an int16.
+  const metres = new Float32Array(coords.length / 2);
+  for (let v = 0; v < metres.length; v += 1) metres[v] = ((Math.round(built.target[coords[2 * v + 1] * W + coords[2 * v]] * 10) << 16) >> 16) * 0.1;
+  for (let t = 0; t < kept.length; t += 3) {
+    const a = kept[t], b = kept[t + 1], c = kept[t + 2];
+    const ha = metres[a], hb = metres[b], hc = metres[c];
+    if (ha <= 0 && hb <= 0 && hc <= 0) continue;
+    const ax = coords[2 * a], ay = coords[2 * a + 1], bx = coords[2 * b], by = coords[2 * b + 1], cx = coords[2 * c], cy = coords[2 * c + 1];
+    const area = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+    if (area === 0) continue;
+    const minX = Math.min(ax, bx, cx), maxX = Math.max(ax, bx, cx), minY = Math.min(ay, by, cy), maxY = Math.max(ay, by, cy);
+    for (let y = minY; y <= maxY; y += 1) for (let x = minX; x <= maxX; x += 1) {
+      const wa = ((bx - x) * (cy - y) - (by - y) * (cx - x)) / area;
+      const wb = ((cx - x) * (ay - y) - (cy - y) * (ax - x)) / area;
+      const wc = 1 - wa - wb;
+      if (wa < 0 || wb < 0 || wc < -1e-9) continue;
+      const z = ha * wa + hb * wb + hc * wc;
+      if (z > 0) out[y * W + x] = z;
+    }
+  }
+  return out;
+}
+
+/** A TypeScript module of the game bundled for node (esbuild), from `source` that re-exports what is wanted. */
+export async function importTs(source) {
+  const bundled = await build({ stdin: { contents: source, resolveDir: ROOT, loader: 'ts' }, bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent' });
+  const dir = await mkdtemp(join(tmpdir(), 'imjin-terrain-'));
+  try {
+    const path = join(dir, 'module.mjs');
+    await writeFile(path, bundled.outputFiles[0].contents);
+    return await import(pathToFileURL(path).href);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+/** The pads of public/ui/grand_sites.json in the DEM's texels with their heights in metres, none before it exists. */
+export async function sitePads(dem) {
+  if (!existsSync(join(ROOT, SITES))) return [];
+  const { sites } = JSON.parse(await readFile(join(ROOT, SITES), 'utf8'));
+  const { padsInTexels } = await importTs(`export { padsInTexels } from './src/ui/grand/settle/solver.ts';`);
+  return padsInTexels(sites, dem.width, dem.height);
 }
 
 /** PNGs for a person to look at: the facets shaded by height, and where the drawn waterline differs from the DEM's. */
@@ -620,17 +785,28 @@ async function preview(dir, dem, built) {
   for (let i = 0; i < W * H; i += 1) if (land[i] && drawn[i] > 0) off.push(Math.abs(drawn[i] - Math.max(0, built.clean[i])));
   off.sort((a, b) => a - b);
   const at = (p) => +off[Math.min(off.length - 1, Math.floor(off.length * p))].toFixed(1);
-  return { landAsSea, seaAsLand, sunk, offMetres: { p50: at(0.5), p90: at(0.9), p99: at(0.99), max: at(1) } };
+  return { counts: { landAsSea, seaAsLand, sunk, offMetres: { p50: at(0.5), p90: at(0.9), p99: at(0.99), max: at(1) } }, drawn };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const t0 = performance.now();
   const dem = await readDem();
-  const built = await buildGrandTerrain(dem);
+  const pads = await sitePads(dem);
+  const built = await buildGrandTerrain(dem, pads);
   const seconds = ((performance.now() - t0) / 1000).toFixed(1);
   const { header, bytes, refiner, filled, fixed } = built;
-  console.log(`${header.triangles} triangles drawn of ${refiner.triangles.length / 3}, ${header.vertices} vertices, ${header.seam} on the seam, ${filled} pocket texels filled, ${fixed} spikes flattened; ${bytes.length} bytes; ${seconds} s`);
-  if (args.preview) console.log(await preview(args.preview, dem, built));
+  console.log(`${header.triangles} triangles drawn of ${refiner.triangles.length / 3}, ${header.vertices} vertices, ${header.seam} on the seam, ${pads.length} pads, ${filled} pocket texels filled, ${fixed} spikes flattened; ${bytes.length} bytes; ${seconds} s`);
+  if (args.preview) {
+    const coast = await preview(args.preview, dem, built);
+    console.log(coast.counts);
+    // The pads must leave the drawn coast as it was: the same texels on each side of the waterline.
+    if (pads.length) {
+      const bare = await preview(join(args.preview, 'no-pads'), dem, await buildGrandTerrain(dem));
+      let moved = 0;
+      for (let i = 0; i < coast.drawn.length; i += 1) if (coast.drawn[i] > 0 !== bare.drawn[i] > 0) moved += 1;
+      console.log(`without the pads: ${JSON.stringify(bare.counts)}; ${moved} texels change sides of the waterline`);
+    }
+  }
   if (args.check) {
     const current = await readFile(join(ROOT, OUT));
     if (Buffer.compare(current, Buffer.from(bytes)) !== 0) {
