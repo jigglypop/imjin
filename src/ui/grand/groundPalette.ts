@@ -34,7 +34,7 @@ export const SKY_LIGHT = [0.46, 0.5, 0.56] as const;
  * The relief is drawn 4.2 times as steep as it is; lit at that slope every hillside facing away from the sun would go
  * dark. Light reads a normal flattened to about half of it, as the old relief shader did.
  */
-const SHADE_SLOPE = 0.55;
+export const SHADE_SLOPE = 0.55;
 
 /** Map units of the old relief (one is about 3.3 km) per world unit: the noise scales below are in them. */
 const TO_MAP = 1 / MESH_SCALE;

@@ -74,7 +74,7 @@ export class CampaignWorld {
     this.scene.fog = this.fog;
     this.root.add(ground.group);
     // Camps and ships stand on the same ground the overlay's markers read; they arrive when their models have loaded.
-    this.layer = new MapLayer((u, v) => groundElevation(ground.heights, u, v), () => this.layerChanged(), (u, v) => rawMetres(ground.heights, u, v));
+    this.layer = new MapLayer((u, v) => groundElevation(ground.heights, u, v), () => this.layerChanged(), (u, v) => rawMetres(ground.heights, u, v), ground.look);
     this.root.add(this.layer.group);
     this.trees = new TreeLayer((u, v) => ground.heightAt(u, v), V_SCALE * MESH_SCALE);
     this.root.add(this.trees.group);
@@ -194,7 +194,9 @@ export class CampaignWorld {
     if (!this.ready || !ground) return;
     const eye = eyeOf(cam);
     camera.fov = (FOV * 180) / Math.PI;
-    camera.near = NEAR;
+    // The near plane draws back with the eye's height: low land stands only a metre or two over the sea plane, and with
+    // the near plane at its closest the depth buffer could not tell them apart from afar (the coasts flickered in hatches).
+    camera.near = Math.max(NEAR, 0.05 * eye[1]);
     camera.far = FAR;
     camera.position.set(eye[0], eye[1], eye[2]);
     camera.lookAt(worldX(cam.u), 0, worldZ(cam.v));

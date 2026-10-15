@@ -5,6 +5,7 @@ import { V_SCALE } from '../../select/demFrame';
 import { loadDem } from '../../select/terrain';
 import { buildFarLandMesh } from './farLand';
 import { buildLand, fetchLand } from './groundLand';
+import { loadLandLook, type LandLook } from './landLook';
 import { buildSea } from './groundSea';
 import { DEM_RECT, MESH_SCALE } from './mapMath';
 import { FAR, type CameraState } from './worldCamera';
@@ -19,6 +20,8 @@ export interface WorldGround {
    * markers, camps and ships on the ground. Land reads as the facets draw it (groundLand.ts), so all of them stand on it.
    */
   readonly heights: Float32Array;
+  /** The land's look, which the hero camps' ground fades into. */
+  readonly look: LandLook;
   /** The haze colour as a CSS hex string: the scene background and the fog colour. */
   readonly haze: string;
   /** Ground height in frame units at a frame point anywhere in the world, the far land north of the DEM included; 0 on water. Trees stand on it. */
@@ -53,10 +56,19 @@ export async function loadGround(signal: AbortSignal): Promise<WorldGround> {
   signal.throwIfAborted();
   const { heights } = dem;
   const made: { dispose(): void }[] = [];
+  // The light is baked off the page from the DEM as loaded, while the land is built (which draws the facets' heights into it).
+  const looking = loadLandLook(heights, signal);
   try {
-    const land = await buildLand(bytes, heights);
+    const land = await buildLand(bytes, heights).catch(async (error: unknown) => {
+      // The look still arrives; it is freed with the rest.
+      made.push(await looking.catch(() => ({ dispose() {} })));
+      throw error;
+    });
     made.push(land);
+    const look = await looking;
+    made.push(look);
     signal.throwIfAborted();
+    land.mesh.material.colorNode = look.color();
     const far = buildFarLandMesh(heights, land.seam);
     made.push(far);
     // The sea's shallows and surf follow the coasts the facets of both draw.
@@ -75,6 +87,7 @@ export async function loadGround(signal: AbortSignal): Promise<WorldGround> {
     return {
       group,
       heights,
+      look,
       haze: WORLD_HAZE,
       heightAt(u, v) {
         if (v < DEM_RECT.v) return far.heightAt(u, v);

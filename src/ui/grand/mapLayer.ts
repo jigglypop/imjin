@@ -25,6 +25,7 @@ import { buildBoatKit, buildShipKit, type KitMesh } from './shipKits';
 import { formation, hash, HULL_LENGTH, pointAlong, SETTLEMENT_RADIUS, SHIP_CAP, type FleetSpec, type MapWorld, type Piece, type SailSpec, type SettlementSpec } from './mapWorld';
 import type { FactionId, ShipClass } from './types';
 import { HeroLayer, heroUses, tierUses, type HeroUse } from './hero/layer';
+import type { LandLook } from './landLook';
 import { heroEnabled } from './hero/site';
 
 // The 3D layer of the campaign map: every port's places (mapWorld.ts) built from the settlement buildings
@@ -328,12 +329,15 @@ export class MapLayer {
   private readonly hero: HeroLayer | null;
   private heroes: HeroUse[] = [];
 
-  /** `drawn(u, v)`, the drawn land in metres unclamped at the sea plane, lets the hero camps lay their ground. */
-  constructor(private readonly ground: (u: number, v: number) => number, private readonly onChange: () => void, drawn?: (u: number, v: number) => number) {
+  /**
+   * `drawn(u, v)`, the drawn land in metres unclamped at the sea plane, lets the hero camps lay their ground, in the
+   * land's look `land`.
+   */
+  constructor(private readonly ground: (u: number, v: number) => number, private readonly onChange: () => void, drawn?: (u: number, v: number) => number, land?: LandLook) {
     this.group.add(this.lights.sun, this.lights.sky, this.lights.fill, this.near, this.far);
     this.far.visible = false;
     this.lights.sun.position.set(-0.55, 0.9, 0.5);
-    this.hero = drawn && heroEnabled() ? new HeroLayer(drawn) : null;
+    this.hero = drawn && land && heroEnabled() ? new HeroLayer(drawn, land) : null;
     if (this.hero) this.group.add(this.hero.group);
   }
 

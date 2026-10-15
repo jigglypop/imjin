@@ -10,6 +10,7 @@ import { buildHero, Merge } from './build';
 import { tierCamp } from './tiers';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildHeroGround, heroGroundLook, type HeroGroundLook } from './ground';
+import type { LandLook } from '../landLook';
 import { joTier1, LAYOUTS, town, waFieldCamp } from './layouts';
 import { Plan, type Moored } from './plan';
 import { ELEVATION_MODEL, HERO_SITES, heroEnabled, MODEL_METRE, siteUV, siteXZ, type HeroSite } from './site';
@@ -133,14 +134,13 @@ export class HeroLayer {
   private readonly built = new Map<string, Built>();
   private readonly materials = new Map<FactionId, Promise<{ material: MeshBasicNodeMaterial; textures: Texture[] } | null>>();
   private readonly ready: { material: Material; textures: Texture[] }[] = [];
-  private look: Promise<HeroGroundLook | null> | null = null;
   private lookReady: HeroGroundLook | null = null;
   private trees: Promise<{ material: MeshBasicNodeMaterial; texture: Texture }> | null = null;
   private treeLook: { material: MeshBasicNodeMaterial; texture: Texture } | null = null;
   private disposed = false;
 
-  /** `drawn(u, v)` is the drawn land's height in metres at a frame point, negative under the sea. */
-  constructor(private readonly drawn: (u: number, v: number) => number) {}
+  /** `drawn(u, v)` is the drawn land's height in metres at a frame point, negative under the sea; `land` the land's look. */
+  constructor(private readonly drawn: (u: number, v: number) => number, private readonly land: LandLook) {}
 
   private material(navy: FactionId) {
     let p = this.materials.get(navy);
@@ -155,11 +155,7 @@ export class HeroLayer {
   }
 
   private groundLook() {
-    this.look ??= heroGroundLook().then((m) => {
-      if (this.disposed) { for (const x of [m.ground, m.laid, m.shade, m.water]) x.dispose(); for (const t of m.textures) t.dispose(); } else this.lookReady = m;
-      return m;
-    }, () => null);
-    return this.look;
+    return (this.lookReady ??= heroGroundLook(this.land));
   }
 
   /**
@@ -325,7 +321,7 @@ export class HeroLayer {
     for (const m of this.ready) { m.material.dispose(); for (const t of m.textures) t.dispose(); }
     this.ready.length = 0;
     const look = this.lookReady;
-    if (look) { for (const x of [look.ground, look.laid, look.shade, look.water]) x.dispose(); for (const t of look.textures) t.dispose(); }
+    if (look) for (const x of [look.ground, look.laid, look.shade, look.water]) x.dispose();
     this.lookReady = null;
     if (this.treeLook) { this.treeLook.material.dispose(); this.treeLook.texture.dispose(); }
     this.treeLook = null;
