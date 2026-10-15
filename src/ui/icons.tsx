@@ -89,3 +89,10 @@ export const Notice = ({ size }: P) => (
     <path d="M12 7.8v5M12 16.2v.1" />
   </Icon>
 );
+
+/** An arrow rising out of a tray, for sharing. */
+export const Share = ({ size }: P) => (
+  <Icon size={size}>
+    <path d="M12 14.5V4.5M8 8.5l4-4 4 4M5.5 12v6.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V12" />
+  </Icon>
+);

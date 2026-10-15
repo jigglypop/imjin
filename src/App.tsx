@@ -17,7 +17,7 @@ import { ErrorBoundary, FatalNotice } from './ui/ErrorBoundary';
 import { Loading } from './ui/Loading';
 import { RecoveryNotice } from './ui/RecoveryNotice';
 import { MainMenu, ScreenFrame, SettingsScreen } from './ui/Screens';
-import { startScenario, urlLaunch, type Launch, type LaunchBody } from './ui/launch';
+import { launchInfo, startScenario, urlLaunch, type Launch, type LaunchBody } from './ui/launch';
 import { screenChunks, startRouter } from './router';
 
 // The battle (three.js, engine, HUD) is its own chunk: the menu paints without parsing it. So is each screen below the
@@ -70,10 +70,13 @@ useUi.subscribe((state, previous) => {
 if (isIOS) installTouchGuard();
 
 // The address opens its screen (/campaign, /en/conquest); test hooks (?scenario=, ?conquest=) skip the menu and boot
-// straight into the battle.
+// straight into the battle, whose loading page names it and shows its picture from the first frame.
 const firstLaunch = urlLaunch();
 startRouter(!!firstLaunch);
-if (firstLaunch) markLoading(resumable(firstLaunch));
+if (firstLaunch) {
+  markLoading(resumable(firstLaunch));
+  setLoading(t('바다를 준비하는 중'), 0, launchInfo(firstLaunch));
+}
 
 export function App() {
   // A language switch redraws every screen, including parts that call t() directly.
@@ -109,14 +112,15 @@ export function App() {
     if (room || quick || rankedQueue) net.send({ t: 'leave' });
   }, [screen]);
 
-  const begin = (next: LaunchBody, text: string, scenario?: ScenarioId) => {
+  const begin = (next: LaunchBody, text: string) => {
     sound.click();
     sound.setMode('battle');
     markLoading(resumable(next));
     setNotice(false);
     setFatal(null);
     setScreen('battle');
-    if (!launch) setLoading(text, 0.01, scenario);
+    // The loading page shows the new battle at once, also when the engine of an earlier battle is still mounted.
+    setLoading(text, 0.01, launchInfo(next));
     setLaunch({ ...next, seq: ++seq });
   };
 
@@ -139,7 +143,7 @@ export function App() {
       }
       const id = msg.battle.id;
       setOrigin('online');
-      begin({ kind: 'scenario', id, faction: msg.seats[msg.you]!.faction, remote }, t('{name} 준비 중', { name: t(SCENARIOS[id].title) }), id);
+      begin({ kind: 'scenario', id, faction: msg.seats[msg.you]!.faction, remote }, t('{name} 준비 중', { name: t(SCENARIOS[id].title) }));
     };
     return () => {
       net.onStart = null;
@@ -156,7 +160,7 @@ export function App() {
     const spawn = campaignMode && campaign ? fleetSpawn(campaign) : undefined;
     lastScenario.current = id;
     setOrigin('select');
-    begin({ kind: 'scenario', id, faction: spawn ? 'joseon' : faction, campaign: spawn }, t('{name} 준비 중', { name: t(SCENARIOS[id].title) }), id);
+    begin({ kind: 'scenario', id, faction: spawn ? 'joseon' : faction, campaign: spawn }, t('{name} 준비 중', { name: t(SCENARIOS[id].title) }));
   };
 
   const resume = recovery.resume;

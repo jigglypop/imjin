@@ -25,7 +25,7 @@ passed through `t()` where they are shown.
 
 ## English style
 - Concise, modern UI English. Sentence case for buttons and labels (Start battle, Back, Settings); Title Case only
-  for mode names and proper nouns (Historical Battles, Faction Campaign, Conquest, Online Battle).
+  for mode names and proper nouns (Historical Battles, Campaign, Battle Series, Conquest, Online Battle).
 - Korean names in the usual romanization (Yi Sun-sin, Won Gyun, Yi Eok-gi, Jeong Un); Japanese in Hepburn
   (Wakisaka Yasuharu, Kuki Yoshitaka, Todo Takatora, Kurushima Michifusa); Chinese in pinyin (Chen Lin, Deng Zilong).
 - Keep it as short as the Korean where space is tight (HUD, buttons): English runs about 1.3-1.8x longer.
@@ -35,10 +35,10 @@ passed through `t()` where they are shown.
 |---|---|
 | 임진왜란 / 壬辰倭亂 (the game's title) | The Imjin War |
 | 역사 전투 | Historical Battles |
-| 캠페인 | Faction Campaign |
+| 캠페인 (the faction campaign) | Campaign |
 | 쟁탈전 | Conquest |
 | 온라인 대전 | Online Battle |
-| 1592 전역 (연속 전투) | 1592 Campaign |
+| 연속 전투 (the nine battles in a row, in 역사 전투) | Battle Series |
 | 조선 / 일본 / 명 | Joseon / Japan / Ming |
 | 조선 수군 / 일본 수군 / 명 수군 | Joseon Navy / Japanese Navy / Ming Navy |
 | 판옥선 | Panokseon |

@@ -333,6 +333,10 @@ input {
   cursor: default;
 }
 
+.share-btn {
+  gap: 6px;
+}
+
 /* ---------------------------------------------------------------- emblem and seal */
 
 .seal {

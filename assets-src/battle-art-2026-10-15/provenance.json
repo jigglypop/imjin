@@ -1,0 +1,2084 @@
+{
+  "renderer": "the game itself (src/game/Engine.ts) in headless Edge with WebGPU, no image generation or painting",
+  "script": "scripts/build-battle-art.mjs",
+  "battles": {
+    "okpo": {
+      "grade": {
+        "exposure": 1,
+        "gamma": 1,
+        "saturation": 1.04
+      },
+      "wide": {
+        "file": "okpo-wide.jpg",
+        "candidate": "w-1-2",
+        "captured": "2026-10-15T18:04:13.114Z",
+        "url": "http://127.0.0.1:5412/?scenario=okpo&hud=0&lv=4&q=high&dpr=2&paused=1&warm=280",
+        "steps": [
+          {
+            "run": 1.5,
+            "time": 280,
+            "afloat": {
+              "joseon": 45,
+              "japan": 34
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 16
+            },
+            "burning": 2
+          }
+        ],
+        "engine": {
+          "fps": 1,
+          "ships": 83,
+          "onLand": 0,
+          "projectiles": 10,
+          "smoke": 196,
+          "fire": 309,
+          "batches": {
+            "panokseon#0": [
+              0,
+              0,
+              1
+            ],
+            "panokseon#1": [
+              0,
+              0,
+              14
+            ],
+            "panokseon#2": [
+              0,
+              0,
+              13
+            ],
+            "atakebune#0": [
+              0,
+              0,
+              9
+            ],
+            "atakebune#1": [
+              0,
+              0,
+              10
+            ],
+            "sekibune#0": [
+              0,
+              0,
+              11
+            ],
+            "sekibune#1": [
+              0,
+              0,
+              5
+            ],
+            "hyeopseon#0": [
+              0,
+              17,
+              0
+            ],
+            "kobaya#0": [
+              0,
+              0,
+              3
+            ]
+          },
+          "backend": "webgpu",
+          "phi": -3.43,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 290,
+          "afloat": {
+            "joseon": 45,
+            "japan": 34
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 16
+          },
+          "burning": 3
+        },
+        "pose": {
+          "tx": 154.795,
+          "tz": -743.512,
+          "yaw": 3.24,
+          "pitch": 0.092,
+          "distance": 196.163,
+          "fov": 38,
+          "lift": 4
+        },
+        "rendered": [
+          3840,
+          2160
+        ],
+        "clipped": 0,
+        "kept": [
+          2880,
+          1620
+        ],
+        "sha256": "c1f7b8b69fabb0e36c4b5d3517352a47e2cbd1f7fd2e39f5687bd1b54fe6ae26"
+      },
+      "tall": {
+        "file": "okpo-tall.jpg",
+        "candidate": "t-1-1",
+        "captured": "2026-10-15T18:04:13.114Z",
+        "url": "http://127.0.0.1:5412/?scenario=okpo&hud=0&lv=4&q=high&dpr=2&paused=1&warm=280",
+        "steps": [
+          {
+            "run": 1.5,
+            "time": 280,
+            "afloat": {
+              "joseon": 45,
+              "japan": 34
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 16
+            },
+            "burning": 2
+          }
+        ],
+        "engine": {
+          "fps": 1,
+          "ships": 83,
+          "onLand": 0,
+          "projectiles": 10,
+          "smoke": 196,
+          "fire": 309,
+          "batches": {
+            "panokseon#0": [
+              0,
+              0,
+              1
+            ],
+            "panokseon#1": [
+              0,
+              0,
+              14
+            ],
+            "panokseon#2": [
+              0,
+              0,
+              13
+            ],
+            "atakebune#0": [
+              0,
+              0,
+              9
+            ],
+            "atakebune#1": [
+              0,
+              0,
+              10
+            ],
+            "sekibune#0": [
+              0,
+              0,
+              11
+            ],
+            "sekibune#1": [
+              0,
+              0,
+              5
+            ],
+            "hyeopseon#0": [
+              0,
+              17,
+              0
+            ],
+            "kobaya#0": [
+              0,
+              0,
+              3
+            ]
+          },
+          "backend": "webgpu",
+          "phi": -3.43,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 290,
+          "afloat": {
+            "joseon": 45,
+            "japan": 34
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 16
+          },
+          "burning": 3
+        },
+        "pose": {
+          "tx": 23.7,
+          "tz": -743.546,
+          "yaw": 3.44,
+          "pitch": 0.25,
+          "distance": 88.913,
+          "fov": 52,
+          "lift": 4
+        },
+        "rendered": [
+          1242,
+          2688
+        ],
+        "clipped": 0,
+        "kept": [
+          1242,
+          2688
+        ],
+        "sha256": "383605fbaa0e7a15d129167d2e4b18959960ca66d42dc83e1d8f577ffddc16c3"
+      }
+    },
+    "sacheon": {
+      "grade": {
+        "exposure": 1.08,
+        "gamma": 1,
+        "saturation": 1.03
+      },
+      "wide": {
+        "file": "sacheon-wide.jpg",
+        "candidate": "w-2-1",
+        "captured": "2026-10-15T18:07:15.697Z",
+        "url": "http://127.0.0.1:5412/?scenario=sacheon&hud=0&lv=4&q=high&dpr=2&paused=1&warm=180",
+        "steps": [
+          {
+            "run": 1.5,
+            "time": 250.5,
+            "afloat": {
+              "joseon": 26,
+              "japan": 11
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 2
+            },
+            "burning": 0
+          }
+        ],
+        "engine": {
+          "fps": 45,
+          "ships": 38,
+          "onLand": 0,
+          "projectiles": 10,
+          "smoke": 2518,
+          "fire": 151,
+          "batches": {
+            "panokseon#0": [
+              1,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              12,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              12,
+              0,
+              0
+            ],
+            "geobukseon#0": [
+              1,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              2,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              2,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              3,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              5,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 0.869,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 266.6,
+          "afloat": {
+            "joseon": 26,
+            "japan": 11
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 2
+          },
+          "burning": 1
+        },
+        "pose": {
+          "tx": 1311.542,
+          "tz": -1664.879,
+          "yaw": 3.556,
+          "pitch": 0.085,
+          "distance": 129.407,
+          "fov": 34,
+          "lift": 3
+        },
+        "rendered": [
+          3840,
+          2160
+        ],
+        "clipped": 0,
+        "kept": [
+          2880,
+          1620
+        ],
+        "sha256": "0b6001a4228e71dbbb6b6df93d4f18a9bf2013d06c61fd83cc0d52a27e88ff22"
+      },
+      "tall": {
+        "file": "sacheon-tall.jpg",
+        "candidate": "t-2-1",
+        "captured": "2026-10-15T18:07:15.697Z",
+        "url": "http://127.0.0.1:5412/?scenario=sacheon&hud=0&lv=4&q=high&dpr=2&paused=1&warm=180",
+        "steps": [
+          {
+            "run": 1.5,
+            "time": 250.5,
+            "afloat": {
+              "joseon": 26,
+              "japan": 11
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 2
+            },
+            "burning": 0
+          }
+        ],
+        "engine": {
+          "fps": 45,
+          "ships": 38,
+          "onLand": 0,
+          "projectiles": 10,
+          "smoke": 2518,
+          "fire": 151,
+          "batches": {
+            "panokseon#0": [
+              1,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              12,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              12,
+              0,
+              0
+            ],
+            "geobukseon#0": [
+              1,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              2,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              2,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              3,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              5,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 0.869,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 266.6,
+          "afloat": {
+            "joseon": 26,
+            "japan": 11
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 2
+          },
+          "burning": 1
+        },
+        "pose": {
+          "tx": 1217.273,
+          "tz": -1700.358,
+          "yaw": 3.759,
+          "pitch": 0.233,
+          "distance": 60.527,
+          "fov": 52,
+          "lift": 3
+        },
+        "rendered": [
+          1242,
+          2688
+        ],
+        "clipped": 0,
+        "kept": [
+          1242,
+          2688
+        ],
+        "sha256": "8bdeab8ebd59ddfd96eec417bcb9cce75c520dbc246d6fa241fbb94b5cfd37c2"
+      }
+    },
+    "dangpo": {
+      "grade": {
+        "exposure": 1,
+        "gamma": 1,
+        "saturation": 1.03
+      },
+      "wide": {
+        "file": "dangpo-wide.jpg",
+        "candidate": "w-1-2",
+        "captured": "2026-10-15T18:10:22.548Z",
+        "url": "http://127.0.0.1:5412/?scenario=dangpo&hud=0&lv=4&q=high&dpr=2&paused=1&warm=150",
+        "steps": [
+          {
+            "stage": 1
+          },
+          {
+            "run": 2,
+            "time": 259.7,
+            "afloat": {
+              "joseon": 26,
+              "japan": 20
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 1
+            },
+            "burning": 3
+          }
+        ],
+        "engine": {
+          "fps": 60,
+          "ships": 46,
+          "onLand": 0,
+          "projectiles": 1,
+          "smoke": 1521,
+          "fire": 173,
+          "batches": {
+            "panokseon#0": [
+              1,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              12,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              11,
+              0,
+              0
+            ],
+            "geobukseon#0": [
+              2,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              4,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              5,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              6,
+              0,
+              0
+            ],
+            "kobaya#0": [
+              5,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 1.912,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 263.7,
+          "afloat": {
+            "joseon": 26,
+            "japan": 19
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 2
+          },
+          "burning": 3
+        },
+        "pose": {
+          "tx": 1798.3,
+          "tz": -504.259,
+          "yaw": 2.088,
+          "pitch": 0.076,
+          "distance": 132.03,
+          "fov": 38,
+          "lift": 4
+        },
+        "rendered": [
+          3840,
+          2160
+        ],
+        "clipped": 0,
+        "kept": [
+          2880,
+          1620
+        ],
+        "sha256": "d512dae74a5d41a2d209d521beb1230339f448f1a7339123d411ebdcd423c219"
+      },
+      "tall": {
+        "file": "dangpo-tall.jpg",
+        "candidate": "t-2-1",
+        "captured": "2026-10-15T18:10:22.548Z",
+        "url": "http://127.0.0.1:5412/?scenario=dangpo&hud=0&lv=4&q=high&dpr=2&paused=1&warm=150",
+        "steps": [
+          {
+            "stage": 1
+          },
+          {
+            "run": 2,
+            "time": 259.7,
+            "afloat": {
+              "joseon": 26,
+              "japan": 20
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 1
+            },
+            "burning": 3
+          }
+        ],
+        "engine": {
+          "fps": 60,
+          "ships": 46,
+          "onLand": 0,
+          "projectiles": 1,
+          "smoke": 1521,
+          "fire": 173,
+          "batches": {
+            "panokseon#0": [
+              1,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              12,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              11,
+              0,
+              0
+            ],
+            "geobukseon#0": [
+              2,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              4,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              5,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              6,
+              0,
+              0
+            ],
+            "kobaya#0": [
+              5,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 1.912,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 267.7,
+          "afloat": {
+            "joseon": 26,
+            "japan": 18
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 3
+          },
+          "burning": 3
+        },
+        "pose": {
+          "tx": 1745.946,
+          "tz": -502.547,
+          "yaw": 3.053,
+          "pitch": 0.167,
+          "distance": 84.229,
+          "fov": 54,
+          "lift": 6
+        },
+        "rendered": [
+          1242,
+          2688
+        ],
+        "clipped": 0,
+        "kept": [
+          1242,
+          2688
+        ],
+        "sha256": "3e423e97478db9d69183624488416fffadd79a34adf1b2bcafa2c25955f2f919"
+      }
+    },
+    "hansan": {
+      "grade": {
+        "exposure": 1,
+        "gamma": 1,
+        "saturation": 1.05
+      },
+      "wide": {
+        "file": "hansan-wide.jpg",
+        "candidate": "w-0-2",
+        "captured": "2026-10-15T18:14:07.527Z",
+        "url": "http://127.0.0.1:5412/?scenario=hansan&hud=0&lv=4&q=high&dpr=2&paused=1&warm=100",
+        "steps": [
+          {
+            "stage": {
+              "wing": {
+                "x": 699,
+                "z": 81
+              }
+            }
+          },
+          {
+            "run": 3,
+            "time": 401.6,
+            "afloat": {
+              "joseon": 53,
+              "japan": 55
+            },
+            "sunk": {
+              "joseon": 3,
+              "japan": 18
+            },
+            "burning": 2
+          }
+        ],
+        "engine": {
+          "fps": 33,
+          "ships": 115,
+          "onLand": 0,
+          "projectiles": 18,
+          "smoke": 9058,
+          "fire": 175,
+          "batches": {
+            "panokseon#0": [
+              2,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              21,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              20,
+              0,
+              0
+            ],
+            "geobukseon#0": [
+              0,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              17,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              16,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              9,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              9,
+              0,
+              0
+            ],
+            "kobaya#0": [
+              11,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 0.462,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 401.9,
+          "afloat": {
+            "joseon": 53,
+            "japan": 55
+          },
+          "sunk": {
+            "joseon": 3,
+            "japan": 18
+          },
+          "burning": 2
+        },
+        "pose": {
+          "tx": 369.026,
+          "tz": 127.474,
+          "yaw": -0.057,
+          "pitch": 0.127,
+          "distance": 356.086,
+          "fov": 36,
+          "lift": 4
+        },
+        "rendered": [
+          3840,
+          2160
+        ],
+        "clipped": 0,
+        "kept": [
+          2880,
+          1620
+        ],
+        "sha256": "b90525e2381c77b6688b87aab77d0f6fb656c490452f05943364806934156007"
+      },
+      "tall": {
+        "file": "hansan-tall.jpg",
+        "candidate": "t-2-1",
+        "captured": "2026-10-15T18:14:07.527Z",
+        "url": "http://127.0.0.1:5412/?scenario=hansan&hud=0&lv=4&q=high&dpr=2&paused=1&warm=100",
+        "steps": [
+          {
+            "stage": {
+              "wing": {
+                "x": 699,
+                "z": 81
+              }
+            }
+          },
+          {
+            "run": 3,
+            "time": 401.6,
+            "afloat": {
+              "joseon": 53,
+              "japan": 55
+            },
+            "sunk": {
+              "joseon": 3,
+              "japan": 18
+            },
+            "burning": 2
+          }
+        ],
+        "engine": {
+          "fps": 33,
+          "ships": 115,
+          "onLand": 0,
+          "projectiles": 18,
+          "smoke": 9058,
+          "fire": 175,
+          "batches": {
+            "panokseon#0": [
+              2,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              21,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              20,
+              0,
+              0
+            ],
+            "geobukseon#0": [
+              0,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              17,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              16,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              9,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              9,
+              0,
+              0
+            ],
+            "kobaya#0": [
+              11,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 0.462,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 426.2,
+          "afloat": {
+            "joseon": 53,
+            "japan": 49
+          },
+          "sunk": {
+            "joseon": 3,
+            "japan": 24
+          },
+          "burning": 1
+        },
+        "pose": {
+          "tx": 321.333,
+          "tz": -47.289,
+          "yaw": 0.101,
+          "pitch": 0.286,
+          "distance": 177.352,
+          "fov": 50,
+          "lift": 4
+        },
+        "rendered": [
+          1242,
+          2688
+        ],
+        "clipped": 0,
+        "kept": [
+          1242,
+          2688
+        ],
+        "sha256": "344d8dff68c650b011fb8e7228281aee00f700236fdacd7e165f1a4556a8af7d"
+      }
+    },
+    "angolpo": {
+      "grade": {
+        "exposure": 1.15,
+        "gamma": 1.1,
+        "saturation": 1.02
+      },
+      "wide": {
+        "file": "angolpo-wide.jpg",
+        "candidate": "w-1-2",
+        "captured": "2026-10-15T18:18:31.444Z",
+        "url": "http://127.0.0.1:5412/?scenario=angolpo&hud=0&lv=4&q=high&dpr=2&paused=1&warm=250",
+        "steps": [
+          {
+            "run": 1.5,
+            "time": 257.7,
+            "afloat": {
+              "joseon": 54,
+              "japan": 26
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 16
+            },
+            "burning": 5
+          }
+        ],
+        "engine": {
+          "fps": 52,
+          "ships": 85,
+          "onLand": 0,
+          "projectiles": 13,
+          "smoke": 4324,
+          "fire": 429,
+          "batches": {
+            "panokseon#0": [
+              2,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              24,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              26,
+              0,
+              0
+            ],
+            "geobukseon#0": [
+              2,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              10,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              11,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              3,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              2,
+              0,
+              0
+            ],
+            "kobaya#0": [
+              5,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 0.939,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 267.8,
+          "afloat": {
+            "joseon": 54,
+            "japan": 26
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 16
+          },
+          "burning": 8
+        },
+        "pose": {
+          "tx": 1011.504,
+          "tz": -442.858,
+          "yaw": 1.675,
+          "pitch": 0.092,
+          "distance": 196.163,
+          "fov": 38,
+          "lift": 4
+        },
+        "rendered": [
+          3840,
+          2160
+        ],
+        "clipped": 0.02,
+        "kept": [
+          2880,
+          1620
+        ],
+        "sha256": "3802e75a15c3a6e7ccb418041262919443e7f7276053db85048b4bfc6434e81a"
+      },
+      "tall": {
+        "file": "angolpo-tall.jpg",
+        "candidate": "t-2-1",
+        "captured": "2026-10-15T18:18:31.444Z",
+        "url": "http://127.0.0.1:5412/?scenario=angolpo&hud=0&lv=4&q=high&dpr=2&paused=1&warm=250",
+        "steps": [
+          {
+            "run": 1.5,
+            "time": 257.7,
+            "afloat": {
+              "joseon": 54,
+              "japan": 26
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 16
+            },
+            "burning": 5
+          }
+        ],
+        "engine": {
+          "fps": 52,
+          "ships": 85,
+          "onLand": 0,
+          "projectiles": 13,
+          "smoke": 4324,
+          "fire": 429,
+          "batches": {
+            "panokseon#0": [
+              2,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              24,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              26,
+              0,
+              0
+            ],
+            "geobukseon#0": [
+              2,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              10,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              11,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              3,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              2,
+              0,
+              0
+            ],
+            "kobaya#0": [
+              5,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 0.939,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 277.8,
+          "afloat": {
+            "joseon": 54,
+            "japan": 26
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 16
+          },
+          "burning": 10
+        },
+        "pose": {
+          "tx": 1015.461,
+          "tz": -309.553,
+          "yaw": 1.824,
+          "pitch": 0.25,
+          "distance": 88.913,
+          "fov": 52,
+          "lift": 4
+        },
+        "rendered": [
+          1242,
+          2688
+        ],
+        "clipped": 0.01,
+        "kept": [
+          1242,
+          2688
+        ],
+        "sha256": "4271fa142f8a3caf0019f176010d40abad96f01ca97a34e9310ab718d9294aab"
+      }
+    },
+    "busan": {
+      "grade": {
+        "exposure": 1,
+        "gamma": 1,
+        "saturation": 1.03
+      },
+      "wide": {
+        "file": "busan-wide.jpg",
+        "candidate": "w-2-2",
+        "captured": "2026-10-15T18:21:19.511Z",
+        "url": "http://127.0.0.1:5412/?scenario=busan&hud=0&lv=4&q=high&dpr=2&paused=1&warm=230",
+        "steps": [
+          {
+            "run": 1.5,
+            "time": 247.5,
+            "afloat": {
+              "joseon": 166,
+              "japan": 425
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 45
+            },
+            "burning": 8
+          }
+        ],
+        "engine": {
+          "fps": 44,
+          "ships": 610,
+          "onLand": 0,
+          "projectiles": 54,
+          "smoke": 11966,
+          "fire": 808,
+          "batches": {
+            "panokseon#0": [
+              1,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              35,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              35,
+              0,
+              0
+            ],
+            "geobukseon#0": [
+              3,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              50,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              58,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              104,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              111,
+              0,
+              0
+            ],
+            "hyeopseon#0": [
+              92,
+              0,
+              0
+            ],
+            "kobaya#0": [
+              90,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 0.628,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 263.7,
+          "afloat": {
+            "joseon": 166,
+            "japan": 410
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 60
+          },
+          "burning": 14
+        },
+        "pose": {
+          "tx": -460.9,
+          "tz": -784.468,
+          "yaw": 3.617,
+          "pitch": 0.158,
+          "distance": 318.761,
+          "fov": 36,
+          "lift": 0
+        },
+        "rendered": [
+          3840,
+          2160
+        ],
+        "clipped": 0.04,
+        "kept": [
+          2880,
+          1620
+        ],
+        "sha256": "881547eae8d49e600c3c699ccd4059bcc1159d923ac2c367882d54cd92951ab5"
+      },
+      "tall": {
+        "file": "busan-tall.jpg",
+        "candidate": "t-2-0",
+        "captured": "2026-10-15T18:21:19.511Z",
+        "url": "http://127.0.0.1:5412/?scenario=busan&hud=0&lv=4&q=high&dpr=2&paused=1&warm=230",
+        "steps": [
+          {
+            "run": 1.5,
+            "time": 247.5,
+            "afloat": {
+              "joseon": 166,
+              "japan": 425
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 45
+            },
+            "burning": 8
+          }
+        ],
+        "engine": {
+          "fps": 44,
+          "ships": 610,
+          "onLand": 0,
+          "projectiles": 54,
+          "smoke": 11966,
+          "fire": 808,
+          "batches": {
+            "panokseon#0": [
+              1,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              35,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              35,
+              0,
+              0
+            ],
+            "geobukseon#0": [
+              3,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              50,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              58,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              104,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              111,
+              0,
+              0
+            ],
+            "hyeopseon#0": [
+              92,
+              0,
+              0
+            ],
+            "kobaya#0": [
+              90,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 0.628,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 263.7,
+          "afloat": {
+            "joseon": 166,
+            "japan": 410
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 60
+          },
+          "burning": 14
+        },
+        "pose": {
+          "tx": -651.147,
+          "tz": -760.918,
+          "yaw": 3.144,
+          "pitch": 0.337,
+          "distance": 139.052,
+          "fov": 56,
+          "lift": 0
+        },
+        "rendered": [
+          1242,
+          2688
+        ],
+        "clipped": 0.24,
+        "kept": [
+          1242,
+          2688
+        ],
+        "sha256": "7221a9d19f7128905f637f2b706561d27f93186753bfad58899677b69938928d"
+      }
+    },
+    "chilcheon": {
+      "grade": {
+        "exposure": 1.6,
+        "gamma": 1.12,
+        "saturation": 1
+      },
+      "wide": {
+        "file": "chilcheon-wide.jpg",
+        "candidate": "w-1-1",
+        "captured": "2026-10-15T18:25:01.943Z",
+        "url": "http://127.0.0.1:5412/?scenario=chilcheon&hud=0&lv=4&q=high&dpr=2&paused=1&warm=500",
+        "steps": [
+          {
+            "run": 2,
+            "time": 500.1,
+            "afloat": {
+              "joseon": 134,
+              "japan": 479
+            },
+            "sunk": {
+              "joseon": 3,
+              "japan": 21
+            },
+            "burning": 9
+          }
+        ],
+        "engine": {
+          "fps": 0,
+          "ships": 617,
+          "onLand": 0,
+          "projectiles": 2,
+          "smoke": 115,
+          "fire": 173,
+          "batches": {
+            "panokseon#0": [
+              1,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              67,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              66,
+              0,
+              0
+            ],
+            "geobukseon#0": [
+              1,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              23,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              22,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              75,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              71,
+              0,
+              0
+            ],
+            "kobaya#0": [
+              68,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 1.8,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 512.4,
+          "afloat": {
+            "joseon": 134,
+            "japan": 474
+          },
+          "sunk": {
+            "joseon": 3,
+            "japan": 26
+          },
+          "burning": 8
+        },
+        "pose": {
+          "tx": -1892.169,
+          "tz": 235.3,
+          "yaw": 3.776,
+          "pitch": 0.08,
+          "distance": 301.003,
+          "fov": 34,
+          "lift": 4
+        },
+        "rendered": [
+          3840,
+          2160
+        ],
+        "clipped": 0.02,
+        "kept": [
+          2880,
+          1620
+        ],
+        "sha256": "139e463fe55008102bf1db2cd6f926dfda3cef2ae3bbb61ebcefba0980c51867"
+      },
+      "tall": {
+        "file": "chilcheon-tall.jpg",
+        "candidate": "t-1-1",
+        "captured": "2026-10-15T18:25:01.943Z",
+        "url": "http://127.0.0.1:5412/?scenario=chilcheon&hud=0&lv=4&q=high&dpr=2&paused=1&warm=500",
+        "steps": [
+          {
+            "run": 2,
+            "time": 500.1,
+            "afloat": {
+              "joseon": 134,
+              "japan": 479
+            },
+            "sunk": {
+              "joseon": 3,
+              "japan": 21
+            },
+            "burning": 9
+          }
+        ],
+        "engine": {
+          "fps": 0,
+          "ships": 617,
+          "onLand": 0,
+          "projectiles": 2,
+          "smoke": 115,
+          "fire": 173,
+          "batches": {
+            "panokseon#0": [
+              1,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              67,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              66,
+              0,
+              0
+            ],
+            "geobukseon#0": [
+              1,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              23,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              22,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              75,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              71,
+              0,
+              0
+            ],
+            "kobaya#0": [
+              68,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 1.8,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 512.4,
+          "afloat": {
+            "joseon": 134,
+            "japan": 474
+          },
+          "sunk": {
+            "joseon": 3,
+            "japan": 26
+          },
+          "burning": 8
+        },
+        "pose": {
+          "tx": -2056.778,
+          "tz": 133.691,
+          "yaw": 3.923,
+          "pitch": 0.235,
+          "distance": 111.48,
+          "fov": 52,
+          "lift": 4
+        },
+        "rendered": [
+          1242,
+          2688
+        ],
+        "clipped": 0,
+        "kept": [
+          1242,
+          2688
+        ],
+        "sha256": "e6e188c5f3f1457f72ed7367c0733a8386d5d89f1590f020cb04f0468f2927d6"
+      }
+    },
+    "myeongnyang": {
+      "grade": {
+        "exposure": 1.9,
+        "gamma": 1.06,
+        "saturation": 1.05
+      },
+      "wide": {
+        "file": "myeongnyang-wide.jpg",
+        "candidate": "w-1-1",
+        "captured": "2026-10-15T18:27:54.574Z",
+        "url": "http://127.0.0.1:5412/?scenario=myeongnyang&hud=0&lv=4&q=high&dpr=2&paused=1&warm=150",
+        "steps": [
+          {
+            "run": 1,
+            "time": 150.1,
+            "afloat": {
+              "joseon": 13,
+              "japan": 133
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 0
+            },
+            "burning": 0
+          },
+          {
+            "stage": 1
+          },
+          {
+            "run": 1,
+            "time": 151.3,
+            "afloat": {
+              "joseon": 13,
+              "japan": 133
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 0
+            },
+            "burning": 0
+          }
+        ],
+        "engine": {
+          "fps": 60,
+          "ships": 146,
+          "onLand": 0,
+          "projectiles": 9,
+          "smoke": 959,
+          "fire": 109,
+          "batches": {
+            "panokseon#0": [
+              1,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              0,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              0,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              22,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              22,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              45,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              44,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": -0.631,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 153,
+          "afloat": {
+            "joseon": 13,
+            "japan": 133
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 0
+          },
+          "burning": 0
+        },
+        "pose": {
+          "tx": -1436.643,
+          "tz": 1022.979,
+          "yaw": 2.131,
+          "pitch": 0.111,
+          "distance": 198.06,
+          "fov": 26,
+          "lift": 4
+        },
+        "rendered": [
+          3840,
+          2160
+        ],
+        "clipped": 0,
+        "kept": [
+          2880,
+          1620
+        ],
+        "sha256": "cd1b211ea40ba4f2790f296e73e7fe4ce16799d000f0eb59e53483701697f373"
+      },
+      "tall": {
+        "file": "myeongnyang-tall.jpg",
+        "candidate": "t-1-1",
+        "captured": "2026-10-15T18:27:54.574Z",
+        "url": "http://127.0.0.1:5412/?scenario=myeongnyang&hud=0&lv=4&q=high&dpr=2&paused=1&warm=150",
+        "steps": [
+          {
+            "run": 1,
+            "time": 150.1,
+            "afloat": {
+              "joseon": 13,
+              "japan": 133
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 0
+            },
+            "burning": 0
+          },
+          {
+            "stage": 1
+          },
+          {
+            "run": 1,
+            "time": 151.3,
+            "afloat": {
+              "joseon": 13,
+              "japan": 133
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 0
+            },
+            "burning": 0
+          }
+        ],
+        "engine": {
+          "fps": 60,
+          "ships": 146,
+          "onLand": 0,
+          "projectiles": 9,
+          "smoke": 959,
+          "fire": 109,
+          "batches": {
+            "panokseon#0": [
+              1,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              0,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              0,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              22,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              22,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              45,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              44,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": -0.631,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 153,
+          "afloat": {
+            "joseon": 13,
+            "japan": 133
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 0
+          },
+          "burning": 0
+        },
+        "pose": {
+          "tx": -1464.892,
+          "tz": 1084.167,
+          "yaw": 2.195,
+          "pitch": 0.214,
+          "distance": 112.853,
+          "fov": 44,
+          "lift": 4
+        },
+        "rendered": [
+          1242,
+          2688
+        ],
+        "clipped": 0,
+        "kept": [
+          1242,
+          2688
+        ],
+        "sha256": "1d618b54af163add92f234b6748b63e592d982f41be71e1ed1e7000b100a46e6"
+      }
+    },
+    "noryang": {
+      "grade": {
+        "exposure": 1.5,
+        "gamma": 1.1,
+        "saturation": 1
+      },
+      "wide": {
+        "file": "noryang-wide.jpg",
+        "candidate": "w-1-0",
+        "captured": "2026-10-15T18:31:34.001Z",
+        "url": "http://127.0.0.1:5412/?scenario=noryang&hud=0&lv=4&q=high&dpr=2&paused=1&warm=420",
+        "steps": [
+          {
+            "run": 1.5,
+            "time": 438.4,
+            "afloat": {
+              "joseon": 123,
+              "japan": 409
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 91
+            },
+            "burning": 4
+          }
+        ],
+        "engine": {
+          "fps": 41,
+          "ships": 542,
+          "onLand": 0,
+          "projectiles": 31,
+          "smoke": 9001,
+          "fire": 550,
+          "batches": {
+            "panokseon#0": [
+              1,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              30,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              29,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              51,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              48,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              125,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              125,
+              0,
+              0
+            ],
+            "kobaya#0": [
+              70,
+              0,
+              0
+            ],
+            "mingship#0": [
+              30,
+              0,
+              0
+            ],
+            "mingsmall#0": [
+              33,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 0.229,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 448.7,
+          "afloat": {
+            "joseon": 123,
+            "japan": 406
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 94
+          },
+          "burning": 4
+        },
+        "pose": {
+          "tx": -1521.327,
+          "tz": 172.347,
+          "yaw": 2.853,
+          "pitch": 0.118,
+          "distance": 254.132,
+          "fov": 32,
+          "lift": 4
+        },
+        "rendered": [
+          3840,
+          2160
+        ],
+        "clipped": 0.15,
+        "kept": [
+          2880,
+          1620
+        ],
+        "sha256": "7e475eadeb5d28017402db7c3e8681fd5bc818514e2b3802c510b42a117feb07"
+      },
+      "tall": {
+        "file": "noryang-tall.jpg",
+        "candidate": "t-1-1",
+        "captured": "2026-10-15T18:31:34.001Z",
+        "url": "http://127.0.0.1:5412/?scenario=noryang&hud=0&lv=4&q=high&dpr=2&paused=1&warm=420",
+        "steps": [
+          {
+            "run": 1.5,
+            "time": 438.4,
+            "afloat": {
+              "joseon": 123,
+              "japan": 409
+            },
+            "sunk": {
+              "joseon": 0,
+              "japan": 91
+            },
+            "burning": 4
+          }
+        ],
+        "engine": {
+          "fps": 41,
+          "ships": 542,
+          "onLand": 0,
+          "projectiles": 31,
+          "smoke": 9001,
+          "fire": 550,
+          "batches": {
+            "panokseon#0": [
+              1,
+              0,
+              0
+            ],
+            "panokseon#1": [
+              30,
+              0,
+              0
+            ],
+            "panokseon#2": [
+              29,
+              0,
+              0
+            ],
+            "atakebune#0": [
+              51,
+              0,
+              0
+            ],
+            "atakebune#1": [
+              48,
+              0,
+              0
+            ],
+            "sekibune#0": [
+              125,
+              0,
+              0
+            ],
+            "sekibune#1": [
+              125,
+              0,
+              0
+            ],
+            "kobaya#0": [
+              70,
+              0,
+              0
+            ],
+            "mingship#0": [
+              30,
+              0,
+              0
+            ],
+            "mingsmall#0": [
+              33,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 0.229,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 448.7,
+          "afloat": {
+            "joseon": 123,
+            "japan": 406
+          },
+          "sunk": {
+            "joseon": 0,
+            "japan": 94
+          },
+          "burning": 4
+        },
+        "pose": {
+          "tx": -1553.887,
+          "tz": 99.899,
+          "yaw": 3.454,
+          "pitch": 0.309,
+          "distance": 263.171,
+          "fov": 50,
+          "lift": 0
+        },
+        "rendered": [
+          1242,
+          2688
+        ],
+        "clipped": 0.06,
+        "kept": [
+          1242,
+          2688
+        ],
+        "sha256": "3af29b9f63c0161ed6ca60a70bd012a83e680cf9113162be12eae1fc1bd9660a"
+      }
+    }
+  },
+  "updated": "2026-10-15T15:30:21.258Z"
+}

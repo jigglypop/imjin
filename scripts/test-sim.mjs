@@ -35,7 +35,7 @@ try {
   const { Battle, SIM_DT } = await load('/src/sim/battle.ts');
   const { SHIP_SPECS, GUN_SHOTS, NO_MODS } = await load('/src/sim/catalog.ts');
   const { anchorsFor, buildAnchorsFor, GEOBUK_SCALE, MODEL_ALIAS, modelScale, variantCount } = await load('/src/ships/anchors.ts');
-  const { buildScenario, SCENARIOS } = await load('/src/sim/scenarios.ts');
+  const { buildScenario, SCENARIOS, SCENARIO_ORDER } = await load('/src/sim/scenarios.ts');
   const { buildConquestOn, buildConquest, CONQUEST_MAPS } = await load('/src/sim/maps.ts');
   const { BUILDINGS } = await load('/src/sim/conquest.ts');
   const { applyCommand } = await load('/src/sim/commands.ts');
@@ -325,6 +325,12 @@ try {
     assert.deepEqual(b.waves.state, SEA_STATES.moderate);
     b.setSea(SEA_STATES.calm);
     assert.deepEqual(sample(waveField), sample(b.waves));
+  });
+
+  await check('every historical battle has its address, in the order the history screen lists them', async () => {
+    const { BATTLE_SLUGS } = await load('/src/routes.ts');
+    assert.deepEqual([...BATTLE_SLUGS], SCENARIO_ORDER);
+    assert.deepEqual(Object.keys(SCENARIOS), SCENARIO_ORDER);
   });
 
   await check('scenario/map builders own the correct sea and projectile collisions follow local time', () => {
