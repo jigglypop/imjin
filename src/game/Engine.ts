@@ -1047,7 +1047,6 @@ export class Engine {
     this.structures = null;
     this.terrain?.dispose();
     this.ocean?.dispose();
-    this.current?.texture.dispose();
     this.conquestView?.dispose();
     this.conquestView = null;
     this.crew?.dispose();

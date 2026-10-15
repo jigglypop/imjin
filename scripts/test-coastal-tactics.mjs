@@ -99,8 +99,7 @@ try {
     assert.equal(ranked.coastalTactic, undefined);
     const map = { ...coast.REGION_MAPS.yeosu, coastalTactic: coastalTacticFor('yeosu') };
     const local = maps.buildConquestOn(map, seats, () => -100, 1).battle;
-    try { assert.equal(local.coastalTactic, 'yeosu-wings'); }
-    finally { local.flow?.texture.dispose(); }
+    assert.equal(local.coastalTactic, 'yeosu-wings');
   });
 
   check('terrain adjustment keeps 300 commanded hulls in water and reserves separate berths', () => {
