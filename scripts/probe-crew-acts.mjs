@@ -2,7 +2,7 @@
 //   node scripts/probe-crew-acts.mjs --url=http://127.0.0.1:5462/ --scene=gun --out=<prefix> [--shots=4] [--step=500]
 // Scenes: gun (an arquebus volley from a Japanese ship), bow (an archer volley from a panokseon), cannon (a panokseon
 // gun crew loading and firing), drum (the drummer of a panokseon closing to board), fire (men fighting a deck fire),
-// board (a boarding: hooks, crossing and duels), swim (men thrown overboard).
+// board (a boarding: crossing and duels), hook (the grappling hooks thrown), swim (men thrown overboard).
 //   --from=x,y,z  camera offset from the man in his ship's frame (x forward, y up, z outboard on his side)
 //   --flip=1      the Japanese ship on the other side of the panokseon (the other side lit)
 //   --kind=atakebune  the Japanese ship (sekibune by default)
@@ -35,15 +35,16 @@ await page.waitForFunction(() => window.__ready === true, null, { timeout: 24000
 await page.waitForFunction(() => window.__engine?.crew?.assets, null, { timeout: 60000 });
 
 // Roles in the crew's rosters: 0 oar, 1 gun, 2 shot, 3 melee, 4 officer, 5 drum.
-const ROLE = { gun: 2, bow: 2, cannon: 1, drum: 5, fire: 1, board: 3, swim: 3 };
+const ROLE = { gun: 2, bow: 2, cannon: 1, drum: 5, fire: 1, board: 3, swim: 3, hook: 3 };
 const defaults = {
   gun: { from: '2.5,1.6,5.5', look: 1.2 },
   bow: { from: '2.5,1.4,5', look: 1.3 },
   cannon: { from: '-2.2,1.7,-2.6', look: 0.9 },
   drum: { from: '3.2,1.2,-4.2', look: 1.1 },
-  fire: { from: '-4,4,-5', look: 0.6 },
+  fire: { from: '-4,24,0', look: 0 },
   board: { from: '0,6,-14', look: 1 },
-  swim: { from: '0,4,10', look: -2.5 },
+  swim: { from: '3,2.5,4', look: 0.8 },
+  hook: { from: '-3,2.6,-4', look: 1.2 },
 }[scene];
 const from = (args.from ?? defaults.from).split(',').map(Number);
 const look = Number(args.look ?? defaults.look);
@@ -52,13 +53,12 @@ const info = await page.evaluate(
   ({ scene, role, from, look, args }) => {
     const e = window.__engine;
     const b = e.battle;
-    const japanShooter = scene === 'gun' || scene === 'board' || scene === 'swim';
-    const pick = (kind, team) => b.ships.find((s) => s.alive && s.spec.kind === kind && s.team === team && !s.grappledWith);
+        const pick = (kind, team) => b.ships.find((s) => s.alive && s.spec.kind === kind && s.team === team && !s.grappledWith);
     const a = pick(args.kind ?? 'sekibune', 'japan') ?? pick('sekibune', 'japan') ?? b.ships.find((s) => s.alive && s.team === 'japan');
     const d = pick('panokseon', 'joseon') ?? b.ships.find((s) => s.alive && s.team === 'joseon');
     const cx = d.x;
     const cz = d.z;
-    const touching = scene === 'board' || scene === 'swim';
+    const touching = scene === 'board' || scene === 'swim' || scene === 'hook';
     const gap = touching ? (a.spec.beam + d.spec.beam) / 2 + 3 : scene === 'cannon' ? 120 : 45;
     // --flip puts the Japanese ship on the other side, to light the scene from the other quarter.
     const az = cz + (args.flip ? -gap : gap);
@@ -92,7 +92,7 @@ const info = await page.evaluate(
         s.moraleState = 'steady';
         s.burn = 0;
       }
-      if (scene === 'fire') d.fire = 0.45;
+      if (scene === 'fire') d.fire = 0.12;
       if (touching) {
         a.stance = 'board';
         // The defenders stand and fight rather than throwing the grapples off.
@@ -106,6 +106,7 @@ const info = await page.evaluate(
     };
     hold();
     window.__hold = setInterval(hold, 16);
+    window.__pair = { a, d };
     // The battle depth rules would let a crew break and cut the grapples: off for the scene.
     if (touching) {
       b.morale = null;
@@ -115,7 +116,7 @@ const info = await page.evaluate(
     e.fastForward = false;
     e.autoFast = false;
     const shooterShip = scene === 'gun' ? a : d;
-    const subject = scene === 'board' || scene === 'swim' ? d : shooterShip;
+    const subject = scene === 'board' || scene === 'swim' ? d : scene === 'hook' ? a : shooterShip;
     const foe = subject === a ? d : a;
     // A musket volley is ordered every few seconds while the scene runs.
     if (scene === 'gun' || scene === 'bow') {
@@ -150,11 +151,20 @@ const info = await page.evaluate(
     };
     // The battle camera keeps the ship in the crew's range; the view itself is set after the crew is drawn.
     e.rts.followId = 0;
-    e.rts.setPose({ tx: subject.x, tz: subject.z, yaw: 1, pitch: 0.5, distance: 30 });
+    // The fire scene looks down on the whole deck from the battle camera, the men moving about it.
+    e.rts.setPose(scene === 'fire' ? { tx: subject.x + from[0], tz: subject.z + from[2], yaw: 1.2, pitch: 1.0, distance: from[1] } : { tx: subject.x, tz: subject.z, yaw: 1, pitch: 0.5, distance: 30 });
     let held = null;
     const original = crew.update.bind(crew);
     crew.update = (battle, dt, camera, view) => {
       original(battle, dt, camera, view);
+      if (scene === "fire") return;
+      // The swim scene watches the first man in the water once there is one.
+      const swimmer = scene === "swim" ? crew.boarding.fallen.find((f) => f.used && f.swim) : null;
+      if (swimmer) {
+        e.camera.position.set(swimmer.x + from[0], swimmer.y + from[1], swimmer.z + from[2]);
+        e.camera.lookAt(swimmer.x, swimmer.y + look, swimmer.z);
+        return;
+      }
       const r = crew.rosters.get(subject.id);
       if (!r || r.live !== crew.frame) {
         // Out of the crew's range: come in over the ship first.
@@ -162,7 +172,7 @@ const info = await page.evaluate(
         e.camera.lookAt(subject.x, 3, subject.z);
         return;
       }
-      if (!held || held.dying >= 0 || held.gone || !r.members[role].includes(held)) held = want(r);
+      if (!held || held.dying >= 0 || held.gone || !r.members[role].includes(held)) held = scene === "fire" ? r.members[role][0] : want(r);
       if (!held) return;
       const st = r.stations[role][held.station];
       const pl = { x: 0, z: 0, yaw: 0 };
@@ -199,8 +209,23 @@ for (let i = 0; i < shots; i += 1) {
     const states = [0, 0, 0, 0, 0, 0];
     for (const f of bo.figs) if (f.used) states[f.state] += 1;
     let bodies = 0;
+    // Every figure drawn this frame, counted by the clip it plays (a held frame or a cut pass counts as its clip).
+    const acts = {};
+    for (const asset of c.assets.values()) {
+      const clips = Object.entries(asset.clips);
+      for (const l of asset.lods) {
+        const arr = l.buffer.array;
+        for (let i = 0; i < l.count; i += 1) {
+          const f = arr[i * 16 + 8];
+          const hit = clips.find(([, k]) => f >= k.start && f < k.start + k.frames);
+          const name = hit ? hit[0] : "?";
+          acts[name] = (acts[name] ?? 0) + 1;
+        }
+      }
+    }
     for (const r of c.rosters.values()) bodies += r.corpses.length;
-    return { us: bo.figs.filter((f) => f.used).slice(0, 4).map((f) => [f.u.toFixed(1), (f.d1 + f.d2 + f.d3).toFixed(1), f.style, f.dir].join(':')).join(' '), fights: bo.fights.filter((f) => f.used).map((f) => `${f.mode}:${f.dormant ? 'z' : ''}${Math.round(c.time - f.t0)}:${f.acc.toFixed(1)}`).join(','), grapple: [...c.rosters.keys()].map((id) => window.__engine.battle.get(id)).filter((s) => s && s.grappledWith).length, figs: states.join('/'), fallen: bo.fallen.filter((f) => f.used).length, swimming: bo.fallen.filter((f) => f.used && f.swim).length, bodies, arrows: bo.arrows.flying, puffs: bo.puffs.pool.filter((p) => p.used).length, drawn: [...c.assets].map(([k, x]) => `${k}:${x.lods.map((l) => l.count).join('/')}`).join(' ') };
+    const { a, d } = window.__pair;
+    return { acts: Object.entries(acts).sort((p, q) => q[1] - p[1]).map(([k, v]) => `${k}:${v}`).join(" "), ships: [a, d].map((s) => `${Math.round(s.crew)}${s.struck ? 'S' : ''}${s.alive ? '' : 'X'}:${s.moraleState}`).join(' '), us: bo.figs.filter((f) => f.used).slice(0, 4).map((f) => [f.u.toFixed(1), (f.d1 + f.d2 + f.d3).toFixed(1), f.style, f.dir].join(':')).join(' '), fights: bo.fights.filter((f) => f.used).map((f) => `${f.mode}:${f.dormant ? 'z' : ''}${Math.round(c.time - f.t0)}:${f.acc.toFixed(1)}`).join(','), grapple: [...c.rosters.keys()].map((id) => window.__engine.battle.get(id)).filter((s) => s && s.grappledWith).length, figs: states.join('/'), fallen: bo.fallen.filter((f) => f.used).length, swimming: bo.fallen.filter((f) => f.used && f.swim).length, bodies, arrows: bo.arrows.flying, puffs: bo.puffs.pool.filter((p) => p.used).length, drawn: [...c.assets].map(([k, x]) => `${k}:${x.lods.map((l) => l.count).join('/')}`).join(' ') };
   });
   console.log(i, JSON.stringify(st), out);
   await page.waitForTimeout(Number(args.step ?? 500));

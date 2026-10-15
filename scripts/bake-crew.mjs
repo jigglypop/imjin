@@ -221,9 +221,10 @@ function weaponTris(id, frame, name) {
   } else if (id === 4) {
     box(tris, frame, -0.2, 0.06, 0.018, 0.018, 0, 0, LACQUER);
     box(tris, frame, 0.06, 0.09, 0.05, 0.05, 0, 0, IRON);
-    for (let i = 0; i < 4; i += 1) {
-      const u0 = 0.09 + i * 0.2;
-      box(tris, frame, u0, u0 + 0.2, 0.016, 0.004, 0.01 + i * i * 0.006, 0, STEEL);
+    // The blade in eight short lengths along a gentle curve, so the steps between them do not show up close.
+    for (let i = 0; i < 8; i += 1) {
+      const u0 = 0.09 + i * 0.1;
+      box(tris, frame, u0, u0 + 0.105, 0.016, 0.004, 0.01 + i * i * 0.0016, 0, STEEL);
     }
   }
   return tris;

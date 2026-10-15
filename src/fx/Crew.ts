@@ -194,8 +194,9 @@ export class Crew {
   private battle: Battle | null = null;
   /** Ship-wide facts looked up once per ship each frame, not per man. */
   private readonly shipState: ShipFacts = { reloading: false, cheering: false, engaged: false, charging: false, advance: 0, routing: false, burning: false, drumming: false };
-  /** Clips cut from the baked ones (a single pass of a loop, one held frame), cached per model. */
-  private readonly cuts = new Map<string, Clip>();
+  /** Clips cut from the baked ones, cached per model: the archers' draw as a single pass, the arquebusiers' held aim. */
+  private readonly bowShots = new Map<CrewKey, Clip>();
+  private readonly aims = new Map<CrewKey, Clip>();
 
   constructor(private readonly views: ShipViews) {
     this.boarding = new Boarding(views, this.rosters, this.live);
@@ -596,15 +597,26 @@ export class Crew {
     } else p.clip = facts.engaged ? 'ready' : 'idle';
   }
 
-  /** A single pass of a looping clip, or one held frame of it, cached per model. */
-  private cut(asset: CrewAsset, name: ClipName, skip: number, frames: number) {
-    const base = asset.clips[name];
-    if (!base) return null;
-    const id = `${asset.key}:${name}:${skip}:${frames}`;
-    let c = this.cuts.get(id);
+  /** The shoot clip as a single pass. The soldiers' bake has junk frames either end of the draw, which are skipped. */
+  private bowShot(asset: CrewAsset) {
+    const shoot = asset.clips.shoot;
+    if (!shoot) return null;
+    let c = this.bowShots.get(asset.key);
     if (!c) {
-      c = { start: base.start + skip, frames: Math.max(1, Math.min(frames, base.frames - skip)), loop: frames === 1 };
-      this.cuts.set(id, c);
+      c = { start: shoot.start + SHOOT_SKIP, frames: shoot.frames - 15, loop: false };
+      this.bowShots.set(asset.key, c);
+    }
+    return c;
+  }
+
+  /** The first frame of the aim clip, held: the matchlock levelled at the cheek. */
+  private aimHold(asset: CrewAsset) {
+    const aim = asset.clips.aim;
+    if (!aim) return null;
+    let c = this.aims.get(asset.key);
+    if (!c) {
+      c = { start: aim.start, frames: 1, loop: true };
+      this.aims.set(asset.key, c);
     }
     return c;
   }
@@ -637,7 +649,7 @@ export class Crew {
     const w = smooth((this.time - mem.fireOrder) / 0.3) * (1 - smooth((this.time - (mem.fireAt + tail - 0.3)) / 0.3));
     p.yaw = lerpAngle(st.yaw, mem.fireYaw, w);
     if (this.time < mem.fireAt + tail) {
-      const data = bow ? this.cut(asset, 'shoot', SHOOT_SKIP, (asset.clips.shoot?.frames ?? 15) - 15) : this.cut(asset, 'aim', 0, 1);
+      const data = bow ? this.bowShot(asset) : this.aimHold(asset);
       if (data) {
         p.clip = bow ? 'shoot' : 'aim';
         p.data = data;

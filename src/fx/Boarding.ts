@@ -38,7 +38,7 @@ const PROPS = BUDGET.fights * MAX_LINKS * PROPS_PER_LINK + FLAGS * (FLAG_BOXES +
 const THROW_LEAD = 0.7;
 const THROW_RELEASE = 2.87;
 /** Height of a swimmer's clip origin under the water line, so his back and head break the surface. */
-const SWIM_DEPTH = 0.95;
+const SWIM_DEPTH = 1.3;
 /** Seconds a man thrown overboard swims before he tires and goes under. */
 const SWIM_FOR = 14;
 
@@ -724,7 +724,8 @@ export class Boarding {
     fig.d1 = fig.dw + 0.16 + railUp * 0.12;
     if (style === PLANK) fig.d2 = Math.max(0.6, gap / WALK);
     else if (style === LEAP) fig.d2 = Math.max(0.5, 0.38 + gap * 0.06);
-    else fig.d2 = Math.max(0.9, gap / 2.6 + Math.max(0, rise) / 1.4 + 0.3);
+    // Hand over hand up a rope is quicker than it looks: a man goes up a hull in a few seconds.
+    else fig.d2 = Math.max(0.9, gap / 3.2 + Math.max(0, rise) / 2.4 + 0.25);
     if (this.findPartner(fig, rD, link.dx)) this.partnerSpot(fig, rD, f.sd);
     else this.holdSpot(fig, rD, link, f.sd);
     fig.d3 = Math.max(0.5, Math.hypot(fig.tx - link.dx, fig.tz - link.dz) / RUN + 0.2);

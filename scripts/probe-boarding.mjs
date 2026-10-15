@@ -9,6 +9,7 @@
 //   --repel=1   the held ship repels boarders, so the grapple breaks and they retreat
 //   --focus=defender|boarder   follow one man of that kind
 //   --swarm=1   a second Japanese ship boards the same Joseon ship from the other side
+//   --soft=0.2  every casualty scaled down, so the fight lasts
 import { chromium } from 'playwright-core';
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
@@ -52,8 +53,9 @@ const opts = {
   gap: args.gap === undefined ? null : Number(args.gap),
   swarm: Number(args.swarm ?? 0),
   repel: args.repel === '1',
+  soft: Number(args.soft ?? 1),
 };
-const info = await page.evaluate(({ kindA, kindD, dist, pitch, yaw, speed, boost, cut, ox, oz, dfrac, gap, swarm, repel }) => {
+const info = await page.evaluate(({ kindA, kindD, dist, pitch, yaw, speed, boost, cut, ox, oz, dfrac, gap, swarm, repel, soft }) => {
   const e = window.__engine;
   const b = e.battle;
   const pick = (kind, team) => b.ships.find((s) => s.alive && s.spec.kind === kind && s.team === team && !s.grappledWith);
@@ -83,6 +85,12 @@ const info = await page.evaluate(({ kindA, kindD, dist, pitch, yaw, speed, boost
   }
   for (let i = 0; i < 4; i += 1) d.roles[i] = d.plan[i] * d.spec.crew * dfrac;
   d.crew = d.spec.crew * dfrac;
+  // --soft scales every casualty, so a fight lasts long enough to watch the duels; nobody breaks and runs either.
+  if (soft < 1) {
+    b.morale = null;
+    const casualties = b.casualties.bind(b);
+    b.casualties = (s, amount, exposure, melee) => casualties(s, amount * soft, exposure, melee);
+  }
   e.rts.followId = 0;
   if (cut) {
     e.cutaway = cut;
@@ -106,6 +114,11 @@ const info = await page.evaluate(({ kindA, kindD, dist, pitch, yaw, speed, boost
     }
     a.stance = 'board';
     if (a2) a2.stance = 'board';
+    // Under --soft a grapple that is let go is made again, so the fight goes on for the camera.
+    if (soft < 1 && gap === null && !a.grappledWith && !a.struck && !d.struck) {
+      b.grappleLock.clear();
+      b.tryGrapple(a, d);
+    }
   };
   hold();
   window.__hold = setInterval(hold, 16);
