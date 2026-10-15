@@ -6,6 +6,10 @@ import { isShipVisible } from './visibility';
 import { anchorScale, anchorsFor } from '../ships/anchors';
 import type { CurrentField } from './current';
 import { coastalFormationSlots, type CoastalFormationKind } from './coastal-tactics';
+import type { DepthRules } from './depth';
+import { FireSpread } from './fire';
+import { MORALE_TICK, Morale, SURRENDER } from './morale';
+import { COHESION_AIM, Tactics, WAKE_SPEED } from './tactics';
 import {
   OWNER_OF,
   TEAMS,
@@ -17,6 +21,7 @@ import {
   type GunState,
   type GunType,
   type LandSampler,
+  type MoraleState,
   type Order,
   type Projectile,
   type Ship,
@@ -106,6 +111,26 @@ const SEARCH_AFTER = 45;
 /** Seconds a boarder waits for the rest of the fleet to come up before it goes in on its own, and how long it then goes unwaited. */
 const PACE_PATIENCE = 60;
 const PACE_FREE = 45;
+// Routs under the depth rules. A running ship makes for its side's open water, or for the nearest shore when its own
+// side lies across the land (a fleet caught in its anchorage); a crew that runs aground there abandons the ship.
+/** How far past its side's starting place a running ship heads. */
+const ROUT_REACH = 1500;
+/** A shore within this distance, on the way home, is where a ship caught in a bay runs to. */
+const BEACH_LOOK = 650;
+/** Seconds aground before a running crew leaves its ship for the shore. */
+const ABANDON_AGROUND = 2;
+/** A side most of whose ships are running has lost the field after this many seconds, unless enough of them rally. */
+const BROKEN_GRACE = 20;
+/**
+ * A fleet a person leads breaks, like the computer's, when the share of it still fighting falls under the scenario's
+ * line for its side; a person holds a little longer than the computer would.
+ */
+const HUMAN_HOLD = 0.8;
+/** What a crew's state leaves of its ship's weight in the battle's balance: a running ship hardly counts. */
+const NERVE_WEIGHT: Record<MoraleState, number> = { steady: 1, wavering: 0.8, rallying: 0.6, routing: 0.25 };
+/** A target with this many of its friends within PACKED_RANGE is worth fire arrows: the fire will spread (the depth rules). */
+const PACKED_RANGE = 90;
+const PACKED_SHIPS = 3;
 
 /** Boarders close in at FLEET_PACE (m/s) while farther than this from their enemy, then go flat out together. */
 const RUSH_RANGE = 450;
@@ -176,6 +201,8 @@ export interface BattleRules {
   decide?(b: Battle): Team | 'draw' | null;
   /** Tenders (ShipSpec.tender) top up their friends under these rules, and the computer's tenders go looking for them. */
   tenders?: boolean;
+  /** Where a routing ship runs to, such as its nearest own port, where it can rally; without it, its side's open water. */
+  refuge?(b: Battle, s: Ship): { x: number; z: number } | null;
 }
 
 export class Battle {
@@ -206,6 +233,18 @@ export class Battle {
   center = { x: 0, z: 0 };
   arenaRadius = 6000;
   rules: BattleRules | null = null;
+  /** The battle depth rules this battle was built with (depth.ts); null keeps the rules from before them. */
+  depth: DepthRules | null = null;
+  private moraleRules: Morale | null = null;
+  private tacticsRules: Tactics | null = null;
+  private fireRules: FireSpread | null = null;
+  private depthTurn = 0;
+  /** Each side's starting place, which its running ships head back past. */
+  private homes: Record<Team, { x: number; z: number }> | null = null;
+  /** Where each running ship is heading, and whether that is a shore to run aground on. */
+  private refuges = new Map<number, { x: number; z: number; beach: boolean; port: boolean }>();
+  /** Since when most of each side's fleet has been running. */
+  private brokenSince: Record<Team, number | null> = { joseon: null, japan: null };
   private byId = new Map<number, Ship>();
   private nextId = 1;
   private nextProjectile = 1;
@@ -249,6 +288,24 @@ export class Battle {
 
   get ended() {
     return this.winner !== null || this.draw;
+  }
+
+  /** The morale rules, while the depth rules have them. */
+  get morale(): Morale | null {
+    if (!this.depth?.morale) return null;
+    return (this.moraleRules ??= new Morale(this));
+  }
+
+  /** Raking, crossfire and formation cohesion, while the depth rules have them. */
+  get tactics(): Tactics | null {
+    if (!this.depth?.gunnery) return null;
+    return (this.tacticsRules ??= new Tactics(this));
+  }
+
+  /** Fire jumping between hulls, while the depth rules have it. */
+  get fireSpread(): FireSpread | null {
+    if (!this.depth?.fireSpread) return null;
+    return (this.fireRules ??= new FireSpread(this));
   }
 
   /** Each battle owns its sea; rendering and other battles cannot change its collisions. */
@@ -311,6 +368,7 @@ export class Battle {
       fire: 0,
       burn: 0,
       morale: 1,
+      moraleState: 'steady',
       order: { type: 'auto' },
       targetId: 0,
       guns,
@@ -379,7 +437,7 @@ export class Battle {
     for (const s of this.ships) {
       if (s.team !== team || !this.isActive(s)) continue;
       const base = this.profile === 'historical' ? s.spec.hull : combatValue(s.spec.kind, this.profile);
-      v += base * ((s.hull / s.spec.hull) * 0.6 + (s.crew / s.spec.crew) * 0.4);
+      v += base * ((s.hull / s.spec.hull) * 0.6 + (s.crew / s.spec.crew) * 0.4) * NERVE_WEIGHT[s.moraleState];
     }
     return v;
   }
@@ -469,6 +527,20 @@ export class Battle {
       ships += 1;
     }
     return ships;
+  }
+
+  /** The squadrons of these ships beat their drums to steady and rally their ships (the depth rules). Returns how many did. */
+  drum(ids: number[]) {
+    const morale = this.morale;
+    if (!morale) return 0;
+    const squadrons = new Set<number>();
+    for (const id of ids) {
+      const s = this.byId.get(id);
+      if (s?.alive && s.squadronId) squadrons.add(s.squadronId);
+    }
+    let beat = 0;
+    for (const sq of squadrons) if (morale.drum(sq)) beat += 1;
+    return beat;
   }
 
   cutGrapples(ids: number[]) {
@@ -633,9 +705,11 @@ export class Battle {
       this.reassign(s, dt);
     }
     this.resolveBoarding(dt);
+    if (this.depth) this.depthStep(dt);
     this.rules?.step(this, dt);
     this.lull = !this.rules && (this.blows > 0 || this.time > OPENING) ? this.time - this.lastBlow : 0;
     if (!this.ended) {
+      const broken = this.morale ? this.brokenSide() : null;
       if (this.rules?.decide) {
         const result = this.rules.decide(this);
         if (result === 'draw') this.draw = true;
@@ -644,6 +718,8 @@ export class Battle {
       else if (this.active.japan.length === 0 && this.active.joseon.length === 0 && this.initial.japan > 0 && this.initial.joseon > 0) this.draw = true;
       else if (this.active.japan.length === 0 && this.initial.japan > 0) this.winner = 'joseon';
       else if (this.active.joseon.length === 0 && this.initial.joseon > 0) this.winner = 'japan';
+      else if (broken === 'draw') this.draw = true;
+      else if (broken) this.winner = otherTeam(broken);
       else if (this.time >= CALLED) {
         const a = this.strength('joseon');
         const d = this.strength('japan');
@@ -665,13 +741,94 @@ export class Battle {
     });
   }
 
+  /**
+   * The depth rules' slower work: each ship's morale and formation, and the fire it may throw onto its neighbours,
+   * looked at once every MORALE_TICK seconds with the fleet spread evenly over the steps.
+   */
+  private depthStep(dt: number) {
+    const morale = this.morale;
+    const tactics = this.tactics;
+    const fire = this.fireSpread;
+    this.homes ??= { joseon: this.centroid('joseon'), japan: this.centroid('japan') };
+    const buckets = Math.max(1, Math.round(MORALE_TICK / dt));
+    this.depthTurn = (this.depthTurn + 1) % buckets;
+    const elapsed = buckets * dt;
+    for (const s of this.ships) {
+      if (!s.alive || s.id % buckets !== this.depthTurn) continue;
+      if (fire && s.fire > 0) fire.spread(s, elapsed);
+      if (!this.isActive(s)) continue;
+      tactics?.formation(s);
+      morale?.look(s, elapsed);
+      if (fire) this.pickAmmo(s);
+    }
+    morale?.step();
+  }
+
+  private centroid(team: Team) {
+    let x = 0;
+    let z = 0;
+    let n = 0;
+    for (const s of this.ships) {
+      if (s.team !== team || !s.alive) continue;
+      x += s.x;
+      z += s.z;
+      n += 1;
+    }
+    return n ? { x: x / n, z: z / n } : { ...this.center };
+  }
+
+  /** A side most of whose fleet has been running for BROKEN_GRACE seconds has lost the field; 'draw' if both have. */
+  private brokenSide(): Team | 'draw' | null {
+    let out: Team | 'draw' | null = null;
+    for (const team of TEAMS) {
+      if (!this.morale!.broken(team)) {
+        this.brokenSince[team] = null;
+        continue;
+      }
+      this.brokenSince[team] ??= this.time;
+      if (this.time - this.brokenSince[team]! >= BROKEN_GRACE) out = out ? 'draw' : team;
+    }
+    return out;
+  }
+
+  /** Whether a computer-led fleet has given up the field and is running for home. */
+  isRetreating(team: Team) {
+    return this.retreating[team];
+  }
+
+  /** Ships of a side still fighting: under the depth rules a running ship does not count. */
+  fighting(team: Team) {
+    if (!this.morale) return this.active[team].length;
+    let n = 0;
+    for (const s of this.active[team]) if (s.moraleState !== 'routing') n += 1;
+    return n;
+  }
+
+  /**
+   * A crew has broken: the computer's orders give way to running, a ship at anchor cuts its cable, and a boarding party
+   * it sent lets go. A person's other orders wait until the ship rallies.
+   */
+  routed(s: Ship) {
+    this.refuges.delete(s.id);
+    this.fleeSince.delete(s.id);
+    if (this.isAi(s)) {
+      if (s.order.type !== 'auto') s.order = { type: 'auto' };
+      s.orderQueue = undefined;
+    } else if (s.order.type === 'anchor') s.order = { type: 'hold' };
+    if (s.grappledWith) {
+      this.lockGrapple(s, s.grappledWith);
+      s.grappledWith = 0;
+    }
+  }
+
   private checkRetreat() {
     if (!this.rules) this.fullStrength ??= { joseon: this.strength('joseon'), japan: this.strength('japan') };
     if (this.time <= 60) return;
     for (const team of TEAMS) {
-      if (this.retreating[team] || this.ledByHuman(team)) continue;
-      const ratio = this.active[team].length / Math.max(1, this.initial[team]);
-      if (ratio < this.retreatBelow[team]) this.retreating[team] = true;
+      const human = this.ledByHuman(team);
+      if (this.retreating[team] || (human && !this.morale)) continue;
+      const ratio = this.fighting(team) / Math.max(1, this.initial[team]);
+      if (ratio < this.retreatBelow[team] * (human ? HUMAN_HOLD : 1)) this.giveUp(team);
     }
     if (!this.fullStrength || (this.lull < STALL_RETREAT && this.time < LONG_BATTLE) || this.time - this.strengthAt < 1) return;
     // A lull that will not break, or a battle that has dragged on: the weaker computer-led side gives up the field.
@@ -682,8 +839,18 @@ export class Battle {
       if (this.retreating[team] || this.ledByHuman(team) || !this.active[team].length) continue;
       const share = own[team] / Math.max(1, own.joseon + own.japan);
       // Badly outnumbered and already bled white; a fleet that was always the smaller one is not beaten by that alone.
-      if ((share < STALL_SHARE && own[team] < this.fullStrength[team] * STALL_WEAR) || (team === weaker && (this.lull >= STALL_YIELD || this.time >= OVERTIME))) this.retreating[team] = true;
+      if ((share < STALL_SHARE && own[team] < this.fullStrength[team] * STALL_WEAR) || (team === weaker && (this.lull >= STALL_YIELD || this.time >= OVERTIME))) this.giveUp(team);
     }
+  }
+
+  /** A computer-led fleet gives up the field. Under the depth rules every crew in it is running from then on. */
+  private giveUp(team: Team) {
+    this.retreating[team] = true;
+    const morale = this.morale;
+    const first = this.active[team][0];
+    if (!morale || !first) return;
+    morale.breakFleet(team);
+    this.events.push({ type: 'broken', ship: first.id, team });
   }
 
   private ledByHuman(team: Team) {
@@ -695,6 +862,16 @@ export class Battle {
   /** Whether the computer leads this ship. */
   isAi(s: Ship) {
     return this.autopilot || !this.humans.has(s.owner);
+  }
+
+  /** A wavering crew the computer leads keeps its distance instead of closing (the depth rules). */
+  private shaken(s: Ship) {
+    return s.moraleState === 'wavering' && this.isAi(s);
+  }
+
+  /** A crew in no state to board: running, regrouping, or shaken under the computer's lead. */
+  private hesitant(s: Ship) {
+    return s.moraleState === 'routing' || s.moraleState === 'rallying' || this.shaken(s);
   }
 
   /** A computer-led ship waiting in its starting order joins the fight once the enemy is close or the wait is over. */
@@ -751,6 +928,9 @@ export class Battle {
       if (this.profile !== 'historical' && s.spec.faction === 'ming') score -= 180 * (1 - o.hull / o.spec.hull);
       // Boarders gang up on a ship that is already held.
       if (boardsFirst(s)) score -= 40 * Math.min(2, this.boarders.get(o.id) ?? 0);
+      // Press a crew that is wavering; a running one is a prize for boarders and a waste of a gun line's time.
+      if (o.moraleState === 'wavering') score -= 70;
+      else if (o.moraleState === 'routing') score += boardsFirst(s) ? -80 : 60;
       if (spreadBoarders) {
         const assigned = Math.max(0, (this.boardingTargets.get(o.id) ?? 0) - (s.targetId === o.id ? 1 : 0));
         // Four crews can fight on one deck. Sending the whole navy at its bow jams the approach with friendly hulls.
@@ -828,6 +1008,8 @@ export class Battle {
 
   private avoidLand(s: Ship) {
     if (s.sinking > 0 || s.struck || s.order.type === 'anchor') return;
+    // A crew running its ship onto a beach means to.
+    if (s.moraleState === 'routing' && this.refuges.get(s.id)?.beach) return;
     const look = s.spec.length * 0.6 + 30 + Math.abs(s.speed) * 9;
     const desired = s.heading + clamp(s.rudder, -1, 1) * 0.6;
     const clear = (h: number) => {
@@ -886,8 +1068,16 @@ export class Battle {
       this.activity.set(s.id, 'boarding');
       return;
     }
+    if (this.morale && s.moraleState === 'routing') {
+      this.rout(s);
+      return;
+    }
     if (this.retreating[s.team] && s.order.type !== 'anchor') {
       this.flee(s);
+      return;
+    }
+    if (s.moraleState === 'rallying') {
+      this.regroup(s);
       return;
     }
     this.stir(s);
@@ -1029,6 +1219,11 @@ export class Battle {
     const away = Math.atan2(s.z - this.center.z, s.x - this.center.x);
     this.steerTo(s, s.x + Math.cos(away) * 400, s.z + Math.sin(away) * 400, 50, 1);
     this.activity.set(s.id, 'fleeing');
+    this.getAway(s);
+  }
+
+  /** A fleeing ship leaves the battle once it is off the map, clear of the enemy, or has run long enough. */
+  private getAway(s: Ship) {
     let since = this.fleeSince.get(s.id);
     if (since === undefined) {
       since = this.time;
@@ -1040,8 +1235,90 @@ export class Battle {
       s.fled = true;
       this.escaped[s.team] += 1;
       this.events.push({ type: 'removed', ship: s.id });
-      this.rules?.lost?.(this, s);
+      this.leave(s);
     }
+  }
+
+  /**
+   * A routing crew runs for its refuge: its own port where the battle has ports, else its side's open water, else the
+   * nearest shore when its side lies across the land, where it abandons the ship. It leaves the battle like a fleeing
+   * ship unless it rallies first; at a port it waits to rally.
+   */
+  private rout(s: Ship) {
+    let r = this.refuges.get(s.id);
+    if (!r) {
+      r = this.findRefuge(s);
+      this.refuges.set(s.id, r);
+    }
+    this.activity.set(s.id, 'fleeing');
+    if (r.port && hyp(r.x - s.x, r.z - s.z) < 140) {
+      s.throttle = 0;
+      s.rudder = 0;
+      return;
+    }
+    this.steerTo(s, r.x, r.z, 40, 1);
+    if (!r.port) this.avoid(s);
+    if (r.beach) {
+      if (s.aground >= ABANDON_AGROUND) this.strike(s, 0);
+    } else if (!r.port) this.getAway(s);
+  }
+
+  /** Where a ship that has just broken runs to. */
+  private findRefuge(s: Ship) {
+    const port = this.rules?.refuge?.(this, s);
+    if (port) return { x: port.x, z: port.z, beach: false, port: true };
+    const home = this.homes?.[s.team] ?? this.center;
+    let ax = home.x - this.center.x;
+    let az = home.z - this.center.z;
+    if (hyp(ax, az) < 50) {
+      ax = s.x - this.center.x;
+      az = s.z - this.center.z;
+    }
+    const len = hyp(ax, az) || 1;
+    const ux = ax / len;
+    const uz = az / len;
+    const shore = this.shoreBehind(s, ux, uz);
+    if (shore) return { ...shore, beach: true, port: false };
+    return { x: home.x + ux * ROUT_REACH, z: home.z + uz * ROUT_REACH, beach: false, port: false };
+  }
+
+  /** The nearest beach on a running ship's way home, when land closes that way off; null when open water lies behind it. */
+  private shoreBehind(s: Ship, ux: number, uz: number) {
+    let blocked = false;
+    for (let d = 120; d <= 900 && !blocked; d += 120) blocked = this.land(s.x + ux * d, s.z + uz * d) > 0;
+    if (!blocked) return null;
+    let best: { x: number; z: number } | null = null;
+    let bestD = Infinity;
+    const base = Math.atan2(uz, ux);
+    for (let k = -4; k <= 4; k += 1) {
+      const cx = Math.cos(base + k * 0.32);
+      const cz = Math.sin(base + k * 0.32);
+      for (let d = 80; d <= BEACH_LOOK && d < bestD; d += 70) {
+        if (this.land(s.x + cx * d, s.z + cz * d) <= 0.5) continue;
+        bestD = d;
+        best = { x: s.x + cx * (d + 30), z: s.z + cz * (d + 30) };
+      }
+    }
+    return best;
+  }
+
+  /** A rallying crew closes on its commander before it takes orders again. */
+  private regroup(s: Ship) {
+    const sq = this.squadrons[s.squadronId - 1];
+    const leader = sq ? this.byId.get(sq.leaderId) : undefined;
+    if (!leader || leader === s || !this.isActive(leader) || hyp(leader.x - s.x, leader.z - s.z) < 120) {
+      this.face(s, s.heading, 0.2);
+    } else this.steerTo(s, leader.x, leader.z, 120, 0.8);
+    this.activity.set(s.id, 'moving');
+    this.avoid(s);
+  }
+
+  /** A ship left the fight: sunk, taken, abandoned or fled. */
+  private leave(s: Ship) {
+    this.rules?.lost?.(this, s);
+    this.morale?.lost(s);
+    this.tactics?.forget(s.id);
+    this.refuges.delete(s.id);
   }
 
   /** Whether no enemy that is still fighting is within sight of the ship. */
@@ -1109,7 +1386,8 @@ export class Battle {
 
   private thinkGunner(s: Ship, forced: Ship | undefined) {
     if (forced && this.profile !== 'historical' && !isShipVisible(this, s.team, forced.id)) forced = undefined;
-    let finish = forced ? undefined : this.finishTarget(s);
+    const shaken = this.shaken(s);
+    let finish = forced || shaken ? undefined : this.finishTarget(s);
     const seen = forced ?? finish ?? this.nearestEnemy(s);
     if (seen) this.searchSince.delete(s.id);
     let target = seen ?? this.hunted(s);
@@ -1143,7 +1421,7 @@ export class Battle {
       this.activity.set(s.id, 'moving');
       return;
     }
-    const stance = s.stance;
+    const stance = shaken ? 'standoff' : s.stance;
     const longRange = this.profile !== 'historical' && s.spec.faction === 'ming';
     const preferredRange = longRange ? Math.max(380, ...s.spec.batteries.map((battery) => this.gunSpec(s.spec.kind, battery.gun).range - 30)) : 380;
     if (stance === 'board' || stance === 'ram' || finish) {
@@ -1156,7 +1434,7 @@ export class Battle {
       this.broadsideDuel(s, target, d, bearing, stance === 'close' ? 45 : longRange ? 190 : 150, stance === 'close' ? 140 : preferredRange);
       return;
     }
-    if (s.spec.kind === 'geobukseon') {
+    if (s.spec.kind === 'geobukseon' && !shaken) {
       const timer = (this.chargeTimer.get(s.id) ?? 0) - THINK_INTERVAL;
       this.chargeTimer.set(s.id, timer);
       if (timer > 0) {
@@ -1197,14 +1475,43 @@ export class Battle {
       const b = bearing - Math.PI / 2;
       const h = Math.abs(wrapAngle(a - s.heading)) < Math.abs(wrapAngle(b - s.heading)) ? a : b;
       const drift = (d - (minRange + maxRange) / 2) / (maxRange - minRange);
-      this.face(s, h + clamp(drift, -0.5, 0.5) * (h === a ? -1 : 1) * 0.6, 0.3);
+      this.face(s, h + clamp(drift, -0.5, 0.5) * (h === a ? -1 : 1) * 0.6, this.rakeThrottle(s, target, bearing, h === b));
       this.activity.set(s.id, 'engaging');
     }
   }
 
+  /**
+   * How hard a computer gunner lying broadside on rows along its circle round the target (the depth rules): it presses
+   * on toward the target's bow or stern, where its broadside rakes the length of the hull, and eases off when that lies
+   * behind it. `increasing` says whether its heading carries it anticlockwise round the target.
+   */
+  private rakeThrottle(s: Ship, target: Ship, bearing: number, increasing: boolean) {
+    if (!this.depth?.gunnery || !this.isAi(s)) return 0.3;
+    const psi = wrapAngle(bearing + Math.PI - target.heading);
+    // Ahead of the beam the bow line is nearer, behind it the stern line: which way round the circle brings it closer.
+    const toward = Math.abs(psi) < Math.PI / 2 ? psi < 0 : psi > 0;
+    return toward === increasing ? 0.45 : 0.15;
+  }
+
+  /**
+   * A computer gunner shoots fire arrows at a ship lying among others of its fleet, where a fire will spread (the depth
+   * rules), and goes back to its usual rounds when its target stands alone. A person's choice of rounds is left alone.
+   */
+  private pickAmmo(s: Ship) {
+    if (!this.isAi(s) || boardsFirst(s) || !s.guns.length || (s.ammo !== 'auto' && s.ammo !== 'fire')) return;
+    const target = this.byId.get(s.targetId);
+    let packed = 0;
+    if (target && this.isActive(target) && target.spec.boardable && (target.spec.fireResist ?? 1) >= 1) {
+      this.grid.query(target.x, target.z, PACKED_RANGE, (o) => {
+        if (o !== target && o.team === target.team && this.isActive(o) && (o.x - target.x) ** 2 + (o.z - target.z) ** 2 < PACKED_RANGE * PACKED_RANGE) packed += 1;
+      });
+    }
+    s.ammo = packed >= PACKED_SHIPS ? 'fire' : 'auto';
+  }
+
   private thinkBoarder(s: Ship, forced: Ship | undefined) {
     if (forced && this.profile !== 'historical' && !isShipVisible(this, s.team, forced.id)) forced = undefined;
-    if (s.stance === 'standoff' || s.stance === 'close') {
+    if (s.stance === 'standoff' || s.stance === 'close' || this.shaken(s)) {
       if (this.profile !== 'historical' && this.isAi(s)) this.setPlan([s.id], [...s.spec.crewPlan] as CrewPlan);
       this.thinkGunner(s, forced);
       return;
@@ -1224,7 +1531,7 @@ export class Battle {
     const lead = this.profile === 'historical' ? Math.min(4, d / Math.max(2, s.spec.maxSpeed)) : this.interceptLead(s, target);
     let tx = target.x + Math.cos(target.heading) * target.speed * lead;
     let tz = target.z + Math.sin(target.heading) * target.speed * lead;
-    if (this.profile !== 'historical' && d > 260 && d < 700) {
+    if ((this.profile !== 'historical' || this.depth?.gunnery) && d > 260 && d < 700) {
       // Approach both quarters instead of feeding every fast hull into the same bow-on collision.
       const index = this.squadrons[s.squadronId - 1]?.shipIds.indexOf(s.id) ?? s.id;
       const wing = (index % 2 ? 1 : -1) * Math.min(160, d * 0.24);
@@ -1356,7 +1663,9 @@ export class Battle {
     const anchored = s.order.type === 'anchor' ? 0 : 1;
     const condition = this.profile === 'historical' ? undefined : s.damageState;
     const drive = (1 - (condition?.propulsion ?? 0) * 0.55) * (1 - (condition?.flooding ?? 0) * 0.3);
-    const target = s.throttle * s.speedCap * spec.maxSpeed * s.mods.speed * crewFactor * (1 - s.fire * 0.35) * sinkingFactor * anchored * drive;
+    // A ship holding its place in a column rows in its leader's wake (the depth rules).
+    const wake = s.order.type === 'follow' && this.tactics?.cohesive.has(s.id) ? WAKE_SPEED : 1;
+    const target = s.throttle * s.speedCap * spec.maxSpeed * s.mods.speed * crewFactor * (1 - s.fire * 0.35) * sinkingFactor * anchored * drive * wake;
     const rate = target > s.speed ? spec.accel : spec.accel * 1.6;
     s.speed += clamp(target - s.speed, -rate * dt, rate * dt);
     if (s.grappledWith || this.boarders.has(s.id)) s.speed *= Math.max(0, 1 - dt * 1.5);
@@ -1495,7 +1804,7 @@ export class Battle {
   }
 
   private wantsBoard(s: Ship, other: Ship) {
-    if (isUnarmed(s.spec)) return false;
+    if (isUnarmed(s.spec) || this.hesitant(s)) return false;
     if (boardsFirst(s)) return s.stance !== 'standoff' && s.stance !== 'close';
     return s.stance === 'board' || (s.stance !== 'standoff' && s.spec.kind !== 'geobukseon' && this.crippled(other));
   }
@@ -1527,7 +1836,7 @@ export class Battle {
   /** Boarders throw their grapples from a few metres off: no collision needed. */
   private reachGrapples() {
     for (const s of this.ships) {
-      if (!s.alive || s.grappledWith || !boardsFirst(s) || !this.isActive(s) || s.stance === 'standoff' || s.stance === 'close') continue;
+      if (!s.alive || s.grappledWith || !boardsFirst(s) || !this.isActive(s) || s.stance === 'standoff' || s.stance === 'close' || this.hesitant(s)) continue;
       let best: Ship | undefined;
       let bestGap = GRAPPLE_REACH.japan;
       this.grid.query(s.x, s.z, s.spec.length * 0.5 + GRAPPLE_REACH.japan + 24, (o) => {
@@ -1654,7 +1963,8 @@ export class Battle {
       const def = this.boardStrength(d) * d.spec.melee * parapet * height * d.mods.defense * (d.repel ? 1.3 : 1);
       this.casualties(d, total * MELEE_RATE * dt * (0.6 + this.rand() * 0.8), 'melee', true);
       attackers.forEach((a, i) => this.casualties(a, def * (power[i]! / Math.max(1e-6, total)) * MELEE_RATE * dt * (0.6 + this.rand() * 0.8), 'melee', true));
-      if (d.crew < d.spec.crew * CAPTURE_CREW) {
+      // Taken when its crew is cut down, or under the depth rules when what is left of it loses heart.
+      if (d.crew < d.spec.crew * CAPTURE_CREW || (this.morale && d.morale < SURRENDER)) {
         let top = 0;
         power.forEach((v, i) => {
           if (v > power[top]!) top = i;
@@ -1663,6 +1973,7 @@ export class Battle {
         victor.kills += 1;
         for (const a of attackers) a.grappledWith = 0;
         this.strike(d, victor.id);
+        this.morale?.prize(victor);
         d.fire = Math.max(d.fire, 0.5);
         continue;
       }
@@ -1680,7 +1991,7 @@ export class Battle {
     if (s.struck) return;
     s.struck = true;
     this.events.push({ type: 'struck', ship: s.id, by });
-    this.rules?.lost?.(this, s);
+    this.leave(s);
   }
 
   /**
@@ -1719,12 +2030,16 @@ export class Battle {
     s.crew = s.roles[0] + s.roles[1] + s.roles[2] + s.roles[3];
   }
 
-  private rangeFactor(s: Ship) {
+  /** How far a ship's guns reach with the rounds it is loading, as a share of their range. */
+  rangeFactor(s: Ship) {
     return s.ammo === 'crew' ? 0.72 : s.ammo === 'fire' ? 0.85 : 1;
   }
 
   private weapons(s: Ship, dt: number) {
     if (!this.isActive(s)) return;
+    // A shaken crew loads slower; a running one leaves its guns.
+    const nerve = this.morale?.steadiness(s) ?? 1;
+    if (nerve <= 0) return;
     const crewFactor = 0.25 + 0.75 * this.gunnery(s);
     const spec = s.spec;
     const targets: (Ship | undefined | null)[] = [null, null, null];
@@ -1743,7 +2058,7 @@ export class Battle {
       const gun = this.gunSpec(spec.kind, battery.gun);
       const range = gun.range * rangeMul;
       if (g.stage < 4) {
-        g.t += dt * crewFactor * s.mods.reload;
+        g.t += dt * crewFactor * s.mods.reload * nerve;
         const need = gun.stages[g.stage]!;
         if (g.t >= need) {
           g.t -= need;
@@ -1796,14 +2111,14 @@ export class Battle {
         s.volleyTimer = 0;
       }
     }
-    if (spec.musketRange > 0) this.smallArms(s, dt);
+    if (spec.musketRange > 0) this.smallArms(s, dt, nerve);
   }
 
-  private smallArms(s: Ship, dt: number) {
+  private smallArms(s: Ship, dt: number, nerve: number) {
     const spec = s.spec;
     const strength = this.musketry(s);
     if (strength <= 0.02) return;
-    s.musketReload = Math.max(0, s.musketReload - dt * (0.5 + 0.5 * Math.min(1, strength)) * s.mods.reload);
+    s.musketReload = Math.max(0, s.musketReload - dt * (0.5 + 0.5 * Math.min(1, strength)) * s.mods.reload * nerve);
     if (s.musketReload > 0) return;
     let target: Ship | undefined;
     let best = spec.musketRange;
@@ -1818,7 +2133,7 @@ export class Battle {
     });
     if (!target) return;
     const t = target as Ship;
-    const accuracy = (1 - (best / spec.musketRange) * 0.6) * s.mods.accuracy;
+    const accuracy = (1 - (best / spec.musketRange) * 0.6) * s.mods.accuracy * nerve;
     const close = best < CLOSE_RANGE && boardsFirst(s);
     const loss = (spec.musketPower * strength * (2.5 + this.rand() * 4) * accuracy * (close ? CLOSE_LOSS : 1)) / t.spec.deckDefense;
     this.casualties(t, loss, 'deck', false);
@@ -1979,8 +2294,10 @@ export class Battle {
       ammo = 'fire';
       spreadMul = 1.15;
     }
-    const morale = (0.6 + 0.4 * (s.crew / s.spec.crew)) * s.mods.accuracy;
-    this.launch(m, aim, gun.type, s.team, s.id, { damage, crewDamage, ammo, spreadMul, morale, fireChance: Math.min(0.85, fireChance * s.mods.fire) });
+    // How well the gun is laid: a full, steady crew keeping its place in the line lays it best.
+    const formation = this.tactics?.cohesive.has(s.id) ? COHESION_AIM : 1;
+    const skill = (0.6 + 0.4 * (s.crew / s.spec.crew)) * s.mods.accuracy * (this.morale?.steadiness(s) ?? 1) * formation;
+    this.launch(m, aim, gun.type, s.team, s.id, { damage, crewDamage, ammo, spreadMul, skill, fireChance: Math.min(0.85, fireChance * s.mods.fire) });
     s.revealed = 4;
     g.ammo = Math.max(0, g.ammo - 1);
   }
@@ -1995,7 +2312,7 @@ export class Battle {
     gunType: GunType,
     team: Team,
     shooter: number,
-    load: { damage: number; crewDamage: number; ammo: AmmoType; spreadMul: number; morale: number; fireChance: number },
+    load: { damage: number; crewDamage: number; ammo: AmmoType; spreadMul: number; skill: number; fireChance: number },
   ) {
     const gun = GUN_SPECS[gunType];
     let tx: number;
@@ -2016,8 +2333,8 @@ export class Battle {
     const dx = tx - m.x;
     const dz = tz - m.z;
     const d = hyp(dx, dz);
-    const spreadAz = ((0.01 + d * 0.00006) / load.morale) * load.spreadMul;
-    const spreadEl = (0.0035 + d * 0.00001) / load.morale;
+    const spreadAz = ((0.01 + d * 0.00006) / load.skill) * load.spreadMul;
+    const spreadEl = (0.0035 + d * 0.00001) / load.skill;
     const gauss = () => (this.rand() + this.rand() + this.rand() - 1.5) * 1.15;
     const az = Math.atan2(dz, dx) + gauss() * spreadAz;
     const k = Math.min(1, (GRAVITY * d) / (gun.muzzle * gun.muzzle));
@@ -2090,15 +2407,19 @@ export class Battle {
           if (p.y > top || p.y < -1.2) return;
           p.alive = false;
           const shooter = this.byId.get(p.shooter);
-          const dmg = p.damage * (1 - s.spec.armor) * (0.7 + this.rand() * 0.6);
+          // Down the keel line, or from a second quarter at once: the depth rules' raking and crossfire.
+          const angle = this.tactics?.hit(s, p.shooter, p.ammo, p.vx, p.vz);
+          const dmg = p.damage * (1 - s.spec.armor) * (0.7 + this.rand() * 0.6) * (angle?.hull ?? 1);
           this.damage(s, dmg, shooter);
           // A round above the bulwark sweeps the open deck; one through the planking kills below.
           const exposure: Exposure = p.ammo === 'grape' || p.y > s.spec.deck ? 'deck' : 'hull';
           if (exposure === 'hull' && p.ammo !== 'arrow' && p.ammo !== 'grape') this.impactDamage(s, dmg, dx, dz);
-          this.casualties(s, (p.crewDamage * (0.5 + this.rand())) / Math.max(1, s.spec.deckDefense * 0.8), exposure, false);
+          this.casualties(s, ((p.crewDamage * (0.5 + this.rand())) / Math.max(1, s.spec.deckDefense * 0.8)) * (angle?.crew ?? 1), exposure, false);
           if (this.rand() < p.fireChance) this.ignite(s, p.ammo === 'fire' ? 0.26 : 0.2);
           this.blow();
-          this.events.push({ type: 'hit', ship: s.id, proj: p.id, x: p.x, y: p.y, z: p.z, damage: dmg, ammo: p.ammo });
+          const hit: Extract<BattleEvent, { type: 'hit' }> = { type: 'hit', ship: s.id, proj: p.id, x: p.x, y: p.y, z: p.z, damage: dmg, ammo: p.ammo };
+          if (angle?.bonus) hit.bonus = angle.bonus;
+          this.events.push(hit);
         });
       }
       if (p.age > 14) p.alive = false;
@@ -2106,10 +2427,11 @@ export class Battle {
     this.projectiles = this.projectiles.filter((p) => p.alive);
   }
 
-  private ignite(s: Ship, amount: number) {
+  /** Sets a ship alight, or feeds its fire. `from` is the burning ship it caught from, when fire spread. */
+  ignite(s: Ship, amount: number, from = 0) {
     const before = s.fire;
     s.fire = Math.min(1, s.fire + amount * (s.spec.fireResist ?? 1));
-    if (before < 0.05) this.events.push({ type: 'ignite', ship: s.id });
+    if (before < 0.05) this.events.push(from ? { type: 'ignite', ship: s.id, from } : { type: 'ignite', ship: s.id });
   }
 
   private damage(s: Ship, amount: number, source?: Ship, combatHit = true) {
@@ -2123,7 +2445,7 @@ export class Battle {
       for (const o of this.ships) if (o.grappledWith === s.id) o.grappledWith = 0;
       if (source) source.kills += 1;
       this.events.push({ type: 'sinking', ship: s.id });
-      if (!s.struck) this.rules?.lost?.(this, s);
+      if (!s.struck) this.leave(s);
     }
   }
 

@@ -5,7 +5,7 @@ export const STAGE_NAMES = ['포구 청소', '화약 넣기', '마개 다지기'
 
 export const GUN_SHOTS: Record<GunType, number> = { cheonja: 18, jija: 24, hyeonja: 36, hwangja: 48, seungja: 60, ozutsu: 30, folangji: 50, hudun: 40 };
 
-export const NO_MODS = { reload: 1, accuracy: 1, speed: 1, turn: 1, fire: 1, melee: 1, defense: 1 };
+export const NO_MODS = { reload: 1, accuracy: 1, speed: 1, turn: 1, fire: 1, melee: 1, defense: 1, morale: 1 };
 
 export const GUN_SPECS: Record<GunType, GunSpec> = {
   cheonja: {

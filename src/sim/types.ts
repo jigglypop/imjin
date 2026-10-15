@@ -118,7 +118,15 @@ export type GunState = {
   ammo: number;
 };
 
-export type ShipMods = { reload: number; accuracy: number; speed: number; turn: number; fire: number; melee: number; defense: number };
+/** `morale` scales how well a crew bears losses and how quickly its commander steadies it (the campaign's 통솔 and veterans). */
+export type ShipMods = { reload: number; accuracy: number; speed: number; turn: number; fire: number; melee: number; defense: number; morale: number };
+
+/**
+ * A crew's nerve under the battle depth rules. Wavering crews shoot and load worse and the computer's hold back; routing
+ * ones stop fighting and run for their own side or the nearest shore; rallying ones close on their commander again.
+ */
+export type MoraleState = 'steady' | 'wavering' | 'routing' | 'rallying';
+export const MORALE_STATES: readonly MoraleState[] = ['steady', 'wavering', 'routing', 'rallying'];
 
 export type Ship = {
   id: number;
@@ -146,7 +154,9 @@ export type Ship = {
   plan: CrewPlan;
   fire: number;
   burn: number;
+  /** 0 to 1. Only the battle depth rules move it; without them every crew stays steady at 1. */
   morale: number;
+  moraleState: MoraleState;
   order: Order;
   /** Waiting move orders, executed by the authoritative battle after the current destination. */
   orderQueue?: Order[];
@@ -223,10 +233,12 @@ export type BattleEvent =
   | { type: 'gun'; ship: number; gun: GunType; x: number; y: number; z: number; dx: number; dy: number; dz: number; big: boolean }
   | { type: 'shot'; id: number; team: Team; gun: GunType; ammo: AmmoType; x: number; y: number; z: number; vx: number; vy: number; vz: number }
   | { type: 'musket'; ship: number; x: number; y: number; z: number; dx: number; dz: number; count: number; arms: SmallArms }
-  | { type: 'hit'; ship: number; proj: number; x: number; y: number; z: number; damage: number; ammo: AmmoType }
+  /** `bonus` marks a shot down the keel line (rake) or one of two from opposite quarters (cross). */
+  | { type: 'hit'; ship: number; proj: number; x: number; y: number; z: number; damage: number; ammo: AmmoType; bonus?: 'rake' | 'cross' }
   | { type: 'splash'; proj: number; x: number; z: number; size: number }
   | { type: 'ground'; proj: number; x: number; y: number; z: number }
-  | { type: 'ignite'; ship: number }
+  /** `from` is the burning ship the fire jumped from, when it spread. */
+  | { type: 'ignite'; ship: number; from?: number }
   | { type: 'explode'; ship: number; x: number; y: number; z: number }
   | { type: 'ram'; a: number; b: number; x: number; z: number; power: number }
   | { type: 'board'; a: number; b: number }
@@ -241,6 +253,14 @@ export type BattleEvent =
   | { type: 'captured'; point: number; owner: number; from: number }
   | { type: 'built'; point: number; building: string; owner: number }
   | { type: 'razed'; point: number; building: string }
-  | { type: 'battery'; point: number; x: number; y: number; z: number; dx: number; dy: number; dz: number };
+  | { type: 'battery'; point: number; x: number; y: number; z: number; dx: number; dy: number; dz: number }
+  /** A crew's nerve changed (the depth rules). */
+  | { type: 'morale'; ship: number; state: MoraleState }
+  /** A squadron's leader left the fight; `flagship` when it was the admiral of a navy. */
+  | { type: 'leader'; ship: number; flagship: boolean }
+  /** A computer-led fleet broke and turned for home; `ship` is one of its ships, for observation. */
+  | { type: 'broken'; ship: number; team: Team }
+  /** A squadron leader beat the drum to steady and rally the ships around it. */
+  | { type: 'drum'; ship: number };
 
 export type LandSampler = (x: number, z: number) => number;
