@@ -12,7 +12,7 @@ import {
   Vector3,
   WebGPURenderer,
 } from 'three/webgpu';
-import { cameraPosition, float, fog, length, mix, normalize, pass, pmremTexture, positionWorld, renderOutput, smoothstep, uniform, uv, vec3, vec4 } from 'three/tsl';
+import { cameraPosition, float, fog, length, mix, pass, positionWorld, renderOutput, smoothstep, uniform, uv, vec3, vec4 } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { smaa } from 'three/addons/tsl/display/SMAANode.js';
 import { Battle } from '../../sim/battle';
@@ -28,6 +28,7 @@ import { SEA_STATES, WaveField, waveField, type SeaStateName } from '../../ocean
 import { atmosphere } from '../../render/atmosphere';
 import { disposeTree } from '../../render/dispose';
 import { seaFogAmount } from '../../render/seaMist';
+import { SkyView } from '../../render/skyDome';
 import { loadSky, SKY_PRESETS, type LoadedSky } from '../../render/sky';
 import { tuneWebGLBackend } from '../../render/webglBackend';
 import { equipment, forceWebGL } from '../../game/quality';
@@ -83,7 +84,7 @@ export class CodexScene {
   private views?: ShipViews;
   private lanterns?: Lanterns;
   private pipeline?: RenderPipeline;
-  private fogEnv?: ReturnType<typeof pmremTexture>;
+  private skyView?: SkyView;
   private battle = new Battle(1592, 'historical');
   private readonly models = new Map<ModelKind, Promise<Record<string, ModelAsset>>>();
   private assets: Record<string, ModelAsset> = {};
@@ -110,7 +111,7 @@ export class CodexScene {
   async init(sky: CodexSky, sea: SeaStateName) {
     const renderer = new WebGPURenderer({ canvas: this.canvas, antialias: false, powerPreference: 'high-performance', forceWebGL });
     this.renderer = renderer;
-    const loading = loadSky(SKY_PRESETS[sky], equipment.hdriSize, undefined, this.controller.signal);
+    const loading = loadSky(SKY_PRESETS[sky], equipment.skySize, undefined, this.controller.signal);
     // A failed fetch must not surface as an unhandled rejection while the renderer is still starting.
     void loading.catch(() => undefined);
     await renderer.init();
@@ -129,16 +130,18 @@ export class CodexScene {
     const seaFloor = { rotation: uniform(new Vector2(1, 0)), sizeU: uniform(6000), heightTexture: this.floor } as unknown as Terrain;
     const loaded = await loading;
     if (this.disposed) {
-      loaded.background.dispose();
+      loaded.view.dispose();
       loaded.environment.dispose();
     }
     this.check();
     this.sky = loaded;
     this.skyName = sky;
-    this.ocean = new Ocean(this.waves, loaded.environment, this.wake, seaFloor, null, null, { segments: equipment.oceanSegments, lights: equipment.lights });
+    this.skyView = new SkyView(loaded.view);
+    this.scene.backgroundNode = this.skyView.background();
+    this.ocean = new Ocean(this.waves, loaded.environment, this.skyView, this.wake, seaFloor, null, null, { segments: equipment.oceanSegments, lights: equipment.lights });
     this.scene.add(this.ocean.mesh);
     this.applySky(loaded, sky);
-    this.setupFog(loaded.environment);
+    this.setupFog();
     const sun = this.sun;
     sun.castShadow = true;
     sun.shadow.mapSize.set(Math.min(4096, equipment.shadowMap), Math.min(4096, equipment.shadowMap));
@@ -433,7 +436,7 @@ export class CodexScene {
 
   async setSky(name: CodexSky) {
     if (!this.renderer || name === this.skyName) return;
-    const sky = await loadSky(SKY_PRESETS[name], equipment.hdriSize, this.sky, this.controller.signal);
+    const sky = await loadSky(SKY_PRESETS[name], equipment.skySize, this.sky, this.controller.signal);
     if (this.disposed) return;
     const before = this.heading;
     this.applySky(sky, name);
@@ -453,7 +456,7 @@ export class CodexScene {
     const preset = SKY_PRESETS[name];
     const info = sky.info;
     const scale = (0.16 / Math.max(1e-4, info.ambientLum)) * preset.brightness;
-    this.scene.background = sky.background;
+    this.skyView?.set(sky.view);
     this.scene.environment = sky.environment;
     this.scene.backgroundIntensity = scale;
     this.scene.environmentIntensity = scale * 1.45;
@@ -471,9 +474,8 @@ export class CodexScene {
     this.sun.intensity = lum * scale * 1.35;
     this.renderer!.toneMappingExposure = preset.exposure * (preset.night > 0.5 ? NIGHT_EXPOSURE : 1);
     this.ocean?.setEnvironment(sky.environment);
-    if (this.fogEnv) this.fogEnv.value = sky.environment;
     // A reused sky keeps its textures; only new ones free those they replace.
-    if (old && old.background !== sky.background) old.background.dispose();
+    if (old && old.view !== sky.view) old.view.dispose();
     if (old && old.environment !== sky.environment) old.environment.dispose();
   }
 
@@ -488,14 +490,15 @@ export class CodexScene {
     atmosphere.envIntensity.value = l.scale;
     atmosphere.fogDensity.value = l.fog;
     atmosphere.night.value = l.night;
+    atmosphere.cloudCover.value = 0;
   }
 
-  private setupFog(env: DataTexture) {
+  /** Everything fades into the haze of the horizon behind it, the colour the sky has there. */
+  private setupFog() {
     const toFrag = positionWorld.sub(cameraPosition);
     const dist = length(toFrag);
-    const dir = toFrag.div(dist);
-    this.fogEnv = pmremTexture(env, normalize(vec3(dir.x, 0.04, dir.z)), float(0.45));
-    this.scene.fogNode = fog(vec3(this.fogEnv).mul(atmosphere.envIntensity), seaFogAmount(dist));
+    const fogColor = vec3(this.skyView!.horizon(toFrag)).mul(atmosphere.envIntensity);
+    this.scene.fogNode = fog(fogColor, seaFogAmount(dist));
   }
 
   private setupPipeline() {
@@ -556,6 +559,7 @@ export class CodexScene {
         this.wake!.update(this.renderer!, dt);
         this.ocean!.update(this.camera.position.x, this.camera.position.z);
         this.aimSun();
+        if (this.skyView) this.skyView.time.value += dt;
         this.pipeline!.render();
       },
     );
@@ -601,14 +605,13 @@ export class CodexScene {
     this.ocean?.dispose();
     this.wake?.dispose();
     this.floor?.dispose();
-    this.fogEnv?.dispose();
     this.views?.renderer.dispose();
     if (this.views) disposeTree(this.views.group);
     if (this.lanterns) disposeTree(this.lanterns.group);
     this.pipeline?.dispose();
     for (const pending of this.models.values()) void pending.then(disposeSceneShipAssets, () => undefined);
     this.models.clear();
-    this.sky?.background.dispose();
+    this.sky?.view.dispose();
     this.sky?.environment.dispose();
     this.scene.clear();
     void this.renderer?.dispose().catch(() => undefined);
