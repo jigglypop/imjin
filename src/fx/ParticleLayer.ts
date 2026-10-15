@@ -168,7 +168,7 @@ export class ParticleLayer {
     material.transparent = true;
     material.depthWrite = false;
     material.fog = true;
-    const c = uv().sub(0.5).mul(2);
+    const c: any = uv().sub(0.5).mul(2);
     const r = length(c);
     const seed = Q.w;
     const life = P.w;
