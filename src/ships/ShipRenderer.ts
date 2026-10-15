@@ -3,7 +3,6 @@ import {
   BufferAttribute,
   BufferGeometry,
   DoubleSide,
-  DynamicDrawUsage,
   Float32BufferAttribute,
   Group,
   InstancedBufferAttribute,
@@ -27,7 +26,7 @@ import {
   fract,
   frontFacing,
   If,
-  instancedDynamicBufferAttribute,
+  instancedBufferAttribute,
   mix,
   mx_noise_float,
   normalLocal,
@@ -54,6 +53,7 @@ import { useProcedural } from './build/mode';
 import { loadProcedural } from './build/procedural';
 import { equipment } from '../game/quality';
 import { emberGlow, weather } from './weather';
+import { charShading } from '../fx/fire/char';
 import { disposeTree, freeAfterDraw } from '../render/dispose';
 import { PHASE_RANGE, SWAY_RANGE, TINT_RANGE } from './build/pack';
 
@@ -339,8 +339,8 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   m.roughness = 1;
   const map = src.map as Texture | null;
   if (map) map.anisotropy = src.userData.shipAnisotropy ?? equipment.anisotropy;
-  const A: any = instancedDynamicBufferAttribute(a, 'vec4');
-  const B: any = instancedDynamicBufferAttribute(b, 'vec4');
+  const A: any = instancedBufferAttribute(a, 'vec4');
+  const B: any = instancedBufferAttribute(b, 'vec4');
   const origin = A.xyz;
   const burn = A.w;
   const up = B.xyz;
@@ -387,16 +387,14 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   }
   const wet = float(1).sub(smoothstep(-0.1, 0.9, shipY));
   const under = float(1).sub(smoothstep(-0.9, -0.05, shipY));
-  const noise = mx_noise_float(positionWorld.mul(0.35)).mul(0.5).add(0.5);
-  const charAmount = smoothstep(0.35, 0.75, noise.add(burn.mul(0.9)).sub(0.45)).mul(burn);
-  const ember = smoothstep(0.62, 0.95, mx_noise_float(positionWorld.mul(1.3).add(vec3(0, burn.mul(4), 0))).mul(0.5).add(0.5));
   // Atlas ships get their waterline in weather(); the legacy models still need it here.
   const wetColor = atlas ? baseColor : baseColor.mul(mix(float(1), float(0.55), wet));
   const algae = atlas ? wetColor : mix(wetColor, wetColor.mul(vec3(0.42, 0.52, 0.36)), under.mul(0.85));
-  const charred = mix(algae, vec3(0.025, 0.02, 0.018), charAmount.mul(0.9));
-  const lit = charred.mul(float(1).add(flash.mul(2)));
+  // The burn attribute packs the fire burning now with the char it has left (fx/fire/char.ts).
+  const char = charShading(burn, algae, shipY, equipment.tier !== 'low');
+  const lit = char.color.mul(float(1).add(flash.mul(2)));
   if (c) {
-    const C: any = instancedDynamicBufferAttribute(c, 'vec4');
+    const C: any = instancedBufferAttribute(c, 'vec4');
     const grain = mx_noise_float(positionWorld.mul(vec3(0.8, 6, 0.8))).mul(0.5).add(0.5);
     const timber = mix(vec3(0.16, 0.1, 0.055), vec3(0.3, 0.2, 0.11), grain);
     m.colorNode = Fn(() => {
@@ -409,7 +407,7 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   const wetRough = mix(rough.mul(0.95).add(0.05), float(0.25), wet.mul(0.8)).max(0.05);
   // Inside a section-cut hull the raw timber never got wet: without this the scoop of the hull bottom mirrors the sky.
   m.roughnessNode = c ? select(frontFacing, wetRough, float(0.9)) : wetRough;
-  m.emissiveNode = vec3(1.0, 0.32, 0.06).mul(charAmount.mul(burn).mul(ember).mul(4)).add(glow);
+  m.emissiveNode = char.emissive.add(glow);
   return m;
 }
 
@@ -490,12 +488,13 @@ export class ShipRenderer {
   }
 
   private makeBatch(lod: LodAsset, cap: number, nominal: number, cut = false): Batch {
-    const mk = () => new InstancedBufferAttribute(new Float32Array(cap * 4), 4).setUsage(DynamicDrawUsage);
+    // Static buffers, which end() marks changed over the range in use: sent once a frame. A dynamic buffer is sent
+    // again by every pass that draws it (the shadow map, then the scene), and whole after the first.
+    const mk = () => new InstancedBufferAttribute(new Float32Array(cap * 4), 4);
     const a = mk();
     const b = mk();
     const c = cut ? mk() : undefined;
     const mesh = new InstancedMesh(lod.geometry, createMaterial(lod.source, a, b, c), cap);
-    mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     mesh.count = 0;
     mesh.frustumCulled = false;
     mesh.castShadow = nominal < 2;
@@ -572,6 +571,9 @@ export class ShipRenderer {
   end() {
     for (const batch of [...[...this.batches.values()].flat(), ...this.cuts.values()].flatMap(batchParts)) {
       batch.mesh.count = batch.count;
+      // Most batches hold no ship in a given frame (a model at the levels nobody is near or far enough for). Hidden, three
+      // skips them; shown, it prepared each one and sent its buffers in every pass for nothing.
+      batch.mesh.visible = batch.count > 0;
       if (batch.count === 0) continue;
       batch.mesh.instanceMatrix.clearUpdateRanges();
       batch.mesh.instanceMatrix.addUpdateRange(0, batch.count * 16);

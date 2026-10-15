@@ -1,7 +1,6 @@
 import {
   AdditiveBlending,
   DoubleSide,
-  DynamicDrawUsage,
   Group,
   InstancedBufferAttribute,
   InstancedMesh,
@@ -12,7 +11,7 @@ import {
   Vector3,
   type Camera,
 } from 'three/webgpu';
-import { cameraPosition, float, instanceIndex, instancedDynamicBufferAttribute, length, mx_noise_float, pow, smoothstep, time, uv, vec3, vec4 } from 'three/tsl';
+import { cameraPosition, float, instanceIndex, instancedBufferAttribute, length, mx_noise_float, pow, smoothstep, time, uv, vec3, vec4 } from 'three/tsl';
 import type { Battle } from '../sim/battle';
 import { anchorsFor, byModel, type ModelKind } from '../ships/anchors';
 import type { ShipViews } from '../ships/ShipViews';
@@ -92,10 +91,10 @@ export class Lanterns {
   onLight: ((x: number, y: number, z: number, intensity: number) => void) | null = null;
 
   constructor(private readonly views: ShipViews) {
-    for (const a of [this.glowPos, this.glowK, this.reflK]) a.setUsage(DynamicDrawUsage);
+    // The buffers are static: update() marks the range it wrote, so each goes up once a frame instead of whole in every pass.
     const g = new SpriteNodeMaterial();
-    const G: any = instancedDynamicBufferAttribute(this.glowPos, 'vec4');
-    const GK: any = instancedDynamicBufferAttribute(this.glowK, 'float');
+    const G: any = instancedBufferAttribute(this.glowPos, 'vec4');
+    const GK: any = instancedBufferAttribute(this.glowK, 'float');
     // The glow floats a little toward the camera so that a lantern's own paper body does not hide its light.
     g.positionNode = G.xyz.add(cameraPosition.sub(G.xyz).normalize().mul(0.35));
     g.scaleNode = G.w;
@@ -118,7 +117,7 @@ export class Lanterns {
     const geo = new PlaneGeometry(1, 1);
     geo.rotateX(Math.PI / 2);
     const m = new MeshBasicNodeMaterial();
-    const RK: any = instancedDynamicBufferAttribute(this.reflK, 'float');
+    const RK: any = instancedBufferAttribute(this.reflK, 'float');
     m.blending = AdditiveBlending;
     m.transparent = true;
     m.depthWrite = false;
@@ -132,7 +131,6 @@ export class Lanterns {
     m.colorNode = vec4(vec3(1.0, 0.48, 0.16).mul(1.1), 1);
     m.opacityNode = lengthFade.mul(widthFade).mul(shimmer).mul(0.8).mul(RK);
     this.refl = new InstancedMesh(geo, m, CAPACITY);
-    this.refl.instanceMatrix.setUsage(DynamicDrawUsage);
     this.refl.count = 0;
     this.refl.frustumCulled = false;
     this.refl.renderOrder = -5;
@@ -250,5 +248,8 @@ export class Lanterns {
     }
     this.glow.count = n;
     this.refl.count = n;
+    // By day, and on a dark night without lights, there is nothing to draw: hidden, neither layer costs a frame anything.
+    this.glow.visible = n > 0;
+    this.refl.visible = n > 0;
   }
 }

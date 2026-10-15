@@ -40,7 +40,7 @@ const CUTS = {
     { clip: 'boarding', from: 0.3, to: 3.3, kicker: 'BOARDING', title: 'Hand to hand', hit: 'musket_volley_1' },
     { clip: 'night', from: 0.3, to: 3.3, kicker: 'NORYANG · 1598', title: 'The last battle', fadeIn: true, grade: 'eq=gamma=1.75:brightness=0.04:contrast=1.06:saturation=1.15' },
     { clip: 'ui', from: 4.7, to: 7.6, kicker: 'HISTORICAL BATTLES', title: '9 real battles', note: 'From Okpo to Noryang' },
-    { clip: 'ui', from: 8.4, to: 11.0, kicker: 'FACTION CAMPAIGN', title: 'Three nations', note: 'Joseon · Japan · Ming' },
+    { clip: 'ui', from: 8.4, to: 11.0, kicker: 'CAMPAIGN', title: 'Three nations', note: 'Joseon · Japan · Ming' },
     { end: true, seconds: 3.4, hit: 'cannon_heavy_1' },
   ],
   ko: [
@@ -52,7 +52,7 @@ const CUTS = {
     { clip: 'boarding', from: 0.3, to: 3.3, hit: 'musket_volley_1' },
     { clip: 'night', from: 0.3, to: 3.3, kicker: 'NORYANG 1598', title: '노량', fadeIn: true, grade: 'eq=gamma=1.75:brightness=0.04:contrast=1.06:saturation=1.15' },
     { clip: 'ui', from: 4.7, to: 7.6, kicker: 'HISTORICAL BATTLES', title: '역사 전투', note: '옥포에서 노량까지, 실제 해전 아홉 곳' },
-    { clip: 'ui', from: 8.4, to: 11.0, kicker: 'FACTION CAMPAIGN', title: '진영 전역', note: '조선 · 일본 · 명' },
+    { clip: 'ui', from: 8.4, to: 11.0, kicker: 'CAMPAIGN', title: '캠페인', note: '조선 · 일본 · 명' },
     { end: true, seconds: 3.4, hit: 'cannon_heavy_1' },
   ],
 }[lang];

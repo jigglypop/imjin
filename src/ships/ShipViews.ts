@@ -1,7 +1,6 @@
 import {
   BoxGeometry,
   Color,
-  DynamicDrawUsage,
   MeshStandardNodeMaterial,
   Euler,
   Frustum,
@@ -23,6 +22,7 @@ import { waveField } from '../ocean/waves';
 import { LOD_COUNT, modelKey, ShipRenderer, type ModelAsset } from './ShipRenderer';
 import type { ShipLodQuality } from '../game/quality';
 import { cutHeight, DECKS, mainDeck } from './decks';
+import { packBurn } from '../fx/fire/char';
 import { byModel, modelKind, modelScale } from './anchors';
 import { RING_FOE, RING_OWN } from './ringTones';
 import { shipObserved } from '../sim/observation';
@@ -112,14 +112,12 @@ export class ShipViews {
     (this.ringsEnemy.material as MeshBasicNodeMaterial).addEventListener('dispose', () => this.releaseRing(this.ringsEnemy));
     const wood = new MeshStandardNodeMaterial({ color: new Color(0.34, 0.24, 0.15), roughness: 0.9 });
     this.props = new InstancedMesh(new BoxGeometry(1, 1, 1), wood, MAX_PROPS);
-    this.props.instanceMatrix.setUsage(DynamicDrawUsage);
     this.props.count = 0;
     this.props.frustumCulled = false;
     this.props.castShadow = true;
     this.props.receiveShadow = true;
     this.group.add(this.props);
     for (const r of [this.ringsOwn, this.ringsEnemy]) {
-      r.instanceMatrix.setUsage(DynamicDrawUsage);
       r.count = 0;
       r.frustumCulled = false;
       r.renderOrder = 4;
@@ -182,7 +180,6 @@ export class ShipViews {
   private growRing(mesh: InstancedMesh, count: number) {
     if (count <= mesh.instanceMatrix.count) return mesh;
     const next = new InstancedMesh(mesh.geometry, mesh.material, Math.max(count, mesh.instanceMatrix.count * 2));
-    next.instanceMatrix.setUsage(DynamicDrawUsage);
     (next.instanceMatrix.array as Float32Array).set(mesh.instanceMatrix.array);
     next.count = mesh.count;
     next.frustumCulled = false;
@@ -299,7 +296,7 @@ export class ShipViews {
       // A model loaded without its near level has fewer levels: the nearest one it has serves the closer ranges.
       const have = assets[v.key]?.lods.length ?? LOD_COUNT;
       const draw = scale === 1 ? v.matrix : this.drawMatrix.copy(v.matrix).scale(this.tmp.setScalar(scale));
-      if (v.visible) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), v.flash, cut);
+      if (v.visible) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, packBurn(ship.fire, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45)), v.flash, cut);
       if (level === 3 && v.visible) props = this.interior(ship, v, main, props);
       const show = (this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0;
       if (show) {
@@ -311,12 +308,15 @@ export class ShipViews {
       }
     }
     this.renderer.end();
-    this.props.count = props;
-    this.props.instanceMatrix.needsUpdate = true;
-    this.ringsOwn.count = own;
-    this.ringsEnemy.count = enemy;
-    this.ringsOwn.instanceMatrix.needsUpdate = true;
-    this.ringsEnemy.instanceMatrix.needsUpdate = true;
+    // The cutaway's timbers and the selection rings are empty most of the time, and then not drawn at all.
+    for (const [mesh, count] of [[this.props, props], [this.ringsOwn, own], [this.ringsEnemy, enemy]] as const) {
+      mesh.count = count;
+      mesh.visible = count > 0;
+      if (count === 0) continue;
+      mesh.instanceMatrix.clearUpdateRanges();
+      mesh.instanceMatrix.addUpdateRange(0, count * 16);
+      mesh.instanceMatrix.needsUpdate = true;
+    }
   }
 
   /** One timber piece in ship space: centre, size, and an optional roll about the ship's length. */

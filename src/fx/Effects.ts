@@ -18,6 +18,7 @@ import type { ParticleQuality } from '../game/quality';
 import { shipObserved } from '../sim/observation';
 import { pointVisible } from '../sim/visibility';
 import { disposeTree } from '../render/dispose';
+import { ShipFires } from './fire/ShipFires';
 
 const OARS: Record<string, number> = { panokseon: 8, geobukseon: 8, atakebune: 13, sekibune: 11 };
 const MASTS: Record<string, number> = { panokseon: 2, geobukseon: 1, hyeopseon: 1, atakebune: 2, sekibune: 1, kobaya: 1, mingship: 3, mingsmall: 1 };
@@ -77,6 +78,8 @@ export class Effects {
   private readonly depth: ReturnType<typeof particleDepth> | null;
   private readonly debris: DebrisField;
   private readonly mun: Munitions;
+  /** Burning ships: flames on the hull, the smoke column, embers, steam, the wreck burning on after (src/fx/fire). */
+  readonly blaze: ShipFires;
   private readonly camPos = new Vector3();
   onShake: ((amount: number) => void) | null = null;
   /** Sinking cues (see sinkPlan.ts) for the sound: kind, world position, 0..1 size. */
@@ -134,13 +137,23 @@ export class Effects {
     this.mun = new Munitions(views, this.smoke, this.fire, this.streaks, this.tier);
     this.mun.setKeep(this.k);
     this.mun.onLand = this.onRocketLand;
+    this.blaze = new ShipFires({
+      views,
+      spray: this.spray,
+      streaks: this.streaks,
+      debris: this.debris,
+      tier: this.tier,
+      light: (x, y, z, intensity, dist, r, g, b) => this.sources.push({ x, y, z, intensity, decay: 1, r, g, b, age: 0, life: 1, dist, once: true }),
+      steam: (x, y, z, size) => this.cue('steam', x, y, z, size),
+    });
+    this.blaze.setKeep(this.k);
     for (let i = 0; i < this.lightCount; i += 1) {
       const l = new PointLight(0xffaa55, 0, 160, 1.6);
       l.castShadow = false;
       this.lights.push(l);
       this.group.add(l);
     }
-    this.group.add(this.smoke.sprite, this.fire.sprite, this.spray.sprite, this.streaks.sprite, this.debris.group, this.mun.group);
+    this.group.add(this.smoke.sprite, this.fire.sprite, this.spray.sprite, this.streaks.sprite, this.debris.group, this.mun.group, this.blaze.group);
   }
 
   /** Frees the meshes, the sprites and the depth copy, whose texture is the clone made for the scene pass on its first frame. */
@@ -157,6 +170,7 @@ export class Effects {
     this.spray.setKeep(keep);
     this.streaks.setKeep(keep);
     this.mun.setKeep(this.k);
+    this.blaze.setKeep(this.k);
   }
 
   /** A count scaled to the quality level (at least 1). */
@@ -183,6 +197,7 @@ export class Effects {
     this.flights.clear();
     this.ghosts.length = 0;
     this.mun.clear();
+    this.blaze.clear();
   }
 
   handle(events: BattleEvent[], battle: Battle) {
@@ -202,6 +217,7 @@ export class Effects {
           const shell = this.flights.get(e.proj)?.ref ?? null;
           this.hit(e.x, e.y, e.z, e.damage, e.ammo, shell ? shellKind(shell.ammo, shell.gun) : e.ammo === 'fire' ? Shell.Hiya : Shell.Ball, e.ship, shell, battle);
           if (shell && (e.ammo === 'arrow' || e.ammo === 'fire')) this.stickArrow(e.ship, e.x, e.y, e.z, shell, battle);
+          this.blaze.hit(e.ship, e.x, e.y, e.z, e.ammo, battle);
           // A brief lift of the struck hull, enough to find it from afar; the splinters and smoke tell the rest.
           this.views.flash(e.ship, Math.min(0.3, 0.12 + e.damage * 0.012));
           break;
@@ -220,7 +236,7 @@ export class Effects {
           break;
         case 'ignite':
           if (e.from) this.embers(e.from, e.ship, battle);
-          this.ignite(e.ship, battle);
+          this.blaze.ignite(e.ship, e.from, battle);
           break;
         case 'ram':
           this.ram(e.x, e.z, e.power);
@@ -232,6 +248,7 @@ export class Effects {
         }
         case 'removed':
           this.dragon.delete(e.ship);
+          this.blaze.removed(e.ship, battle);
           this.finishSink(e.ship, battle);
           break;
         default:
@@ -599,15 +616,6 @@ export class Effects {
     }
   }
 
-  /** Flames taking hold: a short flare-up over the deck. */
-  ignite(id: number, battle: Battle) {
-    const ship = battle.get(id);
-    if (!ship) return;
-    this.views.localToWorld(id, rnd(-0.2, 0.2) * ship.spec.length, this.deckOf(ship), 0, this.p);
-    for (let i = 0; i < 10; i += 1) this.fire.emit({ x: this.p.x + rnd(-2, 2), y: this.p.y, z: this.p.z + rnd(-2, 2), vx: rnd(-1, 1), vy: rnd(3, 8), vz: rnd(-1, 1), life: rnd(0.5, 1.1), size0: 2, size1: rnd(4, 7), heat: rnd(0.6, 1), drag: 1.2, lift: 3, wind: 0.5 });
-    this.light(this.p.x, this.p.y + 3, this.p.z, 12000, 0.5, 1, 0.5, 0.2, 200);
-  }
-
   /** A blast: scale 1 is a magazine going up, 0.3 a cooking-off powder keg. */
   private blast(x: number, y: number, z: number, scale: number) {
     const nf = Math.max(6, Math.round(90 * scale * this.k));
@@ -676,7 +684,8 @@ export class Effects {
     st.slick -= dt;
     if (st.slick <= 0) {
       st.slick = 0.45;
-      this.wake?.stamp(ship.x, ship.z, ship.heading, L * 0.55, 0.35 + 0.35 * p, 1.6, 1.5);
+      // Churn more than foam: the stamps add up over the seconds of a sinking, and foam that saturates draws a white disc.
+      this.wake?.stamp(ship.x, ship.z, ship.heading, L * 0.55, 0.05 + 0.06 * p, 1.6, 9);
     }
   }
 
@@ -768,7 +777,7 @@ export class Effects {
       this.spray.emit({ x: ship.x + Math.cos(a) * r, y: h + 0.2, z: ship.z + Math.sin(a) * r, vx: Math.cos(a) * rnd(0.5, 3), vy: rnd(6, 15), vz: Math.sin(a) * rnd(0.5, 3), life: rnd(1.2, 2.4), size0: 1.5, size1: rnd(4, 8), alpha: 0.75, r: 0.95, g: 0.98, b: 1, drag: 0.5, lift: -9.8, wind: 0.3 });
     }
     for (let i = 0; i < 3; i += 1) this.splash(ship.x + rnd(-0.3, 0.3) * L * Math.cos(ship.heading), ship.z + rnd(-0.3, 0.3) * L * Math.sin(ship.heading), 1.1);
-    this.wake?.stamp(ship.x, ship.z, ship.heading, L * 0.9, 0.9, 1.2, 1.8);
+    this.wake?.stamp(ship.x, ship.z, ship.heading, L * 0.9, 0.4, 1.2, 4.5);
     this.shakeAt(ship.x, 2, ship.z, 0.35);
   }
 
@@ -815,7 +824,7 @@ export class Effects {
       else if (r < 0.92) this.debris.spawn(Piece.Spar, x, y, z, vx, vy, vz, rnd(3, 6), 0.22, 0.22, life, 0.5);
       else this.debris.spawn(Piece.Chunk, x, y, z, vx, vy, vz, 0.7, 0.7, 0.7, life, 1);
     }
-    this.wake?.stamp(ship.x, ship.z, ship.heading, L * 1.1, 1, 1, 2);
+    this.wake?.stamp(ship.x, ship.z, ship.heading, L * 1.1, 0.45, 1, 4.5);
     this.shakeAt(ship.x, 2, ship.z, 0.3);
     this.cue('gone', ship.x, 0, ship.z, size);
   }
@@ -913,45 +922,18 @@ export class Effects {
       if (!ship.alive || !shipObserved(battle, this.views.team, ship)) continue;
       if (ship.spec.kind === 'geobukseon' && ship.sinking === 0) this.dragonSmoke(ship, dt);
       if (ship.sinking > 0) this.sinking(ship, dt);
-      const burning = ship.fire > 0.02 || (ship.sinking > 0 && ship.sinking < 0.85);
-      if (!burning) {
+      // A hull going down burns on if it was burning; one shot to pieces still shows a few small fires among the wreck.
+      const level = ship.fire > 0.02 ? ship.fire : ship.sinking > 0 && ship.sinking < 0.85 ? 0.12 : 0;
+      if (level > 0 || this.blaze.has(ship.id)) this.blaze.burn(ship, level, dt);
+      else {
         const wreck = 1 - ship.hull / ship.spec.hull;
         if (wreck > 0.45 && ship.sinking === 0 && Math.random() < dt * wreck * 5) {
           this.views.localToWorld(ship.id, rnd(-0.3, 0.3) * ship.spec.length, this.deckOf(ship), rnd(-0.3, 0.3) * ship.spec.beam, this.p);
           this.smoke.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: rnd(-0.5, 0.5), vy: rnd(1.5, 3), vz: rnd(-0.5, 0.5), life: rnd(8, 14), size0: 2, size1: rnd(10, 16), alpha: 0.45, r: 0.35, g: 0.33, b: 0.31, drag: 0.8, lift: 0.4, wind: 1 });
         }
-        continue;
       }
-      const level = Math.max(ship.fire, ship.sinking > 0 ? 0.35 : 0);
-      const rate = 40 * level + 6;
-      let acc = (this.emitAccum.get(ship.id) ?? 0) + rate * dt;
-      const L = ship.spec.length;
-      const sea = ship.sinking > 0 ? waveField.heightAt(ship.x, ship.z) : -100;
-      // At 128x one frame spans seconds of sim time: cap the burst so it cannot snowball.
-      acc = Math.min(acc, 24);
-      while (acc >= 1) {
-        acc -= 1;
-        const lx = rnd(-0.38, 0.38) * L;
-        const lz = rnd(-0.4, 0.4) * ship.spec.beam;
-        this.views.localToWorld(ship.id, lx, this.deckOf(ship) * rnd(0.85, 1.15), lz, this.p);
-        // Flames that would sit under the waterline of a heeled, sinking hull are out.
-        if (this.p.y < sea + 0.4) continue;
-        const big = rnd(0.6, 1.4) * (0.6 + level);
-        this.fire.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: rnd(-0.6, 0.6), vy: rnd(1.5, 4), vz: rnd(-0.6, 0.6), life: rnd(0.7, 1.4), size0: 2.6 * big, size1: 4.2 * big, heat: rnd(0.5, 1), drag: 1.5, lift: 2.5, wind: 0.5, alpha: 0.8, rot: rnd(-0.15, 0.15), spin: 0.05 });
-        if (Math.random() < 0.55) {
-          this.smoke.emit({ x: this.p.x, y: this.p.y + 2, z: this.p.z, vx: rnd(-1, 1), vy: rnd(3, 6), vz: rnd(-1, 1), life: rnd(14, 26), size0: rnd(3, 5), size1: rnd(18, 30) * (0.6 + level * 0.6), alpha: 0.75, r: 0.12, g: 0.11, b: 0.1, drag: 0.6, lift: 0.6, wind: 1, heat: 0.35 });
-        }
-        if (Math.random() < 0.3) {
-          this.streaks.emit({ x: this.p.x, y: this.p.y + 1, z: this.p.z, vx: rnd(-2, 2), vy: rnd(5, 12), vz: rnd(-2, 2), life: rnd(1.2, 2.6), minLen: 0.3, stretch: 0.03, width: 0.09, r: 1, g: 0.55, b: 0.2, alpha: 0.9, gravity: 1.5, drag: 0.5 });
-        }
-      }
-      this.emitAccum.set(ship.id, acc);
-      if (level > 0.15) {
-        this.views.localToWorld(ship.id, 0, this.deckOf(ship) + 3, 0, this.p);
-        this.sources.push({ x: this.p.x, y: this.p.y, z: this.p.z, intensity: 5000 * level * (0.85 + Math.random() * 0.3), decay: 1, r: 1, g: 0.5, b: 0.2, age: 0, life: 1, dist: 180, once: true });
-      }
-      if (ship.sinking > 0 && Math.random() < dt * 6) {
-        this.views.localToWorld(ship.id, rnd(-0.45, 0.45) * L, 0, rnd(-0.5, 0.5) * ship.spec.beam, this.p);
+      if (ship.sinking > 0 && ship.sinking < 0.85 && Math.random() < dt * 6) {
+        this.views.localToWorld(ship.id, rnd(-0.45, 0.45) * ship.spec.length, 0, rnd(-0.5, 0.5) * ship.spec.beam, this.p);
         const h = waveField.heightAt(this.p.x, this.p.z);
         for (let i = 0; i < 4; i += 1) this.spray.emit({ x: this.p.x + rnd(-1, 1), y: h + 0.2, z: this.p.z + rnd(-1, 1), vx: rnd(-0.6, 0.6), vy: rnd(0.5, 2.5), vz: rnd(-0.6, 0.6), life: rnd(1.5, 3), size0: 1.2, size1: 3.5, alpha: 0.45, r: 0.92, g: 0.96, b: 0.98, drag: 1, lift: -2 });
       }
@@ -1140,6 +1122,7 @@ export class Effects {
         this.flightPool.push(f);
       }
     }
+    this.blaze.update(dt, this.windX, this.windZ, camera);
     this.smoke.update(dt, this.windX, this.windZ, camera);
     this.fire.update(dt, this.windX, this.windZ, camera);
     this.spray.update(dt, this.windX * 0.3, this.windZ * 0.3, camera);

@@ -10,7 +10,8 @@ const NEAR = 420;
 
 type Model = { geometry: BufferGeometry; material: Material; base: Matrix4 };
 type Item = { m: Matrix4; fm: Matrix4; x: number; z: number };
-type Batch = { near: InstancedMesh; far: InstancedMesh; items: Item[] };
+/** `isNear` says which items the near model drew when the batch was last placed; `placed` is false until the first time. */
+type Batch = { near: InstancedMesh; far: InstancedMesh; items: Item[]; isNear: Uint8Array; placed: boolean };
 
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
@@ -96,7 +97,7 @@ export class Structures {
           mesh.count = 0;
           this.group.add(mesh);
         }
-        this.batches.push({ near, far: farMesh, items });
+        this.batches.push({ near, far: farMesh, items, isNear: new Uint8Array(items.length), placed: false });
       }),
     );
     this.ready = !this.disposed;
@@ -121,15 +122,26 @@ export class Structures {
     const s = this.terrain.toScenario(camera.position.x, camera.position.z);
     const camY = camera.position.y;
     for (const b of this.batches) {
+      // The houses do not move: their matrices are only rewritten, and sent, when one crosses between the two models.
+      let changed = !b.placed;
+      b.items.forEach((it, i) => {
+        const near = Math.hypot(it.x - s.x, it.z - s.z, camY) < NEAR ? 1 : 0;
+        if (b.isNear[i] !== near) changed = true;
+        b.isNear[i] = near;
+      });
+      if (!changed) continue;
+      b.placed = true;
       let n = 0;
       let f = 0;
-      for (const it of b.items) {
-        const d = Math.hypot(it.x - s.x, it.z - s.z, camY);
-        if (d < NEAR) b.near.setMatrixAt(n++, it.m);
+      b.items.forEach((it, i) => {
+        if (b.isNear[i]) b.near.setMatrixAt(n++, it.m);
         else b.far.setMatrixAt(f++, it.fm);
-      }
+      });
       b.near.count = n;
       b.far.count = f;
+      // A model with no house at its range is not drawn at all.
+      b.near.visible = n > 0;
+      b.far.visible = f > 0;
       b.near.instanceMatrix.needsUpdate = true;
       b.far.instanceMatrix.needsUpdate = true;
     }
