@@ -115,6 +115,26 @@ function skirt(b: MeshBuilder, paint: Paint, pad: Pad, natural: (x: number, z: n
 }
 
 /** Builds a plan's meshes: one per navy that has pieces in it, close and far. */
+/** What a navy's atlas has in place of a cell it lacks: a Japanese pier's logs are its timber, a Ming hut's thatch its tiles. */
+const STAND_IN: Record<string, string[]> = {
+  logs: ['timber'], mud: ['plaster'], granite: ['ishigaki', 'stone'], fieldstone: ['ishigaki', 'stone'], giwa: ['kawara', 'tiles'],
+  dancheong: ['beam', 'timber'], pillar: ['lacquer', 'timber'], gate: ['door'], lattice: ['window', 'door'], door: ['lattice', 'gate'],
+  window: ['lattice', 'door'], boards: ['planks'], kawara: ['giwa', 'tiles'], ishigaki: ['granite', 'stone'], lacquer: ['pillar', 'timber'],
+  beam: ['dancheong', 'timber'], canvas: ['plaster'], maku: ['canvas', 'plaster'], glazed: ['tiles', 'giwa', 'kawara'], tiles: ['giwa', 'kawara'],
+  thatch: ['tiles'], brick: ['stone', 'granite', 'ishigaki'], stone: ['granite', 'ishigaki'], bamboo: ['timber'], gold: ['bronze'],
+};
+
+/** A navy's paints, a cell it lacks taken from its stand-in. */
+function paintsOf(navy: FactionId): Kit['P'] {
+  const P = buildingPaints(navy);
+  return (name, o) => {
+    for (const n of [name, ...(STAND_IN[name] ?? [])]) {
+      try { return P(n, o); } catch { /* the next stand-in */ }
+    }
+    return P('timber', o);
+  };
+}
+
 /** Pieces built so far, shared by every camp: a barracks or a gate of one camp is the same build in the next. */
 const cache = new Map<string, [MeshData, MeshData]>();
 
@@ -130,7 +150,7 @@ export function buildHero(plan: Plan): HeroMesh[] {
     const key = keyOf(navy, piece, at.L);
     let lods = cache.get(key);
     if (!lods) {
-      const P = buildingPaints(navy);
+      const P = paintsOf(navy);
       lods = [true, false].map((near) => {
         const k: Kit = { b: new MeshBuilder(), near, P };
         buildPiece(k, navy, piece, at.L);
@@ -146,7 +166,7 @@ export function buildHero(plan: Plan): HeroMesh[] {
   }
   // The pads' skirts in the camp's own stone.
   if (plan.pads.length) {
-    const P = buildingPaints(plan.navy);
+    const P = paintsOf(plan.navy);
     const b = new MeshBuilder();
     for (const pad of plan.pads) skirt(b, facingPaint(P, plan.navy, pad.face), pad, (x, z) => plan.natural(x, z));
     const d = b.data();

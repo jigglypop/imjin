@@ -495,13 +495,19 @@ export class MapLayer {
     if (!world || this.disposed) return;
     const mine = ++this.generation;
     // The hero camps stand in for their places: their camp, beacon and the towns on their ground.
-    const heroes = this.hero ? heroUses(world) : [];
-    const tiers = this.hero ? tierUses(world, heroes) : [];
+    let heroes = this.hero ? heroUses(world) : [];
+    let tiers = this.hero ? tierUses(world, heroes) : [];
+    try {
+      await this.hero?.set(heroes, tiers);
+    } catch (error) {
+      // Should a camp fail to build, the map keeps its old kits rather than showing no places at all.
+      console.error(error);
+      heroes = [];
+      tiers = [];
+    }
+    if (this.disposed || mine !== this.generation) return;
     const replaced = new Set([...heroes.flatMap((h) => [...h.replaces]), ...tiers.map((t) => t.id)]);
     const settlements = world.settlements.filter((s) => !replaced.has(s.id));
-    const heroBuilt = this.hero?.set(heroes, tiers);
-    await heroBuilt;
-    if (this.disposed || mine !== this.generation) return;
     const heroShips = this.hero?.extras(heroes).ships ?? [];
     const pieces = new Set(settlements.flatMap((s) => s.pieces.map((p) => p.kind)));
     const kinds = new Set([...world.fleets.flatMap((f) => (f.kinds.length ? f.kinds : [MAIN_SHIP[f.faction]])), ...world.sails.map((s) => MAIN_SHIP[s.faction]), ...heroShips.map((s) => s.kind)]);
