@@ -172,7 +172,7 @@ await check('a blockade lines the water across a channel and holds its place aga
 await check('the bait shows itself, falls back to its point ahead of a rash pursuer and beats the drum; the ambush there springs', () => {
   const { b, own, foe } = sea({ humans: [0], own: [row('panokseon', 0, -200, 6, 0, 80), row('panokseon', 300, 0, 3, 0, 60)], foe: [row('atakebune', 1500, -150, 10, 30, 35, Math.PI)] });
   for (const s of foe[0]) s.order = { type: 'auto' };
-  b.maneuvers.tempers.set(foe[0][0].squadronId, 'rash');
+  b.squadron(foe[0][0].squadronId).temper = 'rash';
   applyCommand(b, 0, { type: 'maneuver', ids: own[0].map((s) => s.id), kind: 'ambush', x0: -200, z0: 0, x1: 100, z1: 0 });
   applyCommand(b, 0, { type: 'maneuver', ids: own[1].map((s) => s.id), kind: 'lure', x0: 900, z0: 0, x1: -200, z1: 0 });
   const events = steps(b, 420);

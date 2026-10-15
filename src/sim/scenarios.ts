@@ -3,6 +3,7 @@ import { DEPTH_LATEST } from './depth';
 import { SEA_STATES } from '../ocean/waves';
 import { variantFor } from '../ships/anchors';
 import type { ShipKind, ShipMods, Squadron, Team } from './types';
+import type { Temper } from './maneuvers';
 import {
   ANGOLPO_TERRAIN,
   BUSAN_TERRAIN,
@@ -305,6 +306,26 @@ function portraitFor(team: Team, commander: string, kind: ShipKind) {
   return team === 'japan' ? 'portrait_japan' : 'portrait_admiral';
 }
 
+/**
+ * How the named commanders led, for the computer's use of the maneuvers: Wakisaka sailed out alone after glory and took
+ * Yi's bait at Hansan; Kuki and Kato would not leave the shelter of Angolpo; Won Gyun went in regardless; Chen Lin
+ * pressed forward; Shimazu fought his way through to Konishi.
+ */
+const TEMPERS: [string, Temper][] = [
+  ['와키자카', 'rash'],
+  ['구키', 'cautious'],
+  ['가토', 'cautious'],
+  ['고니시', 'cautious'],
+  ['원균', 'rash'],
+  ['진린', 'bold'],
+  ['시마즈', 'bold'],
+  ['이순신', 'steady'],
+];
+
+function temperOf(commander: string): Temper | undefined {
+  return TEMPERS.find(([name]) => commander.includes(name))?.[1];
+}
+
 function cardFor(kind: ShipKind) {
   return `card_${kind === 'hyeopseon' ? 'panokseon' : kind === 'kobaya' ? 'sekibune' : kind.startsWith('ming') ? 'panokseon' : kind}`;
 }
@@ -366,7 +387,12 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     }
     return p;
   };
-  const squad = (team: Team, name: string, cmd: string, kind: ShipKind) => b.addSquadron(team, name, cmd, portraitFor(team, cmd, kind), cardFor(kind));
+  const squad = (team: Team, name: string, cmd: string, kind: ShipKind) => {
+    const sq = b.addSquadron(team, name, cmd, portraitFor(team, cmd, kind), cardFor(kind));
+    const temper = temperOf(cmd);
+    if (temper) sq.temper = temper;
+    return sq;
+  };
   const ship = (sq: Squadron, kind: ShipKind, p: Spot, name: string, flagship = false, variant?: number) => {
     const r = kind === 'panokseon' || kind === 'geobukseon' || kind === 'atakebune' || kind === 'mingship' ? 22 : kind === 'sekibune' || kind === 'mingsmall' ? 15 : 9;
     const spot = settle(p, r);

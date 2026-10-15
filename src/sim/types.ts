@@ -1,4 +1,4 @@
-import type { ManeuverKind, ManeuverPhase, SignalKind } from './maneuvers';
+import type { ManeuverKind, ManeuverPhase, SignalKind, Temper } from './maneuvers';
 
 /**
  * The two sides of a battle. The names are the historical defaults: in the nine battles the Joseon side carries the
@@ -213,6 +213,8 @@ export type Squadron = {
   card: string;
   shipIds: number[];
   leaderId: number;
+  /** How its commander leads under the maneuver rules (maneuvers.ts); without it a Japanese commander is bold, the rest steady. */
+  temper?: Temper;
 };
 
 export type Projectile = {

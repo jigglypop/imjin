@@ -23,7 +23,6 @@ export type ManeuverKind = 'ambush' | 'pincer' | 'breach' | 'encircle' | 'crane'
 export const MANEUVER_KINDS: readonly ManeuverKind[] = ['ambush', 'pincer', 'breach', 'encircle', 'crane', 'blockade', 'lure', 'pursue'];
 /** forming: taking stations; waiting: in place, holding for the trigger; striking: the maneuver itself; done: released. */
 export type ManeuverPhase = 'forming' | 'waiting' | 'striking' | 'done';
-export const MANEUVER_PHASES: readonly ManeuverPhase[] = ['forming', 'waiting', 'striking', 'done'];
 /** The drum to advance (springs waiting plans and opens fire) and the gong to fall back. */
 export type SignalKind = 'advance' | 'withdraw';
 export const SIGNAL_KINDS: readonly SignalKind[] = ['advance', 'withdraw'];
@@ -190,7 +189,6 @@ export class Maneuvers {
   private readonly runs = new Map<number, { h: number; at: number; open: number; trapped: number }>();
   /** Where each squadron started, for cautious commanders who keep near it. */
   private homes: Map<number, { x: number; z: number }> | null = null;
-  readonly tempers = new Map<number, Temper>();
   private readonly tactician: Tactician;
 
   constructor(private readonly b: Battle) {
@@ -204,7 +202,7 @@ export class Maneuvers {
 
   temper(sq: Squadron | undefined): Temper {
     if (!sq) return 'bold';
-    return this.tempers.get(sq.id) ?? (sq.team === 'japan' ? 'bold' : 'steady');
+    return sq.temper ?? (sq.team === 'japan' ? 'bold' : 'steady');
   }
 
   // ---- giving orders
