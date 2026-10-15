@@ -191,10 +191,10 @@ export class Sound {
   }
 
   /** Called every frame: near-field housekeeping, the speed of the battle and how hot the battle is. */
-  tick(_battle: Battle, camera: PerspectiveCamera, scaled: number) {
+  tick(battle: Battle, camera: PerspectiveCamera, scaled: number) {
     const field = this.field;
     if (!this.ctx || !field || this.muted) return;
-    field.tick(camera, scaled);
+    field.tick(camera, scaled, performance.now(), battle);
     this.weather?.setRumble(field.intensity);
   }
 
