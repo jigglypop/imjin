@@ -589,7 +589,8 @@ export class Effects {
     st.slick -= dt;
     if (st.slick <= 0) {
       st.slick = 0.45;
-      this.wake?.stamp(ship.x, ship.z, ship.heading, L * 0.55, 0.35 + 0.35 * p, 1.6, 1.5);
+      // Churn more than foam: the stamps add up over the seconds of a sinking, and foam that saturates draws a white disc.
+      this.wake?.stamp(ship.x, ship.z, ship.heading, L * 0.55, 0.05 + 0.06 * p, 1.6, 9);
     }
   }
 
@@ -681,7 +682,7 @@ export class Effects {
       this.spray.emit({ x: ship.x + Math.cos(a) * r, y: h + 0.2, z: ship.z + Math.sin(a) * r, vx: Math.cos(a) * rnd(0.5, 3), vy: rnd(6, 15), vz: Math.sin(a) * rnd(0.5, 3), life: rnd(1.2, 2.4), size0: 1.5, size1: rnd(4, 8), alpha: 0.75, r: 0.95, g: 0.98, b: 1, drag: 0.5, lift: -9.8, wind: 0.3 });
     }
     for (let i = 0; i < 3; i += 1) this.splash(ship.x + rnd(-0.3, 0.3) * L * Math.cos(ship.heading), ship.z + rnd(-0.3, 0.3) * L * Math.sin(ship.heading), 1.1);
-    this.wake?.stamp(ship.x, ship.z, ship.heading, L * 0.9, 0.9, 1.2, 1.8);
+    this.wake?.stamp(ship.x, ship.z, ship.heading, L * 0.9, 0.4, 1.2, 4.5);
     this.shakeAt(ship.x, 2, ship.z, 0.35);
   }
 
@@ -728,7 +729,7 @@ export class Effects {
       else if (r < 0.92) this.debris.spawn(Piece.Spar, x, y, z, vx, vy, vz, rnd(3, 6), 0.22, 0.22, life, 0.5);
       else this.debris.spawn(Piece.Chunk, x, y, z, vx, vy, vz, 0.7, 0.7, 0.7, life, 1);
     }
-    this.wake?.stamp(ship.x, ship.z, ship.heading, L * 1.1, 1, 1, 2);
+    this.wake?.stamp(ship.x, ship.z, ship.heading, L * 1.1, 0.45, 1, 4.5);
     this.shakeAt(ship.x, 2, ship.z, 0.3);
     this.cue('gone', ship.x, 0, ship.z, size);
   }
