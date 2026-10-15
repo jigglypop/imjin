@@ -86,7 +86,7 @@ try {
     }
   });
   check('building a kind twice gives the same numbers', () => {
-    for (const kind of ['hall', 'wa_keep4', 'mg_gate', 'choga']) {
+    for (const kind of ['hall', 'wa_keep3', 'mg_gate', 'choga']) {
       const [a, b] = [buildings.buildCampBuilding(kind), buildings.buildCampBuilding(kind)];
       for (const lod of [0, 1]) for (const key of ['position', 'normal', 'uv', 'color', 'mat', 'index']) assert.deepEqual(a[lod][key], b[lod][key], `${kind} ${lod} ${key}`);
     }
@@ -96,7 +96,7 @@ try {
     for (const [kind, [near, far]] of built) console.log(`${kind.padEnd(13)} ${String(tris(near)).padStart(5)} ${String(tris(far)).padStart(5)}`);
   }
   check('every kind a camp uses is a building', () => {
-    for (const f of NAVIES) for (let level = 1; level <= 4; level++) for (const p of settlementPieces(level, f)) assert.ok(built.has(p.kind), `${f} ${level} ${p.kind}`);
+    for (const f of NAVIES) for (let level = 1; level <= 3; level++) for (const p of settlementPieces(level, f)) assert.ok(built.has(p.kind), `${f} ${level} ${p.kind}`);
   });
   // A piece's footprint on the ground in radii, turned as the layer turns it: local x goes to (cos rot, -sin rot).
   const corners = (p) => {
@@ -118,7 +118,7 @@ try {
     return true;
   };
   check("a camp's buildings stand clear of each other and of its wall, inside its reach", () => {
-    for (const f of NAVIES) for (let level = 1; level <= 4; level++) {
+    for (const f of NAVIES) for (let level = 1; level <= 3; level++) {
       const plan = campPlan(level, f);
       const all = plan.pieces.filter((p) => p.kind !== 'pier');
       for (const p of all) for (const [x, z] of corners(p)) assert.ok(Math.hypot(x, z) <= plan.radius + 0.02, `${f} ${level} ${p.kind} reaches ${Math.hypot(x, z).toFixed(2)} of ${plan.radius}`);
@@ -129,9 +129,9 @@ try {
       for (const h of houses) if (!/gate|corner/.test(h.kind)) for (const w of walls) assert.ok(!overlap(corners(h), corners(w)), `${f} ${level}: ${h.kind} at ${h.x.toFixed(2)},${h.z.toFixed(2)} is in the wall`);
     }
   });
-  check('a camp never loses a building as it grows (a keep grows a tier, a stockade gate becomes a gatehouse)', () => {
-    const UPGRADE = { wa_keep3: 'wa_keep4', jo_gate: 'fortgate' };
-    for (const f of NAVIES) for (let level = 1; level < 4; level++) {
+  check('a camp never loses a building as it grows (a stockade gate becomes a gatehouse)', () => {
+    const UPGRADE = { jo_gate: 'fortgate' };
+    for (const f of NAVIES) for (let level = 1; level < 3; level++) {
       const count = (l) => {
         const n = new Map();
         for (const p of settlementPieces(l, f)) if (!pieces.WALL_KINDS.has(p.kind)) n.set(p.kind, (n.get(p.kind) ?? 0) + 1);

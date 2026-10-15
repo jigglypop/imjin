@@ -1,4 +1,4 @@
-// The campaign map as a map: every navy's own camps at levels 1-4, readable settlements and non-overlapping city cards,
+// The campaign map as a map: every navy's own camps at levels 1-3, readable settlements and non-overlapping city cards,
 // ships on their lanes and a replay with ships sailing, plus the wheel/drag frame rate, the idle GPU submit count, the
 // GPU objects left after the campaign closes and a phone that must keep the flat map. Windows Edge + D3D11.
 // Usage: node scripts/grand-world2-browser.mjs --url=http://127.0.0.1:5345/ [--out=shots/grand-world2-2026-10-12] [--only=default,camps,replay,phone]
@@ -32,9 +32,9 @@ const campaign = (camps, extra) => {
 };
 // The first view's war: the player's Yeosu 3, Noryang 2, Bangdap 1; Busan 3 and Angolpo 2 on the other side.
 const opening = campaign([['yeosu', 3], ['noryang', 2], ['bangdap', 1], ['busan', 3], ['angolpo', 2], ['geoje', 2]]);
-// One navy's camps from level 4 down along the south coast.
-const COAST = ['yeosu', 'noryang', 'bangdap', 'sacheon'];
-const of = (faction) => campaign(COAST.map((id, i) => [id, 4 - i, faction]));
+// One navy's camps from level 3 down along the south coast.
+const COAST = ['yeosu', 'noryang', 'bangdap'];
+const of = (faction) => campaign(COAST.map((id, i) => [id, 3 - i, faction]));
 await vite.close();
 
 const browser = await chromium.launch({ channel: 'msedge', headless: true, args: ['--enable-unsafe-webgpu', '--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=d3d11'] });
@@ -161,15 +161,13 @@ try {
       await shot(page, `camps-${faction}-0-default`);
       await zoomTo(page, 'noryang', 36);
       await shot(page, `camps-${faction}-1-levels`);
-      // Level 4 (Yeosu) and level 1 (Sacheon) at the closest zoom.
+      // Each level at the closest zoom: Yeosu 3, Noryang 2, Bangdap 1.
       await zoomTo(page, 'yeosu', 26, 70);
-      await shot(page, `camps-${faction}-2-level4`);
-      await zoomTo(page, 'sacheon', 26, 70);
-      await shot(page, `camps-${faction}-3-level1`);
-      await zoomTo(page, 'bangdap', 26, 70);
-      await shot(page, `camps-${faction}-4-level2`);
+      await shot(page, `camps-${faction}-2-level3`);
       await zoomTo(page, 'noryang', 26, 70);
-      await shot(page, `camps-${faction}-5-level3`);
+      await shot(page, `camps-${faction}-3-level2`);
+      await zoomTo(page, 'bangdap', 26, 70);
+      await shot(page, `camps-${faction}-4-level1`);
       await page.context().close();
     }
   }

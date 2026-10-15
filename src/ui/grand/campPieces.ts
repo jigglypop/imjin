@@ -13,7 +13,7 @@ export type PieceKind =
   // Joseon camps
   | 'palisade' | 'stone' | 'jo_gate' | 'fortgate' | 'hall' | 'giwa' | 'choga' | 'magazine' | 'jo_tower' | 'jo_banner'
   // Japanese camps (wajo)
-  | 'wa_fence' | 'wa_wall' | 'wa_gate' | 'wa_tower' | 'wa_keep3' | 'wa_keep4' | 'wa_tent' | 'wa_banner' | 'wa_hall'
+  | 'wa_fence' | 'wa_wall' | 'wa_gate' | 'wa_tower' | 'wa_keep3' | 'wa_tent' | 'wa_banner' | 'wa_hall'
   // Ming forts
   | 'mg_palisade' | 'mg_brick' | 'mg_gate' | 'mg_corner' | 'mg_watch' | 'mg_barracks' | 'mg_hall' | 'mg_flag' | 'mg_tent'
   | 'pier'
@@ -43,7 +43,7 @@ export const navyOf = (kind: PieceKind): FactionId => (kind.startsWith('wa_') ? 
 export const FOOTPRINT: Record<PieceKind, readonly [number, number]> = {
   palisade: [5, 1.9], stone: [5, 1.9], jo_gate: [3.9, 1.9], fortgate: [7.5, 4.9], hall: [10.6, 7.0], giwa: [6.5, 4.2], choga: [4.5, 3.0],
   magazine: [4.1, 3.5], jo_tower: [3.2, 3.5], jo_banner: [1.8, 0.2],
-  wa_fence: [5, 0.2], wa_wall: [5, 2.6], wa_gate: [8.6, 4.6], wa_tower: [4.7, 4.7], wa_keep3: [6.9, 6.2], wa_keep4: [7.3, 6.6], wa_tent: [2.4, 2.1],
+  wa_fence: [5, 0.2], wa_wall: [5, 2.6], wa_gate: [8.6, 4.6], wa_tower: [4.7, 4.7], wa_keep3: [6.9, 6.2], wa_tent: [2.4, 2.1],
   wa_banner: [1.4, 0.2], wa_hall: [8.6, 4.8],
   mg_palisade: [5, 0.7], mg_brick: [5, 2.1], mg_gate: [8.2, 5.4], mg_corner: [4.6, 4.6], mg_watch: [3.1, 3.1], mg_barracks: [8.0, 4.3],
   mg_hall: [9.9, 6.6], mg_flag: [1.8, 0.2], mg_tent: [2.4, 2.4],

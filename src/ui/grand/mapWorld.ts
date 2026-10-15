@@ -87,9 +87,9 @@ const pierAt = (r: number) => put('pier', -(r + m(FOOTPRINT.pier[1])), 0, SEA_SI
 export interface CampPlan { pieces: Piece[]; radius: number }
 
 /**
- * A Joseon naval camp: a log stockade round an office and huts; then a watchtower, more houses and a landing; then a
- * granite wall with its white parapet and a gate pavilion round the commander's hall, barracks, a powder store and
- * banners; at the top a wider wall, a pavilion in the hall's garden and a second tower.
+ * A Joseon naval camp: a log stockade round an office and huts; then a watchtower, more houses and a landing; at the top
+ * a granite wall with its white parapet and a gate pavilion round the commander's hall, barracks, a powder store and
+ * banners.
  */
 function joseonCamp(level: number): CampPlan {
   const S = Math.PI / 2;
@@ -105,21 +105,19 @@ function joseonCamp(level: number): CampPlan {
       put('jo_tower', -0.32, 0.4, 0), put('jo_banner', 0.42, 0.24, Math.PI),
     ],
   };
-  const r = level === 3 ? 0.84 : 0.98, n = level === 3 ? 18 : 21;
+  const r = 0.84;
   const pieces = [
-    ...ring('stone', r, n, m(15)), put('fortgate', r, 0, 0), pierAt(r),
+    ...ring('stone', r, 18, m(15)), put('fortgate', r, 0, 0), pierAt(r),
     put('hall', -0.3, 0, 0), put('giwa', 0.18, -0.5, S), put('giwa', 0.18, 0.5, -S), put('choga', 0.52, -0.3, S), put('choga', 0.52, 0.3, -S),
     put('magazine', -0.5, 0.38, 0), put('jo_tower', -0.5, -0.4, 0), put('jo_banner', 0.6, -0.16, Math.PI), put('jo_banner', 0.6, 0.16, Math.PI),
   ];
-  if (level >= 4) pieces.push(put('jeongja', -0.02, 0.28, -S), put('jo_tower', 0.3, 0.72, -S), put('giwa', -0.62, 0.0, 0));
   // The gatehouse stands out of the ring by its depth.
   return { radius: r + 0.15, pieces };
 }
 
 /**
- * A Japanese camp (wajo): curtains round tents and nobori; then a residence hall, a turret and a landing; then a stone-
- * based plaster wall with a turret gate round a three-tier keep, barracks and a corner turret; at the top a four-tier
- * keep and a second hall and turret.
+ * A Japanese camp (wajo): curtains round tents and nobori; then a residence hall, a turret and a landing; at the top a
+ * stone-based plaster wall with a turret gate round a three-tier keep, barracks and a corner turret.
  */
 function japanCamp(level: number): CampPlan {
   const S = Math.PI / 2;
@@ -138,21 +136,19 @@ function japanCamp(level: number): CampPlan {
       put('wa_tower', -0.26, 0.36, 0), put('wa_banner', 0.44, 0.26, Math.PI), put('wa_banner', 0.44, -0.08, Math.PI),
     ],
   };
-  const r = level === 3 ? 0.84 : 0.98, n = level === 3 ? 16 : 19;
+  const r = 0.84;
   const pieces = [
-    ...ring('wa_wall', r, n, m(17.2)), put('wa_gate', r, 0, 0), pierAt(r),
-    put(level >= 4 ? 'wa_keep4' : 'wa_keep3', -0.3, 0, 0), put('wa_hall', 0.2, -0.48, S), put('wa_tower', -0.45, 0.4, 0),
+    ...ring('wa_wall', r, 16, m(17.2)), put('wa_gate', r, 0, 0), pierAt(r),
+    put('wa_keep3', -0.3, 0, 0), put('wa_hall', 0.2, -0.48, S), put('wa_tower', -0.45, 0.4, 0),
     put('wa_tent', 0.22, 0.44, 0), put('wa_tent', 0.5, 0.3, 0), put('wa_tent', 0, 0.25, 0), put('wa_tent', 0.3, -0.2, 0),
     put('wa_banner', 0.58, -0.2, Math.PI), put('wa_banner', 0.58, 0.14, Math.PI),
   ];
-  if (level >= 4) pieces.push(put('wa_hall', -0.58, -0.36, 0), put('wa_tower', 0.25, 0.66, -S));
   return { radius: r + 0.14, pieces };
 }
 
 /**
  * A Ming fort: a square stockade round a watchtower, tents and flags; then a brick wall with its gate tower round two
- * barracks and a landing; then a larger square with corner bastions round the yamen hall; at the top a larger yard
- * still with a third barracks.
+ * barracks and a landing; at the top a larger square with corner bastions round the yamen hall.
  */
 function mingCamp(level: number): CampPlan {
   const S = Math.PI / 2;
@@ -163,7 +159,7 @@ function mingCamp(level: number): CampPlan {
       put('mg_tent', 0.12, 0.26, 0), put('mg_flag', 0.32, 0.24, Math.PI),
     ],
   };
-  const h = level === 2 ? 0.6 : level === 3 ? 0.75 : 0.88, n = level === 2 ? 3 : level === 3 ? 4 : 5;
+  const h = level === 2 ? 0.6 : 0.75, n = level === 2 ? 3 : 4;
   const pieces = [...square('mg_brick', h, n, m(16.4)), put('mg_gate', h, 0, 0), pierAt(h)];
   if (level === 2) {
     pieces.push(
@@ -178,14 +174,14 @@ function mingCamp(level: number): CampPlan {
     put('mg_tent', 0.1, -0.2, 0), put('mg_tent', 0.1, 0.2, 0), put('mg_tent', -0.5, -0.45, 0),
     put('mg_flag', 0.56, -0.2, Math.PI), put('mg_flag', 0.56, 0.2, Math.PI),
   );
-  if (level >= 4) pieces.push(put('mg_barracks', -0.3, -0.68, S), put('mg_tent', 0.62, -0.5, 0), put('mg_tent', 0.62, 0.5, 0));
   // The corner bastions stand out of the square's corners.
   return { radius: (h + 0.12) * Math.SQRT2, pieces };
 }
 
 /**
- * The camp of a level (1 to 4) and navy, unturned: its sea side looks west (SEA_SIDE). Every navy's camp has its own
- * look, and a higher level keeps every building of the one below it (a keep grows a tier, a stockade becomes a wall).
+ * The camp of a level (1 to 3, the campaign's highest: a higher one is drawn as 3) and navy, unturned: its sea side
+ * looks west (SEA_SIDE). Every navy's camp has its own look, and a higher level keeps every building of the one below it
+ * (a stockade gate becomes a gatehouse, a stockade a wall).
  */
 export function campPlan(level: number, navy: FactionId): CampPlan {
   if (navy === 'japan') return japanCamp(level);

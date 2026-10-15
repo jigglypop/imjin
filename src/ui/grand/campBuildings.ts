@@ -728,7 +728,6 @@ const KITS: Record<PieceKind, (k: Kit) => void> = {
   palisade, stone: stoneWall, jo_gate: joGate, fortgate: fortGate, hall, giwa, choga, magazine, jo_tower: joTower, jo_banner: joBanner,
   wa_fence: waFence, wa_wall: waWall, wa_gate: waGate, wa_tower: waTower,
   wa_keep3: (k) => waKeep(k, [[10.4, 8.4, 4.6], [8.0, 6.4, 4.0], [5.8, 4.6, 3.6]]),
-  wa_keep4: (k) => waKeep(k, [[11.2, 9.2, 4.6], [8.8, 7.2, 4.0], [6.6, 5.4, 3.6], [4.8, 3.8, 3.2]]),
   wa_tent: waTent, wa_banner: waBanner, wa_hall: waHall,
   mg_palisade: mgPalisade, mg_brick: mgBrick, mg_gate: mgGate, mg_corner: mgCorner, mg_watch: mgWatch, mg_barracks: mgBarracks, mg_hall: mgHall,
   mg_flag: mgFlag, mg_tent: mgTent,
