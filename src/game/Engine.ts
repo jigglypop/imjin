@@ -1558,7 +1558,7 @@ export class Engine {
   }
 
   /** A fleet's nerve as the player can see it: the ships it has in view, under the battle depth rules. */
-  fleetMorale(team: Team): FleetMorale {
+  private fleetMorale(team: Team): FleetMorale {
     const b = this.battle;
     let n = 0;
     let level = 0;

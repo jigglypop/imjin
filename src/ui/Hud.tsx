@@ -927,7 +927,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
               <Icon name="chevronDown" size={14} />
             </button>
           ) : (
-            <div className={`balance glass${snap.conquest ? ' balance--cq' : ''}`}>
+            <div className={`balance glass${snap.conquest ? ' balance--cq' : ''}${snap.morale ? ' balance--nerve' : ''}`}>
               <div className="bal-row">
                 <span className="bal-side bal-side--own">
                   <i className="bal-mark" />

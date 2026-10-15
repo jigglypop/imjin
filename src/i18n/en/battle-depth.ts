@@ -14,6 +14,7 @@ export const EN_BATTLE_DEPTH: Record<string, string> = {
   // The rally drum
   '지금은 북을 울릴 수 없습니다 · 부대장선이 없거나 북이 쉬는 중입니다': 'The drum cannot beat now · the squadron has lost its leader or the drum is resting',
   '북을 울려 {n}개 부대를 재집결합니다': 'The drums beat · {n} squadrons rally',
+  '재집결 북 · 고른 부대의 지휘선이 북을 울립니다': 'Rally drum · the command ships of the selected squadrons beat it',
 
   // Callouts
   '적 함선 {n}척 패주': '{n} enemy ships routing',

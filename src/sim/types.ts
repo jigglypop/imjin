@@ -116,6 +116,8 @@ export type GunState = {
   fireDelay: number;
   /** Remaining rounds, including fractional magazine resupply; firing requires a whole round. */
   ammo: number;
+  /** The ship this gun was last laid on; -1 a blind volley, -2 a bombardment. Not sent to online clients. */
+  target?: number;
 };
 
 /** `morale` scales how well a crew bears losses and how quickly its commander steadies it (the campaign's 통솔 and veterans). */

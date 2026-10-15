@@ -293,6 +293,15 @@
   color: var(--bad);
 }
 
+/* The nerve row's word sits over the middle of the panel's lower edge: room for the fold pull under it. */
+.app .hud .balance.balance--nerve {
+  padding-bottom: 14px;
+}
+
+.app.app--touch .hud .balance.balance--nerve {
+  padding-bottom: 17px;
+}
+
 .bal-nerve-label {
   font-size: 11px;
   font-weight: 500;

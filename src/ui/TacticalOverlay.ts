@@ -30,7 +30,9 @@ const ARC_CONE = 0.3;
 const RING_STEPS = 64;
 
 /** `solid` marks a crew's state, filled in its colour; the player's own troubles are outlined, a quieter second rank. */
-type Mark = { x: number; y: number; scale: number; icons: { name: string; color: string; solid: boolean }[] };
+type Icon = { name: string; color: string; solid: boolean; count: number };
+/** `count` is how many ships in the same state a merged crew-state icon stands for; 0 hides one merged into another. */
+type Mark = { x: number; y: number; scale: number; icons: Icon[] };
 type Point = { x: number; y: number };
 
 /**
@@ -126,7 +128,7 @@ export class TacticalOverlay {
     if (foe) drew = this.drawArcs(foe, FOE) || drew;
     const lines = own.slice(0, isTouchDevice ? 1 : MAX_TARGET_LINES);
     for (const s of lines) {
-      const target = b.get(s.targetId);
+      const target = b.get(aimedAt(s));
       if (!b.isActive(target) || !shipObserved(b, team, target)) continue;
       drew = this.drawTargetLine(s, target, OWN, 0.78, 1.5) || drew;
     }
@@ -134,7 +136,7 @@ export class TacticalOverlay {
     if (hovered && hovered.team !== team && b.isActive(hovered) && shipObserved(b, team, hovered)) {
       let n = 0;
       for (const s of b.ships) {
-        if (s.team !== team || s.targetId !== hovered.id || !b.isActive(s) || n >= MAX_TARGET_LINES) continue;
+        if (s.team !== team || aimedAt(s) !== hovered.id || !b.isActive(s) || n >= MAX_TARGET_LINES) continue;
         n += 1;
         if (!lines.includes(s)) this.drawTargetLine(s, hovered, OWN, 0.34, 1);
       }
@@ -314,13 +316,13 @@ export class TacticalOverlay {
       if (!b.isActive(s) || !shipObserved(b, team, s)) continue;
       const icons: Mark['icons'] = [];
       if (depth) {
-        if (s.moraleState === 'routing') icons.push({ name: 'rout', color: BAD, solid: true });
-        else if (s.moraleState === 'wavering') icons.push({ name: 'waver', color: WARN, solid: true });
-        else if (s.moraleState === 'rallying') icons.push({ name: 'drum', color: GOOD, solid: true });
+        if (s.moraleState === 'routing') icons.push({ name: 'rout', color: BAD, solid: true, count: 1 });
+        else if (s.moraleState === 'wavering') icons.push({ name: 'waver', color: WARN, solid: true, count: 1 });
+        else if (s.moraleState === 'rallying') icons.push({ name: 'drum', color: GOOD, solid: true, count: 1 });
       }
       if (s.team === team) {
-        if (s.fire > 0.25) icons.push({ name: 'flame', color: BAD, solid: false });
-        if (s.guns.length && lowOnShot(s)) icons.push({ name: 'shot', color: QUIET, solid: false });
+        if (s.fire > 0.25) icons.push({ name: 'flame', color: BAD, solid: false, count: 1 });
+        if (s.guns.length && lowOnShot(s)) icons.push({ name: 'shot', color: QUIET, solid: false, count: 1 });
       }
       if (!icons.length) continue;
       const dist = Math.hypot(s.x - cam.x, s.spec.height - cam.y, s.z - cam.z);
@@ -336,7 +338,21 @@ export class TacticalOverlay {
     if (this.marks.length > MAX_MARKS) this.marks.sort((p, q) => q.scale - p.scale).length = MAX_MARKS;
     const size = isTouchDevice ? 26 : 22;
     const ctx = this.ctx;
+    // In a crowd, ships in the same state share one mark with their number on it, so the marks never bury the ships.
+    const shown: { m: Mark; icon: Icon }[] = [];
     for (const m of this.marks) {
+      const icon = m.icons[0]!;
+      if (!icon.solid) continue;
+      const reach = size * m.scale * 0.8;
+      const near = shown.find((p) => p.icon.name === icon.name && (p.m.x - m.x) ** 2 + (p.m.y - m.y) ** 2 < reach * reach);
+      if (near) {
+        near.icon.count += 1;
+        icon.count = 0;
+      } else shown.push({ m, icon });
+    }
+    for (const m of this.marks) {
+      const icons = m.icons.filter((icon) => icon.count > 0);
+      if (!icons.length) continue;
       const d = size * m.scale;
       const step = d + 3;
       const lift = 7 * m.scale;
@@ -347,13 +363,32 @@ export class TacticalOverlay {
       ctx.lineWidth = 1;
       ctx.strokeStyle = 'rgba(241, 243, 245, 0.45)';
       ctx.stroke();
-      let x = m.x - ((m.icons.length - 1) * step) / 2;
-      for (const icon of m.icons) {
+      let x = m.x - ((icons.length - 1) * step) / 2;
+      for (const icon of icons) {
         this.badge(x, m.y - lift - d / 2, icon.solid ? d : d * 0.86, icon.name, icon.color, icon.solid);
+        if (icon.count > 1) this.tally(x + d * 0.42, m.y - lift - d * 0.12, icon.count, d);
         x += step;
       }
     }
     return true;
+  }
+
+  /** The number of ships a merged mark stands for, on a small dark tab at its lower right. */
+  private tally(x: number, y: number, n: number, d: number) {
+    const ctx = this.ctx;
+    const text = String(n);
+    const size = Math.round(d * 0.46);
+    ctx.font = `700 ${size}px Pretendard, system-ui, sans-serif`;
+    const w = Math.max(size + 2, ctx.measureText(text).width + 6);
+    ctx.beginPath();
+    ctx.roundRect(x - w / 2, y - size / 2 - 1, w, size + 2, (size + 2) / 2);
+    ctx.fillStyle = 'rgba(14, 16, 20, 0.92)';
+    ctx.fill();
+    ctx.fillStyle = '#f1f3f5';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y + 0.5);
+    ctx.textAlign = 'start';
   }
 
   /**
@@ -386,6 +421,13 @@ export class TacticalOverlay {
     ctx.fill(glyph.fill);
     ctx.restore();
   }
+}
+
+/** The ship a ship is shooting at: its target, or else the one its guns last laid on (a ship keeping its place in a formation). */
+function aimedAt(s: Ship) {
+  if (s.targetId) return s.targetId;
+  for (const g of s.guns) if (g.target && g.target > 0) return g.target;
+  return 0;
 }
 
 /** A ship whose guns hold under a fifth of a full load of rounds between them. */
