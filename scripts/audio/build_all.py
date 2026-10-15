@@ -9,7 +9,12 @@ TARGET = {   # max momentary loudness (LUFS) per class
  'cannon_heavy': -13.5, 'cannon_medium': -15.0, 'cannon_small': -17.0, 'cannon_far': -19.0,
  'broadside': -12.0, 'explosion': -11.5, 'impact_wood': -15.0, 'splash': -18.0,
  'whoosh': -17.0, 'drum': -16.0, 'musket_volley': -20.0, 'creak': -24.0, 'sink': -20.0,
+ 'buk': -17.0, 'taiko': -16.0, 'gong': -21.0, 'horn': -22.0, 'warcry': -23.0, 'cheer': -24.0,
+ 'clash': -21.0, 'overboard': -23.0, 'arrows': -25.0,
 }
+
+# The fleet-command sounds are voices and noise: 64 kbps is plenty and keeps the bank small.
+KBPS = {c: 64 for c in ('buk', 'taiko', 'gong', 'horn', 'warcry', 'cheer', 'clash', 'overboard', 'arrows')}
 
 def cls(name): return name.rsplit('_', 1)[0]
 
@@ -40,7 +45,9 @@ def finish(name, x, ceiling=-1.5):
 
 if __name__ == "__main__":
     use_cache = '--cache' in sys.argv
-    if use_cache:
+    if '--command' in sys.argv:
+        R = recipes.build_command()   # only the fleet-command sounds; needs only their sources in raw/
+    elif use_cache:
         R = {os.path.basename(p)[:-4]: np.load(p) for p in sorted(os.popen('ls proto/raw/*.npy').read().split())}
     else:
         R = build_raw()
@@ -50,7 +57,7 @@ if __name__ == "__main__":
         y, info = finish(n, R[n])
         wav = f'{OUT}/{n}.wav'; mp3 = f'{OUT}/{n}.mp3'
         dsp.write_wav(wav, y)
-        dsp.encode_mp3(y, mp3, 96)
+        dsp.encode_mp3(y, mp3, KBPS.get(cls(n), 96))
         d = dsp.load(mp3)           # what a browser will decode (ffmpeg's mp3 decoder)
         ev = evalx.evaluate(y, n)
         evd = evalx.evaluate(d, n)
