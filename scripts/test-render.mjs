@@ -55,7 +55,7 @@ async function bundle(name, contents, fixtures = {}) {
 }
 
 const texture = () => ({ disposed: 0, dispose() { this.disposed += 1; } });
-const sky = (name) => ({ name, background: texture(), environment: texture(), info: {} });
+const sky = (name) => ({ name, view: texture(), environment: texture(), info: {} });
 const aborted = (error) => error?.name === 'AbortError';
 let passed = 0;
 async function check(name, test) {
@@ -75,8 +75,9 @@ try {
     export { WakeMap } from './src/ocean/WakeMap.ts';
     export { pointVisible } from './src/sim/visibility.ts';
     export { PerspectiveCamera } from 'three/webgpu';`, {
-    'render/sky.ts': `export const SKY_PRESETS = Object.fromEntries(['afternoon','day','sunset','overcast','night'].map(name => [name,{name,night:0}]));
-      export const loadSky = (...args) => globalThis.__renderSky(...args);`,
+    'render/sky.ts': `export const SKY_PRESETS = Object.fromEntries(['afternoon','day','sunset','overcast','night'].map(name => [name,{name,night:0,clouds:{}}]));
+      export const loadSky = (...args) => globalThis.__renderSky(...args);
+      export const viewTexture = () => ({ dispose() {} });`,
     'terrain/Terrain.ts': 'export class Terrain { static load(...args) { return globalThis.__renderTerrain(...args); } }',
     'ocean/Ocean.ts': 'export class Ocean { mesh = {}; dispose() {} }',
     'fx/Crew.ts': 'export const crewAssets = () => Promise.resolve(new Map()); export class Crew { group = {}; dispose() {} }',
@@ -85,7 +86,7 @@ try {
     'ships/ShipRenderer.ts': 'export const CUT_CAP = 1, LOD_COUNT = 3; export const modelKey = (kind) => kind; export class ShipRenderer {} export const loadShipAssets = () => Promise.resolve({}); export const releaseShipAssets = () => Promise.resolve();',
   });
   const base = () => Object.assign(Object.create(Engine.prototype), {
-    disposed: false, ready: true, loading: null, skyLoading: null, sky: null, eq: { hdriSize: '2k' },
+    disposed: false, ready: true, loading: null, skyLoading: null, sky: null, eq: { skySize: 'small' },
     conquestSetup: null, faction: 'joseon', scene: { add() {} }, options: {}, minimap: {},
     rts: { detach() {} }, camera: { position: { x: 0, y: 0, z: 0 } }, renderer: { dispose: () => Promise.resolve() },
     wake: { dispose() {} }, publish() {},
@@ -139,7 +140,7 @@ try {
     await first;
     assert.deepEqual(engine.applied, ['night']);
     assert.equal(engine.skyName, 'night');
-    assert.equal(stale.background.disposed, 1);
+    assert.equal(stale.view.disposed, 1);
     const third = engine.setSky('overcast');
     await engine.setSky('night');
     assert.equal(downloads[2].signal.aborted, true);
@@ -342,7 +343,7 @@ try {
     await rejected;
     assert.deepEqual(freed, { wake: 1, cloud: 1, renderer: 1 });
     assert.equal(terrain.disposed, 1);
-    assert.equal(loaded.background.disposed, 1);
+    assert.equal(loaded.view.disposed, 1);
     assert.equal(engine.ready, false);
   });
 
@@ -388,31 +389,55 @@ try {
     terrainLoad.resolve(terrain);
     await rejected;
     await Promise.resolve();
-    assert.equal(late.background.disposed, 1);
+    assert.equal(late.view.disposed, 1);
     assert.equal(late.environment.disposed, 1);
     assert.equal(terrain.disposed, 1);
   });
 
-  const { loadSky, SKY_PRESETS } = await bundle('sky', "export { loadSky, SKY_PRESETS } from './src/render/sky.ts';", {
-    'HDRLoader.js': 'export class HDRLoader { setDataType() {} loadAsync() { return globalThis.__hdrDownload; } }',
-  });
-  await check('cancelled HDR cannot mutate reused textures and releases its source', async () => {
-    const download = defer();
-    globalThis.__hdrDownload = download.promise;
+  const { loadSky, SKY_PRESETS, lightDirection, Atmosphere, hazeForFog } = await bundle('sky', `
+    export { loadSky, SKY_PRESETS, lightDirection } from './src/render/sky.ts';
+    export { Atmosphere, hazeForFog } from './src/render/atmosphereModel.ts';`);
+  await check('a cancelled sky cannot mutate the textures it would reuse', async () => {
     const controller = new AbortController();
-    const backgroundImage = { width: 4, height: 2 };
-    const environmentData = new Uint16Array([123]);
-    const reuse = { background: { image: backgroundImage }, environment: { image: { data: environmentData } } };
-    const loading = loadSky(SKY_PRESETS.night, '2k', reuse, controller.signal);
+    const viewData = new Uint16Array([123]);
+    const environmentData = new Uint16Array([456]);
+    const reuse = { view: { image: { data: viewData, width: 128, height: 96 } }, environment: { image: { data: environmentData, width: 256, height: 128 } } };
+    const loading = loadSky(SKY_PRESETS.night, 'small', reuse, controller.signal);
     const rejected = assert.rejects(loading, aborted);
     controller.abort();
-    const source = texture();
-    source.image = { width: 4, height: 2, data: new Uint16Array(32) };
-    download.resolve(source);
     await rejected;
-    assert.equal(reuse.background.image, backgroundImage);
+    assert.equal(reuse.view.image.data, viewData);
     assert.equal(reuse.environment.image.data, environmentData);
-    assert.equal(source.disposed, 1);
+  });
+
+  await check('a new sky is written into the textures of the previous one', async () => {
+    const first = await loadSky(SKY_PRESETS.afternoon, 'small');
+    const filtered = first.environment.pmremVersion;
+    const second = await loadSky(SKY_PRESETS.overcast, 'small', first);
+    assert.equal(second.view, first.view);
+    assert.equal(second.environment, first.environment);
+    assert.ok(second.environment.pmremVersion > filtered, 'the reflections are filtered again');
+    for (const name of Object.keys(SKY_PRESETS)) {
+      const { info } = await loadSky(SKY_PRESETS[name], 'small', first);
+      assert.ok(info.ambientLum > 0 && Number.isFinite(info.ambientLum), `${name} ambient`);
+      assert.ok(info.sunIrradiance.x >= 0 && Number.isFinite(info.sunIrradiance.length()), `${name} sun`);
+      // The light keeps the bearing the battles were laid out under, so a battle's map turns as it always did.
+      assert.ok(info.sunDir.distanceTo(lightDirection(SKY_PRESETS[name])) < 1e-9, `${name} light`);
+    }
+  });
+
+  await check('the clear sky is bluer overhead than at the horizon, and the low sun reddens', () => {
+    const clear = new Atmosphere({ light: [0.6, 0.6, 0.53], haze: hazeForFog(SKY_PRESETS.day.fogDensity) });
+    const zenith = clear.radiance(0, 1, 0, [0, 0, 0]);
+    const horizon = clear.radiance(-0.75, 0.01, -0.66, [0, 0, 0]);
+    assert.ok(zenith[2] / zenith[0] > horizon[2] / horizon[0], 'the haze whitens the horizon');
+    const low = new Atmosphere({ light: [0.99, 0.08, 0], haze: hazeForFog(SKY_PRESETS.sunset.fogDensity) }).lightAtSea([0, 0, 0]);
+    const high = clear.lightAtSea([0, 0, 0]);
+    assert.ok(low[0] / low[2] > high[0] / high[2] * 2, 'a sun near the horizon reaches the sea red');
+    const deck = new Atmosphere({ light: [0.6, 0.6, 0.53], haze: 30, direct: 0.1 });
+    assert.ok(deck.deck > 0, 'an overcast lights the haze from its underside');
+    const glare = (a) => a.radiance(0.6, 0.05, 0.53, [0, 0, 0])[1] / a.radiance(-0.6, 0.05, -0.53, [0, 0, 0])[1];
+    assert.ok(glare(deck) - 1 < (glare(new Atmosphere({ light: [0.6, 0.6, 0.53], haze: 30 })) - 1) / 3, 'no sun glare through the deck');
   });
 
   const { SelectScene, TextureLoader, PerspectiveCamera } = await bundle('select', `
