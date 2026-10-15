@@ -21,7 +21,7 @@ export const NORYANG_INTRO: Scene = {
   fadeIn: 3,
   shots: [
     // The moon on a long lens over the Japanese fleet's lanterns.
-    { dur: 12, cam: { type: 'orbit', at: at(japan, 'moon'), yaw: [Math.PI + 0.05, Math.PI - 0.02], pitch: 0.012, dist: [1500, 1320], lift: 4 }, fov: [19, 17], tilt: 0.19 },
+    { dur: 12, cam: { type: 'orbit', at: at(japan, 'moon'), yaw: [Math.PI + 0.05, Math.PI - 0.02], pitch: 0.012, dist: [1500, 1320], lift: 4 }, fov: [23, 21], tilt: 0.12 },
     // Low under the stern pavilion of the Joseon flagship, the commander's deck against the night.
     { dur: 10, cam: { type: 'track', at: at(yi), from: [-38, -1.6, 24], to: [-27, -1.2, 18], look: [-5, 5.5, 0] }, fov: 30, tilt: 0.04, aperture: 0.7 },
     { dur: 9, cam: { type: 'track', at: at(yi), from: [58, 1.5, -30], to: [40, 1, -21], look: [-5, 5.5, 0] }, fov: 26, aperture: 0.9 },
@@ -30,7 +30,7 @@ export const NORYANG_INTRO: Scene = {
     // Ahead of Shimazu's flagship, the fleet coming on behind it.
     { dur: 10, cam: { type: 'orbit', at: at(shimazu), yaw: [0.28, 0.12], pitch: [0.02, 0.03], dist: [230, 150], lift: 7 }, fov: 30 },
     // The plan of the strait from above, as the films lay out the fleets before the fight.
-    { dur: 11, cam: { type: 'orbit', at: at(group(yi, chen, shimazu), { toward: shimazu }), yaw: [Math.PI + 0.25, Math.PI + 0.1], pitch: [1.0, 1.1], dist: [3000, 2700] }, fov: 36 },
+    { dur: 11, cam: { type: 'orbit', at: at(group(yi, chen, shimazu), { toward: shimazu }), yaw: [Math.PI + 0.25, Math.PI + 0.1], pitch: [0.92, 1.0], dist: [3500, 3200] }, fov: 36 },
     // Behind the flagship, looking where it sails: the title.
     { dur: 12, cam: { type: 'orbit', at: at(yi, { toward: japan }), yaw: [Math.PI + 0.3, Math.PI + 0.14], pitch: [0.045, 0.065], dist: [92, 122], lift: [6, 10] }, fov: 30 },
   ],
