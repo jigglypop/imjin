@@ -40,7 +40,7 @@ const deg = Math.PI / 180;
 export const SKY_PRESETS: Record<SkyPresetName, SkyPreset> = {
   afternoon: { label: '오후', azimuth: 49.39 * deg, elevation: 15 * deg, exposure: 0.95, brightness: 1, fogDensity: 0.00007, sunRatio: 17, sunThrough: 1, axisOffset: 1.15, night: 0, clouds: { coverage: 0.42, base: 1300, top: 3500, density: 0.03 } },
   day: { label: '한낮', azimuth: 34.28 * deg, elevation: 48 * deg, exposure: 0.95, brightness: 1.05, fogDensity: 0.00006, sunRatio: 12, sunThrough: 1, axisOffset: 1.3, night: 0, clouds: { coverage: 0.38, base: 1500, top: 3800, density: 0.03 } },
-  sunset: { label: '노을', azimuth: 38.5 * deg, elevation: 5 * deg, exposure: 1.0, brightness: 0.8, fogDensity: 0.00009, sunRatio: 9, sunThrough: 1, axisOffset: 0.5, night: 0, clouds: { coverage: 0.44, base: 1600, top: 3400, density: 0.03 } },
+  sunset: { label: '노을', azimuth: 38.5 * deg, elevation: 5 * deg, exposure: 1.0, brightness: 0.6, fogDensity: 0.00009, sunRatio: 9, sunThrough: 1, axisOffset: 0.5, night: 0, clouds: { coverage: 0.44, base: 1600, top: 3400, density: 0.03 } },
   overcast: { label: '흐림', azimuth: 29.71 * deg, elevation: 23 * deg, exposure: 1.0, brightness: 0.85, fogDensity: 0.00018, sunRatio: 0.9, sunThrough: 0.12, axisOffset: 1.15, night: 0, clouds: { coverage: 0.92, base: 1100, top: 2500, density: 0.045 } },
   night: { label: '달밤', azimuth: 36.04 * deg, elevation: 14 * deg, exposure: 1.0, brightness: 0.085, fogDensity: 0.00011, sunRatio: 14, sunThrough: 1, axisOffset: 0.4, night: 1, clouds: { coverage: 0.36, base: 1500, top: 3300, density: 0.03 } },
 };
@@ -165,24 +165,35 @@ export function buildSky(preset: SkyPreset, size: SkySize): BuiltSky {
       env[o + 3] = 1;
     }
   }
-  const skyAmbient = new Vector3(ambR / ambW, ambG / ambW, ambB / ambW);
+  const tint = preset.night > 0 ? MOONLIGHT : DAYLIGHT;
+  const skyAmbient = new Vector3(ambR / ambW, ambG / ambW, ambB / ambW).multiply(new Vector3(...tint));
   const ambientLum = Math.max(1e-6, 0.2126 * skyAmbient.x + 0.7152 * skyAmbient.y + 0.0722 * skyAmbient.z);
-  const through = [sun[0] * preset.sunThrough, sun[1] * preset.sunThrough, sun[2] * preset.sunThrough] as Rgb;
+  const through = [sun[0] * preset.sunThrough * tint[0], sun[1] * preset.sunThrough * tint[1], sun[2] * preset.sunThrough * tint[2]] as Rgb;
   const ratio = lum(through) / ambientLum;
   const k = ratio > preset.sunRatio ? preset.sunRatio / ratio : 1;
   const sunIrradiance = new Vector3(through[0] * k, through[1] * k, through[2] * k);
+  const horizonColor = new Vector3(horR / horW, horG / horW, horB / horW).multiply(new Vector3(...tint));
   return {
-    view: toHalf(view),
-    env: toHalf(env),
+    view: toHalf(view, tint),
+    env: toHalf(env, tint),
     viewSize: [vw, vh],
     envSize: [ew, eh],
-    info: { sunDir: light, sunIrradiance, skyAmbient, horizon: new Vector3(horR / horW, horG / horW, horB / horW), ambientLum },
+    info: { sunDir: light, sunIrradiance, skyAmbient, horizon: horizonColor, ambientLum },
   };
 }
 
-function toHalf(data: Float32Array) {
+const DAYLIGHT: Rgb = [1, 1, 1];
+/** Moonlight is only sunlight dimmed, but a night scene looks blue to the eye: the films grade it so, and so does the sky. */
+const MOONLIGHT: Rgb = [0.886, 1.01, 1.236];
+
+function toHalf(data: Float32Array, tint: Rgb) {
   const out = new Uint16Array(data.length);
-  for (let i = 0; i < data.length; i += 1) out[i] = DataUtils.toHalfFloat(data[i]!);
+  for (let i = 0; i < data.length; i += 4) {
+    out[i] = DataUtils.toHalfFloat(data[i]! * tint[0]);
+    out[i + 1] = DataUtils.toHalfFloat(data[i + 1]! * tint[1]);
+    out[i + 2] = DataUtils.toHalfFloat(data[i + 2]! * tint[2]);
+    out[i + 3] = DataUtils.toHalfFloat(data[i + 3]!);
+  }
   return out;
 }
 

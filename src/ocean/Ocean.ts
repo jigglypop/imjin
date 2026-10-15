@@ -268,15 +268,25 @@ export class Ocean {
       const gx = float(0).toVar();
       const gz = float(0).toVar();
       const lostSlope = float(0).toVar();
+      const g = fields.gust(p0);
+      const groups = fields.groups(p0);
+      // In the shading each third of the swell rises and falls in sets of its own (the surface itself stays the
+      // battle's, which the hulls ride on), so the long crests break into the irregular sets of a real sea instead of
+      // running as corrugations to the horizon.
+      const setA = mix(float(0.45), float(1.45), groups);
+      const setB = mix(float(0.5), float(1.4), g);
+      const setC = mix(float(1.4), float(0.5), groups);
       Loop(WAVE_COUNT, ({ i }) => {
         const a: any = waveA.element(i);
         const b: any = waveB.element(i);
         const fade = float(1).sub(smoothstep(b.w.mul(0.12), b.w.mul(0.42), footprint));
+        const third = i.mod(3);
+        const sets = select(third.equal(0), setA, select(third.equal(1), setB, setC));
         const theta = a.z.mul(dot(a.xy, p0)).sub(a.w.mul(uTime)).add(b.z);
         const s = sin(theta);
         const c = cos(theta);
-        const qk = b.y.mul(a.z).mul(fade).mul(s);
-        const ka = a.z.mul(b.x).mul(fade).mul(c);
+        const qk = b.y.mul(a.z).mul(fade).mul(s).mul(sets);
+        const ka = a.z.mul(b.x).mul(fade).mul(c).mul(sets);
         sxx.addAssign(qk.mul(a.x).mul(a.x));
         szz.addAssign(qk.mul(a.y).mul(a.y));
         sxz.addAssign(qk.mul(a.x).mul(a.y));
@@ -291,11 +301,11 @@ export class Ocean {
       const dzz = szz.negate().toVar();
       const dxz = sxz.negate().toVar();
       const t = uTime;
-      const g = fields.gust(p0);
-      const groups = fields.groups(p0);
       // Mean square slope of the waves too small for this pixel. Filtering averages their slopes away; what is lost
       // widens the highlight instead, so far water is glossy and its sun path broad rather than glittering with aliasing.
       const lost = float(0).toVar();
+      // Height of the ripple texture's waves (0 to 1), where the Gerstner surface draws them; the wind waves' crests.
+      const ripple = float(0.5).toVar();
       // The finest cascade's compression, kept apart: ripples a hand long wrinkle the foam but do not break into it.
       const fineXX = float(0).toVar();
       const fineZZ = float(0).toVar();
@@ -332,9 +342,13 @@ export class Ocean {
         const uv2 = vec2(p0.x.mul(0.8).sub(p0.y.mul(0.6)), p0.x.mul(0.6).add(p0.y.mul(0.8))).mul(1 / 6.7).add(vec2(t.mul(-0.019), t.mul(0.014)));
         const blend = smoothstep(0.25, 0.75, groups);
         const keep = float(1).div(sqrt(blend.mul(blend).add(float(1).sub(blend).mul(float(1).sub(blend)))));
-        const d1 = mix(texture(detailTex, uv1).xy, texture(detailTex, uv1b).xy, blend).mul(2).sub(1).mul(keep);
+        const r1: any = mix(texture(detailTex, uv1), texture(detailTex, uv1b), blend);
+        const d1 = r1.xy.mul(2).sub(1).mul(keep);
         const d2 = texture(detailTex, uv2).xy.mul(2).sub(1);
-        const near = float(1).sub(smoothstep(30, 1400, dist));
+        // The ripples carry on far out, where their mip levels average them; without them the swell alone mirrors the
+        // sky in long, regular bands.
+        const near = float(1).sub(smoothstep(60, 4000, dist));
+        ripple.assign(r1.z);
         const strength = this.detailStrength.mul(mix(float(0.55), float(1.35), g));
         const slope = d1.mul(0.2).add(d2.mul(0.13)).mul(near).mul(strength);
         dyx.addAssign(slope.x);
@@ -451,8 +465,12 @@ export class Ocean {
       const foamUV = p0.mul(1 / 14).add(N.xz.mul(0.25)).add(vec2(t.mul(0.004), t.mul(-0.003)));
       const foamUV2 = p0.mul(1 / 4.3).add(N.xz.mul(0.12)).sub(vec2(t.mul(0.011), t.mul(0.004)));
       const pattern = texture(foamTex, foamUV).r.mul(0.62).add(texture(foamTex, foamUV2).r.mul(0.38));
-      // Whitecaps break where the gusts blow: in clusters that come and go, not as an even sprinkling.
-      const whitecap = saturate(float(0.86).sub(breaking).mul(2.4)).mul(this.whitecaps).mul(mix(float(0.4), float(1.6), g));
+      // Whitecaps break where the gusts blow: in clusters that come and go, not as an even sprinkling. The swell alone
+      // never folds over far enough to break, so without the FFT cascades the wind waves of the ripple texture whiten
+      // where they ride high on the swell.
+      const folded = saturate(float(0.86).sub(breaking).mul(2.4));
+      const caps = fft ? folded : max(folded, smoothstep(0.7, 0.9, ripple).mul(smoothstep(0.35, 0.8, crest)).mul(0.9));
+      const whitecap = caps.mul(this.whitecaps).mul(mix(float(0.4), float(1.6), g));
       const surf = float(1).sub(smoothstep(0.0, 4.5, depthBelow)).mul(sin(depthBelow.mul(2.2).sub(t.mul(1.6))).mul(0.35).add(0.75));
       const speed = length(flow);
       const whirl = float(0).toVar();
