@@ -5,7 +5,8 @@
 // board (a boarding: crossing and duels), hook (the grappling hooks thrown), swim (men thrown overboard).
 //   --from=x,y,z  camera offset from the man in his ship's frame (x forward, y up, z outboard on his side)
 //   --flip=1      the Japanese ship on the other side of the panokseon (the other side lit)
-//   --kind=atakebune  the Japanese ship (sekibune by default)
+//   --kind=atakebune  the Japanese ship (sekibune by default);  --role=N  follow a man of another station
+//   (0 oar, 1 gun, 2 shot, 3 melee, 4 officer, 5 drum), also to compare with a build that has no drummer
 //   --look=y      height above the man's feet the camera looks at;  --q=high|medium|low;  --w, --h viewport
 import { chromium } from 'playwright-core';
 import { mkdir } from 'node:fs/promises';
@@ -187,7 +188,7 @@ const info = await page.evaluate(
     };
     return { a: a.spec.kind, d: d.spec.kind, subject: subject.spec.kind, grappled: a.grappledWith === d.id };
   },
-  { scene, role: ROLE[scene], from, look, args },
+  { scene, role: args.role === undefined ? ROLE[scene] : Number(args.role), from, look, args },
 );
 console.log('setup', JSON.stringify(info));
 await page.waitForTimeout(Number(args.pre ?? 2500));
@@ -223,7 +224,7 @@ for (let i = 0; i < shots; i += 1) {
         }
       }
     }
-    for (const r of c.rosters.values()) bodies += r.corpses.length;
+    for (const r of c.rosters.values()) bodies += r.corpses?.length ?? 0;
     const { a, d } = window.__pair;
     return { acts: Object.entries(acts).sort((p, q) => q[1] - p[1]).map(([k, v]) => `${k}:${v}`).join(" "), ships: [a, d].map((s) => `${Math.round(s.crew)}${s.struck ? 'S' : ''}${s.alive ? '' : 'X'}:${s.moraleState}`).join(' '), us: bo.figs.filter((f) => f.used).slice(0, 4).map((f) => [f.u.toFixed(1), (f.d1 + f.d2 + f.d3).toFixed(1), f.style, f.dir].join(':')).join(' '), fights: bo.fights.filter((f) => f.used).map((f) => `${f.mode}:${f.dormant ? 'z' : ''}${Math.round(c.time - f.t0)}:${f.acc.toFixed(1)}`).join(','), grapple: [...c.rosters.keys()].map((id) => window.__engine.battle.get(id)).filter((s) => s && s.grappledWith).length, figs: states.join('/'), fallen: bo.fallen.filter((f) => f.used).length, swimming: bo.fallen.filter((f) => f.used && f.swim).length, bodies, arrows: bo.arrows.flying, puffs: bo.puffs.pool.filter((p) => p.used).length, drawn: [...c.assets].map(([k, x]) => `${k}:${x.lods.map((l) => l.count).join('/')}`).join(' ') };
   });

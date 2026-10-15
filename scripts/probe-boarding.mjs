@@ -116,8 +116,7 @@ const info = await page.evaluate(({ kindA, kindD, dist, pitch, yaw, speed, boost
     if (a2) a2.stance = 'board';
     // Under --soft a grapple that is let go is made again, so the fight goes on for the camera.
     if (soft < 1 && gap === null && !a.grappledWith && !a.struck && !d.struck) {
-      b.grappleLock.clear();
-      b.tryGrapple(a, d);
+      a.grappledWith = d.id;
     }
   };
   hold();
