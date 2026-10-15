@@ -149,10 +149,10 @@ export class Clouds {
       const lump = texture3D(noise, q.div(8500)).r;
       const body = clamp(lump.mul(profile).sub(float(1).sub(cover)).div(max(cover, 0.08)), 0, 1);
       if (!detail) return body;
-      const fine = texture3D(noise, q.mul(1 / 1400).add(vec3(0, t.mul(0.004), 0)));
-      const erosion = fine.g.mul(0.625).add(fine.b.mul(0.375));
-      // The edges fray into wisps; deep inside the body the detail barely matters.
-      return clamp(body.sub(erosion.mul(mix(float(0.42), float(0.12), far)).mul(float(1).sub(body))), 0, 1);
+      const fine = texture3D(noise, q.mul(1 / 1100).add(vec3(0, t.mul(0.004), 0)));
+      const erosion = fine.g.mul(0.625).add(fine.b.mul(0.375)).mul(mix(float(0.45), float(0.15), far));
+      // The edges fray into the cauliflower of a cumulus; deep inside the body the detail barely matters.
+      return clamp(body.sub(erosion).div(float(1).sub(erosion)), 0, 1);
     };
 
     const m = new MeshBasicNodeMaterial();
