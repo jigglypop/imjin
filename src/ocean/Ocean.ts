@@ -63,6 +63,7 @@ import { createDetailNormalTexture, createFoamTexture } from './detailNormals';
 import type { WakeMap } from './WakeMap';
 import type { Terrain } from '../terrain/Terrain';
 import { pointLights } from '../render/lights';
+import type { SkyView } from '../render/skyDome';
 import { CASCADES, type FFTWaves } from './FFTWaves';
 import type { CurrentField } from '../sim/current';
 
@@ -154,6 +155,7 @@ export class Ocean {
   constructor(
     private readonly waves: WaveField,
     envTexture: Texture,
+    sky: SkyView,
     private readonly wake: WakeMap,
     terrain: Terrain,
     fft: FFTWaves | null,
@@ -448,10 +450,7 @@ export class Ocean {
       color.assign(mix(color, vec3(0.93, 0.95, 0.96).mul(foamLight), foam.mul(0.92)));
       color.assign(color.mul(float(1).sub(core.clamp(0, 1).mul(0.35))));
 
-      const horizonDir = normalize(vec3(V.x.negate(), 0.035, V.z.negate()));
-      const fogNode = pmremTexture(this.envTexture, horizonDir, float(0.45));
-      pmremNodes.push(fogNode);
-      const fogColor = vec3(fogNode).mul(atmosphere.envIntensity);
+      const fogColor = vec3(sky.horizon(V.negate())).mul(atmosphere.envIntensity);
       const fogAmount = seaFogAmount(dist);
       color.assign(mix(color, fogColor, clamp(fogAmount, 0, 1)));
       const finalColor = min(color, vec3(sunLuma.mul(4).add(60)));
