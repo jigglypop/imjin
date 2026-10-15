@@ -575,7 +575,7 @@ export class Effects {
   private pellets(x: number, y: number, z: number, bx: number, bz: number, damage: number, through: boolean) {
     const sx = -bz;
     const sz = bx;
-    const points = this.n(6 + damage * 0.4);
+    const points = this.n(5 + damage * 0.3);
     const boost = Math.min(2, this.zoomBoost(x, y, z));
     for (let i = 0; i < points; i += 1) {
       const a = rnd(-1.3, 1.3);
@@ -583,7 +583,8 @@ export class Effects {
       const px = x + sx * a + bx * 0.05;
       const py = y + h;
       const pz = z + sz * a + bz * 0.05;
-      this.smoke.emit({ x: px, y: py, z: pz, vx: bx * rnd(1.5, 4) + rnd(-0.6, 0.6), vy: rnd(0.2, 1.2), vz: bz * rnd(1.5, 4) + rnd(-0.6, 0.6), life: rnd(1.2, 2.4), size0: 0.25, size1: rnd(1.1, 1.9), alpha: 0.45, r: 0.62, g: 0.56, b: 0.48, drag: 2, lift: 0.1, wind: 0.6 });
+      // A puff of dust at every other point: the pattern reads as a spray of chips, not a cloud.
+      if (i % 2 === 0) this.smoke.emit({ x: px, y: py, z: pz, vx: bx * rnd(1.5, 4) + rnd(-0.6, 0.6), vy: rnd(0.2, 1.2), vz: bz * rnd(1.5, 4) + rnd(-0.6, 0.6), life: rnd(1.2, 2.4), size0: 0.25, size1: rnd(1.1, 1.9), alpha: 0.45, r: 0.62, g: 0.56, b: 0.48, drag: 2, lift: 0.1, wind: 0.6 });
       if (Math.random() < 0.6) this.debris.spawn(Piece.Splinter, px, py, pz, bx * rnd(2, 6) + rnd(-1.5, 1.5), rnd(1, 4), bz * rnd(2, 6) + rnd(-1.5, 1.5), rnd(0.12, 0.3), rnd(0.5, 1), rnd(0.5, 1), rnd(6, 10), 1.6);
       if (through && Math.random() < 0.5) this.debris.spawn(Piece.Splinter, px, py, pz, -bx * rnd(2, 5), rnd(0.5, 2.5), -bz * rnd(2, 5), rnd(0.1, 0.25), rnd(0.5, 1), rnd(0.5, 1), rnd(6, 10), 1.6);
     }
