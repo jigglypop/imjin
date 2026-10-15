@@ -73,7 +73,7 @@ export class Battlefield {
   private nextFlush = 0;
   private nextBarrage = 0;
   /** Context times before which another sound of that kind is held back: a pass, a blow, a flame or a drum a moment ago masks the next. */
-  private readonly gate = { whoosh: 0, hiss: 0, melee: 0, ignite: 0, drum: 0, cue: 0 };
+  private readonly gate = { whoosh: 0, hiss: 0, melee: 0, ignite: 0, drum: 0, rally: 0, cue: 0 };
   /** Context time of the last voice the player could hear from the near field or the far flush. */
   private lastAudible = -99;
   private camera: Pick<PerspectiveCamera, 'position' | 'quaternion'> | null = null;
@@ -555,6 +555,17 @@ export class Battlefield {
         if (now < this.gate.drum || Math.random() > keep) continue;
         this.gate.drum = now + 1;
         this.drums(1);
+      } else if (e.type === 'drum') {
+        // A squadron leader beating the rally: three strokes from its deck, heard as far as the guns are.
+        const ship = battle.get(e.ship);
+        if (!ship || now < this.gate.rally) continue;
+        const s = this.spatial(camera, ship.x, ship.spec.deck, ship.z);
+        if (s.gain < 0.04) continue;
+        this.gate.rally = now + 2;
+        for (let i = 0; i < 3; i += 1) {
+          const at = now + s.delay + i * 0.38;
+          if (!this.sample('drum', at, { gain: loud(s.gain), pan: s.pan, cutoff: Math.max(900, s.muffle), wet: 0.25 }, 0.3)) voices.drum(at);
+        }
       }
     }
   }

@@ -6,7 +6,7 @@ import { EQUIPMENT_LABEL, equipment, saveEquipmentSetting, type EquipmentSetting
 import { SKY_PRESETS, type SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
 import { setLang, t as tr, useLang, useT } from '../i18n';
-import { pushToast, setTouchBox, useUi, type BattleOrigin, type GameSnapshot, type GunInfo, type PrimaryInfo, type SquadronInfo } from '../state/store';
+import { pushToast, setTouchBox, useUi, type BattleOrigin, type FleetMorale, type GameSnapshot, type GunInfo, type PrimaryInfo, type SquadronInfo } from '../state/store';
 import type { Team } from '../sim/types';
 import { useCompactLayout } from './useCompactLayout';
 import { ConquestBar, CrewPanel, PointPanel } from './ConquestPanels';
@@ -74,7 +74,10 @@ function changeEquipment(next: EquipmentSetting) {
   location.assign(url.toString());
 }
 
-function Stat({ label, value, tone, text }: { label: string; value: number; tone: 'hull' | 'crew' | 'fire'; text: string }) {
+/** How a crew's or a fleet's nerve is named on the HUD when it is not steady (the battle depth rules). */
+const NERVE_WORD: Record<string, string> = { wavering: '동요', routing: '패주', rallying: '재집결', shaken: '동요', broken: '붕괴' };
+
+function Stat({ label, value, tone, text }: { label: string; value: number; tone: 'hull' | 'crew' | 'fire' | 'morale'; text: string }) {
   return (
     <div className="stat">
       <span>{label}</span>
@@ -91,7 +94,34 @@ function shortFleetName(name: string) {
   return name.replace(/^전라좌수영/, '좌수영').replace(/^전라우수영/, '우수영').replace(/^경상우수영/, '경상 우수영');
 }
 
-function Card({ sq, compact, onClick, onDouble }: { sq: SquadronInfo; compact: boolean; onClick: (e: React.MouseEvent) => void; onDouble: () => void }) {
+/**
+ * Each fleet's nerve under its strength bar (the battle depth rules): two meters filling outward from the middle, the
+ * player's to the left and the foe's to the right, amber while a fleet wavers and red once it breaks.
+ */
+function NerveRow({ m }: { m: { own: FleetMorale; foe: FleetMorale } }) {
+  const t = useT();
+  const side = (f: FleetMorale, which: 'own' | 'foe') => {
+    const word = NERVE_WORD[f.state];
+    return (
+      <span className={`bal-nerve-side bal-nerve-side--${which} is-${f.state}`}>
+        {word && which === 'own' && <b>{t(word)}</b>}
+        <span className="bal-nerve-meter">
+          <i style={{ width: `${Math.round(f.level * 100)}%` }} />
+        </span>
+        {word && which === 'foe' && <b>{t(word)}</b>}
+      </span>
+    );
+  };
+  return (
+    <div className="bal-nerve" role="img" aria-label={t('사기 · 아군 {own}% · 적 {foe}%', { own: Math.round(m.own.level * 100), foe: Math.round(m.foe.level * 100) })} data-tip="morale">
+      {side(m.own, 'own')}
+      <span className="bal-nerve-label">{t('사기')}</span>
+      {side(m.foe, 'foe')}
+    </div>
+  );
+}
+
+function Card({ sq, compact, depth, onClick, onDouble }: { sq: SquadronInfo; compact: boolean; depth: boolean; onClick: (e: React.MouseEvent) => void; onDouble: () => void }) {
   const t = useT();
   const lang = useLang();
   return (
@@ -109,6 +139,20 @@ function Card({ sq, compact, onClick, onDouble }: { sq: SquadronInfo; compact: b
             <Icon name="melee" size={13} />
           </div>
         )}
+        {sq.routing > 0 ? (
+          <div className="card-flag card-flag--rout" title={t('{n}척이 달아나고 있습니다', { n: sq.routing })}>
+            <Icon name="rout" size={13} />
+          </div>
+        ) : sq.wavering > 0 ? (
+          <div className="card-flag card-flag--waver" title={t('{n}척이 동요하고 있습니다', { n: sq.wavering })}>
+            <Icon name="waver" size={13} />
+          </div>
+        ) : null}
+        {sq.drum?.beating && (
+          <div className="card-flag card-flag--drum" title={t('북을 울리고 있습니다')}>
+            <Icon name="drum" size={13} />
+          </div>
+        )}
       </div>
       <div className="card-foot">
         <div className="card-name">{compact && lang === 'ko' ? shortFleetName(sq.name) : tName(sq.name)}</div>
@@ -119,12 +163,18 @@ function Card({ sq, compact, onClick, onDouble }: { sq: SquadronInfo; compact: b
         <div className="card-bar">
           <i style={{ width: `${sq.hull * 100}%` }} />
         </div>
+        {depth && sq.alive > 0 && (
+          <div className={`card-bar card-bar--nerve${sq.morale < 0.35 ? ' card-bar--low' : ''}`}>
+            <i style={{ width: `${sq.morale * 100}%` }} />
+          </div>
+        )}
       </div>
     </button>
   );
 }
 
-type OrderDef = { icon: string; label: string; key: string; tip: string; run: () => void; on?: boolean; disabled?: boolean };
+/** `wait` is a cooldown in seconds shown over the icon. */
+type OrderDef = { icon: string; label: string; key: string; tip: string; run: () => void; on?: boolean; disabled?: boolean; wait?: number };
 
 /**
  * Always available, including when a phone folds the larger command sheet. The simplified layout shows a slim strip
@@ -209,7 +259,7 @@ function FleetGroups({ engine, open, onToggle, slim }: { engine: Engine; open: b
  * The order tabs. The open tab is kept by the HUD, so folding the panel away and back does not lose it. `onToggle` folds
  * the grid on a phone and the whole panel on a wide screen.
  */
-function Orders({ engine, p, night, selected, tab, setTab, collapsed, onToggle }: { engine: Engine; p: PrimaryInfo | null; night: boolean; selected: number; tab: Tab; setTab: (tab: Tab) => void; collapsed: boolean; onToggle: () => void }) {
+function Orders({ engine, p, night, selected, drum, tab, setTab, collapsed, onToggle }: { engine: Engine; p: PrimaryInfo | null; night: boolean; selected: number; drum: SquadronInfo['drum'] | undefined; tab: Tab; setTab: (tab: Tab) => void; collapsed: boolean; onToggle: () => void }) {
   const t = useT();
   const input = engine.input;
   const none = selected === 0;
@@ -254,6 +304,8 @@ function Orders({ engine, p, night, selected, tab, setTab, collapsed, onToggle }
         { icon: 'ram', label: '들이받기', key: 'N', tip: 'ram', run: () => input.setStance('ram'), on: p?.stance === 'ram', disabled: none },
         { icon: 'board', label: '백병전 돌입', key: 'B', tip: 'board', run: () => input.setStance('board'), on: p?.stance === 'board', disabled: none },
         { icon: 'repel', label: '백병전 방어', key: 'P', tip: 'repel', run: () => input.repel(), on: !!p && p.repel, disabled: none },
+        // Under the battle depth rules the selection's squadron leader beats the rally drum; it rests between beats.
+        ...(drum !== undefined ? [{ icon: 'drum', label: '재집결', key: 'Shift+R', tip: 'drum', run: () => input.drum(), on: !!drum?.beating, disabled: none || !drum || drum.wait > 0, wait: drum && drum.wait > 0 ? drum.wait : undefined }] : []),
       ],
     },
   };
@@ -276,6 +328,7 @@ function Orders({ engine, p, night, selected, tab, setTab, collapsed, onToggle }
             <button key={o.tip} className={`order ${o.on ? 'order--on' : ''}`} onClick={o.disabled ? undefined : o.run} aria-disabled={o.disabled || undefined} aria-label={`${t(o.label)} (${o.key})`} data-tip={o.tip}>
               <span className="order-icon">
                 <Icon name={o.icon} size={22} />
+                {o.wait !== undefined && <span className="order-wait">{o.wait}</span>}
               </span>
               <span className="order-label">{t(o.label)}</span>
               <kbd>{o.key}</kbd>
@@ -463,6 +516,7 @@ function Detail({ engine, snap, p, portrait }: { engine: Engine; snap: GameSnaps
         <div className="detail-body">
           <Stat label={t('선체')} value={p.hull} tone="hull" text={`${Math.round(p.hull * 100)}%`} />
           <Stat label={t('승조원')} value={p.crew / p.maxCrew} tone="crew" text={`${p.crew}`} />
+          {snap.morale && <Stat label={t('사기')} value={p.morale} tone="morale" text={NERVE_WORD[p.moraleState] ? t(NERVE_WORD[p.moraleState]!) : `${Math.round(p.morale * 100)}%`} />}
           {p.fire > 0.02 && <Stat label={t('화재')} value={p.fire} tone="fire" text={`${Math.round(p.fire * 100)}%`} />}
           {p.damageState && Object.entries(p.damageState).map(([kind, damage]) => damage > 0.015 && <Stat key={kind} label={t(kind === 'flooding' ? '침수' : kind === 'propulsion' ? '추진 손상' : '조타 손상')} value={damage} tone="fire" text={`${Math.round(damage * 100)}%`} />)}
           {p.guns.length > 0 && <GunLights guns={p.guns} />}
@@ -774,7 +828,8 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const p = snap.primary;
   const primaryShip = p ? engine.battle.get(p.id) : undefined;
   const primaryFaction = primaryShip?.spec.faction ?? snap.faction;
-  const primaryPortrait = snap.squadrons.find((s) => s.id === primaryShip?.squadronId)?.portrait
+  const primarySquadron = snap.squadrons.find((s) => s.id === primaryShip?.squadronId);
+  const primaryPortrait = primarySquadron?.portrait
     ?? (primaryFaction === 'japan' ? 'portrait_japan' : primaryFaction === 'ming' ? 'portrait_chenlin' : 'portrait_admiral');
   const enemyTeam: Team = snap.team === 'joseon' ? 'japan' : 'joseon';
   const enemyFaction = snap.squadrons.find((s) => s.team === enemyTeam)?.faction ?? enemyTeam;
@@ -899,6 +954,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                 <i style={{ flexBasis: `${snap.balance * 100}%` }} />
                 <i />
               </div>
+              {snap.morale && <NerveRow m={snap.morale} />}
               {snap.conquest && <ConquestBar c={snap.conquest} />}
               {snap.tide && (
                 <div className={`tide tide--${snap.tide.dir < 0 ? 'flood' : snap.tide.dir > 0 ? 'ebb' : 'slack'}`}>
@@ -1102,7 +1158,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                     <>
                       <div className="cards">
                         {own.map((sq) => (
-                          <Card key={sq.id} sq={sq} compact={compact} onClick={(e) => engine.selectSquadron(sq.id, e.shiftKey)} onDouble={() => engine.focusSquadron(sq.id)} />
+                          <Card key={sq.id} sq={sq} compact={compact} depth={!!snap.morale} onClick={(e) => engine.selectSquadron(sq.id, e.shiftKey)} onDouble={() => engine.focusSquadron(sq.id)} />
                         ))}
                       </div>
                       {wide && <FoldButton className="cards-fold" title={t('장수 패 접기')} onFold={() => setFold('cards', true)} />}
@@ -1122,6 +1178,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                       p={p}
                       night={snap.night}
                       selected={snap.selectedCount}
+                      drum={snap.morale ? primarySquadron?.drum ?? null : undefined}
                       tab={ordersTab}
                       setTab={setOrdersTab}
                       collapsed={compact && ordersCollapsed}

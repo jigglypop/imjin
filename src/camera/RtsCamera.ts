@@ -99,9 +99,11 @@ export class RtsCamera {
       this.keys.delete(e.code);
       return;
     }
+    // Shift+F opens the deck and Shift+R beats the rally drum: neither tilts the camera.
     if (e.shiftKey) {
       this.keys.delete('KeyF');
-      if (e.code === 'KeyF') return;
+      this.keys.delete('KeyR');
+      if (e.code === 'KeyF' || e.code === 'KeyR') return;
     }
     this.keys.add(e.code);
   };

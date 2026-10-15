@@ -230,6 +230,77 @@
   background: var(--enemy-fc, var(--japan));
 }
 
+/* Each fleet's nerve (the battle depth rules): two hairline meters growing outward from the word in the middle, quiet
+   while a fleet holds, amber while it wavers and red once it breaks, with the state named at the outer end. */
+.bal-nerve {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-top: -2px;
+}
+
+.bal-nerve-side {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bal-nerve-meter {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.bal-nerve-meter i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: rgba(241, 243, 245, 0.62);
+  transition: width 0.6s ease, background-color 0.4s;
+}
+
+.bal-nerve-side--own .bal-nerve-meter i {
+  right: 0;
+}
+
+.bal-nerve-side--foe .bal-nerve-meter i {
+  left: 0;
+}
+
+.bal-nerve-side.is-shaken .bal-nerve-meter i {
+  background: var(--warn);
+}
+
+.bal-nerve-side.is-broken .bal-nerve-meter i {
+  background: var(--bad);
+}
+
+.bal-nerve-side b {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--warn);
+}
+
+.bal-nerve-side.is-broken b {
+  color: var(--bad);
+}
+
+.bal-nerve-label {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+
 /* The score panel's fold: a short pull under the middle of its lower edge, like the cards' pull above theirs. */
 .fold-btn.balance-fold {
   position: absolute;
@@ -581,6 +652,10 @@
   background: var(--bad);
 }
 
+.stat-bar--morale i {
+  background: var(--warn);
+}
+
 .stat b {
   font-weight: 600;
   text-align: right;
@@ -788,6 +863,32 @@
   color: var(--bad);
 }
 
+.card-flag--waver {
+  color: var(--warn);
+}
+
+.card-flag--rout {
+  color: var(--bad);
+  box-shadow: inset 0 0 0 1px rgba(207, 150, 134, 0.55);
+}
+
+.card-flag--drum {
+  color: var(--good);
+}
+
+/* Under the hull bar, the squadron's nerve in amber; it turns red when the crews are close to running. */
+.card-bar--nerve {
+  margin-top: 2px;
+}
+
+.card-bar--nerve i {
+  background: var(--warn);
+}
+
+.card-bar--low i {
+  background: var(--bad);
+}
+
 /* ---------------------------------------------------------------- orders */
 
 .fleet-groups {
@@ -934,6 +1035,7 @@
 }
 
 .order-icon {
+  position: relative;
   width: 46px;
   height: 36px;
   border-radius: 10px;
@@ -944,6 +1046,24 @@
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--ink);
   transition: background 0.15s, color 0.15s;
+}
+
+/* Seconds until an order can be given again, pinned to the icon's corner. */
+.order-wait {
+  position: absolute;
+  right: -4px;
+  top: -5px;
+  min-width: 20px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--glass-solid);
+  box-shadow: 0 0 0 1px var(--line-2);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
 }
 
 .order:hover .order-icon {
@@ -1624,6 +1744,17 @@
   color: var(--ink);
 }
 
+/* ---------------------------------------------------------------- the tactical reading drawn under the labels (TacticalOverlay) */
+
+.tactics {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+}
+
 /* ---------------------------------------------------------------- squadron banners over the 3D view (DOM built by SquadronBanners) */
 
 .move-orders {
@@ -1769,6 +1900,25 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--ink-2);
+}
+
+/* A squadron whose crews waver (amber) or run (red), under the battle depth rules. */
+.sqb-nerve {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 -2px;
+}
+
+.sqb-nerve[hidden] {
+  display: none;
+}
+
+.sqb-nerve--waver {
+  color: var(--warn);
+}
+
+.sqb-nerve--rout {
+  color: var(--bad);
 }
 
 .sqb-bar {
