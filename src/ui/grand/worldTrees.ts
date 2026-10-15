@@ -1,6 +1,6 @@
 import { Color, Group, InstancedMesh, MeshBasicNodeMaterial, type BufferGeometry, type Texture } from 'three/webgpu';
 import { treeMaterial, treeShapes } from './hero/trees';
-import type { Cover } from './landLook';
+import type { Cover } from './landCover';
 import { frameU, frameV, worldX, worldZ, type CameraState } from './worldCamera';
 
 // Trees and rocks for the close views of the campaign world, laid on the wooded hills round the point the camera looks

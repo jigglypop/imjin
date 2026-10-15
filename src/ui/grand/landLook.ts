@@ -6,6 +6,7 @@ import { BAND_MARGIN, bakeLand, HEIGHT_RANGE, landFrame, SLOPE_RANGE } from './l
 import { DEM_RECT } from './mapMath';
 import { MAP_ASPECT } from './projection';
 import { MODEL_METRE } from './hero/site';
+import { coverOf, landNoiseData, NOISE, NOISE_SCALE, PALETTE, type Cover } from './landCover';
 
 // The look of the campaign world's land: one shader for the whole DEM (and for the hero camps' smooth patches, which fade
 // into it), so the ground reads as country instead of paper facets. The light comes from a bake of the DEM (landBake.ts:
@@ -16,8 +17,8 @@ import { MODEL_METRE } from './hero/site';
 // ridges, sand and tidal mud along the low shores. Close up, the battle's ground textures add grain; from afar the noise's
 // mipmaps and the footprint fades leave the calm map colours. Unlit like the rest of the map, with its fog.
 
-/** A colour written in sRGB as linear light. */
-const srgb = (r: number, g: number, b: number) => vec3((r / 255) ** 2.2, (g / 255) ** 2.2, (b / 255) ** 2.2);
+/** A colour of the palette (landCover.ts), written in sRGB, as linear light. */
+const srgb = (key: keyof typeof PALETTE) => vec3(...(PALETTE[key].map((c) => (c / 255) ** 2.2) as [number, number, number]));
 
 /** The ground textures worked in close up: grass, rock, sand, woodland floor (the battle's own, 1k). */
 const DETAIL = ['aerial_grass_rock', 'aerial_rocks_02', 'coast_sand_01', 'forest_leaves_02'] as const;
@@ -41,54 +42,12 @@ async function detailTexture(name: string, signal: AbortSignal) {
   return t;
 }
 
-/** The noise texture's side; each channel tiles on it. */
-const NOISE = 256;
-
-/** A cheap hash of a lattice point to 0..1. */
-function hash(ix: number, iz: number, seed: number) {
-  let h = Math.imul(ix | 0, 374761393) ^ Math.imul(iz | 0, 668265263) ^ Math.imul(seed | 0, 1442695041);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
-
-/** Tileable value noise of `period` cells over the texture, at texel (x, y). */
-function value(x: number, y: number, period: number, seed: number) {
-  const fx = (x / NOISE) * period, fy = (y / NOISE) * period;
-  const ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy;
-  const sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
-  const at = (i: number, j: number) => hash(((i % period) + period) % period, ((j % period) + period) % period, seed);
-  const a = at(ix, iy), b = at(ix + 1, iy), c = at(ix, iy + 1), d = at(ix + 1, iy + 1);
-  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
-}
-
-/** Tileable cellular noise: 1 at a jittered point of each of `period` cells, falling to 0 between them (tree crowns). */
-function crowns(x: number, y: number, period: number) {
-  const fx = (x / NOISE) * period, fy = (y / NOISE) * period;
-  const ix = Math.floor(fx), iy = Math.floor(fy);
-  let best = 9;
-  for (let j = -1; j <= 1; j += 1) for (let i = -1; i <= 1; i += 1) {
-    const ci = ix + i, cj = iy + j;
-    const wi = ((ci % period) + period) % period, wj = ((cj % period) + period) % period;
-    const px = ci + 0.15 + 0.7 * hash(wi, wj, 91), py = cj + 0.15 + 0.7 * hash(wi, wj, 92);
-    best = Math.min(best, Math.hypot(fx - px, fy - py));
-  }
-  return Math.max(0, 1 - best / 0.72);
-}
-
 /**
  * The land's noise, four tileable channels: red broad districts, green valleys and stands, blue fine breakup for ragged
  * edges, alpha the crowns of trees. The sea's foam and glint read it too; whoever makes it frees it.
  */
 export function landNoise() {
-  const data = new Uint8Array(NOISE * NOISE * 4);
-  for (let y = 0; y < NOISE; y += 1) for (let x = 0; x < NOISE; x += 1) {
-    const o = (y * NOISE + x) * 4;
-    data[o] = Math.round((value(x, y, 4, 1) * 0.6 + value(x, y, 8, 2) * 0.4) * 255);
-    data[o + 1] = Math.round((value(x, y, 16, 3) * 0.6 + value(x, y, 32, 4) * 0.4) * 255);
-    data[o + 2] = Math.round((value(x, y, 32, 5) * 0.5 + value(x, y, 64, 6) * 0.3 + value(x, y, 128, 7) * 0.2) * 255);
-    data[o + 3] = Math.round(crowns(x, y, 32) * 255);
-  }
-  const tex = new DataTexture(data, NOISE, NOISE, RGBAFormat, UnsignedByteType);
+  const tex = new DataTexture(landNoiseData(), NOISE, NOISE, RGBAFormat, UnsignedByteType);
   tex.wrapS = tex.wrapT = RepeatWrapping;
   tex.magFilter = LinearFilter;
   tex.minFilter = LinearMipmapLinearFilter;
@@ -154,25 +113,6 @@ export interface LocalGround {
   w?: any;
 }
 
-/** The country at a point as the land's look draws it (`LandLook.coverAt`): 0..1 shares, the slope and the height. */
-export interface Cover {
-  wood: number;
-  rock: number;
-  /** Rock that is a crag or a ridge, not a shore. */
-  crag: number;
-  sand: number;
-  farm: number;
-  slope: number;
-  metres: number;
-  /** The broad districts' wander, -0.5..0.5, for what stands on the land to vary by it as the land does. */
-  wander: number;
-}
-
-const smooth = (a: number, b: number, x: number) => {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
-
 export interface LandLook {
   /** The bake (landBake.ts) over the DEM and the close-up ground textures, which it frees. */
   readonly textures: Texture[];
@@ -227,14 +167,15 @@ export async function loadLandLook(metres: Float32Array, noise: DataTexture, sig
     const m: any = p.div(MODEL_METRE);
     const footprint: any = fwidth(m).length();
     const n = (scale: number) => texture(noise, m.div(scale));
-    const broad: any = n(800).r.mul(0.6).add(n(1330).r.mul(0.4));
-    const stand: any = n(400).g;
-    const fine: any = n(128).b;
+    const broad: any = n(NOISE_SCALE.broad).r.mul(0.6).add(n(NOISE_SCALE.broad2).r.mul(0.4));
+    const stand: any = n(NOISE_SCALE.stand).g;
+    const fine: any = n(NOISE_SCALE.fine).b;
     const wander: any = broad.mul(0.65).add(stand.mul(0.35)).sub(0.5);
     const rag: any = fine.sub(0.5).add(stand.sub(0.5).mul(0.6));
 
-    // Woods on the slopes and the hills, their edges ragged (coverAt above follows the same rules for the trees); bare rock on the steepest faces and the high ridges; sand
-    // and mud on the low flat shores; farmland on the low flat ground; grass and scrub elsewhere.
+    // Woods on the slopes and the hills, their edges ragged; bare rock on the steepest faces and the high ridges; sand and
+    // mud on the low flat shores; farmland on the low flat ground; grass and scrub elsewhere (landCover.ts `coverOf` follows
+    // the same rules on the CPU).
     const woodsAt = max(smoothstep(0.26, 0.55, slope.add(wander.mul(0.22))), smoothstep(70, 190, metres.add(wander.mul(90))));
     let wood: any = smoothstep(0.38, 0.62, woodsAt.add(rag.mul(0.45)));
     // Granite where the land drops to the sea, as along the whole south coast, besides the crags and the ridges.
@@ -252,7 +193,7 @@ export async function loadLandLook(metres: Float32Array, noise: DataTexture, sig
     wood = wood.mul(float(1).sub(rock)).mul(float(1).sub(sand));
 
     // Open ground: grass and scrub, drier in some districts.
-    const open: any = mix(srgb(120, 146, 70), srgb(156, 150, 90), smoothstep(0.6, 0.9, broad).mul(0.7));
+    const open: any = mix(srgb('grass'), srgb('scrub'), smoothstep(0.6, 0.9, broad).mul(0.7));
     // Farmland: a patchwork of plots in rows turned with the district, each its own crop, with darker bunds between; the
     // plots give way to their mean colour once a pixel covers a fair share of one.
     const turn: any = broad.mul(6.3);
@@ -266,25 +207,25 @@ export async function loadLandLook(metres: Float32Array, noise: DataTexture, sig
     const pick: any = fract(sin(cell.x.mul(127.1).add(cell.y.mul(311.7))).mul(43758.55));
     // Rice green, young green, ripening gold and bare tilled earth, gold more often in the drier districts.
     const ripe: any = pick.add(broad.sub(0.5).mul(0.5));
-    const crop: any = mix(mix(srgb(104, 140, 58), srgb(140, 166, 78), smoothstep(0.25, 0.35, ripe)),
-      mix(srgb(182, 168, 96), srgb(146, 120, 84), smoothstep(0.85, 0.95, ripe)), smoothstep(0.55, 0.65, ripe));
+    const crop: any = mix(mix(srgb('rice'), srgb('young'), smoothstep(0.25, 0.35, ripe)),
+      mix(srgb('ripe'), srgb('tilled'), smoothstep(0.85, 0.95, ripe)), smoothstep(0.55, 0.65, ripe));
     const f: any = fract(q);
     const edge: any = min(min(f.x, float(1).sub(f.x)).mul(plot.x), min(f.y, float(1).sub(f.y)).mul(plot.y));
     const plots: any = float(1).sub(smoothstep(1.2, 5, footprint));
     const bund: any = float(1).sub(smoothstep(0.25, 0.85, edge.div(max(footprint, 0.25)).mul(0.5))).mul(plots);
-    const field: any = mix(mix(srgb(138, 156, 76), crop, plots), srgb(70, 92, 48), bund.mul(0.75));
+    const field: any = mix(mix(srgb('fields'), crop, plots), srgb('bund'), bund.mul(0.75));
     let ground: any = mix(open, field, farm);
 
     // Woods: broadleaf low down, pine higher up, the canopy in crowns with shade between them, and stands of a little
     // different green.
-    const crown: any = n(128).a;
-    const canopy: any = mix(srgb(58, 96, 46), srgb(36, 66, 42), smoothstep(120, 600, metres.add(wander.mul(200))));
+    const crown: any = n(NOISE_SCALE.crown).a;
+    const canopy: any = mix(srgb('broadleaf'), srgb('pine'), smoothstep(120, 600, metres.add(wander.mul(200))));
     const woodColor: any = canopy.mul(crown.mul(0.75).add(0.55)).mul(stand.sub(0.5).mul(0.35).add(1));
     ground = mix(ground, woodColor, wood);
     // Rock, paler the higher it stands; sand, and mud on the flattest and lowest of it in some reaches.
-    ground = mix(ground, mix(srgb(132, 126, 114), srgb(176, 170, 158), smoothstep(900, 1700, metres)), rock);
+    ground = mix(ground, mix(srgb('rock'), srgb('rockHigh'), smoothstep(900, 1700, metres)), rock);
     const mud: any = smoothstep(0.55, 0.75, broad.add(stand.mul(0.3))).mul(float(1).sub(smoothstep(0.5, 2.5, metres)));
-    ground = mix(ground, mix(srgb(222, 206, 160), srgb(146, 136, 112), mud), sand);
+    ground = mix(ground, mix(srgb('sand'), srgb('mud'), mud), sand);
 
     // Close up, the ground textures' grain, each divided by its own mean so it changes the grain and not the colour, at
     // two scales so no tiling shows; gone before a pixel covers so much ground that their repeats would quilt.
@@ -303,15 +244,7 @@ export async function loadLandLook(metres: Float32Array, noise: DataTexture, sig
     return ground.mul(grain).mul(light);
   };
 
-  // The noise as the shader samples it: bilinear, wrapping, one channel.
-  const noiseAt = (mx: number, mz: number, scale: number, channel: number) => {
-    const fx = (mx / scale) * NOISE - 0.5, fz = (mz / scale) * NOISE - 0.5;
-    const ix = Math.floor(fx), iz = Math.floor(fz), tx = fx - ix, tz = fz - iz;
-    const at = (i: number, j: number) => noiseData[(((j % NOISE) + NOISE) % NOISE * NOISE + (((i % NOISE) + NOISE) % NOISE)) * 4 + channel]! / 255;
-    const top = at(ix, iz) + (at(ix + 1, iz) - at(ix, iz)) * tx, bottom = at(ix, iz + 1) + (at(ix + 1, iz + 1) - at(ix, iz + 1)) * tx;
-    return top + (bottom - top) * tz;
-  };
-  const NONE: Cover = { wood: 0, rock: 0, crag: 0, sand: 0, farm: 0, slope: 0, metres: 0, wander: 0 };
+  const NONE: Cover = { wood: 0, rock: 0, crag: 0, sand: 0, farm: 0, slope: 0, metres: 0, wander: 0, broad: 0.5, stand: 0.5 };
   const coverAt = (u: number, v: number): Cover => {
     const tx = ((u - DEM_RECT.u) / DEM_RECT.w) * (W - 1), ty = ((v - DEM_RECT.v) / DEM_RECT.h) * (H - 1);
     if (!(tx >= 0 && ty >= 0 && tx <= W - 1 && ty <= H - 1)) return NONE;
@@ -322,21 +255,7 @@ export async function loadLandLook(metres: Float32Array, noise: DataTexture, sig
       return (top + (bottom - top) * fy) / 255;
     };
     const slope = read(2) * SLOPE_RANGE, a = read(3), metres = a * a * HEIGHT_RANGE;
-    const mx = (u - 0.5) / MODEL_METRE, mz = (v - 0.5) / MAP_ASPECT / MODEL_METRE;
-    const broad = noiseAt(mx, mz, 800, 0) * 0.6 + noiseAt(mx, mz, 1330, 0) * 0.4;
-    const stand = noiseAt(mx, mz, 400, 1), fine = noiseAt(mx, mz, 128, 2);
-    const wander = broad * 0.65 + stand * 0.35 - 0.5, rag = fine - 0.5 + (stand - 0.5) * 0.6;
-    // The shader's rules (`color` below), step for step.
-    const woodsAt = Math.max(smooth(0.26, 0.55, slope + wander * 0.22), smooth(70, 190, metres + wander * 90));
-    let wood = smooth(0.38, 0.62, woodsAt + rag * 0.45);
-    const shoreRock = (1 - smooth(3, 12, metres + rag * 5)) * smooth(0.22, 0.45, slope + rag * 0.2);
-    const crag = Math.max(smooth(1.5, 2.3, slope + rag * 0.5), smooth(1050, 1500, metres + wander * 150 + rag * 80));
-    let rock = Math.max(crag, shoreRock);
-    const sand = (1 - smooth(1.5, 5.5, metres + rag * 4)) * (1 - smooth(0.12, 0.35, slope));
-    const farm = (1 - smooth(18, 60, metres + wander * 40)) * (1 - smooth(0.1, 0.26, slope + rag * 0.06));
-    rock *= 1 - sand;
-    wood *= (1 - rock) * (1 - sand);
-    return { wood, rock, crag: crag * (1 - sand), sand, farm, slope, metres, wander };
+    return coverOf(noiseData, slope, metres, (u - 0.5) / MODEL_METRE, (v - 0.5) / MAP_ASPECT / MODEL_METRE);
   };
 
   return {

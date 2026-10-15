@@ -880,7 +880,7 @@ export function GrandMap({
       )}
       {!heights && <img
         className="gm__img"
-        src="/ui/map_south.webp"
+        src="/ui/grand_flat.webp"
         alt=""
         draggable={false}
         style={{ width: s * DEM_RECT.w, height: mapH * DEM_RECT.h, transform: `translate3d(${view.x + DEM_RECT.u * s}px, ${view.y + DEM_RECT.v * mapH}px, 0)` }}

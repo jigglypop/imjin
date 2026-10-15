@@ -45,7 +45,7 @@ try {
   check('the land\'s cover decides: woods where it is wooded, rocks on its crags, nothing on open fields', () => {
     // West of the hill's top all wood, east of it all crag, south of it all farmland.
     const cover = (u, v) => {
-      const base = { wood: 0, rock: 0, crag: 0, sand: 0, farm: 0, slope: 0.3, metres: 300, wander: 0 };
+      const base = { wood: 0, rock: 0, crag: 0, sand: 0, farm: 0, slope: 0.3, metres: 300, wander: 0, broad: 0.5, stand: 0.5 };
       if (v > centre.v + 0.004) return { ...base, farm: 1 };
       return u < centre.u ? { ...base, wood: 1 } : { ...base, rock: 1, crag: 1 };
     };
