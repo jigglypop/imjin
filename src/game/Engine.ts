@@ -1020,7 +1020,7 @@ export class Engine {
       b.land = () => -50;
       this.battle = b;
       this.views.reset(this.assets, b);
-      this.rts.setPose(this.options.pose ?? { tx: 0, tz: 0, yaw: Math.PI / 2, pitch: 0.42, distance: 9.5 });
+      this.rts.setPose(this.options.pose ?? { tx: 0, tz: 0, yaw: Math.PI / 2, pitch: 0.3, distance: 8.5 });
       return;
     }
     const keys = Object.keys(this.assets);

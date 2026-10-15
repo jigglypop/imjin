@@ -1198,10 +1198,10 @@ export class Effects {
           this.mun.fireArrow(px, py, pz, ux, uy, uz, ppm);
           break;
         case Shell.Rocket:
-          this.mun.rocket(px, py, pz, ux, uy, uz, 1.6, ppm, dt);
+          this.mun.rocket(px, py, pz, ux, uy, uz, 1.13, ppm, dt);
           break;
         case Shell.Lance:
-          this.mun.rocket(px, py, pz, ux, uy, uz, 0.95, ppm, dt);
+          this.mun.rocket(px, py, pz, ux, uy, uz, 1.31, ppm, dt);
           break;
         case Shell.Grape:
           this.mun.grape(px, py, pz, ux, uy, uz, sp, ppm, p.id, p.age, p.gun);

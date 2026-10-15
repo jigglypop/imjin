@@ -102,9 +102,10 @@ function assemble(parts: Part[]): BufferGeometry {
   return mergeGeometries(geos)!;
 }
 
-/** A cylinder lying along x from x0 to x1. */
+/** A cylinder lying along x from x0 (radius r0) to x1 (radius r1). */
 const rod = (r0: number, r1: number, x0: number, x1: number, seg = 8) => {
-  const g = new CylinderGeometry(r1, r0, x1 - x0, seg);
+  // Turned a quarter about z, the cylinder's top (+y) points to -x: its top radius is the one at x0.
+  const g = new CylinderGeometry(r0, r1, x1 - x0, seg);
   g.rotateZ(Math.PI / 2);
   g.translate((x0 + x1) / 2, 0, 0);
   return g;
@@ -220,22 +221,28 @@ export function hiyaGeometry() {
   return assemble(parts);
 }
 
-/** A rocket arrow: a paper tube of black powder tied to the front of the shaft, an iron head, feathers behind. About 1.2 units long. */
+/**
+ * A rocket arrow at the proportions of the middle singijeon (중신기전) of the Gukjo orye seorye: a bamboo shaft 1.38 m
+ * long, a paper motor 19.6 cm long and 2.7 cm thick bound to its front, a small paper charge (so-balhwa) ahead of the
+ * motor, a small iron head, feathers behind. The Ming fire arrow is the same build, a little longer. 1.22 units long:
+ * drawn at 1.13 it is the singijeon's true size.
+ */
 export function rocketGeometry() {
   const parts: Part[] = [
-    { geo: rod(0.012, 0.012, -0.5, 0.56, 6), color: WOOD },
-    { geo: rod(0.05, 0.05, 0.05, 0.4, 10), color: PAPER },
-    { geo: rod(0.054, 0.054, 0.09, 0.115, 10), color: CORD },
-    { geo: rod(0.054, 0.054, 0.3, 0.325, 10), color: CORD },
-    { geo: spike(0.052, 0.4, 0.5, 10), color: PAPER },
-    { geo: spike(0.026, 0.54, 0.72, 6), color: IRON },
-    ...fins(-0.44, 0.2, 0.09, 2).map((geo) => ({ geo, color: FEATHER })),
+    { geo: rod(0.0058, 0.0058, -0.5, 0.6, 6), color: WOOD },
+    { geo: rod(0.012, 0.012, 0.2, 0.373, 10), color: PAPER },
+    { geo: rod(0.0135, 0.0135, 0.212, 0.224, 10), color: CORD },
+    { geo: rod(0.0135, 0.0135, 0.35, 0.362, 10), color: CORD },
+    { geo: rod(0.014, 0.014, 0.373, 0.425, 10), color: PAPER },
+    { geo: spike(0.014, 0.425, 0.455, 10), color: PAPER },
+    { geo: spike(0.008, 0.6, 0.72, 4), color: IRON },
+    ...fins(-0.46, 0.16, 0.035, 2).map((geo) => ({ geo, color: FEATHER })),
   ];
   return assemble(parts);
 }
 
-/** Where a rocket's flame leaves it, in model units from its origin. */
-const NOZZLE = 0.05;
+/** Where a rocket's flame leaves it, in model units from its origin: the rear of the motor. */
+const NOZZLE = 0.2;
 
 /** A salvo rocket comes down at (x, y, z) travelling along (ux, uy, uz): on the deck of `ship`, or in the sea for 0. */
 type SalvoHook = (x: number, y: number, z: number, ship: number, ux: number, uy: number, uz: number) => void;
@@ -477,7 +484,8 @@ export class Munitions {
   /** A Japanese fire arrow: a thin arrow with a burning bundle at its head. */
   fireArrow(x: number, y: number, z: number, ux: number, uy: number, uz: number, ppm: number) {
     if (this.nHiya >= MAX_HEAVY) return;
-    const sc = Math.max(1.2, Math.min(2, 4 / ppm));
+    // True size (about 0.9 m) up close, up to 1.6 times that from afar.
+    const sc = Math.max(0.9, Math.min(1.44, 4 / ppm));
     this.q.setFromUnitVectors(this.xAxis, this.v.set(ux, uy, uz));
     this.m.compose(this.p.set(x, y, z), this.q, this.s.set(sc, sc, sc));
     this.hiya.setMatrixAt(this.nHiya++, this.m);
@@ -691,7 +699,7 @@ export class Munitions {
       }
       if (first && (!visible || visible(sx, sz))) this.launch(sx, sy, sz, ux, uy, uz, 1);
       if (d < 3200) {
-        this.rocket(px, py, pz, ux, uy, uz, 1.6 * this.size[i]!, ppm, dt);
+        this.rocket(px, py, pz, ux, uy, uz, 1.13 * this.size[i]!, ppm, dt);
         lay(this.trails[i]!, px, py, pz, ppm);
       }
     }

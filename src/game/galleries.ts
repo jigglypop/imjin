@@ -31,7 +31,8 @@ import { disposeTree } from '../render/dispose';
  */
 export type GalleryKind = 'ships' | 'munitions' | 'damage';
 
-export const DAMAGE_STAGES = ['무손상', '방패 파손', '구멍', '화재', '기울어짐'];
+/** The stages of the damage gallery, a column each: pristine, shield wall broken, holed, burning, listing. */
+export const DAMAGE_STAGES = ['pristine', 'shields', 'holed', 'burning', 'listing'];
 
 /** Where the damage gallery's ships stand: a column per stage, a row per kind. */
 const COL = 64;
@@ -219,7 +220,7 @@ function paintLabel(ctx: CanvasRenderingContext2D, o: Ordnance, cx: number, cy: 
   line(o.hanja, 22, 500, '#6b4a2c');
   y += 4;
   line(t(o.by), 17, 600, '#4a3826');
-  const cm = (m: number) => (m * 100).toFixed(m < 0.1 ? 1 : 0);
+  const cm = (m: number) => String(Math.round(m * 1000) / 10);
   line(o.length > 0 ? t('길이 {l} m · 지름 {d} cm', { l: o.length.toFixed(2), d: cm(o.diameter) }) : t('지름 {d} cm', { d: cm(o.diameter) }), 17);
   line(o.mass >= 1 ? t('무게 {w} kg', { w: o.mass.toFixed(1) }) : t('무게 {w} g', { w: Math.round(o.mass * 1000) }), 17);
   line(t(o.record), 15, 400, '#4a3826');
@@ -236,7 +237,7 @@ export class MunitionsGallery {
   constructor() {
     const n = ORDNANCE.length;
     const width = n * SLOT + 0.6;
-    const timber = material([0.32, 0.22, 0.13], 0.9);
+    const timber = material([0.13, 0.09, 0.055], 0.9);
     const dark = material([0.16, 0.11, 0.07], 0.95);
     const deck = new Mesh(new BoxGeometry(width, 0.1, 2.7), timber);
     deck.position.set(0, TOP - 0.05, 0);
@@ -272,9 +273,19 @@ export class MunitionsGallery {
       if (m.lie === 'x') {
         mesh.rotation.y = Math.PI / 2;
         mesh.position.set(x, TOP + m.up, 0.1);
-      } else if (m.lie === 'z') mesh.position.set(x, TOP + m.up, 1.0);
-      else mesh.position.set(x, TOP + m.up, 0.9);
+      } else if (m.lie === 'z') {
+        // The bow arrow model runs back along -z from its tip: turned round, its head points away like the others'.
+        mesh.rotation.y = Math.PI;
+        mesh.position.set(x, TOP + m.up, -0.85);
+      } else mesh.position.set(x, TOP + m.up, 0.9);
       this.group.add(mesh);
+      // A fire arrow carries its charge of powder in paper bound behind the head.
+      if (o.model === 'fireArrow') {
+        const charge = new Mesh(new CylinderGeometry(0.014, 0.014, 0.09, 10), material([0.42, 0.33, 0.2], 0.9));
+        charge.rotation.x = Math.PI / 2;
+        charge.position.set(x, TOP + m.up, -0.85 + 0.1);
+        this.group.add(charge);
+      }
       // The label stands at the back of the rack, a little tilted back.
       const geo = new PlaneGeometry(LABEL_W, LABEL_H);
       const u0 = ((i % COLS) * CELL_W) / canvas.width;
