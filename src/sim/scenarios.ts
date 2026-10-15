@@ -606,15 +606,17 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     const sqYi = squad('joseon', '통제사 본대', '통제사 이순신', 'panokseon');
     const sqSong = squad('joseon', '조선 좌군', '중군장 송희립', 'panokseon');
     const sqRight = squad('joseon', '조선 우군', '가리포첨사 이영남', 'panokseon');
-    line(sqYi, 'panokseon', grid(-2300, -420, head, 20, 4, 72, 64, 10, rand), '통제사 본대', 1);
-    line(sqSong, 'panokseon', grid(-2900, -700, head, 20, 4, 72, 64, 10, rand), '조선 좌군');
-    line(sqRight, 'panokseon', grid(-3300, -250, head, 20, 4, 72, 64, 10, rand), '조선 우군');
+    // The two horns of the allied fleet (掎角): the Ming along the mainland shore to the north, the Joseon fleet on the
+    // Namhae side to the south, before Gwaneumpo, as the local tradition of the battle has it.
+    line(sqYi, 'panokseon', grid(-2300, 620, head, 20, 4, 72, 64, 10, rand), '통제사 본대', 1);
+    line(sqSong, 'panokseon', grid(-2900, 900, head, 20, 4, 72, 64, 10, rand), '조선 좌군');
+    line(sqRight, 'panokseon', grid(-3300, 450, head, 20, 4, 72, 64, 10, rand), '조선 우군');
     const sqChen = squad('joseon', '명 수군 본대', '도독 진린', 'mingship');
     const sqDeng = squad('joseon', '명 수군 선봉', '부총병 등자룡', 'mingship');
     const sqSha = squad('joseon', '명 사선대', '명 유격장', 'mingsmall');
-    line(sqChen, 'mingship', grid(-2500, 650, head, 16, 4, 66, 60, 10, rand), '명 수군 본대', 0);
-    line(sqDeng, 'mingship', grid(-1900, 520, head, 14, 4, 66, 60, 10, rand), '명 수군 선봉', 0);
-    line(sqSha, 'mingsmall', grid(-3200, 900, head, 33, 6, 40, 36, 10, rand), '명 사선대');
+    line(sqChen, 'mingship', grid(-2500, -450, head, 16, 4, 66, 60, 10, rand), '명 수군 본대', 0);
+    line(sqDeng, 'mingship', grid(-1900, -520, head, 14, 4, 66, 60, 10, rand), '명 수군 선봉', 0);
+    line(sqSha, 'mingsmall', grid(-3200, -650, head, 33, 6, 40, 36, 10, rand), '명 사선대');
     // The Japanese column comes on from the east still short of the strait's waist, so the allies have the time to
     // choose where to meet it: at the narrows, from both shores, as on the night.
     // Shimazu's own squadron is made first, so his flagship is the fleet's admiral, but sails in the middle of the

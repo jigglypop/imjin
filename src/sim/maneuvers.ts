@@ -106,6 +106,15 @@ const AMBUSH_STANDOFF = 110;
 const AMBUSH_FOUND = 200;
 /** Ambushes laid this close together spring together: the first one's guns are the signal. */
 const AMBUSH_JOIN = 1200;
+/**
+ * An ambush springs on an enemy within reach of its guns when that enemy is within AMBUSH_DEEP of its radius from the
+ * centre, or within reach of stations whose bearings from it are more than AMBUSH_CROSS radians apart.
+ */
+const AMBUSH_DEEP = 0.5;
+const AMBUSH_CROSS = 1.75;
+/** An ambush leaves its rim open this many radians either side of the bearing of the enemy within ENTRY_LOOK. */
+const ENTRY_GAP = 0.6;
+const ENTRY_LOOK = 8000;
 /** A sprung ambush: hits in the first seconds catch crews not at their stations. */
 export const SURPRISE_TIME = 10;
 export const SURPRISE_CREW = 1.5;
@@ -128,10 +137,11 @@ const TRAPPED_OPEN = 300;
 const TRAPPED_FOE = 500;
 const TRAPPED = 15;
 /**
- * A crew with enemies still fighting between it and home (BARRED_SHIPS of them within BARRED_RANGE, inside BARRED_CONE
- * radians of the way home) or cut off runs for its side's haven within HAVEN_REACH, the pull weighing about as much as
- * open water dead ahead; within HAVEN_IN of the haven it is in.
+ * A crew whose way home is barred runs for its side's haven within HAVEN_REACH, the pull weighing about as much as open
+ * water dead ahead; within HAVEN_IN of the haven it is in. Barred: cut off, less than BARRED_OPEN of open water toward
+ * home, or BARRED_SHIPS enemies still fighting within BARRED_RANGE inside BARRED_CONE radians of the way home.
  */
+const BARRED_OPEN = 350;
 const BARRED_RANGE = 900;
 const BARRED_CONE = 1;
 const BARRED_SHIPS = 2;
@@ -298,13 +308,17 @@ export class Maneuvers {
         // Stations already held by the side's other waiting plans are not handed out again.
         const taken: Slot[] = [];
         for (const other of this.plans.values()) if (other !== plan && other.team === plan.team && other.phase !== 'striking') taken.push(...other.stations.values());
+        // The rim the enemy comes in by is left open, the mouth of the bag: a station there would meet the enemy's van
+        // head on before anything had come into the zone between the two sides.
+        const foe = this.enemyCentroid({ x: x0, z: z0 }, ENTRY_LOOK, plan.team);
+        const entry = foe && hyp(foe.x - x0, foe.z - z0) > plan.r ? Math.atan2(foe.z - z0, foe.x - x0) : null;
         const sorted = [...ships].sort((p, q) => Math.atan2(p.z - z0, p.x - x0) - Math.atan2(q.z - z0, q.x - x0));
         for (const s of sorted) {
           const a = Math.atan2(s.z - z0, s.x - x0);
           // A rim crowded or run aground on that side: the ship lies in a rank further back on its own side instead,
           // and only then further round the rim, where the enemy might come on it before it comes into the zone.
           let spot: Slot | null = null;
-          for (const turn of [0.6, Math.PI]) for (let rank = 0; rank < 5 && !spot; rank += 1) spot = this.wetNear(x0, z0, a, ring + rank * RANK_GAP, taken, turn);
+          for (const turn of [0.6, Math.PI]) for (let rank = 0; rank < 5 && !spot; rank += 1) spot = this.wetNear(x0, z0, a, ring + rank * RANK_GAP, taken, turn, entry);
           if (!spot) continue;
           taken.push(spot);
           plan.stations.set(s.id, spot);
@@ -567,17 +581,22 @@ export class Maneuvers {
   /** The first enemy to find an ambush: one inside its zone, one close to an ambusher, or a shot landing on one. */
   private ambushTrigger(plan: Plan, ships: Ship[]): Ship | null {
     const b = this.b;
-    // An enemy inside the zone and within reach of the guns of the ships on its side: the zone's far rim is out of range
-    // of the stations on the near one, and the first volley is the one that counts.
+    // An enemy inside the zone either deep in it or within reach of the guns on two sides of it at once: a van just
+    // inside the mouth is let come on until the first volley can take it from both sides, as at a narrows.
     let found: Ship | null = null;
     b.near(plan.x0, plan.z0, plan.r, (o) => {
       if (found || o.team === plan.team || !b.isActive(o) || !b.canSee(o, hyp(o.x - plan.x0, o.z - plan.z0), plan.team)) return;
+      const deep = (o.x - plan.x0) ** 2 + (o.z - plan.z0) ** 2 < (plan.r * AMBUSH_DEEP) ** 2;
+      let side: number | null = null;
       for (const s of ships) {
         const reach = this.range(s) * 0.85;
-        if ((o.x - s.x) ** 2 + (o.z - s.z) ** 2 < reach * reach) {
+        if ((o.x - s.x) ** 2 + (o.z - s.z) ** 2 >= reach * reach) continue;
+        const a = Math.atan2(s.z - o.z, s.x - o.x);
+        if (deep || (side !== null && Math.abs(wrapAngle(a - side)) > AMBUSH_CROSS)) {
           found = o;
           return;
         }
+        side ??= a;
       }
     });
     if (found) return found;
@@ -1263,7 +1282,7 @@ export class Maneuvers {
     const haven = b.havens[s.team];
     const inside = !!haven && hyp(haven.x - s.x, haven.z - s.z) < HAVEN_IN;
     if (!run || b.time - run.at >= ROUT_LOOK) {
-      const pick = this.chooseRun(s, run?.h ?? s.heading, inside ? null : this.havenPull(s));
+      const pick = this.chooseRun(s, run?.h ?? s.heading, !inside);
       if (!run) {
         run = { h: pick.h, at: b.time, open: pick.open, trapped: 0 };
         this.runs.set(s.id, run);
@@ -1286,29 +1305,11 @@ export class Maneuvers {
   }
 
   /**
-   * The bearing of the side's haven for a crew whose way home is barred, when the haven is near enough to run for: cut
-   * off from its leader by a column breaking through, or with enemies still fighting between it and where its squadron
-   * came from. Null when the way home is open, so a crew with the sea behind it runs home.
+   * `useHaven`: whether the side's haven may draw the crew. It does when the haven is near enough to run for and the way
+   * home is barred: cut off from its leader by a column breaking through, enemies still fighting between it and where
+   * its squadron came from, or no open water that way. A crew with the sea open behind it runs home.
    */
-  private havenPull(s: Ship): number | null {
-    const b = this.b;
-    const haven = b.havens[s.team];
-    if (!haven || hyp(haven.x - s.x, haven.z - s.z) > HAVEN_REACH) return null;
-    let barred = this.cut.has(s.id);
-    const home = this.homes?.get(s.squadronId);
-    if (!barred && home) {
-      const toward = Math.atan2(home.z - s.z, home.x - s.x);
-      let n = 0;
-      b.near(s.x, s.z, BARRED_RANGE, (o) => {
-        if (o.team === s.team || !b.isActive(o) || o.moraleState === 'routing') return;
-        if (Math.abs(wrapAngle(Math.atan2(o.z - s.z, o.x - s.x) - toward)) < BARRED_CONE) n += 1;
-      });
-      barred = n >= BARRED_SHIPS;
-    }
-    return barred ? Math.atan2(haven.z - s.z, haven.x - s.x) : null;
-  }
-
-  private chooseRun(s: Ship, current: number, haven: number | null) {
+  private chooseRun(s: Ship, current: number, useHaven: boolean) {
     const b = this.b;
     const sight = b.night ? ROUT_SIGHT_NIGHT : ROUT_SIGHT_DAY;
     let tx = 0;
@@ -1318,12 +1319,12 @@ export class Maneuvers {
     const friends: Ship[] = [];
     b.near(s.x, s.z, 1200, (o) => {
       if (o === s || !b.isActive(o)) return;
+      const d = hyp(o.x - s.x, o.z - s.z);
       if (o.team === s.team) {
-        if (hyp(o.x - s.x, o.z - s.z) < 350) friends.push(o);
+        if (d < 350) friends.push(o);
         return;
       }
       if (o.moraleState === 'routing') return;
-      const d = hyp(o.x - s.x, o.z - s.z);
       const w = 1 / Math.max(150, d);
       tx += (o.x - s.x) * w;
       tz += (o.z - s.z) * w;
@@ -1331,19 +1332,25 @@ export class Maneuvers {
       if (d < 650) foes.push(o);
     });
     const away = tw ? Math.atan2(-tz, -tx) : current;
-    let best = current;
+    const open: number[] = [];
+    for (let k = 0; k < 16; k += 1) {
+      const c = Math.cos((k / 16) * TAU);
+      const n = Math.sin((k / 16) * TAU);
+      let w = 0;
+      for (let d = 50; d <= sight; d += 50) {
+        if (!b.isWater(s.x + c * d, s.z + n * d)) break;
+        w = d;
+      }
+      open.push(w);
+    }
+    const haven = useHaven ? this.havenPull(s, open) : null;
+    let best = 0;
     let bestScore = -Infinity;
-    let bestOpen = 0;
     for (let k = 0; k < 16; k += 1) {
       const h = (k / 16) * TAU;
       const c = Math.cos(h);
       const n = Math.sin(h);
-      let open = 0;
-      for (let d = 50; d <= sight; d += 50) {
-        if (!b.isWater(s.x + c * d, s.z + n * d)) break;
-        open = d;
-      }
-      let score = ((open >= sight ? sight * 1.5 : open) / sight) * (1 + 0.7 * Math.cos(h - away));
+      let score = ((open[k]! >= sight ? sight * 1.5 : open[k]!) / sight) * (1 + 0.7 * Math.cos(h - away));
       let jam = 0;
       for (const o of friends) {
         const along = (o.x - s.x) * c + (o.z - s.z) * n;
@@ -1359,11 +1366,31 @@ export class Maneuvers {
       if (Math.abs(wrapAngle(h - current)) < 0.2) score *= 1.1;
       if (score > bestScore) {
         bestScore = score;
-        best = h;
-        bestOpen = open;
+        best = k;
       }
     }
-    return { h: best, open: bestOpen };
+    return { h: (best / 16) * TAU, open: open[best]! };
+  }
+
+  /** The bearing of the side's haven for a crew whose way home is barred (see chooseRun), else null. */
+  private havenPull(s: Ship, open: number[]): number | null {
+    const b = this.b;
+    const haven = b.havens[s.team];
+    if (!haven || hyp(haven.x - s.x, haven.z - s.z) > HAVEN_REACH) return null;
+    let barred = this.cut.has(s.id);
+    const home = this.homes?.get(s.squadronId);
+    if (!barred && home) {
+      const toward = Math.atan2(home.z - s.z, home.x - s.x);
+      const k = Math.round((((toward % TAU) + TAU) % TAU) / (TAU / 16)) % 16;
+      barred = open[k]! < BARRED_OPEN;
+      let n = 0;
+      if (!barred) b.near(s.x, s.z, BARRED_RANGE, (o) => {
+        if (o.team === s.team || !b.isActive(o) || o.moraleState === 'routing') return;
+        if (Math.abs(wrapAngle(Math.atan2(o.z - s.z, o.x - s.x) - toward)) < BARRED_CONE) n += 1;
+      });
+      barred ||= n >= BARRED_SHIPS;
+    }
+    return barred ? Math.atan2(haven.z - s.z, haven.x - s.x) : null;
   }
 
   /**
@@ -1479,10 +1506,11 @@ export class Maneuvers {
   }
 
   /** A station on a circle near a bearing, on water and clear of the stations already taken. */
-  private wetNear(cx: number, cz: number, a: number, r: number, taken: Slot[], turn = Math.PI): Slot | null {
+  private wetNear(cx: number, cz: number, a: number, r: number, taken: Slot[], turn = Math.PI, mouth: number | null = null): Slot | null {
     for (let k = 0; k < 40; k += 1) {
       const da = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (SPACING / r) * 0.5;
       if (Math.abs(da) > turn) break;
+      if (mouth !== null && Math.abs(wrapAngle(a + da - mouth)) < ENTRY_GAP) continue;
       for (const dr of [0, -60, 60, -120, 120]) {
         const rr = Math.max(80, r + dr);
         const x = cx + Math.cos(a + da) * rr;
