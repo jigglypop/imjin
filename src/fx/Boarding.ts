@@ -1320,10 +1320,16 @@ export class Boarding {
    * A shot leaves a rail: a flash and white smoke for a matchlock, an arrow arcing over for a bow. The arrow flies
    * at a man's ship and lands in its deck or hull, or falls short into the sea.
    */
+  /** A matchlock ball fired from (sx, sz) struck `target` (Effects leaves its mark). */
+  onMusket: ((target: Ship, sx: number, sz: number) => void) | null = null;
+
   fire(ship: Ship, battle: Battle, x: number, y: number, z: number, dx: number, dz: number, bow: boolean) {
     const far = Math.hypot(x - this.camPos.x, y - this.camPos.y, z - this.camPos.z);
     if (!bow) {
       this.puffs.gunshot(x, y, z, dx, dz, Math.max(1, Math.min(2.6, far / 70)));
+      // Most balls of a volley strike the ship they were aimed at; their lead flattens on its wall.
+      const aimed = battle.get(ship.targetId);
+      if (aimed && battle.isActive(aimed) && aimed.team !== ship.team && Math.random() < 0.6) this.onMusket?.(aimed, x, z);
       return;
     }
     const target = battle.get(ship.targetId);

@@ -16,17 +16,20 @@ import {
   type WebGPURenderer,
 } from 'three/webgpu';
 import {
+  atan,
   attribute,
   Discard,
   dFdx,
   dFdy,
   dot,
   float,
+  floor,
   Fn,
   fract,
   frontFacing,
   If,
   instancedBufferAttribute,
+  length,
   mix,
   mx_noise_float,
   normalLocal,
@@ -321,6 +324,45 @@ export async function releaseShipAssets(keep: Set<string>) {
   }
 }
 
+/** Steps the sail damage is kept in, in the whole part of the flash attribute (see packFlash). */
+const TEAR_STEPS = 15;
+
+/**
+ * The flash attribute carries three things: the brief lift of a struck hull (the fraction), how torn and burnt the
+ * ship's sails are (fx/Scars.ts, 0..1 in TEAR_STEPS steps) and a seed from the ship's id so that no two ships' sails
+ * are holed alike (the whole part, tear x 16 + seed).
+ */
+export function packFlash(flash: number, tear: number, id: number) {
+  return Math.round(Math.min(1, Math.max(0, tear)) * TEAR_STEPS) * 16 + (id % 16) + Math.min(0.999, Math.max(0, flash));
+}
+
+/**
+ * Holes in a ship's sails and flags (cloth that sways): shot and arrow holes a hand or two across, more as the sails
+ * are torn, and burnt-out patches up to a couple of metres with a charred rim, more as the ship's char grows. Cells in
+ * model space each hold at most one hole, placed and sized from a hash of the cell and the ship's seed, so a hole
+ * stays put and a ship's sails keep their own pattern. Returns how much a pixel is hole (1) and how much charred rim.
+ */
+function clothHoles(P: any, tear: any, char: any, seed: any) {
+  const hash = (v: any, k: number) => fract(sin(dot(v, vec3(12.9898, 78.233, 37.719)).add(seed.mul(17.3).add(k))).mul(43758.5453));
+  const layer = (size: number, r0: number, r1: number, density: any) => {
+    const c = floor(P.div(size));
+    const f = fract(P.div(size)).sub(0.5);
+    const o = vec3(hash(c, 1), hash(c, 2), hash(c, 3)).sub(0.5).mul(0.3);
+    const r = mix(float(r0), float(r1), hash(c, 4)).div(size);
+    const d = f.sub(o);
+    // A ragged edge: the radius wavers round the hole.
+    const wave = sin(atan(d.y, d.z.add(d.x)).mul(7).add(hash(c, 5).mul(40))).mul(0.18).add(1);
+    const at = length(d).div(r.mul(wave));
+    const on = hash(c, 6).lessThan(density);
+    return { at, on };
+  };
+  const shot = layer(0.9, 0.06, 0.2, tear.mul(0.75));
+  const burnt = layer(2.6, 0.35, 0.95, smoothstep(0.08, 0.7, char).mul(0.7).add(tear.mul(0.25)));
+  const hole = select(shot.on.and(shot.at.lessThan(1)), float(1), select(burnt.on.and(burnt.at.lessThan(1)), float(1), float(0)));
+  const rim = select(burnt.on, float(1).sub(smoothstep(1, 1.45, burnt.at)), float(0)).max(select(shot.on, float(1).sub(smoothstep(1, 1.25, shot.at)), float(0)).mul(0.7));
+  return { hole, rim };
+}
+
 /**
  * Hull material. With a cut attribute the hull is drawn as a section: everything above the cut height (in ship space)
  * is discarded and the inside faces show as raw timber, so the decks below can be seen.
@@ -344,8 +386,9 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   const origin = A.xyz;
   const burn = A.w;
   const up = B.xyz;
-  const flash = B.w;
+  const flash = fract(B.w);
   const shipY = dot(positionWorld.sub(origin), up);
+  let holeMask: any = null;
   let baseColor: any = map ? texture(map, uv()).rgb : vec3(src.color.r, src.color.g, src.color.b);
   let rough: any = src.roughnessMap ? texture(src.roughnessMap, uv()).g : float(0.85);
   let glow: any = vec3(0);
@@ -384,6 +427,16 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
     baseColor = worn.color;
     rough = worn.rough;
     glow = emberGlow(surf, tint);
+    // Shot-through and burnt sails (fx/Scars.ts): not on phones, where the cloth keeps its plain shading.
+    if (equipment.tier !== 'low') {
+      const whole = floor(B.w);
+      const tear = floor(whole.div(16)).div(TEAR_STEPS);
+      const seed = whole.mod(16);
+      const holes = clothHoles(positionGeometry, tear, fract(burn), seed);
+      const sails = isCloth.and(packedColor.w.greaterThan(0.001));
+      holeMask = select(sails, holes.hole, float(0));
+      baseColor = mix(baseColor, vec3(0.035, 0.026, 0.02), select(sails, holes.rim, float(0)));
+    }
   }
   const wet = float(1).sub(smoothstep(-0.1, 0.9, shipY));
   const under = float(1).sub(smoothstep(-0.9, -0.05, shipY));
@@ -401,7 +454,20 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
       If(shipY.greaterThan(C.x), () => {
         Discard();
       });
+      if (holeMask) {
+        If(holeMask.greaterThan(0.5), () => {
+          Discard();
+        });
+      }
       return select(frontFacing, lit, timber);
+    })();
+  } else if (holeMask) {
+    const mask = holeMask;
+    m.colorNode = Fn(() => {
+      If(mask.greaterThan(0.5), () => {
+        Discard();
+      });
+      return lit;
     })();
   } else m.colorNode = lit;
   const wetRough = mix(rough.mul(0.95).add(0.05), float(0.25), wet.mul(0.8)).max(0.05);
