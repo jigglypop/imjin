@@ -8,7 +8,10 @@
 //
 //   node scripts/review-settlements.mjs --url=http://127.0.0.1:5291/ [--out=shots/review-settlements] [--label=before]
 //     [--settle] [--navies=joseon,japan,ming] [--levels=1,2,3] [--towns=0] [--regions=yeosu,busan] [--poses=region,close]
-//     [--overlay]
+//     [--overlay] [--keep] [--query=webgl=1]
+//
+// --keep also writes every picture at full size, <out>/<label>/<war>-<pose>-<port>.jpg, to compare one port closely;
+// --query adds parameters to the page's address (webgl=1 draws through the WebGL2 backend).
 //
 // --settle opens the map with ?settle=1, for the settlement path that is to replace mapWorld's layout. Whichever path
 // draws them, the page answers window.__map (GrandMap.tsx): layout() lists the places as SettlementSpec (mapWorld.ts):
@@ -34,6 +37,7 @@ const LEVELS = (args.levels ?? '1,2,3').split(',').map(Number);
 const towns = args.towns !== '0';
 const only = args.regions ? new Set(args.regions.split(',')) : null;
 const overlay = args.overlay === 'true';
+const keep = args.keep === 'true';
 const VIEW = { width: 1600, height: 900 };
 const SEED = 551;
 /**
@@ -54,7 +58,7 @@ const COLUMNS = 7;
 /** A port's works in the review wars, one after another round the coast so every kind is built somewhere. */
 const WORKS = ['shipyard', 'battery', 'dock', 'granary', 'beacon'];
 
-await mkdir(out, { recursive: true });
+await mkdir(keep ? join(out, label) : out, { recursive: true });
 
 // The saves, made by the game's own code.
 const vite = await createServer({ root: ROOT, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
@@ -111,31 +115,47 @@ async function open(save) {
   await page.addInitScript((data) => {
     localStorage.setItem('imjin.grand.v1', JSON.stringify(data));
     localStorage.setItem('imjin.grand.guide.v1', '1');
-    // A frame starts when the canvas hands out its texture; the draws after it are that frame's.
-    const gpu = { frames: [], count: 0, draws: 0, tris: 0 };
+    // Under WebGPU a frame starts when the canvas hands out its texture and the draws after it are that frame's; WebGL2
+    // has no such moment, so there the display's frames tell its frames apart.
+    const gpu = { frames: [], count: 0, ticks: 0, draws: 0, tris: 0, drawn: () => (gpu.count > 0 ? gpu.count : gpu.ticks) };
     window.__gpu = gpu;
+    const close = () => {
+      if (gpu.draws > 0) gpu.frames.push({ draws: gpu.draws, tris: Math.round(gpu.tris) });
+      if (gpu.frames.length > 60) gpu.frames.shift();
+      gpu.draws = 0;
+      gpu.tris = 0;
+    };
+    const tick = () => {
+      gpu.ticks += 1;
+      if (!gpu.count) close();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
     const wrap = (proto, name, fn) => {
       const original = proto[name];
       proto[name] = function (...a) { fn(a); return original.apply(this, a); };
     };
-    if (window.GPUCanvasContext) wrap(GPUCanvasContext.prototype, 'getCurrentTexture', () => {
-      if (gpu.count > 0) gpu.frames.push({ draws: gpu.draws, tris: Math.round(gpu.tris) });
-      if (gpu.frames.length > 60) gpu.frames.shift();
-      gpu.count += 1;
-      gpu.draws = 0;
-      gpu.tris = 0;
-    });
+    const count = (n, instances = 1) => { gpu.draws += 1; gpu.tris += ((n ?? 0) / 3) * (instances ?? 1); };
+    if (window.GPUCanvasContext) wrap(GPUCanvasContext.prototype, 'getCurrentTexture', () => { close(); gpu.count += 1; });
     if (window.GPURenderPassEncoder) {
       const P = GPURenderPassEncoder.prototype;
-      wrap(P, 'draw', (a) => { gpu.draws += 1; gpu.tris += ((a[0] ?? 0) / 3) * (a[1] ?? 1); });
-      wrap(P, 'drawIndexed', (a) => { gpu.draws += 1; gpu.tris += ((a[0] ?? 0) / 3) * (a[1] ?? 1); });
-      wrap(P, 'drawIndirect', () => { gpu.draws += 1; });
-      wrap(P, 'drawIndexedIndirect', () => { gpu.draws += 1; });
+      wrap(P, 'draw', (a) => count(a[0], a[1]));
+      wrap(P, 'drawIndexed', (a) => count(a[0], a[1]));
+      wrap(P, 'drawIndirect', () => count(0));
+      wrap(P, 'drawIndexedIndirect', () => count(0));
+    }
+    if (window.WebGL2RenderingContext) {
+      const P = WebGL2RenderingContext.prototype;
+      wrap(P, 'drawElements', (a) => count(a[1]));
+      wrap(P, 'drawArrays', (a) => count(a[2]));
+      wrap(P, 'drawElementsInstanced', (a) => count(a[1], a[4]));
+      wrap(P, 'drawArraysInstanced', (a) => count(a[2], a[3]));
     }
   }, save);
   const page_ = new URL('campaign', url);
   page_.searchParams.set('lang', 'en');
   if (settle) page_.searchParams.set('settle', '1');
+  for (const [k, v] of new URLSearchParams(args.query ?? '')) page_.searchParams.set(k, v);
   await page.goto(page_.href, { waitUntil: 'domcontentloaded' });
   await page.locator('.g-hub__actions .g-btn--primary').click({ timeout: 90000 });
   await page.waitForFunction(() => !!window.__map, null, { timeout: 120000 });
@@ -147,8 +167,8 @@ async function open(save) {
 /** Waits until the world has drawn a couple of frames with nothing left to ready: models, compiles and trees. */
 async function ready(page) {
   for (let pass = 0; pass < 2; pass += 1) {
-    const start = await page.evaluate(() => window.__gpu.count);
-    await page.waitForFunction((n) => window.__gpu.count >= n + 2, start, { timeout: 60000, polling: 30 });
+    const start = await page.evaluate(() => window.__gpu.drawn());
+    await page.waitForFunction((n) => window.__gpu.drawn() >= n + 2, start, { timeout: 60000, polling: 30 });
     await page.waitForFunction(() => !window.__map.busy(), null, { timeout: 120000, polling: 50 });
   }
   await page.waitForTimeout(150);
@@ -331,6 +351,7 @@ try {
         const x = Math.round(Math.min(VIEW.width - crop[0], Math.max(0, centre.x - crop[0] / 2)));
         const y = Math.round(Math.min(VIEW.height - crop[1], Math.max(0, centre.y - crop[1] / 2)));
         const picture = await page.screenshot({ type: 'jpeg', quality: 90, clip: { x, y, width: crop[0], height: crop[1] } });
+        if (keep) await writeFile(join(out, label, `${name}-${pose}-${id}.jpg`), picture);
         const r = values.get(id);
         pictures.get(pose).push({ label: `${id} · value ${r.value}${r.seat ? ' · seat' : ''}`, picture });
         if (pose === poses[0][0]) posed.push(await gpuNow(page));
