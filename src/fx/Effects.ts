@@ -143,7 +143,11 @@ export class Effects {
       streaks: this.streaks,
       debris: this.debris,
       tier: this.tier,
-      light: (x, y, z, intensity, dist, r, g, b) => this.sources.push({ x, y, z, intensity, decay: 1, r, g, b, age: 0, life: 1, dist, once: true }),
+      // By day the sky already lights the hull: the fire only warms it, so the light is weaker and shorter than at night.
+      light: (x, y, z, intensity, dist, r, g, b) => {
+        const day = 1 - Math.min(1, this.night);
+        this.sources.push({ x, y, z, intensity: intensity * (1 - 0.7 * day), decay: 1, r, g, b, age: 0, life: 1, dist: dist * (1 - 0.35 * day), once: true });
+      },
       steam: (x, y, z, size) => this.cue('steam', x, y, z, size),
     });
     this.blaze.setKeep(this.k);
