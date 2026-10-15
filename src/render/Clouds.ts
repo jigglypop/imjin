@@ -49,7 +49,7 @@ import {
   vec4,
 } from 'three/tsl';
 import { atmosphere } from './atmosphere';
-import { createCloudNoise, weatherMap, WEATHER_SPAN } from './cloudNoise';
+import { cloudNoise, weatherMap, WEATHER_SPAN } from './cloudNoise';
 import type { CloudSpec } from './sky';
 import type { SkyView } from './skyDome';
 
@@ -73,10 +73,12 @@ export type CloudLimits = { steps: number; lightSteps: number };
 
 export type CloudQuality = { steps: number; lightSteps: number; divisor: number; every: number };
 
+const rotation = new Matrix4();
+
 /** A rotation-only view-projection: clouds are far enough that only the camera's turning moves them on screen. */
 function rotationProjection(camera: Camera, out: Matrix4) {
-  const view = new Matrix4().copy(camera.matrixWorldInverse).setPosition(0, 0, 0);
-  return out.multiplyMatrices(camera.projectionMatrix, view);
+  rotation.copy(camera.matrixWorldInverse).setPosition(0, 0, 0);
+  return out.multiplyMatrices(camera.projectionMatrix, rotation);
 }
 
 export class Clouds {
@@ -118,7 +120,7 @@ export class Clouds {
     this.lightStepsU = uniform(Math.min(maxLightSteps, quality.lightSteps));
     const stepsU = this.stepsU;
     const lightStepsU = this.lightStepsU;
-    this.noise = createCloudNoise(64);
+    this.noise = cloudNoise();
     this.weather = weatherMap();
     const noise = this.noise;
     const weather = this.weather;
@@ -326,7 +328,6 @@ export class Clouds {
 
   dispose() {
     for (const rt of [this.current, this.history]) rt.dispose();
-    this.noise.dispose();
     this.marcher.geometry.dispose();
     (this.marcher.material as MeshBasicNodeMaterial).dispose();
     (this.copy.material as MeshBasicNodeMaterial).dispose();

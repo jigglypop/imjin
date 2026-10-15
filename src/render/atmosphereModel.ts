@@ -22,7 +22,7 @@ const MIE_H = 1200;
 const MIE_G = 0.8;
 const OZONE: Rgb = [0.65e-6, 1.881e-6, 0.085e-6];
 /** Light reaching the top of the air, normalised to green: the sun is a little blue before the air reddens it. */
-export const SOLAR: Rgb = [1.474 / 1.8504, 1, 1.91198 / 1.8504];
+const SOLAR: Rgb = [1.474 / 1.8504, 1, 1.91198 / 1.8504];
 /** What the sea gives back to the air under it: a few percent, mostly the sky it mirrors. */
 const SEA_ALBEDO = 0.06;
 
@@ -54,12 +54,7 @@ const DECK_TRANSMIT = 0.35;
  */
 export const DECK_TINT: Rgb = [0.92, 0.99, 1.12];
 
-/** Extinction per metre at sea level for green light: what the scene's fog density should match. */
-export function seaLevelExtinction(haze: number) {
-  return RAYLEIGH[1] + (MIE_SCATTER + MIE_ABSORB) * haze;
-}
-
-/** The aerosol load whose sea-level extinction is `fogDensity` per metre. */
+/** The aerosol load whose sea-level extinction (green light) is `fogDensity` per metre: the fog and the sky agree on the air. */
 export function hazeForFog(fogDensity: number) {
   return Math.max(0.5, (fogDensity - RAYLEIGH[1]) / (MIE_SCATTER + MIE_ABSORB));
 }
@@ -379,12 +374,12 @@ const BEARING_POWER = 1.6;
 const bearingAt = (b: number) => Math.pow(b / (BEARINGS - 1), BEARING_POWER) * Math.PI;
 
 /** Rows of a sky view: v runs 0 (straight down) to 1 (zenith) with sqrt spacing, so most rows sit near the horizon. */
-export function skyViewElevation(v: number) {
+function skyViewElevation(v: number) {
   const s = v * 2 - 1;
   return Math.sign(s) * s * s * (Math.PI / 2);
 }
 
-export function skyViewV(elevation: number) {
+function skyViewV(elevation: number) {
   const s = Math.sqrt(Math.min(1, Math.abs(elevation) / (Math.PI / 2)));
   return 0.5 + 0.5 * Math.sign(elevation) * s;
 }

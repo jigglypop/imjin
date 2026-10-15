@@ -1,7 +1,5 @@
 import type { Texture } from 'three/webgpu';
-import { clamp, float, max, smoothstep, texture, vec2 } from 'three/tsl';
-import { atmosphere } from '../render/atmosphere';
-import { WEATHER_SPAN } from '../render/cloudNoise';
+import { smoothstep, texture, vec2 } from 'three/tsl';
 
 // Typed loosely: the TSL node types do not accept nodes built in Fn bodies as operands everywhere.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -10,8 +8,8 @@ type Node = any;
 /**
  * Smooth fields over the sea, read from the weather map at scales and angles unrelated to each other and to the wave
  * tiles, so nothing they shape repeats within a battle: gusts that roughen the short waves and set off whitecaps as they
- * run downwind, wave groups that swell and ebb, and the shadows of the clouds overhead. `level` is the mip level to read
- * at (0 in the vertex stage), or nothing to let the sampler choose.
+ * run downwind, wave groups that swell and ebb, and patches of greener or darker water. `level` is the mip level to
+ * read at (0 in the vertex stage), or nothing to let the sampler choose.
  */
 export class SeaFields {
   private readonly wind: [number, number];
@@ -44,17 +42,10 @@ export class SeaFields {
     return smoothstep(0.2, 0.8, broad.mul(0.55).add(fine.mul(0.45)));
   }
 
-  /**
-   * Share of the direct sunlight that reaches this point of the sea past the cloud layer: where the sun's ray crosses
-   * the layer, the cover the clouds are drawn with there. The cloud bodies are not followed, so the edges stay soft.
-   */
-  sunThrough(xz: Node): Node {
-    const L = atmosphere.sunDir;
-    const q = xz.add(vec2(L.x, L.z).mul(atmosphere.cloudHeight.div(max(L.y, 0.08))));
-    const w = texture(this.weather, q.sub(atmosphere.cloudDrift).div(WEATHER_SPAN)).r;
-    // As coverAt in cloudNoise.ts.
-    const deck = smoothstep(0.6, 0.9, atmosphere.cloudCover);
-    const cover = clamp(atmosphere.cloudCover.add(w.sub(0.5).mul(float(1.1).sub(deck.mul(0.6)))), 0, 1);
-    return float(1).sub(smoothstep(0.42, 0.8, cover).mul(0.82).mul(smoothstep(0, 0.05, atmosphere.cloudCover)));
+  /** 0 to 1 over patches kilometres across, where plankton, silt or depth turn the water a shade greener or darker. */
+  tint(xz: Node): Node {
+    const broad = this.read(xz, 1.7, 9500).r;
+    const fine = this.read(xz, -0.4, 3700).g;
+    return smoothstep(0.25, 0.75, broad.mul(0.6).add(fine.mul(0.4)));
   }
 }

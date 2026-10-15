@@ -68,6 +68,7 @@ import type { SkyView } from '../render/skyDome';
 import { CASCADES, type FFTWaves } from './FFTWaves';
 import { SeaFields } from './seaFields';
 import { weatherMap } from '../render/cloudNoise';
+import { sunThroughClouds } from '../render/cloudShadow';
 import type { CurrentField } from '../sim/current';
 
 /** Mesh density and shading cost for the ocean. `lights` is how many point lights the surface shades. */
@@ -404,7 +405,7 @@ export class Ocean {
       const D = a2.div(dDen.mul(dDen).mul(Math.PI));
       const Fs = float(0.02).add(float(0.98).mul(pow(float(1).sub(VoH), 5)));
       // The sun is cut off under the clouds' shadows, which drift over the sea with the wind.
-      const sunLit = atmosphere.sunIrradiance.mul(fields.sunThrough(p0)).toVar();
+      const sunLit = atmosphere.sunIrradiance.mul(sunThroughClouds(p0)).toVar();
       const spec = sunLit.mul(D.mul(Fs).mul(NoL).div(max(NoV, 0.12).mul(4)));
       const lightSpec = vec3(0).toVar();
       const lightDiffuse = vec3(0).toVar();
@@ -433,7 +434,9 @@ export class Ocean {
       const scatterAmount = crest.mul(backLit).mul(thin).mul(2.6).add(pow(NoV, 2).mul(0.25));
       const sunLuma = dot(atmosphere.sunIrradiance, vec3(0.2126, 0.7152, 0.0722));
       const scatter = atmosphere.waterScatter.mul(sunLit).mul(scatterAmount).mul(0.18);
-      const body = atmosphere.waterDeep.mul(atmosphere.skyAmbient.mul(4.2).add(sunLit.mul(NoL.mul(0.25).add(0.12)))).add(scatter).add(atmosphere.waterScatter.mul(atmosphere.skyAmbient).mul(crest.mul(0.35).add(wakeTurb.mul(1.6))));
+      // Patches of greener or darker water a few kilometres across: the sea is not one dye.
+      const deep = atmosphere.waterDeep.mul(mix(vec3(1.1, 0.9, 0.94), vec3(0.9, 1.08, 1.04), fields.tint(p0)));
+      const body = deep.mul(atmosphere.skyAmbient.mul(4.2).add(sunLit.mul(NoL.mul(0.25).add(0.12)))).add(scatter).add(atmosphere.waterScatter.mul(atmosphere.skyAmbient).mul(crest.mul(0.35).add(wakeTurb.mul(1.6))));
 
       const shallowTint = float(1).sub(smoothstep(1.5, 14, depthBelow));
       // Refraction and contact foam read the scene colour and depth behind the surface. That costs a framebuffer

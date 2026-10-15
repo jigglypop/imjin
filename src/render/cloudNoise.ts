@@ -227,7 +227,18 @@ export function weatherMap() {
   return tex;
 }
 
-export function createCloudNoise(size = 64) {
+let noiseTexture: Data3DTexture | null = null;
+
+/**
+ * The clouds' 3D noise (Perlin-Worley body in red, Worley detail octaves in green and blue), made once and shared like
+ * the weather map: the cloud shader shapes the clouds from it and the cloud shadows on land and sea follow the same bodies.
+ */
+export function cloudNoise() {
+  noiseTexture ??= createCloudNoise(64);
+  return noiseTexture;
+}
+
+function createCloudNoise(size: number) {
   const rand = mulberry32(2024);
   const p1 = perlin(size, 4, rand);
   const p2 = perlin(size, 8, rand);

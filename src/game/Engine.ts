@@ -1,5 +1,6 @@
 import {
   ACESFilmicToneMapping,
+  Color,
   DataTexture,
   DirectionalLight,
   PCFShadowMap,
@@ -34,6 +35,7 @@ import { SkyView } from '../render/skyDome';
 import { Ocean } from '../ocean/Ocean';
 import { Clouds } from '../render/Clouds';
 import { CLOUD_WIND } from '../render/cloudNoise';
+import { sunThroughClouds } from '../render/cloudShadow';
 import { WakeMap } from '../ocean/WakeMap';
 import { SEA_STATES, spectrumOf, waveField, type SeaStateName } from '../ocean/waves';
 import { combatValue, engagementRange } from '../sim/competitive';
@@ -204,6 +206,8 @@ export class Engine {
   private sky: LoadedSky | null = null;
   /** Every node that reads the sky view: the background, the fog, the sea's haze and the clouds'. Made before the first sky. */
   private skyView: SkyView | null = null;
+  /** The sun's colour times its intensity, which the light's colour node reads (see init). */
+  private readonly sunLight = uniform(new Color());
   private accumulator = 0;
   private publishTimer = 0;
   private readonly autoBuild = new AutoBuild();
@@ -386,6 +390,9 @@ export class Engine {
       this.ocean = new Ocean(waveField, sky.environment, this.skyView!, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
       this.scene.add(this.ocean.mesh);
       const sun = this.sun;
+      // three lights with a light's colorNode in place of its colour times intensity: the clouds' shadows then reach the
+      // land, the ships and the villages as they reach the sea.
+      Object.assign(sun, { colorNode: this.sunLight.mul(sunThroughClouds(positionWorld.xz)) });
       sun.castShadow = true;
       sun.shadow.mapSize.set(this.eq.shadowMap, this.eq.shadowMap);
       sun.shadow.bias = -0.0004;
@@ -876,6 +883,7 @@ export class Engine {
     const lum = Math.max(1e-4, 0.2126 * irr.x + 0.7152 * irr.y + 0.0722 * irr.z);
     this.sun.color.setRGB(irr.x / lum, irr.y / lum, irr.z / lum);
     this.sun.intensity = lum * scale * 1.35;
+    this.sunLight.value.copy(this.sun.color).multiplyScalar(this.sun.intensity);
     this.renderer.toneMappingExposure = preset.exposure;
     if (this.fx) this.fx.night = preset.night;
     if (this.ocean) this.ocean.setEnvironment(sky.environment);
