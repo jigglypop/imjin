@@ -60,7 +60,7 @@ function drumGeometry() {
 function stepGeometry() {
   const g = new BoxGeometry(1, 1, 1);
   g.translate(0, 0.5, 0);
-  return painted([{ geo: g, color: [0.23, 0.16, 0.1] }]);
+  return painted([{ geo: g, color: [0.15, 0.1, 0.065] }]);
 }
 
 /**

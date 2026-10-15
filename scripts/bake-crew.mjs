@@ -171,6 +171,32 @@ function box(out, frame, u0, u1, halfV, halfW, offV = 0, offW = 0, color = [0.3,
   }
 }
 
+/** A square rod from one point to another of a frame (u, v, w each), for the parts that curve: bow limbs, a blade. */
+function rod(out, frame, a, b, half, color) {
+  const p = frame.at(...a);
+  const q = frame.at(...b);
+  const d = norm(q.map((x, i) => x - p[i]));
+  const ref = Math.abs(d[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+  const s = norm(cross(d, ref)).map((x) => x * half);
+  const t = norm(cross(d, s)).map((x) => x * half);
+  const corner = (o, i, j) => o.map((x, k) => x + s[k] * i + t[k] * j);
+  const ends = [p, q].map((o) => [corner(o, -1, -1), corner(o, 1, -1), corner(o, 1, 1), corner(o, -1, 1)]);
+  const center = p.map((x, k) => (x + q[k]) / 2);
+  const quad = (A, B, C, D) => {
+    const n = norm(cross(B.map((x, k) => x - A[k]), C.map((x, k) => x - A[k])));
+    const mid = A.map((x, k) => (x + C[k]) / 2 - center[k]);
+    const flip = n[0] * mid[0] + n[1] * mid[1] + n[2] * mid[2] < 0;
+    const tri = flip ? [A, C, B, A, D, C] : [A, B, C, A, C, D];
+    for (const v of tri) out.push({ p: v, n: flip ? n.map((x) => -x) : n, color });
+  };
+  for (let i = 0; i < 4; i += 1) {
+    const j = (i + 1) % 4;
+    quad(ends[0][i], ends[0][j], ends[1][j], ends[1][i]);
+  }
+  quad(...ends[0]);
+  quad(...ends[1]);
+}
+
 const WOOD = [0.32, 0.2, 0.11];
 const STEEL = [0.55, 0.56, 0.58];
 const IRON = [0.12, 0.12, 0.13];
@@ -207,14 +233,15 @@ function weaponTris(id, frame, name) {
     box(tris, frame, -0.9, 1.55, 0.018, 0.018, 0, 0, WOOD);
     box(tris, frame, 1.55, 1.82, 0.012, 0.03, 0, 0, STEEL);
   } else if (id === 2) {
-    // A short recurve bow, the limbs bending away from the archer.
-    const seg = 6;
+    // A short recurve bow, the limbs bending away from the archer and the tips turning back, with its string.
+    const seg = 12;
+    const bend = (u) => 0.13 * (1 - (u / 0.62) ** 2) - 0.05 * Math.max(0, Math.abs(u) - 0.5) * 8;
     for (let i = 0; i < seg; i += 1) {
       const u0 = -0.62 + (1.24 * i) / seg;
       const u1 = -0.62 + (1.24 * (i + 1)) / seg;
-      const bend = (u) => 0.13 * (1 - (u / 0.62) ** 2) - 0.05 * Math.max(0, Math.abs(u) - 0.5) * 8;
-      box(tris, frame, u0, u1, 0.016, 0.016, 0, (bend(u0) + bend(u1)) / 2, LACQUER);
+      rod(tris, frame, [u0, 0, bend(u0)], [u1, 0, bend(u1)], 0.016, LACQUER);
     }
+    rod(tris, frame, [-0.6, 0, bend(-0.6)], [0.6, 0, bend(0.6)], 0.004, HEMP);
   } else if (id === 3 || id === 11) {
     box(tris, frame, -0.08, 1.05, 0.018, 0.018, 0.04, 0, IRON);
     box(tris, frame, -0.55, -0.02, 0.045, 0.03, 0.0, 0, WOOD);
