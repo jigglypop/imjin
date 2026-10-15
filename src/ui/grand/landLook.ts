@@ -130,6 +130,8 @@ const smooth = (a: number, b: number, x: number) => {
 export interface LandLook {
   /** The bake (landBake.ts) over the DEM, the noise and the close-up ground textures. */
   readonly textures: Texture[];
+  /** The land's noise (four tiling channels: districts, stands, fine breakup, tree crowns), which the sea's foam and glint read too. */
+  readonly noise: Texture;
   /** The ground textures alone, for what is laid on the hero camps' ground (hero/ground.ts). */
   readonly details: Texture[];
   /**
@@ -300,6 +302,7 @@ export async function loadLandLook(metres: Float32Array, signal: AbortSignal): P
 
   return {
     textures,
+    noise,
     details,
     coverAt,
     color,

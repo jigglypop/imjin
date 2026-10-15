@@ -1,5 +1,7 @@
-import { DataTexture, LinearFilter, LinearMipmapLinearFilter, Mesh, MeshBasicNodeMaterial, type Node, PlaneGeometry, RGFormat, UnsignedByteType } from 'three/webgpu';
-import { cameraPosition, clamp, float, fwidth, log, max, mix, positionWorld, sin, smoothstep, texture, vec2, vec3 } from 'three/tsl';
+import { DataTexture, LinearFilter, LinearMipmapLinearFilter, Mesh, MeshBasicNodeMaterial, type Node, PlaneGeometry, RGFormat, type Texture, UnsignedByteType } from 'three/webgpu';
+import { cameraPosition, clamp, float, fract, fwidth, log, max, mix, positionWorld, smoothstep, texture, vec2, vec3 } from 'three/tsl';
+import { SUN_DIRECTION } from './groundPalette';
+import { MODEL_METRE } from './hero/site';
 import meta from '../../select/demMeta.json';
 import { V_SCALE } from '../../select/demFrame';
 import { worldClock } from '../../select/terrain';
@@ -9,8 +11,9 @@ import { FAR, frameU, worldX, worldZ } from './worldCamera';
 
 // The sea of the campaign's 3D world: one plane at sea level out past the far plane, drawn after the land so the depth
 // test throws away whatever the land covers. Its colour is cheap: one fetch from a small texture baked once from the
-// drawn land (the water's depth and the distance to the coast), pale shoals to deep blue, a thin line of surf along the
-// coasts, the sky in it at grazing angles and a swell of a few sines moving with the world clock.
+// drawn land (the water's depth and the distance to the coast) and three from the land's small noise texture: pale
+// shoals to deep blue-green, a thin broken line of surf along the coasts with a wash coming and going off it, the sky in
+// it at grazing angles and the sun's glint on drifting ripples, moving with the world clock.
 //
 // The texture covers the whole world. Over the DEM its texels are even, one for every two of the DEM's; outside it they
 // grow with the distance, slowly to the north, where the far land's coasts lie, and fast elsewhere, where there is only
@@ -215,6 +218,34 @@ function blurLine(values: Float64Array, radius: number) {
   return values;
 }
 
+/**
+ * Smooths the seabed over the water alone (land, at 0, neither counts nor changes): the DEM's bathymetry has straight
+ * seams where its sources meet, steps of several metres that the water's colour drew as rectangles from afar.
+ */
+function smoothSeabed(wet: Float32Array) {
+  const R = 4, w = DEM_COLS, h = DEM_ROWS;
+  const sum = new Float32Array(w * h), count = new Float32Array(w * h);
+  for (let pass = 0; pass < 2; pass += 1) {
+    // Along the rows, then down the columns, each a running window of 2R + 1 texels over the wet ones.
+    for (const [lines, along, step, stride] of [[h, w, 1, w], [w, h, w, 1]] as const) {
+      for (let line = 0; line < lines; line += 1) {
+        const base = line * stride;
+        let s = 0, c = 0;
+        const at = (k: number) => base + k * step;
+        for (let k = 0; k <= R && k < along; k += 1) if (wet[at(k)]! > 0) { s += wet[at(k)]!; c += 1; }
+        for (let k = 0; k < along; k += 1) {
+          sum[at(k)] = s;
+          count[at(k)] = c;
+          const enter = k + R + 1, leave = k - R;
+          if (enter < along && wet[at(enter)]! > 0) { s += wet[at(enter)]!; c += 1; }
+          if (leave >= 0 && wet[at(leave)]! > 0) { s -= wet[at(leave)]!; c -= 1; }
+        }
+      }
+      for (let i = 0; i < w * h; i += 1) if (wet[i]! > 0 && count[i]! > 0) wet[i] = sum[i]! / count[i]!;
+    }
+  }
+}
+
 /** Texels inside each of the DEM's edges over which its depths give way to the edge's smoothed depth (`edgeDepths`). */
 const EDGE_BAND = 24;
 
@@ -281,6 +312,7 @@ function bake(heights: Float32Array, facets: Float32Array[]) {
       wet[r * DEM_COLS + c] = share > 0 ? (wa * Math.min(DEEP, -a) + wb * Math.min(DEEP, -b) + wd * Math.min(DEEP, -d) + we * Math.min(DEEP, -e)) / share : 0;
     }
   }
+  smoothSeabed(wet);
   // Outside it, the depth of the nearest stretch of its edge settles over SETTLE to a shelf off the nearest coast.
   const edges = edgeDepths(wet);
   const corners = [
@@ -336,42 +368,61 @@ const srgb = (r: number, g: number, b: number) => vec3(...([r, g, b].map((c) => 
 
 /**
  * The sea for the whole world. `heights` are the DEM's metres as the land's facets draw them (groundLand.ts); `facets`
- * the drawn facets of the land and the far land, whose coasts the sea's shallows and surf follow.
+ * the drawn facets of the land and the far land, whose coasts the sea's shallows and surf follow; `noise` the land's
+ * noise (landLook.ts), which breaks the foam and ruffles the water for the sun's glint.
  */
-export function buildSea(heights: Float32Array, facets: Float32Array[]) {
+export function buildSea(heights: Float32Array, facets: Float32Array[], noise: Texture) {
   const tex = bake(heights, facets);
   const p = positionWorld;
   const sample = texture(tex, vec2(warp(p.x, AXIS_X), warp(p.z, AXIS_Z)));
   const deep = sample.r;
   const coast = sample.g.mul(LAND_SIDE + SEA_SIDE).sub(LAND_SIDE);
-
-  // Pale shoals right at the shore, turquoise over the shallows, blue over the shelf, deep blue offshore. Only a shore
-  // has the pale shoals: a bank far out stays turquoise, so it does not read as a hole in the sea.
-  const shoal = float(1).sub(smoothstep(0, 0.035, deep)).mul(float(1).sub(smoothstep(1, 4, coast)));
-  const shallows = mix(srgb(64, 168, 174), srgb(132, 206, 196), shoal);
-  const water = mix(mix(shallows, srgb(30, 110, 150), smoothstep(0.02, 0.17, deep)), srgb(15, 58, 102), smoothstep(0.18, 1, deep));
   const toEye = cameraPosition.sub(p);
   const range = toEye.length();
   const view = toEye.div(range);
-  // A slow swell of three crossing sines, a few waves across the screen up close and gone with distance, where it would
-  // only shimmer. It moves with the world clock, so it stands still for a player who asks for reduced motion.
-  const clock = worldClock;
-  const swell = sin(p.x.mul(171).add(p.z.mul(64)).add(clock.mul(0.8)))
-    .add(sin(p.z.mul(187).sub(p.x.mul(93)).sub(clock.mul(0.6))))
-    .add(sin(p.x.mul(277).sub(p.z.mul(141)).add(clock.mul(1.1))).mul(0.6))
-    .mul(float(1).sub(smoothstep(0.15, 0.9, range)));
+  const clock: any = worldClock;
+  // Model metres, the scale the camps are built at, for the ripples and the foam.
+  const m: any = p.xz.div(MODEL_METRE);
+
+  // Deep blue-green offshore, a clearer blue over the shelf, turquoise over the shallows and pale over the sand right at a
+  // shore. Only a shore has the pale shoals: a bank far out stays turquoise, so it does not read as a hole in the sea.
+  const shore = float(1).sub(smoothstep(0.5, 3, coast));
+  const shoal = float(1).sub(smoothstep(0, 0.03, deep)).mul(shore);
+  const shallows = mix(srgb(40, 134, 146), srgb(104, 180, 172), shoal);
+  const water = mix(mix(shallows, srgb(24, 96, 128), smoothstep(0.02, 0.16, deep)), srgb(12, 50, 80), smoothstep(0.16, 0.9, deep));
+
+  // The water ruffled by two drifting sets of ripples (the noise's fine channel), for the sky and the sun to catch; they
+  // fade into the noise's mean, a calm sheen, as the camera draws back.
+  const r1: any = texture(noise, m.div(46).add(vec2(clock.mul(0.004), clock.mul(0.0025)))).b;
+  const r2: any = texture(noise, m.div(29).mul(vec2(1, -1)).add(vec2(clock.mul(-0.003), clock.mul(0.0045)))).b;
+  // Ripples finer than a few pixels only shimmer: they calm as a pixel covers more of them.
+  const calm: any = float(1).sub(smoothstep(0.6, 3, fwidth(m).length()));
+  const tilt: any = vec2(r1.sub(0.5), r2.sub(0.5)).mul(calm.mul(0.45));
+  const normal: any = vec3(tilt.x, 1, tilt.y).normalize();
   // The sky in the water at grazing angles.
-  const grazing = float(1).sub(view.y.clamp(0, 1));
-  const sky = grazing.mul(grazing).mul(grazing).mul(0.45);
-  const lit = mix(water.mul(swell.mul(0.035).add(1)), srgb(150, 188, 214), sky);
-  // A thin line of surf along every coast, under a fifth of a texel wide up close and never thinner than about a pixel
-  // and a half far off; the land covers whatever of it falls inside the drawn coast.
+  const facing: any = view.dot(normal).clamp(0, 1);
+  const grazing = float(1).sub(facing);
+  const sky = grazing.mul(grazing).mul(grazing).mul(0.5);
+  // The sun's glint: a sharp sparkle on the ripples and a broad sheen round it.
+  const sun = vec3(...SUN_DIRECTION);
+  const mirror: any = normal.mul(view.dot(normal).mul(2)).sub(view);
+  const toward: any = mirror.dot(sun).max(0);
+  const glint: any = toward.pow(700).mul(calm).mul(1.4).add(toward.pow(18).mul(0.08));
+  const lit = mix(water.mul(r1.sub(0.5).mul(calm.mul(0.1)).add(1)), srgb(150, 186, 210), sky).add(vec3(1, 0.93, 0.8).mul(glint));
+
+  // Surf: a thin broken line of foam where the water meets the land, about a pixel and a half from afar and a few metres
+  // close up, and a second, fainter wash just off it that comes and goes with the swell. The land covers whatever of it
+  // falls inside the drawn coast.
   const blur = fwidth(coast);
-  const width = max(0.18, blur.mul(1.4));
-  const surf = float(1).sub(smoothstep(width, width.add(blur.max(0.04)), coast))
-    .mul(sin(clock.mul(1.3).add(p.x.mul(900)).add(p.z.mul(600))).mul(0.1).add(0.72));
+  const width = max(0.15, blur.mul(1.2));
+  const broken: any = texture(noise, m.div(24).add(vec2(clock.mul(0.002), 0))).b;
+  const line = float(1).sub(smoothstep(width.mul(0.4), width.add(blur.max(0.03)), coast)).mul(broken.mul(0.7).add(0.45));
+  const swell = fract(coast.mul(0.9).sub(clock.mul(0.12)));
+  const wash = smoothstep(0.8, 0.97, swell).mul(float(1).sub(smoothstep(0.6, 2.4, coast))).mul(smoothstep(0.45, 0.65, broken))
+    .mul(float(1).sub(smoothstep(0.08, 0.3, blur)));
+  const foam = max(line.mul(0.85), wash.mul(0.3)).clamp(0, 1);
   const material = new MeshBasicNodeMaterial();
-  material.colorNode = mix(lit, srgb(238, 246, 244), surf);
+  material.colorNode = mix(lit, srgb(236, 244, 242), foam);
 
   // Wide enough to reach the far plane from anywhere the camera goes, so the fog, not an edge, ends it at the horizon.
   const geometry = new PlaneGeometry(2 * (FAR + 2), 2 * (FAR + 2)).rotateX(-Math.PI / 2);
