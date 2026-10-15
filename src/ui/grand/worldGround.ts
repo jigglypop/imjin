@@ -1,5 +1,5 @@
 import { BackSide, Color, Group, Mesh, MeshBasicNodeMaterial, SphereGeometry } from 'three/webgpu';
-import { mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
+import { attribute, float, mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
 import demMeta from '../../select/demMeta.json';
 import { V_SCALE } from '../../select/demFrame';
 import { loadDem } from '../../select/terrain';
@@ -71,6 +71,8 @@ export async function loadGround(signal: AbortSignal): Promise<WorldGround> {
     land.mesh.material.colorNode = look.color();
     const far = buildFarLandMesh(heights, land.seam);
     made.push(far);
+    const own: any = attribute('land', 'vec4');
+    far.mesh.material.colorNode = look.color({ inner: float(1), sun: own.x, sky: own.y, slope: own.z, metres: own.w });
     // The sea's shallows and surf follow the coasts the facets of both draw.
     const sea = buildSea(heights, [land.facets, far.facets]);
     made.push(sea);

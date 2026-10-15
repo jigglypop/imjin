@@ -1,6 +1,7 @@
 import { BufferAttribute, BufferGeometry, DoubleSide, MeshBasicNodeMaterial, ShapeUtils, Vector2, type Texture } from 'three/webgpu';
 import { attribute, float, floor, fract, fwidth, mix, mx_noise_float, positionLocal, smoothstep, texture, vec2, vec3, vec4 } from 'three/tsl';
-import { SHADE_SLOPE, SKY_LIGHT, SUN_DIRECTION, SUN_LIGHT } from '../groundPalette';
+import { SKY_LIGHT, SUN_DIRECTION, SUN_LIGHT } from '../groundPalette';
+import { vertexLight } from '../landBake';
 import type { LandLook } from '../landLook';
 import type { P2, Plan, Surface } from './plan';
 import { ELEVATION_MODEL, siteUV, type HeroSite } from './site';
@@ -150,7 +151,6 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
   }
   const patch = new Streams();
   const w: number[] = [0, 0, 0, 0];
-  const land: number[] = [0, 0, 0, 0];
   const white = [1, 1, 1];
   const woods = new Float32Array(n * n), open = new Float32Array(n * n);
   for (let j = 0; j < n; j += 1) {
@@ -161,12 +161,8 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
       const gz = (at(i, j + 2) + at(i, j + 1) - at(i, j - 1) - at(i, j - 2)) / (6 * STEP);
       const slope = Math.hypot(gx, gz);
       const metres = h / ELEVATION_MODEL;
-      // Lit as the land's bake lights it: the normal flattened to the share of the slope the light reads.
-      const fx = -gx * SHADE_SLOPE, fz = -gz * SHADE_SLOPE, fl = Math.hypot(fx, 1, fz);
-      land[0] = Math.max(0, (fx * SUN_DIRECTION[0] + SUN_DIRECTION[1] + fz * SUN_DIRECTION[2]) / fl);
-      land[1] = 0.75 + 0.25 / fl;
-      land[2] = slope;
-      land[3] = Math.max(0, metres);
+      // Lit as the land's bake lights it (a model metre is as wide as it is high, so the slope is the drawn one).
+      const land = vertexLight(gx, gz, Math.max(0, metres));
       // Which ground textures show: rock on the steep cuts and crags, sand on the flat shore, woodland floor on the wooded slopes, grass elsewhere.
       const rock = smooth(0.85, 1.6, slope);
       const sand = shore[j * n + i] ? (1 - smooth(0.02, 0.16, h)) * (1 - smooth(0.45, 0.9, slope)) : 0;

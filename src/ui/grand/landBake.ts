@@ -39,6 +39,20 @@ export function landFrame(): BakeFrame {
   };
 }
 
+/**
+ * The light, slope and height the bake would give a vertex of drawn slope (gx, gz) (rise over run along x and z) standing
+ * `metres` high, with no hill's shadow and the sky as open as on a gentle hillside: for land drawn beyond the DEM, which
+ * carries them per vertex. Sun, sky, slope, metres.
+ */
+export function vertexLight(gx: number, gz: number, metres: number): [number, number, number, number] {
+  const fx = -gx * SHADE_SLOPE, fz = -gz * SHADE_SLOPE, len = Math.hypot(fx, 1, fz);
+  const sun = Math.max(0, (fx * SUN_DIRECTION[0] + SUN_DIRECTION[1] + fz * SUN_DIRECTION[2]) / len);
+  return [sun, (0.75 + 0.25 / len) * OPEN_SKY, Math.hypot(gx, gz), metres];
+}
+
+/** The share of the sky an ordinary hillside sees, as the bake reckons it. */
+const OPEN_SKY = 0.92;
+
 /** The slope channel holds the drawn slope (rise over run) over this. */
 export const SLOPE_RANGE = 3;
 /** The height channel holds sqrt(metres / HEIGHT_RANGE), finer on the low ground where farms, beaches and woods part. */

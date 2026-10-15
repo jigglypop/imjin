@@ -104,8 +104,8 @@ export interface LocalGround {
   sky: any;
   slope: any;
   metres: any;
-  /** The patch's own weights of grass, rock, sand and woodland floor. */
-  w: any;
+  /** The patch's own weights of grass, rock, sand and woodland floor; without them the look works them out as it does for the DEM. */
+  w?: any;
 }
 
 export interface LandLook {
@@ -171,10 +171,12 @@ export async function loadLandLook(metres: Float32Array, signal: AbortSignal): P
     // and mud on the low flat shores; farmland on the low flat ground; grass and scrub elsewhere.
     const woodsAt = max(smoothstep(0.26, 0.55, slope.add(wander.mul(0.22))), smoothstep(70, 190, metres.add(wander.mul(90))));
     let wood: any = smoothstep(0.38, 0.62, woodsAt.add(rag.mul(0.45)));
-    let rock: any = max(smoothstep(1.5, 2.3, slope.add(rag.mul(0.5))), smoothstep(1050, 1500, metres.add(wander.mul(150)).add(rag.mul(80))));
+    // Granite where the land drops to the sea, as along the whole south coast, besides the crags and the ridges.
+    const shoreRock: any = float(1).sub(smoothstep(3, 12, metres.add(rag.mul(5)))).mul(smoothstep(0.22, 0.45, slope.add(rag.mul(0.2))));
+    let rock: any = max(max(smoothstep(1.5, 2.3, slope.add(rag.mul(0.5))), smoothstep(1050, 1500, metres.add(wander.mul(150)).add(rag.mul(80)))), shoreRock);
     let sand: any = float(1).sub(smoothstep(1.5, 5.5, metres.add(rag.mul(4)))).mul(float(1).sub(smoothstep(0.12, 0.35, slope)));
     const farm: any = float(1).sub(smoothstep(18, 60, metres.add(wander.mul(40)))).mul(float(1).sub(smoothstep(0.1, 0.26, slope.add(rag.mul(0.06)))));
-    if (local) {
+    if (local?.w) {
       // Inside a patch its own finer ground decides rock, sand and wood (its cut banks, its shore).
       wood = mix(wood, local.w.w, local.inner);
       rock = mix(rock, local.w.y, local.inner);
@@ -184,34 +186,37 @@ export async function loadLandLook(metres: Float32Array, signal: AbortSignal): P
     wood = wood.mul(float(1).sub(rock)).mul(float(1).sub(sand));
 
     // Open ground: grass and scrub, drier in some districts.
-    const open: any = mix(srgb(122, 152, 74), srgb(160, 156, 96), smoothstep(0.62, 0.9, broad).mul(0.7));
+    const open: any = mix(srgb(120, 146, 70), srgb(156, 150, 90), smoothstep(0.6, 0.9, broad).mul(0.7));
     // Farmland: a patchwork of plots in rows turned with the district, each its own crop, with darker bunds between; the
     // plots give way to their mean colour once a pixel covers a fair share of one.
     const turn: any = broad.mul(6.3);
     const c: any = sin(turn.add(1.57)), sn: any = sin(turn);
-    const q0: any = vec2(m.x.mul(c).sub(m.y.mul(sn)), m.x.mul(sn).add(m.y.mul(c))).add(vec2(stand.sub(0.5).mul(14), fine.sub(0.5).mul(6)));
-    const plot = vec2(17, 10.5);
+    // The rows bend with the lie of the land, so on a valley's sides the plots step up it in terraces.
+    const q0: any = vec2(m.x.mul(c).sub(m.y.mul(sn)), m.x.mul(sn).add(m.y.mul(c))).add(vec2(stand.sub(0.5).mul(12), fine.sub(0.5).mul(4).add(metres.mul(0.5))));
+    const plot = vec2(9.5, 5.5);
     const row: any = floor(q0.y.div(plot.y));
     const q: any = vec2(q0.x.div(plot.x).add(row.mul(0.37)), q0.y.div(plot.y));
     const cell: any = floor(q);
     const pick: any = fract(sin(cell.x.mul(127.1).add(cell.y.mul(311.7))).mul(43758.55));
-    const crop: any = mix(mix(srgb(116, 152, 70), srgb(146, 174, 86), smoothstep(0.2, 0.3, pick)),
-      mix(srgb(178, 162, 96), srgb(150, 128, 92), smoothstep(0.8, 0.9, pick)), smoothstep(0.55, 0.65, pick));
+    // Rice green, young green, ripening gold and bare tilled earth, gold more often in the drier districts.
+    const ripe: any = pick.add(broad.sub(0.5).mul(0.5));
+    const crop: any = mix(mix(srgb(104, 140, 58), srgb(140, 166, 78), smoothstep(0.25, 0.35, ripe)),
+      mix(srgb(182, 168, 96), srgb(146, 120, 84), smoothstep(0.85, 0.95, ripe)), smoothstep(0.55, 0.65, ripe));
     const f: any = fract(q);
     const edge: any = min(min(f.x, float(1).sub(f.x)).mul(plot.x), min(f.y, float(1).sub(f.y)).mul(plot.y));
     const plots: any = float(1).sub(smoothstep(1.2, 5, footprint));
-    const bund: any = float(1).sub(smoothstep(0.25, 0.25 + 0.6, edge.div(max(footprint, 0.3)).mul(0.5))).mul(plots);
-    const field: any = mix(mix(srgb(136, 160, 80), crop, plots), srgb(92, 118, 62), bund.mul(0.7));
+    const bund: any = float(1).sub(smoothstep(0.25, 0.85, edge.div(max(footprint, 0.25)).mul(0.5))).mul(plots);
+    const field: any = mix(mix(srgb(138, 156, 76), crop, plots), srgb(70, 92, 48), bund.mul(0.75));
     let ground: any = mix(open, field, farm);
 
     // Woods: broadleaf low down, pine higher up, the canopy in crowns with shade between them, and stands of a little
     // different green.
     const crown: any = n(128).a;
-    const canopy: any = mix(srgb(70, 112, 56), srgb(40, 76, 48), smoothstep(160, 650, metres.add(wander.mul(200))));
-    const woodColor: any = canopy.mul(crown.mul(0.55).add(0.68)).mul(stand.sub(0.5).mul(0.25).add(1));
+    const canopy: any = mix(srgb(58, 96, 46), srgb(36, 66, 42), smoothstep(120, 600, metres.add(wander.mul(200))));
+    const woodColor: any = canopy.mul(crown.mul(0.75).add(0.55)).mul(stand.sub(0.5).mul(0.35).add(1));
     ground = mix(ground, woodColor, wood);
     // Rock, paler the higher it stands; sand, and mud on the flattest and lowest of it in some reaches.
-    ground = mix(ground, mix(srgb(124, 116, 102), srgb(176, 170, 158), smoothstep(900, 1700, metres)), rock);
+    ground = mix(ground, mix(srgb(132, 126, 114), srgb(176, 170, 158), smoothstep(900, 1700, metres)), rock);
     const mud: any = smoothstep(0.55, 0.75, broad.add(stand.mul(0.3))).mul(float(1).sub(smoothstep(0.5, 2.5, metres)));
     ground = mix(ground, mix(srgb(222, 206, 160), srgb(146, 136, 112), mud), sand);
 
