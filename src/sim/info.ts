@@ -6,6 +6,8 @@ import type { SeaStateName } from '../ocean/waves';
 import type { CurrentSpec } from './current';
 import { environmentFor, type BattleEnvironment } from './environment';
 import type { CoastalFormationKind } from './coastal-tactics';
+import type { RegionBattle } from './grand/bridge';
+import { grandInfo } from './grand/spawn';
 
 /** What the engine needs to stage a battle, whether one of the nine historical ones or a conquest map. */
 export type BattleInfo = {
@@ -26,7 +28,7 @@ export type BattleInfo = {
   view: { tx: number; tz: number; dir: number; dist: number; pitch: number };
   /** 0 summer green to 1 winter, for the forests. */
   foliage: number;
-  /** The historical battle whose picture the loading screen shows. A campaign region's battle borrows the picture of the coast it is fought on. */
+  /** The historical battle whose scene the loading page shows. A campaign region's battle borrows the nearest one's (coast.ts regionArt). */
   art?: ScenarioId;
 };
 
@@ -41,4 +43,9 @@ export function conquestInfo(id: ConquestMapId, seed = 1592, ranked = false): Ba
   const m = CONQUEST_MAPS[id];
   const environment = environmentFor(m, seed, ranked);
   return { mode: 'conquest', id, title: m.title, hanja: m.hanja, date: m.date, place: m.place, season: m.season, sky: environment.sky, sea: environment.sea, night: environment.night, current: environment.current, environment, terrain: m.terrain, view: m.view, foliage: m.foliage };
+}
+
+/** What the HUD calls a conquest battle: a campaign meeting is named for its region and month and fought on the region's own coast. */
+export function conquestInfoOf(setup: { map?: ConquestMapId; grand?: RegionBattle; seed: number; ranked?: boolean }): BattleInfo {
+  return setup.grand ? grandInfo(setup.grand) : conquestInfo(setup.map!, setup.seed, setup.ranked);
 }

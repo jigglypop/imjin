@@ -12,6 +12,8 @@ import { useCompactLayout } from './useCompactLayout';
 import { ConquestBar, CrewPanel, PointPanel } from './ConquestPanels';
 import { DirectorSettings, ShotLabel } from './DirectorToggle';
 import { Icon } from './battleIcons';
+import { CodexIcon } from './codex/icons';
+import { routePath } from '../routes';
 import { tCommander, tName, tShips } from './battleNames';
 import { params } from './launch';
 import './hud.css';
@@ -500,6 +502,7 @@ function GunLights({ guns }: { guns: GunInfo[] }) {
 
 function Detail({ engine, snap, p, portrait }: { engine: Engine; snap: GameSnapshot; p: PrimaryInfo; portrait: string }) {
   const t = useT();
+  const lang = useLang();
   return (
     <div className="detail glass interactive">
         <div className="detail-head">
@@ -512,6 +515,10 @@ function Detail({ engine, snap, p, portrait }: { engine: Engine; snap: GameSnaps
               {!p.lights && snap.night ? ' · ' + t('등불 꺼짐') : ''}
             </div>
           </div>
+          {/* A new tab: the codex is its own page, and leaving this one would end the battle. */}
+          <button className="detail-codex" title={t('도감에서 자세히 보기')} aria-label={t('도감에서 자세히 보기')} onClick={() => window.open(`${routePath('codex', lang)}#${p.shipKind}`, '_blank', 'noopener')}>
+            <CodexIcon name="look" size={18} />
+          </button>
         </div>
         <div className="detail-body">
           <Stat label={t('선체')} value={p.hull} tone="hull" text={`${Math.round(p.hull * 100)}%`} />

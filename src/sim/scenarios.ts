@@ -19,18 +19,18 @@ import type { SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
 import type { CurrentSpec } from './current';
 import { echelon, flagshipOf, numbered } from '../i18n/names';
+import type { BattleSlug } from '../routes';
+import { SCENARIO_TEXT, type ScenarioText } from './scenarioText';
 
-export type ScenarioId = 'okpo' | 'sacheon' | 'dangpo' | 'hansan' | 'angolpo' | 'busan' | 'chilcheon' | 'myeongnyang' | 'noryang';
+/** The nine historical battles. Each has an address of its own (/battles/hansan), so the id list lives in src/routes.ts. */
+export type ScenarioId = BattleSlug;
 
 export type Commander = { name: string; title: string; figure: string; portrait: string; banner: string };
 
-export type ScenarioInfo = {
+/** A battle's title, hanja, date, place and one-line hook come from scenarioText.ts. */
+export type ScenarioInfo = ScenarioText & {
   id: ScenarioId;
-  title: string;
-  hanja: string;
-  date: string;
   season: string;
-  place: string;
   difficulty: string;
   summary: string;
   result: string;
@@ -68,11 +68,8 @@ const YI_TONGJE: Commander = { ...YI, title: '삼도수군통제사' };
 export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
   okpo: {
     id: 'okpo',
-    title: '옥포 해전',
-    hanja: '玉浦海戰',
-    date: '1592년 5월 7일',
+    ...SCENARIO_TEXT.okpo,
     season: '늦봄',
-    place: '거제 옥포만',
     difficulty: '쉬움',
     summary:
       '임진왜란이 시작되고 3주쯤 지난 5월 7일, 조선 수군이 처음으로 출전한 해전입니다. 도도 다카토라가 이끄는 일본 함선들이 옥포 포구에 정박해 마을을 약탈하고 있었고, 이순신의 함대가 포구로 들어가 공격했습니다. 일본 함선 26척을 격파했으며 조선 수군의 손실은 없었습니다.',
@@ -90,11 +87,8 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
   },
   sacheon: {
     id: 'sacheon',
-    title: '사천 해전',
-    hanja: '泗川海戰',
-    date: '1592년 5월 29일',
+    ...SCENARIO_TEXT.sacheon,
     season: '초여름',
-    place: '사천 선창',
     difficulty: '보통',
     summary:
       '거북선이 처음으로 실전에 투입된 해전입니다. 일본군은 언덕 위에 조총 부대를 두고 선창에 배를 정박해 두었는데, 조선 수군은 물러나는 척하며 일본 함선을 바다로 끌어낸 뒤 거북선을 앞세워 돌격했습니다. 이순신은 이 싸움에서 왼쪽 어깨에 총상을 입었습니다.',
@@ -112,11 +106,8 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
   },
   dangpo: {
     id: 'dangpo',
-    title: '당포 해전',
-    hanja: '唐浦海戰',
-    date: '1592년 6월 2일',
+    ...SCENARIO_TEXT.dangpo,
     season: '여름',
-    place: '통영 당포',
     difficulty: '보통',
     summary:
       '당포 선창에 정박한 일본 함선 21척을 공격한 해전입니다. 거북선이 높은 누각을 얹은 일본 대장선을 들이받고 판옥선들이 총통을 쏘았으며, 일본 장수 구루시마 미치유키가 화살에 맞아 쓰러졌습니다.',
@@ -134,11 +125,8 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
   },
   hansan: {
     id: 'hansan',
-    title: '한산도 대첩',
-    hanja: '閑山島大捷',
-    date: '1592년 7월 8일',
+    ...SCENARIO_TEXT.hansan,
     season: '여름',
-    place: '견내량 · 한산도 앞바다',
     difficulty: '보통',
     summary:
       '견내량의 좁은 물길에 정박한 와키자카 야스하루의 함대를 한산도 앞바다로 끌어낸 해전입니다. 조선 수군은 판옥선 몇 척으로 적을 유인한 뒤 학익진으로 에워싸고 총통을 쏘아 59척을 격침하거나 나포했습니다.',
@@ -159,11 +147,8 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
   },
   angolpo: {
     id: 'angolpo',
-    title: '안골포 해전',
-    hanja: '安骨浦海戰',
-    date: '1592년 7월 10일',
+    ...SCENARIO_TEXT.angolpo,
     season: '여름',
-    place: '진해 안골포',
     difficulty: '어려움',
     summary:
       '한산도 대첩 이틀 뒤, 구키 요시타카와 가토 요시아키의 함대가 정박한 안골포를 공격한 해전입니다. 포구가 좁고 얕아 판옥선이 한꺼번에 들어갈 수 없었기 때문에, 여러 척이 번갈아 드나들며 정박한 일본 함선에 총통을 쏘았습니다.',
@@ -181,11 +166,8 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
   },
   busan: {
     id: 'busan',
-    title: '부산포 해전',
-    hanja: '釜山浦海戰',
-    date: '1592년 9월 1일',
+    ...SCENARIO_TEXT.busan,
     season: '가을',
-    place: '부산포',
     difficulty: '어려움',
     summary:
       '일본군의 거점인 부산포에는 470여 척이 정박해 있었습니다. 조선 수군은 포구 안으로 돌입해 해안의 조총 사격을 받으면서도 정박한 일본 함선을 차례로 불태웠습니다. 선봉장 정운이 이 싸움에서 전사했습니다.',
@@ -203,11 +185,8 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
   },
   chilcheon: {
     id: 'chilcheon',
-    title: '칠천량 해전',
-    hanja: '漆川梁海戰',
-    date: '1597년 7월 16일',
+    ...SCENARIO_TEXT.chilcheon,
     season: '여름 · 새벽',
-    place: '거제 칠천량',
     difficulty: '극히 어려움',
     summary:
       '이순신이 투옥된 뒤 삼도수군통제사가 된 원균은 칠천량에 함대를 정박시켰습니다. 새벽 어둠 속에서 일본 함대가 사방으로 접근해 기습했고, 조선 수군은 이 싸움에서 궤멸했습니다. 포위를 뚫고 최대한 많은 함선을 지키는 것이 목표입니다.',
@@ -228,11 +207,8 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
   },
   myeongnyang: {
     id: 'myeongnyang',
-    title: '명량 해전',
-    hanja: '鳴梁海戰',
-    date: '1597년 9월 16일',
+    ...SCENARIO_TEXT.myeongnyang,
     season: '가을',
-    place: '울돌목',
     difficulty: '매우 어려움',
     summary:
       '칠천량의 패배 뒤 조선 수군에게 남은 배는 열세 척뿐이었습니다. 이순신은 울돌목의 거센 물살을 이용해 일본 함선 133척과 맞섰고, 물살의 방향이 바뀐 뒤 반격에 나서 31척을 격파했습니다.',
@@ -251,11 +227,8 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
   },
   noryang: {
     id: 'noryang',
-    title: '노량 해전',
-    hanja: '露梁海戰',
-    date: '1598년 11월 19일',
+    ...SCENARIO_TEXT.noryang,
     season: '겨울 · 새벽',
-    place: '노량 해협 · 관음포',
     difficulty: '매우 어려움',
     summary:
       '임진왜란의 마지막 해전입니다. 순천에 고립된 고니시 유키나가를 구하려는 시마즈 요시히로의 함대 500여 척과 조선·명 연합 수군이 노량 해협에서 밤새 맞붙었습니다. 이순신은 새벽 전투 중 전사했습니다.',

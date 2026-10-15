@@ -1,0 +1,350 @@
+/* ============================================================================
+   The loading page (Loading.tsx): the battle's scene from the game, full-bleed, with its briefing set over it in
+   the menu's poster lettering. Desktop: a column on the left over a left and bottom shade. Phone portrait: a sheet
+   at the foot of the tall picture. Phone landscape: the title and the bar only.
+   ============================================================================ */
+
+/* The battle titles in the menu poster's face: Do Hyeon cut to the glyphs of every battle name the page can show
+   (public/ui/fonts/README.md). 8 KB, so the title waits for it rather than flashing in another face. */
+@font-face {
+  font-family: 'Imjin Battle';
+  src: url('/ui/fonts/imjin-battle-dohyeon.woff2') format('woff2');
+  font-weight: 400;
+  font-display: block;
+}
+
+.loading {
+  --brass: #d8c69c;
+  --cream: #f4eedc;
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  height: 100dvh;
+  overflow: hidden;
+  color: var(--ink);
+  line-height: 1.45;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  /* Stands in for the picture until it has decoded: the same night sea. */
+  background: radial-gradient(120% 90% at 60% 30%, var(--sea-2), var(--sea-0) 80%);
+}
+
+/* The scenes keep their subject right of centre; the shade darkens the left and the foot under the text. */
+.loading .art-bg img {
+  object-position: 62% 50%;
+}
+
+.loading .art-bg::after {
+  background:
+    linear-gradient(90deg, rgba(4, 9, 15, 0.84) 0%, rgba(4, 9, 15, 0.6) 30%, rgba(4, 9, 15, 0.16) 56%, rgba(4, 9, 15, 0) 70%),
+    linear-gradient(0deg, rgba(4, 9, 15, 0.8) 0%, rgba(4, 9, 15, 0.24) 36%, rgba(4, 9, 15, 0) 58%);
+}
+
+/* A night battle's scene is dark already: a lighter shade keeps its fires. */
+.loading--night .art-bg::after {
+  background:
+    linear-gradient(90deg, rgba(4, 9, 15, 0.7) 0%, rgba(4, 9, 15, 0.42) 30%, rgba(4, 9, 15, 0.08) 56%, rgba(4, 9, 15, 0) 70%),
+    linear-gradient(0deg, rgba(4, 9, 15, 0.7) 0%, rgba(4, 9, 15, 0.16) 36%, rgba(4, 9, 15, 0) 58%);
+}
+
+.loading-brief {
+  position: absolute;
+  z-index: 2;
+  left: calc(var(--sal) + clamp(28px, 5.5vw, 88px));
+  bottom: calc(var(--sab) + clamp(28px, 7vh, 76px));
+  width: min(600px, 44vw);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-shadow: 0 1px 14px rgba(3, 8, 13, 0.85);
+}
+
+.loading-kicker {
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  color: var(--brass);
+}
+
+.loading-kicker span {
+  margin-left: 0.7em;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+}
+
+/* The menu poster's title face (Do Hyeon) thickened by a stroke of its own colour; English in Cinzel capitals. */
+.loading-title {
+  margin: 8px 0 0 -3px;
+  font-family: 'Imjin Battle', var(--font-title);
+  font-weight: 400;
+  font-size: clamp(56px, 6.6vw, 100px);
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  color: var(--cream);
+  -webkit-text-stroke: 0.022em var(--cream);
+  paint-order: stroke fill;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 0 rgba(8, 18, 26, 0.7)) drop-shadow(0 8px 24px rgba(3, 8, 13, 0.8));
+}
+
+.loading-title--roman {
+  display: flex;
+  flex-direction: column;
+  font-family: 'Imjin Roman', serif;
+  font-weight: 700;
+  font-size: clamp(40px, 4.4vw, 70px);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  -webkit-text-stroke: 0;
+}
+
+.loading-title--roman small {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 0.18em;
+  font-size: 0.3em;
+  font-weight: 500;
+  letter-spacing: 0.42em;
+}
+
+.loading-title--roman small::after {
+  content: '';
+  width: 64px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+.loading-place {
+  margin-top: 12px;
+  font-size: var(--fs-17);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.loading-hook {
+  margin: 14px 0 0;
+  max-width: 34em;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.loading-forces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.loading-force {
+  padding: 5px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: rgba(10, 14, 20, 0.46);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  font-size: var(--fs-13);
+  color: var(--ink-2);
+  text-shadow: none;
+}
+
+.loading-force b {
+  margin-right: 7px;
+  font-weight: 600;
+}
+
+.loading-force--joseon b {
+  color: var(--joseon);
+}
+
+.loading-force--japan b {
+  color: var(--japan);
+}
+
+.loading-force--ming b {
+  color: var(--ming);
+}
+
+.loading-progress {
+  width: 100%;
+  margin-top: 24px;
+}
+
+.loading-bar {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.loading-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--brass);
+  transition: width 0.35s ease-out;
+}
+
+.loading-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-3);
+  margin-top: 8px;
+  font-size: var(--fs-13);
+  color: var(--ink-3);
+}
+
+.loading-meta b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.loading-tip {
+  width: 100%;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  animation: loading-tip 0.7s ease-out;
+}
+
+.loading-tip b {
+  margin-right: 0.6em;
+  font-weight: 600;
+  color: var(--brass);
+}
+
+.loading-quote {
+  margin: 14px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.loading-quote span {
+  font-size: var(--fs-15);
+  color: var(--ink-2);
+}
+
+.loading-quote strong {
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: var(--fs-12);
+  letter-spacing: 0.18em;
+  color: var(--ink-3);
+}
+
+@keyframes loading-tip {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Phones held upright: the tall scene fills the screen and the briefing is a sheet at its foot. */
+@media (max-aspect-ratio: 9/10) {
+  .loading .art-bg img {
+    object-position: 50% 30%;
+  }
+
+  .loading .art-bg::after,
+  .loading--night .art-bg::after {
+    background: linear-gradient(180deg, rgba(4, 9, 15, 0.3) 0%, rgba(4, 9, 15, 0) 18%, rgba(4, 9, 15, 0) 40%, rgba(4, 9, 15, 0.74) 60%, #050b13 88%);
+  }
+
+  .loading-brief {
+    left: calc(var(--sal) + 22px);
+    right: calc(var(--sar) + 22px);
+    bottom: calc(var(--sab) + 20px);
+    width: auto;
+  }
+
+  .loading-kicker {
+    font-size: 13px;
+  }
+
+  .loading-title {
+    font-size: clamp(46px, 14vw, 68px);
+  }
+
+  .loading-title--roman {
+    font-size: clamp(32px, 9vw, 48px);
+  }
+
+  .loading-place {
+    margin-top: 8px;
+    font-size: var(--fs-15);
+  }
+
+  .loading-hook {
+    margin-top: 10px;
+    font-size: var(--fs-15);
+  }
+
+  .loading-forces {
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .loading-force {
+    padding: 4px 10px;
+    font-size: var(--fs-12);
+  }
+
+  .loading-progress {
+    margin-top: 18px;
+  }
+
+  .loading-tip {
+    font-size: var(--fs-13);
+  }
+
+  .loading-quote {
+    display: none;
+  }
+}
+
+/* Phones on their side: the title, the place and the bar beside the scene. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .loading-brief {
+    bottom: calc(var(--sab) + 18px);
+    width: min(440px, 52vw);
+  }
+
+  .loading-title {
+    font-size: clamp(38px, 9vh, 52px);
+  }
+
+  .loading-title--roman {
+    font-size: clamp(26px, 6.5vh, 36px);
+  }
+
+  .loading-place {
+    margin-top: 6px;
+    font-size: var(--fs-13);
+  }
+
+  .loading-progress {
+    margin-top: 12px;
+  }
+
+  .loading-hook,
+  .loading-forces,
+  .loading-tip,
+  .loading-quote {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-tip {
+    animation: none;
+  }
+}

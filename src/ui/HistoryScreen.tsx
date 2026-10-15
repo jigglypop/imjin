@@ -5,13 +5,15 @@ import type { Faction } from '../sim/types';
 import { sound } from '../audio/Sound';
 import { CAMPAIGN_ORDER, campaignOver, currentBattle, setMode, useCampaign } from '../campaign/campaign';
 import { isPhone, isTouchOnly } from '../game/device';
+import { prefetchLoading } from './Backdrop';
 import { CampaignPanel } from './CampaignPanel';
+import { ShareButton } from './share';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Check, ChevronDown, ChevronLeft, Cross } from './icons';
 import { params } from './launch';
 import { StaticMap } from './StaticMap';
 import { useT } from '../i18n';
-import { setScreen } from '../state/store';
+import { setBattle, setScreen, useUi } from '../state/store';
 
 // The 3D war-table map needs three.js and a second renderer. Phones and touch-only tablets get the flat map, so only one renderer ever exists there.
 const SelectCanvas = lazy(() => import('./SelectCanvas'));
@@ -50,17 +52,20 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
   const [side, setSideRaw] = useState<Faction>(readFaction);
   const inCampaign = mode === 'campaign' && !!campaign;
   const current = campaign ? currentBattle(campaign) : 'okpo';
-  const [id, setIdRaw] = useState<ScenarioId>(inCampaign ? current : initial);
+  const locked = (sid: ScenarioId) => inCampaign && !!campaign && CAMPAIGN_ORDER.indexOf(sid) > campaign.step;
+  // The picked battle lives in the store because the address names it (/battles/hansan, src/router.ts). Before a pick
+  // the screen shows the battle last played, or the series' next battle.
+  const picked = useUi((st) => st.battle);
+  const id: ScenarioId = picked && !locked(picked) ? picked : inCampaign ? current : initial;
   // Bumped by every pick, so choosing the battle already selected still flies the 3D camera back to its site.
   const [look, setLook] = useState(0);
   const setId = (next: ScenarioId) => {
     if (next !== id) sound.click();
-    setIdRaw(next);
+    setBattle(next);
     setLook((n) => n + 1);
   };
   const s = SCENARIOS[id];
   const record = (sid: ScenarioId) => campaign?.history.filter((h) => h.id === sid).at(-1);
-  const locked = (sid: ScenarioId) => inCampaign && !!campaign && CAMPAIGN_ORDER.indexOf(sid) > campaign.step;
   const playable = !inCampaign || (!!campaign && !campaignOver(campaign) && id === current);
   const factions = playableFactions(id);
   const effective: Faction = inCampaign ? 'joseon' : factions.includes(side) ? side : 'joseon';
@@ -73,7 +78,7 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
   const switchMode = (next: 'free' | 'campaign') => {
     sound.click();
     setMode(next);
-    if (next === 'campaign') setIdRaw(currentBattle(useCampaign.getState().campaign!));
+    if (next === 'campaign') setBattle(currentBattle(useCampaign.getState().campaign!));
   };
   // The brief scrolls inside its card: fade its bottom edge while there is more below, so a cut line reads as "scroll".
   const briefRef = useRef<HTMLDivElement>(null);
@@ -92,6 +97,11 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
     if (el.firstElementChild) watch.observe(el.firstElementChild);
     return () => watch.disconnect();
   }, [id, inCampaign, effective, measure]);
+  // The loading page's picture downloads while the briefing is read, once the player has stayed on a battle a moment.
+  useEffect(() => {
+    const wait = window.setTimeout(() => prefetchLoading(id), 500);
+    return () => window.clearTimeout(wait);
+  }, [id]);
   const flat = <StaticMap id={id} onSelect={setId} />;
   return (
     <section className="screen hs">
@@ -198,6 +208,7 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
                 {t('군영')}
               </button>
             )}
+            <ShareButton id={id} line={t(s.hook)} />
             <button className="ink-btn" disabled={!playable} onClick={() => onStart(id, inCampaign, effective)}>
               {inCampaign && campaign && campaignOver(campaign) ? t('완료') : t('전투 시작')}
             </button>

@@ -57,14 +57,14 @@ import { applyBalance, FACTION_NAME, FACTION_SHORT } from '../sim/balance';
 import { applyOutcome } from '../campaign/campaign';
 import { finishGrandBattle } from '../campaign/grand';
 import { outcomeOfBattle, type RegionBattle } from '../sim/grand/bridge';
-import { buildGrandConquest, grandAxis, grandInfo, shipOutcomes, worksAfter } from '../sim/grand/spawn';
+import { buildGrandConquest, grandAxis, shipOutcomes, worksAfter } from '../sim/grand/spawn';
 import { CurrentField } from '../sim/current';
 import { DEPTH_V1 } from '../sim/depth';
 import { OWNER_OF, otherTeam, teamOf, type BattleEvent, type Faction, type Ship, type ShipKind, type Team } from '../sim/types';
 import { buildConquest, homeAxis, type ConquestMapId, type Seat } from '../sim/maps';
 import { BUILDING_ORDER, BUILDINGS, RANKED_OPTIONS, ROSTER, rosterOf, SHORT_NAME, buildingHp, upgradeCost, type Conquest } from '../sim/conquest';
 import { applyCommand, type Command } from '../sim/commands';
-import { conquestInfo, scenarioInfo, type BattleInfo } from '../sim/info';
+import { conquestInfoOf, scenarioInfo, type BattleInfo } from '../sim/info';
 import { ConquestView, preloadWorks } from '../conquest/ConquestView';
 import type { NetBattle } from '../net/NetBattle';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
@@ -108,11 +108,6 @@ export type EngineOptions = {
   /** A battle run by the multiplayer server (conquest, or a historical duel when no conquest setup is given). */
   remote?: NetBattle;
 };
-
-/** What the HUD calls a conquest battle: a campaign meeting is named for its region and month and fought on the region's own coast. */
-function conquestInfoOf(setup: ConquestSetup): BattleInfo {
-  return setup.grand ? grandInfo(setup.grand) : conquestInfo(setup.map, setup.seed, setup.ranked);
-}
 
 /** A conquest battle: the map, every seat, and which seat is the player's. `grand` is a faction campaign meeting played on its region's coast instead of a conquest map, with the campaign's own ships. */
 export type ConquestSetup = { seats: Seat[]; you: number; seed: number; ranked?: boolean } & ({ map: ConquestMapId; grand?: undefined } | { grand: RegionBattle; map?: undefined });
@@ -381,7 +376,7 @@ export class Engine {
       this.camera.updateProjectionMatrix();
       waveField.setState(SEA_STATES[this.seaName]);
       const info = this.battleInfo;
-      setLoading(t('바다와 하늘을 준비하는 중'), 0.03, info.art ?? null);
+      setLoading(t('바다와 하늘을 준비하는 중'), 0.03, info);
       // The files download while the cloud and wake shaders build, so neither waits for the other.
       const loading = this.loadAssets(0.03, task);
       // The asset promise may fail while the shared programs are being built.
@@ -1085,7 +1080,7 @@ export class Engine {
     const task = this.beginLoad();
     try {
       this.battleInfo = info;
-      setLoading(t('{title} 준비 중', { title: t(info.title) }), 0.04, info.art ?? null);
+      setLoading(t('{title} 준비 중', { title: t(info.title) }), 0.04, info);
       this.skyName = info.sky;
       this.seaName = info.sea;
       waveField.setState(SEA_STATES[this.seaName]);
@@ -1600,6 +1595,7 @@ export class Engine {
             id: primary.id,
             name: primary.name,
             kind: primary.spec.label,
+            shipKind: primary.spec.kind,
             team: primary.team,
             hull: primary.hull / primary.spec.hull,
             crew: Math.round(primary.crew),

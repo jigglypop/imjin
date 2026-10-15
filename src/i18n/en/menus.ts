@@ -42,22 +42,20 @@ export const EN_MENUS: Record<string, string> = {
 
   // Historical battles
   '단일 전투': 'Single battle',
-  '연속 전투': '1592 Campaign',
+  '연속 전투': 'Battle Series',
   '난이도 쉬움': 'Difficulty: Easy',
   '난이도 보통': 'Difficulty: Normal',
   '난이도 어려움': 'Difficulty: Hard',
   '야간 전투': 'Night battle',
   '지휘할 진영': 'Side to command',
-  '연속 전투 {step}/{total} · 함선 {n}척': 'Campaign {step}/{total} · Ships: {n}',
+  '연속 전투 {step}/{total} · 함선 {n}척': 'Battle Series {step}/{total} · Ships: {n}',
   '역사 기록 · {result}': 'Historical result: {result}',
 
   // Loading
   '죽고자 하면 살 것이요, 살고자 하면 죽을 것이다': 'Seek death and you shall live; seek life and you shall die.',
   '가벼이 움직이지 말고, 태산같이 무겁게 행동하라': 'Do not move rashly. Stand as still and heavy as a mountain.',
   '신에게는 아직 열두 척의 배가 남아 있사옵니다': 'Your servant still has twelve ships.',
-  '호남이 없으면 나라도 없다': 'Without Honam, there is no nation.',
   '싸움이 급하니 나의 죽음을 알리지 말라': 'The battle is at its height. Do not announce my death.',
-  '한 사람이 길목을 지키면 천 명도 두렵게 할 수 있다': 'One man holding the pass can strike fear into a thousand.',
 
   // Notices
   '메모리가 부족해 이전 전투가 종료되었습니다. 이번에는 가벼운 설정으로 실행합니다.': 'The previous battle closed because the device ran out of memory. This one runs on lighter settings.',
@@ -104,7 +102,7 @@ export const EN_MENUS: Record<string, string> = {
   '조총과 적선에 올라타는 전술이 강점입니다. 함선이 싸고 빨라 거점을 먼저 차지할 수 있습니다.': 'Strong in arquebuses and boarding tactics. The ships are cheap and fast, so they can take capture points first.',
   '불랑기포의 빠른 장전과 큰 함선이 강점입니다. 함선 수가 적고 느립니다.': "Strong in the Folangji's fast reload and large ships. There are fewer ships, and they are slow.",
 
-  // Camp (1592 campaign)
+  // Camp (the battle series)
   '군량': 'Provisions',
   '화약': 'Gunpowder',
   '목재': 'Timber',
@@ -117,6 +115,6 @@ export const EN_MENUS: Record<string, string> = {
   '{name} 건조': 'Build {name}',
   '{name} · 격파 {n}': '{name} · {n} sunk',
   '일지': 'Log',
-  '연속 전투를 처음부터 다시 시작합니다. 계속할까요?': 'This restarts the campaign from the beginning. Continue?',
+  '연속 전투를 처음부터 다시 시작합니다. 계속할까요?': 'This restarts the battle series from the beginning. Continue?',
   '처음부터 다시 시작': 'Restart from the beginning',
 };
