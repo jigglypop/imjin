@@ -44,7 +44,7 @@ const { applyBalance, playableFactions } = await load('/src/sim/balance.ts');
 const { teamOf } = await load('/src/sim/types.ts');
 const { generateHeightmap } = await load('/src/terrain/generate.ts');
 const { CurrentField } = await load('/src/sim/current.ts');
-const { DEPTH_V1 } = await load('/src/sim/depth.ts');
+const { DEPTH_LATEST } = await load('/src/sim/depth.ts');
 
 // Heightmaps take a while to generate, so they are kept between runs.
 const cacheDir = join(root, 'node_modules', '.cache', 'balance');
@@ -222,7 +222,7 @@ function runConquest(mapId, faction, seed) {
     { name: 'west', faction, team: 'joseon', human: false, fleet: autoFleet(faction) },
     { name: 'east', faction: foe, team: 'japan', human: false, fleet: autoFleet(foe) },
   ];
-  const { battle: b, conquest } = buildConquest(mapId, seats, landOf(CONQUEST_MAPS[mapId].terrain), seed, classic ? {} : { depth: DEPTH_V1.version });
+  const { battle: b, conquest } = buildConquest(mapId, seats, landOf(CONQUEST_MAPS[mapId].terrain), seed, classic ? {} : { depth: DEPTH_LATEST.version });
   const tickets = (team) => Math.max(0, conquest.tickets[team]);
   const track = pacing(b, (team) => tickets(team) / Math.max(1, tickets('joseon') + tickets('japan')));
   let spawned = 0;

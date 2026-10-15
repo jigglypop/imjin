@@ -5,7 +5,7 @@ import type { ScenarioId } from '../sim/scenarios';
 import { MORALE_STATES, type BattleEvent, type CrewPlan, type Faction, type MoraleState, type Ship, type ShipKind, type Squadron, type Team } from '../sim/types';
 
 /** Bumped whenever client and server stop understanding each other. */
-export const PROTOCOL = 6;
+export const PROTOCOL = 7;
 export const SNAPSHOT_HZ = 10;
 /** How long a dropped player's fleet waits for them before the computer takes it over. */
 export const GRACE_SECONDS = 60;
@@ -103,7 +103,7 @@ export const KINDS: ShipKind[] = [
   'atakebune', 'sekibune', 'kobaya', 'daeantaek', 'sogantaek', 'daegwanseon', 'byeongnyangseon',
   'mingship', 'mingsmall', 'gwangseon', 'haechangseon', 'hoseon',
 ];
-const ORDERS = ['auto', 'move', 'attack', 'hold', 'anchor', 'slot', 'follow', 'broadside', 'bombard'] as const;
+const ORDERS = ['auto', 'move', 'attack', 'hold', 'anchor', 'slot', 'follow', 'broadside', 'bombard', 'maneuver'] as const;
 const STANCES = ['auto', 'standoff', 'close', 'ram', 'board'] as const;
 const AMMOS = ['auto', 'hull', 'crew', 'fire'] as const;
 
@@ -136,6 +136,10 @@ export const SENT_EVENTS = new Set<BattleEvent['type']>([
   'leader',
   'broken',
   'drum',
+  // Tactical maneuvers: a plan's phase, a flagship's signal and a ship cut off by a breach, for the marks and callouts.
+  'maneuver',
+  'signal',
+  'cutoff',
 ]);
 
 export type ShipFrame = {

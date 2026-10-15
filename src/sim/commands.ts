@@ -2,6 +2,7 @@ import type { Battle } from './battle';
 import type { BuildingKind, Conquest } from './conquest';
 import type { CrewPlan, Order, Ship, ShipKind, Stance, AmmoMode, FireMode } from './types';
 import type { CoastalFormationKind } from './coastal-tactics';
+import { MANEUVER_KINDS, SIGNAL_KINDS, type ManeuverKind, type SignalKind } from './maneuvers';
 
 export type ShipPatch = Partial<{ fireMode: FireMode; ammo: AmmoMode; speedCap: number; stance: Stance; lights: boolean; repel: boolean }>;
 export type FormationKind = 'crane' | 'line' | 'column' | 'wedge' | CoastalFormationKind;
@@ -19,6 +20,13 @@ export type Command =
   | { type: 'cut'; ids: number[] }
   /** The squadrons of these ships beat the drum to steady and rally their ships (the depth rules). */
   | { type: 'drum'; ids: number[] }
+  /**
+   * A tactical maneuver for these ships (maneuvers.ts), drawn on the sea: a zone's centre and rim, or a line from the
+   * first point to the second. `open` leaves one side of a ring open, toward the second point.
+   */
+  | { type: 'maneuver'; ids: number[]; kind: ManeuverKind; x0: number; z0: number; x1: number; z1: number; open?: boolean }
+  /** A flagship among these ships signals: the drum to advance, the gong to fall back. */
+  | { type: 'signal'; ids: number[]; signal: SignalKind }
   | { type: 'plan'; ids: number[]; plan: CrewPlan }
   | { type: 'build'; point: number; building: BuildingKind }
   | { type: 'recruit'; point: number; kind: ShipKind }
@@ -109,6 +117,17 @@ export function applyCommand(b: Battle, owner: number, cmd: Command, conquest: C
       return b.cutGrapples(mine(cmd.ids));
     case 'drum':
       return b.drum(mine(cmd.ids));
+    case 'maneuver': {
+      const m = b.maneuvers;
+      if (!m || !MANEUVER_KINDS.includes(cmd.kind) || !finite(cmd.x0, cmd.z0, cmd.x1, cmd.z1) || (cmd.open !== undefined && typeof cmd.open !== 'boolean')) return 0;
+      const ids = mine(cmd.ids);
+      return ids.length ? m.order(owner, ids, cmd.kind, cmd.x0, cmd.z0, cmd.x1, cmd.z1, cmd.open === true)?.ids.length ?? 0 : 0;
+    }
+    case 'signal': {
+      const m = b.maneuvers;
+      if (!m || !SIGNAL_KINDS.includes(cmd.signal)) return 0;
+      return m.signal(owner, mine(cmd.ids), cmd.signal);
+    }
     case 'plan': {
       const plan = cmd.plan;
       if (!Array.isArray(plan) || plan.length !== 4 || !finite(...plan)) return 0;

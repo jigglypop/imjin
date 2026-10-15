@@ -5,6 +5,9 @@ import { GUN_SHOTS } from '../sim/catalog';
 import type { Ship } from '../sim/types';
 import { shipObserved } from '../sim/observation';
 import { iconPaths } from './battleIcons';
+import { t } from '../i18n';
+import { MANEUVER_NAMES, phaseName, type Placing } from '../game/Input';
+import type { Plan } from '../sim/maneuvers';
 
 // The palette of the HUD (styles.css): the ring tones of the two fleets, and the muted status colours.
 const OWN = '117, 151, 177';
@@ -89,6 +92,7 @@ export class TacticalOverlay {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     let drew = false;
+    if (arcs) drew = this.drawPlans() || drew;
     if (arcs) drew = this.drawSelection() || drew;
     if (marks) drew = this.drawMarks() || drew;
     this.dirty = drew;
@@ -106,6 +110,168 @@ export class TacticalOverlay {
     out.x = (((e[0]! * x + e[4]! * y + e[8]! * z + e[12]!) / w) * 0.5 + 0.5) * this.width;
     out.y = (-((e[1]! * x + e[5]! * y + e[9]! * z + e[13]!) / w) * 0.5 + 0.5) * this.height;
     return true;
+  }
+
+  /**
+   * The player's maneuvers on the sea: an ambush's zone and the stations round it, a ring and its open side, a pincer's
+   * two wings and their target, a breach's path, a blockade's line, a lure's way home, each named with its phase; and
+   * the one being drawn, brighter, while the drag lasts.
+   */
+  private drawPlans() {
+    const engine = this.engine;
+    const m = engine.battle.maneuvers;
+    if (!m) return false;
+    let drew = false;
+    for (const plan of m.plans.values()) {
+      if (plan.owner !== engine.owner || plan.phase === 'done') continue;
+      drew = this.drawPlan(plan) || drew;
+    }
+    const placing = engine.input.placing;
+    if (placing?.drawn) drew = this.drawPlacing(placing) || drew;
+    return drew;
+  }
+
+  private drawPlan(plan: Plan) {
+    const ctx = this.ctx;
+    const live = plan.phase === 'striking';
+    const tone = live ? GOOD : `rgba(${OWN}, 0.9)`;
+    let drew = false;
+    ctx.setLineDash(live ? [] : [6, 6]);
+    ctx.lineWidth = live ? 2 : 1.5;
+    ctx.strokeStyle = tone;
+    let lx = plan.x0;
+    let lz = plan.z0;
+    switch (plan.kind) {
+      case 'ambush':
+        // The zone while it waits, the ring closing on what came in once it has sprung.
+        drew = live ? this.circle(plan.cx, plan.cz, plan.r, 0, Math.PI * 2) : this.circle(plan.x0, plan.z0, plan.r, 0, Math.PI * 2);
+        break;
+      case 'crane':
+      case 'encircle':
+      case 'pincer':
+        if (plan.kind !== 'pincer' || live) {
+          drew = this.circle(plan.cx, plan.cz, plan.r, 0, Math.PI * 2);
+          lx = plan.cx;
+          lz = plan.cz;
+        } else drew = this.arrowLine(plan.x0, plan.z0, plan.x1, plan.z1, true);
+        break;
+      case 'breach':
+      case 'lure':
+        drew = this.arrowLine(plan.x0, plan.z0, plan.x1, plan.z1, false);
+        lx = (plan.x0 + plan.x1) / 2;
+        lz = (plan.z0 + plan.z1) / 2;
+        break;
+      case 'blockade':
+        drew = this.arrowLine(plan.x0, plan.z0, plan.x1, plan.z1, true);
+        lx = (plan.x0 + plan.x1) / 2;
+        lz = (plan.z0 + plan.z1) / 2;
+        break;
+      case 'pursue':
+        return false;
+    }
+    ctx.setLineDash([]);
+    // Stations not yet taken show where the ships are going.
+    if (plan.phase === 'forming' || plan.phase === 'waiting') {
+      ctx.fillStyle = `rgba(${OWN}, 0.75)`;
+      for (const st of plan.stations.values()) {
+        if (!this.project(st.x, 0.5, st.z, this.a)) continue;
+        ctx.beginPath();
+        ctx.arc(this.a.x, this.a.y, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (drew) this.label(lx, lz, `${t(MANEUVER_NAMES[plan.kind])} · ${t(phaseName(plan.kind, plan.phase))}`, live ? GOOD : `rgb(${OWN})`);
+    return drew;
+  }
+
+  /** The maneuver being drawn, in the warning tone, with the shape the battle will use. */
+  private drawPlacing(p: Placing) {
+    const ctx = this.ctx;
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = WARN;
+    let drew;
+    const r = Math.hypot(p.x1 - p.x0, p.z1 - p.z0);
+    if (p.kind === 'ambush' || p.kind === 'encircle' || p.kind === 'crane') {
+      // An open ring leaves a quarter turn open round the direction of the drag.
+      const open = p.kind === 'encircle' && p.open ? Math.PI / 4 : 0;
+      const toward = Math.atan2(p.z1 - p.z0, p.x1 - p.x0);
+      drew = this.circle(p.x0, p.z0, Math.max(40, r), toward + open, toward + Math.PI * 2 - open);
+    } else drew = this.arrowLine(p.x0, p.z0, p.x1, p.z1, p.kind === 'pincer' || p.kind === 'blockade');
+    ctx.setLineDash([]);
+    if (drew && p.kind === 'pincer') {
+      // The two wings close from the ends of the line on what lies at its middle.
+      const mx = (p.x0 + p.x1) / 2;
+      const mz = (p.z0 + p.z1) / 2;
+      ctx.lineWidth = 3;
+      this.arrowLine(p.x0, p.z0, p.x0 + (mx - p.x0) * 0.55, p.z0 + (mz - p.z0) * 0.55, false);
+      this.arrowLine(p.x1, p.z1, p.x1 + (mx - p.x1) * 0.55, p.z1 + (mz - p.z1) * 0.55, false);
+    }
+    if (drew) this.label((p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2, t(MANEUVER_NAMES[p.kind]), WARN);
+    return drew;
+  }
+
+  /** A circle (or part of one) on the water. */
+  private circle(x: number, z: number, r: number, from: number, to: number) {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    for (let i = 0; i <= RING_STEPS; i += 1) {
+      const a = from + ((to - from) * i) / RING_STEPS;
+      if (!this.project(x + Math.cos(a) * r, 0.5, z + Math.sin(a) * r, this.b)) return false;
+      if (i === 0) ctx.moveTo(this.b.x, this.b.y);
+      else ctx.lineTo(this.b.x, this.b.y);
+    }
+    ctx.stroke();
+    return true;
+  }
+
+  /** A line on the water with an arrowhead at its end, or a bar at both ends for a line that is held (`barred`). */
+  private arrowLine(x0: number, z0: number, x1: number, z1: number, barred: boolean) {
+    if (!this.project(x0, 0.5, z0, this.a) || !this.project(x1, 0.5, z1, this.b)) return false;
+    const ctx = this.ctx;
+    ctx.beginPath();
+    ctx.moveTo(this.a.x, this.a.y);
+    ctx.lineTo(this.b.x, this.b.y);
+    ctx.stroke();
+    const dx = this.b.x - this.a.x;
+    const dy = this.b.y - this.a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len;
+    const uy = dy / len;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    if (barred) {
+      for (const pt of [this.a, this.b]) {
+        ctx.moveTo(pt.x - uy * 7, pt.y + ux * 7);
+        ctx.lineTo(pt.x + uy * 7, pt.y - ux * 7);
+      }
+    } else {
+      ctx.moveTo(this.b.x - ux * 10 - uy * 6, this.b.y - uy * 10 + ux * 6);
+      ctx.lineTo(this.b.x, this.b.y);
+      ctx.lineTo(this.b.x - ux * 10 + uy * 6, this.b.y - uy * 10 - ux * 6);
+    }
+    ctx.stroke();
+    return true;
+  }
+
+  /** A small dark tab with a maneuver's name and phase. */
+  private label(x: number, z: number, text: string, color: string) {
+    if (!this.project(x, 6, z, this.a)) return;
+    const ctx = this.ctx;
+    ctx.font = '600 12px Pretendard, system-ui, sans-serif';
+    const w = ctx.measureText(text).width + 14;
+    ctx.fillStyle = 'rgba(14, 16, 20, 0.82)';
+    ctx.beginPath();
+    ctx.roundRect(this.a.x - w / 2, this.a.y - 11, w, 20, 10);
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+    ctx.fillStyle = '#f1f3f5';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, this.a.x, this.a.y - 0.5);
+    ctx.textAlign = 'start';
   }
 
   private drawSelection() {
@@ -311,6 +477,7 @@ export class TacticalOverlay {
     const team = engine.team;
     const cam = engine.camera.position;
     const depth = !!b.morale;
+    const maneuvers = b.maneuvers;
     this.marks.length = 0;
     for (const s of b.ships) {
       if (!b.isActive(s) || !shipObserved(b, team, s)) continue;
@@ -320,6 +487,9 @@ export class TacticalOverlay {
         else if (s.moraleState === 'wavering') icons.push({ name: 'waver', color: WARN, solid: true, count: 1 });
         else if (s.moraleState === 'rallying') icons.push({ name: 'drum', color: GOOD, solid: true, count: 1 });
       }
+      // Cut off from its leader by a breach: an enemy's is the breach working, ours a squadron to gather again.
+      if (maneuvers?.isCut(s)) icons.push({ name: 'cut', color: s.team === team ? BAD : GOOD, solid: s.team !== team, count: 1 });
+      else if (s.team === team && maneuvers?.outOfCommand(s)) icons.push({ name: 'flag', color: QUIET, solid: false, count: 1 });
       if (s.team === team) {
         if (s.fire > 0.25) icons.push({ name: 'flame', color: BAD, solid: false, count: 1 });
         if (s.guns.length && lowOnShot(s)) icons.push({ name: 'shot', color: QUIET, solid: false, count: 1 });

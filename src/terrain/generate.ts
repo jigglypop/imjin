@@ -167,6 +167,17 @@ export const NORYANG_TERRAIN: TerrainSpec = {
   ],
 };
 
+/**
+ * The Noryang battle's own waters: the strait with Gwaneumpo carved into Namhae's north-west shore beside its western
+ * mouth, a wide dead-end bay behind a narrow neck, which a broken fleet running for open water can mistake for the way
+ * out. The campaign's region maps keep NORYANG_TERRAIN, so their capture points stay where they were measured.
+ */
+export const NORYANG_BATTLE_TERRAIN: TerrainSpec = {
+  ...NORYANG_TERRAIN,
+  channels: [...NORYANG_TERRAIN.channels, { x0: -2350, z0: 2050, x1: -2650, z1: 2700, width: 260 }],
+  bays: [...(NORYANG_TERRAIN.bays ?? []), { x: -2900, z: 3250, rx: 1200, rz: 700, rot: 0.5 }],
+};
+
 function smoothMax(a: number, b: number, k: number) {
   const h = Math.max(k - Math.abs(a - b), 0) / k;
   return Math.max(a, b) + h * h * k * 0.25;

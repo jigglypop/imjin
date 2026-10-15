@@ -81,17 +81,30 @@ export class Tactics {
     return { hull, crew, bonus };
   }
 
+  /** Whether `target` was hit in the last seconds from a quarter far from where `from` lies: a shot from it now is a crossfire. */
+  crossing(target: Ship, from: Ship) {
+    const list = this.recent.get(target.id);
+    if (!list) return false;
+    const mine = Math.atan2(from.z - target.z, from.x - target.x);
+    for (const r of list) {
+      if (this.b.time - r.t > CROSS_WINDOW + 1 || r.shooter === from.id) continue;
+      if (Math.abs(Math.atan2(Math.sin(r.bearing - mine), Math.cos(r.bearing - mine))) > CROSS_ANGLE) return true;
+    }
+    return false;
+  }
+
   /** Whether a ship keeping station in a formation still has its neighbours beside it on the same heading. */
   formation(s: Ship) {
     const b = this.b;
     const type = s.order.type;
-    if ((type !== 'slot' && type !== 'follow') || s.moraleState === 'routing') {
+    // A ship cut off from its leader by a breach has lost its place in the line, whatever its order.
+    if ((type !== 'slot' && type !== 'follow' && type !== 'maneuver') || s.moraleState === 'routing' || b.maneuvers?.isCut(s)) {
       this.cohesive.delete(s.id);
       return;
     }
     let friends = 0;
     b.near(s.x, s.z, COHESION_RANGE, (o) => {
-      if (o === s || o.team !== s.team || !b.isActive(o) || (o.order.type !== 'slot' && o.order.type !== 'follow')) return;
+      if (o === s || o.team !== s.team || !b.isActive(o) || (o.order.type !== 'slot' && o.order.type !== 'follow' && o.order.type !== 'maneuver')) return;
       const diff = Math.abs(Math.atan2(Math.sin(o.heading - s.heading), Math.cos(o.heading - s.heading)));
       if (diff < COHESION_HEADING) friends += 1;
     });

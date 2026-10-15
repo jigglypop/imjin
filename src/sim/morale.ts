@@ -70,6 +70,12 @@ const DRUM_CALL = 0.25;
 /** Keeping formation steadies a crew: losses bite less and it recovers a little. */
 const COHESION_DRAIN = 0.85;
 const COHESION_GAIN = 0.004;
+/**
+ * Under the maneuver rules: a crew cut off from its leader by an enemy breaking through between them loses heart fast and
+ * its leader's presence does not reach it; one merely beyond its flagship's signals frets more slowly.
+ */
+const CUT_DRAIN = 0.014;
+const UNCOMMANDED_DRAIN = 0.003;
 
 type Memo = { crew: number; hull: number; since: number; quiet: number };
 
@@ -220,8 +226,11 @@ export class Morale {
     if (b.depth?.gunnery && (sides & 1) + ((sides >> 1) & 1) + ((sides >> 2) & 1) + ((sides >> 3) & 1) >= 3) drain += RING_DRAIN * dt;
     const sq = b.squadron(s.squadronId);
     const leader = sq ? b.get(sq.leaderId) : undefined;
-    const present = !!leader && leader !== s && b.isActive(leader) && leader.moraleState !== 'routing';
+    const cut = b.maneuvers?.isCut(s) ?? false;
+    const present = !!leader && leader !== s && b.isActive(leader) && leader.moraleState !== 'routing' && !cut;
     const led = present && dist2(leader, s) < AURA * AURA;
+    if (cut) drain += CUT_DRAIN * dt;
+    else if (b.maneuvers?.outOfCommand(s)) drain += UNCOMMANDED_DRAIN * dt;
     if (led) gain += AURA_GAIN * dt * leader.mods.morale;
     else if (leader && leader !== s && !b.isActive(leader)) drain += LEADERLESS * dt;
     if (b.time - s.lastHit > CALM_AFTER) gain += CALM_GAIN * dt;

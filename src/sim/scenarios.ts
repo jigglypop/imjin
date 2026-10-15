@@ -1,8 +1,9 @@
 import { Battle } from './battle';
-import { DEPTH_V1 } from './depth';
+import { DEPTH_LATEST } from './depth';
 import { SEA_STATES } from '../ocean/waves';
 import { variantFor } from '../ships/anchors';
 import type { ShipKind, ShipMods, Squadron, Team } from './types';
+import type { Temper } from './maneuvers';
 import {
   ANGOLPO_TERRAIN,
   BUSAN_TERRAIN,
@@ -10,7 +11,7 @@ import {
   DANGPO_TERRAIN,
   HANSAN_TERRAIN,
   MYEONGNYANG_TERRAIN,
-  NORYANG_TERRAIN,
+  NORYANG_BATTLE_TERRAIN,
   OKPO_TERRAIN,
   SACHEON_TERRAIN,
   type TerrainSpec,
@@ -237,7 +238,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     sky: 'night',
     sea: 'rough',
     night: true,
-    terrain: NORYANG_TERRAIN,
+    terrain: NORYANG_BATTLE_TERRAIN,
     current: { cx: 0, cz: 0, angle: 0, peak: 1.9, reach: 4600, narrows: 480, turnAt: 480, slack: 70, floodFirst: true },
     joseon: YI_TONGJE,
     japan: { name: '시마즈 요시히로', title: '사쓰마 번주', figure: 'fig_shimazu', portrait: 'portrait_shimazu', banner: '島津' },
@@ -278,6 +279,26 @@ function portraitFor(team: Team, commander: string, kind: ShipKind) {
   return team === 'japan' ? 'portrait_japan' : 'portrait_admiral';
 }
 
+/**
+ * How the named commanders led, for the computer's use of the maneuvers: Wakisaka sailed out alone after glory and took
+ * Yi's bait at Hansan; Kuki and Kato would not leave the shelter of Angolpo; Won Gyun went in regardless; Chen Lin
+ * pressed forward; Shimazu fought his way through to Konishi.
+ */
+const TEMPERS: [string, Temper][] = [
+  ['와키자카', 'rash'],
+  ['구키', 'cautious'],
+  ['가토', 'cautious'],
+  ['고니시', 'cautious'],
+  ['원균', 'rash'],
+  ['진린', 'bold'],
+  ['시마즈', 'bold'],
+  ['이순신', 'steady'],
+];
+
+function temperOf(commander: string): Temper | undefined {
+  return TEMPERS.find(([name]) => commander.includes(name))?.[1];
+}
+
 function cardFor(kind: ShipKind) {
   return `card_${kind === 'hyeopseon' ? 'panokseon' : kind === 'kobaya' ? 'sekibune' : kind.startsWith('ming') ? 'panokseon' : kind}`;
 }
@@ -314,7 +335,7 @@ const LEADS = [
 
 export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: LandFn = () => -50, fleet?: FleetSpawn) {
   const b = new Battle(seed);
-  b.depth = DEPTH_V1;
+  b.depth = DEPTH_LATEST;
   b.setSea(SEA_STATES[SCENARIOS[id].sea]);
   const ca = Math.cos(axis);
   const sa = Math.sin(axis);
@@ -339,7 +360,12 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     }
     return p;
   };
-  const squad = (team: Team, name: string, cmd: string, kind: ShipKind) => b.addSquadron(team, name, cmd, portraitFor(team, cmd, kind), cardFor(kind));
+  const squad = (team: Team, name: string, cmd: string, kind: ShipKind) => {
+    const sq = b.addSquadron(team, name, cmd, portraitFor(team, cmd, kind), cardFor(kind));
+    const temper = temperOf(cmd);
+    if (temper) sq.temper = temper;
+    return sq;
+  };
   const ship = (sq: Squadron, kind: ShipKind, p: Spot, name: string, flagship = false, variant?: number) => {
     const r = kind === 'panokseon' || kind === 'geobukseon' || kind === 'atakebune' || kind === 'mingship' ? 22 : kind === 'sekibune' || kind === 'mingsmall' ? 15 : 9;
     const spot = settle(p, r);
@@ -587,13 +613,17 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     line(sqChen, 'mingship', grid(-2500, 650, head, 16, 4, 66, 60, 10, rand), '명 수군 본대', 0);
     line(sqDeng, 'mingship', grid(-1900, 520, head, 14, 4, 66, 60, 10, rand), '명 수군 선봉', 0);
     line(sqSha, 'mingsmall', grid(-3200, 900, head, 33, 6, 40, 36, 10, rand), '명 사선대');
+    // The Japanese column comes on from the east still short of the strait's waist, so the allies have the time to
+    // choose where to meet it: at the narrows, from both shores, as on the night.
     for (let q = 0; q < 20; q += 1) {
       const lead = LEADS[q];
       const sq = squad('japan', lead ? lead.squad : echelon('사쓰마', q + 1), lead ? lead.name : '일본 장수', q % 4 === 0 ? 'atakebune' : 'sekibune');
       const kindOf = mix(0.22, 0.6);
-      grid(-550 + q * 300, (q % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, numbered(sq.name, i + 1), i === 0));
+      grid(2200 + q * 170, (q % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, numbered(sq.name, i + 1), i === 0));
     }
     b.retreatBelow.japan =0.55;
+    // Shimazu came to break through to Konishi at Suncheon, west of the strait: unopposed, his column keeps going.
+    b.objectives.japan = { x: -5200, z: 200 };
   }
   if (fleet) spawnFleet(b, fleet, axis, land);
   return b;
