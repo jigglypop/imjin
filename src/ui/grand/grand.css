@@ -204,12 +204,10 @@
   }
 }
 
-/* The overlay in four layers, each its own stacking context, so the depth order inside one never reaches another:
-   port discs and labels by distance (z-index 0 to 800, the hovered and the selected port above them), the city cards
-   over those, the fleets' pills over the cards (placed clear of discs and labels), the hover tip over everything on the
-   map. The map's own controls and the replay come after. */
+/* The overlay in layers, each its own stacking context, so the depth order inside one never reaches another: port
+   discs and names by distance (z-index 0 to 800, the hovered and the selected port above them), the fleets' pills over
+   those (placed clear of discs and names), the hover tip over everything on the map. The map's own controls and the replay come after. */
 .gm__marks,
-.gm__cards,
 .gm__fleets,
 .gm__route,
 .gm__tips {
@@ -220,9 +218,6 @@
 }
 .gm__marks {
   z-index: 1;
-}
-.gm__cards {
-  z-index: 2;
 }
 .gm__fleets {
   z-index: 3;
@@ -340,40 +335,6 @@
 }
 .gm-node--own.gm-node--seat .gm-node__disc {
   box-shadow: 0 0 0 2.5px rgba(242, 210, 122, 0.85), 0 0 0 5px var(--c), 0 1px 5px rgba(0, 0, 0, 0.5);
-}
-.gm-node__card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 4px 4px 3px;
-  border-radius: 8px;
-  background: rgba(14, 16, 20, 0.82);
-  border: 1px solid color-mix(in srgb, var(--c) 70%, transparent);
-  text-shadow: none;
-}
-.gm-node__card > span {
-  max-width: 104px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.gm-node__card img {
-  display: block;
-  width: 104px;
-  height: auto;
-  aspect-ratio: 1024 / 683;
-  border-radius: 5px;
-  background: #1a2128;
-}
-@media (pointer: coarse) {
-  .gm-node__card img {
-    width: 76px;
-  }
-}
-.gm-node__card.gm-node__label--l,
-.gm-node__card.gm-node__label--r {
-  top: 0;
-  transform: translateY(-50%);
 }
 .gm-node--seat .gm-node__disc {
   box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.26), 0 0 0 4px var(--c), 0 1px 4px rgba(0, 0, 0, 0.4);
@@ -547,6 +508,58 @@
 .gm-node__label--r {
   left: calc(var(--r) + 6px);
   top: -0.75em;
+}
+/* A port with a camp is named on a light plate in the posters' capitals: its owner's colour down the side, the camp's
+   level after the name. Light on the land so it reads over woods and sea alike. */
+.gm-node__plate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 6px 0 9px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(247, 241, 226, 0.96), rgba(232, 222, 198, 0.96));
+  box-shadow: inset 4px 0 0 var(--c), 0 0 0 1px rgba(40, 32, 20, 0.35), 0 2px 6px rgba(0, 0, 0, 0.35);
+  color: #1d2126;
+  font-family: 'Imjin Roman', var(--font-title);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-shadow: none;
+}
+.gm-node__plate.gm-node__label--l,
+.gm-node__plate.gm-node__label--r {
+  top: -10px;
+}
+.gm-node__plate b {
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--c);
+  color: #0d1217;
+  font-family: var(--font-ui, inherit);
+  font-size: 9.5px;
+  font-weight: 800;
+}
+.gm-node--own .gm-node__plate {
+  box-shadow: inset 4px 0 0 var(--c), 0 0 0 1.5px rgba(196, 160, 74, 0.95), 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+/* A port crowded behind a more important neighbour's disc: a small dot in its owner's colour. */
+.gm-node--minor .gm-node__disc {
+  left: -5px;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  border-width: 1.5px;
+  background: var(--c);
+  box-shadow: 0 0 0 1.5px rgba(14, 16, 20, 0.8);
+}
+.gm-node--minor .gm-node__disc > *,
+.gm-node--minor .gm-node__banner {
+  display: none;
 }
 .gm-tip {
   display: none;

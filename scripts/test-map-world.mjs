@@ -14,11 +14,11 @@ let passed = 0;
 const check = (name, test) => { test(); passed++; console.log(`ok - ${name}`); };
 try {
   const bundled = await build({
-    stdin: { contents: `export * from './src/ui/grand/mapWorld.ts'; export * from './src/ui/grand/cardLayout.ts'; export { project, MAP_ASPECT } from './src/ui/grand/projection.ts'; export { WALL_KINDS, WATER_KINDS, FOOTPRINT, METRES_PER_RADIUS } from './src/ui/grand/campPieces.ts';`, resolveDir: root },
+    stdin: { contents: `export * from './src/ui/grand/mapWorld.ts'; export * from './src/ui/grand/labelLayout.ts'; export { project, MAP_ASPECT } from './src/ui/grand/projection.ts'; export { WALL_KINDS, WATER_KINDS, FOOTPRINT, METRES_PER_RADIUS } from './src/ui/grand/campPieces.ts';`, resolveDir: root },
     bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent',
   });
   const path = join(temporary, 'map-world.mjs'); await writeFile(path, bundled.outputFiles[0].contents);
-  const { settlementPieces, faceSea, buildWorld, layoutSettlements, dryStretches, clearingRadius, townPlan, townSize, workKind, anchorage, hullsFor, drawnKinds, hash, HULL_LENGTH, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, SHIP_CAP, formation, transitShare, transitSpot, pointAlong, buildSails, cardRect, overlaps, pickCards, WALL_KINDS, WATER_KINDS, FOOTPRINT, METRES_PER_RADIUS } = await import(pathToFileURL(path).href);
+  const { settlementPieces, faceSea, buildWorld, layoutSettlements, dryStretches, clearingRadius, townPlan, townSize, workKind, anchorage, hullsFor, drawnKinds, hash, HULL_LENGTH, SETTLEMENT_RADIUS, SEA_SIDE, project, MAP_ASPECT, SHIP_CAP, formation, transitShare, transitSpot, pointAlong, buildSails, labelRect, overlaps, placeLabels, minorDiscs, nameWidth, WALL_KINDS, WATER_KINDS, FOOTPRINT, METRES_PER_RADIUS } = await import(pathToFileURL(path).href);
   const kinds = (level) => new Set(settlementPieces(level).map((p) => p.kind));
   const buildings = (level) => settlementPieces(level).filter((p) => !WALL_KINDS.has(p.kind)).length;
 
@@ -287,41 +287,41 @@ try {
     for (const k of ['pier', 'jo_dock', 'wa_yard', 'mg_yard']) assert.ok(WATER_KINDS.has(k), k);
   });
   const rect = (x0, y0, x1, y1) => ({ x0, y0, x1, y1 });
-  const cand = (id, x, y, extra = {}) => ({ id, own: false, level: 2, distance: 0, rect: rect(x, y, x + 100, y + 90), ...extra });
-  check('a card is shown only if it does not overlap one already shown, in priority order', () => {
+  const screen = rect(0, 0, 1600, 900);
+  const named = (id, x, y, extra = {}) => ({ id, x, y, rad: 14, priority: 0, w: 80, h: 20, side: 'b', ...extra });
+  check('names never cover one another nor another port\'s disc, and the more important one wins', () => {
     assert.ok(overlaps(rect(0, 0, 10, 10), rect(5, 5, 20, 20)) && !overlaps(rect(0, 0, 10, 10), rect(30, 0, 40, 10)));
     assert.ok(overlaps(rect(0, 0, 10, 10), rect(12, 0, 20, 10)), 'a hair apart is still too close');
-    // Three cards in a row, each over its neighbour: the first and third fit, the middle does not.
-    const row = [cand('a', 0, 0, { level: 3 }), cand('b', 60, 0, { level: 2 }), cand('c', 120, 0, { level: 1 })];
-    assert.deepEqual(pickCards(row, null, null, 8), ['a', 'c']);
-    // The selected port wins over everything, then the hovered one, then own ports, then the level.
-    assert.deepEqual(pickCards(row, 'b', null, 8), ['b']);
-    assert.deepEqual(pickCards(row, null, 'c', 8), ['c', 'a']);
-    assert.deepEqual(pickCards([cand('x', 0, 0, { level: 4 }), cand('y', 50, 0, { own: true, level: 1 })], null, null, 8), ['y']);
-    assert.deepEqual(pickCards([cand('x', 0, 0, { distance: 90 }), cand('y', 50, 0, { distance: 10 })], null, null, 8), ['y'], 'the nearer to the centre wins a tie');
-    assert.deepEqual(pickCards(row, null, null, 1), ['a'], 'the limit holds');
-    assert.deepEqual(pickCards([], 'a', 'b', 4), []);
-    // Nothing shown overlaps anything else, whatever the cards.
-    const crowd = Array.from({ length: 40 }, (_, i) => cand(`r${i}`, (i * 37) % 400, (i * 53) % 300, { level: 1 + (i % 4), own: i % 5 === 0, distance: i }));
-    const shown = pickCards(crowd, 'r7', 'r9', 40).map((id) => crowd.find((c) => c.id === id));
-    shown.forEach((a, i) => shown.slice(i + 1).forEach((b) => assert.ok(!overlaps(a.rect, b.rect), `${a.id} / ${b.id}`)));
-    assert.ok(shown.length >= 3);
+    // Two ports side by side: the second's name takes another side, or none, never the first's place.
+    const a = named('a', 500, 400, { priority: 2 }), b = named('b', 540, 400, { priority: 1 });
+    const placed = placeLabels([a, b], [a, b], screen);
+    assert.equal(placed.get('a').side, 'b', 'the more important name keeps the side it prefers');
+    if (placed.has('b')) assert.ok(!overlaps(placed.get('a').rect, placed.get('b').rect));
+    // A crowd at an oblique view: whatever is shown overlaps nothing, and a fair share is shown.
+    const crowd = Array.from({ length: 40 }, (_, i) => named(`r${i}`, 200 + ((i * 97) % 1200), 300 + ((i * 53) % 260), { priority: i % 7, w: 50 + (i % 5) * 20 }));
+    const shown = [...placeLabels(crowd, crowd, screen)];
+    for (const [i, [id, l]] of shown.entries()) {
+      for (const [, m] of shown.slice(i + 1)) assert.ok(!overlaps(l.rect, m.rect), id);
+      for (const d of crowd) if (d.id !== id) assert.ok(!overlaps(l.rect, rect(d.x - d.rad, d.y - d.rad, d.x + d.rad, d.y + d.rad), 0), `${id} over the disc of ${d.id}`);
+      assert.ok(l.rect.x0 >= 0 && l.rect.x1 <= 1600 && l.rect.y0 >= 0 && l.rect.y1 <= 900);
+    }
+    assert.ok(shown.length >= 15, String(shown.length));
   });
-  check('a card never hides another port\'s disc, unless its own port is the selected one', () => {
-    const disc = (id, x, y) => ({ id, rect: rect(x - 14, y - 14, x + 14, y + 14) });
-    const a = cand('a', 0, 0, { level: 4 }), b = cand('b', 300, 0, { level: 1 });
-    const discs = [disc('a', 50, -20), disc('b', 350, -20), disc('c', 40, 60)];
-    assert.deepEqual(pickCards([a, b], null, null, 8, discs), ['b'], 'the card of a would cover the disc of c');
-    assert.deepEqual(pickCards([a, b], 'a', null, 8, discs), ['a', 'b'], 'the selected one is shown anyway');
-    assert.deepEqual(pickCards([a, b], null, null, 8, [disc('a', 50, 40)]), ['a', 'b'], 'its own disc does not count');
-  });
-  check('a card sits on the side its label takes, and cards of far apart ports all show', () => {
+  check('a name keeps the side it held, and the sides lie round the disc', () => {
+    const a = named('a', 500, 400);
+    assert.equal(placeLabels([a], [a], screen, new Map([['a', 'r']])).get('a').side, 'r');
     const [x, y, rad] = [500, 300, 14];
-    const b = cardRect(x, y, rad, 'b', 116, 98), t = cardRect(x, y, rad, 't', 116, 98), l = cardRect(x, y, rad, 'l', 116, 98), r = cardRect(x, y, rad, 'r', 116, 98);
+    const b = labelRect(x, y, rad, 'b', 80, 20), t = labelRect(x, y, rad, 't', 80, 20), l = labelRect(x, y, rad, 'l', 80, 20), r = labelRect(x, y, rad, 'r', 80, 20);
     assert.ok(b.y0 > y + rad && t.y1 < y - rad && l.x1 < x - rad && r.x0 > x + rad);
-    assert.ok([b, t, l, r].every((c) => c.x1 - c.x0 === 116 && c.y1 - c.y0 === 98));
-    const far = [0, 1, 2, 3].map((i) => ({ id: `p${i}`, own: false, level: 1, distance: i, rect: cardRect(i * 300, 100, 14, 'b', 116, 98) }));
-    assert.equal(pickCards(far, null, null, 8).length, 4);
+    // At the screen's edge a name turns inward rather than leave the screen.
+    const edge = named('e', 1590, 400, { side: 'r' });
+    assert.equal(placeLabels([edge], [edge], screen).get('e').side, 'l');
+    assert.ok(nameWidth('여수') > nameWidth('ab') && nameWidth('Yeosu') > 30);
+  });
+  check('a disc over a more important one steps back to a dot; apart, every disc stays', () => {
+    const big = { id: 'big', x: 100, y: 100, rad: 20, priority: 5 }, near = { id: 'near', x: 110, y: 104, rad: 14, priority: 1 }, far = { id: 'far', x: 400, y: 100, rad: 14, priority: 0 };
+    assert.deepEqual([...minorDiscs([near, big, far])], ['near']);
+    assert.deepEqual([...minorDiscs([{ ...near, priority: 9 }, big, far])], ['big']);
   });
   check('a fleet on a lane stands where its turns put it, off both ports', () => {
     assert.equal(transitShare(1, undefined), 0.5);

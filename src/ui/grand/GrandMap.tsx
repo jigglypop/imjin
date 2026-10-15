@@ -6,7 +6,7 @@ import { ErrorBoundary } from '../ErrorBoundary';
 import { ReplayLayer } from './Replay';
 import { useT } from '../../i18n';
 import { FACTION_INFO, FactionCrest, Icon, navyName } from './shared';
-import { campArt, campImage, campLevel } from './campArt';
+import { campLevel } from './campArt';
 import { shipsText, turnsText } from './text';
 import type { FactionId, FleetView, MarchRouteView, RegionView, ReplayView, SpotView } from './types';
 import type { WorldControls, WorldView } from './WorldCanvas';
@@ -15,7 +15,7 @@ import { clampState, frameAll, NEAR, OPEN_PITCH, panBy, projectFrame, screenFram
 import { CameraMotion, KEY_ACTIONS } from './cameraMotion';
 import { boxBetween, markersInBox, type Marker } from './boxSelect';
 import { buildWorld, HULL_LENGTH, laneSpot, SETTLEMENT_RADIUS, type IsSea, type SettlementSpec } from './mapWorld';
-import { cardRect, pickCards } from './cardLayout';
+import { minorDiscs, nameWidth, placeLabels, type Named, type Port, type Side } from './labelLayout';
 import { cutCurve } from './screenPath';
 
 // The 3D world needs three.js and r3f: it is loaded on demand, and phones and touch-only tablets (flatMap), which keep the
@@ -118,17 +118,13 @@ function badgeSpot(x: number, y: number, rad: number, labelSide: string | undefi
 }
 
 const ROMAN = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'];
-/** Phones show camp pictures only this far in; desktops from a closer-than-open view. */
-const CARD_ZOOM = coarsePointer() ? 2.6 : 1.5;
-/** At most this many pictures are mounted at once, nearest the centre first: each decodes to about 2.8 MB (4 on phones). */
-const MAX_CARDS = coarsePointer() ? 4 : 8;
-/** What a card takes on screen, picture and name with their padding: the cards that would overlap are not all shown. */
-const CARD_W = coarsePointer() ? 88 : 116;
-const CARD_H = coarsePointer() ? 80 : 98;
-
-function coarsePointer() {
-  try { return window.matchMedia('(pointer: coarse)').matches; } catch { return false; }
-}
+/** A disc stepped back behind a more important neighbour's, px. */
+const MINOR_RADIUS = 5;
+/** A name's height on screen, px: a plain label, and the nameplate of a port with a camp (its owner's bar, name and level). */
+const LABEL_H = 16;
+const PLATE_H = 22;
+/** What a nameplate adds to its name's width, px: the owner's bar, the padding and the level. */
+const PLATE_EXTRA = 34;
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -171,6 +167,8 @@ export function GrandMap({
 }: GrandMapProps) {
   const t = useT();
   const rootRef = useRef<HTMLDivElement>(null);
+  /** The side each name took in the last frame, so names keep their places as the camera moves (labelLayout.ts). */
+  const heldLabels = useRef(new Map<string, Side>());
   const world = useRef<WorldControls | null>(null);
   const [heights, setHeights] = useState<Float32Array | null>(null);
   const [worldFailed, setWorldFailed] = useState(false);
@@ -696,7 +694,7 @@ export function GrandMap({
   const { s } = view;
   const mapH = s / MAP_ASPECT;
   const openZoom = box.w ? limits().open : 1;
-  // How close the view is compared with its opening: labels and city cards appear as it passes thresholds.
+  // How close the view is compared with its opening: labels appear as it passes thresholds.
   const zoomRatio = inWorld ? OPEN_DISTANCE / cam.distance : s / openZoom;
   /** A map point on the screen: through the free camera in the world, through the flat image's offset and scale otherwise. */
   const place = (u: number, v: number, e: number): Spot => {
@@ -754,20 +752,37 @@ export function GrandMap({
   };
   /** The 3D squadrons by key: a port's navy (`port/faction`) at anchor, a fleet's id under way. */
   const groups = new Map(mapWorld.fleets.map((g) => [g.key, g]));
-  // The port discs and labels on screen, which a fleet's pill must not cover.
-  const marks: { x0: number; y0: number; x1: number; y1: number }[] = [];
+  const showLabel = (r: RegionView) => r.id === selectedRegionId || r.offMap || r.value >= 3 || zoomRatio >= 1.1 || (zoomRatio >= 0.85 && r.value >= 2);
+
+  // The ports on screen, by priority: the selected and the hovered first, then the player's own, then the rest by worth.
+  const ports: Port[] = [];
   if (w > 0) for (const r of regions) {
     const sp = spots.get(r.id);
     if (!sp?.ok || sp.x < -80 || sp.y < -80 || sp.x > w + 80 || sp.y > h + 80) continue;
-    const rad = nodeRadius(r) + 3;
-    marks.push({ x0: sp.x - rad, y0: sp.y - rad, x1: sp.x + rad, y1: sp.y + rad });
-    // A label is about 6 px a character wide, a line tall, on its side of the disc.
-    const side = r.labelSide ?? 'b', half = r.name.length * 6.5 + 4;
-    if (side === 'b') marks.push({ x0: sp.x - half, y0: sp.y + rad, x1: sp.x + half, y1: sp.y + rad + 18 });
-    else if (side === 't') marks.push({ x0: sp.x - half, y0: sp.y - rad - 18, x1: sp.x + half, y1: sp.y - rad });
-    else if (side === 'l') marks.push({ x0: sp.x - rad - 2 * half, y0: sp.y - 9, x1: sp.x - rad, y1: sp.y + 9 });
-    else marks.push({ x0: sp.x + rad, y0: sp.y - 9, x1: sp.x + rad + 2 * half, y1: sp.y + 9 });
+    const priority = (r.id === selectedRegionId ? 2000 : 0) + (r.id === hovered ? 1000 : 0) + (r.owner === me ? 200 : 0) + (r.owner ? 60 : 0)
+      + (r.seat ? 40 : 0) + r.value * 20 + campLevel(r) * 10 - Math.hypot(sp.x - w / 2, sp.y - h / 2) / 100;
+    ports.push({ id: r.id, x: sp.x, y: sp.y, rad: nodeRadius(r), priority });
   }
+  // In the world a low camera crowds the ports together: a disc over a more important one steps back to a dot.
+  const minor = inWorld ? minorDiscs(ports) : new Set<string>();
+  const discs = ports.map((p) => (minor.has(p.id) ? { ...p, rad: MINOR_RADIUS } : p));
+  const plated = (r: RegionView) => !!r.owner && !r.offMap && campLevel(r) > 0;
+  const named: Named[] = [];
+  for (const p of discs) {
+    const r = byId.get(p.id)!;
+    if (!showLabel(r) || (minor.has(p.id) && p.id !== selectedRegionId)) continue;
+    const plate = plated(r);
+    named.push({ ...p, w: nameWidth(r.name, plate ? 8 : 7.2) + (plate ? PLATE_EXTRA : 6), h: plate ? PLATE_H : LABEL_H, side: (r.labelSide ?? 'b') as Side });
+  }
+  const labels = w > 0 ? placeLabels(named, discs, { x0: 4, y0: 4, x1: w - 4, y1: h - 4 }, heldLabels.current) : new Map<string, { side: Side; rect: { x0: number; y0: number; x1: number; y1: number } }>();
+  heldLabels.current = new Map([...labels].map(([id, l]) => [id, l.side]));
+  // The port discs and names on screen, which a fleet's pill must not cover.
+  const marks: { x0: number; y0: number; x1: number; y1: number }[] = [];
+  for (const p of discs) {
+    const rad = p.rad + 3;
+    marks.push({ x0: p.x - rad, y0: p.y - rad, x1: p.x + rad, y1: p.y + rad });
+  }
+  for (const l of labels.values()) marks.push(l.rect);
   /**
    * Where a fleet's pill sits at its port: over the 3D ships that stand for it (or under them when that covers a port's
    * disc or label), the fleets of one navy stacked; in the flat map, or with no ships drawn, beside the port's disc.
@@ -793,32 +808,6 @@ export function GrandMap({
     return { x, y: under ? bottom + 18 + k * 30 : top - 18 - k * 30 };
   };
 
-  const showLabel = (r: RegionView) => r.id === selectedRegionId || r.offMap || r.value >= 3 || zoomRatio >= 1.1 || (zoomRatio >= 0.85 && r.value >= 2);
-
-  // Camp pictures only close up, never over one another nor over another port's disc: the selected port first, then the
-  // hovered, then the player's own, then the rest, each by camp level. A port whose card does not fit keeps its label and
-  // level badge.
-  const cards = new Set<string>();
-  if (w > 0 && zoomRatio >= CARD_ZOOM) {
-    const candidates = regions
-      .filter((r) => r.owner && !r.offMap && spots.get(r.id)?.ok && campLevel(r) > 0 && px(r.id) > 0 && px(r.id) < w && py(r.id) > 0 && py(r.id) < h)
-      .map((r) => ({
-        id: r.id,
-        own: r.owner === me,
-        level: campLevel(r),
-        distance: Math.hypot(px(r.id) - w / 2, py(r.id) - h / 2),
-        rect: cardRect(px(r.id), py(r.id), nodeRadius(r), r.labelSide ?? 'b', CARD_W, CARD_H),
-      }));
-    const discs = regions
-      .filter((r) => spots.get(r.id)?.ok && px(r.id) > -40 && px(r.id) < w + 40 && py(r.id) > -40 && py(r.id) < h + 40)
-      .map((r) => {
-        const rad = nodeRadius(r);
-        return { id: r.id, rect: { x0: px(r.id) - rad, y0: py(r.id) - rad, x1: px(r.id) + rad, y1: py(r.id) + rad } };
-      });
-    for (const id of pickCards(candidates, selectedRegionId, hovered, MAX_CARDS, discs)) cards.add(id);
-  }
-  // A pill keeps off the cards shown as well.
-  for (const id of cards) { const r = byId.get(id)!; marks.push(cardRect(px(id), py(id), nodeRadius(r), r.labelSide ?? 'b', CARD_W, CARD_H)); }
 
   // The centres of what a box can take, in the same pixels the markers are placed with. Only the player's own forces count.
   const ownBadges: Marker[] = [];
@@ -1015,17 +1004,18 @@ export function GrandMap({
           const sel = r.id === selectedRegionId;
           const tgt = targets.has(r.id);
           const col = r.owner ? FACTION_INFO[r.owner].color : '#8a939c';
-          const side = r.labelSide ?? 'b';
+          const label = labels.get(r.id);
+          const small = minor.has(r.id);
+          const side = label?.side ?? r.labelSide ?? 'b';
           const level = campLevel(r);
           const own = r.owner === me;
-          const card = r.owner && cards.has(r.id) ? campArt(r.id, r.owner) : null;
           const garrisoned = fleetsAt.get(r.id);
           const turns = reach?.[r.id];
           return (
             <button
               key={r.id}
               type="button"
-              className={`gm-node${sel ? ' gm-node--sel' : ''}${tgt ? ' gm-node--target' : ''}${r.offMap ? ' gm-node--off' : ''}${r.seat ? ' gm-node--seat' : ''}${r.owner ? '' : ' gm-node--neutral'}${own ? ' gm-node--own' : ''}${card ? ' gm-node--card' : ''}${r.visible ? '' : ' gm-node--fog'}`}
+              className={`gm-node${sel ? ' gm-node--sel' : ''}${tgt ? ' gm-node--target' : ''}${r.offMap ? ' gm-node--off' : ''}${r.seat ? ' gm-node--seat' : ''}${r.owner ? '' : ' gm-node--neutral'}${own ? ' gm-node--own' : ''}${small ? ' gm-node--minor' : ''}${r.visible ? '' : ' gm-node--fog'}`}
               style={{ transform: `translate3d(${x}px, ${y}px, 0)`, zIndex: layer(r.id), ['--r' as string]: `${rad}px`, ['--c' as string]: col }}
               data-region={r.id}
               aria-label={`${r.name}, ${navyName(r.owner)}`}
@@ -1044,31 +1034,19 @@ export function GrandMap({
                   {t('봉쇄 {n}/{m}', { n: r.siege.turns, m: r.siege.hold })}
                 </span>
               )}
-              {level > 0 && <span className="gm-node__lv" aria-hidden>{ROMAN[level] ?? level}</span>}
+              {level > 0 && !(label && plated(r)) && !small && <span className="gm-node__lv" aria-hidden>{ROMAN[level] ?? level}</span>}
               {garrisoned && <span className="gm-node__banner" style={{ ['--b' as string]: FACTION_INFO[garrisoned[0]!.faction].color }} aria-hidden />}
-              {!card && showLabel(r) && <span className={`gm-node__label gm-node__label--${side}`}>{r.name}</span>}
+              {label && (plated(r) ? (
+                <span className={`gm-node__label gm-node__plate gm-node__label--${side}`}>
+                  <span>{r.name}</span>
+                  <b aria-hidden>{ROMAN[level] ?? level}</b>
+                </span>
+              ) : <span className={`gm-node__label gm-node__label--${side}`}>{r.name}</span>)}
             </button>
           );
         })}
       </div>
-      {/* The city cards stand over every disc and label: a card is placed where it hides no other port's disc. */}
-      <div className="gm__cards">
-        {w > 0 &&
-          [...cards].map((id) => {
-            const r = byId.get(id);
-            if (!r?.owner || !spots.get(id)?.ok) return null;
-            const card = campArt(r.id, r.owner);
-            return (
-              <span key={id} className="gm-pin" style={{ transform: `translate3d(${px(id)}px, ${py(id)}px, 0)`, zIndex: layer(id), ['--r' as string]: `${nodeRadius(r)}px`, ['--c' as string]: FACTION_INFO[r.owner].color }}>
-                <span className={`gm-node__label gm-node__card gm-node__label--${r.labelSide ?? 'b'}`}>
-                  <img src={campImage(card, campLevel(r))} width={104} height={69} alt="" loading="lazy" decoding="async" draggable={false} />
-                  <span>{r.name}</span>
-                </span>
-              </span>
-            );
-          })}
-      </div>
-      {/* The fleets' pills over the cards: they are placed clear of the discs and labels, and a card must not hide one. */}
+      {/* The fleets' pills over the ports: they are placed clear of the discs and names. */}
       <div className="gm__fleets">
       {w > 0 &&
         [...fleetsAt.entries()].flatMap(([rid, list]) => {
