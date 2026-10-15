@@ -23,7 +23,7 @@ function lightOf(nx: number, ny: number, nz: number) {
 
 /** A lumpy ball of leaves at (cx, cy, cz) of radius r, smooth normals, its vertices pushed in and out a little. */
 function blob(pos: number[], col: number[], cx: number, cy: number, cz: number, r: number, leaf: Color, seed: number, near = true) {
-  const rings = near ? 3 : 2, seg = near ? 6 : 5, rnd = seeded(seed);
+  const rings = near ? 3 : 2, seg = 6, rnd = seeded(seed);
   const grid: number[][] = [];
   for (let i = 0; i <= rings; i += 1) {
     const a = -Math.PI / 2 + (i / rings) * Math.PI;
@@ -88,7 +88,7 @@ function broadleaf(detail: TreeDetail) {
 function pine(detail: TreeDetail) {
   const near = detail === 'near';
   const pos: number[] = [], col: number[] = [], needles = lin('#24462a'), idx = near ? [...trunk(pos, col, 0.04, -0.1, 0.3)] : [];
-  const seg = near ? 7 : 5;
+  const seg = near ? 7 : 6;
   const skirts = near ? [[0.16, 0.5, 0.31], [0.36, 0.7, 0.25], [0.56, 0.88, 0.18], [0.74, 1.0, 0.11]] as const : [[0.16, 0.62, 0.3], [0.48, 1.0, 0.19]] as const;
   for (const [y0, y1, r] of skirts) {
     const base = pos.length / 3;

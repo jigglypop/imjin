@@ -1,8 +1,8 @@
-import { DataTexture, LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, RGBAFormat, SRGBColorSpace, TextureLoader, UnsignedByteType, type Texture } from 'three/webgpu';
+import { DataTexture, LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, RGBAFormat, SRGBColorSpace, Texture, UnsignedByteType } from 'three/webgpu';
 import { float, floor, fract, fwidth, max, min, mix, positionWorld, sin, smoothstep, texture, vec2, vec3 } from 'three/tsl';
 import demMeta from '../../select/demMeta.json';
 import { SKY_LIGHT, SUN_LIGHT } from './groundPalette';
-import { bakeLand, HEIGHT_RANGE, landFrame, SLOPE_RANGE } from './landBake';
+import { BAND_MARGIN, bakeLand, HEIGHT_RANGE, landFrame, SLOPE_RANGE } from './landBake';
 import { DEM_RECT } from './mapMath';
 import { MAP_ASPECT } from './projection';
 import { MODEL_METRE } from './hero/site';
@@ -21,6 +21,25 @@ const srgb = (r: number, g: number, b: number) => vec3((r / 255) ** 2.2, (g / 25
 
 /** The ground textures worked in close up: grass, rock, sand, woodland floor (the battle's own, 1k). */
 const DETAIL = ['aerial_grass_rock', 'aerial_rocks_02', 'coast_sand_01', 'forest_leaves_02'] as const;
+/**
+ * The size they are drawn at: they only add grain, a few metres a repeat, so a quarter of the pixels shows the same and
+ * the four take 6 MB of the GPU instead of 22.
+ */
+const DETAIL_SIZE = 512;
+
+/** A ground texture, scaled down to DETAIL_SIZE as it is decoded. */
+async function detailTexture(name: string, signal: AbortSignal) {
+  const response = await fetch(`/textures/${name}/diff_1k.jpg`, { signal });
+  if (!response.ok) throw new Error(`${name}: ${response.status}`);
+  const bitmap = await createImageBitmap(await response.blob(), { resizeWidth: DETAIL_SIZE, resizeHeight: DETAIL_SIZE, resizeQuality: 'high' });
+  const t = new Texture(bitmap);
+  t.colorSpace = SRGBColorSpace;
+  t.wrapS = t.wrapT = RepeatWrapping;
+  t.minFilter = LinearMipmapLinearFilter;
+  t.anisotropy = 4;
+  t.needsUpdate = true;
+  return t;
+}
 
 /** The noise texture's side; each channel tiles on it. */
 const NOISE = 256;
@@ -58,9 +77,9 @@ function crowns(x: number, y: number, period: number) {
 
 /**
  * The land's noise, four tileable channels: red broad districts, green valleys and stands, blue fine breakup for ragged
- * edges, alpha the crowns of trees.
+ * edges, alpha the crowns of trees. The sea's foam and glint read it too; whoever makes it frees it.
  */
-function noiseTexture() {
+export function landNoise() {
   const data = new Uint8Array(NOISE * NOISE * 4);
   for (let y = 0; y < NOISE; y += 1) for (let x = 0; x < NOISE; x += 1) {
     const o = (y * NOISE + x) * 4;
@@ -78,22 +97,49 @@ function noiseTexture() {
   return tex;
 }
 
-/** Bakes the land's light in a worker where there is one; on the page otherwise. `metres` is the DEM as loaded. */
-async function bake(metres: Float32Array, signal: AbortSignal): Promise<Uint8Array> {
+/**
+ * Bakes the land's light in workers where there are any, the DEM split into bands of rows among up to six of them (two
+ * seconds of arithmetic on one core); on the page otherwise. `metres` is the DEM as loaded; each worker is sent a copy of
+ * its band before this returns, so the caller may change the DEM afterwards.
+ */
+function bake(metres: Float32Array, signal: AbortSignal): Promise<Uint8Array> {
   const frame = landFrame();
-  if (typeof Worker === 'undefined') return bakeLand(metres, frame);
-  const worker = new Worker(new URL('./landBake.worker.ts', import.meta.url), { type: 'module' });
-  try {
-    return await new Promise<Uint8Array>((resolve, reject) => {
-      signal.addEventListener('abort', () => reject(signal.reason), { once: true });
-      worker.onmessage = (e: MessageEvent<{ out?: Uint8Array; error?: string }>) => (e.data.out ? resolve(e.data.out) : reject(new Error(e.data.error)));
-      worker.onerror = (e) => reject(new Error(e.message));
-      // A copy goes over: the page keeps the DEM.
-      worker.postMessage({ metres: metres.slice(), frame });
-    });
-  } finally {
-    worker.terminate();
+  const W = frame.width, H = frame.height;
+  if (typeof Worker === 'undefined') return Promise.resolve(bakeLand(metres, frame));
+  const cores = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 2 : 2;
+  const bands = Math.max(1, Math.min(6, cores - 1));
+  // Only land costs anything to bake, so the bands share out the land, not the rows: the north is nearly all land.
+  const land = new Float64Array(H + 1);
+  for (let r = 0; r < H; r += 1) {
+    let n = 0;
+    for (let i = r * W; i < (r + 1) * W; i += 1) if (metres[i]! > 0) n += 1;
+    land[r + 1] = land[r]! + n + W * 0.02;
   }
+  const cut = (b: number) => {
+    let r = 0;
+    while (r < H && land[r]! < (land[H]! * b) / bands) r += 1;
+    return r;
+  };
+  const out = new Uint8Array(W * H * 4);
+  const workers: Worker[] = [];
+  const jobs = Array.from({ length: bands }, (_, b) => {
+    const r0 = cut(b), r1 = b === bands - 1 ? H : cut(b + 1);
+    const top = Math.max(0, r0 - BAND_MARGIN), bottom = Math.min(H, r1 + BAND_MARGIN);
+    const worker = new Worker(new URL('./landBake.worker.ts', import.meta.url), { type: 'module' });
+    workers.push(worker);
+    const done = new Promise<void>((resolve, reject) => {
+      worker.onmessage = (e: MessageEvent<{ out?: Uint8Array; error?: string }>) => {
+        if (!e.data.out) return reject(new Error(e.data.error));
+        out.set(e.data.out, r0 * W * 4);
+        resolve();
+      };
+      worker.onerror = (e) => reject(new Error(e.message));
+    });
+    worker.postMessage({ metres: metres.slice(top * W, bottom * W), frame: { ...frame, height: bottom - top }, rows: [r0 - top, r1 - top] });
+    return done;
+  });
+  const aborted = new Promise<never>((_, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+  return Promise.race([Promise.all(jobs), aborted]).then(() => out).finally(() => { for (const w of workers) w.terminate(); });
 }
 
 /** What a hero camp's patch knows better than the bake, given for each of its vertices and faded in by `inner`. */
@@ -128,10 +174,8 @@ const smooth = (a: number, b: number, x: number) => {
 };
 
 export interface LandLook {
-  /** The bake (landBake.ts) over the DEM, the noise and the close-up ground textures. */
+  /** The bake (landBake.ts) over the DEM and the close-up ground textures, which it frees. */
   readonly textures: Texture[];
-  /** The land's noise (four tiling channels: districts, stands, fine breakup, tree crowns), which the sea's foam and glint read too. */
-  readonly noise: Texture;
   /** The ground textures alone, for what is laid on the hero camps' ground (hero/ground.ts). */
   readonly details: Texture[];
   /**
@@ -144,31 +188,26 @@ export interface LandLook {
   dispose(): void;
 }
 
-/** Bakes the light and loads the textures of the land's look. `metres` is the DEM's heights as loaded. */
-export async function loadLandLook(metres: Float32Array, signal: AbortSignal): Promise<LandLook> {
-  const loader = new TextureLoader();
-  const [baked, ...details] = await Promise.all([
-    bake(metres, signal),
-    ...DETAIL.map(async (name) => {
-      const t = await loader.loadAsync(`/textures/${name}/diff_1k.jpg`);
-      t.colorSpace = SRGBColorSpace;
-      t.wrapS = t.wrapT = RepeatWrapping;
-      t.minFilter = LinearMipmapLinearFilter;
-      t.anisotropy = 4;
-      return t;
-    }),
-  ]);
+/**
+ * Bakes the light and loads the textures of the land's look. `metres` is the DEM's heights as loaded (read before this
+ * returns its promise), `noise` the land's noise (`landNoise`), which stays the caller's.
+ */
+export async function loadLandLook(metres: Float32Array, noise: DataTexture, signal: AbortSignal): Promise<LandLook> {
+  const [baked, ...details] = await Promise.all([bake(metres, signal), ...DETAIL.map((name) => detailTexture(name, signal))]);
   const W = demMeta.width, H = demMeta.height;
   const bakeTex = new DataTexture(baked, W, H, RGBAFormat, UnsignedByteType);
   bakeTex.magFilter = LinearFilter;
   bakeTex.minFilter = LinearMipmapLinearFilter;
   bakeTex.generateMipmaps = true;
   bakeTex.needsUpdate = true;
-  const noise = noiseTexture();
   const noiseData = noise.image.data as Uint8Array;
-  const textures = [bakeTex, noise, ...details];
-  if (signal.aborted) {
+  const textures = [bakeTex, ...details];
+  const free = () => {
     for (const t of textures) t.dispose();
+    for (const t of details) (t.image as ImageBitmap).close();
+  };
+  if (signal.aborted) {
+    free();
     signal.throwIfAborted();
   }
 
@@ -302,12 +341,9 @@ export async function loadLandLook(metres: Float32Array, signal: AbortSignal): P
 
   return {
     textures,
-    noise,
     details,
     coverAt,
     color,
-    dispose() {
-      for (const t of textures) t.dispose();
-    },
+    dispose: free,
   };
 }

@@ -5,7 +5,7 @@ import { V_SCALE } from '../../select/demFrame';
 import { loadDem } from '../../select/terrain';
 import { buildFarLandMesh } from './farLand';
 import { buildLand, fetchLand } from './groundLand';
-import { loadLandLook, type LandLook } from './landLook';
+import { landNoise, loadLandLook, type LandLook } from './landLook';
 import { buildSea } from './groundSea';
 import { DEM_RECT, MESH_SCALE } from './mapMath';
 import { FAR, type CameraState } from './worldCamera';
@@ -56,25 +56,28 @@ export async function loadGround(signal: AbortSignal): Promise<WorldGround> {
   signal.throwIfAborted();
   const { heights } = dem;
   const made: { dispose(): void }[] = [];
-  // The light is baked off the page from the DEM as loaded, while the land is built (which draws the facets' heights into it).
-  const looking = loadLandLook(heights, signal);
+  const noise = landNoise();
+  made.push(noise);
+  // The light is baked off the page from the DEM as loaded, while the land, the far land and the sea are built (the land
+  // draws its facets' heights into the DEM).
+  const looking = loadLandLook(heights, noise, signal);
   // A failure is reported where the look is awaited; meanwhile it does not count as unhandled.
   looking.catch(() => undefined);
   let look: LandLook | null = null;
   try {
     const land = await buildLand(bytes, heights);
     made.push(land);
+    const far = buildFarLandMesh(heights, land.seam);
+    made.push(far);
+    // The sea's shallows and surf follow the coasts the facets of both draw.
+    const sea = buildSea(heights, [land.facets, far.facets], noise);
+    made.push(sea);
     look = await looking;
     made.push(look);
     signal.throwIfAborted();
     land.mesh.material.colorNode = look.color();
-    const far = buildFarLandMesh(heights, land.seam);
-    made.push(far);
     const own: any = attribute('land', 'vec4');
     far.mesh.material.colorNode = look.color({ inner: float(1), sun: own.x, sky: own.y, slope: own.z, metres: own.w });
-    // The sea's shallows and surf follow the coasts the facets of both draw.
-    const sea = buildSea(heights, [land.facets, far.facets], look.noise);
-    made.push(sea);
     const sky = buildSky();
     made.push({ dispose: () => { sky.geometry.dispose(); sky.material.dispose(); } });
     // The land is drawn before the sea plane, so the depth test discards the water wherever land stands above it.

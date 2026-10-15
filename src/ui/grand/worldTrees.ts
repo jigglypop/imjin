@@ -17,7 +17,7 @@ const CAPACITY = [7000, 5000, 1500, 5000] as const;
 /** Cell size and tree height for each level, in frame units, the camera distance each serves up to, and the shapes' detail. */
 const LEVELS = [
   { cell: 0.0011, height: 0.0024, until: 0.055, detail: 'near' },
-  { cell: 0.0022, height: 0.0034, until: 0.13, detail: 'near' },
+  { cell: 0.0022, height: 0.0034, until: 0.13, detail: 'far' },
   { cell: 0.0044, height: 0.0052, until: 0.26, detail: 'far' },
 ] as const;
 /** Hysteresis, so a camera resting on a boundary does not flip between two levels. */

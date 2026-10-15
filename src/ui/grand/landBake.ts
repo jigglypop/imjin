@@ -53,6 +53,9 @@ export function vertexLight(gx: number, gz: number, metres: number): [number, nu
 /** The share of the sky an ordinary hillside sees, as the bake reckons it. */
 const OPEN_SKY = 0.92;
 
+/** Rows of the DEM round a band that its bake reads: the farthest a shadow's ray or the horizon is looked for, and the blur. */
+export const BAND_MARGIN = 72;
+
 /** The slope channel holds the drawn slope (rise over run) over this. */
 export const SLOPE_RANGE = 3;
 /** The height channel holds sqrt(metres / HEIGHT_RANGE), finer on the low ground where farms, beaches and woods part. */
@@ -80,11 +83,12 @@ function blur(src: Float32Array, w: number, h: number) {
 /**
  * Bakes the land's texture from the DEM's metres (row-major, north row first, sea negative). Red: the sun's light on the
  * ground, its shadows softened at their edges; green: the sky's light, less in the folds of the land; blue: the slope
- * over SLOPE_RANGE; alpha: sqrt of the height over HEIGHT_RANGE.
+ * over SLOPE_RANGE; alpha: sqrt of the height over HEIGHT_RANGE. Only the rows `rows` (from, to) are baked, so a band of
+ * the DEM with BAND_MARGIN rows of its neighbours on either side bakes the same as the whole would.
  */
-export function bakeLand(metres: Float32Array, f: BakeFrame): Uint8Array {
+export function bakeLand(metres: Float32Array, f: BakeFrame, rows: readonly [number, number] = [0, f.height]): Uint8Array {
   const { width: w, height: h, dx, dz, lift, shadeSlope } = f;
-  const out = new Uint8Array(w * h * 4);
+  const out = new Uint8Array(w * (rows[1] - rows[0]) * 4);
   // Land only: the sea floor neither casts shade on the land nor shows.
   const dry = new Float32Array(w * h);
   for (let i = 0; i < w * h; i += 1) dry[i] = Math.max(0, metres[i]!);
@@ -117,9 +121,9 @@ export function bakeLand(metres: Float32Array, f: BakeFrame): Uint8Array {
     }));
   }
   const MARGIN = 34;
-  for (let z = 0; z < h; z += 1) {
+  for (let z = rows[0]; z < rows[1]; z += 1) {
     for (let x = 0; x < w; x += 1) {
-      const i = z * w + x, o = i * 4;
+      const i = z * w + x, o = ((z - rows[0]) * w + x) * 4;
       const ht = y[i]!;
       // The drawn slope (unflattened) and the normal the light reads.
       const gx = (at(x + 1, z) - at(x - 1, z)) / (2 * dx), gz = (at(x, z + 1) - at(x, z - 1)) / (2 * dz);
