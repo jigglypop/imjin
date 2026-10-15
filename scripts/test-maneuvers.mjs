@@ -1,12 +1,12 @@
 // Regression and acceptance checks for the tactical maneuvers (src/sim/maneuvers.ts, src/sim/tactician.ts, depth-v2).
 //   node scripts/test-maneuvers.mjs            the rules on small battles, then Hansan (about 5 minutes)
 //   node scripts/test-maneuvers.mjs --unit     the rules only (under two minutes)
-//   node scripts/test-maneuvers.mjs --noryang  also Noryang played by commands against no commands (about 15 minutes more).
-//     This one is the open target: the commands win near the record but do not yet beat the computer allies left to
-//     themselves, and the broken van does not reach Gwaneumpo in the whole battle (it does when the strait is shut on it).
+//   node scripts/test-maneuvers.mjs --noryang  also Noryang over three seeds, by commands against no commands (about an
+//     hour more, so it is not part of npm test; scripts/maneuvers-harness.mjs noryang runs the same battles one by one).
 // Every battle is headless and seeded. The acceptance part shows that the battles come out of the maneuvers: the crane
-// at Hansan gives a crossfire the old rules never did, and at Noryang a player's commands alone (an ambush at the
-// strait, a breach behind the van, a pincer, the narrows and Gwaneumpo held) do far better than no commands at all.
+// at Hansan gives a crossfire the old rules never did, and at Noryang a player's commands alone (an ambush in the basin,
+// a breach behind the van, a ring open toward Gwaneumpo) do far better than no commands at all, and the broken van is
+// bottled up in Gwaneumpo.
 import assert from 'node:assert/strict';
 import { openSim, scenario, run, noryang, noryangLine } from './maneuvers-harness.mjs';
 
@@ -331,7 +331,7 @@ if (!unitOnly) {
     assert.ok(kinds.has('pursue'), 'ships sent after the broken enemy');
   });
 
-  if (noryangToo) await check('Noryang: a player’s commands (ambush in the basin, breach behind the van, pincer, the narrows and Gwaneumpo held) do clearly better than none, and the broken van runs into Gwaneumpo', () => {
+  if (noryangToo) await check('Noryang: a player’s commands (ambush in the basin, breach behind the van, a ring open toward Gwaneumpo) do clearly better than none, and the broken van runs into Gwaneumpo', () => {
     const none = [];
     const play = [];
     for (let k = 0; k < 3; k += 1) {
@@ -342,8 +342,8 @@ if (!unitOnly) {
     const gone = (r) => r.sunk + r.taken;
     for (const r of play) assert.equal(r.winner, 'joseon');
     assert.ok(mean(play, gone) >= mean(none, gone) + 20, `destroyed ${mean(none, gone).toFixed(0)} -> ${mean(play, gone).toFixed(0)}`);
-    assert.ok(mean(play, (r) => r.allies) <= mean(none, (r) => r.allies) + 2, 'at no greater cost');
-    assert.ok(mean(play, (r) => r.home + r.through) < mean(none, (r) => r.home + r.through), 'fewer get away');
+    assert.ok(mean(play, (r) => r.allies) * 2 <= mean(none, (r) => r.allies), 'at half the cost or less');
+    assert.ok(mean(play, (r) => r.through) <= 10, 'the relief does not get through to Suncheon');
     assert.ok(play.every((r) => r.bay + r.bayTaken > 0), 'the broken van runs into Gwaneumpo');
   });
 }

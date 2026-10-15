@@ -253,9 +253,9 @@ export const noryangLine = (r) => `${r.winner ?? 'undecided'} at ${r.minutes} mi
  * once the broken van has run into it, and the rest run down the fugitives.
  */
 export function playNoryang(b, applyCommand) {
-  const ZONE = { x: -2300, z: 150, r: 550 };
-  // Behind the van, across the western end of the narrows from south to north: broken through, then held.
-  const CUT = { x0: -1000, z0: 800, x1: -1000, z1: -800 };
+  const ZONE = { x: -3200, z: 250, r: 600 };
+  // Behind the van, across the basin from south to north: broken through, then held.
+  const CUT = { x0: -1800, z0: 800, x1: -1800, z1: -800 };
   const NECK = { x0: -2750, z0: 2350, x1: -2150, z1: 2350 };
   let step = 0;
   let at = -1;
