@@ -333,6 +333,8 @@ export class MapLayer {
   private clock = 0;
   private sailors: Sailors | null = null;
   private world: MapWorld | null = null;
+  /** The world the meshes on show were built from: until it is the last one set, a rebuild is under way. */
+  private shown: MapWorld | null = null;
   private shipTotal = 0;
   private sailShare = 0;
   private sailTime = 0;
@@ -391,6 +393,11 @@ export class MapLayer {
   set(world: MapWorld) {
     this.world = world;
     void this.rebuild();
+  }
+
+  /** True while the last world set is still being built: its models, atlases or ships have not all arrived. */
+  get busy() {
+    return !this.disposed && this.world !== this.shown;
   }
 
   /** The closed turn's sailings at `share` of their way (0 to 1) and the replay's clock `time` (0 to 1.2; lost ships go under near its end). */
@@ -516,6 +523,7 @@ export class MapLayer {
     this.buildSettlements(world.settlements);
     this.buildShips(world.fleets);
     this.buildSailors(world.sails);
+    this.shown = world;
     this.stale = true;
     this.placeBoats();
     this.setView(this.yaw, this.distance);

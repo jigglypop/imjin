@@ -14,7 +14,7 @@ import { DEM_RECT, groundElevation } from './mapMath';
 import { clampState, frameAll, NEAR, panBy, projectFrame, screenFrame, turn, zoomAt as zoomCameraAt, type CameraState } from './worldCamera';
 import { CameraMotion, KEY_ACTIONS } from './cameraMotion';
 import { boxBetween, markersInBox, type Marker } from './boxSelect';
-import { buildWorld, HULL_LENGTH, laneSpot, SETTLEMENT_RADIUS, type IsSea } from './mapWorld';
+import { buildWorld, HULL_LENGTH, laneSpot, SETTLEMENT_RADIUS, type IsSea, type SettlementSpec } from './mapWorld';
 import { cardRect, pickCards } from './cardLayout';
 import { cutCurve } from './screenPath';
 
@@ -60,6 +60,28 @@ export interface GrandMapProps {
   onReplayPhase?: (phase: 'sail' | 'clash') => void;
   onReplayBeat?: (kind: 'clash' | 'capture') => void;
   onReplayDone?: () => void;
+}
+
+/** What review scripts read and set on the 3D map (scripts/review-settlements.mjs), as window.__engine is for a battle. */
+export interface MapHook {
+  camera(): CameraState;
+  /** Puts the camera where `c` says at once, stopping whatever was moving it. */
+  setCamera(c: Partial<CameraState>): void;
+  /** The ports as the map shows them, and the places laid out on them. */
+  regions(): RegionView[];
+  layout(): SettlementSpec[];
+  /** The ground as drawn: the DEM's metre heights, which groundElevation reads. */
+  heights(): Float32Array;
+  /** Where a frame point on the ground is on the screen, in CSS pixels. */
+  place(u: number, v: number): { x: number; y: number };
+  /** The world is still readying what it was last given: a picture taken now may miss part of it. */
+  busy(): boolean;
+}
+
+declare global {
+  interface Window {
+    __map?: MapHook;
+  }
 }
 
 interface View {
@@ -215,6 +237,31 @@ export function GrandMap({
   const onWorldControls = useCallback((controls: WorldControls | null) => {
     world.current = controls;
   }, []);
+
+  // The review scripts' hook, while the 3D world is up.
+  useEffect(() => {
+    if (!heights) return;
+    const hook: MapHook = {
+      camera: () => camRef.current,
+      setCamera: (c) => {
+        touched.current = true;
+        motion.halt();
+        moveCam(clampState({ ...camRef.current, ...c }));
+      },
+      regions: () => regions,
+      layout: () => mapWorld.settlements,
+      heights: () => heights,
+      place: (u, v) => {
+        const p = projectFrame(camRef.current, screenRef.current, u, v, groundElevation(heights, u, v));
+        return { x: p.x, y: p.y };
+      },
+      busy: () => world.current?.busy() ?? true,
+    };
+    window.__map = hook;
+    return () => {
+      if (window.__map === hook) delete window.__map;
+    };
+  }, [heights, regions, mapWorld, motion, moveCam]);
 
   const limits = useCallback(() => {
     const { w, h } = boxRef.current;

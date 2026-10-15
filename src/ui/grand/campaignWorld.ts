@@ -49,6 +49,9 @@ export class CampaignWorld {
   private readonly keys = new WeakMap<Mesh, string>();
   /** Compiles run one after another: the last one asked for. */
   private compiling: Promise<void> = Promise.resolve();
+  /** Compiles asked for and not yet done, and whether the trees still had tiles to plant at the last frame. */
+  private warming = 0;
+  private planting = false;
 
   constructor(private readonly scene: Scene, private readonly onChange: () => void, private readonly compile?: Compile) {
     scene.add(this.root);
@@ -144,7 +147,16 @@ export class CampaignWorld {
       for (const o of objects) if ((o as Mesh).isMesh) this.compiled.add(this.keyOf(o as Mesh));
     };
     // A compile that cannot even start leaves the shaders to the frames that draw them; the compiles after it still run.
-    return (this.compiling = this.compiling.then(run).catch(() => undefined));
+    this.warming += 1;
+    return (this.compiling = this.compiling.then(run).catch(() => undefined).finally(() => { this.warming -= 1; }));
+  }
+
+  /**
+   * True until what the world was last given is on show: the ground still loading, a layer rebuild or a compile under way,
+   * trees still being planted round the camera. Review scripts wait for it before they take a picture.
+   */
+  get busy(): boolean {
+    return !this.ready || !!this.layer?.busy || this.warming > 0 || this.planting;
   }
 
   /**
@@ -196,7 +208,8 @@ export class CampaignWorld {
     this.layer?.setView(cam.yaw, cam.distance);
     this.layer?.tick(clock);
     // Trees are planted a few tiles a frame: while some are still to come the page draws on, even with no ambient frames.
-    if (this.trees?.update(cam)) this.onChange();
+    this.planting = !!this.trees?.update(cam);
+    if (this.planting) this.onChange();
   }
 
   /** Frees the ground, the layers and everything they made; a load still under way is abandoned. */
