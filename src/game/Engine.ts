@@ -908,6 +908,8 @@ export class Engine {
   /** The film grade follows the cinema; the lens pass is in the picture only while a cutscene runs. */
   private updateFilm(dt: number) {
     film.amount.value = this.cinema.grade;
+    // The bloom of a close fire would whiten the whole frame: it is held back while the film grade is on.
+    if (this.bloomNode) this.bloomNode.strength.value = LEVELS[this.level]!.bloomStrength * (1 - 0.55 * this.cinema.grade);
     film.time.value = (film.time.value + dt) % 600;
     const lens = this.cinema.covering && this.filmOutput ? this.filmOutput : this.plainOutput;
     if (lens && this.pipeline.outputNode !== lens) {
