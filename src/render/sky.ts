@@ -1,215 +1,252 @@
-import {
-  DataTexture,
-  DataUtils,
-  EquirectangularReflectionMapping,
-  HalfFloatType,
-  LinearFilter,
-  RGBAFormat,
-  Vector3,
-} from 'three/webgpu';
-import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+import { ClampToEdgeWrapping, DataTexture, DataUtils, EquirectangularReflectionMapping, HalfFloatType, LinearFilter, RepeatWrapping, RGBAFormat, Vector3 } from 'three/webgpu';
 import type { SkyInfo } from './atmosphere';
+import { Atmosphere, buildSkyView, DECK_TINT, hazeForFog, sampleSkyView, type Rgb } from './atmosphereModel';
+import { coverAt, sampleWeather } from './cloudNoise';
 
 export type SkyPresetName = 'afternoon' | 'day' | 'sunset' | 'overcast' | 'night';
 
+/** The cloud layer a sky is drawn with. Heights in metres above the sea. */
+export type CloudSpec = {
+  /** Share of the sky the layer covers, before the weather map breaks it into masses and gaps. */
+  coverage: number;
+  base: number;
+  top: number;
+  /** Extinction per metre at full density: thin fair-weather cloud low, a rain-heavy deck high. */
+  density: number;
+};
+
 export type SkyPreset = {
   label: string;
-  /** File name without size and extension: public/hdri/<file>_4k.hdr, and _2k.hdr from scripts/build-hdri.mjs. */
-  file: string;
+  /**
+   * Bearing and height of the sun (of the moon at night) in radians, bearing 0 along +x turning toward +z. The bearings
+   * are those of the photographed skies the battles were first laid out under, so every battle's map turns as before.
+   */
+  azimuth: number;
+  elevation: number;
   exposure: number;
   brightness: number;
   fogDensity: number;
-  minSunRatio: number;
+  /** The most the direct light may outshine the sky's average radiance; the game's materials were tuned to these ratios. */
+  sunRatio: number;
+  /** Share of the direct light the clouds let through on average: an overcast deck keeps most of it. */
+  sunThrough: number;
   axisOffset: number;
   night: number;
+  clouds: CloudSpec;
 };
+
+const deg = Math.PI / 180;
 
 export const SKY_PRESETS: Record<SkyPresetName, SkyPreset> = {
-  afternoon: { label: '오후', file: 'table_mountain_1_puresky', exposure: 0.95, brightness: 1, fogDensity: 0.00007, minSunRatio: 12, axisOffset: 1.15, night: 0 },
-  day: { label: '한낮', file: 'kloofendal_48d_partly_cloudy_puresky', exposure: 0.95, brightness: 1.05, fogDensity: 0.00006, minSunRatio: 12, axisOffset: 1.3, night: 0 },
-  sunset: { label: '노을', file: 'kloppenheim_06_puresky', exposure: 1.0, brightness: 0.8, fogDensity: 0.00009, minSunRatio: 9, axisOffset: 0.5, night: 0 },
-  overcast: { label: '흐림', file: 'kloofendal_overcast_puresky', exposure: 1.0, brightness: 0.85, fogDensity: 0.00018, minSunRatio: 0, axisOffset: 1.15, night: 0 },
-  night: { label: '달밤', file: 'qwantani_moonrise_puresky', exposure: 1.0, brightness: 0.085, fogDensity: 0.00011, minSunRatio: 5, axisOffset: 0.4, night: 1 },
+  afternoon: { label: '오후', azimuth: 49.39 * deg, elevation: 15 * deg, exposure: 0.95, brightness: 1, fogDensity: 0.00007, sunRatio: 17, sunThrough: 1, axisOffset: 1.15, night: 0, clouds: { coverage: 0.42, base: 1300, top: 3500, density: 0.03 } },
+  day: { label: '한낮', azimuth: 34.28 * deg, elevation: 48 * deg, exposure: 0.95, brightness: 1.05, fogDensity: 0.00006, sunRatio: 12, sunThrough: 1, axisOffset: 1.3, night: 0, clouds: { coverage: 0.38, base: 1500, top: 3800, density: 0.03 } },
+  sunset: { label: '노을', azimuth: 38.5 * deg, elevation: 5 * deg, exposure: 1.0, brightness: 0.6, fogDensity: 0.00009, sunRatio: 9, sunThrough: 1, axisOffset: 0.5, night: 0, clouds: { coverage: 0.44, base: 1600, top: 3400, density: 0.03 } },
+  overcast: { label: '흐림', azimuth: 29.71 * deg, elevation: 23 * deg, exposure: 1.0, brightness: 0.85, fogDensity: 0.00018, sunRatio: 0.9, sunThrough: 0.12, axisOffset: 1.15, night: 0, clouds: { coverage: 0.92, base: 1100, top: 2500, density: 0.045 } },
+  night: { label: '달밤', azimuth: 36.04 * deg, elevation: 14 * deg, exposure: 1.0, brightness: 0.085, fogDensity: 0.00011, sunRatio: 14, sunThrough: 1, axisOffset: 0.4, night: 1, clouds: { coverage: 0.36, base: 1500, top: 3300, density: 0.03 } },
 };
 
-const ENV_W = 1024;
-const ENV_H = 512;
-const SUN_CLIP_RADIUS = 0.16;
-
-let halfTable: Float32Array | null = null;
-
-function decodeTable() {
-  if (halfTable) return halfTable;
-  halfTable = new Float32Array(65536);
-  for (let i = 0; i < 65536; i += 1) halfTable[i] = DataUtils.fromHalfFloat(i);
-  return halfTable;
-}
-
-function dirFromUV(u: number, v: number, out: Vector3) {
-  const phi = (u - 0.5) * Math.PI * 2;
-  const theta = (v - 0.5) * Math.PI;
-  return out.set(Math.cos(theta) * Math.cos(phi), Math.sin(theta), Math.cos(theta) * Math.sin(phi));
-}
+/** Texture sizes of a sky: the view behind everything and the environment the reflections and ambient light come from. */
+export type SkySize = 'small' | 'large';
+const SIZES: Record<SkySize, { view: [number, number]; env: [number, number] }> = {
+  small: { view: [128, 96], env: [256, 128] },
+  large: { view: [256, 128], env: [512, 256] },
+};
 
 export type LoadedSky = {
-  background: DataTexture;
+  /** The sky's radiance by direction, in the layout of atmosphereModel's sky view. */
+  view: DataTexture;
+  /** The same sky with its clouds and the sea below, as an equirectangular map for reflections and ambient light. */
   environment: DataTexture;
   info: SkyInfo;
 };
 
+export function lightDirection(preset: SkyPreset) {
+  const c = Math.cos(preset.elevation);
+  return new Vector3(c * Math.cos(preset.azimuth), Math.sin(preset.elevation), c * Math.sin(preset.azimuth));
+}
+
+const lum = (c: Rgb) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+
 /**
- * `size` picks the prebuilt file: the background is the file itself, the lighting is computed from a 1024x512 filter of it.
- * With `reuse` the new sky is written into the textures of the previous one instead of making new ones. The renderer
- * builds its filtered reflection maps (and the objects that hold them) per texture and never frees the ones of a
- * texture it has dropped, so a battle's sky must stay the same texture objects to leave nothing behind.
+ * The clouds as the environment sees them: one sheet at the layer's middle height, opaque where the weather map gives
+ * the layer cover, lit from above and fading into the air with distance. Close enough to the marched clouds for the
+ * ambient light and the blurred reflections on the sea to agree with them.
  */
-export async function loadSky(preset: SkyPreset, size: '2k' | '4k' = '4k', reuse?: LoadedSky, signal?: AbortSignal): Promise<LoadedSky> {
-  signal?.throwIfAborted();
-  const loader = new HDRLoader();
-  loader.setDataType(HalfFloatType);
-  const source = await loader.loadAsync(`/hdri/${preset.file}_${size}.hdr`);
-  try {
-    // A cancelled request must never write into the running sky's reused textures.
-    signal?.throwIfAborted();
-    source.mapping = EquirectangularReflectionMapping;
-    source.needsUpdate = true;
-    const img = source.image as { data: Uint16Array; width: number; height: number };
-    const table = decodeTable();
-    const srcW = img.width;
-    const srcH = img.height;
-    const channels = img.data.length / (srcW * srcH);
-    const fx = srcW / ENV_W;
-    const fy = srcH / ENV_H;
-    // Every other source pixel is enough from a 4k file. A 2k file has half as many to spare.
-    const stride = Math.max(1, Math.floor(fx / 2));
-    const env = new Float32Array(ENV_W * ENV_H * 4);
-    for (let y = 0; y < ENV_H; y += 1) {
-      const sy0 = Math.floor(y * fy);
-      const sy1 = Math.max(sy0 + 1, Math.floor((y + 1) * fy));
-      for (let x = 0; x < ENV_W; x += 1) {
-        const sx0 = Math.floor(x * fx);
-        const sx1 = Math.max(sx0 + 1, Math.floor((x + 1) * fx));
-        let r = 0;
-        let g = 0;
-        let b = 0;
-        let n = 0;
-        for (let sy = sy0; sy < sy1; sy += stride) {
-          for (let sx = sx0; sx < sx1; sx += stride) {
-            const i = (sy * srcW + sx) * channels;
-            r += table[img.data[i]!]!;
-            g += table[img.data[i + 1]!]!;
-            b += table[img.data[i + 2]!]!;
-            n += 1;
-          }
-        }
-        const o = (y * ENV_W + x) * 4;
-        env[o] = r / n;
-        env[o + 1] = g / n;
-        env[o + 2] = b / n;
-        env[o + 3] = 1;
-      }
-    }
-    const dir = new Vector3();
-    let maxL = 0;
-    let maxIdx = 0;
-    let ambR = 0;
-    let ambG = 0;
-    let ambB = 0;
-    let ambW = 0;
-    let horR = 0;
-    let horG = 0;
-    let horB = 0;
-    let horW = 0;
-    for (let y = 0; y < ENV_H; y += 1) {
-      const v = 1 - (y + 0.5) / ENV_H;
-      if (v < 0.5) continue;
-      const lat = (v - 0.5) * Math.PI;
-      const w = Math.cos(lat);
-      for (let x = 0; x < ENV_W; x += 1) {
-        const o = (y * ENV_W + x) * 4;
-        const L = 0.2126 * env[o]! + 0.7152 * env[o + 1]! + 0.0722 * env[o + 2]!;
-        if (L > maxL) {
-          maxL = L;
-          maxIdx = y * ENV_W + x;
-        }
-        const clamped = Math.min(L, 8);
-        const s = L > 0 ? clamped / L : 0;
-        ambR += env[o]! * s * w * Math.sin(lat + 0.05);
-        ambG += env[o + 1]! * s * w * Math.sin(lat + 0.05);
-        ambB += env[o + 2]! * s * w * Math.sin(lat + 0.05);
-        ambW += w * Math.sin(lat + 0.05);
-        if (v < 0.53) {
-          horR += env[o]! * s;
-          horG += env[o + 1]! * s;
-          horB += env[o + 2]! * s;
+function cloudSheet(preset: SkyPreset, atmosphere: Atmosphere, sky: Rgb, dir: Rgb, zenith: Rgb, sun: Rgb, out: Rgb) {
+  const c = preset.clouds;
+  const mid = (c.base + c.top) * 0.5;
+  const up = Math.max(dir[1], 0.012);
+  const d = Math.min(90000, mid / up);
+  const x = dir[0] * d;
+  const z = dir[2] * d;
+  const cover = coverAt(c.coverage, sampleWeather(x, z, 0));
+  const alpha = Math.min(1, Math.max(0, (cover - 0.3) / 0.35)) * Math.min(1, (c.top - c.base) * c.density / 30);
+  const L = atmosphere.light;
+  const cosT = dir[0] * L[0] + dir[1] * L[1] + dir[2] * L[2];
+  // The underside passes a third of the sunlight down diffusely, thin parts more; edges toward the sun glow with
+  // forward scattering.
+  const g = 0.6;
+  const hg = (1 - g * g) / (4 * Math.PI * Math.pow(1 + g * g - 2 * g * cosT, 1.5));
+  const diffuse = (Math.max(0.05, L[1]) * (0.3 + 0.3 * (1 - cover))) / Math.PI;
+  const glow = hg * 0.35 * (1 - cover * 0.7);
+  const haze = Math.exp(-d * preset.fogDensity * 0.45);
+  const sunLum = lum(sun);
+  for (let k = 0; k < 3; k += 1) {
+    // What the droplets pass down has the clear sky's blue light on the layer's top mixed into the sunlight.
+    const under = sun[k]! * 0.8 + sunLum * DECK_TINT[k]! * 0.2;
+    const base = under * diffuse + sun[k]! * glow + zenith[k]! * 0.6;
+    const seen = sky[k]! + (base - sky[k]!) * haze;
+    out[k] = sky[k]! + (seen - sky[k]!) * alpha;
+  }
+  return out;
+}
+
+type BuiltSky = { view: Uint16Array; env: Uint16Array; viewSize: [number, number]; envSize: [number, number]; info: SkyInfo };
+
+/** Integrates the preset's sky on the CPU: the view, the environment map and the light the scene is lit with. */
+export function buildSky(preset: SkyPreset, size: SkySize): BuiltSky {
+  const light = lightDirection(preset);
+  const atmosphere = new Atmosphere({ light: [light.x, light.y, light.z], haze: hazeForFog(preset.fogDensity), direct: preset.sunThrough });
+  const [vw, vh] = SIZES[size].view;
+  const [ew, eh] = SIZES[size].env;
+  const view = buildSkyView(atmosphere, vw, vh);
+  const sun = atmosphere.lightAtSea([0, 0, 0]);
+  // The clouds are lit above the sea haze, by a whiter sun.
+  const cloudSun = atmosphere.lightAt((preset.clouds.base + preset.clouds.top) * 0.5, [0, 0, 0]);
+  const zenith = sampleSkyView(view, vw, vh, 0, 1, 0, [0, 0, 0]);
+  const env = new Float32Array(ew * eh * 4);
+  const dir: Rgb = [0, 0, 0];
+  const sky: Rgb = [0, 0, 0];
+  const c: Rgb = [0, 0, 0];
+  const horizon: Rgb = [0, 0, 0];
+  let ambR = 0;
+  let ambG = 0;
+  let ambB = 0;
+  let ambW = 0;
+  let horR = 0;
+  let horG = 0;
+  let horB = 0;
+  let horW = 0;
+  for (let y = 0; y < eh; y += 1) {
+    // Row 0 is straight down, as three samples an equirectangular map that is not flipped.
+    const lat = ((y + 0.5) / eh - 0.5) * Math.PI;
+    const cl = Math.cos(lat);
+    for (let x = 0; x < ew; x += 1) {
+      const phi = ((x + 0.5) / ew - 0.5) * Math.PI * 2;
+      dir[0] = cl * Math.cos(phi);
+      dir[1] = Math.sin(lat);
+      dir[2] = cl * Math.sin(phi);
+      const o = (y * ew + x) * 4;
+      if (dir[1] >= 0) {
+        sampleSkyView(view, vw, vh, dir[0], dir[1], dir[2], sky);
+        cloudSheet(preset, atmosphere, sky, dir, zenith, cloudSun, c);
+        const w = cl * Math.sin(lat + 0.05);
+        ambR += c[0] * w;
+        ambG += c[1] * w;
+        ambB += c[2] * w;
+        ambW += w;
+        if (lat < 0.09) {
+          horR += c[0];
+          horG += c[1];
+          horB += c[2];
           horW += 1;
         }
+      } else {
+        // The sea: the far water is lost in the haze at the horizon, the near water gives back little but its own blue-green.
+        sampleSkyView(view, vw, vh, dir[0], 0.004, dir[2], horizon);
+        const k = Math.exp(dir[1] * 24);
+        c[0] = horizon[0] * (0.07 + 0.93 * k) + zenith[0] * 0.05;
+        c[1] = horizon[1] * (0.07 + 0.93 * k) + zenith[1] * 0.09;
+        c[2] = horizon[2] * (0.07 + 0.93 * k) + zenith[2] * 0.1;
       }
+      env[o] = c[0];
+      env[o + 1] = c[1];
+      env[o + 2] = c[2];
+      env[o + 3] = 1;
     }
-    const sunX = maxIdx % ENV_W;
-    const sunY = Math.floor(maxIdx / ENV_W);
-    const sunDir = dirFromUV((sunX + 0.5) / ENV_W, 1 - (sunY + 0.5) / ENV_H, new Vector3()).normalize();
-    const skyAmbient = new Vector3(ambR / ambW, ambG / ambW, ambB / ambW);
-    const horizon = new Vector3(horR / horW, horG / horW, horB / horW);
-    const ambL = 0.2126 * skyAmbient.x + 0.7152 * skyAmbient.y + 0.0722 * skyAmbient.z;
-    const clipL = Math.max(ambL * 3, 1e-3);
-    const irr = new Vector3(0, 0, 0);
-    const cosClip = Math.cos(SUN_CLIP_RADIUS);
-    for (let y = 0; y < ENV_H; y += 1) {
-      const v = 1 - (y + 0.5) / ENV_H;
-      const lat = (v - 0.5) * Math.PI;
-      const solid = (2 * Math.PI / ENV_W) * (Math.PI / ENV_H) * Math.cos(lat);
-      for (let x = 0; x < ENV_W; x += 1) {
-        dirFromUV((x + 0.5) / ENV_W, v, dir);
-        if (dir.dot(sunDir) < cosClip) continue;
-        const o = (y * ENV_W + x) * 4;
-        const L = 0.2126 * env[o]! + 0.7152 * env[o + 1]! + 0.0722 * env[o + 2]!;
-        if (L <= clipL) continue;
-        const k = clipL / L;
-        irr.x += env[o]! * (1 - k) * solid;
-        irr.y += env[o + 1]! * (1 - k) * solid;
-        irr.z += env[o + 2]! * (1 - k) * solid;
-        env[o] = env[o]! * k;
-        env[o + 1] = env[o + 1]! * k;
-        env[o + 2] = env[o + 2]! * k;
-      }
-    }
-    const sunPix = maxIdx * 4;
-    const sunColor = new Vector3(env[sunPix]!, env[sunPix + 1]!, env[sunPix + 2]!);
-    sunColor.divideScalar(Math.max(1e-6, 0.2126 * sunColor.x + 0.7152 * sunColor.y + 0.0722 * sunColor.z));
-    const irrLum = 0.2126 * irr.x + 0.7152 * irr.y + 0.0722 * irr.z;
-    const minLum = ambL * preset.minSunRatio;
-    if (irrLum < minLum) irr.copy(sunColor).multiplyScalar(minLum);
-    const half = new Uint16Array(ENV_W * ENV_H * 4);
-    for (let y = 0; y < ENV_H; y += 1) {
-      const src = y * ENV_W * 4;
-      const dst = (ENV_H - 1 - y) * ENV_W * 4;
-      for (let i = 0; i < ENV_W * 4; i += 1) half[dst + i] = DataUtils.toHalfFloat(env[src + i]!);
-    }
-    let environment: DataTexture;
-    let background: DataTexture = source;
-    const old = reuse?.background.image as { width: number; height: number } | undefined;
-    if (reuse && old && old.width === srcW && old.height === srcH) {
-      environment = reuse.environment;
-      environment.image.data = half;
-      environment.needsUpdate = true;
-      environment.needsPMREMUpdate = true;
-      background = reuse.background;
-      background.image = source.image;
-      background.needsUpdate = true;
-    } else {
-      environment = new DataTexture(half, ENV_W, ENV_H, RGBAFormat, HalfFloatType);
-      environment.mapping = EquirectangularReflectionMapping;
-      environment.magFilter = LinearFilter;
-      environment.minFilter = LinearFilter;
-      environment.flipY = false;
-      environment.generateMipmaps = false;
-      environment.needsUpdate = true;
-    }
-    if (background !== source) source.dispose();
-    return { background, environment, info: { sunDir, sunIrradiance: irr, skyAmbient, horizon, ambientLum: ambL } };
-  } catch (err) {
-    source.dispose();
-    throw err;
   }
+  const tint = preset.night > 0 ? MOONLIGHT : DAYLIGHT;
+  const skyAmbient = new Vector3(ambR / ambW, ambG / ambW, ambB / ambW).multiply(new Vector3(...tint));
+  const ambientLum = Math.max(1e-6, 0.2126 * skyAmbient.x + 0.7152 * skyAmbient.y + 0.0722 * skyAmbient.z);
+  const through = [sun[0] * preset.sunThrough * tint[0], sun[1] * preset.sunThrough * tint[1], sun[2] * preset.sunThrough * tint[2]] as Rgb;
+  const ratio = lum(through) / ambientLum;
+  const k = ratio > preset.sunRatio ? preset.sunRatio / ratio : 1;
+  const sunIrradiance = new Vector3(through[0] * k, through[1] * k, through[2] * k);
+  const horizonColor = new Vector3(horR / horW, horG / horW, horB / horW).multiply(new Vector3(...tint));
+  return {
+    view: toHalf(view, tint),
+    env: toHalf(env, tint),
+    viewSize: [vw, vh],
+    envSize: [ew, eh],
+    info: { sunDir: light, sunIrradiance, skyAmbient, horizon: horizonColor, ambientLum },
+  };
+}
+
+const DAYLIGHT: Rgb = [1, 1, 1];
+/** Moonlight is only sunlight dimmed, but a night scene looks blue to the eye: the films grade it so, and so does the sky. */
+const MOONLIGHT: Rgb = [0.886, 1.01, 1.236];
+
+function toHalf(data: Float32Array, tint: Rgb) {
+  const out = new Uint16Array(data.length);
+  for (let i = 0; i < data.length; i += 4) {
+    out[i] = DataUtils.toHalfFloat(data[i]! * tint[0]);
+    out[i + 1] = DataUtils.toHalfFloat(data[i + 1]! * tint[1]);
+    out[i + 2] = DataUtils.toHalfFloat(data[i + 2]! * tint[2]);
+    out[i + 3] = DataUtils.toHalfFloat(data[i + 3]!);
+  }
+  return out;
+}
+
+/**
+ * A sky view texture. A stand-in made before the battle's sky (a plain grey one) must be made here too: the nodes that
+ * read it keep its sampler when the real sky is swapped in.
+ */
+export function viewTexture(data: Uint16Array = new Uint16Array(8 * 8 * 4).fill(0x2000), [w, h]: [number, number] = [8, 8]) {
+  const tex = new DataTexture(data, w, h, RGBAFormat, HalfFloatType);
+  // Azimuth wraps around; elevation stops at the poles.
+  tex.wrapS = RepeatWrapping;
+  tex.wrapT = ClampToEdgeWrapping;
+  tex.magFilter = LinearFilter;
+  tex.minFilter = LinearFilter;
+  tex.generateMipmaps = false;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function envTexture(data: Uint16Array, [w, h]: [number, number]) {
+  const tex = new DataTexture(data, w, h, RGBAFormat, HalfFloatType);
+  tex.mapping = EquirectangularReflectionMapping;
+  tex.magFilter = LinearFilter;
+  tex.minFilter = LinearFilter;
+  tex.flipY = false;
+  tex.generateMipmaps = false;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/** Yields to the browser, so the loading bar paints before the sky takes the main thread for a few dozen milliseconds. */
+const yieldFrame = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+/**
+ * Builds the preset's sky. With `reuse` the new sky is written into the textures of the previous one instead of making
+ * new ones: the renderer builds its filtered reflection maps (and the objects that hold them) per texture and never
+ * frees the ones of a texture it has dropped, so a battle's sky must stay the same texture objects to leave nothing behind.
+ */
+export async function loadSky(preset: SkyPreset, size: SkySize, reuse?: LoadedSky, signal?: AbortSignal): Promise<LoadedSky> {
+  signal?.throwIfAborted();
+  await yieldFrame();
+  signal?.throwIfAborted();
+  const built = buildSky(preset, size);
+  // A cancelled request must never write into the running sky's reused textures.
+  signal?.throwIfAborted();
+  const fits = (tex: DataTexture | undefined, [w, h]: [number, number]) => !!tex && tex.image.width === w && tex.image.height === h;
+  if (reuse && fits(reuse.view, built.viewSize) && fits(reuse.environment, built.envSize)) {
+    reuse.view.image.data = built.view;
+    reuse.view.needsUpdate = true;
+    reuse.environment.image.data = built.env;
+    reuse.environment.needsUpdate = true;
+    reuse.environment.needsPMREMUpdate = true;
+    return { view: reuse.view, environment: reuse.environment, info: built.info };
+  }
+  return { view: viewTexture(built.view, built.viewSize), environment: envTexture(built.env, built.envSize), info: built.info };
 }

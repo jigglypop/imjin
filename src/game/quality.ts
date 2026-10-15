@@ -1,3 +1,4 @@
+import type { SkySize } from '../render/sky';
 import { deviceMemoryGB, isIOS, isPhone, isTouchOnly } from './device';
 import { recovery } from './recovery';
 
@@ -36,8 +37,8 @@ export type Equipment = {
   anisotropy: number;
   triplanar: boolean;
   noise: number;
-  /** Which prebuilt sky file to load. A phone screen is about 400 CSS px wide, so 2k shows the same sky there. */
-  hdriSize: '2k' | '4k';
+  /** Resolution of the computed sky. The air is smooth, so a phone's smaller tables look the same and cost a third of the time. */
+  skySize: SkySize;
   /** Side length of the terrain ground textures: the 1k files hold a quarter of the memory. */
   terrainTexSize: 1024 | 2048;
   vegetationShadows: boolean;
@@ -62,7 +63,7 @@ const EQUIPMENT: Record<EquipmentTier, Equipment> = {
     anisotropy: 16,
     triplanar: true,
     noise: 1,
-    hdriSize: '4k',
+    skySize: 'large',
     terrainTexSize: 2048,
     vegetationShadows: true,
     fft: true,
@@ -82,7 +83,7 @@ const EQUIPMENT: Record<EquipmentTier, Equipment> = {
     anisotropy: 8,
     triplanar: true,
     noise: 0.75,
-    hdriSize: '2k',
+    skySize: 'large',
     terrainTexSize: 2048,
     vegetationShadows: true,
     fft: true,
@@ -102,7 +103,7 @@ const EQUIPMENT: Record<EquipmentTier, Equipment> = {
     anisotropy: 8,
     triplanar: true,
     noise: 0.75,
-    hdriSize: '2k',
+    skySize: 'small',
     terrainTexSize: 1024,
     vegetationShadows: false,
     fft: false,

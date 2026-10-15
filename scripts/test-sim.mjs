@@ -1,8 +1,10 @@
 // Regression checks for persistent fleets, supplies, independent seas and battle results.
 // Runs the actual simulation/store modules headlessly: node scripts/test-sim.mjs.
 import assert from 'node:assert/strict';
+import { readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { build } from 'esbuild';
 import { createServer } from 'vite';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -14,7 +16,7 @@ globalThis.localStorage = {
   setItem: (key, value) => storage.set(key, String(value)),
   removeItem: (key) => storage.delete(key),
 };
-const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
 let failed = 0;
 async function check(name, run) {
   try {
@@ -390,6 +392,18 @@ try {
     funds = pl.funds;
     assert.equal(applyCommand(b, 0, { type: 'demolish', point: p.id, slot: 0 }, c), 1);
     assert.equal(pl.funds, funds + Math.round(BUILDINGS.shipyard.cost * 0.25)); assert.equal(p.buildings[0], null);
+  });
+
+  await check('no file under src/sim reaches three.js, including those the server does not bundle', async () => {
+    // test-server's look at the server bundle sees only what server/main.ts imports. The campaign rules and the tools
+    // load the rest of src/sim, where Node would run three without complaint, so every file is bundled here and its
+    // import graph searched for three. A type-only import is erased and passes.
+    const files = readdirSync(join(root, 'src/sim'), { recursive: true }).filter((file) => file.endsWith('.ts')).map((file) => join('src/sim', file));
+    const { metafile } = await build({ absWorkingDir: root, entryPoints: files, bundle: true, write: false, metafile: true, platform: 'node', outdir: 'out', logLevel: 'silent' });
+    const three = (path) => path.includes('node_modules/three/');
+    const importers = Object.entries(metafile.inputs).filter(([path, input]) => !three(path) && input.imports.some((i) => three(i.path))).map(([path]) => path);
+    assert.ok(files.length > 30, 'src/sim was not found');
+    assert.deepEqual(importers, [], `three.js is imported by ${importers.join(', ')}`);
   });
 } finally {
   await server.close();

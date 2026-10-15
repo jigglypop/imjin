@@ -23,7 +23,7 @@ const shots = args.shots ?? null;
 if (shots) await mkdir(shots, { recursive: true });
 
 // A war in progress with camps of every navy and tier along the coast, built by the game's own rules.
-const vite = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+const vite = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
 const { newGrand } = await vite.ssrLoadModule('/src/sim/grand/turn.ts');
 const save = newGrand('joseon', 551);
 save.phase = 'orders';

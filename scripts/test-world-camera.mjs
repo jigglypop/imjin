@@ -5,13 +5,13 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
 let passed = 0;
 const check = (name, run) => { run(); passed++; console.log('ok   ' + name); };
 const near = (a, b, eps = 1e-6, what = '') => assert.ok(Math.abs(a - b) <= eps, `${what} ${a} != ${b}`);
 try {
   const cam = await server.ssrLoadModule('/src/ui/grand/worldCamera.ts');
-  const { projectPoint, projectFrame, unproject, panBy, zoomAt, turn, clampState, frameAll, screenFrame, eyeOf, LIMITS, FOV } = cam;
+  const { projectPoint, projectFrame, unproject, panBy, zoomAt, zoomPitch, turn, clampState, frameAll, screenFrame, eyeOf, LIMITS, FOV, OPEN_PITCH } = cam;
   const screen = screenFrame(1600, 900, { top: 0, right: 0, bottom: 0, left: 0 });
   const base = { u: 0.5, v: 0.4, distance: 0.5, yaw: 0, pitch: 0.75 };
 
@@ -82,6 +82,20 @@ try {
     near(c.distance, LIMITS.minDistance, 1e-9, 'closest');
     for (let i = 0; i < 80; i += 1) c = zoomAt(c, screen, 800, 450, 1 / 1.4);
     near(c.distance, LIMITS.maxDistance, 1e-9, 'farthest');
+  });
+
+  check('zooming in tilts the view down towards a camp and zooming out tilts it back, a tilt set by hand kept', () => {
+    near(zoomPitch(LIMITS.maxDistance), OPEN_PITCH, 1e-12, 'far away, the opening pitch');
+    assert.ok(zoomPitch(LIMITS.minDistance) < zoomPitch(0.06) && zoomPitch(0.06) < zoomPitch(0.14) && zoomPitch(0.14) < zoomPitch(0.3) && zoomPitch(0.3) <= OPEN_PITCH);
+    assert.ok(zoomPitch(LIMITS.minDistance) < 0.45, 'low over a single camp');
+    // The player had tipped the view up by 0.2 from where the curve has it.
+    const tipped = { ...base, distance: 0.5, pitch: zoomPitch(0.5) + 0.2 };
+    let c = tipped;
+    for (let i = 0; i < 12; i += 1) c = zoomAt(c, screen, 1100, 300, 1.25);
+    assert.ok(c.pitch < tipped.pitch - 0.15, 'tilted down on the way in');
+    near(c.pitch - zoomPitch(c.distance), 0.2, 1e-9, 'the player\'s tilt kept');
+    for (let i = 0; i < 12; i += 1) c = zoomAt(c, screen, 1100, 300, 1 / 1.25);
+    near(c.pitch, tipped.pitch, 1e-9, 'back up on the way out');
   });
 
   check('turning wraps the yaw and the pitch and the eye height stay inside their limits', () => {

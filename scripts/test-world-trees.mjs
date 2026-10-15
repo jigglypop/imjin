@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
 let passed = 0;
 const check = (name, run) => { run(); passed++; console.log('ok   ' + name); };
 try {
@@ -49,13 +49,20 @@ try {
     layer.dispose();
   });
 
-  check('trees keep clear of a camp', () => {
+  check('trees keep clear of each settlement as far as it reaches, and no farther', () => {
+    // A wide camp east of the hill and a small hamlet west of it.
+    const spots = [{ u: centre.u + 0.006, v: centre.v, r: 0.012 }, { u: centre.u - 0.008, v: centre.v, r: 0.003 }];
     const layer = new TreeLayer(ground, perMetre);
-    layer.setClearings([{ u: centre.u + 0.004, v: centre.v }]);
+    layer.setClearings(spots);
     settle(layer, cam(0.04));
-    const camp = { x: worldX(centre.u + 0.004), z: worldZ(centre.v) };
-    assert.ok(planted(layer) > 0);
-    for (const p of positions(layer)) assert.ok(Math.hypot(p.x - camp.x, p.z - camp.z) >= 0.0175 - 1e-9, 'no tree inside the clearing');
+    const trees = positions(layer);
+    assert.ok(trees.length > 0);
+    for (const s of spots) {
+      const at = { x: worldX(s.u), z: worldZ(s.v) };
+      for (const p of trees) assert.ok(Math.hypot(p.x - at.x, p.z - at.z) >= s.r - 1e-9, 'no tree inside a clearing');
+    }
+    const hamlet = { x: worldX(spots[1].u), z: worldZ(spots[1].v) };
+    assert.ok(trees.some((p) => Math.hypot(p.x - hamlet.x, p.z - hamlet.z) < 0.008), 'a small place is not left in a wide clearing');
     layer.dispose();
   });
 

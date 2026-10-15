@@ -13,7 +13,6 @@ await build({
   platform: 'node',
   format: 'cjs',
   target: 'node22',
-  alias: { 'three/webgpu': 'three' },
   define: { IMJIN_BUILD_REVISION: JSON.stringify(revision) },
   outfile: 'server/dist/server.cjs',
   logLevel: 'warning',

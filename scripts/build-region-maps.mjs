@@ -21,7 +21,7 @@ const args = process.argv.slice(2);
 const preview = args.find((a) => a.startsWith('--preview='))?.slice(10);
 const check = args.includes('--check');
 const only = args.filter((a) => !a.startsWith('--'));
-const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
 const load = (p) => server.ssrLoadModule(p);
 const { findSite, placeSlots, findSpawn } = await load('/src/sim/conquest.ts');
 const { wetSpot } = await load('/src/sim/maps.ts');

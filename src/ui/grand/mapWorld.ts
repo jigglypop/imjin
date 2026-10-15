@@ -1,7 +1,7 @@
 import { SHIP_SPECS } from '../../sim/catalog';
 import { MAP_ASPECT, project } from './projection';
 import { campLevel } from './campArt';
-import { FOOTPRINT, METRES_PER_RADIUS, WALL_KINDS, WATER_KINDS, type PieceKind } from './campPieces';
+import { FOOTPRINT, METRES_PER_RADIUS, STANDARD, STANDARD_KINDS, WALL_KINDS, WATER_KINDS, type PieceKind } from './campPieces';
 import type { BuildingKind, FactionId, FleetView, RegionView, ReplayView, ShipClass, SpotView } from './types';
 
 // What stands on the campaign map besides the terrain: at every port a Korean town, the camp of the navy that holds it
@@ -87,9 +87,9 @@ const pierAt = (r: number) => put('pier', -(r + m(FOOTPRINT.pier[1])), 0, SEA_SI
 export interface CampPlan { pieces: Piece[]; radius: number }
 
 /**
- * A Joseon naval camp: a log stockade round an office and huts; then a watchtower, more houses and a landing; then a
- * granite wall with its white parapet and a gate pavilion round the commander's hall, barracks, a powder store and
- * banners; at the top a wider wall, a pavilion in the hall's garden and a second tower.
+ * A Joseon naval camp: a log stockade round an office and huts; then a watchtower, more houses and a landing; at the top
+ * a granite wall with its white parapet and a gate pavilion round the commander's hall, barracks, a powder store and
+ * banners.
  */
 function joseonCamp(level: number): CampPlan {
   const S = Math.PI / 2;
@@ -105,21 +105,19 @@ function joseonCamp(level: number): CampPlan {
       put('jo_tower', -0.32, 0.4, 0), put('jo_banner', 0.42, 0.24, Math.PI),
     ],
   };
-  const r = level === 3 ? 0.84 : 0.98, n = level === 3 ? 18 : 21;
+  const r = 0.84;
   const pieces = [
-    ...ring('stone', r, n, m(15)), put('fortgate', r, 0, 0), pierAt(r),
+    ...ring('stone', r, 18, m(15)), put('fortgate', r, 0, 0), pierAt(r),
     put('hall', -0.3, 0, 0), put('giwa', 0.18, -0.5, S), put('giwa', 0.18, 0.5, -S), put('choga', 0.52, -0.3, S), put('choga', 0.52, 0.3, -S),
     put('magazine', -0.5, 0.38, 0), put('jo_tower', -0.5, -0.4, 0), put('jo_banner', 0.6, -0.16, Math.PI), put('jo_banner', 0.6, 0.16, Math.PI),
   ];
-  if (level >= 4) pieces.push(put('jeongja', -0.02, 0.28, -S), put('jo_tower', 0.3, 0.72, -S), put('giwa', -0.62, 0.0, 0));
   // The gatehouse stands out of the ring by its depth.
   return { radius: r + 0.15, pieces };
 }
 
 /**
- * A Japanese camp (wajo): curtains round tents and nobori; then a residence hall, a turret and a landing; then a stone-
- * based plaster wall with a turret gate round a three-tier keep, barracks and a corner turret; at the top a four-tier
- * keep and a second hall and turret.
+ * A Japanese camp (wajo): curtains round tents and nobori; then a residence hall, a turret and a landing; at the top a
+ * stone-based plaster wall with a turret gate round a three-tier keep, barracks and a corner turret.
  */
 function japanCamp(level: number): CampPlan {
   const S = Math.PI / 2;
@@ -138,21 +136,19 @@ function japanCamp(level: number): CampPlan {
       put('wa_tower', -0.26, 0.36, 0), put('wa_banner', 0.44, 0.26, Math.PI), put('wa_banner', 0.44, -0.08, Math.PI),
     ],
   };
-  const r = level === 3 ? 0.84 : 0.98, n = level === 3 ? 16 : 19;
+  const r = 0.84;
   const pieces = [
-    ...ring('wa_wall', r, n, m(17.2)), put('wa_gate', r, 0, 0), pierAt(r),
-    put(level >= 4 ? 'wa_keep4' : 'wa_keep3', -0.3, 0, 0), put('wa_hall', 0.2, -0.48, S), put('wa_tower', -0.45, 0.4, 0),
+    ...ring('wa_wall', r, 16, m(17.2)), put('wa_gate', r, 0, 0), pierAt(r),
+    put('wa_keep3', -0.3, 0, 0), put('wa_hall', 0.2, -0.48, S), put('wa_tower', -0.45, 0.4, 0),
     put('wa_tent', 0.22, 0.44, 0), put('wa_tent', 0.5, 0.3, 0), put('wa_tent', 0, 0.25, 0), put('wa_tent', 0.3, -0.2, 0),
     put('wa_banner', 0.58, -0.2, Math.PI), put('wa_banner', 0.58, 0.14, Math.PI),
   ];
-  if (level >= 4) pieces.push(put('wa_hall', -0.58, -0.36, 0), put('wa_tower', 0.25, 0.66, -S));
   return { radius: r + 0.14, pieces };
 }
 
 /**
  * A Ming fort: a square stockade round a watchtower, tents and flags; then a brick wall with its gate tower round two
- * barracks and a landing; then a larger square with corner bastions round the yamen hall; at the top a larger yard
- * still with a third barracks.
+ * barracks and a landing; at the top a larger square with corner bastions round the yamen hall.
  */
 function mingCamp(level: number): CampPlan {
   const S = Math.PI / 2;
@@ -163,7 +159,7 @@ function mingCamp(level: number): CampPlan {
       put('mg_tent', 0.12, 0.26, 0), put('mg_flag', 0.32, 0.24, Math.PI),
     ],
   };
-  const h = level === 2 ? 0.6 : level === 3 ? 0.75 : 0.88, n = level === 2 ? 3 : level === 3 ? 4 : 5;
+  const h = level === 2 ? 0.6 : 0.75, n = level === 2 ? 3 : 4;
   const pieces = [...square('mg_brick', h, n, m(16.4)), put('mg_gate', h, 0, 0), pierAt(h)];
   if (level === 2) {
     pieces.push(
@@ -178,23 +174,33 @@ function mingCamp(level: number): CampPlan {
     put('mg_tent', 0.1, -0.2, 0), put('mg_tent', 0.1, 0.2, 0), put('mg_tent', -0.5, -0.45, 0),
     put('mg_flag', 0.56, -0.2, Math.PI), put('mg_flag', 0.56, 0.2, Math.PI),
   );
-  if (level >= 4) pieces.push(put('mg_barracks', -0.3, -0.68, S), put('mg_tent', 0.62, -0.5, 0), put('mg_tent', 0.62, 0.5, 0));
   // The corner bastions stand out of the square's corners.
   return { radius: (h + 0.12) * Math.SQRT2, pieces };
 }
 
 /**
- * The camp of a level (1 to 4) and navy, unturned: its sea side looks west (SEA_SIDE). Every navy's camp has its own
- * look, and a higher level keeps every building of the one below it (a keep grows a tier, a stockade becomes a wall).
+ * The camp of a level (1 to 3, the campaign's highest: a higher one is drawn as 3) and navy, unturned: its sea side
+ * looks west (SEA_SIDE). Every navy's camp has its own look, and a higher level keeps every building of the one below it
+ * (a stockade gate becomes a gatehouse, a stockade a wall). Its navy's standard flies in the middle of the yard, where
+ * every level leaves room for it.
  */
 export function campPlan(level: number, navy: FactionId): CampPlan {
-  if (navy === 'japan') return japanCamp(level);
-  if (navy === 'ming') return mingCamp(level);
-  return joseonCamp(level);
+  const plan = navy === 'japan' ? japanCamp(level) : navy === 'ming' ? mingCamp(level) : joseonCamp(level);
+  return { ...plan, pieces: [...plan.pieces, put(STANDARD[navy], 0.08, 0, 0)] };
 }
 
 /** The pieces of a camp of this level and owner, unturned; none below level 1. */
 export const settlementPieces = (level: number, navy: FactionId = 'joseon'): Piece[] => (level < 1 ? [] : campPlan(level, navy).pieces);
+
+/** Trees keep this far beyond a place's buildings and fields, in radii: about six metres. */
+const CLEARANCE = 0.15;
+
+/** How far round its centre a place keeps the ground clear of trees, in frame units: its buildings, its fields and a margin. */
+export function clearingRadius(s: SettlementSpec) {
+  let reach = s.radius;
+  for (const f of s.grounds.fields) reach = Math.max(reach, Math.hypot(f.x, f.z) + Math.hypot(f.hx, f.hz));
+  return (reach + CLEARANCE) * SETTLEMENT_RADIUS;
+}
 
 /** Cheap string hash (FNV-1a) so each place keeps its own turn and its town its own houses between renders. */
 export function hash(text: string) {
@@ -291,6 +297,40 @@ export type IsSea = (u: number, v: number) => boolean;
 
 /** Which way (east, south) a port's places are shifted from its marker, by the side the label takes. */
 const LABEL_AWAY: Record<'b' | 't' | 'l' | 'r', [number, number]> = { b: [0, -1], t: [0, 1], l: [1, 0], r: [-1, 0] };
+
+/** How far apart a lane is tested for water, and the shortest stretch of one worth drawing, in radii. */
+const LANE_STEP = 0.05;
+const LANE_LEAST = 0.15;
+
+/**
+ * The stretches of a lane that run over land, the lane's points in radii from a place at (cx, cz): a lane stops at the
+ * first point of it found on the water and goes on where the land comes back, so no lane is drawn across a bay. A
+ * stretch shorter than LANE_LEAST is left out.
+ */
+export function dryStretches(lane: { x: number; z: number }[], cx: number, cz: number, land: (x: number, z: number) => boolean) {
+  const runs: { x: number; z: number }[][] = [];
+  let run: { x: number; z: number }[] = [];
+  for (let i = 0; i + 1 < lane.length; i += 1) {
+    const a = lane[i]!, b = lane[i + 1]!;
+    const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / LANE_STEP));
+    for (let k = i === 0 ? 0 : 1; k <= n; k += 1) {
+      const p = { x: a.x + ((b.x - a.x) * k) / n, z: a.z + ((b.z - a.z) * k) / n };
+      if (land(cx + p.x, cz + p.z)) run.push(p);
+      else if (run.length) {
+        runs.push(run);
+        run = [];
+      }
+    }
+  }
+  if (run.length) runs.push(run);
+  const length = (r: { x: number; z: number }[]) => r.reduce((n, p, j) => (j ? n + Math.hypot(p.x - r[j - 1]!.x, p.z - r[j - 1]!.z) : 0), 0);
+  // Each stretch keeps its ends and the lane's corners; the points tested in between lie on its straight runs.
+  return runs.filter((r) => length(r) >= LANE_LEAST).map((r) => r.filter((p, j) => {
+    if (j === 0 || j === r.length - 1) return true;
+    const a = r[j - 1]!, b = r[j + 1]!;
+    return Math.abs((p.x - a.x) * (b.z - p.z) - (p.z - a.z) * (b.x - p.x)) > 1e-9;
+  }));
+}
 
 /** Turns a place's pieces by `turn` (its x towards its z) round its centre. */
 export function turnPieces(pieces: Piece[], turn: number): Piece[] {
@@ -401,7 +441,7 @@ export function layoutSettlements(regions: RegionView[], isSea?: IsSea): Settlem
       }
     }
     const spot = best ?? { ...want, turn: seaTurn(r, port.seed, (dx, dz) => sea(want.x + dx, want.z + dz)).turn };
-    let pieces = turnPieces(plan.pieces, spot.turn);
+    let pieces = turnPieces(plan.pieces, spot.turn).map((p) => (STANDARD_KINDS.has(p.kind) ? { ...p, rot: WIND } : p));
     // The ring opens where the shore cuts into it, and the pier reaches from the shore out over the water.
     pieces = pieces.filter((p) => !WALL_KINDS.has(p.kind) || corners(p, spot.x, spot.z).every(([cx, cz]) => land(cx, cz)));
     pieces = pieces.flatMap((p) => (WATER_KINDS.has(p.kind) ? shore(p, spot.x, spot.z, land) : [p]));
@@ -440,14 +480,19 @@ export function layoutSettlements(regions: RegionView[], isSea?: IsSea): Settlem
     const keep = turnPieces(town.plan.pieces, turn).filter((p) => corners(p, town!.x, town!.z).every(([cx, cz]) => land(cx, cz)));
     const c = Math.cos(turn), s = Math.sin(turn);
     const rotate = (q: { x: number; z: number }) => ({ x: q.x * c - q.z * s, z: q.x * s + q.z * c });
-    const lanes = town.plan.grounds.lanes.map((lane) => lane.map(rotate));
+    const drawn = town.plan.grounds.lanes.map((lane) => lane.map(rotate));
     if (camp) {
       // A lane from the town's end out to the camp's gate.
       const gate = { x: camp.x + Math.cos(camp.turn) * (camp.r + 0.05) - town.x, z: camp.z + Math.sin(camp.turn) * (camp.r + 0.05) - town.z };
-      lanes.push([rotate({ x: 0.8, z: 0 }), gate]);
+      drawn.push([rotate({ x: 0.8, z: 0 }), gate]);
     }
+    const lanes = drawn.flatMap((lane) => dryStretches(lane, town!.x, town!.z, land));
     const fields = town.plan.grounds.fields.map((f) => ({ ...f, ...rotate(f), rot: f.rot + turn })).filter((f) => land(town!.x + f.x, town!.z + f.z));
-    place(`${port.r.id}/town`, port.r.id, 'town', town.x, town.z, port.r.owner, 0, keep, { yard: 0, lanes, fields });
+    // Whoever holds the port flies a standard over its town, at the town's harbour end.
+    const owner = port.r.owner;
+    const flag = owner ? harbourEnd(keep, fields, town.x, town.z, turn, { land, sea, free }) : null;
+    if (owner && flag) keep.push({ kind: STANDARD[owner], x: flag.x, z: flag.z, rot: WIND });
+    place(`${port.r.id}/town`, port.r.id, 'town', town.x, town.z, owner, 0, keep, { yard: 0, lanes, fields });
     taken.push({ x: town.x, z: town.z, r: town.plan.radius });
   }
   // Works, round the camp (or the town when there is none), in the style of whoever holds the port.
@@ -490,6 +535,48 @@ function shore(p: Piece, cx: number, cz: number, land: (x: number, z: number) =>
     if (back && front) return [{ ...p, x, z }];
   }
   return [];
+}
+
+/** Every standard flies the same way, east, its cloth square to a camera looking north as the map opens. */
+const WIND = 0;
+
+/** How far a point (x, z) lies from a rectangle of half sizes hx by hz at (cx, cz) whose own x runs along (cos a, -sin a). */
+function gap(x: number, z: number, cx: number, cz: number, hx: number, hz: number, a: number) {
+  const dx = x - cx, dz = z - cz, c = Math.cos(a), s = Math.sin(a);
+  return Math.hypot(Math.max(0, Math.abs(dx * c - dz * s) - hx), Math.max(0, Math.abs(dx * s + dz * c) - hz));
+}
+
+/** What a town's standard stands beside: its houses, its pavilion and its old tree. */
+const TOWN_HOUSES: ReadonlySet<PieceKind> = new Set<PieceKind>(['choga', 'giwa', 'wa_house', 'jeongja', 'tree']);
+
+/**
+ * Where a town at (tx, tz) flies its owner's standard, in radii from the town's centre: beside one of its houses at its
+ * harbour end, the edge of the town with the most water close by, on land and clear of its houses, walls and fields and
+ * of every other place; failing water near, at the end that looks `toward` its camp or port. Null when the town has no
+ * house or no spot beside one is clear.
+ */
+function harbourEnd(pieces: Piece[], fields: Field[], tx: number, tz: number, toward: number,
+  o: { land: (x: number, z: number) => boolean; sea: (x: number, z: number) => boolean; free: (x: number, z: number, r: number) => boolean }) {
+  const reach = Math.hypot(m(FOOTPRINT.jo_standard[0]), m(FOOTPRINT.jo_standard[1]));
+  const half = (p: Piece) => [p.len !== undefined ? p.len / 2 : m(FOOTPRINT[p.kind][0]), m(FOOTPRINT[p.kind][1])] as const;
+  let best: { x: number; z: number; cost: number } | null = null;
+  for (const house of pieces.filter((p) => TOWN_HOUSES.has(p.kind))) {
+    const away = Math.hypot(...half(house)) + reach + 0.02;
+    for (let i = 0; i < 16; i += 1) {
+      const a = (i / 16) * Math.PI * 2, x = house.x + Math.cos(a) * away, z = house.z + Math.sin(a) * away;
+      if (![[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].every(([u, w]) => o.land(tx + x + u! * reach, tz + z + w! * reach))) continue;
+      if (!o.free(tx + x, tz + z, reach)) continue;
+      if (pieces.some((p) => gap(x, z, p.x, p.z, ...half(p), p.rot) < reach)) continue;
+      // A field's own x runs along (cos rot, sin rot).
+      if (fields.some((f) => gap(x, z, f.x, f.z, f.hx, f.hz, -f.rot) < reach)) continue;
+      let water = 0;
+      for (const r of [0.3, 0.6]) for (let j = 0; j < 8; j += 1) if (o.sea(tx + x + Math.cos((j * Math.PI) / 4) * r, tz + z + Math.sin((j * Math.PI) / 4) * r)) water += 1;
+      const turn = Math.abs(Math.atan2(Math.sin(Math.atan2(z, x) - toward), Math.cos(Math.atan2(z, x) - toward)));
+      const cost = turn * 0.3 - water * 0.4;
+      if (!best || cost < best.cost) best = { x, z, cost };
+    }
+  }
+  return best && { x: best.x, z: best.z };
 }
 
 /**
