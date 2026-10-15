@@ -4,6 +4,7 @@ import { setSelectionBox } from '../state/store';
 // Touch gestures for the battle view.
 //   one finger drag   pan the camera (or draw a selection box when box mode is on)
 //   one finger tap    select an own ship, or command the selection (move / attack)
+//   one finger drag   while a maneuver button is armed: draws the maneuver on the sea instead
 //   two fingers       pinch zoom, twist rotate, slide sideways to pan, slide vertically to tilt
 // Mouse input stays in Input. Pointers of type 'mouse' and 'pen' are ignored here.
 
@@ -20,6 +21,8 @@ export class TouchControls {
   private dom: HTMLElement | null = null;
   private moved = false;
   private multi = false;
+  /** The one-finger gesture draws a maneuver (Input.placing) rather than panning. */
+  private drawing = false;
   private prev = { dist: 1, angle: 0, cx: 0, cy: 0 };
 
   constructor(private readonly engine: Engine) {}
@@ -59,7 +62,12 @@ export class TouchControls {
     if (this.pointers.size === 1) {
       this.moved = false;
       this.multi = false;
+      this.drawing = !!this.engine.input.placing;
+      if (this.drawing) this.engine.input.placeStart(e.clientX, e.clientY);
     } else if (this.pointers.size === 2) {
+      // Two fingers move the camera even while a maneuver is being drawn; the drawing starts again with one finger.
+      if (this.drawing && this.engine.input.placing) this.engine.input.placing.drawn = false;
+      this.drawing = false;
       // A second finger turns the gesture into a camera gesture. It never produces a tap or a box.
       this.multi = true;
       this.moved = true;
@@ -87,6 +95,10 @@ export class TouchControls {
       rts.tiltBy((cur.cy - prev.cy) * TILT_PER_PX);
       return;
     }
+    if (this.drawing) {
+      this.engine.input.placeMove(e.clientX, e.clientY);
+      return;
+    }
     let panX = dx;
     let panY = dy;
     if (!this.moved) {
@@ -111,6 +123,11 @@ export class TouchControls {
     if (this.pointers.size > 0) return;
     setSelectionBox(null);
     if (this.multi) return;
+    if (this.drawing) {
+      this.drawing = false;
+      this.engine.input.placeEnd(e.clientX, e.clientY);
+      return;
+    }
     if (!this.moved) {
       if (e.timeStamp - p.t0 < TAP_MS) this.engine.input.tap(e.clientX, e.clientY);
       return;

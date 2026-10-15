@@ -1,0 +1,102 @@
+/** Tactical maneuvers: the squadron orders, their phases, the flagship's signals, the callouts and the tooltips. */
+export const EN_MANEUVERS: Record<string, string> = {
+  // The maneuvers and the signals
+  '매복': 'Ambush',
+  '협공': 'Pincer',
+  '돌파': 'Breach',
+  '포위': 'Encircle',
+  '봉쇄': 'Blockade',
+  '유인': 'Lure',
+  '추격': 'Pursue',
+  '진군 북': 'Advance drum',
+  '퇴각 징': 'Retreat gong',
+  '양현': 'Both sides',
+  '양현 일제': 'Both broadsides',
+  '한쪽 열기': 'Leave a side open',
+  '한쪽 열림': 'One side open',
+
+  // Drawing a maneuver on the sea
+  '매복할 구역을 바다에 그리세요 · 구역 한가운데에서 끌어 반경을 정합니다': 'Draw the ambush zone on the sea · drag from its middle to set its radius',
+  '적을 가로지르는 선을 그리세요 · 두 끝에서 양쪽 날개가 조여 듭니다': 'Draw a line across the enemy · the two wings close in from its ends',
+  '적진을 뚫고 지나갈 길을 그리세요 · 시작점에서 빠져나갈 곳까지 끕니다': 'Draw the way through the enemy line · drag from where to go in to where to come out',
+  '포위할 적의 한가운데에서 끌어 반경을 정하세요 · 한쪽 열기를 켜면 끈 쪽을 열어 둡니다': 'Drag from the middle of the enemy to set the ring · with a side left open, it opens where you dragged',
+  '학익진의 한가운데에서 적 쪽으로 끌어 그리세요': 'Drag from the middle of the crane wing toward the enemy',
+  '막을 물목을 가로지르는 선을 그리세요': 'Draw a line across the channel to hold',
+  '미끼가 나설 곳에서 물러날 곳까지 그리세요 · 물러날 곳에 본대를 매복시켜 두세요': 'Draw from where the bait shows itself to where it falls back · lay the main body in ambush there',
+  '{name} 명령 · {ships}': '{name} ordered · {ships}',
+  '달아나는 적이 없습니다': 'No enemy is running',
+  '한쪽을 열어 둡니다 · 끈 쪽으로 적이 빠져나갑니다': 'One side left open · the enemy will slip out where you drag',
+  '사방을 막습니다': 'Closed on every side',
+  '기동 명령을 취소했습니다': 'Maneuver cancelled',
+  '그곳에는 {name|을/를} 펼칠 수 없습니다': 'Cannot lay the {name} there',
+  '{name} · 매복과 대기 중인 기동이 일제히 나섭니다': '{name} · every ambush and waiting maneuver goes in at once',
+  '{name} · 함선들이 물러납니다': '{name} · the ships fall back',
+  '신호를 받을 함선이 없습니다': 'No ship to signal',
+
+  // Phases
+  '미끼가 나섭니다': 'Bait going out',
+  '돌격': 'Charging',
+  '자리 잡는 중': 'Taking stations',
+  '숨죽여 기다림': 'Lying in wait',
+  '물목을 막음': 'Holding the channel',
+  '대기': 'Waiting',
+  '기습': 'Sprung',
+  '물러나며 끌어들임': 'Falling back, drawing them on',
+  '조여 듦': 'Closing in',
+  '돌파 중': 'Breaking through',
+  '추격 중': 'In pursuit',
+  '포위망을 좁힘': 'Tightening the ring',
+  '끝': 'Done',
+
+  // Callouts
+  '적진에서 진군 북이 울립니다': 'The enemy beats the advance',
+  '적진에서 퇴각 징이 울립니다': 'The enemy sounds the retreat',
+  '적 함선 {n}척이 지휘선과 끊겼습니다': '{n} enemy ships cut off from their command ship',
+  '아군 함선 {n}척이 지휘선과 끊겼습니다 · 명령이 늦게 닿습니다': '{n} of our ships cut off from their command ship · orders reach them late',
+  '적의 매복 · 어둠 속에서 포문이 열립니다': 'Enemy ambush · gun ports open in the dark',
+  '적이 양쪽에서 조여 옵니다': 'The enemy closes in from both sides',
+  '적이 대열을 뚫고 들어옵니다': 'The enemy is breaking through our line',
+  '적이 학익진을 펼쳐 감싸 옵니다': 'The enemy spreads the crane wing round us',
+  '적이 포위망을 좁혀 옵니다': 'The enemy tightens its ring',
+  '매복 완료 · 등불을 끄고 숨죽여 기다립니다': 'Ambush laid · lanterns out, waiting in silence',
+  '매복 개시 · 일제히 포문을 엽니다': 'Ambush sprung · every gun port opens at once',
+  '협공 개시 · 양쪽 날개가 조여 듭니다': 'Pincer · both wings close in',
+  '돌파 · 적진을 가르며 양현으로 쏩니다': 'Breach · cutting through, both broadsides firing',
+  '돌파 완료': 'Breach complete',
+  '학익진이 적을 감싸며 좁혀 듭니다': 'The crane wing closes round the enemy',
+  '포위망을 좁힙니다': 'The ring tightens',
+  '봉쇄선 완성 · 물목을 지나는 적을 칩니다': 'Blockade in place · anything passing the channel is fired on',
+  '미끼가 물러납니다 · 적을 끌어들입니다': 'The bait falls back · drawing the enemy on',
+  '미끼 귀환 · 북을 울려 일제히 돌아섭니다': 'The bait is home · the drum beats and the fleet turns as one',
+
+  // Tooltips
+  '양쪽 현의 포를 한꺼번에 쏩니다. 장전이 끝난 포만 나갑니다.': 'Fires the guns of both sides at once. Only loaded guns fire.',
+  '적진 한가운데를 지나며 양쪽에 적을 둘 때. 돌파하는 함선은 알아서 쏩니다.': 'Passing through the enemy with ships on both sides. Ships in a breach fire on their own.',
+  '고른 함선이 그린 구역의 가장자리, 저마다 온 쪽에 자리를 잡고 등불을 끈 채 사격을 멈추고 기다립니다. 적이 구역에 들어오거나 가까이 오면 일제히 양현으로 쏘고, 처음 10초 동안의 명중은 승조원 피해가 50% 커지고 적의 사기를 꺾습니다. 가까이 있는 아군 매복도 함께 일어섭니다.':
+    'The selected ships take stations on the edge of the zone, each on the side it came from, lanterns out and guns held. When the enemy enters the zone or comes close, both broadsides go off at once; hits in the first 10 seconds kill 50% more crew and shake the enemy. Friendly ambushes nearby spring with it.',
+  '적이 지나갈 좁은 물목에서, 특히 밤에. 낮에는 육지 그늘에 붙어야 숨을 수 있습니다.': 'At a narrows the enemy must pass, above all at night. By day only ships close under the land stay hidden.',
+  '고른 함선을 두 날개로 나누어 그린 선의 두 끝에 세웁니다. 두 날개가 자리를 잡으면 함께 적의 양쪽에서 조여 들어 교차 사격을 퍼붓습니다. 여러 부대를 고르면 부대째 나뉩니다.':
+    'Splits the selection into two wings at the two ends of the line. Once both are in place they close in on the enemy from both sides together and catch it in a crossfire. Several squadrons are split whole.',
+  '적이 한 덩어리로 다가올 때. 두 부대 이상으로 하면 좋습니다.': 'When the enemy comes on in one body. Best with two squadrons or more.',
+  '기함을 앞세운 종대가 그린 길을 따라 적진을 꿰뚫고 지나가며, 양쪽에 적이 있으면 양현으로 쏩니다. 돌파선이 적 함선과 그 지휘선(또는 대장선) 사이를 지나면 그 함선은 60초 동안 지휘가 끊겨 명령이 늦고 사기가 떨어지며 대열의 이득을 잃습니다.':
+    'A column led by the flagship drives through the enemy along the path, firing both broadsides when it has enemies on both sides. An enemy ship it passes between and its command ship (or admiral) is cut off for 60 seconds: orders reach it late, its nerve drops and it loses its place in the line.',
+  '적 대열에 틈이 있을 때, 선봉과 본대를 갈라놓고 싶을 때. 두꺼운 대열 한가운데로 들어가면 둘러싸입니다.': 'When the enemy line has a gap, to split its van from its main body. Driving into the thick of a line gets you surrounded.',
+  '그린 원을 따라 함선을 둘러 세우고, 안에 든 적을 따라가며 원을 좁힙니다. 현측은 늘 안쪽을 향합니다. 한쪽 열기를 켜면 끈 쪽을 열어 두어 흔들리는 적이 그쪽으로 빠져나갑니다.':
+    'Stations the ships round the circle and tightens it, following the enemy inside, broadsides always turned in. With one side left open, the side you dragged toward stays open and shaken enemies slip out there.',
+  '수가 앞서고 적이 한곳에 몰려 있을 때. 궁지에 몰린 적이 끝까지 버티면 한쪽을 열어 넓은 물로 끌어내세요.': 'When you outnumber an enemy packed in one place. If a cornered enemy holds out, open a side to draw it out into open water.',
+  '포위의 한쪽을 열어 둡니다. 끈 방향이 열린 쪽입니다.': 'Leaves one side of the ring open, the side you drag toward.',
+  '당항포처럼 포구 깊이 숨은 적을 끌어낼 때.': 'Drawing an enemy out of a deep inlet, as at Danghangpo.',
+  '그린 선을 따라 물 위에 함선을 늘어세우고, 물살을 버티며 자리를 지킵니다. 선을 지나려는 적은 양현으로 칩니다. 선이 짧으면 두 겹으로 섭니다.':
+    'Lines the ships along the line on the water, holding station against the stream. Anything trying to pass is fired on from both sides. A short line is held two deep.',
+  '만의 입구나 좁은 물목을 막을 때. 달아나는 적이 막다른 만에 갇히면 결국 항복합니다.': 'Closing a bay mouth or a narrows. A fleeing enemy trapped in a dead-end bay gives itself up in the end.',
+  '미끼 함선이 그린 선의 시작점으로 나아가 적에게 모습을 보이고 한 번 쏜 뒤, 쫓는 적보다 조금 앞서 끝점으로 물러납니다. 끝점에 닿으면 북을 울려 대기 중인 아군 기동이 일제히 돌아섭니다. 성급한 적장은 미끼를 물고, 신중한 적장은 정박지를 멀리 떠나지 않습니다.':
+    'The bait sails to the start of the line, shows itself and fires once, then falls back to its end just ahead of its pursuers. There it beats the drum and every waiting maneuver turns at once. A rash enemy commander takes the bait; a cautious one does not stray far from his anchorage.',
+  '한산도처럼 적을 좁은 물에서 넓은 바다로, 매복이나 학익진 앞으로 끌어낼 때.': 'Drawing the enemy out of narrow water into the open sea, onto an ambush or a crane wing, as at Hansan.',
+  '고른 함선이 달아나는 적을 쫓아 가까이에서 쏩니다. 달아나는 적이 더 없으면 자유교전으로 돌아갑니다.': 'The selected ships run down fleeing enemies and fire at close range. With no one left running they go back to free combat.',
+  '적이 무너져 달아날 때. 적이 막다른 곳에 몰리면 항복을 받아 냅니다.': 'When the enemy breaks and runs. Pinned in a dead end, it surrenders.',
+  '기함이 북을 울려 아군의 매복, 대기 중인 협공과 학익진을 한꺼번에 일으키고 사격을 엽니다. 기함의 신호는 낮에는 깃발로 1.5km, 밤에는 북과 등불로 0.8km까지 닿고, 그 밖의 함선은 늦게 알아듣습니다.':
+    'The flagship beats the drum: every ambush, waiting pincer and crane wing goes in at once and opens fire. A flagship’s signals carry 1.5 km by flag in daylight and 0.8 km by drum and lantern at night; ships beyond take them late.',
+  '미끼가 돌아왔거나 적이 덫에 다 들어왔을 때.': 'When the bait is home or the enemy is all inside the trap.',
+  '고른 함선이 하던 기동을 풀고 적에게서 500m 물러납니다.': 'The selected ships break off their maneuver and fall back 500 m from the enemy.',
+  '불리한 싸움에서 빠져나와 다시 대열을 짤 때.': 'Getting out of a losing fight to form up again.',
+};

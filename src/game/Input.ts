@@ -9,6 +9,7 @@ import { shipObserved } from '../sim/observation';
 import { pointVisible } from '../sim/visibility';
 import type { FormationKind } from '../sim/commands';
 import { COASTAL_TACTICS } from '../sim/coastal-tactics';
+import type { ManeuverKind, ManeuverPhase, SignalKind } from '../sim/maneuvers';
 
 const DRAG_THRESHOLD = 6;
 
@@ -22,7 +23,32 @@ const CALLOUTS: Record<string, { ko: string; tone: 'info' | 'good' | 'bad' }> = 
   'rally-own': { ko: '아군 함선 {n}척 재집결', tone: 'good' },
   'rally-foe': { ko: '적 함선 {n}척 재집결', tone: 'info' },
   'drum-foe': { ko: '적이 북을 울려 전열을 다잡습니다', tone: 'info' },
+  'cut-foe': { ko: '적 함선 {n}척이 지휘선과 끊겼습니다', tone: 'good' },
+  'cut-own': { ko: '아군 함선 {n}척이 지휘선과 끊겼습니다 · 명령이 늦게 닿습니다', tone: 'bad' },
 };
+export const MANEUVER_NAMES: Record<ManeuverKind, string> = { ambush: '매복', pincer: '협공', breach: '돌파', encircle: '포위', crane: '학익진', blockade: '봉쇄', lure: '유인', pursue: '추격' };
+/** What to draw on the sea once a maneuver is chosen. */
+const MANEUVER_HINTS: Record<ManeuverKind, string> = {
+  ambush: '매복할 구역을 바다에 그리세요 · 구역 한가운데에서 끌어 반경을 정합니다',
+  pincer: '적을 가로지르는 선을 그리세요 · 두 끝에서 양쪽 날개가 조여 듭니다',
+  breach: '적진을 뚫고 지나갈 길을 그리세요 · 시작점에서 빠져나갈 곳까지 끕니다',
+  encircle: '포위할 적의 한가운데에서 끌어 반경을 정하세요 · 한쪽 열기를 켜면 끈 쪽을 열어 둡니다',
+  crane: '학익진의 한가운데에서 적 쪽으로 끌어 그리세요',
+  blockade: '막을 물목을 가로지르는 선을 그리세요',
+  lure: '미끼가 나설 곳에서 물러날 곳까지 그리세요 · 물러날 곳에 본대를 매복시켜 두세요',
+  pursue: '',
+};
+/** A plan's phase as the player reads it, by kind where it differs. */
+export function phaseName(kind: ManeuverKind, phase: ManeuverPhase) {
+  if (phase === 'forming') return kind === 'lure' ? '미끼가 나섭니다' : kind === 'breach' ? '돌격' : '자리 잡는 중';
+  if (phase === 'waiting') return kind === 'ambush' ? '숨죽여 기다림' : kind === 'blockade' ? '물목을 막음' : '대기';
+  if (phase === 'striking') return kind === 'ambush' ? '기습' : kind === 'lure' ? '물러나며 끌어들임' : kind === 'pincer' ? '조여 듦' : kind === 'breach' ? '돌파 중' : kind === 'pursue' ? '추격 중' : '포위망을 좁힘';
+  return '끝';
+}
+const SIGNAL_NAMES: Record<SignalKind, string> = { advance: '진군 북', withdraw: '퇴각 징' };
+/** A maneuver being drawn on the sea: from where the drag started to where it is now. */
+export type Placing = { kind: ManeuverKind; open: boolean; x0: number; z0: number; x1: number; z1: number; drawn: boolean; downX: number; downY: number };
+
 export const STANCE_NAMES: Record<Stance, string> = { auto: '자유교전', standoff: '원거리 포격 · 거리를 유지합니다', close: '근접 포격 · 바짝 붙어 쏩니다', ram: '들이받기 · 적 함선에 부딪칩니다', board: '백병전 돌입 · 적 함선에 올라탑니다' };
 
 export class Input {
@@ -43,6 +69,8 @@ export class Input {
   private lastGroupTime = 0;
   queueMoves = false;
   private pendingRally = -1;
+  /** The maneuver waiting to be drawn on the sea, once its button was pressed. */
+  placing: Placing | null = null;
   /** Morale callouts gathered while the last one of their kind is still on screen, by kind. */
   private readonly callouts = new Map<string, { at: number; n: number }>();
 
@@ -156,6 +184,12 @@ export class Input {
   // Touch pointers are routed to TouchControls. The handlers below only deal with mouse input.
   private onDown = (e: PointerEvent) => {
     if (e.pointerType === 'touch') return;
+    if (this.placing) {
+      // Drawing a maneuver: the left button draws it, the right one gives it up.
+      if (e.button === 0) this.placeStart(e.clientX, e.clientY);
+      else if (e.button === 2) this.cancelManeuver();
+      return;
+    }
     if (e.button === 0 && !e.altKey) {
       this.leftDown = true;
       this.dragging = false;
@@ -168,6 +202,10 @@ export class Input {
 
   private onMove = (e: PointerEvent) => {
     if (e.pointerType === 'touch') return;
+    if (this.placing) {
+      this.placeMove(e.clientX, e.clientY);
+      return;
+    }
     if (!this.leftDown) {
       if (this.dom && e.target === this.dom) {
         const s = this.pickShip(e.clientX, e.clientY);
@@ -341,6 +379,10 @@ export class Input {
   }
 
   private onUp = (e: PointerEvent) => {
+    if (e.pointerType !== 'touch' && e.button === 0 && this.placing?.drawn) {
+      this.placeEnd(e.clientX, e.clientY);
+      return;
+    }
     if (e.pointerType === 'touch' || e.button !== 0 || !this.leftDown) return;
     this.leftDown = false;
     const views = this.engine.views;
@@ -488,7 +530,18 @@ export class Input {
       ez = ships.reduce((v, s) => v + s.z + Math.sin(s.heading) * 1000, 0);
       n = ships.length;
     }
-    this.engine.issue({ type: 'formation', ids, kind, cx: ex / n, cz: ez / n });
+    if (kind === 'crane' && b.maneuvers) {
+      // Under the maneuver rules the crane is a maneuver: its bowl where the squadron lies, its wings reaching for the
+      // enemy, and it closes round whatever comes into it.
+      const ships = ids.map((id) => b.get(id)).filter((s): s is Ship => !!s);
+      const fx = ships.reduce((v, s) => v + s.x, 0) / Math.max(1, ships.length);
+      const fz = ships.reduce((v, s) => v + s.z, 0) / Math.max(1, ships.length);
+      const d = Math.hypot(ex / n - fx, ez / n - fz) || 1;
+      const ux = (ex / n - fx) / d;
+      const uz = (ez / n - fz) / d;
+      const r = Math.min(420, Math.max(250, d * 0.45));
+      this.engine.issue({ type: 'maneuver', ids, kind: 'crane', x0: fx + ux * r, z0: fz + uz * r, x1: fx + ux * r * 2, z1: fz + uz * r * 2 });
+    } else this.engine.issue({ type: 'formation', ids, kind, cx: ex / n, cz: ez / n });
     this.engine.sound.drums(kind === 'crane' ? 3 : 2);
     pushToast(t('{name|을/를} 펼칩니다', { name: t(FORMATION_NAMES[kind]) }));
   }
@@ -505,12 +558,131 @@ export class Input {
     return false;
   }
 
-  volley(side: 0 | 1 | 2) {
+  /**
+   * A maneuver button: the selection will carry it out once it is drawn on the sea (pursuit needs no drawing). Pressing
+   * the same button again gives it up.
+   */
+  beginManeuver(kind: ManeuverKind) {
+    const ids = this.selectedOwn();
+    if (!this.need(ids) || !this.engine.battle?.maneuvers) return;
+    if (kind === 'pursue') {
+      const s = this.engine.battle.get(ids[0]!)!;
+      const n = this.engine.issue({ type: 'maneuver', ids, kind, x0: s.x, z0: s.z, x1: s.x, z1: s.z });
+      pushToast(n ? t('{name} 명령 · {ships}', { name: t(MANEUVER_NAMES[kind]), ships: tShips(n) }) : t('달아나는 적이 없습니다'));
+      this.engine.publish(true);
+      return;
+    }
+    if (this.placing?.kind === kind) {
+      this.cancelManeuver();
+      return;
+    }
+    this.placing = { kind, open: false, x0: 0, z0: 0, x1: 0, z1: 0, drawn: false, downX: 0, downY: 0 };
+    pushToast(t(MANEUVER_HINTS[kind]));
+    this.engine.publish(true);
+  }
+
+  /** Leaves one side of the ring being drawn open, toward the end of the drag. */
+  toggleOpenSide() {
+    if (!this.placing) return;
+    this.placing.open = !this.placing.open;
+    pushToast(t(this.placing.open ? '한쪽을 열어 둡니다 · 끈 쪽으로 적이 빠져나갑니다' : '사방을 막습니다'));
+    this.engine.publish(true);
+  }
+
+  cancelManeuver() {
+    if (!this.placing) return;
+    this.placing = null;
+    pushToast(t('기동 명령을 취소했습니다'));
+    this.engine.publish(true);
+  }
+
+  /** The drag that draws a maneuver starts here (mouse or one finger). */
+  placeStart(clientX: number, clientY: number) {
+    const p = this.placing;
+    const w = this.waterPoint(clientX, clientY);
+    if (!p || !w) return;
+    p.x0 = p.x1 = w.x;
+    p.z0 = p.z1 = w.z;
+    p.downX = clientX;
+    p.downY = clientY;
+    p.drawn = true;
+  }
+
+  placeMove(clientX: number, clientY: number) {
+    const p = this.placing;
+    if (!p?.drawn) return;
+    const w = this.waterPoint(clientX, clientY);
+    if (!w) return;
+    p.x1 = w.x;
+    p.z1 = w.z;
+  }
+
+  /** The drag ends: the maneuver is ordered with what was drawn, or a sensible shape round the point for a short tap. */
+  placeEnd(clientX: number, clientY: number) {
+    const p = this.placing;
+    if (!p?.drawn) return;
+    this.placeMove(clientX, clientY);
+    const ids = this.selectedOwn();
+    this.placing = null;
+    if (!this.need(ids)) return;
+    const b = this.engine.battle;
+    const tapped = Math.hypot(clientX - p.downX, clientY - p.downY) < DRAG_THRESHOLD * 2 || Math.hypot(p.x1 - p.x0, p.z1 - p.z0) < 40;
+    if (tapped) {
+      // A tap: the shape is laid out from the squadron toward the point.
+      let fx = 0;
+      let fz = 0;
+      for (const id of ids) {
+        fx += b.get(id)!.x;
+        fz += b.get(id)!.z;
+      }
+      fx /= ids.length;
+      fz /= ids.length;
+      const d = Math.hypot(p.x0 - fx, p.z0 - fz) || 1;
+      const ux = (p.x0 - fx) / d;
+      const uz = (p.z0 - fz) / d;
+      const half = Math.max(250, ids.length * 35);
+      if (p.kind === 'pincer' || p.kind === 'blockade') {
+        p.x1 = p.x0 + uz * half;
+        p.z1 = p.z0 - ux * half;
+        p.x0 -= uz * half;
+        p.z0 += ux * half;
+      } else if (p.kind === 'breach') {
+        p.x1 = p.x0 + ux * 400;
+        p.z1 = p.z0 + uz * 400;
+        p.x0 -= ux * 400;
+        p.z0 -= uz * 400;
+      } else if (p.kind === 'lure') {
+        p.x1 = fx;
+        p.z1 = fz;
+      } else {
+        p.x1 = p.x0 + ux * 320;
+        p.z1 = p.z0 + uz * 320;
+      }
+    }
+    const n = this.engine.issue({ type: 'maneuver', ids, kind: p.kind, x0: p.x0, z0: p.z0, x1: p.x1, z1: p.z1, ...(p.kind === 'encircle' ? { open: p.open } : {}) });
+    if (n) {
+      this.engine.sound.drums(2);
+      pushToast(t('{name} 명령 · {ships}', { name: t(MANEUVER_NAMES[p.kind]), ships: tShips(n) }), 'good');
+    } else pushToast(t('그곳에는 {name|을/를} 펼칠 수 없습니다', { name: t(MANEUVER_NAMES[p.kind]) }));
+    this.engine.publish(true);
+  }
+
+  /** A flagship's signal to the whole fleet: the drum springs the waiting maneuvers and opens fire, the gong falls back. */
+  signal(kind: SignalKind) {
+    const ids = this.commandIds(true);
+    if (!this.need(ids) || !this.engine.battle?.maneuvers) return;
+    const n = this.engine.issue({ type: 'signal', ids, signal: kind });
+    if (kind === 'advance') this.engine.sound.drums(3);
+    pushToast(n ? t(kind === 'advance' ? '{name} · 매복과 대기 중인 기동이 일제히 나섭니다' : '{name} · 함선들이 물러납니다', { name: t(SIGNAL_NAMES[kind]) }) : t('신호를 받을 함선이 없습니다'), n ? 'good' : 'info');
+    this.engine.publish(true);
+  }
+
+  volley(side: 0 | 1 | 2 | 3) {
     const ids = this.commandIds();
     if (!this.need(ids)) return;
     const n = this.engine.issue({ type: 'volley', ids, side });
     this.engine.sound.drums(1);
-    pushToast(t('{side} 일제 사격 · {ships}', { side: t(side === 0 ? '좌현' : side === 1 ? '우현' : '함수'), ships: tShips(n) }));
+    pushToast(t('{side} 일제 사격 · {ships}', { side: t(side === 0 ? '좌현' : side === 1 ? '우현' : side === 3 ? '양현' : '함수'), ships: tShips(n) }));
     this.engine.publish(true);
   }
 
@@ -682,12 +854,13 @@ export class Input {
       return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (this.maneuverKey(e)) return;
     switch (e.code) {
       case 'KeyZ':
-        this.volley(0);
+        this.volley(e.shiftKey ? 3 : 0);
         break;
       case 'KeyX':
-        this.volley(1);
+        this.volley(e.shiftKey ? 3 : 1);
         break;
       case 'KeyY':
         this.toggleFire();
@@ -752,6 +925,10 @@ export class Input {
         this.engine.publish(true);
         break;
       case 'Escape':
+        if (this.placing) {
+          this.cancelManeuver();
+          break;
+        }
         this.pendingRally = -1;
         this.engine.views.selected.clear();
         this.engine.rts.followId = 0;
@@ -769,6 +946,19 @@ export class Input {
         break;
     }
   };
+
+  /** The maneuver keys, under the maneuver rules: Q ambush, W pincer, E ring, D breach, S blockade, A lure, F pursuit, Shift+E the drum, Shift+S the gong. */
+  private maneuverKey(e: KeyboardEvent) {
+    if (!this.engine.battle?.maneuvers) return false;
+    const plain: Record<string, ManeuverKind> = { KeyQ: 'ambush', KeyW: 'pincer', KeyE: 'encircle', KeyD: 'breach', KeyS: 'blockade', KeyA: 'lure', KeyF: 'pursue' };
+    if (e.shiftKey && e.code === 'KeyE') this.signal('advance');
+    else if (e.shiftKey && e.code === 'KeyS') this.signal('withdraw');
+    else if (e.shiftKey && e.code === 'KeyO' && this.placing) this.toggleOpenSide();
+    else if (!e.shiftKey && plain[e.code]) this.beginManeuver(plain[e.code]!);
+    else return false;
+    e.preventDefault();
+    return true;
+  }
 
   onEvents(events: BattleEvent[]) {
     const b = this.engine.battle;
@@ -795,6 +985,14 @@ export class Input {
       } else if (e.type === 'drum') {
         const s = b.get(e.ship);
         if (s && s.team !== team && shipObserved(b, team, s)) this.callout('drum-foe');
+      } else if (e.type === 'maneuver') {
+        this.maneuverCallout(e.kind, e.phase, e.team === team, e.ship);
+      } else if (e.type === 'signal') {
+        const s = b.get(e.ship);
+        if (s && s.team !== team && shipObserved(b, team, s)) pushToast(t(e.signal === 'advance' ? '적진에서 진군 북이 울립니다' : '적진에서 퇴각 징이 울립니다'), 'info');
+      } else if (e.type === 'cutoff') {
+        const s = b.get(e.ship);
+        if (s && shipObserved(b, team, s)) this.callout(s.team === team ? 'cut-own' : 'cut-foe');
       } else if (e.type === 'explode') {
         const s = b.get(e.ship);
         if (s) pushToast(t('탄약고 폭발 · {name}', { name: tName(s.name) }), s.team === team ? 'bad' : 'good');
@@ -822,6 +1020,29 @@ export class Input {
       }
     }
     this.flushCallouts();
+  }
+
+  /** The moments of a maneuver worth a word: an ambush springing, a pincer closing, the bait home, the enemy's own. */
+  private maneuverCallout(kind: ManeuverKind, phase: ManeuverPhase, own: boolean, ship: number) {
+    const b = this.engine.battle;
+    const s = b.get(ship);
+    if (!own) {
+      if (!s || !shipObserved(b, this.engine.team, s) || phase !== 'striking') return;
+      const foe: Partial<Record<ManeuverKind, string>> = { ambush: '적의 매복 · 어둠 속에서 포문이 열립니다', pincer: '적이 양쪽에서 조여 옵니다', breach: '적이 대열을 뚫고 들어옵니다', crane: '적이 학익진을 펼쳐 감싸 옵니다', encircle: '적이 포위망을 좁혀 옵니다' };
+      if (foe[kind]) pushToast(t(foe[kind]!), 'bad');
+      return;
+    }
+    const lines: Partial<Record<ManeuverKind, Partial<Record<ManeuverPhase, string>>>> = {
+      ambush: { waiting: '매복 완료 · 등불을 끄고 숨죽여 기다립니다', striking: '매복 개시 · 일제히 포문을 엽니다' },
+      pincer: { striking: '협공 개시 · 양쪽 날개가 조여 듭니다' },
+      breach: { striking: '돌파 · 적진을 가르며 양현으로 쏩니다', done: '돌파 완료' },
+      crane: { striking: '학익진이 적을 감싸며 좁혀 듭니다' },
+      encircle: { striking: '포위망을 좁힙니다' },
+      blockade: { waiting: '봉쇄선 완성 · 물목을 지나는 적을 칩니다' },
+      lure: { striking: '미끼가 물러납니다 · 적을 끌어들입니다', done: '미끼 귀환 · 북을 울려 일제히 돌아섭니다' },
+    };
+    const text = lines[kind]?.[phase];
+    if (text) pushToast(t(text), phase === 'striking' || phase === 'done' ? 'good' : 'info');
   }
 
   /** A squadron's leader or a navy's admiral is out of the fight: its ships lose heart (the battle depth rules). */
