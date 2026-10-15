@@ -98,6 +98,9 @@ const LAG_MAX = 25;
 const CUT_TIME = 60;
 const CUT_NEAR = 55;
 const CUT_LAG = 8;
+/** Only enemies the column passes close by, and commanders not too far off for the line between them to matter. */
+const CUT_REACH = 250;
+const CUT_SPAN = 1500;
 /** Ambush: the zone's rim is this far inside the stations, and an enemy this close to an ambusher finds it. */
 const AMBUSH_STANDOFF = 110;
 const AMBUSH_FOUND = 200;
@@ -853,7 +856,7 @@ export class Maneuvers {
         b.volley([s.id], 3);
       }
       // Enemies the column passes between and their squadron's leader, or their admiral, are cut off from them.
-      b.near(s.x, s.z, 450, (o) => {
+      b.near(s.x, s.z, CUT_REACH, (o) => {
         if (o.team === s.team || !b.isActive(o)) return;
         const sq = b.squadron(o.squadronId);
         const leader = sq ? b.get(sq.leaderId) : undefined;
@@ -871,7 +874,7 @@ export class Maneuvers {
     const lx = c.x - o.x;
     const lz = c.z - o.z;
     const len2 = lx * lx + lz * lz;
-    if (len2 < 100 * 100 || len2 > 3000 * 3000) return false;
+    if (len2 < 100 * 100 || len2 > CUT_SPAN * CUT_SPAN) return false;
     const t = ((s.x - o.x) * lx + (s.z - o.z) * lz) / len2;
     if (t < 0.05 || t > 0.95) return false;
     const px = o.x + lx * t - s.x;
