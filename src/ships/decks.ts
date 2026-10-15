@@ -34,18 +34,20 @@ export type DeckPlan = {
   figures: { oar: number; gun: number; shot: number; melee: number };
   /** Oars per side, for rower stations and the oar ports. */
   oars: number;
+  /** A war drum is beaten on board: on the command platform, or aft on the main deck without one. */
+  drum: boolean;
 };
 
 /** Per model; read it for a ship with byModel, as a kind drawn with another's model shares its deck plan. */
 export const DECKS: Record<ModelKind, DeckPlan> = {
-  panokseon: { oarDrop: PANOK_OAR_DROP, open: true, length: 0.66, beam: 0.72, command: { x: -0.18, up: 4 }, figures: { oar: 24, gun: 14, shot: 12, melee: 8 }, oars: 8 },
-  geobukseon: { oarDrop: 2.5, open: false, length: 0.62, beam: 0.62, command: null, figures: { oar: 20, gun: 12, shot: 2, melee: 4 }, oars: 8 },
-  hyeopseon: { oarDrop: 0, open: true, length: 0.6, beam: 0.5, command: null, figures: { oar: 8, gun: 2, shot: 2, melee: 1 }, oars: 4 },
-  atakebune: { oarDrop: 2.2, open: true, length: 0.6, beam: 0.68, command: { x: -0.05, up: 4 }, figures: { oar: 26, gun: 4, shot: 16, melee: 12 }, oars: 13 },
-  sekibune: { oarDrop: 0, open: true, length: 0.66, beam: 0.55, command: null, figures: { oar: 14, gun: 0, shot: 8, melee: 6 }, oars: 7 },
-  kobaya: { oarDrop: 0, open: true, length: 0.62, beam: 0.5, command: null, figures: { oar: 8, gun: 0, shot: 3, melee: 3 }, oars: 4 },
-  mingship: { oarDrop: 1.4, open: true, length: 0.6, beam: 0.66, command: { x: -0.3, up: 3 }, figures: { oar: 16, gun: 12, shot: 12, melee: 8 }, oars: 8 },
-  mingsmall: { oarDrop: 0, open: true, length: 0.6, beam: 0.55, command: null, figures: { oar: 10, gun: 2, shot: 4, melee: 3 }, oars: 5 },
+  panokseon: { oarDrop: PANOK_OAR_DROP, open: true, length: 0.66, beam: 0.72, command: { x: -0.18, up: 4 }, figures: { oar: 24, gun: 14, shot: 12, melee: 8 }, oars: 8, drum: true },
+  geobukseon: { oarDrop: 2.5, open: false, length: 0.62, beam: 0.62, command: null, figures: { oar: 20, gun: 12, shot: 2, melee: 4 }, oars: 8, drum: false },
+  hyeopseon: { oarDrop: 0, open: true, length: 0.6, beam: 0.5, command: null, figures: { oar: 8, gun: 2, shot: 2, melee: 1 }, oars: 4, drum: false },
+  atakebune: { oarDrop: 2.2, open: true, length: 0.6, beam: 0.68, command: { x: -0.05, up: 4 }, figures: { oar: 26, gun: 4, shot: 16, melee: 12 }, oars: 13, drum: true },
+  sekibune: { oarDrop: 0, open: true, length: 0.66, beam: 0.55, command: null, figures: { oar: 14, gun: 0, shot: 8, melee: 6 }, oars: 7, drum: true },
+  kobaya: { oarDrop: 0, open: true, length: 0.62, beam: 0.5, command: null, figures: { oar: 8, gun: 0, shot: 3, melee: 3 }, oars: 4, drum: false },
+  mingship: { oarDrop: 1.4, open: true, length: 0.6, beam: 0.66, command: { x: -0.3, up: 3 }, figures: { oar: 16, gun: 12, shot: 12, melee: 8 }, oars: 8, drum: true },
+  mingsmall: { oarDrop: 0, open: true, length: 0.6, beam: 0.55, command: null, figures: { oar: 10, gun: 2, shot: 4, melee: 3 }, oars: 5, drum: false },
 };
 
 export function mainDeck(key: string, kind: ShipKind, fallback: number) {

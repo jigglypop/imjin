@@ -7,7 +7,7 @@ import { blocked, layoutFor, mainDeck } from '../ships/decks';
 import { waveField } from '../ocean/waves';
 import { equipment } from '../game/quality';
 import { pushCrew, type Clip, type ClipName, type CrewAsset, type CrewKey } from './crewModels';
-import { CAST, GUN, HAND_ARMS, MELEE, OFFICER, SHOT, figureScale, frac, lerpAngle, rnd, smooth, yawTo, type Member, type Roster, type Station } from './crewTypes';
+import { CAST, GUN, HAND_ARMS, MELEE, OFFICER, SHOT, W, deathClip, figureScale, frac, layBody, lerpAngle, rnd, smooth, yawTo, type Member, type Roster, type Station } from './crewTypes';
 import { ArrowField } from './arrows';
 import { PuffField } from './puffs';
 
@@ -30,6 +30,17 @@ const FLAG_BOXES = 5;
 /** Weapons a beaten crew lets fall, per captured ship, two boxes each. */
 const DROPS = 8;
 const PROPS = BUDGET.fights * MAX_LINKS * PROPS_PER_LINK + FLAGS * (FLAG_BOXES + DROPS * 2);
+
+/**
+ * Seconds from the grapple to the hooks biting: a man at the rail winds up and throws the grappling hook first. The
+ * throw clip lets go THROW_RELEASE seconds in.
+ */
+const THROW_LEAD = 0.7;
+const THROW_RELEASE = 2.87;
+/** Height of a swimmer's clip origin under the water line, so his back and head break the surface. */
+const SWIM_DEPTH = 1.3;
+/** Seconds a man thrown overboard swims before he tires and goes under. */
+const SWIM_FOR = 14;
 
 const PARTNERS = [MELEE, SHOT, GUN, OFFICER];
 const PARTNER_PENALTY = [0, 4, 9, 12];
@@ -145,7 +156,8 @@ export type Figure = {
   railUntil: number;
 };
 
-type Fallen = { used: boolean; x: number; y: number; z: number; vx: number; vy: number; vz: number; spin: number; key: CrewKey; age: number; splashed: boolean; yaw: number };
+/** A man in the air or in the sea: thrown off his feet, falling, then swimming for it or going under. */
+type Fallen = { used: boolean; x: number; y: number; z: number; vx: number; vy: number; vz: number; key: CrewKey; age: number; splashed: boolean; yaw: number; swim: boolean; wet: number };
 /** A weapon a beaten man lets fall, in the ship's own frame. */
 type Drop = { x: number; z: number; yaw: number; len: number; late: number };
 type Capture = { id: number; t0: number; win: number; lose: number; by: number; drops: Drop[]; dropped: boolean };
@@ -241,7 +253,7 @@ export class Boarding {
         sx: 0, sz: 0, lat: 0, tx: 0, tz: 0, px: 0, pz: 0, landed: false, wx: 0, wy: 0, wz: 0, wq: new Quaternion(), yaw: 0, dieAt: 0, hurt: 0, fling: 0, search: 0, born: 0, rally: 0, spark: 0, rail: false, up: 0, railUntil: 0,
       });
     }
-    for (let i = 0; i < BUDGET.fallen; i += 1) this.fallen.push({ used: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, spin: 0, key: 'rower', age: 0, splashed: false, yaw: 0 });
+    for (let i = 0; i < BUDGET.fallen; i += 1) this.fallen.push({ used: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, key: 'rower', age: 0, splashed: false, yaw: 0, swim: false, wet: 0 });
 
     // Ropes, planks, hooks, flags and dropped weapons are boxes of one instanced mesh, each with its own colour.
     const geo = new BoxGeometry(1, 1, 1);
@@ -299,6 +311,11 @@ export class Boarding {
 
   cheering(id: number) {
     return (this.cheerUntil.get(id) ?? -1) > this.time;
+  }
+
+  /** The crew raises a shout for a few seconds: a rally, a ship taken. */
+  cheer(id: number, seconds: number) {
+    this.cheerUntil.set(id, Math.max(this.cheerUntil.get(id) ?? -1, this.time + seconds));
   }
 
   // ---------------------------------------------------------------- fights
@@ -369,8 +386,33 @@ export class Boarding {
       link.rest = gap * 1.06 + 0.5;
       link.cut = -1;
       link.splashed = false;
+      this.throwHook(rA, link.ax, f.sa);
     }
     return f;
+  }
+
+  /** The man at the rail nearest a boarding point throws the grappling hook over to the enemy. */
+  private throwHook(rA: Roster, x: number, side: number) {
+    let best: Member | null = null;
+    let bd = 1e9;
+    for (const role of [MELEE, SHOT]) {
+      for (const m of rA.members[role]!) {
+        if (m.dying >= 0 || m.gone || m.away || m.duel || m.fireAt >= 0 || m.act) continue;
+        const st = rA.stations[role]![m.station]!;
+        const d = Math.abs(st.x - x) + (st.z * side > 0 ? 0 : 6);
+        if (d < bd) {
+          bd = d;
+          best = m;
+        }
+      }
+    }
+    if (!best) return;
+    best.act = 'throw';
+    best.actT0 = this.time + THROW_LEAD - THROW_RELEASE;
+    best.actUntil = this.time + THROW_LEAD + 0.5;
+    best.actRate = 1;
+    best.actWeapon = W.hook;
+    best.actYaw = yawTo(0, side);
   }
 
   private free(f: Fight) {
@@ -576,7 +618,7 @@ export class Boarding {
    */
   private sendBoarders(f: Fight, a: Ship, d: Ship, rA: Roster, rD: Roster) {
     const age = this.time - f.t0;
-    const ready = f.links[0]!.plank ? 1.2 : 0.8;
+    const ready = THROW_LEAD + (f.links[0]!.plank ? 0.9 : 0.5);
     if (age < ready) return;
     const full = Math.max(1, a.spec.crew * (a.spec.crewPlan[MELEE]! + a.spec.crewPlan[SHOT]! * 0.6));
     const men = a.roles[MELEE] + a.roles[SHOT] * 0.6;
@@ -682,7 +724,8 @@ export class Boarding {
     fig.d1 = fig.dw + 0.16 + railUp * 0.12;
     if (style === PLANK) fig.d2 = Math.max(0.6, gap / WALK);
     else if (style === LEAP) fig.d2 = Math.max(0.5, 0.38 + gap * 0.06);
-    else fig.d2 = Math.max(0.9, gap / 2.6 + Math.max(0, rise) / 1.4 + 0.3);
+    // Hand over hand up a rope is quicker than it looks: a man goes up a hull in a few seconds.
+    else fig.d2 = Math.max(0.9, gap / 3.2 + Math.max(0, rise) / 2.4 + 0.25);
     if (this.findPartner(fig, rD, link.dx)) this.partnerSpot(fig, rD, f.sd);
     else this.holdSpot(fig, rD, link, f.sd);
     fig.d3 = Math.max(0.5, Math.hypot(fig.tx - link.dx, fig.tz - link.dz) / RUN + 0.2);
@@ -819,8 +862,8 @@ export class Boarding {
       const l = f.links[k]!;
       const fall = l.cut >= 0 && this.time > l.cut ? this.time - l.cut : 0;
       if (fall > 1.5) continue;
-      // Hooks fly over, then the planks are run out.
-      const grow = smooth((age - k * 0.12) / 0.45);
+      // Hooks fly over once thrown, then the planks are run out.
+      const grow = smooth((age - THROW_LEAD - k * 0.12) / 0.45);
       if (grow <= 0) continue;
       this.views.localToWorld(f.a, l.ax, l.ay, l.az, this.a);
       this.views.localToWorld(f.d, l.dx, l.dy, l.dz, this.b);
@@ -849,8 +892,8 @@ export class Boarding {
           this.putBox(this.c.x, this.c.y - fall * fall * 4.9, this.c.z, 0, 0, 0, 1, 0.22 * tg, 0.16 * tg, 0.22 * tg, 0.04, 0.04, 0.045);
         }
       }
-      if (l.plank && reach > 3.2 && age > 0.6) {
-        const lay = smooth((age - 0.6) / 0.7);
+      if (l.plank && reach > 3.2 && age > THROW_LEAD + 0.6) {
+        const lay = smooth((age - THROW_LEAD - 0.6) / 0.7);
         const drop = fall * fall * 4.9;
         const len = (gap + 1.4) * lay;
         // The plank is pushed out from the grappling ship, resting on both rails.
@@ -957,7 +1000,7 @@ export class Boarding {
         if (style === PLANK && cut) style = LEAP;
         if (style === ROPE && cut) {
           // The line is gone with him on it.
-          this.fall(fig.key, this.a.x + dx * k, this.a.y + (this.b.y - this.a.y) * k - 1, this.a.z + dz * k, dx * 0.4, 0.5, dz * 0.4);
+          this.fall(fig.key, this.a.x + dx * k, this.a.y + (this.b.y - this.a.y) * k - 1, this.a.z + dz * k, dx * 0.4, 0.5, dz * 0.4, yawTo(dx, dz));
           if (fig.mem) fig.mem.gone = true;
           this.release(fig);
           return;
@@ -980,8 +1023,8 @@ export class Boarding {
           const d = Math.hypot(dx, dz, this.b.y - this.a.y);
           const hang = 1.25 * smooth(Math.min(1, Math.min(k, 1 - k) * 7));
           this.c.set(this.a.x + dx * k, this.a.y + (this.b.y - this.a.y) * k - this.sag(d, link.rest) * 4 * k * (1 - k) - hang, this.a.z + dz * k);
-          clip = 'cheer';
-          rate = 1.5;
+          clip = 'climb';
+          rate = 1.3;
           t0 = fig.born + fig.seed;
         }
       } else {
@@ -1037,14 +1080,17 @@ export class Boarding {
         // Over the rail (and anyone who dies before reaching the deck falls too, not hangs) toward the gap between the hulls.
         const side = fig.fight ? fig.fight.sd : fig.pz >= 0 ? 1 : -1;
         this.dirv.set(0, 0, side).applyQuaternion(rD.q);
-        this.fall(fig.key, this.c.x, this.c.y, this.c.z, this.dirv.x * rnd(1.5, 3.2), rnd(2, 4), this.dirv.z * rnd(1.5, 3.2));
+        // He goes over backwards, facing the deck he was cut down on.
+        this.fall(fig.key, this.c.x, this.c.y, this.c.z, this.dirv.x * rnd(1.5, 3.2), rnd(2, 4), this.dirv.z * rnd(1.5, 3.2), Math.atan2(-this.dirv.x, -this.dirv.z));
         this.release(fig);
         return;
       } else {
-        clip = 'die';
+        clip = deathClip(fig.seed);
         t0 = fig.dieAt;
         dark = Math.min(1, (this.time - fig.dieAt) / 2.6) * 0.6;
         if (this.time - fig.dieAt > CORPSE) {
+          // The body is left where he fell, among the enemy's own dead.
+          if (asset.clips[clip]) layBody(rD, fig.px, fig.pz, rD.main, fig.yaw, fig.key, clip, fig.dieAt);
           this.release(fig);
           return;
         }
@@ -1133,25 +1179,37 @@ export class Boarding {
     if (fig.state === ST_HOLD && dist <= 0.3) fig.yaw = lerpAngle(fig.yaw, yawTo(0, -sd), 0.1);
   }
 
-  /** A duel in cycles of a few seconds: both swing and thrust, now and then one of the pair reels from a blow. */
+  /**
+   * A duel in exchanges of a few seconds. In each one man attacks (a cut, a thrust, a combination) and the other
+   * parries or gives ground; now and then the blow gets through and he reels. Who attacks changes from one exchange
+   * to the next, so both men are seen to fight.
+   */
   duelClip(f: Figure, side: number, asset: CrewAsset) {
-    const T = 3.4;
+    const T = 3.2;
     const phase = this.time / T + f.seed * 7;
     const cyc = Math.floor(phase);
     const start = (cyc - f.seed * 7) * T;
     const u = this.time - start;
     const h = frac(Math.sin(cyc * 12.9898 + f.seed * 78.233) * 43758.5453);
-    const loser = frac(h * 37.7) < 0.5 ? 0 : 1;
+    const attacker = frac(h * 37.7) < 0.5 ? 0 : 1;
     const p = this.pose;
-    if (h < 0.7 && loser === side && u > 1.3 && u < 2.9) {
+    p.rate = 1 + (f.seed - 0.5) * 0.2;
+    if (attacker === side) {
+      const pick = frac(h * 91.3);
+      const clip: ClipName = pick < 0.3 && asset.clips.combo ? 'combo' : pick < 0.55 && asset.clips.slash ? 'slash' : pick < 0.78 && asset.clips.thrust ? 'thrust' : 'melee';
+      p.clip = clip;
+      p.t0 = start;
+      return p;
+    }
+    // The blow lands in a third of the exchanges.
+    if (h < 0.33 && u > 1.0 && u < 2.4) {
       p.clip = 'hit';
-      p.t0 = start + 1.3;
+      p.t0 = start + 1.0;
       p.rate = 1.1;
       return p;
     }
-    p.clip = asset.clips.thrust && frac(f.seed * 13 + side * 0.37) > 0.5 ? 'thrust' : 'melee';
-    p.t0 = f.seed * 3 + side * 1.1;
-    p.rate = 1 + (f.seed - 0.5) * 0.25;
+    p.clip = frac(h * 13.7) < 0.6 && asset.clips.parry ? 'parry' : asset.clips.block ? 'block' : 'ready';
+    p.t0 = start + 0.15;
     return p;
   }
 
@@ -1162,8 +1220,11 @@ export class Boarding {
 
   // ---------------------------------------------------------------- the fallen
 
-  /** Throws a body into the air; it falls to the sea with a splash. */
-  fall(key: CrewKey, x: number, y: number, z: number, vx: number, vy: number, vz: number) {
+  /**
+   * Throws a man into the air, facing yaw: he is knocked off his feet, falls to the sea with a splash, and then swims
+   * for it or goes under.
+   */
+  fall(key: CrewKey, x: number, y: number, z: number, vx: number, vy: number, vz: number, yaw: number) {
     let f: Fallen | null = null;
     for (const o of this.fallen) {
       if (!o.used) {
@@ -1179,11 +1240,12 @@ export class Boarding {
     f.vx = vx;
     f.vy = vy;
     f.vz = vz;
-    f.spin = 0;
     f.key = key;
     f.age = 0;
     f.splashed = false;
-    f.yaw = Math.atan2(vx, vz);
+    f.yaw = yaw;
+    f.swim = false;
+    f.wet = 0;
   }
 
   private drawFallen(assets: Map<CrewKey, CrewAsset>) {
@@ -1192,33 +1254,63 @@ export class Boarding {
     for (const f of this.fallen) {
       if (!f.used) continue;
       f.age += dt;
+      const born = this.time - f.age;
       const h = waveField.heightAt(f.x, f.z, t, 8);
-      if (f.y > h - 0.2) {
+      const asset = assets.get(f.key);
+      let clip: Clip | undefined;
+      let t0 = born;
+      let rate = 1;
+      let lie = 0;
+      let dark = 0;
+      if (!f.splashed && f.y > h - 0.2) {
+        // Thrown off his feet, then falling.
         f.vy -= G * dt;
         f.x += f.vx * dt;
         f.y += f.vy * dt;
         f.z += f.vz * dt;
-        f.spin += dt * 3.2;
+        clip = f.age < 0.45 ? asset?.clips.knock : asset?.clips.fall;
+        if (f.age >= 0.45) t0 = born + 0.45;
       } else {
         if (!f.splashed) {
           f.splashed = true;
           this.splash(f.x, f.z, 1.1);
+          f.wet = f.age;
+          // Some strike out for a ship or the shore, away from the hull they fell from; the rest go under.
+          f.swim = Math.random() < 0.55;
+          const sp = Math.hypot(f.vx, f.vz) || 1;
+          f.vx = (f.vx / sp) * 0.6;
+          f.vz = (f.vz / sp) * 0.6;
+          if (f.swim) f.yaw = Math.atan2(f.vx, f.vz);
         }
-        f.y = h - 0.9 - Math.max(0, f.age - 3) * 0.35;
-        f.spin = 1.45;
+        const wet = f.age - f.wet;
+        if (f.swim && wet < SWIM_FOR) {
+          f.x += f.vx * dt;
+          f.z += f.vz * dt;
+          f.y = h - SWIM_DEPTH;
+          clip = asset?.clips.swim;
+          t0 = born + f.wet;
+          rate = 0.8;
+        } else {
+          const under = f.swim ? wet - SWIM_FOR : wet;
+          if (under > 6) {
+            f.used = false;
+            continue;
+          }
+          f.y = h - 0.9 - under * 0.35;
+          clip = asset?.clips.die;
+          t0 = this.time - 10;
+          rate = -1;
+          lie = 1.45;
+          dark = Math.min(0.8, under / 5);
+        }
       }
-      if (f.age > 9) {
-        f.used = false;
-        continue;
-      }
-      const asset = assets.get(f.key);
       if (!asset) continue;
-      const clip = asset.clips.die ?? asset.clips.idle!;
+      const data = clip ?? asset.clips.idle!;
       this.q2.setFromAxisAngle(UP, f.yaw);
-      this.q.setFromAxisAngle(this.right.set(1, 0, 0), Math.min(1.45, f.spin));
+      this.q.setFromAxisAngle(X_AXIS, lie);
       this.q.premultiply(this.q2);
       const dist = Math.hypot(f.x - this.camPos.x, f.y - this.camPos.y, f.z - this.camPos.z);
-      pushCrew(asset.lods[this.lodAt(dist)]!, f.x, f.y, f.z, figureScale(dist), this.q.x, this.q.y, this.q.z, this.q.w, clip, this.time - 10, -1, 0, Math.min(0.8, f.age / 7));
+      pushCrew(asset.lods[this.lodAt(dist)]!, f.x, f.y, f.z, figureScale(dist), this.q.x, this.q.y, this.q.z, this.q.w, data, t0, rate, 0, dark);
     }
   }
 

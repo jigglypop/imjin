@@ -1,16 +1,21 @@
 // Soldier and officer models: Gemini draws a T-pose concept, Meshy turns it into a low-poly textured mesh, rigs it and
-// applies library animations. Blender (scripts/blender/vat.py) then bakes the clips into vertex animation textures.
+// applies library animations. scripts/bake-crew.mjs then bakes the clips into the bone tables the game streams.
 //   node scripts/characters.mjs concepts [names]        two concept variants per character
 //   node scripts/characters.mjs model <name> <concept>  image to 3D from assets-src/characters/concepts/<concept>
-//   node scripts/characters.mjs rig <name>              auto-rig the finished model
-//   node scripts/characters.mjs animate <name>          bake the role's clips onto the rig
+//   node scripts/characters.mjs recover [names]         rebuild a T-pose model from the shipped crew file, when the sources are gone
+//   node scripts/characters.mjs rig <name>              auto-rig the finished (or recovered) model
+//   node scripts/characters.mjs animate <name>          bake the role's clips onto the rig, ten to a request
+//   node scripts/characters.mjs more <name> <key=id>... one more part of clips on a finished set
 //   node scripts/characters.mjs poll [wait]             advance every task and download what finished
+import { Document, NodeIO } from '@gltf-transform/core';
+import sharp from 'sharp';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
-process.loadEnvFile(join(ROOT, '.env'));
+// A git worktree has no .env of its own: ENV_FILE points at the main checkout's.
+process.loadEnvFile(process.env.ENV_FILE ?? join(ROOT, '.env'));
 
 const DIR = join(ROOT, 'assets-src', 'characters');
 const CONCEPTS = join(DIR, 'concepts');
@@ -87,12 +92,14 @@ export const CHARACTERS = {
 };
 
 // Meshy animation library ids (GET /openapi/v1/animations/library). Up to ten per request.
+// Every man can be thrown off his feet, fall from a rail and swim for it.
+const FALLS = { fall: 502, swim: 569, knock: 7 };
 const CLIPS = {
-  archer: { idle: 0, ready: 89, shoot: 224, melee: 240, hit: 178, die: 189, run: 14, cheer: 59 },
-  gunner: { idle: 0, ready: 89, shoot: 104, reload: 170, melee: 240, hit: 178, die: 184, run: 510, cheer: 59 },
-  melee: { idle: 0, ready: 89, melee: 97, thrust: 240, hit: 178, die: 189, run: 510, cheer: 59 },
-  officer: { idle: 0, ready: 89, command: 101, melee: 219, hit: 178, die: 189, cheer: 59 },
-  rower: { idle: 0, row: 259, haul: 276, carry: 550, hit: 178, die: 184, run: 14, cheer: 59 },
+  archer: { idle: 0, ready: 89, shoot: 224, melee: 240, hit: 178, die: 189, run: 14, cheer: 59, draw: 222, parry: 147, combo: 105, climb: 449, die2: 184, ...FALLS },
+  gunner: { idle: 0, ready: 89, shoot: 104, reload: 170, melee: 240, hit: 178, die: 184, run: 510, cheer: 59, kneel: 165, parry: 147, combo: 105, climb: 449, throw: 421, die2: 183, ...FALLS, aim: 234 },
+  melee: { idle: 0, ready: 89, melee: 97, thrust: 240, hit: 178, die: 189, run: 510, cheer: 59, combo: 105, slash: 242, parry: 147, block: 151, climb: 449, throw: 421, die2: 187, ...FALLS },
+  officer: { idle: 0, ready: 89, command: 101, melee: 219, hit: 178, die: 189, cheer: 59, wave: 290, signal: 28, parry: 147, die2: 184, ...FALLS },
+  rower: { idle: 0, row: 259, haul: 276, carry: 550, hit: 178, die: 184, run: 14, cheer: 59, ready: 89, ram: 262, bucket: 552, douse: 327, kneel: 165, die2: 183, ...FALLS, drumroll: 87, drum: 214 },
 };
 
 async function readState() {
@@ -170,25 +177,117 @@ async function model(name, file) {
   console.log('model task', name, json.result);
 }
 
+/**
+ * Rebuilds a character's T-pose model from the crew file the game ships (its finest level, without the hand weapons,
+ * and its texture), for rigging again when the Meshy sources are gone. The crew file keeps the bind-pose positions.
+ */
+async function recover(name) {
+  const buf = await readFile(join(ROOT, 'public', 'models', 'crew', `${name}.bin`));
+  const jsonLen = buf.readUInt32LE(8);
+  const header = JSON.parse(buf.subarray(12, 12 + jsonLen).toString());
+  const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  let off = 12 + jsonLen;
+  const take = (Ctor, count, bytes) => {
+    const out = new Ctor(ab, off, count);
+    off += count * bytes;
+    off = (off + 3) & ~3;
+    return out;
+  };
+  const l = header.lods[0];
+  const pos = take(Float32Array, l.verts * 3, 4);
+  const nor = take(Int8Array, l.verts * 4, 1);
+  const uv = take(Float32Array, l.verts * 2, 4);
+  take(Uint8Array, l.verts * 8, 1);
+  take(Uint8Array, l.verts * 4, 1);
+  const index = take(Uint16Array, l.tris * 3 + ((l.tris * 3) % 2), 2);
+  // Weapon vertices carry their weapon id in the normal's fourth byte.
+  const keep = [];
+  for (let t = 0; t < l.tris; t += 1) {
+    const a = index[t * 3], b = index[t * 3 + 1], c = index[t * 3 + 2];
+    if (nor[a * 4 + 3] || nor[b * 4 + 3] || nor[c * 4 + 3]) continue;
+    keep.push(a, b, c);
+  }
+  const remap = new Map();
+  const P = [], N = [], U = [], I = [];
+  for (const v of keep) {
+    let k = remap.get(v);
+    if (k === undefined) {
+      k = remap.size;
+      remap.set(v, k);
+      P.push(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]);
+      const n = [nor[v * 4] / 127, nor[v * 4 + 1] / 127, nor[v * 4 + 2] / 127];
+      const len = Math.hypot(...n) || 1;
+      N.push(n[0] / len, n[1] / len, n[2] / len);
+      U.push(uv[v * 2], uv[v * 2 + 1]);
+    }
+    I.push(k);
+  }
+  const doc = new Document();
+  const buffer = doc.createBuffer();
+  const png = await sharp(await readFile(join(ROOT, 'public', 'models', 'crew', `${name}.webp`))).png().toBuffer();
+  const tex = doc.createTexture('base').setImage(png).setMimeType('image/png');
+  const mat = doc.createMaterial('body').setBaseColorTexture(tex).setRoughnessFactor(0.85).setMetallicFactor(0);
+  const prim = doc
+    .createPrimitive()
+    .setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(new Float32Array(P)).setBuffer(buffer))
+    .setAttribute('NORMAL', doc.createAccessor().setType('VEC3').setArray(new Float32Array(N)).setBuffer(buffer))
+    .setAttribute('TEXCOORD_0', doc.createAccessor().setType('VEC2').setArray(new Float32Array(U)).setBuffer(buffer))
+    .setIndices(doc.createAccessor().setType('SCALAR').setArray(new Uint32Array(I)).setBuffer(buffer))
+    .setMaterial(mat);
+  const mesh = doc.createMesh(name).addPrimitive(prim);
+  doc.createScene().addChild(doc.createNode(name).setMesh(mesh));
+  await mkdir(MODELS, { recursive: true });
+  const out = join(MODELS, `${name}_tpose.glb`);
+  await new NodeIO().write(out, doc);
+  console.log('recovered', out, remap.size, 'verts', I.length / 3, 'tris');
+}
+
 async function rig(name) {
   const state = await readState();
-  const s = state[name];
-  if (s?.model?.status !== 'done') throw new Error(`${name}: model not finished`);
-  const json = await meshy('rigging', { method: 'POST', body: JSON.stringify({ input_task_id: s.model.id, height_meters: 1.7 }) });
+  const s = (state[name] ??= {});
+  const recovered = join(MODELS, `${name}_tpose.glb`);
+  let body;
+  if (s.model?.status === 'done') body = { input_task_id: s.model.id, height_meters: 1.7 };
+  else if (existsSync(recovered)) body = { model_url: `data:model/gltf-binary;base64,${(await readFile(recovered)).toString('base64')}`, height_meters: 1.7 };
+  else throw new Error(`${name}: model not finished and nothing recovered`);
+  const json = await meshy('rigging', { method: 'POST', body: JSON.stringify(body) });
   s.rig = { id: json.result, status: 'pending' };
+  delete s.anim;
   await writeState(state);
   console.log('rig task', name, json.result);
 }
 
+/** One request per ten clips; the parts download as <name>_anim.glb, <name>_anim1.glb, ... in the clip table's order. */
 async function animate(name) {
   const state = await readState();
   const s = state[name];
   if (s?.rig?.status !== 'done') throw new Error(`${name}: rig not finished`);
   const clips = CLIPS[CHARACTERS[name].clips];
-  const json = await meshy('animations', { method: 'POST', body: JSON.stringify({ rig_task_id: s.rig.id, action_ids: Object.values(clips), post_process: { operation_type: 'change_fps', fps: 24 } }) });
-  s.anim = { id: json.result, status: 'pending', clips };
+  const ids = Object.values(clips);
+  const parts = [];
+  for (let i = 0; i < ids.length; i += 10) {
+    const part = ids.slice(i, i + 10);
+    const json = await meshy('animations', { method: 'POST', body: JSON.stringify({ rig_task_id: s.rig.id, action_ids: part, post_process: { operation_type: 'change_fps', fps: 24 } }) });
+    parts.push({ id: json.result, status: 'pending', ids: part });
+    console.log('animation task', name, json.result, part.join(','));
+  }
+  s.anim = { status: 'pending', clips, parts };
   await writeState(state);
-  console.log('animation task', name, json.result);
+}
+
+/** Adds clips to a finished set as one more part (key=action id ...), to try a pose without paying for the rest again. */
+async function more(name, pairs) {
+  const state = await readState();
+  const s = state[name];
+  if (s?.anim?.status !== 'done' || !s.anim.parts) throw new Error(`${name}: animations not finished`);
+  const add = Object.fromEntries(pairs.map((p) => p.split('=')).map(([k, v]) => [k, Number(v)]));
+  const ids = Object.values(add);
+  const json = await meshy('animations', { method: 'POST', body: JSON.stringify({ rig_task_id: s.rig.id, action_ids: ids, post_process: { operation_type: 'change_fps', fps: 24 } }) });
+  s.anim.parts.push({ id: json.result, status: 'pending', ids });
+  Object.assign(s.anim.clips, add);
+  s.anim.status = 'pending';
+  await writeState(state);
+  console.log('animation task', name, json.result, ids.join(','));
 }
 
 async function download(url, out) {
@@ -212,10 +311,11 @@ async function poll() {
         if (j.thumbnail_url) await download(j.thumbnail_url, join(MODELS, `${name}_preview.png`));
       }],
       ['rig', 'rigging', async (j) => download(j.result.rigged_character_glb_url, join(MODELS, `${name}_rigged.glb`))],
-      ['anim', 'animations', async (j) => download(j.result.animation_glb_url, join(MODELS, `${name}_anim.glb`))],
     ];
+    const parts = s.anim?.parts ?? (s.anim ? [s.anim] : []);
+    parts.forEach((part, k) => steps.push([k, 'animations', async (j) => download(j.result.animation_glb_url, join(MODELS, `${name}_anim${k ? k : ''}.glb`))]));
     for (const [key, path, save] of steps) {
-      const task = s[key];
+      const task = typeof key === 'number' ? parts[key] : s[key];
       if (!task || task.status === 'done' || task.status === 'failed') continue;
       const j = await meshy(`${path}/${task.id}`);
       if (j.status === DONE) {
@@ -233,6 +333,7 @@ async function poll() {
       } else pending += 1;
       console.log(name, key, j.status, j.progress ?? '', task.error ?? '');
     }
+    if (s.anim?.parts && s.anim.parts.every((p) => p.status === 'done')) s.anim.status = 'done';
   }
   await writeState(state);
   return pending;
@@ -245,10 +346,14 @@ if (command === 'concepts') {
   await Promise.all(names.flatMap((n) => Array.from({ length: variants }, (_, i) => concept(n, i + 1 + Number(process.env.OFFSET ?? 0)).catch((e) => console.error('fail', n, e.message)))));
 } else if (command === 'model') {
   await model(args[0], args[1]);
+} else if (command === 'recover') {
+  for (const n of args.length ? args : Object.keys(CHARACTERS)) await recover(n);
 } else if (command === 'rig') {
   for (const n of args) await rig(n).catch((e) => console.error(n, e.message));
 } else if (command === 'animate') {
   for (const n of args) await animate(n).catch((e) => console.error(n, e.message));
+} else if (command === 'more') {
+  await more(args[0], args.slice(1));
 } else if (command === 'poll') {
   for (;;) {
     const pending = await poll();
@@ -258,5 +363,5 @@ if (command === 'concepts') {
 } else if (command === 'balance') {
   console.log(await meshy('balance'));
 } else {
-  console.log('usage: node scripts/characters.mjs concepts [names] | model <name> <file> | rig <names> | animate <names> | poll [wait] | balance');
+  console.log('usage: node scripts/characters.mjs concepts [names] | model <name> <file> | recover [names] | rig <names> | animate <names> | more <name> <key=id>... | poll [wait] | balance');
 }

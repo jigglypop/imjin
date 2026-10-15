@@ -9,6 +9,7 @@
 //   --repel=1   the held ship repels boarders, so the grapple breaks and they retreat
 //   --focus=defender|boarder   follow one man of that kind
 //   --swarm=1   a second Japanese ship boards the same Joseon ship from the other side
+//   --soft=0.2  every casualty scaled down, so the fight lasts
 import { chromium } from 'playwright-core';
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
@@ -20,7 +21,7 @@ const args = Object.fromEntries(
   }),
 );
 const url = args.url ?? 'http://127.0.0.1:5311/';
-const prefix = args.prefix ?? '/Users/yeomdonghwan/Desktop/imjin/shots/progress/crew_probe';
+const prefix = args.prefix ?? 'shots/crew_probe';
 const shots = Number(args.shots ?? 4);
 const step = Number(args.step ?? 2500);
 await mkdir(dirname(prefix), { recursive: true });
@@ -52,8 +53,9 @@ const opts = {
   gap: args.gap === undefined ? null : Number(args.gap),
   swarm: Number(args.swarm ?? 0),
   repel: args.repel === '1',
+  soft: Number(args.soft ?? 1),
 };
-const info = await page.evaluate(({ kindA, kindD, dist, pitch, yaw, speed, boost, cut, ox, oz, dfrac, gap, swarm, repel }) => {
+const info = await page.evaluate(({ kindA, kindD, dist, pitch, yaw, speed, boost, cut, ox, oz, dfrac, gap, swarm, repel, soft }) => {
   const e = window.__engine;
   const b = e.battle;
   const pick = (kind, team) => b.ships.find((s) => s.alive && s.spec.kind === kind && s.team === team && !s.grappledWith);
@@ -83,6 +85,12 @@ const info = await page.evaluate(({ kindA, kindD, dist, pitch, yaw, speed, boost
   }
   for (let i = 0; i < 4; i += 1) d.roles[i] = d.plan[i] * d.spec.crew * dfrac;
   d.crew = d.spec.crew * dfrac;
+  // --soft scales every casualty, so a fight lasts long enough to watch the duels; nobody breaks and runs either.
+  if (soft < 1) {
+    b.morale = null;
+    const casualties = b.casualties.bind(b);
+    b.casualties = (s, amount, exposure, melee) => casualties(s, amount * soft, exposure, melee);
+  }
   e.rts.followId = 0;
   if (cut) {
     e.cutaway = cut;
@@ -106,6 +114,10 @@ const info = await page.evaluate(({ kindA, kindD, dist, pitch, yaw, speed, boost
     }
     a.stance = 'board';
     if (a2) a2.stance = 'board';
+    // Under --soft a grapple that is let go is made again, so the fight goes on for the camera.
+    if (soft < 1 && gap === null && !a.grappledWith && !a.struck && !d.struck) {
+      a.grappledWith = d.id;
+    }
   };
   hold();
   window.__hold = setInterval(hold, 16);
@@ -188,7 +200,7 @@ for (let i = 0; i < shots; i += 1) {
     const rD = e.crew.rosters.get(d);
     const alive = rD ? rD.members.map((l) => l.filter((m) => m.dying < 0 && !m.gone).length) : null;
     const awayA = e.crew.rosters.get(a)?.members.map((l) => l.filter((m) => m.away).length);
-    return { t: Math.round(b.time), grapple: sa.grappledWith, crewA: Math.round(sa.crew), crewD: Math.round(sd.crew), struckD: sd.struck, struckA: sa.struck, figs: states.join('/'), capture: [...bo.captures.values()].map((c) => `${c.id}:${c.win}`).join(','), aliveD: alive?.join(','), awayA: awayA?.join(','), fallen: bo.fallen.filter((f) => f.used).length, arrows: bo.arrows.filter((f) => f.used).length, props: bo.nProps, sprites: bo.sprites.filter((f) => f.used).length, drawn: [...e.crew.assets].map(([k, x]) => `${k}:${x.lods.map((l) => l.count).join('/')}`).join(' ') };
+    return { t: Math.round(b.time), grapple: sa.grappledWith, crewA: Math.round(sa.crew), crewD: Math.round(sd.crew), struckD: sd.struck, struckA: sa.struck, figs: states.join('/'), capture: [...bo.captures.values()].map((c) => `${c.id}:${c.win}`).join(','), aliveD: alive?.join(','), awayA: awayA?.join(','), fallen: bo.fallen.filter((f) => f.used).length, arrows: bo.arrows.flying, stuck: bo.arrows.stuckCount, props: bo.nProps, puffs: bo.puffs.pool.filter((f) => f.used).length, drawn: [...e.crew.assets].map(([k, x]) => `${k}:${x.lods.map((l) => l.count).join('/')}`).join(' ') };
   });
   const out = `${prefix}_${String(i).padStart(2, '0')}.png`;
   await page.screenshot({ path: out });

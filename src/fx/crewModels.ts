@@ -21,7 +21,16 @@ export type CrewKey = 'joseon_soldier' | 'joseon_marine' | 'joseon_officer' | 'j
 export const CREW_KEYS: CrewKey[] = ['joseon_soldier', 'joseon_marine', 'joseon_officer', 'japan_ashigaru', 'japan_samurai', 'japan_officer', 'ming_soldier', 'ming_officer', 'rower'];
 
 export type Clip = { start: number; frames: number; loop: boolean };
-export type ClipName = 'idle' | 'ready' | 'shoot' | 'reload' | 'melee' | 'thrust' | 'hit' | 'die' | 'run' | 'cheer' | 'command' | 'row' | 'haul' | 'carry';
+/**
+ * Clips by name; a model has the ones its role needs (scripts/characters.mjs CLIPS). 'kneel' is a kneeling reload,
+ * 'draw' a reach for the quiver and a shot, 'aim' a matchlock held at the cheek, 'die2' a second way of falling dead,
+ * 'knock' a man thrown off his feet, 'fall' a body in the air, 'ram' a man driving a rammer home, 'bucket' and 'douse'
+ * the water carried to a fire and thrown on it, 'drum' and 'drumroll' the war drum, 'wave' and 'signal' a flag.
+ */
+export type ClipName =
+  | 'idle' | 'ready' | 'shoot' | 'reload' | 'melee' | 'thrust' | 'hit' | 'die' | 'run' | 'cheer' | 'command' | 'row' | 'haul' | 'carry'
+  | 'draw' | 'parry' | 'combo' | 'slash' | 'block' | 'climb' | 'throw' | 'die2' | 'fall' | 'swim' | 'knock' | 'kneel' | 'aim'
+  | 'wave' | 'signal' | 'ram' | 'bucket' | 'douse' | 'drum' | 'drumroll';
 
 type Header = { version: number; fps: number; joints: number; frames: number; clips: Record<string, Clip>; height: number; lods: { verts: number; tris: number }[] };
 
