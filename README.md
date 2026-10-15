@@ -2,7 +2,7 @@
 
 임진 해전 — 임진왜란 해전을 다룬 3D 웹 전략 게임 (WebGPU · three.js · React).
 
-- 플레이: https://imjin1592.com (영어판 https://imjin1592.com/en). 화면마다 주소가 있습니다: `/campaign` 캠페인, `/conquest` 쟁탈전, `/battles` 역사 전투, `/online` 온라인 대전, `/settings` 설정. 영어판은 같은 주소 앞에 `/en`을 붙입니다(`/en/campaign` 등).
+- 플레이: https://imjin1592.com (영어판 https://imjin1592.com/en). 화면마다 주소가 있습니다: `/campaign` 캠페인, `/conquest` 쟁탈전, `/battles` 역사 전투, `/online` 온라인 대전, `/settings` 설정. 해전마다 브리핑 주소도 있습니다(`/battles/hansan`, `/battles/myeongnyang` 등). 링크를 보내면 그 해전의 장면이 미리보기로 나옵니다. 영어판은 같은 주소 앞에 `/en`을 붙입니다(`/en/campaign`, `/en/battles/hansan` 등).
 - 개발: `npm install` → `npm run dev` (http://127.0.0.1:5291)
 - 배포: `main` 브랜치에 푸시하면 GitHub Actions가 빌드 후 S3 + CloudFront로 자동 배포합니다.
 - 코드 검증: `npm run typecheck` → `npm test` → `npm run build`. `npm test`는 전투·캠페인·렌더 수명 관리·네트워크·잘못된 서버 입력 회귀를 실행합니다.

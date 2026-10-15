@@ -153,6 +153,8 @@ type UiState = {
   toasts: Toast[];
   box: SelectionBox;
   screen: Screen;
+  /** The historical battle the history screen shows once one is picked; the address names it (/battles/hansan). */
+  battle: ScenarioId | null;
   /** The screen the running battle was started from. */
   origin: BattleOrigin;
   /** A renderer or engine failure that stops the battle from starting. */
@@ -162,7 +164,7 @@ type UiState = {
   autoBuild: boolean;
 };
 
-export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingScenario: null, report: null, toasts: [], box: null, screen: 'menu', origin: 'select', fatal: null, touchBox: false, autoBuild: false }));
+export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingScenario: null, report: null, toasts: [], box: null, screen: 'menu', battle: null, origin: 'select', fatal: null, touchBox: false, autoBuild: false }));
 
 let lastJson = '';
 export function publish(snapshot: GameSnapshot, force = false) {
@@ -204,9 +206,17 @@ export function setProgress(progress: number) {
   useUi.setState((s) => ({ progress: Math.max(s.progress, progress) }));
 }
 
-/** Opens a screen. The router pushes its address as a history entry (a battle keeps the address it started from). */
+/**
+ * Opens a screen. The router pushes its address as a history entry (a battle keeps the address it started from).
+ * Leaving the history screen for anything but a battle forgets the battle it showed, so it opens on /battles next time.
+ */
 export function setScreen(screen: Screen) {
-  useUi.setState({ screen });
+  useUi.setState((s) => ({ screen, battle: screen === 'select' || screen === 'battle' ? s.battle : null }));
+}
+
+/** Picks a historical battle on the history screen. The router renames the address to match, in place. */
+export function setBattle(battle: ScenarioId | null) {
+  useUi.setState({ battle });
 }
 
 export function setOrigin(origin: BattleOrigin) {

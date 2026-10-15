@@ -1,9 +1,12 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { EN_BRIEFING } from './src/i18n/en/briefing.js';
 import { EN_COMMON } from './src/i18n/en/common.js';
-import { routeName, routePages, routePath, type Edition, type RoutePage, type RouteScreen } from './src/routes.js';
+import { EN_SIM } from './src/i18n/en/sim.js';
+import { SCENARIO_TEXT } from './src/sim/scenarioText.js';
+import { CARD_SIZE, cardFile, routeName, routePages, routePath, type BattleSlug, type Edition, type RoutePage, type RouteScreen } from './src/routes.js';
 
 const SITE = 'https://imjin1592.com';
 
@@ -36,19 +39,41 @@ const ENGLISH_FRONT = {
   title: 'The Imjin War · 임진왜란',
   description: 'A 3D naval strategy game about the Imjin War (1592–1598): nine historical battles, a three-faction campaign and online play, free in your browser.',
   preview: 'Thirteen ships against 133 at Myeongnyang. Command the naval battles of the Imjin War in 3D, free in your browser.',
+  alt: 'The Imjin War · a dragon-headed turtle ship ploughing through rough seas at sunset',
 };
 
-/** The English for a screen's name, from the game's own dictionary, so a page's title matches the tab title in the game. */
+/** The English for a page's text, from the game's own dictionaries, so a page's title matches the tab title in the game. */
 function english(ko: string): string {
-  const text = EN_COMMON[ko];
+  const text = EN_COMMON[ko] ?? EN_SIM[ko] ?? EN_BRIEFING[ko];
   if (!text) throw new Error(`route pages: no English for ${ko}`);
   return text;
 }
 
+/** How many characters of a link preview's description KakaoTalk shows in its two lines. */
+const PREVIEW_LIMIT: Record<Edition, number> = { ko: 48, en: 100 };
+
+/**
+ * A battle's page: its name, the date and place with its one line for search results, the one line alone for the link
+ * preview (KakaoTalk shows two lines of it under the picture), and its own card.
+ */
+function battlePage(id: BattleSlug, edition: Edition) {
+  const text = SCENARIO_TEXT[id];
+  const say = (ko: string) => (edition === 'en' ? english(ko) : ko);
+  const name = say(text.title);
+  const preview = say(text.hook);
+  if ([...preview].length > PREVIEW_LIMIT[edition]) throw new Error(`route pages: ${id}'s line is longer than KakaoTalk's two lines: ${preview}`);
+  return {
+    name,
+    description: `${say(text.date)}, ${say(text.place)}. ${preview}`,
+    preview,
+    alt: edition === 'en' ? `${name}, ${say(text.date)}: a scene from the game` : `${name} · ${text.date} · 게임 속 장면`,
+  };
+}
+
 const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-/** index.html (the Korean front page) rewritten for another page: its language, address and preview texts. */
-function pageHtml(base: string, { screen, edition, path }: RoutePage): string {
+/** index.html (the Korean front page) rewritten for another page: its language, address, preview texts and card. */
+function pageHtml(base: string, { screen, edition, path, battle }: RoutePage): string {
   let html = base;
   const swap = (from: RegExp, to: (...groups: string[]) => string) => {
     const next = html.replace(from, (_, ...groups: string[]) => to(...groups));
@@ -60,18 +85,21 @@ function pageHtml(base: string, { screen, edition, path }: RoutePage): string {
 
   const en = edition === 'en';
   const front = screen === 'menu';
+  const own = battle ? battlePage(battle, edition) : null;
   const name = routeName(screen);
-  const title = front ? ENGLISH_FRONT.title : en ? `${english(name)} · ${english('임진왜란')}` : `${name} · 임진왜란`;
-  const description = front ? ENGLISH_FRONT.description : DESCRIPTIONS[screen][edition];
-  const preview = front ? ENGLISH_FRONT.preview : description;
+  const site = en ? english('임진왜란') : '임진왜란';
+  const title = own ? `${own.name} · ${site}` : front ? ENGLISH_FRONT.title : `${en ? english(name) : name} · ${site}`;
+  const description = own ? own.description : front ? ENGLISH_FRONT.description : DESCRIPTIONS[screen][edition];
+  const preview = own ? own.preview : front ? ENGLISH_FRONT.preview : description;
   const url = SITE + path;
+  const card = `${SITE}/${cardFile(battle ?? null, edition)}`;
 
   swap(/<html lang="ko">/, () => `<html lang="${edition}">`);
   swap(/<title>[^<]*<\/title>/, () => `<title>${escapeHtml(title)}</title>`);
   meta('name', 'description', description);
   link('canonical', url);
   for (const alt of ['ko', 'en', 'x-default']) {
-    const href = SITE + routePath(screen, alt === 'en' ? 'en' : 'ko');
+    const href = SITE + routePath(screen, alt === 'en' ? 'en' : 'ko', battle);
     swap(new RegExp(`(<link rel="alternate" hreflang="${alt}" href=")[^"]*(")`), (a, b) => a + href + b);
   }
   meta('property', 'og:title', title);
@@ -81,20 +109,28 @@ function pageHtml(base: string, { screen, edition, path }: RoutePage): string {
   meta('property', 'og:locale:alternate', en ? 'ko_KR' : 'en_US');
   meta('name', 'twitter:title', title);
   meta('name', 'twitter:description', preview);
-  if (en) {
-    meta('property', 'og:image', `${SITE}/og-geobukseon-en.jpg`);
-    meta('property', 'og:image:secure_url', `${SITE}/og-geobukseon-en.jpg`);
-    meta('property', 'og:image:alt', 'The Imjin War · a dragon-headed turtle ship ploughing through rough seas at sunset');
-    meta('name', 'twitter:image', `${SITE}/og-geobukseon-en.jpg`);
-    meta('name', 'apple-mobile-web-app-title', english('임진왜란'));
+  // A battle's page shows its own scene; every other English page the English front card. A Korean screen page keeps
+  // index.html's card.
+  if (own || en) {
+    meta('property', 'og:image', card);
+    meta('property', 'og:image:secure_url', card);
+    meta('property', 'og:image:alt', own ? own.alt : ENGLISH_FRONT.alt);
+    meta('name', 'twitter:image', card);
   }
+  if (en) meta('name', 'apple-mobile-web-app-title', english('임진왜란'));
   return html;
 }
 
+/** The Korean front page names the front card at the size every card is made in, so the other pages can swap in theirs. */
+function checkFront(base: string) {
+  const expect = [`content="${SITE}/${cardFile(null, 'ko')}"`, `"og:image:width" content="${CARD_SIZE.width}"`, `"og:image:height" content="${CARD_SIZE.height}"`];
+  for (const text of expect) if (!base.includes(text)) throw new Error(`route pages: index.html should say ${text}`);
+}
+
 /**
- * One page per address (src/routes.ts): /campaign, /en/conquest and the rest are the same app with that page's
- * language and link-preview tags, so a shared link previews in its own language and the app opens on that screen. The
- * deploy uploads each page under the keys scripts/route-pages.mjs lists.
+ * One page per address (src/routes.ts): /campaign, /en/conquest, /battles/hansan and the rest are the same app with
+ * that page's language and link-preview tags, so a shared link previews in its own language with its own picture and
+ * the app opens on that screen. The deploy uploads each page under the keys scripts/route-pages.mjs lists.
  */
 function routePagesPlugin(): Plugin {
   let outDir = 'dist';
@@ -102,10 +138,12 @@ function routePagesPlugin(): Plugin {
     name: 'route-pages',
     apply: 'build',
     configResolved(config) {
-      outDir = join(config.root, config.build.outDir);
+      // --outDir may be absolute; resolve() keeps it so where join() glued it onto the root.
+      outDir = resolve(config.root, config.build.outDir);
     },
     closeBundle() {
       const base = readFileSync(join(outDir, 'index.html'), 'utf8');
+      checkFront(base);
       for (const page of routePages()) {
         if (page.file === 'index.html') continue;
         const file = join(outDir, page.file);
