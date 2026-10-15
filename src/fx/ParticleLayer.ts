@@ -1,39 +1,69 @@
 import {
   AdditiveBlending,
+  DepthTexture,
   DynamicDrawUsage,
   InstancedBufferAttribute,
   NormalBlending,
   Sprite,
   SpriteNodeMaterial,
   Vector3,
+  ViewportDepthTextureNode,
   type Camera,
 } from 'three/webgpu';
 import {
+  Fn,
+  Loop,
   atan,
+  cameraFar,
+  cameraNear,
   cameraViewMatrix,
+  cos,
+  dot,
   vec2,
   float,
   instancedDynamicBufferAttribute,
   length,
   max,
+  min,
   mix,
   normalize,
+  perspectiveDepthToViewZ,
+  positionView,
   positionWorld,
   pow,
   saturate,
+  screenUV,
+  sin,
   smoothstep,
   sqrt,
   uv,
+  varying,
   vec3,
   vec4,
 } from 'three/tsl';
 import { atmosphere } from '../render/atmosphere';
+import { pointLights } from '../render/lights';
 import type { ParticleQuality } from '../game/quality';
-import { puffNoise } from './particleNoise';
+import { puffNoiseAt, puffWeights } from './particleNoise';
 
 export type ParticleKind = 'smoke' | 'fire' | 'spray';
 
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
+
+/**
+ * The scene's depth as the particles see it: copied once a frame when the first particle layer draws, so the sea
+ * surface and the hulls are in it. One node shared by every layer keeps it to one copy.
+ */
+export function particleDepth() {
+  return new ViewportDepthTextureNode(screenUV, null, new DepthTexture());
+}
+
+/**
+ * How the sprites take light from the scene. `lights` of the point lights (gun flashes, burning hulls, lanterns) light
+ * smoke and spray; `depth`, where the device can afford the copy, lets a sprite fade where it meets water or a hull
+ * instead of being cut along a hard line.
+ */
+export type ParticleLighting = { lights: number; depth: ReturnType<typeof particleDepth> | null };
 
 export type EmitOptions = {
   x: number;
@@ -50,6 +80,13 @@ export type EmitOptions = {
   g?: number;
   b?: number;
   heat?: number;
+  /** Spray only: how much taller than wide the sprite starts (0 is round); it relaxes to round as the water falls. */
+  stretch?: number;
+  /**
+   * How fast the size goes from size0 to size1: the exponent of 1 - (1 - t)^k over the life. 2.2 by default; gun smoke
+   * uses more, swelling to most of its size in the first second and then hanging there for the rest of its life.
+   */
+  growth?: number;
   drag?: number;
   lift?: number;
   spin?: number;
@@ -74,6 +111,7 @@ export class ParticleLayer {
   private readonly life: Float32Array;
   private readonly s0: Float32Array;
   private readonly s1: Float32Array;
+  private readonly gk: Float32Array;
   private readonly a0: Float32Array;
   private readonly rot: Float32Array;
   private readonly spin: Float32Array;
@@ -82,7 +120,8 @@ export class ParticleLayer {
   private readonly windK: Float32Array;
   private readonly seed: Float32Array;
   private readonly col: Float32Array;
-  private readonly heat: Float32Array;
+  /** Heat for fire and smoke; for spray, how far the sprite starts stretched upward. */
+  private readonly aux: Float32Array;
   private order: Uint32Array;
   private spare: Uint32Array;
   private readonly depth: Float32Array;
@@ -93,7 +132,7 @@ export class ParticleLayer {
   private keep: number;
   private readonly tmp = new Vector3();
 
-  constructor(readonly kind: ParticleKind, capacity: number, quality: ParticleQuality) {
+  constructor(readonly kind: ParticleKind, capacity: number, quality: ParticleQuality, lighting: ParticleLighting = { lights: 0, depth: null }) {
     this.capacity = capacity;
     this.keep = quality.keep;
     this.pos = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
@@ -111,6 +150,7 @@ export class ParticleLayer {
     this.life = f();
     this.s0 = f();
     this.s1 = f();
+    this.gk = f();
     this.a0 = f();
     this.rot = f();
     this.spin = f();
@@ -118,7 +158,7 @@ export class ParticleLayer {
     this.lift = f();
     this.windK = f();
     this.seed = f();
-    this.heat = f();
+    this.aux = f();
     this.col = new Float32Array(capacity * 3);
     this.order = new Uint32Array(capacity);
     this.spare = new Uint32Array(capacity);
@@ -135,15 +175,47 @@ export class ParticleLayer {
     material.transparent = true;
     material.depthWrite = false;
     material.fog = true;
-    const c = uv().sub(0.5).mul(2);
+    const c: any = uv().sub(0.5).mul(2);
     const r = length(c);
     const seed = Q.w;
     const life = P.w;
+    const size = Q.x;
+    // What is the same over a whole sprite is worked out per vertex and handed on: the noise weights for its age and
+    // its turn. uv turns with the sprite, but light and gravity keep their screen directions: `s` is this pixel's
+    // offset from the centre as the screen sees it, so every puff is lit from the same side and dark underneath.
+    const turn: any = varying(vec2(cos(Q.y), sin(Q.y)));
+    const cr = turn.x;
+    const sr = turn.y;
+    const s = vec2(c.x.mul(cr).sub(c.y.mul(sr)), c.x.mul(sr).add(c.y.mul(cr)));
+    // Where the sprite passes into water or a hull it thins out over a third of its size instead of being cut off.
+    const soft: any = lighting.depth
+      ? saturate(positionView.z.sub(perspectiveDepthToViewZ(lighting.depth, cameraNear, cameraFar)).div(max(size.mul(0.3), 0.6)))
+      : float(1);
+    // The point lights summed at the sprite's centre in the vertex stage: a gun's flash, a burning hull or a lantern
+    // lights the smoke and spray around it without a light loop for every pixel. By day a fire is faint next to the sun
+    // and the flash only warms the smoke at the muzzle; at night the same light is most of what the smoke gets.
+    const flash: any =
+      lighting.lights > 0
+        ? varying(
+            Fn(() => {
+              const sum = vec3(0).toVar();
+              Loop(lighting.lights, ({ i }) => {
+                const lp: any = pointLights.posNode.element(i);
+                const lc: any = pointLights.colNode.element(i);
+                const d = lp.xyz.sub(P.xyz);
+                const d2 = dot(d, d);
+                const cut = saturate(float(1).sub(pow(sqrt(d2).div(max(lc.w, 1)), 4)));
+                sum.addAssign(lc.xyz.mul(lp.w).div(max(d2.add(size.mul(size).mul(0.25)), 1)).mul(cut.mul(cut)));
+              });
+              return min(sum, vec3(4)).mul(mix(float(0.09), float(0.14), atmosphere.night));
+            })(),
+          )
+        : vec3(0);
     if (kind === 'fire') {
-      material.scaleNode = vec2(Q.x.mul(0.72), Q.x.mul(1.2));
+      material.scaleNode = vec2(size.mul(0.72), size.mul(1.2));
       material.blending = AdditiveBlending;
       material.fog = false;
-      const n: any = puffNoise(vec2(c.x.mul(1.6).add(seed.mul(41.0)), c.y.mul(1.1).sub(life.mul(2.6)).add(seed.mul(17.0))), life, 1.2);
+      const n: any = puffNoiseAt(vec2(c.x.mul(1.6).add(seed.mul(41.0)), c.y.mul(1.1).sub(life.mul(2.6)).add(seed.mul(17.0))), varying(puffWeights(life, 1.2)));
       const body = length(vec2(c.x.mul(1.35), c.y.mul(0.85).add(0.22)));
       const shape = saturate(float(1).sub(body.add(n.mul(0.55)).add(uv().y.mul(0.3))).mul(2.2));
       const temp = shape.mul(float(1).sub(life.mul(0.75))).mul(T.w.mul(0.5).add(0.5));
@@ -152,33 +224,63 @@ export class ParticleLayer {
       const core = vec3(1.0, 0.86, 0.55);
       const ramp = mix(mix(ember, flame, smoothstep(0.08, 0.38, temp)), core, smoothstep(0.42, 0.85, temp));
       material.colorNode = vec4(ramp.mul(T.rgb).mul(temp.mul(5.5).add(0.4)), 1);
-      material.opacityNode = smoothstep(0.02, 0.2, temp).mul(Q.z).mul(smoothstep(1.0, 0.75, r));
+      material.opacityNode = smoothstep(0.02, 0.2, temp).mul(Q.z).mul(smoothstep(1.0, 0.75, r)).mul(soft);
     } else if (kind === 'smoke') {
-      material.scaleNode = Q.x;
+      material.scaleNode = size;
       material.blending = NormalBlending;
-      const n: any = puffNoise(c.mul(1.15).add(vec2(seed.mul(53.0), seed.mul(29.0))), life, 2.2);
-      const density = smoothstep(1.0, 0.2, r.add(n.mul(0.62)));
+      const offset = vec2(seed.mul(53.0), seed.mul(29.0));
+      const weights: any = varying(puffWeights(life, 2.2));
+      const n: any = puffNoiseAt(c.mul(1.15).add(offset), weights);
+      // The edge sits inside the sprite's circle, so the noise can push it in and out and no puff shows a round rim.
+      const density = smoothstep(0.92, 0.2, r.add(n.mul(0.75)));
       const erosion = life.mul(life).mul(0.55);
-      const mask = saturate(density.sub(erosion).mul(1.9)).mul(smoothstep(1.0, 0.72, r));
-      const nz = sqrt(max(float(1).sub(r.mul(r)), 0.08));
-      const normalView = normalize(vec3(c.x.add(n.mul(0.9)), c.y.add(n.mul(0.9)), nz));
-      const lightView = normalize(cameraViewMatrix.mul(vec4(atmosphere.sunDir, 0)).xyz);
-      const ndl = saturate(normalView.dot(lightView).mul(0.5).add(0.5));
+      const mask = saturate(density.sub(erosion).mul(1.9)).mul(smoothstep(1.0, 0.8, r));
       const thickness = smoothstep(0.0, 0.9, density);
-      const sunLight = atmosphere.sunIrradiance.mul(pow(ndl, float(1.4))).mul(0.28).mul(float(1.15).sub(thickness.mul(0.5)));
-      const ambient = atmosphere.skyAmbient.mul(float(0.75).add(c.y.mul(0.25)));
-      const glow = vec3(1.0, 0.36, 0.07).mul(T.w).mul(smoothstep(0.2, -0.9, c.y)).mul(thickness).mul(0.6);
-      material.colorNode = vec4(T.rgb.mul(ambient.add(sunLight)).add(glow), 1);
+      const sunView = normalize(cameraViewMatrix.mul(vec4(atmosphere.sunDir, 0)).xyz);
+      const lightView: any = varying(sunView);
+      // The same smoke a step toward the light, in the sprite's own turned frame: where that is dense, this part lies in
+      // the puff's own shadow. It is what turns a flat white disc into a lit, rounded billow.
+      const toLight: any = varying(vec2(sunView.x.mul(cos(Q.y)).add(sunView.y.mul(sin(Q.y))), sunView.y.mul(cos(Q.y)).sub(sunView.x.mul(sin(Q.y)))).mul(0.42));
+      const cL = c.add(toLight);
+      const nL: any = puffNoiseAt(cL.mul(1.15).add(offset), weights);
+      const shadowing = smoothstep(0.92, 0.2, length(cL).add(nL.mul(0.75)));
+      // A flattened sphere: each puff is only a little rounded, so a bank of them shades as one cloud and not as a pile
+      // of balls each lit on its own.
+      const nz = sqrt(max(float(1).sub(r.mul(r)), 0.08));
+      const normal = normalize(vec3(s.x.mul(0.6).add(n.mul(0.45)), s.y.mul(0.6).add(nL.mul(0.45)), nz));
+      const ndl = saturate(dot(normal, lightView).mul(0.5).add(0.5));
+      const front = saturate(lightView.z.mul(0.5).add(0.5));
+      const shade = float(1).sub(shadowing.mul(0.5).mul(saturate(length(lightView.xy).mul(1.5))));
+      // Lit from behind, the dense heart of a puff goes dark and its thin edge glows.
+      const heart = mix(float(1).sub(thickness.mul(0.6)), float(1), front);
+      const rim = float(1).sub(thickness).mul(float(1).sub(front)).mul(0.5);
+      const sun = atmosphere.sunIrradiance.mul(ndl.mul(shade).mul(heart).add(rim)).mul(0.3);
+      // The sky lights a puff from above and the dark sea gives almost nothing back from below; smoke lying low on the
+      // water is also in the shade of the smoke over it, which shades a whole bank from its top down to the sea.
+      const top = saturate(s.y.mul(0.5).add(0.5));
+      const low = smoothstep(0.5, 14.0, positionWorld.y);
+      const sky = atmosphere.skyAmbient.mul(mix(float(0.6), float(1.0), top)).mul(mix(float(0.7), float(1.05), low)).mul(float(1).sub(thickness.mul(0.2)));
+      const lit = flash.mul(thickness.mul(0.7).add(0.3));
+      const glow = vec3(1.0, 0.36, 0.07).mul(T.w).mul(smoothstep(0.2, -0.9, s.y)).mul(thickness).mul(0.6);
+      material.colorNode = vec4(T.rgb.mul(sky.add(sun).add(lit)).add(glow), 1);
       const waterFade = smoothstep(-0.5, 2.0, positionWorld.y);
-      material.opacityNode = mask.mul(Q.z).mul(waterFade);
+      material.opacityNode = mask.mul(Q.z).mul(waterFade).mul(soft);
     } else {
-      material.scaleNode = Q.x;
+      // Water: a stretched sprite is the jet of a splash, standing up and settling to round as it falls (T.w).
+      material.scaleNode = vec2(size, size.mul(T.w.add(1)));
       material.blending = NormalBlending;
-      const n: any = puffNoise(c.mul(2.2).add(vec2(seed.mul(37.0), seed.mul(17.0))), life, 3);
-      const mask = smoothstep(1.0, 0.1, r.add(n.mul(0.7))).mul(smoothstep(1.0, 0.7, r));
-      const lit = atmosphere.skyAmbient.mul(1.15).add(atmosphere.sunIrradiance.mul(0.14));
+      const n: any = puffNoiseAt(c.mul(2.2).add(vec2(seed.mul(37.0), seed.mul(17.0))), varying(puffWeights(life, 3)));
+      const body = smoothstep(1.0, 0.1, r.add(n.mul(0.7))).mul(smoothstep(1.0, 0.7, r));
+      // Thrown water breaks into clumps of drops that part as they fly; a big sprite is mist, which frays at the edge
+      // and thins from the outside in as it drifts.
+      const parting = life.mul(0.45);
+      const clumps = smoothstep(parting.add(0.05), parting.add(0.4), n.mul(0.5).add(0.5));
+      const fray = saturate(smoothstep(0.85, 0.15, r.add(n.mul(0.6))).sub(life.mul(life).mul(0.45)).mul(1.8));
+      const mask = body.mul(mix(fray, clumps, smoothstep(4.5, 1.2, size)));
+      const top = saturate(s.y.mul(0.5).add(0.5));
+      const lit = atmosphere.skyAmbient.mul(mix(float(0.75), float(1.3), top)).add(atmosphere.sunIrradiance.mul(0.16)).add(flash);
       material.colorNode = vec4(T.rgb.mul(lit), 1);
-      material.opacityNode = mask.mul(Q.z);
+      material.opacityNode = mask.mul(Q.z).mul(soft);
     }
     const sprite = new Sprite(material);
     sprite.count = 0;
@@ -215,6 +317,7 @@ export class ParticleLayer {
     this.life[i] = o.life;
     this.s0[i] = o.size0;
     this.s1[i] = o.size1;
+    this.gk[i] = o.growth ?? 2.2;
     this.a0[i] = o.alpha ?? 1;
     this.rot[i] = o.rot ?? Math.random() * Math.PI * 2;
     this.spin[i] = (Math.random() - 0.5) * (o.spin ?? 0.4);
@@ -222,7 +325,7 @@ export class ParticleLayer {
     this.lift[i] = o.lift ?? 0;
     this.windK[i] = o.wind ?? 1;
     this.seed[i] = Math.random();
-    this.heat[i] = o.heat ?? 0;
+    this.aux[i] = this.kind === 'spray' ? o.stretch ?? 0 : o.heat ?? 0;
     this.col[i * 3] = o.r ?? 1;
     this.col[i * 3 + 1] = o.g ?? 1;
     this.col[i * 3 + 2] = o.b ?? 1;
@@ -241,6 +344,7 @@ export class ParticleLayer {
     this.life[i] = this.life[last]!;
     this.s0[i] = this.s0[last]!;
     this.s1[i] = this.s1[last]!;
+    this.gk[i] = this.gk[last]!;
     this.a0[i] = this.a0[last]!;
     this.rot[i] = this.rot[last]!;
     this.spin[i] = this.spin[last]!;
@@ -248,7 +352,7 @@ export class ParticleLayer {
     this.lift[i] = this.lift[last]!;
     this.windK[i] = this.windK[last]!;
     this.seed[i] = this.seed[last]!;
-    this.heat[i] = this.heat[last]!;
+    this.aux[i] = this.aux[last]!;
     this.col[i * 3] = this.col[last * 3]!;
     this.col[i * 3 + 1] = this.col[last * 3 + 1]!;
     this.col[i * 3 + 2] = this.col[last * 3 + 2]!;
@@ -326,7 +430,7 @@ export class ParticleLayer {
     for (let k = 0; k < n; k += 1) {
       const i = this.order[k]!;
       const t = this.age[i]! / this.life[i]!;
-      const grow = 1 - Math.pow(1 - t, 2.2);
+      const grow = 1 - Math.pow(1 - t, this.gk[i]!);
       const size = this.s0[i]! + (this.s1[i]! - this.s0[i]!) * grow;
       const fadeIn = Math.min(1, this.age[i]! / Math.min(0.15, this.life[i]! * 0.2));
       const fadeOut = this.kind === 'fire' ? Math.pow(1 - t, 1.3) : 1 - t * t;
@@ -342,7 +446,8 @@ export class ParticleLayer {
       T[o] = this.col[i * 3]!;
       T[o + 1] = this.col[i * 3 + 1]!;
       T[o + 2] = this.col[i * 3 + 2]!;
-      T[o + 3] = this.kind === 'fire' ? this.heat[i]! * (1 - t * 0.7) : this.heat[i]! * Math.max(0, 1 - t * 4);
+      const aux = this.aux[i]!;
+      T[o + 3] = this.kind === 'fire' ? aux * (1 - t * 0.7) : this.kind === 'smoke' ? aux * Math.max(0, 1 - t * 4) : aux * (1 - t) * (1 - t);
     }
     for (const a of [this.pos, this.params, this.tint]) {
       a.clearUpdateRanges();

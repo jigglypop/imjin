@@ -425,9 +425,9 @@ export class ShipViews {
     return out.set(x, y, z).applyMatrix4(v.matrix);
   }
 
-  flash(id: number) {
+  flash(id: number, amount: number) {
     const v = this.states.get(id);
-    if (v) v.flash = 0.6;
+    if (v) v.flash = Math.max(v.flash, amount);
   }
 
   worldOf(id: number) {

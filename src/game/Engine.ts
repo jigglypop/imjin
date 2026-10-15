@@ -1871,7 +1871,7 @@ export class Engine {
     this.wake.dispose();
     this.views?.renderer.dispose();
     if (this.views) disposeTree(this.views.group);
-    if (this.fx) disposeTree(this.fx.group);
+    this.fx?.dispose();
     if (this.lanterns) disposeTree(this.lanterns.group);
     this.pipeline?.dispose();
     this.sky?.view.dispose();
