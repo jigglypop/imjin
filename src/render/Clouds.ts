@@ -1,9 +1,10 @@
 import {
-  AddEquation,
   BackSide,
   CustomBlending,
+  AddEquation,
   HalfFloatType,
   LinearFilter,
+  Matrix4,
   Mesh,
   MeshBasicNodeMaterial,
   NoBlending,
@@ -16,7 +17,7 @@ import {
   Vector2,
   type Camera,
   type Data3DTexture,
-  type Texture,
+  type DataTexture,
   type WebGPURenderer,
 } from 'three/webgpu';
 import {
@@ -28,65 +29,88 @@ import {
   dot,
   exp,
   float,
-  hash,
+  fract,
+  interleavedGradientNoise,
   max,
   min,
   mix,
   normalize,
-  pmremTexture,
   positionWorld,
   pow,
   screenCoordinate,
+  screenUV,
+  select,
   smoothstep,
   texture,
   texture3D,
-  screenUV,
-  vec2,
   uniform,
+  vec2,
   vec3,
   vec4,
 } from 'three/tsl';
-import { uv as uv0 } from 'three/tsl';
 import { atmosphere } from './atmosphere';
-import { createCloudNoise } from './cloudNoise';
+import { cloudNoise, weatherMap, WEATHER_SPAN } from './cloudNoise';
+import type { CloudSpec } from './sky';
+import type { SkyView } from './skyDome';
 
-const BOTTOM = 1500;
-const TOP = 3900;
-/** Total distance the light march covers, split across its steps. */
-const LIGHT_SPAN = 760;
+/** Farthest a ray looks for cloud, and most of the layer one ray crosses, in metres. Beyond, the haze has the sky. */
+const MAX_DISTANCE = 60000;
+const MAX_SPAN = 16000;
 /** Loop bounds are fixed when the shader compiles. Steps below the run-time count are used, the rest are skipped. */
 const MAX_STEPS = 64;
 const MAX_LIGHT_STEPS = 4;
+/** Distance the light march covers toward the sun. */
+const LIGHT_SPAN = 900;
+/** Share of each new frame in the accumulated clouds: the rest is the reprojected history, so jittered steps average out. */
+const BLEND = 0.18;
+
+// Typed loosely: the TSL node types do not accept uniform nodes as operands of float arithmetic.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Node = any;
+
 /** What the shader is built for when the levels that can run never need the most: a smaller program for the driver to build. */
 export type CloudLimits = { steps: number; lightSteps: number };
 
 export type CloudQuality = { steps: number; lightSteps: number; divisor: number; every: number };
 
+const rotation = new Matrix4();
+
+/** A rotation-only view-projection: clouds are far enough that only the camera's turning moves them on screen. */
+function rotationProjection(camera: Camera, out: Matrix4) {
+  rotation.copy(camera.matrixWorldInverse).setPosition(0, 0, 0);
+  return out.multiplyMatrices(camera.projectionMatrix, rotation);
+}
+
 export class Clouds {
   readonly mesh: Mesh;
   private readonly marcher: Mesh;
   private readonly marchScene = new Scene();
-  private readonly rtA = new RenderTarget(1, 1, { type: HalfFloatType, depthBuffer: false });
-  private readonly rtB = new RenderTarget(1, 1, { type: HalfFloatType, depthBuffer: false });
-  private readonly texel = uniform(new Vector2(1, 1));
-  private readonly blurH: QuadMesh;
-  private readonly blurV: QuadMesh;
+  /** The newest accumulated clouds, and the copy of it the next frame reads as history. */
+  private readonly current = new RenderTarget(1, 1, { type: HalfFloatType, depthBuffer: false });
+  private readonly history = new RenderTarget(1, 1, { type: HalfFloatType, depthBuffer: false });
+  private readonly copy: QuadMesh;
   private readonly size = new Vector2();
-  // Typed loosely: the TSL node types do not accept uniform nodes as operands of float arithmetic.
-  private readonly stepsU: any;
-  private readonly lightStepsU: any;
+  private readonly stepsU: Node;
+  private readonly lightStepsU: Node;
+  /** Projection of the frame the history was made in, and of the last march, which the composite reprojects with. */
+  private readonly previousVP = uniform(new Matrix4());
+  private readonly marchedVP = uniform(new Matrix4());
+  private readonly blend = uniform(1);
+  private readonly frameU = uniform(0);
   private quality: CloudQuality;
+  private frames = 0;
+  private historyValid = false;
   readonly time = uniform(0);
   readonly coverage = uniform(0.5);
-  readonly density = uniform(0.032);
-  readonly decloud = uniform(0.72);
+  readonly base = uniform(1300);
+  readonly top = uniform(3500);
+  readonly density = uniform(0.03);
   private readonly noise: Data3DTexture;
-  private readonly envNode: ReturnType<typeof pmremTexture>;
-
+  private readonly weather: DataTexture;
   private readonly maxSteps: number;
   private readonly maxLightSteps: number;
 
-  constructor(env: Texture, quality: CloudQuality, limits: CloudLimits = { steps: MAX_STEPS, lightSteps: MAX_LIGHT_STEPS }) {
+  constructor(sky: SkyView, quality: CloudQuality, limits: CloudLimits = { steps: MAX_STEPS, lightSteps: MAX_LIGHT_STEPS }) {
     this.quality = quality;
     this.maxSteps = Math.min(MAX_STEPS, limits.steps);
     this.maxLightSteps = Math.min(MAX_LIGHT_STEPS, limits.lightSteps);
@@ -96,9 +120,41 @@ export class Clouds {
     this.lightStepsU = uniform(Math.min(maxLightSteps, quality.lightSteps));
     const stepsU = this.stepsU;
     const lightStepsU = this.lightStepsU;
-    const lightStep = float(LIGHT_SPAN).div(lightStepsU);
-    this.noise = createCloudNoise(64);
+    this.noise = cloudNoise();
+    this.weather = weatherMap();
     const noise = this.noise;
+    const weather = this.weather;
+    for (const rt of [this.current, this.history]) {
+      rt.texture.minFilter = LinearFilter;
+      rt.texture.magFilter = LinearFilter;
+      rt.texture.generateMipmaps = false;
+    }
+
+    const base = this.base;
+    const top = this.top;
+    const thick = top.sub(base);
+    const t = this.time;
+    const drift = vec3(atmosphere.cloudDrift.x, 0, atmosphere.cloudDrift.y);
+    // Decks (high cover) keep their tops level; scattered clouds pile up into rounded heads over flat bases.
+    const deck = smoothstep(0.6, 0.9, this.coverage);
+    // As coverAt in cloudNoise.ts: scattered clouds swing between gaps and masses, a deck only thins.
+    const spread = float(1.1).sub(deck.mul(0.6));
+    const shape = (p: Node, detail: boolean, far: Node) => {
+      const h = p.y.sub(base).div(thick);
+      const w = texture(weather, p.xz.sub(drift.xz).div(WEATHER_SPAN)).level(float(0));
+      const cover = clamp(this.coverage.add(w.r.sub(0.5).mul(spread)), 0, 1);
+      const crown = mix(mix(0.5, 1, w.g), float(0.95), deck);
+      const profile = smoothstep(0, 0.07, h).mul(smoothstep(crown, crown.mul(mix(0.35, 0.75, deck)), h));
+      const q = p.sub(drift);
+      const lump = texture3D(noise, q.div(8500)).r;
+      const body = clamp(lump.mul(profile).sub(float(1).sub(cover)).div(max(cover, 0.08)), 0, 1);
+      if (!detail) return body;
+      const fine = texture3D(noise, q.mul(1 / 1100).add(vec3(0, t.mul(0.004), 0)));
+      const erosion = fine.g.mul(0.625).add(fine.b.mul(0.375)).mul(mix(float(0.45), float(0.15), far));
+      // The edges fray into the cauliflower of a cumulus; deep inside the body the detail barely matters.
+      return clamp(body.sub(erosion).div(float(1).sub(erosion)), 0, 1);
+    };
+
     const m = new MeshBasicNodeMaterial();
     m.side = BackSide;
     m.transparent = false;
@@ -107,103 +163,98 @@ export class Clouds {
     m.depthTest = false;
     m.fog = false;
     const dir = normalize(positionWorld.sub(cameraPosition));
-    this.envNode = pmremTexture(env, dir, float(0.42));
-    const haze = vec3(this.envNode).mul(atmosphere.envIntensity);
-    const t = this.time;
-    const wind = vec3(t.mul(9), 0, t.mul(4));
     const sun = atmosphere.sunDir;
-    const sample = (p: any, far: any = float(0)) => {
-      const h = p.y.sub(BOTTOM).div(TOP - BOTTOM);
-      const shape = smoothstep(0, 0.1, h).mul(smoothstep(1, 0.45, h));
-      const q = p.add(wind);
-      const weather = texture3D(noise, vec3(q.x.div(46000), 0.37, q.z.div(46000))).r;
-      const base = texture3D(noise, vec3(q.x.div(10500), p.y.div(7000), q.z.div(10500))).r;
-      const cover = clamp(this.coverage.add(weather.sub(0.45).mul(0.9)), 0.05, 0.95);
-      const d0 = base.mul(shape).sub(float(1).sub(cover)).div(cover).max(0);
-      const detail = texture3D(noise, q.div(1900).add(vec3(0, t.mul(0.004), 0))).g;
-      return d0.sub(detail.mul(mix(float(0.32), float(0.08), far)).mul(float(1).sub(d0))).max(0);
-    };
     m.colorNode = Fn(() => {
       const up = dir.y;
-      const out = vec4(0, 0, 0, 0).toVar();
-      If(up.greaterThan(0.004), () => {
+      const marched = vec4(0, 0, 0, 0).toVar();
+      If(up.greaterThan(0.003), () => {
         const camY = cameraPosition.y;
-        const t0 = max(float(BOTTOM).sub(camY).div(up), 0);
-        const t1 = min(min(float(TOP).sub(camY).div(up), 52000), t0.add(9000));
+        // A camera inside the layer starts a kilometre out, and one above it sees none: the battle below stays clear.
+        const t0 = max(base.sub(camY).div(up), 1000);
+        const t1 = min(min(top.sub(camY).div(up), MAX_DISTANCE), t0.add(MAX_SPAN));
         const span = max(t1.sub(t0), 0);
         const stepLen = span.div(stepsU);
-        const jitter = hash(screenCoordinate.x.add(screenCoordinate.y.mul(4096)).toUint());
+        // A different step offset every frame (golden-ratio sequence over interleaved gradient noise): the history
+        // blend turns the banding of a few dozen steps into a smooth integral.
+        const jitter = fract(interleavedGradientNoise(screenCoordinate).add(this.frameU.mul(0.618034)));
         const trans = float(1).toVar();
         const light = vec3(0).toVar();
+        const depth = float(0).toVar();
         const cosA = dot(dir, sun);
-        const g1 = 0.6;
-        const g2 = -0.25;
-        const hg1 = float(1 - g1 * g1).div(pow(float(1 + g1 * g1).sub(cosA.mul(2 * g1)), 1.5));
-        const hg2 = float(1 - g2 * g2).div(pow(float(1 + g2 * g2).sub(cosA.mul(2 * g2)), 1.5));
-        const phase = mix(hg2, hg1, 0.7).mul(1 / (4 * Math.PI));
+        const hg = (g: number) => float(1 - g * g).div(pow(float(1 + g * g).sub(cosA.mul(2 * g)), 1.5)).mul(1 / (4 * Math.PI));
+        // Forward glow of the silver lining with some light thrown back toward the sun.
+        const phase = mix(hg(-0.2), hg(0.72), 0.72);
+        const soft = mix(float(1 / (4 * Math.PI)), hg(0.45), 0.6);
+        const sunLight = atmosphere.sunIrradiance;
+        const zenith = vec3(sky.at(vec3(0, 1, 0))).mul(atmosphere.envIntensity);
+        const ambientTop = max(zenith.mul(2.2), atmosphere.skyAmbient.mul(1.1));
+        // Under a deck the underside is what the sky's average is made of; a lone cloud's base sees the darker sea.
+        const ambientBase = atmosphere.skyAmbient.mul(mix(float(0.55), float(1), deck));
+        const lightStep = float(LIGHT_SPAN).div(lightStepsU.mul(lightStepsU));
         Loop(maxSteps, ({ i }) => {
-          If(trans.greaterThan(0.02).and(float(i).lessThan(stepsU)), () => {
+          If(trans.greaterThan(0.01).and(float(i).lessThan(stepsU)), () => {
             const tt = t0.add(float(i).add(jitter).mul(stepLen));
             const p = cameraPosition.add(dir.mul(tt));
-            const far = smoothstep(9000, 30000, tt);
-            const d = sample(p, far);
-            If(d.greaterThan(0.001), () => {
+            const far = smoothstep(8000, 30000, tt);
+            const d = shape(p, true, far);
+            If(d.greaterThan(0.002), () => {
+              // Optical depth toward the sun over steps that lengthen with distance.
               const od = float(0).toVar();
               Loop(maxLightSteps, ({ i: k }) => {
                 If(float(k).lessThan(lightStepsU), () => {
-                  const lp = p.add(sun.mul(float(k).add(0.5).mul(lightStep)));
-                  od.addAssign(sample(lp, far));
+                  const a = float(k).add(0.5);
+                  const lp = p.add(sun.mul(a.mul(a).mul(lightStep)));
+                  od.addAssign(shape(lp, false, far).mul(a.mul(2).mul(lightStep)));
                 });
               });
+              const tau = od.mul(this.density);
+              // Beer's law plus two weaker, wider octaves for the light scattered many times inside the cloud.
+              const once = exp(tau.negate()).mul(phase);
+              const many = exp(tau.mul(-0.25)).mul(0.55).add(exp(tau.mul(-0.07)).mul(0.3)).mul(soft);
+              const powder = float(1).sub(exp(d.mul(this.density).mul(-260)));
+              const h = clamp(p.y.sub(base).div(thick), 0, 1);
+              const direct = sunLight.mul(once.add(many.mul(powder.mul(0.6).add(0.4)))).mul(3.2);
+              const ambient = mix(ambientBase, ambientTop, h);
               const sigma = d.mul(this.density);
-              const lightT = exp(od.mul(this.density).mul(lightStep).negate());
-              const powder = float(1).sub(exp(d.mul(-2.4)));
-              const hfrac = p.y.sub(BOTTOM).div(TOP - BOTTOM);
-              const ambient = atmosphere.skyAmbient.mul(float(0.55).add(hfrac.mul(0.6))).mul(1.6);
-              const direct = atmosphere.sunIrradiance.mul(lightT).mul(phase.mul(14).add(0.25)).mul(powder.mul(0.75).add(0.25));
-              const fogK = exp(tt.mul(-0.000026));
-              const scattered = mix(haze, direct.add(ambient), fogK);
               const stepT = exp(sigma.mul(stepLen).negate());
-              light.addAssign(trans.mul(float(1).sub(stepT)).mul(scattered));
+              const weight = trans.mul(float(1).sub(stepT));
+              light.addAssign(weight.mul(direct.add(ambient)));
+              depth.addAssign(weight.mul(tt));
               trans.mulAssign(stepT);
             });
           });
         });
-        const cloudA = float(1).sub(trans);
-        const horizon = smoothstep(0.004, 0.09, up);
-        const k = this.decloud.mul(mix(float(0.4), float(1), horizon));
-        const alpha = max(cloudA.mul(horizon), k);
-        const color = mix(haze, light.div(max(cloudA, 0.0001)), cloudA.mul(horizon).div(max(alpha, 0.0001)));
-        out.assign(vec4(color.mul(alpha), alpha));
+        const alpha = float(1).sub(trans);
+        const distance = depth.div(max(alpha, 0.0001));
+        // The air between the eye and the cloud: far clouds sink into the haze of the sky behind them.
+        const air = exp(distance.mul(atmosphere.fogDensity).mul(-0.42));
+        const behind = vec3(sky.at(dir)).mul(atmosphere.envIntensity);
+        const seen = mix(behind.mul(alpha), light, air);
+        // Fading in from the horizon hides the layer's flat edge, and from below its base when the camera climbs into it.
+        const fade = smoothstep(0.003, 0.03, up).mul(float(1).sub(smoothstep(base.sub(200), top, camY)));
+        marched.assign(vec4(seen.mul(fade), alpha.mul(fade)));
       });
-      return out;
+      // Blend with the history where this direction was on screen last frame.
+      const clip = this.previousVP.mul(vec4(dir, 0));
+      const ndc = clip.xy.div(max(clip.w, 1e-5));
+      const uv = vec2(ndc.x.mul(0.5).add(0.5), ndc.y.mul(-0.5).add(0.5));
+      const inside = clip.w.greaterThan(0).and(uv.x.greaterThan(0)).and(uv.x.lessThan(1)).and(uv.y.greaterThan(0)).and(uv.y.lessThan(1));
+      const past = texture(this.history.texture, uv);
+      return mix(past, marched, select(inside, this.blend, float(1)));
     })();
     m.opacityNode = null;
     const marcher = new Mesh(new SphereGeometry(40000, 48, 24), m);
     marcher.frustumCulled = false;
     this.marcher = marcher;
     this.marchScene.add(marcher);
-    for (const rt of [this.rtA, this.rtB]) {
-      rt.texture.minFilter = LinearFilter;
-      rt.texture.magFilter = LinearFilter;
-      rt.texture.generateMipmaps = false;
-    }
-    const blur = (src: Texture, dir: Vector2) => {
-      const bm = new MeshBasicNodeMaterial();
-      bm.blending = NoBlending;
-      bm.depthTest = false;
-      bm.depthWrite = false;
-      const w = [0.2270270270, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162];
-      const step = this.texel.mul(vec2(dir.x, dir.y)).mul(1.0);
-      let acc: any = texture(src, uv0()).mul(w[0]!);
-      for (let k = 1; k < 5; k += 1) {
-        acc = acc.add(texture(src, uv0().add(step.mul(k))).mul(w[k]!)).add(texture(src, uv0().sub(step.mul(k))).mul(w[k]!));
-      }
-      bm.colorNode = acc;
-      return new QuadMesh(bm);
-    };
-    this.blurH = blur(this.rtA.texture, new Vector2(1, 0));
-    this.blurV = blur(this.rtB.texture, new Vector2(0, 1));
+
+    const cm = new MeshBasicNodeMaterial();
+    cm.blending = NoBlending;
+    cm.depthTest = false;
+    cm.depthWrite = false;
+    cm.colorNode = texture(this.current.texture, screenUV);
+    this.copy = new QuadMesh(cm);
+
     const dm = new MeshBasicNodeMaterial();
     dm.side = BackSide;
     dm.transparent = true;
@@ -215,7 +266,11 @@ export class Clouds {
     dm.blendDst = OneMinusSrcAlphaFactor;
     dm.blendSrcAlpha = OneFactor;
     dm.blendDstAlpha = OneMinusSrcAlphaFactor;
-    const shown: any = texture(this.rtA.texture, screenUV);
+    // Read where the direction was on screen at the last march: between marches the clouds stay on the sky, not on the glass.
+    const view = normalize(positionWorld.sub(cameraPosition));
+    const clip = this.marchedVP.mul(vec4(view, 0));
+    const ndc = clip.xy.div(max(clip.w, 1e-5));
+    const shown: Node = texture(this.history.texture, vec2(ndc.x.mul(0.5).add(0.5), ndc.y.mul(-0.5).add(0.5)));
     dm.colorNode = shown.rgb;
     dm.opacityNode = shown.a;
     const mesh = new Mesh(new SphereGeometry(40000, 32, 16), dm);
@@ -231,46 +286,57 @@ export class Clouds {
     this.lightStepsU.value = Math.min(this.maxLightSteps, quality.lightSteps);
   }
 
+  /** The layer of the battle's sky. A new layer starts its accumulation afresh. */
+  setLayer(spec: CloudSpec) {
+    this.coverage.value = spec.coverage;
+    this.base.value = spec.base;
+    this.top.value = spec.top;
+    this.density.value = spec.density;
+    this.historyValid = false;
+  }
+
   render(renderer: WebGPURenderer, camera: Camera) {
     renderer.getDrawingBufferSize(this.size);
     const w = Math.max(1, Math.floor(this.size.x / this.quality.divisor));
     const h = Math.max(1, Math.floor(this.size.y / this.quality.divisor));
-    if (this.rtA.width !== w || this.rtA.height !== h) {
-      this.rtA.setSize(w, h);
-      this.rtB.setSize(w, h);
-      (this.texel.value as Vector2).set(1 / w, 1 / h);
+    if (this.current.width !== w || this.current.height !== h) {
+      this.current.setSize(w, h);
+      this.history.setSize(w, h);
+      this.historyValid = false;
     }
     this.marcher.position.copy(camera.position);
+    this.marcher.updateMatrixWorld();
+    this.blend.value = this.historyValid ? BLEND : 1;
+    this.frameU.value = this.frames % 64;
+    this.frames += 1;
     const prev = renderer.getRenderTarget();
-    renderer.setRenderTarget(this.rtA);
+    renderer.setRenderTarget(this.current);
     renderer.render(this.marchScene, camera);
-    renderer.setRenderTarget(this.rtB);
-    this.blurH.render(renderer);
-    renderer.setRenderTarget(this.rtA);
-    this.blurV.render(renderer);
+    renderer.setRenderTarget(this.history);
+    this.copy.render(renderer);
     renderer.setRenderTarget(prev);
+    rotationProjection(camera, this.marchedVP.value as Matrix4);
+    (this.previousVP.value as Matrix4).copy(this.marchedVP.value as Matrix4);
+    this.historyValid = true;
   }
 
-  setEnvironment(env: Texture) {
-    this.envNode.value = env;
-  }
-
-  /** Runs the march and both blur passes once, so their programs are built while the battle is still loading. */
+  /** Runs the march and the copy once, so their programs are built while the battle is still loading. */
   prewarm(renderer: WebGPURenderer, camera: Camera) {
     this.render(renderer, camera);
+    this.historyValid = false;
   }
 
   dispose() {
-    for (const rt of [this.rtA, this.rtB]) rt.dispose();
-    this.noise.dispose();
+    for (const rt of [this.current, this.history]) rt.dispose();
     this.marcher.geometry.dispose();
     (this.marcher.material as MeshBasicNodeMaterial).dispose();
+    (this.copy.material as MeshBasicNodeMaterial).dispose();
     this.mesh.geometry.dispose();
     (this.mesh.material as MeshBasicNodeMaterial).dispose();
-    for (const quad of [this.blurH, this.blurV]) (quad.material as MeshBasicNodeMaterial).dispose();
     this.mesh.removeFromParent();
   }
 
+  /** `time` is battle time: the wind carries the layer (atmosphere.cloudDrift, set by the engine) and the wisps evolve with it. */
   update(camera: { x: number; y: number; z: number }, time: number) {
     this.mesh.position.set(camera.x, camera.y, camera.z);
     this.time.value = time;

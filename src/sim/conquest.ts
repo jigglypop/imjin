@@ -1,6 +1,7 @@
 import type { Battle, BattleRules } from './battle';
 import { GUN_SPECS } from './catalog';
 import { COMPETITIVE_PROFILE, shipSpec, type BalanceProfile } from './competitive';
+import type { DepthVersion } from './depth';
 import { Strategist } from './strategy';
 import { cardOf, variantFor } from '../ships/anchors';
 import { fleetNo, numbered } from '../i18n/names';
@@ -147,6 +148,8 @@ export type ConquestOptions = {
   musterBudget?: number;
   /** A campaign port holds for its defender on a tie. Ordinary skirmishes end in a draw. */
   tieWinner?: Team;
+  /** The battle depth rules (depth.ts). Ranked and online rooms leave them out until a season adopts a version. */
+  depth?: DepthVersion;
 };
 /** Ordinary conquest and campaign fleets are uncapped, like the written historical battles. */
 export const DEFAULT_OPTIONS: ConquestOptions = { profile: COMPETITIVE_PROFILE, tickets: 3000, timeLimit: 30 * 60, startFunds: 3600, cap: Infinity, maxShips: Infinity, expanded: true, incomeScale: 3, musterBudget: 15600 };
@@ -159,6 +162,22 @@ const CAPTURE_RATE = 0.025;
 const QUEUE_MAX = 5;
 /** Casual logistics uses faster work orders (0.36 of the catalog time, was 0.6); ranked retains the catalog's original timings. */
 const CASUAL_WORK_TIME = 0.36;
+/**
+ * Under the depth rules a fleet that has broken loses this share of the starting tickets each second, once the opening
+ * has passed: a rout at sea ends the battle within a minute or two unless the fleet rallies at its ports.
+ */
+const COLLAPSE_RATE = 0.01;
+const COLLAPSE_AFTER = 120;
+/**
+ * Under the depth rules a side whose fleet still fighting (running crews hardly counting) is under SWEPT_SHARE of the
+ * other's, and has lost at least SWEPT_LOSS of the most it had, for SWEPT_TIME seconds has been swept from the sea and
+ * loses, once the opening SWEPT_AFTER has passed. A port that was only ever held by a few ships and its works is not
+ * swept: it has lost nothing.
+ */
+const SWEPT_SHARE = 0.35;
+const SWEPT_LOSS = 0.5;
+const SWEPT_TIME = 45;
+const SWEPT_AFTER = 300;
 
 const dist2 = (ax: number, az: number, bx: number, bz: number) => (ax - bx) ** 2 + (az - bz) ** 2;
 
@@ -237,6 +256,11 @@ export class Conquest implements BattleRules {
   private readonly brains = new Map<number, Strategist>();
   private incomeTimer = 0;
   private ticketTimer = 0;
+  /** Since when each side has been swept from the sea (the depth rules). */
+  private sweptSince: Record<Team, number | null> = { joseon: null, japan: null };
+  /** The side swept from the sea, as of the last look, once a second. */
+  private sweptTeam: Team | null = null;
+  private peak: Record<Team, number> = { joseon: 0, japan: 0 };
   private recruitSeq = new Map<string, number>();
   private readonly land: LandSampler;
   /** Balance runs let the computer play the human seats too. */
@@ -515,6 +539,8 @@ export class Conquest implements BattleRules {
     if (this.ticketTimer >= 1) {
       this.ticketTimer -= 1;
       this.drain();
+      this.collapse(b);
+      this.sweptTeam = this.swept(b);
     }
     for (const [slot, brain] of this.brains) brain.step(b, this, dt, slot);
     if (this.autopilot) {
@@ -530,7 +556,8 @@ export class Conquest implements BattleRules {
       const counts: Record<Team, number> = { joseon: 0, japan: 0 };
       const bySlot = new Map<number, number>();
       b.near(p.x, p.z, p.r, (s) => {
-        if (!b.isActive(s)) return;
+        // A crew running for safety holds no water.
+        if (!b.isActive(s) || s.moraleState === 'routing') return;
         const w = captureWeight(s.spec);
         counts[s.team] += w;
         bySlot.set(s.owner, (bySlot.get(s.owner) ?? 0) + w);
@@ -745,7 +772,7 @@ export class Conquest implements BattleRules {
         kit.gun,
         pl.team,
         0,
-        { damage: gun.damage * (1 + (bd.level - 1) * 0.15), crewDamage: gun.crewDamage * (1 + (bd.level - 1) * 0.15), ammo: gun.ammo, spreadMul: 0.9, morale: 1, fireChance: 0.1 },
+        { damage: gun.damage * (1 + (bd.level - 1) * 0.15), crewDamage: gun.crewDamage * (1 + (bd.level - 1) * 0.15), ammo: gun.ammo, spreadMul: 0.9, skill: 1, fireChance: 0.1 },
       );
       b.events.push({ type: 'battery', point: p.id, x: ox, y: oy, z: oz, dx: dx / d, dy: 0.05, dz: dz / d });
       bd.reload[g] = kit.reload * (0.85 + b.random() * 0.3);
@@ -779,6 +806,45 @@ export class Conquest implements BattleRules {
     const c = this.held('japan');
     if (a > c) this.tickets.japan -= (a - c) * 0.35;
     else if (c > a) this.tickets.joseon -= (c - a) * 0.35;
+  }
+
+  /** The side swept from the sea for SWEPT_TIME seconds, if one has been (the depth rules). */
+  private swept(b: Battle): Team | null {
+    if (!b.morale) return null;
+    const value = { joseon: b.strength('joseon'), japan: b.strength('japan') };
+    for (const t of TEAMS) this.peak[t] = Math.max(this.peak[t], value[t]);
+    if (b.time < SWEPT_AFTER) return null;
+    for (const t of TEAMS) {
+      if (value[t] >= value[otherTeam(t)] * SWEPT_SHARE || value[t] > this.peak[t] * (1 - SWEPT_LOSS)) {
+        this.sweptSince[t] = null;
+        continue;
+      }
+      this.sweptSince[t] ??= b.time;
+      if (b.time - this.sweptSince[t]! >= SWEPT_TIME) return t;
+    }
+    return null;
+  }
+
+  /** A broken fleet bleeds its tickets (the depth rules). */
+  private collapse(b: Battle) {
+    const morale = b.morale;
+    if (!morale || b.time < COLLAPSE_AFTER) return;
+    for (const t of TEAMS) if (morale.broken(t)) this.tickets[t] -= this.options.tickets * COLLAPSE_RATE;
+  }
+
+  /** A routing ship runs for the nearest port its side holds, a dock first, where it can rally and mend. */
+  refuge(_b: Battle, s: Ship) {
+    let best: CapturePoint | null = null;
+    let bestD = Infinity;
+    for (const p of this.points) {
+      if (this.teamOfPoint(p) !== s.team) continue;
+      const d = dist2(p.x, p.z, s.x, s.z) * (this.levels(p, 'dock') ? 0.5 : 1);
+      if (d < bestD) {
+        bestD = d;
+        best = p;
+      }
+    }
+    return best ? { x: best.x, z: best.z } : null;
   }
 
   lost(b: Battle, s: Ship) {
@@ -839,6 +905,8 @@ export class Conquest implements BattleRules {
     }
     if (defeated.length === 2) return tie();
     if (defeated.length === 1) return otherTeam(defeated[0]!);
+    const swept = this.sweptTeam;
+    if (swept) return otherTeam(swept);
     if (b.time >= this.options.timeLimit) {
       if (this.tickets.joseon === this.tickets.japan) return tie();
       return this.tickets.joseon > this.tickets.japan ? 'joseon' : 'japan';

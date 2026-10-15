@@ -148,10 +148,31 @@ export function panBy(c: CameraState, screen: ScreenFrame, from: { x: number; y:
   return clampState({ ...c, u: c.u + (a.u - b.u), v: c.v + (a.v - b.v) });
 }
 
-/** The camera after zooming by `factor` (above 1 closer): the ground under (sx, sy) stays under it. */
+/** The pitch the map opens with: a high oblique view of the coast. */
+export const OPEN_PITCH = 0.62;
+/** The pitch closest in: low enough that a camp shows its walls and roofs rather than its plan. */
+const CLOSE_PITCH = 0.38;
+/** From this distance out the view keeps the opening's pitch. */
+const OPEN_FROM = 0.45;
+
+/**
+ * The view's pitch by its distance, as a Total War campaign map tilts while it zooms: the opening's high oblique view from
+ * afar, coming down smoothly (by the distance's logarithm) to a low view over a single camp.
+ */
+export function zoomPitch(distance: number) {
+  const t = Math.log(distance / LIMITS.minDistance) / Math.log(OPEN_FROM / LIMITS.minDistance);
+  const s = clamp(t, 0, 1);
+  return CLOSE_PITCH + (OPEN_PITCH - CLOSE_PITCH) * s * s * (3 - 2 * s);
+}
+
+/**
+ * The camera after zooming by `factor` (above 1 closer): the ground under (sx, sy) stays under it, and the view tilts by
+ * as much as zoomPitch changes over the zoom, so a pitch the player set by hand keeps its offset from the curve.
+ */
 export function zoomAt(c: CameraState, screen: ScreenFrame, sx: number, sy: number, factor: number): CameraState {
   const before = unproject(c, screen, sx, sy);
-  const next = clampState({ ...c, distance: c.distance / factor });
+  const distance = clamp(c.distance / factor, LIMITS.minDistance, LIMITS.maxDistance);
+  const next = clampState({ ...c, distance, pitch: c.pitch + zoomPitch(distance) - zoomPitch(c.distance) });
   if (!before) return next;
   const after = unproject(next, screen, sx, sy);
   if (!after) return next;

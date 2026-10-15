@@ -94,7 +94,8 @@ function modsFor(g: Grand, fl: Fleet | undefined, u: ShipUnit): ShipMods {
   // A crew caught on a forced march is tired: slower at the guns and in the boarding.
   const tired = fl?.stance === 'march' ? MARCH.tired : 1;
   // The competitive ship already carries its navy's boarding rules; only experience belongs to this bridge.
-  return { reload: (1 + skill) * tired, accuracy: 1 + skill * 0.8, speed: 1, turn: 1, fire: 1, melee: (1 + skill) * tired, defense: 1 + skill * 0.7 };
+  // A seasoned commander and a crew that has won before hold their nerve longer; a tired one less so.
+  return { reload: (1 + skill) * tired, accuracy: 1 + skill * 0.8, speed: 1, turn: 1, fire: 1, melee: (1 + skill) * tired, defense: 1 + skill * 0.7, morale: (1 + skill) * tired };
 }
 
 function toBridge(g: Grand, fl: Fleet | undefined, u: ShipUnit): Worth {

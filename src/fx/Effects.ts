@@ -219,6 +219,7 @@ export class Effects {
           this.explode(e.ship, battle);
           break;
         case 'ignite':
+          if (e.from) this.embers(e.from, e.ship, battle);
           this.ignite(e.ship, battle);
           break;
         case 'ram':
@@ -575,6 +576,26 @@ export class Effects {
   ram(x: number, z: number, power: number) {
     this.shatter(x, 3, z, this.n(26), 1.2, 8);
     this.splash(x, z, 0.9 + Math.min(1, power * 0.15));
+  }
+
+  /** Fire carried from a burning ship to its neighbour (the battle depth rules): embers arcing across the gap. */
+  private embers(fromId: number, toId: number, battle: Battle) {
+    const from = battle.get(fromId);
+    const to = battle.get(toId);
+    if (!from || !to) return;
+    this.views.localToWorld(fromId, 0, this.deckOf(from) + 2, 0, this.p);
+    const sx = this.p.x;
+    const sy = this.p.y;
+    const sz = this.p.z;
+    this.views.localToWorld(toId, 0, this.deckOf(to), 0, this.p);
+    const boost = this.zoomBoost(sx, sy, sz);
+    const gravity = 6;
+    for (let i = 0; i < this.n(18); i += 1) {
+      const t = rnd(0.9, 1.3);
+      const x = sx + rnd(-2, 2);
+      const z = sz + rnd(-2, 2);
+      this.streaks.emit({ x, y: sy, z, vx: (this.p.x - x) / t + rnd(-1.5, 1.5), vy: (this.p.y - sy) / t + (gravity * t) / 2 + rnd(-1, 1), vz: (this.p.z - z) / t + rnd(-1.5, 1.5), life: t, minLen: 0.2, stretch: 0.04, width: 0.16 * boost, r: 1, g: rnd(0.45, 0.7), b: 0.15, gravity, drag: 0 });
+    }
   }
 
   /** Flames taking hold: a short flare-up over the deck. */

@@ -4,14 +4,6 @@ import { dirname, join } from 'node:path';
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const PUBLIC = join(ROOT, 'public');
 
-const HDRIS = [
-  ['kloofendal_48d_partly_cloudy_puresky', '4k'],
-  ['table_mountain_1_puresky', '4k'],
-  ['kloppenheim_06_puresky', '4k'],
-  ['kloofendal_overcast_puresky', '4k'],
-  ['qwantani_moonrise_puresky', '4k'],
-];
-
 const TEXTURES = [
   ['brown_planks_07', '2k'],
   ['brown_planks_04', '2k'],
@@ -56,14 +48,6 @@ async function files(id) {
   return res.json();
 }
 
-async function fetchHdri(id, res) {
-  const info = await files(id);
-  const url = info.hdri?.[res]?.hdr?.url;
-  if (!url) throw new Error(`no hdr ${res} for ${id}`);
-  const out = join(PUBLIC, 'hdri', `${id}_${res}.hdr`);
-  console.log('hdri', id, await download(url, out));
-}
-
 async function fetchTexture(id, res) {
   const info = await files(id);
   for (const [short, key] of Object.entries(MAPS)) {
@@ -79,5 +63,4 @@ async function fetchTexture(id, res) {
 }
 
 for (const [id, res] of TEXTURES) await fetchTexture(id, res);
-for (const [id, res] of HDRIS) await fetchHdri(id, res);
 console.log('done');

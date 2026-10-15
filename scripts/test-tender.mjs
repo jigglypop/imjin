@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
 let failed = 0;
 function check(name, run) { try { run(); console.log('ok   ' + name); } catch (error) { failed++; console.error('FAIL ' + name + '\n' + error.stack); } }
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
