@@ -1,9 +1,10 @@
 /**
- * Panokseon (板屋船): lofted flat-bottomed hull, two decks (rowers below the main deck), a bulwark of planks with
- * gun ports and painted shield boards, the stern command pavilion (jangdae) with a tiled hip roof, masts with
- * battened sails, banners. Three genuinely different variants share the parts but not the silhouette.
+ * Panokseon (板屋船): lofted flat-bottomed hull, two storeys (the hull proper with the oars under a heavy rail, the
+ * enclosed rowing storey above it standing a hand proud), the fighting deck behind a bulwark of planks with gun ports
+ * and painted shield boards, the raised command pavilion (jangdae) with a tiled hip roof, masts with battened sails,
+ * banners. Three genuinely different variants share the parts but not the silhouette.
  */
-import { anchorsFor, PANOK_PLANS, sideZ, type PanokPlan } from '../anchors';
+import { anchorsFor, PANOK_OAR_DROP, PANOK_PLANS, sideZ, type PanokPlan } from '../anchors';
 import {
   box,
   cylinder,
@@ -33,6 +34,7 @@ import {
   furledSail,
   hatch,
   hangLanterns,
+  hullBand,
   loftHull,
   longPennant,
   mast,
@@ -92,15 +94,19 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
   // --- hull, decks, wales ---
   loftHull(ctx, h, hullPaint, hullPaint, { tint: tintV });
   deckPlane(ctx, h, P('deck_plank'), -L / 2 + 0.35, L / 2 - 0.35, deck, 0.04);
-  if (lod === 0) deckPlane(ctx, h, P('deck_plank', { tint: [0.7, 0.68, 0.64] }), -L / 2 + 3, L / 2 - 3, deck - 1.9, 0.5);
+  if (lod === 0) deckPlane(ctx, h, P('deck_plank', { tint: [0.7, 0.68, 0.64] }), -L / 2 + 3, L / 2 - 3, deck - PANOK_OAR_DROP, 0.5);
   const wales: [number, number, number][] = lod === 0 ? [[0.35, 0.16, 0.34], [1.35, 0.14, 0.26], [deck - 0.06, 0.2, 0.3]] : lod === 1 ? [[deck - 0.06, 0.2, 0.3]] : [];
   for (const [y, t, tall] of wales) sideTimber(ctx, h, y === deck - 0.06 ? stain : timber.tinted(tintV), -L / 2 + 0.6, L / 2 - 0.6, y, t, tall, 0.07);
+  // The rowing storey: darker boards a hand proud of the hull from the storey rail up to the fighting deck. Even the
+  // far level keeps the band, so a fleet seen from afar still reads as two storeys under the wall.
+  hullBand(ctx, h, timber.tinted([0.86, 0.82, 0.78]), -L / 2 + 0.05, L / 2 - 0.05, plan.storey, deck - 0.02, 0.1);
+  if (lod < 2) sideTimber(ctx, h, stain, -L / 2 + 0.1, L / 2 - 0.1, plan.storey, 0.28, 0.32, 0.16);
 
-  // --- oars and their ports ---
+  // --- oars and their ports, under the storey rail ---
   for (const op of anchors.oarPorts) {
     const side = op.side === 0 ? -1 : 1;
     oarPortFrame(ctx, op.pos, side, dark);
-    oar(ctx, op.pos, side, 0.5, P('pine_mast', { tint: [0.9, 0.85, 0.8] }), P('hull_plank'));
+    oar(ctx, op.pos, side, 0.6, P('pine_mast', { tint: [0.9, 0.85, 0.8] }), P('hull_plank'));
   }
 
   // --- bulwark: plank walls with gun ports ---
@@ -162,7 +168,7 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
   if (lod < 2) {
     const xb = L / 2 + 0.03;
     const face = shields[variant === 1 ? 0 : 1]!;
-    b.quadF(face, [[xb, 1.0, -1.7], [xb, 1.0, 1.7], [xb, 3.5, 1.7], [xb, 3.5, -1.7]], [1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    b.quadF(face, [[xb, deck - 3.4, -1.8], [xb, deck - 3.4, 1.8], [xb, deck - 0.4, 1.8], [xb, deck - 0.4, -1.8]], [1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
     box(b, timber.tinted(tintV), [-L / 2 - 0.55, -2.2, -0.2], [-L / 2 - 0.05, 1.3, 0.2], { grain: 1 });
     box(b, timber, [-L / 2 - 0.5, 1.3, -0.14], [-L / 2 - 0.25, deck + 1.0, 0.14], { grain: 1 });
   }
@@ -256,15 +262,20 @@ function pavilion(ctx: Ctx, plan: PanokPlan, variant: number) {
   if (lod < 2) {
     for (const fx of [-0.7, 0, 0.7]) box(b, timber, [x0 + fx * hx - 0.17, floorY - 0.6, -hz - 0.1], [x0 + fx * hx + 0.17, floorY - 0.26, hz + 0.1], { grain: 2 });
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) post(ctx, timber, x0 + sx * hx * 0.82, deck, floorY - 0.26, sz * hz * 0.82, 0.38);
+    // The floor stands a full storey over the deck: tie beams halfway up frame its tall posts into a tower.
+    const tieY = deck + (pv.floorUp - 0.26) * 0.5;
+    for (const sz of [-1, 1]) box(b, timber, [x0 - hx * 0.82, tieY - 0.15, sz * hz * 0.82 - 0.13], [x0 + hx * 0.82, tieY + 0.15, sz * hz * 0.82 + 0.13], { grain: 0 });
+    for (const sx of [-1, 1]) box(b, timber, [x0 + sx * hx * 0.82 - 0.13, tieY - 0.15, -hz * 0.82], [x0 + sx * hx * 0.82 + 0.13, tieY + 0.15, hz * 0.82], { grain: 2 });
     if (lod === 0) {
       for (const sz of [-1, 1]) post(ctx, timber, x0, deck, floorY - 0.26, sz * hz * 0.82, 0.34);
-      // stair on the bow side
-      const steps = 7;
+      // stair on the bow side: steep as a ship's stair, so its foot stays clear of the hatch before the mast
+      const steps = Math.round(pv.floorUp / 0.44);
+      const tread = 0.34;
       for (let k = 0; k < steps; k += 1) {
         const y = floorY - ((k + 1) * pv.floorUp) / steps;
-        box(b, P('deck_plank'), [x0 + hx + k * 0.45, y - 0.06, hz * 0.1], [x0 + hx + (k + 1) * 0.45, y, hz * 0.1 + 1.1], { grain: 2 });
+        box(b, P('deck_plank'), [x0 + hx + k * tread, y - 0.06, hz * 0.1], [x0 + hx + (k + 1) * tread, y, hz * 0.1 + 1.1], { grain: 2 });
       }
-      for (const z of [hz * 0.1 - 0.06, hz * 0.1 + 1.1]) sweep(b, timber, [[x0 + hx, floorY + 0.7, z], [x0 + hx + steps * 0.45, deck + 0.7, z]], rectSection(0.1, 0.1), { caps: true });
+      for (const z of [hz * 0.1 - 0.06, hz * 0.1 + 1.1]) sweep(b, timber, [[x0 + hx, floorY + 0.7, z], [x0 + hx + steps * tread, deck + 0.7, z]], rectSection(0.1, 0.1), { caps: true });
     }
   }
   // railing at the floor edge
@@ -369,7 +380,7 @@ function lookout(ctx: Ctx, plan: PanokPlan, variant: number) {
   const { b, lod, P } = ctx;
   const deck = plan.hull.deck;
   const x0 = plan.hull.length / 2 - 4.2;
-  const fy = deck + 2.3;
+  const fy = deck + plan.parapet + 0.7;
   const timber = P('dark_timber');
   const stain = P('stained_wood');
   const hw = 1.6;

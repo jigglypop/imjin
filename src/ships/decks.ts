@@ -1,5 +1,5 @@
 import type { ShipKind } from '../sim/types';
-import { ATAKE_PLANS, ATAKE_TURRET, HYEOP_PLAN, KOBAYA_PLAN, MING_PLAN, MINGSMALL_PLAN, PANOK_PLANS, SEKI_PLANS, anchorsFor, byModel, modelKind, modelScale, type ModelKind } from './anchors';
+import { ATAKE_PLANS, ATAKE_TURRET, HYEOP_PLAN, KOBAYA_PLAN, MING_PLAN, MINGSMALL_PLAN, PANOK_OAR_DROP, PANOK_PLANS, SEKI_PLANS, anchorsFor, byModel, modelKind, modelScale, type ModelKind } from './anchors';
 import { useProcedural } from './build/mode';
 
 /**
@@ -38,7 +38,7 @@ export type DeckPlan = {
 
 /** Per model; read it for a ship with byModel, as a kind drawn with another's model shares its deck plan. */
 export const DECKS: Record<ModelKind, DeckPlan> = {
-  panokseon: { oarDrop: 1.9, open: true, length: 0.66, beam: 0.72, command: { x: -0.12, up: 3.2 }, figures: { oar: 24, gun: 14, shot: 12, melee: 8 }, oars: 8 },
+  panokseon: { oarDrop: PANOK_OAR_DROP, open: true, length: 0.66, beam: 0.72, command: { x: -0.18, up: 4 }, figures: { oar: 24, gun: 14, shot: 12, melee: 8 }, oars: 8 },
   geobukseon: { oarDrop: 2.5, open: false, length: 0.62, beam: 0.62, command: null, figures: { oar: 20, gun: 12, shot: 2, melee: 4 }, oars: 8 },
   hyeopseon: { oarDrop: 0, open: true, length: 0.6, beam: 0.5, command: null, figures: { oar: 8, gun: 2, shot: 2, melee: 1 }, oars: 4 },
   atakebune: { oarDrop: 2.2, open: true, length: 0.6, beam: 0.68, command: { x: -0.05, up: 4 }, figures: { oar: 26, gun: 4, shot: 16, melee: 12 }, oars: 13 },
