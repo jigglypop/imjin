@@ -24,7 +24,7 @@ try {
 
   check('a Joseon camp grows from a stockade to a walled base and keeps what it had', () => {
     assert.deepEqual(settlementPieces(0), []);
-    assert.deepEqual([...kinds(1)].sort(), ['choga', 'giwa', 'jo_banner', 'jo_gate', 'palisade']);
+    assert.deepEqual([...kinds(1)].sort(), ['choga', 'giwa', 'jo_banner', 'jo_gate', 'jo_standard', 'palisade']);
     assert.ok(kinds(2).has('jo_tower') && kinds(2).has('pier') && kinds(2).has('palisade') && !kinds(2).has('stone'));
     for (const k of ['stone', 'fortgate', 'hall', 'magazine', 'pier']) assert.ok(kinds(3).has(k), k);
     assert.ok(!kinds(3).has('palisade') && !kinds(3).has('jo_gate'));
@@ -119,6 +119,20 @@ try {
       assert.ok(!coastSea(s.u + x * R, s.v + z * R * MAP_ASPECT), `${s.id}: a lane runs over the water at ${x.toFixed(2)},${z.toFixed(2)}`);
     }
     assert.deepEqual(layoutSettlements(coastal, coastSea), places, 'the same ports lay out the same way');
+  });
+  check("whoever holds a port flies its standard in its camp and at its town's harbour end, on land, all flying one way", () => {
+    const STANDARDS = { joseon: 'jo_standard', japan: 'wa_standard', ming: 'mg_standard' };
+    const places = layoutSettlements(coastal, coastSea);
+    for (const s of places.filter((p) => p.kind !== 'beacon')) {
+      const flags = s.pieces.filter((p) => Object.values(STANDARDS).includes(p.kind));
+      assert.deepEqual(flags.map((p) => p.kind), [STANDARDS[s.owner]], `${s.id} flies its owner's standard`);
+      assert.equal(flags[0].rot, 0, `${s.id}: the wind blows one way`);
+      assert.ok(onLand(s, flags[0]), `${s.id}: the standard stands on land`);
+    }
+    // The coast lies south of the ports: a town's harbour end is its south side.
+    for (const town of places.filter((s) => s.kind === 'town')) assert.ok(town.pieces.find((p) => p.kind.endsWith('_standard')).z > 0, `${town.id} flies it on its harbour side`);
+    const neutral = layoutSettlements([region('n', 127.7, 34.72, { owner: null, buildings: [] })], coastSea);
+    assert.ok(neutral.every((s) => s.pieces.every((p) => !p.kind.endsWith('_standard'))), 'a port nobody holds flies none');
   });
   check("a place keeps the trees off its buildings and fields, and a larger place keeps them farther off", () => {
     for (const s of layoutSettlements(coastal, coastSea)) {
@@ -248,7 +262,7 @@ try {
     }
   });
   check('Japanese camps grow from a curtain camp to a castle with a three-tier keep', () => {
-    assert.deepEqual([...names('japan', 1)].sort(), ['wa_banner', 'wa_fence', 'wa_tent']);
+    assert.deepEqual([...names('japan', 1)].sort(), ['wa_banner', 'wa_fence', 'wa_standard', 'wa_tent']);
     for (const k of ['wa_tower', 'wa_hall', 'pier']) assert.ok(names('japan', 2).has(k) && !names('japan', 1).has(k), k);
     for (const k of ['wa_wall', 'wa_gate', 'wa_keep3']) assert.ok(names('japan', 3).has(k), k);
     assert.ok(!names('japan', 3).has('wa_fence'));
@@ -257,7 +271,7 @@ try {
     assert.ok(settlementPieces(3, 'japan').filter((p) => p.kind === 'wa_wall').every((p) => Math.hypot(p.x - gate.x, p.z - gate.z) > 0.25), 'no wall in the gateway');
   });
   check('Ming camps grow from a stockade to a walled yard with bastions', () => {
-    assert.deepEqual([...names('ming', 1)].sort(), ['mg_flag', 'mg_palisade', 'mg_tent', 'mg_watch']);
+    assert.deepEqual([...names('ming', 1)].sort(), ['mg_flag', 'mg_palisade', 'mg_standard', 'mg_tent', 'mg_watch']);
     for (const k of ['mg_brick', 'mg_gate', 'mg_barracks', 'pier']) assert.ok(names('ming', 2).has(k), k);
     assert.ok(!names('ming', 2).has('mg_palisade') && !names('ming', 2).has('mg_corner'));
     for (const k of ['mg_corner', 'mg_hall']) assert.ok(names('ming', 3).has(k), k);

@@ -1,6 +1,7 @@
 import { LinearMipmapLinearFilter, MeshBasicNodeMaterial, NoColorSpace, SRGBColorSpace, TextureLoader, type Texture } from 'three/webgpu';
-import { attribute, cameraWorldMatrix, dFdx, dFdy, float, fract, mix, mx_noise_float, normalMap, positionWorld, texture, transformDirection, uv, varying, vec2, vec3 } from 'three/tsl';
+import { attribute, cameraWorldMatrix, dFdx, dFdy, float, fract, mix, mx_noise_float, normalMap, positionWorld, step, texture, transformDirection, uv, varying, vec2, vec3 } from 'three/tsl';
 import { TINT_RANGE } from '../../ships/build/pack';
+import { SURF } from '../../ships/build/surf';
 import { BUILDING_ATLAS, buildingAtlasFiles } from './buildingAtlas';
 import { SKY_LIGHT, SUN_DIRECTION, SUN_LIGHT } from './groundPalette';
 import type { FactionId } from './types';
@@ -21,6 +22,8 @@ const FILL_DIRECTION = (() => {
   const d = [-0.45, 0.3, 0.84], l = Math.hypot(d[0]!, d[1]!, d[2]!);
   return d.map((c) => c / l) as [number, number, number];
 })();
+/** How much of the sun a banner's cloth lets through to its shaded side. */
+const BANNER_THROUGH = 0.8;
 
 /**
  * A navy's building material: its atlas read the way the battle reads the ships' (each vertex names its cell, the cell's
@@ -49,7 +52,9 @@ export async function campMaterial(navy: FactionId): Promise<{ material: MeshBas
   const mat: any = attribute('mat', 'vec4');
   const shade: any = attribute('color', 'vec4');
   const { grid, cell: size, pad } = BUILDING_ATLAS;
-  const cell = mat.x.mul(255).add(0.5).floor().div(16).floor();
+  const cellSurf = mat.x.mul(255).add(0.5).floor();
+  const cell = cellSurf.div(16).floor();
+  const surf = cellSurf.sub(cell.mul(16));
   const usable = (size - pad * 2) / size;
   const local = vec2(fract(U.x), float(1).sub(fract(U.y))).mul(usable).add(pad / size);
   const at = vec2(cell.mod(grid), cell.div(grid).floor()).add(local).div(grid);
@@ -61,7 +66,11 @@ export async function campMaterial(navy: FactionId): Promise<{ material: MeshBas
   // The surface's normal in the world, the atlas's relief included.
   const bumped: any = normalMap(sample(normal).rgb, vec2(1, 1));
   const n: any = transformDirection(bumped, cameraWorldMatrix);
-  const sun = n.dot(vec3(...SUN_DIRECTION)).max(0);
+  // A banner's thin cloth lets the sun through: seen from the shaded side it glows in its own colour. Picked by
+  // arithmetic, not a branch: the normal is worked out once for both.
+  const toSun = n.dot(vec3(...SUN_DIRECTION));
+  const banner = step(SURF.banner - 0.5, surf).mul(step(surf, SURF.banner + 0.5));
+  const sun = mix(toSun.max(0), toSun.abs().mul(BANNER_THROUGH), banner);
   const sky = n.y.mul(SKY_UP).add(SKY_WALL).add(n.dot(vec3(...FILL_DIRECTION)).max(0).mul(FILL));
   const light = vec3(...SUN_LIGHT).mul(sun).add(vec3(...SKY_LIGHT).mul(sky));
   m.colorNode = sample(albedo).rgb.mul(tint).mul(mix(vec3(0.93, 0.94, 0.96), vec3(1.06, 1.04, 1.0), tone)).mul(light);

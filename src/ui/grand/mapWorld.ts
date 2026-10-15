@@ -1,7 +1,7 @@
 import { SHIP_SPECS } from '../../sim/catalog';
 import { MAP_ASPECT, project } from './projection';
 import { campLevel } from './campArt';
-import { FOOTPRINT, METRES_PER_RADIUS, WALL_KINDS, WATER_KINDS, type PieceKind } from './campPieces';
+import { FOOTPRINT, METRES_PER_RADIUS, STANDARD, STANDARD_KINDS, WALL_KINDS, WATER_KINDS, type PieceKind } from './campPieces';
 import type { BuildingKind, FactionId, FleetView, RegionView, ReplayView, ShipClass, SpotView } from './types';
 
 // What stands on the campaign map besides the terrain: at every port a Korean town, the camp of the navy that holds it
@@ -181,12 +181,12 @@ function mingCamp(level: number): CampPlan {
 /**
  * The camp of a level (1 to 3, the campaign's highest: a higher one is drawn as 3) and navy, unturned: its sea side
  * looks west (SEA_SIDE). Every navy's camp has its own look, and a higher level keeps every building of the one below it
- * (a stockade gate becomes a gatehouse, a stockade a wall).
+ * (a stockade gate becomes a gatehouse, a stockade a wall). Its navy's standard flies in the middle of the yard, where
+ * every level leaves room for it.
  */
 export function campPlan(level: number, navy: FactionId): CampPlan {
-  if (navy === 'japan') return japanCamp(level);
-  if (navy === 'ming') return mingCamp(level);
-  return joseonCamp(level);
+  const plan = navy === 'japan' ? japanCamp(level) : navy === 'ming' ? mingCamp(level) : joseonCamp(level);
+  return { ...plan, pieces: [...plan.pieces, put(STANDARD[navy], 0.08, 0, 0)] };
 }
 
 /** The pieces of a camp of this level and owner, unturned; none below level 1. */
@@ -441,7 +441,7 @@ export function layoutSettlements(regions: RegionView[], isSea?: IsSea): Settlem
       }
     }
     const spot = best ?? { ...want, turn: seaTurn(r, port.seed, (dx, dz) => sea(want.x + dx, want.z + dz)).turn };
-    let pieces = turnPieces(plan.pieces, spot.turn);
+    let pieces = turnPieces(plan.pieces, spot.turn).map((p) => (STANDARD_KINDS.has(p.kind) ? { ...p, rot: WIND } : p));
     // The ring opens where the shore cuts into it, and the pier reaches from the shore out over the water.
     pieces = pieces.filter((p) => !WALL_KINDS.has(p.kind) || corners(p, spot.x, spot.z).every(([cx, cz]) => land(cx, cz)));
     pieces = pieces.flatMap((p) => (WATER_KINDS.has(p.kind) ? shore(p, spot.x, spot.z, land) : [p]));
@@ -488,7 +488,11 @@ export function layoutSettlements(regions: RegionView[], isSea?: IsSea): Settlem
     }
     const lanes = drawn.flatMap((lane) => dryStretches(lane, town!.x, town!.z, land));
     const fields = town.plan.grounds.fields.map((f) => ({ ...f, ...rotate(f), rot: f.rot + turn })).filter((f) => land(town!.x + f.x, town!.z + f.z));
-    place(`${port.r.id}/town`, port.r.id, 'town', town.x, town.z, port.r.owner, 0, keep, { yard: 0, lanes, fields });
+    // Whoever holds the port flies a standard over its town, at the town's harbour end.
+    const owner = port.r.owner;
+    const flag = owner ? harbourEnd(keep, fields, town.x, town.z, turn, { land, sea, free }) : null;
+    if (owner && flag) keep.push({ kind: STANDARD[owner], x: flag.x, z: flag.z, rot: WIND });
+    place(`${port.r.id}/town`, port.r.id, 'town', town.x, town.z, owner, 0, keep, { yard: 0, lanes, fields });
     taken.push({ x: town.x, z: town.z, r: town.plan.radius });
   }
   // Works, round the camp (or the town when there is none), in the style of whoever holds the port.
@@ -531,6 +535,48 @@ function shore(p: Piece, cx: number, cz: number, land: (x: number, z: number) =>
     if (back && front) return [{ ...p, x, z }];
   }
   return [];
+}
+
+/** Every standard flies the same way, east, its cloth square to a camera looking north as the map opens. */
+const WIND = 0;
+
+/** How far a point (x, z) lies from a rectangle of half sizes hx by hz at (cx, cz) whose own x runs along (cos a, -sin a). */
+function gap(x: number, z: number, cx: number, cz: number, hx: number, hz: number, a: number) {
+  const dx = x - cx, dz = z - cz, c = Math.cos(a), s = Math.sin(a);
+  return Math.hypot(Math.max(0, Math.abs(dx * c - dz * s) - hx), Math.max(0, Math.abs(dx * s + dz * c) - hz));
+}
+
+/** What a town's standard stands beside: its houses, its pavilion and its old tree. */
+const TOWN_HOUSES: ReadonlySet<PieceKind> = new Set<PieceKind>(['choga', 'giwa', 'wa_house', 'jeongja', 'tree']);
+
+/**
+ * Where a town at (tx, tz) flies its owner's standard, in radii from the town's centre: beside one of its houses at its
+ * harbour end, the edge of the town with the most water close by, on land and clear of its houses, walls and fields and
+ * of every other place; failing water near, at the end that looks `toward` its camp or port. Null when the town has no
+ * house or no spot beside one is clear.
+ */
+function harbourEnd(pieces: Piece[], fields: Field[], tx: number, tz: number, toward: number,
+  o: { land: (x: number, z: number) => boolean; sea: (x: number, z: number) => boolean; free: (x: number, z: number, r: number) => boolean }) {
+  const reach = Math.hypot(m(FOOTPRINT.jo_standard[0]), m(FOOTPRINT.jo_standard[1]));
+  const half = (p: Piece) => [p.len !== undefined ? p.len / 2 : m(FOOTPRINT[p.kind][0]), m(FOOTPRINT[p.kind][1])] as const;
+  let best: { x: number; z: number; cost: number } | null = null;
+  for (const house of pieces.filter((p) => TOWN_HOUSES.has(p.kind))) {
+    const away = Math.hypot(...half(house)) + reach + 0.02;
+    for (let i = 0; i < 16; i += 1) {
+      const a = (i / 16) * Math.PI * 2, x = house.x + Math.cos(a) * away, z = house.z + Math.sin(a) * away;
+      if (![[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].every(([u, w]) => o.land(tx + x + u! * reach, tz + z + w! * reach))) continue;
+      if (!o.free(tx + x, tz + z, reach)) continue;
+      if (pieces.some((p) => gap(x, z, p.x, p.z, ...half(p), p.rot) < reach)) continue;
+      // A field's own x runs along (cos rot, sin rot).
+      if (fields.some((f) => gap(x, z, f.x, f.z, f.hx, f.hz, -f.rot) < reach)) continue;
+      let water = 0;
+      for (const r of [0.3, 0.6]) for (let j = 0; j < 8; j += 1) if (o.sea(tx + x + Math.cos((j * Math.PI) / 4) * r, tz + z + Math.sin((j * Math.PI) / 4) * r)) water += 1;
+      const turn = Math.abs(Math.atan2(Math.sin(Math.atan2(z, x) - toward), Math.cos(Math.atan2(z, x) - toward)));
+      const cost = turn * 0.3 - water * 0.4;
+      if (!best || cost < best.cost) best = { x, z, cost };
+    }
+  }
+  return best && { x: best.x, z: best.z };
 }
 
 /**

@@ -1,10 +1,10 @@
 import {
   AmbientLight, BufferAttribute, BufferGeometry, Color, DirectionalLight, DoubleSide, Float32BufferAttribute, Group, HemisphereLight,
   InstancedMesh, LinearMipmapLinearFilter, Material, Matrix4, Mesh, MeshBasicMaterial, MeshBasicNodeMaterial, MeshStandardMaterial,
-  MeshStandardNodeMaterial, PlaneGeometry, Quaternion, SRGBColorSpace, TextureLoader, Vector3, type Object3D, type Texture, type UniformNode,
+  MeshStandardNodeMaterial, PlaneGeometry, Quaternion, SRGBColorSpace, TextureLoader, Vector3, type Object3D, type Texture,
 } from 'three/webgpu';
 import {
-  abs, attribute, dFdx, dFdy, float, fract, mix, mx_noise_float, positionGeometry, positionLocal, positionWorld, select, smoothstep, texture, uniform, uv,
+  abs, attribute, dFdx, dFdy, float, fract, mix, mx_noise_float, positionGeometry, positionWorld, select, smoothstep, texture, uv,
   varying, vec2, vec3,
 } from 'three/tsl';
 import { worldClock } from '../../select/terrain';
@@ -22,7 +22,7 @@ import { buildCampBuilding } from './campBuildings';
 import { campMaterial } from './campMaterial';
 import { FOOTPRINT, METRES_PER_RADIUS, navyOf, WALL_KINDS, WATER_KINDS, type PieceKind } from './campPieces';
 import { buildBoatKit, buildShipKit, type KitMesh } from './shipKits';
-import { formation, HULL_LENGTH, pointAlong, SETTLEMENT_RADIUS, SHIP_CAP, type FleetSpec, type MapWorld, type Piece, type SailSpec, type SettlementSpec } from './mapWorld';
+import { formation, hash, HULL_LENGTH, pointAlong, SETTLEMENT_RADIUS, SHIP_CAP, type FleetSpec, type MapWorld, type Piece, type SailSpec, type SettlementSpec } from './mapWorld';
 import type { FactionId, ShipClass } from './types';
 
 // The 3D layer of the campaign map: every port's places (mapWorld.ts) built from the settlement buildings
@@ -30,8 +30,8 @@ import type { FactionId, ShipClass } from './types';
 // lanes and fields they leave bare laid over it, and, where a fleet lies or sails, the battle's own ships of the kinds it
 // has (src/ships/build, its middle and far levels, the battle's atlas and weathering). All instanced, one draw per kind
 // and level of detail, so the whole layer is a few dozen draw calls; a ship that cannot be built is its navy's kit ship
-// (shipKits). Between turns the world keeps living: smoke rises from the larger camps and towns and fishing boats drift
-// off the coasts.
+// (shipKits). Whose a place is, its owner's standard says (campPieces.ts STANDARD). Between turns the world keeps living:
+// smoke rises from a hearth of every town and of the larger camps, and fishing boats drift off the coasts.
 
 const R = SETTLEMENT_RADIUS;
 /** The longest hull's length in frame units. */
@@ -42,22 +42,16 @@ const FULL_LENGTH = 40;
 const shipLength = (kind: ShipClass) => SHIP_LENGTH * Math.min(1, SHIP_SPECS[kind].length / FULL_LENGTH);
 /** The ship a navy's squadron is drawn with when the kinds of its ships are not known (a replay's sailings). */
 const MAIN_SHIP: Record<FactionId, ShipClass> = { joseon: 'panokseon', japan: 'atakebune', ming: 'mingship' };
-/** The owner's ring round a camp: its least radius in settlement radii and how many straight pieces its strip is made of. */
-const RING_RADIUS = 1.12;
-const RING_SEGMENTS = 128;
-/**
- * The ring strip's half width in frame units: about a pixel and a half on a desktop window from afar, so it reads as one
- * thin line at every distance, and never less than this share of a settlement radius close up.
- */
-const ringHalfWidth = (distance: number) => Math.max(R * 0.008, distance * 0.0007);
 /** A fishing boat's length in frame units: a third of a warship's, so the two are never confused. */
 const BOAT_LENGTH = R * 0.2;
 /** At most this many fishing boats on the whole map, two off each camp's coast. */
 const BOAT_CAP = 28;
-/** A smoke plume's width and height in frame units. */
-const PLUME = { w: R * 0.42, h: R * 1.4 };
-/** The owner's ring by navy; saturated so it reads against the dark relief from the opening view. */
-const OWNER_COLOR: Record<FactionId, string> = { joseon: '#3f8cff', japan: '#e8452c', ming: '#f0b72a' };
+/** A smoke plume's width and height in frame units: a hearth's, about twenty metres of the model tall. */
+const PLUME = { w: R * 0.16, h: R * 0.5 };
+/** The houses of a town: one of them smokes when the town has more than three, and each differs a little in size and shade. */
+const HOMES: ReadonlySet<PieceKind> = new Set<PieceKind>(['giwa', 'choga', 'wa_house']);
+/** What a camp's smoke can rise from: its halls, barracks, houses and tents, not its towers, stores or gates. */
+const HEARTHS: ReadonlySet<PieceKind> = new Set<PieceKind>([...HOMES, 'hall', 'wa_hall', 'mg_hall', 'mg_barracks', 'wa_tent', 'mg_tent']);
 /**
  * The buildings' close models show once the camera stands at most this far from what it looks at (a camp is then over
  * about 160 pixels across on a desktop window); farther views draw the far models, the same outlines in about a third of
@@ -153,19 +147,22 @@ interface Sailors {
 }
 
 /**
- * The kit material (ships), the wake's geometry and material, the fishing boat, the smoke plume and the owners' ring:
- * made on first use and kept across rebuilds.
+ * The kit material (ships), the wake's geometry and material, the fishing boat and the smoke plume: made on first use and
+ * kept across rebuilds.
  */
 interface Shared {
   kit: MeshStandardMaterial; wake: MeshBasicMaterial; wakeGeometry: BufferGeometry;
-  boat: BufferGeometry; plume: PlaneGeometry; smoke: MeshBasicNodeMaterial; ring: MeshBasicNodeMaterial;
+  boat: BufferGeometry; plume: PlaneGeometry; smoke: MeshBasicNodeMaterial;
 }
-
-/** A camp's ring: its centre and radius in frame units and its owner's colour. */
-type Ring = { x: number; z: number; r: number; color: Color };
 
 /** A fishing boat circling slowly round a spot of open water: centre and radius in frame units, where it is on the circle and which way it goes. */
 type Boat = { x: number; z: number; r: number; phase: number; dir: 1 | -1; speed: number };
+
+/** A house's shade from a hash: a little lighter or darker, warmer or greyer, as thatch, plaster and tiles weather apart. */
+function houseShade(h: number) {
+  const light = 0.92 + (((h >>> 10) & 1023) / 1023) * 0.14, warm = (((h >>> 20) & 1023) / 1023) * 2 - 1;
+  return new Color(light * (1 + 0.04 * warm), light * (1 + 0.01 * warm), light * (1 - 0.05 * warm));
+}
 
 /** A smoke plume's strip, one unit wide and tall from its foot at y = 0: it widens and leans downwind as it rises. */
 function plumeGeometry() {
@@ -179,7 +176,7 @@ function plumeGeometry() {
 }
 
 /**
- * Camp smoke: a soft grey column on a camera-facing strip, broken into puffs that climb with the world's clock and thin
+ * Hearth smoke: a soft grey wisp on a camera-facing strip, broken into puffs that climb with the world's clock and thin
  * out to nothing at the top.
  */
 function smokeMaterial() {
@@ -189,21 +186,7 @@ function smokeMaterial() {
   const column = float(1).sub(smoothstep(0.18, 0.5, abs(uv().x.sub(0.5))));
   const ends = smoothstep(0, 0.12, rise).mul(float(1).sub(smoothstep(0.45, 1, rise)));
   m.colorNode = mix(vec3(0.62, 0.61, 0.6), vec3(0.86, 0.86, 0.85), rise);
-  m.opacityNode = column.mul(ends).mul(smoothstep(0.2, 0.7, puffs)).mul(0.8);
-  return m;
-}
-
-/**
- * The owners' rings: a flat strip whose centre line lies on the ground, spread to `width` on either side and lifted a
- * little in the shader, so `setView` keeps it a thin line at any distance without rebuilding it. It is pulled towards the
- * camera in the depth test, so where the drawn relief rises a little above the sampled heights it still shows.
- */
-function ringMaterial(width: UniformNode<'float', number>) {
-  const m = new MeshBasicNodeMaterial({ vertexColors: true, side: DoubleSide });
-  m.positionNode = positionLocal.add(attribute('side', 'vec3').mul(width)).add(vec3(0, width.mul(0.4), 0));
-  m.polygonOffset = true;
-  m.polygonOffsetFactor = -2;
-  m.polygonOffsetUnits = -4;
+  m.opacityNode = column.mul(ends).mul(smoothstep(0.2, 0.7, puffs)).mul(0.65);
   return m;
 }
 
@@ -326,9 +309,6 @@ export class MapLayer {
   private distance = 1;
   private readonly built: InstancedMesh[] = [];
   private shared: Shared | null = null;
-  /** The owners' rings round every camp, one mesh; its half width follows the camera's distance. */
-  private ring: Mesh | null = null;
-  private readonly ringWidth = uniform(ringHalfWidth(1));
   private smoke: { mesh: InstancedMesh; spots: Vector3[] } | null = null;
   private boats: { mesh: InstancedMesh; list: Boat[] } | null = null;
   private clock = 0;
@@ -357,7 +337,6 @@ export class MapLayer {
     this.distance = distance;
     this.near.visible = distance <= NEAR_DISTANCE;
     this.far.visible = !this.near.visible;
-    this.ringWidth.value = ringHalfWidth(distance);
     if (Math.abs(yaw - this.yaw) < 1e-4 && !this.stale) return;
     this.yaw = yaw;
     this.stale = false;
@@ -534,12 +513,10 @@ export class MapLayer {
   private clear() {
     for (const mesh of this.built) { mesh.removeFromParent(); mesh.dispose(); }
     this.built.length = 0;
-    for (const mesh of [this.ring, this.decals]) {
-      if (!mesh) continue;
-      mesh.removeFromParent();
-      mesh.geometry.dispose();
+    if (this.decals) {
+      this.decals.removeFromParent();
+      this.decals.geometry.dispose();
     }
-    this.ring = null;
     this.decals = null;
     this.smoke = null;
     this.boats = null;
@@ -571,66 +548,20 @@ export class MapLayer {
         boat: kitGeometry(buildBoatKit()),
         plume: plumeGeometry(),
         smoke: smokeMaterial(),
-        ring: ringMaterial(this.ringWidth),
       };
     }
     return this.shared;
-  }
-
-
-  /**
-   * The owners' rings as one strip: RING_SEGMENTS points round each camp, each on the ground halfway between the mean
-   * and the highest of five heights round it (the sampled heights step from texel to texel, and the strip should neither
-   * cut into a ridge nor hang over a hollow). The shader spreads each point to both edges along `side`. A piece with
-   * either end over the water is left out, so the ring ends at the shore instead of floating over the sea.
-   */
-  private buildRing(rings: Ring[], groundAt: (x: number, z: number) => number) {
-    const position: number[] = [], side: number[] = [], color: number[] = [], index: number[] = [];
-    const d = R * 0.03;
-    for (const ring of rings) {
-      const first = position.length / 3;
-      const land: boolean[] = [];
-      for (let i = 0; i < RING_SEGMENTS; i += 1) {
-        const a = (i / RING_SEGMENTS) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
-        const x = ring.x + c * ring.r, z = ring.z + s * ring.r;
-        const heights = [[0, 0], [d, 0], [-d, 0], [0, d], [0, -d]].map(([dx, dz]) => groundAt(x + dx, z + dz));
-        land.push(heights[0] > 0);
-        const y = (Math.max(...heights) + heights.reduce((n, h) => n + h, 0) / heights.length) / 2;
-        for (const k of [-1, 1]) {
-          position.push(x, y, z);
-          side.push(c * k, 0, s * k);
-          color.push(ring.color.r, ring.color.g, ring.color.b);
-        }
-      }
-      for (let i = 0; i < RING_SEGMENTS; i += 1) {
-        const j = (i + 1) % RING_SEGMENTS;
-        if (!land[i] || !land[j]) continue;
-        const a = first + i * 2, b = first + j * 2;
-        index.push(a, b, a + 1, a + 1, b, b + 1);
-      }
-    }
-    if (!index.length) return;
-    const geometry = new BufferGeometry();
-    geometry.setAttribute('position', new Float32BufferAttribute(position, 3));
-    geometry.setAttribute('side', new Float32BufferAttribute(side, 3));
-    geometry.setAttribute('color', new Float32BufferAttribute(color, 3));
-    geometry.setIndex(index);
-    const mesh = new Mesh(geometry, this.resources.ring);
-    mesh.frustumCulled = false;
-    this.group.add(mesh);
-    this.ring = mesh;
   }
 
   /**
    * Every place's buildings as instances of their kinds, each standing on the drawn ground: a building on its footing at
    * the height that buries none of it and leaves none of its footing in the air; a stretch of wall sheared along its run so
    * it climbs and falls with the ground from one end to the other, sunk where the ground dips under its middle; a work in
-   * the water at sea level. Then the yards, lanes and fields, the camps' rings and smoke, the towns' smoke and the fishing
-   * boats.
+   * the water at sea level. No two houses are quite alike: each is a little larger or smaller and its own shade. Then the
+   * yards, lanes and fields, the smoke of the hearths and the fishing boats.
    */
   private buildSettlements(list: SettlementSpec[]) {
-    const byKind = new Map<PieceKind, Matrix4[]>();
-    const rings: Ring[] = [];
+    const byKind = new Map<PieceKind, { matrices: Matrix4[]; colors: Color[] }>();
     const smoke: Vector3[] = [];
     const boats: Boat[] = [];
     const groundAt = (x: number, z: number) => this.surface(x + 0.5, z * MAP_ASPECT + 0.5);
@@ -638,22 +569,25 @@ export class MapLayer {
     for (const s of list) {
       const cx = s.u - 0.5, cz = (s.v - 0.5) / MAP_ASPECT;
       const seed = [...s.id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
-      for (const p of s.pieces) {
+      s.pieces.forEach((p, i) => {
         let b = byKind.get(p.kind);
-        if (!b) byKind.set(p.kind, (b = []));
-        b.push(this.stand(p, cx + p.x * R, cz + p.z * R, groundAt));
-      }
+        if (!b) byKind.set(p.kind, (b = { matrices: [], colors: [] }));
+        const home = HOMES.has(p.kind), h = home ? hash(`${s.id}:${i}`) : 0;
+        b.matrices.push(this.stand(p, cx + p.x * R, cz + p.z * R, groundAt, home ? 0.9 + ((h & 1023) / 1023) * 0.2 : 1));
+        if (home) b.colors.push(houseShade(h));
+      });
       // The ground the place leaves bare: its yard, its lanes, its fields.
       const at = (q: { x: number; z: number }) => ({ x: cx + q.x * R, z: cz + q.z * R });
       if (s.grounds.yard > 0) decals.disc(cx, cz, s.grounds.yard * R, YARD[s.owner ?? 'joseon']);
       for (const lane of s.grounds.lanes) decals.lane(lane.map(at), R * 0.05, LANE);
       for (const f of s.grounds.fields) decals.field(at(f), f.hx * R, f.hz * R, f.rot, f.paddy);
-      // A large town's hearths smoke too.
-      if (s.kind === 'town' && s.pieces.filter((p) => p.kind === 'giwa' || p.kind === 'choga' || p.kind === 'wa_house').length >= 10) smoke.push(new Vector3(cx, groundAt(cx, cz) + R * 0.2, cz));
+      // A hearth smokes over one house of every town of more than three, and over a hall or barracks of a camp past its first level.
+      const hearths = s.pieces.filter((p) => (s.kind === 'town' ? HOMES : HEARTHS).has(p.kind));
+      if (s.kind === 'town' ? hearths.length > 3 : s.kind === 'camp' && s.level >= 2 && hearths.length > 0) {
+        const p = hearths[seed % hearths.length]!, x = cx + p.x * R, z = cz + p.z * R;
+        smoke.push(new Vector3(x, groundAt(x, z) + R * 0.12, z));
+      }
       if (s.kind !== 'camp' || !s.owner) continue;
-      // A camp flies its own banners (its kits); the owner's ring says whose it is. A larger camp's smoke rises from its yard.
-      const ringColor = new Color(OWNER_COLOR[s.owner]);
-      if (s.level >= 2) smoke.push(new Vector3(cx, groundAt(cx, cz) + R * 0.25, cz));
       // Fishing boats off its coast: two spots of open water a little beyond the camp, each roomy enough to circle in.
       for (let k = 0; k < 2 && boats.length < BOAT_CAP; k += 1) {
         for (let tries = 0; tries < 12; tries += 1) {
@@ -666,15 +600,13 @@ export class MapLayer {
           break;
         }
       }
-      // The owner's ring on the land just outside the camp's wall, in the banner's colour, so whose it is reads from afar.
-      rings.push({ x: cx, z: cz, r: Math.max(RING_RADIUS * 0.6, s.grounds.yard + 0.3) * R, color: ringColor });
     }
     // One instanced draw per kind and level of detail; `setView` shows the close or the far set.
-    for (const [kind, matrices] of byKind) {
+    for (const [kind, { matrices, colors }] of byKind) {
       const kit = this.kit(kind), material = this.readyCampMaterials.get(navyOf(kind))?.material;
       if (!material) continue;
-      this.add(kit.near, material, matrices, undefined, this.near);
-      this.add(kit.far, material, matrices, undefined, this.far);
+      this.add(kit.near, material, matrices, colors.length ? colors : undefined, this.near);
+      this.add(kit.far, material, matrices, colors.length ? colors : undefined, this.far);
     }
     const geometry = decals.geometry();
     if (geometry) {
@@ -683,7 +615,6 @@ export class MapLayer {
       this.decals.frustumCulled = false;
       this.group.add(this.decals);
     }
-    this.buildRing(rings, groundAt);
     const { plume, smoke: smokeMat, boat, kit } = this.resources;
     const plumes = this.add(plume, smokeMat, smoke.map(() => new Matrix4()));
     if (plumes) this.smoke = { mesh: plumes, spots: smoke };
@@ -691,8 +622,11 @@ export class MapLayer {
     if (fishing) this.boats = { mesh: fishing, list: boats };
   }
 
-  /** The instance matrix of a piece at (x, z) in frame units: turned, scaled from radii and standing on the ground. */
-  private stand(p: Piece, x: number, z: number, groundAt: (x: number, z: number) => number) {
+  /**
+   * The instance matrix of a piece at (x, z) in frame units: turned, scaled from radii (and by `size`, a house's own) and
+   * standing on the ground.
+   */
+  private stand(p: Piece, x: number, z: number, groundAt: (x: number, z: number) => number, size = 1) {
     const turn = new Matrix4().makeRotationY(p.rot);
     if (WALL_KINDS.has(p.kind)) {
       // Its run from end to end: local x goes to (cos rot, -sin rot).
@@ -703,14 +637,14 @@ export class MapLayer {
       const sink = Math.max(0, dip - this.kit(p.kind).footing * R * 0.8);
       return new Matrix4().makeTranslation(x, (a + b) / 2 - sink, z).multiply(turn).multiply(new Matrix4().makeShear((b - a) / len, 0, 0, 0, 0, 0)).multiply(new Matrix4().makeScale(len, R, R));
     }
-    const scale = new Matrix4().makeScale(R, R, R);
+    const scale = new Matrix4().makeScale(R * size, R * size, R * size);
     if (WATER_KINDS.has(p.kind)) return new Matrix4().makeTranslation(x, 0, z).multiply(turn).multiply(scale);
-    const [fx, fz] = FOOTPRINT[p.kind].map((metres) => (metres / METRES_PER_RADIUS) * R * 0.8);
+    const [fx, fz] = FOOTPRINT[p.kind].map((metres) => (metres / METRES_PER_RADIUS) * R * size * 0.8);
     const c = Math.cos(p.rot), s = Math.sin(p.rot);
     const heights = [[0, 0], [-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, w]) => groundAt(x + u! * fx * c + w! * fz * s, z - u! * fx * s + w! * fz * c));
     const lo = Math.min(...heights), hi = Math.max(...heights);
     // On a slope it is set at the high side unless that leaves its footing short of the ground on the low side.
-    const y = Math.min(hi, lo + this.kit(p.kind).footing * R * 0.85);
+    const y = Math.min(hi, lo + this.kit(p.kind).footing * R * size * 0.85);
     return new Matrix4().makeTranslation(x, y, z).multiply(turn).multiply(scale);
   }
 

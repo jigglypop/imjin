@@ -20,6 +20,8 @@ export type PieceKind =
   // works, one of each per navy
   | 'jo_battery' | 'wa_battery' | 'mg_battery' | 'jo_yard' | 'wa_yard' | 'mg_yard' | 'jo_dock' | 'wa_dock' | 'mg_dock'
   | 'jo_granary' | 'wa_granary' | 'mg_granary' | 'jo_beacon' | 'wa_beacon' | 'mg_beacon'
+  // the standard a navy flies over every camp and town it holds
+  | 'jo_standard' | 'wa_standard' | 'mg_standard'
   // towns
   | 'doldam' | 'tree' | 'jeongja' | 'wa_house';
 
@@ -36,6 +38,10 @@ export const WATER_KINDS: ReadonlySet<PieceKind> = new Set<PieceKind>(['pier', '
 /** The navy whose atlas a kind is built with. */
 export const navyOf = (kind: PieceKind): FactionId => (kind.startsWith('wa_') ? 'japan' : kind.startsWith('mg_') ? 'ming' : 'joseon');
 
+/** Each navy's standard: a tall pole flying the navy's colour over what it holds, so whose a place is reads from afar. */
+export const STANDARD: Record<FactionId, PieceKind> = { joseon: 'jo_standard', japan: 'wa_standard', ming: 'mg_standard' };
+export const STANDARD_KINDS: ReadonlySet<PieceKind> = new Set(Object.values(STANDARD));
+
 /**
  * Half the ground each kind covers along x and z, in metres, eaves and steps included (a wall's x is half its modelled
  * length): the layout keeps buildings apart by these, and every kit stays inside its own.
@@ -51,5 +57,6 @@ export const FOOTPRINT: Record<PieceKind, readonly [number, number]> = {
   jo_battery: [7.0, 4.6], wa_battery: [7.0, 4.6], mg_battery: [7.0, 4.6], jo_yard: [7.0, 11.8], wa_yard: [7.0, 11.8], mg_yard: [7.0, 11.8],
   jo_dock: [4.3, 9.6], wa_dock: [4.3, 9.6], mg_dock: [4.3, 9.6], jo_granary: [5.6, 3.8], wa_granary: [5.3, 3.6], mg_granary: [5.6, 4.1],
   jo_beacon: [4.5, 4.5], wa_beacon: [3.5, 3.5], mg_beacon: [3.5, 3.5],
+  jo_standard: [2.7, 0.7], wa_standard: [1.5, 0.7], mg_standard: [2.7, 0.7],
   doldam: [5, 0.6], tree: [3.4, 3.4], jeongja: [3.8, 3.5], wa_house: [5.9, 4.1],
 };
