@@ -74,7 +74,7 @@ export type Cue = {
   /** How far the guns and the sea are pushed down under the music, 0..1 (1 = silence but the bed). */
   | { kind: 'hush'; depth: number }
   /** Changes the sky, under a black frame. */
-  | { kind: 'sky'; name: 'night' | 'sunset' | 'day' | 'afternoon' | 'overcast' }
+  | { kind: 'sky'; name: 'night' | 'sunset' | 'dawn' | 'day' | 'afternoon' | 'overcast' }
 );
 
 export type Scene = {

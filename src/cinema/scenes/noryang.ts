@@ -90,7 +90,7 @@ export const NORYANG_OUTRO: Scene = {
     { kind: 'title', at: 70.2, dur: 7.2, eyebrow: '1592 – 1598', title: '노량 해전', hanja: '露梁海戰', sub: '이순신 1545 – 1598' },
   ],
   cues: [
-    { kind: 'sky', at: 0.1, name: 'sunset' },
+    { kind: 'sky', at: 0.1, name: 'dawn' },
     { kind: 'hush', at: 0, depth: 0.45 },
     { kind: 'drums', at: 10.4, count: 4 },
     { kind: 'drums', at: 12.6, count: 4 },
