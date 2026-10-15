@@ -1,6 +1,6 @@
 // Photographs the moments that carry a gun fight's impact: a close broadside, a hit on a hull up close and from the RTS
-// camera, a great arrow striking, a miss splash and a magazine going up. A duel is staged as in probe-projectiles.mjs;
-// when the wanted event comes the battle is frozen `delay` seconds of battle time after it, the camera is put at a fixed
+// camera, a great arrow striking, a miss splash and a magazine going up. A duel is staged as in probe-projectiles.mjs
+// (the blast and the miss are pushed as events); when the wanted event comes the battle is frozen `delay` seconds of battle time after it, the camera is put at a fixed
 // pose relative to where it happened and the frame is saved, so two builds can be compared moment for moment.
 //   node scripts/probe-impact.mjs --url=http://127.0.0.1:5560/ --out=<dir> --tag=new [--scenario=hansan] [--only=hit,splash]
 import { chromium } from 'playwright-core';
@@ -117,10 +117,10 @@ for (const m of MOMENTS) {
       window.__catch = { want, delay };
       const e = window.__engine;
       e.speed = 1;
-      if (want === 'explode') {
-        const d = e.battle.get(window.__duel.d);
-        e.battle.events.push({ type: 'explode', ship: d.id, x: d.x, y: d.spec.deck, z: d.z });
-      }
+      // A blast and a miss are made to order: the duel's shots nearly all strike, and nothing in it blows up.
+      const d = e.battle.get(window.__duel.d);
+      if (want === 'explode') e.battle.events.push({ type: 'explode', ship: d.id, x: d.x, y: d.spec.deck, z: d.z });
+      if (want === 'splash') e.battle.events.push({ type: 'splash', proj: -1, x: d.x - 6, z: d.z - 25, size: 1.2 });
     }, { want: m.want, delay: m.delays[i] });
     const ok = await page.waitForFunction(() => window.__catch?.done === true, null, { timeout: 60000, polling: 20 }).then(() => true, () => false);
     if (!ok) {
