@@ -21,11 +21,15 @@ const ROCK = rgb(124, 116, 102);
 const ROCK_HIGH = rgb(176, 170, 158);
 const SAND = rgb(230, 214, 166);
 
-// The map's sun (the sky dome's glow shares it), a warm direct light and a cool sky light from above.
+// The map's sun (the sky dome's glow shares it), a warm direct light and a cool sky light from above. The buildings
+// standing on the land are lit by the same (campMaterial.ts).
 const SUN_LEN = Math.hypot(-0.55, 0.62, -0.55);
 const SUN_X = -0.55 / SUN_LEN, SUN_Y = 0.62 / SUN_LEN, SUN_Z = -0.55 / SUN_LEN;
-const SUN_LIGHT = [0.7, 0.665, 0.6] as const;
-const SKY_LIGHT = [0.46, 0.5, 0.56] as const;
+/** Towards the sun, a unit vector in the world's x (east), y (up) and z (south). */
+export const SUN_DIRECTION = [SUN_X, SUN_Y, SUN_Z] as const;
+/** The sun's and the sky's light on the land, linear RGB. */
+export const SUN_LIGHT = [0.7, 0.665, 0.6] as const;
+export const SKY_LIGHT = [0.46, 0.5, 0.56] as const;
 /**
  * The relief is drawn 4.2 times as steep as it is; lit at that slope every hillside facing away from the sun would go
  * dark. Light reads a normal flattened to about half of it, as the old relief shader did.

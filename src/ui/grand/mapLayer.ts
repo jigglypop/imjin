@@ -97,7 +97,7 @@ async function shipLevels(kind: ShipKind) {
 /**
  * A navy's ship material: the battle's atlas (its 1k colour map only) read the way the battle reads it, each vertex
  * naming its atlas cell and repeating that cell's tile, shaded by the tint and occlusion the builder baked in and worn by
- * the battle's weathering; lit by the map's sun and sky like the camps.
+ * the battle's weathering; lit by the layer's sun and sky.
  */
 async function shipMaterial(faction: FactionId) {
   const map = await new TextureLoader().loadAsync(atlasFiles(faction, true).albedo);
@@ -301,6 +301,7 @@ function decalMaterial() {
 /** Camps and ships standing on the map terrain; `ground` gives the terrain height in frame units at a frame point. */
 export class MapLayer {
   readonly group = new Group();
+  /** The ships' and the fishing boats' light. The buildings light themselves the way the land is lit (campMaterial.ts). */
   private readonly lights = { sun: new DirectionalLight('#ffe9cf', 2.1), sky: new HemisphereLight('#cfdcec', '#2b3036', 1.5), fill: new AmbientLight('#ffffff', 0.35) };
   /** A navy's kit ship, built when a battle ship could not be. */
   private readonly kitShips = new Map<FactionId, ShipModel>();
