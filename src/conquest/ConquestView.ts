@@ -289,11 +289,15 @@ export class ConquestView {
     for (const batch of this.batches.values()) {
       for (const mesh of [batch.near, batch.far]) {
         mesh.count = counts.get(mesh) ?? 0;
+        // Most kinds of works stand nowhere, or only at the other range: those are not drawn at all.
+        mesh.visible = mesh.count > 0;
         mesh.instanceMatrix.needsUpdate = true;
       }
     }
     this.poles.count = flags;
     this.cloths.count = flags;
+    this.poles.visible = flags > 0;
+    this.cloths.visible = flags > 0;
     this.poles.instanceMatrix.needsUpdate = true;
     this.cloths.instanceMatrix.needsUpdate = true;
     this.clothColor.needsUpdate = true;

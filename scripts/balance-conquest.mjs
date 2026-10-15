@@ -24,7 +24,7 @@ const server = await createServer({
   configFile: false,
   logLevel: 'error',
   appType: 'custom',
-  server: { middlewareMode: true, hmr: false, ws: false },
+  server: { middlewareMode: true, hmr: false, ws: false, watch: null },
   optimizeDeps: { noDiscovery: true, include: [] },
 });
 const load = (p) => server.ssrLoadModule(p);

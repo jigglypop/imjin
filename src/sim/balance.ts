@@ -34,25 +34,31 @@ export type Handicap = {
   enemy?: Mods;
   /** Share of the opposing fleet still fighting when it flees. Left out keeps the scenario's value. */
   enemyRetreat?: number;
+  /**
+   * Share of the player's own fleet still fighting when it breaks (the battle depth rules). Left out keeps the scenario's
+   * value. A fleet left to itself beats no drum, so its running ships do not come back: a stricter line is what keeps
+   * a battle from being won by doing nothing.
+   */
+  ownRetreat?: number;
   /** Share of the opposing ships that sail, every squadron shrinking alike. The rest never reach the battle. */
   enemyFleet?: number;
   difficulty: string;
 };
 
 /** What a Japanese player gets over the computer's crews wherever the battle is not already theirs. */
-const JAPAN_EDGE: Mods = { reload: 1.2, accuracy: 1.15, speed: 1.1, melee: 1.3, defense: 1.3, fire: 1.5 };
-const JOSEON_SLACK: Mods = { reload: 0.65, accuracy: 0.65 };
+const JAPAN_EDGE: Mods = { reload: 1.2, accuracy: 1.15, speed: 1.1, melee: 1.3, defense: 1.3, fire: 1.5, morale: 1.5 };
+const JOSEON_SLACK: Mods = { reload: 0.65, accuracy: 0.65, morale: 0.75 };
 
 const HANDICAPS: Partial<Record<ScenarioId, Partial<Record<Faction, Handicap>>>> = {
-  okpo: { japan: { own: JAPAN_EDGE, enemy: JOSEON_SLACK, enemyFleet: 0.5, difficulty: '보통' } },
-  sacheon: { japan: { own: JAPAN_EDGE, enemy: JOSEON_SLACK, enemyFleet: 0.17, difficulty: '보통' } },
-  dangpo: { japan: { own: JAPAN_EDGE, enemy: JOSEON_SLACK, enemyFleet: 0.39, difficulty: '보통' } },
-  hansan: { japan: { own: JAPAN_EDGE, enemy: JOSEON_SLACK, enemyFleet: 0.5, difficulty: '어려움' } },
-  angolpo: { japan: { own: JAPAN_EDGE, enemy: JOSEON_SLACK, enemyFleet: 0.25, difficulty: '보통' } },
-  busan: { japan: { difficulty: '쉬움' } },
-  chilcheon: { japan: { difficulty: '쉬움' } },
-  myeongnyang: { japan: { difficulty: '쉬움' } },
-  noryang: { japan: { own: JAPAN_EDGE, enemy: JOSEON_SLACK, enemyFleet: 0.6, difficulty: '어려움' } },
+  okpo: { japan: { own: JAPAN_EDGE, enemy: JOSEON_SLACK, enemyFleet: 0.5, enemyRetreat: 0.65, difficulty: '보통' } },
+  sacheon: { japan: { own: JAPAN_EDGE, enemy: JOSEON_SLACK, enemyFleet: 0.17, enemyRetreat: 0.55, difficulty: '보통' } },
+  dangpo: { japan: { own: JAPAN_EDGE, enemy: JOSEON_SLACK, enemyFleet: 0.39, enemyRetreat: 0.7, difficulty: '보통' } },
+  hansan: { japan: { own: JAPAN_EDGE, enemy: JOSEON_SLACK, enemyFleet: 0.5, enemyRetreat: 0.3, ownRetreat: 0.35, difficulty: '어려움' } },
+  angolpo: { japan: { own: JAPAN_EDGE, enemy: JOSEON_SLACK, enemyFleet: 0.25, enemyRetreat: 0.7, difficulty: '보통' } },
+  busan: { japan: { enemyRetreat: 0.6, ownRetreat: 0.75, difficulty: '보통' } },
+  chilcheon: { japan: { enemyRetreat: 0.6, difficulty: '보통' } },
+  myeongnyang: { japan: { enemyRetreat: 0.5, ownRetreat: 0.6, difficulty: '어려움' } },
+  noryang: { japan: { own: JAPAN_EDGE, enemy: JOSEON_SLACK, enemyFleet: 0.6, enemyRetreat: 0.7, ownRetreat: 0.7, difficulty: '어려움' } },
 };
 
 export function handicap(id: ScenarioId, faction: Faction): Handicap {
@@ -83,4 +89,5 @@ export function applyBalance(b: Battle, id: ScenarioId, faction: Faction) {
     for (const key of Object.keys(m) as (keyof ShipMods)[]) s.mods[key] *= m[key]!;
   }
   if (h.enemyRetreat !== undefined) b.retreatBelow[enemy] = h.enemyRetreat;
+  if (h.ownRetreat !== undefined) b.retreatBelow[own] = h.ownRetreat;
 }

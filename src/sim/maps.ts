@@ -6,6 +6,7 @@ import type { TerrainSpec } from '../terrain/generate';
 import type { SkyPresetName } from '../render/sky';
 import { SEA_STATES, type SeaStateName } from '../ocean/waves';
 import { CurrentField, type CurrentSpec } from './current';
+import { depthRules } from './depth';
 import { environmentFor, environmentWind, type BattleEnvironment, type CoastalClimate } from './environment';
 import type { CoastalFormationKind } from './coastal-tactics';
 
@@ -248,6 +249,7 @@ export function buildConquestOn<M extends MapLayout>(map: M, seats: Seat[], land
   const points = map.points.map((p) => ({ ...p, x: p.x * ca - p.z * sa, z: p.x * sa + p.z * ca }));
   const conquest = new Conquest(points, players, land, options);
   b.rules = conquest;
+  b.depth = depthRules(conquest.options.depth);
   b.land = land;
   b.night = environment.night;
   b.visibilityScale = environment.visibility;

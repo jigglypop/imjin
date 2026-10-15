@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
-import type { AmmoMode, CrewPlan, Faction, FireMode, ShipKind, SmallArms, Stance, Team } from '../sim/types';
+import type { AmmoMode, CrewPlan, Faction, FireMode, MoraleState, ShipKind, SmallArms, Stance, Team } from '../sim/types';
 import type { BuildingKind } from '../sim/conquest';
 import type { ScenarioId } from '../sim/scenarios';
 import type { Report } from '../campaign/campaign';
@@ -22,6 +22,12 @@ export type SquadronInfo = {
   burning: number;
   boarding: number;
   selected: boolean;
+  /** The battle depth rules: mean morale of the ships still fighting, how many waver and how many run. */
+  morale: number;
+  wavering: number;
+  routing: number;
+  /** Seconds until the squadron's drum can beat again (0 ready), and whether it is beating now. Null without a leader to beat it. */
+  drum: { wait: number; beating: boolean } | null;
 };
 
 export type GunInfo = { label: string; side: number; stage: number; stageName: string; progress: number; empty: boolean };
@@ -30,6 +36,8 @@ export type PrimaryInfo = {
   id: number;
   name: string;
   kind: string;
+  /** The ship's kind id, for opening it in the ship codex. */
+  shipKind: ShipKind;
   team: Team;
   hull: number;
   crew: number;
@@ -45,6 +53,8 @@ export type PrimaryInfo = {
   lights: boolean;
   repel: boolean;
   grappled: boolean;
+  morale: number;
+  moraleState: MoraleState;
   /** Crew per station and the station plan, in CREW_ROLES order. */
   roles: number[];
   plan: CrewPlan;
@@ -129,18 +139,26 @@ export type GameSnapshot = {
   selectedCount: number;
   night: boolean;
   tide: { label: string; knots: number; dir: number } | null;
+  /**
+   * Each fleet's nerve under the battle depth rules: mean morale of its ships still fighting and the share of them that
+   * waver or run. Null when the battle runs without them.
+   */
+  morale: { own: FleetMorale; foe: FleetMorale } | null;
   squadrons: SquadronInfo[];
   primary: PrimaryInfo | null;
   conquest: ConquestSnapshot | null;
 };
 
+export type FleetMorale = { level: number; shaken: number; running: number; state: 'steady' | 'shaken' | 'broken' };
+
 export type Toast = { id: number; text: string; tone: 'info' | 'good' | 'bad'; at: number };
 export type SelectionBox = { x0: number; y0: number; x1: number; y1: number } | null;
 /**
  * menu: mode cards. select: the nine historical battles. faction: the faction campaign. skirmish and online: setup
- * screens. Every screen but the battle has an address (src/routes.ts), which src/router.ts keeps in step with this.
+ * screens. codex: the ship codex. Every screen but the battle has an address (src/routes.ts), which src/router.ts keeps
+ * in step with this.
  */
-export type Screen = 'menu' | 'select' | 'faction' | 'skirmish' | 'online' | 'settings' | 'battle';
+export type Screen = 'menu' | 'select' | 'faction' | 'skirmish' | 'online' | 'settings' | 'codex' | 'battle';
 /** Screens a battle can be started from, so the HUD back button returns to where the player came from. */
 export type BattleOrigin = 'select' | 'skirmish' | 'online' | 'faction';
 

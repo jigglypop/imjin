@@ -1,5 +1,3 @@
-import { DataTexture, DataUtils, HalfFloatType, LinearFilter, RGBAFormat } from 'three/webgpu';
-
 /** A designed tidal eddy on the adapted map, not an observed real-world whirlpool location. */
 export type CurrentVortex = { x: number; z: number; r: number; spin: number; strength: number };
 
@@ -21,9 +19,12 @@ type Vortex = { x: number; z: number; r: number; spin: number; strength: number 
 
 const SAMPLE = 36;
 
+/**
+ * A battle's tidal current: the flow along a strait, faster where it narrows, with eddies that turn with the tide. The
+ * client, the server and the tools share it; the sea bakes its own texture of it (src/ocean/currentTexture.ts).
+ */
 export class CurrentField {
-  readonly texture: DataTexture;
-  readonly size = 192;
+  /** Side of the square around `centerWorld` the sea draws the current over: a little more than the strait it runs along. */
   readonly extent: number;
   readonly centerWorld: { x: number; z: number };
   private readonly widths: Float32Array;
@@ -54,9 +55,7 @@ export class CurrentField {
     this.offsets = new Float32Array(this.bins);
     this.measure();
     this.placeVortices();
-    const c = this.toWorld(spec.cx, spec.cz);
-    this.centerWorld = c;
-    this.texture = this.bake();
+    this.centerWorld = this.toWorld(spec.cx, spec.cz);
   }
 
   private toWorld(sx: number, sz: number) {
@@ -182,31 +181,5 @@ export class CurrentField {
     const k = Math.max(-1, Math.min(1, (time - turnAt) / slack));
     const shaped = Math.sign(k) * Math.pow(Math.abs(k), 0.6);
     return floodFirst ? shaped : -shaped;
-  }
-
-  private bake() {
-    const n = this.size;
-    const data = new Uint16Array(n * n * 4);
-    for (let j = 0; j < n; j += 1) {
-      for (let i = 0; i < n; i += 1) {
-        const wx = this.centerWorld.x + ((i + 0.5) / n - 0.5) * this.extent;
-        const wz = this.centerWorld.z + ((j + 0.5) / n - 0.5) * this.extent;
-        const s = this.toScenario(wx, wz);
-        const a = this.fieldScenario(s.x, s.z, -1);
-        const b = this.fieldScenario(s.x, s.z, 1);
-        const aw = { x: a.x * this.ca - a.z * this.sa, z: a.x * this.sa + a.z * this.ca };
-        const bw = { x: b.x * this.ca - b.z * this.sa, z: b.x * this.sa + b.z * this.ca };
-        const o = (j * n + i) * 4;
-        data[o] = DataUtils.toHalfFloat(aw.x);
-        data[o + 1] = DataUtils.toHalfFloat(aw.z);
-        data[o + 2] = DataUtils.toHalfFloat(bw.x);
-        data[o + 3] = DataUtils.toHalfFloat(bw.z);
-      }
-    }
-    const tex = new DataTexture(data, n, n, RGBAFormat, HalfFloatType);
-    tex.magFilter = LinearFilter;
-    tex.minFilter = LinearFilter;
-    tex.needsUpdate = true;
-    return tex;
   }
 }

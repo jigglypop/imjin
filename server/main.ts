@@ -49,6 +49,8 @@ const FF_SLICE_MS = Number(process.env.FF_SLICE_MS ?? 6);
 const FF_TOTAL_MS = Number(process.env.FF_TOTAL_MS ?? 10);
 /** Pace of a battle after the approach. Only tests change it. */
 const BASE_SPEED = Number(process.env.BASE_SPEED ?? 1);
+/** Only tests set it: the battle of a room with this name throws on its first step, to show that the room ends alone. */
+const FAULT_ROOM = process.env.FAULT_ROOM ?? '';
 const ENDED_ROOM_SECONDS = 600;
 /** Browsers send their page's origin with a WebSocket; only the game's own pages (and local or LAN ones) may connect. Other clients send none. */
 const ORIGINS = ['https://imjin1592.com', 'https://www.imjin1592.com', ...(process.env.ALLOWED_ORIGINS ?? '').split(',').filter(Boolean)];
@@ -58,6 +60,13 @@ const LOAD_SECONDS = 45;
 // Tests can shorten lifecycle deadlines without changing the production protocol's 60-second grace.
 const DISCONNECT_SECONDS = Number(process.env.GRACE_SECONDS ?? GRACE_SECONDS);
 const PAGE_LOAD_SECONDS = Number(process.env.LOAD_SECONDS ?? LOAD_SECONDS);
+/**
+ * A page says hello in the first frame on a new connection. Until a hello is accepted the socket is outside the
+ * heartbeat, the client cap and the message budget, so it is cut when it has not introduced itself within
+ * HELLO_SECONDS or sends more than HELLO_FRAMES frames first.
+ */
+const HELLO_SECONDS = Number(process.env.HELLO_SECONDS ?? 10);
+const HELLO_FRAMES = 4;
 const speedOf = (live: Live) => (live.ff ? FF_SPEED : BASE_SPEED);
 
 type Client = {
@@ -110,6 +119,8 @@ const rankedQueue: RankedEntry[] = [];
 let ranked: RankedStore | null = null;
 const accountCreation = new Map<string, { since: number; count: number }>();
 let tickMs = 0;
+/** Rooms ended because their battle threw, since the process started. */
+let failedRooms = 0;
 
 const send = (c: Client, msg: ServerMsg) => {
   if (c.ws && c.ws.readyState === c.ws.OPEN) c.ws.send(JSON.stringify(msg));
@@ -417,6 +428,7 @@ function resume(c: Client) {
 }
 
 function stepOnce(room: Room, live: Live) {
+  if (FAULT_ROOM && room.info.name === FAULT_ROOM) throw new Error(`fault injected into room ${room.info.id}`);
   live.battle.step(SIM_DT);
   if (live.ff && live.battle.events.some((e) => e.type === 'gun' || e.type === 'shot')) {
     live.ff = false;
@@ -500,6 +512,27 @@ function flush(room: Room, live: Live) {
     sendBinary(c, encodeSnapshot(live.battle.time, observedShips(live.battle, team), seat, (s) => live.battle.isActive(s)));
     if (live.conquest && live.flushes % 3 === 0) send(c, { t: 'state', conquest: observedState(live.conquest, live.battle, team) });
   }
+}
+
+/** Sends everyone in the room back to the lobby with `reason` and forgets the room, with any seat held for a dropped player. */
+function closeRoom(room: Room, reason: string) {
+  broadcast(room, { t: 'closed', reason });
+  for (const c of [...room.clients]) {
+    c.room = null;
+    if (!c.ws) drop(c);
+  }
+  rooms.delete(room.info.id);
+}
+
+/**
+ * A room whose battle threw. Its state can no longer be trusted, so the room ends on its own: a ranked match is voided,
+ * its players go back to the lobby with a notice, and every other room keeps running.
+ */
+function fail(room: Room, error: unknown) {
+  failedRooms += 1;
+  console.error(`room ${room.info.id} (${choiceKey(room.info.battle)}) failed:`, error);
+  if (room.ranked) finishRanked(room, 'void', 'server-error');
+  closeRoom(room, '서버 오류로 전투를 이어갈 수 없어 방이 닫혔습니다.');
 }
 
 function newRoom(c: Client, name: string, choice: BattleChoice, quick: boolean): Room {
@@ -807,6 +840,16 @@ function detach(c: Client) {
 }
 
 function main() {
+  // A room's tick and a client's request already end only what failed (fail, and the 1011 close in the message
+  // handler). The only promises are room starts and terrain loads, which handle their own errors and share nothing
+  // half-changed with the other rooms, so a rejection that still escapes is logged and the server keeps serving. Any
+  // other exception may have left the rooms, the sessions or the ranked journal half updated: it is logged and the
+  // process exits for systemd to start a clean one, which voids the unfinished ranked matches as a restart.
+  process.on('unhandledRejection', (reason) => console.error('unhandled rejection', reason));
+  process.on('uncaughtException', (error) => {
+    console.error('uncaught exception, exiting', error);
+    process.exit(1);
+  });
   try { ranked = new RankedStore(process.env.RANKED_STORE ?? join(dirname(__filename), 'data', 'ranked.jsonl')); }
   catch (error) { console.error('ranked unavailable', error instanceof Error ? error.message : 'unknown error'); }
   const http = createServer((req, res) => {
@@ -819,7 +862,10 @@ function main() {
           revision: BUILD_REVISION,
           rooms: rooms.size,
           battles: [...rooms.values()].filter((r) => r.live && !r.live.endedAt).length,
+          failedRooms,
           clients: byId.size,
+          // Every open connection, including those that have not said hello yet.
+          sockets: wss.clients.size,
           queue: queue.length,
           rankedQueue: rankedQueue.length,
           rankedReady: ranked?.ready === true,
@@ -840,12 +886,20 @@ function main() {
     const forwarded = request.headers['x-forwarded-for'];
     const address = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(remote) && typeof forwarded === 'string' ? forwarded.split(',').at(-1)!.trim() : remote;
     let c: Client | null = null;
+    let beforeHello = 0;
+    const deadline = setTimeout(() => {
+      if (!c) ws.terminate();
+    }, HELLO_SECONDS * 1000);
     // Receiver errors (including maxPayload) belong to this connection, not the process.
     ws.on('error', () => ws.terminate());
     ws.on('pong', () => {
       if (c) c.alive = true;
     });
     ws.on('message', (data, binary) => {
+      if (!c && ++beforeHello > HELLO_FRAMES) {
+        ws.terminate();
+        return;
+      }
       if (binary) return;
       let raw: unknown;
       try {
@@ -889,6 +943,7 @@ function main() {
       }
     });
     ws.on('close', () => {
+      clearTimeout(deadline);
       if (c && c.ws === ws) detach(c);
     });
   });
@@ -926,16 +981,14 @@ function main() {
     const fast = list.filter((r) => r.live && !r.live.held && !r.live.endedAt && speedOf(r.live) > 1).length;
     const slice = Math.min(FF_SLICE_MS, FF_TOTAL_MS / Math.max(1, fast));
     for (const room of list) {
-      tick(room, dt, slice);
-      const ended = room.live?.endedAt;
-      if (ended && Date.now() - ended > ENDED_ROOM_SECONDS * 1000) {
-        broadcast(room, { t: 'closed', reason: '전투가 끝난 지 오래되어 방이 닫혔습니다.' });
-        for (const c of [...room.clients]) {
-          c.room = null;
-          if (!c.ws) drop(c);
-        }
-        rooms.delete(room.info.id);
+      try {
+        tick(room, dt, slice);
+      } catch (error) {
+        fail(room, error);
+        continue;
       }
+      const ended = room.live?.endedAt;
+      if (ended && Date.now() - ended > ENDED_ROOM_SECONDS * 1000) closeRoom(room, '전투가 끝난 지 오래되어 방이 닫혔습니다.');
     }
     tickMs += (performance.now() - now - tickMs) * 0.05;
   }, 1000 / 60);

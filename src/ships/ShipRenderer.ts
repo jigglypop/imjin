@@ -3,7 +3,6 @@ import {
   BufferAttribute,
   BufferGeometry,
   DoubleSide,
-  DynamicDrawUsage,
   Float32BufferAttribute,
   Group,
   InstancedBufferAttribute,
@@ -27,7 +26,7 @@ import {
   fract,
   frontFacing,
   If,
-  instancedDynamicBufferAttribute,
+  instancedBufferAttribute,
   mix,
   mx_noise_float,
   normalLocal,
@@ -339,8 +338,8 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   m.roughness = 1;
   const map = src.map as Texture | null;
   if (map) map.anisotropy = src.userData.shipAnisotropy ?? equipment.anisotropy;
-  const A: any = instancedDynamicBufferAttribute(a, 'vec4');
-  const B: any = instancedDynamicBufferAttribute(b, 'vec4');
+  const A: any = instancedBufferAttribute(a, 'vec4');
+  const B: any = instancedBufferAttribute(b, 'vec4');
   const origin = A.xyz;
   const burn = A.w;
   const up = B.xyz;
@@ -396,7 +395,7 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   const charred = mix(algae, vec3(0.025, 0.02, 0.018), charAmount.mul(0.9));
   const lit = charred.mul(float(1).add(flash.mul(2)));
   if (c) {
-    const C: any = instancedDynamicBufferAttribute(c, 'vec4');
+    const C: any = instancedBufferAttribute(c, 'vec4');
     const grain = mx_noise_float(positionWorld.mul(vec3(0.8, 6, 0.8))).mul(0.5).add(0.5);
     const timber = mix(vec3(0.16, 0.1, 0.055), vec3(0.3, 0.2, 0.11), grain);
     m.colorNode = Fn(() => {
@@ -490,12 +489,13 @@ export class ShipRenderer {
   }
 
   private makeBatch(lod: LodAsset, cap: number, nominal: number, cut = false): Batch {
-    const mk = () => new InstancedBufferAttribute(new Float32Array(cap * 4), 4).setUsage(DynamicDrawUsage);
+    // Static buffers, which end() marks changed over the range in use: sent once a frame. A dynamic buffer is sent
+    // again by every pass that draws it (the shadow map, then the scene), and whole after the first.
+    const mk = () => new InstancedBufferAttribute(new Float32Array(cap * 4), 4);
     const a = mk();
     const b = mk();
     const c = cut ? mk() : undefined;
     const mesh = new InstancedMesh(lod.geometry, createMaterial(lod.source, a, b, c), cap);
-    mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     mesh.count = 0;
     mesh.frustumCulled = false;
     mesh.castShadow = nominal < 2;
@@ -572,6 +572,9 @@ export class ShipRenderer {
   end() {
     for (const batch of [...[...this.batches.values()].flat(), ...this.cuts.values()].flatMap(batchParts)) {
       batch.mesh.count = batch.count;
+      // Most batches hold no ship in a given frame (a model at the levels nobody is near or far enough for). Hidden, three
+      // skips them; shown, it prepared each one and sent its buffers in every pass for nothing.
+      batch.mesh.visible = batch.count > 0;
       if (batch.count === 0) continue;
       batch.mesh.instanceMatrix.clearUpdateRanges();
       batch.mesh.instanceMatrix.addUpdateRange(0, batch.count * 16);

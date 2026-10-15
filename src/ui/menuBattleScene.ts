@@ -1,7 +1,7 @@
 import {
   ACESFilmicToneMapping, DataTexture, DirectionalLight, FogExp2,
   HemisphereLight, PerspectiveCamera, RedFormat, FloatType, Scene, Vector2, Vector3,
-  Vector4, WebGPURenderer,
+  WebGPURenderer,
 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
 import { Battle } from '../sim/battle';
@@ -13,49 +13,16 @@ import { Ocean } from '../ocean/Ocean';
 import { WakeMap } from '../ocean/WakeMap';
 import { WaveField, waveField, SEA_STATES } from '../ocean/waves';
 import { atmosphere } from '../render/atmosphere';
-import { pointLights } from '../render/lights';
 import { loadSky, SKY_PRESETS, type LoadedSky } from '../render/sky';
+import { SkyView } from '../render/skyDome';
 import { disposeTree } from '../render/dispose';
 import { equipment, forceWebGL } from '../game/quality';
 import type { Terrain } from '../terrain/Terrain';
+import { RenderLease } from './renderLease';
 
 const CYCLE = 40;
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 const ease = (x: number) => { const t=clamp(x); return t*t*(3-2*t); };
-
-/** Shared render uniforms are borrowed only during a synchronous frame, never across await. */
-class RenderLease {
-  private waves = new WaveField();
-  private vectors = new Map<string, Vector3>();
-  private scalars = new Map<string, number>();
-  private positions = pointLights.pos.map(() => new Vector4());
-  private colors = pointLights.col.map(() => new Vector4());
-  run<T>(apply: () => void, frame: () => T): T {
-    this.waves.copyFrom(waveField);
-    const version = waveField.version;
-    for (const [key, node] of Object.entries(atmosphere)) {
-      if (typeof node.value === 'number') this.scalars.set(key, node.value);
-      else {
-        let saved = this.vectors.get(key);
-        if (!saved) { saved = new Vector3(); this.vectors.set(key, saved); }
-        saved.copy(node.value);
-      }
-    }
-    pointLights.pos.forEach((v,i) => this.positions[i]!.copy(v));
-    pointLights.col.forEach((v,i) => this.colors[i]!.copy(v));
-    try { apply(); return frame(); }
-    finally {
-      waveField.copyFrom(this.waves);
-      waveField.version = version;
-      for (const [key, node] of Object.entries(atmosphere)) {
-        if (typeof node.value === 'number') node.value = this.scalars.get(key)!;
-        else node.value.copy(this.vectors.get(key)!);
-      }
-      pointLights.pos.forEach((v,i) => v.copy(this.positions[i]!));
-      pointLights.col.forEach((v,i) => v.copy(this.colors[i]!));
-    }
-  }
-}
 
 export class MenuBattleScene {
   private renderer?: WebGPURenderer;
@@ -64,6 +31,7 @@ export class MenuBattleScene {
   private sun = new DirectionalLight(0xffc89a, 2.7);
   private lease = new RenderLease();
   private sky?: LoadedSky;
+  private skyView?: SkyView;
   private wake?: WakeMap;
   private ocean?: Ocean;
   private oceanWaves = new WaveField(1597);
@@ -129,7 +97,7 @@ export class MenuBattleScene {
       this.renderer.toneMappingExposure=.94;
       this.resize();
       const results = await Promise.allSettled([
-        loadSky(SKY_PRESETS.night, '2k', undefined, this.controller.signal),
+        loadSky(SKY_PRESETS.night, 'small', undefined, this.controller.signal),
         loadSceneShipAssets(['geobukseon','panokseon','atakebune'], {...equipment.ships, anisotropy:equipment.anisotropy}),
       ]);
       // Both sky and model geometry belong to this renderer; faction atlas textures stay shared.
@@ -139,9 +107,9 @@ export class MenuBattleScene {
       this.check();
       const sky=this.sky!;
       this.lightingScale=.16/Math.max(.0001,sky.info.ambientLum)*.2;
-      this.scene.background=sky.background;
+      this.skyView=new SkyView(sky.view);
+      this.scene.backgroundNode=this.skyView.background();
       this.scene.backgroundIntensity=this.lightingScale;
-      this.scene.backgroundRotation.y=.7;
       this.scene.environment=sky.environment;
       this.scene.environmentIntensity=this.lightingScale*1.45;
       this.scene.fog=new FogExp2('#091828', .0018);
@@ -168,7 +136,7 @@ export class MenuBattleScene {
       // Ocean only needs the sea-floor sampler; no invisible terrain meshes or workers are loaded.
       const seaFloor={rotation:uniform(new Vector2(1,0)),sizeU:uniform(6000),heightTexture:this.height} as unknown as Terrain;
       this.oceanWaves.copyFrom(this.battle.waves);
-      this.ocean=new Ocean(this.oceanWaves,sky.environment,this.wake,seaFloor,null,null,{segments:this.mobile?72:144,lights:this.mobile?4:6});
+      this.ocean=new Ocean(this.oceanWaves,sky.environment,this.skyView,this.wake,seaFloor,null,null,{segments:this.mobile?72:144,lights:this.mobile?4:6});
       this.scene.add(this.ocean.mesh);
       this.cameraPose();
       this.lease.run(()=>this.applyLight(),()=>this.views!.sync(this.battle,1,this.camera,this.assets!));
@@ -205,6 +173,7 @@ export class MenuBattleScene {
     atmosphere.envIntensity.value=this.lightingScale;
     atmosphere.fogDensity.value=.0018;
     atmosphere.night.value=1;
+    atmosphere.cloudCover.value=0;
     atmosphere.waterDeep.value.set(.003,.013,.025);
     atmosphere.waterScatter.value.set(.018,.055,.065);
   }
@@ -232,6 +201,7 @@ export class MenuBattleScene {
   private draw(dt: number) {
     if(this.disposed || !this.renderer || !this.views || !this.fx || !this.assets) return;
     this.cameraPose();
+    if(this.skyView) this.skyView.time.value+=dt;
     this.oceanWaves.copyFrom(this.battle.waves);
     this.lease.run(()=>this.applyLight(),()=>{
       this.views!.sync(this.battle,dt,this.camera,this.assets!);
@@ -314,7 +284,7 @@ export class MenuBattleScene {
     if(this.fx) disposeTree(this.fx.group);
     if(this.lanterns) disposeTree(this.lanterns.group);
     if(this.assets) disposeSceneShipAssets(this.assets);
-    this.sky?.background.dispose();
+    this.sky?.view.dispose();
     this.sky?.environment.dispose();
     this.scene.clear();
     void this.renderer?.dispose().catch(()=>undefined);
