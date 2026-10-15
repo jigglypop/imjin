@@ -135,7 +135,8 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
         if (caption.kind !== 'label') continue;
         const at = cinema.screenOf(caption.target, w, h);
         el.style.display = at ? '' : 'none';
-        if (at) el.style.transform = `translate(${at.x}px, ${at.y}px)`;
+        // A tag hangs above its fleet: it is held under the top bar rather than drawn on it.
+        if (at) el.style.transform = `translate(${at.x}px, ${Math.max(at.y, bar + 84)}px)`;
       }
       const active = cinema.captions().length > 0 || cinema.covering || cinema.letterbox > 0.01;
       if (active || shown) setFrame((n) => n + 1);

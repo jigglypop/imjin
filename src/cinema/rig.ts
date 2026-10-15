@@ -100,9 +100,10 @@ export function compose(shot: Shot, k: number, p: Place, host: RigHost, look?: P
     const pitch = lerpRange(cam.pitch, k, 0.1);
     const dist = lerpRange(cam.dist, k, 100);
     const lift = lerpRange(cam.lift, k, 0);
-    lx = p.x;
-    ly = p.y + lift;
-    lz = p.z;
+    const centre = cam.offset ? offset(p, cam.offset) : p;
+    lx = centre.x;
+    ly = centre.y + lift;
+    lz = centre.z;
     const cp = Math.cos(pitch);
     px = lx + Math.cos(yaw) * cp * dist;
     pz = lz + Math.sin(yaw) * cp * dist;

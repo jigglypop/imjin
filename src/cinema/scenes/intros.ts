@@ -1,4 +1,4 @@
-import { at, commander, first, flagship, fleet, group } from '../subjects';
+import { at, commander, first, flagship, fleet } from '../subjects';
 import type { Scene } from '../types';
 
 /** The shorter openings of Hansan and Myeongnyang, from Yi's own reports and diary (src/cinema/SOURCES.md). */
@@ -15,7 +15,7 @@ export const HANSAN_INTRO: Scene = {
     // Ahead of the Japanese fleet as it comes out after the decoys, looking back at it.
     { dur: 9, cam: { type: 'orbit', at: at(japan, { toward: joseon }), yaw: [0.16, 0.32], pitch: [0.035, 0.05], dist: [560, 470], lift: 10 }, fov: 32 },
     // The crane's wing from above.
-    { dur: 11, cam: { type: 'orbit', at: at(group(joseon, japan), { toward: japan }), yaw: [Math.PI + 0.12, Math.PI + 0.02], pitch: [0.95, 1.05], dist: [3200, 2850] }, fov: 38 },
+    { dur: 11, cam: { type: 'orbit', at: at(joseon, { toward: japan }), offset: [420, 0, 0], yaw: [Math.PI + 0.12, Math.PI + 0.02], pitch: [1.22, 1.3], dist: [5000, 4700] }, fov: 38 },
     { dur: 6, cam: { type: 'track', at: at(yi), from: [-36, -1.6, 23], to: [-27, -1.2, 18], look: [-5, 5.5, 0] }, fov: 30, tilt: 0.04, aperture: 0.7 },
     { dur: 8.5, cam: { type: 'orbit', at: at(yi, { toward: japan }), yaw: [Math.PI + 0.32, Math.PI + 0.16], pitch: [0.05, 0.07], dist: [95, 125], lift: [6, 10] }, fov: 30 },
   ],
@@ -24,7 +24,7 @@ export const HANSAN_INTRO: Scene = {
     { kind: 'card', at: 3.4, dur: 5.4, who: '와키자카 야스하루', hanja: '脇坂安治', role: '일본 수군 장수 · 대선 36척, 중선 24척, 소선 13척', portrait: 'portrait_wakisaka', side: 'japan' },
     { kind: 'doc', at: 10, dur: 7.6, tag: '기동', head: '거짓 후퇴', hanja: '佯退而還', body: '판옥선 대여섯 척이 좁은 견내량의 적을 쫓다가 물러나는 척했다. 일본 함선들이 일제히 돛을 달고 넓은 바다까지 따라 나왔다.', source: '이순신 장계 「견내량파왜병장」' },
     { kind: 'label', at: 18.6, dur: 9.8, target: at(joseon), text: '조선 수군', sub: '이순신 · 이억기 · 원균', side: 'joseon' },
-    { kind: 'label', at: 19, dur: 9.4, target: at(japan), text: '일본 함대', sub: '와키자카 야스하루', side: 'japan' },
+    { kind: 'label', at: 19, dur: 9.4, target: at(first(commander('와키자카 야스하루'), flagship('japan'))), text: '일본 함대', sub: '와키자카 야스하루', side: 'japan' },
     { kind: 'doc', at: 19.4, dur: 8.6, tag: '진형', head: '학익진', hanja: '鶴翼列陣 一時齊進', body: '넓은 바다에 나오자 장수들에게 학의 날개처럼 벌려 서게 하고 한꺼번에 나아가 지자·현자·승자 총통을 쏘았다.', source: '이순신 장계 「견내량파왜병장」' },
     { kind: 'card', at: 29.4, dur: 5.4, who: '이순신', hanja: '李舜臣', role: '전라좌도 수군절도사', portrait: 'portrait_yi', side: 'joseon' },
     { kind: 'title', at: 35.6, dur: 7.6, eyebrow: '1592 · 임진년 여름', title: '한산도 대첩', hanja: '閑山島大捷' },

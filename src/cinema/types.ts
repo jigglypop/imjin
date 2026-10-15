@@ -31,8 +31,11 @@ export type Target = {
 
 export type Ease = 'linear' | 'inOut' | 'out' | 'in';
 
-/** Camera around a subject: yaw 0 is in front of it, pi/2 at its starboard; pitch up from the water; distance in metres. */
-export type Orbit = { type: 'orbit'; at: Target; yaw: Range; pitch: Range; dist: Range; lift?: Range };
+/**
+ * Camera around a subject: yaw 0 is in front of it, pi/2 at its starboard; pitch up from the water; distance in metres.
+ * `offset` moves the point it circles within the subject's frame, e.g. toward the enemy to hold both fleets.
+ */
+export type Orbit = { type: 'orbit'; at: Target; yaw: Range; pitch: Range; dist: Range; lift?: Range; offset?: V3 };
 /** Camera moving in a straight line between two offsets of a subject's frame, looking at a third (or at another subject). */
 export type Track = { type: 'track'; at: Target; from: V3; to: V3; look: V3; lookAt?: Target };
 
