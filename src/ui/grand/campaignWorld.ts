@@ -3,8 +3,8 @@ import { V_SCALE } from '../../select/demFrame';
 import { worldClock } from '../../select/terrain';
 import { MESH_SCALE, groundElevation } from './mapMath';
 import { MapLayer } from './mapLayer';
-import { heroClearings } from './hero/layer';
-import { rawMetres } from './hero/site';
+import { heroClearings, heroUses, tierUses } from './hero/layer';
+import { heroEnabled, rawMetres } from './hero/site';
 import { TreeLayer } from './worldTrees';
 import { loadGround, type WorldGround } from './worldGround';
 import { clearingRadius, type MapWorld } from './mapWorld';
@@ -74,9 +74,9 @@ export class CampaignWorld {
     this.scene.fog = this.fog;
     this.root.add(ground.group);
     // Camps and ships stand on the same ground the overlay's markers read; they arrive when their models have loaded.
-    this.layer = new MapLayer((u, v) => groundElevation(ground.heights, u, v), () => this.layerChanged(), (u, v) => rawMetres(ground.heights, u, v));
+    this.layer = new MapLayer((u, v) => groundElevation(ground.heights, u, v), () => this.layerChanged(), (u, v) => rawMetres(ground.heights, u, v), ground.look);
     this.root.add(this.layer.group);
-    this.trees = new TreeLayer((u, v) => ground.heightAt(u, v), V_SCALE * MESH_SCALE);
+    this.trees = new TreeLayer((u, v) => ground.heightAt(u, v), V_SCALE * MESH_SCALE, (u, v) => ground.look.coverAt(u, v), ground.look.details[3]);
     this.root.add(this.trees.group);
     if (this.world) this.show(this.world);
     // The first frame finds the ground's shaders ready, and the trees' too, though none is planted until the camera is close.
@@ -176,7 +176,13 @@ export class CampaignWorld {
 
   private show(world: MapWorld) {
     this.layer?.set(world);
-    this.trees?.setClearings([...world.settlements.map((s) => ({ u: s.u, v: s.v, r: clearingRadius(s) })), ...heroClearings(world)]);
+    // Camps and towns built to the hero camps' rules (hero/layer.ts) keep the trees off their own pads and houses only,
+    // so the woods come up to them as the land's look draws them; the rest keep their whole clearing.
+    const drawn = (u: number, v: number) => rawMetres(this.ground!.heights, u, v);
+    const heroes = heroEnabled() ? heroUses(world) : [];
+    const tiers = new Set(heroEnabled() ? [...heroes.flatMap((h) => [...h.replaces]), ...tierUses(world, heroes).map((t) => t.id)] : []);
+    const kept = world.settlements.filter((s) => !tiers.has(s.id));
+    this.trees?.setClearings([...kept.map((s) => ({ u: s.u, v: s.v, r: clearingRadius(s) })), ...heroClearings(world, drawn)]);
   }
 
   /** The closed turn's ships along their way: `share` of the sailing done, `time` the replay's clock. */
@@ -194,7 +200,9 @@ export class CampaignWorld {
     if (!this.ready || !ground) return;
     const eye = eyeOf(cam);
     camera.fov = (FOV * 180) / Math.PI;
-    camera.near = NEAR;
+    // The near plane draws back with the eye's height: low land stands only a metre or two over the sea plane, and with
+    // the near plane at its closest the depth buffer could not tell them apart from afar (the coasts flickered in hatches).
+    camera.near = Math.max(NEAR, 0.05 * eye[1]);
     camera.far = FAR;
     camera.position.set(eye[0], eye[1], eye[2]);
     camera.lookAt(worldX(cam.u), 0, worldZ(cam.v));

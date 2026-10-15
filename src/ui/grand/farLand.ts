@@ -2,7 +2,7 @@ import { BufferAttribute, BufferGeometry, Mesh, MeshBasicNodeMaterial } from 'th
 import meta from '../../select/demMeta.json';
 import { demHeightAtUV, V_SCALE } from '../../select/demFrame';
 import { freeAfterDraw } from '../../render/dispose';
-import { faceColor, groundSlopes, type Facet } from './groundPalette';
+import { vertexLight } from './landBake';
 import { DEM_RECT, MESH_SCALE } from './mapMath';
 import { MAP_ASPECT } from './projection';
 
@@ -324,46 +324,40 @@ export function buildFarLandMesh(heights: Float32Array, seam: { u: Float32Array;
     world[v * 3 + 1] = pm[v]! * UNIT;
     world[v * 3 + 2] = NORTH_Z - pn[v]!;
   }
-  const slopes = groundSlopes(kept, world, vertices);
-
-  // One colour per facet, by the DEM's palette: three vertices of their own each, so nothing is interpolated across it.
-  // Counter-clockwise in u and north is counter-clockwise seen from above, which three.js takes as facing the viewer.
+  // The facets share their vertices and are drawn with the land's look (landLook.ts) like the DEM's, lit by smooth
+  // normals: each vertex carries the light it gets, its slope and its height, as the DEM's bake would give them.
+  const normals = new Float64Array(vertices * 3);
   const count = kept.length / 3;
-  const position = new Float32Array(count * 9);
-  const color = new Float32Array(count * 9);
-  const facet: Facet = { metres: 0, nx: 0, ny: 1, nz: 0, x: 0, z: 0, size: 0, slope: 0, shore: false };
+  const facets = new Float32Array(count * 9);
   for (let t = 0; t < count; t += 1) {
     const a = kept[t * 3]!, b = kept[t * 3 + 1]!, c = kept[t * 3 + 2]!;
     const ux = world[b * 3]! - world[a * 3]!, uy = world[b * 3 + 1]! - world[a * 3 + 1]!, uz = world[b * 3 + 2]! - world[a * 3 + 2]!;
     const vx = world[c * 3]! - world[a * 3]!, vy = world[c * 3 + 1]! - world[a * 3 + 1]!, vz = world[c * 3 + 2]! - world[a * 3 + 2]!;
+    // The cross product's length is twice the facet's area: bigger facets weigh more in the normals round them.
     const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
-    const length = Math.hypot(nx, ny, nz) || 1;
     const o = t * 9;
     for (const [k, v] of [[0, a], [3, b], [6, c]] as const) {
-      position[o + k] = world[v * 3]!;
-      position[o + k + 1] = world[v * 3 + 1]!;
-      position[o + k + 2] = world[v * 3 + 2]!;
+      facets[o + k] = world[v * 3]!;
+      facets[o + k + 1] = world[v * 3 + 1]!;
+      facets[o + k + 2] = world[v * 3 + 2]!;
+      normals[v * 3] += nx; normals[v * 3 + 1] += ny; normals[v * 3 + 2] += nz;
     }
-    facet.metres = (Math.max(0, pm[a]!) + Math.max(0, pm[b]!) + Math.max(0, pm[c]!)) / 3;
-    facet.nx = nx / length;
-    facet.ny = ny / length;
-    facet.nz = nz / length;
-    facet.x = (position[o]! + position[o + 3]! + position[o + 6]!) / 3;
-    facet.z = (position[o + 2]! + position[o + 5]! + position[o + 8]!) / 3;
-    facet.size = Math.max(Math.abs(ux), Math.abs(vx), Math.abs(ux - vx), Math.abs(uz), Math.abs(vz), Math.abs(uz - vz));
-    facet.slope = slopes[t]!;
-    facet.shore = pm[a]! <= 0 || pm[b]! <= 0 || pm[c]! <= 0;
-    faceColor(facet, color, o);
-    color.copyWithin(o + 3, o, o + 3);
-    color.copyWithin(o + 6, o, o + 3);
+  }
+  const land = new Float32Array(vertices * 4);
+  for (let v = 0; v < vertices; v += 1) {
+    const ny = Math.max(1e-6, normals[v * 3 + 1]!);
+    const gx = -normals[v * 3]! / ny, gz = -normals[v * 3 + 2]! / ny;
+    land.set(vertexLight(gx, gz, Math.max(0, pm[v]!)), v * 4);
   }
 
   const geometry = new BufferGeometry();
-  geometry.setAttribute('position', new BufferAttribute(position, 3));
-  geometry.setAttribute('color', new BufferAttribute(color, 3));
+  geometry.setAttribute('position', new BufferAttribute(world, 3));
+  geometry.setAttribute('land', new BufferAttribute(land, 4));
+  geometry.setIndex(kept);
   // Culled by its bounds, which must be known before the first draw frees the arrays.
   geometry.computeBoundingSphere();
-  const material = new MeshBasicNodeMaterial({ vertexColors: true });
+  // Its colour is the land's look, which the ground gives it once the look has loaded.
+  const material = new MeshBasicNodeMaterial();
   const mesh = new Mesh(geometry, material);
   freeAfterDraw(mesh);
 
@@ -371,7 +365,7 @@ export function buildFarLandMesh(heights: Float32Array, seam: { u: Float32Array;
   return {
     mesh,
     /** The drawn facets, nine floats each (x, y, z of three corners, y in frame units), for the sea to bake its coasts from before the first draw frees them (freeAfterDraw). */
-    facets: position,
+    facets,
     /** Ground height in frame units at a frame point north of the DEM (0 on the water), for the trees. */
     heightAt(u: number, v: number) {
       const north = NORTH_Z - (v - 0.5) / MAP_ASPECT;

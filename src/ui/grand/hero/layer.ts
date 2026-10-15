@@ -10,6 +10,7 @@ import { buildHero, Merge } from './build';
 import { tierCamp } from './tiers';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildHeroGround, heroGroundLook, type HeroGroundLook } from './ground';
+import type { LandLook } from '../landLook';
 import { joTier1, LAYOUTS, town, waFieldCamp } from './layouts';
 import { Plan, type Moored } from './plan';
 import { ELEVATION_MODEL, HERO_SITES, heroEnabled, MODEL_METRE, siteUV, siteXZ, type HeroSite } from './site';
@@ -23,6 +24,8 @@ import { placeBoulders, plantTrees, treeMaterial, treeMeshes } from './trees';
 
 /** The camera distance under which the hero camps show their close models (frame units). */
 const NEAR = 0.2;
+/** The camera distance under which they show their woods: as far as the map's own trees are planted (worldTrees.ts). */
+const WOODS = 0.3;
 
 /** A hero site as the world shows it: which camp, which towns, and what the layer must leave out for it. */
 export interface HeroUse {
@@ -109,6 +112,8 @@ interface Built {
   group: Group;
   near: Group;
   far: Group;
+  /** The camp's own woods: hidden from afar, as the map's trees are (worldTrees.ts), where the ground draws them. */
+  woods: Group;
   geometries: BufferGeometry[];
   ships: { kind: Moored['kind']; u: number; v: number; rot: number }[];
   smoke: { u: number; v: number; y: number }[];
@@ -133,14 +138,12 @@ export class HeroLayer {
   private readonly built = new Map<string, Built>();
   private readonly materials = new Map<FactionId, Promise<{ material: MeshBasicNodeMaterial; textures: Texture[] } | null>>();
   private readonly ready: { material: Material; textures: Texture[] }[] = [];
-  private look: Promise<HeroGroundLook | null> | null = null;
   private lookReady: HeroGroundLook | null = null;
-  private trees: Promise<{ material: MeshBasicNodeMaterial; texture: Texture }> | null = null;
-  private treeLook: { material: MeshBasicNodeMaterial; texture: Texture } | null = null;
+  private treeLook: MeshBasicNodeMaterial | null = null;
   private disposed = false;
 
-  /** `drawn(u, v)` is the drawn land's height in metres at a frame point, negative under the sea. */
-  constructor(private readonly drawn: (u: number, v: number) => number) {}
+  /** `drawn(u, v)` is the drawn land's height in metres at a frame point, negative under the sea; `land` the land's look. */
+  constructor(private readonly drawn: (u: number, v: number) => number, private readonly land: LandLook) {}
 
   private material(navy: FactionId) {
     let p = this.materials.get(navy);
@@ -155,11 +158,7 @@ export class HeroLayer {
   }
 
   private groundLook() {
-    this.look ??= heroGroundLook().then((m) => {
-      if (this.disposed) { for (const x of [m.ground, m.laid, m.shade, m.water]) x.dispose(); for (const t of m.textures) t.dispose(); } else this.lookReady = m;
-      return m;
-    }, () => null);
-    return this.look;
+    return (this.lookReady ??= heroGroundLook(this.land));
   }
 
   /**
@@ -200,16 +199,14 @@ export class HeroLayer {
         add(ground.shade, look.shade, group, 3);
         add(ground.water, look.water, group, 2);
       }
-      const leaves = await (this.trees ??= treeMaterial().then((m) => {
-        if (this.disposed) { m.material.dispose(); m.texture.dispose(); } else this.treeLook = m;
-        return m;
-      }));
-      if (this.disposed) return;
+      const leaves = (this.treeLook ??= treeMaterial(this.land.details[3]!));
       const seed = Math.round(use.site.u * 1e6);
-      const trees = treeMeshes([...plantTrees(plan, use.site.reach, ground.sample, seed, use.avoid), ...placeBoulders(plan, use.site.reach, ground.sample, seed)], leaves.material);
+      const trees = treeMeshes([...plantTrees(plan, use.site.reach, ground.sample, seed, use.avoid), ...placeBoulders(plan, use.site.reach, ground.sample, seed)], leaves);
+      const woods = new Group();
+      group.add(woods);
       for (const t of trees) {
         geometries.push(t.geometry);
-        group.add(t);
+        woods.add(t);
       }
       meshes.forEach((m) => {
         const mat = mats[[...navies].indexOf(m.navy)]?.material;
@@ -219,7 +216,7 @@ export class HeroLayer {
       });
       const at = (x: number, z: number) => siteUV(use.site, x, z);
       const b: Built = {
-        key: use.key, group, near, far, geometries,
+        key: use.key, group, near, far, woods, geometries,
         ships: plan.ships.map((s) => ({ kind: s.kind, ...at(s.x, s.z), rot: s.rot })),
         smoke: plan.smoke.map(([x, y, z]) => ({ ...at(x, z), y: y * MODEL_METRE })),
       };
@@ -244,14 +241,7 @@ export class HeroLayer {
       // One camp a task, so a world of camps does not hold the page up in one piece.
       await new Promise((resolve) => setTimeout(resolve));
       if (this.disposed) return;
-      const site: HeroSite = { id: t.id, navy: t.navy, u: t.u, v: t.v, reach: 56 };
-      const natural = (x: number, z: number) => { const p = siteUV(site, x, z); return this.drawn(p.u, p.v) * ELEVATION_MODEL; };
-      const plan = new Plan({ natural, water: (x, z) => natural(x, z) <= 0.02 }, t.navy);
-      if (t.town) {
-        town(plan, 0, 0, t.town.houses, t.town.seed, 'joseon');
-        // Whose the town is, by the owner's banner at its end.
-        if (t.town.owner) plan.banner(-6, -4, Math.max(0.3, natural(-6, -4)), 9, t.town.owner === 'japan' ? 'red' : t.town.owner === 'ming' ? 'yellow' : 'blue', 1.6, 2.4, 0, t.town.owner === 'japan' ? 'nobori' : 'flag');
-      } else tierCamp(plan, t.navy, t.level, 0, 0);
+      const { site, plan } = tierPlan(t, this.drawn);
       const dx = (t.u - 0.5) / MODEL_METRE, dz = (t.v - 0.5) / (MODEL_METRE * MAP_ASPECT);
       for (const m of buildHero(plan)) {
         let pair = merges.get(m.navy);
@@ -293,7 +283,7 @@ export class HeroLayer {
       add(toGeometry(n.data()), mat, near);
       add(toGeometry(f.data()), mat, far);
     }
-    this.built.set(key, { key, group, near, far, geometries, ships: [], smoke });
+    this.built.set(key, { key, group, near, far, woods: new Group(), geometries, ships: [], smoke });
     this.group.add(group);
   }
 
@@ -308,6 +298,7 @@ export class HeroLayer {
     for (const b of this.built.values()) {
       b.near.visible = distance <= NEAR;
       b.far.visible = !b.near.visible;
+      b.woods.visible = distance <= WOODS;
     }
   }
 
@@ -325,29 +316,60 @@ export class HeroLayer {
     for (const m of this.ready) { m.material.dispose(); for (const t of m.textures) t.dispose(); }
     this.ready.length = 0;
     const look = this.lookReady;
-    if (look) { for (const x of [look.ground, look.laid, look.shade, look.water]) x.dispose(); for (const t of look.textures) t.dispose(); }
+    if (look) for (const x of [look.ground, look.laid, look.shade, look.water]) x.dispose();
     this.lookReady = null;
-    if (this.treeLook) { this.treeLook.material.dispose(); this.treeLook.texture.dispose(); }
+    this.treeLook?.dispose();
     this.treeLook = null;
     this.group.removeFromParent();
   }
 }
 
-/** The ground the map's trees keep off at the hero sites a world shows: every pad, every compound and village (frame units). */
-export function heroClearings(world: MapWorld): { u: number; v: number; r: number }[] {
+/**
+ * Another camp or town of the map laid out in its own frame on the drawn land: `drawn(u, v)` is the drawn land's height
+ * in metres at a frame point.
+ */
+function tierPlan(t: TierUse, drawn: (u: number, v: number) => number) {
+  const site: HeroSite = { id: t.id, navy: t.navy, u: t.u, v: t.v, reach: 56 };
+  const natural = (x: number, z: number) => { const p = siteUV(site, x, z); return drawn(p.u, p.v) * ELEVATION_MODEL; };
+  const plan = new Plan({ natural, water: (x, z) => natural(x, z) <= 0.02 }, t.navy);
+  if (t.town) {
+    town(plan, 0, 0, t.town.houses, t.town.seed, 'joseon');
+    // Whose the town is, by the owner's banner at its end.
+    if (t.town.owner) plan.banner(-6, -4, Math.max(0.3, natural(-6, -4)), 9, t.town.owner === 'japan' ? 'red' : t.town.owner === 'ming' ? 'yellow' : 'blue', 1.6, 2.4, 0, t.town.owner === 'japan' ? 'nobori' : 'flag');
+  } else tierCamp(plan, t.navy, t.level, 0, 0);
+  return { site, plan };
+}
+
+/** The clearings of a plan laid out at a site: every pad and every compound and village (frame units). */
+function planClearings(site: HeroSite, plan: Plan, out: { u: number; v: number; r: number }[]) {
+  const disc = (x: number, z: number, r: number) => out.push({ ...siteUV(site, x, z), r: r * MODEL_METRE });
+  for (const [x, z, r] of plan.clear) disc(x, z, r);
+  for (const pad of plan.pads) {
+    const cx = pad.poly.reduce((s, p) => s + p[0], 0) / pad.poly.length, cz = pad.poly.reduce((s, p) => s + p[1], 0) / pad.poly.length;
+    disc(cx, cz, Math.max(...pad.poly.map((p) => Math.hypot(p[0] - cx, p[1] - cz))) + 3);
+  }
+  // Houses stand on the land as drawn, off any pad: each keeps its own few metres.
+  for (const { piece: p } of plan.pieces) if (p.kind === 'bldg') disc(p.x, p.z, Math.max(p.w, p.d) / 2 + 2);
+}
+
+/**
+ * The ground the map's trees keep off where the hero camps' rules build (frame units): at the hero sites a world shows,
+ * their whole patch (they plant their own woods, trees.ts); at every other camp and town (`drawn` as for HeroLayer), its
+ * pads, compounds and houses, so the woods come up to them as the land's look draws them.
+ */
+export function heroClearings(world: MapWorld, drawn: (u: number, v: number) => number): { u: number; v: number; r: number }[] {
   if (!heroEnabled()) return [];
   const out: { u: number; v: number; r: number }[] = [];
-  for (const use of heroUses(world)) {
+  const heroes = heroUses(world);
+  for (const use of heroes) {
     const plan = heroPlan(use);
     if (!plan) continue;
-    const disc = (x: number, z: number, r: number) => out.push({ ...siteUV(use.site, x, z), r: r * MODEL_METRE });
-    // The camp plants its own woods over its patch (trees.ts): the map's keep off it.
-    disc(0, 0, use.site.reach - 10);
-    for (const [x, z, r] of plan.clear) disc(x, z, r);
-    for (const pad of plan.pads) {
-      const cx = pad.poly.reduce((s, p) => s + p[0], 0) / pad.poly.length, cz = pad.poly.reduce((s, p) => s + p[1], 0) / pad.poly.length;
-      disc(cx, cz, Math.max(...pad.poly.map((p) => Math.hypot(p[0] - cx, p[1] - cz))) + 3);
-    }
+    out.push({ ...siteUV(use.site, 0, 0), r: (use.site.reach - 10) * MODEL_METRE });
+    planClearings(use.site, plan, out);
+  }
+  for (const t of tierUses(world, heroes)) {
+    const { site, plan } = tierPlan(t, drawn);
+    planClearings(site, plan, out);
   }
   return out;
 }

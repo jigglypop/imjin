@@ -1,10 +1,11 @@
 import { BackSide, Color, Group, Mesh, MeshBasicNodeMaterial, SphereGeometry } from 'three/webgpu';
-import { mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
+import { attribute, float, mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
 import demMeta from '../../select/demMeta.json';
 import { V_SCALE } from '../../select/demFrame';
 import { loadDem } from '../../select/terrain';
 import { buildFarLandMesh } from './farLand';
 import { buildLand, fetchLand } from './groundLand';
+import { landNoise, loadLandLook, type LandLook } from './landLook';
 import { buildSea } from './groundSea';
 import { DEM_RECT, MESH_SCALE } from './mapMath';
 import { FAR, type CameraState } from './worldCamera';
@@ -19,6 +20,8 @@ export interface WorldGround {
    * markers, camps and ships on the ground. Land reads as the facets draw it (groundLand.ts), so all of them stand on it.
    */
   readonly heights: Float32Array;
+  /** The land's look, which the hero camps' ground fades into. */
+  readonly look: LandLook;
   /** The haze colour as a CSS hex string: the scene background and the fog colour. */
   readonly haze: string;
   /** Ground height in frame units at a frame point anywhere in the world, the far land north of the DEM included; 0 on water. Trees stand on it. */
@@ -53,15 +56,28 @@ export async function loadGround(signal: AbortSignal): Promise<WorldGround> {
   signal.throwIfAborted();
   const { heights } = dem;
   const made: { dispose(): void }[] = [];
+  const noise = landNoise();
+  made.push(noise);
+  // The light is baked off the page from the DEM as loaded, while the land, the far land and the sea are built (the land
+  // draws its facets' heights into the DEM).
+  const looking = loadLandLook(heights, noise, signal);
+  // A failure is reported where the look is awaited; meanwhile it does not count as unhandled.
+  looking.catch(() => undefined);
+  let look: LandLook | null = null;
   try {
     const land = await buildLand(bytes, heights);
     made.push(land);
-    signal.throwIfAborted();
     const far = buildFarLandMesh(heights, land.seam);
     made.push(far);
     // The sea's shallows and surf follow the coasts the facets of both draw.
-    const sea = buildSea(heights, [land.facets, far.facets]);
+    const sea = buildSea(heights, [land.facets, far.facets], noise);
     made.push(sea);
+    look = await looking;
+    made.push(look);
+    signal.throwIfAborted();
+    land.mesh.material.colorNode = look.color();
+    const own: any = attribute('land', 'vec4');
+    far.mesh.material.colorNode = look.color({ inner: float(1), sun: own.x, sky: own.y, slope: own.z, metres: own.w });
     const sky = buildSky();
     made.push({ dispose: () => { sky.geometry.dispose(); sky.material.dispose(); } });
     // The land is drawn before the sea plane, so the depth test discards the water wherever land stands above it.
@@ -75,6 +91,7 @@ export async function loadGround(signal: AbortSignal): Promise<WorldGround> {
     return {
       group,
       heights,
+      look,
       haze: WORLD_HAZE,
       heightAt(u, v) {
         if (v < DEM_RECT.v) return far.heightAt(u, v);
@@ -100,6 +117,8 @@ export async function loadGround(signal: AbortSignal): Promise<WorldGround> {
     };
   } catch (error) {
     for (const part of made) part.dispose();
+    // A look still on its way when the land failed is freed when it arrives.
+    if (!look) void looking.then((l) => l.dispose(), () => undefined);
     throw error;
   }
 }

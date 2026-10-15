@@ -21,8 +21,8 @@ try {
     return d > 0.03 ? -0.00005 : (0.03 - d) / 0.03 * 600 * perMetre + 12 * perMetre;
   };
   const cam = (distance, u = centre.u, v = centre.v) => ({ u, v, distance, yaw: 0, pitch: 0.7 });
-  const planted = (layer) => layer.mesh.count;
-  const positions = (layer) => Array.from({ length: layer.mesh.count }, (_, i) => ({ x: layer.mesh.instanceMatrix.array[i * 16 + 12], y: layer.mesh.instanceMatrix.array[i * 16 + 13], z: layer.mesh.instanceMatrix.array[i * 16 + 14] }));
+  const planted = (layer) => layer.count;
+  const positions = (layer) => layer.meshes.flatMap((mesh) => Array.from({ length: mesh.count }, (_, i) => ({ x: mesh.instanceMatrix.array[i * 16 + 12], y: mesh.instanceMatrix.array[i * 16 + 13], z: mesh.instanceMatrix.array[i * 16 + 14], h: mesh.instanceMatrix.array[i * 16 + 5] })));
   // update() works within a time budget a frame and says whether to draw again: call it as frames would until it rests.
   const settle = (layer, c) => {
     let changed = false;
@@ -33,10 +33,33 @@ try {
     throw new Error('the trees never came to rest');
   };
 
-  check('a tree is a low-poly pine of at most 12 triangles, and at most 8000 are laid', () => {
+  check('four kinds (broadleaf, fir, rock, red pine), each under 120 triangles, at most 18500 laid in all', () => {
     const layer = new TreeLayer(ground, perMetre);
-    assert.ok(layer.mesh.geometry.getAttribute('position').count / 3 <= 12);
-    assert.ok(layer.mesh.instanceMatrix.count <= 8000, String(layer.mesh.instanceMatrix.count));
+    assert.equal(layer.meshes.length, 4);
+    for (const mesh of layer.meshes) assert.ok(mesh.geometry.index.count / 3 <= 120, String(mesh.geometry.index.count / 3));
+    const capacity = layer.meshes.reduce((n, m) => n + m.instanceMatrix.count, 0);
+    assert.ok(capacity <= 18500, String(capacity));
+    layer.dispose();
+  });
+
+  check('the land\'s cover decides: woods where it is wooded, rocks on its crags, nothing on open fields', () => {
+    // West of the hill's top all wood, east of it all crag, south of it all farmland.
+    const cover = (u, v) => {
+      const base = { wood: 0, rock: 0, crag: 0, sand: 0, farm: 0, slope: 0.3, metres: 300, wander: 0, broad: 0.5, stand: 0.5 };
+      if (v > centre.v + 0.004) return { ...base, farm: 1 };
+      return u < centre.u ? { ...base, wood: 1 } : { ...base, rock: 1, crag: 1 };
+    };
+    const layer = new TreeLayer(ground, perMetre, cover);
+    settle(layer, cam(0.04));
+    const [broad, fir, rock, red] = layer.meshes.map((m) => m.count);
+    assert.ok(broad + fir + red > 200, `${broad + fir + red} trees`);
+    assert.ok(rock > 20, `${rock} rocks`);
+    const at = (mesh, i) => ({ u: frameU(mesh.instanceMatrix.array[i * 16 + 12]), v: frameV(mesh.instanceMatrix.array[i * 16 + 14]) });
+    for (const kind of [0, 1, 3]) for (let i = 0; i < layer.meshes[kind].count; i += 1) {
+      const p = at(layer.meshes[kind], i);
+      assert.ok(p.u < centre.u + 1e-9 && p.v <= centre.v + 0.004 + 1e-9, 'a tree stands in the wood');
+    }
+    for (let i = 0; i < rock; i += 1) assert.ok(at(layer.meshes[2], i).u >= centre.u - 1e-9, 'a rock stands on the crag');
     layer.dispose();
   });
 
@@ -44,7 +67,7 @@ try {
     const layer = new TreeLayer(ground, perMetre);
     assert.equal(settle(layer, cam(0.04)), true);
     assert.ok(planted(layer) > 200 && planted(layer) <= 8000, String(planted(layer)));
-    assert.equal(layer.mesh.visible, true);
+    assert.ok(layer.meshes.some((m) => m.visible));
     for (const p of positions(layer)) assert.ok(ground(frameU(p.x), frameV(p.z)) > 0, 'a tree stands on land');
     layer.dispose();
   });
@@ -72,7 +95,7 @@ try {
     assert.equal(planted(a), planted(b));
     assert.deepEqual(positions(a).slice(0, 20), positions(b).slice(0, 20));
     assert.equal(a.update(cam(0.6)), true, 'going far hides the trees');
-    assert.equal(a.mesh.visible, false);
+    assert.ok(a.meshes.every((m) => !m.visible));
     a.dispose(); b.dispose();
   });
 
@@ -92,7 +115,7 @@ try {
     settle(layer, cam(0.04));
     const first = readings;
     readings = 0;
-    assert.equal(settle(layer, cam(0.04, centre.u + 0.005)), true, 'the trees follow the camera');
+    assert.equal(settle(layer, cam(0.04, centre.u + 0.008)), true, 'the trees follow the camera');
     assert.ok(readings < first * 0.3, `${readings} readings of the ground after a short pan, ${first} for the first planting`);
     layer.dispose();
   });
@@ -100,7 +123,7 @@ try {
   check('trees are bigger when planted for a farther camera, so the forest still reads', () => {
     const near = new TreeLayer(ground, perMetre), far = new TreeLayer(ground, perMetre);
     settle(near, cam(0.04)); settle(far, cam(0.2));
-    const heights = (layer) => Array.from({ length: Math.min(50, layer.mesh.count) }, (_, i) => layer.mesh.instanceMatrix.array[i * 16 + 5]);
+    const heights = (layer) => positions(layer).slice(0, 50).map((p) => p.h);
     const mean = (a) => a.reduce((s, v) => s + v, 0) / a.length;
     assert.ok(mean(heights(far)) > mean(heights(near)) * 2);
     near.dispose(); far.dispose();

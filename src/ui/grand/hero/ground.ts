@@ -1,17 +1,16 @@
-import {
-  BufferAttribute, BufferGeometry, DoubleSide, LinearMipmapLinearFilter, MeshBasicNodeMaterial, RepeatWrapping, SRGBColorSpace, ShapeUtils,
-  TextureLoader, Vector2, type Texture,
-} from 'three/webgpu';
+import { BufferAttribute, BufferGeometry, DoubleSide, MeshBasicNodeMaterial, ShapeUtils, Vector2, type Texture } from 'three/webgpu';
 import { attribute, float, floor, fract, fwidth, mix, mx_noise_float, positionLocal, smoothstep, texture, vec2, vec3, vec4 } from 'three/tsl';
-import { faceColor, SKY_LIGHT, SUN_DIRECTION, SUN_LIGHT, type Facet } from '../groundPalette';
-import { MAP_ASPECT } from '../projection';
+import { SKY_LIGHT, SUN_DIRECTION, SUN_LIGHT } from '../groundPalette';
+import { vertexLight } from '../landBake';
+import type { LandLook } from '../landLook';
 import type { P2, Plan, Surface } from './plan';
-import { ELEVATION_MODEL, MODEL_METRE, siteUV, type HeroSite } from './site';
+import { ELEVATION_MODEL, siteUV, type HeroSite } from './site';
 import { cutAt, sinkAt } from './terrain';
 
-// The ground of a hero camp: the land round it drawn smooth and textured instead of in flat facets (a patch of the drawn
-// land's own heights on a 2 m grid, coloured by the land's palette with smooth normals, grass, woodland floor, rock and
-// beach sand worked in from the battle's ground textures, fading into the facets at its edge), the pads, yards, lanes,
+// The ground of a hero camp: the land round it drawn at its own finer heights (a patch of the drawn land on a 2 m grid,
+// the terraces and banks cut into it), with the land's own look (landLook.ts) lit by the patch's smooth normals and its
+// own grass, woodland floor, rock and beach sand, giving way to the land's bake towards its edge, where the two are the
+// same colour and the patch fades into the facets), the pads, yards, lanes,
 // quays and fields laid on it, and the soft shade every building leaves on the ground beside it. All in the site's frame
 // (model metres); the layer places the meshes. The land's facets sink a little under the patch (terrain.ts), so nothing
 // of them shows through it.
@@ -42,15 +41,19 @@ const SURFACES: Record<Surface, { rgb: [number, number, number]; w: [number, num
   field: { rgb: lin(160, 160, 92), w: [0.7, 0, 0.3, 0], pave: 0 },
 };
 
-/** Vertex streams of a ground mesh: position, colour with alpha, the texture weights and the paving share. */
+/** Vertex streams of a ground mesh: position, colour with alpha, the texture weights, the paving share and the patch's light. */
 class Streams {
-  p: number[] = []; c: number[] = []; w: number[] = []; k: number[] = []; idx: number[] = [];
-  /** `pave` the share of paving joints, `inner` how far inside the patch (0 at its fading edge, 1 well in). */
-  vert(x: number, y: number, z: number, rgb: ArrayLike<number>, a: number, w: ArrayLike<number>, pave: number, inner = 1) {
+  p: number[] = []; c: number[] = []; w: number[] = []; k: number[] = []; l: number[] = []; idx: number[] = [];
+  /**
+   * `pave` the share of paving joints, `inner` how far inside the patch (0 at its fading edge, 1 well in), `land` the
+   * patch's sun, sky, slope and metres for the land's look.
+   */
+  vert(x: number, y: number, z: number, rgb: ArrayLike<number>, a: number, w: ArrayLike<number>, pave: number, inner = 1, land: ArrayLike<number> = NO_LAND) {
     this.p.push(x, y, z);
     this.c.push(rgb[0]!, rgb[1]!, rgb[2]!, a);
     this.w.push(w[0]!, w[1]!, w[2]!, w[3]!);
     this.k.push(pave, inner);
+    this.l.push(land[0]!, land[1]!, land[2]!, land[3]!);
     return this.p.length / 3 - 1;
   }
   geometry() {
@@ -60,11 +63,14 @@ class Streams {
     g.setAttribute('color', new BufferAttribute(new Float32Array(this.c), 4));
     g.setAttribute('w', new BufferAttribute(new Float32Array(this.w), 4));
     g.setAttribute('pave', new BufferAttribute(new Float32Array(this.k), 2));
+    if (this.l.some((v) => v !== 0)) g.setAttribute('land', new BufferAttribute(new Float32Array(this.l), 4));
     g.setIndex(this.p.length / 3 < 65536 ? new BufferAttribute(Uint16Array.from(this.idx), 1) : new BufferAttribute(Uint32Array.from(this.idx), 1));
     g.computeBoundingSphere();
     return g;
   }
 }
+
+const NO_LAND = [0, 0, 0, 0] as const;
 
 /** Smooth value noise in -1..1 for the patch's ragged edge. */
 function wobble(x: number, z: number) {
@@ -144,9 +150,8 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
     }
   }
   const patch = new Streams();
-  const facet: Facet = { metres: 0, nx: 0, ny: 1, nz: 0, x: 0, z: 0, size: STEP * MODEL_METRE, slope: 0, shore: false };
-  const rgb = new Float32Array(3);
   const w: number[] = [0, 0, 0, 0];
+  const white = [1, 1, 1];
   const woods = new Float32Array(n * n), open = new Float32Array(n * n);
   for (let j = 0; j < n; j += 1) {
     for (let i = 0; i < n; i += 1) {
@@ -154,28 +159,21 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
       // A normal smoothed over two cells, so the light rolls over the hills instead of breaking at each facet.
       const gx = (at(i + 2, j) + at(i + 1, j) - at(i - 1, j) - at(i - 2, j)) / (6 * STEP);
       const gz = (at(i, j + 2) + at(i, j + 1) - at(i, j - 1) - at(i, j - 2)) / (6 * STEP);
-      const len = Math.hypot(gx, 1, gz);
       const slope = Math.hypot(gx, gz);
-      const { u, v } = siteUV(site, x, z);
-      facet.metres = h / ELEVATION_MODEL;
-      facet.nx = -gx / len; facet.ny = 1 / len; facet.nz = -gz / len;
-      facet.x = u - 0.5; facet.z = (v - 0.5) / MAP_ASPECT;
-      facet.slope = slope;
-      facet.shore = h <= 0.08;
-      faceColor(facet, rgb, 0);
+      const metres = h / ELEVATION_MODEL;
+      // Lit as the land's bake lights it (a model metre is as wide as it is high, so the slope is the drawn one).
+      const land = vertexLight(gx, gz, Math.max(0, metres));
       // Which ground textures show: rock on the steep cuts and crags, sand on the flat shore, woodland floor on the wooded slopes, grass elsewhere.
       const rock = smooth(0.85, 1.6, slope);
       const sand = shore[j * n + i] ? (1 - smooth(0.02, 0.16, h)) * (1 - smooth(0.45, 0.9, slope)) : 0;
-      const wood = Math.max(smooth(0.3, 0.6, slope), smooth(70, 190, facet.metres)) * (1 - rock) * (1 - sand);
+      const wood = Math.max(smooth(0.3, 0.6, slope), smooth(70, 190, metres)) * (1 - rock) * (1 - sand);
       w[0] = Math.max(0, 1 - rock - sand - wood); w[1] = rock; w[2] = sand; w[3] = wood;
       woods[j * n + i] = wood;
       open[j * n + i] = w[0];
       const edge = R - Math.max(Math.abs(x), Math.abs(z)) + wobble(x, z) * 6;
-      // Well inside the patch the land's bright map colours calm to the colours of real ground: a little less green, warmer.
-      const inner = smooth(FADE, FADE + 35, edge);
-      const grey = rgb[0]! * 0.3 + rgb[1]! * 0.55 + rgb[2]! * 0.15;
-      for (let k = 0; k < 3; k += 1) rgb[k] = rgb[k]! + (grey * [1.1, 1.0, 0.7][k]! - rgb[k]!) * inner * 0.1;
-      patch.vert(x, h + LIFT, z, rgb, smooth(2, FADE, edge), w, 0, inner);
+      // Its own ground takes over from the land's bake inside the fading border, so at the border the two are one colour.
+      const inner = smooth(FADE * 0.5, FADE + 30, edge);
+      patch.vert(x, h + LIFT, z, white, smooth(2, FADE, edge), w, 0, inner, land);
     }
   }
   for (let j = 0; j + 1 < n; j += 1) for (let i = 0; i + 1 < n; i += 1) {
@@ -317,26 +315,16 @@ function smooth(a: number, b: number, x: number) {
   return t * t * (3 - 2 * t);
 }
 
-/** The ground textures the patch is worked from: the battle's own ground (src/terrain), 1k. */
-const TEXTURES = ['aerial_grass_rock', 'aerial_rocks_02', 'coast_sand_01', 'forest_leaves_02'] as const;
-
-export interface HeroGroundLook { ground: MeshBasicNodeMaterial; laid: MeshBasicNodeMaterial; shade: MeshBasicNodeMaterial; water: MeshBasicNodeMaterial; textures: Texture[] }
+export interface HeroGroundLook { ground: MeshBasicNodeMaterial; laid: MeshBasicNodeMaterial; shade: MeshBasicNodeMaterial; water: MeshBasicNodeMaterial }
 
 /**
- * The ground's materials: the vertex colour (the land's palette with its light) carrying the detail of the ground
- * textures, each divided by its own mean so it changes the grain and not the colour, at two scales so no tiling shows;
- * paved surfaces get slab joints. Unlit like the land's facets, with its fog.
+ * The ground's materials. The patch is the land's own look (landLook.ts) with the patch's light and ground faded in over
+ * the bake's. What is laid on it is its vertex colour carrying the detail of the land's ground textures, each divided by
+ * its own mean so it changes the grain and not the colour, at two scales so no tiling shows; paved surfaces get slab
+ * joints. Unlit like the land, with its fog. The textures are the land's, which frees them.
  */
-export async function heroGroundLook(): Promise<HeroGroundLook> {
-  const loader = new TextureLoader();
-  const textures = await Promise.all(TEXTURES.map(async (name) => {
-    const t = await loader.loadAsync(`/textures/${name}/diff_1k.jpg`);
-    t.colorSpace = SRGBColorSpace;
-    t.wrapS = t.wrapT = RepeatWrapping;
-    t.minFilter = LinearMipmapLinearFilter;
-    t.anisotropy = 4;
-    return t;
-  }));
+export function heroGroundLook(land: LandLook): HeroGroundLook {
+  const textures = land.details;
   const p: any = positionLocal.xz;
   const detail = (t: Texture, size: number) => {
     const mean = texture(t, vec2(0.5, 0.5)).level(float(12)).rgb.max(vec3(0.02));
@@ -390,5 +378,9 @@ export async function heroGroundLook(): Promise<HeroGroundLook> {
   water.polygonOffset = true;
   water.polygonOffsetFactor = -2;
   water.polygonOffsetUnits = -4;
-  return { ground: make({ transparent: true, depthWrite: true, offset: 0 }), laid: make({ transparent: true, depthWrite: false, offset: 2 }), shade, water, textures };
+  const ground = new MeshBasicNodeMaterial({ transparent: true, depthWrite: true });
+  const own: any = attribute('land', 'vec4');
+  ground.colorNode = vec4(land.color({ inner, sun: own.x, sky: own.y, slope: own.z, metres: own.w, w }), 1);
+  ground.opacityNode = col.a;
+  return { ground, laid: make({ transparent: true, depthWrite: false, offset: 2 }), shade, water };
 }

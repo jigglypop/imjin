@@ -40,9 +40,12 @@ export interface WorldProps {
 
 /**
  * At rest the world is drawn about thirty times a second, so the sea, the smoke and the boats keep moving (their motion
- * follows the clock, not the frame count). While the camera moves, every display frame is drawn.
+ * follows the clock, not the frame count); from afar, where that motion is a pixel or two, fifteen. While the camera
+ * moves, every display frame is drawn.
  */
 const AMBIENT_MS = 33;
+/** The camera distance (frame units) beyond which the ambient frames halve. */
+const AMBIENT_FAR = 0.3;
 /** The camera r3f makes; `CampaignWorld.frame` sets all of it again for every frame. */
 const CAMERA = { fov: (FOV * 180) / Math.PI, near: NEAR, far: FAR };
 /** The canvas lies under the map's overlay and never takes the pointer: the map's root handles every gesture. */
@@ -134,6 +137,8 @@ export function World({ view, world, onReady, onError, onControls }: WorldProps)
   const props = useRef({ view, onReady, onError, reduced });
   props.current = { view, onReady, onError, reduced };
   const born = useRef(frameTime());
+  /** The camera's distance at the last frame drawn: the ambient frames slow from afar. */
+  const distance = useRef(0);
 
   useEffect(() => {
     // Shaders are compiled away from the frames, for the camera the frames draw with, each mesh on its own: one
@@ -183,7 +188,11 @@ export function World({ view, world, onReady, onError, onControls }: WorldProps)
     if (!ready || !visible) return;
     invalidate();
     if (reduced) return;
-    const id = setInterval(() => invalidate(), AMBIENT_MS);
+    let tick = 0;
+    const id = setInterval(() => {
+      tick += 1;
+      if (distance.current <= AMBIENT_FAR || tick % 2 === 0) invalidate();
+    }, AMBIENT_MS);
     return () => clearInterval(id);
   }, [ready, visible, reduced, invalidate]);
 
@@ -195,6 +204,7 @@ export function World({ view, world, onReady, onError, onControls }: WorldProps)
     if (!v || v.screen.w < 1 || v.screen.h < 1) return;
     // The ambient clock stands still for a player who asks for reduced motion.
     const clock = props.current.reduced ? 0 : (now - born.current) / 1000;
+    distance.current = v.cam.distance;
     campaign.frame(state.camera as PerspectiveCamera, v.cam, v.screen, clock);
     state.gl.render(state.scene, state.camera);
     if (v.more) state.invalidate();

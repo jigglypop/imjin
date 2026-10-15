@@ -2,15 +2,14 @@ import { BufferAttribute, BufferGeometry, Mesh, MeshBasicNodeMaterial } from 'th
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { freeAfterDraw } from '../../render/dispose';
 import { V_SCALE } from '../../select/demFrame';
-import { faceColor, groundSlopes, type Facet } from './groundPalette';
 import { heroEnabled } from './hero/site';
 import { heroGroundReady, prepareHeroGround, shapeLand } from './hero/terrain';
 import { DEM_RECT, MESH_SCALE } from './mapMath';
 import { worldX, worldZ } from './worldCamera';
 
-// The land of the campaign's 3D world: the DEM cut into flat facets at build time (scripts/build-grand-terrain.mjs, whose
-// header describes the asset), each coloured once here by groundPalette.ts with the sun baked in, so the shader only
-// passes a colour through and the scene's fog over it.
+// The land of the campaign's 3D world: the DEM cut into facets at build time (scripts/build-grand-terrain.mjs, whose
+// header describes the asset), drawn with the land's look (landLook.ts), which lights and colours them smooth from a bake
+// of the DEM itself.
 
 const ASSET = '/ui/grand_terrain.bin';
 const VERSION = 1;
@@ -33,7 +32,7 @@ export async function fetchLand(signal: AbortSignal) {
 
 /** The land's mesh and its north edge, where the far land (farLand.ts) joins it. */
 export interface GroundLand {
-  readonly mesh: Mesh;
+  readonly mesh: Mesh<BufferGeometry, MeshBasicNodeMaterial>;
   /** The drawn facets, nine floats each (x, y, z of three corners, y in frame units), for the sea to bake its coasts from before the first draw frees them (freeAfterDraw). */
   readonly facets: Float32Array;
   /** Every vertex of the DEM's north row, west to east: its frame u and its height in metres. */
@@ -91,43 +90,25 @@ export async function buildLand(buffer: ArrayBuffer, heights: Float32Array): Pro
   }
   drawHeights(heights, W, H, grid, metres, index);
 
-  // One colour per facet: three vertices of their own each, so nothing is interpolated across a facet.
+  // The facets share their vertices: the land's look (landLook.ts) shades them smooth from its bake of the DEM, so nothing
+  // is kept per facet. The sea bakes its coasts from the facets laid out one by one, which it is given and then drops.
   const triangles = header.triangles;
-  const position = new Float32Array(triangles * 9);
-  const color = new Float32Array(triangles * 9);
-  const slopes = groundSlopes(index, world, n);
-  const facet: Facet = { metres: 0, nx: 0, ny: 1, nz: 0, x: 0, z: 0, size: 0, slope: 0, shore: false };
+  const facets = new Float32Array(triangles * 9);
+  const order = new Uint32Array(triangles * 3);
   for (let t = 0; t < triangles; t += 1) {
     const a = index[t * 3]!;
     let b = index[t * 3 + 1]!, c = index[t * 3 + 2]!;
-    const ux = world[b * 3]! - world[a * 3]!, uy = world[b * 3 + 1]! - world[a * 3 + 1]!, uz = world[b * 3 + 2]! - world[a * 3 + 2]!;
-    const vx = world[c * 3]! - world[a * 3]!, vy = world[c * 3 + 1]! - world[a * 3 + 1]!, vz = world[c * 3 + 2]! - world[a * 3 + 2]!;
-    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const ux = world[b * 3]! - world[a * 3]!, uz = world[b * 3 + 2]! - world[a * 3 + 2]!;
+    const vx = world[c * 3]! - world[a * 3]!, vz = world[c * 3 + 2]! - world[a * 3 + 2]!;
     // Front faces look up: three.js takes a counter-clockwise triangle as facing the viewer.
-    if (ny < 0) {
-      [b, c] = [c, b];
-      nx = -nx; ny = -ny; nz = -nz;
-    }
-    const length = Math.hypot(nx, ny, nz) || 1;
+    if (uz * vx - ux * vz < 0) [b, c] = [c, b];
+    order[t * 3] = a; order[t * 3 + 1] = b; order[t * 3 + 2] = c;
     const o = t * 9;
     for (const [k, v] of [[0, a], [3, b], [6, c]] as const) {
-      position[o + k] = world[v * 3]!;
-      position[o + k + 1] = world[v * 3 + 1]!;
-      position[o + k + 2] = world[v * 3 + 2]!;
+      facets[o + k] = world[v * 3]!;
+      facets[o + k + 1] = world[v * 3 + 1]!;
+      facets[o + k + 2] = world[v * 3 + 2]!;
     }
-    // A facet with a corner under the sea plane draws a stretch of the coast: where it lies flat, the palette's beach.
-    facet.metres = (metres[a]! + metres[b]! + metres[c]!) / 3;
-    facet.nx = nx / length;
-    facet.ny = ny / length;
-    facet.nz = nz / length;
-    facet.x = (position[o]! + position[o + 3]! + position[o + 6]!) / 3;
-    facet.z = (position[o + 2]! + position[o + 5]! + position[o + 8]!) / 3;
-    facet.size = Math.max(Math.abs(ux), Math.abs(vx), Math.abs(ux - vx), Math.abs(uz), Math.abs(vz), Math.abs(uz - vz));
-    facet.slope = slopes[t]!;
-    facet.shore = metres[a]! <= 0 || metres[b]! <= 0 || metres[c]! <= 0;
-    faceColor(facet, color, o);
-    color.copyWithin(o + 3, o, o + 3);
-    color.copyWithin(o + 6, o, o + 3);
   }
 
   const seamGrid = new Uint16Array(seamStream.buffer, seamStream.byteOffset, header.seam * 2);
@@ -139,16 +120,17 @@ export async function buildLand(buffer: ArrayBuffer, heights: Float32Array): Pro
   }
 
   const geometry = new BufferGeometry();
-  geometry.setAttribute('position', new BufferAttribute(position, 3));
-  geometry.setAttribute('color', new BufferAttribute(color, 3));
-  const material = new MeshBasicNodeMaterial({ vertexColors: true });
+  geometry.setAttribute('position', new BufferAttribute(world, 3));
+  geometry.setIndex(new BufferAttribute(order, 1));
+  // Its colour is the land's look (landLook.ts), which the ground gives it once the light is baked.
+  const material = new MeshBasicNodeMaterial();
   const mesh = new Mesh(geometry, material);
   // The DEM fills most of any view and its arrays are freed after the first draw, so there is no bounding volume to cull by.
   mesh.frustumCulled = false;
   freeAfterDraw(mesh);
   return {
     mesh,
-    facets: position,
+    facets,
     seam,
     dispose() {
       geometry.dispose();

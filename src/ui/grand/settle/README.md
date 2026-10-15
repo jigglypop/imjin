@@ -197,7 +197,7 @@ no main-thread layout, the old kits kept behind `?settle=1` until the new ones m
 - MODULES: `modules/*`, `walls.ts`, `palette.ts`, `material.ts`, `scripts/review-settle-modules.mjs`,
   `scripts/test-settle-modules.mjs`. Builds against `fixtures.ts` until the records exist.
 - Later: `../mapWorld.ts`, `../mapLayer.ts`, `../campaignWorld.ts`, `../WorldCanvas.tsx`, `../GrandMap.tsx`,
-  `../cardLayout.ts`, `../worldTrees.ts`, `../adapt.ts`; then `campBuildings.ts`, `campPieces.ts`, `campMaterial.ts`,
+  `../labelLayout.ts`, `../worldTrees.ts`, `../adapt.ts`; then `campBuildings.ts`, `campPieces.ts`, `campMaterial.ts`,
   `kitParts.ts` and the building atlases retire.
 - Shared, change only in a small commit both streams hear of: `src/ships/build/parts.ts`, `bake.ts`, `pack.ts`.
 

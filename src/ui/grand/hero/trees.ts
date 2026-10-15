@@ -1,5 +1,6 @@
-import { BufferGeometry, Color, Float32BufferAttribute, InstancedMesh, Matrix4, MeshBasicNodeMaterial, Quaternion, RepeatWrapping, SRGBColorSpace, Sphere, TextureLoader, Vector3 } from 'three/webgpu';
-import { float, positionLocal, texture, vec2, vec3 } from 'three/tsl';
+import { BufferGeometry, Color, Float32BufferAttribute, InstancedMesh, Matrix4, MeshBasicNodeMaterial, Quaternion, Sphere, Vector3, type Texture } from 'three/webgpu';
+import { float, instanceIndex, positionLocal, sin, texture, vec2, vec3 } from 'three/tsl';
+import { worldClock } from '../../../select/terrain';
 import { SKY_LIGHT, SUN_DIRECTION, SUN_LIGHT } from '../groundPalette';
 import { outside, seeded, type Plan } from './plan';
 
@@ -67,35 +68,62 @@ function trunk(pos: number[], col: number[], r: number, y0: number, y1: number) 
   return idx;
 }
 
-/** A broadleaf tree one unit tall: a trunk under three masses of leaves. */
-function broadleaf() {
-  const pos: number[] = [], col: number[] = [], leaf = lin('#3f6328');
+/** How finely a tree is built: `near` for the close views, `far` (no trunk, fewer masses: about half the triangles) for the farther ones. */
+export type TreeDetail = 'near' | 'far';
+
+/** A broadleaf tree one unit tall: a trunk under three masses of leaves, or two from afar. */
+function broadleaf(detail: TreeDetail) {
+  const pos: number[] = [], col: number[] = [], leaf = lin('#3d6127');
+  const near = detail === 'near';
   const idx = [
-    ...trunk(pos, col, 0.05, -0.1, 0.45),
+    ...(near ? trunk(pos, col, 0.05, -0.1, 0.45) : []),
     ...blob(pos, col, 0.02, 0.62, 0.02, 0.31, leaf, 1),
     ...blob(pos, col, -0.13, 0.48, -0.06, 0.24, leaf.clone().multiplyScalar(0.9), 3),
+    ...(near ? blob(pos, col, 0.14, 0.5, 0.08, 0.2, leaf.clone().multiplyScalar(1.06), 5) : []),
   ];
   return geometry(pos, col, idx);
 }
 
-/** A pine one unit tall: a trunk and three stacked skirts of needles narrowing to the top. */
-function pine() {
-  const pos: number[] = [], col: number[] = [], needles = lin('#24462a'), idx = [...trunk(pos, col, 0.04, -0.1, 0.3)];
-  const seg = 6;
-  for (const [y0, y1, r] of [[0.18, 0.62, 0.3], [0.42, 0.85, 0.23], [0.66, 1.0, 0.15]] as const) {
+/** A fir of the high ground one unit tall: a trunk and stacked skirts of needles narrowing to the top, drooping at their rims. */
+function pine(detail: TreeDetail) {
+  const near = detail === 'near';
+  const pos: number[] = [], col: number[] = [], needles = lin('#24462a'), idx = near ? [...trunk(pos, col, 0.04, -0.1, 0.3)] : [];
+  const seg = near ? 7 : 6;
+  const skirts = near ? [[0.16, 0.5, 0.31], [0.36, 0.7, 0.25], [0.56, 0.88, 0.18], [0.74, 1.0, 0.11]] as const : [[0.16, 0.62, 0.3], [0.48, 1.0, 0.19]] as const;
+  for (const [y0, y1, r] of skirts) {
     const base = pos.length / 3;
     for (let j = 0; j < seg; j += 1) {
-      const a = (j / seg) * Math.PI * 2;
+      const a = (j / seg) * Math.PI * 2 + y0 * 3;
       const nx = Math.cos(a) * 0.8, ny = 0.6, nz = Math.sin(a) * 0.8;
       const L = lightOf(nx, ny, nz);
-      pos.push(Math.cos(a) * r, y0, Math.sin(a) * r);
-      col.push(needles.r * L[0]! * 0.75, needles.g * L[1]! * 0.75, needles.b * L[2]! * 0.75);
+      pos.push(Math.cos(a) * r, y0 - 0.03, Math.sin(a) * r);
+      col.push(needles.r * L[0]! * 0.7, needles.g * L[1]! * 0.7, needles.b * L[2]! * 0.7);
     }
     pos.push(0, y1, 0);
     const L = lightOf(0, 1, 0);
     col.push(needles.r * L[0]!, needles.g * L[1]!, needles.b * L[2]!);
     for (let j = 0; j < seg; j += 1) idx.push(base + j, base + seg, base + ((j + 1) % seg));
   }
+  return geometry(pos, col, idx);
+}
+
+/**
+ * The red pine of the Korean coasts one unit tall: a bare trunk leaning a little, under flat, broad tufts of needles, the
+ * crown wider than it is deep.
+ */
+function redPine(detail: TreeDetail) {
+  const near = detail === 'near';
+  const pos: number[] = [], col: number[] = [], needles = lin('#2d4f2c');
+  const idx = near ? [...trunk(pos, col, 0.035, -0.1, 0.72)] : [];
+  const tuft = (cx: number, cy: number, cz: number, r: number, shade: number, seed: number) => {
+    const start = pos.length / 3;
+    const made = blob(pos, col, cx, cy, cz, r, needles.clone().multiplyScalar(shade), seed);
+    // Flattened to a tuft: half as deep as it is wide.
+    for (let v = start; v < pos.length / 3; v += 1) pos[v * 3 + 1] = cy + (pos[v * 3 + 1]! - cy) * 0.5;
+    return made;
+  };
+  idx.push(...tuft(0.03, 0.84, 0, 0.3, 1, 11), ...tuft(-0.16, 0.74, 0.08, 0.2, 0.92, 13));
+  if (near) idx.push(...tuft(0.17, 0.72, -0.1, 0.18, 1.05, 17));
   return geometry(pos, col, idx);
 }
 
@@ -187,14 +215,23 @@ export function plantTrees(plan: Plan, reach: number, groundAt: (x: number, z: n
     if (keepOff.some(([cx, cz, r]) => Math.hypot(px - cx, pz - cz) < r)) continue;
     if (plan.flats.some((f) => outside(f.poly, px, pz) < 2) || nearLane(px, pz)) continue;
     const pineShare = Math.min(0.85, 0.25 + g.h * 0.06);
-    out.push([px, g.h - 0.2, pz, 5.5 + rnd.next() * 4.5, rnd.next() < pineShare ? 1 : 0, 0.78 + rnd.next() * 0.34]);
+    const conifer = rnd.next() < pineShare, low = rnd.next() > g.h * 0.05;
+    out.push([px, g.h - 0.2, pz, 5.5 + rnd.next() * 4.5, conifer ? (low ? 3 : 1) : 0, 0.78 + rnd.next() * 0.34]);
   }
   return out;
 }
 
-/** The trees as two instanced meshes (broadleaf, pine) in the site's frame. */
+/**
+ * The shapes, one unit tall, by the kind a spot names: 0 broadleaf, 1 fir, 2 boulder, 3 red pine. The boulder is the
+ * same at either detail.
+ */
+export function treeShapes(detail: TreeDetail) {
+  return [broadleaf(detail), pine(detail), boulder(), redPine(detail)];
+}
+
+/** The trees as instanced meshes, one a kind, in the site's frame. */
 export function treeMeshes(spots: TreeSpot[], material: MeshBasicNodeMaterial) {
-  const shapes = [broadleaf(), pine(), boulder()];
+  const shapes = treeShapes('near');
   return shapes.map((shape, kind) => {
     const list = spots.filter((s) => s[4] === kind);
     if (!list.length) { shape.dispose(); return null; }
@@ -203,7 +240,7 @@ export function treeMeshes(spots: TreeSpot[], material: MeshBasicNodeMaterial) {
     let maxR = 0;
     list.forEach(([x, y, z, h, , shade], i) => {
       q.setFromAxisAngle(up, (x * 12.9898 + z * 78.233) % (Math.PI * 2));
-      const w = kind === 2 ? h : h * (kind ? 0.85 : 1.15) * (0.85 + ((x * 3.7 + z * 1.3) % 0.3));
+      const w = kind === 2 ? h : h * (kind === 1 ? 0.85 : kind === 3 ? 1.05 : 1.15) * (0.85 + ((x * 3.7 + z * 1.3) % 0.3));
       m.compose(new Vector3(x, y, z), q, new Vector3(w, kind === 2 ? h * (0.6 + ((z * 2.3) % 0.5)) : h, w));
       mesh.setMatrixAt(i, m);
       mesh.setColorAt(i, c.setRGB(shade, shade * (0.97 + ((x * 7.1) % 0.06)), shade * 0.95));
@@ -217,19 +254,22 @@ export function treeMeshes(spots: TreeSpot[], material: MeshBasicNodeMaterial) {
 }
 
 /**
- * The trees' material: their baked colours tinted per tree, broken by the woodland texture into clumps of leaves (read
- * across each tree's own shape, so every crown is leafy and none is a smooth ball), unlit like the land, with its fog.
+ * The trees' material: their baked colours tinted per tree, broken by the woodland texture `leaves` (the land's, which
+ * frees it) into clumps of leaves (read across each tree's own shape, so every crown is leafy and none is a smooth ball),
+ * unlit like the land, with its fog. The crowns sway a little in the wind, each tree out of step with the next, and the
+ * trunks and the rocks not at all.
  */
-export async function treeMaterial() {
-  const t = await new TextureLoader().loadAsync('/textures/forest_leaves_02/diff_1k.jpg');
-  t.colorSpace = SRGBColorSpace;
-  t.wrapS = t.wrapT = RepeatWrapping;
+export function treeMaterial(leaves: Texture) {
   const m = new MeshBasicNodeMaterial({ vertexColors: true });
   const p: any = positionLocal;
-  const mean = texture(t, vec2(0.5, 0.5)).level(float(12)).rgb.dot(vec3(0.3, 0.55, 0.15)).max(0.02);
-  const a = texture(t, p.xy.mul(6.1)).rgb.dot(vec3(0.3, 0.55, 0.15)), b = texture(t, p.zy.mul(5.3).add(vec2(0.31, 0.57))).rgb.dot(vec3(0.3, 0.55, 0.15));
-  const leaves = a.mul(b).sqrt().div(mean);
+  const mean = texture(leaves, vec2(0.5, 0.5)).level(float(12)).rgb.dot(vec3(0.3, 0.55, 0.15)).max(0.02);
+  const a = texture(leaves, p.xy.mul(6.1)).rgb.dot(vec3(0.3, 0.55, 0.15)), b = texture(leaves, p.zy.mul(5.3).add(vec2(0.31, 0.57))).rgb.dot(vec3(0.3, 0.55, 0.15));
+  const shade = a.mul(b).sqrt().div(mean);
   // The vertex colours and each tree's tint multiply in after this (vertexColors, instanceColor).
-  m.colorNode = vec3(leaves.pow(1.3).mul(0.85).add(0.15));
-  return { material: m, texture: t };
+  m.colorNode = vec3(shade.pow(1.3).mul(0.85).add(0.15));
+  const clock: any = worldClock, phase = float(instanceIndex).mul(1.7);
+  const bend = p.y.max(0).mul(p.y.max(0)).mul(0.035);
+  const sx: any = sin(clock.mul(1.1).add(phase)).mul(bend), sz: any = sin(clock.mul(0.8).add(phase.mul(1.3))).mul(bend.mul(0.6));
+  m.positionNode = p.add(vec3(sx, 0, sz));
+  return m;
 }

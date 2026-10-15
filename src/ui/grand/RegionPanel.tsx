@@ -1,6 +1,6 @@
 import { useT } from '../../i18n';
 import { BUILDINGS, Bar, Chip, FACTION_INFO, FactionMark, Icon, Sheet, Stat, buildingDesc, buildingName, costText, goldText, navyName, shipName, signed } from './shared';
-import { campArt } from './campArt';
+import { campArt, campImage } from './campArt';
 import { turnsText } from './text';
 import type { BuildingKind, FactionId, FleetView, RegionView, ShipClass } from './types';
 
@@ -32,7 +32,7 @@ function CampView({ region }: { region: RegionView }) {
       <img
         key={`${art}-${level}`}
         className="g-camp__img"
-        src={`/ui/camps/${art}-L${level}.webp`}
+        src={campImage(art, level)}
         alt={t('{place} 군영 {n}단계', { place: region.name, n: level })}
         width={1024}
         height={683}
