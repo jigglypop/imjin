@@ -1,4 +1,4 @@
-import { HalfFloatType, LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, StorageTexture, type WebGPURenderer } from 'three/webgpu';
+import { HalfFloatType, LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, StorageTexture, Vector3, type WebGPURenderer } from 'three/webgpu';
 import { Fn, cos, float, instanceIndex, instancedArray, max, select, sin, sqrt, textureStore, uniform, uvec2, vec2, vec4 } from 'three/tsl';
 import { directionalSpectrum, gaussian, GRAVITY, mulberry32, type SpectrumParams } from './spectrum';
 
@@ -38,7 +38,8 @@ export class FFTWaves {
   readonly derivatives: StorageTexture[];
   readonly time = uniform(0);
   readonly choppiness = uniform(1.1);
-  readonly slopeVariance = [0, 0, 0];
+  /** Mean square slope each cascade adds to the surface: what a pixel too coarse to resolve the cascade loses to filtering. */
+  readonly slopeVariance = uniform(new Vector3());
   private readonly area: number;
   private readonly total: number;
   private readonly logN: number;
@@ -102,7 +103,8 @@ export class FFTWaves {
           slope += variance * k * k;
         }
       }
-      this.slopeVariance[c] = slope;
+      // A mode and its mirror both carry the amplitude drawn above, so the surface holds twice the sum.
+      (this.slopeVariance.value as Vector3).setComponent(c, slope * 2);
       const base = c * this.area;
       for (let y = 0; y < n; y += 1) {
         const my = (n - y) % n;

@@ -1,13 +1,11 @@
 import {
   ACESFilmicToneMapping,
+  Color,
   DataTexture,
   DirectionalLight,
-  EquirectangularReflectionMapping,
-  HalfFloatType,
   PCFShadowMap,
   PerspectiveCamera,
   RenderPipeline,
-  RGBAFormat,
   Scene,
   Vector2,
   Vector3,
@@ -19,10 +17,9 @@ import {
   fog,
   length,
   mix,
-  normalize,
   pass,
-  pmremTexture,
   positionWorld,
+  renderGroup,
   renderOutput,
   smoothstep,
   uniform,
@@ -34,11 +31,12 @@ import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { smaa } from 'three/addons/tsl/display/SMAANode.js';
 import { atmosphere } from '../render/atmosphere';
 import { seaFogAmount } from '../render/seaMist';
-import { loadSky, SKY_PRESETS, type LoadedSky, type SkyPresetName } from '../render/sky';
+import { loadSky, SKY_PRESETS, viewTexture, type LoadedSky, type SkyPresetName } from '../render/sky';
+import { SkyView } from '../render/skyDome';
 import { Ocean } from '../ocean/Ocean';
 import { Clouds } from '../render/Clouds';
-
-const COVERAGE: Record<SkyPresetName, number> = { afternoon: 0.5, day: 0.42, sunset: 0.46, overcast: 0.78, night: 0.38 };
+import { CLOUD_WIND } from '../render/cloudNoise';
+import { sunThroughClouds } from '../render/cloudShadow';
 import { WakeMap } from '../ocean/WakeMap';
 import { SEA_STATES, spectrumOf, waveField, type SeaStateName } from '../ocean/waves';
 import { combatValue, engagementRange } from '../sim/competitive';
@@ -58,6 +56,7 @@ import { finishGrandBattle } from '../campaign/grand';
 import { outcomeOfBattle, type RegionBattle } from '../sim/grand/bridge';
 import { buildGrandConquest, grandAxis, grandInfo, shipOutcomes, worksAfter } from '../sim/grand/spawn';
 import { CurrentField } from '../sim/current';
+import { DEPTH_V1 } from '../sim/depth';
 import { OWNER_OF, otherTeam, teamOf, type BattleEvent, type Faction, type Ship, type ShipKind, type Team } from '../sim/types';
 import { buildConquest, homeAxis, type ConquestMapId, type Seat } from '../sim/maps';
 import { BUILDING_ORDER, BUILDINGS, RANKED_OPTIONS, ROSTER, rosterOf, SHORT_NAME, buildingHp, upgradeCost, type Conquest } from '../sim/conquest';
@@ -73,9 +72,10 @@ import { TouchControls } from './Touch';
 import { AdaptiveQuality } from './adaptive';
 import { equipment, LEVELS, levelSetting, saveLevelSetting, startLevel, type LevelSetting, type OceanQuality, type TerrainQuality } from './quality';
 import { t } from '../i18n';
-import { failBattle, publish, pushToast, setAutoBuild, setLoading, setProgress, setReport, useUi, type GameSnapshot } from '../state/store';
+import { failBattle, publish, pushToast, setAutoBuild, setLoading, setProgress, setReport, useUi, type FleetMorale, type GameSnapshot } from '../state/store';
 import { SquadronBanners } from '../ui/SquadronBanners';
 import { MoveOrders } from '../ui/MoveOrders';
+import { TacticalOverlay } from '../ui/TacticalOverlay';
 import { sound } from '../audio/Sound';
 import { Terrain } from '../terrain/Terrain';
 import { Vegetation } from '../terrain/Vegetation';
@@ -168,6 +168,9 @@ export class Engine {
   input!: Input;
   banners: SquadronBanners | null = null;
   moveOrders: MoveOrders | null = null;
+  tacticalOverlay: TacticalOverlay | null = null;
+  /** Each fleet's state as last told to the player, and the state it has been in since `since` (battle seconds). */
+  private fleetCalls = { own: { shown: 'steady', pending: 'steady', since: 0 }, foe: { shown: 'steady', pending: 'steady', since: 0 } };
   readonly sound = sound;
   readonly minimap = new Minimap();
   private minimapTimer = 0;
@@ -207,7 +210,10 @@ export class Engine {
   private assets: Record<string, ModelAsset> = {};
   private pipeline!: RenderPipeline;
   private sky: LoadedSky | null = null;
-  private fogEnv!: ReturnType<typeof pmremTexture>;
+  /** Every node that reads the sky view: the background, the fog, the sea's haze and the clouds'. Made before the first sky. */
+  private skyView: SkyView | null = null;
+  /** The sun's colour times its intensity, which the light's colour node reads (see init). */
+  private readonly sunLight = uniform(new Color()).setGroup(renderGroup);
   private accumulator = 0;
   private publishTimer = 0;
   private readonly autoBuild = new AutoBuild();
@@ -387,9 +393,12 @@ export class Engine {
       this.placeScenario(sky);
       setLoading(t('날씨와 파도를 준비하는 중'), 0.72);
       if (this.eq.fft && (r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) this.fft = new FFTWaves(spectrumOf(SEA_STATES[this.seaName]), this.eq.fftN);
-      this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
+      this.ocean = new Ocean(waveField, sky.environment, this.skyView!, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
       this.scene.add(this.ocean.mesh);
       const sun = this.sun;
+      // three lights with a light's colorNode in place of its colour times intensity: the clouds' shadows then reach the
+      // land, the ships and the villages as they reach the sea.
+      Object.assign(sun, { colorNode: this.sunLight.mul(sunThroughClouds(positionWorld.xz)) });
       sun.castShadow = true;
       sun.shadow.mapSize.set(this.eq.shadowMap, this.eq.shadowMap);
       sun.shadow.bias = -0.0004;
@@ -410,7 +419,7 @@ export class Engine {
       this.lanterns = new Lanterns(this.views);
       this.lanterns.onLight = (x, y, z, i) => this.fx.lantern(x, y, z, i);
       this.scene.add(this.lanterns.group);
-      this.setupFog(sky.environment);
+      this.setupFog();
       this.setupPipeline();
       if (!this.options.hideLabels) {
         this.banners = new SquadronBanners(document.querySelector('.app') ?? document.body);
@@ -419,6 +428,7 @@ export class Engine {
       this.input = new Input(this);
       this.input.attach(r.domElement);
       this.moveOrders = new MoveOrders(this, document.querySelector('.app') ?? document.body);
+      this.tacticalOverlay = new TacticalOverlay(this, document.querySelector('.app') ?? document.body);
       this.touch = new TouchControls(this);
       this.touch.attach(r.domElement);
       this.rts.attach(r.domElement);
@@ -477,7 +487,7 @@ export class Engine {
   }
 
   private releaseLoadedSky(sky: LoadedSky) {
-    if (sky.background !== this.sky?.background) sky.background.dispose();
+    if (sky.view !== this.sky?.view) sky.view.dispose();
     if (sky.environment !== this.sky?.environment) sky.environment.dispose();
   }
 
@@ -526,7 +536,7 @@ export class Engine {
       if (!task.controller.signal.aborted) setProgress(done + f * (w / total) * span);
     };
     const signal = task.controller.signal;
-    const skyLoad = loadSky(SKY_PRESETS[this.skyName], this.eq.hdriSize, this.sky ?? undefined, signal).then((sky) => {
+    const skyLoad = loadSky(SKY_PRESETS[this.skyName], this.eq.skySize, this.sky ?? undefined, signal).then((sky) => {
       if (signal.aborted) {
         this.releaseLoadedSky(sky);
         signal.throwIfAborted();
@@ -555,19 +565,18 @@ export class Engine {
 
   /**
    * The cloud layer and the wake map do not depend on the battle's files, so they are built and run once up front, while
-   * the sky, terrain and ships are still downloading. The clouds start on a plain placeholder sky; applySky swaps in the
+   * the sky, terrain and ships are still being made. The clouds start on a plain placeholder sky; applySky swaps in the
    * real one. The march shader is built for the most steps the tier's levels can ask for, which is a smaller program on a phone.
    */
   private async warmShared(task: LoadTask) {
+    const gray = viewTexture();
+    this.placeholderSky = gray;
+    this.skyView = new SkyView(gray);
     if (params.get('clouds') !== '0' && this.eq.clouds) {
       const reach = LEVELS.slice(0, Math.max(this.eq.maxLevel, this.level) + 1);
       const limits = { steps: Math.max(...reach.map((l) => l.cloud.steps)), lightSteps: Math.max(...reach.map((l) => l.cloud.lightSteps)) };
-      const gray = new DataTexture(new Uint16Array(64 * 32 * 4).fill(0x3800), 64, 32, RGBAFormat, HalfFloatType);
-      gray.mapping = EquirectangularReflectionMapping;
-      gray.needsUpdate = true;
-      this.placeholderSky = gray;
-      this.clouds = new Clouds(gray, LEVELS[this.level]!.cloud, limits);
-      this.clouds.coverage.value = COVERAGE[this.skyName];
+      this.clouds = new Clouds(this.skyView, LEVELS[this.level]!.cloud, limits);
+      this.clouds.setLayer(SKY_PRESETS[this.skyName].clouds);
       this.scene.add(this.clouds.mesh);
     }
     await settle();
@@ -708,7 +717,9 @@ export class Engine {
       this.phi = this.sink ? 0 : sunAz - Math.PI / 2 - (setup.grand ? grandAxis(setup.grand) : homeAxis(setup.map));
       this.terrain.setRotation(this.phi);
       const land = (x: number, z: number) => this.terrain.heightAt(x, z);
-      const built = setup.grand ? buildGrandConquest(setup.grand, land, this.phi) : buildConquest(setup.map, setup.seats, land, setup.seed, setup.ranked ? RANKED_OPTIONS : {}, this.phi);
+      // A battle against the computer here runs the depth rules; an online room's server keeps the rules it was built with.
+      const options = setup.ranked ? RANKED_OPTIONS : this.sink ? {} : { depth: DEPTH_V1.version };
+      const built = setup.grand ? buildGrandConquest(setup.grand, land, this.phi) : buildConquest(setup.map, setup.seats, land, setup.seed, options, this.phi);
       this.battle = built.battle;
       this.conquest = built.conquest;
       this.owner = setup.you;
@@ -735,6 +746,7 @@ export class Engine {
     this.battle.setSea(SEA_STATES[this.seaName]);
     waveField.copyFrom(this.battle.waves);
     this.reported = false;
+    this.fleetCalls = { own: { shown: 'steady', pending: 'steady', since: 0 }, foe: { shown: 'steady', pending: 'steady', since: 0 } };
     setReport(null);
     this.battle.land = (x, z) => this.terrain.heightAt(x, z);
     this.current = setup ? this.battle.flow : info.current ? new CurrentField(info.current, (x, z) => this.terrain.heightAtScenario(x, z), this.phi) : null;
@@ -862,8 +874,10 @@ export class Engine {
     this.sky = sky;
     const preset = SKY_PRESETS[this.skyName];
     const info = sky.info;
-    const scale = (0.16 / Math.max(1e-4, info.ambientLum)) * preset.brightness;
-    this.scene.background = sky.background;
+    const scale = (0.16 / Math.max(1e-6, info.ambientLum)) * preset.brightness;
+    const view = this.skyView!;
+    view.set(sky.view);
+    this.scene.backgroundNode ??= view.background();
     this.scene.environment = sky.environment;
     this.scene.backgroundIntensity = scale;
     this.scene.environmentIntensity = scale * 1.45;
@@ -879,30 +893,27 @@ export class Engine {
     const lum = Math.max(1e-4, 0.2126 * irr.x + 0.7152 * irr.y + 0.0722 * irr.z);
     this.sun.color.setRGB(irr.x / lum, irr.y / lum, irr.z / lum);
     this.sun.intensity = lum * scale * 1.35;
+    this.sunLight.value.copy(this.sun.color).multiplyScalar(this.sun.intensity);
     this.renderer.toneMappingExposure = preset.exposure;
     if (this.fx) this.fx.night = preset.night;
     if (this.ocean) this.ocean.setEnvironment(sky.environment);
-    if (this.clouds) {
-      this.clouds.setEnvironment(sky.environment);
-      this.clouds.coverage.value = COVERAGE[this.skyName];
-      this.placeholderSky?.dispose();
-      this.placeholderSky = null;
-    }
-    if (this.fogEnv) this.fogEnv.value = sky.environment;
+    this.clouds?.setLayer(preset.clouds);
+    // The sea is shaded by the clouds that are drawn, and by none when they are off.
+    atmosphere.cloudCover.value = this.clouds ? preset.clouds.coverage : 0;
+    atmosphere.cloudHeight.value = (preset.clouds.base + preset.clouds.top) * 0.5;
+    this.placeholderSky?.dispose();
+    this.placeholderSky = null;
     // A reused sky keeps its textures. Only a sky that came in new textures frees the ones it replaces.
-    if (old && old.background !== sky.background) old.background.dispose();
+    if (old && old.view !== sky.view) old.view.dispose();
     if (old && old.environment !== sky.environment) old.environment.dispose();
   }
 
-  private setupFog(env: DataTexture) {
+  /** Everything fades into the haze of the horizon behind it, the same colour the sky has there. */
+  private setupFog() {
     const toFrag = positionWorld.sub(cameraPosition);
     const dist = length(toFrag);
-    const dir = toFrag.div(dist);
-    const fogDir = normalize(vec3(dir.x, 0.04, dir.z));
-    this.fogEnv = pmremTexture(env, fogDir, float(0.45));
-    const fogColor = vec3(this.fogEnv).mul(atmosphere.envIntensity);
-    const factor = seaFogAmount(dist);
-    this.scene.fogNode = fog(fogColor, factor);
+    const fogColor = vec3(this.skyView!.horizon(toFrag)).mul(atmosphere.envIntensity);
+    this.scene.fogNode = fog(fogColor, seaFogAmount(dist));
   }
 
   private setupPipeline() {
@@ -931,7 +942,7 @@ export class Engine {
     const controller = new AbortController();
     this.skyLoading = controller;
     try {
-      const sky = await loadSky(SKY_PRESETS[name], this.eq.hdriSize, this.sky ?? undefined, controller.signal);
+      const sky = await loadSky(SKY_PRESETS[name], this.eq.skySize, this.sky ?? undefined, controller.signal);
       if (controller.signal.aborted || this.disposed) {
         this.releaseLoadedSky(sky);
         return;
@@ -1008,7 +1019,7 @@ export class Engine {
       this.placeScenario(sky);
       setLoading(t('날씨와 파도를 준비하는 중'), 0.72);
       this.fft?.setSpectrum(spectrumOf(SEA_STATES[this.seaName]));
-      this.ocean = new Ocean(waveField, sky.environment, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
+      this.ocean = new Ocean(waveField, sky.environment, this.skyView!, this.wake, this.terrain, this.fft, this.current, this.oceanQuality());
       this.scene.add(this.ocean.mesh);
       this.views.reset(this.assets, this.battle, this.capacityHint());
       this.views.team = this.team;
@@ -1047,7 +1058,6 @@ export class Engine {
     this.structures = null;
     this.terrain?.dispose();
     this.ocean?.dispose();
-    this.current?.texture.dispose();
     this.conquestView?.dispose();
     this.conquestView = null;
     this.crew?.dispose();
@@ -1150,7 +1160,9 @@ export class Engine {
     if (this.rts.followId && !follow) this.rts.followId = 0;
     this.rts.update(dt, follow);
     this.ocean.setTide(this.battle.tide);
+    atmosphere.cloudDrift.value.set(CLOUD_WIND.x * waveField.time, CLOUD_WIND.y * waveField.time);
     this.clouds?.update(this.camera.position, waveField.time);
+    if (this.skyView) this.skyView.time.value += dt;
     this.vegetation?.update(this.camera);
     this.structures?.update(this.camera);
     const tideSign = Math.abs(this.battle.tide) < 0.15 ? 0 : Math.sign(this.battle.tide);
@@ -1177,6 +1189,8 @@ export class Engine {
     const el = this.renderer.domElement;
     this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.hudHidden && !this.rts.cinematic && !this.battle.ended, this.team);
     this.moveOrders?.update();
+    const overlay = !this.hudHidden && !this.rts.cinematic && !this.battle.ended;
+    this.tacticalOverlay?.update(overlay, overlay && this.showLabels);
     this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.hudHidden && !this.rts.cinematic && !this.options.hideLabels && !this.battle.ended, this.battle);
     if (this.conquest && !this.paused && useUi.getState().autoBuild) {
       const order = this.autoBuild.tick(this.battle, this.conquest, this.owner, (cmd) => this.issue(cmd));
@@ -1384,6 +1398,7 @@ export class Engine {
   publish(force = false) {
     const b = this.battle;
     const info = this.battleInfo;
+    const morale = b.morale;
     const squadrons = b.squadrons.map((sq) => {
       let alive = 0;
       let hull = 0;
@@ -1391,16 +1406,24 @@ export class Engine {
       let burning = 0;
       let boarding = 0;
       let selected = 0;
+      let nerve = 0;
+      let wavering = 0;
+      let routing = 0;
       for (const id of sq.shipIds) {
         const s = b.get(id);
         if (!s || !b.isActive(s) || !shipObserved(b, this.team, s)) continue;
         alive += 1;
         hull += s.hull / s.spec.hull;
         crew += s.crew / s.spec.crew;
+        nerve += s.morale;
+        if (s.moraleState === 'wavering') wavering += 1;
+        else if (s.moraleState === 'routing') routing += 1;
         if (s.fire > 0.05) burning += 1;
         if (s.grappledWith || b.ships.some((o) => o.grappledWith === s.id)) boarding += 1;
         if (this.views.selected.has(s.id)) selected += 1;
       }
+      const leader = b.get(sq.leaderId);
+      const drum = morale && sq.team === this.team && b.isActive(leader) && leader.moraleState !== 'routing' ? { wait: Math.ceil(morale.drumWait(sq.id)), beating: (morale.drums.get(sq.id)?.until ?? 0) > b.time } : null;
       return {
         id: sq.id,
         team: sq.team,
@@ -1417,6 +1440,10 @@ export class Engine {
         burning,
         boarding,
         selected: alive > 0 && selected === alive,
+        morale: alive ? nerve / alive : 0,
+        wavering,
+        routing,
+        drum,
       };
     });
     const primary = [...this.views.selected].map((id) => b.get(id)).find((s) => !!s && s.alive);
@@ -1424,6 +1451,8 @@ export class Engine {
     const enemy = this.enemyTeam;
     const strengthOwn = b.strength(own);
     const enemies = b.ships.filter((s) => s.team === enemy && b.isActive(s) && shipObserved(b, own, s));
+    // Enemy crews still running when the battle is decided got away: the result counts them as fled, not as afloat.
+    const running = b.ended && morale ? b.ships.filter((s) => s.team === enemy && s.moraleState === 'routing' && b.isActive(s) && shipObserved(b, own, s)).length : 0;
     const strengthEnemy = b.profile === 'historical' ? b.strength(enemy) : enemies.reduce((n, s) => n + combatValue(s.spec.kind, b.profile) * ((s.hull / s.spec.hull) * 0.6 + (s.crew / s.spec.crew) * 0.4), 0);
     const snapshot: GameSnapshot = {
       scenario: { id: info.id, title: info.title, hanja: info.hanja, date: info.date, place: info.place, season: info.season },
@@ -1433,11 +1462,11 @@ export class Engine {
       team: own,
       time: b.time,
       own: b.teamCount(own),
-      enemy: b.profile === 'historical' ? b.teamCount(enemy) : enemies.length,
+      enemy: (b.profile === 'historical' ? b.teamCount(enemy) : enemies.length) - running,
       observedEnemy: b.profile !== 'historical',
       ownTotal: b.initial[own],
       enemyTotal: b.initial[enemy],
-      escaped: b.escaped[enemy],
+      escaped: b.escaped[enemy] + running,
       balance: this.conquest ? this.conquest.tickets[own] / Math.max(1, this.conquest.tickets[own] + this.conquest.tickets[enemy]) : strengthOwn / Math.max(1, strengthOwn + strengthEnemy),
       winner: b.winner,
       draw: b.draw,
@@ -1456,6 +1485,7 @@ export class Engine {
       muted: this.sound.muted,
       selectedCount: this.views.selected.size,
       night: b.night,
+      morale: morale ? { own: this.fleetMorale(own), foe: this.fleetMorale(enemy) } : null,
       tide: this.current
         ? {
             label: t(Math.abs(b.tide) < 0.15 ? '정조 · 물살이 멎었습니다' : b.profile === 'historical' ? b.tide < 0 ? '밀물 · 일본 함선 쪽으로 흐릅니다' : '썰물 · 물길이 뒤집혔습니다' : b.tide < 0 ? '밀물 · 항로별 물살에 주의하세요' : '썰물 · 조류의 방향이 바뀝니다'),
@@ -1483,6 +1513,8 @@ export class Engine {
             lights: primary.lights,
             repel: primary.repel,
             grappled: !!primary.grappledWith || b.ships.some((o) => o.grappledWith === primary.id),
+            morale: primary.morale,
+            moraleState: primary.moraleState,
             roles: primary.roles.map((r) => Math.round(r)),
             plan: [...primary.plan],
             defaultPlan: [...primary.spec.crewPlan],
@@ -1504,7 +1536,48 @@ export class Engine {
         : null,
       conquest: this.conquestSnapshot(),
     };
+    if (snapshot.morale) this.announceFleets(snapshot.morale);
     publish(snapshot, force);
+  }
+
+  /** Tells the player when either fleet as a whole wavers, breaks or steadies again, once the change has held two seconds. */
+  private announceFleets(m: { own: FleetMorale; foe: FleetMorale }) {
+    const now = this.battle.time;
+    for (const side of ['own', 'foe'] as const) {
+      const f = this.fleetCalls[side];
+      const state = m[side].state;
+      if (state !== f.pending) {
+        f.pending = state;
+        f.since = now;
+      }
+      if (state === f.shown || now - f.since < 2 || this.battle.ended) continue;
+      const before = f.shown;
+      f.shown = state;
+      const own = side === 'own';
+      if (state === 'broken') pushToast(t(own ? '아군 함대가 무너졌습니다 · 대부분의 함선이 달아납니다' : '적 함대가 무너져 달아납니다'), own ? 'bad' : 'good');
+      else if (state === 'shaken' && before === 'steady') pushToast(t(own ? '아군 함대 동요 · 북을 울려 다잡으세요' : '적 함대 동요'), own ? 'bad' : 'good');
+      else if (state === 'steady') pushToast(t(own ? '아군 함대가 전열을 되찾았습니다' : '적 함대가 전열을 되찾았습니다'), own ? 'good' : 'bad');
+    }
+  }
+
+  /** A fleet's nerve as the player can see it: the ships it has in view, under the battle depth rules. */
+  private fleetMorale(team: Team): FleetMorale {
+    const b = this.battle;
+    let n = 0;
+    let level = 0;
+    let shaken = 0;
+    let running = 0;
+    // The ships themselves, not the battle's step lists: an online client's battle is never stepped.
+    for (const s of b.ships) {
+      if (s.team !== team || !b.isActive(s) || !shipObserved(b, this.team, s)) continue;
+      n += 1;
+      level += s.morale;
+      if (s.moraleState === 'routing') running += 1;
+      else if (s.moraleState !== 'steady') shaken += 1;
+    }
+    if (!n) return { level: 0, shaken: 0, running: 0, state: 'steady' };
+    const out = { level: level / n, shaken: shaken / n, running: running / n };
+    return { ...out, state: out.running >= 0.6 ? 'broken' : out.level < 0.5 || out.shaken + out.running >= 0.3 ? 'shaken' : 'steady' };
   }
 
   /** Display names for the two sides, the player's first. */
@@ -1619,6 +1692,8 @@ export class Engine {
     this.banners?.clear();
     this.moveOrders?.dispose();
     this.moveOrders = null;
+    this.tacticalOverlay?.dispose();
+    this.tacticalOverlay = null;
     this.releasePixelRatio?.();
     this.releasePixelRatio = null;
     this.minimap.onPick = null;
@@ -1635,7 +1710,7 @@ export class Engine {
     if (this.fx) disposeTree(this.fx.group);
     if (this.lanterns) disposeTree(this.lanterns.group);
     this.pipeline?.dispose();
-    this.sky?.background.dispose();
+    this.sky?.view.dispose();
     this.sky?.environment.dispose();
     void releaseShipAssets(new Set());
     this.renderer.dispose().catch(() => undefined);

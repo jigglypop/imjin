@@ -1,4 +1,4 @@
-import { Vector3, Vector4 } from 'three/webgpu';
+import { Vector2, Vector3, Vector4 } from 'three/webgpu';
 import { WaveField, waveField } from '../ocean/waves';
 import { atmosphere } from '../render/atmosphere';
 import { pointLights } from '../render/lights';
@@ -11,7 +11,7 @@ import { pointLights } from '../render/lights';
  */
 export class RenderLease {
   private waves = new WaveField();
-  private vectors = new Map<string, Vector3>();
+  private vectors = new Map<string, Vector2 | Vector3>();
   private scalars = new Map<string, number>();
   private positions = pointLights.pos.map(() => new Vector4());
   private colors = pointLights.col.map(() => new Vector4());
@@ -22,12 +22,10 @@ export class RenderLease {
     for (const [key, node] of Object.entries(atmosphere)) {
       if (typeof node.value === 'number') this.scalars.set(key, node.value);
       else {
-        let saved = this.vectors.get(key);
-        if (!saved) {
-          saved = new Vector3();
-          this.vectors.set(key, saved);
-        }
-        saved.copy(node.value);
+        // Each saved vector is a clone of its uniform's value, so two- and three-component ones copy into their own kind.
+        const saved = this.vectors.get(key);
+        if (saved) (saved as Vector3).copy(node.value as Vector3);
+        else this.vectors.set(key, node.value.clone());
       }
     }
     pointLights.pos.forEach((v, i) => this.positions[i]!.copy(v));
@@ -40,7 +38,7 @@ export class RenderLease {
       waveField.version = version;
       for (const [key, node] of Object.entries(atmosphere)) {
         if (typeof node.value === 'number') node.value = this.scalars.get(key)!;
-        else node.value.copy(this.vectors.get(key)!);
+        else (node.value as Vector3).copy(this.vectors.get(key) as Vector3);
       }
       pointLights.pos.forEach((v, i) => v.copy(this.positions[i]!));
       pointLights.col.forEach((v, i) => v.copy(this.colors[i]!));

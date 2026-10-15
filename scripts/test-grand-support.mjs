@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const config = { root, configFile:false, logLevel:'error', appType:'custom', server:{middlewareMode:true,hmr:false,ws:false}, optimizeDeps:{noDiscovery:true,include:[]} };
+const config = { root, configFile:false, logLevel:'error', appType:'custom', server:{middlewareMode:true,hmr:false,ws:false,watch:null}, optimizeDeps:{noDiscovery:true,include:[]} };
 const server = await createServer(config);
 const servers = [server];
 let checks = 0;

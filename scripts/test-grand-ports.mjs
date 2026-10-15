@@ -7,7 +7,7 @@ import { groundHeights } from './region-ground.mjs';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const saved = new Map();
 globalThis.localStorage = { getItem: (key) => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: (key) => saved.delete(key) };
-const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
 const load = (path) => server.ssrLoadModule(path);
 let failures = 0;
 const check = async (name, fn) => {
@@ -218,7 +218,6 @@ try {
       for (let step = 0; step < 60; step++) battle.step(1 / 30);
       assert(battle.ships.every((s) => Number.isFinite(s.x) && Number.isFinite(s.z)), id);
       assert.equal(battle.ships.filter((s) => s.campaignId).length, rb.attacker.ships.length + rb.defender.ships.length);
-      battle.flow?.texture.dispose();
     }
   });
 

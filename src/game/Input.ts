@@ -14,6 +14,15 @@ const DRAG_THRESHOLD = 6;
 
 export const FORMATION_NAMES = { crane: '학익진', line: '일자진', column: '장사진', wedge: '첨자진', 'yeosu-wings': COASTAL_TACTICS['yeosu-wings'].label, 'mokpo-depth': COASTAL_TACTICS['mokpo-depth'].label } as const;
 export const AMMO_NAMES: Record<AmmoMode, string> = { auto: '기본탄', hull: '대장군전·철환 (선체 파괴)', crew: '조란환 (승조원 공격)', fire: '화전 (불화살)' };
+/** Milliseconds between two morale callouts of one kind; what happens between them is counted into the next. */
+const CALLOUT_GAP = 3500;
+const CALLOUTS: Record<string, { ko: string; tone: 'info' | 'good' | 'bad' }> = {
+  'rout-foe': { ko: '적 함선 {n}척 패주', tone: 'good' },
+  'rout-own': { ko: '아군 함선 {n}척 패주 · 북을 울려 재집결하세요', tone: 'bad' },
+  'rally-own': { ko: '아군 함선 {n}척 재집결', tone: 'good' },
+  'rally-foe': { ko: '적 함선 {n}척 재집결', tone: 'info' },
+  'drum-foe': { ko: '적이 북을 울려 전열을 다잡습니다', tone: 'info' },
+};
 export const STANCE_NAMES: Record<Stance, string> = { auto: '자유교전', standoff: '원거리 포격 · 거리를 유지합니다', close: '근접 포격 · 바짝 붙어 쏩니다', ram: '들이받기 · 적 함선에 부딪칩니다', board: '백병전 돌입 · 적 함선에 올라탑니다' };
 
 export class Input {
@@ -34,6 +43,8 @@ export class Input {
   private lastGroupTime = 0;
   queueMoves = false;
   private pendingRally = -1;
+  /** Morale callouts gathered while the last one of their kind is still on screen, by kind. */
+  private readonly callouts = new Map<string, { at: number; n: number }>();
 
   constructor(private readonly engine: Engine) {}
 
@@ -571,6 +582,31 @@ export class Input {
     this.engine.publish(true);
   }
 
+  /**
+   * The selection's squadron leaders beat the drum (the battle depth rules): wavering ships near them steady and running
+   * ones rally. A squadron's drum needs its leader afloat and rests between beats.
+   */
+  drum() {
+    const ids = this.commandIds();
+    if (!this.need(ids)) return;
+    const b = this.engine.battle;
+    const morale = b.morale;
+    if (!morale) return;
+    const squadrons = new Set<number>();
+    for (const id of ids) {
+      const sq = b.squadron(b.get(id)?.squadronId ?? 0);
+      const leader = sq ? b.get(sq.leaderId) : undefined;
+      if (sq && b.isActive(leader) && leader.moraleState !== 'routing' && morale.drumWait(sq.id) <= 0) squadrons.add(sq.id);
+    }
+    if (!squadrons.size) {
+      pushToast(t('지금은 북을 울릴 수 없습니다 · 부대장선이 없거나 북이 쉬는 중입니다'));
+      return;
+    }
+    this.engine.issue({ type: 'drum', ids });
+    pushToast(t('북을 울려 {n}개 부대를 재집결합니다', { n: squadrons.size }), 'good');
+    this.engine.publish(true);
+  }
+
   repel() {
     const ids = this.commandIds();
     if (!this.need(ids)) return;
@@ -725,6 +761,10 @@ export class Input {
       case 'KeyF':
         if (e.shiftKey && !e.repeat) this.engine.toggleCutaway();
         break;
+      case 'KeyR':
+        // R alone tilts the camera; Shift+R beats the rally drum.
+        if (e.shiftKey) this.drum();
+        break;
       default:
         break;
     }
@@ -733,13 +773,28 @@ export class Input {
   onEvents(events: BattleEvent[]) {
     const b = this.engine.battle;
     const team = this.engine.team;
+    // A leader's loss is called out on its own, so its sinking or capture is not announced twice.
+    const leaders = new Set<number>();
+    for (const e of events) if (e.type === 'leader') leaders.add(e.ship);
     for (const e of events) {
       if (e.type === 'sinking') {
         const s = b.get(e.ship);
-        if (s) pushToast(t(s.team === team ? '아군 함선 침몰 · {name}' : '적 함선 침몰 · {name}', { name: tName(s.name) }), s.team === team ? 'bad' : 'good');
+        if (s && !leaders.has(s.id)) pushToast(t(s.team === team ? '아군 함선 침몰 · {name}' : '적 함선 침몰 · {name}', { name: tName(s.name) }), s.team === team ? 'bad' : 'good');
       } else if (e.type === 'struck') {
         const s = b.get(e.ship);
-        if (s) pushToast(t(s.team === team ? '아군 함선 전투 불능 · {name}' : '적 함선 전투 불능 · {name}', { name: tName(s.name) }), s.team === team ? 'bad' : 'good');
+        if (s && !leaders.has(s.id)) pushToast(t(s.team === team ? '아군 함선 전투 불능 · {name}' : '적 함선 전투 불능 · {name}', { name: tName(s.name) }), s.team === team ? 'bad' : 'good');
+      } else if (e.type === 'leader') {
+        const s = b.get(e.ship);
+        if (s) this.leaderLost(s, e.flagship);
+      } else if (e.type === 'morale') {
+        const s = b.get(e.ship);
+        if (!s || !shipObserved(b, team, s)) continue;
+        const own = s.team === team;
+        if (e.state === 'routing') this.callout(own ? 'rout-own' : 'rout-foe');
+        else if (e.state === 'rallying') this.callout(own ? 'rally-own' : 'rally-foe');
+      } else if (e.type === 'drum') {
+        const s = b.get(e.ship);
+        if (s && s.team !== team && shipObserved(b, team, s)) this.callout('drum-foe');
       } else if (e.type === 'explode') {
         const s = b.get(e.ship);
         if (s) pushToast(t('탄약고 폭발 · {name}', { name: tName(s.name) }), s.team === team ? 'bad' : 'good');
@@ -765,6 +820,39 @@ export class Input {
         const s = b.get(e.ship);
         if (s && s.owner === this.engine.owner) pushToast(t('함선 완공 · {name}', { name: tName(s.name) }));
       }
+    }
+    this.flushCallouts();
+  }
+
+  /** A squadron's leader or a navy's admiral is out of the fight: its ships lose heart (the battle depth rules). */
+  private leaderLost(s: Ship, admiral: boolean) {
+    const own = s.team === this.engine.team;
+    const name = tName(s.name);
+    if (admiral) {
+      const text = own ? '아군 대장선 상실 · {name} · 함대의 사기가 크게 꺾입니다' : s.sinking > 0 ? '적 대장선 격침 · {name}' : s.fled ? '적 대장선 도주 · {name}' : '적 대장선 전투 불능 · {name}';
+      pushToast(t(text, { name }), own ? 'bad' : 'good');
+      return;
+    }
+    const sq = this.engine.battle.squadron(s.squadronId);
+    const squadron = sq ? tName(sq.name) : name;
+    pushToast(t(own ? '아군 {squadron} 지휘선 상실 · 부대가 흔들립니다' : '적 {squadron} 지휘선 상실', { squadron }), own ? 'bad' : 'good');
+  }
+
+  /** Counts a morale callout; ships that break or rally together are told as one line, at most every few seconds. */
+  private callout(kind: string) {
+    const c = this.callouts.get(kind) ?? { at: 0, n: 0 };
+    c.n += 1;
+    this.callouts.set(kind, c);
+  }
+
+  private flushCallouts() {
+    const now = performance.now();
+    for (const [kind, c] of this.callouts) {
+      if (!c.n || now - c.at < CALLOUT_GAP) continue;
+      const text = CALLOUTS[kind]!;
+      pushToast(t(text.ko, { n: c.n }), text.tone);
+      c.at = now;
+      c.n = 0;
     }
   }
 }

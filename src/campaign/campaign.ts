@@ -250,6 +250,8 @@ export function modsFor(cmd: Commander | undefined, veteran: number): ShipMods {
     fire: 1 + s.fire * 0.12,
     melee: 1 + s.melee * 0.08 + lvl * 0.01,
     defense: 1 + s.command * 0.06 + lvl * 0.01,
+    // 통솔 steadies the crews: they bear losses better and rally faster around their commander.
+    morale: 1 + s.command * 0.06 + lvl * 0.01 + veteran * 0.02,
   };
 }
 
