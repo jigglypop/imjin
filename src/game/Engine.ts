@@ -1395,8 +1395,10 @@ export class Engine {
       if (!s.alive || !shipObserved(this.battle, this.team, s)) { w.forgetShip(s.id); continue; }
       const L = s.spec.length;
       w.shipWake(s, scaled);
-      if (s.sinking > 0) w.stamp(s.x, s.z, s.heading, L * 0.7, 0.03 * k, 1.6, 1.8);
-      else if (s.fire > 0.3) w.stamp(s.x, s.z, s.heading, L * 0.6, 0.004 * k, 1.6, 0.6);
+      // A sinking hull churns the water round it: little foam (stamped every frame it would build to a flat white disc
+      // under the lace pattern), much turbulence, which roughens and lightens the water.
+      if (s.sinking > 0) w.stamp(s.x, s.z, s.heading, L * 0.7, 0.0015 * k, 1.6, 30);
+      else if (s.fire > 0.3) w.stamp(s.x, s.z, s.heading, L * 0.6, 0.0008 * k, 1.6, 6);
     }
   }
 

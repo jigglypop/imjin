@@ -317,7 +317,7 @@ export class Battlefield {
     const s = this.spatial(camera, x, y, z);
     if (s.gain < 0.03 || this.budget < 1) return;
     const now = this.ctx.currentTime;
-    const small = kind === 'groan' || kind === 'crack' || kind === 'wreck' || kind === 'bubbles';
+    const small = kind === 'groan' || kind === 'crack' || kind === 'wreck' || kind === 'bubbles' || kind === 'steam';
     if (small && (now < this.gate.cue || Math.random() > this.keep())) return;
     if (small) this.gate.cue = now + 0.4;
     const at = now + s.delay + Math.random() * 0.02;
@@ -325,6 +325,11 @@ export class Battlefield {
     const samples = this.samples;
     const gain = loud(s.gain);
     const lp = Math.max(900, s.muffle);
+    if (kind === 'steam') {
+      // Burning timber going into the sea: the recorded whoosh slowed and darkened into a hiss. Noise only, no tone.
+      if (samples.has('whoosh')) this.sample('whoosh', at, { gain: gain * (0.3 + 0.35 * size), pan: s.pan, rate: rnd(0.55, 0.7), cutoff: Math.min(lp, 3200), wet: 0.2 }, 0.8);
+      return;
+    }
     if (kind === 'groan' && samples.has('creak')) {
       this.sample('creak', at, { gain: gain * (0.5 + 0.5 * size), pan: s.pan, rate: rnd(0.85, 1.1), cutoff: lp });
       return;
