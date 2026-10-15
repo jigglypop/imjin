@@ -32,6 +32,14 @@ function joGate(m: Plan, x: number, z: number, rot: number, y: number, h: number
   gatePavilion(m, x, z, rot, y + h, w, d, storeys);
 }
 
+/** The level a pad over an outline stands at: the highest ground under it, a little above the sea at least. */
+function fillLevel(m: Plan, poly: readonly P2[], least: number) {
+  let hi = least;
+  const xs = poly.map((p) => p[0]), zs = poly.map((p) => p[1]);
+  for (let x = Math.min(...xs); x <= Math.max(...xs); x += 3) for (let z = Math.min(...zs); z <= Math.max(...zs); z += 3) hi = Math.max(hi, m.natural(x, z));
+  return hi + 0.25;
+}
+
 /** The highest ground under a footprint and the lowest, for standing a building level on a slope. */
 function footing(m: Plan, x: number, z: number, w: number, d: number, rot: number) {
   const c = Math.cos(rot), s = Math.sin(rot);
@@ -176,11 +184,11 @@ function houseOn(m: Plan, x: number, z: number, w: number, d: number, rot: numbe
 export function joTier1(m: Plan, cx: number, cz: number, rot = 0) {
   const navy = m.navy;
   m.navy = 'joseon';
-  const g = m.natural(cx, cz);
-  const h0 = Math.max(g, 0.8) + 0.3;
   const c = Math.cos(rot), s = Math.sin(rot);
   const P = (a: number, b: number): P2 => [cx + a * c + b * s, cz - a * s + b * c];
-  m.pad(rect(-17, 17, -13, 13, 5).map(([a, b]) => P(a, b)), h0, 'earth', 'earth');
+  const pad = rect(-17, 17, -13, 13, 5).map(([a, b]) => P(a, b));
+  const h0 = fillLevel(m, pad, 0.8);
+  m.pad(pad, h0, 'earth', 'earth');
   const line = rect(-15, 15, -11, 11, 4).map(([a, b]) => P(a, b));
   const gate = P(0, 11);
   m.wallLine(line, h0, 2.6, 0.5, 'jo_stockade', { gaps: [[gate[0], gate[1], 3.5]] });
@@ -317,10 +325,11 @@ export function busan(m: Plan) {
 export function waFieldCamp(m: Plan, cx: number, cz: number, rot = 0) {
   const navy = m.navy;
   m.navy = 'japan';
-  const g = Math.max(m.natural(cx, cz), 0.3) + 0.2;
   const c = Math.cos(rot), s = Math.sin(rot);
   const P = (a: number, b: number): P2 => [cx + a * c + b * s, cz - a * s + b * c];
-  m.pad(rect(-18, 18, -13, 13).map(([a, b]) => P(a, b)), g, 'earth', 'earth');
+  const pad = rect(-18, 18, -13, 13).map(([a, b]) => P(a, b));
+  const g = fillLevel(m, pad, 0.5);
+  m.pad(pad, g, 'earth', 'earth');
   const line = rect(-16, 16, -11, 11).map(([a, b]) => P(a, b));
   const gate = P(0, 11);
   m.wallLine(line, g, 1.8, 0.25, 'wa_curtain', { gaps: [[gate[0], gate[1], 4]] });

@@ -24,7 +24,7 @@ import { FOOTPRINT, METRES_PER_RADIUS, navyOf, WALL_KINDS, WATER_KINDS, type Pie
 import { buildBoatKit, buildShipKit, type KitMesh } from './shipKits';
 import { formation, hash, HULL_LENGTH, pointAlong, SETTLEMENT_RADIUS, SHIP_CAP, type FleetSpec, type MapWorld, type Piece, type SailSpec, type SettlementSpec } from './mapWorld';
 import type { FactionId, ShipClass } from './types';
-import { HeroLayer, heroUses, type HeroUse } from './hero/layer';
+import { HeroLayer, heroUses, tierUses, type HeroUse } from './hero/layer';
 import { heroEnabled } from './hero/site';
 
 // The 3D layer of the campaign map: every port's places (mapWorld.ts) built from the settlement buildings
@@ -496,9 +496,10 @@ export class MapLayer {
     const mine = ++this.generation;
     // The hero camps stand in for their places: their camp, beacon and the towns on their ground.
     const heroes = this.hero ? heroUses(world) : [];
-    const replaced = new Set(heroes.flatMap((h) => [...h.replaces]));
+    const tiers = this.hero ? tierUses(world, heroes) : [];
+    const replaced = new Set([...heroes.flatMap((h) => [...h.replaces]), ...tiers.map((t) => t.id)]);
     const settlements = world.settlements.filter((s) => !replaced.has(s.id));
-    const heroBuilt = this.hero?.set(heroes);
+    const heroBuilt = this.hero?.set(heroes, tiers);
     await heroBuilt;
     if (this.disposed || mine !== this.generation) return;
     const heroShips = this.hero?.extras(heroes).ships ?? [];

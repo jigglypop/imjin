@@ -6,11 +6,13 @@ import { campMaterial } from '../campMaterial';
 import { MAP_ASPECT } from '../projection';
 import type { MapWorld, SettlementSpec } from '../mapWorld';
 import type { FactionId } from '../types';
-import { buildHero } from './build';
+import { buildHero, Merge } from './build';
+import { tierCamp } from './tiers';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildHeroGround, heroGroundLook, type HeroGroundLook } from './ground';
 import { joTier1, LAYOUTS, town, waFieldCamp } from './layouts';
 import { Plan, type Moored } from './plan';
-import { HERO_SITES, heroEnabled, MODEL_METRE, siteUV, siteXZ, type HeroSite } from './site';
+import { ELEVATION_MODEL, HERO_SITES, heroEnabled, MODEL_METRE, siteUV, siteXZ, type HeroSite } from './site';
 import { heroGroundOf } from './terrain';
 import { placeBoulders, plantTrees, treeMaterial, treeMeshes } from './trees';
 
@@ -67,6 +69,16 @@ export function heroUses(world: MapWorld): HeroUse[] {
 }
 
 const houses = (s: SettlementSpec) => s.pieces.filter((p) => p.kind === 'choga' || p.kind === 'giwa' || p.kind === 'wa_house').length;
+
+/** Another camp of the map, built to the hero camps' rules by its navy and level (tiers.ts). */
+export interface TierUse { id: string; u: number; v: number; navy: FactionId; level: number }
+
+/** The camps a world shows that no hero site draws. */
+export function tierUses(world: MapWorld, heroes: HeroUse[]): TierUse[] {
+  const taken = new Set(heroes.flatMap((h) => [...h.replaces]));
+  return world.settlements.filter((s) => s.kind === 'camp' && s.owner && s.level >= 1 && !taken.has(s.id))
+    .map((s) => ({ id: s.id, u: s.u, v: s.v, navy: s.owner!, level: Math.min(3, s.level) }));
+}
 
 /** A hero site's plan: its camp's layout and its villages. */
 export function heroPlan(use: HeroUse): Plan | null {
@@ -150,8 +162,9 @@ export class HeroLayer {
    * Builds what the world's hero sites need and drops the rest; resolves when every site shown is ready. Returns the
    * ships at their quays and the hearths, in frame units, for the map's layer to draw with its own.
    */
-  async set(uses: HeroUse[]) {
-    const wanted = new Set(uses.map((u) => u.key));
+  async set(uses: HeroUse[], tiers: TierUse[] = []) {
+    const tierKey = `tiers:${JSON.stringify(tiers)}`;
+    const wanted = new Set([...uses.map((u) => u.key), tierKey]);
     for (const [key, b] of this.built) if (!wanted.has(key)) this.drop(key, b);
     for (const use of uses) {
       if (this.built.has(use.key)) continue;
@@ -208,11 +221,72 @@ export class HeroLayer {
       this.built.set(use.key, b);
       this.group.add(group);
     }
+    if (!this.built.has(tierKey)) await this.buildTiers(tierKey, tiers);
   }
 
-  /** The ships and hearths of the sites built for `uses`. */
+  /**
+   * Every other camp in one set of meshes: each laid out and built in its own frame on the drawn land, then moved to
+   * where it stands, so the whole map's camps are a few draws (one per navy and level, one for their ground).
+   */
+  private async buildTiers(key: string, tiers: TierUse[]) {
+    const navies = [...new Set(tiers.map((t) => t.navy))];
+    const [look, ...mats] = await Promise.all([this.groundLook(), ...navies.map((n) => this.material(n))]);
+    if (this.disposed) return;
+    const merges = new Map<FactionId, [Merge, Merge]>();
+    const grounds: { patch: BufferGeometry[]; laid: BufferGeometry[]; shade: BufferGeometry[] } = { patch: [], laid: [], shade: [] };
+    const smoke: Built['smoke'] = [];
+    for (const t of tiers) {
+      // One camp a task, so a world of camps does not hold the page up in one piece.
+      await new Promise((resolve) => setTimeout(resolve));
+      if (this.disposed) return;
+      const site: HeroSite = { id: t.id, navy: t.navy, u: t.u, v: t.v, reach: 64 };
+      const natural = (x: number, z: number) => { const p = siteUV(site, x, z); return this.drawn(p.u, p.v) * ELEVATION_MODEL; };
+      const plan = new Plan({ natural, water: (x, z) => natural(x, z) <= 0.02 }, t.navy);
+      tierCamp(plan, t.navy, t.level, 0, 0);
+      const dx = (t.u - 0.5) / MODEL_METRE, dz = (t.v - 0.5) / (MODEL_METRE * MAP_ASPECT);
+      for (const m of buildHero(plan)) {
+        let pair = merges.get(m.navy);
+        if (!pair) merges.set(m.navy, (pair = [new Merge(), new Merge()]));
+        pair[0].stamp(m.near, dx, 0, dz, 0);
+        pair[1].stamp(m.far, dx, 0, dz, 0);
+      }
+      const g = buildHeroGround(site, plan, this.drawn);
+      for (const k of ['patch', 'laid', 'shade'] as const) {
+        const geo = g[k];
+        if (geo) grounds[k].push(geo.translate(dx, 0, dz));
+      }
+      for (const [x, y, z] of plan.smoke) smoke.push({ ...siteUV(site, x, z), y: y * MODEL_METRE });
+    }
+    const group = new Group(), near = new Group(), far = new Group();
+    group.position.set(0, 0, 0);
+    group.scale.setScalar(MODEL_METRE);
+    group.add(near, far);
+    const geometries: BufferGeometry[] = [];
+    const add = (g: BufferGeometry | null, m: Material | undefined, parent: Group, order = 0) => {
+      if (!g || !m) return;
+      geometries.push(g);
+      const mesh = new Mesh(g, m);
+      mesh.renderOrder = order;
+      parent.add(mesh);
+    };
+    if (look) for (const [k, order] of [['patch', 1], ['laid', 2], ['shade', 3]] as const) {
+      const list = grounds[k];
+      const merged = list.length ? mergeGeometries(list) : null;
+      for (const g of list) g.dispose();
+      add(merged, k === 'patch' ? look.ground : k === 'laid' ? look.laid : look.shade, group, order);
+    }
+    for (const [navy, [n, f]] of merges) {
+      const mat = mats[navies.indexOf(navy)]?.material;
+      add(toGeometry(n.data()), mat, near);
+      add(toGeometry(f.data()), mat, far);
+    }
+    this.built.set(key, { key, group, near, far, geometries, ships: [], smoke });
+    this.group.add(group);
+  }
+
+  /** The ships and hearths of the sites built for `uses` and of the other camps. */
   extras(uses: HeroUse[]) {
-    const list = uses.map((u) => this.built.get(u.key)).filter((b): b is Built => !!b);
+    const list = [...uses.map((u) => this.built.get(u.key)), ...[...this.built.values()].filter((b) => b.key.startsWith('tiers:'))].filter((b): b is Built => !!b);
     return { ships: list.flatMap((b) => b.ships), smoke: list.flatMap((b) => b.smoke) };
   }
 

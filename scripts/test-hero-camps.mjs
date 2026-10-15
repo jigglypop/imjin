@@ -17,12 +17,12 @@ let passed = 0;
 const check = (name, test) => { test(); passed++; console.log(`ok - ${name}`); };
 try {
   const bundled = await build({
-    stdin: { contents: `export * from './src/ui/grand/hero/plan.ts'; export * from './src/ui/grand/hero/layouts.ts'; export * from './src/ui/grand/hero/build.ts'; export { cutAt } from './src/ui/grand/hero/terrain.ts';`, resolveDir: root },
+    stdin: { contents: `export * from './src/ui/grand/hero/plan.ts'; export * from './src/ui/grand/hero/layouts.ts'; export * from './src/ui/grand/hero/build.ts'; export { cutAt } from './src/ui/grand/hero/terrain.ts'; export { tierCamp } from './src/ui/grand/hero/tiers.ts';`, resolveDir: root },
     bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent',
   });
   const path = join(temporary, 'hero.mjs');
   await writeFile(path, bundled.outputFiles[0].contents);
-  const { Plan, LAYOUTS, buildHero, village, joTier1, waFieldCamp, cutAt } = await import(pathToFileURL(path).href);
+  const { Plan, LAYOUTS, buildHero, village, joTier1, waFieldCamp, cutAt, tierCamp } = await import(pathToFileURL(path).href);
 
   // A stand-in coast: sea beyond z = 36 and x = 30, land rising gently inland with a knoll in the north-west.
   const natural = (x, z) => {
@@ -96,6 +96,20 @@ try {
     waFieldCamp(plan, -60, 20, 0.1);
     const meshes = buildHero(plan);
     assert.ok(meshes.reduce((n, m) => n + tris(m.near), 0) > 500);
+  });
+  check("every navy's camp at levels 1 to 3 builds, each level larger than the one below, inside its budget", () => {
+    for (const navy of ['joseon', 'japan', 'ming']) {
+      let last = 0;
+      for (const level of [1, 2, 3]) {
+        const plan = new Plan(ground, navy);
+        tierCamp(plan, navy, level, -40, -20);
+        const n = buildHero(plan).reduce((k, m) => k + tris(m.near), 0);
+        if (table) console.log(navy, level, plan.pieces.length, 'pieces', n, 'triangles');
+        assert.ok(n > last && n < 40000, `${navy} ${level}: ${n} triangles after ${last}`);
+        assert.ok(plan.pads.length >= 1);
+        last = n;
+      }
+    }
   });
   console.log(`${passed} passed`);
 } finally {

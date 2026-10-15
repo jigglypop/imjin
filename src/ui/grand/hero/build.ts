@@ -13,7 +13,7 @@ import type { Facing, Pad, Piece, Plan } from './plan';
 export interface HeroMesh { navy: FactionId; near: MeshData; far: MeshData; triangles: number }
 
 /** The vertex streams of a mesh being put together from stamped pieces. */
-class Merge {
+export class Merge {
   p: number[] = []; n: number[] = []; uv: number[] = []; c: number[] = []; m: number[] = []; s: number[] = []; idx: number[] = [];
 
   /** Adds `d` turned by `rot` about the vertical (three's rotation.y) and moved to (x, y, z). */
@@ -115,8 +115,10 @@ function skirt(b: MeshBuilder, paint: Paint, pad: Pad, natural: (x: number, z: n
 }
 
 /** Builds a plan's meshes: one per navy that has pieces in it, close and far. */
+/** Pieces built so far, shared by every camp: a barracks or a gate of one camp is the same build in the next. */
+const cache = new Map<string, [MeshData, MeshData]>();
+
 export function buildHero(plan: Plan): HeroMesh[] {
-  const cache = new Map<string, [MeshData, MeshData]>();
   const merges = new Map<FactionId, [Merge, Merge]>();
   const mergeOf = (navy: FactionId) => {
     let m = merges.get(navy);

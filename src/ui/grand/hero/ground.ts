@@ -92,6 +92,28 @@ export function buildHeroGround(site: HeroSite, plan: Plan, drawn: (u: number, v
   const n = Math.round((2 * R) / STEP) + 1;
   let H = new Float32Array(n * n);
   for (let j = 0; j < n; j += 1) for (let i = 0; i < n; i += 1) H[j * n + i] = height(-R + i * STEP, -R + j * STEP);
+  // Puddles: a hollow of the DEM a few metres across dips under the sea plane where the land's facets bridge it; filled,
+  // so the patch draws land there as the map does. Only water joined to a wide sheet stays water.
+  {
+    const seen = new Int32Array(n * n).fill(-1);
+    for (let start = 0; start < n * n; start += 1) {
+      if (seen[start]! >= 0 || H[start]! > 0) continue;
+      const stack = [start], cells: number[] = [];
+      seen[start] = start;
+      while (stack.length) {
+        const c = stack.pop()!;
+        cells.push(c);
+        const i = c % n, j = (c - i) / n;
+        for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const ii = i + di, jj = j + dj;
+          if (ii < 0 || jj < 0 || ii >= n || jj >= n) continue;
+          const k = jj * n + ii;
+          if (seen[k]! < 0 && H[k]! <= 0) { seen[k] = start; stack.push(k); }
+        }
+      }
+      if (cells.length < 90) for (const c of cells) H[c] = 0.12;
+    }
+  }
   // Smoothed twice over its neighbours: the DEM's metre texels draw a coast in steps, the patch draws it as a line.
   for (let pass = 0; pass < 2; pass += 1) {
     const next = new Float32Array(n * n);

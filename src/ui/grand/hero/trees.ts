@@ -138,7 +138,7 @@ export function placeBoulders(plan: Plan, reach: number, groundAt: (x: number, z
     if (h < -0.25 || h > 0.7) continue;
     let wet = 0;
     for (let k = 0; k < 6; k += 1) if (groundAt(px + Math.cos(k * 1.05) * 4, pz + Math.sin(k * 1.05) * 4).h < -0.05) wet += 1;
-    if (!wet || wet > 4 || rnd.next() > 0.32) continue;
+    if (wet < 2 || wet > 4 || rnd.next() > 0.2) continue;
     if (plan.pads.some((pad) => outside(pad.poly, px, pz) < 3) || plan.flats.some((f) => outside(f.poly, px, pz) < 3)) continue;
     if (ships.some(([sx, sz]) => Math.hypot(px - sx, pz - sz) < 14)) continue;
     if (plan.pieces.some(({ piece: p }) => p.kind === 'box' && p.look === 'pier' && Math.hypot(px - p.x, pz - p.z) < Math.max(p.w, p.d) / 2 + 3)) continue;
@@ -180,7 +180,7 @@ export function plantTrees(plan: Plan, reach: number, groundAt: (x: number, z: n
     const edge = reach - Math.max(Math.abs(px), Math.abs(pz));
     if (edge < 6) continue;
     const g = groundAt(px, pz);
-    if (g.h < 0.25) continue;
+    if (g.h < 0.25 || plan.water(px, pz)) continue;
     const want = Math.min(1, g.wood * 1.3) + g.open * Math.max(0, grove(px, pz) - 0.2) * 1.6;
     if (rnd.next() > want * Math.min(1, edge / 30)) continue;
     if (plan.pads.some((pad) => outside(pad.poly, px, pz) < 4)) continue;

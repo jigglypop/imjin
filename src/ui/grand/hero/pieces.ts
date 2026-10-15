@@ -303,7 +303,7 @@ function wall(k: Kit, navy: FactionId, look: WallLook, L: number, h: number, t: 
       break;
     }
     case 'jo_stockade': {
-      const logs = k.P('logs'), earth = k.P('mud', { tint: [0.58, 0.5, 0.42] });
+      const logs = k.P('logs'), earth = navy === 'joseon' ? k.P('mud', { tint: [0.58, 0.5, 0.42] }) : stoneOf(k, navy).tinted([0.62, 0.52, 0.42]);
       batter(k, earth, earth, 0, 0, L, 1.4, L, 0.7, -1.4, 0.45);
       if (k.near) {
         const m = Math.max(2, Math.round((2 * L) / 0.42));
