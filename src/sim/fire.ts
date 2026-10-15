@@ -1,22 +1,22 @@
 import type { Battle } from './battle';
 import type { Ship } from './types';
 
-/** A fire this large throws sparks and burning pitch onto the hulls around it. */
-const SPREAD_FROM = 0.4;
+/** A fire larger than this throws sparks and burning pitch onto the hulls around it, the more the nearer it is to a blaze. */
+const SPREAD_FROM = 0.5;
 /** Hull-to-hull gap in metres beyond which nothing reaches across the wind; a full wind carries sparks twice as far downwind. */
-const SPREAD_REACH = 45;
+const SPREAD_REACH = 30;
 const DOWNWIND_REACH = 1;
-/** Chance per second that a full fire catches an alongside hull in a crosswind. */
-const SPREAD_RATE = 0.1;
+/** Chance per second that a blaze catches an alongside hull in a crosswind. */
+const SPREAD_RATE = 0.12;
 /** A ship under way can sheer off from a burning neighbour; one lying still cannot. */
 const UNDER_WAY = 1.5;
-const UNDER_WAY_SHARE = 0.35;
+const UNDER_WAY_SHARE = 0.15;
 /** How much a following wind helps, at WIND_FULL m/s and above. */
 const DOWNWIND = 0.85;
 const WIND_FULL = 10;
 /** Most new fires per second that spreading lights across the whole battle, so a packed bay burns over minutes, not in a breath. */
-const SPREAD_BUDGET = 1.5;
-const SPREAD_IGNITE = 0.15;
+const SPREAD_BUDGET = 1;
+const SPREAD_IGNITE = 0.2;
 
 /**
  * Fire that jumps between hulls under the depth rules. A ship burning hard sets the ships lying close to it alight,
@@ -51,7 +51,8 @@ export class FireSpread {
       if (gap > reach) return;
       const closeness = 1 - Math.max(0, gap) / reach;
       const downwind = 1 + DOWNWIND * wind * along;
-      const chance = SPREAD_RATE * s.fire * closeness * downwind * (Math.abs(o.speed) > UNDER_WAY ? UNDER_WAY_SHARE : 1) * dt;
+      const blaze = (s.fire - SPREAD_FROM) / (1 - SPREAD_FROM);
+      const chance = SPREAD_RATE * blaze * closeness * downwind * (Math.abs(o.speed) > UNDER_WAY ? UNDER_WAY_SHARE : 1) * dt;
       if (b.random() >= chance) return;
       this.budget -= 1;
       b.ignite(o, SPREAD_IGNITE, s.id);

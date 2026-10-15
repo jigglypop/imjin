@@ -168,6 +168,16 @@ const CASUAL_WORK_TIME = 0.36;
  */
 const COLLAPSE_RATE = 0.01;
 const COLLAPSE_AFTER = 120;
+/**
+ * Under the depth rules a side whose fleet still fighting (running crews hardly counting) is under SWEPT_SHARE of the
+ * other's, and has lost at least SWEPT_LOSS of the most it had, for SWEPT_TIME seconds has been swept from the sea and
+ * loses, once the opening SWEPT_AFTER has passed. A port that was only ever held by a few ships and its works is not
+ * swept: it has lost nothing.
+ */
+const SWEPT_SHARE = 0.35;
+const SWEPT_LOSS = 0.5;
+const SWEPT_TIME = 45;
+const SWEPT_AFTER = 300;
 
 const dist2 = (ax: number, az: number, bx: number, bz: number) => (ax - bx) ** 2 + (az - bz) ** 2;
 
@@ -246,6 +256,11 @@ export class Conquest implements BattleRules {
   private readonly brains = new Map<number, Strategist>();
   private incomeTimer = 0;
   private ticketTimer = 0;
+  /** Since when each side has been swept from the sea (the depth rules). */
+  private sweptSince: Record<Team, number | null> = { joseon: null, japan: null };
+  /** The side swept from the sea, as of the last look, once a second. */
+  private sweptTeam: Team | null = null;
+  private peak: Record<Team, number> = { joseon: 0, japan: 0 };
   private recruitSeq = new Map<string, number>();
   private readonly land: LandSampler;
   /** Balance runs let the computer play the human seats too. */
@@ -525,6 +540,7 @@ export class Conquest implements BattleRules {
       this.ticketTimer -= 1;
       this.drain();
       this.collapse(b);
+      this.sweptTeam = this.swept(b);
     }
     for (const [slot, brain] of this.brains) brain.step(b, this, dt, slot);
     if (this.autopilot) {
@@ -792,6 +808,23 @@ export class Conquest implements BattleRules {
     else if (c > a) this.tickets.joseon -= (c - a) * 0.35;
   }
 
+  /** The side swept from the sea for SWEPT_TIME seconds, if one has been (the depth rules). */
+  private swept(b: Battle): Team | null {
+    if (!b.morale) return null;
+    const value = { joseon: b.strength('joseon'), japan: b.strength('japan') };
+    for (const t of TEAMS) this.peak[t] = Math.max(this.peak[t], value[t]);
+    if (b.time < SWEPT_AFTER) return null;
+    for (const t of TEAMS) {
+      if (value[t] >= value[otherTeam(t)] * SWEPT_SHARE || value[t] > this.peak[t] * (1 - SWEPT_LOSS)) {
+        this.sweptSince[t] = null;
+        continue;
+      }
+      this.sweptSince[t] ??= b.time;
+      if (b.time - this.sweptSince[t]! >= SWEPT_TIME) return t;
+    }
+    return null;
+  }
+
   /** A broken fleet bleeds its tickets (the depth rules). */
   private collapse(b: Battle) {
     const morale = b.morale;
@@ -872,6 +905,8 @@ export class Conquest implements BattleRules {
     }
     if (defeated.length === 2) return tie();
     if (defeated.length === 1) return otherTeam(defeated[0]!);
+    const swept = this.sweptTeam;
+    if (swept) return otherTeam(swept);
     if (b.time >= this.options.timeLimit) {
       if (this.tickets.joseon === this.tickets.japan) return tie();
       return this.tickets.joseon > this.tickets.japan ? 'joseon' : 'japan';

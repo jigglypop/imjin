@@ -1,5 +1,6 @@
 import type { Battle } from './battle';
 import { combatValue } from './competitive';
+import { NERVE_WEIGHT } from './morale';
 import { isUnarmed } from './catalog';
 import { BUILDINGS, rosterOf, upgradeCost, type BuildingKind, type CapturePoint, type Conquest } from './conquest';
 import { otherTeam, type Faction, type Ship, type ShipKind } from './types';
@@ -44,7 +45,8 @@ const DOCTRINE_OF_FIGHT: Record<Faction, { engage: number; prey: number; reach: 
   ming: { engage: 650, prey: 0.9, reach: 1800, retreat: 2.2 },
   japan: { engage: 900, prey: 1.25, reach: 2600, retreat: 3.2 },
 };
-const power = (list: Ship[]) => list.reduce((a, s) => a + combatValue(s.spec.kind) * (0.35 + 0.65 * (s.hull / s.spec.hull)) * (0.4 + 0.6 * (s.crew / s.spec.crew)), 0);
+/** A fleet's fighting weight; under the battle depth rules a running crew hardly counts, for either side. */
+const power = (list: Ship[]) => list.reduce((a, s) => a + combatValue(s.spec.kind) * (0.35 + 0.65 * (s.hull / s.spec.hull)) * (0.4 + 0.6 * (s.crew / s.spec.crew)) * NERVE_WEIGHT[s.moraleState], 0);
 
 function centroid(list: Ship[]) {
   let x = 0;
