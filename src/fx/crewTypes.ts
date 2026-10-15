@@ -5,35 +5,41 @@ import type { DeckLayout, DeckPlan } from '../ships/decks';
 import type { ClipName, CrewKey } from './crewModels';
 import type { Figure } from './Boarding';
 
-/** Who stands at each station, by navy: rowers, gunners, shooters, deck fighters and the captain. */
-export const CAST: Record<Faction, [CrewKey, CrewKey, CrewKey, CrewKey, CrewKey]> = {
-  joseon: ['rower', 'rower', 'joseon_soldier', 'joseon_marine', 'joseon_officer'],
-  japan: ['rower', 'rower', 'japan_ashigaru', 'japan_samurai', 'japan_officer'],
-  ming: ['rower', 'rower', 'ming_soldier', 'ming_soldier', 'ming_officer'],
+/** Who stands at each station, by navy: rowers, gunners, shooters, deck fighters, the captain and the drummer. */
+export const CAST: Record<Faction, [CrewKey, CrewKey, CrewKey, CrewKey, CrewKey, CrewKey]> = {
+  joseon: ['rower', 'rower', 'joseon_soldier', 'joseon_marine', 'joseon_officer', 'rower'],
+  japan: ['rower', 'rower', 'japan_ashigaru', 'japan_samurai', 'japan_officer', 'rower'],
+  ming: ['rower', 'rower', 'ming_soldier', 'ming_soldier', 'ming_officer', 'rower'],
 };
-/** Weapon each station carries. 1 spear, 2 bow, 3 matchlock, 4 sword. */
+
+/** Hand props the crew models carry (scripts/bake-crew.mjs); a figure shows one and the rest fold away. */
+export const W = { spear: 1, bow: 2, gun: 3, sword: 4, sticks: 5, bucket: 6, flag: 7, hook: 8, none: 9, rammer: 10, aimed: 11 } as const;
+/** Weapon each station carries. */
 export const ARMS: Record<Faction, number[]> = {
-  joseon: [0, 0, 2, 1, 4],
-  japan: [0, 0, 3, 4, 4],
-  ming: [0, 0, 2, 1, 4],
+  joseon: [0, 0, W.bow, W.spear, W.sword, W.sticks],
+  japan: [0, 0, W.gun, W.sword, W.sword, W.sticks],
+  ming: [0, 0, W.bow, W.spear, W.sword, W.sticks],
 };
 /** What the shooters pick up for a melee: every shooter model carries a spear, the fighters their own weapon. */
 export const HAND_ARMS: Record<Faction, number[]> = {
-  joseon: [0, 0, 1, 1, 4],
-  japan: [0, 0, 1, 4, 4],
-  ming: [0, 0, 1, 1, 4],
+  joseon: [0, 0, W.spear, W.spear, W.sword, W.spear],
+  japan: [0, 0, W.spear, W.sword, W.sword, W.spear],
+  ming: [0, 0, W.spear, W.spear, W.sword, W.spear],
 };
 /** A weapon id no model carries: every weapon folds away, which is how a surrendering man drops his arms. */
-export const NO_WEAPON = 9;
+export const NO_WEAPON = W.none;
 
 export const OAR = 0;
 export const GUN = 1;
 export const SHOT = 2;
 export const MELEE = 3;
 export const OFFICER = 4;
+export const DRUM = 5;
+export const ROLES = 6;
 
 export type Deck = 0 | 1 | 2;
-export type Station = { x: number; z: number; yaw: number; deck: Deck };
+/** A place on deck; `up` lifts it onto a firing step built against a wall too high to shoot over. */
+export type Station = { x: number; z: number; yaw: number; deck: Deck; up: number };
 
 /** A crew member standing at a station. Boarding figures are lent out of here and come back when the fight ends. */
 export type Member = {
@@ -62,7 +68,21 @@ export type Member = {
   fired: boolean;
   /** Battle time of the last shot, for the reload that follows. */
   lastFire: number;
+  /**
+   * A short piece of business that overrides what the ship's state would have the man do: a grapnel thrown, a flag
+   * signal, a man knocked off his feet. Plays act from actT0 until actUntil, holding actWeapon, facing actYaw (NaN: as
+   * he stands).
+   */
+  act: ClipName | null;
+  actT0: number;
+  actUntil: number;
+  actRate: number;
+  actWeapon: number;
+  actYaw: number;
 };
+
+/** A man who fell on deck and lies there, in the ship's own frame; the clip holds its last frame. */
+export type Corpse = { x: number; z: number; y: number; yaw: number; key: CrewKey; clip: ClipName; t: number };
 
 export type Roster = {
   key: string;
@@ -96,7 +116,31 @@ export type Roster = {
   defending: boolean;
   boarded: boolean;
   hold: boolean;
+  /** The dead left lying on this deck, oldest first. */
+  corpses: Corpse[];
+  /** Ship's gun for each gun station, as an index into ship.guns (-1 none). */
+  gunOf: number[];
 };
+
+/** The dead left on one deck at most, by tier: older bodies are cleared as new ones fall. */
+export const CORPSES = { high: 14, medium: 8, low: 4 }[equipment.tier];
+
+/** Leaves a body on a deck, clearing the oldest when the deck holds its share. */
+export function layBody(r: Roster, x: number, z: number, y: number, yaw: number, key: CrewKey, clip: ClipName, t: number) {
+  const list = r.corpses;
+  const c = list.length >= CORPSES ? list.shift()! : ({} as Corpse);
+  c.x = x;
+  c.z = z;
+  c.y = y;
+  c.yaw = yaw;
+  c.key = key;
+  c.clip = clip;
+  c.t = t;
+  list.push(c);
+}
+
+/** One of the two ways a man falls dead, the same each time for the same man. */
+export const deathClip = (seed: number): ClipName => (frac(seed * 5.37) < 0.5 ? 'die' : 'die2');
 
 /** Distance beyond which men are drawn larger than life so they still read from the battle camera, by tier. */
 const GROW_FROM = { high: 110, medium: 95, low: 80 }[equipment.tier];

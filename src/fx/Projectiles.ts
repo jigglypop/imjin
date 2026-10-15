@@ -50,6 +50,21 @@ const MAX_FAR = 900;
 const MAX_HEAVY = 300;
 const MAX_STUCK = 72;
 const BALL_NEAR_PX = 4.5;
+/** Below this radius in pixels an iron ball is not drawn at all: its tracer carries it. */
+const BALL_MIN_PX = 0.35;
+/** The shortest a tracer gets on screen, in pixels, so a shot stays readable from RTS height. */
+const TRACER_PX = 18;
+/** The narrowest, in pixels: thinner than this a streak flickers as it crosses pixel rows. */
+const TRACER_WIDTH_PX = 2.2;
+
+/**
+ * The ball each gun fires, in metres across: half a centimetre under the bore of the surviving pieces (cheonja 13 cm,
+ * jija 10.5, hyeonja 7.5, hwangja and seungja 4), a 100-monme lead ball for the Japanese o-zutsu, a folangji ball, and
+ * the large stone or lead ball a hudun puts over its small shot (bore about two Ming inches).
+ */
+const CALIBRE: Record<GunType, number> = { cheonja: 0.125, jija: 0.1, hyeonja: 0.07, hwangja: 0.035, seungja: 0.035, ozutsu: 0.04, folangji: 0.044, hudun: 0.06 };
+/** Grape: the "bird's egg" iron shot of the cheonja and jija, the small iron shot of the lighter guns, the hudun's lead. */
+const pellet = (gun: GunType) => (gun === 'cheonja' || gun === 'jija' ? 0.022 : gun === 'hudun' ? 0.0145 : 0.016);
 
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 /** A repeatable pseudo-random number from a seed, for the offsets of a grape load that must not jump between frames. */
@@ -113,17 +128,54 @@ const FEATHER: [number, number, number] = [0.34, 0.3, 0.23];
 const PAPER: [number, number, number] = [0.33, 0.26, 0.16];
 const CORD: [number, number, number] = [0.16, 0.1, 0.06];
 
-/** The great general arrow: an oak shaft as thick as a wrist, an iron collar and head, three fins. About 1.4 units long. */
+/** Three iron vanes 120 degrees apart, each a thin plate standing out from the shaft between radius r0 and r1. */
+const vanes = (x0: number, x1: number, r0: number, r1: number): BufferGeometry[] => {
+  const out: BufferGeometry[] = [];
+  for (let i = 0; i < 3; i += 1) {
+    const f = new BoxGeometry(x1 - x0, r1 - r0, 0.004);
+    f.translate((x0 + x1) / 2, (r0 + r1) / 2, 0);
+    f.rotateX((i * 2 * Math.PI) / 3);
+    out.push(f);
+  }
+  return out;
+};
+
+/** Thorn wood, pale reddish brown, of the shaft of a gun arrow. */
+const THORN: [number, number, number] = [0.26, 0.14, 0.08];
+/** Blackened forged iron of its sleeve, bands, head and vanes, darker than the wood by enough to read in the sun. */
+const FORGED: [number, number, number] = [0.03, 0.03, 0.033];
+
+/**
+ * A gun arrow at the measures of the jija's janggun-jeon in the Yungwon pilbi (1813), which match the arrow kept by the
+ * Kuki family: 1.92 m, 9.4 cm thick, a forged iron sleeve over its front 0.51 m, a socketed four-sided iron head of
+ * 10.4 cm, three iron vanes of 35 cm held by four iron bands at the tail. The vanes may stand no wider than the bore,
+ * since the arrow is loaded down the muzzle. The origin is the middle of the shaft; the other guns' arrows are this
+ * one stretched (ARROW_FORM).
+ */
 function heavyGeometry() {
   const parts: Part[] = [
-    { geo: rod(0.04, 0.045, -0.62, 0.5), color: WOOD },
-    { geo: rod(0.062, 0.062, 0.44, 0.54), color: IRON },
-    { geo: spike(0.082, 0.52, 0.78), color: IRON },
-    ...fins(-0.48, 0.3, 0.2, 3).map((geo) => ({ geo, color: FEATHER })),
-    { geo: rod(0.05, 0.05, -0.36, -0.31), color: CORD },
+    { geo: rod(0.033, 0.045, -0.96, 0.32, 10), color: THORN },
+    { geo: rod(0.047, 0.047, 0.3, 0.83, 10), color: FORGED },
+    ...[0.34, 0.56, 0.79].map((x) => ({ geo: rod(0.051, 0.051, x, x + 0.025, 10), color: FORGED })),
+    { geo: rod(0.03, 0.03, 0.82, 0.86, 8), color: FORGED },
+    { geo: spike(0.045, 0.856, 0.96, 4), color: FORGED },
+    ...vanes(-0.95, -0.6, 0.03, 0.052).map((geo) => ({ geo, color: FORGED })),
+    ...[-0.94, -0.83, -0.72, -0.62].map((x) => ({ geo: rod(0.037, 0.037, x, x + 0.018, 8), color: FORGED })),
   ];
   return assemble(parts);
 }
+
+/** The model's length and the janggun-jeon's thickness it is built at, in metres. */
+const ARROW_LEN = 1.92;
+const ARROW_GIRTH = 0.094;
+
+/**
+ * Each gun's arrow (weapons table): length and thickness in metres. Cheonja: the daejanggun-jeon, 2.1 m by 10.5 cm (its
+ * proportions estimated from the bore); jija: the janggun-jeon; hyeonja: the chadae-jeon, 1.32 m by 4.6 cm; hwangja: the
+ * leather-vaned piryeong chajung-jeon, 1.31 m by 3.5 cm; the small guns' wooden arrows about 1.2 m.
+ */
+const ARROW_FORM: Partial<Record<GunType, [number, number]>> = { cheonja: [2.1, 0.105], jija: [1.92, 0.094], hyeonja: [1.32, 0.046], hwangja: [1.31, 0.035] };
+const arrowForm = (gun: GunType): [number, number] => ARROW_FORM[gun] ?? [1.2, 0.035];
 
 /** A Japanese fire arrow: a thin shaft, a small head and a charred bundle of tow bound behind it. About 1 unit long. */
 function hiyaGeometry() {
@@ -149,9 +201,6 @@ function rocketGeometry() {
   ];
   return assemble(parts);
 }
-
-/** Visual size of each heavy gun's arrow (metres per model unit). */
-const heavyScale = (gun: GunType) => (gun === 'cheonja' ? 2.3 : gun === 'jija' ? 1.9 : 1.5);
 
 /** Where a rocket's flame leaves it, in model units from its origin. */
 const NOZZLE = 0.05;
@@ -203,6 +252,8 @@ export class Munitions {
   private readonly kHeading = new Float32Array(MAX_STUCK);
   private readonly kPitch = new Float32Array(MAX_STUCK);
   private readonly kScale = new Float32Array(MAX_STUCK);
+  /** A gun arrow's thickness scale against its length scale (kScale); 1 for a fire arrow. */
+  private readonly kGirth = new Float32Array(MAX_STUCK);
   private readonly kAge = new Float32Array(MAX_STUCK);
   private readonly kLife = new Float32Array(MAX_STUCK);
   private readonly kKind = new Uint8Array(MAX_STUCK);
@@ -294,37 +345,42 @@ export class Munitions {
 
   // ---- Round shot -------------------------------------------------------------------------------------------------
 
+  /** An iron ball at its true size, or nothing while it would be under a pixel. */
   private putBall(x: number, y: number, z: number, r: number, ppm: number) {
+    const px = r * ppm;
+    if (px < BALL_MIN_PX) return;
     this.m.makeScale(r, r, r).setPosition(x, y, z);
-    if (r * ppm > BALL_NEAR_PX) {
+    if (px > BALL_NEAR_PX) {
       if (this.nNear < MAX_NEAR) this.near.setMatrixAt(this.nNear++, this.m);
     } else if (this.nFar < MAX_FAR) this.far.setMatrixAt(this.nFar++, this.m);
   }
 
-  /** A soft smear of the motion, only when the shell crosses enough of the screen in a frame for the eye to blur it. */
-  private smear(x: number, y: number, z: number, ux: number, uy: number, uz: number, speed: number, ppm: number, width: number, strength: number) {
-    const a = smooth(10, 55, (speed * ppm) / 60) * strength;
-    if (a < 0.02) return;
-    this.streaks.put(x, y, z, ux, uy, uz, Math.min(14, speed / 60), width, 0.82, 0.78, 0.72, a);
-  }
-
   /**
-   * A round shot: a lit iron sphere that grows with distance so it keeps at least 3.3 px of radius, never more than
-   * a metre or so while the camera is close. Grape is a handful of small balls fanning out of the muzzle.
+   * The tracer: what a film frame makes of a shot crossing it, a streak as long as a 1/40 s exposure's blur, kept to at
+   * least TRACER_PX pixels so the shot reads from RTS height. Hot near the gun, where grains of powder still burn on the
+   * shot and its wad, then cooling to a dull glint. `strength` scales it for the things that are not hot iron.
    */
-  ball(x: number, y: number, z: number, ux: number, uy: number, uz: number, speed: number, ppm: number, weight: number) {
-    const r = Math.min(16, Math.max(0.14, 3.3 / ppm)) * (0.85 + 0.35 * weight);
-    this.putBall(x, y, z, r, ppm);
-    this.smear(x, y, z, ux, uy, uz, speed, ppm, r * 2.2, 0.3);
-    // A dark ball on dark water is hard to find from afar: a faint pale halo lifts it while it is only a few pixels across.
-    const halo = 0.16 * (1 - smooth(3, 8, r * ppm));
-    if (halo > 0.01) this.streaks.put(x, y, z, ux, uy, uz, r * 3, r * 3, 0.8, 0.8, 0.78, halo);
+  private tracer(x: number, y: number, z: number, ux: number, uy: number, uz: number, speed: number, ppm: number, r: number, age: number, strength: number) {
+    const len = Math.max(speed / 40, TRACER_PX / ppm);
+    const width = Math.max(2 * r, TRACER_WIDTH_PX / ppm);
+    const heat = 1 - 0.5 * smooth(0.1, 1.2, age);
+    // Close by the blur is long and the eye sees the dark ball in it: the glow is kept for the shot seen from afar.
+    const near = 1 - 0.5 * smooth(40, 200, (speed / 40) * ppm);
+    this.streaks.put(x, y, z, ux, uy, uz, len, width, 1, 0.3 + 0.22 * heat, 0.08 + 0.1 * heat, (0.5 + 0.4 * heat) * strength * near);
   }
 
-  grape(x: number, y: number, z: number, ux: number, uy: number, uz: number, speed: number, ppm: number, id: number, age: number) {
+  /** A round shot: the iron ball at its gun's calibre and its tracer. */
+  ball(x: number, y: number, z: number, ux: number, uy: number, uz: number, speed: number, ppm: number, gun: GunType, age: number) {
+    const r = CALIBRE[gun] * 0.5;
+    this.putBall(x, y, z, r, ppm);
+    this.tracer(x, y, z, ux, uy, uz, speed, ppm, r, age, 1);
+  }
+
+  /** Grape: a handful of small balls fanning out of the muzzle, each a thin, dimmer tracer of its own. */
+  grape(x: number, y: number, z: number, ux: number, uy: number, uz: number, speed: number, ppm: number, id: number, age: number, gun: GunType) {
     const n = this.perShot + 2;
     const spread = Math.min(7, 0.035 * speed * age);
-    const r = Math.min(9, Math.max(0.09, 2.2 / ppm));
+    const r = pellet(gun) * 0.5;
     let sx = uz;
     let sz = -ux;
     const sl = Math.hypot(sx, sz) || 1;
@@ -340,27 +396,40 @@ export class Munitions {
       const c = Math.cos(a) * rho;
       const s = Math.sin(a) * rho;
       const lag = hash(id * 1.37 + i * 5.1) * 0.012 * speed * Math.min(1, age * 3);
-      this.putBall(x + sx * c + bx * s - ux * lag, y + by * s - uy * lag, z + sz * c + bz * s - uz * lag, r, ppm);
+      const px = x + sx * c + bx * s - ux * lag;
+      const py = y + by * s - uy * lag;
+      const pz = z + sz * c + bz * s - uz * lag;
+      this.putBall(px, py, pz, r, ppm);
+      this.tracer(px, py, pz, ux, uy, uz, speed, ppm, r, age, 0.4);
     }
-    this.smear(x, y, z, ux, uy, uz, speed, ppm, r * 2.5, 0.16);
   }
 
   // ---- Arrows -----------------------------------------------------------------------------------------------------
 
-  /** The great general arrow, pitched along the arc. Big when far, so it still reads. */
-  heavyArrow(x: number, y: number, z: number, ux: number, uy: number, uz: number, speed: number, ppm: number, gun: GunType) {
+  /**
+   * A gun arrow, pitched along the arc, at its true length and thickness while it is 8 pixels long or more; from
+   * further off it may grow to 1.6 times that, and the tracer of the wad burning behind it does the rest. Its straight
+   * iron vanes do not spin it: it leaves the muzzle with a small yaw that dies out within a second or so.
+   */
+  heavyArrow(x: number, y: number, z: number, ux: number, uy: number, uz: number, speed: number, ppm: number, gun: GunType, age: number, id: number) {
     if (this.nHeavy >= MAX_HEAVY) return;
-    const sc = Math.min(12, Math.max(heavyScale(gun), 9 / (1.4 * ppm)));
-    this.q.setFromUnitVectors(this.xAxis, this.v.set(ux, uy, uz));
-    this.m.compose(this.p.set(x, y, z), this.q, this.s.set(sc, sc, sc));
+    const [len, girth] = arrowForm(gun);
+    const grow = Math.min(1.6, Math.max(1, 8 / (len * ppm)));
+    const sl = (len / ARROW_LEN) * grow;
+    const sg = (girth / ARROW_GIRTH) * grow;
+    const wob = 0.06 * Math.exp(-age / 0.4) * Math.sin(age * (14 + 8 * hash(id)) + hash(id * 3.1) * 6.28);
+    this.v.set(ux + uz * wob, uy + wob * 0.6, uz - ux * wob).normalize();
+    this.q.setFromUnitVectors(this.xAxis, this.v);
+    this.m.compose(this.p.set(x, y, z), this.q, this.s.set(sl, sg, sg));
     this.heavy.setMatrixAt(this.nHeavy++, this.m);
-    this.smear(x, y, z, ux, uy, uz, speed, ppm, sc * 0.12, 0.18);
+    const tail = 0.96 * sl;
+    this.tracer(x - ux * tail, y - uy * tail, z - uz * tail, ux, uy, uz, speed, ppm, girth * 0.5 * grow, age, 0.45);
   }
 
   /** A Japanese fire arrow: a thin arrow with a burning bundle at its head. */
   fireArrow(x: number, y: number, z: number, ux: number, uy: number, uz: number, ppm: number) {
     if (this.nHiya >= MAX_HEAVY) return;
-    const sc = Math.min(8, Math.max(1.2, 6 / ppm));
+    const sc = Math.max(1.2, Math.min(2, 4 / ppm));
     this.q.setFromUnitVectors(this.xAxis, this.v.set(ux, uy, uz));
     this.m.compose(this.p.set(x, y, z), this.q, this.s.set(sc, sc, sc));
     this.hiya.setMatrixAt(this.nHiya++, this.m);
@@ -375,7 +444,7 @@ export class Munitions {
 
   /** A rocket arrow with its exhaust: a white-hot core and a longer warm flame, and sparks shed behind it. */
   rocket(x: number, y: number, z: number, ux: number, uy: number, uz: number, sc0: number, ppm: number, dt: number) {
-    const sc = Math.min(16, Math.max(sc0, 7 / (1.2 * ppm)));
+    const sc = Math.max(sc0, Math.min(sc0 * 1.6, 7 / (1.2 * ppm)));
     this.q.setFromUnitVectors(this.xAxis, this.v.set(ux, uy, uz));
     if (this.nRocket < this.rockets.instanceMatrix.count) {
       this.m.compose(this.p.set(x, y, z), this.q, this.s.set(sc, sc, sc));
@@ -598,7 +667,9 @@ export class Munitions {
     this.kYaw[i] = Math.atan2(uz, ux);
     this.kHeading[i] = ship.heading;
     this.kPitch[i] = Math.asin(Math.max(-1, Math.min(1, uy)));
-    this.kScale[i] = kind === 0 ? heavyScale(gun) * rnd(1.15, 1.3) : 1.6;
+    const [len, girth] = arrowForm(gun);
+    this.kScale[i] = kind === 0 ? len / ARROW_LEN : 1.6;
+    this.kGirth[i] = kind === 0 ? girth / ARROW_GIRTH / (len / ARROW_LEN) : 1;
     this.kAge[i] = 0;
     this.kLife[i] = kind === 0 ? rnd(14, 22) : rnd(5, 8);
     this.kKind[i] = kind;
@@ -621,6 +692,7 @@ export class Munitions {
           this.kHeading[i] = this.kHeading[last]!;
           this.kPitch[i] = this.kPitch[last]!;
           this.kScale[i] = this.kScale[last]!;
+          this.kGirth[i] = this.kGirth[last]!;
           this.kAge[i] = this.kAge[last]!;
           this.kLife[i] = this.kLife[last]!;
           this.kKind[i] = this.kKind[last]!;
@@ -637,15 +709,18 @@ export class Munitions {
       const ux = Math.cos(yaw) * cp;
       const uy = Math.sin(pit);
       const uz = Math.sin(yaw) * cp;
-      // Stays a readable size from afar; leaves by shrinking into the planks.
-      const sc = Math.max(this.kScale[i]!, (heavy ? 5 : 4) / ((focal / d) * 1.2)) * smooth(0, 0.8, left);
-      // The origin sits back from the hit so that the head is buried: about a third of a heavy arrow's length shows.
-      const back = (heavy ? 0.3 : 0.24) * sc;
+      // Grows a little from afar, as in flight; leaves by shrinking into the planks.
+      const k = this.kScale[i]!;
+      const sc = (heavy ? k * Math.min(1.6, Math.max(1, 8 / (ARROW_LEN * k * (focal / d)))) : Math.max(k, Math.min(k * 1.6, 4 / ((focal / d) * 1.2)))) * smooth(0, 0.8, left);
+      // The origin sits back from the hit so that the head is buried: a gun arrow goes in to a little under half its
+      // length, the rest and its vanes standing out of the planks.
+      const back = (heavy ? 0.1 : 0.24) * sc;
       const ox = this.p.x - ux * back;
       const oy = this.p.y - uy * back;
       const oz = this.p.z - uz * back;
       this.q.setFromUnitVectors(this.xAxis, this.v.set(ux, uy, uz));
-      this.m.compose(this.p.set(ox, oy, oz), this.q, this.s.set(sc, sc, sc));
+      const sg = sc * this.kGirth[i]!;
+      this.m.compose(this.p.set(ox, oy, oz), this.q, this.s.set(sc, sg, sg));
       if (heavy) this.heavy.setMatrixAt(this.nHeavy++, this.m);
       else {
         this.hiya.setMatrixAt(this.nHiya++, this.m);

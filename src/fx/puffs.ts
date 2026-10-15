@@ -196,6 +196,15 @@ export class PuffField {
     }
   }
 
+  /** A bucket of water thrown on deck fire: a sheet of spray along the throw and a cloud of steam rising off the planks. */
+  douse(x: number, y: number, z: number, dx: number, dz: number, scale: number) {
+    for (let i = 0; i < 3; i += 1) {
+      const s = 2.2 + i * 1.1;
+      this.spawn(PUFF.spray, x, y + 0.9, z, dx * s + (Math.random() - 0.5) * 0.6, 1.4 + Math.random(), dz * s + (Math.random() - 0.5) * 0.6, 0.18 * scale, 0.6 * scale, 0.5, 0.86, 0.9, 0.93, 0.7, 9);
+    }
+    this.spawn(PUFF.smoke, x + dx * 1.4, y + 0.3, z + dz * 1.4, 0, 1.2, 0, 0.6 * scale, 2.6 * scale, 2.4, 0.86, 0.86, 0.86, 0.5, -0.1, 0.8);
+  }
+
   /** A glint where two weapons meet. */
   spark(x: number, y: number, z: number, scale: number) {
     this.spawn(PUFF.flash, x, y, z, 0, 0, 0, 0.14 * scale, 0.5 * scale, 0.1, 1, 0.9, 0.7, 0.8);

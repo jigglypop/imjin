@@ -3,6 +3,7 @@ import type { SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
 import type { AmmoMode, CrewPlan, Faction, FireMode, MoraleState, ShipKind, SmallArms, Stance, Team } from '../sim/types';
 import type { BuildingKind } from '../sim/conquest';
+import type { BattleInfo } from '../sim/info';
 import type { ScenarioId } from '../sim/scenarios';
 import type { Report } from '../campaign/campaign';
 
@@ -36,6 +37,8 @@ export type PrimaryInfo = {
   id: number;
   name: string;
   kind: string;
+  /** The ship's kind id, for opening it in the ship codex. */
+  shipKind: ShipKind;
   team: Team;
   hull: number;
   crew: number;
@@ -153,9 +156,10 @@ export type Toast = { id: number; text: string; tone: 'info' | 'good' | 'bad'; a
 export type SelectionBox = { x0: number; y0: number; x1: number; y1: number } | null;
 /**
  * menu: mode cards. select: the nine historical battles. faction: the faction campaign. skirmish and online: setup
- * screens. Every screen but the battle has an address (src/routes.ts), which src/router.ts keeps in step with this.
+ * screens. codex: the ship codex. Every screen but the battle has an address (src/routes.ts), which src/router.ts keeps
+ * in step with this.
  */
-export type Screen = 'menu' | 'select' | 'faction' | 'skirmish' | 'online' | 'settings' | 'battle';
+export type Screen = 'menu' | 'select' | 'faction' | 'skirmish' | 'online' | 'settings' | 'codex' | 'battle';
 /** Screens a battle can be started from, so the HUD back button returns to where the player came from. */
 export type BattleOrigin = 'select' | 'skirmish' | 'online' | 'faction';
 
@@ -163,11 +167,14 @@ type UiState = {
   snapshot: GameSnapshot | null;
   loading: string | null;
   progress: number;
-  loadingScenario: ScenarioId | null;
+  /** The battle being built, for the loading page: its picture, title, date and place. */
+  loadingBattle: BattleInfo | null;
   report: Report | null;
   toasts: Toast[];
   box: SelectionBox;
   screen: Screen;
+  /** The historical battle the history screen shows once one is picked; the address names it (/battles/hansan). */
+  battle: ScenarioId | null;
   /** The screen the running battle was started from. */
   origin: BattleOrigin;
   /** A renderer or engine failure that stops the battle from starting. */
@@ -177,7 +184,7 @@ type UiState = {
   autoBuild: boolean;
 };
 
-export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingScenario: null, report: null, toasts: [], box: null, screen: 'menu', origin: 'select', fatal: null, touchBox: false, autoBuild: false }));
+export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingBattle: null, report: null, toasts: [], box: null, screen: 'menu', battle: null, origin: 'select', fatal: null, touchBox: false, autoBuild: false }));
 
 let lastJson = '';
 export function publish(snapshot: GameSnapshot, force = false) {
@@ -206,12 +213,12 @@ export function setAutoBuild(autoBuild: boolean) {
   useUi.setState({ autoBuild });
 }
 
-/** `scenario` null clears the loading card's artwork; undefined keeps the one shown. */
-export function setLoading(text: string | null, progress?: number, scenario?: ScenarioId | null) {
+/** `battle` null clears the loading page's battle; undefined keeps the one shown. */
+export function setLoading(text: string | null, progress?: number, battle?: BattleInfo | null) {
   useUi.setState((s) => ({
     loading: text,
     progress: text === null ? 1 : progress ?? s.progress,
-    loadingScenario: scenario !== undefined ? scenario : s.loadingScenario,
+    loadingBattle: battle !== undefined ? battle : s.loadingBattle,
   }));
 }
 
@@ -219,9 +226,17 @@ export function setProgress(progress: number) {
   useUi.setState((s) => ({ progress: Math.max(s.progress, progress) }));
 }
 
-/** Opens a screen. The router pushes its address as a history entry (a battle keeps the address it started from). */
+/**
+ * Opens a screen. The router pushes its address as a history entry (a battle keeps the address it started from).
+ * Leaving the history screen for anything but a battle forgets the battle it showed, so it opens on /battles next time.
+ */
 export function setScreen(screen: Screen) {
-  useUi.setState({ screen });
+  useUi.setState((s) => ({ screen, battle: screen === 'select' || screen === 'battle' ? s.battle : null }));
+}
+
+/** Picks a historical battle on the history screen. The router renames the address to match, in place. */
+export function setBattle(battle: ScenarioId | null) {
+  useUi.setState({ battle });
 }
 
 export function setOrigin(origin: BattleOrigin) {

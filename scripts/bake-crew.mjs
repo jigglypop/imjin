@@ -24,18 +24,24 @@ const LODS = [
 const MAX_CLIP = { cheer: 4, idle: 4, haul: 4 };
 const ONE_SHOT = new Set(['die', 'hit']);
 
-/** Weapons each character carries, by weapon id. 1 spear, 2 bow, 3 matchlock, 4 sword. */
+/**
+ * What each character can hold, by id: 1 spear, 2 bow, 3 matchlock, 4 sword, 5 drumsticks, 6 water bucket, 7 command
+ * flag, 8 grappling hook, 10 rammer, 11 matchlock
+ * levelled along the forearm for aiming (9 is no weapon at all). The game shows one at a time and folds the rest away.
+ */
 const ARMS = {
   joseon_soldier: [2, 1],
-  joseon_marine: [1],
-  joseon_officer: [4],
-  japan_ashigaru: [3, 1],
-  japan_samurai: [4],
-  japan_officer: [4],
-  ming_soldier: [2, 1],
-  ming_officer: [4],
-  rower: [],
+  joseon_marine: [1, 8],
+  joseon_officer: [4, 7],
+  japan_ashigaru: [3, 11, 1, 8],
+  japan_samurai: [4, 8],
+  japan_officer: [4, 7],
+  ming_soldier: [2, 1, 8],
+  ming_officer: [4, 7],
+  rower: [5, 6, 10],
 };
+/** Command flag cloth by navy: faded indigo, oxblood, ochre. */
+const FLAG = { joseon: [0.2, 0.27, 0.4], japan: [0.46, 0.17, 0.14], ming: [0.64, 0.5, 0.2] };
 
 // ---------------------------------------------------------------- matrices (column-major, as glTF)
 const ident = () => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
@@ -165,34 +171,87 @@ function box(out, frame, u0, u1, halfV, halfW, offV = 0, offW = 0, color = [0.3,
   }
 }
 
+/** A square rod from one point to another of a frame (u, v, w each), for the parts that curve: bow limbs, a blade. */
+function rod(out, frame, a, b, half, color) {
+  const p = frame.at(...a);
+  const q = frame.at(...b);
+  const d = norm(q.map((x, i) => x - p[i]));
+  const ref = Math.abs(d[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+  const s = norm(cross(d, ref)).map((x) => x * half);
+  const t = norm(cross(d, s)).map((x) => x * half);
+  const corner = (o, i, j) => o.map((x, k) => x + s[k] * i + t[k] * j);
+  const ends = [p, q].map((o) => [corner(o, -1, -1), corner(o, 1, -1), corner(o, 1, 1), corner(o, -1, 1)]);
+  const center = p.map((x, k) => (x + q[k]) / 2);
+  const quad = (A, B, C, D) => {
+    const n = norm(cross(B.map((x, k) => x - A[k]), C.map((x, k) => x - A[k])));
+    const mid = A.map((x, k) => (x + C[k]) / 2 - center[k]);
+    const flip = n[0] * mid[0] + n[1] * mid[1] + n[2] * mid[2] < 0;
+    const tri = flip ? [A, C, B, A, D, C] : [A, B, C, A, C, D];
+    for (const v of tri) out.push({ p: v, n: flip ? n.map((x) => -x) : n, color });
+  };
+  for (let i = 0; i < 4; i += 1) {
+    const j = (i + 1) % 4;
+    quad(ends[0][i], ends[0][j], ends[1][j], ends[1][i]);
+  }
+  quad(...ends[0]);
+  quad(...ends[1]);
+}
+
 const WOOD = [0.32, 0.2, 0.11];
 const STEEL = [0.55, 0.56, 0.58];
 const IRON = [0.12, 0.12, 0.13];
 const LACQUER = [0.12, 0.05, 0.04];
+const HEMP = [0.42, 0.36, 0.26];
 
-function weaponTris(id, frame) {
+function weaponTris(id, frame, name) {
   const tris = [];
+  if (id === 5) {
+    // A drumstick in the hand, the knob end out.
+    box(tris, frame, -0.06, 0.42, 0.016, 0.016, 0, 0, WOOD);
+    box(tris, frame, 0.42, 0.48, 0.03, 0.03, 0, 0, LACQUER);
+  } else if (id === 6) {
+    // A wooden water bucket hanging past the fingers by its rope bail, so it hangs below a lowered arm.
+    box(tris, frame, -0.01, 0.01, 0.005, 0.12, 0, 0.12, HEMP);
+    box(tris, frame, -0.13, 0.13, 0.13, 0.12, 0, 0.36, WOOD);
+  } else if (id === 7) {
+    // A command flag on a short pole, the cloth hung from its top.
+    const cloth = FLAG[name.split('_')[0]] ?? FLAG.joseon;
+    box(tris, frame, -0.5, 1.75, 0.016, 0.016, 0, 0, WOOD);
+    box(tris, frame, 1.12, 1.72, 0.32, 0.008, 0.33, 0, cloth);
+  } else if (id === 8) {
+    // A four-pronged iron grappling hook on a coil of rope.
+    box(tris, frame, -0.04, 0.32, 0.014, 0.014, 0, 0, IRON);
+    box(tris, frame, 0.26, 0.3, 0.12, 0.012, 0, 0, IRON);
+    box(tris, frame, 0.26, 0.3, 0.012, 0.12, 0, 0, IRON);
+    box(tris, frame, -0.1, 0.06, 0.11, 0.05, -0.12, 0, HEMP);
+  } else if (id === 10) {
+    // The rammer: a long pole with a sheepskin swab on the end.
+    box(tris, frame, -0.7, 1.7, 0.02, 0.02, 0, 0, WOOD);
+    box(tris, frame, 1.7, 1.95, 0.055, 0.055, 0, 0, HEMP);
+  }
   if (id === 1) {
     box(tris, frame, -0.9, 1.55, 0.018, 0.018, 0, 0, WOOD);
     box(tris, frame, 1.55, 1.82, 0.012, 0.03, 0, 0, STEEL);
   } else if (id === 2) {
-    // A short recurve bow, the limbs bending away from the archer.
-    const seg = 6;
+    // A short recurve bow, the limbs bending away from the archer and the tips turning back, with its string.
+    const seg = 12;
+    const bend = (u) => 0.13 * (1 - (u / 0.62) ** 2) - 0.05 * Math.max(0, Math.abs(u) - 0.5) * 8;
     for (let i = 0; i < seg; i += 1) {
       const u0 = -0.62 + (1.24 * i) / seg;
       const u1 = -0.62 + (1.24 * (i + 1)) / seg;
-      const bend = (u) => 0.13 * (1 - (u / 0.62) ** 2) - 0.05 * Math.max(0, Math.abs(u) - 0.5) * 8;
-      box(tris, frame, u0, u1, 0.016, 0.016, 0, (bend(u0) + bend(u1)) / 2, LACQUER);
+      rod(tris, frame, [u0, 0, bend(u0)], [u1, 0, bend(u1)], 0.016, LACQUER);
     }
-  } else if (id === 3) {
+    rod(tris, frame, [-0.6, 0, bend(-0.6)], [0.6, 0, bend(0.6)], 0.004, HEMP);
+  } else if (id === 3 || id === 11) {
     box(tris, frame, -0.08, 1.05, 0.018, 0.018, 0.04, 0, IRON);
     box(tris, frame, -0.55, -0.02, 0.045, 0.03, 0.0, 0, WOOD);
   } else if (id === 4) {
     box(tris, frame, -0.2, 0.06, 0.018, 0.018, 0, 0, LACQUER);
     box(tris, frame, 0.06, 0.09, 0.05, 0.05, 0, 0, IRON);
-    for (let i = 0; i < 4; i += 1) {
-      const u0 = 0.09 + i * 0.2;
-      box(tris, frame, u0, u0 + 0.2, 0.016, 0.004, 0.01 + i * i * 0.006, 0, STEEL);
+    // The blade in eight short lengths along a gentle curve, so the steps between them do not show up close.
+    for (let i = 0; i < 8; i += 1) {
+      const u0 = 0.09 + i * 0.1;
+      box(tris, frame, u0, u0 + 0.105, 0.016, 0.004, 0.01 + i * i * 0.0016, 0, STEEL);
     }
   }
   return tris;
@@ -213,7 +272,13 @@ async function bake(name, state) {
   const rest = new Map(nodes.map((n) => [n, { t: n.getTranslation(), r: n.getRotation(), s: n.getScale() }]));
 
   const clipKeys = Object.keys(state.anim.clips);
-  const anims = root.listAnimations();
+  // The clips come ten to a request: the later parts' channels are matched to this rig's nodes by name.
+  const byName = new Map(nodes.map((n) => [n.getName(), n]));
+  const anims = root.listAnimations().map((a) => ({ anim: a, node: (n) => n }));
+  for (let k = 1; k < (state.anim.parts?.length ?? 1); k += 1) {
+    const part = await io.read(join(SRC, 'models', `${name}_anim${k}.glb`));
+    for (const a of part.getRoot().listAnimations()) anims.push({ anim: a, node: (n) => byName.get(n.getName()) ?? n });
+  }
   if (anims.length !== clipKeys.length) console.warn(name, 'clip count', anims.length, 'expected', clipKeys.length);
 
   // World matrix of every node for a pose (a map of node to local TRS overrides).
@@ -237,11 +302,13 @@ async function bake(name, state) {
 
   // Clips: sampled channels per node.
   const clips = [];
-  anims.forEach((anim, i) => {
+  anims.forEach(({ anim, node }, i) => {
     const key = clipKeys[i] ?? anim.getName();
+    // A clip that was tried and not taken keeps its place in the part it came in, marked with a leading underscore.
+    if (key.startsWith('_')) return;
     const channels = anim.listChannels().map((ch) => {
       const s = ch.getSampler();
-      return { node: ch.getTargetNode(), path: ch.getTargetPath(), times: s.getInput().getArray(), values: s.getOutput().getArray(), size: s.getOutput().getElementSize(), step: s.getInterpolation() === 'STEP' };
+      return { node: node(ch.getTargetNode()), path: ch.getTargetPath(), times: s.getInput().getArray(), values: s.getOutput().getArray(), size: s.getOutput().getElementSize(), step: s.getInterpolation() === 'STEP' };
     });
     let duration = 0;
     for (const c of channels) duration = Math.max(duration, c.times[c.times.length - 1]);
@@ -309,6 +376,8 @@ async function bake(name, state) {
     return { joint: hi, at: (u, v, w) => [grip[0] + U[0] * u + V[0] * v + along[0] * w, grip[1] + U[1] * u + V[1] * v + along[1] * w, grip[2] + U[2] * u + V[2] * v + along[2] * w] };
   };
   const right = handFrame('RightHand', 'RightForeArm');
+  // The same grip with its first axis down the forearm: a gun held out at arm's length points where the arm does.
+  const alongArm = (f) => ({ joint: f.joint, at: (u, v, w) => f.at(w, v, u) });
   const left = handFrame('LeftHand', 'LeftForeArm');
 
   // Levels of detail. The simplifier may collapse across UV seams (Permissive), or a Meshy atlas would pin most edges.
@@ -332,8 +401,10 @@ async function bake(name, state) {
     attrs.set([...base.nor.getElement(i, []), ...base.uv.getElement(i, [])], i * 5);
   }
   const lods = [];
+  // A model recovered from a shipped crew file (characters.mjs recover) is already the finest level: half the original.
+  const shrink = state.model ? 1 : 2;
   for (const lod of LODS) {
-    const target = Math.floor((base.idx.length / 3) * lod.ratio) * 3;
+    const target = Math.floor((base.idx.length / 3) * Math.min(1, lod.ratio * shrink)) * 3;
     const [simplified] = MeshoptSimplifier.simplifyWithAttributes(base.idx, positions, 3, attrs, 5, [0.25, 0.25, 0.25, 1, 1], null, target, lod.error * 4, ['Permissive']);
     const remap = new Map();
     const verts = [];
@@ -351,10 +422,12 @@ async function bake(name, state) {
     }
     if (lods.length < 2) {
       for (const id of ARMS[name] ?? []) {
-        const frame = id === 2 ? left : right;
-        for (const t of weaponTris(id, frame)) {
+        // Bows go in the left hand; a pair of drumsticks takes both.
+        for (const frame of id === 2 ? [left] : id === 5 ? [left, right] : id === 11 ? [alongArm(right)] : [right]) {
+          for (const t of weaponTris(id, frame, name)) {
           tris.push(verts.length);
-          verts.push({ p: t.p, n: t.n, uv: [0, 0], j: [frame.joint, 0, 0, 0], w: [1, 0, 0, 0], weapon: id, color: t.color, tinted: 1 });
+            verts.push({ p: t.p, n: t.n, uv: [0, 0], j: [frame.joint, 0, 0, 0], w: [1, 0, 0, 0], weapon: id, color: t.color, tinted: 1 });
+          }
         }
       }
     }

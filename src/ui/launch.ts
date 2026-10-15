@@ -4,6 +4,7 @@ import { grandSeats, grandYou } from '../sim/grand/spawn';
 import type { NetBattle } from '../net/NetBattle';
 import { playableFactions } from '../sim/balance';
 import { CONQUEST_MAPS, defaultSeats, type ConquestMapId } from '../sim/maps';
+import { conquestInfoOf, scenarioInfo, type BattleInfo } from '../sim/info';
 import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import type { Faction } from '../sim/types';
 
@@ -27,6 +28,11 @@ export function conquestOf(launch: LaunchBody): ConquestSetup | undefined {
     return { seats: grandSeats(rb), you: grandYou(rb), seed: rb.seed, grand: rb };
   }
   return undefined;
+}
+
+/** The battle a launch stages, as the engine will build it: the loading page shows it before the engine has started. */
+export function launchInfo(launch: LaunchBody): BattleInfo {
+  return launch.kind === 'scenario' ? scenarioInfo(launch.id) : conquestInfoOf(conquestOf(launch)!);
 }
 
 const paramScenario = params.get('scenario') as ScenarioId | null;

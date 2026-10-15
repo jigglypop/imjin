@@ -134,6 +134,11 @@ export type PanokPlan = {
   parapet: number;
   /** Rise of the parapet top toward bow and stern. */
   sheer: number;
+  /**
+   * Height of the rail where the hull proper ends and the enclosed rowing storey (sangjang) begins, just above the oar
+   * ports: the storey stands a hand proud of the hull up to the fighting deck.
+   */
+  storey: number;
   pavilion: { x: number; hx: number; hz: number; floorUp: number; postH: number; tiers: 1 | 2 | 3; roofRise: number };
   masts: MastPlan[];
   oars: { n: number; x0: number; x1: number; y: number };
@@ -141,46 +146,62 @@ export type PanokPlan = {
   flagship: boolean;
 };
 
-const PANOK_HULL: HullPlan = { length: 40, beam: 11.5, draft: 1.6, deck: 3.9, flat: 0.36, bilge: 1.5, mid: 0.2, bowF: 0.6, sternF: 0.76, rise: 2.3, risePow: 2.4, flare: 0.5, taper: 1.4 };
+/** The panokseon's rowers stand on a floor this far under the fighting deck, inside the rowing storey. */
+export const PANOK_OAR_DROP = 2.65;
+
+/*
+ * The panokseon was built two storeys high: the hull proper, the enclosed rowing storey on its cross beams with the
+ * oars working under it, the fighting deck on top behind a parapet, and the commander's pavilion above that. The 2021
+ * reconstruction of the National Research Institute of Maritime Cultural Heritage is 32.16 m long, 8.74 m wide and
+ * 5.56 m high; the turtle ship of Yi Chungmugong jeonseo, built on the same hull, has 7.5 cheok (about 2.3 m) of side
+ * planking and 4.3 cheok (1.3 m) of shield boards above it. The height was the point: guns and bows fired down into
+ * the low sekibune and kobaya, and boarders faced a wall Japanese accounts likened to a castle's. Drawn longer than
+ * the reconstruction and seen mostly from above, the ship carries its fighting deck about 5 m over the water, the
+ * parapet above 7 m and the pavilion's floor above 9 m, so it stands over the Japanese hulls as it did.
+ */
+const PANOK_HULL: HullPlan = { length: 40, beam: 11.5, draft: 1.6, deck: 5.2, flat: 0.36, bilge: 1.5, mid: 0.2, bowF: 0.6, sternF: 0.76, rise: 2.3, risePow: 2.4, flare: 0.5, taper: 1.4 };
 
 export const PANOK_PLANS: PanokPlan[] = [
   {
     hull: PANOK_HULL,
     parapet: 2.05,
     sheer: 0.55,
-    pavilion: { x: -7.2, hx: 3.4, hz: 3.0, floorUp: 3.2, postH: 3.0, tiers: 1, roofRise: 1.7 },
+    storey: 3.4,
+    pavilion: { x: -7.2, hx: 3.4, hz: 3.0, floorUp: 4.0, postH: 3.1, tiers: 1, roofRise: 1.8 },
     masts: [
       { x: 3.5, h: 14.6, sailW: 8.4, sailH: 8.8, set: true, r: 0.34 },
       { x: 12.2, h: 10.6, sailW: 6.4, sailH: 6.6, set: true, r: 0.27 },
     ],
-    oars: { n: 8, x0: -14.5, x1: 14.5, y: 2.2 },
+    oars: { n: 8, x0: -14.5, x1: 14.5, y: 2.95 },
     look: false,
     flagship: true,
   },
   {
-    hull: { ...PANOK_HULL, deck: 4.0, beam: 11.5, flat: 0.32, bowF: 0.52, sternF: 0.7, rise: 2.6, mid: 0.26, flare: 0.65, bilge: 1.7 },
+    hull: { ...PANOK_HULL, deck: 5.3, beam: 11.5, flat: 0.32, bowF: 0.52, sternF: 0.7, rise: 2.6, mid: 0.26, flare: 0.65, bilge: 1.7 },
     parapet: 2.2,
     sheer: 0.8,
-    pavilion: { x: -7.6, hx: 3.6, hz: 3.2, floorUp: 3.2, postH: 2.6, tiers: 2, roofRise: 1.5 },
+    storey: 3.5,
+    pavilion: { x: -7.6, hx: 3.6, hz: 3.2, floorUp: 3.9, postH: 2.7, tiers: 2, roofRise: 1.5 },
     masts: [
       { x: 3.0, h: 14.2, sailW: 8.0, sailH: 8.4, set: false, r: 0.34 },
       { x: 12.0, h: 10.2, sailW: 6.0, sailH: 6.2, set: false, r: 0.27 },
     ],
-    oars: { n: 8, x0: -14.5, x1: 14.5, y: 2.3 },
+    oars: { n: 8, x0: -14.5, x1: 14.5, y: 3.05 },
     look: false,
     flagship: false,
   },
   {
-    hull: { ...PANOK_HULL, deck: 3.75, flat: 0.4, bowF: 0.68, sternF: 0.82, rise: 1.9, mid: 0.18, flare: 0.3, bilge: 1.3, taper: 1.8 },
+    hull: { ...PANOK_HULL, deck: 5.0, flat: 0.4, bowF: 0.68, sternF: 0.82, rise: 1.9, mid: 0.18, flare: 0.3, bilge: 1.3, taper: 1.8 },
     parapet: 1.9,
     sheer: 0.35,
-    pavilion: { x: -7.2, hx: 3.4, hz: 3.0, floorUp: 3.2, postH: 2.2, tiers: 3, roofRise: 1.2 },
+    storey: 3.25,
+    pavilion: { x: -7.2, hx: 3.4, hz: 3.0, floorUp: 3.8, postH: 2.3, tiers: 3, roofRise: 1.2 },
     masts: [
       { x: 2.2, h: 14.8, sailW: 8.0, sailH: 8.6, set: true, r: 0.34 },
       { x: 11.6, h: 11.0, sailW: 6.2, sailH: 6.6, set: true, r: 0.27 },
       { x: -16, h: 8, sailW: 3.8, sailH: 4.0, set: true, r: 0.2 },
     ],
-    oars: { n: 8, x0: -14.5, x1: 14.5, y: 2.1 },
+    oars: { n: 8, x0: -14.5, x1: 14.5, y: 2.8 },
     look: true,
     flagship: false,
   },
@@ -441,13 +462,13 @@ function panokAnchors(plan: PanokPlan): ShipAnchors {
     beam: h.beam,
     waterline: 0,
     mainDeck: deck,
-    oarDeck: deck - 1.9,
+    oarDeck: deck - PANOK_OAR_DROP,
     commandDeck: [pv.x, floorY, 0],
     deckBounds: { x0: stern + 1.2, x1: L / 2 - 1.2, halfBeam: (x) => sideZ(h, x, deck) - 0.4 },
     gunPorts,
     oarPorts: oarPorts(h, plan.oars),
     railStations: sideRail(h, -13, 15, 10, deck, 0.55),
-    rowStations: sideRail(h, plan.oars.x0, plan.oars.x1, plan.oars.n, deck - 1.9, 1.6),
+    rowStations: sideRail(h, plan.oars.x0, plan.oars.x1, plan.oars.n, deck - PANOK_OAR_DROP, 1.6),
     boardingPoints: [-12, -3, 6, 13].flatMap((x) => [0, 1].map((side) => ({ pos: [x, deck + 0.2, sideSign(side) * sideZ(h, x, deck)] as V3, side: side as 0 | 1 }))),
     lanterns: [
       [pv.x - pv.hx + 0.4, floorY + postHalf(pv), pv.hz - 0.4],

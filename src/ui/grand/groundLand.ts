@@ -3,6 +3,8 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { freeAfterDraw } from '../../render/dispose';
 import { V_SCALE } from '../../select/demFrame';
 import { faceColor, groundSlopes, type Facet } from './groundPalette';
+import { heroEnabled } from './hero/site';
+import { heroGroundReady, prepareHeroGround, shapeLand } from './hero/terrain';
 import { DEM_RECT, MESH_SCALE } from './mapMath';
 import { worldX, worldZ } from './worldCamera';
 
@@ -75,12 +77,17 @@ export async function buildLand(buffer: ArrayBuffer, heights: Float32Array): Pro
   const metres = new Float32Array(n);
   const world = new Float32Array(n * 3);
   const lift = V_SCALE * MESH_SCALE;
+  // The hero camps' terraces are cut into the land before it is drawn, from the DEM as loaded (hero/terrain.ts).
+  if (heroEnabled()) prepareHeroGround(heights);
+  const shaped = heroGroundReady();
   for (let i = 0; i < n; i += 1) {
-    const h = decimetres[i * 4 + 2]! * header.heightScale;
+    let h = decimetres[i * 4 + 2]! * header.heightScale, sink = 0;
+    const u = DEM_RECT.u + (grid[i * 4]! / (W - 1)) * DEM_RECT.w, v = DEM_RECT.v + (grid[i * 4 + 1]! / (H - 1)) * DEM_RECT.h;
+    if (shaped && h > 0) ({ metres: h, sink } = shapeLand(u, v, h));
     metres[i] = h;
-    world[i * 3] = worldX(DEM_RECT.u + (grid[i * 4]! / (W - 1)) * DEM_RECT.w);
-    world[i * 3 + 1] = h * lift;
-    world[i * 3 + 2] = worldZ(DEM_RECT.v + (grid[i * 4 + 1]! / (H - 1)) * DEM_RECT.h);
+    world[i * 3] = worldX(u);
+    world[i * 3 + 1] = (h - sink) * lift;
+    world[i * 3 + 2] = worldZ(v);
   }
   drawHeights(heights, W, H, grid, metres, index);
 

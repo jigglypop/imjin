@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const dir = await mkdtemp(join(tmpdir(), 'ship-check-'));
 const outfile = join(dir, 'check.mjs');
 await build({

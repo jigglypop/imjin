@@ -53,6 +53,7 @@ import { useProcedural } from './build/mode';
 import { loadProcedural } from './build/procedural';
 import { equipment } from '../game/quality';
 import { emberGlow, weather } from './weather';
+import { charShading } from '../fx/fire/char';
 import { disposeTree, freeAfterDraw } from '../render/dispose';
 import { PHASE_RANGE, SWAY_RANGE, TINT_RANGE } from './build/pack';
 
@@ -386,14 +387,12 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   }
   const wet = float(1).sub(smoothstep(-0.1, 0.9, shipY));
   const under = float(1).sub(smoothstep(-0.9, -0.05, shipY));
-  const noise = mx_noise_float(positionWorld.mul(0.35)).mul(0.5).add(0.5);
-  const charAmount = smoothstep(0.35, 0.75, noise.add(burn.mul(0.9)).sub(0.45)).mul(burn);
-  const ember = smoothstep(0.62, 0.95, mx_noise_float(positionWorld.mul(1.3).add(vec3(0, burn.mul(4), 0))).mul(0.5).add(0.5));
   // Atlas ships get their waterline in weather(); the legacy models still need it here.
   const wetColor = atlas ? baseColor : baseColor.mul(mix(float(1), float(0.55), wet));
   const algae = atlas ? wetColor : mix(wetColor, wetColor.mul(vec3(0.42, 0.52, 0.36)), under.mul(0.85));
-  const charred = mix(algae, vec3(0.025, 0.02, 0.018), charAmount.mul(0.9));
-  const lit = charred.mul(float(1).add(flash.mul(2)));
+  // The burn attribute packs the fire burning now with the char it has left (fx/fire/char.ts).
+  const char = charShading(burn, algae, shipY, equipment.tier !== 'low');
+  const lit = char.color.mul(float(1).add(flash.mul(2)));
   if (c) {
     const C: any = instancedBufferAttribute(c, 'vec4');
     const grain = mx_noise_float(positionWorld.mul(vec3(0.8, 6, 0.8))).mul(0.5).add(0.5);
@@ -408,7 +407,7 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   const wetRough = mix(rough.mul(0.95).add(0.05), float(0.25), wet.mul(0.8)).max(0.05);
   // Inside a section-cut hull the raw timber never got wet: without this the scoop of the hull bottom mirrors the sky.
   m.roughnessNode = c ? select(frontFacing, wetRough, float(0.9)) : wetRough;
-  m.emissiveNode = vec3(1.0, 0.32, 0.06).mul(charAmount.mul(burn).mul(ember).mul(4)).add(glow);
+  m.emissiveNode = char.emissive.add(glow);
   return m;
 }
 

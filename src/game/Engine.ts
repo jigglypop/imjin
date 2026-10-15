@@ -32,6 +32,8 @@ import {
 } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { smaa } from 'three/addons/tsl/display/SMAANode.js';
+import { dof } from 'three/addons/tsl/display/DepthOfFieldNode.js';
+import { film, filmGrade } from '../cinema/grade';
 import { atmosphere } from '../render/atmosphere';
 import { seaFogAmount } from '../render/seaMist';
 import { loadSky, SKY_PRESETS, viewTexture, type LoadedSky, type SkyPresetName } from '../render/sky';
@@ -57,18 +59,19 @@ import { applyBalance, FACTION_NAME, FACTION_SHORT } from '../sim/balance';
 import { applyOutcome } from '../campaign/campaign';
 import { finishGrandBattle } from '../campaign/grand';
 import { outcomeOfBattle, type RegionBattle } from '../sim/grand/bridge';
-import { buildGrandConquest, grandAxis, grandInfo, shipOutcomes, worksAfter } from '../sim/grand/spawn';
+import { buildGrandConquest, grandAxis, shipOutcomes, worksAfter } from '../sim/grand/spawn';
 import { CurrentField } from '../sim/current';
 import { DEPTH_LATEST } from '../sim/depth';
 import { OWNER_OF, otherTeam, teamOf, type BattleEvent, type Faction, type Ship, type ShipKind, type Team } from '../sim/types';
 import { buildConquest, homeAxis, type ConquestMapId, type Seat } from '../sim/maps';
 import { BUILDING_ORDER, BUILDINGS, RANKED_OPTIONS, ROSTER, rosterOf, SHORT_NAME, buildingHp, upgradeCost, type Conquest } from '../sim/conquest';
 import { applyCommand, type Command } from '../sim/commands';
-import { conquestInfo, scenarioInfo, type BattleInfo } from '../sim/info';
+import { conquestInfoOf, scenarioInfo, type BattleInfo } from '../sim/info';
 import { ConquestView, preloadWorks } from '../conquest/ConquestView';
 import type { NetBattle } from '../net/NetBattle';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
 import { AMBIENT_SHAKE, Director } from './Director';
+import { Cinema } from '../cinema/Cinema';
 import { AutoBuild } from './autoBuild';
 import { Input } from './Input';
 import { TouchControls } from './Touch';
@@ -108,11 +111,6 @@ export type EngineOptions = {
   /** A battle run by the multiplayer server (conquest, or a historical duel when no conquest setup is given). */
   remote?: NetBattle;
 };
-
-/** What the HUD calls a conquest battle: a campaign meeting is named for its region and month and fought on the region's own coast. */
-function conquestInfoOf(setup: ConquestSetup): BattleInfo {
-  return setup.grand ? grandInfo(setup.grand) : conquestInfo(setup.map, setup.seed, setup.ranked);
-}
 
 /** A conquest battle: the map, every seat, and which seat is the player's. `grand` is a faction campaign meeting played on its region's coast instead of a conquest map, with the campaign's own ships. */
 export type ConquestSetup = { seats: Seat[]; you: number; seed: number; ranked?: boolean } & ({ map: ConquestMapId; grand?: undefined } | { grand: RegionBattle; map?: undefined });
@@ -227,6 +225,8 @@ export class Engine {
   private phi = 0;
   /** Cinematic camera, kill-cam slow motion and shot feel. */
   readonly director = new Director(this);
+  /** Cutscenes and the documentary mode, played from the running battle (src/cinema). */
+  readonly cinema: Cinema = this.makeCinema();
   private initialSquads = new Map<number, number>();
   campaign: FleetSpawn | undefined;
   private reported = false;
@@ -238,6 +238,9 @@ export class Engine {
   private shadowEvery = 1;
   private cloudEvery = 1;
   private bloomNode: ReturnType<typeof bloom> | null = null;
+  /** The picture's last stage without and with the cutscene lens; the pipeline shows one of them. */
+  private plainOutput: ReturnType<typeof smaa> | null = null;
+  private filmOutput: ReturnType<typeof smaa> | null = null;
   private dprOverride: number | null = null;
   private gpuMs: number | null = null;
   private gpuProbe = false;
@@ -361,6 +364,7 @@ export class Engine {
   /** Every order from the player goes through here: to the local battle, or to the server in a multiplayer game. */
   issue(cmd: Command) {
     if (!this.ready || this.disposed) return 0;
+    this.cinema.onCommand(cmd);
     if (this.sink) {
       this.sink.send(cmd);
       return 'ids' in cmd ? cmd.ids.length : 1;
@@ -381,7 +385,7 @@ export class Engine {
       this.camera.updateProjectionMatrix();
       waveField.setState(SEA_STATES[this.seaName]);
       const info = this.battleInfo;
-      setLoading(t('바다와 하늘을 준비하는 중'), 0.03, info.art ?? null);
+      setLoading(t('바다와 하늘을 준비하는 중'), 0.03, info);
       // The files download while the cloud and wake shaders build, so neither waits for the other.
       const loading = this.loadAssets(0.03, task);
       // The asset promise may fail while the shared programs are being built.
@@ -474,6 +478,7 @@ export class Engine {
       this.ready = true;
       this.remote?.announce();
       this.loading = null;
+      if (!this.options.gallery) this.cinema.begin();
     } catch (err) {
       this.cancelLoad(task);
       throw err;
@@ -900,6 +905,52 @@ export class Engine {
     this.publish(true);
   }
 
+  /** The film grade follows the cinema; the lens pass is in the picture only while a cutscene runs. */
+  private updateFilm(dt: number) {
+    film.amount.value = this.cinema.grade;
+    // The bloom of a close fire would whiten the whole frame: it is held back while the film grade is on.
+    if (this.bloomNode) this.bloomNode.strength.value = LEVELS[this.level]!.bloomStrength * (1 - 0.55 * this.cinema.grade);
+    film.time.value = (film.time.value + dt) % 600;
+    const lens = this.cinema.covering && this.filmOutput ? this.filmOutput : this.plainOutput;
+    if (lens && this.pipeline.outputNode !== lens) {
+      this.pipeline.outputNode = lens;
+      this.pipeline.needsUpdate = true;
+    }
+    const { aperture, focus } = this.cinema.depthOfField;
+    film.focus.value = focus;
+    film.depth.value = Math.max(12, focus * 0.4);
+    film.bokeh.value = aperture * 1.5;
+  }
+
+  private makeCinema() {
+    // The host is read through getters: the battle, the camera and the ships are replaced between battles.
+    const engine = this;
+    return new Cinema({
+      get battle() {
+        return engine.battle;
+      },
+      get team() {
+        return engine.team;
+      },
+      get remote() {
+        return engine.remote;
+      },
+      get rts() {
+        return engine.rts;
+      },
+      get camera() {
+        return engine.camera;
+      },
+      get views() {
+        return engine.views;
+      },
+      scenarioKey: () => (engine.conquestSetup ? null : engine.scenarioId),
+      setSky: (name) => engine.setSky(name).catch(() => undefined),
+      homePose: () => engine.defaultPose(),
+      sound,
+    });
+  }
+
   private defaultPose(): CameraPose {
     const info = this.battleInfo;
     if (this.conquest) {
@@ -1008,16 +1059,21 @@ export class Engine {
     pipeline.outputColorTransform = false;
     const scenePass = pass(this.scene, this.camera, { samples: this.eq.msaa });
     const color = scenePass.getTextureNode('output');
-    this.bloomNode = bloom(color, 0.22, 0.5, 2.2);
-    const hdr = color.add(this.bloomNode);
-    const mapped = renderOutput(hdr);
-    const d = length(uv().sub(0.5).mul(vec3(1.25, 1, 1).xy));
-    const vig = mix(float(1), float(0.62), smoothstep(0.35, 0.95, d).mul(this.vignette.mul(2.5)));
-    const luma = mapped.r.mul(0.2126).add(mapped.g.mul(0.7152)).add(mapped.b.mul(0.0722));
-    const nightColor = mix(vec3(luma, luma, luma), mapped.rgb, 0.6).mul(vec3(0.8, 0.92, 1.15));
-    const toned = mix(mapped.rgb, nightColor, atmosphere.night.mul(float(1).sub(smoothstep(0.25, 0.85, luma))));
-    const graded = vec4(toned.mul(vig), 1);
-    pipeline.outputNode = smaa(graded);
+    const bloomNode = bloom(color, 0.22, 0.5, 2.2);
+    this.bloomNode = bloomNode;
+    const finish = (scene: typeof color) => {
+      const mapped = renderOutput(scene.add(bloomNode));
+      const d = length(uv().sub(0.5).mul(vec3(1.25, 1, 1).xy));
+      const vig = mix(float(1), float(0.62), smoothstep(0.35, 0.95, d).mul(this.vignette.mul(2.5)));
+      const luma = mapped.r.mul(0.2126).add(mapped.g.mul(0.7152)).add(mapped.b.mul(0.0722));
+      const nightColor = mix(vec3(luma, luma, luma), mapped.rgb, 0.6).mul(vec3(0.8, 0.92, 1.15));
+      const toned = mix(mapped.rgb, nightColor, atmosphere.night.mul(float(1).sub(smoothstep(0.25, 0.85, luma))));
+      return smaa(vec4(filmGrade(toned.mul(vig)), 1));
+    };
+    this.plainOutput = finish(color);
+    // A cutscene's lens: depth of field on the scene before the bloom. Phones go without it (its passes cost too much there).
+    this.filmOutput = this.eq.tier === 'low' ? null : finish(dof(color, scenePass.getViewZNode(), film.focus, film.depth, film.bokeh) as unknown as typeof color);
+    pipeline.outputNode = this.plainOutput;
     this.pipeline = pipeline;
   }
 
@@ -1085,7 +1141,7 @@ export class Engine {
     const task = this.beginLoad();
     try {
       this.battleInfo = info;
-      setLoading(t('{title} 준비 중', { title: t(info.title) }), 0.04, info.art ?? null);
+      setLoading(t('{title} 준비 중', { title: t(info.title) }), 0.04, info);
       this.skyName = info.sky;
       this.seaName = info.sea;
       waveField.setState(SEA_STATES[this.seaName]);
@@ -1131,6 +1187,7 @@ export class Engine {
       setLoading(null);
       this.publish(true);
       this.loading = null;
+      this.cinema.begin();
     } catch (err) {
       this.cancelLoad(task);
       throw err;
@@ -1196,7 +1253,7 @@ export class Engine {
     // A multiplayer battle runs on the server at its own pace: no pause, no speed-up, nothing simulated here.
     if (!this.remote) this.updateFastForward(dt);
     const base = this.fastForward ? Math.max(this.speed, FAST_SPEED) : this.speed;
-    const speed = base * this.director.timeFactor(base);
+    const speed = this.cinema.speed(base * this.director.timeFactor(base));
     // Above 4x the frame rate is set by the simulation's share of each frame, not by the GPU, so it says nothing
     // about which quality level the device can hold.
     if (this.remote || this.paused || speed <= 4) this.adaptive?.update(frameDt, this.gpuMs, this.cpuMs);
@@ -1236,6 +1293,7 @@ export class Engine {
     if (events.length) {
       this.sound.update(events, this.battle, this.camera, scaled);
       this.director.feed(events);
+      this.cinema.feed(events);
       this.fx.handle(events, this.battle);
       this.crew.handle(events, this.battle);
       this.input.onEvents(events);
@@ -1243,10 +1301,14 @@ export class Engine {
     }
     this.battle.events = [];
     if (this.battle.ended && !this.reported) this.finishCampaignBattle();
-    this.director.update(dt);
-    const follow = this.rts.followId ? this.views.worldOf(this.rts.followId) : null;
-    if (this.rts.followId && !follow) this.rts.followId = 0;
-    this.rts.update(dt, follow);
+    // While a cutscene or a documentary beat holds the camera, neither the director nor the player moves it.
+    if (!this.cinema.update(dt)) {
+      this.director.update(dt);
+      const follow = this.rts.followId ? this.views.worldOf(this.rts.followId) : null;
+      if (this.rts.followId && !follow) this.rts.followId = 0;
+      this.rts.update(dt, follow);
+    }
+    this.updateFilm(dt);
     this.ocean.setTide(this.battle.tide);
     atmosphere.cloudDrift.value.set(CLOUD_WIND.x * waveField.time, CLOUD_WIND.y * waveField.time);
     this.clouds?.update(this.camera.position, waveField.time);
@@ -1275,11 +1337,11 @@ export class Engine {
     this.lanterns.update(this.battle, this.camera, this.battle.night || SKY_PRESETS[this.skyName].night > 0.5);
     this.updateSun();
     const el = this.renderer.domElement;
-    this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.hudHidden && !this.rts.cinematic && !this.battle.ended, this.team);
+    this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.hudHidden && !this.rts.cinematic && !this.cinema.covering && !this.battle.ended, this.team);
     this.moveOrders?.update();
-    const overlay = !this.hudHidden && !this.rts.cinematic && !this.battle.ended;
+    const overlay = !this.hudHidden && !this.rts.cinematic && !this.cinema.covering && !this.battle.ended;
     this.tacticalOverlay?.update(overlay, overlay && this.showLabels);
-    this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.hudHidden && !this.rts.cinematic && !this.options.hideLabels && !this.battle.ended, this.battle);
+    this.conquestView?.update(this.camera, el.clientWidth, el.clientHeight, this.team, this.selectedPoint, this.showLabels && !this.hudHidden && !this.rts.cinematic && !this.cinema.covering && !this.options.hideLabels && !this.battle.ended, this.battle);
     if (this.conquest && !this.paused && useUi.getState().autoBuild) {
       const order = this.autoBuild.tick(this.battle, this.conquest, this.owner, (cmd) => this.issue(cmd));
       if (order) {
@@ -1400,8 +1462,10 @@ export class Engine {
       if (!s.alive || !shipObserved(this.battle, this.team, s)) { w.forgetShip(s.id); continue; }
       const L = s.spec.length;
       w.shipWake(s, scaled);
-      if (s.sinking > 0) w.stamp(s.x, s.z, s.heading, L * 0.7, 0.03 * k, 1.6, 1.8);
-      else if (s.fire > 0.3) w.stamp(s.x, s.z, s.heading, L * 0.6, 0.004 * k, 1.6, 0.6);
+      // A sinking hull churns the water round it: little foam (stamped every frame it would build to a flat white disc
+      // under the lace pattern), much turbulence, which roughens and lightens the water.
+      if (s.sinking > 0) w.stamp(s.x, s.z, s.heading, L * 0.7, 0.0015 * k, 1.6, 30);
+      else if (s.fire > 0.3) w.stamp(s.x, s.z, s.heading, L * 0.6, 0.0008 * k, 1.6, 6);
     }
   }
 
@@ -1600,6 +1664,7 @@ export class Engine {
             id: primary.id,
             name: primary.name,
             kind: primary.spec.label,
+            shipKind: primary.spec.kind,
             team: primary.team,
             hull: primary.hull / primary.spec.hull,
             crew: Math.round(primary.crew),
@@ -1808,7 +1873,7 @@ export class Engine {
     this.wake.dispose();
     this.views?.renderer.dispose();
     if (this.views) disposeTree(this.views.group);
-    if (this.fx) disposeTree(this.fx.group);
+    this.fx?.dispose();
     if (this.lanterns) disposeTree(this.lanterns.group);
     this.pipeline?.dispose();
     this.sky?.view.dispose();

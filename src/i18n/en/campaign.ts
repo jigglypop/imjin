@@ -1,5 +1,5 @@
 /**
- * English for the Faction Campaign (캠페인): its screens, the campaign's rules text, the war's log, the historical
+ * English for the faction campaign (캠페인, Campaign): its screens, the campaign's rules text, the war's log, the historical
  * events and the names it shows. Keyed by the exact Korean source text; see ../index.ts and ../GLOSSARY.md.
  */
 

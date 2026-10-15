@@ -1,0 +1,515 @@
+{
+  "date": "2026-10-16",
+  "provider": "Meshy (api.meshy.ai openapi v1): auto-rigging and the animation library",
+  "why": "The original Meshy sources of the crew (assets-src/characters, never committed) were gone. Each character was rebuilt from the shipped crew file (node scripts/characters.mjs recover: the finest level without hand weapons, bind-pose positions, its 512 px texture), rigged again and given its old clips plus the fighting ones: duels, parries, falls, swimming, climbing, grapnel throws, flag signals, drumming, ramming and bucket work. Clips whose key starts with an underscore were tried and not used.",
+  "bake": "node scripts/bake-crew.mjs (reads assets-src/characters/state.json and the downloaded parts)",
+  "balanceBefore": 4493,
+  "balanceAfter": 3995,
+  "credits": 498,
+  "creditsNote": "Meshy credits from the account monthly allowance: rigging 5 per character, 3 per animation clip.",
+  "characters": {
+    "joseon_marine": {
+      "rigTask": "01a140f2-73a1-735a-a838-746a0accf6fc",
+      "rigCredits": 5,
+      "clips": {
+        "idle": 0,
+        "ready": 89,
+        "melee": 97,
+        "thrust": 240,
+        "hit": 178,
+        "die": 189,
+        "run": 510,
+        "cheer": 59,
+        "combo": 105,
+        "slash": 242,
+        "parry": 147,
+        "block": 151,
+        "climb": 449,
+        "throw": 421,
+        "die2": 187,
+        "fall": 502,
+        "swim": 569,
+        "knock": 7
+      },
+      "animationTasks": [
+        {
+          "id": "01a140f2-ffe3-71db-9e57-384c94845e2a",
+          "actionIds": [
+            0,
+            89,
+            97,
+            240,
+            178,
+            189,
+            510,
+            59,
+            105,
+            242
+          ],
+          "credits": 30
+        },
+        {
+          "id": "01a140f3-01f4-7716-bf3e-c16f82236073",
+          "actionIds": [
+            147,
+            151,
+            449,
+            421,
+            187,
+            502,
+            569,
+            7
+          ],
+          "credits": 24
+        }
+      ],
+      "credits": 59
+    },
+    "joseon_soldier": {
+      "rigTask": "01a140fb-db6b-7649-ad58-a434411a87a6",
+      "rigCredits": 5,
+      "clips": {
+        "idle": 0,
+        "ready": 89,
+        "shoot": 224,
+        "melee": 240,
+        "hit": 178,
+        "die": 189,
+        "run": 14,
+        "cheer": 59,
+        "draw": 222,
+        "parry": 147,
+        "combo": 105,
+        "climb": 449,
+        "die2": 184,
+        "fall": 502,
+        "swim": 569,
+        "knock": 7
+      },
+      "animationTasks": [
+        {
+          "id": "01a140fd-90c4-71fb-a7b9-fe5803a9be75",
+          "actionIds": [
+            0,
+            89,
+            224,
+            240,
+            178,
+            189,
+            14,
+            59,
+            222,
+            147
+          ],
+          "credits": 30
+        },
+        {
+          "id": "01a140fd-92f6-770f-8a21-97edf5d23bef",
+          "actionIds": [
+            105,
+            449,
+            184,
+            502,
+            569,
+            7
+          ],
+          "credits": 18
+        }
+      ],
+      "credits": 53
+    },
+    "joseon_officer": {
+      "rigTask": "01a140fb-eea7-7362-bbbb-bf28577df7ff",
+      "rigCredits": 5,
+      "clips": {
+        "idle": 0,
+        "ready": 89,
+        "command": 101,
+        "melee": 219,
+        "hit": 178,
+        "die": 189,
+        "cheer": 59,
+        "wave": 290,
+        "signal": 28,
+        "parry": 147,
+        "die2": 184,
+        "fall": 502,
+        "swim": 569,
+        "knock": 7
+      },
+      "animationTasks": [
+        {
+          "id": "01a140fd-9420-75c0-9da9-eb40428d7287",
+          "actionIds": [
+            0,
+            89,
+            101,
+            219,
+            178,
+            189,
+            59,
+            290,
+            28,
+            147
+          ],
+          "credits": 30
+        },
+        {
+          "id": "01a140fd-9533-710e-973f-bd213a2e85b6",
+          "actionIds": [
+            184,
+            502,
+            569,
+            7
+          ],
+          "credits": 12
+        }
+      ],
+      "credits": 47
+    },
+    "japan_ashigaru": {
+      "rigTask": "01a140fb-fbc4-76d3-bba4-a0541b7d51de",
+      "rigCredits": 5,
+      "clips": {
+        "idle": 0,
+        "ready": 89,
+        "shoot": 104,
+        "reload": 170,
+        "melee": 240,
+        "hit": 178,
+        "die": 184,
+        "run": 510,
+        "cheer": 59,
+        "kneel": 165,
+        "parry": 147,
+        "combo": 105,
+        "climb": 449,
+        "throw": 421,
+        "die2": 183,
+        "fall": 502,
+        "swim": 569,
+        "knock": 7,
+        "_aimturn": 585,
+        "_crouch": 95,
+        "aim": 234
+      },
+      "animationTasks": [
+        {
+          "id": "01a140fd-9666-76d8-b429-e7583a390840",
+          "actionIds": [
+            0,
+            89,
+            104,
+            170,
+            240,
+            178,
+            184,
+            510,
+            59,
+            165
+          ],
+          "credits": 30
+        },
+        {
+          "id": "01a140fd-97bd-73f9-bc26-a9d3e23f633b",
+          "actionIds": [
+            147,
+            105,
+            449,
+            421,
+            183,
+            502,
+            569,
+            7
+          ],
+          "credits": 24
+        },
+        {
+          "id": "01a14104-4ad2-70e0-bda2-ecf2bcb44e1b",
+          "actionIds": [
+            585,
+            95,
+            234
+          ],
+          "credits": 9
+        }
+      ],
+      "credits": 68
+    },
+    "japan_samurai": {
+      "rigTask": "01a140fc-35fb-7179-8ea6-68efeaa105f7",
+      "rigCredits": 5,
+      "clips": {
+        "idle": 0,
+        "ready": 89,
+        "melee": 97,
+        "thrust": 240,
+        "hit": 178,
+        "die": 189,
+        "run": 510,
+        "cheer": 59,
+        "combo": 105,
+        "slash": 242,
+        "parry": 147,
+        "block": 151,
+        "climb": 449,
+        "throw": 421,
+        "die2": 187,
+        "fall": 502,
+        "swim": 569,
+        "knock": 7
+      },
+      "animationTasks": [
+        {
+          "id": "01a140fd-98b0-70af-9500-c6c06719bfb6",
+          "actionIds": [
+            0,
+            89,
+            97,
+            240,
+            178,
+            189,
+            510,
+            59,
+            105,
+            242
+          ],
+          "credits": 30
+        },
+        {
+          "id": "01a140fd-99da-7548-9beb-947d88f3925c",
+          "actionIds": [
+            147,
+            151,
+            449,
+            421,
+            187,
+            502,
+            569,
+            7
+          ],
+          "credits": 24
+        }
+      ],
+      "credits": 59
+    },
+    "japan_officer": {
+      "rigTask": "01a140fc-55bb-7142-9b1a-2387a2cd60e0",
+      "rigCredits": 5,
+      "clips": {
+        "idle": 0,
+        "ready": 89,
+        "command": 101,
+        "melee": 219,
+        "hit": 178,
+        "die": 189,
+        "cheer": 59,
+        "wave": 290,
+        "signal": 28,
+        "parry": 147,
+        "die2": 184,
+        "fall": 502,
+        "swim": 569,
+        "knock": 7
+      },
+      "animationTasks": [
+        {
+          "id": "01a140fd-9bc6-7661-a063-081dca8a4a31",
+          "actionIds": [
+            0,
+            89,
+            101,
+            219,
+            178,
+            189,
+            59,
+            290,
+            28,
+            147
+          ],
+          "credits": 30
+        },
+        {
+          "id": "01a140fd-9d6f-715d-881e-c3d97bfdce7c",
+          "actionIds": [
+            184,
+            502,
+            569,
+            7
+          ],
+          "credits": 12
+        }
+      ],
+      "credits": 47
+    },
+    "ming_soldier": {
+      "rigTask": "01a140fc-6919-738c-8689-e58690bd7c00",
+      "rigCredits": 5,
+      "clips": {
+        "idle": 0,
+        "ready": 89,
+        "shoot": 224,
+        "melee": 240,
+        "hit": 178,
+        "die": 189,
+        "run": 14,
+        "cheer": 59,
+        "draw": 222,
+        "parry": 147,
+        "combo": 105,
+        "climb": 449,
+        "die2": 184,
+        "fall": 502,
+        "swim": 569,
+        "knock": 7
+      },
+      "animationTasks": [
+        {
+          "id": "01a140fd-9e6e-7587-8cc8-aae286ec5448",
+          "actionIds": [
+            0,
+            89,
+            224,
+            240,
+            178,
+            189,
+            14,
+            59,
+            222,
+            147
+          ],
+          "credits": 30
+        },
+        {
+          "id": "01a140fd-9fb0-74e1-a62b-087bebb78d77",
+          "actionIds": [
+            105,
+            449,
+            184,
+            502,
+            569,
+            7
+          ],
+          "credits": 18
+        }
+      ],
+      "credits": 53
+    },
+    "ming_officer": {
+      "rigTask": "01a140fc-7e4a-7351-9220-82e231a545d8",
+      "rigCredits": 5,
+      "clips": {
+        "idle": 0,
+        "ready": 89,
+        "command": 101,
+        "melee": 219,
+        "hit": 178,
+        "die": 189,
+        "cheer": 59,
+        "wave": 290,
+        "signal": 28,
+        "parry": 147,
+        "die2": 184,
+        "fall": 502,
+        "swim": 569,
+        "knock": 7
+      },
+      "animationTasks": [
+        {
+          "id": "01a140fd-a0c9-74f0-a810-f88f7fadc0a4",
+          "actionIds": [
+            0,
+            89,
+            101,
+            219,
+            178,
+            189,
+            59,
+            290,
+            28,
+            147
+          ],
+          "credits": 30
+        },
+        {
+          "id": "01a140fd-a23c-7309-ba28-17cbbdee37d3",
+          "actionIds": [
+            184,
+            502,
+            569,
+            7
+          ],
+          "credits": 12
+        }
+      ],
+      "credits": 47
+    },
+    "rower": {
+      "rigTask": "01a140fc-8fcb-7486-ae68-dd3c1c15d182",
+      "rigCredits": 5,
+      "clips": {
+        "idle": 0,
+        "row": 259,
+        "haul": 276,
+        "carry": 550,
+        "hit": 178,
+        "die": 184,
+        "run": 14,
+        "cheer": 59,
+        "ready": 89,
+        "ram": 262,
+        "bucket": 552,
+        "douse": 327,
+        "_hammer": 128,
+        "kneel": 165,
+        "die2": 183,
+        "fall": 502,
+        "swim": 569,
+        "knock": 7,
+        "drumroll": 87,
+        "drum": 214
+      },
+      "animationTasks": [
+        {
+          "id": "01a140fd-a51d-7380-a3de-f01e8f48dfc4",
+          "actionIds": [
+            0,
+            259,
+            276,
+            550,
+            178,
+            184,
+            14,
+            59,
+            89,
+            262
+          ],
+          "credits": 30
+        },
+        {
+          "id": "01a140fd-a63f-7294-9cf8-2d66d28bdb4c",
+          "actionIds": [
+            552,
+            327,
+            128,
+            165,
+            183,
+            502,
+            569,
+            7
+          ],
+          "credits": 24
+        },
+        {
+          "id": "01a14104-4f17-758e-bfee-faaaaa6fdca0",
+          "actionIds": [
+            87,
+            214
+          ],
+          "credits": 6
+        }
+      ],
+      "credits": 65
+    }
+  }
+}

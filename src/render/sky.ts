@@ -3,7 +3,7 @@ import type { SkyInfo } from './atmosphere';
 import { Atmosphere, buildSkyView, DECK_TINT, hazeForFog, sampleSkyView, type Rgb } from './atmosphereModel';
 import { coverAt, sampleWeather } from './cloudNoise';
 
-export type SkyPresetName = 'afternoon' | 'day' | 'sunset' | 'overcast' | 'night';
+export type SkyPresetName = 'afternoon' | 'day' | 'sunset' | 'dawn' | 'overcast' | 'night';
 
 /** The cloud layer a sky is drawn with. Heights in metres above the sea. */
 export type CloudSpec = {
@@ -41,6 +41,8 @@ export const SKY_PRESETS: Record<SkyPresetName, SkyPreset> = {
   afternoon: { label: '오후', azimuth: 49.39 * deg, elevation: 15 * deg, exposure: 0.95, brightness: 1, fogDensity: 0.00007, sunRatio: 17, sunThrough: 1, axisOffset: 1.15, night: 0, clouds: { coverage: 0.42, base: 1300, top: 3500, density: 0.03 } },
   day: { label: '한낮', azimuth: 34.28 * deg, elevation: 48 * deg, exposure: 0.95, brightness: 1.05, fogDensity: 0.00006, sunRatio: 12, sunThrough: 1, axisOffset: 1.3, night: 0, clouds: { coverage: 0.38, base: 1500, top: 3800, density: 0.03 } },
   sunset: { label: '노을', azimuth: 38.5 * deg, elevation: 5 * deg, exposure: 1.0, brightness: 0.6, fogDensity: 0.00009, sunRatio: 9, sunThrough: 1, axisOffset: 0.5, night: 0, clouds: { coverage: 0.44, base: 1600, top: 3400, density: 0.03 } },
+  // A winter dawn after a night battle: the sun still below a grey deck of cloud, pale cold light, no gold.
+  dawn: { label: '겨울 새벽', azimuth: 62 * deg, elevation: 10 * deg, exposure: 1.0, brightness: 0.5, fogDensity: 0.0002, sunRatio: 0.9, sunThrough: 0.1, axisOffset: 1.0, night: 0.35, clouds: { coverage: 0.9, base: 900, top: 2300, density: 0.045 } },
   overcast: { label: '흐림', azimuth: 29.71 * deg, elevation: 23 * deg, exposure: 1.0, brightness: 0.85, fogDensity: 0.00018, sunRatio: 0.9, sunThrough: 0.12, axisOffset: 1.15, night: 0, clouds: { coverage: 0.92, base: 1100, top: 2500, density: 0.045 } },
   night: { label: '달밤', azimuth: 36.04 * deg, elevation: 14 * deg, exposure: 1.0, brightness: 0.085, fogDensity: 0.00011, sunRatio: 14, sunThrough: 1, axisOffset: 0.4, night: 1, clouds: { coverage: 0.36, base: 1500, top: 3300, density: 0.03 } },
 };

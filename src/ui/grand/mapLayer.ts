@@ -24,6 +24,8 @@ import { FOOTPRINT, METRES_PER_RADIUS, navyOf, WALL_KINDS, WATER_KINDS, type Pie
 import { buildBoatKit, buildShipKit, type KitMesh } from './shipKits';
 import { formation, hash, HULL_LENGTH, pointAlong, SETTLEMENT_RADIUS, SHIP_CAP, type FleetSpec, type MapWorld, type Piece, type SailSpec, type SettlementSpec } from './mapWorld';
 import type { FactionId, ShipClass } from './types';
+import { HeroLayer, heroUses, tierUses, type HeroUse } from './hero/layer';
+import { heroEnabled } from './hero/site';
 
 // The 3D layer of the campaign map: every port's places (mapWorld.ts) built from the settlement buildings
 // (campBuildings.ts, made like the battle's ships on each navy's texture atlas) standing on the drawn ground, the yards,
@@ -322,11 +324,17 @@ export class MapLayer {
   private yaw = 0;
   private stale = false;
   private disposed = false;
+  /** The hero camps (hero/layer.ts) and the sites the world on show has them at. */
+  private readonly hero: HeroLayer | null;
+  private heroes: HeroUse[] = [];
 
-  constructor(private readonly ground: (u: number, v: number) => number, private readonly onChange: () => void) {
+  /** `drawn(u, v)`, the drawn land in metres unclamped at the sea plane, lets the hero camps lay their ground. */
+  constructor(private readonly ground: (u: number, v: number) => number, private readonly onChange: () => void, drawn?: (u: number, v: number) => number) {
     this.group.add(this.lights.sun, this.lights.sky, this.lights.fill, this.near, this.far);
     this.far.visible = false;
     this.lights.sun.position.set(-0.55, 0.9, 0.5);
+    this.hero = drawn && heroEnabled() ? new HeroLayer(drawn) : null;
+    if (this.hero) this.group.add(this.hero.group);
   }
 
   /**
@@ -337,6 +345,7 @@ export class MapLayer {
     this.distance = distance;
     this.near.visible = distance <= NEAR_DISTANCE;
     this.far.visible = !this.near.visible;
+    this.hero?.setView(distance);
     if (Math.abs(yaw - this.yaw) < 1e-4 && !this.stale) return;
     this.yaw = yaw;
     this.stale = false;
@@ -485,8 +494,23 @@ export class MapLayer {
     const world = this.world;
     if (!world || this.disposed) return;
     const mine = ++this.generation;
-    const pieces = new Set(world.settlements.flatMap((s) => s.pieces.map((p) => p.kind)));
-    const kinds = new Set([...world.fleets.flatMap((f) => (f.kinds.length ? f.kinds : [MAIN_SHIP[f.faction]])), ...world.sails.map((s) => MAIN_SHIP[s.faction])]);
+    // The hero camps stand in for their places: their camp, beacon and the towns on their ground.
+    let heroes = this.hero ? heroUses(world) : [];
+    let tiers = this.hero ? tierUses(world, heroes) : [];
+    try {
+      await this.hero?.set(heroes, tiers);
+    } catch (error) {
+      // Should a camp fail to build, the map keeps its old kits rather than showing no places at all.
+      console.error(error);
+      heroes = [];
+      tiers = [];
+    }
+    if (this.disposed || mine !== this.generation) return;
+    const replaced = new Set([...heroes.flatMap((h) => [...h.replaces]), ...tiers.map((t) => t.id)]);
+    const settlements = world.settlements.filter((s) => !replaced.has(s.id));
+    const heroShips = this.hero?.extras(heroes).ships ?? [];
+    const pieces = new Set(settlements.flatMap((s) => s.pieces.map((p) => p.kind)));
+    const kinds = new Set([...world.fleets.flatMap((f) => (f.kinds.length ? f.kinds : [MAIN_SHIP[f.faction]])), ...world.sails.map((s) => MAIN_SHIP[s.faction]), ...heroShips.map((s) => s.kind)]);
     const navies = new Set([...pieces].map(navyOf));
     const loading = Promise.all([...[...navies].map((navy) => this.campMaterial(navy)), ...[...kinds].map((kind) => this.shipModel(kind))]);
     // The buildings one kind per task while the atlases load, so a new world does not hold the page up in one piece.
@@ -500,7 +524,8 @@ export class MapLayer {
     // A newer world or a dispose while the models were arriving makes this build stale.
     if (this.disposed || mine !== this.generation) return;
     this.clear();
-    this.buildSettlements(world.settlements);
+    this.heroes = heroes;
+    this.buildSettlements(settlements);
     this.buildShips(world.fleets);
     this.buildSailors(world.sails);
     this.shown = world;
@@ -615,6 +640,7 @@ export class MapLayer {
       this.decals.frustumCulled = false;
       this.group.add(this.decals);
     }
+    for (const h of this.hero?.extras(this.heroes).smoke ?? []) smoke.push(new Vector3(h.u - 0.5, h.y, (h.v - 0.5) / MAP_ASPECT));
     const { plume, smoke: smokeMat, boat, kit } = this.resources;
     const plumes = this.add(plume, smokeMat, smoke.map(() => new Matrix4()));
     if (plumes) this.smoke = { mesh: plumes, spots: smoke };
@@ -703,6 +729,13 @@ export class MapLayer {
         place(f, i, cx + b.x * R, cz + b.z * R, b.rot);
       }
     }
+    // The hero camps' own ships at their quays.
+    for (const s of this.hero?.extras(this.heroes).ships ?? []) {
+      const model = this.ship(SHIP_SPECS[s.kind].faction, s.kind);
+      let matrices = per.get(model);
+      if (!matrices) per.set(model, (matrices = []));
+      matrices.push(this.hull(model, s.u - 0.5, (s.v - 0.5) / MAP_ASPECT, s.rot, shipLength(s.kind)));
+    }
     // One instanced draw per ship model, close or far.
     for (const [model, matrices] of per) {
       this.add(model.near, model.material, matrices, undefined, this.near);
@@ -766,6 +799,7 @@ export class MapLayer {
     if (this.disposed) return;
     this.disposed = true;
     this.clear();
+    this.hero?.dispose();
     for (const m of this.kitShips.values()) m.near.dispose();
     this.kitShips.clear();
     for (const m of this.builtShips.values()) { m?.near.dispose(); m?.far.dispose(); }

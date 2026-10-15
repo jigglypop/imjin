@@ -8,6 +8,7 @@ import { prefetchScreen } from '../router';
 import { setScreen, type Screen } from '../state/store';
 import { Backdrop } from './Backdrop';
 import { ChevronLeft, Sliders, Speaker, SpeakerOff } from './icons';
+import { CodexIcon } from './codex/icons';
 import { ControlsHelp } from './Tutorial';
 import { MenuBattleBackdrop } from './MenuBattleBackdrop';
 import './menu-cinematic.css';
@@ -65,6 +66,9 @@ export function MainMenu() {
       <MenuBattleBackdrop />
       <div className="menu-shade" aria-hidden="true" />
       <header className="screen-top menu-masthead">
+        <button className="back-btn" data-mode="codex" {...mode('codex')}>
+          <CodexIcon name="book" /> {t('함선 도감')}
+        </button>
         <button className="back-btn" onClick={go('settings')}>
           <Sliders /> {t('설정')}
         </button>

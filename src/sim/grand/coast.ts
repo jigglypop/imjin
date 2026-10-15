@@ -27,7 +27,7 @@ import { REGIONS } from './regions';
 
 /** Where a region's port lies on its terrain, in the terrain's own coordinates, and how the attacker comes. */
 export type RegionSite = {
-  /** The historical battle fought on this coast: it names the loading picture and carries the tidal current. Null where the coast is only borrowed. */
+  /** The historical battle fought on this coast: it carries the tidal current and names the loading picture (regionArt). Null where the coast is only borrowed. */
   scenario: ScenarioId | null;
   terrain: TerrainSpec;
   /** Open water off the defender's port; the generator snaps it to the nearest shore with room for works. */
@@ -427,8 +427,6 @@ type Placed = { x: number; z: number; r: number; value: number; role: 'attacker'
 /** A region battle map: the real terrain with the capture points that were found along its coast, as a conquest map. */
 export type RegionMap = MapLayout & {
   id: RegionId;
-  /** The battle the terrain comes from, for its loading picture. */
-  scenario: ScenarioId | null;
   /** The terrain with the ground around the points kept clear. */
   terrain: TerrainSpec;
   current?: CurrentSpec;
@@ -482,10 +480,36 @@ function build(id: RegionId): RegionMap {
   const current = scenario?.current ?? designedCurrent(id, placed, mid, axis);
   const region = REGIONS[id];
   const climate: CoastalClimate = region.terrain === 'strait' ? 'strait' : region.terrain === 'bay' ? 'sheltered' : region.terrain === 'open' ? 'offshore' : 'exposed';
-  return { id, scenario: site.scenario, terrain, current, climate, points, night: false, sky: site.sky, sea: site.sea, foliage: site.foliage, view: { tx: mid.x, tz: mid.z, dir: axis, dist: 1000, pitch: 0.3 }, axis };
+  return { id, terrain, current, climate, points, night: false, sky: site.sky, sea: site.sea, foliage: site.foliage, view: { tx: mid.x, tz: mid.z, dir: axis, dist: 1000, pitch: 0.3 }, axis };
 }
 
 export const REGION_MAPS: Record<RegionId, RegionMap> = Object.fromEntries(REGION_ORDER.map((id) => [id, build(id)])) as Record<RegionId, RegionMap>;
 
 /** A persistent meeting's seed gives the same weather, tide and nighttime on every load and rendering client. */
 export const regionEnvironment = (id: RegionId, seed: number): BattleEnvironment => environmentFor(REGION_MAPS[id], seed);
+
+/** How far a historical battle's waters reach for a region's loading picture, in kilometres. */
+const ART_REACH = 60;
+
+/**
+ * The historical battle whose scene a region's loading page shows: the one fought on its own coast, else the nearest
+ * one within ART_REACH. Only the picture is borrowed; the page names the region's own battle. Regions with no battle
+ * that close (Tsushima, Nagoya, the Ming coast) have none and show the menu's picture.
+ */
+export function regionArt(id: RegionId): ScenarioId | null {
+  const own = REGION_SITES[id].scenario;
+  if (own) return own;
+  const at = REGIONS[id];
+  const km = (lon: number, lat: number) => Math.hypot((lon - at.lon) * Math.cos((at.lat * Math.PI) / 180) * 111.3, (lat - at.lat) * 111.3);
+  let best: ScenarioId | null = null;
+  let reach = ART_REACH;
+  for (const other of REGION_ORDER) {
+    const battle = REGION_SITES[other].scenario;
+    const d = battle ? km(REGIONS[other].lon, REGIONS[other].lat) : Infinity;
+    if (d < reach) {
+      reach = d;
+      best = battle;
+    }
+  }
+  return best;
+}

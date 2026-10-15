@@ -22,6 +22,7 @@ import { waveField } from '../ocean/waves';
 import { LOD_COUNT, modelKey, ShipRenderer, type ModelAsset } from './ShipRenderer';
 import type { ShipLodQuality } from '../game/quality';
 import { cutHeight, DECKS, mainDeck } from './decks';
+import { packBurn } from '../fx/fire/char';
 import { byModel, modelKind, modelScale } from './anchors';
 import { RING_FOE, RING_OWN } from './ringTones';
 import { shipObserved } from '../sim/observation';
@@ -295,7 +296,7 @@ export class ShipViews {
       // A model loaded without its near level has fewer levels: the nearest one it has serves the closer ranges.
       const have = assets[v.key]?.lods.length ?? LOD_COUNT;
       const draw = scale === 1 ? v.matrix : this.drawMatrix.copy(v.matrix).scale(this.tmp.setScalar(scale));
-      if (v.visible) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), v.flash, cut);
+      if (v.visible) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, packBurn(ship.fire, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45)), v.flash, cut);
       if (level === 3 && v.visible) props = this.interior(ship, v, main, props);
       const show = (this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0;
       if (show) {
@@ -424,9 +425,9 @@ export class ShipViews {
     return out.set(x, y, z).applyMatrix4(v.matrix);
   }
 
-  flash(id: number) {
+  flash(id: number, amount: number) {
     const v = this.states.get(id);
-    if (v) v.flash = 0.6;
+    if (v) v.flash = Math.max(v.flash, amount);
   }
 
   worldOf(id: number) {
