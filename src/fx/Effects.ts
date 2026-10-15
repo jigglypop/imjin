@@ -471,11 +471,13 @@ export class Effects {
     // Wood does not spark: the few there are come off the nails and iron fittings the shot tears through.
     this.sparks(x, y, z, ammo === 'arrow' ? 2 + damage * 0.1 : 3 + damage * 0.2, 16, 14);
     // Pale dust off the torn planks and a darker puff of powder and wood smoke, both blown out of the hole.
-    for (let i = 0; i < 4; i += 1) {
-      this.smoke.emit({ x: x + bx * 0.8, y, z: z + bz * 0.8, vx: bx * rnd(2, 6) + rnd(-2.5, 2.5), vy: rnd(0.6, 3), vz: bz * rnd(2, 6) + rnd(-2.5, 2.5), life: rnd(2.5, 4.5), size0: 0.9, size1: rnd(4.5, 7.5) * power, alpha: 0.42, r: 0.6, g: 0.55, b: 0.5, drag: 1.8, lift: 0.18, wind: 0.8 });
+    // A heavier blow throws a bigger cloud: a cheonja's arrow or ball against a light gun's.
+    const burst = power * (0.8 + Math.min(0.6, damage / 30));
+    for (let i = 0; i < 5; i += 1) {
+      this.smoke.emit({ x: x + bx * 0.8, y, z: z + bz * 0.8, vx: bx * rnd(3, 8) + rnd(-3, 3), vy: rnd(0.6, 3.5), vz: bz * rnd(3, 8) + rnd(-3, 3), life: rnd(2.5, 4.5), size0: 1.1, size1: rnd(5, 9) * burst, alpha: 0.5, r: 0.6, g: 0.55, b: 0.5, drag: 1.8, lift: 0.18, wind: 0.8 });
     }
     for (let i = 0; i < 3; i += 1) {
-      this.smoke.emit({ x, y: y + 0.4, z, vx: bx * rnd(1, 4) + rnd(-1.5, 1.5), vy: rnd(1, 3.5), vz: bz * rnd(1, 4) + rnd(-1.5, 1.5), life: rnd(4, 7), size0: 1.1, size1: rnd(6, 9) * power, alpha: 0.6, r: 0.22, g: 0.21, b: 0.2, drag: 1.4, lift: 0.35, wind: 1, heat: i === 0 ? 0.35 : 0 });
+      this.smoke.emit({ x, y: y + 0.4, z, vx: bx * rnd(1, 4) + rnd(-1.5, 1.5), vy: rnd(1, 3.5), vz: bz * rnd(1, 4) + rnd(-1.5, 1.5), life: rnd(4, 7), size0: 1.3, size1: rnd(7, 11) * burst, alpha: 0.7, r: 0.16, g: 0.15, b: 0.14, growth: 4, drag: 1.4, lift: 0.35, wind: 1, heat: i === 0 ? 0.35 : 0 });
     }
     for (let i = 0; i < 4; i += 1) {
       this.fire.emit({ x, y, z, vx: bx * rnd(4, 10) + rnd(-6, 6), vy: rnd(2, 9), vz: bz * rnd(4, 10) + rnd(-6, 6), life: rnd(0.25, 0.6), size0: 0.2, size1: 0.07, heat: 1, drag: 1.5, lift: -8 });
