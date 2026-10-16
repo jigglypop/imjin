@@ -915,9 +915,14 @@ export class Effects {
       this.smoke.emit({ x, y, z, vx: rnd(-0.4, 0.4), vy: rnd(0, 0.5), vz: rnd(-0.4, 0.4), life: rnd(1.6, 2.6), size0: 2.3 * k, size1: rnd(4, 5) * k, alpha: 0.16, r: 0.95, g: 0.95, b: 0.92, drag: 1.2, lift: 0.12, wind: 0.8 });
       return;
     }
-    const fiery = kind === Shell.Hiya;
-    this.smoke.emit({ x, y, z, vx: rnd(-0.3, 0.3), vy: rnd(0, 0.5), vz: rnd(-0.3, 0.3), life: rnd(1.2, 2.2), size0: (1.7 + 0.8 * weight) * k, size1: (rnd(3.4, 4.4) + 1.2 * weight) * k, alpha: fiery ? 0.3 : 0.22, r: fiery ? 0.34 : 0.88, g: fiery ? 0.32 : 0.88, b: fiery ? 0.3 : 0.88, drag: 1.4, lift: 0.1, wind: 0.6, heat: fiery ? 0.5 : 0 });
-    if (fiery) this.fire.emit({ x, y, z, life: rnd(0.15, 0.3), size0: 0.55 * k, size1: 0.15, alpha: 0.7, heat: 0.9, drag: 2, wind: 0.2 });
+    if (kind === Shell.Hiya) {
+      this.smoke.emit({ x, y, z, vx: rnd(-0.3, 0.3), vy: rnd(0, 0.5), vz: rnd(-0.3, 0.3), life: rnd(1.2, 2.2), size0: (1.7 + 0.8 * weight) * k, size1: (rnd(3.4, 4.4) + 1.2 * weight) * k, alpha: 0.3, r: 0.34, g: 0.32, b: 0.3, drag: 1.4, lift: 0.1, wind: 0.6, heat: 0.5 });
+      this.fire.emit({ x, y, z, life: rnd(0.15, 0.3), size0: 0.55 * k, size1: 0.15, alpha: 0.7, heat: 0.9, drag: 2, wind: 0.2 });
+      return;
+    }
+    // Shot and gun arrows leave only the thin grey wisp of the powder that rides out of the bore with them: a broad
+    // white ribbon round a dark ball reads as a puff of air, not as iron.
+    this.smoke.emit({ x, y, z, vx: rnd(-0.2, 0.2), vy: rnd(0, 0.3), vz: rnd(-0.2, 0.2), life: rnd(0.9, 1.5), size0: (0.45 + 0.3 * weight) * k, size1: (rnd(1.3, 1.8) + 0.6 * weight) * k, alpha: 0.2, r: 0.64, g: 0.63, b: 0.6, drag: 1.4, lift: 0.1, wind: 0.6 });
   }
 
   /**
@@ -1057,7 +1062,7 @@ export class Effects {
           this.mun.grape(px, py, pz, ux, uy, uz, sp, ppm, p.id, p.age);
           break;
         default:
-          this.mun.ball(px, py, pz, ux, uy, uz, sp, ppm, weight);
+          this.mun.ball(px, py, pz, ppm, weight);
       }
     }
     this.mun.fly(dt, this.camPos.x, this.camPos.y, this.camPos.z, focal, this.layRocket, (x, z) => pointVisible(battle, this.views.team, x, z));

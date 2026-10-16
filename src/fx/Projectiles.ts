@@ -317,11 +317,12 @@ export class Munitions {
     private readonly streaks: StreakLayer,
     tier: number,
   ) {
-    // Dark forged iron: a soft sheen from the sun and sky, and a faint cold rim so the black sphere keeps its outline on dark water.
+    // Cast iron, blackened: a hard sheen of sun and sky that ends at a crisp edge. A thin cold line right on the edge, too
+    // narrow to read as a glow, keeps the outline of the black sphere on black water at night.
     const iron = () => {
-      const m = new MeshStandardNodeMaterial({ color: new Color(0.075, 0.072, 0.07), roughness: 0.5, metalness: 0.85 });
+      const m = new MeshStandardNodeMaterial({ color: new Color(0.05, 0.048, 0.046), roughness: 0.3, metalness: 0.95 });
       const facing = saturate(dot(normalView, positionViewDirection));
-      m.emissiveNode = vec3(0.2, 0.21, 0.23).mul(pow(float(1).sub(facing), 3.2)).mul(0.5);
+      m.emissiveNode = vec3(0.2, 0.21, 0.23).mul(pow(float(1).sub(facing), 7)).mul(0.35);
       return m;
     };
     const ironMat = iron();
@@ -442,15 +443,12 @@ export class Munitions {
 
   /**
    * A round shot: a lit iron sphere that grows with distance so it keeps at least 3.3 px of radius, never more than
-   * a metre or so while the camera is close. Grape is a handful of small balls fanning out of the muzzle.
+   * a metre or so while the camera is close. Nothing glows round it: a pale smear or halo turns the dark ball into a
+   * puff of air, and the iron reads by its sheen against the sea and the thin smoke it leaves. Grape is a spray of small
+   * balls fanning out of the muzzle.
    */
-  ball(x: number, y: number, z: number, ux: number, uy: number, uz: number, speed: number, ppm: number, weight: number) {
-    const r = Math.min(16, Math.max(0.14, 3.3 / ppm)) * (0.85 + 0.35 * weight);
-    this.putBall(x, y, z, r, ppm);
-    this.smear(x, y, z, ux, uy, uz, speed, ppm, r * 2.2, 0.3);
-    // A dark ball on dark water is hard to find from afar: a faint pale halo lifts it while it is only a few pixels across.
-    const halo = 0.16 * (1 - smooth(3, 8, r * ppm));
-    if (halo > 0.01) this.streaks.put(x, y, z, ux, uy, uz, r * 3, r * 3, 0.8, 0.8, 0.78, halo);
+  ball(x: number, y: number, z: number, ppm: number, weight: number) {
+    this.putBall(x, y, z, Math.min(16, Math.max(0.14, 3.3 / ppm)) * (0.85 + 0.35 * weight), ppm);
   }
 
   grape(x: number, y: number, z: number, ux: number, uy: number, uz: number, speed: number, ppm: number, id: number, age: number) {
