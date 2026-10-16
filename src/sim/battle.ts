@@ -26,6 +26,7 @@ import {
   type Projectile,
   type Ship,
   type ShipKind,
+  type ShipSpec,
   type Side,
   type Squadron,
   type Team,
@@ -302,7 +303,11 @@ export class Battle {
   /** Ship id to the time it lost sight of every enemy. */
   private searchSince = new Map<number, number>();
   private firingLaneAt = -1;
-  private firingLanes = new Map<string, boolean>();
+  private firingLanes = new Map<number, boolean>();
+  /** The fastest shot each ship spec fires, for the firing lane's arc. A battle keeps one balance profile throughout. */
+  private readonly muzzles = new Map<ShipSpec, number>();
+  private readonly sideTargets: (Ship | undefined | null)[] = [null, null, null];
+  private readonly volleyTargets: (Ship | undefined | null)[] = [null, null, null];
 
   constructor(seed = 1592, readonly profile: BalanceProfile = 'historical') {
     this.rand = mulberry32(seed);
@@ -2265,8 +2270,12 @@ export class Battle {
     if (nerve <= 0) return;
     const crewFactor = 0.25 + 0.75 * this.gunnery(s);
     const spec = s.spec;
-    const targets: (Ship | undefined | null)[] = [null, null, null];
-    const volleyTargets: (Ship | undefined | null)[] = [null, null, null];
+    // Each side's target, looked for once per step (null: not yet). The arrays live on the battle: two new ones per ship
+    // per step were over a thousand objects a step in a big battle.
+    const targets = this.sideTargets;
+    const volleyTargets = this.volleyTargets;
+    targets[0] = targets[1] = targets[2] = null;
+    volleyTargets[0] = volleyTargets[1] = volleyTargets[2] = null;
     const volleying = s.volleySide >= 0 && s.volleyTimer > 0;
     let volleyCount = 0;
     if (s.volleyTimer > 0) {
@@ -2437,11 +2446,15 @@ export class Battle {
   private clearFiringLane(s: Ship, target: Ship) {
     const tick = Math.floor(this.time * 5);
     if (tick !== this.firingLaneAt) { this.firingLanes.clear(); this.firingLaneAt = tick; }
-    const key = s.id + ':' + target.id;
+    const key = s.id * 1048576 + target.id;
     const previous = this.firingLanes.get(key);
     if (previous !== undefined) return previous;
     const distance = hyp(target.x - s.x, target.z - s.z);
-    const muzzle = Math.max(120, ...s.spec.batteries.map((b) => this.gunSpec(s.spec.kind, b.gun).muzzle));
+    let muzzle = this.muzzles.get(s.spec);
+    if (muzzle === undefined) {
+      muzzle = Math.max(120, ...s.spec.batteries.map((b) => this.gunSpec(s.spec.kind, b.gun).muzzle));
+      this.muzzles.set(s.spec, muzzle);
+    }
     const samples = Math.max(2, Math.ceil(distance / 65));
     let clear = true;
     for (let i = 1; i < samples; i++) {
@@ -2615,45 +2628,56 @@ export class Battle {
           this.events.push({ type: 'splash', proj: p.id, x: p.x, z: p.z, size: p.ammo === 'arrow' ? 1.2 : p.ammo === 'grape' ? 0.6 : 1 });
           break;
         }
-        this.grid.query(p.x, p.z, 25, (s) => {
-          if (!p.alive || !s.alive || s.team === p.team || s.sinking >= 0.6) return;
-          const dx = p.x - s.x;
-          const dz = p.z - s.z;
-          const r = s.spec.length * 0.5 + 1;
-          if (dx * dx + dz * dz > r * r) return;
-          const c = Math.cos(s.heading);
-          const n = Math.sin(s.heading);
-          const lx = dx * c + dz * n;
-          const lz = -dx * n + dz * c;
-          const halfL = s.spec.length * 0.5;
-          const halfB = s.spec.beam * 0.5 * (1 - Math.pow(Math.abs(lx) / halfL, 3) * 0.6);
-          if (Math.abs(lx) > halfL || Math.abs(lz) > halfB + 0.3) return;
-          const top = Math.abs(lx) < halfL * 0.5 ? s.spec.height * 0.7 : s.spec.deck + 1.5;
-          if (p.y > top || p.y < -1.2) return;
-          p.alive = false;
-          const shooter = this.byId.get(p.shooter);
-          // Down the keel line, or from a second quarter at once: the depth rules' raking and crossfire.
-          const angle = this.tactics?.hit(s, p.shooter, p.ammo, p.vx, p.vz);
-          // The first volley of a sprung ambush catches the crews off their stations.
-          const surprise = this.maneuverRules?.surprised(shooter) ? SURPRISE_CREW : 1;
-          if (surprise > 1) this.morale?.shock(s, SURPRISE_SHOCK);
-          const dmg = p.damage * (1 - s.spec.armor) * (0.7 + this.rand() * 0.6) * (angle?.hull ?? 1);
-          this.damage(s, dmg, shooter);
-          // A round above the bulwark sweeps the open deck; one through the planking kills below.
-          const exposure: Exposure = p.ammo === 'grape' || p.y > s.spec.deck ? 'deck' : 'hull';
-          if (exposure === 'hull' && p.ammo !== 'arrow' && p.ammo !== 'grape') this.impactDamage(s, dmg, dx, dz);
-          this.casualties(s, ((p.crewDamage * (0.5 + this.rand())) / Math.max(1, s.spec.deckDefense * 0.8)) * (angle?.crew ?? 1) * surprise, exposure, false);
-          if (this.rand() < p.fireChance) this.ignite(s, p.ammo === 'fire' ? 0.26 : 0.2);
-          this.blow();
-          const hit: Extract<BattleEvent, { type: 'hit' }> = { type: 'hit', ship: s.id, proj: p.id, x: p.x, y: p.y, z: p.z, damage: dmg, ammo: p.ammo };
-          if (angle?.bonus) hit.bonus = angle.bonus;
-          this.events.push(hit);
-        });
+        this.shell = p;
+        this.teamGrids[otherTeam(p.team)].query(p.x, p.z, 25, this.shellMeets);
       }
       if (p.age > 14) p.alive = false;
     }
-    this.projectiles = this.projectiles.filter((p) => p.alive);
+    this.shell = null;
+    // Compacted in place: a new array every step was garbage for nothing.
+    let n = 0;
+    for (const p of this.projectiles) if (p.alive) this.projectiles[n++] = p;
+    this.projectiles.length = n;
   }
+
+  /** The shell being moved, for shellMeets. */
+  private shell: Projectile | null = null;
+  /** Whether the shell in flight strikes this enemy hull, and what the hit does. One function for every shell and substep. */
+  private readonly shellMeets = (s: Ship) => {
+    const p = this.shell!;
+    if (!p.alive || !s.alive || s.sinking >= 0.6) return;
+    const dx = p.x - s.x;
+    const dz = p.z - s.z;
+    const r = s.spec.length * 0.5 + 1;
+    if (dx * dx + dz * dz > r * r) return;
+    const c = Math.cos(s.heading);
+    const n = Math.sin(s.heading);
+    const lx = dx * c + dz * n;
+    const lz = -dx * n + dz * c;
+    const halfL = s.spec.length * 0.5;
+    const halfB = s.spec.beam * 0.5 * (1 - Math.pow(Math.abs(lx) / halfL, 3) * 0.6);
+    if (Math.abs(lx) > halfL || Math.abs(lz) > halfB + 0.3) return;
+    const top = Math.abs(lx) < halfL * 0.5 ? s.spec.height * 0.7 : s.spec.deck + 1.5;
+    if (p.y > top || p.y < -1.2) return;
+    p.alive = false;
+    const shooter = this.byId.get(p.shooter);
+    // Down the keel line, or from a second quarter at once: the depth rules' raking and crossfire.
+    const angle = this.tactics?.hit(s, p.shooter, p.ammo, p.vx, p.vz);
+    // The first volley of a sprung ambush catches the crews off their stations.
+    const surprise = this.maneuverRules?.surprised(shooter) ? SURPRISE_CREW : 1;
+    if (surprise > 1) this.morale?.shock(s, SURPRISE_SHOCK);
+    const dmg = p.damage * (1 - s.spec.armor) * (0.7 + this.rand() * 0.6) * (angle?.hull ?? 1);
+    this.damage(s, dmg, shooter);
+    // A round above the bulwark sweeps the open deck; one through the planking kills below.
+    const exposure: Exposure = p.ammo === 'grape' || p.y > s.spec.deck ? 'deck' : 'hull';
+    if (exposure === 'hull' && p.ammo !== 'arrow' && p.ammo !== 'grape') this.impactDamage(s, dmg, dx, dz);
+    this.casualties(s, ((p.crewDamage * (0.5 + this.rand())) / Math.max(1, s.spec.deckDefense * 0.8)) * (angle?.crew ?? 1) * surprise, exposure, false);
+    if (this.rand() < p.fireChance) this.ignite(s, p.ammo === 'fire' ? 0.26 : 0.2);
+    this.blow();
+    const hit: Extract<BattleEvent, { type: 'hit' }> = { type: 'hit', ship: s.id, proj: p.id, x: p.x, y: p.y, z: p.z, damage: dmg, ammo: p.ammo };
+    if (angle?.bonus) hit.bonus = angle.bonus;
+    this.events.push(hit);
+  };
 
   /** Sets a ship alight, or feeds its fire. `from` is the burning ship it caught from, when fire spread. */
   ignite(s: Ship, amount: number, from = 0) {

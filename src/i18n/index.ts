@@ -62,13 +62,16 @@ export function setLang(lang: Lang) {
 export type Params = Record<string, string | number>;
 
 const PLACEHOLDER = /\{(\w+)(?:\|([^}]+))?\}/g;
+// Number.toLocaleString builds a new formatter on every call, and the HUD and the ship labels format numbers every
+// frame; one formatter per language gives the same text.
+const NUMBERS = { ko: new Intl.NumberFormat('ko-KR'), en: new Intl.NumberFormat('en-US') };
 
 function format(template: string, params: Params | undefined, korean: boolean): string {
   if (!params) return template;
   return template.replace(PLACEHOLDER, (whole, key: string, pair?: string) => {
     const value = params[key];
     if (value === undefined) return whole;
-    const text = typeof value === 'number' ? value.toLocaleString(korean ? 'ko-KR' : 'en-US') : value;
+    const text = typeof value === 'number' ? NUMBERS[korean ? 'ko' : 'en'].format(value) : value;
     return korean && pair ? josa(text, pair as JosaPair) : text;
   });
 }
