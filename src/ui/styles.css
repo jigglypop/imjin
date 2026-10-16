@@ -6,6 +6,28 @@
    This :root is the one place the palette is written down; the other sheets and tokens.ts read it.
    ============================================================================ */
 
+/* The hanja of captions, titles and names: Shippori Mincho B1, a mincho with the ink pooling at the stroke ends of a
+   woodblock print, cut to the characters the game sets (scripts/hanja-fonts.mjs); the one it lacks comes from Noto Serif
+   TC, listed after it. */
+@font-face {
+  font-family: 'Imjin Hanja';
+  src: url('/ui/fonts/imjin-hanja-shippori-400.woff2') format('woff2');
+  font-weight: 100 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Imjin Hanja';
+  src: url('/ui/fonts/imjin-hanja-shippori-600.woff2') format('woff2');
+  font-weight: 600 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Imjin Hanja TC';
+  src: url('/ui/fonts/imjin-hanja-notoseriftc.woff2') format('woff2');
+  font-weight: 200 900;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
 
@@ -71,7 +93,7 @@
 
   /* Type: Pretendard everywhere. Sizes 12/13/15/17/20/24/32, weights 400/500/600. */
   --font-ui: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
-  --hanja: var(--font-ui);
+  --hanja: 'Imjin Hanja', 'Imjin Hanja TC', var(--font-ui);
   /* The title wordmark's serif (loaded in index.html), and nothing else. */
   --font-title: 'Noto Serif KR', 'Nanum Myeongjo', 'AppleMyungjo', serif;
   --fs-12: 12px;

@@ -1,5 +1,6 @@
 /* The cinema layer: letterbox, fades, documentary captions and fleet labels over the battle (src/ui/CinemaOverlay.tsx).
-   Korean in Noto Serif KR, numbers and Latin in Cinzel (the menu poster's Roman face), hanja set wide in the serif. */
+   Korean in Noto Serif KR, numbers and Latin in Cinzel (the menu poster's Roman face), hanja set wide in the hanja face
+   (Shippori Mincho B1, styles.css). */
 @font-face {
   font-family: 'Cine Roman';
   src: url('/ui/fonts/imjin-title-cinzel.woff2') format('woff2');
@@ -10,6 +11,7 @@
 .cine {
   --cine-serif: 'Cine Roman', 'Noto Serif KR', 'Nanum Myeongjo', 'AppleMyungjo', serif;
   --cine-ko: 'Noto Serif KR', 'Nanum Myeongjo', 'AppleMyungjo', serif;
+  --cine-hanja: 'Imjin Hanja', 'Imjin Hanja TC', var(--cine-ko);
   --cine-brass: #c9b384;
   --cine-gutter: max(28px, 4.2vw);
   position: absolute;
@@ -48,7 +50,7 @@
 .cine-doc-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
 .cine-doc-head b { font-family: var(--cine-ko); font-weight: 700; font-size: clamp(19px, 2vw, 30px); letter-spacing: 0.04em; }
 .cine-doc-tag { font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: 0.18em; padding: 2px 7px; border: 1px solid rgba(255, 255, 255, 0.42); color: rgba(255, 255, 255, 0.82); align-self: center; }
-.cine-hanja { font-family: var(--cine-ko); font-weight: 400; letter-spacing: 0.22em; color: var(--cine-brass); font-size: clamp(13px, 1.15vw, 18px); }
+.cine-hanja { font-family: var(--cine-hanja); font-weight: 400; letter-spacing: 0.22em; color: var(--cine-brass); font-size: clamp(13px, 1.15vw, 18px); }
 .cine-doc-body { margin-top: 7px; font-family: var(--cine-ko); font-weight: 400; font-size: clamp(14px, 1.18vw, 18px); line-height: 1.62; color: rgba(243, 241, 236, 0.94); word-break: keep-all; }
 .cine-source { margin-top: 6px; font-family: var(--font-ui); font-size: clamp(10px, 0.82vw, 12.5px); letter-spacing: 0.04em; color: rgba(243, 241, 236, 0.58); }
 .cine-source::before { content: '— '; }
@@ -75,12 +77,12 @@
 .cine-title { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; text-shadow: 0 2px 24px rgba(0, 0, 0, 0.75); }
 .cine-title-eyebrow { font-family: var(--cine-ko); font-weight: 400; font-size: clamp(12px, 1.1vw, 17px); letter-spacing: 0.5em; margin-right: -0.5em; color: rgba(243, 241, 236, 0.8); animation: cine-track 2.6s cubic-bezier(.2, .6, .2, 1) both; }
 .cine-title-main { margin-top: 0.3em; font-family: var(--cine-ko); font-weight: 700; font-size: clamp(46px, 7.4vw, 124px); line-height: 1; letter-spacing: 0.16em; margin-right: -0.16em; animation: cine-title 3s cubic-bezier(.2, .7, .2, 1) both; }
-.cine-title-hanja { margin-top: 0.55em; font-family: var(--cine-ko); font-size: clamp(14px, 1.5vw, 24px); letter-spacing: 0.9em; margin-right: -0.9em; color: var(--cine-brass); animation: cine-track 3s cubic-bezier(.2, .6, .2, 1) 0.5s both; }
+.cine-title-hanja { margin-top: 0.55em; font-family: var(--cine-hanja); font-size: clamp(14px, 1.5vw, 24px); letter-spacing: 0.9em; margin-right: -0.9em; color: var(--cine-brass); animation: cine-track 3s cubic-bezier(.2, .6, .2, 1) 0.5s both; }
 .cine-title-sub { margin-top: 1.1em; font-family: var(--cine-serif); font-size: clamp(12px, 1.1vw, 17px); letter-spacing: 0.4em; margin-right: -0.4em; color: rgba(243, 241, 236, 0.74); animation: cine-rise 2s ease-out 1s both; }
 
 /* The quote on black: the hanja large, the Korean under it. */
 .cine-quote { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 var(--cine-gutter); }
-.cine-quote-hanja { font-family: var(--cine-ko); font-weight: 600; font-size: clamp(28px, 4vw, 64px); letter-spacing: 0.42em; margin-right: -0.42em; color: #f3f1ec; animation: cine-ink 3.2s ease-out both; }
+.cine-quote-hanja { font-family: var(--cine-hanja); font-weight: 600; font-size: clamp(28px, 4vw, 64px); letter-spacing: 0.42em; margin-right: -0.42em; color: #f3f1ec; animation: cine-ink 3.2s ease-out both; }
 .cine-quote-text { margin-top: 0.9em; font-family: var(--cine-ko); font-weight: 400; font-size: clamp(16px, 1.7vw, 27px); letter-spacing: 0.08em; color: rgba(243, 241, 236, 0.86); animation: cine-rise 2s ease-out 1.6s both; word-break: keep-all; }
 .cine-quote .cine-source { margin-top: 2em; animation: cine-rise 2s ease-out 2.6s both; }
 

@@ -70,6 +70,7 @@
 
 .loading-kicker span {
   margin-left: 0.7em;
+  font-family: var(--hanja);
   font-weight: 500;
   letter-spacing: 0.24em;
 }

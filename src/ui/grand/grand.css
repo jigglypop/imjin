@@ -585,6 +585,7 @@
   color: var(--ink);
 }
 .gm-tip i {
+  font-family: var(--hanja);
   font-style: normal;
   font-weight: 500;
   color: var(--ink-3);
@@ -1158,6 +1159,7 @@
   letter-spacing: -0.02em;
 }
 .g-hanja {
+  font-family: var(--hanja);
   font-size: 13px;
   font-weight: 400;
   color: var(--ink-3);

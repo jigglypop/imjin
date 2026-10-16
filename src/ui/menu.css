@@ -961,6 +961,7 @@
 }
 
 .hs-brief h2 .hanja {
+  font-family: var(--hanja);
   font-size: var(--fs-13);
   font-weight: 400;
   letter-spacing: 0.2em;

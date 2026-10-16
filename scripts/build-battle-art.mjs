@@ -627,6 +627,7 @@ const CARD_STYLE = `
 @font-face { font-family:'Imjin Battle'; src:url('/fonts/imjin-battle-dohyeon.woff2') format('woff2'); font-display:block; }
 @font-face { font-family:'Imjin Roman'; src:url('/fonts/imjin-title-cinzel.woff2') format('woff2'); font-weight:400 900; font-display:block; }
 @font-face { font-family:'Imjin Serif'; src:url('/fonts/imjin-serif-notoserifkr.woff2') format('woff2'); font-weight:200 900; font-display:block; }
+@font-face { font-family:'Imjin Hanja'; src:url('/fonts/imjin-hanja-shippori-600.woff2') format('woff2'); font-display:block; }
 html,body { margin:0; width:${CARD_SIZE.width}px; height:${CARD_SIZE.height}px; overflow:hidden; background:#07121b; }
 body { position:relative; font-family:'Pretendard Variable',Pretendard,sans-serif; color:#f4eedc; }
 .still { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
@@ -641,7 +642,7 @@ body { position:relative; font-family:'Pretendard Variable',Pretendard,sans-seri
 .brand i { font-style:normal; font-family:'Imjin Roman'; font-weight:600; font-size:30px; letter-spacing:.22em; }
 .block { position:absolute; left:56px; bottom:48px; display:flex; flex-direction:column; align-items:flex-start; }
 .kicker { font-family:'Noto Serif KR',serif; font-weight:700; font-size:34px; letter-spacing:.06em; line-height:1.1; color:#d8c69c; text-shadow:0 2px 14px rgba(3,8,13,.9); white-space:nowrap; }
-.kicker small { font-weight:500; font-size:30px; letter-spacing:.24em; margin-left:.4em; }
+.kicker small { font-family:'Imjin Hanja','Noto Serif KR',serif; font-weight:500; font-size:30px; letter-spacing:.24em; margin-left:.4em; }
 .title { margin:10px 0 0 -4px; font-family:'Imjin Battle'; font-weight:400; font-size:150px; line-height:.95; letter-spacing:-.035em; white-space:nowrap; -webkit-text-stroke:.026em #f4eedc; paint-order:stroke fill; filter:drop-shadow(0 3px 0 rgba(8,18,26,.8)) drop-shadow(0 10px 28px rgba(3,8,13,.85)); }
 .place { margin-top:14px; font-size:40px; font-weight:600; letter-spacing:-.01em; color:#f4efe2; text-shadow:0 2px 14px rgba(3,8,13,.95); white-space:nowrap; }
 .en .kicker { font-family:'Imjin Roman'; font-weight:600; font-size:30px; letter-spacing:.14em; }
