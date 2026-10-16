@@ -142,17 +142,17 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '트인 바다: 속도와 화력이 승부를 가릅니다.': 'Open sea: speed and firepower decide.',
 
   // Regions
-  '서해로 통하는 길목입니다. 울돌목의 빠른 물살이 수비 측에 유리합니다.': 'The gateway to the Yellow Sea. The fast current of Uldolmok favors the defender.',
+  '울돌목의 거센 물살에서 이순신이 13척으로 133척을 꺾은 곳입니다.': 'Where Yi Sun-sin beat 133 ships with 13 in the racing currents of Uldolmok.',
   '전라좌수영이 있는 조선 수군의 본거지입니다.': 'Home of the Jeolla Left Naval Command and the main base of the Joseon Navy.',
-  '남해도와 하동 사이의 좁은 수로입니다. 동서 항로를 잇는 길목입니다.': 'A narrow channel between Namhae Island and Hadong. It links the east and west sea lanes.',
-  '안쪽으로 깊이 들어간 만과 포구입니다. 함대를 모으기 좋습니다.': 'Deep bays and harbors. A good place to gather a fleet.',
-  '견내량 너머의 섬입니다. 적을 끌어들여 싸우기 좋은 지형입니다.': 'An island beyond Gyeonnaeryang. Good ground for luring the enemy in.',
-  '남해안 중앙의 큰 섬입니다. 부산으로 향하는 길목입니다.': 'A large island in the middle of the south coast, on the way to Busan.',
-  '부산 서쪽의 만입니다. 일본 수군의 보급선이 드나듭니다.': 'A bay west of Busan where Japanese supply ships come and go.',
-  '쓰시마에서 오는 항로가 닿는 가장 큰 포구입니다. 일본의 본진이 있습니다.': 'The largest port on the lane from Tsushima, and the main Japanese base.',
+  '1598년 이순신이 마지막 해전에서 전사한 좁은 수로입니다.': 'The narrow channel where Yi Sun-sin fell in the last battle, 1598.',
+  '1592년 사천 해전에서 거북선이 처음 싸운 바다입니다.': 'Where the turtle ship first fought, at Sacheon in 1592.',
+  '1592년 학익진으로 일본 함대를 무찌른 한산도 대첩의 바다입니다.': 'The waters of the Great Victory at Hansando, won with the Crane Wing in 1592.',
+  '1592년 조선 수군이 옥포 해전에서 첫 승리를 거둔 섬입니다.': 'The island where the Joseon Navy won its first battle, at Okpo in 1592.',
+  '한산도 대첩 이틀 뒤 일본 함대를 깨뜨린 포구입니다.': 'Where a Japanese fleet was broken two days after Hansando.',
+  '쓰시마 항로가 닿는 일본군의 본진입니다.': 'The Japanese main base, where the lane from Tsushima lands.',
   '일본이 바다를 건너는 중간 기지입니다.': 'The staging base Japan uses to cross the sea.',
-  '히데요시의 대본영입니다. 병력과 함선이 이곳에서 출발합니다.': "Hideyoshi's headquarters. Troops and ships set out from here.",
-  '명 수군의 기지입니다. 곡식과 은이 넉넉하지만 조선까지 거리가 멉니다.': 'The base of the Ming Navy. Grain and silver are plentiful, but Joseon is far away.',
+  '히데요시의 대본영, 침공군이 떠나는 곳입니다.': "Hideyoshi's headquarters, where the invasion sets out.",
+  '명 수군의 기지입니다. 은이 넉넉하지만 조선까지 멉니다.': "The Ming Navy's base. Rich in silver, but far from Joseon.",
   '압록강 너머에 있는 명의 북쪽 거점입니다.': "Ming's northern stronghold beyond the Yalu River.",
 
   // --- Orders and their answers --------------------------------------------------------------------------------
