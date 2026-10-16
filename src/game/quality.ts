@@ -216,7 +216,9 @@ export function saveLevelSetting(setting: LevelSetting) {
 
 function autoTier(): EquipmentTier {
   if (isPhone) return 'low';
-  if (isTouchOnly) return 'medium';
+  // A tablet with little memory or few cores (an Android slate, an old iPad) gets the phone's budget; the rest of the
+  // tablets keep the middle tier. Without it the first battle opens heavy and the controller has to climb down.
+  if (isTouchOnly) return (deviceMemoryGB !== undefined && deviceMemoryGB <= 3) || (navigator.hardwareConcurrency || 8) <= 4 ? 'low' : 'medium';
   return deviceMemoryGB !== undefined && deviceMemoryGB <= 4 ? 'medium' : 'high';
 }
 

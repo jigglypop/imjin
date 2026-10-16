@@ -34,7 +34,7 @@ async function shareBattle(id: ScenarioId, line: string): Promise<'shared' | 'co
 }
 
 /** The share button of a battle: it says so for a moment when the link went to the clipboard rather than a share sheet. */
-export function ShareButton({ id, line }: { id: ScenarioId; line: string }) {
+export function ShareButton({ id, line, label }: { id: ScenarioId; line: string; label?: string }) {
   const t = useT();
   const [copied, setCopied] = useState(false);
   useEffect(() => {
@@ -52,7 +52,7 @@ export function ShareButton({ id, line }: { id: ScenarioId; line: string }) {
       }}
     >
       {copied ? <Check size={15} /> : <Share size={15} />}
-      <span>{copied ? t('링크를 복사했습니다') : t('공유')}</span>
+      <span>{copied ? t('링크를 복사했습니다') : (label ?? t('공유'))}</span>
     </button>
   );
 }
