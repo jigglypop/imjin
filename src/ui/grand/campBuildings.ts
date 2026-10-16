@@ -1,6 +1,6 @@
 import { MeshBuilder, compose, cloth, cylinder, polygon, rectSection, rotX, rotY, spike, sweep, xlate, type MeshData, type Paint, type V3 } from '../../ships/build/parts';
 import { bakeGrime } from '../../ships/build/bake';
-import { bannerPaint, buildingPaints } from './buildingAtlas';
+import { bannerAspect, bannerPaint, buildingPaints } from './buildingAtlas';
 import { METRES_PER_RADIUS, navyOf, WALL_KINDS, WALL_METRES, WATER_KINDS, type PieceKind } from './campPieces';
 import { batter, block, column, face, NY, PY, picture, pictureX, post, rect, roof, surface, thatch, walls, type Kit, type RoofLook } from './kitParts';
 
@@ -95,11 +95,15 @@ export function banner(k: Kit, pole: Paint, cloth_: Paint, x: number, height: nu
   cloth(k.b, cloth_, [x + 0.07, height - 0.25, 0], [w, 0, 0], [0, -h, 0], { nu: k.near ? 3 : 1, nv: 1, wave: k.near ? 0.12 : 0 });
 }
 
-/** A tall Japanese nobori: a pole with an arm across its top and the long cloth hanging from both, `s` times its usual size. */
+/**
+ * A tall Japanese nobori: a pole with an arm across its top and the long cloth hanging from both, `s` times its usual
+ * size. The cloth is as wide as its picture (the navy's nobori sheet) makes it, so the crest stays round.
+ */
 export function nobori(k: Kit, pole: Paint, cloth_: Paint, x: number, s = 1) {
+  const h = 4.6 * s, w = h * bannerAspect('japan', 'white');
   column(k, pole, x, 0, 0.08 * s, 0.06 * s, -0.5, 7.6 * s, k.near ? 6 : 4, true);
-  block(k, pole, [x, 7.2 * s, -0.05 * s], [x + 1.02 * s, 7.32 * s, 0.05 * s], 0);
-  cloth(k.b, cloth_, [x + 0.08 * s, 7.2 * s, 0], [0.9 * s, 0, 0], [0, -4.6 * s, 0], { nu: 1, nv: k.near ? 3 : 1, wave: k.near ? 0.07 * s : 0 });
+  block(k, pole, [x, 7.2 * s, -0.05 * s], [x + w + 0.12 * s, 7.32 * s, 0.05 * s], 0);
+  cloth(k.b, cloth_, [x + 0.08 * s, 7.2 * s, 0], [w, 0, 0], [0, -h, 0], { nu: 1, nv: k.near ? 3 : 1, wave: k.near ? 0.07 * s : 0 });
 }
 
 /**
@@ -528,8 +532,8 @@ function waTent(k: Kit) {
 /** Two nobori, the clan's white and red. */
 function waBanner(k: Kit) {
   const timber = k.P('timber');
-  nobori(k, timber, bannerPaint('japan', 'white'), -1.25);
-  nobori(k, timber, bannerPaint('japan', 'red'), 0.3);
+  nobori(k, timber, bannerPaint('japan', 'white'), -1.3);
+  nobori(k, timber, bannerPaint('japan', 'red'), 0.1);
 }
 
 /** A residence or barracks hall: white walls with black boarding on a low stone base under an irimoya. */
@@ -769,8 +773,8 @@ const KITS: Record<PieceKind, (k: Kit) => void> = {
   // Japan's is a great nobori, red with the white crest.
   wa_standard: (k) => {
     const ishigaki = k.P('ishigaki');
-    batter(k, ishigaki, ishigaki, -0.6, 0, 0.65, 0.65, 0.5, 0.5, -1.4, 0.5);
-    nobori(k, k.P('timber'), bannerPaint('japan', 'red'), -0.6, 2);
+    batter(k, ishigaki, ishigaki, -1.3, 0, 0.65, 0.65, 0.5, 0.5, -1.4, 0.5);
+    nobori(k, k.P('timber'), bannerPaint('japan', 'red'), -1.3, 2);
   },
   mg_standard: (k) => standard(k, bannerPaint('ming', 'yellow'), k.P('stone')),
   mg_beacon: (k) => {

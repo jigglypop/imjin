@@ -1,5 +1,5 @@
 import { cloth, cylinder, polygon, spike, type Paint } from '../../../ships/build/parts';
-import { bannerPaint } from '../buildingAtlas';
+import { bannerAspect, bannerPaint } from '../buildingAtlas';
 import { arched, at, boardsBelow, cannon, coping, crenels, crown, hullFrame, japaneseRoof, koreanRoof, mingRoof, shadow, stake } from '../campBuildings';
 import { batter, block, column, face, NY, PY, picture, pictureX, post, rect, roof, thatch, walls, type Kit, type RoofLook, type RoofOpts } from '../kitParts';
 import type { FactionId } from '../types';
@@ -418,8 +418,10 @@ function flag(k: Kit, navy: FactionId, p: Extract<Piece, { kind: 'banner' }>) {
   if (k.near) spike(k.b, pole, [0, p.h, 0], [0, 1, 0], r * 1.4, 0.35, 4);
   const paint = flagPaint(navy, p.colour);
   if (p.flag === 'nobori') {
-    block(k, pole, [0, p.h - 0.35, -0.04], [p.w + 0.12, p.h - 0.25, 0.04], 0);
-    cloth(k.b, paint, [0.06, p.h - 0.3, 0], [p.w, 0, 0], [0, -p.fh, 0], { nu: k.near ? 2 : 1, nv: k.near ? 4 : 1, flutter: 0.35, hang: true, wave: k.near ? 0.05 : 0 });
+    // As wide as the nobori picture makes it for its length, so the crest stays round.
+    const w = navy === 'japan' ? p.fh * bannerAspect('japan', 'white') : p.w;
+    block(k, pole, [0, p.h - 0.35, -0.04], [w + 0.12, p.h - 0.25, 0.04], 0);
+    cloth(k.b, paint, [0.06, p.h - 0.3, 0], [w, 0, 0], [0, -p.fh, 0], { nu: k.near ? 2 : 1, nv: k.near ? 4 : 1, flutter: 0.35, hang: true, wave: k.near ? 0.05 : 0 });
   } else cloth(k.b, paint, [r, p.h - 0.15, 0], [p.w, 0, 0], [0, -p.fh * 0.7, 0], { nu: k.near ? 4 : 1, nv: k.near ? 2 : 1, flutter: 0.9, wave: k.near ? 0.12 : 0 });
 }
 

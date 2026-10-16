@@ -57,6 +57,6 @@ export const FOOTPRINT: Record<PieceKind, readonly [number, number]> = {
   jo_battery: [7.0, 4.6], wa_battery: [7.0, 4.6], mg_battery: [7.0, 4.6], jo_yard: [7.0, 11.8], wa_yard: [7.0, 11.8], mg_yard: [7.0, 11.8],
   jo_dock: [4.3, 9.6], wa_dock: [4.3, 9.6], mg_dock: [4.3, 9.6], jo_granary: [5.6, 3.8], wa_granary: [5.3, 3.6], mg_granary: [5.6, 4.1],
   jo_beacon: [4.5, 4.5], wa_beacon: [3.5, 3.5], mg_beacon: [3.5, 3.5],
-  jo_standard: [2.7, 0.7], wa_standard: [1.5, 0.7], mg_standard: [2.7, 0.7],
+  jo_standard: [2.7, 0.7], wa_standard: [2.0, 0.7], mg_standard: [2.7, 0.7],
   doldam: [5, 0.6], tree: [3.4, 3.4], jeongja: [3.8, 3.5], wa_house: [5.9, 4.1],
 };
