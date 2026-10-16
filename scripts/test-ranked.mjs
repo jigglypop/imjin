@@ -35,7 +35,7 @@ async function stop() {
 }
 async function start(path, env = {}) {
   serverErrors = '';
-  child = spawn(process.execPath, ['server/dist/server.cjs'], { cwd: root, env: { ...process.env, PORT: '0', FF_SPEED: '1', GRACE_SECONDS: '1.2', LOAD_SECONDS: '0.7', RANKED_STORE: path, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+  child = spawn(process.execPath, ['server/dist/server.cjs'], { cwd: root, env: { ...process.env, PORT: '0', FF_SPEED: '1', GRACE_SECONDS: '1.2', LOAD_SECONDS: '0.7', RANKED_STORE: path, ACCOUNTS_DB: join(temporary, 'accounts.db'), ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
   child.stderr.on('data', (data) => serverErrors += data);
   const port = await new Promise((resolve, reject) => {
     let output = '';
