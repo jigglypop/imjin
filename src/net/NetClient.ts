@@ -129,7 +129,7 @@ class NetClient {
   private account = stored(ACCOUNT_KEY, 'local');
   /**
    * The account session (src/account) this line said hello with. Retries present the same one, so a seat is never
-   * taken back as someone else; a sign-in or sign-out reaches the line when it is idle (reidentify).
+   * taken back as someone else; a sign-in or sign-out reaches the line when it is idle (sessionChanged).
    */
   private session = '';
   private ws: WebSocket | null = null;
@@ -146,6 +146,10 @@ class NetClient {
   private pendingStart: StartMsg | null = null;
   private starter: ((msg: StartMsg) => void) | null = null;
   listener: BattleListener | null = null;
+
+  constructor() {
+    onSessionChange(() => this.sessionChanged());
+  }
 
   /** Who starts the battle on the screen. A start that arrived before anyone listened is delivered when one does. */
   get onStart() {
@@ -183,10 +187,6 @@ class NetClient {
   /** The recovery code of this browser's own ranked record, which a sign-up carries over into the account. */
   get rankedToken() {
     return this.account;
-  }
-
-  constructor() {
-    onSessionChange(() => this.sessionChanged());
   }
 
   /**
