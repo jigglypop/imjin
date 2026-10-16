@@ -11,7 +11,11 @@ const CELL = 500;
 const NIGHT_SHARE = 0.4;
 
 type Observer = { x: number; z: number; height: number; range: number; beacon: boolean };
-type TeamSight = { cells: Map<string, Observer[]>; ships: Set<number>; points: Map<string, boolean> };
+/**
+ * Lookouts by cell, a column (the cell's x index) holding its cells by z index, and remembered map coordinates by x
+ * then z. Number keys spare building a text key for every cell a lookout covers and every query.
+ */
+type TeamSight = { cells: Map<number, Map<number, Observer[]>>; ships: Set<number>; points: Map<number, Map<number, boolean>> };
 type Sight = { tick: number; count: number; night: boolean; scale: number; land: Battle['land']; rules: Battle['rules']; teams: Record<Team, TeamSight> };
 const caches = new WeakMap<Battle, Sight>();
 
@@ -30,7 +34,7 @@ function lineOfSight(b: Battle, o: Observer, x: number, z: number, height: numbe
 }
 
 function observed(b: Battle, sight: TeamSight, x: number, z: number, height: number, exposure = 0): boolean {
-  const cell = sight.cells.get(`${Math.floor(x / CELL)},${Math.floor(z / CELL)}`);
+  const cell = sight.cells.get(Math.floor(x / CELL))?.get(Math.floor(z / CELL));
   if (!cell) return false;
   for (const o of cell) {
     const range = b.night && !o.beacon ? Math.max(o.range * NIGHT_SHARE, exposure) : o.range;
@@ -44,11 +48,15 @@ function observed(b: Battle, sight: TeamSight, x: number, z: number, height: num
 function addObserver(b: Battle, sight: TeamSight, o: Observer): void {
   // Index the cells this lookout can cover, so checking every target does not scan every friendly ship.
   const reach = b.night && !o.beacon ? Math.max(o.range, 1900 * visibilityScale(b)) : o.range;
-  for (let cx = Math.floor((o.x - reach) / CELL); cx <= Math.floor((o.x + reach) / CELL); cx++) {
-    for (let cz = Math.floor((o.z - reach) / CELL); cz <= Math.floor((o.z + reach) / CELL); cz++) {
-      const key = `${cx},${cz}`;
-      const list = sight.cells.get(key);
-      if (list) list.push(o); else sight.cells.set(key, [o]);
+  const x1 = Math.floor((o.x + reach) / CELL);
+  const z0 = Math.floor((o.z - reach) / CELL);
+  const z1 = Math.floor((o.z + reach) / CELL);
+  for (let cx = Math.floor((o.x - reach) / CELL); cx <= x1; cx++) {
+    let column = sight.cells.get(cx);
+    if (!column) sight.cells.set(cx, (column = new Map()));
+    for (let cz = z0; cz <= z1; cz++) {
+      const list = column.get(cz);
+      if (list) list.push(o); else column.set(cz, [o]);
     }
   }
 }
@@ -111,10 +119,12 @@ export function shipPositionVisible(b: Battle, team: Team, s: Ship): boolean {
 /** Ground and remembered map coordinates are visible only when a live lookout can observe them. */
 export function pointVisible(b: Battle, team: Team, x: number, z: number): boolean {
   if (b.profile === 'historical') return true;
-  const sight = sightOf(b).teams[team], key = `${x},${z}`;
-  const previous = sight.points.get(key);
+  const sight = sightOf(b).teams[team];
+  let row = sight.points.get(x);
+  const previous = row?.get(z);
   if (previous !== undefined) return previous;
   const visible = observed(b, sight, x, z, Math.max(0, b.land(x, z)) + 3);
-  sight.points.set(key, visible);
+  if (!row) sight.points.set(x, (row = new Map()));
+  row.set(z, visible);
   return visible;
 }

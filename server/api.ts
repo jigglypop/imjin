@@ -4,7 +4,7 @@
 // later feature adds its own with route() or user(), which hands its handler the signed-in user.
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { ACCOUNT_TEXT, type AccountErrorCode } from '../src/account/wire';
-import { AccountError, type AccountStore, type UserRecord } from './accounts';
+import { AccountError, type AccountStore, type SignedIn, type UserRecord } from './accounts';
 
 /** Browsers send their page's origin; only the game's own pages (and local or LAN ones) may call. Other clients send none. */
 const ORIGINS = ['https://imjin1592.com', 'https://www.imjin1592.com', ...(process.env.ALLOWED_ORIGINS ?? '').split(',').filter(Boolean)];
@@ -176,9 +176,9 @@ export class ApiRouter {
       const token = BEARER.exec(request.headers.authorization ?? '')?.[1] ?? null;
       const now = Date.now();
       const base: ApiRequest = { method: route.method, path, address, token, body, now, accounts };
-      let signedIn: { user: UserRecord; hash: string } | null = null;
+      let signedIn: SignedIn | null = null;
       if (route.signedIn) {
-        signedIn = token ? accounts.session(token, now) : null;
+        signedIn = token ? await accounts.session(token, now) : null;
         if (!signedIn) throw new ApiError('session');
       }
       // A plain route never reads `user` or `session`; the cast only lets both kinds share one handler type.

@@ -7,6 +7,7 @@
 #   scripts/deploy-mp.sh ci       let the GitHub deploy role do the same on every push (repository variable
 #                                 MP_INSTANCE_ID must then be set to the instance id)
 #   scripts/deploy-mp.sh status   instance state and health check
+#   scripts/deploy-mp.sh db       once: the game server's role and DATABASE_URL on the imjin-postgres RDS instance
 # Already in place: private bucket imjin1592-deploy, role and instance profile imjin-mp-instance (SSM core + read
 # of s3://imjin1592-deploy/server/*). There is no SSH key or port; use `aws ssm start-session` for a shell.
 # Needs AWS CLI v2 and a login (`aws login`, or `aws configure sso`; AWS_PROFILE picks a named one). Works with the
@@ -104,6 +105,26 @@ JSON
     aws iam put-role-policy --role-name $GITHUB_ROLE --policy-name mp-deploy --policy-document "$POLICY"
     echo "set the repository variable MP_INSTANCE_ID=$ID so the deploy workflow updates the server"
     ;;
+  db)
+    # The game's own PostgreSQL (imjin-postgres, private, reachable only from the host's security group): runs
+    # infra/mp-db-bootstrap.sh on the host, which gives the server its role and its DATABASE_URL. The host may read the
+    # RDS master secret only while this runs.
+    ID=$(instance_id)
+    [ "$ID" != "None" ] || die "no running imjin-mp instance"
+    ENDPOINT=$(aws rds describe-db-instances --db-instance-identifier imjin-postgres --query 'DBInstances[0].Endpoint.Address' --output text)
+    SECRET=$(aws rds describe-db-instances --db-instance-identifier imjin-postgres --query 'DBInstances[0].MasterUserSecret.SecretArn' --output text)
+    [ "$ENDPOINT" != "None" ] && [ "$SECRET" != "None" ] || die "imjin-postgres is not available yet"
+    aws iam put-role-policy --role-name imjin-mp-instance --policy-name db-bootstrap --policy-document \
+      "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"secretsmanager:GetSecretValue\",\"Resource\":\"$SECRET\"}]}"
+    trap 'aws iam delete-role-policy --role-name imjin-mp-instance --policy-name db-bootstrap' EXIT
+    sleep 15 # IAM changes take a few seconds to reach the instance's credentials
+    SCRIPT=$(base64 < "$ROOT/infra/mp-db-bootstrap.sh" | tr -d '\n')
+    CMD=$(aws ssm send-command --instance-ids "$ID" --document-name AWS-RunShellScript --parameters \
+      "commands=[\"echo $SCRIPT | base64 -d > /root/mp-db-bootstrap.sh\",\"bash /root/mp-db-bootstrap.sh $SECRET $ENDPOINT\",\"rm -f /root/mp-db-bootstrap.sh\"]" \
+      --query Command.CommandId --output text)
+    aws ssm wait command-executed --command-id "$CMD" --instance-id "$ID" || true
+    aws ssm get-command-invocation --command-id "$CMD" --instance-id "$ID" --query '[Status,StandardOutputContent,StandardErrorContent]' --output text
+    ;;
   status)
     ID=$(instance_id)
     echo "instance: $ID"
@@ -111,7 +132,7 @@ JSON
     curl -fsS --max-time 10 "https://$HOST/health" && echo
     ;;
   *)
-    sed -n '2,17p' "$0"
+    sed -n '2,18p' "$0"
     exit 1
     ;;
 esac

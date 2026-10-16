@@ -34,7 +34,9 @@ import { loadLand, terrainWorker } from './terrain';
 import { clean, clientMessage } from './messages';
 import { RankedStore, rankRange, type RankMatch } from './ranked';
 import { observedEvent, observedMetadata, observedShips, observedState } from './observation';
-import { AccountStore, hashSession, type UserRecord } from './accounts';
+import { SESSION_MS, hashSession, type AccountStore, type UserRecord } from './accounts';
+import { MemoryAccountStore } from './accountsMemory';
+import { PgAccountStore, databaseConfig, type DatabaseConfig } from './accountsPg';
 import { ApiRouter, addressOf, originAllowed } from './api';
 import { authRoutes } from './auth';
 
@@ -751,6 +753,8 @@ function handle(c: Client, msg: ClientMsg) {
 
 type Hello = Extract<ClientMsg, { t: 'hello' }>;
 type Identity = { account: Client['account']; user: Client['user']; expired: boolean };
+/** What a hello's session proved: its user with their ranked account, or no user (`expired` when the store does not know the session). */
+type SessionProof = { hash: string; user: UserRecord | null; account: Client['account']; expired: boolean };
 
 /** A new ranked account counts against the address's hourly allowance. False, with the socket closed, when it is spent. */
 function creationAllowed(ws: WebSocket, address: string): boolean {
@@ -770,12 +774,18 @@ function refuseStorage(ws: WebSocket) {
   ws.close(1011, 'account unavailable');
 }
 
-/** Ties a ranked account to a user. A failure of the accounts store is logged; the line still plays with that account. */
-function link(user: UserRecord, rankedId: string): boolean {
-  try { return accounts!.linkRanked(user.id, rankedId) === 'linked'; }
-  catch (error) {
+/**
+ * Ties a ranked account to a user and returns the one they have afterwards: this one, or the one another of their
+ * devices linked first. Null when another user has it or the store failed (logged); the line then plays unlinked.
+ */
+async function link(user: UserRecord, rankedId: string): Promise<string | null> {
+  try {
+    const outcome = await accounts!.linkRanked(user.id, rankedId);
+    if (outcome === 'linked' || outcome === 'same') return rankedId;
+    return outcome === 'other' ? (await accounts!.user(user.id))?.rankedId ?? null : null;
+  } catch (error) {
     console.error('ranked link failed', error instanceof Error ? error.message : 'unknown error');
-    return false;
+    return null;
   }
 }
 
@@ -784,7 +794,7 @@ function link(user: UserRecord, rankedId: string): boolean {
  * recovery code opens, when nobody has it yet; else a new one. Whatever it is gets linked, so every later device of
  * the user plays with it. Null while ranked play is off; undefined when the hello was refused and the socket closed.
  */
-function rankedFor(ws: WebSocket, msg: Hello, name: string, address: string, user: UserRecord): Client['account'] | undefined {
+async function rankedFor(ws: WebSocket, msg: Hello, name: string, address: string, user: UserRecord): Promise<Client['account'] | undefined> {
   if (!ranked?.ready) return null;
   try {
     if (user.rankedId) {
@@ -793,42 +803,43 @@ function rankedFor(ws: WebSocket, msg: Hello, name: string, address: string, use
       return null;
     }
     const own = user.login === null && msg.account ? ranked.verify(msg.account) : null;
-    if (own && link(user, own)) return { id: own, token: null };
+    const adopted = own ? await link(user, own) : null;
+    if (adopted) return { id: adopted, token: null };
     if (!creationAllowed(ws, address)) return undefined;
     const created = ranked.account(undefined, name);
     accountCreation.get(address)!.count++;
-    link(user, created.id);
-    return { id: created.id, token: null };
+    return { id: (await link(user, created.id)) ?? created.id, token: null };
   } catch {
     refuseStorage(ws);
     return undefined;
   }
 }
 
-/**
- * Who a hello speaks for. A session names a signed-in user and brings their ranked account (rankedFor). Without one,
- * or with one the store no longer knows (`expired`), the recovery code alone names the ranked account, as it did before
- * accounts. Null when the hello was refused and the socket closed.
- */
-function identify(ws: WebSocket, msg: Hello, name: string, address: string, c: Client | undefined): Identity | null {
-  let expired = false;
-  if (msg.session !== undefined) {
-    const session = hashSession(msg.session);
-    // The tab that took its seat with this session gets it back as it was, also once the session has ended or while
-    // the store cannot be read: only that tab holds both its seat token and this session.
-    if (c?.user?.session === session) return { account: c.account, user: c.user, expired };
-    let user: UserRecord | null = null;
-    try {
-      user = accounts?.ready ? accounts.session(msg.session)?.user ?? null : null;
-      expired = !!accounts?.ready && !user;
-    } catch (error) {
-      console.error('session check failed', error instanceof Error ? error.message : 'unknown error');
-    }
-    if (user) {
-      const account = rankedFor(ws, msg, name, address, user);
-      return account === undefined ? null : { account, user: { id: user.id, session }, expired };
-    }
+/** What a hello's session proves, asked of the store before the hello does anything else. Undefined when the hello was refused and the socket closed. */
+async function signIn(ws: WebSocket, msg: Hello, name: string, address: string): Promise<SessionProof | undefined> {
+  const hash = hashSession(msg.session!);
+  if (!accounts?.ready) return { hash, user: null, account: null, expired: false };
+  let user: UserRecord | null;
+  try {
+    user = (await accounts.session(msg.session!))?.user ?? null;
+  } catch (error) {
+    console.error('session check failed', error instanceof Error ? error.message : 'unknown error');
+    return { hash, user: null, account: null, expired: false };
   }
+  if (!user) return { hash, user: null, account: null, expired: true };
+  const account = await rankedFor(ws, msg, name, address, user);
+  return account === undefined ? undefined : { hash, user, account, expired: false };
+}
+
+/**
+ * Who a hello speaks for once the store has answered: the signed-in user with their ranked account, or else the ranked
+ * account its recovery code names, as before accounts. The tab that took its seat with this very session gets it back
+ * as it was, also once the session has ended or while the store cannot answer: only that tab holds both its seat token
+ * and this session. Null when the hello was refused and the socket closed.
+ */
+function identify(ws: WebSocket, msg: Hello, name: string, address: string, c: Client | undefined, proof: SessionProof | null): Identity | null {
+  if (proof && c?.user?.session === proof.hash) return { account: c.account, user: c.user, expired: false };
+  if (proof?.user) return { account: proof.account, user: { id: proof.user.id, session: proof.hash }, expired: false };
   let account: Client['account'] = null;
   if (ranked?.ready) {
     if (!msg.account && !creationAllowed(ws, address)) return null;
@@ -846,19 +857,25 @@ function identify(ws: WebSocket, msg: Hello, name: string, address: string, c: C
   }
   // Storage outages disable ranked play; an already authenticated tab can still recover its casual session.
   if (!ranked?.ready && c?.account?.token && msg.account === c.account.token) account = c.account;
-  return { account, user: null, expired };
+  return { account, user: null, expired: proof?.expired ?? false };
 }
 
-/** A connection says who it is. A known token takes its old seat back. */
-function attach(ws: WebSocket, msg: Hello, address: string): Client | null {
+/**
+ * A connection says who it is. A known token takes its old seat back. The account store is asked first and may answer
+ * late; everything after it runs at once, so no other hello can change the seats in between.
+ */
+async function attach(ws: WebSocket, msg: Hello, address: string): Promise<Client | null> {
   if (msg.v !== PROTOCOL) {
     ws.send(JSON.stringify({ t: 'error', code: 'version', text: '게임 버전이 서버와 다릅니다. 새로고침이 필요합니다.' } satisfies ServerMsg));
     ws.close();
     return null;
   }
-  let c = typeof msg.token === 'string' ? byToken.get(msg.token) : undefined;
   const name = clean(msg.name, 16) || '무명';
-  const identity = identify(ws, msg, name, address, c);
+  const proof = msg.session === undefined ? null : await signIn(ws, msg, name, address);
+  // Refused while the store answered, or the socket went meanwhile: it gets no seat.
+  if (proof === undefined || ws.readyState !== ws.OPEN) return null;
+  let c = typeof msg.token === 'string' ? byToken.get(msg.token) : undefined;
+  const identity = identify(ws, msg, name, address, c, proof);
   if (!identity) return null;
   const { user } = identity;
   let { account } = identity;
@@ -932,6 +949,34 @@ function detach(c: Client) {
   c.grace = setTimeout(() => drop(c), DISCONNECT_SECONDS * 1000);
 }
 
+/**
+ * The accounts store the environment asks for: PostgreSQL from DATABASE_URL or PGHOST (accountsPg.ts), memory with
+ * ACCOUNTS_STORE=memory for tests and local runs, or none. Without one, accounts are off and the game goes on, as it
+ * does without ranked storage. One line says which, never with credentials.
+ */
+function openAccounts(env: NodeJS.ProcessEnv): AccountStore | null {
+  // Only tests shorten the 90 days.
+  const sessionMs = Number(env.SESSION_SECONDS) > 0 ? Number(env.SESSION_SECONDS) * 1000 : SESSION_MS;
+  if (env.ACCOUNTS_STORE === 'memory') {
+    console.log('accounts: in memory (ACCOUNTS_STORE=memory), lost when the server stops');
+    return new MemoryAccountStore(sessionMs);
+  }
+  let config: DatabaseConfig | null;
+  try {
+    config = databaseConfig(env);
+  } catch (error) {
+    console.error(`accounts: off, the database settings cannot be used (${error instanceof Error ? error.message : 'unknown error'})`);
+    return null;
+  }
+  if (!config) {
+    console.log('accounts: off (no DATABASE_URL or PGHOST)');
+    return null;
+  }
+  const tls = !config.ssl ? 'no TLS' : typeof config.ssl === 'object' && config.ssl.rejectUnauthorized ? 'TLS, certificate verified' : 'TLS, certificate not verified';
+  console.log(`accounts: PostgreSQL at ${config.host}:${config.port}/${config.database} (${tls})`);
+  return new PgAccountStore(config, sessionMs);
+}
+
 function main() {
   // A room's tick and a client's request already end only what failed (fail, and the 1011 close in the message
   // handler). The only promises are room starts and terrain loads, which handle their own errors and share nothing
@@ -945,23 +990,13 @@ function main() {
   });
   try { ranked = new RankedStore(process.env.RANKED_STORE ?? join(dirname(__filename), 'data', 'ranked.jsonl')); }
   catch (error) { console.error('ranked unavailable', error instanceof Error ? error.message : 'unknown error'); }
-  // Accounts work like ranked play: a store that cannot open turns them off and the battles go on without them.
-  try { accounts = new AccountStore(process.env.ACCOUNTS_DB ?? join(dirname(__filename), 'data', 'accounts.db')); }
-  catch (error) { console.error('accounts unavailable', error instanceof Error ? error.message : 'unknown error'); }
+  accounts = openAccounts(process.env);
   const api = new ApiRouter(accounts);
   authRoutes(api, ranked);
-  // A copy of the accounts when the server starts and every day after, and ended sessions forgotten.
-  const tend = () => {
-    if (!accounts?.ready) return;
-    try {
-      accounts.sweep();
-      accounts.backup();
-    } catch (error) {
-      console.error('accounts backup failed', error instanceof Error ? error.message : 'unknown error');
-    }
-  };
-  tend();
-  setInterval(tend, 24 * 3600 * 1000);
+  // Ended sessions are forgotten every hour.
+  setInterval(() => {
+    if (accounts?.ready) accounts.sweep().catch((error) => console.error('accounts sweep failed', error instanceof Error ? error.message : 'unknown error'));
+  }, 3600 * 1000);
   const http = createServer((req, res) => {
     if (req.url === '/health') {
       res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'cache-control': 'no-store' });
@@ -996,6 +1031,7 @@ function main() {
     const address = addressOf(request);
     let c: Client | null = null;
     let beforeHello = 0;
+    let attaching = false;
     const deadline = setTimeout(() => {
       if (!c) ws.terminate();
     }, HELLO_SECONDS * 1000);
@@ -1041,7 +1077,21 @@ function main() {
               send(c, { t: 'rank', profile: ranked.profile(c.account.id) });
             }
             send(c, { t: 'rooms', rooms: summary() });
-          } else c = attach(ws, msg, address) ?? c;
+          } else if (!attaching) {
+            // The account store may take a moment to answer; a hello that comes meanwhile is ignored, the first decides.
+            attaching = true;
+            attach(ws, msg, address)
+              .then((attached) => {
+                if (attached) c = attached;
+              })
+              .catch((err) => {
+                console.warn('client request failed', err);
+                ws.close(1011, 'request failed');
+              })
+              .finally(() => {
+                attaching = false;
+              });
+          }
           return;
         }
         // Not yet introduced, or a connection that was replaced by a newer one.

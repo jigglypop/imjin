@@ -208,19 +208,19 @@ async function page(url, { stored = null, language = 'ko-KR', battle = false } =
 
 await check('startup: the address opens its screen and is rewritten to its one form in the language on screen', async () => {
   const cases = [
-    ['/campaign', {}, '/campaign', 'faction', '캠페인 · 임진왜란'],
-    ['/ko/campaign/', {}, '/campaign', 'faction', '캠페인 · 임진왜란'],
-    ['/ko', { stored: 'en' }, '/', 'menu', '임진왜란'],
-    ['/campaign', { stored: 'en' }, '/en/campaign', 'faction', 'Campaign · The Imjin War'],
-    ['/online', { language: 'en-US' }, '/en/online', 'online', 'Online Battle · The Imjin War'],
-    ['/en/conquest', { stored: 'ko' }, '/en/conquest', 'skirmish', 'Conquest · The Imjin War'],
-    ['/en/', {}, '/en', 'menu', 'The Imjin War'],
-    ['/en/index.html', {}, '/en', 'menu', 'The Imjin War'],
-    ['/battles/index.html', {}, '/battles', 'select', '역사 전투 · 임진왜란'],
-    ['/settings?lang=en&q=low', {}, '/en/settings?lang=en&q=low', 'settings', 'Settings · The Imjin War'],
-    ['/en/battles?lang=ko', {}, '/battles?lang=ko', 'select', '역사 전투 · 임진왜란'],
-    ['/nowhere', {}, '/', 'menu', '임진왜란'],
-    ['/en/nowhere/at/all', {}, '/en', 'menu', 'The Imjin War'],
+    ['/campaign', {}, '/campaign', 'faction', '캠페인 · MOONWAKE: 임진왜란'],
+    ['/ko/campaign/', {}, '/campaign', 'faction', '캠페인 · MOONWAKE: 임진왜란'],
+    ['/ko', { stored: 'en' }, '/', 'menu', 'MOONWAKE: 임진왜란'],
+    ['/campaign', { stored: 'en' }, '/en/campaign', 'faction', 'Campaign · MOONWAKE: The Imjin War'],
+    ['/online', { language: 'en-US' }, '/en/online', 'online', 'Online Battle · MOONWAKE: The Imjin War'],
+    ['/en/conquest', { stored: 'ko' }, '/en/conquest', 'skirmish', 'Conquest · MOONWAKE: The Imjin War'],
+    ['/en/', {}, '/en', 'menu', 'MOONWAKE: The Imjin War'],
+    ['/en/index.html', {}, '/en', 'menu', 'MOONWAKE: The Imjin War'],
+    ['/battles/index.html', {}, '/battles', 'select', '역사 전투 · MOONWAKE: 임진왜란'],
+    ['/settings?lang=en&q=low', {}, '/en/settings?lang=en&q=low', 'settings', 'Settings · MOONWAKE: The Imjin War'],
+    ['/en/battles?lang=ko', {}, '/battles?lang=ko', 'select', '역사 전투 · MOONWAKE: 임진왜란'],
+    ['/nowhere', {}, '/', 'menu', 'MOONWAKE: 임진왜란'],
+    ['/en/nowhere/at/all', {}, '/en', 'menu', 'MOONWAKE: The Imjin War'],
   ];
   for (const [url, options, address, screen, title] of cases) {
     const p = await page(url, options);
@@ -238,7 +238,7 @@ await check('opening a screen pushes its address once; back and forward open the
   const p = await page('/');
   p.setScreen('faction');
   assert.deepEqual(p.entries(), ['/', '/campaign']);
-  assert.equal(p.title(), '캠페인 · 임진왜란');
+  assert.equal(p.title(), '캠페인 · MOONWAKE: 임진왜란');
   p.setScreen('faction');
   assert.equal(p.calls.push, 1, 'the same screen again makes no entry');
   p.setScreen('menu');
@@ -248,7 +248,7 @@ await check('opening a screen pushes its address once; back and forward open the
   assert.equal(p.screen(), 'menu');
   p.history.back();
   assert.equal(p.screen(), 'faction');
-  assert.equal(p.title(), '캠페인 · 임진왜란');
+  assert.equal(p.title(), '캠페인 · MOONWAKE: 임진왜란');
   p.history.forward();
   p.history.forward();
   assert.equal(p.screen(), 'online');
@@ -302,7 +302,7 @@ await check('switching the language moves the address to the other edition and s
   p.setLang('en');
   assert.equal(p.address(), '/en/settings?q=low', 'a ?lang= would contradict the path');
   assert.equal(p.stored(), 'en');
-  assert.equal(p.title(), 'Settings · The Imjin War');
+  assert.equal(p.title(), 'Settings · MOONWAKE: The Imjin War');
   assert.equal(document.documentElement.lang, 'en');
   assert.equal(p.calls.push, 0);
   p.setScreen('menu');
@@ -317,12 +317,12 @@ await check('switching the language moves the address to the other edition and s
 
 await check("a battle's address opens the history screen on its briefing, not the battle", async () => {
   const cases = [
-    ['/battles/hansan', {}, '/battles/hansan', 'hansan', '한산도 대첩 · 임진왜란'],
-    ['/ko/battles/myeongnyang/', {}, '/battles/myeongnyang', 'myeongnyang', '명량 해전 · 임진왜란'],
-    ['/battles/noryang/index.html', { stored: 'en' }, '/en/battles/noryang', 'noryang', 'Battle of Noryang · The Imjin War'],
-    ['/en/battles/okpo', {}, '/en/battles/okpo', 'okpo', 'Battle of Okpo · The Imjin War'],
-    ['/battles/nowhere', {}, '/battles', null, '역사 전투 · 임진왜란'],
-    ['/battles/hansan/more', {}, '/', null, '임진왜란'],
+    ['/battles/hansan', {}, '/battles/hansan', 'hansan', '한산도 대첩 · MOONWAKE: 임진왜란'],
+    ['/ko/battles/myeongnyang/', {}, '/battles/myeongnyang', 'myeongnyang', '명량 해전 · MOONWAKE: 임진왜란'],
+    ['/battles/noryang/index.html', { stored: 'en' }, '/en/battles/noryang', 'noryang', 'Battle of Noryang · MOONWAKE: The Imjin War'],
+    ['/en/battles/okpo', {}, '/en/battles/okpo', 'okpo', 'Battle of Okpo · MOONWAKE: The Imjin War'],
+    ['/battles/nowhere', {}, '/battles', null, '역사 전투 · MOONWAKE: 임진왜란'],
+    ['/battles/hansan/more', {}, '/', null, 'MOONWAKE: 임진왜란'],
   ];
   for (const [url, options, address, battle, title] of cases) {
     const p = await page(url, options);
@@ -343,7 +343,7 @@ await check('picking a battle renames the address in place; back still leaves th
   p.setBattle('okpo');
   p.setBattle('busan');
   assert.deepEqual(p.entries(), ['/', '/battles/busan'], 'picks make no entries');
-  assert.equal(p.title(), '부산포 해전 · 임진왜란');
+  assert.equal(p.title(), '부산포 해전 · MOONWAKE: 임진왜란');
   p.history.back();
   assert.equal(p.screen(), 'menu');
   assert.equal(p.battle(), null);
@@ -363,7 +363,7 @@ await check('leaving the history screen forgets the pick; it opens on /battles t
   p.history.back();
   p.history.back();
   assert.equal(p.battle(), 'sacheon', 'back to the shared address brings its battle back');
-  assert.equal(p.title(), '사천 해전 · 임진왜란');
+  assert.equal(p.title(), '사천 해전 · MOONWAKE: 임진왜란');
 });
 
 await check('a battle started from a briefing keeps its address and returns to it', async () => {
@@ -389,7 +389,7 @@ await check('switching the language keeps the battle in the address', async () =
   const p = await page('/battles/chilcheon');
   p.setLang('en');
   assert.equal(p.address(), '/en/battles/chilcheon');
-  assert.equal(p.title(), 'Battle of Chilcheollyang · The Imjin War');
+  assert.equal(p.title(), 'Battle of Chilcheollyang · MOONWAKE: The Imjin War');
   assert.equal(p.description(), 'The dawn ambush that destroyed the Joseon navy. Break out and save every ship you can.');
   p.setBattle('myeongnyang');
   assert.equal(p.address(), '/en/battles/myeongnyang');

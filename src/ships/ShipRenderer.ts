@@ -53,6 +53,7 @@ import type { ShipKind } from '../sim/types';
 import { SHIP_SPECS } from '../sim/catalog';
 import { modelKind, type ShipAnchors } from './anchors';
 import { useProcedural } from './build/mode';
+import { SURF } from './build/surf';
 import { loadProcedural } from './build/procedural';
 import { equipment } from '../game/quality';
 import { emberGlow, weather } from './weather';
@@ -386,7 +387,11 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   const origin = A.xyz;
   const burn = A.w;
   const up = B.xyz;
-  const flash = fract(B.w);
+  // Unpacked per vertex, where the instance's value is exact: interpolated to the pixels the packed number (up to 255)
+  // comes out a hair off, so its fraction jumped between 0 and 1 from one triangle to the next and lit the cloth and
+  // the roofs of a damaged ship in a checker of bright triangles.
+  const flash: any = varying(fract(B.w));
+  const packedWhole: any = varying(floor(B.w));
   const shipY = dot(positionWorld.sub(origin), up);
   let holeMask: any = null;
   let baseColor: any = map ? texture(map, uv()).rgb : vec3(src.color.r, src.color.g, src.color.b);
@@ -429,11 +434,12 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
     glow = emberGlow(surf, tint);
     // Shot-through and burnt sails (fx/Scars.ts): not on phones, where the cloth keeps its plain shading.
     if (equipment.tier !== 'low') {
-      const whole = floor(B.w);
+      const whole = packedWhole.add(0.5).floor();
       const tear = floor(whole.div(16)).div(TEAR_STEPS);
       const seed = whole.mod(16);
       const holes = clothHoles(positionGeometry, tear, burn, seed);
-      const sails = isCloth.and(packedColor.w.greaterThan(0.001));
+      // Sails only: a flag or a pennant is too small for a hole a hand across, and cut up it hung in rags like scraps.
+      const sails = surf.equal(SURF.cloth).and(packedColor.w.greaterThan(0.001));
       holeMask = select(sails, holes.hole, float(0));
       baseColor = mix(baseColor, vec3(0.035, 0.026, 0.02), select(sails, holes.rim, float(0)));
     }
