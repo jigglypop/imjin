@@ -416,9 +416,11 @@
   display: none;
 }
 
+/* A phone has the score panel at the top and the toolbar below it: the portrait guide sits under both, over open sea, the
+   landscape one just under the score panel. */
 @media (max-width: 900px), (max-height: 520px) {
   .guide {
-    top: 54px;
+    top: 272px;
     width: min(360px, calc(100vw - 32px));
     padding: 8px 12px;
   }
@@ -426,6 +428,15 @@
   .guide p {
     font-size: var(--fs-12);
     margin-top: 2px;
+  }
+}
+
+@media (max-height: 520px) {
+  .guide {
+    top: 84px;
+    left: 224px;
+    transform: none;
+    width: min(360px, calc(100vw - 240px));
   }
 }
 
