@@ -60,33 +60,33 @@ export const EVENTS: readonly GameEvent[] = [
   {
     id: 'busan_landing',
     turn: 1,
-    headline: '1592년 4월, 일본 함선 700여 척이 부산포에 상륙했습니다. 임진왜란이 시작되었습니다.',
+    headline: '1592년 4월, 일본 함선 700여 척이 부산포에 상륙했습니다.',
     cards: {
       joseon: {
         title: '부산포의 불길',
-        text: '일본 함선 수백 척이 부산포를 덮쳤습니다. 경상도 수군은 싸워 보지도 못하고 흩어졌고, 전라좌수영에는 아직 출전 명령이 닿지 않았습니다. 병사들은 포구에서 명령을 기다리고 있습니다.',
+        text: '일본 함선 수백 척이 부산포를 덮쳤습니다. 경상도 수군은 싸워 보지도 못하고 흩어졌습니다.',
         portrait: 'portrait_yi',
         choices: [
-          { label: '의병과 어민을 모아 협선 확충', effect: { ships: { at: 'yeosu', name: '의병 함대', kinds: { hyeopseon: 3 } } } },
+          { label: '의병·어민으로 협선 확충', effect: { ships: { at: 'yeosu', name: '의병 함대', kinds: { hyeopseon: 3 } } } },
           { label: '군량과 화약 비축', effect: { gold: 250 } },
         ],
       },
       japan: {
         title: '부산포 상륙',
-        text: '선봉대가 부산포를 제압했습니다. 조선 수군은 맞서지 못했습니다. 나고야의 대본영에서는 후속 함대의 출항을 준비하고 있습니다.',
+        text: '선봉대가 부산포를 제압했습니다. 나고야에서는 후속 함대가 출항을 준비합니다.',
         portrait: 'portrait_wakisaka',
         choices: [
           { label: '점령지 곡물 징발', effect: { income: { mult: 1.05, turns: 3 } } },
-          { label: '군자금을 풀어 장수 격려', effect: { gold: 120, xp: 60 } },
+          { label: '전리품으로 장수 포상', effect: { gold: 120, xp: 60 } },
         ],
       },
       ming: {
         title: '조선의 급보',
-        text: '일본군이 조선에 상륙했다는 급보가 도착했습니다. 조정은 일본군이 압록강을 넘어 요동까지 노릴 것을 우려하고 있습니다.',
+        text: '일본군이 조선에 상륙했다는 급보입니다. 조정은 요동까지 위태로울까 걱정합니다.',
         portrait: 'portrait_chenlin',
         choices: [
           { label: '요동 수군 증강', effect: { ships: { at: 'liaodong', name: '요동 증강 함대', kinds: { mingsmall: 1 } } } },
-          { label: '군비를 아끼며 상황 관망', effect: { gold: 220 } },
+          { label: '군비를 아끼며 관망', effect: { gold: 220 } },
         ],
       },
     },
@@ -94,11 +94,11 @@ export const EVENTS: readonly GameEvent[] = [
   {
     id: 'ming_aid',
     turn: 4,
-    headline: '1593년 1월, 명의 이여송이 압록강을 건너 평양성을 되찾았습니다.',
+    headline: '1593년 1월, 이여송의 명군이 평양성을 되찾았습니다.',
     cards: {
       joseon: {
         title: '명의 원군',
-        text: '이여송의 명군이 압록강을 건너 평양성에서 일본군을 몰아냈습니다. 명군에게 군량을 대야 하지만 곳간은 넉넉하지 않습니다.',
+        text: '명군이 평양성을 되찾았습니다. 군량을 대야 하지만 곳간이 넉넉지 않습니다.',
         portrait: 'portrait_chenlin',
         choices: [
           { label: '명군을 후하게 지원', effect: { gold: -80, income: { mult: 1.2, turns: 3 } } },
@@ -107,7 +107,7 @@ export const EVENTS: readonly GameEvent[] = [
       },
       japan: {
         title: '평양성의 패보',
-        text: '평양성을 잃어 병사들의 사기가 떨어졌습니다. 남해안으로 물러난 병력을 다시 가다듬어야 합니다.',
+        text: '평양성을 잃고 사기가 꺾였습니다. 남해안으로 물러난 병력을 추슬러야 합니다.',
         portrait: 'portrait_kuki',
         choices: [
           { label: '남해안 포구에 병력 집결', effect: { income: { mult: 0.95, turns: 2 }, ships: { at: 'busan', name: '철수 함대', kinds: { sekibune: 1, kobaya: 3 } } } },
@@ -116,7 +116,7 @@ export const EVENTS: readonly GameEvent[] = [
       },
       ming: {
         title: '이여송의 출병',
-        text: '명군 4만이 압록강을 건넜습니다. 수군도 서해를 건너 조선을 도울 때가 되었습니다.',
+        text: '명군 4만이 압록강을 건넜습니다. 수군도 서해를 건널 때입니다.',
         portrait: 'portrait_deng',
         choices: [
           { label: '수군 증파', effect: { gold: -150, ships: { at: 'liaodong', name: '명 증원 함대', kinds: { mingship: 1 } } } },
@@ -128,19 +128,19 @@ export const EVENTS: readonly GameEvent[] = [
   {
     id: 'peace_talks',
     turn: 10,
-    headline: '1594년 7월, 명과 일본의 강화 교섭이 시작되어 전선이 잠잠해졌습니다.',
+    headline: '1594년 7월, 명과 일본이 강화 교섭에 들어갔습니다.',
     cards: {
       joseon: {
         title: '강화 교섭',
-        text: '명과 일본이 조선을 빼놓고 강화를 논의합니다. 전선은 조용하지만 일본군은 남해안에 계속 주둔하고 있습니다.',
+        text: '명과 일본이 조선을 빼고 강화를 논의합니다. 일본군은 여전히 남해안에 머뭅니다.',
         choices: [
-          { label: '강화 반대 상소, 전의 고취', effect: { gold: -50, xp: 100 } },
-          { label: '전열을 정비하며 때를 기다림', effect: { repair: 0.1 } },
+          { label: '강화 반대 상소', effect: { gold: -50, xp: 100 } },
+          { label: '전열 정비', effect: { repair: 0.1 } },
         ],
       },
       japan: {
         title: '강화 교섭',
-        text: '명과 강화를 논의하는 동안 전선이 조용합니다. 이 틈에 군량을 채울 수 있습니다.',
+        text: '강화를 논의하는 동안 전선이 조용합니다. 군량을 채울 틈입니다.',
         choices: [
           { label: '교섭에 응해 군량 확보', effect: { gold: 200, income: { mult: 0.95, turns: 2 } } },
           { label: '교섭 중에도 함선 증강', effect: { ships: { at: 'nagoya', name: '신조 함대', kinds: { sekibune: 2, kobaya: 5 } } } },
@@ -148,7 +148,7 @@ export const EVENTS: readonly GameEvent[] = [
       },
       ming: {
         title: '강화 교섭',
-        text: '명이 일본과 마주 앉았습니다. 교섭이 길어질수록 수군 운영비 부담이 커집니다.',
+        text: '일본과 교섭이 시작됐습니다. 길어질수록 수군 유지비가 부담입니다.',
         choices: [
           { label: '교섭을 주도해 군비 절감', effect: { gold: 150 } },
           { label: '수군 정비', effect: { repair: 0.1 } },
@@ -159,33 +159,33 @@ export const EVENTS: readonly GameEvent[] = [
   {
     id: 'reinvasion',
     turn: 20,
-    headline: '1597년 1월, 도요토미 히데요시가 조선 재침을 명령했습니다. 정유재란이 시작되었습니다.',
+    headline: '1597년 1월, 히데요시가 재침을 명령해 정유재란이 시작되었습니다.',
     cards: {
       japan: {
         title: '정유재란',
-        text: '히데요시가 조선 재침을 명령했습니다. 14만 병력이 다시 바다를 건넙니다. 이번에는 남해안을 곧바로 제압하고 전라도로 진격합니다.',
+        text: '14만 병력이 다시 바다를 건넙니다. 이번에는 남해안을 제압하고 전라도로 진격합니다.',
         portrait: 'portrait_kato',
         choices: [
           { label: '대함대 편성', effect: { gold: -400, ships: { at: 'nagoya', name: '재침 함대', kinds: { atakebune: 3, sekibune: 3, kobaya: 5 } } } },
-          { label: '정예만 파견하고 군자금 비축', effect: { gold: 300, xp: 100 } },
+          { label: '정예만 파견', effect: { gold: 300, xp: 100 } },
         ],
       },
       joseon: {
         title: '일본군의 재침',
-        text: '일본군이 다시 바다를 건넌다는 보고가 들어왔습니다. 남해안의 방비를 서둘러야 합니다.',
+        text: '일본군이 다시 바다를 건넌다는 보고입니다. 남해안 방비를 서둘러야 합니다.',
         portrait: 'portrait_yi',
         choices: [
           { label: '수군 재건', effect: { gold: -150, ships: { at: 'yeosu', name: '재건 함대', kinds: { panokseon: 1, hyeopseon: 2 } } } },
-          { label: '포구의 군량과 화약 보충', effect: { gold: 250 } },
+          { label: '군량·화약 보충', effect: { gold: 250 } },
         ],
       },
       ming: {
         title: '정유재란',
-        text: '일본군이 다시 조선을 공격했습니다. 원군을 다시 보낼지를 두고 조정의 의견이 갈립니다.',
+        text: '일본군이 다시 조선을 쳤습니다. 원군을 다시 보낼지 조정의 의견이 갈립니다.',
         portrait: 'portrait_chenlin',
         choices: [
           { label: '수군 재파견', effect: { gold: -400, ships: { at: 'liaodong', name: '명 재파병 함대', kinds: { mingship: 2 } } } },
-          { label: '은으로 조선을 지원하며 관망', effect: { gold: 200, xp: 60 } },
+          { label: '파병 대신 관망', effect: { gold: 200, xp: 60 } },
         ],
       },
     },
@@ -197,11 +197,11 @@ export const EVENTS: readonly GameEvent[] = [
     cards: {
       joseon: {
         title: '이순신의 백의종군',
-        text: '조정은 이순신의 관직을 박탈하고 투옥했다가, 석방한 뒤 백의종군을 명했습니다. 수군은 지휘관 없이 남았습니다.',
+        text: '조정이 이순신을 파직해 옥에 가뒀다가 백의종군을 명했습니다.',
         portrait: 'portrait_yi',
         choices: [
-          { label: '조정의 명을 따라 신임 확보', effect: { gold: 200, suspend: 'yi' } },
-          { label: '장수들과 함께 구명 상소', effect: { gold: -100 } },
+          { label: '조정의 명을 따름', effect: { gold: 200, suspend: 'yi' } },
+          { label: '장수들과 구명 상소', effect: { gold: -100 } },
         ],
       },
     },
@@ -209,16 +209,16 @@ export const EVENTS: readonly GameEvent[] = [
   {
     id: 'yi_return',
     turn: 22,
-    headline: '1597년 7월, 칠천량에서 조선 수군이 패했습니다. 이순신이 삼도수군통제사로 복귀했습니다.',
+    headline: '1597년 7월, 칠천량 패전 뒤 이순신이 삼도수군통제사로 돌아왔습니다.',
     when: (g, f) => f === 'joseon' && g.events.flags.includes(YI_SUSPENDED),
     cards: {
       joseon: {
         title: '삼도수군통제사 복귀',
-        text: '칠천량에서 원균의 수군이 무너졌습니다. 조정은 이순신을 다시 삼도수군통제사로 임명했습니다. 남은 판옥선은 열두 척뿐입니다.',
+        text: '칠천량에서 원균의 수군이 무너졌습니다. 다시 통제사가 된 이순신에게 남은 판옥선은 열두 척뿐입니다.',
         portrait: 'portrait_yi',
         choices: [
-          { label: '남은 판옥선을 수습해 수군 재건', effect: { restore: 'yi', xp: 120, ships: { at: 'myeongnyang', name: '수습 함대', kinds: { panokseon: 2 } } } },
-          { label: '피난민과 군량을 모아 전열 정비', effect: { restore: 'yi', repair: 0.15, gold: 150 } },
+          { label: '남은 배를 수습해 재건', effect: { restore: 'yi', xp: 120, ships: { at: 'myeongnyang', name: '수습 함대', kinds: { panokseon: 2 } } } },
+          { label: '피난민과 군량 수습', effect: { restore: 'yi', repair: 0.15, gold: 150 } },
         ],
       },
     },
@@ -226,11 +226,11 @@ export const EVENTS: readonly GameEvent[] = [
   {
     id: 'taiko_death',
     turn: 27,
-    headline: '1598년 10월, 히데요시가 사망하자 일본군에 철수 명령이 내려졌습니다.',
+    headline: '1598년 10월, 히데요시가 죽고 일본군에 철수 명령이 내려졌습니다.',
     cards: {
       japan: {
         title: '히데요시의 죽음',
-        text: '도요토미 히데요시가 세상을 떠났습니다. 조선에 나와 있던 장수들은 싸울 이유를 잃었고, 함선은 귀환할 날만 기다립니다.',
+        text: '히데요시가 세상을 떠났습니다. 장수들은 싸울 이유를 잃고 귀국만 기다립니다.',
         portrait: 'portrait_konishi',
         choices: [
           { label: '철수를 서둘러 함선 보존', effect: { income: { mult: 0.85, turns: 3 }, repair: 0.15 } },
@@ -239,7 +239,7 @@ export const EVENTS: readonly GameEvent[] = [
       },
       joseon: {
         title: '일본군의 철수',
-        text: '히데요시가 죽자 일본군이 철수를 서두릅니다. 마지막 추격의 기회지만, 오랜 전쟁으로 곳간이 비었습니다.',
+        text: '히데요시가 죽자 일본군이 철수를 서두릅니다. 마지막 추격의 기회지만 곳간이 비었습니다.',
         portrait: 'portrait_yi',
         choices: [
           { label: '퇴로를 막고 전군 추격', effect: { gold: -100, xp: 200 } },
@@ -248,11 +248,11 @@ export const EVENTS: readonly GameEvent[] = [
       },
       ming: {
         title: '일본군의 철수',
-        text: '히데요시의 죽음으로 일본군이 물러납니다. 명 수군은 추격에 가세할 수도, 전쟁을 마무리할 수도 있습니다.',
+        text: '히데요시가 죽자 일본군이 물러납니다. 추격에 가세할지, 전쟁을 끝낼지 정해야 합니다.',
         portrait: 'portrait_chenlin',
         choices: [
-          { label: '수군을 앞세워 추격 가세', effect: { xp: 100, repair: 0.1 } },
-          { label: '전쟁을 마무리하고 은 절약', effect: { gold: 200 } },
+          { label: '추격 가세', effect: { xp: 100, repair: 0.1 } },
+          { label: '전쟁 마무리', effect: { gold: 200 } },
         ],
       },
     },
