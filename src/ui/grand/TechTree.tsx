@@ -1,6 +1,7 @@
 import { useT } from '../../i18n';
 import { Icon, Modal, num } from './shared';
 import './growth.css';
+import { turnsText } from './text';
 import type { FactionId, TechNodeView, TechTreeView } from './types';
 
 export interface TechTreeProps {
@@ -37,7 +38,7 @@ export function TechTree({ me, tree, gold, canOrder, onResearch, onCancel, onClo
         {tree.doing ? (
           <>
             <span className="g-tech__now">
-              {t('연구 중')} <b>{tree.doing.label}</b> · {t('{n}턴 남음', { n: tree.doing.left })}
+              {t('연구 중')} <b>{tree.doing.label}</b> · {t('{turns} 남음', { turns: turnsText(tree.doing.left) })}
             </span>
             <span className="g-tech__bar" aria-hidden>
               <span style={{ width: `${((tree.doing.total - tree.doing.left) / tree.doing.total) * 100}%` }} />
@@ -78,7 +79,7 @@ export function TechTree({ me, tree, gold, canOrder, onResearch, onCancel, onClo
               <div key={n.id} className={`g-tech__card g-tech__card--${n.state}`} style={{ left: p.x, top: p.y, width: W, height: H }}>
                 <div className="g-tech__head">
                   <b>{n.label}</b>
-                  <span className="g-tech__state">{n.state === 'done' ? t('완료') : n.state === 'doing' ? t('{n}턴 남음', { n: n.left ?? 0 }) : t('{gold}냥 · {turns}턴', { gold: n.gold, turns: n.turns })}</span>
+                  <span className="g-tech__state">{n.state === 'done' ? t('완료') : n.state === 'doing' ? t('{turns} 남음', { turns: turnsText(n.left ?? 0) }) : t('{gold}냥 · {turns}', { gold: n.gold, turns: turnsText(n.turns) })}</span>
                 </div>
                 <p className="g-tech__text">{n.text}</p>
                 {n.state === 'open' && (

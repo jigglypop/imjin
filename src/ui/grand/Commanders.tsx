@@ -26,7 +26,7 @@ export function Commanders({ me, cards, canOrder, onLearn, onAssign, onClose }: 
   const c = cards.find((x) => x.id === pick) ?? cards[0];
   const waiting = cards.reduce((n, x) => n + x.points, 0);
   return (
-    <Modal label={t('장수')} eyebrow={t('캠페인')} title={t('장수')} onClose={onClose} tone={me} className="g-modal--wide g-cmd">
+    <Modal label={t('휘하 장수')} eyebrow={t('캠페인')} title={t('휘하 장수')} onClose={onClose} tone={me} className="g-modal--wide g-cmd">
       <div className="g-cmd__layout">
         <nav className="g-cmd__roll" aria-label={t('장수 목록')}>
           {waiting > 0 && <p className="g-cmd__waiting">{t('익힐 재능 {n}개', { n: waiting })}</p>}
