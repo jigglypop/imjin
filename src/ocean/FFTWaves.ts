@@ -16,6 +16,8 @@ export const CASCADES: Cascade[] = [
 type Buf = any;
 
 const COUNT = CASCADES.length;
+/** The cascades whose displacement the sea's vertices are moved by (Ocean.ts). The finest one only bends the normals. */
+const DISPLACED = 2;
 
 function makeTexture(n: number) {
   const t = new StorageTexture(n, n);
@@ -46,13 +48,16 @@ export class FFTWaves {
   private readonly h0Data: Float32Array;
   private readonly h0: Buf;
   private readonly passes: any[] = [];
+  /** The time and choppiness the maps were last computed for; a new spectrum clears them so the next update recomputes. */
+  private mapsTime = NaN;
+  private mapsChoppiness = NaN;
 
   constructor(params: SpectrumParams, readonly n = 256, seed = 1592) {
     if (n < 16 || (n & (n - 1)) !== 0) throw new Error(`FFT size must be a power of two, got ${n}`);
     this.area = n * n;
     this.total = COUNT * this.area;
     this.logN = Math.round(Math.log2(n));
-    this.displacement = CASCADES.map(() => makeTexture(n));
+    this.displacement = CASCADES.slice(0, DISPLACED).map(() => makeTexture(n));
     this.derivatives = CASCADES.map(() => makeTexture(n));
     this.h0Data = new Float32Array(this.total * 4);
     this.h0 = instancedArray(this.h0Data, 'vec4');
@@ -122,6 +127,7 @@ export class FFTWaves {
     }
     const attr = this.h0.value as unknown as { needsUpdate: boolean };
     attr.needsUpdate = true;
+    this.mapsTime = NaN;
   }
 
   private indices() {
@@ -208,7 +214,7 @@ export class FFTWaves {
 
   private assemblePass(cascade: number, srcA: Buf, srcB: Buf) {
     const chop = this.choppiness;
-    const disp = this.displacement[cascade]!;
+    const disp = cascade < DISPLACED ? this.displacement[cascade]! : null;
     const deriv = this.derivatives[cascade]!;
     const n = this.n;
     const area = this.area;
@@ -217,16 +223,24 @@ export class FFTWaves {
       const y = idx.div(n);
       const x = idx.mod(n);
       const addr = idx.add(cascade * area);
-      const a: any = srcA.element(addr);
       const b: any = srcB.element(addr);
       const coord = uvec2(x, y);
-      textureStore(disp, coord, vec4(a.x.mul(chop), a.z, a.y.mul(chop), a.w.mul(chop))).toWriteOnly();
+      if (disp) {
+        const a: any = srcA.element(addr);
+        textureStore(disp, coord, vec4(a.x.mul(chop), a.z, a.y.mul(chop), a.w.mul(chop))).toWriteOnly();
+      }
       textureStore(deriv, coord, vec4(b.x, b.y, b.z.mul(chop), b.w.mul(chop))).toWriteOnly();
     });
     return (fn() as any).compute(area, [64]);
   }
 
   update(renderer: WebGPURenderer, time: number) {
+    // The maps are a function of the sea's time, the spectrum and the choppiness alone. The sea's time moves with the
+    // battle's steps (30 a second), so a faster screen, a paused battle or a held cutscene asked for the same maps again,
+    // and their twenty passes and the mip chains of their textures were run for nothing.
+    if (time === this.mapsTime && this.choppiness.value === this.mapsChoppiness) return;
+    this.mapsTime = time;
+    this.mapsChoppiness = this.choppiness.value;
     this.time.value = time;
     renderer.compute(this.passes as never);
   }

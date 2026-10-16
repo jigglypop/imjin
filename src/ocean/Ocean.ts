@@ -457,8 +457,9 @@ export class Ocean {
         const sceneZr = perspectiveDepthToViewZ(depthR, cameraNear, cameraFar);
         const useDistorted = sceneZr.lessThan(surfaceZ);
         const uvFinal = select(useDistorted, uvR, screenUV);
-        const depthFinal = viewportDepthTexture(uvFinal);
-        depthNodes.push(depthFinal);
+        // The same copy of the depth, read again: a lookup node of its own would copy the depth buffer a second time,
+        // ending and restarting the scene's pass, into a framebuffer-sized texture of its own.
+        const depthFinal = depthR.sample(uvFinal);
         const sceneZ = perspectiveDepthToViewZ(depthFinal, cameraNear, cameraFar);
         const thickness = max(surfaceZ.sub(sceneZ), 0);
         const absorb = mix(vec3(0.55, 0.16, 0.11), vec3(0.42, 0.11, 0.12), shallowTint);

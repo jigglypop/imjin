@@ -58,8 +58,46 @@ function clump(r: number, x: number, y: number, z: number, flat: number, detail:
   return tag(g, 1, (py) => Math.max(0.35, Math.min(1, (py - (y - r * flat)) / (2 * r * flat))));
 }
 
+/**
+ * Stores each corner that several triangles share once and lists the triangles by index. The parts arrive as separate
+ * triangles, so the forest's vertex shader (two texture reads, five hashes and the sway) ran for every corner of every
+ * triangle, about five times per vertex. Only corners whose every attribute is the same bit for bit are shared: each
+ * triangle keeps the very values it had, in the same order, so the picture does not change.
+ */
+function shareCorners(geo: BufferGeometry) {
+  const names = Object.keys(geo.attributes);
+  const sources = names.map((name) => geo.getAttribute(name).array as Float32Array);
+  const sizes = names.map((name) => geo.getAttribute(name).itemSize);
+  const bits = sources.map((a) => new Uint32Array(a.buffer, a.byteOffset, a.length));
+  const count = geo.getAttribute('position').count;
+  const slot = new Map<string, number>();
+  const kept: number[] = [];
+  const index: number[] = [];
+  for (let i = 0; i < count; i += 1) {
+    let key = '';
+    for (let a = 0; a < names.length; a += 1) for (let k = 0; k < sizes[a]!; k += 1) key += `${bits[a]![i * sizes[a]! + k]},`;
+    let j = slot.get(key);
+    if (j === undefined) {
+      j = kept.length;
+      slot.set(key, j);
+      kept.push(i);
+    }
+    index.push(j);
+  }
+  const out = new BufferGeometry();
+  names.forEach((name, a) => {
+    const size = sizes[a]!;
+    const src = sources[a]!;
+    const dst = new Float32Array(kept.length * size);
+    kept.forEach((i, j) => dst.set(src.subarray(i * size, (i + 1) * size), j * size));
+    out.setAttribute(name, new Float32BufferAttribute(dst, size));
+  });
+  out.setIndex(index);
+  return out;
+}
+
 function farTree() {
-  return mergeGeometries([clump(4.4, 0, 8.5, 0, 0.7, 0)])!;
+  return shareCorners(mergeGeometries([clump(4.4, 0, 8.5, 0, 0.7, 0)])!);
 }
 
 function pine(detail: 0 | 1, lite = false) {
@@ -72,7 +110,7 @@ function pine(detail: 0 | 1, lite = false) {
     : detail
       ? [clump(3.4, 0, 11.8, 0, 0.55, 0), clump(2.6, 0.6, 9.6, -0.5, 0.6, 0)]
       : [clump(3.1, 0, 12.6, 0, 0.5, 1), clump(2.5, 1.7, 10.6, 0.7, 0.55, 0), clump(2.4, -1.6, 10.1, -0.9, 0.55, 0), clump(2.1, 0.7, 8.7, -1.7, 0.6, 0), clump(2.0, -0.6, 14.2, 0.8, 0.5, 0)];
-  return mergeGeometries([trunk, ...clumps])!;
+  return shareCorners(mergeGeometries([trunk, ...clumps])!);
 }
 
 /** An instanced draw of `base`. The vertices are shared with the base geometry, so every ring variant costs no extra copy. */
