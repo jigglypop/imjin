@@ -85,9 +85,11 @@ export class Tactics {
   crossing(target: Ship, from: Ship) {
     const list = this.recent.get(target.id);
     if (!list) return false;
-    const mine = Math.atan2(from.z - target.z, from.x - target.x);
+    // The bearing to `from` is wanted only once a recent hit by another ship turns up, which most calls never find.
+    let mine: number | undefined;
     for (const r of list) {
       if (this.b.time - r.t > CROSS_WINDOW + 1 || r.shooter === from.id) continue;
+      mine ??= Math.atan2(from.z - target.z, from.x - target.x);
       if (Math.abs(Math.atan2(Math.sin(r.bearing - mine), Math.cos(r.bearing - mine))) > CROSS_ANGLE) return true;
     }
     return false;

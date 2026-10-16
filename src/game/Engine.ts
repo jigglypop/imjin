@@ -1430,9 +1430,27 @@ export class Engine {
       if (s.grappledWith) return true;
       (s.team === this.team ? own : foe).push(s);
     }
-    const range = engagementRange(b.profile, [...own, ...foe].map((s) => s.spec.kind));
+    // A historical battle's range is fixed and needs no list of the kinds afloat.
+    const range = engagementRange(b.profile, b.profile === 'historical' ? [] : [...own, ...foe].map((s) => s.spec.kind));
     const r2 = range * range;
-    for (const a of own) for (const e of foe) if ((a.x - e.x) ** 2 + (a.z - e.z) ** 2 < r2) return true;
+    // An own ship out of range of the box round every enemy is out of range of each of them: only the ships near the
+    // enemy fleet compare pairs, where an approach used to compare all of them (78,000 pairs at Busan).
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minZ = Infinity;
+    let maxZ = -Infinity;
+    for (const e of foe) {
+      if (e.x < minX) minX = e.x;
+      if (e.x > maxX) maxX = e.x;
+      if (e.z < minZ) minZ = e.z;
+      if (e.z > maxZ) maxZ = e.z;
+    }
+    for (const a of own) {
+      const gx = a.x < minX ? minX - a.x : a.x > maxX ? a.x - maxX : 0;
+      const gz = a.z < minZ ? minZ - a.z : a.z > maxZ ? a.z - maxZ : 0;
+      if (gx ** 2 + gz ** 2 >= r2) continue;
+      for (const e of foe) if ((a.x - e.x) ** 2 + (a.z - e.z) ** 2 < r2) return true;
+    }
     return own.length === 0 || (b.profile === 'historical' && foe.length === 0);
   }
 
