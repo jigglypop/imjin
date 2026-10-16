@@ -49,6 +49,9 @@ export function skillsOf(commanderId: string): SkillDef[] {
 /** Points a commander has to spend: one for each level above the first, less what he has spent. */
 export const skillPoints = (c: Commander) => Math.max(0, c.level - 1 - (c.skills?.length ?? 0));
 
+/** The reason a step is closed only for want of a point: the screen draws it as the next step, not as locked. */
+export const NO_POINTS = '남은 재능 점수가 없습니다';
+
 /** Why a commander cannot take a skill now, or null when he can. A Korean template like an order's reason. */
 export function skillProblem(c: Commander, skillId: string): string | null {
   const skill = skillsOf(c.id).find((s) => s.id === skillId);
@@ -56,13 +59,14 @@ export function skillProblem(c: Commander, skillId: string): string | null {
   const have = c.skills ?? [];
   if (have.includes(skillId)) return '이미 익혔습니다';
   if (!c.alive) return '전사한 장수입니다';
-  if (skillPoints(c) <= 0) return '남은 재능 점수가 없습니다';
+  // What the tree asks for comes before the points, so a locked step says what it is waiting for.
   if (skill.branch === 'mastery') {
     if (c.level < MASTERY_LEVEL) return '{level}레벨에 익힐 수 있습니다';
-    return null;
+  } else {
+    const before = BRANCH_SKILLS[skill.branch][skill.tier - 2];
+    if (before && !have.includes(before.id)) return '앞 단계를 먼저 익혀야 합니다';
   }
-  const before = BRANCH_SKILLS[skill.branch][skill.tier - 2];
-  if (before && !have.includes(before.id)) return '앞 단계를 먼저 익혀야 합니다';
+  if (skillPoints(c) <= 0) return NO_POINTS;
   return null;
 }
 
@@ -170,10 +174,13 @@ export function advanceResearch(g: Grand) {
   }
 }
 
-/** The order the computer researches in: the hull it is waiting for first, then guns, then the rest. */
+/**
+ * The order the computer researches in: Joseon and Ming the hulls they are waiting for first, Japan its volleys before
+ * the larger atakebune (its many cheap hulls gain more from the guns of all of them; scripts/balance-grand.mjs).
+ */
 const AI_ORDER: Record<GrandFaction, readonly string[]> = {
   joseon: ['panokseon', 'turtle', 'chongtong', 'powder', 'drill'],
-  japan: ['atake', 'volley', 'boarding', 'pirates', 'drill'],
+  japan: ['volley', 'atake', 'boarding', 'pirates', 'drill'],
   ming: ['frankish', 'greatships', 'grain', 'drill'],
 };
 
