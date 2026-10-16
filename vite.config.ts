@@ -1,4 +1,5 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { defineConfig, normalizePath, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -173,8 +174,44 @@ function routePagesPlugin(): Plugin {
   };
 }
 
+/**
+ * three.js without its WebGL renderer. @react-three/fiber and three's example loaders import bare 'three', which is
+ * three.module.js: three's core plus the WebGLRenderer, which the game never makes (every Canvas hands r3f a
+ * WebGPURenderer of its own). The loaders get three/webgpu, which exports the same core objects. r3f's Canvas registers
+ * the whole namespace it imports as its catalogue of JSX elements, and a namespace used as a value keeps every export of
+ * its module in the bundle; the game draws no JSX three elements, so r3f gets a module of only the names it reads
+ * itself, and three's core is tree-shaken like the rest of the game's imports. Build only: the dev server's pre-bundled
+ * r3f keeps 'three'.
+ */
+function threeWithoutWebGL(): Plugin {
+  const R3F_THREE = '\0r3f-three';
+  const fromR3f = /[\\/]@react-three[\\/]fiber[\\/]/;
+  return {
+    name: 'three-without-webgl',
+    apply: 'build',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      if (source !== 'three') return null;
+      if (importer && fromR3f.test(importer)) return R3F_THREE;
+      return this.resolve('three/webgpu', importer, { skipSelf: true });
+    },
+    load(id) {
+      if (id !== R3F_THREE) return null;
+      const dist = dirname(createRequire(import.meta.url).resolve('@react-three/fiber'));
+      const names = new Set<string>();
+      for (const file of readdirSync(dist).filter((f) => f.endsWith('.esm.js'))) {
+        for (const m of readFileSync(join(dist, file), 'utf8').matchAll(/\bTHREE\.([A-Za-z_$][\w$]*)/g)) names.add(m[1]!);
+      }
+      // r3f makes a WebGLRenderer only for a Canvas without a gl prop.
+      names.delete('WebGLRenderer');
+      return `export { ${[...names].sort().join(', ')} } from 'three/webgpu';
+export class WebGLRenderer { constructor() { throw new Error('three.js is built without its WebGL renderer: give the Canvas a gl prop'); } }`;
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), routePagesPlugin()],
+  plugins: [threeWithoutWebGL(), react(), routePagesPlugin()],
   cacheDir: CACHE_DIR,
   server: { port: 5291, host: '127.0.0.1', strictPort: true, watch: { ignored: UNWATCHED } },
   build: { target: ['es2022', 'safari16'], chunkSizeWarningLimit: 4000 },
