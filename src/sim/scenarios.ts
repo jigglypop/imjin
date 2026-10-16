@@ -332,6 +332,8 @@ const LEADS = [
   { squad: '소 대', name: '소 요시토시' },
   { squad: '데라자와 대', name: '데라자와 마사나리' },
 ];
+/** Where each Noryang squadron sails in the column, from the head: the other houses lead, Shimazu sixth. */
+const COLUMN_SLOT = [5, 0, 1, 2, 3, 4, ...Array.from({ length: 14 }, (_, i) => 6 + i)];
 
 export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: LandFn = () => -50, fleet?: FleetSpawn) {
   const b = new Battle(seed);
@@ -604,26 +606,34 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     const sqYi = squad('joseon', '통제사 본대', '통제사 이순신', 'panokseon');
     const sqSong = squad('joseon', '조선 좌군', '중군장 송희립', 'panokseon');
     const sqRight = squad('joseon', '조선 우군', '가리포첨사 이영남', 'panokseon');
-    line(sqYi, 'panokseon', grid(-2300, -420, head, 20, 4, 72, 64, 10, rand), '통제사 본대', 1);
-    line(sqSong, 'panokseon', grid(-2900, -700, head, 20, 4, 72, 64, 10, rand), '조선 좌군');
-    line(sqRight, 'panokseon', grid(-3300, -250, head, 20, 4, 72, 64, 10, rand), '조선 우군');
+    // The two horns of the allied fleet (掎角): the Ming along the mainland shore to the north, the Joseon fleet on the
+    // Namhae side to the south, before Gwaneumpo, as the local tradition of the battle has it.
+    line(sqYi, 'panokseon', grid(-2300, 620, head, 20, 4, 72, 64, 10, rand), '통제사 본대', 1);
+    line(sqSong, 'panokseon', grid(-2900, 900, head, 20, 4, 72, 64, 10, rand), '조선 좌군');
+    line(sqRight, 'panokseon', grid(-3300, 450, head, 20, 4, 72, 64, 10, rand), '조선 우군');
     const sqChen = squad('joseon', '명 수군 본대', '도독 진린', 'mingship');
     const sqDeng = squad('joseon', '명 수군 선봉', '부총병 등자룡', 'mingship');
     const sqSha = squad('joseon', '명 사선대', '명 유격장', 'mingsmall');
-    line(sqChen, 'mingship', grid(-2500, 650, head, 16, 4, 66, 60, 10, rand), '명 수군 본대', 0);
-    line(sqDeng, 'mingship', grid(-1900, 520, head, 14, 4, 66, 60, 10, rand), '명 수군 선봉', 0);
-    line(sqSha, 'mingsmall', grid(-3200, 900, head, 33, 6, 40, 36, 10, rand), '명 사선대');
+    line(sqChen, 'mingship', grid(-2500, -450, head, 16, 4, 66, 60, 10, rand), '명 수군 본대', 0);
+    line(sqDeng, 'mingship', grid(-1900, -520, head, 14, 4, 66, 60, 10, rand), '명 수군 선봉', 0);
+    line(sqSha, 'mingsmall', grid(-3200, -650, head, 33, 6, 40, 36, 10, rand), '명 사선대');
     // The Japanese column comes on from the east still short of the strait's waist, so the allies have the time to
     // choose where to meet it: at the narrows, from both shores, as on the night.
+    // Shimazu's own squadron is made first, so his flagship is the fleet's admiral, but sails in the middle of the
+    // column behind a van of the other houses: a column cut behind its van leaves the van without him.
     for (let q = 0; q < 20; q += 1) {
       const lead = LEADS[q];
+      const at = COLUMN_SLOT[q] ?? q;
       const sq = squad('japan', lead ? lead.squad : echelon('사쓰마', q + 1), lead ? lead.name : '일본 장수', q % 4 === 0 ? 'atakebune' : 'sekibune');
       const kindOf = mix(0.22, 0.6);
-      grid(2200 + q * 170, (q % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, numbered(sq.name, i + 1), i === 0));
+      grid(2200 + at * 170, (at % 2 ? 1 : -1) * 90, Math.PI, 25, 5, 54, 48, 12, rand).forEach((p, i) => ship(sq, kindOf(i + q * 5), p, numbered(sq.name, i + 1), i === 0));
     }
     b.retreatBelow.japan =0.55;
     // Shimazu came to break through to Konishi at Suncheon, west of the strait: unopposed, his column keeps going.
     b.objectives.japan = { x: -5200, z: 200 };
+    // The Japanese held Namhae island (a castle at Seonso): crews that could not get home ran for its shore, and
+    // Gwaneumpo's bay on its north-west coast was the nearest water under it.
+    b.havens.japan = { x: -2900, z: 3250 };
   }
   if (fleet) spawnFleet(b, fleet, axis, land);
   return b;

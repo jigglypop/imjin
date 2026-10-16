@@ -92,7 +92,7 @@ await check('language: ?lang= beats the path, which beats the stored choice, whi
 });
 
 const SETTINGS = ['lang=en', 'q=low', 'lv=2', 'webgl=1', 'map=static', 'hud=0', 'dpr=1.5', 'sky=dusk', 'sea=rough', 'paused=1', 'music=0', 'clouds=0', 'ships=legacy', 'menuqa=1'];
-const HOOKS = ['scenario=hansan', 'side=japan', 'conquest=hallyeo', 'me=ming', 'foe=japan', 'size=4', 'seed=7', 'gallery=1', 'cam=1,2,3,4,5', 'follow=3', 'dist=80', 'pitch=0.2', 'yaw=1', 'warm=5', 'cine=1', 'tutorial=1'];
+const HOOKS = ['scenario=hansan', 'side=japan', 'conquest=hallyeo', 'me=ming', 'foe=japan', 'size=4', 'seed=7', 'gallery=1', 'kind=sekibune', 'cam=1,2,3,4,5', 'follow=3', 'dist=80', 'pitch=0.2', 'yaw=1', 'warm=5', 'cine=1', 'tutorial=1'];
 
 await check('settings in the query outlive a navigation; the battle-launch hooks do not', () => {
   assert.deepEqual([...LAUNCH_PARAMS].sort(), HOOKS.map((p) => p.split('=')[0]).sort());
