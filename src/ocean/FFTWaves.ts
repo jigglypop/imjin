@@ -16,6 +16,8 @@ export const CASCADES: Cascade[] = [
 type Buf = any;
 
 const COUNT = CASCADES.length;
+/** The cascades whose displacement the sea's vertices are moved by (Ocean.ts). The finest one only bends the normals. */
+const DISPLACED = 2;
 
 function makeTexture(n: number) {
   const t = new StorageTexture(n, n);
@@ -55,7 +57,7 @@ export class FFTWaves {
     this.area = n * n;
     this.total = COUNT * this.area;
     this.logN = Math.round(Math.log2(n));
-    this.displacement = CASCADES.map(() => makeTexture(n));
+    this.displacement = CASCADES.slice(0, DISPLACED).map(() => makeTexture(n));
     this.derivatives = CASCADES.map(() => makeTexture(n));
     this.h0Data = new Float32Array(this.total * 4);
     this.h0 = instancedArray(this.h0Data, 'vec4');
@@ -212,7 +214,7 @@ export class FFTWaves {
 
   private assemblePass(cascade: number, srcA: Buf, srcB: Buf) {
     const chop = this.choppiness;
-    const disp = this.displacement[cascade]!;
+    const disp = cascade < DISPLACED ? this.displacement[cascade]! : null;
     const deriv = this.derivatives[cascade]!;
     const n = this.n;
     const area = this.area;
@@ -221,10 +223,12 @@ export class FFTWaves {
       const y = idx.div(n);
       const x = idx.mod(n);
       const addr = idx.add(cascade * area);
-      const a: any = srcA.element(addr);
       const b: any = srcB.element(addr);
       const coord = uvec2(x, y);
-      textureStore(disp, coord, vec4(a.x.mul(chop), a.z, a.y.mul(chop), a.w.mul(chop))).toWriteOnly();
+      if (disp) {
+        const a: any = srcA.element(addr);
+        textureStore(disp, coord, vec4(a.x.mul(chop), a.z, a.y.mul(chop), a.w.mul(chop))).toWriteOnly();
+      }
       textureStore(deriv, coord, vec4(b.x, b.y, b.z.mul(chop), b.w.mul(chop))).toWriteOnly();
     });
     return (fn() as any).compute(area, [64]);
