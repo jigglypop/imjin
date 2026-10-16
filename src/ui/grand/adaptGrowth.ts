@@ -1,6 +1,6 @@
 import { t } from '../../i18n';
 import { dateLabel } from '../../sim/grand/economy';
-import { researchProblem, skillPoints, skillProblem, techOf } from '../../sim/grand/growth';
+import { NO_POINTS, researchProblem, skillPoints, skillProblem, techOf } from '../../sim/grand/growth';
 import { BRANCH_LABEL, BRANCH_SKILLS, MASTERY_ID, MASTERY_LEVEL, TREES, techById, techsOf } from '../../sim/grand/growthData';
 import { commanderSuspended } from '../../sim/grand/orders';
 import { COMMANDERS, REGIONS } from '../../sim/grand/regions';
@@ -19,7 +19,9 @@ const placeOf = (g: Grand, fleetId: string) => {
 function node(c: Commander, id: string, label: string, text: string, tier: number): SkillNodeView {
   if (c.skills?.includes(id)) return { id, label: t(label), text: t(text), tier, state: 'have' };
   const problem = skillProblem(c, id);
-  return problem ? { id, label: t(label), text: t(text), tier, state: 'locked', reason: t(problem, { level: MASTERY_LEVEL }) } : { id, label: t(label), text: t(text), tier, state: 'open' };
+  if (!problem) return { id, label: t(label), text: t(text), tier, state: 'open' };
+  // A step that waits only for a point is shown as next, without a reason under it.
+  return { id, label: t(label), text: t(text), tier, state: 'locked', reason: problem === NO_POINTS ? undefined : t(problem, { level: MASTERY_LEVEL }) };
 }
 
 /** Fleets of the navy the commander could take over now: in port, and in his own port when he already leads one. */

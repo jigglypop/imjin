@@ -177,7 +177,7 @@ export function Sheet({
 }
 
 /** A centred dialog on desktop and landscape, a bottom sheet in portrait: the same frame as the battle preview. */
-export function Modal({ title, eyebrow, label, onClose, children, footer, tone }: { title: ReactNode; eyebrow?: ReactNode; label: string; onClose?: () => void; children: ReactNode; footer?: ReactNode; tone?: Owner }) {
+export function Modal({ title, eyebrow, label, onClose, children, footer, tone, className = '' }: { title: ReactNode; eyebrow?: ReactNode; label: string; onClose?: () => void; children: ReactNode; footer?: ReactNode; tone?: Owner; className?: string }) {
   const t = useT();
   // Esc closes a dialog that can be closed, like its close button and a tap outside it.
   useEffect(() => {
@@ -189,7 +189,7 @@ export function Modal({ title, eyebrow, label, onClose, children, footer, tone }
   return (
     <div className="g-scrim" role="presentation" onClick={onClose}>
       <section
-        className="g-glass g-modal"
+        className={`g-glass g-modal ${className}`}
         role="dialog"
         aria-modal="true"
         aria-label={label}
