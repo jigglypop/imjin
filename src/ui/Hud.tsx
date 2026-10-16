@@ -21,6 +21,9 @@ import './hud.css';
 import { ControlsHelp, Tooltips, Tutorial, useTour } from './Tutorial';
 import { useNet } from '../net/NetClient';
 import { RankActions, RankResult } from './RankResult';
+import { BattleGuide } from './BattleGuide';
+import { BattleResult } from './BattleResult';
+import { GUIDES } from './guideText';
 
 const SEA_LABELS: Record<SeaStateName, string> = { calm: '잔잔', moderate: '보통', rough: '거침' };
 const ACTIVITY: Record<string, string> = {
@@ -875,6 +878,8 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
         { label: '손실', value: tShips(snap.ownTotal - snap.own) },
         { label: '소요 시간', value: formatTime(snap.time) },
       ];
+  // The score and the comparison with history belong to a historical battle the player fought for Joseon, not to online or conquest games.
+  const scored = ended && snap.mode === 'scenario' && snap.scenario.id in GUIDES && snap.faction === 'joseon' && !engine.remote;
   const hideLabel = t(isTouchOnly ? 'UI 숨기기' : 'UI 숨기기 · Shift+H');
   const selectBox = box && <div className="select-box" style={{ left: Math.min(box.x0, box.x1), top: Math.min(box.y0, box.y1), width: Math.abs(box.x1 - box.x0), height: Math.abs(box.y1 - box.y0) }} />;
   // The tour stays as it is: the HUD cannot be hidden while it points at the panels.
@@ -1230,6 +1235,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
       )}
 
       {!ended && <Tutorial engine={engine} compact={compact} />}
+      {!ended && <BattleGuide engine={engine} />}
       {!hiddenNow && <Tooltips />}
 
       {ended && (
@@ -1245,6 +1251,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             ))}
           </div>
           {engine.remote && rankedMatch && <RankResult />}
+          {scored && <BattleResult snap={snap} time={formatTime(snap.time)} />}
           {report && (
             <div className="result-camp">
               <p>

@@ -3,21 +3,13 @@
 // here runs against any BaseAudioContext, so scripts/render-sounds.mjs renders the same code offline.
 
 import { Vector3, type PerspectiveCamera } from 'three/webgpu';
-import type { BattleEvent, GunType, Team } from '../sim/types';
+import type { BattleEvent, GunType } from '../sim/types';
 import type { Battle } from '../sim/battle';
-import { DRUM_TIME } from '../sim/morale';
 import { GUN_CLASS, gunClass, type GunClass } from '../fx/gunClass';
 import type { CueKind } from '../fx/sinkPlan';
 import { isPhone, isTouchDevice } from '../game/device';
 import { COST, ranged, SPEED_OF_SOUND, Voices, type Tier } from './voices';
 import { BANK, Samples, SAMPLE_NODES, type Kind, type PlayOptions } from './samples';
-import { modeOf, pickDrummers, stroke, type BeatMode, type Drummer } from './orders';
-
-/**
- * What the battle shows the fleet's drums, horns and cries: its ships, squadrons, clock and what each ship is doing.
- * The offline renderer passes a stand-in with the same names.
- */
-export type CommandView = Pick<Battle, 'get' | 'squadrons' | 'isActive' | 'activityOf' | 'time'>;
 
 /** Cues of the faction campaign's screens, played by `campaignCue`. */
 export type CampaignCue = 'endTurn' | 'move' | 'built' | 'battle' | 'clash' | 'capture' | 'event' | 'victory' | 'defeat';
@@ -47,15 +39,8 @@ const BROADSIDE_WINDOW = 0.5;
 const SYNTH_TRIM = 0.8;
 /** Seconds a sample voice is counted as alive in the node ledger. */
 const SAMPLE_SECS = 4;
-/** The same for a drum stroke or an oar's pull, which are short and come three a second. */
-const STROKE_SECS = 1.6;
 
-/** A sound's place relative to the listener, with the seconds it takes to arrive. */
-type Heard = ReturnType<typeof ranged>;
-/** A squadron leader whose drum may be voiced: how it is beating, how fast its ship goes and where it sounds from. */
-type Voiced = Drummer & { mode: BeatMode; pace: number; spot: Heard };
-
-type Gunfire ={ s: ReturnType<typeof ranged>; gun: GunType; cls: GunClass; bank: GunBank; key: number; score: number };
+type Gunfire = { s: ReturnType<typeof ranged>; gun: GunType; cls: GunClass; bank: GunBank; key: number; score: number };
 /** A level that falls off with range more slowly than the synth's, so a battle further away still carries. */
 const loud = (gain: number) => Math.pow(gain, 0.75);
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
@@ -88,16 +73,7 @@ export class Battlefield {
   private nextFlush = 0;
   private nextBarrage = 0;
   /** Context times before which another sound of that kind is held back: a pass, a blow, a flame or a drum a moment ago masks the next. */
-  private readonly gate = { whoosh: 0, hiss: 0, melee: 0, ignite: 0, drum: 0, cue: 0, clash: 0, shout: 0, over: 0, cry: 0, boardCry: 0, gong: 0, cheer: 0, signal: 0 };
-  /** The drums, horns, cries and crews' work go through their own gain so a heavy salvo can push them down. */
-  private readonly commandBus: GainNode;
-  /** Leader ship id to the stroke it is beating next; only the few leaders that are voiced have one. */
-  private readonly beats = new Map<number, { mode: BeatMode; next: number; step: number }>();
-  /** Ship id of a leader beating the drum order to the battle time it ends. */
-  private readonly orders = new Map<number, number>();
-  /** Squadron id to the context time it last went to the charge, so one charge is cried once. */
-  private readonly charged = new Map<number, number>();
-  private nextCommand = 0;
+  private readonly gate = { whoosh: 0, hiss: 0, melee: 0, ignite: 0, drum: 0, cue: 0 };
   /** Context time of the last voice the player could hear from the near field or the far flush. */
   private lastAudible = -99;
   private camera: Pick<PerspectiveCamera, 'position' | 'quaternion'> | null = null;
@@ -119,10 +95,7 @@ export class Battlefield {
     this.samples = new Samples(ctx, sfx, reverb);
     this.musketBus = ctx.createGain();
     this.musketBus.connect(sfx);
-    this.commandBus = ctx.createGain();
-    this.commandBus.connect(sfx);
-    // The drums stay audible in a lull but give way under the guns, like the muskets.
-    this.ducks = [...ducks, { node: this.musketBus, depth: 0.55 }, { node: this.commandBus, depth: 0.4 }];
+    this.ducks = [...ducks, { node: this.musketBus, depth: 0.55 }];
   }
 
   /** A new battle starts: forget the old one's ships (ids restart from 1, so stale state would silence new ships) and volleys. */
@@ -134,11 +107,7 @@ export class Battlefield {
     this.farCount = 0;
     this.nextFlush = 0;
     this.nextBarrage = 0;
-    for (const k of Object.keys(this.gate) as (keyof typeof this.gate)[]) this.gate[k] = 0;
-    this.beats.clear();
-    this.orders.clear();
-    this.charged.clear();
-    this.nextCommand = 0;
+    this.gate.whoosh = this.gate.hiss = this.gate.melee = this.gate.ignite = this.gate.drum = this.gate.cue = 0;
     this.recent = 0;
     this.intensity = 0;
   }
@@ -184,9 +153,9 @@ export class Battlefield {
     return this.timeScale > 2.5 ? Math.max(0.15, 2.5 / this.timeScale) : 1;
   }
 
-  /** Plays a sample if it is loaded and loud enough to matter. Returns its length in seconds, 0 if it did not play. `secs` is how long the ledger counts it alive. */
-  private sample(kind: Kind, t: number, o: PlayOptions, cost = 1, secs = SAMPLE_SECS) {
-    if (o.gain * BANK[kind].gain < 0.02 || this.budget < cost || !this.samples.has(kind) || !this.reserve(SAMPLE_NODES, secs, t)) return 0;
+  /** Plays a sample if it is loaded and loud enough to matter. Returns its length in seconds, 0 if it did not play. */
+  private sample(kind: Kind, t: number, o: PlayOptions, cost = 1) {
+    if (o.gain * BANK[kind].gain < 0.02 || this.budget < cost || !this.samples.has(kind) || !this.reserve(SAMPLE_NODES, SAMPLE_SECS, t)) return 0;
     this.budget -= cost;
     return this.samples.play(kind, t, o);
   }
@@ -209,7 +178,7 @@ export class Battlefield {
   }
 
   /** Called every frame: the speed of the battle, the voice allowance, the far boom and how hot the battle is. */
-  tick(camera: Pick<PerspectiveCamera, 'position' | 'quaternion'>, scaled: number, wall = performance.now(), view?: CommandView) {
+  tick(camera: Pick<PerspectiveCamera, 'position' | 'quaternion'>, scaled: number, wall = performance.now()) {
     const ctx = this.ctx;
     this.camera = camera;
     const real = Math.min(0.25, Math.max(0, (wall - this.lastWall) / 1000));
@@ -234,111 +203,6 @@ export class Battlefield {
       this.sample('cannon_far', now + 0.05, { gain, pan: rnd(-0.8, 0.8), rate: rnd(0.93, 1.07), wet: 0.15 }, 0.3);
       this.nextBarrage = now + rnd(1.5, 4);
     }
-    if (view) this.command(view, now);
-  }
-
-  /**
-   * The fleets' drums and signals, looked at five times a second. The leader of each squadron that is under way or
-   * fighting beats its navy's drum, faster as the ships speed up and in a roll once they charge (orders.ts); only
-   * the few loudest are voiced, and a squadron going to the charge blows its horn and cries out once.
-   */
-  private command(view: CommandView, now: number) {
-    const camera = this.camera;
-    if (!camera || now < this.nextCommand) return;
-    this.nextCommand = now + 0.2;
-    const voiced: Voiced[] = [];
-    for (const sq of view.squadrons) {
-      const ship = view.get(sq.leaderId);
-      if (!ship || !view.isActive(ship)) continue;
-      const s = this.spatial(camera, ship.x, ship.spec.deck, ship.z);
-      const until = this.orders.get(ship.id);
-      if (until !== undefined && view.time >= until) this.orders.delete(ship.id);
-      const pace = Math.abs(ship.speed) / Math.max(1, ship.spec.maxSpeed);
-      const activity = view.activityOf(ship.id);
-      if (activity === 'charging' && ship.moraleState !== 'routing') this.charge(sq.id, ship.team, s, now);
-      const ordering = until !== undefined && view.time < until && ship.moraleState !== 'routing';
-      const mode = ordering ? 'order' : modeOf(activity, pace, ship.moraleState);
-      if (mode && s.gain >= 0.03) voiced.push({ id: ship.id, team: ship.team, x: ship.x, z: ship.z, gain: s.gain, mode, pace, spot: s });
-    }
-    // At speed a minute of drumming would pass in seconds: one drummer past 3x, none past 10x.
-    const max = this.timeScale > 10 ? 0 : this.timeScale > 3 ? 1 : isPhone ? 2 : 3;
-    const live = new Set<number>();
-    for (const d of pickDrummers(voiced, max, 2, 250)) {
-      live.add(d.id);
-      let beat = this.beats.get(d.id);
-      if (!beat || beat.mode !== d.mode) this.beats.set(d.id, (beat = { mode: d.mode, next: now + 0.05 + Math.random() * 0.25, step: 0 }));
-      // A tab that was hidden comes back with the beat far behind: start again instead of playing the backlog.
-      if (beat.next < now - 0.5) beat.next = now;
-      while (beat.next < now + 0.35) {
-        const st = stroke(d.team, d.mode, beat.step, d.pace);
-        this.beat(d, st.gain, Math.max(now + 0.02, beat.next), beat.step);
-        beat.next += st.wait;
-        beat.step += 1;
-      }
-    }
-    for (const id of this.beats.keys()) if (!live.has(id)) this.beats.delete(id);
-  }
-
-  /** One stroke of a leader's drum: the buk of Joseon or the taiko of Japan, with the oars keeping time under a march. */
-  private beat(d: Voiced, weight: number, t: number, step: number) {
-    const s = d.spot;
-    const bank: Kind = d.team === 'japan' ? 'taiko' : 'buk';
-    const level = { advance: 0.9, charge: 1, engage: 0.7, order: 1.1 }[d.mode];
-    // A low drum carries over water: it falls off with range more slowly than the guns do.
-    const gain = Math.pow(s.gain, 0.55) * weight * level;
-    const at = t + s.delay;
-    const len = this.sample(bank, at, { gain, pan: s.pan, rate: rnd(0.96, 1.04), cutoff: Math.max(600, s.muffle), wet: 0.25, dest: this.commandBus }, 0.35, STROKE_SECS);
-    if (!len && !this.samples.has(bank) && gain > 0.2 && this.budget >= 1) this.voices.drum(at);
-    if (d.mode === 'advance' && step % 2 === 0 && s.dist < 500) {
-      this.sample('oars', at + 0.04, { gain: loud(s.gain) * 0.8, pan: s.pan, rate: rnd(0.95, 1.05), cutoff: Math.max(900, s.muffle), wet: 0.15, dest: this.commandBus }, 0.3, STROKE_SECS);
-    }
-  }
-
-  /** A squadron going to the charge: its horn (Joseon's nagak, the Japanese horagai) and then the cry of its men. */
-  private charge(squadron: number, team: Team, s: Heard, now: number) {
-    const last = this.charged.get(squadron);
-    this.charged.set(squadron, now);
-    if (last !== undefined && now - last < 6) return;
-    if (s.gain < 0.05 || now < this.gate.cry || Math.random() > this.keep()) return;
-    this.gate.cry = now + 4;
-    const gain = loud(s.gain);
-    const at = now + s.delay;
-    const japan = team === 'japan';
-    this.signal(japan ? 'horagai' : 'nagak', at, s, gain);
-    this.sample('warcry', at + 0.4, { gain, pan: s.pan, rate: japan ? rnd(1.08, 1.18) : rnd(0.94, 1.02), cutoff: Math.max(1200, s.muffle), wet: 0.3, dest: this.commandBus }, 0.8);
-  }
-
-  /** A conch signal: the nagak is blown short and firm, the horagai long and low. */
-  private signal(kind: 'nagak' | 'horagai', at: number, s: Heard, gain: number) {
-    if (kind === 'nagak') this.sample('horn', at, { gain: gain * 0.75, pan: s.pan, rate: rnd(0.98, 1.06), cutoff: Math.max(900, s.muffle), wet: 0.35, offset: 0.1, dur: 1.9, dest: this.commandBus }, 0.8);
-    else this.sample('horn', at, { gain: gain * 0.9, pan: s.pan, rate: rnd(0.84, 0.9), cutoff: Math.max(900, s.muffle), wet: 0.35, dest: this.commandBus }, 0.8);
-  }
-
-  /** The roar of a crew that has won something; `size` 1 is a flagship going down. */
-  private cheer(s: Heard, at: number, size: number) {
-    const now = this.ctx.currentTime;
-    if (s.gain < 0.05 || now < this.gate.cheer) return;
-    this.gate.cheer = now + 2;
-    this.sample('cheer', at, { gain: loud(s.gain) * (0.45 + 0.55 * size), pan: s.pan, rate: rnd(0.95, 1.05), cutoff: Math.max(1200, s.muffle), wet: 0.35, dest: this.commandBus }, 1);
-  }
-
-  /** The gong that calls a fleet off or back, struck twice for a retreat. */
-  private gong(s: Heard, at: number, strokes: number) {
-    const now = this.ctx.currentTime;
-    if (s.gain < 0.04 || now < this.gate.gong) return;
-    this.gate.gong = now + 5;
-    for (let i = 0; i < strokes; i += 1) {
-      this.sample('gong', at + i * 1.7, { gain: Math.pow(s.gain, 0.6) * (i ? 0.8 : 1), pan: s.pan, rate: rnd(0.96, 1.03), cutoff: Math.max(1000, s.muffle), wet: 0.4, dest: this.commandBus }, 0.6);
-    }
-  }
-
-  /** Men shouting on a deck: a short slice out of the crowd's cry, never the same one twice. */
-  private shout(s: Heard, at: number, weight: number) {
-    const now = this.ctx.currentTime;
-    if (s.gain < 0.05 || now < this.gate.shout) return;
-    this.gate.shout = now + 0.8;
-    const dur = rnd(0.9, 1.6);
-    this.sample('warcry', at, { gain: loud(s.gain) * weight, pan: s.pan, rate: rnd(0.9, 1.15), cutoff: Math.max(1200, s.muffle), wet: 0.2, index: 2, offset: rnd(0.2, 1.8), dur, dest: this.commandBus }, 0.5);
   }
 
   /** One gun's report from the bank: any file of the class, a little detuned, filtered by range. */
@@ -453,7 +317,7 @@ export class Battlefield {
     const s = this.spatial(camera, x, y, z);
     if (s.gain < 0.03 || this.budget < 1) return;
     const now = this.ctx.currentTime;
-    const small = kind === 'groan' || kind === 'crack' || kind === 'wreck' || kind === 'bubbles' || kind === 'steam';
+    const small = kind === 'groan' || kind === 'crack' || kind === 'wreck' || kind === 'bubbles';
     if (small && (now < this.gate.cue || Math.random() > this.keep())) return;
     if (small) this.gate.cue = now + 0.4;
     const at = now + s.delay + Math.random() * 0.02;
@@ -461,11 +325,6 @@ export class Battlefield {
     const samples = this.samples;
     const gain = loud(s.gain);
     const lp = Math.max(900, s.muffle);
-    if (kind === 'steam') {
-      // Burning timber going into the sea: the recorded whoosh slowed and darkened into a hiss. Noise only, no tone.
-      if (samples.has('whoosh')) this.sample('whoosh', at, { gain: gain * (0.3 + 0.35 * size), pan: s.pan, rate: rnd(0.55, 0.7), cutoff: Math.min(lp, 3200), wet: 0.2 }, 0.8);
-      return;
-    }
     if (kind === 'groan' && samples.has('creak')) {
       this.sample('creak', at, { gain: gain * (0.5 + 0.5 * size), pan: s.pan, rate: rnd(0.85, 1.1), cutoff: lp });
       return;
@@ -562,7 +421,7 @@ export class Battlefield {
     }
   }
 
-  update(events: BattleEvent[], battle: CommandView, camera: Pick<PerspectiveCamera, 'position' | 'quaternion'>) {
+  update(events: BattleEvent[], battle: Pick<Battle, 'get'>, camera: Pick<PerspectiveCamera, 'position' | 'quaternion'>) {
     const voices = this.voices;
     const samples = this.samples;
     this.camera = camera;
@@ -604,19 +463,15 @@ export class Battlefield {
       if (e.type === 'musket') {
         const s = this.spatial(camera, e.x, e.y, e.z);
         if (s.gain < 0.03 || Math.random() > keep) continue;
-        // Joseon and Ming archers loose arrows, low and soft; only the Japanese fire matchlocks.
-        const bow = e.arms === 'bow';
-        const kind: Kind = bow ? 'arrows' : 'musket_volley';
-        if (samples.has(kind)) {
+        if (samples.has('musket_volley')) {
           this.musketEnds = this.musketEnds.filter((end) => end > now);
           // One volley per ship at a time, and no more than three at once: the muskets stay a texture under the guns.
           if (this.musketEnds.length >= 3 || now - (this.musketLast.get(e.ship) ?? -9) < 1.5) continue;
           this.musketLast.set(e.ship, now);
-          const len = this.sample(kind, now + s.delay, { gain: Math.min(1, 0.4 + e.count / 12) * s.gain * (bow ? 0.8 : 1), pan: s.pan, rate: rnd(0.95, 1.05), cutoff: Math.max(bow ? 2500 : 1500, s.muffle), dest: this.musketBus }, 1);
+          const len = this.sample('musket_volley', now + s.delay, { gain: Math.min(1, 0.4 + e.count / 12) * s.gain, pan: s.pan, rate: rnd(0.95, 1.05), cutoff: Math.max(1500, s.muffle), dest: this.musketBus }, 1);
           if (len) this.musketEnds.push(now + s.delay + len);
           continue;
         }
-        if (bow) continue;
         this.budget -= 1;
         for (let i = 0; i < Math.min(6, e.count); i += 1) voices.burst(now + s.delay + Math.random() * 0.45, s.gain * 0.4, s.pan, 'bandpass', Math.min(s.muffle, 2400), 0.9, 0.09);
       } else if (e.type === 'hit') {
@@ -683,22 +538,11 @@ export class Battlefield {
         const gain = loud(s.gain);
         this.sample('sink', now + s.delay, { gain, pan: s.pan, cutoff: Math.max(900, s.muffle) }, 1);
         this.sample('creak', now + s.delay + 0.6, { gain, pan: s.pan, rate: rnd(0.85, 1), cutoff: Math.max(900, s.muffle) });
-        // The crew goes over the side: a few men into the sea over the next seconds.
-        for (let i = 0; i < 3; i += 1) {
-          if (Math.random() < 0.7) this.sample('overboard', now + s.delay + 0.5 + i * rnd(0.6, 1.2), { gain: gain * 0.7, pan: s.pan + rnd(-0.15, 0.15), rate: rnd(0.9, 1.1), cutoff: Math.max(900, s.muffle), dest: this.commandBus }, 0.4);
-        }
       } else if (e.type === 'board' || e.type === 'casualty') {
         if (e.type === 'casualty' && !e.melee) continue;
         const ship = battle.get(e.type === 'board' ? e.b : e.ship);
         if (!ship) continue;
         const s = this.spatial(camera, ship.x, 3, ship.z);
-        // The boarders' cry as they leap across, once for a fight however many ships close.
-        if (e.type === 'board' && s.gain >= 0.05 && now >= this.gate.boardCry) {
-          this.gate.boardCry = now + 3;
-          const boarder = battle.get(e.a);
-          const japan = boarder?.team === 'japan';
-          this.sample('warcry', now + s.delay, { gain: loud(s.gain), pan: s.pan, rate: japan ? rnd(1.08, 1.18) : rnd(0.94, 1.02), cutoff: Math.max(1200, s.muffle), wet: 0.3, dest: this.commandBus }, 0.8);
-        }
         // A boarding fight raises a casualty every few frames; the clash is a texture, so it speaks about five times a second.
         if (s.gain < 0.05 || now < this.gate.melee || Math.random() > keep) continue;
         this.gate.melee = now + 0.2;
@@ -706,63 +550,11 @@ export class Battlefield {
         const at = now + s.delay;
         // A short slice of the bank's splintering plank, high and quick, makes a blow; the synthesised clack is the stand-in.
         if (!this.sample('impact_wood', at, { gain: loud(s.gain) * 0.3, pan: s.pan, rate: rnd(1.3, 1.7), cutoff: Math.max(900, s.muffle), index: 1, offset: rnd(0, 0.15), dur: 0.3 }, 0.5)) voices.clack(at, s.gain * 0.4, s.pan);
-        // Under the blows, steel on steel, the men's shouting and now and then a man into the sea.
-        if (now >= this.gate.clash) {
-          this.gate.clash = now + 1.1;
-          this.sample('clash', at, { gain: loud(s.gain) * 0.8, pan: s.pan + rnd(-0.1, 0.1), rate: rnd(0.95, 1.08), cutoff: Math.max(1500, s.muffle), wet: 0.15, dest: this.commandBus }, 0.5);
-        }
-        this.shout(s, at, 0.4);
-        if (e.type === 'casualty' && e.count >= 2 && now >= this.gate.over && Math.random() < 0.35) {
-          this.gate.over = now + 0.9;
-          this.sample('overboard', at + 0.2, { gain: loud(s.gain) * 0.8, pan: s.pan + rnd(-0.2, 0.2), rate: rnd(0.9, 1.1), cutoff: Math.max(1200, s.muffle), dest: this.commandBus }, 0.4);
-        }
       } else if (e.type === 'volley') {
-        // The drum that calls a volley: one stroke every second or so however many ships order one, from the ship that orders it.
+        // The drum that calls a volley: one stroke every second or so however many ships order one.
         if (now < this.gate.drum || Math.random() > keep) continue;
-        const ship = battle.get(e.ship);
-        if (!ship) continue;
-        const s = this.spatial(camera, ship.x, ship.spec.deck, ship.z);
-        if (s.gain < 0.03) continue;
         this.gate.drum = now + 1;
-        const bank: Kind = ship.team === 'japan' ? 'taiko' : 'buk';
-        const at = now + s.delay;
-        if (!this.sample(bank, at, { gain: Math.pow(s.gain, 0.55), pan: s.pan, cutoff: Math.max(600, s.muffle), wet: 0.25, dest: this.commandBus }, 0.3)) voices.drum(at);
-      } else if (e.type === 'drum') {
-        // A squadron leader beating the drum order: its horn calls the ships in, then the order's own beat runs for as
-        // long as the order does (see command), heard as far as the guns are.
-        const ship = battle.get(e.ship);
-        if (!ship) continue;
-        this.orders.set(ship.id, battle.time + DRUM_TIME);
-        const s = this.spatial(camera, ship.x, ship.spec.deck, ship.z);
-        if (s.gain < 0.04 || now < this.gate.signal) continue;
-        this.gate.signal = now + 3;
-        this.signal(ship.team === 'japan' ? 'horagai' : 'nagak', now + s.delay, s, loud(s.gain));
-      } else if (e.type === 'morale') {
-        const ship = battle.get(e.ship);
-        if (!ship || (e.state !== 'routing' && e.state !== 'rallying')) continue;
-        const s = this.spatial(camera, ship.x, 3, ship.z);
-        if (e.state === 'routing') this.shout(s, now + s.delay, 0.7);
-        // A leader steadied again calls its ships back with the gong.
-        else if (ship.flagship || battle.squadrons.find((q) => q.id === ship.squadronId)?.leaderId === ship.id) this.gong(s, now + s.delay, 1);
-      } else if (e.type === 'leader') {
-        // A squadron's leader gone: the other side cheers, loudest for an admiral.
-        const ship = battle.get(e.ship);
-        if (!ship) continue;
-        const s = this.spatial(camera, ship.x, 3, ship.z);
-        this.cheer(s, now + s.delay + 0.4, e.flagship ? 1 : 0.45);
-        if (e.flagship) this.signal(ship.team === 'japan' ? 'nagak' : 'horagai', now + s.delay + 1.2, s, loud(s.gain));
-      } else if (e.type === 'broken') {
-        // A fleet turns for home: its gong sounds the retreat and the victors cheer.
-        const ship = battle.get(e.ship);
-        if (!ship) continue;
-        const s = this.spatial(camera, ship.x, 3, ship.z);
-        this.gong(s, now + s.delay, 2);
-        this.cheer(s, now + s.delay + 1, 0.9);
-      } else if (e.type === 'struck') {
-        const ship = battle.get(e.by);
-        if (!ship) continue;
-        const s = this.spatial(camera, ship.x, 3, ship.z);
-        this.cheer(s, now + s.delay + 0.3, 0.35);
+        this.drums(1);
       }
     }
   }
