@@ -34,3 +34,5 @@ assets-src/camps-meshy-*/originals/
 assets-src/map-models-*/candidates/
 assets-src/map-models-*/originals/
 .vite/
+# Armor art: a raw replaced by a regeneration stays local (provenance.json keeps every request and why it was redone).
+assets-src/armor-*/rejected/
