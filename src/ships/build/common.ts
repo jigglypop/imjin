@@ -232,13 +232,27 @@ export function oarPortFrame(ctx: Ctx, pos: V3, side: -1 | 1, dark: Paint) {
 
 // ---------- masts, sails, flags ----------
 
+/**
+ * A turned wooden knob `h` tall capping a pole `r` thick at `p`, swelling to `bulge` times its width under a rounded top:
+ * a mast's truck or a flagstaff's finial. A cone there made every mast and staff read as a sharpened stake.
+ */
+export function knob(ctx: Ctx, wood: Paint, p: V3, r: number, h: number, bulge: number, seg: number) {
+  const profile: V2[] = [
+    [r, 0],
+    [r * bulge, h * 0.35],
+    [r * bulge * 0.8, h * 0.8],
+    [0, h],
+  ];
+  ctx.b.with(xlate(p[0], p[1], p[2]), () => lathe(ctx.b, wood, profile, seg));
+}
+
 export function mast(ctx: Ctx, wood: Paint, band: Paint, x: number, y0: number, h: number, r: number) {
   const seg = byLod(ctx, 10, 7, 5);
   cylinder(ctx.b, wood, [x, y0 - 0.6, 0], [x, y0 + h, 0], r * 1.0, r * 0.62, seg, true, 3);
   if (ctx.lod === 0) {
     cylinder(ctx.b, band, [x, y0 + 0.2, 0], [x, y0 + 0.55, 0], r * 1.3, r * 1.3, seg, true);
     cylinder(ctx.b, band, [x, y0 + h - 1.2, 0], [x, y0 + h - 1.05, 0], r * 1.0, r * 1.0, seg, true);
-    cylinder(ctx.b, wood, [x, y0 + h, 0], [x, y0 + h + 0.4, 0], r * 0.62, 0.05, seg, true);
+    knob(ctx, wood, [x, y0 + h, 0], r * 0.62, 0.28, 1.18, seg);
   }
 }
 
@@ -307,7 +321,7 @@ export function flag(ctx: Ctx, o: FlagOpts) {
     phase: o.phase,
   });
   // finial
-  if (ctx.lod === 0) cylinder(ctx.b, o.wood, [x, y + o.poleH, z], [x, y + o.poleH + 0.22, z], 0.07, 0.0, 5, false);
+  if (ctx.lod === 0) knob(ctx, o.wood, [x, y + o.poleH, z], 0.035, 0.15, 1.7, 6);
 }
 
 /**

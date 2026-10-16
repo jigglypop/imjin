@@ -3,7 +3,7 @@
  * plaster-and-timber walls of the fortress tiers.
  */
 import { flagRect, pictureRect } from './atlas';
-import { byLod, type Ctx } from './common';
+import { byLod, knob, type Ctx } from './common';
 import { box, cloth, compose, cylinder, rotY, spike, sweep, rectSection, tube, xlate, type Paint, type TubeStation, type V3 } from './parts';
 
 /**
@@ -25,7 +25,7 @@ export function nobori(ctx: Ctx, base: V3, poleH: number, h: number, key: string
   cylinder(ctx.b, wood, [x, top - 0.12, z], [x, top - 0.12, z + sgn * (w + 0.05)], 0.04, 0.04, 4, true);
   cloth(ctx.b, paint, [x + 0.01, top - 0.16, z], [0, 0, sgn * w], [0, -h, 0], { nu: byLod(ctx, 3, 2, 1), nv: byLod(ctx, 9, 4, 1), flutter: 1.0, wave: 0.05 * w, phase });
   if (ctx.lod === 0) {
-    cylinder(ctx.b, wood, [x, top, z], [x, top + 0.3, z], 0.07, 0.0, 5, false);
+    knob(ctx, wood, [x, top, z], 0.055, 0.2, 1.5, 6);
     cylinder(ctx.b, wood, [x, top - h - 0.14, z], [x, top - h - 0.14, z + sgn * (w + 0.05)], 0.035, 0.035, 4, true);
   }
 }
