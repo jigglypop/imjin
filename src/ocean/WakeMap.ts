@@ -12,6 +12,7 @@ import {
   OrthographicCamera,
   PlaneGeometry,
   QuadMesh,
+  RGFormat,
   RenderTarget,
   Scene,
   Vector2,
@@ -62,8 +63,10 @@ export class WakeMap {
   /** `resolution` is the square texture size. Smaller saves memory and fill rate, and makes wakes softer. */
   constructor(resolution = 2048) {
     this.resolution = resolution;
+    // Foam in red and turbulence in green are all the sea reads: two channels hold half the memory of four, and the fade
+    // pass moves half the bytes.
     const make = () => {
-      const rt = new RenderTarget(this.resolution, this.resolution, { type: HalfFloatType, depthBuffer: false });
+      const rt = new RenderTarget(this.resolution, this.resolution, { type: HalfFloatType, format: RGFormat, depthBuffer: false });
       rt.texture.minFilter = LinearFilter;
       rt.texture.magFilter = LinearFilter;
       rt.texture.wrapS = ClampToEdgeWrapping;
