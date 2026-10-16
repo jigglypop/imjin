@@ -1,11 +1,13 @@
-// A fingerprint of the simulation, step by step, to prove that a speed-up changed nothing: the historical battles and
-// a ranked and a casual conquest run on autopilot, and after every step each ship's numbers (as raw Float64 bytes, so
-// -0 and +0 differ), the projectiles and the events go into a hash. Run it on the old and the new code and compare.
+// A fingerprint of the simulation, step by step, to prove that a speed-up changed nothing: the historical battles,
+// Myeongnyang again on its own coast with its tidal current, a ranked and a casual conquest, and a night conquest on
+// the Hallyeo coast under the single-player rules run on autopilot, and after every step each ship's numbers (as raw
+// Float64 bytes, so -0 and +0 differ), the projectiles and the events go into a hash. Run it on the old and the new
+// code and compare. The two battles on a real coast read the heightmaps scripts/balance.mjs keeps in node_modules/.cache.
 //
 //   node scripts/sim-digest.mjs --out=before.json [--seconds=180] [--only=busan,ranked] [--every=1]
 //   node scripts/sim-digest.mjs --compare=before.json,after.json      the first step where each battle differs
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -31,9 +33,55 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false }, optimizeDeps: { noDiscovery: true, include: [] } });
 const load = (p) => server.ssrLoadModule(p);
 const { SIM_DT } = await load('/src/sim/battle.ts');
-const { buildScenario } = await load('/src/sim/scenarios.ts');
-const { buildConquest, autoFleet } = await load('/src/sim/maps.ts');
+const { buildScenario, SCENARIOS } = await load('/src/sim/scenarios.ts');
+const { buildConquest, autoFleet, CONQUEST_MAPS } = await load('/src/sim/maps.ts');
 const { DEFAULT_OPTIONS, RANKED_OPTIONS } = await load('/src/sim/conquest.ts');
+const { generateHeightmap } = await load('/src/terrain/generate.ts');
+const { CurrentField } = await load('/src/sim/current.ts');
+const { applyBalance } = await load('/src/sim/balance.ts');
+const { DEPTH_LATEST } = await load('/src/sim/depth.ts');
+
+// The heightmap cache and bilinear lookup of scripts/balance.mjs, so both tools sail on the same coast.
+const cacheDir = join(root, 'node_modules', '.cache', 'balance');
+mkdirSync(cacheDir, { recursive: true });
+function landOf(spec) {
+  const file = join(cacheDir, `terrain-${createHash('sha1').update(JSON.stringify(spec)).digest('hex').slice(0, 12)}.f32`);
+  let h;
+  if (existsSync(file)) {
+    const buf = readFileSync(file);
+    h = new Float32Array(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+  } else {
+    h = generateHeightmap(spec);
+    writeFileSync(file, Buffer.from(h.buffer));
+  }
+  const { size, res } = spec;
+  return (sx, sz) => {
+    const fx = ((sx + size / 2) / size) * res - 0.5;
+    const fz = ((sz + size / 2) / size) * res - 0.5;
+    const x0 = Math.max(0, Math.min(res - 2, Math.floor(fx)));
+    const z0 = Math.max(0, Math.min(res - 2, Math.floor(fz)));
+    const tx = Math.max(0, Math.min(1, fx - x0));
+    const tz = Math.max(0, Math.min(1, fz - z0));
+    const a = h[z0 * res + x0];
+    const b = h[z0 * res + x0 + 1];
+    const c = h[(z0 + 1) * res + x0];
+    const d = h[(z0 + 1) * res + x0 + 1];
+    return (a + (b - a) * tx) * (1 - tz) + (c + (d - c) * tx) * tz;
+  };
+}
+
+/** A historical battle on its own coast, with its current, as scripts/balance.mjs and the game build it. */
+function onCoast(id, faction, seed) {
+  const info = SCENARIOS[id];
+  const land = landOf(info.terrain);
+  const b = buildScenario(id, 0, seed, land);
+  b.land = land;
+  b.flow = info.current ? new CurrentField(info.current, land, 0) : null;
+  b.center = { x: info.view.tx, z: info.view.tz };
+  b.arenaRadius = 5200;
+  applyBalance(b, id, faction);
+  return b;
+}
 
 const seconds = Number(args.seconds ?? 180);
 const every = Math.max(1, Number(args.every ?? 1));
@@ -49,6 +97,9 @@ const BATTLES = {
   myeongnyang: () => buildScenario('myeongnyang', 0, 1592),
   ranked: () => buildConquest('hallyeo', seats(true), open, 7, RANKED_OPTIONS).battle,
   casual: () => buildConquest('hallyeo', seats(false), open, 1598, DEFAULT_OPTIONS).battle,
+  tide: () => onCoast('myeongnyang', 'joseon', 1592),
+  // Seed 1592 falls at night on this map; the depth rules are those of a game against the computer.
+  night: () => buildConquest('hallyeo', seats(false), landOf(CONQUEST_MAPS.hallyeo.terrain), 1592, { depth: DEPTH_LATEST.version }).battle,
 };
 const only = args.only ? args.only.split(',') : Object.keys(BATTLES);
 
