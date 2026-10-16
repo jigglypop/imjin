@@ -1,6 +1,6 @@
 import type { Battle } from './battle';
 import { combatValue } from './competitive';
-import type { Faction, MoraleState, Ship, ShipKind, Team } from './types';
+import { otherTeam, type Faction, type MoraleState, type Ship, type ShipKind, type Team } from './types';
 
 /** Seconds between two looks at one crew. The fleet is spread over the steps, so the cost per step stays flat. */
 export const MORALE_TICK = 0.5;
@@ -194,15 +194,15 @@ export class Morale {
     let sides = 0;
     const c = Math.cos(s.heading);
     const n = Math.sin(s.heading);
-    b.near(s.x, s.z, ODDS_RANGE, (o) => {
+    // Friends and foes from their own side's grid: each sum still adds its ships in the same order.
+    b.nearTeam(s.team, s.x, s.z, ODDS_RANGE, (o) => {
       if (!b.isActive(o)) return;
-      const w = this.worth(o);
-      if (o.team === s.team) {
-        friends += w;
-        if (o.moraleState === 'routing' && o !== s) running += 1;
-        return;
-      }
-      foes += w;
+      friends += this.worth(o);
+      if (o.moraleState === 'routing' && o !== s) running += 1;
+    });
+    b.nearTeam(otherTeam(s.team), s.x, s.z, ODDS_RANGE, (o) => {
+      if (!b.isActive(o)) return;
+      foes += this.worth(o);
       const dx = o.x - s.x;
       const dz = o.z - s.z;
       const d2 = dx * dx + dz * dz;
@@ -215,8 +215,8 @@ export class Morale {
       }
     });
     // Foes within 450 m count toward the odds, those within 600 m keep a running crew from settling.
-    if (!near && foes === 0) b.near(s.x, s.z, QUIET_RANGE, (o) => {
-      if (o.team !== s.team && b.isActive(o)) near = true;
+    if (!near && foes === 0) b.nearTeam(otherTeam(s.team), s.x, s.z, QUIET_RANGE, (o) => {
+      if (b.isActive(o)) near = true;
     });
     // Panic spreads: friends running past a crew wear it down.
     if (running) drain += Math.min(RUNNING_MAX, RUNNING_NEAR * running) * dt;

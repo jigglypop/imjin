@@ -1,4 +1,4 @@
-import type { Ship } from './types';
+import type { Ship, Team } from './types';
 
 const OFFSET = 4096;
 
@@ -12,11 +12,12 @@ export class ShipGrid {
     return (cx + OFFSET) * 8192 + (cz + OFFSET);
   }
 
-  rebuild(ships: Ship[]) {
+  /** `team`: only that side's ships, kept in the same order as in the grid of both. */
+  rebuild(ships: Ship[], team?: Team) {
     for (const list of this.used) list.length = 0;
     this.used.length = 0;
     for (const s of ships) {
-      if (!s.alive) continue;
+      if (!s.alive || (team && s.team !== team)) continue;
       const k = this.key(Math.floor(s.x / this.cell), Math.floor(s.z / this.cell));
       let list = this.cells.get(k);
       if (!list) {

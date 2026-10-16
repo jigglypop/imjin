@@ -283,6 +283,8 @@ export class Battle {
   private readonly gapA: number[] = [];
   private readonly gapB: number[] = [];
   private readonly grid = new ShipGrid(120);
+  /** Each side's ships alone: most look-ups want only friends or only foes, and a packed fleet fills the cells round it. */
+  private readonly teamGrids: Record<Team, ShipGrid> = { joseon: new ShipGrid(120), japan: new ShipGrid(120) };
   private active: Record<Team, Ship[]> = { joseon: [], japan: [] };
   private retreating: Record<Team, boolean> = { joseon: false, japan: false };
   /** When a blow last landed: a hit, a ram, a grapple or a man cut down in a melee. */
@@ -713,6 +715,8 @@ export class Battle {
       }
     }
     this.grid.rebuild(this.ships);
+    this.teamGrids.joseon.rebuild(this.ships, 'joseon');
+    this.teamGrids.japan.rebuild(this.ships, 'japan');
     this.checkRetreat();
     const maneuvers = this.maneuvers;
     maneuvers?.step(dt);
@@ -764,6 +768,13 @@ export class Battle {
   /** Active ships of a team, as of the last step. */
   activeOf(team: Team): readonly Ship[] {
     return this.active[team];
+  }
+
+  /** Calls fn for every live ship of one side within r of a point, in the order near() would. */
+  nearTeam(team: Team, x: number, z: number, r: number, fn: (s: Ship) => void) {
+    this.teamGrids[team].query(x, z, r, (s) => {
+      if ((s.x - x) ** 2 + (s.z - z) ** 2 <= r * r) fn(s);
+    });
   }
 
   /** Calls fn for every live ship within r of a point. Uses the grid built at the start of the step. */
@@ -832,8 +843,8 @@ export class Battle {
     for (const s of this.active[team]) {
       if (s.moraleState !== 'routing' || (only && !only(s))) continue;
       let near = false;
-      this.grid.query(s.x, s.z, reach, (o) => {
-        if (!near && o.team !== team && this.isActive(o) && o.moraleState !== 'routing' && (o.x - s.x) ** 2 + (o.z - s.z) ** 2 < reach * reach) near = true;
+      this.teamGrids[otherTeam(team)].query(s.x, s.z, reach, (o) => {
+        if (!near &&this.isActive(o) && o.moraleState !== 'routing' && (o.x - s.x) ** 2 + (o.z - s.z) ** 2 < reach * reach) near = true;
       });
       if (near) return true;
     }
@@ -986,10 +997,16 @@ export class Battle {
     // A rash or bold commander's boarders keep after a ship that turns away from them: the lure works on them.
     const chased = maneuvers && boardsFirst(s) && this.isAi(s) ? this.byId.get(s.targetId) : undefined;
     if (chased && chased.team !== s.team && maneuvers!.chases(s, chased) && hyp(chased.x - s.x, chased.z - s.z) <= within && !(pressing && this.offCourse(s, chased))) return chased;
+    // The most a score can fall below the distance, summed from the bonuses below. A ship that much farther off than
+    // the best so far cannot beat it, so the rest of its scoring (crossfire, crowding, tethers) is not worked out.
+    const boards = boardsFirst(s);
+    // A Ming crew's focus on wounded hulls has no fixed floor, so its candidates are all scored in full.
+    const slack = this.profile !== 'historical' && s.spec.faction === 'ming' ? Infinity : 1e-6 + 60 + (maneuvers && !boards ? 120 : 0) + (boards ? 80 + 80 : 70) + (lightBoarder ? 100 : 0);
     for (const o of list) {
       const d = hyp(o.x - s.x, o.z - s.z);
       if (d > within || !((this.profile === 'historical' && this.lull >= STALL_AI) || this.canSee(o, d, s.team))) continue;
       if (pressing && this.offCourse(s, o)) continue;
+      if (d - slack >= bestScore) continue;
       let score = d;
       if (maneuvers) {
         // Fire spread over the enemy line and drawn to a ship already under fire from another quarter, not a firing
@@ -2327,8 +2344,8 @@ export class Battle {
     if (s.musketReload > 0) return;
     let target: Ship | undefined;
     let best = spec.musketRange;
-    this.grid.query(s.x, s.z, spec.musketRange, (o) => {
-      if (o.team === s.team || !this.isActive(o)) return;
+    this.teamGrids[otherTeam(s.team)].query(s.x, s.z, spec.musketRange, (o) => {
+      if (!this.isActive(o)) return;
       const d = hyp(o.x - s.x, o.z - s.z);
       if (!this.canSee(o, d, s.team)) return;
       if (d < best) {
@@ -2371,8 +2388,8 @@ export class Battle {
     let best: Ship | undefined;
     let bestScore = Infinity;
     const cosArc = Math.cos(0.75);
-    this.grid.query(s.x, s.z, range, (o) => {
-      if (o.team === s.team || !this.isActive(o)) return;
+    this.teamGrids[otherTeam(s.team)].query(s.x, s.z, range, (o) => {
+      if (!this.isActive(o)) return;
       const dx = o.x - s.x;
       const dz = o.z - s.z;
       const d = hyp(dx, dz);
@@ -2398,8 +2415,8 @@ export class Battle {
     const fz = Math.sin(s.heading);
     let best: Ship | undefined;
     let bestD = Infinity;
-    this.grid.query(s.x, s.z, range, (o) => {
-      if (o.team === s.team || !this.isActive(o)) return;
+    this.teamGrids[otherTeam(s.team)].query(s.x, s.z, range, (o) => {
+      if (!this.isActive(o)) return;
       const dx = o.x - s.x;
       const dz = o.z - s.z;
       const d = hyp(dx, dz);
