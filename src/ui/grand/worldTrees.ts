@@ -1,25 +1,33 @@
-import { Color, Group, InstancedMesh, MeshBasicNodeMaterial, type BufferGeometry, type Texture } from 'three/webgpu';
-import { treeMaterial, treeShapes } from './hero/trees';
+import { Color, Group, InstancedMesh, MeshBasicNodeMaterial, type BufferGeometry, type Material, type Texture } from 'three/webgpu';
+import { MODEL_METRE } from './hero/site';
 import type { Cover } from './landCover';
-import { frameU, frameV, worldX, worldZ, type CameraState } from './worldCamera';
+import { rockMaterial, treeMaterial, treeShapes } from './treeModels';
+import { eyeOf, frameU, frameV, worldX, worldZ, type CameraState } from './worldCamera';
 
 // Trees and rocks for the close views of the campaign world, laid on the wooded hills round the point the camera looks
-// at: broadleaf trees, firs on the high ground and the red pines of the coasts (the hero camps' own shapes, hero/trees.ts),
-// and outcrops of rock on the crags, one instanced mesh a kind. They stand where the land's look draws woods and crags
-// (landLook.ts `coverAt`), so the forest and the ground under it agree, at about the size of the hero camps' trees. In
-// three levels by the camera's distance: a nearer camera sees smaller cells and finer shapes. Nothing is planted farther
-// out than the camera can use; there the ground's own canopy carries the forest, and the planted disc thins out into it
-// tree by tree rather than shrinking, so its edge reads as the wood's own. Where trees stand is worked out a tile of
-// cells at a time and kept, within a few milliseconds a frame, so panning only plants the tiles that come into reach.
+// at: broadleaf trees, firs on the high ground and the red pines of the coasts, and outcrops of rock on the crags
+// (treeModels.ts), one instanced mesh a kind at each of two details. They stand where the land's look draws woods and
+// crags (landLook.ts `coverAt`), so the forest and the ground under it agree, at about the size of the hero camps' trees.
+// In three levels by the camera's distance: a nearer camera sees smaller cells; at every level the trees that stand
+// large to the eye are drawn with the finely built shapes, the rest with the light ones. Nothing is planted farther out than the
+// camera can use; there the ground's own canopy carries the forest, and the planted disc thins out into it tree by tree
+// rather than shrinking, so its edge reads as the wood's own. Where trees stand is worked out a tile of cells at a time
+// and kept, within a few milliseconds a frame, so panning only plants the tiles that come into reach.
 
-/** Trees (and rocks) at most of each kind: broadleaf, fir, rock, red pine. */
+/** Trees (and rocks) at most of each kind, broadleaf, fir, rock, red pine: of the light shapes, and of the fine ones. */
 const CAPACITY = [7000, 5000, 1500, 5000] as const;
-/** Cell size and tree height for each level, in frame units, the camera distance each serves up to, and the shapes' detail. */
+const CAPACITY_NEAR = [2600, 1200, 500, 1600] as const;
+/** Cell size and tree height for each level, in frame units, and the camera distance each serves up to. */
 const LEVELS = [
-  { cell: 0.0011, height: 0.0022, until: 0.055, detail: 'near' },
-  { cell: 0.0019, height: 0.003, until: 0.13, detail: 'far' },
-  { cell: 0.0038, height: 0.0048, until: 0.26, detail: 'far' },
+  { cell: 0.0011, height: 0.0022, until: 0.055 },
+  { cell: 0.0019, height: 0.003, until: 0.13 },
+  { cell: 0.0038, height: 0.0048, until: 0.26 },
 ] as const;
+/**
+ * A tree at least this tall for its distance from the eye is drawn with the fine shapes: about 55 pixels tall on a
+ * desktop window, where the light shapes' facets would begin to show.
+ */
+const NEAR_SIZE = 0.036;
 /** Hysteresis, so a camera resting on a boundary does not flip between two levels. */
 const HOLD = 1.12;
 /** The planted disc's radius in cells of its level, and the outer share of it over which the trees thin out. */
@@ -34,6 +42,8 @@ const KEEP = 900;
 /** Floats kept per tree: x, ground height, z, height, width, the tint's red, green and blue, its kind and its thinning rank. */
 const STRIDE = 10;
 const ROCK = 2;
+/** How far the crowns sway in the wind, frame units (a tenth of a metre of the model). */
+const SWAY = 0.12 * MODEL_METRE;
 
 /** A cheap deterministic hash of two integers into 0..1. */
 function hash(a: number, b: number, salt = 0) {
@@ -59,20 +69,23 @@ interface Tile {
 
 /**
  * Trees round the camera's target. `ground` is the terrain height in frame units at a frame point, `perMetre` its frame
- * units per metre; `cover` the land's country at a point (without it, woods come from noise on the hills); `leaves` the
- * woodland texture the crowns are worked with (without it they are plain).
+ * units per metre; `cover` the land's country at a point (without it, woods come from noise on the hills); `details` the
+ * land's ground textures (grass, rock, sand, woodland), whose woodland works the crowns and whose rock the boulders
+ * (without them they are plain).
  */
 export class TreeLayer {
   readonly group = new Group();
-  /** One instanced mesh a kind: broadleaf, fir, rock, red pine. */
-  readonly meshes: InstancedMesh[];
-  private readonly material: MeshBasicNodeMaterial;
-  private readonly shapes: Record<'near' | 'far', BufferGeometry[]>;
+  /** One instanced mesh a kind (broadleaf, fir, rock, red pine) of the fine shapes, and one of the light shapes. */
+  readonly near: InstancedMesh[];
+  readonly far: InstancedMesh[];
+  private readonly materials: Material[];
+  private readonly shapes: BufferGeometry[];
   private clearings: { u: number; v: number; r: number }[] = [];
   private readonly tiles = new Map<number, Tile>();
   private level = -1;
-  /** Where the trees on show were laid round, in world x and z, and whether every tile they need was ready. */
+  /** Where the trees on show were laid round, in world x and z, the eye they were sorted by, and whether every tile they need was ready. */
   private anchor = { x: Number.NaN, z: Number.NaN };
+  private eye: [number, number, number] = [Number.NaN, 0, 0];
   private complete = false;
   private assemblies = 0;
   /** How long laying the trees took the last time (ms): the planting leaves it room within the budget. */
@@ -83,20 +96,30 @@ export class TreeLayer {
     private readonly ground: (u: number, v: number) => number,
     private readonly perMetre: number,
     private readonly cover?: (u: number, v: number) => Cover,
-    leaves?: Texture,
+    details?: readonly Texture[],
   ) {
-    this.material = leaves ? treeMaterial(leaves) : new MeshBasicNodeMaterial({ vertexColors: true });
-    this.shapes = { near: treeShapes('near'), far: treeShapes('far') };
-    this.meshes = CAPACITY.map((capacity, kind) => {
-      const mesh = new InstancedMesh(this.shapes.near[kind]!, this.material, capacity);
+    const trees = details ? treeMaterial(details[3]!, SWAY) : new MeshBasicNodeMaterial({ vertexColors: true });
+    const rocks = details ? rockMaterial(details[1]!) : trees;
+    this.materials = [...new Set([trees, rocks])];
+    const make = (shapes: BufferGeometry[], capacity: readonly number[]) => shapes.map((shape, kind) => {
+      const mesh = new InstancedMesh(shape, kind === ROCK ? rocks : trees, capacity[kind]!);
       mesh.count = 0;
       mesh.frustumCulled = false;
       mesh.visible = false;
-      // The colours of the instances are a tint on the vertex colours; allocate them once.
+      // The colours of the instances are a tint on the shapes' own; allocate them once.
       mesh.setColorAt(0, new Color(1, 1, 1));
       this.group.add(mesh);
       return mesh;
     });
+    const near = treeShapes('near'), far = treeShapes('far');
+    this.shapes = [...near, ...far];
+    this.near = make(near, CAPACITY_NEAR);
+    this.far = make(far, CAPACITY);
+  }
+
+  /** Every mesh, the fine ones first. */
+  get meshes() {
+    return [...this.near, ...this.far];
   }
 
   /** All the trees laid, of every kind. */
@@ -116,8 +139,9 @@ export class TreeLayer {
 
   /**
    * Lays the trees round the camera's target: works out the tiles that have come into reach within a few milliseconds and
-   * re-lays the trees when the target has moved or a level changed. Returns whether the trees changed or still have work
-   * to do, so the caller draws another frame while it is true.
+   * re-lays the trees when the target has moved, a level changed or, at the nearest level, the eye has moved enough to
+   * change which trees are near it. Returns whether the trees changed or still have work to do, so the caller draws
+   * another frame while it is true.
    */
   update(cam: CameraState): boolean {
     if (this.disposed) return false;
@@ -133,7 +157,9 @@ export class TreeLayer {
     const reach = REACH * cell;
     const x = worldX(cam.u), z = worldZ(cam.v);
     const moved = Math.hypot(x - this.anchor.x, z - this.anchor.z);
-    if (want === this.level && this.complete && moved < reach * 0.08) return false;
+    const eye = eyeOf(cam);
+    const turned = !(Math.hypot(eye[0] - this.eye[0], eye[1] - this.eye[1], eye[2] - this.eye[2]) < reach * 0.06);
+    if (want === this.level && this.complete && moved < reach * 0.08 && !turned) return false;
     // The tiles that reach into the disc round the target, nearest first.
     const size = TILE * cell;
     const needed: { key: number; i: number; j: number; distance: number }[] = [];
@@ -161,15 +187,12 @@ export class TreeLayer {
     const complete = ready === needed.length;
     // A new level shows once its nearer half is ready, so the old trees stay until they can be replaced.
     if (want !== this.level && this.level >= 0 && !complete && needed[ready] && needed[ready]!.distance < reach * 0.5) return true;
-    if (want !== this.level) {
-      const shapes = this.shapes[LEVELS[want]!.detail];
-      this.meshes.forEach((m, kind) => { m.geometry = shapes[kind]!; });
-    }
     this.level = want;
     this.complete = complete;
     this.anchor = { x, z };
+    this.eye = eye;
     const laying = performance.now();
-    this.assemble(needed.slice(0, ready), reach, x, z);
+    this.assemble(needed.slice(0, ready), reach, x, z, eye);
     this.layMs = performance.now() - laying;
     return true;
   }
@@ -231,18 +254,20 @@ export class TreeLayer {
         const fir = smooth(250, 700, high + wander * 300);
         const kind = pick < fir * 0.85 ? 1 : pick < fir * 0.85 + (1 - fir) * 0.38 ? 3 : 0;
         const size = height * (0.75 + 0.55 * hash(i, j, level * 7 + 4));
-        const tint = 0.8 + 0.36 * hash(i, j, level * 7 + 6);
-        out.push(x, e, z, size, size * (0.85 + 0.3 * hash(i, j, level * 7 + 5)), tint * (0.95 + 0.1 * jx), tint, tint * (0.95 + 0.1 * jz), kind, rank);
+        // Each tree its own shade and a little warmer or cooler, so a wood is not one green.
+        const tint = 0.84 + 0.3 * hash(i, j, level * 7 + 6), warm = hash(i, j, level * 7 + 9) - 0.5;
+        out.push(x, e, z, size, size * (0.85 + 0.3 * hash(i, j, level * 7 + 5)), tint * (1 + warm * 0.16), tint * (1 + warm * 0.04), tint * (1 - warm * 0.14), kind, rank);
       }
     }
     return Float32Array.from(out);
   }
 
-  /** Lays the trees of the ready tiles, nearest tile first, thinning out tree by tree towards the disc's edge. */
-  private assemble(tiles: { key: number }[], reach: number, cx: number, cz: number) {
-    const arrays = this.meshes.map((m) => m.instanceMatrix.array as Float32Array);
-    const colors = this.meshes.map((m) => m.instanceColor!.array as Float32Array);
-    const counts = this.meshes.map(() => 0);
+  /**
+   * Lays the trees of the ready tiles, nearest tile first, thinning out tree by tree towards the disc's edge, those that
+   * stand large to the `eye` in the fine shapes.
+   */
+  private assemble(tiles: { key: number }[], reach: number, cx: number, cz: number, eye: [number, number, number]) {
+    const sets = [this.near, this.far].map((meshes) => ({ meshes, counts: meshes.map(() => 0), matrices: meshes.map((m) => m.instanceMatrix.array as Float32Array), colours: meshes.map((m) => m.instanceColor!.array as Float32Array) }));
     const clear = this.clearings.map((p) => ({ x: worldX(p.u), z: worldZ(p.v), r: p.r })).filter((p) => Math.hypot(p.x - cx, p.z - cz) < reach + p.r);
     const stamp = (this.assemblies += 1);
     for (const { key } of tiles) {
@@ -251,27 +276,30 @@ export class TreeLayer {
       const trees = tile.trees;
       for (let t = 0; t < trees.length; t += STRIDE) {
         const kind = trees[t + 8]!;
-        const n = counts[kind]!;
-        if (n >= CAPACITY[kind]!) continue;
-        const x = trees[t]!, z = trees[t + 2]!;
+        const x = trees[t]!, y = trees[t + 1]!, z = trees[t + 2]!;
         const dist = Math.hypot(x - cx, z - cz);
         // Fewer and fewer trees towards the edge of the planted disc, so it ends as a wood thins out, not in a line.
         if (dist > reach || trees[t + 9]! > (reach - dist) / (reach * THIN)) continue;
         if (clear.some((p) => Math.hypot(x - p.x, z - p.z) < p.r)) continue;
         const tall = trees[t + 3]!, wide = trees[t + 4]!;
-        const array = arrays[kind]!, o = n * 16;
+        // Large to the eye in the fine shapes while they have room, else in the light ones.
+        let set = sets[1]!;
+        if (tall > NEAR_SIZE * Math.hypot(x - eye[0], y - eye[1], z - eye[2]) && sets[0]!.counts[kind]! < CAPACITY_NEAR[kind]!) set = sets[0]!;
+        const n = set.counts[kind]!;
+        if (n >= set.meshes[kind]!.instanceMatrix.count) continue;
+        const array = set.matrices[kind]!, o = n * 16;
         // Turned about its trunk by where it stands, so neighbours do not show the same side.
         const turn = (x * 9187.3 + z * 7331.1) % (Math.PI * 2), c = Math.cos(turn) * wide, s = Math.sin(turn) * wide;
         array[o] = c; array[o + 1] = 0; array[o + 2] = -s; array[o + 3] = 0;
         array[o + 4] = 0; array[o + 5] = tall; array[o + 6] = 0; array[o + 7] = 0;
         array[o + 8] = s; array[o + 9] = 0; array[o + 10] = c; array[o + 11] = 0;
-        array[o + 12] = x; array[o + 13] = trees[t + 1]! - tall * 0.04; array[o + 14] = z; array[o + 15] = 1;
-        const color = colors[kind]!;
-        color[n * 3] = trees[t + 5]!; color[n * 3 + 1] = trees[t + 6]!; color[n * 3 + 2] = trees[t + 7]!;
-        counts[kind] = n + 1;
+        array[o + 12] = x; array[o + 13] = y - tall * 0.04; array[o + 14] = z; array[o + 15] = 1;
+        const colour = set.colours[kind]!;
+        colour[n * 3] = trees[t + 5]!; colour[n * 3 + 1] = trees[t + 6]!; colour[n * 3 + 2] = trees[t + 7]!;
+        set.counts[kind] = n + 1;
       }
     }
-    this.meshes.forEach((mesh, kind) => {
+    for (const { meshes, counts } of sets) meshes.forEach((mesh, kind) => {
       const n = counts[kind]!;
       mesh.count = n;
       mesh.visible = n > 0;
@@ -294,8 +322,8 @@ export class TreeLayer {
     this.disposed = true;
     this.tiles.clear();
     for (const m of this.meshes) m.dispose();
-    for (const g of [...this.shapes.near, ...this.shapes.far]) g.dispose();
-    this.material.dispose();
+    for (const g of this.shapes) g.dispose();
+    for (const m of this.materials) m.dispose();
     this.group.removeFromParent();
   }
 }

@@ -16,7 +16,8 @@ import { joTier1, LAYOUTS, town, waFieldCamp } from './layouts';
 import { Plan, type Moored } from './plan';
 import { ELEVATION_MODEL, HERO_SITES, heroEnabled, MODEL_METRE, siteUV, siteXZ, type HeroSite } from './site';
 import { heroGroundOf } from './terrain';
-import { placeBoulders, plantTrees, treeMaterial, treeMeshes } from './trees';
+import { placeBoulders, plantTrees, treeMeshes } from './trees';
+import { rockMaterial, treeMaterial } from '../treeModels';
 
 // The hero camps on the campaign map (see site.ts): for each hero site whose camp its own navy holds, the camp of the
 // layouts, the villages of the towns round it, and the ground they stand on, built when the world first shows them and
@@ -27,6 +28,10 @@ import { placeBoulders, plantTrees, treeMaterial, treeMeshes } from './trees';
 const NEAR = 0.2;
 /** The camera distance under which they show their woods: as far as the map's own trees are planted (worldTrees.ts). */
 const WOODS = 0.3;
+/** The camera distance under which the woods are drawn with the finely built trees, about as close as the map's are. */
+const WOODS_NEAR = 0.07;
+/** How far the hero camps' crowns sway in the wind, model metres. */
+const SWAY = 0.12;
 
 /** A hero site as the world shows it: which camp, which towns, and what the layer must leave out for it. */
 export interface HeroUse {
@@ -113,8 +118,8 @@ interface Built {
   group: Group;
   near: Group;
   far: Group;
-  /** The camp's own woods: hidden from afar, as the map's trees are (worldTrees.ts), where the ground draws them. */
-  woods: Group;
+  /** The camp's own woods, finely and lightly built: hidden from afar, as the map's trees are (worldTrees.ts), where the ground draws them. */
+  woods: { near: Group; far: Group };
   geometries: BufferGeometry[];
   ships: { kind: Moored['kind']; u: number; v: number; rot: number }[];
   smoke: { u: number; v: number; y: number }[];
@@ -155,7 +160,7 @@ export class HeroLayer {
   private readonly materials = new Map<FactionId, Promise<MeshBasicNodeMaterial | null>>();
   private readonly ready: Material[] = [];
   private lookReady: HeroGroundLook | null = null;
-  private treeLook: MeshBasicNodeMaterial | null = null;
+  private woodLook: { trees: MeshBasicNodeMaterial; rocks: MeshBasicNodeMaterial } | null = null;
   private disposed = false;
 
   /**
@@ -253,14 +258,14 @@ export class HeroLayer {
     add(ground.laid, look.laid, group, 2);
     add(ground.shade, look.shade, group, 3);
     add(ground.water, look.water, group, 2);
-    const leaves = (this.treeLook ??= treeMaterial(this.land.details[3]!));
+    const wood = (this.woodLook ??= { trees: treeMaterial(this.land.details[3]!, SWAY), rocks: rockMaterial(this.land.details[1]!) });
     const seed = Math.round(use.site.u * 1e6);
-    const trees = treeMeshes([...plantTrees(plan, use.site.reach, ground.sample, seed, use.avoid), ...placeBoulders(plan, use.site.reach, ground.sample, seed)], leaves);
-    const woods = new Group();
-    group.add(woods);
-    for (const t of trees) {
+    const trees = treeMeshes([...plantTrees(plan, use.site.reach, ground.sample, seed, use.avoid), ...placeBoulders(plan, use.site.reach, ground.sample, seed)], wood.trees, wood.rocks);
+    const woods = { near: new Group(), far: new Group() };
+    group.add(woods.near, woods.far);
+    for (const detail of ['near', 'far'] as const) for (const t of trees[detail]) {
       geometries.push(t.geometry);
-      woods.add(t);
+      woods[detail].add(t);
     }
     meshes.forEach((m) => {
       const mat = mats[[...navies].indexOf(m.navy)];
@@ -331,7 +336,7 @@ export class HeroLayer {
       add(toGeometry(n.data()), mat, near);
       add(toGeometry(f.data()), mat, far);
     }
-    return { key, group, near, far, woods: new Group(), geometries, ships: [], smoke };
+    return { key, group, near, far, woods: { near: new Group(), far: new Group() }, geometries, ships: [], smoke };
   }
 
   /** The ships and hearths of the sites built for `uses` and of the other camps. */
@@ -349,7 +354,8 @@ export class HeroLayer {
   private show(b: Built) {
     b.near.visible = this.distance <= NEAR;
     b.far.visible = !b.near.visible;
-    b.woods.visible = this.distance <= WOODS;
+    b.woods.near.visible = this.distance <= WOODS_NEAR;
+    b.woods.far.visible = this.distance <= WOODS && !b.woods.near.visible;
   }
 
   /** Frees what a build made. */
@@ -374,8 +380,9 @@ export class HeroLayer {
     const look = this.lookReady;
     if (look) for (const x of [look.ground, look.laid, look.shade, look.water]) x.dispose();
     this.lookReady = null;
-    this.treeLook?.dispose();
-    this.treeLook = null;
+    this.woodLook?.trees.dispose();
+    this.woodLook?.rocks.dispose();
+    this.woodLook = null;
     this.group.removeFromParent();
   }
 }

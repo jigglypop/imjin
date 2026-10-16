@@ -10,7 +10,7 @@ let passed = 0;
 const check = (name, run) => { run(); passed++; console.log('ok   ' + name); };
 try {
   const { TreeLayer } = await server.ssrLoadModule('/src/ui/grand/worldTrees.ts');
-  const { worldX, worldZ, frameU, frameV } = await server.ssrLoadModule('/src/ui/grand/worldCamera.ts');
+  const { worldX, worldZ, frameU, frameV, eyeOf } = await server.ssrLoadModule('/src/ui/grand/worldCamera.ts');
   const perMetre = 4e-6;
   // An island 0.03 across with a hill in the middle, in a sea; heights in frame units. Every reading is counted.
   const centre = { u: 0.5, v: 0.5 };
@@ -33,12 +33,17 @@ try {
     throw new Error('the trees never came to rest');
   };
 
-  check('four kinds (broadleaf, fir, rock, red pine), each under 120 triangles, at most 18500 laid in all', () => {
+  // Trees of each kind (broadleaf, fir, rock, red pine), finely and lightly built together.
+  const kinds = (layer) => [0, 1, 2, 3].map((k) => layer.near[k].count + layer.far[k].count);
+
+  check('four kinds (broadleaf, fir, rock, red pine) at two details, the light ones under 120 triangles and the fine ones under 420, at most 25600 laid in all', () => {
     const layer = new TreeLayer(ground, perMetre);
-    assert.equal(layer.meshes.length, 4);
-    for (const mesh of layer.meshes) assert.ok(mesh.geometry.index.count / 3 <= 120, String(mesh.geometry.index.count / 3));
+    assert.equal(layer.near.length, 4);
+    assert.equal(layer.far.length, 4);
+    for (const mesh of layer.far) assert.ok(mesh.geometry.index.count / 3 <= 120, String(mesh.geometry.index.count / 3));
+    for (const mesh of layer.near) assert.ok(mesh.geometry.index.count / 3 <= 420, String(mesh.geometry.index.count / 3));
     const capacity = layer.meshes.reduce((n, m) => n + m.instanceMatrix.count, 0);
-    assert.ok(capacity <= 18500, String(capacity));
+    assert.ok(capacity <= 25600, String(capacity));
     layer.dispose();
   });
 
@@ -51,15 +56,15 @@ try {
     };
     const layer = new TreeLayer(ground, perMetre, cover);
     settle(layer, cam(0.04));
-    const [broad, fir, rock, red] = layer.meshes.map((m) => m.count);
+    const [broad, fir, rock, red] = kinds(layer);
     assert.ok(broad + fir + red > 200, `${broad + fir + red} trees`);
     assert.ok(rock > 20, `${rock} rocks`);
     const at = (mesh, i) => ({ u: frameU(mesh.instanceMatrix.array[i * 16 + 12]), v: frameV(mesh.instanceMatrix.array[i * 16 + 14]) });
-    for (const kind of [0, 1, 3]) for (let i = 0; i < layer.meshes[kind].count; i += 1) {
-      const p = at(layer.meshes[kind], i);
+    for (const kind of [0, 1, 3]) for (const mesh of [layer.near[kind], layer.far[kind]]) for (let i = 0; i < mesh.count; i += 1) {
+      const p = at(mesh, i);
       assert.ok(p.u < centre.u + 1e-9 && p.v <= centre.v + 0.004 + 1e-9, 'a tree stands in the wood');
     }
-    for (let i = 0; i < rock; i += 1) assert.ok(at(layer.meshes[2], i).u >= centre.u - 1e-9, 'a rock stands on the crag');
+    for (const mesh of [layer.near[2], layer.far[2]]) for (let i = 0; i < mesh.count; i += 1) assert.ok(at(mesh, i).u >= centre.u - 1e-9, 'a rock stands on the crag');
     layer.dispose();
   });
 
@@ -117,6 +122,23 @@ try {
     readings = 0;
     assert.equal(settle(layer, cam(0.04, centre.u + 0.008)), true, 'the trees follow the camera');
     assert.ok(readings < first * 0.3, `${readings} readings of the ground after a short pan, ${first} for the first planting`);
+    layer.dispose();
+  });
+
+  check('the trees that stand large to the eye take the fine shapes, the rest the light ones', () => {
+    const layer = new TreeLayer(ground, perMetre);
+    const c = cam(0.04);
+    settle(layer, c);
+    const eye = eyeOf(c);
+    const size = (mesh) => Array.from({ length: mesh.count }, (_, i) => {
+      const a = mesh.instanceMatrix.array, o = i * 16;
+      return a[o + 5] / Math.hypot(a[o + 12] - eye[0], a[o + 13] - eye[1], a[o + 14] - eye[2]);
+    });
+    const fine = layer.near.flatMap(size), light = layer.far.flatMap(size);
+    assert.ok(fine.length > 20 && light.length > 20, `${fine.length} fine, ${light.length} light`);
+    assert.ok(Math.min(...fine) > Math.max(...light) * 0.9, 'no light tree stands larger than a fine one');
+    // Turning the camera about its target sorts them again round the new eye.
+    assert.equal(layer.update({ ...c, yaw: 1.5 }), true);
     layer.dispose();
   });
 

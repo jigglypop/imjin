@@ -1,156 +1,15 @@
-import { BufferGeometry, Color, Float32BufferAttribute, InstancedMesh, Matrix4, MeshBasicNodeMaterial, Quaternion, Sphere, Vector3, type Texture } from 'three/webgpu';
-import { float, instanceIndex, positionLocal, sin, texture, vec2, vec3 } from 'three/tsl';
-import { worldClock } from '../../../select/terrain';
-import { SKY_LIGHT, SUN_DIRECTION, SUN_LIGHT } from '../groundPalette';
+import { Color, InstancedMesh, Matrix4, Quaternion, Sphere, Vector3, type BufferGeometry, type Material } from 'three/webgpu';
+import { treeShapes } from '../treeModels';
 import { outside, seeded, type Plan } from './plan';
 
 // The woods round a hero camp: broadleaf trees and pines at their own size (eight to thirteen metres, a barracks' length),
 // dense on the wooded slopes, in groves on the open ground, off the pads, lanes, yards and shores, so the camp stands in
-// country like the painted one instead of among the map's small cones (which keep off the patch). Each tree is a few
-// lumpy masses with the land's light baked into its vertex colours, darker underneath; one instanced draw a camp.
+// country like the painted one instead of among the map's small trees (which keep off the patch), and granite boulders
+// along its shores. The shapes and their materials are the map's (treeModels.ts): one instanced draw a kind, finely
+// built for a close camera and lightly for a farther one.
 
-/** A tree spot: x, ground y, z (site frame), height, kind (0 broadleaf, 1 pine), shade. */
+/** A tree spot: x, ground y, z (site frame), height, kind (0 broadleaf, 1 fir, 2 boulder, 3 red pine), shade. */
 export type TreeSpot = [number, number, number, number, number, number];
-
-const lin = (hex: string) => new Color(hex);
-
-/** The light a face with normal n gets from the land's sun and sky, the shaded side kept from going black. */
-function lightOf(nx: number, ny: number, nz: number) {
-  const sun = Math.max(0, nx * SUN_DIRECTION[0] + ny * SUN_DIRECTION[1] + nz * SUN_DIRECTION[2]);
-  const sky = 0.62 + 0.38 * ny;
-  return [0, 1, 2].map((k) => SUN_LIGHT[k]! * sun * 1.05 + SKY_LIGHT[k]! * sky);
-}
-
-/** A lumpy ball of leaves at (cx, cy, cz) of radius r, smooth normals, its vertices pushed in and out a little. */
-function blob(pos: number[], col: number[], cx: number, cy: number, cz: number, r: number, leaf: Color, seed: number) {
-  const rings = 3, seg = 6, rnd = seeded(seed);
-  const grid: number[][] = [];
-  for (let i = 0; i <= rings; i += 1) {
-    const a = -Math.PI / 2 + (i / rings) * Math.PI;
-    const row: number[] = [];
-    for (let j = 0; j < seg; j += 1) {
-      const b = (j / seg) * Math.PI * 2 + (i % 2) * 0.45;
-      const k = i === 0 || i === rings ? 1 : 0.85 + rnd.next() * 0.3;
-      const nx = Math.cos(a) * Math.cos(b), ny = Math.sin(a), nz = Math.cos(a) * Math.sin(b);
-      const L = lightOf(nx, ny, nz);
-      // Deeper inside the crown and underneath, less light gets in.
-      const ao = 0.55 + 0.45 * (ny * 0.5 + 0.5);
-      pos.push(cx + nx * r * k, cy + ny * r * k * 0.85, cz + nz * r * k);
-      col.push(leaf.r * L[0]! * ao, leaf.g * L[1]! * ao, leaf.b * L[2]! * ao);
-      row.push(pos.length / 3 - 1);
-    }
-    grid.push(row);
-  }
-  const idx: number[] = [];
-  for (let i = 0; i < rings; i += 1) for (let j = 0; j < seg; j += 1) {
-    const a = grid[i]![j]!, b = grid[i]![(j + 1) % seg]!, c = grid[i + 1]![(j + 1) % seg]!, d = grid[i + 1]![j]!;
-    idx.push(a, c, b, a, d, c);
-  }
-  return idx;
-}
-
-/** A trunk from y0 to y1, three-sided. */
-function trunk(pos: number[], col: number[], r: number, y0: number, y1: number) {
-  const bark = lin('#4a3a2a'), idx: number[] = [];
-  const base = pos.length / 3;
-  for (let k = 0; k < 3; k += 1) {
-    const a = (k / 3) * Math.PI * 2;
-    for (const y of [y0, y1]) {
-      pos.push(Math.cos(a) * r, y, Math.sin(a) * r);
-      const L = lightOf(Math.cos(a), 0, Math.sin(a));
-      col.push(bark.r * L[0]!, bark.g * L[1]!, bark.b * L[2]!);
-    }
-  }
-  for (let k = 0; k < 3; k += 1) {
-    const a = base + k * 2, b = base + ((k + 1) % 3) * 2;
-    idx.push(a, a + 1, b + 1, a, b + 1, b);
-  }
-  return idx;
-}
-
-/** How finely a tree is built: `near` for the close views, `far` (no trunk, fewer masses: about half the triangles) for the farther ones. */
-export type TreeDetail = 'near' | 'far';
-
-/** A broadleaf tree one unit tall: a trunk under three masses of leaves, or two from afar. */
-function broadleaf(detail: TreeDetail) {
-  const pos: number[] = [], col: number[] = [], leaf = lin('#3d6127');
-  const near = detail === 'near';
-  const idx = [
-    ...(near ? trunk(pos, col, 0.05, -0.1, 0.45) : []),
-    ...blob(pos, col, 0.02, 0.62, 0.02, 0.31, leaf, 1),
-    ...blob(pos, col, -0.13, 0.48, -0.06, 0.24, leaf.clone().multiplyScalar(0.9), 3),
-    ...(near ? blob(pos, col, 0.14, 0.5, 0.08, 0.2, leaf.clone().multiplyScalar(1.06), 5) : []),
-  ];
-  return geometry(pos, col, idx);
-}
-
-/** A fir of the high ground one unit tall: a trunk and stacked skirts of needles narrowing to the top, drooping at their rims. */
-function pine(detail: TreeDetail) {
-  const near = detail === 'near';
-  const pos: number[] = [], col: number[] = [], needles = lin('#24462a'), idx = near ? [...trunk(pos, col, 0.04, -0.1, 0.3)] : [];
-  const seg = near ? 7 : 6;
-  const skirts = near ? [[0.16, 0.5, 0.31], [0.36, 0.7, 0.25], [0.56, 0.88, 0.18], [0.74, 1.0, 0.11]] as const : [[0.16, 0.62, 0.3], [0.48, 1.0, 0.19]] as const;
-  for (const [y0, y1, r] of skirts) {
-    const base = pos.length / 3;
-    for (let j = 0; j < seg; j += 1) {
-      const a = (j / seg) * Math.PI * 2 + y0 * 3;
-      const nx = Math.cos(a) * 0.8, ny = 0.6, nz = Math.sin(a) * 0.8;
-      const L = lightOf(nx, ny, nz);
-      pos.push(Math.cos(a) * r, y0 - 0.03, Math.sin(a) * r);
-      col.push(needles.r * L[0]! * 0.7, needles.g * L[1]! * 0.7, needles.b * L[2]! * 0.7);
-    }
-    pos.push(0, y1, 0);
-    const L = lightOf(0, 1, 0);
-    col.push(needles.r * L[0]!, needles.g * L[1]!, needles.b * L[2]!);
-    for (let j = 0; j < seg; j += 1) idx.push(base + j, base + seg, base + ((j + 1) % seg));
-  }
-  return geometry(pos, col, idx);
-}
-
-/**
- * The red pine of the Korean coasts one unit tall: a bare trunk leaning a little, under flat, broad tufts of needles, the
- * crown wider than it is deep.
- */
-function redPine(detail: TreeDetail) {
-  const near = detail === 'near';
-  const pos: number[] = [], col: number[] = [], needles = lin('#2d4f2c');
-  const idx = near ? [...trunk(pos, col, 0.035, -0.1, 0.72)] : [];
-  const tuft = (cx: number, cy: number, cz: number, r: number, shade: number, seed: number) => {
-    const start = pos.length / 3;
-    const made = blob(pos, col, cx, cy, cz, r, needles.clone().multiplyScalar(shade), seed);
-    // Flattened to a tuft: half as deep as it is wide.
-    for (let v = start; v < pos.length / 3; v += 1) pos[v * 3 + 1] = cy + (pos[v * 3 + 1]! - cy) * 0.5;
-    return made;
-  };
-  idx.push(...tuft(0.03, 0.84, 0, 0.3, 1, 11), ...tuft(-0.16, 0.74, 0.08, 0.2, 0.92, 13));
-  if (near) idx.push(...tuft(0.17, 0.72, -0.1, 0.18, 1.05, 17));
-  return geometry(pos, col, idx);
-}
-
-/** A boulder one unit across: a squat, knobbly granite lump, lit like the land. */
-function boulder() {
-  const pos: number[] = [], col: number[] = [], idx: number[] = [], stone = lin('#9a958c'), rnd = seeded(7);
-  const rings = 3, seg = 7, grid: number[][] = [];
-  for (let i = 0; i <= rings; i += 1) {
-    const a = -0.35 + (i / rings) * (Math.PI / 2 + 0.35);
-    const row: number[] = [];
-    for (let j = 0; j < seg; j += 1) {
-      const b = (j / seg) * Math.PI * 2;
-      const k = i === rings ? 0.3 : 0.75 + rnd.next() * 0.5;
-      const nx = Math.cos(a) * Math.cos(b), ny = Math.sin(a), nz = Math.cos(a) * Math.sin(b);
-      const L = lightOf(nx, ny, nz), ao = 0.6 + 0.4 * Math.max(0, ny);
-      pos.push(nx * 0.5 * k, Math.max(-0.2, ny) * 0.55 * (i === rings ? 1 : k), nz * 0.5 * k);
-      col.push(stone.r * L[0]! * ao, stone.g * L[1]! * ao, stone.b * L[2]! * ao);
-      row.push(pos.length / 3 - 1);
-    }
-    grid.push(row);
-  }
-  for (let i = 0; i < rings; i += 1) for (let j = 0; j < seg; j += 1) {
-    const a = grid[i]![j]!, b = grid[i]![(j + 1) % seg]!, c = grid[i + 1]![(j + 1) % seg]!, d = grid[i + 1]![j]!;
-    idx.push(a, c, b, a, d, c);
-  }
-  return geometry(pos, col, idx);
-}
 
 /**
  * Granite boulders along the shore, in ones and twos and threes, where the land meets the water, off the quays, slips
@@ -177,14 +36,6 @@ export function placeBoulders(plan: Plan, reach: number, groundAt: (x: number, z
     }
   }
   return out;
-}
-
-function geometry(pos: number[], col: number[], idx: number[]) {
-  const g = new BufferGeometry();
-  g.setAttribute('position', new Float32BufferAttribute(pos, 3));
-  g.setAttribute('color', new Float32BufferAttribute(col, 3));
-  g.setIndex(idx);
-  return g;
 }
 
 /**
@@ -222,54 +73,32 @@ export function plantTrees(plan: Plan, reach: number, groundAt: (x: number, z: n
 }
 
 /**
- * The shapes, one unit tall, by the kind a spot names: 0 broadleaf, 1 fir, 2 boulder, 3 red pine. The boulder is the
- * same at either detail.
+ * The trees as instanced meshes in the site's frame, one a kind (0 broadleaf, 1 fir, 2 boulder, 3 red pine) at each
+ * detail: `near` for a close camera, `far` for the rest. The trees take `trees`, the boulders `rocks`.
  */
-export function treeShapes(detail: TreeDetail) {
-  return [broadleaf(detail), pine(detail), boulder(), redPine(detail)];
-}
-
-/** The trees as instanced meshes, one a kind, in the site's frame. */
-export function treeMeshes(spots: TreeSpot[], material: MeshBasicNodeMaterial) {
-  const shapes = treeShapes('near');
-  return shapes.map((shape, kind) => {
+export function treeMeshes(spots: TreeSpot[], trees: Material, rocks: Material) {
+  const build = (detail: 'near' | 'far') => treeShapes(detail).map((shape, kind) => {
     const list = spots.filter((s) => s[4] === kind);
     if (!list.length) { shape.dispose(); return null; }
-    const mesh = new InstancedMesh(shape, material, list.length);
-    const m = new Matrix4(), q = new Quaternion(), up = new Vector3(0, 1, 0), c = new Color();
-    let maxR = 0;
-    list.forEach(([x, y, z, h, , shade], i) => {
-      q.setFromAxisAngle(up, (x * 12.9898 + z * 78.233) % (Math.PI * 2));
-      const w = kind === 2 ? h : h * (kind === 1 ? 0.85 : kind === 3 ? 1.05 : 1.15) * (0.85 + ((x * 3.7 + z * 1.3) % 0.3));
-      m.compose(new Vector3(x, y, z), q, new Vector3(w, kind === 2 ? h * (0.6 + ((z * 2.3) % 0.5)) : h, w));
-      mesh.setMatrixAt(i, m);
-      mesh.setColorAt(i, c.setRGB(shade, shade * (0.97 + ((x * 7.1) % 0.06)), shade * 0.95));
-      maxR = Math.max(maxR, Math.hypot(x, z) + h);
-    });
-    // One bounding sphere over the whole wood, so the camera culls it whole.
-    mesh.geometry.boundingSphere = new Sphere(new Vector3(0, 0, 0), maxR + 20);
-    mesh.boundingSphere = new Sphere(new Vector3(0, 0, 0), maxR + 20);
-    return mesh;
+    return place(shape, kind === 2 ? rocks : trees, kind, list);
   }).filter((m) => m !== null);
+  return { near: build('near'), far: build('far') };
 }
 
-/**
- * The trees' material: their baked colours tinted per tree, broken by the woodland texture `leaves` (the land's, which
- * frees it) into clumps of leaves (read across each tree's own shape, so every crown is leafy and none is a smooth ball),
- * unlit like the land, with its fog. The crowns sway a little in the wind, each tree out of step with the next, and the
- * trunks and the rocks not at all.
- */
-export function treeMaterial(leaves: Texture) {
-  const m = new MeshBasicNodeMaterial({ vertexColors: true });
-  const p: any = positionLocal;
-  const mean = texture(leaves, vec2(0.5, 0.5)).level(float(12)).rgb.dot(vec3(0.3, 0.55, 0.15)).max(0.02);
-  const a = texture(leaves, p.xy.mul(6.1)).rgb.dot(vec3(0.3, 0.55, 0.15)), b = texture(leaves, p.zy.mul(5.3).add(vec2(0.31, 0.57))).rgb.dot(vec3(0.3, 0.55, 0.15));
-  const shade = a.mul(b).sqrt().div(mean);
-  // The vertex colours and each tree's tint multiply in after this (vertexColors, instanceColor).
-  m.colorNode = vec3(shade.pow(1.3).mul(0.85).add(0.15));
-  const clock: any = worldClock, phase = float(instanceIndex).mul(1.7);
-  const bend = p.y.max(0).mul(p.y.max(0)).mul(0.035);
-  const sx: any = sin(clock.mul(1.1).add(phase)).mul(bend), sz: any = sin(clock.mul(0.8).add(phase.mul(1.3))).mul(bend.mul(0.6));
-  m.positionNode = p.add(vec3(sx, 0, sz));
-  return m;
+function place(shape: BufferGeometry, material: Material, kind: number, list: TreeSpot[]) {
+  const mesh = new InstancedMesh(shape, material, list.length);
+  const m = new Matrix4(), q = new Quaternion(), up = new Vector3(0, 1, 0), c = new Color();
+  let maxR = 0;
+  list.forEach(([x, y, z, h, , shade], i) => {
+    q.setFromAxisAngle(up, (x * 12.9898 + z * 78.233) % (Math.PI * 2));
+    const w = kind === 2 ? h : h * (kind === 1 ? 0.85 : kind === 3 ? 1.05 : 1.15) * (0.85 + ((x * 3.7 + z * 1.3) % 0.3));
+    m.compose(new Vector3(x, y, z), q, new Vector3(w, kind === 2 ? h * (0.6 + ((z * 2.3) % 0.5)) : h, w));
+    mesh.setMatrixAt(i, m);
+    mesh.setColorAt(i, c.setRGB(shade, shade * (0.97 + ((x * 7.1) % 0.06)), shade * 0.95));
+    maxR = Math.max(maxR, Math.hypot(x, z) + h);
+  });
+  // One bounding sphere over the whole wood, so the camera culls it whole.
+  mesh.geometry.boundingSphere = new Sphere(new Vector3(0, 0, 0), maxR + 20);
+  mesh.boundingSphere = new Sphere(new Vector3(0, 0, 0), maxR + 20);
+  return mesh;
 }

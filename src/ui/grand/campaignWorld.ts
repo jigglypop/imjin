@@ -76,7 +76,7 @@ export class CampaignWorld {
     // Camps and ships stand on the same ground the overlay's markers read; they arrive when their models have loaded.
     this.layer = new MapLayer((u, v) => groundElevation(ground.heights, u, v), () => this.layerChanged(), (u, v) => rawMetres(ground.heights, u, v), ground.look);
     this.root.add(this.layer.group);
-    this.trees = new TreeLayer((u, v) => ground.heightAt(u, v), V_SCALE * MESH_SCALE, (u, v) => ground.look.coverAt(u, v), ground.look.details[3]);
+    this.trees = new TreeLayer((u, v) => ground.heightAt(u, v), V_SCALE * MESH_SCALE, (u, v) => ground.look.coverAt(u, v), ground.look.details);
     this.root.add(this.trees.group);
     if (this.world) this.show(this.world);
     // The first frame finds the ground's shaders ready, and the trees' too, though none is planted until the camera is close.
