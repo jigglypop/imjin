@@ -3,6 +3,7 @@ import { t, useT } from '../../i18n';
 import { FACTION_INFO, FactionMark, Icon, navyName, num, toneStyle } from './shared';
 import { shipsText } from './text';
 import type { BattlePreviewView, BattleSideView } from './types';
+import { portraitUrl } from '../portrait';
 
 export interface BattlePreviewProps {
   battle: BattlePreviewView;
@@ -30,7 +31,7 @@ function Side({ side, role, share, help = [] }: { side: BattleSideView; role: st
       </div>
       {side.leader && (
         <div className="g-leader g-leader--tight">
-          <img src={`/ui/portraits/${side.leader.portrait}.jpg`} alt="" width={36} height={36} />
+          <img src={portraitUrl(side.leader.portrait, true)} alt="" width={36} height={36} />
           <span className="g-row__main">
             <span className="g-row__title">{side.leader.name}</span>
             <span className="g-row__sub">

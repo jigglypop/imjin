@@ -15,6 +15,7 @@ import { fleetById } from '../sim/grand/world';
 import { migrateGrandBalance } from '../sim/grand/economy';
 import { orderDispatch, orderMobilize } from '../sim/grand/dispatch';
 import { migrateGrandRegions } from '../sim/grand/migration';
+import { cancelResearch, learnSkill, migrateGrandGrowth, orderResearch } from '../sim/grand/growth';
 import type { ShipKind } from '../sim/types';
 
 /**
@@ -42,6 +43,8 @@ function load(): Grand | null {
     // A war saved before the historical events existed goes on without the cards it never dealt.
     parsed.events ??= { done: {}, pending: null, flags: [], mods: [] };
     migrateGrandBalance(parsed);
+    // A war saved before the commanders' skills and the tech trees goes on under them (growth.ts).
+    migrateGrandGrowth(parsed);
     return parsed;
   } catch {
     return null;
@@ -156,6 +159,11 @@ export const grandOrders = {
   alliance: (a: GrandFaction, b: GrandFaction) => guarded((g) => a === g.player, (g) => orderAlliance(g, a, b)),
   /** Switches the player's automatic building on or off; saved with the war. */
   autoWorks: (on: boolean) => commit((g) => { g.autoWorks = on; return ok(); }),
+  /** Growth rules: one of the player's commanders spends a point on a skill of his tree. */
+  learn: (commanderId: string, skillId: string) => commit((g) => (g.player ? learnSkill(g, g.player, commanderId, skillId) : notYours)),
+  /** Growth rules: the navy starts a research, or stops the one on the way and gets its silver back. */
+  research: (techId: string) => commit((g) => (g.player ? orderResearch(g, g.player, techId) : notYours)),
+  cancelResearch: () => commit((g) => (g.player ? cancelResearch(g, g.player) : notYours)),
 };
 
 /** A fleet that can join another now: docked in a port and done refitting (a merge hands the larger rest to the survivor). */

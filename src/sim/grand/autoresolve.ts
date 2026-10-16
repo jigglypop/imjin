@@ -1,4 +1,6 @@
 import { shipSpec } from '../competitive';
+import type { ShipMods } from '../types';
+import { resolveEdge } from './growth';
 import { batteryStrength, shipDef, type ShipDef } from './economy';
 import { forkRng, next, range, type Rng } from './rng';
 import type { BattleOutcome, BattleOutcomeShip, GrandFaction, RegionState, ShipUnit } from './types';
@@ -36,6 +38,8 @@ export type Force = {
   region?: RegionState;
   /** Fighting worth multiplier for the whole side: below 1 for a force caught tired on a forced march. */
   morale?: number;
+  /** The growth rules' modifiers of single ships (their navy's research, their commander's trait and skills), by ship id. */
+  mods?: Record<string, ShipMods>;
 };
 
 export type ResolveInput = {
@@ -67,13 +71,17 @@ type Unit = {
   kills: number;
   armor: number;
   shore: boolean;
+  /** Factors from the growth rules on its guns, its boarding, its guard against boarders and its nerve. */
+  edge: { gun: number; melee: number; guard: number; nerve: number };
 };
 
-function unitOf(ship: ShipUnit, side: 0 | 1): Unit {
+const PLAIN_EDGE = { gun: 1, melee: 1, guard: 1, nerve: 1 };
+
+function unitOf(ship: ShipUnit, side: 0 | 1, mods?: ShipMods): Unit {
   const def = shipDef(ship.kind);
   const spec = shipSpec(ship.kind);
   const max = def.strength;
-  return { ship, def, side, max, hp: max * ship.hull, start: max * ship.hull, crew: ship.crew, kills: 0, armor: spec.armor, shore: false };
+  return { ship, def, side, max, hp: max * ship.hull, start: max * ship.hull, crew: ship.crew, kills: 0, armor: spec.armor, shore: false, edge: mods ? resolveEdge(mods) : PLAIN_EDGE };
 }
 
 function shoreUnit(region: RegionState, side: 0 | 1): Unit | null {
@@ -81,15 +89,15 @@ function shoreUnit(region: RegionState, side: 0 | 1): Unit | null {
   if (max <= 0) return null;
   const hp = batteryStrength(region);
   const def: ShipDef = { kind: 'panokseon', faction: 'joseon', label: '포대', gold: 0, turns: 0, strength: max, ranged: 1, boardResist: 1 };
-  return { ship: null, def, side, max, hp, start: hp, crew: 1, kills: 0, armor: 0.3, shore: true };
+  return { ship: null, def, side, max, hp, start: hp, crew: 1, kills: 0, armor: 0.3, shore: true, edge: PLAIN_EDGE };
 }
 
 const livingHp = (u: Unit[]) => u.reduce((a, x) => a + Math.max(0, x.hp), 0);
 
 /** Offensive output of a unit in one phase: strength scaled by hull and crew, and by how much of it that phase uses. */
 function output(u: Unit, phase: 'gun' | 'melee', crewNow: number, hullNow: number): number {
-  const base = u.max * (0.35 + 0.65 * Math.min(1, hullNow)) * (0.4 + 0.6 * crewNow);
-  return base * (phase === 'gun' ? 0.3 + 0.9 * u.def.ranged : 0.3 + 0.9 * (1 - u.def.ranged));
+  const base = u.max * (0.35 + 0.65 * Math.min(1, hullNow)) * (0.4 + 0.6 * crewNow) * u.edge.nerve;
+  return base * (phase === 'gun' ? (0.3 + 0.9 * u.def.ranged) * u.edge.gun : (0.3 + 0.9 * (1 - u.def.ranged)) * u.edge.melee);
 }
 
 /**
@@ -115,7 +123,7 @@ function applyDamage(targets: Unit[], dmg: number, phase: 'gun' | 'melee', attac
       }
       const t = live[i]!;
       if (t.hp <= 0) continue;
-      const resist = phase === 'gun' ? 1 - t.armor : t.def.boardResist;
+      const resist = phase === 'gun' ? 1 - t.armor : t.def.boardResist / t.edge.guard;
       const dealt = Math.min(t.hp, each * range(rng, 0.5, 1.5) * resist);
       t.hp -= dealt;
       spent += resist > 0 ? dealt / resist : each;
@@ -132,8 +140,8 @@ function applyDamage(targets: Unit[], dmg: number, phase: 'gun' | 'melee', attac
 
 export function autoResolve(input: ResolveInput): ResolveResult {
   const rng = forkRng(input.seed, ...input.tags);
-  const A = input.attacker.ships.map((s) => unitOf(s, 0));
-  const D = input.defender.ships.map((s) => unitOf(s, 1));
+  const A = input.attacker.ships.map((s) => unitOf(s, 0, input.attacker.mods?.[s.id]));
+  const D = input.defender.ships.map((s) => unitOf(s, 1, input.defender.mods?.[s.id]));
   let shoreD: Unit | null = null;
   if (input.defender.region) {
     shoreD = shoreUnit(input.defender.region, 1);

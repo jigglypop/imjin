@@ -13,6 +13,7 @@ import {
 import { sound } from '../audio/Sound';
 import { useT } from '../i18n';
 import type { ShipKind } from '../sim/types';
+import { portraitUrl } from './portrait';
 
 function Bar({ value, tone }: { value: number; tone: 'hull' | 'crew' | 'supply' }) {
   return (
@@ -89,7 +90,7 @@ export function CampaignPanel({ campaign, onClose }: { campaign: Campaign; onClo
                 return (
                   <div key={sq.id} className="camp-squad">
                     <div className="camp-squad-head">
-                      <img src={`/ui/portraits/${cmd?.portrait ?? 'portrait_admiral'}.jpg`} alt="" />
+                      <img src={portraitUrl(cmd?.portrait ?? 'portrait_admiral', true)} alt="" />
                       <div>
                         <b>{t(sq.name)}</b>
                         <small>
@@ -121,7 +122,7 @@ export function CampaignPanel({ campaign, onClose }: { campaign: Campaign; onClo
                 const prev = LEVEL_XP[c.level - 1] ?? 0;
                 return (
                   <div key={c.id} className="camp-cmd">
-                    <img src={`/ui/portraits/${c.portrait}.jpg`} alt="" />
+                    <img src={portraitUrl(c.portrait, true)} alt="" />
                     <div className="camp-cmd-body">
                       <div className="camp-cmd-name">
                         <b>{t(c.name)}</b> <small>{t(c.title)}</small>

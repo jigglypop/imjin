@@ -129,6 +129,8 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
       sq = b.addSquadron(seat.team, `${SHORT_NAME[u.kind]} ${index}대`, commander, portrait, cardOf(u.kind), slot); // i18n-ignore: same squadron label as the conquest mode
       // A squadron of an allied navy (Ming beside Joseon) is listed with the seat that commands it.
       sq.faction = seat.faction;
+      // A commander's trait can make him rash, bold or cautious under the maneuver rules (growth.ts).
+      if (leader?.temper) sq.temper = leader.temper;
       squads.set(key, sq);
     }
     const row = Math.floor(i / cols);

@@ -9,6 +9,10 @@ export interface TopBarProps {
   onMenu?: () => void;
   /** Opens the war status panel (objective, scores, log). */
   onStatus?: () => void;
+  /** Growth rules: open the commanders' screen and the tech tree; `points` is the skill points waiting, shown as a badge. */
+  onCommanders?: () => void;
+  onTech?: () => void;
+  points?: number;
   onBatch?: () => void;
   /** The automatic-building switch: its state and the flip. Omitted, no switch is drawn. */
   autoWorks?: boolean;
@@ -18,7 +22,7 @@ export interface TopBarProps {
   endLabel?: string;
 }
 
-export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, autoWorks, onAutoWorks, busy, endLabel }: TopBarProps) {
+export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onCommanders, onTech, points = 0, onBatch, autoWorks, onAutoWorks, busy, endLabel }: TopBarProps) {
   const t = useT();
   const net = treasury.income.gold;
   return (
@@ -45,9 +49,9 @@ export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, a
         </div>
       </div>
       <ul className="g-top__res" aria-label={t('재물')}>
-        {onBatch && <li><button type="button" className="g-btn g-btn--sm g-top__batch" disabled={busy} onClick={onBatch}>{t('일괄 이동')}</button></li>}
+        {onBatch && <li className="g-top__slot--batch"><button type="button" className="g-btn g-btn--sm g-top__batch" disabled={busy} onClick={onBatch}>{t('일괄 이동')}</button></li>}
         {onAutoWorks && (
-          <li>
+          <li className="g-top__slot--auto">
             <button
               type="button"
               className={`g-btn g-btn--sm g-top__auto${autoWorks ? ' g-top__auto--on' : ''}`}
@@ -67,8 +71,23 @@ export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onBatch, a
           <b className="g-res__val">{num(treasury.stock.gold)}</b>
           <span className={`g-res__net${net < 0 ? ' g-res__net--neg' : ''}`}>{signed(net)}</span>
         </li>
+        {onCommanders && (
+          <li className="g-top__slot--cmd">
+            <button type="button" className="g-btn g-btn--sm g-top__cmd" onClick={onCommanders}>
+              {t('장수')}
+              {points > 0 && <span className="g-top__badge" aria-label={t('익힐 재능 {n}개', { n: points })}>{points}</span>}
+            </button>
+          </li>
+        )}
+        {onTech && (
+          <li className="g-top__slot--tech">
+            <button type="button" className="g-btn g-btn--sm g-top__tech" onClick={onTech}>
+              {t('기술')}
+            </button>
+          </li>
+        )}
         {onStatus && (
-          <li>
+          <li className="g-top__slot--status">
             <button type="button" className="g-btn g-btn--sm g-top__status" onClick={onStatus}>
               {t('전황')}
             </button>
