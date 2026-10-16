@@ -6,7 +6,7 @@ import { EN_BRIEFING } from './src/i18n/en/briefing.js';
 import { EN_COMMON } from './src/i18n/en/common.js';
 import { EN_SIM } from './src/i18n/en/sim.js';
 import { SCENARIO_TEXT } from './src/sim/scenarioText.js';
-import { CARD_SIZE, cardFile, routeName, routePages, routePath, type BattleSlug, type Edition, type RoutePage, type RouteScreen } from './src/routes.js';
+import { CARD_SIZE, SITE_NAME, cardFile, routeName, routePages, routePath, type BattleSlug, type Edition, type RoutePage, type RouteScreen } from './src/routes.js';
 
 const SITE = 'https://imjin1592.com';
 
@@ -55,10 +55,10 @@ const DESCRIPTIONS: Record<Exclude<RouteScreen, 'menu'>, Record<Edition, string>
 
 /** The English front page (imjin1592.com/en). The Korean one is index.html as written. */
 const ENGLISH_FRONT = {
-  title: 'The Imjin War · 임진왜란',
+  title: 'MOONWAKE: The Imjin War',
   description: 'A 3D naval strategy game about the Imjin War (1592–1598): nine historical battles, a three-faction campaign and online play, free in your browser.',
   preview: 'Thirteen ships against 133 at Myeongnyang. Command the naval battles of the Imjin War in 3D, free in your browser.',
-  alt: 'The Imjin War · a dragon-headed turtle ship ploughing through rough seas at sunset',
+  alt: 'MOONWAKE: The Imjin War · a dragon-headed turtle ship ploughing through rough seas at sunset',
 };
 
 /** The English for a page's text, from the game's own dictionaries, so a page's title matches the tab title in the game. */
@@ -106,7 +106,7 @@ function pageHtml(base: string, { screen, edition, path, battle }: RoutePage): s
   const front = screen === 'menu';
   const own = battle ? battlePage(battle, edition) : null;
   const name = routeName(screen);
-  const site = en ? english('임진왜란') : '임진왜란';
+  const site = en ? english(SITE_NAME) : SITE_NAME;
   const title = own ? `${own.name} · ${site}` : front ? ENGLISH_FRONT.title : `${en ? english(name) : name} · ${site}`;
   const description = own ? own.description : front ? ENGLISH_FRONT.description : DESCRIPTIONS[screen][edition];
   const preview = own ? own.preview : front ? ENGLISH_FRONT.preview : description;
@@ -136,7 +136,7 @@ function pageHtml(base: string, { screen, edition, path, battle }: RoutePage): s
     meta('property', 'og:image:alt', own ? own.alt : ENGLISH_FRONT.alt);
     meta('name', 'twitter:image', card);
   }
-  if (en) meta('name', 'apple-mobile-web-app-title', english('임진왜란'));
+  if (en) meta('name', 'apple-mobile-web-app-title', 'MOONWAKE');
   return html;
 }
 

@@ -9,6 +9,9 @@ export type RouteScreen = 'menu' | 'faction' | 'skirmish' | 'select' | 'online' 
 export type Edition = 'ko' | 'en';
 
 /** Each screen's address in the Korean edition, and its name (Korean source text, translated through t()). */
+/** The series and this chapter, as page titles and the tab show them; the English edition translates it (i18n common). */
+export const SITE_NAME = 'MOONWAKE: 임진왜란';
+
 export const ROUTES: readonly { screen: RouteScreen; slug: string; name: string }[] = [
   { screen: 'menu', slug: '', name: '임진왜란' },
   { screen: 'faction', slug: 'campaign', name: '캠페인' },

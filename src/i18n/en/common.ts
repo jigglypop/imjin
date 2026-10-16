@@ -2,6 +2,7 @@
 export const EN_COMMON: Record<string, string> = {
   // The game and its modes
   '임진왜란': 'The Imjin War',
+  'MOONWAKE: 임진왜란': 'MOONWAKE: The Imjin War',
   '역사 전투': 'Historical Battles',
   '캠페인': 'Campaign',
   '쟁탈전': 'Conquest',

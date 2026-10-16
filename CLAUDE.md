@@ -1,6 +1,6 @@
-# 임진왜란 (imjin)
+# MOONWAKE: 임진왜란 (imjin)
 
-임진왜란을 다룬 WebGPU 3D 해전 전략 게임. https://imjin1592.com 에서 서비스 중.
+MOONWAKE는 역사 해전 시뮬레이터 시리즈, 첫 장은 임진왜란. WebGPU 3D. https://imjin1592.com 에서 서비스 중.
 three.js r186 `three/webgpu` + TSL, @react-three/fiber, React 19, zustand, Vite, 권위 Node 멀티플레이 서버.
 플레이어에게 보이는 텍스트는 한국어(영어판은 `/en` 아래), 코드·주석·커밋은 영어.
 
