@@ -429,6 +429,7 @@ export class Engine {
       this.fx = new Effects(this.views, { lights: this.eq.lights, particles: { keep: LEVELS[this.level]!.particleKeep, sort: true } });
       this.fx.wake = this.wake;
       this.fx.onShake = (k) => this.rts.shake(k, AMBIENT_SHAKE);
+      this.fx.onImpact = (x, y, z, impact) => this.director.impact(x, y, z, impact);
       this.fx.onCue = (kind, x, y, z, size) => this.sound.cue(kind, x, y, z, size);
       this.scene.add(this.fx.group);
       this.crew = new Crew(this.views);

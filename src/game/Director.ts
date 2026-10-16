@@ -56,6 +56,14 @@ const SLOW_HOLD = 0.8;
 const SLOW_OUT = 0.5;
 const SLOW_KEY = 'imjin.slowmo';
 const HEAVY: ReadonlySet<GunType> = new Set<GunType>(['cheonja', 'jija']);
+/**
+ * Hit-stop: a heavy blow right beside the camera holds the battle for a few frames, the way a fighting game lands a
+ * punch. Real seconds it lasts at most, the battle speed while it holds, and the quiet time before the next, so a
+ * broadside's string of hits does not stutter.
+ */
+const STOP_TIME = 0.075;
+const STOP_SPEED = 0.03;
+const STOP_GAP = 0.9;
 
 type Candidate = {
   kind: ShotKind;
@@ -117,6 +125,8 @@ export class Director {
   private fovKick = 0;
   private lastKick = -99;
   private fovApplied = BASE_FOV;
+  private stopUntil = -1;
+  private lastStop = -99;
 
   private shot: Shot | null = null;
   private pending: Candidate | null = null;
@@ -162,13 +172,33 @@ export class Director {
     return this.slowClock >= 0;
   }
 
-  /** Extra factor on battle time: 1 normally, dipping toward SLOW_SPEED during a kill-cam. */
+  /** Extra factor on battle time: 1 normally, dipping toward SLOW_SPEED during a kill-cam, near still in a hit-stop. */
   timeFactor(baseSpeed: number) {
+    if (this.clock < this.stopUntil) return STOP_SPEED;
     if (this.slowClock < 0) return 1;
     const t = this.slowClock;
     const depth = t < SLOW_IN ? smooth(t / SLOW_IN) : t < SLOW_HOLD ? 1 : 1 - smooth((t - SLOW_HOLD) / SLOW_OUT);
     const target = Math.min(1, SLOW_SPEED / Math.max(0.01, baseSpeed));
     return 1 + (target - 1) * depth;
+  }
+
+  /**
+   * A shot struck a hull (Effects.onImpact): `impact` about 0.1 for a light ball glancing off to 1.6 for a great arrow's
+   * breach. Beside the camera a heavy one throws the camera past the gunfire's cap, punches the view in and, at normal
+   * speed in a battle run here, holds the picture for a few frames.
+   */
+  impact(x: number, y: number, z: number, impact: number) {
+    const { rts, camera } = this.host;
+    const c = camera.position;
+    const k = impact / (1 + (Math.hypot(x - c.x, y - c.y, z - c.z) / 90) ** 2);
+    if (k < 0.15) return;
+    rts.shake(0.55 * k, 1.1);
+    if (this.host.speed > 4 || this.host.fastForward) return;
+    if (k > 0.35 && this.fovKick > -0.1) this.fovKick = -Math.min(1.4, 1.1 * k);
+    if (k > 0.6 && !this.host.remote && cameraFeel.punch() > 0 && this.clock - this.lastStop >= STOP_GAP) {
+      this.stopUntil = this.clock + STOP_TIME * Math.min(1, 0.6 + (k - 0.6));
+      this.lastStop = this.clock;
+    }
   }
 
   /** Called with each frame's sim events, before they are cleared. */

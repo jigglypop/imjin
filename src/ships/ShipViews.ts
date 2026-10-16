@@ -43,6 +43,11 @@ export type ViewState = {
   origin: Vector3;
   up: Vector3;
   flash: number;
+  /** A heavy hit's shudder: the roll and pitch it throws the hull into, the heave it knocks down, seconds since. */
+  joltRoll: number;
+  joltPitch: number;
+  joltHeave: number;
+  joltAge: number;
   lod: number;
   visible: boolean;
   sampleTimer: number;
@@ -268,6 +273,10 @@ export class ShipViews {
           origin: new Vector3(),
           up: new Vector3(0, 1, 0),
           flash: 0,
+          joltRoll: 0,
+          joltPitch: 0,
+          joltHeave: 0,
+          joltAge: 9,
           lod: 2,
           visible: true,
           sampleTimer: 0,
@@ -412,6 +421,14 @@ export class ShipViews {
     } else if (s.struck) {
       roll += 0.06;
     }
+    // The shudder of a heavy hit: the hull snaps away from the blow and rocks back over a second, quicker than the swell.
+    if (v.joltAge < 2) {
+      v.joltAge += dt;
+      const fade = Math.exp(-v.joltAge * 4.5);
+      roll += v.joltRoll * fade * Math.cos(v.joltAge * 17);
+      pitch += v.joltPitch * fade * Math.cos(v.joltAge * 13);
+      heave -= v.joltHeave * fade * Math.abs(Math.cos(v.joltAge * 11));
+    }
     this.e.set(roll, -s.heading + yaw, pitch, 'YZX');
     this.q.setFromEuler(this.e);
     this.tmp.set(s.x, heave, s.z);
@@ -430,6 +447,22 @@ export class ShipViews {
   flash(id: number, amount: number) {
     const v = this.states.get(id);
     if (v) v.flash = Math.max(v.flash, amount);
+  }
+
+  /**
+   * Knocks a hull with a blow travelling along (dx, dz), `amount` 1 being a medium ball through the side: a small ship
+   * is thrown further than a big one, and a blow from abeam rolls it while one along the keel pitches it.
+   */
+  jolt(ship: Ship, dx: number, dz: number, amount: number) {
+    const v = this.states.get(ship.id);
+    if (!v) return;
+    const c = Math.cos(ship.heading);
+    const n = Math.sin(ship.heading);
+    const k = Math.min(0.08, (0.012 + 0.03 * amount) * Math.min(2, Math.max(0.5, 30 / ship.spec.length)));
+    v.joltRoll = (dx * -n + dz * c) * k;
+    v.joltPitch = (dx * c + dz * n) * k * 0.5;
+    v.joltHeave = k * 2;
+    v.joltAge = 0;
   }
 
   worldOf(id: number) {
