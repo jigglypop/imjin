@@ -1134,7 +1134,8 @@ export class Maneuvers {
 
   /** Whether a ship is holding a station in a plan: the current and the wind move it less, as at a kedge. */
   holding(s: Ship) {
-    return this.onStation.has(s.id) && s.order.type !== 'auto';
+    // Every ship asks every step: its order is cheaper to read than the set, and rules out those under their own orders.
+    return s.order.type !== 'auto' && this.onStation.has(s.id);
   }
 
   /** The enemy a ship on station fires at: within range, on a clear line, preferring one already hit from another quarter. */
