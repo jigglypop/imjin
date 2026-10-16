@@ -351,3 +351,132 @@
   font-weight: 500;
   color: var(--ink-2);
 }
+
+/* ---- The battle's goal and first hints ---- */
+
+.guide {
+  position: absolute;
+  z-index: 12;
+  top: 92px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 10px 14px 10px;
+  border-radius: 14px;
+  animation: toast-in 0.5s ease-out;
+}
+
+.guide-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-12);
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+.guide-head b {
+  font-weight: 600;
+  color: var(--ink-1);
+}
+
+.guide-dots {
+  display: flex;
+  gap: 5px;
+  margin-right: auto;
+}
+
+.guide-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  opacity: 0.5;
+}
+
+.guide-dots i.on {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.guide p {
+  margin: 4px 0 0;
+  word-break: keep-all;
+  font-size: var(--fs-13);
+  line-height: 1.45;
+}
+
+.guide .guide-hint {
+  color: var(--accent);
+  animation: toast-in 0.4s ease-out;
+}
+
+.guide-name {
+  display: none;
+}
+
+/* A phone has the score panel at the top and the toolbar below it: the portrait guide sits under both, over open sea, the
+   landscape one just under the score panel. */
+@media (max-width: 900px), (max-height: 520px) {
+  .guide {
+    top: 272px;
+    width: min(360px, calc(100vw - 32px));
+    padding: 8px 12px;
+  }
+
+  .guide p {
+    font-size: var(--fs-12);
+    margin-top: 2px;
+  }
+}
+
+@media (max-height: 520px) {
+  .guide {
+    top: 84px;
+    left: 224px;
+    transform: none;
+    width: min(360px, calc(100vw - 240px));
+  }
+}
+
+/* ---- The result card's score and the comparison with history ---- */
+
+.result-score {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--fs-15);
+}
+
+.result-stars {
+  letter-spacing: 3px;
+  font-size: var(--fs-20);
+  color: var(--accent);
+}
+
+.result-stars .off {
+  color: var(--ink-3);
+  opacity: 0.45;
+}
+
+.result-history {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  font-size: var(--fs-13);
+  color: var(--ink-2);
+  word-break: keep-all;
+}
+
+.result-history b {
+  color: var(--ink-1);
+  font-weight: 600;
+}
+
+.result-verdict {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  color: var(--accent);
+}

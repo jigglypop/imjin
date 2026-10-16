@@ -193,11 +193,11 @@ const scenes = {
     await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(3000);
     await poke(page);
-    await page.locator('[data-mode="faction"]').click();
+    await page.locator('.mode-card').nth(1).click();
     await page.waitForTimeout(2500);
     await page.screenshot({ path: join(out, `${tag}_campaign_a.png`) });
     // Pick a faction and start, whatever the screen calls it.
-    for (const text of ['조선', '시작', '새 캠페인']) {
+    for (const text of ['조선', '시작', '새 전역']) {
       const b = page.getByText(text, { exact: false }).first();
       if (await b.count()) {
         await b.click({ timeout: 2000 }).catch(() => undefined);

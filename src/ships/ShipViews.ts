@@ -22,7 +22,6 @@ import { waveField } from '../ocean/waves';
 import { LOD_COUNT, modelKey, packFlash, ShipRenderer, type ModelAsset } from './ShipRenderer';
 import type { ShipLodQuality } from '../game/quality';
 import { cutHeight, DECKS, mainDeck } from './decks';
-import { packBurn } from '../fx/fire/char';
 import { byModel, modelKind, modelScale } from './anchors';
 import { RING_FOE, RING_OWN } from './ringTones';
 import { shipObserved } from '../sim/observation';
@@ -43,11 +42,6 @@ export type ViewState = {
   origin: Vector3;
   up: Vector3;
   flash: number;
-  /** A heavy hit's shudder: the roll and pitch it throws the hull into, the heave it knocks down, seconds since. */
-  joltRoll: number;
-  joltPitch: number;
-  joltHeave: number;
-  joltAge: number;
   lod: number;
   visible: boolean;
   sampleTimer: number;
@@ -273,10 +267,6 @@ export class ShipViews {
           origin: new Vector3(),
           up: new Vector3(0, 1, 0),
           flash: 0,
-          joltRoll: 0,
-          joltPitch: 0,
-          joltHeave: 0,
-          joltAge: 9,
           lod: 2,
           visible: true,
           sampleTimer: 0,
@@ -307,7 +297,7 @@ export class ShipViews {
       // A model loaded without its near level has fewer levels: the nearest one it has serves the closer ranges.
       const have = assets[v.key]?.lods.length ?? LOD_COUNT;
       const draw = scale === 1 ? v.matrix : this.drawMatrix.copy(v.matrix).scale(this.tmp.setScalar(scale));
-      if (v.visible) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, packBurn(ship.fire, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45)), packFlash(v.flash, this.tears.get(ship.id) ?? 0, ship.id), cut);
+      if (v.visible) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), packFlash(v.flash, this.tears.get(ship.id) ?? 0, ship.id), cut);
       if (level === 3 && v.visible) props = this.interior(ship, v, main, props);
       const show = (this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0;
       if (show) {
@@ -421,14 +411,6 @@ export class ShipViews {
     } else if (s.struck) {
       roll += 0.06;
     }
-    // The shudder of a heavy hit: the hull snaps away from the blow and rocks back over a second, quicker than the swell.
-    if (v.joltAge < 2) {
-      v.joltAge += dt;
-      const fade = Math.exp(-v.joltAge * 4.5);
-      roll += v.joltRoll * fade * Math.cos(v.joltAge * 17);
-      pitch += v.joltPitch * fade * Math.cos(v.joltAge * 13);
-      heave -= v.joltHeave * fade * Math.abs(Math.cos(v.joltAge * 11));
-    }
     this.e.set(roll, -s.heading + yaw, pitch, 'YZX');
     this.q.setFromEuler(this.e);
     this.tmp.set(s.x, heave, s.z);
@@ -444,25 +426,9 @@ export class ShipViews {
     return out.set(x, y, z).applyMatrix4(v.matrix);
   }
 
-  flash(id: number, amount: number) {
+  flash(id: number) {
     const v = this.states.get(id);
-    if (v) v.flash = Math.max(v.flash, amount);
-  }
-
-  /**
-   * Knocks a hull with a blow travelling along (dx, dz), `amount` 1 being a medium ball through the side: a small ship
-   * is thrown further than a big one, and a blow from abeam rolls it while one along the keel pitches it.
-   */
-  jolt(ship: Ship, dx: number, dz: number, amount: number) {
-    const v = this.states.get(ship.id);
-    if (!v) return;
-    const c = Math.cos(ship.heading);
-    const n = Math.sin(ship.heading);
-    const k = Math.min(0.08, (0.012 + 0.03 * amount) * Math.min(2, Math.max(0.5, 30 / ship.spec.length)));
-    v.joltRoll = (dx * -n + dz * c) * k;
-    v.joltPitch = (dx * c + dz * n) * k * 0.5;
-    v.joltHeave = k * 2;
-    v.joltAge = 0;
+    if (v) v.flash = 0.6;
   }
 
   worldOf(id: number) {
