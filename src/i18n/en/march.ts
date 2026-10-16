@@ -56,7 +56,7 @@ export const EN_MARCH: Record<string, string> = {
   '강습 명령': 'Order an assault',
   '턴 종료 때 바로 공격합니다': 'Storms the port when the turn ends',
   '도착하면 봉쇄': 'Blockade on arrival',
-  '강습하지 않고 굶겨 항복시킵니다': 'Starves the port into surrender instead of storming it',
+  '강습하지 않고 굶겨 항복시킵니다': 'Starves the port out instead of storming it',
   '고리가 있는 포구를 고르세요. 포구에 올리면 턴별 항로가 보입니다.': "Pick a ringed port. Hover over one to see each turn's leg.",
   '고리 색: 초록 이번 턴 · 노랑 다음 턴 · 주황 그 뒤': 'Rings: green this turn · yellow next turn · orange later',
   '{from|과/와} {to} 사이 바다 위입니다. 다음 턴에 계속 갑니다.': 'At sea between {from} and {to}. Sails on next turn.',

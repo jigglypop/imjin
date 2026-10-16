@@ -48,10 +48,10 @@ export function Icon({ name, size }: { name: IconName; size?: 'sm' | 'lg' }) {
 
 /** Korean source text: show a work's name and help through buildingName / buildingDesc. */
 export const BUILDINGS: Record<BuildingKind, { name: string; icon: IconName; desc: string }> = {
-  camp: { name: '군영', icon: 'camp', desc: '단계당 유지비 면제 +500냥 · 수리 +8%/턴 · 승조원 +10% · 수비대 증가' },
-  shipyard: { name: '선소', icon: 'shipyard', desc: '1·2·3단계: 동시 건조 4·6·8척 · 가격 100·90·80%' },
+  camp: { name: '군영', icon: 'camp', desc: '단계당 유지비 면제 +500냥 · 매 턴 수리 +8%, 승조원 +10% · 수비대 증가' },
+  shipyard: { name: '선소', icon: 'shipyard', desc: '1단계 동시 건조 4척 · 단계당 +2척, 가격 −10%' },
   battery: { name: '포대', icon: 'battery', desc: '단계당 방어 전력 +420 · 손상되면 약해짐 · 직접 지휘하는 전투에도 배치' },
-  dock: { name: '수리소', icon: 'dock', desc: '단계당 수리 +17%/턴 · 승조원 +13% · 즉시 정비 가능' },
+  dock: { name: '수리소', icon: 'dock', desc: '단계당 매 턴 수리 +17%, 승조원 +13% · 즉시 정비 가능' },
   granary: { name: '창고', icon: 'granary', desc: '단계당 수입 +25% · 전투에서는 화약고' },
   beacon: { name: '봉수대', icon: 'beacon', desc: '시야 2항로(2단계부터 3항로) · 단계당 수입 +5%' },
 };

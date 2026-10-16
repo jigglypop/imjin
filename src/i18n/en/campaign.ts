@@ -128,12 +128,12 @@ export const EN_CAMPAIGN: Record<string, string> = {
   '수리소': 'Dock',
   '창고': 'Depot',
   '봉수대': 'Beacon',
-  '단계당 유지비 면제 +500냥 · 수리 +8%/턴 · 승조원 +10% · 수비대 증가': 'Per level: upkeep allowance +500 · repairs +8%/turn · crew +10% · larger garrison',
-  '1·2·3단계: 동시 건조 4·6·8척 · 가격 100·90·80%': 'Levels 1/2/3: build 4/6/8 at once · prices 100/90/80%',
-  '단계당 방어 전력 +420 · 손상되면 약해짐 · 직접 지휘하는 전투에도 배치': 'Per level: defense +420 · weaker when damaged · also stands in battles you command',
-  '단계당 수리 +17%/턴 · 승조원 +13% · 즉시 정비 가능': 'Per level: repairs +17%/turn · crew +13% · instant refits',
-  '단계당 수입 +25% · 전투에서는 화약고': 'Per level: income +25% · a powder magazine in battle',
-  '시야 2항로(2단계부터 3항로) · 단계당 수입 +5%': 'Sight 2 lanes (3 from level 2) · income +5% per level',
+  '단계당 유지비 면제 +500냥 · 매 턴 수리 +8%, 승조원 +10% · 수비대 증가': 'Per level: upkeep allowance +500, repairs +8% and crew +10% a turn, a larger garrison',
+  '1단계 동시 건조 4척 · 단계당 +2척, 가격 −10%': 'Level 1 builds 4 at once; each level adds 2 and cuts prices 10%',
+  '단계당 방어 전력 +420 · 손상되면 약해짐 · 직접 지휘하는 전투에도 배치': 'Per level: defense +420, weaker when damaged; also stands in battles you command',
+  '단계당 매 턴 수리 +17%, 승조원 +13% · 즉시 정비 가능': 'Per level: repairs +17% and crew +13% a turn, instant refits',
+  '단계당 수입 +25% · 전투에서는 화약고': 'Per level: income +25%; a powder magazine in battle',
+  '시야 2항로(2단계부터 3항로) · 단계당 수입 +5%': 'Sight of 2 lanes (3 from level 2), income +5% per level',
 
   // Terrain
   '좁은 해협: 큰 배가 돌기 어려워 수비 측이 유리합니다.': 'Narrow strait: big ships turn slowly, which favors the defender.',
