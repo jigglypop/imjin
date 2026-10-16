@@ -33,7 +33,7 @@ export type BoxLook =
   | 'wa_bastion' | 'mg_bastion' | 'mg_pier' | 'brick_beam' | 'step';
 
 export type Piece =
-  | { kind: 'bldg'; x: number; z: number; rot: number; y: number; w: number; d: number; wallH: number; rise: number; overhang: number; style: RoofStyle; base: number; look: BodyLook; hip?: number }
+  | { kind: 'bldg'; x: number; z: number; rot: number; y: number; w: number; d: number; wallH: number; rise: number; overhang: number; style: RoofStyle; base: number; look: BodyLook; hip?: number; shade?: number }
   | { kind: 'wall'; a: P2; b: P2; y: number; h: number; thick: number; look: WallLook; crenel?: number }
   | { kind: 'box'; x: number; z: number; rot: number; y: number; w: number; d: number; h: number; look: BoxLook }
   | { kind: 'pass'; x: number; z: number; rot: number; y: number; w: number; thick: number; h: number; look: WallLook }

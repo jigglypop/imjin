@@ -451,10 +451,14 @@ export function village(m: Plan, cx: number, cz: number, n: number, rot: number,
     const { hi, lo } = footing(m, x, z, w + 1, d + 1, hr);
     if (hi > 9 || lo <= 0.05 || hi - lo > 2.2) continue;
     placed.push([x, z]);
-    const y = Math.min(hi, lo + 0.9);
-    if (culture === 'japan') m.add({ kind: 'bldg', x, z, rot: hr, y, w: rnd.uniform(6.5, 8.5), d: rnd.uniform(4.2, 5), wallH: 2.1, rise: 1.9, overhang: 0.5, style: 'hipgable', base: y - lo + 0.25, look: 'wa_house' }, 'japan');
-    else if (tiled) m.add({ kind: 'bldg', x, z, rot: hr, y, w, d, wallH: 2.2, rise: 2.0, overhang: 0.6, style: 'hipgable', base: y - lo + 0.3, look: 'jo_house' }, 'joseon');
-    else m.add({ kind: 'bldg', x, z, rot: hr, y, w, d, wallH: 2.0, rise: 1.8, overhang: 0.5, style: 'hip', base: y - lo + 0.25, look: 'jo_thatch' }, 'joseon');
+    // A village house sits low on a few courses of field stone: its floor half a metre over the lowest ground under it,
+    // a little more on a hillside, where the stone is cut into the slope.
+    const y = Math.min(hi, lo + 0.55 + Math.max(0, hi - lo - 1) * 0.3);
+    // Each house its own shade (a quarter of a step), from where it stands, so the street is not stamped from one house.
+    const shade = Math.floor((((x * 0.7123 + z * 0.3317) % 1) + 1) % 1 * 4) / 4;
+    if (culture === 'japan') m.add({ kind: 'bldg', x, z, rot: hr, y, w: rnd.uniform(6.5, 8.5), d: rnd.uniform(4.2, 5), wallH: 2.1, rise: 1.9, overhang: 0.5, style: 'hipgable', base: y - lo + 0.2, look: 'wa_house', shade }, 'japan');
+    else if (tiled) m.add({ kind: 'bldg', x, z, rot: hr, y, w, d, wallH: 2.2, rise: 2.0, overhang: 0.6, style: 'hipgable', base: y - lo + 0.22, look: 'jo_house', shade }, 'joseon');
+    else m.add({ kind: 'bldg', x, z, rot: hr, y, w, d, wallH: 2.0, rise: 1.8, overhang: 0.5, style: 'hip', base: y - lo + 0.2, look: 'jo_thatch', shade }, 'joseon');
     // A stone yard wall in front of the house.
     const fx = x - side * 4.5 * s, fz = z - side * 4.5 * c;
     if (!m.water(fx, fz)) m.add({ kind: 'wall', a: [fx - 4.25 * c, fz + 4.25 * s], b: [fx + 4.25 * c, fz - 4.25 * s], y: m.natural(fx, fz), h: 1.0, thick: 0.6, look: 'doldam' }, 'joseon');

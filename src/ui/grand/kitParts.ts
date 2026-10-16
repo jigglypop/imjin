@@ -268,28 +268,61 @@ function ridgeEnd(k: Kit, sx: number, x: number, y: number, w: number, h: number
 }
 
 /**
- * A thatched roof: a rounded mound of straw over a rounded-rectangle plan, thick at the eave, closing in on a short
- * ridge. `hx` by `hz` at the eave, eave at y, crown at top.
+ * A thatched roof as the Korean choga has it: a thick blanket of straw over a hipped frame, swelling from a level-cut
+ * eave up to a long ridge capped with the braided straw ridge (yongmareum), its corners rounded in plan and the
+ * straw's depth showing all round the eave. `hx` by `hz` at the eave (`hx` the longer), eave at `y`, ridge at `top`;
+ * `overhang` how far the eave stands out from the walls, under which its soffit runs back.
  */
-export function thatch(k: Kit, straw: Paint, under: Paint, hx: number, hz: number, y: number, top: number, o: { ridge?: number; eave?: number } = {}) {
-  const ridge = o.ridge ?? Math.max(0.2, hx - hz);
-  const seg = k.near ? 16 : 8;
-  const ring = (s: number, yy: number, lip = 0): V3[] => Array.from({ length: seg + 1 }, (_, j) => {
-    const a = (j / seg) * Math.PI * 2, c = Math.cos(a), sn = Math.sin(a);
-    const qx = Math.sign(c) * Math.pow(Math.abs(c), 2 / 3.2), qz = Math.sign(sn) * Math.pow(Math.abs(sn), 2 / 3.2);
-    return [qx * (lerp(ridge, hx, s) + lip), yy, -qz * (hz * s + lip)];
+export function thatch(k: Kit, straw: Paint, under: Paint, hx: number, hz: number, y: number, top: number, o: { ridge?: number; eave?: number; overhang?: number; cap?: Paint } = {}) {
+  const near = k.near;
+  const ridge = Math.max(0.15, o.ridge ?? hx - hz * 1.05);
+  const eave = o.eave ?? 0.32, overhang = o.overhang ?? 0.5;
+  // The eave's outline: a rounded rectangle, counter-clockwise from the +x side, with points along its straight runs.
+  const r = Math.min(hx, hz) * 0.62, X = hx - r, Z = hz - r;
+  const arc = near ? 4 : 2, run = near ? 3 : 1, end = near ? 1 : 0;
+  const loop: [number, number][] = [];
+  const quarter = (cx: number, cz: number, a0: number) => {
+    for (let i = 0; i <= arc; i += 1) loop.push([cx + r * Math.cos(a0 + (i / arc) * (Math.PI / 2)), cz + r * Math.sin(a0 + (i / arc) * (Math.PI / 2))]);
+  };
+  const line = (ax: number, az: number, bx: number, bz: number, n: number) => {
+    for (let i = 1; i <= n; i += 1) loop.push([ax + ((bx - ax) * i) / (n + 1), az + ((bz - az) * i) / (n + 1)]);
+  };
+  quarter(X, Z, 0);
+  line(X, hz, -X, hz, run);
+  quarter(-X, Z, Math.PI / 2);
+  line(-hx, Z, -hx, -Z, end);
+  quarter(-X, -Z, Math.PI);
+  line(-X, -hz, X, -hz, run);
+  quarter(X, -Z, Math.PI * 1.5);
+  line(hx, -Z, hx, Z, end);
+  const ring = [...loop, loop[0]!];
+  // Up the roof each eave point draws in towards its nearest point of the ridge, rising fast off the eave and rounding
+  // over at the top, as straw laid thick over a frame does.
+  const rows = near ? [0, 0.3, 0.56, 0.8, 1] : [0, 0.55, 1];
+  const rise = (t: number) => y + (top - y) * (1 - Math.pow(1 - t, 1.7));
+  const P = rows.map((t) => ring.map(([ex, ez]): V3 => {
+    const cx = Math.max(-ridge, Math.min(ridge, ex));
+    return [ex + (cx - ex) * t, rise(t), ez * (1 - t)];
+  }));
+  const along = ring.map((q, j) => (j ? Math.hypot(q[0] - ring[j - 1]![0], q[1] - ring[j - 1]![1]) : 0));
+  for (let j = 1; j < along.length; j += 1) along[j]! += along[j - 1]!;
+  const slope = rows.map((t, i) => (i ? Math.hypot(hz * (t - rows[i - 1]!), rise(t) - rise(rows[i - 1]!)) : 0));
+  for (let i = 1; i < slope.length; i += 1) slope[i]! += slope[i - 1]!;
+  grid(k.b, straw, P, { closedJ: true, uvFn: (i, j) => straw.map(along[j]! * (1 - rows[i]! * 0.5), slope[i]!) });
+  // The eave cut level, the straw's depth showing, and close up the soffit back to the walls.
+  const lip = (dy: number, inset: number) => ring.map(([ex, ez], j): V3 => {
+    const a = ring[Math.max(0, j - 1)]!, b = ring[Math.min(ring.length - 1, j + 1)]!;
+    const tx = b[0] - a[0], tz = b[1] - a[1], tl = Math.hypot(tx, tz) || 1;
+    // Outward in plan is the run turned a quarter clockwise (the loop runs counter-clockwise).
+    return [ex - (tz / tl) * inset, y + dy, ez + (tx / tl) * inset];
   });
-  const rows = k.near ? [0, 0.3, 0.55, 0.78, 1] : [0, 0.55, 1];
-  const eave = o.eave ?? 0.3;
-  // The mound closes in steadily while it rises fast at the eave and flattens to the crown.
-  const mound = rows.map((r) => ring(1 - 0.97 * Math.pow(r, 1.1), y + (top - y) * (2 * r - r * r)));
-  const lip = ring(1, y - eave, 0.08);
-  const P = [lip, ...mound];
-  // Round the plan for u, up the mound for v.
-  const perimeter = P[1]!.reduce((n, q, j) => (j ? n + Math.hypot(q[0] - P[1]![j - 1]![0], q[2] - P[1]![j - 1]![2]) : 0), 0);
-  const up = P.map((row, i) => (i ? Math.hypot(row[0]![0] - P[i - 1]![0]![0], row[0]![1] - P[i - 1]![0]![1]) : 0));
-  for (let i = 1; i < up.length; i += 1) up[i]! += up[i - 1]!;
-  surface(k, straw, P, [0, 1, 0], (i, j) => [(j / seg) * perimeter, up[i]!]);
-  if (k.near) surface(k, under, [ring(0.86, y - eave + 0.12), lip], [0, -1, 0], (i, j) => [(j / seg) * perimeter, i * 0.6]);
-  polygon(k.b, straw, mound[mound.length - 1]!.slice(0, seg), [0, 1, 0], (q) => straw.map(q[0], q[2]));
+  const band = [lip(-eave, 0), lip(0, 0)];
+  grid(k.b, straw.tinted([straw.tint[0] * 0.78, straw.tint[1] * 0.74, straw.tint[2] * 0.7]), band, { closedJ: true, uvFn: (i, j) => straw.map(along[j]!, i * eave) });
+  if (near) grid(k.b, under, [lip(-eave * 0.45, overhang), band[0]!], { closedJ: true, uvFn: (i, j) => under.map(along[j]!, i * overhang) });
+  // The braided ridge: a rounded roll of straw along the ridge, a little past its ends.
+  const cap = o.cap ?? straw.tinted([straw.tint[0] * 0.72, straw.tint[1] * 0.66, straw.tint[2] * 0.6]);
+  const w = Math.min(0.34, hz * 0.14), h = w * 0.75;
+  const section: V2[] = near ? [[-w, -h * 0.5], [-w * 0.8, h * 0.35], [-w * 0.4, h * 0.85], [0, h], [w * 0.4, h * 0.85], [w * 0.8, h * 0.35], [w, -h * 0.5]] : [[-w, -h * 0.5], [-w * 0.5, h * 0.8], [w * 0.5, h * 0.8], [w, -h * 0.5]];
+  const reach = ridge + w * 1.2;
+  sweep(k.b, cap, [[-reach, top - h * 0.15, 0], [-ridge * 0.5, top - h * 0.02, 0], [ridge * 0.5, top - h * 0.02, 0], [reach, top - h * 0.15, 0]], section, { caps: true });
 }
