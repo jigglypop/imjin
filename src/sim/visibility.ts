@@ -11,11 +11,13 @@ const CELL = 500;
 const NIGHT_SHARE = 0.4;
 
 type Observer = { x: number; z: number; height: number; range: number; beacon: boolean };
+/** A remembered map coordinate, filed under its x: the first z asked there, and any others in a map of their own. */
+type Remembered = { z: number; visible: boolean; more: Map<number, boolean> | null };
 /**
- * Lookouts by cell, a column (the cell's x index) holding its cells by z index, and remembered map coordinates by x
- * then z. Number keys spare building a text key for every cell a lookout covers and every query.
+ * Lookouts by cell, a column (the cell's x index) holding its cells by z index, and remembered map coordinates by x.
+ * Number keys spare building a text key for every cell a lookout covers and every query.
  */
-type TeamSight = { cells: Map<number, Map<number, Observer[]>>; ships: Set<number>; points: Map<number, Map<number, boolean>> };
+type TeamSight = { cells: Map<number, Map<number, Observer[]>>; ships: Set<number>; points: Map<number, Remembered> };
 type Sight = { tick: number; count: number; night: boolean; scale: number; land: Battle['land']; rules: Battle['rules']; teams: Record<Team, TeamSight> };
 const caches = new WeakMap<Battle, Sight>();
 
@@ -120,11 +122,16 @@ export function shipPositionVisible(b: Battle, team: Team, s: Ship): boolean {
 export function pointVisible(b: Battle, team: Team, x: number, z: number): boolean {
   if (b.profile === 'historical') return true;
   const sight = sightOf(b).teams[team];
-  let row = sight.points.get(x);
-  const previous = row?.get(z);
-  if (previous !== undefined) return previous;
+  const row = sight.points.get(x);
+  if (row) {
+    // The same z as a map key would match: -0 and 0 alike, NaN with NaN.
+    if (row.z === z || (row.z !== row.z && z !== z)) return row.visible;
+    const previous = row.more?.get(z);
+    if (previous !== undefined) return previous;
+  }
   const visible = observed(b, sight, x, z, Math.max(0, b.land(x, z)) + 3);
-  if (!row) sight.points.set(x, (row = new Map()));
-  row.set(z, visible);
+  // Most points are asked about at one z only, so a small record serves them without a map of their own.
+  if (!row) sight.points.set(x, { z, visible, more: null });
+  else (row.more ??= new Map()).set(z, visible);
   return visible;
 }
