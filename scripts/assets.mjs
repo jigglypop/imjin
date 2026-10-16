@@ -683,9 +683,13 @@ async function readRecords() {
 /** Whether a record names a model: by one of its hashes, or by its file name with whatever path comes before it fitting. */
 function mentions({ text }, path, hashes) {
   if (hashes.some((hash) => text.includes(hash))) return true;
-  const name = path.slice(path.lastIndexOf('/') + 1).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  for (const [token] of text.matchAll(new RegExp(`[\\w./-]*${name}(?![\\w-])`, 'g'))) {
-    const tail = token.replace(/^(\.{0,2}\/)+/, '');
+  const name = path.slice(path.lastIndexOf('/') + 1);
+  for (let at = text.indexOf(name); at >= 0; at = text.indexOf(name, at + 1)) {
+    // Not the end of a longer name (ship.glb in ship.glb-old), and whatever path leads to it must be this file's.
+    if (/[\w-]/.test(text[at + name.length] ?? '')) continue;
+    let start = at;
+    while (start > 0 && /[\w./-]/.test(text[start - 1])) start--;
+    const tail = text.slice(start, at + name.length).replace(/^(\.{0,2}\/)+/, '');
     if (path === tail || path.endsWith(`/${tail}`)) return true;
   }
   return false;
