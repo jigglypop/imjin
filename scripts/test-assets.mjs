@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { execFile, execFileSync } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, rm, utimes, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -363,6 +363,16 @@ try {
     assert.equal(listing.code, 0, listing.stderr);
     assert.ok(listing.stdout.includes(`  ${SHIP}\n`));
     assert.ok(git(A, 'ls-files').split('\n').includes(SHIP), 'listing alone changes nothing');
+    // Other content of the same size under the same mtime fools the index, but not the cut-over.
+    const when = new Date('2026-01-01T00:00:00Z');
+    await utimes(join(A, SHIP), when, when);
+    await run(A, ['status']);
+    await put(A, SHIP, glb(37));
+    await utimes(join(A, SHIP), when, when);
+    const refused = await run(A, ['untrack', '--apply']);
+    assert.equal(refused.code, 1);
+    assert.equal(refused.stderr, 'assets: 1 of them differ from assets.json (public/models/ship.glb first): npm run assets -- push, then try again\n');
+    await put(A, SHIP, binaries[SHIP]);
     const applied = await run(A, ['untrack', '--apply']);
     assert.equal(applied.code, 0, applied.stderr);
     const tracked = git(A, 'ls-files').split('\n');

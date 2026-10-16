@@ -817,9 +817,9 @@ async function untrack(args, flags) {
   }
   const manifest = await readManifest();
   const { files, store } = manifest;
-  const index = await openIndex();
-  const local = await pool(tracked, (path) => localHash(index, path));
-  await index.save();
+  // Every file is hashed afresh rather than taken from the index: nothing may leave git that the store does not hold.
+  const fresh = { get: () => null, set: () => {} };
+  const local = await pool(tracked, (path) => localHash(fresh, path));
   const unrecorded = tracked.filter((path, i) => !local[i] || local[i].sha256 !== files[path]?.sha256);
   if (unrecorded.length) fail(`${unrecorded.length} of them differ from assets.json (${unrecorded[0]} first): npm run assets -- push, then try again`);
   const held = await listBlobs(store);
