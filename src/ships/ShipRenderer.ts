@@ -432,7 +432,7 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
       const whole = floor(B.w);
       const tear = floor(whole.div(16)).div(TEAR_STEPS);
       const seed = whole.mod(16);
-      const holes = clothHoles(positionGeometry, tear, fract(burn), seed);
+      const holes = clothHoles(positionGeometry, tear, burn, seed);
       const sails = isCloth.and(packedColor.w.greaterThan(0.001));
       holeMask = select(sails, holes.hole, float(0));
       baseColor = mix(baseColor, vec3(0.035, 0.026, 0.02), select(sails, holes.rim, float(0)));
@@ -443,9 +443,7 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   // Atlas ships get their waterline in weather(); the legacy models still need it here.
   const wetColor = atlas ? baseColor : baseColor.mul(mix(float(1), float(0.55), wet));
   const algae = atlas ? wetColor : mix(wetColor, wetColor.mul(vec3(0.42, 0.52, 0.36)), under.mul(0.85));
-  // The burn attribute packs the fire burning now with the char it has left (fx/fire/char.ts).
-  const char = charShading(burn, algae, shipY, equipment.tier !== 'low');
-  const lit = char.color.mul(float(1).add(flash.mul(2)));
+  const lit = charShading(burn, algae).mul(float(1).add(flash.mul(2)));
   if (c) {
     const C: any = instancedBufferAttribute(c, 'vec4');
     const grain = mx_noise_float(positionWorld.mul(vec3(0.8, 6, 0.8))).mul(0.5).add(0.5);
@@ -473,7 +471,7 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
   const wetRough = mix(rough.mul(0.95).add(0.05), float(0.25), wet.mul(0.8)).max(0.05);
   // Inside a section-cut hull the raw timber never got wet: without this the scoop of the hull bottom mirrors the sky.
   m.roughnessNode = c ? select(frontFacing, wetRough, float(0.9)) : wetRough;
-  m.emissiveNode = char.emissive.add(glow);
+  m.emissiveNode = glow;
   return m;
 }
 

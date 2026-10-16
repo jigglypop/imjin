@@ -44,8 +44,6 @@ export class Sound {
   /** iOS decodes the sample bank only once the first battle is up, so the decode does not add to the load's memory peak. */
   private samplesAllowed = !isIOS;
   private samplesRequested = false;
-  /** A cutscene is playing: the bed rises like a film score and its far drums play at the menu's strength. */
-  private cinemaOn = false;
 
   constructor() {
     // iOS only lets a context start from touchend or click, not from touchstart, and an interruption (a call, another
@@ -123,7 +121,7 @@ export class Sound {
     this.bed.start();
     this.applyMode(true);
     window.setInterval(() => {
-      if (ctx.state === 'running' && this.musicOn) this.bed?.schedule(ctx.currentTime + 0.5, this.cinemaOn ? 'select' : this.mode);
+      if (ctx.state === 'running' && this.musicOn) this.bed?.schedule(ctx.currentTime + 0.5, this.mode);
       // After a phone call or another app's audio the context can come back 'interrupted' with no gesture to resume it.
       if (ctx.state !== 'running' && !document.hidden && performance.now() - this.lastWake > 2000) this.wake();
     }, 250);
@@ -144,14 +142,10 @@ export class Sound {
     this.ambience.gain.setTargetAtTime(level.ambience, t, tc);
   }
 
-  /**
-   * A cutscene starts or changes (`hush` 0..1: how far the guns and the sea go down under the bed) or ends (null).
-   * A deep hush falls fast, as the sound drops away at the moment a film slows down; everything else eases.
-   */
+  /** A cutscene's hush (0 to 1) lowers the guns and the sea under the music bed; null hands the mix back to the battle. */
   cinema(hush: number | null) {
     const ctx = this.ctx;
     if (!ctx || !this.music || !this.ambience || !this.sfx) return;
-    this.cinemaOn = hush !== null;
     const t = ctx.currentTime;
     const level = LEVELS[this.mode];
     const h = hush ?? 0;
@@ -191,10 +185,10 @@ export class Sound {
   }
 
   /** Called every frame: near-field housekeeping, the speed of the battle and how hot the battle is. */
-  tick(battle: Battle, camera: PerspectiveCamera, scaled: number) {
+  tick(_battle: Battle, camera: PerspectiveCamera, scaled: number) {
     const field = this.field;
     if (!this.ctx || !field || this.muted) return;
-    field.tick(camera, scaled, performance.now(), battle);
+    field.tick(camera, scaled);
     this.weather?.setRumble(field.intensity);
   }
 

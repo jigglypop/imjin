@@ -17,7 +17,6 @@ export const COST = {
   lite: { nodes: 8, secs: 3.5 },
   explosion: { nodes: 34, secs: 6.5 },
   hit: { nodes: 10, secs: 0.6 },
-  thump: { nodes: 6, secs: 0.7 },
   splash: { nodes: 9, secs: 1.2 },
   ground: { nodes: 10, secs: 0.9 },
   ignite: { nodes: 10, secs: 1.6 },
@@ -304,19 +303,6 @@ export class Voices {
     this.rumble(t + 0.45 + Math.random() * 0.4, g * (0.2 + 0.3 * Math.min(1, dist / 600)), dest, 2.2, 300, 70, 0.12);
     // Timber and iron raining back down.
     for (let i = 0; i < 6; i += 1) this.burst(t + 0.25 + i * rnd(0.1, 0.3), g * 0.22 / (1 + dist / 400), spot.pan, 'bandpass', rnd(900, 3200), 1.6, rnd(0.08, 0.2));
-  }
-
-  /**
-   * The blow felt in the chest under a heavy hit or a near gun: a sine dropping from below 100 Hz to the 30s through the
-   * soft clip, gone in half a second. Below the 250 Hz line, so it never reads as a tone. `weight` 0..1 is the gun's.
-   */
-  thump(t: number, spot: Spot, weight: number) {
-    const det = 1 + (Math.random() - 0.5) * 0.12;
-    const end = 0.28 + 0.3 * weight;
-    const clip = this.ctx.createWaveShaper();
-    clip.curve = this.softClip;
-    this.tone('sine', t, (98 - 22 * weight) * det, (40 - 8 * weight) * det, 0.16 + 0.1 * weight, end + 0.05).connect(clip);
-    clip.connect(this.envelope(t, spot.gain * (0.5 + 0.7 * weight), 0.002, end)).connect(this.out(spot.pan, 0.15));
   }
 
   /** A round striking timber: a dull thud under a splintering snap. */
