@@ -196,6 +196,7 @@ function RankedLobby({ navy, setNavy }: { navy: Faction; setNavy: (f: Faction) =
   const queue = useNet((s) => s.rankedQueue);
   const board = useNet((s) => s.leaderboard);
   const result = useNet((s) => s.rankResult);
+  const signedIn = useNet((s) => s.signedIn);
   const [now, setNow] = useState(Date.now());
   const refresh = () => { net.refreshRank(); net.fetchLeaderboard(); };
   useEffect(() => { refresh(); }, []);
@@ -232,7 +233,8 @@ function RankedLobby({ navy, setNavy }: { navy: Faction; setNavy: (f: Faction) =
         <tbody>{board.map((p, i) => <tr key={p.id} className={p.id === profile?.id ? 'on-rank-table-me' : ''}><td>{i + 1}</td><td className="on-rank-player">{p.name}</td><td>{t(RANK_TIER[p.tier])}</td><td>{p.rating}</td><td className="on-rank-table-record">{t('{win}승 {draw}무 {loss}패', { win: p.wins, draw: p.draws, loss: p.losses })}</td></tr>)}</tbody>
       </table></div> : <span className="on-hint">{t('아직 순위표에 등록된 장수가 없습니다.')}</span>}
     </section>
-    <Recovery busy={!!queue} />
+    {/* A signed-in player's record goes with the account: there is no code to keep. */}
+    {!signedIn && <Recovery busy={!!queue} />}
   </>;
 }
 

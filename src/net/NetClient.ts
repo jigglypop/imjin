@@ -1,12 +1,10 @@
 import { create } from 'zustand';
+import { onSessionChange, saveSession, savedSession } from '../account/session';
 import { t } from '../i18n';
 import { pushToast } from '../state/store';
+import { MP_URL } from './address';
 import { GRACE_SECONDS, PROTOCOL, type BattleChoice, type ClientMsg, type RankProfile, type RankStanding, type RoomInfo, type RoomSummary, type ServerMsg } from './protocol';
 import type { Faction } from '../sim/types';
-
-/** Where the multiplayer server listens. A local dev server is used when the page itself is local. */
-export const MP_URL: string =
-  (import.meta.env.VITE_MP_URL as string | undefined) ?? (/^(127\.0\.0\.1|localhost)$/.test(location.hostname) ? 'ws://127.0.0.1:8787/ws' : 'wss://mp.imjin1592.com/ws');
 
 /** idle: not connected; connecting: first attempt; online; reconnecting: the line dropped and we keep trying; error: gave up. */
 type Status = 'idle' | 'connecting' | 'online' | 'reconnecting' | 'error';
@@ -25,6 +23,8 @@ type NetState = {
   /** Korean source text, translated where it is drawn (a language switch updates it). */
   error: string | null;
   identityRejected: boolean;
+  /** The line speaks for a signed-in account, whose ranked record goes with the account rather than a recovery code. */
+  signedIn: boolean;
   ping: number;
   /** Quick match: when the search began (client clock) and how long it waits for a person. */
   quick: { since: number; seconds: number } | null;
@@ -89,6 +89,7 @@ export const useNet = create<NetState>(() => ({
   chat: [],
   error: null,
   identityRejected: false,
+  signedIn: false,
   ping: 0,
   quick: null,
   rankProfile: null,
@@ -126,6 +127,11 @@ function recoveredResult(profile: RankProfile | null, matchId: string | null) {
 class NetClient {
   /** A bearer credential stays in this browser; unlike the tab session it survives disconnects. */
   private account = stored(ACCOUNT_KEY, 'local');
+  /**
+   * The account session (src/account) this line said hello with. Retries present the same one, so a seat is never
+   * taken back as someone else; a sign-in or sign-out reaches the line when it is idle (reidentify).
+   */
+  private session = '';
   private ws: WebSocket | null = null;
   private pingTimer = 0;
   private retryTimer = 0;
@@ -165,12 +171,41 @@ class NetClient {
     store(NAME_KEY, clean, 'local');
     useNet.setState({ name: clean });
     if (this.ws && this.ws.readyState <= WebSocket.OPEN) {
-      this.send({ t: 'hello', name: clean, v: PROTOCOL, account: this.account || undefined });
+      this.send({ t: 'hello', name: clean, v: PROTOCOL, account: this.account || undefined, session: this.session || undefined });
       return;
     }
+    this.session = savedSession()?.token ?? '';
     this.stopped = false;
     this.attempt = 0;
     this.open(quiet);
+  }
+
+  /** The recovery code of this browser's own ranked record, which a sign-up carries over into the account. */
+  get rankedToken() {
+    return this.account;
+  }
+
+  constructor() {
+    onSessionChange(() => this.sessionChanged());
+  }
+
+  /**
+   * The account of this browser changed, here or in another tab. The online name follows a signed-up account's
+   * nickname, and an idle line says hello again as the new account; a line with a room, a queue or a battle keeps the
+   * account its seat was taken with until it closes.
+   */
+  private sessionChanged() {
+    const saved = savedSession();
+    const nickname = saved && !saved.user.guest ? saved.user.nickname : '';
+    if (nickname && nickname !== useNet.getState().name) {
+      store(NAME_KEY, nickname, 'local');
+      useNet.setState({ name: nickname });
+      if (this.ws?.readyState === WebSocket.OPEN && saved!.token === this.session) this.send({ t: 'hello', name: nickname, v: PROTOCOL, account: this.account || undefined, session: this.session || undefined });
+    }
+    const state = useNet.getState();
+    if (this.stopped || (saved?.token ?? '') === this.session || state.room || state.quick || state.rankedQueue || state.battle === 'playing') return;
+    this.disconnect();
+    this.connect(state.name, true);
   }
 
   private open(quiet = false) {
@@ -190,7 +225,7 @@ class NetClient {
     ws.onopen = () => {
       if (this.ws !== ws) return;
       this.lastHeard = performance.now();
-      this.send({ t: 'hello', name: useNet.getState().name, v: PROTOCOL, token: stored(TOKEN_KEY, 'session') || undefined, account: this.account || undefined });
+      this.send({ t: 'hello', name: useNet.getState().name, v: PROTOCOL, token: stored(TOKEN_KEY, 'session') || undefined, account: this.account || undefined, session: this.session || undefined });
       window.clearInterval(this.pingTimer);
       this.pingTimer = window.setInterval(() => {
         // A line that has gone quiet without closing is cut so the reconnect can start.
@@ -380,6 +415,7 @@ class NetClient {
           id: msg.id,
           error: null,
           identityRejected: false,
+          signedIn: !!msg.user,
           retry: null,
           room: msg.resumed ? s.room : null,
           quick: msg.resumed ? s.quick : null,
@@ -401,6 +437,13 @@ class NetClient {
         if (msg.code === 'version' || msg.code === 'identity') {
           this.stopped = true;
           store(TOKEN_KEY, '', 'session');
+        }
+        // The server no longer knows the session this line said hello with: the browser is signed out, and the line
+        // already goes on without it.
+        if (msg.code === 'session') {
+          const ended = this.session;
+          this.session = '';
+          if (ended && savedSession()?.token === ended) saveSession(null);
         }
         useNet.setState({ error: msg.text, identityRejected: msg.code === 'identity', ...(['version', 'identity'].includes(msg.code ?? '') ? { status: 'error' as const, rankedQueue: null } : {}) });
         return;
