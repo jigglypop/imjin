@@ -90,7 +90,10 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
         const z = side * (outer(x) + 0.015);
         const y0 = deck + 0.22;
         const y1 = deck + plan.parapet - 0.28 + sheer(x) * 0.5;
-        b.quadF(crest, [[x - 0.7, y0, z], [x + 0.7, y0, z], [x + 0.7, y1, z], [x - 0.7, y1, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+        // As wide as it is tall, like its picture, so the crest stays round.
+        const hw = Math.min(0.7, (y1 - y0) / 2);
+        const yt = y0 + hw * 2;
+        b.quadF(crest, [[x - hw, y0, z], [x + hw, y0, z], [x + hw, yt, z], [x - hw, yt, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
       }
       for (const g of anchors.gunPorts.filter((q) => q.side === (side === -1 ? 0 : 1))) {
         const z = side * (outer(g.pos[0]) + 0.02);

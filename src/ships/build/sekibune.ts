@@ -67,7 +67,8 @@ export function buildSekibune(variant: number, lod: Lod): MeshData {
         if (i % 2) return;
         const xc = x + (oarXs[i + 1]! - x) * 0.25;
         const z = side * (outer(xc) + 0.012);
-        b.quadF(crest, [[xc - 0.5, deck + 0.2, z], [xc + 0.5, deck + 0.2, z], [xc + 0.5, deck + 0.2 + 0.9, z], [xc - 0.5, deck + 0.2 + 0.9, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+        // Square like its picture, so the crest stays round.
+        b.quadF(crest, [[xc - 0.45, deck + 0.2, z], [xc + 0.45, deck + 0.2, z], [xc + 0.45, deck + 0.2 + 0.9, z], [xc - 0.45, deck + 0.2 + 0.9, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
       });
     }
   }

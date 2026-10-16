@@ -42,7 +42,8 @@ export function buildKobaya(lod: Lod): MeshData {
         oarXs.slice(0, -1).forEach((x, i) => {
           const xc = (x + oarXs[i + 1]!) / 2;
           const z = side * (outer(xc) + 0.012);
-          b.quadF(crest, [[xc - 0.42, deck + 0.12, z], [xc + 0.42, deck + 0.12, z], [xc + 0.42, deck + 0.64, z], [xc - 0.42, deck + 0.64, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+          // Square like its picture, so the crest stays round.
+          b.quadF(crest, [[xc - 0.26, deck + 0.12, z], [xc + 0.26, deck + 0.12, z], [xc + 0.26, deck + 0.64, z], [xc - 0.26, deck + 0.64, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
         });
         const n = 10;
         const path: V3[] = [];
