@@ -171,14 +171,55 @@ function crosses(ax: number, az: number, bx: number, bz: number, o: Ship) {
   const hb = o.spec.beam * 0.5 + 2;
   let t0 = 0;
   let t1 = 1;
-  const edges = [-dx, la0 + hl, dx, hl - la0, -dz, la1 + hb, dz, hb - la1];
-  for (let i = 0; i < 8; i += 2) {
-    const p = edges[i]!;
-    const q = edges[i + 1]!;
-    if (Math.abs(p) < 1e-9) {
-      if (q < 0) return false;
-      continue;
+  // The box's four sides in turn (aft, fore, then either beam), each trimming the stretch of the line within the hull.
+  // Written out rather than looped over a list of them, which made garbage for every friend checked in every lane.
+  let p = -dx;
+  let q = la0 + hl;
+  if (Math.abs(p) < 1e-9) {
+    if (q < 0) return false;
+  } else {
+    const k = q / p;
+    if (p < 0) {
+      if (k > t1) return false;
+      if (k > t0) t0 = k;
+    } else {
+      if (k < t0) return false;
+      if (k < t1) t1 = k;
     }
+  }
+  p = dx;
+  q = hl - la0;
+  if (Math.abs(p) < 1e-9) {
+    if (q < 0) return false;
+  } else {
+    const k = q / p;
+    if (p < 0) {
+      if (k > t1) return false;
+      if (k > t0) t0 = k;
+    } else {
+      if (k < t0) return false;
+      if (k < t1) t1 = k;
+    }
+  }
+  p = -dz;
+  q = la1 + hb;
+  if (Math.abs(p) < 1e-9) {
+    if (q < 0) return false;
+  } else {
+    const k = q / p;
+    if (p < 0) {
+      if (k > t1) return false;
+      if (k > t0) t0 = k;
+    } else {
+      if (k < t0) return false;
+      if (k < t1) t1 = k;
+    }
+  }
+  p = dz;
+  q = hb - la1;
+  if (Math.abs(p) < 1e-9) {
+    if (q < 0) return false;
+  } else {
     const k = q / p;
     if (p < 0) {
       if (k > t1) return false;
