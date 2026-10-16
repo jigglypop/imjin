@@ -171,14 +171,55 @@ function crosses(ax: number, az: number, bx: number, bz: number, o: Ship) {
   const hb = o.spec.beam * 0.5 + 2;
   let t0 = 0;
   let t1 = 1;
-  const edges = [-dx, la0 + hl, dx, hl - la0, -dz, la1 + hb, dz, hb - la1];
-  for (let i = 0; i < 8; i += 2) {
-    const p = edges[i]!;
-    const q = edges[i + 1]!;
-    if (Math.abs(p) < 1e-9) {
-      if (q < 0) return false;
-      continue;
+  // The box's four sides in turn (aft, fore, then either beam), each trimming the stretch of the line within the hull.
+  // Written out rather than looped over a list of them, which made garbage for every friend checked in every lane.
+  let p = -dx;
+  let q = la0 + hl;
+  if (Math.abs(p) < 1e-9) {
+    if (q < 0) return false;
+  } else {
+    const k = q / p;
+    if (p < 0) {
+      if (k > t1) return false;
+      if (k > t0) t0 = k;
+    } else {
+      if (k < t0) return false;
+      if (k < t1) t1 = k;
     }
+  }
+  p = dx;
+  q = hl - la0;
+  if (Math.abs(p) < 1e-9) {
+    if (q < 0) return false;
+  } else {
+    const k = q / p;
+    if (p < 0) {
+      if (k > t1) return false;
+      if (k > t0) t0 = k;
+    } else {
+      if (k < t0) return false;
+      if (k < t1) t1 = k;
+    }
+  }
+  p = -dz;
+  q = la1 + hb;
+  if (Math.abs(p) < 1e-9) {
+    if (q < 0) return false;
+  } else {
+    const k = q / p;
+    if (p < 0) {
+      if (k > t1) return false;
+      if (k > t0) t0 = k;
+    } else {
+      if (k < t0) return false;
+      if (k < t1) t1 = k;
+    }
+  }
+  p = dz;
+  q = hb - la1;
+  if (Math.abs(p) < 1e-9) {
+    if (q < 0) return false;
+  } else {
     const k = q / p;
     if (p < 0) {
       if (k > t1) return false;
@@ -210,6 +251,8 @@ export class Maneuvers {
   private readonly targeted = new Map<number, number>();
   /** Routing crews: the heading they chose and when, and how long they have been trapped. */
   private readonly runs = new Map<number, { h: number; at: number; open: number; trapped: number; haven: boolean }>();
+  /** Each breach's waypoints and the land they were found on. */
+  private readonly legs = new Map<number, { land: Battle['land']; legs: { x: number; z: number }[] }>();
   /** Where each squadron started, for cautious commanders who keep near it. */
   private homes: Map<number, { x: number; z: number }> | null = null;
   private readonly tactician: Tactician;
@@ -491,7 +534,11 @@ export class Maneuvers {
     for (const [id, c] of this.cut) if (b.time >= c.until) this.cut.delete(id);
     this.tactician.step();
     for (const plan of this.plans.values()) this.update(plan);
-    for (const [id, plan] of this.plans) if (plan.phase === 'done') this.plans.delete(id);
+    for (const [id, plan] of this.plans) {
+      if (plan.phase !== 'done') continue;
+      this.plans.delete(id);
+      this.legs.delete(id);
+    }
   }
 
   private findHomes() {
@@ -928,11 +975,17 @@ export class Maneuvers {
   }
 
   private breachLegs(plan: Plan) {
+    // Every ship of the column asks at every look, but the ends never move once ordered: the water for them is found
+    // once, and again only for other land.
+    const known = this.legs.get(plan.id);
+    if (known && known.land === this.b.land) return known.legs;
     const len = hyp(plan.x1 - plan.x0, plan.z1 - plan.z0) || 1;
     const ux = (plan.x1 - plan.x0) / len;
     const uz = (plan.z1 - plan.z0) / len;
     // Ends drawn on the shore are taken at the nearest water a column can pass.
-    return [this.wetSpot(plan.x0, plan.z0), this.wetSpot(plan.x1, plan.z1), this.wetSpot(plan.x1 + ux * 350, plan.z1 + uz * 350)];
+    const legs = [this.wetSpot(plan.x0, plan.z0), this.wetSpot(plan.x1, plan.z1), this.wetSpot(plan.x1 + ux * 350, plan.z1 + uz * 350)];
+    this.legs.set(plan.id, { land: this.b.land, legs });
+    return legs;
   }
 
   private columnLead(plan: Plan) {
@@ -1134,7 +1187,8 @@ export class Maneuvers {
 
   /** Whether a ship is holding a station in a plan: the current and the wind move it less, as at a kedge. */
   holding(s: Ship) {
-    return this.onStation.has(s.id) && s.order.type !== 'auto';
+    // Every ship asks every step: its order is cheaper to read than the set, and rules out those under their own orders.
+    return s.order.type !== 'auto' && this.onStation.has(s.id);
   }
 
   /** The enemy a ship on station fires at: within range, on a clear line, preferring one already hit from another quarter. */

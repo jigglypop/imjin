@@ -3,6 +3,7 @@ import { useT } from '../../i18n';
 import { Bar, Chip, FactionMark, Icon, Sheet, goldText, navyName, shipName } from './shared';
 import { shipsText, turnsText } from './text';
 import type { CommanderView, FactionId, FleetView } from './types';
+import { portraitUrl } from '../portrait';
 
 export interface FleetPanelProps {
   fleet: FleetView;
@@ -235,7 +236,7 @@ export function FleetPanel({
 
       {fleet.commander ? (
         <div className="g-leader">
-          <img src={`/ui/portraits/${fleet.commander.portrait}.jpg`} alt="" width={44} height={44} />
+          <img src={portraitUrl(fleet.commander.portrait, true)} alt="" width={44} height={44} />
           <span className="g-row__main">
             <span className="g-row__title">{fleet.commander.name}</span>
             <span className="g-row__sub">
@@ -269,7 +270,7 @@ export function FleetPanel({
                 setChoosing(false);
               }}
             >
-              <img className="g-avatar" src={`/ui/portraits/${officer.portrait}.jpg`} alt="" width={34} height={34} />
+              <img className="g-avatar" src={portraitUrl(officer.portrait, true)} alt="" width={34} height={34} />
               <span className="g-row__main">
                 <span className="g-row__title">
                   {officer.name} <span className="g-row__kind">Lv.{officer.level}</span>

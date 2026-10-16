@@ -62,10 +62,6 @@ export class CurrentField {
     return { x: sx * this.ca - sz * this.sa, z: sx * this.sa + sz * this.ca };
   }
 
-  private toScenario(wx: number, wz: number) {
-    return { x: wx * this.ca + wz * this.sa, z: -wx * this.sa + wz * this.ca };
-  }
-
   private measure() {
     const { spec } = this;
     for (let i = 0; i < this.bins; i += 1) {
@@ -121,13 +117,18 @@ export class CurrentField {
     }
   }
 
-  private fieldScenario(sx: number, sz: number, direction: number) {
+  /** The flow at a point in the scenario's frame, written into `out`. */
+  private fieldScenario(sx: number, sz: number, direction: number, out: { x: number; z: number }) {
     const { spec } = this;
     const dx = sx - spec.cx;
     const dz = sz - spec.cz;
     const along = dx * this.fa + dz * this.fs;
     const across = -dx * this.fs + dz * this.fa;
-    if (Math.abs(along) > spec.reach) return { x: 0, z: 0 };
+    if (Math.abs(along) > spec.reach) {
+      out.x = 0;
+      out.z = 0;
+      return;
+    }
     const bin = Math.max(0, Math.min(this.bins - 1, Math.floor((along + spec.reach) / this.binSize)));
     const width = this.widths[bin]!;
     const rel = (across - this.offsets[bin]!) / (width * 0.5);
@@ -146,16 +147,27 @@ export class CurrentField {
       vx += (-oz / d) * mag * v.spin;
       vz += (ox / d) * mag * v.spin;
     }
-    return { x: vx, z: vz };
+    out.x = vx;
+    out.z = vz;
   }
 
-  velocity(wx: number, wz: number, tide: number) {
-    if (Math.abs(tide) < 1e-3) return { x: 0, z: 0 };
-    const s = this.toScenario(wx, wz);
-    const f = this.fieldScenario(s.x, s.z, Math.sign(tide));
+  /**
+   * The current at a world point, written into `out` (a new object unless one is passed). Every ship asks once a step,
+   * so a caller that reads the answer at once can keep one object for all of them.
+   */
+  velocity(wx: number, wz: number, tide: number, out = { x: 0, z: 0 }) {
+    if (Math.abs(tide) < 1e-3) {
+      out.x = 0;
+      out.z = 0;
+      return out;
+    }
+    this.fieldScenario(wx * this.ca + wz * this.sa, -wx * this.sa + wz * this.ca, Math.sign(tide), out);
     const k = Math.abs(tide);
-    const w = { x: f.x * k, z: f.z * k };
-    return { x: w.x * this.ca - w.z * this.sa, z: w.x * this.sa + w.z * this.ca };
+    const x = out.x * k;
+    const z = out.z * k;
+    out.x = x * this.ca - z * this.sa;
+    out.z = x * this.sa + z * this.ca;
+    return out;
   }
 
   vortexData(): number[] {

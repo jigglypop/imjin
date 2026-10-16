@@ -24,6 +24,7 @@ import { forkRng, next, range, type Rng } from './rng';
 import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId } from './types';
 import { BUILDING_KINDS, MAX_LEVEL } from './types';
 import { allied, atWar, defenceStrength, findRoute, fleetObserved, fleetStrength, laneDistance, lanesOf, note, ownedBy, passable, visibleRegions } from './world';
+import { aiResearch, autoSkills } from './growth';
 import { MARCH, fleetReach, laneKm, marchDistances, marchRoute, marching } from './march';
 
 /**
@@ -522,12 +523,18 @@ function assignCommanders(g: Grand, f: GrandFaction) {
   }
 }
 
+/** Silver a computer navy keeps beyond its reserve when it starts a research, so the tech tree does not starve the yards. */
+const RESEARCH_MARGIN = 400;
+
 /** Gives the faction's orders for the turn. */
 export function planAi(g: Grand, f: GrandFaction) {
   // Advance the generator by a fixed amount per faction so plans do not shift when an earlier faction died.
   next(g.rng);
   consolidate(g, f);
+  // Under the growth rules the commanders spend their points and the navy researches before it builds.
+  autoSkills(g, f);
   assignCommanders(g, f);
+  aiResearch(g, f, personality(g, f).reserve + RESEARCH_MARGIN);
   economy(g, f);
   fleetsPlan(g, f);
 }

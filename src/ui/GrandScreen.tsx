@@ -14,6 +14,9 @@ import { GrandMap } from './grand/GrandMap';
 import { Guide, type GuideStepView } from './grand/Guide';
 import { RegionPanel } from './grand/RegionPanel';
 import { TopBar } from './grand/TopBar';
+import { Commanders } from './grand/Commanders';
+import { TechTree } from './grand/TechTree';
+import { commanderCards, pointsWaiting, techTree } from './grand/adaptGrowth';
 import {
   eventView,
   factionOptions,
@@ -137,6 +140,8 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const [toast, setToast] = useState<string | null>(null);
   const [status, setStatus] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [roster, setRoster] = useState(false);
+  const [techOpen, setTechOpen] = useState(false);
   const [previewHidden, setPreviewHidden] = useState(false);
   const [overSeen, setOverSeen] = useState(false);
   const [flipped, setFlipped] = useState(false);
@@ -413,6 +418,9 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
         onEndTurn={endTurn}
         onMenu={() => setMenu(true)}
         onStatus={() => setStatus(true)}
+        onCommanders={g.growth ? () => { sound.click(); setRoster(true); } : undefined}
+        onTech={g.growth ? () => { sound.click(); setTechOpen(true); } : undefined}
+        points={g.growth ? pointsWaiting(g, me) : 0}
         autoWorks={!!g.autoWorks}
         onAutoWorks={g.phase === 'orders' ? (on) => { sound.click(); report(grandOrders.autoWorks(on), on ? '자동 건설을 켰습니다' : '자동 건설을 껐습니다'); } : undefined}
         onBatch={g.phase === 'orders' ? () => { closePanels(); setBatchOpen(true); } : undefined}
@@ -548,6 +556,33 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
           onAlliance={(other) => report(grandOrders.alliance(me, other))}
           onWar={(other) => report(grandOrders.declareWar(me, other), '동맹을 파기했습니다')}
           onClose={() => setStatus(false)}
+        />
+      )}
+      {roster && (
+        <Commanders
+          me={me}
+          cards={commanderCards(g, me)}
+          canOrder={g.phase === 'orders'}
+          onLearn={(id, skill) => {
+            sound.click();
+            report(grandOrders.learn(id, skill));
+          }}
+          onAssign={(fleet, id) => report(grandOrders.commander(fleet, id), id ? '지휘관을 임명했습니다' : '지휘관을 해임했습니다')}
+          onClose={() => setRoster(false)}
+        />
+      )}
+      {techOpen && (
+        <TechTree
+          me={me}
+          tree={techTree(g, me)}
+          gold={g.factions[me].gold}
+          canOrder={g.phase === 'orders'}
+          onResearch={(id) => {
+            sound.click();
+            report(grandOrders.research(id));
+          }}
+          onCancel={() => report(grandOrders.cancelResearch())}
+          onClose={() => setTechOpen(false)}
         />
       )}
       {guideOn && !guideHidden && <Guide step={guideStep} steps={guideSteps} onNext={nextGuide} onClose={closeGuide} />}

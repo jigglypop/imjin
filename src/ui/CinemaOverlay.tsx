@@ -3,6 +3,7 @@ import type { Engine } from '../game/Engine';
 import type { Caption } from '../cinema/types';
 import { useT } from '../i18n';
 import './cinema.css';
+import { portraitUrl } from './portrait';
 
 /** Seconds a caption takes to come in and to go. */
 const FADE = 0.7;
@@ -23,7 +24,6 @@ function useCaptionFonts() {
   }, []);
 }
 
-const portraitUrl = (name: string) => `${import.meta.env.BASE_URL}ui/portraits/${name}.jpg`;
 
 function opacityOf(age: number, dur: number) {
   return Math.max(0, Math.min(1, age / FADE, (dur - age) / FADE));

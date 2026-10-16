@@ -96,7 +96,7 @@ try {
   const { revision } = JSON.parse(readFileSync(new URL('../server/dist/build.json', import.meta.url), 'utf8'));
   server = spawn(process.execPath, ['server/dist/server.cjs'], {
     cwd: root,
-    env: { ...process.env, PORT: '0', FF_SPEED: '1', HELLO_SECONDS: '2', FAULT_ROOM: 'fault', RANKED_STORE: join(storage, 'ranked.jsonl') },
+    env: { ...process.env, PORT: '0', FF_SPEED: '1', HELLO_SECONDS: '2', FAULT_ROOM: 'fault', RANKED_STORE: join(storage, 'ranked.jsonl'), ACCOUNTS_STORE: 'memory' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   server.stderr.on('data', (data) => stderr += data);

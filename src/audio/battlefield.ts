@@ -2,7 +2,7 @@
 // the synthesised voices (voices.ts) cover until the bank has decoded and any kind that failed to load. Everything
 // here runs against any BaseAudioContext, so scripts/render-sounds.mjs renders the same code offline.
 
-import { Vector3, type PerspectiveCamera } from 'three/webgpu';
+import type { PerspectiveCamera } from 'three/webgpu';
 import type { BattleEvent, GunType } from '../sim/types';
 import type { Battle } from '../sim/battle';
 import { GUN_CLASS, gunClass, type GunClass } from '../fx/gunClass';
@@ -45,6 +45,46 @@ type Gunfire = { s: ReturnType<typeof ranged>; gun: GunType; cls: GunClass; bank
 const loud = (gain: number) => Math.pow(gain, 0.75);
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
+/**
+ * The few vector steps the listener needs, written out as three.js r186 writes them (Vector3.applyQuaternion, length,
+ * normalize, dot) so every number comes out the same. Sound.ts is in the menu's first script, and one Vector3 here made
+ * that script carry all of three.js.
+ */
+type Vec = { x: number; y: number; z: number };
+type Quat = { x: number; y: number; z: number; w: number };
+
+function applyQuaternion(v: Vec, q: Quat) {
+  const vx = v.x, vy = v.y, vz = v.z;
+  const qx = q.x, qy = q.y, qz = q.z, qw = q.w;
+  const tx = 2 * (qy * vz - qz * vy);
+  const ty = 2 * (qz * vx - qx * vz);
+  const tz = 2 * (qx * vy - qy * vx);
+  v.x = vx + qw * tx + qy * tz - qz * ty;
+  v.y = vy + qw * ty + qz * tx - qx * tz;
+  v.z = vz + qw * tz + qx * ty - qy * tx;
+  return v;
+}
+
+const magnitude = (v: Vec) => Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+const dot = (a: Vec, b: Vec) => a.x * b.x + a.y * b.y + a.z * b.z;
+
+/** The camera's right-hand direction: +x turned by its rotation. */
+function rightOf(q: Quat, out: Vec) {
+  out.x = 1;
+  out.y = 0;
+  out.z = 0;
+  return applyQuaternion(out, q);
+}
+
+/** Three divides by multiplying with the reciprocal, and a zero vector stays zero. */
+function normalize(v: Vec) {
+  const scale = 1 / (magnitude(v) || 1);
+  v.x *= scale;
+  v.y *= scale;
+  v.z *= scale;
+  return v;
+}
+
 /** A node that dips for a moment under a big salvo, by `depth` (0..1) at full strength. */
 export type Duck = { node: GainNode; depth: number };
 
@@ -81,9 +121,9 @@ export class Battlefield {
   private recent = 0;
   /** 0..1 how hot the battle is. */
   intensity = 0;
-  private readonly tmp = new Vector3();
-  private readonly right = new Vector3();
-  private readonly rel = new Vector3();
+  private readonly tmp: Vec = { x: 0, y: 0, z: 0 };
+  private readonly right: Vec = { x: 0, y: 0, z: 0 };
+  private readonly rel: Vec = { x: 0, y: 0, z: 0 };
 
   constructor(
     private readonly ctx: BaseAudioContext,
@@ -117,10 +157,13 @@ export class Battlefield {
   }
 
   private spatial(camera: Pick<PerspectiveCamera, 'position' | 'quaternion'>, x: number, y: number, z: number) {
-    const dist = this.tmp.set(x, y, z).distanceTo(camera.position);
-    this.right.set(1, 0, 0).applyQuaternion(camera.quaternion);
-    this.tmp.sub(camera.position).normalize();
-    const s = ranged(dist, this.tmp.dot(this.right));
+    const p = camera.position;
+    const d = this.tmp;
+    d.x = x - p.x;
+    d.y = y - p.y;
+    d.z = z - p.z;
+    const dist = magnitude(d);
+    const s = ranged(dist, dot(normalize(d), rightOf(camera.quaternion, this.right)));
     // At high speed the shot and its report would drift apart by seconds; compress the lag with the time scale.
     s.delay /= Math.pow(Math.max(1, this.timeScale), 0.6);
     return s;
@@ -284,16 +327,20 @@ export class Battlefield {
 
   /** A round that will pass close to the camera: a whoosh at the moment of closest approach. */
   private whoosh(e: Extract<BattleEvent, { type: 'shot' }>, camera: Pick<PerspectiveCamera, 'position' | 'quaternion'>, now: number) {
-    const rel = this.rel.set(e.x - camera.position.x, e.y - camera.position.y, e.z - camera.position.z);
+    const rel = this.rel;
+    rel.x = e.x - camera.position.x;
+    rel.y = e.y - camera.position.y;
+    rel.z = e.z - camera.position.z;
     const v2 = e.vx * e.vx + e.vy * e.vy + e.vz * e.vz;
     if (v2 < 1) return;
     const ts = -(rel.x * e.vx + rel.y * e.vy + rel.z * e.vz) / v2;
     if (ts <= 0 || ts >= 3) return;
-    rel.set(rel.x + e.vx * ts, rel.y + e.vy * ts, rel.z + e.vz * ts);
-    const dist = rel.length();
+    rel.x += e.vx * ts;
+    rel.y += e.vy * ts;
+    rel.z += e.vz * ts;
+    const dist = magnitude(rel);
     if (dist > 90) return;
-    this.right.set(1, 0, 0).applyQuaternion(camera.quaternion);
-    const side = Math.max(-0.85, Math.min(0.85, (rel.dot(this.right) / Math.max(dist, 12)) * 0.9));
+    const side = Math.max(-0.85, Math.min(0.85, (dot(rel, rightOf(camera.quaternion, this.right)) / Math.max(dist, 12)) * 0.9));
     // A near miss is an event, not a texture: one every quarter second at most, and fewer as the battle runs faster.
     if (now < this.gate.whoosh || Math.random() > this.keep()) return;
     this.gate.whoosh = now + 0.25;

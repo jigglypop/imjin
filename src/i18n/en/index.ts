@@ -17,7 +17,9 @@ import { EN_CODEX } from './codex';
 import { EN_CINEMA } from './cinema';
 import { EN_MUNITIONS } from './munitions';
 import { EN_MANEUVERS } from './maneuvers';
+import { EN_COMMANDERS } from './commanders';
 import { EN_GUIDE } from './guide';
+import { EN_ACCOUNT } from './account';
 
 /** Every English string, keyed by its Korean source text. Areas are split so parallel work does not collide. */
 export const EN: Record<string, string> = {
@@ -40,5 +42,7 @@ export const EN: Record<string, string> = {
   ...EN_CINEMA,
   ...EN_MUNITIONS,
   ...EN_MANEUVERS,
+  ...EN_COMMANDERS,
   ...EN_GUIDE,
+  ...EN_ACCOUNT,
 };

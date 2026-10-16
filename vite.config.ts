@@ -1,4 +1,5 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { defineConfig, normalizePath, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -6,7 +7,7 @@ import { EN_BRIEFING } from './src/i18n/en/briefing.js';
 import { EN_COMMON } from './src/i18n/en/common.js';
 import { EN_SIM } from './src/i18n/en/sim.js';
 import { SCENARIO_TEXT } from './src/sim/scenarioText.js';
-import { CARD_SIZE, cardFile, routeName, routePages, routePath, type BattleSlug, type Edition, type RoutePage, type RouteScreen } from './src/routes.js';
+import { CARD_SIZE, SITE_NAME, cardFile, routeName, routePages, routePath, type BattleSlug, type Edition, type RoutePage, type RouteScreen } from './src/routes.js';
 
 const SITE = 'https://imjin1592.com';
 
@@ -55,10 +56,10 @@ const DESCRIPTIONS: Record<Exclude<RouteScreen, 'menu'>, Record<Edition, string>
 
 /** The English front page (imjin1592.com/en). The Korean one is index.html as written. */
 const ENGLISH_FRONT = {
-  title: 'The Imjin War · 임진왜란',
+  title: 'MOONWAKE: The Imjin War',
   description: 'A 3D naval strategy game about the Imjin War (1592–1598): nine historical battles, a three-faction campaign and online play, free in your browser.',
   preview: 'Thirteen ships against 133 at Myeongnyang. Command the naval battles of the Imjin War in 3D, free in your browser.',
-  alt: 'The Imjin War · a dragon-headed turtle ship ploughing through rough seas at sunset',
+  alt: 'MOONWAKE: The Imjin War · a dragon-headed turtle ship ploughing through rough seas at sunset',
 };
 
 /** The English for a page's text, from the game's own dictionaries, so a page's title matches the tab title in the game. */
@@ -106,7 +107,7 @@ function pageHtml(base: string, { screen, edition, path, battle }: RoutePage): s
   const front = screen === 'menu';
   const own = battle ? battlePage(battle, edition) : null;
   const name = routeName(screen);
-  const site = en ? english('임진왜란') : '임진왜란';
+  const site = en ? english(SITE_NAME) : SITE_NAME;
   const title = own ? `${own.name} · ${site}` : front ? ENGLISH_FRONT.title : `${en ? english(name) : name} · ${site}`;
   const description = own ? own.description : front ? ENGLISH_FRONT.description : DESCRIPTIONS[screen][edition];
   const preview = own ? own.preview : front ? ENGLISH_FRONT.preview : description;
@@ -136,7 +137,7 @@ function pageHtml(base: string, { screen, edition, path, battle }: RoutePage): s
     meta('property', 'og:image:alt', own ? own.alt : ENGLISH_FRONT.alt);
     meta('name', 'twitter:image', card);
   }
-  if (en) meta('name', 'apple-mobile-web-app-title', english('임진왜란'));
+  if (en) meta('name', 'apple-mobile-web-app-title', 'MOONWAKE');
   return html;
 }
 
@@ -173,8 +174,44 @@ function routePagesPlugin(): Plugin {
   };
 }
 
+/**
+ * three.js without its WebGL renderer. @react-three/fiber and three's example loaders import bare 'three', which is
+ * three.module.js: three's core plus the WebGLRenderer, which the game never makes (every Canvas hands r3f a
+ * WebGPURenderer of its own). The loaders get three/webgpu, which exports the same core objects. r3f's Canvas registers
+ * the whole namespace it imports as its catalogue of JSX elements, and a namespace used as a value keeps every export of
+ * its module in the bundle; the game draws no JSX three elements, so r3f gets a module of only the names it reads
+ * itself, and three's core is tree-shaken like the rest of the game's imports. Build only: the dev server's pre-bundled
+ * r3f keeps 'three'.
+ */
+function threeWithoutWebGL(): Plugin {
+  const R3F_THREE = '\0r3f-three';
+  const fromR3f = /[\\/]@react-three[\\/]fiber[\\/]/;
+  return {
+    name: 'three-without-webgl',
+    apply: 'build',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      if (source !== 'three') return null;
+      if (importer && fromR3f.test(importer)) return R3F_THREE;
+      return this.resolve('three/webgpu', importer, { skipSelf: true });
+    },
+    load(id) {
+      if (id !== R3F_THREE) return null;
+      const dist = dirname(createRequire(import.meta.url).resolve('@react-three/fiber'));
+      const names = new Set<string>();
+      for (const file of readdirSync(dist).filter((f) => f.endsWith('.esm.js'))) {
+        for (const m of readFileSync(join(dist, file), 'utf8').matchAll(/\bTHREE\.([A-Za-z_$][\w$]*)/g)) names.add(m[1]!);
+      }
+      // r3f makes a WebGLRenderer only for a Canvas without a gl prop.
+      names.delete('WebGLRenderer');
+      return `export { ${[...names].sort().join(', ')} } from 'three/webgpu';
+export class WebGLRenderer { constructor() { throw new Error('three.js is built without its WebGL renderer: give the Canvas a gl prop'); } }`;
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), routePagesPlugin()],
+  plugins: [threeWithoutWebGL(), react(), routePagesPlugin()],
   cacheDir: CACHE_DIR,
   server: { port: 5291, host: '127.0.0.1', strictPort: true, watch: { ignored: UNWATCHED } },
   build: { target: ['es2022', 'safari16'], chunkSizeWarningLimit: 4000 },

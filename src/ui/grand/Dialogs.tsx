@@ -4,6 +4,7 @@ import { MAP_IMAGE } from './projection';
 import { Bar, FactionCrest, FactionMark, Icon, Modal, goldText, navyName, num, shipName, toneStyle } from './shared';
 import { portsText, shipsText } from './text';
 import type { BattleResultView, EventView, FactionId, GameOverView, LogLineView, ObjectiveView, RelationView, SaveView, ScoreView, TurnReportView } from './types';
+import { portraitUrl } from '../portrait';
 
 /** Dialogs of the faction campaign that are not the map's panels: war status, battle result, turn report, end of the war, menu, continue. */
 
@@ -294,7 +295,7 @@ export function EventCard({ event, me, onChoose }: EventCardProps) {
   return (
     <Modal label={event.title} eyebrow={t('{date} · 역사 사건', { date: event.date })} title={event.title} tone={me}>
       <div className="g-event">
-        {event.portrait && <img className="g-event__portrait" src={`/ui/portraits/${event.portrait}.jpg`} alt="" width={48} height={48} />}
+        {event.portrait && <img className="g-event__portrait" src={portraitUrl(event.portrait, true)} alt="" width={48} height={48} />}
         <p className="g-event__text">{event.text}</p>
       </div>
       <div className="g-event__choices">

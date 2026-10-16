@@ -1,5 +1,5 @@
 import { getLang, t, useLangStore } from './i18n';
-import { LAUNCH_PARAMS, parseRoute, routeName, routePath, withoutParams, type BattleSlug, type RouteScreen } from './routes';
+import { LAUNCH_PARAMS, SITE_NAME, parseRoute, routeName, routePath, withoutParams, type BattleSlug, type RouteScreen } from './routes';
 import { SCENARIO_TEXT } from './sim/scenarioText';
 import { useUi, type BattleOrigin, type Screen } from './state/store';
 
@@ -112,9 +112,9 @@ function open(screen: RouteScreen, battle: BattleSlug | null) {
 /** The tab title names the page in the address (a battle's page, its battle); the description and the home-screen name follow the language. */
 function showHead() {
   const { screen, battle } = parseRoute(location.pathname);
-  const site = t('임진왜란');
+  const site = t(SITE_NAME);
   const text = battle ? SCENARIO_TEXT[battle] : null;
   document.title = text ? `${t(text.title)} · ${site}` : screen === 'menu' ? site : `${t(routeName(screen))} · ${site}`;
   document.querySelector('meta[name="description"]')?.setAttribute('content', text ? t(text.hook) : t('1592, 조선 수군의 바다. 3D 해전 전략 게임.'));
-  document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', site);
+  document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', 'MOONWAKE');
 }

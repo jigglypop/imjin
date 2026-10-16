@@ -53,7 +53,11 @@ export type ConquestState = {
 };
 
 export type ClientMsg =
-  | { t: 'hello'; name: string; v: number; token?: string; account?: string }
+  /**
+   * `token` is the tab's seat, `account` the ranked recovery code this browser holds, `session` the signed-in account's
+   * session (src/account). With a session the ranked account is the one the signed-in user has on every device.
+   */
+  | { t: 'hello'; name: string; v: number; token?: string; account?: string; session?: string }
   | { t: 'list' }
   | { t: 'create'; name: string; battle: BattleChoice }
   | { t: 'join'; room: string }
@@ -76,14 +80,19 @@ export type ClientMsg =
   | { t: 'ping'; at: number };
 
 export type ServerMsg =
-  | { t: 'welcome'; id: string; v: number; token: string; resumed: boolean; account: { id: string; token: string } | null; rank: RankProfile | null }
+  /**
+   * `account` hands the page a ranked recovery code to keep; it is null when the ranked account came with a session,
+   * whose signed-in user is then `user`. A session the server no longer knows is answered with an error of code
+   * 'session' after the welcome, and the line goes on without it.
+   */
+  | { t: 'welcome'; id: string; v: number; token: string; resumed: boolean; account: { id: string; token: string } | null; rank: RankProfile | null; user?: string }
   | { t: 'rank'; profile: RankProfile | null }
   | { t: 'leaderboard'; players: RankStanding[] }
   | { t: 'ranked'; state: 'searching' | 'idle'; since: number; range: number }
   | { t: 'rankedResult'; matchId: string; result: RankResult; reason: RankReason; before: number; after: number; delta: number; profile: RankProfile }
   | { t: 'rooms'; rooms: RoomSummary[] }
   | { t: 'room'; room: RoomInfo | null }
-  | { t: 'error'; text: string; code?: 'version' | 'full' | 'identity' | 'ranked' }
+  | { t: 'error'; text: string; code?: 'version' | 'full' | 'identity' | 'ranked' | 'session' }
   /** A system line (`from` '알림') also carries its template as `key` and the values as `args`, for the client to translate. */
   | { t: 'chat'; from: string; text: string; key?: string; args?: Record<string, string | number> }
   /** `resume` is a rejoin of a battle already running: a client still drawing it just keeps going. */

@@ -396,17 +396,36 @@ export type StartSetup = {
   gold: Record<GrandFaction, number>;
 };
 
-export type CommanderDef = { id: string; faction: GrandFaction; name: string; title: string; portrait: string; level: number };
+/** `joins` is the turn a commander takes up his post under the growth rules; absent for those of the opening fleets. */
+export type CommanderDef = { id: string; faction: GrandFaction; name: string; title: string; portrait: string; level: number; joins?: number };
 
+/**
+ * The navies' named commanders. Those without `joins` lead the opening fleets; under the growth rules the others join in
+ * the season they first held a naval command in the war (see dateOf in economy.ts: the invasion of 1597 is turn 20).
+ */
 export const COMMANDERS: CommanderDef[] = [
   { id: 'yi', faction: 'joseon', name: '이순신', title: '전라좌수사', portrait: 'portrait_yi', level: 3 },
   { id: 'won', faction: 'joseon', name: '원균', title: '경상우수사', portrait: 'portrait_won', level: 1 },
   { id: 'eokgi', faction: 'joseon', name: '이억기', title: '전라우수사', portrait: 'portrait_eokgi', level: 2 },
   { id: 'kwon', faction: 'joseon', name: '권준', title: '순천부사', portrait: 'portrait_kwon', level: 1 },
+  { id: 'eo', faction: 'joseon', name: '어영담', title: '광양현감', portrait: 'portrait_eo', level: 2, joins: 1 },
+  { id: 'jeongun', faction: 'joseon', name: '정운', title: '녹도만호', portrait: 'portrait_jeongun', level: 1, joins: 1 },
+  { id: 'kimwan', faction: 'joseon', name: '김완', title: '사도첨사', portrait: 'portrait_kimwan', level: 1, joins: 1 },
+  { id: 'nadaeyong', faction: 'joseon', name: '나대용', title: '군관', portrait: 'portrait_nadaeyong', level: 1, joins: 1 },
+  { id: 'songhuirip', faction: 'joseon', name: '송희립', title: '군관', portrait: 'portrait_songhuirip', level: 1, joins: 1 },
+  { id: 'iyeongnam', faction: 'joseon', name: '이영남', title: '율포만호', portrait: 'portrait_iyeongnam', level: 1, joins: 2 },
+  { id: 'baeseol', faction: 'joseon', name: '배설', title: '경상우수사', portrait: 'portrait_baeseol', level: 2, joins: 20 },
+  { id: 'anwi', faction: 'joseon', name: '안위', title: '거제현령', portrait: 'portrait_anwi', level: 1, joins: 21 },
+  { id: 'iwan', faction: 'joseon', name: '이완', title: '군관', portrait: 'portrait_iwan', level: 1, joins: 22 },
   { id: 'wakisaka', faction: 'japan', name: '와키자카 야스하루', title: '수군 대장', portrait: 'portrait_wakisaka', level: 2 },
   { id: 'kuki', faction: 'japan', name: '구키 요시타카', title: '수군 장수', portrait: 'portrait_kuki', level: 2 },
   { id: 'kato', faction: 'japan', name: '가토 요시아키', title: '수군 장수', portrait: 'portrait_kato', level: 2 },
   { id: 'kurushima', faction: 'japan', name: '구루시마 미치후사', title: '무라카미 수군', portrait: 'portrait_kurushima', level: 1 },
+  { id: 'todo', faction: 'japan', name: '도도 다카토라', title: '수군 장수', portrait: 'portrait_todo', level: 1, joins: 1 },
+  { id: 'michiyuki', faction: 'japan', name: '구루시마 미치유키', title: '무라카미 수군', portrait: 'portrait_michiyuki', level: 1, joins: 1 },
+  { id: 'konishi', faction: 'japan', name: '고니시 유키나가', title: '선봉 대장', portrait: 'portrait_konishi', level: 2, joins: 20 },
+  { id: 'shimazu', faction: 'japan', name: '시마즈 요시히로', title: '사쓰마 영주', portrait: 'portrait_shimazu', level: 2, joins: 20 },
+  { id: 'tachibana', faction: 'japan', name: '다치바나 무네시게', title: '야나가와 영주', portrait: 'portrait_tachibana', level: 2, joins: 26 },
   { id: 'chenlin', faction: 'ming', name: '진린', title: '수군 도독', portrait: 'portrait_chenlin', level: 2 },
   { id: 'deng', faction: 'ming', name: '등자룡', title: '수군 부총병', portrait: 'portrait_deng', level: 2 },
 ];
