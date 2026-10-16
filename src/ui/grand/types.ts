@@ -341,3 +341,80 @@ export interface TurnReportView {
   battles: number;
   news: LogLineView[];
 }
+
+// --- Growth rules: the commanders' screen and the tech tree --------------------------------------------------------
+
+/** One skill of a commander's tree: taken, open to take now, or locked with the reason. */
+export interface SkillNodeView {
+  id: string;
+  label: string;
+  text: string;
+  tier: number;
+  state: 'have' | 'open' | 'locked';
+  reason?: string;
+}
+
+export interface SkillBranchView {
+  id: string;
+  label: string;
+  nodes: SkillNodeView[];
+}
+
+/** A fleet a commander could be put in charge of now. */
+export interface AssignTargetView {
+  fleetId: string;
+  name: string;
+  place: string;
+  ships: number;
+  /** The commander who leads it now, if any. */
+  leader?: string;
+}
+
+export interface CommanderCardView {
+  id: string;
+  name: string;
+  hanja: string;
+  title: string;
+  portrait: string;
+  level: number;
+  maxLevel: number;
+  /** Experience now, and the experience of the level he is at and of the next one (equal at the top). */
+  xp: number;
+  xpFrom: number;
+  xpTo: number;
+  points: number;
+  trait: { label: string; text: string };
+  branches: SkillBranchView[];
+  mastery: SkillNodeView;
+  status: 'free' | 'leading' | 'suspended' | 'coming';
+  /** The fleet he leads. */
+  fleet?: { id: string; name: string; place: string };
+  /** When he joins, for a commander still to come. */
+  joins?: string;
+  targets: AssignTargetView[];
+}
+
+export interface TechNodeView {
+  id: string;
+  label: string;
+  text: string;
+  gold: number;
+  turns: number;
+  state: 'done' | 'doing' | 'open' | 'locked';
+  /** Turns of research left while it is under way. */
+  left?: number;
+  reason?: string;
+  /** Ids of the techs it needs, which the tree draws its lines from. */
+  needs: string[];
+  /** Place in the tree: the column is the depth of its prerequisites. */
+  col: number;
+  row: number;
+}
+
+export interface TechTreeView {
+  faction: FactionId;
+  nodes: TechNodeView[];
+  cols: number;
+  rows: number;
+  doing?: { label: string; left: number; total: number };
+}

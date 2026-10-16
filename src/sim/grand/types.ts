@@ -56,7 +56,11 @@ export type GBuilding = { kind: BuildingKind; level: number; upgradeLeft: number
 /** One hull of the persistent fleet. hull, crew and supply are fractions of the ship's full value, like campaign.ts. */
 export type ShipUnit = { id: string; kind: ShipKind; name: string; hull: number; crew: number; supply: number; kills: number };
 
-export type Commander = { id: string; faction: GrandFaction; name: string; title: string; portrait: string; level: number; xp: number; alive: boolean };
+/** `skills` are the ids taken from the commander's skill tree (growth.ts); absent in saves made before the growth rules. */
+export type Commander = { id: string; faction: GrandFaction; name: string; title: string; portrait: string; level: number; xp: number; alive: boolean; skills?: string[] };
+
+/** A navy's research (growth.ts): the techs it has, and the one on the way with the turns it still needs and what was paid. */
+export type TechState = { done: string[]; doing: { id: string; left: number; paid: number } | null };
 
 /**
  * A fleet between two ports. Under the lane rules `left` counts the turns still to sail. Under the march rules
@@ -122,6 +126,8 @@ export type FactionState = {
   objectiveHold: number;
   /** Turns since the faction last fought. */
   idle: number;
+  /** The navy's tech tree under the growth rules (`Grand.growth`). */
+  tech?: TechState;
 };
 
 export type Relation = 'allied' | 'war';
@@ -217,6 +223,11 @@ export type Grand = {
    * Absent saves keep the lane rules, one lane a turn.
    */
   march?: 'tw-v1';
+  /**
+   * The growth rules: named commanders join the navies on their historical turns and take skills as they rise, and each
+   * navy researches a tech tree with silver and turns (growth.ts). Absent saves are migrated on load (migrateGrandGrowth).
+   */
+  growth?: 'v1';
   /** Fresh human-led allied campaigns shrink only their original computer ally. Absent old saves keep their rules. */
   allySupport?: { version: 'player-ally-v1'; faction: 'joseon' | 'ming'; reinforcementCarry: Partial<Record<ShipKind, number>> };
   seed: number;

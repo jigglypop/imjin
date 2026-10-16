@@ -3,6 +3,7 @@ import { dateOf } from './economy';
 import { REGION_ORDER, REGIONS } from './regions';
 import type { Fleet, Grand, RegionId, Transit } from './types';
 import { atWar, lanesOf, passable } from './world';
+import { fleetMarch } from './growth';
 
 /**
  * The march rules (`Grand.march`), the campaign's Total War-like movement. A fleet sails a distance each turn instead
@@ -84,7 +85,7 @@ export const winterTurn = (turn: number) => dateOf(turn).month === 1;
 export function fleetReach(g: Grand, fl: Fleet): number {
   const cmd = fl.commanderId ? g.factions[fl.faction].commanders.find((c) => c.id === fl.commanderId && c.alive) : undefined;
   const level = cmd?.level ?? 1;
-  return MARCH.base * fleetPace(fl) * (1 + MARCH.commander * (level - 1)) * (fl.stance === 'march' ? MARCH.forced : 1) * (winterTurn(g.turn) ? MARCH.winter : 1);
+  return MARCH.base * fleetPace(fl) * (1 + MARCH.commander * (level - 1) + fleetMarch(g, fl)) * (fl.stance === 'march' ? MARCH.forced : 1) * (winterTurn(g.turn) ? MARCH.winter : 1);
 }
 
 /** Share of its lane a fleet at sea has sailed, from `from` toward `to`, under either rules. */

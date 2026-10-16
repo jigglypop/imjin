@@ -5,6 +5,7 @@ import { REGIONS, slotsOf } from './regions';
 import type { BuildingKind, GBuilding, Grand, GrandFaction, QueueItem, RegionId, RegionState, ShipUnit } from './types';
 import { MAX_LEVEL } from './types';
 import { allyIncomeMultiplier } from './support';
+import { techIncome } from './growthData';
 
 /**
  * Every number that turns the battle catalog into campaign money and time lives in TUNING. The ship stats themselves
@@ -239,6 +240,7 @@ export function factionIncome(g: Grand, f: GrandFaction): number {
   for (const id of Object.keys(g.regions) as RegionId[]) if (g.regions[id].owner === f) sum += regionIncome(g, id);
   // Lasting effects of the historical events (aid, war weariness).
   for (const m of g.events?.mods ?? []) if (m.faction === f) sum *= m.mult;
+  if (g.growth === 'v1') sum *= techIncome(g.factions[f].tech?.done, f);
   return Math.round(sum * allyIncomeMultiplier(g, f));
 }
 

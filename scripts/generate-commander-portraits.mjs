@@ -7,7 +7,7 @@
 //   node scripts/generate-commander-portraits.mjs --convert       only (re)cut the webp files from the raws
 //   node scripts/generate-commander-portraits.mjs --note "why"    stored with the request (use when redoing one)
 //
-// Where public/ui/portraits/portrait_<id>.jpg exists it goes to the images edit endpoint as the face reference;
+// Where the earlier casting ref/portrait_<id>.jpg exists it goes to the images edit endpoint as the face reference;
 // the others come from text. Output: portrait_<id>.webp (768) and portrait_<id>_sm.webp (192).
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -77,7 +77,8 @@ const WHO = {
 const REF = { admiral: 'admiral', japan: 'japan', yi: 'yi', won: 'won', eokgi: 'eokgi', kwon: 'kwon', eo: 'eo', jeongun: 'jeongun', anwi: 'anwi', chenlin: 'chenlin', deng: 'deng', shimazu: 'shimazu', konishi: 'konishi', wakisaka: 'wakisaka', kurushima: 'kurushima', michiyuki: 'kurushima', todo: 'todo', kato: 'kato', kuki: 'kuki' };
 const ORDER = ['admiral', 'japan', 'yi', 'won', 'eokgi', 'kwon', 'eo', 'jeongun', 'anwi', 'baeseol', 'songhuirip', 'iwan', 'kimwan', 'nadaeyong', 'iyeongnam', 'chenlin', 'deng', 'shimazu', 'konishi', 'wakisaka', 'kurushima', 'michiyuki', 'todo', 'kato', 'kuki', 'tachibana'];
 
-const refPath = (id) => (REF[id] ? join(OUT, `portrait_${REF[id]}.jpg`) : null);
+// The earlier castings (once public/ui/portraits/*.jpg) are kept beside the raws as the face references.
+const refPath = (id) => (REF[id] ? join(SRC, 'ref', `portrait_${REF[id]}.jpg`) : null);
 // The raws are kept as high-quality webp (a 1024 px PNG is 1.7 MB) so the sources stay in the repository.
 const rawPath = (id) => join(RAW, `${id}.webp`);
 const promptOf = (id) =>
@@ -108,7 +109,7 @@ function finish(prov) {
 async function generate(id, prov) {
   const prompt = promptOf(id);
   const ref = refPath(id);
-  const entry = { id, endpoint: ref ? 'images/edits' : 'images/generations', model: MODEL, prompt, reference: ref ? `public/ui/portraits/portrait_${REF[id]}.jpg` : null, size: SIZE, quality: QUALITY, requestedAt: new Date().toISOString(), note: NOTE || undefined };
+  const entry = { id, endpoint: ref ? 'images/edits' : 'images/generations', model: MODEL, prompt, reference: ref ? `assets-src/commanders-2026-10-16/ref/portrait_${REF[id]}.jpg` : null, size: SIZE, quality: QUALITY, requestedAt: new Date().toISOString(), note: NOTE || undefined };
   let lastErr;
   for (let attempt = 0; attempt < 4; attempt++) {
     try {

@@ -6,6 +6,7 @@
 //   node scripts/balance-grand.mjs --spread=0.1             perturb every navy's opening fleet by up to 10%, to see how stable the result is
 //   node scripts/balance-grand.mjs --fit=japan --seeds=300  find the fighting-power multiplier that gives that navy a third of the wars
 //   node scripts/balance-grand.mjs --catalog --odds         the competitive ship table and auto-resolve odds for a few matched fleets
+//   node scripts/balance-grand.mjs --no-growth              the same wars without the growth rules (src/sim/grand/growth.ts): no skills, no research, only the opening commanders
 //   node scripts/balance-grand.mjs --no-events              the same wars without the scripted historical events (src/sim/grand/events.ts), to see what they shift
 //   node scripts/balance-grand.mjs --verbose                one line per game
 //   node scripts/balance-grand.mjs --trace=1592             one game turn by turn: gold (net), each region as owner+garrison[fleets], the log
@@ -58,8 +59,21 @@ for (const pair of (flag('set', '') || '').split(',').filter(Boolean)) setPath(.
 
 const spread = Number(flag('spread', 0));
 
+const { COMMANDERS } = await load('/src/sim/grand/regions.ts');
+/** A war as it was before the growth rules: the timed ship unlocks, the opening commanders and no tech tree. */
+function withoutGrowth(g) {
+  delete g.growth;
+  for (const st of Object.values(g.factions)) {
+    delete st.tech;
+    st.commanders = st.commanders.filter((c) => COMMANDERS.find((d) => d.id === c.id)?.joins === undefined);
+    for (const c of st.commanders) delete c.skills;
+  }
+  return g;
+}
+
 function play(seed) {
   const g = newGrand(null, seed, 'normal', spread);
+  if (args.includes('--no-growth')) withoutGrowth(g);
   for (let guard = 0; guard < 60 && g.phase !== 'over'; guard += 1) endTurn(g);
   return g;
 }

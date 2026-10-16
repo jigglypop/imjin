@@ -1,9 +1,11 @@
 import type { ShipKind, ShipMods, Team } from '../types';
 import { teamOf } from '../types';
-import { TUNING, buildingOf, levelOf, shipGold } from './economy';
+import { TUNING, buildingOf, levelOf, shipDef, shipGold } from './economy';
 import { REGION_ORDER, REGIONS, type Terrain } from './regions';
 import { mix32 } from './rng';
 import { MARCH } from './march';
+import { fleetTemper, growthMods } from './growth';
+import type { Temper } from '../maneuvers';
 import { applyContactOutcome, commanderLevel, contactForces, settlePending } from './turn';
 import type { BattleOutcome, BattleOutcomeShip, BuildingKind, Contact, Fleet, Grand, GrandFaction, RegionId, ShipUnit } from './types';
 
@@ -61,7 +63,8 @@ export type BridgeSeat = {
   ships: BridgeShip[];
   /** Legacy reserve field: uncapped campaign meetings leave this empty. */
   reserve: BridgeShip[];
-  leader: { name: string; title: string; portrait: string; level: number } | null;
+  /** `temper` is how the commander leads under the maneuver rules, when the growth rules give him one. */
+  leader: { name: string; title: string; portrait: string; level: number; temper?: Temper } | null;
 };
 
 export type RegionBattle = {
@@ -87,7 +90,7 @@ export type RegionBattle = {
 
 type Worth = BridgeShip & { worth: number };
 
-function modsFor(g: Grand, fl: Fleet | undefined, u: ShipUnit): ShipMods {
+function modsFor(g: Grand, fl: Fleet | undefined, u: ShipUnit, faction: GrandFaction): ShipMods {
   const level = fl ? commanderLevel(g, fl) : 1;
   const vet = Math.min(1, u.kills / 12);
   const skill = 0.03 * (level - 1) + 0.04 * vet;
@@ -95,10 +98,14 @@ function modsFor(g: Grand, fl: Fleet | undefined, u: ShipUnit): ShipMods {
   const tired = fl?.stance === 'march' ? MARCH.tired : 1;
   // The competitive ship already carries its navy's boarding rules; only experience belongs to this bridge.
   // A seasoned commander and a crew that has won before hold their nerve longer; a tired one less so.
-  return { reload: (1 + skill) * tired, accuracy: 1 + skill * 0.8, speed: 1, turn: 1, fire: 1, melee: (1 + skill) * tired, defense: 1 + skill * 0.7, morale: (1 + skill) * tired };
+  const base: ShipMods = { reload: (1 + skill) * tired, accuracy: 1 + skill * 0.8, speed: 1, turn: 1, fire: 1, melee: (1 + skill) * tired, defense: 1 + skill * 0.7, morale: (1 + skill) * tired };
+  // The growth rules add the navy's research and the commander's trait and skills.
+  const grown = growthMods(g, faction, u.kind, fl);
+  for (const k of Object.keys(base) as (keyof ShipMods)[]) base[k] *= grown[k];
+  return base;
 }
 
-function toBridge(g: Grand, fl: Fleet | undefined, u: ShipUnit): Worth {
+function toBridge(g: Grand, fl: Fleet | undefined, u: ShipUnit, faction: GrandFaction): Worth {
   return {
     campaignId: u.id,
     kind: u.kind,
@@ -109,14 +116,14 @@ function toBridge(g: Grand, fl: Fleet | undefined, u: ShipUnit): Worth {
     kills: u.kills,
     fleetId: fl?.id ?? null,
     leader: fl ? leaderOf(g, [fl]) : null,
-    mods: modsFor(g, fl, u),
+    mods: modsFor(g, fl, u, faction),
     worth: shipGold(u.kind) * (0.35 + 0.65 * u.hull),
   };
 }
 
 /** Every ship fights; strongest hulls lead the initial formation. */
-function seatShips(g: Grand, fleets: Fleet[], local: ShipUnit[] = []): { ships: BridgeShip[]; reserve: BridgeShip[]; worth: number } {
-  const all = [...fleets.flatMap((fl) => fl.ships.map((u) => toBridge(g, fl, u))), ...local.map((u) => toBridge(g, undefined, u))];
+function seatShips(g: Grand, fleets: Fleet[], local: ShipUnit[] = [], owner: GrandFaction | null = null): { ships: BridgeShip[]; reserve: BridgeShip[]; worth: number } {
+  const all = [...fleets.flatMap((fl) => fl.ships.map((u) => toBridge(g, fl, u, fl.faction))), ...local.map((u) => toBridge(g, undefined, u, owner ?? shipDef(u.kind).faction))];
   all.sort((a, b) => b.worth - a.worth);
   const plain = (list: Worth[]): BridgeShip[] => list.map(({ worth: _w, ...ship }) => ship);
   return { ships: plain(all), reserve: [], worth: all.reduce((a, s) => a + s.worth, 0) };
@@ -128,7 +135,9 @@ const WORKS: Partial<Record<BuildingKind, PrebuiltKind>> = { camp: 'camp', shipy
 function leaderOf(g: Grand, fleets: Fleet[]): BridgeSeat['leader'] {
   const best = [...fleets].sort((a, b) => commanderLevel(g, b) - commanderLevel(g, a))[0];
   const cmd = best?.commanderId ? g.factions[best.faction].commanders.find((c) => c.id === best.commanderId) : undefined;
-  return cmd?.alive ? { name: cmd.name, title: cmd.title, portrait: cmd.portrait, level: cmd.level } : null;
+  if (!cmd?.alive) return null;
+  const temper = fleetTemper(g, best);
+  return temper ? { name: cmd.name, title: cmd.title, portrait: cmd.portrait, level: cmd.level, temper } : { name: cmd.name, title: cmd.title, portrait: cmd.portrait, level: cmd.level };
 }
 
 /**
@@ -155,7 +164,7 @@ export function describeContact(g: Grand, c: Contact): RegionBattle {
   // A meeting out at sea is fought in the waters of the nearer port, without its guard boats, guns or works.
   const home = !c.sea && region.owner === c.defender;
   const atk = seatShips(g, forces.attackers);
-  const dfn = seatShips(g, forces.defenders, home ? region.garrison : []);
+  const dfn = seatShips(g, forces.defenders, home ? region.garrison : [], c.defender);
   const works: RegionBattleBuilding[] = [];
   if (home) {
     for (const b of region.buildings) {

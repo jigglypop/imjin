@@ -21,6 +21,7 @@ import './hud.css';
 import { ControlsHelp, Tooltips, Tutorial, useTour } from './Tutorial';
 import { useNet } from '../net/NetClient';
 import { RankActions, RankResult } from './RankResult';
+import { portraitUrl } from './portrait';
 
 const SEA_LABELS: Record<SeaStateName, string> = { calm: '잔잔', moderate: '보통', rough: '거침' };
 const ACTIVITY: Record<string, string> = {
@@ -130,7 +131,7 @@ function Card({ sq, compact, depth, onClick, onDouble }: { sq: SquadronInfo; com
   return (
     // The simplified layout shows only the portrait and the count: the explanation is headed by the fleet's name.
     <button className={`card f-${sq.faction} ${sq.selected ? 'card--selected' : ''} ${sq.alive === 0 ? 'card--dead' : ''}`} onClick={onClick} onDoubleClick={onDouble} aria-label={`${tName(sq.name)} · ${tCommander(sq.commander)}`} data-tip="card" data-tip-title={`${tName(sq.name)} · ${tCommander(sq.commander)}`}>
-      <img src={`/ui/portraits/${sq.portrait}.jpg`} alt="" />
+      <img src={portraitUrl(sq.portrait, true)} alt="" />
       <div className="card-flags">
         {sq.burning > 0 && (
           <div className="card-flag card-flag--fire" title={t('불이 났습니다')}>
@@ -523,7 +524,7 @@ function Detail({ engine, snap, p, portrait }: { engine: Engine; snap: GameSnaps
   return (
     <div className="detail glass interactive">
         <div className="detail-head">
-          <img className="detail-portrait" src={`/ui/portraits/${portrait}.jpg`} alt="" />
+          <img className="detail-portrait" src={portraitUrl(portrait)} alt="" />
           <div className="detail-title">
             <div className="detail-name">{tName(p.name)}</div>
             <div className="detail-sub">

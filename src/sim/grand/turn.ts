@@ -17,7 +17,7 @@ import {
   levelOf,
   navyName,
 } from './economy';
-import { COMMANDERS, KOREA_COAST, REGION_ORDER, REGIONS, START } from './regions';
+import { KOREA_COAST, REGION_ORDER, REGIONS, START } from './regions';
 import { makeRng, next } from './rng';
 import type { BattleOutcome, BuildingKind, Contact, Fleet, Grand, GrandFaction, RegionId, Result, ShipUnit } from './types';
 import { GRAND_FACTIONS, fail, ok } from './types';
@@ -28,6 +28,7 @@ import type { ShipKind } from '../types';
 import { newAllySupport, scaleAllyOpening, supportReinforcements } from './support';
 import { MARCH, laneKm, marchFleets, marching, winterTurn, type SeaMeeting } from './march';
 import { battleGrade, GRADE_TEXT } from './report';
+import { advanceResearch, fleetXp, growing, growthMods, joinCommanders } from './growth';
 
 export { MAX_TURNS, LEVEL_XP, spawnShip };
 
@@ -41,6 +42,7 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
     balanceProfile: 'competitive-v1',
     forces: 'wide-v1',
     march: 'tw-v1',
+    growth: 'v1',
     seed,
     rng: makeRng(seed),
     player,
@@ -74,12 +76,14 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
       faction: f,
       gold: START.gold[f],
       alive: true,
-      commanders: COMMANDERS.filter((c) => c.faction === f).map((c) => ({ ...c, xp: LEVEL_XP[c.level - 1] ?? 0, alive: true })),
+      commanders: [],
       unlocked: [],
+      tech: { done: [], doing: null },
       objectiveHold: 0,
       idle: 0,
     };
   }
+  joinCommanders(g, true);
   const scale = Object.fromEntries(GRAND_FACTIONS.map((f) => [f, TUNING.startFleet[f] * TUNING.forceScale * (1 + spread * (2 * next(g.rng) - 1))])) as Record<GrandFaction, number>;
   const scaled = START.fleets.map((s) => ({ ...s, ships: Object.fromEntries(Object.entries(s.ships).map(([k, n]) => [k, Math.floor(n * scale[s.faction])])) as Partial<Record<ShipKind, number>> }));
   // Round a navy's total once, then allocate the remaining hulls by fractional remainder. Rounding each fleet
@@ -119,9 +123,18 @@ export function contactForces(g: Grand, c: Contact): { attacker: Force; defender
   const home = !c.sea && region.owner === c.defender;
   // A side caught on a forced march fights tired.
   const morale = (list: Fleet[]) => (list.some((f) => f.stance === 'march') ? MARCH.tired : 1);
+  // Under the growth rules each ship fights with its navy's research and its own commander's trait and skills.
+  const mods = (list: Fleet[], guards: ShipUnit[] = []) => {
+    if (!growing(g)) return undefined;
+    const out: Record<string, ReturnType<typeof growthMods>> = {};
+    for (const fl of list) for (const u of fl.ships) out[u.id] = growthMods(g, fl.faction, u.kind, fl);
+    for (const u of guards) out[u.id] = growthMods(g, c.defender, u.kind, undefined);
+    return out;
+  };
+  const guards = home ? region.garrison : [];
   return {
-    attacker: { ships: attackers.flatMap((f) => f.ships), leader: Math.max(1, ...attackers.map((f) => commanderLevel(g, f))), morale: morale(attackers) },
-    defender: { ships: [...defenders.flatMap((f) => f.ships), ...(home ? region.garrison : [])], leader: Math.max(1, ...defenders.map((f) => commanderLevel(g, f))), region: home ? region : undefined, morale: morale(defenders) },
+    attacker: { ships: attackers.flatMap((f) => f.ships), leader: Math.max(1, ...attackers.map((f) => commanderLevel(g, f))), morale: morale(attackers), mods: mods(attackers) },
+    defender: { ships: [...defenders.flatMap((f) => f.ships), ...guards], leader: Math.max(1, ...defenders.map((f) => commanderLevel(g, f))), region: home ? region : undefined, morale: morale(defenders), mods: mods(defenders, guards) },
     attackers,
     defenders,
   };
@@ -221,7 +234,7 @@ function dropEmpty(g: Grand) {
 function giveXp(g: Grand, fl: Fleet, kills: number, won: boolean) {
   const cmd = commanderOf(g, fl);
   if (!cmd || !cmd.alive) return;
-  grantXp(g, fl.faction, cmd, 25 + kills * 8 + (won ? 50 : 0));
+  grantXp(g, fl.faction, cmd, Math.round((25 + kills * 8 + (won ? 50 : 0)) * fleetXp(g, fl)));
 }
 
 /** The one way a battle, played or auto-resolved, changes the campaign. */
@@ -732,7 +745,8 @@ function joinOrNewFleet(g: Grand, faction: GrandFaction, at: RegionId, unit: Shi
 const scaleShips = (ships: Partial<Record<ShipKind, number>>, k: number) => Object.fromEntries(Object.entries(ships).map(([kind, n]) => [kind, n! * k])) as Partial<Record<ShipKind, number>>;
 
 function runEvents(g: Grand) {
-  for (const u of TUNING.unlocks) {
+  // Under the growth rules a navy researches its new hulls (growth.ts) instead of being handed them on a date.
+  for (const u of growing(g) ? [] : TUNING.unlocks) {
     if (g.turn !== u.turn || !g.factions[u.faction].alive || g.factions[u.faction].unlocked.includes(u.kind)) continue;
     g.factions[u.faction].unlocked.push(u.kind);
     note(g, u.note, undefined, g.player === u.faction ? 'good' : 'info');
@@ -905,12 +919,14 @@ function advanceTurn(g: Grand) {
     delete fl.stance;
     delete fl.assault;
   }
+  advanceResearch(g);
   runEvents(g);
   recordStats(g, g.fought, g.turn, paid);
   checkVictory(g);
   if (g.phase !== 'over') {
     g.turn += 1;
     g.phase = 'orders';
+    if (growing(g)) joinCommanders(g);
     fireEvents(g);
   }
 }
