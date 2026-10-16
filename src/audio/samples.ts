@@ -26,18 +26,15 @@ export const BANK = {
   taiko: { count: 2, gain: 0.75 },
   gong: { count: 2, gain: 0.8 },
   horn: { count: 3, gain: 0.9 },
-  warcry: { count: 3, gain: 0.8 },
-  cheer: { count: 2, gain: 0.8 },
   clash: { count: 3, gain: 0.55 },
   overboard: { count: 2, gain: 0.7 },
   arrows: { count: 2, gain: 0.8 },
-  oars: { count: 3, gain: 0.7 },
 } as const;
 
 export type Kind = keyof typeof BANK;
 
 /** Loaded first, so the sounds a battle opens with are there before the rare ones. */
-const ORDER: Kind[] = ['cannon_heavy', 'cannon_medium', 'cannon_small', 'broadside', 'impact_wood', 'splash', 'cannon_far', 'whoosh', 'explosion', 'musket_volley', 'buk', 'taiko', 'arrows', 'clash', 'warcry', 'horn', 'sink', 'creak', 'gong', 'oars', 'overboard', 'cheer', 'drum'];
+const ORDER: Kind[] = ['cannon_heavy', 'cannon_medium', 'cannon_small', 'broadside', 'impact_wood', 'splash', 'cannon_far', 'whoosh', 'explosion', 'musket_volley', 'buk', 'taiko', 'arrows', 'clash', 'horn', 'sink', 'creak', 'gong', 'overboard', 'drum'];
 
 /** Kinds a phone does not decode: the old drum, which the buk and taiko now play. */
 const LEAN_SKIPS: readonly Kind[] = ['drum'];

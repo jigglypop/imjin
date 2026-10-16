@@ -453,7 +453,7 @@ def _hit(name, t0, t1, r=1.0, pre=0.012):
     return dsp.rate(x, r)
 
 def build_command():
-    """Drums (buk, taiko), gong, conch horns, war cries, cheers, blades, men overboard and arrow volleys."""
+    """Drums (buk, taiko), gong, conch horns, blades, men overboard and arrow volleys. No human voices."""
     D = {}
     hall = dsp.make_ir(1.3, 0.8, 0.3, lp_hz=3500, length=1.4, seed=311)
     # Joseon war drum (buk): the deep strokes of a big drum recorded in a loop, slowed for size and given a boom.
@@ -480,19 +480,6 @@ def build_command():
         x = dsp.lp(dsp.hp(_cut(name, a, b, 120, 900), 90, 2), 2400, 2)
         x = dsp.reverb(x, dsp.make_ir(1.4, 1.0, 0.4, lp_hz=3000, length=1.5, seed=330 + k), wet_db=-10)
         D[f'horn_{k}'] = x
-    # War cries: roaring crowds with a man's wordless yell on top. No source holds a word: a concert crowd roaring, a
-    # drawn-out "ahh" shout and a studio roar, so nothing here is a language to translate.
-    crowd = dsp.hp(_cut('449915', 3.6, 7.2, 150, 800), 120, 2)
-    crowd2 = dsp.hp(_cut('130568', 1.0, 4.4, 150, 800), 120, 2)
-    crowd3 = dsp.hp(dsp.rate(_cut('130568', 10.0, 13.6, 150, 800), 1.08), 120, 2)
-    yell = dsp.hp(_cut('396230', 0.45, 3.2, 100, 700), 120, 2)
-    roar = dsp.hp(_cut('265554', 0.0, 2.9, 20, 600), 120, 2)
-    D['warcry_1'] = crowd
-    D['warcry_2'] = dsp.mix_at(crowd2.copy(), dsp.rate(yell, 0.92), 0.2, 0.55)
-    D['warcry_3'] = dsp.mix_at(roar*0.8, crowd3, 0.2, 0.6)
-    # Cheers: a short roar swelling and falling, and a longer one from a small crowd.
-    D['cheer_1'] = dsp.hp(_cut('267249', 0.1, 3.4, 60, 900), 150, 2)
-    D['cheer_2'] = dsp.hp(_cut('264377', 3.0, 6.2, 400, 1000), 150, 2)
     # Blades and spears: stretches of steel on steel with several blows, the top taken off.
     for k, (name, a, b) in enumerate([('568790', 0.45, 2.6), ('568790', 8.0, 10.2), ('708196', 8.0, 10.5)], 1):
         x = dsp.lp(dsp.hp(_cut(name, a, b, 3, 220), 400, 2), 8000, 1)
@@ -509,7 +496,4 @@ def build_command():
         a2 = dsp.mix_at(a2, dsp.rate(fly, r), t, g)
     a2 = dsp.mix_at(a2, dsp.lp(patter, 6000, 1), 0.7, 0.55)
     D['arrows_2'] = dsp.hp(a2, 200, 2)
-    # Oars: the stroke of a galley's rowers, two metered grunts of a rowing crew and a pair of oars dipping.
-    for k, (name, a, b) in enumerate([('764048', 1.15, 2.55), ('764048', 2.6, 3.95), ('438846', 4.9, 6.4)], 1):
-        D[f'oars_{k}'] = dsp.lp(dsp.hp(_cut(name, a, b, 15, 260), 90, 2), 6500, 1)
     return D

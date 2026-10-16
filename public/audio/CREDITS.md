@@ -4,9 +4,9 @@ Battle sound samples for the game, built from Freesound recordings that are all 
 
 52 files, mono, 44.1 kHz, MP3 (96 kbps CBR; the fleet-command sounds, which are voices and noise, 64 kbps), about 1.6 MB in total. No recording is used raw: each file is an edit, pitch change, layering and reverb of the sources below, with a synthesized 30-95 Hz sub-bass thump added to the guns and explosions, a synthetic outdoor reverb tail, and a limiter. Loudness is normalized per class (max momentary loudness, EBU R128, LUFS-M): heavy guns -13.5, broadsides -12, explosions -11.5, medium guns -15, wood impacts -15, small guns -17, splashes -18, far booms -19, musket volleys -20, sinking -20, creak -24; peaks are limited to -1.5 dBFS before encoding (decoded MP3 true peaks stay below -1.3 dBFS).
 
-The fleet-command sounds (buk, taiko, gong, horn, warcry, cheer, clash, overboard, arrows, oars) are likewise edits of the sources below: slowed or sped so no word stays readable, low-passed or high-passed, given a short hall, and normalised per class (buk -17, taiko -16, gong -21, horn -22, warcry -23, cheer -24, clash -21, overboard -23, arrows -25, oars -26 LUFS-M). Every source page was opened and its licence read as Creative Commons 0 before use.
+The fleet-command sounds (buk, taiko, gong, horn, clash, overboard, arrows) are likewise edits of the sources below: slowed or sped so no word stays readable, low-passed or high-passed, given a short hall, and normalised per class (buk -17, taiko -16, gong -21, horn -22, clash -21, overboard -23, arrows -25 LUFS-M). Every source page was opened and its licence read as Creative Commons 0 before use.
 
-Some files are played in more than one way: `sink_1` also in slices of 1.4 to 4.5 s (with fades) for the bubbles and the last gulp of a sinking ship, a short high-pitched slice of `impact_wood_2` for blows in a melee, and short slices of `warcry_3` for men shouting on deck. No other recording is used; the synthesised fallback voices make no sound that is not noise or a low thump.
+Some files are played in more than one way: `sink_1` also in slices of 1.4 to 4.5 s (with fades) for the bubbles and the last gulp of a sinking ship, a short high-pitched slice of `impact_wood_2` for blows in a melee. No other recording is used; the synthesised fallback voices make no sound that is not noise or a low thump.
 
 ## Files
 
@@ -49,11 +49,6 @@ Some files are played in more than one way: `sink_1` also in slices of 1.4 to 4.
 | horn_1.mp3 | 3.5 s | 28 KB | Conch horn (nagak, horagai): one long blast of a conch shell, rising and falling like a breath. | 78974 |
 | horn_2.mp3 | 3.6 s | 29 KB | Second conch blast from another recording, a higher shell. | 64830 |
 | horn_3.mp3 | 3.6 s | 29 KB | Third conch blast, lower and rougher. | 528598 |
-| warcry_1.mp3 | 3.6 s | 29 KB | War cry (hamseong): a crowd roaring as it surges, no word in it. | 449915 |
-| warcry_2.mp3 | 3.4 s | 27 KB | War cry: a drawn-out shouting crowd with a man's wordless yell on top. | 130568, 396230 |
-| warcry_3.mp3 | 3.5 s | 28 KB | War cry: a studio roar with a shouting crowd behind it. Also cut into short slices for men shouting on deck. | 265554, 130568 |
-| cheer_1.mp3 | 3.2 s | 25 KB | Cheer: a crowd roar swelling and falling. | 267249 |
-| cheer_2.mp3 | 3.2 s | 26 KB | Cheer: a small crowd cheering, longer. | 264377 |
 | clash_1.mp3 | 2.1 s | 17 KB | Blades clashing in a boarding fight: several blows of steel on steel, the top taken off. | 568790 |
 | clash_2.mp3 | 2.1 s | 17 KB | Second stretch of blows from the same recording. | 568790 |
 | clash_3.mp3 | 2.5 s | 20 KB | Two swords hitting each other, a slower exchange. | 708196 |
@@ -61,9 +56,6 @@ Some files are played in more than one way: `sink_1` also in slices of 1.4 to 4.
 | overboard_2.mp3 | 2.5 s | 20 KB | Second plunge, softer. | 585744 |
 | arrows_1.mp3 | 2.7 s | 21 KB | A low volley of arrows in flight. | 474121 |
 | arrows_2.mp3 | 2.9 s | 23 KB | Arrows loosed in a ragged volley: four flybys at different pitches with the patter of shafts landing. | 394180, 841529 |
-| oars_1.mp3 | 1.4 s | 11 KB | Oars (galley rowers): one metered stroke of a rowing crew, the grunt of the pull and the sweep of the blades. | 764048 |
-| oars_2.mp3 | 1.3 s | 11 KB | The next stroke of the same crew. | 764048 |
-| oars_3.mp3 | 1.5 s | 12 KB | Oars dipping and creaking in their pins, two strokes. | 438846 |
 
 ## Sources
 
@@ -76,7 +68,6 @@ All licences: Creative Commons 0 (http://creativecommons.org/publicdomain/zero/1
 | 78974 | Conch.wav | RoofDog | https://freesound.org/people/RoofDog/sounds/78974/ |
 | 125348 | civl war canon fire.wav | adeluc4 | https://freesound.org/people/adeluc4/sounds/125348/ |
 | 125932 | reenactment2.aif | alienistcog | https://freesound.org/people/alienistcog/sounds/125932/ |
-| 130568 | RoaringCrowd.wav | benfree | https://freesound.org/people/benfree/sounds/130568/ |
 | 182822 | Artillery Shots.flac | qubodup | https://freesound.org/people/qubodup/sounds/182822/ |
 | 183450 | Wood Crack 5 | utsuru | https://freesound.org/people/utsuru/sounds/183450/ |
 | 183452 | Wood Crack 2 | utsuru | https://freesound.org/people/utsuru/sounds/183452/ |
@@ -91,16 +82,10 @@ All licences: Creative Commons 0 (http://creativecommons.org/publicdomain/zero/1
 | 241840 | Incoming mortar 1 | Zagge28 | https://freesound.org/people/Zagge28/sounds/241840/ |
 | 257752 | Wooden Ship Break | Kodack | https://freesound.org/people/Kodack/sounds/257752/ |
 | 259300 | Huge Explosion | unfa | https://freesound.org/people/unfa/sounds/259300/ |
-| 264377 | small crowd cheering | HowardV | https://freesound.org/people/HowardV/sounds/264377/ |
-| 265554 | Studio roar | AugustSandberg | https://freesound.org/people/AugustSandberg/sounds/265554/ |
-| 267249 | BerlinGameScene.com Crowd Cheer 1 | BerlinGameScene | https://freesound.org/people/BerlinGameScene/sounds/267249/ |
 | 274223 | War Drum Loop | PearceWilsonKing | https://freesound.org/people/PearceWilsonKing/sounds/274223/ |
 | 394180 | Arrow Loose and Flyby | saturdaysoundguy | https://freesound.org/people/saturdaysoundguy/sounds/394180/ |
-| 396230 | Elf Male Warcry.wav | zatar | https://freesound.org/people/zatar/sounds/396230/ |
 | 423959 | Bubbling | pillwave | https://freesound.org/people/pillwave/sounds/423959/ |
-| 438846 | G54-27-Oars Rowing.wav | craigsmith | https://freesound.org/people/craigsmith/sounds/438846/ |
 | 442773 | Big Water Splash | qubodup | https://freesound.org/people/qubodup/sounds/442773/ |
-| 449915 | crowd roar.WAV | jonsept | https://freesound.org/people/jonsept/sounds/449915/ |
 | 474121 | volley of arrows01.wav | mcaseydesign | https://freesound.org/people/mcaseydesign/sounds/474121/ |
 | 476225 | Huge Distant Explosion | Fission9 | https://freesound.org/people/Fission9/sounds/476225/ |
 | 487146 | R29-34-Big Object Falls and Crashes in Room.wav | craigsmith | https://freesound.org/people/craigsmith/sounds/487146/ |
@@ -122,7 +107,6 @@ All licences: Creative Commons 0 (http://creativecommons.org/publicdomain/zero/1
 | 705629 | Destruction_misc1.wav | AirwaveXV | https://freesound.org/people/AirwaveXV/sounds/705629/ |
 | 708196 | Swords Hitting Each Other: 2 Swords clashing, fighting one another, hitting each other. Recorded with ZoomH6, with rifle microphone, EQ was used to reduce background noise. | RileyB711 | https://freesound.org/people/RileyB711/sounds/708196/ |
 | 723974 | Wooden Door breaks | Saladsounds | https://freesound.org/people/Saladsounds/sounds/723974/ |
-| 764048 | CRWDBatl_Crowd Grunting, Exerting, Metered, Rowing_ShaneVincent_GSC24_FUMA-AmbeoVR.wav | ShangusBurger | https://freesound.org/people/ShangusBurger/sounds/764048/ |
 | 803159 | Temple Gong 2 | kerozenne | https://freesound.org/people/kerozenne/sounds/803159/ |
 | 841529 | arrows clattering | Fenodyrie | https://freesound.org/people/Fenodyrie/sounds/841529/ |
 | 854206 | Volley Rifle Fire 5 | qubodup | https://freesound.org/people/qubodup/sounds/854206/ |

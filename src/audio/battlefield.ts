@@ -88,7 +88,7 @@ export class Battlefield {
   private nextFlush = 0;
   private nextBarrage = 0;
   /** Context times before which another sound of that kind is held back: a pass, a blow, a flame or a drum a moment ago masks the next. */
-  private readonly gate = { whoosh: 0, hiss: 0, melee: 0, ignite: 0, drum: 0, cue: 0, clash: 0, shout: 0, over: 0, cry: 0, boardCry: 0, gong: 0, cheer: 0, signal: 0 };
+  private readonly gate = { whoosh: 0, hiss: 0, melee: 0, ignite: 0, drum: 0, cue: 0, clash: 0, over: 0, cry: 0, gong: 0, signal: 0 };
   /** The drums, horns, cries and crews' work go through their own gain so a heavy salvo can push them down. */
   private readonly commandBus: GainNode;
   /** Leader ship id to the stroke it is beating next; only the few leaders that are voiced have one. */
@@ -271,7 +271,7 @@ export class Battlefield {
       if (beat.next < now - 0.5) beat.next = now;
       while (beat.next < now + 0.35) {
         const st = stroke(d.team, d.mode, beat.step, d.pace);
-        this.beat(d, st.gain, Math.max(now + 0.02, beat.next), beat.step);
+        this.beat(d, st.gain, Math.max(now + 0.02, beat.next));
         beat.next += st.wait;
         beat.step += 1;
       }
@@ -279,8 +279,8 @@ export class Battlefield {
     for (const id of this.beats.keys()) if (!live.has(id)) this.beats.delete(id);
   }
 
-  /** One stroke of a leader's drum: the buk of Joseon or the taiko of Japan, with the oars keeping time under a march. */
-  private beat(d: Voiced, weight: number, t: number, step: number) {
+  /** One stroke of a leader's drum: the buk of Joseon or the taiko of Japan. */
+  private beat(d: Voiced, weight: number, t: number) {
     const s = d.spot;
     const bank: Kind = d.team === 'japan' ? 'taiko' : 'buk';
     const level = { advance: 0.9, charge: 1, engage: 0.7, order: 1.1 }[d.mode];
@@ -289,12 +289,9 @@ export class Battlefield {
     const at = t + s.delay;
     const len = this.sample(bank, at, { gain, pan: s.pan, rate: rnd(0.96, 1.04), cutoff: Math.max(600, s.muffle), wet: 0.25, dest: this.commandBus }, 0.35, STROKE_SECS);
     if (!len && !this.samples.has(bank) && gain > 0.2 && this.budget >= 1) this.voices.drum(at);
-    if (d.mode === 'advance' && step % 2 === 0 && s.dist < 500) {
-      this.sample('oars', at + 0.04, { gain: loud(s.gain) * 0.8, pan: s.pan, rate: rnd(0.95, 1.05), cutoff: Math.max(900, s.muffle), wet: 0.15, dest: this.commandBus }, 0.3, STROKE_SECS);
-    }
   }
 
-  /** A squadron going to the charge: its horn (Joseon's nagak, the Japanese horagai) and then the cry of its men. */
+  /** A squadron going to the charge: its horn (Joseon's nagak, the Japanese horagai). */
   private charge(squadron: number, team: Team, s: Heard, now: number) {
     const last = this.charged.get(squadron);
     this.charged.set(squadron, now);
@@ -305,21 +302,12 @@ export class Battlefield {
     const at = now + s.delay;
     const japan = team === 'japan';
     this.signal(japan ? 'horagai' : 'nagak', at, s, gain);
-    this.sample('warcry', at + 0.4, { gain, pan: s.pan, rate: japan ? rnd(1.08, 1.18) : rnd(0.94, 1.02), cutoff: Math.max(1200, s.muffle), wet: 0.3, dest: this.commandBus }, 0.8);
   }
 
   /** A conch signal: the nagak is blown short and firm, the horagai long and low. */
   private signal(kind: 'nagak' | 'horagai', at: number, s: Heard, gain: number) {
     if (kind === 'nagak') this.sample('horn', at, { gain: gain * 0.75, pan: s.pan, rate: rnd(0.98, 1.06), cutoff: Math.max(900, s.muffle), wet: 0.35, offset: 0.1, dur: 1.9, dest: this.commandBus }, 0.8);
     else this.sample('horn', at, { gain: gain * 0.9, pan: s.pan, rate: rnd(0.84, 0.9), cutoff: Math.max(900, s.muffle), wet: 0.35, dest: this.commandBus }, 0.8);
-  }
-
-  /** The roar of a crew that has won something; `size` 1 is a flagship going down. */
-  private cheer(s: Heard, at: number, size: number) {
-    const now = this.ctx.currentTime;
-    if (s.gain < 0.05 || now < this.gate.cheer) return;
-    this.gate.cheer = now + 2;
-    this.sample('cheer', at, { gain: loud(s.gain) * (0.45 + 0.55 * size), pan: s.pan, rate: rnd(0.95, 1.05), cutoff: Math.max(1200, s.muffle), wet: 0.35, dest: this.commandBus }, 1);
   }
 
   /** The gong that calls a fleet off or back, struck twice for a retreat. */
@@ -330,15 +318,6 @@ export class Battlefield {
     for (let i = 0; i < strokes; i += 1) {
       this.sample('gong', at + i * 1.7, { gain: Math.pow(s.gain, 0.6) * (i ? 0.8 : 1), pan: s.pan, rate: rnd(0.96, 1.03), cutoff: Math.max(1000, s.muffle), wet: 0.4, dest: this.commandBus }, 0.6);
     }
-  }
-
-  /** Men shouting on a deck: a short slice out of the crowd's cry, never the same one twice. */
-  private shout(s: Heard, at: number, weight: number) {
-    const now = this.ctx.currentTime;
-    if (s.gain < 0.05 || now < this.gate.shout) return;
-    this.gate.shout = now + 0.8;
-    const dur = rnd(0.9, 1.6);
-    this.sample('warcry', at, { gain: loud(s.gain) * weight, pan: s.pan, rate: rnd(0.9, 1.15), cutoff: Math.max(1200, s.muffle), wet: 0.2, index: 2, offset: rnd(0.2, 1.8), dur, dest: this.commandBus }, 0.5);
   }
 
   /** One gun's report from the bank: any file of the class, a little detuned, filtered by range. */
@@ -706,13 +685,6 @@ export class Battlefield {
         const ship = battle.get(e.type === 'board' ? e.b : e.ship);
         if (!ship) continue;
         const s = this.spatial(camera, ship.x, 3, ship.z);
-        // The boarders' cry as they leap across, once for a fight however many ships close.
-        if (e.type === 'board' && s.gain >= 0.05 && now >= this.gate.boardCry) {
-          this.gate.boardCry = now + 3;
-          const boarder = battle.get(e.a);
-          const japan = boarder?.team === 'japan';
-          this.sample('warcry', now + s.delay, { gain: loud(s.gain), pan: s.pan, rate: japan ? rnd(1.08, 1.18) : rnd(0.94, 1.02), cutoff: Math.max(1200, s.muffle), wet: 0.3, dest: this.commandBus }, 0.8);
-        }
         // A boarding fight raises a casualty every few frames; the clash is a texture, so it speaks about five times a second.
         if (s.gain < 0.05 || now < this.gate.melee || Math.random() > keep) continue;
         this.gate.melee = now + 0.2;
@@ -720,12 +692,11 @@ export class Battlefield {
         const at = now + s.delay;
         // A short slice of the bank's splintering plank, high and quick, makes a blow; the synthesised clack is the stand-in.
         if (!this.sample('impact_wood', at, { gain: loud(s.gain) * 0.3, pan: s.pan, rate: rnd(1.3, 1.7), cutoff: Math.max(900, s.muffle), index: 1, offset: rnd(0, 0.15), dur: 0.3 }, 0.5)) voices.clack(at, s.gain * 0.4, s.pan);
-        // Under the blows, steel on steel, the men's shouting and now and then a man into the sea.
+        // Under the blows, steel on steel and now and then a man into the sea.
         if (now >= this.gate.clash) {
           this.gate.clash = now + 1.1;
           this.sample('clash', at, { gain: loud(s.gain) * 0.8, pan: s.pan + rnd(-0.1, 0.1), rate: rnd(0.95, 1.08), cutoff: Math.max(1500, s.muffle), wet: 0.15, dest: this.commandBus }, 0.5);
         }
-        this.shout(s, at, 0.4);
         if (e.type === 'casualty' && e.count >= 2 && now >= this.gate.over && Math.random() < 0.35) {
           this.gate.over = now + 0.9;
           this.sample('overboard', at + 0.2, { gain: loud(s.gain) * 0.8, pan: s.pan + rnd(-0.2, 0.2), rate: rnd(0.9, 1.1), cutoff: Math.max(1200, s.muffle), dest: this.commandBus }, 0.4);
@@ -753,30 +724,22 @@ export class Battlefield {
         this.signal(ship.team === 'japan' ? 'horagai' : 'nagak', now + s.delay, s, loud(s.gain));
       } else if (e.type === 'morale') {
         const ship = battle.get(e.ship);
-        if (!ship || (e.state !== 'routing' && e.state !== 'rallying')) continue;
+        if (!ship || e.state !== 'rallying') continue;
         const s = this.spatial(camera, ship.x, 3, ship.z);
-        if (e.state === 'routing') this.shout(s, now + s.delay, 0.7);
         // A leader steadied again calls its ships back with the gong.
-        else if (ship.flagship || battle.squadrons.find((q) => q.id === ship.squadronId)?.leaderId === ship.id) this.gong(s, now + s.delay, 1);
+        if (ship.flagship || battle.squadrons.find((q) => q.id === ship.squadronId)?.leaderId === ship.id) this.gong(s, now + s.delay, 1);
       } else if (e.type === 'leader') {
-        // A squadron's leader gone: the other side cheers, loudest for an admiral.
+        // An admiral gone: the other side's conch answers.
         const ship = battle.get(e.ship);
         if (!ship) continue;
         const s = this.spatial(camera, ship.x, 3, ship.z);
-        this.cheer(s, now + s.delay + 0.4, e.flagship ? 1 : 0.45);
         if (e.flagship) this.signal(ship.team === 'japan' ? 'nagak' : 'horagai', now + s.delay + 1.2, s, loud(s.gain));
       } else if (e.type === 'broken') {
-        // A fleet turns for home: its gong sounds the retreat and the victors cheer.
+        // A fleet turns for home: its gong sounds the retreat.
         const ship = battle.get(e.ship);
         if (!ship) continue;
         const s = this.spatial(camera, ship.x, 3, ship.z);
         this.gong(s, now + s.delay, 2);
-        this.cheer(s, now + s.delay + 1, 0.9);
-      } else if (e.type === 'struck') {
-        const ship = battle.get(e.by);
-        if (!ship) continue;
-        const s = this.spatial(camera, ship.x, 3, ship.z);
-        this.cheer(s, now + s.delay + 0.3, 0.35);
       }
     }
   }
