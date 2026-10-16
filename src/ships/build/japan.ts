@@ -2,7 +2,7 @@
  * Parts shared by the Japanese ships: nobori banners, shachihoko, maku curtains, tategaki shield boards and the
  * plaster-and-timber walls of the fortress tiers.
  */
-import { flagRect } from './atlas';
+import { flagRect, pictureRect } from './atlas';
 import { byLod, type Ctx } from './common';
 import { box, cloth, compose, cylinder, rotY, spike, sweep, rectSection, tube, xlate, type Paint, type TubeStation, type V3 } from './parts';
 
@@ -52,9 +52,15 @@ export function shachihoko(ctx: Ctx, gold: Paint, base: V3, facing: 1 | -1, scal
   });
 }
 
-/** Indigo curtains with the crest, hung along an eave: one panel per bay. */
-export function makuRun(ctx: Ctx, maku: Paint, x0: number, x1: number, z: number, yTop: number, h: number, n: number, phase: number, wood: Paint) {
+/**
+ * Indigo curtains with the crest, hung along an eave: one panel per bay, as many bays as panels of the picture's
+ * proportions fit, so the crest stays round.
+ */
+export function makuRun(ctx: Ctx, x0: number, x1: number, z: number, yTop: number, h: number, phase: number, wood: Paint) {
   if (ctx.lod > 1) return;
+  const pic = pictureRect(ctx.faction, 'maku');
+  const maku = ctx.P('maku', { rect: pic.rect });
+  const n = Math.max(1, Math.round((x1 - x0) / (h * pic.aspect)));
   const bay = (x1 - x0) / n;
   // The cloth runs from its top-right corner leftward so its print faces outward.
   for (let i = 0; i < n; i += 1) {

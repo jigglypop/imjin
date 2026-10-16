@@ -3,7 +3,7 @@ import { SURF } from './surf';
 
 export type Faction = 'joseon' | 'japan' | 'ming';
 
-type Slot = { name: string; size?: number; sheet?: { cols: number; rows: number }; flags?: { name: string; aspect?: number }[] };
+type Slot = { name: string; size?: number; aspect?: number; sheet?: { cols: number; rows: number }; flags?: { name: string; aspect?: number }[] };
 const slots = layout.factions as unknown as Record<Faction, Slot[]>;
 
 export const ATLAS = { grid: layout.grid, cell: layout.cell, pad: layout.pad };
@@ -67,6 +67,16 @@ export function flagRect(faction: Faction, sheet: string, flag: string): FlagRec
   const slot = slots[faction][index];
   if (!slot?.sheet || !slot.flags) throw new Error(`atlas ${faction} has no sheet ${sheet}`);
   return { cell: index, ...sheetFlagRect(slot.sheet, slot.flags, flag) };
+}
+
+/** Uv rect of a picture cell drawn at an aspect of its own (the maku curtain), and that aspect. */
+export function pictureRect(faction: Faction, name: string): { rect: [number, number, number, number]; aspect: number } {
+  const slot = slots[faction].find((s) => s.name === name);
+  if (!slot) throw new Error(`atlas ${faction} has no cell ${name}`);
+  const aspect = slot.aspect ?? 1;
+  const box = fitAspect(1, 1, aspect);
+  const inset = 0.01;
+  return { rect: [box.x + inset, box.y + inset, box.x + box.w - inset, box.y + box.h - inset], aspect };
 }
 
 /**
