@@ -24,6 +24,10 @@ three.js r186 `three/webgpu` + TSL, @react-three/fiber, React 19, zustand, Vite,
 - 전투 오디오: 합성음은 250 Hz 위에서 지속·스윕되는 음정 금지(`scripts/audio/analyze.py`로 측정).
 - 주변 코드에 맞출 것: 주석은 이유를 평이한 문장으로, 죽은 코드 금지.
 
+## 에셋
+- `public/`·`assets-src/`의 바이너리(모델, 텍스처, 오디오, 폰트, 지형, 생성 원본)는 내용 해시로 S3에 있고 목록은 커밋된 `assets.json`: 체크아웃 뒤 `npm run assets -- pull`, 바이너리를 추가·변경하면 `npm run assets -- push` 후 `assets.json` 커밋.
+- `npm run assets -- models`가 모델 보관소: 모든 .glb의 삼각형 수, 버전, 출처 기록. 자세한 것은 [docs/dev.md](docs/dev.md#에셋).
+
 ## 배포
 - `main`에 푸시하면 타입체크·테스트·빌드 뒤 사이트(S3 + CloudFront)와 멀티플레이 서버(EC2, SSM 경유)가 함께 배포됨. 요청 없이 푸시하지 말 것.
 - 서버 수동 배포: `scripts/deploy-mp.sh deploy|status`. 서버 데이터는 호스트의 `/opt/imjin/data`에 있고 배포가 덮어쓰지 않음.

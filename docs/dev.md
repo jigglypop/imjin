@@ -30,5 +30,16 @@ macOS는 Chrome + Metal, Windows는 Edge + D3D11. GPU는 같이 돌아가는 다
 - `node scripts/render-sounds.mjs --url=http://127.0.0.1:5291 [--out=<dir>] [--prefix=after_]` 합성 음성(`src/audio/voices.ts`)을 오프라인으로 cannon_near/cannon_far/broadside/explosion/sinking .wav 파일로 렌더링, `--only=battle`은 게임 자체의 `battlefield.ts`와 샘플 뱅크로 각본 전투(포성, 바다, 음악 베드를 게임처럼 섞음)를 `audio2_battle.wav`로, `--only=inventory`는 모든 음성, UI 클릭, 베드, 바다를 각각 파일 하나씩
 - `node scripts/audio/capture.mjs --url=... --tag=<t>` 메뉴 / 전투 1x, 8x, 32x / 쟁탈전 / 캠페인의 실제 마스터 버스를 각각 60초씩 녹음; `python3 scripts/audio/analyze.py <wav>... [--png <dir>]` 라우드니스, 클리핑, 삐 소리로 들리는 좁은 톤을 측정, `scripts/audio/build_page.py <dir>` 둘을 가지고 청취 페이지를 만듦
 
+## 에셋
+`public/`과 `assets-src/` 아래의 바이너리(확장자는 `scripts/assets.mjs`의 `TYPES`: glb, bin, webp, jpg, png, mp3, woff2, dem 등)는 비공개 버킷 `s3://imjin1592-assets`(ap-northeast-2)의 `sha256/<앞 두 자리>/<sha256>`에 있음. 루트의 `assets.json`이 파일마다 sha256과 크기를 한 줄씩 적고, 파일이 바뀌면 이전 버전을 `history`에 남김. 블롭은 지우지 않으므로 모든 버전을 되살릴 수 있음. 텍스트 파일(json, md, txt, svg)과 출처 기록은 git에 그대로 둠. `.gitignore`가 로컬에 두는 것(Meshy 원본, 탈락 후보, 렌더)은 push에 파일을 직접 지정하지 않는 한 저장소에 올라가지 않음.
+- `npm run assets -- pull [paths] [--dry-run]` 캐시나 S3에서 받아 트리를 `assets.json`에 맞춤. 모든 파일을 sha256으로 확인하고 복사함(링크하지 않음). 여기서 바꾸고 push하지 않은 파일은 그대로 둠. 할 일이 없으면 크기와 수정 시각만 봄. CI가 테스트 전에 실행함.
+- `npm run assets -- push [paths] [--dry-run]` 버킷에 없는 새 파일·바뀐 파일을 올리고 기록함; 변경과 함께 `assets.json`을 커밋. 없어진 파일은 이름을 지정했을 때만(`push public/ui/x.webp`) `assets.json`에서 빠지고 블롭은 남음.
+- `status [--remote]` `assets.json`과 다른 것(과 버킷이 다 갖고 있는지); `verify` history를 포함한 모든 버전이 버킷에 제 크기로 있는지; `restore <path> [--previous | --sha=<prefix>]` 이전 버전을 되살리고 그 교체를 기록함.
+- `models [--json]` 모델 보관소: 모든 .glb의 크기, 삼각형 수, 버전, 그리고 파일명이나 해시로 그것을 가리키는 기록(`assets-src/*/provenance.json`, `runtime-assets.json`, `README.md`)의 도구·모델·크레딧.
+- 캐시는 모든 worktree가 공유함: `IMJIN_ASSET_CACHE`, 없으면 `%LOCALAPPDATA%imjin-assets` 또는 `~/.cache/imjin-assets`. 언제 지워도 됨.
+- 자격 증명: `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN`(CI의 배포 역할은 읽기 가능), 없으면 aws CLI(`aws login`); push는 본인 자격 증명으로. `setup [--apply]`은 버킷과 역할의 읽기 정책을 만들고, `untrack [--apply]`은 바이너리를 git에서 빼고 그 패턴을 `.gitignore` 맨 앞에 넣는 한 번뿐인 전환.
+- 병합 뒤 `assets.json`이 충돌하면 양쪽 줄을 다 남기고, 양쪽이 같은 파일을 바꿨으면 원하는 버전을 남김(다른 블롭도 저장소에 남아 있음).
+- `node scripts/test-assets.mjs`가 모든 명령을 메모리 속 S3로 검사함.
+
 ## 캠페인 지도
 각 지역의 점령 지점은 `src/sim/grand/regionPoints.json`이며, `coast.ts`의 앵커로부터 `node scripts/build-region-maps.mjs [--preview=<dir>] [--check]`가 작성하므로 앵커나 지형을 바꾼 뒤에는 다시 실행할 것.
