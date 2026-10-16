@@ -7,13 +7,12 @@ import { boardAt, Part, sailPoint, strike, surfaceFor, type PartId, type ShipSur
 import { equipment } from '../game/quality';
 import { particleNoise } from './particleNoise';
 import { outcome, payload, planking, type Outcome } from './ordnance';
-import { arrowForm, ARROW_GIRTH, ARROW_LEN, EMBEDDED, type Munitions } from './Projectiles';
-import type { ParticleLayer } from './ParticleLayer';
+import { arrowForm, EMBEDDED, type Munitions } from './Projectiles';
 
 /**
  * What a fight leaves on the ships and keeps there until they sink: shot holes and splintered plank scars where the
- * shot met the planks, great arrows standing in the planking at the angle they struck, spent fire arrows smouldering
- * in hulls and sails, iron balls lodged in the wood, pocked and knocked-out shield boards, scorch marks, and torn sails.
+ * shot met the planks, great arrows standing in the planking at the angle they struck, spent fire arrows in hulls and
+ * sails, iron balls lodged in the wood, pocked and knocked-out shield boards, scorch marks, and torn sails.
  * Each mark is kept in its ship's frame, put on the model's surface (src/ships/surface.ts) where the shell's line meets
  * it, so it rides the hull through its roll, its list and its sinking. The decals are one instanced mesh; the arrows
  * and balls are drawn by the munition meshes (Projectiles.ts). Capped in all and per ship by device class, the oldest
@@ -183,7 +182,7 @@ export class Scars {
   private readonly dLocal = new Float32Array(CAPS.decals * 16);
   private readonly dData = new Float32Array(CAPS.decals * 4);
   // Things in the wood: the ship, what it is, the point it entered (ship frame), the line it came in on, its length
-  // and girth scales, the fraction standing out, how long it smoulders on.
+  // (metres for a gun arrow, the model's scale for the others, the radius for a ball) and the fraction standing out.
   private ne = 0;
   private readonly eShip = new Int32Array(EMBEDDED.all);
   private readonly eKind = new Uint8Array(EMBEDDED.all);
@@ -191,10 +190,7 @@ export class Scars {
   private readonly eP = new Float32Array(EMBEDDED.all * 3);
   private readonly eD = new Float32Array(EMBEDDED.all * 3);
   private readonly eLen = new Float32Array(EMBEDDED.all);
-  private readonly eGirth = new Float32Array(EMBEDDED.all);
   private readonly eOut = new Float32Array(EMBEDDED.all);
-  private readonly eBurn = new Float32Array(EMBEDDED.all);
-  private readonly eAcc = new Float32Array(EMBEDDED.all);
   private serial = 0;
   /** How worn each wall board is, per ship: both sides, 1 and it is knocked out. */
   private readonly boards = new Map<number, Float32Array>();
@@ -204,13 +200,9 @@ export class Scars {
   private readonly p = new Vector3();
   private readonly st: Strike = { x: 0, y: 0, z: 0, nx: 0, ny: 1, nz: 0, part: Part.Hull, board: -1 };
   private readonly look: HitLook = { ok: false, result: 'pierce', part: Part.Hull, x: 0, y: 0, z: 0, nx: 0, ny: 0, nz: 1, size: 0, energy: 0 };
-  private k = 1;
-
   constructor(
     private readonly views: ShipViews,
     private readonly mun: Munitions,
-    private readonly smoke: ParticleLayer,
-    private readonly fire: ParticleLayer,
   ) {
     this.data = new InstancedBufferAttribute(new Float32Array(CAPS.decals * 4), 4);
     this.data.setUsage(DynamicDrawUsage);
@@ -224,10 +216,6 @@ export class Scars {
     // Before the smoke and spray: a mark drawn after a puff in front of it would show through the puff.
     this.mesh.renderOrder = -2;
     this.group.add(this.mesh);
-  }
-
-  setKeep(k: number) {
-    this.k = k;
   }
 
   /** A new battle: every mark goes with the old ships. */
@@ -393,14 +381,11 @@ export class Scars {
     this.eP.copyWithin(i * 3, last * 3, last * 3 + 3);
     this.eD.copyWithin(i * 3, last * 3, last * 3 + 3);
     this.eLen[i] = this.eLen[last]!;
-    this.eGirth[i] = this.eGirth[last]!;
     this.eOut[i] = this.eOut[last]!;
-    this.eBurn[i] = this.eBurn[last]!;
-    this.eAcc[i] = this.eAcc[last]!;
   }
 
   /** Leaves a thing in the wood at a plan point, come in along (dx, dy, dz) (plan frame, unit). */
-  embed(ship: number, s: ShipSurface, kind: EmbedKind, px: number, py: number, pz: number, dx: number, dy: number, dz: number, len: number, girth: number, out: number, burn: number) {
+  embed(ship: number, s: ShipSurface, kind: EmbedKind, px: number, py: number, pz: number, dx: number, dy: number, dz: number, len: number, out: number) {
     let i = -1;
     let own = 0;
     let oldest = -1;
@@ -427,10 +412,7 @@ export class Scars {
     this.eD[i * 3 + 1] = dy;
     this.eD[i * 3 + 2] = dz;
     this.eLen[i] = len;
-    this.eGirth[i] = girth;
     this.eOut[i] = out;
-    this.eBurn[i] = burn;
-    this.eAcc[i] = 0;
   }
 
   // ---- Boards and sails ------------------------------------------------------------------------------------------
@@ -547,7 +529,7 @@ export class Scars {
     L.result = res.result;
     L.energy = res.energy;
     this.lookAt(id, s, st);
-    const [len, girth] = arrowForm(gun);
+    const [len] = arrowForm(gun);
     switch (res.result) {
       case 'smash': {
         // The planks broken out over half a metre to a metre, more for more energy; the arrow driven deep into the
@@ -555,7 +537,7 @@ export class Scars {
         const w = clamp(0.4 + ((res.energy - 35000) / 150000) * 0.6, 0.4, 1.05);
         L.size = w;
         this.decal(id, s, Scar.Smash, st.x, st.y, st.z, st.nx, st.ny, st.nz, w * 1.3, w * 0.95, 0);
-        if (arrow) this.embed(id, s, Embed.Heavy, st.x, st.y, st.z, ux, uy, uz, len / ARROW_LEN, girth / ARROW_GIRTH, 0.25, 0);
+        if (arrow) this.embed(id, s, Embed.Heavy, st.x, st.y, st.z, ux, uy, uz, len, 0.25);
         if (st.part === Part.Wall) this.wear(id, s, st.x, side, w, 1);
         break;
       }
@@ -565,7 +547,7 @@ export class Scars {
         const D = load.diameter * (arrow ? 1.35 : 1.3);
         L.size = D;
         this.decal(id, s, Scar.Hole, st.x, st.y, st.z, st.nx, st.ny, st.nz, Math.max(0.18, D * 3.4), Math.max(0.16, D * 3), arrow ? 0.1 : 0.55);
-        if (arrow) this.embed(id, s, Embed.Heavy, st.x, st.y, st.z, ux, uy, uz, len / ARROW_LEN, girth / ARROW_GIRTH, rnd(0.4, 0.7), 0);
+        if (arrow) this.embed(id, s, Embed.Heavy, st.x, st.y, st.z, ux, uy, uz, len, rnd(0.4, 0.7));
         if (st.part === Part.Wall) this.wear(id, s, st.x, side, 0.3, arrow ? 0.6 : 0.45);
         break;
       }
@@ -577,11 +559,11 @@ export class Scars {
         const deep = res.result === 'spall';
         if (arrow) {
           const head = 0.12 + (deep ? 0.15 : 0.05);
-          this.embed(id, s, Embed.Heavy, st.x, st.y, st.z, ux, uy, uz, len / ARROW_LEN, girth / ARROW_GIRTH, 1 - head / len, 0);
+          this.embed(id, s, Embed.Heavy, st.x, st.y, st.z, ux, uy, uz, len, 1 - head / len);
           this.decal(id, s, Scar.Gouge, st.x, st.y, st.z, st.nx, st.ny, st.nz, load.diameter * 4, load.diameter * 1.8, 0);
         } else {
           const r = load.diameter / 2;
-          this.embed(id, s, Embed.Ball, st.x, st.y, st.z, ux, uy, uz, r, r, deep ? 0.3 : 0.55, 0);
+          this.embed(id, s, Embed.Ball, st.x, st.y, st.z, ux, uy, uz, r, deep ? 0.3 : 0.55);
           this.decal(id, s, Scar.Gouge, st.x, st.y, st.z, st.nx, st.ny, st.nz, load.diameter * (deep ? 3.6 : 2.6), load.diameter * (deep ? 3 : 2.2), 0);
         }
         if (st.part === Part.Wall) this.wear(id, s, st.x, side, 0.2, arrow ? 0.35 : deep ? 0.3 : 0.18);
@@ -598,15 +580,15 @@ export class Scars {
     return L;
   }
 
-  /** A fire arrow (a rocket, a Japanese hiya) left burning in the planks: a scorch spreads round it while it smoulders. */
+  /** A fire arrow (a rocket, a Japanese hiya) left in the planks with the scorch of its burnt-out charge round it. */
   private fireArrow(ship: Ship, s: ShipSurface, st: Strike, ux: number, uy: number, uz: number, kind: EmbedKind) {
-    this.embed(ship.id, s, kind, st.x, st.y, st.z, ux, uy, uz, kind === Embed.Hiya ? 0.9 : 1.13, 1, 0.85, rnd(25, 45));
+    this.embed(ship.id, s, kind, st.x, st.y, st.z, ux, uy, uz, kind === Embed.Hiya ? 0.9 : 1.13, 0.85);
     this.decal(ship.id, s, Scar.Scorch, st.x, st.y, st.z, st.nx, st.ny, st.nz, rnd(0.55, 0.95), rnd(0.5, 0.8), 0);
   }
 
   /**
    * A cosmetic rocket of a salvo came down on a ship: the dispatches have fire arrows shot into the curtains and sails
-   * (당포, "射中其紗帳與布帆"), so many of them hang burning in the canvas; the rest stick in the planks.
+   * (당포, "射中其紗帳與布帆"), so many of them hang in the canvas; the rest stick in the planks.
    */
   rocket(ship: Ship, x: number, y: number, z: number, dx: number, dy: number, dz: number) {
     const s = this.surfaceOf(ship);
@@ -616,7 +598,7 @@ export class Scars {
       const sail = s.sails[Math.floor(Math.random() * s.sails.length)]!;
       // High in the sail more than low: the Ming manual's rule is that a sail lit high cannot be saved.
       sailPoint(sail, rnd(0.15, 0.85), Math.pow(Math.random(), 1.4) * 0.85 + 0.08, st);
-      this.embed(ship.id, s, Embed.Rocket, st.x, st.y, st.z, this.v.x, this.v.y, this.v.z, 1.13, 1, 0.8, rnd(15, 30));
+      this.embed(ship.id, s, Embed.Rocket, st.x, st.y, st.z, this.v.x, this.v.y, this.v.z, 1.13, 0.8);
       this.tear(ship.id, 0.08);
       return;
     }
@@ -661,10 +643,9 @@ export class Scars {
 
   /**
    * Writes the decals of the ships in view into the mesh and hands the things in the wood to the munition meshes
-   * (between their begin and end). Fire arrows smoulder on for half a minute or so. `focal` is pixels per metre at one
-   * metre, as in Effects.
+   * (between their begin and end). `focal` is pixels per metre at one metre, as in Effects.
    */
-  update(dt: number, battle: Battle, camX: number, camY: number, camZ: number, focal: number) {
+  update(battle: Battle, camX: number, camY: number, camZ: number, focal: number) {
     const out = this.mesh.instanceMatrix.array as Float32Array;
     const data = this.data.array as Float32Array;
     let n = 0;
@@ -719,13 +700,11 @@ export class Scars {
         continue;
       }
       if (kind === Embed.Heavy) {
-        const real = len * ARROW_LEN;
-        const grow = Math.min(1.6, Math.max(1, 8 / (real * ppm)));
-        // The model's head is at +0.96 of its scaled length from its origin; the origin sits back so that the part
-        // not standing out is in the wood.
-        const sl = len * grow;
-        const inside = (1 - outside) * real;
-        this.mun.putHeavy(this.p.x + this.v.x * (inside - 0.96 * sl), this.p.y + this.v.y * (inside - 0.96 * sl), this.p.z + this.v.z * (inside - 0.96 * sl), this.v.x, this.v.y, this.v.z, sl, this.eGirth[i]! * grow);
+        // The head is driven into the wood by the part of the arrow not standing out; from afar it is drawn a little
+        // longer so that it still reads.
+        const grow = Math.min(1.6, Math.max(1, 8 / (len * ppm)));
+        const inside = (1 - outside) * len;
+        this.mun.putHeavy(this.p.x + this.v.x * inside, this.p.y + this.v.y * inside, this.p.z + this.v.z * inside, this.v.x, this.v.y, this.v.z, len * grow);
         continue;
       }
       const grow = Math.min(1.6, Math.max(1, 4 / (len * ppm)));
@@ -737,22 +716,6 @@ export class Scars {
       const oz = this.p.z + this.v.z * (inside - tip * sc);
       if (kind === Embed.Hiya) this.mun.putHiya(ox, oy, oz, this.v.x, this.v.y, this.v.z, sc);
       else this.mun.putRocket(ox, oy, oz, this.v.x, this.v.y, this.v.z, sc);
-      // The bundle of tow or the spent motor smoulders: a lick of flame and a thread of smoke, dying down.
-      const burn = this.eBurn[i]!;
-      if (burn > 0 && dt > 0 && ship.sinking < 0.5) {
-        this.eBurn[i] = Math.max(0, burn - dt);
-        if (d > 450) continue;
-        const live = Math.min(1, burn / 8);
-        this.eAcc[i] = Math.min(this.eAcc[i]! + (3 + 4 * live) * this.k * dt, 4);
-        const hx = this.p.x - this.v.x * 0.15;
-        const hy = this.p.y - this.v.y * 0.15;
-        const hz = this.p.z - this.v.z * 0.15;
-        while (this.eAcc[i]! >= 1) {
-          this.eAcc[i] = this.eAcc[i]! - 1;
-          this.fire.emit({ x: hx + rnd(-0.05, 0.05), y: hy, z: hz + rnd(-0.05, 0.05), vx: rnd(-0.2, 0.2), vy: rnd(0.6, 1.4), vz: rnd(-0.2, 0.2), life: rnd(0.25, 0.5), size0: 0.28 * live + 0.08, size1: 0.12, heat: 1, drag: 1.5, lift: 1.5, wind: 0.4, alpha: 0.8 });
-          if (Math.random() < 0.5) this.smoke.emit({ x: hx, y: hy + 0.2, z: hz, vx: rnd(-0.2, 0.2), vy: rnd(0.8, 1.6), vz: rnd(-0.2, 0.2), life: rnd(3, 6), size0: 0.3, size1: rnd(1.6, 2.8), alpha: 0.28, r: 0.25, g: 0.23, b: 0.22, drag: 0.8, lift: 0.4, wind: 1 });
-        }
-      }
     }
   }
 }
