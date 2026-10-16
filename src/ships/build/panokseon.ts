@@ -200,7 +200,7 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
     if (lod < 2) {
       const fl = variant === 0 ? ['flags_a', 'su'] : variant === 1 ? ['flags_a', 'jang'] : ['flags_a', 'tiger'];
       if (i === 0) flag(ctx, { pole: [m.x, deck + m.h + 0.4, 0], poleH: 1.0, w: variant === 0 ? 2.5 : 1.7, h: variant === 0 ? 2.3 : 1.6, sheet: fl[0]!, flag: fl[1]!, phase: 2.1, wood: timber });
-      else if (i === 1) longPennant(ctx, fl[0] === 'flags_a' ? clothPatch(ctx, 'flags_a', 'red') : clothPatch(ctx, 'flags_b', 'blue'), [m.x - 0.1, deck + m.h - 0.1, 0], 7.5, 0.8, 0.6);
+      else if (i === 1) longPennant(ctx, fl[0] === 'flags_a' ? clothPatch(ctx, 'flags_a', 'red') : clothPatch(ctx, 'flags_b', 'blue'), [m.x - 0.1, deck + m.h - 0.1, 0], 7.0, 0.8, 0.6);
     }
   });
 

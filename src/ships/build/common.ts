@@ -310,10 +310,13 @@ export function flag(ctx: Ctx, o: FlagOpts) {
   if (ctx.lod === 0) cylinder(ctx.b, o.wood, [x, y + o.poleH, z], [x, y + o.poleH + 0.22, z], 0.07, 0.0, 5, false);
 }
 
-/** Long swallow-tailed pennant from a mast top. */
-export function longPennant(ctx: Ctx, color: Paint, from: V3, length: number, width: number, phase: number) {
+/**
+ * Long swallow-tailed pennant from a mast top. It sags along its length, turns a little as it flies and ends in two
+ * square-cut tails: narrowing to a point it stood out against the sky as a black spike, not as cloth.
+ */
+export function longPennant(ctx: Ctx, color: Paint, from: V3, length: number, width: number, phase: number, droop = 0.1) {
   if (ctx.lod > 1) return;
-  pennant(ctx.b, color, from, [-1, -0.05, 0], [0, -1, 0], length, width, width * 0.12, byLod(ctx, 8, 3, 1), { flutter: 1.2, phase });
+  pennant(ctx.b, color, from, [-1, -0.05, 0], [0, -1, 0], length, width, width * 0.78, byLod(ctx, 12, 6, 1), { flutter: 1.2, phase, fork: 0.14, droop, twist: 0.6, wave: 12 });
 }
 
 // ---------- small props ----------

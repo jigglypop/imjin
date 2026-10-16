@@ -547,23 +547,66 @@ export function cloth(b: MeshBuilder, paint: Paint, origin: V3, uAxis: V3, vAxis
   mkGrid(-1);
 }
 
-/** Cloth strip that trails behind a point (pennants, whiskers): triangle or rectangle tapering to `tip` width. */
-export function pennant(b: MeshBuilder, paint: Paint, origin: V3, along: V3, down: V3, length: number, width: number, tip: number, segs: number, o: { flutter?: number; phase?: number } = {}) {
-  const P: V3[][] = [];
+export type PennantOpts = {
+  flutter?: number;
+  phase?: number;
+  /**
+   * Depth of a swallowtail's notch as a fraction of the length: the strip ends in two square-cut tails either side of
+   * it instead of narrowing to `tip`. 0 for a plain strip.
+   */
+  fork?: number;
+  /** How far the free end sags below the line `along` as a fraction of the length; the cloth curves down toward it. */
+  droop?: number;
+  /** Most the strip rolls about its own line toward the free end, radians: its faces turn to the light and away. */
+  twist?: number;
+  /** Radians the baked side-to-side wave turns through along the length (5 by default, under one whole wave). */
+  wave?: number;
+};
+
+/**
+ * Cloth strip that trails behind a point (pennants, whiskers): hung from the line out of `origin` along `along`, `width`
+ * deep toward `down` at the hoist and `tip` deep at the free end. Drawn on both faces a little apart, like cloth().
+ */
+export function pennant(b: MeshBuilder, paint: Paint, origin: V3, along: V3, down: V3, length: number, width: number, tip: number, segs: number, o: PennantOpts = {}) {
   const dir = norm(along);
-  const dn = norm(down);
-  for (let i = 0; i <= segs; i += 1) {
-    const t = i / segs;
+  const dn = norm(sub(down, mul(dir, dot(down, dir))));
+  const lat = cross(dir, dn);
+  const droop = o.droop ?? 0;
+  // Rows along the length. With a fork one falls on the notch's apex at every LOD, so the tails keep their length.
+  const tails = o.fork && segs > 1 ? Math.min(segs - 1, Math.max(1, Math.round(segs * o.fork))) : 0;
+  const fork = tails ? o.fork! : 0;
+  const ts: number[] = [];
+  for (let i = 0; i <= segs - tails; i += 1) ts.push(((1 - fork) * i) / (segs - tails));
+  for (let i = 1; i <= tails; i += 1) ts.push(1 - fork + (fork * i) / tails);
+  const rows = ts.map((t) => {
     const w = lerp(width, tip, t);
-    const wave = 0.05 * length * Math.sin(t * 5 + (o.phase ?? 0)) * t;
-    const base = add(origin, mul(dir, length * t));
-    P.push([add(base, mul(cross(dir, dn), wave)), add(add(base, mul(dn, w)), mul(cross(dir, dn), wave))]);
-  }
-  // i along the length, j downward
-  const sway = (i: number) => (o.flutter ?? 1) * (i / segs);
-  const nrm = cross(dir, dn);
-  grid(b, paint, P, { sway, phase: o.phase, flip: dot(cross(sub(P[1]![0]!, P[0]![0]!), sub(P[0]![1]!, P[0]![0]!)), nrm) < 0, uvFn: (i, j) => paint.map(i / segs, 1 - j) });
-  grid(b, paint, P, { sway, phase: o.phase, flip: dot(cross(sub(P[1]![0]!, P[0]![0]!), sub(P[0]![1]!, P[0]![0]!)), nrm) >= 0, uvFn: (i, j) => paint.map(i / segs, 1 - j) });
+    const wave = 0.05 * length * Math.sin(t * (o.wave ?? 5) + (o.phase ?? 0)) * t;
+    // A plain strip keeps its top edge on the line from the origin; a swallowtail narrows evenly about its middle.
+    const centre = add(origin, add(add(mul(dir, length * t), mul(dn, (fork > 0 ? width : w) / 2 + droop * length * t * t)), mul(lat, wave)));
+    // Across the strip square to its line as that sags, rolled about the line; `face` is the front face's normal.
+    const tangent = norm(add(dir, mul(dn, 2 * droop * t)));
+    const flat = norm(sub(dn, mul(tangent, dot(dn, tangent))));
+    const roll = (o.twist ?? 0) * t * Math.sin(t * 4.5 + (o.phase ?? 0) * 1.7);
+    const across = add(mul(flat, Math.cos(roll)), mul(lat, Math.sin(roll)));
+    const face = sub(mul(lat, Math.cos(roll)), mul(flat, Math.sin(roll)));
+    // The notch widens from its apex to a little over a third of the end's width between the two tails.
+    const gap = fork > 0 ? (Math.max(0, t - 1 + fork) / fork) * tip * 0.18 : 0;
+    return { w, centre, across, face, gap };
+  });
+  type Row = (typeof rows)[number];
+  // A band of the strip between two offsets across it from the middle (negative toward the top edge): the whole strip,
+  // or one tail with its half of the body.
+  const band = (k0: (r: Row) => number, k1: (r: Row) => number) => {
+    for (const side of [1, -1]) {
+      const P = rows.map((r) => [k0(r), k1(r)].map((k) => add(add(r.centre, mul(r.across, k)), mul(r.face, side * 0.012))));
+      // v runs from 1 at the top edge to 0 at the bottom, as on a flag.
+      grid(b, paint, P, { flip: side < 0, sway: (i) => (o.flutter ?? 1) * ts[i]!, phase: o.phase, uvFn: (i, j) => paint.map(ts[i]!, 0.5 - (j ? k1 : k0)(rows[i]!) / rows[i]!.w) });
+    }
+  };
+  if (fork > 0) {
+    band((r) => -r.w / 2, (r) => -r.gap);
+    band((r) => r.gap, (r) => r.w / 2);
+  } else band((r) => -r.w / 2, (r) => r.w / 2);
 }
 
 
