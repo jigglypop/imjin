@@ -176,8 +176,12 @@ export class Effects {
     this.sources.push({ x, y, z, intensity, decay: 1, r: 1, g: 0.6, b: 0.27, age: 0, life: 1, dist: 70, once: true });
   }
 
+  /**
+   * A brief light of the guns: a flash, a hit, a blast. The intensities are the ones the gunfire was set by; the hulls
+   * of the ships built since take a point light about twice as brightly, so they are halved to light them as before.
+   */
   private light(x: number, y: number, z: number, intensity: number, life: number, r = 1, g = 0.62, b = 0.3, dist = 140) {
-    this.sources.push({ x, y, z, intensity, decay: 1, r, g, b, age: 0, life, dist });
+    this.sources.push({ x, y, z, intensity: intensity * 0.5, decay: 1, r, g, b, age: 0, life, dist });
   }
 
   /** A new battle starts on this engine: ship and shell ids restart, so the old battle's per-id state must not carry over. */
