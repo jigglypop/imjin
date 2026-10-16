@@ -559,7 +559,9 @@ export class Effects {
       this.fire.emit({ x: x + bx * 0.8, y: y + rnd(-0.3, 0.5), z: z + bz * 0.8, vx: bx * sp + rnd(-4, 4) * impact, vy: rnd(-1, 5) * impact, vz: bz * sp + rnd(-4, 4) * impact, life: rnd(0.14, 0.32), size0: rnd(0.9, 1.6) * impact, size1: rnd(2.6, 4.6) * impact * Math.sqrt(boost), alpha: 0.9, heat: rnd(0.7, 1), drag: 5, wind: 0.1 });
     }
     // Timber flung far and high: boards, splinters and lumps out of the struck face, over the deck and into the sea.
-    this.fling(x, y, z, this.n((3 + damage * 1.1) * bite * (0.6 + 0.6 * blow)), Math.min(1.5, 0.7 + 0.5 * impact), bx, bz);
+    // A heavy gun's blow bursts the wood even where the shot itself lodges: the old timber does not give way cleanly.
+    const shatter = blow >= 0.7 ? Math.max(0.8, Math.min(1.3, bite)) : Math.min(1.3, bite);
+    this.fling(x, y, z, this.n((12 + damage * 2.2) * shatter * (0.75 + 0.5 * blow)), Math.min(1.4, (arrow ? 1.2 : 1) * (0.8 + 0.3 * impact)), bx, bz);
     // Burning splinters and grains of powder streaking out of the hole, the trace the eye follows.
     for (let i = 0; i < this.n(4 + 14 * impact); i += 1) {
       const sp = rnd(12, 34) * (0.6 + 0.4 * impact);
@@ -651,26 +653,27 @@ export class Effects {
   }
 
   /**
-   * The timber a hard blow throws far: boards, splinters and charred lumps leaving the struck face (bx, bz) in a wide
-   * cone, some higher than the deckhouse, landing in the sea a ship's beam away. `power` 1 is a medium ball's hit.
+   * The timber a hard blow throws far: boards, splinters and charred lumps burst out all round the hole, along the hull
+   * as much as away from it and leaning out of the struck face (bx, bz), the highest well over the deckhouse, landing in
+   * the sea a ship's length away. The first few are whole boards tumbling end over end. `power` 1 is a medium ball's hit.
    */
   private fling(x: number, y: number, z: number, count: number, power: number, bx: number, bz: number) {
+    const spread = 12 * power;
     for (let i = 0; i < count; i += 1) {
-      const sp = rnd(4, 13) * power;
-      const vx = bx * sp + rnd(-5, 5) * power;
-      const vz = bz * sp + rnd(-5, 5) * power;
-      const vy = rnd(4, 15) * power;
+      const out = rnd(1, 8) * power;
+      const vx = rnd(-spread, spread) + bx * out;
+      const vz = rnd(-spread, spread) + bz * out;
       const r = Math.random();
-      if (i < 2) {
-        const s = rnd(0.9, 1.8) * power;
-        this.debris.spawn(Piece.Plank, x, y, z, vx * 0.8, vy, vz * 0.8, s, s * 0.7, s * 0.7, rnd(14, 26));
-      } else if (r < 0.5) this.debris.spawn(Piece.Splinter, x, y, z, vx * 1.2, vy * 1.1, vz * 1.2, rnd(0.6, 2) * power, rnd(1.2, 2.2), rnd(1.2, 2.2), rnd(10, 20), 1.6);
+      if (i < 3) {
+        const s = rnd(1.3, 2.4) * power;
+        this.debris.spawn(Piece.Plank, x, y, z, vx * 0.7, rnd(5, 15) * power, vz * 0.7, s, s * 1.3, s * 1.3, rnd(14, 26));
+      } else if (r < 0.5) this.debris.spawn(Piece.Splinter, x, y, z, vx * 1.3, rnd(5, 19) * power, vz * 1.3, rnd(0.9, 2.8) * power, rnd(1.4, 2.4), rnd(1.4, 2.4), rnd(10, 20), 1.6);
       else if (r < 0.82) {
-        const s = rnd(0.35, 0.9) * power;
-        this.debris.spawn(Piece.Plank, x, y, z, vx, vy, vz, s, s, s, rnd(12, 22));
+        const s = rnd(0.45, 1.2) * power;
+        this.debris.spawn(Piece.Plank, x, y, z, vx, rnd(4, 17) * power, vz, s, s, s, rnd(14, 26));
       } else {
-        const s = rnd(0.25, 0.7) * power;
-        this.debris.spawn(Piece.Chunk, x, y, z, vx * 0.8, vy * 0.9, vz * 0.8, s, s, s, rnd(10, 18));
+        const s = rnd(0.4, 1.1) * power;
+        this.debris.spawn(Piece.Chunk, x, y, z, vx * 0.8, rnd(3, 13) * power, vz * 0.8, s, s, s, rnd(10, 18));
       }
     }
   }
@@ -737,6 +740,14 @@ export class Effects {
       const up = rnd(12, 20) * lift * (1 - (i / jets) * 0.4);
       this.spray.emit({ x: x + rnd(-0.35, 0.35) * k, y: h + 0.3, z: z + rnd(-0.35, 0.35) * k, vx: rnd(-0.6, 0.6), vy: up, vz: rnd(-0.6, 0.6), life: rnd(1.6, 2.4), size0: rnd(0.6, 0.9) * k * wide, size1: rnd(1.8, 2.8) * k * wide, alpha: rnd(0.75, 0.92), r: 0.92, g: 0.95, b: 0.97, stretch: rnd(1.8, 3), rot: rnd(-0.08, 0.08), spin: 0.02, drag: 0.3, lift: -9.8, wind: 0.2 });
     }
+    // The body of a heavy shot's column: broad white water heaved up round the narrow jets, so a round shot or a great
+    // arrow stands a thick white pillar; a light shot's stays a thin spout.
+    const heavy = Math.min(1, Math.max(0, (size - 0.6) / 0.5));
+    for (let i = 0; i < Math.round(12 * size * heavy); i += 1) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random();
+      this.spray.emit({ x: x + Math.cos(a) * r * 1.2 * k, y: h + 0.2, z: z + Math.sin(a) * r * 1.2 * k, vx: Math.cos(a) * rnd(0.5, 3) * k, vy: rnd(11, 25) * lift * (1 - r * 0.4), vz: Math.sin(a) * rnd(0.5, 3) * k, life: rnd(1.4, 2.4), size0: rnd(1.3, 2.1) * k, size1: rnd(4.5, 7.5) * k, alpha: rnd(0.65, 0.9), r: 0.94, g: 0.97, b: 1, stretch: rnd(0.6, 1.4), drag: 0.35, lift: -9.8, wind: 0.3 });
+    }
     // The crown: water thrown out and up round the foot of the column.
     const crown = Math.round(8 + 10 * size);
     for (let i = 0; i < crown; i += 1) {
@@ -754,7 +765,7 @@ export class Effects {
     // The mist the falling column leaves: it comes up from the foot as the water comes down, hangs low over the sea
     // and drifts off thinning.
     for (let i = 0; i < Math.round(3 + 3 * size); i += 1) {
-      this.spray.emit({ x: x + rnd(-1.5, 1.5) * k, y: h + rnd(0.5, 3) * lift, z: z + rnd(-1.5, 1.5) * k, vx: rnd(-0.8, 0.8), vy: rnd(0.2, 1), vz: rnd(-0.8, 0.8), life: rnd(3, 5), size0: 2 * k, size1: rnd(6, 9) * k, alpha: rnd(0.14, 0.22), r: 0.88, g: 0.92, b: 0.95, drag: 0.9, lift: 0.04, wind: 1 });
+      this.spray.emit({ x: x + rnd(-1.5, 1.5) * k, y: h + rnd(0.5, 3) * lift, z: z + rnd(-1.5, 1.5) * k, vx: rnd(-0.8, 0.8), vy: rnd(0.2, 1), vz: rnd(-0.8, 0.8), life: rnd(3, 5), size0: 2 * k, size1: rnd(6, 9) * k, alpha: rnd(0.14, 0.22) * (1 + heavy), r: 0.88, g: 0.92, b: 0.95, drag: 0.9, lift: 0.04, wind: 1 });
     }
     this.wake?.stamp(x, z, 0, 3 + 3 * size, 0.45 * Math.min(1.5, size), 1, 1.3);
   }
