@@ -348,8 +348,6 @@ export class Battlefield {
     const len = this.sample(f.bank, t, { gain, pan: f.s.pan, rate, cutoff: Math.max(900, f.s.muffle) });
     if (len && gain > 0.15) this.lastAudible = this.ctx.currentTime;
     if (len && f.bank === 'cannon_heavy') this.duck(t, gain * 1.2);
-    // A big gun near the camera is felt as much as heard: a sub-bass blow under the report.
-    if (len && f.bank !== 'cannon_small' && f.s.dist < 350) this.felt(t, f.s, f.cls.weight * mult);
     return len;
   }
 
@@ -359,13 +357,6 @@ export class Battlefield {
     if (len && gain > 0.15) this.lastAudible = this.ctx.currentTime;
     if (len) this.duck(t, gain * 1.4);
     return len > 0;
-  }
-
-  /** The sub-bass blow of a heavy hit or a near gun (Voices.thump), within the voice budget. */
-  private felt(t: number, s: Heard, weight: number) {
-    if (s.gain < 0.12 || this.budget < 0.3 || !this.reserve(COST.thump.nodes, COST.thump.secs, t)) return;
-    this.budget -= 0.3;
-    this.voices.thump(t, s, weight);
   }
 
   /** The synthesised report, for a gun class whose files are not loaded. */
@@ -633,14 +624,9 @@ export class Battlefield {
         if (s.gain < 0.03 || (Math.random() > keep && e.damage < 10)) continue;
         const at = now + s.delay;
         const grape = e.ammo === 'grape';
-        // A heavy gun's shot strikes louder and lower than a light one's, with the blow felt under it; a heavy hit
-        // near by gives way to nothing for a moment, as a near gun does.
-        const k = Math.min(1.25, 0.55 + e.damage * 0.05);
-        const heavy = !grape && e.damage >= 7;
+        const k = Math.min(1, 0.5 + e.damage * 0.04);
         if (samples.has('impact_wood')) {
-          const len = this.sample('impact_wood', at, { gain: loud(s.gain) * k, pan: s.pan, rate: grape ? rnd(1.1, 1.2) : heavy ? rnd(0.82, 0.92) : rnd(0.92, 1.08), cutoff: Math.max(900, s.muffle), index: grape ? 1 : undefined });
-          if (len && heavy) this.duck(at, loud(s.gain) * k);
-          if (!grape) this.felt(at, s, Math.min(1, e.damage / 15));
+          this.sample('impact_wood', at, { gain: loud(s.gain) * k, pan: s.pan, rate: grape ? rnd(1.1, 1.2) : rnd(0.92, 1.08), cutoff: Math.max(900, s.muffle), index: grape ? 1 : undefined });
         } else if (this.reserve(COST.hit.nodes, COST.hit.secs, at)) {
           this.budget -= 1;
           voices.hit(at, s, e.damage);

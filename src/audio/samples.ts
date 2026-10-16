@@ -14,7 +14,7 @@ export const BANK = {
   cannon_far: { count: 2, gain: 1.1 },
   broadside: { count: 2, gain: 1.1 },
   explosion: { count: 2, gain: 1 },
-  impact_wood: { count: 3, gain: 0.95 },
+  impact_wood: { count: 3, gain: 0.75 },
   splash: { count: 2, gain: 0.55 },
   whoosh: { count: 2, gain: 0.5 },
   musket_volley: { count: 2, gain: 0.8 },

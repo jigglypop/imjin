@@ -3,7 +3,7 @@ import type { Battle } from '../sim/battle';
 import type { AmmoType, BattleEvent, GunType, Projectile, Ship } from '../sim/types';
 import type { ShipViews } from '../ships/ShipViews';
 import { waveField } from '../ocean/waves';
-import { ParticleLayer, StreakLayer, particleDepth } from './ParticleLayer';
+import { ParticleLayer, StreakLayer } from './ParticleLayer';
 import { DebrisField, Piece } from './Debris';
 import { gunClass } from './gunClass';
 import { arcPeak, timeToImpact } from './flight';
@@ -42,11 +42,6 @@ type LightSource = {
   dist: number;
   /** Lives for one lighting pass whatever the sim clock does (it stands still while paused). */
   once?: boolean;
-  /**
-   * Weight in the race for the few light slots. A gun's flash is dim next to a burning hull but lasts a few frames,
-   * and the eye looks for it: without a head start the lanterns and fires of a night battle would leave it dark.
-   */
-  rank?: number;
   score?: number;
 };
 /**
@@ -58,8 +53,6 @@ type Flight = { x: number; y: number; z: number; seen: number; end: number; peak
 const SETTLE = 0.12;
 /** A ship going down: its script and the running parts of the sinking effects. */
 type SinkState = { plan: SinkCue[]; next: number; bubbles: number; slick: number; bubbleUntil: number };
-/** A shot hole left burning: the ship, the point in its frame, seconds left, how big, and its emission carry-over. */
-type Smoulder = { ship: number; lx: number; ly: number; lz: number; left: number; size: number; acc: number };
 
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 const smooth = (a: number, b: number, x: number) => {
@@ -75,8 +68,6 @@ export class Effects {
   /** Sparks and glowing embers: velocity-aligned additive streaks, plus the soft smear of a flying ball. */
   readonly streaks: StreakLayer;
   private readonly lightCount: number;
-  /** The scene depth the particles fade against, where the device can afford the copy. */
-  private readonly depth: ReturnType<typeof particleDepth> | null;
   private readonly debris: DebrisField;
   private readonly mun: Munitions;
   /** What the fight leaves on the ships until they sink: holes, embedded arrows, broken boards, torn sails. */
@@ -85,11 +76,6 @@ export class Effects {
   readonly blaze: ShipFires;
   private readonly camPos = new Vector3();
   onShake: ((amount: number) => void) | null = null;
-  /**
-   * A shot struck a hull with `impact` (about 0.1 for a light ball glancing off to 1.6 for a great arrow's breach), from
-   * outside the face (bx, bz): the camera's kick and the hit-stop of a heavy blow beside the camera.
-   */
-  onImpact: ((x: number, y: number, z: number, impact: number, ship: number, bx: number, bz: number) => void) | null = null;
   /** Sinking cues (see sinkPlan.ts) for the sound: kind, world position, 0..1 size. */
   onCue: ((kind: CueKind, x: number, y: number, z: number, size: number) => void) | null = null;
   private readonly lights: PointLight[] = [];
@@ -114,7 +100,6 @@ export class Effects {
   shipRate = 1;
   private readonly seaAt = (x: number, z: number) => waveField.heightAt(x, z, waveField.time, 8);
   private readonly sinks = new Map<number, SinkState>();
-  private readonly smoulders: Smoulder[] = [];
   private frame = 0;
   /** Equipment class: how big the pools are (1 PC, less on tablets and phones). */
   private readonly tier: number;
@@ -128,14 +113,11 @@ export class Effects {
   night = 0;
 
   constructor(private readonly views: ShipViews, quality: EffectsQuality) {
-    this.lightCount = quality.lights;
-    // Soft contact with the sea and the hulls costs a depth copy each frame: PCs only (the class with eight lights).
-    this.depth = quality.lights >= 8 ? particleDepth() : null;
-    const lighting = { lights: this.lightCount, depth: this.depth };
     // Capacities leave headroom above the level 4 emission rate, so the layers do not saturate in a big battle.
-    this.smoke = new ParticleLayer('smoke', 12000, quality.particles, lighting);
-    this.fire = new ParticleLayer('fire', 8000, quality.particles, lighting);
-    this.spray = new ParticleLayer('spray', 6000, quality.particles, lighting);
+    this.smoke = new ParticleLayer('smoke', 12000, quality.particles);
+    this.fire = new ParticleLayer('fire', 8000, quality.particles);
+    this.spray = new ParticleLayer('spray', 6000, quality.particles);
+    this.lightCount = quality.lights;
     this.tier = quality.lights >= 8 ? 1 : quality.lights >= 6 ? 0.7 : 0.45;
     this.k = Math.min(1.25, Math.max(0.4, quality.particles.keep));
     this.streaks = new StreakLayer(Math.round(1200 * this.tier), Math.round(1700 * this.tier), quality.particles);
@@ -145,8 +127,7 @@ export class Effects {
     this.mun = new Munitions(this.smoke, this.fire, this.streaks, this.tier);
     this.mun.setKeep(this.k);
     this.mun.onLand = this.onRocketLand;
-    this.scars = new Scars(views, this.mun, this.smoke, this.fire);
-    this.scars.setKeep(this.k);
+    this.scars = new Scars(views, this.mun);
     this.blaze = new ShipFires({
       views,
       spray: this.spray,
@@ -170,9 +151,8 @@ export class Effects {
     this.group.add(this.smoke.sprite, this.fire.sprite, this.spray.sprite, this.streaks.sprite, this.debris.group, this.mun.group, this.scars.group, this.blaze.group);
   }
 
-  /** Frees the meshes, the sprites and the depth copy, whose texture is the clone made for the scene pass on its first frame. */
+  /** Frees the meshes and the sprites. */
   dispose() {
-    this.depth?.value.dispose();
     disposeTree(this.group);
   }
 
@@ -184,7 +164,6 @@ export class Effects {
     this.spray.setKeep(keep);
     this.streaks.setKeep(keep);
     this.mun.setKeep(this.k);
-    this.scars.setKeep(this.k);
     this.blaze.setKeep(this.k);
   }
 
@@ -197,8 +176,8 @@ export class Effects {
     this.sources.push({ x, y, z, intensity, decay: 1, r: 1, g: 0.6, b: 0.27, age: 0, life: 1, dist: 70, once: true });
   }
 
-  private light(x: number, y: number, z: number, intensity: number, life: number, r = 1, g = 0.62, b = 0.3, dist = 140, rank = 1) {
-    this.sources.push({ x, y, z, intensity, decay: 1, r, g, b, age: 0, life, dist, rank });
+  private light(x: number, y: number, z: number, intensity: number, life: number, r = 1, g = 0.62, b = 0.3, dist = 140) {
+    this.sources.push({ x, y, z, intensity, decay: 1, r, g, b, age: 0, life, dist });
   }
 
   /** A new battle starts on this engine: ship and shell ids restart, so the old battle's per-id state must not carry over. */
@@ -207,7 +186,6 @@ export class Effects {
     this.dragon.clear();
     this.strokes.clear();
     this.sinks.clear();
-    this.smoulders.length = 0;
     for (const f of this.flights.values()) this.flightPool.push(f);
     this.flights.clear();
     this.ghosts.length = 0;
@@ -233,10 +211,9 @@ export class Effects {
           const shell = this.flights.get(e.proj)?.ref ?? null;
           const ship = battle.get(e.ship);
           const look = ship ? this.scarHit(ship, e.x, e.y, e.z, e.ammo, shell) : null;
-          this.hit(e.x, e.y, e.z, e.damage, e.ammo, shell ? shellKind(shell.ammo, shell.gun) : e.ammo === 'fire' ? Shell.Hiya : Shell.Ball, e.ship, shell, battle, look);
+          this.hit(e.x, e.y, e.z, e.damage, e.ammo, shell ? shellKind(shell.ammo, shell.gun) : e.ammo === 'fire' ? Shell.Hiya : Shell.Ball, look);
           this.blaze.hit(e.ship, e.x, e.y, e.z, e.ammo, battle);
-          // A brief lift of the struck hull, enough to find it from afar; the splinters and smoke tell the rest.
-          this.views.flash(e.ship, Math.min(0.45, 0.14 + e.damage * 0.018));
+          this.views.flash(e.ship);
           break;
         }
         case 'ground':
@@ -275,10 +252,9 @@ export class Effects {
     }
   }
 
-  /** Shakes the camera by `strength` at the source, falling off over `reach` metres: gunfire only rocks a camera right beside it. */
-  private shakeAt(x: number, y: number, z: number, strength: number, reach = 90) {
+  private shakeAt(x: number, y: number, z: number, strength: number) {
     const d = this.camPos.distanceTo(this.v.set(x, y, z));
-    const k = strength / (1 + (d / reach) ** 2);
+    const k = strength / (1 + (d / 90) ** 2);
     if (k > 0.02) this.onShake?.(k);
   }
 
@@ -287,112 +263,99 @@ export class Effects {
     return Math.min(5, Math.max(1, this.camPos.distanceTo(this.v.set(x, y, z)) / 160));
   }
 
-  /**
-   * A gun going off. Black powder burns in a flash lasting a few frames: a white-hot tongue out of the bore, a ball of
-   * burning gas, grains of powder still alight. What stays is the smoke: a dense jet that the air stops within a few
-   * metres, rolling over into a thick, lit cloud that hangs at the gun's height and drifts off with the wind, so a
-   * broadside builds a bank along the ship's side. The blast also slaps the water below into a ring of spray.
-   */
   gun(x: number, y: number, z: number, dx: number, dy: number, dz: number, big: boolean, type?: GunType) {
     const w = gunClass(type, big).weight;
     const scale = 0.55 + 0.6 * w;
-    // The flash: a tongue of white-hot gas along the bore, whatever the view. A streak is brightest at its head, so it
-    // is put with its head at the muzzle, pointing back, and its tail reaching out along the line of fire.
-    for (let i = 0; i < 2; i += 1) {
-      const len = (2.4 + 3 * w) * (1 - i * 0.3) * rnd(0.85, 1.15);
-      this.streaks.emit({ x: x + dx * 0.2, y: y + dy * 0.2, z: z + dz * 0.2, vx: -dx, vy: -dy, vz: -dz, life: rnd(0.04, 0.07), minLen: len, stretch: 0, width: (0.3 + 0.4 * w) * (1 - i * 0.3), r: 1, g: 0.85, b: 0.6, alpha: 1 });
+    const flames = Math.round(8 + 10 * w);
+    for (let i = 0; i < flames; i += 1) {
+      const f = i / flames;
+      const sp = 18 + f * 70;
+      const spread = 2 + f * 5;
+      this.fire.emit({ x: x + dx * (0.6 + f * 1.2), y: y + dy * (0.6 + f), z: z + dz * (0.6 + f * 1.2), vx: dx * sp + rnd(-spread, spread), vy: dy * sp + rnd(-spread, spread) * 0.6, vz: dz * sp + rnd(-spread, spread), life: rnd(0.07, 0.2) * (1 - f * 0.4), size0: (4.5 - f * 2.2) * scale, size1: (7.5 - f * 3) * scale, alpha: 1, heat: 1 - f * 0.3, drag: 7, wind: 0 });
     }
-    // The ball of burning gas: a white-hot core at the bore, the body of the flame and its ragged front, each larger
-    // and briefer than the last; a heavy charge throws a last bloom further out. From the RTS camera the ball is
-    // widened so a broadside still flashes along the side.
-    const boost = Math.min(2.5, this.zoomBoost(x, y, z));
-    const ball = scale * Math.sqrt(boost);
-    for (let i = 0; i < 4; i += 1) {
-      const at = 0.6 + i * 1.2 * scale;
-      this.fire.emit({ x: x + dx * at, y: y + dy * at, z: z + dz * at, vx: dx * 26, vy: dy * 26, vz: dz * 26, life: rnd(0.05, 0.08) + i * 0.018, size0: (1.6 + i * 1.1) * ball, size1: (3.8 + i * 2.4) * ball, alpha: 1, heat: 1 - i * 0.08, drag: 9, wind: 0 });
+    this.fire.emit({ x: x + dx * 1.5, y: y + dy * 1.5, z: z + dz * 1.5, life: 0.06, size0: 7 * scale, size1: 10 * scale, alpha: 1, heat: 1, drag: 8, wind: 0 });
+    if (w > 0.6) {
+      // The fireball of a heavy gun: a few large, brief blooms a little way off the muzzle.
+      for (let i = 0; i < 3; i += 1) this.fire.emit({ x: x + dx * (3 + i * 2.4), y: y + dy * (3 + i * 2.4) + 0.3, z: z + dz * (3 + i * 2.4), vx: dx * 30, vy: dy * 30 + 1, vz: dz * 30, life: rnd(0.1, 0.16), size0: 4 * scale, size1: 8 * scale, alpha: 0.55, heat: 0.9, drag: 5, wind: 0 });
     }
-    // The blast's bloom round the muzzle, sideways as much as forward: what makes the shot a blow and not a spark.
-    this.fire.emit({ x: x + dx * 2 * scale, y: y + dy * 2 * scale + 0.2, z: z + dz * 2 * scale, life: 0.06 + 0.04 * w, size0: 2.5 * ball, size1: (6 + 6 * w) * ball, alpha: 0.65, heat: 0.95, drag: 6, wind: 0 });
-    if (w > 0.6) this.fire.emit({ x: x + dx * 5, y: y + dy * 5 + 0.3, z: z + dz * 5, vx: dx * 18, vy: dy * 18 + 1, vz: dz * 18, life: rnd(0.1, 0.15), size0: 4 * scale, size1: 8.5 * scale, alpha: 0.6, heat: 0.85, drag: 6, wind: 0 });
-    // Grains of powder still burning, flung out in a narrow fan; a few fall smouldering to the water.
-    for (let i = 0; i < this.n(4 + 6 * w); i += 1) {
-      const sp = rnd(40, 110);
-      const fan = 0.2;
-      this.streaks.emit({ x: x + dx * 0.8, y: y + dy * 0.8, z: z + dz * 0.8, vx: dx * sp + rnd(-fan, fan) * sp * 0.5, vy: dy * sp + rnd(-fan, fan) * sp * 0.5, vz: dz * sp + rnd(-fan, fan) * sp * 0.5, life: rnd(0.08, 0.22), minLen: 0.3, stretch: 0.012, width: (0.05 + 0.06 * w) * boost, r: 1, g: rnd(0.45, 0.65), b: rnd(0.12, 0.25), gravity: 6, drag: 1.5 });
+    for (let i = 0; i < this.n(8 + 8 * w); i += 1) {
+      const sp = rnd(25, 70);
+      this.fire.emit({ x, y, z, vx: dx * sp + rnd(-6, 6), vy: dy * sp + rnd(0, 8), vz: dz * sp + rnd(-6, 6), life: rnd(0.5, 1.4), size0: 0.28, size1: 0.1, heat: 1, drag: 0.8, lift: -6, wind: 0.2 });
     }
-    for (let i = 0; i < this.n(3 + 4 * w); i += 1) {
-      const sp = rnd(15, 40);
-      this.fire.emit({ x, y, z, vx: dx * sp + rnd(-4, 4), vy: dy * sp + rnd(0, 5), vz: dz * sp + rnd(-4, 4), life: rnd(0.4, 1), size0: 0.25, size1: 0.08, heat: 1, drag: 1, lift: -6, wind: 0.2 });
-    }
-    // The jet: dense, yellowish-grey powder smoke shot out of the bore and stopped by the air within ten metres or so.
-    for (let i = 0; i < Math.round(3 + 3 * w); i += 1) {
-      const sp = rnd(22, 48) * (0.8 + 0.4 * w);
-      const tone = rnd(0.56, 0.66);
-      this.smoke.emit({ x: x + dx * 0.9, y: y + dy * 0.9, z: z + dz * 0.9, vx: dx * sp + rnd(-1.5, 1.5), vy: dy * sp + rnd(-0.5, 1.5), vz: dz * sp + rnd(-1.5, 1.5), life: rnd(9, 15), size0: rnd(1.4, 2) * scale, size1: rnd(8, 12) * scale, alpha: rnd(0.62, 0.78), r: tone, g: tone * 0.97, b: tone * 0.9, drag: 3.4, lift: 0.14, wind: 1, spin: 0.25, growth: 5 });
-    }
-    // The billow: the hot gas of the charge swelling to several metres within the first second, a short life so that it
-    // grows fast; by the time it thins out the slower cloud has taken its place.
-    for (let i = 0; i < Math.round(3 + 3 * w); i += 1) {
-      const along = rnd(1, 4.5) * scale;
-      const sp = rnd(4, 12) * scale;
-      const tone = rnd(0.66, 0.78);
-      this.smoke.emit({ x: x + dx * along + rnd(-0.5, 0.5), y: y + dy * along + rnd(-0.3, 0.6), z: z + dz * along + rnd(-0.5, 0.5), vx: dx * sp + rnd(-2.5, 2.5), vy: dy * sp + rnd(0, 2), vz: dz * sp + rnd(-2.5, 2.5), life: rnd(1.8, 2.8), size0: rnd(0.8, 1.2) * scale, size1: rnd(5, 7.5) * scale, alpha: rnd(0.5, 0.65), r: tone, g: tone * 0.98, b: tone * 0.94, drag: 2.6, lift: 0.2, wind: 1, spin: 0.35, heat: i < 2 ? 0.6 : 0 });
-    }
-    // The cloud the jet rolls over into: puffs of every size round its first metres, swelling as much up and sideways
-    // as along the bore, rising slowly and rolling as they grow, lasting long enough that the next guns of a broadside
-    // fire into the smoke of the first.
-    const puffs = Math.round(5 + 6 * w);
-    for (let i = 0; i < puffs; i += 1) {
-      const along = rnd(0.5, 8) * scale;
-      const sp = rnd(2, 14) * scale;
-      const tone = rnd(0.62, 0.76);
-      this.smoke.emit({
-        x: x + dx * along + rnd(-1, 1),
-        y: y + dy * along + rnd(-0.5, 1.2),
-        z: z + dz * along + rnd(-1, 1),
-        vx: dx * sp + rnd(-3.5, 3.5),
-        vy: dy * sp + rnd(-0.5, 3),
-        vz: dz * sp + rnd(-3.5, 3.5),
-        life: rnd(16, 28),
-        size0: rnd(1.2, 2.6) * scale,
-        size1: rnd(10, 19) * scale,
-        alpha: rnd(0.4, 0.62),
-        r: tone,
-        g: tone * 0.985,
-        b: tone * 0.96,
-        drag: 1.4,
-        lift: rnd(0.08, 0.24),
-        wind: 1,
-        spin: 0.18,
-        growth: 7,
+    // Burning powder streaking out of the bore in a narrow fan.
+    const boost = this.zoomBoost(x, y, z);
+    for (let i = 0; i < this.n(12 + 24 * w); i += 1) {
+      const sp = rnd(45, 150);
+      const fan = 0.22;
+      this.streaks.emit({
+        x: x + dx * 0.8,
+        y: y + dy * 0.8,
+        z: z + dz * 0.8,
+        vx: dx * sp + rnd(-fan, fan) * sp * 0.5,
+        vy: dy * sp + rnd(-fan, fan) * sp * 0.5,
+        vz: dz * sp + rnd(-fan, fan) * sp * 0.5,
+        life: rnd(0.12, 0.4),
+        minLen: 0.6,
+        stretch: 0.03,
+        width: (0.1 + 0.14 * w) * boost,
+        r: 1,
+        g: rnd(0.55, 0.8),
+        b: rnd(0.2, 0.4),
+        gravity: 6,
+        drag: 0.9,
       });
     }
-    // The blast ring: the pressure wave throwing smoke out sideways round the bore, fast, then stopped by the air.
     const px = -dz;
     const pz = dx;
-    const ring = Math.round(5 + 5 * w);
+    const ring = Math.round(10 + 8 * w);
     for (let i = 0; i < ring; i += 1) {
-      const a = ((i + Math.random() * 0.6) / ring) * Math.PI * 2;
-      const sp = rnd(13, 22) * scale;
-      this.smoke.emit({ x: x + dx * 1.6, y: y + dy * 1.6, z: z + dz * 1.6, vx: px * Math.cos(a) * sp + dx * 6, vy: Math.sin(a) * sp * 0.7 + 0.4, vz: pz * Math.cos(a) * sp + dz * 6, life: rnd(2.5, 4.5), size0: 0.9 * scale, size1: rnd(5, 8) * scale, alpha: 0.45, r: 0.76, g: 0.75, b: 0.72, drag: 4.5, lift: 0.12, wind: 1, growth: 6 });
+      const a = (i / ring) * Math.PI * 2;
+      const ux = px * Math.cos(a);
+      const uy = Math.sin(a);
+      const uz = pz * Math.cos(a);
+      const sp = rnd(9, 16) * scale;
+      this.smoke.emit({ x: x + dx * 2.2, y: y + dy * 2, z: z + dz * 2.2, vx: ux * sp + dx * 7, vy: uy * sp * 0.7 + 0.5, vz: uz * sp + dz * 7, life: rnd(5, 9), size0: 1.6 * scale, size1: rnd(8, 12) * scale, alpha: 0.7, r: 0.93, g: 0.92, b: 0.9, drag: 2.6, lift: 0.18, wind: 1 });
     }
-    // The blast slaps the sea under the muzzle: a ring of spray running outward and a flattened, frothy patch.
-    const h = waveField.heightAt(x, z, waveField.time, 6);
-    const reach = Math.max(2, y - h);
-    const cx = x + dx * (2 + reach * 0.8);
-    const cz = z + dz * (2 + reach * 0.8);
-    const drops = Math.round(10 + 14 * w);
-    for (let i = 0; i < drops; i += 1) {
-      const a = (i / drops) * Math.PI * 2 + Math.random() * 0.4;
-      const out = rnd(8, 16) * (0.6 + 0.6 * w);
-      this.spray.emit({ x: cx + Math.cos(a) * 1.2, y: h + 0.2, z: cz + Math.sin(a) * 1.2, vx: Math.cos(a) * out + dx * 4, vy: rnd(0.6, 2.2), vz: Math.sin(a) * out + dz * 4, life: rnd(0.6, 1), size0: 0.5, size1: rnd(1.8, 3) * (0.7 + 0.5 * w), alpha: 0.45, r: 0.92, g: 0.95, b: 0.97, drag: 2.2, lift: -9.8, wind: 0.3 });
+    // A fast jet of dark powder smoke straight out of the muzzle.
+    for (let i = 0; i < Math.round(3 + 4 * w); i += 1) {
+      const sp = rnd(30, 60);
+      this.smoke.emit({ x: x + dx * 1.2, y: y + dy * 1.2, z: z + dz * 1.2, vx: dx * sp, vy: dy * sp + 0.3, vz: dz * sp, life: rnd(3, 6), size0: 1.2 * scale, size1: rnd(6, 10) * scale, alpha: 0.6, r: 0.3, g: 0.29, b: 0.28, drag: 3.2, lift: 0.15, wind: 1, heat: 0.3 });
     }
-    this.wake?.stamp(cx, cz, Math.atan2(dz, dx), 6 + 6 * w, 0.35 + 0.35 * w, 1, 1.2);
-    this.shakeAt(x, y, z, 0.18 + 0.35 * w, 30);
-    // The flash lights the hull, the water and the smoke for a few frames: warm, close and gone. By day it has to stand
-    // against the sun; at night the eye has opened up for it and a third of it is the brightest thing on the water.
-    const day = 1 - Math.min(1, this.night);
-    this.light(x + dx * 2.5, y + 0.8, z + dz * 2.5, (700 + 1600 * w) * (1 + 1.6 * day), 0.1, 1, 0.66, 0.36, 35 + 35 * w, 30);
+    if (w > 0.45) {
+      const h = waveField.heightAt(x, z, waveField.time, 6);
+      for (let i = 0; i < 14; i += 1) {
+        const a = Math.random() * Math.PI * 2;
+        this.spray.emit({ x: x + dx * 5 + Math.cos(a) * 2, y: h + 0.2, z: z + dz * 5 + Math.sin(a) * 2, vx: Math.cos(a) * rnd(2, 6) + dx * 6, vy: rnd(1.5, 4), vz: Math.sin(a) * rnd(2, 6) + dz * 6, life: rnd(0.8, 1.4), size0: 0.8, size1: rnd(2.5, 4), alpha: 0.55, r: 0.95, g: 0.97, b: 1, drag: 0.8, lift: -9.8, wind: 0.2 });
+      }
+      // The blast's pressure flattens the sea in front of the muzzle.
+      this.wake?.stamp(x + dx * 6, z + dz * 6, Math.atan2(dz, dx), 9 + 5 * w, 0.5 + 0.3 * w, 1, 1.2);
+    }
+    this.shakeAt(x, y, z, 0.2 + 0.4 * w);
+    const puffs = Math.round(11 + 11 * w);
+    for (let i = 0; i < puffs; i += 1) {
+      const sp = rnd(4, 26) * scale;
+      const gray = rnd(0.78, 0.92);
+      this.smoke.emit({
+        x: x + dx * rnd(0.5, 3),
+        y: y + rnd(-0.3, 0.6),
+        z: z + dz * rnd(0.5, 3),
+        vx: dx * sp + rnd(-1.5, 1.5),
+        vy: dy * sp + rnd(0, 1.5),
+        vz: dz * sp + rnd(-1.5, 1.5),
+        life: rnd(12, 24),
+        size0: rnd(2, 3.5) * scale,
+        size1: rnd(14, 26) * scale,
+        alpha: rnd(0.55, 0.8),
+        r: gray,
+        g: gray,
+        b: gray * 0.98,
+        drag: 1.1,
+        lift: 0.22,
+        wind: 1,
+        heat: i < 3 ? 0.6 : 0,
+      });
+    }
+    this.light(x + dx * 3, y + 1, z + dz * 3, 6500 + 9500 * w, 0.2, 1, 0.68, 0.36, 120 + 60 * w);
   }
 
   /** Far volleys only: where the crew is drawn its shooters make their own flashes and smoke, and a bow makes none. */
@@ -474,7 +437,7 @@ export class Effects {
 
   /**
    * A rocket of a salvo came down on a deck, or into the sea beside the ship: the rockets the sim does not count. One
-   * that came down on a ship stays in it, burning, often in a sail.
+   * that came down on a ship stays in it, often in a sail.
    */
   private readonly onRocketLand = (x: number, y: number, z: number, ship: number, ux: number, uy: number, uz: number) => {
     if (!ship) {
@@ -498,217 +461,43 @@ export class Effects {
       this.smoke.emit({ x, y: y + 0.5, z, vx: rnd(-2, 2), vy: rnd(1, 3.5), vz: rnd(-2, 2), life: rnd(3, 6), size0: 0.9, size1: rnd(3.5, 6) * scale, alpha: 0.4, r: 0.4, g: 0.38, b: 0.35, drag: 1.4, lift: 0.3, wind: 0.8 });
     }
     this.sparks(x, y + 0.3, z, 12 * scale, 14, 14);
-    this.light(x, y + 1, z, 20 * scale, 0.14, 1, 0.6, 0.25, 22);
+    this.light(x, y + 1, z, 1800 * scale, 0.14, 1, 0.6, 0.25, 90);
   }
 
-  /**
-   * A shot striking a hull. The planking bursts: splinters of tarred wood with the pale grain torn open, thrown back out
-   * of the face that was struck and some through the far side; a puff of wood dust and dark powder smoke; a brief flash
-   * and a few sparks off the iron. A heavy hit (a great arrow, a big ball, a fire shot) leaves the hole smouldering.
-   */
-  hit(x: number, y: number, z: number, damage: number, ammo: AmmoType = 'ball', kind: ShellKind = Shell.Ball, ship = 0, shell: Projectile | null = null, battle?: Battle, look: HitLook | null = null) {
-    // A rocket arrow bursts in small puffs of fire, a fire arrow (hiya) leaves a bit of flame: neither tears the planking like a shot.
-    if (kind === Shell.Rocket || kind === Shell.Lance) {
-      this.shatter(x, y, z, this.n(3 + damage * 0.5), 0.55, 6);
-      this.rocketBurst(x, y, z, kind === Shell.Rocket ? 1 : 0.7);
-      this.shakeAt(x, y, z, 0.12 + damage * 0.01, 60);
-      return;
-    }
-    // Where the shell met the planks and the way back out of the struck face: the surface's normal where the model was
-    // found, else back toward where the shot came from.
-    const sh = shell ? Math.hypot(shell.vx, shell.vz) || 1 : 1;
-    let bx = shell ? -shell.vx / sh : 0;
-    let bz = shell ? -shell.vz / sh : 0;
+  /** A shell striking a hull, at the point of the planks the hit marks found when there is one (`look`). */
+  hit(x: number, y: number, z: number, damage: number, ammo: AmmoType = 'ball', kind: ShellKind = Shell.Ball, look: HitLook | null = null) {
     if (look?.ok) {
       x = look.x;
       y = look.y;
       z = look.z;
-      const nl = Math.hypot(look.nx, look.nz);
-      if (nl > 0.3) {
-        bx = look.nx / nl;
-        bz = look.nz / nl;
-      }
     }
-    const result = look?.ok ? look.result : ammo === 'arrow' ? 'pierce' : ammo === 'grape' ? 'embed' : 'pierce';
-    if (ammo === 'grape') {
-      this.pellets(x, y, z, bx, bz, damage, result === 'pierce');
-      this.shakeAt(x, y, z, 0.12 + damage * 0.01, 50);
+    // A rocket arrow bursts in small puffs of fire, a fire arrow (hiya) leaves a bit of flame: neither tears the planking like a shot.
+    if (kind === Shell.Rocket || kind === Shell.Lance) {
+      this.shatter(x, y, z, this.n(3 + damage * 0.5), 0.55, 6);
+      this.rocketBurst(x, y, z, kind === Shell.Rocket ? 1 : 0.7);
+      this.shakeAt(x, y, z, 0.12 + damage * 0.01);
       return;
     }
-    // A great arrow is a log of thorn wood sheathed in iron: what it smashes it throws out as whole boards. A ball goes
-    // through and drives its splinters inboard, where they did the killing; a shot that only lodges throws little.
-    const arrow = ammo === 'arrow';
-    const through = result === 'smash' || result === 'pierce';
-    const power = result === 'smash' ? 1.5 : arrow ? 1.15 : through ? 1 : result === 'spall' ? 0.75 : 0.45;
-    const out = result === 'smash' ? 0.72 : arrow ? 0.5 : through ? 0.4 : result === 'spall' ? 0.3 : 0.85;
-    const count = result === 'glance' ? 4 : result === 'embed' || result === 'stick' ? 3 + damage * 0.15 : (6 + damage * 0.8) * power;
-    this.splinters(x, y, z, this.n(count), Math.min(1.3, power), bx, bz, out);
-    // How hard the blow lands, 0.1 for a light ball glancing off to 1.6 for a great arrow smashing a breach: the weight
-    // of the gun (or of the damage, for a shell nobody saw fly) times what the wood let it do.
-    const blow = shell ? gunClass(shell.gun, true).weight : Math.min(1, damage / 15);
-    const bite = result === 'smash' ? 1.25 : result === 'pierce' ? 1 : result === 'spall' ? 0.7 : result === 'glance' ? 0.25 : 0.45;
-    const impact = bite * (0.45 + 0.8 * blow);
-    // Seen from the RTS camera the flash, the smoke and the flying sparks are widened so a hit still reads as a hit.
-    const zoom = this.zoomBoost(x, y, z);
-    const boost = Math.min(2.5, zoom);
-    // The blow itself: a white-hot flash at the hole and a ball of burning powder and wood thrown back out of it,
-    // there and gone in a few frames.
-    this.fire.emit({ x: x + bx * 0.5, y, z: z + bz * 0.5, life: 0.08 + 0.04 * impact, size0: 1.2 * impact * zoom, size1: (3.5 + 3.5 * impact) * zoom, alpha: 1, heat: 1, drag: 4, wind: 0 });
-    for (let i = 0; i < this.n(3 + 6 * impact); i += 1) {
-      const sp = rnd(5, 15) * impact;
-      this.fire.emit({ x: x + bx * 0.8, y: y + rnd(-0.3, 0.5), z: z + bz * 0.8, vx: bx * sp + rnd(-4, 4) * impact, vy: rnd(-1, 5) * impact, vz: bz * sp + rnd(-4, 4) * impact, life: rnd(0.14, 0.32), size0: rnd(0.9, 1.6) * impact, size1: rnd(2.6, 4.6) * impact * Math.sqrt(boost), alpha: 0.9, heat: rnd(0.7, 1), drag: 5, wind: 0.1 });
+    // A heavy arrow (daejanggun-jeon) is a log of oak with an iron head: more timber, bigger pieces.
+    const power = ammo === 'arrow' ? 1.35 : 1;
+    this.shatter(x, y, z, this.n((10 + damage * 1.8) * power), power, 12);
+    for (let i = 0; i < 9; i += 1) {
+      this.smoke.emit({ x, y, z, vx: rnd(-6, 6), vy: rnd(1, 7), vz: rnd(-6, 6), life: rnd(3, 7), size0: 1.2, size1: rnd(6, 11), alpha: 0.55, r: 0.5, g: 0.42, b: 0.32, drag: 1.8, lift: 0.3 });
     }
-    // Timber flung far and high: boards, splinters and lumps out of the struck face, over the deck and into the sea.
-    // A heavy gun's blow bursts the wood even where the shot itself lodges: the old timber does not give way cleanly.
-    const shatter = blow >= 0.7 ? Math.max(0.8, Math.min(1.3, bite)) : Math.min(1.3, bite);
-    this.fling(x, y, z, this.n((12 + damage * 2.2) * shatter * (0.75 + 0.5 * blow)), Math.min(1.4, (arrow ? 1.2 : 1) * (0.8 + 0.3 * impact)), bx, bz);
-    // Burning splinters and grains of powder streaking out of the hole, the trace the eye follows.
-    for (let i = 0; i < this.n(4 + 14 * impact); i += 1) {
-      const sp = rnd(12, 34) * (0.6 + 0.4 * impact);
-      this.streaks.emit({ x, y, z, vx: bx * sp * rnd(0.4, 1) + rnd(-0.6, 0.6) * sp, vy: rnd(0.1, 0.8) * sp, vz: bz * sp * rnd(0.4, 1) + rnd(-0.6, 0.6) * sp, life: rnd(0.25, 0.7), minLen: 0.4, stretch: 0.035, width: 0.11 * boost, r: 1, g: rnd(0.5, 0.75), b: rnd(0.15, 0.3), gravity: 14, drag: 0.6 });
+    this.sparks(x, y, z, 14 + damage * 0.9, 24, 26);
+    // Pale wood dust billowing off the struck planks.
+    for (let i = 0; i < 5; i += 1) {
+      this.smoke.emit({ x, y, z, vx: rnd(-5, 5), vy: rnd(0.5, 4), vz: rnd(-5, 5), life: rnd(2, 4), size0: 1.5, size1: rnd(8, 14) * power, alpha: 0.5, r: 0.7, g: 0.6, b: 0.46, drag: 1.6, lift: 0.2, wind: 0.8 });
     }
-    // Whole planks out of a breach, half a metre to a metre and a half long, a strake's width and thickness.
-    if (result === 'smash') {
-      for (let i = 0; i < this.n(3 + Math.min(3, damage * 0.15)); i += 1) {
-        this.debris.spawn(Piece.Plank, x + rnd(-0.3, 0.3), y + rnd(-0.3, 0.3), z + rnd(-0.3, 0.3), bx * rnd(3, 10) + rnd(-3, 3), rnd(4, 11), bz * rnd(3, 10) + rnd(-3, 3), rnd(0.6, 1.5), rnd(0.5, 0.65), rnd(0.9, 1.15), rnd(16, 26), 1.2);
-      }
+    for (let i = 0; i < 6; i += 1) {
+      this.fire.emit({ x, y, z, vx: rnd(-14, 14), vy: rnd(2, 12), vz: rnd(-14, 14), life: rnd(0.2, 0.6), size0: 0.22, size1: 0.08, heat: 1, drag: 1.5, lift: -8 });
     }
-    // Wood does not spark: the few there are come off the nails and iron fittings the shot tears through.
-    if (through) this.sparks(x, y, z, arrow ? 3 + damage * 0.2 : 4 + damage * 0.3, 18, 16);
-    // Pale dust off the torn planks and a darker puff of powder and wood smoke, both blown out of the hole: a quick
-    // dark burst first, then the cloud. A heavier blow throws a bigger cloud: a cheonja's arrow or ball against a light gun's.
-    const burst = power * (0.8 + Math.min(0.6, damage / 30)) * (0.8 + 0.4 * blow);
-    const dust = through ? 6 : 3;
-    for (let i = 0; i < dust; i += 1) {
-      this.smoke.emit({ x: x + bx * 0.8, y, z: z + bz * 0.8, vx: bx * rnd(4, 11) + rnd(-4, 4), vy: rnd(0.8, 5), vz: bz * rnd(4, 11) + rnd(-4, 4), life: rnd(2.5, 4.5), size0: 1.2, size1: rnd(6, 10) * burst, alpha: 0.55, r: 0.6, g: 0.55, b: 0.5, drag: 2, lift: 0.18, wind: 0.8, growth: 4 });
-    }
-    for (let i = 0; i < (through ? 4 : 2); i += 1) {
-      this.smoke.emit({ x: x + bx * 0.4, y: y + 0.3, z: z + bz * 0.4, vx: bx * rnd(2, 7) + rnd(-2.5, 2.5), vy: rnd(1, 4.5), vz: bz * rnd(2, 7) + rnd(-2.5, 2.5), life: rnd(4, 7), size0: 1.4, size1: rnd(7, 12) * burst * Math.sqrt(boost), alpha: 0.75, r: 0.14, g: 0.13, b: 0.12, growth: 6, drag: 1.8, lift: 0.35, wind: 1, heat: i === 0 ? 0.5 : 0 });
-    }
+    this.fire.emit({ x, y, z, life: 0.12, size0: 3.5 * power, size1: 6 * power, heat: 1, drag: 4, wind: 0 });
     if (ammo === 'fire') {
-      for (let i = 0; i < 10; i += 1) this.fire.emit({ x: x + rnd(-1, 1), y: y + rnd(0, 1.5), z: z + rnd(-1, 1), vx: rnd(-2, 2), vy: rnd(2, 6), vz: rnd(-2, 2), life: rnd(0.5, 1.2), size0: rnd(1.2, 2.4), size1: rnd(2.6, 4.2), heat: rnd(0.6, 1), drag: 1.5, lift: 2.5, wind: 0.5 });
+      for (let i = 0; i < 12; i += 1) this.fire.emit({ x: x + rnd(-1, 1), y: y + rnd(0, 1.5), z: z + rnd(-1, 1), vx: rnd(-2, 2), vy: rnd(2, 6), vz: rnd(-2, 2), life: rnd(0.5, 1.2), size0: rnd(1.5, 3), size1: rnd(3, 5), heat: rnd(0.6, 1), drag: 1.5, lift: 2.5, wind: 0.5 });
     }
-    // The flash lights the struck side and the water under it. By day it has to stand against the sun; at night the
-    // same light would turn the whole hull white, so it is far smaller.
-    const day = 1 - Math.min(1, this.night);
-    this.light(x + bx * 1.5, y + 0.8, z + bz * 1.5, (ammo === 'fire' ? 1.3 : 1) * impact * (300 + 3600 * day), 0.12, 1, 0.62, 0.32, 25 + 35 * impact, 30);
-    this.shakeAt(x, y, z, (through ? 0.3 : 0.12) + damage * 0.02, 60);
-    const struck = battle?.get(ship);
-    if (struck) this.views.jolt(struck, -bx, -bz, impact);
-    this.onImpact?.(x, y, z, impact, ship, bx, bz);
-    // The wad that followed the shot in burns on in the splintered wood of a breach or a hole.
-    if (battle && ((through && (damage >= 8 || arrow)) || ammo === 'fire')) this.smoulder(ship, x, y, z, ammo === 'fire' ? 1.3 : Math.min(1.2, damage / 10), battle);
-  }
-
-  /**
-   * A load of small shot (the joran-hwan, iron shot, a hudun's lead) arriving as a pattern a few metres across: dust and
-   * chips jump from a dozen points of the wall at once, few pieces bigger than a hand; through thin Japanese boards some
-   * pass on inboard. It does not open the hull: what it kills is the men behind the wall.
-   */
-  private pellets(x: number, y: number, z: number, bx: number, bz: number, damage: number, through: boolean) {
-    const sx = -bz;
-    const sz = bx;
-    const points = this.n(5 + damage * 0.3);
-    const boost = Math.min(2, this.zoomBoost(x, y, z));
-    for (let i = 0; i < points; i += 1) {
-      const a = rnd(-1.3, 1.3);
-      const h = rnd(-0.5, 0.6);
-      const px = x + sx * a + bx * 0.05;
-      const py = y + h;
-      const pz = z + sz * a + bz * 0.05;
-      // A puff of dust at every other point: the pattern reads as a spray of chips, not a cloud.
-      if (i % 2 === 0) this.smoke.emit({ x: px, y: py, z: pz, vx: bx * rnd(1.5, 4) + rnd(-0.6, 0.6), vy: rnd(0.2, 1.2), vz: bz * rnd(1.5, 4) + rnd(-0.6, 0.6), life: rnd(1.2, 2.4), size0: 0.25, size1: rnd(1.1, 1.9), alpha: 0.45, r: 0.62, g: 0.56, b: 0.48, drag: 2, lift: 0.1, wind: 0.6 });
-      if (Math.random() < 0.6) this.debris.spawn(Piece.Splinter, px, py, pz, bx * rnd(2, 6) + rnd(-1.5, 1.5), rnd(1, 4), bz * rnd(2, 6) + rnd(-1.5, 1.5), rnd(0.12, 0.3), rnd(0.5, 1), rnd(0.5, 1), rnd(6, 10), 1.6);
-      if (through && Math.random() < 0.5) this.debris.spawn(Piece.Splinter, px, py, pz, -bx * rnd(2, 5), rnd(0.5, 2.5), -bz * rnd(2, 5), rnd(0.1, 0.25), rnd(0.5, 1), rnd(0.5, 1), rnd(6, 10), 1.6);
-    }
-    // A few sparks where iron meets the iron of the guns' port frames and the wall's nails.
-    for (let i = 0; i < this.n(3); i += 1) {
-      this.streaks.emit({ x: x + sx * rnd(-1, 1), y: y + rnd(-0.4, 0.5), z: z + sz * rnd(-1, 1), vx: bx * rnd(2, 8) + rnd(-3, 3), vy: rnd(1, 5), vz: bz * rnd(2, 8) + rnd(-3, 3), life: rnd(0.12, 0.3), minLen: 0.2, stretch: 0.03, width: 0.06 * boost, r: 1, g: rnd(0.55, 0.75), b: 0.25, gravity: 14, drag: 0.5 });
-    }
-  }
-
-  /**
-   * Splinters of a shot hole: mostly small, dark tarred pieces, some pale torn grain, a board now and then. `out` of
-   * them fly back out of the struck face (bx, bz), the rest on through the hull: a ball drives most of its splinters
-   * inboard, where they did the killing; a great arrow smashes more of the face it strikes. None goes higher than a mast.
-   */
-  private splinters(x: number, y: number, z: number, count: number, power: number, bx: number, bz: number, out: number) {
-    for (let i = 0; i < count; i += 1) {
-      const back = bx === 0 && bz === 0 ? 0 : Math.random() < out ? 1 : -0.6;
-      const sp = rnd(3, 10) * power;
-      const vx = bx * back * sp + rnd(-3, 3);
-      const vz = bz * back * sp + rnd(-3, 3);
-      const vy = rnd(1.5, 7.5) * power;
-      const r = Math.random();
-      if (r < 0.5) this.debris.spawn(Piece.Plank, x, y, z, vx, vy, vz, rnd(0.25, 0.7) * power, rnd(0.3, 0.6), rnd(0.25, 0.55), rnd(8, 15), 1.4);
-      else if (r < 0.78) this.debris.spawn(Piece.Splinter, x, y, z, vx * 1.2, vy, vz * 1.2, rnd(0.25, 0.8) * power, rnd(0.8, 1.6), rnd(0.8, 1.6), rnd(8, 14), 1.6);
-      else if (r < 0.94) {
-        const s = rnd(0.12, 0.32) * power;
-        this.debris.spawn(Piece.Chunk, x, y, z, vx * 0.8, vy, vz * 0.8, s, s, s, rnd(8, 14));
-      } else {
-        const s = rnd(0.6, 1.1) * power;
-        this.debris.spawn(Piece.Plank, x, y, z, vx * 0.6, vy * 0.8, vz * 0.6, s * 1.4, s * 0.8, s * 0.8, rnd(12, 20));
-      }
-    }
-  }
-
-  /**
-   * The timber a hard blow throws far: boards, splinters and charred lumps burst out all round the hole, along the hull
-   * as much as away from it and leaning out of the struck face (bx, bz), the highest well over the deckhouse, landing in
-   * the sea a ship's length away. The first few are whole boards tumbling end over end. `power` 1 is a medium ball's hit.
-   */
-  private fling(x: number, y: number, z: number, count: number, power: number, bx: number, bz: number) {
-    const spread = 12 * power;
-    for (let i = 0; i < count; i += 1) {
-      const out = rnd(1, 8) * power;
-      const vx = rnd(-spread, spread) + bx * out;
-      const vz = rnd(-spread, spread) + bz * out;
-      const r = Math.random();
-      if (i < 3) {
-        const s = rnd(1.3, 2.4) * power;
-        this.debris.spawn(Piece.Plank, x, y, z, vx * 0.7, rnd(5, 15) * power, vz * 0.7, s, s * 1.3, s * 1.3, rnd(14, 26));
-      } else if (r < 0.5) this.debris.spawn(Piece.Splinter, x, y, z, vx * 1.3, rnd(5, 19) * power, vz * 1.3, rnd(0.9, 2.8) * power, rnd(1.4, 2.4), rnd(1.4, 2.4), rnd(10, 20), 1.6);
-      else if (r < 0.82) {
-        const s = rnd(0.45, 1.2) * power;
-        this.debris.spawn(Piece.Plank, x, y, z, vx, rnd(4, 17) * power, vz, s, s, s, rnd(14, 26));
-      } else {
-        const s = rnd(0.4, 1.1) * power;
-        this.debris.spawn(Piece.Chunk, x, y, z, vx * 0.8, rnd(3, 13) * power, vz * 0.8, s, s, s, rnd(10, 18));
-      }
-    }
-  }
-
-  /** The hole a heavy hit leaves keeps burning a little: a few flames and a thread of dark smoke, riding with the hull. */
-  private smoulder(ship: number, x: number, y: number, z: number, size: number, battle: Battle) {
-    const s = battle.get(ship);
-    const at = this.views.worldOf(ship);
-    if (!s || !at || this.smoulders.length >= Math.round(16 * this.tier)) return;
-    const c = Math.cos(s.heading);
-    const n = Math.sin(s.heading);
-    const dx = x - at.x;
-    const dz = z - at.z;
-    this.smoulders.push({ ship, lx: dx * c + dz * n, ly: y - at.y, lz: -dx * n + dz * c, left: rnd(4, 8) * (0.7 + 0.3 * size), size, acc: 0 });
-  }
-
-  private smouldering(battle: Battle, dt: number) {
-    for (let i = this.smoulders.length - 1; i >= 0; i -= 1) {
-      const m = this.smoulders[i]!;
-      const ship = battle.get(m.ship);
-      m.left -= dt;
-      if (!ship || !ship.alive || ship.sinking > 0.3 || m.left <= 0) {
-        this.smoulders.splice(i, 1);
-        continue;
-      }
-      this.views.localToWorld(m.ship, m.lx, m.ly, m.lz, this.p);
-      const dying = Math.min(1, m.left / 2);
-      m.acc = Math.min(m.acc + (5 + 7 * m.size) * dying * this.k * dt, 6);
-      while (m.acc >= 1) {
-        m.acc -= 1;
-        this.fire.emit({ x: this.p.x + rnd(-0.3, 0.3), y: this.p.y + rnd(-0.2, 0.2), z: this.p.z + rnd(-0.3, 0.3), vx: rnd(-0.4, 0.4), vy: rnd(1, 2.5), vz: rnd(-0.4, 0.4), life: rnd(0.35, 0.7), size0: 0.7 * m.size, size1: rnd(1.2, 1.9) * m.size, heat: rnd(0.6, 1), drag: 1.5, lift: 2, wind: 0.5, alpha: 0.85, rot: rnd(-0.15, 0.15), spin: 0.05 });
-        if (Math.random() < 0.45) this.smoke.emit({ x: this.p.x, y: this.p.y + 0.8, z: this.p.z, vx: rnd(-0.4, 0.4), vy: rnd(1.2, 2.4), vz: rnd(-0.4, 0.4), life: rnd(5, 9), size0: 0.8, size1: rnd(4, 7) * m.size, alpha: 0.4 * dying, r: 0.22, g: 0.2, b: 0.19, drag: 0.8, lift: 0.5, wind: 1, heat: 0.3 });
-      }
-      this.sources.push({ x: this.p.x, y: this.p.y + 1, z: this.p.z, intensity: 8 * m.size * dying * (0.8 + Math.random() * 0.4), decay: 1, r: 1, g: 0.5, b: 0.2, age: 0, life: 1, dist: 14, once: true });
-    }
+    this.light(x, y + 1, z, ammo === 'fire' ? 6000 : 3500, 0.16);
+    this.shakeAt(x, y, z, 0.3 + damage * 0.02);
   }
 
   ground(x: number, y: number, z: number) {
@@ -720,54 +509,48 @@ export class Effects {
       this.debris.spawn(Piece.Chunk, x, y + 0.5, z, rnd(-6, 6), rnd(5, 13), rnd(-6, 6), s, s, s, rnd(6, 12));
     }
     this.sparks(x, y + 0.3, z, 8, 12, 14);
-    this.light(x, y + 1, z, 20, 0.1, 1, 0.62, 0.3, 22);
+    this.light(x, y + 1, z, 1800, 0.1);
   }
 
-  /**
-   * A shot falling into the sea: a tall, narrow column of white water thrown up in a fraction of a second, a crown of
-   * water round its foot, drops catching the light, and spray that hangs and drifts after the column has fallen back on
-   * itself, then a ring of foam. `size` 1 is a round shot; a great arrow throws more, grape and rocket arrows less.
-   */
   splash(x: number, z: number, size: number) {
     const h = waveField.heightAt(x, z);
-    const k = Math.sqrt(size);
-    // The column: water stood up in tall sprites, flung straight up and falling back on itself, rounding as it falls.
-    // A heavy shot throws it taller than a light one by more than its size: a great arrow's column stands over the masts.
-    const lift = Math.min(1.5, k * (0.85 + 0.35 * size));
-    const jets = Math.round(5 + 8 * size);
-    const wide = 0.8 + 0.45 * size;
-    for (let i = 0; i < jets; i += 1) {
-      const up = rnd(12, 20) * lift * (1 - (i / jets) * 0.4);
-      this.spray.emit({ x: x + rnd(-0.35, 0.35) * k, y: h + 0.3, z: z + rnd(-0.35, 0.35) * k, vx: rnd(-0.6, 0.6), vy: up, vz: rnd(-0.6, 0.6), life: rnd(1.6, 2.4), size0: rnd(0.6, 0.9) * k * wide, size1: rnd(1.8, 2.8) * k * wide, alpha: rnd(0.75, 0.92), r: 0.92, g: 0.95, b: 0.97, stretch: rnd(1.8, 3), rot: rnd(-0.08, 0.08), spin: 0.02, drag: 0.3, lift: -9.8, wind: 0.2 });
+    for (let i = 0; i < Math.round(14 * size); i += 1) {
+      this.spray.emit({ x: x + rnd(-0.6, 0.6), y: h + 0.3, z: z + rnd(-0.6, 0.6), vx: rnd(-0.8, 0.8), vy: rnd(14, 26) * size, vz: rnd(-0.8, 0.8), life: rnd(1.6, 2.6), size0: rnd(1, 1.8) * size, size1: rnd(3.5, 6) * size, alpha: rnd(0.6, 0.9), r: 0.95, g: 0.97, b: 1, drag: 0.25, lift: -9.8, wind: 0.25 });
     }
-    // The body of a heavy shot's column: broad white water heaved up round the narrow jets, so a round shot or a great
-    // arrow stands a thick white pillar; a light shot's stays a thin spout.
-    const heavy = Math.min(1, Math.max(0, (size - 0.6) / 0.5));
-    for (let i = 0; i < Math.round(12 * size * heavy); i += 1) {
+    const n = Math.round(26 * size);
+    for (let i = 0; i < n; i += 1) {
       const a = Math.random() * Math.PI * 2;
       const r = Math.random();
-      this.spray.emit({ x: x + Math.cos(a) * r * 1.2 * k, y: h + 0.2, z: z + Math.sin(a) * r * 1.2 * k, vx: Math.cos(a) * rnd(0.5, 3) * k, vy: rnd(11, 25) * lift * (1 - r * 0.4), vz: Math.sin(a) * rnd(0.5, 3) * k, life: rnd(1.4, 2.4), size0: rnd(1.3, 2.1) * k, size1: rnd(4.5, 7.5) * k, alpha: rnd(0.65, 0.9), r: 0.94, g: 0.97, b: 1, stretch: rnd(0.6, 1.4), drag: 0.35, lift: -9.8, wind: 0.3 });
+      this.spray.emit({
+        x: x + Math.cos(a) * r * 1.2,
+        y: h + 0.2,
+        z: z + Math.sin(a) * r * 1.2,
+        vx: Math.cos(a) * rnd(0.5, 4) * size,
+        vy: rnd(7, 19) * size * (1 - r * 0.5),
+        vz: Math.sin(a) * rnd(0.5, 4) * size,
+        life: rnd(1.1, 2.4),
+        size0: rnd(0.8, 1.6) * size,
+        size1: rnd(2.5, 5) * size,
+        alpha: rnd(0.55, 0.85),
+        r: 0.94,
+        g: 0.97,
+        b: 1,
+        drag: 0.35,
+        lift: -9.8,
+        wind: 0.3,
+      });
     }
-    // The crown: water thrown out and up round the foot of the column.
-    const crown = Math.round(8 + 10 * size);
-    for (let i = 0; i < crown; i += 1) {
-      const a = (i / crown) * Math.PI * 2 + Math.random() * 0.5;
-      const out = rnd(1.5, 4) * k;
-      this.spray.emit({ x: x + Math.cos(a) * 0.6 * k, y: h + 0.2, z: z + Math.sin(a) * 0.6 * k, vx: Math.cos(a) * out, vy: rnd(3.5, 7.5) * lift, vz: Math.sin(a) * out, life: rnd(0.8, 1.3), size0: 0.4 * k, size1: rnd(1, 1.7) * k, alpha: rnd(0.6, 0.8), r: 0.93, g: 0.96, b: 0.98, stretch: 0.6, drag: 0.5, lift: -9.8, wind: 0.25 });
+    for (let i = 0; i < 6; i += 1) {
+      this.spray.emit({ x: x + rnd(-1, 1), y: h + 0.3, z: z + rnd(-1, 1), vx: rnd(-1, 1), vy: rnd(0.2, 1.2), vz: rnd(-1, 1), life: rnd(2, 3.5), size0: 2, size1: rnd(5, 8) * size, alpha: 0.4, r: 0.9, g: 0.95, b: 0.97, drag: 1.2, lift: 0, wind: 0.4 });
     }
-    // Drops flung high catch the light as short streaks.
-    const boost = Math.min(2.5, this.zoomBoost(x, h, z));
-    for (let i = 0; i < this.n(5 * size); i += 1) {
+    // Flung drops catch the light as short streaks, and a heavy shot leaves a ring on the sea.
+    const boost = this.zoomBoost(x, h, z);
+    for (let i = 0; i < this.n(8 * size); i += 1) {
       const a = Math.random() * Math.PI * 2;
-      const out = rnd(0.5, 3) * k;
-      this.streaks.emit({ x, y: h + 0.8, z, vx: Math.cos(a) * out, vy: rnd(9, 16) * lift, vz: Math.sin(a) * out, life: rnd(0.9, 1.5), minLen: 0.3, stretch: 0.03, width: 0.08 * boost * k, r: 0.78, g: 0.86, b: 0.95, alpha: 0.4, gravity: 9.8, drag: 0.1 });
+      const out = rnd(1, 6) * size;
+      this.streaks.emit({ x, y: h + 0.5, z, vx: Math.cos(a) * out, vy: rnd(8, 20) * size, vz: Math.sin(a) * out, life: rnd(0.8, 1.5), minLen: 0.3, stretch: 0.03, width: 0.11 * boost * size, r: 0.82, g: 0.9, b: 1, alpha: 0.55, gravity: 9.8, drag: 0.1 });
     }
-    // The mist the falling column leaves: it comes up from the foot as the water comes down, hangs low over the sea
-    // and drifts off thinning.
-    for (let i = 0; i < Math.round(3 + 3 * size); i += 1) {
-      this.spray.emit({ x: x + rnd(-1.5, 1.5) * k, y: h + rnd(0.5, 3) * lift, z: z + rnd(-1.5, 1.5) * k, vx: rnd(-0.8, 0.8), vy: rnd(0.2, 1), vz: rnd(-0.8, 0.8), life: rnd(3, 5), size0: 2 * k, size1: rnd(6, 9) * k, alpha: rnd(0.14, 0.22) * (1 + heavy), r: 0.88, g: 0.92, b: 0.95, drag: 0.9, lift: 0.04, wind: 1 });
-    }
-    this.wake?.stamp(x, z, 0, 3 + 3 * size, 0.45 * Math.min(1.5, size), 1, 1.3);
+    if (size > 0.9) this.wake?.stamp(x, z, 0, 5 * size, 0.6 * Math.min(1.5, size), 1, 1.3);
   }
 
   ram(x: number, z: number, power: number) {
@@ -1126,15 +909,9 @@ export class Effects {
       this.smoke.emit({ x, y, z, vx: rnd(-0.4, 0.4), vy: rnd(0, 0.5), vz: rnd(-0.4, 0.4), life: rnd(1.6, 2.6), size0: 2.3 * k, size1: rnd(4, 5) * k, alpha: 0.16, r: 0.95, g: 0.95, b: 0.92, drag: 1.2, lift: 0.12, wind: 0.8 });
       return;
     }
-    if (kind === Shell.Hiya) {
-      // A fire arrow trails the dark smoke of its burning tow and a few sparks of flame.
-      this.smoke.emit({ x, y, z, vx: rnd(-0.3, 0.3), vy: rnd(0, 0.5), vz: rnd(-0.3, 0.3), life: rnd(1.2, 2.2), size0: 1.2 * k, size1: rnd(2.8, 3.6) * k, alpha: 0.26, r: 0.34, g: 0.32, b: 0.3, drag: 1.4, lift: 0.1, wind: 0.6, heat: 0.5 });
-      this.fire.emit({ x, y, z, life: rnd(0.15, 0.3), size0: 0.55 * k, size1: 0.15, alpha: 0.7, heat: 0.9, drag: 2, wind: 0.2 });
-      return;
-    }
-    // Shot leaves only a faint wisp of its burning wad: a thin grey thread along the arc, gone in a second or so. Each
-    // puff starts wider than the gap to the next, so the thread never breaks up into beads.
-    this.smoke.emit({ x, y, z, vx: rnd(-0.2, 0.2), vy: rnd(0, 0.3), vz: rnd(-0.2, 0.2), life: rnd(0.6, 1.1), size0: 1.3 * k, size1: (rnd(1.8, 2.1) + 0.4 * weight) * k, alpha: 0.035 + 0.03 * weight, r: 0.84, g: 0.84, b: 0.83, drag: 1.4, lift: 0.08, wind: 0.6 });
+    const fiery = kind === Shell.Hiya;
+    this.smoke.emit({ x, y, z, vx: rnd(-0.3, 0.3), vy: rnd(0, 0.5), vz: rnd(-0.3, 0.3), life: rnd(1.2, 2.2), size0: (1.7 + 0.8 * weight) * k, size1: (rnd(3.4, 4.4) + 1.2 * weight) * k, alpha: fiery ? 0.3 : 0.22, r: fiery ? 0.34 : 0.88, g: fiery ? 0.32 : 0.88, b: fiery ? 0.3 : 0.88, drag: 1.4, lift: 0.1, wind: 0.6, heat: fiery ? 0.5 : 0 });
+    if (fiery) this.fire.emit({ x, y, z, life: rnd(0.15, 0.3), size0: 0.55 * k, size1: 0.15, alpha: 0.7, heat: 0.9, drag: 2, wind: 0.2 });
   }
 
   /**
@@ -1143,13 +920,11 @@ export class Effects {
    */
   private layTrail(trail: Trail, px: number, py: number, pz: number, ppm: number, crowd: number, kind: ShellKind, weight: number) {
     const rocket = kind === Shell.Rocket || kind === Shell.Lance;
-    // The closest spacing keeps a shot's thin puffs touching, so a near trail is a thread and not a string of beads.
-    const base = rocket ? 2 : kind === Shell.Hiya ? 1.8 : 1.2;
-    const spacing = Math.min(10, Math.max(base, 4.5 / ppm) * crowd);
+    const spacing = Math.min(10, Math.max(rocket ? 2 : 1.8, 4.5 / ppm) * crowd);
     const run = Math.hypot(px - trail.x, py - trail.y, pz - trail.z);
     if (run < spacing) return;
     const puffs = Math.min(rocket ? 8 : 16, Math.floor(run / spacing));
-    const k = Math.max(1, spacing / base);
+    const k = Math.max(1, spacing / (rocket ? 2 : 1.8));
     for (let i = 1; i <= puffs; i += 1) {
       const at = (i * spacing) / run;
       this.trailPuff(trail.x + (px - trail.x) * at, trail.y + (py - trail.y) * at, trail.z + (pz - trail.z) * at, kind, weight, k);
@@ -1182,7 +957,6 @@ export class Effects {
     this.rowCam = camera;
     this.battleRef = battle;
     this.continuous(battle, dt);
-    this.smouldering(battle, dt);
     this.camPos.copy(camera.position);
     this.frame += 1;
     for (let i = this.ghosts.length - 1; i >= 0; i -= 1) {
@@ -1262,26 +1036,26 @@ export class Effects {
       }
       switch (kind) {
         case Shell.Heavy:
-          this.mun.heavyArrow(px, py, pz, ux, uy, uz, sp, ppm, p.gun, p.age, p.id);
+          this.mun.heavyArrow(px, py, pz, ux, uy, uz, sp, ppm, p.gun);
           break;
         case Shell.Hiya:
           this.mun.fireArrow(px, py, pz, ux, uy, uz, ppm);
           break;
         case Shell.Rocket:
-          this.mun.rocket(px, py, pz, ux, uy, uz, 1.13, ppm, dt);
+          this.mun.rocket(px, py, pz, ux, uy, uz, 1.6, ppm, dt);
           break;
         case Shell.Lance:
-          this.mun.rocket(px, py, pz, ux, uy, uz, 1.31, ppm, dt);
+          this.mun.rocket(px, py, pz, ux, uy, uz, 0.95, ppm, dt);
           break;
         case Shell.Grape:
-          this.mun.grape(px, py, pz, ux, uy, uz, sp, ppm, p.id, p.age, p.gun);
+          this.mun.grape(px, py, pz, ux, uy, uz, sp, ppm, p.id, p.age);
           break;
         default:
-          this.mun.ball(px, py, pz, ux, uy, uz, sp, ppm, p.gun, p.age);
+          this.mun.ball(px, py, pz, ux, uy, uz, sp, ppm, weight);
       }
     }
     this.mun.fly(dt, this.camPos.x, this.camPos.y, this.camPos.z, focal, this.layRocket, (x, z) => pointVisible(battle, this.views.team, x, z));
-    this.scars.update(dt, battle, this.camPos.x, this.camPos.y, this.camPos.z, focal);
+    this.scars.update(battle, this.camPos.x, this.camPos.y, this.camPos.z, focal);
     this.mun.end();
     if (this.flights.size > shells.length) {
       for (const [id, f] of this.flights) {
@@ -1334,7 +1108,7 @@ export class Effects {
     }
     for (const s of this.sources) {
       const fade = s.life > 0 ? 1 - s.age / s.life : 1;
-      s.score = (s.intensity * fade * (s.rank ?? 1)) / (1 + (cam.distanceTo(this.v.set(s.x, s.y, s.z)) / 300) ** 2);
+      s.score = (s.intensity * fade) / (1 + (cam.distanceTo(this.v.set(s.x, s.y, s.z)) / 300) ** 2);
     }
     this.sources.sort((a, b) => b.score! - a.score!);
     for (let i = 0; i < this.lightCount; i += 1) {

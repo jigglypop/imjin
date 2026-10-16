@@ -71,23 +71,11 @@ export function particleNoise() {
   return shared;
 }
 
-/**
- * How puffNoise fades between its four fields at `age` (0..1, `evolve` up to 3), scaled so that a sample is one dot
- * product. Fading between two independent fields lowers the contrast halfway; dividing by the weights' length keeps it.
- * They depend on the age alone, so a sprite can work them out once per vertex and share them between samples.
- */
-export function puffWeights(age: any, evolve: number): any {
+/** Noise in about -1..1 at `coord` (in noise units, four per tile), evolving as `age` goes from 0 to 1 by fading between its four fields. */
+export function puffNoise(coord: any, age: any, evolve: number): any {
   const phase = age.mul(evolve);
   const weights = vec4(max(float(1).sub(phase.abs()), 0), max(float(1).sub(phase.sub(1).abs()), 0), max(float(1).sub(phase.sub(2).abs()), 0), max(float(1).sub(phase.sub(3).abs()), 0));
-  return weights.mul(float(2).div(sqrt(dot(weights, weights))));
-}
-
-/** Noise in about -1..1 at `coord` (in noise units, four per tile) with weights from puffWeights. The weights sum to 1 before scaling, so centring the sample centres the result. */
-export function puffNoiseAt(coord: any, weights: any): any {
-  return dot(texture(particleNoise(), coord.div(BASE_CELLS)).sub(0.5), weights);
-}
-
-/** Noise in about -1..1 at `coord`, evolving as `age` goes from 0 to 1 by fading between its four fields. */
-export function puffNoise(coord: any, age: any, evolve: number): any {
-  return puffNoiseAt(coord, puffWeights(age, evolve));
+  const sample = texture(particleNoise(), coord.div(BASE_CELLS));
+  // Fading between two independent fields lowers the contrast halfway; dividing by the weights' length keeps it.
+  return dot(sample, weights).sub(0.5).div(sqrt(dot(weights, weights))).mul(2);
 }
