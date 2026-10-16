@@ -148,6 +148,8 @@ const FAST_SPEED = SPEEDS[SPEEDS.length - 1];
  * The time budget grows with the multiplier: at 16x and up the player wants the battle to move, not a smooth 60 fps.
  */
 const MAX_STEPS = 160;
+/** Seconds a paused picture stands still before frames stop being drawn: long enough for the clouds to settle. */
+const STILL_HOLD = 1.2;
 const simBudgetMs = (speed: number) => (speed >= 64 ? 32 : speed >= 16 ? 24 : speed >= 8 ? 14 : 9);
 type LoadTask = { controller: AbortController; terrain?: Terrain; sky?: LoadedSky };
 
@@ -333,6 +335,11 @@ export class Engine {
    */
   private pageHidden = document.hidden;
   private releaseVisibility: (() => void) | null = null;
+  /** Camera matrices and canvas size of the last frame, seconds the picture has stood still, and whether it was skipped. */
+  private readonly lastPose: number[] = [];
+  private stillFor = 0;
+  private resting = false;
+  private lastFrameDt = 0;
 
   private watchVisibility() {
     const hide = () => {
@@ -341,13 +348,20 @@ export class Engine {
     const sync = () => {
       this.pageHidden = document.hidden;
     };
+    // Any touch of the controls may change what a paused battle shows (a selection, an order's marker, a label).
+    const stir = () => {
+      this.stillFor = 0;
+    };
+    const touches = ['pointerdown', 'pointermove', 'pointerup', 'wheel', 'keydown', 'keyup', 'resize'] as const;
     document.addEventListener('visibilitychange', sync);
     window.addEventListener('pagehide', hide);
     window.addEventListener('pageshow', sync);
+    for (const type of touches) window.addEventListener(type, stir, { passive: true });
     this.releaseVisibility = () => {
       document.removeEventListener('visibilitychange', sync);
       window.removeEventListener('pagehide', hide);
       window.removeEventListener('pageshow', sync);
+      for (const type of touches) window.removeEventListener(type, stir);
     };
   }
 
@@ -1281,13 +1295,15 @@ export class Engine {
       this.fpsTime = 0;
     }
     const dt = Math.min(frameDt, 0.1);
+    this.lastFrameDt = dt;
     // A multiplayer battle runs on the server at its own pace: no pause, no speed-up, nothing simulated here.
     if (!this.remote) this.updateFastForward(dt);
     const base = this.fastForward ? Math.max(this.speed, FAST_SPEED) : this.speed;
     const speed = this.cinema.speed(base * this.director.timeFactor(base));
     // Above 4x the frame rate is set by the simulation's share of each frame, not by the GPU, so it says nothing
     // about which quality level the device can hold.
-    if (this.remote || this.paused || speed <= 4) this.adaptive?.update(frameDt, this.gpuMs, this.cpuMs);
+    // A frame that drew nothing says nothing about what the device can hold either.
+    if (!this.resting && (this.remote || this.paused || speed <= 4)) this.adaptive?.update(frameDt, this.gpuMs, this.cpuMs);
     const requested = this.paused ? 0 : dt * speed;
     let scaled = this.remote ? dt : 0;
     if (this.remote) {
@@ -1521,8 +1537,36 @@ export class Engine {
     this.sun.target.updateMatrixWorld();
   }
 
+  /**
+   * Whether this frame would draw what the canvas already shows: a paused battle (the sea, smoke and crews all keep
+   * battle time) whose camera, canvas and controls have not moved for STILL_HOLD seconds, so the clouds' accumulation has
+   * settled too. The canvas keeps its last picture and the GPU rests until something changes.
+   */
+  private unchanged(dt: number) {
+    const m = this.camera.matrixWorld.elements;
+    const p = this.camera.projectionMatrix.elements;
+    const el = this.renderer.domElement;
+    const pose = this.lastPose;
+    let same = pose.length === 34 && pose[32] === el.width && pose[33] === el.height;
+    for (let i = 0; i < 16; i += 1) {
+      if (pose[i] !== m[i] || pose[16 + i] !== p[i]) same = false;
+      pose[i] = m[i]!;
+      pose[16 + i] = p[i]!;
+    }
+    pose[32] = el.width;
+    pose[33] = el.height;
+    const still = same && this.paused && !this.remote && !this.cinema.covering && !this.rts.cinematic;
+    this.stillFor = still ? this.stillFor + dt : 0;
+    return this.stillFor > STILL_HOLD;
+  }
+
   render() {
     if (!this.ready || this.pageHidden) return;
+    this.resting = this.unchanged(this.lastFrameDt);
+    if (this.resting) {
+      this.cpuMs = this.updateMs;
+      return;
+    }
     const started = performance.now();
     this.wake.update(this.renderer, this.lastScaled);
     this.fft?.update(this.renderer, waveField.time);
