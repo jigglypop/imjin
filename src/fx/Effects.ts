@@ -42,6 +42,8 @@ type LightSource = {
   dist: number;
   /** Lives for one lighting pass whatever the sim clock does (it stands still while paused). */
   once?: boolean;
+  /** How much of it the scene's lights give the hulls and crews; the sea and the smoke take it whole. */
+  hull?: number;
   score?: number;
 };
 /**
@@ -178,10 +180,10 @@ export class Effects {
 
   /**
    * A brief light of the guns: a flash, a hit, a blast. The intensities are the ones the gunfire was set by; the hulls
-   * of the ships built since take a point light about twice as brightly, so they are halved to light them as before.
+   * of the ships built since take a point light about twice as brightly, so they get half of it to light as before.
    */
   private light(x: number, y: number, z: number, intensity: number, life: number, r = 1, g = 0.62, b = 0.3, dist = 140) {
-    this.sources.push({ x, y, z, intensity: intensity * 0.5, decay: 1, r, g, b, age: 0, life, dist });
+    this.sources.push({ x, y, z, intensity, decay: 1, r, g, b, age: 0, life, dist, hull: 0.5 });
   }
 
   /** A new battle starts on this engine: ship and shell ids restart, so the old battle's per-id state must not carry over. */
@@ -1126,9 +1128,10 @@ export class Effects {
       const fade = s.life > 0 ? 1 - s.age / s.life : 1;
       l.position.set(s.x, s.y, s.z);
       l.color.setRGB(s.r, s.g, s.b);
-      l.intensity = s.intensity * fade * (1 + this.night * 0.5);
+      const intensity = s.intensity * fade * (1 + this.night * 0.5);
+      l.intensity = intensity * (s.hull ?? 1);
       l.distance = s.dist;
-      this.lightPos[i]!.set(s.x, s.y, s.z, l.intensity);
+      this.lightPos[i]!.set(s.x, s.y, s.z, intensity);
       this.lightCol[i]!.set(s.r, s.g, s.b, s.dist);
     }
     for (let i = this.sources.length - 1; i >= 0; i -= 1) if (this.sources[i]!.once) this.sources.splice(i, 1);
