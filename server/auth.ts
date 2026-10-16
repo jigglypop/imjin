@@ -46,23 +46,23 @@ export function authRoutes(api: ApiRouter, ranked: RankedStore | null) {
   const loginsByAddress = new Limiter(10, MINUTE);
   const loginsByName = new Limiter(5, MINUTE);
 
-  const reply = (accounts: AccountStore, user: UserRecord, token: string): AuthReply => ({ token, user: publicUser(user), profile: accounts.profile(user.id)! });
+  const reply = async (accounts: AccountStore, user: UserRecord, token: string): Promise<AuthReply> => ({ token, user: publicUser(user), profile: (await accounts.profile(user.id))! });
 
   /** Ties the ranked account of a recovery code to `user` when nobody has it, for a page whose own record should carry over. */
-  const adopt = (accounts: AccountStore, user: UserRecord, code: string | null) => {
+  const adopt = async (accounts: AccountStore, user: UserRecord, code: string | null) => {
     const rankedId = code && ranked?.ready ? ranked.verify(code) : null;
-    if (rankedId) accounts.linkRanked(user.id, rankedId);
+    if (rankedId) await accounts.linkRanked(user.id, rankedId);
   };
 
   // A page makes a guest only when it first has progress to keep. A page that already holds a session gets its own
   // user back instead of a second one. The nickname is the page's online name, if it has one; nobody typed it here.
-  api.route('POST', '/api/auth/guest', ({ accounts, body, token, address, now }) => {
-    const signedIn = token ? accounts.session(token, now) : null;
+  api.route('POST', '/api/auth/guest', async ({ accounts, body, token, address, now }) => {
+    const signedIn = token ? await accounts.session(token, now) : null;
     if (signedIn) return reply(accounts, signedIn.user, token!);
     const nickname = (typeof body.nickname === 'string' && clean(body.nickname.slice(0, 256), NICKNAME_MAX)) || '무명';
     if (!creations.take(address, now)) throw new ApiError('rate');
-    const user = accounts.createGuest(nickname, now);
-    return reply(accounts, user, accounts.startSession(user.id, now));
+    const user = await accounts.createGuest(nickname, now);
+    return reply(accounts, user, await accounts.startSession(user.id, now));
   });
 
   // With a guest's session the guest itself signs up: the same id, the same progress. `rankedToken` is the recovery code
@@ -74,16 +74,16 @@ export function authRoutes(api: ApiRouter, ranked: RankedStore | null) {
     const code = body.rankedToken === undefined ? null : recoveryOf(body.rankedToken);
     let guest: UserRecord | null = null;
     if (token) {
-      guest = accounts.session(token, now)?.user ?? null;
+      guest = (await accounts.session(token, now))?.user ?? null;
       if (!guest) throw new ApiError('session');
       if (guest.login !== null) throw new ApiError('registered');
     } else if (!creations.take(address, now)) throw new ApiError('rate');
-    // Checked before the hash is paid for; the transaction checks again for a sign-up that raced this one.
-    if (accounts.userByLogin(login)) throw new ApiError('login-taken');
+    // Checked before the hash is paid for; the store checks again for a sign-up that raced this one.
+    if (await accounts.userByLogin(login)) throw new ApiError('login-taken');
     const hash = await hashPassword(password);
-    const user = guest ? accounts.register(guest.id, login, hash, nickname) : accounts.createUser(login, hash, nickname, now);
-    adopt(accounts, user, code);
-    return reply(accounts, accounts.user(user.id)!, guest ? token! : accounts.startSession(user.id, now));
+    const user = guest ? await accounts.register(guest.id, login, hash, nickname) : await accounts.createUser(login, hash, nickname, now);
+    await adopt(accounts, user, code);
+    return reply(accounts, (await accounts.user(user.id))!, guest ? token! : await accounts.startSession(user.id, now));
   });
 
   // Attempts are limited per address and per login, before the password is checked. An unknown login costs as much
@@ -92,21 +92,21 @@ export function authRoutes(api: ApiRouter, ranked: RankedStore | null) {
     const login = typeof body.login === 'string' ? body.login.trim().toLowerCase().slice(0, 32) : '';
     const password = typeof body.password === 'string' ? body.password : '';
     if (!loginsByAddress.take(address, now) || !loginsByName.take(login, now)) throw new ApiError('rate');
-    const user = LOGIN_RULE.test(login) ? accounts.userByLogin(login) : null;
+    const user = LOGIN_RULE.test(login) ? await accounts.userByLogin(login) : null;
     const ok = await verifyPassword(password, user?.password ?? null);
     if (!user || !ok) throw new ApiError('credentials');
-    if (staleHash(user.password!)) accounts.rehash(user.id, await hashPassword(password));
-    return reply(accounts, user, accounts.startSession(user.id, Date.now()));
+    if (staleHash(user.password!)) await accounts.rehash(user.id, await hashPassword(password));
+    return reply(accounts, user, await accounts.startSession(user.id, Date.now()));
   });
 
-  api.route('POST', '/api/auth/logout', ({ accounts, token }) => {
-    if (token) accounts.endSession(token);
+  api.route('POST', '/api/auth/logout', async ({ accounts, token }) => {
+    if (token) await accounts.endSession(token);
     return { ok: true };
   });
 
-  api.user('GET', '/api/me', ({ accounts, user }): MeReply => ({ user: publicUser(user), profile: accounts.profile(user.id)! }));
+  api.user('GET', '/api/me', async ({ accounts, user }): Promise<MeReply> => ({ user: publicUser(user), profile: (await accounts.profile(user.id))! }));
 
-  api.user('POST', '/api/me/nickname', ({ accounts, user, body }): UserReply => ({ user: publicUser(accounts.rename(user.id, nicknameOf(body.nickname))) }));
+  api.user('POST', '/api/me/nickname', async ({ accounts, user, body }): Promise<UserReply> => ({ user: publicUser(await accounts.rename(user.id, nicknameOf(body.nickname))) }));
 
   // The current password proves it is the player at the keyboard. The other sessions end; this one stays.
   api.user('POST', '/api/me/password', async ({ accounts, user, body, session, now }) => {
@@ -114,19 +114,19 @@ export function authRoutes(api: ApiRouter, ranked: RankedStore | null) {
     const next = passwordOf(body.next);
     if (!loginsByName.take(user.login, now)) throw new ApiError('rate');
     if (!(await verifyPassword(typeof body.current === 'string' ? body.current : '', user.password))) throw new ApiError('current');
-    accounts.setPassword(user.id, await hashPassword(next), session);
+    await accounts.setPassword(user.id, await hashPassword(next), session);
     return { ok: true };
   });
 
   // An explicit tie of a ranked record (by its recovery code) to the signed-in account.
-  api.user('POST', '/api/auth/link-ranked', ({ accounts, user, body }): UserReply => {
+  api.user('POST', '/api/auth/link-ranked', async ({ accounts, user, body }): Promise<UserReply> => {
     const code = recoveryOf(body.rankedToken);
     if (!ranked?.ready) throw new ApiError('ranked');
     const rankedId = ranked.verify(code);
     if (!rankedId) throw new ApiError('ranked-code');
-    const linked = accounts.linkRanked(user.id, rankedId);
+    const linked = await accounts.linkRanked(user.id, rankedId);
     if (linked === 'taken') throw new ApiError('ranked-taken');
     if (linked === 'other') throw new ApiError('ranked-other');
-    return { user: publicUser(accounts.user(user.id)!) };
+    return { user: publicUser((await accounts.user(user.id))!) };
   });
 }
