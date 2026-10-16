@@ -1,8 +1,9 @@
 // A fingerprint of the simulation, step by step, to prove that a speed-up changed nothing: the historical battles,
 // Myeongnyang again on its own coast with its tidal current, a ranked and a casual conquest, and a night conquest on
-// the Hallyeo coast under the single-player rules run on autopilot, and after every step each ship's numbers (as raw
-// Float64 bytes, so -0 and +0 differ), the projectiles and the events go into a hash. Run it on the old and the new
-// code and compare. The two battles on a real coast read the heightmaps scripts/balance.mjs keeps in node_modules/.cache.
+// the Hallyeo coast under the single-player rules run on autopilot, and a day conquest there pits the computer against
+// a player who only orders a breach, a blockade and a ring. After every step each ship's numbers (as raw Float64
+// bytes, so -0 and +0 differ), the projectiles and the events go into a hash. Run it on the old and the new code and
+// compare. The battles on a real coast read the heightmaps scripts/balance.mjs keeps in node_modules/.cache.
 //
 //   node scripts/sim-digest.mjs --out=before.json [--seconds=180] [--only=busan,ranked] [--every=1]
 //   node scripts/sim-digest.mjs --compare=before.json,after.json      the first step where each battle differs
@@ -40,6 +41,7 @@ const { generateHeightmap } = await load('/src/terrain/generate.ts');
 const { CurrentField } = await load('/src/sim/current.ts');
 const { applyBalance } = await load('/src/sim/balance.ts');
 const { DEPTH_LATEST } = await load('/src/sim/depth.ts');
+const { applyCommand } = await load('/src/sim/commands.ts');
 
 // The heightmap cache and bilinear lookup of scripts/balance.mjs, so both tools sail on the same coast.
 const cacheDir = join(root, 'node_modules', '.cache', 'balance');
@@ -100,8 +102,35 @@ const BATTLES = {
   tide: () => onCoast('myeongnyang', 'joseon', 1592),
   // Seed 1592 falls at night on this map; the depth rules are those of a game against the computer.
   night: () => buildConquest('hallyeo', seats(false), landOf(CONQUEST_MAPS.hallyeo.terrain), 1592, { depth: DEPTH_LATEST.version }).battle,
+  // A day on the same coast against the computer, the first seat a player who only gives the maneuvers the computer
+  // never orders itself (ORDERS); the rest of that fleet holds where it mustered.
+  orders: () => buildConquest('hallyeo', [{ ...seats(false)[0], human: true }, seats(false)[1]], landOf(CONQUEST_MAPS.hallyeo.terrain), 1598, { depth: DEPTH_LATEST.version }).battle,
 };
 const only = args.only ? args.only.split(',') : Object.keys(BATTLES);
+
+// Half a minute in, the player sends six ships to breach the enemy fleet and lays a blockade across its way with five
+// more; a minute in, six more ring the enemy. Each is given before the step it is listed at.
+const centre = (list) => ({ x: list.reduce((a, s) => a + s.x, 0) / list.length, z: list.reduce((a, s) => a + s.z, 0) / list.length });
+const ORDERS = new Map([
+  [Math.round(30 / SIM_DT), (b) => {
+    const own = b.activeOf('joseon').filter((s) => s.owner === 0);
+    const a = centre(own);
+    const e = centre(b.activeOf('japan'));
+    const len = Math.hypot(e.x - a.x, e.z - a.z) || 1;
+    const ux = (e.x - a.x) / len;
+    const uz = (e.z - a.z) / len;
+    applyCommand(b, 0, { type: 'maneuver', ids: own.slice(0, 6).map((s) => s.id), kind: 'breach', x0: a.x, z0: a.z, x1: e.x + ux * 300, z1: e.z + uz * 300 });
+    const mx = a.x + ux * 300;
+    const mz = a.z + uz * 300;
+    applyCommand(b, 0, { type: 'maneuver', ids: own.slice(6, 11).map((s) => s.id), kind: 'blockade', x0: mx - uz * 250, z0: mz + ux * 250, x1: mx + uz * 250, z1: mz - ux * 250 });
+  }],
+  [Math.round(60 / SIM_DT), (b) => {
+    const own = b.activeOf('joseon').filter((s) => s.owner === 0 && s.order.type !== 'maneuver');
+    const e = centre(b.activeOf('japan'));
+    applyCommand(b, 0, { type: 'maneuver', ids: own.slice(0, 6).map((s) => s.id), kind: 'encircle', x0: e.x, z0: e.z, x1: e.x + 450, z1: e.z });
+  }],
+]);
+const SCRIPTS = { orders: ORDERS };
 
 // Walks plain data a few levels deep in a fixed key order. Ships and specs are referenced, not owned, so a ship met
 // below the top of the walk stops it, as does anything already walked from the same root.
@@ -128,12 +157,16 @@ function feed(hash, value, depth, seen) {
 const out = { seconds, every, battles: {} };
 for (const name of only) {
   const b = BATTLES[name]();
-  b.autopilot = true;
-  b.humans = new Set();
+  // A scripted battle keeps its player: the orders are theirs, and no computer takes their ships over.
+  if (!SCRIPTS[name]) {
+    b.autopilot = true;
+    b.humans = new Set();
+  }
   const steps = [];
   const started = performance.now();
   const total = Math.round(seconds / SIM_DT);
   for (let i = 0; i < total; i += 1) {
+    SCRIPTS[name]?.get(i)?.(b);
     b.step(SIM_DT);
     if (i % every === 0) {
       const hash = createHash('sha256');
