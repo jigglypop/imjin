@@ -90,7 +90,7 @@ scenes = [
     ('battle32x', '명량 해전 32배속'),
     ('fight', '명량 해전 접전 (32배속으로 접근한 뒤 2배속 60초)'),
     ('skirmish', '쟁탈전 (거점 점령전)'),
-    ('campaign', '캠페인 화면'),
+    ('campaign', '진영 전역 화면'),
 ]
 for key, label in scenes:
     parts.append(pair(label, '', ROOT / f'before_{key}.wav', ROOT / f'after_{key}.wav'))

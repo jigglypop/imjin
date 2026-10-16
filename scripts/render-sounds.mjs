@@ -4,7 +4,7 @@
 // `--only=inventory` renders every voice alone (v_*), the music bed and UI sounds (music_*, ui_*) and the retired
 // references (legacy_*), one file each, for scripts/audio/analyze.py to go through.
 // Needs a running dev server: the modules are loaded through Vite, then rendered in an OfflineAudioContext in Chrome.
-// `battle` writes audio2_battle.wav and `command` audio2_command.wav (the fleets' drums, horns and cries with no guns); the others are the synthesised voices alone.
+// `battle` writes audio2_battle.wav; the others are the synthesised voices alone.
 import { chromium } from 'playwright-core';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -117,43 +117,7 @@ const scenes = {
     at(20, { type: 'ignite', ship: 13 });
     at(35, { type: 'board', a: 3, b: 12 });
     for (let t = 35.2; t < 44; t += 0.1) at(t, { type: 'casualty', ship: 3, count: 1, melee: true });
-    // the fleets under way: both leaders pick up speed, charge, then fight; the drum order, a rout, a leader lost, a fleet broken
-    const state = (t, id, activity, speed, extra = {}) => at(t, { set: [id, { activity, speed, ...extra }] });
-    state(2, 1, 'moving', 3); state(3, 11, 'moving', 2.5); state(6, 1, 'moving', 5.5); state(8, 11, 'moving', 5); state(10, 1, 'moving', 7.5);
-    state(12, 11, 'charging', 7.5); state(14, 1, 'charging', 8); state(18, 1, 'engaging', 3); state(19, 11, 'engaging', 3);
-    at(20.5, { type: 'drum', ship: 1 });
-    state(33, 1, 'boarding', 1);
-    at(24, { type: 'musket', ship: 2, x: -190, y: 5, z: -225, dx: 1, dz: 0, count: 12, arms: 'bow' });
-    at(28, { type: 'musket', ship: 3, x: -160, y: 5, z: -280, dx: 1, dz: 0, count: 16, arms: 'bow' });
-    at(30, { type: 'morale', ship: 13, state: 'routing' });
-    at(33.6, { type: 'leader', ship: 12, flagship: false });
-    at(36, { type: 'struck', ship: 12, by: 3 });
-    at(39, { type: 'morale', ship: 1, state: 'rallying' });
-    at(42, { type: 'leader', ship: 11, flagship: true });
-    at(44, { type: 'broken', ship: 14, team: 'japan' });
     [[33.6, 'groan'], [34.5, 'crack'], [35.5, 'bubbles'], [36.5, 'mast'], [38, 'groan'], [39, 'bubbles'], [41, 'plunge'], [43, 'gone']].forEach(([t, kind]) => at(t, { cue: [kind, -100, 3, -110, 1] }));
-  ` },
-  // The fleets' own voice with no guns: the drums rising from a crawl to a charge, the horns and cries, the drum
-  // order, a boarding fight, a rout, a lost leader and a broken fleet, over the sea and the bed.
-  command: { field: true, mix: true, secs: 50, file: 'audio2_command.wav', script: `
-    const joseon = [1, 2, 3].map((id, i) => ship(id, -240 + i * 40, -260 - i * 50));
-    const japan = [11, 12, 13].map((id, i) => ship(id, 260 + i * 50, -380 - i * 40));
-    const state = (t, id, activity, speed, extra = {}) => at(t, { set: [id, { activity, speed, ...extra }] });
-    state(1, 1, 'moving', 1.5); state(3, 11, 'moving', 1.5); state(7, 1, 'moving', 4); state(9, 11, 'moving', 4);
-    state(13, 1, 'moving', 7.5); state(14, 11, 'moving', 7.5);
-    state(18, 1, 'charging', 8); state(19, 11, 'charging', 8);
-    state(24, 1, 'engaging', 3); state(25, 11, 'engaging', 3);
-    at(27, { type: 'drum', ship: 1 });
-    at(34, { type: 'board', a: 12, b: 2 });
-    for (let t = 34.2; t < 40; t += 0.1) at(t, { type: 'casualty', ship: 2, count: 1 + (rng() < 0.4 ? 1 : 0), melee: true });
-    at(36, { type: 'musket', ship: 2, x: -200, y: 5, z: -310, dx: 1, dz: 0, count: 14, arms: 'bow' });
-    at(38, { type: 'musket', ship: 3, x: -160, y: 5, z: -360, dx: 1, dz: 0, count: 16, arms: 'bow' });
-    at(40, { type: 'morale', ship: 13, state: 'routing' });
-    at(41, { type: 'sinking', ship: 12 });
-    at(42, { type: 'leader', ship: 12, flagship: false });
-    at(44, { type: 'leader', ship: 11, flagship: true });
-    at(46, { type: 'broken', ship: 13, team: 'japan' });
-    state(47, 1, 'idle', 0); state(47, 11, 'idle', 0);
   ` },
 };
 
@@ -266,26 +230,21 @@ for (const [name, scene] of Object.entries(scenes)) {
         const ships = new Map();
         const timeline = [];
         let id = 1000;
-        // A ship carries what the fleet's drums read: its side, speed, nerve and squadron (the battle script sets the team).
-        const ship = (shipId, x, z) => { const s = { id: shipId, x, z, spec: { deck: 6, maxSpeed: 8 }, team: shipId >= 11 && shipId < 20 ? 'japan' : 'joseon', speed: 0, moraleState: 'steady', squadronId: shipId >= 11 && shipId < 20 ? 2 : 1, flagship: shipId === 1 }; ships.set(shipId, s); return s; };
-        const activities = new Map();
+        const ship = (shipId, x, z) => { const s = { id: shipId, x, z, spec: { deck: 6 } }; ships.set(shipId, s); return s; };
         const at = (t, e) => timeline.push({ t, e });
         new Function('ship', 'at', 'rng', 'nextId', play)(ship, at, rng, () => (id += 1));
         timeline.sort((a, b) => a.t - b.t);
-        const squadrons = [{ id: 1, leaderId: 1 }, { id: 2, leaderId: 11 }];
-        const battle = { get: (shipId) => ships.get(shipId), squadrons, isActive: () => true, activityOf: (shipId) => activities.get(shipId) ?? 'idle', time: 0 };
+        const battle = { get: (shipId) => ships.get(shipId) };
         const STEP = 0.05;
         let next = 0;
         const step = (t) => {
           const events = [];
           while (next < timeline.length && timeline[next].t <= t) {
             const e = timeline[next++].e;
-            if (e.set) { const [shipId, patch] = e.set; const { activity, ...rest } = patch; Object.assign(ships.get(shipId), rest); if (activity) activities.set(shipId, activity); }
-            else if (e.cue) bf.cue(...e.cue);
+            if (e.cue) bf.cue(...e.cue);
             else events.push(e);
           }
-          battle.time = t;
-          bf.tick(camera, STEP, t * 1000, battle);
+          bf.tick(camera, STEP, t * 1000);
           weather?.setRumble(bf.intensity);
           if (events.length) bf.update(events, battle, camera);
           if (t + STEP < secs - 0.1) ctx.suspend(t + STEP).then(() => step(t + STEP));

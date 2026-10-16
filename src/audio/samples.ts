@@ -14,30 +14,19 @@ export const BANK = {
   cannon_far: { count: 2, gain: 1.1 },
   broadside: { count: 2, gain: 1.1 },
   explosion: { count: 2, gain: 1 },
-  impact_wood: { count: 3, gain: 0.95 },
+  impact_wood: { count: 3, gain: 0.75 },
   splash: { count: 2, gain: 0.55 },
   whoosh: { count: 2, gain: 0.5 },
   musket_volley: { count: 2, gain: 0.8 },
   creak: { count: 1, gain: 0.6 },
   sink: { count: 1, gain: 0.8 },
   drum: { count: 2, gain: 0.75 },
-  // The fleet's voice: drums, gong, horns, cries and the work of the crews (see battlefield.ts, orders.ts).
-  buk: { count: 3, gain: 0.75 },
-  taiko: { count: 2, gain: 0.75 },
-  gong: { count: 2, gain: 0.8 },
-  horn: { count: 3, gain: 0.9 },
-  clash: { count: 3, gain: 0.55 },
-  overboard: { count: 2, gain: 0.7 },
-  arrows: { count: 2, gain: 0.8 },
 } as const;
 
 export type Kind = keyof typeof BANK;
 
 /** Loaded first, so the sounds a battle opens with are there before the rare ones. */
-const ORDER: Kind[] = ['cannon_heavy', 'cannon_medium', 'cannon_small', 'broadside', 'impact_wood', 'splash', 'cannon_far', 'whoosh', 'explosion', 'musket_volley', 'buk', 'taiko', 'arrows', 'clash', 'horn', 'sink', 'creak', 'gong', 'overboard', 'drum'];
-
-/** Kinds a phone does not decode: the old drum, which the buk and taiko now play. */
-const LEAN_SKIPS: readonly Kind[] = ['drum'];
+const ORDER: Kind[] = ['cannon_heavy', 'cannon_medium', 'cannon_small', 'broadside', 'impact_wood', 'splash', 'cannon_far', 'whoosh', 'explosion', 'musket_volley', 'sink', 'creak', 'drum'];
 
 export type PlayOptions = {
   /** Level before the kind's own gain. */
@@ -76,14 +65,14 @@ export class Samples {
   ) {}
 
   /**
-   * Fetch and decode the bank. A phone keeps two files per kind and skips the old drum, which halves what stays decoded
+   * Fetch and decode the bank. A phone keeps two files per kind and skips the drums, which halves what stays decoded
    * in memory. Files that fail to load are simply missing; callers fall back to the synthesised voices.
    */
   async load(base: string, lean: boolean) {
     // Decode into a private table and publish only when everything has settled, so the playing side never sees holes.
     const loaded: Partial<Record<Kind, AudioBuffer[]>> = {};
     await Promise.all(
-      ORDER.filter((kind) => !(lean && LEAN_SKIPS.includes(kind))).flatMap((kind) => {
+      ORDER.filter((kind) => !(lean && kind === 'drum')).flatMap((kind) => {
         const count = lean ? Math.min(2, BANK[kind].count) : BANK[kind].count;
         return Array.from({ length: count }, async (_, i) => {
           try {
