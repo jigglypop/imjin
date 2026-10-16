@@ -46,6 +46,9 @@ export class FFTWaves {
   private readonly h0Data: Float32Array;
   private readonly h0: Buf;
   private readonly passes: any[] = [];
+  /** The time and choppiness the maps were last computed for; a new spectrum clears them so the next update recomputes. */
+  private mapsTime = NaN;
+  private mapsChoppiness = NaN;
 
   constructor(params: SpectrumParams, readonly n = 256, seed = 1592) {
     if (n < 16 || (n & (n - 1)) !== 0) throw new Error(`FFT size must be a power of two, got ${n}`);
@@ -122,6 +125,7 @@ export class FFTWaves {
     }
     const attr = this.h0.value as unknown as { needsUpdate: boolean };
     attr.needsUpdate = true;
+    this.mapsTime = NaN;
   }
 
   private indices() {
@@ -227,6 +231,12 @@ export class FFTWaves {
   }
 
   update(renderer: WebGPURenderer, time: number) {
+    // The maps are a function of the sea's time, the spectrum and the choppiness alone. The sea's time moves with the
+    // battle's steps (30 a second), so a faster screen, a paused battle or a held cutscene asked for the same maps again,
+    // and their twenty passes and the mip chains of their textures were run for nothing.
+    if (time === this.mapsTime && this.choppiness.value === this.mapsChoppiness) return;
+    this.mapsTime = time;
+    this.mapsChoppiness = this.choppiness.value;
     this.time.value = time;
     renderer.compute(this.passes as never);
   }
