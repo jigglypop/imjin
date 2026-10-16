@@ -78,7 +78,7 @@ export function buildKobaya(lod: Lod): MeshData {
   // nobori poles stepped into the floor
   for (const f of anchors.flagMounts) {
     if (f.kind !== 'nobori') continue;
-    nobori(ctx, [f.pos[0], floorY, f.pos[2]], f.size[1] + 2.1, f.size[0], f.size[1], f.id.slice(7), f.pos[0] * 0.8, wood);
+    nobori(ctx, [f.pos[0], floorY, f.pos[2]], f.size[1] + 2.1, f.size[1], f.id.slice(7), f.pos[0] * 0.8, wood);
     if (lod < 2) box(b, plank, [f.pos[0] - 0.22, floorY, -0.22], [f.pos[0] + 0.22, floorY + 0.3, 0.22], { grain: 1 });
   }
   for (const l of anchors.lanterns) {

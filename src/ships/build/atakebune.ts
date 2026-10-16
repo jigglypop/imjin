@@ -162,7 +162,7 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
   // --- banners ---
   for (const f of anchors.flagMounts) {
     if (f.kind !== 'nobori') continue;
-    nobori(ctx, f.pos, f.size[1] + 0.9, f.size[0], f.size[1], f.id.slice(7), f.pos[0] * 0.7 + f.pos[2], wood);
+    nobori(ctx, f.pos, f.size[1] + 0.9, f.size[1], f.id.slice(7), f.pos[0] * 0.7 + f.pos[2], wood);
   }
 
   // --- deck furniture ---

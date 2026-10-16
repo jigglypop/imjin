@@ -4,7 +4,7 @@
  */
 import { type HullPlan, hullSection, hullTop, sideZ } from '../anchors';
 import type { Faction } from './atlas';
-import { flagRect } from './atlas';
+import { clothSize, flagRect } from './atlas';
 import {
   type MeshBuilder,
   type Paint,
@@ -292,11 +292,13 @@ export function flag(ctx: Ctx, o: FlagOpts) {
   if (ctx.lod > 1) return;
   const fr = flagRect(ctx.faction, o.sheet, o.flag);
   const paint = ctx.P(o.sheet, { rect: fr.rect });
-  cloth(ctx.b, paint, [x - 0.04, y + o.poleH - 0.05, z], [-o.w, 0, 0], [0, -o.h, 0], {
+  // The cloth takes its picture's proportions (about the size asked for), so the lettering is never stretched.
+  const [w, h] = clothSize(o.w, o.h, fr.aspect);
+  cloth(ctx.b, paint, [x - 0.04, y + o.poleH - 0.05, z], [-w, 0, 0], [0, -h, 0], {
     nu: o.nu ?? byLod(ctx, 6, 2, 1),
     nv: o.nv ?? byLod(ctx, 4, 2, 1),
     flutter: o.flutter ?? 1,
-    wave: 0.07 * o.w,
+    wave: 0.07 * w,
     phase: o.phase,
   });
   // finial
