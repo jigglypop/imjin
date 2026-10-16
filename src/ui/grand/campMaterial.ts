@@ -26,15 +26,10 @@ const FILL_DIRECTION = (() => {
 const BANNER_THROUGH = 0.8;
 
 /**
- * A navy's building material: its atlas read the way the battle reads the ships' (each vertex names its cell, the cell's
- * texture repeats by the metre, explicit gradients keep the mip level steady across the wrap) with the normal map
- * derived from it, shaded by the occlusion the kit baked into its vertices (darker at the foot of a wall and under the
- * eaves) and lit as the land is lit (groundPalette.ts): the same sun from the north-west and the same sky, worked out
- * here rather than by the scene's lights, so a building's sunny side is the hills' sunny side. No other light: a town
- * fills much of the screen close up, and its pixels must cost about what the map's own ground does. One building differs
- * from its neighbour by a shade of colour, worked out per vertex from where it stands.
+ * A navy's building atlas, its colour and its normal map: loaded once for every material that reads it (the map's kits
+ * and the hero camps share one pair a navy).
  */
-export async function campMaterial(navy: FactionId): Promise<{ material: MeshBasicNodeMaterial; textures: Texture[] }> {
+export async function loadBuildingAtlas(navy: FactionId): Promise<Texture[]> {
   const loader = new TextureLoader();
   const files = buildingAtlasFiles(navy);
   const load = async (url: string, colour: boolean) => {
@@ -45,7 +40,20 @@ export async function campMaterial(navy: FactionId): Promise<{ material: MeshBas
     t.minFilter = LinearMipmapLinearFilter;
     return t;
   };
-  const [albedo, normal] = await Promise.all([load(files.albedo, true), load(files.normal, false)]);
+  return Promise.all([load(files.albedo, true), load(files.normal, false)]);
+}
+
+/**
+ * A navy's building material: its atlas (`atlas`, loaded here when not given) read the way the battle reads the ships' (each vertex names its cell, the cell's
+ * texture repeats by the metre, explicit gradients keep the mip level steady across the wrap) with the normal map
+ * derived from it, shaded by the occlusion the kit baked into its vertices (darker at the foot of a wall and under the
+ * eaves) and lit as the land is lit (groundPalette.ts): the same sun from the north-west and the same sky, worked out
+ * here rather than by the scene's lights, so a building's sunny side is the hills' sunny side. No other light: a town
+ * fills much of the screen close up, and its pixels must cost about what the map's own ground does. One building differs
+ * from its neighbour by a shade of colour, worked out per vertex from where it stands.
+ */
+export async function campMaterial(navy: FactionId, atlas: Promise<Texture[]> = loadBuildingAtlas(navy)): Promise<{ material: MeshBasicNodeMaterial; textures: Texture[] }> {
+  const [albedo, normal] = await atlas;
   const m = new MeshBasicNodeMaterial();
   // Packed bytes, see pack.ts: mat = (atlas cell * 16 + surface class, sway phase, soot), color.xyz = the sqrt-coded tint.
   const U: any = uv();

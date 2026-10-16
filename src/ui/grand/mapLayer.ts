@@ -19,7 +19,7 @@ import { weather } from '../../ships/weather';
 import { MAP_ASPECT } from './projection';
 import { DEM_RECT } from './mapMath';
 import { buildCampBuilding } from './campBuildings';
-import { campMaterial } from './campMaterial';
+import { campMaterial, loadBuildingAtlas } from './campMaterial';
 import { FOOTPRINT, METRES_PER_RADIUS, navyOf, WALL_KINDS, WATER_KINDS, type PieceKind } from './campPieces';
 import { buildBoatKit, buildShipKit, type KitMesh } from './shipKits';
 import { formation, hash, HULL_LENGTH, pointAlong, SETTLEMENT_RADIUS, SHIP_CAP, type FleetSpec, type MapWorld, type Piece, type SailSpec, type SettlementSpec } from './mapWorld';
@@ -299,9 +299,12 @@ export class MapLayer {
   private readonly readyMaterials: { material: MeshStandardNodeMaterial; map: Texture }[] = [];
   /** Each building kind's close and far geometry and how deep its footing reaches (radii), built when a world first needs it. */
   private readonly kits = new Map<PieceKind, { near: BufferGeometry; far: BufferGeometry; footing: number }>();
-  /** Each navy's building material and its atlas, loaded when a world first needs it; null when its atlas failed to load. */
-  private readonly campMaterials = new Map<FactionId, Promise<{ material: Material; textures: Texture[] } | null>>();
-  private readonly readyCampMaterials = new Map<FactionId, { material: Material; textures: Texture[] }>();
+  /** Each navy's building atlas, loaded once for its kits' material and the hero camps' (hero/layer.ts), freed here. */
+  private readonly atlases = new Map<FactionId, Promise<Texture[]>>();
+  private readonly readyAtlases: Texture[] = [];
+  /** Each navy's building material, made when a world first needs it; null when its atlas failed to load. */
+  private readonly campMaterials = new Map<FactionId, Promise<Material | null>>();
+  private readonly readyCampMaterials = new Map<FactionId, Material>();
   /** The yards, lanes and fields laid over the ground: one mesh, rebuilt with the world. */
   private decals: Mesh | null = null;
   private decalMaterial: MeshBasicNodeMaterial | null = null;
@@ -337,7 +340,7 @@ export class MapLayer {
     this.group.add(this.lights.sun, this.lights.sky, this.lights.fill, this.near, this.far);
     this.far.visible = false;
     this.lights.sun.position.set(-0.55, 0.9, 0.5);
-    this.hero = drawn && land && heroEnabled() ? new HeroLayer(drawn, land) : null;
+    this.hero = drawn && land && heroEnabled() ? new HeroLayer(drawn, land, (navy) => this.atlas(navy)) : null;
     if (this.hero) this.group.add(this.hero.group);
   }
 
@@ -458,11 +461,24 @@ export class MapLayer {
   private campMaterial(navy: FactionId) {
     let p = this.campMaterials.get(navy);
     if (!p) {
-      p = campMaterial(navy).then((m) => {
-        if (this.disposed) { m.material.dispose(); for (const t of m.textures) t.dispose(); } else this.readyCampMaterials.set(navy, m);
-        return m;
+      p = campMaterial(navy, this.atlas(navy)).then(({ material }) => {
+        if (this.disposed) material.dispose(); else this.readyCampMaterials.set(navy, material);
+        return material;
       }, () => null);
       this.campMaterials.set(navy, p);
+    }
+    return p;
+  }
+
+  /** A navy's building atlas, loaded on first use; one that arrives after the layer is gone is freed at once. */
+  private atlas(navy: FactionId) {
+    let p = this.atlases.get(navy);
+    if (!p) {
+      p = loadBuildingAtlas(navy);
+      p.then((textures) => {
+        if (this.disposed) for (const t of textures) t.dispose(); else this.readyAtlases.push(...textures);
+      }, () => undefined);
+      this.atlases.set(navy, p);
     }
     return p;
   }
@@ -632,7 +648,7 @@ export class MapLayer {
     }
     // One instanced draw per kind and level of detail; `setView` shows the close or the far set.
     for (const [kind, { matrices, colors }] of byKind) {
-      const kit = this.kit(kind), material = this.readyCampMaterials.get(navyOf(kind))?.material;
+      const kit = this.kit(kind), material = this.readyCampMaterials.get(navyOf(kind));
       if (!material) continue;
       this.add(kit.near, material, matrices, colors.length ? colors : undefined, this.near);
       this.add(kit.far, material, matrices, colors.length ? colors : undefined, this.far);
@@ -814,9 +830,12 @@ export class MapLayer {
     this.shipMaterials.clear();
     for (const k of this.kits.values()) { k.near.dispose(); k.far.dispose(); }
     this.kits.clear();
-    for (const m of this.readyCampMaterials.values()) { m.material.dispose(); for (const t of m.textures) t.dispose(); }
+    for (const m of this.readyCampMaterials.values()) m.dispose();
     this.readyCampMaterials.clear();
     this.campMaterials.clear();
+    for (const t of this.readyAtlases) t.dispose();
+    this.readyAtlases.length = 0;
+    this.atlases.clear();
     this.decalMaterial?.dispose();
     this.decalMaterial = null;
     if (this.shared) for (const resource of Object.values(this.shared)) resource.dispose();
