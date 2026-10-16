@@ -165,14 +165,27 @@ export class RankedStore {
       if (!hex(token, 64)) throw new Error('invalid account credential');
       const id = this.credentials.get(hashToken(token));
       if (!id) throw new Error('unknown account credential');
-      const account = this.accounts.get(id)!;
-      if (account.name !== name && Date.now() - account.renamedAt >= 30000) this.commit({ v: 1, t: 'rename', id, name, at: Date.now() });
+      this.rename(id, name);
       return { id, token };
     }
     const credential = randomBytes(32).toString('hex');
     const id = randomBytes(12).toString('hex');
     this.commit({ v: 1, t: 'account', id, hash: hashToken(credential), name, at: Date.now() });
     return { id, token: credential };
+  }
+
+  /** The ranked account a recovery code opens, or null. Nothing is written. */
+  verify(token: string): string | null {
+    if (!this.ready || !hex(token, 64)) return null;
+    return this.credentials.get(hashToken(token)) ?? null;
+  }
+
+  /** The leaderboard follows the name a player connects with, at most once every 30 s. False for an unknown account. */
+  rename(id: string, name: string): boolean {
+    const account = this.accounts.get(id);
+    if (!this.ready || !account) return false;
+    if (account.name !== name && Date.now() - account.renamedAt >= 30000) this.commit({ v: 1, t: 'rename', id, name, at: Date.now() });
+    return true;
   }
 
   profile(id: string): RankProfile | null {

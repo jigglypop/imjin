@@ -17,7 +17,7 @@ macOS uses Chrome + Metal, Windows Edge + D3D11. The GPU is shared with whatever
 - Big battles (desktop Chrome WebGPU): `probe-perf.mjs --url=...?scenario=busan [--speed=8] [--pre=10] [--close] [--uncapped] [--cpu [--callers=fn]] [--alloc]` fps, frame percentiles, per-stage ms, draw calls, triangles, heap churn and GC hitches over 30 s of fighting; `probe-draws.mjs` every draw of a frame; `probe-ablate.mjs` GPU cost of hiding one part at a time; `probe-series.mjs` fps and particles over time; `probe-phone.mjs` the same on WebKit with `?q=low`; `perf-shot.mjs` a screenshot from the thick of a fight
 
 ## Online locally
-`npm run server:build && PORT=8791 node server/dist/server.cjs`, then `VITE_MP_URL=ws://127.0.0.1:8791/ws npx vite --port 5306 --strictPort`, then `node scripts/mp-smoke.mjs` (ws only) and `node scripts/mp-browser.mjs --url=http://127.0.0.1:5306/ --mode=all` (two pages).
+`npm run server:build && PORT=8791 node server/dist/server.cjs`, then `VITE_MP_URL=ws://127.0.0.1:8791/ws npx vite --port 5306 --strictPort`, then `node scripts/mp-smoke.mjs` (ws only) and `node scripts/mp-browser.mjs --url=http://127.0.0.1:5306/ --mode=all` (two pages). The same server answers the account API under `/api/`; give it `ACCOUNTS_DB=<scratch file>` and `RANKED_STORE=<scratch file>` to keep test accounts out of `server/dist/data`.
 
 ## Balance
 - `node scripts/balance.mjs` historical scenarios (`--kpi` pacing, `--passive`, `--classic`, `--conquest`)

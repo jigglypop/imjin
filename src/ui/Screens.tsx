@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
+import { useAccount } from '../account/store';
 import { sound } from '../audio/Sound';
 import { isIOS } from '../game/device';
 import { cameraFeel, FEEL_CHOICES, FEEL_LABEL, type CameraFeel } from '../camera/feel';
@@ -6,8 +7,9 @@ import { EQUIPMENT_LABEL, equipment, forceWebGL, saveEquipmentSetting, saveWebgp
 import { setLang, useLang, useT, type Lang } from '../i18n';
 import { prefetchScreen } from '../router';
 import { setScreen, type Screen } from '../state/store';
+import { AccountPanel } from './AccountPanel';
 import { Backdrop } from './Backdrop';
-import { ChevronLeft, Sliders, Speaker, SpeakerOff } from './icons';
+import { ChevronLeft, Person, Sliders, Speaker, SpeakerOff } from './icons';
 import { CodexIcon } from './codex/icons';
 import { ControlsHelp } from './Tutorial';
 import { MenuBattleBackdrop } from './MenuBattleBackdrop';
@@ -60,6 +62,13 @@ export function MainMenu() {
   const t = useT();
   const lang = useLang();
   const title = t('임진왜란');
+  const user = useAccount((s) => s.user);
+  const [account, setAccount] = useState(false);
+  const accountButton = useRef<HTMLButtonElement | null>(null);
+  const closeAccount = useCallback(() => {
+    setAccount(false);
+    accountButton.current?.focus();
+  }, []);
   return (
     <section className="screen menu menu--cinematic">
       <Backdrop kind="menu" cinematic />
@@ -71,6 +80,19 @@ export function MainMenu() {
         </button>
         <button className="back-btn" onClick={go('settings')}>
           <Sliders /> {t('설정')}
+        </button>
+        {/* A guest is shown as signed out: it signs up from here to keep its progress. */}
+        <button
+          ref={accountButton}
+          className="back-btn menu-account"
+          aria-haspopup="dialog"
+          aria-expanded={account}
+          onClick={() => {
+            sound.click();
+            setAccount(true);
+          }}
+        >
+          <Person /> <span className="menu-account-name">{user && !user.guest ? user.nickname : t('로그인')}</span>
         </button>
       </header>
       <div className="menu-inner">
@@ -106,6 +128,7 @@ export function MainMenu() {
       <footer className={`menu-billing menu-billing--${lang}`} aria-hidden="true">
         {BILLING.map((group) => <span key={group.side}><b>{t(group.side)}</b>{group.names.map((name) => t(name)).join(' · ')}</span>)}
       </footer>
+      {account && <AccountPanel onClose={closeAccount} />}
     </section>
   );
 }
