@@ -29,5 +29,16 @@ macOS uses Chrome + Metal, Windows Edge + D3D11. The GPU is shared with whatever
 - `node scripts/render-sounds.mjs --url=http://127.0.0.1:5291 [--out=<dir>] [--only=battle|inventory]` renders the synthesised voices, a scripted battle mix, or every voice one file each
 - `node scripts/audio/capture.mjs --url=... --tag=<t>` records the real master bus of menu / battle / skirmish / campaign; `python3 scripts/audio/analyze.py <wav>... [--png <dir>]` loudness, clipping and narrow tones that read as beeps; `scripts/audio/build_page.py <dir>` a listening page
 
+## Assets
+Binary files under `public/` and `assets-src/` (the extensions are `TYPES` in `scripts/assets.mjs`: glb, bin, webp, jpg, png, mp3, woff2, dem and the like) live in the private bucket `s3://imjin1592-assets` (ap-northeast-2) under `sha256/<first two hex>/<sha256>`. `assets.json` at the root names each with its sha256 and size, one line per file, and keeps the versions a file replaced in its `history`. Blobs are never deleted, so every version can come back. Text files (json, md, txt, svg) stay in git, and so do the provenance records. What `.gitignore` keeps local (Meshy originals, rejected candidates, renders) stays out of the store unless a push names the file outright.
+- `npm run assets -- pull [paths] [--dry-run]` makes the tree match `assets.json` from the cache or S3, checking every file against its sha256 and copying it (never linking). A file changed here and not pushed is kept. With nothing to do it only looks at sizes and mtimes. CI runs it before the tests.
+- `npm run assets -- push [paths] [--dry-run]` uploads the new and changed files the bucket lacks and records them; commit `assets.json` with the change. A file that is gone leaves `assets.json` only when named (`push public/ui/x.webp`); its blobs stay.
+- `status [--remote]` what differs from `assets.json` (and whether the bucket holds it all); `verify` every version, history included, is in the bucket at its size; `restore <path> [--previous | --sha=<prefix>]` brings an earlier version back and records the swap.
+- `models [--json]` the model vault: every .glb with its size, triangles and versions, and the records (`assets-src/*/provenance.json`, `runtime-assets.json`, `README.md`) that name it by file name or hash, with their tool, model and credits fields.
+- The cache is shared by every worktree: `IMJIN_ASSET_CACHE`, else `%LOCALAPPDATA%\imjin-assets` or `~/.cache/imjin-assets`. It can be deleted at any time.
+- Credentials: `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN` (CI's deploy role can read), else the aws CLI's (`aws login`); pushing takes your own. `setup [--apply]` creates the bucket and the role's read policy; `untrack [--apply]` is the one-time cut-over that takes the binaries out of git and puts their patterns first in `.gitignore`.
+- A conflict in `assets.json` after a merge: keep both sides' lines; where both changed one file, keep the version wanted (the other blob stays in the store).
+- `node scripts/test-assets.mjs` runs every command against an in-memory S3.
+
 ## Campaign maps
 `node scripts/build-region-maps.mjs [--preview=<dir>] [--check]` rewrites `src/sim/grand/regionPoints.json` from the anchors in `coast.ts`: rerun it after changing an anchor or a terrain.

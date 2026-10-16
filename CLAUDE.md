@@ -22,6 +22,10 @@
 - Battle audio: nothing synthesised with a sustained or swept pitch above 250 Hz (`scripts/audio/analyze.py`).
 - Match the surrounding code: comments explain why in plain sentences; no dead code.
 
+## Assets
+- Binaries under `public/` and `assets-src/` (models, textures, audio, fonts, terrain, generation sources) live in S3 by content hash, listed in the committed `assets.json`: `npm run assets -- pull` after a checkout; `npm run assets -- push` after adding or changing one, then commit `assets.json`.
+- `npm run assets -- models` is the model vault: every .glb with its triangles, versions and provenance. More in [docs/dev.md](docs/dev.md#assets).
+
 ## Deploy
 - A push to `main` deploys the site (S3 + CloudFront) and the multiplayer server (EC2 through SSM) after typecheck, tests and build. Never push unasked.
 - The server by hand: `scripts/deploy-mp.sh deploy|status`. Its data lives in `/opt/imjin/data` on the host and is never overwritten by a deploy.
