@@ -5,6 +5,9 @@
  * Vertex layout of the merged mesh (see MeshData):
  *   position, normal, uv (tile space: repeats per atlas cell, wrapped in the shader), color (tint x AO),
  *   mat = (atlas cell, surface class), sway = (weight, phase) for cloth that flutters. bakeGrime adds a soot amount (0..1) to mat's surface class as a fraction of SOOT_STEP.
+ *   reef (optional) = how far a set sail's vertex is from where the sail gathers when taken in, metres (up to the yard of
+ *   a square sail, down to the boom of a junk sail): the shader moves it that far times how far the sail is taken in,
+ *   so a ship lowers and raises its sails without another model.
  * Ship space is +X bow, +Y up, Z across the beam, origin amidships on the waterline, metres.
  */
 import { cellOf, type Faction } from './atlas';
@@ -24,6 +27,7 @@ export type MeshData = {
   mat: Float32Array;
   sway: Float32Array;
   index: Uint32Array;
+  reef?: Float32Array;
 };
 
 // ---------- vector helpers ----------
@@ -130,8 +134,11 @@ export class MeshBuilder {
   private c: number[] = [];
   private m: number[] = [];
   private s: number[] = [];
+  private r: number[] = [];
   private idx: number[] = [];
   private stack: Xf[] = [IDENTITY];
+  /** Height (model space) the sail being built gathers to when taken in, null outside a sail. */
+  private gather: number | null = null;
 
   get xf() {
     return this.stack[this.stack.length - 1]!;
@@ -152,9 +159,17 @@ export class MeshBuilder {
     this.stack.pop();
   }
 
+  /** Run fn with every vertex it adds belonging to a sail that gathers at local height y when taken in (see reef). */
+  sail(y: number, fn: () => void) {
+    this.gather = applyP(this.xf, [0, y, 0])[1];
+    fn();
+    this.gather = null;
+  }
+
   vert(pos: V3, nor: V3, uv: V2, paint: Paint, sway?: V2): number {
     const xf = this.xf;
     const P = applyP(xf, pos);
+    this.r.push(this.gather === null ? 0 : this.gather - P[1]);
     const N = norm(applyV(xf, nor));
     this.p.push(P[0], P[1], P[2]);
     this.n.push(N[0], N[1], N[2]);
@@ -203,6 +218,7 @@ export class MeshBuilder {
       mat: new Float32Array(this.m),
       sway: new Float32Array(this.s),
       index: new Uint32Array(this.idx),
+      reef: new Float32Array(this.r),
     };
   }
 }

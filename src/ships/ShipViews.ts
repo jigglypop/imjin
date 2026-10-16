@@ -45,6 +45,9 @@ export type ViewState = {
   lod: number;
   visible: boolean;
   sampleTimer: number;
+  /** How far the sails are set, 0 (taken in) to 1, and how long the ship has lain still (battle seconds). */
+  sail: number;
+  still: number;
   /** The model drawn (an entry of the assets), kind#variant of the model's own kind. */
   key: string;
   /**
@@ -86,6 +89,8 @@ export class ShipViews {
   cutaway = new Map<number, number>();
   /** How shot-through and burnt each ship's sails are, 0..1 (fx/Scars.ts keeps it). */
   readonly tears = new Map<number, number>();
+  /** Every sail set whatever the ship does (the inspection galleries, where the ships lie still). */
+  keepSails = false;
   /** Timber of the decks a cutaway opens up: the rowers' floor, oar looms and posts. */
   private readonly props: InstancedMesh;
   private readonly propMatrix = new Matrix4();
@@ -270,6 +275,8 @@ export class ShipViews {
           lod: 2,
           visible: true,
           sampleTimer: 0,
+          sail: 1,
+          still: 0,
           key: this.keyFor(ship, assets),
           anchors: '',
         };
@@ -290,6 +297,7 @@ export class ShipViews {
         if ((lodTarget > v.lod && dist > edge) || (lodTarget < v.lod && dist < edge)) v.lod = lodTarget;
       }
       this.updateTransform(ship, v, dt, dist);
+      this.trimSails(ship, v, dt);
       const level = this.cutaway.get(ship.id) ?? 0;
       const main = level ? mainDeck(v.anchors, ship.spec.kind, ship.spec.deck) : 0;
       const cut = level ? cutHeight(level, main, byModel(DECKS, ship.spec.kind)) : undefined;
@@ -297,7 +305,7 @@ export class ShipViews {
       // A model loaded without its near level has fewer levels: the nearest one it has serves the closer ranges.
       const have = assets[v.key]?.lods.length ?? LOD_COUNT;
       const draw = scale === 1 ? v.matrix : this.drawMatrix.copy(v.matrix).scale(this.tmp.setScalar(scale));
-      if (v.visible) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), packFlash(v.flash, this.tears.get(ship.id) ?? 0, ship.id), cut);
+      if (v.visible) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), packFlash(v.flash, this.tears.get(ship.id) ?? 0, ship.id, v.sail), cut);
       if (level === 3 && v.visible) props = this.interior(ship, v, main, props);
       const show = (this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0;
       if (show) {
@@ -354,6 +362,20 @@ export class ShipViews {
       }
     }
     return i;
+  }
+
+  /**
+   * Sails come in when a ship lies still (at anchor, holding its place, or stopped a while) and go up again when it gets
+   * under way: the yard and cloth move over some seconds of battle time (the shader gathers them, ShipRenderer).
+   */
+  private trimSails(s: Ship, v: ViewState, dt: number) {
+    const step = Math.min(dt, 1);
+    const moving = s.speed > Math.max(0.6, s.spec.maxSpeed * 0.12);
+    v.still = moving ? 0 : v.still + step;
+    const set = this.keepSails || (s.sinking === 0 && s.order.type !== 'anchor' && v.still < 5);
+    // A crew hauls a sail up a little slower than it lets one run down.
+    const rate = set ? 1 / 9 : 1 / 6;
+    v.sail = Math.min(1, Math.max(0, v.sail + (set ? rate : -rate) * step));
   }
 
   private updateTransform(s: Ship, v: ViewState, dt: number, dist: number) {

@@ -999,6 +999,8 @@ export class Engine {
   }
 
   private setupGallery() {
+    // The galleries are for looking the models over: their ships lie still, but with every sail set.
+    this.views.keepSails = true;
     if (this.options.gallery === 'damage') {
       const only = params.get('kind') as ShipKind | null;
       const kinds = only && ALL_KINDS.includes(only) ? [only] : ALL_KINDS;

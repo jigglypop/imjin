@@ -6,7 +6,7 @@ import { SOOT_STEP } from './bake';
  * A procedural model's vertex is 32 bytes in three buffers (it was 60, all float32). WebGPU allows 8 vertex buffers and
  * the ships' section-cut batch already spends 3 on instance data, so each buffer interleaves several attributes:
  *   float32  position (3), uv (2)           uv is in tile space and reaches +-25: it needs the precision
- *   snorm8   normal xyz (the fourth byte is padding: WebGPU has no 3-byte vertex format)
+ *   snorm8   normal xyz, reef (a set sail's drop below its yard over REEF_RANGE; 0 for everything else)
  *   unorm8   color xyz, sway weight         tint x AO, sqrt-coded so dark vertices keep their steps
  *            mat: atlas cell * 16 + surface class, sway phase (16 bit over PHASE_RANGE), soot (the baked grime amount, 0..1)
  * The ships' material (ShipRenderer.createMaterial) and the campaign map's (mapLayer.ts, campMaterial.ts) read them back
@@ -16,6 +16,8 @@ export const TINT_RANGE = 4;
 export const SWAY_RANGE = 1.5;
 /** The sway phase is stored as 16 bits over [-PHASE_RANGE / 2, PHASE_RANGE / 2]. It cannot be wrapped to 2 pi: the shader uses it at two frequencies. */
 export const PHASE_RANGE = 40;
+/** Metres the reef byte spans: the tallest sail hangs about 20 m below its yard. */
+export const REEF_RANGE = 24;
 
 const unorm = (x: number) => Math.max(0, Math.min(255, Math.round(x * 255)));
 const snorm = (x: number) => Math.max(-127, Math.min(127, Math.round(x * 127)));
@@ -33,6 +35,7 @@ export function toGeometry(d: MeshData) {
     nrm[i * 4] = snorm(d.normal[i * 3]!);
     nrm[i * 4 + 1] = snorm(d.normal[i * 3 + 1]!);
     nrm[i * 4 + 2] = snorm(d.normal[i * 3 + 2]!);
+    nrm[i * 4 + 3] = d.reef ? snorm(d.reef[i]! / REEF_RANGE) : 0;
     for (let k = 0; k < 3; k += 1) col[i * 8 + k] = unorm(Math.sqrt(d.color[i * 3 + k]! / TINT_RANGE));
     col[i * 8 + 3] = unorm(d.sway[i * 2]! / SWAY_RANGE);
     col[i * 8 + 4] = Math.round(d.mat[i * 2]!) * 16 + surf;
@@ -45,7 +48,10 @@ export function toGeometry(d: MeshData) {
   const shape = new InterleavedBuffer(geo, 5);
   g.setAttribute('position', new InterleavedBufferAttribute(shape, 3, 0));
   g.setAttribute('uv', new InterleavedBufferAttribute(shape, 2, 3));
-  g.setAttribute('normal', new InterleavedBufferAttribute(new InterleavedBuffer(nrm, 4), 4, 0, true));
+  const normals = new InterleavedBuffer(nrm, 4);
+  g.setAttribute('normal', new InterleavedBufferAttribute(normals, 4, 0, true));
+  // The same four bytes under a name of their own, read for the reef in w: the normal reaches the shader as a vec3.
+  g.setAttribute('reef', new InterleavedBufferAttribute(normals, 4, 0, true));
   const bytes = new InterleavedBuffer(col, 8);
   g.setAttribute('color', new InterleavedBufferAttribute(bytes, 4, 0, true));
   g.setAttribute('mat', new InterleavedBufferAttribute(bytes, 4, 4, true));

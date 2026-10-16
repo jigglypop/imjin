@@ -249,8 +249,13 @@ export function sail(ctx: Ctx, cloth_: Paint, wood: Paint, rope: Paint, o: SailO
   const nu = byLod(ctx, 6, 3, 1);
   const nv = byLod(ctx, 8, 4, 1);
   const x = o.x + 0.42;
-  cloth(ctx.b, cloth_, [x, o.yTop, -o.w / 2], [0, 0, o.w], [0, -o.h, 0], { nu, nv, billow: o.billow, flutter: 0.5, phase: o.phase });
   cylinder(ctx.b, wood, [x - 0.12, o.yTop + 0.05, -o.w / 2 - 0.5], [x - 0.12, o.yTop + 0.05, o.w / 2 + 0.5], 0.1, 0.1, byLod(ctx, 6, 4, 3), true);
+  // The cloth, its battens, boom and sheets gather up to the yard when the ship takes the sail in (ShipRenderer).
+  ctx.b.sail(o.yTop, () => setSail(ctx, cloth_, wood, rope, o, x, nu, nv));
+}
+
+function setSail(ctx: Ctx, cloth_: Paint, wood: Paint, rope: Paint, o: SailOpts, x: number, nu: number, nv: number) {
+  cloth(ctx.b, cloth_, [x, o.yTop, -o.w / 2], [0, 0, o.w], [0, -o.h, 0], { nu, nv, billow: o.billow, flutter: 0.5, phase: o.phase });
   if (ctx.lod === 0) {
     for (let k = 1; k <= o.battens; k += 1) {
       const t = k / (o.battens + 1);
