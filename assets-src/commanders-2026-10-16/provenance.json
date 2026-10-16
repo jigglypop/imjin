@@ -1,0 +1,711 @@
+{
+  "requests": [
+    {
+      "id": "tachibana",
+      "endpoint": "images/generations",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Sengoku Japanese costume: Tachibana Muneshige, about thirty, young famed general, handsome hard lean face, faint moustache, fearless clear eyes; black lacquer cuirass with lamellar shoulder guards, a kabuto with a tall gilded crescent maedate crest.",
+      "reference": null,
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:50:34.622Z",
+      "finishedAt": "2026-10-16T08:51:20.484Z",
+      "usage": {
+        "input_tokens": 270,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 270
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2026
+      },
+      "estimatedCostUsd": 0.054
+    },
+    {
+      "id": "michiyuki",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. The reference is his younger brother; make them clearly brothers, not the same man. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Sengoku Japanese costume: Kurushima Michiyuki, Murakami-line pirate lord and the elder brother of Kurushima Michifusa, late thirties, the same broad sun-browned family face and jaw as his younger brother but heavier and older, short beard, confident proud eyes; dark indigo and brown lacquered armour, kabuto with a modest low crest.",
+      "reference": "public/ui/portraits/portrait_kurushima.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:50:34.622Z",
+      "finishedAt": "2026-10-16T08:51:26.636Z",
+      "usage": {
+        "input_tokens": 1381,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 357
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3137
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "yi",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: Yi Sun-sin, about fifty, long lean oval face, deeply observant tired eyes, thin moustache and a long narrow beard streaked grey, calm resolve; low iron tugu helmet with a short red plume over a cloth cap, oxblood cloth dujeong brigandine with visible rivets.",
+      "reference": "public/ui/portraits/portrait_yi.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:50:34.606Z",
+      "finishedAt": "2026-10-16T08:51:29.082Z",
+      "usage": {
+        "input_tokens": 1357,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 333
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3113
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "eo",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: Eo Yeong-dam, Gwangyang magistrate and veteran pilot, about sixty, deeply weathered thin face, short grey beard, sharp thoughtful eyes squinting as if reading the water; worn black jeonlip hat, faded brown-grey cheolik military coat with a leather belt, no armour.",
+      "reference": "public/ui/portraits/portrait_eo.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:51:45.777Z",
+      "finishedAt": "2026-10-16T08:52:36.063Z",
+      "usage": {
+        "input_tokens": 1357,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 333
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3113
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "won",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: Won Gyun, early fifties, heavyset, broad face, thick irregular black beard, tired stubborn expression; wide black felt jeonlip military hat with a small red plume, salt-worn dark-blue brigandine.",
+      "reference": "public/ui/portraits/portrait_won.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:51:45.752Z",
+      "finishedAt": "2026-10-16T08:52:36.811Z",
+      "usage": {
+        "input_tokens": 1341,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 317
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3097
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "kwon",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: Gwon Jun, Suncheon magistrate in his forties, scholarly oval face, neat short black beard, quiet intelligent eyes; black jeonlip military hat with a hat cord of amber beads, subdued dark-green cloth brigandine over a blue cheolik coat.",
+      "reference": "public/ui/portraits/portrait_kwon.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:51:45.777Z",
+      "finishedAt": "2026-10-16T08:52:38.535Z",
+      "usage": {
+        "input_tokens": 1348,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 324
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3104
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "eokgi",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: Yi Eok-gi, about thirty, narrow refined face, fine moustache, alert reserved eyes; low iron tugu helmet with a red plume, deep-teal cloth brigandine.",
+      "reference": "public/ui/portraits/portrait_eokgi.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:51:45.777Z",
+      "finishedAt": "2026-10-16T08:52:38.618Z",
+      "usage": {
+        "input_tokens": 1333,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 309
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3089
+      },
+      "estimatedCostUsd": 0.0624
+    },
+    {
+      "id": "baeseol",
+      "endpoint": "images/generations",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: Bae Seol, Gyeongsang right naval commander, about forty-five, long pale tense face, thin moustache, wary evasive eyes and a drawn mouth; black jeonlip hat with a plume, dark-blue brigandine, clean and less battered than the others.",
+      "reference": null,
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:52:38.536Z",
+      "finishedAt": "2026-10-16T08:53:25.501Z",
+      "usage": {
+        "input_tokens": 276,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 276
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2032
+      },
+      "estimatedCostUsd": 0.0541
+    },
+    {
+      "id": "anwi",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: An Wi, Geoje magistrate in his forties, broad cheekbones, compact black beard, resilient concentrated expression, sweat and soot on the face; low iron helmet with a modest red plume, worn charcoal brigandine.",
+      "reference": "public/ui/portraits/portrait_anwi.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:52:36.812Z",
+      "finishedAt": "2026-10-16T08:53:25.883Z",
+      "usage": {
+        "input_tokens": 1340,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 316
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3096
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "jeongun",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: Jeong Un, Nokdo commander in his late forties, rugged angular face, short coarse beard, a faint old healed scar on the cheek, fierce intense eyes; faded wine-red brigandine and a low iron tugu helmet.",
+      "reference": "public/ui/portraits/portrait_jeongun.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:52:36.066Z",
+      "finishedAt": "2026-10-16T08:53:27.654Z",
+      "usage": {
+        "input_tokens": 1342,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 318
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3098
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "songhuirip",
+      "endpoint": "images/generations",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: Song Hui-rip, staff officer, about forty, square strong jaw, short black beard, bruised and soot-stained face, resolute shouting expression; plain iron helmet with a red tassel, brown cloth brigandine.",
+      "reference": null,
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:52:38.619Z",
+      "finishedAt": "2026-10-16T08:53:29.252Z",
+      "usage": {
+        "input_tokens": 265,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 265
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2021
+      },
+      "estimatedCostUsd": 0.054
+    },
+    {
+      "id": "nadaeyong",
+      "endpoint": "images/generations",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: Na Dae-yong, the officer who built the turtle ship, about forty, a thoughtful craftsman-officer, narrow clever face, short trimmed beard, calloused attentive eyes; black jeonlip hat, indigo cheolik coat with a leather tool-pouch strap across the chest and a little sawdust on the shoulder, no armour.",
+      "reference": null,
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:53:27.655Z",
+      "finishedAt": "2026-10-16T08:54:13.511Z",
+      "usage": {
+        "input_tokens": 288,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 288
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2044
+      },
+      "estimatedCostUsd": 0.0541
+    },
+    {
+      "id": "iwan",
+      "endpoint": "images/generations",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: Yi Wan, Yi Sun-sin's nephew, about thirty, young firm face, a light thin moustache, composed steady eyes; iron tugu helmet with a red plume, dark-blue brigandine, a little dried blood on the sleeve.",
+      "reference": null,
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:53:25.502Z",
+      "finishedAt": "2026-10-16T08:54:14.184Z",
+      "usage": {
+        "input_tokens": 268,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 268
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2024
+      },
+      "estimatedCostUsd": 0.054
+    },
+    {
+      "id": "kimwan",
+      "endpoint": "images/generations",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: Kim Wan, Sado garrison commander, about forty, broad weathered face, short thick beard, bold direct gaze; jeonlip hat with a small plume, dark-brown brigandine.",
+      "reference": null,
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:53:25.883Z",
+      "finishedAt": "2026-10-16T08:54:14.516Z",
+      "usage": {
+        "input_tokens": 259,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 259
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2015
+      },
+      "estimatedCostUsd": 0.054
+    },
+    {
+      "id": "iyeongnam",
+      "endpoint": "images/generations",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: Yi Yeong-nam, Yulpo commander, about forty, lean tanned earnest face, light moustache and short beard, resolute eyes; iron tugu helmet with a red plume, dull-green brigandine.",
+      "reference": null,
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:53:29.253Z",
+      "finishedAt": "2026-10-16T08:54:18.809Z",
+      "usage": {
+        "input_tokens": 264,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 264
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2020
+      },
+      "estimatedCostUsd": 0.054
+    },
+    {
+      "id": "shimazu",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Sengoku Japanese costume: Shimazu Yoshihiro, Satsuma lord in his late fifties, strong battle-hardened face, grey moustache and short beard, heavy-lidded fearless eyes; black iron kabuto with a plain low crest, black lacquer lamellar cuirass under an off-white jinbaori surcoat bearing a small black cross-in-circle mon, the same mon on a white banner blurred behind.",
+      "reference": "public/ui/portraits/portrait_shimazu.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:54:14.517Z",
+      "finishedAt": "2026-10-16T08:55:02.453Z",
+      "usage": {
+        "input_tokens": 1376,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 352
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3132
+      },
+      "estimatedCostUsd": 0.0626
+    },
+    {
+      "id": "deng",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Late-Ming Chinese costume: Deng Zilong, over seventy, lean deeply lined face, a long white beard, fierce unbowed eyes; rounded Ming steel helmet with a red tassel, weathered rust-red brigandine over pale grey cloth.",
+      "reference": "public/ui/portraits/portrait_deng.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:54:14.185Z",
+      "finishedAt": "2026-10-16T08:55:09.376Z",
+      "usage": {
+        "input_tokens": 1341,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 317
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3097
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "konishi",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Sengoku Japanese costume: Konishi Yukinaga, about forty, thoughtful long face, small thin moustache, shrewd measured eyes, a merchant's calculating calm; black kabuto with a restrained crest, charcoal-purple lacquer cuirass, a small plain wooden cross hanging at the collar, a banner with a plain paulownia-style mon blurred behind.",
+      "reference": "public/ui/portraits/portrait_konishi.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:54:18.810Z",
+      "finishedAt": "2026-10-16T08:55:09.603Z",
+      "usage": {
+        "input_tokens": 1361,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 337
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3117
+      },
+      "estimatedCostUsd": 0.0626
+    },
+    {
+      "id": "chenlin",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Late-Ming Chinese costume: Chen Lin, naval commissioner in his fifties, broad imposing face, full long dark beard, arrogant heavy-lidded eyes and a raised chin; rounded Ming steel helmet with a thick red tassel and a short back flap, brick-red cotton brigandine with rows of brass studs, a dark red official cloak collar.",
+      "reference": "public/ui/portraits/portrait_chenlin.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:54:13.512Z",
+      "finishedAt": "2026-10-16T08:55:10.957Z",
+      "usage": {
+        "input_tokens": 1361,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 337
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3117
+      },
+      "estimatedCostUsd": 0.0626
+    },
+    {
+      "id": "wakisaka",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Sengoku Japanese costume: Wakisaka Yasuharu, naval daimyo in his late thirties, sharp lean face, thin moustache, cool confident eyes; dark blue-black lacquer cuirass with modest gold detail, kabuto with a tall simple gilded crest.",
+      "reference": "public/ui/portraits/portrait_wakisaka.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:55:02.454Z",
+      "finishedAt": "2026-10-16T08:55:51.890Z",
+      "usage": {
+        "input_tokens": 1342,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 318
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3098
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "kato",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Sengoku Japanese costume: Kato Yoshiaki, about thirty, angular clean-shaven face, steady sharp eyes; blue-black lacquered cuirass, kabuto with a narrow long curved horn-like crest.",
+      "reference": "public/ui/portraits/portrait_kato.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:55:10.958Z",
+      "finishedAt": "2026-10-16T08:55:58.530Z",
+      "usage": {
+        "input_tokens": 1331,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 307
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3087
+      },
+      "estimatedCostUsd": 0.0624
+    },
+    {
+      "id": "todo",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Sengoku Japanese costume: Todo Takatora, very tall and broad, about forty, long imposing face, short rough beard, serious thoughtful expression, his head close to the top of the frame; black lacquered cuirass, kabuto with a narrow tall pointed crest and large segmented shikoro neck guard, a banner with a plain ivy-leaf mon blurred behind.",
+      "reference": "public/ui/portraits/portrait_todo.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:55:09.605Z",
+      "finishedAt": "2026-10-16T08:56:00.981Z",
+      "usage": {
+        "input_tokens": 1363,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 339
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3119
+      },
+      "estimatedCostUsd": 0.0626
+    },
+    {
+      "id": "kurushima",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Sengoku Japanese costume: Kurushima Michifusa, Murakami-line pirate admiral in his thirties, sun-browned broad face, sparse facial hair, tense attentive eyes; dark charcoal and green lacquered armour, kabuto with a modest low crest, a rope-and-sea-salt look.",
+      "reference": "public/ui/portraits/portrait_kurushima.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:55:09.377Z",
+      "finishedAt": "2026-10-16T08:56:01.495Z",
+      "usage": {
+        "input_tokens": 1351,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 327
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3107
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "kuki",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Sengoku Japanese costume: Kuki Yoshitaka, Kuki pirate navy lord in his fifties, windburnt cheeks, salt-and-pepper short beard, narrow watchful eyes; worn dark-red lacquered cuirass, black kabuto with a restrained crescent crest, wide shikoro, a plain white banner with a small dark Kuki mon blurred behind.",
+      "reference": "public/ui/portraits/portrait_kuki.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:55:51.891Z",
+      "finishedAt": "2026-10-16T08:56:42.431Z",
+      "usage": {
+        "input_tokens": 1364,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 340
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3120
+      },
+      "estimatedCostUsd": 0.0626
+    },
+    {
+      "id": "tachibana",
+      "endpoint": "images/generations",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Sengoku Japanese costume: Tachibana Muneshige, about thirty, young famed general, handsome hard lean face, faint moustache, fearless clear eyes; black lacquer cuirass with lamellar shoulder guards, a kabuto with a modest gilded crescent crest, the whole crest entirely inside the frame with margin above it.",
+      "reference": null,
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:57:22.929Z",
+      "note": "crest was cropped at the top of the frame",
+      "finishedAt": "2026-10-16T08:58:10.381Z",
+      "usage": {
+        "input_tokens": 279,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 279
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 2035
+      },
+      "estimatedCostUsd": 0.0541
+    },
+    {
+      "id": "wakisaka",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Sengoku Japanese costume: Wakisaka Yasuharu, naval daimyo in his late thirties, sharp lean face, thin moustache, cool confident eyes; dark blue-black lacquer cuirass with modest gold detail, kabuto with a modest gilded crest, entirely inside the frame.",
+      "reference": "public/ui/portraits/portrait_wakisaka.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:57:22.916Z",
+      "note": "crest was cropped at the top of the frame",
+      "finishedAt": "2026-10-16T08:58:14.282Z",
+      "usage": {
+        "input_tokens": 1346,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 322
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3102
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "admiral",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Joseon Korean costume: a nameless naval captain, forty-five, short irregular black beard, serious mature face; low iron tugu helmet with a red plume, dark-indigo cloth brigandine.",
+      "reference": "public/ui/portraits/portrait_admiral.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:58:24.332Z",
+      "finishedAt": "2026-10-16T08:59:10.396Z",
+      "usage": {
+        "input_tokens": 1329,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 305
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3085
+      },
+      "estimatedCostUsd": 0.0624
+    },
+    {
+      "id": "japan",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is the existing casting of this same man: keep his face, age, beard and features recognisable, and redraw him in the film-still look described here, with the costume described here. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. Sengoku Japanese costume: a nameless ship captain in his thirties, lean salt-weathered face, short sparse moustache, hard attentive eyes; broad conical black iron jingasa hat, practical black lacquer cuirass with segmented shoulder guards.",
+      "reference": "public/ui/portraits/portrait_japan.jpg",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T08:58:24.353Z",
+      "finishedAt": "2026-10-16T08:59:13.329Z",
+      "usage": {
+        "input_tokens": 1338,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 314
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3094
+      },
+      "estimatedCostUsd": 0.0624
+    }
+  ],
+  "model": "gpt-image-2.5-sunburst",
+  "script": "scripts/generate-commander-portraits.mjs",
+  "pricingNote": "Estimated from returned token usage at gpt-image-2 list prices per million tokens ({\"textIn\":5,\"imageIn\":8,\"imageOut\":30}); the 2.5 preview has no public price.",
+  "requestCount": 28,
+  "totalEstimatedCostUsd": 1.683
+}
