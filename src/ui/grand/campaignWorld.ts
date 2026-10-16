@@ -215,7 +215,7 @@ export class CampaignWorld {
     this.fog.far = fog.far;
     worldClock.value = clock;
     ground.update(camera.position, cam, clock);
-    this.layer?.setView(cam.yaw, cam.distance);
+    this.layer?.setView(cam);
     this.layer?.tick(clock);
     // Trees are planted a few tiles a frame: while some are still to come the page draws on, even with no ambient frames.
     this.planting = !!this.trees?.update(cam);
