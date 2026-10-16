@@ -151,6 +151,8 @@ export class CodexScene {
     sun.shadow.camera.far = 600;
     this.scene.add(sun, sun.target);
     this.views = new ShipViews({}, this.battle, FULL_DETAIL);
+    // The codex shows each ship under all its sails, though it lies still.
+    this.views.keepSails = true;
     this.scene.add(this.views.group);
     this.lanterns = new Lanterns(this.views);
     this.scene.add(this.lanterns.group);

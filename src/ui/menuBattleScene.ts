@@ -121,6 +121,8 @@ export class MenuBattleScene {
       rim.position.set(-100,40,70);
       this.scene.add(this.sun,this.sun.target,rim,new HemisphereLight(0x7aa1c7,0x10151d,.75));
       this.views=new ShipViews(this.assets!,this.battle,{...equipment.ships,maxLod0:this.mobile?4:16,near:250,mid:850});
+      // The poster's fleet keeps every sail set, as the approved backdrop shows it.
+      this.views.keepSails=true;
       this.scene.add(this.views.group);
       this.fx=this.lease.run(()=>{},()=>new Effects(this.views!,{lights:this.mobile?4:6,particles:{keep:this.mobile?.4:.8,sort:true}}));
       this.fx.night=1;
