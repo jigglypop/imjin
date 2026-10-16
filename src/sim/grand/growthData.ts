@@ -53,7 +53,7 @@ export const TREES: Record<string, CommanderTree> = {
   yi: {
     hanja: '李舜臣',
     branches: ['gunnery', 'command', 'seamanship'],
-    trait: { label: '학익진', text: '학의 날개로 감싸는 진법의 대가: 명중 +6%, 사기 +6%, 침착한 지휘', effect: { accuracy: 1.06, morale: 1.06, temper: 'steady' } },
+    trait: { label: '학익진', text: '진법의 대가: 명중 +6%, 사기 +6%, 침착한 지휘', effect: { accuracy: 1.06, morale: 1.06, temper: 'steady' } },
     mastery: { label: '학익진 완성', text: '명중 +6%, 장전 +5%, 사기 +6%', effect: { accuracy: 1.06, reload: 1.05, morale: 1.06 } },
   },
   won: {
@@ -77,7 +77,7 @@ export const TREES: Record<string, CommanderTree> = {
   eo: {
     hanja: '魚泳潭',
     branches: ['seamanship', 'gunnery'],
-    trait: { label: '물길 안내', text: '남해의 물길을 손금 보듯 안다: 속도 +4%, 선회 +8%, 항속 +10%', effect: { speed: 1.04, turn: 1.08, march: 0.1 } },
+    trait: { label: '물길 안내', text: '남해 물길에 밝다: 속도 +4%, 선회 +8%, 항속 +10%', effect: { speed: 1.04, turn: 1.08, march: 0.1 } },
     mastery: { label: '남해 수로', text: '항속 +10%, 선회 +6%', effect: { march: 0.1, turn: 1.06 } },
   },
   jeongun: {
@@ -167,7 +167,7 @@ export const TREES: Record<string, CommanderTree> = {
   konishi: {
     hanja: '小西行長',
     branches: ['command', 'seamanship'],
-    trait: { label: '신중', text: '싸움보다 협상을 먼저 생각한다: 방어 +8%, 신중한 지휘', effect: { defense: 1.08, temper: 'cautious' } },
+    trait: { label: '신중', text: '싸움보다 협상이 먼저다: 방어 +8%, 신중한 지휘', effect: { defense: 1.08, temper: 'cautious' } },
     mastery: { label: '순천 왜성', text: '방어 +8%, 사기 +5%', effect: { defense: 1.08, morale: 1.05 } },
   },
   shimazu: {
@@ -179,7 +179,7 @@ export const TREES: Record<string, CommanderTree> = {
   tachibana: {
     hanja: '立花宗茂',
     branches: ['boarding', 'command'],
-    trait: { label: '서국 무쌍', text: '서쪽에서 견줄 이가 없다는 장수: 백병 +8%, 사기 +8%', effect: { melee: 1.08, morale: 1.08 } },
+    trait: { label: '서국 무쌍', text: '서쪽에 적수가 없다: 백병 +8%, 사기 +8%', effect: { melee: 1.08, morale: 1.08 } },
     mastery: { label: '야나가와 정예', text: '백병 +8%, 사기 +5%', effect: { melee: 1.08, morale: 1.05 } },
   },
   chenlin: {

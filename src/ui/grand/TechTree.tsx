@@ -48,7 +48,7 @@ export function TechTree({ me, tree, gold, canOrder, onResearch, onCancel, onClo
             </button>
           </>
         ) : (
-          <span className="g-tech__now">{t('진행 중인 연구가 없습니다. 연구할 기술을 고르세요.')}</span>
+          <span className="g-tech__now">{t('연구할 기술을 고르세요.')}</span>
         )}
         <span className="g-tech__gold">
           <Icon name="coin" size="sm" /> {num(gold)}

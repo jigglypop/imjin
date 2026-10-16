@@ -109,7 +109,7 @@ export function BattlePreview({ battle, onFight, onAuto, onCancel, onBesiege, on
         <span className="g-sheet__handle g-sheet__handle--static" aria-hidden />
         <header className="g-sheet__head">
           <div className="g-sheet__titles">
-            <div className="g-sheet__eyebrow">{battle.sea ? t('전투 준비 · 바다 위에서 마주침') : battle.relief ? t('전투 준비 · 봉쇄 구원') : t('전투 준비')}</div>
+            <div className="g-sheet__eyebrow">{battle.sea ? t('전투 준비 · 바다 위 조우') : battle.relief ? t('전투 준비 · 봉쇄 구원') : t('전투 준비')}</div>
             <h2 className="g-sheet__title">{battle.sea ? t('{place} 앞바다 해전', { place: battle.regionName }) : t('{place} 해전', { place: battle.regionName })}</h2>
           </div>
           <button type="button" className="g-icon-btn" aria-label={t('닫기')} onClick={onCancel}>
@@ -135,8 +135,8 @@ export function BattlePreview({ battle, onFight, onAuto, onCancel, onBesiege, on
           </div>
 
           <p className={`g-power__odds${risky ? ' g-power__odds--risky' : ''}`}>
-            {battle.you ? t('자동 전투로 진행하면 우리 측이 이길 확률은 {p}입니다.', { p: percent(ours) }) : t('자동 전투로 진행하면 공격 측이 이길 확률은 {p}입니다.', { p: percent(ours) })}
-            {risky ? ' ' + t('직접 지휘하는 편이 유리합니다.') : ''}
+            {battle.you ? t('자동 전투 승률 {p}', { p: percent(ours) }) : t('자동 전투 공격 측 승률 {p}', { p: percent(ours) })}
+            {risky ? ' · ' + t('직접 지휘를 권합니다') : ''}
           </p>
 
           {battle.notes && battle.notes.length > 0 && (
@@ -150,7 +150,7 @@ export function BattlePreview({ battle, onFight, onAuto, onCancel, onBesiege, on
         <footer className="g-sheet__foot">
           {sure ? (
             <div className="g-sure">
-              <p>{t('승률이 {p}에 그칩니다. 자동 전투에서는 함대를 잃고 포구를 빼앗길 수 있습니다. 그래도 자동 전투로 진행합니까?', { p: percent(ours) })}</p>
+              <p>{t('승률 {p} · 자동 전투로 진행할까요?', { p: percent(ours) })}</p>
               <div className="g-actions">
                 <button type="button" className="g-btn g-btn--primary" onClick={onFight}>
                   {t('직접 지휘')}
@@ -172,12 +172,12 @@ export function BattlePreview({ battle, onFight, onAuto, onCancel, onBesiege, on
                 {t('자동 전투')}
               </button>
               {battle.canBesiege && onBesiege && (
-                <button type="button" className="g-btn" title={t('강습하지 않고 포구를 둘러싸 굶깁니다')} onClick={onBesiege}>
+                <button type="button" className="g-btn" title={t('강습하지 않고 굶겨 항복시킵니다')} onClick={onBesiege}>
                   {t('봉쇄')}
                 </button>
               )}
               {battle.canWithdraw && onWithdraw && (
-                <button type="button" className="g-btn g-btn--danger" title={t('싸우지 않고 물러납니다')} onClick={onWithdraw}>
+                <button type="button" className="g-btn g-btn--danger" onClick={onWithdraw}>
                   {t('퇴각')}
                 </button>
               )}

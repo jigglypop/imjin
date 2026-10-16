@@ -38,7 +38,7 @@ export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onCommande
           <b>
             {turn.date}
             {turn.winter && (
-              <span className="g-top__winter" title={t('겨울: 행동력 −20%, 바다 위 함대 보급 소모 증가')}>
+              <span className="g-top__winter" title={t('겨울: 행동력 −20% · 바다 위 보급 소모 증가')}>
                 {t('겨울')}
               </span>
             )}
@@ -56,7 +56,7 @@ export function TopBar({ turn, treasury, onEndTurn, onMenu, onStatus, onCommande
               type="button"
               className={`g-btn g-btn--sm g-top__auto${autoWorks ? ' g-top__auto--on' : ''}`}
               aria-pressed={!!autoWorks}
-              title={t('켜 두면 턴을 마칠 때 군영과 시설을 은이 남는 만큼 알아서 짓고 올립니다. 함선은 짓지 않습니다.')}
+              title={t('켜면 턴 끝에 남는 은으로 시설을 짓습니다 · 함선 제외')}
               onClick={() => onAutoWorks(!autoWorks)}
             >
               {t('자동 건설')} <b>{autoWorks ? t('켜짐') : t('꺼짐')}</b>

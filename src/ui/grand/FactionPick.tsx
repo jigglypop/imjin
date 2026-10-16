@@ -19,9 +19,9 @@ export interface FactionPickProps {
 /** Korean source text: shown through t(). */
 const DIFFICULTY = ['쉬움', '보통', '어려움'];
 const LEVELS: { id: Level; name: string; hint: string }[] = [
-  { id: 'easy', name: '쉬움', hint: '적 진영의 수입이 10% 줄어듭니다.' },
-  { id: 'normal', name: '보통', hint: '난이도에 따른 소득 보정이 없습니다.' },
-  { id: 'hard', name: '어려움', hint: '적 진영의 수입이 15% 늘어납니다.' },
+  { id: 'easy', name: '쉬움', hint: '적 수입 −10%' },
+  { id: 'normal', name: '보통', hint: '수입 보정 없음' },
+  { id: 'hard', name: '어려움', hint: '적 수입 +15%' },
 ];
 
 /** Choose the faction to lead: one card each with its strengths and starting ports. */
@@ -92,7 +92,7 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
             })}
           </div>
           {sel !== 'japan' && <p className="g-pick__ally">
-            {t('동맹 {navy}: 시작 함대·무료 함대 증원을 약 40%, 소득을 35% 줄입니다.', { navy: t(sel === 'joseon' ? '명' : '조선') })}
+            {t('동맹 {navy}: 시작 함대·무료 증원 −40% · 수입 −35%', { navy: t(sel === 'joseon' ? '명' : '조선') })}
           </p>}
           <footer className="g-glass g-pick__foot">
             <div className="g-level" role="radiogroup" aria-label={t('난이도')}>

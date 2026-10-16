@@ -124,7 +124,7 @@ function Detail({ c, canOrder, onLearn, onAssign }: { c: CommanderCardView; canO
                   </button>
                 </div>
               ) : (
-                <p className="g-note">{t('지금은 지휘하는 함대가 없습니다.')}</p>
+                <p className="g-note">{t('지휘하는 함대가 없습니다.')}</p>
               )}
               {c.targets.length > 0 && (
                 <ul className="g-list g-cmd__targets">
@@ -144,7 +144,7 @@ function Detail({ c, canOrder, onLearn, onAssign }: { c: CommanderCardView; canO
                   ))}
                 </ul>
               )}
-              {c.fleet && c.targets.length === 0 && <p className="g-hint">{t('같은 포구에 있는 함대로만 옮길 수 있습니다.')}</p>}
+              {c.fleet && c.targets.length === 0 && <p className="g-hint">{t('같은 포구의 함대로만 옮길 수 있습니다.')}</p>}
             </>
           )}
         </>

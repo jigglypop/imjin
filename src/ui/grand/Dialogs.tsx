@@ -34,7 +34,7 @@ function Scores({ scores, me }: { scores: ScoreView[]; me: FactionId }) {
 
 function Log({ lines }: { lines: LogLineView[] }) {
   const t = useT();
-  if (!lines.length) return <p className="g-hint">{t('아직 새 소식이 없습니다.')}</p>;
+  if (!lines.length) return <p className="g-hint">{t('새 소식이 없습니다.')}</p>;
   return (
     <ul className="g-log">
       {[...lines].reverse().map((l, i) => (
@@ -77,8 +77,8 @@ export function StatusPanel({ me, objective, scores, relations, log, canOrder, o
       </div>
       <p className="g-hint">
         {objective.hold > 0
-          ? t('목표를 {hold}턴째 유지하고 있습니다. {need}턴을 유지하면 승리합니다.', { hold: objective.hold, need: objective.holdNeeded })
-          : t('목표를 달성하고 {need}턴을 유지하면 승리합니다. 달성하지 못하면 마지막 턴의 점수로 승패를 가립니다.', { need: objective.holdNeeded })}
+          ? t('목표 유지 {hold}/{need}턴', { hold: objective.hold, need: objective.holdNeeded })
+          : t('{need}턴 유지하면 승리합니다. 못 하면 마지막 턴 점수로 가립니다.', { need: objective.holdNeeded })}
       </p>
 
       <h3 className="g-section">{t('세력 점수')}</h3>
@@ -206,7 +206,7 @@ export function BattleResult({ result, onClose }: BattleResultProps) {
           </li>
         ))}
       </ul>
-      {result.fleet.length > 12 && <p className="g-hint">{t('그 밖에 {n}척이 더 있습니다.', { n: result.fleet.length - 12 })}</p>}
+      {result.fleet.length > 12 && <p className="g-hint">{t('외 {n}척', { n: result.fleet.length - 12 })}</p>}
     </Modal>
   );
 }
@@ -366,7 +366,7 @@ export function GrandMenu({ onClose, onStatus, onLeave, onAbandon }: MenuProps) 
           {t('전황 · 외교')}
         </button>
         <button type="button" className="g-btn g-btn--block" onClick={onLeave}>
-          {t('메인 메뉴 (진행 상황은 저장됩니다)')}
+          {t('메인 메뉴 (자동 저장)')}
         </button>
         {sure ? (
           <button type="button" className="g-btn g-btn--block g-btn--danger" onClick={onAbandon}>
@@ -377,7 +377,7 @@ export function GrandMenu({ onClose, onStatus, onLeave, onAbandon }: MenuProps) 
             {t('캠페인 포기')}
           </button>
         )}
-        {sure && <p className="g-hint">{t('포기하면 저장된 캠페인이 삭제되며 되돌릴 수 없습니다.')}</p>}
+        {sure && <p className="g-hint">{t('저장이 지워지며 되돌릴 수 없습니다.')}</p>}
       </div>
     </Modal>
   );
@@ -423,7 +423,7 @@ export function Hub({ save, onContinue, onNew, onBack }: HubProps) {
             <dd>{num(save.gold)}</dd>
           </div>
         </dl>
-        {save.over ? <p className="g-hint">{t('이 캠페인은 종료되었습니다.')}</p> : save.waiting > 0 ? <p className="g-banner">{t('진행할 전투가 {n}건 있습니다.', { n: save.waiting })}</p> : null}
+        {save.over ? <p className="g-hint">{t('끝난 캠페인입니다.')}</p> : save.waiting > 0 ? <p className="g-banner">{t('대기 중인 전투 {n}건', { n: save.waiting })}</p> : null}
         <div className="g-hub__actions">
           <button type="button" className="g-btn g-btn--primary g-btn--lg" onClick={onContinue}>
             {save.over ? t('결과 보기') : t('이어서 하기')}

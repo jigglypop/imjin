@@ -775,10 +775,10 @@ export function growthVictoryRules(g: Grand): NonNullable<Grand['victoryRules']>
 }
 
 export function objectiveText(f: GrandFaction, g?: Grand): string {
-  if (g?.victoryRules?.kind === 'growth-v1') return '시작 영토보다 점령 가치를 늘려 공통 목표를 달성하고 반년 동안 유지합니다.';
-  if (f === 'joseon') return '남해안의 모든 포구와 쓰시마를 차지하고 반년 동안 유지합니다.';
-  if (f === 'japan') return '한산도를 포함해 남해안 포구에서 두 곳을 제외한 나머지를 차지하고 반년 동안 유지합니다.';
-  return '부산포와 함께 쓰시마나 나고야를 차지하고 반년 동안 유지합니다.';
+  if (g?.victoryRules?.kind === 'growth-v1') return '점령 가치를 시작 때보다 목표만큼 늘립니다.';
+  if (f === 'joseon') return '남해안의 모든 포구와 쓰시마를 차지합니다.';
+  if (f === 'japan') return '한산도를 포함해 남해안 포구를 두 곳만 빼고 모두 차지합니다.';
+  return '부산포와 함께 쓰시마나 나고야를 차지합니다.';
 }
 
 export function objectiveMet(g: Grand, f: GrandFaction): boolean {

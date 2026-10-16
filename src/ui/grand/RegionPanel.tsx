@@ -64,8 +64,8 @@ function SiegeView({ region, me }: { region: RegionView; me: FactionId }) {
       <Bar value={s.turns / Math.max(1, s.hold)} tone={ours ? 'good' : 'bad'} label={t('봉쇄 {n}/{m}', { n: s.turns, m: s.hold })} />
       <p>
         {region.owner === me
-          ? t('수입과 함선 건조가 멈췄고 수비대가 굶주립니다. {turns} 안에 구원 함대를 보내지 않으면 항복합니다.', { turns: left })
-          : t('수입과 함선 건조가 멈췄고 수비대가 굶주립니다. {turns} 뒤에 항복합니다.', { turns: left })}
+          ? t('수입·건조 정지 · {turns} 안에 구원하지 않으면 항복', { turns: left })
+          : t('수입·건조 정지 · {turns} 뒤 항복', { turns: left })}
       </p>
     </div>
   );
@@ -96,7 +96,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
     >
       {region.note && <p className="g-note">{region.note}</p>}
       {!seen ? (
-        <p className="g-hint">{t('시야 밖입니다. 봉수대를 세우거나 가까운 포구에 함대를 두면 상황을 볼 수 있습니다.')}</p>
+        <p className="g-hint">{t('시야 밖입니다. 봉수대나 가까운 함대가 있으면 보입니다.')}</p>
       ) : (
         <>
           <CampView region={region} />
@@ -197,7 +197,7 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
           {own && (region.recruit.length > 0 || region.yard.length > 0) && (
             <>
               <h3 className="g-section">
-                {t('함선 건조')} <span className="g-section__hint">{region.yardIdle ? t('선소가 완공되어야 건조가 시작됩니다') : t('주문 즉시 은이 차감됩니다')}</span>
+                {t('함선 건조')} {region.yardIdle && <span className="g-section__hint">{t('선소 완공 후 건조 시작')}</span>}
               </h3>
               {region.yard.length > 0 && (
                 <ul className="g-list g-list--tight">
@@ -236,11 +236,11 @@ export function RegionPanel({ region, fleets, me, onClose, onBuild, onCancelBuil
           {onMergeAll && mine.length > 1 && (
             <div className="g-tools">
               <button type="button" className="g-btn g-btn--sm" disabled={ready.length < 2} onClick={() => onMergeAll(ready.map((f) => f.id))}>{t('모두 합류 ({n})', { n: ready.length })}</button>
-              <span className="g-hint">{ready.length < 2 ? t('정비 중인 함대는 합칠 수 없습니다. 정비가 끝난 함대가 둘 이상 필요합니다.') : ready.length < mine.length ? t('정비 중인 함대는 제외하고 합칩니다.') : t('이 포구의 함대를 하나로 합칩니다.')}</span>
+              {ready.length < mine.length && <span className="g-hint">{ready.length < 2 ? t('정비를 마친 함대가 둘 이상 필요합니다.') : t('정비 중인 함대는 빼고 합칩니다.')}</span>}
             </div>
           )}
           {fleets.length === 0 ? (
-            <p className="g-hint">{t('주둔 중인 함대가 없습니다.')}</p>
+            <p className="g-hint">{t('주둔 함대가 없습니다.')}</p>
           ) : (
             <ul className="g-list">
               {fleets.map((f) => (

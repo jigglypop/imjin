@@ -249,7 +249,7 @@ export function orderSplit(g: Grand, fleetId: string, shipIds: string[]): Result
   const fl = fleetById(g, fleetId);
   if (!fl || !fl.at) return fail('나눌 수 없습니다');
   const take = fl.ships.filter((s) => shipIds.includes(s.id));
-  if (!take.length) return fail('나눌 함선을 먼저 선택해야 합니다');
+  if (!take.length) return fail('나눌 함선을 고르세요');
   if (take.length >= fl.ships.length) return fail('함선을 전부 나눌 수는 없습니다');
   fl.ships = fl.ships.filter((s) => !shipIds.includes(s.id));
   const next: Fleet = { id: mintId(g, 'f'), faction: fl.faction, name: `${fl.name} 분견 함대`, commanderId: null, ships: take, at: fl.at, transit: null, route: [], from: fl.from, rest: fl.rest }; // i18n-ignore: detachment name; the UI translates the pattern
