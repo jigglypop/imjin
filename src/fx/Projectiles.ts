@@ -444,13 +444,6 @@ export class Munitions {
     } else if (this.nFar < MAX_FAR) this.far.setMatrixAt(this.nFar++, this.m);
   }
 
-  /** A soft smear of the motion, only when the shell crosses enough of the screen in a frame for the eye to blur it. */
-  private smear(x: number, y: number, z: number, ux: number, uy: number, uz: number, speed: number, ppm: number, width: number, strength: number) {
-    const a = smooth(10, 55, (speed * ppm) / 60) * strength;
-    if (a < 0.02) return;
-    this.streaks.put(x, y, z, ux, uy, uz, Math.min(14, speed / 60), width, 0.82, 0.78, 0.72, a);
-  }
-
   /**
    * A round shot: a lit iron sphere that grows with distance so it keeps at least 3.3 px of radius, never more than
    * a metre or so while the camera is close. Nothing glows round it: a pale smear or halo turns the dark ball into a
@@ -462,7 +455,8 @@ export class Munitions {
   }
 
   grape(x: number, y: number, z: number, ux: number, uy: number, uz: number, speed: number, ppm: number, id: number, age: number) {
-    const n = this.perShot + 2;
+    // Joran-hwan, bird's-egg shot: a spray of a dozen small iron balls on the high tier, fewer on the small ones.
+    const n = this.perShot * 2 + 2;
     const spread = Math.min(7, 0.035 * speed * age);
     const r = Math.min(9, Math.max(0.09, 2.2 / ppm));
     let sx = uz;
@@ -482,7 +476,6 @@ export class Munitions {
       const lag = hash(id * 1.37 + i * 5.1) * 0.012 * speed * Math.min(1, age * 3);
       this.putBall(x + sx * c + bx * s - ux * lag, y + by * s - uy * lag, z + sz * c + bz * s - uz * lag, r, ppm);
     }
-    this.smear(x, y, z, ux, uy, uz, speed, ppm, r * 2.5, 0.16);
   }
 
   // ---- Arrows -----------------------------------------------------------------------------------------------------
@@ -525,25 +518,27 @@ export class Munitions {
     this.heavy.setMatrixAt(this.nHeavy++, this.m);
   }
 
-  /** A Japanese fire arrow: a thin arrow with a burning bundle at its head. */
+  /**
+   * A Japanese fire arrow: a thin arrow about a metre long with a bundle of tow burning at its head, a small flame and
+   * the dark smoke it trails (Effects lays the smoke). From afar it grows at most to 1.6 times its size; no glow line.
+   */
   fireArrow(x: number, y: number, z: number, ux: number, uy: number, uz: number, ppm: number) {
     if (this.nHiya >= MAX_HEAVY) return;
-    const sc = Math.min(8, Math.max(1.2, 6 / ppm));
+    const sc = Math.min(1.6, Math.max(1, 10 / ppm));
     this.q.setFromUnitVectors(this.xAxis, this.v.set(ux, uy, uz));
     this.m.compose(this.p.set(x, y, z), this.q, this.s.set(sc, sc, sc));
     this.hiya.setMatrixAt(this.nHiya++, this.m);
-    // The burning head: a warm glow and a short tongue of flame trailing from it.
-    const head = x + ux * 0.4 * sc;
-    const hy = y + uy * 0.4 * sc;
-    const hz = z + uz * 0.4 * sc;
-    const glow = Math.max(1.2, 6 / ppm);
-    this.streaks.put(head, hy, hz, ux, uy, uz, glow * 1.6, glow * 0.8, 1, 0.5, 0.16, 0.5);
-    this.streaks.put(head, hy, hz, ux, uy, uz, glow * 0.7, glow * 0.35, 1, 0.82, 0.55, 0.8);
+    // The tow bound behind the head, burning: a short-lived tongue of flame that the flight leaves streaming back.
+    const t = 0.3 * sc;
+    this.fire.emit({ x: x + ux * t, y: y + uy * t, z: z + uz * t, vx: -ux * 4, vy: -uy * 4 + 0.6, vz: -uz * 4, life: 0.12, size0: 0.32 * sc, size1: 0.16 * sc, alpha: 0.85, heat: 0.9, drag: 3, wind: 0.3 });
   }
 
-  /** A rocket arrow with its exhaust: a white-hot core and a longer warm flame, and sparks shed behind it. */
-  rocket(x: number, y: number, z: number, ux: number, uy: number, uz: number, sc0: number, ppm: number, dt: number) {
-    const sc = Math.min(16, Math.max(sc0, 7 / (1.2 * ppm)));
+  /**
+   * A rocket arrow and its motor's flame: the sim knows it as a shell, and Effects lays its white smoke trail. The flame
+   * is a small tongue of fire at the nozzle, not a glowing line, and from afar the rocket grows at most to 1.6 times.
+   */
+  rocket(x: number, y: number, z: number, ux: number, uy: number, uz: number, sc0: number, ppm: number) {
+    const sc = Math.min(1.6 * sc0, Math.max(sc0, 7 / (1.2 * ppm)));
     this.q.setFromUnitVectors(this.xAxis, this.v.set(ux, uy, uz));
     if (this.nRocket < this.rockets.instanceMatrix.count) {
       this.m.compose(this.p.set(x, y, z), this.q, this.s.set(sc, sc, sc));
@@ -552,33 +547,7 @@ export class Munitions {
     const nx = x + ux * NOZZLE * sc;
     const ny = y + uy * NOZZLE * sc;
     const nz = z + uz * NOZZLE * sc;
-    const flick = 0.8 + Math.random() * 0.4;
-    const len = Math.max(1.3 * sc * flick, 7 / ppm);
-    const w = Math.max(0.2 * sc, 1.8 / ppm);
-    // put() draws from its head back along the direction: the head is the nozzle, bright, and the flame fades behind it.
-    this.streaks.put(nx, ny, nz, ux, uy, uz, len, w, 1, 0.5, 0.14, 0.85);
-    this.streaks.put(nx, ny, nz, ux, uy, uz, len * 0.42, w * 0.45, 1, 0.9, 0.66, 0.95);
-    this.fire.emit({ x: nx - ux * 0.3 * sc, y: ny - uy * 0.3 * sc, z: nz - uz * 0.3 * sc, life: 0.08, size0: 0.22 * sc, size1: 0.5 * sc, alpha: 0.55, heat: 1, drag: 4, wind: 0 });
-    if (Math.random() < Math.min(1, 8 * dt * this.k)) {
-      const sp = rnd(14, 34);
-      this.streaks.emit({
-        x: nx - ux * len * 0.4,
-        y: ny - uy * len * 0.4,
-        z: nz - uz * len * 0.4,
-        vx: -ux * sp + rnd(-5, 5),
-        vy: -uy * sp + rnd(-3, 5),
-        vz: -uz * sp + rnd(-5, 5),
-        life: rnd(0.2, 0.45),
-        minLen: 0.25,
-        stretch: 0.03,
-        width: Math.max(0.05, 0.8 / ppm),
-        r: 1,
-        g: rnd(0.55, 0.8),
-        b: rnd(0.2, 0.35),
-        gravity: 8,
-        drag: 0.6,
-      });
-    }
+    this.fire.emit({ x: nx - ux * 0.15 * sc, y: ny - uy * 0.15 * sc, z: nz - uz * 0.15 * sc, life: 0.08, size0: 0.2 * sc, size1: 0.38 * sc, alpha: 0.6, heat: 0.75, drag: 4, wind: 0 });
   }
 
   /** The kick at the start of a rocket's flight: a white blast of smoke behind it, a flash and a spray of sparks. */
@@ -742,7 +711,7 @@ export class Munitions {
       }
       if (first && (!visible || visible(sx, sz))) this.launch(sx, sy, sz, ux, uy, uz, 1);
       if (d < 3200) {
-        this.rocket(px, py, pz, ux, uy, uz, 1.6 * this.size[i]!, ppm, dt);
+        this.rocket(px, py, pz, ux, uy, uz, 1.6 * this.size[i]!, ppm);
         lay(this.trails[i]!, px, py, pz, ppm);
       }
     }
