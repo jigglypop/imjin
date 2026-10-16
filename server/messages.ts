@@ -1,7 +1,11 @@
 import { CONQUEST_MAPS } from '../src/sim/maps';
 import { SCENARIOS } from '../src/sim/scenarios';
 import { FACTIONS } from '../src/sim/types';
+import { SESSION_RULE } from '../src/account/wire';
 import type { ClientMsg } from '../src/net/protocol';
+
+/** A name or a line of chat as others see it: no control characters or angle brackets, trimmed, at most `max` long. */
+export const clean = (text: unknown, max: number) => String(text ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max);
 
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown, max: number) => typeof value === 'string' && value.length <= max;
@@ -20,7 +24,7 @@ export function clientMessage(value: unknown): ClientMsg | null {
   let valid = false;
   switch (value.t) {
     case 'hello':
-      valid = text(value.name, 256) && typeof value.v === 'number' && Number.isInteger(value.v) && (value.token === undefined || (typeof value.token === 'string' && /^[a-f0-9]{32}$/.test(value.token))) && (value.account === undefined || (typeof value.account === 'string' && /^[a-f0-9]{64}$/.test(value.account)));
+      valid = text(value.name, 256) && typeof value.v === 'number' && Number.isInteger(value.v) && (value.token === undefined || (typeof value.token === 'string' && /^[a-f0-9]{32}$/.test(value.token))) && (value.account === undefined || (typeof value.account === 'string' && /^[a-f0-9]{64}$/.test(value.account))) && (value.session === undefined || (typeof value.session === 'string' && SESSION_RULE.test(value.session)));
       break;
     case 'create':
       valid = text(value.name, 256) && choice(value.battle);

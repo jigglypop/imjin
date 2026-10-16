@@ -3,12 +3,13 @@
 //   npm run server            (bundled to server/dist/server.cjs, PORT defaults to 8787)
 // Rooms fight a conquest map or a historical scenario as a duel. Quick match pairs players or fills with the
 // computer. A dropped player keeps their seat for GRACE_SECONDS (session token), and the approach to the first
-// contact is skipped at FF_SPEED.
+// contact is skipped at FF_SPEED. The same listener serves the account API under /api/ (api.ts, auth.ts).
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { isMainThread } from 'node:worker_threads';
 import { WebSocketServer, type WebSocket } from 'ws';
+import { ACCOUNT_TEXT } from '../src/account/wire';
 import { SIM_DT, type Battle } from '../src/sim/battle';
 import { applyCommand, type Command } from '../src/sim/commands';
 import type { Conquest } from '../src/sim/conquest';
@@ -30,9 +31,14 @@ import {
 } from '../src/net/protocol';
 import { buildBattle, choiceKey, inContact, openSeats, sanitizeChoice, terrainOf, titleOf } from './battles';
 import { loadLand, terrainWorker } from './terrain';
-import { clientMessage } from './messages';
+import { clean, clientMessage } from './messages';
 import { RankedStore, rankRange, type RankMatch } from './ranked';
 import { observedEvent, observedMetadata, observedShips, observedState } from './observation';
+import { SESSION_MS, hashSession, type AccountStore, type UserRecord } from './accounts';
+import { MemoryAccountStore } from './accountsMemory';
+import { PgAccountStore, databaseConfig, type DatabaseConfig } from './accountsPg';
+import { ApiRouter, addressOf, originAllowed } from './api';
+import { authRoutes } from './auth';
 
 /** Set by build-server.mjs, so health identifies the bundle actually running. */
 declare const IMJIN_BUILD_REVISION: string;
@@ -52,9 +58,6 @@ const BASE_SPEED = Number(process.env.BASE_SPEED ?? 1);
 /** Only tests set it: the battle of a room with this name throws on its first step, to show that the room ends alone. */
 const FAULT_ROOM = process.env.FAULT_ROOM ?? '';
 const ENDED_ROOM_SECONDS = 600;
-/** Browsers send their page's origin with a WebSocket; only the game's own pages (and local or LAN ones) may connect. Other clients send none. */
-const ORIGINS = ['https://imjin1592.com', 'https://www.imjin1592.com', ...(process.env.ALLOWED_ORIGINS ?? '').split(',').filter(Boolean)];
-const originAllowed = (origin: string | undefined) => !origin || ORIGINS.includes(origin) || /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin);
 /** Pages take a while to load a battle; the clock waits for them this long. */
 const LOAD_SECONDS = 45;
 // Tests can shorten lifecycle deadlines without changing the production protocol's 60-second grace.
@@ -80,7 +83,10 @@ type Client = {
   /** Message budget of the connection (leaky bucket). */
   budget: number;
   budgetAt: number;
-  account: { id: string; token: string } | null;
+  /** The ranked account: opened by its recovery code (`token`), or by the session of the user it is linked to (`token` null). */
+  account: { id: string; token: string | null } | null;
+  /** The signed-in user the line said hello as, and the hash of the session that proved it. */
+  user: { id: string; session: string } | null;
 };
 type Live = {
   battle: Battle;
@@ -117,6 +123,7 @@ const rooms = new Map<string, Room>();
 const queue: Quick[] = [];
 const rankedQueue: RankedEntry[] = [];
 let ranked: RankedStore | null = null;
+let accounts: AccountStore | null = null;
 const accountCreation = new Map<string, { since: number; count: number }>();
 let tickMs = 0;
 /** Rooms ended because their battle threw, since the process started. */
@@ -148,8 +155,6 @@ function code() {
     if (!rooms.has(id)) return id;
   }
 }
-
-const clean = (text: unknown, max: number) => String(text ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max);
 
 function summary() {
   return [...rooms.values()]
@@ -746,42 +751,143 @@ function handle(c: Client, msg: ClientMsg) {
   }
 }
 
-/** A connection says who it is. A known token takes its old seat back. */
-function attach(ws: WebSocket, msg: Extract<ClientMsg, { t: 'hello' }>, address: string): Client | null {
-  if (msg.v !== PROTOCOL) {
-    ws.send(JSON.stringify({ t: 'error', code: 'version', text: '게임 버전이 서버와 다릅니다. 새로고침이 필요합니다.' } satisfies ServerMsg));
-    ws.close();
+type Hello = Extract<ClientMsg, { t: 'hello' }>;
+type Identity = { account: Client['account']; user: Client['user']; expired: boolean };
+/** What a hello's session proved: its user with their ranked account, or no user (`expired` when the store does not know the session). */
+type SessionProof = { hash: string; user: UserRecord | null; account: Client['account']; expired: boolean };
+
+/** A new ranked account counts against the address's hourly allowance. False, with the socket closed, when it is spent. */
+function creationAllowed(ws: WebSocket, address: string): boolean {
+  let limit = accountCreation.get(address);
+  if (!limit || Date.now() - limit.since > 3600000) limit = { since: Date.now(), count: 0 };
+  if (limit.count >= 24) {
+    ws.send(JSON.stringify({ t: 'error', code: 'identity', text: '새 계정을 너무 자주 만들었습니다. 저장된 복원 코드로 접속하거나 잠시 후 다시 시도해 주세요.' } satisfies ServerMsg));
+    ws.close(4003, 'account creation limit');
+    return false;
+  }
+  accountCreation.set(address, limit);
+  return true;
+}
+
+function refuseStorage(ws: WebSocket) {
+  ws.send(JSON.stringify({ t: 'error', code: 'ranked', text: '계정 저장소를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.' } satisfies ServerMsg));
+  ws.close(1011, 'account unavailable');
+}
+
+/**
+ * Ties a ranked account to a user and returns the one they have afterwards: this one, or the one another of their
+ * devices linked first. Null when another user has it or the store failed (logged); the line then plays unlinked.
+ */
+async function link(user: UserRecord, rankedId: string): Promise<string | null> {
+  try {
+    const outcome = await accounts!.linkRanked(user.id, rankedId);
+    if (outcome === 'linked' || outcome === 'same') return rankedId;
+    return outcome === 'other' ? (await accounts!.user(user.id))?.rankedId ?? null : null;
+  } catch (error) {
+    console.error('ranked link failed', error instanceof Error ? error.message : 'unknown error');
     return null;
   }
-  let c = typeof msg.token === 'string' ? byToken.get(msg.token) : undefined;
-  let account: Client['account'] = null;
-  const name = clean(msg.name, 16) || '무명';
-  if (ranked?.ready) {
-    if (!msg.account) {
-      let limit = accountCreation.get(address);
-      if (!limit || Date.now() - limit.since > 3600000) limit = { since: Date.now(), count: 0 };
-      if (limit.count >= 24) {
-        ws.send(JSON.stringify({ t: 'error', code: 'identity', text: '새 계정을 너무 자주 만들었습니다. 저장된 복원 코드로 접속하거나 잠시 후 다시 시도해 주세요.' } satisfies ServerMsg));
-        ws.close(4003, 'account creation limit');
-        return null;
-      }
-      accountCreation.set(address, limit);
+}
+
+/**
+ * The ranked account of a signed-in user: the one linked to them; for a guest (which is this browser) the one its
+ * recovery code opens, when nobody has it yet; else a new one. Whatever it is gets linked, so every later device of
+ * the user plays with it. Null while ranked play is off; undefined when the hello was refused and the socket closed.
+ */
+async function rankedFor(ws: WebSocket, msg: Hello, name: string, address: string, user: UserRecord): Promise<Client['account'] | undefined> {
+  if (!ranked?.ready) return null;
+  try {
+    if (user.rankedId) {
+      if (ranked.rename(user.rankedId, name)) return { id: user.rankedId, token: null };
+      console.error('a linked ranked account is missing from the journal');
+      return null;
     }
+    const own = user.login === null && msg.account ? ranked.verify(msg.account) : null;
+    const adopted = own ? await link(user, own) : null;
+    if (adopted) return { id: adopted, token: null };
+    if (!creationAllowed(ws, address)) return undefined;
+    const created = ranked.account(undefined, name);
+    accountCreation.get(address)!.count++;
+    return { id: (await link(user, created.id)) ?? created.id, token: null };
+  } catch {
+    refuseStorage(ws);
+    return undefined;
+  }
+}
+
+/** What a hello's session proves, asked of the store before the hello does anything else. Undefined when the hello was refused and the socket closed. */
+async function signIn(ws: WebSocket, msg: Hello, name: string, address: string): Promise<SessionProof | undefined> {
+  const hash = hashSession(msg.session!);
+  if (!accounts?.ready) return { hash, user: null, account: null, expired: false };
+  let user: UserRecord | null;
+  try {
+    user = (await accounts.session(msg.session!))?.user ?? null;
+  } catch (error) {
+    console.error('session check failed', error instanceof Error ? error.message : 'unknown error');
+    return { hash, user: null, account: null, expired: false };
+  }
+  if (!user) return { hash, user: null, account: null, expired: true };
+  const account = await rankedFor(ws, msg, name, address, user);
+  return account === undefined ? undefined : { hash, user, account, expired: false };
+}
+
+/**
+ * Who a hello speaks for once the store has answered: the signed-in user with their ranked account, or else the ranked
+ * account its recovery code names, as before accounts. The tab that took its seat with this very session gets it back
+ * as it was, also once the session has ended or while the store cannot answer: only that tab holds both its seat token
+ * and this session. Null when the hello was refused and the socket closed.
+ */
+function identify(ws: WebSocket, msg: Hello, name: string, address: string, c: Client | undefined, proof: SessionProof | null): Identity | null {
+  if (proof && c?.user?.session === proof.hash) return { account: c.account, user: c.user, expired: false };
+  if (proof?.user) return { account: proof.account, user: { id: proof.user.id, session: proof.hash }, expired: false };
+  let account: Client['account'] = null;
+  if (ranked?.ready) {
+    if (!msg.account && !creationAllowed(ws, address)) return null;
     try { account = ranked.account(msg.account, name); }
     catch {
-      ws.send(JSON.stringify({ t: 'error', code: ranked.ready ? 'identity' : 'ranked', text: ranked.ready ? '복원 코드를 확인할 수 없습니다. 저장된 코드를 다시 확인해 주세요.' : '계정 저장소를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.' } satisfies ServerMsg));
-      ws.close(ranked.ready ? 4003 : 1011, 'account unavailable');
+      if (!ranked.ready) {
+        refuseStorage(ws);
+        return null;
+      }
+      ws.send(JSON.stringify({ t: 'error', code: 'identity', text: '복원 코드를 확인할 수 없습니다. 저장된 코드를 다시 확인해 주세요.' } satisfies ServerMsg));
+      ws.close(4003, 'account unavailable');
       return null;
     }
     if (!msg.account) accountCreation.get(address)!.count++;
   }
   // Storage outages disable ranked play; an already authenticated tab can still recover its casual session.
-  if (!ranked?.ready && c?.account && msg.account === c.account.token) account = c.account;
-  if (c?.account && (account?.id !== c.account.id || msg.account !== c.account.token)) {
+  if (!ranked?.ready && c?.account?.token && msg.account === c.account.token) account = c.account;
+  return { account, user: null, expired: proof?.expired ?? false };
+}
+
+/**
+ * A connection says who it is. A known token takes its old seat back. The account store is asked first and may answer
+ * late; everything after it runs at once, so no other hello can change the seats in between.
+ */
+async function attach(ws: WebSocket, msg: Hello, address: string): Promise<Client | null> {
+  if (msg.v !== PROTOCOL) {
+    ws.send(JSON.stringify({ t: 'error', code: 'version', text: '게임 버전이 서버와 다릅니다. 새로고침이 필요합니다.' } satisfies ServerMsg));
+    ws.close();
+    return null;
+  }
+  const name = clean(msg.name, 16) || '무명';
+  const proof = msg.session === undefined ? null : await signIn(ws, msg, name, address);
+  // Refused while the store answered, or the socket went meanwhile: it gets no seat.
+  if (proof === undefined || ws.readyState !== ws.OPEN) return null;
+  let c = typeof msg.token === 'string' ? byToken.get(msg.token) : undefined;
+  const identity = identify(ws, msg, name, address, c, proof);
+  if (!identity) return null;
+  const { user } = identity;
+  let { account } = identity;
+  // A seat goes back only to whoever took it: a signed-in user's to the same user, by any of their sessions; any other
+  // to the same recovery code.
+  if (c?.user ? c.user.id !== user?.id : c?.account && (account?.id !== c.account.id || msg.account !== c.account.token)) {
     ws.send(JSON.stringify({ t: 'error', code: 'identity', text: '이 자리의 계정과 복원 코드가 일치하지 않습니다.' } satisfies ServerMsg));
     ws.close(4003, 'account mismatch');
     return null;
   }
+  // The seat keeps the ranked account its battle was matched with, also while ranked play is off.
+  if (c?.user && c.account) account = c.account;
   // The permanent credential can recover a ranked seat after a tab was closed, without its session token.
   if (!c && account && ranked?.activeMatch(account.id)) c = [...byId.values()].find((other) => other.account?.id === account.id && other.room?.ranked && !other.room.ranked.settled);
   const resumed = !!c;
@@ -797,15 +903,19 @@ function attach(ws: WebSocket, msg: Extract<ClientMsg, { t: 'hello' }>, address:
       ws.close();
       return null;
     }
-    c = { id: randomBytes(6).toString('hex'), token: randomBytes(16).toString('hex'), name: '무명', ws: null, room: null, alive: true, grace: null, budget: 120, budgetAt: performance.now(), account };
+    c = { id: randomBytes(6).toString('hex'), token: randomBytes(16).toString('hex'), name: '무명', ws: null, room: null, alive: true, grace: null, budget: 120, budgetAt: performance.now(), account, user };
     byToken.set(c.token, c);
     byId.set(c.id, c);
   }
   c.ws = ws;
   c.account = account;
+  c.user = user;
   c.alive = true;
   c.name = clean(msg.name, 16) || c.name;
-  send(c, { t: 'welcome', id: c.id, v: PROTOCOL, token: c.token, resumed, account: c.account, rank: c.account ? ranked?.profile(c.account.id) ?? null : null });
+  // A ranked account that came with a session is the signed-in user's: its recovery code is never handed to a page.
+  const code = c.account?.token ? { id: c.account.id, token: c.account.token } : null;
+  send(c, { t: 'welcome', id: c.id, v: PROTOCOL, token: c.token, resumed, account: code, rank: c.account ? ranked?.profile(c.account.id) ?? null : null, ...(c.user ? { user: c.user.id } : {}) });
+  if (identity.expired) send(c, { t: 'error', code: 'session', text: ACCOUNT_TEXT.session });
   const seat = c.room?.info.seats.find((s) => s.client === c!.id);
   if (c.room && seat) {
     if (seat.away) {
@@ -839,6 +949,34 @@ function detach(c: Client) {
   c.grace = setTimeout(() => drop(c), DISCONNECT_SECONDS * 1000);
 }
 
+/**
+ * The accounts store the environment asks for: PostgreSQL from DATABASE_URL or PGHOST (accountsPg.ts), memory with
+ * ACCOUNTS_STORE=memory for tests and local runs, or none. Without one, accounts are off and the game goes on, as it
+ * does without ranked storage. One line says which, never with credentials.
+ */
+function openAccounts(env: NodeJS.ProcessEnv): AccountStore | null {
+  // Only tests shorten the 90 days.
+  const sessionMs = Number(env.SESSION_SECONDS) > 0 ? Number(env.SESSION_SECONDS) * 1000 : SESSION_MS;
+  if (env.ACCOUNTS_STORE === 'memory') {
+    console.log('accounts: in memory (ACCOUNTS_STORE=memory), lost when the server stops');
+    return new MemoryAccountStore(sessionMs);
+  }
+  let config: DatabaseConfig | null;
+  try {
+    config = databaseConfig(env);
+  } catch (error) {
+    console.error(`accounts: off, the database settings cannot be used (${error instanceof Error ? error.message : 'unknown error'})`);
+    return null;
+  }
+  if (!config) {
+    console.log('accounts: off (no DATABASE_URL or PGHOST)');
+    return null;
+  }
+  const tls = !config.ssl ? 'no TLS' : typeof config.ssl === 'object' && config.ssl.rejectUnauthorized ? 'TLS, certificate verified' : 'TLS, certificate not verified';
+  console.log(`accounts: PostgreSQL at ${config.host}:${config.port}/${config.database} (${tls})`);
+  return new PgAccountStore(config, sessionMs);
+}
+
 function main() {
   // A room's tick and a client's request already end only what failed (fail, and the 1011 close in the message
   // handler). The only promises are room starts and terrain loads, which handle their own errors and share nothing
@@ -852,6 +990,13 @@ function main() {
   });
   try { ranked = new RankedStore(process.env.RANKED_STORE ?? join(dirname(__filename), 'data', 'ranked.jsonl')); }
   catch (error) { console.error('ranked unavailable', error instanceof Error ? error.message : 'unknown error'); }
+  accounts = openAccounts(process.env);
+  const api = new ApiRouter(accounts);
+  authRoutes(api, ranked);
+  // Ended sessions are forgotten every hour.
+  setInterval(() => {
+    if (accounts?.ready) accounts.sweep().catch((error) => console.error('accounts sweep failed', error instanceof Error ? error.message : 'unknown error'));
+  }, 3600 * 1000);
   const http = createServer((req, res) => {
     if (req.url === '/health') {
       res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'cache-control': 'no-store' });
@@ -869,24 +1014,24 @@ function main() {
           queue: queue.length,
           rankedQueue: rankedQueue.length,
           rankedReady: ranked?.ready === true,
+          accountsReady: accounts?.ready === true,
           tickMs: Math.round(tickMs * 100) / 100,
           ffSpeed: FF_SPEED,
         }),
       );
       return;
     }
+    if (api.handle(req, res)) return;
     res.writeHead(404);
     res.end();
   });
 
   const wss = new WebSocketServer({ server: http, path: '/ws', maxPayload: 64 * 1024, verifyClient: (info: { origin: string }) => originAllowed(info.origin || undefined) });
   wss.on('connection', (ws, request) => {
-    // Only the local TLS proxy may supply the original address. A direct client cannot spoof this header.
-    const remote = request.socket.remoteAddress ?? 'unknown';
-    const forwarded = request.headers['x-forwarded-for'];
-    const address = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(remote) && typeof forwarded === 'string' ? forwarded.split(',').at(-1)!.trim() : remote;
+    const address = addressOf(request);
     let c: Client | null = null;
     let beforeHello = 0;
+    let attaching = false;
     const deadline = setTimeout(() => {
       if (!c) ws.terminate();
     }, HELLO_SECONDS * 1000);
@@ -919,19 +1064,34 @@ function main() {
           c.budget -= 1;
         }
         if (msg.t === 'hello') {
-          // A second hello on the same connection only renames the player.
+          // A second hello on the same connection only renames the player: who it speaks for was settled by the first
+          // one, and a signed-in line never goes by the browser's recovery code.
           if (c && c.ws === ws && msg.v === PROTOCOL) {
-            if (msg.account !== undefined && msg.account !== c.account?.token) {
+            if (!c.user && msg.account !== undefined && msg.account !== c.account?.token) {
               send(c, { t: 'error', code: 'identity', text: '다른 계정으로 접속하려면 현재 연결을 먼저 닫아 주세요.' });
               return;
             }
             c.name = clean(msg.name, 16) || c.name;
             if (ranked?.ready && c.account) {
-              ranked.account(c.account.token, c.name);
+              ranked.rename(c.account.id, c.name);
               send(c, { t: 'rank', profile: ranked.profile(c.account.id) });
             }
             send(c, { t: 'rooms', rooms: summary() });
-          } else c = attach(ws, msg, address) ?? c;
+          } else if (!attaching) {
+            // The account store may take a moment to answer; a hello that comes meanwhile is ignored, the first decides.
+            attaching = true;
+            attach(ws, msg, address)
+              .then((attached) => {
+                if (attached) c = attached;
+              })
+              .catch((err) => {
+                console.warn('client request failed', err);
+                ws.close(1011, 'request failed');
+              })
+              .finally(() => {
+                attaching = false;
+              });
+          }
           return;
         }
         // Not yet introduced, or a connection that was replaced by a newer one.

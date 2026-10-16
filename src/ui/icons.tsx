@@ -82,6 +82,14 @@ export const Home = ({ size }: P) => (
   </Icon>
 );
 
+/** A head and shoulders, for the account. */
+export const Person = ({ size }: P) => (
+  <Icon size={size}>
+    <circle cx="12" cy="8.5" r="3.5" />
+    <path d="M5.5 19.5c.7-3.4 3.3-5.2 6.5-5.2s5.8 1.8 6.5 5.2" />
+  </Icon>
+);
+
 /** An exclamation in a ring, for notices. */
 export const Notice = ({ size }: P) => (
   <Icon size={size}>

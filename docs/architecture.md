@@ -30,6 +30,11 @@ Sound.ts (컨텍스트, 버스 연결, 음악/클릭 설정), battlefield.ts (�
 ## UI
 `src/ui/` React HUD/메뉴; `styles.css` + `conquest.css`; `useCompactLayout`을 통한 컴팩트 레이아웃 (`.app--compact`, `.app--touch`)
 
+## 계정
+- 서버: `server/accounts.ts`가 저장소 인터페이스(사용자, 해시로 저장하는 세션과 90일 연장 만료, 사용자마다 리비전이 붙은 JSON 프로필, 추가만 하는 통화 원장, 1회성 지급 기록; 변경은 원장·지급과 한 트랜잭션). `server/accountsPg.ts`가 PostgreSQL에 둠(운영은 RDS `imjin-postgres`, 호스트의 `/etc/imjin/db.env`에 있는 `DATABASE_URL`, `scripts/deploy-mp.sh db`로 설정; 마이그레이션은 앞으로만, advisory lock 아래), `server/accountsMemory.ts`는 프로세스 메모리에 둠(테스트·로컬). 둘 다 없으면 계정이 꺼지고 `/health`가 `accountsReady: false`. `server/auth.ts` 비밀번호(scrypt), `server/api.ts` `/api` 라우터(CORS, 16 KB JSON, Bearer 세션, 속도 제한).
+- 온라인: hello에 세션이 실리면 로그인한 사용자의 랭크 계정으로 플레이(첫 방문에 만들고 연결). 세션이 없으면 예전처럼 복원 코드.
+- 클라이언트: `src/account/`(토큰은 localStorage `imjin.session.v1`, `ensureAccount()`는 처음 저장할 것이 생길 때 게스트를 만듦), 메뉴의 계정 패널. `scripts/test-accounts.mjs`는 메모리 저장소로, `scripts/test-accounts-pg.mjs`는 `DATABASE_TEST_URL`의 임시 PostgreSQL로 같은 검사를 돌림.
+
 ## 폰 메모리, 자세히
 - low 등급이 무엇을 로드할지는 `quality.ts` 장비에서 결정됨: 2048 px 함선 모델이나 노멀/러프니스 맵 없음, 더 작은 계산 하늘(`skySize`), 1k 지면 텍스처(`scripts/build-terrain-tex.mjs`), 전투에서 쓰는 함선 종류만. 전투는 렌더러가 새 하늘 텍스처를 만들게 해서는 안 됨(`loadSky`가 재사용함).
 - WebGL2 백엔드는 `src/render/webglBackend.ts`에서 보정됨: 인스턴스 행렬은 정점 속성에서 오며(한 모델의 배치들이 각자 컴파일하는 대신 셰이더 프로그램 하나를 공유), 정점 배열 캐시는 파괴된 속성이 쓰던 것을 버림(캐시된 VAO가 끝난 모든 전투의 버퍼를 GPU에 살려 두고 있었음). `freeAfterDraw`(`src/render/dispose.ts`)는 지형과 함선 정점 데이터를 그린 뒤 CPU 사본을 떼어냄. 매 프레임 텍스처가 바뀌는 노드(웨이크 맵)는 재질이 죽을 때 보여주지 않는 쪽 텍스처에 죽은 바인드 그룹을 남김: `WakeMap.release`가 이를 정리함.

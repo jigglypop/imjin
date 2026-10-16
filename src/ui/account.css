@@ -1,0 +1,263 @@
+/* The account entry on the main menu and its panel, in the poster's look of menu-cinematic.css: dark glass behind a
+   brass hairline, square corners, and the cream of the campaign button for the one action that matters. */
+
+.menu-account-name {
+  max-width: 8em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The panel is modal: a tap outside it closes it. */
+.acc-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: rgba(3, 8, 13, 0.32);
+}
+
+.acc {
+  position: absolute;
+  top: calc(var(--sat) + 78px);
+  right: calc(var(--sar) + 40px);
+  width: 320px;
+  max-height: calc(100dvh - var(--sat) - 90px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: 16px 20px 20px;
+  border: 1px solid rgba(210, 190, 148, 0.26);
+  border-radius: 2px;
+  background: rgba(8, 13, 19, 0.84);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  color: #e4e2da;
+  line-height: 1.4;
+  outline: none;
+}
+
+/* As everywhere on touch devices, no blur over the live menu battle; without it the title would show through. */
+.app--touch .acc {
+  background: #080d13;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.acc-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: rgba(228, 226, 218, 0.7);
+  cursor: pointer;
+}
+
+.acc-close:hover {
+  color: #fff5db;
+  background: rgba(211, 188, 145, 0.08);
+}
+
+.acc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.acc-form--row {
+  flex-direction: row;
+}
+
+.acc-form--row .acc-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.acc-form--row .acc-submit {
+  margin-top: 0;
+  padding: 0 18px;
+}
+
+.acc-tabs {
+  display: flex;
+  gap: 22px;
+  margin: 0 40px 8px 0;
+  border-bottom: 1px solid rgba(199, 176, 132, 0.2);
+}
+
+.acc-tab {
+  position: relative;
+  padding: 6px 0 10px;
+  border: 0;
+  background: transparent;
+  color: rgba(215, 214, 206, 0.6);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.acc-tab--on {
+  color: #fff5db;
+}
+
+.acc-tab--on::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: #cfbc96;
+}
+
+/* 16px type keeps iOS from zooming the page when a field is focused. */
+.acc-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgba(210, 190, 148, 0.22);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f1efe7;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.acc-input::placeholder {
+  color: rgba(215, 214, 206, 0.45);
+}
+
+.acc-input:focus {
+  outline: none;
+  border-color: #cfbc96;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* Hover brightens the gradient rather than swapping it for a flat colour: a gradient cannot be faded, so the swap would
+   flash through transparent. */
+.acc-submit {
+  min-height: 44px;
+  margin-top: 4px;
+  border: 1px solid #d3c4a2;
+  border-radius: 1px;
+  background: linear-gradient(120deg, #e8dec5, #cfbc96);
+  color: #151817;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.acc-submit:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+
+.acc-submit:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.acc-note,
+.acc-error,
+.acc-done {
+  margin: 0;
+  font-size: 12px;
+}
+
+.acc-note {
+  margin-top: 4px;
+  color: rgba(214, 210, 198, 0.58);
+}
+
+.acc-error {
+  color: var(--bad);
+}
+
+.acc-done {
+  color: var(--good);
+}
+
+.acc-me {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.acc-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 40px 0 0;
+}
+
+.acc-who b {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff5db;
+  overflow-wrap: anywhere;
+}
+
+.acc-who small {
+  color: rgba(214, 210, 198, 0.6);
+}
+
+.acc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.acc-chip {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(210, 190, 148, 0.26);
+  border-radius: 2px;
+  background: transparent;
+  color: #dcdad2;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.acc-chip:hover,
+.acc-chip--on {
+  color: #fff5db;
+  background: rgba(211, 188, 145, 0.12);
+}
+
+.acc-foot {
+  padding-top: 12px;
+  border-top: 1px solid rgba(199, 176, 132, 0.16);
+}
+
+@media (max-width: 600px) {
+  .menu-account-name {
+    max-width: 5.5em;
+  }
+
+  .acc {
+    top: calc(var(--sat) + 66px);
+    left: calc(var(--sal) + 12px);
+    right: calc(var(--sar) + 12px);
+    width: auto;
+    max-height: calc(100dvh - var(--sat) - 78px);
+  }
+}
+
+/* A phone on its side has no height to spare under the buttons: the panel covers them instead. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .acc {
+    top: calc(var(--sat) + 10px);
+    max-height: calc(100dvh - var(--sat) - 20px);
+  }
+}
