@@ -213,8 +213,13 @@ function flightArrowGeometry() {
 const FLIGHT_LEN = 1.4;
 const FLIGHT_HEAD = 0.78;
 
-/** Visual size of each heavy gun's arrow in flight (metres per model unit). */
-const heavyScale = (gun: GunType) => (gun === 'cheonja' ? 2.3 : gun === 'jija' ? 1.9 : 1.5);
+/**
+ * How much a gun arrow in flight may grow beyond its true measures as the camera draws back: its length up to twice,
+ * so it stays a dozen pixels long from the RTS camera, and its girth up to three times, so it is a line a pixel wide
+ * and not a thread that flickers out. Never more: a far arrow is a thin fast line, not a pole.
+ */
+const ARROW_GROW = 2;
+const GIRTH_GROW = 3;
 
 /** A Japanese fire arrow: a thin shaft, a small head and a charred bundle of tow bound behind it. About 1 unit long. */
 export function hiyaGeometry() {
@@ -275,11 +280,14 @@ export class Munitions {
   private readonly near: InstancedMesh;
   private readonly far: InstancedMesh;
   private readonly heavy: InstancedMesh;
+  /** Gun arrows left standing in the ships, at the measures they had before the arrows in flight were drawn true. */
+  private readonly lodged: InstancedMesh;
   private readonly hiya: InstancedMesh;
   private readonly rockets: InstancedMesh;
   private nNear = 0;
   private nFar = 0;
   private nHeavy = 0;
+  private nLodged = 0;
   private nHiya = 0;
   private nRocket = 0;
   private readonly m = new Matrix4();
@@ -331,10 +339,11 @@ export class Munitions {
     this.near = new InstancedMesh(new SphereGeometry(1, 22, 15), ironMat, MAX_NEAR + stay);
     this.far = new InstancedMesh(new SphereGeometry(1, 8, 6), ironMat, MAX_FAR);
     const wood = () => new MeshStandardNodeMaterial({ vertexColors: true, roughness: 0.72, metalness: 0.05, emissive: new Color(0.025, 0.016, 0.008) });
-    this.heavy = new InstancedMesh(flightArrowGeometry(), wood(), MAX_HEAVY + stay);
+    this.heavy = new InstancedMesh(heavyGeometry(), wood(), MAX_HEAVY);
+    this.lodged = new InstancedMesh(flightArrowGeometry(), wood(), stay);
     this.hiya = new InstancedMesh(hiyaGeometry(), wood(), MAX_HEAVY + stay);
     this.rockets = new InstancedMesh(flightRocketGeometry(), wood(), Math.round(240 * tier) + 60 + stay);
-    for (const mesh of [this.near, this.far, this.heavy, this.hiya, this.rockets]) {
+    for (const mesh of [this.near, this.far, this.heavy, this.lodged, this.hiya, this.rockets]) {
       mesh.instanceMatrix.setUsage(DynamicDrawUsage);
       mesh.count = 0;
       mesh.frustumCulled = false;
@@ -376,17 +385,18 @@ export class Munitions {
   // ---- Per frame -------------------------------------------------------------------------------------------------
 
   begin() {
-    this.nNear = this.nFar = this.nHeavy = this.nHiya = this.nRocket = 0;
+    this.nNear = this.nFar = this.nHeavy = this.nLodged = this.nHiya = this.nRocket = 0;
   }
 
   end() {
     this.near.count = this.nNear;
     this.far.count = this.nFar;
     this.heavy.count = this.nHeavy;
+    this.lodged.count = this.nLodged;
     this.hiya.count = this.nHiya;
     this.rockets.count = this.nRocket;
     // An empty mesh is not drawn at all, and a full one sends only the instances in use.
-    for (const mesh of [this.near, this.far, this.heavy, this.hiya, this.rockets]) {
+    for (const mesh of [this.near, this.far, this.heavy, this.lodged, this.hiya, this.rockets]) {
       mesh.visible = mesh.count > 0;
       if (!mesh.visible) continue;
       mesh.instanceMatrix.clearUpdateRanges();
@@ -404,10 +414,10 @@ export class Munitions {
 
   /** A gun arrow standing in a hull: the point of its head, the line it points along and its drawn length in metres. */
   putHeavy(x: number, y: number, z: number, ux: number, uy: number, uz: number, length: number) {
-    if (this.nHeavy >= this.heavy.instanceMatrix.count) return;
+    if (this.nLodged >= this.lodged.instanceMatrix.count) return;
     const sc = length / FLIGHT_LEN;
     const back = FLIGHT_HEAD * sc;
-    this.heavy.setMatrixAt(this.nHeavy++, this.aim(x - ux * back, y - uy * back, z - uz * back, ux, uy, uz, sc));
+    this.lodged.setMatrixAt(this.nLodged++, this.aim(x - ux * back, y - uy * back, z - uz * back, ux, uy, uz, sc));
   }
 
   putHiya(x: number, y: number, z: number, ux: number, uy: number, uz: number, sc: number) {
@@ -477,12 +487,42 @@ export class Munitions {
 
   // ---- Arrows -----------------------------------------------------------------------------------------------------
 
-  /** The great general arrow, pitched along the arc. Big when far, so it still reads. */
-  heavyArrow(x: number, y: number, z: number, ux: number, uy: number, uz: number, speed: number, ppm: number, gun: GunType) {
+  /**
+   * A gun arrow at its gun's true measures (ARROW_FORM), head first along the tangent of its arc. Its straight iron vanes
+   * steady it: it leaves the muzzle with a small yaw that dies away within the first second, and it does not spin.
+   * Nothing glows round it; from afar it grows only within ARROW_GROW and GIRTH_GROW.
+   */
+  heavyArrow(x: number, y: number, z: number, ux: number, uy: number, uz: number, ppm: number, gun: GunType, age: number, seed: number) {
     if (this.nHeavy >= MAX_HEAVY) return;
-    const sc = Math.min(12, Math.max(heavyScale(gun), 9 / (1.4 * ppm)));
-    this.heavy.setMatrixAt(this.nHeavy++, this.aim(x, y, z, ux, uy, uz, sc));
-    this.smear(x, y, z, ux, uy, uz, speed, ppm, sc * 0.12, 0.18);
+    const [len, girth] = arrowForm(gun);
+    const grow = Math.min(ARROW_GROW, Math.max(1, 12 / (len * ppm)));
+    const thick = Math.min(GIRTH_GROW, Math.max(grow, 1 / (girth * ppm)));
+    // The yaw out of the bore: a degree or two, swinging a few times a second and gone by the end of the first second.
+    const fade = 0.035 * Math.exp(-4 * age);
+    const yaw = fade * Math.sin(age * 22 + seed);
+    const pitch = 0.7 * fade * Math.cos(age * 19 + seed * 1.7);
+    let sx = uz;
+    let sz = -ux;
+    const sl = Math.hypot(sx, sz) || 1;
+    sx /= sl;
+    sz /= sl;
+    const bx = uy * sz;
+    const by = uz * sx - ux * sz;
+    const bz = -uy * sx;
+    let dx = ux + sx * yaw + bx * pitch;
+    let dy = uy + by * pitch;
+    let dz = uz + sz * yaw + bz * pitch;
+    const dl = Math.hypot(dx, dy, dz) || 1;
+    dx /= dl;
+    dy /= dl;
+    dz /= dl;
+    // The model is the jija's arrow with its origin mid-shaft; the drawn position is the shell's, which is its head.
+    const lx = (len / ARROW_LEN) * grow;
+    const g = (girth / ARROW_GIRTH) * thick;
+    const back = (ARROW_LEN / 2) * lx;
+    this.q.setFromUnitVectors(this.xAxis, this.v.set(dx, dy, dz));
+    this.m.compose(this.p.set(x - dx * back, y - dy * back, z - dz * back), this.q, this.s.set(lx, g, g));
+    this.heavy.setMatrixAt(this.nHeavy++, this.m);
   }
 
   /** A Japanese fire arrow: a thin arrow with a burning bundle at its head. */

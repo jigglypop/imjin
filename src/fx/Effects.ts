@@ -922,7 +922,7 @@ export class Effects {
     }
     // Shot and gun arrows leave only the thin grey wisp of the powder that rides out of the bore with them: a broad
     // white ribbon round a dark ball reads as a puff of air, not as iron.
-    this.smoke.emit({ x, y, z, vx: rnd(-0.2, 0.2), vy: rnd(0, 0.3), vz: rnd(-0.2, 0.2), life: rnd(0.9, 1.5), size0: (0.45 + 0.3 * weight) * k, size1: (rnd(1.3, 1.8) + 0.6 * weight) * k, alpha: 0.2, r: 0.64, g: 0.63, b: 0.6, drag: 1.4, lift: 0.1, wind: 0.6 });
+    this.smoke.emit({ x, y, z, vx: rnd(-0.2, 0.2), vy: rnd(0, 0.3), vz: rnd(-0.2, 0.2), life: rnd(0.9, 1.5), size0: (1.1 + 0.3 * weight) * k, size1: (rnd(1.9, 2.4) + 0.5 * weight) * k, alpha: 0.13, r: 0.64, g: 0.63, b: 0.6, drag: 1.4, lift: 0.1, wind: 0.6 });
   }
 
   /**
@@ -931,11 +931,13 @@ export class Effects {
    */
   private layTrail(trail: Trail, px: number, py: number, pz: number, ppm: number, crowd: number, kind: ShellKind, weight: number) {
     const rocket = kind === Shell.Rocket || kind === Shell.Lance;
-    const spacing = Math.min(10, Math.max(rocket ? 2 : 1.8, 4.5 / ppm) * crowd);
+    // The thin wisp of shot and gun arrows is laid closer than a rocket's smoke, so its small puffs join into a line.
+    const base = rocket || kind === Shell.Hiya ? (rocket ? 2 : 1.8) : 1.2;
+    const spacing = Math.min(10, Math.max(base, 4.5 / ppm) * crowd);
     const run = Math.hypot(px - trail.x, py - trail.y, pz - trail.z);
     if (run < spacing) return;
     const puffs = Math.min(rocket ? 8 : 16, Math.floor(run / spacing));
-    const k = Math.max(1, spacing / (rocket ? 2 : 1.8));
+    const k = Math.max(1, spacing / base);
     for (let i = 1; i <= puffs; i += 1) {
       const at = (i * spacing) / run;
       this.trailPuff(trail.x + (px - trail.x) * at, trail.y + (py - trail.y) * at, trail.z + (pz - trail.z) * at, kind, weight, k);
@@ -1047,7 +1049,7 @@ export class Effects {
       }
       switch (kind) {
         case Shell.Heavy:
-          this.mun.heavyArrow(px, py, pz, ux, uy, uz, sp, ppm, p.gun);
+          this.mun.heavyArrow(px, py, pz, ux, uy, uz, ppm, p.gun, p.age, f.seed);
           break;
         case Shell.Hiya:
           this.mun.fireArrow(px, py, pz, ux, uy, uz, ppm);

@@ -1,8 +1,10 @@
 // Photographs one shell in flight up close and from the RTS camera, so two builds can be compared at the same moment of
 // a flight. A duel is staged as in probe-projectiles.mjs; the first shell of the wanted kind is frozen `age` seconds after
 // it left the muzzle and the camera is set round its drawn position at each distance in turn.
-//   node scripts/probe-flight.mjs --url=http://127.0.0.1:5640/ --out=<dir> --tag=new --want=ball|arrow|grape|rocket|hiya
-//     [--sky=day|night] [--age=0.7] [--dists=6,18,60,420] [--yaw=0.7] [--pitch=0.05] [--gun=cheonja]
+//   node scripts/probe-flight.mjs --url=http://127.0.0.1:5640/ --out=<dir> --tag=new --want=ball|arrow|grape|rocket|hiya|bow
+//     [--sky=day|night] [--age=0.7] [--dists=6,18,60,420] [--yaw=0.7] [--pitch=0.05] [--gun=cheonja] [--dist=240]
+// `bow` freezes the archers' volley instead (stage it at --dist=80): the oldest arrow in the air `age` seconds after it was loosed.
+// A distance of 200 m or more is the RTS camera's pitch (0.65), or --rts-pitch.
 import { chromium } from 'playwright-core';
 import { mkdir } from 'node:fs/promises';
 
@@ -66,7 +68,9 @@ const staged = await page.evaluate(({ want, dist, age, gun }) => {
     }
     a.order = { type: 'auto' };
     a.targetId = d.id;
-    if (performance.now() > nextVolley && e.speed > 0) {
+    // The bow volley is photographed alone: the guns stay empty, so no hit throws planks across the frame.
+    if (want === 'bow') for (const g of a.guns) g.ammo = 0;
+    else if (performance.now() > nextVolley && e.speed > 0) {
       nextVolley = performance.now() + 3000;
       for (const g of a.guns) {
         g.ammo = 99;
@@ -79,6 +83,14 @@ const staged = await page.evaluate(({ want, dist, age, gun }) => {
   const ammo = want === 'rocket' || want === 'hiya' ? 'fire' : want;
   window.__catcher = setInterval(() => {
     if (window.__frozen) return;
+    if (want === 'bow') {
+      let arrow = null;
+      for (const o of e.crew.boarding.arrows.pool) if (o.used && !o.stuck && o.t >= age && o.t < o.T * 0.9 && (!arrow || o.t > arrow.t)) arrow = o;
+      if (!arrow) return;
+      e.speed = 0;
+      window.__frozen = { x: arrow.px, y: arrow.py, z: arrow.pz, gun: 'bow', ammo: 'arrow', age: arrow.t, bow: true };
+      return;
+    }
     const p = b.projectiles.find((q) => q.ammo === ammo && q.age >= age && (!gun || q.gun === gun));
     if (!p) return;
     e.speed = 0;
@@ -96,17 +108,17 @@ if (!ok) {
 }
 const shell = await page.evaluate(() => ({ gun: window.__frozen.gun, ammo: window.__frozen.ammo, age: window.__frozen.age }));
 for (const dist of dists) {
-  await page.evaluate(({ dist, yaw, pitch }) => {
+  await page.evaluate(({ dist, yaw, pitch, rtsPitch }) => {
     const e = window.__engine;
     const p = window.__frozen;
     const rts = dist >= 200;
-    e.rts.setPose({ tx: p.x, tz: p.z, yaw, pitch: rts ? 0.65 : pitch, distance: dist }, true);
-    const lift = p.y + e.fx.liftOf(p);
+    e.rts.setPose({ tx: p.x, tz: p.z, yaw, pitch: rts ? rtsPitch : pitch, distance: dist }, true);
+    const lift = p.bow ? p.y : p.y + e.fx.liftOf(p);
     clearInterval(window.__lift);
     window.__lift = setInterval(() => {
       e.rts.lookLift = lift;
     }, 8);
-  }, { dist, yaw: Number(args.yaw ?? 0.7), pitch: Number(args.pitch ?? 0.05) });
+  }, { dist, yaw: Number(args.yaw ?? 0.7), pitch: Number(args.pitch ?? 0.05), rtsPitch: Number(args['rts-pitch'] ?? 0.65) });
   await page.waitForTimeout(900);
   const file = `${out}/${tag}_${want}_${sky}_${dist}m.png`;
   await page.screenshot({ path: file });

@@ -16,11 +16,15 @@ const STUCK = { high: 480, medium: 240, low: 96 }[equipment.tier];
 const STUCK_PER_SHIP = { high: 32, medium: 20, low: 12 }[equipment.tier];
 const G = 9.81;
 /**
- * A war arrow (jangjeon) at its true size: 0.85 m of bamboo about 9 mm thick. From afar it may grow to 1.6 times that
- * length, and its shaft is drawn at least a pixel and a third wide, so a volley still reads as a rain of lines.
+ * A war arrow (jangjeon) at its true size: 0.85 m of bamboo about 9 mm thick. From afar it may grow to a quarter more
+ * than that length and its shaft is drawn at least a pixel wide: a volley reads as a sheaf of thin fast lines, never
+ * as poles.
  */
 const LENGTH = 0.85;
 const SHAFT = 0.009;
+const GROW = 1.25;
+/** Turns a second about its shaft: the fletching gives a loosed arrow a slow spin. */
+const SPIN = 14;
 /** The model's shaft is this wide for a unit scale. */
 const MODEL_SHAFT = 0.036;
 /** Pixels per metre at one metre for the battle camera (900 px tall view, 42 degrees). */
@@ -50,9 +54,12 @@ type Arrow = {
   born: number;
   /** Rise of the arc over a straight line to the end, metres. */
   lift: number;
+  /** Where its spin starts, so the arrows of a volley do not turn as one. */
+  roll: number;
 };
 
 const Z_AXIS = new Vector3(0, 0, 1);
+const spin = new Quaternion();
 
 /**
  * One arrow in unit length along -z from its tip at the origin: a square shaft, an iron head and three feathers.
@@ -149,7 +156,7 @@ export class ArrowField {
     private readonly puffs: PuffField,
   ) {
     for (let i = 0; i < FLYING + STUCK; i += 1) {
-      this.pool.push({ used: false, stuck: false, x0: 0, y0: 0, z0: 0, tx: 0, ty: 0, tz: 0, tid: 0, t: 0, T: 1, px: 0, py: 0, pz: 0, dx: 0, dy: 0, dz: 1, born: 0, lift: 0 });
+      this.pool.push({ used: false, stuck: false, x0: 0, y0: 0, z0: 0, tx: 0, ty: 0, tz: 0, tid: 0, t: 0, T: 1, px: 0, py: 0, pz: 0, dx: 0, dy: 0, dz: 1, born: 0, lift: 0, roll: i * 2.39996 });
     }
     const mat = new MeshStandardNodeMaterial({ roughness: 0.85, side: DoubleSide });
     mat.colorNode = attribute('color', 'vec3');
@@ -243,22 +250,16 @@ export class ArrowField {
         const x = a.x0 + (this.p.x - a.x0) * s;
         const y = a.y0 + (this.p.y - a.y0) * s + a.lift * 4 * s * (1 - s);
         const z = a.z0 + (this.p.z - a.z0) * s;
-        const mx = x - a.px;
-        const my = y - a.py;
-        const mz = z - a.pz;
-        const ml = Math.hypot(mx, my, mz);
-        if (ml > 1e-4) {
-          a.dx = mx / ml;
-          a.dy = my / ml;
-          a.dz = mz / ml;
-        } else if (a.dx === 0 && a.dy === 0 && a.dz === 0) {
-          // First frame: along the chord, tilted up as a loosed arrow is.
-          const cx = this.p.x - a.x0;
-          const cz = this.p.z - a.z0;
-          const ch = Math.hypot(cx, cz) || 1;
-          a.dx = cx / ch;
-          a.dy = 0.5;
-          a.dz = cz / ch;
+        // Nose first along the tangent of the arc: the chord to where the end is now and the slope of the rise, so the
+        // arrow pitches over its top smoothly and comes in at the shallow angle a fast, flat shot has.
+        const cx = this.p.x - a.x0;
+        const cy = this.p.y - a.y0 + a.lift * 4 * (1 - 2 * s);
+        const cz = this.p.z - a.z0;
+        const cl = Math.hypot(cx, cy, cz);
+        if (cl > 1e-4) {
+          a.dx = cx / cl;
+          a.dy = cy / cl;
+          a.dz = cz / cl;
         }
         a.px = x;
         a.py = y;
@@ -271,8 +272,8 @@ export class ArrowField {
         }
         this.p.set(x, y, z);
         const ppm = FOCAL / Math.max(1, Math.hypot(x - cam.x, y - cam.y, z - cam.z));
-        len = LENGTH * Math.min(1.6, Math.max(1, 10 / (LENGTH * ppm)));
-        sx = Math.max(SHAFT, 1.3 / ppm) / MODEL_SHAFT;
+        len = LENGTH * Math.min(GROW, Math.max(1, 10 / (LENGTH * ppm)));
+        sx = Math.max(SHAFT, 1 / ppm) / MODEL_SHAFT;
         sy = sx;
         sz = len;
         this.d.set(a.dx, a.dy, a.dz);
@@ -300,6 +301,7 @@ export class ArrowField {
         this.p.addScaledVector(this.d, SUNK);
       }
       this.q.setFromUnitVectors(Z_AXIS, this.d);
+      if (!a.stuck) this.q.multiply(spin.setFromAxisAngle(Z_AXIS, a.roll + a.t * SPIN));
       const qx = this.q.x;
       const qy = this.q.y;
       const qz = this.q.z;

@@ -1335,7 +1335,8 @@ export class Boarding {
     const target = battle.get(ship.targetId);
     if (target && battle.isActive(target) && target.team !== ship.team) {
       const dist = Math.hypot(target.x - x, target.z - z);
-      const T = Math.max(0.5, dist / 56);
+      // A war bow looses at about 60 m/s: at boarding range the arrow flies nearly flat.
+      const T = Math.max(0.4, dist / 62);
       if (Math.random() < 0.22) {
         // Short or long of the ship: the sea takes it.
         const ux = (target.x - x) / (dist || 1);

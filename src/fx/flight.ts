@@ -11,8 +11,11 @@ import { shipObserved } from '../sim/observation';
 
 /** The sim's gravity (battle.ts). */
 const G = 9.81;
-/** Peak lift of the drawn arc as a share of the horizontal range. */
-const ARC: Record<AmmoType, number> = { ball: 0.07, fire: 0.07, arrow: 0.085, grape: 0.03 };
+/**
+ * Peak lift of the drawn arc as a share of the horizontal range. A gun arrow leaves the cheonja at well over 100 m/s and
+ * flies a low, flat line, never higher than a ball: lobbed high it came down like a stick tossed into a pot.
+ */
+const ARC: Record<AmmoType, number> = { ball: 0.07, fire: 0.07, arrow: 0.045, grape: 0.03 };
 const SCAN = 0.02;
 const LAND_STEP = 0.15;
 
