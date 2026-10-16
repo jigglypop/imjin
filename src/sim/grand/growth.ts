@@ -114,7 +114,7 @@ export function joinCommanders(g: Grand, quiet = false) {
     const st = g.factions[def.faction];
     if (!st.alive || (def.joins ?? 1) > g.turn || st.commanders.some((c) => c.id === def.id)) continue;
     st.commanders.push(newCommander(def));
-    if (!quiet && def.joins !== undefined && g.turn > 1) note(g, '{name}({title}) 장군이 수군에 합류했습니다', { name: def.name, title: def.title }, def.faction === g.player ? 'good' : 'info');
+    if (!quiet && def.joins !== undefined && g.turn > 1) note(g, '{name}({title}) 합류', { name: def.name, title: def.title }, def.faction === g.player ? 'good' : 'info');
   }
 }
 
@@ -158,7 +158,7 @@ function finishTech(g: Grand, f: GrandFaction, t: TechDef) {
   const st = techOf(g, f);
   if (!st.done.includes(t.id)) st.done.push(t.id);
   if (t.unlock && !g.factions[f].unlocked.includes(t.unlock)) g.factions[f].unlocked.push(t.unlock);
-  note(g, '{navy|이/가} {tech} 연구를 마쳤습니다', { navy: navyName(f), tech: t.label }, f === g.player ? 'good' : 'info');
+  note(g, '{navy}, {tech} 연구 완료', { navy: navyName(f), tech: t.label }, f === g.player ? 'good' : 'info');
 }
 
 /** The research of every navy goes on by a turn. Run when a turn closes. */

@@ -159,7 +159,7 @@ export const EN_COMMANDERS: Record<string, string> = {
   '앞 단계를 먼저 익혀야 합니다': 'Learn the step before it first',
   '없는 장수입니다': 'No such commander',
   '{name|이/가} {skill|을/를} 익혔습니다': '{name} learned {skill}',
-  '{name}({title}) 장군이 수군에 합류했습니다': '{name} ({title}) has joined the navy',
+  '{name}({title}) 합류': '{name} ({title}) joins',
   '없는 기술입니다': 'No such technology',
   '이미 연구했습니다': 'Already researched',
   '다른 연구가 진행 중입니다': 'Another research is under way',
@@ -168,7 +168,7 @@ export const EN_COMMANDERS: Record<string, string> = {
   '{tech} 연구를 시작했습니다 ({turns}턴)': 'Research of {tech} begun ({turns} turns)',
   '진행 중인 연구가 없습니다': 'No research under way',
   '연구를 취소했습니다': 'Research cancelled',
-  '{navy|이/가} {tech} 연구를 마쳤습니다': '{navy} completed research of {tech}',
+  '{navy}, {tech} 연구 완료': '{navy}: {tech} researched',
 
   // The commanders' screen and the tech tree
   '장수 목록': 'Commanders',

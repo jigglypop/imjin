@@ -14,11 +14,11 @@ export const EN_MARCH: Record<string, string> = {
   '상처뿐인 승리': 'Pyrrhic victory',
 
   // The war's log and the answers to orders (sim/grand/turn.ts, orders.ts).
-  '{place} 해전에서 {navy|이/가} {grade|을/를} 거두었습니다 (손실: {a} {lostA}척 · {d} {lostD}척)': 'Battle of {place}: {grade} for the {navy} (losses: {a} {lostA} · {d} {lostD})',
-  '{place} 앞바다에서 {navy|이/가} {grade|을/를} 거두었습니다 (손실: {a} {lostA}척 · {d} {lostD}척)': 'Off {place}: {grade} for the {navy} (losses: {a} {lostA} · {d} {lostD})',
-  '{navy|이/가} {place|을/를} 봉쇄했습니다': 'The {navy} has blockaded {place}',
-  '{navy|이/가} {place} 싸움에서 물러났습니다': 'The {navy} withdrew from the fight at {place}',
-  '{place}의 수비대가 봉쇄를 견디지 못하고 항복했습니다': 'The garrison of {place} could not hold out against the blockade and surrendered',
+  '{place} 해전: {navy} {grade} · 손실 {a} {lostA}척, {d} {lostD}척': 'Battle of {place}: {grade} for the {navy} · lost {a} {lostA}, {d} {lostD}',
+  '{place} 앞바다: {navy} {grade} · 손실 {a} {lostA}척, {d} {lostD}척': 'Off {place}: {grade} for the {navy} · lost {a} {lostA}, {d} {lostD}',
+  '{navy}, {place} 봉쇄': '{navy} blockades {place}',
+  '{navy}, {place}에서 퇴각': '{navy} withdraws from {place}',
+  '{place} 수비대, 봉쇄 끝에 항복': '{place} garrison surrenders to the blockade',
   '해당 전투가 없습니다': 'There is no such battle',
   '봉쇄할 수 없는 전투입니다': 'This battle cannot become a blockade',
   '적 함대가 지키는 포구는 봉쇄할 수 없습니다': 'A port guarded by an enemy fleet cannot be blockaded',

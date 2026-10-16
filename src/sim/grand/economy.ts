@@ -62,9 +62,9 @@ export const TUNING = {
   startFleet: { joseon: 0.98, japan: 0.74, ming: 1.95 } as Record<GrandFaction, number>,
   /** Ships a navy can build only once their design is ready (GATES `unlock`): the turn, and the news it brings. */
   unlocks: [
-    { faction: 'joseon', kind: 'geobukseon', turn: 3, note: '나대용이 거북선을 완성했습니다. 선소 2단계에서 건조할 수 있습니다.' },
-    { faction: 'japan', kind: 'daeantaek', turn: 3, note: '구키 요시타카가 누각 대장선 대안택선을 완성했습니다. 선소 3단계에서 건조할 수 있습니다.' },
-    { faction: 'ming', kind: 'gwangseon', turn: 6, note: '광둥의 철력목 전선 광선의 설계가 전해졌습니다. 선소 3단계에서 건조할 수 있습니다.' },
+    { faction: 'joseon', kind: 'geobukseon', turn: 3, note: '나대용, 거북선 완성 · 선소 2단계부터 건조' },
+    { faction: 'japan', kind: 'daeantaek', turn: 3, note: '구키 요시타카, 대장선 대안택선 완성 · 선소 3단계부터 건조' },
+    { faction: 'ming', kind: 'gwangseon', turn: 6, note: '광둥 전선 광선의 설계 도착 · 선소 3단계부터 건조' },
   ] as { faction: GrandFaction; kind: ShipKind; turn: number; note: string }[],
   /**
    * Under the march rules (`Grand.march`) a fight draws in the fleets lying near it, which favours the navy with the most

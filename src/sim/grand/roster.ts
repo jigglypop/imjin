@@ -44,6 +44,6 @@ export function grantXp(g: Grand, faction: GrandFaction, cmd: Commander, xp: num
   cmd.xp += xp;
   while (cmd.level < LEVEL_XP.length && cmd.xp >= LEVEL_XP[cmd.level]!) {
     cmd.level += 1;
-    note(g, '{name}의 레벨이 {level|으로/로} 올랐습니다', { name: cmd.name, level: String(cmd.level) }, faction === g.player ? 'good' : 'info');
+    note(g, '{name}, 레벨 {level} 달성', { name: cmd.name, level: String(cmd.level) }, faction === g.player ? 'good' : 'info');
   }
 }

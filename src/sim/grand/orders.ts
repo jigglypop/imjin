@@ -331,7 +331,7 @@ export function orderDeclareWar(g: Grand, a: GrandFaction, b: GrandFaction): Res
   if (bad) return bad;
   if (a === b || atWar(g, a, b)) return fail('이미 적대 관계입니다');
   g.relations[pairKey(a, b)] = 'war';
-  note(g, '{a|이/가} {b|과/와}의 동맹을 파기했습니다', { a: navyName(a), b: navyName(b) }, 'bad');
+  note(g, '{a}, {b|과/와}의 동맹 파기', { a: navyName(a), b: navyName(b) }, 'bad');
   return ok();
 }
 
@@ -342,7 +342,7 @@ export function orderAlliance(g: Grand, a: GrandFaction, b: GrandFaction): Resul
   // The invaders accept no treaty: only the two defenders of Joseon may ally.
   if (a === 'japan' || b === 'japan') return fail('일본은 동맹을 맺지 않습니다');
   g.relations[pairKey(a, b)] = 'allied';
-  note(g, '{a|과/와} {b|이/가} 동맹을 맺었습니다', { a: navyName(a), b: navyName(b) }, 'good');
+  note(g, '{a|과/와} {b} 동맹 체결', { a: navyName(a), b: navyName(b) }, 'good');
   return ok();
 }
 
