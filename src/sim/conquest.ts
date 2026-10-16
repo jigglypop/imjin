@@ -394,6 +394,13 @@ export class Conquest implements BattleRules {
     return { value, count };
   }
 
+  /** How many of a player's ships are afloat and fighting: counted, not listed, as a finished hull waiting on its slipway asks every step. */
+  private afloat(b: Battle, slot: number) {
+    let n = 0;
+    for (const s of b.ships) if (s.owner === slot && b.isActive(s)) n += 1;
+    return n;
+  }
+
   /** The built and finished buildings of a kind at a point. */
   count(p: CapturePoint, kind: BuildingKind) {
     let n = 0;
@@ -640,7 +647,7 @@ export class Conquest implements BattleRules {
       const workers = p.queue.slice(0, this.queueWorkers(p));
       workers.forEach((item, worker) => {
         item.left -= dt * this.constructionRate(p.owner);
-        if (item.left > 0 || b.ships.filter((s) => s.owner === p.owner && b.isActive(s)).length >= this.shipLimit(p.owner)) return;
+        if (item.left > 0 || this.afloat(b, p.owner) >= this.shipLimit(p.owner)) return;
         // Extra slipways launch side by side when the adjacent water is navigable.
         const offset = worker === 0 ? 0 : Math.ceil(worker / 2) * (worker % 2 ? -42 : 42);
         let x = p.spawn.x - Math.sin(p.spawn.heading) * offset;
