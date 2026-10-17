@@ -58,3 +58,4 @@ Every ready chapter: >= 4 battles with scenarios, flagship kind exists in SHIP_S
 - Narrowing a budget test to the 1592 navies instead of fixing the mesh.
 - Aliasing a new chapter's ships or crews to Ming/Japan models as placeholders.
 - Boxy stacked castles and dark single-sided sails on the Armada galleons.
+- Parallel git worktrees per chapter, each with a full `npm run assets -- pull`: filled C: (each copy is GBs). Work chapters one at a time in the single chapters worktree; keep >= 3 GB free and delete your own intermediates.
