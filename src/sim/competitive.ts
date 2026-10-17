@@ -52,8 +52,8 @@ export const COMPETITIVE_UNITS: Record<ShipKind, UnitBalance> = {
   urca: { spec: { cost: 260, build: 30 } },
   // The Lepanto chapter keeps its catalog prices until scripts/balance-competitive.mjs fits them (docs/balance-cross.md).
   reale: { spec: { cost: 900, build: 70 } },
-  galea: { spec: { cost: 520, build: 40 } },
-  vgalleass: { spec: { cost: 980, build: 72 } },
+  galea: { spec: { cost: 650, build: 40 } },
+  vgalleass: { spec: { cost: 1200, build: 72 } },
   sultana: { spec: { cost: 860, build: 68 } },
   kadirga: { spec: { cost: 470, build: 38 } },
   kalyata: { spec: { cost: 260, build: 24 } },
