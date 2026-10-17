@@ -73,7 +73,8 @@ try {
   });
 
   check('ranked rosters, doctrine fleets and recruiting keep the original kinds', () => {
-    assert.deepEqual(RANKED_ROSTER, OLD_ROSTER);
+    // The 1592 ranked rosters are untouched; the Armada navies have rosters of their own.
+    assert.deepEqual({ joseon: RANKED_ROSTER.joseon, japan: RANKED_ROSTER.japan, ming: RANKED_ROSTER.ming }, OLD_ROSTER);
     for (const f of ['joseon', 'japan', 'ming']) {
       assert.deepEqual(rosterOf(f, false), OLD_ROSTER[f]);
       for (const k of OLD_ROSTER[f]) assert.ok(ROSTER[f].includes(k));
