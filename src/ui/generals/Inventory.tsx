@@ -30,9 +30,10 @@ const iconOf = (item: Item) => {
 };
 
 export function ItemIcon({ item, size = 40 }: { item: Item; size?: number }) {
-  const weapon = itemBase(item.base)?.weapon;
-  // Weapons already have painted cards (the 무기 picker's); the other kinds wait for theirs.
-  if (weapon) return <img className={`loot-icon loot-icon--img loot-icon--${item.rarity}`} src={`${import.meta.env.BASE_URL}ui/weapons/${weapon}.webp`} alt="" width={size} height={size} loading="lazy" />;
+  const base = itemBase(item.base);
+  // Weapons use their painted cards (the 무기 picker's); every other piece has its own (scripts/item-icons.mjs).
+  const src = base?.weapon ? `ui/weapons/${base.weapon}.webp` : base ? `ui/items/${base.id}.webp` : null;
+  if (src) return <img className={`loot-icon loot-icon--img loot-icon--${item.rarity}`} src={`${import.meta.env.BASE_URL}${src}`} alt="" width={size} height={size} loading="lazy" />;
   return (
     <svg className={`loot-icon loot-icon--${item.rarity}`} width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
       <path d={iconOf(item)} />

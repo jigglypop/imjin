@@ -1,0 +1,167 @@
+{
+  "note": "Loot icons, Gemini image edit with the hwando weapon card as the style reference (OpenAI images out of credit 2026-10-17).",
+  "items": {
+    "a_cheomju": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Joseon dynasty 16th-century iron helmet (cheomju) with a flat brim, riveted bowl, small finial on top, and a lacquered neck guard of overlapping plates",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_gyeoncheol": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a pair of 16th-century East Asian iron shoulder guards (pauldrons) made of overlapping lacquered iron scales laced with red silk cord",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_hwan": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a pair of 16th-century Korean archer bracers (hohwan): dark leather arm guards reinforced with small brass-riveted iron splints, tied with cords",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_gapsang": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century East Asian armored skirt (tassets): rows of small lacquered iron lamellae laced with red cord hanging from a cloth belt",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_deungchae": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Joseon general's command whip (deungchae): a slender rattan rod wrapped with red cord, with a tassel and a metal cap at the grip",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_jihwibong": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Joseon general's command baton: a short polished black lacquered staff with gilt bronze ends and a long red silk tassel",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_gunseon": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Japanese warrior's iron war fan (tessen), half open, black lacquered ribs and a red sun disc on a gold leaf",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_nagak": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a conch shell signal horn (nagak) with a bronze mouthpiece and a braided red cord sling",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_sinjeon": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Joseon command arrow (sinjeon): a single arrow with a small red pennant tied to the shaft and a tag, black fletching",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_sonja": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an old Chinese bound book of Sun Tzu's Art of War, thread-bound, faded indigo cover with a paper title label, slightly worn",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_ojak": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an old thread-bound East Asian military treatise, brown cover with a paper title label, some loose bamboo slips beside it",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_gihyo": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an old thread-bound Ming military manual with an ochre cover, opened slightly to show woodblock-printed diagrams of soldiers",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_yukdo": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a bundle of ancient bamboo strip scrolls tied with cord, a classic Chinese strategy text",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_byeonghak": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an old Joseon thread-bound drill manual with a dark green cover and a paper title label, corners worn",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_byeongbu": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Joseon military tally (byeongbu): a round wooden token cut into two separate halves lying side by side, slightly apart, each half carved with characters, a red cord",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 2
+    },
+    "s_janggunin": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a bronze general's seal with a turtle-shaped handle, square base, red seal paste on the face",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_mapae": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Joseon round bronze horse tablet (mapae) with embossed horses on its face and a short cord loop",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_gyoseo": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a royal Joseon square jade seal with a dragon handle, a gold cord tassel, beside a small red-sealed document",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    }
+  }
+}
