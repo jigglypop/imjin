@@ -22,6 +22,10 @@ macOS는 Chrome + Metal, Windows는 Edge + D3D11. GPU는 같이 돌아가는 다
 - Docker Desktop을 켠 뒤 `npm run db:dev`: `infra/dev-db.compose.yml`의 PostgreSQL 16이 `127.0.0.1:5433`에 뜸(이름 있는 볼륨 `imjin-dev-pg`에 보관, 재시작해도 계정·장수 프로필 유지). 끄기 `npm run db:dev:down`, 완전 초기화 `docker volume rm imjin-dev-db_imjin-dev-pg`.
 - `npm run server:dev`: `.env.development`의 `DATABASE_URL`(로컬 전용 계정 imjin/imjin-dev, TLS 끔)로 :8787 서버를 띄움. 스키마는 서버가 시작할 때 `server/accountsPg.ts`의 MIGRATIONS로 스스로 올림. DB 없이 돌리려면 기존대로 `ACCOUNTS_STORE=memory npm run server`.
 - `node --env-file=.env.development scripts/test-meta-server.mjs`: 메모리 저장소와 개발 PostgreSQL(일회용 DB를 만들고 지움) 둘 다에서 장수 성장 API 확인.
+- 장수 성장 데이터는 스키마 2부터 자기 테이블에 있음(`server/accountsPg.ts` MIGRATIONS[1], 행 변환은 `server/metaRecord.ts`): `meta_accounts`(계정별 전적·첫 승리·일일 상한·드롭 수), `owned_armor`(산 갑옷·재련 횟수), `commander_progress`(장수별 xp·level·keystone·respecs·갑옷·무기·talents jsonb), `items`(item_uid, def_id, rarity, seed, reforge_count, 획득·분해 시각; 분해한 것도 `salvaged_at`과 함께 남음), `equipment`(장수·슬롯 → item_uid, 한 물건은 한 번만, items·commander_progress에 FK). 모든 변경(구매·장착·분해·재련·전리품)은 한 트랜잭션에서 사용자 행을 잠그고 원장(ledger, `coin`·`item`)과 테이블을 함께 씀. 메모리 저장소도 같은 행 구조(`ProfileTx.meta/saveMeta`)를 따름.
+- 이전(스키마 1 → 2): 서버가 시작할 때 자동으로 테이블을 만들고(IF NOT EXISTS, 다시 돌려도 안전), 준비되면 `profiles.data.meta` JSON이 남은 사용자를 하나씩 테이블로 옮기고 JSON을 지움(`meta.ts` `migrateJsonMeta`, 로그 `meta: moved N JSON profiles`). 옮기지 못한 사용자는 다음 변경 때 다시 옮김. JSON과 행이 함께 있으면 JSON이 이김(이 서버는 JSON을 남기지 않으므로 그건 더 나중에 쓰인 것).
+- 운영 RDS: 배포하면 위 이전이 저절로 돌아감. 미리 스냅샷을 찍어 둘 것(`aws rds create-db-snapshot`). 되돌리기: 서버를 멈춘 뒤 `DATABASE_URL=<RDS> node scripts/meta-rollback.mjs [--dry-run]`이 모든 행을 스키마 1의 JSON으로 되써 넣고 `schema_version`을 1로 내림(테이블은 남음) → 이전 서버 배포. 그 뒤 새 서버를 다시 배포하면 JSON을 다시 옮김. 개발 DB에서 129명 이전 → 되돌리기 → 원본 백업과 비교해 차이 0을 확인함.
+- 주의: 스키마 1 서버(이전 빌드)를 이전된 DB에 붙여 두면 그 서버는 JSON이 없어 새 프로필로 봄. 같은 개발 DB를 쓰는 오래된 `server:dev`는 새 빌드로 다시 띄울 것.
 - 전리품은 새 테이블 없이 기존 `profiles.data.meta`(JSON)와 원장 `ledger`(kind `item`, 얻으면 +1·분해하면 −1, 잔액 = 보유 수)에 기록: 운영 RDS 마이그레이션 없음(스키마 1 그대로).
 
 ## 로컬 온라인
@@ -47,6 +51,9 @@ macOS는 Chrome + Metal, Windows는 Edge + D3D11. GPU는 같이 돌아가는 다
 - 자격 증명: `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN`(CI의 배포 역할은 읽기 가능), 없으면 aws CLI(`aws login`); push는 본인 자격 증명으로. `setup [--apply]`은 버킷과 역할의 읽기 정책을 만들고, `untrack [--apply]`은 바이너리를 git에서 빼고 그 패턴을 `.gitignore` 맨 앞에 넣는 한 번뿐인 전환.
 - 병합 뒤 `assets.json`이 충돌하면 양쪽 줄을 다 남기고, 양쪽이 같은 파일을 바꿨으면 원하는 버전을 남김(다른 블롭도 저장소에 남아 있음).
 - 콜드 아카이브(생성 원본: 컨셉 PNG, raw/rig/anim GLB, 후보, .blend): `npm run assets -- archive <paths> [--from=<목록>] [--dry-run]`이 같은 버킷의 `archive/sha256/`에 올리고 커밋하는 `assets-archive.json`(경로 → sha256, 크기, uploadedAt)에 적은 뒤, HEAD로 크기를 확인하고 로컬 파일을 지움. `assets.json`이 관리하는 파일은 건드리지 않음. `archive-pull "<경로|glob>" [--dry-run] [--force]`로 필요할 때만 되살리고, `archive-status [--remote]`로 폴더별 현황 확인. CI와 `pull`은 아카이브를 받지 않음 — 생성 원본은 `push` 말고 여기로.
+- 런타임 파일을 로컬에 두지 않기: `npm run assets -- prune-local [paths] [--min-size=5M] [--dry-run]`이 `public/`의 파일(기본 `public/models`) 중 `assets.json`과 해시가 같고 버킷에 제 크기로 있는 것(HEAD로 확인)만 지우고, 지운 목록을 커밋하지 않는 `.assets-remote.json`에 적음. 개발 서버(`vite.config.ts`의 `imjin-remote-assets`)는 `assets.json`에 있는데 로컬에 없는 `public/` 파일을 공유 캐시에서, 없으면 S3에서 받아 sha256을 확인한 뒤 내줌(응답 헤더 `X-Imjin-Asset: remote`). 캐시는 `IMJIN_ASSET_CACHE_MAX`(기본 2G) 아래로 오래 안 쓴 것부터 지움. 파일을 Node에서 읽는 테스트·스크립트는 `scripts/lib/remote-assets.mjs`의 `runtimePath(rel)`로 경로를 얻음(로컬 사본, 없으면 캐시).
+  - `pull`은 `.assets-remote.json`의 파일을 건너뜀; `pull --all [paths]`가 되살리고 목록에서 뺌. `push`는 그 파일을 없어졌다고 빼지 않음. `vite build`는 원격 전용 파일이 하나라도 있으면 멈춤(로컬 빌드 전에 `pull --all`). CI는 새 체크아웃이라 전부 받음.
+  - AWS 자격 증명이 없으면 지운 파일은 개발 서버에서 502로 실패함. 새로 만든 모델은 `push` 뒤에 prune.
 - `node scripts/test-assets.mjs`가 모든 명령을 메모리 속 S3로 검사함.
 
 ## 캠페인 지도

@@ -217,8 +217,38 @@ export class WebGLRenderer { constructor() { throw new Error('three.js is built 
   };
 }
 
+/**
+ * Runtime binaries from the asset store: a public/ file that assets.json names but this tree lacks (pruned with
+ * `npm run assets -- prune-local`) is served from the shared cache, fetched from S3 on first use. A build needs every
+ * file here, so it stops while any is remote-only (`npm run assets -- pull --all` brings them back).
+ */
+function remoteAssetsPlugin(): Plugin {
+  let build = false;
+  return {
+    name: 'imjin-remote-assets',
+    configResolved(config) {
+      build = config.command === 'build';
+    },
+    async configureServer(server) {
+      const lib = await import(new URL('./scripts/lib/remote-assets.mjs', import.meta.url).href);
+      server.middlewares.use(lib.remoteAssetsMiddleware({ log: server.config.logger }));
+    },
+    buildStart() {
+      if (!build) return;
+      const remote = (() => {
+        try {
+          return (JSON.parse(readFileSync(join(import.meta.dirname, '.assets-remote.json'), 'utf8')).paths ?? []) as string[];
+        } catch {
+          return [];
+        }
+      })();
+      if (remote.length) this.error(`${remote.length} runtime files are remote-only here (${remote[0]} first): npm run assets -- pull --all, then build`);
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [threeWithoutWebGL(), react(), routePagesPlugin()],
+  plugins: [remoteAssetsPlugin(), threeWithoutWebGL(), react(), routePagesPlugin()],
   cacheDir: CACHE_DIR,
   server: { port: 5291, host: '127.0.0.1', strictPort: true, watch: { ignored: UNWATCHED } },
   build: { target: ['es2022', 'safari16'], chunkSizeWarningLimit: 4000 },

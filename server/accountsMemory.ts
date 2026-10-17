@@ -22,6 +22,7 @@ import {
   type SignedIn,
   type UserRecord,
 } from './accounts';
+import type { ItemRow, MetaRecord } from './metaRecord';
 
 type Entry = LedgerEntry & { userId: string };
 
@@ -33,6 +34,8 @@ export class MemoryAccountStore implements AccountStore {
   private profiles = new Map<string, { text: string; rev: number }>();
   private entries: Entry[] = [];
   private claims = new Map<string, string>();
+  /** The growth profile's rows as the tables of schema 2 keep them; loot no longer held stays, marked salvaged. */
+  private metas = new Map<string, { record: MetaRecord; salvaged: Map<string, ItemRow & { salvagedAt: number }> }>();
   private lastEntry = 0;
   private queue: Promise<unknown> = Promise.resolve();
 
@@ -195,6 +198,7 @@ export class MemoryAccountStore implements AccountStore {
       if (rev !== null && rev !== stored.rev) throw new AccountError('conflict');
       const pending: Entry[] = [];
       const claimed = new Set<string>();
+      let meta = null as MetaRecord | null;
       const tx: ProfileTx = {
         balance: async (kind) => this.balanceOf(userId, kind, pending),
         ledger: async (entry) => {
@@ -208,12 +212,35 @@ export class MemoryAccountStore implements AccountStore {
           claimed.add(key);
           return true;
         },
+        meta: async () => {
+          const kept = meta ?? this.metas.get(userId)?.record;
+          return kept ? structuredClone(kept) : null;
+        },
+        saveMeta: async (record) => {
+          const uids = new Set(record.items.map((i) => i.uid));
+          const worn = new Set<string>();
+          for (const e of record.equipment) {
+            // The constraints of the tables: a piece worn once, held, by a commander with a row.
+            if (!uids.has(e.uid) || worn.has(e.uid) || !record.commanders.some((c) => c.commanderId === e.commanderId)) throw new AccountError('invalid');
+            worn.add(e.uid);
+          }
+          meta = structuredClone(record);
+        },
       };
       const data = JSON.parse(stored.text) as ProfileData;
       const text = profileText((await change(data, tx)) ?? data);
       this.entries.push(...pending);
       for (const key of claimed) this.claims.set(key, userId);
       this.profiles.set(userId, { text, rev: stored.rev + 1 });
+      if (meta) {
+        const now = Date.now();
+        const before = this.metas.get(userId);
+        const salvaged = before?.salvaged ?? new Map();
+        const held = new Set(meta.items.map((i) => i.uid));
+        for (const i of before?.record.items ?? []) if (!held.has(i.uid)) salvaged.set(i.uid, { ...i, salvagedAt: now });
+        for (const uid of held) salvaged.delete(uid);
+        this.metas.set(userId, { record: meta, salvaged });
+      }
       return { data: JSON.parse(text) as ProfileData, rev: stored.rev + 1 };
     });
   }
@@ -242,6 +269,15 @@ export class MemoryAccountStore implements AccountStore {
       this.claims.set(key, userId);
       return true;
     });
+  }
+
+  async jsonMetaUsers(limit: number) {
+    const out: string[] = [];
+    for (const [userId, stored] of this.profiles) {
+      if (out.length >= limit) break;
+      if (Object.hasOwn(JSON.parse(stored.text) as object, 'meta')) out.push(userId);
+    }
+    return out.sort();
   }
 
   async close() {}

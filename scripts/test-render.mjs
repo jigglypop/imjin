@@ -200,7 +200,7 @@ try {
       battle, conquest: null, pageHidden: false, fpsFrames: 0, fpsTime: 0, speed: 1, paused: true,
       fastForward: false, accumulator: 0, publishTimer: 10, minimapTimer: 10,
       director: { timeFactor: () => 1, update() {}, feed: seen }, updateFastForward() {}, cutawayIds: () => [],
-      views: { cutaway: new Map(), sync() {} }, stampWakes() {},
+      views: { cutaway: new Map(), capture() {}, sync() {} }, stampWakes() {},
       rts: { followId: 0, update() {} }, ocean: { setTide() {}, update() {} },
       sound: { setRoar() {}, tick() {}, update: seen }, fx: { update() {}, handle: seen },
       crew: { update() {}, handle: seen }, input: { onEvents: seen }, lanterns: { update() {} },

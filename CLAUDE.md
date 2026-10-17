@@ -27,6 +27,7 @@ three.js r186 `three/webgpu` + TSL, @react-three/fiber, React 19, zustand, Vite,
 
 ## 에셋
 - `public/`·`assets-src/`의 런타임 바이너리(모델, 텍스처, 오디오, 폰트, 지형)는 내용 해시로 S3에 있고 목록은 커밋된 `assets.json`: 체크아웃 뒤 `npm run assets -- pull`, 바이너리를 추가·변경하면 `npm run assets -- push` 후 `assets.json` 커밋. 생성 원본은 `assets-archive.json`(콜드 보관).
+- 런타임 바이너리도 로컬에 쌓지 않음: `npm run assets -- prune-local`(기본 `public/models`)이 S3에 확인된 사본을 지우고, 개발 서버가 그 파일을 S3에서 받아 캐시(`IMJIN_ASSET_CACHE_MAX`, 기본 2G)에 두고 내줌. Node에서 바이너리를 읽는 테스트는 `runtimePath`(`scripts/lib/remote-assets.mjs`). 로컬 빌드 전엔 `pull --all`.
 - `npm run assets -- models`가 모델 보관소: 모든 .glb의 삼각형 수, 버전, 출처 기록. 자세한 것은 [docs/dev.md](docs/dev.md#에셋).
 
 ## 배포

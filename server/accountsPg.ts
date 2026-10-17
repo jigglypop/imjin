@@ -24,6 +24,7 @@ import {
   type SignedIn,
   type UserRecord,
 } from './accounts';
+import type { CommanderRow, EquipmentRow, ItemRow, MetaRecord } from './metaRecord';
 
 /**
  * Forward migrations: entry i takes the schema from version i to i + 1, each in one transaction with the version it
@@ -76,7 +77,70 @@ export const MIGRATIONS = [
      user_id text NOT NULL REFERENCES users (id),
      at bigint NOT NULL
    );`,
+  // Schema 2: the growth profile (talents, loot, what is worn) in tables of its own instead of profiles.data.meta. The
+  // JSON is moved over per user in the transaction of the user's next change, and by the server's start-up sweep
+  // (meta.ts migrateJsonMeta). IF NOT EXISTS lets a database rolled back to schema 1 (docs/dev.md) come forward again.
+  `CREATE TABLE IF NOT EXISTS meta_accounts (
+     user_id text PRIMARY KEY REFERENCES users (id),
+     version integer NOT NULL,
+     stats jsonb NOT NULL CHECK (jsonb_typeof(stats) = 'object'),
+     firsts jsonb NOT NULL CHECK (jsonb_typeof(firsts) = 'array'),
+     day text NOT NULL,
+     earned bigint NOT NULL CHECK (earned >= 0),
+     drops bigint NOT NULL CHECK (drops >= 0),
+     dropped bigint NOT NULL CHECK (dropped >= 0),
+     created_at bigint NOT NULL,
+     updated_at bigint NOT NULL
+   );
+   CREATE TABLE IF NOT EXISTS owned_armor (
+     user_id text NOT NULL REFERENCES meta_accounts (user_id),
+     armor_id text NOT NULL,
+     rerolls integer NOT NULL CHECK (rerolls >= 0),
+     PRIMARY KEY (user_id, armor_id)
+   );
+   CREATE TABLE IF NOT EXISTS commander_progress (
+     user_id text NOT NULL REFERENCES meta_accounts (user_id),
+     commander_id text NOT NULL,
+     xp bigint NOT NULL CHECK (xp >= 0),
+     level integer NOT NULL CHECK (level >= 1),
+     keystone text,
+     respecs integer NOT NULL CHECK (respecs >= 0),
+     armor_id text,
+     weapon_id text,
+     talents jsonb NOT NULL CHECK (jsonb_typeof(talents) = 'object'),
+     updated_at bigint NOT NULL,
+     PRIMARY KEY (user_id, commander_id)
+   );
+   CREATE INDEX IF NOT EXISTS commander_progress_level ON commander_progress (commander_id, level DESC);
+   CREATE TABLE IF NOT EXISTS items (
+     user_id text NOT NULL REFERENCES meta_accounts (user_id),
+     item_uid text NOT NULL CHECK (char_length(item_uid) BETWEEN 1 AND 24),
+     def_id text NOT NULL,
+     rarity text NOT NULL CHECK (rarity IN ('common', 'fine', 'rare', 'epic', 'legendary')),
+     seed bigint NOT NULL,
+     reforge_count integer NOT NULL CHECK (reforge_count >= 0),
+     src text NOT NULL,
+     pos integer NOT NULL,
+     created_at bigint NOT NULL,
+     salvaged_at bigint,
+     PRIMARY KEY (user_id, item_uid)
+   );
+   CREATE INDEX IF NOT EXISTS items_held ON items (user_id, pos) WHERE salvaged_at IS NULL;
+   CREATE INDEX IF NOT EXISTS items_def ON items (def_id, rarity);
+   CREATE TABLE IF NOT EXISTS equipment (
+     user_id text NOT NULL,
+     commander_id text NOT NULL,
+     slot text NOT NULL CHECK (slot IN ('weapon', 'armor', 'trinket', 'book', 'seal')),
+     item_uid text NOT NULL,
+     PRIMARY KEY (user_id, commander_id, slot),
+     CONSTRAINT equipment_worn_once UNIQUE (user_id, item_uid),
+     FOREIGN KEY (user_id, commander_id) REFERENCES commander_progress (user_id, commander_id),
+     FOREIGN KEY (user_id, item_uid) REFERENCES items (user_id, item_uid)
+   );
+   CREATE INDEX IF NOT EXISTS profiles_json_meta ON profiles (user_id) WHERE data ? 'meta';`,
 ];
+/** The tables of the growth profile, children first: what a rollback to schema 1 empties (docs/dev.md). */
+export const META_TABLES = ['equipment', 'items', 'commander_progress', 'owned_armor', 'meta_accounts'] as const;
 /** pg_advisory_lock key: two servers starting at once take turns to migrate. */
 const SCHEMA_LOCK = 1592_0001;
 /** Reconnection waits: a second at first, doubling to half a minute. */
@@ -394,6 +458,68 @@ export class PgAccountStore implements AccountStore {
     return (await run('INSERT INTO claims (key, user_id, at) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING RETURNING key', [key, userId, at])).length === 1;
   }
 
+  private async readMeta(run: Run, userId: string): Promise<MetaRecord | null> {
+    type AccountRow = { version: number; stats: MetaRecord['account']['stats']; firsts: string[]; day: string; earned: number; drops: number; dropped: number };
+    const [account] = await run<AccountRow>('SELECT version, stats, firsts, day, earned, drops, dropped FROM meta_accounts WHERE user_id = $1', [userId]);
+    if (!account) return null;
+    const armor = await run<{ armorId: string; rerolls: number }>('SELECT armor_id AS "armorId", rerolls FROM owned_armor WHERE user_id = $1 ORDER BY armor_id', [userId]);
+    const commanders = await run<CommanderRow>(
+      'SELECT commander_id AS "commanderId", xp, level, keystone, respecs, armor_id AS "armorId", weapon_id AS "weaponId", talents FROM commander_progress WHERE user_id = $1 ORDER BY commander_id',
+      [userId],
+    );
+    const items = await run<ItemRow>(
+      'SELECT item_uid AS uid, def_id AS "defId", rarity, seed, reforge_count AS "reforgeCount", src, pos FROM items WHERE user_id = $1 AND salvaged_at IS NULL ORDER BY pos',
+      [userId],
+    );
+    const equipment = await run<EquipmentRow>('SELECT commander_id AS "commanderId", slot, item_uid AS uid FROM equipment WHERE user_id = $1', [userId]);
+    return { account, armor, commanders, items, equipment };
+  }
+
+  /** Inside the transaction that holds the user's profile row. */
+  private async writeMeta(run: Run, userId: string, rec: MetaRecord, now: number) {
+    const a = rec.account;
+    await run(
+      `INSERT INTO meta_accounts (user_id, version, stats, firsts, day, earned, drops, dropped, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+       ON CONFLICT (user_id) DO UPDATE SET version = $2, stats = $3, firsts = $4, day = $5, earned = $6, drops = $7, dropped = $8, updated_at = $9`,
+      [userId, a.version, JSON.stringify(a.stats), JSON.stringify(a.firsts), a.day, a.earned, a.drops, a.dropped, now],
+    );
+    // What is worn goes first and comes back last, so no row ever points at a piece or a commander that is gone.
+    await run('DELETE FROM equipment WHERE user_id = $1', [userId]);
+    await run('DELETE FROM owned_armor WHERE user_id = $1 AND NOT (armor_id = ANY($2::text[]))', [userId, rec.armor.map((r) => r.armorId)]);
+    await run(
+      `INSERT INTO owned_armor (user_id, armor_id, rerolls) SELECT $1, * FROM unnest($2::text[], $3::integer[])
+       ON CONFLICT (user_id, armor_id) DO UPDATE SET rerolls = excluded.rerolls`,
+      [userId, rec.armor.map((r) => r.armorId), rec.armor.map((r) => r.rerolls)],
+    );
+    const c = rec.commanders;
+    await run('DELETE FROM commander_progress WHERE user_id = $1 AND NOT (commander_id = ANY($2::text[]))', [userId, c.map((r) => r.commanderId)]);
+    await run(
+      `INSERT INTO commander_progress (user_id, commander_id, xp, level, keystone, respecs, armor_id, weapon_id, talents, updated_at)
+       SELECT $1, t.id, t.xp, t.level, t.keystone, t.respecs, t.armor, t.weapon, t.talents::jsonb, $10
+       FROM unnest($2::text[], $3::bigint[], $4::integer[], $5::text[], $6::integer[], $7::text[], $8::text[], $9::text[]) AS t (id, xp, level, keystone, respecs, armor, weapon, talents)
+       ON CONFLICT (user_id, commander_id) DO UPDATE SET xp = excluded.xp, level = excluded.level, keystone = excluded.keystone, respecs = excluded.respecs,
+         armor_id = excluded.armor_id, weapon_id = excluded.weapon_id, talents = excluded.talents,
+         updated_at = CASE WHEN (commander_progress.xp, commander_progress.respecs, commander_progress.armor_id, commander_progress.weapon_id, commander_progress.talents)
+           IS NOT DISTINCT FROM (excluded.xp, excluded.respecs, excluded.armor_id, excluded.weapon_id, excluded.talents) THEN commander_progress.updated_at ELSE excluded.updated_at END`,
+      [userId, c.map((r) => r.commanderId), c.map((r) => r.xp), c.map((r) => r.level), c.map((r) => r.keystone), c.map((r) => r.respecs), c.map((r) => r.armorId), c.map((r) => r.weaponId), c.map((r) => JSON.stringify(r.talents)), now],
+    );
+    const i = rec.items;
+    await run('UPDATE items SET salvaged_at = $3 WHERE user_id = $1 AND salvaged_at IS NULL AND NOT (item_uid = ANY($2::text[]))', [userId, i.map((r) => r.uid), now]);
+    await run(
+      `INSERT INTO items (user_id, item_uid, def_id, rarity, seed, reforge_count, src, pos, created_at)
+       SELECT $1, *, $9 FROM unnest($2::text[], $3::text[], $4::text[], $5::bigint[], $6::integer[], $7::text[], $8::integer[])
+       ON CONFLICT (user_id, item_uid) DO UPDATE SET def_id = excluded.def_id, rarity = excluded.rarity, seed = excluded.seed, reforge_count = excluded.reforge_count,
+         src = excluded.src, pos = excluded.pos, salvaged_at = NULL`,
+      [userId, i.map((r) => r.uid), i.map((r) => r.defId), i.map((r) => r.rarity), i.map((r) => r.seed), i.map((r) => r.reforgeCount), i.map((r) => r.src), i.map((r) => r.pos), now],
+    );
+    const e = rec.equipment;
+    await run('INSERT INTO equipment (user_id, commander_id, slot, item_uid) SELECT $1, * FROM unnest($2::text[], $3::text[], $4::text[])', [userId, e.map((r) => r.commanderId), e.map((r) => r.slot), e.map((r) => r.uid)]);
+  }
+
+  async jsonMetaUsers(limit: number) {
+    return (await this.run<{ user_id: string }>("SELECT user_id FROM profiles WHERE data ? 'meta' ORDER BY user_id LIMIT $1", [limit])).map((r) => r.user_id);
+  }
+
   updateProfile(userId: string, rev: number | null, change: (data: ProfileData, tx: ProfileTx) => ProfileData | void | Promise<ProfileData | void>) {
     return this.transaction(async (run): Promise<Profile> => {
       const [current] = await run<Profile>('SELECT data, rev FROM profiles WHERE user_id = $1 FOR UPDATE', [userId]);
@@ -403,6 +529,8 @@ export class PgAccountStore implements AccountStore {
         balance: (kind) => this.balanceOn(run, userId, kind),
         ledger: (entry) => this.entry(run, userId, entry, Date.now()),
         claimOnce: (key) => this.claim(run, key, userId, Date.now()),
+        meta: () => this.readMeta(run, userId),
+        saveMeta: (record) => this.writeMeta(run, userId, record, Date.now()),
       };
       const text = profileText((await change(current.data, tx)) ?? current.data);
       const [row] = await run<Profile>('UPDATE profiles SET data = $2, rev = rev + 1 WHERE user_id = $1 RETURNING data, rev', [userId, text]);
