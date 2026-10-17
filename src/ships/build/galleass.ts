@@ -4,8 +4,10 @@
  * round-fronted castle at the bow carrying the heavy guns that fire ahead over the iron-shod spur, a stern castle under
  * its striped awning, and three lateen masts.
  */
-import { buildAnchorsFor, galleassCastleZ, sideZ } from '../anchors';
-import { GALLEASS_PLAN as PLAN } from '../armadaPlans';
+import { buildAnchorsFor, galleassCastleZ, oaredPlanOf, sideZ } from '../anchors';
+import { SHIP_SPECS } from '../../sim/catalog';
+import type { ShipKind } from '../../sim/types';
+import type { Faction } from './atlas';
 import {
   anchorProp,
   barrel,
@@ -56,11 +58,23 @@ function ringWall(ctx: Ctx, x0: number, x1: number, lo: number, hi: number, zAt:
   }
 }
 
-export function buildGalleass(lod: Lod): MeshData {
-  const plan = PLAN;
-  const anchors = buildAnchorsFor('galleass#0')!;
+/** Each navy's colours on its oared ships: mast-head flags (fore, main, mizzen), the poop ensign, the streamers, the main lateen's cloth. */
+const LOOKS: Partial<Record<Faction, { masts: [string, string][]; flagship?: [string, string]; ensign: [string, string]; streamers: [string, string][]; mainSail?: string; flagSail?: string }>> = {
+  spain: { masts: [['flags_a', 'burgundy'], ['flags_a', 'royal'], ['flags_b', 'santiago']], ensign: ['flags_a', 'castile'], streamers: [['flags_b', 'red'], ['flags_b', 'redgold']] },
+  // Venice's lion banner on the line, the blue Holy League standard on La Real's main (Capponi; the Toledo banner).
+  holyleague: { masts: [['flags_b', 'genoa'], ['flags_a', 'stmark'], ['flags_a', 'burgundy']], flagship: ['flags_a', 'holyleague'], ensign: ['flags_a', 'stmark'], streamers: [['flags_b', 'red'], ['flags_b', 'redgold']], flagSail: 'sail_cross' },
+  // Red Ottoman naval flags with crescents; the Kapudan Pasha's green banner on the Sultana (no star: that came in the 18th century).
+  ottoman: { masts: [['flags_a', 'crescent'], ['flags_a', 'zulfikar'], ['flags_a', 'crescent']], flagship: ['flags_a', 'kapudan'], ensign: ['flags_a', 'sultan'], streamers: [['flags_b', 'redgreen'], ['flags_b', 'green']], flagSail: 'sail_saint' },
+};
+
+export function buildGalleass(lod: Lod, kind: ShipKind = 'galleass'): MeshData {
+  const plan = oaredPlanOf(kind)!;
+  const anchors = buildAnchorsFor(`${kind}#0`)!;
   const b = new MeshBuilder();
-  const ctx: Ctx = { b, lod, faction: 'spain', P: paints('spain'), rnd: mulberry32(15888) };
+  const faction = SHIP_SPECS[kind].faction as Faction;
+  const look = LOOKS[faction] ?? LOOKS.spain!;
+  const flagship = kind === 'reale' || kind === 'sultana';
+  const ctx: Ctx = { b, lod, faction, P: paints(faction), rnd: mulberry32(15888 + kind.length * 97) };
   const Pn = ctx.P;
   const h = plan.hull;
   const L = h.length;
@@ -80,6 +94,7 @@ export function buildGalleass(lod: Lod): MeshData {
   const iron = Pn('iron');
   const bronze = Pn('bronze', { tint: [1.15, 1.0, 0.85] });
   const canvas = Pn('sail_canvas');
+  const flagCloth = flagship && look.flagSail ? Pn(look.flagSail, { rect: [0.012, 0.012, 0.988, 0.988] }) : canvas;
 
   // --- hull ---
   loftHull(ctx, h, hull, hull);
@@ -229,16 +244,17 @@ export function buildGalleass(lod: Lod): MeshData {
   plan.masts.forEach((m, i) => {
     mast(ctx, wood, iron, m.x, deck, m.h, m.r);
     shrouds(ctx, rope, m.x, deck + m.h * 0.8, (sgn, dx) => [m.x + dx, yo + 0.6, sgn * (o.z - 0.05)], [-1.8, -0.6, 0.6], m.r);
-    lateenSail(ctx, canvas, wood, { x: m.x, y: deck + m.h * 0.86, len: m.lateen.len, fore: m.lateen.fore, tilt: m.lateen.tilt, h: m.lateen.h, phase: i * 1.4, billow: Math.min(2, m.lateen.h * 0.15) });
+    lateenSail(ctx, i === 1 ? flagCloth : canvas, wood, { x: m.x, y: deck + m.h * 0.86, len: m.lateen.len, fore: m.lateen.fore, tilt: m.lateen.tilt, h: m.lateen.h, phase: i * 1.4, billow: Math.min(2, m.lateen.h * 0.15) });
     if (lod < 2) {
-      const [sheet, name] = i === 1 ? ['flags_a', 'royal'] : i === 0 ? ['flags_a', 'burgundy'] : ['flags_b', 'santiago'];
+      const [sheet, name] = i === 1 && flagship && look.flagship ? look.flagship : look.masts[i % look.masts.length]!;
       flag(ctx, { pole: [m.x, deck + m.h, 0], poleH: 2.0, w: 2.6, h: 1.8, sheet, flag: name, phase: i, wood, nu: byLod(ctx, 6, 2, 1), nv: byLod(ctx, 4, 2, 1) });
-      longPennant(ctx, clothPatch(ctx, 'flags_b', i % 2 ? 'red' : 'redgold'), [m.x - 0.1, deck + m.h - 0.5, 0], 7, 0.5, i);
+      const [ps, pn] = look.streamers[i % look.streamers.length]!;
+      longPennant(ctx, clothPatch(ctx, ps, pn), [m.x - 0.1, deck + m.h - 0.5, 0], Math.min(7, m.h * 0.45), 0.5, i);
     }
   });
   if (lod === 0) for (let i = 1; i < plan.masts.length; i += 1) line(ctx, rope, [plan.masts[i]!.x, deck + plan.masts[i]!.h * 0.8, 0], [plan.masts[i - 1]!.x, deck + 0.8, 0], 0.07);
   if (lod === 0) line(ctx, rope, [plan.masts[0]!.x + 0.2, deck + plan.masts[0]!.h * 0.8, 0], [L / 2 + plan.spur * 0.6, spurY + 0.4, 0], 0.07);
-  if (lod < 2) flag(ctx, { pole: [sc.x0 + 0.2, syTop + 2.2, 0], poleH: 2.6, w: 2.6, h: 1.8, sheet: 'flags_a', flag: 'castile', phase: 0.2, wood, nu: byLod(ctx, 6, 2, 1), nv: byLod(ctx, 4, 2, 1) });
+  if (lod < 2) flag(ctx, { pole: [sc.x0 + 0.2, syTop + 2.2, 0], poleH: 2.6, w: 2.6, h: 1.8, sheet: look.ensign[0], flag: look.ensign[1], phase: 0.2, wood, nu: byLod(ctx, 6, 2, 1), nv: byLod(ctx, 4, 2, 1) });
 
   // --- stores ---
   barrel(ctx, timber, iron, [bc.x0 - 1.2, deck, 1.2], 0.4, 0.95);

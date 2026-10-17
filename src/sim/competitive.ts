@@ -10,6 +10,8 @@ export const COMPETITIVE_TRAITS: Record<Faction, string> = {
   ming: '장거리·정확한 집중 사격 · 근접·추격에 취약',
   england: '빠른 갤리온·긴 사거리 컬버린 · 도선전에 약함',
   spain: '높은 선루·병사 많은 도선전 · 느린 장전',
+  holyleague: '이물 대포와 화승총병 · 갈레아스의 화력',
+  ottoman: '빠른 갤리선과 활 · 많은 병사의 도선전',
 };
 
 type UnitBalance = { spec: Partial<ShipSpec>; mods?: Partial<ShipMods>; range?: number; damage?: number };
@@ -48,6 +50,13 @@ export const COMPETITIVE_UNITS: Record<ShipKind, UnitBalance> = {
   spgalleon: { spec: { cost: 700, build: 60 } },
   galleass: { spec: { cost: 620, build: 56 } },
   urca: { spec: { cost: 260, build: 30 } },
+  // The Lepanto chapter keeps its catalog prices until scripts/balance-competitive.mjs fits them (docs/balance-cross.md).
+  reale: { spec: { cost: 900, build: 70 } },
+  galea: { spec: { cost: 520, build: 40 } },
+  vgalleass: { spec: { cost: 980, build: 72 } },
+  sultana: { spec: { cost: 860, build: 68 } },
+  kadirga: { spec: { cost: 470, build: 38 } },
+  kalyata: { spec: { cost: 260, build: 24 } },
 };
 
 /** The three treasuries earn the same base income; cheap boarding ships are not discounted a second time. */
@@ -57,6 +66,8 @@ export const COMPETITIVE_FACTIONS: Record<Faction, { income: number; cost: numbe
   ming: { income: 1, cost: 1, power: 1.005 },
   england: { income: 1, cost: 1, power: 1 },
   spain: { income: 1, cost: 1, power: 1 },
+  holyleague: { income: 1, cost: 1, power: 1 },
+  ottoman: { income: 1, cost: 1, power: 1 },
 };
 
 const specs = Object.fromEntries(Object.entries(SHIP_SPECS).map(([kind, spec]) => [kind, { ...spec, ...COMPETITIVE_UNITS[kind as ShipKind].spec }])) as Record<ShipKind, ShipSpec>;

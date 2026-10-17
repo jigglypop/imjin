@@ -3,6 +3,10 @@ import { MAP_ASPECT, project } from './projection';
 import { campLevel } from './campArt';
 import { FOOTPRINT, METRES_PER_RADIUS, STANDARD, STANDARD_KINDS, WALL_KINDS, WATER_KINDS, type PieceKind } from './campPieces';
 import type { BuildingKind, FactionId, FleetView, RegionView, ReplayView, ShipClass, SpotView } from './types';
+import { ARMADA_REGION_ORDER } from '../../sim/grand/regionsArmada';
+
+/** The ports of the Armada theatre, whose towns are English, Flemish, French and Iberian rather than Korean. */
+const EUROPEAN: ReadonlySet<string> = new Set(ARMADA_REGION_ORDER);
 
 // What stands on the campaign map besides the terrain: at every port a Korean town, the camp of the navy that holds it
 // and the works it has built, standing round each other on the land like the districts of a Civilization city; and a
@@ -179,13 +183,45 @@ function mingCamp(level: number): CampPlan {
 }
 
 /**
+ * An English or Spanish coastal fort of the Armada theatre (campEurope.ts): an earth bank with oak pales round tents and a
+ * cottage; then a house, a round gun tower and a landing; at the top a stone curtain with a gatehouse round a square keep,
+ * a hall, two gun towers and houses. Both navies build alike and fly their own banners.
+ */
+function europeCamp(level: number, navy: FactionId): CampPlan {
+  const S = Math.PI / 2, flag: PieceKind = navy === 'spain' ? 'sp_banner' : 'en_banner';
+  if (level === 1) return {
+    radius: 0.6,
+    pieces: [
+      ...ring('eu_palisade', 0.55, 11, m(7.8)), put('eu_gate', 0.55, 0, 0), put('eu_tent', -0.25, -0.2, 0), put('eu_tent', -0.25, 0.2, 0),
+      put('eu_cottage', 0.12, -0.3, S), put(flag, 0.34, -0.22, Math.PI),
+    ],
+  };
+  if (level === 2) return {
+    radius: 0.73,
+    pieces: [
+      ...ring('eu_palisade', 0.68, 13, m(7.8)), put('eu_gate', 0.68, 0, 0), pierAt(0.68),
+      put('eu_house', -0.28, 0, 0), put('eu_cottage', 0.06, -0.42, S), put('eu_tent', 0.1, 0.42, 0), put('eu_tent', 0.38, -0.32, 0),
+      put('eu_bastion', -0.28, 0.33, 0), put(flag, 0.42, 0.24, Math.PI),
+    ],
+  };
+  const r = 0.84;
+  const pieces = [
+    ...ring('eu_wall', r, 18, m(15)), put('eu_gatehouse', r, 0, 0), pierAt(r),
+    put('eu_keep', -0.32, 0, 0), put('eu_hall', 0.2, -0.48, S), put('eu_house', 0.2, 0.5, -S), put('eu_cottage', 0.52, 0.3, -S),
+    put('eu_tent', 0.0, 0.3, 0), put('eu_tent', 0.5, -0.25, 0),
+    put('eu_bastion', -0.46, -0.4, 0), put('eu_bastion', -0.46, 0.4, 0), put(flag, 0.6, -0.16, Math.PI), put(flag, 0.6, 0.16, Math.PI),
+  ];
+  return { radius: r + 0.15, pieces };
+}
+
+/**
  * The camp of a level (1 to 3, the campaign's highest: a higher one is drawn as 3) and navy, unturned: its sea side
  * looks west (SEA_SIDE). Every navy's camp has its own look, and a higher level keeps every building of the one below it
  * (a stockade gate becomes a gatehouse, a stockade a wall). Its navy's standard flies in the middle of the yard, where
  * every level leaves room for it.
  */
 export function campPlan(level: number, navy: FactionId): CampPlan {
-  const plan = navy === 'japan' ? japanCamp(level) : navy === 'ming' ? mingCamp(level) : joseonCamp(level);
+  const plan = navy === 'japan' ? japanCamp(level) : navy === 'ming' ? mingCamp(level) : navy === 'england' || navy === 'spain' ? europeCamp(level, navy) : joseonCamp(level);
   return { ...plan, pieces: [...plan.pieces, put(STANDARD[navy], 0.08, 0, 0)] };
 }
 
@@ -236,7 +272,7 @@ export function townSize(value: number, seat: boolean) {
  * (+x), fields beyond the last houses. A Japanese village (Tsushima) has its own houses. The seed shuffles which plot
  * gets which house and turns each a little, so no two towns are alike.
  */
-export function townPlan(houses: number, tiled: number, seed: number, japanese = false, pavilion = false): TownPlan {
+export function townPlan(houses: number, tiled: number, seed: number, japanese = false, pavilion = false, european = false): TownPlan {
   const rnd = stream(seed);
   const lanes = houses > 6 ? [-0.42, 0.42] : [0];
   const xs = [0, -0.38, 0.38];
@@ -251,11 +287,11 @@ export function townPlan(houses: number, tiled: number, seed: number, japanese =
   const walls = new Map<string, Piece>();
   const wall = (x: number, z: number, along: 'x' | 'z', len: number) => {
     const key = `${along}${x.toFixed(3)},${z.toFixed(3)}`;
-    if (!walls.has(key)) walls.set(key, { kind: 'doldam', x, z, rot: along === 'x' ? 0 : Math.PI / 2, len });
+    if (!walls.has(key)) walls.set(key, { kind: european ? 'eu_hedge' : 'doldam', x, z, rot: along === 'x' ? 0 : Math.PI / 2, len });
   };
   const used = plots.slice(0, Math.min(houses, plots.length));
   used.forEach((p, i) => {
-    const kind: PieceKind = japanese ? 'wa_house' : i < tiled ? 'giwa' : 'choga';
+    const kind: PieceKind = european ? (i < tiled ? 'eu_house' : 'eu_cottage') : japanese ? 'wa_house' : i < tiled ? 'giwa' : 'choga';
     const z = p.lane + p.side * 0.24;
     // The house faces the lane: a plot north of the lane looks south.
     pieces.push({ kind, x: p.x + (rnd() - 0.5) * 0.04, z, rot: (p.side > 0 ? Math.PI : 0) + (rnd() - 0.5) * 0.12 });
@@ -266,10 +302,12 @@ export function townPlan(houses: number, tiled: number, seed: number, japanese =
   // Where the lane comes in from the camp: the village tree, and the pavilion of a larger town.
   const mid = lanes.length > 1 ? 0 : -0.14;
   pieces.push(put('tree', 0.64, mid, 0));
-  if (pavilion) pieces.push(put('jeongja', 0.66, mid + (lanes.length > 1 ? 0.24 : 0.36), Math.PI));
+  // A European town's is its parish church, a little farther off the lane: it is longer than a pavilion.
+  if (pavilion) pieces.push(european ? put('eu_church', 0.7, mid + (lanes.length > 1 ? 0.3 : 0.42), Math.PI) : put('jeongja', 0.66, mid + (lanes.length > 1 ? 0.24 : 0.36), Math.PI));
   // Fields beyond the far end of each lane.
   const fields: Field[] = [];
-  for (const lane of lanes) for (const side of [-1, 1]) fields.push({ x: -0.82, z: lane + side * 0.15, hx: 0.14, hz: 0.12, rot: (rnd() - 0.5) * 0.1, paddy: rnd() < 0.6 });
+  // Rice paddies in Korea; wheat and pasture in Europe.
+  for (const lane of lanes) for (const side of [-1, 1]) fields.push({ x: -0.82, z: lane + side * 0.15, hx: 0.14, hz: 0.12, rot: (rnd() - 0.5) * 0.1, paddy: !european && rnd() < 0.6 });
   const roads = lanes.map((z) => [{ x: -0.62, z }, { x: 0.8, z }]);
   if (lanes.length > 1) roads.push([{ x: 0.58, z: lanes[0]! }, { x: 0.58, z: lanes[1]! }]);
   let radius = 0;
@@ -283,11 +321,11 @@ export function townPlan(houses: number, tiled: number, seed: number, japanese =
 
 /** The works a region can build and the kind each is drawn as for a navy. */
 const WORKS: Partial<Record<BuildingKind, Record<FactionId, PieceKind>>> = {
-  battery: { joseon: 'jo_battery', japan: 'wa_battery', ming: 'mg_battery' },
-  shipyard: { joseon: 'jo_yard', japan: 'wa_yard', ming: 'mg_yard' },
-  dock: { joseon: 'jo_dock', japan: 'wa_dock', ming: 'mg_dock' },
-  granary: { joseon: 'jo_granary', japan: 'wa_granary', ming: 'mg_granary' },
-  beacon: { joseon: 'jo_beacon', japan: 'wa_beacon', ming: 'mg_beacon' },
+  battery: { joseon: 'jo_battery', japan: 'wa_battery', ming: 'mg_battery', england: 'eu_battery', spain: 'eu_battery' },
+  shipyard: { joseon: 'jo_yard', japan: 'wa_yard', ming: 'mg_yard', england: 'eu_yard', spain: 'eu_yard' },
+  dock: { joseon: 'jo_dock', japan: 'wa_dock', ming: 'mg_dock', england: 'eu_dock', spain: 'eu_dock' },
+  granary: { joseon: 'jo_granary', japan: 'wa_granary', ming: 'mg_granary', england: 'eu_granary', spain: 'eu_granary' },
+  beacon: { joseon: 'jo_beacon', japan: 'wa_beacon', ming: 'mg_beacon', england: 'eu_beacon', spain: 'eu_beacon' },
 };
 /** The piece a region's work is drawn as, in the style of whoever holds the port (Korea's own while nobody does). */
 export const workKind = (work: BuildingKind, owner: FactionId | null): PieceKind | null => WORKS[work]?.[owner ?? 'joseon'] ?? null;
@@ -457,7 +495,8 @@ export function layoutSettlements(regions: RegionView[], isSea?: IsSea): Settlem
     const size = townSize(port.r.value, !!port.r.seat);
     let town: { plan: TownPlan; x: number; z: number; cost: number } | null = null;
     for (let houses = size.houses; houses >= 3 && !town; houses -= 2) {
-      const plan = townPlan(houses, Math.min(size.tiled, houses - 2), port.seed, port.r.korea === false, size.pavilion && houses === size.houses);
+      const european = EUROPEAN.has(port.r.id);
+      const plan = townPlan(houses, Math.min(size.tiled, houses - 2), port.seed, !european && port.r.korea === false, size.pavilion && houses === size.houses, european);
       const rt = plan.radius;
       const spots = camp
         ? [...spiral(camp.x, camp.z, [0.06, 0.35, 0.7, 1.1, 1.6, 2.2].map((d) => camp.r + rt + d), 20)].map((c) => ({ ...c, d: c.d - camp.r - rt }))

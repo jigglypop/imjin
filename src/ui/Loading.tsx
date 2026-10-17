@@ -38,6 +38,11 @@ const BATTLE_TIP: Record<ScenarioId, Tip> = {
   wight: TIPS.wedge!,
   calais: TIPS.lights!,
   gravelines: TIPS.line!,
+  preveza: TIPS.repel!,
+  djerba: TIPS.standoff!,
+  'lepanto-north': TIPS.ram!,
+  'lepanto-centre': TIPS.ram!,
+  'lepanto-south': TIPS.wedge!,
 };
 const GENERAL_TIPS: Tip[] = ['skip', 'speed', 'broadside', 'ammo', 'card', 'hold'].map((id) => TIPS[id]!);
 const TIP_MS = 7000;

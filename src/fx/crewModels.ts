@@ -21,6 +21,7 @@ import { abs, attribute, cross, float, floor, Fn, If, int, ivec2, max, min, mix,
 export const CREW_KEYS = [
   'joseon_soldier', 'joseon_marine', 'joseon_officer', 'japan_ashigaru', 'japan_samurai', 'japan_officer', 'ming_soldier', 'ming_officer', 'rower',
   'england_shot', 'england_soldier', 'england_officer', 'england_sailor', 'spain_shot', 'spain_soldier', 'spain_officer', 'spain_sailor',
+  'holyleague_shot', 'holyleague_soldier', 'holyleague_officer', 'holyleague_oarsman', 'ottoman_archer', 'ottoman_janissary', 'ottoman_officer', 'ottoman_oarsman',
 ] as const;
 export type CrewKey = (typeof CREW_KEYS)[number];
 

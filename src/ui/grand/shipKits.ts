@@ -21,7 +21,7 @@ function paint(hex: string): Paint {
 }
 
 /** The navy's colour, the same as the camps' banners and owner rings. */
-const BANNER: Record<FactionId, string> = { joseon: '#3f8cff', japan: '#e8452c', ming: '#f0b72a' };
+const BANNER: Record<FactionId, string> = { joseon: '#3f8cff', japan: '#e8452c', ming: '#f0b72a', england: '#5fae78', spain: '#d8574a' };
 
 const BOTTOM = 4;
 
@@ -123,10 +123,60 @@ function ming(b: MeshBuilder) {
   streamer(b, paint(BANNER.ming), 2, 20.6, 4.6);
 }
 
+/**
+ * A race-built English galleon: a long low hull with a short quarterdeck aft and hardly any forecastle, painted in the
+ * Tudor green and white chequers along the waist, three masts of square sails and a lateen on the mizzen.
+ */
+function england(b: MeshBuilder) {
+  const L = 34;
+  hull(b, paint('#3d2e22'), paint('#7a5f42'), { length: L, beam: 8.4, depth: 3.6, draft: 1.3, sheer: 1.2 });
+  box(b, paint('#2f6a46'), [-4.0, 2.0, -12], [4.0, 2.7, 10], { skip: BOTTOM });
+  box(b, paint('#e8e2d2'), [-4.05, 2.7, -12], [4.05, 3.1, 10], { skip: BOTTOM });
+  box(b, paint('#4a3526'), [-3.6, 2.3, -16], [3.6, 5.0, -9.5], { skip: BOTTOM });
+  box(b, paint('#4a3526'), [-2.6, 2.6, 10.5], [2.6, 4.0, 14], { skip: BOTTOM });
+  const wood = paint('#4f3b29'), cloth_ = paint('#efe9d8');
+  mast(b, wood, 7.5, 2.3, 19, 0.3);
+  mast(b, wood, 0, 2.3, 23, 0.34);
+  mast(b, wood, -9, 4.8, 14, 0.24);
+  sail(b, cloth_, 7.5, 18.5, 11, 7.5, 0.45);
+  sail(b, cloth_, 7.5, 10.4, 12, 6.5, 0.45);
+  sail(b, cloth_, 0, 22.5, 13, 8.5, 0.45);
+  sail(b, cloth_, 0, 13.4, 14, 7.5, 0.45);
+  sail(b, cloth_, -9, 17.5, 7, 8, 0.2);
+  streamer(b, paint(BANNER.england), 0, 25.2, 6);
+}
+
+/**
+ * A Spanish galleon of the Armada: a deep hull with towering castles fore and aft painted in red and ochre, four masts,
+ * the square sails marked with the red cross of Burgundy.
+ */
+function spain(b: MeshBuilder) {
+  const L = 34;
+  hull(b, paint('#4a3423'), paint('#80654a'), { length: L, beam: 9.6, depth: 4.0, draft: 1.5, sheer: 1.6 });
+  box(b, paint('#8c3326'), [-4.5, 2.4, -16], [4.5, 7.6, -8.5], { skip: BOTTOM });
+  box(b, paint('#c79a3e'), [-4.6, 6.9, -16.1], [4.6, 7.5, -8.4], { skip: BOTTOM });
+  box(b, paint('#8c3326'), [-3.8, 2.6, 9], [3.8, 6.2, 14.5], { skip: BOTTOM });
+  box(b, paint('#c79a3e'), [-3.9, 5.6, 8.9], [3.9, 6.1, 14.6], { skip: BOTTOM });
+  const wood = paint('#4f3b29'), cloth_ = paint('#e9dfc8'), cross = paint('#b8322a');
+  mast(b, wood, 8, 6.1, 15, 0.3);
+  mast(b, wood, 0.5, 2.6, 22, 0.36);
+  mast(b, wood, -7.5, 7.5, 12, 0.24);
+  mast(b, wood, -12.5, 7.5, 10, 0.2);
+  sail(b, cloth_, 8, 19.5, 11, 8, 0.45);
+  sail(b, cloth_, 0.5, 23.2, 13, 9, 0.45);
+  sail(b, cross, 0.5, 18.4, 2.2, 2.2, 0.45);
+  sail(b, cloth_, 0.5, 14, 14, 7.5, 0.45);
+  sail(b, cloth_, -7.5, 18, 6.5, 7, 0.2);
+  sail(b, cloth_, -12.5, 16.5, 5, 6, 0.2);
+  streamer(b, paint(BANNER.spain), 0.5, 25.6, 6);
+}
+
 const BUILD: Record<FactionId, { length: number; build: (b: MeshBuilder) => void }> = {
   joseon: { length: 30, build: joseon },
   japan: { length: 28, build: japan },
   ming: { length: 26, build: ming },
+  england: { length: 34, build: england },
+  spain: { length: 34, build: spain },
 };
 
 /**

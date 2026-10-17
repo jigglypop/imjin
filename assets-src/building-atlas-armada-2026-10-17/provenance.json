@@ -1,0 +1,28 @@
+{
+  "what": "The Armada campaign map's European building atlas (Tudor and Habsburg coastal forts, half-timbered towns, flags of England and Spain) and the theatre's relief (Britain, Ireland, the Channel and the Low Countries).",
+  "atlas": {
+    "tool": "scripts/ship-textures.mjs all --set=buildings --faction=england (generate + compose)",
+    "endpoint": "images/generations",
+    "model": "gpt-image-2",
+    "quality": "high",
+    "size": "1024x1024",
+    "generatedAt": "2026-10-17",
+    "prompts": "src/ui/grand/buildingAtlas.json factions.england, each prompt followed by its style line",
+    "images": 20,
+    "estimatedCostUsd": 3.4,
+    "costNote": "Estimate (~0.17 USD per high-quality 1024x1024 image); 19 cells and flags, one (door) generated again after a network failure. The script does not log usage.",
+    "raw": "assets-src/textures-buildings/england/*_1.png, contact sheet assets-src/textures-buildings/england_atlas_preview.jpg",
+    "published": {
+      "public/textures/buildings/england_albedo.webp": "20e8d20586240788d3c8a536d9de5d76f40436bccc5d03790e0f4d6cb45ba303",
+      "public/textures/buildings/england_normal.webp": "f4fff5f47af6ba5057805d10c2f254b73a9844f2508149dea549850fd1b2d7dd"
+    }
+  },
+  "relief": {
+    "tool": "scripts/fetch-dem.mjs --region=britain (Terrarium elevation tiles, zoom 8, AWS open data: Mapzen / USGS / NOAA and others), then scripts/build-grand-terrain.mjs --theatre=armada",
+    "costUsd": 0,
+    "published": {
+      "public/ui/britain_dem.webp": "7208e29d219c01c2e00405e6af49baad635748d90147813a2f8487c5dd1be209",
+      "public/ui/grand_terrain_armada.bin": "7f9e5ad36a6ceaee98bed461fd530dfe32468220b4d17b029a1c10145719feaf"
+    }
+  }
+}

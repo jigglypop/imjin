@@ -1,5 +1,5 @@
-import demMeta from '../../../select/demMeta.json';
-import { V_SCALE } from '../../../select/demFrame';
+import { demMeta, MAP } from '../mapTheatre';
+import { V_SCALE } from '../mapTheatre';
 import { DEM_RECT, MESH_SCALE } from '../mapMath';
 import { MAP_ASPECT } from '../projection';
 import type { FactionId } from '../types';
@@ -58,6 +58,7 @@ export function rawMetres(heights: Float32Array, u: number, v: number) {
 
 /** Whether the campaign map draws the hero camps: on in the browser, `?hero=0` shows the old kits for comparison. */
 export function heroEnabled() {
-  if (typeof location === 'undefined') return false;
+  // The hero camps are 1592's own (Yeosu, Busan, Gogeumdo); another theatre's map draws its camps from the kits.
+  if (typeof location === 'undefined' || MAP.id !== 'imjin') return false;
   return new URLSearchParams(location.search).get('hero') !== '0';
 }

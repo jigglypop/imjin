@@ -48,12 +48,17 @@ const CAMPS = [
   { id: 'japan', faction: 'japan', commander: '일본 수군 (공용)', regions: [], site: 'a typical captured Korean coastal port held by Japanese troops, a bay with hills behind' },
   { id: 'chenlin', faction: 'ming', commander: '진린', regions: ['liaodong'], site: 'a northern Chinese river-mouth garrison on a flat coast, a brick-faced earthen wall and a long canal dock' },
   { id: 'deng', faction: 'ming', commander: '등자룡', regions: ['shandong'], site: 'a large Chinese naval harbour on a flat coast with a walled yamen compound, brick towers and a broad quay' },
+  // The Armada theatre: one shared camp for each navy (src/ui/grand/campArt.ts).
+  { id: 'england', faction: 'england', commander: '잉글랜드 수군 (공용)', regions: [], site: 'an English Channel harbour in a green Devon combe, chalk-and-slate cliffs, a small town of half-timbered houses and a stone church tower behind the quay' },
+  { id: 'spain', faction: 'spain', commander: '에스파냐 수군 (공용)', regions: [], site: 'a Flemish or Galician harbour on a low sandy coast with dunes, a walled town with red-tiled roofs and a church spire behind the quay' },
 ];
 
 const FACTION = {
   joseon: 'Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions).',
   japan: 'Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes.',
   ming: 'Ming China: brick walls, red and yellow lacquered gate towers with yellow-glazed tiled roofs, plain red and yellow cloth banners without any emblem, large Chinese junk warships with batten sails.',
+  england: 'Tudor England: grey dressed-stone curtain walls and round artillery towers, half-timbered houses with red clay tile and slate roofs, thatched cottages, the red St George cross on white flags and green-and-white Tudor pennants, low sleek race-built English galleons with three masts and square sails.',
+  spain: 'Habsburg Spain and Flanders: pale stone bastions and walls, whitewashed and red-brick houses with red tiled roofs, the red ragged cross of Burgundy on white flags and crimson banners, tall Spanish galleons with high castles fore and aft and four masts.',
 };
 
 const STYLE =

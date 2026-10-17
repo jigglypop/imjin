@@ -1,6 +1,7 @@
 import { MeshBuilder, compose, cloth, cylinder, polygon, rectSection, rotX, rotY, spike, sweep, xlate, type MeshData, type Paint, type V3 } from '../../ships/build/parts';
 import { bakeGrime } from '../../ships/build/bake';
 import { bannerPaint, buildingPaints } from './buildingAtlas';
+import { EUROPE_KITS } from './campEurope';
 import { METRES_PER_RADIUS, navyOf, WALL_KINDS, WALL_METRES, WATER_KINDS, type PieceKind } from './campPieces';
 import { batter, block, column, face, NY, PY, picture, pictureX, post, rect, roof, surface, thatch, walls, type Kit, type RoofLook } from './kitParts';
 
@@ -106,7 +107,7 @@ export function nobori(k: Kit, pole: Paint, cloth_: Paint, x: number, s = 1) {
  * The standard of the navy that holds a place: a tall pole on a stone foot flying a great flag of the navy's colour, a
  * size larger than a camp's own banners, so whose the place is reads from across a bay.
  */
-function standard(k: Kit, flag: Paint, foot: Paint) {
+export function standard(k: Kit, flag: Paint, foot: Paint) {
   const timber = k.P('timber');
   batter(k, foot, foot, -1.9, 0, 0.65, 0.65, 0.5, 0.5, -1.4, 0.5);
   column(k, timber, -1.9, 0, 0.19, 0.13, 0.3, 16, k.near ? 6 : 4, true);
@@ -157,7 +158,7 @@ export function hullFrame(k: Kit, timber: Paint, plank: Paint, len: number, beam
  * A shipyard: a timber slipway running from the shore (-z) down into the water (+z) with a hull on the stocks, a shed
  * for the shipwrights on the shore beside it, timber stacked by the shed.
  */
-function yard(k: Kit, look: RoofLook, shed: Paint, hull: { beam: number; depth: number; flat?: number; square?: number }) {
+export function yard(k: Kit, look: RoofLook, shed: Paint, hull: { beam: number; depth: number; flat?: number; square?: number }) {
   const planks = k.P('planks'), timber = k.P('timber');
   // The slipway: its deck sinks from 0.7 m on the shore to under the water at its seaward end.
   const top = (z: number) => 0.7 - ((z + 10.5) / 21) * 2.2;
@@ -175,7 +176,7 @@ function yard(k: Kit, look: RoofLook, shed: Paint, hull: { beam: number; depth: 
 }
 
 /** A dock: a pier on posts out over the water from a stone landing, a boathouse on the shore end with the navy's roof. */
-function dock(k: Kit, look: RoofLook, wall: Paint, stone: Paint, door: Paint) {
+export function dock(k: Kit, look: RoofLook, wall: Paint, stone: Paint, door: Paint) {
   const planks = k.P('planks'), timber = k.P('timber');
   // A stone landing on the shore, the pier running on from it.
   batter(k, stone, stone, 0, -1.5, 2.6, 2.6, 2.4, 2.4, -2.4, 1.15);
@@ -389,7 +390,7 @@ function pier(k: Kit) {
 // ---------- the works ----------
 
 /** A gun platform: a stone-faced earth terrace, a parapet with three embrasures facing the sea (+z), three cannons. */
-function battery(k: Kit, face_: Paint, top: Paint, parapet: Paint, carriage: Paint, bronze: Paint, merlonCap: Paint | null) {
+export function battery(k: Kit, face_: Paint, top: Paint, parapet: Paint, carriage: Paint, bronze: Paint, merlonCap: Paint | null) {
   batter(k, face_, top, 0, 0, 6.9, 4.5, 6.5, 4.1, -1.8, 1.6);
   const xs = [-2.8, 0, 2.8], g = 0.62;
   if (k.near) {
@@ -736,7 +737,7 @@ function waHouse(k: Kit) {
 
 // ---------- the catalogue ----------
 
-const KITS: Record<PieceKind, (k: Kit) => void> = {
+const KITS = {
   palisade, stone: stoneWall, jo_gate: joGate, fortgate: fortGate, hall, giwa, choga, magazine, jo_tower: joTower, jo_banner: joBanner,
   wa_fence: waFence, wa_wall: waWall, wa_gate: waGate, wa_tower: waTower,
   wa_keep3: (k) => waKeep(k, [[10.4, 8.4, 4.6], [8.0, 6.4, 4.0], [5.8, 4.6, 3.6]]),
@@ -781,7 +782,8 @@ const KITS: Record<PieceKind, (k: Kit) => void> = {
     if (k.near) at(k, 1.6, 7.0, -1.6, 0, () => banner(k, k.P('timber'), bannerPaint('ming', 'red'), 0, 3.2, 1.0, 1.0));
   },
   doldam, tree, jeongja, wa_house: waHouse,
-};
+  ...EUROPE_KITS,
+} as Record<PieceKind, (k: Kit) => void>;
 
 /** Every kind a settlement is built from. */
 export const KIT_KINDS = Object.keys(KITS) as PieceKind[];

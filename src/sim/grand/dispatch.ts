@@ -1,4 +1,5 @@
-import { REGIONS, REGION_ORDER } from './regions';
+import { REGIONS } from './regions';
+import { orderOf } from './theatre';
 import { findRoute, fleetById, mintId, passable } from './world';
 import type { Fleet, Grand, GrandFaction, RegionId, Result } from './types';
 import { fail, ok } from './types';
@@ -48,7 +49,7 @@ function planDispatch(g: Grand, fleetIds: readonly string[], portIds: readonly R
 
 /** Every selected fleet and port must be able to reach the destination. */
 export function dispatchTargets(g: Grand, fleets: readonly string[], ports: readonly RegionId[], faction: GrandFaction): RegionId[] {
-  return REGION_ORDER.filter((id) => planDispatch(g, fleets, ports, id, faction).ok);
+  return orderOf(g).filter((id) => planDispatch(g, fleets, ports, id, faction).ok);
 }
 
 export function orderDispatch(g: Grand, fleets: readonly string[], ports: readonly RegionId[], dest: RegionId, faction: GrandFaction): Result {

@@ -20,6 +20,7 @@ import {
 } from './economy';
 import { buildRequirement, orderAssault, orderBuild, commanderSuspended, orderCommander, orderMerge, orderMove, orderRecruit, orderRefit, orderStance, recruitProblem, refitCost } from './orders';
 import { REGIONS } from './regions';
+import { factionsOf } from './theatre';
 import { forkRng, next, range, type Rng } from './rng';
 import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId } from './types';
 import { BUILDING_KINDS, MAX_LEVEL } from './types';
@@ -106,9 +107,37 @@ export const AI: Record<GrandFaction, Personality> = {
     minPatience: 0.75,
     restBelow: 0.7,
   },
+  // The Armada theatre. England: fast hulls and long guns, guards its coast and strikes at the Flemish ports.
+  england: {
+    attackRatio: 1.15,
+    worksShare: 0.4,
+    reserve: 80,
+    guard: 0.9,
+    doctrine: { racegalleon: 0.62, pinnace: 0.3, fireship: 0.08 },
+    works: { camp: 1, shipyard: 1.2, battery: 1.3, dock: 1.1, granary: 1.1, beacon: 0.5 },
+    wanted: { dunkirk: 1.5, calais: 1.2, corunna: 1, gravelines: 0.8 },
+    minNet: 40,
+    impatience: 0.04,
+    minPatience: 0.65,
+    restBelow: 0.65,
+  },
+  // Spain: the great fleet of galleons and hulks, bent on the Narrow Seas and the crossing to London.
+  spain: {
+    attackRatio: 1.05,
+    worksShare: 0.35,
+    reserve: 100,
+    guard: 0.8,
+    doctrine: { spgalleon: 0.62, galleass: 0.14, urca: 0.24 },
+    works: { camp: 1, shipyard: 1.3, battery: 0.8, dock: 1.1, granary: 1.2, beacon: 0.3 },
+    wanted: { london: 2, downs: 1.2, wight: 1.2, plymouth: 1, flushing: 1 },
+    minNet: 20,
+    impatience: 0.05,
+    minPatience: 0.6,
+    restBelow: 0.6,
+  },
 };
 
-const enemiesOf = (g: Grand, f: GrandFaction) => (['joseon', 'japan', 'ming'] as const).filter((o) => atWar(g, f, o));
+const enemiesOf = (g: Grand, f: GrandFaction) => factionsOf(g).filter((o) => atWar(g, f, o));
 
 /**
  * The enemy strength each region can see arrive this turn under the march rules. It is asked for again and again while a

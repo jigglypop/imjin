@@ -13,19 +13,21 @@ export type ShipKind =
   | 'atakebune' | 'sekibune' | 'kobaya' | 'daeantaek' | 'sogantaek' | 'daegwanseon' | 'byeongnyangseon'
   | 'mingship' | 'mingsmall' | 'gwangseon' | 'haechangseon' | 'hoseon'
   // The Armada chapter, 1588.
-  | 'racegalleon' | 'pinnace' | 'fireship' | 'spgalleon' | 'galleass' | 'urca';
-export type Faction = 'joseon' | 'japan' | 'ming' | 'england' | 'spain';
+  | 'racegalleon' | 'pinnace' | 'fireship' | 'spgalleon' | 'galleass' | 'urca'
+  // The Lepanto chapter, 1538-1571: the Holy League's lanterna, galleys and Venetian galleasses, the Ottoman flagship, galleys and galiots.
+  | 'reale' | 'galea' | 'vgalleass' | 'sultana' | 'kadirga' | 'kalyata';
+export type Faction = 'joseon' | 'japan' | 'ming' | 'england' | 'spain' | 'holyleague' | 'ottoman';
 /** The navies of the first chapter (임진왜란): code that walks the 1592 navies reads this list, so it keeps its three. */
 export const FACTIONS: readonly Faction[] = ['joseon', 'japan', 'ming'];
 /** Every navy of every chapter. */
-export const ALL_FACTIONS: readonly Faction[] = ['joseon', 'japan', 'ming', 'england', 'spain'];
+export const ALL_FACTIONS: readonly Faction[] = ['joseon', 'japan', 'ming', 'england', 'spain', 'holyleague', 'ottoman'];
 /**
  * The two battle slots keep their 1592 names: the first ('joseon') is a chapter's defending side, the second ('japan') the
  * invader. The Ming fleet fights on the Joseon side; England takes the first slot and the Armada the second.
  */
-export const teamOf = (faction: Faction): Team => (faction === 'japan' || faction === 'spain' ? 'japan' : 'joseon');
+export const teamOf = (faction: Faction): Team => (faction === 'japan' || faction === 'spain' || faction === 'ottoman' ? 'japan' : 'joseon');
 /** In the historical battles each faction is one commander, with these owner ids. Conquest battles number their players from 0. */
-export const OWNER_OF: Record<Faction, number> = { joseon: 0, japan: 1, ming: 2, england: 0, spain: 1 };
+export const OWNER_OF: Record<Faction, number> = { joseon: 0, japan: 1, ming: 2, england: 0, spain: 1, holyleague: 0, ottoman: 1 };
 export type Side = 0 | 1;
 
 export type GunType = 'cheonja' | 'jija' | 'hyeonja' | 'hwangja' | 'seungja' | 'ozutsu' | 'folangji' | 'hudun'

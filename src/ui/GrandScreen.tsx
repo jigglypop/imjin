@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sound } from '../audio/Sound';
 import { t, useLang } from '../i18n';
-import { abandonGrand, autoResolveGrand, besiegeGrand, chooseGrandEvent, dismissBattle, dismissReplay, dismissReport, dispatchForces, endGrandTurn, grandOrders, guideSeen, markGuideSeen, mergeArrived, mergeFleets, prepareGrandBattle, startGrand, useGrand, withdrawGrand } from '../campaign/grand';
+import { abandonGrand, autoResolveGrand, besiegeGrand, chooseGrandEvent, dismissBattle, dismissReplay, dismissReport, dispatchForces, endGrandTurn, grandOrders, guideSeen, markGuideSeen, mergeArrived, mergeFleets, prepareGrandBattle, showGrandTheatre, startGrand, useGrand, withdrawGrand } from '../campaign/grand';
+import { factionsOf } from '../sim/grand/theatre';
+import { mapTheatreId } from './grand/theatreChoice';
 import type { RegionBattle } from '../sim/grand/bridge';
 import type { BuildingKind as SimBuilding, Grand, RegionId, Result } from '../sim/grand/types';
 import type { ShipKind } from '../sim/types';
@@ -80,8 +82,10 @@ const MARCH_GUIDE_STEP: Omit<GuideStepView, 'target'> = {
  */
 export function GrandScreen({ onBattle }: { onBattle: (battle: RegionBattle) => void }) {
   const lang = useLang();
-  const options = useMemo(factionOptions, [lang]);
+  const options = useMemo(() => factionOptions(), [lang]);
   const [stage, setStage] = useState<Stage>(() => {
+    // The war of the theatre this page's map draws (the chapter in the address: /armada/campaign is the Armada's).
+    showGrandTheatre(mapTheatreId());
     const s = useGrand.getState();
     // Coming back from a battle or an auto-resolve, the player is already in the war.
     if (!s.grand) return 'pick';
@@ -125,7 +129,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const lastBattle = useGrand((s) => s.lastBattle);
   const reported = useGrand((s) => s.reported);
   const replay = useGrand((s) => s.replay);
-  const me: FactionId = g.player ?? 'joseon';
+  const me: FactionId = g.player ?? factionsOf(g)[0]!;
   const [regionId, setRegionId] = useState<string | null>(null);
   const [fleetId, setFleetId] = useState<string | null>(null);
   const [moving, setMoving] = useState(false);

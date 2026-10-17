@@ -37,6 +37,12 @@ const ROMAN: Record<ShipKind, string> = {
   spgalleon: 'Galeón',
   galleass: 'Galeaza',
   urca: 'Urca',
+  reale: 'La Real',
+  galea: 'Galea sottile',
+  vgalleass: 'Galeazza',
+  sultana: 'Sultana (baştarda)',
+  kadirga: 'Kadırga',
+  kalyata: 'Kalyata',
 };
 
 export const romanOf = (kind: ShipKind) => ROMAN[kind];

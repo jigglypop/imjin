@@ -55,6 +55,12 @@ const ROLE_NOTE: Record<ShipKind, string> = {
   spgalleon: '높은 선루와 많은 병사: 대포와 석포, 적 함선 도선',
   galleass: '노와 돛: 이물의 대포 3문, 바람 없이도 기동',
   urca: '수송선: 가까운 아군 4척의 병력·탄약을 보급합니다',
+  reale: '기함 갤리선: 병사 150명과 이물 대포, 지휘 반경',
+  galea: '갤리선: 노로 빠르게, 이물 대포 한 번 쏘고 도선',
+  vgalleass: '갈레아스: 사방으로 포를 쏘는 느린 포대선',
+  sultana: '기함 갤리선: 예니체리와 활, 이물 대포',
+  kadirga: '갤리선: 빠르고 활이 많음, 도선전',
+  kalyata: '갈리오트: 가장 빠른 소형 갤리선, 측면 우회',
 };
 
 const TRAIT = COMPETITIVE_TRAITS;

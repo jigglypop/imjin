@@ -30,6 +30,12 @@ export const SHIP_PREFIX: Record<ShipKind, string> = {
   spgalleon: '에스파냐 갤리온',
   galleass: '갈레아스',
   urca: '우르카',
+  reale: '라 레알',
+  galea: '갤리선',
+  vgalleass: '베네치아 갈레아스',
+  sultana: '술타나',
+  kadirga: '카드르가',
+  kalyata: '칼리야타',
 };
 
 export function spawnShip(g: Grand, kind: ShipKind, hull = 1, crew = 1): ShipUnit {

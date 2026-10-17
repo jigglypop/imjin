@@ -4,8 +4,8 @@
 // country they show come from this, so the hills read smooth and round. Pure arithmetic over arrays (no three.js, no
 // DOM), so it runs in a worker (landBake.worker.ts) or, without one, on the page.
 
-import demMeta from '../../select/demMeta.json';
-import { V_SCALE } from '../../select/demFrame';
+import { demMeta } from './mapTheatre';
+import { V_SCALE } from './mapTheatre';
 import { SHADE_SLOPE, SUN_DIRECTION } from './groundPalette';
 import { DEM_RECT, MESH_SCALE } from './mapMath';
 import { MAP_ASPECT } from './projection';

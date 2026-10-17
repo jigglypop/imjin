@@ -7,6 +7,8 @@ export const FACTION_INFO: Record<FactionId, { name: string; navy: string; color
   joseon: { name: '조선', navy: '조선 수군', color: 'var(--joseon)', soft: 'var(--joseon-soft)', crest: 'joseon' },
   japan: { name: '일본', navy: '일본 수군', color: 'var(--japan)', soft: 'var(--japan-soft)', crest: 'japan' },
   ming: { name: '명', navy: '명 수군', color: 'var(--ming)', soft: 'var(--ming-soft)', crest: 'ming' },
+  england: { name: '잉글랜드', navy: '잉글랜드 수군', color: 'var(--england)', soft: 'var(--england-soft)', crest: 'england' },
+  spain: { name: '에스파냐', navy: '에스파냐 수군', color: 'var(--spain)', soft: 'var(--spain-soft)', crest: 'spain' },
 };
 
 export const ownerName = (o: Owner) => t(o ? FACTION_INFO[o].name : '중립');
@@ -84,6 +86,12 @@ export const SHIP_NAME: Record<ShipClass, string> = {
   spgalleon: '에스파냐 갤리온',
   galleass: '갈레아스',
   urca: '우르카',
+  reale: '라 레알',
+  galea: '갤리선',
+  vgalleass: '베네치아 갈레아스',
+  sultana: '술타나',
+  kadirga: '카드르가',
+  kalyata: '칼리야타',
 };
 
 export const shipName = (kind: ShipClass) => t(SHIP_NAME[kind]);

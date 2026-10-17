@@ -13,6 +13,8 @@ const RANKED_DOCTRINE: Record<Faction, Partial<Record<ShipKind, number>>> = {
   ming: { mingship: 0.6, mingsmall: 0.4 },
   england: { racegalleon: 0.7, pinnace: 0.3 },
   spain: { spgalleon: 0.55, galleass: 0.3, urca: 0.15 },
+  holyleague: { galea: 0.8, vgalleass: 0.2 },
+  ottoman: { kadirga: 0.7, kalyata: 0.3 },
 };
 /**
  * The same under the expanded rules, where the size tiers and support craft are on offer too. They take small shares,
@@ -24,6 +26,8 @@ const DOCTRINE: Record<Faction, Partial<Record<ShipKind, number>>> = {
   ming: { gwangseon: 0.08, mingship: 0.48, haechangseon: 0.1, mingsmall: 0.28, hoseon: 0.06 },
   england: { racegalleon: 0.64, pinnace: 0.28, fireship: 0.08 },
   spain: { spgalleon: 0.55, galleass: 0.3, urca: 0.15 },
+  holyleague: { reale: 0.08, galea: 0.74, vgalleass: 0.18 },
+  ottoman: { sultana: 0.08, kadirga: 0.62, kalyata: 0.3 },
 };
 const doctrineOf = (c: Conquest, faction: Faction) => (c.options.expanded ? DOCTRINE : RANKED_DOCTRINE)[faction];
 
@@ -51,6 +55,9 @@ const DOCTRINE_OF_FIGHT: Record<Faction, { engage: number; prey: number; reach: 
   // The English stood off and fought with their guns; the Armada sought to grapple and board.
   england: { engage: 650, prey: 0.9, reach: 1800, retreat: 2.2 },
   spain: { engage: 900, prey: 1.25, reach: 2600, retreat: 3.2 },
+  // Galleys closed bow-on to fire their one volley and board (Guilmartin); the Ottomans sought to envelop with their numbers.
+  holyleague: { engage: 700, prey: 1.1, reach: 2200, retreat: 2.6 },
+  ottoman: { engage: 800, prey: 1.2, reach: 2600, retreat: 2.8 },
 };
 /** A fleet's fighting weight; under the battle depth rules a running crew hardly counts, for either side. */
 const power = (list: Ship[]) => list.reduce((a, s) => a + combatValue(s.spec.kind) * (0.35 + 0.65 * (s.hull / s.spec.hull)) * (0.4 + 0.6 * (s.crew / s.spec.crew)) * NERVE_WEIGHT[s.moraleState], 0);

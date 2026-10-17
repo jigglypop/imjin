@@ -44,7 +44,7 @@ export const grandMap = (rb: RegionBattle) => {
 /** What the engine stages a region battle from: the real terrain of the region, its tide, sky and loading picture. */
 export function grandInfo(rb: RegionBattle): BattleInfo {
   const m = grandMap(rb);
-  const date = dateLabel(rb.turn);
+  const date = dateLabel(rb.turn, rb);
   return {
     mode: 'conquest',
     id: rb.mapId,
@@ -69,7 +69,7 @@ export function grandInfo(rb: RegionBattle): BattleInfo {
 /** Bearing from the attacker's anchorage to the defender's port in the terrain's own coordinates: the engine turns the map to the light by it. */
 export const grandAxis = (rb: RegionBattle) => grandMap(rb).axis;
 
-const DEFAULT_PORTRAIT = { joseon: 'portrait_admiral', japan: 'portrait_japan', ming: 'portrait_deng' } as const;
+const DEFAULT_PORTRAIT: Record<GrandFaction, string> = { joseon: 'portrait_admiral', japan: 'portrait_japan', ming: 'portrait_deng', england: 'portrait_howard', spain: 'portrait_medina' };
 const HP_FLOOR = 0.25;
 
 /** The works the defender's port stands with, in the order they take the plots on the shore: yard, then guns, then the rest. */

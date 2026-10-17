@@ -7,7 +7,7 @@ import type { Faction, ShipKind } from '../sim/types';
  * Chapters not yet built are listed with `ready: false` so the menu can show what is coming.
  */
 export type ChapterDef = {
-  id: ChapterId | 'lepanto' | 'trafalgar';
+  id: ChapterId | 'trafalgar';
   title: string;
   /** The poster's native-script line above the title. */
   native: string;
@@ -63,11 +63,27 @@ export const CHAPTERS: ChapterDef[] = [
     campaign: '해협을 따라 장수를 키우는 원정',
     history: '플리머스에서 그라블린까지 다섯 해전',
   },
-  { id: 'lepanto', title: '레판토', native: 'LEPANTO', tagline: '', years: '1571', year: 1571, ready: false, navies: [[], []], hero: { kind: 'galleass', own: [], foe: [] }, billing: [], campaign: '', history: '' },
+  {
+    id: 'lepanto',
+    title: '레판토',
+    native: 'LEPANTO',
+    tagline: '노와 칼의 마지막 바다',
+    years: '1538 — 1571',
+    year: 1571,
+    ready: true,
+    navies: [['holyleague'], ['ottoman']],
+    hero: { kind: 'reale', own: ['galea', 'vgalleass'], foe: ['sultana', 'kadirga'] },
+    billing: [
+      { side: '신성동맹', names: ['돈 후안 데 아우스트리아', '아고스티노 바르바리고', '세바스티아노 베니에르', '조반니 안드레아 도리아'] },
+      { side: '오스만', names: ['뮈에진자데 알리 파샤', '울루치 알리', '메흐메드 시로코'] },
+    ],
+    campaign: '지중해를 두고 장수를 키우는 세력 싸움',
+    history: '프레베자에서 레판토까지 다섯 해전',
+  },
   { id: 'trafalgar', title: '트라팔가르', native: 'TRAFALGAR', tagline: '', years: '1805', year: 1805, ready: false, navies: [[], []], hero: { kind: 'racegalleon', own: [], foe: [] }, billing: [], campaign: '', history: '' },
 ];
 
 export const chapterDef = (id: ChapterId) => CHAPTERS.find((c) => c.id === id)!;
 
 /** The chapter a navy belongs to. */
-export const chapterOfFaction = (f: Faction): ChapterId => (f === 'england' || f === 'spain' ? 'armada' : 'imjin');
+export const chapterOfFaction = (f: Faction): ChapterId => (f === 'england' || f === 'spain' ? 'armada' : f === 'holyleague' || f === 'ottoman' ? 'lepanto' : 'imjin');

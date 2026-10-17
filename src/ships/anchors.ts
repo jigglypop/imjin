@@ -5,6 +5,7 @@
  */
 import { SHIP_SPECS } from '../sim/catalog';
 import type { GunType, ShipKind } from '../sim/types';
+import { GALLEY_PLANS, isGalleyKind } from './lepantoPlans';
 import { FIRESHIP_PLAN, GALLEASS_PLAN, PINNACE_PLAN, RACE_PLANS, SPAIN_PLANS, URCA_PLAN, type GalleassPlan, type SailPlan } from './armadaPlans';
 
 export type V3 = [number, number, number];
@@ -930,11 +931,17 @@ export function galleassCastleZ(plan: GalleassPlan, x: number) {
   return Math.max(1.2, full * Math.sqrt(Math.max(0, 1 - u * u * 0.86)));
 }
 
-function galleassAnchors(plan: GalleassPlan): ShipAnchors {
+/** The oared plan of a galleass or galley kind (the Venetian galleass shares the Neapolitan one's lines), or undefined. */
+export function oaredPlanOf(kind: string): GalleassPlan | undefined {
+  if (kind === 'galleass' || kind === 'vgalleass') return GALLEASS_PLAN;
+  return isGalleyKind(kind) ? GALLEY_PLANS[kind] : undefined;
+}
+
+function galleassAnchors(plan: GalleassPlan, kind: ShipKind = 'galleass'): ShipAnchors {
   const h = plan.hull;
   const L = h.length;
   const deck = h.deck;
-  const slots = gunSlots('galleass');
+  const slots = gunSlots(kind);
   const o = plan.outrigger;
   const gunPorts: GunPort[] = [];
   for (const side of [0, 1] as const) {
@@ -1008,7 +1015,8 @@ function scaledAnchors(a: ShipAnchors, scale: number): ShipAnchors {
 /** The kinds with a procedural model of their own. */
 export type ModelKind =
   | 'panokseon' | 'geobukseon' | 'hyeopseon' | 'atakebune' | 'sekibune' | 'kobaya' | 'mingship' | 'mingsmall'
-  | 'racegalleon' | 'pinnace' | 'fireship' | 'spgalleon' | 'galleass' | 'urca';
+  | 'racegalleon' | 'pinnace' | 'fireship' | 'spgalleon' | 'galleass' | 'urca'
+  | 'reale' | 'galea' | 'vgalleass' | 'sultana' | 'kadirga' | 'kalyata';
 
 /**
  * Kinds drawn, until they get silhouettes of their own, with the model of their nearest relative of the same navy,
@@ -1026,6 +1034,7 @@ export const MODEL_ALIAS: Record<Exclude<ShipKind, ModelKind>, ModelKind> = {
   haechangseon: 'mingship',
   hoseon: 'mingsmall',
 };
+
 
 /** The kind whose model draws this kind. */
 export const modelKind = (kind: ShipKind): ModelKind => (MODEL_ALIAS as Partial<Record<ShipKind, ModelKind>>)[kind] ?? (kind as ModelKind);
@@ -1100,7 +1109,7 @@ export function buildAnchorsFor(key: string): ShipAnchors | undefined {
   else if (kind === 'kobaya') a = kobayaAnchors(KOBAYA_PLAN);
   else if (kind === 'mingship') a = mingAnchors(MING_PLAN);
   else if (kind === 'mingsmall') a = mingSmallAnchors(MINGSMALL_PLAN);
-  else if (kind === 'galleass') a = galleassAnchors(GALLEASS_PLAN);
+  else if (oaredPlanOf(kind)) a = galleassAnchors(oaredPlanOf(kind)!, kind as ShipKind);
   else {
     const plan = sailPlanOf(kind as ShipKind, variant);
     if (plan) a = sailAnchors(kind as ShipKind, plan);
@@ -1109,7 +1118,7 @@ export function buildAnchorsFor(key: string): ShipAnchors | undefined {
   return a;
 }
 
-export const PROCEDURAL_KINDS: ModelKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall', 'racegalleon', 'pinnace', 'fireship', 'spgalleon', 'galleass', 'urca'];
+export const PROCEDURAL_KINDS: ModelKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall', 'racegalleon', 'pinnace', 'fireship', 'spgalleon', 'galleass', 'urca', 'reale', 'galea', 'vgalleass', 'sultana', 'kadirga', 'kalyata'];
 
 /** The construction plan of a square-rigged ship model of 1588, or undefined for the others. */
 export function sailPlanOf(kind: ShipKind, variant: number): SailPlan | undefined {

@@ -37,11 +37,13 @@ export const NAVIES: { faction: Faction; kinds: ShipKind[] }[] = [
   { faction: 'ming', kinds: ['gwangseon', 'mingship', 'haechangseon', 'mingsmall', 'hoseon'] },
   { faction: 'england', kinds: ['racegalleon', 'pinnace', 'fireship'] },
   { faction: 'spain', kinds: ['spgalleon', 'galleass', 'urca'] },
+  { faction: 'holyleague', kinds: ['reale', 'vgalleass', 'galea'] },
+  { faction: 'ottoman', kinds: ['sultana', 'kadirga', 'kalyata'] },
 ];
 
 /** The seal of each navy: its name in hanja (the menu's serif cut carries these characters). */
 /** The red seal's characters for the East Asian navies; England and Spain carry their round emblem instead (codex.css). */
-export const NAVY_SEAL: Record<Faction, string> = { joseon: '朝鮮', japan: '日本', ming: '明', england: '', spain: '' };
+export const NAVY_SEAL: Record<Faction, string> = { joseon: '朝鮮', japan: '日本', ming: '明', england: '', spain: '', holyleague: '', ottoman: '' };
 
 const KIM_1982 = '김재근, 『조선왕조군선연구』, 일조각, 1982';
 const ISHII_1995 = '이시이 겐지(石井謙治), 『화선(和船) II』, 호세이대학출판국, 1995';
@@ -52,6 +54,11 @@ const MART = 'Colin Martin & Geoffrey Parker, The Spanish Armada, 1988 (개정 1
 const KON = 'Angus Konstam, The Armada Campaign 1588, Osprey, 2001';
 const LAV = 'Peter Kirsch, The Galleon, 1990';
 const JANGCHO = '이순신, 『임진장초(壬辰狀草)』';
+const CAPPONI = 'Niccolò Capponi, Victory of the West, 2006';
+const GUIL = 'John F. Guilmartin, Gunpowder and Galleys, 1974 (개정 2003)';
+const KON_LEP = 'Angus Konstam, Lepanto 1571, Osprey, 2003';
+const BOSTAN = 'İdris Bostan, Kadırga ve Kalyata (오스만 갤리선 연구), 2005';
+const MMB = '바르셀로나 해양박물관(Museu Marítim) 라 레알 복원선, 1971';
 
 export const ENTRIES: Record<ShipKind, CodexEntry> = {
   panokseon: {
@@ -286,7 +293,61 @@ export const ENTRIES: Record<ShipKind, CodexEntry> = {
     facts: ['무적함대 우르카 23척 (Martin & Parker)'],
     sources: [MART],
     grade: 'B',
+  },  reale: {
+    native: 'La Real',
+    era: '1568–1571년',
+    role: '신성동맹 함대 총사령관 돈 후안의 기함',
+    story: '바르셀로나 조선소에서 지은 거대한 기함 갤리선(란테르나)입니다. 한쪽에 노 30개, 노 하나에 노꾼 너덧 명이 붙었고, 고물은 금박 조각과 그림으로 화려하게 꾸몄습니다. 레판토에서 알리 파샤의 술타나호와 이물을 맞대고 싸워 이를 함락했습니다.',
+    facts: ['길이 약 60m, 한쪽 노 30개 (바르셀로나 복원선)', '레판토에서 병사 약 400명 탑승 (Capponi)'],
+    sources: [CAPPONI, MMB, KON_LEP],
+    grade: 'A',
   },
+  galea: {
+    native: 'Galea sottile',
+    era: '16세기',
+    role: '지중해 해전의 주력 갤리선',
+    story: '길고 낮은 노선으로, 노 하나에 노꾼 셋이 앉는 알라 센실레 방식이었습니다. 큰 대포 한 문과 작은 포 몇 문을 이물에만 실어, 적에게 이물을 겨누고 한 번 쏜 뒤 부딪쳐 올라타 싸웠습니다. 레판토의 동맹 함대 갤리선 200여 척 가운데 절반 이상이 베네치아의 배였습니다.',
+    facts: ['길이 약 41–42m, 한쪽 노 24–26개 (Guilmartin)', '이물 중앙포 1문(30–50파운드)과 작은 포 2–4문 (Guilmartin)'],
+    sources: [GUIL, CAPPONI],
+    grade: 'A',
+  },
+  vgalleass: {
+    native: 'Galeazza',
+    era: '1571년',
+    role: '베네치아의 포대선',
+    story: '베네치아의 큰 상선 갤리선을 고쳐 사방으로 포를 쏘게 만든 배입니다. 프란체스코 두오도가 이끈 6척이 레판토에서 동맹 함대의 앞에 끌려 나가 섰고, 그 포격이 오스만 함대의 대열을 흩뜨렸습니다. 느려서 싸움터까지 다른 갤리선이 끌어 주어야 했습니다.',
+    facts: ['레판토의 베네치아 갈레아스 6척 (Capponi)', '갤리선보다 훨씬 많은 포를 실음 (Guilmartin)'],
+    sources: [CAPPONI, GUIL],
+    grade: 'B',
+  },
+  sultana: {
+    native: 'Sultana',
+    era: '1571년',
+    role: '오스만 함대 대제독 알리 파샤의 기함',
+    story: '오스만 함대의 대제독(카푸단 파샤) 뮈에진자데 알리 파샤의 기함 갤리선(바슈타르다)입니다. 레판토에서 라 레알호와 맞붙었고, 예니체리 수백 명이 갑판에서 두 번이나 동맹군을 밀어냈지만 세 번째 돌격에 함락되었습니다. 이 배의 초록 깃발은 전리품이 되었습니다.',
+    facts: ['레판토에서 나포, 알리 파샤 전사 (Konstam)', '예니체리 약 200명 탑승 (Capponi)'],
+    sources: [CAPPONI, KON_LEP],
+    grade: 'B',
+  },
+  kadirga: {
+    native: 'Kadırga',
+    era: '16세기',
+    role: '오스만 함대의 주력 갤리선',
+    story: '오스만 해군의 표준 갤리선으로, 한쪽에 노 25개 안팎이었습니다. 베네치아 갤리선보다 가볍고 빨랐으며 이물 포는 더 적었습니다. 병사들은 화승총보다 활을 많이 썼고, 빠르게 다가가 적을 감싸고 올라타 싸웠습니다.',
+    facts: ['한쪽 노 약 25개 (Bostan)', '레판토의 오스만 갤리선 약 210척 (Capponi)'],
+    sources: [BOSTAN, CAPPONI, GUIL],
+    grade: 'B',
+  },
+  kalyata: {
+    native: 'Kalyata',
+    era: '16세기',
+    role: '빠른 소형 갤리선 (갈리오트)',
+    story: '돛대 하나에 노 19–24개짜리 작은 갤리선으로, 북아프리카 해적들이 즐겨 탔습니다. 레판토에서는 울루치 알리의 좌익과 알리 파샤의 후위에 많이 섞여 있었습니다.',
+    facts: ['한쪽 노 19–24개, 돛대 1개 (Bostan)', '레판토의 오스만 갈리오트·푸스타 약 60척 (Capponi)'],
+    sources: [BOSTAN, CAPPONI],
+    grade: 'B',
+  },
+
 };
 
 /** What each gun was and what it fired, from the record. */

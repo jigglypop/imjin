@@ -970,6 +970,19 @@ const CREW_SETS: { factions: readonly Faction[]; capacities: Partial<Record<Crew
       spain_sailor: [144, 1000, 2000],
     },
   },
+  {
+    factions: ['holyleague', 'ottoman'],
+    capacities: {
+      holyleague_shot: [128, 1000, 2000],
+      holyleague_soldier: [96, 800, 1600],
+      holyleague_officer: [16, 60, 120],
+      holyleague_oarsman: [200, 1600, 3200],
+      ottoman_archer: [128, 1100, 2200],
+      ottoman_janissary: [112, 900, 1800],
+      ottoman_officer: [16, 60, 120],
+      ottoman_oarsman: [200, 1600, 3200],
+    },
+  },
 ];
 
 /**

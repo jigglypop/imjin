@@ -1,3 +1,5 @@
+import { THEATRES } from '../../sim/grand/theatre';
+import { mapTheatreId } from './theatreChoice';
 import { useState } from 'react';
 import { useT } from '../../i18n';
 import { MAP_IMAGE } from './projection';
@@ -401,7 +403,7 @@ export function Hub({ save, onContinue, onNew, onBack }: HubProps) {
         {t('메뉴')}
       </button>
       <section className="g-glass g-hub__card" style={toneStyle(save.faction)}>
-        <div className="g-sheet__eyebrow">{t('캠페인 · 1592')}</div>
+        <div className="g-sheet__eyebrow">{t('캠페인 · {year}', { year: THEATRES[mapTheatreId()].year })}</div>
         <h1 className="g-hub__title">
           <FactionCrest faction={save.faction} size={56} />
           <span>

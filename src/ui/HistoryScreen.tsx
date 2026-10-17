@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
-import { ARMADA_ORDER, SCENARIO_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
+import { CHAPTER_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import { commanderOf, FACTION_NAME, FACTION_SHORT, forcesOf, handicap, playableFactions } from '../sim/balance';
 import type { Faction } from '../sim/types';
 import { sound } from '../audio/Sound';
@@ -48,8 +48,8 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
   const t = useT();
   // A later chapter lists its own battles on its own map; the 1592 run of battles (연속 전투) is the first chapter's.
   const chapter = useUi((st) => st.chapter);
-  const armada = chapter === 'armada';
-  const order: ScenarioId[] = armada ? ARMADA_ORDER : SCENARIO_ORDER;
+  const armada = chapter !== 'imjin';
+  const order: ScenarioId[] = CHAPTER_ORDER[chapter];
 
   const mode = useCampaign((st) => st.mode);
   const campaign = useCampaign((st) => st.campaign);

@@ -8,6 +8,10 @@ const arg = (n, d) => process.argv.find((a) => a.startsWith('--' + n + '='))?.sl
 const REGIONS = {
   korea: { out: 'korea_dem.webp', meta: 'demMeta.json', z: 10, bounds: { west: 125.85, east: 129.5, south: 34.1, north: 35.62 } },
   channel: { out: 'channel_dem.webp', meta: 'channelMeta.json', z: 8, bounds: { west: -6.6, east: 3.4, south: 49.02, north: 52.25 } },
+  // The Armada campaign's world: Britain and Ireland, the Channel, the North Sea's south, Brittany and the Low Countries,
+  // reaching past the campaign's frame (src/ui/grand/mapFrameArmada.json) so the continent's edge lies out in the haze.
+  // About 800 m a pixel; its scale is taken at its own latitude.
+  britain: { out: 'britain_dem.webp', meta: 'britainMeta.json', z: 8, width: 1800, midLat: 54, bounds: { west: -12.6, east: 6.6, south: 46.3, north: 60.6 } },
 };
 const REGION = REGIONS[arg('region', 'korea')];
 const OUT = join(ROOT, 'public', 'ui', REGION.out);
@@ -15,7 +19,7 @@ const META = join(ROOT, 'src', 'select', REGION.meta);
 
 const Z = REGION.z;
 const BOUNDS = REGION.bounds;
-const WIDTH = 2048;
+const WIDTH = REGION.width ?? 2048;
 
 const lonToX = (lon) => ((lon + 180) / 360) * 2 ** Z;
 const latToY = (lat) => {
@@ -127,7 +131,7 @@ await writeFile(
       y1: mercY(BOUNDS.south),
       minH: Math.round(minH),
       maxH: Math.round(maxH),
-      metersPerPixel: (40075016 * Math.cos((35 * Math.PI) / 180) * (BOUNDS.east - BOUNDS.west)) / 360 / WIDTH,
+      metersPerPixel: (40075016 * Math.cos(((REGION.midLat ?? 35) * Math.PI) / 180) * (BOUNDS.east - BOUNDS.west)) / 360 / WIDTH,
     },
     null,
     2,

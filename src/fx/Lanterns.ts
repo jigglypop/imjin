@@ -72,6 +72,12 @@ const POINTS: Record<ModelKind, [number, number, number][]> = {
   fireship: [],
   spgalleon: [],
   galleass: [],
+  reale: [],
+  galea: [],
+  vgalleass: [],
+  sultana: [],
+  kadirga: [],
+  kalyata: [],
   urca: [],
 };
 

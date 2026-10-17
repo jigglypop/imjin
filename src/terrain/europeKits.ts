@@ -210,10 +210,91 @@ function hedge(): Part[] {
   return parts;
 }
 
-const BUILDERS: Record<EuropeanStructure, () => Part[]> = { cottage, tudor, church, gable, spire, hedge };
+// The Mediterranean coasts of the Lepanto chapter: the Aetolian and Epirote shore (Greek villages of rubble stone under
+// low-pitched Roman tile, a domed Orthodox chapel, dry-stone field walls with olives) and Djerba (whitewashed flat-roofed
+// houses, a mosque with its square minaret, the Maghreb's typical form; Braudel and period views of Djerba).
+const LIMESTONE = '#b9ad94';
+const LIMESTONE_DARK = '#8e8470';
+const ROMAN_TILE = '#a0563a';
+const WHITEWASH = '#e6e1d4';
+const WHITEWASH_DARK = '#c9c2b0';
+const OLIVE = '#56603c';
+
+/** A Greek village house: rubble stone, one or two storeys, a low tile roof. 8 by 6 m. */
+function medhouse(): Part[] {
+  return [
+    box(LIMESTONE_DARK, 8.2, 2, 6.2, 0, -1.6),
+    box(LIMESTONE, 8, 5.2, 6, 0, 0.4),
+    gableEnds(LIMESTONE, 8, 6, 1.4, 5.6),
+    roof(ROMAN_TILE, 8, 6, 1.4, 5.6, 0, 0, 0.35),
+    box(DOOR, 0.2, 2.1, 1.1, 4.05, 0.4, 0.8),
+    box(WINDOW, 0.2, 0.8, 0.7, 4.05, 3.4, -1.4),
+    box(WINDOW, 1, 0.8, 0.2, -1.5, 3.4, 3.05),
+  ];
+}
+
+/** A small Byzantine chapel: a cross plan under tile with a drum and dome at the crossing. 14 m long. */
+function chapel(): Part[] {
+  return [
+    box(LIMESTONE_DARK, 14.4, 2, 8.4, 0, -1.6),
+    box(LIMESTONE, 14, 6, 6, 0, 0.4),
+    gableEnds(LIMESTONE, 14, 6, 1.8, 6.4),
+    roof(ROMAN_TILE, 14, 6, 1.8, 6.4, 0, 0, 0.25),
+    box(LIMESTONE, 5, 5.6, 8, 0, 0.4),
+    finish(new CylinderGeometry(2.2, 2.2, 3, 8), LIMESTONE, at(0, 9.2, 0)),
+    finish(new ConeGeometry(2.5, 2.2, 8), ROMAN_TILE, at(0, 11.8, 0)),
+    finish(new CylinderGeometry(3, 3, 6, 8, 1, false, 0, Math.PI), LIMESTONE, at(7, 3.4, 0, Math.PI / 2)),
+    box(DOOR, 0.2, 2.6, 1.4, -7.05, 0.4, 0),
+    box(TIMBER, 0.2, 2.4, 0.2, 0, 13, 0),
+    box(TIMBER, 0.2, 0.2, 1.2, 0, 13.8, 0),
+  ];
+}
+
+/** A Djerban house: whitewashed walls, a flat roof with its parapet, a courtyard wall. 9 by 8 m. */
+function flathouse(): Part[] {
+  return [
+    box(WHITEWASH_DARK, 9.2, 2, 8.2, 0, -1.6),
+    box(WHITEWASH, 6, 4.2, 8, -1.5, 0.4),
+    box(WHITEWASH_DARK, 6.2, 0.5, 8.2, -1.5, 4.6),
+    box(WHITEWASH, 3, 2.2, 0.4, 3, 0.4, 3.8),
+    box(WHITEWASH, 3, 2.2, 0.4, 3, 0.4, -3.8),
+    box(WHITEWASH, 0.4, 2.2, 8, 4.4, 0.4, 0),
+    box(DOOR, 0.2, 2, 1.1, 4.62, 0.4, 0),
+    box(WINDOW, 0.7, 0.7, 0.2, -2.5, 2.6, 4.02),
+  ];
+}
+
+/** A Djerban mosque: a whitewashed prayer hall with low domes, a square minaret. 18 m long, the minaret 17 m. */
+function mosque(): Part[] {
+  const parts: Part[] = [
+    box(WHITEWASH_DARK, 18.4, 2, 12.4, 0, -1.6),
+    box(WHITEWASH, 14, 5, 12, 2, 0.4),
+    box(WHITEWASH_DARK, 14.2, 0.5, 12.2, 2, 5.4),
+    box(WHITEWASH, 4, 15, 4, -7, 0.4),
+    box(WHITEWASH_DARK, 4.6, 0.6, 4.6, -7, 15.4),
+    box(WHITEWASH, 2.4, 2.4, 2.4, -7, 16),
+    finish(new IcosahedronGeometry(1.3, 1), WHITEWASH, at(-7, 19, 0, 0, 1, 0.8, 1)),
+    box(DOOR, 0.2, 2.6, 1.6, 9.05, 0.4, 0),
+  ];
+  for (const dz of [-3, 3]) parts.push(finish(new IcosahedronGeometry(2.4, 1), WHITEWASH, at(4, 5.9, dz, 0, 1, 0.6, 1)));
+  for (const k of [-4, 0, 4]) parts.push(box(WINDOW, 1, 1.6, 0.2, 2 + k, 2.4, 6.05), box(WINDOW, 1, 1.6, 0.2, 2 + k, 2.4, -6.05));
+  return parts;
+}
+
+/** A dry-stone field wall with olive trees along it: about 34 m. */
+function drywall(): Part[] {
+  const parts: Part[] = [box(LIMESTONE_DARK, 34, 2.2, 1, 0, -1.1)];
+  for (const x of [-11, 2, 13]) {
+    parts.push(finish(new CylinderGeometry(0.25, 0.4, 2.6, 5, 1, true), TIMBER, at(x, 1.3, 2.4)));
+    parts.push(finish(new IcosahedronGeometry(1, 1), OLIVE, at(x, 3.6, 2.4, x, 3, 1.9, 2.8)));
+  }
+  return parts;
+}
+
+const BUILDERS: Record<EuropeanStructure, () => Part[]> = { cottage, tudor, church, gable, spire, hedge, medhouse, chapel, flathouse, mosque, drywall };
 
 /** Footprint (m) of each kit along its longer side, as Structures' SIZE gives the Korean models'. */
-export const EUROPE_SIZE: Record<EuropeanStructure, number> = { cottage: 13, tudor: 12.5, church: 31, gable: 9.4, spire: 33, hedge: 34 };
+export const EUROPE_SIZE: Record<EuropeanStructure, number> = { cottage: 13, tudor: 12.5, church: 31, gable: 9.4, spire: 33, hedge: 34, medhouse: 8.4, chapel: 14.4, flathouse: 9.4, mosque: 18.4, drywall: 34 };
 
 export const isEuropean = (type: string): type is EuropeanStructure => type in BUILDERS;
 

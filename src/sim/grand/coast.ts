@@ -5,7 +5,7 @@ import type { MapLayout } from '../maps';
 import type { SeaStateName } from '../../ocean/waves';
 import type { SkyPresetName } from '../../render/sky';
 import { NORYANG_TERRAIN, type TerrainSpec } from '../../terrain/generate';
-import { REGION_ORDER } from './regions';
+import { ALL_REGION_ORDER } from './regions';
 import type { RegionId } from './types';
 import layouts from './regionPoints.json';
 import windows from './regionWindows.json';
@@ -299,6 +299,57 @@ const BASE_REGION_SITES: Partial<Record<RegionId, RegionSite>> = {
 };
 
 /**
+ * The Armada theatre's ports are fought on the five Channel coasts of the chapter's battles (src/terrain/armadaTerrain.ts):
+ * an English shore to the north for the English and Irish ports, the low Flemish and French shore to the south for the
+ * ports across the narrow seas. Like the Korean added ports these are adapted battle areas, not surveys of each port; only
+ * a port fought over in history names its battle, and none inherits a historical tide.
+ */
+function ARMADA_SITES(): Partial<Record<RegionId, RegionSite>> {
+  // Shore to the north (negative z): the sea is to the south. Shore to the south: the sea is to the north.
+  const north = (scenario: ScenarioId, port: { x: number; z: number }, own: boolean, name: string, latin: string, sky: SkyPresetName, sea: SeaStateName): RegionSite => ({
+    scenario: own ? scenario : null, terrain: SCENARIO_TERRAIN(scenario), port, seaward: Math.PI / 2, span: 1300, sky, sea, foliage: 0.6,
+    names: armadaNames(name, latin),
+  });
+  const south = (scenario: ScenarioId, port: { x: number; z: number }, own: boolean, name: string, latin: string, sky: SkyPresetName, sea: SeaStateName): RegionSite => ({
+    scenario: own ? scenario : null, terrain: SCENARIO_TERRAIN(scenario), port, seaward: -Math.PI / 2, span: 1300, sky, sea, foliage: 0.4,
+    names: armadaNames(name, latin),
+  });
+  return {
+    london: north('wight', { x: -2200, z: -2900 }, false, '틸버리', 'Tilbury', 'overcast', 'calm'),
+    harwich: north('portland', { x: -2600, z: -5100 }, false, '하리치', 'Harwich', 'overcast', 'moderate'),
+    downs: north('plymouth', { x: 2600, z: -3800 }, false, '다운스', 'The Downs', 'day', 'moderate'),
+    dover: north('portland', { x: 500, z: -5300 }, false, '도버', 'Dover', 'day', 'moderate'),
+    portsmouth: north('plymouth', { x: -1200, z: -4300 }, false, '포츠머스', 'Portsmouth', 'day', 'moderate'),
+    wight: north('wight', { x: -2600, z: -2800 }, true, '와이트섬', 'Isle of Wight', 'afternoon', 'moderate'),
+    portland: north('portland', { x: -2400, z: -1600 }, true, '포틀랜드', 'Portland', 'dawn', 'rough'),
+    plymouth: north('plymouth', { x: 500, z: -4000 }, true, '플리머스', 'Plymouth', 'day', 'rough'),
+    lizard: north('plymouth', { x: -2600, z: -3300 }, false, '리저드곶', 'The Lizard', 'overcast', 'rough'),
+    scilly: north('plymouth', { x: -7400, z: -3900 }, false, '실리 제도', 'Scilly', 'overcast', 'rough'),
+    kinsale: north('plymouth', { x: 3600, z: -3900 }, false, '킨세일', 'Kinsale', 'overcast', 'rough'),
+    blasket: north('wight', { x: 6200, z: -2400 }, false, '블래스킷 해협', 'Blasket Sound', 'overcast', 'rough'),
+    forth: north('wight', { x: -400, z: -3400 }, false, '리스', 'Leith', 'overcast', 'moderate'),
+    orkney: north('portland', { x: -1500, z: -500 }, false, '페어섬', 'Fair Isle', 'overcast', 'rough'),
+    ushant: north('portland', { x: -5800, z: -5600 }, false, '우에상', 'Ushant', 'overcast', 'rough'),
+    corunna: north('plymouth', { x: -500, z: -3800 }, false, '라코루냐', 'A Coruña', 'day', 'moderate'),
+    santander: north('wight', { x: 3000, z: -3400 }, false, '산탄데르', 'Santander', 'day', 'moderate'),
+    lisbon: north('portland', { x: 1500, z: -5400 }, false, '리스본', 'Lisbon', 'day', 'calm'),
+    calais: south('calais', { x: 0, z: 3800 }, true, '칼레', 'Calais', 'overcast', 'moderate'),
+    gravelines: south('gravelines', { x: 0, z: 3600 }, true, '그라블린', 'Gravelines', 'day', 'rough'),
+    dunkirk: south('gravelines', { x: 5000, z: 3200 }, false, '됭케르크', 'Dunkirk', 'overcast', 'moderate'),
+    sluys: south('calais', { x: 4000, z: 3900 }, false, '슬로이스', 'Sluys', 'overcast', 'calm'),
+    flushing: south('gravelines', { x: -4000, z: 3800 }, false, '플러싱', 'Flushing', 'day', 'moderate'),
+  };
+}
+
+/** The battle map's point names of an Armada theatre port, from its name. */
+function armadaNames(name: string, latin: string): RegionSite['names'] {
+  return {
+    defender: [name, latin], attacker: [`${name} 바깥 정박지`, `${latin} roads`], centre: [`${name} 입구`, `${latin} approach`], // i18n-ignore: place-derived labels translated by EN_PORTS
+    flanks: [[`${name} 북쪽 수로`, `${latin} north channel`], [`${name} 남쪽 수로`, `${latin} south channel`]], // i18n-ignore: place-derived labels translated by EN_PORTS
+  };
+}
+
+/**
  * New ports use the existing nearby coast terrain kits, with their own anchorage and point layout. The strategic
  * marker is geographical; a tactical kit is an adapted battle area, not a surveyed reconstruction of that port.
  * Only Dangpo names its corresponding historical scenario; borrowed coastlines never inherit a historical tide.
@@ -346,6 +397,7 @@ const COASTAL_SITES: Record<RegionId, RegionSite> = {
   gijang: coastalPort('busan', '기장 죽성', '機張竹城'),
   seosaengpo: coastalPort('busan', '서생포', '西生浦'),
   ulsan: coastalPort('busan', '울산 도산', '蔚山島山'),
+  ...ARMADA_SITES(),
 };
 
 /** The south coast: evergreen hills, broad-leaved scrub in the folds, paddies in the valleys, a few tiled roofs. */
@@ -411,7 +463,7 @@ function realGround(id: RegionId, index: number): TerrainSpec {
  * attacker comes from the bearing of the broadest open sea. The others keep the borrowed historical terrain.
  */
 export const REGION_SITES: Record<RegionId, RegionSite> = Object.fromEntries(
-  REGION_ORDER.map((id, index) => {
+  ALL_REGION_ORDER.map((id, index) => {
     const site = COASTAL_SITES[id];
     const win = (windows as Record<string, { seaward: number } | undefined>)[id];
     return [id, win ? { ...site, terrain: realGround(id, index), port: { x: 0, z: 0 }, seaward: win.seaward, span: 1200 } : site];
@@ -448,6 +500,10 @@ const COASTAL_FLOW: Record<RegionId, number> = {
   yeongdeungpo: 1.05, yulpo: 0.85, jangmunpo: 0.6, jepo: 0.55, cheonseongpo: 1.4, dadaepo: 1.1, mokpo: 1.8,
   gogeumdo: 0.9, hoeryeongpo: 0.6, eoranpo: 0.8, ijin: 0.9, garipo: 1, yeodo: 0.7, waegyo: 0.5, mijo: 1, namhaeseonso: 0.6, gyeonnaeryang: 1.6,
   happo: 0.45, jukdo: 0.5, gijang: 0.8, seosaengpo: 0.8, ulsan: 0.6,
+  // The Armada theatre: the Channel's tides run strongest in the Dover strait and round the headlands.
+  london: 0.7, harwich: 0.6, downs: 0.9, dover: 1.4, portsmouth: 0.8, wight: 1.1, portland: 1.3, plymouth: 0.7, lizard: 1, scilly: 1,
+  kinsale: 0.5, blasket: 1.5, forth: 0.6, orkney: 1.6, flushing: 0.9, calais: 1, gravelines: 0.8, dunkirk: 0.6, sluys: 0.5, ushant: 1.4,
+  corunna: 0.5, santander: 0.5, lisbon: 0.6,
 };
 
 function designedCurrent(id: RegionId, placed: Placed[], mid: { x: number; z: number }, axis: number): CurrentSpec {
@@ -483,7 +539,7 @@ function build(id: RegionId): RegionMap {
   return { id, terrain, current, climate, points, night: false, sky: site.sky, sea: site.sea, foliage: site.foliage, view: { tx: mid.x, tz: mid.z, dir: axis, dist: 1000, pitch: 0.3 }, axis };
 }
 
-export const REGION_MAPS: Record<RegionId, RegionMap> = Object.fromEntries(REGION_ORDER.map((id) => [id, build(id)])) as Record<RegionId, RegionMap>;
+export const REGION_MAPS: Record<RegionId, RegionMap> = Object.fromEntries(ALL_REGION_ORDER.map((id) => [id, build(id)])) as Record<RegionId, RegionMap>;
 
 /** A persistent meeting's seed gives the same weather, tide and nighttime on every load and rendering client. */
 export const regionEnvironment = (id: RegionId, seed: number): BattleEnvironment => environmentFor(REGION_MAPS[id], seed);
@@ -503,7 +559,7 @@ export function regionArt(id: RegionId): ScenarioId | null {
   const km = (lon: number, lat: number) => Math.hypot((lon - at.lon) * Math.cos((at.lat * Math.PI) / 180) * 111.3, (lat - at.lat) * 111.3);
   let best: ScenarioId | null = null;
   let reach = ART_REACH;
-  for (const other of REGION_ORDER) {
+  for (const other of ALL_REGION_ORDER) {
     const battle = REGION_SITES[other].scenario;
     const d = battle ? km(REGIONS[other].lon, REGIONS[other].lat) : Infinity;
     if (d < reach) {

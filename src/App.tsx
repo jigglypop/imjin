@@ -4,6 +4,7 @@ import type { RegionBattle } from './sim/grand/bridge';
 import { net, useNet } from './net/NetClient';
 import { NetBattle } from './net/NetBattle';
 import { setFatal, setLoading, setOrigin, setScreen, useUi } from './state/store';
+import { chooseMapTheatre, needsReload, theatreOfChapter } from './ui/grand/theatreChoice';
 import { SCENARIOS, type ScenarioId } from './sim/scenarios';
 import type { Faction } from './sim/types';
 import { sound } from './audio/Sound';
@@ -83,6 +84,14 @@ export function App() {
   // A language switch redraws every screen, including parts that call t() directly.
   useLang();
   const screen = useUi((s) => s.screen);
+  // The campaign's world is the chapter's theatre (/armada/campaign the Armada's). Its map is built for one theatre a
+  // page, so opening another theatre's campaign after one has been drawn loads the page again at the new address.
+  const theatre = theatreOfChapter(useUi((s) => s.chapter)) ?? 'imjin';
+  const reloadForTheatre = screen === 'faction' && needsReload(theatre);
+  if (screen === 'faction' && !reloadForTheatre) chooseMapTheatre(theatre);
+  useEffect(() => {
+    if (reloadForTheatre) location.reload();
+  }, [reloadForTheatre]);
   const fatal = useUi((s) => s.fatal);
   const compact = useCompactLayout();
   const [launch, setLaunch] = useState<Launch | null>(firstLaunch);
@@ -185,7 +194,7 @@ export function App() {
           <HistoryScreen initial={lastScenario.current} onStart={startHistory} />
         </Chunk>
       )}
-      {screen === 'faction' && (
+      {screen === 'faction' && !reloadForTheatre && (
         <Chunk frame="캠페인">
           <GrandScreen onBattle={startGrandBattle} />
         </Chunk>

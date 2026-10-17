@@ -3,7 +3,9 @@ import { shipSpec } from '../../sim/competitive';
 import type { ShipKind } from '../../sim/types';
 import { buildingWorkTotal, buildingOf, dateLabel, garrisonCap, levelOf, netIncome, queueSlots, regionIncome } from '../../sim/grand/economy';
 import { buildMenu, recruitMenu, refitCost } from '../../sim/grand/orders';
-import { REGIONS, REGION_ORDER, START, type RegionDef } from '../../sim/grand/regions';
+import { REGIONS, type RegionDef } from '../../sim/grand/regions';
+import { factionsOf, orderOf, THEATRES } from '../../sim/grand/theatre';
+import { mapTheatreId } from './theatreChoice';
 import { GRADE_TEXT, type BattleSummary } from '../../sim/grand/report';
 import { pendingCard, describeEffect } from '../../sim/grand/events';
 import type { TurnReplay } from '../../sim/grand/replay';
@@ -50,6 +52,10 @@ const PIN: Partial<Record<RegionId, { lon: number; lat: number }>> = {
   nagoya: { lon: 130.05, lat: 33.55 },
   shandong: { lon: 125.12, lat: 34.5 },
   liaodong: { lon: 125.2, lat: 35.38 },
+  // The Iberian ports of the Armada theatre lie south of its map: pinned on the Bay of Biscay at its southern edge.
+  lisbon: { lon: -9.9, lat: 47.95 },
+  corunna: { lon: -7.9, lat: 47.95 },
+  santander: { lon: -5.7, lat: 47.85 },
 };
 
 const LABEL: Partial<Record<RegionId, RegionView['labelSide']>> = {
@@ -74,12 +80,12 @@ const TERRAIN_NOTE: Record<RegionDef['terrain'], string> = {
   open: '트인 바다입니다. 속도와 화력이 승부를 가릅니다.',
 };
 
-const player = (g: Grand): GrandFaction => g.player ?? 'joseon';
+const player = (g: Grand): GrandFaction => g.player ?? factionsOf(g)[0]!;
 
 export function regionViews(g: Grand): RegionView[] {
   const me = player(g);
   const seen = visibleRegions(g, me);
-  return REGION_ORDER.map((id) => {
+  return orderOf(g).map((id) => {
     const def = REGIONS[id];
     const r = g.regions[id];
     const own = r.owner === me;
@@ -201,7 +207,7 @@ export function fleetViews(g: Grand): FleetView[] {
 }
 
 export function turnView(g: Grand): TurnView {
-  return { turn: g.turn, maxTurns: MAX_TURNS, date: t(dateLabel(g.turn)), faction: player(g), winter: marching(g) && winterTurn(g.turn) };
+  return { turn: g.turn, maxTurns: MAX_TURNS, date: t(dateLabel(g.turn, g)), faction: player(g), winter: marching(g) && winterTurn(g.turn) };
 }
 
 export function treasuryView(g: Grand): TreasuryView {
@@ -255,10 +261,10 @@ export function moveTargets(g: Grand, fl: Fleet): RegionId[] {
   if (marching(g)) {
     if (fl.rest > 0 || (!fl.at && !fl.transit)) return [];
     const { dist } = marchDistances(g, fl);
-    return REGION_ORDER.filter((id) => id !== fl.at && dist.has(id) && (fl.stance !== 'march' || passable(g, fl.faction, id)));
+    return orderOf(g).filter((id) => id !== fl.at && dist.has(id) && (fl.stance !== 'march' || passable(g, fl.faction, id)));
   }
   if (!fl.at || fl.transit || fl.rest > 0) return [];
-  return REGION_ORDER.filter((id) => id !== fl.at && findRoute(g, fl.faction, fl.at!, id));
+  return orderOf(g).filter((id) => id !== fl.at && findRoute(g, fl.faction, fl.at!, id));
 }
 
 /** March rules: the turns the fleet needs to reach each port it can be sent to, for the map's coloured range. */
@@ -367,7 +373,7 @@ export function objectiveView(g: Grand): ObjectiveView {
 
 export function scoreViews(g: Grand): ScoreView[] {
   const me = player(g), seen = visibleRegions(g, me);
-  return (['joseon', 'japan', 'ming'] as GrandFaction[]).map((f) => {
+  return factionsOf(g).map((f) => {
     const known = g.phase === 'over' || allied(g, me, f);
     return { faction: f, score: known ? scoreOf(g, f) : null, observedOnly: !known, regions: ownedBy(g, f).length,
       ships: known ? shipCount(g, f) : g.fleets.filter((fl) => fl.faction === f && fleetObserved(g, me, fl, seen)).reduce((n, fl) => n + fl.ships.length, 0), alive: g.factions[f].alive };
@@ -381,7 +387,7 @@ export function logLines(g: Grand, turn?: number, limit = 14): LogLineView[] {
 
 export function relationViews(g: Grand): RelationView[] {
   const me = player(g);
-  return (['joseon', 'japan', 'ming'] as GrandFaction[])
+  return factionsOf(g)
     .filter((f) => f !== me)
     .map((other) => {
       const isAllied = allied(g, me, other);
@@ -417,11 +423,29 @@ const OPTION_TEXT: Record<GrandFaction, { name: string; leaders: string[]; blurb
     weakness: '먼 출전 거리',
     difficulty: 3,
   },
+  england: {
+    name: '잉글랜드',
+    leaders: ['하워드', '드레이크'],
+    blurb: '빠른 레이스 빌트 갤리온과 긴 사거리의 컬버린으로 해협을 지키는 진영입니다. 플리머스와 다운스에서 시작해 무적함대를 막고 플랑드르의 항구를 노립니다.',
+    strengths: ['원거리 포격', '빠른 함선', '많은 포구'],
+    weakness: '도선전에 약함',
+    difficulty: 2,
+  },
+  spain: {
+    name: '에스파냐',
+    leaders: ['메디나 시도니아', '레칼데'],
+    blurb: '거대한 갤리온과 병사들로 바다를 건너 잉글랜드를 침공하는 진영입니다. 라코루냐의 무적함대와 됭케르크의 파르마군이 런던을 노립니다.',
+    strengths: ['강한 도선전', '큰 함대', '인디아스의 은'],
+    weakness: '느린 장전, 먼 본국',
+    difficulty: 2,
+  },
 };
 
-export const factionOptions = (): FactionOption[] =>
-  (['joseon', 'japan', 'ming'] as GrandFaction[]).map((id) => {
+/** The pick cards of a theatre's navies (the page's own theatre by default). */
+export const factionOptions = (theatre = mapTheatreId()): FactionOption[] =>
+  THEATRES[theatre].factions.map((id) => {
     const o = OPTION_TEXT[id];
+    const start = THEATRES[theatre].start;
     return {
       id,
       name: t(o.name),
@@ -430,12 +454,12 @@ export const factionOptions = (): FactionOption[] =>
       strengths: o.strengths.map((x) => t(x)),
       weakness: t(o.weakness),
       difficulty: o.difficulty,
-      startRegions: REGION_ORDER.filter((r) => START.owners[r] === id).map((r) => t(REGIONS[r].name)),
-      fleets: START.fleets.filter((f) => f.faction === id).length,
+      startRegions: THEATRES[theatre].order.filter((r) => start.owners[r] === id).map((r) => t(REGIONS[r].name)),
+      fleets: start.fleets.filter((f) => f.faction === id).length,
     };
   });
 
-const NAVY: Record<GrandFaction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군' };
+const NAVY: Record<GrandFaction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군', england: '잉글랜드 수군', spain: '에스파냐 수군' };
 
 export function resultView(s: BattleSummary): BattleResultView {
   const winnerSide = s.winner === 'attacker' ? s.attacker : s.defender;
@@ -503,7 +527,7 @@ export function saveView(g: Grand): SaveView {
     faction: me,
     turn: g.turn,
     maxTurns: MAX_TURNS,
-    date: t(dateLabel(g.turn)),
+    date: t(dateLabel(g.turn, g)),
     regions: ownedBy(g, me).length,
     ships: shipCount(g, me),
     gold: Math.round(g.factions[me].gold),
@@ -527,7 +551,7 @@ export function eventView(g: Grand): EventView | null {
   if (!shown) return null;
   return {
     id: shown.event.id,
-    date: t(dateLabel(g.turn)),
+    date: t(dateLabel(g.turn, g)),
     title: t(shown.card.title),
     text: t(shown.card.text),
     portrait: shown.card.portrait,
@@ -546,7 +570,7 @@ export function turnReportView(g: Grand, turn: number): TurnReportView {
   const closed = row?.gold[me] ?? Math.round(g.factions[me].gold);
   const now = Math.round(g.factions[me].gold);
   return {
-    date: `${t(dateLabel(turn))} → ${t(dateLabel(turn + 1))}`,
+    date: `${t(dateLabel(turn, g))} → ${t(dateLabel(turn + 1, g))}`,
     gold: {
       now,
       before,

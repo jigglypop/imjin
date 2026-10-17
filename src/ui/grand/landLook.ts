@@ -1,6 +1,6 @@
 import { DataTexture, LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, RGBAFormat, SRGBColorSpace, Texture, UnsignedByteType } from 'three/webgpu';
 import { float, floor, fract, fwidth, max, min, mix, positionWorld, sin, smoothstep, texture, vec2, vec3 } from 'three/tsl';
-import demMeta from '../../select/demMeta.json';
+import { demMeta } from './mapTheatre';
 import { SKY_LIGHT, SUN_LIGHT } from './groundPalette';
 import { BAND_MARGIN, bakeLand, HEIGHT_RANGE, landFrame, SLOPE_RANGE } from './landBake';
 import { DEM_RECT } from './mapMath';

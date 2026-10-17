@@ -1,10 +1,17 @@
 import { createNoise2D } from './noise';
 import type { TerrainSpec } from './generate';
-import { DEFAULT_BIOME } from './region';
+import { DEFAULT_BIOME, type RegionBiome } from './region';
 
 export type StructureType = 'choga' | 'giwa' | 'fortgate' | 'bongsu' | EuropeanStructure;
 /** The procedural buildings of the 1588 coasts (src/terrain/europeKits.ts): English cottages and church, Flemish brick houses and church, hedgerows. */
-export type EuropeanStructure = 'cottage' | 'tudor' | 'church' | 'gable' | 'spire' | 'hedge';
+export type EuropeanStructure = 'cottage' | 'tudor' | 'church' | 'gable' | 'spire' | 'hedge' | 'medhouse' | 'chapel' | 'flathouse' | 'mosque' | 'drywall';
+/** The kits each coast style builds: its church (or mosque), its two kinds of house, its field boundary. */
+export const STYLE_KITS: Record<NonNullable<RegionBiome['style']>, { temple: EuropeanStructure; house: [EuropeanStructure, EuropeanStructure]; bound: EuropeanStructure }> = {
+  english: { temple: 'church', house: ['cottage', 'tudor'], bound: 'hedge' },
+  flemish: { temple: 'spire', house: ['gable', 'gable'], bound: 'hedge' },
+  greek: { temple: 'chapel', house: ['medhouse', 'medhouse'], bound: 'drywall' },
+  maghreb: { temple: 'mosque', house: ['flathouse', 'flathouse'], bound: 'drywall' },
+};
 export type Structure = { type: StructureType; x: number; z: number; y: number; rot: number; s: number };
 export type FeatureResult = { mask: Uint8Array; structures: Structure[] };
 
@@ -119,7 +126,7 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
         const g = grad(i, j);
         for (let k = 0; k < 4; k += 1) houses.push({ x: best.x + Math.cos(k * 1.57) * 12, z: best.z + Math.sin(k * 1.57) * 12 });
         houses.push({ x: best.x, z: best.z });
-        structures.push({ type: style === 'english' ? 'church' : 'spire', x: best.x, z: best.z, y: H(i, j), rot: Math.round(Math.atan2(-g.gz, -g.gx) / (Math.PI / 2)) * (Math.PI / 2), s: 1 });
+        structures.push({ type: STYLE_KITS[style].temple, x: best.x, z: best.z, y: H(i, j), rot: Math.round(Math.atan2(-g.gz, -g.gx) / (Math.PI / 2)) * (Math.PI / 2), s: 1 });
       }
     }
     let placed = 0;
@@ -152,7 +159,7 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
       const giwa = rand() < biome.tiled;
       const rot = Math.round((downhill + (rand() - 0.5) * 0.6) / (Math.PI / 2)) * (Math.PI / 2) + (rand() - 0.5) * 0.25;
       // The houses of a gridded town all face the street.
-      const type: StructureType = style === 'english' ? (giwa ? 'cottage' : 'tudor') : style === 'flemish' ? 'gable' : giwa ? 'giwa' : 'choga';
+      const type: StructureType = style ? STYLE_KITS[style].house[giwa ? 0 : 1] : giwa ? 'giwa' : 'choga';
       structures.push({ type, x, z, y: h, rot: biome.layout === 'grid' ? Math.round(rot / (Math.PI / 2)) * (Math.PI / 2) : rot, s: 0.9 + rand() * 0.2 });
       placed += 1;
     }
@@ -172,7 +179,7 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
         if (g.g > 0.11) continue;
         // Field boundaries run on a grid of their own, turned to the village's shore.
         const rot = shoreA + (rand() < 0.5 ? 0 : Math.PI / 2) + (rand() - 0.5) * 0.2;
-        structures.push({ type: 'hedge', x, z, y: h, rot: -rot, s: 0.8 + rand() * 0.5 });
+        structures.push({ type: STYLE_KITS[style].bound, x, z, y: h, rot: -rot, s: 0.8 + rand() * 0.5 });
         made += 1;
       }
     }

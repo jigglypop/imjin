@@ -230,6 +230,56 @@ export const TREES: Record<string, CommanderTree> = {
     trait: { label: '척가군', text: '척계광의 절강병을 이끈 유격장: 명중 +6%, 방어 +4%', effect: { accuracy: 1.06, defense: 1.04 } },
     mastery: { label: '모란봉', text: '명중 +5%, 백병 +6%', effect: { accuracy: 1.05, melee: 1.06 } },
   },
+
+  // The Armada theatre.
+  howard: {
+    hanja: 'Charles Howard',
+    branches: ['command', 'gunnery'],
+    trait: { label: '해군 총사령관', text: '서두르지 않고 바람 위를 지킨다: 사기 +6%, 명중 +3%, 침착한 지휘', effect: { morale: 1.06, accuracy: 1.03, temper: 'steady' } },
+    mastery: { label: '바람 위의 함대', text: '명중 +5%, 속도 +4%, 사기 +4%', effect: { accuracy: 1.05, speed: 1.04, morale: 1.04 } },
+  },
+  drake: {
+    hanja: 'Francis Drake',
+    branches: ['seamanship', 'gunnery', 'boarding'],
+    trait: { label: '엘 드라케', text: '카디스의 수염을 그슬린 사략선장: 속도 +5%, 화재 +12%, 항속 +8%, 대담한 지휘', effect: { speed: 1.05, fire: 1.12, march: 0.08, temper: 'bold' } },
+    mastery: { label: '리벤지호', text: '장전 +6%, 명중 +5%, 백병 +5%', effect: { reload: 1.06, accuracy: 1.05, melee: 1.05 } },
+  },
+  hawkins: {
+    hanja: 'John Hawkins',
+    branches: ['seamanship', 'command'],
+    trait: { label: '해군 재무관', text: '선체를 낮고 빠르게 다시 지었다: 선회 +8%, 방어 +4%', effect: { turn: 1.08, defense: 1.04 } },
+    mastery: { label: '레이스 빌트', text: '속도 +5%, 선회 +6%, 항속 +6%', effect: { speed: 1.05, turn: 1.06, march: 0.06 } },
+  },
+  frobisher: {
+    hanja: 'Martin Frobisher',
+    branches: ['boarding', 'gunnery'],
+    trait: { label: '북서 항로 탐험가', text: '거친 바다에 단련된 함장: 사기 +5%, 백병 +5%, 무모한 지휘', effect: { morale: 1.05, melee: 1.05, temper: 'rash' } },
+    mastery: { label: '트라이엄프호', text: '방어 +8%, 장전 +4%', effect: { defense: 1.08, reload: 1.04 } },
+  },
+  medina: {
+    hanja: 'Medina Sidonia',
+    branches: ['command', 'boarding'],
+    trait: { label: '초승달 진형', text: '함대를 흩지 않고 진형을 지킨다: 방어 +8%, 사기 +3%, 신중한 지휘', effect: { defense: 1.08, morale: 1.03, temper: 'cautious' } },
+    mastery: { label: '무적함대', text: '사기 +6%, 방어 +6%', effect: { morale: 1.06, defense: 1.06 } },
+  },
+  recalde: {
+    hanja: 'Juan Martínez de Recalde',
+    branches: ['seamanship', 'command', 'boarding'],
+    trait: { label: '노련한 제독', text: '대서양을 가장 잘 아는 에스파냐 제독: 선회 +6%, 사기 +5%, 항속 +6%, 침착한 지휘', effect: { turn: 1.06, morale: 1.05, march: 0.06, temper: 'steady' } },
+    mastery: { label: '산 후안호', text: '방어 +8%, 백병 +6%', effect: { defense: 1.08, melee: 1.06 } },
+  },
+  leyva: {
+    hanja: 'Alonso de Leyva',
+    branches: ['boarding', 'command'],
+    trait: { label: '선봉', text: '귀족 자제들을 태운 라 라타호의 지휘관: 백병 +10%, 대담한 지휘', effect: { melee: 1.1, temper: 'bold' } },
+    mastery: { label: '라 라타 산타 마리아 엔코로나다', text: '백병 +8%, 사기 +6%', effect: { melee: 1.08, morale: 1.06 } },
+  },
+  oquendo: {
+    hanja: 'Miguel de Oquendo',
+    branches: ['gunnery', 'seamanship'],
+    trait: { label: '기푸스코아 전대', text: '바스크 선원들의 전대장: 장전 +5%, 속도 +3%', effect: { reload: 1.05, speed: 1.03 } },
+    mastery: { label: '산타 아나호', text: '장전 +5%, 명중 +5%', effect: { reload: 1.05, accuracy: 1.05 } },
+  },
 };
 
 export const MASTERY_ID = 'mastery';
@@ -271,6 +321,16 @@ export const TECHS: readonly TechDef[] = [
   { id: 'greatships', faction: 'ming', label: '대선 건조', text: '광선 건조 가능 (선소 3단계), 대형선·광선 방어 +10%', gold: 600, turns: 3, needs: ['frankish'], kinds: ['mingship', 'gwangseon'], effect: { defense: 1.1 }, unlock: 'gwangseon' },
   { id: 'grain', faction: 'ming', label: '군량 해운', text: '수입 +3%', gold: 450, turns: 2, needs: [], income: 1.03 },
   { id: 'drill', faction: 'ming', label: '수군 조련', text: '사기 +8%, 장수 경험 +25%', gold: 350, turns: 2, needs: ['grain'], effect: { morale: 1.08, xp: 1.25 } },
+
+  { id: 'culverin', faction: 'england', label: '컬버린 포술', text: '전 함선 장전 +6%, 명중 +6%', gold: 480, turns: 2, needs: [], effect: { reload: 1.06, accuracy: 1.06 } },
+  { id: 'raceships', faction: 'england', label: '레이스 빌트 개조', text: '갤리온·핀네이스 속도 +5%, 선회 +8%', gold: 400, turns: 2, needs: [], kinds: ['racegalleon', 'pinnace'], effect: { speed: 1.05, turn: 1.08 } },
+  { id: 'fireships', faction: 'england', label: '화공선 전술', text: '화재 +20%', gold: 380, turns: 2, needs: ['culverin'], effect: { fire: 1.2 } },
+  { id: 'drill', faction: 'england', label: '수병 조련', text: '사기 +8%, 장수 경험 +25%', gold: 350, turns: 2, needs: ['raceships'], effect: { morale: 1.08, xp: 1.25 } },
+
+  { id: 'galleasses', faction: 'spain', label: '갈레아스 건조', text: '갈레아스 건조 가능 (선소 2단계), 갤리온·갈레아스 방어 +10%', gold: 450, turns: 2, needs: [], kinds: ['spgalleon', 'galleass'], effect: { defense: 1.1 }, unlock: 'galleass' },
+  { id: 'tercios', faction: 'spain', label: '테르시오 승선대', text: '백병 +12%, 방어 +4%', gold: 420, turns: 2, needs: [], effect: { melee: 1.12, defense: 1.04 } },
+  { id: 'silver', faction: 'spain', label: '인디아스 은 선단', text: '수입 +5%', gold: 480, turns: 2, needs: [], income: 1.05 },
+  { id: 'drill', faction: 'spain', label: '수병 조련', text: '사기 +8%, 장수 경험 +25%', gold: 350, turns: 2, needs: ['tercios'], effect: { morale: 1.08, xp: 1.25 } },
 ];
 
 export const techsOf = (f: GrandFaction): TechDef[] => TECHS.filter((t) => t.faction === f);

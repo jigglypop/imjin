@@ -126,7 +126,7 @@ export interface CommandSink {
 }
 
 /** Every kind with a model of its own: the gallery shows them all. A battle loads only the models of the kinds it uses. */
-const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall', 'racegalleon', 'pinnace', 'fireship', 'spgalleon', 'galleass', 'urca'];
+const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall', 'racegalleon', 'pinnace', 'fireship', 'spgalleon', 'galleass', 'urca', 'reale', 'galea', 'vgalleass', 'sultana', 'kadirga', 'kalyata'];
 
 /** Lets the browser paint the loading bar before the next stretch of blocking work (a timer covers a hidden tab, where frames never come). */
 const settle = () => new Promise<void>((resolve) => {
@@ -976,7 +976,7 @@ export class Engine {
       }
       return { tx: own.x - Math.cos(back) * 260, tz: own.z - Math.sin(back) * 260, yaw: back + 0.15, pitch: 0.34, distance: 720 };
     }
-    if ((this.faction === 'joseon' || this.faction === 'england') && info.mode === 'scenario') {
+    if (teamOf(this.faction) === 'joseon' && this.faction !== 'ming' && info.mode === 'scenario') {
       const c = this.terrain.toWorld(info.view.tx, info.view.tz);
       const dir = info.view.dir + this.phi;
       return { tx: c.x, tz: c.z, yaw: dir + Math.PI + 0.22, pitch: info.view.pitch, distance: info.view.dist };
@@ -1853,7 +1853,8 @@ export class Engine {
     const ming = !!SCENARIOS[this.scenarioId].ming;
     // A later chapter's battle names its own navies: the slot's navy is the faction of the ships in it.
     const navyOf = (team: Team) => this.battle.ships.find((s) => s.team === team)?.spec.faction;
-    if (navyOf('joseon') === 'england' || navyOf('japan') === 'spain') {
+    const later = (f: string | undefined) => !!f && f !== 'joseon' && f !== 'japan' && f !== 'ming';
+    if (later(navyOf('joseon')) || later(navyOf('japan'))) {
       const own = navyOf(this.team), enemy = navyOf(this.enemyTeam);
       return { own: own ? t(FACTION_NAME[own]) : '', enemy: enemy ? t(FACTION_NAME[enemy]) : '' };
     }

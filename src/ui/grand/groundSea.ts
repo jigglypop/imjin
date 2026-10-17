@@ -2,8 +2,8 @@ import { DataTexture, LinearFilter, LinearMipmapLinearFilter, Mesh, MeshBasicNod
 import { cameraPosition, clamp, float, fract, fwidth, log, max, mix, positionWorld, smoothstep, texture, vec2, vec3 } from 'three/tsl';
 import { SUN_DIRECTION } from './groundPalette';
 import { MODEL_METRE } from './hero/site';
-import meta from '../../select/demMeta.json';
-import { V_SCALE } from '../../select/demFrame';
+import { demMeta as meta } from './mapTheatre';
+import { V_SCALE } from './mapTheatre';
 import { worldClock } from '../../select/terrain';
 import { FAR_DEPTH } from './farLand';
 import { DEM_RECT, MESH_SCALE } from './mapMath';

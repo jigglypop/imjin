@@ -22,6 +22,11 @@ export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
   wight: { lon: -1.25, lat: 50.55 },
   calais: { lon: 1.8, lat: 50.98 },
   gravelines: { lon: 2.05, lat: 51.06 },
+  preveza: { lon: 20.72, lat: 38.95 },
+  djerba: { lon: 10.75, lat: 33.88 },
+  'lepanto-north': { lon: 21.1, lat: 38.33 },
+  'lepanto-centre': { lon: 21.15, lat: 38.27 },
+  'lepanto-south': { lon: 21.2, lat: 38.2 },
 };
 
 type Meta = typeof korea;

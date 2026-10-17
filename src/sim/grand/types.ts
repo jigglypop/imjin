@@ -1,9 +1,15 @@
 import type { Faction, ShipKind } from '../types';
 import type { Rng } from './rng';
 
-/** The navies of the 1592 war: the campaign world is the Korean theatre, so only the first chapter's navies play in it. */
-export type GrandFaction = Extract<Faction, 'joseon' | 'japan' | 'ming'>;
+/**
+ * The navies a campaign theatre can field (theatre.ts). The 1592 war in the Korean theatre plays the first three;
+ * GRAND_FACTIONS stays their list, and code that runs a campaign asks `factionsOf(g)` for the navies of its theatre.
+ */
+export type GrandFaction = Extract<Faction, 'joseon' | 'japan' | 'ming' | 'england' | 'spain'>;
 export const GRAND_FACTIONS: readonly GrandFaction[] = ['joseon', 'japan', 'ming'];
+
+/** A campaign's world: its map, regions, lanes and navies (theatre.ts). Absent in a save means the Korean theatre of 1592. */
+export type TheatreId = 'imjin' | 'armada';
 
 export type RegionId =
   | 'myeongnyang'
@@ -45,7 +51,11 @@ export type RegionId =
   | 'jukdo'
   | 'gijang'
   | 'seosaengpo'
-  | 'ulsan';
+  | 'ulsan'
+  // The Armada theatre (regionsArmada.ts).
+  | 'london' | 'harwich' | 'downs' | 'dover' | 'portsmouth' | 'wight' | 'portland' | 'plymouth' | 'lizard' | 'scilly'
+  | 'kinsale' | 'blasket' | 'forth' | 'orkney' | 'flushing' | 'calais' | 'gravelines' | 'dunkirk' | 'sluys' | 'ushant'
+  | 'corunna' | 'santander' | 'lisbon';
 
 export type BuildingKind = 'camp' | 'shipyard' | 'battery' | 'dock' | 'granary' | 'beacon';
 export const BUILDING_KINDS: readonly BuildingKind[] = ['camp', 'shipyard', 'battery', 'dock', 'granary', 'beacon'];
@@ -132,7 +142,7 @@ export type FactionState = {
 };
 
 export type Relation = 'allied' | 'war';
-export type PairKey = 'japan:joseon' | 'japan:ming' | 'joseon:ming';
+export type PairKey = 'japan:joseon' | 'japan:ming' | 'joseon:ming' | 'england:spain';
 
 /** A meeting of fleets in one region this turn, waiting to be fought out. */
 export type Contact = {
@@ -210,6 +220,8 @@ export type Victory = { faction: GrandFaction; kind: 'objective' | 'score' | 'el
 
 export type Grand = {
   version: 1;
+  /** The campaign's world (theatre.ts). Absent: the Korean theatre of 1592, so its saves stay as they were. */
+  theatre?: Exclude<TheatreId, 'imjin'>;
   /** Absent in saves made before the nonhistorical catalog was split from historical battles. */
   balanceProfile?: 'competitive-v1';
   /** New competitive campaigns compare territorial growth; absent saves retain their original objectives. */

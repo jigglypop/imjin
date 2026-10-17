@@ -33,4 +33,10 @@ export const SCENARIO_TEXT = {
   wight: { title: '와이트섬 해전', hanja: 'Isle of Wight', date: '1588년 8월 4일', place: '와이트섬 앞바다 · 오워스', hook: '솔렌트로 들어가려는 무적함대를 네 개 전대로 막아 모래톱 쪽으로 몰아냈습니다.' },
   calais: { title: '칼레 화공', hanja: 'Calais', date: '1588년 8월 7–8일', place: '칼레 앞바다', hook: '한밤중 불붙은 배 8척이 정박한 무적함대를 덮쳐 진형을 무너뜨렸습니다.' },
   gravelines: { title: '그라블린 해전', hanja: 'Gravelines', date: '1588년 8월 8일', place: '그라블린 앞바다 · 플랑드르 모래톱', hook: '아르마다 전쟁의 결전. 잉글랜드 함대가 처음으로 가까이 붙어 포를 쏘았습니다.' },
+  // The Lepanto chapter, 1538-1571.
+  preveza: { title: '프레베자 해전', hanja: 'Preveza', date: '1538년 9월 28일', place: '프레베자 · 아르타 만 입구', hook: '바람이 잦아든 바다에서 바르바로사의 갤리선이 도리아의 연합 함대를 몰아냈습니다.' },
+  djerba: { title: '제르바 해전', hanja: 'Djerba', date: '1560년 5월 11–14일', place: '제르바 섬 앞바다', hook: '물을 싣던 기독교 함대를 피얄레 파샤가 덮쳤습니다. 흩어진 갤리선을 한 척이라도 더 살려야 합니다.' },
+  'lepanto-north': { title: '레판토 해전 · 북쪽 날개', hanja: 'Lepanto · Ala sinistra', date: '1571년 10월 7일', place: '파트라스 만 · 아이톨리아 해안', hook: '해안에 붙은 바르바리고의 베네치아 갤리선을 시로코가 얕은 물길로 돌아 칩니다.' },
+  'lepanto-centre': { title: '레판토 해전 · 중앙', hanja: 'Lepanto · Battaglia', date: '1571년 10월 7일', place: '파트라스 만 · 쿠르촐라리 앞바다', hook: '라 레알호와 술타나호가 이물을 맞댄 레판토의 결전.' },
+  'lepanto-south': { title: '레판토 해전 · 남쪽 날개', hanja: 'Lepanto · Corno destro', date: '1571년 10월 7일', place: '파트라스 만 · 바다 쪽', hook: '도리아와 울루치 알리가 서로 바다 쪽으로 돌다 틈이 벌어졌습니다.' },
 } satisfies Record<string, ScenarioText>;

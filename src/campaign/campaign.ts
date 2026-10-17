@@ -227,6 +227,12 @@ const KIND_COST: Record<ShipKind, { hull: number; crew: number; supply: number }
   spgalleon: { hull: 1.4, crew: 1.6, supply: 1.4 },
   galleass: { hull: 1.2, crew: 1.6, supply: 1.3 },
   urca: { hull: 0.8, crew: 0.5, supply: 0.4 },
+  reale: { hull: 1.3, crew: 1.6, supply: 1.4 },
+  galea: { hull: 0.8, crew: 0.9, supply: 0.8 },
+  vgalleass: { hull: 1.4, crew: 1.7, supply: 1.4 },
+  sultana: { hull: 1.3, crew: 1.6, supply: 1.4 },
+  kadirga: { hull: 0.75, crew: 0.9, supply: 0.75 },
+  kalyata: { hull: 0.45, crew: 0.45, supply: 0.4 },
 };
 
 export function repairCost(c: Campaign) {

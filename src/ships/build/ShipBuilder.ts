@@ -48,7 +48,13 @@ function buildLod(kind: ShipKind, variant: number, lod: Lod, omitDragonHead: boo
     case 'fireship':
       return buildSailShip(kind, variant, lod);
     case 'galleass':
-      return buildGalleass(lod);
+    case 'vgalleass':
+    case 'reale':
+    case 'galea':
+    case 'sultana':
+    case 'kadirga':
+    case 'kalyata':
+      return buildGalleass(lod, kind);
     default:
       throw new Error(`no procedural model for ${kind}`);
   }

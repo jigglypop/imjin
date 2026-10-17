@@ -24,7 +24,7 @@ try {
   });
   const path = join(temporary, 'camp-kits.mjs'); await writeFile(path, bundled.outputFiles[0].contents);
   const { buildShipKit, campPlan, settlementPieces, buildShip, modelKind, PROCEDURAL_KINDS, SHIP_SPECS, buildings, pieces } = await import(pathToFileURL(path).href);
-  const NAVIES = ['joseon', 'japan', 'ming'];
+  const NAVIES = ['joseon', 'japan', 'ming', 'england', 'spain'];
   const tris = (m) => m.index.length / 3;
 
   // The settlements' buildings, made like the battle's ships: procedural parts on each navy's texture atlas.
@@ -130,7 +130,7 @@ try {
     }
   });
   check('a camp never loses a building as it grows (a stockade gate becomes a gatehouse)', () => {
-    const UPGRADE = { jo_gate: 'fortgate' };
+    const UPGRADE = { jo_gate: 'fortgate', eu_gate: 'eu_gatehouse' };
     for (const f of NAVIES) for (let level = 1; level < 3; level++) {
       const count = (l) => {
         const n = new Map();
@@ -163,7 +163,7 @@ try {
     }
     // The navies differ in their colours, not only in their outlines.
     const tint = (f) => { const m = buildShipKit(f); return m.color.reduce((a, v) => a + v, 0); };
-    assert.equal(new Set(NAVIES.map((f) => tint(f).toFixed(3))).size, 3);
+    assert.equal(new Set(NAVIES.map((f) => tint(f).toFixed(3))).size, NAVIES.length);
   });
   check('every ship kind is the battle\'s procedural ship on the map, its far level light and in ship space', () => {
     for (const kind of Object.keys(SHIP_SPECS)) assert.ok(PROCEDURAL_KINDS.includes(modelKind(kind)), `${kind} is drawn by the battle's builder`);

@@ -1,6 +1,6 @@
 import { shipSpec } from '../competitive';
 import { dateOf } from './economy';
-import { REGION_ORDER, REGIONS } from './regions';
+import { REGIONS, regionIndex } from './regions';
 import type { Fleet, Grand, RegionId, Transit } from './types';
 import { atWar, lanesOf, passable } from './world';
 import { fleetMarch } from './growth';
@@ -120,7 +120,7 @@ export function marchDistances(g: Grand, fl: Fleet, limit = Infinity): { dist: M
     }
   }
   while (open.length) {
-    open.sort((a, b) => dist.get(a)! - dist.get(b)! || REGION_ORDER.indexOf(a) - REGION_ORDER.indexOf(b));
+    open.sort((a, b) => dist.get(a)! - dist.get(b)! || regionIndex(a) - regionIndex(b));
     const here = open.shift()!;
     // A hostile port ends the way: it is fought for, not sailed through. The port the fleet lies in may be left.
     if (here !== fl.at && !passable(g, fl.faction, here)) continue;

@@ -158,7 +158,40 @@ const PARTS: Record<ModelKind, Part[]> = {
     { id: 'hull', label: '둥근 선체', note: '배가 둥글고 넓은 발트해의 화물선입니다. 무적함대의 보급선으로 식량과 물, 말과 화약을 실었습니다.', at: wall(0.6) },
     { id: 'saker', label: '세이커포', note: '가벼운 화포 몇 문만 실어 싸움에는 약했습니다.', at: gun('saker') },
     { id: 'sails', label: '가로돛', note: '느렸고 바람을 거슬러 가기가 힘들었습니다.', at: sail(0.55) },
+  ],  reale: [
+    { id: 'bow', label: '이물 포대', note: '이물 단 위에 큰 대포 한 문과 작은 포 넷을 앞으로 향해 놓았습니다.', at: (a) => lift(a.fireSpots[3], 0.6) },
+    { id: 'oars', label: '노와 노꾼', note: '노 하나에 노꾼 셋에서 다섯이 붙어 저었습니다. 노꾼은 죄수, 노예, 품삯을 받는 자원자였습니다.', at: oars },
+    { id: 'sails', label: '래틴 돛', note: '세모난 래틴 돛을 달았지만, 싸울 때는 돛을 내리고 노로만 움직였습니다.', at: sail(0.6) },
+    { id: 'stern', label: '고물', note: '지휘관이 서는 고물 갑판 위에 차양을 쳤습니다.', at: COMMAND_DECK },
   ],
+  galea: [
+    { id: 'bow', label: '이물 포대', note: '이물 단 위에 큰 대포 한 문과 작은 포 두셋을 앞으로 향해 놓았습니다.', at: (a) => lift(a.fireSpots[3], 0.6) },
+    { id: 'oars', label: '노와 노꾼', note: '노 하나에 노꾼 셋에서 다섯이 붙어 저었습니다. 노꾼은 죄수, 노예, 품삯을 받는 자원자였습니다.', at: oars },
+    { id: 'sails', label: '래틴 돛', note: '세모난 래틴 돛을 달았지만, 싸울 때는 돛을 내리고 노로만 움직였습니다.', at: sail(0.6) },
+    { id: 'stern', label: '고물', note: '지휘관이 서는 고물 갑판 위에 차양을 쳤습니다.', at: COMMAND_DECK },
+  ],
+  vgalleass: [
+    { id: 'bow', label: '뱃머리 포루', note: '둥근 뱃머리 포루에서 큰 포를 앞과 옆으로 쏘았습니다. 레판토에서 이 포격이 오스만 대열을 흐트러뜨렸습니다.', at: (a) => lift(a.fireSpots[3], 0.6) },
+    { id: 'oars', label: '노와 노꾼', note: '큰 선체에 비해 노의 힘이 모자라 싸움터까지 갤리선이 끌어 주었습니다.', at: oars },
+    { id: 'sails', label: '래틴 돛', note: '돛대 셋에 래틴 돛을 달았습니다.', at: sail(0.6) },
+  ],
+  sultana: [
+    { id: 'bow', label: '이물 포대', note: '이물 단 위에 큰 대포 한 문과 작은 포를 놓았습니다. 병사들은 포보다 활을 많이 썼습니다.', at: (a) => lift(a.fireSpots[3], 0.6) },
+    { id: 'oars', label: '노와 노꾼', note: '노 하나에 노꾼 셋에서 다섯이 붙어 저었습니다. 노꾼은 죄수, 노예, 품삯을 받는 자원자였습니다.', at: oars },
+    { id: 'sails', label: '래틴 돛', note: '세모난 래틴 돛을 달았지만, 싸울 때는 돛을 내리고 노로만 움직였습니다.', at: sail(0.6) },
+    { id: 'stern', label: '고물', note: '지휘관이 서는 고물 갑판 위에 차양을 쳤습니다.', at: COMMAND_DECK },
+  ],
+  kadirga: [
+    { id: 'bow', label: '이물 포대', note: '이물 포는 베네치아 갤리선보다 적었습니다.', at: (a) => lift(a.fireSpots[3], 0.6) },
+    { id: 'oars', label: '노와 노꾼', note: '노 하나에 노꾼 셋에서 다섯이 붙어 저었습니다. 노꾼은 죄수, 노예, 품삯을 받는 자원자였습니다.', at: oars },
+    { id: 'sails', label: '래틴 돛', note: '세모난 래틴 돛을 달았지만, 싸울 때는 돛을 내리고 노로만 움직였습니다.', at: sail(0.6) },
+    { id: 'stern', label: '고물', note: '지휘관이 서는 고물 갑판 위에 차양을 쳤습니다.', at: COMMAND_DECK },
+  ],
+  kalyata: [
+    { id: 'oars', label: '노와 노꾼', note: '노 하나에 노꾼 둘이 붙은 가볍고 빠른 배였습니다.', at: oars },
+    { id: 'sails', label: '래틴 돛', note: '돛대 하나에 큰 래틴 돛을 달았습니다.', at: sail(0.6) },
+  ],
+
 };
 
 /** The anchors a kind is drawn and labelled with: its own, or its model's scaled to it. */

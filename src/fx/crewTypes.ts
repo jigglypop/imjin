@@ -13,6 +13,10 @@ export const CAST: Record<Faction, [CrewKey, CrewKey, CrewKey, CrewKey, CrewKey,
   // The Armada navies: sailors at the guns and the drum, caliver-men and arquebusiers, morion-helmeted soldiers.
   england: ['england_sailor', 'england_sailor', 'england_shot', 'england_soldier', 'england_officer', 'england_sailor'],
   spain: ['spain_sailor', 'spain_sailor', 'spain_shot', 'spain_soldier', 'spain_officer', 'spain_sailor'],
+  // The Lepanto navies: galley oarsmen at the benches and the guns, Spanish arquebusiers and Venetian fanti; Ottoman
+  // azap archers and janissaries, the oars pulled by captives.
+  holyleague: ['holyleague_oarsman', 'holyleague_oarsman', 'holyleague_shot', 'holyleague_soldier', 'holyleague_officer', 'holyleague_oarsman'],
+  ottoman: ['ottoman_oarsman', 'ottoman_oarsman', 'ottoman_archer', 'ottoman_janissary', 'ottoman_officer', 'ottoman_oarsman'],
 };
 
 /** Hand props the crew models carry (scripts/bake-crew.mjs); a figure shows one and the rest fold away. */
@@ -24,6 +28,8 @@ export const ARMS: Record<Faction, number[]> = {
   ming: [0, 0, W.bow, W.spear, W.sword, W.sticks],
   england: [0, 0, W.gun, W.spear, W.sword, W.sticks],
   spain: [0, 0, W.gun, W.spear, W.sword, W.sticks],
+  holyleague: [0, 0, W.gun, W.spear, W.sword, W.sticks],
+  ottoman: [0, 0, W.bow, W.sword, W.sword, W.sticks],
 };
 /** What the shooters pick up for a melee: every shooter model carries a spear, the fighters their own weapon. */
 export const HAND_ARMS: Record<Faction, number[]> = {
@@ -32,6 +38,8 @@ export const HAND_ARMS: Record<Faction, number[]> = {
   ming: [0, 0, W.spear, W.spear, W.sword, W.spear],
   england: [0, 0, W.spear, W.spear, W.sword, W.spear],
   spain: [0, 0, W.spear, W.spear, W.sword, W.spear],
+  holyleague: [0, 0, W.spear, W.spear, W.sword, W.spear],
+  ottoman: [0, 0, W.sword, W.sword, W.sword, W.spear],
 };
 /** A weapon id no model carries: every weapon folds away, which is how a surrendering man drops his arms. */
 export const NO_WEAPON = W.none;

@@ -7,6 +7,8 @@
 //   node scripts/build-grand-terrain.mjs            writes the asset
 //   node scripts/build-grand-terrain.mjs --check    rebuilds it in memory and fails unless it matches the file byte for byte
 //   node scripts/build-grand-terrain.mjs --preview=<dir>  also writes PNGs of the facets and of where the drawn coast differs
+//   node scripts/build-grand-terrain.mjs --theatre=armada [--check]  the Armada campaign's world from public/ui/britain_dem.webp
+//     to public/ui/grand_terrain_armada.bin; its north edge eases down to the sea as well, since no far land lies beyond it
 //
 // How it is made: greedy Delaunay refinement (Garland and Heckbert's "Fast polygonal approximation of terrains and height
 // fields", in the style of Mapbox's delatin): start from the DEM's four corners and keep inserting the texel of largest
@@ -38,8 +40,13 @@ import sharp from 'sharp';
 import { MeshoptEncoder } from 'meshoptimizer';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const SOURCE = 'public/ui/korea_dem.webp';
-const OUT = 'public/ui/grand_terrain.bin';
+const THEATRES = {
+  imjin: { source: 'public/ui/korea_dem.webp', out: 'public/ui/grand_terrain.bin', rimNorth: false },
+  armada: { source: 'public/ui/britain_dem.webp', out: 'public/ui/grand_terrain_armada.bin', rimNorth: true },
+};
+const THEATRE = THEATRES[process.argv.find((a) => a.startsWith('--theatre='))?.slice(10) ?? 'imjin'];
+const SOURCE = THEATRE.source;
+const OUT = THEATRE.out;
 const VERSION = 1;
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, ...v] = a.replace(/^--/, '').split('='); return [k, v.length ? v.join('=') : 'true']; }));
@@ -205,7 +212,7 @@ function prepare(W, H, source) {
     for (let x = 0; x < W; x += 1) {
       const i = y * W + x;
       if (!land[i]) { target[i] = -Math.min(seaMax, Math.max(seaMin, -heights[i])); continue; }
-      const edge = Math.min(x, W - 1 - x, H - 1 - y);
+      const edge = THEATRE.rimNorth ? Math.min(x, W - 1 - x, H - 1 - y, y) : Math.min(x, W - 1 - x, H - 1 - y);
       const rim = smoothstep(0, PARAMS.rim, edge);
       target[i] = PARAMS.landMin + Math.max(0, smooth[i] - PARAMS.landMin) * rim;
     }

@@ -1,3 +1,4 @@
+import { theatreOfChapter } from './grand/theatreChoice';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { useAccount } from '../account/store';
 import { sound } from '../audio/Sound';
@@ -93,7 +94,7 @@ export function MainMenu() {
   const chapter = chapterDef(useUi((s) => s.chapter));
   const main = chapter.id === 'imjin';
   const title = t(chapter.title);
-  // A later chapter's campaign is its run of battles with growing commanders, on the history screen.
+  // A chapter with a faction campaign theatre (1592, the Armada) opens it; one without opens its run of battles on the history screen.
   const chapterCampaign = { onPointerEnter: () => prefetchScreen('select'), onClick: () => { sound.click(); setMode('campaign'); setScreen('select'); } };
   const user = useAccount((s) => s.user);
   const [account, setAccount] = useState(false);
@@ -159,7 +160,7 @@ export function MainMenu() {
           {lang === 'en' && main && <div className="wordmark-mark" aria-hidden="true"><span>壬辰倭亂</span><b>임진왜란</b></div>}
         </div>
         <div className="menu-play">
-          <button className="menu-primary" data-mode="faction" {...(main ? mode('faction') : chapterCampaign)}>
+          <button className="menu-primary" data-mode="faction" {...(main || theatreOfChapter(chapter.id) ? mode('faction') : chapterCampaign)}>
             <span className="menu-primary-copy"><strong>{t('캠페인')}</strong><small>{t(chapter.campaign)}</small></span>
             <span className="menu-arrow" aria-hidden="true">↗</span>
           </button>

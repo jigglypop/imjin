@@ -1,7 +1,7 @@
 import type { ShipKind, ShipMods, Team } from '../types';
 import { teamOf } from '../types';
 import { TUNING, buildingOf, levelOf, shipDef, shipGold } from './economy';
-import { REGION_ORDER, REGIONS, type Terrain } from './regions';
+import { REGIONS, regionIndex, type Terrain } from './regions';
 import { mix32 } from './rng';
 import { MARCH } from './march';
 import { fleetTemper, growthMods } from './growth';
@@ -69,6 +69,8 @@ export type BridgeSeat = {
 
 export type RegionBattle = {
   id: string;
+  /** The campaign's theatre, absent for the 1592 war (its battles' descriptions are as before). */
+  theatre?: Grand['theatre'];
   /** The waiting contact this battle settles; pass it back through applyBattleResult. */
   contactId: string;
   turn: number;
@@ -176,6 +178,7 @@ export function describeContact(g: Grand, c: Contact): RegionBattle {
   const anyHuman = g.player !== null;
   return {
     id: `${g.seed}:${c.id}`,
+    ...(g.theatre ? { theatre: g.theatre } : {}),
     contactId: c.id,
     turn: g.turn,
     regionId: c.regionId,
@@ -183,7 +186,7 @@ export function describeContact(g: Grand, c: Contact): RegionBattle {
     mapId: c.regionId,
     terrain: def.terrain,
     humanSide: humanAttacker ? 'attacker' : 'defender',
-    seed: mix32(g.seed ^ mix32(g.turn * 131 + REGION_ORDER.indexOf(c.regionId))) || 1592,
+    seed: mix32(g.seed ^ mix32(g.turn * 131 + regionIndex(c.regionId))) || 1592,
     attacker: { name: TUNING.faction[c.attacker].label, faction: c.attacker, team: teams.attacker, human: humanAttacker, ships: atk.ships, reserve: atk.reserve, leader: leaderOf(g, forces.attackers) },
     defender: { name: TUNING.faction[c.defender].label, faction: c.defender, team: teams.defender, human: anyHuman && !humanAttacker, ships: dfn.ships, reserve: dfn.reserve, leader: leaderOf(g, forces.defenders) },
     defenderBuildings: works,

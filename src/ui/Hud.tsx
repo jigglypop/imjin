@@ -56,7 +56,7 @@ function formatTime(t: number) {
 
 /** Counts are by team. The engine names the sides, the player's first. */
 /** The portrait for a ship whose squadron names none: its navy's commander-in-chief. */
-const FALLBACK_PORTRAIT: Record<Faction, string> = { joseon: 'portrait_admiral', japan: 'portrait_japan', ming: 'portrait_chenlin', england: 'portrait_howard', spain: 'portrait_medina' };
+const FALLBACK_PORTRAIT: Record<Faction, string> = { joseon: 'portrait_admiral', japan: 'portrait_japan', ming: 'portrait_chenlin', england: 'portrait_howard', spain: 'portrait_medina', holyleague: 'portrait_donjuan', ottoman: 'portrait_alipasha' };
 
 function teamName(snap: GameSnapshot, team: Team) {
   return team === snap.team ? snap.sides.own : snap.sides.enemy;
