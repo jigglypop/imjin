@@ -105,6 +105,64 @@
           "total_tokens": 3040
         },
         "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "29101470-4709-4d8e-85a3-6d3d87321c47"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "f520c0cb-520e-4551-957e-1f34bea09370",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6600457291370159,
+          "sy": 1.6999735464593664
+        },
+        "lods": [
+          {
+            "verts": 2122,
+            "tris": 1906
+          },
+          {
+            "verts": 1110,
+            "tris": 740
+          },
+          {
+            "verts": 218,
+            "tris": 202
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "melee",
+          "thrust",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "combo",
+          "slash",
+          "parry",
+          "block",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
       }
     },
     "britain_officer": {
@@ -287,6 +345,65 @@
           "total_tokens": 3049
         },
         "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "d1141c3a-692f-4349-96bc-50efb98f42bf"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "789d0048-0a01-466c-bfa9-f0a41148a614",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6347247831903897,
+          "sy": 1.7008528744566367
+        },
+        "lods": [
+          {
+            "verts": 1789,
+            "tris": 1900
+          },
+          {
+            "verts": 930,
+            "tris": 722
+          },
+          {
+            "verts": 223,
+            "tris": 212
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "shoot",
+          "reload",
+          "melee",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "kneel",
+          "parry",
+          "combo",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "aim"
+        ]
       }
     },
     "france_soldier": {
@@ -310,6 +427,64 @@
           "total_tokens": 3029
         },
         "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "bf1bf673-5147-41f3-9280-a08ebb229db6"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "90441176-923b-4498-92cf-a0ca82616bf8",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.66539972004423,
+          "sy": 1.6986248197580411
+        },
+        "lods": [
+          {
+            "verts": 2060,
+            "tris": 1914
+          },
+          {
+            "verts": 1080,
+            "tris": 740
+          },
+          {
+            "verts": 213,
+            "tris": 206
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "melee",
+          "thrust",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "combo",
+          "slash",
+          "parry",
+          "block",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
       }
     },
     "france_officer": {
@@ -333,6 +508,60 @@
           "total_tokens": 3031
         },
         "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "bce3ea3f-3d42-4aa0-bcab-0e97b269a96b"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "13cd9ed4-fe8a-4ccf-9b1a-93d8e000597a",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6195090949558677,
+          "sy": 1.698218750262734
+        },
+        "lods": [
+          {
+            "verts": 1776,
+            "tris": 1686
+          },
+          {
+            "verts": 957,
+            "tris": 666
+          },
+          {
+            "verts": 181,
+            "tris": 170
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "command",
+          "melee",
+          "hit",
+          "die",
+          "cheer",
+          "wave",
+          "signal",
+          "parry",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
       }
     },
     "france_sailor": {
@@ -356,6 +585,65 @@
           "total_tokens": 3022
         },
         "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "be2aa260-a384-415d-8ab2-0791883f364a"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "f9692d6c-4455-455f-a514-0f5c4406352b",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5781973099568314,
+          "sy": 1.6991752257971726
+        },
+        "lods": [
+          {
+            "verts": 1689,
+            "tris": 1646
+          },
+          {
+            "verts": 834,
+            "tris": 624
+          },
+          {
+            "verts": 221,
+            "tris": 186
+          }
+        ],
+        "clips": [
+          "idle",
+          "row",
+          "haul",
+          "carry",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "ready",
+          "ram",
+          "bucket",
+          "douse",
+          "kneel",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "drumroll",
+          "drum"
+        ]
       }
     },
     "spain1805_shot": {
@@ -379,6 +667,65 @@
           "total_tokens": 3042
         },
         "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "d6817012-4906-4176-8fca-1bf16529a5c2"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "ddb5fd66-6d80-4553-9936-881eeb30e10d",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5535067413264172,
+          "sy": 1.7004595707810362
+        },
+        "lods": [
+          {
+            "verts": 2136,
+            "tris": 1882
+          },
+          {
+            "verts": 997,
+            "tris": 710
+          },
+          {
+            "verts": 242,
+            "tris": 206
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "shoot",
+          "reload",
+          "melee",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "kneel",
+          "parry",
+          "combo",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "aim"
+        ]
       }
     },
     "spain1805_soldier": {
@@ -402,6 +749,64 @@
           "total_tokens": 3029
         },
         "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "9265600f-fe1a-4dd2-a0d9-763f8e2a0d7a"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "4c9ccbe7-2d63-4082-8e53-3500f859f0d6",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6550993040845325,
+          "sy": 1.725119975125
+        },
+        "lods": [
+          {
+            "verts": 2081,
+            "tris": 1914
+          },
+          {
+            "verts": 1119,
+            "tris": 740
+          },
+          {
+            "verts": 236,
+            "tris": 206
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "melee",
+          "thrust",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "combo",
+          "slash",
+          "parry",
+          "block",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
       }
     },
     "spain1805_sailor": {
@@ -425,6 +830,65 @@
           "total_tokens": 3023
         },
         "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "989d626e-8d74-41ee-9502-83a4396a2b9e"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "d114dd02-3350-473a-8b7b-591ccd20d56e",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5534687829604286,
+          "sy": 1.7105592957404714
+        },
+        "lods": [
+          {
+            "verts": 1730,
+            "tris": 1648
+          },
+          {
+            "verts": 838,
+            "tris": 622
+          },
+          {
+            "verts": 183,
+            "tris": 182
+          }
+        ],
+        "clips": [
+          "idle",
+          "row",
+          "haul",
+          "carry",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "ready",
+          "ram",
+          "bucket",
+          "douse",
+          "kneel",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "drumroll",
+          "drum"
+        ]
       }
     },
     "spain1805_officer": {
@@ -435,6 +899,60 @@
         "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Spanish Navy officer of 1805: a black bicorne with a red cockade, a dark blue coat with red lapels and gold lace, red waistcoat, blue breeches, black boots. Clean-shaven, powdered hair.",
         "poseReference": "render of ming_officer bind pose",
         "estimatedUsd": 0.04
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "4ae27d68-e348-40e2-8a08-e1de359a4353"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "da180316-53bf-430f-a4f8-bae5b606caf6",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.7444431372999958,
+          "sy": 1.7002261429135384
+        },
+        "lods": [
+          {
+            "verts": 1943,
+            "tris": 1684
+          },
+          {
+            "verts": 996,
+            "tris": 654
+          },
+          {
+            "verts": 201,
+            "tris": 168
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "command",
+          "melee",
+          "hit",
+          "die",
+          "cheer",
+          "wave",
+          "signal",
+          "parry",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
       }
     }
   }
