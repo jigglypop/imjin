@@ -2,6 +2,7 @@
 // (sight, capture weight, fire resistance) do what they say; unarmed craft never fight; the new kinds stay deterministic.
 import assert from 'node:assert/strict';
 import { dirname, join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 
@@ -40,7 +41,7 @@ try {
       assert.ok(PROCEDURAL_KINDS.includes(modelKind(kind)), kind + ' model');
       assert.ok(PROCEDURAL_KINDS.includes(kind) !== !!MODEL_ALIAS[kind], kind + ' has a builder or an alias, not both');
       assert.equal(SHIP_SPECS[modelKind(kind)].faction, spec.faction, kind + ' is drawn with a model of its own navy');
-      assert.match(cardOf(kind), /^card_(panokseon|geobukseon|atakebune|sekibune)$/);
+      assert.ok(existsSync(join(root, 'public/ui/cards', cardOf(kind) + '.jpg')), kind + ' card ' + cardOf(kind));
     }
   });
 
