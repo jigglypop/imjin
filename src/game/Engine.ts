@@ -1851,6 +1851,12 @@ export class Engine {
       return { own: names(this.team), enemy: names(this.enemyTeam) };
     }
     const ming = !!SCENARIOS[this.scenarioId].ming;
+    // A later chapter's battle names its own navies: the slot's navy is the faction of the ships in it.
+    const navyOf = (team: Team) => this.battle.ships.find((s) => s.team === team)?.spec.faction;
+    if (navyOf('joseon') === 'england' || navyOf('japan') === 'spain') {
+      const own = navyOf(this.team), enemy = navyOf(this.enemyTeam);
+      return { own: own ? t(FACTION_NAME[own]) : '', enemy: enemy ? t(FACTION_NAME[enemy]) : '' };
+    }
     const name = (team: Team) => (team === 'japan' ? t(FACTION_NAME.japan) : !ming ? t(FACTION_NAME.joseon) : t(this.faction === 'ming' ? '명·조선 연합' : '조선·명 연합'));
     return { own: name(this.team), enemy: name(this.enemyTeam) };
   }
