@@ -10,13 +10,16 @@ const positional = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const flags = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => { const [k, ...v] = a.replace(/^--/, '').split('='); return [k, v.join('=') || 'true']; }));
 const url = positional[0] ?? 'http://127.0.0.1:5291/?scenario=hansan';
 const then = flags.then ? flags.then.split(',') : [];
-const before = new Set(execSync("ps -axo pid=").toString().trim().split(/\s+/));
+// Process RSS reads ps (macOS/Linux); on Windows only the GPU numbers from the page are reported.
+const unix = process.platform !== 'win32';
+const before = new Set(unix ? execSync("ps -axo pid=").toString().trim().split(/\s+/) : []);
 const browser = await webkit.launch({ headless: true });
 const ctx = await browser.newContext({ ...devices['iPhone 15 Pro'] });
 const page = await ctx.newPage();
 const t0 = Date.now();
 await page.goto(url, { waitUntil: 'domcontentloaded' });
 const sample = (label) => {
+  if (!unix) return 0;
   const rows = execSync("ps -axo pid=,rss=,comm=").toString().trim().split('\n').map((l) => l.trim().split(/\s+/));
   const mine = rows.filter(([pid, , comm]) => !before.has(pid) && /WebKit/.test(comm ?? ''));
   const total = mine.reduce((s, r) => s + Number(r[1]), 0);
