@@ -507,6 +507,50 @@ async function pack(c) {
         copy.addSampler(sampler).addChannel(doc.createAnimationChannel().setTargetNode(target).setTargetPath(ch.getTargetPath()).setSampler(sampler));
       }
     }
+    // --robe: long-robe figures take a narrow-stance sword set (Sword Shout 101 as command, Right-hand Sword Slash
+    // 219 as attack), Meshy clips made on the same rig (motion-candidates/robe.glb), copied by joint name, unedited.
+    if (args.robe) {
+      const src = await io.read(join(d, 'motion-candidates', 'robe.glb'));
+      const byName = new Map(doc.getRoot().listNodes().map((n) => [n.getName(), n]));
+      const buffer = doc.getRoot().listBuffers()[0];
+      for (const [name, from] of [['command_sword', 'Sword_Shout'], ['attack_sword', 'Right_Hand_Sword_Slash']]) {
+        const clip = src.getRoot().listAnimations().find((a) => a.getName().split('|').includes(from) || a.getName() === from);
+        if (!clip) throw new Error(`robe.glb has no ${from}`);
+        for (const a of doc.getRoot().listAnimations()) if (a.getName() === name) a.dispose();
+        const copy = doc.createAnimation(name);
+        for (const ch of clip.listChannels()) {
+          const target = byName.get(ch.getTargetNode().getName());
+          if (!target) continue;
+          const sm = ch.getSampler();
+          const acc = (x) => doc.createAccessor().setType(x.getType()).setArray(x.getArray().slice()).setBuffer(buffer);
+          const sampler = doc.createAnimationSampler().setInput(acc(sm.getInput())).setOutput(acc(sm.getOutput())).setInterpolation(sm.getInterpolation());
+          copy.addSampler(sampler).addChannel(doc.createAnimationChannel().setTargetNode(target).setTargetPath(ch.getTargetPath()).setSampler(sampler));
+        }
+      }
+    }
+    // --headup=<deg>[:clip,clip]: a constant pitch-up of the head in those clips (default idle_sword), taken in the
+    // neck's bind frame about the body's left-right axis, so a library idle that looks at the ground faces forward.
+    if (args.headup) {
+      const [deg, which] = args.headup.split(':');
+      const clips = (which ?? 'idle_sword').split(',');
+      const nodes = doc.getRoot().listNodes();
+      const parentOf = new Map(); for (const n of nodes) for (const ch of n.listChildren()) parentOf.set(ch, n);
+      const mul = (a, b) => [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1], a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0], a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3], a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]];
+      const inv = (q) => [-q[0], -q[1], -q[2], q[3]];
+      const head = nodes.find((n) => n.getName() === 'Head');
+      let P = [0, 0, 0, 1]; for (let n = parentOf.get(head); n; n = parentOf.get(n)) P = mul(n.getRotation(), P);
+      const t = (-Number(deg) * Math.PI) / 180;
+      const Q = mul(mul(inv(P), [Math.sin(t / 2), 0, 0, Math.cos(t / 2)]), P);
+      for (const a of doc.getRoot().listAnimations()) {
+        if (!clips.includes(a.getName())) continue;
+        for (const ch of a.listChannels()) {
+          if (ch.getTargetNode() !== head || ch.getTargetPath() !== 'rotation') continue;
+          const acc = ch.getSampler().getOutput(); const arr = acc.getArray().slice();
+          for (let i = 0; i < arr.length; i += 4) { const q = mul(Q, [arr[i], arr[i + 1], arr[i + 2], arr[i + 3]]); const l = Math.hypot(...q); arr.set(q.map((x) => x / l), i); }
+          acc.setArray(arr);
+        }
+      }
+    }
     // Meshy's rigged output keeps only a 2k colour map (from the 2k upload); the raw model's own full-size colour,
     // normal and metal/roughness maps go back on (the UVs are the raw model's), sized per level below.
     const raw = await io.read(join(d, existsSync(join(d, 'retex.glb')) ? 'retex.glb' : 'raw.glb'));
@@ -537,6 +581,19 @@ async function pack(c) {
         if (slot === 'BaseColor' && args.grade) image = new Uint8Array(await sharp(Buffer.from(image)).modulate({ saturation: Number(args.grade) }).linear(1.08, -6).png().toBuffer());
         const tex = doc.createTexture(`${slot}`).setImage(image).setMimeType(slot === 'BaseColor' && (args.grade || args.studs || args.skin || args.deblue || args.lacquer) ? 'image/png' : src.getMimeType());
         m[`set${slot}Texture`](tex);
+      }
+      // --eyes=x,y,w,h@size: the eyes' texel box on the raw colour map (found from the face's UVs): sclera and iris
+      // toned to the concept, the box made non-metal and rough so the eyes stop mirroring the sky.
+      if (args.eyes && m.getBaseColorTexture()) {
+        const [boxes, size] = args.eyes.split('@');
+        const { fixEyes } = await import('./lib/cast-studs.mjs');
+        for (const xywh of boxes.split(';')) {
+          const [x, y, w, h] = xywh.split(',').map(Number);
+          const r = await fixEyes(m.getBaseColorTexture().getImage(), { x, y, w, h, size: Number(size) }, m.getMetallicRoughnessTexture()?.getImage());
+          m.getBaseColorTexture().setImage(r.color).setMimeType('image/png');
+          if (r.mr) m.getMetallicRoughnessTexture().setImage(r.mr).setMimeType('image/png');
+          if (lod.suffix === '') log(c.id, 'eyes', xywh, r.sclera, 'sclera px', r.iris, 'iris px');
+        }
       }
       // --torso: the chest plate alone (by its bind-pose place) gets lacquer colour and gloss; the rest keeps Meshy's maps.
       if (args.torso && m.getBaseColorTexture() && m.getMetallicRoughnessTexture()) {

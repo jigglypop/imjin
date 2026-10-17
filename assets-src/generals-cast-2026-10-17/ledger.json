@@ -9104,11 +9104,756 @@
       "what": "yi__yi_tongjesa motions",
       "task": "01a14852-5b17-73f4-a21d-45096d0cf1b3",
       "credits": 24
+    },
+    {
+      "at": "2026-10-17T05:40:10.647Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/wakisaka__wakisaka_shichihon_t/front.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 2688,
+        "input_tokens_details": {
+          "image_tokens": 1784,
+          "text_tokens": 904
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 8618
+      }
+    },
+    {
+      "at": "2026-10-17T05:40:32.233Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_t/front.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 2681,
+        "input_tokens_details": {
+          "image_tokens": 1784,
+          "text_tokens": 897
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 8611
+      }
+    },
+    {
+      "at": "2026-10-17T05:40:40.731Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/wakisaka__wakisaka_shichihon_t/left.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1740,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 219
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7670
+      }
+    },
+    {
+      "at": "2026-10-17T05:40:45.610Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/wakisaka__wakisaka_shichihon_t/right.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1740,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 219
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7670
+      }
+    },
+    {
+      "at": "2026-10-17T05:40:47.018Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/wakisaka__wakisaka_shichihon_t/back.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1731,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 210
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7661
+      }
+    },
+    {
+      "at": "2026-10-17T05:41:01.184Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/wakisaka__wakisaka_shichihon_t/face.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1619,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 98
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7549
+      }
+    },
+    {
+      "at": "2026-10-17T05:41:05.134Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_t/left.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1740,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 219
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7670
+      }
+    },
+    {
+      "at": "2026-10-17T05:41:06.019Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_t/back.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1731,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 210
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7661
+      }
+    },
+    {
+      "at": "2026-10-17T05:41:08.524Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_t/right.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1740,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 219
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7670
+      }
+    },
+    {
+      "at": "2026-10-17T05:41:20.862Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_t/face.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1619,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 98
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7549
+      }
+    },
+    {
+      "at": "2026-10-17T05:44:01.968Z",
+      "provider": "tripo",
+      "what": "wakisaka model",
+      "task": "f607d789-06f6-4f56-8266-b622f488dc6f",
+      "credits": 60
+    },
+    {
+      "at": "2026-10-17T05:44:12.388Z",
+      "provider": "tripo",
+      "what": "chenlin model",
+      "task": "be485b2c-d126-42a5-8a02-529680c39309",
+      "credits": 60
+    },
+    {
+      "at": "2026-10-17T05:45:08.635Z",
+      "provider": "meshy",
+      "what": "wakisaka__wakisaka_shichihon rig",
+      "task": "01a14863-d99c-740d-9f60-db216efa992f",
+      "credits": 5
+    },
+    {
+      "at": "2026-10-17T05:45:56.489Z",
+      "provider": "meshy",
+      "what": "wakisaka__wakisaka_shichihon motions",
+      "task": "01a14864-822e-76e7-9ca0-11dbb7ea7b2c",
+      "credits": 24
+    },
+    {
+      "at": "2026-10-17T05:46:38.968Z",
+      "provider": "meshy",
+      "what": "chenlin__chenlin_dudok rig",
+      "task": "01a14865-408e-77d8-8202-37aeca0abcd3",
+      "credits": 5
+    },
+    {
+      "at": "2026-10-17T05:47:26.872Z",
+      "provider": "meshy",
+      "what": "chenlin__chenlin_dudok motions",
+      "task": "01a14865-e312-7102-b9d9-90f8d9e18447",
+      "credits": 24
+    },
+    {
+      "at": "2026-10-17T05:49:24.572Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/deng__deng_nojang_t/front.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 2696,
+        "input_tokens_details": {
+          "image_tokens": 1784,
+          "text_tokens": 912
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 8626
+      }
+    },
+    {
+      "at": "2026-10-17T05:49:36.571Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/won__won_heukcheol_t/front.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 2671,
+        "input_tokens_details": {
+          "image_tokens": 1784,
+          "text_tokens": 887
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 8601
+      }
+    },
+    {
+      "at": "2026-10-17T05:49:53.547Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/deng__deng_nojang_t/left.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1740,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 219
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7670
+      }
+    },
+    {
+      "at": "2026-10-17T05:50:00.574Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/deng__deng_nojang_t/right.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1740,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 219
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7670
+      }
+    },
+    {
+      "at": "2026-10-17T05:50:02.209Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/deng__deng_nojang_t/back.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1731,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 210
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7661
+      }
+    },
+    {
+      "at": "2026-10-17T05:50:10.617Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/deng__deng_nojang_t/face.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1619,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 98
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7549
+      }
+    },
+    {
+      "at": "2026-10-17T05:50:13.166Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/won__won_heukcheol_t/back.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1731,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 210
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7661
+      }
+    },
+    {
+      "at": "2026-10-17T05:50:20.434Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/won__won_heukcheol_t/left.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1740,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 219
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7670
+      }
+    },
+    {
+      "at": "2026-10-17T05:50:20.774Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/won__won_heukcheol_t/face.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1619,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 98
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7549
+      }
+    },
+    {
+      "at": "2026-10-17T05:50:27.560Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/won__won_heukcheol_t/right.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1740,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 219
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7670
+      }
+    },
+    {
+      "at": "2026-10-17T05:51:19.483Z",
+      "provider": "meshy",
+      "what": "chenlin__chenlin_dudok_t motion candidates 101,219,29,242,105,4,199,202",
+      "task": "01a14869-824d-7545-be2a-c5d7bacf2da6",
+      "credits": 24
+    },
+    {
+      "at": "2026-10-17T05:52:59.937Z",
+      "provider": "tripo",
+      "what": "won model",
+      "task": "77c7cb19-ed1d-4f68-b97c-612eda35376e",
+      "credits": 60
+    },
+    {
+      "at": "2026-10-17T06:03:58.504Z",
+      "provider": "meshy",
+      "what": "won__won_heukcheol rig",
+      "task": "01a14875-246e-7468-9396-8c1d78101762",
+      "credits": 5
+    },
+    {
+      "at": "2026-10-17T06:04:46.384Z",
+      "provider": "meshy",
+      "what": "won__won_heukcheol motions",
+      "task": "01a14875-bf8d-7394-9367-8da94f8363b3",
+      "credits": 24
+    },
+    {
+      "at": "2026-10-17T06:05:18.525Z",
+      "provider": "meshy",
+      "what": "won__won_heukcheol_t motion candidates 101,219",
+      "task": "01a14876-a025-737c-a329-90ca47915518",
+      "credits": 6
+    },
+    {
+      "at": "2026-10-17T06:06:33.541Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/eokgi__eokgi_cheonggap_t/front.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 2668,
+        "input_tokens_details": {
+          "image_tokens": 1784,
+          "text_tokens": 884
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 8598
+      }
+    },
+    {
+      "at": "2026-10-17T06:06:38.355Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/kato__kato_teppo_t/front.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 2647,
+        "input_tokens_details": {
+          "image_tokens": 1784,
+          "text_tokens": 863
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 8577
+      }
+    },
+    {
+      "at": "2026-10-17T06:07:03.182Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/eokgi__eokgi_cheonggap_t/left.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1740,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 219
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7670
+      }
+    },
+    {
+      "at": "2026-10-17T06:07:05.681Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/kato__kato_teppo_t/left.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1740,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 219
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7670
+      }
+    },
+    {
+      "at": "2026-10-17T06:07:08.349Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/eokgi__eokgi_cheonggap_t/right.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1740,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 219
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7670
+      }
+    },
+    {
+      "at": "2026-10-17T06:07:09.318Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/eokgi__eokgi_cheonggap_t/back.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1731,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 210
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7661
+      }
+    },
+    {
+      "at": "2026-10-17T06:07:11.466Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/kato__kato_teppo_t/back.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1731,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 210
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7661
+      }
+    },
+    {
+      "at": "2026-10-17T06:07:14.666Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/kato__kato_teppo_t/right.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1740,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 219
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7670
+      }
+    },
+    {
+      "at": "2026-10-17T06:07:18.021Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/eokgi__eokgi_cheonggap_t/face.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1619,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 98
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7549
+      }
+    },
+    {
+      "at": "2026-10-17T06:07:26.539Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/kato__kato_teppo_t/face.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 1619,
+        "input_tokens_details": {
+          "image_tokens": 1521,
+          "text_tokens": 98
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 7549
+      }
+    },
+    {
+      "at": "2026-10-17T06:07:58.514Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/konishi__konishi_gin_t/front.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 2663,
+        "input_tokens_details": {
+          "image_tokens": 1784,
+          "text_tokens": 879
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 8593
+      }
+    },
+    {
+      "at": "2026-10-17T06:07:58.884Z",
+      "provider": "meshy",
+      "what": "weapon joseon_jangchang model",
+      "task": "01a14878-ac33-727d-b9c4-c39c7c30ab3d",
+      "credits": 35
+    },
+    {
+      "at": "2026-10-17T06:08:02.438Z",
+      "provider": "meshy",
+      "what": "weapon japan_yari model",
+      "task": "01a14878-baeb-7588-934b-89e5947275cd",
+      "credits": 35
+    },
+    {
+      "at": "2026-10-17T06:08:03.072Z",
+      "provider": "openai",
+      "what": "assets-src/generals-cast-2026-10-17/shimazu__shimazu_oni_t/front.png",
+      "model": "gpt-image-2.5-flare",
+      "credits": 0,
+      "usage": {
+        "input_tokens": 2654,
+        "input_tokens_details": {
+          "image_tokens": 1784,
+          "text_tokens": 870
+        },
+        "output_tokens": 5930,
+        "output_tokens_details": {
+          "image_tokens": 5930,
+          "text_tokens": 0
+        },
+        "total_tokens": 8584
+      }
+    },
+    {
+      "at": "2026-10-17T06:08:06.915Z",
+      "provider": "meshy",
+      "what": "weapon ming_qiang model",
+      "task": "01a14878-ca8b-72d4-ab0c-ebfb06470194",
+      "credits": 35
+    },
+    {
+      "at": "2026-10-17T06:08:10.524Z",
+      "provider": "meshy",
+      "what": "weapon joseon_gakgung model",
+      "task": "01a14878-da3f-75b9-9f39-d536635d89d4",
+      "credits": 35
     }
   ],
   "totals": {
     "openai": 0,
-    "tripo": 425,
-    "meshy": 1261
+    "tripo": 605,
+    "meshy": 1518
   }
 }

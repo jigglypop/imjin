@@ -186,3 +186,22 @@
 | 2026-10-17 05:14 | yi__yi_tongjesa (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/yi__yi_tongjesa_t |
 | 2026-10-17 05:20 | chenlin, yi, deng, won (live) | idle → Meshy Idle 6 (246, owner's pick), shoulders −12° re-applied (cast-idle.mjs + cast-shoulders.mjs) | review/idle6_live4.png, review/idle_candidates_yi_3_6_10_5.png |
 | 2026-10-17 05:26 | yi__yi_tongjesa (t3) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 05:38 | yi__yi_tongjesa (t3) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 05:38 | yi__yi_tongjesa (t3) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 05:41 | wakisaka__wakisaka_shichihon (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/wakisaka__wakisaka_shichihon_t |
+| 2026-10-17 05:41 | chenlin__chenlin_dudok (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_t |
+| 2026-10-17 05:44 | yi__yi_tongjesa (t3) | LIVE (checked: lead approved t3 (Tripo 4-view + Meshy rig/sets, eyes fix, headup 12, sword-only): review/yi__yi_tongjesa_t3_sheet.png, _face_fixed.png) | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 05:47 | wakisaka__wakisaka_shichihon (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/wakisaka__wakisaka_shichihon.glb |
+| 2026-10-17 05:47 | chenlin__chenlin_dudok (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/chenlin__chenlin_dudok.glb |
+| 2026-10-17 05:50 | deng__deng_nojang (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/deng__deng_nojang_t |
+| 2026-10-17 05:50 | won__won_heukcheol (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/won__won_heukcheol_t |
+| 2026-10-17 06:03 | wakisaka__wakisaka_shichihon (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/wakisaka__wakisaka_shichihon.glb |
+| 2026-10-17 06:03 | wakisaka__wakisaka_shichihon (t) | LIVE (checked: lead approved wakisaka t (Tripo 4-view + Meshy rig/sets, eye fix, headup 12): review/wakisaka__wakisaka_shichihon_t_sheet.png) | public/models/generals/wakisaka__wakisaka_shichihon.glb |
+| 2026-10-17 06:03 | chenlin__chenlin_dudok (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/chenlin__chenlin_dudok.glb |
+| 2026-10-17 06:05 | chenlin__chenlin_dudok (t) | LIVE (checked: lead approved chenlin t robe set: review/chenlin__chenlin_dudok_t_robe_sheet.png) | public/models/generals/chenlin__chenlin_dudok.glb |
+| 2026-10-17 06:05 | deng__deng_nojang (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/deng__deng_nojang_t |
+| 2026-10-17 06:05 | won__won_heukcheol (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/won__won_heukcheol.glb |
+| 2026-10-17 06:06 | won__won_heukcheol (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/won__won_heukcheol.glb |
+| 2026-10-17 06:06 | won__won_heukcheol (t) | LIVE (checked: lead approved won t (robe set) + eye fix: review/won__won_heukcheol_t_sheet.png, _t_eyes.png) | public/models/generals/won__won_heukcheol.glb |
+| 2026-10-17 06:07 | eokgi__eokgi_cheonggap (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/eokgi__eokgi_cheonggap_t |
+| 2026-10-17 06:07 | kato__kato_teppo (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kato__kato_teppo_t |

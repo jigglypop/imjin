@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useT } from '../../i18n';
-import { armorById, armorCardUrl, GENERALS, TIER_LABEL, WEAPON_KINDS, WEAPON_KIND_LABEL, weaponsFor, type MetaFaction } from '../../meta/catalog';
+import { armorById, armorCardUrl, GENERALS, TIER_LABEL, WEAPON_KINDS, WEAPON_KIND_LABEL, weaponsFor, defaultWeapon, type MetaFaction } from '../../meta/catalog';
 import { syncProfile, useLocalProfile } from '../../meta/localProfile';
 import { AFFIX_RARITY_LABEL, affixById, PRIMARY_STATS, rerollCost, rollEffect, rollQuality, STAT_LABEL, type ArmorRoll } from '../../meta/affixes';
 import { armorRoll, rerollProblem, generalState, learnProblem, levelProgress, skillPointsLeft, owns, skillsFor, wornArmor, wornWeapon, type Profile } from '../../meta/rules';
@@ -111,7 +111,8 @@ function GeneralFigure({ id, profile }: { id: string; profile: Profile }) {
   const armorId = [preview, worn].find((a) => a && figures.has(a)) ?? figures.keys().next().value;
   const file = armorId ? figures.get(armorId) : undefined;
   const files = useMemo(() => (file ? [file] : null), [file]);
-  const weapon = wornWeapon(profile, id);
+  const held = wornWeapon(profile, id);
+  const weapon = SWORD_ONLY.has(id) && held && held.kind !== 'sword' ? defaultWeapon(GENERALS.find((g) => g.id === id)!.faction) : held;
   return (
     <>
       <section className="gen-representative" aria-label={t('장수 모습')} data-model-id={file ?? id}>
@@ -204,6 +205,12 @@ function ArmorStats({ armorId, profile }: { armorId: string; profile: Profile })
   );
 }
 
+/**
+ * Figures remade with the weapon-kind motion sets whose spear and bow sets wait for the new weapon models and grip
+ * rules: only their swords can be chosen for now (the other kinds show, disabled).
+ */
+const SWORD_ONLY = new Set(['yi', 'wakisaka', 'chenlin', 'won']);
+
 function WeaponSelection({ id, profile }: { id: string; profile: Profile }) {
   const t = useT();
   const equipWeapon = useLocalProfile((s) => s.equipWeapon);
@@ -218,7 +225,7 @@ function WeaponSelection({ id, profile }: { id: string; profile: Profile }) {
           <span>{t(WEAPON_KIND_LABEL[kind])}</span>
           <div className="gen-weapons__choices">
             {choices.filter((w) => w.kind === kind).map((w) => (
-              <button key={w.id} data-weapon-id={w.id} className="gen-weapon" aria-pressed={selected?.id === w.id} title={t(w.line)} onClick={() => equipWeapon(id, w.id)}>
+              <button key={w.id} data-weapon-id={w.id} className="gen-weapon" aria-pressed={selected?.id === w.id} disabled={SWORD_ONLY.has(id) && kind !== 'sword'} title={t(SWORD_ONLY.has(id) && kind !== 'sword' ? '이 장수의 창술·궁술 동작은 준비 중입니다' : w.line)} onClick={() => equipWeapon(id, w.id)}>
                 <img src={`${import.meta.env.BASE_URL}ui/weapons/${w.id}.webp`} alt="" loading="lazy" width={54} height={54} />
                 <b>{t(w.name)}</b>
               </button>

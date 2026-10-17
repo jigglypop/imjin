@@ -156,3 +156,34 @@ export async function lacquerRegion(color, mr, mask, size, normal) {
   const enc = (buf) => sharp(buf, { raw: { width: size, height: size, channels: 3 } }).png().toBuffer();
   return { color: new Uint8Array(await enc(c)), mr: new Uint8Array(await enc(m)), normal: nm ? new Uint8Array(await enc(nm)) : null, tinted: n };
 }
+
+/**
+ * Eyes in a generated colour map, inside one texel box ({x, y, w, h} on a map of `size` px; boxes scale with the map):
+ * the sclera (bright, unsaturated) toned down to a warm off-white, the iris (dark, cold) pushed to dark brown; the
+ * small brightest specks (catchlights) are left. With `mr`, the same box gets a non-metal, fairly rough surface so the
+ * eye stops mirroring the sky.
+ */
+export async function fixEyes(color, box, mr) {
+  const { data, info } = await sharp(Buffer.from(color)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const k = info.width / box.size;
+  const x0 = Math.round(box.x * k), y0 = Math.round(box.y * k), x1 = Math.round((box.x + box.w) * k), y1 = Math.round((box.y + box.h) * k);
+  let sclera = 0, iris = 0;
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    const i = (y * info.width + x) * 4;
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), sat = max ? (max - min) / max : 0;
+    if (max > 245) continue; // catchlight
+    if (max > 120 && sat < 0.25) { const l = 0.7 * (0.3 * r + 0.59 * g + 0.11 * b); data[i] = Math.min(255, l * 1.04); data[i + 1] = l * 0.98; data[i + 2] = l * 0.9; sclera++; }
+    else if (max < 110 && b >= r - 6) { const l = 0.3 * r + 0.59 * g + 0.11 * b; data[i] = l * 0.95 + 12; data[i + 1] = l * 0.7 + 5; data[i + 2] = l * 0.45; iris++; }
+  }
+  const out = { color: new Uint8Array(await sharp(data, { raw: info }).png().toBuffer()), sclera, iris };
+  if (mr) {
+    const m = await sharp(Buffer.from(mr)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const km = m.info.width / box.size;
+    for (let y = Math.round(box.y * km); y < Math.round((box.y + box.h) * km); y++) for (let x = Math.round(box.x * km); x < Math.round((box.x + box.w) * km); x++) {
+      const i = (y * m.info.width + x) * 4; m.data[i + 1] = Math.max(m.data[i + 1], 150); m.data[i + 2] = 0;
+    }
+    out.mr = new Uint8Array(await sharp(m.data, { raw: m.info }).png().toBuffer());
+  }
+  return out;
+}
