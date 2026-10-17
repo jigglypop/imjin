@@ -1,4 +1,5 @@
 import type { TerrainSpec } from './generate';
+import { ENGLISH_BIOME, FLEMISH_BIOME } from './region';
 
 // The coasts of the Armada's running fight up the Channel, July–August 1588. Each battle's shore is to the north of
 // its map (negative z) except Calais and Gravelines, where the Flemish and French coast lies to the south of the
@@ -18,6 +19,7 @@ export const PLYMOUTH_TERRAIN: TerrainSpec = {
     { x: 1200, z: 3400, rx: 70, rz: 40, rot: 0.5, peak: 5, rough: 0.4 },
   ],
   channels: [],
+  biome: ENGLISH_BIOME,
   bays: [{ x: 500, z: -5100, rx: 2000, rz: 1100, rot: 0 }],
 };
 
@@ -33,6 +35,7 @@ export const PORTLAND_TERRAIN: TerrainSpec = {
     { x: -6800, z: -6400, rx: 3600, rz: 900, rot: -0.1, peak: 18, rough: 0.5 },
   ],
   channels: [],
+  biome: ENGLISH_BIOME,
 };
 
 /** Off the Isle of Wight, 4 August: the island's south coast and St Catherine's to the north, the Owers to the east. */
@@ -47,6 +50,7 @@ export const WIGHT_TERRAIN: TerrainSpec = {
     { x: 6200, z: -1600, rx: 420, rz: 160, rot: -0.3, peak: 2, rough: 0.3 },
   ],
   channels: [],
+  biome: ENGLISH_BIOME,
 };
 
 /** The Calais roads, night of 7–8 August: the French coast south of the anchorage, Cap Blanc-Nez to the west. */
@@ -60,6 +64,7 @@ export const CALAIS_TERRAIN: TerrainSpec = {
     { x: 2200, z: 4600, rx: 1300, rz: 600, rot: 0, peak: 14, rough: 0.5 },
   ],
   channels: [],
+  biome: FLEMISH_BIOME,
 };
 
 /** Off Gravelines, 8 August: the low Flemish coast and its banks to the south-east, the North Sea open to the north. */
@@ -73,4 +78,5 @@ export const GRAVELINES_TERRAIN: TerrainSpec = {
     { x: -1800, z: 4400, rx: 2000, rz: 220, rot: -0.1, peak: 1.2, rough: 0.3 },
   ],
   channels: [],
+  biome: FLEMISH_BIOME,
 };

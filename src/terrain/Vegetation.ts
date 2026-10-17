@@ -226,8 +226,10 @@ export class Vegetation {
     const keepInner = inner > 0 ? d.greaterThan(h4.mul(0.2).add(0.88).mul(inner)) : float(1).greaterThan(0);
     const keep = keepDensity.and(keepOuter).and(keepInner).and(ground.greaterThan(2.5));
     const s: any = keep.select(mix(float(0.75), float(1.3), h4).mul(inner > 0 ? (cell > 15 ? 2.1 : 1.45) : 1), float(0));
-    const sTall = s.mul(float(1).sub(broad.mul(0.22)));
-    const sWide = s.mul(broad.mul(0.3).add(1));
+    // A poplar (Flanders' field rows) is half again as tall and less than half as wide; the share is the region's, 0 has none.
+    const tall = hash(seed.add(uint(5))).lessThan(t.poplar).select(float(1), float(0));
+    const sTall = s.mul(float(1).sub(broad.mul(0.22))).mul(tall.mul(0.75).add(1));
+    const sWide = s.mul(broad.mul(0.3).add(1)).mul(float(1).sub(tall.mul(0.6)));
     const rot = h1.mul(6.2831);
     const c = cos(rot);
     const sn = sin(rot);

@@ -35,6 +35,14 @@ export type RegionBiome = {
   /** Width of the beach band, 1 as the old maps have it; mud-coloured where `shoreTint` says so. */
   shore: number;
   shoreTint: [number, number, number];
+  /**
+   * Whose land it is, for the houses, the church and the hedges: Korea (absent, the old maps) has thatch and tile houses,
+   * a beacon and a fort gate; 'english' (1588 Channel coast) stone and timber-framed cottages, a church tower and
+   * hedgerows; 'flemish' (Calais, Gravelines) brick stepped-gable houses, a spired church and hedgerows.
+   */
+  style?: 'english' | 'flemish';
+  /** Share of crowns that are tall and narrow, like the poplars of Flanders (absent or 0 leaves none). */
+  poplar?: number;
 };
 
 export const DEFAULT_BIOME: RegionBiome = {
@@ -54,6 +62,41 @@ export const DEFAULT_BIOME: RegionBiome = {
   dry: 0,
   shore: 1,
   shoreTint: [1, 1, 1],
+};
+
+/** The 1588 English Channel coast: broad-leaved woods (oak, beech, ash), green fields, stone and timber villages. */
+export const ENGLISH_BIOME: RegionBiome = {
+  ...DEFAULT_BIOME,
+  forest: 0.7,
+  canopyLine: 260,
+  fields: 2,
+  plain: 0.45,
+  villages: 6,
+  houses: 0.9,
+  tiled: 0.45,
+  beacons: 0,
+  broadleaf: 0.9,
+  tint: [1.08, 1.06, 0.92],
+  style: 'english',
+};
+
+/** The French and Flemish coast of Calais and Gravelines: flat fields, poplar and willow rows, brick towns. */
+export const FLEMISH_BIOME: RegionBiome = {
+  ...DEFAULT_BIOME,
+  forest: 0.45,
+  canopyLine: 220,
+  fields: 2.4,
+  plain: 0.8,
+  villages: 6,
+  houses: 1.2,
+  layout: 'row',
+  beacons: 0,
+  broadleaf: 0.8,
+  poplar: 0.45,
+  tint: [1.08, 1.05, 0.9],
+  shore: 1.4,
+  shoreTint: [0.95, 0.9, 0.78],
+  style: 'flemish',
 };
 
 /** A real elevation window (public/terrain/<id>.dem) with the biome that dresses it. */

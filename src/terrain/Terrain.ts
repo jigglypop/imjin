@@ -88,6 +88,8 @@ export class Terrain {
   readonly tint = uniform(new Vector3(1, 1, 1));
   /** Share of crowns that are broad-leaved; the trees read it. */
   readonly broadleaf = uniform(0);
+  /** Share of crowns that are tall and narrow (poplars); the trees read it. */
+  readonly poplar = uniform(0);
   private readonly shoreTint = uniform(new Vector3(1, 1, 1));
   private readonly dry = uniform(0);
   private readonly shore = uniform(1);
@@ -101,10 +103,11 @@ export class Terrain {
 
   private constructor(readonly spec: TerrainSpec, readonly heights: Float32Array, readonly mask: Uint8Array, readonly structures: Structure[], quality: TerrainQuality, private readonly ground: Ground) {
     this.sizeU.value = spec.size;
-    const biome = spec.region?.biome ?? DEFAULT_BIOME;
+    const biome = spec.region?.biome ?? spec.biome ?? DEFAULT_BIOME;
     this.tint.value.set(...biome.tint);
     this.shoreTint.value.set(...biome.shoreTint);
     this.broadleaf.value = biome.broadleaf;
+    this.poplar.value = biome.poplar ?? 0;
     this.dry.value = biome.dry;
     this.shore.value = biome.shore;
     this.rockLook.value = biome.rockLook;

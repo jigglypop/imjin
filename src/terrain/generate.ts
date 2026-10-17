@@ -1,5 +1,5 @@
 import { createNoise2D } from './noise';
-import type { RegionGround } from './region';
+import type { RegionBiome, RegionGround } from './region';
 
 export type LandShape = {
   x: number;
@@ -24,6 +24,8 @@ export type TerrainSpec = {
   reserve?: { x: number; z: number; r: number }[];
   /** A campaign region cut from real elevation data: its heights come from regionHeightmap, not from generateHeightmap. */
   region?: RegionGround;
+  /** The dressing of a generated map (trees, villages) when it is not the Korean default; a region's own biome wins. */
+  biome?: RegionBiome;
 };
 
 export const HANSAN_TERRAIN: TerrainSpec = {
