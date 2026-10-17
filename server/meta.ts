@@ -10,7 +10,7 @@ import { START_COINS, START_XP, type MetaBattleStart, type MetaBattleTicket, typ
 import { battleReport, teamGenerals } from '../src/meta/battle';
 import type { Battle } from '../src/sim/battle';
 import { buildScenario, SCENARIOS, type ScenarioId } from '../src/sim/scenarios';
-import { teamOf, type Faction, type Team } from '../src/sim/types';
+import { ALL_FACTIONS, teamOf, type Faction, type Team } from '../src/sim/types';
 import type { AccountStore, ProfileData, ProfileTx } from './accounts';
 import { ApiError, Limiter, type ApiRouter } from './api';
 
@@ -89,7 +89,8 @@ function knownHistory(id: ScenarioId, faction: Faction) {
   return { enemyShips: b.ships.filter((s) => s.team === enemy).length, ownShips: b.ships.filter((s) => s.team === team).length, generals: teamGenerals(b, team) };
 }
 
-const FACTIONS: Faction[] = ['joseon', 'japan', 'ming'];
+/** Every chapter's navy: a battle's rewards are the same for each. */
+const FACTIONS: readonly Faction[] = ALL_FACTIONS;
 
 export function metaRoutes(api: ApiRouter) {
   const tickets = new Map<string, Ticket>();

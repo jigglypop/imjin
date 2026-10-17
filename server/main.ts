@@ -15,7 +15,7 @@ import { applyCommand, type Command } from '../src/sim/commands';
 import type { Conquest } from '../src/sim/conquest';
 import { CONQUEST_MAPS, CONQUEST_ORDER, type Seat } from '../src/sim/maps';
 import { SCENARIO_ORDER, SCENARIOS } from '../src/sim/scenarios';
-import { FACTIONS, teamOf, type BattleEvent, type Faction, type Team } from '../src/sim/types';
+import { ALL_FACTIONS, teamOf, type BattleEvent, type Faction, type Team } from '../src/sim/types';
 import {
   encodeSnapshot,
   GRACE_SECONDS,
@@ -592,9 +592,9 @@ function quickJoin(c: Client, msg: Extract<ClientMsg, { t: 'quick' }>) {
   dequeue(c);
   let choice = sanitizeChoice(msg.battle);
   if (choice.kind === 'conquest') choice = { ...choice, size: 2 };
-  let faction: Faction = FACTIONS.includes(msg.faction) ? msg.faction : 'joseon';
-  // Only the Joseon and Japanese fleets sail a historical duel.
-  if (choice.kind === 'scenario' && faction === 'ming') faction = 'joseon';
+  let faction: Faction = ALL_FACTIONS.includes(msg.faction) ? msg.faction : 'joseon';
+  // Only the Joseon and Japanese fleets sail a historical duel of 1592.
+  if (choice.kind === 'scenario' && faction !== 'joseon' && faction !== 'japan') faction = teamOf(faction);
   const mate = queue.find((q) => q.c !== c && choiceKey(q.choice) === choiceKey(choice) && (choice.kind === 'conquest' || teamOf(q.faction) !== teamOf(faction)));
   if (mate) {
     queue.splice(queue.indexOf(mate), 1);
@@ -711,7 +711,7 @@ function handle(c: Client, msg: ClientMsg) {
       if (!mine && !(host && !seat.client)) return;
       // A duel's sides are fixed: Joseon on seat 0, Japan on seat 1.
       // The Ming fleet sailed only with the Joseon side.
-      if (room.info.battle.kind === 'conquest' && msg.faction && FACTIONS.includes(msg.faction as Faction)) seat.faction = msg.faction as Faction;
+      if (room.info.battle.kind === 'conquest' && msg.faction && ALL_FACTIONS.includes(msg.faction as Faction)) seat.faction = msg.faction as Faction;
       if (typeof msg.human === 'boolean' && host && !seat.client) seat.human = msg.human;
       for (const s of room.info.seats) s.ready = s.client === room.info.host ? s.ready : false;
       pushRoom(room);
