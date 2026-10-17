@@ -8,7 +8,9 @@
 .menu-battle--ready { opacity:1; }
 .menu-battle canvas { display:block; width:100%; height:100%; }
 .menu-shade { position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(3,8,13,.2),rgba(3,8,13,.04) 38%,rgba(3,8,13,.48) 70%,#040b11 100%),linear-gradient(90deg,rgba(3,8,13,.35),transparent 72%); }
-.menu--cinematic .screen-top.menu-masthead { position:absolute; inset:0 0 auto; padding:calc(var(--sat) + 28px) calc(var(--sar) + 40px) 0 calc(var(--sal) + 40px); justify-content:flex-end; }
+/* The masthead spans the top edge over the chapter picker: only its buttons take the pointer, so the picker's tabs stay clickable. */
+.menu--cinematic .screen-top.menu-masthead > * { pointer-events:auto; }
+.menu--cinematic .screen-top.menu-masthead { position:absolute; pointer-events:none; inset:0 0 auto; padding:calc(var(--sat) + 28px) calc(var(--sar) + 40px) 0 calc(var(--sal) + 40px); justify-content:flex-end; }
 .menu--cinematic .back-btn { background:transparent; border-color:rgba(210,190,148,.24); border-radius:2px; font-size:12px; min-height:40px; gap:8px; color:#d9d8d2; }
 .menu--cinematic .back-btn:hover { background:rgba(193,171,126,.12); }
 .menu--cinematic .menu-inner { width:100%; margin:0; padding:80px 24px 76px; gap:30px; align-items:center; justify-content:flex-end; overflow-y:auto; }
@@ -103,7 +105,7 @@
 }
 
 /* The series' chapters, set left in the masthead row like a film's reel list. */
-.chapter-picker { position:absolute; z-index:3; top:calc(var(--sat) + 26px); left:calc(var(--sal) + 40px); display:flex; gap:2px; border:1px solid rgba(199,176,132,.22); background:rgba(8,12,16,.38); backdrop-filter:blur(6px); }
+.chapter-picker { position:absolute; z-index:7; top:calc(var(--sat) + 26px); left:calc(var(--sal) + 40px); display:flex; gap:2px; border:1px solid rgba(199,176,132,.22); background:rgba(8,12,16,.38); backdrop-filter:blur(6px); }
 .chapter-chip { display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:8px 14px; min-width:84px; border:0; background:transparent; color:#bdb9ad; cursor:pointer; transition:color .2s,background .2s; }
 .chapter-chip b { font-size:13px; font-weight:600; letter-spacing:.04em; }
 .chapter-chip small { font-size:10px; letter-spacing:.12em; opacity:.7; }
