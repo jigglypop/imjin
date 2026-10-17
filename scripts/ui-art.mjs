@@ -123,6 +123,20 @@ add({
     'imperial gold, vermilion and deep teal accents.' + EMBLEM_STYLE,
 });
 
+// The Armada chapter's navies (1588).
+add({
+  id: 'emblem_england', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
+  prompt:
+    'Emblem of the Elizabethan English navy of 1588: a deep green and white circular badge (the Tudor livery colours) with a bold red St George cross pennant flying from the mainmast of a white stylized race-built galleon silhouette (three masts, square sails, low castles) on stylized white waves, ' +
+    'accents of Tudor green, white and red.' + EMBLEM_STYLE,
+});
+add({
+  id: 'emblem_spain', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
+  prompt:
+    'Emblem of the Spanish Armada of 1588: a deep crimson circular badge with a bold gold ragged Burgundy saltire cross (the cross of Saint Andrew with knotted branches) centered, a small stylized gold galleon silhouette with high castles in the lower part, ' +
+    'accents of crimson, gold and black.' + EMBLEM_STYLE,
+});
+
 // ---------- helpers ----------
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const rawPath = (it, v) => join(RAW, `${it.id}${v ? '.' + v : ''}.png`);

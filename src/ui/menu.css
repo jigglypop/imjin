@@ -1673,3 +1673,11 @@
     min-width: 0;
   }
 }
+
+.screen .emblem--england {
+  background-image: url(/ui/art/emblem_england_sm.webp);
+}
+
+.screen .emblem--spain {
+  background-image: url(/ui/art/emblem_spain_sm.webp);
+}
