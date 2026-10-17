@@ -492,8 +492,9 @@ async function rig(c) {
 // (free right arm sent forward), attack 227 Archery Shot 3. Unedited Meshy library clips.
 // Lead's picks 2026-10-17: idle 252 Idle 12 (with --posture), attack 241 Weapon Combo 2 (92 Double Combo Attack for
 // long-skirted generals via --actions), archery 227.
-const KIND_ACTIONS = 'idle_sword:252,command_sword:240,attack_sword:241,idle_spear:335,attack_spear:214,idle_bow:244,command_bow:29,attack_bow:227';
-const MESHY_CLIP = { sword_judgment: 'command_sword', sword_shout: 'command_sword', charged_slash: 'command_sword', idle_12: 'idle_sword', weapon_combo_2: 'attack_sword', double_combo_attack: 'attack_sword', idle_6: 'idle_sword', thrust_slash: 'command_sword', left_slash: 'attack_sword', axe_breathe_and_look_around: 'idle_spear', punch_forward_with_both_fists: 'attack_spear', idle_4: 'idle_bow', call_gesture: 'command_bow', archery_shot_3: 'attack_bow' };
+// Owner 2026-10-17: standing only — the one clip is 251 Idle 11 (command and attack clips removed).
+const KIND_ACTIONS = 'idle_sword:251';
+const MESHY_CLIP = { sword_judgment: 'command_sword', sword_shout: 'command_sword', charged_slash: 'command_sword', idle_12: 'idle_sword', idle_11: 'idle_sword', weapon_combo_2: 'attack_sword', double_combo_attack: 'attack_sword', idle_6: 'idle_sword', thrust_slash: 'command_sword', left_slash: 'attack_sword', axe_breathe_and_look_around: 'idle_spear', punch_forward_with_both_fists: 'attack_spear', idle_4: 'idle_bow', call_gesture: 'command_bow', archery_shot_3: 'attack_bow' };
 const ACTIONS = Object.fromEntries((args.actions ?? KIND_ACTIONS).split(',').map((p) => p.split(':')).map(([n, id]) => [Number(id), n]));
 async function motion(c) {
   const d = dirOf(c);
@@ -794,7 +795,8 @@ async function staticCheck(file, lod) {
   const joints = skins[0]?.listJoints().map((j) => j.getName()) ?? [];
   for (const j of ['Hips', 'Head', 'RightHand', 'LeftHand']) if (!joints.includes(j)) problems.push(`no joint ${j}`);
   const clips = root.listAnimations().map((a) => a.getName());
-  for (const c of (clips.includes('idle_sword') ? ['idle_sword', 'command_sword', 'attack_sword', 'idle_spear', 'attack_spear', 'idle_bow', 'command_bow', 'attack_bow'] : ['idle', 'command', 'slash'])) if (!clips.includes(c)) problems.push(`no clip ${c}`);
+  // Owner 2026-10-17: standing only, one clip (idle_sword = Meshy 251 Idle 11); scripts/generals-idle-only.mjs reduces a pack to it.
+  if (!clips.includes('idle_sword')) problems.push('no clip idle_sword');
   let tris = 0;
   for (const m of root.listMeshes()) for (const p of m.listPrimitives()) tris += p.getIndices().getCount() / 3;
   if (tris > lod.triangles * (lod.suffix === '_lod2' ? 2.1 : 1.5)) problems.push(`triangles ${tris}`);

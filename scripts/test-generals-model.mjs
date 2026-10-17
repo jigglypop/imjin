@@ -228,12 +228,13 @@ await check('all 18 selectable weapons have indexed desktop/mobile files and thu
 const cast = [...models].filter((f) => /^[a-z]+__[a-z_]+$/.test(f));
 if (cast.length) {
   const { io } = await import('./lib/figure.mjs');
-  await check(`indexed general figures (${cast.length}) have three levels with idle, command and slash on a hand bone`, async () => {
+  await check(`indexed general figures (${cast.length}) have three levels with only the standing clip (owner 2026-10-17: no command or attack buttons) on a hand bone`, async () => {
     for (const file of cast) for (const suffix of ['', '_lod1', '_lod2']) {
       const doc = await io.read(fileURLToPath(new URL(`../public/models/generals/${file}${suffix}.glb`, import.meta.url)));
       for (const kind of ['sword', 'spear', 'bow']) {
         const clips = M.movementClips(doc.getRoot().listAnimations().map((a) => new AnimationClip(a.getName(), 1, [])), kind);
-        assert.ok(clips.idle, `${file}${suffix} ${kind} idle`); assert.deepEqual([...clips.moves.keys()].sort(), ['command', 'slash'], `${file}${suffix} ${kind} moves`);
+        assert.ok(clips.idle, `${file}${suffix} ${kind} idle`); assert.deepEqual([...clips.moves.keys()], [], `${file}${suffix} ${kind} moves`);
+        assert.deepEqual(doc.getRoot().listAnimations().map((a) => a.getName()), ['idle_sword'], `${file}${suffix} clips`);
       }
       assert.ok(doc.getRoot().listNodes().some((n) => n.getName() === 'RightHand'), `${file}${suffix} RightHand`);
     }

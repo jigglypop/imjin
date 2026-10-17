@@ -10,6 +10,7 @@ import { useT } from '../../i18n';
 import { tuneWebGLBackend } from '../../render/webglBackend';
 import { lightStage } from './studio';
 import type { WeaponDef } from '../../meta/catalog';
+import { idleBlade } from './idleBlade';
 
 /**
  * One armored representative character, with its own skeleton and motions, plus one replaceable weapon.
@@ -62,6 +63,11 @@ export function holdWeapon(body: Object3D, weapon: Object3D, definition: WeaponD
     // A bow is held through the fist along the knuckle line (the socket's +Y): upright beside the body while standing,
     // and in the shot it follows the knuckle line so the bow stands vertical in the extended left hand (aimBow).
     if (left) held.userData.rest = held.quaternion.clone();
+    if (definition.kind === 'sword') {
+      held.userData.grip = held.quaternion.clone();
+      // The files put their origin near the pommel; the fist belongs on the hilt just under the guard (owner 2026-10-17).
+      weapon.position.y -= swordGripShift(weapon);
+    }
     return held;
   }
   const handName = left ? 'LeftHand' : 'RightHand';
@@ -267,6 +273,44 @@ export function aimBow(figure: Figure) {
   const shot = figure.moves.get('slash');
   const w = shot?.isRunning() ? shot.getEffectiveWeight() : 0;
   held.quaternion.slerpQuaternions(rest, GRIP, w);
+}
+
+/** Metres to slide a sword down its +Y so the fist centre sits FIST below the guard (the widest slice of the lower half). */
+const FIST = 0.055;
+export function swordGripShift(weapon: Object3D) {
+  weapon.updateMatrixWorld(true);
+  const inv = new Matrix4().copy(weapon.matrixWorld).invert(), v = new Vector3(), pts: Vector3[] = [];
+  weapon.traverse((o) => {
+    const g = (o as Mesh).geometry as BufferGeometry | undefined, pos = g?.getAttribute('position');
+    if (!(o as Mesh).isMesh || !pos) return;
+    const m = new Matrix4().multiplyMatrices(inv, o.matrixWorld);
+    for (let i = 0; i < pos.count; i++) pts.push(v.fromBufferAttribute(pos, i).applyMatrix4(m).clone());
+  });
+  if (!pts.length) return 0;
+  let lo = Infinity, hi = -Infinity; for (const p of pts) { lo = Math.min(lo, p.y); hi = Math.max(hi, p.y); }
+  const bins = 60, wide = new Array<number>(bins).fill(0), step = (hi - lo) / bins;
+  for (const p of pts) { const b = Math.min(bins - 1, Math.floor((p.y - lo) / step)); wide[b] = Math.max(wide[b]!, Math.hypot(p.x, p.z)); }
+  let g = 0; for (let b = 0; b < bins / 2; b++) if (wide[b]! > wide[g]!) g = b;
+  const guard = lo + (g + 0.5) * step;
+  return Math.max(0, guard - FIST);
+}
+
+const tmpA = new Vector3(), tmpB = new Vector3(), tmpQ = new Quaternion(), tmpM = new Matrix4(), idleQ = new Quaternion();
+/** While the figure stands, a held sword hangs outside the legs (idleBlade); in a move it is gripped as the fist holds it. */
+export function hangSword(figure: Figure) {
+  const held = figure.weapon, grip = held?.userData.grip as Quaternion | undefined;
+  const socket = held?.parent, hips = figure.root.getObjectByName('Hips');
+  if (!held || !grip || !socket || !hips || figure.kind !== 'sword') return;
+  const w = figure.idle?.isRunning() ? figure.idle.getEffectiveWeight() : 0;
+  if (w <= 0) { held.quaternion.copy(grip); return; }
+  figure.root.updateMatrixWorld(true);
+  const hand = figure.root.worldToLocal(socket.getWorldPosition(tmpA)).toArray();
+  const hip = figure.root.worldToLocal(hips.getWorldPosition(tmpB)).toArray();
+  const { dir, edge } = idleBlade(hand, hip);
+  const x = new Vector3(...edge), y = new Vector3(...dir), z = new Vector3().crossVectors(x, y);
+  idleQ.setFromRotationMatrix(tmpM.makeBasis(x, y, z)).premultiply(figure.root.getWorldQuaternion(tmpQ));
+  idleQ.premultiply(socket.getWorldQuaternion(tmpQ).invert());
+  held.quaternion.slerpQuaternions(grip, idleQ, Math.min(1, w));
 }
 
 export function playFigure(figure: Figure, move: Move) {
@@ -534,7 +578,7 @@ class FigureStage {
       turn.y += (face - turn.y) * Math.min(1, dt * 1.5);
     }
     this.figure?.mixer.update(dt);
-    if (this.figure) aimBow(this.figure);
+    if (this.figure) { aimBow(this.figure); hangSword(this.figure); }
     void this.renderer.render(this.scene, this.camera);
     this.raf = requestAnimationFrame(this.frame);
   };
