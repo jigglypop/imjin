@@ -27,6 +27,7 @@ its representative flagship on the menu, ships balanced within and across chapte
 - Preview images: every chapter battle gets the same preview set as the 1592 battles (battle preview pictures, cards, share images, menu previews), same pipeline and quality.
 - Choosing a chapter switches the whole UI to that chapter (tabs): battles, campaign, codex, generals. /generals lists the chapter's commanders by faction tab (England/Spain, Holy League/Ottoman, Britain/France-Spain); portraits stand in until their 3D figures come from the generals-cast pipeline (the lead schedules those).
 - Strict historical accuracy (고증): commanders per battle, ship names and types, flags/ensigns, uniforms/armour, dates, weather/wind, tactics, place names - each sourced, sources recorded in the data (`sources` fields) or docs; no invented facts.
+- Fleet sizes are historical, one for one like 1592's (명량 13 vs 133, 부산포 636 ships, 노량 623): every ship of the squadrons engaged in that action, with the source in the scenario file's header and the counts in `forces`. 1592 proves the engine and the phone budget at ~640 ships, so no chapter battle needs scaling; a future battle over that would scale both sides by one factor and say "실제 n척" in `forces`. Check `probe-memory.mjs ?q=low` on the chapter's biggest battle (Calais 272 ships: 182 MB textures, 267 MB GPU).
 - Battle data must drive the battle-opening cinematics (.claude/skills/cinematics in the main checkout): per battle the commanders present and quotes with sources.
 
 ## Cross-chapter balance

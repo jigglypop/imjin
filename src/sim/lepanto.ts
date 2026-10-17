@@ -7,7 +7,14 @@ import { CENTRE_TERRAIN, DJERBA_TERRAIN, NORTH_TERRAIN, PREVEZA_TERRAIN, SOUTH_T
 
 // The Lepanto chapter: the galley wars of the Holy League and the Ottoman Empire, Preveza (1538) and Djerba (1560) to
 // the three wings of Lepanto (7 October 1571). In battle the Christian fleet takes the first slot ('joseon') and the
-// Ottoman fleet the second ('japan'). Fleets are scaled down as the 1592 and 1588 battles are, in the same proportions.
+// Ottoman fleet the second ('japan'). Every galley of the wing or fleet in the action is on the water, one for one as
+// the 1592 battles are (owner 2026-10-17): Preveza 112 galleys and the Venetian galleon against 122 galleys and galiots
+// (Guilmartin; the League's other sailing ships lay becalmed out of the fight), Djerba some 54 galleys against 86
+// (Guilmartin, Braudel), and at Lepanto each wing as Capponi and Konstam give it: Barbarigo 53 and two galleasses
+// against Siroco's 54, Don Juan 62 and two galleasses against Ali Pasha's 87 with Murad Dragut's reserve of 8 galleys
+// and 22 galiots behind, Doria 53 and Santa Cruz's reserve of 30 against Uluc Ali's 61 galleys and 32 galiots (Doria's
+// two galleasses never came up). How a fleet divides between galleys and galiots where the sources give only the total
+// (Preveza, Djerba) is the game's arrangement.
 // Sources (every number and name below is from these):
 //   N. Capponi, Victory of the West: The Story of the Battle of Lepanto (2006): orders of battle, the wings, the wind;
 //   J. F. Guilmartin, Gunpowder and Galleys (1974, rev. 2003): Preveza, Djerba, galley tactics and armament;
@@ -104,7 +111,7 @@ export const LEPANTO_SCENARIOS: Record<LepantoSlug, ScenarioInfo> = {
     summary:
       '1538년 9월 28일, 바르바로사의 오스만 함대가 프레베자 만 입구에서 나왔습니다. 안드레아 도리아의 신성동맹 함대는 갤리선과 범선이 섞여 있어 바람이 약하자 대열을 맞추지 못했고, 도리아는 정면 대결을 피했습니다. 바람이 없는 바다에 남은 콘둘메르의 베네치아 대형 범선은 오스만 갤리선에 둘러싸여 하루 종일 버텼지만, 동맹 함대는 갤리선 여러 척을 잃고 물러났습니다.',
     result: '오스만 승리, 동맹 함대 갤리선 약 13척 손실 후 퇴각',
-    forces: { joseon: '갤리선 18척 · 갈레아스 1척', japan: '갤리선 16척 · 갈리오트 6척' },
+    forces: { joseon: '갤리선 112척 · 베네치아 대형 범선 1척 (바람이 없어 움직이지 못한 범선 약 49척 제외)', japan: '갤리선·갈리오트 122척' },
     sky: 'day',
     sea: 'calm',
     night: false,
@@ -123,7 +130,7 @@ export const LEPANTO_SCENARIOS: Record<LepantoSlug, ScenarioInfo> = {
     summary:
       '1560년 5월, 트리폴리를 되찾으려던 에스파냐 원정군은 제르바 섬을 점령하고 요새를 쌓고 있었습니다. 5월 11일 피얄레 파샤의 오스만 함대가 예상보다 일찍 나타났고, 물을 싣던 기독교 함대는 대열을 갖추지 못한 채 흩어졌습니다. 갤리선 약 30척이 붙잡히거나 침몰했고, 섬에 남은 수비대는 석 달을 버티다 항복했습니다.',
     result: '오스만 대승, 기독교 연합 갤리선 약 30척 손실',
-    forces: { joseon: '갤리선 14척 · 수송선 4척 (흩어짐)', japan: '갤리선 22척' },
+    forces: { joseon: '갤리선 약 54척 · 수송선 4척 (흩어짐)', japan: '갤리선·갈리오트 86척' },
     sky: 'day',
     sea: 'calm',
     night: false,
@@ -142,7 +149,7 @@ export const LEPANTO_SCENARIOS: Record<LepantoSlug, ScenarioInfo> = {
     summary:
       '1571년 10월 7일 정오 무렵, 신성동맹 함대의 좌익 바르바리고의 베네치아 갤리선 53척이 아이톨리아 해안에 바짝 붙어 나아갔습니다. 마주한 메흐메드 시로코의 갤리선 54척은 얕은 물길로 돌아 들어와 베네치아 대열의 옆을 쳤고, 바르바리고는 눈에 화살을 맞고 쓰러졌습니다. 그러나 베네치아 갤리선이 바다 쪽에서 돌아 들어와 오스만 우익을 해안으로 밀어붙였고, 시로코는 전사했습니다.',
     result: '신성동맹 승리, 오스만 우익 거의 전멸 · 바르바리고와 시로코 모두 전사',
-    forces: { joseon: '갤리선 16척 · 갈레아스 2척', japan: '갤리선 16척 · 갈리오트 2척' },
+    forces: { joseon: '갤리선 53척 · 갈레아스 2척', japan: '갤리선 54척' },
     sky: 'day',
     sea: 'calm',
     night: false,
@@ -161,7 +168,7 @@ export const LEPANTO_SCENARIOS: Record<LepantoSlug, ScenarioInfo> = {
     summary:
       '중앙에서 돈 후안의 기함 라 레알호가 알리 파샤의 기함 술타나호와 이물을 맞대고 부딪쳤습니다. 앞에 세운 갈레아스 두 척의 포격이 오스만 대열을 흐트러뜨린 뒤였습니다. 두 기함 갑판 위에서 에스파냐 화승총병과 예니체리가 두 번 밀고 밀리는 동안, 베니에르와 콜론나의 기함이 옆을 받쳤습니다. 세 번째 돌격에 술타나호가 함락되고 알리 파샤가 전사하자 오스만 중앙이 무너졌습니다.',
     result: '신성동맹 승리, 술타나호 나포 · 알리 파샤 전사',
-    forces: { joseon: '갤리선 18척 · 갈레아스 2척 (라 레알 포함)', japan: '갤리선 18척 · 갈리오트 4척 (술타나 포함)' },
+    forces: { joseon: '갤리선 62척 · 갈레아스 2척 (라 레알 포함)', japan: '갤리선 87척 (술타나 포함) · 후위 갤리선 8척 · 갈리오트 22척' },
     sky: 'day',
     sea: 'calm',
     night: false,
@@ -180,7 +187,7 @@ export const LEPANTO_SCENARIOS: Record<LepantoSlug, ScenarioInfo> = {
     summary:
       '남쪽에서는 울루치 알리가 바다 쪽으로 대열을 넓히자 조반니 안드레아 도리아도 감싸이지 않으려 남쪽으로 따라 움직였습니다. 그 사이 동맹 우익과 중앙 사이에 틈이 벌어졌고, 울루치 알리는 그 틈으로 돌아 들어와 몰타 기사단의 기함을 붙잡았습니다. 산타 크루스 후작의 예비대와 돈 후안이 돌아오자 울루치 알리는 붙잡은 깃발을 들고 갤리선 서른여 척과 함께 빠져나갔습니다.',
     result: '동맹 승리로 끝났으나 울루치 알리 탈출 · 몰타 기함 한때 나포',
-    forces: { joseon: '갤리선 16척 (예비대 4척 포함)', japan: '갤리선 14척 · 갈리오트 6척' },
+    forces: { joseon: '갤리선 53척 · 예비대 갤리선 30척', japan: '갤리선 61척 · 갈리오트 32척' },
     sky: 'afternoon',
     sea: 'calm',
     night: false,
@@ -225,9 +232,9 @@ export function lepantoForces(id: LepantoSlug, k: ForceKit) {
   if (id === 'preveza') {
     // Barbarossa comes out of the Gulf of Arta eastward of the League; little wind, Doria's sailing ships becalmed.
     b.windAngle = Math.PI * 1.5;
-    lineAbreast(k, 'japan', '오스만 본대', '하이레딘 바르바로사', ['kadirga', 'kadirga', 'kalyata'], 900, -200, Math.PI, 16, '바르바로사 기함');
-    lineAbreast(k, 'japan', '투르구트 분대', '투르구트 레이스', ['kalyata'], 900, 900, Math.PI, 6, '투르구트 기함');
-    lineAbreast(k, 'joseon', '동맹 갤리선대', '안드레아 도리아', ['galea', 'galea'], -1300, 0, 0, 18, '도리아 기함');
+    lineAbreast(k, 'japan', '오스만 본대', '하이레딘 바르바로사', ['kadirga', 'kadirga', 'kalyata'], 900, -400, Math.PI, 100, '바르바로사 기함');
+    lineAbreast(k, 'japan', '투르구트 분대', '투르구트 레이스', ['kalyata'], 1300, 2400, Math.PI, 22, '투르구트 기함');
+    lineAbreast(k, 'joseon', '동맹 갤리선대', '안드레아 도리아', ['galea', 'galea'], -1300, 0, 0, 112, '도리아 기함');
     const sail = k.squad('joseon', '베네치아 대형 범선', '알레산드로 콘둘메르', 'vgalleass');
     k.ship(sail, 'vgalleass', { x: -300, z: 300, h: 0 }, '갈레오네 디 베네치아', true);
     b.retreatBelow.joseon = 0.45;
@@ -235,9 +242,9 @@ export function lepantoForces(id: LepantoSlug, k: ForceKit) {
   } else if (id === 'djerba') {
     // The Christian galleys lie off the island taking on water; Piyale's galleys come up fast from the east.
     b.windAngle = Math.PI;
-    lineAbreast(k, 'japan', '오스만 함대', '피얄레 파샤', ['kadirga', 'kadirga', 'kalyata'], 1200, 0, Math.PI, 22, '피얄레 기함');
+    lineAbreast(k, 'japan', '오스만 함대', '피얄레 파샤', ['kadirga', 'kadirga', 'kalyata'], 1200, 0, Math.PI, 86, '피얄레 기함');
     const sq = k.squad('joseon', '기독교 연합 갤리선', '조반니 안드레아 도리아', 'galea');
-    k.grid(-500, 400, 0.4, 14, 5, 90, 120, 60, k.rand).forEach((p, i) => k.ship(sq, 'galea', p, i ? k.numbered('연합 갤리선', i) : '도리아 기함', i === 0));
+    k.grid(-700, 400, 0.4, 54, 9, 90, 120, 60, k.rand).forEach((p, i) => k.ship(sq, 'galea', p, i ? k.numbered('연합 갤리선', i) : '도리아 기함', i === 0));
     const tr = k.squad('joseon', '수송선', '메디나셀리 공작', 'vgalleass');
     k.grid(-1100, 900, 0.2, 4, 2, 120, 120, 30, k.rand).forEach((p, i) => k.ship(tr, 'vgalleass', p, k.numbered('수송선', i + 1), i === 0));
     b.retreatBelow.joseon = 0.5;
@@ -247,24 +254,26 @@ export function lepantoForces(id: LepantoSlug, k: ForceKit) {
     // dropped and come round to the west before noon (Capponi), behind the League.
     b.windAngle = 0;
     galleassScreen(k, '좌익 갈레아스', -800, -300, 0);
-    lineAbreast(k, 'joseon', '바르바리고 전대 (좌익)', '아고스티노 바르바리고', ['galea', 'galea'], -1200, -200, 0, 16, '바르바리고 기함');
-    lineAbreast(k, 'japan', '시로코 전대 (우익)', '메흐메드 시로코', ['kadirga', 'kadirga', 'kalyata'], 1000, -300, Math.PI, 18, '시로코 기함');
+    lineAbreast(k, 'joseon', '바르바리고 전대 (좌익)', '아고스티노 바르바리고', ['galea', 'galea'], -1200, -200, 0, 53, '바르바리고 기함');
+    lineAbreast(k, 'japan', '시로코 전대 (우익)', '메흐메드 시로코', ['kadirga'], 1000, -300, Math.PI, 54, '시로코 기함');
     b.retreatBelow.japan = 0.25;
     b.retreatBelow.joseon = 0.3;
   } else if (id === 'lepanto-centre') {
     galleassScreen(k, '중앙 갈레아스', -800, 0, 0);
     b.windAngle = 0;
-    lineAbreast(k, 'joseon', '돈 후안 전대 (중앙)', '돈 후안 데 아우스트리아', ['reale', 'galea', 'galea'], -1200, 0, 0, 18, '라 레알');
-    lineAbreast(k, 'japan', '알리 파샤 전대 (중앙)', '뮈에진자데 알리 파샤', ['sultana', 'kadirga', 'kadirga'], 1100, 0, Math.PI, 18, '술타나');
-    lineAbreast(k, 'japan', '중앙 후위', '뮈에진자데 알리 파샤', ['kalyata'], 1500, 0, Math.PI, 4, '후위 갈리오트', 60);
+    lineAbreast(k, 'joseon', '돈 후안 전대 (중앙)', '돈 후안 데 아우스트리아', ['reale', 'galea', 'galea'], -1200, 0, 0, 62, '라 레알');
+    lineAbreast(k, 'japan', '알리 파샤 전대 (중앙)', '뮈에진자데 알리 파샤', ['sultana', 'kadirga', 'kadirga'], 1100, 0, Math.PI, 87, '술타나');
+    // Murad Dragut's reserve, 8 galleys and 22 galiots: the flagship and a 29-long pattern holding 7 galleys.
+    lineAbreast(k, 'japan', '중앙 후위', '무라트 드라구트', ['kadirga', ...Array.from({ length: 29 }, (_, i): ShipKind => ((i * 7) % 29 < 7 ? 'kadirga' : 'kalyata'))], 1600, 0, Math.PI, 30, '후위 기함', 60);
     b.retreatBelow.japan = 0.3;
     b.retreatBelow.joseon = 0.3;
   } else {
     // Doria edges south to avoid being outflanked, opening a gap towards the centre that Uluç Ali turns into.
     b.windAngle = 0;
-    lineAbreast(k, 'joseon', '도리아 전대 (우익)', '조반니 안드레아 도리아', ['galea', 'galea'], -1100, 600, 0.12, 12, '도리아 기함');
-    lineAbreast(k, 'joseon', '산타 크루스 예비대', '산타 크루스 후작', ['galea'], -2000, -200, 0, 4, '산타 크루스 기함');
-    lineAbreast(k, 'japan', '울루치 알리 전대 (좌익)', '울루치 알리', ['kadirga', 'kadirga', 'kalyata'], 1100, 300, Math.PI + 0.1, 20, '울루치 기함');
+    lineAbreast(k, 'joseon', '도리아 전대 (우익)', '조반니 안드레아 도리아', ['galea', 'galea'], -1100, 600, 0.12, 53, '도리아 기함');
+    lineAbreast(k, 'joseon', '산타 크루스 예비대', '산타 크루스 후작', ['galea'], -2200, -400, 0, 30, '산타 크루스 기함');
+    // Uluc Ali's 61 galleys and 32 galiots, the galiots spread through the line as Konstam draws them.
+    lineAbreast(k, 'japan', '울루치 알리 전대 (좌익)', '울루치 알리', ['kadirga', ...Array.from({ length: 23 }, (_, i): ShipKind => ((i * 8) % 23 < 8 ? 'kalyata' : 'kadirga'))], 1100, 300, Math.PI + 0.1, 93, '울루치 기함');
     b.retreatBelow.japan = 0.35;
     b.retreatBelow.joseon = 0.3;
   }
