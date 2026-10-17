@@ -45,6 +45,7 @@ const { EN_SIM } = await load('src/i18n/en/sim.ts');
 const { EN_MENUS } = await load('src/i18n/en/menus.ts');
 const { EN_ARMADA } = await load('src/i18n/en/armada.ts');
 const { EN_LEPANTO } = await load('src/i18n/en/lepanto.ts');
+const { EN_TRAFALGAR } = await load('src/i18n/en/trafalgar.ts');
 const { chapterOfBattle } = await load('src/routes.ts');
 
 /** The stills: a wide one for the cards and the desktop loading picture, a tall one for phones. Rendered at twice the size. */
@@ -395,6 +396,7 @@ const SHOTS = {
   },
   ...armadaShots(),
   ...lepantoShots(),
+  ...trafalgarShots(),
 };
 
 /**
@@ -413,7 +415,8 @@ function armadaShots() {
     (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const F = c.around(H, c.team('japan'), 900); return c.place(H, c.toward(F, H) + 0.5, 240, 32, 54, 0, 0.3, 8); },
     (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 260, 30, 52, 0, 0.28, 8); },
   ];
-  const plan = (warm, grade, until = closing) => ({ warm, steps: [{ run: 2, until }], moments: [0, 12, 24], wide, tall, grade, card: 0.5 });
+  // Two moments: the third ran past the capture's limits in the long Channel battles.
+  const plan = (warm, grade, until = closing) => ({ warm, steps: [{ run: 2, until }], moments: [0, 12], wide, tall, grade, card: 0.5 });
   const day = { exposure: 1, gamma: 1, saturation: 1.04 };
   return {
     plymouth: plan(20, day),
@@ -444,6 +447,33 @@ function lepantoShots() {
   const plan = (grade) => ({ warm: 20, steps: [{ run: 2, until: closing }], moments: [0, 10, 20], wide, tall, grade, card: 0.5 });
   const day = { exposure: 1, gamma: 1, saturation: 1.04 };
   return { preveza: plan(day), djerba: plan({ exposure: 1.05, gamma: 1.03, saturation: 1.06 }), 'lepanto-north': plan(day), 'lepanto-centre': plan(day), 'lepanto-south': plan(day) };
+}
+
+/**
+ * Trafalgar's five battles (Britain in the first slot, France and Spain in the second): ships of the line fight broadside
+ * to broadside at a few hundred metres, so each is played until the lines are within long gunshot, then framed as the
+ * Armada's are, a little closer in. The Nile is fought at dusk and into the night: its grade lifts the exposure.
+ */
+function trafalgarShots() {
+  const closing = (c) => (c.e.battle.time > 40 && c.dist(c.cen(c.team('joseon')), c.cen(c.team('japan'))) < 800) || c.e.battle.time > 360;
+  const wide = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const F = c.around(H, c.team('japan'), 800); return c.place(H, c.toward(F, H) + 0.5, 210, 28, 34, 0.32, -0.05, 8); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 230, 26, 34, 0.3, -0.04, 8); },
+    (c) => { const A = c.cen(c.team('joseon')); const B = c.cen(c.team('japan')); const M = { x: (A.x + B.x) / 2, z: (A.z + B.z) / 2 }; return c.place(M, c.toward(B, A) + 0.8, 720, 140, 34, 0.2, -0.08); },
+  ];
+  const tall = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const F = c.around(H, c.team('japan'), 800); return c.place(H, c.toward(F, H) + 0.5, 220, 30, 54, 0, 0.3, 8); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 240, 28, 52, 0, 0.28, 8); },
+  ];
+  const plan = (grade) => ({ warm: 20, steps: [{ run: 2, until: closing }], moments: [0, 10], wide, tall, grade, card: 0.5 });
+  const day = { exposure: 1, gamma: 1, saturation: 1.04 };
+  return {
+    'st-vincent': plan(day),
+    nile: plan({ exposure: 2.4, gamma: 1.18, saturation: 1 }),
+    finisterre: plan({ exposure: 1.3, gamma: 1.06, saturation: 1 }),
+    'trafalgar-weather': plan(day),
+    'trafalgar-lee': plan(day),
+  };
 }
 
 const sha = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');
@@ -485,7 +515,7 @@ async function play(page, seconds) {
     e.speed = 1;
     e.paused = false;
   });
-  await page.waitForFunction((s) => window.__engine.battle.time >= window.__until + s, seconds, { timeout: 300000, polling: 50 });
+  await page.waitForFunction((s) => window.__engine.battle.time >= window.__until + s, seconds, { timeout: Number(args['play-timeout'] ?? 900000), polling: 250 });
   await page.evaluate(() => {
     window.__engine.paused = true;
   });
@@ -605,7 +635,19 @@ async function capture() {
   try {
     for (const id of only) {
       if (id === 'front') await captureFront(browser, base);
-      else await captureBattle(browser, id, base, args.capture);
+      else {
+        // A long battle can stall the GPU process once in a while: try again in a fresh page, up to --retries times.
+        for (let attempt = 0; ; attempt++) {
+          try {
+            await captureBattle(browser, id, base, args.capture);
+            break;
+          } catch (e) {
+            if (attempt >= Number(args.retries ?? 2)) throw e;
+            console.log(`${id}: attempt ${attempt + 1} failed (${e.message.split('
+')[0]}), retrying`);
+          }
+        }
+      }
     }
   } finally {
     await browser.close();
@@ -657,7 +699,7 @@ async function graded(file, grade) {
 
 const escapeHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const english = (ko) => {
-  const text = EN_SIM[ko] ?? EN_MENUS[ko] ?? EN_ARMADA[ko] ?? EN_LEPANTO[ko];
+  const text = EN_SIM[ko] ?? EN_MENUS[ko] ?? EN_ARMADA[ko] ?? EN_LEPANTO[ko] ?? EN_TRAFALGAR[ko];
   if (!text) throw new Error(`no English for ${ko}`);
   return text;
 };
@@ -737,7 +779,7 @@ function cardPage(lang, id) {
   const t = battleText(id, lang);
   // A later chapter's card carries the series name and that chapter's war instead of the Imjin War's seal.
   const chapter = chapterOfBattle(id);
-  const CH = { armada: ['THE SPANISH ARMADA', '아르마다 전쟁'], lepanto: ['LEPANTO', '레판토'] }[chapter];
+  const CH = { armada: ['THE SPANISH ARMADA', '아르마다 전쟁'], lepanto: ['LEPANTO', '레판토'], trafalgar: ['TRAFALGAR', '트라팔가르'] }[chapter];
   const brand = CH
     ? `<div class="brand">${en ? `<i>MOONWAKE · ${CH[0]}</i>` : `<b>${CH[1]}</b>`}</div>`
     : en ? '<div class="brand"><i>THE IMJIN WAR</i></div>' : '<div class="brand"><b>임진왜란</b><span class="seal">海<br>戰</span></div>';

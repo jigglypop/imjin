@@ -149,7 +149,7 @@ export const CARD_SIZE = { width: 1200, height: 600 } as const;
 const CARD_VERSION: Partial<Record<BattleSlug | 'front', number>> & Record<(typeof BATTLE_SLUGS)[number] | 'front', number> = {
   front: 1, okpo: 1, sacheon: 1, dangpo: 1, hansan: 1, angolpo: 1, busan: 1, chilcheon: 1, myeongnyang: 1, noryang: 1,
   // The later chapters' battles that have their own cards so far (scripts/build-battle-art.mjs); the rest share the front card.
-  plymouth: 1, calais: 1, gravelines: 1, preveza: 1, djerba: 1, 'lepanto-north': 1, 'lepanto-south': 1,
+  plymouth: 1, calais: 1, gravelines: 1, preveza: 1, djerba: 1, 'lepanto-north': 1, 'lepanto-south': 1, 'lepanto-centre': 1,
 };
 
 export function cardFile(battle: BattleSlug | null, edition: Edition): string {
