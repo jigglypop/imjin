@@ -167,7 +167,8 @@ try {
   });
   check('every ship kind is the battle\'s procedural ship on the map, its far level light and in ship space', () => {
     for (const kind of Object.keys(SHIP_SPECS)) assert.ok(PROCEDURAL_KINDS.includes(modelKind(kind)), `${kind} is drawn by the battle's builder`);
-    for (const kind of PROCEDURAL_KINDS) {
+    // The campaign map is the 1592 war: its budget binds the models of the 1592 navies (the Armada ships are battle-only).
+    for (const kind of PROCEDURAL_KINDS.filter((k) => ['joseon', 'japan', 'ming'].includes(SHIP_SPECS[k]?.faction ?? 'joseon'))) {
       const far = buildShip(kind, 0).lods[2];
       const tris = far.index.length / 3;
       assert.ok(tris > 0 && tris <= 900, `${kind} far level: ${tris} triangles`);
