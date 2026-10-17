@@ -20,14 +20,14 @@ await build({
     contents: [
       "export * from './server/accounts.ts'", "export * from './server/accountsMemory.ts'", "export * from './server/accountsPg.ts'", "export * from './server/api.ts'",
       "export * from './server/auth.ts'", "export * from './server/meta.ts'", "export * as R from './src/meta/rules.ts'", "export * as A from './src/meta/affixes.ts'",
-      "export * as B from './src/meta/battle.ts'", "export * as C from './src/meta/catalog.ts'", "export { buildScenario } from './src/sim/scenarios.ts'",
+      "export * as B from './src/meta/battle.ts'", "export * as L from './src/meta/loot.ts'", "export * as C from './src/meta/catalog.ts'", "export { buildScenario } from './src/sim/scenarios.ts'",
     ].join(';\n'),
     resolveDir: root, loader: 'ts',
   },
   outfile: file, platform: 'node', format: 'cjs', bundle: true, external: ['pg-native'], logLevel: 'silent',
 });
 const m = createRequire(import.meta.url)(file);
-const { R, A, C } = m;
+const { R, A, C, L } = m;
 
 async function suite(name, store) {
   while (!store.ready) await new Promise((r) => setTimeout(r, 100));
@@ -81,22 +81,32 @@ async function suite(name, store) {
       assert.deepEqual(reasons.slice(0, 3), ['reroll', 'buy', 'meta-start']);
     });
 
-    await check('equipment and skills follow the rules, and a stored salt or purse sent by a page is ignored', async () => {
+    await check('equipment, talents and respec follow the rules, and a stored salt or purse sent by a page is ignored', async () => {
       const worn = await ok('POST', '/meta/equip', { general: 'yi', armor: 'yi_tongjesa' }, token);
       assert.equal(worn.profile.generals.yi.armor, 'yi_tongjesa');
       assert.equal((await call('POST', '/meta/equip', { general: 'wakisaka', armor: 'yi_tongjesa' }, token)).json.error.text, '다른 나라의 갑옷입니다');
       const armed = await ok('POST', '/meta/weapon', { general: 'yi', weapon: 'joseon_jangchang' }, token);
       assert.equal(armed.profile.generals.yi.weapon, 'joseon_jangchang');
-      const step = R.skillsFor('yi')[0].id;
-      const learned = await ok('POST', '/meta/learn', { general: 'yi', skill: step }, token);
-      assert.deepEqual(learned.profile.generals.yi.skills, [step]);
-      assert.equal((await call('POST', '/meta/learn', { general: 'yi', skill: step }, token)).json.error.text, '이미 익혔습니다');
+      const step = 'gunnery.powder';
+      assert.equal((await call('POST', '/meta/learn', { general: 'yi', skill: step }, token)).json.error.text, '이 가지에 2점을 쓰면 열립니다');
+      await ok('POST', '/meta/learn', { general: 'yi', skill: 'gunnery.rapid' }, token);
+      const learned = await ok('POST', '/meta/learn', { general: 'yi', skill: 'gunnery.rapid' }, token);
+      assert.deepEqual(learned.profile.generals.yi.talents, { 'gunnery.rapid': 2 });
+      await ok('POST', '/meta/learn', { general: 'yi', skill: step }, token);
+      assert.equal((await call('POST', '/meta/learn', { general: 'yi', skill: 'gunnery.aim' }, token)).json.error.text, '남은 재능 점수가 없습니다');
+      const reset = await ok('POST', '/meta/respec', { general: 'yi' }, token);
+      assert.deepEqual(reset.profile.generals.yi.talents, {});
+      assert.equal(reset.profile.coins, learned.profile.coins, 'the first reset is free');
+      await ok('POST', '/meta/learn', { general: 'yi', skill: 'gunnery.aim' }, token);
+      const paidReset = await ok('POST', '/meta/respec', { general: 'yi' }, token);
+      assert.equal(reset.profile.coins - paidReset.profile.coins, R.RESPEC_PER_LEVEL * 4);
+      assert.equal((await store.ledger(id, 'coin'))[0].reason, 'respec');
       assert.equal((await call('POST', '/meta/equip', { general: 'yi' }, token)).status, 400);
     });
 
     await check('a browser profile is carried over once, as choices only: no coins, experience or rolls of its own', async () => {
       const other = await ok('POST', '/auth/guest', {});
-      const forged = { ...R.newProfile(), coins: 9999999, salt: 'forged', owned: ['won_heukcheol'], rolls: { won_heukcheol: { seed: 42, rerolls: 7 } }, generals: { won: { xp: 99999, skills: [], armor: 'won_heukcheol', weapon: 'joseon_dangpa' } } };
+      const forged = { ...R.newProfile(), coins: 9999999, salt: 'forged', owned: ['won_heukcheol'], rolls: { won_heukcheol: { seed: 42, rerolls: 7 } }, generals: { won: { xp: 99999, talents: { 'boarding.hooks': 2 }, armor: 'won_heukcheol', weapon: 'joseon_dangpa' } }, items: [{ uid: 'x', base: 'b_sonja', rarity: 'legendary', rerolls: 0, seed: 1 }] };
       const r = await ok('POST', '/meta/import', { profile: forged }, other.token);
       assert.equal(r.imported, true);
       assert.equal(r.profile.salt, other.user.id);
@@ -106,6 +116,7 @@ async function suite(name, store) {
       assert.equal(r.profile.generals.won.xp, 600);
       assert.equal(r.profile.generals.won.armor, 'won_heukcheol');
       assert.equal(r.profile.generals.won.weapon, 'joseon_dangpa');
+      assert.deepEqual(r.profile.items, [], 'loot is never carried over');
       const twice = await ok('POST', '/meta/import', { profile: forged }, other.token);
       assert.equal(twice.imported, false);
       assert.equal(twice.profile.coins, r.profile.coins);
@@ -121,6 +132,28 @@ async function suite(name, store) {
       assert.ok(paid.profile.generals.yi.xp > before.generals.yi.xp);
       assert.equal(paid.profile.stats.wins, before.stats.wins + 1);
       assert.equal((await call('POST', '/meta/battle/finish', { ticket, report }, token)).status, 409, 'a ticket pays once');
+      // Loot: rolled from the account id and the drop counter (verifiable), a first win adds a 희귀+ piece, and every
+      // piece is a line of the item ledger.
+      assert.ok(paid.reward.drops.length >= 2);
+      assert.equal(paid.profile.drops, before.drops + 1);
+      const expect = L.rollDrops(id, before.drops, { result: 'win', stars: 3, sunk: 10, firstWin: true, side: 'joseon' });
+      assert.deepEqual(paid.reward.drops.map((d) => [d.uid, d.base, d.rarity]), expect.map((d) => [d.uid, d.base, d.rarity]));
+      for (const d of paid.reward.drops) assert.equal(d.seed, L.itemSeed(id, d.uid, 0));
+      assert.equal(await store.balance(id, 'item'), paid.profile.items.length);
+      const loot = paid.profile.items[0];
+      const slot = L.itemBase(loot.base).slot;
+      const geared = await ok('POST', '/meta/item/equip', { general: 'yi', slot, item: loot.uid }, token);
+      assert.equal(geared.profile.generals.yi.gear[slot], loot.uid);
+      assert.equal((await call('POST', '/meta/item/equip', { general: 'yi', slot: 'nope', item: loot.uid }, token)).status, 400);
+      assert.equal((await call('POST', '/meta/item/equip', { general: 'yi', slot, item: 'zz' }, token)).json.error.text, '가지지 않은 물건입니다');
+      const reforged = await ok('POST', '/meta/item/reforge', { item: loot.uid }, token);
+      assert.equal(reforged.profile.items[0].seed, L.itemSeed(id, loot.uid, 1));
+      assert.equal(geared.profile.coins - reforged.profile.coins, L.REFORGE[loot.rarity]);
+      const broken = await ok('POST', '/meta/item/salvage', { item: loot.uid }, token);
+      assert.equal(broken.profile.coins - reforged.profile.coins, L.SALVAGE[loot.rarity]);
+      assert.equal(broken.profile.generals.yi.gear?.[slot], undefined);
+      assert.equal(await store.balance(id, 'item'), broken.profile.items.length);
+      assert.equal((await store.ledger(id, 'item'))[0].reason, 'salvage');
       const forged = await ok('POST', '/meta/battle/start', { mode: 'history', scenario: 'hansan', side: 'joseon' }, token);
       assert.equal((await call('POST', '/meta/battle/finish', { ticket: forged.ticket, report: { ...report, sunk: 9999 } }, token)).status, 409, 'more ships sunk than the enemy had');
       assert.equal((await call('POST', '/meta/battle/finish', { ticket: forged.ticket, report: { ...report, generals: [{ id: 'wakisaka', sunk: 0 }] } }, token)).status, 409, 'a general who did not lead');

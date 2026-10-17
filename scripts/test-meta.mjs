@@ -17,6 +17,8 @@ try {
   const R = await load('/src/meta/rules.ts');
   const M = await load('/src/meta/battle.ts');
   const A = await load('/src/meta/affixes.ts');
+  const T = await load('/src/meta/talents.ts');
+  const L = await load('/src/meta/loot.ts');
   const { TREES } = await load('/src/sim/grand/growthData.ts');
   const { buildScenario } = await load('/src/sim/scenarios.ts');
   const close = (a, b) => Math.abs(a - b) < 1e-12;
@@ -60,42 +62,113 @@ try {
     }
   });
 
-  check('levels: 100 xp for the second level, 200 more for the third, capped at 10', () => {
+  check('levels: 100 xp for the second level, 200 more for the third, capped at 20', () => {
     assert.equal(R.xpFor(1), 0);
     assert.equal(R.xpFor(2), 100);
     assert.equal(R.xpFor(3), 300);
     assert.equal(R.levelOf(99), 1);
     assert.equal(R.levelOf(100), 2);
     assert.equal(R.levelOf(R.xpFor(10)), 10);
-    assert.equal(R.levelOf(1e12), 10);
+    assert.equal(R.levelOf(1e12), 20);
     assert.deepEqual(R.levelProgress(150), { level: 2, into: 50, need: 200 });
     assert.equal(R.levelProgress(1e9).need, null);
   });
 
   check('a stored profile is cleaned: unknown generals, skills and armor dropped, counts made whole and positive', () => {
-    const p = R.normalizeProfile({ coins: 12.7, owned: ['joseon_swaeja', 'nope', 'joseon_dujeong', 'joseon_swaeja'], generals: { yi: { xp: -5, skills: ['gunnery1', 'boarding1', 'x'], armor: 'japan_oyoroi' }, ghost: { xp: 9 } }, stats: { wins: 'a' }, firsts: ['b', 'a', 'a'] });
+    const p = R.normalizeProfile({ coins: 12.7, owned: ['joseon_swaeja', 'nope', 'joseon_dujeong', 'joseon_swaeja'], generals: { yi: { xp: -5, talents: { 'gunnery.rapid': 1, 'boarding.hooks': 1, x: 1 }, armor: 'japan_oyoroi' }, ghost: { xp: 9 } }, stats: { wins: 'a' }, firsts: ['b', 'a', 'a'] });
     assert.equal(p.coins, 12);
     assert.deepEqual(p.owned, ['joseon_swaeja']);
-    assert.deepEqual(p.generals.yi, { xp: 0, skills: ['gunnery1'] });
+    assert.deepEqual(p.generals.yi, { xp: 0, talents: {} }, 'no points at level 1, so nothing is kept');
     assert.equal(p.generals.ghost, undefined);
     assert.deepEqual(p.stats, { battles: 0, wins: 0, sunk: 0, lost: 0 });
     assert.deepEqual(p.firsts, ['a', 'b']);
     assert.deepEqual(R.normalizeProfile(null), R.newProfile());
   });
 
-  check('skills: one point a level, steps in order, mastery at level 6, only from the general\'s own branches', () => {
-    let p = R.newProfile();
-    assert.equal(R.learnProblem(p, 'yi', 'gunnery1'), '남은 재능 점수가 없습니다');
-    p = { ...p, generals: { yi: { xp: R.xpFor(3), skills: [] } } };
-    assert.equal(R.skillPointsLeft(p, 'yi'), 2);
-    assert.equal(R.learnProblem(p, 'yi', 'gunnery2'), '앞 단계를 먼저 익혀야 합니다');
-    assert.equal(R.learnProblem(p, 'yi', 'boarding1'), '이 장수가 배울 수 없는 재능입니다');
-    assert.equal(R.learnProblem(p, 'yi', 'mastery'), '6레벨에 익힐 수 있습니다');
-    p = R.learn(R.learn(p, 'yi', 'gunnery1'), 'yi', 'gunnery2');
-    assert.deepEqual(p.generals.yi.skills, ['gunnery1', 'gunnery2']);
-    assert.throws(() => R.learn(p, 'yi', 'gunnery3'), R.RuleError);
-    p = { ...p, generals: { yi: { ...p.generals.yi, xp: R.xpFor(6) } } };
-    assert.equal(R.learnProblem(p, 'yi', 'mastery'), null);
+  check('talent trees: every general has three distinct branches with five tiers, one keystone each, and his 비기', () => {
+    for (const g of C.GENERALS) {
+      const branches = T.branchesOf(g.id);
+      assert.equal(branches.length, 3, g.id);
+      assert.equal(new Set(branches).size, 3, g.id);
+      for (const b of TREES[g.id].branches.slice(0, 3)) assert.ok(branches.includes(b), `${g.id} keeps his campaign branch ${b}`);
+      const nodes = T.talentsFor(g.id);
+      assert.equal(new Set(nodes.map((n) => n.id)).size, nodes.length, g.id);
+      assert.equal(nodes.filter((n) => n.keystone).length, 3, g.id);
+      assert.equal(nodes.filter((n) => n.branch === 'mastery').length, 1, g.id);
+    }
+    for (const list of Object.values(T.BRANCH_NODES)) {
+      for (const tier of [1, 2, 3, 4, 5]) assert.ok(list.some((n) => n.tier === tier));
+      // Enough ranks below the keystone to open it, and keystones are two-sided.
+      assert.ok(list.filter((n) => n.tier < 5).reduce((s, n) => s + n.ranks, 0) >= T.TIER_GATE[5]);
+      const key = list.find((n) => n.keystone);
+      assert.ok(Object.values(key.per).some((v) => v < 0) && Object.values(key.per).some((v) => v >= 0.07), key.id);
+    }
+  });
+
+  check('talents: points from levels and milestones, tier gates, ranks, keystone level and exclusivity, 비기 gate', () => {
+    assert.equal(T.pointsAtLevel(1), 0);
+    assert.equal(T.pointsAtLevel(4), 3);
+    assert.equal(T.pointsAtLevel(5), 5, 'milestone at 5 adds one');
+    assert.equal(T.pointsAtLevel(20), 19 + 6);
+    let p = { ...R.newProfile(), generals: { yi: { xp: R.xpFor(4), talents: {} } } };
+    assert.equal(R.learnProblem(p, 'yi', 'boarding.hooks'), '이 장수가 배울 수 없는 재능입니다');
+    assert.equal(R.learnProblem(p, 'yi', 'gunnery.powder'), '이 가지에 2점을 쓰면 열립니다');
+    p = R.learn(R.learn(p, 'yi', 'gunnery.rapid'), 'yi', 'gunnery.rapid');
+    assert.equal(p.generals.yi.talents['gunnery.rapid'], 2);
+    assert.equal(R.learnProblem(p, 'yi', 'gunnery.powder'), null);
+    p = R.learn(p, 'yi', 'gunnery.rapid');
+    assert.equal(R.learnProblem(p, 'yi', 'gunnery.rapid'), '이미 끝까지 익혔습니다');
+    assert.equal(R.learnProblem(p, 'yi', 'gunnery.aim'), '남은 재능 점수가 없습니다');
+    // A level-20 general fills a branch: keystones are exclusive, the 비기 waits for its level and spent points.
+    let q = { ...R.newProfile(), generals: { yi: { xp: R.xpFor(20), talents: {} } } };
+    for (const n of T.BRANCH_NODES.gunnery.filter((n) => !n.keystone)) for (let i = 0; i < n.ranks; i++) q = R.learn(q, 'yi', n.id);
+    for (let i = 0; i < 3; i++) q = R.learn(q, 'yi', 'command.drums');
+    for (let i = 0; i < 3; i++) q = R.learn(q, 'yi', 'command.law');
+    for (let i = 0; i < 2; i++) q = R.learn(q, 'yi', 'command.drill');
+    q = R.learn(q, 'yi', 'command.formation');
+    q = R.learn(q, 'yi', 'command.runners');
+    assert.equal(R.learnProblem({ ...q, generals: { yi: { ...q.generals.yi, xp: R.xpFor(9) } } }, 'yi', 'gunnery.keystone'), '10레벨에 익힐 수 있습니다');
+    q = R.learn(q, 'yi', 'gunnery.keystone');
+    assert.equal(R.keystoneOf(q, 'yi').id, 'gunnery.keystone');
+    assert.match(R.learnProblem(q, 'yi', 'command.keystone'), /핵심 재능은 하나만/);
+    q = R.learn(q, 'yi', 'mastery');
+    assert.equal(R.learnProblem({ ...q, generals: { yi: { xp: R.xpFor(11), talents: {} } } }, 'yi', 'mastery'), '12레벨에 익힐 수 있습니다');
+    assert.equal(R.learnProblem({ ...q, generals: { yi: { xp: R.xpFor(12), talents: {} } } }, 'yi', 'mastery'), '재능 점수를 8점 쓴 뒤에 익힐 수 있습니다');
+    // A stored tree is cleaned through the same gates, in tier order.
+    const stored = R.normalizeProfile(JSON.parse(JSON.stringify({ ...q, generals: { yi: { ...q.generals.yi, talents: { ...q.generals.yi.talents, 'command.keystone': 1, 'gunnery.rapid': 9 } } } })));
+    assert.deepEqual(stored.generals.yi.talents, q.generals.yi.talents);
+    assert.deepEqual(R.normalizeProfile({ generals: { yi: { xp: R.xpFor(3), talents: { 'gunnery.powder': 2, 'gunnery.rapid': 1 } } } }).generals.yi.talents, { 'gunnery.rapid': 1 }, 'gates hold on load');
+  });
+
+  check('talents: resonance with the trait, keystones two-sided, caps, preview through generalMods, respec cost', () => {
+    // Yi's trait raises accuracy and morale: 정조준 resonates (+1.5% a rank becomes +2.25%), 속사 does not.
+    assert.ok(T.resonates('yi', T.talentById('yi', 'gunnery.aim')));
+    assert.ok(!T.resonates('yi', T.talentById('yi', 'gunnery.rapid')));
+    assert.ok(close(T.nodeAdds('yi', T.talentById('yi', 'gunnery.aim'), 1).accuracy, 0.0225));
+    assert.ok(close(T.nodeAdds('yi', T.talentById('yi', 'gunnery.rapid'), 2).reload, 0.03));
+    const e = T.talentEffect('yi', { 'gunnery.keystone': 1 });
+    assert.ok(close(e.melee, 0.92) && close(e.reload, 1.08) && close(e.accuracy, 1.075), JSON.stringify(e));
+    for (const g of C.GENERALS) {
+      const all = Object.fromEntries(T.talentsFor(g.id).map((n) => [n.id, n.ranks]));
+      for (const v of Object.values(T.talentEffect(g.id, all))) assert.ok(v <= 1 + T.TALENT_CAP.max + 1e-9 && v >= 1 + T.TALENT_CAP.min - 1e-9, g.id);
+    }
+    let p = { ...R.newProfile(), coins: 5000, generals: { yi: { xp: R.xpFor(6), talents: {} } } };
+    const before = R.generalMods(p, 'yi');
+    const preview = R.generalMods(p, 'yi', { 'gunnery.aim': 1 });
+    p = R.learn(p, 'yi', 'gunnery.aim');
+    assert.deepEqual(R.generalMods(p, 'yi'), preview, 'the preview is what learning gives');
+    assert.ok(preview.accuracy > before.accuracy);
+    assert.equal(R.respecCost(p, 'yi'), 0, 'the first reset is free');
+    p = R.respec(p, 'yi');
+    assert.deepEqual(p.generals.yi.talents, {});
+    assert.equal(p.coins, 5000);
+    assert.equal(R.respecProblem(p, 'yi'), '되돌릴 재능이 없습니다');
+    p = R.learn(p, 'yi', 'gunnery.aim');
+    assert.equal(R.respecCost(p, 'yi'), 600);
+    p = R.respec(p, 'yi');
+    assert.equal(p.coins, 4400);
+    assert.equal(p.generals.yi.respecs, 2);
+    assert.throws(() => R.respec({ ...R.learn(p, 'yi', 'gunnery.aim'), coins: 10 }, 'yi'), R.RuleError);
   });
 
   check('armor: bought once with enough coins and signatures shared by every general of their navy', () => {
@@ -161,7 +234,7 @@ try {
   });
 
   check('switching weapon replaces one slot while preserving armor, progression, other generals and battle factors', () => {
-    const p = { ...R.newProfile(), coins: 24, owned: ['yi_tongjesa'], generals: { yi: { xp: 600, skills: ['gunnery1'], armor: 'yi_tongjesa' }, won: { xp: 150, skills: [] } } };
+    const p = { ...R.newProfile(), coins: 24, owned: ['yi_tongjesa'], generals: { yi: { xp: 600, talents: { 'gunnery.rapid': 1 }, armor: 'yi_tongjesa' }, won: { xp: 150, talents: {} } } };
     const original = JSON.stringify(p);
     let next = p;
     for (const w of C.weaponsFor(C.generalById('yi'))) {
@@ -178,30 +251,32 @@ try {
     assert.equal(JSON.stringify(p), original);
   });
 
-  check('v1 migration keeps armor, currency, skills and rewards; malformed or foreign weapons fall back safely', () => {
+  check('v1 migration keeps armor, currency and rewards, gives every campaign-step point back as talent points; malformed or foreign weapons fall back safely', () => {
     const old = { ...R.newProfile(), coins: 1234, owned: ['yi_tongjesa'], generals: { yi: { xp: 600, skills: ['gunnery1'], armor: 'yi_tongjesa' }, won: { xp: 300, skills: [], armor: 'yi_tongjesa', weapon: 'joseon_dangpa' }, eokgi: { xp: 10, skills: [], weapon: 'japan_yari' }, chenlin: { xp: 20, skills: [], weapon: ['ming_jian', 'ming_gong'] }, deng: { xp: 30, skills: [], weapon: 'missing' } }, firsts: ['win:history:hansan:joseon'] };
     const p = R.normalizeProfile(old);
-    assert.equal(p.v, 1);
+    assert.equal(p.v, 2);
     assert.equal(p.coins, old.coins);
     assert.deepEqual(p.owned, old.owned);
     assert.deepEqual(p.firsts, old.firsts);
-    assert.deepEqual(p.generals.yi, old.generals.yi);
+    assert.deepEqual(p.generals.yi, { xp: 600, talents: {}, armor: 'yi_tongjesa' });
+    assert.equal(R.skillPointsLeft(p, 'yi'), 3, 'level 4: every point back');
+    assert.deepEqual(p.items, []);
     assert.equal(R.wornWeapon(p, 'yi').id, 'joseon_hwando');
-    assert.deepEqual(p.generals.won, old.generals.won, 'other generals may retain the same-faction signature');
+    assert.deepEqual(p.generals.won, { xp: 300, talents: {}, armor: 'yi_tongjesa', weapon: 'joseon_dangpa' }, 'other generals may retain the same-faction signature');
     for (const id of ['eokgi', 'chenlin', 'deng']) assert.equal(p.generals[id].weapon, undefined, id);
     assert.equal(R.wornWeapon(p, 'eokgi').faction, 'joseon');
     assert.equal(R.wornWeapon(p, 'chenlin').faction, 'ming');
     assert.deepEqual(R.normalizeProfile(JSON.parse(JSON.stringify(p))), p, 'migration is stable on later reloads');
-    assert.equal(R.wornWeapon({ ...p, generals: { yi: { xp: 0, skills: [], weapon: 'japan_yumi' } } }, 'yi').id, 'joseon_hwando', 'readback also checks faction');
-    assert.equal(R.wornArmor({ ...p, generals: { yi: { xp: 0, skills: [], armor: 'japan_tosei' } } }, 'yi').id, 'joseon_dujeong');
+    assert.equal(R.wornWeapon({ ...p, generals: { yi: { xp: 0, talents: {}, weapon: 'japan_yumi' } } }, 'yi').id, 'joseon_hwando', 'readback also checks faction');
+    assert.equal(R.wornArmor({ ...p, generals: { yi: { xp: 0, talents: {}, armor: 'japan_tosei' } } }, 'yi').id, 'joseon_dujeong');
   });
 
-  check('a general\'s factors: his trait, his steps and his armor multiply; the campaign-only march, xp and temper are left out', () => {
-    let p = { ...R.newProfile(), coins: 9000, generals: { yi: { xp: R.xpFor(2), skills: ['gunnery1'] } } };
+  check('a general\'s factors: his trait, his talents and his armor multiply; the campaign-only march, xp and temper are left out', () => {
+    let p = { ...R.newProfile(), coins: 9000, generals: { yi: { xp: R.xpFor(2), talents: { 'gunnery.rapid': 1 } } } };
     p = R.equip(R.buy(p, 'yi_tongjesa').profile, 'yi', 'yi_tongjesa');
     const m = R.generalMods(p, 'yi');
     const bare = R.generalMods(R.equip(p, 'yi', null), 'yi');
-    assert.ok(close(bare.accuracy, 1.06) && close(bare.morale, 1.06) && close(bare.reload, 1.05) && bare.defense === 1 && bare.speed === 1, 'trait and step');
+    assert.ok(close(bare.accuracy, 1.06) && close(bare.morale, 1.06) && close(bare.reload, 1.015) && bare.defense === 1 && bare.speed === 1, 'trait and step');
     const fx = A.rollEffect(R.armorRoll(p, 'yi_tongjesa'));
     assert.ok(Object.keys(fx).length > 0, 'a signature always rolls something');
     for (const k of Object.keys(R.NEUTRAL_MODS)) assert.ok(close(m[k], bare[k] * (fx[k] ?? 1)), k);
@@ -366,8 +441,105 @@ try {
     assert.equal(theirs.sunk, 1);
   });
 
+  check('loot catalog: every weapon is a base for its navy, every slot has bases, rolls stay in rarity ranges and caps', () => {
+    assert.equal(new Set(L.ITEM_BASES.map((b) => b.id)).size, L.ITEM_BASES.length);
+    for (const w of C.WEAPONS) assert.equal(L.ITEM_BASES.find((b) => b.weapon === w.id)?.faction, w.faction, w.id);
+    for (const slot of L.GEAR_SLOTS) assert.ok(L.ITEM_BASES.filter((b) => b.slot === slot).length >= 4, slot);
+    for (const rarity of L.RARITIES) {
+      const spec = L.RARITY_ROLL[rarity];
+      for (let i = 0; i < 200; i++) {
+        const item = { base: L.ITEM_BASES[i % L.ITEM_BASES.length].id, rarity, seed: L.itemSeed('s', `u${i}`) };
+        const r = L.rollItem(item);
+        assert.deepEqual(L.rollItem(item), r, 'reproducible');
+        const pts = A.PRIMARY_STATS.reduce((s, k) => s + r.stats[k], 0);
+        assert.ok(pts >= spec.points[0] && pts <= spec.points[1], `${rarity} ${pts}`);
+        assert.ok(r.affixes.length >= spec.affixes[0] && r.affixes.length <= spec.affixes[1]);
+        for (const v of Object.values(L.itemEffect(item))) assert.ok(v > 1 && v <= L.ITEM_FACTOR_CAP + 1e-9);
+      }
+    }
+    // Bias: a war manual leans to 지능.
+    let int = 0, str = 0;
+    for (let i = 0; i < 400; i++) { const r = L.rollItem({ base: 'b_sonja', rarity: 'rare', seed: L.itemSeed('s', `b${i}`) }); int += r.stats.int; str += r.stats.str; }
+    assert.ok(int > 2 * str, `${int} vs ${str}`);
+    // The refactor kept every armor roll as it was.
+    const a = C.armorById('yi_tongjesa');
+    assert.deepEqual(A.rollArmor(a, 12345), A.rollPieces((() => { let x = 12345; return () => { x = (x + 0x6d2b79f5) >>> 0; let t = x; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })(), A.TIER_ROLL.signature));
+  });
+
+  check('drops: decided by salt and counter alone, a win always drops, a first win adds a 희귀+ piece, weapons only for the own navy', () => {
+    const win = { result: 'win', stars: 3, sunk: 10, firstWin: false, side: 'joseon' };
+    assert.deepEqual(L.rollDrops('acct', 7, win), L.rollDrops('acct', 7, win));
+    assert.notDeepEqual(L.rollDrops('acct', 7, win), L.rollDrops('other', 7, win));
+    const tally = { common: 0, fine: 0, rare: 0, epic: 0, legendary: 0 };
+    let lossDrops = 0;
+    for (let i = 0; i < 2000; i++) {
+      const d = L.rollDrops('acct', i, win);
+      assert.ok(d.length >= 1 && d.length <= 2);
+      for (const x of d) { tally[x.rarity]++; const b = L.itemBase(x.base); assert.ok(!b.faction || b.faction === 'joseon'); }
+      lossDrops += L.rollDrops('acct', i, { ...win, result: 'loss', stars: 0 }).length;
+      const first = L.rollDrops('acct', i, { ...win, firstWin: true });
+      assert.ok(['rare', 'epic', 'legendary'].includes(first.at(-1).rarity));
+      for (const x of L.rollDrops('acct', i, { ...win, side: 'holyleague' })) assert.equal(L.itemBase(x.base).faction, undefined);
+    }
+    assert.ok(tally.common > tally.fine && tally.fine > tally.rare && tally.rare > tally.epic && tally.epic > tally.legendary && tally.legendary > 0, JSON.stringify(tally));
+    assert.ok(lossDrops > 250 && lossDrops < 550, `loss drops ${lossDrops}`);
+  });
+
+  check('rewards drop loot into the profile: counter moves, daily cap for untrusted, full inventory salvages, rolls verifiable', () => {
+    const report = { mode: 'history', scenario: 'hansan', side: 'joseon', result: 'win', stars: 3, sunk: 8, lost: 0, simSeconds: 300, generals: [{ id: 'yi', sunk: 4 }] };
+    let p = { ...R.newProfile(), salt: 'acct' };
+    const first = R.rewardFor(p, report, '2026-10-17', false);
+    assert.ok(first.reward.drops.length >= 2, 'first win: a regular drop and the 희귀+ bonus');
+    assert.equal(first.profile.drops, 1);
+    assert.deepEqual(first.profile.items, first.reward.drops);
+    for (const it of first.profile.items) assert.equal(it.seed, L.itemSeed('acct', it.uid, 0));
+    assert.deepEqual(R.normalizeProfile(JSON.parse(JSON.stringify(first.profile)), 'acct').items, first.profile.items, 'stored items reload the same');
+    const forged = R.normalizeProfile({ ...first.profile, items: first.profile.items.map((i) => ({ ...i, seed: 1 })) }, 'acct');
+    assert.deepEqual(forged.items, first.profile.items, 'a stored seed is never trusted');
+    p = first.profile;
+    for (let i = 0; i < 40; i++) p = R.rewardFor(p, report, '2026-10-17', false).profile;
+    assert.equal(p.dropped, L.DAILY_DROPS);
+    assert.equal(p.items.length, L.DAILY_DROPS);
+    assert.ok(R.rewardFor(p, report, '2026-10-18', false).reward.drops.length >= 1, 'a new day drops again');
+    let full = { ...p, items: Array.from({ length: L.INVENTORY_CAP }, (_, i) => ({ uid: `f${i}`, base: 'b_sonja', rarity: 'common', rerolls: 0, seed: L.itemSeed('acct', `f${i}`), src: '' })) };
+    const paid = R.rewardFor(full, report, '2026-10-19', true);
+    assert.equal(paid.profile.items.length, L.INVENTORY_CAP);
+    assert.ok(paid.reward.salvaged > 0 && paid.reward.drops.length === 0);
+  });
+
+  check('gear: slot and navy checks, one wearer per piece, a worn weapon becomes the figure\'s weapon, salvage and reforge', () => {
+    const sword = { uid: 'a-0', base: 'w_joseon_ungeom', rarity: 'epic', rerolls: 0, seed: L.itemSeed('acct', 'a-0'), src: '' };
+    const katana = { uid: 'a-1', base: 'w_japan_katana', rarity: 'rare', rerolls: 0, seed: L.itemSeed('acct', 'a-1'), src: '' };
+    const book = { uid: 'a-2', base: 'b_sonja', rarity: 'legendary', rerolls: 0, seed: L.itemSeed('acct', 'a-2'), src: '' };
+    let p = { ...R.newProfile(), salt: 'acct', coins: 3000, items: [sword, katana, book], generals: { yi: { xp: 600, talents: {} }, won: { xp: 600, talents: {} } } };
+    assert.equal(R.equipItemProblem(p, 'yi', 'weapon', 'a-1'), '다른 나라의 무기입니다');
+    assert.equal(R.equipItemProblem(p, 'yi', 'book', 'a-0'), '맞지 않는 자리입니다');
+    assert.equal(R.equipItemProblem(p, 'yi', 'seal', 'zz'), '가지지 않은 물건입니다');
+    const bare = R.generalMods(p, 'yi');
+    p = R.equipItem(R.equipItem(p, 'yi', 'weapon', 'a-0'), 'yi', 'book', 'a-2');
+    assert.equal(R.wornWeapon(p, 'yi').id, 'joseon_ungeom', 'the figure holds the looted sword');
+    const m = R.generalMods(p, 'yi');
+    const fx = [L.itemEffect(sword), L.itemEffect(book)];
+    for (const k of Object.keys(R.NEUTRAL_MODS)) assert.ok(Math.abs(m[k] - Math.min(R.GENERAL_CAP.max, bare[k] * (fx[0][k] ?? 1) * (fx[1][k] ?? 1))) < 1e-5, k);
+    p = R.equipItem(p, 'won', 'book', 'a-2');
+    assert.equal(R.wearerOf(p, 'a-2'), 'won');
+    assert.equal(p.generals.yi.gear.book, undefined, 'moved, not copied');
+    const reforged = R.reforge(p, 'a-2');
+    assert.equal(reforged.coins, 3000 - L.REFORGE.legendary);
+    assert.equal(reforged.items[2].seed, L.itemSeed('acct', 'a-2', 1));
+    assert.equal(R.reforgeProblem({ ...p, coins: 10 }, 'a-2'), '엽전이 모자랍니다');
+    const salvaged = R.salvage(p, 'a-0');
+    assert.equal(salvaged.coins, 3000 + L.SALVAGE.epic);
+    assert.equal(salvaged.items.length, 2);
+    assert.equal(salvaged.generals.yi.gear.weapon, undefined);
+    assert.equal(R.wornWeapon(salvaged, 'yi').id, 'joseon_ungeom', 'the cosmetic weapon stays');
+    // Every factor of a fully geared, fully learned general stays in bounds.
+    const all = Object.fromEntries(T.talentsFor('yi').map((n) => [n.id, n.ranks]));
+    for (const v of Object.values(R.generalMods(p, 'yi', all))) assert.ok(v <= R.GENERAL_CAP.max && v >= R.GENERAL_CAP.min);
+  });
+
   const storageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
-  const storage = new Map([['imjin.meta.local.v1', JSON.stringify({ ...R.newProfile(), coins: 4321, owned: ['yi_tongjesa'], generals: { won: { xp: 300, skills: [], armor: 'yi_tongjesa' } } })]]);
+  const storage = new Map([['imjin.meta.local.v1', JSON.stringify({ ...R.newProfile(), coins: 4321, owned: ['yi_tongjesa'], generals: { won: { xp: 300, talents: {}, armor: 'yi_tongjesa' } } })]]);
   Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)) } });
   try {
     const { useLocalProfile } = await load('/src/meta/localProfile.ts');
@@ -380,7 +552,7 @@ try {
       assert.equal(useLocalProfile.getState().equipWeapon('won', 'joseon_gakgung'), true);
       const persisted = storage.get('imjin.meta.local.v1');
       const reloaded = R.normalizeProfile(JSON.parse(persisted));
-      assert.deepEqual(reloaded.generals.won, { xp: 300, skills: [], armor: 'yi_tongjesa', weapon: 'joseon_gakgung' });
+      assert.deepEqual(reloaded.generals.won, { xp: 300, talents: {}, armor: 'yi_tongjesa', weapon: 'joseon_gakgung' });
       assert.equal(reloaded.coins, 4321);
       assert.equal(useLocalProfile.getState().equipWeapon('won', 'japan_yari'), false);
       assert.equal(useLocalProfile.getState().refused, '다른 나라의 무기입니다');

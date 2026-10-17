@@ -5,7 +5,8 @@
 // account id as the salt, so no page can send a roll, a purse or experience of its own.
 import { randomBytes } from 'node:crypto';
 import { generalById, GENERALS } from '../src/meta/catalog';
-import { buy, equip, equipWeapon, learn, newProfile, normalizeProfile, reportProblem, reroll, rewardFor, RuleError, type BattleReport, type Profile } from '../src/meta/rules';
+import { buy, equip, equipItem, equipWeapon, learn, reforge, respec, salvage, newProfile, normalizeProfile, reportProblem, reroll, rewardFor, RuleError, type BattleReport, type Profile } from '../src/meta/rules';
+import { GEAR_SLOTS, type GearSlot } from '../src/meta/loot';
 import { START_COINS, START_XP, type MetaBattleStart, type MetaBattleTicket, type MetaReply, type MetaRewardReply } from '../src/meta/wire';
 import { battleReport, teamGenerals } from '../src/meta/battle';
 import type { Battle } from '../src/sim/battle';
@@ -44,7 +45,7 @@ async function load(data: ProfileData, userId: string, tx: ProfileTx): Promise<P
     p.salt = userId;
     if (await tx.claimOnce(`meta-start:${userId}`)) {
       await tx.ledger({ kind: 'coin', amount: START_COINS, reason: 'meta-start' });
-      for (const g of GENERALS) if (g.famous) p.generals[g.id] = { xp: START_XP, skills: [] };
+      for (const g of GENERALS) if (g.famous) p.generals[g.id] = { xp: START_XP, talents: {} };
     }
   }
   p.coins = await tx.balance('coin');
@@ -63,6 +64,12 @@ export async function changeMeta(accounts: AccountStore, userId: string, reason:
       const after = await change(before, tx);
       const delta = after.coins - before.coins;
       if (delta !== 0) await tx.ledger({ kind: 'coin', amount: delta, item, reason });
+      // Every piece of loot that comes or goes is a line of the append-only ledger too (kind 'item', the balance is the
+      // inventory's size), so a drop can be traced to the battle that paid it.
+      const had = new Set(before.items.map((i) => i.uid));
+      const has = new Set(after.items.map((i) => i.uid));
+      for (const i of after.items) if (!had.has(i.uid)) await tx.ledger({ kind: 'item', amount: 1, item: `${i.uid}:${i.base}:${i.rarity}`.slice(0, 64), reason });
+      for (const i of before.items) if (!has.has(i.uid)) await tx.ledger({ kind: 'item', amount: -1, item: `${i.uid}:${i.base}:${i.rarity}`.slice(0, 64), reason });
       after.coins = await tx.balance('coin');
       after.salt = userId;
       out = after;
@@ -139,6 +146,33 @@ export function metaRoutes(api: ApiRouter) {
     return { profile, rev } satisfies MetaReply;
   });
 
+  api.user('POST', '/api/meta/respec', async ({ accounts, user, body }) => {
+    const general = need(body.general);
+    const { profile, rev } = await changeMeta(accounts, user.id, 'respec', (p) => respec(p, general), `respec:${general}`);
+    return { profile, rev } satisfies MetaReply;
+  });
+
+  api.user('POST', '/api/meta/item/equip', async ({ accounts, user, body }) => {
+    const general = need(body.general);
+    const slot = need(body.slot, 16) as GearSlot;
+    if (!GEAR_SLOTS.includes(slot)) throw new ApiError('json');
+    const item = idOrNull(body.item);
+    const { profile, rev } = await changeMeta(accounts, user.id, 'item-equip', (p) => equipItem(p, general, slot, item));
+    return { profile, rev } satisfies MetaReply;
+  });
+
+  api.user('POST', '/api/meta/item/salvage', async ({ accounts, user, body }) => {
+    const item = need(body.item, 24);
+    const { profile, rev } = await changeMeta(accounts, user.id, 'salvage', (p) => salvage(p, item), `item:${item}`);
+    return { profile, rev } satisfies MetaReply;
+  });
+
+  api.user('POST', '/api/meta/item/reforge', async ({ accounts, user, body }) => {
+    const item = need(body.item, 24);
+    const { profile, rev } = await changeMeta(accounts, user.id, 'reforge', (p) => reforge(p, item), `item:${item}`);
+    return { profile, rev } satisfies MetaReply;
+  });
+
   // A profile this browser kept before it had an account, carried over once per account. Only choices are taken, each
   // through the server's rules: the armor it owned is bought again from the server's purse (rolled afresh from the
   // account id), the steps learned are learned again where the server's experience allows, and what was worn is put on.
@@ -158,7 +192,8 @@ export function metaRoutes(api: ApiRouter) {
       };
       for (const id of local.owned) attempt((q) => buy(q, id).profile);
       for (const [id, g] of Object.entries(local.generals)) {
-        for (const skill of g.skills) attempt((q) => learn(q, id, skill));
+        // Talents are learned again in tier order, rank by rank, where the server's experience allows.
+        for (const [node, ranks] of Object.entries(g.talents)) for (let i = 0; i < ranks; i++) attempt((q) => learn(q, id, node));
         if (g.armor) attempt((q) => equip(q, id, g.armor!));
         if (g.weapon) attempt((q) => equipWeapon(q, id, g.weapon!));
       }

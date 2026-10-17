@@ -3,8 +3,10 @@ import { useT } from '../../i18n';
 import { armorById, armorCardUrl, GENERALS, TIER_LABEL, WEAPON_KINDS, WEAPON_KIND_LABEL, weaponsFor, defaultWeapon, type MetaFaction } from '../../meta/catalog';
 import { syncProfile, useLocalProfile } from '../../meta/localProfile';
 import { AFFIX_RARITY_LABEL, affixById, PRIMARY_STATS, rerollCost, rollEffect, rollQuality, STAT_LABEL, type ArmorRoll } from '../../meta/affixes';
-import { armorRoll, rerollProblem, generalState, learnProblem, levelProgress, skillPointsLeft, owns, skillsFor, wornArmor, wornWeapon, type Profile } from '../../meta/rules';
-import { BRANCH_LABEL, TREES } from '../../sim/grand/growthData';
+import { armorRoll, rerollProblem, generalState, levelProgress, skillPointsLeft, owns, wornArmor, wornWeapon, type Profile } from '../../meta/rules';
+import { TREES } from '../../sim/grand/growthData';
+import { Inventory } from './Inventory';
+import { TalentTree } from './TalentTree';
 import { COMMANDERS } from '../../sim/grand/regions';
 import { portraitUrl } from '../portrait';
 import { ScreenFrame } from '../Screens';
@@ -239,17 +241,15 @@ function WeaponSelection({ id, profile }: { id: string; profile: Profile }) {
 
 function Poster({ id, profile }: { id: string; profile: Profile }) {
   const t = useT();
-  const learnStep = useLocalProfile((s) => s.learn);
   const c = commander(id);
   const tree = TREES[id];
   const prog = levelProgress(generalState(profile, id).xp);
   const points = skillPointsLeft(profile, id);
-  const learned = generalState(profile, id).skills;
-  const steps = skillsFor(id);
   return (
     <article className="gen-poster" data-general-id={id}>
       <div className="gen-figure-column">
         <GeneralFigure key={id} id={id} profile={profile} />
+        <Inventory id={id} profile={profile} />
       </div>
       <div className="gen-growth">
         <div className="gen-poster__id">
@@ -265,46 +265,14 @@ function Poster({ id, profile }: { id: string; profile: Profile }) {
           </div>
           {points > 0 && <span className="gen-points">{t('재능 점수 {n}', { n: points })}</span>}
         </div>
-      {tree && (
-        <section className="gen-trait">
-          <span>{t('고유 특성')}</span>
-          <b>{t(tree.trait.label)}</b>
-          <p>{t(tree.trait.text)}</p>
-        </section>
-      )}
-      {tree && (
-        <section className="gen-tree" aria-label={t('재능')}>
-          {tree.branches.map((branch) => (
-            <div key={branch} className="gen-branch">
-              <h3>{t(BRANCH_LABEL[branch])}</h3>
-              {steps
-                .filter((s) => s.branch === branch)
-                .map((s) => {
-                  const have = learned.includes(s.id);
-                  const why = have ? null : learnProblem(profile, id, s.id);
-                  return (
-                    <button key={s.id} className={`gen-step${have ? ' gen-step--have' : why ? '' : ' gen-step--open'}`} disabled={have || !!why} title={why ? t(why) : undefined} onClick={() => learnStep(id, s.id)}>
-                      <b>{t(s.label)}</b>
-                      <small>{t(s.text)}</small>
-                    </button>
-                  );
-                })}
-            </div>
-          ))}
-          {steps
-            .filter((s) => s.branch === 'mastery')
-            .map((s) => {
-              const have = learned.includes(s.id);
-              const why = have ? null : learnProblem(profile, id, s.id);
-              return (
-                <button key={s.id} className={`gen-step gen-step--mastery${have ? ' gen-step--have' : why ? '' : ' gen-step--open'}`} disabled={have || !!why} title={why ? t(why) : undefined} onClick={() => learnStep(id, s.id)}>
-                  <b>{t('비기')}: {t(s.label)}</b>
-                  <small>{t(s.text)}</small>
-                </button>
-              );
-            })}
-        </section>
-      )}
+        {tree && (
+          <section className="gen-trait">
+            <span>{t('고유 특성')} · {t('같은 능력을 올리는 재능은 공명해 50% 더 강해집니다')}</span>
+            <b>{t(tree.trait.label)}</b>
+            <p>{t(tree.trait.text)}</p>
+          </section>
+        )}
+        {tree && <TalentTree key={id} id={id} profile={profile} />}
       </div>
     </article>
   );
