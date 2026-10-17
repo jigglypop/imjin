@@ -8,6 +8,7 @@ import { setLang, useLang, useT, type Lang } from '../i18n';
 import { prefetchScreen } from '../router';
 import { setChapter, setScreen, useUi, type Screen } from '../state/store';
 import { CHAPTERS, chapterDef } from '../chapters';
+import { setMode } from '../campaign/campaign';
 import { AccountPanel } from './AccountPanel';
 import { Backdrop } from './Backdrop';
 import { ChevronLeft, Person, Sliders, Speaker, SpeakerOff } from './icons';
@@ -92,6 +93,8 @@ export function MainMenu() {
   const chapter = chapterDef(useUi((s) => s.chapter));
   const main = chapter.id === 'imjin';
   const title = t(chapter.title);
+  // A later chapter's campaign is its run of battles with growing commanders, on the history screen.
+  const chapterCampaign = { onPointerEnter: () => prefetchScreen('select'), onClick: () => { sound.click(); setMode('campaign'); setScreen('select'); } };
   const user = useAccount((s) => s.user);
   const [account, setAccount] = useState(false);
   const accountButton = useRef<HTMLButtonElement | null>(null);
@@ -156,7 +159,7 @@ export function MainMenu() {
           {lang === 'en' && main && <div className="wordmark-mark" aria-hidden="true"><span>壬辰倭亂</span><b>임진왜란</b></div>}
         </div>
         <div className="menu-play">
-          <button className="menu-primary" data-mode="faction" {...mode('faction')}>
+          <button className="menu-primary" data-mode="faction" {...(main ? mode('faction') : chapterCampaign)}>
             <span className="menu-primary-copy"><strong>{t('캠페인')}</strong><small>{t(chapter.campaign)}</small></span>
             <span className="menu-arrow" aria-hidden="true">↗</span>
           </button>

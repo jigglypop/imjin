@@ -57,6 +57,8 @@ export type ScenarioInfo = ScenarioText & {
 type Place = (x: number, z: number) => { x: number; z: number };
 
 export type FleetSpawn = {
+  /** The navy the campaign's fleet replaces in the battle: Joseon in 1592, England in the Armada chapter. */
+  faction?: 'joseon' | 'england';
   squads: {
     name: string;
     commander: string;
@@ -651,7 +653,8 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
 }
 
 function spawnFleet(b: Battle, fleet: FleetSpawn, axis: number, land: LandFn) {
-  const old = b.ships.filter((s) => s.spec.faction === 'joseon');
+  const navy = fleet.faction ?? 'joseon';
+  const old = b.ships.filter((s) => s.spec.faction === navy);
   if (!old.length) return;
   let cx = 0;
   let cz = 0;
@@ -667,7 +670,7 @@ function spawnFleet(b: Battle, fleet: FleetSpawn, axis: number, land: LandFn) {
   cz /= old.length;
   const heading = Math.atan2(hz, hx);
   const holding = old.filter((s) => s.order.type === 'hold').length > old.length / 2;
-  b.removeShips((s) => s.spec.faction === 'joseon');
+  b.removeShips((s) => s.spec.faction === navy);
   const ca = Math.cos(axis);
   const sa = Math.sin(axis);
   const wet = (x: number, z: number) => land(x * ca + z * sa, -x * sa + z * ca) < -4;

@@ -1,5 +1,7 @@
+import { useUi } from '../state/store';
 import { create } from 'zustand';
-import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
+import { ARMADA_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
+import type { ChapterId } from '../routes';
 import type { ShipKind, ShipMods } from '../sim/types';
 import type { FleetSpawn } from '../sim/scenarios';
 import { t } from '../i18n';
@@ -47,6 +49,8 @@ export type BattleRecord = { id: ScenarioId; win: boolean; draw?: boolean; sunk:
 
 export type Campaign = {
   version: 1;
+  /** The chapter this run of battles belongs to; absent for the 1592 campaign. */
+  chapter?: 'armada';
   step: number;
   resources: Resources;
   squads: FleetSquad[];
@@ -56,6 +60,13 @@ export type Campaign = {
 };
 
 const STORAGE_KEY = 'imjin.campaign.v1';
+/** Each chapter keeps its own run; the 1592 one keeps its original key. */
+const storageKey = (chapter: ChapterId) => (chapter === 'imjin' ? STORAGE_KEY : `imjin.campaign.${chapter}.v1`);
+/** The battles of a campaign, in order. */
+export const orderOf = (c: Campaign): ScenarioId[] => (c.chapter === 'armada' ? ARMADA_ORDER : CAMPAIGN_ORDER);
+const chapterOf = (c: Campaign): ChapterId => c.chapter ?? 'imjin';
+/** The commander whose squadron carries the fleet's flagship. */
+const chiefOf = (c: Campaign) => (c.chapter === 'armada' ? 'howard' : 'yi');
 
 export const LEVEL_XP = [0, 120, 300, 560, 900, 1350, 1900, 2600, 3500];
 
@@ -70,8 +81,37 @@ function ships(kind: ShipKind, count: number, prefix: string): FleetShip[] {
   return Array.from({ length: count }, (_, i) => ({ id: `s${shipSeq++}`, kind, name: numbered(prefix, i + 1), hull: 1, crew: 1, supply: 1, kills: 0 }));
 }
 
-export function newCampaign(): Campaign {
+/**
+ * The Armada campaign: Howard's fleet from Plymouth to Gravelines. The commanders grow from battle to battle the way
+ * Yi's captains do; Seymour's squadron from the Downs joins after Wight, and the Calais fireships are fitted out there.
+ */
+function newArmadaCampaign(): Campaign {
+  return {
+    version: 1,
+    chapter: 'armada',
+    step: 0,
+    resources: { grain: 100, powder: 50, timber: 50, merit: 0 },
+    commanders: [
+      commander('howard', '찰스 하워드', '해군 총사령관', 'portrait_howard', 2, { command: 1 }),
+      commander('drake', '프랜시스 드레이크', '부사령관', 'portrait_drake', 2, { gunnery: 1 }),
+      commander('hawkins', '존 호킨스', '후위 사령관', 'portrait_hawkins', 1, { seamanship: 1 }),
+      commander('frobisher', '마틴 프로비셔', '트라이엄프호 함장', 'portrait_frobisher', 1, { melee: 1 }),
+    ],
+    squads: [
+      { id: 'q1', name: '하워드 전대', commanderId: 'howard', ships: ships('racegalleon', 6, '하워드 전대') },
+      { id: 'q2', name: '드레이크 전대', commanderId: 'drake', ships: ships('racegalleon', 5, '드레이크 전대') },
+      { id: 'q3', name: '호킨스 전대', commanderId: 'hawkins', ships: ships('racegalleon', 4, '호킨스 전대') },
+      { id: 'q4', name: '프로비셔 전대', commanderId: 'frobisher', ships: ships('racegalleon', 3, '프로비셔 전대') },
+      { id: 'q5', name: '핀네이스대', commanderId: 'hawkins', ships: ships('pinnace', 12, '핀네이스') },
+    ],
+    history: [],
+    log: [t('1588년 7월 29일, 리저드 곶에서 무적함대가 보였다는 봉화가 올랐습니다. 하워드의 함대가 플리머스에서 출항을 서두릅니다.')],
+  };
+}
+
+export function newCampaign(chapter: ChapterId = 'imjin'): Campaign {
   shipSeq = 1;
+  if (chapter === 'armada') return newArmadaCampaign();
   return {
     version: 1,
     step: 0,
@@ -95,9 +135,9 @@ export function newCampaign(): Campaign {
   };
 }
 
-function load(): Campaign | null {
+function load(chapter: ChapterId = 'imjin'): Campaign | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey(chapter));
     if (!raw) return null;
     const c = JSON.parse(raw) as Campaign;
     if (c.version !== 1) return null;
@@ -110,16 +150,25 @@ function load(): Campaign | null {
 
 function save(c: Campaign | null) {
   try {
-    if (c) localStorage.setItem(STORAGE_KEY, JSON.stringify(c));
+    if (c) localStorage.setItem(storageKey(chapterOf(c)), JSON.stringify(c));
     else localStorage.removeItem(STORAGE_KEY);
   } catch {
     // storage unavailable; campaign stays in memory
   }
 }
 
-type CampaignState = { mode: 'free' | 'campaign'; campaign: Campaign | null };
+type CampaignState = { mode: 'free' | 'campaign'; campaign: Campaign | null; chapter: ChapterId };
 
-export const useCampaign = create<CampaignState>(() => ({ mode: 'free', campaign: load() }));
+export const useCampaign = create<CampaignState>(() => ({ mode: 'free', campaign: load(), chapter: 'imjin' }));
+
+/** The history screen shows another chapter: its own campaign is loaded in place of the last one. */
+export function showChapterCampaign(chapter: ChapterId) {
+  if (useCampaign.getState().chapter === chapter) return;
+  const campaign = load(chapter);
+  shipSeq = 1;
+  for (const sq of campaign?.squads ?? []) for (const s of sq.ships) shipSeq = Math.max(shipSeq, Number(s.id.slice(1)) + 1);
+  useCampaign.setState({ chapter, campaign, mode: 'free' });
+}
 
 function commit(mutate: (c: Campaign) => void) {
   const current = useCampaign.getState().campaign;
@@ -132,7 +181,7 @@ function commit(mutate: (c: Campaign) => void) {
 
 export function setMode(mode: 'free' | 'campaign') {
   if (mode === 'campaign' && !useCampaign.getState().campaign) {
-    const c = newCampaign();
+    const c = newCampaign(useCampaign.getState().chapter);
     save(c);
     useCampaign.setState({ campaign: c });
   }
@@ -140,17 +189,18 @@ export function setMode(mode: 'free' | 'campaign') {
 }
 
 export function resetCampaign() {
-  const c = newCampaign();
+  const c = newCampaign(useCampaign.getState().chapter);
   save(c);
   useCampaign.setState({ campaign: c, mode: 'campaign' });
 }
 
 export function currentBattle(c: Campaign) {
-  return CAMPAIGN_ORDER[Math.min(c.step, CAMPAIGN_ORDER.length - 1)]!;
+  const order = orderOf(c);
+  return order[Math.min(c.step, order.length - 1)]!;
 }
 
 export function campaignOver(c: Campaign) {
-  return c.step >= CAMPAIGN_ORDER.length;
+  return c.step >= orderOf(c).length;
 }
 
 const KIND_COST: Record<ShipKind, { hull: number; crew: number; supply: number }> = {
@@ -211,7 +261,15 @@ export function repairAll(part: 'hull' | 'crew' | 'supply') {
   });
 }
 
-export const BUILD: Partial<Record<ShipKind, { timber: number; powder: number; grain: number; unlock: number; label: string }>> = {
+export type BuildCost = { timber: number; powder: number; grain: number; unlock: number; label: string };
+/** What the Armada campaign can fit out between battles: ships hired into the fleet, and fireships before Calais. */
+export const ARMADA_BUILD: Partial<Record<ShipKind, BuildCost>> = {
+  racegalleon: { timber: 55, powder: 16, grain: 34, unlock: 1, label: '갤리온' },
+  pinnace: { timber: 12, powder: 3, grain: 8, unlock: 0, label: '핀네이스' },
+  fireship: { timber: 6, powder: 4, grain: 2, unlock: 3, label: '화공선' },
+};
+export const buildsOf = (c: Campaign) => (c.chapter === 'armada' ? ARMADA_BUILD : BUILD);
+export const BUILD: Partial<Record<ShipKind, BuildCost>> = {
   panokseon: { timber: 45, powder: 12, grain: 30, unlock: 0, label: '판옥선' },
   geobukseon: { timber: 60, powder: 18, grain: 30, unlock: 1, label: '거북선' },
   hyeopseon: { timber: 8, powder: 1, grain: 6, unlock: 0, label: '협선' },
@@ -219,13 +277,13 @@ export const BUILD: Partial<Record<ShipKind, { timber: number; powder: number; g
 
 export function buildShip(kind: ShipKind, squadId: string) {
   commit((c) => {
-    const cost = BUILD[kind];
+    const cost = buildsOf(c)[kind];
     if (!cost || c.step < cost.unlock) return;
     if (c.resources.timber < cost.timber || c.resources.powder < cost.powder || c.resources.grain < cost.grain) return;
     let sq = c.squads.find((q) => q.id === squadId) ?? c.squads[0];
     if (!sq) {
-      const cmd = c.commanders.find((x) => x.id === 'yi' && x.alive) ?? c.commanders.find((x) => x.alive);
-      sq = { id: 'q1', name: '전라좌수영 본대', commanderId: cmd?.id ?? 'yi', ships: [] };
+      const cmd = c.commanders.find((x) => x.id === chiefOf(c) && x.alive) ?? c.commanders.find((x) => x.alive);
+      sq = { id: 'q1', name: c.chapter === 'armada' ? '하워드 전대' : '전라좌수영 본대', commanderId: cmd?.id ?? chiefOf(c), ships: [] };
       c.squads.push(sq);
     }
     c.resources.timber -= cost.timber;
@@ -311,6 +369,30 @@ const EVENTS: Partial<Record<ScenarioId, (c: Campaign) => string[]>> = {
   },
 };
 
+// The Armada's run: what happened between its battles (Martin and Parker; Laughton, State Papers).
+const ARMADA_EVENTS: Partial<Record<ScenarioId, (c: Campaign) => string[]>> = {
+  plymouth: (c) => {
+    c.resources.powder += 30;
+    return [t('드레이크가 낙오한 로사리오호를 나포했습니다. 배에 실린 화약과 탄환이 함대에 나뉘었습니다.')];
+  },
+  portland: (c) => {
+    c.resources.powder = Math.max(0, c.resources.powder - 20);
+    return [t('이틀의 포격으로 화약이 바닥나고 있습니다. 해안의 성채들에서 화약을 거두어 보냅니다.')];
+  },
+  wight: (c) => {
+    if (!c.commanders.some((x) => x.id === 'seymour')) c.commanders.push(commander('seymour', '헨리 시모어', '다운스 전대 사령관', 'portrait_admiral', 2, { gunnery: 1 }));
+    c.squads.push({ id: `q${c.squads.length + 1}`, name: '시모어 전대', commanderId: 'seymour', ships: ships('racegalleon', 5, '시모어 전대') });
+    c.squads.push({ id: `q${c.squads.length + 1}`, name: '화공선', commanderId: 'howard', ships: ships('fireship', 8, '화공선') });
+    return [t('다운스에서 헨리 시모어의 전대가 합류했습니다.'), t('칼레 앞바다에 정박한 무적함대를 치기 위해 상선 8척을 화공선으로 꾸몄습니다.')];
+  },
+  calais: (c) => {
+    for (const sq of c.squads) sq.ships = sq.ships.filter((s) => s.kind !== 'fireship');
+    c.squads = c.squads.filter((q) => q.ships.length > 0);
+    return [t('무적함대가 닻줄을 끊고 흩어졌습니다. 새벽, 그라블린 앞바다에서 결전이 시작됩니다.')];
+  },
+  gravelines: () => [t('남서풍이 무적함대를 북해로 몰아갔습니다. 무적함대는 스코틀랜드와 아일랜드를 돌아 귀국하다 폭풍에 50여 척을 잃었습니다.')],
+};
+
 export function applyOutcome(o: BattleOutcome): Report {
   const win = o.win && !o.draw;
   const draw = o.draw ? { draw: true } : {};
@@ -363,7 +445,7 @@ export function applyOutcome(o: BattleOutcome): Report {
     c.history.push({ id: o.id, win, ...draw, sunk: o.enemySunk, lost: report.lost, escaped: o.enemyEscaped });
     const historicalLoss = o.id === 'chilcheon';
     if (win || historicalLoss) {
-      const events = EVENTS[o.id]?.(c) ?? [];
+      const events = (c.chapter === 'armada' ? ARMADA_EVENTS : EVENTS)[o.id]?.(c) ?? [];
       report.events.push(...events);
       c.log.unshift(...events);
       c.step += 1;
@@ -379,7 +461,10 @@ export function fleetSpawn(c: Campaign): FleetSpawn {
   const battle = currentBattle(c);
   const lead = (id: string) => (battle === 'chilcheon' && id === 'yi' ? 'won' : id);
   let flagDone = false;
+  const chief = chiefOf(c);
+  const flagKind: ShipKind = c.chapter === 'armada' ? 'racegalleon' : 'panokseon';
   return {
+    faction: c.chapter === 'armada' ? 'england' : 'joseon',
     squads: c.squads.map((sq) => {
       const cmd = c.commanders.find((x) => x.id === lead(sq.commanderId)) ?? c.commanders.find((x) => x.alive);
       return {
@@ -387,7 +472,7 @@ export function fleetSpawn(c: Campaign): FleetSpawn {
         commander: cmd ? `${cmd.title} ${cmd.name}` : '장수',
         portrait: cmd?.portrait ?? 'portrait_admiral',
         ships: sq.ships.map((s) => {
-          const flagship = !flagDone && s.kind === 'panokseon' && (cmd?.id === 'yi' || (battle === 'chilcheon' && cmd?.id === 'won'));
+          const flagship = !flagDone && s.kind === flagKind && (cmd?.id === chief || (battle === 'chilcheon' && cmd?.id === 'won'));
           if (flagship) flagDone = true;
           return { kind: s.kind, name: flagship ? flagshipOf(cmd?.name ?? '') : s.name, hull: s.hull, crew: s.crew, supply: s.supply, campaignId: s.id, mods: modsFor(cmd, Math.min(10, s.kills)), flagship };
         }),
@@ -395,3 +480,7 @@ export function fleetSpawn(c: Campaign): FleetSpawn {
     }),
   };
 }
+
+// The campaign on show follows the chapter on show.
+showChapterCampaign(useUi.getState().chapter);
+useUi.subscribe((s) => showChapterCampaign(s.chapter));

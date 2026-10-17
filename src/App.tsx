@@ -161,7 +161,7 @@ export function App() {
     const spawn = campaignMode && campaign ? fleetSpawn(campaign) : undefined;
     lastScenario.current = id;
     setOrigin('select');
-    begin({ kind: 'scenario', id, faction: spawn ? 'joseon' : faction, campaign: spawn }, t('{name} 준비 중', { name: t(SCENARIOS[id].title) }));
+    begin({ kind: 'scenario', id, faction: spawn ? (spawn.faction ?? 'joseon') : faction, campaign: spawn }, t('{name} 준비 중', { name: t(SCENARIOS[id].title) }));
   };
 
   const resume = recovery.resume;
