@@ -17,6 +17,12 @@ macOS는 Chrome + Metal, Windows는 Edge + D3D11. GPU는 같이 돌아가는 다
 - 대규모 전투 성능 (데스크톱 Chrome WebGPU): `node scripts/probe-perf.mjs --url=...?scenario=busan [--speed=8] [--pre=10] [--close] [--uncapped] [--cpu [--callers=fn]] [--alloc]` 30초 교전 동안의 fps, 프레임 백분위, 단계별 ms, 드로우 콜, 삼각형 수, 힙 변동과 GC 끊김 (`--uncapped`는 vsync를 꺼서 60 fps가 상한이 되지 않게 함; `--close`는 카메라를 교전 한가운데에 둠); `probe-draws.mjs` 한 프레임의 모든 드로우를 객체와 패스별로; `probe-ablate.mjs` 부분을 하나씩 숨겼을 때의 GPU 비용; `probe-series.mjs` 시간에 따른 fps와 파티클 수; `probe-phone.mjs` 같은 것을 WebKit에서 `?q=low`로 (드로우 콜, 삼각형, 프로그램, 메모리); `perf-shot.mjs` 교전 한가운데의 스크린샷
 - `node scripts/sim-digest.mjs --out=<json>` 전후로 돌린 뒤 `--compare=<before>,<after>`: 시뮬레이션이 스텝마다 비트 단위로 같은지 확인 (역사 전투 넷, 랭크·일반 쟁탈전)
 
+## 개발 DB
+- Docker Desktop을 켠 뒤 `npm run db:dev`: `infra/dev-db.compose.yml`의 PostgreSQL 16이 `127.0.0.1:5433`에 뜸(이름 있는 볼륨 `imjin-dev-pg`에 보관, 재시작해도 계정·장수 프로필 유지). 끄기 `npm run db:dev:down`, 완전 초기화 `docker volume rm imjin-dev-db_imjin-dev-pg`.
+- `npm run server:dev`: `.env.development`의 `DATABASE_URL`(로컬 전용 계정 imjin/imjin-dev, TLS 끔)로 :8787 서버를 띄움. 스키마는 서버가 시작할 때 `server/accountsPg.ts`의 MIGRATIONS로 스스로 올림. DB 없이 돌리려면 기존대로 `ACCOUNTS_STORE=memory npm run server`.
+- `node --env-file=.env.development scripts/test-meta-server.mjs`: 메모리 저장소와 개발 PostgreSQL(일회용 DB를 만들고 지움) 둘 다에서 장수 성장 API 확인.
+- 전리품은 새 테이블 없이 기존 `profiles.data.meta`(JSON)와 원장 `ledger`(kind `item`, 얻으면 +1·분해하면 −1, 잔액 = 보유 수)에 기록: 운영 RDS 마이그레이션 없음(스키마 1 그대로).
+
 ## 로컬 온라인
 `npm run server:build && PORT=8791 node server/dist/server.cjs`, `VITE_MP_URL=ws://127.0.0.1:8791/ws npx vite --port 5306 --strictPort`, 그다음 `node scripts/mp-smoke.mjs` (ws만) 와 `node scripts/mp-browser.mjs --url=http://127.0.0.1:5306/ --mode=all` (페이지 두 개).
 

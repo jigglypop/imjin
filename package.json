@@ -13,7 +13,10 @@
     "e2e": "node scripts/e2e.mjs",
     "server:build": "node scripts/build-server.mjs",
     "server": "npm run server:build && node server/dist/server.cjs",
-    "assets": "node scripts/assets.mjs"
+    "server:dev": "npm run server:build && node --env-file=.env.development server/dist/server.cjs",
+    "assets": "node scripts/assets.mjs",
+    "db:dev": "docker compose -f infra/dev-db.compose.yml up -d --wait",
+    "db:dev:down": "docker compose -f infra/dev-db.compose.yml down"
   },
   "dependencies": {
     "@react-three/fiber": "^9.8.1",
