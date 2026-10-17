@@ -1809,6 +1809,8 @@
 }
 .move-order--japan { --mo-cloth: #74222f; --mo-tassel: #ddd3bf; }
 .move-order--ming { --mo-cloth: #a3391f; --mo-border: #b2914f; --mo-mark: #e6d6ad; --mo-tassel: #8d2e1f; }
+.move-order--england { --mo-cloth: #ebe6d8; --mo-border: #ebe6d8; --mo-mark: #b5262e; --mo-tassel: #2f5a3c; }
+.move-order--spain { --mo-cloth: #ebe3cc; --mo-border: #c9a24a; --mo-mark: #a8232c; --mo-tassel: #c9a24a; }
 .move-order svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; transform-origin: 9px 53px; animation: move-order-raise 0.32s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
 .move-order__ring { fill: none; stroke: currentColor; stroke-opacity: 0.9; stroke-width: 1.4; transform-box: fill-box; transform-origin: center; animation: move-order-ripple 0.9s ease-out 3 both; }
 .move-order__pole { stroke: #2a2019; stroke-width: 1.8; stroke-linecap: round; }
@@ -1832,6 +1834,8 @@
 .move-order__ring--outer { animation-delay: 1.3s; }
 .move-order__mark { fill: none; stroke: var(--mo-mark); stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
 .move-order__mark--ring { stroke-width: 3.5; }
+.move-order__mark--cross { stroke-width: 5.2; stroke-linecap: butt; }
+.move-order__mark--saltire { stroke-width: 3.6; stroke-dasharray: 3.2 1.1; }
 .move-order__cloth--rally { transform-origin: 11px 29px; animation-duration: 1.8s; }
 @keyframes move-order-raise {
   from { transform: scaleY(0.05) translateY(6px); opacity: 0; }

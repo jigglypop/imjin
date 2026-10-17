@@ -64,6 +64,11 @@
   --japan-soft: rgba(184, 150, 138, 0.16);
   --ming: #c8a96c;
   --ming-soft: rgba(200, 169, 108, 0.16);
+  /* 1588: England's Tudor green, Spain's Burgundy red */
+  --england: #8fb39c;
+  --england-soft: rgba(143, 179, 156, 0.16);
+  --spain: #cf7f6f;
+  --spain-soft: rgba(207, 127, 111, 0.16);
   /* The same tones, deeper, for marks drawn straight on the pale map (campaign lines and arrowheads) */
   --joseon-deep: #46637a;
   --japan-deep: #6b4a40;
@@ -379,6 +384,14 @@ input {
 .emblem--ming {
   background: var(--ming);
   color: var(--ink-dark);
+}
+
+.emblem--england {
+  background: var(--england) url(/ui/art/emblem_england_sm.webp) center / cover;
+}
+
+.emblem--spain {
+  background: var(--spain) url(/ui/art/emblem_spain_sm.webp) center / cover;
 }
 
 /* The battle HUD (top bar, cards, orders, banners, result, compact layouts) is in hud.css. */

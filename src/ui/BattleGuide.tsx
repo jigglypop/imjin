@@ -3,7 +3,7 @@ import type { Engine } from '../game/Engine';
 import { useT } from '../i18n';
 import { useUi } from '../state/store';
 import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
-import { GUIDES } from './guideText';
+import { GUIDES, guidedFaction } from './guideText';
 import { Icon } from './battleIcons';
 import { params } from './launch';
 import { useTour } from './Tutorial';
@@ -44,7 +44,7 @@ export function BattleGuide({ engine }: { engine: Engine }) {
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
   const eligible =
-    !!id && id in GUIDES && mode === 'scenario' && faction === 'joseon' && !engine.remote && !engine.campaign && params.get('guide') !== '0' && params.get('hud') !== '0';
+    !!id && id in GUIDES && mode === 'scenario' && guidedFaction(faction) && !engine.remote && !engine.campaign && params.get('guide') !== '0' && params.get('hud') !== '0';
   const showing = eligible && !done && !tour && !readSeen(id);
   useEffect(() => {
     if (!showing) return;

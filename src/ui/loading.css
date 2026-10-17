@@ -170,6 +170,14 @@
   color: var(--ming);
 }
 
+.loading-force--england b {
+  color: var(--england);
+}
+
+.loading-force--spain b {
+  color: var(--spain);
+}
+
 .loading-progress {
   width: 100%;
   margin-top: 24px;

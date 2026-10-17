@@ -41,6 +41,10 @@ const REI = 'M10 1.2C7.9 4.4 4.9 7 1.2 8.6M10 1.2C12.1 4.4 15.1 7 18.8 8.6M7.4 9
 /** Kato Kiyomasa's snake's-eye crest: a Japanese mark as plain as 令 is for the others. */
 const JANOME = 'M24.65 24.45a4.65 4.65 0 1 1 0 9.3a4.65 4.65 0 1 1 0-9.3Z';
 
+/** St George's cross on England's white standard and the ragged Burgundy saltire on Spain's, across the whole banner. */
+const ST_GEORGE = 'M24.8 10V48M10 29H40';
+const BURGUNDY = 'M13 14.5L37 44.5M37 14.5L13 44.5';
+
 /** The dyed field, its border, then what is painted on it, all under the shading of the folds. */
 function cloth(path: string, clip: string, inner = '') {
   return `<path class="move-order__field" d="${path}"/><path class="move-order__border" d="${path}" clip-path="url(#${clip})"/>${inner}<path d="${path}" fill="url(#mo-folds)"/>`;
@@ -53,7 +57,14 @@ function moveFlag(queuedNumber: number | null) {
 
 /** Taller than a move flag and square-cut, with a tassel under the spear head and the navy's mark on the cloth. */
 function rallyFlag(faction: Faction) {
-  const mark = faction === 'japan' ? `<path class="move-order__mark move-order__mark--ring" d="${JANOME}"/>` : `<path class="move-order__mark" d="${REI}" transform="translate(15.85 19.86) scale(.88)"/>`;
+  const mark =
+    faction === 'japan'
+      ? `<path class="move-order__mark move-order__mark--ring" d="${JANOME}"/>`
+      : faction === 'england'
+        ? `<path class="move-order__mark move-order__mark--cross" d="${ST_GEORGE}" clip-path="url(#mo-banner)"/>`
+        : faction === 'spain'
+          ? `<path class="move-order__mark move-order__mark--saltire" d="${BURGUNDY}" clip-path="url(#mo-banner)"/>`
+          : `<path class="move-order__mark" d="${REI}" transform="translate(15.85 19.86) scale(.88)"/>`;
   return `<svg viewBox="0 0 52 84"><ellipse class="move-order__ring move-order__ring--rally" cx="10" cy="79" rx="12" ry="3.6"/><ellipse class="move-order__ring move-order__ring--rally move-order__ring--outer" cx="10" cy="79" rx="12" ry="3.6"/><path class="move-order__pole move-order__pole--rally" d="M10 8.4V79"/><path class="move-order__gloss" d="M9.3 11V78"/><path class="move-order__tassel" d="${TASSEL}"/><path class="move-order__finial" d="${SPEAR.rally}"/><g class="move-order__cloth move-order__cloth--rally">${cloth(BANNER, 'mo-banner', mark)}</g></svg>`;
 }
 

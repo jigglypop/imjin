@@ -1,5 +1,5 @@
 import { useT } from '../i18n';
-import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
+import { SCENARIOS, isArmadaBattle, type ScenarioId } from '../sim/scenarios';
 import type { GameSnapshot } from '../state/store';
 import { GUIDES, scoreBattle } from './guideText';
 import { ShareButton } from './share';
@@ -16,7 +16,9 @@ export function BattleResult({ snap, time }: { snap: GameSnapshot; time: string 
   const survive = guide.kind === 'survive';
   const yours = survive
     ? t('{n}척 생존', { n: snap.own })
-    : t('일본 함선 {n}척 격파, 아군 {m}척 손실', { n: destroyed, m: lost });
+    : isArmadaBattle(id)
+      ? t('에스파냐 함선 {n}척 격파, 아군 {m}척 손실', { n: destroyed, m: lost })
+      : t('일본 함선 {n}척 격파, 아군 {m}척 손실', { n: destroyed, m: lost });
   const gap = r.value - r.history;
   const verdict = survive
     ? gap > 0 ? t('역사보다 {n}척을 더 살렸습니다.', { n: gap }) : t('역사만큼 함선을 지켜 내지 못했습니다.')

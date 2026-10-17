@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { net, useNet } from '../net/NetClient';
 import type { BattleChoice, RoomInfo, RoomSummary } from '../net/protocol';
 import { CONQUEST_MAPS, CONQUEST_ORDER, type ConquestMapId } from '../sim/maps';
-import { SCENARIOS, SCENARIO_ORDER, type ScenarioId } from '../sim/scenarios';
+import { SCENARIOS, SCENARIO_ORDER, isArmadaBattle, type ScenarioId } from '../sim/scenarios';
 import { FACTION_NAME, FACTION_SHORT } from '../sim/balance';
 import { FACTIONS, type Faction } from '../sim/types';
 import { COMPETITIVE_TRAITS } from '../sim/competitive';
@@ -364,6 +364,9 @@ function Seats({ room, me }: { room: RoomInfo; me: string }) {
   const t = useT();
   const host = room.host === me;
   const duel = room.battle.kind === 'scenario';
+  // A duel's seats are its two slots; a 1588 battle fills them with England and Spain.
+  const armada = room.battle.kind === 'scenario' && isArmadaBattle(room.battle.id);
+  const navyOf = (team: RoomInfo['seats'][number]['team']): Faction => (armada ? (team === 'joseon' ? 'england' : 'spain') : team);
   return (
     <div className="on-seats">
       {room.seats.map((s, i) => {
@@ -371,12 +374,12 @@ function Seats({ room, me }: { room: RoomInfo; me: string }) {
         const label = s.client ? (s.client === me ? t('{name} (나)', { name: s.player }) : s.player || t('상대 장수')) : s.human ? t('빈 자리') : t('컴퓨터');
         return (
           <div key={i} className={`on-seat on-seat--${s.team} ${s.client === me ? 'on-seat--me' : ''}`}>
-            <span className="on-side">{t(duel ? FACTION_SHORT[s.team] : s.name)}</span>
+            <span className="on-side">{t(duel ? FACTION_SHORT[navyOf(s.team)] : s.name)}</span>
             <b>{label}</b>
             {s.away && <span className="on-tag on-tag--warn">{t('연결 끊김')}</span>}
             <div className="on-factions">
-              {(duel ? [s.team] : FACTIONS).map((f) => (
-                <button key={f} className={`on-faction ${s.faction === f ? 'on-faction--on' : ''}`} disabled={!editable} onClick={() => net.send({ t: 'seat', index: i, faction: f })} title={t(FACTION_NAME[f])}>
+              {(duel ? [navyOf(s.team)] : FACTIONS).map((f) => (
+                <button key={f} className={`on-faction ${duel || s.faction === f ? 'on-faction--on' : ''}`} disabled={!editable} onClick={() => net.send({ t: 'seat', index: i, faction: f })} title={t(FACTION_NAME[f])}>
                   <i className={`emblem emblem--${f}`} />
                 </button>
               ))}
@@ -428,7 +431,9 @@ function Room({ room }: { room: RoomInfo }) {
         </small>
       </div>
       {error && <div className="on-alert">{t(error)}</div>}
-      {room.battle.kind === 'scenario' && room.state === 'lobby' && <p className="on-lead">{t('조선과 일본 중 한 자리를 맡습니다. 비어 있는 자리는 컴퓨터가 맡습니다.')}</p>}
+      {room.battle.kind === 'scenario' && room.state === 'lobby' && (
+        <p className="on-lead">{t(isArmadaBattle(room.battle.id) ? '잉글랜드와 에스파냐 중 한 자리를 맡습니다. 비어 있는 자리는 컴퓨터가 맡습니다.' : '조선과 일본 중 한 자리를 맡습니다. 비어 있는 자리는 컴퓨터가 맡습니다.')}</p>
+      )}
       <Seats room={room} me={me} />
       {room.ranked && room.state === 'ended' && <RankResult showOutcome />}
       <div className="on-chat" ref={log}>

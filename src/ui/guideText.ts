@@ -1,4 +1,8 @@
 import type { ScenarioId } from '../sim/scenarios';
+import type { Faction } from '../sim/types';
+
+/** The navy each battle's guide and score are written for: the first slot, Joseon in 1592 and England in 1588. */
+export const guidedFaction = (f: Faction | undefined) => f === 'joseon' || f === 'england';
 
 /**
  * What a first-time player is told about each historical battle: the goal in one line, three hints for the first half

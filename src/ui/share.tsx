@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { routePath } from '../routes';
+import { chapterOfBattle, routePath } from '../routes';
+import { chapterDef } from '../chapters';
 import { getLang, t, useT } from '../i18n';
 import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import { sound } from '../audio/Sound';
@@ -15,7 +16,8 @@ const SITE = 'https://imjin1592.com';
  */
 async function shareBattle(id: ScenarioId, line: string): Promise<'shared' | 'copied' | 'other'> {
   const url = SITE + routePath('select', getLang(), id);
-  const site = t('임진왜란');
+  // The chapter the battle belongs to names the share: 임진왜란, 아르마다.
+  const site = t(chapterDef(chapterOfBattle(id)).title);
   if (navigator.share) {
     try {
       await navigator.share({ title: `${t(SCENARIOS[id].title)} · ${site}`, text: line, url });

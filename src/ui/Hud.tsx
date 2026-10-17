@@ -8,7 +8,7 @@ import { SKY_PRESETS, type SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
 import { setLang, t as tr, useLang, useT } from '../i18n';
 import { pushToast, setTouchBox, useUi, type BattleOrigin, type FleetMorale, type GameSnapshot, type GunInfo, type PrimaryInfo, type SquadronInfo } from '../state/store';
-import type { Team } from '../sim/types';
+import type { Faction, Team } from '../sim/types';
 import { useCompactLayout } from './useCompactLayout';
 import { ConquestBar, CrewPanel, PointPanel } from './ConquestPanels';
 import { DirectorSettings, ShotLabel } from './DirectorToggle';
@@ -24,7 +24,7 @@ import { RankActions, RankResult } from './RankResult';
 import { portraitUrl } from './portrait';
 import { BattleGuide } from './BattleGuide';
 import { BattleResult } from './BattleResult';
-import { GUIDES } from './guideText';
+import { GUIDES, guidedFaction } from './guideText';
 
 const SEA_LABELS: Record<SeaStateName, string> = { calm: '잔잔', moderate: '보통', rough: '거침' };
 const ACTIVITY: Record<string, string> = {
@@ -55,6 +55,9 @@ function formatTime(t: number) {
 }
 
 /** Counts are by team. The engine names the sides, the player's first. */
+/** The portrait for a ship whose squadron names none: its navy's commander-in-chief. */
+const FALLBACK_PORTRAIT: Record<Faction, string> = { joseon: 'portrait_admiral', japan: 'portrait_japan', ming: 'portrait_chenlin', england: 'portrait_howard', spain: 'portrait_medina' };
+
 function teamName(snap: GameSnapshot, team: Team) {
   return team === snap.team ? snap.sides.own : snap.sides.enemy;
 }
@@ -858,7 +861,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const primaryFaction = primaryShip?.spec.faction ?? snap.faction;
   const primarySquadron = snap.squadrons.find((s) => s.id === primaryShip?.squadronId);
   const primaryPortrait = primarySquadron?.portrait
-    ?? (primaryFaction === 'japan' ? 'portrait_japan' : primaryFaction === 'ming' ? 'portrait_chenlin' : 'portrait_admiral');
+    ?? FALLBACK_PORTRAIT[primaryFaction];
   const enemyTeam: Team = snap.team === 'joseon' ? 'japan' : 'joseon';
   const enemyFaction = snap.squadrons.find((s) => s.team === enemyTeam)?.faction ?? enemyTeam;
   const won = snap.winner === snap.team;
@@ -879,8 +882,8 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
         { label: '손실', value: tShips(snap.ownTotal - snap.own) },
         { label: '소요 시간', value: formatTime(snap.time) },
       ];
-  // The score and the comparison with history belong to a historical battle the player fought for Joseon, not to online or conquest games.
-  const scored = ended && snap.mode === 'scenario' && snap.scenario.id in GUIDES && snap.faction === 'joseon' && !engine.remote;
+  // The score and the comparison with history belong to a historical battle the player fought for the side it was written for (Joseon, England), not to online or conquest games.
+  const scored = ended && snap.mode === 'scenario' && snap.scenario.id in GUIDES && guidedFaction(snap.faction) && !engine.remote;
   const hideLabel = t(isTouchOnly ? 'UI 숨기기' : 'UI 숨기기 · Shift+H');
   const selectBox = box && <div className="select-box" style={{ left: Math.min(box.x0, box.x1), top: Math.min(box.y0, box.y1), width: Math.abs(box.x1 - box.x0), height: Math.abs(box.y1 - box.y0) }} />;
   // The tour stays as it is: the HUD cannot be hidden while it points at the panels.

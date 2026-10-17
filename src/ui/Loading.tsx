@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
-import { FACTION_SHORT, forcesOf } from '../sim/balance';
-import type { Faction } from '../sim/types';
+import { FACTION_SHORT, forcesOf, playableFactions } from '../sim/balance';
 import { useLang, useT } from '../i18n';
 import { useUi } from '../state/store';
 import { Backdrop } from './Backdrop';
@@ -63,7 +62,7 @@ export function Loading() {
   const tips = scenario ? [BATTLE_TIP[scenario], ...GENERAL_TIPS] : GENERAL_TIPS;
   const tip = tips[turn % tips.length]!;
   const quote = scenario ? QUOTES[scenario] : undefined;
-  const sides: Faction[] = s?.forces.ming ? ['joseon', 'ming', 'japan'] : ['joseon', 'japan'];
+  const sides = scenario ? playableFactions(scenario) : [];
   const title = t(info?.title ?? '임진왜란');
   // The English edition sets the name in the poster's Roman capitals, "Battle of" small above it as on the cards.
   const roman = lang === 'en' ? (/^Battle of (.+)$/.exec(title)?.[1] ?? title) : null;

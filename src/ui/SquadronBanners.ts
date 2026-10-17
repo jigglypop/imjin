@@ -42,8 +42,11 @@ export function squadronLabel(sq: Squadron) {
   const first = sq.commander.split(' · ')[0]!;
   if (ROLE.test(first)) return sq.name;
   const words = first.split(' ');
-  // Japanese names come surname first; Joseon and Ming titles come before the name.
-  return sq.faction === 'japan' ? words[0]! : words[words.length - 1]!;
+  // Japanese names come surname first; Joseon and Ming titles come before the name; English and Spanish names end in
+  // the surname, but a Spanish noble is known by his title's place (메디나 시도니아 공작 -> 메디나 시도니아).
+  if (sq.faction === 'japan') return words[0]!;
+  if (sq.faction === 'spain' && words.length > 1 && /^(공작|후작|백작)$/.test(words[words.length - 1]!)) return words.slice(0, -1).join(' ');
+  return words[words.length - 1]!;
 }
 
 const tmp = new Vector3();

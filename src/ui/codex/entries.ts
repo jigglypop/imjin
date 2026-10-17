@@ -40,7 +40,8 @@ export const NAVIES: { faction: Faction; kinds: ShipKind[] }[] = [
 ];
 
 /** The seal of each navy: its name in hanja (the menu's serif cut carries these characters). */
-export const NAVY_SEAL: Record<Faction, string> = { joseon: '朝鮮', japan: '日本', ming: '明', england: 'ENGLAND', spain: 'ESPAÑA' };
+/** The red seal's characters for the East Asian navies; England and Spain carry their round emblem instead (codex.css). */
+export const NAVY_SEAL: Record<Faction, string> = { joseon: '朝鮮', japan: '日本', ming: '明', england: '', spain: '' };
 
 const KIM_1982 = '김재근, 『조선왕조군선연구』, 일조각, 1982';
 const ISHII_1995 = '이시이 겐지(石井謙治), 『화선(和船) II』, 호세이대학출판국, 1995';
