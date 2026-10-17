@@ -44,10 +44,11 @@ Who commanded which battle, where they stood, flags, ship types, dates, weather 
 - Frame grabbing: load `?scenario=<id>&cutscene=1`, wait for `cinema.progress.t`, `cinema.togglePause()`, screenshot, unpause.
 
 ## Speaker close-ups, smoothing and subtitles (owner 2026-10-18, supersedes the comms boxes)
+- Framing (owner 2026-10-18): one clean medium close-up, chest up, the figure CENTRED, camera at eye level ~3 m before him (`closeUp`: from [3.1,1.9,±0.25] to [2.8,1.9,±0.22], look [0,1.75,0], fov 24, aperture 0.6), a very slow push-in, fixed focus; on his figure the lens rides with the interpolated ship without a spring (a spring trails a moving ship by metres). Galleys: he stands on the stern platform (`Crew.commandPost`, `x0 + 5`). Standing idle only.
 - Grammar: each speaker is his live 3D figure at his command post on his own deck (`Cast`, `hangSword`), filmed with `closeUp` (shot / reverse shot between the flagships, slow push-in, a cut on every line change) and one `overShoulder`/listener beat. A commander without a live figure: the wide orbit on his flagship (the close-up's `fallback`) with the subtitle only, never a portrait card.
 - Talking body clip: optional, cinematic only (pure Meshy clip on his rig, deform <= 0.3, blade clearance per generals-cast); idle when absent. Estimate credits before fetching.
 - Camera smoothing: `CutscenePlayer.follow` is a critically damped spring (x/z rate 2.2 on a figure, 2 on ships; heading at half; height >= 6 so heave never loses his face). Position and heading only, never the deck's roll or pitch. No procedural shake. The focus distance is fixed at each shot's first frame. Measure: per-frame third difference of camera position away from cuts (hansan 0.014 m/frame^3 after the change).
-- No pop: figures come on deck only at a cut (`Cast.reveal` on `player.cuts`), and close vs fallback is decided at the cut, never switched mid-shot. Film light: rim x0.4, fill x1.35 so he sits in the scene's light.
+- No pop: figures come on deck only at a cut (`Cast.reveal` on `player.cuts`), and close vs fallback is decided at the cut, never switched mid-shot. No film lights of his own: the figure takes the scene's sun, sky, fog and exposure like the ships (owner 2026-10-18).
 - Subtitle (`.cine-say`): one colour (white), `--font-ui` 500, soft shadow, a small name before the line in the same colour; no hanja, title or record in the frame (records stay in SOURCES.md).
 
 ## Campaign openings (owner 2026-10-17: concise documentary openings like strategy games)
@@ -56,6 +57,8 @@ Who commanded which battle, where they stood, flags, ship types, dates, weather 
 - Frame grabbing: start a campaign at `/<chapter>/campaign?opening=1`, click `.g-pick__go`, wait for `window.__map`, screenshot at shot mid-points.
 
 ## Rejected (do not retry)
+- Figure-only film lighting (key/rim/fill lightsNode): white glow, he looks pasted on. Off-centre framing, orbiting or over-the-shoulder close-ups. Talking body clips (cancelled 2026-10-18, no credits spent).
+- Ships drawn at the sim's fixed steps: they and every camera on them judder; `ShipViews.pose` interpolates between steps (presentation only).
 - Portrait comms boxes / thumbnail cards for the speaker (2026-10-17 build, reversed by the owner 2026-10-18).
 - Coloured names, hanja and source lines inside the film subtitle; camera shake; following the deck's roll; focus that changes within a shot.
 - Static full-screen portrait cards and card intro films anywhere (openings, /generals, campaign roster).

@@ -112,7 +112,9 @@ export class CutscenePlayer {
         this.closeOn = !!figure;
       }
       if (this.closeOn) {
-        this.place = this.follow(this.place, figure, dt, 2.2);
+        // On his figure the lens rides with the drawn (interpolated) ship, no lag: a spring would trail a moving ship
+        // by metres and put him off centre. Only the height is eased, so the deck's heave does not bob the frame.
+        if (figure) this.place = this.place ? { ...figure, y: this.place.y + (figure.y - this.place.y) * (1 - Math.exp(-dt * 6)) } : { ...figure };
         if (!this.place) return null;
         return compose({ ...shot, cam: { type: 'track', at: cam.at, from: cam.from, to: cam.to, look: cam.look } }, k, this.place, this.host);
       }

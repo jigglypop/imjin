@@ -1326,6 +1326,7 @@ export class Engine {
       const budget = simBudgetMs(speed);
       let steps = 0;
       while (!this.paused && this.accumulator >= SIM_DT && steps < MAX_STEPS) {
+        this.views.capture(this.battle);
         this.stepSim(SIM_DT);
         scaled += SIM_DT;
         this.accumulator -= SIM_DT;
@@ -1341,6 +1342,12 @@ export class Engine {
       if (this.accumulator > SIM_DT * 4) this.accumulator = 0;
     }
     this.lastScaled = scaled;
+    // Presentation between sim steps: ships drawn and the sea sampled at the frame's own time, one step behind the sim.
+    if (!this.remote && !this.fastForward) {
+      const alpha = Math.min(1, Math.max(0, this.accumulator / SIM_DT));
+      this.views.alpha = alpha;
+      waveField.time = this.battle.time - (1 - alpha) * SIM_DT;
+    } else this.views.alpha = 1;
     const events = this.remote ? this.battle.events : this.battle.events.filter((e) => eventObserved(e, this.battle, this.conquest, this.team));
     this.views.cutaway.clear();
     for (const id of this.cutawayIds()) this.views.cutaway.set(id, this.cutaway);

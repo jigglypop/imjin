@@ -1,3 +1,4 @@
+import type { Ship } from '../sim/types';
 import { CHAPTER_INTROS } from './scenes/chapters';
 import { Vector3, type PerspectiveCamera } from 'three/webgpu';
 import type { CameraPose as RtsPose, RtsCamera } from '../camera/RtsCamera';
@@ -23,7 +24,7 @@ export interface CinemaHost {
   readonly remote: unknown;
   readonly rts: RtsCamera;
   readonly camera: PerspectiveCamera;
-  readonly views: { heaveOf(id: number): number };
+  readonly views: { heaveOf(id: number): number; pose(s: Ship): { x: number; z: number; heading: number } };
   /** The historical battle being played, null in a capture-point battle. */
   scenarioKey(): ScenarioId | null;
   setSky(name: SkyPresetName): unknown;
@@ -106,6 +107,11 @@ export class Cinema implements RigHost {
   }
 
   private eventShip = 0;
+
+  /** A ship as drawn (interpolated between sim steps), so the camera follows what is on screen. */
+  poseOf(s: Ship) {
+    return this.host.views.pose(s);
+  }
 
   heaveOf(id: number) {
     return this.host.views.heaveOf(id);

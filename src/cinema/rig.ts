@@ -8,6 +8,8 @@ export type Place = { x: number; y: number; z: number; heading: number; size: nu
 export interface RigHost {
   readonly ctx: SceneContext;
   heaveOf(id: number): number;
+  /** The ship as drawn, between sim steps. */
+  poseOf?(s: Ship): { x: number; z: number; heading: number };
   ground(x: number, z: number): number;
   water(x: number, z: number): number;
   /** Bearing of the moon at night, of the sun by day, radians from +x toward +z. */
@@ -53,17 +55,19 @@ export function locate(target: Target, host: RigHost): Place | null {
   let place: Place;
   if (ships.length === 1) {
     const s = ships[0]!;
-    place = { x: s.x, y: host.heaveOf(s.id) + s.spec.deck, z: s.z, heading: s.heading, size: s.spec.length };
+    const d = host.poseOf?.(s) ?? s;
+    place = { x: d.x, y: host.heaveOf(s.id) + s.spec.deck, z: d.z, heading: d.heading, size: s.spec.length };
   } else {
     let x = 0;
     let z = 0;
     let hx = 0;
     let hz = 0;
     for (const s of ships) {
-      x += s.x;
-      z += s.z;
-      hx += Math.cos(s.heading);
-      hz += Math.sin(s.heading);
+      const d = host.poseOf?.(s) ?? s;
+      x += d.x;
+      z += d.z;
+      hx += Math.cos(d.heading);
+      hz += Math.sin(d.heading);
     }
     x /= ships.length;
     z /= ships.length;

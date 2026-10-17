@@ -1,6 +1,6 @@
 import { at, commander, first, flagship, fleet } from '../subjects';
 import type { Scene } from '../types';
-import { closeUp, home, order, overShoulder } from './shots';
+import { closeUp, home, order } from './shots';
 
 /**
  * The openings of Hansan and Myeongnyang (src/cinema/SOURCES.md): the sea and the title, the side's commander close on
@@ -27,7 +27,7 @@ export const HANSAN_INTRO: Scene = {
     { dur: 8.5, cam: { type: 'orbit', at: at(japan, { toward: joseon }), yaw: [0.16, 0.3], pitch: [0.035, 0.05], dist: [600, 500], lift: 10 }, fov: 30 },
     closeUp('yi', yi, 7.5, -1),
     closeUp('wakisaka', wakisaka, 7, 1),
-    overShoulder('yi', yi, 4),
+    closeUp('yi', yi, 4, -1),
     order(yi, japan, 4.5),
     // High behind the Korean line, the crane's wing opening toward the Japanese fleet.
     { dur: 7.5, cam: { type: 'orbit', at: at(joseon, { toward: japan }), offset: [250, 0, 0], yaw: [Math.PI + 0.35, Math.PI + 0.2], pitch: [0.3, 0.36], dist: [1500, 1700], lift: 10 }, fov: 34 },

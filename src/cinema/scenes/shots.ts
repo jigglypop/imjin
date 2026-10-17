@@ -11,14 +11,15 @@ import type { Act, Orbit, Pick, Shot, Target } from '../types';
 const around = (ship: Pick): Orbit => ({ type: 'orbit', at: at(ship), yaw: [0.95, 0.75], pitch: [0.07, 0.09], dist: [62, 54], lift: 6 });
 
 /**
- * Head and shoulders, about 85 mm, the lens wide open so the sea behind him melts: a slow push-in. `side` puts the
- * camera off his left (-1, the side's own commander, looking screen right) or his right (+1, the reverse shot).
+ * A clean medium close-up (owner 2026-10-18): chest up, the camera at his eye level a little off his face, the
+ * figure centred (the camera looks at his upper chest), a very slow push-in, fixed focus. `side` only says which side
+ * of his face the camera stands, by 0.25 m. No orbit, no over-the-shoulder.
  */
 export const closeUp = (who: string, ship: Pick, dur: number, side: 1 | -1, acts?: Act[]): Shot => ({
   dur,
-  cam: { type: 'figure', who, at: at(ship), from: [3.3, 1.86, 0.7 * side], to: [2.7, 1.88, 0.58 * side], look: [0, 1.7, 0], fallback: around(ship) },
-  fov: 20,
-  aperture: 1.6,
+  cam: { type: 'figure', who, at: at(ship), from: [3.1, 1.9, 0.25 * side], to: [2.8, 1.9, 0.22 * side], look: [0, 1.75, 0], fallback: around(ship) },
+  fov: 24,
+  aperture: 0.6,
   ease: 'inOut',
   acts,
 });
@@ -32,14 +33,6 @@ export const order = (ship: Pick, toward: Pick, dur: number): Shot => ({
   cam: { type: 'orbit', at: at(ship, { toward }), yaw: [Math.PI - 0.62, Math.PI - 0.4], pitch: [0.07, 0.045], dist: [130, 82], lift: [9, 6] },
   fov: [32, 27],
   ease: 'inOut',
-});
-
-/** Over his shoulder toward the enemy he faces: his back sharp, the enemy fleet soft beyond. */
-export const overShoulder = (who: string, ship: Pick, dur: number): Shot => ({
-  dur,
-  cam: { type: 'figure', who, at: at(ship), from: [-1.7, 2.02, 0.8], to: [-1.45, 2.0, 0.7], look: [40, 0.2, -3], fallback: around(ship) },
-  fov: 28,
-  aperture: 0.3,
 });
 
 /** The hand-off: from the last shot into the battle camera. */

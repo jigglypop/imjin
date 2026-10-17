@@ -1,8 +1,4 @@
-import {
-  AmbientLight, DirectionalLight, Group, MeshStandardNodeMaterial, Quaternion, Vector3,
-  type Material, type Mesh, type Object3D, type PerspectiveCamera, type Scene as ThreeScene,
-} from 'three/webgpu';
-import { lights } from 'three/tsl';
+import { Group, Vector3, type PerspectiveCamera, type Scene as ThreeScene } from 'three/webgpu';
 import { createFigure, hangSword, holdWeapon, listModels, loader, modelUrl, releaseFigure, standFigure, weaponUrl, type Figure } from '../ui/generals/GeneralModel';
 import { WEAPONS } from '../meta/catalog';
 import type { Ship } from '../sim/types';
@@ -20,18 +16,6 @@ export interface CastHost {
   readonly standIns: Set<number>;
 }
 
-/**
- * Film light on the figures only (their materials get their own lights node; the battle's lights and shaders are not
- * touched, so nothing in the scene recompiles): a key from the camera's left front, a rim from behind on the other
- * side, and a soft fill. Colours and strengths follow the battle's light.
- */
-const LIGHT: Record<CastLight, { key: [number, number]; rim: [number, number]; fill: [number, number] }> = {
-  day: { key: [0xfff1dc, 2.6], rim: [0xd8e6ff, 3.2], fill: [0x8a9bb0, 0.55] },
-  overcast: { key: [0xe9ecf0, 2.1], rim: [0xcfdcec, 2.6], fill: [0x8796a6, 0.6] },
-  dusk: { key: [0xffc58a, 2.4], rim: [0xffa766, 3.4], fill: [0x6f6a80, 0.5] },
-  // Moonlight from behind, a warm lantern key in front.
-  night: { key: [0xffb36b, 1.9], rim: [0x9fb8ff, 3.6], fill: [0x2c3550, 0.5] },
-};
 
 type Member = { def: CastMember; figure: Figure | null; holder: Group; ship: number; facing: number; failed: boolean; shown?: boolean; post?: { x: number; y: number; z: number } | null };
 
@@ -57,24 +41,11 @@ function centre(got: Ship | Ship[] | undefined) {
 export class Cast {
   private readonly members = new Map<string, Member>();
   private readonly group = new Group();
-  private readonly key = new DirectionalLight();
-  private readonly rim = new DirectionalLight();
-  private readonly fill = new AmbientLight();
-  private readonly lightsNode = lights([this.key, this.rim, this.fill]);
   private readonly tmp = new Vector3();
-  private readonly q = new Quaternion();
   private disposed = false;
 
-  constructor(private readonly host: CastHost, cast: Record<string, CastMember>, light: CastLight, ctx: SceneContext) {
+  constructor(private readonly host: CastHost, cast: Record<string, CastMember>, _light: CastLight, ctx: SceneContext) {
     this.group.name = 'cinema_cast';
-    const l = LIGHT[light];
-    this.key.color.set(l.key[0]);
-    this.key.intensity = l.key[1];
-    this.rim.color.set(l.rim[0]);
-    // The rim stays soft and the fill near the sea's ambient so he sits in the battle's light, not pasted over it.
-    this.rim.intensity = l.rim[1] * 0.4;
-    this.fill.color.set(l.fill[0]);
-    this.fill.intensity = l.fill[1] * 1.35;
     host.scene.add(this.group);
     for (const [name, def] of Object.entries(cast)) {
       const holder = new Group();
@@ -107,7 +78,7 @@ export class Cast {
         releaseFigure(figure);
         return;
       }
-      this.relight(figure.root);
+      // No film lights of his own (owner 2026-10-18): he takes the scene's sun, sky, fog and exposure like the ships.
       m.figure = figure;
       m.holder.add(figure.root);
     } catch (e) {
@@ -115,25 +86,6 @@ export class Cast {
       m.failed = true;
       if (import.meta.env.DEV) console.warn('[cinema] cast figure', m.def.file, e);
     }
-  }
-
-  /** The figures' materials as node materials with the film lights of their own; the textures stay shared. */
-  private relight(root: Object3D) {
-    root.traverse((o) => {
-      const mesh = o as Mesh;
-      if (!mesh.isMesh) return;
-      const swap = (m: Material) => {
-        const n = new MeshStandardNodeMaterial();
-        for (const k in m) if (k !== 'uuid' && k !== 'id' && k !== 'type') (n as unknown as Record<string, unknown>)[k] = (m as unknown as Record<string, unknown>)[k];
-        n.lightsNode = this.lightsNode;
-        n.needsUpdate = true;
-        m.dispose();
-        return n;
-      };
-      mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swap) : swap(mesh.material);
-      mesh.castShadow = false;
-      mesh.receiveShadow = false;
-    });
   }
 
   /** His ship and the bearing he faces (toward the enemy he names), looked up again while he is not on screen. */
@@ -206,23 +158,6 @@ export class Cast {
       m.figure.mixer.update(dt);
       // The held sword hangs outside the body as on the generals screen (idleBlade.ts).
       hangSword(m.figure);
-    }
-    // Key from the camera's left, above; rim from behind the subject, opposite; both aim at the subject on screen.
-    const cam = this.host.camera;
-    const subject = on ? this.members.get(on) : undefined;
-    const at = subject?.holder.visible ? subject.holder.position : cam.position;
-    const right = this.tmp.set(1, 0, 0).applyQuaternion(cam.getWorldQuaternion(this.q));
-    const rx = right.x;
-    const rz = right.z;
-    const fx = at.x - cam.position.x;
-    const fz = at.z - cam.position.z;
-    const fl = Math.hypot(fx, fz) || 1;
-    this.key.position.set(at.x - rx * 6 - (fx / fl) * 6, at.y + 6, at.z - rz * 6 - (fz / fl) * 6);
-    this.rim.position.set(at.x + rx * 4 + (fx / fl) * 8, at.y + 4, at.z + rz * 4 + (fz / fl) * 8);
-    for (const l of [this.key, this.rim]) {
-      l.target.position.set(at.x, at.y + 1.5, at.z);
-      l.updateMatrixWorld();
-      l.target.updateMatrixWorld();
     }
   }
 

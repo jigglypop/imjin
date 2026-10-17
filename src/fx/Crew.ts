@@ -163,6 +163,8 @@ const NO_VIEW: CrewView = { cutaway: 0, cut: new Set(), winner: null };
  * duel on the enemy deck, the dead fall where they stand and stay there or go over the side and swim, and a beaten
  * crew drops its arms.
  */
+const GALLEYS = new Set(['reale', 'galea', 'sultana', 'kadirga', 'kalyata', 'galleass', 'vgalleass']);
+
 export class Crew {
   readonly group = new Group();
   private assets: Map<CrewKey, CrewAsset> | null = null;
@@ -247,8 +249,12 @@ export class Crew {
     // The panokseon's and the atakebune's command platforms are open; the Ming castles wall theirs in, and an
     // atakebune's bow is enclosed (a camera there sees black).
     if (st.deck === 2 && (ship.spec.kind === 'panokseon' || ship.spec.kind === 'atakebune')) return { x: st.x + 0.6, y, z: st.z };
+    // On a galley the commander stood on the stern platform (the bow is the rambata, the gangway runs between the
+    // benches): a few metres forward of the poop, on the centreline.
+    if (GALLEYS.has(ship.spec.kind)) return { x: r.layout.x0 + 5, y: r.main, z: 0 };
     if (st.deck === 2) return { x: r.layout.x1 - 1.4, y: r.main, z: 0 };
-    return { x: r.layout.x1 - 1.4, y, z: 0 };
+    // Always on the open main deck: a galley's officer station is on the rowing deck below it (he stood hidden).
+    return { x: r.layout.x1 - 1.4, y: r.main, z: 0 };
   }
 
   private deckY(r: Roster, deck: Deck) {
