@@ -1,10 +1,27 @@
 import { at } from '../subjects';
-import type { Pick, Shot, Target } from '../types';
+import type { Act, Orbit, Pick, Shot, Target } from '../types';
 
 /**
- * The camera set-ups of the battle openings (settled in .claude/skills/cinematics/SKILL.md): ships only, the commanders
- * speak through their comms thumbnails (CinemaOverlay), never a 3D close-up.
+ * The camera set-ups of the commander close-ups (settled in .claude/skills/cinematics/SKILL.md). Metres in the
+ * commander's frame: forward the way he faces (toward the enemy), up from his feet, right to his right. A flagship's
+ * figure stands 1.12 x 1.8 m, his eyes about 1.85 m up.
  */
+
+/** His ship from a little off the bow, while his figure is not on deck yet (or never comes, on a failed load). */
+const around = (ship: Pick): Orbit => ({ type: 'orbit', at: at(ship), yaw: [0.95, 0.75], pitch: [0.07, 0.09], dist: [62, 54], lift: 6 });
+
+/**
+ * Head and shoulders, about 85 mm, the lens wide open so the sea behind him melts: a slow push-in. `side` puts the
+ * camera off his left (-1, the side's own commander, looking screen right) or his right (+1, the reverse shot).
+ */
+export const closeUp = (who: string, ship: Pick, dur: number, side: 1 | -1, acts?: Act[]): Shot => ({
+  dur,
+  cam: { type: 'figure', who, at: at(ship), from: [3.3, 1.86, 0.7 * side], to: [2.7, 1.88, 0.58 * side], look: [0, 1.7, 0], fallback: around(ship) },
+  fov: 20,
+  aperture: 1.6,
+  ease: 'inOut',
+  acts,
+});
 
 /**
  * The order, as a camera beat (the figures only stand, owner 2026-10-17): low off his flagship's quarter, pushing in as
@@ -17,20 +34,13 @@ export const order = (ship: Pick, toward: Pick, dur: number): Shot => ({
   ease: 'inOut',
 });
 
+/** Over his shoulder toward the enemy he faces: his back sharp, the enemy fleet soft beyond. */
+export const overShoulder = (who: string, ship: Pick, dur: number): Shot => ({
+  dur,
+  cam: { type: 'figure', who, at: at(ship), from: [-1.7, 2.02, 0.8], to: [-1.45, 2.0, 0.7], look: [40, 0.2, -3], fallback: around(ship) },
+  fov: 28,
+  aperture: 0.3,
+});
+
 /** The hand-off: from the last shot into the battle camera. */
 export const home = (target: Target, dur = 4.5): Shot => ({ dur, cam: { type: 'home', at: target }, ease: 'inOut' });
-
-/**
- * On his flagship while he talks (owner 2026-10-17): the battle opening shows ships, and the commander speaks through
- * his comms thumbnail (CinemaOverlay `say`), not a 3D close-up. A slow push along her quarter; `side` mirrors the angle
- * for the reverse (shot / reverse shot between the two flagships) and `alt` gives a second set-up on the same ship, so a
- * cut can fall on each line change.
- */
-export const aboard = (ship: Pick, dur: number, side: 1 | -1, alt = false): Shot => ({
-  dur,
-  cam: alt
-    ? { type: 'orbit', at: at(ship), yaw: [side * 0.35, side * 0.2], pitch: [0.11, 0.09], dist: [58, 46], lift: [7, 6] }
-    : { type: 'orbit', at: at(ship), yaw: [side * 1.05, side * 0.8], pitch: [0.06, 0.08], dist: [90, 66], lift: [5, 7] },
-  fov: [30, 27],
-  ease: 'inOut',
-});

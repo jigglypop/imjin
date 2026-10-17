@@ -253,8 +253,7 @@ export class Cinema implements RigHost {
     const camera = !this.host.remote && (kind === 'cutscene' || this.host.rts.cinematic);
     this.running = { player: new CutscenePlayer(scene, this), kind, camera };
     this.pose = null;
-    // Figures load only for scenes that still frame one (the openings speak through comms thumbnails instead).
-    if (camera && kind === 'cutscene' && scene.cast && this.host.cast && scene.shots.some((s) => s.cam.type === 'figure')) this.cast = new Cast(this.host.cast, scene.cast, scene.castLight ?? 'day', this.ctx);
+    if (camera && kind === 'cutscene' && scene.cast && this.host.cast) this.cast = new Cast(this.host.cast, scene.cast, scene.castLight ?? 'day', this.ctx);
     if (kind === 'cutscene') {
       this.host.sound.cinema(0);
     }

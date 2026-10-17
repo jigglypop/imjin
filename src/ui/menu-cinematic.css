@@ -114,7 +114,7 @@
 .chapter-chip:disabled { cursor:default; opacity:.45; }
 .wordmark-hanja--roman { position:static; display:block; transform:none; margin:0 0 .25em; text-align:center; writing-mode:horizontal-tb; font-family:"Cormorant Garamond","Times New Roman",serif; letter-spacing:.42em; font-size:max(10px,calc(var(--t)*.14)); }
 @media (max-width: 760px) {
-  .chapter-picker { top:auto; bottom:calc(var(--sab, 0px) + 150px); left:50%; transform:translateX(-50%); max-width:calc(100vw - 32px); overflow-x:auto; }
+  .chapter-picker { top:auto; bottom:calc(var(--sab, 0px) + 232px); left:50%; transform:translateX(-50%); max-width:calc(100vw - 32px); overflow-x:auto; }
   .chapter-chip { min-width:64px; padding:6px 9px; }
   .chapter-chip b { font-size:11px; }
 }

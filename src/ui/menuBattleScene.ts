@@ -199,6 +199,7 @@ export class MenuBattleScene {
     if(this.disposed || !this.renderer) return;
     const r=this.canvas.parentElement!.getBoundingClientRect();
     this.camera.aspect=Math.max(1,r.width)/Math.max(1,r.height);
+    this.viewWidth=Math.max(1,r.width);
     this.camera.updateProjectionMatrix();
     // Portrait keeps detail in the hero and caps fill-rate independently of game quality.
     const cap=this.mobile?1.15:1.5;
@@ -206,21 +207,27 @@ export class MenuBattleScene {
     this.renderer.setSize(Math.max(1,r.width),Math.max(1,r.height),false);
   }
 
+  private viewWidth=1920;
+
   private cameraPose() {
     const p=this.elapsed/CYCLE, drift=Math.sin(p*Math.PI*2)*3;
     const portrait=this.camera.aspect<.85;
     // A tall-masted flagship is framed from further off and higher, so its rig stays in the shot; a ship of the line
     // longer than the 1588 galleons further still, in proportion to its length.
     const turtle=this.heroOf.kind==='geobukseon', grow=Math.max(1,SHIP_SPECS[this.heroOf.kind].length/42);
-    const k=turtle?1:1.75*grow, lift=turtle?0:8*grow;
+    // The title block keeps its CSS size, so on a narrower landscape window (1366 px) it takes more of the frame: a ship
+    // of the line stands further off and further right there, its sails clear of the title and the masthead buttons.
+    const narrow=grow>1&&!portrait?clamp((1920-this.viewWidth)/640):0;
+    const k=turtle?1:1.75*grow*(1+.18*narrow), lift=turtle?0:8*grow;
     this.camera.position.set(this.hero.x+(portrait?60:37)*k+drift, (portrait?17:8)+lift, this.hero.z+(portrait?48:24)*k);
-    this.target.set(this.hero.x+(portrait?3:-28)*k*.15,(portrait?8:7)+lift*1.7,this.hero.z-(portrait?12:40)*k*.15);
+    // In portrait a ship of the line's mastheads would reach the title: aim higher so the ship sits lower in the frame.
+    this.target.set(this.hero.x+(portrait?3:-28)*k*.15,(portrait?8:7)+lift*1.7+(portrait&&grow>1?(grow-1)*40:0),this.hero.z-(portrait?12:40)*k*.15);
     this.camera.lookAt(this.target);
     // A ship of the line fills more of the frame than the galleons do: pan the camera to its left so the hull sits in
     // the right half of a landscape frame, clear of the title block, as the other chapters' heroes do.
     if(grow>1&&!portrait) {
       this.camera.updateMatrixWorld();
-      const pan=-(grow-1)*PAN_PER_GROW, ex=this.camera.matrixWorld.elements;
+      const pan=-(grow-1)*PAN_PER_GROW*(1+.9*narrow), ex=this.camera.matrixWorld.elements;
       this.camera.position.x+=ex[0]!*pan; this.camera.position.z+=ex[2]!*pan;
     }
     this.camera.updateMatrixWorld();

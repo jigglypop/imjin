@@ -1,6 +1,6 @@
 import { at, commander, first, flagship, fleet, squadron } from '../subjects';
 import type { Scene } from '../types';
-import { aboard, home, order } from './shots';
+import { closeUp, home, order } from './shots';
 
 /**
  * Noryang, told from the records (src/cinema/SOURCES.md): the night crossing from Myodo, the moon past full and high,
@@ -30,10 +30,11 @@ export const NORYANG_INTRO: Scene = {
   shots: [
     // The moon on a long lens over the Japanese fleet's lanterns: the title.
     { dur: 9.5, cam: { type: 'orbit', at: at(japan, 'moon'), yaw: [Math.PI + 0.05, Math.PI - 0.02], pitch: 0.012, dist: [1500, 1350], lift: 4 }, fov: [23, 21], tilt: 0.12 },
-    aboard(yi, 8, -1),
-    aboard(chen, 4.5, 1),
-    aboard(deng, 6, -1, true),
-    aboard(shimazu, 7, 1),
+    closeUp('yi', yi, 8, -1),
+    closeUp('chen', chen, 4.5, 1),
+    closeUp('deng', deng, 6, -1),
+    // From his left: on his right the drummer stands close and blooms white in the night grade.
+    closeUp('shimazu', shimazu, 7, -1),
     order(yi, japan, 4.5),
     // Behind the flagship, low over the water, the lanterns of the Japanese fleet ahead.
     { dur: 7, cam: { type: 'orbit', at: at(yi, { toward: japan }), yaw: [Math.PI + 0.3, Math.PI + 0.14], pitch: [0.045, 0.065], dist: [92, 135], lift: [6, 10] }, fov: 30 },

@@ -4,11 +4,12 @@ import { TRAFALGAR_ORDER, TRAFALGAR_QUOTES, TRAFALGAR_SCENARIOS } from '../../si
 import type { ScenarioInfo } from '../../sim/scenarios';
 import { at, commander, first, flagship, fleet } from '../subjects';
 import type { CastLight, Scene } from '../types';
-import { aboard, home, order } from './shots';
+import { closeUp, home, order } from './shots';
 
 /**
- * The openings of the later chapters' battles, on the 1592 grammar (establishing + title, the camera on one flagship and
- * then the other while each commander speaks through his comms thumbnail, the order, the fleet, the hand-off). Every line and its record is in the
+ * The openings of the later chapters' battles, on the 1592 grammar (establishing + title, the side's commander, the
+ * reverse, the order, the fleet, the hand-off). Their commanders have no 3D figures yet, so each close-up frames his
+ * flagship and his line comes with his portrait as a painted insert (cast.ts). Every line and its record is in the
  * battle's quotes (src/sim/armada.ts, src/sim/lepanto.ts) and src/cinema/SOURCES.md.
  */
 
@@ -34,8 +35,8 @@ function chapterIntro(info: ScenarioInfo, quotes: { joseon: Quote; japan: Quote 
     },
     shots: [
       { dur: 8.5, cam: { type: 'orbit', at: at(foe, { toward: own }), yaw: [0.18, 0.3], pitch: [0.035, 0.05], dist: [650, 540], lift: 12 }, fov: 30 },
-      aboard(a, 6.2, -1),
-      aboard(b, 8.3, 1),
+      closeUp('joseon', a, 7.5, -1),
+      closeUp('japan', b, 7, 1),
       order(a, foe, 4.5),
       { dur: 7, cam: { type: 'orbit', at: at(own, { toward: foe }), yaw: [Math.PI + 0.3, Math.PI + 0.18], pitch: [0.22, 0.28], dist: [900, 1050], lift: 10 }, fov: 34 },
       home(at(own)),
@@ -43,8 +44,8 @@ function chapterIntro(info: ScenarioInfo, quotes: { joseon: Quote; japan: Quote 
     captions: [
       { kind: 'stamp', at: 0.8, dur: 6.4, when: info.date, where: info.place },
       { kind: 'title', at: 2.2, dur: 5.8, eyebrow, title: info.title, hanja: info.hanja },
-      say('joseon', quotes.joseon, 8.9, 5.6),
-      say('japan', quotes.japan, 15.1, 6),
+      say('joseon', quotes.joseon, 9.2, 5.8),
+      say('japan', quotes.japan, 16.6, 5.6),
       { kind: 'label', at: 28.4, dur: 5.6, target: at(own), text: info.forces.joseon, sub: info.joseon.name, side: 'joseon' },
       { kind: 'label', at: 28.8, dur: 5.2, target: at(b), text: info.forces.japan, sub: info.japan.name, side: 'japan' },
     ],
