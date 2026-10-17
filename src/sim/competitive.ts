@@ -42,7 +42,7 @@ export const COMPETITIVE_UNITS: Record<ShipKind, UnitBalance> = {
   hoseon: { spec: { hull: 42, crew: 38, cost: 185, build: 20 }, mods: { reload: 0.9, accuracy: 1.1 }, range: 1.25, damage: 0.9 },
   // The Armada chapter: catalog ships at prices fitted against the 1592 navies in AI conquest matches
   // (scripts/balance-competitive.mjs --match=england:joseon,...; docs/balance-cross.md). Ranked keeps the 1592 eight.
-  racegalleon: { spec: { cost: 1050, build: 64 } },
+  racegalleon: { spec: { cost: 1160, build: 64 } },
   pinnace: { spec: { cost: 240, build: 22 } },
   fireship: { spec: { cost: 180, build: 16 } },
   spgalleon: { spec: { cost: 700, build: 60 } },
