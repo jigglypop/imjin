@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useT } from '../../i18n';
+import { generalById, isImjin } from '../../meta/catalog';
 import { useLocalProfile } from '../../meta/localProfile';
 import { generalMods, generalState, keystoneOf, learnProblem, levelProgress, MAX_LEVEL, respecCost, respecProblem, skillPointsLeft, talentPoints, type Profile } from '../../meta/rules';
 import { BRANCH_LABEL, branchesOf, MILESTONES, nodeAdds, resonates, TIER_GATE, spentIn, talentsFor, traitKeys, type ModKey, type TalentNode } from '../../meta/talents';
@@ -52,6 +53,9 @@ export function TalentTree({ id, profile }: { id: string; profile: Profile }) {
     return r > 0 ? 'part' : 'lock';
   };
 
+  // 1592 generals read their talents in hanja; the other chapters' in the first syllables of the Korean name.
+  const imjin = isImjin(generalById(id)?.faction ?? '');
+  const glyph = (n: TalentNode) => (imjin && /[一-鿿]/.test(n.hanja) ? n.hanja.slice(0, n.branch === 'mastery' ? 3 : 2) : t(n.label).replace(/\s/g, '').slice(0, n.branch === 'mastery' ? 4 : 2));
   const nodeButton = (n: TalentNode) => {
     const st = stateOf(n);
     const r = talents[n.id] ?? 0;
@@ -65,7 +69,7 @@ export function TalentTree({ id, profile }: { id: string; profile: Profile }) {
         aria-label={`${t(n.label)} ${r}/${n.ranks}`}
         onClick={() => setPick(n.id)}
       >
-        <span className="tal-node__glyph" aria-hidden="true">{n.hanja.slice(0, n.branch === 'mastery' ? 3 : 2)}</span>
+        <span className="tal-node__glyph" aria-hidden="true">{glyph(n)}</span>
         <span className="tal-node__name">{t(n.label)}</span>
         <span className="tal-node__rank">{r}/{n.ranks}</span>
       </button>
@@ -142,7 +146,7 @@ function NodeCard({ id, node, profile, resonance, onLearn }: { id: string; node:
     <article className={`tal-card${node.keystone ? ' tal-card--key' : ''}`} aria-live="polite">
       <header>
         <span className="tal-card__kind">{t(node.keystone ? '핵심 재능' : node.branch === 'mastery' ? '비기' : `${BRANCH_LABEL[node.branch as keyof typeof BRANCH_LABEL]} ${node.tier}단`)}</span>
-        <h4>{t(node.label)} <small>{node.hanja}</small></h4>
+        <h4>{t(node.label)} {(isImjin(generalById(id)?.faction ?? '') || !/[一-鿿]/.test(node.hanja)) && <small>{node.hanja}</small>}</h4>
         <span className="tal-card__rank">{r} / {node.ranks}</span>
       </header>
       <p className="tal-card__line">{t(node.line)}</p>

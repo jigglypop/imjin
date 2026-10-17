@@ -3,7 +3,7 @@ import { useT } from '../../i18n';
 import { affixById, PRIMARY_STATS, STAT_LABEL } from '../../meta/affixes';
 import { generalById, weaponById } from '../../meta/catalog';
 import { useLocalProfile } from '../../meta/localProfile';
-import { GEAR_SLOTS, INVENTORY_CAP, itemBase, itemEffect, RARITY_LABEL, REFORGE, rollItem, SALVAGE, SLOT_LABEL, type GearSlot, type Item } from '../../meta/loot';
+import { baseFits, GEAR_SLOTS, INVENTORY_CAP, itemBase, itemEffect, RARITY_LABEL, REFORGE, rollItem, SALVAGE, SLOT_LABEL, type GearSlot, type Item } from '../../meta/loot';
 import { equipItemProblem, gearOf, generalState, reforgeProblem, wearerOf, type Profile } from '../../meta/rules';
 import { COMMANDERS } from '../../sim/grand/regions';
 import { MOD_LABEL } from './TalentTree';
@@ -58,7 +58,10 @@ export function Inventory({ id, profile }: { id: string; profile: Profile }) {
   const [pick, setPick] = useState<string | null>(null);
   const gear = generalState(profile, id).gear ?? {};
   const worn = gearOf(profile, id);
-  const items = profile.items.filter((i) => slot === 'all' || itemBase(i.base)?.slot === slot);
+  // The bag shows what this general's war and navy can carry; the other wars' pieces wait under their own navies.
+  const faction = generalById(id)?.faction ?? '';
+  const usable = profile.items.filter((i) => { const b = itemBase(i.base); return !!b && baseFits(b, faction); });
+  const items = usable.filter((i) => slot === 'all' || itemBase(i.base)?.slot === slot);
   const picked = profile.items.find((i) => i.uid === pick) ?? null;
   return (
     <section className="loot" aria-label={t('장비와 전리품')}>
@@ -77,7 +80,7 @@ export function Inventory({ id, profile }: { id: string; profile: Profile }) {
       {worn.length > 0 && <p className="loot-total">{t('장비 효과')}: {Object.entries(combined(worn)).map(([k, v]) => `${t(MOD_LABEL[k]!)} ${pct(v)}`).join(' · ')}</p>}
       <div className="loot-bag">
         <header>
-          <h3>{t('전리품')} <small>{profile.items.length} / {INVENTORY_CAP}</small></h3>
+          <h3>{t('전리품')} <small>{usable.length} · {t('가방')} {profile.items.length} / {INVENTORY_CAP}</small></h3>
           <div className="loot-filter" role="tablist">
             {(['all', ...GEAR_SLOTS] as const).map((s) => (
               <button key={s} role="tab" aria-selected={slot === s} className={slot === s ? 'loot-filter--on' : ''} onClick={() => setSlot(s)}>{t(s === 'all' ? '전체' : SLOT_LABEL[s])}</button>
@@ -123,7 +126,7 @@ function ItemCard({ item, generalId, profile, onEquip, onGone }: { item: Item; g
         <div>
           <span className="loot-card__rarity">{t(RARITY_LABEL[item.rarity])} · {t(SLOT_LABEL[base.slot])}</span>
           <h4>{t(base.name)} <small>{base.hanja}</small></h4>
-          <p>{t(base.line)}{base.faction && ` · ${t(generalById(generalId)?.faction === base.faction ? '3D 모습에 보입니다' : '다른 나라의 무기')}`}</p>
+          <p>{t(base.line)}{(base.weapon || base.model) && ` · ${t(baseFits(base, generalById(generalId)?.faction ?? '') ? '장착하면 3D 모습에 보입니다' : '이 장수가 쓸 수 없는 무기')}`}</p>
         </div>
       </header>
       <div className="gen-armor-roll__stats">

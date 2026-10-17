@@ -4,7 +4,7 @@
 // stored `coins` is only its copy. Every change applies src/meta/rules.ts on the server; armor rolls come from the
 // account id as the salt, so no page can send a roll, a purse or experience of its own.
 import { randomBytes } from 'node:crypto';
-import { generalById, GENERALS } from '../src/meta/catalog';
+import { generalById, GENERALS, isImjin } from '../src/meta/catalog';
 import { buy, equip, equipItem, equipWeapon, learn, reforge, respec, salvage, newProfile, normalizeProfile, reportProblem, reroll, rewardFor, RuleError, type BattleReport, type Profile } from '../src/meta/rules';
 import { GEAR_SLOTS, type GearSlot } from '../src/meta/loot';
 import { START_COINS, START_XP, type MetaBattleStart, type MetaBattleTicket, type MetaReply, type MetaRewardReply } from '../src/meta/wire';
@@ -48,6 +48,8 @@ async function load(data: ProfileData, userId: string, tx: ProfileTx): Promise<P
       for (const g of GENERALS) if (g.famous) p.generals[g.id] = { xp: START_XP, talents: {} };
     }
   }
+  // The other chapters' famous commanders joined later: an account made before them gets their start once.
+  if (await tx.claimOnce(`meta-chapters:${userId}`)) for (const g of GENERALS) if (g.famous && !isImjin(g.faction) && !p.generals[g.id]) p.generals[g.id] = { xp: START_XP, talents: {} };
   p.coins = await tx.balance('coin');
   return p;
 }

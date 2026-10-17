@@ -97,6 +97,54 @@ export const BRANCH_NODES: Record<Branch, readonly TalentNode[]> = {
   ],
 };
 
+type Sig = { label: string; hanja: string; per: TalentNode['per']; line: string };
+const sig = (label: string, hanja: string, per: TalentNode['per'], line: string): Sig => ({ label, hanja, per, line });
+
+/**
+ * A commander's own talent from his career (고유 재능): one rank in his first branch's fourth tier, beside its ranked
+ * node, opened by the same six points. The other chapters' commanders each have one; their sources are the campaign
+ * notes of growthData.ts (Corbett, Mattingly, Capponi, Adkins).
+ */
+export const SIGNATURES: Record<string, Sig> = {
+  howard: sig('바람 위의 신중함', 'Weather gage', { defense: 0.04, accuracy: 0.02 }, '바람 위를 지키며 함부로 붙지 않았다'),
+  drake: sig('칼레의 화선', 'Fireships at Calais', { fire: 0.1, speed: 0.02 }, '밤바람에 화선 여덟 척을 흘려보내 초승달을 흩었다'),
+  frobisher: sig('트라이엄프호의 돌입', 'Triumph', { melee: 0.05, morale: 0.02 }, '가장 큰 배로 적진 한가운데 버텼다'),
+  hawkins: sig('낮은 갤리언', 'Race-built', { turn: 0.04, speed: 0.02 }, '선루를 깎아 빠르고 날렵하게 다시 지었다'),
+  medina: sig('진형의 규율', 'Disciplina', { defense: 0.04, morale: 0.03, speed: -0.02 }, '진형을 벗어나는 함장은 교수형에 처한다고 명했다'),
+  recalde: sig('비스케이의 물길', 'Vizcaya', { turn: 0.03, morale: 0.02, speed: 0.01 }, '대서양의 바람과 물길을 가장 잘 알았다'),
+  leyva: sig('라 라타 코로나다', 'La Rata Coronada', { melee: 0.06 }, '귀족 자제들이 등선을 기다리던 배'),
+  oquendo: sig('기푸스코아의 포대', 'Gipuzkoa', { reload: 0.04, accuracy: 0.01 }, '바스크 포수들이 쉬지 않고 쟁였다'),
+  donjuan: sig('레알호 돌격', 'La Real', { morale: 0.04, melee: 0.03 }, '기함을 곧장 술타나호에 붙였다'),
+  venier: sig('노장의 석궁', 'Balestra', { melee: 0.04, accuracy: 0.02 }, '일흔다섯 노장이 갑판에서 몸소 쏘았다'),
+  barbarigo: sig('해안 좌익 고수', 'Ala sinistra', { defense: 0.04, turn: 0.02 }, '얕은 물가에 붙여 포위를 막았다'),
+  doria: sig('우익의 기동', 'Manovra', { turn: 0.05 }, '바다 쪽으로 넓게 돌며 울루치 알리와 겨루었다'),
+  alipasha: sig('술타나의 예니체리', 'Yeniçeri', { melee: 0.05, morale: 0.02 }, '기함에 예니체리 정예를 태웠다'),
+  pertev: sig('원정군 보병', 'Sefer', { melee: 0.03, defense: 0.03 }, '갤리선마다 원정군 병사를 실었다'),
+  uluc: sig('바다 쪽 우회', 'Kanat', { speed: 0.04, turn: 0.03 }, '도리아를 끌어내 틈으로 파고들었다'),
+  siroco: sig('이집트 갤리선단', 'Mısır', { morale: 0.03, turn: 0.03 }, '해안 쪽 우익을 이끌었다'),
+  nelson: sig('대열 돌파', 'Breaking the line', { melee: 0.03, morale: 0.03, accuracy: 0.02, defense: -0.02 }, '종렬로 곧장 적 대열을 끊었다: 다가가는 동안 맞는다'),
+  cornwallis: sig('빌리 블루의 봉쇄', 'Close blockade', { defense: 0.03, morale: 0.03 }, '겨울에도 브레스트 앞바다를 떠나지 않았다'),
+  collingwood: sig('로열 소버린의 일제 사격', 'Royal Sovereign', { reload: 0.05, accuracy: 0.02 }, '3분 30초에 세 번 쏘는 포수들'),
+  calder: sig('안개 속의 신중', 'Finisterre', { defense: 0.05 }, '잡은 것을 지키려 다시 싸우지 않았다'),
+  hardy: sig('뒷갑판의 침착', 'Quarterdeck', { defense: 0.03, morale: 0.03 }, '포화 속 뒷갑판을 넬슨과 함께 걸었다'),
+  blackwood: sig('프리깃 정찰', 'Eyes of the fleet', { speed: 0.04, turn: 0.03 }, '연합 함대의 움직임을 깃발 신호로 알렸다'),
+  villeneuve: sig('아부키르의 생존', 'Aboukir', { speed: 0.03, defense: 0.03 }, '나일 해전에서 남은 배를 이끌고 빠져나갔다'),
+  ganteaume: sig('출항 대기', 'Brest', { defense: 0.03, reload: 0.02 }, '봉쇄 속에서도 함대를 언제든 나갈 수 있게 했다'),
+  missiessy: sig('서인도 습격', 'Antilles', { speed: 0.03, fire: 0.05 }, '로슈포르를 빠져나가 영국 섬들을 불태웠다'),
+  lucas: sig('수류탄과 소총', 'Redoutable', { melee: 0.05, fire: 0.04 }, '돛대 위에서 빅토리호 갑판을 쓸었다'),
+  gravina: sig('관측 전대', 'Escuadra de observación', { morale: 0.03, defense: 0.03 }, '예비대로 연합 함대 뒤를 받쳤다'),
+  alava: sig('산타 아나호의 분전', 'Santa Ana', { defense: 0.04, melee: 0.02 }, '로열 소버린호와 끝까지 맞붙었다'),
+  churruca: sig('측량가의 사격', 'Nepomuceno', { accuracy: 0.05 }, '포마다 거리를 재어 쏘게 한 측량가'),
+};
+
+/** A commander's own talent as a node (`<branch>.sig`), or null. */
+export function signatureNode(generalId: string): TalentNode | null {
+  const s = SIGNATURES[generalId];
+  const branch = branchesOf(generalId)[0];
+  if (!s || !branch) return null;
+  return { id: `${branch}.sig`, branch, tier: 4, col: 0, ranks: 1, label: s.label, hanja: s.hanja, per: s.per, line: s.line };
+}
+
 /** Which branch a trait's factor leans to, for the third branch of a general whose campaign tree has two. */
 const LEAN: Record<ModKey, Branch> = { reload: 'gunnery', accuracy: 'gunnery', fire: 'gunnery', morale: 'command', speed: 'seamanship', turn: 'seamanship', melee: 'boarding', defense: 'boarding' };
 const MOD_KEYS: readonly ModKey[] = ['reload', 'accuracy', 'speed', 'turn', 'fire', 'melee', 'defense', 'morale'];
@@ -132,6 +180,8 @@ export function masteryNode(generalId: string): TalentNode | null {
 /** Every node a general can learn: his three branches, then his 비기. */
 export function talentsFor(generalId: string): TalentNode[] {
   const out = branchesOf(generalId).flatMap((b) => [...BRANCH_NODES[b]]);
+  const own = signatureNode(generalId);
+  if (own) out.splice(out.findIndex((n) => n.branch === own.branch && n.keystone), 0, own);
   const m = masteryNode(generalId);
   if (m) out.push(m);
   return out;

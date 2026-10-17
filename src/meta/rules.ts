@@ -1,7 +1,7 @@
 import type { ShipMods } from '../sim/types';
 import { TREES, type Effect } from '../sim/grand/growthData';
 import { armorSeed, rerollCost, rollArmor, rollEffect, type ArmorRoll } from './affixes';
-import { DAILY_DROPS, INVENTORY_CAP, REFORGE, SALVAGE, itemBase, itemEffect, itemSeed, rollDrops, RARITIES, GEAR_SLOTS, type GearSlot, type Item } from './loot';
+import { baseFits, DAILY_DROPS, INVENTORY_CAP, REFORGE, SALVAGE, itemBase, itemEffect, itemSeed, rollDrops, RARITIES, GEAR_SLOTS, type GearSlot, type Item } from './loot';
 import { KEYSTONE_LEVEL, MASTERY_LEVEL, MASTERY_SPENT, TIER_GATE, pointsAtLevel, spentAll, spentIn, talentEffect, talentsFor, type TalentNode } from './talents';
 import { ARMORS, GENERALS, armorById, armorsFor, basicArmor, defaultWeapon, generalById, weaponById, type ArmorDef, type WeaponDef } from './catalog';
 
@@ -353,6 +353,13 @@ export function gearOf(p: Profile, generalId: string): Item[] {
   return GEAR_SLOTS.map((s) => gear[s]).filter((u): u is string => !!u).map((u) => p.items.find((i) => i.uid === u)).filter((i): i is Item => !!i);
 }
 
+/** The chapter sword model a general's worn loot weapon gives his figure (lootEras.ts `model`), if any. */
+export function wornModel(p: Profile, generalId: string): string | undefined {
+  const uid = generalState(p, generalId).gear?.weapon;
+  const item = uid ? p.items.find((i) => i.uid === uid) : undefined;
+  return item ? itemBase(item.base)?.model : undefined;
+}
+
 /** The general who carries a piece, if any. */
 export function wearerOf(p: Profile, uid: string): string | undefined {
   return Object.entries(p.generals).find(([, g]) => g.gear && Object.values(g.gear).includes(uid))?.[0];
@@ -363,7 +370,7 @@ function gearProblemFor(generalId: string, item: Item, slot: GearSlot): string |
   const g = generalById(generalId);
   if (!base || !g) return '없는 물건입니다';
   if (base.slot !== slot) return '맞지 않는 자리입니다';
-  if (base.faction && base.faction !== g.faction) return '다른 나라의 무기입니다';
+  if (!baseFits(base, g.faction)) return base.slot === 'weapon' ? '다른 나라의 무기입니다' : '이 장수가 쓸 수 없는 물건입니다';
   return null;
 }
 

@@ -39,7 +39,7 @@ try {
     for (const g of C.GENERALS) {
       assert.ok(TREES[g.id], `${g.id} has a tree`);
       assert.ok(existsSync(join(root, 'public', 'ui', 'portraits', `portrait_${g.id}.webp`)), `${g.id} has a portrait`);
-      if (g.famous) assert.equal(C.ARMORS.filter((a) => a.general === g.id).length, 1, `${g.id} has one signature`);
+      if (g.famous && C.isImjin(g.faction)) assert.equal(C.ARMORS.filter((a) => a.general === g.id).length, 1, `${g.id} has one signature`);
     }
   });
 
@@ -211,7 +211,7 @@ try {
 
   check('the complete weapon/general matrix: one free same-faction weapon per general; unknown and foreign weapons refused', () => {
     const p = R.newProfile();
-    for (const g of C.GENERALS) {
+    for (const g of C.GENERALS.filter((x) => C.isImjin(x.faction))) {
       assert.deepEqual(C.weaponsFor(g).map((w) => w.id), C.WEAPONS.filter((w) => w.faction === g.faction).map((w) => w.id));
       assert.equal(R.wornWeapon(p, g.id).id, C.defaultWeapon(g.faction).id);
       for (const w of C.WEAPONS) {
@@ -536,6 +536,38 @@ try {
     // Every factor of a fully geared, fully learned general stays in bounds.
     const all = Object.fromEntries(T.talentsFor('yi').map((n) => [n.id, n.ranks]));
     for (const v of Object.values(R.generalMods(p, 'yi', all))) assert.ok(v <= R.GENERAL_CAP.max && v >= R.GENERAL_CAP.min);
+  });
+
+  check('chapter commanders: full generals with three branches, their own career talent, era loot only, icons for every piece', () => {
+    const chapter = C.GENERALS.filter((g) => !C.isImjin(g.faction));
+    assert.equal(chapter.length, 29);
+    for (const g of chapter) {
+      const own = T.signatureNode(g.id);
+      assert.ok(own, `${g.id} has a career talent`);
+      assert.equal(own.branch, T.branchesOf(g.id)[0]);
+      assert.ok(T.talentsFor(g.id).some((n) => n.id === own.id));
+      const all = Object.fromEntries(T.talentsFor(g.id).map((n) => [n.id, n.ranks]));
+      for (const v of Object.values(R.generalMods(R.newProfile(), g.id, all))) assert.ok(v <= R.GENERAL_CAP.max && v >= R.GENERAL_CAP.min, g.id);
+    }
+    // A Nelson at level 6 opens his own talent with six points in command.
+    let p = { ...R.newProfile(), generals: { nelson: { xp: R.xpFor(8), talents: {} } } };
+    for (const n of ['command.drums', 'command.drums', 'command.drums', 'command.law', 'command.drill', 'command.drill']) p = R.learn(p, 'nelson', n);
+    p = R.learn(p, 'nelson', 'command.sig');
+    assert.ok(R.generalMods(p, 'nelson').defense < R.generalMods({ ...p, generals: { nelson: { ...p.generals.nelson, talents: { ...p.generals.nelson.talents, 'command.sig': 0 } } } }, 'nelson').defense, 'breaking the line costs defense');
+    for (const side of ['england', 'spain', 'holyleague', 'ottoman', 'britain', 'france', 'spain1805']) {
+      for (let i = 0; i < 200; i++) for (const d of L.rollDrops('acct', i, { result: 'win', stars: 3, sunk: 5, firstWin: true, side })) {
+        const b = L.itemBase(d.base);
+        assert.ok(L.baseFits(b, side), `${side} dropped ${b.id}`);
+        assert.ok(b.eras.includes(L.ERA_OF[side]));
+      }
+    }
+    for (const b of L.ITEM_BASES) if (!b.weapon) assert.ok(existsSync(join(root, 'public', 'ui', 'items', `${b.id}.webp`)), `${b.id} icon`);
+    const kilij = { uid: 'k', base: 'w_kilij', rarity: 'rare', rerolls: 0, seed: 1, src: '' };
+    const q = { ...R.newProfile(), items: [kilij], generals: { alipasha: { xp: 0, talents: {} } } };
+    assert.equal(R.equipItemProblem(q, 'nelson', 'weapon', 'k'), '다른 나라의 무기입니다');
+    assert.equal(R.equipItemProblem(q, 'yi', 'weapon', 'k'), '다른 나라의 무기입니다');
+    assert.equal(R.wornModel(R.equipItem(q, 'alipasha', 'weapon', 'k'), 'alipasha'), 'kilij');
+    assert.equal(R.equipItemProblem({ ...q, items: [{ ...kilij, base: 'b_sonja' }] }, 'nelson', 'book', 'k'), '이 장수가 쓸 수 없는 물건입니다');
   });
 
   const storageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');

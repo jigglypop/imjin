@@ -45,7 +45,8 @@ export function useGeneralModels() {
 
 /** New weapon files use metres, +Y along the blade/shaft and a grip at their origin. */
 export function holdWeapon(body: Object3D, weapon: Object3D, definition: WeaponDef) {
-  const left = definition.kind === 'bow';
+  // A figure carrying a `left_handed` node holds every weapon in his left fist (Nelson lost his right arm in 1797).
+  const left = definition.kind === 'bow' || !!body.getObjectByName('left_handed');
   body.updateMatrixWorld(true);
   const socket = body.getObjectByName(left ? 'socket_grip_left' : 'socket_grip_right');
   if (socket) {
