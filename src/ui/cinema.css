@@ -120,19 +120,12 @@
 
 /* The commander on screen speaks: a centred film subtitle above the bottom bar (src/cinema 'say'). */
 .cine-say { position: absolute; left: 0; right: 0; margin: 0 auto; bottom: calc(var(--cine-bar, 0px) + max(26px, 4vh)); width: min(980px, 90vw); text-align: center; animation: cine-rise 0.9s cubic-bezier(.2, .7, .2, 1) both; }
-.cine-say-who { display: inline-flex; gap: 12px; align-items: baseline; font-family: var(--font-cine); font-weight: 500; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
-.cine-say-who b { font-weight: 700; font-size: clamp(13px, 1.1vw, 17px); letter-spacing: 0.14em; color: var(--side, var(--cine-brass)); }
-.cine-say-who span { font-size: clamp(11px, 0.88vw, 13.5px); letter-spacing: 0.04em; color: rgba(243, 241, 236, 0.7); }
-.cine-say-text { margin-top: 8px; font-family: var(--font-cine); font-weight: 600; font-size: clamp(19px, 2vw, 32px); line-height: 1.42; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 18px rgba(0, 0, 0, 0.55); word-break: keep-all; }
-.cine-say-hanja { margin-top: 6px; }
-.cine-say .cine-source { margin-top: 8px; opacity: 0.85; }
+.cine-say-text { font-family: var(--font-ui); font-weight: 500; font-size: clamp(18px, 1.7vw, 28px); line-height: 1.45; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 0 14px rgba(0, 0, 0, 0.45); word-break: keep-all; }
+.cine-say-name { margin-right: 0.7em; font-size: 0.66em; opacity: 0.8; }
 .cine-say--joseon { --side: #d9c08a; }
 .cine-say--japan { --side: #e0a39a; }
 .cine-say--ming { --side: #e6c46e; }
 /* A name over a silent close-up: larger, nothing under it but the record. */
-.cine-say--name .cine-say-who b { font-size: clamp(17px, 1.6vw, 25px); }
-/* No figure on deck: his portrait comes in as a painted insert above the line. */
-.cine-say-insert { display: block; width: clamp(64px, 6vw, 96px); aspect-ratio: 3 / 4; object-fit: cover; margin: 0 auto 10px; border: 1px solid rgba(201, 179, 132, 0.5); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6); }
 .app--compact .cine-say { bottom: calc(var(--cine-bar, 0px) + 40px); }
 .app--compact .cine-say-text { font-size: 16px; }
 

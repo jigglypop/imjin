@@ -6,8 +6,10 @@ const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const RAMP = 0.6;
 
 /**
- * Plays one scene: advances its clock in real time, picks the shot, follows the shot's subject with a little lag (a
- * camera operator's, so a ship rolling on the swell does not shake the frame), and says which captions and cues are due.
+ * Plays one scene: advances its clock in real time, picks the shot, follows the shot's subject through a critically
+ * damped spring (position and heading only, never the deck's roll or pitch; the sim's fixed steps and the swell are
+ * filtered out, so the frame never trembles), and says which captions and cues are due. No procedural shake anywhere;
+ * the focus distance is fixed for each shot (no focus hunting).
  */
 export class CutscenePlayer {
   /** Seconds into the scene. */
@@ -17,6 +19,14 @@ export class CutscenePlayer {
   private shotIndex = -1;
   private shotStart = 0;
   private place: Place | null = null;
+  /** The spring's velocity for `place`. */
+  private vel = { x: 0, y: 0, z: 0, h: 0 };
+  /** Cuts so far (the cast reveals loaded figures only on a cut). */
+  cuts = 0;
+  /** This shot's focus distance, fixed at its first frame. */
+  private focus = 0;
+  /** Whether this figure shot frames the figure (decided at its first frame, never switched mid-shot). */
+  private decided = false;
   private lookPlace: Place | null = null;
   private firedCues = 0;
   private firedActs = 0;
@@ -57,6 +67,9 @@ export class CutscenePlayer {
       // A cut: the new subject is framed at once, not swung to.
       this.place = null;
       this.lookPlace = null;
+      this.cuts += 1;
+      this.focus = 0;
+      this.decided = false;
       this.from = null;
       this.closeOn = false;
       this.firedActs = 0;
@@ -69,7 +82,11 @@ export class CutscenePlayer {
   /** The camera for this frame, or null when the subject has never been found. */
   camera(dt: number): CameraPose | null {
     const pose = this.frame(dt);
-    if (pose) this.last = pose;
+    if (pose) {
+      if (!this.focus) this.focus = pose.focus;
+      pose.focus = this.focus;
+      this.last = pose;
+    }
     return pose;
   }
 
@@ -89,10 +106,13 @@ export class CutscenePlayer {
     }
     if (cam.type === 'figure') {
       const figure = this.host.figure?.(cam.who) ?? null;
-      if (figure || this.closeOn) {
-        // Once the figure is framed the shot stays on him (he cannot leave the deck mid-shot).
-        this.closeOn = true;
-        this.place = this.follow(this.place, figure, dt, 7);
+      // Close or wide is decided at the cut: a figure that loads mid-shot never swings the camera onto him.
+      if (!this.decided) {
+        this.decided = true;
+        this.closeOn = !!figure;
+      }
+      if (this.closeOn) {
+        this.place = this.follow(this.place, figure, dt, 2.2);
         if (!this.place) return null;
         return compose({ ...shot, cam: { type: 'track', at: cam.at, from: cam.from, to: cam.to, look: cam.look } }, k, this.place, this.host);
       }
@@ -120,12 +140,32 @@ export class CutscenePlayer {
     return due;
   }
 
-  private follow(was: Place | null, now: Place | null, dt: number, rate = 3): Place | null {
+  /**
+   * A critically damped spring toward the subject (angular rate `rate`, heading at half). Height follows faster: the
+   * deck's heave is already smooth (the wave field is sampled per frame) and a lagging lens would lose his face on a
+   * rough sea. Second order: the sim's fixed steps in x/z come out as a smooth glide.
+   */
+  private follow(was: Place | null, now: Place | null, dt: number, rate = 2): Place | null {
     if (!now) return was;
-    if (!was) return { ...now };
-    const k = 1 - Math.exp(-dt * rate);
-    const kh = 1 - Math.exp(-dt * rate * 0.5);
-    return { x: was.x + (now.x - was.x) * k, y: was.y + (now.y - was.y) * k, z: was.z + (now.z - was.z) * k, heading: was.heading + wrap(now.heading - was.heading) * kh, size: now.size };
+    if (!was) {
+      this.vel = { x: 0, y: 0, z: 0, h: 0 };
+      return { ...now };
+    }
+    const v = this.vel;
+    const step = (x: number, target: number, vel: number, w: number): [number, number] => {
+      // Exact critically damped step (Game Programming Gems 4, 'smooth damp').
+      const e = Math.exp(-w * dt);
+      const d = x - target;
+      const temp = (vel + w * d) * dt;
+      return [target + (d + temp) * e, (vel - w * temp) * e];
+    };
+    const h = was.heading + wrap(now.heading - was.heading);
+    let x, y, z, hd;
+    [x, v.x] = step(was.x, now.x, v.x, rate);
+    [z, v.z] = step(was.z, now.z, v.z, rate);
+    [y, v.y] = step(was.y, now.y, v.y, Math.max(6, rate * 3));
+    [hd, v.h] = step(was.heading, h, v.h, rate / 2);
+    return { x, y, z, heading: hd, size: now.size };
   }
 
   /** Captions showing now with how far each is through its time (0..1). */

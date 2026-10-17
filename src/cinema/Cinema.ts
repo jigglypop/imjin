@@ -119,6 +119,8 @@ export class Cinema implements RigHost {
     return waveField.heightAt(x, z);
   }
 
+  private seenCuts = 0;
+
   figure(who: string) {
     return this.cast?.place(who) ?? null;
   }
@@ -129,12 +131,6 @@ export class Cinema implements RigHost {
   }
 
   /** The portrait to inset with a commander's line: none while his figure is on deck in a close-up. */
-  insertFor(name: string) {
-    const r = this.running;
-    if (r?.camera && r.player.onFigure && this.cast?.ready(name)) return null;
-    return r?.player.scene.cast?.[name]?.portrait ?? null;
-  }
-
   lightBearing() {
     const d = atmosphere.sunDir.value as Vector3;
     return Math.atan2(d.z, d.x);
@@ -252,6 +248,7 @@ export class Cinema implements RigHost {
     // Online the cinema never takes the camera or holds the battle; a beat takes it only while the documentary camera runs.
     const camera = !this.host.remote && (kind === 'cutscene' || this.host.rts.cinematic);
     this.running = { player: new CutscenePlayer(scene, this), kind, camera };
+    this.seenCuts = 0;
     this.pose = null;
     if (camera && kind === 'cutscene' && scene.cast && this.host.cast) this.cast = new Cast(this.host.cast, scene.cast, scene.castLight ?? 'day', this.ctx);
     if (kind === 'cutscene') {
@@ -356,6 +353,10 @@ export class Cinema implements RigHost {
     if (r) {
       for (const cue of r.player.advance(dt)) this.cue(cue);
       for (const a of r.player.acts()) this.cast?.act(a.who, a.move);
+      if (r.player.cuts !== this.seenCuts) {
+        this.seenCuts = r.player.cuts;
+        this.cast?.reveal();
+      }
       const shot = r.player.shot;
       this.cast?.update(dt, this.ctx, shot?.cam.type === 'figure' ? shot.cam.who : null);
       // Any camera input during a beat (it turns the director's camera off) hands the camera back at once.

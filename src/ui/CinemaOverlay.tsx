@@ -92,10 +92,11 @@ function CaptionView({ caption, age }: { caption: Caption; age: number }) {
 }
 
 /**
- * A film subtitle for the commander on screen: his name and title, his words, the hanja of a quoted record, its source.
- * When his figure is not on deck (not live, not loaded, a failed load) his portrait comes in as a painted insert.
+ * A film subtitle for the commander on screen (owner 2026-10-18): one colour, Pretendard medium, a soft shadow, a small
+ * name before the line in the same colour. Hanja, titles and records stay out of the frame (src/cinema/SOURCES.md).
+ * No portrait card ever (owner 2026-10-18): without his figure the camera holds wide on his flagship and the line stands alone.
  */
-function SayView({ caption, age, insert, plate }: { caption: Extract<Caption, { kind: 'say' }>; age: number; insert: string | null; plate: IntroView | null }) {
+function SayView({ caption, age, plate }: { caption: Extract<Caption, { kind: 'say' }>; age: number; plate: IntroView | null }) {
   const t = useT();
   return (
     <>
@@ -106,18 +107,15 @@ function SayView({ caption, age, insert, plate }: { caption: Extract<Caption, { 
         <div className="cine-plate-title">{t(plate.title)}</div>
       </div>
     )}
-    <div className={`cine-say cine-say--${caption.side}${caption.text ? '' : ' cine-say--name'}`} style={{ opacity: opacityOf(age, caption.dur) }}>
-      {insert && <img className="cine-say-insert" src={portraitUrl(insert)} alt="" />}
-      <div className="cine-say-who">
-        <b>{t(caption.who)}</b>
-        {caption.role && <span>{t(caption.role)}</span>}
-      </div>
-      {caption.text && <div className="cine-say-text">{t(caption.text)}</div>}
-      {caption.hanja && <div className="cine-hanja cine-say-hanja">{caption.hanja}</div>}
-      <div className="cine-source">
-        {t(caption.source)}
-        {caption.note && ` · ${t(caption.note)}`}
-      </div>
+    <div className="cine-say" style={{ opacity: opacityOf(age, caption.dur) }}>
+      {caption.text ? (
+        <div className="cine-say-text">
+          <span className="cine-say-name">{t(caption.who)}</span>
+          {t(caption.text)}
+        </div>
+      ) : (
+        <div className="cine-say-text">{t(caption.who)}</div>
+      )}
     </div>
     </>
   );
@@ -256,7 +254,7 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
           ))}
       </div>
       {captions.map(({ caption, age }) =>
-        caption.kind === 'say' ? <SayView key={`say${caption.at}`} caption={caption} age={age} insert={cinema.insertFor(caption.cast)} plate={plateFor(caption)} /> : null,
+        caption.kind === 'say' ? <SayView key={`say${caption.at}`} caption={caption} age={age} plate={plateFor(caption)} /> : null,
       )}
       {captions
         .filter((c) => c.caption.kind === 'title' || c.caption.kind === 'quote' || c.caption.kind === 'card')

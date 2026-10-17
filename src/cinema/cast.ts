@@ -33,7 +33,7 @@ const LIGHT: Record<CastLight, { key: [number, number]; rim: [number, number]; f
   night: { key: [0xffb36b, 1.9], rim: [0x9fb8ff, 3.6], fill: [0x2c3550, 0.5] },
 };
 
-type Member = { def: CastMember; figure: Figure | null; holder: Group; ship: number; facing: number; failed: boolean; post?: { x: number; y: number; z: number } | null };
+type Member = { def: CastMember; figure: Figure | null; holder: Group; ship: number; facing: number; failed: boolean; shown?: boolean; post?: { x: number; y: number; z: number } | null };
 
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const shipOf = (got: Ship | Ship[] | undefined) => (Array.isArray(got) ? got[0] : got);
@@ -71,9 +71,10 @@ export class Cast {
     this.key.color.set(l.key[0]);
     this.key.intensity = l.key[1];
     this.rim.color.set(l.rim[0]);
-    this.rim.intensity = l.rim[1];
+    // The rim stays soft and the fill near the sea's ambient so he sits in the battle's light, not pasted over it.
+    this.rim.intensity = l.rim[1] * 0.4;
     this.fill.color.set(l.fill[0]);
-    this.fill.intensity = l.fill[1];
+    this.fill.intensity = l.fill[1] * 1.35;
     host.scene.add(this.group);
     for (const [name, def] of Object.entries(cast)) {
       const holder = new Group();
@@ -89,9 +90,12 @@ export class Cast {
   private async load(m: Member) {
     try {
       const live = await listModels();
-      if (!live.has(m.def.file)) throw new Error(`${m.def.file} is not live`);
+      // A chapter names its man (`fig_howard`); his figure counts from the day any `<id>__<armor>` file goes live.
+      const id = m.def.file.replace(/^fig_/, '');
+      const file = live.has(m.def.file) ? m.def.file : [...live].find((k) => k.startsWith(`${id}__`));
+      if (!file) throw new Error(`${m.def.file} is not live`);
       const weaponDef = WEAPONS.find((w) => w.id === m.def.weapon);
-      const [gltf, weapon] = await Promise.all([loader.loadAsync(modelUrl(m.def.file)), weaponDef ? loader.loadAsync(weaponUrl(weaponDef.id)) : null]);
+      const [gltf, weapon] = await Promise.all([loader.loadAsync(modelUrl(file)), weaponDef ? loader.loadAsync(weaponUrl(weaponDef.id)) : null]);
       const asset = gltf.scene;
       const figure = createFigure(asset, gltf.animations, weaponDef?.kind ?? 'sword');
       if (weapon && weaponDef) {
@@ -107,7 +111,7 @@ export class Cast {
       m.figure = figure;
       m.holder.add(figure.root);
     } catch (e) {
-      // No figure: the close-up falls back to his ship and his line comes with his portrait.
+      // No figure: the close-up falls back to a wide shot of his ship; his line stands alone (no portrait card).
       m.failed = true;
       if (import.meta.env.DEV) console.warn('[cinema] cast figure', m.def.file, e);
     }
@@ -139,6 +143,11 @@ export class Cast {
     m.ship = ship.id;
     const to = centre(m.def.facing(ctx));
     if (to) m.facing = Math.atan2(to.z - ship.z, to.x - ship.x);
+  }
+
+  /** A cut: every loaded figure may now stand on his deck. */
+  reveal() {
+    for (const m of this.members.values()) if (m.figure) m.shown = true;
   }
 
   /** Whether `name`'s figure is standing on his deck. */
@@ -191,7 +200,8 @@ export class Cast {
       // The rig's heading 0 is +x; the figure's front is +z after normalising.
       m.holder.quaternion.setFromAxisAngle(this.tmp.set(0, 1, 0), Math.PI / 2 - m.facing);
       m.holder.scale.setScalar(this.host.shipScale(ship.id));
-      m.holder.visible = true;
+      // He only comes on deck at a cut (reveal), never in front of the camera.
+      m.holder.visible = !!m.shown;
       this.host.standIns.add(ship.id);
       m.figure.mixer.update(dt);
       // The held sword hangs outside the body as on the generals screen (idleBlade.ts).
