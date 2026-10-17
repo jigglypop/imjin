@@ -423,7 +423,7 @@ function armadaShots() {
     portland: plan(20, { exposure: 1.1, gamma: 1.04, saturation: 1.04 }),
     wight: plan(20, day),
     // The fireships: run until the first Spanish ship has caught fire.
-    calais: plan(0, { exposure: 2.6, gamma: 1.2, saturation: 1 }, (c) => c.burning('japan').length >= 2 || c.e.battle.time > 300),
+    calais: plan(0, { exposure: 3.2, gamma: 1.35, saturation: 1.02 }, (c) => c.burning('japan').length >= 2 || c.e.battle.time > 300),
     gravelines: plan(20, { exposure: 1.8, gamma: 1.1, saturation: 1.06 }),
   };
 }
@@ -643,8 +643,7 @@ async function capture() {
             break;
           } catch (e) {
             if (attempt >= Number(args.retries ?? 2)) throw e;
-            console.log(`${id}: attempt ${attempt + 1} failed (${e.message.split('
-')[0]}), retrying`);
+            console.log(`${id}: attempt ${attempt + 1} failed (${e.message.split(String.fromCharCode(10))[0]}), retrying`);
           }
         }
       }
