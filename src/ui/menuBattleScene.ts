@@ -206,8 +206,10 @@ export class MenuBattleScene {
   private cameraPose() {
     const p=this.elapsed/CYCLE, drift=Math.sin(p*Math.PI*2)*3;
     const portrait=this.camera.aspect<.85;
-    this.camera.position.set(this.hero.x+(portrait?60:37)+drift, portrait?17:8, this.hero.z+(portrait?48:24));
-    this.target.set(this.hero.x+(portrait?3:-28),portrait?8:7,this.hero.z-(portrait?12:40));
+    // A tall-masted flagship is framed from further off and higher, so its rig stays in the shot.
+    const k=this.heroOf.kind==='geobukseon'?1:1.75, lift=this.heroOf.kind==='geobukseon'?0:8;
+    this.camera.position.set(this.hero.x+(portrait?60:37)*k+drift, (portrait?17:8)+lift, this.hero.z+(portrait?48:24)*k);
+    this.target.set(this.hero.x+(portrait?3:-28)*k*.15,(portrait?8:7)+lift*1.7,this.hero.z-(portrait?12:40)*k*.15);
     this.camera.lookAt(this.target);
     this.camera.updateMatrixWorld();
   }
