@@ -391,6 +391,7 @@ const SHOTS = {
     card: 0.5,
   },
   ...armadaShots(),
+  ...lepantoShots(),
 };
 
 /**
@@ -419,6 +420,27 @@ function armadaShots() {
     calais: plan(0, { exposure: 1.5, gamma: 1.1, saturation: 1 }, (c) => c.burning('japan').length >= 2 || c.e.battle.time > 300),
     gravelines: plan(20, { exposure: 1.1, gamma: 1.05, saturation: 1.06 }),
   };
+}
+
+/**
+ * Lepanto's five battles (the Holy League in the first slot, the Ottomans in the second): galleys fight at the ram and
+ * the boarding bridge, so each is played until the lines are within a few hundred metres (or a first galley is taken),
+ * then framed as the Armada's are, closer in.
+ */
+function lepantoShots() {
+  const closing = (c) => (c.e.battle.time > 30 && c.dist(c.cen(c.team('joseon')), c.cen(c.team('japan'))) < 450) || c.e.battle.time > 420;
+  const wide = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const F = c.around(H, c.team('japan'), 600); return c.place(H, c.toward(F, H) + 0.5, 170, 22, 34, 0.32, -0.05, 8); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 180, 20, 34, 0.3, -0.04, 8); },
+    (c) => { const A = c.cen(c.team('joseon')); const B = c.cen(c.team('japan')); const M = { x: (A.x + B.x) / 2, z: (A.z + B.z) / 2 }; return c.place(M, c.toward(B, A) + 0.8, 620, 130, 34, 0.2, -0.08); },
+  ];
+  const tall = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const F = c.around(H, c.team('japan'), 600); return c.place(H, c.toward(F, H) + 0.5, 180, 24, 54, 0, 0.3, 8); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 190, 22, 52, 0, 0.28, 8); },
+  ];
+  const plan = (grade) => ({ warm: 20, steps: [{ run: 2, until: closing }], moments: [0, 10, 20], wide, tall, grade, card: 0.5 });
+  const day = { exposure: 1, gamma: 1, saturation: 1.04 };
+  return { preveza: plan(day), djerba: plan({ exposure: 1.05, gamma: 1.03, saturation: 1.06 }), 'lepanto-north': plan(day), 'lepanto-centre': plan(day), 'lepanto-south': plan(day) };
 }
 
 const sha = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');

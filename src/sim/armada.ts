@@ -117,6 +117,38 @@ export const ARMADA_SCENARIOS: Record<ArmadaSlug, ScenarioInfo> = {
 export const ARMADA_ORDER: ArmadaSlug[] = ['plymouth', 'portland', 'wight', 'calais', 'gravelines'];
 export const isArmadaBattle = (id: string): id is ArmadaSlug => (ARMADA_ORDER as string[]).includes(id);
 
+/**
+ * The two commanders' lines for each battle's opening film. A line is quoted only where a record holds the words; the
+ * rest are summaries of what the record says he did, and their source says so. Sources: G. Mattingly, The Defeat of
+ * the Spanish Armada (1959); C. Martin & G. Parker, The Spanish Armada (1988); J. K. Laughton (ed.), State Papers
+ * relating to the Defeat of the Spanish Armada (Navy Records Society, 1894).
+ */
+export const ARMADA_QUOTES: Record<ArmadaSlug, { joseon: { text: string; source: string }; japan: { text: string; source: string } }> = {
+  plymouth: {
+    joseon: { text: '바람 위를 잡아라. 저들의 초승달 밖에서 멀리 쏜다.', source: '하워드 함대가 밤사이 바람 위로 돌아 원거리 포격한 기동 요약(인물 대사 아님), Mattingly 1959, 21장' },
+    japan: { text: '진형을 지켜라. 초승달을 흐트러뜨리지 마라.', source: '메디나 시도니아가 지킨 방어 진형 요약(인물 대사 아님), Martin & Parker 1988, 9장' },
+  },
+  portland: {
+    joseon: { text: '곶 안쪽에서 버틴다. 바람이 바뀔 때까지.', source: '포틀랜드 곶 안쪽 프로비셔 전대의 고립 요약(인물 대사 아님), Mattingly 1959, 22장' },
+    japan: { text: '갈레아스는 노를 저어 저 배들을 덮쳐라.', source: '몬카다의 갈레아스 공격 요약(인물 대사 아님), Martin & Parker 1988, 9장' },
+  },
+  wight: {
+    joseon: { text: '저들을 모래톱 쪽으로 몰아라. 솔렌트에 들이지 마라.', source: '와이트섬 앞 네 전대의 압박 기동 요약(인물 대사 아님), Mattingly 1959, 23장' },
+    japan: { text: '솔렌트를 잡지 못하면 칼레로 간다.', source: '메디나 시도니아가 칼레로 향한 결정 요약(인물 대사 아님), Martin & Parker 1988, 10장' },
+  },
+  calais: {
+    joseon: { text: '불배를 띄워라. 물살과 바람이 저들에게 데려가리라.', source: '1588년 8월 7일 밤 화공선 8척 투입 요약(인물 대사 아님), Mattingly 1959, 25장' },
+    japan: { text: '닻줄을 끊고 피했다가 다시 정박하라.', source: '메디나 시도니아가 내린 피신 후 재집결 명령 요약(인물 대사 아님), Martin & Parker 1988, 10장' },
+  },
+  gravelines: {
+    joseon: {
+      text: '하느님께서 적을 바람 아래로 멀리 몰아내는 좋은 날을 주셨다. 파르마 공과 시도니아 공은 며칠 안에 손을 잡지 못하리라.',
+      source: '드레이크가 월싱엄에게 보낸 편지, 1588년 7월 29일(율리우스력), Laughton 1894',
+    },
+    japan: { text: '산마르틴호는 물러서지 않는다. 함대를 다시 모아라.', source: '기함 산마르틴호가 돌아서서 싸우며 함대를 모은 일 요약(인물 대사 아님), Martin & Parker 1988, 11장' },
+  },
+};
+
 /** How the named Armada commanders fought, for the computer's maneuvers. */
 export const ARMADA_TEMPERS: [string, 'rash' | 'cautious' | 'bold' | 'steady'][] = [
   ['드레이크', 'bold'],

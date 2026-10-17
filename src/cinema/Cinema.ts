@@ -1,3 +1,4 @@
+import { CHAPTER_INTROS } from './scenes/chapters';
 import { Vector3, type PerspectiveCamera } from 'three/webgpu';
 import type { CameraPose as RtsPose, RtsCamera } from '../camera/RtsCamera';
 import { atmosphere } from '../render/atmosphere';
@@ -33,7 +34,7 @@ export interface CinemaHost {
   readonly cast?: CastHost;
 }
 
-const INTROS: Partial<Record<ScenarioId, Scene>> = { noryang: NORYANG_INTRO, hansan: HANSAN_INTRO, myeongnyang: MYEONGNYANG_INTRO };
+const INTROS: Partial<Record<ScenarioId, Scene>> = { noryang: NORYANG_INTRO, hansan: HANSAN_INTRO, myeongnyang: MYEONGNYANG_INTRO, ...CHAPTER_INTROS };
 const OUTROS: Partial<Record<ScenarioId, Scene>> = { noryang: NORYANG_OUTRO };
 const INTRO_KEY = 'imjin.cutscenes';
 const DOC_KEY = 'imjin.documentary';

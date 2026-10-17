@@ -94,3 +94,12 @@ and the subtitle says so.
 
 Not shown: 고니시 유키나가 at Noryang (he stayed in the Suncheon fort and slipped out by sea; he was not in the strait),
 any line for 진린 before the battle, 원균 or 이억기 speaking at Hansan (no recorded words).
+
+## The later chapters (src/cinema/scenes/chapters.ts)
+One opening per Armada and Lepanto battle on the same grammar. Their commanders have no 3D figures yet: the close-ups
+frame the flagship and each line comes with the commander's portrait. The lines and their records are the battles'
+quotes, `ARMADA_QUOTES` (src/sim/armada.ts) and `LEPANTO_QUOTES` (src/sim/lepanto.ts). Only two are quoted words:
+Drake's letter to Walsingham of 29 July 1588 (O.S.), after Gravelines (Laughton, State Papers relating to the Defeat
+of the Spanish Armada, 1894), and Don John's "win here or die" before Lepanto (Capponi 2006, ch. 12; Konstam 2003), with
+Ali Pasha's promise to his Christian rowers as reported (same sources). Every other line is a summary of what the record
+says the man did, and its source line says "(인물 대사 아님)".
