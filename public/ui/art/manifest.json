@@ -194,6 +194,40 @@
       "prompt": "Emblem of the Spanish Armada of 1588: a deep crimson circular badge with a bold gold ragged Burgundy saltire cross (the cross of Saint Andrew with knotted branches) centered, a small stylized gold galleon silhouette with high castles in the lower part, accents of crimson, gold and black. Clean modern seal / crest design, flat vector-like illustration with subtle depth, perfectly centered, a single circular badge filling about 88 percent of the square, bold simple shapes that stay legible at 32 pixels, refined thin gold rim. No sun disc, no rays, no sunburst. The area outside the circular badge is a pure flat white background (#FFFFFF) with nothing else, no shadow, no glow. No text, no letters, no Chinese characters, no numbers.",
       "model": "gpt-image-2",
       "generated": "1024x1024"
+    },
+    "emblem_holyleague": {
+      "kind": "emblem",
+      "file": "emblem_holyleague.webp",
+      "size": [
+        512,
+        512
+      ],
+      "small": "emblem_holyleague_sm.webp",
+      "smallSize": [
+        128,
+        128
+      ],
+      "smallBytes": 8952,
+      "prompt": "Emblem of the Holy League fleet of 1571 (Venice, Spain and the Papacy): a deep blue circular badge (the blue damask of the League standard) with a bold plain gold Latin cross above a white stylized Mediterranean war galley silhouette (long low hull, a single bank of oars, one lateen sail) on stylized white waves, accents of deep blue, gold and crimson. Clean modern seal / crest design, flat vector-like illustration with subtle depth, perfectly centered, a single circular badge filling about 88 percent of the square, bold simple shapes that stay legible at 32 pixels, refined thin gold rim. No sun disc, no rays, no sunburst. The area outside the circular badge is a pure flat white background (#FFFFFF) with nothing else, no shadow, no glow. No text, no letters, no Chinese characters, no numbers.",
+      "model": "gemini-3.1-flash-image-preview",
+      "generated": "1024x1024"
+    },
+    "emblem_ottoman": {
+      "kind": "emblem",
+      "file": "emblem_ottoman.webp",
+      "size": [
+        512,
+        512
+      ],
+      "small": "emblem_ottoman_sm.webp",
+      "smallSize": [
+        128,
+        128
+      ],
+      "smallBytes": 7070,
+      "prompt": "Emblem of the Ottoman fleet of 1571: a deep crimson circular badge with a bold white crescent above a white stylized Mediterranean war galley silhouette (long low hull, a single bank of oars, two lateen sails) on stylized white waves, accents of crimson, white and dark green. Clean modern seal / crest design, flat vector-like illustration with subtle depth, perfectly centered, a single circular badge filling about 88 percent of the square, bold simple shapes that stay legible at 32 pixels, refined thin gold rim. No sun disc, no rays, no sunburst. The area outside the circular badge is a pure flat white background (#FFFFFF) with nothing else, no shadow, no glow. No text, no letters, no Chinese characters, no numbers.",
+      "model": "gemini-3.1-flash-image-preview",
+      "generated": "1024x1024"
     }
   }
 }

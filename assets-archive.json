@@ -626,6 +626,14 @@
     "assets-src/generals-weapons-2026-10-17/review/ming_guandao.png": {"sha256":"6dac02daf31e66892eef0ac17711fb79171d609cf035f011b432725e9456916e","size":261166,"uploadedAt":"2026-10-17T09:11:31Z"},
     "assets-src/generals-weapons-2026-10-17/review/ming_guandao_front.png": {"sha256":"4f93488eac4c9f9d86658ffa775f4cc095671d19681a7c20611206e4493c12d1","size":263267,"uploadedAt":"2026-10-17T09:11:31Z"},
     "assets-src/generals-weapons-2026-10-17/review/ming_guandao_side.png": {"sha256":"d886b0bf69ca300ac0bafbb1f9d8f37d821ffdacf64902263098e7e41633f763","size":258881,"uploadedAt":"2026-10-17T09:11:31Z"},
-    "assets-src/generals-weapons-2026-10-17/review/weapon-contact-sheet.png": {"sha256":"651b95c7a5623be66626f35de8b69ce6d414beee4ad223a4f9f7828dc3b0fc76","size":150899,"uploadedAt":"2026-10-17T09:11:31Z"}
+    "assets-src/generals-weapons-2026-10-17/review/weapon-contact-sheet.png": {"sha256":"651b95c7a5623be66626f35de8b69ce6d414beee4ad223a4f9f7828dc3b0fc76","size":150899,"uploadedAt":"2026-10-17T09:11:31Z"},
+    "assets-src/ui-art/camps/holyleague-L1.png": {"sha256":"2483dd0dfa5a96e0229001a70eda431e1bb78408f566c332f6ede582d0d5ee01","size":1933182,"uploadedAt":"2026-10-17T11:59:07Z"},
+    "assets-src/ui-art/camps/holyleague-L2.png": {"sha256":"ef1e02d4a31df0299590f03a6303f49cc59d52ae7ac20f435e042260fcba69b6","size":1901315,"uploadedAt":"2026-10-17T11:59:06Z"},
+    "assets-src/ui-art/camps/holyleague-L3.png": {"sha256":"0391130db1ad2a86589751bf4008cdfb9fcb274106c75f8a6b59a005eda53eed","size":1997963,"uploadedAt":"2026-10-17T11:59:07Z"},
+    "assets-src/ui-art/camps/ottoman-L1.png": {"sha256":"1e89e6d2cb5a41c65f9c0365aeee3739bc935a58f0d9345178b642043093ec74","size":2072044,"uploadedAt":"2026-10-17T11:59:07Z"},
+    "assets-src/ui-art/camps/ottoman-L2.png": {"sha256":"524c67a81ea0b169d6b04776d4ed27743c43f5e1b3ac6018d8fe94f52c66d012","size":2076408,"uploadedAt":"2026-10-17T11:59:06Z"},
+    "assets-src/ui-art/camps/ottoman-L3.png": {"sha256":"5788d1856edf8f070a9e951384afee572f26614266569ec42d258e956f2cc550","size":2133219,"uploadedAt":"2026-10-17T11:59:07Z"},
+    "assets-src/ui-art/emblem_holyleague.png": {"sha256":"6c536b196d98eef6800bea63e4e5451e834a237e4559e09f0af10a4950852c8b","size":1107205,"uploadedAt":"2026-10-17T11:59:06Z"},
+    "assets-src/ui-art/emblem_ottoman.png": {"sha256":"00d03045bb9a0acfa2141e76d8972f971da2b8ae08f7efe85cfaa1680f18cfaa","size":571982,"uploadedAt":"2026-10-17T11:59:06Z"}
   }
 }

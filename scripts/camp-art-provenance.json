@@ -4,14 +4,16 @@
   "quality": "medium",
   "size": "1536x1024",
   "generatedAt": "2026-10-11",
-  "note": "Level 1 from text; levels 2 and 3 are edits of the level below. Exported as WebP, 1024 px wide.",
+  "note": "Level 1 from text; levels 2 and 3 are edits of the level below. Exported as WebP, 1024 px wide. A camp without its own `made` was made with the top-level provider and model.",
   "style": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction.",
   "factions": {
     "joseon": "Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions).",
     "japan": "Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes.",
     "ming": "Ming China: brick walls, red and yellow lacquered gate towers with yellow-glazed tiled roofs, plain red and yellow cloth banners without any emblem, large Chinese junk warships with batten sails.",
     "england": "Tudor England: grey dressed-stone curtain walls and round artillery towers, half-timbered houses with red clay tile and slate roofs, thatched cottages, the red St George cross on white flags and green-and-white Tudor pennants, low sleek race-built English galleons with three masts and square sails.",
-    "spain": "Habsburg Spain and Flanders: pale stone bastions and walls, whitewashed and red-brick houses with red tiled roofs, the red ragged cross of Burgundy on white flags and crimson banners, tall Spanish galleons with high castles fore and aft and four masts."
+    "spain": "Habsburg Spain and Flanders: pale stone bastions and walls, whitewashed and red-brick houses with red tiled roofs, the red ragged cross of Burgundy on white flags and crimson banners, tall Spanish galleons with high castles fore and aft and four masts.",
+    "holyleague": "the Holy League of 1571 (Venice, Spain, the Papacy): pale limestone bastions and walls of an Italian-style sea fortress, whitewashed houses with low-pitched red clay tile roofs, plain crimson and plain blue cloth banners without any emblem, long low Mediterranean war galleys with a single bank of oars, a bow spur and lateen sails, beached and moored stern-to along the quay.",
+    "ottoman": "the Ottoman Empire of 1571: grey stone fortress walls and round towers, whitewashed houses with low-pitched red clay tile roofs, a lead-domed mosque with a slender pencil minaret, plain red and plain green cloth banners without any emblem, long low Mediterranean war galleys (kadirga) and smaller galiots with a single bank of oars and lateen sails, moored stern-to along the quay."
   },
   "camps": [
     {
@@ -589,6 +591,72 @@
       ],
       "generatedAt": "2026-10-17",
       "quality": "medium"
+    },
+    {
+      "id": "holyleague",
+      "faction": "holyleague",
+      "commander": "신성동맹 함대 (공용)",
+      "regions": [],
+      "site": "a Venetian-held Ionian harbour below a stone sea fortress on a rocky point, olive and cypress hills behind, a small town of whitewashed houses with low red-tiled roofs and a square bell tower",
+      "made": {
+        "provider": "Google Gemini API",
+        "model": "gemini-3.1-flash-image-preview",
+        "size": "3:2",
+        "generatedAt": "2026-10-17"
+      },
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/holyleague-L1.webp",
+          "bytes": 51456,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. the Holy League of 1571 (Venice, Spain, the Papacy): pale limestone bastions and walls of an Italian-style sea fortress, whitewashed houses with low-pitched red clay tile roofs, plain crimson and plain blue cloth banners without any emblem, long low Mediterranean war galleys with a single bank of oars, a bow spur and lateen sails, beached and moored stern-to along the quay. LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: a Venetian-held Ionian harbour below a stone sea fortress on a rocky point, olive and cypress hills behind, a small town of whitewashed houses with low red-tiled roofs and a square bell tower."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/holyleague-L2.webp",
+          "bytes": 52832,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. the Holy League of 1571 (Venice, Spain, the Papacy): pale limestone bastions and walls of an Italian-style sea fortress, whitewashed houses with low-pitched red clay tile roofs, plain crimson and plain blue cloth banners without any emblem, long low Mediterranean war galleys with a single bank of oars, a bow spur and lateen sails, beached and moored stern-to along the quay. Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/holyleague-L3.webp",
+          "bytes": 60700,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. the Holy League of 1571 (Venice, Spain, the Papacy): pale limestone bastions and walls of an Italian-style sea fortress, whitewashed houses with low-pitched red clay tile roofs, plain crimson and plain blue cloth banners without any emblem, long low Mediterranean war galleys with a single bank of oars, a bow spur and lateen sails, beached and moored stern-to along the quay. Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
+    },
+    {
+      "id": "ottoman",
+      "faction": "ottoman",
+      "commander": "오스만 함대 (공용)",
+      "regions": [],
+      "site": "an Ottoman-held Greek harbour below a stone sea fortress on a dry hillside of olive trees, a small town of whitewashed houses with low red-tiled roofs, a domed mosque and a slender minaret",
+      "made": {
+        "provider": "Google Gemini API",
+        "model": "gemini-3.1-flash-image-preview",
+        "size": "3:2",
+        "generatedAt": "2026-10-17"
+      },
+      "levels": [
+        {
+          "level": 1,
+          "file": "public/ui/camps/ottoman-L1.webp",
+          "bytes": 60644,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. the Ottoman Empire of 1571: grey stone fortress walls and round towers, whitewashed houses with low-pitched red clay tile roofs, a lead-domed mosque with a slender pencil minaret, plain red and plain green cloth banners without any emblem, long low Mediterranean war galleys (kadirga) and smaller galiots with a single bank of oars and lateen sails, moored stern-to along the quay. LEVEL 1, a modest new camp: a low wooden palisade of sharpened logs around a small yard, one simple gate, three or four small thatched or plain tiled huts, a drying rack and a campfire, a short wooden jetty with two small fishing boats and no warships at all. Empty surroundings, plenty of untouched wild land and forest around it. Site: an Ottoman-held Greek harbour below a stone sea fortress on a dry hillside of olive trees, a small town of whitewashed houses with low red-tiled roofs, a domed mosque and a slender minaret."
+        },
+        {
+          "level": 2,
+          "file": "public/ui/camps/ottoman-L2.webp",
+          "bytes": 64322,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. the Ottoman Empire of 1571: grey stone fortress walls and round towers, whitewashed houses with low-pitched red clay tile roofs, a lead-domed mosque with a slender pencil minaret, plain red and plain green cloth banners without any emblem, long low Mediterranean war galleys (kadirga) and smaller galiots with a single bank of oars and lateen sails, moored stern-to along the quay. Grow this very same camp into LEVEL 2 on the identical site, identical camera angle and identical coastline: replace the palisade with a sturdier timber-and-earth wall with a watchtower at the gate, add a row of tiled barracks, a storehouse and a small parade ground, extend the pier and moor two or three proper warships. Keep the terrain, shoreline and composition exactly as they are."
+        },
+        {
+          "level": 3,
+          "file": "public/ui/camps/ottoman-L3.webp",
+          "bytes": 68594,
+          "prompt": "Bird's-eye strategy-game illustration of a sixteenth-century naval camp, seen from high above at a fixed three-quarter oblique angle (about 50 degrees down), the whole camp centred and fully inside the frame with sea at the top and land at the bottom. Dark, moody hand-painted cinematic look: blue-hour dusk, deep navy sea and dark pine hills, warm lantern and brazier light spilling from doors, soft drifting mist, fine film grain, rich but desaturated colours, a little gunpowder haze. Painterly realism like a concept painting for a historical naval epic. Tiny soldiers are dark unrecognizable figures, no faces. Absolutely no text, no letters, no Chinese characters, no Korean script, no numbers, no logos, no watermark, no border, no UI, no modern objects, no rising-sun flag, no sunburst. Use only the colours of the faction. the Ottoman Empire of 1571: grey stone fortress walls and round towers, whitewashed houses with low-pitched red clay tile roofs, a lead-domed mosque with a slender pencil minaret, plain red and plain green cloth banners without any emblem, long low Mediterranean war galleys (kadirga) and smaller galiots with a single bank of oars and lateen sails, moored stern-to along the quay. Grow this very same camp into LEVEL 3, a fully fortified naval base, on the identical site, identical camera angle and identical coastline: a continuous stone-and-timber wall with corner towers and a fortified gate, many tiled barracks, a large command hall, storehouses, cannon emplacements on the ramparts, a long stone quay with a large dock, and a fleet of several warships including the faction's best, lanterns lit everywhere. Keep the terrain, shoreline and composition exactly as they are."
+        }
+      ]
     }
   ]
 }
