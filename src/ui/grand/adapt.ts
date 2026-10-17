@@ -56,6 +56,10 @@ const PIN: Partial<Record<RegionId, { lon: number; lat: number }>> = {
   lisbon: { lon: -9.9, lat: 47.95 },
   corunna: { lon: -7.9, lat: 47.95 },
   santander: { lon: -5.7, lat: 47.85 },
+  // The Lepanto theatre's ports off its map: Famagusta at the eastern edge, Tripoli and Alexandria at the southern.
+  famagusta: { lon: 29.75, lat: 35.6 },
+  tripoli: { lon: 13.6, lat: 34.75 },
+  alexandria: { lon: 28.3, lat: 34.75 },
 };
 
 const LABEL: Partial<Record<RegionId, RegionView['labelSide']>> = {
@@ -439,6 +443,22 @@ const OPTION_TEXT: Record<GrandFaction, { name: string; leaders: string[]; blurb
     weakness: '느린 장전, 먼 본국',
     difficulty: 2,
   },
+  holyleague: {
+    name: '신성동맹',
+    leaders: ['돈 후안', '베니에르'],
+    blurb: '베네치아, 에스파냐, 교황령이 맺은 동맹의 함대입니다. 메시나에 모인 갤리선과 베네치아의 갈레아스로 오스만 함대를 찾아 이오니아해로 나갑니다.',
+    strengths: ['이물 대포 화력', '갈레아스', '화승총병'],
+    weakness: '흩어진 포구, 늦은 집결',
+    difficulty: 2,
+  },
+  ottoman: {
+    name: '오스만',
+    leaders: ['알리 파샤', '울루치 알리'],
+    blurb: '많은 갤리선과 갈리오트로 지중해 동쪽을 쥔 술탄의 함대입니다. 레판토와 모돈에서 시작해 베네치아의 섬들과 키프로스를 노립니다.',
+    strengths: ['많은 함선', '빠른 갤리선', '활과 도선전'],
+    weakness: '약한 이물 화력',
+    difficulty: 2,
+  },
 };
 
 /** The pick cards of a theatre's navies (the page's own theatre by default). */
@@ -459,7 +479,7 @@ export const factionOptions = (theatre = mapTheatreId()): FactionOption[] =>
     };
   });
 
-const NAVY: Record<GrandFaction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군', england: '잉글랜드 수군', spain: '에스파냐 수군' };
+const NAVY: Record<GrandFaction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군', england: '잉글랜드 수군', spain: '에스파냐 수군', holyleague: '신성동맹 함대', ottoman: '오스만 함대' };
 
 export function resultView(s: BattleSummary): BattleResultView {
   const winnerSide = s.winner === 'attacker' ? s.attacker : s.defender;

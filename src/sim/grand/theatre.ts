@@ -1,5 +1,6 @@
 import { REGION_ORDER, START, type StartSetup } from './regions';
 import { ARMADA_REGION_ORDER, ARMADA_START } from './regionsArmada';
+import { LEPANTO_REGION_ORDER, LEPANTO_START } from './regionsLepanto';
 import type { Grand, GrandFaction, PairKey, Relation, RegionId, TheatreId } from './types';
 
 /**
@@ -48,6 +49,18 @@ export const THEATRES: Record<TheatreId, TheatreDef> = {
     since: 6,
     intro: '잉글랜드와 에스파냐가 해협과 북해의 물길을 두고 맞섭니다.',
     seed: 1588,
+  },
+  // July 1571: the Holy League concluded in May, its fleet gathering at Messina, Famagusta still holding out.
+  lepanto: {
+    id: 'lepanto',
+    factions: ['holyleague', 'ottoman'],
+    order: LEPANTO_REGION_ORDER,
+    start: LEPANTO_START,
+    relations: { 'holyleague:ottoman': 'war' },
+    year: 1571,
+    since: 6,
+    intro: '신성동맹과 오스만 제국이 이오니아해와 지중해의 물길을 두고 맞섭니다.',
+    seed: 1571,
   },
 };
 

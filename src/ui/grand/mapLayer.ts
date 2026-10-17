@@ -44,7 +44,7 @@ const FULL_LENGTH = 40;
 /** A hull of this kind's length in frame units. */
 const shipLength = (kind: ShipClass) => SHIP_LENGTH * Math.min(1, SHIP_SPECS[kind].length / FULL_LENGTH);
 /** The ship a navy's squadron is drawn with when the kinds of its ships are not known (a replay's sailings). */
-const MAIN_SHIP: Record<FactionId, ShipClass> = { joseon: 'panokseon', japan: 'atakebune', ming: 'mingship', england: 'racegalleon', spain: 'spgalleon' };
+const MAIN_SHIP: Record<FactionId, ShipClass> = { joseon: 'panokseon', japan: 'atakebune', ming: 'mingship', england: 'racegalleon', spain: 'spgalleon', holyleague: 'galea', ottoman: 'kadirga' };
 /** A fishing boat's length in frame units: a third of a warship's, so the two are never confused. */
 const BOAT_LENGTH = R * 0.2;
 /** At most this many fishing boats on the whole map, two off each camp's coast. */
@@ -52,9 +52,9 @@ const BOAT_CAP = 28;
 /** A smoke plume's width and height in frame units: a hearth's, about twenty metres of the model tall. */
 const PLUME = { w: R * 0.16, h: R * 0.5 };
 /** The houses of a town: one of them smokes when the town has more than three, and each differs a little in size and shade. */
-const HOMES: ReadonlySet<PieceKind> = new Set<PieceKind>(['giwa', 'choga', 'wa_house', 'eu_house', 'eu_cottage']);
+const HOMES: ReadonlySet<PieceKind> = new Set<PieceKind>(['giwa', 'choga', 'wa_house', 'eu_house', 'eu_cottage', 'md_house', 'md_cottage']);
 /** What a camp's smoke can rise from: its halls, barracks, houses and tents, not its towers, stores or gates. */
-const HEARTHS: ReadonlySet<PieceKind> = new Set<PieceKind>([...HOMES, 'hall', 'wa_hall', 'mg_hall', 'mg_barracks', 'wa_tent', 'mg_tent', 'eu_hall', 'eu_tent']);
+const HEARTHS: ReadonlySet<PieceKind> = new Set<PieceKind>([...HOMES, 'hall', 'wa_hall', 'mg_hall', 'mg_barracks', 'wa_tent', 'mg_tent', 'eu_hall', 'eu_tent', 'ot_mosque']);
 /**
  * The buildings' close models show once the camera stands at most this far from what it looks at (a camp is then over
  * about 160 pixels across on a desktop window); farther views draw the far models, the same outlines in about a third of
@@ -64,7 +64,7 @@ const NEAR_DISTANCE = 0.3;
 /** Yards, lanes and fields float this far over the drawn ground (frame units), so the relief never shows through them. */
 const DECAL_LIFT = R * 0.005;
 /** The packed earth of a camp's yard by navy, the lanes' earth, and a paddy's and a dry field's two shades. */
-const YARD: Record<FactionId, string> = { joseon: '#9c8865', japan: '#968d7a', ming: '#928671', england: '#8f8a72', spain: '#9a8a6c' };
+const YARD: Record<FactionId, string> = { joseon: '#9c8865', japan: '#968d7a', ming: '#928671', england: '#8f8a72', spain: '#9a8a6c', holyleague: '#a69676', ottoman: '#a39071' };
 const LANE = '#bba57f';
 const FIELD = { paddy: ['#86a04a', '#9cb25a'], dry: ['#a79a58', '#8f8248'] } as const;
 

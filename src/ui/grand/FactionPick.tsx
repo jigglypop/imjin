@@ -45,7 +45,7 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
               </button>
             )}
             <div>
-              <div className="g-sheet__eyebrow">{t('캠페인 · {year}', { year: THEATRES[mapTheatreId()].year })}</div>
+              <div className="g-sheet__eyebrow">{t('캠페인 · {year}', { year: String(THEATRES[mapTheatreId()].year) })}</div>
               <h1 className="g-pick__title">{t('진영 선택')}</h1>
             </div>
           </header>

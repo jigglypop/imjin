@@ -1,8 +1,10 @@
 import koreaMeta from '../../select/demMeta.json';
 import britainMeta from '../../select/britainMeta.json';
+import mediterraneanMeta from '../../select/mediterraneanMeta.json';
 import { EXAGGERATION as KOREA_EXAGGERATION } from '../../select/demFrame';
 import koreaFrame from './mapFrame.json';
 import armadaFrame from './mapFrameArmada.json';
+import lepantoFrame from './mapFrameLepanto.json';
 import { mapTheatreId } from './theatreChoice';
 import type { TheatreId } from '../../sim/grand/types';
 
@@ -35,6 +37,8 @@ export type MapTheatre = {
 const THEATRE_MAPS: Record<TheatreId, MapTheatre> = {
   imjin: { id: 'imjin', meta: koreaMeta, frame: koreaFrame, dem: '/ui/korea_dem.webp', land: '/ui/grand_terrain.bin', image: '/ui/grand_map.webp', exaggeration: KOREA_EXAGGERATION, farLand: true },
   armada: { id: 'armada', meta: britainMeta, frame: armadaFrame, dem: '/ui/britain_dem.webp', land: '/ui/grand_terrain_armada.bin', image: '/ui/map_channel.webp', exaggeration: 9, farLand: false, openOnSeat: 6 },
+  // The Mediterranean's DEM is coarser still, but its mountains are high (the Pindus, the Apennines, the Alps in the north).
+  lepanto: { id: 'lepanto', meta: mediterraneanMeta, frame: lepantoFrame, dem: '/ui/mediterranean_dem.webp', land: '/ui/grand_terrain_lepanto.bin', image: '/ui/map_mediterranean.webp', exaggeration: 7, farLand: false, openOnSeat: 6 },
 };
 
 export const MAP: MapTheatre = THEATRE_MAPS[mapTheatreId()];

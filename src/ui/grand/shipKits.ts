@@ -21,7 +21,7 @@ function paint(hex: string): Paint {
 }
 
 /** The navy's colour, the same as the camps' banners and owner rings. */
-const BANNER: Record<FactionId, string> = { joseon: '#3f8cff', japan: '#e8452c', ming: '#f0b72a', england: '#5fae78', spain: '#d8574a' };
+const BANNER: Record<FactionId, string> = { joseon: '#3f8cff', japan: '#e8452c', ming: '#f0b72a', england: '#5fae78', spain: '#d8574a', holyleague: '#5f7fd0', ottoman: '#c8382f' };
 
 const BOTTOM = 4;
 
@@ -171,12 +171,46 @@ function spain(b: MeshBuilder) {
   streamer(b, paint(BANNER.spain), 0.5, 25.6, 6);
 }
 
+/**
+ * A Mediterranean war galley of 1571: a long, low, narrow hull with the outrigger (apostis) the oars work from and a
+ * dark band of oars down each side, the spur at the bow, a raised poop under its awning at the stern, and two masts
+ * with lateen yards and triangular sails. The League's and the Sultan's galleys differ in their paint and pennant.
+ */
+function galley(b: MeshBuilder, side: Paint, deck: Paint, awning: Paint, pennantColour: string) {
+  const L = 40;
+  hull(b, side, deck, { length: L, beam: 5.2, depth: 2.0, draft: 0.8, sheer: 0.7 });
+  const wood = paint('#4a3726'), oars = paint('#3a2c20'), cloth_ = paint('#e8dfc9');
+  // The apostis and the oar banks along both sides.
+  box(b, wood, [-3.4, 1.1, -14], [3.4, 1.45, 13], { skip: BOTTOM });
+  for (const sx of [-1, 1]) box(b, oars, sx < 0 ? [-7.6, 0.25, -12.5] : [3.4, 0.25, -12.5], sx < 0 ? [-3.4, 0.55, 12] : [7.6, 0.55, 12]);
+  // The spur, the poop and its awning.
+  cylinder(b, wood, [0, 1.4, L / 2 - 0.5], [0, 1.9, L / 2 + 5], 0.35, 0.12, 5, true);
+  box(b, wood, [-2.2, 1.4, -L / 2 + 0.6], [2.2, 2.6, -L / 2 + 6.5], { skip: BOTTOM });
+  box(b, awning, [-2.4, 3.9, -L / 2 + 0.4], [2.4, 4.3, -L / 2 + 6.8], { skip: BOTTOM });
+  // Two masts with lateen yards and their triangular sails, the main forward of amidships.
+  const lateen = (z: number, h: number, yard: number) => {
+    mast(b, wood, z, 1.2, h, 0.26);
+    const top: V3 = [0.3, 1.2 + h + yard * 0.32, z - yard * 0.45], low: V3 = [0.3, 1.2 + h * 0.35, z + yard * 0.55], foot: V3 = [0.3, 2.4, z - yard * 0.25];
+    cylinder(b, wood, [top[0], top[1], top[2]], [low[0], low[1], low[2]], 0.16, 0.12, 4, false);
+    polygon(b, cloth_, [top, low, foot], [1, 0, 0]);
+    polygon(b, cloth_, [top, foot, low], [-1, 0, 0]);
+  };
+  lateen(5, 19, 24);
+  lateen(-6, 12, 16);
+  streamer(b, paint(pennantColour), 5, 1.2 + 19 + 24 * 0.32, 6);
+}
+
+const holyleague = (b: MeshBuilder) => galley(b, paint('#3b2f28'), paint('#86684a'), paint('#b8322a'), BANNER.holyleague);
+const ottoman = (b: MeshBuilder) => galley(b, paint('#4a3423'), paint('#8a6c4c'), paint('#2f6b4a'), BANNER.ottoman);
+
 const BUILD: Record<FactionId, { length: number; build: (b: MeshBuilder) => void }> = {
   joseon: { length: 30, build: joseon },
   japan: { length: 28, build: japan },
   ming: { length: 26, build: ming },
   england: { length: 34, build: england },
   spain: { length: 34, build: spain },
+  holyleague: { length: 45, build: holyleague },
+  ottoman: { length: 45, build: ottoman },
 };
 
 /**

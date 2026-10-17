@@ -61,9 +61,12 @@ export const TUNING = {
     // The Armada theatre: the queen's ships fitted out in the Thames, the king's new galleons from Lisbon.
     england: { first: 6, every: 6, at: 'london', ships: { racegalleon: 1, pinnace: 2 } },
     spain: { first: 6, every: 6, at: 'lisbon', ships: { spgalleon: 2, urca: 2 } },
+    // The Lepanto theatre: Venice's Arsenal and the Sultan's yard on the Golden Horn.
+    holyleague: { first: 6, every: 6, at: 'venice', ships: { galea: 3 } },
+    ottoman: { first: 6, every: 6, at: 'istanbul', ships: { kadirga: 3, kalyata: 1 } },
   } as Record<GrandFaction, { first: number; every: number; at: RegionId; ships: Partial<Record<ShipKind, number>> }>,
   /** Allied campaign train/development cohorts account for unequal opening holdings and expedition travel. */
-  startFleet: { joseon: 0.98, japan: 0.74, ming: 1.95, england: 1, spain: 1 } as Record<GrandFaction, number>,
+  startFleet: { joseon: 0.98, japan: 0.74, ming: 1.95, england: 1, spain: 1, holyleague: 1, ottoman: 1 } as Record<GrandFaction, number>,
   /** Ships a navy can build only once their design is ready (GATES `unlock`): the turn, and the news it brings. */
   unlocks: [
     { faction: 'joseon', kind: 'geobukseon', turn: 3, note: '나대용이 거북선을 완성했습니다. 선소 2단계에서 건조할 수 있습니다.' },
@@ -75,7 +78,7 @@ export const TUNING = {
    * hulls in the densest anchorages (Japan round Busan), and winter slows the long crossing from China: these replace
    * `faction.*.income` there (tuned on 300 computer wars, scripts/balance-grand.mjs).
    */
-  marchIncome: { joseon: 1.1, japan: 1.0, ming: 2.7, england: 1.25, spain: 1.6 } as Record<GrandFaction, number>,
+  marchIncome: { joseon: 1.1, japan: 1.0, ming: 2.7, england: 1.25, spain: 1.6, holyleague: 1.4, ottoman: 1.4 } as Record<GrandFaction, number>,
   faction: {
     // Fast-production development cohorts retain each navy's distinct expedition and opening holdings.
     // Joseon opens with twenty-two ports and their standing garrisons to Japan's sixteen, so its income per port is the lowest.
@@ -89,6 +92,11 @@ export const TUNING = {
     // less here: 16 computer wars split 9 to 7 (TUNING overrides in a headless run of newGrand(null, seed, .., 'armada')).
     england: { ...COMPETITIVE_FACTIONS.england, income: 1.25, cost: 0.75, power: 1.5, label: '잉글랜드' },
     spain: { ...COMPETITIVE_FACTIONS.spain, income: 1.6, label: '에스파냐' },
+    // The League's galleys outgun the Ottomans' bow to bow and carry more arquebusiers, which the auto-resolve's hull and
+    // soldier count cannot see, and the Ottomans open with more hulls: its ships count for more, 16 computer wars split 9 to 7
+    // (Ottoman to League) in a headless run of newGrand(null, seed, .., 'lepanto').
+    holyleague: { ...COMPETITIVE_FACTIONS.holyleague, income: 1.4, power: 1.3, label: '신성동맹' },
+    ottoman: { ...COMPETITIVE_FACTIONS.ottoman, income: 1.4, label: '오스만' },
   } as Record<GrandFaction, { income: number; cost: number; power: number; label: string }>,
 };
 
@@ -195,10 +203,14 @@ export const GATES: Partial<Record<ShipKind, { yard: number; unlock: boolean }>>
   racegalleon: { yard: 1, unlock: false },
   spgalleon: { yard: 1, unlock: false },
   galleass: { yard: 2, unlock: true },
+  // The Lepanto theatre: the lantern galleys need the larger yards; Venice's galleasses wait for their conversion.
+  reale: { yard: 3, unlock: false },
+  sultana: { yard: 3, unlock: false },
+  vgalleass: { yard: 2, unlock: true },
 };
 
 /** The local boat each navy leaves to guard a port. */
-export const GARRISON_KIND: Record<GrandFaction, ShipKind> = { joseon: 'hyeopseon', japan: 'kobaya', ming: 'mingsmall', england: 'pinnace', spain: 'urca' };
+export const GARRISON_KIND: Record<GrandFaction, ShipKind> = { joseon: 'hyeopseon', japan: 'kobaya', ming: 'mingsmall', england: 'pinnace', spain: 'urca', holyleague: 'galea', ottoman: 'kalyata' };
 
 export const shipGold = (kind: ShipKind) => shipDef(kind).gold;
 

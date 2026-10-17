@@ -5,11 +5,11 @@ import type { Rng } from './rng';
  * The navies a campaign theatre can field (theatre.ts). The 1592 war in the Korean theatre plays the first three;
  * GRAND_FACTIONS stays their list, and code that runs a campaign asks `factionsOf(g)` for the navies of its theatre.
  */
-export type GrandFaction = Extract<Faction, 'joseon' | 'japan' | 'ming' | 'england' | 'spain'>;
+export type GrandFaction = Extract<Faction, 'joseon' | 'japan' | 'ming' | 'england' | 'spain' | 'holyleague' | 'ottoman'>;
 export const GRAND_FACTIONS: readonly GrandFaction[] = ['joseon', 'japan', 'ming'];
 
 /** A campaign's world: its map, regions, lanes and navies (theatre.ts). Absent in a save means the Korean theatre of 1592. */
-export type TheatreId = 'imjin' | 'armada';
+export type TheatreId = 'imjin' | 'armada' | 'lepanto';
 
 export type RegionId =
   | 'myeongnyang'
@@ -55,7 +55,11 @@ export type RegionId =
   // The Armada theatre (regionsArmada.ts).
   | 'london' | 'harwich' | 'downs' | 'dover' | 'portsmouth' | 'wight' | 'portland' | 'plymouth' | 'lizard' | 'scilly'
   | 'kinsale' | 'blasket' | 'forth' | 'orkney' | 'flushing' | 'calais' | 'gravelines' | 'dunkirk' | 'sluys' | 'ushant'
-  | 'corunna' | 'santander' | 'lisbon';
+  | 'corunna' | 'santander' | 'lisbon'
+  // The Lepanto theatre (regionsLepanto.ts).
+  | 'venice' | 'zara' | 'cattaro' | 'corfu' | 'cephalonia' | 'zante' | 'candia' | 'famagusta' | 'otranto' | 'naples'
+  | 'messina' | 'civitavecchia' | 'malta' | 'genoa' | 'istanbul' | 'gallipoli' | 'negroponte' | 'rhodes' | 'nafpaktos'
+  | 'patras' | 'curzolari' | 'preveza' | 'valona' | 'modon' | 'navarino' | 'tripoli' | 'alexandria';
 
 export type BuildingKind = 'camp' | 'shipyard' | 'battery' | 'dock' | 'granary' | 'beacon';
 export const BUILDING_KINDS: readonly BuildingKind[] = ['camp', 'shipyard', 'battery', 'dock', 'granary', 'beacon'];
@@ -142,7 +146,7 @@ export type FactionState = {
 };
 
 export type Relation = 'allied' | 'war';
-export type PairKey = 'japan:joseon' | 'japan:ming' | 'joseon:ming' | 'england:spain';
+export type PairKey = 'japan:joseon' | 'japan:ming' | 'joseon:ming' | 'england:spain' | 'holyleague:ottoman';
 
 /** A meeting of fleets in one region this turn, waiting to be fought out. */
 export type Contact = {

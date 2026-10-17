@@ -6,14 +6,16 @@ import type { TheatreId } from '../../sim/grand/types';
 // later on the same page reloads it (App.tsx asks `needsReload`). No imports beyond types: anything may read this.
 
 /** The theatre a chapter's campaign is fought in. A chapter without a campaign of its own has none. */
-export const theatreOfChapter = (chapter: string): TheatreId | null => (chapter === 'armada' ? 'armada' : chapter === 'imjin' ? 'imjin' : null);
+export const theatreOfChapter = (chapter: string): TheatreId | null =>
+  chapter === 'armada' ? 'armada' : chapter === 'lepanto' ? 'lepanto' : chapter === 'imjin' ? 'imjin' : null;
 
-/** The theatre the address names, without fixing anything: /armada/campaign is the Armada's, the rest 1592's. */
+/** The theatre the address names, without fixing anything: /armada/campaign is the Armada's, /lepanto/campaign Lepanto's, the rest 1592's. */
 export const theatreOfAddress = (): TheatreId => fromAddress();
 
 const fromAddress = (): TheatreId => {
   const path = typeof location === 'undefined' ? '/' : location.pathname;
-  return /^\/(?:en\/|ko\/)?armada(?:\/|$)/.test(path) ? 'armada' : 'imjin';
+  const m = /^\/(?:en\/|ko\/)?(armada|lepanto)(?:\/|$)/.exec(path);
+  return m ? (m[1] as 'armada' | 'lepanto') : 'imjin';
 };
 
 let locked: TheatreId | null = null;

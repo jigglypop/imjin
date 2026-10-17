@@ -351,6 +351,8 @@ export const CAMP_WALL: Record<FactionId, Record<Tier, WallStyle>> = {
   // The Armada theatre has no solved settlements; its camps are the European kits (campEurope.ts). Masonry stands in.
   england: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
   spain: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
+  holyleague: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
+  ottoman: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
 };
 
 // ---------- colour and light ----------

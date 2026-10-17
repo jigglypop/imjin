@@ -9,6 +9,8 @@ export const FACTION_INFO: Record<FactionId, { name: string; navy: string; color
   ming: { name: '명', navy: '명 수군', color: 'var(--ming)', soft: 'var(--ming-soft)', crest: 'ming' },
   england: { name: '잉글랜드', navy: '잉글랜드 수군', color: 'var(--england)', soft: 'var(--england-soft)', crest: 'england' },
   spain: { name: '에스파냐', navy: '에스파냐 수군', color: 'var(--spain)', soft: 'var(--spain-soft)', crest: 'spain' },
+  holyleague: { name: '신성동맹', navy: '신성동맹 함대', color: 'var(--holyleague)', soft: 'var(--holyleague-soft)', crest: 'holyleague' },
+  ottoman: { name: '오스만', navy: '오스만 함대', color: 'var(--ottoman)', soft: 'var(--ottoman-soft)', crest: 'ottoman' },
 };
 
 export const ownerName = (o: Owner) => t(o ? FACTION_INFO[o].name : '중립');

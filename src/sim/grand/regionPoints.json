@@ -363,5 +363,171 @@
     {"role":"defender","x":1450,"z":-5360,"r":260,"value":2,"site":{"x":1510,"z":-5500}},
     {"role":"centre","x":815,"z":-5100,"r":340,"value":2,"site":{"x":520,"z":-5510}},
     {"role":"flank","x":1027,"z":-4582,"r":220,"value":1}
+  ],
+  "venice": [
+    {"role":"attacker","x":3160,"z":-1990,"r":260,"value":2,"site":{"x":3160,"z":-2380}},
+    {"role":"defender","x":4280,"z":-2540,"r":260,"value":2,"site":{"x":4280,"z":-2720}},
+    {"role":"centre","x":3720,"z":-2265,"r":340,"value":2,"site":{"x":3720,"z":-2570}},
+    {"role":"flank","x":3967,"z":-1762,"r":220,"value":1,"site":{"x":3850,"z":-2590}}
+  ],
+  "zara": [
+    {"role":"attacker","x":-1440,"z":-2530,"r":260,"value":2,"site":{"x":-1180,"z":-2920}},
+    {"role":"defender","x":-2540,"z":-3080,"r":260,"value":2,"site":{"x":-2470,"z":-3250}},
+    {"role":"centre","x":-1990,"z":-2805,"r":340,"value":2,"site":{"x":-2110,"z":-3090}},
+    {"role":"flank","x":-2240,"z":-2304,"r":220,"value":1,"site":{"x":-2090,"z":-3080}}
+  ],
+  "cattaro": [
+    {"role":"attacker","x":4940,"z":-2870,"r":260,"value":2,"site":{"x":4830,"z":-3270}},
+    {"role":"defender","x":3730,"z":-3200,"r":260,"value":2,"site":{"x":3540,"z":-3120}},
+    {"role":"centre","x":4327,"z":-3006,"r":340,"value":2,"site":{"x":4420,"z":-3230}},
+    {"role":"flank","x":4188,"z":-2495,"r":220,"value":1,"site":{"x":4270,"z":-3240}}
+  ],
+  "corfu": [
+    {"role":"attacker","x":-5240,"z":-2170,"r":260,"value":2,"site":{"x":-5650,"z":-2250}},
+    {"role":"defender","x":-4680,"z":-3440,"r":260,"value":2,"site":{"x":-4620,"z":-3580}},
+    {"role":"centre","x":-4960,"z":-2805,"r":340,"value":2,"site":{"x":-5570,"z":-2800}},
+    {"role":"flank","x":-5363,"z":-2983,"r":220,"value":1,"site":{"x":-5550,"z":-3060}},
+    {"role":"flank","x":-4448,"z":-2579,"r":220,"value":1}
+  ],
+  "cephalonia": [
+    {"role":"attacker","x":-2600,"z":3930,"r":260,"value":2,"site":{"x":-2600,"z":4920}},
+    {"role":"defender","x":-1820,"z":4860,"r":260,"value":2,"site":{"x":-1870,"z":4980}},
+    {"role":"centre","x":-2210,"z":4395,"r":340,"value":2,"site":{"x":-2580,"z":4930}},
+    {"role":"flank","x":-1781,"z":4035,"r":220,"value":1}
+  ],
+  "zante": [
+    {"role":"attacker","x":-2710,"z":4570,"r":260,"value":2,"site":{"x":-2560,"z":4930}},
+    {"role":"defender","x":-3730,"z":5320,"r":260,"value":2,"site":{"x":-3620,"z":5430}},
+    {"role":"centre","x":-3220,"z":4945,"r":340,"value":2,"site":{"x":-3520,"z":5360}},
+    {"role":"flank","x":-3552,"z":4494,"r":220,"value":1,"site":{"x":-3510,"z":5310}}
+  ],
+  "candia": [
+    {"role":"attacker","x":3820,"z":4350,"r":260,"value":2,"site":{"x":4180,"z":4350}},
+    {"role":"defender","x":2990,"z":5340,"r":260,"value":2,"site":{"x":3160,"z":5510}},
+    {"role":"centre","x":3405,"z":4845,"r":340,"value":2,"site":{"x":3370,"z":5520}},
+    {"role":"flank","x":3926,"z":5282,"r":220,"value":1,"site":{"x":4150,"z":5370}},
+    {"role":"flank","x":2976,"z":4485,"r":220,"value":1,"site":{"x":2640,"z":5080}}
+  ],
+  "famagusta": [
+    {"role":"attacker","x":2200,"z":1690,"r":260,"value":2,"site":{"x":1960,"z":2620}},
+    {"role":"defender","x":2620,"z":2780,"r":260,"value":2,"site":{"x":2560,"z":2920}},
+    {"role":"centre","x":2410,"z":2235,"r":340,"value":2,"site":{"x":2050,"z":2650}},
+    {"role":"flank","x":2933,"z":2034,"r":220,"value":1},
+    {"role":"flank","x":1943,"z":2415,"r":220,"value":1,"site":{"x":1940,"z":2640}}
+  ],
+  "otranto": [
+    {"role":"attacker","x":-3200,"z":-2050,"r":260,"value":2,"site":{"x":-3050,"z":-2410}},
+    {"role":"defender","x":-3660,"z":-3160,"r":260,"value":2,"site":{"x":-3370,"z":-3160}},
+    {"role":"centre","x":-3430,"z":-2605,"r":340,"value":2,"site":{"x":-3290,"z":-2750}},
+    {"role":"flank","x":-3947,"z":-2391,"r":220,"value":1,"site":{"x":-3320,"z":-2830}}
+  ],
+  "naples": [
+    {"role":"attacker","x":-840,"z":-2480,"r":260,"value":2,"site":{"x":-690,"z":-2840}},
+    {"role":"defender","x":350,"z":-2810,"r":260,"value":2,"site":{"x":350,"z":-2940}},
+    {"role":"centre","x":-237,"z":-2616,"r":340,"value":2,"site":{"x":-240,"z":-2820}},
+    {"role":"flank","x":-95,"z":-2105,"r":220,"value":1,"site":{"x":-330,"z":-2820}}
+  ],
+  "messina": [
+    {"role":"attacker","x":5020,"z":3520,"r":260,"value":2,"site":{"x":5060,"z":3930}},
+    {"role":"defender","x":5980,"z":4310,"r":260,"value":2,"site":{"x":5840,"z":4370}},
+    {"role":"centre","x":5500,"z":3915,"r":340,"value":2,"site":{"x":5220,"z":4030}},
+    {"role":"flank","x":5856,"z":3483,"r":220,"value":1,"site":{"x":5590,"z":4160}}
+  ],
+  "civitavecchia": [
+    {"role":"attacker","x":5270,"z":-3020,"r":260,"value":2,"site":{"x":5270,"z":-3280}},
+    {"role":"defender","x":6570,"z":-2980,"r":260,"value":2,"site":{"x":6680,"z":-3090}},
+    {"role":"centre","x":5920,"z":-3000,"r":340,"value":2,"site":{"x":5830,"z":-3220}},
+    {"role":"flank","x":5903,"z":-2440,"r":220,"value":1,"site":{"x":5900,"z":-3230}}
+  ],
+  "malta": [
+    {"role":"attacker","x":-5650,"z":5140,"r":260,"value":2,"site":{"x":-5800,"z":5500}},
+    {"role":"defender","x":-6790,"z":5760,"r":260,"value":2,"site":{"x":-6590,"z":5960}},
+    {"role":"centre","x":-6220,"z":5450,"r":340,"value":2,"site":{"x":-5980,"z":5690}},
+    {"role":"flank","x":-6488,"z":4958,"r":220,"value":1,"site":{"x":-5970,"z":5640}}
+  ],
+  "genoa": [
+    {"role":"attacker","x":-7080,"z":-2630,"r":260,"value":2,"site":{"x":-6950,"z":-2630}},
+    {"role":"defender","x":-7080,"z":-3930,"r":260,"value":2,"site":{"x":-6990,"z":-4150}},
+    {"role":"centre","x":-7080,"z":-3280,"r":340,"value":2,"site":{"x":-6790,"z":-2990}},
+    {"role":"flank","x":-7640,"z":-3280,"r":220,"value":1,"site":{"x":-7640,"z":-4070}}
+  ],
+  "istanbul": [
+    {"role":"attacker","x":-1650,"z":-2850,"r":260,"value":2,"site":{"x":-2060,"z":-2930}},
+    {"role":"defender","x":-190,"z":-3250,"r":260,"value":2,"site":{"x":-130,"z":-3390}},
+    {"role":"centre","x":-920,"z":-3050,"r":340,"value":2,"site":{"x":-330,"z":-3610}},
+    {"role":"flank","x":-1068,"z":-3590,"r":220,"value":1,"site":{"x":-530,"z":-3890}},
+    {"role":"flank","x":-772,"z":-2510,"r":220,"value":1}
+  ],
+  "gallipoli": [
+    {"role":"attacker","x":3110,"z":900,"r":260,"value":2,"site":{"x":3110,"z":1290}},
+    {"role":"defender","x":2050,"z":1360,"r":260,"value":2,"site":{"x":1930,"z":1410}},
+    {"role":"centre","x":2556,"z":1075,"r":340,"value":2,"site":{"x":2560,"z":1250}},
+    {"role":"flank","x":2357,"z":616,"r":220,"value":1,"site":{"x":2480,"z":1290}}
+  ],
+  "negroponte": [
+    {"role":"attacker","x":6400,"z":180,"r":260,"value":2,"site":{"x":6540,"z":520}},
+    {"role":"defender","x":5960,"z":1290,"r":260,"value":2,"site":{"x":5960,"z":1450}},
+    {"role":"centre","x":6180,"z":735,"r":340,"value":2,"site":{"x":6450,"z":740}},
+    {"role":"flank","x":5659,"z":529,"r":220,"value":1,"site":{"x":6410,"z":830}}
+  ],
+  "rhodes": [
+    {"role":"attacker","x":380,"z":4480,"r":260,"value":2,"site":{"x":530,"z":4840}},
+    {"role":"defender","x":-750,"z":5140,"r":260,"value":2,"site":{"x":-860,"z":5400}},
+    {"role":"centre","x":-230,"z":4732,"r":340,"value":2,"site":{"x":-110,"z":5300}},
+    {"role":"flank","x":-467,"z":4326,"r":220,"value":1}
+  ],
+  "nafpaktos": [
+    {"role":"attacker","x":2740,"z":-2130,"r":260,"value":2,"site":{"x":2930,"z":-2500}},
+    {"role":"defender","x":1790,"z":-2920,"r":260,"value":2,"site":{"x":1850,"z":-3060}},
+    {"role":"centre","x":2265,"z":-2525,"r":340,"value":2,"site":{"x":2400,"z":-2840}},
+    {"role":"flank","x":1907,"z":-2094,"r":220,"value":1}
+  ],
+  "patras": [
+    {"role":"attacker","x":270,"z":4560,"r":260,"value":2,"site":{"x":550,"z":4840}},
+    {"role":"defender","x":1490,"z":4910,"r":260,"value":2,"site":{"x":1380,"z":5020}},
+    {"role":"centre","x":905,"z":4648,"r":340,"value":2,"site":{"x":800,"z":4900}},
+    {"role":"flank","x":1034,"z":4197,"r":220,"value":1,"site":{"x":1070,"z":4920}}
+  ],
+  "curzolari": [
+    {"role":"attacker","x":240,"z":-2520,"r":260,"value":2,"site":{"x":240,"z":-2910}},
+    {"role":"defender","x":-1010,"z":-2840,"r":260,"value":2,"site":{"x":-1170,"z":-2840}},
+    {"role":"centre","x":-400,"z":-2622,"r":340,"value":2,"site":{"x":-480,"z":-2810}},
+    {"role":"flank","x":-524,"z":-2137,"r":220,"value":1,"site":{"x":-600,"z":-2790}}
+  ],
+  "preveza": [
+    {"role":"attacker","x":-1910,"z":-2220,"r":260,"value":2,"site":{"x":-2190,"z":-2500}},
+    {"role":"defender","x":-2000,"z":-3400,"r":260,"value":2,"site":{"x":-2080,"z":-3210}},
+    {"role":"centre","x":-1865,"z":-2817,"r":340,"value":2,"site":{"x":-2070,"z":-2820}},
+    {"role":"flank","x":-1397,"z":-2853,"r":220,"value":1,"site":{"x":-2070,"z":-2770}}
+  ],
+  "valona": [
+    {"role":"attacker","x":560,"z":2180,"r":260,"value":2,"site":{"x":920,"z":2330}},
+    {"role":"defender","x":-660,"z":2800,"r":260,"value":2,"site":{"x":-770,"z":3060}},
+    {"role":"centre","x":-50,"z":2490,"r":340,"value":2,"site":{"x":110,"z":3080}},
+    {"role":"flank","x":-304,"z":1991,"r":220,"value":1}
+  ],
+  "modon": [
+    {"role":"attacker","x":-4210,"z":5400,"r":260,"value":2,"site":{"x":-4150,"z":5540}},
+    {"role":"defender","x":-5330,"z":5270,"r":260,"value":2,"site":{"x":-5330,"z":5450}},
+    {"role":"centre","x":-4763,"z":5275,"r":340,"value":2,"site":{"x":-4980,"z":5490}},
+    {"role":"flank","x":-4705,"z":4779,"r":220,"value":1,"site":{"x":-5040,"z":5470}}
+  ],
+  "navarino": [
+    {"role":"attacker","x":6450,"z":4340,"r":260,"value":2,"site":{"x":6210,"z":4580}},
+    {"role":"defender","x":7380,"z":5190,"r":260,"value":2,"site":{"x":7250,"z":5320}},
+    {"role":"centre","x":6915,"z":4765,"r":340,"value":2,"site":{"x":6820,"z":4980}},
+    {"role":"flank","x":7293,"z":4352,"r":220,"value":1,"site":{"x":6820,"z":4960}}
+  ],
+  "tripoli": [
+    {"role":"attacker","x":-2210,"z":2100,"r":260,"value":2,"site":{"x":-2060,"z":2460}},
+    {"role":"defender","x":-1010,"z":2460,"r":260,"value":2,"site":{"x":-1090,"z":2650}},
+    {"role":"centre","x":-1610,"z":2280,"r":340,"value":2,"site":{"x":-1850,"z":2520}},
+    {"role":"flank","x":-1466,"z":1801,"r":220,"value":1,"site":{"x":-1110,"z":2100}}
+  ],
+  "alexandria": [
+    {"role":"attacker","x":3570,"z":2840,"r":260,"value":2,"site":{"x":3310,"z":3100}},
+    {"role":"defender","x":5010,"z":3120,"r":260,"value":2,"site":{"x":5010,"z":3410}},
+    {"role":"centre","x":4290,"z":2980,"r":340,"value":2,"site":{"x":4430,"z":3330}},
+    {"role":"flank","x":4397,"z":2430,"r":220,"value":1}
   ]
 }

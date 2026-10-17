@@ -9,6 +9,8 @@
 //   node scripts/build-grand-terrain.mjs --preview=<dir>  also writes PNGs of the facets and of where the drawn coast differs
 //   node scripts/build-grand-terrain.mjs --theatre=armada [--check]  the Armada campaign's world from public/ui/britain_dem.webp
 //     to public/ui/grand_terrain_armada.bin; its north edge eases down to the sea as well, since no far land lies beyond it
+//   node scripts/build-grand-terrain.mjs --theatre=lepanto [--check]  the Lepanto campaign's, from public/ui/mediterranean_dem.webp
+//     to public/ui/grand_terrain_lepanto.bin, its north edge eased down the same way
 //
 // How it is made: greedy Delaunay refinement (Garland and Heckbert's "Fast polygonal approximation of terrains and height
 // fields", in the style of Mapbox's delatin): start from the DEM's four corners and keep inserting the texel of largest
@@ -43,6 +45,9 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const THEATRES = {
   imjin: { source: 'public/ui/korea_dem.webp', out: 'public/ui/grand_terrain.bin', rimNorth: false },
   armada: { source: 'public/ui/britain_dem.webp', out: 'public/ui/grand_terrain_armada.bin', rimNorth: true },
+  // The Mediterranean's DEM is coarser (1.2 km a texel) and its mountains steep: a real slope there rises more than SPIKE
+  // between neighbours, and fitting it to 18 m would take three times the Armada's triangles, so it is fitted looser.
+  lepanto: { source: 'public/ui/mediterranean_dem.webp', out: 'public/ui/grand_terrain_lepanto.bin', rimNorth: true, relief: 50, spike: 1200 },
 };
 const THEATRE = THEATRES[process.argv.find((a) => a.startsWith('--theatre='))?.slice(10) ?? 'imjin'];
 const SOURCE = THEATRE.source;
@@ -52,14 +57,14 @@ const VERSION = 1;
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, ...v] = a.replace(/^--/, '').split('='); return [k, v.length ? v.join('=') : 'true']; }));
 const num = (key, fallback) => (args[key] !== undefined ? Number(args[key]) : fallback);
 const PARAMS = {
-  relief: num('relief', 18),
+  relief: num('relief', THEATRE.relief ?? 18),
   miss: 4,
   landMin: num('landMin', 1.5),
   seaDepth: [num('seaMin', 3), num('seaMax', 40)],
   pocket: num('pocket', 48),
   rim: num('rim', 12),
   blur: num('blur', 16),
-  spike: 300,
+  spike: THEATRE.spike ?? 300,
 };
 
 /** Heights in metres, as terrain.ts decodes them. */

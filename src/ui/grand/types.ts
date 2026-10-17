@@ -1,7 +1,7 @@
 // View-model types of the faction campaign screens. They are deliberately plain data so the UI kit does not depend on
 // the campaign logic (src/sim/grand, src/campaign/grand.ts): the adapter in adapt.ts maps the store state onto these shapes.
 
-export type FactionId = 'joseon' | 'japan' | 'ming' | 'england' | 'spain';
+export type FactionId = 'joseon' | 'japan' | 'ming' | 'england' | 'spain' | 'holyleague' | 'ottoman';
 export type Owner = FactionId | null;
 
 /** The campaign has one treasury: grain and silver counted together as gold. */

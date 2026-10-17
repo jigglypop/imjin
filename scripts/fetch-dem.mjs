@@ -5,6 +5,7 @@ import { join } from 'node:path';
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const arg = (n, d) => process.argv.find((a) => a.startsWith('--' + n + '='))?.slice(n.length + 3) ?? d;
 // --region=channel fetches the Armada chapter's window (the English Channel) into its own files; the default is Korea.
+// --region=britain and --region=mediterranean fetch the Armada and Lepanto campaigns' worlds.
 const REGIONS = {
   korea: { out: 'korea_dem.webp', meta: 'demMeta.json', z: 10, bounds: { west: 125.85, east: 129.5, south: 34.1, north: 35.62 } },
   channel: { out: 'channel_dem.webp', meta: 'channelMeta.json', z: 8, bounds: { west: -6.6, east: 3.4, south: 49.02, north: 52.25 } },
@@ -12,6 +13,9 @@ const REGIONS = {
   // reaching past the campaign's frame (src/ui/grand/mapFrameArmada.json) so the continent's edge lies out in the haze.
   // About 800 m a pixel; its scale is taken at its own latitude.
   britain: { out: 'britain_dem.webp', meta: 'britainMeta.json', z: 8, width: 1800, midLat: 54, bounds: { west: -12.6, east: 6.6, south: 46.3, north: 60.6 } },
+  // The Lepanto campaign's world: the central and eastern Mediterranean from Genoa and Tunis to Istanbul and Rhodes, past
+  // the campaign's frame (src/ui/grand/mapFrameLepanto.json) on every side. About 1.3 km a pixel at its middle latitude.
+  mediterranean: { out: 'mediterranean_dem.webp', meta: 'mediterraneanMeta.json', z: 8, width: 1800, midLat: 40, bounds: { west: 7.0, east: 31.6, south: 33.0, north: 47.2 } },
 };
 const REGION = REGIONS[arg('region', 'korea')];
 const OUT = join(ROOT, 'public', 'ui', REGION.out);

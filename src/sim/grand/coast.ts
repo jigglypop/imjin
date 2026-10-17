@@ -341,6 +341,53 @@ function ARMADA_SITES(): Partial<Record<RegionId, RegionSite>> {
   };
 }
 
+/**
+ * The Lepanto theatre's ports are fought on the chapter's five coasts (src/terrain/lepantoTerrain.ts): the Aetolian
+ * shore to the north (the northern wing's) for the ports on a northern or western shore, the Peloponnese shore to the
+ * south (the southern wing's) for those on a southern one, the strait of Preveza for Preveza itself and the low coast of
+ * Djerba for the North African ports. Like the Armada's these are adapted battle areas, not surveys of each port; only
+ * the Curzolari (the battle of Lepanto's northern wing) and Preveza (1538) name their battles.
+ */
+function LEPANTO_SITES(): Partial<Record<RegionId, RegionSite>> {
+  const north = (scenario: ScenarioId, port: { x: number; z: number }, own: boolean, name: string, latin: string, sky: SkyPresetName, sea: SeaStateName): RegionSite => ({
+    scenario: own ? scenario : null, terrain: SCENARIO_TERRAIN(scenario), port, seaward: Math.PI / 2, span: 1300, sky, sea, foliage: 0.45,
+    names: armadaNames(name, latin),
+  });
+  const south = (scenario: ScenarioId, port: { x: number; z: number }, own: boolean, name: string, latin: string, sky: SkyPresetName, sea: SeaStateName): RegionSite => ({
+    scenario: own ? scenario : null, terrain: SCENARIO_TERRAIN(scenario), port, seaward: -Math.PI / 2, span: 1300, sky, sea, foliage: 0.35,
+    names: armadaNames(name, latin),
+  });
+  return {
+    venice: north('lepanto-north', { x: 4200, z: -3500 }, false, '베네치아', 'Venice', 'day', 'calm'),
+    zara: north('lepanto-north', { x: -2400, z: -3600 }, false, '자라', 'Zara', 'day', 'calm'),
+    cattaro: north('preveza', { x: 3600, z: -3400 }, false, '카타로', 'Cattaro', 'overcast', 'calm'),
+    corfu: north('lepanto-north', { x: -4600, z: -3700 }, false, '코르푸', 'Corfu', 'day', 'moderate'),
+    cephalonia: south('lepanto-south', { x: -2000, z: 5400 }, false, '케팔로니아', 'Cephalonia', 'afternoon', 'moderate'),
+    zante: south('lepanto-south', { x: -3600, z: 5400 }, false, '잔테', 'Zante', 'afternoon', 'moderate'),
+    candia: south('lepanto-south', { x: 3000, z: 5400 }, false, '칸디아', 'Candia', 'day', 'moderate'),
+    famagusta: south('djerba', { x: 2600, z: 2900 }, false, '파마구스타', 'Famagusta', 'day', 'calm'),
+    otranto: north('preveza', { x: -4800, z: -3400 }, false, '오트란토', 'Otranto', 'day', 'moderate'),
+    naples: north('lepanto-north', { x: 0, z: -3700 }, false, '나폴리', 'Naples', 'day', 'calm'),
+    messina: south('lepanto-south', { x: 5600, z: 4400 }, false, '메시나', 'Messina', 'day', 'moderate'),
+    civitavecchia: north('preveza', { x: 7000, z: -3400 }, false, '치비타베키아', 'Civitavecchia', 'day', 'calm'),
+    malta: south('lepanto-south', { x: -7000, z: 5400 }, false, '몰타', 'Malta', 'day', 'moderate'),
+    genoa: north('lepanto-north', { x: -7000, z: -3800 }, false, '제노바', 'Genoa', 'overcast', 'moderate'),
+    istanbul: north('preveza', { x: 0, z: -3400 }, false, '이스탄불', 'Istanbul', 'day', 'moderate'),
+    gallipoli: south('preveza', { x: 2000, z: 1400 }, false, '겔리볼루', 'Gallipoli', 'day', 'moderate'),
+    negroponte: south('preveza', { x: 6000, z: 1400 }, false, '네그로폰테', 'Negroponte', 'afternoon', 'moderate'),
+    rhodes: south('lepanto-south', { x: -500, z: 5400 }, false, '로도스', 'Rhodes', 'day', 'moderate'),
+    nafpaktos: north('lepanto-north', { x: 2000, z: -3700 }, false, '레판토', 'Lepanto', 'day', 'calm'),
+    patras: south('lepanto-south', { x: 1200, z: 5400 }, false, '파트라스', 'Patras', 'day', 'calm'),
+    curzolari: north('lepanto-north', { x: -1200, z: -3600 }, true, '쿠르촐라리', 'Curzolari', 'day', 'calm'),
+    preveza: north('preveza', { x: -2000, z: -3400 }, true, '프레베자', 'Preveza', 'day', 'moderate'),
+    valona: south('preveza', { x: -500, z: 1400 }, false, '발로나', 'Valona', 'overcast', 'moderate'),
+    modon: south('lepanto-south', { x: -5400, z: 5400 }, false, '모돈', 'Modon', 'afternoon', 'moderate'),
+    navarino: south('lepanto-south', { x: 7400, z: 5400 }, false, '나바리노', 'Navarino', 'day', 'calm'),
+    tripoli: south('djerba', { x: -1000, z: 3000 }, false, '트리폴리', 'Tripoli', 'day', 'calm'),
+    alexandria: south('djerba', { x: 5000, z: 3000 }, false, '알렉산드리아', 'Alexandria', 'day', 'calm'),
+  };
+}
+
 /** The battle map's point names of an Armada theatre port, from its name. */
 function armadaNames(name: string, latin: string): RegionSite['names'] {
   return {
@@ -398,6 +445,7 @@ const COASTAL_SITES: Record<RegionId, RegionSite> = {
   seosaengpo: coastalPort('busan', '서생포', '西生浦'),
   ulsan: coastalPort('busan', '울산 도산', '蔚山島山'),
   ...ARMADA_SITES(),
+  ...LEPANTO_SITES(),
 };
 
 /** The south coast: evergreen hills, broad-leaved scrub in the folds, paddies in the valleys, a few tiled roofs. */
@@ -504,6 +552,10 @@ const COASTAL_FLOW: Record<RegionId, number> = {
   london: 0.7, harwich: 0.6, downs: 0.9, dover: 1.4, portsmouth: 0.8, wight: 1.1, portland: 1.3, plymouth: 0.7, lizard: 1, scilly: 1,
   kinsale: 0.5, blasket: 1.5, forth: 0.6, orkney: 1.6, flushing: 0.9, calais: 1, gravelines: 0.8, dunkirk: 0.6, sluys: 0.5, ushant: 1.4,
   corunna: 0.5, santander: 0.5, lisbon: 0.6,
+  // The Lepanto theatre: the Mediterranean is nearly tideless; the narrows (Messina, the Euripus, the Dardanelles) run.
+  venice: 0.5, zara: 0.4, cattaro: 0.3, corfu: 0.6, cephalonia: 0.4, zante: 0.4, candia: 0.4, famagusta: 0.3, otranto: 0.7, naples: 0.3,
+  messina: 1.4, civitavecchia: 0.3, malta: 0.4, genoa: 0.3, istanbul: 1.2, gallipoli: 1.4, negroponte: 1.6, rhodes: 0.5, nafpaktos: 0.6,
+  patras: 0.5, curzolari: 0.5, preveza: 0.9, valona: 0.4, modon: 0.5, navarino: 0.4, tripoli: 0.3, alexandria: 0.3,
 };
 
 function designedCurrent(id: RegionId, placed: Placed[], mid: { x: number; z: number }, axis: number): CurrentSpec {

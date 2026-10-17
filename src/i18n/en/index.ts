@@ -7,6 +7,7 @@ import { EN_SIM } from './sim';
 import { EN_ARMADA } from './armada';
 import { EN_LEPANTO } from './lepanto';
 import { EN_ARMADA_CAMPAIGN } from './armadaCampaign';
+import { EN_LEPANTO_CAMPAIGN } from './lepantoCampaign';
 import { EN_EXPANSION } from './expansion';
 import { EN_CONQUEST_DEPTH } from './conquest-depth';
 import { EN_CONTROLS } from './controls';
@@ -32,6 +33,7 @@ export const EN: Record<string, string> = {
   ...EN_ARMADA,
   ...EN_LEPANTO,
   ...EN_ARMADA_CAMPAIGN,
+  ...EN_LEPANTO_CAMPAIGN,
   ...EN_MENUS,
   ...EN_BATTLE,
   ...EN_CAMPAIGN,

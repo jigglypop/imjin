@@ -280,6 +280,56 @@ export const TREES: Record<string, CommanderTree> = {
     trait: { label: '기푸스코아 전대', text: '바스크 선원들의 전대장: 장전 +5%, 속도 +3%', effect: { reload: 1.05, speed: 1.03 } },
     mastery: { label: '산타 아나호', text: '장전 +5%, 명중 +5%', effect: { reload: 1.05, accuracy: 1.05 } },
   },
+
+  // The Lepanto theatre (Capponi, Victory of the West; Konstam, Lepanto 1571; Bicheno, Crescent and Cross).
+  donjuan: {
+    hanja: 'Don Juan de Austria',
+    branches: ['command', 'boarding'],
+    trait: { label: '카를 5세의 아들', text: '알푸하라스 반란을 진압한 스물네 살의 총사령관: 사기 +8%, 백병 +3%, 대담한 지휘', effect: { morale: 1.08, melee: 1.03, temper: 'bold' } },
+    mastery: { label: '레알호', text: '백병 +6%, 사기 +5%', effect: { melee: 1.06, morale: 1.05 } },
+  },
+  venier: {
+    hanja: 'Sebastiano Venier',
+    branches: ['boarding', 'command'],
+    trait: { label: '일흔다섯의 노장', text: '기함 갑판에서 석궁을 쏘며 싸운 베네치아 총사령관: 백병 +8%, 사기 +4%, 무모한 지휘', effect: { melee: 1.08, morale: 1.04, temper: 'rash' } },
+    mastery: { label: '베네치아의 기함', text: '방어 +6%, 백병 +5%', effect: { defense: 1.06, melee: 1.05 } },
+  },
+  barbarigo: {
+    hanja: 'Agostino Barbarigo',
+    branches: ['command', 'gunnery'],
+    trait: { label: '해안의 좌익', text: '얕은 해안에 붙여 좌익을 지켰다: 방어 +6%, 명중 +3%, 침착한 지휘', effect: { defense: 1.06, accuracy: 1.03, temper: 'steady' } },
+    mastery: { label: '마지막 지휘', text: '사기 +6%, 방어 +4%', effect: { morale: 1.06, defense: 1.04 } },
+  },
+  doria: {
+    hanja: 'Gian Andrea Doria',
+    branches: ['seamanship', 'command'],
+    trait: { label: '제노바의 갤리선 계약자', text: '자기 갤리선을 아끼는 노련한 선원: 선회 +8%, 방어 +3%, 신중한 지휘', effect: { turn: 1.08, defense: 1.03, temper: 'cautious' } },
+    mastery: { label: '우익의 기동', text: '속도 +4%, 선회 +5%, 항속 +6%', effect: { speed: 1.04, turn: 1.05, march: 0.06 } },
+  },
+  alipasha: {
+    hanja: 'Müezzinzade Ali Pasha',
+    branches: ['command', 'boarding'],
+    trait: { label: '카푸단 파샤', text: '예니체리를 태운 술타나의 지휘관: 백병 +8%, 사기 +4%, 대담한 지휘', effect: { melee: 1.08, morale: 1.04, temper: 'bold' } },
+    mastery: { label: '술타나호', text: '백병 +6%, 방어 +5%', effect: { melee: 1.06, defense: 1.05 } },
+  },
+  pertev: {
+    hanja: 'Pertev Pasha',
+    branches: ['boarding', 'command'],
+    trait: { label: '세르다르', text: '함대에 태운 원정군의 장군: 백병 +6%, 방어 +4%, 신중한 지휘', effect: { melee: 1.06, defense: 1.04, temper: 'cautious' } },
+    mastery: { label: '원정군', text: '백병 +5%, 사기 +5%', effect: { melee: 1.05, morale: 1.05 } },
+  },
+  uluc: {
+    hanja: 'Uluç Ali',
+    branches: ['seamanship', 'gunnery', 'boarding'],
+    trait: { label: '알제의 베일레르베이', text: '칼라브리아에서 붙잡혀 와 해적 제독이 되었다: 속도 +6%, 선회 +6%, 항속 +8%, 침착한 지휘', effect: { speed: 1.06, turn: 1.06, march: 0.08, temper: 'steady' } },
+    mastery: { label: '몰타의 기함', text: '레판토에서 몰타 기사단의 기함을 붙잡았다: 백병 +6%, 속도 +4%', effect: { melee: 1.06, speed: 1.04 } },
+  },
+  siroco: {
+    hanja: 'Mehmed Siroco',
+    branches: ['command', 'seamanship'],
+    trait: { label: '알렉산드리아 총독', text: '이집트 갤리선단을 이끈 우익의 지휘관: 사기 +5%, 선회 +4%', effect: { morale: 1.05, turn: 1.04 } },
+    mastery: { label: '해안의 우익', text: '방어 +5%, 백병 +5%', effect: { defense: 1.05, melee: 1.05 } },
+  },
 };
 
 export const MASTERY_ID = 'mastery';
@@ -331,6 +381,19 @@ export const TECHS: readonly TechDef[] = [
   { id: 'tercios', faction: 'spain', label: '테르시오 승선대', text: '백병 +12%, 방어 +4%', gold: 420, turns: 2, needs: [], effect: { melee: 1.12, defense: 1.04 } },
   { id: 'silver', faction: 'spain', label: '인디아스 은 선단', text: '수입 +5%', gold: 480, turns: 2, needs: [], income: 1.05 },
   { id: 'drill', faction: 'spain', label: '수병 조련', text: '사기 +8%, 장수 경험 +25%', gold: 350, turns: 2, needs: ['tercios'], effect: { morale: 1.08, xp: 1.25 } },
+
+  // The Lepanto theatre. Venice turned six great merchant galleys into galleasses at the Arsenal; Don Juan had the
+  // galleys' spurs cut down so their bow guns could fire low; Spain's arquebusiers fought aboard; the Ottomans carried
+  // janissaries and the composite bow, and the corsairs of Barbary sailed with them (Capponi; Guilmartin).
+  { id: 'galleasses', faction: 'holyleague', label: '갈레아스 개조', text: '갈레아스 건조 가능 (선소 2단계), 갈레아·갈레아스 방어 +10%', gold: 450, turns: 2, needs: [], kinds: ['galea', 'vgalleass'], effect: { defense: 1.1 }, unlock: 'vgalleass' },
+  { id: 'arquebus', faction: 'holyleague', label: '화승총병 승선', text: '백병 +10%, 명중 +4%', gold: 420, turns: 2, needs: [], effect: { melee: 1.1, accuracy: 1.04 } },
+  { id: 'spurs', faction: 'holyleague', label: '충각 절단', text: '이물 대포 낮게 쏘기: 명중 +8%', gold: 380, turns: 2, needs: ['arquebus'], effect: { accuracy: 1.08 } },
+  { id: 'drill', faction: 'holyleague', label: '수병 조련', text: '사기 +8%, 장수 경험 +25%', gold: 350, turns: 2, needs: ['galleasses'], effect: { morale: 1.08, xp: 1.25 } },
+
+  { id: 'janissaries', faction: 'ottoman', label: '예니체리 승선', text: '백병 +12%, 방어 +4%', gold: 420, turns: 2, needs: [], effect: { melee: 1.12, defense: 1.04 } },
+  { id: 'archers', faction: 'ottoman', label: '복합궁 사수', text: '전 함선 장전 +6%, 명중 +4%', gold: 400, turns: 2, needs: [], effect: { reload: 1.06, accuracy: 1.04 } },
+  { id: 'corsairs', faction: 'ottoman', label: '바르바리 해적 편입', text: '카드르가·칼리야타 속도 +5%, 선회 +6%', gold: 380, turns: 2, needs: [], kinds: ['kadirga', 'kalyata'], effect: { speed: 1.05, turn: 1.06 } },
+  { id: 'drill', faction: 'ottoman', label: '수병 조련', text: '사기 +8%, 장수 경험 +25%', gold: 350, turns: 2, needs: ['janissaries'], effect: { morale: 1.08, xp: 1.25 } },
 ];
 
 export const techsOf = (f: GrandFaction): TechDef[] => TECHS.filter((t) => t.faction === f);

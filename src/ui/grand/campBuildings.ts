@@ -2,6 +2,7 @@ import { MeshBuilder, compose, cloth, cylinder, polygon, rectSection, rotX, rotY
 import { bakeGrime } from '../../ships/build/bake';
 import { bannerPaint, buildingPaints } from './buildingAtlas';
 import { EUROPE_KITS } from './campEurope';
+import { MEDITERRANEAN_KITS } from './campMediterranean';
 import { METRES_PER_RADIUS, navyOf, WALL_KINDS, WALL_METRES, WATER_KINDS, type PieceKind } from './campPieces';
 import { batter, block, column, face, NY, PY, picture, pictureX, post, rect, roof, surface, thatch, walls, type Kit, type RoofLook } from './kitParts';
 
@@ -783,6 +784,7 @@ const KITS = {
   },
   doldam, tree, jeongja, wa_house: waHouse,
   ...EUROPE_KITS,
+  ...MEDITERRANEAN_KITS,
 } as Record<PieceKind, (k: Kit) => void>;
 
 /** Every kind a settlement is built from. */

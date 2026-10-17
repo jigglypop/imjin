@@ -11,7 +11,7 @@ const CAMP_SEAT: Record<string, [art: string, faction: FactionId]> = {
   dadaepo: ['todo', 'japan'], cheonseongpo: ['kurushima', 'japan'], jepo: ['shimazu', 'japan'],
   liaodong: ['chenlin', 'ming'], shandong: ['deng', 'ming'],
 };
-const SHARED_CAMP: Record<FactionId, string> = { joseon: 'admiral', japan: 'japan', ming: 'deng', england: 'england', spain: 'spain' };
+const SHARED_CAMP: Record<FactionId, string> = { joseon: 'admiral', japan: 'japan', ming: 'deng', england: 'england', spain: 'spain', holyleague: 'holyleague', ottoman: 'ottoman' };
 
 export const campArt = (regionId: string, owner: FactionId) => {
   const seat = CAMP_SEAT[regionId];

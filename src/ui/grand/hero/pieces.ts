@@ -406,6 +406,9 @@ function box(k: Kit, navy: FactionId, p: Extract<Piece, { kind: 'box' }>) {
 function flagPaint(navy: FactionId, colour: Colour): Paint {
   // The Armada theatre has no hero camps; its navies fly their own flags from the European atlas.
   if (navy === 'england' || navy === 'spain') return bannerPaint('england', navy);
+  // The Lepanto theatre's navies fly the stand-in flags of campMediterranean.ts.
+  if (navy === 'holyleague') return bannerPaint('england', 'england');
+  if (navy === 'ottoman') return bannerPaint('england', 'castile', [0.86, 0.8, 0.8]);
   const have: Record<'joseon' | 'japan' | 'ming', Colour[]> = { joseon: ['blue', 'red', 'yellow', 'white'], japan: ['white', 'red', 'black', 'blue'], ming: ['yellow', 'red', 'blue', 'black'] };
   if (have[navy].includes(colour)) return bannerPaint(navy, colour);
   if (colour === 'black') return bannerPaint(navy, have[navy][0]!, [0.16, 0.16, 0.18]);

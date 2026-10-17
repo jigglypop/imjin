@@ -135,6 +135,35 @@ export const AI: Record<GrandFaction, Personality> = {
     minPatience: 0.6,
     restBelow: 0.6,
   },
+  // The Lepanto theatre. The Holy League: heavy bow guns, arquebusiers and the galleasses, bent on the Ottoman bases of the
+  // Ionian Sea and the relief of the Venetian islands.
+  holyleague: {
+    attackRatio: 1.15,
+    worksShare: 0.4,
+    reserve: 90,
+    guard: 0.9,
+    doctrine: { galea: 0.74, vgalleass: 0.18, reale: 0.08 },
+    works: { camp: 1, shipyard: 1.2, battery: 1.2, dock: 1.1, granary: 1.1, beacon: 0.4 },
+    wanted: { nafpaktos: 1.5, modon: 1.2, navarino: 1, preveza: 1, famagusta: 1 },
+    minNet: 40,
+    impatience: 0.04,
+    minPatience: 0.65,
+    restBelow: 0.65,
+  },
+  // The Ottoman fleet: many fast galleys and galiots, raiding the Venetian islands and the Adriatic.
+  ottoman: {
+    attackRatio: 1.05,
+    worksShare: 0.35,
+    reserve: 100,
+    guard: 0.8,
+    doctrine: { kadirga: 0.62, kalyata: 0.3, sultana: 0.08 },
+    works: { camp: 1, shipyard: 1.3, battery: 0.9, dock: 1.1, granary: 1.2, beacon: 0.3 },
+    wanted: { famagusta: 1.5, candia: 1.3, corfu: 1.2, cephalonia: 1, zante: 1, cattaro: 0.8 },
+    minNet: 20,
+    impatience: 0.05,
+    minPatience: 0.6,
+    restBelow: 0.6,
+  },
 };
 
 const enemiesOf = (g: Grand, f: GrandFaction) => factionsOf(g).filter((o) => atWar(g, f, o));

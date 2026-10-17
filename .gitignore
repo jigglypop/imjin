@@ -364,3 +364,17 @@ assets-src/cards-chapters-*/*.webp
 /assets-src/commanders-2026-10-16/src/wuweizhong.webp
 /assets-src/commanders-2026-10-16/src/yanghao.webp
 public/models/generals/_stage/
+# The Lepanto campaign's binaries (assets.json)
+/public/ui/mediterranean_dem.webp
+/public/ui/grand_terrain_lepanto.bin
+/public/ui/map_mediterranean.webp
+/public/ui/camps/holyleague-L1.webp
+/public/ui/camps/holyleague-L2.webp
+/public/ui/camps/holyleague-L3.webp
+/public/ui/camps/ottoman-L1.webp
+/public/ui/camps/ottoman-L2.webp
+/public/ui/camps/ottoman-L3.webp
+/public/ui/art/emblem_holyleague.webp
+/public/ui/art/emblem_holyleague_sm.webp
+/public/ui/art/emblem_ottoman.webp
+/public/ui/art/emblem_ottoman_sm.webp
