@@ -109,9 +109,9 @@ The figures only stand now (owner: no command or attack clips), so the old waist
 plays over `order()` (scenes/shots.ts), a low camera off the flagship's quarter pushing in as she leads toward the enemy.
 The lines and their records are unchanged.
 
-## Commander openings (src/cinema/commanderIntros.ts)
-Each commander's short opening (on /generals from his card's 소개 영상 button and the first time he is picked; in the
-campaign's 장수 roster; in a battle opening his name plate the first time it features him). A line with `note` is
+## Commander lines (src/cinema/commanderIntros.ts)
+Each commander's record lines (the card films on /generals and in the campaign roster were removed by the owner
+2026-10-17; the data now feeds a battle opening's name plate the first time it features him). A line with `note` is
 written in character from the record named, and the subtitle adds "기록에 따른 대사"; the others are quoted.
 
 | Commander | Line | Record | Kind |

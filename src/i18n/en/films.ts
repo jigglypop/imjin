@@ -1,6 +1,5 @@
 /** The commanders' openings (src/cinema/commanderIntros.ts) and the campaigns' openings (src/cinema/campaignOpenings.ts). */
 export const EN_FILMS: Record<string, string> = {
-  '소개 영상': 'Intro film',
   '기록에 따른 대사': 'line based on the record',
   '조선 수군': 'Joseon navy',
   '일본 수군': 'Japanese navy',

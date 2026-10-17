@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ACESFilmicToneMapping, AnimationMixer, Box3, Group, LoopOnce, Matrix4, PerspectiveCamera, Quaternion, Scene, SRGBColorSpace, Vector3, WebGPURenderer,
-  type AnimationAction, type Bone, type DirectionalLight, type AnimationClip, type BufferGeometry, type DataTexture, type Material, type Mesh, type Object3D, type Skeleton, type SkinnedMesh, type Texture,
+  type AnimationAction, type Bone, type AnimationClip, type BufferGeometry, type DataTexture, type Material, type Mesh, type Object3D, type Skeleton, type SkinnedMesh, type Texture,
 } from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
@@ -11,8 +11,6 @@ import { tuneWebGLBackend } from '../../render/webglBackend';
 import { lightStage } from './studio';
 import type { WeaponDef } from '../../meta/catalog';
 import { idleBlade } from './idleBlade';
-import { introLength, markIntroduced, type IntroView } from '../../cinema/commanderIntros';
-import { FilmCaptions, useFilmClock } from '../CommanderFilm';
 
 /**
  * One armored representative character, with its own skeleton and motions, plus one replaceable weapon.
@@ -376,7 +374,6 @@ class FigureStage {
   private last = 0;
   private disposed = false;
   /** A commander's opening is playing: its start (performance.now) and length in seconds; the camera follows its path. */
-  private film: { start: number; length: number } | null = null;
 
   constructor(
     private readonly host: HTMLElement,
@@ -417,34 +414,6 @@ class FigureStage {
   private placeCamera() {
     this.camera.position.set(0, this.view.y, this.view.z);
     this.camera.lookAt(0, this.view.look, 0);
-  }
-
-  /**
-   * His opening (CommanderFilm.tsx): from low and wide, the whole figure in haze at the right of the frame, a slow
-   * push-in to his face; the key light drops and the rim comes up. Null hands the camera back.
-   */
-  setFilm(length: number | null) {
-    this.film = length === null ? null : { start: performance.now(), length };
-    this.scene.traverse((o) => {
-      const l = o as DirectionalLight;
-      if (!l.isDirectionalLight) return;
-      l.userData.base ??= l.intensity;
-      const rim = l.position.z < 0;
-      l.intensity = length === null ? (l.userData.base as number) : (l.userData.base as number) * (rim ? 2.6 : 0.75);
-    });
-    if (length === null) this.placeCamera();
-  }
-
-  private filmCamera(now: number) {
-    const f = this.film!;
-    const s = Math.min(1, Math.max(0, (now - f.start) / 1000 / f.length));
-    const k = s * s * (3 - 2 * s);
-    const lerp = (a: number, b: number) => a + (b - a) * k;
-    // Upright screens keep him in the middle; wide ones leave the left for his name.
-    const wide = Math.min(1, Math.max(0, this.camera.aspect - 0.8));
-    this.camera.position.set(lerp(-1.1, 0.42), lerp(0.45, 1.66), lerp(6.2, 1.55));
-    this.camera.lookAt(lerp(-0.9, -0.22) * wide, lerp(1.0, 1.58), 0);
-    this.turn.rotation.y = lerp(-0.42, -0.2);
   }
 
   /** Head and shoulders or the whole figure; the camera glides there. */
@@ -599,13 +568,10 @@ class FigureStage {
     this.view.y += (goal.y - this.view.y) * glide;
     this.view.z += (goal.z - this.view.z) * glide;
     this.view.look += (goal.look - this.view.look) * glide;
-    if (this.film) this.filmCamera(now);
-    else this.placeCamera();
+    this.placeCamera();
     // He turns slowly about straight on, a quarter each way, never showing his back unless dragged round.
     const turn = this.turn.rotation;
-    if (this.film) {
-      // The film holds his turn.
-    } else if (this.rotating && this.figure?.playing && !this.drag) {
+    if (this.rotating && this.figure?.playing && !this.drag) {
       const face = Math.round(turn.y / (Math.PI * 2)) * Math.PI * 2 - 0.35;
       turn.y += (face - turn.y) * Math.min(1, dt * 4);
     } else if (this.rotating && !this.drag) {
@@ -681,19 +647,7 @@ const INSPECTION_VIEWS: { view: FigureView; label: string }[] = [
 /**
  * One complete character file, null while its availability is unknown, and an optional replaceable weapon.
  */
-/** His opening over the stage: the stage's camera follows the film while it runs. */
-function StageFilm({ intro, stage, onDone }: { intro: IntroView; stage: FigureStage | null; onDone: () => void }) {
-  const length = introLength(intro);
-  const t = useFilmClock(length, onDone);
-  useEffect(() => {
-    markIntroduced(intro.id);
-    stage?.setFilm(length);
-    return () => stage?.setFilm(null);
-  }, [intro.id, stage, length]);
-  return <FilmCaptions intro={intro} t={t} onSkip={onDone} />;
-}
-
-export function GeneralModel({ files, weapon, film, onFilmEnd }: { files: string[] | null; weapon?: WeaponDef; film?: IntroView | null; onFilmEnd?: () => void }) {
+export function GeneralModel({ files, weapon }: { files: string[] | null; weapon?: WeaponDef }) {
   const t = useT();
   const host = useRef<HTMLDivElement | null>(null);
   const stage = useRef<FigureStage | null>(null);
@@ -726,8 +680,7 @@ export function GeneralModel({ files, weapon, film, onFilmEnd }: { files: string
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weapon?.id]);
   return (
-    <div className={`gen-model gen-model--${state}${film ? ' gen-model--film' : ''}`} ref={host}>
-      {film && <StageFilm intro={film} stage={stage.current} onDone={() => onFilmEnd?.()} />}
+    <div className={`gen-model gen-model--${state}`} ref={host}>
       {state === 'loading' && <span className="gen-model__wait" aria-hidden="true" />}
       {state === 'failed' && <p className="gen-model__error" role="status">{t('모델을 불러오지 못했습니다.')}</p>}
       {state === 'ready' && weaponState === 'loading' && <p className="gen-model__weapon-status" role="status">{t('무기를 불러오는 중입니다.')}</p>}

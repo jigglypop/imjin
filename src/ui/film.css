@@ -1,4 +1,4 @@
-/* A commander's opening (src/ui/CommanderFilm.tsx): 2.39:1 letterbox, the name in --font-title, his lines in --font-cine. */
+/* Film styles shared by the openings (battle name plates, campaign openings): 2.39:1 letterbox, --font-title names, --font-cine lines. */
 
 .film { position: absolute; inset: 0; z-index: 5; color: #f3f1ec; overflow: hidden; cursor: pointer; --side: #d9c08a; --bar: max(0px, calc((100% - 100vw / 2.39) / 2)); }
 .film--japan { --side: #e0a39a; }

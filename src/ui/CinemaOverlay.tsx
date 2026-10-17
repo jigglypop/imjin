@@ -92,11 +92,20 @@ function CaptionView({ caption, age }: { caption: Caption; age: number }) {
 }
 
 /**
- * A film subtitle for the commander on screen: his name and title, his words, the hanja of a quoted record, its source.
- * When his figure is not on deck (not live, not loaded, a failed load) his portrait comes in as a painted insert.
+ * A commander speaks through his comms box (owner 2026-10-17, strategy-game comms): his portrait thumbnail framed
+ * like a feed from his deck, name and title, his line typed out beside it, the record under it. The camera meanwhile
+ * holds on his flagship. Allied sides sit left and the enemy right, so an exchange reads as dialogue.
  */
 function SayView({ caption, age, insert, plate }: { caption: Extract<Caption, { kind: 'say' }>; age: number; insert: string | null; plate: IntroView | null }) {
   const t = useT();
+  const text = caption.text ? t(caption.text) : '';
+  // Typed in over the first ~55% of the line (never slower than 14 characters a second), then held to be read.
+  const rate = Math.max(14, text.length / Math.max(0.8, caption.dur * 0.55));
+  const typed = Math.min(text.length, Math.ceil(Math.max(0, age - 0.35) * rate));
+  // Whole words only: a word cut at the span boundary would wrap differently (keep-all) and jump when it completes.
+  const next = text.indexOf(' ', typed);
+  const shown = typed === 0 ? 0 : next < 0 ? text.length : next;
+  const right = caption.side === 'japan';
   return (
     <>
     {plate && (
@@ -106,17 +115,27 @@ function SayView({ caption, age, insert, plate }: { caption: Extract<Caption, { 
         <div className="cine-plate-title">{t(plate.title)}</div>
       </div>
     )}
-    <div className={`cine-say cine-say--${caption.side}${caption.text ? '' : ' cine-say--name'}`} style={{ opacity: opacityOf(age, caption.dur) }}>
-      {insert && <img className="cine-say-insert" src={portraitUrl(insert)} alt="" />}
-      <div className="cine-say-who">
-        <b>{t(caption.who)}</b>
-        {caption.role && <span>{t(caption.role)}</span>}
+    <div className={`cine-comms cine-say--${caption.side}${right ? ' cine-comms--right' : ''}${text ? '' : ' cine-comms--name'}`} style={{ opacity: opacityOf(age, caption.dur) }}>
+      <div className="cine-comms-thumb">
+        {insert && <img src={portraitUrl(insert)} alt="" />}
+        <span className="cine-comms-live" aria-hidden="true" />
       </div>
-      {caption.text && <div className="cine-say-text">{t(caption.text)}</div>}
-      {caption.hanja && <div className="cine-hanja cine-say-hanja">{caption.hanja}</div>}
-      <div className="cine-source">
-        {t(caption.source)}
-        {caption.note && ` · ${t(caption.note)}`}
+      <div className="cine-comms-body">
+        <div className="cine-say-who">
+          <b>{t(caption.who)}</b>
+          {caption.role && <span>{t(caption.role)}</span>}
+        </div>
+        {text && (
+          <div className="cine-comms-text">
+            {text.slice(0, shown)}
+            <span className="cine-comms-rest">{text.slice(shown)}</span>
+          </div>
+        )}
+        {caption.hanja && <div className="cine-hanja cine-say-hanja">{caption.hanja}</div>}
+        <div className="cine-source">
+          {t(caption.source)}
+          {caption.note && ` · ${t(caption.note)}`}
+        </div>
       </div>
     </div>
     </>
