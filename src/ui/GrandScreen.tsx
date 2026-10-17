@@ -13,6 +13,10 @@ import { BattleResult, EventCard, GameOver, GrandMenu, Hub, StatusPanel, TurnSum
 import { FactionPick } from './grand/FactionPick';
 import { FleetPanel } from './grand/FleetPanel';
 import { GrandMap } from './grand/GrandMap';
+import { CampaignOpening } from './grand/CampaignOpening';
+import { CAMPAIGN_OPENINGS, openingSeen } from '../cinema/campaignOpenings';
+import { filmsOn } from '../cinema/commanderIntros';
+import type { CameraState } from './grand/worldCamera';
 import { Guide, type GuideStepView } from './grand/Guide';
 import { RegionPanel } from './grand/RegionPanel';
 import { TopBar } from './grand/TopBar';
@@ -151,6 +155,17 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
   const [flipped, setFlipped] = useState(false);
   const [reduced] = useState(prefersReducedMotion);
   const [guideOn, setGuideOn] = useState(() => g.turn === 1 && g.phase === 'orders' && !guideSeen());
+  // The war's opening film, the first time its campaign opens on this device (and from ?opening=1).
+  const theatreId = (g.theatre ?? 'imjin') as keyof typeof CAMPAIGN_OPENINGS;
+  const opening = CAMPAIGN_OPENINGS[theatreId] ?? null;
+  const [filming, setFilming] = useState(() => {
+    if (!opening) return false;
+    const asked = typeof location !== 'undefined' && new URLSearchParams(location.search).get('opening') === '1';
+    if (asked) return true;
+    const automated = typeof navigator !== 'undefined' && navigator.webdriver;
+    return !automated && filmsOn() && g.turn === 1 && g.phase === 'orders' && !openingSeen(theatreId);
+  });
+  const filmCam = useRef<((now: number) => CameraState | null) | null>(null);
   const [guideStep, setGuideStep] = useState(0);
   const toastTimer = useRef(0);
 
@@ -387,7 +402,9 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
 
   return (
     <>
+      {filming && opening && <CampaignOpening opening={opening} film={filmCam} onDone={() => setFilming(false)} />}
       <GrandMap
+        film={filmCam}
         regions={regions}
         fleets={fleets}
         me={me}
@@ -589,7 +606,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
           onClose={() => setTechOpen(false)}
         />
       )}
-      {guideOn && !guideHidden && <Guide step={guideStep} steps={guideSteps} onNext={nextGuide} onClose={closeGuide} />}
+      {guideOn && !guideHidden && !filming && <Guide step={guideStep} steps={guideSteps} onNext={nextGuide} onClose={closeGuide} />}
       {menu && (
         <GrandMenu
           onClose={() => setMenu(false)}

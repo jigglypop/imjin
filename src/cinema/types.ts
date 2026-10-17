@@ -49,8 +49,8 @@ export type Close = { type: 'figure'; who: string; at: Target; from: V3; to: V3;
 /** Eases from wherever the last shot left the camera into the player's battle camera, so the hand-off has no jump. */
 export type Home = { type: 'home'; at: Target };
 
-/** What a figure does from a moment of its shot: the command clip (the sword sent forward) or back to standing. */
-export type Act = { who: string; move: 'command' | 'stand'; at: number };
+/** What a figure does from a moment of its shot: back to his standing clip (the figures only stand, owner 2026-10-17). */
+export type Act = { who: string; move: 'stand'; at: number };
 
 export type Shot = {
   dur: number;

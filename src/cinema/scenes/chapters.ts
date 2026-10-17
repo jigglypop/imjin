@@ -3,7 +3,7 @@ import { LEPANTO_ORDER, LEPANTO_QUOTES, LEPANTO_SCENARIOS, type Quote } from '..
 import type { ScenarioInfo } from '../../sim/scenarios';
 import { at, commander, first, flagship, fleet } from '../subjects';
 import type { CastLight, Scene } from '../types';
-import { closeUp, command, home } from './shots';
+import { closeUp, home, order } from './shots';
 
 /**
  * The openings of the later chapters' battles, on the 1592 grammar (establishing + title, the side's commander, the
@@ -36,7 +36,7 @@ function chapterIntro(info: ScenarioInfo, quotes: { joseon: Quote; japan: Quote 
       { dur: 8.5, cam: { type: 'orbit', at: at(foe, { toward: own }), yaw: [0.18, 0.3], pitch: [0.035, 0.05], dist: [650, 540], lift: 12 }, fov: 30 },
       closeUp('joseon', a, 7.5, -1),
       closeUp('japan', b, 7, 1),
-      command('joseon', a, 4.5),
+      order(a, foe, 4.5),
       { dur: 7, cam: { type: 'orbit', at: at(own, { toward: foe }), yaw: [Math.PI + 0.3, Math.PI + 0.18], pitch: [0.22, 0.28], dist: [900, 1050], lift: 10 }, fov: 34 },
       home(at(own)),
     ],

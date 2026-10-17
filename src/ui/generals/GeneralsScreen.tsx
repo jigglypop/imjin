@@ -12,6 +12,9 @@ import { portraitUrl } from '../portrait';
 import { ScreenFrame } from '../Screens';
 import { GeneralModel, useGeneralModels } from './GeneralModel';
 import './generals.css';
+import '../film.css';
+import { filmsOn, introduced, introOf } from '../../cinema/commanderIntros';
+import { PortraitFilm } from '../CommanderFilm';
 
 const NAVIES: { id: MetaFaction; label: string }[] = [
   { id: 'joseon', label: '조선' },
@@ -92,6 +95,9 @@ export function GeneralsScreen() {
   );
 }
 
+/** Automated runs (probes, screenshots) see the screen as before unless they ask for films with ?cutscene=1. */
+const automatedRun = () => typeof navigator !== 'undefined' && navigator.webdriver && new URLSearchParams(location.search).get('cutscene') !== '1';
+
 /** The figure files of one general, `<general>__<armor>`, by armor id. */
 function figuresOf(models: ReadonlySet<string> | null, id: string): Map<string, string> {
   const out = new Map<string, string>();
@@ -115,14 +121,28 @@ function GeneralFigure({ id, profile }: { id: string; profile: Profile }) {
   const files = useMemo(() => (file ? [file] : null), [file]);
   const held = wornWeapon(profile, id);
   const weapon = SWORD_ONLY.has(id) && held && held.kind !== 'sword' ? defaultWeapon(GENERALS.find((g) => g.id === id)!.faction) : held;
+  const intro = useMemo(() => introOf(id), [id]);
+  const [film, setFilm] = useState(false);
+  // His opening plays the first time he is picked on this device (unless battle films are off), and from the button.
+  useEffect(() => {
+    setFilm(false);
+    if (!intro || !models || introduced(id) || !filmsOn() || automatedRun()) return;
+    setFilm(true);
+  }, [id, intro, models]);
   return (
     <>
       <section className="gen-representative" aria-label={t('장수 모습')} data-model-id={file ?? id}>
-        {file ? <GeneralModel files={files} weapon={weapon} /> : (
+        {film && intro && !file && <PortraitFilm intro={intro} onDone={() => setFilm(false)} />}
+        {file ? <GeneralModel files={files} weapon={weapon} film={film && intro ? intro : null} onFilmEnd={() => setFilm(false)} /> : (
           <div className={`gen-model gen-representative__placeholder ${models ? 'gen-model--failed' : 'gen-model--loading'}`}>
             {models ? <img className="gen-representative__portrait" src={portraitOf(id)} alt="" /> : <span className="gen-model__wait" aria-hidden="true" />}
             <p className="gen-representative__status" role="status">{t(models ? '이 장수의 3D 모습은 준비 중입니다.' : '장수 모델을 불러오는 중입니다.')}</p>
           </div>
+        )}
+        {intro && (
+          <button className="gen-intro-button" data-intro={id} onClick={() => setFilm(true)}>
+            {t('소개 영상')}
+          </button>
         )}
       </section>
       {figures.size > 0 && (

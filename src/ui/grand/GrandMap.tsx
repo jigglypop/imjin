@@ -61,6 +61,8 @@ export interface GrandMapProps {
   onReplayPhase?: (phase: 'sail' | 'clash') => void;
   onReplayBeat?: (kind: 'clash' | 'capture') => void;
   onReplayDone?: () => void;
+  /** A campaign opening films the map: while it returns a camera, it holds the camera (CampaignOpening.tsx). */
+  film?: { current: ((now: number) => CameraState | null) | null };
 }
 
 /** What review scripts read and set on the 3D map (scripts/review-settlements.mjs), as window.__engine is for a battle. */
@@ -165,6 +167,7 @@ export function GrandMap({
   onReplayPhase,
   onReplayBeat,
   onReplayDone,
+  film,
 }: GrandMapProps) {
   const t = useT();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -534,6 +537,13 @@ export function GrandMap({
   const frameView = useCallback((now: number): WorldView | null => {
     if (!opened.current) return null;
     const screen = screenRef.current;
+    const filmed = film?.current?.(now);
+    if (filmed) {
+      motion.halt();
+      const c = clampState(filmed);
+      camRef.current = c;
+      return { cam: c, screen, more: true };
+    }
     const next = motion.step(camRef.current, screen, now);
     camRef.current = next;
     if (next !== shownCam.current) {
@@ -542,7 +552,7 @@ export function GrandMap({
     }
     const g = gesture.current;
     return { cam: next, screen, more: motion.moving || (g.moved && !g.boxing && pointers.current.size > 0) };
-  }, [motion]);
+  }, [motion, film]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 1 && e.button !== 2) return;

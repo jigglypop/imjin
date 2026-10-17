@@ -4,6 +4,7 @@ import type { Caption } from '../cinema/types';
 import { useT } from '../i18n';
 import './cinema.css';
 import { portraitUrl } from './portrait';
+import { introByName, introduced, markIntroduced, NAVY_LABEL, type IntroView } from '../cinema/commanderIntros';
 
 /** Seconds a caption takes to come in and to go. */
 const FADE = 0.7;
@@ -94,9 +95,17 @@ function CaptionView({ caption, age }: { caption: Caption; age: number }) {
  * A film subtitle for the commander on screen: his name and title, his words, the hanja of a quoted record, its source.
  * When his figure is not on deck (not live, not loaded, a failed load) his portrait comes in as a painted insert.
  */
-function SayView({ caption, age, insert }: { caption: Extract<Caption, { kind: 'say' }>; age: number; insert: string | null }) {
+function SayView({ caption, age, insert, plate }: { caption: Extract<Caption, { kind: 'say' }>; age: number; insert: string | null; plate: IntroView | null }) {
   const t = useT();
   return (
+    <>
+    {plate && (
+      <div className={`cine-plate cine-say--${caption.side}`} style={{ opacity: opacityOf(age, Math.min(caption.dur, 4.8)) * (age < 4.8 ? 1 : 0) }}>
+        <div className="cine-plate-eyebrow">{t(NAVY_LABEL[plate.faction])} · {plate.year}</div>
+        <div className="cine-plate-name">{t(plate.name)}</div>
+        <div className="cine-plate-title">{t(plate.title)}</div>
+      </div>
+    )}
     <div className={`cine-say cine-say--${caption.side}${caption.text ? '' : ' cine-say--name'}`} style={{ opacity: opacityOf(age, caption.dur) }}>
       {insert && <img className="cine-say-insert" src={portraitUrl(insert)} alt="" />}
       <div className="cine-say-who">
@@ -110,6 +119,7 @@ function SayView({ caption, age, insert }: { caption: Extract<Caption, { kind: '
         {caption.note && ` · ${t(caption.note)}`}
       </div>
     </div>
+    </>
   );
 }
 
@@ -126,6 +136,24 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
   const black = useRef<HTMLDivElement>(null);
   const progress = useRef<HTMLDivElement>(null);
   const labels = useRef(new Map<Caption, HTMLDivElement>());
+  /**
+   * The first time a commander is featured in a battle opening on this device, his first line comes with his name plate
+   * (--font-title): the opening introduces him (src/cinema/commanderIntros.ts).
+   */
+  const plates = useRef({ id: '', first: new Map<string, number>() });
+  const plateFor = (caption: Extract<Caption, { kind: 'say' }>): IntroView | null => {
+    const id = cinema.progress?.id ?? '';
+    if (!id) return null;
+    if (plates.current.id !== id) plates.current = { id, first: new Map() };
+    const first = plates.current.first;
+    const intro = introByName(caption.who);
+    if (!first.has(caption.who)) {
+      const fresh = !!intro && !introduced(intro.id);
+      first.set(caption.who, fresh ? caption.at : -1);
+      if (fresh) markIntroduced(intro.id);
+    }
+    return first.get(caption.who) === caption.at ? intro : null;
+  };
 
   // Captions and controls re-render every frame while anything is showing; the bars, fades and labels are moved here
   // directly, so an idle battle costs one cheap callback a frame.
@@ -228,7 +256,7 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
           ))}
       </div>
       {captions.map(({ caption, age }) =>
-        caption.kind === 'say' ? <SayView key={`say${caption.at}`} caption={caption} age={age} insert={cinema.insertFor(caption.cast)} /> : null,
+        caption.kind === 'say' ? <SayView key={`say${caption.at}`} caption={caption} age={age} insert={cinema.insertFor(caption.cast)} plate={plateFor(caption)} /> : null,
       )}
       {captions
         .filter((c) => c.caption.kind === 'title' || c.caption.kind === 'quote' || c.caption.kind === 'card')

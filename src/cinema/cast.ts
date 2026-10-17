@@ -3,7 +3,7 @@ import {
   type Material, type Mesh, type Object3D, type PerspectiveCamera, type Scene as ThreeScene,
 } from 'three/webgpu';
 import { lights } from 'three/tsl';
-import { createFigure, holdWeapon, listModels, loader, modelUrl, playFigure, releaseFigure, standFigure, weaponUrl, type Figure } from '../ui/generals/GeneralModel';
+import { createFigure, hangSword, holdWeapon, listModels, loader, modelUrl, releaseFigure, standFigure, weaponUrl, type Figure } from '../ui/generals/GeneralModel';
 import { WEAPONS } from '../meta/catalog';
 import type { Ship } from '../sim/types';
 import type { Place } from './rig';
@@ -159,11 +159,9 @@ export class Cast {
     return { x: p.x, y: p.y, z: p.z, heading: m.facing, size: 2 };
   }
 
-  act(name: string, move: 'command' | 'stand') {
+  act(name: string, _move: 'stand') {
     const f = this.members.get(name)?.figure;
-    if (!f) return;
-    if (move === 'command') playFigure(f, 'command');
-    else standFigure(f);
+    if (f) standFigure(f);
   }
 
   /** Per frame: each figure at his post, turned toward the enemy, his clip advanced; the lights placed for this camera. */
@@ -196,6 +194,8 @@ export class Cast {
       m.holder.visible = true;
       this.host.standIns.add(ship.id);
       m.figure.mixer.update(dt);
+      // The held sword hangs outside the body as on the generals screen (idleBlade.ts).
+      hangSword(m.figure);
     }
     // Key from the camera's left, above; rim from behind the subject, opposite; both aim at the subject on screen.
     const cam = this.host.camera;

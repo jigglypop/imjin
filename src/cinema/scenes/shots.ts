@@ -23,14 +23,15 @@ export const closeUp = (who: string, ship: Pick, dur: number, side: 1 | -1, acts
   acts,
 });
 
-/** Waist up, about 50 mm, as he gives the order: the command clip starts at once and the camera pushes in on it. */
-export const command = (who: string, ship: Pick, dur: number): Shot => ({
+/**
+ * The order, as a camera beat (the figures only stand, owner 2026-10-17): low off his flagship's quarter, pushing in as
+ * she leads toward the enemy, the order as a subtitle over it.
+ */
+export const order = (ship: Pick, toward: Pick, dur: number): Shot => ({
   dur,
-  cam: { type: 'figure', who, at: at(ship), from: [3.7, 2.0, 0.9], to: [2.7, 1.95, 0.6], look: [0, 1.55, 0], fallback: around(ship) },
-  fov: 30,
-  aperture: 0.8,
-  ease: 'out',
-  acts: [{ who, move: 'command', at: 0.4 }],
+  cam: { type: 'orbit', at: at(ship, { toward }), yaw: [Math.PI - 0.62, Math.PI - 0.4], pitch: [0.07, 0.045], dist: [130, 82], lift: [9, 6] },
+  fov: [32, 27],
+  ease: 'inOut',
 });
 
 /** Over his shoulder toward the enemy he faces: his back sharp, the enemy fleet soft beyond. */

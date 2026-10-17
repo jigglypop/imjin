@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { useT } from '../../i18n';
 import { portraitUrl } from '../portrait';
 import { Modal } from './shared';
+import { introOf } from '../../cinema/commanderIntros';
+import { PortraitFilm } from '../CommanderFilm';
 import './growth.css';
+import '../film.css';
 import type { CommanderCardView, FactionId, SkillNodeView } from './types';
 
 export interface CommandersProps {
@@ -58,8 +61,11 @@ function Detail({ c, canOrder, onLearn, onAssign }: { c: CommanderCardView; canO
   const top = c.level >= c.maxLevel;
   const share = top ? 1 : Math.max(0, Math.min(1, (c.xp - c.xpFrom) / Math.max(1, c.xpTo - c.xpFrom)));
   const learn = (n: SkillNodeView) => canOrder && !coming && n.state === 'open' && onLearn(c.id, n.id);
+  const intro = introOf(c.id);
+  const [film, setFilm] = useState(false);
   return (
     <article className="g-cmd__detail" key={c.id}>
+      {film && intro && <PortraitFilm intro={intro} onDone={() => setFilm(false)} />}
       <header className={`g-cmd__hero${coming ? ' g-cmd__hero--coming' : ''}`}>
         <img className="g-cmd__portrait" src={portraitUrl(c.portrait)} alt="" width={768} height={768} />
         <div className="g-cmd__heroText">
@@ -68,6 +74,11 @@ function Detail({ c, canOrder, onLearn, onAssign }: { c: CommanderCardView; canO
             {c.name}
             {c.hanja && <span className="g-cmd__hanja">{c.hanja}</span>}
           </h3>
+          {intro && (
+            <button type="button" className="g-btn g-btn--sm g-btn--ghost" data-intro={c.id} onClick={() => setFilm(true)}>
+              {t('소개 영상')}
+            </button>
+          )}
           {coming ? (
             <p className="g-cmd__coming">{t('{date}에 수군에 합류합니다', { date: c.joins ?? '' })}</p>
           ) : (

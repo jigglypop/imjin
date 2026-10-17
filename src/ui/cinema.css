@@ -135,3 +135,11 @@
 .cine-say-insert { display: block; width: clamp(64px, 6vw, 96px); aspect-ratio: 3 / 4; object-fit: cover; margin: 0 auto 10px; border: 1px solid rgba(201, 179, 132, 0.5); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6); }
 .app--compact .cine-say { bottom: calc(var(--cine-bar, 0px) + 40px); }
 .app--compact .cine-say-text { font-size: 16px; }
+
+/* A commander's name plate the first time an opening features him (src/cinema/commanderIntros.ts): --font-title. */
+.cine-plate { position: absolute; left: var(--cine-gutter); top: 50%; transform: translateY(-62%); text-shadow: 0 2px 24px rgba(0, 0, 0, 0.85); }
+.cine-plate-eyebrow { font-family: var(--font-cine); font-weight: 500; font-size: clamp(11px, 0.95vw, 14px); letter-spacing: 0.4em; color: rgba(243, 241, 236, 0.78); animation: cine-track 2.4s cubic-bezier(.2, .6, .2, 1) both; }
+.cine-plate-name { margin-top: 0.25em; font-family: var(--font-title); font-weight: 400; font-size: clamp(38px, 5.2vw, 88px); line-height: 1.05; letter-spacing: 0.1em; animation: cine-title 2.6s cubic-bezier(.2, .7, .2, 1) both; }
+.cine-plate-title { display: inline-block; margin-top: 0.45em; padding-top: 0.45em; border-top: 2px solid var(--side, var(--cine-brass)); font-family: var(--font-cine); font-weight: 600; font-size: clamp(13px, 1.25vw, 19px); letter-spacing: 0.16em; color: rgba(243, 241, 236, 0.9); animation: cine-rise 1.8s ease-out 0.5s both; }
+.app--compact .cine-plate { top: calc(var(--cine-bar, 0px) + 12px); transform: none; }
+.app--compact .cine-plate-name { font-size: 30px; }
