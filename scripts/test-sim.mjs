@@ -330,7 +330,8 @@ try {
   await check('every historical battle has its address, in the order the history screen lists them', async () => {
     const { BATTLE_SLUGS } = await load('/src/routes.ts');
     assert.deepEqual([...BATTLE_SLUGS], SCENARIO_ORDER);
-    assert.deepEqual(Object.keys(SCENARIOS), SCENARIO_ORDER);
+    const { ARMADA_ORDER } = await load('/src/sim/armada.ts');
+    assert.deepEqual(Object.keys(SCENARIOS), [...SCENARIO_ORDER, ...ARMADA_ORDER]);
   });
 
   await check('scenario/map builders own the correct sea and projectile collisions follow local time', () => {

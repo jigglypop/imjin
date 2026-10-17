@@ -34,6 +34,11 @@ const BATTLE_TIP: Record<ScenarioId, Tip> = {
   chilcheon: TIPS.repel!,
   myeongnyang: TIDE,
   noryang: TIPS.lights!,
+  plymouth: TIPS['volley.port']!,
+  portland: TIPS.line!,
+  wight: TIPS.wedge!,
+  calais: TIPS.lights!,
+  gravelines: TIPS.line!,
 };
 const GENERAL_TIPS: Tip[] = ['skip', 'speed', 'broadside', 'ammo', 'card', 'hold'].map((id) => TIPS[id]!);
 const TIP_MS = 7000;

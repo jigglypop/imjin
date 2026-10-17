@@ -27,4 +27,10 @@ export const SCENARIO_TEXT = {
   chilcheon: { title: '칠천량 해전', hanja: '漆川梁海戰', date: '1597년 7월 16일', place: '거제 칠천량', hook: '조선 수군이 무너진 새벽의 기습. 포위를 뚫고 한 척이라도 더 살려야 합니다.' },
   myeongnyang: { title: '명량 해전', hanja: '鳴梁海戰', date: '1597년 9월 16일', place: '울돌목', hook: '13척으로 133척을 막아 낸 해전. 물살이 바뀔 때까지 버텨야 합니다.' },
   noryang: { title: '노량 해전', hanja: '露梁海戰', date: '1598년 11월 19일', place: '노량 해협 · 관음포', hook: '임진왜란의 마지막 해전. 조선·명 수군이 500여 척과 밤새 맞붙었습니다.' },
+  // The Armada chapter, 1588.
+  plymouth: { title: '플리머스 해전', hanja: 'Plymouth', date: '1588년 7월 31일', place: '플리머스 앞바다 · 에디스톤', hook: '바람 위를 잡은 잉글랜드 함대가 무적함대의 초승달 진형을 멀리서 포격했습니다.' },
+  portland: { title: '포틀랜드 해전', hanja: 'Portland Bill', date: '1588년 8월 2일', place: '포틀랜드 곶', hook: '곶 안쪽에 고립된 프로비셔를 갈레아스가 덮칩니다. 바람이 바뀔 때까지 버텨야 합니다.' },
+  wight: { title: '와이트섬 해전', hanja: 'Isle of Wight', date: '1588년 8월 4일', place: '와이트섬 앞바다 · 오워스', hook: '솔렌트로 들어가려는 무적함대를 네 개 전대로 막아 모래톱 쪽으로 몰아냈습니다.' },
+  calais: { title: '칼레 화공', hanja: 'Calais', date: '1588년 8월 7–8일', place: '칼레 앞바다', hook: '한밤중 불붙은 배 8척이 정박한 무적함대를 덮쳐 진형을 무너뜨렸습니다.' },
+  gravelines: { title: '그라블린 해전', hanja: 'Gravelines', date: '1588년 8월 8일', place: '그라블린 앞바다 · 플랑드르 모래톱', hook: '아르마다 전쟁의 결전. 잉글랜드 함대가 처음으로 가까이 붙어 포를 쏘았습니다.' },
 } satisfies Record<string, ScenarioText>;

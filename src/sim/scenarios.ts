@@ -1,4 +1,5 @@
 import { Battle } from './battle';
+import { SHIP_SPECS } from './catalog';
 import { DEPTH_LATEST } from './depth';
 import { SEA_STATES } from '../ocean/waves';
 import { variantFor } from '../ships/anchors';
@@ -22,6 +23,8 @@ import type { CurrentSpec } from './current';
 import { echelon, flagshipOf, numbered } from '../i18n/names';
 import type { BattleSlug } from '../routes';
 import { SCENARIO_TEXT, type ScenarioText } from './scenarioText';
+import { ARMADA_ORDER, ARMADA_PORTRAITS, ARMADA_SCENARIOS, ARMADA_TEMPERS, armadaForces, isArmadaBattle } from './armada';
+export { ARMADA_ORDER, isArmadaBattle };
 
 /** The nine historical battles. Each has an address of its own (/battles/hansan), so the id list lives in src/routes.ts. */
 export type ScenarioId = BattleSlug;
@@ -35,6 +38,7 @@ export type ScenarioInfo = ScenarioText & {
   difficulty: string;
   summary: string;
   result: string;
+  /** The two sides' forces, by battle slot: in a later chapter 'joseon' is its first navy and 'japan' its second. */
   forces: { joseon: string; japan: string; ming?: string };
   sky: SkyPresetName;
   sea: SeaStateName;
@@ -250,11 +254,13 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     ],
     view: { tx: -1700, tz: 0, dir: 0, dist: 1000, pitch: 0.27 },
   },
+  ...ARMADA_SCENARIOS,
 };
 
 export const SCENARIO_ORDER: ScenarioId[] = ['okpo', 'sacheon', 'dangpo', 'hansan', 'angolpo', 'busan', 'chilcheon', 'myeongnyang', 'noryang'];
 
 const PORTRAITS: [string, string][] = [
+  ...ARMADA_PORTRAITS,
   ['이순신', 'portrait_yi'],
   ['원균', 'portrait_won'],
   ['이억기', 'portrait_eokgi'],
@@ -276,6 +282,8 @@ const PORTRAITS: [string, string][] = [
 function portraitFor(team: Team, commander: string, kind: ShipKind) {
   for (const [name, portrait] of PORTRAITS) if (commander.includes(name)) return portrait;
   if (kind.startsWith('ming')) return 'portrait_deng';
+  if (kind === 'racegalleon' || kind === 'pinnace' || kind === 'fireship') return 'portrait_howard';
+  if (kind === 'spgalleon' || kind === 'galleass' || kind === 'urca') return 'portrait_medina';
   return team === 'japan' ? 'portrait_japan' : 'portrait_admiral';
 }
 
@@ -285,6 +293,7 @@ function portraitFor(team: Team, commander: string, kind: ShipKind) {
  * pressed forward; Shimazu fought his way through to Konishi.
  */
 const TEMPERS: [string, Temper][] = [
+  ...ARMADA_TEMPERS,
   ['와키자카', 'rash'],
   ['구키', 'cautious'],
   ['가토', 'cautious'],
@@ -369,7 +378,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     return sq;
   };
   const ship = (sq: Squadron, kind: ShipKind, p: Spot, name: string, flagship = false, variant?: number) => {
-    const r = kind === 'panokseon' || kind === 'geobukseon' || kind === 'atakebune' || kind === 'mingship' ? 22 : kind === 'sekibune' || kind === 'mingsmall' ? 15 : 9;
+    const r = kind === 'panokseon' || kind === 'geobukseon' || kind === 'atakebune' || kind === 'mingship' ? 22 : kind === 'sekibune' || kind === 'mingsmall' ? 15 : SHIP_SPECS[kind].faction === 'england' || SHIP_SPECS[kind].faction === 'spain' ? SHIP_SPECS[kind].length * 0.5 : 9;
     const spot = settle(p, r);
     taken.push({ x: spot.x, z: spot.z, r });
     const w = place(spot.x, spot.z);
@@ -600,6 +609,8 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
       });
     });
     b.retreatBelow.japan =0.35;
+  } else if (isArmadaBattle(id)) {
+    armadaForces(id, { b, rand, squad, ship, grid, arc, slotAll, numbered });
   } else {
     b.night = true;
     const head = 0;

@@ -32,7 +32,7 @@ export type BattleInfo = {
   art?: ScenarioId;
 };
 
-const FOLIAGE: Record<ScenarioId, number> = { okpo: 0.1, sacheon: 0.05, dangpo: 0, hansan: 0, angolpo: 0, busan: 0.6, chilcheon: 0, myeongnyang: 0.72, noryang: 1 };
+const FOLIAGE: Record<ScenarioId, number> = { okpo: 0.1, sacheon: 0.05, dangpo: 0, hansan: 0, angolpo: 0, busan: 0.6, chilcheon: 0, myeongnyang: 0.72, noryang: 1, plymouth: 0, portland: 0, wight: 0, calais: 0, gravelines: 0.1 };
 
 export function scenarioInfo(id: ScenarioId): BattleInfo {
   const s = SCENARIOS[id];

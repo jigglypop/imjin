@@ -15,6 +15,11 @@ export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
   chilcheon: { lon: 128.62, lat: 34.98 },
   myeongnyang: { lon: 126.31, lat: 34.57 },
   noryang: { lon: 127.87, lat: 34.94 },
+  plymouth: { lon: -4.25, lat: 50.25 },
+  portland: { lon: -2.45, lat: 50.5 },
+  wight: { lon: -1.25, lat: 50.55 },
+  calais: { lon: 1.8, lat: 50.98 },
+  gravelines: { lon: 2.05, lat: 51.06 },
 };
 
 const lonToX = (lon: number) => ((lon + 180) / 360) * 2 ** meta.zoom;
