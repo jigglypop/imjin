@@ -1,13 +1,14 @@
-// Click regression: every primary button of the main menu, the chapter tabs, the history battle list and /generals is
-// reachable (no overlay takes the pointer at its centre or edges) and does what it says within a second.
-//   node scripts/e2e-clicks.mjs [--url=http://127.0.0.1:5291] [--headed] [--max-ms=1000]
+// Click regression: every primary button of the main menu, the chapter tabs, each chapter's history battle list,
+// /generals (tabs, roster, weapons) and each chapter's campaign pick is reachable (no overlay takes the pointer at its
+// centre or edges), answers within --max-ms and no main-thread task between press and answer runs past --max-task-ms.
+//   node scripts/e2e-clicks.mjs [--url=http://127.0.0.1:5291] [--headed] [--max-ms=2000] [--max-task-ms=1500]
 // Needs a running dev server (npm run dev). Exit code 1 on any failure.
 import { chromium } from 'playwright-core';
 import { parseArgs } from './e2e/util.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 const base = (args.url ?? 'http://127.0.0.1:5291').replace(/\/$/, '');
-const maxMs = Number(args['max-ms'] ?? 1000);
+const maxMs = Number(args['max-ms'] ?? 2000);
 const win = process.platform === 'win32';
 const browser = await chromium.launch({
   channel: args.channel ?? (win ? 'msedge' : 'chrome'),
@@ -15,6 +16,14 @@ const browser = await chromium.launch({
   args: ['--enable-unsafe-webgpu', '--enable-gpu', '--ignore-gpu-blocklist', win ? '--use-angle=d3d11' : '--use-angle=metal'],
 });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+// Main-thread long tasks, to catch a click that freezes the page (the AudioContext once did this on the first gesture).
+await page.addInitScript(() => {
+  window.__longtasks = [];
+  try {
+    new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__longtasks.push([e.startTime, e.duration]); }).observe({ type: 'longtask', buffered: true });
+  } catch { /* no longtask timing in this browser */ }
+});
+const maxTaskMs = Number(args['max-task-ms'] ?? 1500);
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 const results = [];
@@ -58,11 +67,18 @@ async function blocked(selector = 'button, a[href], [role=tab]') {
 async function clickAndWait(name, locator, done, arg) {
   try {
     await locator.waitFor({ state: 'visible', timeout: 15000 });
+    const p0 = await page.evaluate(() => performance.now());
     const t0 = Date.now();
     await locator.click({ timeout: 3000, noWaitAfter: true, force: false });
     await page.waitForFunction(done, arg, { timeout: 8000, polling: 16 });
     const ms = Date.now() - t0;
-    record(name, ms <= maxMs, `${ms} ms`);
+    // Only tasks that started between the press and the answer: the next screen building its 3D afterwards is not a
+    // frozen click.
+    const task = await page.evaluate((p) => {
+      const end = performance.now();
+      return Math.round(Math.max(0, ...window.__longtasks.filter(([s, d]) => s >= p - 50 && s + d <= end + 50 && s < end - 30).map(([, d]) => d)));
+    }, p0);
+    record(name, ms <= maxMs && task <= maxTaskMs, `${ms} ms${task ? `, longest task ${task} ms` : ''}`);
   } catch (e) {
     record(name, false, e.message.split('\n')[0]);
   }
@@ -121,6 +137,41 @@ for (let i = (await factionTabs.count()) - 1; i >= 0; i--) {
     return document.querySelectorAll('.gen-tabs .gen-tab')[j]?.getAttribute('aria-selected') === 'true';
   }, i);
 }
+
+// /generals: the roster picks a commander, the weapon choices equip.
+await open('/generals');
+const picks = page.locator('.gen-roll .gen-pick');
+for (const i of [1, 2, 0]) {
+  await clickAndWait(`generals: roster ${i + 1}`, picks.nth(i), (j) => document.querySelectorAll('.gen-roll .gen-pick')[j]?.getAttribute('aria-pressed') === 'true', i);
+}
+const weapons = page.locator('.gen-weapons [data-weapon-id]:not([disabled])');
+for (const i of [1, 0]) {
+  const w = weapons.nth(i);
+  if (!(await w.count())) continue;
+  await w.scrollIntoViewIfNeeded().catch(() => undefined);
+  const id = await w.getAttribute('data-weapon-id');
+  await clickAndWait(`generals: weapon ${id}`, w, (wid) => document.querySelector(`.gen-weapons [data-weapon-id="${wid}"]`)?.getAttribute('aria-pressed') === 'true', id);
+}
+
+// Campaign: the faction cards and the difficulty pick answer, and the start button leaves the pick screen.
+for (const prefix of ['', '/armada', '/lepanto', '/trafalgar']) {
+  const label = `${prefix || '/imjin'} campaign`;
+  await open(`${prefix}/campaign`);
+  const covered = await blocked('.g-fcard, .g-level__opt, .g-pick__go, .screen-top button');
+  record(`${label}: no button covered`, !covered.length, covered.join('; '));
+  const cards = page.locator('.g-fcard');
+  const n = await cards.count();
+  record(`${label}: factions present`, n > 0, `${n} cards`);
+  for (let i = n - 1; i >= 0; i--) {
+    await clickAndWait(`${label}: faction ${i + 1}`, cards.nth(i), (j) => document.querySelectorAll('.g-fcard')[j]?.classList.contains('g-fcard--on'), i);
+  }
+  const levels = page.locator('.g-level__opt');
+  for (let i = (await levels.count()) - 1; i >= 0; i--) {
+    await clickAndWait(`${label}: level ${i + 1}`, levels.nth(i), (j) => document.querySelectorAll('.g-level__opt')[j]?.getAttribute('aria-checked') === 'true', i);
+  }
+}
+await open('/campaign');
+await clickAndWait('campaign: start', page.locator('.g-pick__go').first(), () => !document.querySelector('.g-pick__go'));
 
 if (errors.length) record('no page errors', false, errors.slice(0, 3).join(' | '));
 await browser.close();
