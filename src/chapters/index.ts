@@ -7,7 +7,7 @@ import type { Faction, ShipKind } from '../sim/types';
  * Chapters not yet built are listed with `ready: false` so the menu can show what is coming.
  */
 export type ChapterDef = {
-  id: ChapterId | 'lepanto' | 'redcliffs' | 'trafalgar';
+  id: ChapterId | 'lepanto' | 'trafalgar';
   title: string;
   /** The poster's native-script line above the title. */
   native: string;
@@ -64,7 +64,6 @@ export const CHAPTERS: ChapterDef[] = [
     history: '플리머스에서 그라블린까지 다섯 해전',
   },
   { id: 'lepanto', title: '레판토', native: 'LEPANTO', tagline: '', years: '1571', year: 1571, ready: false, navies: [[], []], hero: { kind: 'galleass', own: [], foe: [] }, billing: [], campaign: '', history: '' },
-  { id: 'redcliffs', title: '적벽', native: '赤壁', tagline: '', years: '208', year: 208, ready: false, navies: [[], []], hero: { kind: 'mingship', own: [], foe: [] }, billing: [], campaign: '', history: '' },
   { id: 'trafalgar', title: '트라팔가르', native: 'TRAFALGAR', tagline: '', years: '1805', year: 1805, ready: false, navies: [[], []], hero: { kind: 'racegalleon', own: [], foe: [] }, billing: [], campaign: '', history: '' },
 ];
 

@@ -1,6 +1,6 @@
 ---
 name: chapters
-description: Rules for adding or changing a MOONWAKE chapter (Armada 1588, Lepanto 1571, Red Cliffs 208, Trafalgar 1805, or a new one) - registry, factions, ships, battles, campaign, cross-chapter balance, visuals, assets and checks. Load before touching src/chapters, a chapter's ships, battles, campaign or balance.
+description: Rules for adding or changing a MOONWAKE chapter (Armada 1588, Lepanto 1571, Trafalgar 1805 (Red Cliffs was dropped by the owner), or a new one) - registry, factions, ships, battles, campaign, cross-chapter balance, visuals, assets and checks. Load before touching src/chapters, a chapter's ships, battles, campaign or balance.
 ---
 
 # MOONWAKE chapters
@@ -19,8 +19,9 @@ its representative flagship on the menu, ships balanced within and across chapte
 3. Battles: slugs in routes, scenarios with real coasts (Terrarium DEM bake like the Channel map), fleets, commanders, guides.
 4. Campaign: the generalized grand campaign (`src/sim/grand`) on the chapter's own region set and map; the 1592 grand campaign must stay identical (its tests and digests).
 5. Ship models: procedural builders in `src/ships/build/<chapter>.ts` + gpt-image atlas; crew models of the chapter's own people (never borrowed Ming/Japan crews).
-6. Menu hero, share cards, ship cards, HUD faction names, terrain dressing of the region (villages, trees).
-7. Balance (below), server acceptance, memory probes, tests, screenshots you actually looked at.
+6. Crews (병력): made exactly the way the 1592 crews are (same model/texture/LOD/animation/instancing pipeline in src/fx/Crew.ts, crewModels.ts, crewTypes.ts and their assets-src provenance), era-correct per faction - Armada: English and Spanish sailors/soldiers; Lepanto: Venetian/Spanish arquebusiers, galley rowers, Ottoman janissaries/azaps/archers; Trafalgar: British/French/Spanish sailors and marines in period uniform. Never borrow Joseon/Japan/Ming crews.
+7. Menu hero, share cards, ship cards, HUD faction names, terrain dressing of the region (villages, trees).
+8. Balance (below), server acceptance, memory probes, tests, screenshots you actually looked at.
 
 ## Cross-chapter balance
 - Stats stay historical; fairness is set by **price** (`COMPETITIVE_UNITS[kind].spec.cost` in `src/sim/competitive.ts`). 1592 prices are fixed (ranked).
@@ -41,9 +42,10 @@ its representative flagship on the menu, ships balanced within and across chapte
 - Check with `node scripts/shot.mjs` beside a 1592 ship at the same moment and camera.
 
 ## Menu flagship hero shot
-- `CHAPTERS[].hero.kind` is the flagship (거북선 for 1592; Ark Royal-class race galleon for 1588; galleass / Real for Lepanto; louchuan for Red Cliffs; HMS Victory for Trafalgar). Tall-masted ships are framed from further off and higher. Do not alter the turtle ship's look.
+- `CHAPTERS[].hero.kind` is the flagship (거북선 for 1592; Ark Royal-class race galleon for 1588; galleass / Real for Lepanto; HMS Victory for Trafalgar). Tall-masted ships are framed from further off and higher. Do not alter the turtle ship's look.
 
 ## Assets, provenance, audio, text, memory
+- Disk: keep >= 3 GB free on C:. Archive bulky generation sources to S3 with `npm run assets -- archive` (when it exists); otherwise delete your own intermediates.
 - Binaries (models, textures, audio, fonts, terrain, raw generations) go through `npm run assets -- push` and the committed `assets.json`; never commit binaries directly. Record every generated asset with prompt, tool and cost in provenance.json. Paid gen allowed (gpt-image, Tripo); Meshy is reserved for commander rigs - don't use it.
 - No human voices in battle audio (no cheers, shouts, war cries).
 - Phone: `?q=low` battle of the chapter through `scripts/probe-memory.mjs` (textures < 300 MB, GPU < 400 MB) and `scripts/probe-leak.mjs` (battle disposal frees everything).
