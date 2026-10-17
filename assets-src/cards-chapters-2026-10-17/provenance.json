@@ -1,0 +1,64 @@
+{
+  "tool": "scripts/chapter-cards.mjs",
+  "model": "gpt-image-2.5-sunburst",
+  "size": "1024x1536",
+  "quality": "high",
+  "style": "Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+  "cards": {
+    "racegalleon": {
+      "prompt": "An English race-built galleon of 1588 like the Ark Royal: a long low sleek hull with low castles, four masts with square sails painted with the red St George cross, green-and-white painted upper works. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T10:10:22.919Z",
+      "estimatedCostUsd": 0.25
+    },
+    "spgalleon": {
+      "prompt": "A high-charged Spanish Armada galleon of 1588 like the San Martín: towering fore and stern castles, square sails with the red Cross of Burgundy, red and gold painted upper works. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T10:11:03.809Z",
+      "estimatedCostUsd": 0.25
+    },
+    "galleass": {
+      "prompt": "A Neapolitan galleass of the Spanish Armada, 1588: a long galley hull with banks of oars, a high round bow castle with heavy guns, three lateen sails, red and black paint. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T10:11:48.691Z",
+      "estimatedCostUsd": 0.25
+    },
+    "fireship": {
+      "prompt": "An English fireship of 1588 at night, a small merchant ship burning from stem to stern with sails ablaze, drifting down on the wind. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T10:13:08.110Z",
+      "estimatedCostUsd": 0.25
+    },
+    "urca": {
+      "prompt": "A round-bellied Baltic urca store ship of the Spanish Armada, 1588, broad and slow with square sails. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T10:13:48.769Z",
+      "estimatedCostUsd": 0.25
+    },
+    "reale": {
+      "prompt": "La Real, the great flagship galley of Don John of Austria at Lepanto in 1571: a long low galley with thirty oars a side, a richly carved and gilded red-and-gold poop under an awning, the blue Holy League banner with a crucifix on the main lateen mast. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T10:14:32.627Z",
+      "estimatedCostUsd": 0.25
+    },
+    "galea": {
+      "prompt": "A Venetian war galley (galea sottile) of 1571 rowing hard, long and low, red paint, a centre-line bow gun on the bow platform, lateen sails furled, the red banner of the Lion of Saint Mark. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T10:15:12.303Z",
+      "estimatedCostUsd": 0.25
+    },
+    "vgalleass": {
+      "prompt": "A Venetian galleass at Lepanto in 1571: a heavy galley-built gun ship with a round bow castle firing a broadside of guns, oars out, three lateen masts, the Lion of Saint Mark banner. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T10:15:52.286Z",
+      "estimatedCostUsd": 0.25
+    },
+    "sultana": {
+      "prompt": "The Sultana, Ali Pasha's Ottoman flagship galley at Lepanto in 1571: a long galley with a gilded poop under a green awning, the great green banner with a gold double-bladed sword, janissaries in tall white caps on deck (no star on any flag, crescents only). Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T10:16:31.972Z",
+      "estimatedCostUsd": 0.25
+    },
+    "kadirga": {
+      "prompt": "An Ottoman kadırga war galley of 1571 rowing fast, long and low, red and green paint, a lateen sail striped red and white, red flags with white crescents (no stars), archers in turbans on the bow. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T10:17:11.958Z",
+      "estimatedCostUsd": 0.25
+    },
+    "kalyata": {
+      "prompt": "A small fast Ottoman corsair galiot (kalyata) of 1571 with one lateen mast and a single bank of oars, a red flag with a white crescent (no star), skimming low over the waves. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T10:17:54.564Z",
+      "estimatedCostUsd": 0.25
+    }
+  }
+}

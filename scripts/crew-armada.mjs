@@ -19,18 +19,20 @@ import { loadTexture, readCrew, renderLod, writeCrew } from './lib/crew-file.mjs
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const ENV = [join(ROOT, '.env'), 'C:/dev/imjin/.env'].find((p) => existsSync(p));
 if (ENV) process.loadEnvFile(ENV);
-const DIR = join(ROOT, 'assets-src', 'crew-armada-2026-10-17');
+// CREW_SET=lepanto (or trafalgar) makes another chapter's crews the same way, into its own source folder.
+const SET = process.env.CREW_SET ?? 'armada';
+const DIR = join(ROOT, 'assets-src', `crew-${SET}-2026-10-17`);
 const OUT = join(ROOT, 'public', 'models', 'crew');
 const PROV = join(DIR, 'provenance.json');
 
-const POSE =
+const ARMADA_POSE =
   'A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the Spanish Armada of 1588. ' +
   'The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, ' +
   'the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. ' +
   'Weathered, salt-stained, believable late-sixteenth-century materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs.';
 
 /** Each character: the shipped figure whose rig, clips and hand weapons he takes, and his costume. */
-export const CHARACTERS = {
+const ARMADA = {
   england_shot: {
     base: 'japan_ashigaru',
     look: 'An English Elizabethan caliver-man (musketeer) of 1588 aboard a royal galleon: a plain steel morion helmet with a tall comb and a curved brim, a buff leather jerkin over a russet wool doublet, a leather bandolier of small wooden powder charges across the chest, full grey-brown venetian breeches to the knee, wool stockings and low leather shoes. Short brown beard.',
@@ -64,8 +66,50 @@ export const CHARACTERS = {
     look: 'A Spanish sailor and gunner of the Armada of 1588: a red wool stocking cap, a loose off-white linen shirt with rolled sleeves, a short brown leather jerkin open at the front, wide knee-length faded blue canvas breeches, bare shins and rope-soled shoes. Dark stubble.',
   },
 };
+
+const LEPANTO_POSE = ARMADA_POSE.replace('the Spanish Armada of 1588', 'the battle of Lepanto of 1571').replace('late-sixteenth-century', 'mid-sixteenth-century Mediterranean');
+/** The Lepanto crews (sources: Capponi 2006; Konstam, Lepanto 1571, Osprey 2003, plates of Spanish, Venetian and Ottoman troops; Nicolle, Armies of the Ottoman Empire 1300-1774, Osprey 1983). */
+const LEPANTO = {
+  holyleague_shot: {
+    base: 'japan_ashigaru',
+    look: 'A Spanish tercio arquebusier of 1571 serving aboard a Holy League galley: a plain steel morion helmet with a comb, a faded red wool doublet, a leather bandolier of wooden powder charges across the chest, full brown breeches to the knee, wool stockings, leather shoes. Black moustache and short beard.',
+  },
+  holyleague_soldier: {
+    base: 'joseon_marine',
+    look: 'A Venetian infantryman (fante da mar) of 1571 on a war galley: an open steel burgonet helmet, a steel breastplate over a faded blue-grey wool doublet, a crimson sash, dark trunk hose, wool stockings, leather shoes. Brown beard.',
+  },
+  holyleague_officer: {
+    base: 'ming_officer',
+    look: 'A Venetian galley captain (sopracomito) of 1571, a patrician: an etched steel cuirass over a dark crimson velvet doublet, a small white ruff, a short crimson cloak-less coat with fur trim at the collar, black trunk hose, dark boots, bareheaded with short grey hair. Grey beard.',
+  },
+  holyleague_oarsman: {
+    base: 'rower',
+    look: 'A Mediterranean galley oarsman (galeotto, a convict rower) of 1571: shaved head with a short beard stubble, bare chest and arms, sun-browned skin, coarse undyed linen knee breeches, an iron ankle ring, barefoot.',
+  },
+  ottoman_archer: {
+    base: 'joseon_soldier',
+    look: 'An Ottoman azap marine archer of 1571 aboard a kadirga galley: a red felt conical cap wrapped with a white turban cloth, a long belted dark red wool kaftan to the knee with sleeves, a leather quiver belt, loose blue-grey trousers, soft red leather boots. Black moustache.',
+  },
+  ottoman_janissary: {
+    base: 'japan_samurai',
+    look: 'An Ottoman janissary of 1571: the tall white felt börk cap falling behind the head with a brass spoon-holder at the front, a long dark blue wool dolama coat tucked into a red sash, loose white trousers, red leather boots. Long moustache, shaven chin.',
+  },
+  ottoman_officer: {
+    base: 'ming_officer',
+    look: 'An Ottoman galley captain (reis) of 1571: a large white turban, a long green brocade kaftan over a mail shirt, a broad red sash, loose dark trousers, yellow leather boots. Full dark beard.',
+  },
+  ottoman_oarsman: {
+    base: 'rower',
+    look: 'A galley slave oarsman of an Ottoman galley in 1571, a Christian captive: shaved head, a thin beard, bare chest and arms, coarse undyed linen breeches to the knee, an iron ankle ring, barefoot.',
+  },
+};
+const SETS = { armada: { pose: ARMADA_POSE, characters: ARMADA }, lepanto: { pose: LEPANTO_POSE, characters: LEPANTO } };
+const POSE = SETS[SET].pose;
+/** Each character: the shipped figure whose rig, clips and hand weapons he takes, and his costume. */
+export const CHARACTERS = SETS[SET].characters;
 /** Command flag cloth by navy: St George's white for England, Burgundy saltire red for Spain. */
-const FLAG = { england: [0.78, 0.76, 0.7], spain: [0.62, 0.16, 0.12] };
+// The officer's command flag: England white, Spain red, the Holy League blue (its standard), the Ottomans green (the Kapudan Pasha's).
+const FLAG = { england: [0.78, 0.76, 0.7], spain: [0.62, 0.16, 0.12], holyleague: [0.2, 0.3, 0.55], ottoman: [0.18, 0.4, 0.22] };
 const FLAG_ID = 7;
 
 const args = process.argv.slice(2);
@@ -74,7 +118,7 @@ const names = args.slice(1).length ? args.slice(1) : Object.keys(CHARACTERS);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const record = (name, k, v) => {
   // Read again each time: several stages may run at once.
-  const prov = existsSync(PROV) ? JSON.parse(readFileSync(PROV, 'utf8')) : { date: '2026-10-17', pipeline: 'scripts/crew-armada.mjs', characters: {} };
+  const prov = existsSync(PROV) ? JSON.parse(readFileSync(PROV, 'utf8')) : { date: '2026-10-17', pipeline: `CREW_SET=${SET} scripts/crew-armada.mjs`, characters: {} };
   prov.characters[name] = { ...(prov.characters[name] ?? {}), base: CHARACTERS[name].base, [k]: v };
   writeFileSync(PROV, JSON.stringify(prov, null, 2) + '\n');
 };
