@@ -124,9 +124,10 @@ type Walls = { out: Paint; inner: Paint; thick: number };
  * One side wall of the upper works from x0 to x1 between heights lo and hi, both faces and a cap, on both beams.
  * The outer face follows the leaning side (sailSideZ).
  */
-function upperWall(ctx: Ctx, plan: SailPlan, x0: number, x1: number, lo: number, hi: number, w: Walls, cap = true) {
+function upperWall(ctx: Ctx, plan: SailPlan, x0: number, x1: number, lo: number, hiAt: number | ((x: number) => number), w: Walls, cap = true) {
+  const roof = typeof hiAt === 'number' ? () => hiAt : hiAt;
   if (x1 - x0 < 0.05) return;
-  const n = Math.max(1, Math.round((x1 - x0) / byLod(ctx, 1.4, 3, 12)));
+  const n = Math.max(typeof hiAt === 'number' ? 1 : byLod(ctx, 6, 3, 1), Math.round((x1 - x0) / byLod(ctx, 1.4, 3, 12)));
   const zAt = (x: number, y: number) => sailSideZ(plan, x, y);
   for (const sgn of [-1, 1]) {
     const outer: V3[][] = [];
@@ -134,6 +135,7 @@ function upperWall(ctx: Ctx, plan: SailPlan, x0: number, x1: number, lo: number,
     const top: V3[][] = [];
     for (let i = 0; i <= n; i += 1) {
       const x = lerp(x0, x1, i / n);
+      const hi = roof(x);
       outer.push([[x, lo, sgn * zAt(x, lo)], [x, hi, sgn * zAt(x, hi)]]);
       inner.push([[x, lo, sgn * (zAt(x, lo) - w.thick)], [x, hi, sgn * (zAt(x, hi) - w.thick)]]);
       top.push([[x, hi, sgn * (zAt(x, hi) - w.thick)], [x, hi, sgn * zAt(x, hi)]]);
@@ -205,7 +207,21 @@ function castle(ctx: Ctx, plan: SailPlan, tiers: CastleTier[], aft: boolean, P: 
     if (ctx.lod < 2 && (k > 0 || t.x1 > plan.hull.length / 2 || t.x0 < -plan.hull.length / 2)) flatDeck(ctx, plan, P.castle!, t.x0, t.x1, t.y0 - 0.02, 0.02, true);
     // Parapet round the open part of this roof.
     const open: [number, number] = next ? (aft ? [next.x1, t.x1] : [t.x0, next.x0]) : [t.x0, t.x1];
-    upperWall(ctx, plan, open[0], open[1], t.y1, t.y1 + rail, walls);
+    // The top storey's rail sweeps up towards the ship's end, as the carved rails of the period did, instead of a flat box top.
+    const end = aft ? t.x0 : t.x1;
+    const sweepUp = next ? () => t.y1 + rail : (x: number) => t.y1 + rail + 0.7 * smooth(aft ? t.x1 : t.x0, end, x);
+    upperWall(ctx, plan, open[0], open[1], t.y1, sweepUp, walls);
+    if (k > 0 && ctx.lod === 0) {
+      // Carved corbels under the storey's floor where it meets the storey below.
+      const m = Math.max(2, Math.floor((t.x1 - t.x0) / 1.6));
+      for (let i = 0; i <= m; i += 1) {
+        const x = lerp(t.x0 + 0.3, t.x1 - 0.3, i / m);
+        for (const sgn of [-1, 1]) {
+          const z = sgn * sailSideZ(plan, x, t.y0);
+          box(ctx.b, P.gilt!, [x - 0.1, t.y0 - 0.45, Math.min(z, z + sgn * 0.18)], [x + 0.1, t.y0 + 0.05, Math.max(z, z + sgn * 0.18)], { grain: 1 });
+        }
+      }
+    }
     if (englishRail) strip(ctx, plan, P.pavesse!, open[0], open[1], t.y1 + 0.05, t.y1 + rail - 0.02);
     // Bulkhead facing the waist and the breastwork on its roof edge.
     const xf = aft ? t.x1 : t.x0;
@@ -215,7 +231,7 @@ function castle(ctx: Ctx, plan: SailPlan, tiers: CastleTier[], aft: boolean, P: 
     if (ctx.lod < 2) crossWall(ctx, plan, P.castle!, xf - face * 0.2, t.y1, t.y1 + rail, (-face) as 1 | -1, 0.05);
     // End face over the stern or the bow.
     const xe = aft ? t.x0 : t.x1;
-    crossWall(ctx, plan, P.castle!, xe, t.y0, t.y1 + (next ? 0 : rail), (-face) as 1 | -1);
+    crossWall(ctx, plan, P.castle!, xe, t.y0, t.y1 + (next ? 0 : rail + 0.7), (-face) as 1 | -1);
     if (!next && ctx.lod < 2) crossWall(ctx, plan, P.inner!, xe + face * 0.2, t.y1, t.y1 + rail, face as 1 | -1, 0.2);
     moulding(ctx, plan, P.gilt!, t.x0, t.x1, t.y1 - 0.05, 0.2);
     // A row of small windows (cabins, loopholes for the arquebusiers) along the upper storeys, between carved pilasters.
@@ -295,8 +311,8 @@ export function buildSailShip(kind: ShipKind, variant: number, lod: Lod): MeshDa
   const tint = (k: number): V3 => [k * old, k * old * 0.97, k * old * 0.94];
   const P: Record<string, Paint> = {
     hull: Pn('hull_plank', { tint: tint(0.95) }),
-    livery: Pn(plan.livery, { tint: tint(1) }),
-    castle: Pn(plan.castleLivery, { tint: tint(1) }),
+    livery: Pn(plan.livery, { tint: tint(1.3) }),
+    castle: Pn(plan.castleLivery, { tint: tint(1.3) }),
     inner: Pn('deck_plank', { tint: tint(0.7) }),
     deck: Pn('deck_plank', { tint: tint(1) }),
     bulkhead: Pn('cabin_wood', { tint: tint(0.95) }),
