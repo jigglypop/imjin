@@ -29,9 +29,11 @@ for (const spec of list) {
   const [key, weapon] = spec.split(':'); const blade = await sword(weapon);
   if (!figures.has(key)) {
     const F = await loadFigure(`${DIR}/${key}.glb`);
-    const sockLocal = new Matrix4().fromArray(F.nodes.find((n) => n.getName() === 'socket_grip_right').getMatrix());
-    const handJ = F.jointNames.indexOf('RightHand'), hipsJ = F.jointNames.indexOf('Hips');
-    const skip = new Set(['RightHand', 'RightForeArm'].map((n) => F.jointNames.indexOf(n)));
+    // A `left_handed` figure (Nelson) holds the sword in his left fist.
+    const L = F.nodes.some((n) => n.getName() === 'left_handed'), S = L ? 'Left' : 'Right';
+    const sockLocal = new Matrix4().fromArray(F.nodes.find((n) => n.getName() === `socket_grip_${S.toLowerCase()}`).getMatrix());
+    const handJ = F.jointNames.indexOf(`${S}Hand`), hipsJ = F.jointNames.indexOf('Hips');
+    const skip = new Set([`${S}Hand`, `${S}ForeArm`].map((n) => F.jointNames.indexOf(n)));
     const keep = F.prims.map((p) => { const k = new Uint8Array(p.pos.length / 3); for (let v = 0; v < k.length; v++) { let b = 0; for (let q = 1; q < 4; q++) if (p.w[v * 4 + q] > p.w[v * 4 + b]) b = q; k[v] = skip.has(p.j[v * 4 + b]) ? 0 : 1; } return k; });
     const dur = Math.max(...F.clips.idle_sword.map((c) => c.t[c.t.length - 1])); const frames = [];
     for (let t = 0; t <= dur + 1e-6; t += 1 / 15) { const P = pose(F, 'idle_sword', t);
