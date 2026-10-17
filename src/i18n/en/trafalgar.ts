@@ -221,6 +221,7 @@ export const EN_TRAFALGAR: Record<string, string> = {
   "포갑판 두 층에 대포 80문을 실은 투낭급 전열함입니다. 프랑스 전열함은 영국 배보다 길고 빨랐으며, 아래 갑판에 36리브르의 무거운 포를 실었습니다. 트라팔가르에서 빌뇌브의 기함 뷔상토르호는 빅토리호의 고물 쪽 현측 포격을 맞고 돛대를 모두 잃은 뒤 항복했습니다.":
     "An eighty-gun ship of the Tonnant class on two decks. French ships of the line were longer and faster than the British and carried heavy 36-pounders on the lower deck. At Trafalgar Villeneuve's flagship Bucentaure was raked through the stern by the Victory, lost all her masts and struck.",
   "36리브르 30문, 24리브르 32문, 8리브르 18문 (Goodwin)": "30 x 36-pdr, 32 x 24-pdr, 18 x 8-pdr (Goodwin)",
+  "게임의 근사: 나일 해전의 기함 로리앙호(대포 120문, 포갑판 세 층)도 120문급 함선이 생길 때까지 이 80문함으로 그립니다": "A game approximation: L'Orient, the 120-gun three-decker flagship at the Nile, is drawn as this 80-gun ship until a 120-gun class exists",
   "승조원 약 800명 (Goodwin)": "About 800 men (Goodwin)",
   "1791년 진수, 1805년": "Launched 1791; 1805",
   "프랑스 전열의 주력함": "The mainstay of the French line",
@@ -239,6 +240,7 @@ export const EN_TRAFALGAR: Record<string, string> = {
   "에스파냐 해군의 74문함은 튼튼한 쿠바산 목재로 지어 오래 버텼지만, 1805년에는 숙련된 수병이 모자라 카디스에서 끌어온 병사와 육지 사람으로 승조원을 채웠습니다. 산후안 네포무세노호의 함장 코스메 다미안 추루카는 영국 배 여섯 척에 둘러싸여 싸우다 전사했습니다.":
     "Spanish seventy-fours were built of tough Cuban timber and lasted, but in 1805 seamen were so short that their crews were filled with soldiers and landsmen brought in from Cádiz. Cosme Damián Churruca of the San Juan Nepomuceno was killed fighting six British ships around him.",
   "36파운드(리브라) 28문, 18파운드 30문 (Harbron)": "28 x 36-pdr (libras), 30 x 18-pdr (Harbron)",
+  "게임의 근사: 산타아나·프린시페 데 아스투리아스 같은 112문 3층 함선은 112문급 함선이 생길 때까지 이 74문함으로 그립니다": "A game approximation: the 112-gun three-deckers such as Santa Ana and Príncipe de Asturias are drawn as this 74 until a 112-gun class exists",
   "1805년 영국 전열함의 아래 포갑판에 실린 32파운드(약 14.5kg) 쇠 장포입니다. 바퀴 달린 포가에 얹혀 밧줄로 반동을 받았고, 부싯돌 격발기로 쏘아 잘 훈련된 포수는 프랑스·에스파냐 포수보다 두 배 가까이 빨리 쏘았습니다.":
     "The iron 32-pounder (about 14.5 kg shot) of the lower deck of a British ship of the line in 1805. Mounted on a truck carriage with its recoil taken by breeching ropes and fired by a flintlock, it was served by drilled crews nearly twice as fast as the French and Spanish guns.",
   "가운데와 위 포갑판의 24·18파운드 장포입니다. 아래 갑판 포보다 가벼워 다루기 쉬웠고, 프리깃은 18파운드 포를 주포로 실었습니다.": "The 24- and 18-pounders of the middle and upper gun decks: lighter and handier than the lower-deck guns. Frigates carried 18-pounders as their main battery.",
