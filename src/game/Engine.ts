@@ -581,7 +581,7 @@ export class Engine {
       track(skyLoad, weights.sky),
       track(terrainLoad, weights.terrain),
       track(loadShipAssets(this.kindsInBattle(), options, shipsDone(weights.ships)), weights.ships),
-      track(crewAssets(), weights.crew),
+      track(crewAssets([...new Set(this.kindsInBattle().map((k) => SHIP_SPECS[k].faction))]), weights.crew),
       preloadStructures(),
       this.conquestSetup ? preloadWorks() : undefined,
     ]);
@@ -976,7 +976,7 @@ export class Engine {
       }
       return { tx: own.x - Math.cos(back) * 260, tz: own.z - Math.sin(back) * 260, yaw: back + 0.15, pitch: 0.34, distance: 720 };
     }
-    if (this.faction === 'joseon' && info.mode === 'scenario') {
+    if ((this.faction === 'joseon' || this.faction === 'england') && info.mode === 'scenario') {
       const c = this.terrain.toWorld(info.view.tx, info.view.tz);
       const dir = info.view.dir + this.phi;
       return { tx: c.x, tz: c.z, yaw: dir + Math.PI + 0.22, pitch: info.view.pitch, distance: info.view.dist };
