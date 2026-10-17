@@ -1,16 +1,16 @@
 ---
 name: cinematics
-description: Battle-opening cinematics and cutscenes — ships on camera, commanders speaking through comms thumbnails, camera language, timing, subtitles. Use for any work in src/cinema or battle intros/outros.
+description: Battle-opening cinematics and cutscenes — 3D commander close-ups on deck with dialogue, camera language, timing, subtitles. Use for any work in src/cinema or battle intros/outros.
 ---
 
 # Battle cinematics (owner decision 2026-10-17)
 
-Every battle opens with a film-like cinematic that shows the battle and its ships; each commander speaks through a framed thumbnail of himself aboard his ship (RTS-style comms) while the camera holds on his flagship. No full-screen 3D close-ups, no card films. It must feel like 명량/한산/노량, not a slideshow.
+Every battle opens with a film-like cinematic: the battle, its ships, and each commander as his live 3D figure on his own deck, filmed in close-ups while he speaks. No portrait cards, no card films. It must feel like 명량/한산/노량, not a slideshow.
 
 ## Shot grammar (default intro, 20–35 s, skippable)
 1. **Establishing:** wide shot of the sea, weather and fleets (existing battle scene), with the title card in `--font-title`.
-2. **Commander speaks (comms):** the camera on his flagship (`aboard(ship, dur, side)`, a slow push along her quarter) while his **comms box** carries the line: framed portrait thumbnail (a feed from his deck, blinking side-colour dot), name + title, the line typed in word by word over ~55 % of its time, hanja and record under it.
-3. **Reply:** cut to the other flagship (`aboard(…, +1)`, mirrored angle) with his comms box on the other side. Allies (joseon/ming and every chapter's first side) left, the enemy (`japan` key) right, so exchanges read as dialogue. Cut on every line change (a second line from the same man = `aboard(…, alt=true)`).
+2. **Commander speaks:** `closeUp(who, ship, dur, -1)` on his live figure at his command post; a slow push-in, the subtitle at the bottom.
+3. **Reply:** `closeUp(…, +1)` on the other commander on his own deck (reverse shot); cut on every line change; a listener reaction (`overShoulder`) where it fits.
 4. **Order:** a camera beat, not a gesture (figures only stand since 2026-10-17): `order(ship, enemy)` — low off his flagship's quarter, pushing in as she leads — with the order as his subtitle, then the fleet moving.
 5. **Hand-off:** the camera eases into the gameplay camera with no jump.
 
@@ -21,10 +21,10 @@ Every battle opens with a film-like cinematic that shows the battle and its ship
   - Every quote must be real or clearly in-character. Never anachronisms.
   - Korean text plus `/en` translations.
   - Subtitles only: **no recorded or synthesized human voices** (owner rule). Use music and sound effects only.
-- Thumbnail = his portrait (`public/ui/portraits`). Where a live figure looks better, a pre-rendered still of it on deck may replace it (render once, webp under `public/ui/comms/`, `npm run assets -- push`); never a placeholder model and never a live 3D render in the opening.
+- Uses only live, approved general figures; without one, the wide fallback on his flagship and the subtitle only.
 - Never blocks input: skippable with click/tap/Esc, and remembers "skip intros" in settings.
 - Deterministic sim untouched: cinematics are presentation only. The sim starts when the hand-off ends (or immediately when skipped).
-- Phones: the comms box shrinks (`.app--compact`), the ships keep their tier LOD. Free everything the cinematic loaded when it ends (see `Engine.disposeBattle`, `probe-leak.mjs`).
+- Phones: the figures and ships use the tier LOD. Free everything the cinematic loaded when it ends (see `Engine.disposeBattle`, `probe-leak.mjs`).
 - Verify with screenshots or a short frame sequence of each shot, and look at them. Check fonts against the `typography` skill.
 
 ## Historical accuracy (all chapters)
@@ -40,14 +40,15 @@ Who commanded which battle, where they stood, flags, ship types, dates, weather 
   - `order(ship, toward)`: orbit at the flagship framed toward the enemy, yaw π−0.62→π−0.4, pitch 0.07→0.045, dist 130→82 m, lift 9→6, fov 32→27. Replaces the old `command` shot.
   - `home(target, 4.5)`: eases position, aim and fov from the last shot into `RtsCamera.eyeOf(homePose)`, so the hand-off has no jump.
 - Timing that reads well: establishing 8.5–9.5 s with stamp + title card together, speaker on his flagship 6–6.6 s per line (a second line = a new set-up of ~4.2 s), reply 7–8.3 s, a name-only cut 4.5 s, command 4.5 s, fleet 7–7.5 s with labels, hand-off 4.5 s. Totals: Hansan 43.5 s, Myeongnyang 40 s, Noryang 51 s.
-- Subtitle: caption kind `say` renders the comms box (below). Empty `text` gives a name-only box. A click/tap on the frame skips, as do Esc/Enter; the `전투 영상` chip in the director toggle turns intros off.
+- Subtitle: caption kind `say` renders the subtitle (below). Empty `text` gives the name alone. A click/tap on the frame skips, as do Esc/Enter; the `전투 영상` chip in the director toggle turns intros off.
 - Frame grabbing: load `?scenario=<id>&cutscene=1`, wait for `cinema.progress.t`, `cinema.togglePause()`, screenshot, unpause.
 
-## Comms dialogue (owner 2026-10-17: "the commander speaks through a thumbnail of himself aboard his ship")
-- Built in `CinemaOverlay.tsx` `SayView` (`.cine-comms` in `cinema.css`); the image is the scene cast's `portrait` (`Cinema.insertFor`). Typing reveals whole words only (a split word wraps differently under keep-all and jumps).
-- Openings no longer frame 3D figures: `Cinema.start` loads the cast only for scenes that still have a `figure` shot (none of the openings). The cast entries stay for the portraits. A still render of a live figure on his deck may later replace the portrait as the thumbnail.
-- Applies to every 1592, Armada, Lepanto and Trafalgar opening (`intros.ts`, `noryang.ts`, `chapters.ts`).
-- Name plate: a battle opening shows his name plate (`.cine-plate`, --font-title) over his first line the first time it features him (data in `commanderIntros.ts`, records in SOURCES.md).
+## Speaker close-ups, smoothing and subtitles (owner 2026-10-18, supersedes the comms boxes)
+- Grammar: each speaker is his live 3D figure at his command post on his own deck (`Cast`, `hangSword`), filmed with `closeUp` (shot / reverse shot between the flagships, slow push-in, a cut on every line change) and one `overShoulder`/listener beat. A commander without a live figure: the wide orbit on his flagship (the close-up's `fallback`) with the subtitle only, never a portrait card.
+- Talking body clip: optional, cinematic only (pure Meshy clip on his rig, deform <= 0.3, blade clearance per generals-cast); idle when absent. Estimate credits before fetching.
+- Camera smoothing: `CutscenePlayer.follow` is a critically damped spring (x/z rate 2.2 on a figure, 2 on ships; heading at half; height >= 6 so heave never loses his face). Position and heading only, never the deck's roll or pitch. No procedural shake. The focus distance is fixed at each shot's first frame. Measure: per-frame third difference of camera position away from cuts (hansan 0.014 m/frame^3 after the change).
+- No pop: figures come on deck only at a cut (`Cast.reveal` on `player.cuts`), and close vs fallback is decided at the cut, never switched mid-shot. Film light: rim x0.4, fill x1.35 so he sits in the scene's light.
+- Subtitle (`.cine-say`): one colour (white), `--font-ui` 500, soft shadow, a small name before the line in the same colour; no hanja, title or record in the frame (records stay in SOURCES.md).
 
 ## Campaign openings (owner 2026-10-17: concise documentary openings like strategy games)
 - Data: `src/cinema/campaignOpenings.ts` (imjin 61.5 s, armada 62 s, lepanto 54.5 s, trafalgar 54 s). Shots over the campaign's own 3D map: `from`/`to` eyes in lon/lat + distance (frame units) + yaw (0 looks north) + pitch (0.22–0.36 reads cinematic); 7–8 s each, one stamp (date in --font-title small brass, place in --font-title large) top-left, one line (--font-cine) bottom-centre with its source, closing title 8.5 s pulling back to the whole theatre (`MOONWAKE · years`, title --font-title, hanja, sub, source).
@@ -55,11 +56,13 @@ Who commanded which battle, where they stood, flags, ship types, dates, weather 
 - Frame grabbing: start a campaign at `/<chapter>/campaign?opening=1`, click `.g-pick__go`, wait for `window.__map`, screenshot at shot mid-points.
 
 ## Rejected (do not retry)
+- Portrait comms boxes / thumbnail cards for the speaker (2026-10-17 build, reversed by the owner 2026-10-18).
+- Coloured names, hanja and source lines inside the film subtitle; camera shake; following the deck's roll; focus that changes within a shot.
 - Static full-screen portrait cards and card intro films anywhere (openings, /generals, campaign roster).
 - The waist-up `command` shot with the command clip: the figures only stand (owner 2026-10-17); every opening uses `order()` instead.
 - A battle opening growing a full per-commander film inside it: the opening's length and audio cues are fixed; the name plate is the in-battle intro.
 - Commander card films (owner 2026-10-17): no intro film on /generals (no auto-play, no 소개 영상 button) nor in the campaign 장수 roster. `CommanderFilm.tsx`/`PortraitFilm`/`FigureStage.setFilm` are deleted.
-- Full-screen 3D talking close-ups of a commander, and static 3D close-up "cards" of a commander while his line plays (reads as a card, not a film), and the follow-up plan of 3D close-ups with Meshy talking clips (56 Stand and Chat, 310, 311 were tried 2026-10-17, 39 credits; stripped again): owner chose the comms thumbnail over the ship instead. Do not fetch talk clips.
+- Static 3D close-up "cards" of a commander while his line plays (reads as a card, not a film). Talking clips 56 Stand and Chat, 310, 311 (tried 2026-10-17, 39 credits) were stripped; a new talking clip needs the owner's go and a deform check.
 - Opening stamps in --font-cine over bright land: unreadable; stamps are --font-title with a dark top gradient.
 - Standing the commander at an atakebune's bow (enclosed: the frame is black).
 - Standing the commander on a sekibune/Ming captain's mark: the camera lands inside the cabin or the castle (the deck plans' obstacles do not match the drawn models), or outside the hull when he turns abeam.
