@@ -1,5 +1,5 @@
 import type { Battle } from './battle';
-import { SCENARIOS, type ScenarioId } from './scenarios';
+import { SCENARIOS, isArmadaBattle, type ScenarioId } from './scenarios';
 import { OWNER_OF, teamOf, type Faction, type ShipMods } from './types';
 
 export const FACTION_NAME: Record<Faction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군', england: '잉글랜드 해군', spain: '에스파냐 무적함대' };
@@ -7,6 +7,7 @@ export const FACTION_SHORT: Record<Faction, string> = { joseon: '조선', japan:
 
 /** Factions the player can lead in a battle. The Ming fleet only sailed at Noryang. */
 export function playableFactions(id: ScenarioId): Faction[] {
+  if (isArmadaBattle(id)) return ['england', 'spain'];
   return SCENARIOS[id].ming ? ['joseon', 'ming', 'japan'] : ['joseon', 'japan'];
 }
 

@@ -6,7 +6,8 @@ import { cameraFeel, FEEL_CHOICES, FEEL_LABEL, type CameraFeel } from '../camera
 import { EQUIPMENT_LABEL, equipment, forceWebGL, saveEquipmentSetting, saveWebgpuOptIn, webgpuOptIn, type EquipmentSetting } from '../game/quality';
 import { setLang, useLang, useT, type Lang } from '../i18n';
 import { prefetchScreen } from '../router';
-import { setScreen, type Screen } from '../state/store';
+import { setChapter, setScreen, useUi, type Screen } from '../state/store';
+import { CHAPTERS, chapterDef } from '../chapters';
 import { AccountPanel } from './AccountPanel';
 import { Backdrop } from './Backdrop';
 import { ChevronLeft, Person, Sliders, Speaker, SpeakerOff } from './icons';
@@ -58,10 +59,39 @@ const BILLING: { side: string; names: string[] }[] = [
   { side: '일본', names: ['와키자카 야스하루', '구키 요시타카', '구루시마 미치후사'] },
 ];
 
+/** The series' chapters along the top of the poster: picking one brings up its flagship the way the turtle ship is shown. */
+function ChapterPicker() {
+  const t = useT();
+  const current = useUi((s) => s.chapter);
+  return (
+    <nav className="chapter-picker" aria-label={t('장 선택')}>
+      {CHAPTERS.map((c) => (
+        <button
+          key={c.id}
+          className={`chapter-chip ${c.id === current ? 'chapter-chip--on' : ''}`}
+          aria-pressed={c.id === current}
+          disabled={!c.ready}
+          title={c.ready ? undefined : t('준비 중')}
+          onClick={() => {
+            if (!c.ready || c.id === current) return;
+            sound.click();
+            setChapter(c.id as typeof current);
+          }}
+        >
+          <b>{t(c.title)}</b>
+          <small>{c.ready ? c.years : t('준비 중')}</small>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
 export function MainMenu() {
   const t = useT();
   const lang = useLang();
-  const title = t('임진왜란');
+  const chapter = chapterDef(useUi((s) => s.chapter));
+  const main = chapter.id === 'imjin';
+  const title = t(chapter.title);
   const user = useAccount((s) => s.user);
   const [account, setAccount] = useState(false);
   const accountButton = useRef<HTMLButtonElement | null>(null);
@@ -71,8 +101,9 @@ export function MainMenu() {
   }, []);
   return (
     <section className="screen menu menu--cinematic">
-      <Backdrop kind="menu" cinematic />
-      <MenuBattleBackdrop />
+      {/* The poster under the live scene is the turtle ship's own; another chapter waits on open sea for its flagship. */}
+      {main ? <Backdrop kind="menu" cinematic /> : <div className="menu-sea" aria-hidden="true" />}
+      <MenuBattleBackdrop hero={chapter.hero} />
       <div className="menu-shade" aria-hidden="true" />
       <header className="screen-top menu-masthead">
         <button className="back-btn" data-mode="codex" {...mode('codex')}>
@@ -98,12 +129,18 @@ export function MainMenu() {
           <Person /> <span className="menu-account-name">{user && !user.guest ? user.nickname : t('로그인')}</span>
         </button>
       </header>
+      <ChapterPicker />
       <div className="menu-inner">
         {/* A film poster's title lockup: the tagline above, the title, the years between hairlines. Every part is
             sized from the title's --t, so the lockup scales as one piece. */}
-        <div className={`wordmark wordmark--${lang}`}>
-          <p className="wordmark-tagline">{t('나라를 지킨 바다')}</p>
-          {lang === 'ko' ? (
+        <div className={`wordmark wordmark--${lang} wordmark--${chapter.id}`}>
+          <p className="wordmark-tagline">{t(chapter.tagline)}</p>
+          {!main ? (
+            <div className="menu-title-lockup">
+              <span className="wordmark-hanja wordmark-hanja--roman" aria-hidden="true">{chapter.native}</span>
+              <h1 className="wordmark-title wordmark-title--poster">{title}</h1>
+            </div>
+          ) : lang === 'ko' ? (
             <div className="menu-title-lockup">
               <span className="wordmark-hanja" aria-hidden="true">壬辰倭亂</span>
               <h1 className="wordmark-title wordmark-title--poster">{title}</h1>
@@ -115,12 +152,12 @@ export function MainMenu() {
               <span className="wordmark-name" aria-hidden="true">Imjin War</span>
             </h1>
           )}
-          <div className="wordmark-dates" aria-hidden="true"><i /><span>1592 — 1598</span><i /></div>
-          {lang === 'en' && <div className="wordmark-mark" aria-hidden="true"><span>壬辰倭亂</span><b>임진왜란</b></div>}
+          <div className="wordmark-dates" aria-hidden="true"><i /><span>{chapter.years}</span><i /></div>
+          {lang === 'en' && main && <div className="wordmark-mark" aria-hidden="true"><span>壬辰倭亂</span><b>임진왜란</b></div>}
         </div>
         <div className="menu-play">
           <button className="menu-primary" data-mode="faction" {...mode('faction')}>
-            <span className="menu-primary-copy"><strong>{t('캠페인')}</strong><small>{t('한 나라로 남해안 점령')}</small></span>
+            <span className="menu-primary-copy"><strong>{t('캠페인')}</strong><small>{t(chapter.campaign)}</small></span>
             <span className="menu-arrow" aria-hidden="true">↗</span>
           </button>
           <nav className="menu-modes" aria-label={t('전투 선택')}>
@@ -129,7 +166,7 @@ export function MainMenu() {
         </div>
       </div>
       <footer className={`menu-billing menu-billing--${lang}`} aria-hidden="true">
-        {BILLING.map((group) => <span key={group.side}><b>{t(group.side)}</b>{group.names.map((name) => t(name)).join(' · ')}</span>)}
+        {(main ? BILLING : chapter.billing).map((group) => <span key={group.side}><b>{t(group.side)}</b>{group.names.map((name) => t(name)).join(' · ')}</span>)}
       </footer>
       {account && <AccountPanel onClose={closeAccount} />}
     </section>

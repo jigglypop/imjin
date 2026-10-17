@@ -1,4 +1,6 @@
-import meta from '../select/demMeta.json';
+import korea from '../select/demMeta.json';
+import channel from '../select/channelMeta.json';
+import { isArmadaBattle } from '../sim/armada';
 import type { ScenarioId } from '../sim/scenarios';
 import { isPhone, isTouchOnly } from '../game/device';
 import { params } from './launch';
@@ -22,15 +24,20 @@ export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
   gravelines: { lon: 2.05, lat: 51.06 },
 };
 
-const lonToX = (lon: number) => ((lon + 180) / 360) * 2 ** meta.zoom;
-const latToY = (lat: number) => {
+type Meta = typeof korea;
+const lonToX = (meta: Meta, lon: number) => ((lon + 180) / 360) * 2 ** meta.zoom;
+const latToY = (meta: Meta, lat: number) => {
   const r = (lat * Math.PI) / 180;
   return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * 2 ** meta.zoom;
 };
 
+/** The flat map a battle is pinned on: the south coast of Korea, or the English Channel for the Armada (scripts/build-ui-map.mjs). */
+export const mapImageOf = (id: ScenarioId) => (isArmadaBattle(id) ? '/ui/map_channel.webp' : '/ui/map_south.webp');
+
 export function siteUV(id: ScenarioId) {
   const s = SITES[id];
-  return { u: (lonToX(s.lon) - meta.x0) / (meta.x1 - meta.x0), v: (latToY(s.lat) - meta.y0) / (meta.y1 - meta.y0) };
+  const meta: Meta = isArmadaBattle(id) ? channel : korea;
+  return { u: (lonToX(meta, s.lon) - meta.x0) / (meta.x1 - meta.x0), v: (latToY(meta, s.lat) - meta.y0) / (meta.y1 - meta.y0) };
 }
 
 /** Phones and touch-only tablets draw the flat map image instead of the 3D relief (`?map=static` forces it). */
@@ -38,4 +45,4 @@ export const flatMap = isPhone || isTouchOnly || params.get('map') === 'static';
 
 /** Marker label: the battle's name without the generic suffix or prefix (Korean "옥포 해전", English "Battle of Okpo"). */
 export const shortTitle = (title: string) =>
-  title.replace(/ (해전|대첩)$/, '').replace(/^Battle of (the )?/, '');
+  title.replace(/ (해전|대첩|화공)$/, '').replace(/^Battle of (the )?/, '');

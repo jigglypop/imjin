@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
-import { SCENARIO_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
+import { ARMADA_ORDER, SCENARIO_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import { commanderOf, FACTION_NAME, FACTION_SHORT, forcesOf, handicap, playableFactions } from '../sim/balance';
 import type { Faction } from '../sim/types';
 import { sound } from '../audio/Sound';
@@ -21,12 +21,12 @@ const flatMap = isPhone || isTouchOnly || params.get('map') === 'static';
 
 const FACTION_KEY = 'imjin.faction';
 /** The order the sides are listed in: the allies first, the invader last. */
-const ORDER: Faction[] = ['joseon', 'ming', 'japan'];
+const ORDER: Faction[] = ['joseon', 'ming', 'japan', 'england', 'spain'];
 
 function readFaction(): Faction {
   try {
     const v = localStorage.getItem(FACTION_KEY);
-    return v === 'japan' || v === 'ming' ? v : 'joseon';
+    return v === 'japan' || v === 'ming' || v === 'england' || v === 'spain' ? v : 'joseon';
   } catch {
     return 'joseon';
   }
@@ -46,7 +46,12 @@ const DIFFICULTY: Record<string, string> = { 쉬움: '난이도 쉬움', 보통:
 /** The nine historical battles: pick a battle on the map, pick a side, and sail. The 1592 campaign is a secondary mode here. */
 export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onStart: (id: ScenarioId, campaign: boolean, faction: Faction) => void }) {
   const t = useT();
-  const mode = useCampaign((st) => st.mode);
+  // A later chapter lists its own battles on its own map; the 1592 run of battles (연속 전투) is the first chapter's.
+  const chapter = useUi((st) => st.chapter);
+  const armada = chapter === 'armada';
+  const order: ScenarioId[] = armada ? ARMADA_ORDER : SCENARIO_ORDER;
+  const storedMode = useCampaign((st) => st.mode);
+  const mode = armada ? 'free' : storedMode;
   const campaign = useCampaign((st) => st.campaign);
   const [camp, setCamp] = useState(false);
   const [side, setSideRaw] = useState<Faction>(readFaction);
@@ -56,7 +61,7 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
   // The picked battle lives in the store because the address names it (/battles/hansan, src/router.ts). Before a pick
   // the screen shows the battle last played, or the series' next battle.
   const picked = useUi((st) => st.battle);
-  const id: ScenarioId = picked && !locked(picked) ? picked : inCampaign ? current : initial;
+  const id: ScenarioId = picked && order.includes(picked) && !locked(picked) ? picked : inCampaign ? current : order.includes(initial) ? initial : order[0]!;
   // Bumped by every pick, so choosing the battle already selected still flies the 3D camera back to its site.
   const [look, setLook] = useState(0);
   const setId = (next: ScenarioId) => {
@@ -68,7 +73,7 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
   const record = (sid: ScenarioId) => campaign?.history.filter((h) => h.id === sid).at(-1);
   const playable = !inCampaign || (!!campaign && !campaignOver(campaign) && id === current);
   const factions = playableFactions(id);
-  const effective: Faction = inCampaign ? 'joseon' : factions.includes(side) ? side : 'joseon';
+  const effective: Faction = inCampaign ? 'joseon' : factions.includes(side) ? side : factions[0]!;
   const sides: Faction[] = [...factions].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
   const setSide = (f: Faction) => {
     sound.click();
@@ -102,11 +107,11 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
     const wait = window.setTimeout(() => prefetchLoading(id), 500);
     return () => window.clearTimeout(wait);
   }, [id]);
-  const flat = <StaticMap id={id} onSelect={setId} />;
+  const flat = <StaticMap id={id} order={order} onSelect={setId} />;
   return (
     <section className="screen hs">
       <div className="hs-map">
-        {flatMap ? (
+        {flatMap || armada ? (
           flat
         ) : (
           <ErrorBoundary fallback={flat}>
@@ -129,7 +134,7 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
             <ChevronLeft /> {t('뒤로')}
           </button>
           <h1 className="screen-title">{t('역사 전투')}</h1>
-          <div className="screen-actions">
+          {!armada && <div className="screen-actions">
             <div className="seg" role="tablist">
               <button role="tab" aria-selected={mode === 'free'} className={mode === 'free' ? 'on' : ''} onClick={() => switchMode('free')}>
                 {t('단일 전투')}
@@ -138,10 +143,10 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
                 {t('연속 전투')}
               </button>
             </div>
-          </div>
+          </div>}
         </header>
         <div className="hs-tabs">
-          {SCENARIO_ORDER.map((sid) => (
+          {order.map((sid) => (
             <button key={sid} className={`hs-tab ${sid === id ? 'hs-tab--on' : ''} ${locked(sid) ? 'hs-tab--locked' : ''}`} disabled={locked(sid)} onClick={() => setId(sid)}>
               {inCampaign && record(sid) && (
                 <span className={`tab-seal ${record(sid)!.draw ? 'tab-seal--draw' : record(sid)!.win ? '' : 'tab-seal--loss'}`} role="img" aria-label={record(sid)!.draw ? t('무승부') : record(sid)!.win ? t('승리') : t('패배')}>

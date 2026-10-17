@@ -3,11 +3,18 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
-const OUT = join(ROOT, 'public', 'ui', 'korea_dem.webp');
-const META = join(ROOT, 'src', 'select', 'demMeta.json');
+const arg = (n, d) => process.argv.find((a) => a.startsWith('--' + n + '='))?.slice(n.length + 3) ?? d;
+// --region=channel fetches the Armada chapter's window (the English Channel) into its own files; the default is Korea.
+const REGIONS = {
+  korea: { out: 'korea_dem.webp', meta: 'demMeta.json', z: 10, bounds: { west: 125.85, east: 129.5, south: 34.1, north: 35.62 } },
+  channel: { out: 'channel_dem.webp', meta: 'channelMeta.json', z: 8, bounds: { west: -6.6, east: 3.4, south: 49.25, north: 52.05 } },
+};
+const REGION = REGIONS[arg('region', 'korea')];
+const OUT = join(ROOT, 'public', 'ui', REGION.out);
+const META = join(ROOT, 'src', 'select', REGION.meta);
 
-const Z = 10;
-const BOUNDS = { west: 125.85, east: 129.5, south: 34.1, north: 35.62 };
+const Z = REGION.z;
+const BOUNDS = REGION.bounds;
 const WIDTH = 2048;
 
 const lonToX = (lon) => ((lon + 180) / 360) * 2 ** Z;

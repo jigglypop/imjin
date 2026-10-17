@@ -1,5 +1,5 @@
 import { getLang, t, useLangStore } from './i18n';
-import { LAUNCH_PARAMS, SITE_NAME, parseRoute, routeName, routePath, withoutParams, type BattleSlug, type RouteScreen } from './routes';
+import { LAUNCH_PARAMS, MAIN_CHAPTER, SITE_NAME, chapterOfBattle, parseRoute, routeName, routePath, withoutParams, type BattleSlug, type ChapterId, type RouteScreen } from './routes';
 import { SCENARIO_TEXT } from './sim/scenarioText';
 import { useUi, type BattleOrigin, type Screen } from './state/store';
 
@@ -51,18 +51,19 @@ const ORIGINS: readonly BattleOrigin[] = ['select', 'skirmish', 'online', 'facti
  */
 export function startRouter(battle: boolean) {
   const route = parseRoute(location.pathname);
-  rewrite(route.screen, location.search, route.battle);
+  const chapter = route.chapter ?? MAIN_CHAPTER;
+  rewrite(route.screen, location.search, route.battle, chapter);
   const origin = ORIGINS.find((o) => o === route.screen);
   const picked = route.battle ?? null;
-  useUi.setState(battle ? { screen: 'battle', battle: picked, ...(origin ? { origin } : {}) } : { screen: route.screen, battle: picked });
+  useUi.setState(battle ? { screen: 'battle', battle: picked, chapter, ...(origin ? { origin } : {}) } : { screen: route.screen, battle: picked, chapter });
   showHead();
 
   useUi.subscribe((state, previous) => {
     if (following) return;
-    if (state.screen !== previous.screen) {
-      if (state.screen !== 'battle') open(state.screen, state.battle);
+    if (state.screen !== previous.screen || state.chapter !== previous.chapter) {
+      if (state.screen !== 'battle') open(state.screen, state.battle, state.chapter);
     } else if (state.screen === 'select' && state.battle !== previous.battle) {
-      rewrite('select', withoutParams(location.search, LAUNCH_PARAMS), state.battle);
+      rewrite('select', withoutParams(location.search, LAUNCH_PARAMS), state.battle, state.chapter);
       showHead();
     }
   });
@@ -72,19 +73,20 @@ export function startRouter(battle: boolean) {
   useLangStore.subscribe((state, previous) => {
     if (state.lang === previous.lang) return;
     const here = parseRoute(location.pathname);
-    rewrite(here.screen, withoutParams(location.search, ['lang']), here.battle);
+    rewrite(here.screen, withoutParams(location.search, ['lang']), here.battle, here.chapter ?? MAIN_CHAPTER);
     showHead();
   });
 
   window.addEventListener('popstate', () => {
-    const { screen, battle: named } = parseRoute(location.pathname);
+    const { screen, battle: named, chapter: prefix } = parseRoute(location.pathname);
+    const chapter = prefix ?? MAIN_CHAPTER;
     // An entry made before a language switch still names the old edition: the language stays as chosen and the
     // address follows it. Landing anywhere is moving on, so the launch hooks go too.
-    rewrite(screen, withoutParams(location.search, LAUNCH_PARAMS), named);
+    rewrite(screen, withoutParams(location.search, LAUNCH_PARAMS), named, chapter);
     following = true;
     try {
       if (useUi.getState().screen === 'battle') leaveBattle?.();
-      useUi.setState({ screen, battle: named ?? null });
+      useUi.setState({ screen, battle: named ?? null, chapter });
     } finally {
       following = false;
     }
@@ -93,8 +95,8 @@ export function startRouter(battle: boolean) {
 }
 
 /** Replaces the current entry's address with `screen` (and the battle it names) in the language on screen, when it differs. */
-function rewrite(screen: RouteScreen, search: string, battle?: BattleSlug | null) {
-  const next = routePath(screen, getLang(), battle) + search + location.hash;
+function rewrite(screen: RouteScreen, search: string, battle?: BattleSlug | null, chapter: ChapterId = battle ? chapterOfBattle(battle) : MAIN_CHAPTER) {
+  const next = routePath(screen, getLang(), battle, chapter) + search + location.hash;
   if (next !== location.pathname + location.search + location.hash) history.replaceState(history.state, '', next);
 }
 
@@ -102,10 +104,12 @@ function rewrite(screen: RouteScreen, search: string, battle?: BattleSlug | null
  * A screen the player opened: a new entry, unless the address already shows that screen (a battle returning to the
  * screen it was started from). The launch hooks go either way, so a reload does not start the test battle again.
  */
-function open(screen: RouteScreen, battle: BattleSlug | null) {
-  const path = routePath(screen, getLang(), battle);
+function open(screen: RouteScreen, battle: BattleSlug | null, chapter: ChapterId) {
+  // Only the menu, the history screen and the campaign are a chapter's own; the other screens are the series' and keep the root.
+  const own = screen === 'menu' || screen === 'select' || screen === 'faction' ? chapter : MAIN_CHAPTER;
+  const path = routePath(screen, getLang(), battle, own);
   const search = withoutParams(location.search, LAUNCH_PARAMS);
-  if (path === location.pathname) rewrite(screen, search, battle);
+  if (path === location.pathname) rewrite(screen, search, battle, own);
   else history.pushState(null, '', path + search);
   showHead();
 }

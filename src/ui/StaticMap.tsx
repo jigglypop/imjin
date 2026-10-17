@@ -1,20 +1,20 @@
 import type { CSSProperties } from 'react';
-import { SCENARIO_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
+import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import { useT } from '../i18n';
-import { shortTitle, siteUV } from './siteMap';
+import { mapImageOf, shortTitle, siteUV } from './siteMap';
 
 // Pins close enough that their labels would collide: these put the label on the pin's left.
 const LABEL_LEFT = new Set<ScenarioId>(['dangpo']);
 
 /** The select map for phones: one flat image, no 3D renderer. The plane pans so the chosen site sits in the open part of the screen. */
-export function StaticMap({ id, onSelect }: { id: ScenarioId; onSelect: (id: ScenarioId) => void }) {
+export function StaticMap({ id, order, onSelect }: { id: ScenarioId; order: readonly ScenarioId[]; onSelect: (id: ScenarioId) => void }) {
   const t = useT();
   const at = siteUV(id);
   return (
     <div className="smap">
       <div className="smap-plane" style={{ '--u': at.u, '--v': at.v } as CSSProperties}>
-        <img src="/ui/map_south.webp" alt="" decoding="async" />
-        {SCENARIO_ORDER.map((sid) => {
+        <img src={mapImageOf(id)} alt="" decoding="async" />
+        {order.map((sid) => {
           const { u, v } = siteUV(sid);
           return (
             <button

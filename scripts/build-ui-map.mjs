@@ -5,10 +5,13 @@
 import sharp from 'sharp';
 import { readFileSync } from 'node:fs';
 
-const ROOT = new URL('..', import.meta.url).pathname;
-const meta = JSON.parse(readFileSync(ROOT + 'src/select/demMeta.json', 'utf8'));
+const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+// --region=channel bakes the Armada chapter's map from scripts/fetch-dem.mjs --region=channel.
+const region = process.argv.find((a) => a.startsWith('--region='))?.slice(9) ?? 'korea';
+const FILES = { korea: ['demMeta.json', 'korea_dem.webp', 'map_south.webp'], channel: ['channelMeta.json', 'channel_dem.webp', 'map_channel.webp'] }[region];
+const meta = JSON.parse(readFileSync(ROOT + 'src/select/' + FILES[0], 'utf8'));
 const { width: w, height: h, metersPerPixel } = meta;
-const { data } = await sharp(ROOT + 'public/ui/korea_dem.webp').ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+const { data } = await sharp(ROOT + 'public/ui/' + FILES[1]).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
 const H = new Float32Array(w * h);
 for (let i = 0; i < w * h; i += 1) H[i] = data[i * 4] * 256 + data[i * 4 + 1] + data[i * 4 + 2] / 256 - 32768;
 const at = (x, y) => H[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))];
@@ -61,5 +64,5 @@ for (let y = 0; y < h; y += 1) {
     out[k + 2] = c[2];
   }
 }
-await sharp(out, { raw: { width: w, height: h, channels: 3 } }).webp({ quality: 80 }).toFile(ROOT + 'public/ui/map_south.webp');
-console.log('wrote public/ui/map_south.webp');
+await sharp(out, { raw: { width: w, height: h, channels: 3 } }).webp({ quality: 80 }).toFile(ROOT + 'public/ui/' + FILES[2]);
+console.log('wrote public/ui/' + FILES[2]);

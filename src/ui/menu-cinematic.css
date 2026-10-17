@@ -123,3 +123,19 @@
   .menu-battle { display:none; }
   .menu--cinematic *, .menu--cinematic *::after { transition:none!important; animation:none!important; }
 }
+
+/* The series' chapters, set left in the masthead row like a film's reel list. */
+.chapter-picker { position:absolute; z-index:3; top:calc(var(--sat) + 26px); left:calc(var(--sal) + 40px); display:flex; gap:2px; border:1px solid rgba(199,176,132,.22); background:rgba(8,12,16,.38); backdrop-filter:blur(6px); }
+.chapter-chip { display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:8px 14px; min-width:84px; border:0; background:transparent; color:#bdb9ad; cursor:pointer; transition:color .2s,background .2s; }
+.chapter-chip b { font-size:13px; font-weight:600; letter-spacing:.04em; }
+.chapter-chip small { font-size:10px; letter-spacing:.12em; opacity:.7; }
+.chapter-chip:hover:not(:disabled) { color:#fff5db; background:rgba(211,188,145,.08); }
+.chapter-chip--on { color:#fff5db; background:rgba(211,188,145,.14); box-shadow:inset 0 -2px 0 #c7b084; }
+.chapter-chip:disabled { cursor:default; opacity:.45; }
+.wordmark-hanja--roman { position:static; display:block; transform:none; margin:0 0 .25em; text-align:center; writing-mode:horizontal-tb; font-family:"Cormorant Garamond","Times New Roman",serif; letter-spacing:.42em; font-size:max(10px,calc(var(--t)*.14)); }
+@media (max-width: 760px) {
+  .chapter-picker { top:auto; bottom:calc(var(--sab, 0px) + 150px); left:50%; transform:translateX(-50%); max-width:calc(100vw - 32px); overflow-x:auto; }
+  .chapter-chip { min-width:64px; padding:6px 9px; }
+  .chapter-chip b { font-size:11px; }
+}
+.menu-sea { position:absolute; inset:0; background:radial-gradient(ellipse 90% 60% at 62% 72%, #1a2a39 0%, #0b131c 55%, #05080c 100%); }
