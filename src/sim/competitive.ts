@@ -40,13 +40,14 @@ export const COMPETITIVE_UNITS: Record<ShipKind, UnitBalance> = {
   gwangseon: { spec: { armor: 0.24, maxSpeed: 4.2, turnRate: 0.11, cost: 950, build: 80 }, mods: { reload: 0.8, accuracy: 1.15 }, range: 1.35, damage: 0.85 },
   haechangseon: { spec: { armor: 0.07, maxSpeed: 5.2, cost: 420, build: 40 }, mods: { reload: 0.85, accuracy: 1.12 }, range: 1.3, damage: 0.88 },
   hoseon: { spec: { hull: 42, crew: 38, cost: 185, build: 20 }, mods: { reload: 0.9, accuracy: 1.1 }, range: 1.25, damage: 0.9 },
-  // The Armada chapter keeps its catalog values; cross-chapter prices live in points.ts.
-  racegalleon: { spec: {} },
-  pinnace: { spec: {} },
-  fireship: { spec: {} },
-  spgalleon: { spec: {} },
-  galleass: { spec: {} },
-  urca: { spec: {} },
+  // The Armada chapter: catalog ships at prices fitted against the 1592 navies in AI conquest matches
+  // (scripts/balance-competitive.mjs --match=england:joseon,...; docs/balance-cross.md). Ranked keeps the 1592 eight.
+  racegalleon: { spec: { cost: 1050, build: 64 } },
+  pinnace: { spec: { cost: 240, build: 22 } },
+  fireship: { spec: { cost: 180, build: 16 } },
+  spgalleon: { spec: { cost: 700, build: 60 } },
+  galleass: { spec: { cost: 620, build: 56 } },
+  urca: { spec: { cost: 260, build: 30 } },
 };
 
 /** The three treasuries earn the same base income; cheap boarding ships are not discounted a second time. */

@@ -320,7 +320,8 @@ try {
     assert.ok(conquest.recruitIn(battle, 0, p.id, 'atakebune'));
   });
   check('campaign prices, combat appraisal and real-time spawn use the same competitive profile', () => {
-    for (const kind of Object.keys(SHIP_SPECS)) {
+    // The faction campaign is the 1592 war: only its navies' ships have campaign prices.
+    for (const kind of Object.keys(SHIP_SPECS).filter((k) => factions.includes(SHIP_SPECS[k].faction))) {
       assert.equal(shipDef(kind).gold, Math.round(shipSpec(kind).cost * TUNING.goldPerCost * TUNING.faction[shipSpec(kind).faction].cost));
       assert.equal(shipDef(kind).turns, Math.ceil(shipSpec(kind).build / TUNING.shipSecondsPerTurn));
       assert.equal(shipDef(kind).strength, combatValue(kind) * TUNING.faction[shipSpec(kind).faction].power);

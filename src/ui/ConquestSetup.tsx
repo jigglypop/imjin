@@ -3,7 +3,7 @@ import { CONQUEST_MAPS, CONQUEST_ORDER, MUSTER_BUDGET, autoFleet, fleetCost, typ
 import { ROSTER, SHORT_NAME } from '../sim/conquest';
 import { COMPETITIVE_TRAITS, shipSpec } from '../sim/competitive';
 import { FACTION_SHORT } from '../sim/balance';
-import { FACTIONS, type Faction, type ShipKind } from '../sim/types';
+import { ALL_FACTIONS as FACTIONS, type Faction, type ShipKind } from '../sim/types';
 import type { ConquestSetup } from '../game/Engine';
 import { sound } from '../audio/Sound';
 import { useT } from '../i18n';
