@@ -9,7 +9,7 @@ Three roles only. Every `font-family` in `src/ui/**/*.css`, `index.html` and can
 
 | Role | Variable | Font | Use |
 |---|---|---|---|
-| Title | `--font-title` | **정묵바위체** (Jeongmuk Bawi) | game/chapter titles, battle title cards, big headings |
+| Title | `--font-title` | **Pretendard** (owner 2026-10-17: 정묵바위체 looked 촌스러움) | game/chapter titles, battle title cards, big headings |
 | Subtitle / dialogue | `--font-cine` | **함렛 Hahmlet** (variable, Medium 500+) | cutscene subtitles, commander dialogue, battle log, briefing body |
 | UI / HUD | `--font-ui` | **Pretendard** (variable, tabular numbers) | menus, buttons, HUD, numbers, scoreboards |
 | Hanja fallback | `--font-hanja` | **Noto Serif KR** | 黑 蛟 and other hanja mixed into dialogue or titles |
@@ -28,3 +28,4 @@ Three roles only. Every `font-family` in `src/ui/**/*.css`, `index.html` and can
 - Mixing DoHyeon, 'Imjin Serif', 'Imjin Roman', 'YiSunShin', 'YiSunShin Dotum' or system fonts per screen. Those are removed.
 - Thin serif subtitles.
 - Glyph-edited 정묵바위체.
+- 정묵바위체 brush titles — owner found them tacky (2026-10-17); titles are Pretendard.
