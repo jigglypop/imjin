@@ -4,6 +4,7 @@ import { EN_COMMON } from './common';
 import { EN_MENUS } from './menus';
 import { EN_ONLINE } from './online';
 import { EN_SIM } from './sim';
+import { EN_ARMADA } from './armada';
 import { EN_EXPANSION } from './expansion';
 import { EN_CONQUEST_DEPTH } from './conquest-depth';
 import { EN_CONTROLS } from './controls';
@@ -26,6 +27,7 @@ import { EN_ARMORY } from './armory';
 export const EN: Record<string, string> = {
   ...EN_COMMON,
   ...EN_SIM,
+  ...EN_ARMADA,
   ...EN_MENUS,
   ...EN_BATTLE,
   ...EN_CAMPAIGN,

@@ -187,7 +187,7 @@ function englishLine(k: ForceKit, name: string, cmd: string, flag: string, cx: n
   const sq = k.squad('joseon', name, cmd, 'racegalleon');
   for (let i = 0; i < galleons; i += 1) k.ship(sq, 'racegalleon', { x: cx - c * i * 80, z: cz - s * i * 80, h: heading }, i === 0 ? flag : k.numbered(name, i + 1), i === 0);
   if (pinnaces) {
-    const pq = k.squad('joseon', `${name} 핀네이스`, cmd, 'pinnace');
+    const pq = k.squad('joseon', `${name} 핀네이스`, cmd, 'pinnace');  // i18n-ignore: a squadron name built from its leader's
     for (let i = 0; i < pinnaces; i += 1) k.ship(pq, 'pinnace', { x: cx - c * i * 60 + s * 120, z: cz - s * i * 60 - c * 120, h: heading }, k.numbered(`${name} 핀네이스`, i + 1));
   }
   return sq;
