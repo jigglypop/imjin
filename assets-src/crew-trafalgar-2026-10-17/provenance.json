@@ -23,6 +23,24 @@
           "total_tokens": 3045
         },
         "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "05a98e73-d88d-4b88-aadc-87d434fcd640"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "7298f5ce-7f5e-45b0-92ed-d402b88356ae",
+        "credits": 30
       }
     },
     "britain_soldier": {
@@ -69,6 +87,24 @@
           "total_tokens": 3038
         },
         "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "2bf58468-7b9b-4c82-a3b8-947d137c5041"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "89ade167-9f99-45eb-b399-c0380571b66f",
+        "credits": 30
       }
     },
     "britain_sailor": {
@@ -92,6 +128,24 @@
           "total_tokens": 3030
         },
         "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "9388b976-bb0f-482b-ad33-0e91a6ca90b0"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "3459ecc0-0566-4c5e-91b2-2bec54cd2c62",
+        "credits": 30
       }
     },
     "france_shot": {
@@ -253,6 +307,16 @@
           "total_tokens": 3023
         },
         "estimatedUsd": 0.062
+      }
+    },
+    "spain1805_officer": {
+      "base": "ming_officer",
+      "concept": {
+        "tool": "gemini image edit",
+        "model": "gemini-3.1-flash-image-preview",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Spanish Navy officer of 1805: a black bicorne with a red cockade, a dark blue coat with red lapels and gold lace, red waistcoat, blue breeches, black boots. Clean-shaven, powdered hair.",
+        "poseReference": "render of ming_officer bind pose",
+        "estimatedUsd": 0.04
       }
     }
   }

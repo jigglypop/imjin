@@ -130,7 +130,7 @@ const FLAG_ID = 7;
 
 const args = process.argv.slice(2);
 const stage = args[0];
-const names = args.slice(1).length ? args.slice(1) : Object.keys(CHARACTERS);
+const names = args.slice(1).filter((a) => !a.startsWith('--')).length ? args.slice(1).filter((a) => !a.startsWith('--')) : Object.keys(CHARACTERS);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const record = (name, k, v) => {
   // Read again each time: several stages may run at once.
@@ -164,6 +164,14 @@ async function concept(name) {
   const ref = join(d, 'pose-ref.png');
   writeFileSync(ref, await renderLod(sourceOf(c.base).lods[0], null, { view: 'front', size: 1024 }));
   const prompt = `${POSE} ${c.look}`;
+  if (process.argv.includes('--provider=gemini')) {
+    // Gemini edits the pose render the same way when the OpenAI images API is out of reach.
+    const { geminiImage, geminiModel } = await import('./gemini-image.mjs');
+    writeFileSync(join(d, 'concept.png'), await geminiImage(prompt, { aspect: '1:1', image: readFileSync(ref) }));
+    record(name, 'concept', { tool: 'gemini image edit', model: geminiModel(), prompt, poseReference: `render of ${c.base} bind pose`, estimatedUsd: 0.04 });
+    console.log(name, 'concept', geminiModel());
+    return;
+  }
   for (const model of ['gpt-image-2.5-sunburst', 'gpt-image-2', 'gpt-image-1']) {
     const form = new FormData();
     form.set('model', model);
