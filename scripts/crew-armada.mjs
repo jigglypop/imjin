@@ -103,13 +103,29 @@ const LEPANTO = {
     look: 'A galley slave oarsman of an Ottoman galley in 1571, a Christian captive: shaved head, a thin beard, bare chest and arms, coarse undyed linen breeches to the knee, an iron ankle ring, barefoot.',
   },
 };
-const SETS = { armada: { pose: ARMADA_POSE, characters: ARMADA }, lepanto: { pose: LEPANTO_POSE, characters: LEPANTO } };
+const TRAFALGAR_POSE = ARMADA_POSE.replace('the Spanish Armada of 1588', 'the battle of Trafalgar of 1805').replace('late-sixteenth-century', 'Napoleonic-era 1805');
+/** The Trafalgar crews (sources: Goodwin, The Ships of Trafalgar 2005; Fremont-Barnes, Nelson's Sailors, Osprey 2005; Haythornthwaite, Napoleon's Line Infantry; Harbron 1988 for the Spanish marines). */
+const TRAFALGAR = {
+  britain_shot: { base: 'japan_ashigaru', look: 'A British Royal Marine private of 1805: a black round hat with the brim turned up on one side, a red wool coatee with white facings and white crossbelts, white waistcoat and white breeches, black gaiters, black shoes. Clean-shaven, short hair.' },
+  britain_soldier: { base: 'japan_samurai', look: 'A British Royal Navy seaman of 1805 ready to board: a black tarred round hat, a short blue jacket open over a checked shirt, a red neckerchief, loose white canvas trousers, black shoes. Clean-shaven, a short pigtail.' },
+  britain_officer: { base: 'ming_officer', look: 'A Royal Navy lieutenant of 1805: a black bicorne hat worn athwartships, a dark blue undress coat with white lapels piping and gold buttons, white waistcoat and breeches, black Hessian boots. Clean-shaven, powdered queue.' },
+  britain_sailor: { base: 'rower', look: 'A British Royal Navy gunner of 1805 in action: bare-chested with a black silk kerchief tied round his head against the noise, loose white canvas trousers rolled at the ankle, barefoot. Clean-shaven.' },
+  france_shot: { base: 'japan_ashigaru', look: 'A French line infantryman serving as marine aboard a ship of the line in 1805: a black bicorne hat with a tricolour cockade, a dark blue coat with white lapels and red cuffs, white crossbelts, white waistcoat and breeches, black gaiters. Moustache.' },
+  france_soldier: { base: 'japan_samurai', look: 'A French Navy sailor of 1805 ready to board: a red wool stocking cap, a short dark blue jacket over a blue-and-white striped shirt, loose white canvas trousers, bare feet. Side-whiskers.' },
+  france_officer: { base: 'ming_officer', look: 'A French Imperial Navy officer of 1805: a black bicorne with a tricolour cockade, a dark blue coat with gold buttons and a red waistcoat, white breeches, black boots. Clean-shaven.' },
+  france_sailor: { base: 'rower', look: 'A French Navy gunner of 1805 in action: a red stocking cap, a sleeveless white shirt open at the neck, loose white canvas trousers, barefoot. Stubble.' },
+  spain1805_shot: { base: 'japan_ashigaru', look: 'A Spanish marine (infantería de marina) of 1805: a black bicorne with a red cockade, a dark blue coat with red facings and cuffs, white crossbelts, red waistcoat, blue breeches, black gaiters. Black moustache.' },
+  spain1805_soldier: { base: 'japan_samurai', look: 'A Spanish Navy sailor of 1805 ready to board: a red wool cap, a short brown jacket over a white shirt, a red sash, loose white canvas trousers, rope-soled shoes. Dark stubble.' },
+  spain1805_officer: { base: 'ming_officer', look: 'A Spanish Navy officer of 1805: a black bicorne with a red cockade, a dark blue coat with red lapels and gold lace, red waistcoat, blue breeches, black boots. Clean-shaven, powdered hair.' },
+  spain1805_sailor: { base: 'rower', look: 'A Spanish Navy gunner of 1805 in action: a red kerchief tied round his head, a sleeveless white shirt, loose white canvas trousers, barefoot. Black stubble.' },
+};
+const SETS = { armada: { pose: ARMADA_POSE, characters: ARMADA }, lepanto: { pose: LEPANTO_POSE, characters: LEPANTO }, trafalgar: { pose: TRAFALGAR_POSE, characters: TRAFALGAR } };
 const POSE = SETS[SET].pose;
 /** Each character: the shipped figure whose rig, clips and hand weapons he takes, and his costume. */
 export const CHARACTERS = SETS[SET].characters;
 /** Command flag cloth by navy: St George's white for England, Burgundy saltire red for Spain. */
 // The officer's command flag: England white, Spain red, the Holy League blue (its standard), the Ottomans green (the Kapudan Pasha's).
-const FLAG = { england: [0.78, 0.76, 0.7], spain: [0.62, 0.16, 0.12], holyleague: [0.2, 0.3, 0.55], ottoman: [0.18, 0.4, 0.22] };
+const FLAG = { england: [0.78, 0.76, 0.7], spain: [0.62, 0.16, 0.12], holyleague: [0.2, 0.3, 0.55], ottoman: [0.18, 0.4, 0.22], britain: [0.78, 0.76, 0.7], france: [0.2, 0.25, 0.5], spain1805: [0.66, 0.18, 0.14] };
 const FLAG_ID = 7;
 
 const args = process.argv.slice(2);

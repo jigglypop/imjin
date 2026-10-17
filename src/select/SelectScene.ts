@@ -25,6 +25,7 @@ import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import { playableFactions } from '../sim/balance';
 import type { Faction } from '../sim/types';
 import { disposeTree } from '../render/dispose';
+import { FONT_HANJA } from '../ui/fonts';
 
 export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
   okpo: { lon: 128.69, lat: 34.89 },
@@ -93,22 +94,13 @@ function seeded(seed: number) {
   };
 }
 
-/** The banners are written with a brush. Only the characters the banners use are fetched (a few kilobytes). */
-const FLAG_FONT = 'Yuji Boku';
+/** The banners' hanja in --font-hanja; waits for the characters they use before painting. */
 let flagFont: Promise<unknown> | null = null;
 function loadFlagFont() {
   if (!flagFont) {
     const chars = new Set([...'帥明']);
     for (const s of Object.values(SCENARIOS)) for (const ch of s.joseon.banner + s.japan.banner + (s.ming?.banner ?? '')) chars.add(ch);
-    const text = [...chars].join('');
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = `https://fonts.googleapis.com/css2?family=Yuji+Boku&display=swap&text=${encodeURIComponent(text)}`;
-    flagFont = new Promise((resolve) => {
-      link.onload = resolve;
-      link.onerror = resolve;
-      document.head.appendChild(link);
-    }).then(() => document.fonts.load(`400 200px "${FLAG_FONT}"`, text));
+    flagFont = document.fonts.load(`700 200px ${FONT_HANJA}`, [...chars].join('')).catch(() => undefined);
   }
   return flagFont;
 }
@@ -205,7 +197,7 @@ function inkText(ctx: CanvasRenderingContext2D, text: string, x: number, y: numb
   ctx.fillStyle = INK;
   ctx.shadowColor = 'rgba(26, 22, 18, 0.45)';
   ctx.shadowBlur = size * 0.03;
-  ctx.font = `400 ${size}px "${FLAG_FONT}", "Noto Serif KR", serif`;
+  ctx.font = `700 ${size}px ${FONT_HANJA}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(text, x, y);

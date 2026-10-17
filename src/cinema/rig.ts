@@ -1,5 +1,5 @@
 import type { Ship } from '../sim/types';
-import type { Ease, Range, SceneContext, Shot, Target, V3 } from './types';
+import type { Ease, Orbit, Range, SceneContext, Shot, Target, Track, V3 } from './types';
 
 /** Where a subject is this frame: a point at its deck (a fleet's at the water), its heading and its size. */
 export type Place = { x: number; y: number; z: number; heading: number; size: number };
@@ -12,6 +12,10 @@ export interface RigHost {
   water(x: number, z: number): number;
   /** Bearing of the moon at night, of the sun by day, radians from +x toward +z. */
   lightBearing(): number;
+  /** A cast figure's feet and facing on his deck, null while it is not on screen. */
+  figure?(who: string): Place | null;
+  /** The battle camera the scene hands over to. */
+  homeEye?(): CameraPose | null;
 }
 
 export type CameraPose = { px: number; py: number; pz: number; lx: number; ly: number; lz: number; fov: number; roll: number; focus: number };
@@ -87,7 +91,7 @@ function offset(p: Place, v: V3) {
  * The camera of a shot at progress `k` (0..1, already eased) with the subject at `p`. A camera never goes under the
  * water or into a hill: it is lifted over them, as a crane would be.
  */
-export function compose(shot: Shot, k: number, p: Place, host: RigHost, look?: Place | null): CameraPose {
+export function compose(shot: Omit<Shot, 'cam'> & { cam: Orbit | Track }, k: number, p: Place, host: RigHost, look?: Place | null): CameraPose {
   const cam = shot.cam;
   let px: number;
   let py: number;

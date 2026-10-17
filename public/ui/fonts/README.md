@@ -1,33 +1,54 @@
-# Menu title lettering
+# MOONWAKE fonts
 
-The menu's title lockup (`src/ui/menu-cinematic.css`) uses three subset fonts, and the loading page and the link cards a fourth, each under the SIL Open Font License included beside it. None of the families has reserved font names.
+Three roles and a hanja fallback, nothing else (owner decision 2026-10-17, `.claude/skills/typography/SKILL.md`). The CSS variables are in `src/ui/styles.css`; canvas text reads the same stacks from `src/ui/fonts.ts`.
 
-## Do Hyeon: `imjin-title-dohyeon.woff2`
+| Role | Variable | File | Font | License |
+|---|---|---|---|---|
+| Title | `--font-title` | `jeongmukbawi-regular.woff` | 정묵바위체 (SangSang Rock), 상상토끼 | 상상토끼 free-font terms (below) |
+| Latin title fallback | in `--font-title` (first on `/en`) | `imjin-title-cinzel.woff2` | Cinzel | OFL, `OFL-Cinzel.txt` |
+| Subtitles, dialogue, briefing, logs | `--font-cine` | `moonwake-cine-hahmlet.woff2` | 함렛 Hahmlet | OFL, `OFL-Hahmlet.txt` |
+| UI, HUD | `--font-ui` | `moonwake-ui-sans.woff2` (family `MW UI Sans`) | Pretendard, renamed subset | OFL with Reserved Font Name, `OFL-Pretendard.txt` |
+| Hanja | `--font-hanja` | `moonwake-hanja-notoserifkr.woff2` | Noto Serif KR | OFL, `OFL-NotoSerifKR.txt` |
 
-Only the four glyphs in `임진왜란`. A subset of [Do Hyeon](https://github.com/google/fonts/tree/main/ofl/dohyeon) (BM DOHYEON by Woowa Brothers), `OFL-DoHyeon.txt`. The family has a single weight; the menu thickens it with a text stroke of its own colour.
+The OFL subsets cover KS X 1001's 2,350 Hangul syllables, printable ASCII and every other mark the game's source sets (the Hanja file: the 477 hanja in `src/`). Text with a syllable or hanja outside them falls to the next face in the stack: cut again with the new text.
 
-Source: `DoHyeon-Regular.ttf` from google/fonts, SHA-256 `35644be7f28e0a68a447b1f7af351dcde5674b870f24f7b5f43e26d00b4ab653`.
+## 정묵바위체: `jeongmukbawi-regular.woff`
 
-Reproduction: `python -m fontTools.subset DoHyeon-Regular.ttf --text=임진왜란 --flavor=woff2 --layout-features='*' --name-IDs='*' --name-languages='*' --output-file=imjin-title-dohyeon.woff2`. The copyright and license name entries are kept.
+By 상상토끼 (SangSang Tokki) from the calligraphy of 정묵 김덕수. Official page: https://sangsangfont.com/21/?idx=122 (free, "개인/기업/상업적인 모든 분야에서 사용을 허락합니다", "폰트 임베딩 지원"). The official download is a TTF/OTF pack behind a 0-won checkout with a log-in, which an automated session cannot do. The file here is the web font the noonnu catalogue serves for it, `https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/SangSangRockOTF.woff` (https://noonnu.cc/font_page/395), byte for byte, SHA-256 `c3f288d4b30ae94b668fe13e7ce1ca7c7aee2b082ab56b2be8e19d83bd8c046f`.
 
-## Do Hyeon, battle titles: `imjin-battle-dohyeon.woff2`
+License as listed (noonnu, quoting 상상토끼): print, web, packaging, video, embedding (web sites, apps, e-books) and BI/CI allowed; "재배포는 가능하나 상업적 재판매와 폰트 파일의 수정은 절대 금지" (redistribution allowed; reselling and modifying the font file forbidden). 상상토끼 may use part of a work made with its free fonts to promote them. Because modifying the file is forbidden, it is **not** subset and not converted to WOFF2: it is served as distributed, 3.3 MB (2,350 + 129 Hangul, Latin, marks; no hanja, which fall to Noto Serif KR). It is preloaded only on wide screens (`index.html`); phones load it with `font-display: swap`.
 
-The loading page's poster title and the link cards (`scripts/build-battle-art.mjs`): the glyphs of every battle name they set, which are the nine historical battles (`src/sim/scenarioText.ts`), every campaign region's battle (`<region> 해전`, the region names in `src/sim/grand/regions.ts`), the conquest maps (`src/sim/maps.ts`) and 임진왜란, 80 glyphs with the middle dot. Same source file and license as above. A new region or map name means cutting it again with the new text; a missing syllable would fall back to the page's other faces.
+Owner to do: download the official pack from the 상상토끼 page while logged in, keep its license file here, and replace this file with the officially distributed one if it differs; ask 상상토끼 whether a subset is allowed, which would cut the file to a few KB.
 
-Reproduction: `python -m fontTools.subset DoHyeon-Regular.ttf --text=가거견고골교금기김나남내노녹다답당대덕도동둥등란량려령리마명목문미발방배부사산생서선성소수순시쓰아안야어여영오옥왜요울율이임장쟁전제조죽진천첩칠탈포한합항해회· --flavor=woff2 --layout-features='*' --name-IDs='*' --name-languages='*' --output-file=imjin-battle-dohyeon.woff2`.
+## Hahmlet: `moonwake-cine-hahmlet.woff2`
+
+[Hahmlet](https://github.com/hyper-type/hahmlet) by Hypertype, from google/fonts `ofl/hahmlet/Hahmlet[wght].ttf`, SHA-256 `892bffe530255770a7435226154a02f519055ff6bedf64254f37f21d15a59279`. No Reserved Font Name. Weight axis limited to 500-800 (subtitles never go lighter than 500).
+
+## Pretendard: `moonwake-ui-sans.woff2`
+
+[Pretendard](https://github.com/orioncactus/pretendard) v1.3.9 by Kil Hyung-jin, `public/variable/PretendardVariable.ttf` from the release zip (https://github.com/orioncactus/pretendard/releases/tag/v1.3.9), SHA-256 `3090ccde0442bb347aa7685d9ba8b17436a60682df6e8f92a9a670de14056e22`. "Pretendard" is a Reserved Font Name, so the subset is renamed `MW UI Sans` in its name table (family, full, PostScript and unique names; the copyright, trademark and license entries are kept). Weight axis limited to 400-800; `tnum` kept for the HUD's tabular figures.
+
+## Noto Serif KR: `moonwake-hanja-notoserifkr.woff2`
+
+[Noto Serif KR](https://github.com/google/fonts/tree/main/ofl/notoserifkr) by Google, `NotoSerifKR[wght].ttf` from google/fonts, SHA-256 `11f8d5de6f1b79195efba3828aaa2ec95c1178f5ae976fb23c8d53250a9938f3`. Only the hanja, weight axis 200-900.
 
 ## Cinzel: `imjin-title-cinzel.woff2`
 
-The English title, the years and the English billing. Printable ASCII plus a few marks (no-break space, middle dot, Ō/ō, dashes, curly quotes, ellipsis), with the weight axis (400-900) kept. [Cinzel](https://github.com/google/fonts/tree/main/ofl/cinzel) by Natanael Gama, `OFL-Cinzel.txt`.
+[Cinzel](https://github.com/google/fonts/tree/main/ofl/cinzel) by Natanael Gama, `Cinzel[wght].ttf` from google/fonts, SHA-256 `f4d83d34d1f6c741193e4acf4b3dff9531e5a67b6aa65228d00a7db72a4e0f34`: printable ASCII plus U+00A0, U+00B7, Ō/ō, dashes, curly quotes, ellipsis, weight axis 400-900.
 
-Source: `Cinzel[wght].ttf` from google/fonts, SHA-256 `f4d83d34d1f6c741193e4acf4b3dff9531e5a67b6aa65228d00a7db72a4e0f34`.
+## Reproduction
 
-Reproduction: `python -m fontTools.subset "Cinzel[wght].ttf" --unicodes=U+0020-007E,U+00A0,U+00B7,U+014C,U+014D,U+2013,U+2014,U+2018,U+2019,U+201C,U+201D,U+2026 --flavor=woff2 --layout-features='*' --name-IDs='*' --name-languages='*' --output-file=imjin-title-cinzel.woff2`.
+`text.txt` is the 2,350 KS X 1001 syllables (every EUC-KR code B0A1-C8FE) plus every non-ASCII, non-hanja character in `src/`, `server/` and `index.html`; `hanja.txt` the hanja there (U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF).
 
-## Noto Serif KR: `imjin-serif-notoserifkr.woff2`
+```
+O="--flavor=woff2 --layout-features=* --name-IDs=* --name-languages=*"
+python -m fontTools.subset "Hahmlet[wght].ttf" --text-file=text.txt --unicodes=U+0020-007E,U+00A0 $O --output-file=h.woff2
+python -m fontTools.varLib.instancer h.woff2 wght=500:800 -o moonwake-cine-hahmlet.woff2
+python -m fontTools.subset PretendardVariable.ttf --text-file=text.txt --unicodes=U+0020-007E,U+00A0 $O --output-file=p.woff2
+python -m fontTools.varLib.instancer p.woff2 wght=400:800 -o p2.woff2
+# then rename: every name record except IDs 0, 7, 13, 14: "Pretendard Variable"/"Pretendard" -> "MW UI Sans", "PretendardVariable" -> "MWUISans"
+python -m fontTools.subset "NotoSerifKR[wght].ttf" --text-file=hanja.txt $O --output-file=moonwake-hanja-notoserifkr.woff2
+python -m fontTools.subset "Cinzel[wght].ttf" --unicodes=U+0020-007E,U+00A0,U+00B7,U+014C,U+014D,U+2013,U+2014,U+2018,U+2019,U+201C,U+201D,U+2026 $O --output-file=imjin-title-cinzel.woff2
+```
 
-The Korean tagline, the hanja and the seal: only `나라를지킨바다壬辰倭亂海戰朝鮮明日本`, with the weight axis (200-900) kept. [Noto Serif KR](https://github.com/google/fonts/tree/main/ofl/notoserifkr) by Google, `OFL-NotoSerifKR.txt`. Changing the tagline (`나라를 지킨 바다` in `src/ui/Screens.tsx`) means cutting the subset again with the new text.
-
-Source: `NotoSerifKR[wght].ttf` from google/fonts, SHA-256 `11f8d5de6f1b79195efba3828aaa2ec95c1178f5ae976fb23c8d53250a9938f3`.
-
-Reproduction: `python -m fontTools.subset "NotoSerifKR[wght].ttf" --text=나라를지킨바다壬辰倭亂海戰朝鮮明日本 --flavor=woff2 --layout-features='*' --name-IDs='*' --name-languages='*' --output-file=imjin-serif-notoserifkr.woff2`.
+Removed 2026-10-17: Do Hyeon (`imjin-title-dohyeon`, `imjin-battle-dohyeon`), the old Noto Serif KR lockup cut (`imjin-serif-notoserifkr`) and Asan City's 이순신체/이순신돋움체 (`imjin-yisunshin-*`).

@@ -231,6 +231,26 @@ export class Crew {
     this.group.clear();
   }
 
+  /** Ships whose captain is not drawn: a cutscene's named commander stands at his post (src/cinema/cast.ts). */
+  readonly standIns = new Set<number>();
+
+  /**
+   * Where a named commander stands for a close-up, in ship space: a step forward of the captain's mark on a panokseon's
+   * command platform; on any other ship, at the head of the main deck, where nothing stands between him and a camera off
+   * the bow (the deck plans' cabins do not always match the drawn model, so the middle of the deck is not trusted).
+   */
+  commandPost(ship: Ship) {
+    const r = this.roster(ship);
+    const st = r.stations[OFFICER]?.[0];
+    if (!st) return null;
+    const y = this.deckY(r, st.deck);
+    // The panokseon's and the atakebune's command platforms are open; the Ming castles wall theirs in, and an
+    // atakebune's bow is enclosed (a camera there sees black).
+    if (st.deck === 2 && (ship.spec.kind === 'panokseon' || ship.spec.kind === 'atakebune')) return { x: st.x + 0.6, y, z: st.z };
+    if (st.deck === 2) return { x: r.layout.x1 - 1.4, y: r.main, z: 0 };
+    return { x: r.layout.x1 - 1.4, y, z: 0 };
+  }
+
   private deckY(r: Roster, deck: Deck) {
     return deck === 0 ? r.main - r.layout.oarDrop : deck === 2 ? r.main + (r.layout.command?.up ?? 0) : r.main;
   }
@@ -849,7 +869,7 @@ export class Crew {
       const list = r.members[role]!;
       for (let i = 0; i < list.length; i += 1) {
         const mem = list[i]!;
-        if (mem.away || mem.gone) continue;
+        if (mem.away || mem.gone || (role === OFFICER && this.standIns.has(ship.id))) continue;
         const st = r.stations[role]![mem.station]!;
         const visible = st.deck === 0 ? r.showLow : st.deck === 2 ? r.showCommand : r.showMain;
         if (!visible) continue;

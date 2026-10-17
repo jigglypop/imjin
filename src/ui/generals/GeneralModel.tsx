@@ -21,7 +21,7 @@ function reviewFiles(): string[] {
   if (!import.meta.env.DEV || typeof location === 'undefined') return [];
   return (new URLSearchParams(location.search).get('review') ?? '').split(',').filter((f) => /^[a-zA-Z0-9_-]+$/.test(f));
 }
-function listModels() {
+export function listModels() {
   listing ??= fetch(`${import.meta.env.BASE_URL}models/generals/index.json`)
     .then((r) => (r.ok ? (r.json() as Promise<string[]>) : []))
     .then((names) => new Set([...names, ...reviewFiles()]))
@@ -43,7 +43,7 @@ export function useGeneralModels() {
 }
 
 /** New weapon files use metres, +Y along the blade/shaft and a grip at their origin. */
-function holdWeapon(body: Object3D, weapon: Object3D, definition: WeaponDef) {
+export function holdWeapon(body: Object3D, weapon: Object3D, definition: WeaponDef) {
   const left = definition.kind === 'bow';
   body.updateMatrixWorld(true);
   const socket = body.getObjectByName(left ? 'socket_grip_left' : 'socket_grip_right');
@@ -52,7 +52,10 @@ function holdWeapon(body: Object3D, weapon: Object3D, definition: WeaponDef) {
     held.name = `held_${definition.id}`;
     held.add(weapon);
     held.position.copy(socket.getWorldPosition(new Vector3()));
-    if (definition.kind === 'sword') held.quaternion.copy(socket.getWorldQuaternion(new Quaternion()));
+    // The socket's +X runs from the wrist toward the closed fingers and its +Y leaves the thumb side; sword files carry
+    // their edge on -X, so a half turn about the blade puts the edge on the fingers' side (toward the target, the spine
+    // toward the thumb), as a sabre is really held.
+    if (definition.kind === 'sword') held.quaternion.copy(socket.getWorldQuaternion(new Quaternion())).multiply(EDGE_TO_FINGERS);
     else if (body.parent) held.quaternion.copy(body.parent.getWorldQuaternion(new Quaternion()));
     // Align a resting polearm/bow upright; an angled forearm would otherwise point a long shaft through the helmet.
     socket.attach(held);
@@ -90,6 +93,9 @@ function holdWeapon(body: Object3D, weapon: Object3D, definition: WeaponDef) {
   hand.add(held);
   return held;
 }
+
+/** A half turn about the blade (+Y): the file's edge side (-X) onto the socket's finger side (+X). */
+const EDGE_TO_FINGERS = new Quaternion(0, 1, 0, 0);
 
 /** How far the weapon leaves the fist from straight forward toward the line of the arm, degrees, per kind. */
 const GRIP_TILT: Record<WeaponDef['kind'], number> = { sword: 35, spear: 0, bow: 0 };
@@ -132,10 +138,10 @@ function normalizeFigure(asset: Object3D) {
 /** Each figure ships three levels, picked by the equipment tier: high (PC) LOD0, medium (tablet) _lod1, low (phone) _lod2. */
 const LOD_SUFFIX = { high: '', medium: '_lod1', low: '_lod2' } as const;
 /** Weapons come in two levels: the desktop file and _lod1 for tablets and phones. */
-const weaponUrl = (id: string) => `${import.meta.env.BASE_URL}models/generals/parts/weapon_${id}${equipment.tier === 'high' ? '' : '_lod1'}.glb`;
-const modelUrl = (file: string) => `${import.meta.env.BASE_URL}models/generals/${file}${LOD_SUFFIX[equipment.tier]}.glb`;
+export const weaponUrl = (id: string) => `${import.meta.env.BASE_URL}models/generals/parts/weapon_${id}${equipment.tier === 'high' ? '' : '_lod1'}.glb`;
+export const modelUrl = (file: string) => `${import.meta.env.BASE_URL}models/generals/${file}${LOD_SUFFIX[equipment.tier]}.glb`;
 
-const loader = new GLTFLoader();
+export const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
 
 /**
@@ -208,7 +214,7 @@ function movementClips(clips: readonly AnimationClip[], kind: WeaponKind = 'swor
   return { idle: exact(`idle_${kind}`) ?? exact('idle_sword') ?? find('idle'), moves };
 }
 type FigureView = 'front' | 'side' | 'back';
-type Figure = {
+export type Figure = {
   root: Object3D;
   asset: Object3D;
   mixer: AnimationMixer;
@@ -221,7 +227,7 @@ type Figure = {
   finished: (event: { action: AnimationAction }) => void;
 };
 
-function createFigure(asset: Object3D, animations: readonly AnimationClip[], kind: WeaponKind): Figure {
+export function createFigure(asset: Object3D, animations: readonly AnimationClip[], kind: WeaponKind): Figure {
   const root = normalizeFigure(asset);
   const mixer = new AnimationMixer(asset);
   const figure: Figure = { root, asset, mixer, idle: null, moves: new Map(), playing: null, weapon: null, clips: animations, kind, finished: () => {} };
@@ -250,7 +256,7 @@ function armFigure(figure: Figure, kind: WeaponKind) {
   figure.mixer.update(0);
 }
 
-function playFigure(figure: Figure, move: Move) {
+export function playFigure(figure: Figure, move: Move) {
   const next = figure.moves.get(move);
   if (!next) return false;
   const from = figure.playing ?? figure.idle;
@@ -262,7 +268,7 @@ function playFigure(figure: Figure, move: Move) {
   return true;
 }
 
-function standFigure(figure: Figure) {
+export function standFigure(figure: Figure) {
   if (!figure.idle) return false;
   const previous = figure.playing;
   figure.idle.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).play();
@@ -271,7 +277,7 @@ function standFigure(figure: Figure) {
   return true;
 }
 
-function releaseFigure(figure: Figure, retained?: Object3D) {
+export function releaseFigure(figure: Figure, retained?: Object3D) {
   figure.mixer.removeEventListener('finished', figure.finished);
   figure.mixer.stopAllAction();
   figure.mixer.uncacheRoot(figure.asset);

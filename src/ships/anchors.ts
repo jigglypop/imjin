@@ -1052,6 +1052,9 @@ export function cardOf(kind: ShipKind) {
   // The 1588 navies have no cards of their own yet: the English take the allied card, the Spanish the opposing ones.
   if (faction === 'england') return 'card_panokseon';
   if (faction === 'spain') return model === 'spgalleon' || model === 'galleass' ? 'card_atakebune' : 'card_sekibune';
+  // Nor do the 1571 navies: the Holy League takes the allied card, the Ottomans the opposing ones.
+  if (faction === 'holyleague') return 'card_panokseon';
+  if (faction === 'ottoman') return model === 'sultana' ? 'card_atakebune' : 'card_sekibune';
   return `card_${model === 'hyeopseon' || faction === 'ming' ? 'panokseon' : model === 'kobaya' ? 'sekibune' : model}`;
 }
 

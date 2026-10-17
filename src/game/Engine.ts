@@ -154,6 +154,9 @@ const MAX_STEPS = 160;
 const simBudgetMs = (speed: number) => (speed >= 64 ? 32 : speed >= 16 ? 24 : speed >= 8 ? 14 : 9);
 type LoadTask = { controller: AbortController; terrain?: Terrain; sky?: LoadedSky };
 
+/** Stand-ins written while no crew is drawn are simply dropped. */
+const NO_STAND_INS = new Set<number>();
+
 export class Engine {
   readonly scene = new Scene();
   readonly sun = new DirectionalLight(0xffffff, 3);
@@ -928,7 +931,8 @@ export class Engine {
     }
     const { aperture, focus } = this.cinema.depthOfField;
     film.focus.value = focus;
-    film.depth.value = Math.max(12, focus * 0.4);
+    // A close-up on a figure two or three metres away wants a shallow field; the fleet shots keep theirs.
+    film.depth.value = Math.max(focus < 8 ? 1.2 : 12, focus * 0.4);
     film.bokeh.value = aperture * 1.5;
   }
 
@@ -958,6 +962,18 @@ export class Engine {
       setSky: (name) => engine.setSky(name).catch(() => undefined),
       homePose: () => engine.defaultPose(),
       sound,
+      cast: {
+        scene: engine.scene,
+        get camera() {
+          return engine.camera;
+        },
+        localToWorld: (id, x, y, z, out) => engine.views.localToWorld(id, x, y, z, out),
+        shipScale: (id) => (engine.battle.get(id)?.flagship ? 1.12 : 1),
+        commandPost: (ship) => engine.crew?.commandPost(ship) ?? null,
+        get standIns() {
+          return engine.crew?.standIns ?? NO_STAND_INS;
+        },
+      },
     });
   }
 

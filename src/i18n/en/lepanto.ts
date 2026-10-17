@@ -87,7 +87,7 @@ export const EN_LEPANTO: Record<string, string> = {
   "파트라스 만 · 쿠르촐라리 앞바다": "Gulf of Patras · off the Curzolari",
   "파트라스 만 · 바다 쪽": "Gulf of Patras · seaward",
   "바람이 잦아든 바다에서 바르바로사의 갤리선이 도리아의 연합 함대를 몰아냈습니다.": "In a dying wind Barbarossa's galleys drove off Doria's allied fleet.",
-  "물을 싣던 기독교 함대를 피얄레 파샤가 덮쳤습니다. 흩어진 갤리선을 한 척이라도 더 살려야 합니다.": "Piyale Pasha fell on the Christian fleet as it watered. Save every scattered galley you can.",
+  "물을 싣던 기독교 함대를 피얄레 파샤가 덮쳤습니다. 갤리선을 한 척이라도 더 살리세요.": "Piyale Pasha fell on the Christian fleet as it watered. Save every scattered galley you can.",
   "해안에 붙은 바르바리고의 베네치아 갤리선을 시로코가 얕은 물길로 돌아 칩니다.": "Siroco slips through the shallows to strike Barbarigo's Venetian galleys along the shore.",
   "라 레알호와 술타나호가 이물을 맞댄 레판토의 결전.": "The decisive clash of Lepanto: La Real and the Sultana bow to bow.",
   "도리아와 울루치 알리가 서로 바다 쪽으로 돌다 틈이 벌어졌습니다.": "Doria and Uluç Ali each edged seaward, and a gap opened.",

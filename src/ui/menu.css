@@ -904,6 +904,8 @@
 }
 
 .hs-brief-scroll {
+  font-family: var(--font-cine);
+  font-weight: 500;
   flex: 1;
   min-height: 0;
   overflow-y: auto;

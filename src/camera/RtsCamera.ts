@@ -37,6 +37,17 @@ export class RtsCamera {
     }
   }
 
+  /** Where the camera stands and looks for a pose (a cutscene eases into it before handing the camera back). */
+  eyeOf(p: CameraPose) {
+    const groundY = Math.max(waveField.heightAt(p.tx, p.tz) * 0.4, this.ground(p.tx, p.tz));
+    const ly = groundY + Math.min(8, 2 + p.distance * 0.02) + this.lookLift;
+    const cp = Math.cos(p.pitch);
+    const px = p.tx + Math.cos(p.yaw) * cp * p.distance;
+    const pz = p.tz + Math.sin(p.yaw) * cp * p.distance;
+    const py = Math.max(ly + Math.sin(p.pitch) * p.distance, waveField.heightAt(px, pz) + 2.2, this.ground(px, pz) + 12);
+    return { px, py, pz, lx: p.tx, ly, lz: p.tz };
+  }
+
   attach(dom: HTMLElement) {
     this.dom = dom;
     dom.addEventListener('wheel', this.onWheel, { passive: false });
@@ -194,17 +205,9 @@ export class RtsCamera {
     this.yaw += (this.goal.yaw - this.yaw) * sr;
     this.pitch += (this.goal.pitch - this.pitch) * sr;
     this.distance += (this.goal.distance - this.distance) * s;
-    const groundY = Math.max(waveField.heightAt(this.target.x, this.target.z) * 0.4, this.ground(this.target.x, this.target.z));
-    const lookY = groundY + Math.min(8, 2 + this.distance * 0.02) + this.lookLift;
-    const cp = Math.cos(this.pitch);
-    const px = this.target.x + Math.cos(this.yaw) * cp * this.distance;
-    const pz = this.target.z + Math.sin(this.yaw) * cp * this.distance;
-    let py = lookY + Math.sin(this.pitch) * this.distance;
-    const water = waveField.heightAt(px, pz);
-    const land = this.ground(px, pz);
-    py = Math.max(py, water + 2.2, land + 12);
-    this.camera.position.set(px, py, pz);
-    this.camera.lookAt(this.target.x, lookY, this.target.z);
+    const eye = this.eyeOf({ tx: this.target.x, tz: this.target.z, yaw: this.yaw, pitch: this.pitch, distance: this.distance });
+    this.camera.position.set(eye.px, eye.py, eye.pz);
+    this.camera.lookAt(eye.lx, eye.ly, eye.lz);
     if (this.shakeAmount > 0.002) {
       this.shakeClock += dt;
       const a = this.shakeAmount * this.shakeAmount * cameraFeel.shake();

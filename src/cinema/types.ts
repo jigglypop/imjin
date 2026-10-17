@@ -39,9 +39,23 @@ export type Orbit = { type: 'orbit'; at: Target; yaw: Range; pitch: Range; dist:
 /** Camera moving in a straight line between two offsets of a subject's frame, looking at a third (or at another subject). */
 export type Track = { type: 'track'; at: Target; from: V3; to: V3; look: V3; lookAt?: Target };
 
+/**
+ * Close on a commander's figure at his post (src/cinema/cast.ts): `from`/`to` and `look` are metres in his frame
+ * (forward the way he faces, up from his feet, right to his right). Until his figure is on deck, or on a device or page
+ * where it never comes, the shot falls back to `fallback` around his ship.
+ */
+export type Close = { type: 'figure'; who: string; at: Target; from: V3; to: V3; look: V3; fallback: Orbit };
+
+/** Eases from wherever the last shot left the camera into the player's battle camera, so the hand-off has no jump. */
+export type Home = { type: 'home'; at: Target };
+
+/** What a figure does from a moment of its shot: the command clip (the sword sent forward) or back to standing. */
+export type Act = { who: string; move: 'command' | 'stand'; at: number };
+
 export type Shot = {
   dur: number;
-  cam: Orbit | Track;
+  cam: Orbit | Track | Close | Home;
+  acts?: readonly Act[];
   ease?: Ease;
   /** Vertical field of view in degrees; a long lens is a small number. */
   fov?: Range;
@@ -63,6 +77,12 @@ export type Caption = { at: number; dur: number } & (
   | { kind: 'card'; who: string; hanja?: string; role: string; portrait: string; side: Side }
   | { kind: 'label'; target: Target; text: string; sub?: string; side: Side }
   | { kind: 'quote'; text: string; hanja: string; source: string }
+  /**
+   * A film subtitle: the commander on screen speaks. `cast` names his figure; when it is not on screen the line comes
+   * with his portrait as a painted insert. `source` says where the words are from, `note` marks a line written in
+   * character from a record rather than quoted.
+   */
+  | { kind: 'say'; cast: string; who: string; role?: string; text: string; hanja?: string; source: string; note?: string; side: Side }
 );
 
 export type CaptionKind = Caption['kind'];
@@ -77,8 +97,19 @@ export type Cue = {
   | { kind: 'sky'; name: 'night' | 'sunset' | 'dawn' | 'day' | 'afternoon' | 'overcast' }
 );
 
+/**
+ * A commander whose live figure (public/models/generals/index.json) stands at the captain's post of his flagship for the
+ * scene's close-ups, facing `facing`, holding `weapon` (a parts/weapon_<id> file).
+ */
+export type CastMember = { file: string; weapon: string; ship: Pick; facing: Pick; portrait: string };
+
+/** Light on the figures: the battle's time of day and weather. */
+export type CastLight = 'day' | 'overcast' | 'dusk' | 'night';
+
 export type Scene = {
   id: string;
+  cast?: Record<string, CastMember>;
+  castLight?: CastLight;
   shots: Shot[];
   captions: Caption[];
   cues?: Cue[];

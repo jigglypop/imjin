@@ -6,6 +6,41 @@
    This :root is the one place the palette is written down; the other sheets and tokens.ts read it.
    ============================================================================ */
 
+/* MOONWAKE's type: three roles, nothing else (.claude/skills/typography, public/ui/fonts/README.md).
+   --font-title 정묵바위체 (Cinzel for Latin), --font-cine 함렛 Hahmlet, --font-ui Pretendard, --font-hanja Noto Serif KR.
+   정묵바위체 is served exactly as distributed (its license forbids modifying the file), so it is not subset and not
+   preloaded; the OFL faces are cut to KS X 1001's 2,350 syllables, ASCII and the marks and hanja the game sets. */
+@font-face {
+  font-family: 'Jeongmuk Bawi';
+  src: url('/ui/fonts/jeongmukbawi-regular.woff') format('woff');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'MW Cinzel';
+  src: url('/ui/fonts/imjin-title-cinzel.woff2') format('woff2');
+  font-weight: 400 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'MW Hahmlet';
+  src: url('/ui/fonts/moonwake-cine-hahmlet.woff2') format('woff2');
+  font-weight: 500 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'MW UI Sans';
+  src: url('/ui/fonts/moonwake-ui-sans.woff2') format('woff2');
+  font-weight: 400 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'MW Hanja';
+  src: url('/ui/fonts/moonwake-hanja-notoserifkr.woff2') format('woff2');
+  font-weight: 200 900;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
 
@@ -74,11 +109,12 @@
   --japan-deep: #6b4a40;
   --ming-deep: #8c7040;
 
-  /* Type: Pretendard everywhere. Sizes 12/13/15/17/20/24/32, weights 400/500/600. */
-  --font-ui: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
-  --hanja: var(--font-ui);
-  /* The title wordmark's serif (loaded in index.html), and nothing else. */
-  --font-title: 'Noto Serif KR', 'Nanum Myeongjo', 'AppleMyungjo', serif;
+  /* Type: the three roles (top of this sheet). Sizes 12/13/15/17/20/24/32, weights 400/500/600. Canvas text reads
+     the same stacks from src/ui/fonts.ts. */
+  --font-ui: 'MW UI Sans', 'MW Hanja', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+  --font-cine: 'MW Hahmlet', 'MW Hanja', serif;
+  --font-hanja: 'MW Hanja', 'MW Hahmlet', serif;
+  --font-title: 'Jeongmuk Bawi', 'MW Cinzel', 'MW Hanja', 'MW Hahmlet', serif;
   --fs-12: 12px;
   --fs-13: 13px;
   --fs-15: 15px;
@@ -108,6 +144,11 @@
 
   /* HUD sizes: scale with the window instead of zooming */
   --bh: clamp(150px, 14vw, 182px);
+}
+
+/* The English page sets its titles in Cinzel's capitals first; Korean in them falls through to 정묵바위체. */
+:root:lang(en) {
+  --font-title: 'MW Cinzel', 'Jeongmuk Bawi', 'MW Hanja', 'MW Hahmlet', serif;
 }
 
 * {
@@ -177,7 +218,7 @@ input {
 }
 
 .hanja {
-  font-family: var(--hanja);
+  font-family: var(--font-hanja);
   font-weight: 700;
 }
 
@@ -354,7 +395,7 @@ input {
   border-radius: 8px;
   background: var(--seal);
   color: var(--ink-dark);
-  font-family: var(--hanja);
+  font-family: var(--font-hanja);
   font-weight: 700;
   font-size: var(--fs-15);
 }
@@ -370,7 +411,7 @@ input {
   justify-content: center;
   background: var(--joseon);
   color: var(--ink-dark);
-  font-family: var(--hanja);
+  font-family: var(--font-hanja);
   font-style: normal;
   font-weight: 700;
   font-size: 24px;

@@ -9,7 +9,7 @@
 // Each output has a <file>.json beside it (prompt, task id, credits); a rerun skips what is done and resumes a
 // provider task that was still running instead of creating a new one. Credits go to ledger.json.
 //
-//   node scripts/generals-cast.mjs <concept|model|rig|motion|pack|all> --id=yi[,wakisaka] [--redo] [--only=front,left,back]
+//   node scripts/generals-cast.mjs <concept|model|rig|motion|pack|live|review|all> --id=yi[,wakisaka] [--redo] [--only=front,left,back]
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -55,25 +55,25 @@ const CAST = [
   { id: 'konishi', armor: 'konishi_gin', sword: 'tachi', face: 'Konishi Yukinaga, Japanese vanguard commander and Christian daimyo, thirties: a refined intelligent Japanese face, a neat moustache', look: JAPAN + 'Silver-lacquered tosei-gusoku with white silk lacing, a European-style polished steel breastplate (nanban-do) with a small gold cross engraved on it, silver sode and kusazuri; a silver momonari kabuto with a gold cross-shaped maedate and a silver neck guard; a short white silk scarf.' },
   { id: 'shimazu', armor: 'shimazu_oni', sword: 'nodachi', face: 'Shimazu Yoshihiro, Japanese warlord, sixties: a fierce lean old Japanese face with a grey moustache and short grey beard, the eyes of a demon fighter', look: JAPAN + 'Black-lacquered tosei-gusoku with bright red silk lacing, red sode and kusazuri; a black kabuto with a gold maedate in the shape of the Shimazu mon (a cross inside a ring) and a red neck guard.' },
   { id: 'deng', armor: 'deng_nojang', sword: 'zhanmadao', face: 'Deng Zilong, the seventy-year-old Ming veteran admiral: a lean, fierce old Han Chinese face, a long white beard and white moustache, unbroken pride', look: MING + 'Clearly readable lamellar of distinct, evenly spaced small plates in warm dark bronze and blued iron with a soft matte satin finish (no mirror shine, no grime streaks), laced with bright red cords, over a dark red robe; bronze lion-head shoulder guards; a dark red skirt; a bronze-and-iron Ming helmet with a spike, a red tassel and phoenix-wing flaps, red cloth cheek and neck guards with clean, crisp edges.' },
-  { id: 'kwon', armor: 'joseon_gyeongbeon', sword: 'hwando', face: 'Gwon Jun, Joseon magistrate and staff officer, forties: a clever composed Korean face, a neat moustache and chin beard', look: JOSEON + 'A gyeongbeon-gap: iron mail set with polished small steel plates over a dark blue robe, red trims, a red belt; an iron tugu helmet with a small spike and red tassel, mail neck guard.' },
+  { id: 'kwon', armor: 'joseon_gyeongbeon', sword: 'hwando', face: 'Gwon Jun, an older scholar-official commander about fifty-five: a dignified long pale face with soft wrinkles, gentle heavy-lidded eyes, a long thin grey-streaked moustache and a long grey wispy chin beard, the bearing of a scholar', look: JOSEON + 'A gyeongbeon-gap: iron mail set with polished small steel plates over a dark blue robe, red trims, a red belt; an iron tugu helmet with a small spike and red tassel, mail neck guard.' },
   { id: 'eo', armor: 'joseon_dujeong', sword: 'hwando', face: 'Eo Yeong-dam, Joseon magistrate and veteran navigator, fifties: a sea-weathered Korean face, grey-shot moustache and beard', look: JOSEON + 'A dark green cotton dujeong-gap coat with brass rivets and red trims, a black belt; a dark iron tugu helmet with a spike and red plume and a green riveted neck curtain.' },
-  { id: 'jeongun', armor: 'joseon_dujeong', sword: 'hwando', face: 'Jeong Un, the fearless Joseon commander who died charging at Busan, forties: a fierce square Korean face, thick brows, a full black beard', look: JOSEON + 'A bright red dujeong-gap coat with brass rivets, black trims, iron arm guards; an iron tugu helmet with a spike and a large red plume, a red riveted neck curtain.' },
-  { id: 'kimwan', armor: 'joseon_pigap', sword: 'hwando', face: 'Kim Wan, Joseon officer, thirties: a tough lean Korean face, a short moustache', look: JOSEON + 'A black lacquered leather lamellar coat (pigap) laced with red cords, red shoulder trims; a black leather and iron helmet with a small spike and black plume.' },
-  { id: 'nadaeyong', armor: 'joseon_dujeong', sword: 'hwando', face: 'Na Dae-yong, the Joseon shipwright officer who helped build the turtle ship, forties: an intelligent determined Korean face, moustache and short beard', look: JOSEON + 'A dark brown dujeong-gap coat with brass rivets and dark teal trims, a leather belt with tools; a dark iron tugu helmet with a spike and a brown plume.' },
-  { id: 'songhuirip', armor: 'joseon_swaeja', sword: 'hwando', face: 'Song Hui-rip, Joseon naval officer, forties: an earnest brave Korean face, moustache and chin beard', look: JOSEON + 'Iron chain mail (swaeja-gap) to the knees over a crimson robe, iron arm guards, a red belt; an iron tugu helmet with a spike and red tassel and a mail neck curtain.' },
-  { id: 'iyeongnam', armor: 'joseon_dujeong', sword: 'hwando', face: 'Yi Yeong-nam, Joseon naval commander, thirties: a handsome lean Korean face, thin moustache, loyal steady eyes', look: JOSEON + 'An indigo blue dujeong-gap coat with brass rivets, red trims, a red belt; a dark iron tugu helmet with a spike and red tassel, a blue riveted neck curtain.' },
-  { id: 'baeseol', armor: 'joseon_gyeongbeon', sword: 'hwando', face: 'Bae Seol, Joseon admiral, fifties: a hard, proud, sullen Korean face, a heavy moustache and short beard', look: JOSEON + 'A grey steel gyeongbeon-gap of mail and polished plates over a dark grey robe, black trims; an iron tugu helmet with a spike and a grey-black plume.' },
-  { id: 'anwi', armor: 'joseon_eorin', sword: 'ungeom', face: 'An Wi, Joseon magistrate and fearless captain, forties: a bold Korean face, thick moustache and short beard', look: JOSEON + 'A gilt-bronze fish-scale lamellar (eorin-gap) coat over a red robe, red trims; a gilded tugu helmet with a spike and red plume.' },
-  { id: 'iwan', armor: 'yi_tongjesa', sword: 'hwando', face: 'Yi Wan, nephew of Yi Sun-sin, young officer in his late twenties: a handsome young Korean face resembling his uncle, a thin moustache, burning eyes', look: JOSEON + 'A crimson dujeong-gap coat with brass rivets and black trims, black shoulder guards; a black iron tugu helmet with a spike and red plume, a red riveted neck curtain.' },
+  { id: 'jeongun', armor: 'joseon_dujeong', sword: 'hwando', face: 'Jeong Un, stern Joseon naval commander about forty-nine: a long, hard, sun-darkened face with a high forehead, heavy straight brows, deep creases beside the mouth, and a FULL thick black beard with a long moustache, greying at the edges', look: JOSEON + 'A bright red dujeong-gap coat with brass rivets, black trims, iron arm guards; an iron tugu helmet with a spike and a large red plume, a red riveted neck curtain.' },
+  { id: 'kimwan', armor: 'joseon_pigap', sword: 'hwando', face: 'Kim Wan, a Joseon officer about forty-five: a narrow lean face with high cheekbones, sunken cheeks, a hooked nose, a thin drooping moustache and a sparse wispy chin beard, tired determined eyes', look: JOSEON + 'A black lacquered leather lamellar coat (pigap) laced with red cords, red shoulder trims; a black leather and iron helmet with a small spike and black plume.' },
+  { id: 'nadaeyong', armor: 'joseon_dujeong', sword: 'hwando', face: 'Na Dae-yong, the turtle-ship builder, about thirty-six: a deeply sun-weathered, ruddy-brown practical shipwright face, squinting crow-feet wrinkles, a broad flat nose, a short rough stubbly beard and a short moustache, a small scar on the cheek', look: JOSEON + 'A dark brown dujeong-gap coat with brass rivets and dark teal trims, a leather belt with tools; a dark iron tugu helmet with a spike and a brown plume.' },
+  { id: 'songhuirip', armor: 'joseon_swaeja', sword: 'hwando', face: 'Song Hui-rip, a fierce broad-faced Joseon officer about forty: a wide round heavy-jawed face, thick bushy brows drawn together in a scowl, flared nostrils, a thick bristling black moustache and a short full jaw beard', look: JOSEON + 'Iron chain mail (swaeja-gap) to the knees over a crimson robe, iron arm guards, a red belt; an iron tugu helmet with a spike and red tassel and a mail neck curtain.' },
+  { id: 'iyeongnam', armor: 'joseon_dujeong', sword: 'hwando', face: 'Yi Yeong-nam, a Joseon officer in his early thirties: a slim angular face, a pointed chin, sharp alert eyes, smooth skin, a thin pencil moustache only and no beard', look: JOSEON + 'An indigo blue dujeong-gap coat with brass rivets, red trims, a red belt; a dark iron tugu helmet with a spike and red tassel, a blue riveted neck curtain.' },
+  { id: 'baeseol', armor: 'joseon_gyeongbeon', sword: 'hwando', face: 'Bae Seol, a gaunt nervous Joseon commander about fifty: a thin hollow-cheeked bony face, worried brows raised in the middle, anxious eyes with bags beneath, a thin greying moustache and a scraggly short grey beard', look: JOSEON + 'A grey steel gyeongbeon-gap of mail and polished plates over a dark grey robe, black trims; an iron tugu helmet with a spike and a grey-black plume.' },
+  { id: 'anwi', armor: 'joseon_eorin', sword: 'ungeom', face: 'An Wi, a square-jawed Joseon officer about forty: a broad square blocky face, a strong heavy jaw and chin, a straight wide nose, level steady eyes, a neat short boxed black beard along the jaw and a trimmed moustache', look: JOSEON + 'A gilt-bronze fish-scale lamellar (eorin-gap) coat over a red robe, red trims; a gilded tugu helmet with a spike and red plume.' },
+  { id: 'iwan', armor: 'yi_tongjesa', sword: 'hwando', face: 'Yi Wan, nephew of Yi Sun-sin, young officer in his mid twenties: a fresh, smooth CLEAN-SHAVEN youthful Korean face with no beard and no moustache, an oval face, a slim straight nose, bright eager eyes, resembling his uncle', look: JOSEON + 'A crimson dujeong-gap coat with brass rivets and black trims, black shoulder guards; a black iron tugu helmet with a spike and red plume, a red riveted neck curtain.' },
   { id: 'kurushima', armor: 'japan_oyoroi', sword: 'tachi', face: 'Kurushima Michifusa, Murakami pirate-clan commander, thirties: a wild handsome Japanese face, a rough moustache, reckless eyes', look: JAPAN + 'A red-lacquered tosei-gusoku with red and gold silk lacing, large red sode, kusazuri; a red-lacquered kabuto with tall gold kuwagata horns and a wave-crest mon.' },
-  { id: 'michiyuki', armor: 'japan_haramaki', sword: 'katana', face: 'Kurushima Michiyuki, Murakami clan samurai, forties: a weathered sailor\'s Japanese face, a moustache and short beard', look: JAPAN + 'A dark green-laced haramaki-style tosei-gusoku with dark iron plates, small sode, kusazuri; an iron kabuto with a small wave-crest maedate and a sea-blue neck guard.' },
-  { id: 'tachibana', armor: 'japan_nimaido', sword: 'tachi', face: 'Tachibana Muneshige, the peerless Japanese general, thirties: a noble handsome Japanese face, clean-shaven, a calm fearless gaze', look: JAPAN + 'A black-lacquered two-piece (nimai-do) cuirass with gold silk lacing, black sode and kusazuri; a black kabuto with a large gold sunburst-free wheel-shaped (kuruma) halo crest of gilded spokes behind it and gold kuwagata horns.' },
+  { id: 'michiyuki', armor: 'japan_haramaki', sword: 'katana', face: 'Kurushima Michiyuki, a young Japanese pirate-lord about thirty: a wild sharp-featured face, a lean wolfish grin, a narrow jaw, bold thick brows, a clean-shaven chin with only faint stubble, tanned sea-roughened skin', look: JAPAN + 'A dark green-laced haramaki-style tosei-gusoku with dark iron plates, small sode, kusazuri; an iron kabuto with a small wave-crest maedate and a sea-blue neck guard.' },
+  { id: 'tachibana', armor: 'japan_nimaido', sword: 'tachi', face: 'Tachibana Muneshige, a handsome noble young samurai lord about twenty-five: a refined, symmetrical, CLEAN-SHAVEN fair face, a slender elegant nose, calm composed eyes, smooth unlined skin, no beard and no moustache', look: JAPAN + 'A black-lacquered two-piece (nimai-do) cuirass with gold silk lacing, black sode and kusazuri; a black kabuto with a large gold sunburst-free wheel-shaped (kuruma) halo crest of gilded spokes behind it and gold kuwagata horns.' },
   { id: 'lirusong', armor: 'ming_sanmun', sword: 'zhanmadao', face: 'Li Rusong, Ming commander-in-chief of the Korean expedition, forties: a powerful, proud Han Chinese face with Liaodong toughness, a full black moustache and beard', look: MING + 'Gilded shanwenjia lamellar over a scarlet robe, gold lion-head pauldrons, a gilded chest mirror, red skirt panels; a tall gilded Ming helmet with spike, big red tassel and phoenix wings.' },
   { id: 'magui', armor: 'ming_yuyeop', sword: 'dao', face: 'Ma Gui, Ming general of Hui descent, fifties: a hard square face, thick beard, a cavalryman\'s scowl', look: MING + 'Willow-leaf (liuye) steel lamellar with red lacing over a dark red robe, steel shoulder guards, red skirts; a steel Ming helmet with spike, red tassel and phoenix-wing flaps.' },
   { id: 'liuting', armor: 'ming_dingjia', sword: 'zhanmadao', face: 'Liu Ting, the Ming general famed for his huge strength, forties: a massive powerful Han Chinese man, a full black beard, a ferocious grin', look: MING + 'A red brigandine (dingjia) studded with brass nails, heavy gilded shoulder guards, a gilded chest mirror; a red-and-gold Ming helmet with spike, red tassel and phoenix wings.' },
-  { id: 'jijin', armor: 'ming_swaeja', sword: 'dao', face: 'Ji Jin, Ming naval commander from Zhejiang, forties: a lean seafaring Han Chinese face, a moustache and short beard', look: MING + 'Steel chain mail over a blue-and-red robe, small gilded shoulder guards, a red belt; a steel Ming helmet with spike, red tassel and phoenix-wing flaps, a blue silk neck guard.' },
+  { id: 'jijin', armor: 'ming_swaeja', sword: 'dao', face: 'Ji Jin, a rugged sea-hardened Ming naval officer about forty-five: a broad weather-beaten dark tanned face with a flattened broken nose, deep wind wrinkles, a heavy shaggy black beard and moustache', look: MING + 'Steel chain mail over a blue-and-red robe, small gilded shoulder guards, a red belt; a steel Ming helmet with spike, red tassel and phoenix-wing flaps, a blue silk neck guard.' },
   { id: 'yanghao', armor: 'ming_myeongap', sword: 'jian', face: 'Yang Hao, Ming supreme commissioner (a civil official commanding the army), fifties: a scholarly stern Han Chinese face, a long thin moustache and long beard', look: MING + 'A padded red-and-gold quilted mianjia armor coat studded with gilt nails, gold embroidered cloud collar, a jade belt; a gilded Ming helmet with spike, red tassel and phoenix wings.' },
-  { id: 'wuweizhong', armor: 'ming_dingjia', sword: 'dao', face: 'Wu Weizhong, Ming southern infantry general (Qi Jiguang\'s school), forties: a disciplined lean Han Chinese face, moustache and goatee', look: MING + 'A dark red nail-studded brigandine (dingjia) over a black robe, iron shoulder guards; an iron Ming helmet with spike, red tassel and phoenix-wing flaps.' },
+  { id: 'wuweizhong', armor: 'ming_dingjia', sword: 'dao', face: 'Wu Weizhong, a Zhejiang veteran Ming commander about fifty: a hard lean southern Han Chinese face with a long diagonal SCAR across the left cheek and brow, narrow piercing eyes, a long thin drooping moustache and a short pointed grey beard', look: MING + 'A dark red nail-studded brigandine (dingjia) over a black robe, iron shoulder guards; an iron Ming helmet with spike, red tassel and phoenix-wing flaps.' },
 ];
 const BY = Object.fromEntries(CAST.map((c) => [c.id, c]));
 const NEW_MING = new Set(['lirusong', 'magui', 'liuting', 'jijin', 'yanghao', 'wuweizhong']);
@@ -174,10 +174,10 @@ async function http(method, url, headers, body, tries = 6) {
 // ---------------------------------------------------------------- concept
 // References go up at 1536 px: full-size 10 MB uploads get their connection reset.
 const png = async (file) => new Blob([await sharp(file).resize(1280, 1280, { fit: 'inside', withoutEnlargement: true }).flatten({ background: '#cfd0d2' }).jpeg({ quality: 92 }).toBuffer()], { type: 'image/jpeg' });
-async function edit(file, prompt, refs) {
+async function edit(file, prompt, refs, size) {
   let last;
   for (const model of IMAGE_MODELS) {
-    const image = { model, ...IMAGE };
+    const image = { model, ...IMAGE, ...(size ? { size } : {}) };
     const form = new FormData();
     for (const [k, v] of Object.entries(image)) form.set(k, String(v));
     form.set('n', '1');
@@ -243,7 +243,60 @@ function progress(c, stage, extra = '') {
   writeFileSync(f, readFileSync(f, 'utf8') + `| ${new Date().toISOString().slice(0, 16).replace('T', ' ')} | ${c.key}${args.cand ? ` (${args.cand})` : ''} | ${stage} | ${extra} |\n`);
 }
 
+/**
+ * --turnaround: the armour first, then the man in it. armor.png is the armour alone on a ghost mannequin from the
+ * front, back, left and right in one row; the four character views (front, left, back, right) are then each made
+ * with that sheet and his face close-up (--faceref=<file>, default face.png beside them) as references, so the
+ * armour agrees exactly in every view Tripo's multiview gets.
+ */
+const ARMOR_SHEET = (c) =>
+  'A costume-department armour turnaround sheet for a big-budget live-action historical war film: ONE complete suit of armour with its helmet, shown four times side by side in one row at the same scale and the same height, from left to right: seen from the FRONT, from the BACK, from ITS LEFT SIDE in strict profile, from ITS RIGHT SIDE in strict profile. ' +
+  'Each time the armour is worn by an invisible ghost mannequin: it keeps the shape it has on a tall athletic man with broad shoulders, a deep chest and a narrow cinched waist, the sleeves and shoulder guards angled 45 degrees down and away from the body as in an A-pose, the skirts hanging straight, the boots standing apart; empty inside, no person, no head, no hands, no mannequin, no stand. ' +
+  `The armour: ${c.look} ` +
+  'The first attached picture is the style reference of this costume department (rendering, light, materials, accuracy only). The second attached picture shows this armour on its stand: take its colours, materials and construction where they agree with the description. ' +
+  'All four views show exactly the same armour: identical colours, plates, rivets, lacing, trims, lengths and helmet. Photographic, crisp detail, soft even flat studio light, a fully transparent background (clean cutouts, no ground shadow). No sword, no weapon, no scabbard. No text, no letters, no labels, no border, no watermark. No illustration look, no plastic CGI look.';
+const TURN_FRONT = (c) =>
+  FRAME +
+  (args.hero ? 'His face is the most important part: a striking, heroic, cinematic leading-man face ready for close-ups in film cutscenes: sharp defined bone structure, intense clear eyes with defined irises, natural skin with real pores and fine lines (never waxy or plastic), crisp beard and hair strands. ' : '') +
+  `He is ${c.face}. ${c.look} ` +
+  'The FIRST attached picture is the turnaround of his armour (front, back, left, right): he wears EXACTLY this armour and helmet, every plate, rivet, lacing cord, colour, trim and length as in its front view, filled out by his athletic body (full broad chest, the cuirass at its full width). ' +
+  'The SECOND attached picture is a close-up of his face: keep exactly this face, its features, beard, age and skin, photographic. ' +
+  RULES;
+const TURN_VIEW = (w) =>
+  viewPrompt(w) +
+  ' The SECOND attached picture is the turnaround of his armour (front, back, left, right): from this side the armour and helmet must look exactly as in its matching view of that sheet. The THIRD attached picture is a close-up of his face' + (w === 'back' ? ' (not visible from behind).' : ': the same face in profile.');
+
+async function turnaround(c) {
+  await styleSheet();
+  const d = dirOf(c);
+  const only = (args.only ?? 'armor,front,left,back,right').split(',');
+  const sheet = join(d, 'armor.png');
+  const face = args.faceref ? join(ROOT, args.faceref) : join(d, 'face.png');
+  if (!existsSync(face)) throw new Error(`no face reference ${face}`);
+  if (only.includes('armor') && (!existsSync(sheet) || args.redo)) {
+    log(c.id, 'armor sheet…');
+    await edit(sheet, ARMOR_SHEET(c), [STYLE, join(ROOT, 'public', 'ui', 'armor', `${c.armor}.webp`)], '2880x1632');
+    log(c.id, 'armor sheet ready');
+  }
+  const front = join(d, 'front.png');
+  if (only.includes('front') && (!existsSync(front) || args.redo)) {
+    log(c.id, 'front…');
+    await edit(front, TURN_FRONT(c), [sheet, face]);
+    log(c.id, 'front ready');
+  }
+  await Promise.all(['left', 'back', 'right'].filter((w) => only.includes(w)).map(async (w, i) => {
+    const out = join(d, `${w}.png`);
+    if (existsSync(out) && !args.redo) return;
+    await sleep(i * 3000);
+    log(c.id, `${w}…`);
+    await edit(out, TURN_VIEW(w), [front, sheet, face]);
+    log(c.id, `${w} ready`);
+  }));
+  if (['armor', 'front', 'left', 'back', 'right'].every((w) => existsSync(join(d, `${w}.png`)))) progress(c, 'concept (armor turnaround → front/left/back/right)', rel(d));
+}
+
 async function concept(c) {
+  if (args.turnaround) return turnaround(c);
   await styleSheet();
   const d = dirOf(c);
   const only = (args.only ?? (args.views4 ? 'front,left,back,right,face' : 'front,left,back,face,detail')).split(',');
@@ -307,8 +360,9 @@ async function model(c) {
   if (existsSync(out) && !args.redo) return log(c.id, 'raw model there');
   // --swaplr: views made before the profile wording was fixed (left.png showed his right side).
   const views = (args.views4 ? (args.swaplr ? ['front', 'right', 'back', 'left'] : ['front', 'left', 'back', 'right']) : ['front', 'left', 'back']).map((w) => join(d, `${w}.png`));
-  for (const v of views) if (!existsSync(v)) throw new Error(`missing ${rel(v)}`);
   const r = recordOf(out);
+  // A task already made is fetched again without its views (they may have been cleared for disk space).
+  if (!r.task) for (const v of views) if (!existsSync(v)) throw new Error(`missing ${rel(v)}`);
   // Tripo while its balance covers a model (40 credits at standard geometry), then Meshy (30), keeping 5 per remaining rig.
   let provider = r.provider ?? args.provider ?? 'meshy';
   if (!provider) {
@@ -439,7 +493,7 @@ async function rig(c) {
 // Lead's picks 2026-10-17: idle 252 Idle 12 (with --posture), attack 241 Weapon Combo 2 (92 Double Combo Attack for
 // long-skirted generals via --actions), archery 227.
 const KIND_ACTIONS = 'idle_sword:252,command_sword:240,attack_sword:241,idle_spear:335,attack_spear:214,idle_bow:244,command_bow:29,attack_bow:227';
-const MESHY_CLIP = { idle_12: 'idle_sword', weapon_combo_2: 'attack_sword', double_combo_attack: 'attack_sword', idle_6: 'idle_sword', thrust_slash: 'command_sword', left_slash: 'attack_sword', axe_breathe_and_look_around: 'idle_spear', punch_forward_with_both_fists: 'attack_spear', idle_4: 'idle_bow', call_gesture: 'command_bow', archery_shot_3: 'attack_bow' };
+const MESHY_CLIP = { sword_judgment: 'command_sword', sword_shout: 'command_sword', charged_slash: 'command_sword', idle_12: 'idle_sword', weapon_combo_2: 'attack_sword', double_combo_attack: 'attack_sword', idle_6: 'idle_sword', thrust_slash: 'command_sword', left_slash: 'attack_sword', axe_breathe_and_look_around: 'idle_spear', punch_forward_with_both_fists: 'attack_spear', idle_4: 'idle_bow', call_gesture: 'command_bow', archery_shot_3: 'attack_bow' };
 const ACTIONS = Object.fromEntries((args.actions ?? KIND_ACTIONS).split(',').map((p) => p.split(':')).map(([n, id]) => [Number(id), n]));
 async function motion(c) {
   const d = dirOf(c);
@@ -553,14 +607,29 @@ async function pack(c) {
         }
       }
     }
+    // --commandfrom=<clip>: command_sword becomes a copy of that clip of the same rig (lead 2026-10-17: command_bow,
+    // Meshy 29 Call Gesture, the sword arm sent straight forward), unedited.
+    if (args.commandfrom) {
+      const from = doc.getRoot().listAnimations().find((a) => a.getName() === args.commandfrom);
+      if (!from) throw new Error(`no clip ${args.commandfrom}`);
+      const buffer = doc.getRoot().listBuffers()[0];
+      for (const a of doc.getRoot().listAnimations()) if (a.getName() === 'command_sword') a.dispose();
+      const copy = doc.createAnimation('command_sword');
+      for (const ch of from.listChannels()) {
+        const sm = ch.getSampler();
+        const acc = (x) => doc.createAccessor().setType(x.getType()).setArray(x.getArray().slice()).setBuffer(buffer);
+        const sampler = doc.createAnimationSampler().setInput(acc(sm.getInput())).setOutput(acc(sm.getOutput())).setInterpolation(sm.getInterpolation());
+        copy.addSampler(sampler).addChannel(doc.createAnimationChannel().setTargetNode(ch.getTargetNode()).setTargetPath(ch.getTargetPath()).setSampler(sampler));
+      }
+    }
     // --headup=<deg>[:clip,clip]: a constant pitch-up of the head in those clips (default idle_sword), taken in the
     // neck's bind frame about the body's left-right axis, so a library idle that looks at the ground faces forward.
-    // --posture=<Bone>:<deg>,<Bone>:<deg>[;clip,clip]: the same constant pitch-up on other bones (spine straight,
+    // --posture=<Bone>:<deg>[:x|y|z],…[;clip,clip]: the same constant turn on other bones (x pitch-up by default, y yaw, z roll, body axes) (spine straight,
     // chest out, chin up), each about the body's left-right axis in its own parent frame.
     const pitches = [];
     if (args.headup) { const [deg, which] = args.headup.split(':'); pitches.push(['Head', deg, which]); }
-    if (args.posture) { const [list, which] = args.posture.split(';'); for (const p of list.split(',')) { const [b, deg] = p.split(':'); pitches.push([b, deg, which]); } }
-    for (const [bone, deg, which] of pitches) {
+    if (args.posture) { const [list, which] = args.posture.split(';'); for (const p of list.split(',')) { const [b, deg, axis] = p.split(':'); pitches.push([b, deg, which, axis]); } }
+    for (const [bone, deg, which, axis = 'x'] of pitches) {
       const clips = (which ?? 'idle_sword').split(',');
       const nodes = doc.getRoot().listNodes();
       const parentOf = new Map(); for (const n of nodes) for (const ch of n.listChildren()) parentOf.set(ch, n);
@@ -570,7 +639,7 @@ async function pack(c) {
       if (!head) throw new Error(`no bone ${bone}`);
       let P = [0, 0, 0, 1]; for (let n = parentOf.get(head); n; n = parentOf.get(n)) P = mul(n.getRotation(), P);
       const t = (-Number(deg) * Math.PI) / 180;
-      const Q = mul(mul(inv(P), [Math.sin(t / 2), 0, 0, Math.cos(t / 2)]), P);
+      const e = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] }[axis]; const Q = mul(mul(inv(P), [e[0] * Math.sin(t / 2), e[1] * Math.sin(t / 2), e[2] * Math.sin(t / 2), Math.cos(t / 2)]), P);
       for (const a of doc.getRoot().listAnimations()) {
         if (!clips.includes(a.getName())) continue;
         for (const ch of a.listChannels()) {
@@ -702,7 +771,7 @@ async function pack(c) {
   }
   const bad = Object.entries(levels).filter(([, l]) => !l.check.ok);
   if (bad.length) throw new Error(`static check failed: ${JSON.stringify(bad)}`);
-  record(join(d, 'pack'), { at: new Date().toISOString(), levels });
+  record(join(d, 'pack'), { at: new Date().toISOString(), args: rest, levels });
   progress(c, 'packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions', `public/models/generals/${c.key}.glb`);
   log(c.id, 'DONE', JSON.stringify(levels));
 }
@@ -777,7 +846,28 @@ async function retexture(c) {
 
 async function all(c) { await concept(c); await model(c); await rig(c); await motion(c); await pack(c); }
 
-const STEPS = { concept, model, retexture, rig, motion, pack, live, all };
+/**
+ * review: prints the review gate for one figure from .claude/skills/generals-cast/SKILL.md (the owner's settled
+ * rules: step 6, the weapon rules and the rejected list), with what exists for it: sources, pack args, sheets.
+ */
+async function review(c) {
+  const skill = readFileSync(join(ROOT, '.claude', 'skills', 'generals-cast', 'SKILL.md'), 'utf8');
+  const section = (h) => { const i = skill.indexOf(h); if (i < 0) return ''; const j = skill.indexOf('\n## ', i + h.length); return skill.slice(i, j < 0 ? undefined : j).trim(); };
+  const g0 = skill.indexOf('6. **Review gate**');
+  const gate = skill.slice(g0, skill.indexOf('\n## ', g0)).trim();
+  const d = dirOf(c);
+  const packed = existsSync(join(d, 'pack.json')) ? JSON.parse(readFileSync(join(d, 'pack.json'), 'utf8')) : null;
+  const sheets = existsSync(join(PKG, 'review')) ? readdirSync(join(PKG, 'review')).filter((f) => f.startsWith(c.key)) : [];
+  const live = JSON.parse(readFileSync(join(ROOT, 'public', 'models', 'generals', 'index.json'), 'utf8')).includes(c.key);
+  console.log(`# Review gate: ${c.key}${args.cand ? ` (${args.cand})` : ''}  ${live ? '[LIVE]' : '[not live]'}`);
+  console.log(`sources: ${rel(d)}  views: ${['armor', 'front', 'left', 'back', 'right', 'face'].filter((w) => existsSync(join(d, `${w}.png`))).join(',') || '-'}  raw:${existsSync(join(d, 'raw.glb'))} rig:${existsSync(join(d, 'rig.glb'))} anim:${existsSync(join(d, 'anim.glb'))}`);
+  console.log(`pack: ${packed ? `${packed.at} args ${JSON.stringify(packed.args ?? '(not recorded)')}` : 'not packed'}`);
+  console.log(`sheets: ${sheets.join(', ') || 'none'}\n`);
+  for (const t of [gate, section('## Weapon rules'), section('## Rejected')]) console.log(`${t}\n`);
+  console.log('Tick every item above against the sheets; any flaw means redo that step. Live only after the lead approves.');
+}
+
+const STEPS = { concept, model, retexture, rig, motion, pack, live, review, all };
 if (!STEPS[step]) throw new Error(`step: ${Object.keys(STEPS).join(' | ')}`);
 mkdirSync(PKG, { recursive: true });
 const ids = args.id === 'all' ? CAST.map((c) => c.id) : (args.id ?? 'yi').split(',');

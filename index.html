@@ -39,12 +39,9 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-    <!-- A serif for the title wordmark only. It loads without blocking first paint. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@700&display=swap" media="print" onload="this.media = 'all'" />
+    <!-- The first screen's title face (src/ui/styles.css). 정묵바위체 may not be cut down (public/ui/fonts/README.md),
+         so only screens wide enough for the poster title fetch it this early; phones get it with font-display: swap. -->
+    <link rel="preload" href="/ui/fonts/jeongmukbawi-regular.woff" as="font" type="font/woff" crossorigin media="(min-width: 900px)" />
     <style>
       html,
       body {

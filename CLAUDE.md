@@ -20,14 +20,15 @@ three.js r186 `three/webgpu` + TSL, @react-three/fiber, React 19, zustand, Vite,
 ## 규칙
 - `src/sim`은 결정론적으로 유지: `Date.now`, `Math.random`, DOM, three.js 금지, 전투의 시드 RNG만 사용. 여기를 바꾸면 서버와 랭크전도 바뀜. 클라이언트에 필요한 Ship·BattleEvent 필드는 `src/net/protocol.ts`에도 추가.
 - 폰(iOS Safari, WebGL2 경로, `?q=low`)은 1.2–1.5 GB 근처에서 탭을 죽임: 텍스처 300 MB, GPU 메모리 400 MB 미만 유지(`scripts/probe-memory.mjs`), 전투가 만든 것은 해제(`Engine.disposeBattle`, `probe-leak.mjs`로 확인).
-- 많은 재질이 읽는 유니폼은 `renderGroup`에. 픽셀 비율은 엔진이 소유. 첫 프레임들 이후에는 지오메트리 배열을 읽지 말 것(`freeAfterDraw`).
-- 전투 오디오: 합성음은 250 Hz 위에서 지속·스윕되는 음정 금지(`scripts/audio/analyze.py`로 측정).
-- 주변 코드에 맞출 것: 주석은 이유를 평이한 문장으로, 죽은 코드 금지.
+
+## 하네스 (작업 전에 해당 스킬을 먼저 읽을 것. 확정된 규칙·거절된 방식은 여기에 바로 추가)
+- `.claude/skills/generals-cast` 장수 3D·무기 / `chapters` 아르마다·레판토·트라팔가르 장 / `cinematics` 전투 시네마틱·대사·고증 / `typography` 폰트(제목 정묵바위체, 자막 함렛, UI Pretendard) / `ship` 운영 배포
+- 생성 원본은 로컬에 쌓지 않음: `npm run assets -- archive`로 S3 콜드 보관(CI는 받지 않음). worktree를 여러 개 만들어 에셋을 복사하지 않음. C: 여유 3 GB 이상 유지.
 
 ## 에셋
-- `public/`·`assets-src/`의 바이너리(모델, 텍스처, 오디오, 폰트, 지형, 생성 원본)는 내용 해시로 S3에 있고 목록은 커밋된 `assets.json`: 체크아웃 뒤 `npm run assets -- pull`, 바이너리를 추가·변경하면 `npm run assets -- push` 후 `assets.json` 커밋.
+- `public/`·`assets-src/`의 런타임 바이너리(모델, 텍스처, 오디오, 폰트, 지형)는 내용 해시로 S3에 있고 목록은 커밋된 `assets.json`: 체크아웃 뒤 `npm run assets -- pull`, 바이너리를 추가·변경하면 `npm run assets -- push` 후 `assets.json` 커밋. 생성 원본은 `assets-archive.json`(콜드 보관).
 - `npm run assets -- models`가 모델 보관소: 모든 .glb의 삼각형 수, 버전, 출처 기록. 자세한 것은 [docs/dev.md](docs/dev.md#에셋).
 
 ## 배포
-- `main`에 푸시하면 타입체크·테스트·빌드 뒤 사이트(S3 + CloudFront)와 멀티플레이 서버(EC2, SSM 경유)가 함께 배포됨. 요청 없이 푸시하지 말 것.
+- 배포는 `ship` 스킬 절차대로(origin/main 기준 임시 worktree, 해당 파일만). `main`에 푸시하면 타입체크·테스트·빌드 뒤 사이트(S3 + CloudFront)와 멀티플레이 서버(EC2, SSM 경유)가 함께 배포됨. 요청 없이 푸시하지 말 것.
 - 서버 수동 배포: `scripts/deploy-mp.sh deploy|status`. 서버 데이터는 호스트의 `/opt/imjin/data`에 있고 배포가 덮어쓰지 않음.

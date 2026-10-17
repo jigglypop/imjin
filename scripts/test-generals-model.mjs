@@ -3,6 +3,7 @@
 // Fixtures verify runtime behavior and ownership, never provider quality or visual fit.
 import assert from 'node:assert/strict';
 import { readFile, access } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
@@ -19,9 +20,9 @@ const built = await build({
   define: { 'import.meta.env.BASE_URL': '"/"' },
   plugins: [{ name: 'cpu-general', setup(api) {
     api.onLoad({ filter: /GeneralModel\.tsx$/ }, async ({ path }) => ({
-      contents: `${await readFile(path, 'utf8')}\nexport { singleModelFile, normalizeFigure, createFigure,
-        playFigure, standFigure, releaseFigure, availableMotions, free, movementClips, holdWeapon,
-        FigureStage, loader, modelUrl, MOVES, ATTACK_LABEL };`, loader: 'tsx',
+      contents: `${await readFile(path, 'utf8')}\nexport { singleModelFile, normalizeFigure,
+        availableMotions, free, movementClips,
+        FigureStage, MOVES, ATTACK_LABEL };`, loader: 'tsx',
     }));
     api.onLoad({ filter: /game[\\/]quality\.ts$/ }, () => ({
       contents: `export const equipment = { tier: 'high', select: { dprCap: 2 } }; export const forceWebGL = false;`, loader: 'ts',
@@ -235,6 +236,71 @@ if (cast.length) {
         assert.ok(clips.idle, `${file}${suffix} ${kind} idle`); assert.deepEqual([...clips.moves.keys()].sort(), ['command', 'slash'], `${file}${suffix} ${kind} moves`);
       }
       assert.ok(doc.getRoot().listNodes().some((n) => n.getName() === 'RightHand'), `${file}${suffix} RightHand`);
+    }
+  });
+}
+await check('index.json lists no staged or candidate files', async () => {
+  for (const f of models) assert.ok(!/(^|\/)_(stage|cand)(\/|$)/.test(f), `index.json lists ${f}`);
+});
+// Sword files: metres, +Y along the blade, grip at the origin, and a single-edged blade's EDGE on -X (the thin side
+// across the blade's width; the spine is the thick side on +X). Every figure's socket_grip_right has +X from the
+// wrist toward the closed fingers and +Y out of the thumb side, so holdWeapon must turn the file's -X onto the
+// socket's +X: edge on the fingers' side, toward the target, spine to the thumb ("역날" is the opposite).
+await check('curved swords are held edge on the fingers side (hwando, katana, tachi, dao)', async () => {
+  const { io } = await import('./lib/figure.mjs');
+  for (const id of ['joseon_hwando', 'japan_katana', 'japan_tachi', 'ming_dao']) {
+    for (const suffix of ['', '_lod1']) {
+      const doc = await io.read(fileURLToPath(new URL(`../public/models/generals/parts/weapon_${id}${suffix}.glb`, import.meta.url)));
+      const pts = [];
+      for (const node of doc.getRoot().listNodes()) {
+        const mesh = node.getMesh(); if (!mesh) continue; const W = node.getWorldMatrix();
+        for (const prim of mesh.listPrimitives()) {
+          const P = prim.getAttribute('POSITION'); const v = [0, 0, 0];
+          for (let i = 0; i < P.getCount(); i++) { P.getElement(i, v); pts.push([W[0] * v[0] + W[4] * v[1] + W[8] * v[2] + W[12], W[1] * v[0] + W[5] * v[1] + W[9] * v[2] + W[13], W[2] * v[0] + W[6] * v[1] + W[10] * v[2] + W[14]]); }
+        }
+      }
+      let y0 = Infinity, y1 = -Infinity; for (const p of pts) { y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+      // the blade between 60 % and 85 % of its length: the z thickness of its two long sides
+      const band = pts.filter((p) => p[1] > y0 + (y1 - y0) * 0.6 && p[1] < y0 + (y1 - y0) * 0.85);
+      let lo = Infinity, hi = -Infinity; for (const p of band) { lo = Math.min(lo, p[0]); hi = Math.max(hi, p[0]); }
+      const thick = (keep) => { const z = band.filter(keep).map((p) => p[2]); return Math.max(...z) - Math.min(...z); };
+      const minus = thick((p) => p[0] < lo + (hi - lo) * 0.2), plus = thick((p) => p[0] > hi - (hi - lo) * 0.2);
+      assert.ok(minus < plus * 0.85, `weapon_${id}${suffix}: the edge (thin side) must be on -X, thickness -X ${minus.toFixed(4)} vs +X ${plus.toFixed(4)}`);
+    }
+    const body = new Group(); const socket = new Group(); socket.name = 'socket_grip_right'; body.add(socket);
+    const blade = new Group(); M.holdWeapon(body, blade, M.WEAPONS.find((w) => w.id === id)); blade.updateMatrixWorld(true);
+    const edge = new Vector3(-1, 0, 0).transformDirection(blade.matrixWorld), up = new Vector3(0, 1, 0).transformDirection(blade.matrixWorld);
+    assert.ok(edge.x > 0.999, `${id}: edge must map to the socket's finger side (+X), got ${edge.toArray()}`);
+    assert.ok(up.y > 0.999, `${id}: blade must leave the thumb side (+Y)`);
+  }
+});
+if (cast.length) {
+  const { io } = await import('./lib/figure.mjs');
+  const { readdirSync, existsSync } = await import('node:fs');
+  const { createHash } = await import('node:crypto');
+  const pkg = fileURLToPath(new URL('../assets-src/generals-cast-2026-10-17/', import.meta.url));
+  const trianglesOf = (doc) => doc.getRoot().listMeshes().reduce((t, m) => t + m.listPrimitives().reduce((u, p) => u + p.getIndices().getCount() / 3, 0), 0);
+  await check(`indexed general figures (${cast.length}) have LOD1/LOD2, both grip sockets and an undecimated LOD0`, async () => {
+    for (const file of cast) {
+      for (const suffix of ['', '_lod1', '_lod2']) {
+        const path = fileURLToPath(new URL(`../public/models/generals/${file}${suffix}.glb`, import.meta.url));
+        await access(path).catch(() => assert.fail(`${file}${suffix}.glb missing`));
+        const names = (await io.read(path)).getRoot().listNodes().map((n) => n.getName());
+        for (const s of ['socket_grip_right', 'socket_grip_left']) assert.ok(names.includes(s), `${file}${suffix} has no ${s}`);
+      }
+      // LOD0 is the full rigged mesh (it goes on the card); a decimated LOD0 smears the face. Sources come from the
+      // asset store (npm run assets -- pull); without them this part is skipped.
+      if (!existsSync(pkg)) continue;
+      const lod0 = fileURLToPath(new URL(`../public/models/generals/${file}.glb`, import.meta.url));
+      const sha = createHash('sha256').update(await readFile(lod0)).digest('hex');
+      const dirs = readdirSync(pkg).filter((d) => (d === file || d.startsWith(`${file}_`)) && existsSync(`${pkg}${d}/rig.glb`));
+      if (!dirs.length) continue;
+      const packOf = (d) => { try { return JSON.parse(readFileSync(`${pkg}${d}/pack.json`, 'utf8')); } catch { return null; } };
+      const exact = dirs.find((d) => packOf(d)?.levels?._lod0?.check?.sha256 === sha);
+      const tris = trianglesOf(await io.read(lod0));
+      const rigs = await Promise.all((exact ? [exact] : dirs).map(async (d) => trianglesOf(await io.read(`${pkg}${d}/rig.glb`))));
+      const need = Math.min(...rigs) * 0.98;
+      assert.ok(tris >= need, `${file}: LOD0 has ${tris} triangles, its rig mesh ${Math.min(...rigs)} (LOD0 must not be decimated)`);
     }
   });
 }

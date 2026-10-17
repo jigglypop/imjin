@@ -8,6 +8,7 @@ import { iconPaths } from './battleIcons';
 import { t } from '../i18n';
 import { MANEUVER_NAMES, phaseName, type Placing } from '../game/Input';
 import type { Plan } from '../sim/maneuvers';
+import { FONT_UI } from './fonts';
 
 // The palette of the HUD (styles.css): the ring tones of the two fleets, and the muted status colours.
 const OWN = '117, 151, 177';
@@ -258,7 +259,7 @@ export class TacticalOverlay {
   private label(x: number, z: number, text: string, color: string) {
     if (!this.project(x, 6, z, this.a)) return;
     const ctx = this.ctx;
-    ctx.font = '600 12px Pretendard, system-ui, sans-serif';
+    ctx.font = `600 12px ${FONT_UI}`;
     const w = ctx.measureText(text).width + 14;
     ctx.fillStyle = 'rgba(14, 16, 20, 0.82)';
     ctx.beginPath();
@@ -453,7 +454,7 @@ export class TacticalOverlay {
     if (!this.project(target.x, target.spec.height + 6, target.z, this.a)) return false;
     const ctx = this.ctx;
     const text = `×${n}`;
-    ctx.font = '600 12px Pretendard, system-ui, sans-serif';
+    ctx.font = `600 12px ${FONT_UI}`;
     const w = ctx.measureText(text).width + 12;
     const x = this.a.x + 14;
     const y = this.a.y - 10;
@@ -548,7 +549,7 @@ export class TacticalOverlay {
     const ctx = this.ctx;
     const text = String(n);
     const size = Math.round(d * 0.46);
-    ctx.font = `700 ${size}px Pretendard, system-ui, sans-serif`;
+    ctx.font = `700 ${size}px ${FONT_UI}`;
     const w = Math.max(size + 2, ctx.measureText(text).width + 6);
     ctx.beginPath();
     ctx.roundRect(x - w / 2, y - size / 2 - 1, w, size + 2, (size + 2) / 2);
