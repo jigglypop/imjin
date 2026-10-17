@@ -4,6 +4,7 @@
 // routes that apply them; a store only keeps the records.
 import { createHash, randomBytes } from 'node:crypto';
 import type { AccountErrorCode } from '../src/account/wire';
+import type { MetaRecord } from './metaRecord';
 
 /**
  * A refusal the routes answer with its code. `invalid` is a caller's mistake (bad arguments), never the player's;
@@ -27,6 +28,10 @@ export type ProfileTx = {
   balance(kind: string): Promise<number>;
   ledger(change: LedgerChange): Promise<LedgerEntry>;
   claimOnce(key: string): Promise<boolean>;
+  /** The growth profile's rows (metaRecord.ts), or null before they were first written. */
+  meta(): Promise<MetaRecord | null>;
+  /** Replaces the growth profile's rows: a piece of loot no longer held is kept as salvaged, never deleted. */
+  saveMeta(record: MetaRecord): Promise<void>;
 };
 /** 'same' when the user already has that ranked account, 'taken' when another user has it, 'other' when this user has another one. */
 export type LinkOutcome = 'linked' | 'same' | 'taken' | 'other';
@@ -76,6 +81,8 @@ export interface AccountStore {
   ledger(userId: string, kind?: string, limit?: number): Promise<LedgerEntry[]>;
   /** True the first time `key` is claimed (by anyone: put the user in the key when it is per user), false ever after. */
   claimOnce(key: string, userId: string, at?: number): Promise<boolean>;
+  /** Users whose growth profile is still the JSON of schema 1 (profiles.data.meta), at most `limit` of them. */
+  jsonMetaUsers(limit: number): Promise<string[]>;
   close(): Promise<void>;
 }
 

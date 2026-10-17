@@ -1,6 +1,8 @@
 // The growth routes: the account's commander and armor profile (coins, owned armor and its rolls, what each general
-// wears and carries, his experience and the steps he learned). The profile is kept under `meta` in the user's progress
-// (accounts.ts profiles), and every coin moves through the account's coin ledger, whose balance is the purse: the
+// wears and carries, his experience and the steps he learned). The profile is kept in rows of its own (metaRecord.ts:
+// the tables of schema 2 in PostgreSQL), written in the same transaction as the ledger lines of the change; a profile
+// still kept as JSON under `meta` in the user's progress (schema 1) is moved to them by its next change or by the
+// start-up sweep (migrateJsonMeta), and every coin moves through the account's coin ledger, whose balance is the purse: the
 // stored `coins` is only its copy. Every change applies src/meta/rules.ts on the server; armor rolls come from the
 // account id as the salt, so no page can send a roll, a purse or experience of its own.
 import { randomBytes } from 'node:crypto';
@@ -13,6 +15,7 @@ import type { Battle } from '../src/sim/battle';
 import { buildScenario, SCENARIOS, type ScenarioId } from '../src/sim/scenarios';
 import { ALL_FACTIONS, teamOf, type Faction, type Team } from '../src/sim/types';
 import type { AccountStore, ProfileData, ProfileTx } from './accounts';
+import { profileOf, recordOf } from './metaRecord';
 import { ApiError, Limiter, type ApiRouter } from './api';
 
 const HOUR = 3600 * 1000;
@@ -37,9 +40,14 @@ const idOrNull = (value: unknown) => (value === null ? null : need(value));
 /** The profile kept for `userId`, with its purse from the ledger. A profile made now gets the starting grant once. */
 async function load(data: ProfileData, userId: string, tx: ProfileTx): Promise<Profile> {
   let p: Profile;
+  const rows = await tx.meta();
   if (data.meta && typeof data.meta === 'object') {
+    // Schema 1: the JSON profile, moved into the rows when this change is stored. This server never leaves the JSON
+    // behind, so JSON beside rows was written later (a server of schema 1 still running, or a rollback) and wins.
     // The salt is always the account id, whatever the stored copy says; rolls are recomputed from it.
     p = normalizeProfile({ ...(data.meta as object), salt: userId }, userId);
+  } else if (rows) {
+    p = profileOf(rows, userId);
   } else {
     p = newProfile();
     p.salt = userId;
@@ -75,13 +83,49 @@ export async function changeMeta(accounts: AccountStore, userId: string, reason:
       after.coins = await tx.balance('coin');
       after.salt = userId;
       out = after;
-      data.meta = after;
+      await tx.saveMeta(recordOf(after));
+      delete data.meta;
     });
     return { profile: out!, rev: stored.rev };
   } catch (error) {
     if (error instanceof RuleError) throw new ApiError('rule', 409, error.message);
     throw error;
   }
+}
+
+/**
+ * Moves every growth profile still kept as JSON (schema 1) into its rows, each in its own transaction as an ordinary
+ * change that changes nothing. Safe to run again and alongside the routes: a moved profile is no longer listed. Returns
+ * how many it moved; one that fails is logged and left as JSON for its next change.
+ */
+export async function migrateJsonMeta(accounts: AccountStore, log: Pick<Console, 'error'> = console): Promise<number> {
+  let moved = 0;
+  const failed = new Set<string>();
+  for (;;) {
+    const batch = (await accounts.jsonMetaUsers(100 + failed.size)).filter((id) => !failed.has(id));
+    if (!batch.length) return moved;
+    for (const id of batch) {
+      try {
+        await changeMeta(accounts, id, 'meta-migrate', (p) => p);
+        moved++;
+      } catch (error) {
+        failed.add(id);
+        log.error(`meta: could not move the profile of ${id} into its tables (${error instanceof Error ? error.message : 'unknown error'})`);
+      }
+    }
+  }
+}
+
+/** Writes a user's rows back as the JSON of schema 1 (profiles.data.meta), for a rollback to a server before schema 2. */
+export async function exportJsonMeta(accounts: AccountStore, userId: string): Promise<boolean> {
+  let wrote = false;
+  await accounts.updateProfile(userId, null, async (data, tx) => {
+    const rows = await tx.meta();
+    if (!rows) return;
+    data.meta = profileOf(rows, userId, await tx.balance('coin'));
+    wrote = true;
+  });
+  return wrote;
 }
 
 /** A battle against the computer the server agreed to pay for, kept in this process until it is reported. */

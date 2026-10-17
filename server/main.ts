@@ -39,7 +39,7 @@ import { MemoryAccountStore } from './accountsMemory';
 import { PgAccountStore, databaseConfig, type DatabaseConfig } from './accountsPg';
 import { ApiRouter, addressOf, originAllowed } from './api';
 import { authRoutes } from './auth';
-import { metaRoutes, payServerBattle } from './meta';
+import { metaRoutes, migrateJsonMeta, payServerBattle } from './meta';
 
 /** Set by build-server.mjs, so health identifies the bundle actually running. */
 declare const IMJIN_BUILD_REVISION: string;
@@ -1011,6 +1011,15 @@ function main() {
   const api = new ApiRouter(accounts);
   authRoutes(api, ranked);
   metaRoutes(api);
+  // Growth profiles still kept as JSON (schema 1) move into their tables once the database is ready.
+  const migrating = setInterval(() => {
+    if (!accounts?.ready) return;
+    clearInterval(migrating);
+    migrateJsonMeta(accounts)
+      .then((moved) => moved && console.log(`meta: moved ${moved} JSON profiles into their tables`))
+      .catch((error) => console.error('meta: the JSON migration failed', error instanceof Error ? error.message : 'unknown error'));
+  }, 1000);
+  migrating.unref();
   // Ended sessions are forgotten every hour.
   setInterval(() => {
     if (accounts?.ready) accounts.sweep().catch((error) => console.error('accounts sweep failed', error instanceof Error ? error.message : 'unknown error'));
