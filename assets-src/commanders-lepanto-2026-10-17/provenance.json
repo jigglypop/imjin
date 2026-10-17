@@ -1,0 +1,209 @@
+{
+  "requests": [
+    {
+      "id": "donjuan",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred Mediterranean war galleys of 1571 with lateen sails and long banks of oars, a galley deck and European or Ottoman sailors only, no Asian junks, no Asian soldiers. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Spanish costume of 1571: His face follows his known contemporary portraits. Don Juan of Austria, captain-general of the Holy League, about twenty-four, a young handsome fair face, light brown-blond wavy hair, a thin young moustache and wisp of beard, bright eager eyes; a small white ruff, an etched blackened-and-gilt steel cuirass, a red silk sash, bareheaded.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:14:05.191Z",
+      "finishedAt": "2026-10-17T09:14:51.033Z",
+      "usage": {
+        "input_tokens": 1411,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 387
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3167
+      },
+      "estimatedCostUsd": 0.0628
+    },
+    {
+      "id": "venier",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred Mediterranean war galleys of 1571 with lateen sails and long banks of oars, a galley deck and European or Ottoman sailors only, no Asian junks, no Asian soldiers. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Venetian costume of 1571: His face follows his known contemporary portraits. Sebastiano Venier, Venetian captain-general, about seventy-five, a fierce old weathered face, a long full white beard, hard defiant eyes; a steel cuirass over a red doublet, a fur-collared cloak, a dark cap.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:14:05.204Z",
+      "finishedAt": "2026-10-17T09:14:52.287Z",
+      "usage": {
+        "input_tokens": 1394,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 370
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3150
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "barbarigo",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred Mediterranean war galleys of 1571 with lateen sails and long banks of oars, a galley deck and European or Ottoman sailors only, no Asian junks, no Asian soldiers. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Venetian costume of 1571: His face follows his known contemporary portraits. Agostino Barbarigo, Venetian provveditore, about fifty-three, a lean grave face, a long grey beard, steady eyes; a dark crimson Venetian patrician robe over a steel breastplate, a small dark cap.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:14:05.204Z",
+      "finishedAt": "2026-10-17T09:14:57.353Z",
+      "usage": {
+        "input_tokens": 1388,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 364
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3144
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "doria",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred Mediterranean war galleys of 1571 with lateen sails and long banks of oars, a galley deck and European or Ottoman sailors only, no Asian junks, no Asian soldiers. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Genoese costume of 1571: His face follows his known contemporary portraits. Giovanni Andrea Doria, Genoese admiral, about thirty-two, a long narrow dark face, short black hair, a dark pointed beard, cool calculating eyes; a small ruff, a black doublet under a dark steel gorget, bareheaded.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:14:05.204Z",
+      "finishedAt": "2026-10-17T09:15:03.694Z",
+      "usage": {
+        "input_tokens": 1394,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 370
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3150
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "uluc",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred Mediterranean war galleys of 1571 with lateen sails and long banks of oars, a galley deck and European or Ottoman sailors only, no Asian junks, no Asian soldiers. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Ottoman costume of 1571: Uluc Ali (Occhiali), beylerbey of Algiers, about fifty, a sun-darkened hawkish face, a short grey-black beard, sharp cunning eyes; a red-and-white turban, a dark red kaftan over a mail shirt, no ruff.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:14:52.288Z",
+      "finishedAt": "2026-10-17T09:15:34.401Z",
+      "usage": {
+        "input_tokens": 1393,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 369
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3149
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "alipasha",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred Mediterranean war galleys of 1571 with lateen sails and long banks of oars, a galley deck and European or Ottoman sailors only, no Asian junks, no Asian soldiers. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Ottoman costume of 1571: His face follows his known contemporary portraits. Muezzinzade Ali Pasha, Kapudan Pasha of the Ottoman fleet, about fifty, a broad dignified face, a full dark beard streaked with grey, grave proud eyes; a large white turban, a rich green-and-gold kaftan over mail, no ruff.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:14:51.035Z",
+      "finishedAt": "2026-10-17T09:15:36.772Z",
+      "usage": {
+        "input_tokens": 1403,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 379
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3159
+      },
+      "estimatedCostUsd": 0.0628
+    },
+    {
+      "id": "siroco",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred Mediterranean war galleys of 1571 with lateen sails and long banks of oars, a galley deck and European or Ottoman sailors only, no Asian junks, no Asian soldiers. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Ottoman costume of 1571: Mehmed Siroco (Suluk Mehmed Pasha), governor of Alexandria, about fifty-five, a lean weathered face, a grey beard, stern eyes; a white turban, a blue kaftan over mail, no ruff.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:14:57.354Z",
+      "finishedAt": "2026-10-17T09:15:43.493Z",
+      "usage": {
+        "input_tokens": 1384,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 360
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3140
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "pertev",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred Mediterranean war galleys of 1571 with lateen sails and long banks of oars, a galley deck and European or Ottoman sailors only, no Asian junks, no Asian soldiers. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Ottoman costume of 1571: Pertev Pasha, serdar of the land forces, about sixty, a heavy aged face, a white beard, tired grave eyes; a tall white turban with a plume, an ochre fur-trimmed kaftan, no ruff.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:15:03.695Z",
+      "finishedAt": "2026-10-17T09:15:55.315Z",
+      "usage": {
+        "input_tokens": 1385,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 361
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3141
+      },
+      "estimatedCostUsd": 0.0627
+    }
+  ],
+  "model": "gpt-image-2.5-sunburst",
+  "script": "scripts/generate-chapter-portraits.mjs --chapter lepanto",
+  "pricingNote": "Estimated from returned token usage at gpt-image-2 list prices per million tokens ({\"textIn\":5,\"imageIn\":8,\"imageOut\":30}); the 2.5 preview has no public price.",
+  "requestCount": 8,
+  "totalEstimatedCostUsd": 0.502
+}

@@ -1,0 +1,261 @@
+{
+  "requests": [
+    {
+      "id": "collingwood",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Royal Navy uniform of 1805: His face follows his known contemporary portraits. Vice-Admiral Cuthbert Collingwood, fifty-seven, a long serious face, powdered grey hair tied back, no beard, calm steady eyes; a dark blue admiral coat with gold lace, a white stock.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:16:09.925Z",
+      "finishedAt": "2026-10-17T09:16:53.644Z",
+      "usage": {
+        "input_tokens": 1397,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 373
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3153
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "blackwood",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Royal Navy uniform of 1805: Captain Henry Blackwood, thirty-five, a lean energetic face, dark hair, side-whiskers, no beard; a dark blue captain coat, a white stock, a bicorne hat.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:16:09.925Z",
+      "finishedAt": "2026-10-17T09:16:54.707Z",
+      "usage": {
+        "input_tokens": 1382,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 358
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3138
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "hardy",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Royal Navy uniform of 1805: His face follows his known contemporary portraits. Captain Thomas Masterman Hardy, thirty-six, a big broad strong face, dark hair, no beard, calm eyes; a dark blue post-captain coat with gold lace, a white stock.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:16:09.925Z",
+      "finishedAt": "2026-10-17T09:16:55.131Z",
+      "usage": {
+        "input_tokens": 1391,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 367
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3147
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "nelson",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Royal Navy uniform of 1805: His face follows his known contemporary portraits. Vice-Admiral Horatio Nelson, forty-seven, a thin pale sensitive face, greying sandy hair, a scar over the blind right eye, no beard; a dark blue full-dress vice-admiral coat with gold lace and epaulettes and stars of his orders, a white stock, bareheaded.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:16:09.902Z",
+      "finishedAt": "2026-10-17T09:16:56.079Z",
+      "usage": {
+        "input_tokens": 1415,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 391
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3171
+      },
+      "estimatedCostUsd": 0.0628
+    },
+    {
+      "id": "villeneuve",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. French Imperial Navy uniform of 1805: His face follows his known contemporary portraits. Vice-amiral Pierre-Charles Villeneuve, forty-two, a long anxious face, dark hair, no beard, worried eyes; a dark blue French admiral coat with heavy gold oak-leaf embroidery, a white stock.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:16:53.645Z",
+      "finishedAt": "2026-10-17T09:17:39.158Z",
+      "usage": {
+        "input_tokens": 1397,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 373
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3153
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "lucas",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. French Imperial Navy uniform of 1805: Captain Jean-Jacques Lucas, forty-one, a short fierce face, dark hair, side-whiskers, no beard; a dark blue French captain coat with gold, a bicorne.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:16:55.132Z",
+      "finishedAt": "2026-10-17T09:17:40.156Z",
+      "usage": {
+        "input_tokens": 1383,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 359
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3139
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "churruca",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Spanish Navy uniform of 1805: His face follows his known contemporary portraits. Brigadier Cosme Damian Churruca, forty-four, a fine intelligent face, dark hair, no beard; a dark blue Spanish captain coat with red facings, a white stock.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:16:56.081Z",
+      "finishedAt": "2026-10-17T09:17:40.491Z",
+      "usage": {
+        "input_tokens": 1389,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 365
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3145
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "gravina",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Spanish Navy uniform of 1805: His face follows his known contemporary portraits. Admiral Federico Gravina, forty-nine, a dignified olive face, powdered grey hair, no beard; a dark blue Spanish admiral coat with red facings and gold lace, a white stock.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:16:54.716Z",
+      "finishedAt": "2026-10-17T09:17:46.255Z",
+      "usage": {
+        "input_tokens": 1391,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 367
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3147
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "hardy",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Royal Navy uniform of 1805: His face follows his known contemporary portraits. Captain Thomas Masterman Hardy, thirty-six, a very large heavy-jawed fleshy face with a broad nose and small deep-set eyes, thinning light-brown hair, no beard, no hat; a dark blue post-captain coat with gold lace, a white stock.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:17:59.898Z",
+      "note": "faces too alike in the first set",
+      "finishedAt": "2026-10-17T09:18:41.728Z",
+      "usage": {
+        "input_tokens": 1407,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 383
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3163
+      },
+      "estimatedCostUsd": 0.0628
+    },
+    {
+      "id": "lucas",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. French Imperial Navy uniform of 1805: Captain Jean-Jacques Lucas, forty-one, a small wiry man with a narrow sharp-featured face, hooked nose, receding black hair with grey at the temples, thin lips, clean-shaven, no hat; a dark blue French captain coat with gold.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T09:17:59.912Z",
+      "note": "faces too alike in the first set",
+      "finishedAt": "2026-10-17T09:18:46.376Z",
+      "usage": {
+        "input_tokens": 1399,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 375
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3155
+      },
+      "estimatedCostUsd": 0.0627
+    }
+  ],
+  "model": "gpt-image-2.5-sunburst",
+  "script": "scripts/generate-chapter-portraits.mjs --chapter trafalgar",
+  "pricingNote": "Estimated from returned token usage at gpt-image-2 list prices per million tokens ({\"textIn\":5,\"imageIn\":8,\"imageOut\":30}); the 2.5 preview has no public price.",
+  "requestCount": 10,
+  "totalEstimatedCostUsd": 0.627
+}
