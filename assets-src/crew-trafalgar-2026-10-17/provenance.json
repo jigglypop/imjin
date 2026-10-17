@@ -231,6 +231,29 @@
         },
         "estimatedUsd": 0.062
       }
+    },
+    "spain1805_sailor": {
+      "base": "rower",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Spanish Navy gunner of 1805 in action: a red kerchief tied round his head, a sleeveless white shirt, loose white canvas trousers, barefoot. Black stubble.",
+        "poseReference": "render of rower bind pose",
+        "usage": {
+          "input_tokens": 1267,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 243
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3023
+        },
+        "estimatedUsd": 0.062
+      }
     }
   }
 }
