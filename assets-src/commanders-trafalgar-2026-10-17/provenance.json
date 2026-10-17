@@ -251,11 +251,59 @@
         "total_tokens": 3155
       },
       "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "jervis",
+      "endpoint": "gemini generateContent",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Royal Navy uniform of 1797: His face follows his known contemporary portraits. Admiral Sir John Jervis, sixty-two, a heavy square stern face with a strong jaw and thick dark eyebrows, powdered white hair, no beard; a dark blue admiral full-dress coat with gold lace, a white stock, bareheaded.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T13:32:28.273Z",
+      "finishedAt": "2026-10-17T13:32:40.578Z",
+      "estimatedCostUsd": 0.04
+    },
+    {
+      "id": "calder",
+      "endpoint": "gemini generateContent",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Royal Navy uniform of 1805: His face follows his known contemporary portraits. Vice-Admiral Sir Robert Calder, sixty, a broad fleshy face, powdered grey hair, no beard, a guarded expression; a dark blue vice-admiral coat with gold lace, a white stock.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T13:32:28.275Z",
+      "finishedAt": "2026-10-17T13:32:41.216Z",
+      "estimatedCostUsd": 0.04
+    },
+    {
+      "id": "cordoba",
+      "endpoint": "gemini generateContent",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Spanish Navy uniform of 1797: Teniente general José de Córdoba y Ramos, about sixty, a lined olive face, powdered white hair, no beard, a hesitant look; a dark blue Spanish admiral coat with red facings and gold lace, a white stock.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T13:32:28.275Z",
+      "finishedAt": "2026-10-17T13:32:41.503Z",
+      "estimatedCostUsd": 0.04
+    },
+    {
+      "id": "brueys",
+      "endpoint": "gemini generateContent",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. French Republican Navy uniform of 1798: His face follows his known contemporary portraits. Vice-amiral François-Paul Brueys, forty-five, a long thin face, dark hair tied back, no beard, a weary look; a dark blue French admiral coat with gold embroidery and a tricolour sash, a white stock.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T13:32:28.275Z",
+      "finishedAt": "2026-10-17T13:32:41.948Z",
+      "estimatedCostUsd": 0.04
     }
   ],
   "model": "gpt-image-2.5-sunburst",
   "script": "scripts/generate-chapter-portraits.mjs --chapter trafalgar",
   "pricingNote": "Estimated from returned token usage at gpt-image-2 list prices per million tokens ({\"textIn\":5,\"imageIn\":8,\"imageOut\":30}); the 2.5 preview has no public price.",
-  "requestCount": 10,
-  "totalEstimatedCostUsd": 0.627
+  "requestCount": 14,
+  "totalEstimatedCostUsd": 0.787
 }

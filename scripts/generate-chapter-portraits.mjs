@@ -74,6 +74,10 @@ const SETS = {
       gravina: 'Spanish Navy uniform of 1805: His face follows his known contemporary portraits. Admiral Federico Gravina, forty-nine, a dignified olive face, powdered grey hair, no beard; a dark blue Spanish admiral coat with red facings and gold lace, a white stock.',
       lucas: 'French Imperial Navy uniform of 1805: Captain Jean-Jacques Lucas, forty-one, a small wiry man with a narrow sharp-featured face, hooked nose, receding black hair with grey at the temples, thin lips, clean-shaven, no hat; a dark blue French captain coat with gold.',
       churruca: 'Spanish Navy uniform of 1805: His face follows his known contemporary portraits. Brigadier Cosme Damian Churruca, forty-four, a fine intelligent face, dark hair, no beard; a dark blue Spanish captain coat with red facings, a white stock.',
+      jervis: 'Royal Navy uniform of 1797: His face follows his known contemporary portraits. Admiral Sir John Jervis, sixty-two, a heavy square stern face with a strong jaw and thick dark eyebrows, powdered white hair, no beard; a dark blue admiral full-dress coat with gold lace, a white stock, bareheaded.',
+      calder: 'Royal Navy uniform of 1805: His face follows his known contemporary portraits. Vice-Admiral Sir Robert Calder, sixty, a broad fleshy face, powdered grey hair, no beard, a guarded expression; a dark blue vice-admiral coat with gold lace, a white stock.',
+      brueys: 'French Republican Navy uniform of 1798: His face follows his known contemporary portraits. Vice-amiral François-Paul Brueys, forty-five, a long thin face, dark hair tied back, no beard, a weary look; a dark blue French admiral coat with gold embroidery and a tricolour sash, a white stock.',
+      cordoba: 'Spanish Navy uniform of 1797: Teniente general José de Córdoba y Ramos, about sixty, a lined olive face, powdered white hair, no beard, a hesitant look; a dark blue Spanish admiral coat with red facings and gold lace, a white stock.',
     },
   },
 };
@@ -113,6 +117,16 @@ async function generate(id, prov) {
   const ref = refPath(id);
   const entry = { id, endpoint: ref ? 'images/edits' : 'images/generations', model: MODEL, prompt, reference: ref ? relative(ROOT, ref).replaceAll('\\', '/') : null, size: SIZE, quality: QUALITY, requestedAt: new Date().toISOString(), note: NOTE || undefined };
   let lastErr;
+  if (args.includes('--provider=gemini')) {
+    // Gemini's image model with the same style reference, while the OpenAI images API is out of credit.
+    const { geminiImage, geminiModel } = await import('./gemini-image.mjs');
+    const refPng = ref ? await sharp(await readFile(ref)).png().toBuffer() : null;
+    await sharp(await geminiImage(prompt, { aspect: '1:1', image: refPng })).webp({ quality: 94, effort: 5 }).toFile(rawPath(id));
+    Object.assign(entry, { endpoint: 'gemini generateContent', model: geminiModel(), finishedAt: new Date().toISOString(), estimatedCostUsd: 0.04 });
+    prov.requests.push(entry);
+    await writeFile(PROV, JSON.stringify(finish(prov), null, 2));
+    return;
+  }
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
       let res;
