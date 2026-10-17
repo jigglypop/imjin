@@ -1022,7 +1022,12 @@ async function pruneLocal(args, flags) {
   reportHashing();
   const differ = targets.filter((path) => here.get(path) && here.get(path).sha256 !== files[path].sha256);
   if (differ.length) fail(`${differ.length} of them differ from assets.json (${differ[0]} first): npm run assets -- push, then try again`);
-  const chosen = targets.filter((path) => here.get(path) && files[path].size >= minSize);
+  // A file git still tracks (a branch from before the cut-over) would read as deleted in git: it stays.
+  const listed = spawnSync('git', ['ls-files', '-z', '--', ...new Set(targets.map((path) => path.split('/').slice(0, 2).join('/')))], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 });
+  const tracked = new Set(listed.status === 0 ? listed.stdout.split('\0').filter(Boolean) : []);
+  const chosen = targets.filter((path) => here.get(path) && files[path].size >= minSize && !tracked.has(path));
+  const inGit = targets.filter((path) => here.get(path) && tracked.has(path)).length;
+  if (inGit) console.log(`${inGit} of them stay: git tracks them on this branch (npm run assets -- untrack takes them out of git)`);
   if (!chosen.length) {
     console.log('nothing to prune: no local copy there that assets.json names');
     return;
