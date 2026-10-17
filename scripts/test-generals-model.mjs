@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 import { readFile, access } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+// Runtime binaries may be pruned to S3 (npm run assets -- prune-local): runtimePath reads them through the cache.
+import { runtimePath } from './lib/remote-assets.mjs';
 import { build } from 'esbuild';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -221,8 +223,8 @@ await check('all 18 selectable weapons have indexed desktop/mobile files and thu
   assert.equal(M.WEAPONS.length, 18);
   for (const weapon of M.WEAPONS) {
     const file = `parts/weapon_${weapon.id}`; assert.ok(models.has(file), file);
-    for (const suffix of ['', '_lod1']) await access(new URL(`../public/models/generals/${file}${suffix}.glb`, import.meta.url));
-    await access(new URL(`../public/ui/weapons/${weapon.id}.webp`, import.meta.url));
+    for (const suffix of ['', '_lod1']) await runtimePath(`public/models/generals/${file}${suffix}.glb`);
+    await runtimePath(`public/ui/weapons/${weapon.id}.webp`);
   }
 });
 const cast = [...models].filter((f) => /^[a-z]+__[a-z_]+$/.test(f));
@@ -230,7 +232,7 @@ if (cast.length) {
   const { io } = await import('./lib/figure.mjs');
   await check(`indexed general figures (${cast.length}) have three levels with only the standing clip (owner 2026-10-17: no command or attack buttons) on a hand bone`, async () => {
     for (const file of cast) for (const suffix of ['', '_lod1', '_lod2']) {
-      const doc = await io.read(fileURLToPath(new URL(`../public/models/generals/${file}${suffix}.glb`, import.meta.url)));
+      const doc = await io.read(await runtimePath(`public/models/generals/${file}${suffix}.glb`));
       for (const kind of ['sword', 'spear', 'bow']) {
         const clips = M.movementClips(doc.getRoot().listAnimations().map((a) => new AnimationClip(a.getName(), 1, [])), kind);
         assert.ok(clips.idle, `${file}${suffix} ${kind} idle`); assert.deepEqual([...clips.moves.keys()], [], `${file}${suffix} ${kind} moves`);
@@ -251,7 +253,7 @@ await check('curved swords are held edge on the fingers side (hwando, katana, ta
   const { io } = await import('./lib/figure.mjs');
   for (const id of ['joseon_hwando', 'japan_katana', 'japan_tachi', 'ming_dao']) {
     for (const suffix of ['', '_lod1']) {
-      const doc = await io.read(fileURLToPath(new URL(`../public/models/generals/parts/weapon_${id}${suffix}.glb`, import.meta.url)));
+      const doc = await io.read(await runtimePath(`public/models/generals/parts/weapon_${id}${suffix}.glb`));
       const pts = [];
       for (const node of doc.getRoot().listNodes()) {
         const mesh = node.getMesh(); if (!mesh) continue; const W = node.getWorldMatrix();
@@ -284,7 +286,7 @@ if (cast.length) {
   await check(`indexed general figures (${cast.length}) have LOD1/LOD2, both grip sockets and an undecimated LOD0`, async () => {
     for (const file of cast) {
       for (const suffix of ['', '_lod1', '_lod2']) {
-        const path = fileURLToPath(new URL(`../public/models/generals/${file}${suffix}.glb`, import.meta.url));
+        const path = await runtimePath(`public/models/generals/${file}${suffix}.glb`);
         await access(path).catch(() => assert.fail(`${file}${suffix}.glb missing`));
         const names = (await io.read(path)).getRoot().listNodes().map((n) => n.getName());
         for (const s of ['socket_grip_right', 'socket_grip_left']) assert.ok(names.includes(s), `${file}${suffix} has no ${s}`);
@@ -292,7 +294,7 @@ if (cast.length) {
       // LOD0 is the full rigged mesh (it goes on the card); a decimated LOD0 smears the face. Sources come from the
       // asset store (npm run assets -- pull); without them this part is skipped.
       if (!existsSync(pkg)) continue;
-      const lod0 = fileURLToPath(new URL(`../public/models/generals/${file}.glb`, import.meta.url));
+      const lod0 = await runtimePath(`public/models/generals/${file}.glb`);
       const sha = createHash('sha256').update(await readFile(lod0)).digest('hex');
       const dirs = readdirSync(pkg).filter((d) => (d === file || d.startsWith(`${file}_`)) && existsSync(`${pkg}${d}/rig.glb`));
       if (!dirs.length) continue;
@@ -309,7 +311,7 @@ if (models.has('representative/general')) {
   const { io } = await import('./lib/figure.mjs');
   await check('indexed representative GLBs contain the three real motions', async () => {
     for (const suffix of ['', '_lod1']) {
-      const path = fileURLToPath(new URL(`../public/models/generals/representative/general${suffix}.glb`, import.meta.url)); const doc = await io.read(path);
+      const path = await runtimePath(`public/models/generals/representative/general${suffix}.glb`); const doc = await io.read(path);
       const clips = M.movementClips(doc.getRoot().listAnimations().map((a) => new AnimationClip(a.getName(), 1, [])));
       assert.ok(clips.idle); assert.deepEqual([...clips.moves.keys()], ['command', 'slash']);
     }

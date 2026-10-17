@@ -7,6 +7,7 @@ import { Matrix4, Vector3 } from 'three';
 import { io } from './lib/figure.mjs';
 import { loadFigure, pose } from './lib/deform.mjs';
 import { idleBlade } from '../src/ui/generals/idleBlade.ts';
+import { runtimePath } from './lib/remote-assets.mjs';
 const MIN = 0.05, FIST = 0.055;
 const DIR = 'public/models/generals';
 const SWORDS = { joseon: ['joseon_hwando', 'joseon_ungeom'], japan: ['japan_katana', 'japan_tachi'], ming: ['ming_dao', 'ming_jian'] };
@@ -14,7 +15,7 @@ const FACTION = Object.fromEntries([...readFileSync('src/meta/catalog.ts', 'utf8
 const list = process.argv.slice(2).length ? process.argv.slice(2)
   : JSON.parse(readFileSync(`${DIR}/index.json`, 'utf8')).filter((k) => !k.startsWith('parts/')).flatMap((k) => (SWORDS[FACTION[k.split('__')[1]]] ?? SWORDS.joseon).map((w) => `${k}:weapon_${w}`));
 async function sword(name) {
-  const d = await io.read(`${DIR}/parts/${name}.glb`); const pts = [];
+  const d = await io.read(await runtimePath(`${DIR}/parts/${name}.glb`)); const pts = [];
   for (const n of d.getRoot().listNodes()) { const m = n.getMesh(); if (!m) continue; const W = new Matrix4().fromArray(n.getWorldMatrix());
     for (const p of m.listPrimitives()) { const P = p.getAttribute('POSITION'); for (let i = 0; i < P.getCount(); i++) pts.push(new Vector3(...P.getElement(i, [])).applyMatrix4(W)); } }
   let lo = Infinity, hi = -Infinity; for (const p of pts) { lo = Math.min(lo, p.y); hi = Math.max(hi, p.y); }
@@ -28,7 +29,7 @@ const figures = new Map(); let failed = 0;
 for (const spec of list) {
   const [key, weapon] = spec.split(':'); const blade = await sword(weapon);
   if (!figures.has(key)) {
-    const F = await loadFigure(`${DIR}/${key}.glb`);
+    const F = await loadFigure(await runtimePath(`${DIR}/${key}.glb`));
     // A `left_handed` figure (Nelson) holds the sword in his left fist.
     const L = F.nodes.some((n) => n.getName() === 'left_handed'), S = L ? 'Left' : 'Right';
     const sockLocal = new Matrix4().fromArray(F.nodes.find((n) => n.getName() === `socket_grip_${S.toLowerCase()}`).getMatrix());

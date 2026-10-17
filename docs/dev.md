@@ -47,6 +47,9 @@ macOS는 Chrome + Metal, Windows는 Edge + D3D11. GPU는 같이 돌아가는 다
 - 자격 증명: `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN`(CI의 배포 역할은 읽기 가능), 없으면 aws CLI(`aws login`); push는 본인 자격 증명으로. `setup [--apply]`은 버킷과 역할의 읽기 정책을 만들고, `untrack [--apply]`은 바이너리를 git에서 빼고 그 패턴을 `.gitignore` 맨 앞에 넣는 한 번뿐인 전환.
 - 병합 뒤 `assets.json`이 충돌하면 양쪽 줄을 다 남기고, 양쪽이 같은 파일을 바꿨으면 원하는 버전을 남김(다른 블롭도 저장소에 남아 있음).
 - 콜드 아카이브(생성 원본: 컨셉 PNG, raw/rig/anim GLB, 후보, .blend): `npm run assets -- archive <paths> [--from=<목록>] [--dry-run]`이 같은 버킷의 `archive/sha256/`에 올리고 커밋하는 `assets-archive.json`(경로 → sha256, 크기, uploadedAt)에 적은 뒤, HEAD로 크기를 확인하고 로컬 파일을 지움. `assets.json`이 관리하는 파일은 건드리지 않음. `archive-pull "<경로|glob>" [--dry-run] [--force]`로 필요할 때만 되살리고, `archive-status [--remote]`로 폴더별 현황 확인. CI와 `pull`은 아카이브를 받지 않음 — 생성 원본은 `push` 말고 여기로.
+- 런타임 파일을 로컬에 두지 않기: `npm run assets -- prune-local [paths] [--min-size=5M] [--dry-run]`이 `public/`의 파일(기본 `public/models`) 중 `assets.json`과 해시가 같고 버킷에 제 크기로 있는 것(HEAD로 확인)만 지우고, 지운 목록을 커밋하지 않는 `.assets-remote.json`에 적음. 개발 서버(`vite.config.ts`의 `imjin-remote-assets`)는 `assets.json`에 있는데 로컬에 없는 `public/` 파일을 공유 캐시에서, 없으면 S3에서 받아 sha256을 확인한 뒤 내줌(응답 헤더 `X-Imjin-Asset: remote`). 캐시는 `IMJIN_ASSET_CACHE_MAX`(기본 2G) 아래로 오래 안 쓴 것부터 지움. 파일을 Node에서 읽는 테스트·스크립트는 `scripts/lib/remote-assets.mjs`의 `runtimePath(rel)`로 경로를 얻음(로컬 사본, 없으면 캐시).
+  - `pull`은 `.assets-remote.json`의 파일을 건너뜀; `pull --all [paths]`가 되살리고 목록에서 뺌. `push`는 그 파일을 없어졌다고 빼지 않음. `vite build`는 원격 전용 파일이 하나라도 있으면 멈춤(로컬 빌드 전에 `pull --all`). CI는 새 체크아웃이라 전부 받음.
+  - AWS 자격 증명이 없으면 지운 파일은 개발 서버에서 502로 실패함. 새로 만든 모델은 `push` 뒤에 prune.
 - `node scripts/test-assets.mjs`가 모든 명령을 메모리 속 S3로 검사함.
 
 ## 캠페인 지도
