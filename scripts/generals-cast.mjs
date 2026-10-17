@@ -44,7 +44,7 @@ const MING = 'Faction look: a late-Ming Chinese general as in big-budget Chinese
  * (his signature armor where he has one), `look` the film costume brief, `sword` the blade in his right fist.
  */
 const CAST = [
-  { id: 'yi', armor: 'yi_tongjesa', sword: 'hwando', face: 'Yi Sun-sin, the Joseon admiral, about fifty: a lean, sun-weathered Korean face with real skin texture and fine lines, deep-set sharp intense dark eyes with clearly defined irises, a thin black moustache and a long, narrow, neat black chin beard (a few grey threads) falling straight down in front of the collar, separate from the armour', look: JOSEON + 'The supreme naval commander as in the films Myeongryang and Noryang: a long deep-red dujeong-gap brigandine coat to mid-shin, its red cloth covered with even rows of small round polished BRASS rivet heads (gold-coloured metal, never white or cream), black trims edged with thin gold, a smooth plain collar (no fur, no fur ruff, nothing hairy on the armour), red shoulder guards with brass rivets, a broad black belt with a gilt buckle; a black-lacquered Korean tugu helmet with a gilded brow band, a tall gilded spike finial and a short red tassel, and a red neck curtain with brass rivets.' },
+  { id: 'yi', armor: 'yi_tongjesa', sword: 'hwando', face: 'Yi Sun-sin, the Joseon admiral, about fifty: a lean, sun-weathered Korean face with real skin texture and fine lines, deep-set sharp intense dark eyes with clearly defined irises, a thin black moustache and a long, narrow, neat black chin beard (a few grey threads) falling straight down in front of the collar, separate from the armour', look: JOSEON + 'The supreme naval commander as in the films Myeongryang, Hansan and Noryang, on a lean athletic body (flat stomach, V-taper, broad natural shoulders): a FITTED deep-red dujeong-gap brigandine coat to the knee, CLOSED in front and tailored to the torso (matte studded cloth all over, NO glossy or smooth front panel, no breastplate, no robe look), its red cloth covered with even rows of small round polished BRASS rivet heads (gold-coloured metal, never white or cream), black trims edged with thin gold, a smooth plain collar (no fur, no fur ruff, nothing hairy on the armour), red shoulder guards with brass rivets, a broad black belt with a gilt buckle; a black-lacquered Korean tugu helmet with a gilded brow band, a tall gilded spike finial and a short red tassel, and a red neck curtain with brass rivets.' },
   { id: 'wakisaka', armor: 'wakisaka_shichihon', sword: 'katana', face: 'Wakisaka Yasuharu, Japanese samurai commander, late thirties: a lean hard Japanese face, thin moustache, intense proud eyes', look: JAPAN + 'A smooth, glossy, plain black-lacquered cuirass (okegawa-do) with no white or pale marks or patterns on it, dark blue silk lacing, large sode shoulder guards, kusazuri tassets, black haidate, a black menpo-less face open; a black lacquered kabuto with a wide gold crescent maedate and a black neck guard (shikoro); a black jinbaori surcoat is NOT worn.' },
   { id: 'chenlin', armor: 'chenlin_dudok', sword: 'jian', face: 'Chen Lin, the Ming admiral, fifties: a broad commanding Han Chinese face, a long black moustache and a full beard, stern proud eyes', look: MING + 'The fleet commander-in-chief: gilded shanwenjia mountain-pattern lamellar over a red silk robe, gold lion-head shoulder guards, a gilded round chest mirror (hujingxin), a jade-and-gold belt, red skirt panels edged with gold; a tall gilded Ming helmet with a long spike, a red horsehair tassel and upturned phoenix-wing side flaps.' },
   { id: 'won', armor: 'won_heukcheol', sword: 'hwando', face: 'Won Gyun, Joseon admiral, fifties: a heavy broad Korean face, thick moustache and a short full beard, a stubborn fierce glare, a big bull-like build', look: JOSEON + 'A blackened-iron lamellar coat over a dark red dujeong-gap, heavy black iron shoulder guards and arm guards, black and dark red with iron rivets; a black iron tugu helmet with a spike and a black horsehair plume, riveted black neck curtain.' },
@@ -103,7 +103,7 @@ const FRAME =
   'A full-body character reference photograph for image-to-3D reconstruction and auto-rigging, in the look of a live-action costume fitting for a cinematic big-budget historical war film (the hero costume of a film lead in Myeongryang, Hansan, Noryang, Immortal Admiral Yi Sun-sin, a Japanese NHK taiga drama or a Ming-dynasty epic). ' +
   'Exactly one man standing alone in a relaxed 45-degree A-pose for rigging: both arms straight and spread out to the sides, each arm angled exactly 45 degrees below horizontal (halfway between a T-pose and hanging down), so the fists are well away from the body, about one forearm length outside the hips, with wide open sky between each arm and the torso and skirts; shoulders relaxed and low (not shrugged); legs straight and apart, the feet planted wider than the shoulders (an inverted V between the legs), toes forward; head level, facing the camera. ' +
   'BOTH hands are empty, relaxed loosely closed fists, the backs of the hands facing outward, holding nothing at all (the weapon is fitted later): no sword, no weapon, no scabbard on the body, nothing in the hands. ' +
-  'Heroic film-lead proportions: tall, powerful, eight heads tall, broad square shoulders, a deep chest, a narrow belted waist; a movie-poster hero, never stocky or chibi. ' +
+  'Heroic athletic film-lead build: tall, eight heads tall, broad square shoulders, a deep chest, a FLAT stomach and a narrow, tightly cinched waist (a clear V-taper; from the side the belly never pushes out past the chest), the armour tailored and fitted close to the body, never a barrel-shaped robe; a movie-poster hero, never stocky, pot-bellied or chibi. ' +
   'Seen at chest height through a long telephoto lens, orthographic-looking, no perspective distortion. The whole figure fits in the frame with a clear margin above the helmet crest, below the boots and beyond both fists. ' +
   'Soft, even, flat studio light from every side, no hard shadows, no rim light; a plain seamless light grey background, no floor line, no ground shadow, nothing else in the picture. ' +
   'Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord and seam clearly separated, believable late-sixteenth-century materials with a soft matte or satin finish: no mirror reflections, no glare, no grime streaks, every surface pattern crisp and readable. ';
@@ -436,8 +436,10 @@ async function rig(c) {
 // command 240 Thrust Slash (the arm thrust forward), attack 97 Left Slash; spear idle 335 Axe Breathe, attack 214 Punch
 // Forward with Both Fists (two-hand thrust), command shares the sword's; bow idle 244 Idle 4, command 29 Call Gesture
 // (free right arm sent forward), attack 227 Archery Shot 3. Unedited Meshy library clips.
-const KIND_ACTIONS = 'idle_sword:246,command_sword:240,attack_sword:97,idle_spear:335,attack_spear:214,idle_bow:244,command_bow:29,attack_bow:227';
-const MESHY_CLIP = { idle_6: 'idle_sword', thrust_slash: 'command_sword', left_slash: 'attack_sword', axe_breathe_and_look_around: 'idle_spear', punch_forward_with_both_fists: 'attack_spear', idle_4: 'idle_bow', call_gesture: 'command_bow', archery_shot_3: 'attack_bow' };
+// Lead's picks 2026-10-17: idle 252 Idle 12 (with --posture), attack 241 Weapon Combo 2 (92 Double Combo Attack for
+// long-skirted generals via --actions), archery 227.
+const KIND_ACTIONS = 'idle_sword:252,command_sword:240,attack_sword:241,idle_spear:335,attack_spear:214,idle_bow:244,command_bow:29,attack_bow:227';
+const MESHY_CLIP = { idle_12: 'idle_sword', weapon_combo_2: 'attack_sword', double_combo_attack: 'attack_sword', idle_6: 'idle_sword', thrust_slash: 'command_sword', left_slash: 'attack_sword', axe_breathe_and_look_around: 'idle_spear', punch_forward_with_both_fists: 'attack_spear', idle_4: 'idle_bow', call_gesture: 'command_bow', archery_shot_3: 'attack_bow' };
 const ACTIONS = Object.fromEntries((args.actions ?? KIND_ACTIONS).split(',').map((p) => p.split(':')).map(([n, id]) => [Number(id), n]));
 async function motion(c) {
   const d = dirOf(c);
@@ -507,6 +509,29 @@ async function pack(c) {
         copy.addSampler(sampler).addChannel(doc.createAnimationChannel().setTargetNode(target).setTargetPath(ch.getTargetPath()).setSampler(sampler));
       }
     }
+    // --slim=<depth>[,<width>]: a V-taper at bind pose, positions only (weights, joints, UVs, vertex count and order
+    // kept): between chest and hips the front of the body is drawn back toward the spine and the waist sides inward,
+    // with a smooth bump falloff, so the belly no longer pushes out over the belt. Arms (far from the midline) untouched.
+    if (args.slim) {
+      const [depth, width = String(Number(args.slim) * 0.5)] = args.slim.split(',').map(String);
+      for (const mesh of doc.getRoot().listMeshes()) for (const prim of mesh.listPrimitives()) {
+        const P = prim.getAttribute('POSITION'); const a = P.getArray().slice(); const n = P.getCount();
+        let y0 = Infinity, y1 = -Infinity; for (let i = 0; i < n; i++) { y0 = Math.min(y0, a[i * 3 + 1]); y1 = Math.max(y1, a[i * 3 + 1]); }
+        const H = y1 - y0; if (H <= 0) continue;
+        // the spine line: mean x/z of the vertices in the waist band
+        let sx = 0, sz = 0, c = 0; for (let i = 0; i < n; i++) { const t = (a[i * 3 + 1] - y0) / H; if (t > 0.6 && t < 0.67 && Math.abs(a[i * 3]) < 0.12 * H) { sx += a[i * 3]; sz += a[i * 3 + 2]; c++; } }
+        if (!c) continue; const xc = sx / c, zc = sz / c;
+        for (let i = 0; i < n; i++) {
+          const t = (a[i * 3 + 1] - y0) / H; const dx = a[i * 3] - xc; if (Math.abs(dx) > 0.13 * H) continue;
+          const u = (t - Number(args.slimat ?? 0.645)) / 0.065; if (Math.abs(u) >= 1) continue;
+          const w = Math.cos((u * Math.PI) / 2) ** 2 * (1 - Math.max(0, (Math.abs(dx) - 0.09 * H) / (0.04 * H)));
+          const dz = a[i * 3 + 2] - zc;
+          if (dz > 0) a[i * 3 + 2] = zc + dz * (1 - Number(depth) * w);
+          a[i * 3] = xc + dx * (1 - Number(width) * w);
+        }
+        P.setArray(a);
+      }
+    }
     // --robe: long-robe figures take a narrow-stance sword set (Sword Shout 101 as command, Right-hand Sword Slash
     // 219 as attack), Meshy clips made on the same rig (motion-candidates/robe.glb), copied by joint name, unedited.
     if (args.robe) {
@@ -530,14 +555,19 @@ async function pack(c) {
     }
     // --headup=<deg>[:clip,clip]: a constant pitch-up of the head in those clips (default idle_sword), taken in the
     // neck's bind frame about the body's left-right axis, so a library idle that looks at the ground faces forward.
-    if (args.headup) {
-      const [deg, which] = args.headup.split(':');
+    // --posture=<Bone>:<deg>,<Bone>:<deg>[;clip,clip]: the same constant pitch-up on other bones (spine straight,
+    // chest out, chin up), each about the body's left-right axis in its own parent frame.
+    const pitches = [];
+    if (args.headup) { const [deg, which] = args.headup.split(':'); pitches.push(['Head', deg, which]); }
+    if (args.posture) { const [list, which] = args.posture.split(';'); for (const p of list.split(',')) { const [b, deg] = p.split(':'); pitches.push([b, deg, which]); } }
+    for (const [bone, deg, which] of pitches) {
       const clips = (which ?? 'idle_sword').split(',');
       const nodes = doc.getRoot().listNodes();
       const parentOf = new Map(); for (const n of nodes) for (const ch of n.listChildren()) parentOf.set(ch, n);
       const mul = (a, b) => [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1], a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0], a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3], a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]];
       const inv = (q) => [-q[0], -q[1], -q[2], q[3]];
-      const head = nodes.find((n) => n.getName() === 'Head');
+      const head = nodes.find((n) => n.getName() === bone);
+      if (!head) throw new Error(`no bone ${bone}`);
       let P = [0, 0, 0, 1]; for (let n = parentOf.get(head); n; n = parentOf.get(n)) P = mul(n.getRotation(), P);
       const t = (-Number(deg) * Math.PI) / 180;
       const Q = mul(mul(inv(P), [Math.sin(t / 2), 0, 0, Math.cos(t / 2)]), P);
@@ -549,6 +579,45 @@ async function pack(c) {
           for (let i = 0; i < arr.length; i += 4) { const q = mul(Q, [arr[i], arr[i + 1], arr[i + 2], arr[i + 3]]); const l = Math.hypot(...q); arr.set(q.map((x) => x / l), i); }
           acc.setArray(arr);
         }
+      }
+    }
+    // Grip sockets from the fist itself (bind pose): the centre of the vertices the hand bone carries, the grip axis
+    // along the knuckle line (the widest direction of the fist across the forearm), pointing to the thumb side
+    // (forward in the A-pose). socket_grip_right / socket_grip_left are children of the hand bones.
+    {
+      const { Matrix4, Vector3 } = await import('three');
+      const skin = doc.getRoot().listSkins()[0];
+      const joints = skin.listJoints();
+      for (const [hand, fore, name] of [['RightHand', 'RightForeArm', 'socket_grip_right'], ['LeftHand', 'LeftForeArm', 'socket_grip_left']]) {
+        const hj = joints.findIndex((j) => j.getName() === hand);
+        const handNode = joints[hj]; const foreNode = joints.find((j) => j.getName() === fore);
+        if (hj < 0 || !foreNode) continue;
+        for (const old of handNode.listChildren()) if (old.getName() === name) old.dispose();
+        const pts = [];
+        for (const mesh of doc.getRoot().listMeshes()) for (const prim of mesh.listPrimitives()) {
+          const P = prim.getAttribute('POSITION'), J = prim.getAttribute('JOINTS_0'), W = prim.getAttribute('WEIGHTS_0');
+          if (!J || !W) continue;
+          const v = [0, 0, 0], j = [0, 0, 0, 0], w = [0, 0, 0, 0];
+          for (let i = 0; i < P.getCount(); i++) { J.getElement(i, j); W.getElement(i, w); let h = 0; for (let k = 0; k < 4; k++) if (j[k] === hj) h += w[k]; if (h > 0.6) pts.push(P.getElement(i, v).slice()); }
+        }
+        if (pts.length < 20) continue;
+        const mid = pts.reduce((a, p) => a.map((x, k) => x + p[k] / pts.length), [0, 0, 0]);
+        const wrist = new Vector3().setFromMatrixPosition(new Matrix4().fromArray(handNode.getWorldMatrix()));
+        const elbow = new Vector3().setFromMatrixPosition(new Matrix4().fromArray(foreNode.getWorldMatrix()));
+        const along = wrist.clone().sub(elbow).normalize();
+        // covariance → the widest axis across the forearm (power iteration on the covariance with `along` projected out)
+        const C = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+        for (const p of pts) { const d = new Vector3(p[0] - mid[0], p[1] - mid[1], p[2] - mid[2]); d.addScaledVector(along, -d.dot(along)); const a = d.toArray(); for (let r = 0; r < 3; r++) for (let q = 0; q < 3; q++) C[r][q] += a[r] * a[q]; }
+        let k = new Vector3(0, 0, 1);
+        for (let it = 0; it < 50; it++) { const a = k.toArray(); k = new Vector3(...[0, 1, 2].map((r) => C[r][0] * a[0] + C[r][1] * a[1] + C[r][2] * a[2])); k.addScaledVector(along, -k.dot(along)).normalize(); }
+        if (k.z < 0) k.negate();
+        const x = along.clone().addScaledVector(k, -along.dot(k)).normalize();
+        const z = x.clone().cross(k).normalize();
+        const world = new Matrix4().makeBasis(x, k, z).setPosition(new Vector3(...mid));
+        const local = new Matrix4().fromArray(handNode.getWorldMatrix()).invert().multiply(world);
+        const socket = doc.createNode(name).setMatrix(local.toArray());
+        handNode.addChild(socket);
+        if (lod.suffix === '') log(c.id, name, pts.length, 'fist vertices');
       }
     }
     // Meshy's rigged output keeps only a 2k colour map (from the 2k upload); the raw model's own full-size colour,

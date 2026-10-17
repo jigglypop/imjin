@@ -1,9 +1,9 @@
 {
-  "at": "2026-10-17T06:03:52.577Z",
+  "at": "2026-10-17T06:28:06.483Z",
   "levels": {
     "_lod0": {
       "triangles": 119947,
-      "bytes": 5752760,
+      "bytes": 5752952,
       "clips": [
         "command_bow",
         "attack_spear",
@@ -17,8 +17,8 @@
       "check": {
         "ok": true,
         "problems": [],
-        "bytes": 5752760,
-        "sha256": "521de850ab6501ca266a6b83e65210f9d3419269639f31d210d7e29a0f8677d2",
+        "bytes": 5752952,
+        "sha256": "485ab9207a9ace8c5dd174e130296693445afef6b6af0707d86aac6a1db35269",
         "triangles": 119947,
         "joints": 24,
         "clips": [
@@ -49,7 +49,7 @@
     },
     "_lod1": {
       "triangles": 9998,
-      "bytes": 1378528,
+      "bytes": 1378180,
       "clips": [
         "command_bow",
         "attack_spear",
@@ -63,8 +63,8 @@
       "check": {
         "ok": true,
         "problems": [],
-        "bytes": 1378528,
-        "sha256": "3da5229160658fbe25f5099764a2863a33f6f3d32e6e10aea02f9905841dcea7",
+        "bytes": 1378180,
+        "sha256": "baf120cd7305c7ff9e34b3c1b6f77bb7c2f9564210db5c34ba2774238d7ce89a",
         "triangles": 9998,
         "joints": 24,
         "clips": [
@@ -94,8 +94,8 @@
       }
     },
     "_lod2": {
-      "triangles": 4992,
-      "bytes": 838312,
+      "triangles": 4994,
+      "bytes": 838240,
       "clips": [
         "command_bow",
         "attack_spear",
@@ -109,9 +109,9 @@
       "check": {
         "ok": true,
         "problems": [],
-        "bytes": 838312,
-        "sha256": "ca04323283944533f234e52d5746f415986ef52431ec1212163bdabd85e1f11d",
-        "triangles": 4992,
+        "bytes": 838240,
+        "sha256": "5b514ccb8491d4c4daaf67756ab3c2095d52a34112709ddefe544e11bf6aeac5",
+        "triangles": 4994,
         "joints": 24,
         "clips": [
           "command_bow",

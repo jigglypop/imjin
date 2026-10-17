@@ -205,3 +205,198 @@
 | 2026-10-17 06:06 | won__won_heukcheol (t) | LIVE (checked: lead approved won t (robe set) + eye fix: review/won__won_heukcheol_t_sheet.png, _t_eyes.png) | public/models/generals/won__won_heukcheol.glb |
 | 2026-10-17 06:07 | eokgi__eokgi_cheonggap (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/eokgi__eokgi_cheonggap_t |
 | 2026-10-17 06:07 | kato__kato_teppo (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kato__kato_teppo_t |
+| 2026-10-17 06:08 | konishi__konishi_gin (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/konishi__konishi_gin_t |
+| 2026-10-17 06:08 | shimazu__shimazu_oni (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/shimazu__shimazu_oni_t |
+| 2026-10-17 06:10 | kuki__kuki_tetsu (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kuki__kuki_tetsu_t |
+| 2026-10-17 06:10 | todo__todo_tokan (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/todo__todo_tokan_t |
+| 2026-10-17 06:12 | lirusong__ming_sanmun (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/lirusong__ming_sanmun_t |
+| 2026-10-17 06:12 | magui__ming_yuyeop (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/magui__ming_yuyeop_t |
+| 2026-10-17 06:13 | jijin__ming_swaeja (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/jijin__ming_swaeja_t |
+| 2026-10-17 06:14 | liuting__ming_dingjia (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/liuting__ming_dingjia_t |
+| 2026-10-17 06:15 | yanghao__ming_myeongap (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/yanghao__ming_myeongap_t |
+| 2026-10-17 06:16 | wuweizhong__ming_dingjia (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/wuweizhong__ming_dingjia_t |
+| 2026-10-17 06:17 | kwon__joseon_gyeongbeon (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kwon__joseon_gyeongbeon_t |
+| 2026-10-17 06:17 | eo__joseon_dujeong (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/eo__joseon_dujeong_t |
+
+## 2026-10-17 redo (Tripo 4-view cutout concepts → Tripo v3.1 detailed → Meshy rig + weapon-kind sets)
+Pipeline: concept --cand=t --views4 --hero --transparent (front/left/back/right/face, gpt-image-2.5, transparent PNG);
+model --views4 --provider=tripo (geometry/texture detailed, PBR, face_limit 300k; L/R profile wording fixed after t/t2 came out two-faced);
+rig/motion (Meshy; sets idle_sword 246 Idle 6 / command_sword 240 / attack_sword 97, spear 335/214, bow 244/29/227);
+pack --cand --headup=12 [--robe: command 101 Sword Shout, attack 219] [--eyes=boxes@4096, boxes picked by UV render]; live --cand.
+| 06:07 | yi__yi_tongjesa (t3) | LIVE — [x] 4-view concept [x] single face [x] eyes fixed [x] headup [x] sword set w/ hwando [ ] spear/bow (disabled in UI) | review/yi__yi_tongjesa_t3_sheet.png, _face_fixed.png |
+| 06:07 | wakisaka__wakisaka_shichihon (t) | LIVE — [x] concept [x] face/eyes [x] kabuto [x] sword set w/ katana | review/wakisaka__wakisaka_shichihon_t_sheet.png |
+| 06:07 | chenlin__chenlin_dudok (t) | LIVE — [x] concept [x] face [x] robe set (no skirt streaks) | review/chenlin__chenlin_dudok_t_robe_sheet.png |
+| 06:07 | won__won_heukcheol (t) | LIVE — [x] concept [x] eyes fixed [x] robe set | review/won__won_heukcheol_t_sheet.png, _t_eyes.png |
+| 06:07 | deng__deng_nojang (t) | concepts ready; Tripo model refused (balance 65 < cost) — waiting for top-up; old deng stays live | concepts_tripo_won_deng.jpg |
+| 06:07 | weapons: 6 swords | LIVE (parts/ + ui/weapons; old in public/models/generals/_stage/old) | review/weapons_batch1_*.png |
+| 06:07 | weapons: jangchang, yari, qiang, gakgung | staged only (_stage/): spear grip rule wrong for idle/attack (point down / vertical), bow command clip raises the bow hand | review/weapons_batch2_spear_bow_inhand.png |
+| 2026-10-17 06:19 | kimwan__joseon_pigap (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kimwan__joseon_pigap_t |
+| 2026-10-17 06:19 | jeongun__joseon_dujeong (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/jeongun__joseon_dujeong_t |
+| 2026-10-17 06:20 | songhuirip__joseon_swaeja (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/songhuirip__joseon_swaeja_t |
+| 2026-10-17 06:20 | nadaeyong__joseon_dujeong (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/nadaeyong__joseon_dujeong_t |
+| 2026-10-17 06:22 | iyeongnam__joseon_dujeong (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/iyeongnam__joseon_dujeong_t |
+| 2026-10-17 06:22 | baeseol__joseon_gyeongbeon (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/baeseol__joseon_gyeongbeon_t |
+| 2026-10-17 06:22 | yi__yi_tongjesa (t3) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 06:23 | yi__yi_tongjesa (t3) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 06:23 | anwi__joseon_eorin (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/anwi__joseon_eorin_t |
+| 2026-10-17 06:23 | yi__yi_tongjesa (t3) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 06:24 | iwan__yi_tongjesa (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/iwan__yi_tongjesa_t |
+| 2026-10-17 06:24 | wakisaka__wakisaka_shichihon (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/wakisaka__wakisaka_shichihon.glb |
+| 2026-10-17 06:24 | chenlin__chenlin_dudok (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/chenlin__chenlin_dudok.glb |
+| 2026-10-17 06:24 | won__won_heukcheol (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/won__won_heukcheol.glb |
+| 2026-10-17 06:25 | michiyuki__japan_haramaki (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/michiyuki__japan_haramaki_t |
+| 2026-10-17 06:25 | kurushima__japan_oyoroi (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kurushima__japan_oyoroi_t |
+| 2026-10-17 06:27 | tachibana__japan_nimaido (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/tachibana__japan_nimaido_t |
+| 2026-10-17 06:27 | yi__yi_tongjesa (t3) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 06:28 | wakisaka__wakisaka_shichihon (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/wakisaka__wakisaka_shichihon.glb |
+| 2026-10-17 06:28 | chenlin__chenlin_dudok (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/chenlin__chenlin_dudok.glb |
+| 2026-10-17 06:28 | won__won_heukcheol (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/won__won_heukcheol.glb |
+| 2026-10-17 06:28 | yi__yi_tongjesa (t3) | LIVE (checked: slim v2 (lead: go live if clean): review/slim_before_after_4_v2.png) | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 06:28 | wakisaka__wakisaka_shichihon (t) | LIVE (checked: slim v2: review/slim_before_after_4_v2.png) | public/models/generals/wakisaka__wakisaka_shichihon.glb |
+| 2026-10-17 06:28 | chenlin__chenlin_dudok (t) | LIVE (checked: slim v2: review/slim_before_after_4_v2.png) | public/models/generals/chenlin__chenlin_dudok.glb |
+| 2026-10-17 06:28 | won__won_heukcheol (t) | LIVE (checked: slim v2: review/slim_before_after_4_v2.png) | public/models/generals/won__won_heukcheol.glb |
+| 2026-10-17 06:30 | deng__deng_nojang (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/deng__deng_nojang_t |
+| 2026-10-17 06:30 | eokgi__eokgi_cheonggap (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/eokgi__eokgi_cheonggap_t |
+| 2026-10-17 06:30 | kato__kato_teppo (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kato__kato_teppo_t |
+| 2026-10-17 06:30 | shimazu__shimazu_oni (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/shimazu__shimazu_oni_t |
+| 2026-10-17 06:36 | kuki__kuki_tetsu (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kuki__kuki_tetsu_t |
+| 2026-10-17 06:36 | todo__todo_tokan (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/todo__todo_tokan_t |
+| 2026-10-17 06:37 | konishi__konishi_gin (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/konishi__konishi_gin_t |
+| 2026-10-17 06:38 | yanghao__ming_myeongap (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/yanghao__ming_myeongap_t |
+| 15:41 | yi, wakisaka, chenlin, won, deng | OFF index (lead/owner re-check: sword grip not in fist, slouched idle, yi armor reads as glossy robe) | |
+| 2026-10-17 06:41 | yi__yi_tongjesa (t3) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 06:42 | wuweizhong__ming_dingjia (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/wuweizhong__ming_dingjia_t |
+| 2026-10-17 06:43 | magui__ming_yuyeop (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/magui__ming_yuyeop_t |
+| 2026-10-17 06:43 | lirusong__ming_sanmun (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/lirusong__ming_sanmun_t |
+| 2026-10-17 06:44 | liuting__ming_dingjia (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/liuting__ming_dingjia_t |
+| 2026-10-17 06:47 | iyeongnam__joseon_dujeong (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/iyeongnam__joseon_dujeong_t |
+| 2026-10-17 06:49 | jeongun__joseon_dujeong (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/jeongun__joseon_dujeong_t |
+| 2026-10-17 06:49 | eo__joseon_dujeong (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/eo__joseon_dujeong_t |
+| 2026-10-17 06:49 | yi__yi_tongjesa (t4) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/yi__yi_tongjesa_t4 |
+| 2026-10-17 06:50 | tachibana__japan_nimaido (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/tachibana__japan_nimaido_t |
+| 2026-10-17 06:53 | jijin__ming_swaeja (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/jijin__ming_swaeja_t |
+| 2026-10-17 06:53 | kimwan__joseon_pigap (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kimwan__joseon_pigap_t |
+| 2026-10-17 06:54 | nadaeyong__joseon_dujeong (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/nadaeyong__joseon_dujeong_t |
+| 2026-10-17 06:54 | yi__yi_tongjesa (t4) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 06:57 | kwon__joseon_gyeongbeon (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kwon__joseon_gyeongbeon_t |
+| 2026-10-17 06:57 | baeseol__joseon_gyeongbeon (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/baeseol__joseon_gyeongbeon_t |
+| 2026-10-17 06:58 | anwi__joseon_eorin (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/anwi__joseon_eorin_t |
+| 2026-10-17 07:01 | songhuirip__joseon_swaeja (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/songhuirip__joseon_swaeja_t |
+| 2026-10-17 07:01 | kurushima__japan_oyoroi (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kurushima__japan_oyoroi_t |
+| 2026-10-17 07:02 | michiyuki__japan_haramaki (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/michiyuki__japan_haramaki_t |
+| 2026-10-17 07:02 | yi__yi_tongjesa (t4) | LIVE (checked: review/yi__yi_tongjesa_t4_sheet.jpg) | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 07:03 | deng__deng_nojang (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/deng__deng_nojang_t |
+| 2026-10-17 07:03 | eokgi__eokgi_cheonggap (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/eokgi__eokgi_cheonggap_t |
+| 2026-10-17 07:04 | won__won_heukcheol (t4) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/won__won_heukcheol_t4 |
+| 2026-10-17 07:05 | chenlin__chenlin_dudok (t4) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_t4 |
+| 2026-10-17 07:05 | wakisaka__wakisaka_shichihon (t4) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/wakisaka__wakisaka_shichihon_t4 |
+| 2026-10-17 07:05 | deng__deng_nojang (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/deng__deng_nojang.glb |
+| 2026-10-17 07:05 | eokgi__eokgi_cheonggap (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/eokgi__eokgi_cheonggap.glb |
+| 2026-10-17 07:05 | iwan__yi_tongjesa (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/iwan__yi_tongjesa_t |
+| 2026-10-17 07:05 | kato__kato_teppo (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kato__kato_teppo_t |
+| 2026-10-17 07:05 | konishi__konishi_gin (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/konishi__konishi_gin_t |
+| 2026-10-17 07:05 | shimazu__shimazu_oni (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/shimazu__shimazu_oni_t |
+| 2026-10-17 07:05 | kuki__kuki_tetsu (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kuki__kuki_tetsu_t |
+| 2026-10-17 07:05 | todo__todo_tokan (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/todo__todo_tokan_t |
+| 2026-10-17 07:05 | yanghao__ming_myeongap (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/yanghao__ming_myeongap_t |
+| 2026-10-17 07:07 | konishi__konishi_gin (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/konishi__konishi_gin.glb |
+| 2026-10-17 07:07 | yanghao__ming_myeongap (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/yanghao__ming_myeongap.glb |
+| 2026-10-17 07:07 | shimazu__shimazu_oni (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/shimazu__shimazu_oni.glb |
+| 2026-10-17 07:07 | kuki__kuki_tetsu (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/kuki__kuki_tetsu.glb |
+| 2026-10-17 07:07 | todo__todo_tokan (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/todo__todo_tokan.glb |
+| 2026-10-17 07:07 | kato__kato_teppo (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/kato__kato_teppo.glb |
+| 2026-10-17 07:09 | won__won_heukcheol (t4) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/won__won_heukcheol.glb |
+| 2026-10-17 07:09 | chenlin__chenlin_dudok (t4) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/chenlin__chenlin_dudok.glb |
+| 2026-10-17 07:09 | wakisaka__wakisaka_shichihon (t4) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/wakisaka__wakisaka_shichihon.glb |
+| 2026-10-17 07:10 | deng__deng_nojang (t) | LIVE (checked: review/deng__deng_nojang_t_sheet.jpg) | public/models/generals/deng__deng_nojang.glb |
+| 2026-10-17 07:10 | eokgi__eokgi_cheonggap (t) | LIVE (checked: review/eokgi__eokgi_cheonggap_t_sheet.jpg) | public/models/generals/eokgi__eokgi_cheonggap.glb |
+| 2026-10-17 07:10 | anwi__joseon_eorin (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/anwi__joseon_eorin_t |
+| 2026-10-17 07:10 | baeseol__joseon_gyeongbeon (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/baeseol__joseon_gyeongbeon_t |
+| 2026-10-17 07:10 | eo__joseon_dujeong (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/eo__joseon_dujeong_t |
+| 2026-10-17 07:10 | iwan__yi_tongjesa (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/iwan__yi_tongjesa_t |
+| 2026-10-17 07:10 | iyeongnam__joseon_dujeong (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/iyeongnam__joseon_dujeong_t |
+| 2026-10-17 07:10 | jeongun__joseon_dujeong (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/jeongun__joseon_dujeong_t |
+| 2026-10-17 07:12 | jeongun__joseon_dujeong (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/jeongun__joseon_dujeong.glb |
+| 2026-10-17 07:12 | iwan__yi_tongjesa (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/iwan__yi_tongjesa.glb |
+| 2026-10-17 07:12 | iyeongnam__joseon_dujeong (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/iyeongnam__joseon_dujeong.glb |
+| 2026-10-17 07:12 | baeseol__joseon_gyeongbeon (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/baeseol__joseon_gyeongbeon.glb |
+| 2026-10-17 07:12 | anwi__joseon_eorin (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/anwi__joseon_eorin.glb |
+| 2026-10-17 07:12 | eo__joseon_dujeong (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/eo__joseon_dujeong.glb |
+| 2026-10-17 07:12 | jijin__ming_swaeja (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/jijin__ming_swaeja_t |
+| 2026-10-17 07:12 | kimwan__joseon_pigap (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kimwan__joseon_pigap_t |
+| 2026-10-17 07:12 | kurushima__japan_oyoroi (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kurushima__japan_oyoroi_t |
+| 2026-10-17 07:12 | kwon__joseon_gyeongbeon (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kwon__joseon_gyeongbeon_t |
+| 2026-10-17 07:12 | lirusong__ming_sanmun (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/lirusong__ming_sanmun_t |
+| 2026-10-17 07:12 | liuting__ming_dingjia (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/liuting__ming_dingjia_t |
+| 2026-10-17 07:14 | jijin__ming_swaeja (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/jijin__ming_swaeja.glb |
+| 2026-10-17 07:14 | kimwan__joseon_pigap (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/kimwan__joseon_pigap.glb |
+| 2026-10-17 07:14 | kurushima__japan_oyoroi (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/kurushima__japan_oyoroi.glb |
+| 2026-10-17 07:14 | kwon__joseon_gyeongbeon (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/kwon__joseon_gyeongbeon.glb |
+| 2026-10-17 07:14 | liuting__ming_dingjia (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/liuting__ming_dingjia.glb |
+| 2026-10-17 07:14 | magui__ming_yuyeop (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/magui__ming_yuyeop_t |
+| 2026-10-17 07:14 | michiyuki__japan_haramaki (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/michiyuki__japan_haramaki_t |
+| 2026-10-17 07:14 | nadaeyong__joseon_dujeong (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/nadaeyong__joseon_dujeong_t |
+| 2026-10-17 07:14 | songhuirip__joseon_swaeja (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/songhuirip__joseon_swaeja_t |
+| 2026-10-17 07:14 | lirusong__ming_sanmun (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/lirusong__ming_sanmun.glb |
+| 2026-10-17 07:14 | tachibana__japan_nimaido (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/tachibana__japan_nimaido_t |
+| 2026-10-17 07:14 | wuweizhong__ming_dingjia (t) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/wuweizhong__ming_dingjia_t |
+| 2026-10-17 07:16 | magui__ming_yuyeop (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/magui__ming_yuyeop.glb |
+| 2026-10-17 07:16 | michiyuki__japan_haramaki (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/michiyuki__japan_haramaki.glb |
+| 2026-10-17 07:16 | songhuirip__joseon_swaeja (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/songhuirip__joseon_swaeja.glb |
+| 2026-10-17 07:16 | nadaeyong__joseon_dujeong (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/nadaeyong__joseon_dujeong.glb |
+| 2026-10-17 07:16 | tachibana__japan_nimaido (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/tachibana__japan_nimaido.glb |
+| 2026-10-17 07:16 | wuweizhong__ming_dingjia (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/wuweizhong__ming_dingjia.glb |
+| 2026-10-17 07:17 | wakisaka__wakisaka_shichihon (t4) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/wakisaka__wakisaka_shichihon.glb |
+| 2026-10-17 07:17 | yi__yi_tongjesa (t4) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 07:17 | won__won_heukcheol (t4) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/won__won_heukcheol.glb |
+| 2026-10-17 07:17 | deng__deng_nojang (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/deng__deng_nojang.glb |
+| 2026-10-17 07:17 | chenlin__chenlin_dudok (t4) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/chenlin__chenlin_dudok.glb |
+| 2026-10-17 07:17 | eokgi__eokgi_cheonggap (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/eokgi__eokgi_cheonggap.glb |
+| 2026-10-17 07:17 | kato__kato_teppo (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/kato__kato_teppo.glb |
+| 2026-10-17 07:17 | konishi__konishi_gin (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/konishi__konishi_gin.glb |
+| 2026-10-17 07:17 | shimazu__shimazu_oni (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/shimazu__shimazu_oni.glb |
+| 2026-10-17 07:17 | kuki__kuki_tetsu (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/kuki__kuki_tetsu.glb |
+| 2026-10-17 07:17 | todo__todo_tokan (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/todo__todo_tokan.glb |
+| 2026-10-17 07:17 | yanghao__ming_myeongap (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/yanghao__ming_myeongap.glb |
+| 2026-10-17 07:17 | anwi__joseon_eorin (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/anwi__joseon_eorin.glb |
+| 2026-10-17 07:17 | baeseol__joseon_gyeongbeon (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/baeseol__joseon_gyeongbeon.glb |
+| 2026-10-17 07:17 | eo__joseon_dujeong (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/eo__joseon_dujeong.glb |
+| 2026-10-17 07:17 | iwan__yi_tongjesa (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/iwan__yi_tongjesa.glb |
+| 2026-10-17 07:17 | iyeongnam__joseon_dujeong (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/iyeongnam__joseon_dujeong.glb |
+| 2026-10-17 07:17 | jeongun__joseon_dujeong (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/jeongun__joseon_dujeong.glb |
+| 2026-10-17 07:17 | kimwan__joseon_pigap (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/kimwan__joseon_pigap.glb |
+| 2026-10-17 07:17 | jijin__ming_swaeja (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/jijin__ming_swaeja.glb |
+| 2026-10-17 07:17 | kurushima__japan_oyoroi (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/kurushima__japan_oyoroi.glb |
+| 2026-10-17 07:17 | kwon__joseon_gyeongbeon (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/kwon__joseon_gyeongbeon.glb |
+| 2026-10-17 07:17 | lirusong__ming_sanmun (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/lirusong__ming_sanmun.glb |
+| 2026-10-17 07:17 | liuting__ming_dingjia (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/liuting__ming_dingjia.glb |
+| 2026-10-17 07:17 | michiyuki__japan_haramaki (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/michiyuki__japan_haramaki.glb |
+| 2026-10-17 07:17 | magui__ming_yuyeop (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/magui__ming_yuyeop.glb |
+| 2026-10-17 07:17 | nadaeyong__joseon_dujeong (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/nadaeyong__joseon_dujeong.glb |
+| 2026-10-17 07:17 | songhuirip__joseon_swaeja (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/songhuirip__joseon_swaeja.glb |
+| 2026-10-17 07:17 | tachibana__japan_nimaido (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/tachibana__japan_nimaido.glb |
+| 2026-10-17 07:17 | wuweizhong__ming_dingjia (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/wuweizhong__ming_dingjia.glb |
+| 2026-10-17 07:18 | yi__yi_tongjesa (t4) | LIVE (checked: review/faces_headup4.jpg) | public/models/generals/yi__yi_tongjesa.glb |
+| 2026-10-17 07:18 | wakisaka__wakisaka_shichihon (t4) | LIVE (checked: review/faces_headup4.jpg) | public/models/generals/wakisaka__wakisaka_shichihon.glb |
+| 2026-10-17 07:18 | chenlin__chenlin_dudok (t4) | LIVE (checked: review/faces_headup4.jpg) | public/models/generals/chenlin__chenlin_dudok.glb |
+| 2026-10-17 07:18 | won__won_heukcheol (t4) | LIVE (checked: review/faces_headup4.jpg) | public/models/generals/won__won_heukcheol.glb |
+| 2026-10-17 07:18 | deng__deng_nojang (t) | LIVE (checked: review/faces_headup4.jpg) | public/models/generals/deng__deng_nojang.glb |
+| 2026-10-17 07:18 | eokgi__eokgi_cheonggap (t) | LIVE (checked: review/faces_headup4.jpg) | public/models/generals/eokgi__eokgi_cheonggap.glb |
+| 2026-10-17 07:18 | kato__kato_teppo (t) | LIVE (checked: review/faces_headup4.jpg) | public/models/generals/kato__kato_teppo.glb |
+| 2026-10-17 07:18 | konishi__konishi_gin (t) | LIVE (checked: review/faces_headup4.jpg) | public/models/generals/konishi__konishi_gin.glb |
+| 2026-10-17 07:18 | shimazu__shimazu_oni (t) | LIVE (checked: review/faces_headup4.jpg) | public/models/generals/shimazu__shimazu_oni.glb |
+| 2026-10-17 07:18 | kuki__kuki_tetsu (t) | LIVE (checked: review/faces_headup4.jpg) | public/models/generals/kuki__kuki_tetsu.glb |
+| 2026-10-17 07:18 | todo__todo_tokan (t) | LIVE (checked: review/faces_headup4.jpg) | public/models/generals/todo__todo_tokan.glb |
+| 2026-10-17 07:18 | yanghao__ming_myeongap (t) | LIVE (checked: review/faces_headup4.jpg) | public/models/generals/yanghao__ming_myeongap.glb |
+| 2026-10-17 07:29 | kurushima__japan_oyoroi (t) | LIVE (checked: review/faces_headup4.jpg) | public/models/generals/kurushima__japan_oyoroi.glb |
+| 2026-10-17 07:29 | liuting__ming_dingjia (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/liuting__ming_dingjia.glb |
+| 2026-10-17 07:29 | lirusong__ming_sanmun (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/lirusong__ming_sanmun.glb |
+| 2026-10-17 07:29 | magui__ming_yuyeop (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/magui__ming_yuyeop.glb |
+| 2026-10-17 07:29 | eo__joseon_dujeong (t) | packed (not live): provider → bytes → static check ok (LOD0/1/2) → Meshy rig → Meshy motions | public/models/generals/eo__joseon_dujeong.glb |
+| 2026-10-17 07:30 | lirusong__ming_sanmun (t) | LIVE (checked: review/lirusong_robe_sheet) | public/models/generals/lirusong__ming_sanmun.glb |
+| 2026-10-17 07:30 | liuting__ming_dingjia (t) | LIVE (checked: review/liuting_robe_sheet) | public/models/generals/liuting__ming_dingjia.glb |
+| 2026-10-17 07:30 | magui__ming_yuyeop (t) | LIVE (checked: review/magui_robe_sheet) | public/models/generals/magui__ming_yuyeop.glb |
+| 2026-10-17 07:30 | eo__joseon_dujeong (t) | LIVE (checked: review/eo_robe_sheet) | public/models/generals/eo__joseon_dujeong.glb |
+| 2026-10-17 07:30 | kimwan__joseon_pigap (t5) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/kimwan__joseon_pigap_t5 |
+| 2026-10-17 07:30 | songhuirip__joseon_swaeja (t5) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/songhuirip__joseon_swaeja_t5 |
+| 2026-10-17 07:31 | iwan__yi_tongjesa (t5) | concept (front/left/back/face/detail) | assets-src/generals-cast-2026-10-17/iwan__yi_tongjesa_t5 |
