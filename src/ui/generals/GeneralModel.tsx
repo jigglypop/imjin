@@ -59,6 +59,9 @@ export function holdWeapon(body: Object3D, weapon: Object3D, definition: WeaponD
     else if (body.parent) held.quaternion.copy(body.parent.getWorldQuaternion(new Quaternion()));
     // Align a resting polearm/bow upright; an angled forearm would otherwise point a long shaft through the helmet.
     socket.attach(held);
+    // A bow is held through the fist along the knuckle line (the socket's +Y): upright beside the body while standing,
+    // and in the shot it follows the knuckle line so the bow stands vertical in the extended left hand (aimBow).
+    if (left) held.userData.rest = held.quaternion.clone();
     return held;
   }
   const handName = left ? 'LeftHand' : 'RightHand';
@@ -256,6 +259,16 @@ function armFigure(figure: Figure, kind: WeaponKind) {
   figure.mixer.update(0);
 }
 
+const GRIP = new Quaternion();
+/** Blends a held bow from its upright rest to the socket's knuckle line by the weight of the shot (attack_bow). */
+export function aimBow(figure: Figure) {
+  const held = figure.weapon, rest = held?.userData.rest as Quaternion | undefined;
+  if (!held || !rest || figure.kind !== 'bow') return;
+  const shot = figure.moves.get('slash');
+  const w = shot?.isRunning() ? shot.getEffectiveWeight() : 0;
+  held.quaternion.slerpQuaternions(rest, GRIP, w);
+}
+
 export function playFigure(figure: Figure, move: Move) {
   const next = figure.moves.get(move);
   if (!next) return false;
@@ -409,6 +422,15 @@ class FigureStage {
       if (this.disposed || this.request !== request) return;
       const gltf = await loader.loadAsync(modelUrl(file));
       loaded = gltf.scene;
+      // Armour as separate rigid pieces (pilot 2026-10-17): a `piece_<part>` node under a bone names its piece file in
+      // its extras; the piece hangs there unskinned, like the weapon. Swapping armour = swapping these files.
+      const mounts: Object3D[] = [];
+      loaded.traverse((o) => { if (typeof o.userData.piece === 'string' && /^[\w/-]+$/.test(o.userData.piece)) mounts.push(o); });
+      for (const mount of mounts) {
+        const piece = (await loader.loadAsync(`${import.meta.env.BASE_URL}models/generals/${mount.userData.piece}.glb`)).scene;
+        piece.traverse((o) => (o.frustumCulled = false));
+        mount.add(piece);
+      }
       if (this.disposed || this.request !== request) {
         free(loaded, this.figure?.root);
         return;
@@ -512,6 +534,7 @@ class FigureStage {
       turn.y += (face - turn.y) * Math.min(1, dt * 1.5);
     }
     this.figure?.mixer.update(dt);
+    if (this.figure) aimBow(this.figure);
     void this.renderer.render(this.scene, this.camera);
     this.raf = requestAnimationFrame(this.frame);
   };

@@ -517,6 +517,9 @@ async function motion(c) {
 // ---------------------------------------------------------------- pack
 /** The clip names the screen plays (src/ui/generals/GeneralModel.tsx): idle, command, slash, walk. */
 function clipName(name) {
+  // --clipmap=<Meshy clip>:<our clip>,… names clips outside MESHY_CLIP (the armour-pieces pilot's Idle_9, victory, …).
+  const map = Object.fromEntries((args.clipmap ?? '').split(',').filter(Boolean).map((p) => p.split(':')));
+  if (map[name]) return map[name];
   const n = name.toLowerCase();
   const k = n.replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
   if (MESHY_CLIP[k]) return MESHY_CLIP[k];
@@ -867,7 +870,26 @@ async function review(c) {
   console.log('Tick every item above against the sheets; any flaw means redo that step. Live only after the lead approves.');
 }
 
-const STEPS = { concept, model, retexture, rig, motion, pack, live, review, all };
+/**
+ * deform: the per-frame deformation metric (scripts/lib/deform.mjs) of a packed figure, every clip (or --clip=a,b),
+ * worst frames first; --file=<glb> scores any skinned GLB. Exit 1 when a clip is over the 0.3 promotion threshold.
+ */
+async function deform(c) {
+  const { loadFigure, prepare, scoreClip, stance } = await import('./lib/deform.mjs');
+  const file = args.file ?? join(ROOT, 'public', 'models', 'generals', `${c.key}.glb`);
+  const F = await loadFigure(file); const s = prepare(F);
+  let over = 0;
+  for (const clip of args.clip ? args.clip.split(',') : Object.keys(F.clips)) {
+    const r = scoreClip(F, s, clip);
+    const worst = r.worst.filter((x, i, a) => a.findIndex((y) => Math.abs(y.time - x.time) < 0.25) === i).slice(0, 4);
+    const st = /idle/.test(clip) ? stance(F, clip) : null;
+    if (r.score > 0.3) over++;
+    log(c.id, `${clip.padEnd(14)} ${r.score.toFixed(2)}${r.score > 0.3 ? ' OVER' : ''}  worst ${worst.map((w) => `t${w.time.toFixed(2)}(${w.score.toFixed(2)} crush ${w.crush.toFixed(3)} col ${w.collapse.toFixed(3)} pierce ${w.pierce.toFixed(3)})`).join(' ')}${st ? `  stance tilt ${st.tilt.toFixed(1)} shift ${st.shift.toFixed(2)}` : ''}`);
+  }
+  if (over) throw new Error(`${over} clip(s) over 0.3`);
+}
+
+const STEPS = { concept, model, retexture, rig, motion, pack, live, review, all, deform };
 if (!STEPS[step]) throw new Error(`step: ${Object.keys(STEPS).join(' | ')}`);
 mkdirSync(PKG, { recursive: true });
 const ids = args.id === 'all' ? CAST.map((c) => c.id) : (args.id ?? 'yi').split(',');

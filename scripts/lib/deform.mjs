@@ -61,7 +61,7 @@ function sample(ch, time, out) {
 }
 
 /** Skinned vertex positions of every primitive at `time` of `clip` (null clip = bind pose). */
-function pose(F, clip, time) {
+export function pose(F, clip, time) {
   const trs = F.rest.map((r) => ({ t: [...r.t], r: [...r.r], s: [...r.s] }));
   if (clip) for (const ch of F.clips[clip]) {
     const o = ch.path === 'translation' ? trs[ch.node].t : ch.path === 'rotation' ? trs[ch.node].r : ch.path === 'scale' ? trs[ch.node].s : null;
@@ -72,8 +72,10 @@ function pose(F, clip, time) {
   const done = F.nodes.map(() => false);
   const W = (i) => {
     if (done[i]) return world[i];
+    // the parent first: W() recursion reuses tv/qv/sv/local, so composing before it read the parent's TRS (fixed 2026-10-17)
+    const up = F.parent[i] >= 0 ? W(F.parent[i]) : null;
     local.compose(tv.fromArray(trs[i].t), qv.fromArray(trs[i].r), sv.fromArray(trs[i].s));
-    world[i] = F.parent[i] >= 0 ? new Matrix4().multiplyMatrices(W(F.parent[i]), local) : local.clone();
+    world[i] = up ? new Matrix4().multiplyMatrices(up, local) : local.clone();
     done[i] = true; return world[i];
   };
   const skinM = F.joints.map((n, j) => new Matrix4().multiplyMatrices(W(n), new Matrix4().fromArray(F.ibm, j * 16)));
@@ -244,4 +246,163 @@ function radius(V, v, A, Bm) {
   const px = V[v * 3] - ax, py = V[v * 3 + 1] - ay, pz = V[v * 3 + 2] - az;
   const L2 = dx * dx + dy * dy + dz * dz; const t = Math.max(0, Math.min(1, (px * dx + py * dy + pz * dz) / L2));
   return Math.hypot(px - t * dx, py - t * dy, pz - t * dz);
+}
+
+// ---------------------------------------------------------------- rigid pieces (pilot 2026-10-17)
+// An armour piece hung rigidly on one bone (helmet on Head, cuirass on a spine bone, lower armour on Hips) against the
+// skinned body under it. The piece is voxelised once into a solid (ray parity per grid column) with distances to its
+// surface; per frame every body vertex is carried into the piece's frame and looked up:
+//   pokeOut  body vertices the piece covered at bind that now stand OUTSIDE it (a thigh through the tassets): metres
+//   intrude  body vertices outside the piece at bind that now sink INTO it (an arm into the cuirass): metres inside
+// Vertices of the piece's own bone and the chain above it (which carry the piece) are skipped for intrude. Depth = the
+// 10th deepest vertex (single strays are noise). pieceScore = depth / LIMIT.pierce, the same 0.3 promotion threshold.
+
+/** Solid occupancy + signed distance to the surface of a closed triangle mesh (positions in piece space). */
+export function voxelize(pos, idx, N = 128, enclose = 0) {
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < pos.length; i += 3) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], pos[i + k]); hi[k] = Math.max(hi[k], pos[i + k]); }
+  const span = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
+  const pad = span * 0.08; for (let k = 0; k < 3; k++) { lo[k] -= pad; hi[k] += pad; }
+  const h = (span + 2 * pad) / N;
+  const n = [0, 1, 2].map((k) => Math.max(2, Math.ceil((hi[k] - lo[k]) / h)));
+  const solid = new Uint8Array(n[0] * n[1] * n[2]);
+  const at = (x, y, z) => (z * n[1] + y) * n[0] + x;
+  const cols = new Map();
+  for (let t = 0; t < idx.length; t += 3) {
+    const A = idx[t] * 3, B = idx[t + 1] * 3, C = idx[t + 2] * 3;
+    const ay = pos[A + 1], az = pos[A + 2], by = pos[B + 1], bz = pos[B + 2], cy = pos[C + 1], cz = pos[C + 2];
+    const y0 = Math.max(0, Math.ceil((Math.min(ay, by, cy) - lo[1]) / h - 0.5)), y1 = Math.min(n[1] - 1, Math.floor((Math.max(ay, by, cy) - lo[1]) / h - 0.5));
+    const z0 = Math.max(0, Math.ceil((Math.min(az, bz, cz) - lo[2]) / h - 0.5)), z1 = Math.min(n[2] - 1, Math.floor((Math.max(az, bz, cz) - lo[2]) / h - 0.5));
+    const d = (by - ay) * (cz - az) - (bz - az) * (cy - ay); if (Math.abs(d) < 1e-14) continue;
+    for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) {
+      const py = lo[1] + (y + 0.5013) * h, pz = lo[2] + (z + 0.4987) * h; // off-centre: never exactly on a shared edge
+      const u = ((py - ay) * (cz - az) - (pz - az) * (cy - ay)) / d, v = ((by - ay) * (pz - az) - (bz - az) * (py - ay)) / d;
+      if (u < 0 || v < 0 || u + v > 1) continue;
+      const x = pos[A] + u * (pos[B] - pos[A]) + v * (pos[C] - pos[A]);
+      const key = z * n[1] + y; if (!cols.has(key)) cols.set(key, []); cols.get(key).push(x);
+    }
+  }
+  for (const [key, xs] of cols) {
+    xs.sort((a, b) => a - b);
+    const y = key % n[1], z = Math.floor(key / n[1]);
+    for (let i = 0; i + 1 < xs.length; i += 2) {
+      const x0 = Math.max(0, Math.ceil((xs[i] - lo[0]) / h - 0.5)), x1 = Math.min(n[0] - 1, Math.floor((xs[i + 1] - lo[0]) / h - 0.5));
+      for (let x = x0; x <= x1; x++) solid[at(x, y, z)] = 1;
+    }
+  }
+  // Generated pieces are thin shells open at the face, neck, waist or hem, not closed solids: the shell's cells (every
+  // vertex, edge midpoint and centroid) count as solid, and so does every empty cell the shell ENCLOSES: blocked by the
+  // shell in at least `enclose` of the 26 grid directions (a head inside a helmet, a chest inside a cuirass, hips in a skirt).
+  for (let t = 0; t < idx.length; t += 3) {
+    const A = idx[t] * 3, B = idx[t + 1] * 3, C = idx[t + 2] * 3;
+    for (const [a, b, c] of [[1, 0, 0], [0, 1, 0], [0, 0, 1], [0.5, 0.5, 0], [0, 0.5, 0.5], [0.5, 0, 0.5], [1 / 3, 1 / 3, 1 / 3]]) {
+      const x = Math.floor((a * pos[A] + b * pos[B] + c * pos[C] - lo[0]) / h), y = Math.floor((a * pos[A + 1] + b * pos[B + 1] + c * pos[C + 1] - lo[1]) / h), z = Math.floor((a * pos[A + 2] + b * pos[B + 2] + c * pos[C + 2] - lo[2]) / h);
+      if (x >= 0 && y >= 0 && z >= 0 && x < n[0] && y < n[1] && z < n[2]) solid[at(x, y, z)] = 1;
+    }
+  }
+  const wall = solid.slice();
+  if (enclose) {
+    const dirs = []; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (let c = -1; c <= 1; c++) if (a || b || c) dirs.push([a, b, c]);
+    for (let z = 0; z < n[2]; z++) for (let y = 0; y < n[1]; y++) for (let x = 0; x < n[0]; x++) {
+      if (wall[at(x, y, z)]) continue;
+      let blocked = 0;
+      for (let d = 0; d < 26 && blocked + (26 - d) >= enclose; d++) {
+        const [a, b, c] = dirs[d];
+        for (let i = x + a, j = y + b, k = z + c; i >= 0 && j >= 0 && k >= 0 && i < n[0] && j < n[1] && k < n[2]; i += a, j += b, k += c) if (wall[at(i, j, k)]) { blocked++; break; }
+      }
+      if (blocked >= enclose) solid[at(x, y, z)] = 1;
+    }
+  }
+  // squared distance (cells) to the nearest cell of the other kind, separable EDT (Felzenszwalb)
+  const edt = (target) => {
+    const INF = 1e12, D = new Float64Array(solid.length);
+    for (let i = 0; i < solid.length; i++) D[i] = solid[i] === target ? 0 : INF;
+    const L = Math.max(...n), f = new Float64Array(L), out = new Float64Array(L), vv = new Int32Array(L), zz = new Float64Array(L + 1);
+    const line = (base, stride, len) => {
+      for (let i = 0; i < len; i++) f[i] = D[base + i * stride];
+      let k = 0; vv[0] = 0; zz[0] = -Infinity; zz[1] = Infinity;
+      for (let q = 1; q < len; q++) {
+        let s;
+        for (;;) { s = ((f[q] + q * q) - (f[vv[k]] + vv[k] * vv[k])) / (2 * q - 2 * vv[k]); if (s <= zz[k] && k > 0) k--; else break; }
+        if (s <= zz[k]) { vv[k] = q; zz[k] = -Infinity; zz[k + 1] = Infinity; continue; }
+        k++; vv[k] = q; zz[k] = s; zz[k + 1] = Infinity;
+      }
+      k = 0; for (let q = 0; q < len; q++) { while (zz[k + 1] < q) k++; out[q] = (q - vv[k]) ** 2 + f[vv[k]]; }
+      for (let i = 0; i < len; i++) D[base + i * stride] = out[i];
+    };
+    for (let z = 0; z < n[2]; z++) for (let y = 0; y < n[1]; y++) line(at(0, y, z), 1, n[0]);
+    for (let z = 0; z < n[2]; z++) for (let x = 0; x < n[0]; x++) line(at(x, 0, z), n[0], n[1]);
+    for (let y = 0; y < n[1]; y++) for (let x = 0; x < n[0]; x++) line(at(x, y, 0), n[0] * n[1], n[2]);
+    return D;
+  };
+  const toSolid = edt(1), toEmpty = edt(0);
+  /** signed distance in piece units: > 0 outside, < 0 inside (cell-accurate) */
+  const sdf = (x, y, z) => {
+    const i = Math.floor((x - lo[0]) / h), j = Math.floor((y - lo[1]) / h), k = Math.floor((z - lo[2]) / h);
+    if (i < 0 || j < 0 || k < 0 || i >= n[0] || j >= n[1] || k >= n[2]) {
+      const cx = Math.min(Math.max(x, lo[0]), hi[0]), cy = Math.min(Math.max(y, lo[1]), hi[1]), cz = Math.min(Math.max(z, lo[2]), hi[2]);
+      return Math.hypot(x - cx, y - cy, z - cz) + pad;
+    }
+    const c = at(i, j, k);
+    return solid[c] ? -Math.sqrt(toEmpty[c]) * h : Math.sqrt(toSolid[c]) * h;
+  };
+  let filled = 0; for (const s of solid) filled += s;
+  /** does the straight path a -> b (piece space) pass through the shell itself (not an opening)? */
+  const crossesWall = (ax, ay, az, bx, by, bz) => {
+    const L = Math.hypot(bx - ax, by - ay, bz - az), steps = Math.max(1, Math.ceil(L / (h * 0.5)));
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps, x = Math.floor((ax + (bx - ax) * t - lo[0]) / h), y = Math.floor((ay + (by - ay) * t - lo[1]) / h), z = Math.floor((az + (bz - az) * t - lo[2]) / h);
+      if (x >= 0 && y >= 0 && z >= 0 && x < n[0] && y < n[1] && z < n[2] && wall[at(x, y, z)]) return true;
+    }
+    return false;
+  };
+  return { lo, hi, h, n, solid, wall, sdf, crossesWall, filled: filled / solid.length };
+}
+
+/**
+ * Scorer for one rigid piece on the body: piece = { vox (voxelize of the piece in its own space), bone (joint name),
+ * place (Matrix4: piece space -> body world at bind) }. Returns (clip, time) -> { pokeOut, intrude, score }.
+ */
+export function preparePiece(F, piece) {
+  const bind = pose(F, null, 0);
+  const bj = F.jointNames.indexOf(piece.bone);
+  if (bj < 0) throw new Error(`no joint ${piece.bone}`);
+  const carried = new Set(); for (let n = F.joints[bj]; n >= 0; n = F.parent[n]) carried.add(F.nodes[n].getName());
+  const inv = piece.place.clone().invert();
+  let lo = Infinity, hi = -Infinity; for (const V of bind.verts) for (let i = 1; i < V.length; i += 3) { lo = Math.min(lo, V[i]); hi = Math.max(hi, V[i]); }
+  const toM = 1.8 / (hi - lo);
+  const unit = new Vector3().setFromMatrixColumn(piece.place, 0).length();
+  const v = new Vector3();
+  const state = F.prims.map((p, pi) => {
+    const dom = dominant(p, F.jointNames), B = bind.verts[pi];
+    const covered = new Uint8Array(p.pos.length / 3), own = new Uint8Array(p.pos.length / 3), P0 = new Float32Array(p.pos.length);
+    for (let i = 0; i < covered.length; i++) {
+      v.set(B[i * 3], B[i * 3 + 1], B[i * 3 + 2]).applyMatrix4(inv);
+      P0[i * 3] = v.x; P0[i * 3 + 1] = v.y; P0[i * 3 + 2] = v.z;
+      covered[i] = piece.vox.sdf(v.x, v.y, v.z) < 0 ? 1 : 0;
+      own[i] = carried.has(dom[i]) ? 1 : 0;
+    }
+    return { covered, own, P0 };
+  });
+  const bindBoneInv = bind.jointWorld[bj].clone().invert();
+  return (clip, time) => {
+    const P = pose(F, clip, time);
+    const M = new Matrix4().multiplyMatrices(P.jointWorld[bj], bindBoneInv).multiply(piece.place).invert();
+    const outs = [], ins = [];
+    state.forEach((S, pi) => {
+      const V = P.verts[pi];
+      for (let i = 0; i < S.covered.length; i++) {
+        v.set(V[i * 3], V[i * 3 + 1], V[i * 3 + 2]).applyMatrix4(M);
+        const d = piece.vox.sdf(v.x, v.y, v.z) * unit * toM;
+        // only a vertex that got there THROUGH the shell counts: leaving by an opening (a leg under the hem, an arm out
+        // of the armhole) or entering by one is free movement, not a poke-through
+        const through = () => piece.vox.crossesWall(S.P0[i * 3], S.P0[i * 3 + 1], S.P0[i * 3 + 2], v.x, v.y, v.z);
+        if (S.covered[i] && d > 0.004 && through()) outs.push(d);
+        else if (!S.covered[i] && !S.own[i] && d < -0.004 && through()) ins.push(-d);
+      }
+    });
+    const tenth = (a) => (a.length >= 10 ? a.sort((x, y) => y - x)[9] : 0);
+    const pokeOut = tenth(outs), intrude = tenth(ins);
+    return { time, pokeOut, pokeN: outs.length, intrude, intrudeN: ins.length, score: Math.max(pokeOut, intrude) / LIMIT.pierce };
+  };
 }
