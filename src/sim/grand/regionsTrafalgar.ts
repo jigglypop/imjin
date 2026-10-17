@@ -54,11 +54,11 @@ export const TRAFALGAR_REGIONS: Record<TrafalgarId, RegionDef> = {
   martinique: r('martinique', '마르티니크', 'Martinique', -61.07, 14.6, 2, 'bay', '프랑스령 서인도의 섬입니다. 1805년 5월 14일 빌뇌브의 연합 함대가 포르드프랑스에 닿았고, 6월 2일 영국이 지키던 다이아몬드 바위를 되찾았습니다.', { edge: 'w' }),
   cadiz: r('cadiz', '카디스', 'Cádiz', -6.29, 36.53, 3, 'bay', '라 카라카 조선소가 있는 에스파냐 해군의 본거지입니다. 1805년 8월 20일 연합 함대가 들어왔고, 10월 19일 이곳에서 나가 트라팔가르로 향했습니다.', { capitalOf: 'spain1805' }),
   ferrol: r('ferrol', '페롤', 'Ferrol', -8.23, 43.48, 2, 'bay', '갈리시아의 에스파냐 군항입니다. 그란다야나의 에스파냐 함대와 구르동의 프랑스 전대가 이곳에 묶여 있었고, 8월 빌뇌브가 이들을 데리고 나갔습니다.'),
-  vigo: r('vigo', '비고', 'Vigo', -8.72, 42.24, 1, 'bay', '갈리시아 남쪽의 깊은 만입니다. 피니스테레 해전 뒤 빌뇌브가 부서진 함선 셋을 이곳에 남겼습니다.'),
+  vigo: r('vigo', '비고', 'Vigo', -8.8, 42.1, 1, 'bay', '갈리시아 남쪽의 깊은 만입니다. 피니스테레 해전 뒤 빌뇌브가 부서진 함선 셋을 이곳에 남겼습니다.'),
   cartagena: r('cartagena', '카르타헤나', 'Cartagena', -0.98, 37.6, 2, 'bay', '에스파냐 지중해 함대의 군항이자 조선소입니다. 살세도의 전열함 여섯 척이 1805년 내내 이곳에 머물렀습니다.'),
   mahon: r('mahon', '마온', 'Mahón', 4.27, 39.89, 1, 'island', '메노르카섬의 깊은 항구입니다. 1798년 영국이 점령했다가 1802년 아미앵 조약으로 에스파냐에 돌려주었습니다.'),
   trafalgar: r('trafalgar', '트라팔가르곶', 'Cabo Trafalgar', -6.03, 36.18, 1, 'open', '카디스와 지브롤터 사이의 낮은 곶입니다. 1805년 10월 21일 넬슨과 콜링우드의 두 종렬이 이 앞바다에서 연합 함대의 대열을 끊었습니다.'),
-  finisterre: r('finisterre', '피니스테레곶', 'Cabo Finisterre', -9.27, 42.88, 1, 'open', '갈리시아 서쪽 끝의 곶입니다. 1805년 7월 22일 짙은 안개 속에서 콜더가 서인도에서 돌아오던 빌뇌브를 막아 에스파냐 함선 두 척을 붙잡았습니다.'),
+  finisterre: r('finisterre', '피니스테레곶', 'Cabo Finisterre', -9.6, 43.0, 1, 'open', '갈리시아 서쪽 끝의 곶입니다. 1805년 7월 22일 짙은 안개 속에서 콜더가 서인도에서 돌아오던 빌뇌브를 막아 에스파냐 함선 두 척을 붙잡았습니다.'),
 };
 
 /** The sea lanes of the theatre, each listed once: [a, b, turns]. */
@@ -89,13 +89,14 @@ export const TRAFALGAR_COMMANDERS: CommanderDef[] = [
   { id: 'nelson', faction: 'britain', name: '허레이쇼 넬슨', title: '지중해 함대 사령관 · 해군 중장', portrait: 'portrait_nelson', level: 3 },
   { id: 'cornwallis', faction: 'britain', name: '윌리엄 콘월리스', title: '해협 함대 사령관 · 해군 대장', portrait: 'portrait_cornwallis', level: 3 },
   { id: 'collingwood', faction: 'britain', name: '커스버트 콜링우드', title: '해군 중장', portrait: 'portrait_collingwood', level: 2 },
+  // Hardy and Lucas were flag and ship captains, never squadron commanders: their squadrons here are game licence (said in their titles).
   { id: 'calder', faction: 'britain', name: '로버트 콜더', title: '해군 중장 · 페롤 봉쇄 함대 사령관', portrait: 'portrait_calder', level: 2 },
-  { id: 'hardy', faction: 'britain', name: '토머스 하디', title: '빅토리호 함장', portrait: 'portrait_hardy', level: 1, joins: 1 },
+  { id: 'hardy', faction: 'britain', name: '토머스 하디', title: '빅토리호 함장 · 전대 지휘는 게임 설정', portrait: 'portrait_hardy', level: 1, joins: 1 },
   { id: 'blackwood', faction: 'britain', name: '헨리 블랙우드', title: '유리알러스호 함장 · 프리깃 전대', portrait: 'portrait_blackwood', level: 1, joins: 4 },
   { id: 'villeneuve', faction: 'france', name: '피에르 빌뇌브', title: '툴롱 함대 사령관 · 해군 중장', portrait: 'portrait_villeneuve', level: 2 },
   { id: 'ganteaume', faction: 'france', name: '오노레 강톰', title: '브레스트 함대 사령관 · 해군 중장', portrait: 'portrait_ganteaume', level: 2 },
   { id: 'missiessy', faction: 'france', name: '에두아르 드 미시에시', title: '로슈포르 전대 사령관 · 해군 소장', portrait: 'portrait_missiessy', level: 2 },
-  { id: 'lucas', faction: 'france', name: '장자크 뤼카', title: '르두타블호 함장', portrait: 'portrait_lucas', level: 1, joins: 1 },
+  { id: 'lucas', faction: 'france', name: '장자크 뤼카', title: '르두타블호 함장 · 전대 지휘는 게임 설정', portrait: 'portrait_lucas', level: 1, joins: 1 },
   { id: 'gravina', faction: 'spain1805', name: '페데리코 그라비나', title: '에스파냐 함대 사령관 · 해군 중장', portrait: 'portrait_gravina', level: 3 },
   { id: 'alava', faction: 'spain1805', name: '이그나시오 마리아 데 알라바', title: '에스파냐 함대 부사령관 · 해군 중장', portrait: 'portrait_alava', level: 2 },
   { id: 'churruca', faction: 'spain1805', name: '코스메 다미안 추루카', title: '산후안 네포무세노호 함장 · 준장', portrait: 'portrait_churruca', level: 2 },

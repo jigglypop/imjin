@@ -134,11 +134,13 @@ export const EN_TRAFALGAR_CAMPAIGN: Record<string, string> = {
   '해군 중장': 'Vice-Admiral',
   '해군 중장 · 페롤 봉쇄 함대 사령관': 'Vice-Admiral · Commander off Ferrol',
   '빅토리호 함장': 'Captain of the Victory',
+  '빅토리호 함장 · 전대 지휘는 게임 설정': 'Captain of the Victory · leading a squadron is game licence',
   '유리알러스호 함장 · 프리깃 전대': 'Captain of the Euryalus · the frigates',
   '툴롱 함대 사령관 · 해군 중장': 'Commander, Toulon fleet · Vice-Admiral',
   '브레스트 함대 사령관 · 해군 중장': 'Commander, Brest fleet · Vice-Admiral',
   '로슈포르 전대 사령관 · 해군 소장': 'Commander, Rochefort squadron · Rear-Admiral',
   '르두타블호 함장': 'Captain of the Redoutable',
+  '르두타블호 함장 · 전대 지휘는 게임 설정': 'Captain of the Redoutable · leading a squadron is game licence',
   '에스파냐 함대 사령관 · 해군 중장': 'Commander of the Spanish fleet · Vice-Admiral',
   '에스파냐 함대 부사령관 · 해군 중장': 'Second-in-command of the Spanish fleet · Vice-Admiral',
   '산후안 네포무세노호 함장 · 준장': 'Captain of the San Juan Nepomuceno · Brigadier',
@@ -234,6 +236,7 @@ export const EN_TRAFALGAR_CAMPAIGN: Record<string, string> = {
   '4층 갑판의 거함': 'The four-decker',
   '프랑스와 동맹': 'Allied with France',
   '수병 부족': 'Short of seamen',
+  '영국은 프랑스·에스파냐와 동맹을 맺지 않습니다': 'Britain makes no alliance with France or Spain',
 };
 
 for (const [ko, en] of Object.entries(PORT_NAMES)) {

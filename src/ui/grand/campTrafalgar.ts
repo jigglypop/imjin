@@ -8,17 +8,13 @@ import type { FactionId } from './types';
 // theatre (campEurope.ts: stone curtains, keeps and gun towers, slate and tile), Spain's on the Mediterranean set of the
 // Lepanto theatre (campMediterranean.ts: whitewashed houses under clay tiles round a church). Only their flags are new.
 //
-// The European atlas's flag sheet (buildingAtlas.json, 'england') holds St George's cross, the Tudor colours, the cross
-// of Burgundy and the arms of Castile; it has no Union flag of 1801, no tricolour and no Spanish ensign of 1785. Until it
-// has them: Britain flies St George's red cross on white (the field of the White Ensign Nelson's fleet wore at
-// Trafalgar), Spain the arms of Castile (the centre of its red and gold naval ensign), France the cross cloth dyed
-// towards blue as a plain stand-in.
+// The European atlas's flag sheet (buildingAtlas.json, 'england') holds, beside the 1588 banners, the flags of 1805 drawn
+// from their patterns by scripts/draw-1805-flags.mjs: the Union Flag of 1801, the French tricolour and the Spanish naval
+// ensign of 1785.
 
-/** A navy of the Trafalgar theatre's flag in the European atlas's sheet (see the note above). */
+/** A navy of the Trafalgar theatre's flag in the European atlas's sheet. */
 export function trafalgarFlag(navy: Extract<FactionId, 'britain' | 'france' | 'spain1805'>) {
-  if (navy === 'britain') return bannerPaint('england', 'england');
-  if (navy === 'spain1805') return bannerPaint('england', 'castile');
-  return bannerPaint('england', 'england', [0.5, 0.62, 1]);
+  return bannerPaint('england', navy === 'britain' ? 'union1801' : navy === 'france' ? 'tricolour' : 'spain1785');
 }
 
 /** The kits of the Trafalgar theatre's own pieces, merged into campBuildings.ts's catalogue. */
