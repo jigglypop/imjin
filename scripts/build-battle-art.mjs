@@ -390,7 +390,36 @@ const SHOTS = {
     grade: { exposure: 1.5, gamma: 1.1, saturation: 1 },
     card: 0.5,
   },
+  ...armadaShots(),
 };
+
+/**
+ * The Armada's five battles (England in the first slot, Spain in the second): played until the fleets are within long
+ * culverin range of each other, then framed from behind the English ship most engaged, from beside the Spanish ship
+ * nearest it, and from high over both fleets. The framings take no outside names: they run in the page as source text.
+ */
+function armadaShots() {
+  const closing = (c) => (c.e.battle.time > 45 && c.dist(c.cen(c.team('joseon')), c.cen(c.team('japan'))) < 1000) || c.e.battle.time > 420;
+  const wide = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const F = c.around(H, c.team('japan'), 900); return c.place(H, c.toward(F, H) + 0.5, 230, 30, 34, 0.32, -0.05, 8); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 250, 28, 34, 0.3, -0.04, 8); },
+    (c) => { const A = c.cen(c.team('joseon')); const B = c.cen(c.team('japan')); const M = { x: (A.x + B.x) / 2, z: (A.z + B.z) / 2 }; return c.place(M, c.toward(B, A) + 0.8, 760, 150, 34, 0.2, -0.08); },
+  ];
+  const tall = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const F = c.around(H, c.team('japan'), 900); return c.place(H, c.toward(F, H) + 0.5, 240, 32, 54, 0, 0.3, 8); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 260, 30, 52, 0, 0.28, 8); },
+  ];
+  const plan = (warm, grade, until = closing) => ({ warm, steps: [{ run: 2, until }], moments: [0, 12, 24], wide, tall, grade, card: 0.5 });
+  const day = { exposure: 1, gamma: 1, saturation: 1.04 };
+  return {
+    plymouth: plan(20, day),
+    portland: plan(20, { exposure: 1.1, gamma: 1.04, saturation: 1.04 }),
+    wight: plan(20, day),
+    // The fireships: run until the first Spanish ship has caught fire.
+    calais: plan(0, { exposure: 1.5, gamma: 1.1, saturation: 1 }, (c) => c.burning('japan').length >= 2 || c.e.battle.time > 300),
+    gravelines: plan(20, { exposure: 1.1, gamma: 1.05, saturation: 1.06 }),
+  };
+}
 
 const sha = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');
 const round = (pose) => Object.fromEntries(Object.entries(pose).map(([k, v]) => [k, +v.toFixed(3)]));
