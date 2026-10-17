@@ -7,9 +7,10 @@ import { readFileSync } from 'node:fs';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 // --region=channel bakes the Armada chapter's map from scripts/fetch-dem.mjs --region=channel; --region=mediterranean the
-// Lepanto campaign's, behind its faction pick, from scripts/fetch-dem.mjs --region=mediterranean.
+// Lepanto campaign's, behind its faction pick, from scripts/fetch-dem.mjs --region=mediterranean; --region=atlantic the
+// Trafalgar campaign's, from scripts/fetch-dem.mjs --region=atlantic.
 const region = process.argv.find((a) => a.startsWith('--region='))?.slice(9) ?? 'korea';
-const FILES = { korea: ['demMeta.json', 'korea_dem.webp', 'map_south.webp'], channel: ['channelMeta.json', 'channel_dem.webp', 'map_channel.webp'], mediterranean: ['mediterraneanMeta.json', 'mediterranean_dem.webp', 'map_mediterranean.webp'] }[region];
+const FILES = { korea: ['demMeta.json', 'korea_dem.webp', 'map_south.webp'], channel: ['channelMeta.json', 'channel_dem.webp', 'map_channel.webp'], mediterranean: ['mediterraneanMeta.json', 'mediterranean_dem.webp', 'map_mediterranean.webp'], atlantic: ['atlanticMeta.json', 'atlantic_dem.webp', 'map_atlantic.webp'] }[region];
 const meta = JSON.parse(readFileSync(ROOT + 'src/select/' + FILES[0], 'utf8'));
 const { width: w, height: h, metersPerPixel } = meta;
 const { data } = await sharp(ROOT + 'public/ui/' + FILES[1]).ensureAlpha().raw().toBuffer({ resolveWithObject: true });

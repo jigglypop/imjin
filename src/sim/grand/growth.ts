@@ -188,6 +188,9 @@ const AI_ORDER: Record<GrandFaction, readonly string[]> = {
   spain: ['galleasses', 'tercios', 'silver', 'drill'],
   holyleague: ['galleasses', 'arquebus', 'spurs', 'drill'],
   ottoman: ['janissaries', 'archers', 'corsairs', 'drill'],
+  britain: ['gunlocks', 'copper', 'popham', 'drill'],
+  france: ['boarders', 'soldiers', 'tops', 'drill'],
+  spain1805: ['artillery', 'fourdecks', 'havana', 'drill'],
 };
 
 /** The computer starts the next research it can afford while keeping `reserve` in the treasury. */

@@ -11,6 +11,8 @@
 //     to public/ui/grand_terrain_armada.bin; its north edge eases down to the sea as well, since no far land lies beyond it
 //   node scripts/build-grand-terrain.mjs --theatre=lepanto [--check]  the Lepanto campaign's, from public/ui/mediterranean_dem.webp
 //     to public/ui/grand_terrain_lepanto.bin, its north edge eased down the same way
+//   node scripts/build-grand-terrain.mjs --theatre=trafalgar [--check]  the Trafalgar campaign's, from public/ui/atlantic_dem.webp
+//     to public/ui/grand_terrain_trafalgar.bin, fitted as loosely as the Mediterranean's (the DEM is coarser still)
 //
 // How it is made: greedy Delaunay refinement (Garland and Heckbert's "Fast polygonal approximation of terrains and height
 // fields", in the style of Mapbox's delatin): start from the DEM's four corners and keep inserting the texel of largest
@@ -48,6 +50,8 @@ const THEATRES = {
   // The Mediterranean's DEM is coarser (1.2 km a texel) and its mountains steep: a real slope there rises more than SPIKE
   // between neighbours, and fitting it to 18 m would take three times the Armada's triangles, so it is fitted looser.
   lepanto: { source: 'public/ui/mediterranean_dem.webp', out: 'public/ui/grand_terrain_lepanto.bin', rimNorth: true, relief: 50, spike: 1200 },
+  // Iberia, France and the Alps at 1.5 km a texel: the same looser fit as the Mediterranean's.
+  trafalgar: { source: 'public/ui/atlantic_dem.webp', out: 'public/ui/grand_terrain_trafalgar.bin', rimNorth: true, relief: 50, spike: 1200 },
 };
 const THEATRE = THEATRES[process.argv.find((a) => a.startsWith('--theatre='))?.slice(10) ?? 'imjin'];
 const SOURCE = THEATRE.source;

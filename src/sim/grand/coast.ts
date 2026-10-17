@@ -5,7 +5,10 @@ import type { MapLayout } from '../maps';
 import type { SeaStateName } from '../../ocean/waves';
 import type { SkyPresetName } from '../../render/sky';
 import { NORYANG_TERRAIN, type TerrainSpec } from '../../terrain/generate';
-import { ALL_REGION_ORDER } from './regions';
+import { ALL_REGION_ORDER, REGION_ORDER } from './regions';
+import { ARMADA_REGION_ORDER } from './regionsArmada';
+import { LEPANTO_REGION_ORDER } from './regionsLepanto';
+import { TRAFALGAR_REGION_ORDER } from './regionsTrafalgar';
 import type { RegionId } from './types';
 import layouts from './regionPoints.json';
 import windows from './regionWindows.json';
@@ -414,6 +417,48 @@ function coastalPort(base: RegionId, name: string, hanja: string, dx = 0, dz = 0
   };
 }
 
+/**
+ * The Trafalgar theatre's ports. Its own coasts (src/terrain/trafalgarTerrain.ts) carry the Andalusian ports: Cape
+ * Trafalgar itself (the weather column's battle), Cádiz on the lee column's sea and Gibraltar further along that shore,
+ * and the cliffs of Cape St Vincent stand in for the Galician capes, Finisterre naming Calder's action. The Channel and
+ * Biscay ports are fought on the Armada chapter's Channel coasts (the English shore to the north for the English, Irish,
+ * Breton and Galician ports, the low French shore of Calais and Gravelines for Cherbourg and Boulogne), the
+ * Mediterranean ports on the Lepanto chapter's, and the two Caribbean islands on the low shore of Djerba. Like the other
+ * theatres' these are adapted battle areas, not surveys of each port.
+ */
+function TRAFALGAR_SITES(): Partial<Record<RegionId, RegionSite>> {
+  const site = (scenario: ScenarioId, own: ScenarioId | null, port: { x: number; z: number }, seaward: number, foliage: number, name: string, latin: string, sky: SkyPresetName, sea: SeaStateName): RegionSite => ({
+    scenario: own, terrain: SCENARIO_TERRAIN(scenario), port, seaward, span: 1300, sky, sea, foliage, names: armadaNames(name, latin),
+  });
+  const N = Math.PI / 2, S = -Math.PI / 2, W = Math.PI;
+  return {
+    spithead: site('plymouth', null, { x: -1200, z: -4300 }, N, 0.6, '스핏헤드', 'Spithead', 'day', 'moderate'),
+    plymsound: site('plymouth', null, { x: 500, z: -4000 }, N, 0.6, '플리머스 사운드', 'Plymouth Sound', 'overcast', 'moderate'),
+    torbay: site('portland', null, { x: -2600, z: -5100 }, N, 0.6, '토베이', 'Torbay', 'overcast', 'rough'),
+    deal: site('plymouth', null, { x: 2600, z: -3800 }, N, 0.5, '다운스', 'The Downs', 'overcast', 'moderate'),
+    cork: site('plymouth', null, { x: 3600, z: -3900 }, N, 0.6, '코브', 'Cove of Cork', 'overcast', 'rough'),
+    gibraltar: site('trafalgar-weather', null, { x: 7400, z: -2600 }, W, 0.35, '지브롤터', 'Gibraltar', 'day', 'moderate'),
+    valletta: site('lepanto-south', null, { x: 3000, z: 5400 }, S, 0.3, '그랜드 하버', 'Grand Harbour', 'day', 'moderate'),
+    maddalena: site('preveza', null, { x: 3600, z: -3400 }, N, 0.4, '애진코트 해협', 'Agincourt Sound', 'day', 'moderate'),
+    barbados: site('djerba', null, { x: 5000, z: 3000 }, S, 0.5, '칼라일만', 'Carlisle Bay', 'day', 'calm'),
+    brest: site('wight', null, { x: 6200, z: -2400 }, N, 0.55, '브레스트 수로', 'Goulet de Brest', 'overcast', 'rough'),
+    lorient: site('wight', null, { x: 3000, z: -3400 }, N, 0.55, '로리앙', 'Lorient', 'overcast', 'moderate'),
+    rochefort: site('wight', null, { x: -400, z: -3400 }, N, 0.5, '엑스 정박지', "Rade d'Aix", 'day', 'moderate'),
+    cherbourg: site('calais', null, { x: 4000, z: 3900 }, S, 0.4, '셰르부르', 'Cherbourg', 'overcast', 'moderate'),
+    boulogne: site('gravelines', null, { x: 5000, z: 3200 }, S, 0.4, '불로뉴', 'Boulogne', 'overcast', 'rough'),
+    toulon: site('lepanto-north', null, { x: 4200, z: -3500 }, N, 0.45, '툴롱', 'Toulon', 'day', 'calm'),
+    taranto: site('preveza', null, { x: -4800, z: -3400 }, N, 0.4, '타란토', 'Taranto', 'day', 'calm'),
+    martinique: site('djerba', null, { x: -1000, z: 3000 }, S, 0.5, '포르드프랑스', 'Fort-de-France', 'day', 'calm'),
+    cadiz: site('trafalgar-lee', null, { x: 7200, z: -800 }, W, 0.35, '카디스', 'Cádiz', 'day', 'moderate'),
+    ferrol: site('plymouth', null, { x: -500, z: -3800 }, N, 0.6, '페롤', 'Ferrol', 'overcast', 'moderate'),
+    vigo: site('portland', null, { x: 1500, z: -5400 }, N, 0.6, '비고', 'Vigo', 'day', 'moderate'),
+    cartagena: site('lepanto-north', null, { x: -7000, z: -3800 }, N, 0.35, '카르타헤나', 'Cartagena', 'day', 'calm'),
+    mahon: site('lepanto-south', null, { x: -7000, z: 5400 }, S, 0.35, '마온', 'Mahón', 'day', 'moderate'),
+    trafalgar: site('trafalgar-weather', 'trafalgar-weather', { x: 7600, z: 1200 }, W, 0.35, '트라팔가르곶', 'Cabo Trafalgar', 'day', 'rough'),
+    finisterre: site('st-vincent', 'finisterre', { x: 6000, z: -4600 }, (3 * Math.PI) / 4, 0.45, '피니스테레곶', 'Cabo Finisterre', 'overcast', 'moderate'),
+  };
+}
+
 const COASTAL_SITES: Record<RegionId, RegionSite> = {
   ...BASE_REGION_SITES as Record<RegionId, RegionSite>,
   nokdo: coastalPort('yeosu', '녹도진', '鹿島鎭', -240, 120),
@@ -446,6 +491,7 @@ const COASTAL_SITES: Record<RegionId, RegionSite> = {
   ulsan: coastalPort('busan', '울산 도산', '蔚山島山'),
   ...ARMADA_SITES(),
   ...LEPANTO_SITES(),
+  ...TRAFALGAR_SITES(),
 };
 
 /** The south coast: evergreen hills, broad-leaved scrub in the folds, paddies in the valleys, a few tiled roofs. */
@@ -556,6 +602,11 @@ const COASTAL_FLOW: Record<RegionId, number> = {
   venice: 0.5, zara: 0.4, cattaro: 0.3, corfu: 0.6, cephalonia: 0.4, zante: 0.4, candia: 0.4, famagusta: 0.3, otranto: 0.7, naples: 0.3,
   messina: 1.4, civitavecchia: 0.3, malta: 0.4, genoa: 0.3, istanbul: 1.2, gallipoli: 1.4, negroponte: 1.6, rhodes: 0.5, nafpaktos: 0.6,
   patras: 0.5, curzolari: 0.5, preveza: 0.9, valona: 0.4, modon: 0.5, navarino: 0.4, tripoli: 0.3, alexandria: 0.3,
+  // The Trafalgar theatre: the Channel's tides, the Atlantic swell of Biscay and Iberia, the Strait's inflowing current,
+  // the near-tideless Mediterranean and the Caribbean.
+  spithead: 1, plymsound: 0.7, torbay: 0.6, deal: 1.1, cork: 0.6, gibraltar: 1.5, valletta: 0.3, maddalena: 0.6, barbados: 0.3,
+  brest: 1.4, lorient: 0.8, rochefort: 0.9, cherbourg: 1.3, boulogne: 1, toulon: 0.3, taranto: 0.3, martinique: 0.3,
+  cadiz: 0.8, ferrol: 0.7, vigo: 0.6, cartagena: 0.3, mahon: 0.3, trafalgar: 1, finisterre: 0.6,
 };
 
 function designedCurrent(id: RegionId, placed: Placed[], mid: { x: number; z: number }, axis: number): CurrentSpec {
@@ -596,6 +647,10 @@ export const REGION_MAPS: Record<RegionId, RegionMap> = Object.fromEntries(ALL_R
 /** A persistent meeting's seed gives the same weather, tide and nighttime on every load and rendering client. */
 export const regionEnvironment = (id: RegionId, seed: number): BattleEnvironment => environmentFor(REGION_MAPS[id], seed);
 
+/** Each theatre's regions: a loading picture is borrowed only from a battle of the region's own war (Plymouth in 1805 is not the Armada's). */
+const THEATRE_ORDERS: readonly (readonly RegionId[])[] = [REGION_ORDER, ARMADA_REGION_ORDER, LEPANTO_REGION_ORDER, TRAFALGAR_REGION_ORDER];
+const theatreIndex = (id: RegionId) => THEATRE_ORDERS.findIndex((order) => order.includes(id));
+
 /** How far a historical battle's waters reach for a region's loading picture, in kilometres. */
 const ART_REACH = 60;
 
@@ -611,7 +666,9 @@ export function regionArt(id: RegionId): ScenarioId | null {
   const km = (lon: number, lat: number) => Math.hypot((lon - at.lon) * Math.cos((at.lat * Math.PI) / 180) * 111.3, (lat - at.lat) * 111.3);
   let best: ScenarioId | null = null;
   let reach = ART_REACH;
+  const theatre = theatreIndex(id);
   for (const other of ALL_REGION_ORDER) {
+    if (theatreIndex(other) !== theatre) continue;
     const battle = REGION_SITES[other].scenario;
     const d = battle ? km(REGIONS[other].lon, REGIONS[other].lat) : Infinity;
     if (d < reach) {

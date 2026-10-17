@@ -153,6 +153,26 @@ add({
     'accents of crimson, white and dark green.' + EMBLEM_STYLE,
 });
 
+// The Trafalgar chapter's navies (1805).
+add({
+  id: 'emblem_britain', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
+  prompt:
+    'Emblem of the Royal Navy of 1805: a deep navy-blue circular badge with a bold gold fouled anchor (an anchor with its cable twisted round the shank) above a small white stylized three-masted ship of the line silhouette (two rows of gunports, square sails) on stylized white waves, ' +
+    'accents of navy blue, red and gold.' + EMBLEM_STYLE,
+});
+add({
+  id: 'emblem_france', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
+  prompt:
+    'Emblem of the French Imperial Navy of 1805: a deep blue circular badge with a bold gold Napoleonic eagle with spread wings (no crown, no letters) above a small white stylized three-masted ship of the line silhouette on stylized white waves, a thin band of blue, white and red along the rim, ' +
+    'accents of blue, white, red and gold.' + EMBLEM_STYLE,
+});
+add({
+  id: 'emblem_spain1805', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
+  prompt:
+    'Emblem of the Spanish Navy of 1805: a crimson and gold circular badge (the red and yellow of the Spanish naval ensign of 1785) with a bold simple gold castle tower with three turrets above a small white stylized three-masted ship of the line silhouette on stylized white waves, ' +
+    'accents of crimson, gold and black.' + EMBLEM_STYLE,
+});
+
 // ---------- helpers ----------
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const rawPath = (it, v) => join(RAW, `${it.id}${v ? '.' + v : ''}.png`);

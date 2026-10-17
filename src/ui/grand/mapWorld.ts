@@ -5,13 +5,21 @@ import { FOOTPRINT, METRES_PER_RADIUS, STANDARD, STANDARD_KINDS, WALL_KINDS, WAT
 import type { BuildingKind, FactionId, FleetView, RegionView, ReplayView, ShipClass, SpotView } from './types';
 import { ARMADA_REGION_ORDER } from '../../sim/grand/regionsArmada';
 import { LEPANTO_REGION_ORDER, LEPANTO_START } from '../../sim/grand/regionsLepanto';
+import { TRAFALGAR_REGION_ORDER } from '../../sim/grand/regionsTrafalgar';
 
 /** The ports of the Armada theatre, whose towns are English, Flemish, French and Iberian rather than Korean. */
 const EUROPEAN: ReadonlySet<string> = new Set(ARMADA_REGION_ORDER);
 /** The ports of the Lepanto theatre: Mediterranean towns, with a church where the League held them in 1571 and a mosque where the Sultan did. */
 const MEDITERRANEAN: ReadonlySet<string> = new Set(LEPANTO_REGION_ORDER);
+/**
+ * The ports of the Trafalgar theatre: the Channel, Biscay and Galician towns are built like the Armada theatre's (stone,
+ * slate and timber); those of Andalusia, the Mediterranean and the Caribbean as whitewashed towns round a church.
+ */
+const TRAFALGAR: ReadonlySet<string> = new Set(TRAFALGAR_REGION_ORDER);
+const SOUTHERN: ReadonlySet<string> = new Set(['gibraltar', 'valletta', 'maddalena', 'toulon', 'taranto', 'cadiz', 'cartagena', 'mahon', 'trafalgar', 'martinique', 'barbados']);
 const townStyle = (id: string): TownStyle =>
-  EUROPEAN.has(id) ? true : MEDITERRANEAN.has(id) ? (LEPANTO_START.owners[id as keyof typeof LEPANTO_START.owners] === 'ottoman' ? 'ottoman' : 'league') : false;
+  EUROPEAN.has(id) ? true : MEDITERRANEAN.has(id) ? (LEPANTO_START.owners[id as keyof typeof LEPANTO_START.owners] === 'ottoman' ? 'ottoman' : 'league')
+    : TRAFALGAR.has(id) ? (SOUTHERN.has(id) ? 'league' : true) : false;
 
 /** A town's look beyond Korea's: true the Armada theatre's, 'league' and 'ottoman' the Lepanto theatre's two. */
 export type TownStyle = boolean | 'league' | 'ottoman';
@@ -196,7 +204,7 @@ function mingCamp(level: number): CampPlan {
  * a hall, two gun towers and houses. Both navies build alike and fly their own banners.
  */
 function europeCamp(level: number, navy: FactionId): CampPlan {
-  const S = Math.PI / 2, flag: PieceKind = navy === 'spain' ? 'sp_banner' : 'en_banner';
+  const S = Math.PI / 2, flag: PieceKind = navy === 'spain' ? 'sp_banner' : navy === 'britain' ? 'gb_banner' : navy === 'france' ? 'fr_banner' : 'en_banner';
   if (level === 1) return {
     radius: 0.6,
     pieces: [
@@ -227,7 +235,7 @@ function europeCamp(level: number, navy: FactionId): CampPlan {
  * (campEurope.ts), with whitewashed Mediterranean houses (campMediterranean.ts) in place of the timber and thatch.
  */
 function mediterraneanCamp(level: number, navy: FactionId): CampPlan {
-  const S = Math.PI / 2, flag: PieceKind = navy === 'ottoman' ? 'ot_banner' : 'hl_banner';
+  const S = Math.PI / 2, flag: PieceKind = navy === 'ottoman' ? 'ot_banner' : navy === 'spain1805' ? 'es_banner' : 'hl_banner';
   if (level === 1) return {
     radius: 0.6,
     pieces: [
@@ -260,7 +268,7 @@ function mediterraneanCamp(level: number, navy: FactionId): CampPlan {
  * every level leaves room for it.
  */
 export function campPlan(level: number, navy: FactionId): CampPlan {
-  const plan = navy === 'japan' ? japanCamp(level) : navy === 'ming' ? mingCamp(level) : navy === 'england' || navy === 'spain' ? europeCamp(level, navy) : navy === 'holyleague' || navy === 'ottoman' ? mediterraneanCamp(level, navy) : joseonCamp(level);
+  const plan = navy === 'japan' ? japanCamp(level) : navy === 'ming' ? mingCamp(level) : navy === 'england' || navy === 'spain' || navy === 'britain' || navy === 'france' ? europeCamp(level, navy) : navy === 'holyleague' || navy === 'ottoman' || navy === 'spain1805' ? mediterraneanCamp(level, navy) : joseonCamp(level);
   return { ...plan, pieces: [...plan.pieces, put(STANDARD[navy], 0.08, 0, 0)] };
 }
 
@@ -361,11 +369,11 @@ export function townPlan(houses: number, tiled: number, seed: number, japanese =
 
 /** The works a region can build and the kind each is drawn as for a navy. */
 const WORKS: Partial<Record<BuildingKind, Record<FactionId, PieceKind>>> = {
-  battery: { joseon: 'jo_battery', japan: 'wa_battery', ming: 'mg_battery', england: 'eu_battery', spain: 'eu_battery', holyleague: 'eu_battery', ottoman: 'eu_battery' },
-  shipyard: { joseon: 'jo_yard', japan: 'wa_yard', ming: 'mg_yard', england: 'eu_yard', spain: 'eu_yard', holyleague: 'eu_yard', ottoman: 'eu_yard' },
-  dock: { joseon: 'jo_dock', japan: 'wa_dock', ming: 'mg_dock', england: 'eu_dock', spain: 'eu_dock', holyleague: 'eu_dock', ottoman: 'eu_dock' },
-  granary: { joseon: 'jo_granary', japan: 'wa_granary', ming: 'mg_granary', england: 'eu_granary', spain: 'eu_granary', holyleague: 'md_granary', ottoman: 'md_granary' },
-  beacon: { joseon: 'jo_beacon', japan: 'wa_beacon', ming: 'mg_beacon', england: 'eu_beacon', spain: 'eu_beacon', holyleague: 'eu_beacon', ottoman: 'eu_beacon' },
+  battery: { joseon: 'jo_battery', japan: 'wa_battery', ming: 'mg_battery', england: 'eu_battery', spain: 'eu_battery', holyleague: 'eu_battery', ottoman: 'eu_battery', britain: 'eu_battery', france: 'eu_battery', spain1805: 'eu_battery' },
+  shipyard: { joseon: 'jo_yard', japan: 'wa_yard', ming: 'mg_yard', england: 'eu_yard', spain: 'eu_yard', holyleague: 'eu_yard', ottoman: 'eu_yard', britain: 'eu_yard', france: 'eu_yard', spain1805: 'eu_yard' },
+  dock: { joseon: 'jo_dock', japan: 'wa_dock', ming: 'mg_dock', england: 'eu_dock', spain: 'eu_dock', holyleague: 'eu_dock', ottoman: 'eu_dock', britain: 'eu_dock', france: 'eu_dock', spain1805: 'eu_dock' },
+  granary: { joseon: 'jo_granary', japan: 'wa_granary', ming: 'mg_granary', england: 'eu_granary', spain: 'eu_granary', holyleague: 'md_granary', ottoman: 'md_granary', britain: 'eu_granary', france: 'eu_granary', spain1805: 'md_granary' },
+  beacon: { joseon: 'jo_beacon', japan: 'wa_beacon', ming: 'mg_beacon', england: 'eu_beacon', spain: 'eu_beacon', holyleague: 'eu_beacon', ottoman: 'eu_beacon', britain: 'eu_beacon', france: 'eu_beacon', spain1805: 'eu_beacon' },
 };
 /** The piece a region's work is drawn as, in the style of whoever holds the port (Korea's own while nobody does). */
 export const workKind = (work: BuildingKind, owner: FactionId | null): PieceKind | null => WORKS[work]?.[owner ?? 'joseon'] ?? null;

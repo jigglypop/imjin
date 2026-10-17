@@ -31,7 +31,10 @@ export type PieceKind =
   | 'eu_battery' | 'eu_yard' | 'eu_dock' | 'eu_granary' | 'eu_beacon' | 'en_standard' | 'sp_standard'
   // The Lepanto theatre (campMediterranean.ts): the European forts with Mediterranean towns, a church or a mosque, and
   // the Holy League's and the Ottomans' banners and standards
-  | 'md_house' | 'md_cottage' | 'md_church' | 'ot_mosque' | 'md_granary' | 'hl_banner' | 'ot_banner' | 'hl_standard' | 'ot_standard';
+  | 'md_house' | 'md_cottage' | 'md_church' | 'ot_mosque' | 'md_granary' | 'hl_banner' | 'ot_banner' | 'hl_standard' | 'ot_standard'
+  // The Trafalgar theatre (campTrafalgar.ts): the European and Mediterranean kits under Britain's, France's and Spain's
+  // banners and standards
+  | 'gb_banner' | 'fr_banner' | 'es_banner' | 'gb_standard' | 'fr_standard' | 'es_standard';
 
 /** Metres of the world one settlement radius stands for: a house is about a quarter of a radius long. */
 export const METRES_PER_RADIUS = 40;
@@ -45,10 +48,10 @@ export const WATER_KINDS: ReadonlySet<PieceKind> = new Set<PieceKind>(['pier', '
 
 /** The navy whose atlas a kind is built with. England's (the European set) serves both navies of the Armada theatre. */
 export const navyOf = (kind: PieceKind): FactionId =>
-  kind.startsWith('wa_') ? 'japan' : kind.startsWith('mg_') ? 'ming' : /^(eu|en|sp|md|hl|ot)_/.test(kind) ? 'england' : 'joseon';
+  kind.startsWith('wa_') ? 'japan' : kind.startsWith('mg_') ? 'ming' : /^(eu|en|sp|md|hl|ot|gb|fr|es)_/.test(kind) ? 'england' : 'joseon';
 
 /** Each navy's standard: a tall pole flying the navy's colour over what it holds, so whose a place is reads from afar. */
-export const STANDARD: Record<FactionId, PieceKind> = { joseon: 'jo_standard', japan: 'wa_standard', ming: 'mg_standard', england: 'en_standard', spain: 'sp_standard', holyleague: 'hl_standard', ottoman: 'ot_standard' };
+export const STANDARD: Record<FactionId, PieceKind> = { joseon: 'jo_standard', japan: 'wa_standard', ming: 'mg_standard', england: 'en_standard', spain: 'sp_standard', holyleague: 'hl_standard', ottoman: 'ot_standard', britain: 'gb_standard', france: 'fr_standard', spain1805: 'es_standard' };
 export const STANDARD_KINDS: ReadonlySet<PieceKind> = new Set(Object.values(STANDARD));
 
 /**
@@ -75,4 +78,5 @@ export const FOOTPRINT: Record<PieceKind, readonly [number, number]> = {
   en_standard: [2.7, 0.7], sp_standard: [2.7, 0.7],
   md_house: [4.8, 3.5], md_cottage: [4.3, 3.2], md_church: [10.0, 4.0], ot_mosque: [6.6, 5.6], md_granary: [6.0, 4.0],
   hl_banner: [1.8, 0.2], ot_banner: [1.8, 0.2], hl_standard: [2.7, 0.7], ot_standard: [2.7, 0.7],
+  gb_banner: [1.8, 0.2], fr_banner: [1.8, 0.2], es_banner: [1.8, 0.2], gb_standard: [2.7, 0.7], fr_standard: [2.7, 0.7], es_standard: [2.7, 0.7],
 };

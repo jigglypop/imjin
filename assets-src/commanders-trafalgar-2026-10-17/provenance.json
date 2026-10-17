@@ -299,11 +299,59 @@
       "requestedAt": "2026-10-17T13:32:28.275Z",
       "finishedAt": "2026-10-17T13:32:41.948Z",
       "estimatedCostUsd": 0.04
+    },
+    {
+      "id": "alava",
+      "endpoint": "gemini generateContent",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Spanish Navy uniform of 1805: His face follows his known contemporary portraits. Teniente general Ignacio María de Álava, fifty-five, second in command of the Spanish fleet, a long Basque face with a high forehead, powdered grey hair, no beard, a calm grave look; a dark blue Spanish admiral coat with red facings and gold lace, a white stock.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T15:16:48.921Z",
+      "finishedAt": "2026-10-17T15:16:59.982Z",
+      "estimatedCostUsd": 0.04
+    },
+    {
+      "id": "cornwallis",
+      "endpoint": "gemini generateContent",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Royal Navy uniform of 1805: His face follows his known contemporary portraits. Admiral the Honourable William Cornwallis, sixty, commander of the Channel Fleet off Brest, a round ruddy weather-beaten face, a large nose, powdered white hair, no beard, a blunt stubborn look; a dark blue admiral coat with gold lace, a white stock.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T15:16:48.917Z",
+      "finishedAt": "2026-10-17T15:17:00.469Z",
+      "estimatedCostUsd": 0.04
+    },
+    {
+      "id": "ganteaume",
+      "endpoint": "gemini generateContent",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. French Imperial Navy uniform of 1805: His face follows his known contemporary portraits. Vice-amiral Honoré Ganteaume, fifty, commander of the Brest fleet, a broad Provençal face with heavy dark eyebrows, dark greying hair brushed forward, short side-whiskers, no beard; a dark blue French admiral coat with gold oak-leaf embroidery, a white stock.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T15:16:48.921Z",
+      "finishedAt": "2026-10-17T15:17:01.382Z",
+      "estimatedCostUsd": 0.04
+    },
+    {
+      "id": "missiessy",
+      "endpoint": "gemini generateContent",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred ships of the line of 1805 with tiers of gun ports and square sails, a quarterdeck and European sailors only, no Asian junks, no Asian soldiers. The period is 1805, Napoleonic: no ruffs. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Period practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. French Imperial Navy uniform of 1805: Contre-amiral Édouard de Missiessy, forty-eight, commander of the Rochefort squadron, a lean aristocratic face, a long straight nose, dark hair greying at the temples, no beard, a reserved look; a dark blue French rear-admiral coat with gold embroidery, a white stock.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T15:16:48.921Z",
+      "finishedAt": "2026-10-17T15:17:02.214Z",
+      "estimatedCostUsd": 0.04
     }
   ],
   "model": "gpt-image-2.5-sunburst",
   "script": "scripts/generate-chapter-portraits.mjs --chapter trafalgar",
   "pricingNote": "Estimated from returned token usage at gpt-image-2 list prices per million tokens ({\"textIn\":5,\"imageIn\":8,\"imageOut\":30}); the 2.5 preview has no public price.",
-  "requestCount": 14,
-  "totalEstimatedCostUsd": 0.787
+  "requestCount": 18,
+  "totalEstimatedCostUsd": 0.947
 }

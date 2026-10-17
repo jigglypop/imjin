@@ -353,6 +353,9 @@ export const CAMP_WALL: Record<FactionId, Record<Tier, WallStyle>> = {
   spain: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
   holyleague: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
   ottoman: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
+  britain: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
+  france: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
+  spain1805: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
 };
 
 // ---------- colour and light ----------

@@ -1,6 +1,7 @@
 import { REGION_ORDER, START, type StartSetup } from './regions';
 import { ARMADA_REGION_ORDER, ARMADA_START } from './regionsArmada';
 import { LEPANTO_REGION_ORDER, LEPANTO_START } from './regionsLepanto';
+import { TRAFALGAR_REGION_ORDER, TRAFALGAR_START } from './regionsTrafalgar';
 import type { Grand, GrandFaction, PairKey, Relation, RegionId, TheatreId } from './types';
 
 /**
@@ -61,6 +62,20 @@ export const THEATRES: Record<TheatreId, TheatreDef> = {
     since: 6,
     intro: '신성동맹과 오스만 제국이 이오니아해와 지중해의 물길을 두고 맞섭니다.',
     seed: 1571,
+  },
+  // January 1805: Spain at war with Britain since 12 December 1804 and allied to France (the treaty of 4 January 1805),
+  // the Combined Fleet's squadrons blockaded in Brest, Rochefort, Ferrol, Cádiz, Cartagena and Toulon. Three navies, as
+  // in 1592: France and Spain allied against Britain.
+  trafalgar: {
+    id: 'trafalgar',
+    factions: ['britain', 'france', 'spain1805'],
+    order: TRAFALGAR_REGION_ORDER,
+    start: TRAFALGAR_START,
+    relations: { 'britain:france': 'war', 'britain:spain1805': 'war', 'france:spain1805': 'allied' },
+    year: 1805,
+    since: 0,
+    intro: '영국과 프랑스·에스파냐 연합이 해협과 대서양, 지중해의 물길을 두고 맞섭니다.',
+    seed: 1805,
   },
 };
 

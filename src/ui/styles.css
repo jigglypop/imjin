@@ -109,6 +109,13 @@
   --holyleague-soft: rgba(147, 166, 207, 0.16);
   --ottoman: #c9786e;
   --ottoman-soft: rgba(201, 120, 110, 0.16);
+  /* 1805: the Royal Navy's red, the French blue, Spain's gold */
+  --britain: #cf8277;
+  --britain-soft: rgba(207, 130, 119, 0.16);
+  --france: #8ea5d8;
+  --france-soft: rgba(142, 165, 216, 0.16);
+  --spain1805: #d6b45f;
+  --spain1805-soft: rgba(214, 180, 95, 0.16);
   /* The same tones, deeper, for marks drawn straight on the pale map (campaign lines and arrowheads) */
   --joseon-deep: #46637a;
   --japan-deep: #6b4a40;

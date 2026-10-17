@@ -1,10 +1,12 @@
 import koreaMeta from '../../select/demMeta.json';
 import britainMeta from '../../select/britainMeta.json';
 import mediterraneanMeta from '../../select/mediterraneanMeta.json';
+import atlanticMeta from '../../select/atlanticMeta.json';
 import { EXAGGERATION as KOREA_EXAGGERATION } from '../../select/demFrame';
 import koreaFrame from './mapFrame.json';
 import armadaFrame from './mapFrameArmada.json';
 import lepantoFrame from './mapFrameLepanto.json';
+import trafalgarFrame from './mapFrameTrafalgar.json';
 import { mapTheatreId } from './theatreChoice';
 import type { TheatreId } from '../../sim/grand/types';
 
@@ -39,6 +41,8 @@ const THEATRE_MAPS: Record<TheatreId, MapTheatre> = {
   armada: { id: 'armada', meta: britainMeta, frame: armadaFrame, dem: '/ui/britain_dem.webp', land: '/ui/grand_terrain_armada.bin', image: '/ui/map_channel.webp', exaggeration: 9, farLand: false, openOnSeat: 6 },
   // The Mediterranean's DEM is coarser still, but its mountains are high (the Pindus, the Apennines, the Alps in the north).
   lepanto: { id: 'lepanto', meta: mediterraneanMeta, frame: lepantoFrame, dem: '/ui/mediterranean_dem.webp', land: '/ui/grand_terrain_lepanto.bin', image: '/ui/map_mediterranean.webp', exaggeration: 7, farLand: false, openOnSeat: 6 },
+  // The Atlantic world's DEM is the coarsest (1.5 km a texel); the Pyrenees, the Alps and the Sierra Nevada carry its relief.
+  trafalgar: { id: 'trafalgar', meta: atlanticMeta, frame: trafalgarFrame, dem: '/ui/atlantic_dem.webp', land: '/ui/grand_terrain_trafalgar.bin', image: '/ui/map_atlantic.webp', exaggeration: 7, farLand: false, openOnSeat: 6 },
 };
 
 export const MAP: MapTheatre = THEATRE_MAPS[mapTheatreId()];

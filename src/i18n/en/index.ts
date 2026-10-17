@@ -9,6 +9,7 @@ import { EN_LEPANTO } from './lepanto';
 import { EN_TRAFALGAR } from './trafalgar';
 import { EN_ARMADA_CAMPAIGN } from './armadaCampaign';
 import { EN_LEPANTO_CAMPAIGN } from './lepantoCampaign';
+import { EN_TRAFALGAR_CAMPAIGN } from './trafalgarCampaign';
 import { EN_EXPANSION } from './expansion';
 import { EN_CONQUEST_DEPTH } from './conquest-depth';
 import { EN_CONTROLS } from './controls';
@@ -37,6 +38,7 @@ export const EN: Record<string, string> = {
   ...EN_TRAFALGAR,
   ...EN_ARMADA_CAMPAIGN,
   ...EN_LEPANTO_CAMPAIGN,
+  ...EN_TRAFALGAR_CAMPAIGN,
   ...EN_MENUS,
   ...EN_BATTLE,
   ...EN_CAMPAIGN,

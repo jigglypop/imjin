@@ -330,6 +330,86 @@ export const TREES: Record<string, CommanderTree> = {
     trait: { label: '알렉산드리아 총독', text: '이집트 갤리선단을 이끈 우익의 지휘관: 사기 +5%, 선회 +4%', effect: { morale: 1.05, turn: 1.04 } },
     mastery: { label: '해안의 우익', text: '방어 +5%, 백병 +5%', effect: { defense: 1.05, melee: 1.05 } },
   },
+  // The Trafalgar theatre (Corbett, The Campaign of Trafalgar; Adkins, Trafalgar; Harbron, Trafalgar and the Spanish Navy;
+  // Rodger, The Command of the Ocean).
+  nelson: {
+    hanja: 'Horatio Nelson',
+    branches: ['command', 'gunnery', 'seamanship'],
+    trait: { label: '넬슨 터치', text: '두 종렬로 적의 대열을 끊는 계획을 함장들과 나누었다: 사기 +8%, 명중 +4%, 대담한 지휘', effect: { morale: 1.08, accuracy: 1.04, temper: 'bold' } },
+    mastery: { label: '형제 함장들', text: '함장마다 제 판단으로 싸운다: 사기 +6%, 장전 +5%, 백병 +4%', effect: { morale: 1.06, reload: 1.05, melee: 1.04 } },
+  },
+  cornwallis: {
+    hanja: 'William Cornwallis',
+    branches: ['seamanship', 'command'],
+    trait: { label: '빌리 블루', text: '해협 함대를 이끌고 겨울에도 브레스트 앞바다를 떠나지 않았다: 방어 +6%, 항속 +6%, 침착한 지휘', effect: { defense: 1.06, march: 0.06, temper: 'steady' } },
+    mastery: { label: '근접 봉쇄', text: '방어 +5%, 사기 +5%, 선회 +4%', effect: { defense: 1.05, morale: 1.05, turn: 1.04 } },
+  },
+  collingwood: {
+    hanja: 'Cuthbert Collingwood',
+    branches: ['gunnery', 'command'],
+    trait: { label: '세 번의 일제 사격', text: '3분 30초에 일제 사격 세 번을 하도록 수병을 조련했다: 장전 +8%, 침착한 지휘', effect: { reload: 1.08, temper: 'steady' } },
+    mastery: { label: '풍하 종렬', text: '로열 소버린호가 먼저 적진에 들었다: 명중 +5%, 사기 +5%', effect: { accuracy: 1.05, morale: 1.05 } },
+  },
+  calder: {
+    hanja: 'Robert Calder',
+    branches: ['command', 'seamanship'],
+    trait: { label: '피니스테레의 안개', text: '안개 속에서 두 척을 붙잡고도 다시 싸우지 않았다: 방어 +6%, 신중한 지휘', effect: { defense: 1.06, temper: 'cautious' } },
+    mastery: { label: '페롤 봉쇄', text: '방어 +5%, 항속 +6%', effect: { defense: 1.05, march: 0.06 } },
+  },
+  hardy: {
+    hanja: 'Thomas Masterman Hardy',
+    branches: ['boarding', 'command'],
+    trait: { label: '빅토리호의 함장', text: '넬슨 곁 뒷갑판에서 포화를 견딘 기함 함장: 방어 +6%, 사기 +4%, 침착한 지휘', effect: { defense: 1.06, morale: 1.04, temper: 'steady' } },
+    mastery: { label: '넬슨의 마지막 곁', text: '사기 +6%, 백병 +5%', effect: { morale: 1.06, melee: 1.05 } },
+  },
+  blackwood: {
+    hanja: 'Henry Blackwood',
+    branches: ['seamanship', 'gunnery'],
+    trait: { label: '함대의 눈', text: '카디스 앞바다에서 연합 함대를 지켜본 프리깃 전대장: 속도 +6%, 선회 +6%, 항속 +8%', effect: { speed: 1.06, turn: 1.06, march: 0.08 } },
+    mastery: { label: '유리알러스호', text: '속도 +4%, 명중 +5%', effect: { speed: 1.04, accuracy: 1.05 } },
+  },
+  villeneuve: {
+    hanja: 'Pierre-Charles Villeneuve',
+    branches: ['seamanship', 'command'],
+    trait: { label: '나일의 생존자', text: '아부키르만에서 남은 함선을 이끌고 빠져나간 제독: 항속 +8%, 방어 +3%, 신중한 지휘', effect: { march: 0.08, defense: 1.03, temper: 'cautious' } },
+    mastery: { label: '서인도 원정', text: '대서양을 두 번 건넌 함대: 속도 +4%, 항속 +8%', effect: { speed: 1.04, march: 0.08 } },
+  },
+  ganteaume: {
+    hanja: 'Honoré Ganteaume',
+    branches: ['command', 'gunnery'],
+    trait: { label: '브레스트 함대', text: '봉쇄 속에서 스물한 척을 출항 대기시킨 제독: 방어 +5%, 사기 +4%, 신중한 지휘', effect: { defense: 1.05, morale: 1.04, temper: 'cautious' } },
+    mastery: { label: '이집트 귀환', text: '1799년 보나파르트를 이집트에서 몰래 데려왔다: 항속 +8%, 사기 +4%', effect: { march: 0.08, morale: 1.04 } },
+  },
+  missiessy: {
+    hanja: 'Édouard de Missiessy',
+    branches: ['seamanship', 'gunnery'],
+    trait: { label: '로슈포르 탈출', text: '1805년 1월 봉쇄를 빠져나가 서인도를 습격했다: 속도 +6%, 항속 +8%, 침착한 지휘', effect: { speed: 1.06, march: 0.08, temper: 'steady' } },
+    mastery: { label: '도미니카 습격', text: '속도 +4%, 명중 +5%', effect: { speed: 1.04, accuracy: 1.05 } },
+  },
+  lucas: {
+    hanja: 'Jean-Jacques Lucas',
+    branches: ['boarding', 'gunnery'],
+    trait: { label: '르두타블호의 조련', text: '수병들에게 수류탄과 소총을 익혀 빅토리호에 올라타려 했다: 백병 +10%, 대담한 지휘', effect: { melee: 1.1, temper: 'bold' } },
+    mastery: { label: '망루의 소총수', text: '르두타블호 망루의 소총수가 넬슨을 쏘았다: 명중 +6%, 백병 +5%', effect: { accuracy: 1.06, melee: 1.05 } },
+  },
+  gravina: {
+    hanja: 'Federico Gravina',
+    branches: ['command', 'seamanship'],
+    trait: { label: '관측 전대', text: '연합 함대의 예비대를 이끈 에스파냐 총사령관: 사기 +6%, 방어 +4%, 침착한 지휘', effect: { morale: 1.06, defense: 1.04, temper: 'steady' } },
+    mastery: { label: '프린시페 데 아스투리아스호', text: '사기 +5%, 방어 +5%, 선회 +4%', effect: { morale: 1.05, defense: 1.05, turn: 1.04 } },
+  },
+  alava: {
+    hanja: 'Ignacio María de Álava',
+    branches: ['boarding', 'command'],
+    trait: { label: '산타 아나호', text: '로열 소버린호와 맞붙어 끝까지 싸운 부사령관: 방어 +7%, 백병 +4%, 침착한 지휘', effect: { defense: 1.07, melee: 1.04, temper: 'steady' } },
+    mastery: { label: '탈환의 출격', text: '사기 +5%, 백병 +5%', effect: { morale: 1.05, melee: 1.05 } },
+  },
+  churruca: {
+    hanja: 'Cosme Damián Churruca',
+    branches: ['gunnery', 'seamanship'],
+    trait: { label: '항해자이자 측량가', text: '마젤란 해협과 카리브해를 측량한 함장: 명중 +6%, 선회 +5%, 침착한 지휘', effect: { accuracy: 1.06, turn: 1.05, temper: 'steady' } },
+    mastery: { label: '산후안 네포무세노호', text: '여러 척에 둘러싸여도 깃발을 내리지 않았다: 방어 +6%, 사기 +6%', effect: { defense: 1.06, morale: 1.06 } },
+  },
 };
 
 export const MASTERY_ID = 'mastery';
@@ -394,6 +474,25 @@ export const TECHS: readonly TechDef[] = [
   { id: 'archers', faction: 'ottoman', label: '복합궁 사수', text: '전 함선 장전 +6%, 명중 +4%', gold: 400, turns: 2, needs: [], effect: { reload: 1.06, accuracy: 1.04 } },
   { id: 'corsairs', faction: 'ottoman', label: '바르바리 해적 편입', text: '카드르가·칼리야타 속도 +5%, 선회 +6%', gold: 380, turns: 2, needs: [], kinds: ['kadirga', 'kalyata'], effect: { speed: 1.05, turn: 1.06 } },
   { id: 'drill', faction: 'ottoman', label: '수병 조련', text: '사기 +8%, 장수 경험 +25%', gold: 350, turns: 2, needs: ['janissaries'], effect: { morale: 1.08, xp: 1.25 } },
+  // The Trafalgar theatre. Britain fitted flintlock gunlocks to its guns and drilled its crews to fire faster; coppered
+  // hulls kept their speed through a long blockade; Popham's telegraphic code (1803) carried Nelson's signal. France
+  // embarked soldiers of the Armée d'Angleterre, and Lucas trained the Redoutable's men to board and to fire from the
+  // tops; Spain's marine artillery corps served its guns, the Santísima Trinidad was rebuilt with a fourth deck in
+  // 1795, and Havana's yard built its hulls of Cuban hardwoods (Goodwin; Adkins; Harbron; Lavery, Nelson's Navy).
+  { id: 'gunlocks', faction: 'britain', label: '부싯돌 격발기', text: '전 함선 장전 +8%, 명중 +3%', gold: 420, turns: 2, needs: [], effect: { reload: 1.08, accuracy: 1.03 } },
+  { id: 'copper', faction: 'britain', label: '구리 피복', text: '속도 +5%, 선회 +4%, 항속 +6%', gold: 400, turns: 2, needs: [], effect: { speed: 1.05, turn: 1.04, march: 0.06 } },
+  { id: 'popham', faction: 'britain', label: '포펌 신호서', text: '사기 +6%, 명중 +4%', gold: 380, turns: 2, needs: ['gunlocks'], effect: { morale: 1.06, accuracy: 1.04 } },
+  { id: 'drill', faction: 'britain', label: '수병 조련', text: '사기 +8%, 장수 경험 +25%', gold: 350, turns: 2, needs: ['copper'], effect: { morale: 1.08, xp: 1.25 } },
+
+  { id: 'boarders', faction: 'france', label: '승선 돌격 조련', text: '백병 +12%', gold: 400, turns: 2, needs: [], effect: { melee: 1.12 } },
+  { id: 'soldiers', faction: 'france', label: '대육군 승선', text: '백병 +6%, 방어 +6%', gold: 420, turns: 2, needs: [], effect: { melee: 1.06, defense: 1.06 } },
+  { id: 'tops', faction: 'france', label: '망루 저격수', text: '명중 +6%, 백병 +4%', gold: 380, turns: 2, needs: ['boarders'], effect: { accuracy: 1.06, melee: 1.04 } },
+  { id: 'drill', faction: 'france', label: '수병 조련', text: '사기 +8%, 장수 경험 +25%', gold: 350, turns: 2, needs: ['soldiers'], effect: { morale: 1.08, xp: 1.25 } },
+
+  { id: 'artillery', faction: 'spain1805', label: '해병 포병대', text: '명중 +7%, 장전 +3%', gold: 400, turns: 2, needs: [], effect: { accuracy: 1.07, reload: 1.03 } },
+  { id: 'fourdecks', faction: 'spain1805', label: '4층 갑판 개조', text: '산티시마 트리니다드 건조 가능 (선소 3단계)', gold: 450, turns: 2, needs: [], unlock: 'trinidad' },
+  { id: 'havana', faction: 'spain1805', label: '아바나 조선소', text: '74문 전열함·트리니다드 방어 +10%', gold: 400, turns: 2, needs: ['artillery'], kinds: ['es74', 'trinidad'], effect: { defense: 1.1 } },
+  { id: 'drill', faction: 'spain1805', label: '수병 조련', text: '사기 +8%, 장수 경험 +25%', gold: 350, turns: 2, needs: ['fourdecks'], effect: { morale: 1.08, xp: 1.25 } },
 ];
 
 export const techsOf = (f: GrandFaction): TechDef[] => TECHS.filter((t) => t.faction === f);

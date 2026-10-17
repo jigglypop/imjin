@@ -228,6 +228,57 @@
       "prompt": "Emblem of the Ottoman fleet of 1571: a deep crimson circular badge with a bold white crescent above a white stylized Mediterranean war galley silhouette (long low hull, a single bank of oars, two lateen sails) on stylized white waves, accents of crimson, white and dark green. Clean modern seal / crest design, flat vector-like illustration with subtle depth, perfectly centered, a single circular badge filling about 88 percent of the square, bold simple shapes that stay legible at 32 pixels, refined thin gold rim. No sun disc, no rays, no sunburst. The area outside the circular badge is a pure flat white background (#FFFFFF) with nothing else, no shadow, no glow. No text, no letters, no Chinese characters, no numbers.",
       "model": "gemini-3.1-flash-image-preview",
       "generated": "1024x1024"
+    },
+    "emblem_britain": {
+      "kind": "emblem",
+      "file": "emblem_britain.webp",
+      "size": [
+        512,
+        512
+      ],
+      "small": "emblem_britain_sm.webp",
+      "smallSize": [
+        128,
+        128
+      ],
+      "smallBytes": 7802,
+      "prompt": "Emblem of the Royal Navy of 1805: a deep navy-blue circular badge with a bold gold fouled anchor (an anchor with its cable twisted round the shank) above a small white stylized three-masted ship of the line silhouette (two rows of gunports, square sails) on stylized white waves, accents of navy blue, red and gold. Clean modern seal / crest design, flat vector-like illustration with subtle depth, perfectly centered, a single circular badge filling about 88 percent of the square, bold simple shapes that stay legible at 32 pixels, refined thin gold rim. No sun disc, no rays, no sunburst. The area outside the circular badge is a pure flat white background (#FFFFFF) with nothing else, no shadow, no glow. No text, no letters, no Chinese characters, no numbers.",
+      "model": "gemini-3.1-flash-image-preview",
+      "generated": "1024x1024"
+    },
+    "emblem_france": {
+      "kind": "emblem",
+      "file": "emblem_france.webp",
+      "size": [
+        512,
+        512
+      ],
+      "small": "emblem_france_sm.webp",
+      "smallSize": [
+        128,
+        128
+      ],
+      "smallBytes": 8298,
+      "prompt": "Emblem of the French Imperial Navy of 1805: a deep blue circular badge with a bold gold Napoleonic eagle with spread wings (no crown, no letters) above a small white stylized three-masted ship of the line silhouette on stylized white waves, a thin band of blue, white and red along the rim, accents of blue, white, red and gold. Clean modern seal / crest design, flat vector-like illustration with subtle depth, perfectly centered, a single circular badge filling about 88 percent of the square, bold simple shapes that stay legible at 32 pixels, refined thin gold rim. No sun disc, no rays, no sunburst. The area outside the circular badge is a pure flat white background (#FFFFFF) with nothing else, no shadow, no glow. No text, no letters, no Chinese characters, no numbers.",
+      "model": "gemini-3.1-flash-image-preview",
+      "generated": "1024x1024"
+    },
+    "emblem_spain1805": {
+      "kind": "emblem",
+      "file": "emblem_spain1805.webp",
+      "size": [
+        512,
+        512
+      ],
+      "small": "emblem_spain1805_sm.webp",
+      "smallSize": [
+        128,
+        128
+      ],
+      "smallBytes": 7246,
+      "prompt": "Emblem of the Spanish Navy of 1805: a crimson and gold circular badge (the red and yellow of the Spanish naval ensign of 1785) with a bold simple gold castle tower with three turrets above a small white stylized three-masted ship of the line silhouette on stylized white waves, accents of crimson, gold and black. Clean modern seal / crest design, flat vector-like illustration with subtle depth, perfectly centered, a single circular badge filling about 88 percent of the square, bold simple shapes that stay legible at 32 pixels, refined thin gold rim. No sun disc, no rays, no sunburst. The area outside the circular badge is a pure flat white background (#FFFFFF) with nothing else, no shadow, no glow. No text, no letters, no Chinese characters, no numbers.",
+      "model": "gemini-3.1-flash-image-preview",
+      "generated": "1024x1024"
     }
   }
 }

@@ -60,6 +60,10 @@ const PIN: Partial<Record<RegionId, { lon: number; lat: number }>> = {
   famagusta: { lon: 29.75, lat: 35.6 },
   tripoli: { lon: 13.6, lat: 34.75 },
   alexandria: { lon: 28.3, lat: 34.75 },
+  // The Trafalgar theatre's Caribbean islands, 5,000 km to the west: pinned on the Atlantic at its western edge, Barbados
+  // to the south-east of Martinique as it lies.
+  martinique: { lon: -10.9, lat: 38.3 },
+  barbados: { lon: -10.2, lat: 37.5 },
 };
 
 const LABEL: Partial<Record<RegionId, RegionView['labelSide']>> = {
@@ -459,6 +463,30 @@ const OPTION_TEXT: Record<GrandFaction, { name: string; leaders: string[]; blurb
     weakness: '약한 이물 화력',
     difficulty: 2,
   },
+  britain: {
+    name: '영국',
+    leaders: ['넬슨', '콘월리스'],
+    blurb: '브레스트와 툴롱, 페롤과 카디스를 봉쇄하며 바다를 지키는 진영입니다. 빠른 포격과 숙련된 수병으로 연합 함대가 모이기 전에 하나씩 잡아야 합니다.',
+    strengths: ['빠른 포격', '숙련된 수병', '여러 바다의 기지'],
+    weakness: '두 적을 동시에 상대',
+    difficulty: 2,
+  },
+  france: {
+    name: '프랑스',
+    leaders: ['빌뇌브', '강톰'],
+    blurb: '나폴레옹의 함대입니다. 브레스트와 툴롱, 로슈포르의 함대를 봉쇄에서 빼내 에스파냐 함대와 합쳐 해협을 쥐고, 불로뉴의 대육군을 영국으로 건너보내야 합니다.',
+    strengths: ['큰 함선', '도선 돌격', '에스파냐와 동맹'],
+    weakness: '봉쇄된 항구, 경험 없는 수병',
+    difficulty: 3,
+  },
+  spain1805: {
+    name: '에스파냐',
+    leaders: ['그라비나', '알라바'],
+    blurb: '카디스와 페롤, 카르타헤나의 함대로 프랑스와 손잡은 진영입니다. 크고 튼튼한 전열함과 산티시마 트리니다드로 지브롤터 해협을 쥐고 있습니다.',
+    strengths: ['튼튼한 선체', '4층 갑판의 거함', '프랑스와 동맹'],
+    weakness: '수병 부족',
+    difficulty: 3,
+  },
 };
 
 /** The pick cards of a theatre's navies (the page's own theatre by default). */
@@ -479,7 +507,7 @@ export const factionOptions = (theatre = mapTheatreId()): FactionOption[] =>
     };
   });
 
-const NAVY: Record<GrandFaction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군', england: '잉글랜드 수군', spain: '에스파냐 수군', holyleague: '신성동맹 함대', ottoman: '오스만 함대' };
+const NAVY: Record<GrandFaction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군', england: '잉글랜드 수군', spain: '에스파냐 수군', holyleague: '신성동맹 함대', ottoman: '오스만 함대', britain: '영국 해군', france: '프랑스 해군', spain1805: '에스파냐 해군' };
 
 export function resultView(s: BattleSummary): BattleResultView {
   const winnerSide = s.winner === 'attacker' ? s.attacker : s.defender;

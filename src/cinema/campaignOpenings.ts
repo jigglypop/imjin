@@ -14,7 +14,7 @@ export type CampaignOpening = { theatre: TheatreId; shots: OpeningShot[]; title:
 
 const E = (lon: number, lat: number, dist: number, yaw: number, pitch: number): MapEye => ({ lon, lat, dist, yaw, pitch });
 
-export const CAMPAIGN_OPENINGS: Record<'imjin' | 'armada' | 'lepanto', CampaignOpening> = {
+export const CAMPAIGN_OPENINGS: Record<'imjin' | 'armada' | 'lepanto' | 'trafalgar', CampaignOpening> = {
   imjin: {
     theatre: 'imjin',
     shots: [
@@ -52,6 +52,18 @@ export const CAMPAIGN_OPENINGS: Record<'imjin' | 'armada' | 'lepanto', CampaignO
       { dur: 7.5, from: E(21.1, 38.25, 0.08, -0.5, 0.26), to: E(21.2, 38.35, 0.05, -0.8, 0.22), when: '정오 무렵', where: '쿠르촐라리 앞바다', line: '갈레아스 여섯 척의 포가 먼저 울렸다.', source: 'Capponi 2006, 12장' },
     ],
     title: { eyebrow: '1571', title: '레판토', sub: '갤리선이 맞붙은 마지막 대해전', source: 'Guilmartin 2003', dur: 8.5 },
+  },
+  trafalgar: {
+    theatre: 'trafalgar',
+    shots: [
+      { dur: 7.5, from: E(1.2, 50.4, 0.16, 0.4, 0.3), to: E(1.55, 50.7, 0.1, 0.15, 0.25), when: '1804년 – 1805년', where: '불로뉴', line: '영국을 칠 군대가 해협 건너 불로뉴에 모였다.', source: 'Corbett 1910' },
+      { dur: 7.5, from: E(6.4, 42.6, 0.14, -0.5, 0.3), to: E(6.0, 43.0, 0.09, -0.2, 0.25), when: '1805년 3월 30일', where: '툴롱', line: '빌뇌브의 함대가 넬슨의 감시를 피해 툴롱을 빠져나갔다.', source: 'Corbett 1910' },
+      { dur: 7.5, from: E(-6.9, 36.1, 0.12, 0.6, 0.3), to: E(-6.45, 36.4, 0.08, 0.3, 0.25), when: '4월 9일', where: '카디스', line: '그라비나의 에스파냐 함대가 카디스에서 합류했다.', source: 'Corbett 1910' },
+      { dur: 7.5, from: E(-10.4, 42.6, 0.18, 1.0, 0.28), to: E(-9.8, 43.0, 0.12, 1.3, 0.24), when: '7월 22일', where: '피니스테레 곶 앞바다', line: '안개 속에서 콜더가 연합 함대와 싸워 두 척을 빼앗았다.', source: 'Corbett 1910' },
+      { dur: 7.5, from: E(-8.6, 39.5, 0.4, 0.2, 0.28), to: E(-7.2, 37.6, 0.3, 0.4, 0.25), when: '8월 20일', where: '카디스', line: '연합 함대는 해협 대신 남쪽 카디스로 들어갔다.', source: 'Corbett 1910' },
+      { dur: 8, from: E(-6.6, 35.8, 0.12, 0.9, 0.26), to: E(-6.2, 36.0, 0.07, 1.2, 0.22), when: '1805년 10월 21일 정오 무렵', where: '트라팔가르 곶 앞바다', line: '넬슨의 두 종대가 연합 함대 서른세 척의 전열을 꿰뚫었다.', source: 'Corbett 1910 · Adkins 2004' },
+    ],
+    title: { eyebrow: '1805', title: '트라팔가르', sub: '"영국은 모든 이가 제 의무를 다하기를 기대한다"', source: '넬슨의 신호, 1805년 10월 21일 (Pasco의 기록)', dur: 8.5 },
   },
 };
 

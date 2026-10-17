@@ -7,15 +7,15 @@ import type { TheatreId } from '../../sim/grand/types';
 
 /** The theatre a chapter's campaign is fought in. A chapter without a campaign of its own has none. */
 export const theatreOfChapter = (chapter: string): TheatreId | null =>
-  chapter === 'armada' ? 'armada' : chapter === 'lepanto' ? 'lepanto' : chapter === 'imjin' ? 'imjin' : null;
+  chapter === 'armada' ? 'armada' : chapter === 'lepanto' ? 'lepanto' : chapter === 'trafalgar' ? 'trafalgar' : chapter === 'imjin' ? 'imjin' : null;
 
-/** The theatre the address names, without fixing anything: /armada/campaign is the Armada's, /lepanto/campaign Lepanto's, the rest 1592's. */
+/** The theatre the address names, without fixing anything: /armada/campaign is the Armada's, /lepanto/campaign Lepanto's, /trafalgar/campaign Trafalgar's, the rest 1592's. */
 export const theatreOfAddress = (): TheatreId => fromAddress();
 
 const fromAddress = (): TheatreId => {
   const path = typeof location === 'undefined' ? '/' : location.pathname;
-  const m = /^\/(?:en\/|ko\/)?(armada|lepanto)(?:\/|$)/.exec(path);
-  return m ? (m[1] as 'armada' | 'lepanto') : 'imjin';
+  const m = /^\/(?:en\/|ko\/)?(armada|lepanto|trafalgar)(?:\/|$)/.exec(path);
+  return m ? (m[1] as 'armada' | 'lepanto' | 'trafalgar') : 'imjin';
 };
 
 let locked: TheatreId | null = null;

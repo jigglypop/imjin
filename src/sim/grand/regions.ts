@@ -2,6 +2,7 @@ import type { ShipKind } from '../types';
 import type { BuildingKind, GrandFaction, RegionId } from './types';
 import { ARMADA_COMMANDERS, ARMADA_EDGES, ARMADA_REGION_ORDER, ARMADA_REGIONS } from './regionsArmada';
 import { LEPANTO_COMMANDERS, LEPANTO_EDGES, LEPANTO_REGION_ORDER, LEPANTO_REGIONS } from './regionsLepanto';
+import { TRAFALGAR_COMMANDERS, TRAFALGAR_EDGES, TRAFALGAR_REGION_ORDER, TRAFALGAR_REGIONS } from './regionsTrafalgar';
 
 export type Terrain = 'strait' | 'bay' | 'open' | 'island';
 
@@ -338,10 +339,10 @@ const KOREAN_REGIONS: Partial<Record<RegionId, RegionDef>> = {
 };
 
 /** Every region of every theatre (theatre.ts picks a campaign's own). The Korean ones keep their order first. */
-export const REGIONS: Record<RegionId, RegionDef> = { ...KOREAN_REGIONS, ...ARMADA_REGIONS, ...LEPANTO_REGIONS } as Record<RegionId, RegionDef>;
+export const REGIONS: Record<RegionId, RegionDef> = { ...KOREAN_REGIONS, ...ARMADA_REGIONS, ...LEPANTO_REGIONS, ...TRAFALGAR_REGIONS } as Record<RegionId, RegionDef>;
 
 /** Every theatre's regions, the Korean ones first in REGION_ORDER, so a Korean region's index is its REGION_ORDER index. */
-export const ALL_REGION_ORDER: readonly RegionId[] = [...REGION_ORDER, ...ARMADA_REGION_ORDER, ...LEPANTO_REGION_ORDER];
+export const ALL_REGION_ORDER: readonly RegionId[] = [...REGION_ORDER, ...ARMADA_REGION_ORDER, ...LEPANTO_REGION_ORDER, ...TRAFALGAR_REGION_ORDER];
 const INDEX = new Map(ALL_REGION_ORDER.map((id, i) => [id, i]));
 /** A region's place in ALL_REGION_ORDER: the tie-break of route searches and the seed tag of a region's fights. */
 export const regionIndex = (id: RegionId) => INDEX.get(id) ?? -1;
@@ -386,7 +387,7 @@ const EDGES: [RegionId, RegionId, 1 | 2 | 3][] = [
 
 export const LANES: Record<RegionId, Lane[]> = (() => {
   const out = Object.fromEntries(ALL_REGION_ORDER.map((id) => [id, [] as Lane[]])) as Record<RegionId, Lane[]>;
-  for (const [a, b, turns] of [...EDGES, ...ARMADA_EDGES, ...LEPANTO_EDGES]) {
+  for (const [a, b, turns] of [...EDGES, ...ARMADA_EDGES, ...LEPANTO_EDGES, ...TRAFALGAR_EDGES]) {
     out[a].push({ to: b, turns });
     out[b].push({ to: a, turns });
   }
@@ -448,6 +449,7 @@ export const COMMANDERS: CommanderDef[] = [
   // Other theatres' commanders join only campaigns whose navies they serve (joinCommanders skips absent navies).
   ...ARMADA_COMMANDERS,
   ...LEPANTO_COMMANDERS,
+  ...TRAFALGAR_COMMANDERS,
 ];
 
 /** Strategic starting positions, not simultaneous historical ownership of every port. */

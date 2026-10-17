@@ -183,5 +183,13 @@ Lifespans on the name cards follow 한국민족문화대백과 / ja.wikipedia / 
 | | The six galleasses open fire first | Capponi 2006, ch. 12 |
 | | "The last great battle of galley fleets" (closing line) | Guilmartin 2003 |
 
-Dates of the Armada follow the Gregorian calendar, as the battles' own data do. Trafalgar has no campaign yet; its
-opening waits for it.
+| 1805 | 1804–1805: the army for England gathers at Boulogne | Corbett 1910 |
+| | 30 March: Villeneuve leaves Toulon past Nelson's watch | Corbett 1910 |
+| | 9 April: Gravina's Spanish squadron joins at Cadiz | Corbett 1910 |
+| | 22 July: Calder's action off Finisterre, two Spanish ships taken | Corbett 1910 |
+| | 20 August: the combined fleet runs south into Cadiz | Corbett 1910 |
+| | 21 October: Nelson's two columns break the line of 33 | Corbett 1910; Adkins 2004 |
+| | "England expects that every man will do his duty" | Nelson's signal, 21 October 1805 (Pasco) |
+
+Dates of the Armada follow the Gregorian calendar, as the battles' own data do. Corbett 1910 is J. S. Corbett,
+*The Campaign of Trafalgar*; Adkins 2004 is R. Adkins, *Trafalgar: The Biography of a Battle*.

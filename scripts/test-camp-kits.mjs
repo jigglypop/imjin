@@ -24,7 +24,7 @@ try {
   });
   const path = join(temporary, 'camp-kits.mjs'); await writeFile(path, bundled.outputFiles[0].contents);
   const { buildShipKit, campPlan, settlementPieces, buildShip, modelKind, PROCEDURAL_KINDS, SHIP_SPECS, buildings, pieces } = await import(pathToFileURL(path).href);
-  const NAVIES = ['joseon', 'japan', 'ming', 'england', 'spain', 'holyleague', 'ottoman'];
+  const NAVIES = ['joseon', 'japan', 'ming', 'england', 'spain', 'holyleague', 'ottoman', 'britain', 'france', 'spain1805'];
   const tris = (m) => m.index.length / 3;
 
   // The settlements' buildings, made like the battle's ships: procedural parts on each navy's texture atlas.

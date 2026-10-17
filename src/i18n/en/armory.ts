@@ -45,4 +45,5 @@ export const EN_ARMORY: Record<string, string> = {
   '{n} 엽전': '{n} coins',
   '다시 벼릴 수 없는 갑옷입니다': 'This armor cannot be reforged',
   '기본 갑옷에는 능력치가 붙지 않습니다.': 'Basic armor has no rolled stats.',
+  '에스파냐 1805': 'Spain 1805',
 };

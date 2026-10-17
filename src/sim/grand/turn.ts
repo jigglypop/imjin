@@ -762,7 +762,7 @@ function runEvents(g: Grand) {
     if (g.regions[plan.at].owner !== f) continue;
     const ships = supportReinforcements(g, f, g.forces === 'wide-v1' ? scaleShips(plan.ships, TUNING.forceScale) : plan.ships);
     if (!Object.values(ships).some((n) => n && n > 0)) continue;
-    const fleet = spawnFleet(g, f, plan.at, f === 'japan' ? '후속 함대' : f === 'ming' ? '원군 함대' : f === 'england' ? '여왕의 함대' : f === 'spain' ? '증원 함대' : f === 'holyleague' ? '동맹 증원 함대' : f === 'ottoman' ? '술탄의 함대' : '의병 함대', ships, null);
+    const fleet = spawnFleet(g, f, plan.at, f === 'japan' ? '후속 함대' : f === 'ming' ? '원군 함대' : f === 'england' ? '여왕의 함대' : f === 'spain' ? '증원 함대' : f === 'holyleague' ? '동맹 증원 함대' : f === 'ottoman' ? '술탄의 함대' : f === 'britain' ? '해군성의 증원 함대' : f === 'france' ? '황제의 함대' : f === 'spain1805' ? '국왕의 함대' : '의병 함대', ships, null);
     note(g, '{navy}의 {fleet} {n}척이 {place}에 도착했습니다', { navy: navyName(f), fleet: fleet.name, n: fleet.ships.length, place: REGIONS[plan.at].name }, f === g.player ? 'good' : 'info');
   }
 }

@@ -69,7 +69,7 @@ export function grandInfo(rb: RegionBattle): BattleInfo {
 /** Bearing from the attacker's anchorage to the defender's port in the terrain's own coordinates: the engine turns the map to the light by it. */
 export const grandAxis = (rb: RegionBattle) => grandMap(rb).axis;
 
-const DEFAULT_PORTRAIT: Record<GrandFaction, string> = { joseon: 'portrait_admiral', japan: 'portrait_japan', ming: 'portrait_deng', england: 'portrait_howard', spain: 'portrait_medina', holyleague: 'portrait_donjuan', ottoman: 'portrait_alipasha' };
+const DEFAULT_PORTRAIT: Record<GrandFaction, string> = { joseon: 'portrait_admiral', japan: 'portrait_japan', ming: 'portrait_deng', england: 'portrait_howard', spain: 'portrait_medina', holyleague: 'portrait_donjuan', ottoman: 'portrait_alipasha', britain: 'portrait_nelson', france: 'portrait_villeneuve', spain1805: 'portrait_gravina' };
 const HP_FLOOR = 0.25;
 
 /** The works the defender's port stands with, in the order they take the plots on the shore: yard, then guns, then the rest. */
