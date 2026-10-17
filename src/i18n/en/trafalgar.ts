@@ -104,28 +104,28 @@ export const EN_TRAFALGAR: Record<string, string> = {
   "1797년 2월 14일 아침, 안개가 걷히자 저비스의 영국 함대 15척 앞에 코르도바의 에스파냐 함대 27척이 두 무리로 흩어져 있었습니다. 저비스는 한 줄로 두 무리 사이를 뚫고 들어가 뱃머리를 돌려 큰 무리를 쫓았습니다. 에스파냐 본대가 영국 대열의 꼬리를 돌아 빠져나가려 하자, 넬슨은 명령 없이 캡틴호를 대열에서 빼내 그 앞을 막았고, 산니콜라스호와 산호세호에 차례로 올라타 두 배를 붙잡았습니다.":
     "On the morning of 14 February 1797, as the fog lifted, Jervis's fifteen British ships found Córdoba's twenty-seven Spanish ships scattered in two groups. Jervis led his single line between them and tacked after the larger group. When the Spanish main body tried to escape round the rear of the British line, Nelson took the Captain out of the line without orders to block it, and boarded first the San Nicolás and then the San José, taking both.",
   "영국 승리, 에스파냐 전열함 4척 나포": "British victory; four Spanish ships of the line taken",
-  "전열함 10척 (1급 4척)": "10 ships of the line (4 first-rates)",
-  "전열함 16척 (산티시마 트리니다드 포함, 두 무리)": "16 ships of the line (with the Santísima Trinidad, in two groups)",
+  "전열함 15척 (3층 갑판 6척)": "15 ships of the line (6 three-deckers)",
+  "전열함 27척 (산티시마 트리니다드 포함, 본대 18척 · 풍하 분대 9척)": "27 ships of the line (with the Santísima Trinidad; main body 18 · lee division 9)",
   "1798년 8월 1일 오후, 이집트 원정군을 싣고 온 브뤼에스의 프랑스 함대 13척이 아부키르 만에 한 줄로 닻을 내리고 있었습니다. 저녁 여섯 시가 넘어 도착한 넬슨은 날이 저무는데도 곧바로 공격했습니다. 앞장선 골리앗호의 폴리 함장이 프랑스 대열의 머리를 돌아 얕은 해안 쪽으로 들어갔고, 뒤따른 배들이 대열 양쪽에서 프랑스 배를 하나씩 끼고 쏘았습니다. 밤 열 시 무렵 기함 로리앙호가 불타 폭발했습니다.":
     "On the afternoon of 1 August 1798 Brueys's thirteen French ships, which had carried the army to Egypt, lay at anchor in a line in Abu Qir Bay. Nelson arrived after six in the evening and attacked at once, though night was falling. Captain Foley of the leading Goliath rounded the head of the French line into the shallows inshore, and the ships that followed doubled the French one by one from both sides. At about ten the flagship L'Orient caught fire and blew up.",
   "영국 대승, 프랑스 전열함 11척 나포·격침 · 로리앙호 폭발 · 브뤼에스 전사": "Decisive British victory; eleven French ships of the line taken or destroyed · L'Orient blown up · Brueys killed",
-  "74문 전열함 9척": "9 seventy-fours",
-  "전열함 9척 (닻을 내린 한 줄)": "9 ships of the line (anchored in a line)",
+  "74문 전열함 12척 · 50문함 리앤더 (좌초한 컬로든 제외)": "12 seventy-fours · the 50-gun Leander (not the Culloden, aground)",
+  "전열함 13척 (닻을 내린 한 줄, 프리깃 4척 제외)": "13 ships of the line (anchored in a line; the 4 frigates not shown)",
   "1805년 7월 22일, 서인도에서 돌아오던 빌뇌브의 연합 함대 20척이 피니스테레 곶 앞바다에서 콜더의 영국 함대 15척과 마주쳤습니다. 짙은 안개 속에서 두 함대는 서로를 제대로 보지 못한 채 엇갈리며 포를 쏘았고, 앞장선 그라비나의 에스파냐 배들이 가장 많이 맞았습니다. 해 질 녘까지 산라파엘호와 피르메호가 붙잡혔지만, 콜더는 이튿날 다시 싸우지 않았고 빌뇌브는 비고를 거쳐 페롤로 들어갔습니다.":
     "On 22 July 1805 Villeneuve's twenty ships of the Combined Fleet, back from the West Indies, met Calder's fifteen British ships off Cape Finisterre. In thick fog the two fleets fired as they passed, hardly able to see each other, and Gravina's Spaniards in the van took the worst of it. By nightfall the San Rafael and the Firme were taken, but Calder did not renew the fight the next day, and Villeneuve went into Vigo and on to Ferrol.",
   "결정적 승패 없음, 에스파냐 전열함 2척 나포 · 콜더는 뒤에 군법회의에 회부": "Indecisive; two Spanish ships of the line taken · Calder later court-martialled",
-  "전열함 10척 (1급 3척)": "10 ships of the line (3 three-deckers)",
-  "전열함 12척 (에스파냐 4척 · 프랑스 8척)": "12 ships of the line (4 Spanish · 8 French)",
+  "전열함 15척 (98문함 4척)": "15 ships of the line (4 ninety-eights)",
+  "전열함 20척 (에스파냐 6척 · 프랑스 14척)": "20 ships of the line (6 Spanish · 14 French)",
   "1805년 10월 21일, 카디스에서 나온 연합 함대 33척이 바람이 약한 바다에서 북쪽으로 길게 늘어선 초승달 대열을 이루었습니다. 넬슨은 함대를 두 줄로 나누어 대열에 직각으로 들이받았습니다. 빅토리호가 이끈 풍상 종렬은 큰 너울 위를 천천히 다가가며 반 시간 넘게 일방적으로 포격을 받았고, 빅토리호는 뷔상토르호의 고물을 지나며 포를 퍼부은 뒤 르두타블호와 맞붙었습니다. 넬슨은 르두타블호 돛대 위에서 날아온 총탄에 맞아 쓰러졌고, 승리를 들은 뒤 숨을 거두었습니다.":
     "On 21 October 1805 the thirty-three ships of the Combined Fleet, out of Cádiz, lay in a long crescent heading north in light airs. Nelson split his fleet into two columns and drove them at right angles into the line. The weather column, led by the Victory, crept down over a heavy swell under fire it could not return for more than half an hour; the Victory raked the Bucentaure's stern as she passed and then locked with the Redoutable. Nelson fell to a musket ball from the Redoutable's mizzen top, and died after hearing of the victory.",
   "영국 승리, 뷔상토르·산티시마 트리니다드·르두타블 나포 · 빌뇌브 포로 · 넬슨 전사": "British victory; the Bucentaure, Santísima Trinidad and Redoutable taken · Villeneuve captured · Nelson killed",
-  "전열함 9척 (빅토리 포함) · 프리깃 1척": "9 ships of the line (with the Victory) · 1 frigate",
-  "전열함 12척 (뷔상토르 · 산티시마 트리니다드 포함)": "12 ships of the line (with the Bucentaure · Santísima Trinidad)",
+  "전열함 12척 (빅토리 · 아프리카 포함) · 프리깃 1척": "12 ships of the line (with the Victory and the Africa) · 1 frigate",
+  "전열함 15척 (전위 8척 · 중앙 7척, 뷔상토르 · 산티시마 트리니다드 포함)": "15 ships of the line (van 8 · centre 7, with the Bucentaure and the Santísima Trinidad)",
   "같은 날 정오 무렵, 콜링우드의 로열 소버린호가 풍하 종렬의 맨 앞에서 홀로 연합 함대 후위로 뛰어들어 에스파냐의 산타아나호와 맞붙었습니다. 뒤따른 배들이 하나씩 대열을 끊고 들어가 근접 난전이 벌어졌습니다. 추루카의 산후안 네포무세노호는 여섯 척에 둘러싸여 싸우다 추루카가 전사한 뒤 항복했고, 프랑스의 아실호는 불타 폭발했습니다. 크게 다친 그라비나는 남은 배를 모아 카디스로 물러났습니다.":
     "Around noon the same day Collingwood's Royal Sovereign, at the head of the lee column, broke alone into the Combined Fleet's rear and engaged the Spanish Santa Ana. The ships behind her cut through the line one by one into a close mêlée. Churruca's San Juan Nepomuceno, surrounded by six ships, struck after Churruca was killed, and the French Achille caught fire and blew up. Gravina, badly wounded, gathered the survivors and withdrew to Cádiz.",
   "영국 승리, 연합 함대 후위 대부분 나포 · 아실호 폭발 · 추루카 전사": "British victory; most of the Combined Fleet's rear taken · the Achille blown up · Churruca killed",
-  "전열함 10척 (로열 소버린 포함)": "10 ships of the line (with the Royal Sovereign)",
-  "전열함 12척 (에스파냐 6척 · 프랑스 6척)": "12 ships of the line (6 Spanish · 6 French)",
+  "전열함 15척 (로열 소버린 포함)": "15 ships of the line (with the Royal Sovereign)",
+  "전열함 18척 (후위 9척 · 관측 전대 9척)": "18 ships of the line (rear 9 · squadron of observation 9)",
 
   // Squadrons
   "영국 지중해 함대": "British Mediterranean Fleet",
@@ -143,6 +143,7 @@ export const EN_TRAFALGAR: Record<string, string> = {
   "관측 전대": "Squadron of observation",
   "풍상 종렬": "Weather column",
   "풍하 종렬": "Lee column",
+  "늦게 도착한 분대": "The late arrivals",
 
   // Ships
   "컬로든": "Culloden", "블레넘": "Blenheim", "프린스 조지": "Prince George", "오라이언": "Orion", "빅토리": "Victory", "에그먼트": "Egmont",
@@ -161,6 +162,15 @@ export const EN_TRAFALGAR: Record<string, string> = {
   "산타아나": "Santa Ana", "푸괴": "Fougueux", "모나르카": "Monarca", "알제지라스": "Algésiras", "아실": "Achille", "산후안 네포무세노 (추루카)": "San Juan Nepomuceno (Churruca)",
   "로열 소버린": "Royal Sovereign", "벨아일": "Belleisle", "마스": "Mars", "콜로서스": "Colossus", "아킬레스": "Achilles", "드레드노트": "Dreadnought",
   "리벤지": "Revenge", "프린스": "Prince",
+  "이리지스터블": "Irresistible", "나무르": "Namur", "다이어뎀": "Diadem", "넵투노": "Neptuno", "산안토니오": "San Antonio",
+  "산도밍고": "San Domingo", "산프란시스코 데 파울라": "San Francisco de Paula", "산헤나로": "San Genaro", "아틀란테": "Atlante",
+  "글로리오소": "Glorioso", "산후안 네포무세노": "San Juan Nepomuceno", "콩키스타도르": "Conquistador", "외뢰": "Heureux",
+  "메르퀴르": "Mercure", "제네뢰": "Généreux", "티몰레옹": "Timoléon", "오데이셔스": "Audacious", "알렉산더": "Alexander",
+  "스위프트슈어": "Swiftsure", "리앤더": "Leander", "알렉산더 볼": "Alexander Ball", "아메리카": "América", "에스파냐호": "España",
+  "베릭": "Berwick", "에글": "Aigle", "레조너블": "Raisonnable", "드래건": "Dragon", "글로리": "Glory", "워리어": "Warrior",
+  "선더러": "Thunderer", "라요": "Rayo", "산프란시스코 데 아시스": "San Francisco de Asís", "미노타우로스 ": "Minotaur",
+  "스파르티에이트": "Spartiate", "아프리카": "Africa", "헨리 딕비": "Henry Digby", "몬타녜스": "Montañés", "아르고노트": "Argonaute",
+  "폴리페무스": "Polyphemus",
 
   // Ship kinds and guns
   "1급 전열함": "First rate",

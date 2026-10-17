@@ -87,7 +87,7 @@ export const CHAPTERS: ChapterDef[] = [
     tagline: '모든 이가 제 의무를 다한 바다',
     years: '1797 — 1805',
     year: 1805,
-    ready: false,
+    ready: true,
     navies: [['britain'], ['france', 'spain1805']],
     hero: { kind: 'firstrate', own: ['gb74', 'gbfrigate'], foe: ['trinidad', 'fr80'] },
     billing: [

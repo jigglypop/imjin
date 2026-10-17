@@ -5,6 +5,7 @@ import {
 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
 import { Battle } from '../sim/battle';
+import { SHIP_SPECS } from '../sim/catalog';
 import { ShipViews } from '../ships/ShipViews';
 import { Lanterns } from '../fx/Lanterns';
 import { loadSceneShipAssets, disposeSceneShipAssets, type ModelAsset } from '../ships/ShipRenderer';
@@ -206,8 +207,10 @@ export class MenuBattleScene {
   private cameraPose() {
     const p=this.elapsed/CYCLE, drift=Math.sin(p*Math.PI*2)*3;
     const portrait=this.camera.aspect<.85;
-    // A tall-masted flagship is framed from further off and higher, so its rig stays in the shot.
-    const k=this.heroOf.kind==='geobukseon'?1:1.75, lift=this.heroOf.kind==='geobukseon'?0:8;
+    // A tall-masted flagship is framed from further off and higher, so its rig stays in the shot; a ship of the line
+    // longer than the 1588 galleons further still, in proportion to its length.
+    const turtle=this.heroOf.kind==='geobukseon', grow=Math.max(1,SHIP_SPECS[this.heroOf.kind].length/42);
+    const k=turtle?1:1.75*grow, lift=turtle?0:8*grow;
     this.camera.position.set(this.hero.x+(portrait?60:37)*k+drift, (portrait?17:8)+lift, this.hero.z+(portrait?48:24)*k);
     this.target.set(this.hero.x+(portrait?3:-28)*k*.15,(portrait?8:7)+lift*1.7,this.hero.z-(portrait?12:40)*k*.15);
     this.camera.lookAt(this.target);

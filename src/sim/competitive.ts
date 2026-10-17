@@ -60,14 +60,16 @@ export const COMPETITIVE_UNITS: Record<ShipKind, UnitBalance> = {
   sultana: { spec: { cost: 860, build: 68 } },
   kadirga: { spec: { cost: 470, build: 38 } },
   kalyata: { spec: { cost: 260, build: 24 } },
-  // The Trafalgar chapter's prices, fitted with scripts/balance-competitive.mjs (docs/balance-cross.md).
-  firstrate: { spec: { cost: 1500, build: 90 } },
-  gb74: { spec: { cost: 1150, build: 74 } },
-  gbfrigate: { spec: { cost: 450, build: 40 } },
-  fr80: { spec: { cost: 1350, build: 84 } },
-  fr74: { spec: { cost: 1100, build: 74 } },
-  trinidad: { spec: { cost: 1700, build: 96 } },
-  es74: { spec: { cost: 1100, build: 74 } },
+  // The Trafalgar chapter's prices, fitted with scripts/balance-competitive.mjs over 16 seeds (docs/balance-cross.md):
+  // the British 74's faster gunnery is paid for at 910 against 750 for the French and Spanish 74s. The flagships, offered
+  // only under the expanded rules, are priced in the same proportion to their 74s.
+  firstrate: { spec: { cost: 1250, build: 90 } },
+  gb74: { spec: { cost: 910, build: 74 } },
+  gbfrigate: { spec: { cost: 320, build: 40 } },
+  fr80: { spec: { cost: 1000, build: 84 } },
+  fr74: { spec: { cost: 750, build: 74 } },
+  trinidad: { spec: { cost: 1150, build: 96 } },
+  es74: { spec: { cost: 750, build: 74 } },
 };
 
 /** The three treasuries earn the same base income; cheap boarding ships are not discounted a second time. */
