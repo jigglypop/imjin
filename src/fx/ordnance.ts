@@ -103,6 +103,16 @@ export function payload(gun: GunType, ammo: AmmoType): { mass: number; diameter:
       return { mass: 2.4, diameter: 0.09, deform: 1 };
     case 'base':
       return { mass: 0.5, diameter: 0.045, deform: 1 };
+    // The guns of 1805 (Lavery 1987): English pounds of 0.454 kg; the French livre of 0.49 kg (36 livres = 17.6 kg).
+    case 'long32':
+    case 'carronade':
+      return { mass: 14.5, diameter: 0.16, deform: 1 };
+    case 'long18':
+      return { mass: 9, diameter: 0.135, deform: 1 };
+    case 'long12':
+      return { mass: 5.4, diameter: 0.115, deform: 1 };
+    case 'long36':
+      return { mass: 17.6, diameter: 0.17, deform: 1 };
   }
 }
 
@@ -113,7 +123,7 @@ export function payload(gun: GunType, ammo: AmmoType): { mass: number; diameter:
  */
 export function planking(faction: Faction, part: 'hull' | 'wall' | 'castle', hullCm: number) {
   // European oak: a harder wood, thick bulwarks and castle sides.
-  if (faction === 'england' || faction === 'spain') return { T: part === 'hull' ? hullCm : part === 'wall' ? 8 : 5, k: 40 };
+  if (faction === 'england' || faction === 'spain' || faction === 'britain' || faction === 'france' || faction === 'spain1805') return { T: part === 'hull' ? hullCm : part === 'wall' ? 8 : 5, k: 40 };
   const k = faction === 'japan' ? 22 : faction === 'ming' ? 35 : 30;
   const T = part === 'hull' ? hullCm : part === 'wall' ? (faction === 'japan' ? 3 : faction === 'ming' ? 4 : 6) : faction === 'japan' ? 2.5 : 3;
   return { T, k };

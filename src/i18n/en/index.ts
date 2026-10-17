@@ -6,6 +6,7 @@ import { EN_ONLINE } from './online';
 import { EN_SIM } from './sim';
 import { EN_ARMADA } from './armada';
 import { EN_LEPANTO } from './lepanto';
+import { EN_TRAFALGAR } from './trafalgar';
 import { EN_ARMADA_CAMPAIGN } from './armadaCampaign';
 import { EN_LEPANTO_CAMPAIGN } from './lepantoCampaign';
 import { EN_EXPANSION } from './expansion';
@@ -33,6 +34,7 @@ export const EN: Record<string, string> = {
   ...EN_SIM,
   ...EN_ARMADA,
   ...EN_LEPANTO,
+  ...EN_TRAFALGAR,
   ...EN_ARMADA_CAMPAIGN,
   ...EN_LEPANTO_CAMPAIGN,
   ...EN_MENUS,

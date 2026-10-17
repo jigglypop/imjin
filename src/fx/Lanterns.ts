@@ -79,6 +79,13 @@ const POINTS: Record<ModelKind, [number, number, number][]> = {
   kadirga: [],
   kalyata: [],
   urca: [],
+  firstrate: [],
+  gb74: [],
+  gbfrigate: [],
+  fr80: [],
+  fr74: [],
+  trinidad: [],
+  es74: [],
 };
 
 const DECK: Record<string, number> = { 'panokseon#0': 6.0, 'panokseon#1': 4.7, 'panokseon#2': 4.4, 'atakebune#0': 3.5, 'sekibune#0': 2.1, 'hyeopseon#0': 0.95, 'kobaya#0': 0.8, 'mingship#0': 4.2, 'mingsmall#0': 2.4, 'geobukseon#0': 4.7 };

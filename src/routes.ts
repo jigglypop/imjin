@@ -35,7 +35,7 @@ export const BATTLE_SLUGS = ['okpo', 'sacheon', 'dangpo', 'hansan', 'angolpo', '
  * chapter's pages live under its id (/armada, /armada/battles/gravelines, /en/armada). The chapter registry with its
  * names, navies and ships is src/chapters; this file keeps only the ids and battle slugs, since it takes no imports.
  */
-export const CHAPTER_IDS = ['imjin', 'armada', 'lepanto'] as const;
+export const CHAPTER_IDS = ['imjin', 'armada', 'lepanto', 'trafalgar'] as const;
 export type ChapterId = (typeof CHAPTER_IDS)[number];
 export const MAIN_CHAPTER: ChapterId = 'imjin';
 const PREFIXED: readonly string[] = CHAPTER_IDS.filter((c) => c !== MAIN_CHAPTER);
@@ -45,10 +45,12 @@ export const isChapterId = (id: string | undefined): id is ChapterId => !!id && 
 export const CHAPTER_BATTLES = {
   armada: ['plymouth', 'portland', 'wight', 'calais', 'gravelines'],
   lepanto: ['preveza', 'djerba', 'lepanto-north', 'lepanto-centre', 'lepanto-south'],
+  trafalgar: ['st-vincent', 'nile', 'finisterre', 'trafalgar-weather', 'trafalgar-lee'],
 } as const;
 export type ArmadaSlug = (typeof CHAPTER_BATTLES.armada)[number];
 export type LepantoSlug = (typeof CHAPTER_BATTLES.lepanto)[number];
-export type BattleSlug = (typeof BATTLE_SLUGS)[number] | ArmadaSlug | LepantoSlug;
+export type TrafalgarSlug = (typeof CHAPTER_BATTLES.trafalgar)[number];
+export type BattleSlug = (typeof BATTLE_SLUGS)[number] | ArmadaSlug | LepantoSlug | TrafalgarSlug;
 /** The battles of a chapter, the first chapter's included. */
 export const battlesOf = (chapter: ChapterId): readonly BattleSlug[] => (chapter === 'imjin' ? BATTLE_SLUGS : CHAPTER_BATTLES[chapter]);
 export const chapterOfBattle = (slug: BattleSlug): ChapterId => (CHAPTER_IDS.find((c) => c !== MAIN_CHAPTER && (battlesOf(c) as readonly string[]).includes(slug)) ?? MAIN_CHAPTER);

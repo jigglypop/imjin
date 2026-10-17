@@ -1,0 +1,31 @@
+{
+  "tool": "scripts/ship-textures.mjs generate --provider=gemini + compose",
+  "endpoint": "gemini generateContent (scripts/gemini-image.mjs)",
+  "model": "GEMINI_IMAGE_MODEL from .env",
+  "generatedAt": "2026-10-17",
+  "prompts": "src/ships/build/atlasLayout.json factions.britain / factions.france / factions.spain1805, each prompt followed by its style line",
+  "images": 66,
+  "estimatedCostUsd": 2.6,
+  "costNote": "Estimate (~0.04 USD per Gemini image). The British cells were already in the raw cache; the French and Spanish ones were made here, two flags retried after IMAGE_RECITATION refusals.",
+  "raw": "assets-src/textures-ships/{britain,france,spain1805}/*_1.png (gitignored cache)",
+  "published": {
+    "public/textures/ships/britain_albedo.webp": "efab8702602567fdcefcb602525daaa3142ecf43a5e4b920e4d3bd636149a5e3",
+    "public/textures/ships/britain_albedo_1k.webp": "a1ab806a67b70383b0fb909760c7898f24adb140d6080d30a5039ef06313aafc",
+    "public/textures/ships/britain_normal.webp": "a5122e4ea37f15acdf3b6285aa9bfaf8503fdc5ca30a2be2536cbc5358b40f99",
+    "public/textures/ships/britain_normal_1k.webp": "618705c9050d7ff73f34492cbb4a374997973df245e2c75a1ce2f1c53772455e",
+    "public/textures/ships/britain_rough.webp": "20b3d1ea1445eb52668d16a1180e70216823034538959f13986ccaa00389ccbc",
+    "public/textures/ships/britain_rough_1k.webp": "944f55354d0e311ee8e89b97cd5a018c2bbb03eb0c75e2ddada6ee442ec3558b",
+    "public/textures/ships/france_albedo.webp": "e7ea8e7ee39baa634d6a8dc29eda2605f791d854b7d1b6310ed4893487435c68",
+    "public/textures/ships/france_albedo_1k.webp": "a758043b02bb2427b41e59273902d3e1ae18090c01006804c6205eaf7a3872e8",
+    "public/textures/ships/france_normal.webp": "87067ce7481189cd726fd2c15d9b0ceaca16e6b53bdc583f71d0ee26d8f89359",
+    "public/textures/ships/france_normal_1k.webp": "1891a0525c444122282519488ea9b7680ff1e556f62c2a93f31e723ed6ed1e2d",
+    "public/textures/ships/france_rough.webp": "23c62bd5e28e020d7a4112a95c2d01fdc8f25cc588fd8a02e07fb8a1a13a14bc",
+    "public/textures/ships/france_rough_1k.webp": "41af36f7600f1d886c8f3bda373c144407f91e9647a275835ac9befa32a360ee",
+    "public/textures/ships/spain1805_albedo.webp": "c5937888824c98fe031a99717a34574b75afddb6ed1f76b08dc9c41a65f04f4e",
+    "public/textures/ships/spain1805_albedo_1k.webp": "a559000f9c3928b4e2bcd7d4a52b64795f9c279f8e3d3d1de29be0cb10caff6e",
+    "public/textures/ships/spain1805_normal.webp": "d9ad5ec50438cbd15446c5c421040c4e73ce730f28a3255be3048123c14b7f0f",
+    "public/textures/ships/spain1805_normal_1k.webp": "cc900570f94630d3655d88bf64fc349eafdb62f41578d49d55c17e16ac314350",
+    "public/textures/ships/spain1805_rough.webp": "68ac532da3fb3beb50283b3d429103a5110d1e276cb95f8192edd9e650d6c1b6",
+    "public/textures/ships/spain1805_rough_1k.webp": "505cb368ed76c361e8d2e046fa9d962bbbbc54390652b498529187f7f60e83a6"
+  }
+}

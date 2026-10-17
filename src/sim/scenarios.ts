@@ -25,7 +25,8 @@ import type { BattleSlug, ChapterId } from '../routes';
 import { SCENARIO_TEXT, type ScenarioText } from './scenarioText';
 import { ARMADA_ORDER, ARMADA_PORTRAITS, ARMADA_SCENARIOS, ARMADA_TEMPERS, armadaForces, isArmadaBattle } from './armada';
 import { LEPANTO_ORDER, LEPANTO_PORTRAITS, LEPANTO_SCENARIOS, LEPANTO_TEMPERS, lepantoForces, isLepantoBattle } from './lepanto';
-export { ARMADA_ORDER, isArmadaBattle, LEPANTO_ORDER, isLepantoBattle };
+import { TRAFALGAR_ORDER, TRAFALGAR_PORTRAITS, TRAFALGAR_SCENARIOS, TRAFALGAR_TEMPERS, trafalgarForces, isTrafalgarBattle } from './trafalgar';
+export { ARMADA_ORDER, isArmadaBattle, LEPANTO_ORDER, isLepantoBattle, TRAFALGAR_ORDER, isTrafalgarBattle };
 
 /** The nine historical battles. Each has an address of its own (/battles/hansan), so the id list lives in src/routes.ts. */
 export type ScenarioId = BattleSlug;
@@ -259,20 +260,22 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
   },
   ...ARMADA_SCENARIOS,
   ...LEPANTO_SCENARIOS,
+  ...TRAFALGAR_SCENARIOS,
 };
 
 export const SCENARIO_ORDER: ScenarioId[] = ['okpo', 'sacheon', 'dangpo', 'hansan', 'angolpo', 'busan', 'chilcheon', 'myeongnyang', 'noryang'];
 
 /** Each chapter's battles in order (the first chapter's are SCENARIO_ORDER). */
-export const CHAPTER_ORDER: Record<ChapterId, ScenarioId[]> = { imjin: SCENARIO_ORDER, armada: ARMADA_ORDER, lepanto: LEPANTO_ORDER };
+export const CHAPTER_ORDER: Record<ChapterId, ScenarioId[]> = { imjin: SCENARIO_ORDER, armada: ARMADA_ORDER, lepanto: LEPANTO_ORDER, trafalgar: TRAFALGAR_ORDER };
 /** The chapter a historical battle belongs to. */
-export const chapterOfScenario = (id: ScenarioId): ChapterId => (isArmadaBattle(id) ? 'armada' : isLepantoBattle(id) ? 'lepanto' : 'imjin');
+export const chapterOfScenario = (id: ScenarioId): ChapterId => (isArmadaBattle(id) ? 'armada' : isLepantoBattle(id) ? 'lepanto' : isTrafalgarBattle(id) ? 'trafalgar' : 'imjin');
 /** The two navies of each chapter's battles, by slot ('joseon' first, 'japan' second). */
-export const CHAPTER_NAVIES: Record<ChapterId, [Faction, Faction]> = { imjin: ['joseon', 'japan'], armada: ['england', 'spain'], lepanto: ['holyleague', 'ottoman'] };
+export const CHAPTER_NAVIES: Record<ChapterId, [Faction, Faction]> = { imjin: ['joseon', 'japan'], armada: ['england', 'spain'], lepanto: ['holyleague', 'ottoman'], trafalgar: ['britain', 'france'] };
 
 const PORTRAITS: [string, string][] = [
   ...ARMADA_PORTRAITS,
   ...LEPANTO_PORTRAITS,
+  ...TRAFALGAR_PORTRAITS,
   ['이순신', 'portrait_yi'],
   ['원균', 'portrait_won'],
   ['이억기', 'portrait_eokgi'],
@@ -298,6 +301,9 @@ function portraitFor(team: Team, commander: string, kind: ShipKind) {
   if (kind === 'spgalleon' || kind === 'galleass' || kind === 'urca') return 'portrait_medina';
   if (kind === 'reale' || kind === 'galea' || kind === 'vgalleass') return 'portrait_donjuan';
   if (kind === 'sultana' || kind === 'kadirga' || kind === 'kalyata') return 'portrait_alipasha';
+  if (kind === 'firstrate' || kind === 'gb74' || kind === 'gbfrigate') return 'portrait_nelson';
+  if (kind === 'fr80' || kind === 'fr74') return 'portrait_villeneuve';
+  if (kind === 'trinidad' || kind === 'es74') return 'portrait_gravina';
   return team === 'japan' ? 'portrait_japan' : 'portrait_admiral';
 }
 
@@ -309,6 +315,7 @@ function portraitFor(team: Team, commander: string, kind: ShipKind) {
 const TEMPERS: [string, Temper][] = [
   ...ARMADA_TEMPERS,
   ...LEPANTO_TEMPERS,
+  ...TRAFALGAR_TEMPERS,
   ['와키자카', 'rash'],
   ['구키', 'cautious'],
   ['가토', 'cautious'],
@@ -628,6 +635,8 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     armadaForces(id, { b, rand, squad, ship, grid, arc, slotAll, numbered });
   } else if (isLepantoBattle(id)) {
     lepantoForces(id, { b, rand, squad, ship, grid, arc, slotAll, numbered });
+  } else if (isTrafalgarBattle(id)) {
+    trafalgarForces(id, { b, rand, squad, ship, grid, arc, slotAll, numbered });
   } else {
     b.night = true;
     const head = 0;

@@ -27,6 +27,11 @@ export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
   'lepanto-north': { lon: 21.1, lat: 38.33 },
   'lepanto-centre': { lon: 21.15, lat: 38.27 },
   'lepanto-south': { lon: 21.2, lat: 38.2 },
+  'st-vincent': { lon: -9.4, lat: 36.9 },
+  nile: { lon: 30.1, lat: 31.35 },
+  finisterre: { lon: -11.5, lat: 43.6 },
+  'trafalgar-weather': { lon: -6.25, lat: 36.25 },
+  'trafalgar-lee': { lon: -6.22, lat: 36.2 },
 };
 
 type Meta = typeof korea;

@@ -43,6 +43,9 @@ export const RANKED_ROSTER: Record<Faction, ShipKind[]> = {
   spain: ['spgalleon', 'galleass', 'urca'],
   holyleague: ['galea', 'vgalleass'],
   ottoman: ['kadirga', 'kalyata'],
+  britain: ['gb74', 'gbfrigate'],
+  france: ['fr74'],
+  spain1805: ['es74'],
 };
 
 /** Ships each navy can build under the expanded rules (casual battles and the campaign): the size tiers and support craft as well. */
@@ -54,6 +57,9 @@ export const ROSTER: Record<Faction, ShipKind[]> = {
   spain: ['spgalleon', 'galleass', 'urca'],
   holyleague: ['reale', 'galea', 'vgalleass'],
   ottoman: ['sultana', 'kadirga', 'kalyata'],
+  britain: ['firstrate', 'gb74', 'gbfrigate'],
+  france: ['fr80', 'fr74'],
+  spain1805: ['trinidad', 'es74'],
 };
 
 export const rosterOf = (faction: Faction, expanded: boolean | undefined) => (expanded ? ROSTER : RANKED_ROSTER)[faction];
@@ -70,6 +76,9 @@ const PORTRAITS: Record<Faction, string[]> = {
   spain: ['portrait_medina', 'portrait_recalde', 'portrait_oquendo', 'portrait_leyva'],
   holyleague: ['portrait_donjuan', 'portrait_barbarigo', 'portrait_venier', 'portrait_doria'],
   ottoman: ['portrait_alipasha', 'portrait_siroco', 'portrait_uluc', 'portrait_pertev'],
+  britain: ['portrait_nelson', 'portrait_collingwood', 'portrait_hardy', 'portrait_blackwood'],
+  france: ['portrait_villeneuve', 'portrait_lucas'],
+  spain1805: ['portrait_gravina', 'portrait_churruca'],
 };
 
 /** Ship names in squadron and recruit labels. */
@@ -103,6 +112,13 @@ export const SHORT_NAME: Record<ShipKind, string> = {
   sultana: '술타나',
   kadirga: '카드르가',
   kalyata: '칼리야타',
+  firstrate: '1급 전열함',
+  gb74: '74문 전열함 (영국)',
+  gbfrigate: '프리깃',
+  fr80: '80문 전열함',
+  fr74: '74문 전열함 (프랑스)',
+  trinidad: '산티시마 트리니다드',
+  es74: '74문 전열함 (에스파냐)',
 };
 
 /** Shore guns by navy: count, gun and seconds between rounds. */
@@ -114,6 +130,9 @@ const BATTERY_GUNS: Record<Faction, { gun: GunType; count: number; reload: numbe
   spain: { gun: 'cannon', count: 3, reload: 11 },
   holyleague: { gun: 'cannon', count: 3, reload: 10 },
   ottoman: { gun: 'cannon', count: 2, reload: 11 },
+  britain: { gun: 'long32', count: 3, reload: 7 },
+  france: { gun: 'long36', count: 3, reload: 9 },
+  spain1805: { gun: 'long36', count: 3, reload: 9 },
 };
 
 export type Building = { kind: BuildingKind; hp: number; progress: number; reload: number[]; level: BuildingLevel; upgradeLeft: number; upgradeTotal: number; constructionTotal?: number };

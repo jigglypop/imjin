@@ -39,11 +39,14 @@ export const NAVIES: { faction: Faction; kinds: ShipKind[] }[] = [
   { faction: 'spain', kinds: ['spgalleon', 'galleass', 'urca'] },
   { faction: 'holyleague', kinds: ['reale', 'vgalleass', 'galea'] },
   { faction: 'ottoman', kinds: ['sultana', 'kadirga', 'kalyata'] },
+  { faction: 'britain', kinds: ['firstrate', 'gb74', 'gbfrigate'] },
+  { faction: 'france', kinds: ['fr80', 'fr74'] },
+  { faction: 'spain1805', kinds: ['trinidad', 'es74'] },
 ];
 
 /** The seal of each navy: its name in hanja (the menu's serif cut carries these characters). */
 /** The red seal's characters for the East Asian navies; England and Spain carry their round emblem instead (codex.css). */
-export const NAVY_SEAL: Record<Faction, string> = { joseon: '朝鮮', japan: '日本', ming: '明', england: '', spain: '', holyleague: '', ottoman: '' };
+export const NAVY_SEAL: Record<Faction, string> = { joseon: '朝鮮', japan: '日本', ming: '明', england: '', spain: '', holyleague: '', ottoman: '', britain: '', france: '', spain1805: '' };
 
 const KIM_1982 = '김재근, 『조선왕조군선연구』, 일조각, 1982';
 const ISHII_1995 = '이시이 겐지(石井謙治), 『화선(和船) II』, 호세이대학출판국, 1995';
@@ -59,6 +62,11 @@ const GUIL = 'John F. Guilmartin, Gunpowder and Galleys, 1974 (개정 2003)';
 const KON_LEP = 'Angus Konstam, Lepanto 1571, Osprey, 2003';
 const BOSTAN = 'İdris Bostan, Kadırga ve Kalyata (오스만 갤리선 연구), 2005';
 const MMB = '바르셀로나 해양박물관(Museu Marítim) 라 레알 복원선, 1971';
+const GOOD = 'Peter Goodwin, The Ships of Trafalgar, 2005';
+const LAV_LINE = 'Brian Lavery, The Ship of the Line, 1983';
+const HARB = 'John D. Harbron, Trafalgar and the Spanish Navy, 1988';
+const ADK = 'Roy Adkins, Trafalgar: The Biography of a Battle, 2004';
+const VICTORY = '포츠머스 HMS 빅토리호 보존선 (National Museum of the Royal Navy)';
 
 export const ENTRIES: Record<ShipKind, CodexEntry> = {
   panokseon: {
@@ -347,7 +355,69 @@ export const ENTRIES: Record<ShipKind, CodexEntry> = {
     sources: [BOSTAN, CAPPONI],
     grade: 'B',
   },
-
+  firstrate: {
+    native: 'First rate (HMS Victory)',
+    era: '1765년 진수, 1805년',
+    role: '영국 해군의 1급 전열함 · 넬슨의 기함',
+    story: '포갑판 세 층에 대포 100문을 실은 1급 전열함입니다. 트라팔가르에서 넬슨은 빅토리호를 이끌고 풍상 종렬의 맨 앞에서 연합 함대의 중앙으로 들어가, 뷔상토르호의 고물을 지나며 현측 포격을 퍼붓고 르두타블호와 맞붙었습니다. 넬슨은 르두타블호 돛대 위 저격병의 총에 맞아 이 배의 아래 갑판에서 숨을 거두었습니다. 지금도 포츠머스에 보존되어 있습니다.',
+    facts: ['포갑판 길이 56.7m, 폭 15.8m (Goodwin)', '대포 100문 (32파운드 30, 24파운드 28, 12파운드 42), 68파운드 캐로네이드 2문 (Goodwin)', '트라팔가르의 승조원 821명 (Goodwin)'],
+    sources: [GOOD, VICTORY, ADK],
+    grade: 'A',
+  },
+  gb74: {
+    native: 'Seventy-four',
+    era: '18세기 후반–1805년',
+    role: '영국 전열의 주력함',
+    story: '포갑판 두 층에 대포 74문을 실은 3급 전열함으로, 넬슨 시대 함대의 대부분을 이루었습니다. 트라팔가르의 영국 전열함 27척 가운데 16척이 74문함이었습니다. 벨레로폰, 마스, 콜로서스 같은 배가 콜링우드의 풍하 종렬에서 연합 함대 후위로 뛰어들었습니다.',
+    facts: ['포갑판 길이 약 51m (Goodwin)', '32파운드 28문, 18파운드 28문, 9파운드 18문 (Lavery)', '승조원 약 600명 (Goodwin)'],
+    sources: [GOOD, LAV_LINE],
+    grade: 'A',
+  },
+  gbfrigate: {
+    native: 'Frigate (36 guns)',
+    era: '1805년',
+    role: '함대의 눈 · 신호 중계',
+    story: '포갑판 한 층의 빠른 배로, 전열 밖에서 적을 살피고 기함의 신호를 받아 다른 배에 다시 올려 주었습니다. 블랙우드의 유리알러스호는 트라팔가르 앞 며칠 동안 카디스의 연합 함대를 바짝 따라붙어 그 움직임을 넬슨에게 알렸습니다.',
+    facts: ['유리알러스호: 포갑판 길이 약 44m, 18파운드 26문 (Goodwin)', '승조원 약 260명 (Goodwin)'],
+    sources: [GOOD, ADK],
+    grade: 'A',
+  },
+  fr80: {
+    native: 'Vaisseau de 80 (Bucentaure)',
+    era: '1803년 진수, 1805년',
+    role: '프랑스 함대 빌뇌브의 기함',
+    story: '포갑판 두 층에 대포 80문을 실은 투낭급 전열함입니다. 프랑스 전열함은 영국 배보다 길고 빨랐으며, 아래 갑판에 36리브르의 무거운 포를 실었습니다. 트라팔가르에서 빌뇌브의 기함 뷔상토르호는 빅토리호의 고물 쪽 현측 포격을 맞고 돛대를 모두 잃은 뒤 항복했습니다.',
+    facts: ['36리브르 30문, 24리브르 32문, 8리브르 18문 (Goodwin)', '승조원 약 800명 (Goodwin)'],
+    sources: [GOOD, ADK],
+    grade: 'A',
+  },
+  fr74: {
+    native: 'Vaisseau de 74 (Redoutable)',
+    era: '1791년 진수, 1805년',
+    role: '프랑스 전열의 주력함',
+    story: '프랑스 해군의 표준 74문함입니다. 르두타블호의 함장 장자크 뤼카는 승조원에게 도선과 수류탄, 소총 사격을 훈련시켰고, 트라팔가르에서 빅토리호에 바짝 붙어 갑판을 쓸어냈습니다. 넬슨을 쏜 총탄도 이 배의 미즌 돛대 위에서 날아왔습니다.',
+    facts: ['36리브르 28문, 18리브르 30문, 8리브르 16문 (Goodwin)', '르두타블호 승조원 643명 가운데 522명 사상 (뤼카의 보고, Adkins)'],
+    sources: [GOOD, ADK],
+    grade: 'A',
+  },
+  trinidad: {
+    native: 'Santísima Trinidad',
+    era: '1769년 진수, 1795년 개조',
+    role: '에스파냐 해군의 4층 포갑판 기함',
+    story: '아바나에서 지은, 당시 세상에서 가장 큰 군함입니다. 1795년 갑판을 이어 포갑판 네 층에 대포 136문을 실었지만 무겁고 느렸습니다. 1797년 산비센테 곶에서 간신히 붙잡히지 않았고, 트라팔가르에서는 시스네로스 제독의 기함으로 싸우다 돛대를 모두 잃고 항복한 뒤 폭풍 속에 가라앉았습니다.',
+    facts: ['길이 약 61m, 대포 136문 (Harbron)', '트라팔가르의 승조원 1,048명 (Harbron)'],
+    sources: [HARB, GOOD],
+    grade: 'A',
+  },
+  es74: {
+    native: 'Navío de 74 (San Juan Nepomuceno)',
+    era: '1766년 진수, 1805년',
+    role: '에스파냐 전열의 주력함',
+    story: '에스파냐 해군의 74문함은 튼튼한 쿠바산 목재로 지어 오래 버텼지만, 1805년에는 숙련된 수병이 모자라 카디스에서 끌어온 병사와 육지 사람으로 승조원을 채웠습니다. 산후안 네포무세노호의 함장 코스메 다미안 추루카는 영국 배 여섯 척에 둘러싸여 싸우다 전사했습니다.',
+    facts: ['36파운드(리브라) 28문, 18파운드 30문 (Harbron)', '승조원 약 600명 (Goodwin)'],
+    sources: [HARB, GOOD],
+    grade: 'A',
+  },
 };
 
 /** What each gun was and what it fired, from the record. */
@@ -366,6 +436,11 @@ export const GUN_NOTES: Record<GunType, string> = {
   perrier: '깎은 돌 탄환을 쏘는 석포(페드레로)입니다. 가까운 거리에서 갑판의 사람과 삭구를 쓸어내는 데 썼습니다.',
   saker: '5파운드 남짓한 탄을 쏘는 중소형 포로, 양쪽 함대 모두 많이 실었습니다.',
   base: '난간에 꽂아 돌려 쏘는 작은 후장식 선회포입니다. 산탄으로 등선해 오는 적을 막았습니다.',
+  long32: '1805년 영국 전열함의 아래 포갑판에 실린 32파운드(약 14.5kg) 쇠 장포입니다. 바퀴 달린 포가에 얹혀 밧줄로 반동을 받았고, 부싯돌 격발기로 쏘아 잘 훈련된 포수는 프랑스·에스파냐 포수보다 두 배 가까이 빨리 쏘았습니다.',
+  long18: '가운데와 위 포갑판의 24·18파운드 장포입니다. 아래 갑판 포보다 가벼워 다루기 쉬웠고, 프리깃은 18파운드 포를 주포로 실었습니다.',
+  long12: '위 갑판과 뒷갑판의 12파운드 장포입니다. 양쪽 함대 모두 위 갑판에 가벼운 포를 실었습니다.',
+  carronade: '스코틀랜드 캐런 제철소가 만든 짧고 가벼운 포입니다. 사거리는 짧지만 큰 탄을 쏘아 가까이에서 선체를 부수었습니다. 빅토리호는 트라팔가르에서 68파운드 캐로네이드로 뷔상토르호의 고물을 쏘았습니다.',
+  long36: '프랑스와 에스파냐 전열함 아래 갑판의 36리브르(약 17.6kg) 장포입니다. 영국 32파운드 포보다 무거운 탄을 쏘았지만 화승으로 격발하고 훈련이 모자라 장전이 느렸습니다.',
   hudun: '척계광이 만든 가벼운 화포로, 앞발을 땅에 박아 고정한 모습이 웅크린 호랑이 같다 하여 붙은 이름입니다. 산탄을 쏘았으며, 『화포식언해』는 납탄 70개 또는 쇠탄 30개를 넣는다고 적었습니다.',
 };
 

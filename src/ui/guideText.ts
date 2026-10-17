@@ -2,7 +2,7 @@ import type { ScenarioId } from '../sim/scenarios';
 import type { Faction } from '../sim/types';
 
 /** The navy each battle's guide and score are written for: the first slot, Joseon in 1592 and England in 1588. */
-export const guidedFaction = (f: Faction | undefined) => f === 'joseon' || f === 'england';
+export const guidedFaction = (f: Faction | undefined) => f === 'joseon' || f === 'england' || f === 'britain';
 
 /**
  * What a first-time player is told about each historical battle: the goal in one line, three hints for the first half
@@ -20,6 +20,36 @@ export type BattleGuide = {
 };
 
 export const GUIDES: Record<ScenarioId, BattleGuide> = {
+  'st-vincent': {
+    goal: '두 무리로 흩어진 에스파냐 함대 사이를 한 줄로 뚫고, 본대가 대열 꼬리를 돌아 빠져나가지 못하게 막으세요.',
+    hints: ['아래 장수 패로 저비스 함대를 고르세요. 한 줄로 두 무리 사이를 지나가세요.', '에스파냐 본대가 대열의 꼬리를 돌아 나가려 하면 뒤쪽 배를 돌려 그 앞을 막으세요. 넬슨이 캡틴호로 한 일입니다.', '산티시마 트리니다드호는 크지만 느립니다. 74문함 두 척으로 양쪽에서 끼고 쏘세요.'],
+    kind: 'destroy',
+    history: 4,
+  },
+  nile: {
+    goal: '닻을 내린 프랑스 대열을 머리부터 양쪽에서 끼고 쏘아 한 척씩 무너뜨리세요.',
+    hints: ['골리앗 선두를 프랑스 대열 머리 너머 해안 쪽으로 돌려 넣으세요. 프랑스 배는 해안 쪽 포를 준비하지 않았습니다.', '넬슨 본대는 바다 쪽에서 같은 배를 맞은편에서 치세요. 한 척을 두 척이 끼면 빨리 무너집니다.', '프랑스 배는 닻을 내려 움직이지 못합니다. 대열 뒤쪽은 바람을 거슬러야 와서 도울 수 있습니다.'],
+    kind: 'destroy',
+    history: 11,
+  },
+  finisterre: {
+    goal: '안개 속에서 연합 함대의 선두를 붙잡아 끊어 내세요. 무리하게 쫓으면 대열이 흩어집니다.',
+    hints: ['앞장선 에스파냐 배들이 가장 가깝습니다. 대열 앞쪽을 돌려 그쪽으로 붙이세요.', '안개 속에서는 멀리 쏘아도 잘 맞지 않습니다. 가까이 다가가 현측 포격을 하세요.', '부서진 배가 생기면 대열에서 빼고 다른 배로 메우세요.'],
+    kind: 'destroy',
+    history: 2,
+  },
+  'trafalgar-weather': {
+    goal: '빅토리호로 뷔상토르호 고물 뒤의 틈을 뚫고 연합 함대 중앙을 끊어 내세요. 다가가는 동안의 포격을 견뎌야 합니다.',
+    hints: ['다가가는 동안 적의 현측 포격을 맞습니다. 대열을 흩지 말고 곧장 들어가세요.', '적의 고물을 지나며 쏘는 포격이 가장 셉니다. 뷔상토르호 바로 뒤로 파고드세요.', '전위는 늦게 돌아옵니다. 그 전에 중앙의 기함을 무너뜨리세요.'],
+    kind: 'destroy',
+    history: 6,
+  },
+  'trafalgar-lee': {
+    goal: '로열 소버린호를 앞세워 연합 함대 후위로 뛰어들어, 대열을 끊고 배마다 가까이 붙어 싸우세요.',
+    hints: ['로열 소버린호가 혼자 먼저 들어갑니다. 뒤따르는 배를 서둘러 붙이세요.', '대열을 끊은 뒤에는 배마다 적 한 척을 골라 가까이 붙으세요. 캐로네이드는 가까울수록 셉니다.', '그라비나의 관측 전대가 뒤에서 옵니다. 마지막 배들로 그쪽을 막으세요.'],
+    kind: 'destroy',
+    history: 9,
+  },
   preveza: {
     goal: '바람이 약한 바다에서 동맹 함대를 지켜 물러나세요. 바르바로사의 갤리선에 붙잡힌 배를 구해야 합니다.',
     hints: ['갤리선은 이물로만 큰 포를 쏩니다. 적을 향해 배를 돌리세요.', '대형 범선은 바람이 없으면 움직이지 못합니다. 갤리선으로 감싸 지키세요.', '흩어지면 하나씩 붙잡힙니다. 대열을 유지한 채 서쪽으로 물러나세요.'],

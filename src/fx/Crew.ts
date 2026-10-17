@@ -1003,6 +1003,24 @@ const CREW_SETS: { factions: readonly Faction[]; capacities: Partial<Record<Crew
       ottoman_oarsman: [200, 1600, 3200],
     },
   },
+  {
+    // The Trafalgar crews: a model not baked yet is skipped by loadCrew (that station stands empty), never borrowed.
+    factions: ['britain', 'france', 'spain1805'],
+    capacities: {
+      britain_shot: [96, 700, 1400],
+      britain_soldier: [96, 700, 1400],
+      britain_officer: [16, 60, 120],
+      britain_sailor: [200, 1600, 3200],
+      france_shot: [96, 800, 1600],
+      france_soldier: [96, 800, 1600],
+      france_officer: [16, 60, 120],
+      france_sailor: [200, 1600, 3200],
+      spain1805_shot: [96, 700, 1400],
+      spain1805_soldier: [96, 700, 1400],
+      spain1805_officer: [16, 60, 120],
+      spain1805_sailor: [200, 1600, 3200],
+    },
+  },
 ];
 
 /**

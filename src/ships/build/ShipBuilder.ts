@@ -46,6 +46,13 @@ function buildLod(kind: ShipKind, variant: number, lod: Lod, omitDragonHead: boo
     case 'urca':
     case 'pinnace':
     case 'fireship':
+    case 'firstrate':
+    case 'gb74':
+    case 'gbfrigate':
+    case 'fr80':
+    case 'fr74':
+    case 'trinidad':
+    case 'es74':
       return buildSailShip(kind, variant, lod);
     case 'galleass':
     case 'vgalleass':

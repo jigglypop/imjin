@@ -84,7 +84,7 @@ export async function preloadWorks() {
 }
 
 /** Banner colours by navy: the faction tones of the HUD (styles.css), a little lifted so cloth reads in daylight. */
-const FLAG: Record<Faction, Color> = { joseon: new Color('#4f7088'), japan: new Color('#7a564a'), ming: new Color('#a08450'), england: new Color('#9a3a3a'), spain: new Color('#b08a3a'), holyleague: new Color('#3f5f8f'), ottoman: new Color('#3f7a52') };
+const FLAG: Record<Faction, Color> = { joseon: new Color('#4f7088'), japan: new Color('#7a564a'), ming: new Color('#a08450'), england: new Color('#9a3a3a'), spain: new Color('#b08a3a'), holyleague: new Color('#3f5f8f'), ottoman: new Color('#3f7a52'), britain: new Color('#8a3434'), france: new Color('#3a4f8f'), spain1805: new Color('#b8963a') };
 const NEUTRAL = new Color('#d9dcdf');
 
 type Label = { root: HTMLDivElement; name: HTMLElement; bar: HTMLElement; fill: HTMLElement; works: HTMLElement; last: string };

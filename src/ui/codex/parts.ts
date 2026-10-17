@@ -191,7 +191,38 @@ const PARTS: Record<ModelKind, Part[]> = {
     { id: 'oars', label: '노와 노꾼', note: '노 하나에 노꾼 둘이 붙은 가볍고 빠른 배였습니다.', at: oars },
     { id: 'sails', label: '래틴 돛', note: '돛대 하나에 큰 래틴 돛을 달았습니다.', at: sail(0.6) },
   ],
-
+  firstrate: [
+    { id: 'decks', label: '세 층의 포갑판', note: '아래 갑판에 32파운드, 가운데에 24파운드, 위에 12파운드 포를 실어 한쪽 현측 포격만 50문이었습니다.', at: gun(null) },
+    { id: 'chequer', label: '넬슨 체크무늬', note: '검은 선체에 포문 줄마다 노란 띠를 칠하고 포문 뚜껑은 검게 칠했습니다. 넬슨이 함대 전체에 이 칠을 따르게 했습니다 (Goodwin 2005).', at: gun(null) },
+    { id: 'long32', label: '32파운드 장포', note: '가장 무거운 포를 가장 낮은 갑판에 실어 배가 기울지 않게 했습니다.', at: gun('long32') },
+    { id: 'quarterdeck', label: '뒷갑판', note: '함장과 제독이 서서 지휘하던 곳입니다. 넬슨은 이곳에서 르두타블호 저격병의 총에 맞았습니다.', at: COMMAND_DECK },
+    { id: 'sails', label: '가로돛', note: '돛대 셋에 가로돛을 세 단씩 달고, 뒤쪽 돛대에는 세로돛(스팽커)을 달았습니다.', at: sail(0.55) },
+  ],
+  gb74: [
+    { id: 'chequer', label: '넬슨 체크무늬', note: '검은 선체에 포문 줄마다 노란 띠를 칠하고 포문 뚜껑은 검게 칠했습니다. 넬슨이 함대 전체에 이 칠을 따르게 했습니다 (Goodwin 2005).', at: gun(null) },
+    { id: 'carronade', label: '캐로네이드', note: '짧고 가벼운 대구경 포로, 가까운 거리에서 적의 고물을 부쉈습니다.', at: gun('carronade') },
+    { id: 'sails', label: '가로돛', note: '돛대 셋에 가로돛을 세 단씩 달았습니다.', at: sail(0.55) },
+  ],
+  gbfrigate: [
+    { id: 'deck', label: '한 층의 포갑판', note: '포갑판이 하나뿐이라 가볍고 빨랐습니다. 전열에는 서지 않았습니다.', at: gun(null) },
+    { id: 'sails', label: '가로돛', note: '빠르게 오가며 기함의 신호를 받아 다른 배에 다시 올렸습니다.', at: sail(0.55) },
+  ],
+  fr80: [
+    { id: 'long36', label: '36리브르 장포', note: '영국 32파운드 포보다 무거운 탄을 쏘는 아래 갑판의 포입니다.', at: gun('long36') },
+    { id: 'stern', label: '고물', note: '고물 회랑의 유리창이 넓어, 빅토리호가 고물을 지나며 쏜 포탄이 배 끝까지 꿰뚫었습니다.', at: (a) => lift(a.stern, 3.5, 0.4) },
+  ],
+  fr74: [
+    { id: 'tops', label: '돛대 위 저격대', note: '뤼카는 돛대 위 망루에 소총수와 척탄병을 올려 적 갑판을 쏘게 했습니다.', at: sail(0.8) },
+    { id: 'long36', label: '36리브르 장포', note: '아래 갑판의 무거운 포입니다.', at: gun('long36') },
+  ],
+  trinidad: [
+    { id: 'decks', label: '네 층의 포갑판', note: '1795년 앞뒤 갑판을 이어 네 번째 포갑판을 만들고 대포 136문을 실었습니다.', at: gun(null) },
+    { id: 'stern', label: '고물 장식', note: '삼위일체를 새긴 고물 조각으로 이름이 붙었습니다.', at: (a) => lift(a.stern, 3.5, 0.4) },
+  ],
+  es74: [
+    { id: 'long36', label: '36파운드 장포', note: '아래 갑판의 무거운 포입니다. 훈련이 모자라 장전이 느렸습니다.', at: gun('long36') },
+    { id: 'sails', label: '가로돛', note: '돛대 셋에 가로돛을 세 단씩 달았습니다.', at: sail(0.55) },
+  ],
 };
 
 /** The anchors a kind is drawn and labelled with: its own, or its model's scaled to it. */

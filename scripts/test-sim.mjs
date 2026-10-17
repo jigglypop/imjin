@@ -332,7 +332,8 @@ try {
     assert.deepEqual([...BATTLE_SLUGS], SCENARIO_ORDER);
     const { ARMADA_ORDER } = await load('/src/sim/armada.ts');
     const { LEPANTO_ORDER } = await load('/src/sim/lepanto.ts');
-    assert.deepEqual(Object.keys(SCENARIOS), [...SCENARIO_ORDER, ...ARMADA_ORDER, ...LEPANTO_ORDER]);
+    const { TRAFALGAR_ORDER } = await load('/src/sim/trafalgar.ts');
+    assert.deepEqual(Object.keys(SCENARIOS), [...SCENARIO_ORDER, ...ARMADA_ORDER, ...LEPANTO_ORDER, ...TRAFALGAR_ORDER]);
   });
 
   await check('scenario/map builders own the correct sea and projectile collisions follow local time', () => {

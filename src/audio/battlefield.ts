@@ -30,6 +30,11 @@ const GUN_BANK: Record<GunType, GunBank> = {
   perrier: 'cannon_medium',
   saker: 'cannon_small',
   base: 'cannon_small',
+  long32: 'cannon_heavy',
+  long36: 'cannon_heavy',
+  carronade: 'cannon_heavy',
+  long18: 'cannon_medium',
+  long12: 'cannon_small',
 };
 
 /**

@@ -126,7 +126,7 @@ export interface CommandSink {
 }
 
 /** Every kind with a model of its own: the gallery shows them all. A battle loads only the models of the kinds it uses. */
-const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall', 'racegalleon', 'pinnace', 'fireship', 'spgalleon', 'galleass', 'urca', 'reale', 'galea', 'vgalleass', 'sultana', 'kadirga', 'kalyata'];
+const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall', 'racegalleon', 'pinnace', 'fireship', 'spgalleon', 'galleass', 'urca', 'reale', 'galea', 'vgalleass', 'sultana', 'kadirga', 'kalyata', 'firstrate', 'gb74', 'gbfrigate', 'fr80', 'fr74', 'trinidad', 'es74'];
 
 /** Lets the browser paint the loading bar before the next stretch of blocking work (a timer covers a hidden tab, where frames never come). */
 const settle = () => new Promise<void>((resolve) => {

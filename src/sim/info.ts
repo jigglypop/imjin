@@ -32,7 +32,7 @@ export type BattleInfo = {
   art?: ScenarioId;
 };
 
-const FOLIAGE: Record<ScenarioId, number> = { okpo: 0.1, sacheon: 0.05, dangpo: 0, hansan: 0, angolpo: 0, busan: 0.6, chilcheon: 0, myeongnyang: 0.72, noryang: 1, plymouth: 0, portland: 0, wight: 0, calais: 0, gravelines: 0.1, preveza: 0.2, djerba: 0.1, 'lepanto-north': 0.2, 'lepanto-centre': 0, 'lepanto-south': 0 };
+const FOLIAGE: Record<ScenarioId, number> = { okpo: 0.1, sacheon: 0.05, dangpo: 0, hansan: 0, angolpo: 0, busan: 0.6, chilcheon: 0, myeongnyang: 0.72, noryang: 1, plymouth: 0, portland: 0, wight: 0, calais: 0, gravelines: 0.1, preveza: 0.2, djerba: 0.1, 'lepanto-north': 0.2, 'lepanto-centre': 0, 'lepanto-south': 0, 'st-vincent': 0, nile: 0.1, finisterre: 0, 'trafalgar-weather': 0, 'trafalgar-lee': 0 };
 
 export function scenarioInfo(id: ScenarioId): BattleInfo {
   const s = SCENARIOS[id];

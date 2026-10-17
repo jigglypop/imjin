@@ -233,6 +233,13 @@ const KIND_COST: Record<ShipKind, { hull: number; crew: number; supply: number }
   sultana: { hull: 1.3, crew: 1.6, supply: 1.4 },
   kadirga: { hull: 0.75, crew: 0.9, supply: 0.75 },
   kalyata: { hull: 0.45, crew: 0.45, supply: 0.4 },
+  firstrate: { hull: 1.2, crew: 1.2, supply: 1.2 },
+  gb74: { hull: 1, crew: 1, supply: 1 },
+  gbfrigate: { hull: 0.6, crew: 0.6, supply: 0.7 },
+  fr80: { hull: 1.1, crew: 1.1, supply: 1.1 },
+  fr74: { hull: 1, crew: 1, supply: 1 },
+  trinidad: { hull: 1.3, crew: 1.3, supply: 1.3 },
+  es74: { hull: 1, crew: 1, supply: 1 },
 };
 
 export function repairCost(c: Campaign) {

@@ -7,7 +7,7 @@ import type { Faction, ShipKind } from '../sim/types';
  * Chapters not yet built are listed with `ready: false` so the menu can show what is coming.
  */
 export type ChapterDef = {
-  id: ChapterId | 'trafalgar';
+  id: ChapterId;
   title: string;
   /** The poster's native-script line above the title. */
   native: string;
@@ -80,10 +80,28 @@ export const CHAPTERS: ChapterDef[] = [
     campaign: '지중해를 두고 장수를 키우는 세력 싸움',
     history: '프레베자에서 레판토까지 다섯 해전',
   },
-  { id: 'trafalgar', title: '트라팔가르', native: 'TRAFALGAR', tagline: '', years: '1805', year: 1805, ready: false, navies: [[], []], hero: { kind: 'racegalleon', own: [], foe: [] }, billing: [], campaign: '', history: '' },
+  {
+    id: 'trafalgar',
+    title: '트라팔가르',
+    native: 'TRAFALGAR',
+    tagline: '모든 이가 제 의무를 다한 바다',
+    years: '1797 — 1805',
+    year: 1805,
+    ready: false,
+    navies: [['britain'], ['france', 'spain1805']],
+    hero: { kind: 'firstrate', own: ['gb74', 'gbfrigate'], foe: ['trinidad', 'fr80'] },
+    billing: [
+      { side: '영국', names: ['허레이쇼 넬슨', '커스버트 콜링우드', '토머스 하디', '헨리 블랙우드'] },
+      { side: '프랑스', names: ['피에르 빌뇌브', '장자크 뤼카'] },
+      { side: '에스파냐', names: ['페데리코 그라비나', '코스메 다미안 추루카'] },
+    ],
+    campaign: '대서양과 지중해를 두고 장수를 키우는 세력 싸움',
+    history: '산비센테 곶에서 트라팔가르까지 다섯 해전',
+  },
 ];
 
 export const chapterDef = (id: ChapterId) => CHAPTERS.find((c) => c.id === id)!;
 
 /** The chapter a navy belongs to. */
-export const chapterOfFaction = (f: Faction): ChapterId => (f === 'england' || f === 'spain' ? 'armada' : f === 'holyleague' || f === 'ottoman' ? 'lepanto' : 'imjin');
+export const chapterOfFaction = (f: Faction): ChapterId =>
+  f === 'england' || f === 'spain' ? 'armada' : f === 'holyleague' || f === 'ottoman' ? 'lepanto' : f === 'britain' || f === 'france' || f === 'spain1805' ? 'trafalgar' : 'imjin';

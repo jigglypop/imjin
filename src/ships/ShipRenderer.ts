@@ -104,6 +104,14 @@ export const SHIP_MODELS: ShipModelSpec[] = [
   { kind: 'urca', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
   { kind: 'pinnace', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.1 },
   { kind: 'fireship', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.1 },
+  // The ships of 1805 are procedural only.
+  { kind: 'firstrate', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'gb74', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'gbfrigate', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'fr80', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'fr74', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'trinidad', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'es74', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
 ];
 
 export const FALLBACK_MODEL: Partial<Record<ShipKind, string>> = {

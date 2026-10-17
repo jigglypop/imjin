@@ -15,6 +15,9 @@ const RANKED_DOCTRINE: Record<Faction, Partial<Record<ShipKind, number>>> = {
   spain: { spgalleon: 0.55, galleass: 0.3, urca: 0.15 },
   holyleague: { galea: 0.8, vgalleass: 0.2 },
   ottoman: { kadirga: 0.7, kalyata: 0.3 },
+  britain: { gb74: 0.86, gbfrigate: 0.14 },
+  france: { fr74: 1 },
+  spain1805: { es74: 1 },
 };
 /**
  * The same under the expanded rules, where the size tiers and support craft are on offer too. They take small shares,
@@ -28,6 +31,9 @@ const DOCTRINE: Record<Faction, Partial<Record<ShipKind, number>>> = {
   spain: { spgalleon: 0.55, galleass: 0.3, urca: 0.15 },
   holyleague: { reale: 0.08, galea: 0.74, vgalleass: 0.18 },
   ottoman: { sultana: 0.08, kadirga: 0.62, kalyata: 0.3 },
+  britain: { firstrate: 0.24, gb74: 0.64, gbfrigate: 0.12 },
+  france: { fr80: 0.22, fr74: 0.78 },
+  spain1805: { trinidad: 0.2, es74: 0.8 },
 };
 const doctrineOf = (c: Conquest, faction: Faction) => (c.options.expanded ? DOCTRINE : RANKED_DOCTRINE)[faction];
 
@@ -58,6 +64,11 @@ const DOCTRINE_OF_FIGHT: Record<Faction, { engage: number; prey: number; reach: 
   // Galleys closed bow-on to fire their one volley and board (Guilmartin); the Ottomans sought to envelop with their numbers.
   holyleague: { engage: 700, prey: 1.1, reach: 2200, retreat: 2.6 },
   ottoman: { engage: 800, prey: 1.2, reach: 2600, retreat: 2.8 },
+  // Nelson's captains sought close action ("no captain can do very wrong if he places his ship alongside that of an
+  // enemy", the Trafalgar memorandum); the French and Spanish fired high at the rigging from further off.
+  britain: { engage: 550, prey: 1.0, reach: 2000, retreat: 2.4 },
+  france: { engage: 750, prey: 1.0, reach: 2000, retreat: 2.2 },
+  spain1805: { engage: 750, prey: 1.0, reach: 2000, retreat: 2.2 },
 };
 /** A fleet's fighting weight; under the battle depth rules a running crew hardly counts, for either side. */
 const power = (list: Ship[]) => list.reduce((a, s) => a + combatValue(s.spec.kind) * (0.35 + 0.65 * (s.hull / s.spec.hull)) * (0.4 + 0.6 * (s.crew / s.spec.crew)) * NERVE_WEIGHT[s.moraleState], 0);

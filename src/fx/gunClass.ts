@@ -21,6 +21,11 @@ export const GUN_CLASS: Record<GunType, GunClass> = {
   perrier: { weight: 0.7, sharp: 0.5 },
   saker: { weight: 0.42, sharp: 0.78 },
   base: { weight: 0.28, sharp: 0.9 },
+  long32: { weight: 0.88, sharp: 0.4 },
+  long18: { weight: 0.72, sharp: 0.5 },
+  long12: { weight: 0.55, sharp: 0.65 },
+  carronade: { weight: 0.92, sharp: 0.3 },
+  long36: { weight: 0.92, sharp: 0.36 },
 };
 
 export const gunClass = (type: GunType | undefined, big: boolean): GunClass => (type ? GUN_CLASS[type] : big ? GUN_CLASS.hyeonja : GUN_CLASS.seungja);

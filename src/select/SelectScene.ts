@@ -47,6 +47,11 @@ export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
   'lepanto-north': { lon: 21.1, lat: 38.33 },
   'lepanto-centre': { lon: 21.15, lat: 38.27 },
   'lepanto-south': { lon: 21.2, lat: 38.2 },
+  'st-vincent': { lon: -9.4, lat: 36.9 },
+  nile: { lon: 30.1, lat: 31.35 },
+  finisterre: { lon: -11.5, lat: 43.6 },
+  'trafalgar-weather': { lon: -6.25, lat: 36.25 },
+  'trafalgar-lee': { lon: -6.22, lat: 36.2 },
 };
 
 const lonToX = (lon: number) => ((lon + 180) / 360) * 2 ** meta.zoom;
@@ -71,6 +76,9 @@ const FLAG_AT: Record<Faction, { dx: number; dz: number; size: number; lean: num
   spain: { dx: 1.6, dz: -0.2, size: 1.1, lean: -0.3 },
   holyleague: { dx: -1.5, dz: 0.5, size: 1.1, lean: 0.3 },
   ottoman: { dx: 1.6, dz: -0.2, size: 1.1, lean: -0.3 },
+  britain: { dx: -1.5, dz: 0.5, size: 1.1, lean: 0.3 },
+  france: { dx: 1.6, dz: -0.2, size: 1.1, lean: -0.3 },
+  spain1805: { dx: 2.7, dz: 0.5, size: 1.05, lean: -0.25 },
 };
 const PLAYER_FLAG = 1.3;
 

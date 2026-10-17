@@ -2,7 +2,7 @@
 // (gpt-image), composite one atlas per faction with sharp, derive normal and roughness maps from the albedo, write
 // public/textures/ships/* or, with --set=buildings, public/textures/buildings/*.
 //
-//   node scripts/ship-textures.mjs generate [--set=buildings] [--faction=joseon,japan,ming] [--only=slot,slot] [--n=1] [--model=gpt-image-2] [--jobs=8]
+//   node scripts/ship-textures.mjs generate [--provider=gemini] [--set=buildings] [--faction=joseon,japan,ming] [--only=slot,slot] [--n=1] [--model=gpt-image-2] [--jobs=8]
 //   node scripts/ship-textures.mjs compose  [--set=buildings] [--faction=...] [--pick=joseon/hull_plank:2,...]
 //   node scripts/ship-textures.mjs patch    [--set=buildings] --faction=joseon --only=slot,slot   (recompose just those cells into the published atlas)
 //   node scripts/ship-textures.mjs all      [--set=buildings] (generate then compose)
@@ -71,8 +71,19 @@ function tasks() {
   return list;
 }
 
+const PROVIDER = args.provider ?? 'openai';
+
 async function generate(task) {
   const prompt = `${task.prompt} ${layout.style}`;
+  if (PROVIDER === 'gemini') {
+    // Gemini's image model (scripts/gemini-image.mjs) for when the OpenAI images API is out of reach; the ratio follows the slot's size.
+    const { geminiImage } = await import('./gemini-image.mjs');
+    const [w, h] = (task.size ?? '1024x1024').split('x').map(Number);
+    const aspect = w === h ? '1:1' : w > h ? '3:2' : '2:3';
+    await mkdir(join(task.file, '..'), { recursive: true });
+    await writeFile(task.file, await geminiImage(prompt, { aspect }));
+    return;
+  }
   for (let attempt = 1; attempt <= 4; attempt += 1) {
     const res = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
@@ -94,7 +105,7 @@ async function generate(task) {
 }
 
 async function runGenerate() {
-  if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing (.env)');
+  if (PROVIDER !== 'gemini' && !process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing (.env)');
   const todo = [];
   for (const t of tasks()) if (!(await exists(t.file))) todo.push(t);
   console.log(`${todo.length} images to generate with ${MODEL} (${QUALITY}), ${JOBS} at a time`);

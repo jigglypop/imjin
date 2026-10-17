@@ -148,6 +148,9 @@ export const RANKED_FLEET_MIX: Record<Faction, ShipKind[]> = {
   spain: ['spgalleon', 'galleass', 'urca', 'spgalleon', 'urca'],
   holyleague: ['galea', 'galea', 'vgalleass', 'galea', 'galea'],
   ottoman: ['kadirga', 'kadirga', 'kalyata', 'kadirga', 'kalyata', 'kadirga'],
+  britain: ['gb74', 'gb74', 'gbfrigate', 'gb74', 'gb74'],
+  france: ['fr74', 'fr74', 'fr74', 'fr74'],
+  spain1805: ['es74', 'es74', 'es74', 'es74'],
 };
 /**
  * The opening mix under the expanded rules: the same fleets with some of the new size tiers among them. The support
@@ -161,6 +164,9 @@ export const FLEET_MIX: Record<Faction, ShipKind[]> = {
   spain: ['spgalleon', 'galleass', 'urca', 'spgalleon', 'urca'],
   holyleague: ['reale', 'galea', 'galea', 'vgalleass', 'galea', 'galea'],
   ottoman: ['sultana', 'kadirga', 'kadirga', 'kalyata', 'kadirga', 'kalyata'],
+  britain: ['firstrate', 'gb74', 'gb74', 'gbfrigate', 'gb74'],
+  france: ['fr80', 'fr74', 'fr74', 'fr74'],
+  spain1805: ['trinidad', 'es74', 'es74', 'es74'],
 };
 
 export const fleetCost = (fleet: ShipKind[], profile: BalanceProfile = COMPETITIVE_PROFILE) => fleet.reduce((a, k) => a + shipSpec(k, profile).cost, 0);

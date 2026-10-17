@@ -12,6 +12,9 @@ export const COMPETITIVE_TRAITS: Record<Faction, string> = {
   spain: '높은 선루·병사 많은 도선전 · 느린 장전',
   holyleague: '이물 대포와 화승총병 · 갈레아스의 화력',
   ottoman: '빠른 갤리선과 활 · 많은 병사의 도선전',
+  britain: '빠른 장전의 현측 포격 · 캐로네이드의 근거리 화력',
+  france: '무거운 36리브르 포 · 저격병과 도선 훈련',
+  spain1805: '거대한 다층 전열함 · 느린 장전과 기동',
 };
 
 type UnitBalance = { spec: Partial<ShipSpec>; mods?: Partial<ShipMods>; range?: number; damage?: number };
@@ -57,6 +60,14 @@ export const COMPETITIVE_UNITS: Record<ShipKind, UnitBalance> = {
   sultana: { spec: { cost: 860, build: 68 } },
   kadirga: { spec: { cost: 470, build: 38 } },
   kalyata: { spec: { cost: 260, build: 24 } },
+  // The Trafalgar chapter's prices, fitted with scripts/balance-competitive.mjs (docs/balance-cross.md).
+  firstrate: { spec: { cost: 1500, build: 90 } },
+  gb74: { spec: { cost: 1150, build: 74 } },
+  gbfrigate: { spec: { cost: 450, build: 40 } },
+  fr80: { spec: { cost: 1350, build: 84 } },
+  fr74: { spec: { cost: 1100, build: 74 } },
+  trinidad: { spec: { cost: 1700, build: 96 } },
+  es74: { spec: { cost: 1100, build: 74 } },
 };
 
 /** The three treasuries earn the same base income; cheap boarding ships are not discounted a second time. */
@@ -68,6 +79,9 @@ export const COMPETITIVE_FACTIONS: Record<Faction, { income: number; cost: numbe
   spain: { income: 1, cost: 1, power: 1 },
   holyleague: { income: 1, cost: 1, power: 1 },
   ottoman: { income: 1, cost: 1, power: 1 },
+  britain: { income: 1, cost: 1, power: 1 },
+  france: { income: 1, cost: 1, power: 1 },
+  spain1805: { income: 1, cost: 1, power: 1 },
 };
 
 const specs = Object.fromEntries(Object.entries(SHIP_SPECS).map(([kind, spec]) => [kind, { ...spec, ...COMPETITIVE_UNITS[kind as ShipKind].spec }])) as Record<ShipKind, ShipSpec>;

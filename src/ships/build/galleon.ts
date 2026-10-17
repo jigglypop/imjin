@@ -32,8 +32,14 @@ import {
 import { box, cylinder, grid, lerp, MeshBuilder, paints, polygon, rectSection, sweep, xlate, type MeshData, type Paint, type V3 } from './parts';
 import { fightingTop, lateenSail, line, shrouds, squareSail } from './rig';
 
-/** Flags each navy flies: masthead flags by mast, the ensign at the stern, the streamer patches. */
-const FLAGS: Record<'england' | 'spain', { mast: [string, string][]; command: [string, string]; ensign: [string, string]; streamer: [string, string][] }> = {
+type SailNavy = 'england' | 'spain' | 'britain' | 'france' | 'spain1805';
+
+/**
+ * Flags each navy flies: masthead flags by mast, the ensign at the stern, the streamer patches. In 1805 every British
+ * ship at Trafalgar wore the white ensign by Nelson's order, Nelson as vice-admiral of the white the St George flag at
+ * the fore; the French the tricolour, the Spanish the red and gold ensign of 1785 (Goodwin 2005).
+ */
+const FLAGS: Record<SailNavy, { mast: [string, string][]; command: [string, string]; ensign: [string, string]; streamer: [string, string][] }> = {
   england: {
     mast: [['flags_a', 'stgeorge'], ['flags_a', 'stgeorge'], ['flags_a', 'stgeorge'], ['flags_b', 'rose']],
     command: ['flags_a', 'royal'],
@@ -46,6 +52,9 @@ const FLAGS: Record<'england' | 'spain', { mast: [string, string][]; command: [s
     ensign: ['flags_a', 'royal'],
     streamer: [['flags_b', 'redgold'], ['flags_b', 'red'], ['flags_b', 'white']],
   },
+  britain: { mast: [['flags_b', 'pendant']], command: ['flags_a', 'vice'], ensign: ['flags_a', 'white'], streamer: [['flags_b', 'pendant']] },
+  france: { mast: [['flags_b', 'pendant']], command: ['flags_a', 'admiral'], ensign: ['flags_a', 'tricolore'], streamer: [['flags_b', 'pendant']] },
+  spain1805: { mast: [['flags_b', 'pendant']], command: ['flags_a', 'admiral'], ensign: ['flags_a', 'rojigualda'], streamer: [['flags_b', 'pendant']] },
 };
 
 const smooth = (a: number, c: number, x: number) => {
@@ -87,8 +96,8 @@ function loftShaped(ctx: Ctx, h: HullPlan, skin: Paint) {
 }
 
 /** A painted band on the shaped hull's side between two heights, both beams (hullBand on the plan). */
-function shapedBand(ctx: Ctx, h: HullPlan, paint: Paint, x0: number, x1: number, lo: number, hi: number, off: number) {
-  const n = byLod(ctx, 30, 12, 6);
+function shapedBand(ctx: Ctx, h: HullPlan, paint: Paint, x0: number, x1: number, lo: number, hi: number, off: number, farSegs = 6) {
+  const n = byLod(ctx, 30, 12, farSegs);
   const m = byLod(ctx, 4, 2, 1);
   for (const sgn of [-1, 1]) {
     const P: V3[][] = [];
@@ -300,7 +309,7 @@ const BOAT: HullPlan = { length: 6.5, beam: 1.9, draft: 0.45, deck: 0.55, flat: 
 export function buildSailShip(kind: ShipKind, variant: number, lod: Lod): MeshData {
   const plan = sailPlanOf(kind, variant)!;
   const anchors = buildAnchorsFor(`${kind}#${variant}`)!;
-  const faction = SHIP_SPECS[kind].faction as Faction & ('england' | 'spain');
+  const faction = SHIP_SPECS[kind].faction as Faction & SailNavy;
   const b = new MeshBuilder();
   const ctx: Ctx = { b, lod, faction, P: paints(faction), rnd: mulberry32(plan.seed) };
   const Pn = ctx.P;
@@ -320,7 +329,8 @@ export function buildSailShip(kind: ShipKind, variant: number, lod: Lod): MeshDa
     wale: Pn('hull_plank', { tint: [0.32, 0.29, 0.27] }),
     timber: Pn('hull_plank', { tint: [0.55, 0.5, 0.46] }),
     dark: Pn('hull_plank', { tint: [0.09, 0.08, 0.07] }),
-    lid: Pn(faction === 'england' ? 'ochre_paint' : 'red_paint', { tint: tint(1.05) }),
+    // Port lids: ochre for the English of 1588, black on the 1805 chequer, red on the Spanish galleons.
+    lid: Pn(faction === 'england' ? 'ochre_paint' : plan.bands ? 'black_paint' : 'red_paint', { tint: tint(1.05) }),
     wood: Pn('mast_wood', { tint: tint(0.95) }),
     rope: Pn('rope'),
     bronze: Pn('bronze', { tint: [1.15, 1.0, 0.85] }),
@@ -337,8 +347,9 @@ export function buildSailShip(kind: ShipKind, variant: number, lod: Lod): MeshDa
   const band0 = deck - Math.min(2.6, deck * 0.42);
   if (plan.bands) {
     // The chequer of 1805: the side above the wales in the castle colour, a livery band along each tier of ports.
-    shapedBand(ctx, h, P.castle!, -L / 2 + 0.05, L / 2 - 0.1, plan.bands[0]![0] - 0.4, deck - 0.02, 0.03);
-    for (const [lo, hi] of plan.bands) shapedBand(ctx, h, P.livery!, -L / 2 + 0.3, L / 2 - 0.4, lo, Math.min(hi, deck - 0.05), 0.045);
+    // Far away the bands keep fewer segments, so a four-decker stays inside the far level's triangle budget.
+    shapedBand(ctx, h, P.castle!, -L / 2 + 0.05, L / 2 - 0.1, plan.bands[0]![0] - 0.4, deck - 0.02, 0.03, 3);
+    for (const [lo, hi] of plan.bands) shapedBand(ctx, h, P.livery!, -L / 2 + 0.3, L / 2 - 0.4, lo, Math.min(hi, deck - 0.05), 0.045, 3);
   } else shapedBand(ctx, h, P.livery!, -L / 2 + 0.05, L / 2 - 0.1, band0, deck - 0.02, 0.035);
   const wales = deck > 3 ? [band0 - 0.1, deck - 0.75 - (deck - band0) * 0.35] : [band0 - 0.08];
   for (const y of lod < 2 ? wales : wales.slice(0, 1)) shapedWale(ctx, h, P.wale!, -L / 2 + 0.1, L / 2 - 0.2, y, 0.16, 0.26, 0.07);

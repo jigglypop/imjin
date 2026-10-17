@@ -61,6 +61,13 @@ const ROLE_NOTE: Record<ShipKind, string> = {
   sultana: '기함 갤리선: 예니체리와 활, 이물 대포',
   kadirga: '갤리선: 빠르고 활이 많음, 도선전',
   kalyata: '갈리오트: 가장 빠른 소형 갤리선, 측면 우회',
+  firstrate: '1급 전열함: 세 층 포갑판의 기함, 가장 무거운 현측 포격',
+  gb74: '74문 전열함: 전열의 주력, 빠른 장전',
+  gbfrigate: '프리깃: 빠른 정찰과 신호 중계',
+  fr80: '80문 전열함: 무거운 36리브르 포의 기함',
+  fr74: '74문 전열함: 저격병과 도선 훈련',
+  trinidad: '산티시마 트리니다드: 네 층 포갑판, 느리지만 가장 큰 배',
+  es74: '74문 전열함: 36파운드 포, 느린 장전',
 };
 
 const TRAIT = COMPETITIVE_TRAITS;

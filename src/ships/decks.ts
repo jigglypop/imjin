@@ -62,6 +62,14 @@ export const DECKS: Record<ModelKind, DeckPlan> = {
   sultana: { oarDrop: 0, open: true, length: 0.7, beam: 0.8, command: { x: -0.44, up: 2.3 }, figures: { oar: 40, gun: 4, shot: 18, melee: 16 }, oars: 31, drum: true },
   kadirga: { oarDrop: 0, open: true, length: 0.7, beam: 0.8, command: { x: -0.44, up: 1.7 }, figures: { oar: 30, gun: 3, shot: 12, melee: 8 }, oars: 25, drum: true },
   kalyata: { oarDrop: 0, open: true, length: 0.7, beam: 0.8, command: null, figures: { oar: 20, gun: 2, shot: 6, melee: 4 }, oars: 19, drum: false },
+  // The ships of 1805: gun crews along the weather deck, marines at the rails and the poop, the captain on the quarterdeck.
+  firstrate: { oarDrop: 0, open: true, length: 0.66, beam: 0.62, command: { x: -0.3, up: 2.2 }, figures: { oar: 0, gun: 18, shot: 12, melee: 8 }, oars: 0, drum: true },
+  gb74: { oarDrop: 0, open: true, length: 0.66, beam: 0.62, command: { x: -0.3, up: 2.2 }, figures: { oar: 0, gun: 16, shot: 10, melee: 6 }, oars: 0, drum: true },
+  gbfrigate: { oarDrop: 0, open: true, length: 0.66, beam: 0.6, command: { x: -0.32, up: 0 }, figures: { oar: 0, gun: 12, shot: 6, melee: 4 }, oars: 0, drum: false },
+  fr80: { oarDrop: 0, open: true, length: 0.66, beam: 0.62, command: { x: -0.3, up: 2.2 }, figures: { oar: 0, gun: 16, shot: 14, melee: 8 }, oars: 0, drum: true },
+  fr74: { oarDrop: 0, open: true, length: 0.66, beam: 0.62, command: { x: -0.3, up: 2.2 }, figures: { oar: 0, gun: 14, shot: 14, melee: 8 }, oars: 0, drum: true },
+  trinidad: { oarDrop: 0, open: true, length: 0.66, beam: 0.62, command: { x: -0.3, up: 2.2 }, figures: { oar: 0, gun: 18, shot: 14, melee: 10 }, oars: 0, drum: true },
+  es74: { oarDrop: 0, open: true, length: 0.66, beam: 0.62, command: { x: -0.3, up: 2.2 }, figures: { oar: 0, gun: 14, shot: 12, melee: 8 }, oars: 0, drum: true },
 };
 
 export function mainDeck(key: string, kind: ShipKind, fallback: number) {

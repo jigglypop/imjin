@@ -67,7 +67,7 @@ const FLAG_COLORS: [number, number, number][] = [
   [0.64, 0.5, 0.2],
   [0.86, 0.84, 0.78],
 ];
-const FACTION_INDEX: Record<Faction, number> = { joseon: 0, japan: 1, ming: 2, england: 0, spain: 2, holyleague: 0, ottoman: 1 };
+const FACTION_INDEX: Record<Faction, number> = { joseon: 0, japan: 1, ming: 2, england: 0, spain: 2, holyleague: 0, ottoman: 1, britain: 0, france: 1, spain1805: 2 };
 
 type Link = {
   /** Rail points on the grappling ship (a) and the held ship (d), in each ship's own frame: the top of the rail. */

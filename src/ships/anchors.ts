@@ -6,6 +6,7 @@
 import { SHIP_SPECS } from '../sim/catalog';
 import type { GunType, ShipKind } from '../sim/types';
 import { GALLEY_PLANS, isGalleyKind } from './lepantoPlans';
+import { SHIPS_1805 } from './trafalgarPlans';
 import { FIRESHIP_PLAN, GALLEASS_PLAN, PINNACE_PLAN, RACE_PLANS, SPAIN_PLANS, URCA_PLAN, type GalleassPlan, type SailPlan } from './armadaPlans';
 
 export type V3 = [number, number, number];
@@ -1016,7 +1017,8 @@ function scaledAnchors(a: ShipAnchors, scale: number): ShipAnchors {
 export type ModelKind =
   | 'panokseon' | 'geobukseon' | 'hyeopseon' | 'atakebune' | 'sekibune' | 'kobaya' | 'mingship' | 'mingsmall'
   | 'racegalleon' | 'pinnace' | 'fireship' | 'spgalleon' | 'galleass' | 'urca'
-  | 'reale' | 'galea' | 'vgalleass' | 'sultana' | 'kadirga' | 'kalyata';
+  | 'reale' | 'galea' | 'vgalleass' | 'sultana' | 'kadirga' | 'kalyata'
+  | 'firstrate' | 'gb74' | 'gbfrigate' | 'fr80' | 'fr74' | 'trinidad' | 'es74';
 
 /**
  * Kinds drawn, until they get silhouettes of their own, with the model of their nearest relative of the same navy,
@@ -1118,15 +1120,17 @@ export function buildAnchorsFor(key: string): ShipAnchors | undefined {
   return a;
 }
 
-export const PROCEDURAL_KINDS: ModelKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall', 'racegalleon', 'pinnace', 'fireship', 'spgalleon', 'galleass', 'urca', 'reale', 'galea', 'vgalleass', 'sultana', 'kadirga', 'kalyata'];
+export const PROCEDURAL_KINDS: ModelKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall', 'racegalleon', 'pinnace', 'fireship', 'spgalleon', 'galleass', 'urca', 'reale', 'galea', 'vgalleass', 'sultana', 'kadirga', 'kalyata', 'firstrate', 'gb74', 'gbfrigate', 'fr80', 'fr74', 'trinidad', 'es74'];
 
-/** The construction plan of a square-rigged ship model of 1588, or undefined for the others. */
+/** The construction plan of a square-rigged ship model of 1588 or 1805, or undefined for the others. */
 export function sailPlanOf(kind: ShipKind, variant: number): SailPlan | undefined {
   if (kind === 'racegalleon') return RACE_PLANS[variant] ?? RACE_PLANS[0]!;
   if (kind === 'spgalleon') return SPAIN_PLANS[variant] ?? SPAIN_PLANS[0]!;
   if (kind === 'urca') return URCA_PLAN;
   if (kind === 'pinnace') return PINNACE_PLAN;
   if (kind === 'fireship') return FIRESHIP_PLAN;
+  const plans = SHIPS_1805[kind];
+  if (plans) return plans[variant] ?? plans[0]!;
   return undefined;
 }
 /** How many models a kind has: an aliased kind has its model's. */
@@ -1134,6 +1138,7 @@ export function variantCount(kind: ShipKind) {
   const model = modelKind(kind);
   if (model === 'racegalleon') return RACE_PLANS.length;
   if (model === 'spgalleon') return SPAIN_PLANS.length;
+  if (SHIPS_1805[model]) return SHIPS_1805[model]!.length;
   return model === 'panokseon' ? PANOK_PLANS.length : model === 'atakebune' ? ATAKE_PLANS.length : model === 'sekibune' ? SEKI_PLANS.length : 1;
 }
 

@@ -94,6 +94,13 @@ export const SHIP_NAME: Record<ShipClass, string> = {
   sultana: '술타나',
   kadirga: '카드르가',
   kalyata: '칼리야타',
+  firstrate: '1급 전열함',
+  gb74: '74문 전열함 (영국)',
+  gbfrigate: '프리깃',
+  fr80: '80문 전열함',
+  fr74: '74문 전열함 (프랑스)',
+  trinidad: '산티시마 트리니다드',
+  es74: '74문 전열함 (에스파냐)',
 };
 
 export const shipName = (kind: ShipClass) => t(SHIP_NAME[kind]);

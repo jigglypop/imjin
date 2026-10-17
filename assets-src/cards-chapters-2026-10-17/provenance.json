@@ -59,6 +59,55 @@
       "prompt": "A small fast Ottoman corsair galiot (kalyata) of 1571 with one lateen mast and a single bank of oars, a red flag with a white crescent (no star), skimming low over the waves. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
       "at": "2026-10-17T10:17:54.564Z",
       "estimatedCostUsd": 0.25
+    },
+    "firstrate": {
+      "prompt": "HMS Victory at Trafalgar in 1805: a three-decker first-rate ship of the line, black hull with three yellow ochre bands along the rows of gun ports (the Nelson chequer) and black port lids, three masts under full square sails, the white ensign at the stern and the St George flag of a vice-admiral at the fore. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T13:01:02.457Z",
+      "tool": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "estimatedCostUsd": 0.04
+    },
+    "gb74": {
+      "prompt": "A British 74-gun ship of the line of 1805 (like HMS Bellerophon): two gun decks, black hull with two yellow ochre bands along the gun ports and black port lids, three masts of square sails, a white ensign, firing a broadside. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T13:01:12.614Z",
+      "tool": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "estimatedCostUsd": 0.04
+    },
+    "gbfrigate": {
+      "prompt": "A British 36-gun frigate of 1805 (like HMS Euryalus) under full sail, a single gun deck with a yellow ochre band and black port lids, signal flags flying from the mizzen, heeling in the wind. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T13:01:25.201Z",
+      "tool": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "estimatedCostUsd": 0.04
+    },
+    "fr80": {
+      "prompt": "The French 80-gun flagship Bucentaure at Trafalgar in 1805: two gun decks, black hull with a red-brown band along the gun ports, three masts of square sails, the French tricolour ensign at the stern. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T13:01:37.284Z",
+      "tool": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "estimatedCostUsd": 0.04
+    },
+    "fr74": {
+      "prompt": "The French 74-gun ship Redoutable at Trafalgar in 1805: two gun decks, black hull with a dull yellow band, musketeers in the fighting tops, the French tricolour ensign, wreathed in cannon smoke. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T13:01:47.504Z",
+      "tool": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "estimatedCostUsd": 0.04
+    },
+    "trinidad": {
+      "prompt": "The Spanish four-decker Santisima Trinidad of 1805, the largest warship in the world: four rows of gun ports on a dark red hull with black bands, three masts of square sails, the red and yellow Spanish naval ensign of 1785 at the stern. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T13:01:59.442Z",
+      "tool": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "estimatedCostUsd": 0.04
+    },
+    "es74": {
+      "prompt": "A Spanish 74-gun ship of the line of 1805 (like the San Juan Nepomuceno): two gun decks, black hull with dark red bands along the gun ports, three masts of square sails, the red and yellow Spanish naval ensign of 1785. Painterly concept art card illustration, seen from a low dramatic angle, sailing through dark waves under cannon smoke. Muted ink-wash palette of deep teal, charcoal and ochre with gold and vermilion accents, visible brush strokes, aged silk texture, cinematic lighting, historically accurate rigging and flags, no text, no border, no frame.",
+      "at": "2026-10-17T13:02:10.449Z",
+      "tool": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "estimatedCostUsd": 0.04
     }
   }
 }

@@ -2,8 +2,8 @@ import type { Battle } from './battle';
 import { CHAPTER_NAVIES, SCENARIOS, chapterOfScenario, type ScenarioId } from './scenarios';
 import { OWNER_OF, teamOf, type Faction, type ShipMods } from './types';
 
-export const FACTION_NAME: Record<Faction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군', england: '잉글랜드 해군', spain: '에스파냐 무적함대', holyleague: '신성동맹 함대', ottoman: '오스만 함대' };
-export const FACTION_SHORT: Record<Faction, string> = { joseon: '조선', japan: '일본', ming: '명', england: '잉글랜드', spain: '에스파냐', holyleague: '신성동맹', ottoman: '오스만' };
+export const FACTION_NAME: Record<Faction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군', england: '잉글랜드 해군', spain: '에스파냐 무적함대', holyleague: '신성동맹 함대', ottoman: '오스만 함대', britain: '영국 해군', france: '프랑스 해군', spain1805: '에스파냐 해군' };
+export const FACTION_SHORT: Record<Faction, string> = { joseon: '조선', japan: '일본', ming: '명', england: '잉글랜드', spain: '에스파냐', holyleague: '신성동맹', ottoman: '오스만', britain: '영국', france: '프랑스', spain1805: '에스파냐' };
 
 /** Factions the player can lead in a battle. The Ming fleet only sailed at Noryang. */
 export function playableFactions(id: ScenarioId): Faction[] {
