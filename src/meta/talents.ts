@@ -1,5 +1,11 @@
 import type { ShipMods } from '../sim/types';
-import { BRANCHES, BRANCH_LABEL, TREES, type Branch, type Effect } from '../sim/grand/growthData';
+import { BRANCHES, BRANCH_LABEL, TREES, type Branch, type CommanderTree, type Effect } from '../sim/grand/growthData';
+import { generalById } from './catalog';
+import { ERA_OF } from './loot';
+import { BATTLE_TREES, ERA_NAMES } from './talentEras';
+
+/** A general's tree: his campaign tree, or for a battle-only commander his account tree (talentEras.ts). */
+export const treeOf = (id: string): CommanderTree | undefined => TREES[id] ?? BATTLE_TREES[id];
 
 /**
  * The account's talent trees (재능): what a general spends his level points on. Pure data plus the arithmetic of
@@ -107,7 +113,7 @@ const sig = (label: string, hanja: string, per: TalentNode['per'], line: string)
  */
 export const SIGNATURES: Record<string, Sig> = {
   howard: sig('바람 위의 신중함', 'Weather gage', { defense: 0.04, accuracy: 0.02 }, '바람 위를 지키며 함부로 붙지 않았다'),
-  drake: sig('칼레의 화선', 'Fireships at Calais', { fire: 0.1, speed: 0.02 }, '밤바람에 화선 여덟 척을 흘려보내 초승달을 흩었다'),
+  drake: sig('칼레의 화선', 'Fireships at Calais', { fire: 0.08, speed: 0.02 }, '밤바람에 화선 여덟 척을 흘려보내 초승달을 흩었다'),
   frobisher: sig('트라이엄프호의 돌입', 'Triumph', { melee: 0.05, morale: 0.02 }, '가장 큰 배로 적진 한가운데 버텼다'),
   hawkins: sig('낮은 갤리언', 'Race-built', { turn: 0.04, speed: 0.02 }, '선루를 깎아 빠르고 날렵하게 다시 지었다'),
   medina: sig('진형의 규율', 'Disciplina', { defense: 0.04, morale: 0.03, speed: -0.02 }, '진형을 벗어나는 함장은 교수형에 처한다고 명했다'),
@@ -134,6 +140,9 @@ export const SIGNATURES: Record<string, Sig> = {
   lucas: sig('수류탄과 소총', 'Redoutable', { melee: 0.05, fire: 0.04 }, '돛대 위에서 빅토리호 갑판을 쓸었다'),
   gravina: sig('관측 전대', 'Escuadra de observación', { morale: 0.03, defense: 0.03 }, '예비대로 연합 함대 뒤를 받쳤다'),
   alava: sig('산타 아나호의 분전', 'Santa Ana', { defense: 0.04, melee: 0.02 }, '로열 소버린호와 끝까지 맞붙었다'),
+  jervis: sig('세인트빈센트의 군율', 'Discipline', { defense: 0.03, reload: 0.03 }, '반란을 누르고 함대를 다시 세웠다'),
+  brueys: sig('닻 내린 전열', 'Aboukir', { defense: 0.06, reload: 0.02, speed: -0.02 }, '해안에 붙여 닻을 내리고 기다렸다: 움직이지 못한다'),
+  cordoba: sig('대함대', 'Armada', { morale: 0.03, defense: 0.02 }, '스물일곱 척의 큰 함대를 이끌었다'),
   churruca: sig('측량가의 사격', 'Nepomuceno', { accuracy: 0.05 }, '포마다 거리를 재어 쏘게 한 측량가'),
 };
 
@@ -151,13 +160,13 @@ const MOD_KEYS: readonly ModKey[] = ['reload', 'accuracy', 'speed', 'turn', 'fir
 
 /** The factors a general's trait raises (resonance). */
 export function traitKeys(generalId: string): ModKey[] {
-  const e = TREES[generalId]?.trait.effect as Effect | undefined;
+  const e = treeOf(generalId)?.trait.effect as Effect | undefined;
   return e ? MOD_KEYS.filter((k) => (e[k] ?? 1) > 1) : [];
 }
 
 /** A general's three branches, in his tree's order. */
 export function branchesOf(generalId: string): Branch[] {
-  const tree = TREES[generalId];
+  const tree = treeOf(generalId);
   if (!tree) return [];
   const out = [...tree.branches].slice(0, 3);
   for (const k of traitKeys(generalId)) if (out.length < 3 && !out.includes(LEAN[k])) out.push(LEAN[k]);
@@ -167,7 +176,7 @@ export function branchesOf(generalId: string): Branch[] {
 
 /** The general's 비기 as a node: his campaign mastery's factors, kept as fractions. */
 export function masteryNode(generalId: string): TalentNode | null {
-  const tree = TREES[generalId];
+  const tree = treeOf(generalId);
   if (!tree) return null;
   const per: TalentNode['per'] = {};
   for (const k of MOD_KEYS) {
@@ -179,7 +188,9 @@ export function masteryNode(generalId: string): TalentNode | null {
 
 /** Every node a general can learn: his three branches, then his 비기. */
 export function talentsFor(generalId: string): TalentNode[] {
-  const out = branchesOf(generalId).flatMap((b) => [...BRANCH_NODES[b]]);
+  const era = ERA_OF[generalById(generalId)?.faction ?? ''];
+  const names = era && era !== 'imjin' ? ERA_NAMES[era] : null;
+  const out = branchesOf(generalId).flatMap((b) => BRANCH_NODES[b].map((n) => (names?.[n.id] ? { ...n, label: names[n.id]![0], line: names[n.id]![1] } : n)));
   const own = signatureNode(generalId);
   if (own) out.splice(out.findIndex((n) => n.branch === own.branch && n.keystone), 0, own);
   const m = masteryNode(generalId);

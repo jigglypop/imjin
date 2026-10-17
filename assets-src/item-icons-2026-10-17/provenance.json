@@ -256,11 +256,11 @@
     "t_fleece": {
       "tool": "gemini image edit",
       "model": "gemini-3.1-flash-image-preview",
-      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: the collar of the Order of the Golden Fleece: a gold chain of flint-and-steel links with a pendant golden ram fleece",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: the collar of the Order of the Golden Fleece: a heavy gold chain of fire-steel links with, hanging at the bottom, a small golden sheep (a ram fleece) suspended by its middle with head and legs drooping, clearly a sheep",
       "styleReference": "public/ui/weapons/joseon_hwando.webp",
       "date": "2026-10-17",
       "estimatedUsd": 0.04,
-      "takes": 1
+      "takes": 2
     },
     "t_chart": {
       "tool": "gemini image edit",
@@ -328,11 +328,11 @@
     "a_zirh": {
       "tool": "gemini image edit",
       "model": "gemini-3.1-flash-image-preview",
-      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an Ottoman mail-and-plate shirt (zırh gömlek): fine riveted mail with small steel plates on the chest, laid flat",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an Ottoman 16th-century mail-and-plate armor (zırh gömlek): a shirt of shiny riveted steel chain mail with rows of rectangular steel plates across the chest and belly, short mail sleeves, clearly metal armor, laid flat",
       "styleReference": "public/ui/weapons/joseon_hwando.webp",
       "date": "2026-10-17",
       "estimatedUsd": 0.04,
-      "takes": 1
+      "takes": 2
     },
     "a_kaftan": {
       "tool": "gemini image edit",

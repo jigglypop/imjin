@@ -1,8 +1,8 @@
 import type { ShipMods } from '../sim/types';
-import { TREES, type Effect } from '../sim/grand/growthData';
+import type { Effect } from '../sim/grand/growthData';
 import { armorSeed, rerollCost, rollArmor, rollEffect, type ArmorRoll } from './affixes';
 import { baseFits, DAILY_DROPS, INVENTORY_CAP, REFORGE, SALVAGE, itemBase, itemEffect, itemSeed, rollDrops, RARITIES, GEAR_SLOTS, type GearSlot, type Item } from './loot';
-import { KEYSTONE_LEVEL, MASTERY_LEVEL, MASTERY_SPENT, TIER_GATE, pointsAtLevel, spentAll, spentIn, talentEffect, talentsFor, type TalentNode } from './talents';
+import { KEYSTONE_LEVEL, MASTERY_LEVEL, MASTERY_SPENT, TIER_GATE, pointsAtLevel, spentAll, spentIn, talentEffect, talentsFor, treeOf, type TalentNode } from './talents';
 import { ARMORS, GENERALS, armorById, armorsFor, basicArmor, defaultWeapon, generalById, weaponById, type ArmorDef, type WeaponDef } from './catalog';
 
 /**
@@ -333,7 +333,7 @@ function multiply(m: ShipMods, e: Effect | Partial<ShipMods>) {
  */
 export function generalMods(p: Profile, generalId: string, talents?: Record<string, number>): ShipMods {
   const m = { ...NEUTRAL_MODS };
-  const tree = TREES[generalId];
+  const tree = treeOf(generalId);
   if (!tree) return m;
   multiply(m, tree.trait.effect);
   multiply(m, talentEffect(generalId, talents ?? generalState(p, generalId).talents));

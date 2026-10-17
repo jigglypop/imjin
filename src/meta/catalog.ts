@@ -100,9 +100,9 @@ export const GENERALS: readonly GeneralDef[] = [
   ...chapter('spain', ['medina', 'recalde'], ['leyva', 'oquendo']),
   ...chapter('holyleague', ['donjuan', 'venier'], ['barbarigo', 'doria']),
   ...chapter('ottoman', ['alipasha', 'uluc'], ['pertev', 'siroco']),
-  ...chapter('britain', ['nelson', 'collingwood'], ['cornwallis', 'calder', 'hardy', 'blackwood']),
-  ...chapter('france', ['villeneuve', 'lucas'], ['ganteaume', 'missiessy']),
-  ...chapter('spain1805', ['gravina', 'churruca'], ['alava']),
+  ...chapter('britain', ['nelson', 'collingwood'], ['cornwallis', 'calder', 'hardy', 'blackwood', 'jervis']),
+  ...chapter('france', ['villeneuve', 'lucas'], ['ganteaume', 'missiessy', 'brueys']),
+  ...chapter('spain1805', ['gravina', 'churruca'], ['alava', 'cordoba']),
 ];
 
 function chapter(faction: GeneralFaction, famous: string[], others: string[]): GeneralDef[] {

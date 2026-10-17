@@ -4,9 +4,9 @@ import { armorById, armorCardUrl, GENERALS, TIER_LABEL, WEAPON_KINDS, WEAPON_KIN
 import { syncProfile, useLocalProfile } from '../../meta/localProfile';
 import { AFFIX_RARITY_LABEL, affixById, PRIMARY_STATS, rerollCost, rollEffect, rollQuality, STAT_LABEL, type ArmorRoll } from '../../meta/affixes';
 import { armorRoll, rerollProblem, generalState, levelProgress, skillPointsLeft, owns, wornArmor, wornModel, wornWeapon, type Profile } from '../../meta/rules';
-import { TREES } from '../../sim/grand/growthData';
 import { Inventory } from './Inventory';
 import { TalentTree } from './TalentTree';
+import { treeOf } from '../../meta/talents';
 import { COMMANDERS } from '../../sim/grand/regions';
 import { portraitUrl } from '../portrait';
 import { ScreenFrame } from '../Screens';
@@ -243,7 +243,7 @@ function WeaponSelection({ id, profile }: { id: string; profile: Profile }) {
 function Poster({ id, profile }: { id: string; profile: Profile }) {
   const t = useT();
   const c = commander(id);
-  const tree = TREES[id];
+  const tree = treeOf(id);
   const prog = levelProgress(generalState(profile, id).xp);
   const points = skillPointsLeft(profile, id);
   return (
@@ -283,7 +283,7 @@ function Poster({ id, profile }: { id: string; profile: Profile }) {
 /** A chapter commander's level, trait and talent tree: the same growth as the 1592 generals (src/meta/talents.ts). */
 function ChapterGrowth({ id, profile }: { id: string; profile: Profile }) {
   const t = useT();
-  const tree = TREES[id]!;
+  const tree = treeOf(id)!;
   const prog = levelProgress(generalState(profile, id).xp);
   return (
     <>
@@ -325,8 +325,8 @@ function ChapterLayout({ navy, pick, setPick }: { navy: ChapterNavy; pick: strin
               <b>{t(g.name)}</b>
               <span>{t(g.title)}</span>
             </span>
-            {TREES[g.id] && <span className="gen-pick__lv">Lv.{levelProgress(generalState(profile, g.id).xp).level}</span>}
-            {TREES[g.id] && skillPointsLeft(profile, g.id) > 0 && <span className="gen-pick__dot">{skillPointsLeft(profile, g.id)}</span>}
+            {treeOf(g.id) && <span className="gen-pick__lv">Lv.{levelProgress(generalState(profile, g.id).xp).level}</span>}
+            {treeOf(g.id) && skillPointsLeft(profile, g.id) > 0 && <span className="gen-pick__dot">{skillPointsLeft(profile, g.id)}</span>}
           </button>
         ))}
       </nav>
@@ -340,14 +340,14 @@ function ChapterLayout({ navy, pick, setPick }: { navy: ChapterNavy; pick: strin
               </div>
             )}
           </section>
-          {TREES[c.id] && <Inventory id={c.id} profile={profile} />}
+          {treeOf(c.id) && <Inventory id={c.id} profile={profile} />}
         </div>
         <div className="gen-growth">
           <div className="gen-poster__id">
             <span className="gen-poster__title">{t(c.title)}</span>
             <h2>{t(c.name)}</h2>
           </div>
-          {TREES[c.id] && <ChapterGrowth id={c.id} profile={profile} />}
+          {treeOf(c.id) && <ChapterGrowth id={c.id} profile={profile} />}
         </div>
       </article>
     </div>

@@ -37,7 +37,7 @@ try {
       for (const v of Object.values(a.effect)) assert.ok(v >= 1 && v <= 1.1, a.id);
     }
     for (const g of C.GENERALS) {
-      assert.ok(TREES[g.id], `${g.id} has a tree`);
+      assert.ok(T.treeOf(g.id), `${g.id} has a tree`);
       assert.ok(existsSync(join(root, 'public', 'ui', 'portraits', `portrait_${g.id}.webp`)), `${g.id} has a portrait`);
       if (g.famous && C.isImjin(g.faction)) assert.equal(C.ARMORS.filter((a) => a.general === g.id).length, 1, `${g.id} has one signature`);
     }
@@ -90,7 +90,7 @@ try {
       const branches = T.branchesOf(g.id);
       assert.equal(branches.length, 3, g.id);
       assert.equal(new Set(branches).size, 3, g.id);
-      for (const b of TREES[g.id].branches.slice(0, 3)) assert.ok(branches.includes(b), `${g.id} keeps his campaign branch ${b}`);
+      for (const b of T.treeOf(g.id).branches.slice(0, 3)) assert.ok(branches.includes(b), `${g.id} keeps his campaign branch ${b}`);
       const nodes = T.talentsFor(g.id);
       assert.equal(new Set(nodes.map((n) => n.id)).size, nodes.length, g.id);
       assert.equal(nodes.filter((n) => n.keystone).length, 3, g.id);
@@ -540,7 +540,7 @@ try {
 
   check('chapter commanders: full generals with three branches, their own career talent, era loot only, icons for every piece', () => {
     const chapter = C.GENERALS.filter((g) => !C.isImjin(g.faction));
-    assert.equal(chapter.length, 29);
+    assert.equal(chapter.length, 32);
     for (const g of chapter) {
       const own = T.signatureNode(g.id);
       assert.ok(own, `${g.id} has a career talent`);
@@ -549,6 +549,10 @@ try {
       const all = Object.fromEntries(T.talentsFor(g.id).map((n) => [n.id, n.ranks]));
       for (const v of Object.values(R.generalMods(R.newProfile(), g.id, all))) assert.ok(v <= R.GENERAL_CAP.max && v >= R.GENERAL_CAP.min, g.id);
     }
+    // Era names: no 1592 terms on an 1805 tree.
+    assert.equal(T.talentById('nelson', 'gunnery.volley').label, '일제 현측사격');
+    assert.equal(T.talentById('uluc', 'seamanship.tides').label, '노 젓기 속도');
+    assert.equal(T.talentById('yi', 'seamanship.tides').label, '물때');
     // A Nelson at level 6 opens his own talent with six points in command.
     let p = { ...R.newProfile(), generals: { nelson: { xp: R.xpFor(8), talents: {} } } };
     for (const n of ['command.drums', 'command.drums', 'command.drums', 'command.law', 'command.drill', 'command.drill']) p = R.learn(p, 'nelson', n);
