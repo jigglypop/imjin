@@ -23,6 +23,12 @@ its representative flagship on the menu, ships balanced within and across chapte
 7. Menu hero, share cards, ship cards, HUD faction names, terrain dressing of the region (villages, trees).
 8. Balance (below), server acceptance, memory probes, tests, screenshots you actually looked at.
 
+## Owner requirements (2026-10-17)
+- Preview images: every chapter battle gets the same preview set as the 1592 battles (battle preview pictures, cards, share images, menu previews), same pipeline and quality.
+- Choosing a chapter switches the whole UI to that chapter (tabs): battles, campaign, codex, generals. /generals lists the chapter's commanders by faction tab (England/Spain, Holy League/Ottoman, Britain/France-Spain); portraits stand in until their 3D figures come from the generals-cast pipeline (the lead schedules those).
+- Strict historical accuracy (고증): commanders per battle, ship names and types, flags/ensigns, uniforms/armour, dates, weather/wind, tactics, place names - each sourced, sources recorded in the data (`sources` fields) or docs; no invented facts.
+- Battle data must drive the battle-opening cinematics (.claude/skills/cinematics in the main checkout): per battle the commanders present and quotes with sources.
+
 ## Cross-chapter balance
 - Stats stay historical; fairness is set by **price** (`COMPETITIVE_UNITS[kind].spec.cost` in `src/sim/competitive.ts`). 1592 prices are fixed (ranked).
 - Benchmark = AI vs AI conquest, navy fleet vs navy fleet:
