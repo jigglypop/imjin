@@ -1,5 +1,6 @@
 import { ARMADA_ORDER, ARMADA_QUOTES, ARMADA_SCENARIOS } from '../../sim/armada';
 import { LEPANTO_ORDER, LEPANTO_QUOTES, LEPANTO_SCENARIOS, type Quote } from '../../sim/lepanto';
+import { TRAFALGAR_ORDER, TRAFALGAR_QUOTES, TRAFALGAR_SCENARIOS } from '../../sim/trafalgar';
 import type { ScenarioInfo } from '../../sim/scenarios';
 import { at, commander, first, flagship, fleet } from '../subjects';
 import type { CastLight, Scene } from '../types';
@@ -62,4 +63,5 @@ const lightOf = (info: ScenarioInfo): CastLight => (info.night ? 'night' : info.
 export const CHAPTER_INTROS: Record<string, Scene> = Object.fromEntries([
   ...ARMADA_ORDER.map((id) => [id, chapterIntro(ARMADA_SCENARIOS[id], ARMADA_QUOTES[id], '1588 · 아르마다 전쟁', lightOf(ARMADA_SCENARIOS[id]))] as const),
   ...LEPANTO_ORDER.map((id) => [id, chapterIntro(LEPANTO_SCENARIOS[id], LEPANTO_QUOTES[id], `${LEPANTO_SCENARIOS[id].date.slice(0, 4)} · 지중해 갤리선 전쟁`, lightOf(LEPANTO_SCENARIOS[id]))] as const),
+  ...TRAFALGAR_ORDER.map((id) => [id, chapterIntro(TRAFALGAR_SCENARIOS[id], TRAFALGAR_QUOTES[id], `${TRAFALGAR_SCENARIOS[id].date.slice(0, 4)} · 나폴레옹 전쟁의 바다`, lightOf(TRAFALGAR_SCENARIOS[id]))] as const),
 ]);

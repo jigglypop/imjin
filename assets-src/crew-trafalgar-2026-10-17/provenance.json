@@ -41,6 +41,47 @@
         },
         "task": "7298f5ce-7f5e-45b0-92ed-d402b88356ae",
         "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5213834998059645,
+          "sy": 1.6994659930971134
+        },
+        "lods": [
+          {
+            "verts": 1907,
+            "tris": 1900
+          },
+          {
+            "verts": 970,
+            "tris": 720
+          },
+          {
+            "verts": 230,
+            "tris": 212
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "shoot",
+          "reload",
+          "melee",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "kneel",
+          "parry",
+          "combo",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "aim"
+        ]
       }
     },
     "britain_soldier": {
@@ -105,6 +146,42 @@
         },
         "task": "89ade167-9f99-45eb-b399-c0380571b66f",
         "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5630107692075559,
+          "sy": 1.6998119558496618
+        },
+        "lods": [
+          {
+            "verts": 1849,
+            "tris": 1682
+          },
+          {
+            "verts": 988,
+            "tris": 666
+          },
+          {
+            "verts": 176,
+            "tris": 164
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "command",
+          "melee",
+          "hit",
+          "die",
+          "cheer",
+          "wave",
+          "signal",
+          "parry",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
       }
     },
     "britain_sailor": {
@@ -146,6 +223,47 @@
         },
         "task": "3459ecc0-0566-4c5e-91b2-2bec54cd2c62",
         "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6744771338647355,
+          "sy": 1.7007421344110296
+        },
+        "lods": [
+          {
+            "verts": 1670,
+            "tris": 1646
+          },
+          {
+            "verts": 829,
+            "tris": 624
+          },
+          {
+            "verts": 219,
+            "tris": 186
+          }
+        ],
+        "clips": [
+          "idle",
+          "row",
+          "haul",
+          "carry",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "ready",
+          "ram",
+          "bucket",
+          "douse",
+          "kneel",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "drumroll",
+          "drum"
+        ]
       }
     },
     "france_shot": {
