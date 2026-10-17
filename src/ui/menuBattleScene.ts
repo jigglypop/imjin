@@ -27,6 +27,8 @@ export type MenuHero = { kind: ShipKind; own: ShipKind[]; foe: ShipKind[] };
 const TURTLE: MenuHero = { kind: 'geobukseon', own: ['panokseon'], foe: ['atakebune'] };
 
 const CYCLE = 40;
+/** Metres the menu camera pans left per unit of a hero's length over the 1588 galleons' (ships of the line only). */
+const PAN_PER_GROW = 60;
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 const ease = (x: number) => { const t=clamp(x); return t*t*(3-2*t); };
 
@@ -214,6 +216,13 @@ export class MenuBattleScene {
     this.camera.position.set(this.hero.x+(portrait?60:37)*k+drift, (portrait?17:8)+lift, this.hero.z+(portrait?48:24)*k);
     this.target.set(this.hero.x+(portrait?3:-28)*k*.15,(portrait?8:7)+lift*1.7,this.hero.z-(portrait?12:40)*k*.15);
     this.camera.lookAt(this.target);
+    // A ship of the line fills more of the frame than the galleons do: pan the camera to its left so the hull sits in
+    // the right half of a landscape frame, clear of the title block, as the other chapters' heroes do.
+    if(grow>1&&!portrait) {
+      this.camera.updateMatrixWorld();
+      const pan=-(grow-1)*PAN_PER_GROW, ex=this.camera.matrixWorld.elements;
+      this.camera.position.x+=ex[0]!*pan; this.camera.position.z+=ex[2]!*pan;
+    }
     this.camera.updateMatrixWorld();
   }
 
