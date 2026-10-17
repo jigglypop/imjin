@@ -10,9 +10,9 @@ export const CAST: Record<Faction, [CrewKey, CrewKey, CrewKey, CrewKey, CrewKey,
   joseon: ['rower', 'rower', 'joseon_soldier', 'joseon_marine', 'joseon_officer', 'rower'],
   japan: ['rower', 'rower', 'japan_ashigaru', 'japan_samurai', 'japan_officer', 'rower'],
   ming: ['rower', 'rower', 'ming_soldier', 'ming_soldier', 'ming_officer', 'rower'],
-  // The Armada navies have no figures of their own yet: they borrow the musket-armed casts closest in kit.
-  england: ['rower', 'rower', 'ming_soldier', 'ming_soldier', 'ming_officer', 'rower'],
-  spain: ['rower', 'rower', 'japan_ashigaru', 'ming_soldier', 'ming_officer', 'rower'],
+  // The Armada navies: sailors at the guns and the drum, caliver-men and arquebusiers, morion-helmeted soldiers.
+  england: ['england_sailor', 'england_sailor', 'england_shot', 'england_soldier', 'england_officer', 'england_sailor'],
+  spain: ['spain_sailor', 'spain_sailor', 'spain_shot', 'spain_soldier', 'spain_officer', 'spain_sailor'],
 };
 
 /** Hand props the crew models carry (scripts/bake-crew.mjs); a figure shows one and the rest fold away. */

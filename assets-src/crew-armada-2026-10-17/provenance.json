@@ -1,0 +1,632 @@
+{
+  "date": "2026-10-17",
+  "pipeline": "scripts/crew-armada.mjs",
+  "characters": {
+    "england_shot": {
+      "base": "japan_ashigaru",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the Spanish Armada of 1588. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable late-sixteenth-century materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. An English Elizabethan caliver-man (musketeer) of 1588 aboard a royal galleon: a plain steel morion helmet with a tall comb and a curved brim, a buff leather jerkin over a russet wool doublet, a leather bandolier of small wooden powder charges across the chest, full grey-brown venetian breeches to the knee, wool stockings and low leather shoes. Short brown beard.",
+        "poseReference": "render of japan_ashigaru bind pose",
+        "usage": {
+          "input_tokens": 1312,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 288
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3068
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "460cd302-aa29-4d67-8bbc-be75bccc6f22"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "614a86f1-cec3-4415-87f7-e869ae76b197",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5889096196961876,
+          "sy": 1.699333448545221
+        },
+        "lods": [
+          {
+            "verts": 2080,
+            "tris": 1896
+          },
+          {
+            "verts": 995,
+            "tris": 722
+          },
+          {
+            "verts": 219,
+            "tris": 210
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "shoot",
+          "reload",
+          "melee",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "kneel",
+          "parry",
+          "combo",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "aim"
+        ]
+      }
+    },
+    "england_soldier": {
+      "base": "joseon_marine",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the Spanish Armada of 1588. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable late-sixteenth-century materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. An English Elizabethan soldier of 1588 who fights boarders on deck: a polished steel combed morion helmet, a steel breastplate and short tassets over a faded red wool doublet with a St George red cross badge on white at the shoulder, dark padded trunk hose, wool stockings, leather shoes. Reddish beard.",
+        "poseReference": "render of joseon_marine bind pose",
+        "usage": {
+          "input_tokens": 1292,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 268
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3048
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "15663ddb-7415-4c1d-8852-6a37d4a7b33f"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "79f0200d-a9d1-4123-8954-52c33a3395cb",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6283855756789771,
+          "sy": 1.698768090742153
+        },
+        "lods": [
+          {
+            "verts": 1743,
+            "tris": 1678
+          },
+          {
+            "verts": 801,
+            "tris": 614
+          },
+          {
+            "verts": 210,
+            "tris": 182
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "melee",
+          "thrust",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "combo",
+          "slash",
+          "parry",
+          "block",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "england_officer": {
+      "base": "ming_officer",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the Spanish Armada of 1588. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable late-sixteenth-century materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. An English Elizabethan sea captain of 1588 like Drake or Hawkins: a black velvet doublet with gold buttons and a small white lace ruff, a gilded steel gorget, a short black cloak-less jerkin, puffed paned black and gold trunk hose, high dark leather boots, a black tall-crowned hat with a short white feather. Pointed grey-brown beard.",
+        "poseReference": "render of ming_officer bind pose",
+        "usage": {
+          "input_tokens": 1303,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 279
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3059
+        },
+        "estimatedUsd": 0.062
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6504031605897669,
+          "sy": 1.700098293372991
+        },
+        "lods": [
+          {
+            "verts": 1873,
+            "tris": 1684
+          },
+          {
+            "verts": 998,
+            "tris": 668
+          },
+          {
+            "verts": 201,
+            "tris": 174
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "command",
+          "melee",
+          "hit",
+          "die",
+          "cheer",
+          "wave",
+          "signal",
+          "parry",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "england_sailor": {
+      "base": "rower",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the Spanish Armada of 1588. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable late-sixteenth-century materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. An English Tudor sailor and gunner of 1588: a knitted brown wool Monmouth cap, a loose off-white linen shirt with sleeves rolled to the elbow, a sleeveless brown canvas waistcoat, wide knee-length canvas slops (sailor breeches) of grey-blue, bare shins and simple leather shoes. Stubble.",
+        "poseReference": "render of rower bind pose",
+        "usage": {
+          "input_tokens": 1292,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 268
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3048
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "abb75e55-f126-4531-a2a9-64e805c3c62d"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "f6501087-af53-4e1d-902a-4b63dfe4b52a",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6035656570261492,
+          "sy": 1.700248633439019
+        },
+        "lods": [
+          {
+            "verts": 1787,
+            "tris": 1648
+          },
+          {
+            "verts": 861,
+            "tris": 622
+          },
+          {
+            "verts": 222,
+            "tris": 186
+          }
+        ],
+        "clips": [
+          "idle",
+          "row",
+          "haul",
+          "carry",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "ready",
+          "ram",
+          "bucket",
+          "douse",
+          "kneel",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "drumroll",
+          "drum"
+        ]
+      }
+    },
+    "spain_shot": {
+      "base": "japan_ashigaru",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the Spanish Armada of 1588. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable late-sixteenth-century materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Spanish tercio arquebusier of 1588 aboard an Armada galleon: a blackened steel morion helmet with a tall comb and upturned brim, an ochre-yellow slashed doublet, a red silk sash tied across the body (the Spanish field sign), a leather bandolier of wooden powder charges, dark brown full breeches to the knee, wool stockings, leather shoes. Black moustache and short beard.",
+        "poseReference": "render of japan_ashigaru bind pose",
+        "usage": {
+          "input_tokens": 1313,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 289
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3069
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "373fd0cf-1de0-457d-93ad-6958bec7bdb6"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "87f1fa04-c94c-4b6f-a8fd-21f684b43cd7",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6272687117082203,
+          "sy": 1.6974694359754947
+        },
+        "lods": [
+          {
+            "verts": 2185,
+            "tris": 1894
+          },
+          {
+            "verts": 1010,
+            "tris": 720
+          },
+          {
+            "verts": 222,
+            "tris": 210
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "shoot",
+          "reload",
+          "melee",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "kneel",
+          "parry",
+          "combo",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "aim"
+        ]
+      }
+    },
+    "spain_soldier": {
+      "base": "joseon_marine",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the Spanish Armada of 1588. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable late-sixteenth-century materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A veteran Spanish tercio soldier of 1588 who fights at the rail: a steel combed morion helmet, a steel breastplate with tassets over a dark green doublet, a broad red sash across the breastplate, black slashed trunk hose, wool stockings, leather shoes. Black beard.",
+        "poseReference": "render of joseon_marine bind pose",
+        "usage": {
+          "input_tokens": 1285,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 261
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3041
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "e04459ec-0dba-4e9c-b7de-3f9ee673b0b3"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "2c8a49d6-90d8-45ea-a70d-862daea0f837",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5730782892276827,
+          "sy": 1.699042234518909
+        },
+        "lods": [
+          {
+            "verts": 1781,
+            "tris": 1676
+          },
+          {
+            "verts": 805,
+            "tris": 616
+          },
+          {
+            "verts": 224,
+            "tris": 190
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "melee",
+          "thrust",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "combo",
+          "slash",
+          "parry",
+          "block",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "spain_officer": {
+      "base": "ming_officer",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the Spanish Armada of 1588. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable late-sixteenth-century materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Spanish Armada captain of 1588, a noble: a black doublet with a white lace ruff, an ornate etched and gilded steel half armour breastplate, a crimson sash across it, black and gold puffed trunk hose, high black boots, a steel morion with a red plume. Pointed black beard and moustache.",
+        "poseReference": "render of ming_officer bind pose",
+        "usage": {
+          "input_tokens": 1293,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 269
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3049
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "b24959bb-c2f2-469e-9bc8-ab6b11a190d1"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "e78c5608-0f8b-4183-baeb-e7d3e63c4341",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.690716301102305,
+          "sy": 1.7007847409742218
+        },
+        "lods": [
+          {
+            "verts": 2022,
+            "tris": 1684
+          },
+          {
+            "verts": 1058,
+            "tris": 668
+          },
+          {
+            "verts": 230,
+            "tris": 174
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "command",
+          "melee",
+          "hit",
+          "die",
+          "cheer",
+          "wave",
+          "signal",
+          "parry",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "spain_sailor": {
+      "base": "rower",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the Spanish Armada of 1588. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable late-sixteenth-century materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Spanish sailor and gunner of the Armada of 1588: a red wool stocking cap, a loose off-white linen shirt with rolled sleeves, a short brown leather jerkin open at the front, wide knee-length faded blue canvas breeches, bare shins and rope-soled shoes. Dark stubble.",
+        "poseReference": "render of rower bind pose",
+        "usage": {
+          "input_tokens": 1286,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 262
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3042
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "6dc2d34a-8c33-46c3-9680-3d9e825773ee"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "a6e7f2d7-ef76-4a78-95a2-6916561ea6c2",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.701284960174335,
+          "sy": 1.698759274027279
+        },
+        "lods": [
+          {
+            "verts": 1819,
+            "tris": 1642
+          },
+          {
+            "verts": 879,
+            "tris": 620
+          },
+          {
+            "verts": 220,
+            "tris": 184
+          }
+        ],
+        "clips": [
+          "idle",
+          "row",
+          "haul",
+          "carry",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "ready",
+          "ram",
+          "bucket",
+          "douse",
+          "kneel",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "drumroll",
+          "drum"
+        ]
+      }
+    }
+  }
+}

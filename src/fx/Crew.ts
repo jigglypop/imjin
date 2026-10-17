@@ -1,3 +1,4 @@
+import type { Faction } from '../sim/types';
 import { Group, Quaternion, Vector3, type Camera } from 'three/webgpu';
 import type { Battle } from '../sim/battle';
 import type { BattleEvent, Ship, Team } from '../sim/types';
@@ -209,8 +210,14 @@ export class Crew {
     void crewAssets().then((assets) => {
       if (this.disposed) return;
       this.assets = assets;
-      for (const a of assets.values()) for (const l of a.lods) this.group.add(l.mesh);
+      this.attach(assets);
     });
+  }
+
+  private attached = 0;
+  private attach(assets: Map<CrewKey, CrewAsset>) {
+    for (const a of assets.values()) for (const l of a.lods) if (l.mesh.parent !== this.group) this.group.add(l.mesh);
+    this.attached = assets.size;
   }
 
   /** Frees the boarding props, the deck gear and the sprites. The skinned crew meshes are cached for the next battle and only leave this group. */
@@ -481,6 +488,8 @@ export class Crew {
     crewTime.value = this.time;
     const assets = this.assets;
     if (!assets) return;
+    // A war's crews that arrived after this battle's crew was made join the scene.
+    if (assets.size !== this.attached) this.attach(assets);
     this.frame += 1;
     this.battle = battle;
     beginCrew(assets);
@@ -930,20 +939,51 @@ export class Crew {
   }
 }
 
-let shared: Promise<Map<CrewKey, CrewAsset>> | null = null;
+const shared = new Map<CrewKey, CrewAsset>();
+const loading = new Map<string, Promise<unknown>>();
+/** The crews by war: each set downloads the first time a battle has one of its navies. */
+const CREW_SETS: { factions: readonly Faction[]; capacities: Partial<Record<CrewKey, number[]>> }[] = [
+  {
+    factions: ['joseon', 'japan', 'ming'],
+    capacities: {
+      joseon_soldier: [128, 1200, 2400],
+      joseon_marine: [112, 900, 1800],
+      joseon_officer: [16, 80, 160],
+      japan_ashigaru: [128, 1300, 2600],
+      japan_samurai: [112, 1000, 2000],
+      japan_officer: [16, 80, 200],
+      ming_soldier: [144, 1000, 2000],
+      ming_officer: [16, 60, 120],
+      rower: [160, 1000, 2400],
+    },
+  },
+  {
+    factions: ['england', 'spain'],
+    capacities: {
+      england_shot: [128, 1000, 2000],
+      england_soldier: [96, 700, 1400],
+      england_officer: [16, 60, 120],
+      england_sailor: [144, 1000, 2000],
+      spain_shot: [128, 1000, 2000],
+      spain_soldier: [112, 900, 1800],
+      spain_officer: [16, 60, 120],
+      spain_sailor: [144, 1000, 2000],
+    },
+  },
+];
 
-/** The character models load once and are shared by every battle. */
-export function crewAssets() {
-  shared ??= loadCrew({
-    joseon_soldier: [128, 1200, 2400],
-    joseon_marine: [112, 900, 1800],
-    joseon_officer: [16, 80, 160],
-    japan_ashigaru: [128, 1300, 2600],
-    japan_samurai: [112, 1000, 2000],
-    japan_officer: [16, 80, 200],
-    ming_soldier: [144, 1000, 2000],
-    ming_officer: [16, 60, 120],
-    rower: [160, 1000, 2400],
-  });
-  return shared;
+/**
+ * The character models load once and are shared by every battle; the 1592 crews always (boarding, the menu), the
+ * other wars' when a battle has their navies.
+ */
+export function crewAssets(factions: readonly Faction[] = []) {
+  const sets = CREW_SETS.filter((s, i) => i === 0 || s.factions.some((f) => factions.includes(f)));
+  return Promise.all(
+    sets.map((s) => {
+      const id = s.factions.join();
+      let p = loading.get(id);
+      if (!p) loading.set(id, (p = loadCrew(s.capacities, shared)));
+      return p;
+    }),
+  ).then(() => shared);
 }
