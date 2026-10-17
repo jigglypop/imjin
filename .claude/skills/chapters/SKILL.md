@@ -67,3 +67,9 @@ Every ready chapter: >= 4 battles with scenarios, flagship kind exists in SHIP_S
 - Aliasing a new chapter's ships or crews to Ming/Japan models as placeholders.
 - Boxy stacked castles and dark single-sided sails on the Armada galleons.
 - Parallel git worktrees per chapter, each with a full `npm run assets -- pull`: filled C: (each copy is GBs). Work chapters one at a time in the single chapters worktree; keep >= 3 GB free and delete your own intermediates.
+- Running `build-battle-art.mjs --capture` while other GPU work (shot.mjs, probes, other agents' captures) runs: the headless page loses its device or never reaches `__ready`. Capture one battle at a time on a quiet GPU; the long Channel battles use two moments, not three.
+
+## Settled (2026-10-17)
+- Later chapters' openings come from `src/cinema/scenes/chapters.ts` (one generic intro per battle from its ScenarioInfo + `<CHAPTER>_QUOTES`); lines without a record are labelled "(인물 대사 아님)" in their source. Add a new chapter's battles there.
+- Link cards of later chapters carry the chapter name (MOONWAKE · <war>) instead of the Imjin seal; add the battle to `CARD_VERSION` in routes.ts once its stills exist.
+- Image generation falls back to Gemini (`--provider=gemini`, scripts/gemini-image.mjs) when OpenAI is out of credit; Tripo image-to-model costs about 40 credits per crew figure (check `GET /v2/openapi/user/balance` first).
