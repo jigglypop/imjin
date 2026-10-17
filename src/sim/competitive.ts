@@ -60,9 +60,10 @@ export const COMPETITIVE_UNITS: Record<ShipKind, UnitBalance> = {
   sultana: { spec: { cost: 860, build: 68 } },
   kadirga: { spec: { cost: 470, build: 38 } },
   kalyata: { spec: { cost: 260, build: 24 } },
-  // The Trafalgar chapter's prices, fitted with scripts/balance-competitive.mjs over 16 seeds (docs/balance-cross.md):
-  // the British 74's faster gunnery is paid for at 910 against 750 for the French and Spanish 74s. The flagships, offered
-  // only under the expanded rules, are priced in the same proportion to their 74s.
+  // The Trafalgar chapter's prices among its own navies, fitted with scripts/balance-competitive.mjs over 16 seeds
+  // (docs/balance-cross.md): the British 74's faster gunnery is paid for against the French and Spanish 74s. Against an
+  // earlier era's navy they are multiplied by CROSS_ERA_PRICE below. The flagships, offered only under the expanded
+  // rules, keep their proportion to their 74s.
   firstrate: { spec: { cost: 1250, build: 90 } },
   gb74: { spec: { cost: 910, build: 74 } },
   gbfrigate: { spec: { cost: 320, build: 40 } },
@@ -70,6 +71,44 @@ export const COMPETITIVE_UNITS: Record<ShipKind, UnitBalance> = {
   fr74: { spec: { cost: 750, build: 74 } },
   trinidad: { spec: { cost: 1150, build: 96 } },
   es74: { spec: { cost: 750, build: 74 } },
+};
+
+/**
+ * Mixed-era budgets. A navy of a later era pays several times a 1592 price for a ship, so a room's muster budget, start
+ * funds, fleet cap and income grow by the largest factor of the navies present: the dearer navy still fields a squadron
+ * and the 1592 navy buys proportionally more. 1592, 1588 and 1571 navies keep factor 1, so their rooms are unchanged.
+ */
+export const ERA_BUDGET_SCALE: Partial<Record<Faction, number>> = { britain: 4, france: 4, spain1805: 4 };
+export const eraBudgetScale = (factions: Iterable<Faction>) => {
+  let k = 1;
+  for (const f of factions) k = Math.max(k, ERA_BUDGET_SCALE[f] ?? 1);
+  return k;
+};
+
+/**
+ * Cross-era prices. One price per ship cannot serve both kinds of room: a ship of the line priced fairly against the
+ * other 1805 navies is far too cheap against 1592's ships, and priced against 1592 it loses every 1805 duel. So the
+ * prices above are the 1805 navies' among themselves, and in a mixed-era room (a later era's navy against an earlier
+ * one) each later navy's ships cost this factor more, for buying, the fleet cap and the tickets a loss bleeds. Both
+ * sides still spend the same budget. Fitted with scripts/balance-competitive.mjs (docs/balance-cross.md).
+ */
+export const CROSS_ERA_PRICE: Partial<Record<Faction, number>> = { britain: 4, france: 3.7, spain1805: 3.6 };
+const ERA_KINDS: Partial<Record<Faction, ShipKind[]>> = { britain: ['firstrate', 'gb74', 'gbfrigate'], france: ['fr80', 'fr74'], spain1805: ['trinidad', 'es74'] };
+
+/** The price factors of a room's ships, or nothing when every navy in it is of one era (1805 alone, or none of 1805). */
+export function eraPrices(factions: Iterable<Faction>): Partial<Record<ShipKind, number>> | undefined {
+  const list = [...factions];
+  const later = list.filter((f) => (ERA_BUDGET_SCALE[f] ?? 1) > 1);
+  if (!later.length || later.length === list.length) return undefined;
+  const out: Partial<Record<ShipKind, number>> = {};
+  for (const f of later) for (const k of ERA_KINDS[f] ?? []) out[k] = CROSS_ERA_PRICE[f] ?? 1;
+  return out;
+}
+
+/** One navy's price factor in a room of these navies (1 unless it is a later era's navy in a mixed-era room). */
+export const eraPriceScale = (faction: Faction, factions: Iterable<Faction>) => {
+  const kind = ERA_KINDS[faction]?.[0];
+  return (kind && eraPrices(factions)?.[kind]) || 1;
 };
 
 /** The three treasuries earn the same base income; cheap boarding ships are not discounted a second time. */

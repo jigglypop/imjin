@@ -1,6 +1,6 @@
 import type { Battle, BattleRules } from './battle';
 import { GUN_SPECS } from './catalog';
-import { COMPETITIVE_PROFILE, shipSpec, type BalanceProfile } from './competitive';
+import { COMPETITIVE_PROFILE, eraBudgetScale, eraPrices, shipSpec, type BalanceProfile } from './competitive';
 import type { DepthVersion } from './depth';
 import { Strategist } from './strategy';
 import { cardOf, variantFor } from '../ships/anchors';
@@ -193,6 +193,10 @@ export type ConquestOptions = {
   expanded?: boolean;
   incomeScale?: number;
   musterBudget?: number;
+  /** The mixed-era factor already applied to the budget, funds, cap and income (eraOptions). */
+  eraScale?: number;
+  /** A mixed-era room's price factors of the later navies' ships (eraPrices in competitive.ts). */
+  eraPrice?: Partial<Record<ShipKind, number>>;
   /** A campaign port holds for its defender on a tie. Ordinary skirmishes end in a draw. */
   tieWinner?: Team;
   /** The battle depth rules (depth.ts). Ranked and online rooms leave them out until a season adopts a version. */
@@ -202,6 +206,19 @@ export type ConquestOptions = {
 export const DEFAULT_OPTIONS: ConquestOptions = { profile: COMPETITIVE_PROFILE, tickets: 3000, timeLimit: 30 * 60, startFunds: 3600, cap: Infinity, maxShips: Infinity, expanded: true, incomeScale: 3, musterBudget: 15600 };
 /** The sole fixed fleet limit belongs to competitive ranked one-versus-one rooms. */
 export const RANKED_OPTIONS: ConquestOptions = { profile: COMPETITIVE_PROFILE, tickets: 1000, timeLimit: 30 * 60, startFunds: 1200, cap: 10000, maxShips: 36, expanded: false, incomeScale: 1, musterBudget: 5200 };
+
+/**
+ * The options of a skirmish or online room for the navies in it: scaled by eraBudgetScale (competitive.ts) when a later
+ * era's navy is present, unchanged (the same object) otherwise. `eraScale` records the factor.
+ */
+export function eraOptions(options: Partial<ConquestOptions>, factions: Iterable<Faction>): Partial<ConquestOptions> {
+  const factions_ = [...factions];
+  const k = eraBudgetScale(factions_);
+  if (k === 1 || options.eraScale !== undefined) return options;
+  const base = { ...DEFAULT_OPTIONS, ...options };
+  const eraPrice = eraPrices(factions_);
+  return { ...options, eraScale: k, ...(eraPrice ? { eraPrice } : {}), musterBudget: (base.musterBudget ?? 15600) * k, startFunds: base.startFunds * k, cap: base.cap * k, incomeScale: (base.incomeScale ?? 1) * k };
+}
 
 const BASE_INCOME = 60;
 const POINT_INCOME = 45;
@@ -314,7 +331,9 @@ export class Conquest implements BattleRules {
   autopilot = false;
 
   shipSpec(kind: ShipKind) {
-    return shipSpec(kind, this.options.profile);
+    const spec = shipSpec(kind, this.options.profile);
+    const factor = this.options.eraPrice?.[kind];
+    return factor ? { ...spec, cost: Math.round(spec.cost * factor) } : spec;
   }
 
   constructor(map: MapPoint[], players: Omit<ConquestPlayer, 'funds' | 'income' | 'cap' | 'sunk' | 'lost'>[], land: LandSampler, options: Partial<ConquestOptions> = {}) {
@@ -428,7 +447,7 @@ export class Conquest implements BattleRules {
     let count = 0;
     for (const s of b.ships) {
       if (s.owner !== slot || !b.isActive(s)) continue;
-      value += s.spec.cost;
+      value += this.options.eraPrice ? this.shipSpec(s.spec.kind).cost : s.spec.cost;
       count += 1;
     }
     for (const p of this.points) {
@@ -902,7 +921,7 @@ export class Conquest implements BattleRules {
   }
 
   lost(b: Battle, s: Ship) {
-    this.tickets[s.team] -= s.spec.cost / 12;
+    this.tickets[s.team] -= (this.options.eraPrice ? this.shipSpec(s.spec.kind).cost : s.spec.cost) / 12;
     const owner = this.players[s.owner];
     if (owner) owner.lost += 1;
     for (const pl of this.players) if (pl.team !== s.team) pl.sunk += 1 / Math.max(1, this.players.filter((q) => q.team !== s.team).length);

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { CONQUEST_MAPS, CONQUEST_ORDER, MUSTER_BUDGET, autoFleet, fleetCost, type ConquestMapId, type Seat } from '../sim/maps';
+import { CONQUEST_MAPS, CONQUEST_ORDER, MUSTER_BUDGET, autoFleet, type ConquestMapId, type Seat } from '../sim/maps';
 import { ROSTER, SHORT_NAME } from '../sim/conquest';
-import { COMPETITIVE_TRAITS, shipSpec } from '../sim/competitive';
+import { COMPETITIVE_TRAITS, eraBudgetScale, eraPrices, eraPriceScale, shipSpec } from '../sim/competitive';
 import { FACTION_SHORT } from '../sim/balance';
 import { ALL_FACTIONS as FACTIONS, type Faction, type ShipKind } from '../sim/types';
 import type { ConquestSetup } from '../game/Engine';
@@ -90,28 +90,36 @@ function FactionPick({ value, onChange, label }: { value: Faction; onChange: (f:
 }
 
 /** Conquest battle setup: map, sides and the opening fleet bought from the muster budget. */
+/** The mixed-era budget factor of the navies a setup puts on the map (eraOptions in conquest.ts applies the same). */
+const naviesOf = (c: Saved): Faction[] => (CONQUEST_MAPS[c.map].seats >= 4 && c.size === 4 ? [c.me, c.foe, c.ally] : [c.me, c.foe]);
+const scaleOf = (c: Saved) => eraBudgetScale(naviesOf(c));
+/** The computer's opening fleet for a navy in this setup, at the room's prices (eraPrices). */
+const openingOf = (f: Faction, c: Saved) => autoFleet(f, MUSTER_BUDGET * scaleOf(c), undefined, undefined, undefined, eraPriceScale(f, naviesOf(c)));
+
 export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup) => void }) {
   const t = useT();
   const [cfg, setCfgRaw] = useState<Saved>(load);
-  const [fleet, setFleet] = useState<ShipKind[]>(() => autoFleet(cfg.me));
+  const [fleet, setFleet] = useState<ShipKind[]>(() => openingOf(cfg.me, cfg));
   const setCfg = (patch: Partial<Saved>) => {
     sound.click();
     const next = { ...cfg, ...patch };
-    if (patch.me && patch.me !== cfg.me) setFleet(autoFleet(next.me));
+    if ((patch.me && patch.me !== cfg.me) || scaleOf(next) !== scaleOf(cfg)) setFleet(openingOf(next.me, next));
     setCfgRaw(next);
     save(next);
   };
   const map = CONQUEST_MAPS[cfg.map];
-  const budget = MUSTER_BUDGET;
+  const budget = MUSTER_BUDGET * scaleOf(cfg);
   const size = map.seats >= 4 ? cfg.size : 2;
-  const cost = fleetCost(fleet);
+  const factors = eraPrices(naviesOf(cfg));
+  const price = (k: ShipKind) => Math.round(shipSpec(k).cost * (factors?.[k] ?? 1));
+  const cost = fleet.reduce((sum, k) => sum + price(k), 0);
   const counts = useMemo(() => {
     const m = new Map<ShipKind, number>();
     for (const k of fleet) m.set(k, (m.get(k) ?? 0) + 1);
     return m;
   }, [fleet]);
   const add = (k: ShipKind, count = 1) => {
-    const n = Math.min(count, Math.floor((budget - cost) / shipSpec(k).cost));
+    const n = Math.min(count, Math.floor((budget - cost) / price(k)));
     if (n <= 0) return;
     sound.click();
     setFleet([...fleet, ...Array.from({ length: n }, () => k)]);
@@ -125,11 +133,11 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
   const start = () => {
     const seats: Seat[] = [
       { name: t('아군 본대'), faction: cfg.me, team: 'joseon', human: true, fleet },
-      { name: t('적 본대'), faction: cfg.foe, team: 'japan', human: false, fleet: autoFleet(cfg.foe) },
+      { name: t('적 본대'), faction: cfg.foe, team: 'japan', human: false, fleet: openingOf(cfg.foe, cfg) },
     ];
     if (size === 4) {
-      seats.push({ name: t('동맹군'), faction: cfg.ally, team: 'joseon', human: false, fleet: autoFleet(cfg.ally) });
-      seats.push({ name: t('적 별동대'), faction: cfg.foe, team: 'japan', human: false, fleet: autoFleet(cfg.foe) });
+      seats.push({ name: t('동맹군'), faction: cfg.ally, team: 'joseon', human: false, fleet: openingOf(cfg.ally, cfg) });
+      seats.push({ name: t('적 별동대'), faction: cfg.foe, team: 'japan', human: false, fleet: autoFleet(cfg.foe, budget) });
     }
     onStart({ map: cfg.map, seats, you: 0, seed: 1592 + Math.floor(Math.random() * 100000) });
   };
@@ -183,7 +191,7 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
                   <div key={k} className="cs-ship">
                     <div className="cs-ship-name">
                       <b>{t(SHORT_NAME[k])}</b>
-                      <small>{shipSpec(k).cost.toLocaleString('ko-KR')}</small>
+                      <small>{price(k).toLocaleString('ko-KR')}</small>
                     </div>
                     <div className="cs-ship-note">{t(ROLE_NOTE[k])}</div>
                     <div className="cs-ship-count">
@@ -191,7 +199,7 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
                         <Minus size={16} />
                       </button>
                       <b>{counts.get(k) ?? 0}</b>
-                      <button onClick={(e) => add(k, e.shiftKey ? 10 : 1)} disabled={cost + shipSpec(k).cost > budget} title={t('Shift 클릭: 10척 추가')} aria-label={t('{name} 늘리기', { name: t(SHORT_NAME[k]) })}>
+                      <button onClick={(e) => add(k, e.shiftKey ? 10 : 1)} disabled={cost + price(k) > budget} title={t('Shift 클릭: 10척 추가')} aria-label={t('{name} 늘리기', { name: t(SHORT_NAME[k]) })}>
                         <Plus size={16} />
                       </button>
                     </div>
@@ -199,7 +207,7 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
                 ))}
               </div>
               <div className="chips">
-                <button className="chip" onClick={() => setFleet(autoFleet(cfg.me))}>
+                <button className="chip" onClick={() => setFleet(openingOf(cfg.me, cfg))}>
                   {t('기본 구성')}
                 </button>
                 <button className="chip" onClick={() => setFleet([])}>

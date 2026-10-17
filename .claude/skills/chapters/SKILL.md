@@ -37,6 +37,7 @@ its representative flagship on the menu, ships balanced within and across chapte
   Use at least 12-16 seeds: 6 seeds swing 30 points between neighbouring prices.
 - Target: the two navies of one chapter 50% +-10; each new navy vs each 1592 navy within the band 1592's own pairs show (currently 83-100%, i.e. the benchmark is lopsided for 1592 itself; do not change 1592 prices or digests, report to the lead instead), aim for 25-75% vs every other navy.
 - Record results in `docs/balance-cross.md`.
+- Cross-era (settled 2026-10-18): base prices balance a chapter's own navies; a mixed-era room scales every seat's budget by `ERA_BUDGET_SCALE` (1805: 4) and multiplies the later navy's prices by `CROSS_ERA_PRICE` (`eraOptions`, `Conquest.shipSpec`, `autoFleet(..., priceScale)`). Judge by each navy's average over the three 1592 navies x two maps (cells swing 6-100% by map); 1805 now 54-56%. Rooms of one era are untouched (1592 digests identical); ranked stays 1592-only.
 
 ## Determinism
 - `src/sim` deterministic: no Date.now/Math.random/DOM/three; seeded RNG only. Client-needed fields go in `src/net/protocol.ts`.
