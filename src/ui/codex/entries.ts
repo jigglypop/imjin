@@ -35,6 +35,8 @@ export const NAVIES: { faction: Faction; kinds: ShipKind[] }[] = [
   { faction: 'joseon', kinds: ['panokseon', 'geobukseon', 'hyeopseon', 'sahuseon', 'pojakseon'] },
   { faction: 'japan', kinds: ['daeantaek', 'atakebune', 'sogantaek', 'daegwanseon', 'sekibune', 'byeongnyangseon', 'kobaya'] },
   { faction: 'ming', kinds: ['gwangseon', 'mingship', 'haechangseon', 'mingsmall', 'hoseon'] },
+  { faction: 'england', kinds: ['racegalleon', 'pinnace', 'fireship'] },
+  { faction: 'spain', kinds: ['spgalleon', 'galleass', 'urca'] },
 ];
 
 /** The seal of each navy: its name in hanja (the menu's serif cut carries these characters). */

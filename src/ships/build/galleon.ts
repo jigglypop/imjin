@@ -71,8 +71,8 @@ const hullZ = (h: HullPlan, x: number, y: number) => sideZ(h, x, Math.min(y, h.d
 
 /** The hull skin lofted through the plan's sections narrowed by endShape, with its end plates. */
 function loftShaped(ctx: Ctx, h: HullPlan, skin: Paint) {
-  const n = byLod(ctx, 40, 16, 9);
-  const step = byLod(ctx, 1, 2, 3);
+  const n = byLod(ctx, 40, 16, 8);
+  const step = byLod(ctx, 1, 2, 4);
   const rows: V3[][] = [];
   for (let i = 0; i < n; i += 1) {
     const t = i / (n - 1);
@@ -321,7 +321,7 @@ export function buildSailShip(kind: ShipKind, variant: number, lod: Lod): MeshDa
   const band0 = deck - Math.min(2.6, deck * 0.42);
   shapedBand(ctx, h, P.livery!, -L / 2 + 0.05, L / 2 - 0.1, band0, deck - 0.02, 0.035);
   const wales = deck > 3 ? [band0 - 0.1, deck - 0.75 - (deck - band0) * 0.35] : [band0 - 0.08];
-  for (const y of wales) shapedWale(ctx, h, P.wale!, -L / 2 + 0.1, L / 2 - 0.2, y, 0.16, 0.26, 0.07);
+  for (const y of lod < 2 ? wales : wales.slice(0, 1)) shapedWale(ctx, h, P.wale!, -L / 2 + 0.1, L / 2 - 0.2, y, 0.16, 0.26, 0.07);
   if (lod < 2 && deck > 3) shapedWale(ctx, h, P.wale!, -L / 2 + 0.4, L / 2 - 0.8, deck * 0.32, 0.14, 0.22, 0.06);
   deckPlane(ctx, h, P.deck!, -L / 2 + 0.15, L / 2 - 0.15, deck, 0.03);
 

@@ -18,6 +18,11 @@ import {
 import {
   atan,
   attribute,
+  cameraPosition,
+  max,
+  normalize,
+  normalWorld,
+  pow,
   Discard,
   dFdx,
   dFdy,
@@ -58,6 +63,7 @@ import { loadProcedural } from './build/procedural';
 import { equipment } from '../game/quality';
 import { emberGlow, weather } from './weather';
 import { charShading } from '../fx/fire/char';
+import { atmosphere } from '../render/atmosphere';
 import { disposeTree, freeAfterDraw } from '../render/dispose';
 import { PHASE_RANGE, SWAY_RANGE, TINT_RANGE } from './build/pack';
 
@@ -447,6 +453,14 @@ function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, 
     baseColor = worn.color;
     rough = worn.rough;
     glow = emberGlow(surf, tint);
+    // Canvas lets the sun through: a sail seen from its shaded side glows with the light behind it instead of going
+    // black, strongest looking towards the sun (sails and flags; the camera's side of a two-sided sheet).
+    const toCam = normalize(cameraPosition.sub(positionWorld));
+    const nCam = normalWorld.mul(select(dot(normalWorld, toCam).greaterThan(0), float(1), float(-1)));
+    const behind = max(dot(nCam, atmosphere.sunDir).negate(), 0);
+    const into = pow(max(dot(toCam.negate(), atmosphere.sunDir), 0), 3);
+    const shine = behind.mul(float(0.1).add(into.mul(0.22)));
+    glow = glow.add(select(isCloth, baseColor.mul(atmosphere.sunIrradiance).mul(shine), vec3(0)));
     // Shot-through and burnt sails (fx/Scars.ts): not on phones, where the cloth keeps its plain shading.
     if (equipment.tier !== 'low') {
       const whole = packedWhole.add(0.5).floor();
