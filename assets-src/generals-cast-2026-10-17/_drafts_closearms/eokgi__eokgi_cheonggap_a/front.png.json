@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-17T04:22:30.960Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "A full-body character reference photograph for image-to-3D reconstruction and auto-rigging, in the look of a live-action costume fitting for a cinematic big-budget historical war film (the hero costume of a film lead in Myeongryang, Hansan, Noryang, Immortal Admiral Yi Sun-sin, a Japanese NHK taiga drama or a Ming-dynasty epic). Exactly one man standing alone in a relaxed 45-degree A-pose for rigging: both arms straight and angled about 45 degrees down from the shoulders, held clear of the body with a clear gap between each arm and the torso and skirts, shoulders relaxed and low (not shrugged); legs straight and slightly apart, feet flat about shoulder width, toes forward; head level, facing the camera. BOTH hands are empty, relaxed loosely closed fists, the backs of the hands facing outward, holding nothing at all (the weapon is fitted later): no sword, no weapon, no scabbard on the body, nothing in the hands. Heroic film-lead proportions: tall, powerful, eight heads tall, broad square shoulders, a deep chest, a narrow belted waist; a movie-poster hero, never stocky or chibi. Seen at chest height through a long telephoto lens, orthographic-looking, no perspective distortion. The whole figure fits in the frame with a clear margin above the helmet crest, below the boots and beyond both fists. Soft, even, flat studio light from every side, no hard shadows, no rim light; a plain seamless light grey background, no floor line, no ground shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord and seam clearly separated, believable late-sixteenth-century materials with a soft matte or satin finish: no mirror reflections, no glare, no grime streaks, every surface pattern crisp and readable. He is Yi Eok-gi, young Joseon admiral, early thirties: a handsome youthful Korean face, a thin moustache, bright resolute eyes. Recast him as the charismatic, handsome leading man of a historical war film, an original face (not a real actor). Faction look: Joseon Korean commander, as in the films Myeongryang (2014), Hansan: Rising Dragon (2022) and Noryang: Deadly Sea (2023) and the KBS drama Immortal Admiral Yi Sun-sin (2004). A deep blue silk dujeong-gap coat to mid-shin with rows of gilded rivets and red trims, gold-embroidered shoulder guards, a red belt; a dark iron tugu helmet with a gilded spike and a blue-and-red tassel, a blue riveted neck curtain. The first attached picture is the style reference sheet of this film costume department: match its photographic rendering, its soft frontal light, its material treatment and its level of historical accuracy (but not its man, costume or pose). The second attached picture shows his armour on its stand: take its colours and materials where they agree with the description. His face is a new design, not copied from any painted portrait. No cape or cloak, no long ribbons or banners flying away from the body, no sashimono back flag; skirts and tassets hang straight close to the legs. No text, no letters, no logo, no border, no watermark. No rising sun flag, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items. Exactly two arms, two legs, two empty fists.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/style-sheet.png",
+    "public/ui/armor/eokgi_cheonggap.webp"
+  ],
+  "usage": {
+    "input_tokens": 2970,
+    "input_tokens_details": {
+      "image_tokens": 2208,
+      "text_tokens": 762
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 8900
+  }
+}

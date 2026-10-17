@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-17T04:35:42.550Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "The attached picture is the front view of a costume reference. Make a close-up front portrait of the same man's face in the same helmet: head and shoulders, straight on, the face filling the frame, the same face, beard, age and helmet, same soft flat studio light and plain light grey background. Photographic, sharp. No text, no border.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_a/front.png"
+  ],
+  "usage": {
+    "input_tokens": 1610,
+    "input_tokens_details": {
+      "image_tokens": 1521,
+      "text_tokens": 89
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 7540
+  }
+}

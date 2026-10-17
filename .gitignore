@@ -36,3 +36,8 @@ assets-src/map-models-*/originals/
 .vite/
 # Armor art: a raw replaced by a regeneration stays local (provenance.json keeps every request and why it was redone).
 assets-src/armor-*/rejected/
+# General figures cast pipeline: concept sheets, Meshy originals, rigs and motions (about 7.6 GB) stay local, since CI
+# pulls every tracked binary; the json records beside them keep their prompts, task ids and hashes.
+assets-src/generals-cast-2026-10-17/**/*.png
+assets-src/generals-cast-2026-10-17/**/*.jpg
+assets-src/generals-cast-2026-10-17/**/*.glb

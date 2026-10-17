@@ -1,0 +1,128 @@
+{
+  "version": 3,
+  "method": "Blender cuff/sole landmark fitting and nearest polygon surface weights; rigid helmet, hip-hung skirt, rigid boots on calf joints to exclude malformed sole pivots",
+  "body": {
+    "path": "assets-src/generals-parts-2026-10-17/body_yi_tripo_rig.glb",
+    "sha256": "42a3a87ed96452714d7198ca540e4aefc05cab212a97de0bf29186f7d16982d2"
+  },
+  "armors": {
+    "joseon_dujeong": {
+      "source": {
+        "path": "assets-src/generals-parts-2026-10-17/armor_joseon_dujeong_shell_tripo.glb",
+        "sha256": "b0638916b215dbf1aa947e8e677a41e235ee65c5b72220115cbc930b980abb3a",
+        "providerTask": "0e286829-9c19-424e-935d-4e8d51abd164"
+      },
+      "fit": {
+        "blender": "5.2.1 LTS",
+        "scale": 0.9770457650969538,
+        "lift": 0.5166321620594275,
+        "vertices": 107191,
+        "correspondenceError": 0,
+        "soleBefore": 0.03828441304463731,
+        "soleAfter": -6.191148713696748e-7,
+        "regions": {
+          "helmet": 13305,
+          "skirt": 31930,
+          "boots": 15998
+        },
+        "minWeightSum": 0.9999998807907104,
+        "maxWeightSum": 1.0000001192092896
+      },
+      "helmet": {
+        "source": "C:/dev/imjin/assets-src/generals-parts-2026-10-17/armor_joseon_dujeong_rig.glb",
+        "sha256": "3e1843e9f407e561575918721a9f9940e1c25cc62a91b3f6d7d37345d7506bf1",
+        "crop": "head weight > 0.5; posterior nape below crown; central plume and face excluded; side panels meet beneath original plume",
+        "fit": {
+          "scale": 0.53,
+          "donorHead": [
+            0.003990921130820123,
+            1.502088394619096,
+            -0.0522447526839791
+          ],
+          "targetHead": [
+            0.017351430118838974,
+            0.7920974235857751,
+            -0.0038573288394197994
+          ],
+          "headJoint": 24
+        },
+        "vertices": 25675,
+        "tris": 15615,
+        "removedFrontPlumeTris": 657
+      },
+      "levels": {
+        "high": {
+          "triangles": 175614,
+          "coatTriangles": 159999,
+          "sha256": "1c2e31bee1173774cb6b7fc71c971817e41249cda8f1663e11627c8bc8be263e",
+          "bytes": 8731772
+        },
+        "_lod1": {
+          "triangles": 75609,
+          "coatTriangles": 59994,
+          "sha256": "41048b6822139aeadae9b86d35577bfdb635b2e4c34e5501b52b340a1c44f1f5",
+          "bytes": 3413820
+        }
+      }
+    },
+    "yi_tongjesa": {
+      "source": {
+        "path": "assets-src/generals-parts-2026-10-17/armor_yi_tongjesa_shell_tripo.glb",
+        "sha256": "121d09016d66fa614b0447d72a5b15fd34f151d47694b0ee866bc11d5c9fc8dd",
+        "providerTask": "9dcc529b-8bdc-466f-a012-1134187c8b50"
+      },
+      "fit": {
+        "blender": "5.2.1 LTS",
+        "scale": 0.8975707106282728,
+        "lift": 0.5459801181277313,
+        "vertices": 104059,
+        "correspondenceError": 0,
+        "soleBefore": 0.10613515176695354,
+        "soleAfter": -6.191148713696748e-7,
+        "regions": {
+          "helmet": 16214,
+          "skirt": 28092,
+          "boots": 10978
+        },
+        "minWeightSum": 0.9999998807907104,
+        "maxWeightSum": 1.0000001192092896
+      },
+      "helmet": {
+        "source": "C:/dev/imjin/assets-src/generals-parts-2026-10-17/armor_yi_tongjesa_rig.glb",
+        "sha256": "e9608023442d2e872ff825aca732fd4136223b06ba40f6ed5f764462279d5d3d",
+        "crop": "head weight > 0.5; posterior nape below crown; central plume and face excluded; side panels meet beneath original plume",
+        "fit": {
+          "scale": 0.53,
+          "donorHead": [
+            5.969498852040822e-8,
+            1.5356662852590162,
+            0.048570245140610945
+          ],
+          "targetHead": [
+            0.017351430118838974,
+            0.7920974235857751,
+            -0.0038573288394197994
+          ],
+          "headJoint": 24
+        },
+        "vertices": 24793,
+        "tris": 15432,
+        "removedFrontPlumeTris": 1086
+      },
+      "levels": {
+        "high": {
+          "triangles": 175432,
+          "coatTriangles": 160000,
+          "sha256": "34bf980f86b6b755ae4a38b7d7d21fe04d7d6e3055a8b33fc921d238f4d5dcd0",
+          "bytes": 8419452
+        },
+        "_lod1": {
+          "triangles": 75425,
+          "coatTriangles": 59993,
+          "sha256": "8f0c2c558122c530a7db4fbded9f1e2580036b48ef6e9da91b6a1851bc4230e6",
+          "bytes": 3368424
+        }
+      }
+    }
+  }
+}

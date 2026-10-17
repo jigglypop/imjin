@@ -20,6 +20,7 @@ export const screenChunks = {
   skirmish: () => import('./ui/ConquestSetup'),
   online: () => import('./ui/OnlinePanel'),
   codex: () => import('./ui/codex/CodexScreen'),
+  generals: () => import('./ui/generals/GeneralsScreen'),
 };
 
 export function prefetchScreen(screen: Screen) {

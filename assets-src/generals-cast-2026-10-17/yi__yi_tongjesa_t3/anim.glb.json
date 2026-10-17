@@ -1,0 +1,25 @@
+{
+  "task": "01a14852-5b17-73f4-a21d-45096d0cf1b3",
+  "action_ids": [
+    29,
+    97,
+    214,
+    227,
+    240,
+    244,
+    246,
+    335
+  ],
+  "names": {
+    "29": "command_bow",
+    "97": "attack_sword",
+    "214": "attack_spear",
+    "227": "attack_bow",
+    "240": "command_sword",
+    "244": "idle_bow",
+    "246": "idle_sword",
+    "335": "idle_spear"
+  },
+  "at": "2026-10-17T05:25:19.758Z",
+  "credits": 24
+}

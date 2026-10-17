@@ -1,0 +1,17 @@
+{
+  "task": "01a146a9-053a-73ba-bbc9-4f20cef8ecae",
+  "action_ids": [
+    11,
+    30,
+    97,
+    101
+  ],
+  "names": {
+    "11": "idle",
+    "30": "walk",
+    "97": "slash",
+    "101": "command"
+  },
+  "at": "2026-10-16T21:40:44.830Z",
+  "credits": 12
+}

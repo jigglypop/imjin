@@ -90,6 +90,8 @@ import { disposeTree } from '../render/dispose';
 import { tuneWebGLBackend } from '../render/webglBackend';
 
 import { Minimap } from '../ui/Minimap';
+import { applyGenerals, battleReport } from '../meta/battle';
+import { beginRewardedBattle, finishRewardedBattle, useLocalProfile } from '../meta/localProfile';
 import { DamageGallery, MunitionsGallery, damageBattle, damagePose, type GalleryKind } from './galleries';
 
 const params = new URLSearchParams(location.search);
@@ -842,6 +844,7 @@ export class Engine {
     }
     this.minimap.team = this.team;
     this.battle.setSea(SEA_STATES[this.seaName]);
+    this.applyAccountGenerals(setup);
     waveField.copyFrom(this.battle.waves);
     this.reported = false;
     this.fleetCalls = { own: { shown: 'steady', pending: 'steady', since: 0 }, foe: { shown: 'steady', pending: 'steady', since: 0 } };
@@ -1332,7 +1335,10 @@ export class Engine {
       for (const e of events) if (e.type === 'battery') this.fx.gun(e.x, e.y, e.z, e.dx, e.dy, e.dz, true);
     }
     this.battle.events = [];
-    if (this.battle.ended && !this.reported) this.finishCampaignBattle();
+    if (this.battle.ended && !this.reported) {
+      this.payAccountBattle();
+      this.finishCampaignBattle();
+    }
     // While a cutscene or a documentary beat holds the camera, neither the director nor the player moves it.
     if (!this.cinema.update(dt)) {
       this.director.update(dt);
@@ -1461,6 +1467,38 @@ export class Engine {
       const t = c.teamOfPoint(p);
       return { x: p.x, z: p.z, r: p.r, side: (t ? (t === this.team ? 'own' : 'foe') : 'none') as 'own' | 'foe' | 'none', selected: p.id === this.selectedPoint };
     });
+  }
+
+  /** A battle against the computer the account pays for when it ends, with the ticket the server gave for it. */
+  private accountBattle: { ticket: Promise<string | null>; mode: 'history' | 'conquest'; scenario: string } | null = null;
+
+  /**
+   * The account generals' talents and armor rolls (src/meta) on the ships they lead: only in a battle against the
+   * computer. Online and ranked battles stay equal for both players (the server builds them without), and the grand
+   * campaign raises its own generals. Called once on the freshly built battle, before its first step.
+   */
+  private applyAccountGenerals(setup: ConquestSetup | null) {
+    this.accountBattle = null;
+    if (this.remote || this.sink || setup?.ranked || setup?.grand) return;
+    const b = this.battle;
+    const team = this.team;
+    const generals = applyGenerals(b, team, useLocalProfile.getState().profile);
+    const mode = setup ? 'conquest' : 'history';
+    const scenario = setup ? setup.map! : this.scenarioId;
+    // A conquest battle builds ships as it goes, so its fleets are bounded only by the server's cap.
+    const ownShips = setup ? 400 : b.ships.filter((s) => s.team === team).length;
+    const enemyShips = setup ? 400 : b.ships.length - ownShips;
+    const ticket = beginRewardedBattle({ mode, scenario, side: this.faction, ownShips, enemyShips, generals });
+    this.accountBattle = { ticket, mode, scenario };
+  }
+
+  /** Reports the finished battle to the account (the server judges and pays it). */
+  private payAccountBattle() {
+    const paid = this.accountBattle;
+    if (!paid) return;
+    this.accountBattle = null;
+    const report = battleReport(this.battle, this.team, null, paid.mode, paid.scenario, this.faction);
+    void paid.ticket.then((ticket) => finishRewardedBattle(ticket, report)).catch(() => undefined);
   }
 
   private finishCampaignBattle() {

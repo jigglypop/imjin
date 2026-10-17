@@ -1,0 +1,119 @@
+{
+  "at": "2026-10-16T20:40:50.262Z",
+  "levels": {
+    "_lod0": {
+      "triangles": 49999,
+      "bytes": 2491240,
+      "clips": [
+        "idle",
+        "command",
+        "slash",
+        "walk"
+      ],
+      "check": {
+        "ok": true,
+        "problems": [],
+        "bytes": 2491240,
+        "sha256": "be3330c1e5cde0740aab6071b4fdcc2dc835a96c82a10486f0e9ba6d900808b4",
+        "triangles": 49999,
+        "joints": 24,
+        "clips": [
+          "idle",
+          "command",
+          "slash",
+          "walk"
+        ],
+        "textures": [
+          [
+            2048,
+            2048
+          ],
+          [
+            2048,
+            2048
+          ],
+          [
+            2048,
+            2048
+          ]
+        ]
+      }
+    },
+    "_lod1": {
+      "triangles": 9996,
+      "bytes": 902776,
+      "clips": [
+        "idle",
+        "command",
+        "slash",
+        "walk"
+      ],
+      "check": {
+        "ok": true,
+        "problems": [],
+        "bytes": 902776,
+        "sha256": "b7b3fe68695b35dc570ff4ce77abeeffc7b0b6350737aa0b25954ced31321fc9",
+        "triangles": 9996,
+        "joints": 24,
+        "clips": [
+          "idle",
+          "command",
+          "slash",
+          "walk"
+        ],
+        "textures": [
+          [
+            1024,
+            1024
+          ],
+          [
+            1024,
+            1024
+          ],
+          [
+            1024,
+            1024
+          ]
+        ]
+      }
+    },
+    "_lod2": {
+      "triangles": 3998,
+      "bytes": 416096,
+      "clips": [
+        "idle",
+        "command",
+        "slash",
+        "walk"
+      ],
+      "check": {
+        "ok": true,
+        "problems": [],
+        "bytes": 416096,
+        "sha256": "fc998083b3c0853548537e1df9e30d80d092b97e452597c01460fa67c82513eb",
+        "triangles": 3998,
+        "joints": 24,
+        "clips": [
+          "idle",
+          "command",
+          "slash",
+          "walk"
+        ],
+        "textures": [
+          [
+            512,
+            512
+          ],
+          [
+            512,
+            512
+          ],
+          [
+            512,
+            512
+          ]
+        ]
+      }
+    }
+  }
+}

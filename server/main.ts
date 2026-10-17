@@ -39,6 +39,7 @@ import { MemoryAccountStore } from './accountsMemory';
 import { PgAccountStore, databaseConfig, type DatabaseConfig } from './accountsPg';
 import { ApiRouter, addressOf, originAllowed } from './api';
 import { authRoutes } from './auth';
+import { metaRoutes, payServerBattle } from './meta';
 
 /** Set by build-server.mjs, so health identifies the bundle actually running. */
 declare const IMJIN_BUILD_REVISION: string;
@@ -447,6 +448,7 @@ function stepOnce(room: Room, live: Live) {
   if (speedOf(live) === 1 && live.steps % STEPS_PER_SNAPSHOT === 0) flush(room, live);
   if (live.battle.ended) {
     flush(room, live);
+    payRoom(room, live);
     if (room.ranked) {
       finishRanked(room, live.battle.draw ? 'draw' : live.battle.winner === 'joseon' ? 0 : 1, 'battle');
       return;
@@ -460,6 +462,21 @@ function stepOnce(room: Room, live: Live) {
     broadcast(room, { t: 'end', winner: live.battle.winner as Team | null, draw: live.battle.draw });
     pushRoom(room);
   }
+}
+
+/**
+ * Pays every signed-in person who played a battle the server ran to its end (online and ranked alike, uncapped: the
+ * server watched it). A store that cannot answer only costs the reward; it is logged.
+ */
+function payRoom(room: Room, live: Live) {
+  if (!accounts?.ready) return;
+  room.info.seats.forEach((seat, index) => {
+    if (!seat.human || !seat.client) return;
+    const userId = byId.get(seat.client)?.user?.id;
+    if (!userId) return;
+    payServerBattle(accounts!, userId, live.battle, index, seat.faction, seat.team, room.ranked ? 'ranked' : 'online', choiceKey(room.info.battle))
+      .catch((error) => console.error('meta reward failed', error instanceof Error ? error.message : 'unknown error'));
+  });
 }
 
 function tick(room: Room, dt: number, slice: number) {
@@ -993,6 +1010,7 @@ function main() {
   accounts = openAccounts(process.env);
   const api = new ApiRouter(accounts);
   authRoutes(api, ranked);
+  metaRoutes(api);
   // Ended sessions are forgotten every hour.
   setInterval(() => {
     if (accounts?.ready) accounts.sweep().catch((error) => console.error('accounts sweep failed', error instanceof Error ? error.message : 'unknown error'));

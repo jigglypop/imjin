@@ -1,0 +1,119 @@
+{
+  "at": "2026-10-16T21:34:59.957Z",
+  "levels": {
+    "_lod0": {
+      "triangles": 49958,
+      "bytes": 5521448,
+      "clips": [
+        "idle",
+        "walk",
+        "slash",
+        "command"
+      ],
+      "check": {
+        "ok": true,
+        "problems": [],
+        "bytes": 5521448,
+        "sha256": "20ed4200180b82a8c60a00ce290084b6328fe92609dbdab24434746892b19fec",
+        "triangles": 49958,
+        "joints": 24,
+        "clips": [
+          "idle",
+          "walk",
+          "slash",
+          "command"
+        ],
+        "textures": [
+          [
+            4096,
+            4096
+          ],
+          [
+            2048,
+            2048
+          ],
+          [
+            2048,
+            2048
+          ]
+        ]
+      }
+    },
+    "_lod1": {
+      "triangles": 9898,
+      "bytes": 1052640,
+      "clips": [
+        "idle",
+        "walk",
+        "slash",
+        "command"
+      ],
+      "check": {
+        "ok": true,
+        "problems": [],
+        "bytes": 1052640,
+        "sha256": "296a171eb8f2b826be3e18293fa0cc0b0d726b95bc164c498b0d602a6d985356",
+        "triangles": 9898,
+        "joints": 24,
+        "clips": [
+          "idle",
+          "walk",
+          "slash",
+          "command"
+        ],
+        "textures": [
+          [
+            1024,
+            1024
+          ],
+          [
+            1024,
+            1024
+          ],
+          [
+            1024,
+            1024
+          ]
+        ]
+      }
+    },
+    "_lod2": {
+      "triangles": 4938,
+      "bytes": 480468,
+      "clips": [
+        "idle",
+        "walk",
+        "slash",
+        "command"
+      ],
+      "check": {
+        "ok": true,
+        "problems": [],
+        "bytes": 480468,
+        "sha256": "caff139454d276f5005bf1dbca97bc0152f5357e7544d7da341b89a02874ac35",
+        "triangles": 4938,
+        "joints": 24,
+        "clips": [
+          "idle",
+          "walk",
+          "slash",
+          "command"
+        ],
+        "textures": [
+          [
+            512,
+            512
+          ],
+          [
+            512,
+            512
+          ],
+          [
+            512,
+            512
+          ]
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "task": "01a1468b-5a66-7040-837f-220ff52aa16d",
+  "rig_task": "01a14671-5e43-7020-917e-ba3884ee0d64",
+  "action_ids": [
+    11,
+    12,
+    101,
+    105,
+    219,
+    30
+  ],
+  "names": {
+    "11": "Idle 1",
+    "12": "Idle 2",
+    "30": "Casual Walk",
+    "101": "Sword Shout",
+    "105": "Triple Combo Attack",
+    "219": "Right-hand Sword Slash"
+  },
+  "credits": 18
+}

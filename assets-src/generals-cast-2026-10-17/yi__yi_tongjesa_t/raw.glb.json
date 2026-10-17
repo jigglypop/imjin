@@ -1,0 +1,34 @@
+{
+  "provider": "tripo",
+  "task": "000b86b0-20d1-43c9-b581-12dc4a860a0a",
+  "at": "2026-10-17T05:15:24.735Z",
+  "request": {
+    "type": "multiview_to_model",
+    "model_version": "v3.1-20260211",
+    "files": [
+      {
+        "type": "png",
+        "file_token": "26989e08-52c2-4246-a756-a8c18c2bf853"
+      },
+      {
+        "type": "png",
+        "file_token": "ab791bc2-7906-4a83-a3ff-6e8149758794"
+      },
+      {
+        "type": "png",
+        "file_token": "529743bd-e4a5-4a8f-a92b-0414d4ade6ca"
+      },
+      {
+        "type": "png",
+        "file_token": "dd7a4581-1502-4e2e-b50e-8f52b0cb3910"
+      }
+    ],
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "geometry_quality": "detailed",
+    "face_limit": 300000,
+    "orientation": "default"
+  },
+  "credits": 60
+}

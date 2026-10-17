@@ -29,6 +29,7 @@ const HistoryScreen = lazy(() => screenChunks.select().then((m) => ({ default: m
 const ConquestSetupPanel = lazy(() => screenChunks.skirmish().then((m) => ({ default: m.ConquestSetupPanel })));
 const OnlinePanel = lazy(() => screenChunks.online().then((m) => ({ default: m.OnlinePanel })));
 const CodexScreen = lazy(() => screenChunks.codex().then((m) => ({ default: m.CodexScreen })));
+const GeneralsScreen = lazy(() => screenChunks.generals().then((m) => ({ default: m.GeneralsScreen })));
 
 /**
  * Code from a chunk of its own. A screen that draws its own frame shows an empty frame with its title until the code
@@ -91,7 +92,7 @@ export function App() {
   // Fetch the battle chunk in the background once a screen that can start a battle opens.
   // The menu itself stays light, and phones wait until a mode is chosen.
   useEffect(() => {
-    if (screen === 'menu' || screen === 'battle' || screen === 'settings' || screen === 'codex') return;
+    if (screen === 'menu' || screen === 'battle' || screen === 'settings' || screen === 'codex' || screen === 'generals') return;
     void loadBattle();
   }, [screen]);
   useEffect(() => {
@@ -207,6 +208,11 @@ export function App() {
       {screen === 'codex' && (
         <Chunk frame="함선 도감">
           <CodexScreen />
+        </Chunk>
+      )}
+      {screen === 'generals' && (
+        <Chunk frame="장수">
+          <GeneralsScreen />
         </Chunk>
       )}
       {launch && <Loading />}

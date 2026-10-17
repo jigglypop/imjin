@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-17T04:36:12.340Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "The attached picture is the front view of a character reference for image-to-3D reconstruction. Make the matching view of the exact same man in the exact same costume and the exact same 45-degree A-pose with both fists empty and relaxed, seen from directly behind: the back of the helmet and its neck guard, the back of the armour, the belt, the skirts and the boots; both arms still angled 45 degrees down, clear of the body, with empty relaxed fists; nothing of his face. Same scale, same height in the frame, same orthographic look, same soft flat studio light, same plain light grey background, no floor line, no shadow. Everything consistent with the front view: colours, materials, trims, helmet, lengths, proportions. No text, no letters, no logo, no border. No painting or illustration look, no plastic CGI look. Exactly two arms, two legs.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/tachibana__japan_nimaido/front.png"
+  ],
+  "usage": {
+    "input_tokens": 1723,
+    "input_tokens_details": {
+      "image_tokens": 1521,
+      "text_tokens": 202
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 7653
+  }
+}

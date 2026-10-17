@@ -1,0 +1,119 @@
+{
+  "at": "2026-10-17T03:57:13.068Z",
+  "levels": {
+    "_lod0": {
+      "triangles": 119982,
+      "bytes": 5492576,
+      "clips": [
+        "walk",
+        "slash",
+        "command",
+        "idle"
+      ],
+      "check": {
+        "ok": true,
+        "problems": [],
+        "bytes": 5492576,
+        "sha256": "270676a600bfcc12a7d25c26d7456ce3ca5d6ad9e72c06f69dc633e1eec7f9e0",
+        "triangles": 119982,
+        "joints": 24,
+        "clips": [
+          "walk",
+          "slash",
+          "command",
+          "idle"
+        ],
+        "textures": [
+          [
+            4096,
+            4096
+          ],
+          [
+            2048,
+            2048
+          ],
+          [
+            2048,
+            2048
+          ]
+        ]
+      }
+    },
+    "_lod1": {
+      "triangles": 9958,
+      "bytes": 1070652,
+      "clips": [
+        "walk",
+        "slash",
+        "command",
+        "idle"
+      ],
+      "check": {
+        "ok": true,
+        "problems": [],
+        "bytes": 1070652,
+        "sha256": "b953fa5e7b5ccbba66fcb5c1ea3bd9b5d6524f37375561a7f9575cb3a1040ba7",
+        "triangles": 9958,
+        "joints": 24,
+        "clips": [
+          "walk",
+          "slash",
+          "command",
+          "idle"
+        ],
+        "textures": [
+          [
+            1024,
+            1024
+          ],
+          [
+            1024,
+            1024
+          ],
+          [
+            1024,
+            1024
+          ]
+        ]
+      }
+    },
+    "_lod2": {
+      "triangles": 4988,
+      "bytes": 559244,
+      "clips": [
+        "walk",
+        "slash",
+        "command",
+        "idle"
+      ],
+      "check": {
+        "ok": true,
+        "problems": [],
+        "bytes": 559244,
+        "sha256": "4a63930dc8edc1ab8b3ea74156cb5f8ceba109cac741bdf76d2c091e959899d0",
+        "triangles": 4988,
+        "joints": 24,
+        "clips": [
+          "walk",
+          "slash",
+          "command",
+          "idle"
+        ],
+        "textures": [
+          [
+            512,
+            512
+          ],
+          [
+            512,
+            512
+          ],
+          [
+            512,
+            512
+          ]
+        ]
+      }
+    }
+  }
+}

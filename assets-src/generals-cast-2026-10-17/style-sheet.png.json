@@ -1,0 +1,24 @@
+{
+  "at": "2026-10-16T20:42:50.908Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x1632",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "A costume-department style reference sheet for a big-budget live-action historical war film about the Imjin War (1592-1598), in the visual language of the Korean films Myeongryang, Hansan: Rising Dragon and Noryang: Deadly Sea. Three mannequin torsos on stands in a row against a plain seamless light grey studio backdrop: a Joseon red dujeong-gap brigandine with brass rivets and a tugu helmet; a Japanese black-lacquered tosei-gusoku with silk lacing and a kabuto; a Ming gilded mountain-pattern lamellar with a phoenix-wing helmet. Photographic, sharp, 85 mm lens, soft even frontal key light from slightly above-left with gentle fill, no hard shadows; materials rendered truthfully: rubbed iron, worn lacquer, faded silk, dulled brass with verdigris, leather with wear; museum-grade historical accuracy, lived-in, no fantasy elements. No people, no text, no letters, no logo, no border. No illustration look, no plastic CGI look.",
+  "usage": {
+    "input_tokens": 225,
+    "input_tokens_details": {
+      "image_tokens": 0,
+      "text_tokens": 225
+    },
+    "output_tokens": 2171,
+    "output_tokens_details": {
+      "image_tokens": 2171,
+      "text_tokens": 0
+    },
+    "total_tokens": 2396
+  }
+}

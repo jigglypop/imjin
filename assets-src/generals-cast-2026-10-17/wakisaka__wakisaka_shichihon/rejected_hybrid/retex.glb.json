@@ -1,0 +1,19 @@
+{
+  "task": "01a146c0-af13-7571-9516-b9fbdbca0ea5",
+  "at": "2026-10-16T22:06:42.159Z",
+  "request": {
+    "ai_model": "meshy-7",
+    "enable_pbr": true,
+    "texture_resolution": "4k",
+    "enable_original_uv": false,
+    "target_formats": [
+      "glb"
+    ]
+  },
+  "views": [
+    "front",
+    "left",
+    "back"
+  ],
+  "credits": 10
+}

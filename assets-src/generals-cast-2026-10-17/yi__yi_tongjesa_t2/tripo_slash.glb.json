@@ -1,0 +1,12 @@
+{
+  "task": "f5e567be-8e82-435a-b8ab-b64702867b61",
+  "body": {
+    "type": "animate_retarget",
+    "original_model_task_id": "56df4db9-1b3c-46fe-a87c-8f122bb6d998",
+    "out_format": "glb",
+    "animation": "preset:biped:slash",
+    "animate_in_place": true
+  },
+  "at": "2026-10-17T05:19:36.963Z",
+  "credits": 10
+}
