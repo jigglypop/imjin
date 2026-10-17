@@ -10,6 +10,9 @@ export const CAST: Record<Faction, [CrewKey, CrewKey, CrewKey, CrewKey, CrewKey,
   joseon: ['rower', 'rower', 'joseon_soldier', 'joseon_marine', 'joseon_officer', 'rower'],
   japan: ['rower', 'rower', 'japan_ashigaru', 'japan_samurai', 'japan_officer', 'rower'],
   ming: ['rower', 'rower', 'ming_soldier', 'ming_soldier', 'ming_officer', 'rower'],
+  // The Armada navies have no figures of their own yet: they borrow the musket-armed casts closest in kit.
+  england: ['rower', 'rower', 'ming_soldier', 'ming_soldier', 'ming_officer', 'rower'],
+  spain: ['rower', 'rower', 'japan_ashigaru', 'ming_soldier', 'ming_officer', 'rower'],
 };
 
 /** Hand props the crew models carry (scripts/bake-crew.mjs); a figure shows one and the rest fold away. */
@@ -19,12 +22,16 @@ export const ARMS: Record<Faction, number[]> = {
   joseon: [0, 0, W.bow, W.spear, W.sword, W.sticks],
   japan: [0, 0, W.gun, W.sword, W.sword, W.sticks],
   ming: [0, 0, W.bow, W.spear, W.sword, W.sticks],
+  england: [0, 0, W.gun, W.spear, W.sword, W.sticks],
+  spain: [0, 0, W.gun, W.spear, W.sword, W.sticks],
 };
 /** What the shooters pick up for a melee: every shooter model carries a spear, the fighters their own weapon. */
 export const HAND_ARMS: Record<Faction, number[]> = {
   joseon: [0, 0, W.spear, W.spear, W.sword, W.spear],
   japan: [0, 0, W.spear, W.sword, W.sword, W.spear],
   ming: [0, 0, W.spear, W.spear, W.sword, W.spear],
+  england: [0, 0, W.spear, W.spear, W.sword, W.spear],
+  spain: [0, 0, W.spear, W.spear, W.sword, W.spear],
 };
 /** A weapon id no model carries: every weapon folds away, which is how a surrendering man drops his arms. */
 export const NO_WEAPON = W.none;

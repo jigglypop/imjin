@@ -11,6 +11,8 @@ const RANKED_DOCTRINE: Record<Faction, Partial<Record<ShipKind, number>>> = {
   joseon: { panokseon: 0.6, geobukseon: 0.22, hyeopseon: 0.18 },
   japan: { atakebune: 0.42, sekibune: 0.44, kobaya: 0.14 },
   ming: { mingship: 0.6, mingsmall: 0.4 },
+  england: { racegalleon: 0.7, pinnace: 0.3 },
+  spain: { spgalleon: 0.55, galleass: 0.3, urca: 0.15 },
 };
 /**
  * The same under the expanded rules, where the size tiers and support craft are on offer too. They take small shares,
@@ -20,6 +22,8 @@ const DOCTRINE: Record<Faction, Partial<Record<ShipKind, number>>> = {
   joseon: { panokseon: 0.56, geobukseon: 0.2, hyeopseon: 0.14, pojakseon: 0.06, sahuseon: 0.04 },
   japan: { daeantaek: 0.08, atakebune: 0.3, sogantaek: 0.08, daegwanseon: 0.08, sekibune: 0.34, kobaya: 0.12 },
   ming: { gwangseon: 0.08, mingship: 0.48, haechangseon: 0.1, mingsmall: 0.28, hoseon: 0.06 },
+  england: { racegalleon: 0.64, pinnace: 0.28, fireship: 0.08 },
+  spain: { spgalleon: 0.55, galleass: 0.3, urca: 0.15 },
 };
 const doctrineOf = (c: Conquest, faction: Faction) => (c.options.expanded ? DOCTRINE : RANKED_DOCTRINE)[faction];
 
@@ -44,6 +48,9 @@ const DOCTRINE_OF_FIGHT: Record<Faction, { engage: number; prey: number; reach: 
   joseon: { engage: 650, prey: 0.9, reach: 1800, retreat: 2.2 },
   ming: { engage: 650, prey: 0.9, reach: 1800, retreat: 2.2 },
   japan: { engage: 900, prey: 1.25, reach: 2600, retreat: 3.2 },
+  // The English stood off and fought with their guns; the Armada sought to grapple and board.
+  england: { engage: 650, prey: 0.9, reach: 1800, retreat: 2.2 },
+  spain: { engage: 900, prey: 1.25, reach: 2600, retreat: 3.2 },
 };
 /** A fleet's fighting weight; under the battle depth rules a running crew hardly counts, for either side. */
 const power = (list: Ship[]) => list.reduce((a, s) => a + combatValue(s.spec.kind) * (0.35 + 0.65 * (s.hull / s.spec.hull)) * (0.4 + 0.6 * (s.crew / s.spec.crew)) * NERVE_WEIGHT[s.moraleState], 0);

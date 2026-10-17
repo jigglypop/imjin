@@ -24,6 +24,12 @@ export const SHIP_PREFIX: Record<ShipKind, string> = {
   gwangseon: '명 광선',
   haechangseon: '명 해창선',
   hoseon: '명 호선',
+  racegalleon: '갤리온',
+  pinnace: '핀네이스',
+  fireship: '화공선',
+  spgalleon: '에스파냐 갤리온',
+  galleass: '갈레아스',
+  urca: '우르카',
 };
 
 export function spawnShip(g: Grand, kind: ShipKind, hull = 1, crew = 1): ShipUnit {

@@ -1,7 +1,8 @@
 import type { Faction, ShipKind } from '../types';
 import type { Rng } from './rng';
 
-export type GrandFaction = Faction;
+/** The navies of the 1592 war: the campaign world is the Korean theatre, so only the first chapter's navies play in it. */
+export type GrandFaction = Extract<Faction, 'joseon' | 'japan' | 'ming'>;
 export const GRAND_FACTIONS: readonly GrandFaction[] = ['joseon', 'japan', 'ming'];
 
 export type RegionId =

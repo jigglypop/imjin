@@ -15,6 +15,12 @@ export const GUN_CLASS: Record<GunType, GunClass> = {
   ozutsu: { weight: 0.62, sharp: 0.62 },
   folangji: { weight: 0.38, sharp: 0.92 },
   hudun: { weight: 0.34, sharp: 0.85 },
+  culverin: { weight: 0.8, sharp: 0.45 },
+  demiculverin: { weight: 0.62, sharp: 0.58 },
+  cannon: { weight: 1, sharp: 0.28 },
+  perrier: { weight: 0.7, sharp: 0.5 },
+  saker: { weight: 0.42, sharp: 0.78 },
+  base: { weight: 0.28, sharp: 0.9 },
 };
 
 export const gunClass = (type: GunType | undefined, big: boolean): GunClass => (type ? GUN_CLASS[type] : big ? GUN_CLASS.hyeonja : GUN_CLASS.seungja);

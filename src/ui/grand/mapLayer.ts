@@ -437,7 +437,7 @@ export class MapLayer {
     const key = modelKind(kind);
     let p = this.shipModels.get(key);
     if (!p) {
-      p = Promise.all([shipLevels(key), this.shipMaterial(SHIP_SPECS[key].faction)]).then(([levels, { material }]) => {
+      p = Promise.all([shipLevels(key), this.shipMaterial(SHIP_SPECS[key].faction as FactionId)]).then(([levels, { material }]) => {
         if (this.disposed) { levels.near.dispose(); levels.far.dispose(); return null; }
         const m = { ...levels, material };
         this.builtShips.set(key, m);
@@ -735,7 +735,7 @@ export class MapLayer {
     }
     // The hero camps' own ships at their quays.
     for (const s of this.hero?.extras(this.heroes).ships ?? []) {
-      const model = this.ship(SHIP_SPECS[s.kind].faction, s.kind);
+      const model = this.ship(SHIP_SPECS[s.kind].faction as FactionId, s.kind);
       let matrices = per.get(model);
       if (!matrices) per.set(model, (matrices = []));
       matrices.push(this.hull(model, s.u - 0.5, (s.v - 0.5) / MAP_ASPECT, s.rot, shipLength(s.kind)));

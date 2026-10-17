@@ -171,6 +171,12 @@ const KIND_COST: Record<ShipKind, { hull: number; crew: number; supply: number }
   gwangseon: { hull: 1.3, crew: 1, supply: 1 },
   haechangseon: { hull: 0.6, crew: 0.6, supply: 0.6 },
   hoseon: { hull: 0.3, crew: 0.3, supply: 0.2 },
+  racegalleon: { hull: 1.2, crew: 1.2, supply: 1.1 },
+  pinnace: { hull: 0.35, crew: 0.3, supply: 0.25 },
+  fireship: { hull: 0.2, crew: 0.05, supply: 0 },
+  spgalleon: { hull: 1.4, crew: 1.6, supply: 1.4 },
+  galleass: { hull: 1.2, crew: 1.6, supply: 1.3 },
+  urca: { hull: 0.8, crew: 0.5, supply: 0.4 },
 };
 
 export function repairCost(c: Campaign) {

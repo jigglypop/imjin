@@ -11,16 +11,26 @@ export const otherTeam = (t: Team): Team => (t === 'joseon' ? 'japan' : 'joseon'
 export type ShipKind =
   | 'panokseon' | 'geobukseon' | 'hyeopseon' | 'sahuseon' | 'pojakseon'
   | 'atakebune' | 'sekibune' | 'kobaya' | 'daeantaek' | 'sogantaek' | 'daegwanseon' | 'byeongnyangseon'
-  | 'mingship' | 'mingsmall' | 'gwangseon' | 'haechangseon' | 'hoseon';
-export type Faction = 'joseon' | 'japan' | 'ming';
+  | 'mingship' | 'mingsmall' | 'gwangseon' | 'haechangseon' | 'hoseon'
+  // The Armada chapter, 1588.
+  | 'racegalleon' | 'pinnace' | 'fireship' | 'spgalleon' | 'galleass' | 'urca';
+export type Faction = 'joseon' | 'japan' | 'ming' | 'england' | 'spain';
+/** The navies of the first chapter (임진왜란): code that walks the 1592 navies reads this list, so it keeps its three. */
 export const FACTIONS: readonly Faction[] = ['joseon', 'japan', 'ming'];
-/** The Ming fleet fights on the Joseon side. */
-export const teamOf = (faction: Faction): Team => (faction === 'japan' ? 'japan' : 'joseon');
+/** Every navy of every chapter. */
+export const ALL_FACTIONS: readonly Faction[] = ['joseon', 'japan', 'ming', 'england', 'spain'];
+/**
+ * The two battle slots keep their 1592 names: the first ('joseon') is a chapter's defending side, the second ('japan') the
+ * invader. The Ming fleet fights on the Joseon side; England takes the first slot and the Armada the second.
+ */
+export const teamOf = (faction: Faction): Team => (faction === 'japan' || faction === 'spain' ? 'japan' : 'joseon');
 /** In the historical battles each faction is one commander, with these owner ids. Conquest battles number their players from 0. */
-export const OWNER_OF: Record<Faction, number> = { joseon: 0, japan: 1, ming: 2 };
+export const OWNER_OF: Record<Faction, number> = { joseon: 0, japan: 1, ming: 2, england: 0, spain: 1 };
 export type Side = 0 | 1;
 
-export type GunType = 'cheonja' | 'jija' | 'hyeonja' | 'hwangja' | 'seungja' | 'ozutsu' | 'folangji' | 'hudun';
+export type GunType = 'cheonja' | 'jija' | 'hyeonja' | 'hwangja' | 'seungja' | 'ozutsu' | 'folangji' | 'hudun'
+  // The Armada chapter: English long guns and the Spanish heavy short pieces, and the swivel guns of both.
+  | 'culverin' | 'demiculverin' | 'cannon' | 'perrier' | 'saker' | 'base';
 export type AmmoType = 'arrow' | 'ball' | 'grape' | 'fire';
 
 export type GunSpec = {
@@ -92,6 +102,10 @@ export type ShipSpec = {
   capture?: number;
   /** Share of a new fire, and of its spread, that takes hold on this ship (curtains and wet straw); 1 without it. */
   fireResist?: number;
+  /** A fireship: the fire it sets on an enemy hull it touches, after which it burns out itself. */
+  fireship?: number;
+  /** The chapter-wide balance tier (1 light ... 4 first-rate); see src/sim/points.ts. */
+  tier?: 1 | 2 | 3 | 4;
 };
 
 export type FireMode = 'free' | 'hold';

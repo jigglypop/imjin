@@ -144,6 +144,8 @@ export const RANKED_FLEET_MIX: Record<Faction, ShipKind[]> = {
   joseon: ['panokseon', 'panokseon', 'geobukseon', 'panokseon', 'hyeopseon', 'panokseon', 'hyeopseon'],
   japan: ['atakebune', 'sekibune', 'sekibune', 'kobaya', 'atakebune', 'sekibune', 'kobaya', 'sekibune'],
   ming: ['mingship', 'mingsmall', 'mingship', 'mingsmall', 'mingsmall'],
+  england: ['racegalleon', 'pinnace', 'racegalleon', 'pinnace', 'racegalleon', 'pinnace'],
+  spain: ['spgalleon', 'galleass', 'urca', 'spgalleon', 'urca'],
 };
 /**
  * The opening mix under the expanded rules: the same fleets with some of the new size tiers among them. The support
@@ -153,6 +155,8 @@ export const FLEET_MIX: Record<Faction, ShipKind[]> = {
   joseon: ['panokseon', 'panokseon', 'geobukseon', 'panokseon', 'hyeopseon', 'panokseon', 'hyeopseon'],
   japan: ['atakebune', 'sekibune', 'sekibune', 'kobaya', 'sogantaek', 'sekibune', 'kobaya', 'daegwanseon', 'atakebune', 'sekibune'],
   ming: ['mingship', 'mingsmall', 'mingship', 'mingsmall', 'haechangseon', 'mingsmall', 'hoseon'],
+  england: ['racegalleon', 'pinnace', 'racegalleon', 'pinnace', 'fireship', 'racegalleon', 'pinnace'],
+  spain: ['spgalleon', 'galleass', 'urca', 'spgalleon', 'urca'],
 };
 
 export const fleetCost = (fleet: ShipKind[], profile: BalanceProfile = COMPETITIVE_PROFILE) => fleet.reduce((a, k) => a + shipSpec(k, profile).cost, 0);

@@ -90,6 +90,19 @@ export function payload(gun: GunType, ammo: AmmoType): { mass: number; diameter:
       return { mass: 0.5, diameter: 0.044, deform: 2.5 };
     case 'hudun':
       return { mass: 1.1, diameter: 0.06, deform: 1.5 };
+    // The Armada guns: English and Spanish shot weights of 1588 (pounds of about 0.45 kg); the pedrero fired dressed stone.
+    case 'culverin':
+      return { mass: 7.7, diameter: 0.13, deform: 1 };
+    case 'demiculverin':
+      return { mass: 4.3, diameter: 0.105, deform: 1 };
+    case 'cannon':
+      return { mass: 14.5, diameter: 0.16, deform: 1 };
+    case 'perrier':
+      return { mass: 6, diameter: 0.15, deform: 2 };
+    case 'saker':
+      return { mass: 2.4, diameter: 0.09, deform: 1 };
+    case 'base':
+      return { mass: 0.5, diameter: 0.045, deform: 1 };
   }
 }
 
@@ -99,6 +112,8 @@ export function payload(gun: GunType, ammo: AmmoType): { mass: number; diameter:
  * the Ming fir between; shield boards and castle walls thinner still. Only the Joseon figure is recorded.
  */
 export function planking(faction: Faction, part: 'hull' | 'wall' | 'castle', hullCm: number) {
+  // European oak: a harder wood, thick bulwarks and castle sides.
+  if (faction === 'england' || faction === 'spain') return { T: part === 'hull' ? hullCm : part === 'wall' ? 8 : 5, k: 40 };
   const k = faction === 'japan' ? 22 : faction === 'ming' ? 35 : 30;
   const T = part === 'hull' ? hullCm : part === 'wall' ? (faction === 'japan' ? 3 : faction === 'ming' ? 4 : 6) : faction === 'japan' ? 2.5 : 3;
   return { T, k };

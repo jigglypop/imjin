@@ -49,6 +49,12 @@ const ROLE_NOTE: Record<ShipKind, string> = {
   gwangseon: '철력목 대형선: 단단한 선체, 충돌에 강합니다 (조선 파견 기록 없음)',
   haechangseon: '중형 전선: 불랑기포 4문 (조선 파견 기록 없음)',
   hoseon: '빠른 소형선: 불랑기포, 거점 습격',
+  racegalleon: '긴 사거리 컬버린, 빠른 선체: 거리를 두고 포격',
+  pinnace: '빠른 소형선: 정찰과 추격, 거점 점령',
+  fireship: '무장 없는 화공선: 적 함선에 닿으면 불을 옮기고 스스로 타 버립니다',
+  spgalleon: '높은 선루와 많은 병사: 대포와 석포, 적 함선 도선',
+  galleass: '노와 돛: 이물의 대포 3문, 바람 없이도 기동',
+  urca: '수송선: 가까운 아군 4척의 병력·탄약을 보급합니다',
 };
 
 const TRAIT = COMPETITIVE_TRAITS;

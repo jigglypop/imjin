@@ -9,7 +9,7 @@ import type { LandSampler, Ship, Squadron } from '../types';
 import type { BridgeSeat, RegionBattle, RegionBattleBuilding } from './bridge';
 import { ATTACKER_HOME, DEFENDER_HOME, REGION_MAPS, regionArt, regionEnvironment } from './coast';
 import { REGIONS } from './regions';
-import type { BattleOutcomeShip, BuildingKind } from './types';
+import type { BattleOutcomeShip, BuildingKind, GrandFaction } from './types';
 import { coastalTacticFor } from '../coastal-tactics';
 import { cardOf } from '../../ships/anchors';
 
@@ -123,8 +123,8 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
     let sq = squads.get(key);
     if (!sq) {
       const leader = u.leader ?? (spec.faction === seat.faction ? seat.leader : null);
-      const portrait = leader?.portrait ?? DEFAULT_PORTRAIT[spec.faction];
-      const commander = leader ? `${leader.title} ${leader.name}` : `${TUNING.faction[spec.faction].label} 수군`; // i18n-ignore: navy labels have English entries
+      const portrait = leader?.portrait ?? DEFAULT_PORTRAIT[spec.faction as GrandFaction];
+      const commander = leader ? `${leader.title} ${leader.name}` : `${TUNING.faction[spec.faction as GrandFaction].label} 수군`; // i18n-ignore: navy labels have English entries
       const index = [...squads.keys()].filter((k) => k.startsWith(`${u.kind}:`)).length + 1;
       sq = b.addSquadron(seat.team, `${SHORT_NAME[u.kind]} ${index}대`, commander, portrait, cardOf(u.kind), slot); // i18n-ignore: same squadron label as the conquest mode
       // A squadron of an allied navy (Ming beside Joseon) is listed with the seat that commands it.

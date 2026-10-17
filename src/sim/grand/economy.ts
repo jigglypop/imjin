@@ -158,10 +158,10 @@ export function rangedShare(spec: ShipSpec): number {
 export function shipDef(kind: ShipKind): ShipDef {
   const spec = shipSpec(kind);
   const combat = combatStats(kind);
-  const f = TUNING.faction[spec.faction];
+  const f = TUNING.faction[spec.faction as GrandFaction];
   return {
     kind,
-    faction: spec.faction,
+    faction: spec.faction as GrandFaction,
     label: spec.label,
     gold: Math.max(10, Math.round(spec.cost * TUNING.goldPerCost * f.cost)),
     turns: Math.max(1, Math.ceil(spec.build / TUNING.shipSecondsPerTurn)),

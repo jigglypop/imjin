@@ -34,10 +34,7 @@ export interface WorkView {
   cancelable: boolean;
 }
 
-export type ShipClass =
-  | 'panokseon' | 'geobukseon' | 'hyeopseon' | 'sahuseon' | 'pojakseon'
-  | 'atakebune' | 'sekibune' | 'kobaya' | 'daeantaek' | 'sogantaek' | 'daegwanseon' | 'byeongnyangseon'
-  | 'mingship' | 'mingsmall' | 'gwangseon' | 'haechangseon' | 'hoseon';
+export type ShipClass = import('../../sim/types').ShipKind;
 
 export interface RecruitView {
   kind: ShipClass;

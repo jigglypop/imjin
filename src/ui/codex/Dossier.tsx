@@ -31,6 +31,12 @@ const ROMAN: Record<ShipKind, string> = {
   haechangseon: 'Haicangchuan',
   mingsmall: 'Shachuan',
   hoseon: 'Huchuan',
+  racegalleon: 'Race-built galleon',
+  pinnace: 'Pinnace',
+  fireship: 'Fireship',
+  spgalleon: 'Galeón',
+  galleass: 'Galeaza',
+  urca: 'Urca',
 };
 
 export const romanOf = (kind: ShipKind) => ROMAN[kind];

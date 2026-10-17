@@ -51,5 +51,5 @@ export function buildShip(kind: ShipKind, variant: number, omitDragonHead = fals
   const lods = LOD_LEVELS.map((l) => buildLod(kind, variant, l, omitDragonHead));
   bakeGrime(lods, buildAnchorsFor(`${kind}#${variant}`)!);
   if (kind === 'geobukseon') for (const lod of lods) for (let i = 0; i < lod.position.length; i++) lod.position[i]! *= GEOBUK_SCALE;
-  return { lods, anchors, faction: SHIP_SPECS[kind].faction };
+  return { lods, anchors, faction: SHIP_SPECS[kind].faction as Faction };
 }

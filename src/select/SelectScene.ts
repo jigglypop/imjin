@@ -56,6 +56,8 @@ const FLAG_AT: Record<Faction, { dx: number; dz: number; size: number; lean: num
   joseon: { dx: -1.5, dz: 0.5, size: 1.15, lean: 0.3 },
   ming: { dx: -2.7, dz: -0.5, size: 1.08, lean: 0.25 },
   japan: { dx: 1.6, dz: -0.2, size: 0.76, lean: -0.3 },
+  england: { dx: -1.5, dz: 0.5, size: 1.1, lean: 0.3 },
+  spain: { dx: 1.6, dz: -0.2, size: 1.1, lean: -0.3 },
 };
 const PLAYER_FLAG = 1.3;
 

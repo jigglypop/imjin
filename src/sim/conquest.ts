@@ -39,6 +39,8 @@ export const RANKED_ROSTER: Record<Faction, ShipKind[]> = {
   joseon: ['panokseon', 'geobukseon', 'hyeopseon'],
   japan: ['atakebune', 'sekibune', 'kobaya'],
   ming: ['mingship', 'mingsmall'],
+  england: ['racegalleon', 'pinnace'],
+  spain: ['spgalleon', 'galleass', 'urca'],
 };
 
 /** Ships each navy can build under the expanded rules (casual battles and the campaign): the size tiers and support craft as well. */
@@ -46,6 +48,8 @@ export const ROSTER: Record<Faction, ShipKind[]> = {
   joseon: ['panokseon', 'geobukseon', 'hyeopseon', 'pojakseon', 'sahuseon'],
   japan: ['daeantaek', 'atakebune', 'sogantaek', 'daegwanseon', 'sekibune', 'kobaya', 'byeongnyangseon'],
   ming: ['gwangseon', 'mingship', 'haechangseon', 'mingsmall', 'hoseon'],
+  england: ['racegalleon', 'pinnace', 'fireship'],
+  spain: ['spgalleon', 'galleass', 'urca'],
 };
 
 export const rosterOf = (faction: Faction, expanded: boolean | undefined) => (expanded ? ROSTER : RANKED_ROSTER)[faction];
@@ -58,6 +62,8 @@ const PORTRAITS: Record<Faction, string[]> = {
   joseon: ['portrait_admiral', 'portrait_eo', 'portrait_kwon', 'portrait_jeongun', 'portrait_anwi', 'portrait_eokgi'],
   japan: ['portrait_japan', 'portrait_kato', 'portrait_kuki', 'portrait_kurushima', 'portrait_konishi', 'portrait_wakisaka'],
   ming: ['portrait_deng', 'portrait_chenlin'],
+  england: ['portrait_howard', 'portrait_drake', 'portrait_hawkins', 'portrait_frobisher'],
+  spain: ['portrait_medina', 'portrait_recalde', 'portrait_oquendo', 'portrait_leyva'],
 };
 
 /** Ship names in squadron and recruit labels. */
@@ -79,6 +85,12 @@ export const SHORT_NAME: Record<ShipKind, string> = {
   gwangseon: '명 광선',
   haechangseon: '명 해창선',
   hoseon: '명 호선',
+  racegalleon: '갤리온',
+  pinnace: '핀네이스',
+  fireship: '화공선',
+  spgalleon: '에스파냐 갤리온',
+  galleass: '갈레아스',
+  urca: '우르카',
 };
 
 /** Shore guns by navy: count, gun and seconds between rounds. */
@@ -86,6 +98,8 @@ const BATTERY_GUNS: Record<Faction, { gun: GunType; count: number; reload: numbe
   joseon: { gun: 'jija', count: 3, reload: 9 },
   japan: { gun: 'folangji', count: 4, reload: 8 },
   ming: { gun: 'folangji', count: 4, reload: 7.5 },
+  england: { gun: 'culverin', count: 3, reload: 8 },
+  spain: { gun: 'cannon', count: 3, reload: 11 },
 };
 
 export type Building = { kind: BuildingKind; hp: number; progress: number; reload: number[]; level: BuildingLevel; upgradeLeft: number; upgradeTotal: number; constructionTotal?: number };

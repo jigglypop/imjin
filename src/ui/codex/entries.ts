@@ -38,13 +38,16 @@ export const NAVIES: { faction: Faction; kinds: ShipKind[] }[] = [
 ];
 
 /** The seal of each navy: its name in hanja (the menu's serif cut carries these characters). */
-export const NAVY_SEAL: Record<Faction, string> = { joseon: '朝鮮', japan: '日本', ming: '明' };
+export const NAVY_SEAL: Record<Faction, string> = { joseon: '朝鮮', japan: '日本', ming: '明', england: 'ENGLAND', spain: 'ESPAÑA' };
 
 const KIM_1982 = '김재근, 『조선왕조군선연구』, 일조각, 1982';
 const ISHII_1995 = '이시이 겐지(石井謙治), 『화선(和船) II』, 호세이대학출판국, 1995';
 const QI = '척계광(戚繼光), 『기효신서(紀效新書)』';
 const ZHENG = '정약증(鄭若曾), 『주해도편(籌海圖編)』, 1562';
 const MAO = '모원의(茅元儀), 『무비지(武備志)』, 1621';
+const MART = 'Colin Martin & Geoffrey Parker, The Spanish Armada, 1988 (개정 1999)';
+const KON = 'Angus Konstam, The Armada Campaign 1588, Osprey, 2001';
+const LAV = 'Peter Kirsch, The Galleon, 1990';
 const JANGCHO = '이순신, 『임진장초(壬辰狀草)』';
 
 export const ENTRIES: Record<ShipKind, CodexEntry> = {
@@ -227,6 +230,60 @@ export const ENTRIES: Record<ShipKind, CodexEntry> = {
     sources: [],
     grade: 'C',
   },
+  racegalleon: {
+    native: 'Race-built galleon',
+    era: '1570년대–1600년대',
+    role: '잉글랜드 함대의 주력 전투함',
+    story: '존 호킨스가 해군 재무관으로 있으며 앞뒤 선루를 낮추고 선체를 길고 날렵하게 고쳐 지은 갤리온입니다. 바람을 거슬러 잘 달렸고, 무거운 포를 많이 싣고 멀리서 쏘는 싸움을 위해 만들어졌습니다. 리벤지호, 아크 로열호가 대표적입니다.',
+    facts: ['리벤지호(1577): 약 450–500톤, 포 40여 문 (Kirsch)', '아크 로열호(1587): 약 800톤, 하워드의 기함 (Konstam)', '1588년 잉글랜드 함대의 포탄 대부분은 9–18파운드급 장포였음 (Martin & Parker)'],
+    sources: [LAV, KON, MART],
+    grade: 'B',
+  },
+  pinnace: {
+    native: 'Pinnace',
+    era: '16세기',
+    role: '정찰·연락·추격용 소형선',
+    story: '돛과 노를 함께 쓰는 작고 빠른 배입니다. 1588년 잉글랜드 함대 약 200척 가운데 많은 수가 이런 소형선과 무장 상선이었습니다.',
+    facts: ['잉글랜드 함대: 왕실 함선 34척 + 무장 상선·소형선 160여 척 (Konstam)'],
+    sources: [KON],
+    grade: 'C',
+  },
+  fireship: {
+    native: 'Fireship',
+    era: '1588년 8월 7일',
+    role: '화공선',
+    story: '칼레 앞바다에 닻을 내린 무적함대를 향해 잉글랜드는 한밤중 낡은 상선 8척에 역청과 장전된 포를 채워 불을 붙여 바람과 조류에 실어 보냈습니다. 불탄 배는 없었지만 무적함대는 닻줄을 끊고 흩어졌고, 다음 날 그라블린 해전으로 이어졌습니다.',
+    facts: ['화공선 8척, 1588년 8월 7–8일 밤 (Martin & Parker)'],
+    sources: [MART],
+    grade: 'B',
+  },
+  spgalleon: {
+    native: 'Galeón',
+    era: '1580년대',
+    role: '무적함대의 주력 전투함',
+    story: '포르투갈과 카스티야 함대의 갤리온입니다. 높은 앞뒤 선루에 병사를 가득 태워 적선에 붙어 올라타는 싸움을 하도록 만들어졌습니다. 총사령관 메디나 시도니아 공작의 기함 산 마르틴호가 이 배입니다.',
+    facts: ['산 마르틴호: 약 1,000톤, 포 48문, 승선 약 470명 (Martin & Parker)', '무적함대 포의 상당수는 육상용 포가에 얹혀 재장전이 매우 느렸음 (Martin & Parker, 난파선 조사)'],
+    sources: [MART, KON],
+    grade: 'B',
+  },
+  galleass: {
+    native: 'Galeaza',
+    era: '1571–1588년',
+    role: '노와 돛을 함께 쓰는 중무장선',
+    story: '갤리선의 노와 범선의 돛을 함께 가진 큰 배로, 이물에 무거운 포를 실었습니다. 나폴리 갈레아스 4척이 무적함대와 함께 왔고, 그중 산 로렌소호는 칼레에서 좌초해 잉글랜드군에 빼앗겼습니다. 지로나호는 아일랜드 앞바다에서 침몰했습니다.',
+    facts: ['나폴리 갈레아스 4척, 노잡이 약 300명씩 (Konstam)', '지로나호 난파 유물: 1967–69년 인양, 벨파스트 얼스터 박물관'],
+    sources: [KON, MART],
+    grade: 'B',
+  },
+  urca: {
+    native: 'Urca',
+    era: '16세기',
+    role: '보급·수송선',
+    story: '발트해와 북해에서 쓰던 둥근 화물선(헐크)입니다. 무적함대의 식량, 화약, 공성 장비를 실었고, 느리고 무장이 가벼웠습니다.',
+    facts: ['무적함대 우르카 23척 (Martin & Parker)'],
+    sources: [MART],
+    grade: 'B',
+  },
 };
 
 /** What each gun was and what it fired, from the record. */
@@ -239,6 +296,12 @@ export const GUN_NOTES: Record<GunType, string> = {
   seungja: '1575년 무렵 김지가 만든, 손에 들고 쏘는 소형 총통입니다. 임진왜란 때에는 일본의 조총에 밀렸습니다.',
   ozutsu: '쇠를 두드려 만든 일본의 대구경 화기입니다. 주조한 포보다 터질 위험이 적었고, 20몬메(약 75g)부터 수백 몬메에 이르는 탄을 쏘았습니다.',
   folangji: '포르투갈의 후장식 선회포를 명이 본떠 만든 화포입니다. 화약과 탄을 미리 넣은 자포(子砲)를 갈아 끼워 빠르게 연달아 쏠 수 있었고, 조선도 들여와 썼습니다.',
+  culverin: '잉글랜드 갤리온의 주력 장포입니다. 포신이 길어(약 3.5m) 17파운드(약 7.7kg) 쇠 탄환을 멀리 쏘았고, 바퀴 넷 달린 함상 포가에 얹혀 빠르게 다시 장전할 수 있었습니다.',
+  demiculverin: '컬버린의 절반 크기로, 9파운드(약 4kg) 탄을 쏘았습니다. 1588년 잉글랜드 함대에 가장 많이 실린 포입니다.',
+  cannon: '짧고 굵은 대구경 포(카뇬)로 30파운드가 넘는 탄을 쏘았습니다. 위력은 컸지만 무적함대의 포는 육상용 두 바퀴 포가에 묶여 있어 한 번 쏘고 다시 장전하기까지 오래 걸렸습니다.',
+  perrier: '깎은 돌 탄환을 쏘는 석포(페드레로)입니다. 가까운 거리에서 갑판의 사람과 삭구를 쓸어내는 데 썼습니다.',
+  saker: '5파운드 남짓한 탄을 쏘는 중소형 포로, 양쪽 함대 모두 많이 실었습니다.',
+  base: '난간에 꽂아 돌려 쏘는 작은 후장식 선회포입니다. 산탄으로 등선해 오는 적을 막았습니다.',
   hudun: '척계광이 만든 가벼운 화포로, 앞발을 땅에 박아 고정한 모습이 웅크린 호랑이 같다 하여 붙은 이름입니다. 산탄을 쏘았으며, 『화포식언해』는 납탄 70개 또는 쇠탄 30개를 넣는다고 적었습니다.',
 };
 

@@ -874,6 +874,13 @@ export const MODEL_ALIAS: Record<Exclude<ShipKind, ModelKind>, ModelKind> = {
   gwangseon: 'mingship',
   haechangseon: 'mingship',
   hoseon: 'mingsmall',
+  // Placeholders until the Armada models land.
+  racegalleon: 'mingship',
+  pinnace: 'mingsmall',
+  fireship: 'mingsmall',
+  spgalleon: 'mingship',
+  galleass: 'mingship',
+  urca: 'mingship',
 };
 
 /** The kind whose model draws this kind. */

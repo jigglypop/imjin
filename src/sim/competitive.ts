@@ -8,6 +8,8 @@ export const COMPETITIVE_TRAITS: Record<Faction, string> = {
   joseon: '견고한 화포·도선 방어 · 비싸고 느린 주력함',
   japan: '값싼 기동·도선 · 약한 원거리 화력',
   ming: '장거리·정확한 집중 사격 · 근접·추격에 취약',
+  england: '빠른 갤리온·긴 사거리 컬버린 · 도선전에 약함',
+  spain: '높은 선루·병사 많은 도선전 · 느린 장전',
 };
 
 type UnitBalance = { spec: Partial<ShipSpec>; mods?: Partial<ShipMods>; range?: number; damage?: number };
@@ -38,6 +40,13 @@ export const COMPETITIVE_UNITS: Record<ShipKind, UnitBalance> = {
   gwangseon: { spec: { armor: 0.24, maxSpeed: 4.2, turnRate: 0.11, cost: 950, build: 80 }, mods: { reload: 0.8, accuracy: 1.15 }, range: 1.35, damage: 0.85 },
   haechangseon: { spec: { armor: 0.07, maxSpeed: 5.2, cost: 420, build: 40 }, mods: { reload: 0.85, accuracy: 1.12 }, range: 1.3, damage: 0.88 },
   hoseon: { spec: { hull: 42, crew: 38, cost: 185, build: 20 }, mods: { reload: 0.9, accuracy: 1.1 }, range: 1.25, damage: 0.9 },
+  // The Armada chapter keeps its catalog values; cross-chapter prices live in points.ts.
+  racegalleon: { spec: {} },
+  pinnace: { spec: {} },
+  fireship: { spec: {} },
+  spgalleon: { spec: {} },
+  galleass: { spec: {} },
+  urca: { spec: {} },
 };
 
 /** The three treasuries earn the same base income; cheap boarding ships are not discounted a second time. */
@@ -45,6 +54,8 @@ export const COMPETITIVE_FACTIONS: Record<Faction, { income: number; cost: numbe
   joseon: { income: 1, cost: 1, power: 1.01 },
   japan: { income: 1, cost: 1, power: 0.93 },
   ming: { income: 1, cost: 1, power: 1.005 },
+  england: { income: 1, cost: 1, power: 1 },
+  spain: { income: 1, cost: 1, power: 1 },
 };
 
 const specs = Object.fromEntries(Object.entries(SHIP_SPECS).map(([kind, spec]) => [kind, { ...spec, ...COMPETITIVE_UNITS[kind as ShipKind].spec }])) as Record<ShipKind, ShipSpec>;

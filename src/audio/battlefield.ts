@@ -24,6 +24,12 @@ const GUN_BANK: Record<GunType, GunBank> = {
   hwangja: 'cannon_small',
   seungja: 'cannon_small',
   hudun: 'cannon_small',
+  culverin: 'cannon_heavy',
+  cannon: 'cannon_heavy',
+  demiculverin: 'cannon_medium',
+  perrier: 'cannon_medium',
+  saker: 'cannon_small',
+  base: 'cannon_small',
 };
 
 /**

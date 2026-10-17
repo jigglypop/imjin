@@ -1954,6 +1954,8 @@ export class Battle {
             }
           }
         }
+        // A fireship that touches an enemy sets it alight and burns itself out (the Armada chapter's Calais fireships).
+        if (bestPen > -3 && a.team !== b.team && (a.spec.fireship || b.spec.fireship)) this.fireshipContact(a, b);
         if (bestPen <= 0) {
           if (bestPen > -3) this.tryGrapple(a, b);
           return;
@@ -2639,6 +2641,14 @@ export class Battle {
   }
 
   /** Sets a ship alight, or feeds its fire. `from` is the burning ship it caught from, when fire spread. */
+  private fireshipContact(a: Ship, b: Ship) {
+    for (const [f, t] of [[a, b], [b, a]] as const) {
+      if (!f.spec.fireship || f.fire >= 0.95) continue;
+      this.ignite(t, f.spec.fireship, f.id);
+      this.ignite(f, 1);
+    }
+  }
+
   ignite(s: Ship, amount: number, from = 0) {
     const before = s.fire;
     s.fire = Math.min(1, s.fire + amount * (s.spec.fireResist ?? 1));
