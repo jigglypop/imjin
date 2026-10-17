@@ -153,7 +153,10 @@ await check('every page has a two-to-one link card: its battle\'s own, or the fr
   assert.equal(cardFile(null, 'ko'), 'og/front-ko-v1.jpg');
   assert.equal(cardFile(null, 'en'), 'og/front-en-v1.jpg');
   const cards = new Set(routePages().map((p) => cardFile(p.battle ?? null, p.edition)));
-  assert.equal(cards.size, (BATTLE_SLUGS.length + 1) * 2, 'a later chapter shares the front card for now');
+  // Every 1592 battle and the later chapters' battles that have their own card; the rest share the front card.
+  const own = routePages().filter((p) => p.battle && cardFile(p.battle, p.edition) !== cardFile(null, p.edition)).map((p) => p.battle);
+  assert.ok(BATTLE_SLUGS.every((b) => own.includes(b)), 'every 1592 battle has its own card');
+  assert.equal(cards.size, (new Set(own).size + 1) * 2);
   for (const battle of BATTLE_SLUGS) assert.match(cardFile(battle, 'en'), new RegExp(`^og/${battle}-en-v\\d+\\.jpg$`));
 });
 

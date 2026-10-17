@@ -146,12 +146,16 @@ export function withoutParams(search: string, names: readonly string[]): string 
  * card's version here when its picture changes.
  */
 export const CARD_SIZE = { width: 1200, height: 600 } as const;
-const CARD_VERSION: Record<(typeof BATTLE_SLUGS)[number] | 'front', number> = { front: 1, okpo: 1, sacheon: 1, dangpo: 1, hansan: 1, angolpo: 1, busan: 1, chilcheon: 1, myeongnyang: 1, noryang: 1 };
+const CARD_VERSION: Partial<Record<BattleSlug | 'front', number>> & Record<(typeof BATTLE_SLUGS)[number] | 'front', number> = {
+  front: 1, okpo: 1, sacheon: 1, dangpo: 1, hansan: 1, angolpo: 1, busan: 1, chilcheon: 1, myeongnyang: 1, noryang: 1,
+  // The later chapters' battles that have their own cards so far (scripts/build-battle-art.mjs); the rest share the front card.
+  plymouth: 1, calais: 1, gravelines: 1, preveza: 1, djerba: 1, 'lepanto-north': 1, 'lepanto-south': 1,
+};
 
 export function cardFile(battle: BattleSlug | null, edition: Edition): string {
   // A later chapter's battles have no cards of their own yet: they share the front card.
-  const id = battle && battle in CARD_VERSION ? (battle as keyof typeof CARD_VERSION) : 'front';
-  return `og/${id}-${edition}-v${CARD_VERSION[id]}.jpg`;
+  const id = battle && battle in CARD_VERSION ? battle : 'front';
+  return `og/${id}-${edition}-v${CARD_VERSION[id]!}.jpg`;
 }
 
 /** One page of the built site: its address, its file under dist/ and the storage keys that answer for it. */

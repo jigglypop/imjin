@@ -43,6 +43,9 @@ const { BATTLE_SLUGS, CARD_SIZE, cardFile } = await load('src/routes.ts');
 const { SCENARIO_TEXT } = await load('src/sim/scenarioText.ts');
 const { EN_SIM } = await load('src/i18n/en/sim.ts');
 const { EN_MENUS } = await load('src/i18n/en/menus.ts');
+const { EN_ARMADA } = await load('src/i18n/en/armada.ts');
+const { EN_LEPANTO } = await load('src/i18n/en/lepanto.ts');
+const { chapterOfBattle } = await load('src/routes.ts');
 
 /** The stills: a wide one for the cards and the desktop loading picture, a tall one for phones. Rendered at twice the size. */
 const WIDE = { width: 1920, height: 1080 };
@@ -417,8 +420,8 @@ function armadaShots() {
     portland: plan(20, { exposure: 1.1, gamma: 1.04, saturation: 1.04 }),
     wight: plan(20, day),
     // The fireships: run until the first Spanish ship has caught fire.
-    calais: plan(0, { exposure: 1.5, gamma: 1.1, saturation: 1 }, (c) => c.burning('japan').length >= 2 || c.e.battle.time > 300),
-    gravelines: plan(20, { exposure: 1.1, gamma: 1.05, saturation: 1.06 }),
+    calais: plan(0, { exposure: 2.6, gamma: 1.2, saturation: 1 }, (c) => c.burning('japan').length >= 2 || c.e.battle.time > 300),
+    gravelines: plan(20, { exposure: 1.8, gamma: 1.1, saturation: 1.06 }),
   };
 }
 
@@ -654,7 +657,7 @@ async function graded(file, grade) {
 
 const escapeHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const english = (ko) => {
-  const text = EN_SIM[ko] ?? EN_MENUS[ko];
+  const text = EN_SIM[ko] ?? EN_MENUS[ko] ?? EN_ARMADA[ko] ?? EN_LEPANTO[ko];
   if (!text) throw new Error(`no English for ${ko}`);
   return text;
 };
@@ -732,7 +735,12 @@ function cardPage(lang, id) {
       <div class="lockup">${mark}<div class="years"><i></i><span>1592 — 1598</span><i></i></div><div class="line">${site}</div></div></body>`;
   }
   const t = battleText(id, lang);
-  const brand = en ? '<div class="brand"><i>THE IMJIN WAR</i></div>' : '<div class="brand"><b>임진왜란</b><span class="seal">海<br>戰</span></div>';
+  // A later chapter's card carries the series name and that chapter's war instead of the Imjin War's seal.
+  const chapter = chapterOfBattle(id);
+  const CH = { armada: ['THE SPANISH ARMADA', '아르마다 전쟁'], lepanto: ['LEPANTO', '레판토'] }[chapter];
+  const brand = CH
+    ? `<div class="brand">${en ? `<i>MOONWAKE · ${CH[0]}</i>` : `<b>${CH[1]}</b>`}</div>`
+    : en ? '<div class="brand"><i>THE IMJIN WAR</i></div>' : '<div class="brand"><b>임진왜란</b><span class="seal">海<br>戰</span></div>';
   const title = en ? `${t.pre ? `<div class="pre">${t.pre}</div>` : ''}<div class="name" id="fit">${escapeHtml(t.title)}</div>` : `<div class="title" id="fit">${t.title}</div>`;
   return `<body class="${lang}"><img class="still" src="/still.jpg" alt=""><div class="shade"></div>${brand}
     <div class="block"><div class="kicker">${escapeHtml(t.date)}<small>${t.hanja}</small></div>${title}<div class="place">${escapeHtml(t.place)}</div></div>
