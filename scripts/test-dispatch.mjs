@@ -76,7 +76,9 @@ try {
     g.fleets[0].ships[0].kind = 'hyeopseon'; assert.ok(visibleRegions(g, 'joseon').has(b));
     g.fleets[0].ships[0].crew = 0; assert.equal(visibleRegions(g, 'joseon').has(b), false);
     g.fleets = []; g.regions.yeosu.buildings = [{ kind: 'beacon', level: 1 }]; assert.ok(visibleRegions(g, 'joseon').has(b));
-    assert.equal(Object.keys(REGIONS).length, 40);
+    // The 1592 map's forty ports; REGIONS also holds the other theatres' (theatre.ts).
+    assert.equal(REGION_ORDER.length, 40);
+    assert.ok(REGION_ORDER.every((id) => REGIONS[id]));
   });
 } finally { await vite.close(); }
 process.exitCode = failed ? 1 : 0;
