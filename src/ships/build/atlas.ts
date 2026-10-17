@@ -1,7 +1,7 @@
 import layout from './atlasLayout.json';
 import { SURF } from './surf';
 
-export type Faction = 'joseon' | 'japan' | 'ming';
+export type Faction = 'joseon' | 'japan' | 'ming' | 'england' | 'spain';
 
 type Slot = { name: string; size?: number; sheet?: { cols: number; rows: number }; flags?: { name: string }[] };
 const slots = layout.factions as unknown as Record<Faction, Slot[]>;

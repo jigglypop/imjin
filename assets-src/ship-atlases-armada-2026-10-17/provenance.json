@@ -1,0 +1,27 @@
+{
+  "tool": "scripts/ship-textures.mjs generate + compose",
+  "endpoint": "images/generations",
+  "model": "gpt-image-2",
+  "quality": "high",
+  "size": "1024x1024",
+  "generatedAt": "2026-10-17",
+  "prompts": "src/ships/build/atlasLayout.json factions.england / factions.spain, each prompt followed by its style line",
+  "images": 44,
+  "estimatedCostUsd": 7.5,
+  "costNote": "Estimate (~0.17 USD per high-quality 1024x1024 image); the script does not log usage. One take per cell, none regenerated.",
+  "raw": "assets-src/textures-ships/{england,spain}/*_1.png (gitignored cache)",
+  "published": {
+    "public/textures/ships/england_albedo.webp": "da6a0ebaf1579e7a49ab542bb177c050d102da87a4ca0671e2d40fc4401f1645",
+    "public/textures/ships/england_albedo_1k.webp": "4cdfafcaf25e983e6ef0a688836f3032a57110d6e0099709acb2d0b1ba4193bb",
+    "public/textures/ships/england_normal.webp": "6dc3bfd31dd674758ebae8589feed970f71293576d4fbe8044a0652cb7b8be9e",
+    "public/textures/ships/england_normal_1k.webp": "0d4a446787d8522c1d1718ba6001a6c9bf2e79139f5c7b4283421207f8276722",
+    "public/textures/ships/england_rough.webp": "a87419fb65f87d5d5d072ac716086ff65a9dce5557ffe608903b3ca47a8e30f8",
+    "public/textures/ships/england_rough_1k.webp": "87bf56a1f105655cd86e95988c07d3e483e5cd4029a72615e903e461599e42ff",
+    "public/textures/ships/spain_albedo.webp": "d6ebecd0eeec3153f94c81030cb583846cc1f9ef85ed43517e3a7537700acafe",
+    "public/textures/ships/spain_albedo_1k.webp": "a8e813f29bfcda75d0beb71f54fa2febb8906db6513c6009a8cfdaf90e8701f0",
+    "public/textures/ships/spain_normal.webp": "0c5e9ff8ab57ba764b1d1d5365f4177d616378bea3f3a6ec8e2336c86cf9180e",
+    "public/textures/ships/spain_normal_1k.webp": "b0183059780dbe6bd95fe7924a36ca14e8afab73f48641023f52f8fb94567306",
+    "public/textures/ships/spain_rough.webp": "216321306fab0ed79fd4658759f6c3a8c4c1951897a2a6c4b8c4bf68d237bbcf",
+    "public/textures/ships/spain_rough_1k.webp": "a6b7f2fa87d1304224336972778c5d84d03fdebe7d3ff9fa513d41f476942cfe"
+  }
+}

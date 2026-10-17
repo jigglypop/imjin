@@ -85,6 +85,27 @@ const SHOTS = [
   { name: 'pano0_cut3_bow', key: 'panokseon#0', yaw: 0.6, pitch: 0.7, distance: 22, dx: 13, cut: 3 },
   { name: 'geo_mid', key: 'geobukseon#0', yaw: PI / 2 - 0.5, pitch: 0.12, distance: 34, dx: 4 },
   { name: 'row_japan', key: 'atakebune#0', yaw: 0.7, pitch: 0.25, distance: 150, dx: 60 },
+  // The 1588 ships (Armada chapter).
+  { name: 'race0_34', key: 'racegalleon#0', yaw: 0.9, pitch: 0.18, distance: 80 },
+  { name: 'race0_side', key: 'racegalleon#0', yaw: PI / 2, pitch: 0.06, distance: 82, dx: 4 },
+  { name: 'race0_stern', key: 'racegalleon#0', yaw: 2.4, pitch: 0.2, distance: 34, dx: -14 },
+  { name: 'race0_bow', key: 'racegalleon#0', yaw: -0.6, pitch: 0.15, distance: 34, dx: 14 },
+  { name: 'race0_deck', key: 'racegalleon#0', yaw: 0.5, pitch: 0.5, distance: 30, dx: 0 },
+  { name: 'race1_34', key: 'racegalleon#1', yaw: 0.9, pitch: 0.18, distance: 80 },
+  { name: 'sp0_34', key: 'spgalleon#0', yaw: 0.9, pitch: 0.18, distance: 86 },
+  { name: 'sp0_side', key: 'spgalleon#0', yaw: PI / 2, pitch: 0.06, distance: 88, dx: 4 },
+  { name: 'sp0_stern', key: 'spgalleon#0', yaw: 2.5, pitch: 0.18, distance: 36, dx: -16 },
+  { name: 'sp0_bow', key: 'spgalleon#0', yaw: -0.6, pitch: 0.15, distance: 36, dx: 16 },
+  { name: 'sp1_34', key: 'spgalleon#1', yaw: 0.9, pitch: 0.18, distance: 86 },
+  { name: 'galleass_34', key: 'galleass#0', yaw: 0.9, pitch: 0.22, distance: 80 },
+  { name: 'galleass_side', key: 'galleass#0', yaw: PI / 2, pitch: 0.08, distance: 80 },
+  { name: 'galleass_bow', key: 'galleass#0', yaw: -0.6, pitch: 0.18, distance: 30, dx: 18 },
+  { name: 'galleass_deck', key: 'galleass#0', yaw: 0.6, pitch: 0.55, distance: 30, dx: -4 },
+  { name: 'urca_34', key: 'urca#0', yaw: 0.9, pitch: 0.18, distance: 60 },
+  { name: 'urca_stern', key: 'urca#0', yaw: 2.5, pitch: 0.18, distance: 30, dx: -10 },
+  { name: 'pinnace_34', key: 'pinnace#0', yaw: 0.9, pitch: 0.18, distance: 40 },
+  { name: 'fireship_34', key: 'fireship#0', yaw: 0.9, pitch: 0.25, distance: 40 },
+  { name: 'armada_line', key: 'spgalleon#0', yaw: PI / 2 + 0.25, pitch: 0.12, distance: 260, dx: -60 },
 ];
 const only = args.shots ? new Set(args.shots.split(',')) : null;
 

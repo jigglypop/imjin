@@ -83,6 +83,15 @@ export const SHIP_MODELS: ShipModelSpec[] = [
   { kind: 'kobaya', variant: 0, base: '/models/kobaya', axis: 'z', bow: 1, waterline: 0.11 },
   { kind: 'mingship', variant: 0, base: '/models/mingship', axis: 'z', bow: 1, waterline: 0.15 },
   { kind: 'mingsmall', variant: 0, base: '/models/mingsmall', axis: 'z', bow: 1, waterline: 0.1 },
+  // The 1588 ships are procedural only; under ?ships=legacy they fall back to a Ming model (FALLBACK_MODEL).
+  { kind: 'racegalleon', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'racegalleon', variant: 1, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'spgalleon', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'spgalleon', variant: 1, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'galleass', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'urca', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'pinnace', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.1 },
+  { kind: 'fireship', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.1 },
 ];
 
 export const FALLBACK_MODEL: Partial<Record<ShipKind, string>> = {
@@ -90,6 +99,12 @@ export const FALLBACK_MODEL: Partial<Record<ShipKind, string>> = {
   kobaya: '/models/sekibune_v2',
   mingship: '/models/atakebune_v2',
   mingsmall: '/models/sekibune_v2',
+  racegalleon: '/models/mingship',
+  spgalleon: '/models/mingship',
+  galleass: '/models/mingship',
+  urca: '/models/mingship',
+  pinnace: '/models/mingsmall',
+  fireship: '/models/mingsmall',
 };
 
 /** Detail levels a full model set has: near, mid, far. A model loaded without its near level has fewer. */

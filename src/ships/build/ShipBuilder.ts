@@ -13,6 +13,8 @@ import { buildHyeopseon } from './hyeopseon';
 import { bakeGrime } from './bake';
 import type { MeshData } from './parts';
 import { buildPanokseon } from './panokseon';
+import { buildSailShip } from './galleon';
+import { buildGalleass } from './galleass';
 
 export const LOD_LEVELS: Lod[] = [0, 1, 2];
 
@@ -39,6 +41,14 @@ function buildLod(kind: ShipKind, variant: number, lod: Lod, omitDragonHead: boo
       return buildMingship(lod);
     case 'mingsmall':
       return buildMingsmall(lod);
+    case 'racegalleon':
+    case 'spgalleon':
+    case 'urca':
+    case 'pinnace':
+    case 'fireship':
+      return buildSailShip(kind, variant, lod);
+    case 'galleass':
+      return buildGalleass(lod);
     default:
       throw new Error(`no procedural model for ${kind}`);
   }

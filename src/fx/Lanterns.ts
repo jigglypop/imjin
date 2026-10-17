@@ -66,6 +66,13 @@ const POINTS: Record<ModelKind, [number, number, number][]> = {
     [0.4, 1.4, 0],
     [-0.4, 1.4, 0],
   ],
+  // The 1588 ships are procedural only: their lanterns come from the anchors.
+  racegalleon: [],
+  pinnace: [],
+  fireship: [],
+  spgalleon: [],
+  galleass: [],
+  urca: [],
 };
 
 const DECK: Record<string, number> = { 'panokseon#0': 6.0, 'panokseon#1': 4.7, 'panokseon#2': 4.4, 'atakebune#0': 3.5, 'sekibune#0': 2.1, 'hyeopseon#0': 0.95, 'kobaya#0': 0.8, 'mingship#0': 4.2, 'mingsmall#0': 2.4, 'geobukseon#0': 4.7 };

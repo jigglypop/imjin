@@ -53,6 +53,7 @@ import { ShipViews } from '../ships/ShipViews';
 import { Effects } from '../fx/Effects';
 import { Crew, crewAssets } from '../fx/Crew';
 import { Lanterns } from '../fx/Lanterns';
+import { SHIP_SPECS } from '../sim/catalog';
 import { Battle, SIM_DT } from '../sim/battle';
 import { buildScenario, SCENARIOS, type FleetSpawn, type ScenarioId } from '../sim/scenarios';
 import { applyBalance, FACTION_NAME, FACTION_SHORT } from '../sim/balance';
@@ -125,7 +126,7 @@ export interface CommandSink {
 }
 
 /** Every kind with a model of its own: the gallery shows them all. A battle loads only the models of the kinds it uses. */
-const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
+const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall', 'racegalleon', 'pinnace', 'fireship', 'spgalleon', 'galleass', 'urca'];
 
 /** Lets the browser paint the loading bar before the next stretch of blocking work (a timer covers a hidden tab, where frames never come). */
 const settle = () => new Promise<void>((resolve) => {
@@ -1028,9 +1029,14 @@ export class Engine {
       return;
     }
     const keys = Object.keys(this.assets);
+    // Bow to stern in a line, 52 m apart for the 1592 ships and wider for the longer 1588 ones.
+    const gap = keys.map((key) => Math.max(52, SHIP_SPECS[this.assets[key]!.kind].length + 12));
+    const total = gap.reduce((n, g) => n + g, 0) - gap[gap.length - 1]!;
+    let at = -total / 2;
     keys.forEach((key, i) => {
       const asset = this.assets[key]!;
-      const s = b.addShip(asset.kind, (i - (keys.length - 1) / 2) * 52, 0, 0, key, null, false, asset.variant);
+      const s = b.addShip(asset.kind, at, 0, 0, key, null, false, asset.variant);
+      at += gap[i]!;
       s.speed = 0;
       s.team = 'joseon';
       s.order = { type: 'hold' };
