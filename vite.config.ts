@@ -8,6 +8,7 @@ import { EN_COMMON } from './src/i18n/en/common.js';
 import { EN_SIM } from './src/i18n/en/sim.js';
 import { EN_ARMADA } from './src/i18n/en/armada.js';
 import { EN_LEPANTO } from './src/i18n/en/lepanto.js';
+import { EN_TRAFALGAR } from './src/i18n/en/trafalgar.js';
 import { SCENARIO_TEXT } from './src/sim/scenarioText.js';
 import { CARD_SIZE, SITE_NAME, cardFile, routeName, routePages, routePath, type BattleSlug, type Edition, type RoutePage, type RouteScreen } from './src/routes.js';
 
@@ -70,7 +71,7 @@ const ENGLISH_FRONT = {
 
 /** The English for a page's text, from the game's own dictionaries, so a page's title matches the tab title in the game. */
 function english(ko: string): string {
-  const text = EN_COMMON[ko] ?? EN_SIM[ko] ?? EN_BRIEFING[ko] ?? EN_ARMADA[ko] ?? EN_LEPANTO[ko];
+  const text = EN_COMMON[ko] ?? EN_SIM[ko] ?? EN_BRIEFING[ko] ?? EN_ARMADA[ko] ?? EN_LEPANTO[ko] ?? EN_TRAFALGAR[ko];
   if (!text) throw new Error(`route pages: no English for ${ko}`);
   return text;
 }

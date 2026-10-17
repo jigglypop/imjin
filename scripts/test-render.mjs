@@ -159,7 +159,7 @@ try {
       battle: { time: 0, tide: 0, events: [], ended: false },
       director: { timeFactor: () => 1, update() {} }, updateFastForward() {}, cutawayIds: () => [],
       stepSim(dt) { this.battle.time += dt; },
-      views: { cutaway: new Map(), sync(b, dt) { received.views = dt; } }, stampWakes(e, dt) { received.wakes = dt; },
+      views: { cutaway: new Map(), capture() {}, sync(b, dt) { received.views = dt; } }, stampWakes(e, dt) { received.wakes = dt; },
       rts: { followId: 0, update() {} }, ocean: { setTide() {}, update() {} },
       sound: { setRoar() {}, tick(b, c, dt) { received.sound = dt; } },
       fx: { update(b, dt) { received.fx = dt; } }, crew: { update(b, dt) { received.crew = dt; } },
