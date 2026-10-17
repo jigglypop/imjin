@@ -335,7 +335,11 @@ export function buildSailShip(kind: ShipKind, variant: number, lod: Lod): MeshDa
   // --- hull: planking, painted upper strakes between black wales, deck ---
   loftShaped(ctx, h, P.hull!);
   const band0 = deck - Math.min(2.6, deck * 0.42);
-  shapedBand(ctx, h, P.livery!, -L / 2 + 0.05, L / 2 - 0.1, band0, deck - 0.02, 0.035);
+  if (plan.bands) {
+    // The chequer of 1805: the side above the wales in the castle colour, a livery band along each tier of ports.
+    shapedBand(ctx, h, P.castle!, -L / 2 + 0.05, L / 2 - 0.1, plan.bands[0]![0] - 0.4, deck - 0.02, 0.03);
+    for (const [lo, hi] of plan.bands) shapedBand(ctx, h, P.livery!, -L / 2 + 0.3, L / 2 - 0.4, lo, Math.min(hi, deck - 0.05), 0.045);
+  } else shapedBand(ctx, h, P.livery!, -L / 2 + 0.05, L / 2 - 0.1, band0, deck - 0.02, 0.035);
   const wales = deck > 3 ? [band0 - 0.1, deck - 0.75 - (deck - band0) * 0.35] : [band0 - 0.08];
   for (const y of lod < 2 ? wales : wales.slice(0, 1)) shapedWale(ctx, h, P.wale!, -L / 2 + 0.1, L / 2 - 0.2, y, 0.16, 0.26, 0.07);
   if (lod < 2 && deck > 3) shapedWale(ctx, h, P.wale!, -L / 2 + 0.4, L / 2 - 0.8, deck * 0.32, 0.14, 0.22, 0.06);

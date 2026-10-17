@@ -56,6 +56,9 @@ export type SailPlan = {
   flagship: boolean;
   /** Fireship: no guns, an old patched merchant hull heaped with brushwood and pitch barrels. */
   fire?: boolean;
+  /** Painted bands (heights above the waterline) in the livery along the gun tiers, the rest of the side in the castle
+   *  livery: the 1805 chequer. Absent: one livery band under the rail, as in 1588. */
+  bands?: [number, number][];
   seed: number;
 };
 
