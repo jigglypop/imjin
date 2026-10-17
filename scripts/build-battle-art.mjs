@@ -420,7 +420,7 @@ function armadaShots() {
   const day = { exposure: 1, gamma: 1, saturation: 1.04 };
   return {
     plymouth: plan(20, day),
-    portland: plan(20, { exposure: 1.1, gamma: 1.04, saturation: 1.04 }),
+    portland: plan(20, { exposure: 2, gamma: 1.12, saturation: 1.04 }),
     wight: plan(20, day),
     // The fireships: run until the first Spanish ship has caught fire.
     calais: plan(0, { exposure: 3.2, gamma: 1.35, saturation: 1.02 }, (c) => c.burning('japan').length >= 2 || c.e.battle.time > 300),
@@ -452,7 +452,7 @@ function lepantoShots() {
 /**
  * Trafalgar's five battles (Britain in the first slot, France and Spain in the second): ships of the line fight broadside
  * to broadside at a few hundred metres, so each is played until the lines are within long gunshot, then framed as the
- * Armada's are, a little closer in. The Nile is fought at dusk and into the night: its grade lifts the exposure.
+ * Armada's are, a little closer in. The Nile is fought at dusk, low sun ahead: its grade adds no lift, which burnt it out.
  */
 function trafalgarShots() {
   const closing = (c) => (c.e.battle.time > 40 && c.dist(c.cen(c.team('joseon')), c.cen(c.team('japan'))) < 800) || c.e.battle.time > 360;
@@ -469,7 +469,7 @@ function trafalgarShots() {
   const day = { exposure: 1, gamma: 1, saturation: 1.04 };
   return {
     'st-vincent': plan(day),
-    nile: plan({ exposure: 2.4, gamma: 1.18, saturation: 1 }),
+    nile: plan({ exposure: 1, gamma: 1, saturation: 1 }),
     finisterre: plan({ exposure: 1.3, gamma: 1.06, saturation: 1 }),
     'trafalgar-weather': plan(day),
     'trafalgar-lee': plan(day),
@@ -496,6 +496,8 @@ async function still(page, frame, exposure) {
     [frame.toString(), exposure],
   );
   await page.waitForTimeout(1800);
+  // A dev server's error overlay (another file mid-edit) would sit over the still: drop it.
+  await page.evaluate(() => document.querySelectorAll('vite-error-overlay').forEach((o) => o.remove()));
   return { png: await page.screenshot({ type: 'png' }), pose: round(pose) };
 }
 
