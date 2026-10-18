@@ -39,10 +39,10 @@ export const SCENARIO_TEXT = {
   'lepanto-north': { title: '레판토 해전 · 북쪽 날개', hanja: 'Lepanto · Ala sinistra', date: '1571년 10월 7일', place: '파트라스 만 · 아이톨리아 해안', hook: '해안에 붙은 바르바리고의 베네치아 갤리선을 시로코가 얕은 물길로 돌아 칩니다.' },
   'lepanto-centre': { title: '레판토 해전 · 중앙', hanja: 'Lepanto · Battaglia', date: '1571년 10월 7일', place: '파트라스 만 · 쿠르촐라리 앞바다', hook: '라 레알호와 술타나호가 이물을 맞댄 레판토의 결전.' },
   // The Trafalgar chapter, 1797-1805.
-  'st-vincent': { title: '산비센테 곶 해전', hanja: 'Cape St Vincent', date: '1797년 2월 14일', place: '산비센테 곶 앞바다', hook: '두 무리로 흩어진 에스파냐 함대 사이를 저비스의 한 줄이 뚫었습니다. 넬슨이 대열을 벗어납니다.' },
-  nile: { title: '나일 해전', hanja: 'Battle of the Nile', date: '1798년 8월 1–2일', place: '이집트 아부키르 만', hook: '닻을 내린 프랑스 함대를 넬슨이 해 질 녘에 양쪽에서 끼고 쳤습니다. 기함 로리앙호가 폭발했습니다.' },
+  'st-vincent': { title: '산비센테 곶 해전', hanja: 'Cape St Vincent', date: '1797년 2월 14일', place: '산비센테 곶 앞바다', hook: '흩어진 에스파냐 함대 사이를 저비스의 한 줄이 뚫고, 넬슨이 대열을 벗어납니다.' },
+  nile: { title: '나일 해전', hanja: 'Battle of the Nile', date: '1798년 8월 1–2일', place: '이집트 아부키르 만', hook: '닻 내린 프랑스 함대를 넬슨이 해 질 녘 양쪽에서 쳤습니다. 로리앙호가 폭발했습니다.' },
   finisterre: { title: '피니스테레 곶 해전', hanja: "Calder's Action", date: '1805년 7월 22일', place: '피니스테레 곶 서쪽 바다', hook: '짙은 안개 속에서 콜더의 함대가 빌뇌브의 연합 함대와 엇갈리며 싸웠습니다.' },
-  'trafalgar-weather': { title: '트라팔가르 해전 · 풍상 종렬', hanja: 'Trafalgar · Weather column', date: '1805년 10월 21일', place: '트라팔가르 곶 앞바다', hook: '넬슨의 빅토리호가 연합 함대 중앙으로 곧장 들이받습니다. 영국은 모든 이가 제 의무를 다하기를 기대합니다.' },
+  'trafalgar-weather': { title: '트라팔가르 해전 · 풍상 종렬', hanja: 'Trafalgar · Weather column', date: '1805년 10월 21일', place: '트라팔가르 곶 앞바다', hook: '빅토리호가 연합 함대 중앙을 들이받습니다. 영국은 모두가 의무를 다하길 기대합니다.' },
   'trafalgar-lee': { title: '트라팔가르 해전 · 풍하 종렬', hanja: 'Trafalgar · Lee column', date: '1805년 10월 21일', place: '트라팔가르 곶 앞바다 · 남쪽', hook: '콜링우드의 로열 소버린호가 홀로 먼저 연합 함대 후위를 끊고 들어갑니다.' },
   'lepanto-south': { title: '레판토 해전 · 남쪽 날개', hanja: 'Lepanto · Corno destro', date: '1571년 10월 7일', place: '파트라스 만 · 바다 쪽', hook: '도리아와 울루치 알리가 서로 바다 쪽으로 돌다 틈이 벌어졌습니다.' },
 } satisfies Record<string, ScenarioText>;
