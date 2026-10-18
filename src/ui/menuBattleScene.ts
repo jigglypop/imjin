@@ -27,8 +27,6 @@ export type MenuHero = { kind: ShipKind; own: ShipKind[]; foe: ShipKind[] };
 const TURTLE: MenuHero = { kind: 'geobukseon', own: ['panokseon'], foe: ['atakebune'] };
 
 const CYCLE = 40;
-/** Metres the menu camera pans left per unit of a hero's length over the 1588 galleons' (ships of the line only). */
-const PAN_PER_GROW = 60;
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 const ease = (x: number) => { const t=clamp(x); return t*t*(3-2*t); };
 
@@ -212,25 +210,33 @@ export class MenuBattleScene {
   private cameraPose() {
     const p=this.elapsed/CYCLE, drift=Math.sin(p*Math.PI*2)*3;
     const portrait=this.camera.aspect<.85;
-    // A tall-masted flagship is framed from further off and higher, so its rig stays in the shot; a ship of the line
-    // longer than the 1588 galleons further still, in proportion to its length.
-    const turtle=this.heroOf.kind==='geobukseon', grow=Math.max(1,SHIP_SPECS[this.heroOf.kind].length/42);
-    // The title block keeps its CSS size, so on a narrower landscape window (1366 px) it takes more of the frame: a ship
-    // of the line stands further off and further right there, its sails clear of the title and the masthead buttons.
-    const narrow=!turtle&&grow>1&&!portrait?clamp((1920-this.viewWidth)/640):0;
-    const k=turtle?1:1.75*grow*(1+.18*narrow), lift=turtle?0:8*grow;
-    this.camera.position.set(this.hero.x+(portrait?60:37)*k+drift, (portrait?17:8)+lift, this.hero.z+(portrait?48:24)*k);
-    // In portrait a ship of the line's mastheads would reach the title: aim higher so the ship sits lower in the frame.
-    // The turtle ship keeps its approved shot exactly (origin/main 1847179); the others aim nearer their own hull.
-    if(turtle) this.target.set(this.hero.x+(portrait?3:-28),portrait?8:7,this.hero.z-(portrait?12:40));
-    else this.target.set(this.hero.x+(portrait?3:-28)*k*.15,(portrait?8:7)+lift*1.7+(portrait&&grow>1?(grow-1)*40:0),this.hero.z-(portrait?12:40)*k*.15);
-    this.camera.lookAt(this.target);
-    // A ship of the line fills more of the frame than the galleons do: pan the camera to its left so the hull sits in
-    // the right half of a landscape frame, clear of the title block, as the other chapters' heroes do.
-    if(!turtle&&grow>1&&!portrait) {
+    if(this.heroOf.kind==='geobukseon') {
+      // The turtle ship keeps its approved shot exactly (origin/main 1847179).
+      this.camera.position.set(this.hero.x+(portrait?60:37)+drift, portrait?17:8, this.hero.z+(portrait?48:24));
+      this.target.set(this.hero.x+(portrait?3:-28),portrait?8:7,this.hero.z-(portrait?12:40));
+      this.camera.lookAt(this.target);
       this.camera.updateMatrixWorld();
-      const pan=-(grow-1)*PAN_PER_GROW*(1+.9*narrow), ex=this.camera.matrixWorld.elements;
+      return;
+    }
+    // Every other chapter's flagship: a bow-quarter broadside from the turtle shot's side, the whole hull and rig in frame.
+    // Distance follows the larger of the hull length and the rig height, so a galley and a first-rate fill alike; in a
+    // landscape frame the view pans so the ship stands in the right half, clear of the title block and its buttons.
+    const spec=SHIP_SPECS[this.heroOf.kind], L=spec.length, H=spec.height;
+    const narrow=portrait?0:clamp((1920-this.viewWidth)/640);
+    const size=Math.max(L, H*1.45);
+    const D=size*(portrait?2.4:1.7*(1+.2*narrow));
+    const h=this.hero.heading, fx=Math.cos(h), fz=Math.sin(h), nx=-fz, nz=fx;
+    const ax=this.hero.x+fx*L*.04, az=this.hero.z+fz*L*.04;
+    const along=D*.6, out=D*.8;
+    this.camera.position.set(ax+nx*out+fx*along+drift, 3+H*.22, az+nz*out+fz*along);
+    this.target.set(ax, H*(portrait?.42:.4), az);
+    this.camera.lookAt(this.target);
+    if(!portrait) {
+      this.camera.updateMatrixWorld();
+      const pan=-D*(.2+.1*narrow), ex=this.camera.matrixWorld.elements;
       this.camera.position.x+=ex[0]!*pan; this.camera.position.z+=ex[2]!*pan;
+      this.target.x+=ex[0]!*pan; this.target.z+=ex[2]!*pan;
+      this.camera.lookAt(this.target);
     }
     this.camera.updateMatrixWorld();
   }
