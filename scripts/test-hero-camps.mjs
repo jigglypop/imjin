@@ -111,6 +111,34 @@ try {
       }
     }
   });
+  // The layer that shows them (hero/layer.ts) on stand-in textures: it never gets as far as the GPU here.
+  const layerBundle = await build({
+    stdin: { contents: `export { HeroLayer } from './src/ui/grand/hero/layer.ts'; export { Texture } from 'three/webgpu'; export { vec3 } from 'three/tsl';`, resolveDir: root },
+    bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent',
+  });
+  const layerPath = join(temporary, 'layer.mjs');
+  await writeFile(layerPath, layerBundle.outputFiles[0].contents);
+  const { HeroLayer, Texture, vec3 } = await import(pathToFileURL(layerPath).href);
+  const texture = () => new Texture();
+  const layer = new HeroLayer(() => 4, { details: [texture(), texture(), texture(), texture()], color: () => vec3(1, 1, 1) }, async () => [texture(), texture()]);
+  const world = (level) => Array.from({ length: 6 }, (_, i) => ({ id: `c${i}`, u: 0.3 + i * 0.02, v: 0.4, navy: 'joseon', level }));
+  const [A, B] = [world(2), world(3)];
+  const settled = async (...worlds) => { await Promise.all(worlds.map((w) => layer.set([], w))); return layer.group.children; };
+  await (async () => {
+    // A replay's clash and its end ask for the same world one after the other: one build, no ghost camps.
+    assert.equal((await settled(A, A)).length, 1, 'the same world asked for twice builds once');
+    const before = layer.group.children[0];
+    const pending = layer.set([], B);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    assert.deepEqual(layer.group.children, [before], 'the old camps stand while the new ones build');
+    await pending;
+    assert.ok(layer.group.children.length === 1 && layer.group.children[0] !== before, 'the new camps replace the old');
+    // A build a newer world no longer wants is freed when it finishes, not shown.
+    assert.equal((await settled(A, B)).length, 1, 'a superseded build is dropped');
+  })();
+  layer.dispose();
+  console.log('ok - the layer builds a world once, swaps it in whole and drops what a newer world replaced');
+  passed++;
   console.log(`${passed} passed`);
 } finally {
   await rm(temporary, { recursive: true, force: true });

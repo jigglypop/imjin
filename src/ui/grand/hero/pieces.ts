@@ -1,4 +1,4 @@
-import { cloth, cylinder, polygon, spike, type Paint } from '../../../ships/build/parts';
+import { box as solid, cloth, cylinder, polygon, spike, type Paint } from '../../../ships/build/parts';
 import { bannerAspect, bannerPaint } from '../buildingAtlas';
 import { trafalgarFlag } from '../campTrafalgar';
 import { arched, at, boardsBelow, cannon, coping, crenels, crown, hullFrame, japaneseRoof, koreanRoof, mingRoof, shadow, stake } from '../campBuildings';
@@ -72,10 +72,16 @@ function building(k: Kit, navy: FactionId, p: Extract<Piece, { kind: 'bldg' }>) 
   const { w, d, base, wallH, rise, overhang, style, look } = p;
   const hx = w / 2, hz = d / 2, top = base + wallH;
   const stone = stoneOf(k, navy);
-  // The base: a battered stone plinth (a stepped one under a hall), its foot below the ground on the low side.
+  // The base: a battered stone plinth (a stepped one under a hall), its foot below the ground on the low side; a
+  // village house stands on a narrower one of field stone, laid dry as a farmer lays it.
+  const house = look === 'jo_thatch' || look === 'jo_house' || look === 'wa_house';
+  const shade = p.shade ?? 0.5;
   if (look === 'jo_granary') {
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) post(k, k.P('timber'), sx * (hx - 0.3), sz * (hz - 0.3), 0.3, -0.8, base);
     block(k, k.P('planks'), [-hx - 0.2, base - 0.15, -hz - 0.2], [hx + 0.2, base, hz + 0.2]);
+  } else if (house) {
+    const rubble = navy === 'joseon' ? k.P('fieldstone', { tint: [0.92, 0.9, 0.86] }) : stone.tinted([0.86, 0.84, 0.8]);
+    batter(k, rubble, rubble.tinted([0.84, 0.82, 0.78]), 0, 0, hx + 0.48, hz + 0.48, hx + 0.34, hz + 0.34, -1.2, Math.max(0.12, base));
   } else if (look !== 'wa_tent') batter(k, stone, stone.tinted([1.06, 1.05, 1.02]), 0, 0, hx + 0.6, hz + 0.6, hx + 0.45, hz + 0.45, -1.2, Math.max(0.12, base));
   const y0 = Math.max(0.12, base);
   const outline = rect(-hx, -hz, hx, hz);
@@ -106,9 +112,16 @@ function building(k: Kit, navy: FactionId, p: Extract<Piece, { kind: 'bldg' }>) 
       break;
     }
     case 'jo_thatch': {
-      walls(k, k.P('mud', { tint: [0.92, 0.84, 0.74] }), outline, y0, top);
-      if (k.near) frame(k, w, d, y0, top, k.P('timber'), k.P('timber'), k.P('door'), null);
-      thatch(k, k.P('thatch'), k.P('timber'), hx + overhang, hz + overhang, top, top + rise, { eave: 0.25 });
+      // Clay walls between dark posts, a plank veranda along the front, under a roof of old straw gone grey-gold.
+      walls(k, k.P('mud', { tint: [0.9, 0.8, 0.66] }), outline, y0, top);
+      if (k.near) {
+        frame(k, w, d, y0, top, k.P('timber', { tint: [0.62, 0.56, 0.5] }), k.P('timber', { tint: [0.6, 0.54, 0.48] }), k.P('door'), null);
+        block(k, k.P('planks', { tint: [0.78, 0.72, 0.64] }), [-hx + 0.25, y0 - 0.08, hz], [hx - 0.25, y0 + 0.22, hz + 0.55]);
+      }
+      // Straw from this autumn's gold to the grey of years: each house its own.
+      const age = 1 - shade * 0.3;
+      const straw = k.P('thatch', { tint: [0.94 * age, 0.86 * age, 0.72 * age * (0.94 + shade * 0.1)], size: 1.9 });
+      thatch(k, straw, k.P('timber', { tint: [0.55, 0.5, 0.45] }), hx + overhang, hz + overhang, top, top + rise * 0.8, { eave: 0.34, overhang });
       return;
     }
     case 'jo_shed': case 'mg_shed': case 'wa_shed': {
@@ -343,6 +356,43 @@ function pass(k: Kit, navy: FactionId, p: Extract<Piece, { kind: 'pass' }>) {
   face(k, stone.tinted([1.08, 1.06, 1.02]), [[-W, p.h, D], [W, p.h, D], [W, p.h, -D], [-W, p.h, -D]], [0, 1, 0]);
 }
 
+/**
+ * A timber pier of half sizes hx by hz, its deck at h: boards laid across on three stringers with a raised curb along
+ * each edge, round pilings driven in at every bay (every other one standing up as a mooring post) and a beam across the
+ * head. From afar one plank block on a log block.
+ */
+function pier(k: Kit, hx: number, hz: number, h: number) {
+  const planks = k.P('planks', { tint: [0.9, 0.86, 0.8] }), logs = k.P('logs'), timber = k.P('timber', { tint: [0.8, 0.76, 0.72] });
+  if (!k.near) {
+    block(k, planks, [-hx, h - 0.25, -hz], [hx, h, hz]);
+    block(k, logs, [-hx + 0.2, -2.4, -hz + 0.2], [hx - 0.2, h - 0.25, hz - 0.2], NY | PY);
+    return;
+  }
+  // `a` runs along the pier, `c` across it, whichever way the pier's footprint runs.
+  const along = hx >= hz, A = along ? hx : hz, C = along ? hz : hx;
+  const bx = (a0: number, a1: number, y0: number, y1: number, c0: number, c1: number, paint: Paint, grain: 0 | 1 | 2 = 1, skip = NY) =>
+    solid(k.b, paint, along ? [a0, y0, c0] : [c0, y0, a0], along ? [a1, y1, c1] : [c1, y1, a1], { skip, grain });
+  // The grain of a board runs across the pier: x when the pier runs along z.
+  const across: 0 | 2 = along ? 2 : 0;
+  for (const c of [-C + 0.22, 0, C - 0.22]) bx(-A, A, h - 0.58, h - 0.22, c - 0.12, c + 0.12, timber, along ? 0 : 2);
+  const step = 0.4, n = Math.max(1, Math.round((2 * A) / step)), board = (2 * A) / n;
+  for (let i = 0; i < n; i += 1) {
+    const a0 = -A + i * board + 0.025, a1 = -A + (i + 1) * board - 0.025;
+    // Every board its own height by a hair, so the deck is not a sheet.
+    bx(a0, a1, h - 0.22, h - 0.005 + ((i * 7) % 5) * 0.006, -C, C, planks, across);
+  }
+  for (const s of [-1, 1]) bx(-A, A, h - 0.22, h + 0.1, s * (C - 0.1) - 0.08, s * (C - 0.1) + 0.08, timber, along ? 0 : 2, NY);
+  bx(A - 0.05, A + 0.1, h - 0.45, h + 0.14, -C - 0.05, C + 0.05, timber, across);
+  const bays = Math.max(1, Math.round((2 * A) / 2.4));
+  for (let i = 0; i <= bays; i += 1) for (const s of [-1, 1]) {
+    const a = -A + 0.18 + ((2 * A - 0.36) * i) / bays, c = s * (C - 0.04);
+    const x = along ? a : c, z = along ? c : a;
+    // Driven well into the bed, a post every other bay standing proud of the deck with its head chamfered.
+    const tall = i % 2 === 0;
+    cylinder(k.b, logs, [x, -2.4, z], [x, h + (tall ? 0.5 : 0.12), z], 0.17, 0.15, 6, true);
+  }
+}
+
 /** Blocks: bastions, piers, platforms, guns, stacks, wells, timber. */
 function box(k: Kit, navy: FactionId, p: Extract<Piece, { kind: 'box' }>) {
   const hx = p.w / 2, hz = p.d / 2, h = p.h;
@@ -367,7 +417,7 @@ function box(k: Kit, navy: FactionId, p: Extract<Piece, { kind: 'box' }>) {
       break;
     }
     case 'pier': case 'timber': case 'plank_pile': {
-      const planks = k.P('planks'), logs = k.P('logs');
+      const logs = k.P('logs');
       if (p.look === 'timber') { post(k, logs, 0, 0, Math.max(p.w, 0.2), -0.4, h); break; }
       if (p.look === 'plank_pile') {
         for (let i = 0; i < (k.near ? 5 : 2); i += 1) {
@@ -376,14 +426,7 @@ function box(k: Kit, navy: FactionId, p: Extract<Piece, { kind: 'box' }>) {
         }
         break;
       }
-      block(k, planks, [-hx, h - 0.25, -hz], [hx, h, hz]);
-      if (k.near) {
-        const along = hx >= hz, Lh = along ? hx : hz, n = Math.max(1, Math.round((2 * Lh) / 2.4));
-        for (let i = 0; i <= n; i += 1) for (const s of [-1, 1]) {
-          const t = -Lh + (2 * Lh * i) / n;
-          post(k, logs, along ? t : s * (hx - 0.2), along ? s * (hz - 0.2) : t, 0.3, -2.4, h - 0.25);
-        }
-      } else block(k, logs, [-hx + 0.2, -2.4, -hz + 0.2], [hx - 0.2, h - 0.25, hz - 0.2], NY | PY);
+      pier(k, hx, hz, h);
       break;
     }
     case 'gun': cannon(k, 0, 0, hz, k.P('timber'), k.P('bronze')); break;

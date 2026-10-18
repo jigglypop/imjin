@@ -1,6 +1,7 @@
 import { Group, Mesh, type MeshBasicNodeMaterial, type BufferGeometry, type InstancedMesh, type Material, type Texture } from 'three/webgpu';
 import { attribute, normalLocal, positionLocal, sin, vec3 } from 'three/tsl';
 import { worldClock } from '../../../select/terrain';
+import { freeAfterDraw } from '../../../render/dispose';
 import { SWAY_RANGE, toGeometry } from '../../../ships/build/pack';
 import { campMaterial } from '../campMaterial';
 import { MAP_ASPECT } from '../projection';
@@ -15,7 +16,8 @@ import { joTier1, LAYOUTS, town, waFieldCamp } from './layouts';
 import { Plan, type Moored } from './plan';
 import { ELEVATION_MODEL, HERO_SITES, heroEnabled, MODEL_METRE, siteUV, siteXZ, type HeroSite } from './site';
 import { heroGroundOf } from './terrain';
-import { placeBoulders, plantTrees, treeMaterial, treeMeshes } from './trees';
+import { placeBoulders, plantTrees, treeMeshes, type Woods } from './trees';
+import { rockMaterial, treeMaterial } from '../treeModels';
 
 // The hero camps on the campaign map (see site.ts): for each hero site whose camp its own navy holds, the camp of the
 // layouts, the villages of the towns round it, and the ground they stand on, built when the world first shows them and
@@ -26,6 +28,8 @@ import { placeBoulders, plantTrees, treeMaterial, treeMeshes } from './trees';
 const NEAR = 0.2;
 /** The camera distance under which they show their woods: as far as the map's own trees are planted (worldTrees.ts). */
 const WOODS = 0.3;
+/** How far the hero camps' crowns sway in the wind, model metres. */
+const SWAY = 0.12;
 
 /** A hero site as the world shows it: which camp, which towns, and what the layer must leave out for it. */
 export interface HeroUse {
@@ -114,42 +118,64 @@ interface Built {
   far: Group;
   /** The camp's own woods: hidden from afar, as the map's trees are (worldTrees.ts), where the ground draws them. */
   woods: Group;
+  /** Its trees, dealt to the fine or the light shapes by the eye, and where the eye was when they last were. */
+  trees: Woods | null;
+  dealt: [number, number, number] | null;
   geometries: BufferGeometry[];
   ships: { kind: Moored['kind']; u: number; v: number; rot: number }[];
   smoke: { u: number; v: number; y: number }[];
 }
 
 /**
- * A navy's building material for the hero camps: the map's (campMaterial.ts) with its banners moving in the wind, each
- * cloth swinging about its pole along its own normal, out of step with the next by where it stands.
+ * A navy's building material for the hero camps: the map's (campMaterial.ts) on the atlas the map's layer loaded, with its
+ * banners moving in the wind, each cloth swinging about its pole along its own normal, out of step with the next by
+ * where it stands.
  */
-async function heroMaterial(navy: FactionId) {
-  const made = await campMaterial(navy);
+async function heroMaterial(navy: FactionId, atlas: Promise<Texture[]>) {
+  const made = await campMaterial(navy, atlas);
   const shade: any = attribute('color', 'vec4');
   const p: any = positionLocal;
   const weight = shade.w.mul(SWAY_RANGE);
   const wave = sin(worldClock.mul(2.3).add(p.x.mul(0.8)).add(p.z.mul(0.55))).add(sin(worldClock.mul(3.7).add(p.x.mul(1.9))).mul(0.35));
   made.material.positionNode = p.add(normalLocal.mul(wave.mul(weight).mul(0.22))).add(vec3(0, weight.mul(-0.04), 0));
-  return made;
+  return made.material;
+}
+
+/** A mesh of a built site, its CPU copy freed once it is on the GPU (nothing reads it back). */
+function meshOf(g: BufferGeometry, m: Material, order: number) {
+  const mesh = new Mesh(g, m);
+  mesh.renderOrder = order;
+  freeAfterDraw(mesh);
+  return mesh;
 }
 
 export class HeroLayer {
   readonly group = new Group();
   private readonly built = new Map<string, Built>();
-  private readonly materials = new Map<FactionId, Promise<{ material: MeshBasicNodeMaterial; textures: Texture[] } | null>>();
-  private readonly ready: { material: Material; textures: Texture[] }[] = [];
+  /** Builds under way by key: a set() that wants one of them awaits it rather than building it twice. */
+  private readonly building = new Map<string, Promise<void>>();
+  /** The keys the last set() wants: a build that finishes after a newer set() stopped wanting it is freed at once. */
+  private wanted = new Set<string>();
+  /** The camera distance and eye setView was last given, for a site that is added after it. */
+  private distance = Infinity;
+  private eye: readonly [number, number, number] = [0, 100, 0];
+  private readonly materials = new Map<FactionId, Promise<MeshBasicNodeMaterial | null>>();
+  private readonly ready: Material[] = [];
   private lookReady: HeroGroundLook | null = null;
-  private treeLook: MeshBasicNodeMaterial | null = null;
+  private woodLook: { trees: MeshBasicNodeMaterial; rocks: MeshBasicNodeMaterial } | null = null;
   private disposed = false;
 
-  /** `drawn(u, v)` is the drawn land's height in metres at a frame point, negative under the sea; `land` the land's look. */
-  constructor(private readonly drawn: (u: number, v: number) => number, private readonly land: LandLook) {}
+  /**
+   * `drawn(u, v)` is the drawn land's height in metres at a frame point, negative under the sea; `land` the land's look;
+   * `atlas(navy)` a navy's building atlas as the map's layer loaded it, which that layer frees.
+   */
+  constructor(private readonly drawn: (u: number, v: number) => number, private readonly land: LandLook, private readonly atlas: (navy: FactionId) => Promise<Texture[]>) {}
 
   private material(navy: FactionId) {
     let p = this.materials.get(navy);
     if (!p) {
-      p = heroMaterial(navy).then((m) => {
-        if (this.disposed) { m.material.dispose(); for (const t of m.textures) t.dispose(); } else this.ready.push(m);
+      p = heroMaterial(navy, this.atlas(navy)).then((m) => {
+        if (this.disposed) m.dispose(); else this.ready.push(m);
         return m;
       }, () => null);
       this.materials.set(navy, p);
@@ -162,85 +188,116 @@ export class HeroLayer {
   }
 
   /**
-   * Builds what the world's hero sites need and drops the rest; resolves when every site shown is ready. Returns the
-   * ships at their quays and the hearths, in frame units, for the map's layer to draw with its own.
+   * Builds what the world's hero sites and its other camps need, then drops what it no longer shows: the old camps stand
+   * until their replacements are in place, so a turn that takes a port does not blank every camp while the new ones
+   * build. A build of the same thing already under way is awaited rather than started again (a replay's clash and its
+   * end ask for the same world), and a build that finishes after a newer set() stopped wanting it is freed at once.
+   * Resolves when every site shown is ready.
    */
   async set(uses: HeroUse[], tiers: TierUse[] = []) {
     const tierKey = `tiers:${JSON.stringify(tiers)}`;
-    const wanted = new Set([...uses.map((u) => u.key), tierKey]);
-    for (const [key, b] of this.built) if (!wanted.has(key)) this.drop(key, b);
-    for (const use of uses) {
-      if (this.built.has(use.key)) continue;
-      const plan = heroPlan(use);
-      if (!plan) continue;
-      const navies = new Set(plan.pieces.map((p) => p.navy));
-      const [look, ...mats] = await Promise.all([this.groundLook(), ...[...navies].map((n) => this.material(n))]);
-      if (this.disposed) return;
-      // Give the page a frame between the ground and the buildings.
-      await new Promise((resolve) => setTimeout(resolve));
-      const meshes = buildHero(plan);
-      const ground = buildHeroGround(use.site, plan, this.drawn);
-      const group = new Group(), near = new Group(), far = new Group();
-      group.position.set(use.site.u - 0.5, 0, (use.site.v - 0.5) / MAP_ASPECT);
-      group.scale.setScalar(MODEL_METRE);
-      group.add(near, far);
-      const geometries: BufferGeometry[] = [];
-      const add = (g: BufferGeometry | null, m: Material | undefined, parent: Group, order = 0) => {
-        if (!g || !m) return;
-        geometries.push(g);
-        const mesh = new Mesh(g, m);
-        mesh.renderOrder = order;
-        parent.add(mesh);
-      };
-      if (look) {
-        // After the land (-1) and the sea (0): the patch fades into both at its edge.
-        add(ground.patch, look.ground, group, 1);
-        add(ground.laid, look.laid, group, 2);
-        add(ground.shade, look.shade, group, 3);
-        add(ground.water, look.water, group, 2);
+    const wanted = (this.wanted = new Set([...uses.map((u) => u.key), tierKey]));
+    try {
+      for (const use of uses) await this.ensure(use.key, () => this.buildSite(use));
+      await this.ensure(tierKey, () => this.buildTiers(tierKey, tiers));
+    } catch (error) {
+      // The map's layer shows its own kits instead (mapLayer.ts): nothing of these may stand over them.
+      if (wanted === this.wanted) {
+        this.wanted = new Set();
+        for (const [key, b] of this.built) this.drop(key, b);
       }
-      const leaves = (this.treeLook ??= treeMaterial(this.land.details[3]!));
-      const seed = Math.round(use.site.u * 1e6);
-      const trees = treeMeshes([...plantTrees(plan, use.site.reach, ground.sample, seed, use.avoid), ...placeBoulders(plan, use.site.reach, ground.sample, seed)], leaves);
-      const woods = new Group();
-      group.add(woods);
-      for (const t of trees) {
-        geometries.push(t.geometry);
-        woods.add(t);
-      }
-      meshes.forEach((m) => {
-        const mat = mats[[...navies].indexOf(m.navy)]?.material;
-        if (!mat) return;
-        add(toGeometry(m.near), mat, near);
-        add(toGeometry(m.far), mat, far);
-      });
-      const at = (x: number, z: number) => siteUV(use.site, x, z);
-      const b: Built = {
-        key: use.key, group, near, far, woods, geometries,
-        ships: plan.ships.map((s) => ({ kind: s.kind, ...at(s.x, s.z), rot: s.rot })),
-        smoke: plan.smoke.map(([x, y, z]) => ({ ...at(x, z), y: y * MODEL_METRE })),
-      };
-      this.built.set(use.key, b);
-      this.group.add(group);
+      throw error;
     }
-    if (!this.built.has(tierKey)) await this.buildTiers(tierKey, tiers);
+    // A newer set() under way does the dropping once its own builds stand.
+    if (this.disposed || wanted !== this.wanted) return;
+    for (const [key, b] of this.built) if (!wanted.has(key)) this.drop(key, b);
+  }
+
+  /** Builds `key` with `make` unless it stands already, or waits for the build of it under way. */
+  private async ensure(key: string, make: () => Promise<Built | null>) {
+    if (this.built.has(key)) return;
+    let job = this.building.get(key);
+    if (!job) {
+      job = make().then((b) => {
+        if (!b) return;
+        if (this.disposed || !this.wanted.has(key)) {
+          this.free(b);
+          return;
+        }
+        this.built.set(key, b);
+        this.group.add(b.group);
+        this.show(b);
+      }).finally(() => { this.building.delete(key); });
+      this.building.set(key, job);
+    }
+    await job;
+  }
+
+  /** A hero site's camp, villages, woods and ground, in its own frame; null when its ground has not loaded. */
+  private async buildSite(use: HeroUse): Promise<Built | null> {
+    const plan = heroPlan(use);
+    if (!plan) return null;
+    const navies = new Set(plan.pieces.map((p) => p.navy));
+    const [look, ...mats] = await Promise.all([this.groundLook(), ...[...navies].map((n) => this.material(n))]);
+    if (this.disposed) return null;
+    // Give the page a frame between the ground and the buildings.
+    await new Promise((resolve) => setTimeout(resolve));
+    if (this.disposed) return null;
+    const meshes = buildHero(plan);
+    const ground = buildHeroGround(use.site, plan, this.drawn);
+    const group = new Group(), near = new Group(), far = new Group();
+    group.position.set(use.site.u - 0.5, 0, (use.site.v - 0.5) / MAP_ASPECT);
+    group.scale.setScalar(MODEL_METRE);
+    group.add(near, far);
+    const geometries: BufferGeometry[] = [];
+    const add = (g: BufferGeometry | null, m: Material | null | undefined, parent: Group, order = 0) => {
+      if (!g) return;
+      geometries.push(g);
+      if (m) parent.add(meshOf(g, m, order));
+    };
+    // After the land (-1) and the sea (0): the patch fades into both at its edge.
+    add(ground.patch, look.ground, group, 1);
+    add(ground.laid, look.laid, group, 2);
+    add(ground.shade, look.shade, group, 3);
+    add(ground.water, look.water, group, 2);
+    const wood = (this.woodLook ??= { trees: treeMaterial(this.land.details[3]!, SWAY), rocks: rockMaterial(this.land.details[1]!) });
+    const seed = Math.round(use.site.u * 1e6);
+    const trees = treeMeshes([...plantTrees(plan, use.site.reach, ground.sample, seed, use.avoid), ...placeBoulders(plan, use.site.reach, ground.sample, seed)], wood.trees, wood.rocks);
+    const woods = new Group();
+    group.add(woods);
+    for (const t of trees.meshes) {
+      geometries.push(t.geometry);
+      woods.add(t);
+    }
+    meshes.forEach((m) => {
+      const mat = mats[[...navies].indexOf(m.navy)];
+      if (!mat) return;
+      add(toGeometry(m.near), mat, near);
+      add(toGeometry(m.far), mat, far);
+    });
+    const at = (x: number, z: number) => siteUV(use.site, x, z);
+    return {
+      key: use.key, group, near, far, woods, trees, dealt: null, geometries,
+      ships: plan.ships.map((s) => ({ kind: s.kind, ...at(s.x, s.z), rot: s.rot })),
+      smoke: plan.smoke.map(([x, y, z]) => ({ ...at(x, z), y: y * MODEL_METRE })),
+    };
   }
 
   /**
    * Every other camp in one set of meshes: each laid out and built in its own frame on the drawn land, then moved to
    * where it stands, so the whole map's camps are a few draws (one per navy and level, one for their ground).
    */
-  private async buildTiers(key: string, tiers: TierUse[]) {
+  private async buildTiers(key: string, tiers: TierUse[]): Promise<Built | null> {
     const navies = [...new Set(tiers.map((t) => t.navy))];
     const [look, ...mats] = await Promise.all([this.groundLook(), ...navies.map((n) => this.material(n))]);
-    if (this.disposed) return;
+    if (this.disposed) return null;
     const merges = new Map<FactionId, [Merge, Merge]>();
     const grounds: { patch: BufferGeometry[]; laid: BufferGeometry[]; shade: BufferGeometry[] } = { patch: [], laid: [], shade: [] };
     const smoke: Built['smoke'] = [];
     for (const t of tiers) {
       // One camp a task, so a world of camps does not hold the page up in one piece.
       await new Promise((resolve) => setTimeout(resolve));
-      if (this.disposed) return;
+      if (this.disposed) return null;
       const { site, plan } = tierPlan(t, this.drawn);
       const dx = (t.u - 0.5) / MODEL_METRE, dz = (t.v - 0.5) / (MODEL_METRE * MAP_ASPECT);
       for (const m of buildHero(plan)) {
@@ -265,26 +322,23 @@ export class HeroLayer {
     group.scale.setScalar(MODEL_METRE);
     group.add(near, far);
     const geometries: BufferGeometry[] = [];
-    const add = (g: BufferGeometry | null, m: Material | undefined, parent: Group, order = 0) => {
-      if (!g || !m) return;
+    const add = (g: BufferGeometry | null, m: Material | null | undefined, parent: Group, order = 0) => {
+      if (!g) return;
       geometries.push(g);
-      const mesh = new Mesh(g, m);
-      mesh.renderOrder = order;
-      parent.add(mesh);
+      if (m) parent.add(meshOf(g, m, order));
     };
-    if (look) for (const [k, order] of [['patch', 1], ['laid', 2], ['shade', 3]] as const) {
+    for (const [k, order] of [['patch', 1], ['laid', 2], ['shade', 3]] as const) {
       const list = grounds[k];
       const merged = list.length ? mergeGeometries(list) : null;
       for (const g of list) g.dispose();
       add(merged, k === 'patch' ? look.ground : k === 'laid' ? look.laid : look.shade, group, order);
     }
     for (const [navy, [n, f]] of merges) {
-      const mat = mats[navies.indexOf(navy)]?.material;
+      const mat = mats[navies.indexOf(navy)];
       add(toGeometry(n.data()), mat, near);
       add(toGeometry(f.data()), mat, far);
     }
-    this.built.set(key, { key, group, near, far, woods: new Group(), geometries, ships: [], smoke });
-    this.group.add(group);
+    return { key, group, near, far, woods: new Group(), trees: null, dealt: null, geometries, ships: [], smoke };
   }
 
   /** The ships and hearths of the sites built for `uses` and of the other camps. */
@@ -293,19 +347,40 @@ export class HeroLayer {
     return { ships: list.flatMap((b) => b.ships), smoke: list.flatMap((b) => b.smoke) };
   }
 
-  /** Shows the close or the far models by the camera's distance from what it looks at. */
-  setView(distance: number) {
-    for (const b of this.built.values()) {
-      b.near.visible = distance <= NEAR;
-      b.far.visible = !b.near.visible;
-      b.woods.visible = distance <= WOODS;
-    }
+  /**
+   * Shows the close or the far models by the camera's distance from what it looks at, and deals the woods to their
+   * detail by how large each tree stands to the eye (a world point).
+   */
+  setView(distance: number, eye: readonly [number, number, number]) {
+    this.distance = distance;
+    this.eye = eye;
+    for (const b of this.built.values()) this.show(b);
   }
 
-  private drop(key: string, b: Built) {
+  private show(b: Built) {
+    b.near.visible = this.distance <= NEAR;
+    b.far.visible = !b.near.visible;
+    b.woods.visible = this.distance <= WOODS;
+    const trees = b.trees;
+    if (!trees || !b.woods.visible) return;
+    // The eye in the site's frame: its group stands at the site's origin, a model metre to the world unit MODEL_METRE.
+    const o = b.group.position, k = 1 / MODEL_METRE;
+    const eye: [number, number, number] = [(this.eye[0] - o.x) * k, (this.eye[1] - o.y) * k, (this.eye[2] - o.z) * k];
+    // Only when the eye has moved enough to change which trees stand large.
+    if (b.dealt && Math.hypot(eye[0] - b.dealt[0], eye[1] - b.dealt[1], eye[2] - b.dealt[2]) < this.distance * k * 0.03) return;
+    b.dealt = eye;
+    trees.deal(eye);
+  }
+
+  /** Frees what a build made. */
+  private free(b: Built) {
     b.group.removeFromParent();
     b.group.traverse((o) => { if ((o as InstancedMesh).isInstancedMesh) (o as InstancedMesh).dispose(); });
     for (const g of b.geometries) g.dispose();
+  }
+
+  private drop(key: string, b: Built) {
+    this.free(b);
     this.built.delete(key);
   }
 
@@ -313,13 +388,15 @@ export class HeroLayer {
     if (this.disposed) return;
     this.disposed = true;
     for (const [key, b] of this.built) this.drop(key, b);
-    for (const m of this.ready) { m.material.dispose(); for (const t of m.textures) t.dispose(); }
+    // The atlases are the map's layer's to free.
+    for (const m of this.ready) m.dispose();
     this.ready.length = 0;
     const look = this.lookReady;
     if (look) for (const x of [look.ground, look.laid, look.shade, look.water]) x.dispose();
     this.lookReady = null;
-    this.treeLook?.dispose();
-    this.treeLook = null;
+    this.woodLook?.trees.dispose();
+    this.woodLook?.rocks.dispose();
+    this.woodLook = null;
     this.group.removeFromParent();
   }
 }
