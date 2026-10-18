@@ -14,8 +14,10 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 process.loadEnvFile(join(ROOT, '.env'));
 const [step, ...rest] = process.argv.slice(2);
 const args = Object.fromEntries(rest.map((a) => { const [k, ...v] = a.replace(/^--/, '').split('='); return [k, v.length ? v.join('=') : 'true']; }));
-const PKG = join(ROOT, 'assets-src', 'generals-weapons-cast-2026-10-17');
-const LEDGER = join(ROOT, 'assets-src', 'generals-cast-2026-10-17', 'ledger.json');
+// GENERALS_ASSETS points a worktree at the main checkout's assets-src (generation sources live there, archived to S3).
+const SRC = process.env.GENERALS_ASSETS ?? join(ROOT, 'assets-src');
+const PKG = join(SRC, 'generals-weapons-cast-2026-10-17');
+const LEDGER = join(SRC, 'generals-cast-2026-10-17', 'ledger.json');
 const OUT = args.stage ? join(ROOT, 'public', 'models', 'generals', '_stage') : join(ROOT, 'public', 'models', 'generals', 'parts');
 const ICONS = args.stage ? join(ROOT, 'public', 'models', 'generals', '_stage') : join(ROOT, 'public', 'ui', 'weapons');
 mkdirSync(OUT, { recursive: true });
@@ -39,6 +41,12 @@ const WEAPONS = {
   ming_qiang: { kind: 'spear', length: 2.7, grip: 0.42, brief: 'a Ming Chinese hongyingqiang spear: a leaf-shaped polished steel head with a ridge, a gilt socket, a thick bright red horsehair tassel below the head, a long red-lacquered wooden shaft, an iron butt cap' },
   ming_guandao: { kind: 'spear', length: 2.4, grip: 0.4, brief: 'a Ming Chinese guandao (yanyuedao) glaive: a broad crescent-curved polished steel blade with a dragon-head gilt bronze collar and a back spike, a red tassel, a long dark red-lacquered wooden shaft with gilt bands and an iron butt spike' },
   ming_gong: { kind: 'bow', length: 1.5, grip: 0.5, brief: 'a Ming Chinese composite recurve bow, STRUNG: a brown horn-and-sinew body covered in birch bark with long rigid ears (siyahs) bent forward at both ends, bone string bridges, a leather-wrapped grip, a thin silk bowstring' },
+  // The other chapters (Armada 1588, Lepanto 1571, Trafalgar 1797-1805); `era` replaces the 1590s craftsmanship line.
+  rapier: { kind: 'sword', length: 1.12, grip: 0.12, era: 'late-sixteenth-century European', brief: 'a European swept-hilt rapier of a sea commander (1570-1590): a long slender straight double-edged polished steel blade with a narrow fuller, a blackened-steel swept hilt of curving bars and a ring guard with straight quillons, a wire-wrapped grip, a round pommel' },
+  kilij: { kind: 'sword', length: 0.98, grip: 0.13, era: 'sixteenth-century Ottoman', brief: 'an Ottoman kilij sabre of a pasha (1570s): a strongly curved single-edged polished steel blade widening near the tip into a false-edged yelman, gold-inlaid near the hilt, a gilt straight cross-guard with round ends, a black horn grip with a pistol-shaped pommel cap' },
+  naval_sword: { kind: 'sword', length: 0.95, grip: 0.13, era: 'Napoleonic-era British', brief: 'a Royal Navy officer\'s sword of the 1805 pattern: a straight single-edged polished steel blade with a blued and gilt etched panel near the hilt, a gilt brass stirrup hilt with a fouled-anchor oval in the side ring, a white ivory grip bound with gilt wire, a gilt lion-head pommel' },
+  sabre_fr: { kind: 'sword', length: 0.95, grip: 0.13, era: 'Napoleonic-era French', brief: 'a French naval officer\'s sabre of 1805: a gently curved single-edged polished steel blade with a blued and gilt etched panel near the hilt, a gilt brass stirrup guard with an anchor emblem, a black horn grip bound with gilt wire, a gilt pommel cap' },
+  espada: { kind: 'sword', length: 0.96, grip: 0.13, era: 'Napoleonic-era Spanish', brief: 'a Spanish Real Armada officer\'s sword of 1800: a straight narrow double-edged polished steel blade, a gilt brass hilt with a single knuckle bow and a small anchor-engraved shell guard, a dark wood grip bound with gilt wire, a gilt urn pommel' },
   ming_shaogong: { kind: 'bow', length: 1.6, grip: 0.5, brief: 'a Ming Chinese long-eared composite bow (changshaogong), STRUNG: very long straight rigid ears at both ends, a dark red lacquered horn body with gold painted dragon bands and gilt tip caps, a leather grip, a thin silk bowstring' },
 };
 
@@ -47,7 +55,7 @@ const CONCEPT = (w) =>
   (w.kind === 'bow'
     ? 'The bow stands perfectly upright and centred, its tips at the top and bottom of the picture, its belly facing left, the string on the right, the whole bow in frame with a margin. '
     : 'The weapon stands perfectly upright and centred, the point/blade at the TOP and the hilt/butt at the BOTTOM, seen straight from the side, the whole weapon in frame with a margin; the bare weapon alone, no scabbard anywhere in the picture. ') +
-  'Ornate but historically grounded late-sixteenth-century craftsmanship as in the hero props of big-budget historical war films; crisp, sharply focused detail of every fitting, wrap and engraving; truthful materials: polished steel, gilt bronze, lacquer, silk, leather. ' +
+  `Ornate but historically grounded ${w.era ?? 'late-sixteenth-century'} craftsmanship as in the hero props of big-budget historical war films; crisp, sharply focused detail of every fitting, wrap and engraving; truthful materials: polished steel, gilt bronze, lacquer, silk, leather. ` +
   'Plain seamless light grey studio background, soft even light, no shadows, no reflections of a room, nothing else in the picture. No hands, no people, no text, no letters, no logo, no border, no illustration look.';
 
 const recordOf = (f) => (existsSync(`${f}.json`) ? JSON.parse(readFileSync(`${f}.json`, 'utf8')) : {});
@@ -89,6 +97,13 @@ async function concept(id, w) {
   const out = join(d, 'concept.png');
   if (existsSync(out) && !args.redo) return log(id, 'concept there');
   const prompt = CONCEPT(w);
+  if (args.images === 'gemini') {
+    const { geminiImage, geminiModel } = await import('./gemini-image.mjs');
+    writeFileSync(out, await geminiImage(prompt, { aspect: '9:16' }));
+    record(out, { at: new Date().toISOString(), tool: 'gemini image', model: geminiModel(), prompt, estimatedUsd: 0.04 });
+    ledger({ provider: 'gemini', what: `weapon ${id} concept`, model: geminiModel(), credits: 0, usd: 0.04 });
+    return log(id, 'concept ready');
+  }
   for (const model of ['gpt-image-2.5-flare', 'gpt-image-2']) {
     try {
       const image = { model, size: '1632x2880', quality: 'high', background: 'opaque', output_format: 'png' };

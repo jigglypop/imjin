@@ -1,0 +1,42 @@
+yi__yi_tongjesa.glb height 1.850 joints: Hips,Spine02,Spine01,Spine,neck,Head,head_end,headfront,LeftShoulder,LeftArm,LeftForeArm,LeftHand,RightShoulder,RightArm,RightForeArm,RightHand,LeftUpLeg,LeftLeg,LeftFoot,LeftToeBase,RightUpLeg,RightLeg,RightFoot,RightToeBase
+Hips 0.538 (ref 0.53, 1cm) z-6
+Spine02 0.595 (ref 0.7, -19cm) z-7
+Spine01 0.652 z-8
+Spine 0.710 (ref 0.6, 20cm) z-9
+neck 0.744 (ref 0.84, -18cm) z-10
+Head 0.784 (ref 0.9, -21cm) z-11
+head_end 0.884 z-7
+headfront 0.784 z11
+LeftShoulder 0.720 z-10
+LeftArm 0.720 (ref 0.81, -17cm) z-6
+LeftUpLeg 0.487 z-6
+LeftLeg 0.282 z6
+LeftFoot 0.075 z-2
+wakisaka__wakisaka_shichihon.glb height 1.850 joints: Hips,Spine02,Spine01,Spine,neck,Head,head_end,headfront,LeftShoulder,LeftArm,LeftForeArm,LeftHand,RightShoulder,RightArm,RightForeArm,RightHand,LeftUpLeg,LeftLeg,LeftFoot,LeftToeBase,RightUpLeg,RightLeg,RightFoot,RightToeBase
+Hips 0.538 (ref 0.53, 1cm) z-6
+Spine02 0.601 (ref 0.7, -18cm) z-7
+Spine01 0.664 z-9
+Spine 0.728 (ref 0.6, 24cm) z-10
+neck 0.770 (ref 0.84, -13cm) z-10
+Head 0.810 (ref 0.9, -17cm) z-11
+head_end 0.875 z-7
+headfront 0.810 z10
+LeftShoulder 0.748 z-10
+LeftArm 0.748 (ref 0.81, -11cm) z-5
+LeftUpLeg 0.484 z-6
+LeftLeg 0.267 z4
+LeftFoot 0.079 z-3
+chenlin__chenlin_dudok.glb height 1.850 joints: Hips,Spine02,Spine01,Spine,neck,Head,head_end,headfront,LeftShoulder,LeftArm,LeftForeArm,LeftHand,RightShoulder,RightArm,RightForeArm,RightHand,LeftUpLeg,LeftLeg,LeftFoot,LeftToeBase,RightUpLeg,RightLeg,RightFoot,RightToeBase
+Hips 0.544 (ref 0.53, 3cm) z-3
+Spine02 0.601 (ref 0.7, -18cm) z-4
+Spine01 0.657 z-4
+Spine 0.715 (ref 0.6, 21cm) z-5
+neck 0.748 (ref 0.84, -17cm) z-5
+Head 0.788 (ref 0.9, -21cm) z-6
+head_end 0.959 z-3
+headfront 0.788 z13
+LeftShoulder 0.733 z-5
+LeftArm 0.733 (ref 0.81, -14cm) z-5
+LeftUpLeg 0.494 z-3
+LeftLeg 0.291 z6
+LeftFoot 0.071 z-2
