@@ -117,9 +117,10 @@ export class CutscenePlayer {
         this.clear = plain ? { yaw: 0, dist: 1 } : { yaw: cam.turn ?? 0, dist: cam.reach ?? 1 };
       }
       if (this.closeOn) {
-        // On his figure the lens rides with the drawn (interpolated) ship, no lag: a spring would trail a moving ship
-        // by metres and put him off centre. Only the height is eased, so the deck's heave does not bob the frame.
-        if (figure) this.place = this.place ? { ...figure, y: this.place.y + (figure.y - this.place.y) * (1 - Math.exp(-dt * 6)) } : { ...figure };
+        // A stabilised rig (owner 2026-10-18: no tremble, no bob in a face shot): the figure itself is held steady on
+        // his deck (Cast.update: the hull's travel exactly, the sea's roll, pitch, heave and the hull's turns heavily
+        // smoothed), and the lens takes his place as it is, so he and the lens never drift apart.
+        if (figure) this.place = { ...figure };
         if (!this.place) return null;
         const c = this.clear;
         const scale = (v: V3): V3 => [v[0] * c.dist, v[1], v[2] * c.dist];

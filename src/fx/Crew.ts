@@ -124,15 +124,12 @@ function stations(ship: Ship, figures: DeckPlan['figures'], plan: DeckPlan, lay:
     for (let t = 0; t < 10 && blocked(lay, x, 0, 0.5); t += 1) x -= 1;
     out[OFFICER]!.push({ x: Math.max(lay.x0 + 0.3, x), z: 0, yaw: yawTo(1, 0), deck: 1, up: 0 });
   }
-  // The drummer beats the war drum beside the captain on the command platform, or aft on the main deck. He faces
-  // across the ship, so the drum stands clear of the captain and both read from the side.
+  // The drummer beats the war drum aft on the main deck, never on the command platform: that holds the captain alone,
+  // so nobody stands behind the commander in an opening's close-up (owner 2026-10-18). He faces across the ship.
   if (plan.drum) {
-    if (lay.command) out[DRUM]!.push({ x: lay.command.x - 1.1, z: 0.4, yaw: yawTo(0, -1), deck: 2, up: 0 });
-    else {
-      let x = Math.max(x0, -0.3 * L) + 1.6;
-      for (let t = 0; t < 12 && blocked(lay, x, 0.4, 0.9); t += 1) x += 1;
-      out[DRUM]!.push({ x, z: 0.4, yaw: yawTo(0, -1), deck: 1, up: 0 });
-    }
+    let x = Math.max(x0, -0.3 * L) + 1.6;
+    for (let t = 0; t < 12 && blocked(lay, x, 0.4, 0.9); t += 1) x += 1;
+    out[DRUM]!.push({ x, z: 0.4, yaw: yawTo(0, -1), deck: 1, up: 0 });
   }
   return out;
 }

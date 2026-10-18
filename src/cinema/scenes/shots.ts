@@ -18,9 +18,11 @@ const around = (ship: Pick): Orbit => ({ type: 'orbit', at: at(ship), yaw: [0.95
 /** `clear`: a turn about him and a share of the distance found by scripts/probe-cine-occlusion.mjs --search. */
 export const closeUp = (who: string, ship: Pick, dur: number, side: 1 | -1, acts?: Act[], clear?: { turn: number; reach: number }): Shot => ({
   dur,
-  cam: { type: 'figure', who, at: at(ship), from: [3.1, 1.9, 0.25 * side], to: [2.8, 1.9, 0.22 * side], look: [0, 1.75, 0], fallback: around(ship), ...clear },
-  fov: 24,
-  aperture: 0.6,
+  // Chest up, never his feet (a pitching deck shows them clipping), sharp throughout (no depth of field), and the
+  // world in slow motion while he speaks so the sea barely moves and he holds steady (owner 2026-10-18).
+  cam: { type: 'figure', who, at: at(ship), from: [2.9, 1.85, 0.24 * side], to: [2.6, 1.85, 0.21 * side], look: [0, 1.6, 0], fallback: around(ship), ...clear },
+  fov: 22,
+  slow: 0.3,
   ease: 'inOut',
   acts,
 });

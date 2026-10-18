@@ -30,7 +30,15 @@ const install = () => {
     const r = cin.running;
     if (!r || r.kind !== 'cutscene') return;
     const c = e.camera.position;
-    S.cams.push([performance.now(), r.player.t, r.player.shotIndex, c.x, c.y, c.z]);
+    // Where his face lands on screen (px of a 1280x720 frame), for the frame-to-frame jitter.
+    let sx = NaN, sy = NaN;
+    const shot = r.player.scene.shots[r.player.shotIndex];
+    const m = shot?.cam.type === 'figure' ? cin.cast?.members.get(shot.cam.who) : null;
+    if (m?.holder.visible) {
+      const v = m.holder.localToWorld(cin.cast.tmp.clone().set(0, 1.72, 0.1)).project(e.camera);
+      sx = (v.x * 0.5 + 0.5) * 1280; sy = (0.5 - v.y * 0.5) * 720;
+    }
+    S.cams.push([performance.now(), r.player.t, r.player.shotIndex, c.x, c.y, c.z, sx, sy]);
   };
   tick();
   const ctorOf = (pred) => {
@@ -237,6 +245,13 @@ const run = async (id) => {
     for (let i = 3; i < rs.length; i++) js.push(Math.hypot(...[0, 1, 2].map((q) => rs[i][q] - 3 * rs[i - 1][q] + 3 * rs[i - 2][q] - rs[i - 3][q])));
     js.sort((a, b) => a - b);
     const key = `${s.i}:${s.who}`;
+    // Face jitter: distance of each frame's face position from the midpoint of its neighbours (px), past 0.25 s.
+    const fs = cams.filter((c) => Number.isFinite(c[6]) && c[0] >= cams[0][0] + 250);
+    const jit = [];
+    for (let i = 1; i + 1 < fs.length; i++) jit.push(Math.hypot(fs[i][6] - (fs[i - 1][6] + fs[i + 1][6]) / 2, fs[i][7] - (fs[i - 1][7] + fs[i + 1][7]) / 2));
+    jit.sort((a, b) => a - b);
+    per[key].faceJitMean = +(jit.reduce((a, x) => a + x, 0) / (jit.length || 1)).toFixed(3);
+    per[key].faceJitP95 = +(jit[Math.floor(jit.length * 0.95)] ?? 0).toFixed(3);
     per[key].jerkMean = +(js.reduce((a, x) => a + x, 0) / (js.length || 1)).toFixed(4);
     per[key].jerkP95 = +(js[Math.floor(js.length * 0.95)] ?? 0).toFixed(4);
     per[key].jerkMax = +(js[js.length - 1] ?? 0).toFixed(4);

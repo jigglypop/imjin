@@ -17,12 +17,14 @@ export interface CastHost {
   commandPost(ship: Ship): { x: number; y: number; z: number } | null;
   /** A ship's drawn heading (interpolated between sim steps), so he turns with the hull and not in steps. */
   drawnHeading?(ship: Ship): number;
+  /** A ship's drawn position (interpolated between sim steps), without the waves' roll and heave. */
+  drawnAt?(ship: Ship): { x: number; z: number };
   /** Ships whose own captain figure steps aside while the commander stands there. */
   readonly standIns: Set<number>;
 }
 
 
-type Member = { def: CastMember; figure: Figure | null; holder: Group; ship: number; facing: number; failed: boolean; shown?: boolean; off?: number; fade?: number; mats?: Material[]; post?: { x: number; y: number; z: number } | null };
+type Member = { def: CastMember; figure: Figure | null; holder: Group; ship: number; facing: number; failed: boolean; shown?: boolean; off?: number; steady?: { x: number; y: number; z: number }; steadyFacing?: number; fade?: number; mats?: Material[]; post?: { x: number; y: number; z: number } | null };
 
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const shipOf = (got: Ship | Ship[] | undefined) => (Array.isArray(got) ? got[0] : got);
@@ -169,7 +171,10 @@ export class Cast {
         this.aim(m, ctx);
         m.off = Math.max(-0.55, Math.min(0.55, wrap(m.facing - ship.heading)));
       }
-      m.facing = (this.host.drawnHeading?.(ship) ?? ship.heading) + m.off;
+      // His turn follows the hull's heavily smoothed, so a yawing hull does not swing the close-up.
+      const want = (this.host.drawnHeading?.(ship) ?? ship.heading) + m.off;
+      m.facing = m.steadyFacing === undefined || dt <= 0 ? want : m.steadyFacing + wrap(want - m.steadyFacing) * (1 - Math.exp(-dt / 1.6));
+      m.steadyFacing = m.facing;
       // His mark is chosen once, so he never steps about the deck between shots.
       m.post ??= this.host.commandPost(ship);
       const post = m.post;
@@ -178,6 +183,17 @@ export class Cast {
         continue;
       }
       this.host.localToWorld(ship.id, post.x, post.y, post.z, this.tmp);
+      // Steady on his deck (owner 2026-10-18): he travels with the drawn hull exactly, but the waves' roll, pitch and
+      // heave reach him only heavily smoothed, so his face holds still in the close-up (his feet are out of frame).
+      const hull = this.host.drawnAt?.(ship);
+      if (hull && m.steady && dt > 0) {
+        const k = 1 - Math.exp(-dt / 1.6);
+        const ky = 1 - Math.exp(-dt / 3);
+        m.steady.x += (this.tmp.x - hull.x - m.steady.x) * k;
+        m.steady.z += (this.tmp.z - hull.z - m.steady.z) * k;
+        m.steady.y += (this.tmp.y - m.steady.y) * ky;
+        this.tmp.set(hull.x + m.steady.x, m.steady.y, hull.z + m.steady.z);
+      } else if (hull) m.steady = { x: this.tmp.x - hull.x, y: this.tmp.y, z: this.tmp.z - hull.z };
       m.holder.position.copy(this.tmp);
       // The rig's heading 0 is +x; the figure's front is +z after normalising.
       m.holder.quaternion.setFromAxisAngle(this.tmp.set(0, 1, 0), Math.PI / 2 - m.facing);

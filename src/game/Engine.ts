@@ -971,6 +971,7 @@ export class Engine {
         shipScale: (id) => (engine.battle.get(id)?.flagship ? 1.12 : 1),
         commandPost: (ship) => engine.crew?.commandPost(ship) ?? null,
         drawnHeading: (ship) => engine.views.pose(ship).heading,
+        drawnAt: (ship) => engine.views.pose(ship),
         get standIns() {
           return engine.crew?.standIns ?? NO_STAND_INS;
         },

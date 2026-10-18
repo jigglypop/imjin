@@ -128,9 +128,8 @@ export function CampaignOpening({ opening, film, onDone }: { opening: Opening; f
       <div className="film-bar film-bar--top" />
       <div className="film-bar film-bar--bottom" />
       {shot && (shot.when || shot.where) && (
-        <div className="opening-stamp" key={`s${acc}`} style={{ opacity: fade(shotAge, shot.dur) }}>
-          {shot.when && <div className="opening-stamp-when">{t(shot.when)}</div>}
-          {shot.where && <div className="opening-stamp-where">{t(shot.where)}</div>}
+        <div className="film-stamp" key={`s${acc}`} style={{ opacity: fade(shotAge, shot.dur) }}>
+          {[shot.when, shot.where].filter(Boolean).map((x) => t(x!)).join(' · ')}
         </div>
       )}
       {shot?.line && shotAge > 0.9 && (

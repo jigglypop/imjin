@@ -2,7 +2,9 @@
    Film subtitles: --font-cine (함렛, 500 and up) in white with a soft shadow, hanja through --font-hanja. */
 
 .cine {
-  --cine-brass: #c9b384;
+  --cine-brass: rgba(255, 255, 255, 0.72);
+  --film-bar: var(--cine-bar, 0px);
+  --film-gutter: var(--cine-gutter);
   --cine-gutter: max(28px, 4.2vw);
   position: absolute;
   inset: 0;
@@ -36,7 +38,7 @@
 .cine-stamp-when { font-size: clamp(12px, 1.15vw, 17px); letter-spacing: 0.14em; color: var(--cine-brass); }
 .cine-stamp-where { margin-top: 5px; font-family: var(--font-cine); font-weight: 600; font-size: clamp(16px, 1.75vw, 26px); letter-spacing: 0.08em; }
 
-.cine-doc { max-width: min(640px, 82vw); padding: 14px 18px 13px; background: linear-gradient(90deg, rgba(4, 7, 10, 0.72), rgba(4, 7, 10, 0.38) 75%, rgba(4, 7, 10, 0)); border-left: 2px solid rgba(255, 255, 255, 0.55); animation: cine-rise 1s cubic-bezier(.2, .7, .2, 1) both; }
+.cine-doc { max-width: min(640px, 82vw); padding: 14px 18px 13px;  border-left: 2px solid rgba(255, 255, 255, 0.55); animation: cine-rise 1s cubic-bezier(.2, .7, .2, 1) both; }
 .cine-doc-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
 .cine-doc-head b { font-family: var(--font-cine); font-weight: 700; font-size: clamp(19px, 2vw, 30px); letter-spacing: 0.04em; }
 .cine-doc-tag { font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: 0.18em; padding: 2px 7px; border: 1px solid rgba(255, 255, 255, 0.42); color: rgba(255, 255, 255, 0.82); align-self: center; }
@@ -54,14 +56,14 @@
 .cine-line-hanja { margin-top: 5px; }
 
 /* A name card at the right, as a documentary introduces its figures. */
-.cine-card { position: absolute; right: var(--cine-gutter); top: calc(var(--cine-bar, 0px) + max(24px, 6vh)); width: clamp(190px, 17vw, 270px); padding: 0 0 12px 28px; text-align: right; background: radial-gradient(120% 70% at 100% 85%, rgba(4, 7, 10, 0.62), rgba(4, 7, 10, 0) 70%); animation: cine-slide 1.1s cubic-bezier(.2, .7, .2, 1) both; text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9); }
+.cine-card { position: absolute; right: var(--cine-gutter); top: calc(var(--cine-bar, 0px) + max(24px, 6vh)); width: clamp(190px, 17vw, 270px); padding: 0 0 12px 28px; text-align: right; animation: cine-slide 1.1s cubic-bezier(.2, .7, .2, 1) both; text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9); }
 .cine-portrait--large { width: 100%; aspect-ratio: 4 / 5; display: block; margin-bottom: 12px; }
 .cine-card-name { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
 .cine-card-name b { font-family: var(--font-cine); font-weight: 700; font-size: clamp(18px, 1.7vw, 27px); letter-spacing: 0.04em; white-space: nowrap; }
-.cine-card-role { margin-top: 6px; padding-top: 7px; border-top: 2px solid var(--side, var(--cine-brass)); font-family: var(--font-cine); font-weight: 500; font-size: clamp(11.5px, 0.95vw, 14.5px); line-height: 1.5; color: rgba(243, 241, 236, 0.84); word-break: keep-all; }
-.cine-card--joseon { --side: var(--joseon); }
-.cine-card--japan { --side: var(--japan); }
-.cine-card--ming { --side: var(--ming); }
+.cine-card-role { margin-top: 6px; padding-top: 7px; border-top: 1px solid rgba(255, 255, 255, 0.4); font-family: var(--font-cine); font-weight: 500; font-size: clamp(11.5px, 0.95vw, 14.5px); line-height: 1.5; color: rgba(243, 241, 236, 0.84); word-break: keep-all; }
+.cine-card--joseon { --side: #fff; }
+.cine-card--japan { --side: #fff; }
+.cine-card--ming { --side: #fff; }
 
 /* Title card: the menu poster's lockup over the scene. */
 .cine-title { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; text-shadow: 0 2px 24px rgba(0, 0, 0, 0.75); }
@@ -79,12 +81,9 @@
 /* Fleet labels pinned over the water. The element sits at the fleet; the tag hangs above a hairline. */
 .cine-label { position: absolute; left: 0; top: 0; will-change: transform; }
 .cine-label-tag { position: absolute; bottom: 0; left: 0; transform: translateX(-50%); padding-bottom: 44px; text-align: center; white-space: nowrap; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.95); }
-.cine-label-tag::after { content: ''; position: absolute; left: 50%; bottom: 0; width: 1px; height: 38px; background: linear-gradient(var(--side, #fff), rgba(255, 255, 255, 0)); }
-.cine-label-tag b { display: block; font-family: var(--font-cine); font-weight: 700; font-size: clamp(14px, 1.3vw, 20px); letter-spacing: 0.12em; color: var(--side, #fff); }
+.cine-label-tag::after { content: ''; position: absolute; left: 50%; bottom: 0; width: 1px; height: 38px; background: rgba(255, 255, 255, 0.5); }
+.cine-label-tag b { display: block; font-family: var(--font-cine); font-weight: 700; font-size: clamp(14px, 1.3vw, 20px); letter-spacing: 0.12em; color: #fff; }
 .cine-label-tag span { display: block; margin-top: 2px; font-family: var(--font-cine); font-weight: 500; font-size: clamp(11px, 0.92vw, 14px); color: rgba(243, 241, 236, 0.8); }
-.cine-label--joseon { --side: #a9c3d8; }
-.cine-label--japan { --side: #e0b4a6; }
-.cine-label--ming { --side: #e2c487; }
 
 .cine-controls { position: absolute; right: var(--cine-gutter); bottom: calc(var(--cine-bar, 0px) * 0.5 - 15px); display: flex; gap: 8px; opacity: 0.55; transition: opacity 0.3s; }
 .cine--covering:hover .cine-controls { opacity: 1; }
@@ -94,9 +93,10 @@
 .cine-controls--doc { opacity: 0.8; align-items: center; }
 .cine-doc-mark { font: 600 11px var(--font-ui); letter-spacing: 0.3em; color: rgba(255, 255, 255, 0.55); margin-right: 6px; }
 .cine-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(255, 255, 255, 0.06); }
-.cine-progress div { height: 100%; background: rgba(201, 179, 132, 0.55); transform-origin: 0 50%; transform: scaleX(0); }
+.cine-progress div { height: 100%; background: rgba(255, 255, 255, 0.35); transform-origin: 0 50%; transform: scaleX(0); }
 .cine-held { position: absolute; top: calc(var(--cine-bar, 0px) + 18px); left: 50%; transform: translateX(-50%); font: 600 12px var(--font-ui); letter-spacing: 0.4em; color: rgba(255, 255, 255, 0.8); }
 
+@keyframes cine-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes cine-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes cine-slide { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
 @keyframes cine-track { from { opacity: 0; letter-spacing: 1.1em; } to { opacity: 1; } }
@@ -119,20 +119,25 @@
 }
 
 /* The commander on screen speaks: a centred film subtitle above the bottom bar (src/cinema 'say'). */
-.cine-say { position: absolute; left: 0; right: 0; margin: 0 auto; bottom: calc(var(--cine-bar, 0px) + max(26px, 4vh)); width: min(980px, 90vw); text-align: center; animation: cine-rise 0.9s cubic-bezier(.2, .7, .2, 1) both; }
-.cine-say-text { font-family: var(--font-ui); font-weight: 500; font-size: clamp(18px, 1.7vw, 28px); line-height: 1.45; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 0 14px rgba(0, 0, 0, 0.45); word-break: keep-all; }
-.cine-say-name { margin-right: 0.7em; font-size: 0.66em; opacity: 0.8; }
-.cine-say--joseon { --side: #d9c08a; }
-.cine-say--japan { --side: #e0a39a; }
-.cine-say--ming { --side: #e6c46e; }
+.cine-say { position: absolute; left: 0; right: 0; margin: 0 auto; bottom: calc(var(--cine-bar, 0px) + max(28px, 4.6vh)); width: min(52em, 84vw); text-align: center; animation: cine-fade 0.45s ease-out both; }
+/* Film subtitle (owner 2026-10-18, after The Last of Us / Ghost of Tsushima / RDR2): centred, two lines at most, white
+   Pretendard 500 at ~2.2vh, a soft shadow and no box; the speaker's name before it in the same white, lighter and
+   smaller. No colours, hanja or sources. */
+.cine-say-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-family: var(--font-ui); font-weight: 500; font-size: clamp(15px, 2.2vh, 26px); line-height: 1.5; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7), 0 0 10px rgba(0, 0, 0, 0.35); word-break: keep-all; }
+.cine-say-name { font-weight: 400; font-size: 0.86em; opacity: 0.78; }
+.cine-say-name::after { content: '  ·  '; white-space: pre; }
 /* A name over a silent close-up: larger, nothing under it but the record. */
 .app--compact .cine-say { bottom: calc(var(--cine-bar, 0px) + 40px); }
-.app--compact .cine-say-text { font-size: 16px; }
+.app--compact .cine-say-text { font-size: 15px; }
 
 /* A commander's name plate the first time an opening features him (src/cinema/commanderIntros.ts): --font-title. */
 .cine-plate { position: absolute; left: var(--cine-gutter); top: 50%; transform: translateY(-62%); text-shadow: 0 2px 24px rgba(0, 0, 0, 0.85); }
 .cine-plate-eyebrow { font-family: var(--font-cine); font-weight: 500; font-size: clamp(11px, 0.95vw, 14px); letter-spacing: 0.4em; color: rgba(243, 241, 236, 0.78); animation: cine-track 2.4s cubic-bezier(.2, .6, .2, 1) both; }
 .cine-plate-name { margin-top: 0.25em; font-family: var(--font-title); font-weight: 400; font-size: clamp(38px, 5.2vw, 88px); line-height: 1.05; letter-spacing: 0.1em; animation: cine-title 2.6s cubic-bezier(.2, .7, .2, 1) both; }
-.cine-plate-title { display: inline-block; margin-top: 0.45em; padding-top: 0.45em; border-top: 2px solid var(--side, var(--cine-brass)); font-family: var(--font-cine); font-weight: 600; font-size: clamp(13px, 1.25vw, 19px); letter-spacing: 0.16em; color: rgba(243, 241, 236, 0.9); animation: cine-rise 1.8s ease-out 0.5s both; }
+.cine-plate-title { display: inline-block; margin-top: 0.45em; padding-top: 0.45em; border-top: 1px solid rgba(255, 255, 255, 0.4); font-family: var(--font-cine); font-weight: 600; font-size: clamp(13px, 1.25vw, 19px); letter-spacing: 0.16em; color: rgba(243, 241, 236, 0.9); animation: cine-rise 1.8s ease-out 0.5s both; }
 .app--compact .cine-plate { top: calc(var(--cine-bar, 0px) + 12px); transform: none; }
 .app--compact .cine-plate-name { font-size: 30px; }
+
+/* Date and place (owner 2026-10-18): one small neutral line at the bottom left, above the letterbox, the same in every
+   film (battle openings, outros, campaign openings). No title card, no brass, no gradient behind it. */
+.film-stamp { position: absolute; left: var(--film-gutter, max(28px, 4.2vw)); bottom: calc(var(--film-bar) + max(18px, 2.4vh)); font-family: var(--font-ui); font-weight: 500; font-size: clamp(13px, 0.95vw, 14px); letter-spacing: 0.02em; color: rgba(255, 255, 255, 0.8); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); white-space: nowrap; z-index: 1; }

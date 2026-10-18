@@ -8,7 +8,7 @@ description: Battle-opening cinematics and cutscenes — 3D commander close-ups 
 Every battle opens with a film-like cinematic: the battle, its ships, and each commander as his live 3D figure on his own deck, filmed in close-ups while he speaks. No portrait cards, no card films. It must feel like 명량/한산/노량, not a slideshow.
 
 ## Shot grammar (default intro, 20–35 s, skippable)
-1. **Establishing:** wide shot of the sea, weather and fleets (existing battle scene), with the title card in `--font-title`.
+1. **Establishing:** wide shot of the sea, weather and fleets (existing battle scene), with the date · place line (no title card).
 2. **Commander speaks:** `closeUp(who, ship, dur, -1)` on his live figure at his command post; a slow push-in, the subtitle at the bottom.
 3. **Reply:** `closeUp(…, +1)` on the other commander on his own deck (reverse shot); cut on every line change; a listener reaction (`overShoulder`) where it fits.
 4. **Order:** a camera beat, not a gesture (figures only stand since 2026-10-17): `order(ship, enemy)` — low off his flagship's quarter, pushing in as she leads — with the order as his subtitle, then the fleet moving.
@@ -44,12 +44,15 @@ Who commanded which battle, where they stood, flags, ship types, dates, weather 
 - Frame grabbing: load `?scenario=<id>&cutscene=1`, wait for `cinema.progress.t`, `cinema.togglePause()`, screenshot, unpause.
 
 ## Speaker close-ups, smoothing and subtitles (owner 2026-10-18, supersedes the comms boxes)
-- Framing (owner 2026-10-18): one clean medium close-up, chest up, the figure CENTRED, camera at eye level ~3 m before him (`closeUp`: from [3.1,1.9,±0.25] to [2.8,1.9,±0.22], look [0,1.75,0], fov 24, aperture 0.6), a very slow push-in, fixed focus; on his figure the lens rides with the interpolated ship without a spring (a spring trails a moving ship by metres). Galleys: he stands on the stern platform (`Crew.commandPost`, `x0 + 5`). Standing idle only.
+- Framing (owner 2026-10-18): one clean medium close-up, chest up and never his feet, the figure CENTRED, camera at eye level ~3 m before him (`closeUp`: from [2.9,1.85,±0.24] to [2.6,1.85,±0.21], look [0,1.6,0], fov 22, no depth of field: sharp throughout), a very slow push-in, `slow: 0.3` (the world at 0.3x while he speaks, presentation only). Standing idle only.
+- Stabilised (owner 2026-10-18): the figure travels with the drawn hull exactly, but the sea's roll, pitch and heave and the hull's turns reach him heavily smoothed (`Cast.update`, 1.6 s / 3 s); the lens takes his place as it is (never smoothed separately, or he and the lens drift apart). Measure with `node scripts/probe-cine-occlusion.mjs --jerk --fixed` (fixed 1/60 s frames): face jitter < 0.5 px, lens jerk < 0.05 m/frame^3. Ships stay interpolated under a cutscene even during the pre-contact fast-forward.
+- Where he stands (`Crew.commandPost`): panokseon/atakebune command platform (alone: the drummer is on the main deck); galleys `x0 + 15`, forward of the stern canopy; 1797-1805 ships the quarterdeck `command.x + 6` (at +8 the mizzen hides him); galleons the open waist `x1 - 9.4`. Check every opening with the probe (core = face/chest occluded <= 5%, box = boxed-in share); a shot that stays boxed in takes `closeUp(..., { turn, reach })` from `--search`.
 - Grammar: each speaker is his live 3D figure at his command post on his own deck (`Cast`, `hangSword`), filmed with `closeUp` (shot / reverse shot between the flagships, slow push-in, a cut on every line change) and one `overShoulder`/listener beat. A commander without a live figure: the wide orbit on his flagship (the close-up's `fallback`) with the subtitle only, never a portrait card.
 - Talking body clip: optional, cinematic only (pure Meshy clip on his rig, deform <= 0.3, blade clearance per generals-cast); idle when absent. Estimate credits before fetching.
 - Camera smoothing: `CutscenePlayer.follow` is a critically damped spring (x/z rate 2.2 on a figure, 2 on ships; heading at half; height >= 6 so heave never loses his face). Position and heading only, never the deck's roll or pitch. No procedural shake. The focus distance is fixed at each shot's first frame. Measure: per-frame third difference of camera position away from cuts (hansan 0.014 m/frame^3 after the change).
 - No pop: figures come on deck only at a cut (`Cast.reveal` on `player.cuts`), and close vs fallback is decided at the cut, never switched mid-shot. No film lights of his own: the figure takes the scene's sun, sky, fog and exposure like the ships (owner 2026-10-18).
-- Subtitle (`.cine-say`): one colour (white), `--font-ui` 500, soft shadow, a small name before the line in the same colour; no hanja, title or record in the frame (records stay in SOURCES.md).
+- Subtitle (`.cine-say`, owner 2026-10-18, after The Last of Us / Ghost of Tsushima / RDR2): centred, two lines at most, white Pretendard 500 at ~2.2vh, soft shadow, no box; the name before it in the same white, lighter and smaller (`이순신  ·`); fades per line; no hanja, title or record (records stay in SOURCES.md).
+- Date and place (`.film-stamp`): one small line `date · place`, Pretendard 500 13-14px, white 80%, bottom left above the letterbox, the same in every film (battle openings and campaign openings). No title card.
 
 ## Campaign openings (owner 2026-10-17: concise documentary openings like strategy games)
 - Data: `src/cinema/campaignOpenings.ts` (imjin 61.5 s, armada 62 s, lepanto 54.5 s, trafalgar 54 s). Shots over the campaign's own 3D map: `from`/`to` eyes in lon/lat + distance (frame units) + yaw (0 looks north) + pitch (0.22–0.36 reads cinematic); 7–8 s each, one stamp (date in --font-title small brass, place in --font-title large) top-left, one line (--font-cine) bottom-centre with its source, closing title 8.5 s pulling back to the whole theatre (`MOONWAKE · years`, title --font-title, hanja, sub, source).
@@ -57,6 +60,10 @@ Who commanded which battle, where they stood, flags, ship types, dates, weather 
 - Frame grabbing: start a campaign at `/<chapter>/campaign?opening=1`, click `.g-pick__go`, wait for `window.__map`, screenshot at shot mid-points.
 
 ## Rejected (do not retry)
+- The big centred battle title card (`title` captions render nothing, owner 2026-10-18); stamps in --font-title or brass at the top.
+- Colour in the film text: side-coloured names, coloured fleet labels, gold/brass accents, tinted overlays or gradients behind captions (owner 2026-10-18): all white or neutral grey, letterbox black.
+- Depth-of-field blur and haze in close-ups; framing that shows his feet (a pitching deck shows them clipping); the lens smoothing his height or heading apart from the figure.
+- A drummer (or anyone) on the commander's platform behind him.
 - Figure-only film lighting (key/rim/fill lightsNode): white glow, he looks pasted on. Off-centre framing, orbiting or over-the-shoulder close-ups. Talking body clips (cancelled 2026-10-18, no credits spent).
 - Ships drawn at the sim's fixed steps: they and every camera on them judder; `ShipViews.pose` interpolates between steps (presentation only).
 - Portrait comms boxes / thumbnail cards for the speaker (2026-10-17 build, reversed by the owner 2026-10-18).

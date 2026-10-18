@@ -24,20 +24,14 @@ function CaptionView({ caption, age }: { caption: Caption; age: number }) {
   switch (caption.kind) {
     case 'stamp':
       return (
-        <div className="cine-stamp" style={style}>
-          <div className="cine-stamp-when">{t(caption.when)}</div>
-          <div className="cine-stamp-where">{t(caption.where)}</div>
+        // One small neutral line at the bottom, the same in every film (owner 2026-10-18).
+        <div className="film-stamp" style={style}>
+          {t(caption.when)} · {t(caption.where)}
         </div>
       );
     case 'title':
-      return (
-        <div className="cine-title" style={style}>
-          {caption.eyebrow && <div className="cine-title-eyebrow">{t(caption.eyebrow)}</div>}
-          <div className="cine-title-main">{t(caption.title)}</div>
-          {caption.hanja && <div className="cine-title-hanja">{caption.hanja}</div>}
-          {caption.sub && <div className="cine-title-sub">{t(caption.sub)}</div>}
-        </div>
-      );
+      // No battle title card over the film (owner 2026-10-18): the date and place line says where we are.
+      return null;
     case 'doc':
       return (
         <div className="cine-doc" style={style}>
@@ -67,7 +61,7 @@ function CaptionView({ caption, age }: { caption: Caption; age: number }) {
       );
     case 'card':
       return (
-        <div className={`cine-card cine-card--${caption.side}`} style={style}>
+        <div className="cine-card" style={style}>
           <img className="cine-portrait cine-portrait--large" src={portraitUrl(caption.portrait)} alt="" />
           <div className="cine-card-name">
             <b>{t(caption.who)}</b>
@@ -101,7 +95,7 @@ function SayView({ caption, age, plate }: { caption: Extract<Caption, { kind: 's
   return (
     <>
     {plate && (
-      <div className={`cine-plate cine-say--${caption.side}`} style={{ opacity: opacityOf(age, Math.min(caption.dur, 4.8)) * (age < 4.8 ? 1 : 0) }}>
+      <div className="cine-plate" style={{ opacity: opacityOf(age, Math.min(caption.dur, 4.8)) * (age < 4.8 ? 1 : 0) }}>
         <div className="cine-plate-eyebrow">{t(NAVY_LABEL[plate.faction])} · {plate.year}</div>
         <div className="cine-plate-name">{t(plate.name)}</div>
         <div className="cine-plate-title">{t(plate.title)}</div>
@@ -111,7 +105,7 @@ function SayView({ caption, age, plate }: { caption: Extract<Caption, { kind: 's
       {caption.text ? (
         <div className="cine-say-text">
           <span className="cine-say-name">{t(caption.who)}</span>
-          {t(caption.text)}
+          <span className="cine-say-line">{t(caption.text)}</span>
         </div>
       ) : (
         <div className="cine-say-text">{t(caption.who)}</div>
@@ -233,7 +227,7 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
           caption.kind === 'label' ? (
             <div
               key={`${caption.at}${caption.text}`}
-              className={`cine-label cine-label--${caption.side}`}
+              className="cine-label"
               style={{ opacity: opacityOf(age, caption.dur) }}
               ref={(el) => {
                 if (el) labels.current.set(caption, el);
@@ -246,9 +240,14 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
             </div>
           ) : null,
         )}
+      {captions
+        .filter((c) => c.caption.kind === 'stamp')
+        .map(({ caption, age }) => (
+          <CaptionView key={`stamp${caption.at}`} caption={caption} age={age} />
+        ))}
       <div className="cine-lower">
         {captions
-          .filter((c) => c.caption.kind === 'stamp' || c.caption.kind === 'doc' || c.caption.kind === 'line')
+          .filter((c) => c.caption.kind === 'doc' || c.caption.kind === 'line')
           .map(({ caption, age }) => (
             <CaptionView key={`${caption.kind}${caption.at}`} caption={caption} age={age} />
           ))}
