@@ -185,7 +185,7 @@ export class Lanterns {
       const cam = camera.position;
       let lights = 0;
       for (const ship of battle.ships) {
-        if (!ship.alive) continue;
+        if (!ship.alive || this.views.hidden.has(ship.id)) continue;
         // A ship going down loses its lights with its way: they are out by the time the deck is awash.
         const afloat = 1 - Math.min(1, ship.sinking * 4);
         const k = this.level(ship.id, ship.lights ? 1 : 0, dt) * afloat;

@@ -4,7 +4,6 @@ import type { Caption } from '../cinema/types';
 import { useT } from '../i18n';
 import './cinema.css';
 import { portraitUrl } from './portrait';
-import { introByName, introduced, markIntroduced, NAVY_LABEL, type IntroView } from '../cinema/commanderIntros';
 
 /** Seconds a caption takes to come in and to go. */
 const FADE = 0.7;
@@ -90,17 +89,9 @@ function CaptionView({ caption, age }: { caption: Caption; age: number }) {
  * name before the line in the same colour. Hanja, titles and records stay out of the frame (src/cinema/SOURCES.md).
  * No portrait card ever (owner 2026-10-18): without his figure the camera holds wide on his flagship and the line stands alone.
  */
-function SayView({ caption, age, plate }: { caption: Extract<Caption, { kind: 'say' }>; age: number; plate: IntroView | null }) {
+function SayView({ caption, age }: { caption: Extract<Caption, { kind: 'say' }>; age: number }) {
   const t = useT();
   return (
-    <>
-    {plate && (
-      <div className="cine-plate" style={{ opacity: opacityOf(age, Math.min(caption.dur, 4.8)) * (age < 4.8 ? 1 : 0) }}>
-        <div className="cine-plate-eyebrow">{t(NAVY_LABEL[plate.faction])} · {plate.year}</div>
-        <div className="cine-plate-name">{t(plate.name)}</div>
-        <div className="cine-plate-title">{t(plate.title)}</div>
-      </div>
-    )}
     <div className="cine-say" style={{ opacity: opacityOf(age, caption.dur) }}>
       {caption.text ? (
         <div className="cine-say-text">
@@ -111,7 +102,6 @@ function SayView({ caption, age, plate }: { caption: Extract<Caption, { kind: 's
         <div className="cine-say-text">{t(caption.who)}</div>
       )}
     </div>
-    </>
   );
 }
 
@@ -128,25 +118,6 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
   const black = useRef<HTMLDivElement>(null);
   const progress = useRef<HTMLDivElement>(null);
   const labels = useRef(new Map<Caption, HTMLDivElement>());
-  /**
-   * The first time a commander is featured in a battle opening on this device, his first line comes with his name plate
-   * (--font-title): the opening introduces him (src/cinema/commanderIntros.ts).
-   */
-  const plates = useRef({ id: '', first: new Map<string, number>() });
-  const plateFor = (caption: Extract<Caption, { kind: 'say' }>): IntroView | null => {
-    const id = cinema.progress?.id ?? '';
-    if (!id) return null;
-    if (plates.current.id !== id) plates.current = { id, first: new Map() };
-    const first = plates.current.first;
-    const intro = introByName(caption.who);
-    if (!first.has(caption.who)) {
-      const fresh = !!intro && !introduced(intro.id);
-      first.set(caption.who, fresh ? caption.at : -1);
-      if (fresh) markIntroduced(intro.id);
-    }
-    return first.get(caption.who) === caption.at ? intro : null;
-  };
-
   // Captions and controls re-render every frame while anything is showing; the bars, fades and labels are moved here
   // directly, so an idle battle costs one cheap callback a frame.
   useEffect(() => {
@@ -253,7 +224,7 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
           ))}
       </div>
       {captions.map(({ caption, age }) =>
-        caption.kind === 'say' ? <SayView key={`say${caption.at}`} caption={caption} age={age} plate={plateFor(caption)} /> : null,
+        caption.kind === 'say' ? <SayView key={`say${caption.at}`} caption={caption} age={age} /> : null,
       )}
       {captions
         .filter((c) => c.caption.kind === 'title' || c.caption.kind === 'quote' || c.caption.kind === 'card')

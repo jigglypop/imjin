@@ -26,8 +26,7 @@ export const HANSAN_INTRO: Scene = {
     // Ahead of the Japanese fleet as it comes out of the narrows after the decoys, looking back at it: the title.
     { dur: 8.5, cam: { type: 'orbit', at: at(japan, { toward: joseon }), yaw: [0.16, 0.3], pitch: [0.035, 0.05], dist: [600, 500], lift: 10 }, fov: 30 },
     closeUp('yi', yi, 7.5, -1),
-    // The atakebune's tower walls him in head-on; turned off his bow the sea shows behind him (probe: box 0.46 -> 0.33).
-    closeUp('wakisaka', wakisaka, 7, 1, undefined, { turn: -0.75, reach: 1 }),
+    closeUp('wakisaka', wakisaka, 7, 1),
     closeUp('yi', yi, 4, -1),
     order(yi, japan, 4.5),
     // High behind the Korean line, the crane's wing opening toward the Japanese fleet.
@@ -77,8 +76,7 @@ export const MYEONGNYANG_INTRO: Scene = {
     // Ahead of the 133 ships as the flood carries them into the strait.
     { dur: 8.5, cam: { type: 'orbit', at: at(japan, { toward: yi }), yaw: [0.22, 0.08], pitch: [0.03, 0.04], dist: [760, 650], lift: 10 }, fov: 30 },
     closeUp('yi', yi, 8.5, -1),
-    // As Wakisaka's: turned and nearer, the tower leaves the frame (probe: box 0.70 -> 0.37).
-    closeUp('kurushima', kurushima, 7, 1, undefined, { turn: 1, reach: 0.7 }),
+    closeUp('kurushima', kurushima, 7, 1),
     order(yi, japan, 4.5),
     // Behind the lone flagship, rowing toward the fleet.
     { dur: 7, cam: { type: 'orbit', at: at(yi, { toward: japan }), yaw: [Math.PI + 0.3, Math.PI + 0.16], pitch: [0.05, 0.07], dist: [95, 125], lift: [6, 10] }, fov: 30 },

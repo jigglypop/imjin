@@ -6,27 +6,24 @@ import { createFigure, hangSword, holdWeapon, listModels, loader, modelUrl, rele
 import { WEAPONS } from '../meta/catalog';
 import type { Ship } from '../sim/types';
 import type { Place } from './rig';
+import { DeckSet } from './set';
 import type { CastLight, CastMember, SceneContext } from './types';
 
-/** What the cast reads from the engine: the ships' transforms and where each one's captain stands. */
+/** What the cast reads from the engine: where the ships are drawn, and which ones to leave out of the picture. */
 export interface CastHost {
   readonly scene: ThreeScene;
   readonly camera: PerspectiveCamera;
-  localToWorld(id: number, x: number, y: number, z: number, out: Vector3): Vector3;
   shipScale(id: number): number;
-  commandPost(ship: Ship): { x: number; y: number; z: number } | null;
-  /** A ship's drawn heading (interpolated between sim steps), so he turns with the hull and not in steps. */
-  drawnHeading?(ship: Ship): number;
-  /** A ship's drawn position (interpolated between sim steps), without the waves' roll and heave. */
-  drawnAt?(ship: Ship): { x: number; z: number };
-  /** Ships whose own captain figure steps aside while the commander stands there. */
-  readonly standIns: Set<number>;
+  /** A ship's drawn position and heading (interpolated between sim steps). */
+  drawnAt(ship: Ship): { x: number; z: number; heading: number };
+  /** Ships not drawn this frame (hull, crew and lanterns): his flagship while he stands on its set in her place. */
+  readonly hidden: Set<number>;
+  /** Detail of the sets: 1 on phones. */
+  readonly setLod: 0 | 1;
 }
 
+type Member = { def: CastMember; figure: Figure | null; holder: Group; ship: number; facing: number; failed: boolean; shown?: boolean; fade?: number; mats?: Material[]; set: DeckSet | null; placed?: boolean };
 
-type Member = { def: CastMember; figure: Figure | null; holder: Group; ship: number; facing: number; failed: boolean; shown?: boolean; off?: number; steady?: { x: number; y: number; z: number }; steadyFacing?: number; fade?: number; mats?: Material[]; post?: { x: number; y: number; z: number } | null };
-
-const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const shipOf = (got: Ship | Ship[] | undefined) => (Array.isArray(got) ? got[0] : got);
 function centre(got: Ship | Ship[] | undefined) {
   const ships = got ? (Array.isArray(got) ? got : [got]) : [];
@@ -42,8 +39,9 @@ function centre(got: Ship | Ship[] | undefined) {
 
 /**
  * The commanders of one scene, loaded from their live figures (the same files, LODs, weapon grip and clips as the
- * generals screen) and stood at the captain's post of their flagships for the close-ups. Everything it loads is freed
- * when the scene ends.
+ * generals screen), each filmed on his own deck set (set.ts) where his flagship is, the flagship hidden while he is on
+ * screen. Only the man speaking is out: the set and the figure show for his close-up alone. Everything it loads is
+ * freed when the scene ends.
  */
 export class Cast {
   private readonly members = new Map<string, Member>();
@@ -67,9 +65,14 @@ export class Cast {
       shadow.renderOrder = 1;
       holder.add(shadow);
       this.group.add(holder);
-      const member: Member = { def, figure: null, holder, ship: 0, facing: 0, failed: false };
+      const member: Member = { def, figure: null, holder, ship: 0, facing: 0, failed: false, set: null };
       this.members.set(name, member);
       this.aim(member, ctx);
+      const ship = ctx.battle.get(member.ship);
+      if (ship) {
+        member.set = new DeckSet(ship.spec.kind, host.setLod);
+        this.group.add(member.set.group);
+      }
       void this.load(member);
     }
   }
@@ -82,7 +85,7 @@ export class Cast {
       const file = live.has(m.def.file) ? m.def.file : [...live].find((k) => k.startsWith(`${id}__`));
       if (!file) throw new Error(`${m.def.file} is not live`);
       const weaponDef = WEAPONS.find((w) => w.id === m.def.weapon);
-      const [gltf, weapon] = await Promise.all([loader.loadAsync(modelUrl(file)), weaponDef ? loader.loadAsync(weaponUrl(weaponDef.id)) : null]);
+      const [gltf, weapon] = await Promise.all([loader.loadAsync(modelUrl(file)), weaponDef ? loader.loadAsync(weaponUrl(weaponDef.id)) : null, m.set?.ready]);
       const asset = gltf.scene;
       const figure = createFigure(asset, gltf.animations, weaponDef?.kind ?? 'sword');
       if (weapon && weaponDef) {
@@ -126,9 +129,9 @@ export class Cast {
     if (to) m.facing = Math.atan2(to.z - ship.z, to.x - ship.x);
   }
 
-  /** A cut: every loaded figure may now stand on his deck. */
+  /** A cut: every loaded figure (with his set) may now come on screen. */
   reveal() {
-    for (const m of this.members.values()) if (m.figure) m.shown = true;
+    for (const m of this.members.values()) if (m.figure && m.set?.loaded) m.shown = true;
   }
 
   /** Whether `name`'s figure is standing on his deck. */
@@ -154,58 +157,41 @@ export class Cast {
     if (f) standFigure(f);
   }
 
-  /** Per frame: each figure at his post, turned toward the enemy, his clip advanced; the lights placed for this camera. */
+  /**
+   * Per frame: the man speaking (`on`) on his set, which stands still where his flagship was at the cut, facing the
+   * enemy he names; his flagship is hidden meanwhile. Everyone else, and every set, is out of the picture.
+   */
   update(dt: number, ctx: SceneContext, on: string | null) {
     for (const [name, m] of this.members) {
-      if (!m.figure) continue;
       const ship = ctx.battle.get(m.ship);
-      if (!ship || !ship.alive) {
+      const live = !!m.figure && !!m.shown && !!m.set?.loaded && !!ship?.alive && name === on;
+      if (!live || !ship || !m.figure || !m.set) {
+        if (m.placed) this.host.hidden.delete(m.ship);
+        m.placed = false;
         m.holder.visible = false;
-        this.host.standIns.delete(m.ship);
+        if (m.set) m.set.group.visible = false;
         continue;
       }
-      // He turns on his deck toward the enemy, but keeps within a third of a right angle of the bow: further round, the
-      // camera a few metres in front of him would stand outside the hull, looking at its shield wall. While he speaks
-      // his turn on the deck holds, and he swings with the drawn hull (the sim's heading steps would jolt the lens).
-      if (name !== on || m.off === undefined) {
+      if (!m.placed) {
+        // Placed once at the cut and never moved: no roll, no heave, no swing, nothing for the lens to tremble with.
+        m.placed = true;
         this.aim(m, ctx);
-        m.off = Math.max(-0.55, Math.min(0.55, wrap(m.facing - ship.heading)));
+        const at = this.host.drawnAt(ship);
+        const scale = this.host.shipScale(ship.id);
+        m.set.place(at.x, at.z, m.facing, scale);
+        m.holder.position.set(at.x, m.set.height * scale, at.z);
+        // The rig's heading 0 is +x; the figure's front is +z after normalising.
+        m.holder.quaternion.setFromAxisAngle(this.tmp.set(0, 1, 0), Math.PI / 2 - m.facing);
+        m.holder.scale.setScalar(scale);
+        this.host.hidden.add(ship.id);
       }
-      // His turn follows the hull's heavily smoothed, so a yawing hull does not swing the close-up.
-      const want = (this.host.drawnHeading?.(ship) ?? ship.heading) + m.off;
-      m.facing = m.steadyFacing === undefined || dt <= 0 ? want : m.steadyFacing + wrap(want - m.steadyFacing) * (1 - Math.exp(-dt / 1.6));
-      m.steadyFacing = m.facing;
-      // His mark is chosen once, so he never steps about the deck between shots.
-      m.post ??= this.host.commandPost(ship);
-      const post = m.post;
-      if (!post) {
-        m.holder.visible = false;
-        continue;
-      }
-      this.host.localToWorld(ship.id, post.x, post.y, post.z, this.tmp);
-      // Steady on his deck (owner 2026-10-18): he travels with the drawn hull exactly, but the waves' roll, pitch and
-      // heave reach him only heavily smoothed, so his face holds still in the close-up (his feet are out of frame).
-      const hull = this.host.drawnAt?.(ship);
-      if (hull && m.steady && dt > 0) {
-        const k = 1 - Math.exp(-dt / 1.6);
-        const ky = 1 - Math.exp(-dt / 3);
-        m.steady.x += (this.tmp.x - hull.x - m.steady.x) * k;
-        m.steady.z += (this.tmp.z - hull.z - m.steady.z) * k;
-        m.steady.y += (this.tmp.y - m.steady.y) * ky;
-        this.tmp.set(hull.x + m.steady.x, m.steady.y, hull.z + m.steady.z);
-      } else if (hull) m.steady = { x: this.tmp.x - hull.x, y: this.tmp.y, z: this.tmp.z - hull.z };
-      m.holder.position.copy(this.tmp);
-      // The rig's heading 0 is +x; the figure's front is +z after normalising.
-      m.holder.quaternion.setFromAxisAngle(this.tmp.set(0, 1, 0), Math.PI / 2 - m.facing);
-      m.holder.scale.setScalar(this.host.shipScale(ship.id));
-      // He only comes on deck at a cut (reveal), never in front of the camera.
-      m.holder.visible = !!m.shown;
-      this.host.standIns.add(ship.id);
+      m.holder.visible = true;
+      m.set.group.visible = true;
       m.figure.mixer.update(dt);
-      if (m.shown && m.mats && (m.fade ?? 0) < 1) {
-        m.fade = Math.min(1, (m.fade ?? 0) + dt / 0.5);
-        const o = m.fade * m.fade * (3 - 2 * m.fade);
-        for (const mat of m.mats) mat.opacity = o;
+      // He is there from the cut's first frame (a fade on screen reads as a ghost).
+      if (m.mats && m.fade !== 1) {
+        m.fade = 1;
+        for (const mat of m.mats) mat.opacity = 1;
       }
       // The held sword hangs outside the body as on the generals screen (idleBlade.ts).
       hangSword(m.figure);
@@ -216,7 +202,8 @@ export class Cast {
     if (this.disposed) return;
     this.disposed = true;
     for (const m of this.members.values()) {
-      this.host.standIns.delete(m.ship);
+      if (m.placed) this.host.hidden.delete(m.ship);
+      m.set?.dispose();
       if (m.figure) releaseFigure(m.figure);
       m.figure = null;
     }

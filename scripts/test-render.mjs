@@ -83,7 +83,7 @@ try {
     'fx/Crew.ts': 'export const crewAssets = () => Promise.resolve(new Map()); export class Crew { group = {}; dispose() {} }',
     'terrain/Structures.ts': 'export const preloadStructures = () => Promise.resolve(); export class Structures {}',
     'conquest/ConquestView.ts': 'export const preloadWorks = () => Promise.resolve(); export class ConquestView {}',
-    'ships/ShipRenderer.ts': 'export const CUT_CAP = 1, LOD_COUNT = 3; export const modelKey = (kind) => kind; export const packFlash = (flash) => flash; export class ShipRenderer {} export const loadShipAssets = () => Promise.resolve({}); export const releaseShipAssets = () => Promise.resolve();',
+    'ships/ShipRenderer.ts': 'export const CUT_CAP = 1, LOD_COUNT = 3; export const modelKey = (kind) => kind; export const packFlash = (flash) => flash; export class ShipRenderer {} export const loadShipAssets = () => Promise.resolve({}); export const releaseShipAssets = () => Promise.resolve(); export const createMaterial = () => null;',
   });
   const base = () => Object.assign(Object.create(Engine.prototype), {
     disposed: false, ready: true, loading: null, skyLoading: null, sky: null, eq: { skySize: 'small' },

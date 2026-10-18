@@ -160,9 +160,6 @@ const NO_VIEW: CrewView = { cutaway: 0, cut: new Set(), winner: null };
  * duel on the enemy deck, the dead fall where they stand and stay there or go over the side and swim, and a beaten
  * crew drops its arms.
  */
-const GALLEYS = new Set(['reale', 'galea', 'sultana', 'kadirga', 'kalyata', 'galleass', 'vgalleass']);
-const SHIPS_1805 = new Set(['firstrate', 'gb74', 'gbfrigate', 'fr80', 'fr74', 'trinidad', 'es74']);
-const ARMADA_SAIL = new Set(['racegalleon', 'spgalleon', 'urca', 'pinnace']);
 
 export class Crew {
   readonly group = new Group();
@@ -233,36 +230,6 @@ export class Crew {
   }
 
   /** Ships whose captain is not drawn: a cutscene's named commander stands at his post (src/cinema/cast.ts). */
-  readonly standIns = new Set<number>();
-
-  /**
-   * Where a named commander stands for a close-up, in ship space: a step forward of the captain's mark on a panokseon's
-   * command platform; on any other ship, at the head of the main deck, where nothing stands between him and a camera off
-   * the bow (the deck plans' cabins do not always match the drawn model, so the middle of the deck is not trusted).
-   */
-  commandPost(ship: Ship) {
-    const r = this.roster(ship);
-    const st = r.stations[OFFICER]?.[0];
-    if (!st) return null;
-    const y = this.deckY(r, st.deck);
-    // The panokseon's and the atakebune's command platforms are open; the Ming castles wall theirs in, and an
-    // atakebune's bow is enclosed (a camera there sees black).
-    if (st.deck === 2 && (ship.spec.kind === 'panokseon' || ship.spec.kind === 'atakebune')) return { x: st.x + 0.6, y, z: st.z };
-    // On a galley the commander stood aft (the bow is the rambata, the gangway runs between the benches): on the
-    // centreline just forward of the stern canopy, since under it the camera before him sees only its panels (the
-    // occlusion probe: enclosure 0.7-0.8 at x0 + 5, 0.03-0.07 here, face clear).
-    if (GALLEYS.has(ship.spec.kind)) return { x: r.layout.x0 + 15, y: r.main, z: 0 };
-    // A ship of the line: on the quarterdeck, where the admirals of 1797-1805 stood, a little forward of the officers
-    // mark (6 m: at 8 m the mizzen stands between him and the lens on a 74; probe: core 0, box 0 on every 1805 hull).
-    const qd = r.layout.command;
-    if (SHIPS_1805.has(ship.spec.kind) && qd) return { x: qd.x + 6, y: r.main + qd.up, z: 0 };
-    // Galleons: their castles are short and walled; in the open waist, forward of the mainmast (box 0.8 -> 0.1).
-    if (ARMADA_SAIL.has(ship.spec.kind)) return { x: r.layout.x1 - 9.4, y: r.main, z: 0 };
-    if (st.deck === 2) return { x: r.layout.x1 - 1.4, y: r.main, z: 0 };
-    // Always on the open main deck: a galley's officer station is on the rowing deck below it (he stood hidden).
-    return { x: r.layout.x1 - 1.4, y: r.main, z: 0 };
-  }
-
   private deckY(r: Roster, deck: Deck) {
     return deck === 0 ? r.main - r.layout.oarDrop : deck === 2 ? r.main + (r.layout.command?.up ?? 0) : r.main;
   }
@@ -558,7 +525,7 @@ export class Crew {
     this.boarding.begin(battle, this.time, dt, this.frame);
     for (const ship of battle.ships) {
       const r = this.rosters.get(ship.id);
-      if (r && r.live === this.frame) this.drawCrew(battle, ship, r, view, assets);
+      if (r && r.live === this.frame && !this.views.hidden.has(ship.id)) this.drawCrew(battle, ship, r, view, assets);
     }
     this.boarding.draw(battle, assets, camera);
     endCrew(assets);
@@ -881,7 +848,7 @@ export class Crew {
       const list = r.members[role]!;
       for (let i = 0; i < list.length; i += 1) {
         const mem = list[i]!;
-        if (mem.away || mem.gone || (role === OFFICER && this.standIns.has(ship.id))) continue;
+        if (mem.away || mem.gone) continue;
         const st = r.stations[role]![mem.station]!;
         const visible = st.deck === 0 ? r.showLow : st.deck === 2 ? r.showCommand : r.showMain;
         if (!visible) continue;

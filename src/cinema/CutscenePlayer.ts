@@ -117,9 +117,8 @@ export class CutscenePlayer {
         this.clear = plain ? { yaw: 0, dist: 1 } : { yaw: cam.turn ?? 0, dist: cam.reach ?? 1 };
       }
       if (this.closeOn) {
-        // A stabilised rig (owner 2026-10-18: no tremble, no bob in a face shot): the figure itself is held steady on
-        // his deck (Cast.update: the hull's travel exactly, the sea's roll, pitch, heave and the hull's turns heavily
-        // smoothed), and the lens takes his place as it is, so he and the lens never drift apart.
+        // He stands on his deck set (cast.ts, set.ts), placed once at the cut and never moved: the lens takes his place
+        // as it is, so nothing trembles.
         if (figure) this.place = { ...figure };
         if (!this.place) return null;
         const c = this.clear;

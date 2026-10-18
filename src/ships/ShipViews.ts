@@ -84,6 +84,8 @@ export class ShipViews {
   private readonly need = new Map<string, number>();
   /** Ships drawn in cutaway, by level (1 roofs off, 2 walls off, 3 down to the rowers' deck). */
   cutaway = new Map<number, number>();
+  /** Ships left out of the picture: a commander's flagship while he is filmed on his set in her place (cinema/set.ts). */
+  readonly hidden = new Set<number>();
   /** How shot-through and burnt each ship's sails are, 0..1 (fx/Scars.ts keeps it). */
   readonly tears = new Map<number, number>();
   /** Timber of the decks a cutaway opens up: the rowers' floor, oar looms and posts. */
@@ -297,7 +299,7 @@ export class ShipViews {
       // A model loaded without its near level has fewer levels: the nearest one it has serves the closer ranges.
       const have = assets[v.key]?.lods.length ?? LOD_COUNT;
       const draw = scale === 1 ? v.matrix : this.drawMatrix.copy(v.matrix).scale(this.tmp.setScalar(scale));
-      if (v.visible) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), packFlash(v.flash, this.tears.get(ship.id) ?? 0, ship.id), cut);
+      if (v.visible && !this.hidden.has(ship.id)) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), packFlash(v.flash, this.tears.get(ship.id) ?? 0, ship.id), cut);
       if (level === 3 && v.visible) props = this.interior(ship, v, main, props);
       const show = (this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0;
       if (show) {

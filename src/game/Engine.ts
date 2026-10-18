@@ -155,7 +155,7 @@ const simBudgetMs = (speed: number) => (speed >= 64 ? 32 : speed >= 16 ? 24 : sp
 type LoadTask = { controller: AbortController; terrain?: Terrain; sky?: LoadedSky };
 
 /** Stand-ins written while no crew is drawn are simply dropped. */
-const NO_STAND_INS = new Set<number>();
+const NO_HIDDEN = new Set<number>();
 
 export class Engine {
   readonly scene = new Scene();
@@ -967,14 +967,12 @@ export class Engine {
         get camera() {
           return engine.camera;
         },
-        localToWorld: (id, x, y, z, out) => engine.views.localToWorld(id, x, y, z, out),
         shipScale: (id) => (engine.battle.get(id)?.flagship ? 1.12 : 1),
-        commandPost: (ship) => engine.crew?.commandPost(ship) ?? null,
-        drawnHeading: (ship) => engine.views.pose(ship).heading,
         drawnAt: (ship) => engine.views.pose(ship),
-        get standIns() {
-          return engine.crew?.standIns ?? NO_STAND_INS;
+        get hidden() {
+          return engine.views?.hidden ?? NO_HIDDEN;
         },
+        setLod: equipment.tier === 'low' ? 1 : 0,
       },
     });
   }
