@@ -842,19 +842,23 @@
   --mw: clamp(1100px, 280vw, 1700px);
   --ma: 0.507;
   --mh: calc(var(--mw) * var(--ma));
-  --fx: 50%;
-  --fy: 28%;
+  --fx: 50vw;
+  --fy: 28vh;
   position: absolute;
   inset: 0;
 }
 
+/* Panned with a compositor transform, not left/top: a left/top glide re-lays the plane every frame and snaps the image
+   and its pins to whole pixels apart, so the pins stepped against the map while it moved. */
 .smap-plane {
   position: absolute;
+  left: 0;
+  top: 0;
   width: var(--mw);
   height: var(--mh);
-  left: calc(var(--fx) - var(--u) * var(--mw));
-  top: calc(var(--fy) - var(--v) * var(--mh));
-  transition: left 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), top 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transform: translate3d(calc(var(--fx) - var(--u) * var(--mw)), calc(var(--fy) - var(--v) * var(--mh)), 0);
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change: transform;
 }
 
 .smap-plane::after {
@@ -1644,8 +1648,8 @@
   }
 
   .smap {
-    --fx: 27%;
-    --fy: 62%;
+    --fx: 27vw;
+    --fy: 62vh;
     --mw: clamp(1100px, 150vw, 1700px);
   }
 

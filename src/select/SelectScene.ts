@@ -1,23 +1,16 @@
 import {
   CanvasTexture,
-  CircleGeometry,
   Color,
-  CylinderGeometry,
   DataTexture,
-  DoubleSide,
   Group,
-  Mesh,
-  MeshBasicNodeMaterial,
   NoToneMapping,
   PerspectiveCamera,
-  PlaneGeometry,
   Scene,
-  SRGBColorSpace,
   Vector2,
   Vector3,
   type WebGPURenderer,
 } from 'three/webgpu';
-import { cos, float, positionLocal, sin, texture, uniform, uv, vec3 } from 'three/tsl';
+import { uniform } from 'three/tsl';
 import meta from './demMeta.json';
 import { demHeightAtUV, MAP_H, MAP_W, MIST_HEX, V_SCALE } from './demFrame';
 import { buildTerrain, loadDem } from './terrain';
@@ -102,16 +95,6 @@ function seeded(seed: number) {
   };
 }
 
-/** The banners' hanja in --font-hanja; waits for the characters they use before painting. */
-let flagFont: Promise<unknown> | null = null;
-function loadFlagFont() {
-  if (!flagFont) {
-    const chars = new Set([...'帥明']);
-    for (const s of Object.values(SCENARIOS)) for (const ch of s.joseon.banner + s.japan.banner + (s.ming?.banner ?? '')) chars.add(ch);
-    flagFont = document.fonts.load(`700 200px ${FONT_HANJA}`, [...chars].join('')).catch(() => undefined);
-  }
-  return flagFont;
-}
 
 const INK = '#1a1612';
 
@@ -300,11 +283,8 @@ export class SelectScene {
     this.demTexture = tex;
     this.heights = heights;
     this.scene.add(buildTerrain(tex, this.segments));
-    for (const faction of ['joseon', 'ming', 'japan'] as Faction[]) {
-      const flag = this.makeFlag(faction);
-      this.flags.push(flag);
-      this.scene.add(flag.group);
-    }
+    // No 3D war-table flags: the owner wants the battles marked by the flat 2D pins alone (SelectCanvas markers), so
+    // nothing modelled rides the map while it glides. with no flags setForces and updateFlags are no-ops.
     if (this.forces) this.setForces(this.forces.id, this.forces.player);
     // Attach first: focus() reads the canvas height to decide how far south to aim, and an unattached canvas reads as 1 px.
     this.attach(this.renderer.domElement);
@@ -522,62 +502,6 @@ export class SelectScene {
     // the sleeve the pole runs through
     ctx.fillStyle = trim;
     ctx.fillRect(w - 24, m - 10, 24, h - 2 * m + 20);
-  }
-
-  private makeFlag(faction: Faction): Flag {
-    const tall = faction === 'japan';
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = tall ? 1300 : 600;
-    const tex = new CanvasTexture(canvas);
-    tex.colorSpace = SRGBColorSpace;
-    tex.anisotropy = 8;
-    const flag: Flag = { faction, group: new Group(), canvas, tex, text: '', base: 0, pos: new Vector3(), goal: new Vector3(), scale: 0, goalScale: 0 };
-    void loadFlagFont().then(() => {
-      if (this.disposed) return;
-      if (!flag.text) return;
-      this.paintFlag(canvas, faction, flag.text);
-      tex.needsUpdate = true;
-    });
-    // The cloth hangs from the pole: to the left for the square flags, to the right for the nobori.
-    const aspect = canvas.height / canvas.width;
-    const geo = new PlaneGeometry(1, aspect, 40, Math.round(40 * aspect));
-    geo.translate(tall ? 0.5 : -0.5, -aspect / 2, 0);
-    const m = new MeshBasicNodeMaterial();
-    m.side = DoubleSide;
-    const d = tall ? uv().x : float(1).sub(uv().x);
-    const v = uv().y;
-    const t = this.clock;
-    const phase = d.mul(7.5).sub(t.mul(2.6)).add(v.mul(1.8));
-    const wave = sin(phase).mul(0.07).add(sin(d.mul(17).sub(t.mul(4.4)).add(v.mul(3))).mul(0.018)).mul(d);
-    const slope = cos(phase).mul(0.5).add(cos(d.mul(17).sub(t.mul(4.4))).mul(0.25));
-    m.positionNode = positionLocal.add(vec3(0, d.mul(d).mul(-0.04), wave));
-    const cloth0 = texture(tex, uv());
-    m.colorNode = cloth0.rgb.mul(slope.mul(d).mul(0.22).add(0.86));
-    // the frayed edge and the flame tongues are cut out of the plane
-    m.opacityNode = cloth0.a;
-    m.alphaTest = 0.5;
-    const cloth = new Mesh(geo, m);
-    const wood = new MeshBasicNodeMaterial({ color: 0x8a8174 });
-    const pole = new Mesh(new CylinderGeometry(0.014, 0.018, aspect + 1.6, 10), wood);
-    pole.position.set(0, -aspect / 2 - 0.2, 0);
-    const finial = new Mesh(new CylinderGeometry(0, 0.04, 0.13, 8), new MeshBasicNodeMaterial({ color: 0xdfe8f2 }));
-    finial.position.set(0, 0.665, 0);
-    flag.group.add(cloth, pole, finial);
-    if (tall) {
-      const bar = new Mesh(new CylinderGeometry(0.011, 0.011, 1.05, 8), wood);
-      bar.rotation.z = Math.PI / 2;
-      bar.position.set(0.5, 0, 0);
-      flag.group.add(bar);
-    }
-    // An ink shadow where the pole meets the map.
-    flag.base = aspect + 1;
-    const shadow = new Mesh(new CircleGeometry(0.32, 28), new MeshBasicNodeMaterial({ color: 0x1b1814, transparent: true, opacity: 0.28, depthWrite: false }));
-    shadow.rotation.x = -Math.PI / 2;
-    shadow.position.set(0, -flag.base + 0.03, 0);
-    flag.group.add(shadow);
-    flag.group.visible = false;
-    return flag;
   }
 
   private updateFlags(dt: number, yaw: number) {
