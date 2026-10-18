@@ -25,6 +25,8 @@ three.js r186 `three/webgpu` + TSL, @react-three/fiber, React 19, zustand, Vite,
 - `.claude/skills/generals-cast` 장수 3D·무기 / `chapters` 아르마다·레판토·트라팔가르 장 / `cinematics` 전투 시네마틱·대사·고증 / `typography` 폰트(전부 Pretendard) / `ui-design` 글래스 UI·간격·라벨 디자인 시스템 / `ship` 운영 배포
 - 생성 원본은 로컬에 쌓지 않음: `npm run assets -- archive`로 S3 콜드 보관(CI는 받지 않음). worktree를 여러 개 만들어 에셋을 복사하지 않음. C: 여유 3 GB 이상 유지.
 
+- **worktree·브랜치는 되도록 만들지 말 것.** 작업은 통합 브랜치(chapters) 하나에서. 부득이하게 만들면(배포용 임시 등) 작업이 끝나는 즉시 junction 해제 → worktree 제거 → 브랜치 삭제까지 반드시 지울 것. 에이전트 isolation:worktree 사용 금지.
+
 ## 에셋
 - `public/`·`assets-src/`의 런타임 바이너리(모델, 텍스처, 오디오, 폰트, 지형)는 내용 해시로 S3에 있고 목록은 커밋된 `assets.json`: 체크아웃 뒤 `npm run assets -- pull`, 바이너리를 추가·변경하면 `npm run assets -- push` 후 `assets.json` 커밋. 생성 원본은 `assets-archive.json`(콜드 보관).
 - 런타임 바이너리도 로컬에 쌓지 않음: `npm run assets -- prune-local`(기본 `public/models`)이 S3에 확인된 사본을 지우고, 개발 서버가 그 파일을 S3에서 받아 캐시(`IMJIN_ASSET_CACHE_MAX`, 기본 2G)에 두고 내줌. Node에서 바이너리를 읽는 테스트는 `runtimePath`(`scripts/lib/remote-assets.mjs`). 로컬 빌드 전엔 `pull --all`.
