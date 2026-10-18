@@ -185,7 +185,7 @@ export class WakeMap {
       const c = Math.cos(h), n = Math.sin(h);
       const sternX = px - c * spec.length * 0.54, sternZ = pz - n * spec.length * 0.54;
       this.stamp(sternX, sternZ, h, spec.beam * 0.78, 0.014 * intensity, 2.8, 2.4);
-      for (const side of [-1, 1]) {
+      for (let side = -1; side <= 1; side += 2) {
         const aft = spec.length * 0.15, width = spec.beam * 0.8;
         this.stamp(sternX - c * aft - n * width * side, sternZ - n * aft + c * width * side, h - side * 0.36, spec.beam * 0.5, 0.008 * intensity, 3.4, 1.4);
       }
@@ -193,10 +193,15 @@ export class WakeMap {
     const c = Math.cos(heading), n = Math.sin(heading);
     const bowX = x + c * spec.length * 0.45, bowZ = z + n * spec.length * 0.45;
     const turn = Math.max(-0.3, Math.min(0.3, ship.turn * Math.abs(ship.speed) * 3));
-    for (const side of [-1, 1]) {
+    for (let side = -1; side <= 1; side += 2) {
       this.stamp(bowX - n * spec.beam * 0.43 * side, bowZ + c * spec.beam * 0.43 * side, heading - side * 0.58, spec.beam * 0.43, 0.014 * fraction * dt * 60 * (1 + side * turn), 2.5, 0.8);
     }
-    this.trails.set(id, { x, z, heading });
+    // Every moving ship passes here every frame: its trail point is updated in place rather than made anew.
+    if (previous) {
+      previous.x = x;
+      previous.z = z;
+      previous.heading = heading;
+    } else this.trails.set(id, { x, z, heading });
   }
 
   /**

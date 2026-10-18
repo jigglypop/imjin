@@ -430,6 +430,26 @@ try {
     }
   });
 
+  await check('the sky its textures already hold is returned as it is, and one they no longer hold is built again', async () => {
+    const first = await loadSky(SKY_PRESETS.day, 'small');
+    const filtered = first.environment.pmremVersion;
+    const uploaded = first.view.version;
+    const again = await loadSky(SKY_PRESETS.day, 'small', first);
+    assert.equal(again.view, first.view);
+    assert.equal(again.environment, first.environment);
+    assert.equal(again.info, first.info);
+    assert.equal(again.environment.pmremVersion, filtered, 'the reflections are not filtered again');
+    assert.equal(again.view.version, uploaded, 'nothing is uploaded again');
+    // The same preset at the other size is another sky: the textures of the first do not fit it.
+    assert.notEqual((await loadSky(SKY_PRESETS.day, 'large', first)).view, first.view);
+    // Once another preset has been written into the textures, `first` is stale: asking for its own preset builds it again.
+    await loadSky(SKY_PRESETS.night, 'small', first);
+    const afterNight = first.environment.pmremVersion;
+    const back = await loadSky(SKY_PRESETS.day, 'small', first);
+    assert.ok(back.environment.pmremVersion > afterNight, 'the day sky is written again');
+    assert.ok(back.info.sunDir.distanceTo(lightDirection(SKY_PRESETS.day)) < 1e-9);
+  });
+
   await check('the clear sky is bluer overhead than at the horizon, and the low sun reddens', () => {
     const clear = new Atmosphere({ light: [0.6, 0.6, 0.53], haze: hazeForFog(SKY_PRESETS.day.fogDensity) });
     const zenith = clear.radiance(0, 1, 0, [0, 0, 0]);

@@ -229,6 +229,15 @@ function envTexture(data: Uint16Array, [w, h]: [number, number]) {
 /** Yields to the browser, so the loading bar paints before the sky takes the main thread for a few dozen milliseconds. */
 const yieldFrame = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
+/** What each sky texture was last written for: the preset, the size and the light that came with it. */
+const contents = new WeakMap<DataTexture, { preset: SkyPreset; size: SkySize; info: SkyInfo }>();
+
+function remember(view: DataTexture, environment: DataTexture, preset: SkyPreset, size: SkySize, info: SkyInfo) {
+  const held = { preset, size, info };
+  contents.set(view, held);
+  contents.set(environment, held);
+}
+
 /**
  * Builds the preset's sky. With `reuse` the new sky is written into the textures of the previous one instead of making
  * new ones: the renderer builds its filtered reflection maps (and the objects that hold them) per texture and never
@@ -236,6 +245,12 @@ const yieldFrame = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
  */
 export async function loadSky(preset: SkyPreset, size: SkySize, reuse?: LoadedSky, signal?: AbortSignal): Promise<LoadedSky> {
   signal?.throwIfAborted();
+  // A sky is a function of its preset and size alone. Textures that already hold the one asked for are returned as they
+  // are: integrating it again, writing it up and filtering the reflections again would end in the same picture.
+  const held = reuse && contents.get(reuse.view);
+  if (reuse && held && held.preset === preset && held.size === size && contents.get(reuse.environment) === held) {
+    return { view: reuse.view, environment: reuse.environment, info: held.info };
+  }
   await yieldFrame();
   signal?.throwIfAborted();
   const built = buildSky(preset, size);
@@ -248,7 +263,11 @@ export async function loadSky(preset: SkyPreset, size: SkySize, reuse?: LoadedSk
     reuse.environment.image.data = built.env;
     reuse.environment.needsUpdate = true;
     reuse.environment.needsPMREMUpdate = true;
+    remember(reuse.view, reuse.environment, preset, size, built.info);
     return { view: reuse.view, environment: reuse.environment, info: built.info };
   }
-  return { view: viewTexture(built.view, built.viewSize), environment: envTexture(built.env, built.envSize), info: built.info };
+  const view = viewTexture(built.view, built.viewSize);
+  const environment = envTexture(built.env, built.envSize);
+  remember(view, environment, preset, size, built.info);
+  return { view, environment, info: built.info };
 }
