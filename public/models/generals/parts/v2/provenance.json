@@ -1,0 +1,37 @@
+{
+  "schema": "imjin.regenerated-pilot-runtime.v1",
+  "model": "meshy-7.1",
+  "providerCredits": 75,
+  "pilotOnly": true,
+  "fullWardrobeAccepted": false,
+  "levels": {
+    "body_yi": {
+      "high": {
+        "path": "public\\models\\generals\\parts\\v2\\body_yi.glb",
+        "bytes": 5130488,
+        "sha256": "956613aad0ff01f6d3762c8abac1d9e8a5ab14280515b7d984b8f0c5ba766f1a",
+        "triangles": 160000
+      },
+      "_lod1": {
+        "path": "public\\models\\generals\\parts\\v2\\body_yi_lod1.glb",
+        "bytes": 2431900,
+        "sha256": "523e3d2bd74349bf0efafae255184fa5c2dd5c3290be8ba0d0732fe9f146f51a",
+        "triangles": 59999
+      }
+    },
+    "armor_joseon_dujeong": {
+      "high": {
+        "path": "public\\models\\generals\\parts\\v2\\armor_joseon_dujeong.glb",
+        "bytes": 6321112,
+        "sha256": "cb62b5f11b513394de5b4efee0fc3d73d27042a0f7bdb801c5cea79dd28fa0a5",
+        "triangles": 159987
+      },
+      "_lod1": {
+        "path": "public\\models\\generals\\parts\\v2\\armor_joseon_dujeong_lod1.glb",
+        "bytes": 3459796,
+        "sha256": "278dbc9b2fa5ed73b9ac8cc5508ad86e612ffe291f2d580ba9639f0a606b3f27",
+        "triangles": 85040
+      }
+    }
+  }
+}

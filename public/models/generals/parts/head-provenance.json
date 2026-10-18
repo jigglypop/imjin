@@ -1,0 +1,95 @@
+{
+  "at": "2026-10-16T18:56:25.404Z",
+  "sources": {
+    "skeleton": {
+      "file": "assets-src/generals-parts-2026-10-17/body_yi_tripo_rig.glb",
+      "sha256": "42a3a87ed96452714d7198ca540e4aefc05cab212a97de0bf29186f7d16982d2"
+    },
+    "head": {
+      "file": "assets-src/generals-parts-2026-10-17/body_yi_rig.glb",
+      "sha256": "73ae76cbdb4cf83af4e472ba1ce61c51c99e2e499e6f12dc34885366a883c2f9"
+    },
+    "idle": {
+      "file": "assets-src/generals-parts-2026-10-17/body_yi_tripo_idle.glb",
+      "sha256": "0850c8a5077a7d270d556407fad54c36339d3d953336bbf34c35a04339ce06f6"
+    },
+    "slash": {
+      "file": "assets-src/generals-parts-2026-10-17/body_yi_tripo_slash.glb",
+      "sha256": "5055194bb51370cd6da62af8102fd624349201661d50cc3841b5e0699c97b537"
+    }
+  },
+  "backup": "F:\\codex-work\\imjin-wardrobe-20261017\\refit",
+  "method": "Retain Tripo hands with 3cm wrist overlap, skeleton and slash clip. Replace the Janus Tripo head with the coherent Meshy face and beard; +90deg Y rotation, head-envelope fit, crop the scalp/nape inside fitted helmets, skin to Tripo Head/NeckTwist02. Preserve retained source triangles and UVs for desktop; simplify the mobile facial patch conservatively with UV weight 2. Author the idle stance from bind transforms.",
+  "wardrobeStance": {
+    "source": "body bind transforms",
+    "durationSeconds": 4,
+    "loweredShouldersDegrees": 70,
+    "joints": 41
+  },
+  "scale": 0.5815809998831425,
+  "shiftX": 0,
+  "shiftY": 0,
+  "facialPatch": {
+    "minForward": 0.0047994391322135925,
+    "maxHeight": 0.91,
+    "frame": "glTF +X forward, +Y up; metres",
+    "reason": "Both fitted shell helmet brims occupy Y .88-.90; retain a frontal patch with hidden overlap beneath helmet and neck curtain."
+  },
+  "sourceHeadBounds": {
+    "min": [
+      -0.10445398837327957,
+      1.4552116394042969,
+      -0.11113278567790985
+    ],
+    "max": [
+      0.10437128692865372,
+      1.850000262260437,
+      0.12600788474082947
+    ]
+  },
+  "oldTripoHeadBounds": {
+    "min": [
+      -0.06876976788043976,
+      0.7499754428863525,
+      -0.05717432498931885
+    ],
+    "max": [
+      0.08436864614486694,
+      0.9795770049095154,
+      0.056070875376462936
+    ]
+  },
+  "newHeadBounds": {
+    "min": [
+      0.00481501454487443,
+      0.7499754428863525,
+      -0.057351451367139816
+    ],
+    "max": [
+      0.07675769180059433,
+      0.9099610447883606,
+      0.05647110939025879
+    ]
+  },
+  "handsTriangles": 10908,
+  "sourceHeadTriangles": 107443,
+  "headTriangles": 36758,
+  "outputs": [
+    {
+      "file": "public/models/generals/parts/body_yi.glb",
+      "bytes": 5933112,
+      "sha256": "a938a486aee7a3c2f07f6fecc2f99e30ef5959867d990693a5008d39e83c6335",
+      "triangles": 47666,
+      "headTriangles": 36758,
+      "handsTriangles": 10908
+    },
+    {
+      "file": "public/models/generals/parts/body_yi_lod1.glb",
+      "bytes": 2858500,
+      "sha256": "f8301d10a32910c308f5e77cce1d4acbb89fda9fa7ef61513c7f3faedbdd5bdb",
+      "triangles": 47666,
+      "headTriangles": 36758,
+      "handsTriangles": 10908
+    }
+  ]
+}

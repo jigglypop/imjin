@@ -194,6 +194,42 @@ export const TREES: Record<string, CommanderTree> = {
     trait: { label: '노장', text: '일흔이 넘도록 싸운 장수: 사기 +10%, 백병 +5%', effect: { morale: 1.1, melee: 1.05 } },
     mastery: { label: '노량의 노장', text: '백병 +8%, 사기 +5%', effect: { melee: 1.08, morale: 1.05 } },
   },
+  lirusong: {
+    hanja: '李如松',
+    branches: ['command', 'gunnery'],
+    trait: { label: '동정 제독', text: '평양성을 되찾은 제독: 사기 +6%, 명중 +4%, 대담한 지휘', effect: { morale: 1.06, accuracy: 1.04, temper: 'bold' } },
+    mastery: { label: '평양성 탈환', text: '장전 +6%, 사기 +6%', effect: { reload: 1.06, morale: 1.06 } },
+  },
+  magui: {
+    hanja: '麻貴',
+    branches: ['command', 'boarding'],
+    trait: { label: '비왜 제독', text: '정유년의 명군을 이끈 제독: 방어 +6%, 사기 +5%', effect: { defense: 1.06, morale: 1.05 } },
+    mastery: { label: '울산 공성', text: '백병 +6%, 방어 +6%', effect: { melee: 1.06, defense: 1.06 } },
+  },
+  liuting: {
+    hanja: '劉綎',
+    branches: ['boarding', 'command'],
+    trait: { label: '유대도', text: '백 근 대도를 휘두른 장수: 백병 +10%', effect: { melee: 1.1 } },
+    mastery: { label: '서로군', text: '백병 +6%, 사기 +6%', effect: { melee: 1.06, morale: 1.06 } },
+  },
+  jijin: {
+    hanja: '季金',
+    branches: ['seamanship', 'gunnery'],
+    trait: { label: '절강 수군', text: '노량에서 싸운 수군 유격장: 속도 +4%, 장전 +5%', effect: { speed: 1.04, reload: 1.05 } },
+    mastery: { label: '노량 협공', text: '명중 +6%, 장전 +5%', effect: { accuracy: 1.06, reload: 1.05 } },
+  },
+  yanghao: {
+    hanja: '楊鎬',
+    branches: ['command', 'seamanship'],
+    trait: { label: '경리', text: '군무를 총괄한 문관: 사기 +6%, 방어 +3%, 신중한 지휘', effect: { morale: 1.06, defense: 1.03, temper: 'cautious' } },
+    mastery: { label: '직산 방어', text: '방어 +6%, 사기 +5%', effect: { defense: 1.06, morale: 1.05 } },
+  },
+  wuweizhong: {
+    hanja: '吳惟忠',
+    branches: ['gunnery', 'boarding'],
+    trait: { label: '척가군', text: '척계광의 절강병을 이끈 유격장: 명중 +6%, 방어 +4%', effect: { accuracy: 1.06, defense: 1.04 } },
+    mastery: { label: '모란봉', text: '명중 +5%, 백병 +6%', effect: { accuracy: 1.05, melee: 1.06 } },
+  },
 };
 
 export const MASTERY_ID = 'mastery';

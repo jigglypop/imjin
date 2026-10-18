@@ -1,0 +1,25 @@
+{
+  "asset": "body-front-v1",
+  "type": "reference-image",
+  "mode": "built-in",
+  "tool": "image_gen.imagegen",
+  "generatedDate": "2026-10-17",
+  "originalPath": "C:/Users/dongh/.codex/generated_images/01a1461e-8fb8-7333-a309-fda9be965fce/exec-1580bc15-ad88-415f-8fa8-8bbef3cbe230.png",
+  "savedPath": "assets-src/generals-regeneration-2026-10-17/references/body-front-v1.png",
+  "sourceGeometry": null,
+  "inputImages": [],
+  "prompt": "Use case: stylized-concept.\nAsset type: NEW fixed anatomical base reference for a modular historical game character, for subsequent image-to-3D production. This must be a new clean design, unrelated to any existing geometry.\nScene/backdrop: perfectly flat neutral mid-grey studio background, no floor line, no objects, restrained even soft studio lighting, no dramatic shadows.\nSubject: exactly ONE Korean male admiral in his late 40s, compact neat moustache and small goatee, sober alert expression, hair in a tight very small topknot with a plain charcoal headband. Natural realistic adult anatomy with approximately eight-head proportions; athletic fit build, moderate shoulder width, proportionate small head, normal neck, normal forearms, not a bodybuilder. Dress him ONLY in a plain fitted dark charcoal long-sleeve undershirt, equally plain fitted charcoal trousers, and simple plain black ankle-to-mid-calf boots. Clear separate waistline, simple realistic cloth seams, understated fabric. All clothing closely follows the underlying anatomy so armor can fit over it later.\nStyle/medium: sober premium realistic 3D game character reference, believable face and anatomy, clean legible construction, restrained material detail; neither cartoon nor statue nor anime.\nComposition/framing: square canvas. STRICT frontal ORTHOGRAPHIC elevation, entirely straight toward the viewer with zero camera yaw, no foreshortening. Full figure from topknot to boot soles occupies 90 percent of canvas height, vertically centered, with generous safe margins around horizontal arms. STRICT symmetric T-POSE: both arms held perfectly horizontal at shoulder height, elbows straight but natural, compact closed fists, fingers not spread; legs straight, feet hip width apart, both boots parallel and toes pointing straight forward. Upright centered spine and head. Show exactly ONE front view only.\nConstraints: NO armor of any kind, NO helmet, NO weapons, NO belt ornament, NO jewelry, NO cloak, NO skirt or robe, NO extra people, NO second view, NO turnaround, NO collage, NO text, NO frame, NO watermark. Preserve a practical neutral fixed body baseline rather than a heroic action pose. Do not oversize the head, hands, shoulders, chest or feet.",
+  "visualReview": {
+    "status": "reference-accepted",
+    "observations": [
+      "Single full frontal figure with arms horizontal and fists closed.",
+      "Plain charcoal close fitting undersuit and boots; no armor, weapon or helmet.",
+      "Natural adult proportions and readable Korean middle-aged face.",
+      "Topknot is compact; grey studio background and full body framing are clear."
+    ],
+    "limitations": [
+      "A single front image does not establish side/back geometry or rig quality.",
+      "Minor shirt and trouser folds remain visible; provider must keep body geometry simple."
+    ]
+  }
+}

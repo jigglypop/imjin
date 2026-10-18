@@ -1,0 +1,24 @@
+{
+  "image_urls": [
+    "${DATA_URI:references/armor_joseon_dujeong_front.png}",
+    "${DATA_URI:references/armor_joseon_dujeong_left.png}",
+    "${DATA_URI:references/armor_joseon_dujeong_back.png}",
+    "${DATA_URI:references/armor_joseon_dujeong_right.png}"
+  ],
+  "ai_model": "meshy-7.1",
+  "geometry_resolution": "2k",
+  "should_remesh": true,
+  "topology": "triangle",
+  "should_texture": true,
+  "enable_pbr": true,
+  "texture_resolution": "4k",
+  "image_enhancement": false,
+  "remove_lighting": true,
+  "auto_size": false,
+  "save_pre_remeshed_model": true,
+  "target_formats": [
+    "glb"
+  ],
+  "multi_view_thumbnails": true,
+  "target_polycount": 200000
+}

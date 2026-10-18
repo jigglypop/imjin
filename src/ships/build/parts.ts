@@ -111,6 +111,19 @@ export class Paint {
   tinted(tint: V3) {
     return new Paint(this.cell, this.size, this.surf, tint, this.rect);
   }
+
+  /**
+   * This rect paint (a square picture) cropped about its centre to the shape of a w x h board, so a crest or emblem
+   * mapped across the whole board stays round instead of stretching with the board.
+   */
+  fit(w: number, h: number): Paint {
+    const r = this.rect;
+    if (!r || !(w > 0) || !(h > 0)) return this;
+    const a = w / h;
+    const cu = a < 1 ? ((r[2] - r[0]) * (1 - a)) / 2 : 0;
+    const cv = a > 1 ? ((r[3] - r[1]) * (1 - 1 / a)) / 2 : 0;
+    return new Paint(this.cell, this.size, this.surf, this.tint, [r[0] + cu, r[1] + cv, r[2] - cu, r[3] - cv]);
+  }
 }
 
 /** Paint factory bound to a faction's atlas layout. */
@@ -531,23 +544,42 @@ export function cloth(b: MeshBuilder, paint: Paint, origin: V3, uAxis: V3, vAxis
   mkGrid(-1);
 }
 
-/** Cloth strip that trails behind a point (pennants, whiskers): triangle or rectangle tapering to `tip` width. */
-export function pennant(b: MeshBuilder, paint: Paint, origin: V3, along: V3, down: V3, length: number, width: number, tip: number, segs: number, o: { flutter?: number; phase?: number } = {}) {
-  const P: V3[][] = [];
+export type PennantOpts = {
+  flutter?: number;
+  phase?: number;
+  /** How far the free end sags below the line `along`, as a fraction of the length. */
+  droop?: number;
+  /** Rows of triangles across the strip: more let the flutter bend it across as well as along. */
+  rows?: number;
+};
+
+/**
+ * Cloth strip that trails behind a point (pennants, whiskers): its hoist edge runs `width` from `origin` toward `down`
+ * and it narrows evenly about its middle line to `tip` at the free end. Drawn on both faces a little apart like cloth().
+ */
+export function pennant(b: MeshBuilder, paint: Paint, origin: V3, along: V3, down: V3, length: number, width: number, tip: number, segs: number, o: PennantOpts = {}) {
   const dir = norm(along);
-  const dn = norm(down);
+  const dn = norm(sub(down, mul(dir, dot(down, dir))));
+  const lat = cross(dir, dn);
+  const rows = o.rows ?? 1;
+  const ph = o.phase ?? 0;
+  const droop = o.droop ?? 0;
+  const mid: V3[] = [];
+  const depth: number[] = [];
   for (let i = 0; i <= segs; i += 1) {
     const t = i / segs;
-    const w = lerp(width, tip, t);
-    const wave = 0.05 * length * Math.sin(t * 5 + (o.phase ?? 0)) * t;
-    const base = add(origin, mul(dir, length * t));
-    P.push([add(base, mul(cross(dir, dn), wave)), add(add(base, mul(dn, w)), mul(cross(dir, dn), wave))]);
+    // A still wave about one and a half bends long, growing toward the fly: the hoist is held, the end swings free.
+    const wave = 0.06 * length * Math.sin(t * 9.5 + ph) * Math.pow(t, 1.5);
+    mid.push(add(origin, add(add(mul(dir, length * t), mul(dn, width / 2 + droop * length * t * t)), mul(lat, wave))));
+    depth.push(lerp(width, tip, t));
   }
-  // i along the length, j downward
-  const sway = (i: number) => (o.flutter ?? 1) * (i / segs);
-  const nrm = cross(dir, dn);
-  grid(b, paint, P, { sway, phase: o.phase, flip: dot(cross(sub(P[1]![0]!, P[0]![0]!), sub(P[0]![1]!, P[0]![0]!)), nrm) < 0, uvFn: (i, j) => paint.map(i / segs, 1 - j) });
-  grid(b, paint, P, { sway, phase: o.phase, flip: dot(cross(sub(P[1]![0]!, P[0]![0]!), sub(P[0]![1]!, P[0]![0]!)), nrm) >= 0, uvFn: (i, j) => paint.map(i / segs, 1 - j) });
+  // i along the length, j across from the top edge down; the flutter grows faster than the length toward the fly.
+  const sway = (i: number) => (o.flutter ?? 1) * Math.pow(i / segs, 1.3);
+  for (const side of [1, -1]) {
+    const P = mid.map((m, i) => Array.from({ length: rows + 1 }, (_, j) => add(m, add(mul(dn, (j / rows - 0.5) * depth[i]!), mul(lat, side * 0.008)))));
+    // grid's normal is dP/di x dP/dj = dir x dn = lat; the back layer faces the other way.
+    grid(b, paint, P, { sway, phase: ph, flip: side < 0, uvFn: (i, j) => paint.map(i / segs, 1 - j / rows) });
+  }
 }
 
 

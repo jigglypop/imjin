@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-17T08:58:35.806Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "transparent",
+    "output_format": "png"
+  },
+  "prompt": "A full-body character reference photograph for image-to-3D reconstruction and auto-rigging, in the look of a live-action costume fitting for a cinematic big-budget historical war film (the hero costume of a film lead in Myeongryang, Hansan, Noryang, Immortal Admiral Yi Sun-sin, a Japanese NHK taiga drama or a Ming-dynasty epic). Exactly one man standing alone in a relaxed 45-degree A-pose for rigging: both arms straight and spread out to the sides, each arm angled exactly 45 degrees below horizontal (halfway between a T-pose and hanging down), so the fists are well away from the body, about one forearm length outside the hips, with wide open sky between each arm and the torso and skirts; shoulders relaxed and low (not shrugged); legs straight and apart, the feet planted wider than the shoulders (an inverted V between the legs), toes forward; head level, facing the camera. BOTH hands are empty, relaxed loosely closed fists, the backs of the hands facing outward, holding nothing at all (the weapon is fitted later): no sword, no weapon, no scabbard on the body, nothing in the hands. Heroic athletic film-lead build: tall, eight heads tall, broad square shoulders, a deep chest, a FLAT stomach and a narrow, tightly cinched waist (a clear V-taper; from the side the belly never pushes out past the chest), the armour tailored and fitted close to the body, never a barrel-shaped robe; a movie-poster hero, never stocky, pot-bellied or chibi. Seen at chest height through a long telephoto lens, orthographic-looking, no perspective distortion. The whole figure fits in the frame with a clear margin above the helmet crest, below the boots and beyond both fists. Soft, even, flat studio light from every side, no hard shadows, no rim light; a plain seamless light grey background, no floor line, no ground shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord and seam clearly separated, believable late-sixteenth-century materials with a soft matte or satin finish: no mirror reflections, no glare, no grime streaks, every surface pattern crisp and readable. His face is the most important part: a striking, heroic, cinematic leading-man face ready for close-ups in film cutscenes: sharp defined bone structure, intense clear eyes with defined irises, natural skin with real pores and fine lines (never waxy or plastic), crisp beard and hair strands. He is Kurushima Michiyuki, a young Japanese pirate-lord about thirty: a wild sharp-featured face, a lean wolfish grin, a narrow jaw, bold thick brows, a clean-shaven chin with only faint stubble, tanned sea-roughened skin. Faction look: a Sengoku-period Japanese daimyo commander as in big-budget Japanese taiga dramas and the Korean Yi Sun-sin films: lacquered tosei-gusoku, silk lacing, an ornate kabuto. A dark green-laced haramaki-style tosei-gusoku with dark iron plates, small sode, kusazuri; an iron kabuto with a small wave-crest maedate and a sea-blue neck guard. The FIRST attached picture is the turnaround of his armour (front, back, left, right): he wears EXACTLY this armour and helmet, every plate, rivet, lacing cord, colour, trim and length as in its front view, filled out by his athletic body (full broad chest, the cuirass at its full width). The SECOND attached picture is a close-up of his face: keep exactly this face, its features, beard, age and skin, photographic. No cape or cloak, no long ribbons or banners flying away from the body, no sashimono back flag; skirts and tassets hang straight close to the legs. No text, no letters, no logo, no border, no watermark. No rising sun flag, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items. Exactly two arms, two legs, two empty fists.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/michiyuki__japan_haramaki_t6/armor.png",
+    "assets-src/generals-cast-2026-10-17/michiyuki__japan_haramaki_t5/face.png"
+  ],
+  "usage": {
+    "input_tokens": 3341,
+    "input_tokens_details": {
+      "image_tokens": 2441,
+      "text_tokens": 900
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 9271
+  }
+}

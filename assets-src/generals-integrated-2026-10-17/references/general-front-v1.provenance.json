@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "status": "candidate-awaiting-parent-review",
+  "asset": "general-front-v1.png",
+  "createdDate": "2026-10-17",
+  "generationMethod": "built-in image_gen.imagegen",
+  "generationRequestCount": 1,
+  "provider3DRequestsSubmitted": 0,
+  "sourceGeneratedImage": "C:/Users/dongh/.codex/generated_images/01a1461e-b3b1-7322-a6cd-3a8617798768/exec-14e8d49e-e3f8-4f02-953b-681290dde6ef.png",
+  "sha256": "5a7d1539c7b09ee1b388e24aed631c9fec4a59a6ae6fb201b304c2f2148e1f0f",
+  "referenceImages": [
+    "../../generals-regeneration-2026-10-17/references/joseon-dujeong-coat-front-v2.png",
+    "../../generals-regeneration-2026-10-17/references/body-front-v1.png"
+  ],
+  "geometryOrScreenshotReferenceUsed": false,
+  "transparentBackground": false,
+  "prompt": "Use case: historical-scene. Asset type: a brand-new integrated full-character FRONT reference photograph for image-to-3D and humanoid rigging.\nImage 1 is a design reference for a red Joseon dujeong armor coat; image 2 is an original fictional Korean admiral casting and neutral T-pose reference. Create ONE NEW COMPLETE CHARACTER wearing his full coherent armor, helmet and boots, holding ONE sword. Do not make an empty garment or a collage of separate pieces.\nSubject: a charismatic heroic late-sixteenth-century Joseon admiral in his forties, an ORIGINAL face and not a real actor, calm fierce eyes, neat black moustache and a short pointed chin beard. Tall, lean heroic anatomy with powerful broad shoulders and a substantial chest; physical head excluding the helmet is only one eighth-and-a-half of his sole-to-skull height. Keep a genuinely small proportionate head, never oversized. Upright neutral spine and level neck, no backward lean.\nHe wears generously cut, THICK and broad-shouldered muted oxblood-red Joseon dujeong armor with realistic woven fabric over hidden steel plates, an evenly spaced regular grid of small aged brass rivets, dark almost-black leather bindings, substantial overlapping shoulder guards and full sleeves. Clear V-shaped dark collar on his FRONT chest beneath his chin, a wide dark leather waistbelt with a restrained rectangular brass/gold buckle CENTER FRONT. The coat has one STRAIGHT vertical center-front closure, a clean central slit below the hips, two straight long skirt panels ending slightly below the knees. No stepped, zigzag or stair-shaped opening.\nA substantial REAL STEEL Joseon helmet sits naturally on his small head: a rounded slightly pointed grey steel bowl with restrained brass seams, no fantasy horns, a short crown finial with a modest red plume close to the helmet, and a protective steel/lamellar neck guard draped around the sides and BACK of his neck. The helmet should feel protective and solid, not a thin cap; it must not enlarge his face or cranium. Only his one face appears through the FRONT opening. Plain dark trousers and exactly TWO tall dark leather boots below the armor hem.\nPose: strict symmetrical T-pose. Both upper arms and forearms extend straight horizontally to his sides at shoulder height. Both elbows straight, shoulders level, both hands compact CLOSED fists, no open fingers. Both feet flat and pointing forward, legs separated enough to be visibly distinct. His LEFT fist (viewer RIGHT) is empty. His RIGHT hand (viewer LEFT) grips exactly ONE beautiful practical hwando sword with the handle passing THROUGH his closed fingers, thumb wrapped around the grip, a small brass guard above the fist, a dark wrapped handle and a modestly curved clean steel blade. The blade points UP AND AWAY from his body toward the upper-left of the image, nearly vertical with a slight outward lean; it never crosses or touches his torso, head, sleeves or boots. Keep this sword attached in the correct hand, no floating weapon, no second sword, no scabbard. The arm itself stays horizontal in a T pose even though the blade points upward.\nComposition: square 1254x1254 canvas. Exact orthographic straight FRONT view, eye-level neutral product camera, no 3/4 angle and no dramatic perspective. Show the complete helmet, both fists, the ENTIRE sword including its tip, all armor panels and both complete boot soles, with a clean margin around everything. Adjust framing to fit the raised blade and T-pose without cutting off any object. Soft flat even studio lighting, neutral light-grey seamless background, no floor line, no cast shadows, natural material colors with clean PBR-readable detail. Photorealistic premium game character production reference, no painterly or toy-plastic look.\nExactly ONE person and ONE sword. No background objects, no stand, no labels, no text, no logos, no border, no diagram, no multiple views.",
+  "visualReview": {
+    "inspected": true,
+    "findings": [
+      "One integrated armored male figure, one substantial steel helmet, one face, two boots.",
+      "Both arms horizontal in T-pose; subject right hand (viewer left) grips one sword; subject left fist empty.",
+      "Broad red studded armor, V collar, center-front brass belt buckle, dark edge bindings.",
+      "Sword tip is inside image but very close to upper border (approximately 8 pixels); evaluate framing before 3D submission.",
+      "Lower coat closure contains a small single offset at slit start; no 3D quality or rigging acceptance is implied by the reference.",
+      "Front candidate only. Back and side generation deferred until parent's front review."
+    ]
+  }
+}

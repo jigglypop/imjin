@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "New wardrobe generation receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "operationId",
+    "provider",
+    "endpoint",
+    "requestSha256",
+    "references",
+    "approval",
+    "submission",
+    "billing",
+    "artifacts"
+  ],
+  "properties": {
+    "schema": {
+      "const": "imjin.regeneration-receipt.v1"
+    },
+    "operationId": {
+      "type": "string"
+    },
+    "provider": {
+      "enum": [
+        "meshy",
+        "tripo"
+      ]
+    },
+    "endpoint": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "requestSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "references": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "view",
+          "path",
+          "sha256",
+          "width",
+          "height"
+        ],
+        "properties": {
+          "view": {
+            "enum": [
+              "front",
+              "left",
+              "back",
+              "right"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 256
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 256
+          }
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "required": [
+        "status",
+        "totalCreditCeiling",
+        "operationCreditReservation",
+        "requestHashBound"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not-authorized",
+            "authorized"
+          ]
+        },
+        "authorizationMessage": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "totalCreditCeiling": {
+          "type": "number",
+          "minimum": 0
+        },
+        "operationCreditReservation": {
+          "type": "number",
+          "minimum": 0
+        },
+        "requestHashBound": {
+          "type": "boolean"
+        }
+      }
+    },
+    "submission": {
+      "type": "object",
+      "required": [
+        "state",
+        "attempts",
+        "taskId"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "prepared",
+            "submitting",
+            "submission-uncertain",
+            "submitted",
+            "queued",
+            "running",
+            "success",
+            "failed",
+            "cancelled",
+            "downloaded",
+            "verified"
+          ]
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "taskId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "intentAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "responseAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lastObservedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "billing": {
+      "type": "object",
+      "required": [
+        "estimatedReservedCredits",
+        "actualConsumedCredits"
+      ],
+      "properties": {
+        "estimatedReservedCredits": {
+          "type": "number",
+          "minimum": 0
+        },
+        "actualConsumedCredits": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "balanceBefore": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "balanceAfter": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "frozenBefore": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "frozenAfter": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "sha256",
+          "bytes"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "role": {
+            "enum": [
+              "raw-glb",
+              "rigged-glb",
+              "texture",
+              "clay-render",
+              "textured-render",
+              "fit-report"
+            ]
+          }
+        }
+      }
+    },
+    "visualReview": {
+      "type": "object"
+    }
+  }
+}

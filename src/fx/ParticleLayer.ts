@@ -350,6 +350,7 @@ export class ParticleLayer {
       a.needsUpdate = true;
     }
     this.sprite.count = n;
+    this.sprite.visible = n > 0;
     this.tmp.set(0, 0, 0);
   }
 }
@@ -551,5 +552,6 @@ export class StreakLayer {
       attr.needsUpdate = true;
     }
     this.sprite.count = total;
+    this.sprite.visible = total > 0;
   }
 }

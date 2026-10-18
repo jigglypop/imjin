@@ -10,7 +10,6 @@ import {
   NoBlending,
   OneFactor,
   OneMinusSrcAlphaFactor,
-  QuadMesh,
   RenderTarget,
   Scene,
   SphereGeometry,
@@ -38,7 +37,6 @@ import {
   positionWorld,
   pow,
   screenCoordinate,
-  screenUV,
   select,
   smoothstep,
   texture,
@@ -85,10 +83,14 @@ export class Clouds {
   readonly mesh: Mesh;
   private readonly marcher: Mesh;
   private readonly marchScene = new Scene();
-  /** The newest accumulated clouds, and the copy of it the next frame reads as history. */
-  private readonly current = new RenderTarget(1, 1, { type: HalfFloatType, depthBuffer: false });
-  private readonly history = new RenderTarget(1, 1, { type: HalfFloatType, depthBuffer: false });
-  private readonly copy: QuadMesh;
+  /**
+   * The target the next march writes, and the newest accumulated clouds, which that march reads as history and the dome
+   * shows. The two swap after every march instead of copying one into the other.
+   */
+  private current = new RenderTarget(1, 1, { type: HalfFloatType, depthBuffer: false });
+  private history = new RenderTarget(1, 1, { type: HalfFloatType, depthBuffer: false });
+  private readonly pastNode: ReturnType<typeof texture>;
+  private readonly shownNode: ReturnType<typeof texture>;
   private readonly size = new Vector2();
   private readonly stepsU: Node;
   private readonly lightStepsU: Node;
@@ -129,6 +131,8 @@ export class Clouds {
       rt.texture.magFilter = LinearFilter;
       rt.texture.generateMipmaps = false;
     }
+    this.pastNode = texture(this.history.texture);
+    this.shownNode = texture(this.history.texture);
 
     const base = this.base;
     const top = this.top;
@@ -239,7 +243,7 @@ export class Clouds {
       const ndc = clip.xy.div(max(clip.w, 1e-5));
       const uv = vec2(ndc.x.mul(0.5).add(0.5), ndc.y.mul(-0.5).add(0.5));
       const inside = clip.w.greaterThan(0).and(uv.x.greaterThan(0)).and(uv.x.lessThan(1)).and(uv.y.greaterThan(0)).and(uv.y.lessThan(1));
-      const past = texture(this.history.texture, uv);
+      const past = vec4(this.pastNode.sample(uv) as unknown as Node);
       return mix(past, marched, select(inside, this.blend, float(1)));
     })();
     m.opacityNode = null;
@@ -247,13 +251,6 @@ export class Clouds {
     marcher.frustumCulled = false;
     this.marcher = marcher;
     this.marchScene.add(marcher);
-
-    const cm = new MeshBasicNodeMaterial();
-    cm.blending = NoBlending;
-    cm.depthTest = false;
-    cm.depthWrite = false;
-    cm.colorNode = texture(this.current.texture, screenUV);
-    this.copy = new QuadMesh(cm);
 
     const dm = new MeshBasicNodeMaterial();
     dm.side = BackSide;
@@ -270,7 +267,7 @@ export class Clouds {
     const view = normalize(positionWorld.sub(cameraPosition));
     const clip = this.marchedVP.mul(vec4(view, 0));
     const ndc = clip.xy.div(max(clip.w, 1e-5));
-    const shown: Node = texture(this.history.texture, vec2(ndc.x.mul(0.5).add(0.5), ndc.y.mul(-0.5).add(0.5)));
+    const shown: Node = this.shownNode.sample(vec2(ndc.x.mul(0.5).add(0.5), ndc.y.mul(-0.5).add(0.5)));
     dm.colorNode = shown.rgb;
     dm.opacityNode = shown.a;
     const mesh = new Mesh(new SphereGeometry(40000, 32, 16), dm);
@@ -310,17 +307,20 @@ export class Clouds {
     this.frameU.value = this.frames % 64;
     this.frames += 1;
     const prev = renderer.getRenderTarget();
+    this.pastNode.value = this.history.texture;
     renderer.setRenderTarget(this.current);
     renderer.render(this.marchScene, camera);
-    renderer.setRenderTarget(this.history);
-    this.copy.render(renderer);
     renderer.setRenderTarget(prev);
+    const written = this.current;
+    this.current = this.history;
+    this.history = written;
+    this.shownNode.value = written.texture;
     rotationProjection(camera, this.marchedVP.value as Matrix4);
     (this.previousVP.value as Matrix4).copy(this.marchedVP.value as Matrix4);
     this.historyValid = true;
   }
 
-  /** Runs the march and the copy once, so their programs are built while the battle is still loading. */
+  /** Runs the march once, so its program is built while the battle is still loading. */
   prewarm(renderer: WebGPURenderer, camera: Camera) {
     this.render(renderer, camera);
     this.historyValid = false;
@@ -330,7 +330,6 @@ export class Clouds {
     for (const rt of [this.current, this.history]) rt.dispose();
     this.marcher.geometry.dispose();
     (this.marcher.material as MeshBasicNodeMaterial).dispose();
-    (this.copy.material as MeshBasicNodeMaterial).dispose();
     this.mesh.geometry.dispose();
     (this.mesh.material as MeshBasicNodeMaterial).dispose();
     this.mesh.removeFromParent();

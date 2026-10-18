@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:50:21.750Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Pertev Mehmed Pasha, Ottoman vizier and commander of the fleet's soldiers, about sixty. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Pertev Mehmed Pasha, Ottoman vizier and commander of the fleet's soldiers, about sixty: a heavy, grave elderly Ottoman face, a long white beard and white moustache, heavy-lidded eyes), in the costume of: Faction look: an Ottoman fleet commander at Lepanto, 1571, as in big-budget Turkish historical series (Magnificent Century) and Ottoman miniatures of the Süleymanic age: The vizier: a riveted mail shirt with steel arm guards (kolçak) under a knee-length crimson silk brocade kaftan with gold patterns, a gold-embroidered sash, loose dark trousers, red leather boots; a large white turban. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_pertev.webp"
+  ],
+  "estimatedUsd": 0.04
+}

@@ -1,0 +1,106 @@
+{
+  "kind": "sword",
+  "hand": "right",
+  "length": 1.21,
+  "notes": "Curved single edge, separate polished bevels, wrapped rayskin grip",
+  "id": "japan_tachi",
+  "faction": "japan",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 4044,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.09809999912977219,
+    1.2399999648332596,
+    0.16879000514745712
+  ],
+  "lodTriangles": 4044,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_tachi.glb",
+      "bytes": 135484,
+      "sha256": "8bd04c03f80953b5b2f3e2f25bd7edbd5d46b3f92ffb15d02f9e2a35ebf8b76c"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_tachi_lod1.glb",
+      "bytes": 135488,
+      "sha256": "9ea13ee4a648bb98d647364b1f89046923cd7f940acf020b93d9d6f8f807383a"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\japan_tachi.blend",
+      "bytes": 153338,
+      "sha256": "f1c3915e9809145c1049348a7625085974d77a24f5a588ff6d6e064ecbef06d1"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_japan_tachi.glb",
+      "bytes": 135484,
+      "sha256": "8bd04c03f80953b5b2f3e2f25bd7edbd5d46b3f92ffb15d02f9e2a35ebf8b76c",
+      "triangles": 4044,
+      "vertices": 4334,
+      "min": [
+        -0.04904999956488609,
+        -0.13459999859333038,
+        -0.06649000197649002
+      ],
+      "max": [
+        0.04904999956488609,
+        1.1053999662399292,
+        0.1023000031709671
+      ],
+      "dimensions": [
+        0.09809999912977219,
+        1.2399999648332596,
+        0.16879000514745712
+      ],
+      "steelOutwardVertices": 104,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_japan_tachi_lod1.glb",
+      "bytes": 135488,
+      "sha256": "9ea13ee4a648bb98d647364b1f89046923cd7f940acf020b93d9d6f8f807383a",
+      "triangles": 4044,
+      "vertices": 4334,
+      "min": [
+        -0.04904999956488609,
+        -0.13459999859333038,
+        -0.06649000197649002
+      ],
+      "max": [
+        0.04904999956488609,
+        1.1053999662399292,
+        0.1023000031709671
+      ],
+      "dimensions": [
+        0.09809999912977219,
+        1.2399999648332596,
+        0.16879000514745712
+      ],
+      "steelOutwardVertices": 104,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/japan_tachi.blend",
+    "bytes": 153338,
+    "sha256": "f1c3915e9809145c1049348a7625085974d77a24f5a588ff6d6e064ecbef06d1"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/japan_tachi.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 2646,
+    "sha256": "c60cb318fc69d25c399de81e34bd2b62e8a8c79d5b0ccbd1a4514c215ad44632"
+  }
+}

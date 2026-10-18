@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:30:54.822Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Don Alonso Martínez de Leiva, Knight of Santiago, about forty-four. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Don Alonso Martínez de Leiva, Knight of Santiago, about forty-four: a handsome, dashing Spanish face, dark eyes, black hair, a pointed black beard and a curled moustache), in the costume of: Faction look: a Spanish commander of the Armada of 1588, a grandee or veteran sea captain of Philip II, as in big-budget Spanish period films and series (Alatriste, Isabel): The favourite of the fleet: a bright gilt-etched steel half-armour over a black doublet, a small ruff, the red sword-shaped cross of the Order of Santiago embroidered on a white silk sash across the breastplate, a crimson sash at the waist, black trunk hose and boots; a polished steel morion with a short red plume. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_leyva.webp"
+  ],
+  "estimatedUsd": 0.04
+}

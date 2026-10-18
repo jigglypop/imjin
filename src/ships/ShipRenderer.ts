@@ -505,6 +505,7 @@ export class ShipRenderer {
   private build() {
     for (const child of [...this.group.children]) this.group.remove(child);
     this.batches.clear();
+    this.parts = null;
     for (const key of Object.keys(this.assets)) this.buildKey(key);
   }
 
@@ -581,6 +582,7 @@ export class ShipRenderer {
     const cap = Math.max(1, this.capacity.get(key) ?? 0);
     if (!this.capacity.get(key)) return;
     {
+      this.parts = null;
       this.batches.set(
         key,
         asset.lods.map((lod, level) => {
@@ -597,11 +599,20 @@ export class ShipRenderer {
     for (const batch of [...[...this.batches.values()].flat(), ...this.cuts.values()]) this.release(batch);
     this.batches.clear();
     this.cuts.clear();
+    this.parts = null;
     this.group.removeFromParent();
   }
 
+  /** Every batch and part, whole and cut away, listed once whenever a batch is made instead of twice every frame. */
+  private parts: Batch[] | null = null;
+
+  private allParts() {
+    this.parts ??= [...[...this.batches.values()].flat(), ...this.cuts.values()].flatMap(batchParts);
+    return this.parts;
+  }
+
   begin() {
-    for (const batch of [...[...this.batches.values()].flat(), ...this.cuts.values()]) for (const part of batchParts(batch)) part.count = 0;
+    for (const part of this.allParts()) part.count = 0;
   }
 
   private cutBatch(key: string) {
@@ -610,6 +621,7 @@ export class ShipRenderer {
     const lod = this.assets[key]!.lods[0]!;
     batch = this.makeBatch(lod, CUT_CAP, 0, true);
     this.cuts.set(key, batch);
+    this.parts = null;
     return batch;
   }
 
@@ -639,7 +651,7 @@ export class ShipRenderer {
   }
 
   end() {
-    for (const batch of [...[...this.batches.values()].flat(), ...this.cuts.values()].flatMap(batchParts)) {
+    for (const batch of this.allParts()) {
       batch.mesh.count = batch.count;
       // Most batches hold no ship in a given frame (a model at the levels nobody is near or far enough for). Hidden, three
       // skips them; shown, it prepared each one and sent its buffers in every pass for nothing.

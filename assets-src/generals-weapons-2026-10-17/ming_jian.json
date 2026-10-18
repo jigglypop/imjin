@@ -1,0 +1,106 @@
+{
+  "kind": "sword",
+  "hand": "right",
+  "length": 1.07,
+  "notes": "Straight double edge with ridge, cast guard and brass inlay",
+  "id": "ming_jian",
+  "faction": "ming",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 4104,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.03468186408281326,
+    1.2890270948410034,
+    0.11028570681810379
+  ],
+  "lodTriangles": 4104,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_jian.glb",
+      "bytes": 136916,
+      "sha256": "43b590a4a9544ebc2d3a83d2875ecfcefd0574f169b02e888d653ab3bd5f9ada"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_jian_lod1.glb",
+      "bytes": 136920,
+      "sha256": "54a57b18fcb74e94026fdad21e64b42a5724f87a385ce18161212fd69b8a52df"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\ming_jian.blend",
+      "bytes": 156792,
+      "sha256": "70e0132e1e90b74d9221f300feff216afcfd525e0ac44d0a7e40736a605c9b51"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_ming_jian.glb",
+      "bytes": 136916,
+      "sha256": "43b590a4a9544ebc2d3a83d2875ecfcefd0574f169b02e888d653ab3bd5f9ada",
+      "triangles": 4104,
+      "vertices": 4380,
+      "min": [
+        -0.017000000923871994,
+        -0.29002708196640015,
+        -0.055142853409051895
+      ],
+      "max": [
+        0.01768186315894127,
+        0.9990000128746033,
+        0.055142853409051895
+      ],
+      "dimensions": [
+        0.03468186408281326,
+        1.2890270948410034,
+        0.11028570681810379
+      ],
+      "steelOutwardVertices": 168,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_ming_jian_lod1.glb",
+      "bytes": 136920,
+      "sha256": "54a57b18fcb74e94026fdad21e64b42a5724f87a385ce18161212fd69b8a52df",
+      "triangles": 4104,
+      "vertices": 4380,
+      "min": [
+        -0.017000000923871994,
+        -0.29002708196640015,
+        -0.055142853409051895
+      ],
+      "max": [
+        0.01768186315894127,
+        0.9990000128746033,
+        0.055142853409051895
+      ],
+      "dimensions": [
+        0.03468186408281326,
+        1.2890270948410034,
+        0.11028570681810379
+      ],
+      "steelOutwardVertices": 168,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/ming_jian.blend",
+    "bytes": 156792,
+    "sha256": "70e0132e1e90b74d9221f300feff216afcfd525e0ac44d0a7e40736a605c9b51"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/ming_jian.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 2322,
+    "sha256": "f11559282a654d7f219e8300afa5b1a246ef6b64042947be94f6a02dac14f390"
+  }
+}

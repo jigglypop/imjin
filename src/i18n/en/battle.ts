@@ -125,6 +125,10 @@ export const EN_BATTLE: Record<string, string> = {
   '명령 펼치기': 'Show orders',
   '명령 접기': 'Hide orders',
   '지휘': 'Command',
+  '검술': 'Swordplay',
+  '창술': 'Spearplay',
+  '궁술': 'Archery',
+  '이 장수의 창술·궁술 동작은 준비 중입니다': 'Spear and bow motions for this general are coming soon',
 
   // ---- HUD layout: full, simplified, folded to edge tabs
   '전체': 'Full',

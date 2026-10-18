@@ -1,0 +1,23 @@
+{
+  "task": "01a1459f-595d-73df-8658-24400353a73a",
+  "endpoint": "multi-image-to-3d",
+  "at": "2026-10-16T16:50:41.490Z",
+  "inputs": [
+    "front",
+    "yi_yi_tongjesa_back_t.png"
+  ],
+  "request": {
+    "ai_model": "meshy-7.1",
+    "should_texture": true,
+    "enable_pbr": true,
+    "texture_resolution": "8k",
+    "should_remesh": false,
+    "image_enhancement": false,
+    "remove_lighting": true,
+    "target_formats": [
+      "glb"
+    ],
+    "geometry_resolution": "2k"
+  },
+  "credits": 40
+}

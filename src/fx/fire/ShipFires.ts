@@ -264,7 +264,7 @@ export class ShipFires {
       const i = hot[Math.floor(Math.random() * hot.length)]!;
       const s = b.sites[i]!;
       views.localToWorld(ship.id, s.x + rnd(-1, 1), s.y + 0.8 + 1.2 * b.heat[i]!, s.z + rnd(-0.8, 0.8), this.q);
-      this.plume.emit({ x: this.q.x, y: this.q.y, z: this.q.z, vx: rnd(-0.8, 0.8), vy: rnd(4, 7) * (0.6 + 0.4 * level), vz: rnd(-0.8, 0.8), life: rnd(26, 36) * (0.7 + 0.3 * level), size0: rnd(4, 7) * scale, size1: rnd(30, 50) * (0.5 + 0.7 * level) * scale, alpha: 0.6 + 0.38 * sooty, shade: 0.24 - 0.17 * sooty, glow: b.heat[i]! * (0.5 + 0.5 * level), baseY: s.y, drag: 0.35, lift: 1.1 + 0.4 * level, wind: 0.8 });
+      this.plume.emit({ x: this.q.x, y: this.q.y, z: this.q.z, vx: rnd(-0.8, 0.8), vy: rnd(4, 7) * (0.6 + 0.4 * level), vz: rnd(-0.8, 0.8), life: rnd(21, 29) * (0.7 + 0.3 * level), size0: rnd(4, 7) * scale, size1: rnd(24, 40) * (0.5 + 0.7 * level) * scale, alpha: 0.5 + 0.3 * sooty, shade: 0.24 - 0.17 * sooty, glow: b.heat[i]! * (0.5 + 0.5 * level), baseY: s.y, drag: 0.35, lift: 1.1 + 0.4 * level, wind: 0.8 });
     }
     // Sparks and embers going up in the heat and drifting off downwind.
     b.emberAcc = Math.min(20, b.emberAcc + (2 + 16 * level) * k * dt);
@@ -399,7 +399,7 @@ export class ShipFires {
       p.smokeAcc -= 1;
       const j = Math.floor(Math.random() * (p.flot.length / 3)) * 3;
       const g = 0.08 + 0.25 * (1 - left);
-      this.plume.emit({ x: p.flot[j]!, y: h + 1.2, z: p.flot[j + 1]!, vx: rnd(-0.5, 0.5), vy: rnd(3, 5.5) * (0.5 + 0.5 * left), vz: rnd(-0.5, 0.5), life: rnd(20, 30), size0: rnd(3, 4), size1: rnd(18, 30) * Math.sqrt(p.L / 40) * (0.5 + 0.5 * left), alpha: 0.35 + 0.5 * left * p.heat, shade: g, glow: fade, baseY: h, drag: 0.35, lift: 1, wind: 0.85 });
+      this.plume.emit({ x: p.flot[j]!, y: h + 1.2, z: p.flot[j + 1]!, vx: rnd(-0.5, 0.5), vy: rnd(3, 5.5) * (0.5 + 0.5 * left), vz: rnd(-0.5, 0.5), life: rnd(20, 30), size0: rnd(3, 4), size1: rnd(18, 30) * Math.sqrt(p.L / 40) * (0.5 + 0.5 * left), alpha: 0.28 + 0.4 * left * p.heat, shade: g, glow: fade, baseY: h, drag: 0.35, lift: 1, wind: 0.85 });
     }
     // Steam off the spot where the hull went under, for the first seconds.
     if (p.age < 6) {

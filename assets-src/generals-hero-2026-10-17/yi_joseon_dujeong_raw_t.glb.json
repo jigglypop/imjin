@@ -1,0 +1,22 @@
+{
+  "task": "01a145b0-62c8-72d6-beab-bb998a50e1a8",
+  "endpoint": "image-to-3d",
+  "at": "2026-10-16T17:09:14.272Z",
+  "inputs": [
+    "front"
+  ],
+  "request": {
+    "ai_model": "meshy-7.1",
+    "should_texture": true,
+    "enable_pbr": true,
+    "texture_resolution": "8k",
+    "should_remesh": false,
+    "image_enhancement": false,
+    "remove_lighting": true,
+    "target_formats": [
+      "glb"
+    ],
+    "geometry_resolution": "4k"
+  },
+  "credits": 40
+}

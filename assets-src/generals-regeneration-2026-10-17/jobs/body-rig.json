@@ -1,0 +1,59 @@
+{
+  "schema": "imjin.meshy-pilot-job.v1",
+  "operation": "body-rig",
+  "endpoint": "rigging",
+  "createdAt": "2026-10-16T19:33:38.848Z",
+  "status": "SUCCEEDED",
+  "reservedCredits": 5,
+  "requestSha256": "bdfb97f77903b6b8092affb3770541f12d019f287b5468a744633894ed311816",
+  "references": [],
+  "request": {
+    "input_task_id": "01a1462d-9bb0-766b-97d9-3671717404e2",
+    "height_meters": 1.8
+  },
+  "balanceBefore": {
+    "balance": 563,
+    "monthly_credits": 70,
+    "permanent_credits": 493,
+    "monthly_resets_at": 1794756016000
+  },
+  "createAttempts": 1,
+  "taskId": "01a14634-aa68-729b-92ef-e0b3f937a1c6",
+  "submittedAt": "2026-10-16T19:33:44.613Z",
+  "progress": 100,
+  "lastObservedAt": "2026-10-16T19:35:00.143Z",
+  "consumedCredits": 5,
+  "balanceAfter": {
+    "balance": 558,
+    "monthly_credits": 65,
+    "permanent_credits": 493,
+    "monthly_resets_at": 1794756016000
+  },
+  "downloads": {
+    "rigged_character_glb_url": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/body-rig/rigged_character_glb_url.glb",
+      "bytes": 34294284,
+      "sha256": "d2b0125fc94a6f54588bb3743446b759c5e1c79430906e5c12882603039563dc"
+    },
+    "basic_animations_walking_glb_url": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/body-rig/basic_animations_walking_glb_url.glb",
+      "bytes": 34274792,
+      "sha256": "87ecddf6c5de12a0c32c96f575e5bddb127c955205d710012e5848cf7087a635"
+    },
+    "basic_animations_walking_armature_glb_url": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/body-rig/basic_animations_walking_armature_glb_url.glb",
+      "bytes": 89908,
+      "sha256": "a72e481a0748538d36dfbba9fad8b84600be766b483b7dd6bf3c2652e900c64c"
+    },
+    "basic_animations_running_glb_url": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/body-rig/basic_animations_running_glb_url.glb",
+      "bytes": 34264168,
+      "sha256": "691f79adb72acf8cb79d5a7f397948a00aa1429ac6b47b8909c8531d02f327ec"
+    },
+    "basic_animations_running_armature_glb_url": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/body-rig/basic_animations_running_armature_glb_url.glb",
+      "bytes": 79276,
+      "sha256": "868148ccba480507c77818d18feb240d3bd919f6b27d15b90556e7deaf26f1ad"
+    }
+  }
+}

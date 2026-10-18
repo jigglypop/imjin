@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-16T17:33:30.471Z",
+  "image": {
+    "model": "gpt-image-2.5-sunburst",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "A character reference photograph for image-to-3D reconstruction and auto-rigging, live-action and photographic. Exactly one man in a strict T-pose: both arms straight out to the sides at shoulder height, perfectly level, both hands clenched into compact fists, legs straight, feet a little apart and flat, the spine straight, the neck vertical, the head level and stacked above the shoulders. Seen at chest height through a long telephoto lens with no perspective distortion; the whole figure inside the square frame with a clear margin all round, its height filling about nine tenths of the frame. Soft, even, flat studio light from every side, no hard shadows; a plain seamless very light grey background, no floor line, no cast shadow, nothing else in the picture. No text, no letters, no logo, no border. No painting or illustration look, no plastic CGI look. Seen straight from the front. Heroic film-lead proportions, the same for every general: eight and a half heads tall, long legs with the crotch at half his height, broad square shoulders, a deep chest, a narrow waist, a strong neck; lean and powerful. He is Yi Sun-sin, the Joseon admiral, in his late forties, a long oval face, high cheekbones, a thin moustache and a long narrow chin beard; the attached casting photograph is his face: keep it exactly. He wears only close-fitting plain white cotton underclothes (a thin long-sleeved undershirt and ankle-length under-trousers, snug to the body so its shape reads), plain white cotton socks, no shoes; his hair is drawn up into a small tight topknot held by a fine black horsehair headband (manggeon) close to the skull, nothing else on his head. No armour, no weapon, no belt, no jewellery.",
+  "refs": [
+    "assets-src/generals-hero-2026-10-17/yi_joseon_dujeong_cast_a.png"
+  ],
+  "usage": {
+    "input_tokens": 1922,
+    "input_tokens_details": {
+      "image_tokens": 1521,
+      "text_tokens": 401
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 7852
+  }
+}

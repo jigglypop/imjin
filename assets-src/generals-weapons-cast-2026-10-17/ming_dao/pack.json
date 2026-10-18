@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-17T05:44:42.753Z",
+  "levels": {
+    "_lod0": {
+      "triangles": 40000,
+      "bytes": 1349448,
+      "length": 1.05,
+      "grip": 0.19
+    },
+    "_lod1": {
+      "triangles": 4990,
+      "bytes": 202328,
+      "length": 1.05,
+      "grip": 0.19
+    }
+  }
+}

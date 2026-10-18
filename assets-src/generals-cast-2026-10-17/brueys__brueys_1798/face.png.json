@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T15:08:46.092Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of François-Paul Brueys d'Aigalliers, French vice-admiral, forty-five. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (François-Paul Brueys d'Aigalliers, French vice-admiral, forty-five: a long, serious, aristocratic southern French face, powdered grey hair, clean-shaven, grave eyes), in the costume of: Faction look: a French Navy officer of the Napoleonic wars, 1798-1805, as in big-budget Napoleonic films: The admiral at the Nile, 1798: a vice-amiral's dark navy-blue tailcoat with the collar, cuffs and front edges embroidered with gold oak leaves, gold epaulettes, a red-white-blue sash at the waist, white waistcoat and breeches, black boots; a black bicorne with gold edging and a tricolour cockade. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_brueys.webp"
+  ],
+  "estimatedUsd": 0.04
+}

@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:39:54.553Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Müezzinzade Ali Pasha, Kapudan Pasha of the Ottoman fleet, about fifty. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Müezzinzade Ali Pasha, Kapudan Pasha of the Ottoman fleet, about fifty: a strong, proud Ottoman Turkish face, a full black beard and moustache, dark commanding eyes), in the costume of: Faction look: an Ottoman fleet commander at Lepanto, 1571, as in big-budget Turkish historical series (Magnificent Century) and Ottoman miniatures of the Süleymanic age: The Grand Admiral: a mail-and-plate shirt (krug) of riveted mail set with small polished steel plates, worn under a knee-length gold-and-green silk brocade kaftan open at the front with frog fastenings, a broad crimson silk sash, loose dark red trousers tucked into yellow leather boots; a tall white turban wound round a red cap, with a small jewelled aigrette and a short heron plume. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_alipasha.webp"
+  ],
+  "estimatedUsd": 0.04
+}

@@ -147,7 +147,7 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
         const y1 = y0 + plan.parapet - 0.55;
         const sh = variant === 1 ? shields[1]! : variant === 2 ? shields[0]! : shields[(i + (side > 0 ? 1 : 0)) % 2]!;
         b.quadF(stain, [[x - wb / 2 - 0.08, y0 - 0.06, z], [x + wb / 2 + 0.08, y0 - 0.06, z], [x + wb / 2 + 0.08, y1 + 0.06, z], [x - wb / 2 - 0.08, y1 + 0.06, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
-        b.quadF(sh, [[x - wb / 2, y0, z + side * 0.012], [x + wb / 2, y0, z + side * 0.012], [x + wb / 2, y1, z + side * 0.012], [x - wb / 2, y1, z + side * 0.012]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+        b.quadF(sh.fit(wb, y1 - y0), [[x - wb / 2, y0, z + side * 0.012], [x + wb / 2, y0, z + side * 0.012], [x + wb / 2, y1, z + side * 0.012], [x - wb / 2, y1, z + side * 0.012]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
         for (const dx of [-1.2, 1.2]) {
           const xs = x + dx;
           b.quadF(dark, [[xs - 0.07, deck + 0.5, z + side * 0.01], [xs + 0.07, deck + 0.5, z + side * 0.01], [xs + 0.07, deck + plan.parapet - 0.4, z + side * 0.01], [xs - 0.07, deck + plan.parapet - 0.4, z + side * 0.01]], [0, 0, side]);
@@ -168,7 +168,7 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
   if (lod < 2) {
     const xb = L / 2 + 0.03;
     const face = shields[variant === 1 ? 0 : 1]!;
-    b.quadF(face, [[xb, deck - 3.4, -1.8], [xb, deck - 3.4, 1.8], [xb, deck - 0.4, 1.8], [xb, deck - 0.4, -1.8]], [1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    b.quadF(face.fit(3.6, 3.0), [[xb, deck - 3.4, -1.8], [xb, deck - 3.4, 1.8], [xb, deck - 0.4, 1.8], [xb, deck - 0.4, -1.8]], [1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
     box(b, timber.tinted(tintV), [-L / 2 - 0.55, -2.2, -0.2], [-L / 2 - 0.05, 1.3, 0.2], { grain: 1 });
     box(b, timber, [-L / 2 - 0.5, 1.3, -0.14], [-L / 2 - 0.25, deck + 1.0, 0.14], { grain: 1 });
   }
@@ -200,7 +200,7 @@ export function buildPanokseon(variant: number, lod: Lod): MeshData {
     if (lod < 2) {
       const fl = variant === 0 ? ['flags_a', 'su'] : variant === 1 ? ['flags_a', 'jang'] : ['flags_a', 'tiger'];
       if (i === 0) flag(ctx, { pole: [m.x, deck + m.h + 0.4, 0], poleH: 1.0, w: variant === 0 ? 2.5 : 1.7, h: variant === 0 ? 2.3 : 1.6, sheet: fl[0]!, flag: fl[1]!, phase: 2.1, wood: timber });
-      else if (i === 1) longPennant(ctx, fl[0] === 'flags_a' ? clothPatch(ctx, 'flags_a', 'red') : clothPatch(ctx, 'flags_b', 'blue'), [m.x - 0.1, deck + m.h - 0.1, 0], 7.5, 0.8, 0.6);
+      else if (i === 1) longPennant(ctx, fl[0] === 'flags_a' ? clothPatch(ctx, 'flags_a', 'red') : clothPatch(ctx, 'flags_b', 'blue'), [m.x - 0.1, deck + m.h - 0.1, 0], 6.2, 0.8, 0.6);
     }
   });
 

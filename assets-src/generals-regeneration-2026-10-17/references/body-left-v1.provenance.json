@@ -1,0 +1,31 @@
+{
+  "asset": "body-left-v1",
+  "type": "reference-image",
+  "view": "left",
+  "orientation": "subject left profile faces image right",
+  "mode": "built-in",
+  "tool": "image_gen.imagegen",
+  "generatedDate": "2026-10-17",
+  "originalPath": "C:/Users/dongh/.codex/generated_images/01a1461e-8fb8-7333-a309-fda9be965fce/exec-ea8d0b63-91e2-4c84-bf19-25d254c73f38.png",
+  "savedPath": "assets-src/generals-regeneration-2026-10-17/references/body-left-v1.png",
+  "sourceGeometry": null,
+  "inputImages": [
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/body-front-v1.png",
+      "role": "approved body, clothing, pose, scale and identity"
+    }
+  ],
+  "prompt": "Use case: identity-preserve.\nAsset type: STRICT SUBJECT-LEFT PROFILE of the SAME fixed anatomical game character base, one single image for consistent multi-view image-to-3D.\nInput image 1 is the approved exact FRONT person. Preserve his identity, Korean male late-40s face with compact moustache and small goatee, tiny tight topknot, plain charcoal headband, natural athletic approximately eight-head proportions, body volumes, clothing, boots, pose and image scale. Rotate the camera precisely 90 degrees to see his LEFT anatomical side. The face/nose/chest/toes point to the RIGHT edge of the image. The viewer sees the LEFT ear and LEFT cheek. This is a true 90-degree side elevation, not three-quarter and not a rotated frontal face.\nKeep the exact plain close-fitting dark charcoal long-sleeve undershirt and charcoal trousers and simple plain black mid-calf boots. No armor, helmet, weapon, cloak, jewelry, belt ornaments, props or other person. Realistic modest physique, normal neck/chest/abdomen, not a barrel chest or bodybuilder. Match his face rather than inventing a new man.\nCRITICAL T-POSE SIDE PROJECTION: The body is still in the same unchanged symmetric T-pose from the front image. Both straight arms extend LATERALLY out of the body's shoulders, perpendicular to the sagittal plane. Therefore in this strict side orthographic view, the NEAR LEFT ARM points straight toward the CAMERA, is seen END-ON at shoulder height, and overlaps its own shoulder. Show a compact closed fist/end-on foreshortened forearm at shoulder level, approximately y=265; the FAR RIGHT ARM points away from camera and is hidden behind the near arm/shoulder. Arms must NOT hang down, must NOT reach forward toward the direction of the face, and must NOT stretch across the image to the right or left. Do not change T-pose to A-pose. The near compact fist should sit in front of the shoulder in projection, not over the face.\nUpright straight spine and legs, same hip-width spacing with feet parallel; side silhouette naturally overlaps the far leg because camera is exactly on his left. Boot toes face RIGHT. Full figure remains centered horizontally. One head, no extra limbs, normal anatomical hands.\nComposition: 1254x1254 square; exactly one LEFT PROFILE view, fixed orthographic scale. Topknot top approximately y=15, shoulder/arm axis y=265, waist y=510, knees y=850, soles y=1190. Same full-body height and margins as input; do not zoom in to fill the mostly empty side-profile canvas. Identical neutral mid-grey flat studio background without floor line, even soft light, sober premium realistic 3D game reference rendering. No perspective, no yaw, no collage, no turnaround sheet, no text or watermark.",
+  "visualReview": {
+    "status": "selected-reference-not-3d-accepted",
+    "observations": [
+      "Strict left-side profile faces right; one face and compact beard/topknot/headband.",
+      "Near arm is viewed end-on with closed fist at shoulder height; far arm hidden, neither arm hanging nor reaching in facial direction.",
+      "Full body, aligned head/waist/boots, plain charcoal undersuit and black boots, no armor."
+    ],
+    "limitations": [
+      "Generated orthographic side silhouette is approximate rather than a render from the front view mesh.",
+      "Leg and hand hidden surfaces still require inspection after 3D generation."
+    ]
+  }
+}

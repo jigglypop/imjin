@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-16T16:35:35.225Z",
+  "image": {
+    "model": "gpt-image-2.5-sunburst",
+    "size": "2048x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "The attached picture is the front view of a character reference for image-to-3D reconstruction. Make the matching view of the exact same man in the exact same costume and the exact same pose, seen from directly behind, at the same height and scale and position in the frame: the back of the helmet, its neck curtain and plume, the straight flat back of the coat with its rivet pattern, the belt, the coat skirts and the boots; the elbows show at his sides; nothing of his face. Same soft, even, flat studio light and the same plain seamless very light grey background, no floor line, no shadow. Everything consistent with the front view: colours, materials, trims, lengths, proportions. No text, no letters, no logo, no border. No painting or illustration look, no plastic CGI look.",
+  "refs": [
+    "assets-src/generals-hero-2026-10-17/yi_yi_tongjesa_front_u1.png"
+  ],
+  "usage": {
+    "input_tokens": 1702,
+    "input_tokens_details": {
+      "image_tokens": 1518,
+      "text_tokens": 184
+    },
+    "output_tokens": 3223,
+    "output_tokens_details": {
+      "image_tokens": 3223,
+      "text_tokens": 0
+    },
+    "total_tokens": 4925
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "task": "56df4db9-1b3c-46fe-a87c-8f122bb6d998",
+  "body": {
+    "type": "animate_rig",
+    "original_model_task_id": "2481768c-918e-419d-8390-7137564209b2",
+    "out_format": "glb",
+    "rig_type": "biped",
+    "spec": "tripo"
+  },
+  "at": "2026-10-17T05:18:59.406Z",
+  "credits": 25
+}

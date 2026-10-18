@@ -386,12 +386,12 @@ export class Effects {
       const vx = rnd(-spread, spread);
       const vz = rnd(-spread, spread);
       if (i < 2) {
-        const s = rnd(1.3, 2.4) * power;
-        this.debris.spawn(Piece.Plank, x, y, z, vx * 0.7, rnd(4, 15), vz * 0.7, s, s * 1.3, s * 1.3, rnd(14, 26));
+        const s = rnd(0.9, 1.6) * power;
+        this.debris.spawn(Piece.Plank, x, y, z, vx * 0.7, rnd(4, 15), vz * 0.7, s, s * 0.9, s * 0.9, rnd(14, 26));
       } else if (r < 0.5) {
-        this.debris.spawn(Piece.Splinter, x, y, z, vx * 1.3, rnd(5, 19), vz * 1.3, rnd(0.9, 2.8) * power, rnd(1.4, 2.4), rnd(1.4, 2.4), rnd(10, 20), 1.6);
+        this.debris.spawn(Piece.Splinter, x, y, z, vx * 1.3, rnd(5, 19), vz * 1.3, rnd(0.6, 1.8) * power, rnd(1.2, 2), rnd(1.2, 2), rnd(10, 20), 1.6);
       } else if (r < 0.82) {
-        const s = rnd(0.45, 1.2) * power;
+        const s = rnd(0.4, 0.95) * power;
         this.debris.spawn(Piece.Plank, x, y, z, vx, rnd(4, 17), vz, s, s, s, rnd(14, 26));
       } else {
         const s = rnd(0.4, 1.1) * power;
@@ -487,13 +487,13 @@ export class Effects {
     // A heavy arrow (daejanggun-jeon) is a log of oak with an iron head: more timber, bigger pieces.
     const power = ammo === 'arrow' ? 1.35 : 1;
     this.shatter(x, y, z, this.n((10 + damage * 1.8) * power), power, 12);
-    for (let i = 0; i < 9; i += 1) {
-      this.smoke.emit({ x, y, z, vx: rnd(-6, 6), vy: rnd(1, 7), vz: rnd(-6, 6), life: rnd(3, 7), size0: 1.2, size1: rnd(6, 11), alpha: 0.55, r: 0.5, g: 0.42, b: 0.32, drag: 1.8, lift: 0.3 });
+    for (let i = 0; i < 7; i += 1) {
+      this.smoke.emit({ x, y, z, vx: rnd(-6, 6), vy: rnd(1, 6), vz: rnd(-6, 6), life: rnd(2.5, 5.5), size0: 1.2, size1: rnd(5, 9), alpha: 0.42, r: 0.5, g: 0.42, b: 0.32, drag: 1.8, lift: 0.3 });
     }
     this.sparks(x, y, z, 14 + damage * 0.9, 24, 26);
     // Pale wood dust billowing off the struck planks.
     for (let i = 0; i < 5; i += 1) {
-      this.smoke.emit({ x, y, z, vx: rnd(-5, 5), vy: rnd(0.5, 4), vz: rnd(-5, 5), life: rnd(2, 4), size0: 1.5, size1: rnd(8, 14) * power, alpha: 0.5, r: 0.7, g: 0.6, b: 0.46, drag: 1.6, lift: 0.2, wind: 0.8 });
+      this.smoke.emit({ x, y, z, vx: rnd(-5, 5), vy: rnd(0.5, 4), vz: rnd(-5, 5), life: rnd(2, 4), size0: 1.5, size1: rnd(7, 12) * power, alpha: 0.38, r: 0.7, g: 0.6, b: 0.46, drag: 1.6, lift: 0.2, wind: 0.8 });
     }
     for (let i = 0; i < 6; i += 1) {
       this.fire.emit({ x, y, z, vx: rnd(-14, 14), vy: rnd(2, 12), vz: rnd(-14, 14), life: rnd(0.2, 0.6), size0: 0.22, size1: 0.08, heat: 1, drag: 1.5, lift: -8 });
@@ -589,18 +589,20 @@ export class Effects {
     const nf = Math.max(6, Math.round(90 * scale * this.k));
     for (let i = 0; i < nf; i += 1) {
       const a = Math.random() * Math.PI * 2;
-      const e = Math.random() * 1.2;
-      const sp = rnd(6, 30) * (0.5 + scale * 0.5);
-      this.fire.emit({ x, y, z, vx: Math.cos(a) * Math.cos(e) * sp, vy: Math.sin(e) * sp + 4, vz: Math.sin(a) * Math.cos(e) * sp, life: rnd(0.5, 1.4), size0: rnd(4, 8) * (0.5 + scale * 0.5), size1: rnd(9, 16) * (0.5 + scale * 0.5), heat: rnd(0.6, 1), drag: 2.5, lift: 3, wind: 0.2 });
+      // Thrown up and out of the deck rather than a round ball, and gone quickly into the smoke.
+      const e = rnd(0.35, 1.45);
+      const sp = rnd(6, 28) * (0.5 + scale * 0.5);
+      this.fire.emit({ x, y, z, vx: Math.cos(a) * Math.cos(e) * sp, vy: Math.sin(e) * sp + 4, vz: Math.sin(a) * Math.cos(e) * sp, life: rnd(0.35, 1), size0: rnd(3, 6.5) * (0.5 + scale * 0.5), size1: rnd(7, 12) * (0.5 + scale * 0.5), heat: rnd(0.6, 1), drag: 2.8, lift: 3, wind: 0.2 });
     }
-    const ns = Math.max(4, Math.round(50 * scale * this.k));
+    // The smoke goes up as a column that leans off with the wind, not a wide dome sitting on the ship.
+    const ns = Math.max(4, Math.round(38 * scale * this.k));
     for (let i = 0; i < ns; i += 1) {
       const a = Math.random() * Math.PI * 2;
-      this.smoke.emit({ x, y: y + rnd(0, 6), z, vx: Math.cos(a) * rnd(3, 14), vy: rnd(3, 16), vz: Math.sin(a) * rnd(3, 14), life: rnd(14, 28), size0: rnd(5, 9) * (0.5 + scale * 0.5), size1: rnd(22, 38) * (0.4 + scale * 0.6), alpha: 0.85, r: 0.16, g: 0.14, b: 0.13, drag: 0.9, lift: 0.5, heat: 0.8 });
+      this.smoke.emit({ x, y: y + rnd(0, 6), z, vx: Math.cos(a) * rnd(2, 8), vy: rnd(6, 20), vz: Math.sin(a) * rnd(2, 8), life: rnd(9, 16), size0: rnd(3, 6) * (0.5 + scale * 0.5), size1: rnd(12, 22) * (0.4 + scale * 0.6), alpha: 0.6, r: 0.16, g: 0.14, b: 0.13, drag: 0.7, lift: 1.6, heat: 0.8 });
     }
     this.shatter(x, y + 2, z, this.n(70 * scale), 1.5 * (0.6 + scale * 0.4), 22 * (0.5 + scale * 0.5));
-    this.sparks(x, y + 1, z, 60 * scale, 36, 40);
-    this.light(x, y + 6, z, 220000 * scale ** 1.5, 0.5 + 0.9 * scale, 1, 0.55, 0.25, 250 + 350 * scale);
+    this.sparks(x, y + 1, z, 35 * scale, 32, 36);
+    this.light(x, y + 6, z, 50000 * scale ** 1.5, 0.5 + 0.9 * scale, 1, 0.55, 0.25, 250 + 350 * scale);
     this.shakeAt(x, y, z, 0.35 + 0.7 * scale);
   }
 
@@ -693,7 +695,7 @@ export class Effects {
           const ember = ship.fire > 0.2 && Math.random() < 0.4 ? 1 : 0;
           const r = Math.random();
           if (r < 0.34) {
-            const s = rnd(0.8, 1.9);
+            const s = rnd(0.6, 1.3);
             this.debris.spawn(Piece.Plank, this.p.x, this.p.y, this.p.z, vx, vy, vz, s * 1.6, s, s, life, 0.8, ember);
           } else if (r < 0.5) this.debris.spawn(Piece.Spar, this.p.x, this.p.y, this.p.z, vx, vy, vz, rnd(3, 7), 0.22, 0.22, life, 0.5, ember);
           else if (r < 0.7) this.debris.spawn(Piece.Sail, this.p.x, this.p.y, this.p.z, vx * 0.6, vy, vz * 0.6, rnd(3, 7), 1, rnd(2, 5), life, 0.4, ember);
@@ -784,7 +786,7 @@ export class Effects {
       const r = Math.random();
       const y = h - 0.5;
       if (r < 0.4) {
-        const s = rnd(0.7, 1.7);
+        const s = rnd(0.6, 1.3);
         this.debris.spawn(Piece.Plank, x, y, z, vx, vy, vz, s * 1.6, s, s, life, 0.8);
       } else if (r < 0.55) this.debris.spawn(Piece.Beam, x, y, z, vx, vy, vz, rnd(2, 5), 1, 1, life, 0.7);
       else if (r < 0.7) this.debris.spawn(Piece.Sail, x, y, z, vx * 0.6, vy, vz * 0.6, rnd(3, 6), 1, rnd(2, 4), life, 0.4);
@@ -897,7 +899,7 @@ export class Effects {
         const wreck = 1 - ship.hull / ship.spec.hull;
         if (wreck > 0.45 && ship.sinking === 0 && Math.random() < dt * wreck * 5) {
           this.views.localToWorld(ship.id, rnd(-0.3, 0.3) * ship.spec.length, this.deckOf(ship), rnd(-0.3, 0.3) * ship.spec.beam, this.p);
-          this.smoke.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: rnd(-0.5, 0.5), vy: rnd(1.5, 3), vz: rnd(-0.5, 0.5), life: rnd(8, 14), size0: 2, size1: rnd(10, 16), alpha: 0.45, r: 0.35, g: 0.33, b: 0.31, drag: 0.8, lift: 0.4, wind: 1 });
+          this.smoke.emit({ x: this.p.x, y: this.p.y, z: this.p.z, vx: rnd(-0.5, 0.5), vy: rnd(1.5, 3), vz: rnd(-0.5, 0.5), life: rnd(7, 11), size0: 2, size1: rnd(9, 14), alpha: 0.34, r: 0.35, g: 0.33, b: 0.31, drag: 0.8, lift: 0.4, wind: 1 });
         }
       }
       if (ship.sinking > 0 && ship.sinking < 0.85 && Math.random() < dt * 6) {

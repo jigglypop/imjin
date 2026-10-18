@@ -1,0 +1,111 @@
+{
+  "kind": "bow",
+  "hand": "left",
+  "length": 1.46,
+  "notes": "Laminated korean bow, shaped recurve, horn nocks, central handgrip, taut separate string",
+  "nock": [
+    0,
+    0,
+    -0.162
+  ],
+  "id": "joseon_janggunbow",
+  "faction": "joseon",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 8356,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.04192426800727844,
+    1.4837888479232788,
+    0.3305201679468155
+  ],
+  "lodTriangles": 7700,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_janggunbow.glb",
+      "bytes": 178072,
+      "sha256": "ae337570e02c3d16aaae4397a50530221cf9935122477636b436a0133f75cb29"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_janggunbow_lod1.glb",
+      "bytes": 166260,
+      "sha256": "2c5c3a9d05c97b40efcf79e398d2de9dff70a5e979a12338444095847f94e483"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\joseon_janggunbow.blend",
+      "bytes": 204941,
+      "sha256": "885e4a814053ebfb26b43d9997a49796f26adc542631e2be72262235cd66e05c"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_joseon_janggunbow.glb",
+      "bytes": 178072,
+      "sha256": "ae337570e02c3d16aaae4397a50530221cf9935122477636b436a0133f75cb29",
+      "triangles": 8356,
+      "vertices": 5028,
+      "min": [
+        -0.02096213400363922,
+        -0.7418944239616394,
+        -0.19845767319202423
+      ],
+      "max": [
+        0.02096213400363922,
+        0.7418944239616394,
+        0.13206249475479126
+      ],
+      "dimensions": [
+        0.04192426800727844,
+        1.4837888479232788,
+        0.3305201679468155
+      ],
+      "steelOutwardVertices": 0,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_joseon_janggunbow_lod1.glb",
+      "bytes": 166260,
+      "sha256": "2c5c3a9d05c97b40efcf79e398d2de9dff70a5e979a12338444095847f94e483",
+      "triangles": 7700,
+      "vertices": 4700,
+      "min": [
+        -0.02096213400363922,
+        -0.7418944239616394,
+        -0.19845829904079437
+      ],
+      "max": [
+        0.02096213400363922,
+        0.7418944239616394,
+        0.13206249475479126
+      ],
+      "dimensions": [
+        0.04192426800727844,
+        1.4837888479232788,
+        0.33052079379558563
+      ],
+      "steelOutwardVertices": 0,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/joseon_janggunbow.blend",
+    "bytes": 204941,
+    "sha256": "885e4a814053ebfb26b43d9997a49796f26adc542631e2be72262235cd66e05c"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/joseon_janggunbow.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 5254,
+    "sha256": "f7e4ce9a8f6e234bb4477c90672ec5d6cc6d1a4eba054eda914e44d31656e7b4"
+  }
+}

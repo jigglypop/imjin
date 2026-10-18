@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-16T17:36:48.234Z",
+  "image": {
+    "model": "gpt-image-2.5-sunburst",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "A character reference photograph for image-to-3D reconstruction and auto-rigging, live-action and photographic. Exactly one man in a strict T-pose: both arms straight out to the sides at shoulder height, perfectly level, both hands clenched into compact fists, legs straight, feet a little apart and flat, the spine straight, the neck vertical, the head level and stacked above the shoulders. Seen at chest height through a long telephoto lens with no perspective distortion; the whole figure inside the square frame with a clear margin all round, its height filling about nine tenths of the frame. Soft, even, flat studio light from every side, no hard shadows; a plain seamless very light grey background, no floor line, no cast shadow, nothing else in the picture. No text, no letters, no logo, no border. No painting or illustration look, no plastic CGI look. Seen straight from the front. The attached picture is this man in his underclothes, seen straight from the front. Dress exactly this man, in exactly this pose, scale and position in the frame, in the full armour below, with its helmet, boots and every piece, fitted to his body: the body underneath does not change size or shape. The armour hangs close to the body: coat skirts split and hanging straight, no cape, no loose ribbons, cords or tassels away from the body, the plume close behind the helmet. The armour: Joseon Korean dujeong-gap, the brigandine of the Joseon army: a long coat of thick oxblood-red cotton reaching below the knee, lined inside with overlapping iron plates, its whole face set with even rows of round brass rivet heads, a plain dark cloth belt, the cloth faded and salt-stained at the hem and the brass dulled with verdigris. Helmet: a low rounded Korean iron tugu helmet with a small spike finial and a red horsehair plume, and a long oxblood cloth neck curtain set with the same brass rivets. No weapon, nothing held, no scabbard.",
+  "refs": [
+    "assets-src/generals-parts-2026-10-17/body_yi_front.png"
+  ],
+  "usage": {
+    "input_tokens": 1959,
+    "input_tokens_details": {
+      "image_tokens": 1521,
+      "text_tokens": 438
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 7889
+  }
+}

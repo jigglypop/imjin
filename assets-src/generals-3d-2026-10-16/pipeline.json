@@ -1,0 +1,881 @@
+{
+  "schema": "imjin.generals-3d.v3",
+  "clips": {
+    "idle": "Idle_11",
+    "shout": "Sword_Shout",
+    "slash": "Right_Hand_Sword_Slash"
+  },
+  "motions": {
+    "file": "motions.glb",
+    "task": "01a14514-238c-752a-8954-9298d0944e46",
+    "rig": "01a14505-6076-7290-8fc1-2014dafbacb1",
+    "rigOf": "yi_joseon_dujeong (v2)",
+    "actions": [
+      11,
+      251,
+      101,
+      102,
+      219,
+      334,
+      147,
+      89,
+      403,
+      377
+    ],
+    "credits": 30,
+    "at": "2026-10-16T14:25:00Z"
+  },
+  "previous": "pipeline-v2.json: the open-handed first set (Meshy animations per figure); its idle twisted the hips and its hands could not hold a sword",
+  "jobs": {
+    "yi_joseon_dujeong": {
+      "concept": {
+        "at": "2026-10-16T15:00:41.113Z",
+        "prompt": "A character reference image made for image-to-3D reconstruction and auto-rigging, in the look of a realistic live-action historical costume fitting photograph. Exactly one man standing alone in a strict T-pose: both arms stretched straight out to the sides at shoulder height, level; both hands clenched into firm, compact fists, the backs of the hands facing up, the fingers curled tight into the palms and the thumbs folded over them; legs straight, feet a shoulder width apart and flat; head up, facing straight ahead. Seen straight from the front at eye level through a long lens, no perspective distortion. The whole figure inside the frame with a clear margin: the top of the helmet and its plume or crest, both fists and the soles of the boots. His fists are empty: no weapon, nothing held. Soft, even, shadowless studio light from every side; the figure isolated on a fully transparent background with no ground, no floor line, no shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord, buckle and seam clearly separated, in believable late-sixteenth-century materials (rubbed iron, worn lacquer, silk, leather, brass). The attached picture is the existing casting of this man: keep who he is (his age, his beard and moustache style), but recast him as the strikingly handsome, charismatic leading man of a big-budget historical war film, an original face and not any real actor: strong jaw and cheekbones, intense confident eyes, healthy skin with fine natural texture, well-groomed facial hair, a heroic commanding presence. He is Yi Sun-sin, the Joseon admiral, about fifty. The armour he wears, with its helmet: Joseon Korean dujeong-gap, the brigandine of the Joseon army: a long coat of thick oxblood-red cotton reaching below the knee, lined inside with overlapping iron plates, its whole face set with even rows of round brass rivet heads, a plain dark cloth belt, the cloth faded and salt-stained at the hem and the brass dulled with verdigris. Helmet: a low rounded Korean iron tugu helmet with a small spike finial and a red horsehair plume, and a long oxblood cloth neck curtain set with the same brass rivets. No text, no letters, no logo, no border, no emblem, crest or mon unless named above. No rising sun flag, no sunburst or radiating rays, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items.",
+        "usage": {
+          "input_tokens": 1573,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 549
+          },
+          "output_tokens": 3568,
+          "output_tokens_details": {
+            "image_tokens": 3568,
+            "text_tokens": 0
+          },
+          "total_tokens": 5141
+        }
+      },
+      "model": {
+        "task": "01a1453a-c2f2-7793-a545-edb605ae2fdf",
+        "at": "2026-10-16T15:00:43.962Z",
+        "request": {
+          "ai_model": "meshy-7.1",
+          "model_type": "standard",
+          "geometry_resolution": "4k",
+          "should_remesh": true,
+          "target_polycount": 280000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_resolution": "4k",
+          "pose_mode": "t-pose",
+          "target_formats": [
+            "glb"
+          ]
+        },
+        "credits": 35
+      },
+      "rig": {
+        "task": "01a1453f-09db-7290-8b85-d3c803c8256d",
+        "at": "2026-10-16T15:05:28.383Z",
+        "credits": 5
+      },
+      "done": {
+        "at": "2026-10-16T15:06:49.086Z",
+        "levels": {
+          "_lod0": {
+            "triangles": 159988,
+            "bytes": 9594000
+          },
+          "_lod1": {
+            "triangles": 76698,
+            "bytes": 4422868
+          }
+        },
+        "grip": {
+          "vertices": 3236,
+          "at": [
+            -0.7804,
+            1.2163,
+            -0.0428
+          ],
+          "axis": [
+            -1,
+            0,
+            0.017
+          ]
+        },
+        "clips": [
+          "idle",
+          "shout",
+          "slash"
+        ]
+      }
+    },
+    "yi_joseon_pigap": {
+      "concept": {
+        "at": "2026-10-16T15:02:43.619Z",
+        "prompt": "A character reference image made for image-to-3D reconstruction and auto-rigging, in the look of a realistic live-action historical costume fitting photograph. Exactly one man standing alone in a strict T-pose: both arms stretched straight out to the sides at shoulder height, level; both hands clenched into firm, compact fists, the backs of the hands facing up, the fingers curled tight into the palms and the thumbs folded over them; legs straight, feet a shoulder width apart and flat; head up, facing straight ahead. Seen straight from the front at eye level through a long lens, no perspective distortion. The whole figure inside the frame with a clear margin: the top of the helmet and its plume or crest, both fists and the soles of the boots. His fists are empty: no weapon, nothing held. Soft, even, shadowless studio light from every side; the figure isolated on a fully transparent background with no ground, no floor line, no shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord, buckle and seam clearly separated, in believable late-sixteenth-century materials (rubbed iron, worn lacquer, silk, leather, brass). The attached picture is the existing casting of this man: keep who he is (his age, his beard and moustache style), but recast him as the strikingly handsome, charismatic leading man of a big-budget historical war film, an original face and not any real actor: strong jaw and cheekbones, intense confident eyes, healthy skin with fine natural texture, well-groomed facial hair, a heroic commanding presence. He is Yi Sun-sin, the Joseon admiral, about fifty. The armour he wears, with its helmet: Joseon Korean pigap, leather lamellar: a knee-length coat of hundreds of small rawhide plates lacquered black and laced in tight horizontal rows with dark brown leather cord, the lacquer rubbed through to brown leather on the edges and creases, plain leather shoulder guards of larger lacquered plates, a leather belt; dark, matte and practical, a soldier's armor rather than a lord's. Helmet: a plain dark iron bowl helmet with riveted bands and a neck guard of black-lacquered leather strips, no plume. No text, no letters, no logo, no border, no emblem, crest or mon unless named above. No rising sun flag, no sunburst or radiating rays, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items.",
+        "usage": {
+          "input_tokens": 1564,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 540
+          },
+          "output_tokens": 3568,
+          "output_tokens_details": {
+            "image_tokens": 3568,
+            "text_tokens": 0
+          },
+          "total_tokens": 5132
+        }
+      },
+      "model": {
+        "task": "01a1453c-a15e-74be-bbc6-75ea802d000a",
+        "at": "2026-10-16T15:02:46.326Z",
+        "request": {
+          "ai_model": "meshy-7.1",
+          "model_type": "standard",
+          "geometry_resolution": "4k",
+          "should_remesh": true,
+          "target_polycount": 280000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_resolution": "4k",
+          "pose_mode": "t-pose",
+          "target_formats": [
+            "glb"
+          ]
+        },
+        "credits": 35
+      },
+      "rig": {
+        "task": "01a14541-10d0-7084-9efc-e8f1ecb88efd",
+        "at": "2026-10-16T15:07:41.540Z",
+        "credits": 5
+      },
+      "done": {
+        "at": "2026-10-16T15:09:03.892Z",
+        "levels": {
+          "_lod0": {
+            "triangles": 159997,
+            "bytes": 8744952
+          },
+          "_lod1": {
+            "triangles": 75393,
+            "bytes": 4073912
+          }
+        },
+        "grip": {
+          "vertices": 2409,
+          "at": [
+            -0.8315,
+            1.2603,
+            -0.0204
+          ],
+          "axis": [
+            -0.998,
+            -0.059,
+            0.019
+          ]
+        },
+        "clips": [
+          "idle",
+          "shout",
+          "slash"
+        ]
+      }
+    },
+    "yi_joseon_swaeja": {
+      "concept": {
+        "at": "2026-10-16T15:00:48.273Z",
+        "prompt": "A character reference image made for image-to-3D reconstruction and auto-rigging, in the look of a realistic live-action historical costume fitting photograph. Exactly one man standing alone in a strict T-pose: both arms stretched straight out to the sides at shoulder height, level; both hands clenched into firm, compact fists, the backs of the hands facing up, the fingers curled tight into the palms and the thumbs folded over them; legs straight, feet a shoulder width apart and flat; head up, facing straight ahead. Seen straight from the front at eye level through a long lens, no perspective distortion. The whole figure inside the frame with a clear margin: the top of the helmet and its plume or crest, both fists and the soles of the boots. His fists are empty: no weapon, nothing held. Soft, even, shadowless studio light from every side; the figure isolated on a fully transparent background with no ground, no floor line, no shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord, buckle and seam clearly separated, in believable late-sixteenth-century materials (rubbed iron, worn lacquer, silk, leather, brass). The attached picture is the existing casting of this man: keep who he is (his age, his beard and moustache style), but recast him as the strikingly handsome, charismatic leading man of a big-budget historical war film, an original face and not any real actor: strong jaw and cheekbones, intense confident eyes, healthy skin with fine natural texture, well-groomed facial hair, a heroic commanding presence. He is Yi Sun-sin, the Joseon admiral, about fifty. The armour he wears, with its helmet: Joseon Korean swaeja-gap, mail armor: a knee-length coat of riveted iron mail, thousands of small tight rings with a dull grey sheen and spots of rust, worn over a padded dark navy cotton coat whose quilted collar and cuffs show, a dark leather belt; the whole armor reads silver-grey with a fine ring texture. Helmet: an iron tugu helmet with a short red tassel and a mail aventail of the same rings hanging from its rim over the neck and shoulders. No text, no letters, no logo, no border, no emblem, crest or mon unless named above. No rising sun flag, no sunburst or radiating rays, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items.",
+        "usage": {
+          "input_tokens": 1556,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 532
+          },
+          "output_tokens": 3568,
+          "output_tokens_details": {
+            "image_tokens": 3568,
+            "text_tokens": 0
+          },
+          "total_tokens": 5124
+        }
+      },
+      "model": {
+        "task": "01a1453a-decc-73b2-a4b0-3e99adac8496",
+        "at": "2026-10-16T15:00:51.253Z",
+        "request": {
+          "ai_model": "meshy-7.1",
+          "model_type": "standard",
+          "geometry_resolution": "4k",
+          "should_remesh": true,
+          "target_polycount": 280000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_resolution": "4k",
+          "pose_mode": "t-pose",
+          "target_formats": [
+            "glb"
+          ]
+        },
+        "credits": 35
+      },
+      "rig": {
+        "task": "01a1453f-5972-7206-bcb7-f17a184f627a",
+        "at": "2026-10-16T15:05:51.164Z",
+        "credits": 5
+      },
+      "done": {
+        "at": "2026-10-16T15:07:33.305Z",
+        "levels": {
+          "_lod0": {
+            "triangles": 159988,
+            "bytes": 10707412
+          },
+          "_lod1": {
+            "triangles": 120274,
+            "bytes": 6623180
+          }
+        },
+        "grip": {
+          "vertices": 1567,
+          "at": [
+            -0.8114,
+            1.2271,
+            0.0015
+          ],
+          "axis": [
+            -0.999,
+            -0.029,
+            0.031
+          ]
+        },
+        "clips": [
+          "idle",
+          "shout",
+          "slash"
+        ]
+      }
+    },
+    "yi_joseon_gyeongbeon": {
+      "concept": {
+        "at": "2026-10-16T15:00:48.968Z",
+        "prompt": "A character reference image made for image-to-3D reconstruction and auto-rigging, in the look of a realistic live-action historical costume fitting photograph. Exactly one man standing alone in a strict T-pose: both arms stretched straight out to the sides at shoulder height, level; both hands clenched into firm, compact fists, the backs of the hands facing up, the fingers curled tight into the palms and the thumbs folded over them; legs straight, feet a shoulder width apart and flat; head up, facing straight ahead. Seen straight from the front at eye level through a long lens, no perspective distortion. The whole figure inside the frame with a clear margin: the top of the helmet and its plume or crest, both fists and the soles of the boots. His fists are empty: no weapon, nothing held. Soft, even, shadowless studio light from every side; the figure isolated on a fully transparent background with no ground, no floor line, no shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord, buckle and seam clearly separated, in believable late-sixteenth-century materials (rubbed iron, worn lacquer, silk, leather, brass). The attached picture is the existing casting of this man: keep who he is (his age, his beard and moustache style), but recast him as the strikingly handsome, charismatic leading man of a big-budget historical war film, an original face and not any real actor: strong jaw and cheekbones, intense confident eyes, healthy skin with fine natural texture, well-groomed facial hair, a heroic commanding presence. He is Yi Sun-sin, the Joseon admiral, about fifty. The armour he wears, with its helmet: Joseon Korean gyeongbeon-gap, a commander's mail-and-plate armor: a knee-length coat of iron mail set front and back with rows of small polished rectangular iron plates joined by the rings, and a large round polished iron mirror plate on the chest; the polished plates catch the light like small mirrors against the darker mail, red cloth trim at the hem and collar. Helmet: a polished iron tugu helmet with a tall red horsehair plume and a mail aventail. No text, no letters, no logo, no border, no emblem, crest or mon unless named above. No rising sun flag, no sunburst or radiating rays, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items.",
+        "usage": {
+          "input_tokens": 1553,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 529
+          },
+          "output_tokens": 3568,
+          "output_tokens_details": {
+            "image_tokens": 3568,
+            "text_tokens": 0
+          },
+          "total_tokens": 5121
+        }
+      },
+      "model": {
+        "task": "01a1453a-e188-762c-8b77-8471932b545f",
+        "at": "2026-10-16T15:00:51.749Z",
+        "request": {
+          "ai_model": "meshy-7.1",
+          "model_type": "standard",
+          "geometry_resolution": "4k",
+          "should_remesh": true,
+          "target_polycount": 280000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_resolution": "4k",
+          "pose_mode": "t-pose",
+          "target_formats": [
+            "glb"
+          ]
+        },
+        "credits": 35
+      },
+      "rig": {
+        "task": "01a1453f-59fd-72f1-b38f-072ce7395f29",
+        "at": "2026-10-16T15:05:49.028Z",
+        "credits": 5
+      },
+      "done": {
+        "at": "2026-10-16T15:07:21.140Z",
+        "levels": {
+          "_lod0": {
+            "triangles": 159998,
+            "bytes": 10637520
+          },
+          "_lod1": {
+            "triangles": 120161,
+            "bytes": 6308704
+          }
+        },
+        "grip": {
+          "vertices": 1940,
+          "at": [
+            -0.8295,
+            1.1794,
+            0.0031
+          ],
+          "axis": [
+            -0.997,
+            -0.059,
+            0.043
+          ]
+        },
+        "clips": [
+          "idle",
+          "shout",
+          "slash"
+        ]
+      }
+    },
+    "yi_joseon_eorin": {
+      "concept": {
+        "at": "2026-10-16T15:01:01.468Z",
+        "prompt": "A character reference image made for image-to-3D reconstruction and auto-rigging, in the look of a realistic live-action historical costume fitting photograph. Exactly one man standing alone in a strict T-pose: both arms stretched straight out to the sides at shoulder height, level; both hands clenched into firm, compact fists, the backs of the hands facing up, the fingers curled tight into the palms and the thumbs folded over them; legs straight, feet a shoulder width apart and flat; head up, facing straight ahead. Seen straight from the front at eye level through a long lens, no perspective distortion. The whole figure inside the frame with a clear margin: the top of the helmet and its plume or crest, both fists and the soles of the boots. His fists are empty: no weapon, nothing held. Soft, even, shadowless studio light from every side; the figure isolated on a fully transparent background with no ground, no floor line, no shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord, buckle and seam clearly separated, in believable late-sixteenth-century materials (rubbed iron, worn lacquer, silk, leather, brass). The attached picture is the existing casting of this man: keep who he is (his age, his beard and moustache style), but recast him as the strikingly handsome, charismatic leading man of a big-budget historical war film, an original face and not any real actor: strong jaw and cheekbones, intense confident eyes, healthy skin with fine natural texture, well-groomed facial hair, a heroic commanding presence. He is Yi Sun-sin, the Joseon admiral, about fifty. The armour he wears, with its helmet: Joseon Korean eorin-gap, a high general's fish-scale armor: a long coat covered in small rounded overlapping gilt-bronze scales laid like the scales of a fish, on a deep crimson silk ground that shows at the edges and the collar, gilded scale shoulder guards; the gilding rubbed back to warm bronze on the raised edges, restrained and real. Helmet: an iron tugu helmet banded with gilt bronze, with a red horsehair plume and a neck guard of the same gilt scales. No text, no letters, no logo, no border, no emblem, crest or mon unless named above. No rising sun flag, no sunburst or radiating rays, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items.",
+        "usage": {
+          "input_tokens": 1558,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 534
+          },
+          "output_tokens": 3568,
+          "output_tokens_details": {
+            "image_tokens": 3568,
+            "text_tokens": 0
+          },
+          "total_tokens": 5126
+        }
+      },
+      "model": {
+        "task": "01a1453b-125d-7439-baaa-50c91c0aaf2c",
+        "at": "2026-10-16T15:01:04.320Z",
+        "request": {
+          "ai_model": "meshy-7.1",
+          "model_type": "standard",
+          "geometry_resolution": "4k",
+          "should_remesh": true,
+          "target_polycount": 280000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_resolution": "4k",
+          "pose_mode": "t-pose",
+          "target_formats": [
+            "glb"
+          ]
+        },
+        "credits": 35
+      },
+      "rig": {
+        "task": "01a1453f-d13f-7100-858d-8395b455a077",
+        "at": "2026-10-16T15:06:21.499Z",
+        "credits": 5
+      },
+      "done": {
+        "at": "2026-10-16T15:07:57.436Z",
+        "levels": {
+          "_lod0": {
+            "triangles": 159994,
+            "bytes": 10446768
+          },
+          "_lod1": {
+            "triangles": 98733,
+            "bytes": 5566364
+          }
+        },
+        "grip": {
+          "vertices": 3554,
+          "at": [
+            -0.7877,
+            1.2422,
+            -0.0372
+          ],
+          "axis": [
+            -1,
+            0.015,
+            0.027
+          ]
+        },
+        "clips": [
+          "idle",
+          "shout",
+          "slash"
+        ]
+      }
+    },
+    "yi_yi_tongjesa": {
+      "concept": {
+        "at": "2026-10-16T15:01:20.795Z",
+        "prompt": "A character reference image made for image-to-3D reconstruction and auto-rigging, in the look of a realistic live-action historical costume fitting photograph. Exactly one man standing alone in a strict T-pose: both arms stretched straight out to the sides at shoulder height, level; both hands clenched into firm, compact fists, the backs of the hands facing up, the fingers curled tight into the palms and the thumbs folded over them; legs straight, feet a shoulder width apart and flat; head up, facing straight ahead. Seen straight from the front at eye level through a long lens, no perspective distortion. The whole figure inside the frame with a clear margin: the top of the helmet and its plume or crest, both fists and the soles of the boots. His fists are empty: no weapon, nothing held. Soft, even, shadowless studio light from every side; the figure isolated on a fully transparent background with no ground, no floor line, no shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord, buckle and seam clearly separated, in believable late-sixteenth-century materials (rubbed iron, worn lacquer, silk, leather, brass). The attached picture is the existing casting of this man: keep who he is (his age, his beard and moustache style), but recast him as the strikingly handsome, charismatic leading man of a big-budget historical war film, an original face and not any real actor: strong jaw and cheekbones, intense confident eyes, healthy skin with fine natural texture, well-groomed facial hair, a heroic commanding presence. He is Yi Sun-sin, the Joseon admiral, about fifty. The armour he wears, with its helmet: The personal armor of Yi Sun-sin, Supreme Naval Commander of the Three Provinces of Joseon: a long dujeong-gap coat of deep crimson silk, a darker and richer red than any soldier's coat, with a soft sheen in its folds, faced with dense close rows of bright gilt rivet heads so that the whole coat glints gold; a thick dark brown fur collar and fur-trimmed cuffs, a broad belt of gilt lacquer with gilt plaques across the waist, wide shoulder flaps edged in gilt; the silk darkened and frayed by salt and smoke, the gilt rubbed, dignified and war-worn. Helmet: a black-lacquered iron tugu helmet with bright gilt bands and a gilt finial, a long full crimson horsehair plume falling to the shoulder, and a crimson neck curtain set with gilt rivets. No text, no letters, no logo, no border, no emblem, crest or mon unless named above. No rising sun flag, no sunburst or radiating rays, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items.",
+        "usage": {
+          "input_tokens": 1629,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 605
+          },
+          "output_tokens": 3568,
+          "output_tokens_details": {
+            "image_tokens": 3568,
+            "text_tokens": 0
+          },
+          "total_tokens": 5197
+        }
+      },
+      "model": {
+        "task": "01a1453b-5de2-75c9-a81e-5f12cc0310c6",
+        "at": "2026-10-16T15:01:23.752Z",
+        "request": {
+          "ai_model": "meshy-7.1",
+          "model_type": "standard",
+          "geometry_resolution": "4k",
+          "should_remesh": true,
+          "target_polycount": 280000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_resolution": "4k",
+          "pose_mode": "t-pose",
+          "target_formats": [
+            "glb"
+          ]
+        },
+        "credits": 35
+      },
+      "rig": {
+        "task": "01a14540-48b0-76db-9b46-384020c481b1",
+        "at": "2026-10-16T15:06:50.154Z",
+        "credits": 5
+      },
+      "done": {
+        "at": "2026-10-16T15:08:13.321Z",
+        "levels": {
+          "_lod0": {
+            "triangles": 159994,
+            "bytes": 8674360
+          },
+          "_lod1": {
+            "triangles": 72164,
+            "bytes": 4137172
+          }
+        },
+        "grip": {
+          "vertices": 2480,
+          "at": [
+            -0.7914,
+            1.2405,
+            0.0126
+          ],
+          "axis": [
+            -0.995,
+            -0.062,
+            0.073
+          ]
+        },
+        "clips": [
+          "idle",
+          "shout",
+          "slash"
+        ]
+      }
+    },
+    "wakisaka_japan_tosei": {
+      "concept": {
+        "at": "2026-10-16T15:00:59.491Z",
+        "prompt": "A character reference image made for image-to-3D reconstruction and auto-rigging, in the look of a realistic live-action historical costume fitting photograph. Exactly one man standing alone in a strict T-pose: both arms stretched straight out to the sides at shoulder height, level; both hands clenched into firm, compact fists, the backs of the hands facing up, the fingers curled tight into the palms and the thumbs folded over them; legs straight, feet a shoulder width apart and flat; head up, facing straight ahead. Seen straight from the front at eye level through a long lens, no perspective distortion. The whole figure inside the frame with a clear margin: the top of the helmet and its plume or crest, both fists and the soles of the boots. His fists are empty: no weapon, nothing held. Soft, even, shadowless studio light from every side; the figure isolated on a fully transparent background with no ground, no floor line, no shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord, buckle and seam clearly separated, in believable late-sixteenth-century materials (rubbed iron, worn lacquer, silk, leather, brass). The attached picture is the existing casting of this man: keep who he is (his age, his beard and moustache style), but recast him as the strikingly handsome, charismatic leading man of a big-budget historical war film, an original face and not any real actor: strong jaw and cheekbones, intense confident eyes, healthy skin with fine natural texture, well-groomed facial hair, a heroic commanding presence. He is Wakisaka Yasuharu, a Japanese naval lord in his late thirties. The armour he wears, with its helmet: Sengoku Japanese tosei gusoku: a black-lacquered iron okegawa-do cuirass of riveted horizontal plates, a skirt of kusazuri tassets of lacquered plates laced in dark blue cord, black sode shoulder guards, kote sleeves of mail and small plates on dark cloth. Helmet: a black suji-bachi kabuto with raised ribs, a wide flaring shikoro neck guard laced in dark blue and small turned-back fukigaeshi, no crest. No text, no letters, no logo, no border, no emblem, crest or mon unless named above. No rising sun flag, no sunburst or radiating rays, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items.",
+        "usage": {
+          "input_tokens": 1560,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 536
+          },
+          "output_tokens": 3568,
+          "output_tokens_details": {
+            "image_tokens": 3568,
+            "text_tokens": 0
+          },
+          "total_tokens": 5128
+        }
+      },
+      "model": {
+        "task": "01a1453b-0ab5-7797-8ec0-96fb4b3cbafd",
+        "at": "2026-10-16T15:01:02.380Z",
+        "request": {
+          "ai_model": "meshy-7.1",
+          "model_type": "standard",
+          "geometry_resolution": "4k",
+          "should_remesh": true,
+          "target_polycount": 280000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_resolution": "4k",
+          "pose_mode": "t-pose",
+          "target_formats": [
+            "glb"
+          ]
+        },
+        "credits": 35
+      },
+      "rig": {
+        "task": "01a1453f-82dd-74a4-b4e7-6fce9ab59a05",
+        "at": "2026-10-16T15:05:59.914Z",
+        "credits": 5
+      },
+      "done": {
+        "at": "2026-10-16T15:07:31.799Z",
+        "levels": {
+          "_lod0": {
+            "triangles": 159997,
+            "bytes": 10002976
+          },
+          "_lod1": {
+            "triangles": 74869,
+            "bytes": 4390896
+          }
+        },
+        "grip": {
+          "vertices": 5546,
+          "at": [
+            0.0654,
+            1.3356,
+            -0.2027
+          ],
+          "axis": [
+            0.744,
+            0.191,
+            -0.64
+          ]
+        },
+        "clips": [
+          "idle",
+          "shout",
+          "slash"
+        ]
+      }
+    },
+    "wakisaka_japan_haramaki": {
+      "error": "TypeError: fetch failed"
+    },
+    "wakisaka_japan_nimaido": {
+      "concept": {
+        "at": "2026-10-16T15:01:34.879Z",
+        "prompt": "A character reference image made for image-to-3D reconstruction and auto-rigging, in the look of a realistic live-action historical costume fitting photograph. Exactly one man standing alone in a strict T-pose: both arms stretched straight out to the sides at shoulder height, level; both hands clenched into firm, compact fists, the backs of the hands facing up, the fingers curled tight into the palms and the thumbs folded over them; legs straight, feet a shoulder width apart and flat; head up, facing straight ahead. Seen straight from the front at eye level through a long lens, no perspective distortion. The whole figure inside the frame with a clear margin: the top of the helmet and its plume or crest, both fists and the soles of the boots. His fists are empty: no weapon, nothing held. Soft, even, shadowless studio light from every side; the figure isolated on a fully transparent background with no ground, no floor line, no shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord, buckle and seam clearly separated, in believable late-sixteenth-century materials (rubbed iron, worn lacquer, silk, leather, brass). The attached picture is the existing casting of this man: keep who he is (his age, his beard and moustache style), but recast him as the strikingly handsome, charismatic leading man of a big-budget historical war film, an original face and not any real actor: strong jaw and cheekbones, intense confident eyes, healthy skin with fine natural texture, well-groomed facial hair, a heroic commanding presence. He is Wakisaka Yasuharu, a Japanese naval lord in his late thirties. The armour he wears, with its helmet: Sengoku Japanese nimai-do gusoku: a two-piece hinged iron cuirass of broad smooth plates in austere glossy black lacquer with almost no decoration, black-laced tassets, plain black sode shoulder guards; severe and spare. Helmet: a smooth black zunari kabuto with one plain gilt fore-plate on its front, a small smooth gold shield with no design on it. No text, no letters, no logo, no border, no emblem, crest or mon unless named above. No rising sun flag, no sunburst or radiating rays, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items.",
+        "usage": {
+          "input_tokens": 1536,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 512
+          },
+          "output_tokens": 3568,
+          "output_tokens_details": {
+            "image_tokens": 3568,
+            "text_tokens": 0
+          },
+          "total_tokens": 5104
+        }
+      },
+      "model": {
+        "task": "01a1453b-9422-72c9-9f56-20bc9d12b568",
+        "at": "2026-10-16T15:01:37.458Z",
+        "request": {
+          "ai_model": "meshy-7.1",
+          "model_type": "standard",
+          "geometry_resolution": "4k",
+          "should_remesh": true,
+          "target_polycount": 280000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_resolution": "4k",
+          "pose_mode": "t-pose",
+          "target_formats": [
+            "glb"
+          ]
+        },
+        "credits": 35
+      },
+      "rig": {
+        "task": "01a1453f-d14a-7160-967d-9e8dce633121",
+        "at": "2026-10-16T15:06:19.958Z",
+        "credits": 5
+      },
+      "done": {
+        "at": "2026-10-16T15:07:43.440Z",
+        "levels": {
+          "_lod0": {
+            "triangles": 159986,
+            "bytes": 8588064
+          },
+          "_lod1": {
+            "triangles": 85128,
+            "bytes": 4488572
+          }
+        },
+        "grip": {
+          "vertices": 2427,
+          "at": [
+            -0.8189,
+            1.2514,
+            -0.0016
+          ],
+          "axis": [
+            -0.993,
+            -0.015,
+            0.12
+          ]
+        },
+        "clips": [
+          "idle",
+          "shout",
+          "slash"
+        ]
+      }
+    },
+    "wakisaka_japan_nanbando": {
+      "concept": {
+        "at": "2026-10-16T15:01:03.860Z",
+        "prompt": "A character reference image made for image-to-3D reconstruction and auto-rigging, in the look of a realistic live-action historical costume fitting photograph. Exactly one man standing alone in a strict T-pose: both arms stretched straight out to the sides at shoulder height, level; both hands clenched into firm, compact fists, the backs of the hands facing up, the fingers curled tight into the palms and the thumbs folded over them; legs straight, feet a shoulder width apart and flat; head up, facing straight ahead. Seen straight from the front at eye level through a long lens, no perspective distortion. The whole figure inside the frame with a clear margin: the top of the helmet and its plume or crest, both fists and the soles of the boots. His fists are empty: no weapon, nothing held. Soft, even, shadowless studio light from every side; the figure isolated on a fully transparent background with no ground, no floor line, no shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord, buckle and seam clearly separated, in believable late-sixteenth-century materials (rubbed iron, worn lacquer, silk, leather, brass). The attached picture is the existing casting of this man: keep who he is (his age, his beard and moustache style), but recast him as the strikingly handsome, charismatic leading man of a big-budget historical war film, an original face and not any real actor: strong jaw and cheekbones, intense confident eyes, healthy skin with fine natural texture, well-groomed facial hair, a heroic commanding presence. He is Wakisaka Yasuharu, a Japanese naval lord in his late thirties. The armour he wears, with its helmet: Sengoku Japanese nanban-do gusoku: a European steel peascod breastplate with a sharp central ridge, bright polished steel with rust freckles and one round dent where a test bullet struck it, worn with Japanese black-lacquered kusazuri tassets laced in dark blue, mail-and-plate kote sleeves and lacquered sode shoulder guards. Helmet: a European steel morion with a ridged crown and a curved brim, adapted the Japanese way with a black-lacquered shikoro neck guard laced to its rim. No text, no letters, no logo, no border, no emblem, crest or mon unless named above. No rising sun flag, no sunburst or radiating rays, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items.",
+        "usage": {
+          "input_tokens": 1569,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 545
+          },
+          "output_tokens": 3568,
+          "output_tokens_details": {
+            "image_tokens": 3568,
+            "text_tokens": 0
+          },
+          "total_tokens": 5137
+        }
+      },
+      "model": {
+        "task": "01a1453b-1ac7-758b-a3b3-f879b1d953a7",
+        "at": "2026-10-16T15:01:06.306Z",
+        "request": {
+          "ai_model": "meshy-7.1",
+          "model_type": "standard",
+          "geometry_resolution": "4k",
+          "should_remesh": true,
+          "target_polycount": 280000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_resolution": "4k",
+          "pose_mode": "t-pose",
+          "target_formats": [
+            "glb"
+          ]
+        },
+        "credits": 35
+      },
+      "rig": {
+        "task": "01a1453f-a9ca-71eb-9da0-b7323d3be976",
+        "at": "2026-10-16T15:06:09.228Z",
+        "credits": 5
+      },
+      "done": {
+        "at": "2026-10-16T15:07:56.107Z",
+        "levels": {
+          "_lod0": {
+            "triangles": 159983,
+            "bytes": 10789436
+          },
+          "_lod1": {
+            "triangles": 137464,
+            "bytes": 7096860
+          }
+        },
+        "grip": {
+          "vertices": 2097,
+          "at": [
+            -0.8249,
+            1.251,
+            -0.0351
+          ],
+          "axis": [
+            -1,
+            -0.015,
+            0.027
+          ]
+        },
+        "clips": [
+          "idle",
+          "shout",
+          "slash"
+        ]
+      }
+    },
+    "wakisaka_japan_oyoroi": {
+      "concept": {
+        "at": "2026-10-16T15:01:09.676Z",
+        "prompt": "A character reference image made for image-to-3D reconstruction and auto-rigging, in the look of a realistic live-action historical costume fitting photograph. Exactly one man standing alone in a strict T-pose: both arms stretched straight out to the sides at shoulder height, level; both hands clenched into firm, compact fists, the backs of the hands facing up, the fingers curled tight into the palms and the thumbs folded over them; legs straight, feet a shoulder width apart and flat; head up, facing straight ahead. Seen straight from the front at eye level through a long lens, no perspective distortion. The whole figure inside the frame with a clear margin: the top of the helmet and its plume or crest, both fists and the soles of the boots. His fists are empty: no weapon, nothing held. Soft, even, shadowless studio light from every side; the figure isolated on a fully transparent background with no ground, no floor line, no shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord, buckle and seam clearly separated, in believable late-sixteenth-century materials (rubbed iron, worn lacquer, silk, leather, brass). The attached picture is the existing casting of this man: keep who he is (his age, his beard and moustache style), but recast him as the strikingly handsome, charismatic leading man of a big-budget historical war film, an original face and not any real actor: strong jaw and cheekbones, intense confident eyes, healthy skin with fine natural texture, well-groomed facial hair, a heroic commanding presence. He is Wakisaka Yasuharu, a Japanese naval lord in his late thirties. The armour he wears, with its helmet: Japanese o-yoroi, the old great armor and a treasured heirloom: a box-like cuirass of small vermilion-lacquered scales laced in dense rows of scarlet silk cord with bands of white silk lacing, large flat rectangular o-sode shoulder boards of the same scales, a plain dark leather panel on the breast, the vermilion softened and crazed by age, the gilt fittings worn. Helmet: a hoshi-kabuto of riveted plates with prominent rivet heads, large flaring fukigaeshi and a deep shikoro laced in scarlet, no emblem. No text, no letters, no logo, no border, no emblem, crest or mon unless named above. No rising sun flag, no sunburst or radiating rays, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items.",
+        "usage": {
+          "input_tokens": 1584,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 560
+          },
+          "output_tokens": 3568,
+          "output_tokens_details": {
+            "image_tokens": 3568,
+            "text_tokens": 0
+          },
+          "total_tokens": 5152
+        }
+      },
+      "model": {
+        "task": "01a1453b-3179-74ad-8c42-6db2635dce95",
+        "at": "2026-10-16T15:01:12.433Z",
+        "request": {
+          "ai_model": "meshy-7.1",
+          "model_type": "standard",
+          "geometry_resolution": "4k",
+          "should_remesh": true,
+          "target_polycount": 280000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_resolution": "4k",
+          "pose_mode": "t-pose",
+          "target_formats": [
+            "glb"
+          ]
+        },
+        "credits": 35
+      },
+      "rig": {
+        "task": "01a14540-1feb-77dd-a216-deb85c45e029",
+        "at": "2026-10-16T15:06:39.384Z",
+        "credits": 5
+      },
+      "done": {
+        "at": "2026-10-16T15:08:04.519Z",
+        "levels": {
+          "_lod0": {
+            "triangles": 159994,
+            "bytes": 10002436
+          },
+          "_lod1": {
+            "triangles": 87744,
+            "bytes": 4973168
+          }
+        },
+        "grip": {
+          "vertices": 2336,
+          "at": [
+            -0.7917,
+            1.2559,
+            -0.0251
+          ],
+          "axis": [
+            -0.999,
+            -0.016,
+            0.048
+          ]
+        },
+        "clips": [
+          "idle",
+          "shout",
+          "slash"
+        ]
+      }
+    },
+    "wakisaka_wakisaka_shichihon": {
+      "concept": {
+        "at": "2026-10-16T15:01:08.780Z",
+        "prompt": "A character reference image made for image-to-3D reconstruction and auto-rigging, in the look of a realistic live-action historical costume fitting photograph. Exactly one man standing alone in a strict T-pose: both arms stretched straight out to the sides at shoulder height, level; both hands clenched into firm, compact fists, the backs of the hands facing up, the fingers curled tight into the palms and the thumbs folded over them; legs straight, feet a shoulder width apart and flat; head up, facing straight ahead. Seen straight from the front at eye level through a long lens, no perspective distortion. The whole figure inside the frame with a clear margin: the top of the helmet and its plume or crest, both fists and the soles of the boots. His fists are empty: no weapon, nothing held. Soft, even, shadowless studio light from every side; the figure isolated on a fully transparent background with no ground, no floor line, no shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord, buckle and seam clearly separated, in believable late-sixteenth-century materials (rubbed iron, worn lacquer, silk, leather, brass). The attached picture is the existing casting of this man: keep who he is (his age, his beard and moustache style), but recast him as the strikingly handsome, charismatic leading man of a big-budget historical war film, an original face and not any real actor: strong jaw and cheekbones, intense confident eyes, healthy skin with fine natural texture, well-groomed facial hair, a heroic commanding presence. He is Wakisaka Yasuharu, a Japanese naval lord in his late thirties. The armour he wears, with its helmet: The personal armor of Wakisaka Yasuharu: a black-lacquered tosei gusoku with every plate edge lined in gold lacquer, laced throughout in deep purple silk cord, purple-laced tassets and sode shoulder guards. Helmet: a black kabuto with a purple-laced shikoro and a tall plain upright fore-crest of gold leaf, a simple tapering blade with no emblem. No text, no letters, no logo, no border, no emblem, crest or mon unless named above. No rising sun flag, no sunburst or radiating rays, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items.",
+        "usage": {
+          "input_tokens": 1541,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 517
+          },
+          "output_tokens": 3568,
+          "output_tokens_details": {
+            "image_tokens": 3568,
+            "text_tokens": 0
+          },
+          "total_tokens": 5109
+        }
+      },
+      "model": {
+        "task": "01a1453b-2dfd-7693-a596-bb9fd5dbd92b",
+        "at": "2026-10-16T15:01:12.953Z",
+        "request": {
+          "ai_model": "meshy-7.1",
+          "model_type": "standard",
+          "geometry_resolution": "4k",
+          "should_remesh": true,
+          "target_polycount": 280000,
+          "topology": "triangle",
+          "should_texture": true,
+          "enable_pbr": true,
+          "texture_resolution": "4k",
+          "pose_mode": "t-pose",
+          "target_formats": [
+            "glb"
+          ]
+        },
+        "credits": 35
+      },
+      "rig": {
+        "task": "01a1453f-aa12-73ea-a29f-5a533278ad17",
+        "at": "2026-10-16T15:06:10.000Z",
+        "credits": 5
+      },
+      "done": {
+        "at": "2026-10-16T15:07:44.676Z",
+        "levels": {
+          "_lod0": {
+            "triangles": 159994,
+            "bytes": 10034380
+          },
+          "_lod1": {
+            "triangles": 100867,
+            "bytes": 5389008
+          }
+        },
+        "grip": {
+          "vertices": 2724,
+          "at": [
+            -0.7936,
+            1.1765,
+            -0.0255
+          ],
+          "axis": [
+            -0.997,
+            -0.06,
+            0.053
+          ]
+        },
+        "clips": [
+          "idle",
+          "shout",
+          "slash"
+        ]
+      }
+    }
+  },
+  "image": {
+    "model": "gpt-image-2.5-sunburst",
+    "size": "2048x2048",
+    "quality": "high",
+    "background": "transparent",
+    "output_format": "png"
+  },
+  "meshy": {
+    "ai_model": "meshy-7.1",
+    "model_type": "standard",
+    "geometry_resolution": "4k",
+    "should_remesh": true,
+    "target_polycount": 280000,
+    "topology": "triangle",
+    "should_texture": true,
+    "enable_pbr": true,
+    "texture_resolution": "4k",
+    "pose_mode": "t-pose",
+    "target_formats": [
+      "glb"
+    ]
+  }
+}

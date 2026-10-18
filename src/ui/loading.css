@@ -4,15 +4,6 @@
    at the foot of the tall picture. Phone landscape: the title and the bar only.
    ============================================================================ */
 
-/* The battle titles in the menu poster's face: Do Hyeon cut to the glyphs of every battle name the page can show
-   (public/ui/fonts/README.md). 8 KB, so the title waits for it rather than flashing in another face. */
-@font-face {
-  font-family: 'Imjin Battle';
-  src: url('/ui/fonts/imjin-battle-dohyeon.woff2') format('woff2');
-  font-weight: 400;
-  font-display: block;
-}
-
 .loading {
   --brass: #d8c69c;
   --cream: #f4eedc;
@@ -48,6 +39,8 @@
 }
 
 .loading-brief {
+  font-family: var(--font-cine);
+  font-weight: 500;
   position: absolute;
   z-index: 2;
   left: calc(var(--sal) + clamp(28px, 5.5vw, 88px));
@@ -74,10 +67,10 @@
   letter-spacing: 0.24em;
 }
 
-/* The menu poster's title face (Do Hyeon) thickened by a stroke of its own colour; English in Cinzel capitals. */
+/* --font-title thickened by a stroke of its own colour; Cinzel capitals on the English page. */
 .loading-title {
   margin: 8px 0 0 -3px;
-  font-family: 'Imjin Battle', var(--font-title);
+  font-family: var(--font-title);
   font-weight: 400;
   font-size: clamp(56px, 6.6vw, 100px);
   line-height: 0.95;
@@ -92,7 +85,7 @@
 .loading-title--roman {
   display: flex;
   flex-direction: column;
-  font-family: 'Imjin Roman', serif;
+  font-family: var(--font-title);
   font-weight: 700;
   font-size: clamp(40px, 4.4vw, 70px);
   line-height: 1;

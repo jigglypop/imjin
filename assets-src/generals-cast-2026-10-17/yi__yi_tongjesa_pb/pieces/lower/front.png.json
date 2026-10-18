@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-17T10:13:59.498Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "transparent",
+    "output_format": "png"
+  },
+  "prompt": "A costume-department prop photograph for image-to-3D reconstruction: ONE single armour piece alone, the lower part of his red dujeong-gap brigandine: the riveted armour skirt, a front-split wrap of thick red riveted panels with black gold-edged trims hanging from the waist to just above the knee, open at the front centre and at the sides for the legs; no belt, no torso. It is worn by an invisible ghost mannequin of a tall athletic man (broad shoulders, deep chest, narrow waist) standing straight and seen exactly from the FRONT: the piece keeps the exact shape, size and position it has on him, empty inside: no person, no head, no face, no neck, no hands, no arms, no legs, no mannequin, no stand, nothing else. The FIRST attached picture shows this man wearing this armour: copy the piece EXACTLY from it (every plate, rivet, lacing cord, colour, trim, shape and proportion). The SECOND attached picture is a close-up of him (for the helmet and collar detail). Centred, the piece fills most of the frame with a clear margin. Photographic, crisp detail, soft even flat studio light, no hard shadows, a fully transparent background (a clean cutout, no ground shadow). No sword, no other armour pieces. No text, no letters, no labels, no border. No illustration look, no plastic CGI look.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/yi__yi_tongjesa_t4/front.png",
+    "assets-src/generals-cast-2026-10-17/yi__yi_tongjesa_t4/face.png"
+  ],
+  "usage": {
+    "input_tokens": 3364,
+    "input_tokens_details": {
+      "image_tokens": 3042,
+      "text_tokens": 322
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 9294
+  }
+}

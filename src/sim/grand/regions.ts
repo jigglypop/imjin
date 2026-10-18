@@ -428,6 +428,12 @@ export const COMMANDERS: CommanderDef[] = [
   { id: 'tachibana', faction: 'japan', name: '다치바나 무네시게', title: '야나가와 영주', portrait: 'portrait_tachibana', level: 2, joins: 26 },
   { id: 'chenlin', faction: 'ming', name: '진린', title: '수군 도독', portrait: 'portrait_chenlin', level: 2 },
   { id: 'deng', faction: 'ming', name: '등자룡', title: '수군 부총병', portrait: 'portrait_deng', level: 2 },
+  { id: 'lirusong', faction: 'ming', name: '이여송', title: '동정 제독', portrait: 'portrait_lirusong', level: 2, joins: 4 },
+  { id: 'wuweizhong', faction: 'ming', name: '오유충', title: '유격장군', portrait: 'portrait_wuweizhong', level: 1, joins: 4 },
+  { id: 'yanghao', faction: 'ming', name: '양호', title: '경리', portrait: 'portrait_yanghao', level: 1, joins: 22 },
+  { id: 'magui', faction: 'ming', name: '마귀', title: '비왜 제독', portrait: 'portrait_magui', level: 2, joins: 22 },
+  { id: 'liuting', faction: 'ming', name: '유정', title: '서로군 제독', portrait: 'portrait_liuting', level: 2, joins: 25 },
+  { id: 'jijin', faction: 'ming', name: '계금', title: '수군 유격장', portrait: 'portrait_jijin', level: 1, joins: 25 },
 ];
 
 /** Strategic starting positions, not simultaneous historical ownership of every port. */

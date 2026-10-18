@@ -1,0 +1,30 @@
+{
+  "asset": "body-back-v1",
+  "type": "reference-image",
+  "view": "back",
+  "mode": "built-in",
+  "tool": "image_gen.imagegen",
+  "generatedDate": "2026-10-17",
+  "originalPath": "C:/Users/dongh/.codex/generated_images/01a1461e-8fb8-7333-a309-fda9be965fce/exec-59a714a9-0960-4b77-a303-0492731f5f95.png",
+  "savedPath": "assets-src/generals-regeneration-2026-10-17/references/body-back-v1.png",
+  "sourceGeometry": null,
+  "inputImages": [
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/body-front-v1.png",
+      "role": "approved body, clothing, pose, scale and identity"
+    }
+  ],
+  "prompt": "Use case: identity-preserve.\nAsset type: BACK image of the SAME fixed anatomical base reference for a modular realistic historical game character; one consistent view for image-to-3D.\nInput image 1: the approved FRONT of the exact person, clothing, physical proportions, pose, studio lighting, background and canvas scale to preserve. Turn the camera around this exact unchanged person by precisely 180 degrees. Do not redesign or restyle him.\nPrimary request: a STRICT REAR ORTHOGRAPHIC full-body view. The man faces completely away from the viewer. Show the BACK of his head with correctly groomed dark hair, the rear of his one tiny tight topknot and plain charcoal headband, both ears from behind, real rear neck/nape, upper back, shoulder blades, back waist, seat of trousers, backs of legs, and boot heels. A rear view has ZERO face: absolutely no eyes, no eyebrows, no nose, no mouth, no moustache or beard drawn on the back of the skull. No chest, no front shirt neckline, no front trouser fly.\nKeep the same sober late-40s Korean male admiral's natural approximately eight-head adult proportions and athletic moderate build; the same plain close-fitting dark charcoal long-sleeve undershirt and charcoal trousers, the same simple plain black mid-calf boots. No armor, helmet, cloak, weapons, jewelry, belt ornaments, extra objects or people.\nPose invariants: exact same symmetric upright T-POSE with shoulders level, BOTH arms straight horizontally out to the sides at shoulder height, compact closed fists, no bent elbow; legs straight at hip width, feet parallel, heels facing the rear camera. Spine and head centered. Match reference body volume and limb lengths.\nComposition invariants: one single strict rear view only, 1254x1254 square canvas, same fixed orthographic scale as input. Top of topknot approximately y=15, shoulder/arm axis approximately y=265, waist approximately y=510, knees approximately y=850, boot soles approximately y=1190. Full figure entirely inside canvas with same safe side margins; no crop, no zoom, no perspective, no yaw, no three-quarter view, no collage, no turnaround sheet.\nIdentical flat neutral mid-grey studio background with no floor line, even soft studio light and clean restrained premium realistic 3D game reference rendering. No text or watermark. Keep anatomy believable and no heroic inflation. The back of the head must be normal hair and nape only.",
+  "visualReview": {
+    "status": "selected-reference-not-3d-accepted",
+    "observations": [
+      "Strict rear view; ordinary rear hair, small topknot, headband and nape; zero rear face.",
+      "Rear shirt and trouser seams and boot heels; no front chest or fly.",
+      "Horizontal outstretched arms, compact fists, straight hip-width legs, full-body framing align closely to front."
+    ],
+    "limitations": [
+      "Generated views are visual references, not exact multi-camera captures of one 3D mesh.",
+      "Finger orientation and hidden surfaces must be checked on the generated 3D body."
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T15:38:26.156Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Ignacio María de Álava, Spanish teniente general of the navy, fifty-five. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Ignacio María de Álava, Spanish teniente general of the navy, fifty-five: a long, severe Basque face, a large aquiline nose, powdered grey hair, clean-shaven, stern deep-set dark eyes), in the costume of: Faction look: an officer of the Spanish Real Armada of 1797-1805, as in Spanish Napoleonic-era films and the portraits in the Museo Naval, Madrid: The second-in-command at Trafalgar: a teniente general's uniform of the Real Armada, a dark navy-blue tailcoat with red collar, lapels and cuffs embroidered with broad gold lace, gold buttons, gold epaulettes, a red waistcoat with gold lace, white breeches, black boots; a black bicorne with gold edging and a red cockade. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_alava.webp"
+  ],
+  "estimatedUsd": 0.04
+}

@@ -1,0 +1,106 @@
+{
+  "kind": "sword",
+  "hand": "right",
+  "length": 1,
+  "notes": "Curved single edge, separate polished bevels, wrapped rayskin grip",
+  "id": "ming_dao",
+  "faction": "ming",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 3928,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.0820000022649765,
+    1.1880309879779816,
+    0.13955645635724068
+  ],
+  "lodTriangles": 3928,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_dao.glb",
+      "bytes": 150172,
+      "sha256": "58873579ef0ebac204559a23f58fca3a1c96057301658e7884c95740bca1d1f6"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_dao_lod1.glb",
+      "bytes": 150176,
+      "sha256": "f83208d9c3ebde0a9d18477943dce3c50c297d9e796f764d1c48c072cd1e7ed6"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\ming_dao.blend",
+      "bytes": 154950,
+      "sha256": "d89e217fbf0b263cf2ef6f9e2664729fb2213b6c6ca5d2664b78d10805be19d2"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_ming_dao.glb",
+      "bytes": 150172,
+      "sha256": "58873579ef0ebac204559a23f58fca3a1c96057301658e7884c95740bca1d1f6",
+      "triangles": 3928,
+      "vertices": 4942,
+      "min": [
+        -0.04100000113248825,
+        -0.2590309679508209,
+        -0.05400000140070915
+      ],
+      "max": [
+        0.04100000113248825,
+        0.9290000200271606,
+        0.08555645495653152
+      ],
+      "dimensions": [
+        0.0820000022649765,
+        1.1880309879779816,
+        0.13955645635724068
+      ],
+      "steelOutwardVertices": 104,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_ming_dao_lod1.glb",
+      "bytes": 150176,
+      "sha256": "f83208d9c3ebde0a9d18477943dce3c50c297d9e796f764d1c48c072cd1e7ed6",
+      "triangles": 3928,
+      "vertices": 4942,
+      "min": [
+        -0.04100000113248825,
+        -0.2590309679508209,
+        -0.05400000140070915
+      ],
+      "max": [
+        0.04100000113248825,
+        0.9290000200271606,
+        0.08555645495653152
+      ],
+      "dimensions": [
+        0.0820000022649765,
+        1.1880309879779816,
+        0.13955645635724068
+      ],
+      "steelOutwardVertices": 104,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/ming_dao.blend",
+    "bytes": 154950,
+    "sha256": "d89e217fbf0b263cf2ef6f9e2664729fb2213b6c6ca5d2664b78d10805be19d2"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/ming_dao.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 2954,
+    "sha256": "4b3b3f8ffbfb0a0aa92cc6c4f1393e6fbc25a2822a7b062a504ae155bd79dab9"
+  }
+}

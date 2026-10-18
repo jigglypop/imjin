@@ -1,0 +1,106 @@
+{
+  "kind": "spear",
+  "hand": "right",
+  "length": 2.485,
+  "notes": "Solid tapered hardwood pole, ridged bevel head, separate socket, hand binding, butt spike; yari",
+  "id": "japan_yari",
+  "faction": "japan",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 4156,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.041999999433755875,
+    2.4850000143051147,
+    0.041999999433755875
+  ],
+  "lodTriangles": 4156,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_yari.glb",
+      "bytes": 146504,
+      "sha256": "fe59a154c73eecc356d4f95511c80288a0237bf02cd0f2a3d593586222808b2f"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_yari_lod1.glb",
+      "bytes": 146508,
+      "sha256": "58b77bdf42722f5227a7ede1ac3ba2cd933367b904aa74c76032c711f6687ee4"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\japan_yari.blend",
+      "bytes": 159415,
+      "sha256": "392b098f9315d5dde0d740767246edea1b1e7f715a5961a9d307cb64e2ef18cb"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_japan_yari.glb",
+      "bytes": 146504,
+      "sha256": "fe59a154c73eecc356d4f95511c80288a0237bf02cd0f2a3d593586222808b2f",
+      "triangles": 4156,
+      "vertices": 4800,
+      "min": [
+        -0.020999999716877937,
+        -1.0950000286102295,
+        -0.020999999716877937
+      ],
+      "max": [
+        0.020999999716877937,
+        1.3899999856948853,
+        0.020999999716877937
+      ],
+      "dimensions": [
+        0.041999999433755875,
+        2.4850000143051147,
+        0.041999999433755875
+      ],
+      "steelOutwardVertices": 56,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_japan_yari_lod1.glb",
+      "bytes": 146508,
+      "sha256": "58b77bdf42722f5227a7ede1ac3ba2cd933367b904aa74c76032c711f6687ee4",
+      "triangles": 4156,
+      "vertices": 4800,
+      "min": [
+        -0.020999999716877937,
+        -1.0950000286102295,
+        -0.020999999716877937
+      ],
+      "max": [
+        0.020999999716877937,
+        1.3899999856948853,
+        0.020999999716877937
+      ],
+      "dimensions": [
+        0.041999999433755875,
+        2.4850000143051147,
+        0.041999999433755875
+      ],
+      "steelOutwardVertices": 56,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/japan_yari.blend",
+    "bytes": 159415,
+    "sha256": "392b098f9315d5dde0d740767246edea1b1e7f715a5961a9d307cb64e2ef18cb"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/japan_yari.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 2248,
+    "sha256": "57502e2c4b7055f54856209be218658687384539b16c2fb090a8672bf4f3634c"
+  }
+}

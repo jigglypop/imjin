@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:50:29.037Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Cuthbert Collingwood, Vice-Admiral, fifty-seven. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Cuthbert Collingwood, Vice-Admiral, fifty-seven: a long, calm, kindly Northumbrian face, a long nose, grey hair tied in a short queue, clean-shaven, steady grey eyes), in the costume of: Faction look: a Royal Navy officer of 1797-1805, as in Master and Commander (2003) and the Hornblower films: The vice-admiral of the lee column: his vice-admiral's undress coat, the regulation 1795-pattern Royal Navy uniform: a tailored dark navy-blue wool tailcoat with a high standing collar, gold lace and gilt anchor buttons, white wool lapels-free front buttoned close over a white waistcoat, white breeches, white stockings to the knee, black buckled shoes or black Hessian boots; a black felt bicorne hat with gold loop and black cockade, worn athwartships, gold epaulettes. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_collingwood.webp"
+  ],
+  "estimatedUsd": 0.04
+}

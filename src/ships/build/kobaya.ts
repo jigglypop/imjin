@@ -42,7 +42,7 @@ export function buildKobaya(lod: Lod): MeshData {
         oarXs.slice(0, -1).forEach((x, i) => {
           const xc = (x + oarXs[i + 1]!) / 2;
           const z = side * (outer(xc) + 0.012);
-          b.quadF(crest, [[xc - 0.42, deck + 0.12, z], [xc + 0.42, deck + 0.12, z], [xc + 0.42, deck + 0.64, z], [xc - 0.42, deck + 0.64, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+          b.quadF(crest.fit(0.84, 0.52), [[xc - 0.42, deck + 0.12, z], [xc + 0.42, deck + 0.12, z], [xc + 0.42, deck + 0.64, z], [xc - 0.42, deck + 0.64, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
         });
         const n = 10;
         const path: V3[] = [];
@@ -58,7 +58,7 @@ export function buildKobaya(lod: Lod): MeshData {
   if (lod < 2) {
     const xb = L / 2;
     sweep(b, lacquer, [[xb - 0.5, tops(xb - 0.5), 0], [xb + 0.15, tops(xb) + 0.1, 0], [xb + 0.3, tops(xb) + 0.55, 0]], rectSection(0.16, 0.2), { caps: true });
-    b.quadF(crest, [[xb - 0.02, tops(xb) - 0.7, -0.35], [xb - 0.02, tops(xb) - 0.7, 0.35], [xb - 0.02, tops(xb) - 0.05, 0.35], [xb - 0.02, tops(xb) - 0.05, -0.35]], [1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    b.quadF(crest.fit(0.7, 0.65), [[xb - 0.02, tops(xb) - 0.7, -0.35], [xb - 0.02, tops(xb) - 0.7, 0.35], [xb - 0.02, tops(xb) - 0.05, 0.35], [xb - 0.02, tops(xb) - 0.05, -0.35]], [1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
     box(b, plank, [-L / 2 - 0.35, -0.8, -0.1], [-L / 2 - 0.02, 0.7, 0.1], { grain: 1 });
     cylinder(b, wood, [-L / 2 - 0.2, 0.7, 0], [-L / 2 + 0.7, deck + 0.6, 0], 0.05, 0.05, 5, true);
   }

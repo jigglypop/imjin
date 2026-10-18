@@ -1,0 +1,17 @@
+{
+  "taskId": "01a1462d-9bb0-766b-97d9-3671717404e2",
+  "sourceSha256": "8c00ed3037e33c84ce3b1547ef9f4b216493e12c688abd33cb5f3ca46bf5da9c",
+  "acceptedForRigging": true,
+  "acceptedForRuntime": false,
+  "triangles": 185973,
+  "reviewer": "root agent direct inspection of Blender textured front/back/side and clay back",
+  "frontAxis": "+Z",
+  "rearFaceCount": 0,
+  "headTorsoBootDirectionConsistent": true,
+  "evidence": "F:/codex-work/imjin-regeneration-review/body/8c00ed3037e3/review.json",
+  "remaining": [
+    "Pose conversion opened the hands; weapon grip must be corrected on the NEW generated geometry.",
+    "Review rig deformation and body-coat direction in the browser before acceptance.",
+    "Body alone is not a complete general or a finished wardrobe."
+  ]
+}

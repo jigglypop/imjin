@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-16T18:25:30.329Z",
+  "image": {
+    "model": "gpt-image-2.5-sunburst",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "The attached picture is a full suit of armour worn in a strict T-pose, seen exactly from his left side in strict profile: he faces the right edge of the picture; his left arm points straight at the camera and is seen end-on, foreshortened to the fist in front of his shoulder, his right arm hidden behind his body; both arms still level at shoulder height, still straight out to his sides, not reaching forward. Redraw exactly the same armour, every piece, colour, rivet, trim and the helmet, in exactly the same pose, scale and position in the frame, but worn by an invisible man: there is no person at all. No head, no face, no beard, no hair, no neck, no hands, no skin anywhere: the helmet floats empty in its place with dark empty space under its brim and inside its neck curtain, the collar and the sleeve cuffs are open and empty and dark inside, the boots stand empty. The armour keeps the full shape of the body inside it, arms straight out level at the shoulders. Same soft, even, flat studio light and the same plain seamless very light grey background, no floor, no shadow. No text, no border. Photographic, no illustration look.",
+  "refs": [
+    "assets-src/generals-parts-2026-10-17/armor_joseon_dujeong_side.png"
+  ],
+  "usage": {
+    "input_tokens": 1792,
+    "input_tokens_details": {
+      "image_tokens": 1521,
+      "text_tokens": 271
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 7722
+  }
+}

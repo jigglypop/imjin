@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:19:22.202Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "16:9",
+  "prompt": "A costume-department turnaround sheet for a big-budget live-action historical film about the Spanish Armada of 1588 (Elizabeth: The Golden Age): ONE complete costume (with its armour where it has one, and its headwear) shown four times side by side in one row at the same scale and height, from left to right: from the FRONT, from the BACK, from ITS LEFT SIDE in strict profile, from ITS RIGHT SIDE in strict profile. Each time the costume is worn by an invisible ghost mannequin: it keeps the shape it has on a tall athletic man with broad shoulders, a deep chest and a narrow cinched waist, the sleeves angled 45 degrees down and away from the body as in an A-pose, the legs standing apart; empty inside, no person, no head, no hands, no mannequin, no stand. The costume: Faction look: an Elizabethan English sea commander of 1588, as in big-budget period films about the Armada (Elizabeth: The Golden Age, the BBC Elizabeth R): The rear-admiral: a dark brown doublet with a small white ruff, a russeted (dark brown-blued) steel breastplate and gorget with plain brass rivets, dark padded trunk hose, dark hose and black boots; a black skull cap. The attached picture is his portrait: take the colours and the construction of his dress where they agree with the description. All four views show exactly the same costume: identical colours, plates, buttons, lace, trims and lengths. Photographic, crisp detail, believable late-sixteenth-century materials: polished and etched steel, velvet, silk, wool, leather, soft even flat studio light, a plain light grey background, no ground shadow. No sword, no weapon, no scabbard. No text, no letters, no labels, no border. No illustration look.",
+  "refs": [
+    "public/ui/portraits/portrait_hawkins.webp"
+  ],
+  "estimatedUsd": 0.04
+}

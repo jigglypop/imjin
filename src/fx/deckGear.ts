@@ -1,4 +1,4 @@
-import { BoxGeometry, BufferAttribute, CylinderGeometry, DynamicDrawUsage, Group, InstancedMesh, Matrix4, MeshStandardNodeMaterial, Quaternion, Vector3, type BufferGeometry } from 'three/webgpu';
+import { BoxGeometry, BufferAttribute, CylinderGeometry, Group, InstancedMesh, Matrix4, MeshStandardNodeMaterial, Quaternion, Vector3, type BufferGeometry } from 'three/webgpu';
 import { attribute } from 'three/tsl';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -80,7 +80,6 @@ export class DeckGear {
     this.mesh = new InstancedMesh(drumGeometry(), mat, MAX);
     this.steps = new InstancedMesh(stepGeometry(), mat, STEPS);
     for (const m of [this.mesh, this.steps]) {
-      m.instanceMatrix.setUsage(DynamicDrawUsage);
       m.count = 0;
       m.frustumCulled = false;
       m.castShadow = true;
@@ -112,8 +111,12 @@ export class DeckGear {
 
   end() {
     for (const m of [this.mesh, this.steps]) {
-      m.instanceMatrix.needsUpdate = m.count > 0;
+      // Static buffers sent once a frame, only the filled part: a dynamic one went again, whole, in the shadow pass and the main.
       m.visible = m.count > 0;
+      if (!m.count) continue;
+      m.instanceMatrix.clearUpdateRanges();
+      m.instanceMatrix.addUpdateRange(0, m.count * 16);
+      m.instanceMatrix.needsUpdate = true;
     }
   }
 }

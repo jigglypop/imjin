@@ -1,0 +1,22 @@
+{
+  "task": "01a145cd-c888-7057-add7-d00fe3b01a90",
+  "endpoint": "multi-image-to-3d",
+  "at": "2026-10-16T17:41:21.076Z",
+  "request": {
+    "ai_model": "meshy-7.1",
+    "geometry_resolution": "2k",
+    "should_texture": true,
+    "enable_pbr": true,
+    "texture_resolution": "4k",
+    "should_remesh": true,
+    "topology": "triangle",
+    "target_polycount": 280000,
+    "image_enhancement": false,
+    "remove_lighting": true,
+    "target_formats": [
+      "glb"
+    ],
+    "image_urls": "3 views"
+  },
+  "credits": 35
+}

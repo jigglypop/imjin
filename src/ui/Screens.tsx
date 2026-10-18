@@ -78,6 +78,9 @@ export function MainMenu() {
         <button className="back-btn" data-mode="codex" {...mode('codex')}>
           <CodexIcon name="book" /> {t('함선 도감')}
         </button>
+        <button className="back-btn" data-mode="generals" {...mode('generals')}>
+          <Person /> {t('장수')}
+        </button>
         <button className="back-btn" onClick={go('settings')}>
           <Sliders /> {t('설정')}
         </button>

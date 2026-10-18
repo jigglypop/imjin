@@ -1,0 +1,7 @@
+{
+  "at": "2026-10-17T14:21:36.819Z",
+  "tool": "gemini image edit",
+  "note": "rejected_v2/front_grey_v3.png mirrored (missing arm on the right), orders moved back to the left breast",
+  "prompt": "Edit this photograph minimally. Keep the man, his face, pose, coat, hat, arm, the pinned empty sleeve, scale, framing, light and background exactly the same. Change only two things: (1) move the four embroidered silver star orders from the left side of the picture to the same place on the OTHER lapel/breast (the right side of the picture), so nothing remains where they were; (2) the coat buttons and lace stay symmetrical. His one hand stays an empty closed fist, arm angled 45 degrees down and out. Photographic, no text.",
+  "estimatedUsd": 0.04
+}

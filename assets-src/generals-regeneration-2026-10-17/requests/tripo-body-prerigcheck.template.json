@@ -1,0 +1,4 @@
+{
+  "type": "animate_prerigcheck",
+  "original_model_task_id": "${PILOT_NEW_BODY_GENERATION_TASK_ID}"
+}

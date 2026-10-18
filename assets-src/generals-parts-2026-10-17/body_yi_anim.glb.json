@@ -1,0 +1,14 @@
+{
+  "task": "01a145cc-e08f-74a6-a8b4-5e0e4cc861ee",
+  "endpoint": "animations",
+  "at": "2026-10-16T17:40:17.969Z",
+  "request": {
+    "rig_task_id": "01a145cb-d161-73e1-96b4-07c44180b1e5",
+    "action_ids": [
+      11,
+      101,
+      219
+    ]
+  },
+  "credits": 9
+}

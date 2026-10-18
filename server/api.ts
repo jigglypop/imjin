@@ -44,6 +44,7 @@ const STATUS: Record<AccountErrorCode, number> = {
   'ranked-other': 409,
   conflict: 409,
   insufficient: 409,
+  rule: 409,
 };
 
 /** A refusal with its code; the status and the text come from the tables, unless given. */

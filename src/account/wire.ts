@@ -55,5 +55,6 @@ export const ACCOUNT_TEXT = {
   'ranked-other': '이 계정에는 이미 다른 전적이 있습니다.',
   conflict: '다른 곳에서 먼저 바뀌었습니다. 다시 시도해 주세요.',
   insufficient: '잔액이 모자랍니다.',
+  rule: '지금은 할 수 없습니다.',
 } as const;
 export type AccountErrorCode = keyof typeof ACCOUNT_TEXT;

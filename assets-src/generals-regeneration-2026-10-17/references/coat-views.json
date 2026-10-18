@@ -1,0 +1,54 @@
+{
+  "schema": "imjin.coat-reference-views.v1",
+  "createdAt": "2026-10-16T19:29:06.352Z",
+  "asset": "armor_joseon_dujeong_coat",
+  "status": "new-generated-candidates-parent-selects",
+  "tool": "builtin-image_gen",
+  "oldGeometryReuse": false,
+  "views": [
+    {
+      "view": "front",
+      "path": "joseon-dujeong-coat-front-v2.png",
+      "bytes": 1765708,
+      "sha256": "059fb60bb60a3b74e64c7ab82661c13f01d545cf9bdca132d23ae6438ff53335",
+      "width": 1254,
+      "height": 1254,
+      "visuallyInspected": true,
+      "providerSelected": false,
+      "reviewNotes": "Design and landmarks agree with approved front/back."
+    },
+    {
+      "view": "left",
+      "path": "joseon-dujeong-coat-left-v1.png",
+      "bytes": 1657143,
+      "sha256": "0542acace3731caac4d90adb1c1244c5cfcf18b35d34945467ba663c48be7778",
+      "width": 1254,
+      "height": 1254,
+      "visuallyInspected": true,
+      "providerSelected": false,
+      "reviewNotes": "Hem approximately55px longer than front/back; parent reviews for submission."
+    },
+    {
+      "view": "back",
+      "path": "joseon-dujeong-coat-back-v1.png",
+      "bytes": 1766888,
+      "sha256": "6f7251a4805af24d4a9739452491be084a5df2c2d561f5535e254e98b479b28e",
+      "width": 1254,
+      "height": 1254,
+      "visuallyInspected": true,
+      "providerSelected": false,
+      "reviewNotes": "Design and landmarks agree with approved front/back."
+    },
+    {
+      "view": "right",
+      "path": "joseon-dujeong-coat-right-v1.png",
+      "bytes": 1659738,
+      "sha256": "7dbb1813ec4ac937085eac6e06ce6dcf91a58ecf5bce55131337fd03aca1e042",
+      "width": 1254,
+      "height": 1254,
+      "visuallyInspected": true,
+      "providerSelected": false,
+      "reviewNotes": "Hem approximately33px longer than front/back; parent reviews for submission."
+    }
+  ]
+}

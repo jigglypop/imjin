@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-17T08:45:37.198Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x1632",
+    "quality": "high",
+    "background": "transparent",
+    "output_format": "png"
+  },
+  "prompt": "A costume-department armour turnaround sheet for a big-budget live-action historical war film: ONE complete suit of armour with its helmet, shown four times side by side in one row at the same scale and the same height, from left to right: seen from the FRONT, from the BACK, from ITS LEFT SIDE in strict profile, from ITS RIGHT SIDE in strict profile. Each time the armour is worn by an invisible ghost mannequin: it keeps the shape it has on a tall athletic man with broad shoulders, a deep chest and a narrow cinched waist, the sleeves and shoulder guards angled 45 degrees down and away from the body as in an A-pose, the skirts hanging straight, the boots standing apart; empty inside, no person, no head, no hands, no mannequin, no stand. The armour: Faction look: Joseon Korean commander, as in the films Myeongryang (2014), Hansan: Rising Dragon (2022) and Noryang: Deadly Sea (2023) and the KBS drama Immortal Admiral Yi Sun-sin (2004). A crimson dujeong-gap coat with brass rivets and black trims, black shoulder guards; a black iron tugu helmet with a spike and red plume, a red riveted neck curtain. The first attached picture is the style reference of this costume department (rendering, light, materials, accuracy only). The second attached picture shows this armour on its stand: take its colours, materials and construction where they agree with the description. All four views show exactly the same armour: identical colours, plates, rivets, lacing, trims, lengths and helmet. Photographic, crisp detail, soft even flat studio light, a fully transparent background (clean cutouts, no ground shadow). No sword, no weapon, no scabbard. No text, no letters, no labels, no border, no watermark. No illustration look, no plastic CGI look.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/style-sheet.png",
+    "public/ui/armor/yi_tongjesa.webp"
+  ],
+  "usage": {
+    "input_tokens": 2206,
+    "input_tokens_details": {
+      "image_tokens": 1784,
+      "text_tokens": 422
+    },
+    "output_tokens": 2171,
+    "output_tokens_details": {
+      "image_tokens": 2171,
+      "text_tokens": 0
+    },
+    "total_tokens": 4377
+  }
+}

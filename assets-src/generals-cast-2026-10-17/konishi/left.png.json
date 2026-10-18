@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-16T20:50:15.182Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "The attached picture is the front view of a character reference for image-to-3D reconstruction. Make the matching view of the exact same man in the exact same costume, the exact same sword and the exact same strict T-pose, seen exactly from HIS LEFT SIDE in strict profile (he faces the right edge of the picture): his left arm points straight at the camera, foreshortened, and his right arm with the sword points straight away behind him; the sword is mostly hidden behind his body except possibly the tip. Same scale, same height in the frame, same orthographic look, same soft flat studio light, same plain light grey background, no floor line, no shadow. Everything consistent with the front view: colours, materials, trims, helmet, lengths, proportions. No text, no letters, no logo, no border. No painting or illustration look, no plastic CGI look. Exactly two arms, two legs.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/konishi/front.png"
+  ],
+  "usage": {
+    "input_tokens": 1725,
+    "input_tokens_details": {
+      "image_tokens": 1521,
+      "text_tokens": 204
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 7655
+  }
+}

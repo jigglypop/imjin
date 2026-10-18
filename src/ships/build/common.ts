@@ -4,7 +4,7 @@
  */
 import { type HullPlan, hullSection, hullTop, sideZ } from '../anchors';
 import type { Faction } from './atlas';
-import { flagRect } from './atlas';
+import { clothSize, flagAspect, flagRect } from './atlas';
 import {
   type MeshBuilder,
   type Paint,
@@ -238,8 +238,17 @@ export function mast(ctx: Ctx, wood: Paint, band: Paint, x: number, y0: number, 
   if (ctx.lod === 0) {
     cylinder(ctx.b, band, [x, y0 + 0.2, 0], [x, y0 + 0.55, 0], r * 1.3, r * 1.3, seg, true);
     cylinder(ctx.b, band, [x, y0 + h - 1.2, 0], [x, y0 + h - 1.05, 0], r * 1.0, r * 1.0, seg, true);
-    cylinder(ctx.b, wood, [x, y0 + h, 0], [x, y0 + h + 0.4, 0], r * 0.62, 0.05, seg, true);
+    knob(ctx, wood, [x, y0 + h, 0], r * 0.62);
   }
+}
+
+/**
+ * Turned cap on a pole or mast top (a collar, a waist and a ball) of radius r at its widest. A pointed cone there read
+ * as a black spike against the sky with the pennant tapering beside it.
+ */
+export function knob(ctx: Ctx, wood: Paint, top: V3, r: number) {
+  const prof: V2[] = [[r * 0.9, 0], [r * 1.15, r * 0.25], [r * 1.15, r * 0.55], [r * 0.55, r * 0.8], [r * 0.95, r * 1.25], [r, r * 1.7], [r * 0.7, r * 2.2], [0, r * 2.45]];
+  ctx.b.with(xlate(top[0], top[1], top[2]), () => lathe(ctx.b, wood, prof, byLod(ctx, 8, 6, 4)));
 }
 
 export type SailOpts = { x: number; yTop: number; w: number; h: number; billow: number; battens: number; phase: number };
@@ -292,21 +301,26 @@ export function flag(ctx: Ctx, o: FlagOpts) {
   if (ctx.lod > 1) return;
   const fr = flagRect(ctx.faction, o.sheet, o.flag);
   const paint = ctx.P(o.sheet, { rect: fr.rect });
-  cloth(ctx.b, paint, [x - 0.04, y + o.poleH - 0.05, z], [-o.w, 0, 0], [0, -o.h, 0], {
+  // The cloth takes its picture's shape (keeping the area asked for) so the lettering is never stretched.
+  const [w, h] = clothSize(flagAspect(ctx.faction, o.sheet, o.flag), o.w, o.h);
+  cloth(ctx.b, paint, [x - 0.04, y + o.poleH - 0.05, z], [-w, 0, 0], [0, -h, 0], {
     nu: o.nu ?? byLod(ctx, 6, 2, 1),
     nv: o.nv ?? byLod(ctx, 4, 2, 1),
     flutter: o.flutter ?? 1,
-    wave: 0.07 * o.w,
+    wave: 0.07 * w,
     phase: o.phase,
   });
-  // finial
-  if (ctx.lod === 0) cylinder(ctx.b, o.wood, [x, y + o.poleH, z], [x, y + o.poleH + 0.22, z], 0.07, 0.0, 5, false);
+  if (ctx.lod === 0) knob(ctx, o.wood, [x, y + o.poleH, z], 0.07);
 }
 
-/** Long swallow-tailed pennant from a mast top. */
+/**
+ * Long triangular streamer from a mast top, its hoist edge lashed to the mast at `from` and `width` deep at most. The
+ * hoist is at least a sixth of the length: thinner, it read as a black needle from the battle camera.
+ */
 export function longPennant(ctx: Ctx, color: Paint, from: V3, length: number, width: number, phase: number) {
   if (ctx.lod > 1) return;
-  pennant(ctx.b, color, from, [-1, -0.05, 0], [0, -1, 0], length, width, width * 0.12, byLod(ctx, 8, 3, 1), { flutter: 1.2, phase });
+  const hoist = Math.max(width, length * 0.17);
+  pennant(ctx.b, color, from, [-1, 0, 0], [0, -1, 0], length, hoist, hoist * 0.03, byLod(ctx, 14, 6, 1), { flutter: 1.3, phase, droop: 0.09, rows: byLod(ctx, 3, 1, 1) });
 }
 
 // ---------- small props ----------

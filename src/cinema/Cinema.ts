@@ -8,6 +8,7 @@ import type { Command } from '../sim/commands';
 import type { ScenarioId } from '../sim/scenarios';
 import type { BattleEvent, Team } from '../sim/types';
 import { beatFor, formationBeat, type Beat, type BeatMemory } from './beats';
+import { Cast, type CastHost } from './cast';
 import { CutscenePlayer } from './CutscenePlayer';
 import { locate, type CameraPose, type RigHost } from './rig';
 import { HANSAN_INTRO, MYEONGNYANG_INTRO } from './scenes/intros';
@@ -28,6 +29,8 @@ export interface CinemaHost {
   homePose(): RtsPose;
   /** The sound side: the bed up and the battle down by `hush` while a scene runs, null when it ends; drum strokes. */
   sound: { cinema(hush: number | null): void; drums(count: number): void };
+  /** Where the commanders' figures are put for the close-ups; absent where there are none (a gallery, a test). */
+  readonly cast?: CastHost;
 }
 
 const INTROS: Partial<Record<ScenarioId, Scene>> = { noryang: NORYANG_INTRO, hansan: HANSAN_INTRO, myeongnyang: MYEONGNYANG_INTRO };
@@ -78,6 +81,7 @@ export class Cinema implements RigHost {
   /** The documentary mode (다큐멘터리 모드). */
   documentary = typeof location !== 'undefined' && new URLSearchParams(location.search).get('doc') === '1' ? true : stored(DOC_KEY, false);
   private running: Running | null = null;
+  private cast: Cast | null = null;
   private queue: Beat | null = null;
   private memory: BeatMemory = { fired: new Set(), routing: [] };
   private cooled = new Map<string, number>();
@@ -112,6 +116,22 @@ export class Cinema implements RigHost {
 
   water(x: number, z: number) {
     return waveField.heightAt(x, z);
+  }
+
+  figure(who: string) {
+    return this.cast?.place(who) ?? null;
+  }
+
+  homeEye() {
+    const e = this.host.rts.eyeOf(this.host.homePose());
+    return { ...e, fov: BASE_FOV, roll: 0, focus: Math.hypot(e.px - e.lx, e.py - e.ly, e.pz - e.lz) };
+  }
+
+  /** The portrait to inset with a commander's line: none while his figure is on deck in a close-up. */
+  insertFor(name: string) {
+    const r = this.running;
+    if (r?.camera && r.player.onFigure && this.cast?.ready(name)) return null;
+    return r?.player.scene.cast?.[name]?.portrait ?? null;
   }
 
   lightBearing() {
@@ -232,6 +252,7 @@ export class Cinema implements RigHost {
     const camera = !this.host.remote && (kind === 'cutscene' || this.host.rts.cinematic);
     this.running = { player: new CutscenePlayer(scene, this), kind, camera };
     this.pose = null;
+    if (camera && kind === 'cutscene' && scene.cast && this.host.cast) this.cast = new Cast(this.host.cast, scene.cast, scene.castLight ?? 'day', this.ctx);
     if (kind === 'cutscene') {
       this.host.sound.cinema(0);
     }
@@ -243,6 +264,8 @@ export class Cinema implements RigHost {
     const r = this.running;
     if (!r) return;
     this.running = null;
+    this.cast?.dispose();
+    this.cast = null;
     if (r.kind === 'cutscene') {
       this.host.sound.cinema(null);
     }
@@ -331,6 +354,9 @@ export class Cinema implements RigHost {
     let placed = false;
     if (r) {
       for (const cue of r.player.advance(dt)) this.cue(cue);
+      for (const a of r.player.acts()) this.cast?.act(a.who, a.move);
+      const shot = r.player.shot;
+      this.cast?.update(dt, this.ctx, shot?.cam.type === 'figure' ? shot.cam.who : null);
       // Any camera input during a beat (it turns the director's camera off) hands the camera back at once.
       if (r.kind === 'beat' && r.camera && !this.host.rts.cinematic) {
         r.camera = false;

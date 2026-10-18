@@ -1,0 +1,111 @@
+{
+  "kind": "bow",
+  "hand": "left",
+  "length": 1.7999999999999998,
+  "notes": "Laminated japanese bow, shaped recurve, horn nocks, central handgrip, taut separate string",
+  "nock": [
+    0,
+    0,
+    -0.15
+  ],
+  "id": "japan_shigeto",
+  "faction": "japan",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 7900,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.03799999877810478,
+    1.823788821697235,
+    0.26593850553035736
+  ],
+  "lodTriangles": 7700,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_shigeto.glb",
+      "bytes": 169332,
+      "sha256": "5ce6fe0927cc3b27ee0836639ea6c55078425f0f7e4400045bf6fb5cddba6ca8"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_shigeto_lod1.glb",
+      "bytes": 165736,
+      "sha256": "9c8778815e7683794290c3fb3ee5f8a609a0856175876069255d1678127ecf57"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\japan_shigeto.blend",
+      "bytes": 199856,
+      "sha256": "44ec81a6443702db8af24e126325f90ce577aebd56bad590f7475d4debac8ccf"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_japan_shigeto.glb",
+      "bytes": 169332,
+      "sha256": "5ce6fe0927cc3b27ee0836639ea6c55078425f0f7e4400045bf6fb5cddba6ca8",
+      "triangles": 7900,
+      "vertices": 4812,
+      "min": [
+        -0.01899999938905239,
+        -0.611894428730011,
+        -0.15800000727176666
+      ],
+      "max": [
+        0.01899999938905239,
+        1.2118943929672241,
+        0.1079384982585907
+      ],
+      "dimensions": [
+        0.03799999877810478,
+        1.823788821697235,
+        0.26593850553035736
+      ],
+      "steelOutwardVertices": 0,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_japan_shigeto_lod1.glb",
+      "bytes": 165736,
+      "sha256": "9c8778815e7683794290c3fb3ee5f8a609a0856175876069255d1678127ecf57",
+      "triangles": 7700,
+      "vertices": 4712,
+      "min": [
+        -0.01899999938905239,
+        -0.611894428730011,
+        -0.15800000727176666
+      ],
+      "max": [
+        0.01899999938905239,
+        1.2118943929672241,
+        0.1079384982585907
+      ],
+      "dimensions": [
+        0.03799999877810478,
+        1.823788821697235,
+        0.26593850553035736
+      ],
+      "steelOutwardVertices": 0,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/japan_shigeto.blend",
+    "bytes": 199856,
+    "sha256": "44ec81a6443702db8af24e126325f90ce577aebd56bad590f7475d4debac8ccf"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/japan_shigeto.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 4168,
+    "sha256": "574fce1b8d5e634f30aac380c0bccda4826aec6020881231dccd23e8bd6a47e3"
+  }
+}

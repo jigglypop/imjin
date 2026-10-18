@@ -1,0 +1,4 @@
+{
+  "input_task_id": "${PILOT_NEW_BODY_GENERATION_TASK_ID}",
+  "height_meters": 1.8
+}

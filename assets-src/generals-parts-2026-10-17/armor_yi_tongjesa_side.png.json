@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-16T17:37:31.295Z",
+  "image": {
+    "model": "gpt-image-2.5-sunburst",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "A character reference photograph for image-to-3D reconstruction and auto-rigging, live-action and photographic. Exactly one man in a strict T-pose: both arms straight out to the sides at shoulder height, perfectly level, both hands clenched into compact fists, legs straight, feet a little apart and flat, the spine straight, the neck vertical, the head level and stacked above the shoulders. Seen at chest height through a long telephoto lens with no perspective distortion; the whole figure inside the square frame with a clear margin all round, its height filling about nine tenths of the frame. Soft, even, flat studio light from every side, no hard shadows; a plain seamless very light grey background, no floor line, no cast shadow, nothing else in the picture. No text, no letters, no logo, no border. No painting or illustration look, no plastic CGI look. Seen exactly from his left side in strict profile: he faces the right edge of the picture; his left arm points straight at the camera and is seen end-on, foreshortened to the fist in front of his shoulder, his right arm hidden behind his body; both arms still level at shoulder height, still straight out to his sides, NOT reaching forward. The attached picture is this man in his underclothes, seen exactly from his left side in strict profile: he faces the right edge of the picture; his left arm points straight at the camera and is seen end-on, foreshortened to the fist in front of his shoulder, his right arm hidden behind his body; both arms still level at shoulder height, still straight out to his sides, not reaching forward. Dress exactly this man, in exactly this pose, scale and position in the frame, in the full armour below, with its helmet, boots and every piece, fitted to his body: the body underneath does not change size or shape. The armour hangs close to the body: coat skirts split and hanging straight, no cape, no loose ribbons, cords or tassels away from the body, the plume close behind the helmet. The armour: The personal armor of Yi Sun-sin, Supreme Naval Commander of the Three Provinces of Joseon: a long dujeong-gap coat of deep crimson silk, a darker and richer red than any soldier's coat, with a soft sheen in its folds, faced with dense close rows of bright gilt rivet heads so that the whole coat glints gold; a thick dark brown fur collar and fur-trimmed cuffs, a broad belt of gilt lacquer with gilt plaques across the waist, wide shoulder flaps edged in gilt; the silk darkened and frayed by salt and smoke, the gilt rubbed, dignified and war-worn. Helmet: a black-lacquered iron tugu helmet with bright gilt bands and a gilt finial, a long full crimson horsehair plume falling to the shoulder, and a crimson neck curtain set with gilt rivets. No weapon, nothing held, no scabbard. The second attached picture is the same armour from the front: match it exactly.",
+  "refs": [
+    "assets-src/generals-parts-2026-10-17/body_yi_side.png",
+    "assets-src/generals-parts-2026-10-17/armor_yi_tongjesa_front.png"
+  ],
+  "usage": {
+    "input_tokens": 3696,
+    "input_tokens_details": {
+      "image_tokens": 3042,
+      "text_tokens": 654
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 9626
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T15:00:05.927Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Thomas Masterman Hardy, Captain of HMS Victory, thirty-six. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Thomas Masterman Hardy, Captain of HMS Victory, thirty-six: a very tall, big-framed Dorset man, a broad open honest face, short brown hair, clean-shaven, strong jaw), in the costume of: Faction look: a Royal Navy officer of 1797-1805, as in Master and Commander (2003) and the Hornblower films: The flag captain: a post-captain's full-dress coat, the regulation 1795-pattern Royal Navy uniform: a tailored dark navy-blue wool tailcoat with a high standing collar, gold lace and gilt anchor buttons, white wool lapels-free front buttoned close over a white waistcoat, white breeches, white stockings to the knee, black buckled shoes or black Hessian boots; a black felt bicorne hat with gold loop and black cockade, worn athwartships, gold epaulettes on both shoulders. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_hardy.webp"
+  ],
+  "estimatedUsd": 0.04
+}

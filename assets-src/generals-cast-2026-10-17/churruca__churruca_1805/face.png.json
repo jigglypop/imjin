@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T15:19:59.028Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Cosme Damián Churruca, Spanish brigadier and scientist-captain, forty-four. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Cosme Damián Churruca, Spanish brigadier and scientist-captain, forty-four: a thin, intelligent, serious Basque face, a high forehead, dark hair, long sideburns, clean-shaven), in the costume of: Faction look: an officer of the Spanish Real Armada of 1797-1805, as in Spanish Napoleonic-era films and the portraits in the Museo Naval, Madrid: The captain of the San Juan Nepomuceno: a brigadier's uniform of the Real Armada, a dark navy-blue tailcoat with red collar, lapels and cuffs edged with gold lace, gold buttons, gold epaulettes, a red waistcoat, white breeches, black boots; a black bicorne with gold edging and a red cockade. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_churruca.webp"
+  ],
+  "estimatedUsd": 0.04
+}

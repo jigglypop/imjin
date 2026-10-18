@@ -11,18 +11,6 @@ const FADE = 0.7;
 const ASPECT = 2.39;
 const MAX_BAR = 0.13;
 
-const FONTS = 'https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&display=swap';
-
-/** The caption faces load with the first cutscene, not with the menu. */
-function useCaptionFonts() {
-  useEffect(() => {
-    if (document.querySelector(`link[href="${FONTS}"]`)) return;
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = FONTS;
-    document.head.appendChild(link);
-  }, []);
-}
 
 
 function opacityOf(age: number, dur: number) {
@@ -95,9 +83,34 @@ function CaptionView({ caption, age }: { caption: Caption; age: number }) {
           <div className="cine-source">{t(caption.source)}</div>
         </div>
       );
+    case 'say':
+      return null;
     case 'label':
       return null;
   }
+}
+
+/**
+ * A film subtitle for the commander on screen: his name and title, his words, the hanja of a quoted record, its source.
+ * When his figure is not on deck (not live, not loaded, a failed load) his portrait comes in as a painted insert.
+ */
+function SayView({ caption, age, insert }: { caption: Extract<Caption, { kind: 'say' }>; age: number; insert: string | null }) {
+  const t = useT();
+  return (
+    <div className={`cine-say cine-say--${caption.side}${caption.text ? '' : ' cine-say--name'}`} style={{ opacity: opacityOf(age, caption.dur) }}>
+      {insert && <img className="cine-say-insert" src={portraitUrl(insert)} alt="" />}
+      <div className="cine-say-who">
+        <b>{t(caption.who)}</b>
+        {caption.role && <span>{t(caption.role)}</span>}
+      </div>
+      {caption.text && <div className="cine-say-text">{t(caption.text)}</div>}
+      {caption.hanja && <div className="cine-hanja cine-say-hanja">{caption.hanja}</div>}
+      <div className="cine-source">
+        {t(caption.source)}
+        {caption.note && ` · ${t(caption.note)}`}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -105,7 +118,6 @@ function CaptionView({ caption, age }: { caption: Caption; age: number }) {
  * controls. A cutscene owns the keyboard: Space holds it, Esc or Enter skips it, and no key reaches the battle's input.
  */
 export function CinemaOverlay({ engine }: { engine: Engine }) {
-  useCaptionFonts();
   const t = useT();
   const cinema = engine.cinema;
   const [, setFrame] = useState(0);
@@ -178,7 +190,14 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
   const online = !!engine.remote;
 
   return (
-    <div className={`cine${covering ? ' cine--covering' : ''}`} aria-live="polite">
+    <div
+      className={`cine${covering ? ' cine--covering' : ''}`}
+      aria-live="polite"
+      onClick={(e) => {
+        // A click or a tap on the film skips it (the buttons handle their own).
+        if (covering && !(e.target as HTMLElement).closest('button')) cinema.skip();
+      }}
+    >
       <div className="cine-bar cine-bar--top" ref={barTop} />
       <div className="cine-bar cine-bar--bottom" ref={barBottom} />
       <div className="cine-black" ref={black} />
@@ -208,6 +227,9 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
             <CaptionView key={`${caption.kind}${caption.at}`} caption={caption} age={age} />
           ))}
       </div>
+      {captions.map(({ caption, age }) =>
+        caption.kind === 'say' ? <SayView key={`say${caption.at}`} caption={caption} age={age} insert={cinema.insertFor(caption.cast)} /> : null,
+      )}
       {captions
         .filter((c) => c.caption.kind === 'title' || c.caption.kind === 'quote' || c.caption.kind === 'card')
         .map(({ caption, age }) => (

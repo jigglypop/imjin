@@ -1,4 +1,4 @@
-import { BoxGeometry, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardNodeMaterial, Quaternion, Vector3, type Camera } from 'three/webgpu';
+import { BoxGeometry, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardNodeMaterial, Quaternion, Vector3, type Camera } from 'three/webgpu';
 import { attribute } from 'three/tsl';
 import type { Battle } from '../sim/battle';
 import type { Faction, Ship } from '../sim/types';
@@ -258,12 +258,10 @@ export class Boarding {
     // Ropes, planks, hooks, flags and dropped weapons are boxes of one instanced mesh, each with its own colour.
     const geo = new BoxGeometry(1, 1, 1);
     this.propColor = new InstancedBufferAttribute(new Float32Array(PROPS * 3), 3);
-    this.propColor.setUsage(DynamicDrawUsage);
     geo.setAttribute('iTint', this.propColor);
     const wood = new MeshStandardNodeMaterial({ roughness: 0.88 });
     wood.colorNode = attribute('iTint', 'vec3');
     this.props = new InstancedMesh(geo, wood, PROPS);
-    this.props.instanceMatrix.setUsage(DynamicDrawUsage);
     this.props.count = 0;
     this.props.frustumCulled = false;
     this.props.castShadow = true;
@@ -774,9 +772,16 @@ export class Boarding {
     this.arrows.update(this.dt, this.camPos);
     this.puffs.update(this.dt, camera);
     this.props.count = this.nProps;
-    this.props.instanceMatrix.needsUpdate = true;
-    this.propColor.needsUpdate = true;
     this.props.visible = this.nProps > 0;
+    if (this.nProps > 0) {
+      // Only the filled part, once a frame: the shadow pass and the main share the upload.
+      this.props.instanceMatrix.clearUpdateRanges();
+      this.props.instanceMatrix.addUpdateRange(0, this.nProps * 16);
+      this.props.instanceMatrix.needsUpdate = true;
+      this.propColor.clearUpdateRanges();
+      this.propColor.addUpdateRange(0, this.nProps * 3);
+      this.propColor.needsUpdate = true;
+    }
   }
 
   private putBox(px: number, py: number, pz: number, qx: number, qy: number, qz: number, qw: number, sx: number, sy: number, sz: number, r: number, g: number, b: number) {

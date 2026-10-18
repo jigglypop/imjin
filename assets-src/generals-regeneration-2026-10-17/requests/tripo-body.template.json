@@ -1,0 +1,36 @@
+{
+  "type": "multiview_to_model",
+  "model_version": "v3.1-20260211",
+  "texture": true,
+  "pbr": true,
+  "texture_quality": "detailed",
+  "geometry_quality": "detailed",
+  "texture_alignment": "original_image",
+  "enable_image_autofix": false,
+  "auto_size": false,
+  "generate_parts": false,
+  "smart_low_poly": false,
+  "quad": false,
+  "export_uv": true,
+  "files": [
+    {
+      "type": "png",
+      "file_token": "${UPLOAD_TOKEN:references/body_front.png}"
+    },
+    {
+      "type": "png",
+      "file_token": "${UPLOAD_TOKEN:references/body_left.png}"
+    },
+    {
+      "type": "png",
+      "file_token": "${UPLOAD_TOKEN:references/body_back.png}"
+    },
+    {
+      "type": "png",
+      "file_token": "${UPLOAD_TOKEN:references/body_right.png}"
+    }
+  ],
+  "face_limit": 180000,
+  "model_seed": 207101,
+  "texture_seed": 207201
+}

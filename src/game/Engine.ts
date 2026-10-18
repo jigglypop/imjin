@@ -9,7 +9,9 @@ import {
   Scene,
   Vector2,
   Vector3,
+  type InstancedBufferGeometry,
   type InstancedMesh,
+  type Mesh,
   type Object3D,
   type Sprite,
   type WebGPURenderer,
@@ -90,7 +92,12 @@ import { disposeTree } from '../render/dispose';
 import { tuneWebGLBackend } from '../render/webglBackend';
 
 import { Minimap } from '../ui/Minimap';
+import { applyGenerals, battleReport } from '../meta/battle';
+import { beginRewardedBattle, finishRewardedBattle, useLocalProfile } from '../meta/localProfile';
 import { DamageGallery, MunitionsGallery, damageBattle, damagePose, type GalleryKind } from './galleries';
+
+/** What cutawayIds returns while no ship is cut away: one shared empty set instead of a new one every frame. */
+const NO_IDS: ReadonlySet<number> = new Set();
 
 const params = new URLSearchParams(location.search);
 
@@ -150,6 +157,9 @@ const FAST_SPEED = SPEEDS[SPEEDS.length - 1];
 const MAX_STEPS = 160;
 const simBudgetMs = (speed: number) => (speed >= 64 ? 32 : speed >= 16 ? 24 : speed >= 8 ? 14 : 9);
 type LoadTask = { controller: AbortController; terrain?: Terrain; sky?: LoadedSky };
+
+/** Stand-ins written while no crew is drawn are simply dropped. */
+const NO_STAND_INS = new Set<number>();
 
 export class Engine {
   readonly scene = new Scene();
@@ -670,7 +680,11 @@ export class Engine {
   private showIdle() {
     const idle: Object3D[] = [];
     this.scene.traverse((o) => {
-      if (o.visible || !((o as InstancedMesh).isInstancedMesh || (o as Sprite).isSprite) || (o as InstancedMesh).count > 0) return;
+      if (o.visible) return;
+      const geo = (o as Mesh).geometry as InstancedBufferGeometry | undefined;
+      const batch = (o as InstancedMesh).isInstancedMesh || (o as Sprite).isSprite;
+      const figures = !batch && (o as Mesh).isMesh && geo?.isInstancedBufferGeometry === true;
+      if (!(batch || figures) || (batch ? (o as InstancedMesh).count > 0 : geo!.instanceCount > 0)) return;
       o.visible = true;
       idle.push(o);
     });
@@ -842,6 +856,7 @@ export class Engine {
     }
     this.minimap.team = this.team;
     this.battle.setSea(SEA_STATES[this.seaName]);
+    this.applyAccountGenerals(setup);
     waveField.copyFrom(this.battle.waves);
     this.reported = false;
     this.fleetCalls = { own: { shown: 'steady', pending: 'steady', since: 0 }, foe: { shown: 'steady', pending: 'steady', since: 0 } };
@@ -873,9 +888,9 @@ export class Engine {
   }
 
   /** Ships drawn in cutaway: the selection, once close enough to see inside, nearest first and no more than a section batch holds. */
-  cutawayIds() {
+  cutawayIds(): ReadonlySet<number> {
+    if (!this.cutaway) return NO_IDS;
     const out = new Set<number>();
-    if (!this.cutaway) return out;
     const cam = this.camera.position;
     const near: { id: number; d: number }[] = [];
     for (const id of this.views.selected) {
@@ -924,7 +939,8 @@ export class Engine {
     }
     const { aperture, focus } = this.cinema.depthOfField;
     film.focus.value = focus;
-    film.depth.value = Math.max(12, focus * 0.4);
+    // A close-up on a figure two or three metres away wants a shallow field; the fleet shots keep theirs.
+    film.depth.value = Math.max(focus < 8 ? 1.2 : 12, focus * 0.4);
     film.bokeh.value = aperture * 1.5;
   }
 
@@ -954,6 +970,18 @@ export class Engine {
       setSky: (name) => engine.setSky(name).catch(() => undefined),
       homePose: () => engine.defaultPose(),
       sound,
+      cast: {
+        scene: engine.scene,
+        get camera() {
+          return engine.camera;
+        },
+        localToWorld: (id, x, y, z, out) => engine.views.localToWorld(id, x, y, z, out),
+        shipScale: (id) => (engine.battle.get(id)?.flagship ? 1.12 : 1),
+        commandPost: (ship) => engine.crew?.commandPost(ship) ?? null,
+        get standIns() {
+          return engine.crew?.standIns ?? NO_STAND_INS;
+        },
+      },
     });
   }
 
@@ -1316,7 +1344,7 @@ export class Engine {
       if (this.accumulator > SIM_DT * 4) this.accumulator = 0;
     }
     this.lastScaled = scaled;
-    const events = this.remote ? this.battle.events : this.battle.events.filter((e) => eventObserved(e, this.battle, this.conquest, this.team));
+    const events = this.remote || !this.battle.events.length ? this.battle.events : this.battle.events.filter((e) => eventObserved(e, this.battle, this.conquest, this.team));
     this.views.cutaway.clear();
     for (const id of this.cutawayIds()) this.views.cutaway.set(id, this.cutaway);
     this.views.sync(this.battle, scaled, this.camera, this.assets);
@@ -1332,7 +1360,10 @@ export class Engine {
       for (const e of events) if (e.type === 'battery') this.fx.gun(e.x, e.y, e.z, e.dx, e.dy, e.dz, true);
     }
     this.battle.events = [];
-    if (this.battle.ended && !this.reported) this.finishCampaignBattle();
+    if (this.battle.ended && !this.reported) {
+      this.payAccountBattle();
+      this.finishCampaignBattle();
+    }
     // While a cutscene or a documentary beat holds the camera, neither the director nor the player moves it.
     if (!this.cinema.update(dt)) {
       this.director.update(dt);
@@ -1356,7 +1387,7 @@ export class Engine {
       }
       this.lastTide = tideSign;
     }
-    this.ocean.update(this.camera.position.x, this.camera.position.z);
+    this.ocean.update(this.camera.position.x, this.camera.position.z, this.camera);
     if (this.current) {
       const t = this.rts.target;
       const v = this.current.velocity(t.x, t.z, this.battle.tide);
@@ -1368,6 +1399,7 @@ export class Engine {
     this.crew.update(this.battle, scaled, this.camera, this.crewView());
     this.lanterns.update(this.battle, this.camera, this.battle.night || SKY_PRESETS[this.skyName].night > 0.5);
     this.updateSun();
+    this.vegetation?.updateShadow(this.sun);
     const el = this.renderer.domElement;
     this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.hudHidden && !this.rts.cinematic && !this.cinema.covering && !this.battle.ended, this.team);
     this.moveOrders?.update();
@@ -1461,6 +1493,38 @@ export class Engine {
       const t = c.teamOfPoint(p);
       return { x: p.x, z: p.z, r: p.r, side: (t ? (t === this.team ? 'own' : 'foe') : 'none') as 'own' | 'foe' | 'none', selected: p.id === this.selectedPoint };
     });
+  }
+
+  /** A battle against the computer the account pays for when it ends, with the ticket the server gave for it. */
+  private accountBattle: { ticket: Promise<string | null>; mode: 'history' | 'conquest'; scenario: string } | null = null;
+
+  /**
+   * The account generals' talents and armor rolls (src/meta) on the ships they lead: only in a battle against the
+   * computer. Online and ranked battles stay equal for both players (the server builds them without), and the grand
+   * campaign raises its own generals. Called once on the freshly built battle, before its first step.
+   */
+  private applyAccountGenerals(setup: ConquestSetup | null) {
+    this.accountBattle = null;
+    if (this.remote || this.sink || setup?.ranked || setup?.grand) return;
+    const b = this.battle;
+    const team = this.team;
+    const generals = applyGenerals(b, team, useLocalProfile.getState().profile);
+    const mode = setup ? 'conquest' : 'history';
+    const scenario = setup ? setup.map! : this.scenarioId;
+    // A conquest battle builds ships as it goes, so its fleets are bounded only by the server's cap.
+    const ownShips = setup ? 400 : b.ships.filter((s) => s.team === team).length;
+    const enemyShips = setup ? 400 : b.ships.length - ownShips;
+    const ticket = beginRewardedBattle({ mode, scenario, side: this.faction, ownShips, enemyShips, generals });
+    this.accountBattle = { ticket, mode, scenario };
+  }
+
+  /** Reports the finished battle to the account (the server judges and pays it). */
+  private payAccountBattle() {
+    const paid = this.accountBattle;
+    if (!paid) return;
+    this.accountBattle = null;
+    const report = battleReport(this.battle, this.team, null, paid.mode, paid.scenario, this.faction);
+    void paid.ticket.then((ticket) => finishRewardedBattle(ticket, report)).catch(() => undefined);
   }
 
   private finishCampaignBattle() {
@@ -1661,13 +1725,23 @@ export class Engine {
         drum,
       };
     });
-    const primary = [...this.views.selected].map((id) => b.get(id)).find((s) => !!s && s.alive);
+    let primary: ReturnType<typeof b.get>;
+    for (const id of this.views.selected) {
+      const s = b.get(id);
+      if (s && s.alive) { primary = s; break; }
+    }
     const own = this.team;
     const enemy = this.enemyTeam;
     const strengthOwn = b.strength(own);
-    const enemies = b.ships.filter((s) => s.team === enemy && b.isActive(s) && shipObserved(b, own, s));
+    const enemies: typeof b.ships = [];
     // Enemy crews still running when the battle is decided got away: the result counts them as fled, not as afloat.
-    const running = b.ended && morale ? b.ships.filter((s) => s.team === enemy && s.moraleState === 'routing' && b.isActive(s) && shipObserved(b, own, s)).length : 0;
+    let running = 0;
+    const countRunning = b.ended && !!morale;
+    for (const s of b.ships) {
+      if (s.team !== enemy || !b.isActive(s) || !shipObserved(b, own, s)) continue;
+      enemies.push(s);
+      if (countRunning && s.moraleState === 'routing') running += 1;
+    }
     const strengthEnemy = b.profile === 'historical' ? b.strength(enemy) : enemies.reduce((n, s) => n + combatValue(s.spec.kind, b.profile) * ((s.hull / s.spec.hull) * 0.6 + (s.crew / s.spec.crew) * 0.4), 0);
     const snapshot: GameSnapshot = {
       scenario: { id: info.id, title: info.title, hanja: info.hanja, date: info.date, place: info.place, season: info.season },
@@ -1811,6 +1885,9 @@ export class Engine {
     return { own: name(this.team), enemy: name(this.enemyTeam) };
   }
 
+  /** The selected point's build and recruit lists, kept while nothing they depend on has changed. */
+  private cqOrders: { key: string; build: NonNullable<NonNullable<GameSnapshot['conquest']>['selected']>['build']; recruit: NonNullable<NonNullable<GameSnapshot['conquest']>['selected']>['recruit'] } | null = null;
+
   private conquestSnapshot(): GameSnapshot['conquest'] {
     const c = this.conquest;
     if (!c) return null;
@@ -1820,6 +1897,19 @@ export class Engine {
     const p = c.points[this.selectedPoint];
     const mine = !!p && p.owner === this.owner;
     const observed = !!p && (c.teamOfPoint(p) === this.team || pointVisible(this.battle, this.team, p.x, p.z));
+    const maxShips = c.shipLimit(this.owner);
+    let orders = this.cqOrders;
+    if (p) {
+      // Everything canBuild, canRecruit and the times read: costs are whole, so whole funds decide the same.
+      const key = `${p.id}|${p.owner}|${mine}|${Math.floor(me.funds)}|${fleet.value}|${fleet.count}|${maxShips}|${me.cap}|${c.constructionRate(this.owner)}|${c.count(p, 'shipyard')}|${c.yardSlots(p)}|${p.queue.length}|${p.buildings.map((bd) => bd?.kind ?? '').join(',')}|${me.faction}|${c.options.expanded}`;
+      if (!orders || orders.key !== key) {
+        orders = this.cqOrders = {
+          key,
+          build: BUILDING_ORDER.filter((kind) => c.options.expanded || kind !== 'camp').map((kind) => ({ kind, label: BUILDINGS[kind].label, cost: BUILDINGS[kind].cost, time: c.buildTime(kind), desc: c.buildingDesc(kind), ok: mine && c.canBuild(this.owner, p.id, kind) })),
+          recruit: rosterOf(me.faction, c.options.expanded).map((kind) => ({ kind, label: SHORT_NAME[kind], cost: this.battle.shipSpec(kind).cost, time: Math.ceil(c.recruitTime(kind) / c.constructionRate(this.owner)), ok: mine && c.canRecruit(this.battle, this.owner, p.id, kind) })),
+        };
+      }
+    }
     return {
       tickets: { own: Math.max(0, Math.round(c.tickets[this.team])), foe: Math.max(0, Math.round(c.tickets[this.enemyTeam])), max: c.options.tickets },
       timeLeft: Math.max(0, c.options.timeLimit - this.battle.time),
@@ -1828,7 +1918,7 @@ export class Engine {
       fleetValue: fleet.value,
       cap: me.cap,
       ships: fleet.count,
-      maxShips: c.shipLimit(this.owner),
+      maxShips,
       held: { own: c.held(this.team), foe: c.held(this.enemyTeam) },
       points: c.points.map((q) => ({ id: q.id, name: q.name, side: sideOf(c.teamOfPoint(q)), hold: q.hold, contested: q.contested })),
       selected: p
@@ -1846,8 +1936,8 @@ export class Engine {
             expanded: !!c.options.expanded,
             buildings: p.buildings.map((bd, slot) => (observed && bd ? { slot, kind: bd.kind, label: BUILDINGS[bd.kind].label, progress: bd.progress, hp: bd.hp / buildingHp(bd.kind, bd.level), level: bd.level, upgradeLeft: bd.upgradeLeft, upgradeTotal: bd.upgradeTotal, upgradeCost: bd.level < 3 ? upgradeCost(bd.kind, bd.level) : 0, upgradeTime: bd.level < 3 ? c.upgradeDuration(bd.kind, bd.level) : 0, canUpgrade: mine && c.canUpgrade(this.owner, p.id, slot) } : null)),
             queue: observed ? p.queue.map((q, i) => ({ kind: q.kind, label: SHORT_NAME[q.kind], left: Math.max(0, q.left / c.constructionRate(p.owner)), total: q.total / c.constructionRate(p.owner), working: i < c.queueWorkers(p) })) : [],
-            build: BUILDING_ORDER.filter((kind) => c.options.expanded || kind !== 'camp').map((kind) => ({ kind, label: BUILDINGS[kind].label, cost: BUILDINGS[kind].cost, time: c.buildTime(kind), desc: c.buildingDesc(kind), ok: mine && c.canBuild(this.owner, p.id, kind) })),
-            recruit: rosterOf(me.faction, c.options.expanded).map((kind) => ({ kind, label: SHORT_NAME[kind], cost: this.battle.shipSpec(kind).cost, time: Math.ceil(c.recruitTime(kind) / c.constructionRate(this.owner)), ok: mine && c.canRecruit(this.battle, this.owner, p.id, kind) })),
+            build: orders!.build,
+            recruit: orders!.recruit,
             shipyard: observed && c.count(p, 'shipyard') > 0,
             yardSlots: observed ? c.yardSlots(p) : 0,
             rally: observed ? p.rally ?? null : null,

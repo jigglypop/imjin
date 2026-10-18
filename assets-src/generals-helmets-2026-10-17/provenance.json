@@ -1,0 +1,215 @@
+{
+  "schema": "imjin.locally-authored-helmet-candidate.v1",
+  "candidate": true,
+  "acceptedByUser": false,
+  "created": "2026-10-17",
+  "provider": "None; no paid calls",
+  "authoring": "Original Blender hard-surface shell, separate three-panel cloth neck guards, formed rivets, curved individual horsehair fibres; deterministic authored 512px PBR textures",
+  "styleReference": "assets-src/generals-parts-2026-10-17/armor_joseon_dujeong_front.png (style only, zero mesh extraction)",
+  "historicalScope": "Joseon-style game interpretation matching the supplied costume concept, not an exact museum artifact replica",
+  "coordinates": {
+    "up": "+Y",
+    "front": "+Z",
+    "origin": "brow-plane skull centre",
+    "socket": "socket_helmet_brow at exact origin",
+    "meters": true
+  },
+  "designDimensionsMeters": {
+    "domeWidth": 0.224,
+    "domeDepth": 0.264,
+    "domeHeight": 0.18,
+    "clothDrop": 0.235,
+    "frontOpeningAngleDegrees": 104
+  },
+  "triangles": {
+    "high": 35086,
+    "low": 8564
+  },
+  "fitPreview": {
+    "sourceBody": "C:\\dev\\imjin\\assets-src\\generals-regeneration-2026-10-17\\raw\\body\\glb.glb",
+    "sourceSha256": "8c00ed3037e33c84ce3b1547ef9f4b216493e12c688abd33cb5f3ca46bf5da9c",
+    "originalBodyUnchanged": true,
+    "previewOnlyHeadScale": 0.9,
+    "previewHeadPivotInRawBody": [
+      0,
+      0.648,
+      -0.01
+    ],
+    "previewBrowAnchorInRawBody": [
+      0,
+      0.758,
+      -0.01
+    ],
+    "warning": "Final bind/head attachment and cloth shoulder clearance require parent runtime review; preview body changes were in memory only, never exported."
+  },
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\v2\\helmet_joseon_dujeong.glb",
+      "bytes": 2666688,
+      "sha256": "8a3e8ba5a57856e877f7738cad00cb45db5f7c9a653af9db97a219f6fea20790"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\v2\\helmet_joseon_dujeong_lod1.glb",
+      "bytes": 2036272,
+      "sha256": "61a59ebb9c2fe77d400db425216032f90fe9401507b469701d2e3680eb274969"
+    },
+    {
+      "path": "C:\\dev\\imjin\\assets-src\\generals-helmets-2026-10-17\\helmet_joseon_dujeong.blend",
+      "bytes": 2439770,
+      "sha256": "e24217d355d6c3665d8f48c954ec04ea0ae0afb3199c227afd9ec293f17ccbff"
+    },
+    {
+      "path": "C:\\dev\\imjin\\scripts\\build-general-joseon-helmet.py",
+      "bytes": 20377,
+      "sha256": "58a4c7a6ec7b9844c5d7d2301b97cf366c08ee8b522a5cb14044613b83346457"
+    }
+  ],
+  "validation": {
+    "originalBodySha256After": "8c00ed3037e33c84ce3b1547ef9f4b216493e12c688abd33cb5f3ca46bf5da9c",
+    "levels": [
+      {
+        "path": "public/models/generals/parts/v2/helmet_joseon_dujeong.glb",
+        "bytes": 2666688,
+        "sha256": "8a3e8ba5a57856e877f7738cad00cb45db5f7c9a653af9db97a219f6fea20790",
+        "triangles": 35086,
+        "vertices": 20989,
+        "meshes": 1,
+        "materialPrimitives": 8,
+        "min": [
+          -0.14185406267642975,
+          -0.2549999952316284,
+          -0.16674000024795532
+        ],
+        "max": [
+          0.14185406267642975,
+          0.24799999594688416,
+          0.14880871772766113
+        ],
+        "dimensionsMeters": [
+          0.2837081253528595,
+          0.5029999911785126,
+          0.31554871797561646
+        ],
+        "frontOpeningVertices": 0,
+        "degenerateTriangles": 0,
+        "rearClothRayHits": 2,
+        "textures": [
+          {
+            "name": "iron-authored-normal",
+            "width": 512,
+            "height": 512,
+            "bytes": 298683
+          },
+          {
+            "name": "iron-authored-base",
+            "width": 512,
+            "height": 512,
+            "bytes": 309608
+          },
+          {
+            "name": "iron-authored-roughness",
+            "width": 512,
+            "height": 512,
+            "bytes": 302322
+          },
+          {
+            "name": "cloth-authored-normal",
+            "width": 512,
+            "height": 512,
+            "bytes": 327205
+          },
+          {
+            "name": "cloth-authored-base",
+            "width": 512,
+            "height": 512,
+            "bytes": 287720
+          },
+          {
+            "name": "cloth-authored-roughness",
+            "width": 512,
+            "height": 512,
+            "bytes": 249447
+          }
+        ]
+      },
+      {
+        "path": "public/models/generals/parts/v2/helmet_joseon_dujeong_lod1.glb",
+        "bytes": 2036272,
+        "sha256": "61a59ebb9c2fe77d400db425216032f90fe9401507b469701d2e3680eb274969",
+        "triangles": 8444,
+        "vertices": 6285,
+        "meshes": 1,
+        "materialPrimitives": 8,
+        "min": [
+          -0.14135150611400604,
+          -0.2550329566001892,
+          -0.16691021621227264
+        ],
+        "max": [
+          0.14135150611400604,
+          0.24795936048030853,
+          0.1486864537000656
+        ],
+        "dimensionsMeters": [
+          0.2827030122280121,
+          0.5029923170804977,
+          0.31559666991233826
+        ],
+        "frontOpeningVertices": 0,
+        "degenerateTriangles": 0,
+        "rearClothRayHits": 2,
+        "textures": [
+          {
+            "name": "iron-authored-normal",
+            "width": 512,
+            "height": 512,
+            "bytes": 298683
+          },
+          {
+            "name": "iron-authored-base",
+            "width": 512,
+            "height": 512,
+            "bytes": 309608
+          },
+          {
+            "name": "iron-authored-roughness",
+            "width": 512,
+            "height": 512,
+            "bytes": 302322
+          },
+          {
+            "name": "cloth-authored-normal",
+            "width": 512,
+            "height": 512,
+            "bytes": 327205
+          },
+          {
+            "name": "cloth-authored-base",
+            "width": 512,
+            "height": 512,
+            "bytes": 287720
+          },
+          {
+            "name": "cloth-authored-roughness",
+            "width": 512,
+            "height": 512,
+            "bytes": 249447
+          }
+        ]
+      }
+    ],
+    "reviewFiles": [
+      "assets-src/generals-helmets-2026-10-17/review/helmet-front.png",
+      "assets-src/generals-helmets-2026-10-17/review/helmet-left.png",
+      "assets-src/generals-helmets-2026-10-17/review/helmet-back.png",
+      "assets-src/generals-helmets-2026-10-17/review/helmet-right.png",
+      "assets-src/generals-helmets-2026-10-17/review/helmet-three-quarter.png",
+      "assets-src/generals-helmets-2026-10-17/review/fit-front.png",
+      "assets-src/generals-helmets-2026-10-17/review/fit-left.png",
+      "assets-src/generals-helmets-2026-10-17/review/fit-back.png",
+      "assets-src/generals-helmets-2026-10-17/review/fit-right.png",
+      "assets-src/generals-helmets-2026-10-17/review/fit-upper-body.png"
+    ],
+    "validationBoundary": "Static geometry/texture/socket checks and four-view standalone plus body-fit visual review. Preview uses temporary head scaling. Final rig attachment, cloth movement and browser acceptance remain required."
+  }
+}

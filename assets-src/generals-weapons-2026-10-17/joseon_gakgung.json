@@ -1,0 +1,111 @@
+{
+  "kind": "bow",
+  "hand": "left",
+  "length": 1.14,
+  "notes": "Laminated korean bow, shaped recurve, horn nocks, central handgrip, taut separate string",
+  "nock": [
+    0,
+    0,
+    -0.11200000000000002
+  ],
+  "id": "joseon_gakgung",
+  "faction": "joseon",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 8452,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.03799999877810478,
+    1.1637887954711914,
+    0.2439526617527008
+  ],
+  "lodTriangles": 7700,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_gakgung.glb",
+      "bytes": 179796,
+      "sha256": "bb462b4c943ad78b8e9c193617a1808263c260a74429703a5a193f46ef6dae00"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_gakgung_lod1.glb",
+      "bytes": 166264,
+      "sha256": "74686780f60452d975beb5dd2a30f4cf65d5db64f13a5b21f3b77bea27dd1e73"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\joseon_gakgung.blend",
+      "bytes": 207354,
+      "sha256": "22dd4236bf73e11226b282c6d98734a66313224aca38f1b1b27458eaaa679aed"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_joseon_gakgung.glb",
+      "bytes": 179796,
+      "sha256": "bb462b4c943ad78b8e9c193617a1808263c260a74429703a5a193f46ef6dae00",
+      "triangles": 8452,
+      "vertices": 5076,
+      "min": [
+        -0.01899999938905239,
+        -0.5818943977355957,
+        -0.14689016342163086
+      ],
+      "max": [
+        0.01899999938905239,
+        0.5818943977355957,
+        0.09706249833106995
+      ],
+      "dimensions": [
+        0.03799999877810478,
+        1.1637887954711914,
+        0.2439526617527008
+      ],
+      "steelOutwardVertices": 0,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_joseon_gakgung_lod1.glb",
+      "bytes": 166264,
+      "sha256": "74686780f60452d975beb5dd2a30f4cf65d5db64f13a5b21f3b77bea27dd1e73",
+      "triangles": 7700,
+      "vertices": 4700,
+      "min": [
+        -0.01899999938905239,
+        -0.5818943977355957,
+        -0.14689016342163086
+      ],
+      "max": [
+        0.01899999938905239,
+        0.5818943977355957,
+        0.09706249833106995
+      ],
+      "dimensions": [
+        0.03799999877810478,
+        1.1637887954711914,
+        0.2439526617527008
+      ],
+      "steelOutwardVertices": 0,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/joseon_gakgung.blend",
+    "bytes": 207354,
+    "sha256": "22dd4236bf73e11226b282c6d98734a66313224aca38f1b1b27458eaaa679aed"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/joseon_gakgung.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 5084,
+    "sha256": "ad3a786bbe91c0519111e0497c1f4bc762b1e8b8081823e4f59d11603ddac202"
+  }
+}

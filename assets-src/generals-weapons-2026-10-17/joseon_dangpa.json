@@ -1,0 +1,106 @@
+{
+  "kind": "spear",
+  "hand": "right",
+  "length": 2.275,
+  "notes": "Solid tapered hardwood pole, ridged bevel head, separate socket, hand binding, butt spike; fork",
+  "id": "joseon_dangpa",
+  "faction": "joseon",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 4492,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.06442850828170776,
+    2.274999976158142,
+    0.29100000858306885
+  ],
+  "lodTriangles": 4492,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_dangpa.glb",
+      "bytes": 136896,
+      "sha256": "99baf60aa7d4d6259a884025061de1e489cb265314e1763e51d0d0c28d01e2b0"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_dangpa_lod1.glb",
+      "bytes": 136900,
+      "sha256": "30a365e86f3d2ae96ed7565360ffd8c9d637a0aaeceb85d6fa9657111a97bca0"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\joseon_dangpa.blend",
+      "bytes": 163691,
+      "sha256": "12c6a1cf69a1e59ff232c195d80a8fe1623cb171b349339000e4b87bd65281e9"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_joseon_dangpa.glb",
+      "bytes": 136896,
+      "sha256": "99baf60aa7d4d6259a884025061de1e489cb265314e1763e51d0d0c28d01e2b0",
+      "triangles": 4492,
+      "vertices": 4248,
+      "min": [
+        -0.02630365639925003,
+        -1.0049999952316284,
+        -0.14550000429153442
+      ],
+      "max": [
+        0.03812485188245773,
+        1.2699999809265137,
+        0.14550000429153442
+      ],
+      "dimensions": [
+        0.06442850828170776,
+        2.274999976158142,
+        0.29100000858306885
+      ],
+      "steelOutwardVertices": 168,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_joseon_dangpa_lod1.glb",
+      "bytes": 136900,
+      "sha256": "30a365e86f3d2ae96ed7565360ffd8c9d637a0aaeceb85d6fa9657111a97bca0",
+      "triangles": 4492,
+      "vertices": 4248,
+      "min": [
+        -0.02630365639925003,
+        -1.0049999952316284,
+        -0.14550000429153442
+      ],
+      "max": [
+        0.03812485188245773,
+        1.2699999809265137,
+        0.14550000429153442
+      ],
+      "dimensions": [
+        0.06442850828170776,
+        2.274999976158142,
+        0.29100000858306885
+      ],
+      "steelOutwardVertices": 168,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/joseon_dangpa.blend",
+    "bytes": 163691,
+    "sha256": "12c6a1cf69a1e59ff232c195d80a8fe1623cb171b349339000e4b87bd65281e9"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/joseon_dangpa.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 2700,
+    "sha256": "f92de31acd09f7aada9a80a1836f4efba2a397fc89ac1269b3dd45a2a33770ab"
+  }
+}

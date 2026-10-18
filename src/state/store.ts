@@ -159,12 +159,14 @@ export type SelectionBox = { x0: number; y0: number; x1: number; y1: number } | 
  * screens. codex: the ship codex. Every screen but the battle has an address (src/routes.ts), which src/router.ts keeps
  * in step with this.
  */
-export type Screen = 'menu' | 'select' | 'faction' | 'skirmish' | 'online' | 'settings' | 'codex' | 'battle';
+export type Screen = 'menu' | 'select' | 'faction' | 'skirmish' | 'online' | 'settings' | 'codex' | 'generals' | 'battle';
 /** Screens a battle can be started from, so the HUD back button returns to where the player came from. */
 export type BattleOrigin = 'select' | 'skirmish' | 'online' | 'faction';
 
 type UiState = {
+  /** The battle as the HUD shows it; its time, fps, timeLeft and gun progress are stale, read `live` for those. */
   snapshot: GameSnapshot | null;
+  live: LiveState;
   loading: string | null;
   progress: number;
   /** The battle being built, for the loading page: its picture, title, date and place. */
@@ -184,14 +186,75 @@ type UiState = {
   autoBuild: boolean;
 };
 
-export const useUi = create<UiState>(() => ({ snapshot: null, loading: '바다를 준비하는 중', progress: 0, loadingBattle: null, report: null, toasts: [], box: null, screen: 'menu', battle: null, origin: 'select', fatal: null, touchBox: false, autoBuild: false }));
+/**
+ * The fields that change on nearly every publish: the clock, the frame rate, the conquest countdown and the guns'
+ * loading. They live in their own small slice so only the few components that show them re-render each time; the
+ * snapshot itself is replaced only when something else changed.
+ */
+export type LiveState = { time: number; fps: number; timeLeft: number; guns: number[] };
 
-let lastJson = '';
+const EMPTY_GUNS: number[] = [];
+
+export const useUi = create<UiState>(() => ({ snapshot: null, live: { time: 0, fps: 0, timeLeft: 0, guns: EMPTY_GUNS }, loading: '바다를 준비하는 중', progress: 0, loadingBattle: null, report: null, toasts: [], box: null, screen: 'menu', battle: null, origin: 'select', fatal: null, touchBox: false, autoBuild: false }));
+
+/**
+ * `next` with every part that equals the matching part of `prev` replaced by that part, so unchanged squadrons, points
+ * and panels keep their identity and memoized components skip them. Returns `prev` itself when nothing differs.
+ */
+function share<T>(prev: T, next: T): T {
+  if (prev === next) return prev;
+  if (typeof prev !== 'object' || typeof next !== 'object' || prev === null || next === null) return next;
+  if (Array.isArray(prev) !== Array.isArray(next)) return next;
+  if (Array.isArray(next)) {
+    const a = prev as unknown as unknown[];
+    let same = a.length === next.length;
+    const out = next.map((v, i) => {
+      const r = i < a.length ? share(a[i], v) : v;
+      if (r !== a[i]) same = false;
+      return r;
+    });
+    return same ? prev : (out as unknown as T);
+  }
+  const a = prev as Record<string, unknown>;
+  const b = next as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  let same = true;
+  for (const k in b) {
+    const r = share(a[k], b[k]);
+    // JSON drops undefined fields, and so did the comparison this replaces.
+    if (r !== a[k] || (r === undefined && !(k in a))) same = false;
+    out[k] = r;
+  }
+  if (same) for (const k in a) if (!(k in b)) { same = false; break; }
+  return same ? prev : (out as T);
+}
+
+function sameNumbers(a: number[], b: number[]) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 export function publish(snapshot: GameSnapshot, force = false) {
-  const json = JSON.stringify(snapshot);
-  if (!force && json === lastJson) return;
-  lastJson = json;
-  useUi.setState({ snapshot });
+  const state = useUi.getState();
+  const guns = snapshot.primary ? snapshot.primary.guns.map((g) => g.progress) : EMPTY_GUNS;
+  const was = state.live;
+  const live: LiveState = { time: snapshot.time, fps: snapshot.fps, timeLeft: snapshot.conquest?.timeLeft ?? 0, guns: sameNumbers(was.guns, guns) ? was.guns : guns };
+  const liveChanged = live.time !== was.time || live.fps !== was.fps || live.timeLeft !== was.timeLeft || live.guns !== was.guns;
+  // The fast fields are carried over from the previous snapshot, so they alone never count as a change.
+  const prev = state.snapshot;
+  let next = snapshot;
+  if (prev) {
+    const primary = snapshot.primary && prev.primary
+      ? { ...snapshot.primary, guns: snapshot.primary.guns.map((g, i) => ({ ...g, progress: prev.primary!.guns[i]?.progress ?? g.progress })) }
+      : snapshot.primary;
+    const conquest = snapshot.conquest && prev.conquest ? { ...snapshot.conquest, timeLeft: prev.conquest.timeLeft } : snapshot.conquest;
+    next = share(prev, { ...snapshot, time: prev.time, fps: prev.fps, primary, conquest });
+  }
+  if (next === prev && force) next = { ...prev! };
+  if (next !== prev && liveChanged) useUi.setState({ snapshot: next, live });
+  else if (next !== prev) useUi.setState({ snapshot: next });
+  else if (liveChanged) useUi.setState({ live });
 }
 
 let toastId = 1;

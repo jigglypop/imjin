@@ -1,0 +1,36 @@
+{
+  "type": "multiview_to_model",
+  "model_version": "v3.1-20260211",
+  "texture": true,
+  "pbr": true,
+  "texture_quality": "detailed",
+  "geometry_quality": "detailed",
+  "texture_alignment": "original_image",
+  "enable_image_autofix": false,
+  "auto_size": false,
+  "generate_parts": false,
+  "smart_low_poly": false,
+  "quad": false,
+  "export_uv": true,
+  "files": [
+    {
+      "type": "png",
+      "file_token": "${UPLOAD_TOKEN:references/armor_joseon_dujeong_front.png}"
+    },
+    {
+      "type": "png",
+      "file_token": "${UPLOAD_TOKEN:references/armor_joseon_dujeong_left.png}"
+    },
+    {
+      "type": "png",
+      "file_token": "${UPLOAD_TOKEN:references/armor_joseon_dujeong_back.png}"
+    },
+    {
+      "type": "png",
+      "file_token": "${UPLOAD_TOKEN:references/armor_joseon_dujeong_right.png}"
+    }
+  ],
+  "face_limit": 200000,
+  "model_seed": 207102,
+  "texture_seed": 207202
+}

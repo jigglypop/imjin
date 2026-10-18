@@ -3,7 +3,7 @@ import { GUN_SHOTS, GUN_SPECS, isUnarmed } from './catalog';
 import { combatValue, shipGunSpec, shipMods, shipSpec, type BalanceProfile } from './competitive';
 import { ShipGrid } from './grid';
 import { isShipVisible } from './visibility';
-import { anchorScale, anchorsFor } from '../ships/anchors';
+import { anchorScale, anchorsFor, type GunPort } from '../ships/anchors';
 import type { CurrentField } from './current';
 import { coastalFormationSlots, type CoastalFormationKind } from './coastal-tactics';
 import type { DepthRules } from './depth';
@@ -300,7 +300,16 @@ export class Battle {
   /** Ship id to the time it lost sight of every enemy. */
   private searchSince = new Map<number, number>();
   private firingLaneAt = -1;
-  private firingLanes = new Map<string, boolean>();
+  /** Per-tick scratch: each side's target for one ship's guns (weapons), and two ships' hull circles (collide). */
+  private readonly sideTargets: (Ship | undefined | null)[] = [null, null, null];
+  private readonly sideVolleyTargets: (Ship | undefined | null)[] = [null, null, null];
+  private readonly circlesA: number[] = [];
+  private readonly circlesB: number[] = [];
+  private firingLanes = new Map<number, boolean>();
+  /** Per ship spec: the longest battery range and fastest muzzle velocity (gunSpec is pure per kind, gun and profile). */
+  private batteryReach = new WeakMap<object, { range: number; muzzle: number }>();
+  /** Per gun: its slot among the ship's guns on the same side and its modelled port; a ship's guns never change. */
+  private gunSlots = new WeakMap<GunState, { slot: number; count: number; port: GunPort | undefined }>();
 
   constructor(seed = 1592, readonly profile: BalanceProfile = 'historical') {
     this.rand = mulberry32(seed);
@@ -352,6 +361,20 @@ export class Battle {
 
   gunSpec(kind: ShipKind, gun: GunType) {
     return shipGunSpec(kind, gun, this.profile);
+  }
+
+  /** The longest range and fastest muzzle of a ship's batteries (-Infinity with none), cached per spec. */
+  private reach(s: Ship) {
+    const spec = s.spec;
+    let r = this.batteryReach.get(spec);
+    if (!r) {
+      r = {
+        range: Math.max(...spec.batteries.map((b) => this.gunSpec(spec.kind, b.gun).range)),
+        muzzle: Math.max(...spec.batteries.map((b) => this.gunSpec(spec.kind, b.gun).muzzle)),
+      };
+      this.batteryReach.set(spec, r);
+    }
+    return r;
   }
 
   addSquadron(team: Team, name: string, commander: string, portrait: string, card: string, owner = -1) {
@@ -1284,7 +1307,7 @@ export class Battle {
       return;
     }
     if (order.type === 'bombard') {
-      const range = this.profile === 'historical' ? 280 : Math.max(30, ...s.spec.batteries.map((battery) => this.gunSpec(s.spec.kind, battery.gun).range - 30));
+      const range = this.profile === 'historical' ? 280 : Math.max(30, this.reach(s).range - 30);
       this.presentSide(s, order.x, order.z, this.sideToward(s, order.x, order.z), range);
       this.avoid(s);
       return;
@@ -1551,7 +1574,7 @@ export class Battle {
     if (this.profile !== 'historical' && !forced && s.spec.kind !== 'geobukseon' && !this.clearFiringLane(s, target)) {
       // Islands can hide the nearest hull while another enemy is already in an open firing lane.
       // Keep that gun line instead of abandoning range to chase a target through the island.
-      const range = Math.max(0, ...s.spec.batteries.map((battery) => this.gunSpec(s.spec.kind, battery.gun).range));
+      const range = Math.max(0, this.reach(s).range);
       let best: Ship | undefined, distance = range;
       for (const foe of this.active[otherTeam(s.team)]) {
         const d = hyp(foe.x - s.x, foe.z - s.z);
@@ -1572,7 +1595,7 @@ export class Battle {
     }
     const stance = shaken ? 'standoff' : s.stance;
     const longRange = this.profile !== 'historical' && s.spec.faction === 'ming';
-    const preferredRange = longRange ? Math.max(380, ...s.spec.batteries.map((battery) => this.gunSpec(s.spec.kind, battery.gun).range - 30)) : 380;
+    const preferredRange = longRange ? Math.max(380, this.reach(s).range - 30) : 380;
     if (stance === 'board' || stance === 'ram' || finish) {
       const lead = Math.min(3, d / 8);
       this.steerTo(s, target.x + Math.cos(target.heading) * target.speed * lead, target.z + Math.sin(target.heading) * target.speed * lead, stance === 'ram' ? 10 : 14, 1);
@@ -1922,8 +1945,8 @@ export class Battle {
   }
 
   private collide(dt: number) {
-    const ca: number[] = [];
-    const cb: number[] = [];
+    const ca = this.circlesA;
+    const cb = this.circlesB;
     for (const a of this.ships) {
       if (!a.alive) continue;
       this.grid.query(a.x, a.z, a.spec.length + 25, (b) => {
@@ -2248,8 +2271,10 @@ export class Battle {
     if (nerve <= 0) return;
     const crewFactor = 0.25 + 0.75 * this.gunnery(s);
     const spec = s.spec;
-    const targets: (Ship | undefined | null)[] = [null, null, null];
-    const volleyTargets: (Ship | undefined | null)[] = [null, null, null];
+    const targets = this.sideTargets;
+    const volleyTargets = this.sideVolleyTargets;
+    targets[0] = targets[1] = targets[2] = null;
+    volleyTargets[0] = volleyTargets[1] = volleyTargets[2] = null;
     const volleying = s.volleySide >= 0 && s.volleyTimer > 0;
     let volleyCount = 0;
     if (s.volleyTimer > 0) {
@@ -2420,11 +2445,11 @@ export class Battle {
   private clearFiringLane(s: Ship, target: Ship) {
     const tick = Math.floor(this.time * 5);
     if (tick !== this.firingLaneAt) { this.firingLanes.clear(); this.firingLaneAt = tick; }
-    const key = s.id + ':' + target.id;
+    const key = s.id * 65536 + target.id;
     const previous = this.firingLanes.get(key);
     if (previous !== undefined) return previous;
     const distance = hyp(target.x - s.x, target.z - s.z);
-    const muzzle = Math.max(120, ...s.spec.batteries.map((b) => this.gunSpec(s.spec.kind, b.gun).muzzle));
+    const muzzle = Math.max(120, this.reach(s).muzzle);
     const samples = Math.max(2, Math.ceil(distance / 65));
     let clear = true;
     for (let i = 1; i < samples; i++) {
@@ -2441,11 +2466,18 @@ export class Battle {
    * built from) fire from the port itself; the others from a point scaled from the spec.
    */
   muzzle(s: Ship, side: Side | 2, slot: number, count: number) {
+    return this.muzzleAt(s, side, slot, count, this.gunPort(s, side, slot));
+  }
+
+  private gunPort(s: Ship, side: Side | 2, slot: number) {
+    const anchors = anchorsFor(`${s.spec.kind}#${s.variant}`) ?? anchorsFor(`${s.spec.kind}#0`);
+    return anchors?.gunPorts.find((g) => g.side === side && g.index === slot);
+  }
+
+  private muzzleAt(s: Ship, side: Side | 2, slot: number, count: number, port: GunPort | undefined) {
     const spec = s.spec;
     const c = Math.cos(s.heading);
     const n = Math.sin(s.heading);
-    const anchors = anchorsFor(`${spec.kind}#${s.variant}`) ?? anchorsFor(`${spec.kind}#0`);
-    const port = anchors?.gunPorts.find((g) => g.side === side && g.index === slot);
     if (port) {
       // Ship space has +X forward and +Z across the beam; the shot starts a little past the muzzle of the carriage gun.
       const out = 0.9 * anchorScale(spec.kind);
@@ -2471,9 +2503,19 @@ export class Battle {
     if (target && this.profile !== 'historical' && !isShipVisible(this, s.team, target.id)) return;
     const battery = s.spec.batteries[g.battery]!;
     const gun = this.gunSpec(s.spec.kind, battery.gun);
-    const sideGuns = s.guns.filter((x) => x.side === g.side);
-    const slot = sideGuns.indexOf(g);
-    const m = this.muzzle(s, g.side, slot, sideGuns.length);
+    let at = this.gunSlots.get(g);
+    if (!at) {
+      let slot = -1;
+      let count = 0;
+      for (const x of s.guns) {
+        if (x.side !== g.side) continue;
+        if (x === g) slot = count;
+        count++;
+      }
+      at = { slot, count, port: this.gunPort(s, g.side, slot) };
+      this.gunSlots.set(g, at);
+    }
+    const m = this.muzzleAt(s, g.side, at.slot, at.count, at.port);
     let aim: { x: number; y: number; z: number; vx: number; vz: number } | null = null;
     if (target && this.isActive(target)) aim = { x: target.x, y: target.spec.deck * 0.6, z: target.z, vx: Math.cos(target.heading) * target.speed, vz: Math.sin(target.heading) * target.speed };
     else if (targetId === -2 && s.order.type === 'bombard') aim = { x: s.order.x, y: s.order.y + 2, z: s.order.z, vx: 0, vz: 0 };
@@ -2635,7 +2677,14 @@ export class Battle {
       }
       if (p.age > 14) p.alive = false;
     }
-    this.projectiles = this.projectiles.filter((p) => p.alive);
+    // In-place compaction, order kept (the same result as filtering on alive).
+    const ps = this.projectiles;
+    let w = 0;
+    for (let i = 0; i < ps.length; i++) {
+      const p = ps[i]!;
+      if (p.alive) ps[w++] = p;
+    }
+    ps.length = w;
   }
 
   /** Sets a ship alight, or feeds its fire. `from` is the burning ship it caught from, when fire spread. */

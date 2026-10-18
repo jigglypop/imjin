@@ -5,6 +5,8 @@ const OFFSET = 4096;
 export class ShipGrid {
   private readonly cells = new Map<number, Ship[]>();
   private readonly used: Ship[][] = [];
+  private usedKeys: number[] = [];
+  private spareKeys: number[] = [];
 
   constructor(readonly cell = 120) {}
 
@@ -15,6 +17,9 @@ export class ShipGrid {
   rebuild(ships: Ship[]) {
     for (const list of this.used) list.length = 0;
     this.used.length = 0;
+    const previous = this.usedKeys;
+    const keys = this.spareKeys;
+    keys.length = 0;
     for (const s of ships) {
       if (!s.alive) continue;
       const k = this.key(Math.floor(s.x / this.cell), Math.floor(s.z / this.cell));
@@ -23,9 +28,16 @@ export class ShipGrid {
         list = [];
         this.cells.set(k, list);
       }
-      if (list.length === 0) this.used.push(list);
+      if (list.length === 0) {
+        this.used.push(list);
+        keys.push(k);
+      }
       list.push(s);
     }
+    // Cells left empty would otherwise pile up as the fleets move; an empty cell adds nothing to a query.
+    for (const k of previous) if (this.cells.get(k)?.length === 0) this.cells.delete(k);
+    this.usedKeys = keys;
+    this.spareKeys = previous;
   }
 
   query(x: number, z: number, r: number, fn: (s: Ship) => void) {

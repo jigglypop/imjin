@@ -1,0 +1,29 @@
+{
+  "task": "a8954158-1239-4f00-9656-c13ee1606695",
+  "at": "2026-10-16T18:06:21.743Z",
+  "request": {
+    "type": "multiview_to_model",
+    "model_version": "v3.1-20260211",
+    "files": [
+      {
+        "type": "jpg",
+        "file_token": "2c50863a-b2ae-4111-a6bc-9429eda35396"
+      },
+      {
+        "type": "jpg",
+        "file_token": "acc0661b-61c7-48cf-8483-90446139cee5"
+      },
+      {
+        "type": "jpg",
+        "file_token": "642502ce-983d-4a6f-8054-93adca2dc46b"
+      },
+      {}
+    ],
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "geometry_quality": "detailed",
+    "face_limit": 200000
+  },
+  "credits": 60
+}

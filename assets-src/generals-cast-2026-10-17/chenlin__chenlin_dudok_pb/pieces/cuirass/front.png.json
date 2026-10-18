@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-17T10:14:58.183Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "transparent",
+    "output_format": "png"
+  },
+  "prompt": "A costume-department prop photograph for image-to-3D reconstruction: ONE single armour piece alone, his gilded shanwenjia mountain-pattern lamellar cuirass from the collar to the waist with a gilded round chest mirror (hujingxin) on the breast, the two gold lion-head shoulder guards with their gilded lamellar flaps attached at the shoulders, angled 45 degrees down as on an A-pose wearer, the jade-and-gold belt at its lower edge; no sleeves, no skirt. It is worn by an invisible ghost mannequin of a tall athletic man (broad shoulders, deep chest, narrow waist) standing straight and seen exactly from the FRONT: the piece keeps the exact shape, size and position it has on him, empty inside: no person, no head, no face, no neck, no hands, no arms, no legs, no mannequin, no stand, nothing else. The FIRST attached picture shows this man wearing this armour: copy the piece EXACTLY from it (every plate, rivet, lacing cord, colour, trim, shape and proportion). The SECOND attached picture is a close-up of him (for the helmet and collar detail). Centred, the piece fills most of the frame with a clear margin. Photographic, crisp detail, soft even flat studio light, no hard shadows, a fully transparent background (a clean cutout, no ground shadow). No sword, no other armour pieces. No text, no letters, no labels, no border. No illustration look, no plastic CGI look.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_t4/front.png",
+    "assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_t4/face.png"
+  ],
+  "usage": {
+    "input_tokens": 3384,
+    "input_tokens_details": {
+      "image_tokens": 3042,
+      "text_tokens": 342
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 9314
+  }
+}

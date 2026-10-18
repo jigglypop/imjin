@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-17T10:16:40.036Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "transparent",
+    "output_format": "png"
+  },
+  "prompt": "The FIRST attached picture is the front view of one armour piece for image-to-3D reconstruction, worn by an invisible ghost mannequin. Make the matching view of exactly the same piece, seen from directly behind: its back. The piece: his tall gilded Ming helmet: a pointed gilded bowl with a long gilded spike and a long red horsehair tassel, upturned gilded phoenix-wing flaps at the sides, and its red-and-gold embroidered neck-and-cheek guards hanging to the shoulders, open at the face. The SECOND attached picture shows the man wearing it from this same side: the piece must look exactly as there. Same scale, same height in the frame, same orthographic look, same soft flat studio light, a fully transparent background (a clean cutout, no ground shadow). Empty inside: no person, no head, no hands, no mannequin, no stand. Everything consistent with the front view: colours, materials, trims, lengths, proportions. No text, no letters, no border. No illustration look, no plastic CGI look.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_pb/pieces/helmet/front.png",
+    "assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_t4/back.png"
+  ],
+  "usage": {
+    "input_tokens": 3286,
+    "input_tokens_details": {
+      "image_tokens": 3042,
+      "text_tokens": 244
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 9216
+  }
+}

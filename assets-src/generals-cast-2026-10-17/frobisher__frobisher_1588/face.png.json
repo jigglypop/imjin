@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:18:37.521Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Sir Martin Frobisher, the Arctic explorer, fifty-three. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Sir Martin Frobisher, the Arctic explorer, fifty-three: a big, rugged, blunt Yorkshire face, a heavy brow, a broad nose, a full thick brown beard and moustache, a hard stare), in the costume of: Faction look: an Elizabethan English sea commander of 1588, as in big-budget period films about the Armada (Elizabeth: The Golden Age, the BBC Elizabeth R): The fighting captain as in his Ketel portrait: a buff-leather jerkin over a dark red doublet, a steel gorget, padded dark trunk hose, tall brown boots, a wide leather belt; a plain steel combed morion helmet. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_frobisher.webp"
+  ],
+  "estimatedUsd": 0.04
+}

@@ -1,0 +1,10 @@
+{
+  "task": "01a145d1-a4aa-75e0-9a67-25b04a791412",
+  "endpoint": "rigging",
+  "at": "2026-10-16T17:45:36.099Z",
+  "request": {
+    "input_task_id": "01a145cd-c888-7057-add7-d00fe3b01a90",
+    "height_meters": 1.85
+  },
+  "credits": 5
+}

@@ -93,7 +93,7 @@ export class Structures {
         for (const mesh of [near, farMesh]) {
           mesh.castShadow = true;
           mesh.receiveShadow = true;
-          mesh.frustumCulled = false;
+          // Culled by the sphere around the houses it holds (recomputed whenever they change), in the main and the shadow pass.
           mesh.count = 0;
           this.group.add(mesh);
         }
@@ -124,19 +124,21 @@ export class Structures {
     for (const b of this.batches) {
       // The houses do not move: their matrices are only rewritten, and sent, when one crosses between the two models.
       let changed = !b.placed;
-      b.items.forEach((it, i) => {
+      for (let i = 0; i < b.items.length; i += 1) {
+        const it = b.items[i]!;
         const near = Math.hypot(it.x - s.x, it.z - s.z, camY) < NEAR ? 1 : 0;
         if (b.isNear[i] !== near) changed = true;
         b.isNear[i] = near;
-      });
+      }
       if (!changed) continue;
       b.placed = true;
       let n = 0;
       let f = 0;
-      b.items.forEach((it, i) => {
+      for (let i = 0; i < b.items.length; i += 1) {
+        const it = b.items[i]!;
         if (b.isNear[i]) b.near.setMatrixAt(n++, it.m);
         else b.far.setMatrixAt(f++, it.fm);
-      });
+      }
       b.near.count = n;
       b.far.count = f;
       // A model with no house at its range is not drawn at all.
@@ -144,6 +146,8 @@ export class Structures {
       b.far.visible = f > 0;
       b.near.instanceMatrix.needsUpdate = true;
       b.far.instanceMatrix.needsUpdate = true;
+      if (n > 0) b.near.computeBoundingSphere();
+      if (f > 0) b.far.computeBoundingSphere();
     }
   }
 }

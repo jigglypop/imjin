@@ -1,0 +1,24 @@
+{
+  "schema": "imjin.meshy-pilot-approval.v1",
+  "recordedAt": "2026-10-16T19:25:55.338Z",
+  "provider": "Meshy",
+  "maximumCredits": 75,
+  "userAuthorization": "Meshy 75크레딧 예산으로 실행 (권장)",
+  "latestModelInstruction": "최신모델로 실행. 그리고 검술은 멋있는걸로",
+  "operations": {
+    "body": 35,
+    "coat": 35,
+    "body-rig": 5
+  },
+  "automaticRetries": false,
+  "priceSource": "https://docs.meshy.ai/en/api/pricing",
+  "modelSource": "https://docs.meshy.ai/en/api/multi-image-to-3d",
+  "resolvedModel": "meshy-7.1",
+  "excludes": [
+    "paid animation",
+    "helmet generation",
+    "regeneration",
+    "Tripo"
+  ],
+  "enforcement": "Local reservation and one create per operation. Provider does not document a per-task credit cap."
+}

@@ -71,3 +71,26 @@ lane (D), the flagship cutting the Japanese line in two (D), 100 ships captured 
 
 Raking fire, crossfire, boarding, a magazine explosion, a fleet wavering or breaking, the line, the column (with the
 Busan report's "長蛇突前") and the wedge explain what the game is doing; they cite nothing unless a record says it.
+
+## Commander close-ups in the openings (scenes/intros.ts, scenes/noryang.ts)
+
+Who stands on screen follows the battle's own order of battle in `src/sim/scenarios.ts`. A line with a record in
+`source` and no `note` is quoted; a line with a `note` is written in character from what the record says the man did,
+and the subtitle says so.
+
+| Battle | On screen | Line | Source | Kind |
+|---|---|---|---|---|
+| Hansan 1592.7.8 | 이순신 (전라좌수사); 이억기·원균 named on the fleet label | Gyeonnaeryang is narrow and reefy, lure them to the open sea | 장계 「見乃梁破倭兵狀」 (narrow strait, reefs, panokseon would collide; draw them out to the open sea) | in character |
+| | 와키자카 야스하루 | No need to wait for Kuki and Kato | 『脇坂記』: he sailed alone ahead of Kuki Yoshitaka and Kato Yoshiaki for the honour | in character |
+| | 이순신, the order | 학익진을 펼쳐라 (鶴翼列陣 一時齊進) | same 장계 | the report's words as an order |
+| Myeongnyang 1597.9.16 | 이순신 (삼도수군통제사) | 必死則生 必生則死 / 一夫當逕 足懼千夫 (said to his captains the day before, and labelled so) | 『난중일기』 1597.9.15 | quoted |
+| | 구루시마 미치후사 (van; killed that day); 도도·와키자카 named on the fleet label | The current carries us through the narrows | Japanese records via ja.wikipedia 「鳴梁海戦」; the morning flood ran with the Japanese | in character |
+| | 이순신, the order | 노를 재촉하라 (促櫓突前) | 『난중일기』 9.16 "余促櫓突前" | the diary's words as an order |
+| Noryang 1598.11.19 | 이순신 | 此讎若除 死卽無憾 (the prayer on deck in the third watch) | 이분 『행록』 | quoted |
+| | 진린 (명 수군 도독) | name and title only; no line is recorded | 「전라좌수영대첩비」, 『明史』 陳璘傳 | — |
+| | 등자룡 (부총병, past seventy) | Old as I am, the van is mine | 『明史』 권247 鄧子龍傳: past seventy, his spirit fiercer still, he sought the first honours | in character |
+| | 시마즈 요시히로 | We relieve Konishi; break through Noryang | 『征韓録』; 『행록』 "行長擧火 與南海賊相應" | in character |
+| | 이순신, the order | none: the command clip and the drums | — | — |
+
+Not shown: 고니시 유키나가 at Noryang (he stayed in the Suncheon fort and slipped out by sea; he was not in the strait),
+any line for 진린 before the battle, 원균 or 이억기 speaking at Hansan (no recorded words).

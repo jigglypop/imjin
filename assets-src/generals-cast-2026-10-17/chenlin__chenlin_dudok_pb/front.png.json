@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-17T10:14:19.341Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "transparent",
+    "output_format": "png"
+  },
+  "prompt": "A full-body character reference photograph for image-to-3D reconstruction and auto-rigging, in the look of a live-action costume fitting for a big-budget historical war film. Exactly one man standing alone in a relaxed 45-degree A-pose: both arms straight and spread out to the sides, each arm angled exactly 45 degrees below horizontal, the fists about one forearm length outside the hips with open sky between arm and body; shoulders relaxed and low; legs straight and apart, feet wider than the shoulders, toes forward; head level, facing the camera. The RIGHT hand is a firmly closed fist with a hollow grip channel through it (as if around an invisible sword hilt), the LEFT hand a relaxed loosely closed fist; both hands empty, holding nothing: no weapon, no scabbard. Heroic athletic film-lead build: tall, broad square shoulders, a deep chest, a FLAT stomach and a narrow cinched waist (from the side the belly never pushes out past the chest). He is Chen Lin, the Ming admiral, fifties: the exact face of the attached face picture (broad commanding face, long black moustache and full beard, stern proud eyes). He is dressed ONLY in what he wears UNDER his armour: a crimson silk robe with a long skirt to mid-shin in soft folds and close sleeves, gilded bracers on the forearms, a plain red cloth sash at the waist, and tall brown-and-gold Ming boots. His hair is gathered in a small topknot under a snug black cloth cap (wangjin net), the head otherwise bare, so a helmet fits over it. NO helmet, NO cuirass, NO breastplate, NO shoulder guards, NO armour plates or riveted panels on the torso, NO armoured skirt: the armour is fitted later as separate pieces, so the garments stay close to the body and thin. The FIRST attached picture is this man in his full armour (for his build, proportions, colours and pose only: leave all of that armour off). The SECOND attached picture is his face: keep exactly this face, features, beard, age and skin. Seen at chest height through a long telephoto lens, orthographic-looking. The whole figure fits in the frame with a clear margin. Soft, even, flat studio light, no hard shadows; a fully transparent background (a clean cutout, no ground shadow). Crisp, photographic, believable late-sixteenth-century materials, matte or satin. No cape, no ribbons, no text, no letters, no logo, no border. No painting or illustration look, no plastic CGI look. Exactly two arms, two legs.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_t4/front.png",
+    "assets-src/generals-cast-2026-10-17/chenlin__chenlin_dudok_t4/face.png"
+  ],
+  "usage": {
+    "input_tokens": 3611,
+    "input_tokens_details": {
+      "image_tokens": 3042,
+      "text_tokens": 569
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 9541
+  }
+}

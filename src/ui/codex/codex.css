@@ -130,7 +130,7 @@
   letter-spacing: 0.08em;
 }
 .cx-heading small {
-  font-family: 'Imjin Serif', var(--font-title);
+  font-family: var(--font-title);
   font-size: 11px;
   font-weight: 400;
   letter-spacing: 0.42em;
@@ -213,7 +213,7 @@
   padding: 3px 4px 2px;
   background: #863a30;
   color: #e0c2a4;
-  font-family: 'Imjin Serif', var(--font-title);
+  font-family: var(--font-title);
   font-size: 11px;
   font-style: normal;
   letter-spacing: 0;
@@ -305,7 +305,7 @@
   flex: none;
   padding-top: 4px;
   writing-mode: vertical-rl;
-  font-family: 'Imjin Serif', var(--font-title);
+  font-family: var(--font-title);
   font-size: 15px;
   letter-spacing: 0.3em;
   color: rgba(255, 255, 255, 0.6);
@@ -325,7 +325,7 @@
 }
 .cx-title-roman {
   margin: 9px 0 0;
-  font-family: 'Imjin Roman', serif;
+  font-family: var(--font-title);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.36em;
@@ -344,7 +344,7 @@
   writing-mode: vertical-rl;
   background: #863a30;
   color: #e0c2a4;
-  font-family: 'Imjin Serif', var(--font-title);
+  font-family: var(--font-title);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.1;
@@ -368,7 +368,7 @@
   border: 1px solid var(--brass-line);
   background: none;
   color: var(--ink-2);
-  font-family: 'Imjin Roman', serif;
+  font-family: var(--font-title);
   cursor: pointer;
 }
 .cx-forms button.on {
@@ -431,7 +431,7 @@
 }
 .cx-stat b {
   color: #fff;
-  font-family: 'Imjin Roman', serif;
+  font-family: var(--font-title);
   font-size: 20px;
   font-weight: 600;
 }
@@ -477,7 +477,7 @@
 }
 .cx-crew b {
   color: #fff;
-  font-family: 'Imjin Roman', serif;
+  font-family: var(--font-title);
 }
 .cx-guns {
   display: flex;
@@ -644,7 +644,7 @@
   border: 1px solid var(--brass);
   border-radius: 50%;
   color: var(--brass);
-  font-family: 'Imjin Roman', serif;
+  font-family: var(--font-title);
   font-size: 11px;
   font-style: normal;
 }

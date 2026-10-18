@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "status": "candidate-awaiting-parent-review",
+  "asset": "general-left-v1.png",
+  "createdDate": "2026-10-17",
+  "generationMethod": "built-in image_gen.imagegen",
+  "generationRequestCount": 1,
+  "provider3DRequestsSubmitted": 0,
+  "sourceGeneratedImage": "C:/Users/dongh/.codex/generated_images/01a1461e-b3b1-7322-a6cd-3a8617798768/exec-b7a595c6-5740-45bc-94d2-0034452c81c8.png",
+  "width": 1254,
+  "height": 1254,
+  "bytes": 1687581,
+  "sha256": "99735275d2d83d39f580f7cbb507cbe989fa73717a0a44a3d6f4988ba2dce76c",
+  "referenceImages": [
+    "general-front-v1.png",
+    "general-back-v1.png"
+  ],
+  "geometryOrScreenshotReferenceUsed": false,
+  "transparentBackground": false,
+  "prompt": "Use case: historical-scene. Asset type: a matching STRICT LEFT PROFILE reference photograph of the EXACT SAME integrated fictional Joseon admiral in the supplied approved FRONT and BACK references. Rotate ONLY the camera around this same figure; preserve every detail, proportions, armor design, lengths, rivets, helmet, face, sword and pose. This is one character for coherent multi-view image-to-3D, NOT a redesign.\nCAMERA AND SIDE: exact orthographic 90-degree LEFT side view of the man, camera looks at the man's LEFT side. His nose, face, toes, chest FRONT and the front brass belt buckle all point toward IMAGE RIGHT. The back of his steel helmet, the rear neckguard and his back are on IMAGE LEFT. Show only one eye and the left profile of his nose/moustache/chin beard, no frontal two-eyed face, no three-quarter view.\nCRITICAL POSE PROJECTION: keep the strict T-pose unchanged in 3D. Both arms still extend laterally from his shoulders horizontally, elbows straight. From this EXACT side camera, the near LEFT arm points straight TOWARD THE CAMERA and is foreshortened END-ON; the compact empty LEFT fist is seen END-ON at SHOULDER HEIGHT overlapping the near shoulder/cuff. The near hand must NOT point to image right or left. Do NOT rotate the near arm forward in front of his chest. Do NOT show a long sideways upper arm or forearm running across this side image. The far RIGHT arm extends directly AWAY FROM THE CAMERA, remains horizontal at shoulder height, and may be hidden by the torso/near arm. Both fists remain compact CLOSED hands.\nONE SWORD HANDEDNESS: his RIGHT hand, on the FAR SIDE away from this left-profile camera, still correctly grips the identical dark-handled brass-guard hwando shown in the front and back. It must never transfer to the near LEFT hand. The sword and the far right fist may be partly or mostly occluded in this strict side projection. If visible, the blade is seen almost edge-on above the far shoulder/hand and behind nearer body/helmet layers. Keep the same upward and outward blade direction IN THREE DIMENSIONS, not a new sword pose. It is okay for sword and helmet to overlap in this 2D SIDE projection while being separate in 3D. Do not move either arm or weapon merely to make the sword more visible. No second sword or scabbard.\nAPPEARANCE: same original Korean male face, physical head proportion and hairstyle hidden beneath the substantial rounded slightly pointed steel Joseon helmet with brass seams, short finial, red plume, and lamellar neckguard hanging down the sides and rear. Same thick broad-shouldered muted oxblood-red dujeong armor with regular brass rivets, black edge bindings, overlapping shoulder protectors, V-shaped FRONT collar, wide black waist belt with small brass buckle on the FRONT (image RIGHT edge), straight lower coat opening and below-knee red hem. From this strict side, the armor has convincing THICK front-to-back volume around a substantial chest and back; avoid a flat paper-thin torso. Same two boots and trousers, upright neutral spine, no backwards leaning. Both boots point to IMAGE RIGHT and may partly overlap at this orthographic angle.\nComposition: 1254x1254 square. Preserve the figure's exact same apparent vertical scale as the front and back references (helmet finial near y85, boot soles near y1220, shoulder/near fist around y395, belt around y575, red hem near y990), and center the body profile on the canvas with ample horizontal grey space. Include all visible sword length if it projects above the helmet, no clipping. Soft even studio light, seamless neutral grey background matching the provided references. Photorealistic premium game-character PBR reference. Exactly ONE figure, ONE view, ONE correctly assigned sword, zero text, zero labels, zero diagram, zero ground props.",
+  "visualReview": {
+    "inspected": true,
+    "findings": [
+      "Left-side profile faces image right; one eye and side of nose visible, back helmet on image left.",
+      "Near left closed fist is end-on at shoulder height and empty. Far right sword is behind the shoulder; no weapon transfer to left hand.",
+      "Thick torso profile, front buckle at image-right edge, coherent red armor, steel helmet/neckguard, boots face image right.",
+      "Both boots partly overlap as expected for a profile; no forced separation.",
+      "Whole sword remains visible inside top edge. Far right grip is partly occluded behind shoulder.",
+      "Vertical landmarks are approximately 10-25px above front/back at the same square size. Parent review and eventual 3D visual acceptance remain required."
+    ]
+  }
+}

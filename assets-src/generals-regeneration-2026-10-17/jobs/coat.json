@@ -1,0 +1,118 @@
+{
+  "schema": "imjin.meshy-pilot-job.v1",
+  "operation": "coat",
+  "endpoint": "multi-image-to-3d",
+  "createdAt": "2026-10-16T19:30:31.668Z",
+  "status": "SUCCEEDED",
+  "reservedCredits": 35,
+  "requestSha256": "cdd48ceed35b55fca62a358eeea241190f746c28960791e5b71fecc973f62d53",
+  "references": [
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/joseon-dujeong-coat-front-v2.png",
+      "sha256": "059fb60bb60a3b74e64c7ab82661c13f01d545cf9bdca132d23ae6438ff53335",
+      "bytes": 1765708,
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/joseon-dujeong-coat-left-v1.png",
+      "sha256": "0542acace3731caac4d90adb1c1244c5cfcf18b35d34945467ba663c48be7778",
+      "bytes": 1657143,
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/joseon-dujeong-coat-back-v1.png",
+      "sha256": "6f7251a4805af24d4a9739452491be084a5df2c2d561f5535e254e98b479b28e",
+      "bytes": 1766888,
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/joseon-dujeong-coat-right-v1.png",
+      "sha256": "7dbb1813ec4ac937085eac6e06ce6dcf91a58ecf5bce55131337fd03aca1e042",
+      "bytes": 1659738,
+      "width": 1254,
+      "height": 1254
+    }
+  ],
+  "request": {
+    "image_urls": [
+      "sha256:059fb60bb60a3b74e64c7ab82661c13f01d545cf9bdca132d23ae6438ff53335",
+      "sha256:0542acace3731caac4d90adb1c1244c5cfcf18b35d34945467ba663c48be7778",
+      "sha256:6f7251a4805af24d4a9739452491be084a5df2c2d561f5535e254e98b479b28e",
+      "sha256:7dbb1813ec4ac937085eac6e06ce6dcf91a58ecf5bce55131337fd03aca1e042"
+    ],
+    "ai_model": "meshy-7.1",
+    "geometry_resolution": "2k",
+    "should_remesh": true,
+    "topology": "triangle",
+    "should_texture": true,
+    "enable_pbr": true,
+    "texture_resolution": "4k",
+    "image_enhancement": false,
+    "remove_lighting": true,
+    "auto_size": false,
+    "save_pre_remeshed_model": true,
+    "target_formats": [
+      "glb"
+    ],
+    "multi_view_thumbnails": true,
+    "target_polycount": 200000
+  },
+  "balanceBefore": {
+    "balance": 598,
+    "monthly_credits": 105,
+    "permanent_credits": 493,
+    "monthly_resets_at": 1794756016000
+  },
+  "createAttempts": 1,
+  "taskId": "01a14631-cf72-72dd-9d35-eee203da1ece",
+  "submittedAt": "2026-10-16T19:30:35.428Z",
+  "progress": 100,
+  "lastObservedAt": "2026-10-16T19:34:56.350Z",
+  "consumedCredits": 35,
+  "balanceAfter": {
+    "balance": 558,
+    "monthly_credits": 65,
+    "permanent_credits": 493,
+    "monthly_resets_at": 1794756016000
+  },
+  "downloads": {
+    "glb": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/coat/glb.glb",
+      "bytes": 36546780,
+      "sha256": "9ea9934b6167b75e00d88aaca461b65d4b02d46edcd540f0915aade227ca341c"
+    },
+    "pre_remeshed_glb": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/coat/pre_remeshed_glb.glb",
+      "bytes": 43991512,
+      "sha256": "2745e3511b63d866627d8e739c88b27b7260ce83aaef7a4f03cb31bcec82cb21"
+    },
+    "thumbnail_back": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/coat/thumbnail_back.png",
+      "bytes": 123128,
+      "sha256": "f47eb32e98f929b1373cd5a90a1ba02cf7d0d8a726de68b0bacf0a9a75bebe24"
+    },
+    "thumbnail_front": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/coat/thumbnail_front.png",
+      "bytes": 134899,
+      "sha256": "b77d23ee372479388e628b2174b29028f7bd927a60c11b4fe47dd2b1b2208b29"
+    },
+    "thumbnail_left": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/coat/thumbnail_left.png",
+      "bytes": 94221,
+      "sha256": "0eca3b4c90b83799d29831d163243af8f0761d4b2d37bca93f3db981237a9d80"
+    },
+    "thumbnail_right": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/coat/thumbnail_right.png",
+      "bytes": 94636,
+      "sha256": "85e9e42e9e76da926141f5509bc735e911392013ccd9a56bd72df5dda90f2260"
+    },
+    "thumbnail": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/coat/thumbnail.png",
+      "bytes": 134899,
+      "sha256": "b77d23ee372479388e628b2174b29028f7bd927a60c11b4fe47dd2b1b2208b29"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:07:40.651Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Sir Francis Drake, forty-eight. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Sir Francis Drake, forty-eight: a round, ruddy, sun-weathered Devon face, curly short reddish-brown hair, a short pointed reddish beard and an upturned moustache, sharp bold eyes, a confident set to the mouth), in the costume of: Faction look: an Elizabethan English sea commander of 1588, as in big-budget period films about the Armada (Elizabeth: The Golden Age, the BBC Elizabeth R): The vice-admiral and privateer: a fitted black doublet with rows of small gold buttons and a small white ruff, a polished steel gorget, a fitted steel breastplate with a central ridge, padded black-and-gold paned trunk hose, black hose and tall black boots; a broad leather sword belt; a small black flat cap. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_drake.webp"
+  ],
+  "estimatedUsd": 0.04
+}

@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:18:39.222Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Alonso Pérez de Guzmán, seventh Duke of Medina Sidonia, thirty-eight. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Alonso Pérez de Guzmán, seventh Duke of Medina Sidonia, thirty-eight: a slim, pale, long Spanish aristocrat face, a narrow nose, dark thoughtful eyes, short black hair, a short neat black beard and moustache), in the costume of: Faction look: a Spanish commander of the Armada of 1588, a grandee or veteran sea captain of Philip II, as in big-budget Spanish period films and series (Alatriste, Isabel): The Captain-General of the Ocean Sea: a gilt-etched blackened Milanese half-armour (gorget, peascod breastplate, tassets) with bands of gold etching over a black silk doublet, a small white ruff, a crimson silk commander sash tied at the hip, black trunk hose, black hose and boots; the small gold Golden Fleece pendant on a red ribbon at his chest; a black velvet cap. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_medina.webp"
+  ],
+  "estimatedUsd": 0.04
+}

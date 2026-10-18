@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-16T22:24:14.860Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "A full-body character reference photograph for image-to-3D reconstruction and auto-rigging, in the look of a live-action costume fitting for a big-budget historical war film. Exactly one man standing alone in a strict T-pose: both arms stretched straight out to the sides at shoulder height, perfectly level and horizontal; palms facing down; legs straight, feet a little apart and flat, toes forward; head level, facing the camera. BOTH hands are empty, firmly closed fists, the backs of the hands up, the thumbs over the fingers, holding nothing at all (the weapon is fitted later): no sword, no weapon, no scabbard on the body, nothing in the hands. Heroic film-lead proportions: tall, powerful, eight heads tall, broad square shoulders, a deep chest, a narrow belted waist; a movie-poster hero, never stocky or chibi. Seen at chest height through a long telephoto lens, orthographic-looking, no perspective distortion. The whole figure fits in the frame with a clear margin above the helmet crest, below the boots and beyond both fists. Soft, even, flat studio light from every side, no hard shadows, no rim light; a plain seamless light grey background, no floor line, no ground shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord and seam clearly separated, believable late-sixteenth-century materials with a soft matte or satin finish: no mirror reflections, no glare, no grime streaks, every surface pattern crisp and readable. He is Wu Weizhong, Ming southern infantry general (Qi Jiguang's school), forties: a disciplined lean Han Chinese face, moustache and goatee. Recast him as the charismatic, handsome leading man of a historical war film, an original face (not a real actor). Faction look: a late-Ming Chinese general as in big-budget Chinese historical epics: gold and red, polished mountain-pattern (shanwenjia) or mail armor, a tall Ming helmet with a spike and red tassel and phoenix-wing flaps. A dark red nail-studded brigandine (dingjia) over a black robe, iron shoulder guards; an iron Ming helmet with spike, red tassel and phoenix-wing flaps. The first attached picture is the style reference sheet of this film costume department: match its photographic rendering, its soft frontal light, its material treatment and its level of historical accuracy (but not its man, costume or pose). The second attached picture shows his armour on its stand: take its colours and materials where they agree with the description. His face is a new design, not copied from any painted portrait. No cape or cloak, no long ribbons or banners flying away from the body, no sashimono back flag; skirts and tassets hang straight close to the legs. No text, no letters, no logo, no border, no watermark. No rising sun flag, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items. Exactly two arms, two legs, two empty fists.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/style-sheet.png",
+    "public/ui/armor/ming_dingjia.webp"
+  ],
+  "usage": {
+    "input_tokens": 2874,
+    "input_tokens_details": {
+      "image_tokens": 2208,
+      "text_tokens": 666
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 8804
+  }
+}

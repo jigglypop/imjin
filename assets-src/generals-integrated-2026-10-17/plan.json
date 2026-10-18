@@ -1,0 +1,48 @@
+{
+  "schema": "imjin.integrated-general.v1",
+  "status": "40-credits-approved-preparing-unarmed-references",
+  "supersedes": "The previous wardrobe/full-faction asset expansion is cancelled by the user's later explicit scope change.",
+  "userScope": {
+    "representativeCharacters": 1,
+    "armorAndHelmet": "Generated together as one complete armored humanoid, not assembled from the rejected clothing patches.",
+    "embeddedWeapons": 0,
+    "equippedWeaponsAtOnce": 1,
+    "weaponVariants": 18,
+    "armorSelection": false,
+    "weaponSelection": true,
+    "generationBindPose": "UNARMED T-pose; front, left, back reference views; both fists empty",
+    "runtimeActions": ["서있기", "지휘", "검술"],
+    "existingRosterAndProgression": "preserved"
+  },
+  "provider": "Meshy",
+  "model": "meshy-7.1",
+  "modelSource": "https://docs.meshy.ai/en/api/multi-image-to-3d",
+  "priceSource": "https://docs.meshy.ai/en/api/pricing",
+  "newPaidOperations": [
+    { "id": "whole-generation", "endpoint": "/openapi/v1/multi-image-to-3d", "estimatedCredits": 35, "attempts": 1 },
+    { "id": "whole-rig", "endpoint": "/openapi/v1/rigging", "estimatedCredits": 5, "attempts": 1, "requiresRawVisualPass": true }
+  ],
+  "proposedNewCreditCeiling": 40,
+  "previousPilotActualCredits": 75,
+  "previousPilotAllowanceRemaining": 0,
+  "newPaidSubmissionsMade": 0,
+  "automaticRetries": false,
+  "automaticRegeneration": false,
+  "paidAnimation": false,
+  "motions": "Retarget existing licensed idle, command and actual Triple_Combo_Attack source onto the NEW integrated rig; no old geometry reuse.",
+  "finalRuntimeAsset": "public/models/generals/representative/general.glb",
+  "finalLowTierAsset": "public/models/generals/representative/general_lod1.glb",
+  "rawAcceptance": [
+    "One complete humanoid and one helmet; ZERO weapons; two feet, clear limbs and empty fists.",
+    "Physical chest, back, shoulder blades, head and boots agree on front direction.",
+    "Small proportionate head and substantial armor/helmet matching the new front reference.",
+    "No duplicate rear face, malformed slit, floating garment or fused empty limbs.",
+    "At most 300000 actual triangles before rigging."
+  ],
+  "runtimeAcceptance": [
+    "Exactly one fixed representative body GLB; changing general does not change armor; selected weapon is a separate interchangeable part.",
+    "Exactly standing, command, swordsmanship action controls.",
+    "Front/side/back and moving sword/hand/feet review in the actual browser.",
+    "No armor wardrobe, armor preview or armor shop. Weapon choice remains available."
+  ]
+}

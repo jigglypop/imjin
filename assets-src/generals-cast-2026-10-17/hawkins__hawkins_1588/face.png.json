@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:18:35.019Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Sir John Hawkins, Treasurer of the Navy, fifty-six. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Sir John Hawkins, Treasurer of the Navy, fifty-six: a long lean shrewd English face, deep-set eyes, a long grey forked beard and grey moustache, weathered lines), in the costume of: Faction look: an Elizabethan English sea commander of 1588, as in big-budget period films about the Armada (Elizabeth: The Golden Age, the BBC Elizabeth R): The rear-admiral: a dark brown doublet with a small white ruff, a russeted (dark brown-blued) steel breastplate and gorget with plain brass rivets, dark padded trunk hose, dark hose and black boots; a black skull cap. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_hawkins.webp"
+  ],
+  "estimatedUsd": 0.04
+}

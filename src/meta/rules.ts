@@ -1,6 +1,7 @@
 import type { ShipMods } from '../sim/types';
 import { BRANCH_SKILLS, MASTERY_ID, TREES, type Effect, type SkillDef } from '../sim/grand/growthData';
-import { ARMORS, GENERALS, armorById, armorsFor, basicArmor, generalById, type ArmorDef } from './catalog';
+import { armorSeed, rerollCost, rollArmor, rollEffect, type ArmorRoll } from './affixes';
+import { ARMORS, GENERALS, armorById, armorsFor, basicArmor, defaultWeapon, generalById, weaponById, type ArmorDef, type WeaponDef } from './catalog';
 
 /**
  * The rules of an account's growth: what a battle earns, how a general rises and learns, and what armor costs and fits.
@@ -17,12 +18,18 @@ export const MASTERY_LEVEL = 6;
 /** Coins a day from battles the server cannot watch (single-player); online results are not capped. */
 export const DAILY_CAP = 3000;
 
-export type GeneralState = { xp: number; skills: string[]; armor?: string };
+export type GeneralState = { xp: number; skills: string[]; armor?: string; weapon?: string };
+/** One owned armor piece's roll: the seed that decides its stats and abilities, and how often it was rerolled. */
+export type ArmorItem = { seed: number; rerolls: number };
 export type Profile = {
   v: typeof PROFILE_VERSION;
   coins: number;
   /** Bought armor, sorted. A faction's basic armor is everyone's and never listed. */
   owned: string[];
+  /** Mixed into every armor seed: the account id on the server, a random string for a local profile. */
+  salt: string;
+  /** The roll of each owned armor, by id (affixes.ts rollArmor). */
+  rolls: Record<string, ArmorItem>;
   generals: Record<string, GeneralState>;
   stats: { battles: number; wins: number; sunk: number; lost: number };
   /** One-time bonuses already paid, e.g. `win:history:hansan:joseon`. */
@@ -32,18 +39,29 @@ export type Profile = {
   earned: number;
 };
 
-export const newProfile = (): Profile => ({ v: PROFILE_VERSION, coins: 0, owned: [], generals: {}, stats: { battles: 0, wins: 0, sunk: 0, lost: 0 }, firsts: [], day: '', earned: 0 });
+export const newProfile = (): Profile => ({ v: PROFILE_VERSION, coins: 0, owned: [], salt: 'local', rolls: {}, generals: {}, stats: { battles: 0, wins: 0, sunk: 0, lost: 0 }, firsts: [], day: '', earned: 0 });
 
 const count = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) && n > 0 ? Math.floor(n) : 0);
 const strings = (a: unknown) => (Array.isArray(a) ? a.filter((s): s is string => typeof s === 'string') : []);
 
-/** A stored profile made safe to use: unknown generals, armor and skills dropped, counts clamped to whole numbers. */
-export function normalizeProfile(raw: unknown): Profile {
+/**
+ * Also migrates older v1 profiles: a missing weapon uses the faction's default sword, and an owned armor without a
+ * roll gets one from the salt (`salt`, else the given account id) and its id, so the migration is reproducible.
+ */
+export function normalizeProfile(raw: unknown, accountId = 'local'): Profile {
   const p = newProfile();
+  p.salt = accountId;
   if (!raw || typeof raw !== 'object') return p;
   const r = raw as Record<string, unknown>;
   p.coins = count(r.coins);
+  if (typeof r.salt === 'string' && r.salt) p.salt = r.salt.slice(0, 64);
   p.owned = [...new Set(strings(r.owned).filter((id) => armorById(id) && armorById(id)!.tier !== 'basic'))].sort();
+  const rolls = r.rolls && typeof r.rolls === 'object' ? (r.rolls as Record<string, unknown>) : {};
+  for (const id of p.owned) {
+    const it = rolls[id] as Record<string, unknown> | undefined;
+    const rerolls = it && typeof it === 'object' ? count(it.rerolls) : 0;
+    p.rolls[id] = { seed: armorSeed(p.salt, id, rerolls), rerolls };
+  }
   const gens = r.generals && typeof r.generals === 'object' ? (r.generals as Record<string, unknown>) : {};
   for (const g of GENERALS) {
     const s = gens[g.id] as Record<string, unknown> | undefined;
@@ -51,6 +69,7 @@ export function normalizeProfile(raw: unknown): Profile {
     const known = new Set(skillsFor(g.id).map((k) => k.id));
     const state: GeneralState = { xp: count(s.xp), skills: [...new Set(strings(s.skills).filter((k) => known.has(k)))] };
     if (typeof s.armor === 'string' && armorsFor(g).some((a) => a.id === s.armor)) state.armor = s.armor;
+    if (typeof s.weapon === 'string' && weaponById(s.weapon)?.faction === g.faction) state.weapon = s.weapon;
     p.generals[g.id] = state;
   }
   const st = (r.stats && typeof r.stats === 'object' ? r.stats : {}) as Record<string, unknown>;
@@ -138,7 +157,31 @@ export function buy(p: Profile, armorId: string): { profile: Profile; armor: Arm
   const problem = buyProblem(p, armorId);
   if (problem) throw new RuleError(problem);
   const armor = armorById(armorId)!;
-  return { profile: { ...p, coins: p.coins - armor.price, owned: [...p.owned, armorId].sort() }, armor };
+  return { profile: { ...p, coins: p.coins - armor.price, owned: [...p.owned, armorId].sort(), rolls: { ...p.rolls, [armorId]: { seed: armorSeed(p.salt, armorId), rerolls: 0 } } }, armor };
+}
+
+/** The roll of an armor a profile owns (a migrated piece without a stored roll gets its first), or null for basic or unowned armor. */
+export function armorRoll(p: Profile, armorId: string): ArmorRoll | null {
+  const a = armorById(armorId);
+  if (!a || a.tier === 'basic' || !p.owned.includes(armorId)) return null;
+  return rollArmor(a, p.rolls[armorId]?.seed ?? armorSeed(p.salt, armorId));
+}
+
+export function rerollProblem(p: Profile, armorId: string): string | null {
+  const a = armorById(armorId);
+  if (!a || a.tier === 'basic') return '다시 벼릴 수 없는 갑옷입니다';
+  if (!p.owned.includes(armorId)) return '아직 가지지 않은 갑옷입니다';
+  if (p.coins < rerollCost(a)) return '엽전이 모자랍니다';
+  return null;
+}
+
+/** Reforges a piece: pays rerollCost and moves it to the next seed of its chain (salt, id, rerolls), so it stays verifiable. */
+export function reroll(p: Profile, armorId: string): Profile {
+  const problem = rerollProblem(p, armorId);
+  if (problem) throw new RuleError(problem);
+  const a = armorById(armorId)!;
+  const rerolls = (p.rolls[armorId]?.rerolls ?? 0) + 1;
+  return { ...p, coins: p.coins - rerollCost(a), rolls: { ...p.rolls, [armorId]: { seed: armorSeed(p.salt, armorId, rerolls), rerolls } } };
 }
 
 /** Why a general cannot put on an armor (null takes his own basic armor back), or null. */
@@ -149,7 +192,6 @@ export function equipProblem(p: Profile, generalId: string, armorId: string | nu
   const a = armorById(armorId);
   if (!a) return '없는 갑옷입니다';
   if (a.faction !== g.faction) return '다른 나라의 갑옷입니다';
-  if (a.general && a.general !== g.id) return '다른 장수의 전용 갑옷입니다';
   if (!owns(p, armorId)) return '아직 가지지 않은 갑옷입니다';
   return null;
 }
@@ -167,7 +209,38 @@ export function wornArmor(p: Profile, generalId: string): ArmorDef | undefined {
   const g = generalById(generalId);
   if (!g) return undefined;
   const id = generalState(p, generalId).armor;
-  return (id && armorById(id)) || basicArmor(g.faction);
+  const armor = id && armorById(id);
+  return (armor && armor.faction === g.faction ? armor : undefined) || basicArmor(g.faction);
+}
+
+// --- Weapons ----------------------------------------------------------------------------------------------------
+
+/** Weapons are freely available cosmetics. A null selection restores the faction's default sword. */
+export function equipWeaponProblem(_p: Profile, generalId: string, weaponId: string | null): string | null {
+  const g = generalById(generalId);
+  if (!g) return '없는 장수입니다';
+  if (weaponId === null) return null;
+  const weapon = weaponById(weaponId);
+  if (!weapon) return '없는 무기입니다';
+  if (weapon.faction !== g.faction) return '다른 나라의 무기입니다';
+  return null;
+}
+
+export function equipWeapon(p: Profile, generalId: string, weaponId: string | null): Profile {
+  const problem = equipWeaponProblem(p, generalId, weaponId);
+  if (problem) throw new RuleError(problem);
+  const { weapon: _old, ...rest } = generalState(p, generalId);
+  const state: GeneralState = weaponId ? { ...rest, weapon: weaponId } : rest;
+  return { ...p, generals: { ...p.generals, [generalId]: state } };
+}
+
+/** Exactly one active weapon, with a safe same-faction fallback for old or invalid profile data. */
+export function wornWeapon(p: Profile, generalId: string): WeaponDef | undefined {
+  const g = generalById(generalId);
+  if (!g) return undefined;
+  const id = generalState(p, generalId).weapon;
+  const weapon = id && weaponById(id);
+  return (weapon && weapon.faction === g.faction ? weapon : undefined) || defaultWeapon(g.faction);
 }
 
 // --- What a general brings to his ships -------------------------------------------------------------------------
@@ -194,7 +267,8 @@ export function generalMods(p: Profile, generalId: string): ShipMods {
     if (s) multiply(m, s.effect);
   }
   const armor = wornArmor(p, generalId);
-  if (armor) multiply(m, armor.effect);
+  const roll = armor && armorRoll(p, armor.id);
+  if (roll) multiply(m, rollEffect(roll));
   return m;
 }
 
@@ -282,5 +356,5 @@ export function reportProblem(report: BattleReport, known: { ownShips: number; e
   return null;
 }
 
-/** Every armor a profile could show in a shop: its faction's, and the signatures of its generals. */
+/** Every purchasable armor a profile could show in a shop, optionally filtered to a faction. */
 export const shopArmors = (faction?: string): ArmorDef[] => ARMORS.filter((a) => a.tier !== 'basic' && (!faction || a.faction === faction));

@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "status": "candidate-views-awaiting-parent-3d-submission-selection",
+  "createdDate": "2026-10-17",
+  "purpose": "New integrated Joseon general with armor, helmet and one right-hand sword, T-pose generation reference. Runtime idle, command and sword animations retained by parent.",
+  "oldGeometryOrScreenshotsUsed": false,
+  "provider3DRequestsSubmittedByThisAgent": 0,
+  "front": "general-front-v1.png",
+  "back": "general-back-v1.png",
+  "left": "general-left-v1.png",
+  "views": [
+    {
+      "file": "general-front-v1.png",
+      "view": "front",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "5a7d1539c7b09ee1b388e24aed631c9fec4a59a6ae6fb201b304c2f2148e1f0f",
+      "rightSwordHandScreenSide": "left"
+    },
+    {
+      "file": "general-back-v1.png",
+      "view": "back",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1816705,
+      "sha256": "5493ff977a49ae2db654f0c56fc9142c044b3bc02e26fc8d9c7707ea965c4859",
+      "rightSwordHandScreenSide": "right"
+    },
+    {
+      "file": "general-left-v1.png",
+      "view": "left profile, face points image right",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1687581,
+      "sha256": "99735275d2d83d39f580f7cbb507cbe989fa73717a0a44a3d6f4988ba2dce76c",
+      "nearHand": "left, empty closed fist end-on",
+      "farHand": "right, holds sword"
+    }
+  ],
+  "notes": [
+    "Front selected by parent before matching back and side generation.",
+    "No paid provider calls or old geometry repairs performed.",
+    "3D pose and material consistency must be judged on generated geometry; these image candidates alone are not acceptance evidence."
+  ]
+}

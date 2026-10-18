@@ -1,0 +1,33 @@
+{
+  "schema": "imjin.regeneration-submission-policy.v1",
+  "status": "proposal-not-authorized",
+  "paidSubmissionsMade": 0,
+  "networkMutationsMade": 0,
+  "maxCreateAttemptsPerOperation": 1,
+  "maxConcurrentCreates": 1,
+  "automaticCreateRetries": false,
+  "automaticRegeneration": false,
+  "knownTaskObservation": "GET retry with backoff on the SAME task ID; never create again merely because polling timed out",
+  "missingCreateResponse": "mark submission-uncertain; retain full reserved estimate and stop dependent paid steps; reconcile provider task history/account state, never automatically retry POST",
+  "beforeCreate": [
+    "Bind approved four-view image bytes; record SHA256 and pixel dimensions.",
+    "Pin endpoint, model, all request parameters and request SHA256.",
+    "Obtain explicit user authorization for selected provider, exact operations and total credit ceiling.",
+    "Recheck primary production pricing and balance; do not treat wallet balance as a spending limit.",
+    "Atomically persist submitting intent and reserve operation estimate in a durable ledger before sending exactly one POST."
+  ],
+  "afterCreate": [
+    "Persist task ID before any subsequent network action.",
+    "Poll same task until authoritative terminal state; download bytes to a fresh path.",
+    "Record actual consumed credits and reconcile account balance/frozen credits.",
+    "Stop next paid step if cost exceeds the approved per-operation or total estimate."
+  ],
+  "hardCap": {
+    "providerRequestField": null,
+    "preTaskQuoteEndpoint": null,
+    "documentationFinding": "No per-task maximum-spend field or pre-task quote endpoint is documented in the inspected generation, rigging, billing, balance and task-query references. Do not claim that absence proves no private feature exists.",
+    "enforcement": "Local fixed operation count and conservative reservation only. This is NOT a provider-enforced hard monetary cap.",
+    "strictProviderGuaranteedCapRequired": "Do not submit until a provider-confirmed account/key budget or price quote is available."
+  },
+  "secrets": "Credentials only from existing environment; never serialize headers, API keys, tokens or signed result URLs to review artifacts."
+}

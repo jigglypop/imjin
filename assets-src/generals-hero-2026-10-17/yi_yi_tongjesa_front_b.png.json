@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-16T15:33:55.061Z",
+  "prompt": "A full-body character reference photograph made for image-to-3D reconstruction and auto-rigging, in the look of a live-action costume fitting for a big-budget historical film. Exactly one man standing alone in a strict T-pose: both arms stretched straight out to the sides at shoulder height, perfectly level; both hands clenched into firm, compact fists, the backs of the hands up and the thumbs folded over the fingers; legs straight, feet a little apart and flat, toes forward; head level. Heroic film-lead proportions: tall, lean and powerful, eight and a half heads tall from the soles of his boots to the crown of his head (the helmet not counted), long legs with the crotch at half his height, broad square shoulders, a deep chest, a narrow belted waist, a strong neck. A movie-poster hero, never stocky or squat. Seen at the height of his chest through a long telephoto lens, so there is no perspective distortion. The whole figure fits inside the frame with a clear margin above the top of the helmet and its plume, below the soles of the boots and beyond both fists. Soft, even, flat studio light from every side, no hard shadows, no rim light, no dramatic highlights; a plain seamless very light grey background, no floor line, no cast shadow, nothing else in the picture. Crisp, sharply focused detail everywhere: every plate, rivet, lacing cord, buckle and seam clearly separated, in believable late-sixteenth-century materials (rubbed iron, worn lacquer, silk, leather, brass). He faces the camera straight on and looks straight into the lens. The first attached picture is his portrait: He is Yi Sun-sin, the Joseon admiral, in his late forties. Keep who the attached portrait shows: a long oval Korean face with high cheekbones, a thin moustache and a long, narrow, well-kept chin beard falling to his collar. Recast him as the strikingly handsome, charismatic leading man of a big-budget historical war film: calm, noble and fearless, piercing dark eyes under strong level brows, a straight nose, a sharp clean jaw line, healthy sun-weathered skin with fine natural texture, the beard black with a few threads of grey. An original face, not any real actor. The armour he wears, with its helmet: The personal armor of Yi Sun-sin, Supreme Naval Commander of the Three Provinces of Joseon: a long dujeong-gap coat of deep crimson silk, a darker and richer red than any soldier's coat, with a soft sheen in its folds, faced with dense close rows of bright gilt rivet heads so that the whole coat glints gold; a thick dark brown fur collar and fur-trimmed cuffs, a broad belt of gilt lacquer with gilt plaques across the waist, wide shoulder flaps edged in gilt; the silk darkened and frayed by salt and smoke, the gilt rubbed, dignified and war-worn. Helmet: a black-lacquered iron tugu helmet with bright gilt bands and a gilt finial, a long full crimson horsehair plume falling to the shoulder, and a crimson neck curtain set with gilt rivets. The second attached picture shows this armour on its stand: match its colours, its rivet pattern, its collar and its helmet. His fists are empty: no weapon, no sword, nothing held, no scabbard. No cape or cloak, no long ribbons, cords or tassels hanging away from the body; the plume falls close behind the helmet. The coat skirts hang straight and close to the legs, split at the front and the sides, ending at mid-shin so the tall boots show. No text, no letters, no logo, no border, no emblem, crest or mon unless named above. No rising sun flag, no sunburst or radiating rays, no red sun disc. No painting or illustration look, no cartoon, no plastic CGI look, no modern items.",
+  "refs": [
+    "assets-src/commanders-2026-10-16/src/yi.webp",
+    "public/ui/armor/yi_tongjesa.webp"
+  ],
+  "usage": {
+    "input_tokens": 2730,
+    "input_tokens_details": {
+      "image_tokens": 1888,
+      "text_tokens": 842
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 8660
+  },
+  "image": {
+    "model": "gpt-image-2.5-sunburst",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  }
+}

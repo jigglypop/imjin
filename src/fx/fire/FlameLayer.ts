@@ -210,5 +210,6 @@ export class FlameLayer {
       a.needsUpdate = true;
     }
     this.sprite.count = this.count;
+    this.sprite.visible = this.count > 0;
   }
 }

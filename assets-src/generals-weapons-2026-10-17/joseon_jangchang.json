@@ -1,0 +1,106 @@
+{
+  "kind": "spear",
+  "hand": "right",
+  "length": 2.485,
+  "notes": "Solid tapered hardwood pole, ridged bevel head, separate socket, hand binding, butt spike; leaf",
+  "id": "joseon_jangchang",
+  "faction": "joseon",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 3516,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.041999999433755875,
+    2.4850000143051147,
+    0.057999998331069946
+  ],
+  "lodTriangles": 3516,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_jangchang.glb",
+      "bytes": 112656,
+      "sha256": "3c6fc363a73c7a9126aef4957807d2ede9cdaaa79989ae23f99141afb8b53dbc"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_jangchang_lod1.glb",
+      "bytes": 112664,
+      "sha256": "7c2d3d56e35c1f337814563db524300a20035ac296e1e61e838882885f0fd65f"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\joseon_jangchang.blend",
+      "bytes": 151924,
+      "sha256": "d00927194fc72560405e1357988719b483404b0d209e017ff011ab72a407ab76"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_joseon_jangchang.glb",
+      "bytes": 112656,
+      "sha256": "3c6fc363a73c7a9126aef4957807d2ede9cdaaa79989ae23f99141afb8b53dbc",
+      "triangles": 3516,
+      "vertices": 3520,
+      "min": [
+        -0.020999999716877937,
+        -1.1050000190734863,
+        -0.028999999165534973
+      ],
+      "max": [
+        0.020999999716877937,
+        1.3799999952316284,
+        0.028999999165534973
+      ],
+      "dimensions": [
+        0.041999999433755875,
+        2.4850000143051147,
+        0.057999998331069946
+      ],
+      "steelOutwardVertices": 56,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_joseon_jangchang_lod1.glb",
+      "bytes": 112664,
+      "sha256": "7c2d3d56e35c1f337814563db524300a20035ac296e1e61e838882885f0fd65f",
+      "triangles": 3516,
+      "vertices": 3520,
+      "min": [
+        -0.020999999716877937,
+        -1.1050000190734863,
+        -0.028999999165534973
+      ],
+      "max": [
+        0.020999999716877937,
+        1.3799999952316284,
+        0.028999999165534973
+      ],
+      "dimensions": [
+        0.041999999433755875,
+        2.4850000143051147,
+        0.057999998331069946
+      ],
+      "steelOutwardVertices": 56,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/joseon_jangchang.blend",
+    "bytes": 151924,
+    "sha256": "d00927194fc72560405e1357988719b483404b0d209e017ff011ab72a407ab76"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/joseon_jangchang.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 2212,
+    "sha256": "ea66b2933fe26c1c231bca810613c408d27b0de3356f8eedfe8232979a278641"
+  }
+}

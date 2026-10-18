@@ -122,7 +122,7 @@ export function buildMingship(lod: Lod): MeshData {
     box(b, red, [xb - 0.3, deck, -zb], [xb, top(xb), zb], { grain: 1 });
     if (lod < 2) {
       const x = xb + 0.015;
-      b.quadF(P('panel_gold', { rect: [0.02, 0.02, 0.98, 0.98], surf: 3 }), [[x, deck + 0.15, -1.4], [x, deck + 0.15, 1.4], [x, deck + 0.15 + 2.5, 1.4], [x, deck + 0.15 + 2.5, -1.4]], [1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+      b.quadF(P('panel_gold', { rect: [0.02, 0.02, 0.98, 0.98], surf: 3 }).fit(2.8, 2.5), [[x, deck + 0.15, -1.4], [x, deck + 0.15, 1.4], [x, deck + 0.15 + 2.5, 1.4], [x, deck + 0.15 + 2.5, -1.4]], [1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
       box(b, gilt, [xb - 0.1, deck + 0.05, -1.55], [xb + 0.03, deck + 0.15, 1.55], { grain: 2 });
       box(b, gilt, [xb - 0.1, deck + 2.65, -1.55], [xb + 0.03, deck + 2.75, 1.55], { grain: 2 });
     }
@@ -151,7 +151,7 @@ export function buildMingship(lod: Lod): MeshData {
       box(b, gilt, [xf - 0.05, deck + 1.95, z - 0.75], [xf + 0.07, deck + 2.12, z + 0.75], { grain: 2 });
     }
     const xs = c.x - c.hx - 0.015;
-    b.quadF(P('panel_gold', { rect: [0.02, 0.02, 0.98, 0.98], surf: 3 }), [[xs, deck + 0.2, -1.5], [xs, deck + 0.2, 1.5], [xs, deck + 2.6, 1.5], [xs, deck + 2.6, -1.5]], [-1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    b.quadF(P('panel_gold', { rect: [0.02, 0.02, 0.98, 0.98], surf: 3 }).fit(3.0, 2.4), [[xs, deck + 0.2, -1.5], [xs, deck + 0.2, 1.5], [xs, deck + 2.6, 1.5], [xs, deck + 2.6, -1.5]], [-1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
   }
   // poop deck slab, rails, stair
   box(b, red, [c.x - c.hx - 0.1, y1, -c.hz - 0.35], [c.x + c.hx + 0.5, y1 + 0.28, c.hz + 0.35], { grain: 0 });

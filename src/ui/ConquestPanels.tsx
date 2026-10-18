@@ -17,6 +17,8 @@ function clock(t: number) {
 /** Ticket meters and the treasury chips, under the battle balance. */
 export function ConquestBar({ c }: { c: ConquestSnapshot }) {
   const t = useT();
+  // The countdown changes every publish: it comes from the live slice, not the snapshot.
+  const timeLeft = useUi((s) => s.live.timeLeft);
   return (
     <div className="cq-bar">
       <div className="cq-tickets">
@@ -29,7 +31,7 @@ export function ConquestBar({ c }: { c: ConquestSnapshot }) {
           </div>
         </div>
         <span className="cq-clock" title={t('남은 시간')}>
-          {clock(c.timeLeft)}
+          {clock(timeLeft)}
         </span>
         <div className="cq-ticket cq-ticket--foe" title={t('적 기세')}>
           <span>

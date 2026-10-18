@@ -1,5 +1,6 @@
 import {
   BufferGeometry,
+  type DirectionalLight,
   CylinderGeometry,
   Float32BufferAttribute,
   Group,
@@ -132,6 +133,24 @@ const MAX_BLOCKS = 3000;
 
 type Block = { cells: Int16Array; top: number };
 
+/** The layer the sun's shadow camera alone draws: the shadow-only copy of the near forest lives on it. */
+export const SHADOW_LAYER = 5;
+
+/**
+ * What the near ring draws into the shadow map: the slots of the camera's list whose block the shadow camera can see. The
+ * camera's own draw casts nothing, so the shadow pass no longer runs the crowns of the whole view, most of which lie
+ * outside the shadow box when zoomed in; no tree casts that did not before.
+ */
+type ShadowCopy = {
+  mesh: Mesh;
+  full: InstancedBufferGeometry;
+  lite: InstancedBufferGeometry;
+  cells: InstancedBufferAttribute;
+  /** Shadow camera the list was built for, and the camera list it was cut from. */
+  view: Float32Array;
+  from: unknown;
+};
+
 type Ring = {
   cell: number;
   grid: number;
@@ -145,6 +164,9 @@ type Ring = {
   blocks: Map<number, Block>;
   /** Camera and centre the instance list was built for. */
   built: { cx: number; cz: number; view: Float32Array } | null;
+  /** The camera frustum (terrain space) the list was built with. */
+  seen: Frustum;
+  shadow: ShadowCopy | null;
 };
 
 export class Vegetation {
@@ -155,6 +177,7 @@ export class Vegetation {
   private readonly viewProj = new Matrix4();
   private readonly toTerrain = new Matrix4();
   private readonly box = new Box3();
+  private readonly shadowFrustum = new Frustum();
 
   constructor(
     private readonly terrain: Terrain,
@@ -178,6 +201,8 @@ export class Vegetation {
     for (const r of this.rings) {
       r.full.dispose();
       r.lite.dispose();
+      r.shadow?.full.dispose();
+      r.shadow?.lite.dispose();
       (r.mesh.material as MeshStandardNodeMaterial).dispose();
     }
     this.group.removeFromParent();
@@ -185,7 +210,10 @@ export class Vegetation {
 
   /** Full and lite crown geometry for the level, switched at run time. */
   setLite(lite: boolean) {
-    for (const r of this.rings) r.mesh.geometry = lite ? r.lite : r.full;
+    for (const r of this.rings) {
+      r.mesh.geometry = lite ? r.lite : r.full;
+      if (r.shadow) r.shadow.mesh.geometry = lite ? r.shadow.lite : r.shadow.full;
+    }
   }
 
   private ring(variants: { full: BufferGeometry; lite: BufferGeometry }, cell: number, grid: number, inner: number, shadows: boolean): Ring {
@@ -253,10 +281,23 @@ export class Vegetation {
     m.colorNode = mix(trunk, seasonal, vPart).mul(vAo.mul(0.7).add(0.3));
     const mesh = new Mesh(full, m);
     mesh.frustumCulled = false;
-    mesh.castShadow = shadows;
+    mesh.castShadow = false;
     mesh.receiveShadow = shadows;
     this.group.add(mesh);
-    return { cell, grid, inner, center, mesh, full, lite, cells, blocks: new Map(), built: null };
+    let shadow: ShadowCopy | null = null;
+    if (shadows) {
+      const sCells = new InstancedBufferAttribute(new Float32Array(grid * grid * 2), 2);
+      const sFull = instancedGeometry(variants.full, sCells);
+      const sLite = instancedGeometry(variants.lite, sCells);
+      const sMesh = new Mesh(sFull, m);
+      sMesh.frustumCulled = false;
+      sMesh.castShadow = true;
+      sMesh.receiveShadow = false;
+      sMesh.layers.set(SHADOW_LAYER);
+      this.group.add(sMesh);
+      shadow = { mesh: sMesh, full: sFull, lite: sLite, cells: sCells, view: new Float32Array(32), from: null };
+    }
+    return { cell, grid, inner, center, mesh, full, lite, cells, blocks: new Map(), built: null, seen: new Frustum(), shadow };
   }
 
   update(camera: Camera) {
@@ -301,10 +342,25 @@ export class Vegetation {
    * whether a tree stands there and how big it is, so the picture is that of drawing the whole grid.
    */
   private gather(r: Ring, cx: number, cz: number, view: Frustum, camera: Camera) {
+    const n = this.collect(r, cx, cz, view, null, r.cells);
+    r.full.instanceCount = n;
+    r.lite.instanceCount = n;
+    r.seen.copy(view);
+    const view16 = r.built?.view ?? new Float32Array(32);
+    view16.set(camera.matrixWorld.elements, 0);
+    view16.set(camera.projectionMatrix.elements, 16);
+    r.built = { cx, cz, view: view16 };
+  }
+
+  /**
+   * Fills `into` with the ring's tree slots in blocks the view can see (and the second view too, when given), and sends
+   * the filled part. Returns the slot count.
+   */
+  private collect(r: Ring, cx: number, cz: number, view: Frustum, also: Frustum | null, into: InstancedBufferAttribute) {
     const half = r.grid / 2;
     const x0 = cx - half;
     const z0 = cz - half;
-    const out = r.cells.array as Float32Array;
+    const out = into.array as Float32Array;
     // A cell nearer than the previous ring's edge is that ring's.
     const skip = r.inner > 0 ? (0.88 * r.inner) / r.cell : 0;
     let n = 0;
@@ -315,6 +371,7 @@ export class Vegetation {
         this.box.min.set((bx * BLOCK) * r.cell - SHADOW_REACH, -4, (bz * BLOCK) * r.cell - SHADOW_REACH);
         this.box.max.set(((bx + 1) * BLOCK) * r.cell + SHADOW_REACH, block.top + TREE_TOP, ((bz + 1) * BLOCK) * r.cell + SHADOW_REACH);
         if (!view.intersectsBox(this.box)) continue;
+        if (also && !also.intersectsBox(this.box)) continue;
         const list = block.cells;
         for (let k = 0; k < list.length; k += 2) {
           const x = list[k]!;
@@ -333,15 +390,35 @@ export class Vegetation {
       out[1] = 0;
       n = 1;
     }
-    r.full.instanceCount = n;
-    r.lite.instanceCount = n;
-    r.cells.clearUpdateRanges();
-    r.cells.addUpdateRange(0, n * 2);
-    r.cells.needsUpdate = true;
-    const view16 = r.built?.view ?? new Float32Array(32);
-    view16.set(camera.matrixWorld.elements, 0);
-    view16.set(camera.projectionMatrix.elements, 16);
-    r.built = { cx, cz, view: view16 };
+    into.clearUpdateRanges();
+    into.addUpdateRange(0, n * 2);
+    into.needsUpdate = true;
+    return n;
+  }
+
+  /**
+   * Cuts the near ring's shadow list from its camera list, by the sun's shadow camera as Engine.updateSun just placed it.
+   * Only the shadow camera draws the copy.
+   */
+  updateShadow(sun: DirectionalLight) {
+    const cam = sun.shadow.camera;
+    cam.layers.enable(SHADOW_LAYER);
+    sun.updateMatrixWorld();
+    sun.shadow.updateMatrices(sun);
+    for (const r of this.rings) {
+      const sh = r.shadow;
+      if (!sh || !r.built) continue;
+      if (sh.from === r.built && this.sameView(sh.view, cam)) continue;
+      this.toTerrain.copy(cam.matrixWorld).invert().multiply(this.terrain.group.matrixWorld);
+      this.viewProj.multiplyMatrices(cam.projectionMatrix, this.toTerrain);
+      this.shadowFrustum.setFromProjectionMatrix(this.viewProj);
+      const n = this.collect(r, r.built.cx, r.built.cz, r.seen, this.shadowFrustum, sh.cells);
+      sh.full.instanceCount = n;
+      sh.lite.instanceCount = n;
+      sh.view.set(cam.matrixWorld.elements, 0);
+      sh.view.set(cam.projectionMatrix.elements, 16);
+      sh.from = r.built;
+    }
   }
 
   /** The cells of a block where the ground is land and the forest mask is not empty: the only places a tree can stand. */

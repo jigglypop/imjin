@@ -1,0 +1,44 @@
+{
+  "asset": "joseon-dujeong-coat-front-v2",
+  "type": "reference-image",
+  "mode": "built-in",
+  "tool": "image_gen.imagegen",
+  "generatedDate": "2026-10-17",
+  "originalPath": "C:/Users/dongh/.codex/generated_images/01a1461e-8fb8-7333-a309-fda9be965fce/exec-8a107ad8-56b2-4f76-a891-2e5ea51c5f1e.png",
+  "savedPath": "assets-src/generals-regeneration-2026-10-17/references/joseon-dujeong-coat-front-v2.png",
+  "sourceGeometry": null,
+  "inputImages": [
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/body-front-v1.png",
+      "role": "fixed new body proportions and T-pose reference"
+    },
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/joseon-dujeong-coat-front-v1.png",
+      "role": "new empty coat target, fit correction only"
+    }
+  ],
+  "prompt": "Use case: precise-object-edit.\nImage 1 is the FIXED BODY SCALE reference. Image 2 is the EMPTY DUJEONG COAT edit target. Keep the coat design, oxblood textile, small regular brass rivets, dark edge bindings, practical plain belt, empty collar, open cuffs, and clean realistic rendering from Image 2. Change ONLY its fit and placement to match the body in Image 1; the current coat is oversized in the image.\nOutput ONLY the empty coat on the same 1254 by 1254 square neutral grey background. Never output the person, skin, hands, legs, boots or underlying undersuit. No mannequin, support, head, helmet, weapon, text or extra view.\nMake three precise fit corrections on this unchanged canvas: (1) shorten BOTH sleeves symmetrically so the open cuff outer edges finish at the body's wrists, approximately x=125 and x=1125, leaving grey where the fists were. Keep the sleeve centerline horizontal at approximately y=265 and elbows natural. (2) Lower the top of the standing collar to approximately y=210, at the reference body's neck base, and keep the chest and shoulders naturally fitted around that reference torso. (3) Shorten the coat skirt so the bottom hem finishes approximately y=930, just below the reference knees. Preserve the waist belt centered at approximately y=510. The top of the canvas and region below hem remain empty grey. Do not enlarge the coat to fill this new empty space.\nThis is a natural wearable outer coat of moderate thickness on the exact same athletic adult body, with a fitted torso and a gently flaring knee-length skirt. Preserve the clear overlapping front closure and small lower center slit. Sleeves remain STRICT Tpose and hollow; neck opening remains visibly empty. Keep a clean readable sewn garment without ornament inflation or invented parts. ONE STRICT FRONT ORTHOGRAPHIC VIEW, zero yaw, uniform soft studio light. Never add a human silhouette inside.",
+  "requestAttempts": [
+    {
+      "status": "failed",
+      "reason": "network error: error sending request",
+      "output": null
+    },
+    {
+      "status": "succeeded"
+    }
+  ],
+  "visualReview": {
+    "status": "reference-selected-not-3d-accepted",
+    "observations": [
+      "Empty frontal T-pose armor coat retains the new sober oxblood dujeong design.",
+      "Cuffs are shorter and skirt hem is higher than v1; body parts, mannequin and support remain absent.",
+      "Collar, cuffs, cloth panels, regular rivets, practical waist belt and hem split are readable."
+    ],
+    "limitations": [
+      "Requested pixel alignment was only approximate; exact modular fit must be established on the new 3D body, not inferred from this image.",
+      "One view does not establish side/back construction, inner surface quality, topology or rigging.",
+      "Not a finished game model; provider result and multi-view/motion inspection remain required."
+    ]
+  }
+}

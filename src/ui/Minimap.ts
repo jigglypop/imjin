@@ -14,6 +14,11 @@ export class Minimap {
   private cz = 0;
   private extent = 8000;
   onPick: ((x: number, z: number, button: number) => void) | null = null;
+  private factionsOf: Battle | null = null;
+  private factionsTeam: Team | null = null;
+  private factions: { own: Faction; foe: Faction } = { own: 'joseon', foe: 'japan' };
+  /** Ship dots by look, their flat x, y, radius lists reused from frame to frame. */
+  private readonly groups = new Map<string, { sel: boolean; fill: string; stroke: string; width: number; xyr: number[]; n: number }>();
 
   constructor() {
     this.canvas.width = SIZE;
@@ -95,18 +100,25 @@ export class Minimap {
   draw(battle: Battle, selected: Set<number>, camX: number, camZ: number, yaw: number, points?: { x: number; z: number; r: number; side: 'own' | 'foe' | 'none'; selected: boolean }[]) {
     const ctx = this.ctx;
     ctx.drawImage(this.base, 0, 0);
-    let own: Faction = 'joseon';
-    let foe: Faction = 'japan';
-    const own0 = battle.ships.find((s) => s.team === this.team);
-    const foe0 = battle.ships.find((s) => s.team !== this.team);
-    if (own0) own = own0.spec.faction;
-    if (foe0) foe = foe0.spec.faction;
+    // The two navies are read once per battle (and team): the first ship of each side names it.
+    if (this.factionsOf !== battle || this.factionsTeam !== this.team) {
+      const own0 = battle.ships.find((s) => s.team === this.team);
+      const foe0 = battle.ships.find((s) => s.team !== this.team);
+      this.factions = { own: own0 ? own0.spec.faction : 'joseon', foe: foe0 ? foe0.spec.faction : 'japan' };
+      // Kept only once both sides have a ship: a conquest navy may launch its first one later.
+      this.factionsOf = own0 && foe0 ? battle : null;
+      this.factionsTeam = this.team;
+    }
+    const { own, foe } = this.factions;
     // The faction tones are already lifted for dark glass, which is what the minimap's sea is; the foe's rim stays umber.
     const foeRing = factionColor('japan');
     const tone = (f: Faction) => factionColor(f);
-    const toPx = (x: number, z: number) => [((x - this.cx) / this.extent + 0.5) * SIZE, ((z - this.cz) / this.extent + 0.5) * SIZE] as const;
+    const sx = SIZE / this.extent;
+    const ox = (0.5 - this.cx / this.extent) * SIZE;
+    const oz = (0.5 - this.cz / this.extent) * SIZE;
     for (const p of points ?? []) {
-      const [px, py] = toPx(p.x, p.z);
+      const px = p.x * sx + ox;
+      const py = p.z * sx + oz;
       ctx.beginPath();
       ctx.arc(px, py, Math.max(5, (p.r / this.extent) * SIZE), 0, Math.PI * 2);
       const pc = p.side === 'own' ? factionColor(own) : p.side === 'foe' ? factionColor(foe) : '';
@@ -116,22 +128,47 @@ export class Minimap {
       ctx.strokeStyle = pc ? tone(p.side === 'own' ? own : foe) : 'rgba(255, 255, 255, 0.5)';
       ctx.stroke();
     }
+    // Ships are gathered by look (fill, rim) and each look is drawn as one path; the selected ones go last, on top.
+    for (const g of this.groups.values()) g.n = 0;
     for (const s of battle.ships) {
       if (!s.alive || s.sinking > 0 || !shipObserved(battle, this.team, s)) continue;
-      const [px, py] = toPx(s.x, s.z);
+      const px = s.x * sx + ox;
+      const py = s.z * sx + oz;
       if (px < 0 || py < 0 || px > SIZE || py > SIZE) continue;
       const sel = selected.has(s.id);
       const friend = s.team === this.team;
-      ctx.fillStyle = sel ? '#ffffff' : tone(s.spec.faction);
-      ctx.strokeStyle = friend ? 'rgba(255, 255, 255, 0.85)' : foeRing;
-      ctx.lineWidth = friend ? 0.7 : 1.2;
+      const fill = sel ? '#ffffff' : s.spec.faction;
+      const key = `${sel ? 1 : 0}${friend ? 1 : 0}${fill}`;
+      let g = this.groups.get(key);
+      if (!g) {
+        g = { sel, fill: sel ? '#ffffff' : tone(s.spec.faction), stroke: friend ? 'rgba(255, 255, 255, 0.85)' : foeRing, width: friend ? 0.7 : 1.2, xyr: [], n: 0 };
+        this.groups.set(key, g);
+      }
       const r = s.spec.length > 30 ? 3.4 : s.spec.length > 20 ? 2.8 : 2.2;
-      ctx.beginPath();
-      ctx.arc(px, py, sel ? r + 1 : r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
+      g.xyr[g.n++] = px;
+      g.xyr[g.n++] = py;
+      g.xyr[g.n++] = sel ? r + 1 : r;
     }
-    const [cx, cy] = toPx(camX, camZ);
+    for (const pass of [false, true]) {
+      for (const g of this.groups.values()) {
+        if (g.sel !== pass || !g.n) continue;
+        ctx.fillStyle = g.fill;
+        ctx.strokeStyle = g.stroke;
+        ctx.lineWidth = g.width;
+        ctx.beginPath();
+        for (let i = 0; i < g.n; i += 3) {
+          const x = g.xyr[i]!;
+          const y = g.xyr[i + 1]!;
+          const r = g.xyr[i + 2]!;
+          ctx.moveTo(x + r, y);
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+        }
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+    const cx = camX * sx + ox;
+    const cy = camZ * sx + oz;
     const dirX = -Math.cos(yaw);
     const dirZ = -Math.sin(yaw);
     const spread = 0.55;

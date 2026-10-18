@@ -1,0 +1,119 @@
+{
+  "schema": "imjin.meshy-pilot-job.v1",
+  "operation": "body",
+  "endpoint": "multi-image-to-3d",
+  "createdAt": "2026-10-16T19:25:56.276Z",
+  "status": "SUCCEEDED",
+  "reservedCredits": 35,
+  "requestSha256": "180291d0615ba924a753c5bacf8ea7d19a97c04c43bb7d9c74162c977533aebb",
+  "references": [
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/body-front-v1.png",
+      "sha256": "db05ea757cdc98c183694c711f1f8d49df94ba962bf61f4ec9d935200bda5476",
+      "bytes": 1613787,
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/body-left-v1.png",
+      "sha256": "d1e58e2bc2f3c23e1cd654e2d295c1716c733ae333db45b49f2325e9f262ab4e",
+      "bytes": 1621101,
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/body-back-v1.png",
+      "sha256": "e7c6a397b781b7a80c236b8a7d15920f0cd28f427018e10ea3173930ff13c51d",
+      "bytes": 1658329,
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/body-right-v1.png",
+      "sha256": "fbcd01049743bc421b2ca255b80ee9c8db2c1d1e211d6bb64fe349c663a3bdb4",
+      "bytes": 1610364,
+      "width": 1254,
+      "height": 1254
+    }
+  ],
+  "request": {
+    "image_urls": [
+      "sha256:db05ea757cdc98c183694c711f1f8d49df94ba962bf61f4ec9d935200bda5476",
+      "sha256:d1e58e2bc2f3c23e1cd654e2d295c1716c733ae333db45b49f2325e9f262ab4e",
+      "sha256:e7c6a397b781b7a80c236b8a7d15920f0cd28f427018e10ea3173930ff13c51d",
+      "sha256:fbcd01049743bc421b2ca255b80ee9c8db2c1d1e211d6bb64fe349c663a3bdb4"
+    ],
+    "ai_model": "meshy-7.1",
+    "geometry_resolution": "2k",
+    "should_remesh": true,
+    "topology": "triangle",
+    "should_texture": true,
+    "enable_pbr": true,
+    "texture_resolution": "4k",
+    "image_enhancement": false,
+    "remove_lighting": true,
+    "auto_size": false,
+    "save_pre_remeshed_model": true,
+    "target_formats": [
+      "glb"
+    ],
+    "multi_view_thumbnails": true,
+    "target_polycount": 180000,
+    "pose_mode": "t-pose"
+  },
+  "balanceBefore": {
+    "balance": 633,
+    "monthly_credits": 140,
+    "permanent_credits": 493,
+    "monthly_resets_at": 1794756016000
+  },
+  "createAttempts": 1,
+  "taskId": "01a1462d-9bb0-766b-97d9-3671717404e2",
+  "submittedAt": "2026-10-16T19:25:59.963Z",
+  "progress": 100,
+  "lastObservedAt": "2026-10-16T19:34:55.766Z",
+  "consumedCredits": 35,
+  "balanceAfter": {
+    "balance": 558,
+    "monthly_credits": 65,
+    "permanent_credits": 493,
+    "monthly_resets_at": 1794756016000
+  },
+  "downloads": {
+    "glb": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/body/glb.glb",
+      "bytes": 28956452,
+      "sha256": "8c00ed3037e33c84ce3b1547ef9f4b216493e12c688abd33cb5f3ca46bf5da9c"
+    },
+    "pre_remeshed_glb": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/body/pre_remeshed_glb.glb",
+      "bytes": 11081748,
+      "sha256": "e7cb04d4b3347849e24c3f030c2c2b780c5529783d40e7e068d98be3e76c164a"
+    },
+    "thumbnail_back": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/body/thumbnail_back.png",
+      "bytes": 60419,
+      "sha256": "a01e660eb91814fe5fc2f31ee9fd58a7572a69473dc21afdc5d24384c02b4c91"
+    },
+    "thumbnail_front": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/body/thumbnail_front.png",
+      "bytes": 56316,
+      "sha256": "0d6e111d5e956bd3099aad946562388f5e6a7128b64d32971e1c64cd19188f8c"
+    },
+    "thumbnail_left": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/body/thumbnail_left.png",
+      "bytes": 50544,
+      "sha256": "56ad04c324bcd0d1a942ac3fafc3bc42744975c5a40ba38a92536b726ff25e45"
+    },
+    "thumbnail_right": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/body/thumbnail_right.png",
+      "bytes": 49539,
+      "sha256": "28bb0b9c670e55aa748b2848e7827511d93a5d56655b76d721b22c11d4e87b02"
+    },
+    "thumbnail": {
+      "path": "assets-src/generals-regeneration-2026-10-17/raw/body/thumbnail.png",
+      "bytes": 56316,
+      "sha256": "0d6e111d5e956bd3099aad946562388f5e6a7128b64d32971e1c64cd19188f8c"
+    }
+  }
+}

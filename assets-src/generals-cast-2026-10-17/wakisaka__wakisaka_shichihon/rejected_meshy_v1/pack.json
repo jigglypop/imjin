@@ -1,0 +1,113 @@
+{
+  "at": "2026-10-16T23:03:53.800Z",
+  "levels": {
+    "_lod0": {
+      "triangles": 119922,
+      "bytes": 5657216,
+      "clips": [
+        "idle",
+        "slash",
+        "command"
+      ],
+      "check": {
+        "ok": true,
+        "problems": [],
+        "bytes": 5657216,
+        "sha256": "a4f5340313fe1898b4c5a594354d17ea406f7610e58f5259bfc9c88ada2085c8",
+        "triangles": 119922,
+        "joints": 24,
+        "clips": [
+          "idle",
+          "slash",
+          "command"
+        ],
+        "textures": [
+          [
+            4096,
+            4096
+          ],
+          [
+            2048,
+            2048
+          ],
+          [
+            2048,
+            2048
+          ]
+        ]
+      }
+    },
+    "_lod1": {
+      "triangles": 9954,
+      "bytes": 999972,
+      "clips": [
+        "idle",
+        "slash",
+        "command"
+      ],
+      "check": {
+        "ok": true,
+        "problems": [],
+        "bytes": 999972,
+        "sha256": "387968b334ac9bb28dfeb8c774f4dd4bb4949a80500ab9e70ff5dfb5b43b317d",
+        "triangles": 9954,
+        "joints": 24,
+        "clips": [
+          "idle",
+          "slash",
+          "command"
+        ],
+        "textures": [
+          [
+            1024,
+            1024
+          ],
+          [
+            1024,
+            1024
+          ],
+          [
+            1024,
+            1024
+          ]
+        ]
+      }
+    },
+    "_lod2": {
+      "triangles": 4978,
+      "bytes": 449016,
+      "clips": [
+        "idle",
+        "slash",
+        "command"
+      ],
+      "check": {
+        "ok": true,
+        "problems": [],
+        "bytes": 449016,
+        "sha256": "8cd143ea1c9310e746e90794264e3c99a978a5e9246362eba10c90a3462e9c84",
+        "triangles": 4978,
+        "joints": 24,
+        "clips": [
+          "idle",
+          "slash",
+          "command"
+        ],
+        "textures": [
+          [
+            512,
+            512
+          ],
+          [
+            512,
+            512
+          ],
+          [
+            512,
+            512
+          ]
+        ]
+      }
+    }
+  }
+}

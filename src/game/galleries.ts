@@ -22,6 +22,7 @@ import { ORDNANCE, type Ordnance } from '../fx/ordnance';
 import { hullTop } from '../ships/anchors';
 import { t } from '../i18n';
 import { disposeTree } from '../render/dispose';
+import { FONT_UI } from '../ui/fonts';
 
 /**
  * The inspection galleries behind `?gallery=`: `munitions` lays every projectile the battles fire on a jetty at its
@@ -188,7 +189,7 @@ function model(o: Ordnance): { geo: BufferGeometry; mat: MeshStandardNodeMateria
 
 /** Writes one label into its cell of the atlas: the name, its characters, the weapon, measures, weight and source. */
 function paintLabel(ctx: CanvasRenderingContext2D, o: Ordnance, cx: number, cy: number) {
-  const font = "'Pretendard Variable', Pretendard, 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif";
+  const font = FONT_UI;
   ctx.fillStyle = '#efe6d2';
   ctx.fillRect(cx + 4, cy + 4, CELL_W - 8, CELL_H - 8);
   ctx.strokeStyle = '#5b4630';

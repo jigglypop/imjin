@@ -1,0 +1,93 @@
+{
+  "schema": "imjin.regeneration-doc-sources.v1",
+  "checkedAt": "2026-10-16T19:16:57.332Z",
+  "sources": [
+    {
+      "id": "meshy-pricing",
+      "url": "https://docs.meshy.ai/en/api/pricing",
+      "checkedAt": "2026-10-16T19:16:57.332Z",
+      "claims": [
+        "Multi-image mesh+4K textures:30 credits",
+        "Ultra 2K geometry:+5 credits",
+        "Automatic rigging:5 credits"
+      ]
+    },
+    {
+      "id": "meshy-multiview",
+      "url": "https://docs.meshy.ai/en/api/multi-image-to-3d",
+      "checkedAt": "2026-10-16T19:16:57.332Z",
+      "claims": [
+        "meshy-7.1 pinned; front first, remaining order immaterial",
+        "2K geometry selected because multi-image failure section rejects4K geometry",
+        "image_enhancement:false preserves exact input; PBR4K textures are supported"
+      ]
+    },
+    {
+      "id": "meshy-rigging",
+      "url": "https://docs.meshy.ai/en/api/rigging",
+      "checkedAt": "2026-10-16T19:16:57.332Z",
+      "claims": [
+        "Only textured humanoid body rigged; input_task_id face count limit300000"
+      ]
+    },
+    {
+      "id": "meshy-balance",
+      "url": "https://docs.meshy.ai/en/api/balance",
+      "checkedAt": "2026-10-16T19:16:57.332Z",
+      "claims": [
+        "Read-only GET https://api.meshy.ai/openapi/v1/balance"
+      ]
+    },
+    {
+      "id": "tripo-production-billing",
+      "url": "https://platform.tripo3d.ai/docs/billing",
+      "checkedAt": "2026-10-16T19:16:57.332Z",
+      "claims": [
+        "H3 textured multiview30 + detailed texture20 + detailed geometry20 => conservative70",
+        "Rig25; no coat rig"
+      ]
+    },
+    {
+      "id": "tripo-current-pricing",
+      "url": "https://docs.tripo3d.ai/get-started/pricing.html",
+      "checkedAt": "2026-10-16T19:16:57.332Z",
+      "claims": [
+        "H3 textured multiview30; texture detailed20; rig25",
+        "Task query consumed_credit is authoritative actual billing"
+      ]
+    },
+    {
+      "id": "tripo-h3-multiview",
+      "url": "https://docs.tripo3d.ai/model-generation/multiview-to-model-v3-0-v3-1.html",
+      "checkedAt": "2026-10-16T19:16:57.332Z",
+      "claims": [
+        "v3.1-20260211; exactly four files slots front,left,back,right",
+        "Detailed geometry+20; generate_parts incompatible with texture/PBR"
+      ]
+    },
+    {
+      "id": "tripo-rig",
+      "url": "https://docs.tripo3d.ai/animation/rig-v2-5-20260210.html",
+      "checkedAt": "2026-10-16T19:16:57.332Z",
+      "claims": [
+        "animate_rig model_version v2.5-20260210; biped; spec tripo; glb"
+      ]
+    },
+    {
+      "id": "tripo-task-query",
+      "url": "https://docs.tripo3d.ai/task-query/get-your-task-result.html",
+      "checkedAt": "2026-10-16T19:16:57.332Z",
+      "claims": [
+        "GET same task ID; output URLs expire; consumed_credit records actual charge"
+      ]
+    },
+    {
+      "id": "tripo-wallet",
+      "url": "https://platform.tripo3d.ai/docs/wallet",
+      "checkedAt": "2026-10-16T19:16:57.332Z",
+      "claims": [
+        "Read-only GET https://api.tripo3d.ai/v2/openapi/user/balance returns balance/frozen"
+      ]
+    }
+  ]
+}

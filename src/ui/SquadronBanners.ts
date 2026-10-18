@@ -28,6 +28,12 @@ type Banner = {
   ownWidth: number;
   /** Squadrons this pill stands for when it has absorbed its neighbours; just its own otherwise. */
   group: number[];
+  /**
+   * The root's layout width and the pill's height as last measured, -1 until measured again. They change only with the
+   * text and classes, so they are read after those change instead of every frame (each read forced a layout).
+   */
+  width: number;
+  pillH: number;
 };
 
 /** Where a squadron's pill would sit this frame, before overlapping ones are merged. */
@@ -86,7 +92,7 @@ export class SquadronBanners {
     root.append(pill, pole);
     // In a battle between two fleets of the same navy, the rim tells friend from foe.
     root.classList.add(own ? 'sqb--own' : 'sqb--foe');
-    const banner: Banner = { root, name, bar, count, nerve, lastNerve: '', lastHull: -1, lastCount: -1, lastState: '', lastName: '', lastCountText: '', lastSelected: false, far: false, lang: '', ownWidth: 90, group: [sq.id] };
+    const banner: Banner = { root, name, bar, count, nerve, lastNerve: '', lastHull: -1, lastCount: -1, lastState: '', lastName: '', lastCountText: '', lastSelected: false, far: false, lang: '', ownWidth: 90, group: [sq.id], width: -1, pillH: -1 };
     root.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       if (e.button !== 0) return;
@@ -180,23 +186,37 @@ export class SquadronBanners {
     // Overlapping pills of one side collapse into the one with the most ships (the selected one first).
     const parent = spots.map((_, i) => i);
     const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i]!)));
-    const box = (s: Spot) => ({ w: s.banner.ownWidth * s.scale, h: (s.banner.root.firstElementChild as HTMLElement | null)?.offsetHeight || PILL_H });
+    // A hidden pill measures nothing, so it counts at the default height, as it always has.
+    const pillHeight = (banner: Banner) => {
+      if (banner.root.style.display === 'none') return PILL_H;
+      if (banner.pillH < 0) banner.pillH = (banner.root.firstElementChild as HTMLElement | null)?.offsetHeight ?? 0;
+      return banner.pillH || PILL_H;
+    };
+    const boxW: number[] = [];
+    const boxH: number[] = [];
+    for (const s of spots) {
+      boxW.push(s.banner.ownWidth * s.scale);
+      boxH.push(pillHeight(s.banner));
+    }
     for (let i = 0; i < spots.length; i += 1) {
       const a = spots[i]!;
-      const ba = box(a);
       for (let j = i + 1; j < spots.length; j += 1) {
         const b = spots[j]!;
         if (a.sq.team !== b.sq.team) continue;
-        const bb = box(b);
-        const hh = (ba.h * a.scale + bb.h * b.scale) / 2 + MERGE_GAP;
-        if (Math.abs(a.sx - b.sx) < (ba.w + bb.w) / 2 + MERGE_GAP && Math.abs(a.sy - b.sy) < hh) parent[find(j)] = find(i);
+        const hh = (boxH[i]! * a.scale + boxH[j]! * b.scale) / 2 + MERGE_GAP;
+        if (Math.abs(a.sx - b.sx) < (boxW[i]! + boxW[j]!) / 2 + MERGE_GAP && Math.abs(a.sy - b.sy) < hh) parent[find(j)] = find(i);
       }
     }
     const clusters = new Map<number, Spot[]>();
     spots.forEach((s, i) => {
       const root = find(i);
-      clusters.set(root, [...(clusters.get(root) ?? []), s]);
+      const list = clusters.get(root);
+      if (list) list.push(s);
+      else clusters.set(root, [s]);
     });
+
+    // Writes first, then the few measurements the changed pills need, then the positions: no layout between pills.
+    const shown: { lead: Spot; banner: Banner; merged: boolean; resized: boolean }[] = [];
 
     for (const members of clusters.values()) {
       const lead = members.reduce((best, s) => (s.selected > 0 !== best.selected > 0 ? (s.selected > 0 ? s : best) : s.alive > best.alive ? s : best));
@@ -248,13 +268,23 @@ export class SquadronBanners {
         banner.nerve.innerHTML = nerve ? iconSvg(nerve, 12) : '';
         resized = true;
       }
-      if (resized && !merged) banner.ownWidth = Math.max(44, banner.root.offsetWidth);
       if (hull !== banner.lastHull) {
         banner.bar.style.width = `${hull}%`;
         banner.lastHull = hull;
       }
+      if (resized) {
+        banner.width = -1;
+        banner.pillH = -1;
+      }
+      shown.push({ lead, banner, merged, resized });
+    }
+    for (const { banner, merged, resized } of shown) {
+      if (banner.width < 0) banner.width = banner.root.offsetWidth;
+      if (resized && !merged) banner.ownWidth = Math.max(44, banner.width);
+    }
+    for (const { lead, banner } of shown) {
       // Keep the pill on screen and out from under the tool column and the score panel.
-      const w = Math.max(banner.root.offsetWidth, 44) * lead.scale;
+      const w = Math.max(banner.width, 44) * lead.scale;
       const h = (PILL_H + 12) * lead.scale;
       let sx = Math.max(w / 2 + 4, Math.min(width - w / 2 - 4, lead.sx));
       let sy = Math.max(safe.top + h, lead.sy);

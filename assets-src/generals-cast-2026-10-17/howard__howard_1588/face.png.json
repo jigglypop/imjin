@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:18:32.426Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Charles Howard, Lord Howard of Effingham, the Lord High Admiral of England, fifty-two. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Charles Howard, Lord Howard of Effingham, the Lord High Admiral of England, fifty-two: a long noble oval English face, a high forehead, keen grey eyes, a long pointed greying brown beard and moustache), in the costume of: Faction look: an Elizabethan English sea commander of 1588, as in big-budget period films about the Armada (Elizabeth: The Golden Age, the BBC Elizabeth R): The Lord Admiral: a gilt-etched polished steel peascod breastplate and gorget with bands of gold etching, steel tassets over padded black trunk hose, worn over a black silk doublet with gold-embroidered sleeves and a small white lace ruff; a gold chain of office across the chest; black hose and tall black leather boots; a small black velvet bonnet with a short white plume. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_howard.webp"
+  ],
+  "estimatedUsd": 0.04
+}

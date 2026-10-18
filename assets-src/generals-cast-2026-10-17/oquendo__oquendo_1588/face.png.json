@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:30:51.272Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Miguel de Oquendo, the Guipúzcoan admiral, sixty-four. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Miguel de Oquendo, the Guipúzcoan admiral, sixty-four: a broad, robust, ruddy old Basque face, a full white beard and white moustache, heavy brows, proud eyes), in the costume of: Faction look: a Spanish commander of the Armada of 1588, a grandee or veteran sea captain of Philip II, as in big-budget Spanish period films and series (Alatriste, Isabel): The admiral of the Guipúzcoa squadron: a polished steel breastplate with brass rivets over a dark green doublet, a small ruff, a crimson sash, dark trunk hose, black boots; a steel morion helmet with a small brass crest. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_oquendo.webp"
+  ],
+  "estimatedUsd": 0.04
+}

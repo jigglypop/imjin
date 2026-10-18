@@ -1,0 +1,788 @@
+{
+  "schema": "imjin.generals-regeneration-plan.v1",
+  "createdAt": "2026-10-16T19:18:35.066Z",
+  "status": "prepared-awaiting-reference-review-and-explicit-credit-ceiling",
+  "oldGeometryReuse": false,
+  "paidSubmissionsMade": 0,
+  "fullObjective": {
+    "generals": 24,
+    "armorDesigns": 26,
+    "weaponVariants": 18,
+    "validFactionOutfits": 217,
+    "oneEquippedWeaponPerGeneral": true,
+    "weaponKinds": [
+      "sword",
+      "spear",
+      "bow"
+    ],
+    "allFactionArmorIncludingSignaturesInterchangeable": true
+  },
+  "pilot": {
+    "assets": [
+      {
+        "id": "pilot_body",
+        "kind": "body",
+        "description": "NEW full neutral underclothes body with boots, one face, no armor/helmet/weapon",
+        "references": [
+          "references/body_front.png",
+          "references/body_left.png",
+          "references/body_back.png",
+          "references/body_right.png"
+        ]
+      },
+      {
+        "id": "armor_joseon_dujeong_coat",
+        "kind": "coat",
+        "description": "NEW coat only: torso, sleeves and split skirt; no person/head/helmet/boots/weapons/mannequin/stand, hollow collar and cuffs",
+        "references": [
+          "references/armor_joseon_dujeong_front.png",
+          "references/armor_joseon_dujeong_left.png",
+          "references/armor_joseon_dujeong_back.png",
+          "references/armor_joseon_dujeong_right.png"
+        ]
+      }
+    ],
+    "helmet": "Separate new standalone asset after body+coat fit gate; excluded from this paid pilot.",
+    "rigging": "Only new body auto-rigged; coat locally bound to NEW body in Blender after silhouette/inside review.",
+    "providerComparisonNotAuthorized": true,
+    "recommendedProvider": "meshy",
+    "providers": {
+      "meshy": {
+        "productionOrigin": "https://api.meshy.ai",
+        "model": "meshy-7.1",
+        "selectionReason": "Pinned current production multi-image model; public credit schedule is unambiguous for this two-asset pilot.",
+        "operations": [
+          {
+            "id": "new-body",
+            "method": "POST",
+            "path": "/openapi/v1/multi-image-to-3d",
+            "template": "requests/meshy-body.template.json",
+            "estimatedCredits": 35
+          },
+          {
+            "id": "new-coat",
+            "method": "POST",
+            "path": "/openapi/v1/multi-image-to-3d",
+            "template": "requests/meshy-coat.template.json",
+            "estimatedCredits": 35
+          },
+          {
+            "id": "new-body-rig",
+            "method": "POST",
+            "path": "/openapi/v1/rigging",
+            "template": "requests/meshy-body-rig.template.json",
+            "estimatedCredits": 5,
+            "requires": "New body/coat geometry visual gate and body triangle count<=300000"
+          }
+        ],
+        "generationCreditsEach": {
+          "meshAnd4KTextures": 30,
+          "ultra2KGeometry": 5,
+          "total": 35
+        },
+        "estimatedPilotCredits": 75,
+        "proposedApprovalCeilingCredits": 75,
+        "providerEnforcedCeiling": false,
+        "balanceSnapshot": {
+          "checkedAt": "2026-10-16T19:16:57.332Z",
+          "balance": 633
+        },
+        "excludedPaidOperations": [
+          "image generation",
+          "helmet",
+          "coat auto-rigging",
+          "animation",
+          "remesh follow-up",
+          "retexture",
+          "retries",
+          "full catalog batch"
+        ]
+      },
+      "tripo": {
+        "productionOrigin": "https://api.tripo3d.ai/v2/openapi",
+        "model": "v3.1-20260211",
+        "selectionReason": "Pinned H3 quality model with four explicit positional references; not an automatic fallback.",
+        "operations": [
+          {
+            "id": "new-body",
+            "method": "POST",
+            "path": "/task",
+            "template": "requests/tripo-body.template.json",
+            "estimatedCredits": 70
+          },
+          {
+            "id": "new-coat",
+            "method": "POST",
+            "path": "/task",
+            "template": "requests/tripo-coat.template.json",
+            "estimatedCredits": 70
+          },
+          {
+            "id": "new-body-prerigcheck",
+            "method": "POST",
+            "path": "/task",
+            "template": "requests/tripo-body-prerigcheck.template.json",
+            "estimatedCredits": 0
+          },
+          {
+            "id": "new-body-rig",
+            "method": "POST",
+            "path": "/task",
+            "template": "requests/tripo-body-rig.template.json",
+            "estimatedCredits": 25,
+            "requires": "Body pre-rig check riggable:true plus geometry visual gate"
+          }
+        ],
+        "generationCreditsEach": {
+          "texturedMultiview": 30,
+          "detailedTextureConservativeSurcharge": 20,
+          "detailedGeometrySurcharge": 20,
+          "conservativeTotal": 70
+        },
+        "estimatedPilotCredits": 165,
+        "proposedApprovalCeilingCredits": 165,
+        "providerEnforcedCeiling": false,
+        "pricingUncertainty": "Official developer product pages have also listed detailed-texture output10 credits lower. Use production billing detailed+20 as conservative reservation, not an exact guaranteed quote. Inspect consumed_credit after each task before any next paid step.",
+        "balanceSnapshot": {
+          "checkedAt": "2026-10-16T19:16:57.332Z",
+          "balance": 670,
+          "frozen": 0
+        },
+        "excludedPaidOperations": [
+          "image generation",
+          "helmet",
+          "coat auto-rigging",
+          "retarget",
+          "segmentation",
+          "retries",
+          "full catalog batch"
+        ]
+      }
+    }
+  },
+  "referenceGates": {
+    "fourViews": [
+      "front",
+      "left",
+      "back",
+      "right"
+    ],
+    "frontPrimary": true,
+    "currentOldViewOrderDiagnosis": "Previous front,left,back,empty-right ordering was valid. No evidence establishes view-order error as the cause.",
+    "body": [
+      "Exactly one face on front, zero facial features on rear scalp.",
+      "Neutral upright spine/pelvis and level neck; shoulders and arms horizontal; feet forward; no pose performance.",
+      "Underclothes and boots only; complete fingers/closed weapon grip, visibly separated legs."
+    ],
+    "coat": [
+      "Coat only; empty open collar/wrists and visible material thickness.",
+      "No skin, face, head, hands, helmet, trousers, boots, weapons, mannequin, hanger or stand.",
+      "Same silhouette, trims, closures and skirt splits across views."
+    ],
+    "consensus": [
+      "Use one approved primary design; side/back derived with that design and canonical body measurements as references.",
+      "Orthographic camera and identical scale/floor across four views. Compare shoulder, wrist, waist, knee and hem lines before submission.",
+      "Do not substitute alternate armor or cast portraits with conflicting silhouette, face, age, light or pose as geometry views."
+    ],
+    "likelyFailureCause": {
+      "classification": "inference-from-current-source-and-pipeline",
+      "findings": [
+        "A single fused generated figure conflated body identity, armor, helmet, hands and footwear.",
+        "Independent view edits were not measured against shared landmarks; high-resolution and polygon count did not enforce consistency.",
+        "Auto-rig rest frames differed between providers; view order was valid, while reference consensus and modular boundaries were unverified."
+      ],
+      "notProven": "No controlled regeneration comparison has yet isolated the causal contribution of any single factor."
+    }
+  },
+  "acceptanceGates": [
+    {
+      "id": "reference",
+      "status": "pending",
+      "proof": "Approved four-view body and coat; image hashes and consensus measurements."
+    },
+    {
+      "id": "raw-geometry",
+      "status": "pending",
+      "proof": "NEW GLB front/left/back/right textured and clay renders; one body face; no coat person or closure defects."
+    },
+    {
+      "id": "fit",
+      "status": "pending",
+      "proof": "NEW body+coat overlay on same canonical skeleton; collar/wrists/waist/hem coverage in neutral and motion views."
+    },
+    {
+      "id": "pilot-browser",
+      "status": "pending",
+      "proof": "localhost generals live body+coat; weapon attachment and armor swap round-trip, visual front/side/back."
+    },
+    {
+      "id": "full-catalog",
+      "status": "pending",
+      "proof": "All24 generals, all26 armor coat/helmet designs, all18 weapon variants and217 faction outfits verified."
+    }
+  ],
+  "catalog": {
+    "generals": [
+      {
+        "id": "yi",
+        "faction": "joseon",
+        "famous": true,
+        "status": "awaiting-new-reference",
+        "newBody": "body_yi"
+      },
+      {
+        "id": "won",
+        "faction": "joseon",
+        "famous": true,
+        "status": "awaiting-new-reference",
+        "newBody": "body_won"
+      },
+      {
+        "id": "eokgi",
+        "faction": "joseon",
+        "famous": true,
+        "status": "awaiting-new-reference",
+        "newBody": "body_eokgi"
+      },
+      {
+        "id": "kwon",
+        "faction": "joseon",
+        "famous": false,
+        "status": "awaiting-new-reference",
+        "newBody": "body_kwon"
+      },
+      {
+        "id": "eo",
+        "faction": "joseon",
+        "famous": false,
+        "status": "awaiting-new-reference",
+        "newBody": "body_eo"
+      },
+      {
+        "id": "jeongun",
+        "faction": "joseon",
+        "famous": false,
+        "status": "awaiting-new-reference",
+        "newBody": "body_jeongun"
+      },
+      {
+        "id": "kimwan",
+        "faction": "joseon",
+        "famous": false,
+        "status": "awaiting-new-reference",
+        "newBody": "body_kimwan"
+      },
+      {
+        "id": "nadaeyong",
+        "faction": "joseon",
+        "famous": false,
+        "status": "awaiting-new-reference",
+        "newBody": "body_nadaeyong"
+      },
+      {
+        "id": "songhuirip",
+        "faction": "joseon",
+        "famous": false,
+        "status": "awaiting-new-reference",
+        "newBody": "body_songhuirip"
+      },
+      {
+        "id": "iyeongnam",
+        "faction": "joseon",
+        "famous": false,
+        "status": "awaiting-new-reference",
+        "newBody": "body_iyeongnam"
+      },
+      {
+        "id": "baeseol",
+        "faction": "joseon",
+        "famous": false,
+        "status": "awaiting-new-reference",
+        "newBody": "body_baeseol"
+      },
+      {
+        "id": "anwi",
+        "faction": "joseon",
+        "famous": false,
+        "status": "awaiting-new-reference",
+        "newBody": "body_anwi"
+      },
+      {
+        "id": "iwan",
+        "faction": "joseon",
+        "famous": false,
+        "status": "awaiting-new-reference",
+        "newBody": "body_iwan"
+      },
+      {
+        "id": "wakisaka",
+        "faction": "japan",
+        "famous": true,
+        "status": "awaiting-new-reference",
+        "newBody": "body_wakisaka"
+      },
+      {
+        "id": "kuki",
+        "faction": "japan",
+        "famous": true,
+        "status": "awaiting-new-reference",
+        "newBody": "body_kuki"
+      },
+      {
+        "id": "kato",
+        "faction": "japan",
+        "famous": true,
+        "status": "awaiting-new-reference",
+        "newBody": "body_kato"
+      },
+      {
+        "id": "todo",
+        "faction": "japan",
+        "famous": true,
+        "status": "awaiting-new-reference",
+        "newBody": "body_todo"
+      },
+      {
+        "id": "konishi",
+        "faction": "japan",
+        "famous": true,
+        "status": "awaiting-new-reference",
+        "newBody": "body_konishi"
+      },
+      {
+        "id": "shimazu",
+        "faction": "japan",
+        "famous": true,
+        "status": "awaiting-new-reference",
+        "newBody": "body_shimazu"
+      },
+      {
+        "id": "kurushima",
+        "faction": "japan",
+        "famous": false,
+        "status": "awaiting-new-reference",
+        "newBody": "body_kurushima"
+      },
+      {
+        "id": "michiyuki",
+        "faction": "japan",
+        "famous": false,
+        "status": "awaiting-new-reference",
+        "newBody": "body_michiyuki"
+      },
+      {
+        "id": "tachibana",
+        "faction": "japan",
+        "famous": false,
+        "status": "awaiting-new-reference",
+        "newBody": "body_tachibana"
+      },
+      {
+        "id": "chenlin",
+        "faction": "ming",
+        "famous": true,
+        "status": "awaiting-new-reference",
+        "newBody": "body_chenlin"
+      },
+      {
+        "id": "deng",
+        "faction": "ming",
+        "famous": true,
+        "status": "awaiting-new-reference",
+        "newBody": "body_deng"
+      }
+    ],
+    "armors": [
+      {
+        "id": "joseon_dujeong",
+        "faction": "joseon",
+        "name": "두정갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_joseon_dujeong",
+          "helmet_joseon_dujeong"
+        ]
+      },
+      {
+        "id": "joseon_pigap",
+        "faction": "joseon",
+        "name": "피갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_joseon_pigap",
+          "helmet_joseon_pigap"
+        ]
+      },
+      {
+        "id": "joseon_swaeja",
+        "faction": "joseon",
+        "name": "쇄자갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_joseon_swaeja",
+          "helmet_joseon_swaeja"
+        ]
+      },
+      {
+        "id": "joseon_gyeongbeon",
+        "faction": "joseon",
+        "name": "경번갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_joseon_gyeongbeon",
+          "helmet_joseon_gyeongbeon"
+        ]
+      },
+      {
+        "id": "joseon_eorin",
+        "faction": "joseon",
+        "name": "어린갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_joseon_eorin",
+          "helmet_joseon_eorin"
+        ]
+      },
+      {
+        "id": "japan_tosei",
+        "faction": "japan",
+        "name": "당세구족",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_japan_tosei",
+          "helmet_japan_tosei"
+        ]
+      },
+      {
+        "id": "japan_haramaki",
+        "faction": "japan",
+        "name": "하라마키",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_japan_haramaki",
+          "helmet_japan_haramaki"
+        ]
+      },
+      {
+        "id": "japan_nimaido",
+        "faction": "japan",
+        "name": "니마이도",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_japan_nimaido",
+          "helmet_japan_nimaido"
+        ]
+      },
+      {
+        "id": "japan_nanbando",
+        "faction": "japan",
+        "name": "남만동",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_japan_nanbando",
+          "helmet_japan_nanbando"
+        ]
+      },
+      {
+        "id": "japan_oyoroi",
+        "faction": "japan",
+        "name": "주칠 오요로이",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_japan_oyoroi",
+          "helmet_japan_oyoroi"
+        ]
+      },
+      {
+        "id": "ming_dingjia",
+        "faction": "ming",
+        "name": "정갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_ming_dingjia",
+          "helmet_ming_dingjia"
+        ]
+      },
+      {
+        "id": "ming_myeongap",
+        "faction": "ming",
+        "name": "면갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_ming_myeongap",
+          "helmet_ming_myeongap"
+        ]
+      },
+      {
+        "id": "ming_swaeja",
+        "faction": "ming",
+        "name": "쇄자갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_ming_swaeja",
+          "helmet_ming_swaeja"
+        ]
+      },
+      {
+        "id": "ming_yuyeop",
+        "faction": "ming",
+        "name": "유엽갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_ming_yuyeop",
+          "helmet_ming_yuyeop"
+        ]
+      },
+      {
+        "id": "ming_sanmun",
+        "faction": "ming",
+        "name": "산문갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_ming_sanmun",
+          "helmet_ming_sanmun"
+        ]
+      },
+      {
+        "id": "yi_tongjesa",
+        "faction": "joseon",
+        "name": "통제사 홍갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_yi_tongjesa",
+          "helmet_yi_tongjesa"
+        ]
+      },
+      {
+        "id": "won_heukcheol",
+        "faction": "joseon",
+        "name": "흑철갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_won_heukcheol",
+          "helmet_won_heukcheol"
+        ]
+      },
+      {
+        "id": "eokgi_cheonggap",
+        "faction": "joseon",
+        "name": "우수사 청갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_eokgi_cheonggap",
+          "helmet_eokgi_cheonggap"
+        ]
+      },
+      {
+        "id": "wakisaka_shichihon",
+        "faction": "japan",
+        "name": "칠본창 구족",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_wakisaka_shichihon",
+          "helmet_wakisaka_shichihon"
+        ]
+      },
+      {
+        "id": "kuki_tetsu",
+        "faction": "japan",
+        "name": "철갑선 구족",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_kuki_tetsu",
+          "helmet_kuki_tetsu"
+        ]
+      },
+      {
+        "id": "kato_teppo",
+        "faction": "japan",
+        "name": "조총대장 구족",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_kato_teppo",
+          "helmet_kato_teppo"
+        ]
+      },
+      {
+        "id": "todo_tokan",
+        "faction": "japan",
+        "name": "당관 투구 구족",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_todo_tokan",
+          "helmet_todo_tokan"
+        ]
+      },
+      {
+        "id": "konishi_gin",
+        "faction": "japan",
+        "name": "은빛 구족",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_konishi_gin",
+          "helmet_konishi_gin"
+        ]
+      },
+      {
+        "id": "shimazu_oni",
+        "faction": "japan",
+        "name": "귀신 구족",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_shimazu_oni",
+          "helmet_shimazu_oni"
+        ]
+      },
+      {
+        "id": "chenlin_dudok",
+        "faction": "ming",
+        "name": "도독 금갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_chenlin_dudok",
+          "helmet_chenlin_dudok"
+        ]
+      },
+      {
+        "id": "deng_nojang",
+        "faction": "ming",
+        "name": "노장 철갑",
+        "status": "awaiting-new-reference",
+        "newComponents": [
+          "coat_deng_nojang",
+          "helmet_deng_nojang"
+        ]
+      }
+    ],
+    "weapons": [
+      {
+        "id": "joseon_hwando",
+        "faction": "joseon",
+        "kind": "sword",
+        "name": "환도",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "joseon_ungeom",
+        "faction": "joseon",
+        "kind": "sword",
+        "name": "운검",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "joseon_jangchang",
+        "faction": "joseon",
+        "kind": "spear",
+        "name": "장창",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "joseon_dangpa",
+        "faction": "joseon",
+        "kind": "spear",
+        "name": "당파",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "joseon_gakgung",
+        "faction": "joseon",
+        "kind": "bow",
+        "name": "각궁",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "joseon_janggunbow",
+        "faction": "joseon",
+        "kind": "bow",
+        "name": "장수 각궁",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "japan_katana",
+        "faction": "japan",
+        "kind": "sword",
+        "name": "가타나",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "japan_tachi",
+        "faction": "japan",
+        "kind": "sword",
+        "name": "다치",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "japan_yari",
+        "faction": "japan",
+        "kind": "spear",
+        "name": "야리",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "japan_jumonjiyari",
+        "faction": "japan",
+        "kind": "spear",
+        "name": "십문자창",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "japan_yumi",
+        "faction": "japan",
+        "kind": "bow",
+        "name": "유미",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "japan_shigeto",
+        "faction": "japan",
+        "kind": "bow",
+        "name": "시게토 활",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "ming_dao",
+        "faction": "ming",
+        "kind": "sword",
+        "name": "유엽도",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "ming_jian",
+        "faction": "ming",
+        "kind": "sword",
+        "name": "장검",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "ming_qiang",
+        "faction": "ming",
+        "kind": "spear",
+        "name": "홍영창",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "ming_guandao",
+        "faction": "ming",
+        "kind": "spear",
+        "name": "언월도",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "ming_gong",
+        "faction": "ming",
+        "kind": "bow",
+        "name": "복합궁",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      },
+      {
+        "id": "ming_shaogong",
+        "faction": "ming",
+        "kind": "bow",
+        "name": "장초궁",
+        "status": "awaiting-current-asset-and-runtime-verification"
+      }
+    ]
+  },
+  "submissionPolicy": "requests/submission-policy.json",
+  "sourceProvenance": "requests/source-provenance.json"
+}

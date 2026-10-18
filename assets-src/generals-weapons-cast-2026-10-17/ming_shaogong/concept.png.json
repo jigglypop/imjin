@@ -1,0 +1,24 @@
+{
+  "at": "2026-10-17T04:38:46.963Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "1632x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "A museum product photograph of a single weapon for image-to-3D reconstruction: a Ming Chinese long-eared composite bow (changshaogong), STRUNG: very long straight rigid ears at both ends, a dark red lacquered horn body with gold painted dragon bands and gilt tip caps, a leather grip, a thin silk bowstring. The bow stands perfectly upright and centred, its tips at the top and bottom of the picture, its belly facing left, the string on the right, the whole bow in frame with a margin. Ornate but historically grounded late-sixteenth-century craftsmanship as in the hero props of big-budget historical war films; crisp, sharply focused detail of every fitting, wrap and engraving; truthful materials: polished steel, gilt bronze, lacquer, silk, leather. Plain seamless light grey studio background, soft even light, no shadows, no reflections of a room, nothing else in the picture. No hands, no people, no text, no letters, no logo, no border, no illustration look.",
+  "usage": {
+    "input_tokens": 212,
+    "input_tokens_details": {
+      "image_tokens": 0,
+      "text_tokens": 212
+    },
+    "output_tokens": 2171,
+    "output_tokens_details": {
+      "image_tokens": 2171,
+      "text_tokens": 0
+    },
+    "total_tokens": 2383
+  }
+}

@@ -100,9 +100,26 @@ function visibilityScale(b: Battle): number {
   return Number.isFinite(b.visibilityScale) ? Math.max(0.1, Math.min(1.5, b.visibilityScale)) : 1;
 }
 
+const allShips = new WeakMap<Battle, { ids: number[]; set: Set<number> }>();
+
+/** Every ship id, reused while the ship list holds the same ids in the same order (callers get a ReadonlySet). */
+function historicalShips(b: Battle): ReadonlySet<number> {
+  const ships = b.ships;
+  const hit = allShips.get(b);
+  if (hit && hit.ids.length === ships.length) {
+    let same = true;
+    for (let i = 0; i < ships.length; i++) if (hit.ids[i] !== ships[i]!.id) { same = false; break; }
+    if (same) return hit.set;
+  }
+  const ids = ships.map((s) => s.id);
+  const set = new Set(ids);
+  allShips.set(b, { ids, set });
+  return set;
+}
+
 /** Shared team observation; historical scenarios retain their original unrestricted map. */
 export function visibleShips(b: Battle, team: Team): ReadonlySet<number> {
-  if (b.profile === 'historical') return new Set(b.ships.map((s) => s.id));
+  if (b.profile === 'historical') return historicalShips(b);
   return sightOf(b).teams[team].ships;
 }
 

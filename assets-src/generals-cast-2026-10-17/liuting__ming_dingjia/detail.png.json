@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-17T04:43:05.394Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "The attached picture is the front view of a costume reference. Make a costume-department detail sheet of the same costume on a plain light grey background: the helmet alone from the front and the side, a close-up of the armour's chest and shoulder construction (plates, rivets, lacing), and the sword alone laid flat horizontally with its hilt and guard. Same materials and colours, photographic, sharp, even studio light. No people, no text, no letters, no labels, no border.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/liuting__ming_dingjia/front.png"
+  ],
+  "usage": {
+    "input_tokens": 1639,
+    "input_tokens_details": {
+      "image_tokens": 1521,
+      "text_tokens": 118
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 7569
+  }
+}

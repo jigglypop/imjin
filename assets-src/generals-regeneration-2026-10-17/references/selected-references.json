@@ -1,0 +1,27 @@
+{
+  "purpose": "New regeneration references only; all prior garment geometry excluded.",
+  "generatedWith": "built-in image_gen.imagegen only",
+  "body": {
+    "image": "body-front-v1.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "db05ea757cdc98c183694c711f1f8d49df94ba962bf61f4ec9d935200bda5476",
+    "provenance": "body-front-v1.provenance.json",
+    "status": "selected-front-reference"
+  },
+  "coat": {
+    "image": "joseon-dujeong-coat-front-v2.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "059fb60bb60a3b74e64c7ab82661c13f01d545cf9bdca132d23ae6438ff53335",
+    "provenance": "joseon-dujeong-coat-front-v2.provenance.json",
+    "status": "selected-front-reference-approximate-image-fit"
+  },
+  "superseded": [
+    {
+      "image": "joseon-dujeong-coat-front-v1.png",
+      "reason": "coat sleeve and skirt envelope too large"
+    }
+  ],
+  "acceptanceBoundary": "References are not 3D acceptance. Produce new meshes, fit to fixed body, inspect front/side/back and animation before changing runtime model selection."
+}

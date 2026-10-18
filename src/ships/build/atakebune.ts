@@ -90,7 +90,7 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
         const z = side * (outer(x) + 0.015);
         const y0 = deck + 0.22;
         const y1 = deck + plan.parapet - 0.28 + sheer(x) * 0.5;
-        b.quadF(crest, [[x - 0.7, y0, z], [x + 0.7, y0, z], [x + 0.7, y1, z], [x - 0.7, y1, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+        b.quadF(crest.fit(1.4, y1 - y0), [[x - 0.7, y0, z], [x + 0.7, y0, z], [x + 0.7, y1, z], [x - 0.7, y1, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
       }
       for (const g of anchors.gunPorts.filter((q) => q.side === (side === -1 ? 0 : 1))) {
         const z = side * (outer(g.pos[0]) + 0.02);
@@ -108,7 +108,7 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
     if (lod < 2) {
       const x = xe + sgn * 0.015;
       const w = Math.min(zE * 0.8, 1.6);
-      b.quadF(crest, [[x, deck + 0.2, -w], [x, deck + 0.2, w], [x, t - 0.15, w], [x, t - 0.15, -w]], [sgn, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+      b.quadF(crest.fit(2 * w, t - 0.15 - (deck + 0.2)), [[x, deck + 0.2, -w], [x, deck + 0.2, w], [x, t - 0.15, w], [x, t - 0.15, -w]], [sgn, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
     }
   }
   // rudder and stem
@@ -143,7 +143,7 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
   }
   // maku curtains hang under the eaves of the lowest tier
   const t0 = lv[0]!;
-  for (const side of [-1, 1] as const) makuRun(ctx, P('maku', { rect: [0.01, 0.01, 0.99, 0.99] }), plan.cx - t0.hx + 0.5, plan.cx + t0.hx - 0.5, side * (t0.hz + 0.2), t0.y1 - 0.12, 1.5, 4, side, frame);
+  for (const side of [-1, 1] as const) makuRun(ctx, P('maku', { rect: [0.01, 0.01, 0.99, 0.99] }), plan.cx - t0.hx + 0.5, plan.cx + t0.hx - 0.5, side * (t0.hz + 0.2), t0.y1 - 0.12, 1.5, side, frame);
 
   // --- mast and straw sail ---
   const m = plan.mast;

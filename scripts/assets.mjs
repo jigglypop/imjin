@@ -20,6 +20,10 @@ const USAGE = `node scripts/assets.mjs <command>   (or npm run assets -- <comman
   models [--json]               the model vault: every .glb with its triangles, versions and provenance records
   setup [--apply]               the private bucket and the deploy role's read access, through the aws CLI
   untrack [--apply]             the cut-over: managed files out of git, their patterns into .gitignore
+  archive <paths...> [--from=<list>] [--dry-run]   generation sources to the cold archive (archive/ in the bucket,
+                                assets-archive.json), each local copy deleted once the bucket holds it; CI never pulls it
+  archive-pull <path|glob...> [--dry-run] [--force]   bring archived files back on demand
+  archive-status [--remote]     what the archive holds per folder; --remote: the bucket holds every archived blob
 Environment: IMJIN_ASSET_CACHE (the shared cache), IMJIN_ASSET_ENDPOINT (an S3-compatible endpoint, path-style),
 AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_SESSION_TOKEN (else the aws CLI's credentials).`;
 
@@ -48,6 +52,7 @@ const TYPES = {
   wav: 'audio/wav',
   webm: 'video/webm',
   webp: 'image/webp',
+  woff: 'font/woff',
   woff2: 'font/woff2',
   zip: 'application/zip',
 };
@@ -832,9 +837,141 @@ async function untrack(args, flags) {
   console.log(`untracked ${tracked.length} files; the removals, .gitignore and assets.json are staged for one commit. From then on every checkout needs npm run assets -- pull`);
 }
 
-const COMMANDS = { status, push, pull, verify, restore, models, setup, untrack };
-const FLAGS = { status: ['remote'], push: ['dry-run'], pull: ['dry-run'], verify: [], restore: ['previous', 'sha'], models: ['json'], setup: ['apply'], untrack: ['apply'] };
-const TAKES_PATHS = ['push', 'pull', 'restore'];
+// ---- the cold archive
+// Generation sources (concepts, raw/rig/anim GLBs, rejected candidates) are kept off the local disk and out of
+// assets.json, which CI pulls whole: `archive` uploads them under archive/sha256/ in the same bucket, records them in
+// the committed assets-archive.json and deletes each local copy once the bucket holds it at its size. Nothing pulls
+// the archive except archive-pull, on demand.
+const ARCHIVE_MANIFEST = join(ROOT, 'assets-archive.json');
+const ARCHIVE_SCHEMA = 'imjin.assets-archive.v1';
+const ARCHIVE_STORE = { ...STORE, prefix: 'archive/sha256/' };
+const ARCHIVE_EXTRA = { blend: 'application/octet-stream', blend1: 'application/octet-stream', fbx: 'application/octet-stream', psd: 'image/vnd.adobe.photoshop', tif: 'image/tiff', tiff: 'image/tiff' };
+const archiveType = (path) => TYPES[extension(path)] ?? ARCHIVE_EXTRA[extension(path)];
+
+async function readArchive() {
+  const text = await readFile(ARCHIVE_MANIFEST, 'utf8').catch((error) => (error.code === 'ENOENT' ? null : Promise.reject(error)));
+  if (text === null) return { schema: ARCHIVE_SCHEMA, store: { ...ARCHIVE_STORE }, files: {} };
+  const manifest = parseJson(text);
+  if (manifest?.schema !== ARCHIVE_SCHEMA) fail(`${ARCHIVE_MANIFEST} is not an ${ARCHIVE_SCHEMA} manifest`);
+  return manifest;
+}
+
+async function writeArchive(manifest) {
+  const lines = Object.keys(manifest.files).sort().map((path) => `    ${JSON.stringify(path)}: ${JSON.stringify(manifest.files[path])}`);
+  await writeAtomic(ARCHIVE_MANIFEST, `{\n  "schema": ${JSON.stringify(manifest.schema)},\n  "store": ${JSON.stringify(manifest.store)},\n  "files": {\n${lines.join(',\n')}\n  }\n}\n`);
+}
+
+/** Every archivable file a command-line path names: the file itself, or each one under a directory. */
+async function archivable(arg) {
+  const path = repoPath(arg);
+  const full = join(ROOT, path);
+  const info = await stat(full).catch(() => null);
+  if (!info) fail(`${arg}: no such file or directory`);
+  if (info.isFile()) return archiveType(path) ? [path] : [];
+  const found = [];
+  for (const entry of await readdir(full, { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    const child = relative(ROOT, join(entry.parentPath, entry.name)).split(sep).join('/');
+    if (archiveType(child)) found.push(child);
+  }
+  return found;
+}
+
+async function archive(args, flags) {
+  if (flags.from) args = [...args, ...(await readFile(resolve(flags.from), 'utf8')).split(/\r?\n/).map((line) => line.trim()).filter(Boolean)];
+  if (!args.length) fail('archive needs paths (or --from=<list file>)');
+  const live = new Set(Object.keys((await readManifest()).files));
+  const paths = [...new Set((await Promise.all(args.map(archivable))).flat())].sort();
+  const skipped = paths.filter((path) => live.has(path));
+  if (skipped.length) console.log(`kept ${skipped.length} file(s) that assets.json manages (the archive is for sources, not shipped assets)`);
+  const todo = paths.filter((path) => !live.has(path));
+  const manifest = await readArchive();
+  let bytes = 0;
+  if (flags['dry-run']) {
+    for (const path of todo) bytes += (await stat(join(ROOT, path))).size;
+    console.log(`would archive ${todo.length} file(s), ${size(bytes)}`);
+    return;
+  }
+  let done = 0;
+  let writing = Promise.resolve();
+  await pool(todo, async (path) => {
+    const full = join(ROOT, path);
+    const data = await readFile(full);
+    const hash = sha256(data);
+    if ((await headBlob(ARCHIVE_STORE, hash)) !== data.length) {
+      // S3 checks the body against the signed sha256, so a stored blob is the file's exact bytes.
+      const response = await request(ARCHIVE_STORE, 'PUT', blobKey(ARCHIVE_STORE, hash), { body: data, payloadHash: hash, headers: { 'content-type': archiveType(path) } });
+      if (!response.ok) throw await storeError(response, ARCHIVE_STORE, `the upload of ${path}`);
+      await response.body?.cancel();
+    }
+    if ((await headBlob(ARCHIVE_STORE, hash)) !== data.length) fail(`s3://${ARCHIVE_STORE.bucket}/${blobKey(ARCHIVE_STORE, hash)} is missing or the wrong size after upload; ${path} was kept`);
+    const previous = manifest.files[path];
+    const history = previous && previous.sha256 !== hash ? [{ sha256: previous.sha256, size: previous.size, uploadedAt: previous.uploadedAt }, ...(previous.history ?? [])] : previous?.history;
+    manifest.files[path] = { sha256: hash, size: data.length, uploadedAt: now(), ...(history ? { history } : {}) };
+    // The record is on disk before the local copy goes, so a crash never loses a file's only trace.
+    writing = writing.then(() => writeArchive(manifest));
+    await writing;
+    await rm(full);
+    bytes += data.length;
+    if (++done % 50 === 0) console.log(`  ${done}/${todo.length}`);
+  });
+  await writeArchive(manifest);
+  console.log(`archived ${done} file(s), ${size(bytes)} freed; recorded in assets-archive.json (commit it)`);
+}
+
+/** A path or glob (* within a segment, ** across them) as a regex; a directory also matches everything under it. */
+function globRegex(glob) {
+  const body = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*\/?/g, '\0').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]').replace(/\0/g, '.*');
+  return new RegExp(`^${body}(/.*)?$`);
+}
+
+async function archivePull(args, flags) {
+  if (!args.length) fail('archive-pull needs a path or glob, e.g. "assets-src/generals-cast-2026-10-17/**/*.png"');
+  const manifest = await readArchive();
+  const patterns = args.map((arg) => globRegex(arg.replace(/\\/g, '/').replace(/^\.\//, '')));
+  const paths = Object.keys(manifest.files).filter((path) => patterns.some((re) => re.test(path)));
+  if (!paths.length) fail(`nothing in assets-archive.json matches ${args.join(' ')}`);
+  let fetched = 0;
+  await pool(paths, async (path) => {
+    const entry = manifest.files[path];
+    const full = join(ROOT, path);
+    if (!flags.force && (await readFile(full).then((data) => sha256(data) === entry.sha256, () => false))) return;
+    if (flags['dry-run']) return void console.log(`  ${path}  ${size(entry.size)}`);
+    const response = await request(manifest.store, 'GET', blobKey(manifest.store, entry.sha256));
+    if (!response.ok) throw await storeError(response, manifest.store, `the archived ${path}`);
+    const data = Buffer.from(await response.arrayBuffer());
+    if (sha256(data) !== entry.sha256) fail(`the archived blob of ${path} does not match its sha256`);
+    await writeAtomic(full, data);
+    fetched++;
+  });
+  console.log(flags['dry-run'] ? `${paths.length} file(s) match` : `restored ${fetched} of ${paths.length} matching file(s)`);
+}
+
+async function archiveStatus(args, flags) {
+  const manifest = await readArchive();
+  const entries = Object.entries(manifest.files);
+  const groups = new Map();
+  let local = 0;
+  for (const [path, entry] of entries) {
+    const dir = path.split('/').slice(0, 2).join('/');
+    const group = groups.get(dir) ?? { count: 0, bytes: 0 };
+    group.count++;
+    group.bytes += entry.size;
+    groups.set(dir, group);
+    if (await exists(join(ROOT, path))) local++;
+  }
+  for (const [dir, { count, bytes }] of [...groups].sort()) console.log(`  ${dir}  ${count} file(s)  ${size(bytes)}`);
+  console.log(`${entries.length} archived file(s), ${size(entries.reduce((sum, [, entry]) => sum + entry.size, 0))}; ${local} also on disk`);
+  if (flags.remote) {
+    const missing = (await pool(entries, async ([path, entry]) => ((await headBlob(manifest.store, entry.sha256)) === entry.size ? null : path))).filter(Boolean);
+    console.log(missing.length ? `missing from the bucket (${missing.length}):\n  ${missing.join('\n  ')}` : 'the bucket holds every archived blob at its size');
+    if (missing.length) process.exitCode = 1;
+  }
+}
+
+const COMMANDS = { status, push, pull, verify, restore, models, setup, untrack, archive, 'archive-pull': archivePull, 'archive-status': archiveStatus };
+const FLAGS = { status: ['remote'], push: ['dry-run'], pull: ['dry-run'], verify: [], restore: ['previous', 'sha'], models: ['json'], setup: ['apply'], untrack: ['apply'], archive: ['dry-run', 'from'], 'archive-pull': ['dry-run', 'force'], 'archive-status': ['remote'] };
+const TAKES_PATHS = ['push', 'pull', 'restore', 'archive', 'archive-pull'];
 
 async function main(argv) {
   const [command, ...args] = argv.filter((arg) => !arg.startsWith('--'));

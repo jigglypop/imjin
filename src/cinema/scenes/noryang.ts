@@ -1,5 +1,6 @@
-import { at, commander, first, flagship, fleet, group, squadron } from '../subjects';
+import { at, commander, first, flagship, fleet, squadron } from '../subjects';
 import type { Scene } from '../types';
+import { closeUp, command, home } from './shots';
 
 /**
  * Noryang, told from the records (src/cinema/SOURCES.md): the night crossing from Myodo, the moon past full and high,
@@ -19,42 +20,53 @@ const allied = fleet('joseon');
 export const NORYANG_INTRO: Scene = {
   id: 'noryang-intro',
   fadeIn: 3,
+  castLight: 'night',
+  cast: {
+    yi: { file: 'yi__yi_tongjesa', weapon: 'joseon_hwando', ship: yi, facing: japan, portrait: 'portrait_yi' },
+    chen: { file: 'chenlin__chenlin_dudok', weapon: 'ming_jian', ship: chen, facing: japan, portrait: 'portrait_chenlin' },
+    deng: { file: 'deng__deng_nojang', weapon: 'ming_dao', ship: deng, facing: japan, portrait: 'portrait_deng' },
+    shimazu: { file: 'shimazu__shimazu_oni', weapon: 'japan_tachi', ship: shimazu, facing: allied, portrait: 'portrait_shimazu' },
+  },
   shots: [
-    // The moon on a long lens over the Japanese fleet's lanterns.
-    { dur: 12, cam: { type: 'orbit', at: at(japan, 'moon'), yaw: [Math.PI + 0.05, Math.PI - 0.02], pitch: 0.012, dist: [1500, 1320], lift: 4 }, fov: [23, 21], tilt: 0.12 },
-    // Low under the stern pavilion of the Joseon flagship, the commander's deck against the night.
-    { dur: 10, cam: { type: 'track', at: at(yi), from: [-38, -1.6, 24], to: [-27, -1.2, 18], look: [-5, 5.5, 0] }, fov: 30, tilt: 0.04, aperture: 0.7 },
-    { dur: 9, cam: { type: 'track', at: at(yi), from: [58, 1.5, -30], to: [40, 1, -21], look: [-5, 5.5, 0] }, fov: 26, aperture: 0.9 },
-    { dur: 9, cam: { type: 'orbit', at: at(chen), yaw: [0.7, 1.15], pitch: [0.06, 0.085], dist: [78, 60], lift: 4 }, fov: 32, aperture: 0.6 },
-    { dur: 8, cam: { type: 'track', at: at(deng), from: [55, 3, 78], to: [-30, 3, 78], look: [0, 4, 0] }, fov: 30, ease: 'linear', aperture: 0.4 },
-    // Ahead of Shimazu's flagship, the fleet coming on behind it.
-    { dur: 10, cam: { type: 'orbit', at: at(shimazu), yaw: [0.28, 0.12], pitch: [0.02, 0.03], dist: [230, 150], lift: 7 }, fov: 30 },
-    // The plan of the strait from above, as the films lay out the fleets before the fight.
-    { dur: 11, cam: { type: 'orbit', at: at(group(yi, chen, shimazu), { toward: shimazu }), yaw: [Math.PI + 0.25, Math.PI + 0.1], pitch: [0.92, 1.0], dist: [3500, 3200] }, fov: 36 },
-    // Behind the flagship, looking where it sails: the title.
-    { dur: 12, cam: { type: 'orbit', at: at(yi, { toward: japan }), yaw: [Math.PI + 0.3, Math.PI + 0.14], pitch: [0.045, 0.065], dist: [92, 122], lift: [6, 10] }, fov: 30 },
+    // The moon on a long lens over the Japanese fleet's lanterns: the title.
+    { dur: 9.5, cam: { type: 'orbit', at: at(japan, 'moon'), yaw: [Math.PI + 0.05, Math.PI - 0.02], pitch: 0.012, dist: [1500, 1350], lift: 4 }, fov: [23, 21], tilt: 0.12 },
+    closeUp('yi', yi, 8, -1),
+    closeUp('chen', chen, 4.5, 1),
+    closeUp('deng', deng, 6, -1),
+    closeUp('shimazu', shimazu, 7, 1),
+    command('yi', yi, 4.5),
+    // Behind the flagship, low over the water, the lanterns of the Japanese fleet ahead.
+    { dur: 7, cam: { type: 'orbit', at: at(yi, { toward: japan }), yaw: [Math.PI + 0.3, Math.PI + 0.14], pitch: [0.045, 0.065], dist: [92, 135], lift: [6, 10] }, fov: 30 },
+    home(at(joseon)),
   ],
   captions: [
-    { kind: 'stamp', at: 1.2, dur: 8, when: '1598년 음력 11월 19일 · 사경 (새벽 1~3시)', where: '노량 해협 · 남해도와 하동 사이' },
-    { kind: 'doc', at: 4.5, dur: 7, tag: '전황', head: '보름을 나흘 넘긴 달', body: '달은 높이 떠 있었다. 노량에 이른 연합 함대 앞에 일본 함선이 바다를 덮고 있었다. 300여 척(『선조실록』), 500여 척(『행록』).', hanja: '舳艫蔽海', source: '『선조실록』 1598년 11월 27일 · 이분 『행록』' },
-    { kind: 'doc', at: 13, dur: 8, tag: '기동', head: '함매와고', hanja: '銜枚卧皷', body: '군사들 입에 하무를 물리고 북을 눕혔다. 조선과 명의 함대는 이경(밤 9~11시)에 묘도를 함께 떠나 사경에 노량에 닿았다.', source: '이분 『행록』 · 『이충무공전서』 권10' },
-    { kind: 'line', at: 23, dur: 7.6, who: '이순신', role: '삼도수군통제사', portrait: 'portrait_yi', text: '이 원수를 없앨 수 있다면, 죽어도 여한이 없겠습니다.', hanja: '此讎若除 死卽無憾', source: '그날 밤 삼경, 배 위에서 손을 씻고 무릎 꿇어 하늘에 빈 말 · 이분 『행록』' },
-    { kind: 'card', at: 32, dur: 7, who: '진린', hanja: '陳璘', role: '명 수군 도독', portrait: 'portrait_chenlin', side: 'ming' },
-    { kind: 'doc', at: 33.6, dur: 5.8, tag: '기동', head: '기각', hanja: '掎角', body: '명 수군이 함께 나아가 조선 수군과 기각을 이루었다. 뒷다리와 뿔을 함께 잡듯, 두 갈래로 적을 친다.', source: '「전라좌수영대첩비」 · 『명사』 진린전' },
-    { kind: 'card', at: 41, dur: 6.5, who: '등자룡', hanja: '鄧子龍', role: '명 부총병 · 일흔이 넘은 노장', portrait: 'portrait_deng', side: 'ming' },
-    { kind: 'card', at: 49.5, dur: 7, who: '시마즈 요시히로', hanja: '島津義弘', role: '사쓰마의 장수 · 일본 구원 함대', portrait: 'portrait_shimazu', side: 'japan' },
-    { kind: 'doc', at: 51.2, dur: 6.3, tag: '전황', head: '구원하러 온 함대', body: '순천 왜교성에 갇힌 고니시 유키나가가 봉화를 올려 구원을 청했다. 남해와 사천의 일본 함대가 노량과 엄목포에 모여들었다.', hanja: '行長擧火 與南海賊相應', source: '이분 『행록』' },
-    { kind: 'label', at: 59, dur: 10, target: at(joseon), text: '조선 수군', sub: '통제사 이순신', side: 'joseon' },
-    { kind: 'label', at: 59.4, dur: 9.6, target: at(ming), text: '명 수군', sub: '도독 진린 · 부총병 등자룡', side: 'ming' },
-    { kind: 'label', at: 59.8, dur: 9.2, target: at(squadron('시마즈')), text: '일본 함대', sub: '시마즈 요시히로', side: 'japan' },
-    { kind: 'doc', at: 61, dur: 7.5, tag: '지형', head: '노량', hanja: '露梁', body: '남해도와 육지 사이의 좁은 물목. 순천의 고니시를 빼내려는 일본 함대와 그 길을 막은 연합 함대가 이 물길에서 맞붙었다.' },
-    { kind: 'title', at: 70.5, dur: 9.5, eyebrow: '칠 년 전쟁의 마지막 바다', title: '노량 해전', hanja: '露梁海戰', sub: '1598' },
+    { kind: 'stamp', at: 1.2, dur: 7, when: '1598년 음력 11월 19일 · 사경 (새벽 1~3시)', where: '노량 해협 · 남해도와 하동 사이' },
+    { kind: 'title', at: 3.2, dur: 6, eyebrow: '칠 년 전쟁의 마지막 바다', title: '노량 해전', hanja: '露梁海戰', sub: '1598' },
+    {
+      kind: 'say', at: 10.4, dur: 6.4, cast: 'yi', side: 'joseon', who: '이순신', role: '삼도수군통제사 · 그날 밤 삼경, 배 위에서 하늘에 빌며',
+      text: '이 원수를 없앨 수 있다면, 죽어도 여한이 없겠습니다.', hanja: '此讎若除 死卽無憾', source: '이분 『행록』',
+    },
+    { kind: 'say', at: 18, dur: 3.8, cast: 'chen', side: 'ming', who: '진린', role: '명 수군 도독 · 조선 수군과 기각을 이루어', text: '', source: '「전라좌수영대첩비」 · 『명사』 진린전' },
+    {
+      kind: 'say', at: 22.4, dur: 5.2, cast: 'deng', side: 'ming', who: '등자룡', role: '명 부총병 · 일흔이 넘은 노장',
+      text: '늙었다 하여 뒤에 설 수는 없다. 선봉은 내가 맡겠다.',
+      source: '『명사』 권247 등자룡전', note: '일흔이 넘었으나 기개가 더욱 굳세어 앞장서 공을 세우려 했다는 기록에 따른 대사',
+    },
+    {
+      kind: 'say', at: 28.6, dur: 5.6, cast: 'shimazu', side: 'japan', who: '시마즈 요시히로', role: '사쓰마의 장수 · 일본 구원 함대',
+      text: '고니시를 구한다. 노량을 뚫고 나아가라.',
+      source: '『征韓録』 · 이분 『행록』', note: '순천 왜교성에 갇힌 고니시를 구하러 왔다는 기록에 따른 대사',
+    },
+    { kind: 'label', at: 39.2, dur: 6, target: at(joseon), text: '조선 수군', sub: '통제사 이순신', side: 'joseon' },
+    { kind: 'label', at: 39.5, dur: 5.7, target: at(ming), text: '명 수군', sub: '도독 진린 · 부총병 등자룡', side: 'ming' },
+    { kind: 'label', at: 39.8, dur: 5.4, target: at(squadron('시마즈')), text: '일본 함대', sub: '시마즈 요시히로', side: 'japan' },
   ],
   cues: [
     { kind: 'hush', at: 0, depth: 0.35 },
-    { kind: 'drums', at: 69.6, count: 3 },
-    { kind: 'drums', at: 71.8, count: 3 },
-    { kind: 'drums', at: 74.2, count: 5 },
+    { kind: 'drums', at: 35.4, count: 3 },
+    { kind: 'drums', at: 37.6, count: 3 },
+    { kind: 'drums', at: 40, count: 5 },
+    { kind: 'hush', at: 45, depth: 0 },
   ],
 };
 

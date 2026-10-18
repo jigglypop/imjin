@@ -1,0 +1,24 @@
+{
+  "at": "2026-10-17T04:54:23.075Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "1632x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "A museum product photograph of a single weapon for image-to-3D reconstruction: a Joseon Korean hwando sabre of a naval commander (1590s): a slender, slightly curved single-edged polished steel blade with a fine fuller, a round pierced brass guard (dongdari), a dark red ray-skin grip wrapped in red silk cord, gilt brass collar and pommel cap. The weapon stands perfectly upright and centred, the point/blade at the TOP and the hilt/butt at the BOTTOM, seen straight from the side, the whole weapon in frame with a margin; the bare weapon alone, no scabbard anywhere in the picture. Ornate but historically grounded late-sixteenth-century craftsmanship as in the hero props of big-budget historical war films; crisp, sharply focused detail of every fitting, wrap and engraving; truthful materials: polished steel, gilt bronze, lacquer, silk, leather. Plain seamless light grey studio background, soft even light, no shadows, no reflections of a room, nothing else in the picture. No hands, no people, no text, no letters, no logo, no border, no illustration look.",
+  "usage": {
+    "input_tokens": 239,
+    "input_tokens_details": {
+      "image_tokens": 0,
+      "text_tokens": 239
+    },
+    "output_tokens": 2171,
+    "output_tokens_details": {
+      "image_tokens": 2171,
+      "text_tokens": 0
+    },
+    "total_tokens": 2410
+  }
+}

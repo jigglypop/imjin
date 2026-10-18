@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "asset": "general-unarmed-back-v2.png",
+  "generationMethod": "built-in image_gen.imagegen; newly generated unarmed rear reference",
+  "sourceGeneratedImage": "C:/Users/dongh/.codex/generated_images/01a14609-03ea-7eb3-b48a-e4150e973ecd/exec-f73f7394-1160-49aa-8f3b-f62a998f142f.png",
+  "prompt": "A photorealistic full-body orthographic BACK VIEW production reference of ONE 16th-century Korean Joseon admiral, strict horizontal T POSE, BOTH FISTS CLOSED AND COMPLETELY EMPTY. No sword, no bow, no spear, no scabbard, no weapon of any kind. One integrated complete armored man with small realistically proportionate head, wide powerful shoulders, oxblood-red thick dujeong armor studded with evenly spaced small aged brass rivets, black leather edging, three overlapping rectangular shoulder plates each side, horizontal long red studded sleeves, black wrist cuffs, broad plain black waistbelt seen from behind WITHOUT buckle, straight long knee-length split coat skirts and two black leather boots. Round grey steel Joseon helmet with narrow brass seams, brass rivet browband, small dark round finial and red horsehair plume falling close behind; a CLOSED rear studded metal neckguard drapes to the upper back. NO face or facial features visible from behind. Anatomically clear back shoulders and buttocks, boots point away from the viewer. Both arms straight level to the sides at shoulder height, elbows straight, fists compact, feet a little apart and flat. Entire person from finial to soles within a square 1254x1254 light neutral grey seamless background, feet near y1215, finial near y85, wrist centres near y395, waist near y580, coat hem near y995. Soft flat studio light, premium realistic fabric/steel/leather PBR detail, no shadows, no scene, no mannequin, no text, no collage. Crucially EMPTY HANDS and ZERO weapons.",
+  "weaponCount": 0,
+  "visualReview": {
+    "inspected": true,
+    "weaponCount": 0,
+    "rearFaceCount": 0,
+    "view": "back",
+    "findings": [
+      "Both fists empty; no blade/guard/hilt/scabbard.",
+      "Closed rear helmet and rear armor; two boots point away.",
+      "Same armor family; independently generated view has small landmark/material variation from front, so geometry requires raw four-view review."
+    ]
+  }
+}

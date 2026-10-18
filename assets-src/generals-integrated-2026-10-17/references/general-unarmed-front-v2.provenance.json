@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "status": "weapon-free-reference-visually-inspected",
+  "asset": "general-unarmed-front-v2.png",
+  "createdDate": "2026-10-17",
+  "generationMethod": "built-in image_gen.imagegen localized edit",
+  "generationRequestCount": 2,
+  "successfulResults": 1,
+  "firstRequestFailure": "network error: error sending request; no handle/result and no new PNG found before one retry",
+  "provider3DRequestsSubmitted": 0,
+  "sourceGeneratedImage": "C:/Users/dongh/.codex/generated_images/01a1461e-b3b1-7322-a6cd-3a8617798768/exec-4b79a68b-bcfc-436a-9e34-bccd548d6634.png",
+  "width": 1254,
+  "height": 1254,
+  "bytes": 1772696,
+  "sha256": "caa049b9389dafa90b68517bf0f8b3fea219bd604f08329184fbf52b11cf2b14",
+  "referenceImages": [
+    "general-front-v1.png"
+  ],
+  "geometryOrScreenshotReferenceUsed": false,
+  "transparentBackground": false,
+  "weaponCount": 0,
+  "prompt": "Use case: precise localized reference-image edit. Edit this EXACT approved full-character FRONT image. REMOVE ONLY the entire sword from the subject's RIGHT hand (viewer LEFT): remove the whole steel blade, brass guard, dark handle and pommel, leaving ZERO weapon remnants. Fill the removed sword area with the same seamless neutral grey background. Replace only the former sword-gripping right hand with an anatomically correct compact CLOSED EMPTY FIST at the EXACT same wrist position and horizontal T-pose arm angle; fingers curled together, thumb wrapped around the fingers, no hole holding an invisible rod. Match the size and natural orientation of the already-empty opposite fist.\nEVERYTHING ELSE MUST STAY THE SAME: identical original fictional Korean admiral face, small head proportions, steel helmet and red plume, neckguard, broad thick shoulders, red studded dujeong armor, rivet locations and black edge bindings, V collar, brass front belt buckle, center coat closure and hem shape, trousers, both boots, body proportions, camera angle, exact character position and scale, neutral grey background and lighting. Both arms stay straight horizontal in a strict T-pose. Both hands must be compact CLOSED EMPTY fists. This is a targeted weapon-removal edit, not a redesign, new pose, or camera change.\nKeep the SAME full 1254x1254 square canvas and full figure framing. Exact straight orthographic FRONT view. One person, no second figure. NO sword, NO blade, NO weapon, NO hilt, NO guard, NO pommel, NO scabbard, NO bow, NO spear, NO staff, NO accessory in either hand or elsewhere in the image. No labels, text or graphic overlays. Photorealistic PBR reference.",
+  "visualReview": {
+    "inspected": true,
+    "weaponCount": 0,
+    "findings": [
+      "Full sword, guard, hilt, pommel and all weapon remnants removed.",
+      "Both hands are compact closed EMPTY fists; strict horizontal T-pose preserved.",
+      "Same complete armor, steel helmet, original fictional admiral, silhouette, proportions and studio lighting retained.",
+      "Single front view, one figure, no sword, bow, spear, scabbard or other weapon."
+    ],
+    "scope": "Reference image only; generated geometry still requires visual and animation review."
+  }
+}

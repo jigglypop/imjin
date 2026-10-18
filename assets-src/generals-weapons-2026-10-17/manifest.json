@@ -1,0 +1,1954 @@
+{
+  "created": "2026-10-17",
+  "originalScript": "scripts/build-general-weapons.py",
+  "scriptSha256": "ef20ac48abc5b0bffb9af3ed9b92e842ca4b51f6af97ca35db8d66e4b9851a9d",
+  "sourceWorkspace": "F:\\codex-work\\imjin\\weapon-production",
+  "coordinateContract": "glTF meters, +Y length/upright, +Z bow/front curvature, origin middle of handgrip; swords/spears RIGHT, bows LEFT",
+  "historicalAccuracy": "Original game interpretations of named East Asian weapon families; not museum scans or exact artifact reproductions",
+  "provider": "None; no paid generation; no external source copied",
+  "weapons": [
+    {
+      "kind": "sword",
+      "hand": "right",
+      "length": 0.94,
+      "notes": "Curved single edge, separate polished bevels, wrapped rayskin grip",
+      "id": "joseon_hwando",
+      "faction": "joseon",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 2852,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.09000000357627869,
+        0.9699999988079071,
+        0.11542006954550743
+      ],
+      "lodTriangles": 2852,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_hwando.glb",
+          "bytes": 106816,
+          "sha256": "8d59b920112ac9d2c7f05a1b170f789b259d935b91d1e688d61e2fc80706e44b"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_hwando_lod1.glb",
+          "bytes": 106824,
+          "sha256": "16c5ea2dd6ef9e7723834e56c0fc0f9f95f5c0f7973b81b4206a7bbb6712478c"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\joseon_hwando.blend",
+          "bytes": 137990,
+          "sha256": "792db4d5dcc671e5923bdf958fbf220f6b18b0289373f15d2fa5d937627e7a14"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_joseon_hwando.glb",
+          "bytes": 106816,
+          "sha256": "8d59b920112ac9d2c7f05a1b170f789b259d935b91d1e688d61e2fc80706e44b",
+          "triangles": 2852,
+          "vertices": 3438,
+          "min": [
+            -0.04500000178813934,
+            -0.09139999747276306,
+            -0.05400000140070915
+          ],
+          "max": [
+            0.04500000178813934,
+            0.878600001335144,
+            0.06142006814479828
+          ],
+          "dimensions": [
+            0.09000000357627869,
+            0.9699999988079071,
+            0.11542006954550743
+          ],
+          "steelOutwardVertices": 104,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_joseon_hwando_lod1.glb",
+          "bytes": 106824,
+          "sha256": "16c5ea2dd6ef9e7723834e56c0fc0f9f95f5c0f7973b81b4206a7bbb6712478c",
+          "triangles": 2852,
+          "vertices": 3438,
+          "min": [
+            -0.04500000178813934,
+            -0.09139999747276306,
+            -0.05400000140070915
+          ],
+          "max": [
+            0.04500000178813934,
+            0.878600001335144,
+            0.06142006814479828
+          ],
+          "dimensions": [
+            0.09000000357627869,
+            0.9699999988079071,
+            0.11542006954550743
+          ],
+          "steelOutwardVertices": 104,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/joseon_hwando.blend",
+        "bytes": 137990,
+        "sha256": "792db4d5dcc671e5923bdf958fbf220f6b18b0289373f15d2fa5d937627e7a14"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/joseon_hwando.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 2788,
+        "sha256": "e392e7beb948c462378f15c9f9dffec0c47463644c1b72beae1e664995123753"
+      }
+    },
+    {
+      "kind": "sword",
+      "hand": "right",
+      "length": 1.07,
+      "notes": "Straight double edge with ridge, cast guard and brass inlay",
+      "id": "joseon_ungeom",
+      "faction": "joseon",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 4744,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.10245999693870544,
+        1.2950253188610077,
+        0.1373399943113327
+      ],
+      "lodTriangles": 4744,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_ungeom.glb",
+          "bytes": 167176,
+          "sha256": "b5a5ea7d1e4113157810cdaae7bf811d8256bf87a13e8c521dc2f876383ac694"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_ungeom_lod1.glb",
+          "bytes": 167180,
+          "sha256": "7d4ee57fe01689d50a562ce4b0d9ba5bcb959829fc35c84f4f324581203d7f3b"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\joseon_ungeom.blend",
+          "bytes": 159154,
+          "sha256": "a7bd2b44bb37662a615e0d1efa82cd85d5363c85cd54639c19a18c768a663e3b"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_joseon_ungeom.glb",
+          "bytes": 167176,
+          "sha256": "b5a5ea7d1e4113157810cdaae7bf811d8256bf87a13e8c521dc2f876383ac694",
+          "triangles": 4744,
+          "vertices": 5480,
+          "min": [
+            -0.05122999846935272,
+            -0.3008253276348114,
+            -0.06866999715566635
+          ],
+          "max": [
+            0.05122999846935272,
+            0.9941999912261963,
+            0.06866999715566635
+          ],
+          "dimensions": [
+            0.10245999693870544,
+            1.2950253188610077,
+            0.1373399943113327
+          ],
+          "steelOutwardVertices": 168,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_joseon_ungeom_lod1.glb",
+          "bytes": 167180,
+          "sha256": "7d4ee57fe01689d50a562ce4b0d9ba5bcb959829fc35c84f4f324581203d7f3b",
+          "triangles": 4744,
+          "vertices": 5480,
+          "min": [
+            -0.05122999846935272,
+            -0.3008253276348114,
+            -0.06866999715566635
+          ],
+          "max": [
+            0.05122999846935272,
+            0.9941999912261963,
+            0.06866999715566635
+          ],
+          "dimensions": [
+            0.10245999693870544,
+            1.2950253188610077,
+            0.1373399943113327
+          ],
+          "steelOutwardVertices": 168,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/joseon_ungeom.blend",
+        "bytes": 159154,
+        "sha256": "a7bd2b44bb37662a615e0d1efa82cd85d5363c85cd54639c19a18c768a663e3b"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/joseon_ungeom.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 2426,
+        "sha256": "0228ef5314526a7d0058f65fed43718a963f978665ae7ca4c83d2c59715ed283"
+      }
+    },
+    {
+      "kind": "sword",
+      "hand": "right",
+      "length": 1.08,
+      "notes": "Curved single edge, separate polished bevels, wrapped rayskin grip",
+      "id": "japan_katana",
+      "faction": "japan",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 2876,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.09000000357627869,
+        1.1100000143051147,
+        0.1242532916367054
+      ],
+      "lodTriangles": 2876,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_katana.glb",
+          "bytes": 113864,
+          "sha256": "b369b1c349c9579563e5840a592884cf3745c876c358d3f5b22ef5b5872920ea"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_katana_lod1.glb",
+          "bytes": 113868,
+          "sha256": "305a264e3077d71c9d19e2a0ef71124502354a506a13389be081e039303b8c0f"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\japan_katana.blend",
+          "bytes": 142396,
+          "sha256": "dd8e65c0a57f98272027464249087cfa9bab5b69ea917583a6320f7b6981ac26"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_japan_katana.glb",
+          "bytes": 113864,
+          "sha256": "b369b1c349c9579563e5840a592884cf3745c876c358d3f5b22ef5b5872920ea",
+          "triangles": 2876,
+          "vertices": 3726,
+          "min": [
+            -0.04500000178813934,
+            -0.125,
+            -0.05400000140070915
+          ],
+          "max": [
+            0.04500000178813934,
+            0.9850000143051147,
+            0.07025329023599625
+          ],
+          "dimensions": [
+            0.09000000357627869,
+            1.1100000143051147,
+            0.1242532916367054
+          ],
+          "steelOutwardVertices": 104,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_japan_katana_lod1.glb",
+          "bytes": 113868,
+          "sha256": "305a264e3077d71c9d19e2a0ef71124502354a506a13389be081e039303b8c0f",
+          "triangles": 2876,
+          "vertices": 3726,
+          "min": [
+            -0.04500000178813934,
+            -0.125,
+            -0.05400000140070915
+          ],
+          "max": [
+            0.04500000178813934,
+            0.9850000143051147,
+            0.07025329023599625
+          ],
+          "dimensions": [
+            0.09000000357627869,
+            1.1100000143051147,
+            0.1242532916367054
+          ],
+          "steelOutwardVertices": 104,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/japan_katana.blend",
+        "bytes": 142396,
+        "sha256": "dd8e65c0a57f98272027464249087cfa9bab5b69ea917583a6320f7b6981ac26"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/japan_katana.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 2718,
+        "sha256": "335551aa2e70a5e91a96845ee07b8496194495b6d3897194ba5affb5c5ac5669"
+      }
+    },
+    {
+      "kind": "sword",
+      "hand": "right",
+      "length": 1.21,
+      "notes": "Curved single edge, separate polished bevels, wrapped rayskin grip",
+      "id": "japan_tachi",
+      "faction": "japan",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 4044,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.09809999912977219,
+        1.2399999648332596,
+        0.16879000514745712
+      ],
+      "lodTriangles": 4044,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_tachi.glb",
+          "bytes": 135484,
+          "sha256": "8bd04c03f80953b5b2f3e2f25bd7edbd5d46b3f92ffb15d02f9e2a35ebf8b76c"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_tachi_lod1.glb",
+          "bytes": 135488,
+          "sha256": "9ea13ee4a648bb98d647364b1f89046923cd7f940acf020b93d9d6f8f807383a"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\japan_tachi.blend",
+          "bytes": 153338,
+          "sha256": "f1c3915e9809145c1049348a7625085974d77a24f5a588ff6d6e064ecbef06d1"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_japan_tachi.glb",
+          "bytes": 135484,
+          "sha256": "8bd04c03f80953b5b2f3e2f25bd7edbd5d46b3f92ffb15d02f9e2a35ebf8b76c",
+          "triangles": 4044,
+          "vertices": 4334,
+          "min": [
+            -0.04904999956488609,
+            -0.13459999859333038,
+            -0.06649000197649002
+          ],
+          "max": [
+            0.04904999956488609,
+            1.1053999662399292,
+            0.1023000031709671
+          ],
+          "dimensions": [
+            0.09809999912977219,
+            1.2399999648332596,
+            0.16879000514745712
+          ],
+          "steelOutwardVertices": 104,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_japan_tachi_lod1.glb",
+          "bytes": 135488,
+          "sha256": "9ea13ee4a648bb98d647364b1f89046923cd7f940acf020b93d9d6f8f807383a",
+          "triangles": 4044,
+          "vertices": 4334,
+          "min": [
+            -0.04904999956488609,
+            -0.13459999859333038,
+            -0.06649000197649002
+          ],
+          "max": [
+            0.04904999956488609,
+            1.1053999662399292,
+            0.1023000031709671
+          ],
+          "dimensions": [
+            0.09809999912977219,
+            1.2399999648332596,
+            0.16879000514745712
+          ],
+          "steelOutwardVertices": 104,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/japan_tachi.blend",
+        "bytes": 153338,
+        "sha256": "f1c3915e9809145c1049348a7625085974d77a24f5a588ff6d6e064ecbef06d1"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/japan_tachi.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 2646,
+        "sha256": "c60cb318fc69d25c399de81e34bd2b62e8a8c79d5b0ccbd1a4514c215ad44632"
+      }
+    },
+    {
+      "kind": "sword",
+      "hand": "right",
+      "length": 1,
+      "notes": "Curved single edge, separate polished bevels, wrapped rayskin grip",
+      "id": "ming_dao",
+      "faction": "ming",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 3928,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.0820000022649765,
+        1.1880309879779816,
+        0.13955645635724068
+      ],
+      "lodTriangles": 3928,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_dao.glb",
+          "bytes": 150172,
+          "sha256": "58873579ef0ebac204559a23f58fca3a1c96057301658e7884c95740bca1d1f6"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_dao_lod1.glb",
+          "bytes": 150176,
+          "sha256": "f83208d9c3ebde0a9d18477943dce3c50c297d9e796f764d1c48c072cd1e7ed6"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\ming_dao.blend",
+          "bytes": 154950,
+          "sha256": "d89e217fbf0b263cf2ef6f9e2664729fb2213b6c6ca5d2664b78d10805be19d2"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_ming_dao.glb",
+          "bytes": 150172,
+          "sha256": "58873579ef0ebac204559a23f58fca3a1c96057301658e7884c95740bca1d1f6",
+          "triangles": 3928,
+          "vertices": 4942,
+          "min": [
+            -0.04100000113248825,
+            -0.2590309679508209,
+            -0.05400000140070915
+          ],
+          "max": [
+            0.04100000113248825,
+            0.9290000200271606,
+            0.08555645495653152
+          ],
+          "dimensions": [
+            0.0820000022649765,
+            1.1880309879779816,
+            0.13955645635724068
+          ],
+          "steelOutwardVertices": 104,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_ming_dao_lod1.glb",
+          "bytes": 150176,
+          "sha256": "f83208d9c3ebde0a9d18477943dce3c50c297d9e796f764d1c48c072cd1e7ed6",
+          "triangles": 3928,
+          "vertices": 4942,
+          "min": [
+            -0.04100000113248825,
+            -0.2590309679508209,
+            -0.05400000140070915
+          ],
+          "max": [
+            0.04100000113248825,
+            0.9290000200271606,
+            0.08555645495653152
+          ],
+          "dimensions": [
+            0.0820000022649765,
+            1.1880309879779816,
+            0.13955645635724068
+          ],
+          "steelOutwardVertices": 104,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/ming_dao.blend",
+        "bytes": 154950,
+        "sha256": "d89e217fbf0b263cf2ef6f9e2664729fb2213b6c6ca5d2664b78d10805be19d2"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/ming_dao.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 2954,
+        "sha256": "4b3b3f8ffbfb0a0aa92cc6c4f1393e6fbc25a2822a7b062a504ae155bd79dab9"
+      }
+    },
+    {
+      "kind": "sword",
+      "hand": "right",
+      "length": 1.07,
+      "notes": "Straight double edge with ridge, cast guard and brass inlay",
+      "id": "ming_jian",
+      "faction": "ming",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 4104,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.03468186408281326,
+        1.2890270948410034,
+        0.11028570681810379
+      ],
+      "lodTriangles": 4104,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_jian.glb",
+          "bytes": 136916,
+          "sha256": "43b590a4a9544ebc2d3a83d2875ecfcefd0574f169b02e888d653ab3bd5f9ada"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_jian_lod1.glb",
+          "bytes": 136920,
+          "sha256": "54a57b18fcb74e94026fdad21e64b42a5724f87a385ce18161212fd69b8a52df"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\ming_jian.blend",
+          "bytes": 156792,
+          "sha256": "70e0132e1e90b74d9221f300feff216afcfd525e0ac44d0a7e40736a605c9b51"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_ming_jian.glb",
+          "bytes": 136916,
+          "sha256": "43b590a4a9544ebc2d3a83d2875ecfcefd0574f169b02e888d653ab3bd5f9ada",
+          "triangles": 4104,
+          "vertices": 4380,
+          "min": [
+            -0.017000000923871994,
+            -0.29002708196640015,
+            -0.055142853409051895
+          ],
+          "max": [
+            0.01768186315894127,
+            0.9990000128746033,
+            0.055142853409051895
+          ],
+          "dimensions": [
+            0.03468186408281326,
+            1.2890270948410034,
+            0.11028570681810379
+          ],
+          "steelOutwardVertices": 168,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_ming_jian_lod1.glb",
+          "bytes": 136920,
+          "sha256": "54a57b18fcb74e94026fdad21e64b42a5724f87a385ce18161212fd69b8a52df",
+          "triangles": 4104,
+          "vertices": 4380,
+          "min": [
+            -0.017000000923871994,
+            -0.29002708196640015,
+            -0.055142853409051895
+          ],
+          "max": [
+            0.01768186315894127,
+            0.9990000128746033,
+            0.055142853409051895
+          ],
+          "dimensions": [
+            0.03468186408281326,
+            1.2890270948410034,
+            0.11028570681810379
+          ],
+          "steelOutwardVertices": 168,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/ming_jian.blend",
+        "bytes": 156792,
+        "sha256": "70e0132e1e90b74d9221f300feff216afcfd525e0ac44d0a7e40736a605c9b51"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/ming_jian.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 2322,
+        "sha256": "f11559282a654d7f219e8300afa5b1a246ef6b64042947be94f6a02dac14f390"
+      }
+    },
+    {
+      "kind": "spear",
+      "hand": "right",
+      "length": 2.485,
+      "notes": "Solid tapered hardwood pole, ridged bevel head, separate socket, hand binding, butt spike; leaf",
+      "id": "joseon_jangchang",
+      "faction": "joseon",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 3516,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.041999999433755875,
+        2.4850000143051147,
+        0.057999998331069946
+      ],
+      "lodTriangles": 3516,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_jangchang.glb",
+          "bytes": 112656,
+          "sha256": "3c6fc363a73c7a9126aef4957807d2ede9cdaaa79989ae23f99141afb8b53dbc"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_jangchang_lod1.glb",
+          "bytes": 112664,
+          "sha256": "7c2d3d56e35c1f337814563db524300a20035ac296e1e61e838882885f0fd65f"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\joseon_jangchang.blend",
+          "bytes": 151924,
+          "sha256": "d00927194fc72560405e1357988719b483404b0d209e017ff011ab72a407ab76"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_joseon_jangchang.glb",
+          "bytes": 112656,
+          "sha256": "3c6fc363a73c7a9126aef4957807d2ede9cdaaa79989ae23f99141afb8b53dbc",
+          "triangles": 3516,
+          "vertices": 3520,
+          "min": [
+            -0.020999999716877937,
+            -1.1050000190734863,
+            -0.028999999165534973
+          ],
+          "max": [
+            0.020999999716877937,
+            1.3799999952316284,
+            0.028999999165534973
+          ],
+          "dimensions": [
+            0.041999999433755875,
+            2.4850000143051147,
+            0.057999998331069946
+          ],
+          "steelOutwardVertices": 56,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_joseon_jangchang_lod1.glb",
+          "bytes": 112664,
+          "sha256": "7c2d3d56e35c1f337814563db524300a20035ac296e1e61e838882885f0fd65f",
+          "triangles": 3516,
+          "vertices": 3520,
+          "min": [
+            -0.020999999716877937,
+            -1.1050000190734863,
+            -0.028999999165534973
+          ],
+          "max": [
+            0.020999999716877937,
+            1.3799999952316284,
+            0.028999999165534973
+          ],
+          "dimensions": [
+            0.041999999433755875,
+            2.4850000143051147,
+            0.057999998331069946
+          ],
+          "steelOutwardVertices": 56,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/joseon_jangchang.blend",
+        "bytes": 151924,
+        "sha256": "d00927194fc72560405e1357988719b483404b0d209e017ff011ab72a407ab76"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/joseon_jangchang.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 2212,
+        "sha256": "ea66b2933fe26c1c231bca810613c408d27b0de3356f8eedfe8232979a278641"
+      }
+    },
+    {
+      "kind": "spear",
+      "hand": "right",
+      "length": 2.275,
+      "notes": "Solid tapered hardwood pole, ridged bevel head, separate socket, hand binding, butt spike; fork",
+      "id": "joseon_dangpa",
+      "faction": "joseon",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 4492,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.06442850828170776,
+        2.274999976158142,
+        0.29100000858306885
+      ],
+      "lodTriangles": 4492,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_dangpa.glb",
+          "bytes": 136896,
+          "sha256": "99baf60aa7d4d6259a884025061de1e489cb265314e1763e51d0d0c28d01e2b0"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_dangpa_lod1.glb",
+          "bytes": 136900,
+          "sha256": "30a365e86f3d2ae96ed7565360ffd8c9d637a0aaeceb85d6fa9657111a97bca0"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\joseon_dangpa.blend",
+          "bytes": 163691,
+          "sha256": "12c6a1cf69a1e59ff232c195d80a8fe1623cb171b349339000e4b87bd65281e9"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_joseon_dangpa.glb",
+          "bytes": 136896,
+          "sha256": "99baf60aa7d4d6259a884025061de1e489cb265314e1763e51d0d0c28d01e2b0",
+          "triangles": 4492,
+          "vertices": 4248,
+          "min": [
+            -0.02630365639925003,
+            -1.0049999952316284,
+            -0.14550000429153442
+          ],
+          "max": [
+            0.03812485188245773,
+            1.2699999809265137,
+            0.14550000429153442
+          ],
+          "dimensions": [
+            0.06442850828170776,
+            2.274999976158142,
+            0.29100000858306885
+          ],
+          "steelOutwardVertices": 168,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_joseon_dangpa_lod1.glb",
+          "bytes": 136900,
+          "sha256": "30a365e86f3d2ae96ed7565360ffd8c9d637a0aaeceb85d6fa9657111a97bca0",
+          "triangles": 4492,
+          "vertices": 4248,
+          "min": [
+            -0.02630365639925003,
+            -1.0049999952316284,
+            -0.14550000429153442
+          ],
+          "max": [
+            0.03812485188245773,
+            1.2699999809265137,
+            0.14550000429153442
+          ],
+          "dimensions": [
+            0.06442850828170776,
+            2.274999976158142,
+            0.29100000858306885
+          ],
+          "steelOutwardVertices": 168,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/joseon_dangpa.blend",
+        "bytes": 163691,
+        "sha256": "12c6a1cf69a1e59ff232c195d80a8fe1623cb171b349339000e4b87bd65281e9"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/joseon_dangpa.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 2700,
+        "sha256": "f92de31acd09f7aada9a80a1836f4efba2a397fc89ac1269b3dd45a2a33770ab"
+      }
+    },
+    {
+      "kind": "spear",
+      "hand": "right",
+      "length": 2.485,
+      "notes": "Solid tapered hardwood pole, ridged bevel head, separate socket, hand binding, butt spike; yari",
+      "id": "japan_yari",
+      "faction": "japan",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 4156,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.041999999433755875,
+        2.4850000143051147,
+        0.041999999433755875
+      ],
+      "lodTriangles": 4156,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_yari.glb",
+          "bytes": 146504,
+          "sha256": "fe59a154c73eecc356d4f95511c80288a0237bf02cd0f2a3d593586222808b2f"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_yari_lod1.glb",
+          "bytes": 146508,
+          "sha256": "58b77bdf42722f5227a7ede1ac3ba2cd933367b904aa74c76032c711f6687ee4"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\japan_yari.blend",
+          "bytes": 159415,
+          "sha256": "392b098f9315d5dde0d740767246edea1b1e7f715a5961a9d307cb64e2ef18cb"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_japan_yari.glb",
+          "bytes": 146504,
+          "sha256": "fe59a154c73eecc356d4f95511c80288a0237bf02cd0f2a3d593586222808b2f",
+          "triangles": 4156,
+          "vertices": 4800,
+          "min": [
+            -0.020999999716877937,
+            -1.0950000286102295,
+            -0.020999999716877937
+          ],
+          "max": [
+            0.020999999716877937,
+            1.3899999856948853,
+            0.020999999716877937
+          ],
+          "dimensions": [
+            0.041999999433755875,
+            2.4850000143051147,
+            0.041999999433755875
+          ],
+          "steelOutwardVertices": 56,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_japan_yari_lod1.glb",
+          "bytes": 146508,
+          "sha256": "58b77bdf42722f5227a7ede1ac3ba2cd933367b904aa74c76032c711f6687ee4",
+          "triangles": 4156,
+          "vertices": 4800,
+          "min": [
+            -0.020999999716877937,
+            -1.0950000286102295,
+            -0.020999999716877937
+          ],
+          "max": [
+            0.020999999716877937,
+            1.3899999856948853,
+            0.020999999716877937
+          ],
+          "dimensions": [
+            0.041999999433755875,
+            2.4850000143051147,
+            0.041999999433755875
+          ],
+          "steelOutwardVertices": 56,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/japan_yari.blend",
+        "bytes": 159415,
+        "sha256": "392b098f9315d5dde0d740767246edea1b1e7f715a5961a9d307cb64e2ef18cb"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/japan_yari.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 2248,
+        "sha256": "57502e2c4b7055f54856209be218658687384539b16c2fb090a8672bf4f3634c"
+      }
+    },
+    {
+      "kind": "spear",
+      "hand": "right",
+      "length": 2.395,
+      "notes": "Solid tapered hardwood pole, ridged bevel head, separate socket, hand binding, butt spike; cross",
+      "id": "japan_jumonjiyari",
+      "faction": "japan",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 4308,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.041999999433755875,
+        2.3949999809265137,
+        0.3409999907016754
+      ],
+      "lodTriangles": 4308,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_jumonjiyari.glb",
+          "bytes": 155168,
+          "sha256": "451218d0cfd2c29f2c14d2a4f01d14e93506a8c2cb01f9e0ba5f0664a9fdcbca"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_jumonjiyari_lod1.glb",
+          "bytes": 155172,
+          "sha256": "c4696043f8bbf2799d2fe8b599972703093de96c416814bcafb7c427f58fdc76"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\japan_jumonjiyari.blend",
+          "bytes": 160556,
+          "sha256": "dac074ee07e86563d462e70a3ce9e26e622857d27e70693986645f909a79bae5"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_japan_jumonjiyari.glb",
+          "bytes": 155168,
+          "sha256": "451218d0cfd2c29f2c14d2a4f01d14e93506a8c2cb01f9e0ba5f0664a9fdcbca",
+          "triangles": 4308,
+          "vertices": 5088,
+          "min": [
+            -0.020999999716877937,
+            -1.024999976158142,
+            -0.1704999953508377
+          ],
+          "max": [
+            0.020999999716877937,
+            1.3700000047683716,
+            0.1704999953508377
+          ],
+          "dimensions": [
+            0.041999999433755875,
+            2.3949999809265137,
+            0.3409999907016754
+          ],
+          "steelOutwardVertices": 168,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_japan_jumonjiyari_lod1.glb",
+          "bytes": 155172,
+          "sha256": "c4696043f8bbf2799d2fe8b599972703093de96c416814bcafb7c427f58fdc76",
+          "triangles": 4308,
+          "vertices": 5088,
+          "min": [
+            -0.020999999716877937,
+            -1.024999976158142,
+            -0.1704999953508377
+          ],
+          "max": [
+            0.020999999716877937,
+            1.3700000047683716,
+            0.1704999953508377
+          ],
+          "dimensions": [
+            0.041999999433755875,
+            2.3949999809265137,
+            0.3409999907016754
+          ],
+          "steelOutwardVertices": 168,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/japan_jumonjiyari.blend",
+        "bytes": 160556,
+        "sha256": "dac074ee07e86563d462e70a3ce9e26e622857d27e70693986645f909a79bae5"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/japan_jumonjiyari.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 2556,
+        "sha256": "9488fe7c8792fb6fb68b8b17203f4ed5c3879b8d9d38e5cca906c7d898529202"
+      }
+    },
+    {
+      "kind": "spear",
+      "hand": "right",
+      "length": 2.535,
+      "notes": "Solid tapered hardwood pole, ridged bevel head, separate socket, hand binding, butt spike; leaf",
+      "id": "ming_qiang",
+      "faction": "ming",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 4736,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.10065437480807304,
+        2.534999966621399,
+        0.09307913482189178
+      ],
+      "lodTriangles": 4736,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_qiang.glb",
+          "bytes": 136612,
+          "sha256": "382cd166ee1d6242edf0a083cedf32967b469dbd1c017a5067371d72d11cc169"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_qiang_lod1.glb",
+          "bytes": 136616,
+          "sha256": "5653dc74d7bcd7670d5d00dd26cae851df27ee5ddd547297ab3c642c0e2837e7"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\ming_qiang.blend",
+          "bytes": 168169,
+          "sha256": "5edbaf193047d1ca60025d5740393e391ae941ee570fc4d70a6ca49fb44057b6"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_ming_qiang.glb",
+          "bytes": 136612,
+          "sha256": "382cd166ee1d6242edf0a083cedf32967b469dbd1c017a5067371d72d11cc169",
+          "triangles": 4736,
+          "vertices": 4176,
+          "min": [
+            -0.04106149822473526,
+            -1.1449999809265137,
+            -0.05360715836286545
+          ],
+          "max": [
+            0.059592876583337784,
+            1.3899999856948853,
+            0.03947197645902634
+          ],
+          "dimensions": [
+            0.10065437480807304,
+            2.534999966621399,
+            0.09307913482189178
+          ],
+          "steelOutwardVertices": 56,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_ming_qiang_lod1.glb",
+          "bytes": 136616,
+          "sha256": "5653dc74d7bcd7670d5d00dd26cae851df27ee5ddd547297ab3c642c0e2837e7",
+          "triangles": 4736,
+          "vertices": 4176,
+          "min": [
+            -0.04106149822473526,
+            -1.1449999809265137,
+            -0.05360715836286545
+          ],
+          "max": [
+            0.059592876583337784,
+            1.3899999856948853,
+            0.03947197645902634
+          ],
+          "dimensions": [
+            0.10065437480807304,
+            2.534999966621399,
+            0.09307913482189178
+          ],
+          "steelOutwardVertices": 56,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/ming_qiang.blend",
+        "bytes": 168169,
+        "sha256": "5edbaf193047d1ca60025d5740393e391ae941ee570fc4d70a6ca49fb44057b6"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/ming_qiang.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 2306,
+        "sha256": "5435da747d58dc1acf2a1ec1605f48d29e788d97db09f9ea9ec8a832d15d5cfb"
+      }
+    },
+    {
+      "kind": "spear",
+      "hand": "right",
+      "length": 2.505,
+      "notes": "Solid tapered hardwood pole, ridged bevel head, separate socket, hand binding, butt spike; glaive",
+      "id": "ming_guandao",
+      "faction": "ming",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 6354,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.10065437480807304,
+        2.5049999952316284,
+        0.23750000447034836
+      ],
+      "lodTriangles": 6354,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_guandao.glb",
+          "bytes": 190048,
+          "sha256": "7506c3e685dde9e12548472e502d659fc14072d680668afc24c124aabd328b4a"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_guandao_lod1.glb",
+          "bytes": 190052,
+          "sha256": "d0601f1eff31d5579ff43cdc7233c5834c5a2578338cb2c41215725c83e2c378"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\ming_guandao.blend",
+          "bytes": 184094,
+          "sha256": "872b503a8a429bfb3ae1ad480aa2c4b30c0416616990e20267e4eace7b8e666d"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_ming_guandao.glb",
+          "bytes": 190048,
+          "sha256": "7506c3e685dde9e12548472e502d659fc14072d680668afc24c124aabd328b4a",
+          "triangles": 6354,
+          "vertices": 5998,
+          "min": [
+            -0.04106149822473526,
+            -1.0449999570846558,
+            -0.08399999886751175
+          ],
+          "max": [
+            0.059592876583337784,
+            1.4600000381469727,
+            0.1535000056028366
+          ],
+          "dimensions": [
+            0.10065437480807304,
+            2.5049999952316284,
+            0.23750000447034836
+          ],
+          "steelOutwardVertices": 80,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_ming_guandao_lod1.glb",
+          "bytes": 190052,
+          "sha256": "d0601f1eff31d5579ff43cdc7233c5834c5a2578338cb2c41215725c83e2c378",
+          "triangles": 6354,
+          "vertices": 5998,
+          "min": [
+            -0.04106149822473526,
+            -1.0449999570846558,
+            -0.08399999886751175
+          ],
+          "max": [
+            0.059592876583337784,
+            1.4600000381469727,
+            0.1535000056028366
+          ],
+          "dimensions": [
+            0.10065437480807304,
+            2.5049999952316284,
+            0.23750000447034836
+          ],
+          "steelOutwardVertices": 80,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/ming_guandao.blend",
+        "bytes": 184094,
+        "sha256": "872b503a8a429bfb3ae1ad480aa2c4b30c0416616990e20267e4eace7b8e666d"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/ming_guandao.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 2626,
+        "sha256": "b34e221ae61fde23c4173033c587436d5a3a4982c01e1d5d5a8626a66e394fe2"
+      }
+    },
+    {
+      "kind": "bow",
+      "hand": "left",
+      "length": 1.14,
+      "notes": "Laminated korean bow, shaped recurve, horn nocks, central handgrip, taut separate string",
+      "nock": [
+        0,
+        0,
+        -0.11200000000000002
+      ],
+      "id": "joseon_gakgung",
+      "faction": "joseon",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 8452,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.03799999877810478,
+        1.1637887954711914,
+        0.2439526617527008
+      ],
+      "lodTriangles": 7700,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_gakgung.glb",
+          "bytes": 179796,
+          "sha256": "bb462b4c943ad78b8e9c193617a1808263c260a74429703a5a193f46ef6dae00"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_gakgung_lod1.glb",
+          "bytes": 166264,
+          "sha256": "74686780f60452d975beb5dd2a30f4cf65d5db64f13a5b21f3b77bea27dd1e73"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\joseon_gakgung.blend",
+          "bytes": 207354,
+          "sha256": "22dd4236bf73e11226b282c6d98734a66313224aca38f1b1b27458eaaa679aed"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_joseon_gakgung.glb",
+          "bytes": 179796,
+          "sha256": "bb462b4c943ad78b8e9c193617a1808263c260a74429703a5a193f46ef6dae00",
+          "triangles": 8452,
+          "vertices": 5076,
+          "min": [
+            -0.01899999938905239,
+            -0.5818943977355957,
+            -0.14689016342163086
+          ],
+          "max": [
+            0.01899999938905239,
+            0.5818943977355957,
+            0.09706249833106995
+          ],
+          "dimensions": [
+            0.03799999877810478,
+            1.1637887954711914,
+            0.2439526617527008
+          ],
+          "steelOutwardVertices": 0,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_joseon_gakgung_lod1.glb",
+          "bytes": 166264,
+          "sha256": "74686780f60452d975beb5dd2a30f4cf65d5db64f13a5b21f3b77bea27dd1e73",
+          "triangles": 7700,
+          "vertices": 4700,
+          "min": [
+            -0.01899999938905239,
+            -0.5818943977355957,
+            -0.14689016342163086
+          ],
+          "max": [
+            0.01899999938905239,
+            0.5818943977355957,
+            0.09706249833106995
+          ],
+          "dimensions": [
+            0.03799999877810478,
+            1.1637887954711914,
+            0.2439526617527008
+          ],
+          "steelOutwardVertices": 0,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/joseon_gakgung.blend",
+        "bytes": 207354,
+        "sha256": "22dd4236bf73e11226b282c6d98734a66313224aca38f1b1b27458eaaa679aed"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/joseon_gakgung.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 5084,
+        "sha256": "ad3a786bbe91c0519111e0497c1f4bc762b1e8b8081823e4f59d11603ddac202"
+      }
+    },
+    {
+      "kind": "bow",
+      "hand": "left",
+      "length": 1.46,
+      "notes": "Laminated korean bow, shaped recurve, horn nocks, central handgrip, taut separate string",
+      "nock": [
+        0,
+        0,
+        -0.162
+      ],
+      "id": "joseon_janggunbow",
+      "faction": "joseon",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 8356,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.04192426800727844,
+        1.4837888479232788,
+        0.3305201679468155
+      ],
+      "lodTriangles": 7700,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_janggunbow.glb",
+          "bytes": 178072,
+          "sha256": "ae337570e02c3d16aaae4397a50530221cf9935122477636b436a0133f75cb29"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_janggunbow_lod1.glb",
+          "bytes": 166260,
+          "sha256": "2c5c3a9d05c97b40efcf79e398d2de9dff70a5e979a12338444095847f94e483"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\joseon_janggunbow.blend",
+          "bytes": 204941,
+          "sha256": "885e4a814053ebfb26b43d9997a49796f26adc542631e2be72262235cd66e05c"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_joseon_janggunbow.glb",
+          "bytes": 178072,
+          "sha256": "ae337570e02c3d16aaae4397a50530221cf9935122477636b436a0133f75cb29",
+          "triangles": 8356,
+          "vertices": 5028,
+          "min": [
+            -0.02096213400363922,
+            -0.7418944239616394,
+            -0.19845767319202423
+          ],
+          "max": [
+            0.02096213400363922,
+            0.7418944239616394,
+            0.13206249475479126
+          ],
+          "dimensions": [
+            0.04192426800727844,
+            1.4837888479232788,
+            0.3305201679468155
+          ],
+          "steelOutwardVertices": 0,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_joseon_janggunbow_lod1.glb",
+          "bytes": 166260,
+          "sha256": "2c5c3a9d05c97b40efcf79e398d2de9dff70a5e979a12338444095847f94e483",
+          "triangles": 7700,
+          "vertices": 4700,
+          "min": [
+            -0.02096213400363922,
+            -0.7418944239616394,
+            -0.19845829904079437
+          ],
+          "max": [
+            0.02096213400363922,
+            0.7418944239616394,
+            0.13206249475479126
+          ],
+          "dimensions": [
+            0.04192426800727844,
+            1.4837888479232788,
+            0.33052079379558563
+          ],
+          "steelOutwardVertices": 0,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/joseon_janggunbow.blend",
+        "bytes": 204941,
+        "sha256": "885e4a814053ebfb26b43d9997a49796f26adc542631e2be72262235cd66e05c"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/joseon_janggunbow.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 5254,
+        "sha256": "f7e4ce9a8f6e234bb4477c90672ec5d6cc6d1a4eba054eda914e44d31656e7b4"
+      }
+    },
+    {
+      "kind": "bow",
+      "hand": "left",
+      "length": 1.92,
+      "notes": "Laminated japanese bow, shaped recurve, horn nocks, central handgrip, taut separate string",
+      "nock": [
+        0,
+        0,
+        -0.13
+      ],
+      "id": "japan_yumi",
+      "faction": "japan",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 7900,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.03799999877810478,
+        1.9437888860702515,
+        0.26095449924468994
+      ],
+      "lodTriangles": 7700,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_yumi.glb",
+          "bytes": 170136,
+          "sha256": "00248e498d2f0a1de9b3ebc063943cac0db0d922ed148cac64aafa231d0e5bb8"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_yumi_lod1.glb",
+          "bytes": 166544,
+          "sha256": "936205e802db750e9c02239b89eba0b9b65123ecfe1a7051ea924f994f49c0fd"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\japan_yumi.blend",
+          "bytes": 199348,
+          "sha256": "5f7f062bbfcf353746c6fef610c2a1354b4ece7c08c01fdf45788c3dcf856950"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_japan_yumi.glb",
+          "bytes": 170136,
+          "sha256": "00248e498d2f0a1de9b3ebc063943cac0db0d922ed148cac64aafa231d0e5bb8",
+          "triangles": 7900,
+          "vertices": 4812,
+          "min": [
+            -0.01899999938905239,
+            -0.6518944501876831,
+            -0.1379999965429306
+          ],
+          "max": [
+            0.01899999938905239,
+            1.2918944358825684,
+            0.12295450270175934
+          ],
+          "dimensions": [
+            0.03799999877810478,
+            1.9437888860702515,
+            0.26095449924468994
+          ],
+          "steelOutwardVertices": 0,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_japan_yumi_lod1.glb",
+          "bytes": 166544,
+          "sha256": "936205e802db750e9c02239b89eba0b9b65123ecfe1a7051ea924f994f49c0fd",
+          "triangles": 7700,
+          "vertices": 4712,
+          "min": [
+            -0.01899999938905239,
+            -0.6518944501876831,
+            -0.1379999965429306
+          ],
+          "max": [
+            0.01899999938905239,
+            1.2918944358825684,
+            0.12295450270175934
+          ],
+          "dimensions": [
+            0.03799999877810478,
+            1.9437888860702515,
+            0.26095449924468994
+          ],
+          "steelOutwardVertices": 0,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/japan_yumi.blend",
+        "bytes": 199348,
+        "sha256": "5f7f062bbfcf353746c6fef610c2a1354b4ece7c08c01fdf45788c3dcf856950"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/japan_yumi.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 3952,
+        "sha256": "b5eaa01448cda9b3bed4c2b0613ea34b00bfeea6fe10e752afc0cf6cc71c00a7"
+      }
+    },
+    {
+      "kind": "bow",
+      "hand": "left",
+      "length": 1.7999999999999998,
+      "notes": "Laminated japanese bow, shaped recurve, horn nocks, central handgrip, taut separate string",
+      "nock": [
+        0,
+        0,
+        -0.15
+      ],
+      "id": "japan_shigeto",
+      "faction": "japan",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 7900,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.03799999877810478,
+        1.823788821697235,
+        0.26593850553035736
+      ],
+      "lodTriangles": 7700,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_shigeto.glb",
+          "bytes": 169332,
+          "sha256": "5ce6fe0927cc3b27ee0836639ea6c55078425f0f7e4400045bf6fb5cddba6ca8"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_shigeto_lod1.glb",
+          "bytes": 165736,
+          "sha256": "9c8778815e7683794290c3fb3ee5f8a609a0856175876069255d1678127ecf57"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\japan_shigeto.blend",
+          "bytes": 199856,
+          "sha256": "44ec81a6443702db8af24e126325f90ce577aebd56bad590f7475d4debac8ccf"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_japan_shigeto.glb",
+          "bytes": 169332,
+          "sha256": "5ce6fe0927cc3b27ee0836639ea6c55078425f0f7e4400045bf6fb5cddba6ca8",
+          "triangles": 7900,
+          "vertices": 4812,
+          "min": [
+            -0.01899999938905239,
+            -0.611894428730011,
+            -0.15800000727176666
+          ],
+          "max": [
+            0.01899999938905239,
+            1.2118943929672241,
+            0.1079384982585907
+          ],
+          "dimensions": [
+            0.03799999877810478,
+            1.823788821697235,
+            0.26593850553035736
+          ],
+          "steelOutwardVertices": 0,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_japan_shigeto_lod1.glb",
+          "bytes": 165736,
+          "sha256": "9c8778815e7683794290c3fb3ee5f8a609a0856175876069255d1678127ecf57",
+          "triangles": 7700,
+          "vertices": 4712,
+          "min": [
+            -0.01899999938905239,
+            -0.611894428730011,
+            -0.15800000727176666
+          ],
+          "max": [
+            0.01899999938905239,
+            1.2118943929672241,
+            0.1079384982585907
+          ],
+          "dimensions": [
+            0.03799999877810478,
+            1.823788821697235,
+            0.26593850553035736
+          ],
+          "steelOutwardVertices": 0,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/japan_shigeto.blend",
+        "bytes": 199856,
+        "sha256": "44ec81a6443702db8af24e126325f90ce577aebd56bad590f7475d4debac8ccf"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/japan_shigeto.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 4168,
+        "sha256": "574fce1b8d5e634f30aac380c0bccda4826aec6020881231dccd23e8bd6a47e3"
+      }
+    },
+    {
+      "kind": "bow",
+      "hand": "left",
+      "length": 1.44,
+      "notes": "Laminated chinese bow, shaped recurve, horn nocks, central handgrip, taut separate string",
+      "nock": [
+        0,
+        0,
+        -0.163
+      ],
+      "id": "ming_gong",
+      "faction": "ming",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 8548,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.03994122892618179,
+        1.4637888669967651,
+        0.3555926978588104
+      ],
+      "lodTriangles": 7700,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_gong.glb",
+          "bytes": 180692,
+          "sha256": "25886262232a7e8abb23f7c40632c1d59397db4f1ac03bb42888dfc17b948d00"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_gong_lod1.glb",
+          "bytes": 165424,
+          "sha256": "466b1e4efddb2f050be836a01dc8880fdd200b07f1af14299356b9063fcb6af1"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\ming_gong.blend",
+          "bytes": 206873,
+          "sha256": "1fc696ecf41bbb178f0b84e55f8ddab3f2a38f6e587c8401af3f6cdacebfc36f"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_ming_gong.glb",
+          "bytes": 180692,
+          "sha256": "25886262232a7e8abb23f7c40632c1d59397db4f1ac03bb42888dfc17b948d00",
+          "triangles": 8548,
+          "vertices": 5124,
+          "min": [
+            -0.019970614463090897,
+            -0.7318944334983826,
+            -0.20806095004081726
+          ],
+          "max": [
+            0.019970614463090897,
+            0.7318944334983826,
+            0.14753174781799316
+          ],
+          "dimensions": [
+            0.03994122892618179,
+            1.4637888669967651,
+            0.3555926978588104
+          ],
+          "steelOutwardVertices": 0,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_ming_gong_lod1.glb",
+          "bytes": 165424,
+          "sha256": "466b1e4efddb2f050be836a01dc8880fdd200b07f1af14299356b9063fcb6af1",
+          "triangles": 7700,
+          "vertices": 4700,
+          "min": [
+            -0.019970614463090897,
+            -0.7318944334983826,
+            -0.20806095004081726
+          ],
+          "max": [
+            0.019970614463090897,
+            0.7318944334983826,
+            0.14753174781799316
+          ],
+          "dimensions": [
+            0.03994122892618179,
+            1.4637888669967651,
+            0.3555926978588104
+          ],
+          "steelOutwardVertices": 0,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/ming_gong.blend",
+        "bytes": 206873,
+        "sha256": "1fc696ecf41bbb178f0b84e55f8ddab3f2a38f6e587c8401af3f6cdacebfc36f"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/ming_gong.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 5114,
+        "sha256": "214dad03a6b1eddfa9f04d0bbf9ef303fc80b4dca76977dc71b76c99d0b11261"
+      }
+    },
+    {
+      "kind": "bow",
+      "hand": "left",
+      "length": 1.02,
+      "notes": "Laminated chinese bow, shaped recurve, horn nocks, central handgrip, taut separate string",
+      "nock": [
+        0,
+        0,
+        -0.123
+      ],
+      "id": "ming_shaogong",
+      "faction": "ming",
+      "grip": [
+        0,
+        0,
+        0
+      ],
+      "up": "+Y",
+      "forward": "+Z",
+      "triangles": 8548,
+      "author": "OpenAI Codex - original procedural mesh authored for imjin",
+      "license": "Project-owned original geometry; no third-party meshes or textures",
+      "blenderVersion": "5.2.1 LTS",
+      "dimensionsMeters": [
+        0.03799999877810478,
+        1.0437889099121094,
+        0.27916909009218216
+      ],
+      "lodTriangles": 7700,
+      "files": [
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_shaogong.glb",
+          "bytes": 180716,
+          "sha256": "158467d5a5a23d5f9d51613159894e97ae83db139eb06f2222796fee141b1d39"
+        },
+        {
+          "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_shaogong_lod1.glb",
+          "bytes": 165452,
+          "sha256": "aadf7533c610c47276ea27449c6cd51dc4b9e8df379ca428a07dd94a31d99cfc"
+        },
+        {
+          "path": "F:\\codex-work\\imjin\\weapon-production\\ming_shaogong.blend",
+          "bytes": 206811,
+          "sha256": "7efceed30ecb1a458646e2aef5e1734d7c58e41ccd476d1c6cbf79b9fe5f2082"
+        }
+      ],
+      "verifiedLevels": [
+        {
+          "suffix": "",
+          "path": "public/models/generals/parts/weapon_ming_shaogong.glb",
+          "bytes": 180716,
+          "sha256": "158467d5a5a23d5f9d51613159894e97ae83db139eb06f2222796fee141b1d39",
+          "triangles": 8548,
+          "vertices": 5124,
+          "min": [
+            -0.01899999938905239,
+            -0.5218944549560547,
+            -0.16668733954429626
+          ],
+          "max": [
+            0.01899999938905239,
+            0.5218944549560547,
+            0.1124817505478859
+          ],
+          "dimensions": [
+            0.03799999877810478,
+            1.0437889099121094,
+            0.27916909009218216
+          ],
+          "steelOutwardVertices": 0,
+          "steelInwardVertices": 0
+        },
+        {
+          "suffix": "_lod1",
+          "path": "public/models/generals/parts/weapon_ming_shaogong_lod1.glb",
+          "bytes": 165452,
+          "sha256": "aadf7533c610c47276ea27449c6cd51dc4b9e8df379ca428a07dd94a31d99cfc",
+          "triangles": 7700,
+          "vertices": 4700,
+          "min": [
+            -0.01899999938905239,
+            -0.5218944549560547,
+            -0.16668733954429626
+          ],
+          "max": [
+            0.01899999938905239,
+            0.5218944549560547,
+            0.1124817505478859
+          ],
+          "dimensions": [
+            0.03799999877810478,
+            1.0437889099121094,
+            0.27916909009218216
+          ],
+          "steelOutwardVertices": 0,
+          "steelInwardVertices": 0
+        }
+      ],
+      "editableSource": {
+        "path": "assets-src/generals-weapons-2026-10-17/ming_shaogong.blend",
+        "bytes": 206811,
+        "sha256": "7efceed30ecb1a458646e2aef5e1734d7c58e41ccd476d1c6cbf79b9fe5f2082"
+      },
+      "thumbnail": {
+        "path": "public/ui/weapons/ming_shaogong.webp",
+        "width": 512,
+        "height": 512,
+        "bytes": 5176,
+        "sha256": "01466f899466395138aa270b05ae13e864534d36f14b8f164cd29c7c6f1f06dd"
+      }
+    }
+  ],
+  "verification": {
+    "performed": "2026-10-16T19:14:57.178Z",
+    "script": "scripts/pack-general-weapons.mjs",
+    "results": "18 distinct high/LOD geometry pairs; axis, grip sockets, finite vertices/normals, outward steel face normals, topology budgets, bow nocks, zero external texture sources; 512x512 thumbnail and editable blend archived for all"
+  }
+}

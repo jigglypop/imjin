@@ -1,0 +1,106 @@
+{
+  "kind": "spear",
+  "hand": "right",
+  "length": 2.395,
+  "notes": "Solid tapered hardwood pole, ridged bevel head, separate socket, hand binding, butt spike; cross",
+  "id": "japan_jumonjiyari",
+  "faction": "japan",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 4308,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.041999999433755875,
+    2.3949999809265137,
+    0.3409999907016754
+  ],
+  "lodTriangles": 4308,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_jumonjiyari.glb",
+      "bytes": 155168,
+      "sha256": "451218d0cfd2c29f2c14d2a4f01d14e93506a8c2cb01f9e0ba5f0664a9fdcbca"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_jumonjiyari_lod1.glb",
+      "bytes": 155172,
+      "sha256": "c4696043f8bbf2799d2fe8b599972703093de96c416814bcafb7c427f58fdc76"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\japan_jumonjiyari.blend",
+      "bytes": 160556,
+      "sha256": "dac074ee07e86563d462e70a3ce9e26e622857d27e70693986645f909a79bae5"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_japan_jumonjiyari.glb",
+      "bytes": 155168,
+      "sha256": "451218d0cfd2c29f2c14d2a4f01d14e93506a8c2cb01f9e0ba5f0664a9fdcbca",
+      "triangles": 4308,
+      "vertices": 5088,
+      "min": [
+        -0.020999999716877937,
+        -1.024999976158142,
+        -0.1704999953508377
+      ],
+      "max": [
+        0.020999999716877937,
+        1.3700000047683716,
+        0.1704999953508377
+      ],
+      "dimensions": [
+        0.041999999433755875,
+        2.3949999809265137,
+        0.3409999907016754
+      ],
+      "steelOutwardVertices": 168,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_japan_jumonjiyari_lod1.glb",
+      "bytes": 155172,
+      "sha256": "c4696043f8bbf2799d2fe8b599972703093de96c416814bcafb7c427f58fdc76",
+      "triangles": 4308,
+      "vertices": 5088,
+      "min": [
+        -0.020999999716877937,
+        -1.024999976158142,
+        -0.1704999953508377
+      ],
+      "max": [
+        0.020999999716877937,
+        1.3700000047683716,
+        0.1704999953508377
+      ],
+      "dimensions": [
+        0.041999999433755875,
+        2.3949999809265137,
+        0.3409999907016754
+      ],
+      "steelOutwardVertices": 168,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/japan_jumonjiyari.blend",
+    "bytes": 160556,
+    "sha256": "dac074ee07e86563d462e70a3ce9e26e622857d27e70693986645f909a79bae5"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/japan_jumonjiyari.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 2556,
+    "sha256": "9488fe7c8792fb6fb68b8b17203f4ed5c3879b8d9d38e5cca906c7d898529202"
+  }
+}

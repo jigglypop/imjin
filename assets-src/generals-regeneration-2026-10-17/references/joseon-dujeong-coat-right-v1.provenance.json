@@ -1,0 +1,33 @@
+{
+  "schema": "imjin.reference-image.v1",
+  "createdAt": "2026-10-16T19:28:29.735Z",
+  "tool": "builtin-image_gen",
+  "mode": "reference-conditioned-generation",
+  "prompt": "Use case: product-mockup. Asset type: single orthographic RIGHT-SIDE reference for the SAME modular historical armor coat.\nInput image 1 is the approved FRONT design; input image 2 is its approved BACK. Match them exactly; render a new camera angle, not a new design.\nRender exactly this EMPTY muted oxblood-red Joseon dujeong coat from the wearer's RIGHT side, strict 90-degree profile. The invisible wearer's FRONT WOULD FACE THE LEFT EDGE OF THE PICTURE. The coat's front closure/belt buckle/front skirt split is therefore on the LEFT-facing edge; the plain closed back with center-back seam is on the RIGHT-facing edge. Keep those anatomical sides exact.\nThe coat stays in the EXACT same T pose as the references: sleeves straight horizontally out to its sides at shoulder height, never forwards. The camera looks along the arm axis, so the NEAR RIGHT SLEEVE IS SEEN END-ON as a hollow DARK ROUND OPEN CUFF in front of its shoulder; sleeve length foreshortens toward camera and the far sleeve is hidden. Do not display two long sleeves across the image and do not point a sleeve toward either edge.\nPreserve the exact red woven cloth, regular rectangular grid of small aged brass rivets, dark near-black bindings around collar/cuffs/shoulder joins/hem, plain dark leather waist belt, SAME long flared skirt and black-edged side split. Keep the proper side thickness/volume. The upper opening is a short empty collar, no head. Skirt ends are fabric panels, never legs.\nOnly the EMPTY COAT. NO person, mannequin, body, head, face, neck, hands, skin, hair, trousers, legs, boots, helmet, weapon, hanger, support or stand.\nComposition: square 1254x1254 pixels, orthographic pure side view, no perspective, no 3/4 turn. Keep the exact FRONT reference product scale: collar top y170, shoulders y260, foreshortened cuff center y300, belt center y515, lowest hem y1015. DO NOT extend skirt below y1025. Center the whole side profile around x627 with broad grey space at left and right. Same flat neutral-grey seamless background, soft diffuse even light, no floor line, no cast shadow. Photographic detailed game production reference. No writing, labels, arrows, border or watermark.",
+  "references": [
+    "joseon-dujeong-coat-front-v2.png",
+    "joseon-dujeong-coat-back-v1.png"
+  ],
+  "generatedSourcePath": "C:/Users/dongh/.codex/generated_images/01a1461e-b3b1-7322-a6cd-3a8617798768/exec-23ce71b1-87c5-4215-ab69-445b958bc447.png",
+  "output": "joseon-dujeong-coat-right-v1.png",
+  "review": {
+    "status": "visually-reviewed-candidate-parent-selects",
+    "angle": "right",
+    "frontDirection": "image-left",
+    "checks": [
+      "Pure anatomical side profile",
+      "Near sleeve seen end-on with hollow empty cuff",
+      "No person/head/skin/mannequin/boots/weapons/stand",
+      "Same red cloth, brass grid, dark trim and waistbelt"
+    ],
+    "approximateLandmarkPixels": {
+      "collarTop": 160,
+      "cuffCenter": 285,
+      "beltCenter": 515,
+      "hem": 1048
+    },
+    "remainingDifference": "Side hem extends 33 pixels below front/back reference. Parent selects provider views after inspecting this candidate.",
+    "limitation": "Reference images alone do not prove 3D consensus or fit."
+  },
+  "newMeshyPaidSubmission": false
+}

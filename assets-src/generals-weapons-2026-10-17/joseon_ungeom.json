@@ -1,0 +1,106 @@
+{
+  "kind": "sword",
+  "hand": "right",
+  "length": 1.07,
+  "notes": "Straight double edge with ridge, cast guard and brass inlay",
+  "id": "joseon_ungeom",
+  "faction": "joseon",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 4744,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.10245999693870544,
+    1.2950253188610077,
+    0.1373399943113327
+  ],
+  "lodTriangles": 4744,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_ungeom.glb",
+      "bytes": 167176,
+      "sha256": "b5a5ea7d1e4113157810cdaae7bf811d8256bf87a13e8c521dc2f876383ac694"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_ungeom_lod1.glb",
+      "bytes": 167180,
+      "sha256": "7d4ee57fe01689d50a562ce4b0d9ba5bcb959829fc35c84f4f324581203d7f3b"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\joseon_ungeom.blend",
+      "bytes": 159154,
+      "sha256": "a7bd2b44bb37662a615e0d1efa82cd85d5363c85cd54639c19a18c768a663e3b"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_joseon_ungeom.glb",
+      "bytes": 167176,
+      "sha256": "b5a5ea7d1e4113157810cdaae7bf811d8256bf87a13e8c521dc2f876383ac694",
+      "triangles": 4744,
+      "vertices": 5480,
+      "min": [
+        -0.05122999846935272,
+        -0.3008253276348114,
+        -0.06866999715566635
+      ],
+      "max": [
+        0.05122999846935272,
+        0.9941999912261963,
+        0.06866999715566635
+      ],
+      "dimensions": [
+        0.10245999693870544,
+        1.2950253188610077,
+        0.1373399943113327
+      ],
+      "steelOutwardVertices": 168,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_joseon_ungeom_lod1.glb",
+      "bytes": 167180,
+      "sha256": "7d4ee57fe01689d50a562ce4b0d9ba5bcb959829fc35c84f4f324581203d7f3b",
+      "triangles": 4744,
+      "vertices": 5480,
+      "min": [
+        -0.05122999846935272,
+        -0.3008253276348114,
+        -0.06866999715566635
+      ],
+      "max": [
+        0.05122999846935272,
+        0.9941999912261963,
+        0.06866999715566635
+      ],
+      "dimensions": [
+        0.10245999693870544,
+        1.2950253188610077,
+        0.1373399943113327
+      ],
+      "steelOutwardVertices": 168,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/joseon_ungeom.blend",
+    "bytes": 159154,
+    "sha256": "a7bd2b44bb37662a615e0d1efa82cd85d5363c85cd54639c19a18c768a663e3b"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/joseon_ungeom.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 2426,
+    "sha256": "0228ef5314526a7d0058f65fed43718a963f978665ae7ca4c83d2c59715ed283"
+  }
+}

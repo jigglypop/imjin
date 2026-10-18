@@ -11,9 +11,10 @@
 // the others come from text. Output: portrait_<id>.webp (768) and portrait_<id>_sm.webp (192).
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import sharp from 'sharp';
 
+const rawPath = (id) => join(RAW, `${id}.webp`);
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const ENV = [join(ROOT, '.env'), 'C:/dev/imjin/.env'].find((p) => existsSync(p));
 if (ENV) process.loadEnvFile(ENV);
@@ -28,7 +29,7 @@ const FORCE = args.includes('--force');
 const CONVERT_ONLY = args.includes('--convert');
 const ONLY = opt('only', '').split(',').filter(Boolean);
 const NOTE = opt('note', '');
-const MODEL = 'gpt-image-2.5-sunburst';
+const MODEL = opt('model', 'gpt-image-2.5-sunburst');
 const SIZE = '1024x1024';
 const QUALITY = 'high';
 // USD per million tokens, the gpt-image-2 list prices; the 2.5 preview is not priced publicly, so totals are estimates.
@@ -61,6 +62,12 @@ const WHO = {
   iyeongnam: JOSEON + 'Yi Yeong-nam, Yulpo commander, about forty, lean tanned earnest face, light moustache and short beard, resolute eyes; iron tugu helmet with a red plume, dull-green brigandine.',
   chenlin: 'Late-Ming Chinese costume: Chen Lin, naval commissioner in his fifties, broad imposing face, full long dark beard, arrogant heavy-lidded eyes and a raised chin; rounded Ming steel helmet with a thick red tassel and a short back flap, brick-red cotton brigandine with rows of brass studs, a dark red official cloak collar.',
   deng: 'Late-Ming Chinese costume: Deng Zilong, over seventy, lean deeply lined face, a long white beard, fierce unbowed eyes; rounded Ming steel helmet with a red tassel, weathered rust-red brigandine over pale grey cloth.',
+  lirusong: "'Late-Ming Chinese costume: Li Rusong, Ming commander-in-chief of the 1592-93 expedition, about forty-four, of Liaodong frontier stock, a strong square face with high cheekbones, a full black moustache and a short thick beard, proud commanding eyes; rounded Ming steel helmet with a tall spike and a thick red tassel, dark iron lamellar cuirass under a crimson general's cloak with a small gilt chest mirror.",
+  magui: "'Late-Ming Chinese costume: Ma Gui, Ming commander-in-chief of 1597, about fifty-four, of a Hui Muslim frontier family from Datong, a long weathered face with a prominent nose, a grey-streaked full beard, hard experienced eyes; rounded Ming helmet with a red tassel and neck flaps, dark iron mountain-pattern scale armour with a deep blue cloak collar.",
+  liuting: "'Late-Ming Chinese costume: Liu Ting, Ming general of the western route in 1598, about forty, a huge burly man with a broad heavy face, thick black beard, fierce bold eyes; rounded Ming steel helmet with a red tassel, heavy black iron lamellar armour over a dark red war robe, the haft of a great iron blade glimpsed over one shoulder.",
+  jijin: "'Late-Ming Chinese costume: Ji Jin, Ming naval guerrilla commander from Zhejiang who fought at Noryang, about forty-five, a lean sun-darkened sailor's face, a thin moustache and a short wispy beard, alert narrow eyes; simple low Ming iron helmet with a small red tassel, faded blue padded cotton armour with brass studs, salt-stained.",
+  yanghao: "'Late-Ming Chinese costume: Yang Hao, Ming civil official and grand coordinator of the Korean campaign in 1597, about fifty, a pale scholarly long face, a neat long thin black beard, stern self-assured eyes; black Ming official's gauze hat with side wings, a dark crimson official robe with a square embroidered rank badge on the chest, a light mail collar showing beneath it, no helmet.",
+  wuweizhong: "'Late-Ming Chinese costume: Wu Weizhong, Ming guerrilla general from Yiwu in Zhejiang who led Qi Jiguang-trained southern infantry at Pyongyang, about fifty, a compact hard southern face, a short black-grey beard, steady disciplined eyes, a fresh bandaged wound near the collarbone; plain round iron helmet with a small red tassel, worn dark-blue padded cotton armour with rows of iron studs.",
   shimazu: 'Sengoku Japanese costume: Shimazu Yoshihiro, Satsuma lord in his late fifties, strong battle-hardened face, grey moustache and short beard, heavy-lidded fearless eyes; black iron kabuto with a plain low crest, black lacquer lamellar cuirass under an off-white jinbaori surcoat bearing a small black cross-in-circle mon, the same mon on a white banner blurred behind.',
   konishi: "Sengoku Japanese costume: Konishi Yukinaga, about forty, thoughtful long face, small thin moustache, shrewd measured eyes, a merchant's calculating calm; black kabuto with a restrained crest, charcoal-purple lacquer cuirass, a small plain wooden cross hanging at the collar, a banner with a plain paulownia-style mon blurred behind.",
   wakisaka: 'Sengoku Japanese costume: Wakisaka Yasuharu, naval daimyo in his late thirties, sharp lean face, thin moustache, cool confident eyes; dark blue-black lacquer cuirass with modest gold detail, kabuto with a modest gilded crest, entirely inside the frame.',
@@ -75,14 +82,17 @@ const WHO = {
 };
 // Existing castings used as the face reference; michiyuki takes his brother's.
 const REF = { admiral: 'admiral', japan: 'japan', yi: 'yi', won: 'won', eokgi: 'eokgi', kwon: 'kwon', eo: 'eo', jeongun: 'jeongun', anwi: 'anwi', chenlin: 'chenlin', deng: 'deng', shimazu: 'shimazu', konishi: 'konishi', wakisaka: 'wakisaka', kurushima: 'kurushima', michiyuki: 'kurushima', todo: 'todo', kato: 'kato', kuki: 'kuki' };
-const ORDER = ['admiral', 'japan', 'yi', 'won', 'eokgi', 'kwon', 'eo', 'jeongun', 'anwi', 'baeseol', 'songhuirip', 'iwan', 'kimwan', 'nadaeyong', 'iyeongnam', 'chenlin', 'deng', 'shimazu', 'konishi', 'wakisaka', 'kurushima', 'michiyuki', 'todo', 'kato', 'kuki', 'tachibana'];
+const ORDER = ['admiral', 'japan', 'yi', 'won', 'eokgi', 'kwon', 'eo', 'jeongun', 'anwi', 'baeseol', 'songhuirip', 'iwan', 'kimwan', 'nadaeyong', 'iyeongnam', 'chenlin', 'deng', 'lirusong', 'magui', 'liuting', 'jijin', 'yanghao', 'wuweizhong', 'shimazu', 'konishi', 'wakisaka', 'kurushima', 'michiyuki', 'todo', 'kato', 'kuki', 'tachibana'];
 
 // The earlier castings (once public/ui/portraits/*.jpg) are kept beside the raws as the face references.
-const refPath = (id) => (REF[id] ? join(SRC, 'ref', `portrait_${REF[id]}.jpg`) : null);
+// Casts with no earlier casting take a finished portrait of the same navy as a style reference only.
+const STYLE_REF = { lirusong: 'chenlin', magui: 'deng', liuting: 'chenlin', jijin: 'deng', yanghao: 'chenlin', wuweizhong: 'deng' };
+const STYLE_NOTE =
+  'The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man: do not reuse his face, beard or costume. ';
+const refPath = (id) => (REF[id] ? join(SRC, 'ref', `portrait_${REF[id]}.jpg`) : STYLE_REF[id] ? rawPath(STYLE_REF[id]) : null);
 // The raws are kept as high-quality webp (a 1024 px PNG is 1.7 MB) so the sources stay in the repository.
-const rawPath = (id) => join(RAW, `${id}.webp`);
 const promptOf = (id) =>
-  (refPath(id) ? REF_NOTE + (id === 'michiyuki' ? 'The reference is his younger brother; make them clearly brothers, not the same man. ' : '') : '') + STYLE + WHO[id];
+  (STYLE_REF[id] ? STYLE_NOTE : '') + (REF[id] ? REF_NOTE + (id === 'michiyuki' ? 'The reference is his younger brother; make them clearly brothers, not the same man. ' : '') : '') + STYLE + WHO[id];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const headers = () => ({ Authorization: `Bearer ${process.env.OPENAI_API_KEY}` });
 
@@ -109,7 +119,7 @@ function finish(prov) {
 async function generate(id, prov) {
   const prompt = promptOf(id);
   const ref = refPath(id);
-  const entry = { id, endpoint: ref ? 'images/edits' : 'images/generations', model: MODEL, prompt, reference: ref ? `assets-src/commanders-2026-10-16/ref/portrait_${REF[id]}.jpg` : null, size: SIZE, quality: QUALITY, requestedAt: new Date().toISOString(), note: NOTE || undefined };
+  const entry = { id, endpoint: ref ? 'images/edits' : 'images/generations', model: MODEL, prompt, reference: ref ? relative(ROOT, ref).replaceAll('\\', '/') : null, size: SIZE, quality: QUALITY, requestedAt: new Date().toISOString(), note: NOTE || undefined };
   let lastErr;
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
@@ -117,7 +127,7 @@ async function generate(id, prov) {
       if (ref) {
         const form = new FormData();
         form.set('model', MODEL); form.set('prompt', prompt); form.set('size', SIZE); form.set('quality', QUALITY); form.set('n', '1'); form.set('output_format', 'png');
-        form.set('image', new Blob([await readFile(ref)], { type: 'image/jpeg' }), 'reference.jpg');
+        form.set('image', new Blob([await readFile(ref)], { type: ref.endsWith('.webp') ? 'image/webp' : 'image/jpeg' }), ref.endsWith('.webp') ? 'reference.webp' : 'reference.jpg');
         res = await fetch('https://api.openai.com/v1/images/edits', { method: 'POST', headers: headers(), body: form });
       } else {
         res = await fetch('https://api.openai.com/v1/images/generations', {

@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-16T16:49:13.727Z",
+  "image": {
+    "model": "gpt-image-2.5-sunburst",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "The attached picture is the front view of a character reference for image-to-3D reconstruction. Make the matching view of the exact same man in the exact same costume and the exact same pose, seen exactly from his left side in strict profile, at the same height and scale and position in the frame. The profile shows a perfectly upright man: the neck vertical, the ear above the shoulder, the head stacked over the spine with no forward lean, the back straight and flat with no hump, the chest out; the beard hangs straight DOWN along the front of the throat and chest, it never juts forward; his arms and fists exactly as in the front view. Same soft, even, flat studio light and the same plain seamless very light grey background, no floor line, no shadow. Everything consistent with the front view: colours, materials, trims, lengths, proportions. No text, no letters, no logo, no border. No painting or illustration look, no plastic CGI look.",
+  "refs": [
+    "assets-src/generals-hero-2026-10-17/yi_yi_tongjesa_front_t.png"
+  ],
+  "usage": {
+    "input_tokens": 1736,
+    "input_tokens_details": {
+      "image_tokens": 1521,
+      "text_tokens": 215
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 7666
+  }
+}

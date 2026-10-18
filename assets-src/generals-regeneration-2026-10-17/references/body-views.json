@@ -1,0 +1,57 @@
+{
+  "purpose": "Four newly generated consistent body references for the approved Meshy pilot; no existing geometry used.",
+  "generatedWith": "built-in image_gen.imagegen only",
+  "ordering": [
+    "front",
+    "back",
+    "left",
+    "right"
+  ],
+  "views": [
+    {
+      "view": "front",
+      "image": "body-front-v1.png",
+      "provenance": "body-front-v1.provenance.json",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1613787,
+      "sha256": "db05ea757cdc98c183694c711f1f8d49df94ba962bf61f4ec9d935200bda5476"
+    },
+    {
+      "view": "back",
+      "image": "body-back-v1.png",
+      "provenance": "body-back-v1.provenance.json",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1658329,
+      "sha256": "e7c6a397b781b7a80c236b8a7d15920f0cd28f427018e10ea3173930ff13c51d"
+    },
+    {
+      "view": "left",
+      "image": "body-left-v1.png",
+      "provenance": "body-left-v1.provenance.json",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1621101,
+      "sha256": "d1e58e2bc2f3c23e1cd654e2d295c1716c733ae333db45b49f2325e9f262ab4e"
+    },
+    {
+      "view": "right",
+      "image": "body-right-v1.png",
+      "provenance": "body-right-v1.provenance.json",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1610364,
+      "sha256": "fbcd01049743bc421b2ca255b80ee9c8db2c1d1e211d6bb64fe349c663a3bdb4"
+    }
+  ],
+  "visualReview": {
+    "status": "reference-selected-not-3d-accepted",
+    "rearFaceCount": 0,
+    "sideProjection": "Near arm end-on at shoulder; far arm hidden. Left faces image right; right faces image left.",
+    "limitations": [
+      "Images approximate one consistent fixed body but are not renders of one proven 3D mesh.",
+      "New 3D topology, actual anatomy, rear face absence and rig deformation still require inspection."
+    ]
+  }
+}

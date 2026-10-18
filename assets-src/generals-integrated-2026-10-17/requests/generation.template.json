@@ -1,0 +1,21 @@
+{
+  "image_urls": [
+    "${DATA_URI:references/general-unarmed-front-v2.png}",
+    "${DATA_URI:references/general-unarmed-back-v2.png}",
+    "${DATA_URI:references/general-unarmed-left-v2.png}"
+  ],
+  "ai_model": "meshy-7.1",
+  "geometry_resolution": "2k",
+  "should_remesh": true,
+  "topology": "triangle",
+  "target_polycount": 220000,
+  "should_texture": true,
+  "enable_pbr": true,
+  "texture_resolution": "4k",
+  "image_enhancement": false,
+  "remove_lighting": true,
+  "auto_size": false,
+  "save_pre_remeshed_model": true,
+  "target_formats": ["glb"],
+  "multi_view_thumbnails": true
+}

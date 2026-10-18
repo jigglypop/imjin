@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:39:45.997Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Sebastiano Venier, Captain-General of Venice, seventy-five. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Sebastiano Venier, Captain-General of Venice, seventy-five: a fierce, gaunt old Venetian face, a long full white beard and white moustache, a bald crown with white hair at the sides, piercing hard eyes), in the costume of: Faction look: a commander of the Holy League fleet at Lepanto, 1571, as in the paintings of Titian, Veronese and Tintoretto and big-budget Renaissance war films: The Venetian commander as in Tintoretto's portrait: a polished steel full armour with plain gilt edges (breastplate, pauldrons, vambraces, tassets), a crimson velvet sash, crimson hose; bareheaded. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_venier.webp"
+  ],
+  "estimatedUsd": 0.04
+}

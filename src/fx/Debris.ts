@@ -3,18 +3,33 @@ import {
   Color,
   CylinderGeometry,
   DoubleSide,
-  DynamicDrawUsage,
   Euler,
   Group,
   InstancedMesh,
   Matrix4,
   MeshStandardNodeMaterial,
   PlaneGeometry,
+  StaticDrawUsage,
   Quaternion,
   Vector3,
   type BufferGeometry,
 } from 'three/webgpu';
+import { float, fract, mix, mx_noise_float, positionGeometry, smoothstep, vec3 } from 'three/tsl';
 import { waveField } from '../ocean/waves';
+
+/**
+ * Wood grain drawn in the shader from the piece's own model position, so no texture is loaded: long streaks along the
+ * piece's length (local x) with warped growth rings across it, and a fine fibre noise. Returns a colour node.
+ */
+function woodGrain(r: number, g: number, b: number, rings: number) {
+  const p = positionGeometry;
+  const warp = mx_noise_float(p.mul(vec3(0.8, 4, 4))).mul(1.4);
+  const ring = fract(p.y.mul(rings).add(p.z.mul(rings * 0.45)).add(warp));
+  const band = smoothstep(0.0, 0.25, ring).mul(smoothstep(1.0, 0.55, ring));
+  const fibre = mx_noise_float(p.mul(vec3(1.5, 70, 70))).mul(0.5).add(0.5);
+  const shade = mix(float(0.55), float(1.2), band).mul(mix(float(0.85), float(1.08), fibre));
+  return vec3(r, g, b).mul(shade);
+}
 
 /** Pieces of broken ship. Long pieces are modelled along their local x axis. */
 export const Piece = { Plank: 0, Splinter: 1, Chunk: 2, Mast: 3, Spar: 4, Sail: 5, Beam: 6, Barrel: 7 } as const;
@@ -106,21 +121,24 @@ export class DebrisField {
     spar.rotateZ(Math.PI / 2);
     const sail = new PlaneGeometry(1, 1);
     sail.rotateX(-Math.PI / 2);
-    const specs: { geo: BufferGeometry; color: [number, number, number]; rough: number; side?: boolean }[] = [
-      { geo: lay(new BoxGeometry(1, 0.12, 0.26)), color: [0.2, 0.13, 0.075], rough: 0.9 },
-      { geo: lay(new BoxGeometry(1, 0.05, 0.09)), color: [0.42, 0.3, 0.17], rough: 0.85 },
-      { geo: lay(new BoxGeometry(0.5, 0.3, 0.4)), color: [0.045, 0.036, 0.03], rough: 1 },
-      { geo: mast, color: [0.24, 0.155, 0.09], rough: 0.85 },
-      { geo: spar, color: [0.3, 0.2, 0.12], rough: 0.85 },
-      { geo: sail, color: [0.7, 0.62, 0.46], rough: 1, side: true },
-      { geo: lay(new BoxGeometry(1, 0.3, 0.45)), color: [0.17, 0.11, 0.065], rough: 0.9 },
-      { geo: new CylinderGeometry(0.35, 0.32, 0.8, 8), color: [0.2, 0.13, 0.08], rough: 0.8 },
+    // `rings`: growth rings per metre of the unit geometry across the grain (0 = no grain: cloth, charred lumps).
+    const specs: { geo: BufferGeometry; color: [number, number, number]; rough: number; rings: number; side?: boolean }[] = [
+      { geo: lay(new BoxGeometry(1, 0.12, 0.26)), color: [0.25, 0.165, 0.095], rough: 0.9, rings: 18 },
+      { geo: lay(new BoxGeometry(1, 0.05, 0.09)), color: [0.42, 0.3, 0.17], rough: 0.85, rings: 40 },
+      { geo: lay(new BoxGeometry(0.5, 0.3, 0.4)), color: [0.045, 0.036, 0.03], rough: 1, rings: 0 },
+      { geo: mast, color: [0.26, 0.17, 0.1], rough: 0.85, rings: 14 },
+      { geo: spar, color: [0.32, 0.21, 0.125], rough: 0.85, rings: 18 },
+      { geo: sail, color: [0.7, 0.62, 0.46], rough: 1, rings: 0, side: true },
+      { geo: lay(new BoxGeometry(1, 0.3, 0.45)), color: [0.22, 0.145, 0.085], rough: 0.9, rings: 16 },
+      { geo: new CylinderGeometry(0.35, 0.32, 0.8, 8), color: [0.2, 0.13, 0.08], rough: 0.8, rings: 0 },
     ];
     for (const s of specs) {
       const mat = new MeshStandardNodeMaterial({ color: new Color(s.color[0], s.color[1], s.color[2]), roughness: s.rough, metalness: 0 });
+      if (s.rings > 0) mat.colorNode = woodGrain(s.color[0], s.color[1], s.color[2], s.rings);
       if (s.side) mat.side = DoubleSide;
       const mesh = new InstancedMesh(s.geo, mat, cap);
-      mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+      // Written by range each frame (only the pieces alive), so the buffer is not reallocated as dynamic.
+      mesh.instanceMatrix.setUsage(StaticDrawUsage);
       mesh.count = 0;
       mesh.frustumCulled = false;
       mesh.castShadow = false;
@@ -242,7 +260,13 @@ export class DebrisField {
     }
     for (let k = 0; k < KINDS; k += 1) {
       const mesh = this.meshes[k]!;
-      mesh.count = this.counts[k]!;
+      const n = this.counts[k]!;
+      const was = mesh.count;
+      mesh.count = n;
+      mesh.visible = n > 0;
+      if (n === 0 && was === 0) continue;
+      mesh.instanceMatrix.clearUpdateRanges();
+      mesh.instanceMatrix.addUpdateRange(0, Math.max(16, n * 16));
       mesh.instanceMatrix.needsUpdate = true;
     }
   }

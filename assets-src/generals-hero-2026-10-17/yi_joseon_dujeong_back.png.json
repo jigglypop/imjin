@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-16T15:44:36.468Z",
+  "image": {
+    "model": "gpt-image-2.5-sunburst",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "The attached picture is the front view of a character reference for image-to-3D reconstruction. Make the matching back view: the exact same man in the exact same costume, seen from directly behind, in the same strict T-pose with the arms level and the fists clenched, at exactly the same scale, height and position in the frame, with the same soft flat studio light and the same plain very light grey background. Show the back of the helmet and its neck curtain, the plume falling close behind the helmet, the back of the coat with the same rivet pattern continuing around, the back of the belt, the coat skirts split at the back, the backs of the boots, and the backs of his fists. Nothing of his face is visible. Everything that was on the front view is consistent: colours, materials, trims, lengths and proportions. No text, no letters, no logo, no border, no weapon, nothing held, no cape. No painting or illustration look, no plastic CGI look.",
+  "refs": [
+    "assets-src/generals-hero-2026-10-17/yi_joseon_dujeong_front.png"
+  ],
+  "usage": {
+    "input_tokens": 1742,
+    "input_tokens_details": {
+      "image_tokens": 1521,
+      "text_tokens": 221
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 7672
+  }
+}

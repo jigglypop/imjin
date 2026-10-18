@@ -1,0 +1,106 @@
+{
+  "kind": "sword",
+  "hand": "right",
+  "length": 1.08,
+  "notes": "Curved single edge, separate polished bevels, wrapped rayskin grip",
+  "id": "japan_katana",
+  "faction": "japan",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 2876,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.09000000357627869,
+    1.1100000143051147,
+    0.1242532916367054
+  ],
+  "lodTriangles": 2876,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_katana.glb",
+      "bytes": 113864,
+      "sha256": "b369b1c349c9579563e5840a592884cf3745c876c358d3f5b22ef5b5872920ea"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_katana_lod1.glb",
+      "bytes": 113868,
+      "sha256": "305a264e3077d71c9d19e2a0ef71124502354a506a13389be081e039303b8c0f"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\japan_katana.blend",
+      "bytes": 142396,
+      "sha256": "dd8e65c0a57f98272027464249087cfa9bab5b69ea917583a6320f7b6981ac26"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_japan_katana.glb",
+      "bytes": 113864,
+      "sha256": "b369b1c349c9579563e5840a592884cf3745c876c358d3f5b22ef5b5872920ea",
+      "triangles": 2876,
+      "vertices": 3726,
+      "min": [
+        -0.04500000178813934,
+        -0.125,
+        -0.05400000140070915
+      ],
+      "max": [
+        0.04500000178813934,
+        0.9850000143051147,
+        0.07025329023599625
+      ],
+      "dimensions": [
+        0.09000000357627869,
+        1.1100000143051147,
+        0.1242532916367054
+      ],
+      "steelOutwardVertices": 104,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_japan_katana_lod1.glb",
+      "bytes": 113868,
+      "sha256": "305a264e3077d71c9d19e2a0ef71124502354a506a13389be081e039303b8c0f",
+      "triangles": 2876,
+      "vertices": 3726,
+      "min": [
+        -0.04500000178813934,
+        -0.125,
+        -0.05400000140070915
+      ],
+      "max": [
+        0.04500000178813934,
+        0.9850000143051147,
+        0.07025329023599625
+      ],
+      "dimensions": [
+        0.09000000357627869,
+        1.1100000143051147,
+        0.1242532916367054
+      ],
+      "steelOutwardVertices": 104,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/japan_katana.blend",
+    "bytes": 142396,
+    "sha256": "dd8e65c0a57f98272027464249087cfa9bab5b69ea917583a6320f7b6981ac26"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/japan_katana.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 2718,
+    "sha256": "335551aa2e70a5e91a96845ee07b8496194495b6d3897194ba5affb5c5ac5669"
+  }
+}

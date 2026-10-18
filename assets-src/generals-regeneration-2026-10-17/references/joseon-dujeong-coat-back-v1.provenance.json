@@ -1,0 +1,25 @@
+{
+  "schema": "imjin.reference-image.v1",
+  "createdAt": "2026-10-16T19:24:03.916Z",
+  "tool": "builtin-image_gen",
+  "mode": "reference-conditioned-generation",
+  "prompt": "Use case: product-mockup. Asset type: orthographic multiview reference for reconstructing ONE modular historical armor coat.\nInput image 1 is the approved FRONT design reference, not the requested output angle.\nGenerate the matching TRUE STRAIGHT BACK VIEW of exactly this empty Joseon dujeong armor COAT, as if the product was rotated exactly 180 degrees around its vertical axis. Preserve the exact muted oxblood-red woven cloth, evenly spaced small round aged brass rivets in a regular rectangular grid, near-black dark-brown narrow edge bindings, same waist belt, same upper-body width, same long split skirt, same horizontally outstretched T-pose sleeves and empty open wrist cuffs.\nThe back is a proper continuous CLOSED BACK of the same coat: brass rivet rows continue across the shoulder blades and back, a restrained vertical center-back seam, and two long lower skirt pleats or tail folds. The waist belt wraps around the back as a plain narrow dark band. Absolutely no belt buckle on the back. Absolutely no front-opening placket, no frontal collar overlap or front coat fasteners on the back.\nOnly the empty coat exists. There is NO wearer, no person, no head, no face, no neck, no hair, no hands, no skin, no mannequin, no hanging frame, no body-shaped stand, no trousers, no legs, no boots, no helmet, no weapon. The dark collar opening is empty; sleeve openings are empty. The lower ends are garment fabric skirt panels, never legs.\nSquare 1254 by 1254 canvas. Match the FRONT image's unchanged product scale and vertical placement: collar top near pixel 170, shoulders near 250-260, sleeve cuff horizontal center near 300, belt center near 515, lowest coat hem near 1015; coat centered horizontally, full cuffs inside image near x110 and x1145. Straight, level orthographic camera, no perspective, no 3/4 angle. Body and sleeves remain in exact T pose, no arm bending. Same flat neutral grey seamless background and soft even studio lighting, no floor, no shadow, no dramatic highlights. Photographic game-production product reference, not a drawing. No text, no labels, no arrows, no border, no watermark.",
+  "references": [
+    "joseon-dujeong-coat-front-v2.png"
+  ],
+  "generatedSourcePath": "C:/Users/dongh/.codex/generated_images/01a1461e-b3b1-7322-a6cd-3a8617798768/exec-1cc7d619-a8fd-44ba-a08a-7c7862f441a3.png",
+  "output": "joseon-dujeong-coat-back-v1.png",
+  "review": {
+    "status": "visually-reviewed-new-reference",
+    "angle": "back",
+    "checks": [
+      "True continuous back with center seam",
+      "No frontal placket or rear buckle",
+      "Same red cloth, brass grid, black trim and belt",
+      "No person/head/skin/boots/weapon/stand",
+      "T-pose horizontal sleeves and open wrists"
+    ],
+    "limitation": "Input reference consistency is not 3D fit or geometry acceptance."
+  },
+  "newMeshyPaidSubmission": false
+}

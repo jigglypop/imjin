@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:30:56.632Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Don Juan of Austria, half-brother of Philip II, twenty-four. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Don Juan of Austria, half-brother of Philip II, twenty-four: a handsome young Habsburg face, fair reddish-blond hair, a light moustache and a short fair beard, bright blue eyes, a confident young prince), in the costume of: Faction look: a commander of the Holy League fleet at Lepanto, 1571, as in the paintings of Titian, Veronese and Tintoretto and big-budget Renaissance war films: The captain-general of the Holy League: a full gilt-etched polished Milanese field armour (gorget, peascod breastplate, pauldrons, vambraces, gauntlet-free bare hands, tassets, cuisses), bands of gold etching, a crimson silk commander sash across the chest, a small white collar, red hose, steel greaves and sabatons; bareheaded. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_donjuan.webp"
+  ],
+  "estimatedUsd": 0.04
+}

@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:39:51.390Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Gian Andrea Doria, the Genoese admiral, thirty-two. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Gian Andrea Doria, the Genoese admiral, thirty-two: a lean, sharp, calculating Genoese face, a long straight nose, a short black beard and moustache, cool dark eyes), in the costume of: Faction look: a commander of the Holy League fleet at Lepanto, 1571, as in the paintings of Titian, Veronese and Tintoretto and big-budget Renaissance war films: The Genoese commander of the right: a blackened Genoese half-armour with gilt-etched bands (gorget, breastplate, pauldrons, tassets) over a black doublet, a white ruffled collar, black trunk hose and boots; a black velvet cap. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_doria.webp"
+  ],
+  "estimatedUsd": 0.04
+}

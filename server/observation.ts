@@ -1,16 +1,17 @@
 import type { Battle } from '../src/sim/battle';
 import type { Conquest } from '../src/sim/conquest';
-import type { BattleEvent, Team } from '../src/sim/types';
+import type { BattleEvent, Ship, Team } from '../src/sim/types';
 import { isShipVisible, pointVisible, shipPositionVisible, visibleShips } from '../src/sim/visibility';
 import type { ShipMeta } from '../src/net/protocol';
 
-export function observedMetadata(b: Battle, team: Team, known: Map<number, string>, all = false): ShipMeta[] {
+export function observedMetadata(b: Battle, team: Team, known: Map<number, string>, all = false, ships: readonly Ship[] = observedShips(b, team)): ShipMeta[] {
   const result: ShipMeta[] = [];
-  for (const s of observedShips(b, team)) {
-    const meta: ShipMeta = { id: s.id, kind: s.spec.kind, name: s.name, squadron: s.squadronId, flagship: s.flagship, variant: s.variant, owner: s.owner, team: s.team };
-    const signature = JSON.stringify(meta);
+  for (const s of ships) {
+    // A change signature, compared only: fixed-shape fields first and the free-text name last keep it unambiguous.
+    const signature = s.spec.kind + '|' + s.squadronId + '|' + s.flagship + '|' + s.variant + '|' + s.owner + '|' + s.team + '|' + s.name;
     if (!all && known.get(s.id) === signature) continue;
-    known.set(s.id, signature); result.push(meta);
+    known.set(s.id, signature);
+    result.push({ id: s.id, kind: s.spec.kind, name: s.name, squadron: s.squadronId, flagship: s.flagship, variant: s.variant, owner: s.owner, team: s.team });
   }
   return result;
 }

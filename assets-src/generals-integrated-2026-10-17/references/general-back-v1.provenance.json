@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "status": "candidate-awaiting-parent-review",
+  "asset": "general-back-v1.png",
+  "createdDate": "2026-10-17",
+  "generationMethod": "built-in image_gen.imagegen",
+  "generationRequestCount": 1,
+  "provider3DRequestsSubmitted": 0,
+  "sourceGeneratedImage": "C:/Users/dongh/.codex/generated_images/01a1461e-b3b1-7322-a6cd-3a8617798768/exec-a0f353eb-6b39-4e51-a569-63c652f4c2cc.png",
+  "width": 1254,
+  "height": 1254,
+  "bytes": 1816705,
+  "sha256": "5493ff977a49ae2db654f0c56fc9142c044b3bc02e26fc8d9c7707ea965c4859",
+  "referenceImages": [
+    "general-front-v1.png"
+  ],
+  "geometryOrScreenshotReferenceUsed": false,
+  "transparentBackground": false,
+  "prompt": "Use case: historical-scene. Asset type: a matching BACK reference photograph of the EXACT SAME original fictional Joseon admiral from the supplied approved FRONT reference, for one integrated image-to-3D humanoid. This is a camera rotation of the same character and pose, NOT a redesign or a new outfit.\nPreserve the reference figure's exact realistic proportions, small physical head, broad thick shoulders, sole-to-head height, red dujeong armor silhouette and lengths, regular brass rivet grid, black edge bindings, shoulder guards, waist height, trousers, tall dark leather boots, iron helmet bowl, brass bands, red crown plume, and sword. Preserve both straight horizontal arms and compact fists.\nCamera: exact orthographic straight BACK view. Camera stands directly behind the man, level and centered. His face and the front of his chest must be COMPLETELY INVISIBLE: ZERO eyes, ZERO nose, ZERO mouth, ZERO face on the helmet back. We see a real closed back of the steel helmet with a protective lamellar neck guard draped over the back of his neck and upper shoulders; the red plume descends naturally at the rear. Do not put a second face or a front helmet opening at the back.\nGarment back: uninterrupted CLOSED oxblood-red dujeong back panel with coherent evenly spaced brass rivets and restrained black bindings. No V-shaped chest opening on the back, no center-front placket, no gold buckle on the back. A subtle straight vertical center BACK seam is acceptable. The dark leather waist belt wraps around the waist as a plain strap with its buckle on the unseen FRONT only. Broad shoulder guards are viewed from behind. Lower armored coat is the same slightly-below-knee length and the same straight long panels as the front; avoid staircase, zigzag or stepped cutouts. Keep the posterior garment closed except a minimal straight lower hem movement slit if physically needed; no exposed back torso, no open back collar.\nPose and handedness: BOTH ARMS horizontal in a strict T-pose, both elbows straight, torso upright and neutral, shoulders level, exactly two boots flat with feet pointing away from the camera. In this BACK view his LEFT empty fist is on viewer LEFT. His RIGHT hand holding the ONE sword is on viewer RIGHT. The closed right fingers actually wrap around the dark handle below the small brass guard, no floating handle. The same curved steel hwando blade points almost vertically UP and slightly OUTWARD to the upper-RIGHT of the frame, away from his body, never across the torso. Sword shape, length, brass guard and dark hilt match the supplied reference. Exactly one sword, no scabbard, no weapon in left hand.\nComposition: same square 1254x1254 canvas, same figure and arm scale as the approved front. Show the whole helmet, both fists, every armor hem, both boots and the ENTIRE sword including tip. Soft flat even studio lighting on a seamless neutral grey background with no floor line, no distracting shadow, no labels or text. Photorealistic premium game-character PBR reference. ONE person, ONE sword, ONE view; no collage, no accessories laid out separately, no stand.",
+  "visualReview": {
+    "inspected": true,
+    "findings": [
+      "Strict back view: no visible eyes, nose, mouth, face, V chest collar or front buckle.",
+      "Closed red back armor, plain rear waist belt, center back seam, substantial helmet neckguard.",
+      "Subject right hand on viewer right grips one sword, subject left fist viewer left is empty. Both arms stay horizontal.",
+      "Full boots and helmet visible. Sword tip remains inside canvas with approximately 7px top margin.",
+      "Rear hem has a minimal straight center slit. Front and rear silhouette, arm width and material agree visually; 3D correspondence remains unverified."
+    ]
+  }
+}

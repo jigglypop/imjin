@@ -15,7 +15,10 @@ const LIFETIME = 8000;
 /** A move flag goes once every ship it was issued to is this close; the flag only marks where they are heading. */
 const ARRIVED = 150;
 
-type Mark = { root: HTMLDivElement; x: number; z: number; at: number; shape: Shape; ids: number[] };
+/** `probedAt` and `covered`: the last HUD-cover probe and its answer, re-asked every PROBE_EVERY ms. */
+type Mark = { root: HTMLDivElement; x: number; z: number; at: number; shape: Shape; ids: number[]; probedAt?: number; covered?: boolean };
+/** Hit-testing the page forces a layout, so whether a panel covers a flag is asked about this often, not every frame. */
+const PROBE_EVERY = 150;
 
 /** A small triangular pennant: a destination needs a mark on the water, not a banner over the ships. */
 const PENNANT = 'M9.8 9C17.8 7.6 27 13.2 37 19.6C27.2 20.8 18.2 25.2 9.8 28Z';
@@ -64,6 +67,8 @@ export class MoveOrders {
   private marks: Mark[] = [];
   /** One standing banner per own port that has a rally point, keyed by point id. */
   private rallies = new Map<number, Mark & { key: string }>();
+  /** The canvas's page rect, measured once per update. */
+  private rect: DOMRect | null = null;
 
   constructor(private readonly engine: Engine, parent: HTMLElement) {
     this.layer.className = 'move-orders';
@@ -102,14 +107,18 @@ export class MoveOrders {
 
   /** True when a HUD panel covers the flag cloth or its foot, so the flag steps back instead of fighting the panel. */
   private underHud(x: number, y: number, scale: number, mark: Mark) {
+    const now = performance.now();
+    if (mark.probedAt !== undefined && now - mark.probedAt < PROBE_EVERY) return !!mark.covered;
+    mark.probedAt = now;
     const canvas = this.engine.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
+    const rect = (this.rect ??= canvas.getBoundingClientRect());
     const probe = (px: number, py: number) => {
       const top = document.elementsFromPoint(rect.left + px, rect.top + py).find((el) => !this.layer.contains(el) && !el.closest('.cpoints, .banners'));
       return !!top && top !== canvas;
     };
     const { foot, cloth } = mark.shape;
-    return probe(x, y) || probe(x + (cloth.x - foot.x) * scale, y + (cloth.y - foot.y) * scale);
+    mark.covered = probe(x, y) || probe(x + (cloth.x - foot.x) * scale, y + (cloth.y - foot.y) * scale);
+    return mark.covered;
   }
 
   private arrived(mark: Mark) {
@@ -123,6 +132,7 @@ export class MoveOrders {
 
   update() {
     const now = performance.now();
+    this.rect = null;
     const hidden = this.engine.rts.cinematic || this.engine.battle.ended;
     this.marks = this.marks.filter((mark) => {
       const age = now - mark.at;

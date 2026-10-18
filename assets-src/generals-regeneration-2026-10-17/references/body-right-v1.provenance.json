@@ -1,0 +1,31 @@
+{
+  "asset": "body-right-v1",
+  "type": "reference-image",
+  "view": "right",
+  "orientation": "subject right profile faces image left",
+  "mode": "built-in",
+  "tool": "image_gen.imagegen",
+  "generatedDate": "2026-10-17",
+  "originalPath": "C:/Users/dongh/.codex/generated_images/01a1461e-8fb8-7333-a309-fda9be965fce/exec-0c36bd6c-8b83-4a2f-bf2c-9bf56f00f85d.png",
+  "savedPath": "assets-src/generals-regeneration-2026-10-17/references/body-right-v1.png",
+  "sourceGeometry": null,
+  "inputImages": [
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/body-front-v1.png",
+      "role": "approved body, clothing, pose, scale and identity"
+    }
+  ],
+  "prompt": "Use case: identity-preserve.\nAsset type: STRICT SUBJECT-RIGHT PROFILE of the SAME fixed anatomical game character base, one single image for consistent multi-view image-to-3D.\nInput image 1 is the approved exact FRONT person. Preserve his identity, Korean male late-40s face with compact moustache and small goatee, tiny tight topknot, plain charcoal headband, natural athletic approximately eight-head proportions, body volumes, clothing, boots, pose and image scale. Rotate the camera precisely 90 degrees to see his RIGHT anatomical side. The face/nose/chest/toes point to the LEFT edge of the image. The viewer sees the RIGHT ear and RIGHT cheek. This is a true 90-degree side elevation, not three-quarter and not a rotated frontal face.\nKeep the exact plain close-fitting dark charcoal long-sleeve undershirt and charcoal trousers and simple plain black mid-calf boots. No armor, helmet, weapon, cloak, jewelry, belt ornaments, props or other person. Realistic modest physique, normal neck/chest/abdomen, not a barrel chest or bodybuilder. Match his face rather than inventing a new man.\nCRITICAL T-POSE SIDE PROJECTION: The body is still in the same unchanged symmetric T-pose from the front image. Both straight arms extend LATERALLY out of the body's shoulders, perpendicular to the sagittal plane. Therefore in this strict side orthographic view, the NEAR RIGHT ARM points straight toward the CAMERA, is seen END-ON at shoulder height, and overlaps its own shoulder. Show a compact closed fist/end-on foreshortened forearm at shoulder level, approximately y=265; the FAR LEFT ARM points away from camera and is hidden behind the near arm/shoulder. Arms must NOT hang down, must NOT reach forward toward the direction of the face, and must NOT stretch across the image to the right or left. Do not change T-pose to A-pose. The near compact fist should sit in front of the shoulder in projection, not over the face.\nUpright straight spine and legs, same hip-width spacing with feet parallel; side silhouette naturally overlaps the far leg because camera is exactly on his right. Boot toes face LEFT. Full figure remains centered horizontally. One head, no extra limbs, normal anatomical hands.\nComposition: 1254x1254 square; exactly one RIGHT PROFILE view, fixed orthographic scale. Topknot top approximately y=15, shoulder/arm axis y=265, waist y=510, knees y=850, soles y=1190. Same full-body height and margins as input; do not zoom in to fill the mostly empty side-profile canvas. Identical neutral mid-grey flat studio background without floor line, even soft light, sober premium realistic 3D game reference rendering. No perspective, no yaw, no collage, no turnaround sheet, no text or watermark.",
+  "visualReview": {
+    "status": "selected-reference-not-3d-accepted",
+    "observations": [
+      "Strict right-side profile faces left; one face with compact beard/topknot/headband.",
+      "Near arm is viewed end-on with compact fist at shoulder height; far arm hidden, no dangling or facial-direction reaching arm.",
+      "Full body at consistent height, charcoal close-fitting undersuit and black boots; no armor or extra objects."
+    ],
+    "limitations": [
+      "Generated orthographic side silhouettes are approximate rather than four real camera views of a fixed mesh.",
+      "Exact symmetry, arm depth and hidden anatomy must be checked on the new generated 3D body."
+    ]
+  }
+}

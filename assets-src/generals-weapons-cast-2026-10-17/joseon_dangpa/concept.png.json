@@ -1,0 +1,24 @@
+{
+  "at": "2026-10-17T04:36:44.105Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "1632x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "A museum product photograph of a single weapon for image-to-3D reconstruction: a Joseon Korean dangpa trident: a long central steel spike and two upturned curved side prongs forged as one steel fork, a brass socket, a long dark lacquered wooden shaft with brass bands and an iron butt cap. The weapon stands perfectly upright and centred, the point/blade at the TOP and the hilt/butt at the BOTTOM, seen straight from the side, the whole weapon in frame with a margin; the scabbard (if any) is NOT shown. Ornate but historically grounded late-sixteenth-century craftsmanship as in the hero props of big-budget historical war films; crisp, sharply focused detail of every fitting, wrap and engraving; truthful materials: polished steel, gilt bronze, lacquer, silk, leather. Plain seamless light grey studio background, soft even light, no shadows, no reflections of a room, nothing else in the picture. No hands, no people, no text, no letters, no logo, no border, no illustration look.",
+  "usage": {
+    "input_tokens": 221,
+    "input_tokens_details": {
+      "image_tokens": 0,
+      "text_tokens": 221
+    },
+    "output_tokens": 2171,
+    "output_tokens_details": {
+      "image_tokens": 2171,
+      "text_tokens": 0
+    },
+    "total_tokens": 2392
+  }
+}

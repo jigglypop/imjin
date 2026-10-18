@@ -110,11 +110,12 @@ const CARDS = {
 
 /** The menu's wordmark (src/ui/Screens.tsx, menu-cinematic.css) at card size, over the left of the still. */
 const page = (card) => `<!doctype html><html><head><meta charset="utf-8">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
-@font-face { font-family:'Imjin Title'; src:url('/imjin-title-dohyeon.woff2') format('woff2'); font-display:block; }
+@font-face { font-family:'Jeongmuk Bawi'; src:url('/jeongmukbawi-regular.woff') format('woff'); font-display:block; }
+@font-face { font-family:'MW UI Sans'; src:url('/moonwake-ui-sans.woff2') format('woff2'); font-weight:400 800; font-display:block; }
+@font-face { font-family:'MW Hanja'; src:url('/moonwake-hanja-notoserifkr.woff2') format('woff2'); font-weight:200 900; font-display:block; }
 html,body { margin:0; width:${W}px; height:${H}px; overflow:hidden; background:#07121b; }
-body { position:relative; font-family:'Pretendard Variable',Pretendard,'Malgun Gothic','Apple SD Gothic Neo',sans-serif; }
+body { position:relative; font-family:'MW UI Sans',sans-serif; }
 .still { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 /* The title side darkens so the cream type reads at thumbnail size; the ship side keeps its light. */
 .shade { position:absolute; inset:0; background:
@@ -123,11 +124,11 @@ body { position:relative; font-family:'Pretendard Variable',Pretendard,'Malgun G
 .mark { position:absolute; left:70px; top:0; bottom:0; width:470px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; }
 .kicker { font-size:17px; letter-spacing:.3em; padding-left:.3em; color:#d8d0bb; text-shadow:0 1px 10px rgba(3,8,13,.9); }
 .lockup { position:relative; }
-.poster { margin:0; font-family:'Imjin Title',sans-serif; font-weight:400; font-size:126px; line-height:.95; letter-spacing:-.04em;
+.poster { margin:0; font-family:'Jeongmuk Bawi',sans-serif; font-weight:400; font-size:126px; line-height:.95; letter-spacing:-.04em;
   padding:0 .04em 0 0; white-space:nowrap; color:#f1ead6; -webkit-text-stroke:.036em #f1ead6; paint-order:stroke fill;
   filter:drop-shadow(0 3px 0 #08121a) drop-shadow(0 12px 30px rgba(3,8,13,.8)); }
 .seal { position:absolute; right:-46px; bottom:16px; width:36px; height:50px; display:grid; place-content:center; background:#863a30;
-  color:#e8cfb2; font-family:'Noto Serif KR','Batang',serif; font-size:16px; line-height:1.2; text-align:center; transform:rotate(5deg);
+  color:#e8cfb2; font-family:'MW Hanja',serif; font-size:16px; line-height:1.2; text-align:center; transform:rotate(5deg);
   clip-path:polygon(3% 2%,94% 0,100% 7%,97% 96%,6% 100%,0 94%); box-shadow:0 0 0 2px #863a30; }
 .art { width:300px; height:auto; filter:drop-shadow(0 8px 24px rgba(3,8,13,.75)); }
 .sub { font-size:16px; letter-spacing:.44em; padding-left:.44em; color:#e2dccb; text-shadow:0 1px 10px rgba(3,8,13,.9); }
@@ -143,14 +144,16 @@ body { position:relative; font-family:'Pretendard Variable',Pretendard,'Malgun G
 async function compose() {
   const files = {
     '/still.jpg': [STILL, 'image/jpeg'],
-    '/imjin-title-dohyeon.woff2': [join(ROOT, 'public', 'ui', 'fonts', 'imjin-title-dohyeon.woff2'), 'font/woff2'],
+    '/jeongmukbawi-regular.woff': [join(ROOT, 'public', 'ui', 'fonts', 'jeongmukbawi-regular.woff'), 'font/woff'],
+    '/moonwake-ui-sans.woff2': [join(ROOT, 'public', 'ui', 'fonts', 'moonwake-ui-sans.woff2'), 'font/woff2'],
+    '/moonwake-hanja-notoserifkr.woff2': [join(ROOT, 'public', 'ui', 'fonts', 'moonwake-hanja-notoserifkr.woff2'), 'font/woff2'],
     '/menu_title_en.webp': [join(ROOT, 'public', 'ui', 'art', 'menu_title_en.webp'), 'image/webp'],
   };
   const browser = await launch();
   try {
     for (const [lang, card] of Object.entries(CARDS)) {
       const tab = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 2 });
-      // A made-up origin serves the card and its local files; the Pretendard stylesheet still comes from its CDN.
+      // A made-up origin serves the card and its local files (public/ui/fonts).
       await tab.route('https://og.card/**', (route) => {
         const path = new URL(route.request().url()).pathname;
         if (path === '/') return route.fulfill({ body: page(card), contentType: 'text/html; charset=utf-8' });

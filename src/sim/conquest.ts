@@ -693,20 +693,28 @@ export class Conquest implements BattleRules {
     return !!this.options.expanded;
   }
 
+  /** Scratch for tend(): ships served this step and one tender's candidates. */
+  private readonly tendServed = new Set<number>();
+  private readonly tendWanted: { s: Ship; need: number; d: number }[] = [];
+
   /** Tenders top up the friends beside them. A ship takes from one tender only, so a crowd of tenders cannot make it immortal. */
   private tend(b: Battle, dt: number) {
-    const served = new Set<number>();
+    const served = this.tendServed;
+    served.clear();
+    const wanted = this.tendWanted;
     for (const t of b.ships) {
       const spec = t.spec.tender;
       if (!spec || !b.isActive(t)) continue;
-      const wanted: { s: Ship; need: number; d: number }[] = [];
+      wanted.length = 0;
       b.near(t.x, t.z, spec.range, (s) => {
         if (s === t || s.team !== t.team || !b.isActive(s) || served.has(s.id) || b.time - s.lastHit <= 8) return;
         const need = b.tenderNeed(s);
         if (need > 0) wanted.push({ s, need, d: Math.hypot(s.x - t.x, s.z - t.z) });
       });
       wanted.sort((p, q) => q.need - p.need || p.d - q.d || p.s.id - q.s.id);
-      for (const { s } of wanted.slice(0, spec.capacity)) {
+      const n = Math.min(wanted.length, Math.max(0, spec.capacity));
+      for (let i = 0; i < n; i++) {
+        const s = wanted[i]!.s;
         served.add(s.id);
         b.mend(s, dt * spec.hull, dt * spec.crew);
         b.resupply(s, dt * spec.ammo);

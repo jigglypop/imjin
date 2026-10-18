@@ -1,0 +1,18 @@
+{
+  "task": "01a14837-6c80-7650-9f14-0fd6c2361bde",
+  "at": "2026-10-17T04:55:56.194Z",
+  "request": {
+    "ai_model": "meshy-7.1",
+    "should_texture": true,
+    "enable_pbr": true,
+    "texture_resolution": "4k",
+    "geometry_resolution": "2k",
+    "should_remesh": false,
+    "image_enhancement": false,
+    "remove_lighting": true,
+    "target_formats": [
+      "glb"
+    ]
+  },
+  "credits": 35
+}

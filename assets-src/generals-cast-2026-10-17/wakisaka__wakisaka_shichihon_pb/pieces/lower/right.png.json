@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-17T10:16:32.605Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "transparent",
+    "output_format": "png"
+  },
+  "prompt": "The FIRST attached picture is the front view of one armour piece for image-to-3D reconstruction, worn by an invisible ghost mannequin. Make the matching view of exactly the same piece, seen exactly from ITS RIGHT SIDE (the wearer's right) in strict profile: the front of the piece faces the RIGHT edge of the picture. The piece: his kusazuri tassets: seven hanging panels of black lacquered plates laced with dark blue silk, hanging from the waist to mid-thigh all round, with gaps between the panels for the legs; no cuirass. The SECOND attached picture shows the man wearing it from this same side: the piece must look exactly as there. Same scale, same height in the frame, same orthographic look, same soft flat studio light, a fully transparent background (a clean cutout, no ground shadow). Empty inside: no person, no head, no hands, no mannequin, no stand. Everything consistent with the front view: colours, materials, trims, lengths, proportions. No text, no letters, no border. No illustration look, no plastic CGI look.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/wakisaka__wakisaka_shichihon_pb/pieces/lower/front.png",
+    "assets-src/generals-cast-2026-10-17/wakisaka__wakisaka_shichihon_t4/right.png"
+  ],
+  "usage": {
+    "input_tokens": 3292,
+    "input_tokens_details": {
+      "image_tokens": 3042,
+      "text_tokens": 250
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 9222
+  }
+}

@@ -623,46 +623,47 @@ function battleText(id, lang) {
  * is 150 px. Content stays 48 px inside the edges, which some apps trim.
  */
 const CARD_STYLE = `
-@font-face { font-family:'Imjin Title'; src:url('/fonts/imjin-title-dohyeon.woff2') format('woff2'); font-display:block; }
-@font-face { font-family:'Imjin Battle'; src:url('/fonts/imjin-battle-dohyeon.woff2') format('woff2'); font-display:block; }
-@font-face { font-family:'Imjin Roman'; src:url('/fonts/imjin-title-cinzel.woff2') format('woff2'); font-weight:400 900; font-display:block; }
-@font-face { font-family:'Imjin Serif'; src:url('/fonts/imjin-serif-notoserifkr.woff2') format('woff2'); font-weight:200 900; font-display:block; }
+@font-face { font-family:'Jeongmuk Bawi'; src:url('/fonts/jeongmukbawi-regular.woff') format('woff'); font-display:block; }
+@font-face { font-family:'MW Cinzel'; src:url('/fonts/imjin-title-cinzel.woff2') format('woff2'); font-weight:400 900; font-display:block; }
+@font-face { font-family:'MW Hanja'; src:url('/fonts/moonwake-hanja-notoserifkr.woff2') format('woff2'); font-weight:200 900; font-display:block; }
+@font-face { font-family:'MW Hahmlet'; src:url('/fonts/moonwake-cine-hahmlet.woff2') format('woff2'); font-weight:500 800; font-display:block; }
+@font-face { font-family:'MW UI Sans'; src:url('/fonts/moonwake-ui-sans.woff2') format('woff2'); font-weight:400 800; font-display:block; }
 html,body { margin:0; width:${CARD_SIZE.width}px; height:${CARD_SIZE.height}px; overflow:hidden; background:#07121b; }
-body { position:relative; font-family:'Pretendard Variable',Pretendard,sans-serif; color:#f4eedc; }
+body { position:relative; font-family:'MW UI Sans',sans-serif; color:#f4eedc; }
 .still { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .shade { position:absolute; inset:0; background:
   linear-gradient(90deg, rgba(4,9,15,.82) 0%, rgba(4,9,15,.62) 30%, rgba(4,9,15,.18) 55%, rgba(4,9,15,0) 70%),
   linear-gradient(0deg, rgba(4,9,15,.7) 0%, rgba(4,9,15,.22) 34%, rgba(4,9,15,0) 55%),
   linear-gradient(180deg, rgba(4,9,15,.45) 0%, rgba(4,9,15,0) 22%); }
 .brand { position:absolute; left:56px; top:44px; display:flex; align-items:center; gap:14px; }
-.brand b { font-family:'Imjin Title'; font-weight:400; font-size:44px; line-height:1; letter-spacing:-.03em; -webkit-text-stroke:.02em #f4eedc; }
-.seal { display:grid; place-content:center; background:#863a30; color:#e8cfb2; font-family:'Imjin Serif',serif; font-weight:600; line-height:1.15; text-align:center; transform:rotate(5deg); clip-path:polygon(3% 2%,94% 0,100% 7%,97% 96%,6% 100%,0 94%); }
+.brand b { font-family:'Jeongmuk Bawi'; font-weight:400; font-size:44px; line-height:1; letter-spacing:-.03em; -webkit-text-stroke:.02em #f4eedc; }
+.seal { display:grid; place-content:center; background:#863a30; color:#e8cfb2; font-family:'MW Hanja','MW Hahmlet',serif; font-weight:600; line-height:1.15; text-align:center; transform:rotate(5deg); clip-path:polygon(3% 2%,94% 0,100% 7%,97% 96%,6% 100%,0 94%); }
 .brand .seal { width:30px; height:42px; font-size:13px; }
-.brand i { font-style:normal; font-family:'Imjin Roman'; font-weight:600; font-size:30px; letter-spacing:.22em; }
+.brand i { font-style:normal; font-family:'MW Cinzel'; font-weight:600; font-size:30px; letter-spacing:.22em; }
 .block { position:absolute; left:56px; bottom:48px; display:flex; flex-direction:column; align-items:flex-start; }
-.kicker { font-family:'Noto Serif KR',serif; font-weight:700; font-size:34px; letter-spacing:.06em; line-height:1.1; color:#d8c69c; text-shadow:0 2px 14px rgba(3,8,13,.9); white-space:nowrap; }
+.kicker { font-family:'MW Hahmlet','MW Hanja',serif; font-weight:700; font-size:34px; letter-spacing:.06em; line-height:1.1; color:#d8c69c; text-shadow:0 2px 14px rgba(3,8,13,.9); white-space:nowrap; }
 .kicker small { font-weight:500; font-size:30px; letter-spacing:.24em; margin-left:.4em; }
-.title { margin:10px 0 0 -4px; font-family:'Imjin Battle'; font-weight:400; font-size:150px; line-height:.95; letter-spacing:-.035em; white-space:nowrap; -webkit-text-stroke:.026em #f4eedc; paint-order:stroke fill; filter:drop-shadow(0 3px 0 rgba(8,18,26,.8)) drop-shadow(0 10px 28px rgba(3,8,13,.85)); }
+.title { margin:10px 0 0 -4px; font-family:'Jeongmuk Bawi'; font-weight:400; font-size:150px; line-height:.95; letter-spacing:-.035em; white-space:nowrap; -webkit-text-stroke:.026em #f4eedc; paint-order:stroke fill; filter:drop-shadow(0 3px 0 rgba(8,18,26,.8)) drop-shadow(0 10px 28px rgba(3,8,13,.85)); }
 .place { margin-top:14px; font-size:40px; font-weight:600; letter-spacing:-.01em; color:#f4efe2; text-shadow:0 2px 14px rgba(3,8,13,.95); white-space:nowrap; }
-.en .kicker { font-family:'Imjin Roman'; font-weight:600; font-size:30px; letter-spacing:.14em; }
-.pre { display:flex; align-items:center; gap:18px; margin-top:16px; font-family:'Imjin Roman'; font-weight:500; font-size:30px; letter-spacing:.42em; text-transform:uppercase; }
+.en .kicker { font-family:'MW Cinzel'; font-weight:600; font-size:30px; letter-spacing:.14em; }
+.pre { display:flex; align-items:center; gap:18px; margin-top:16px; font-family:'MW Cinzel'; font-weight:500; font-size:30px; letter-spacing:.42em; text-transform:uppercase; }
 .pre::after { content:''; width:90px; height:2px; background:currentColor; opacity:.7; }
-.name { margin:4px 0 0 -3px; font-family:'Imjin Roman'; font-weight:700; font-size:118px; line-height:1; letter-spacing:.02em; text-transform:uppercase; white-space:nowrap; filter:drop-shadow(0 3px 0 rgba(8,18,26,.8)) drop-shadow(0 10px 28px rgba(3,8,13,.85)); }
+.name { margin:4px 0 0 -3px; font-family:'MW Cinzel'; font-weight:700; font-size:118px; line-height:1; letter-spacing:.02em; text-transform:uppercase; white-space:nowrap; filter:drop-shadow(0 3px 0 rgba(8,18,26,.8)) drop-shadow(0 10px 28px rgba(3,8,13,.85)); }
 .site { position:absolute; right:52px; bottom:44px; font-size:26px; font-weight:600; letter-spacing:.02em; color:rgba(244,239,226,.92); text-shadow:0 2px 12px rgba(3,8,13,.95); }
 /* The front card: the menu's lockup, the tagline above, the hanja running down beside the title, the seal, the years. */
 .front .shade { background:linear-gradient(90deg,rgba(4,9,15,.8) 0%,rgba(4,9,15,.62) 30%,rgba(4,9,15,.2) 52%,rgba(4,9,15,0) 66%),linear-gradient(180deg,rgba(4,9,15,.2) 0%,rgba(4,9,15,0) 30%,rgba(4,9,15,0) 66%,rgba(4,9,15,.42) 100%); }
 .lockup { position:absolute; left:56px; top:0; bottom:0; width:520px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-.tagline { font-family:'Imjin Serif',serif; font-weight:300; font-size:30px; line-height:1; letter-spacing:.5em; margin-right:-.5em; white-space:nowrap; color:rgba(255,255,255,.86); text-shadow:0 1px 14px rgba(3,8,13,.85); }
-.front.en .tagline { font-family:'Imjin Roman'; font-weight:500; font-size:22px; letter-spacing:.32em; margin-right:-.32em; text-transform:uppercase; }
+.tagline { font-family:'MW Hanja','MW Hahmlet',serif; font-weight:300; font-size:30px; line-height:1; letter-spacing:.5em; margin-right:-.5em; white-space:nowrap; color:rgba(255,255,255,.86); text-shadow:0 1px 14px rgba(3,8,13,.85); }
+.front.en .tagline { font-family:'MW Cinzel'; font-weight:500; font-size:22px; letter-spacing:.32em; margin-right:-.32em; text-transform:uppercase; }
 .mark { position:relative; margin-top:26px; }
-.mark .hanja { position:absolute; right:100%; top:50%; margin-right:26px; transform:translateY(-50%); writing-mode:vertical-rl; font-family:'Imjin Serif',serif; font-weight:400; font-size:24px; line-height:1; letter-spacing:.34em; color:rgba(255,255,255,.78); text-shadow:0 1px 12px rgba(3,8,13,.8); }
-.mark h1 { margin:0; font-family:'Imjin Title'; font-weight:400; font-size:168px; line-height:.9; letter-spacing:-.04em; padding-right:.04em; white-space:nowrap; -webkit-text-stroke:.026em #f4eedc; paint-order:stroke fill; filter:drop-shadow(0 3px 0 #08121a) drop-shadow(0 12px 30px rgba(3,8,13,.8)); }
+.mark .hanja { position:absolute; right:100%; top:50%; margin-right:26px; transform:translateY(-50%); writing-mode:vertical-rl; font-family:'MW Hanja','MW Hahmlet',serif; font-weight:400; font-size:24px; line-height:1; letter-spacing:.34em; color:rgba(255,255,255,.78); text-shadow:0 1px 12px rgba(3,8,13,.8); }
+.mark h1 { margin:0; font-family:'Jeongmuk Bawi'; font-weight:400; font-size:168px; line-height:.9; letter-spacing:-.04em; padding-right:.04em; white-space:nowrap; -webkit-text-stroke:.026em #f4eedc; paint-order:stroke fill; filter:drop-shadow(0 3px 0 #08121a) drop-shadow(0 12px 30px rgba(3,8,13,.8)); }
 .mark .seal { position:absolute; right:-44px; bottom:22px; width:34px; height:48px; font-size:15px; box-shadow:0 0 0 2px #863a30; }
-.the { display:flex; align-items:center; gap:.9em; font-family:'Imjin Roman'; font-weight:500; font-size:34px; letter-spacing:.62em; margin-right:-.62em; margin-top:22px; }
+.the { display:flex; align-items:center; gap:.9em; font-family:'MW Cinzel'; font-weight:500; font-size:34px; letter-spacing:.62em; margin-right:-.62em; margin-top:22px; }
 .the::before, .the::after { content:''; width:2.2em; height:2px; background:currentColor; opacity:.7; }
 .the::after { margin-left:-.62em; }
-.roman { margin-top:6px; font-family:'Imjin Roman'; font-weight:600; font-size:96px; line-height:1; letter-spacing:.07em; margin-right:-.07em; white-space:nowrap; filter:drop-shadow(0 3px 0 #08121a) drop-shadow(0 12px 30px rgba(3,8,13,.8)); }
-.years { display:flex; align-items:center; gap:22px; margin-top:26px; font-family:'Imjin Roman'; font-weight:600; font-size:30px; color:#d8c69c; white-space:nowrap; }
+.roman { margin-top:6px; font-family:'MW Cinzel'; font-weight:600; font-size:96px; line-height:1; letter-spacing:.07em; margin-right:-.07em; white-space:nowrap; filter:drop-shadow(0 3px 0 #08121a) drop-shadow(0 12px 30px rgba(3,8,13,.8)); }
+.years { display:flex; align-items:center; gap:22px; margin-top:26px; font-family:'MW Cinzel'; font-weight:600; font-size:30px; color:#d8c69c; white-space:nowrap; }
 .years span { letter-spacing:.32em; margin-right:-.32em; }
 .years i { width:84px; height:2px; background:linear-gradient(90deg,transparent,rgba(216,198,156,.85)); }
 .years i:last-child { transform:scaleX(-1); }
@@ -690,8 +691,6 @@ function cardPage(lang, id) {
 /** Renders one card at twice its size and keeps it as a JPEG of the card size. */
 async function renderCard(browser, lang, id, still, out) {
   const html = `<!doctype html><html><head><meta charset="utf-8">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&display=block">
 <style>${CARD_STYLE}</style></head>${cardPage(lang, id)}
 <script>
   // A long name shrinks to the room left of the picture's subject.
@@ -703,13 +702,13 @@ async function renderCard(browser, lang, id, still, out) {
 </script></html>`;
   const tab = await browser.newPage({ viewport: { width: CARD_SIZE.width, height: CARD_SIZE.height }, deviceScaleFactor: 2 });
   try {
-    // A made-up origin serves the card and its local files; Pretendard and Noto Serif KR come from their CDNs.
+    // A made-up origin serves the card and its local files (public/ui/fonts).
     await tab.route('https://og.card/**', (route) => {
       const path = new URL(route.request().url()).pathname;
       if (path === '/') return route.fulfill({ body: html, contentType: 'text/html; charset=utf-8' });
       if (path === '/still.jpg') return route.fulfill({ body: still, contentType: 'image/jpeg' });
       const font = path.startsWith('/fonts/') && join(FONTS, path.slice(7));
-      return font && existsSync(font) ? route.fulfill({ body: readFileSync(font), contentType: 'font/woff2' }) : route.fulfill({ status: 404 });
+      return font && existsSync(font) ? route.fulfill({ body: readFileSync(font), contentType: font.endsWith('.woff') ? 'font/woff' : 'font/woff2' }) : route.fulfill({ status: 404 });
     });
     await tab.goto('https://og.card/', { waitUntil: 'networkidle' });
     await tab.waitForFunction(() => document.body.dataset.ready === '1');

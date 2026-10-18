@@ -1,12 +1,17 @@
 import {
+  Box3,
   BufferGeometry,
   Float32BufferAttribute,
+  Frustum,
+  Matrix4,
   FrontSide,
   Mesh,
   MeshBasicNodeMaterial,
   Uint32BufferAttribute,
   Vector2,
+  Vector3,
   Vector4,
+  type Camera,
   type Texture,
 } from 'three/webgpu';
 import {
@@ -97,6 +102,15 @@ function foamTexture() {
   return foamCache;
 }
 
+/** Pieces of the sea the camera can skip: a wedge of one band of rings, its triangles one contiguous run of the index. */
+type OceanChunk = { start: number; count: number; box: Box3 };
+
+/** Azimuth wedges and the outer radii of the ring bands the sea is cut into for culling. */
+const WEDGES = 16;
+const BANDS = [150, 600, 2000, 6000, 16000, Infinity];
+/** Room for the waves around a piece's flat bounds: the Gerstner sum and the FFT cascades stay well inside it. */
+const WAVE_PAD = 60;
+
 function createOceanGeometry(segments = 400, r0 = 0.4, rMax = 46000, aspect = 1.05) {
   const growth = 1 + ((2 * Math.PI) / segments) * aspect;
   const radii: number[] = [];
@@ -115,29 +129,56 @@ function createOceanGeometry(segments = 400, r0 = 0.4, rMax = 46000, aspect = 1.
       p += 3;
     }
   }
+  // The triangles go band by band outward, and within a band wedge by wedge, each wedge's rings still near to far: the
+  // order the transparent surface blends in stays front to back from the camera at the centre, as when it went ring by ring.
+  const wedgeOf = (s: number) => Math.floor((s * WEDGES) / segments);
   const indices: number[] = [];
-  for (let s = 0; s < segments; s += 1) indices.push(0, 1 + ((s + 1) % segments), 1 + s);
-  for (let j = 0; j < radii.length - 1; j += 1) {
-    const a0 = 1 + j * segments;
-    const b0 = 1 + (j + 1) * segments;
-    const shifted = j % 2 === 1;
-    for (let s = 0; s < segments; s += 1) {
-      const s1 = (s + 1) % segments;
-      const a = a0 + s;
-      const a1 = a0 + s1;
-      const b = b0 + s;
-      const b1 = b0 + s1;
-      if (shifted) {
-        indices.push(a, a1, b1, a, b1, b);
-      } else {
-        indices.push(a, a1, b, a1, b1, b);
+  const chunks: OceanChunk[] = [];
+  const rings = radii.length - 1;
+  let from = -1;
+  for (let band = 0; band < BANDS.length && from < rings; band += 1) {
+    // Ring j joins radii j and j+1; the fan at the centre (j = -1) opens the first band.
+    let to = from;
+    while (to < rings && (to < 0 || radii[to]! < BANDS[band]!)) to += 1;
+    for (let w = 0; w < WEDGES; w += 1) {
+      const start = indices.length;
+      for (let j = from; j < to; j += 1) {
+        for (let s = 0; s < segments; s += 1) {
+          if (wedgeOf(s) !== w) continue;
+          const s1 = (s + 1) % segments;
+          if (j < 0) {
+            indices.push(0, 1 + s1, 1 + s);
+            continue;
+          }
+          const a0 = 1 + j * segments;
+          const b0 = 1 + (j + 1) * segments;
+          const a = a0 + s;
+          const a1 = a0 + s1;
+          const b = b0 + s;
+          const b1 = b0 + s1;
+          if (j % 2 === 1) indices.push(a, a1, b1, a, b1, b);
+          else indices.push(a, a1, b, a1, b1, b);
+        }
       }
+      const count = indices.length - start;
+      if (!count) continue;
+      const box = new Box3();
+      const v = new Vector3();
+      for (let k = start; k < indices.length; k += 1) {
+        const i = indices[k]! * 3;
+        box.expandByPoint(v.set(positions[i]!, 0, positions[i + 2]!));
+      }
+      box.min.addScalar(-WAVE_PAD);
+      box.max.addScalar(WAVE_PAD);
+      chunks.push({ start, count, box });
     }
+    from = to;
   }
   const geometry = new BufferGeometry();
   geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
   geometry.setIndex(new Uint32BufferAttribute(new Uint32Array(indices), 1));
-  return { geometry, spacing: (2 * Math.PI) / segments };
+  geometry.addGroup(0, indices.length, 0);
+  return { geometry, chunks, spacing: (2 * Math.PI) / segments };
 }
 
 export class Ocean {
@@ -161,6 +202,10 @@ export class Ocean {
   /** The battle's current baked for this surface. */
   private readonly currentMap: Texture | null;
   private waveVersion = -1;
+  private readonly chunks: OceanChunk[];
+  private readonly frustum = new Frustum();
+  private readonly viewProj = new Matrix4();
+  private readonly box = new Box3();
 
   constructor(
     private readonly waves: WaveField,
@@ -182,7 +227,8 @@ export class Ocean {
     const foamTex = foamTexture();
     const uTime = this.time;
     const lightCount = quality.lights;
-    const { geometry, spacing } = createOceanGeometry(quality.segments);
+    const { geometry, chunks, spacing } = createOceanGeometry(quality.segments);
+    this.chunks = chunks;
 
     const worldXZ = modelWorldMatrix.mul(vec4(positionGeometry, 1)).xz;
     const vertexDistance = length(worldXZ.sub(cameraPosition.xz));
@@ -542,7 +588,8 @@ export class Ocean {
       return m;
     };
 
-    const mesh = new Mesh(geometry, matPlain);
+    // One material in a list, so the geometry's groups are drawn: cull() leaves in them only the runs the camera can see.
+    const mesh = new Mesh(geometry, [matPlain]);
     mesh.frustumCulled = false;
     mesh.renderOrder = -10;
     mesh.receiveShadow = false;
@@ -553,7 +600,7 @@ export class Ocean {
   /** Switches between the refracting and the plain surface. The refracting one is built the first time it is asked for. */
   setRefraction(on: boolean) {
     if (on) this.matRefract ??= this.makeRefract();
-    this.mesh.material = on ? this.matRefract! : this.matPlain;
+    this.mesh.material = [on ? this.matRefract! : this.matPlain];
   }
 
   setEnvironment(envTexture: Texture) {
@@ -594,9 +641,36 @@ export class Ocean {
     this.tide.value = tide;
   }
 
-  update(cameraX: number, cameraZ: number) {
+  update(cameraX: number, cameraZ: number, camera?: Camera) {
     this.syncWaves();
     this.time.value = this.waves.time;
     this.mesh.position.set(cameraX, 0, cameraZ);
+    if (camera) this.cull(camera);
+  }
+
+  /**
+   * Draws only the pieces of the sea inside the camera's frustum: most of the disc lies behind it or beside the view, and
+   * every vertex costs the full wave sum. Neighbouring visible pieces are drawn as one run. Without a call, all is drawn.
+   */
+  private cull(camera: Camera) {
+    this.mesh.updateMatrixWorld();
+    camera.updateMatrixWorld();
+    this.viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    this.frustum.setFromProjectionMatrix(this.viewProj, camera.coordinateSystem, camera.reversedDepth);
+    const groups = this.mesh.geometry.groups;
+    groups.length = 0;
+    let runStart = -1;
+    let runEnd = -1;
+    for (const c of this.chunks) {
+      if (!this.frustum.intersectsBox(this.box.copy(c.box).applyMatrix4(this.mesh.matrixWorld))) continue;
+      if (c.start === runEnd) {
+        runEnd += c.count;
+        continue;
+      }
+      if (runStart >= 0) groups.push({ start: runStart, count: runEnd - runStart, materialIndex: 0 });
+      runStart = c.start;
+      runEnd = c.start + c.count;
+    }
+    if (runStart >= 0) groups.push({ start: runStart, count: runEnd - runStart, materialIndex: 0 });
   }
 }

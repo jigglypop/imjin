@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T14:07:39.991Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Horatio Nelson, Vice-Admiral, forty-seven. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Horatio Nelson, Vice-Admiral, forty-seven: a lean, thin-faced, pale English face, a long straight nose, a sensitive mouth, grey-white unpowdered hair worn short and swept forward, no beard, clean-shaven, the right eye blind and slightly clouded but open (no eye patch), a faint scar over the right brow), in the costume of: Faction look: a Royal Navy officer of 1797-1805, as in Master and Commander (2003) and the Hornblower films: Vice-Admiral Nelson as at Trafalgar: his undress vice-admiral's coat of 1805, the regulation 1795-pattern Royal Navy uniform: a tailored dark navy-blue wool tailcoat with a high standing collar, gold lace and gilt anchor buttons, white wool lapels-free front buttoned close over a white waistcoat, white breeches, white stockings to the knee, black buckled shoes or black Hessian boots; a black felt bicorne hat with gold loop and black cockade, worn athwartships, gold epaulettes, and the four embroidered silver-and-gold stars of his orders sewn on the left breast of the coat. He has NO RIGHT ARM below the shoulder: the empty right coat sleeve is folded up and pinned to the front of the coat at the chest with a button. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_nelson.webp"
+  ],
+  "estimatedUsd": 0.04
+}

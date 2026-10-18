@@ -41,4 +41,5 @@ export const EN_ACCOUNT: Record<string, string> = {
   '이 계정에는 이미 다른 전적이 있습니다.': 'This account already has another record.',
   '다른 곳에서 먼저 바뀌었습니다. 다시 시도해 주세요.': 'It was changed elsewhere first. Please try again.',
   '잔액이 모자랍니다.': 'Not enough balance.',
+  '지금은 할 수 없습니다.': 'That cannot be done right now.',
 };

@@ -1,0 +1,111 @@
+{
+  "kind": "bow",
+  "hand": "left",
+  "length": 1.44,
+  "notes": "Laminated chinese bow, shaped recurve, horn nocks, central handgrip, taut separate string",
+  "nock": [
+    0,
+    0,
+    -0.163
+  ],
+  "id": "ming_gong",
+  "faction": "ming",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 8548,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.03994122892618179,
+    1.4637888669967651,
+    0.3555926978588104
+  ],
+  "lodTriangles": 7700,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_gong.glb",
+      "bytes": 180692,
+      "sha256": "25886262232a7e8abb23f7c40632c1d59397db4f1ac03bb42888dfc17b948d00"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_gong_lod1.glb",
+      "bytes": 165424,
+      "sha256": "466b1e4efddb2f050be836a01dc8880fdd200b07f1af14299356b9063fcb6af1"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\ming_gong.blend",
+      "bytes": 206873,
+      "sha256": "1fc696ecf41bbb178f0b84e55f8ddab3f2a38f6e587c8401af3f6cdacebfc36f"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_ming_gong.glb",
+      "bytes": 180692,
+      "sha256": "25886262232a7e8abb23f7c40632c1d59397db4f1ac03bb42888dfc17b948d00",
+      "triangles": 8548,
+      "vertices": 5124,
+      "min": [
+        -0.019970614463090897,
+        -0.7318944334983826,
+        -0.20806095004081726
+      ],
+      "max": [
+        0.019970614463090897,
+        0.7318944334983826,
+        0.14753174781799316
+      ],
+      "dimensions": [
+        0.03994122892618179,
+        1.4637888669967651,
+        0.3555926978588104
+      ],
+      "steelOutwardVertices": 0,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_ming_gong_lod1.glb",
+      "bytes": 165424,
+      "sha256": "466b1e4efddb2f050be836a01dc8880fdd200b07f1af14299356b9063fcb6af1",
+      "triangles": 7700,
+      "vertices": 4700,
+      "min": [
+        -0.019970614463090897,
+        -0.7318944334983826,
+        -0.20806095004081726
+      ],
+      "max": [
+        0.019970614463090897,
+        0.7318944334983826,
+        0.14753174781799316
+      ],
+      "dimensions": [
+        0.03994122892618179,
+        1.4637888669967651,
+        0.3555926978588104
+      ],
+      "steelOutwardVertices": 0,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/ming_gong.blend",
+    "bytes": 206873,
+    "sha256": "1fc696ecf41bbb178f0b84e55f8ddab3f2a38f6e587c8401af3f6cdacebfc36f"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/ming_gong.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 5114,
+    "sha256": "214dad03a6b1eddfa9f04d0bbf9ef303fc80b4dca76977dc71b76c99d0b11261"
+  }
+}

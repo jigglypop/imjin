@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { memo, useCallback, useEffect, useReducer, useRef, useState, type CSSProperties } from 'react';
 import { SPEEDS, type Engine } from '../game/Engine';
 import { AMMO_NAMES, MANEUVER_NAMES } from '../game/Input';
 import type { ManeuverKind } from '../sim/maneuvers';
@@ -55,6 +55,29 @@ function formatTime(t: number) {
 }
 
 /** Counts are by team. The engine names the sides, the player's first. */
+/** The battle clock, the only part of the score panel that changes every publish. */
+function Clock() {
+  const time = useUi((s) => s.live.time);
+  return <>{formatTime(time)}</>;
+}
+
+function Fps() {
+  const fps = useUi((s) => s.live.fps);
+  return <>{fps}</>;
+}
+
+/**
+ * Re-renders a component that reads the engine's own state (groups, the selection, a maneuver being placed) at the
+ * rate the snapshot is published, now that its parent no longer re-renders on every publish.
+ */
+function useEngineTick(ms = 150) {
+  const [, tick] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    const timer = window.setInterval(tick, ms);
+    return () => window.clearInterval(timer);
+  }, [ms]);
+}
+
 function teamName(snap: GameSnapshot, team: Team) {
   return team === snap.team ? snap.sides.own : snap.sides.enemy;
 }
@@ -84,7 +107,7 @@ function changeEquipment(next: EquipmentSetting) {
 /** How a crew's or a fleet's nerve is named on the HUD when it is not steady (the battle depth rules). */
 const NERVE_WORD: Record<string, string> = { wavering: '동요', routing: '패주', rallying: '재집결', shaken: '동요', broken: '붕괴' };
 
-function Stat({ label, value, tone, text }: { label: string; value: number; tone: 'hull' | 'crew' | 'fire' | 'morale'; text: string }) {
+const Stat = memo(function Stat({ label, value, tone, text }: { label: string; value: number; tone: 'hull' | 'crew' | 'fire' | 'morale'; text: string }) {
   return (
     <div className="stat">
       <span>{label}</span>
@@ -94,7 +117,7 @@ function Stat({ label, value, tone, text }: { label: string; value: number; tone
       <b>{text}</b>
     </div>
   );
-}
+});
 
 /** A phone's card is 62 px wide: the long Korean fleet names drop their region prefix so two lines say all of it. */
 function shortFleetName(name: string) {
@@ -105,7 +128,7 @@ function shortFleetName(name: string) {
  * Each fleet's nerve under its strength bar (the battle depth rules): two meters filling outward from the middle, the
  * player's to the left and the foe's to the right, amber while a fleet wavers and red once it breaks.
  */
-function NerveRow({ m }: { m: { own: FleetMorale; foe: FleetMorale } }) {
+const NerveRow = memo(function NerveRow({ m }: { m: { own: FleetMorale; foe: FleetMorale } }) {
   const t = useT();
   const side = (f: FleetMorale, which: 'own' | 'foe') => {
     const word = NERVE_WORD[f.state];
@@ -126,14 +149,14 @@ function NerveRow({ m }: { m: { own: FleetMorale; foe: FleetMorale } }) {
       {side(m.foe, 'foe')}
     </div>
   );
-}
+});
 
-function Card({ sq, compact, depth, onClick, onDouble }: { sq: SquadronInfo; compact: boolean; depth: boolean; onClick: (e: React.MouseEvent) => void; onDouble: () => void }) {
+const Card = memo(function Card({ sq, compact, depth, onSelect, onFocus }: { sq: SquadronInfo; compact: boolean; depth: boolean; onSelect: (id: number, add: boolean) => void; onFocus: (id: number) => void }) {
   const t = useT();
   const lang = useLang();
   return (
     // The simplified layout shows only the portrait and the count: the explanation is headed by the fleet's name.
-    <button className={`card f-${sq.faction} ${sq.selected ? 'card--selected' : ''} ${sq.alive === 0 ? 'card--dead' : ''}`} onClick={onClick} onDoubleClick={onDouble} aria-label={`${tName(sq.name)} · ${tCommander(sq.commander)}`} data-tip="card" data-tip-title={`${tName(sq.name)} · ${tCommander(sq.commander)}`}>
+    <button className={`card f-${sq.faction} ${sq.selected ? 'card--selected' : ''} ${sq.alive === 0 ? 'card--dead' : ''}`} onClick={(e) => onSelect(sq.id, e.shiftKey)} onDoubleClick={() => onFocus(sq.id)} aria-label={`${tName(sq.name)} · ${tCommander(sq.commander)}`} data-tip="card" data-tip-title={`${tName(sq.name)} · ${tCommander(sq.commander)}`}>
       <img src={portraitUrl(sq.portrait, true)} alt="" />
       <div className="card-flags">
         {sq.burning > 0 && (
@@ -178,7 +201,7 @@ function Card({ sq, compact, depth, onClick, onDouble }: { sq: SquadronInfo; com
       </div>
     </button>
   );
-}
+});
 
 /** `wait` is a cooldown in seconds shown over the icon. */
 type OrderDef = { icon: string; label: string; key: string; tip: string; run: () => void; on?: boolean; disabled?: boolean; wait?: number };
@@ -193,6 +216,8 @@ function FleetGroups({ engine, open, onToggle, slim }: { engine: Engine; open: b
   const [active, setActive] = useState(0);
   const [editing, setEditing] = useState<number | null>(null);
   const [name, setName] = useState('');
+  // Groups, the selection and the route queue are the engine's, not the snapshot's.
+  useEngineTick();
   const input = engine.input;
   const groups = input.getGroups();
   const current = groups.find((g) => g.selected)?.index ?? active;
@@ -268,6 +293,8 @@ function FleetGroups({ engine, open, onToggle, slim }: { engine: Engine; open: b
  */
 function Orders({ engine, p, night, selected, drum, tab, setTab, collapsed, onToggle }: { engine: Engine; p: PrimaryInfo | null; night: boolean; selected: number; drum: SquadronInfo['drum'] | undefined; tab: Tab; setTab: (tab: Tab) => void; collapsed: boolean; onToggle: () => void }) {
   const t = useT();
+  // The maneuver being placed is the input's, not the snapshot's.
+  useEngineTick();
   const input = engine.input;
   const none = selected === 0;
   // Squadron maneuvers under the maneuver rules: a button arms one, and the selection carries it out once drawn on the sea.
@@ -418,7 +445,9 @@ const BACK_LABEL: Record<BattleOrigin, { long: string; short: string }> = {
  * Pause and speed. The full layout shows every multiplier; the simplified one steps down and up beside the speed it is
  * at; a phone shows one button that cycles through them.
  */
-function SpeedControl({ engine, snap, variant }: { engine: Engine; snap: GameSnapshot; variant: 'all' | 'step' | 'cycle' }) {
+type SpeedState = Pick<GameSnapshot, 'speed' | 'paused' | 'approach' | 'autoFast' | 'fastForward'>;
+
+const SpeedControl = memo(function SpeedControl({ engine, variant, ...snap }: SpeedState & { engine: Engine; variant: 'all' | 'step' | 'cycle' }) {
   const t = useT();
   const setSpeed = (s: number) => {
     engine.speed = s;
@@ -482,7 +511,7 @@ function SpeedControl({ engine, snap, variant }: { engine: Engine; snap: GameSna
       )}
     </>
   );
-}
+});
 
 const GUN_SIDES: [number, string][] = [
   [0, '좌현'],
@@ -494,22 +523,24 @@ const GUN_SIDES: [number, string][] = [
  * The ship's guns as lights, one per gun, grouped by side: green when it can fire, filling amber while it loads, an empty
  * ring when it is out of shot. Each light names its gun and stage on hover.
  */
-function GunLights({ guns }: { guns: GunInfo[] }) {
+const GunLights = memo(function GunLights({ guns }: { guns: GunInfo[] }) {
   const t = useT();
+  // The loading fill comes from the live slice, in the order of `guns`.
+  const progress = useUi((s) => s.live.guns);
   return (
     <div className="gun-lights">
       {GUN_SIDES.map(([side, label]) => {
-        const list = guns.filter((g) => g.side === side);
+        const list = guns.map((g, i) => ({ g, p: progress[i] ?? g.progress })).filter(({ g }) => g.side === side);
         if (!list.length) return null;
         return (
           <div key={side} className="gun-side">
             <span>{t(label)}</span>
             <div className="gun-dots">
-              {list.map((g, i) => (
+              {list.map(({ g, p }, i) => (
                 <i
                   key={i}
                   className={`gun-dot ${g.empty ? 'gun-dot--empty' : g.stage >= 4 ? 'gun-dot--ready' : ''}`}
-                  style={{ '--p': Math.min(1, (g.stage + g.progress) / 4) } as CSSProperties}
+                  style={{ '--p': Math.min(1, (g.stage + p) / 4) } as CSSProperties}
                   title={`${t(g.label)} · ${g.stageName}`}
                 />
               ))}
@@ -519,9 +550,10 @@ function GunLights({ guns }: { guns: GunInfo[] }) {
       })}
     </div>
   );
-}
+});
 
-function Detail({ engine, snap, p, portrait }: { engine: Engine; snap: GameSnapshot; p: PrimaryInfo; portrait: string }) {
+// `cutaway` is only compared: the crew panel inside reads the engine's deck view, which a forced publish announces.
+const Detail = memo(function Detail({ engine, night, depth, p, portrait }: { engine: Engine; night: boolean; depth: boolean; p: PrimaryInfo; portrait: string; cutaway: number }) {
   const t = useT();
   const lang = useLang();
   return (
@@ -533,7 +565,7 @@ function Detail({ engine, snap, p, portrait }: { engine: Engine; snap: GameSnaps
             <div className="detail-sub">
               {t(p.kind)} · {t(ACTIVITY[p.activity] ?? p.activity)}
               {p.fireMode === 'hold' ? ' · ' + t('사격 중지') : ''}
-              {!p.lights && snap.night ? ' · ' + t('등불 꺼짐') : ''}
+              {!p.lights && night ? ' · ' + t('등불 꺼짐') : ''}
             </div>
           </div>
           {/* A new tab: the codex is its own page, and leaving this one would end the battle. */}
@@ -544,7 +576,7 @@ function Detail({ engine, snap, p, portrait }: { engine: Engine; snap: GameSnaps
         <div className="detail-body">
           <Stat label={t('선체')} value={p.hull} tone="hull" text={`${Math.round(p.hull * 100)}%`} />
           <Stat label={t('승조원')} value={p.crew / p.maxCrew} tone="crew" text={`${p.crew}`} />
-          {snap.morale && <Stat label={t('사기')} value={p.morale} tone="morale" text={NERVE_WORD[p.moraleState] ? t(NERVE_WORD[p.moraleState]!) : `${Math.round(p.morale * 100)}%`} />}
+          {depth && <Stat label={t('사기')} value={p.morale} tone="morale" text={NERVE_WORD[p.moraleState] ? t(NERVE_WORD[p.moraleState]!) : `${Math.round(p.morale * 100)}%`} />}
           {p.fire > 0.02 && <Stat label={t('화재')} value={p.fire} tone="fire" text={`${Math.round(p.fire * 100)}%`} />}
           {p.damageState && Object.entries(p.damageState).map(([kind, damage]) => damage > 0.015 && <Stat key={kind} label={t(kind === 'flooding' ? '침수' : kind === 'propulsion' ? '추진 손상' : '조타 손상')} value={damage} tone="fire" text={`${Math.round(damage * 100)}%`} />)}
           {p.guns.length > 0 && <GunLights guns={p.guns} />}
@@ -552,7 +584,7 @@ function Detail({ engine, snap, p, portrait }: { engine: Engine; snap: GameSnaps
         </div>
     </div>
   );
-}
+});
 
 const HINT_KEY = 'imjin.hud.hint';
 
@@ -695,6 +727,8 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const report = useUi((s) => s.report);
   const touchBox = useUi((s) => s.touchBox);
   const origin = useUi((s) => s.origin);
+  // The clock as the result card shows it: followed only once the battle is decided.
+  const endTime = useUi((s) => (s.snapshot && (s.snapshot.winner || s.snapshot.draw) ? s.live.time : 0));
   const rankedMatch = useNet((s) => s.rankedMatch);
   const tourActive = useTour((s) => s.active);
   const compact = useCompactLayout();
@@ -851,7 +885,10 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
     wasTour.current = tourActive;
   }, [tourActive]);
 
+  const selectSquadron = useCallback((id: number, add: boolean) => engine.selectSquadron(id, add), [engine]);
+  const focusSquadron = useCallback((id: number) => engine.focusSquadron(id), [engine]);
   if (!snap) return null;
+  const speedState: SpeedState = { speed: snap.speed, paused: snap.paused, approach: snap.approach, autoFast: snap.autoFast, fastForward: snap.fastForward };
   const own = snap.squadrons.filter((s) => s.faction === snap.faction);
   const p = snap.primary;
   const primaryShip = p ? engine.battle.get(p.id) : undefined;
@@ -871,13 +908,13 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
     ? [
         { label: '기세', value: `${snap.conquest.tickets.own} : ${snap.conquest.tickets.foe}` },
         { label: '거점', value: `${snap.conquest.held.own} : ${snap.conquest.held.foe}` },
-        { label: '소요 시간', value: formatTime(snap.time) },
+        { label: '소요 시간', value: formatTime(endTime) },
       ]
     : [
         { label: '격파', value: tShips(snap.enemyTotal - snap.enemy - snap.escaped) },
         { label: '도주', value: tShips(snap.escaped) },
         { label: '손실', value: tShips(snap.ownTotal - snap.own) },
-        { label: '소요 시간', value: formatTime(snap.time) },
+        { label: '소요 시간', value: formatTime(endTime) },
       ];
   // The score and the comparison with history belong to a historical battle the player fought for Joseon, not to online or conquest games.
   const scored = ended && snap.mode === 'scenario' && snap.scenario.id in GUIDES && snap.faction === 'joseon' && !engine.remote;
@@ -951,7 +988,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             <button className="balance balance--pill glass" onClick={() => setFold('score', false)} aria-expanded={false} aria-label={t('전황 펼치기')} title={t('전황 펼치기')}>
               <i className="bal-mark bal-mark--own" />
               <b>{snap.own}</b>
-              <span className="bal-pill-time">{formatTime(snap.time)}</span>
+              <span className="bal-pill-time"><Clock /></span>
               <b>{snap.enemy}</b>
               <i className="bal-mark bal-mark--foe" />
               <Icon name="chevronDown" size={14} />
@@ -966,10 +1003,10 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                   <small>/{snap.ownTotal}</small>
                 </span>
                 <span className="bal-time">
-                  {formatTime(snap.time)}
+                  <Clock />
                   {perf && (
                     <span className="fps">
-                      {snap.fps}fps · {t(LEVEL_LABEL[snap.level] ?? '')}
+                      <Fps />fps · {t(LEVEL_LABEL[snap.level] ?? '')}
                     </span>
                   )}
                 </span>
@@ -1180,7 +1217,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             {/* Once the battle is decided the result card is the only thing to act on: no orders or cards behind it. */}
             {!ended && (
               <>
-                {!mapFolded && (p ? <Detail engine={engine} snap={snap} p={p} portrait={primaryPortrait} /> : hintOpen && !tourActive && !slim && <Hint onClose={closeHint} />)}
+                {!mapFolded && (p ? <Detail engine={engine} cutaway={engine.cutaway} night={snap.night} depth={!!snap.morale} p={p} portrait={primaryPortrait} /> : hintOpen && !tourActive && !slim && <Hint onClose={closeHint} />)}
                 <div className="cards-wrap">
                   {folded('cards') ? (
                     <FoldTab label={t('장수 패 {n}', { n: own.length })} title={t('장수 패 펼치기')} onOpen={() => setFold('cards', false)} />
@@ -1188,7 +1225,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                     <>
                       <div className="cards">
                         {own.map((sq) => (
-                          <Card key={sq.id} sq={sq} compact={compact} depth={!!snap.morale} onClick={(e) => engine.selectSquadron(sq.id, e.shiftKey)} onDouble={() => engine.focusSquadron(sq.id)} />
+                          <Card key={sq.id} sq={sq} compact={compact} depth={!!snap.morale} onSelect={selectSquadron} onFocus={focusSquadron} />
                         ))}
                       </div>
                       {wide && <FoldButton className="cards-fold" title={t('장수 패 접기')} onFold={() => setFold('cards', true)} />}
@@ -1216,7 +1253,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                     />
                     {wide && !engine.remote && (
                       <div className={`speed${slim ? ' speed--step' : ''}`}>
-                        <SpeedControl engine={engine} snap={snap} variant={slim ? 'step' : 'all'} />
+                        <SpeedControl engine={engine} {...speedState} variant={slim ? 'step' : 'all'} />
                       </div>
                     )}
                   </div>
@@ -1226,7 +1263,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                     <button className="dock-fold" aria-expanded={!sheetFolded} onClick={() => setSheetFolded((v) => !v)}>
                       {t('지휘')} <Icon name={sheetFolded ? 'chevronUp' : 'chevronDown'} size={14} />
                     </button>
-                    {!engine.remote && <SpeedControl engine={engine} snap={snap} variant="cycle" />}
+                    {!engine.remote && <SpeedControl engine={engine} {...speedState} variant="cycle" />}
                   </div>
                 )}
               </>
@@ -1252,7 +1289,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             ))}
           </div>
           {engine.remote && rankedMatch && <RankResult />}
-          {scored && <BattleResult snap={snap} time={formatTime(snap.time)} />}
+          {scored && <BattleResult snap={snap} time={formatTime(endTime)} />}
           {report && (
             <div className="result-camp">
               <p>

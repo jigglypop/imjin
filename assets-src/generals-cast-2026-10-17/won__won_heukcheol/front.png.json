@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-16T21:28:29.860Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "The attached picture is an approved full-body costume reference. Make exactly the same picture, the same man, face, armour, helmet, colours, pose, scale, framing, light and background, with one change only: he holds nothing. Both hands are empty, firmly closed fists, backs of the hands up, thumbs over the fingers, the arms still perfectly horizontal in the strict T-pose. Remove the sword, its tassel and anything held completely. No text, no border. Photographic, no illustration look.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/won/front.png"
+  ],
+  "usage": {
+    "input_tokens": 1642,
+    "input_tokens_details": {
+      "image_tokens": 1521,
+      "text_tokens": 121
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 7572
+  }
+}

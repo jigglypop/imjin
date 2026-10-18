@@ -1,0 +1,29 @@
+{
+  "at": "2026-10-17T08:52:44.821Z",
+  "image": {
+    "model": "gpt-image-2.5-flare",
+    "size": "2880x2880",
+    "quality": "high",
+    "background": "transparent",
+    "output_format": "png"
+  },
+  "prompt": "The attached picture is the front view of a character reference for image-to-3D reconstruction. Make the matching view of the exact same man in the exact same costume and the exact same 45-degree A-pose with both fists empty and relaxed, seen exactly from HIS LEFT SIDE in strict profile (he faces the LEFT edge of the picture, the camera standing at his left): his left arm hangs angled down at his side in the A-pose, slightly away from the body, the empty relaxed fist by his thigh; his right arm hidden behind his body. Same scale, same height in the frame, same orthographic look, same soft flat studio light, same plain light grey background, no floor line, no shadow. Everything consistent with the front view: colours, materials, trims, helmet, lengths, proportions. No text, no letters, no logo, no border. No painting or illustration look, no plastic CGI look. Exactly two arms, two legs. The SECOND attached picture is the turnaround of his armour (front, back, left, right): from this side the armour and helmet must look exactly as in its matching view of that sheet. The THIRD attached picture is a close-up of his face: the same face in profile.",
+  "refs": [
+    "assets-src/generals-cast-2026-10-17/jijin__ming_swaeja_t6/front.png",
+    "assets-src/generals-cast-2026-10-17/jijin__ming_swaeja_t6/armor.png",
+    "assets-src/generals-cast-2026-10-17/jijin__ming_swaeja_t5/face.png"
+  ],
+  "usage": {
+    "input_tokens": 4257,
+    "input_tokens_details": {
+      "image_tokens": 3962,
+      "text_tokens": 295
+    },
+    "output_tokens": 5930,
+    "output_tokens_details": {
+      "image_tokens": 5930,
+      "text_tokens": 0
+    },
+    "total_tokens": 10187
+  }
+}

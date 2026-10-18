@@ -1,0 +1,106 @@
+{
+  "kind": "spear",
+  "hand": "right",
+  "length": 2.535,
+  "notes": "Solid tapered hardwood pole, ridged bevel head, separate socket, hand binding, butt spike; leaf",
+  "id": "ming_qiang",
+  "faction": "ming",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 4736,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.10065437480807304,
+    2.534999966621399,
+    0.09307913482189178
+  ],
+  "lodTriangles": 4736,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_qiang.glb",
+      "bytes": 136612,
+      "sha256": "382cd166ee1d6242edf0a083cedf32967b469dbd1c017a5067371d72d11cc169"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_ming_qiang_lod1.glb",
+      "bytes": 136616,
+      "sha256": "5653dc74d7bcd7670d5d00dd26cae851df27ee5ddd547297ab3c642c0e2837e7"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\ming_qiang.blend",
+      "bytes": 168169,
+      "sha256": "5edbaf193047d1ca60025d5740393e391ae941ee570fc4d70a6ca49fb44057b6"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_ming_qiang.glb",
+      "bytes": 136612,
+      "sha256": "382cd166ee1d6242edf0a083cedf32967b469dbd1c017a5067371d72d11cc169",
+      "triangles": 4736,
+      "vertices": 4176,
+      "min": [
+        -0.04106149822473526,
+        -1.1449999809265137,
+        -0.05360715836286545
+      ],
+      "max": [
+        0.059592876583337784,
+        1.3899999856948853,
+        0.03947197645902634
+      ],
+      "dimensions": [
+        0.10065437480807304,
+        2.534999966621399,
+        0.09307913482189178
+      ],
+      "steelOutwardVertices": 56,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_ming_qiang_lod1.glb",
+      "bytes": 136616,
+      "sha256": "5653dc74d7bcd7670d5d00dd26cae851df27ee5ddd547297ab3c642c0e2837e7",
+      "triangles": 4736,
+      "vertices": 4176,
+      "min": [
+        -0.04106149822473526,
+        -1.1449999809265137,
+        -0.05360715836286545
+      ],
+      "max": [
+        0.059592876583337784,
+        1.3899999856948853,
+        0.03947197645902634
+      ],
+      "dimensions": [
+        0.10065437480807304,
+        2.534999966621399,
+        0.09307913482189178
+      ],
+      "steelOutwardVertices": 56,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/ming_qiang.blend",
+    "bytes": 168169,
+    "sha256": "5edbaf193047d1ca60025d5740393e391ae941ee570fc4d70a6ca49fb44057b6"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/ming_qiang.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 2306,
+    "sha256": "5435da747d58dc1acf2a1ec1605f48d29e788d97db09f9ea9ec8a832d15d5cfb"
+  }
+}

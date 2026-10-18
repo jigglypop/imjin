@@ -15,7 +15,7 @@ import { applyCommand, type Command } from '../src/sim/commands';
 import type { Conquest } from '../src/sim/conquest';
 import { CONQUEST_MAPS, CONQUEST_ORDER, type Seat } from '../src/sim/maps';
 import { SCENARIO_ORDER, SCENARIOS } from '../src/sim/scenarios';
-import { FACTIONS, teamOf, type BattleEvent, type Faction, type Team } from '../src/sim/types';
+import { FACTIONS, teamOf, type BattleEvent, type Faction, type Ship, type Team } from '../src/sim/types';
 import {
   encodeSnapshot,
   GRACE_SECONDS,
@@ -39,6 +39,7 @@ import { MemoryAccountStore } from './accountsMemory';
 import { PgAccountStore, databaseConfig, type DatabaseConfig } from './accountsPg';
 import { ApiRouter, addressOf, originAllowed } from './api';
 import { authRoutes } from './auth';
+import { metaRoutes, payServerBattle } from './meta';
 
 /** Set by build-server.mjs, so health identifies the bundle actually running. */
 declare const IMJIN_BUILD_REVISION: string;
@@ -375,20 +376,32 @@ async function start(room: Room) {
   }
 }
 
-function metaMsg(live: Live, all: boolean, client: Client, room: Room): ServerMsg | null {
+function metaMsg(live: Live, all: boolean, client: Client, room: Room, seen?: Map<Team, Ship[]>): ServerMsg | null {
   const seat = room.info.seats.findIndex((s) => s.client === client.id);
   const team = room.info.seats[seat]?.team;
   if (!team) return null;
   let view = live.observed.get(client.id);
   if (!view) { view = { known: new Map(), squads: '' }; live.observed.set(client.id, view); }
-  const observed = observedShips(live.battle, team);
+  const observed = observedFor(live, team, seen);
   const visibleIds = new Set(observed.map((s) => s.id));
-  const ships = observedMetadata(live.battle, team, view.known, all);
+  const ships = observedMetadata(live.battle, team, view.known, all, observed);
   const squadrons = live.battle.squadrons.map((q) => ({ ...q, shipIds: q.shipIds.filter((id) => visibleIds.has(id)), leaderId: visibleIds.has(q.leaderId) ? q.leaderId : 0 })).filter((q) => q.shipIds.length > 0);
-  const squads = JSON.stringify(squadrons.map((q) => [q.id, q.shipIds, q.leaderId]));
+  // Compared only; never empty, so the first comparison against '' always differs.
+  let squads = '#';
+  for (const q of squadrons) squads += q.id + ':' + q.shipIds.join(',') + ':' + q.leaderId + ';';
   if (!all && !ships.length && squads === view.squads) return null;
   view.squads = squads;
   return { t: 'meta', ships, squadrons };
+}
+
+/** A team's observed ships, computed once per flush when `seen` is given. */
+function observedFor(live: Live, team: Team, seen?: Map<Team, Ship[]>) {
+  let ships = seen?.get(team);
+  if (!ships) {
+    ships = observedShips(live.battle, team);
+    seen?.set(team, ships);
+  }
+  return ships;
 }
 
 /** Whether the battle clock is held back for pages still loading. */
@@ -447,6 +460,7 @@ function stepOnce(room: Room, live: Live) {
   if (speedOf(live) === 1 && live.steps % STEPS_PER_SNAPSHOT === 0) flush(room, live);
   if (live.battle.ended) {
     flush(room, live);
+    payRoom(room, live);
     if (room.ranked) {
       finishRanked(room, live.battle.draw ? 'draw' : live.battle.winner === 'joseon' ? 0 : 1, 'battle');
       return;
@@ -460,6 +474,21 @@ function stepOnce(room: Room, live: Live) {
     broadcast(room, { t: 'end', winner: live.battle.winner as Team | null, draw: live.battle.draw });
     pushRoom(room);
   }
+}
+
+/**
+ * Pays every signed-in person who played a battle the server ran to its end (online and ranked alike, uncapped: the
+ * server watched it). A store that cannot answer only costs the reward; it is logged.
+ */
+function payRoom(room: Room, live: Live) {
+  if (!accounts?.ready) return;
+  room.info.seats.forEach((seat, index) => {
+    if (!seat.human || !seat.client) return;
+    const userId = byId.get(seat.client)?.user?.id;
+    if (!userId) return;
+    payServerBattle(accounts!, userId, live.battle, index, seat.faction, seat.team, room.ranked ? 'ranked' : 'online', choiceKey(room.info.battle))
+      .catch((error) => console.error('meta reward failed', error instanceof Error ? error.message : 'unknown error'));
+  });
 }
 
 function tick(room: Room, dt: number, slice: number) {
@@ -506,15 +535,18 @@ function flush(room: Room, live: Live) {
   let casualties = 0;
   const events = live.events.filter((e) => e.type !== 'casualty' || (!e.melee && (casualties += 1) <= 40));
   live.events = [];
+  const historical = live.battle.profile === 'historical';
+  const seen = new Map<Team, Ship[]>();
   for (const c of room.clients) {
     const seat = room.info.seats.findIndex((s) => s.client === c.id);
     const team = room.info.seats[seat]?.team;
     if (!team) continue;
-    const meta = metaMsg(live, false, c, room);
+    const meta = metaMsg(live, false, c, room, seen);
     if (meta) send(c, meta);
-    const seenEvents = events.filter((e) => observedEvent(e, live.battle, live.conquest, team));
+    // Historical battles show every event to everyone (observedEvent is always true there).
+    const seenEvents = historical ? events : events.filter((e) => observedEvent(e, live.battle, live.conquest, team));
     if (seenEvents.length) send(c, { t: 'events', events: seenEvents });
-    sendBinary(c, encodeSnapshot(live.battle.time, observedShips(live.battle, team), seat, (s) => live.battle.isActive(s)));
+    sendBinary(c, encodeSnapshot(live.battle.time, observedFor(live, team, seen), seat, (s) => live.battle.isActive(s)));
     if (live.conquest && live.flushes % 3 === 0) send(c, { t: 'state', conquest: observedState(live.conquest, live.battle, team) });
   }
 }
@@ -993,6 +1025,7 @@ function main() {
   accounts = openAccounts(process.env);
   const api = new ApiRouter(accounts);
   authRoutes(api, ranked);
+  metaRoutes(api);
   // Ended sessions are forgotten every hour.
   setInterval(() => {
     if (accounts?.ready) accounts.sweep().catch((error) => console.error('accounts sweep failed', error instanceof Error ? error.message : 'unknown error'));

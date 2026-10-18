@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T15:10:13.855Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "16:9",
+  "prompt": "A costume-department turnaround sheet for a big-budget live-action historical film about the naval wars of 1797-1805 (Master and Commander, Waterloo): ONE complete costume (with its armour where it has one, and its headwear) shown four times side by side in one row at the same scale and height, from left to right: from the FRONT, from the BACK, from ITS LEFT SIDE in strict profile, from ITS RIGHT SIDE in strict profile. Each time the costume is worn by an invisible ghost mannequin: it keeps the shape it has on a tall athletic man with broad shoulders, a deep chest and a narrow cinched waist, the sleeves angled 45 degrees down and away from the body as in an A-pose, the legs standing apart; empty inside, no person, no head, no hands, no mannequin, no stand. The costume: Faction look: a French Navy officer of the Napoleonic wars, 1798-1805, as in big-budget Napoleonic films: The commander of the combined fleet: a French vice-amiral's uniform of 1805, a dark navy-blue tailcoat with a high collar, the collar, cuffs and front edges richly embroidered with gold oak leaves, gold bullion epaulettes with silver stars, a red-white-blue silk sash at the waist, a white waistcoat, white breeches, tall black boots; a black bicorne with broad gold edging and a tricolour cockade. The attached picture is his portrait: take the colours and the construction of his dress where they agree with the description. All four views show exactly the same costume: identical colours, plates, buttons, lace, trims and lengths. Photographic, crisp detail, believable Napoleonic-era materials: fine wool broadcloth, gold bullion lace and embroidery, gilt buttons, silk, leather, soft even flat studio light, a plain light grey background, no ground shadow. No sword, no weapon, no scabbard. No text, no letters, no labels, no border. No illustration look.",
+  "refs": [
+    "public/ui/portraits/portrait_villeneuve.webp"
+  ],
+  "estimatedUsd": 0.04
+}

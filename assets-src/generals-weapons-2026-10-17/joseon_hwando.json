@@ -1,0 +1,106 @@
+{
+  "kind": "sword",
+  "hand": "right",
+  "length": 0.94,
+  "notes": "Curved single edge, separate polished bevels, wrapped rayskin grip",
+  "id": "joseon_hwando",
+  "faction": "joseon",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 2852,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.09000000357627869,
+    0.9699999988079071,
+    0.11542006954550743
+  ],
+  "lodTriangles": 2852,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_hwando.glb",
+      "bytes": 106816,
+      "sha256": "8d59b920112ac9d2c7f05a1b170f789b259d935b91d1e688d61e2fc80706e44b"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_joseon_hwando_lod1.glb",
+      "bytes": 106824,
+      "sha256": "16c5ea2dd6ef9e7723834e56c0fc0f9f95f5c0f7973b81b4206a7bbb6712478c"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\joseon_hwando.blend",
+      "bytes": 137990,
+      "sha256": "792db4d5dcc671e5923bdf958fbf220f6b18b0289373f15d2fa5d937627e7a14"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_joseon_hwando.glb",
+      "bytes": 106816,
+      "sha256": "8d59b920112ac9d2c7f05a1b170f789b259d935b91d1e688d61e2fc80706e44b",
+      "triangles": 2852,
+      "vertices": 3438,
+      "min": [
+        -0.04500000178813934,
+        -0.09139999747276306,
+        -0.05400000140070915
+      ],
+      "max": [
+        0.04500000178813934,
+        0.878600001335144,
+        0.06142006814479828
+      ],
+      "dimensions": [
+        0.09000000357627869,
+        0.9699999988079071,
+        0.11542006954550743
+      ],
+      "steelOutwardVertices": 104,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_joseon_hwando_lod1.glb",
+      "bytes": 106824,
+      "sha256": "16c5ea2dd6ef9e7723834e56c0fc0f9f95f5c0f7973b81b4206a7bbb6712478c",
+      "triangles": 2852,
+      "vertices": 3438,
+      "min": [
+        -0.04500000178813934,
+        -0.09139999747276306,
+        -0.05400000140070915
+      ],
+      "max": [
+        0.04500000178813934,
+        0.878600001335144,
+        0.06142006814479828
+      ],
+      "dimensions": [
+        0.09000000357627869,
+        0.9699999988079071,
+        0.11542006954550743
+      ],
+      "steelOutwardVertices": 104,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/joseon_hwando.blend",
+    "bytes": 137990,
+    "sha256": "792db4d5dcc671e5923bdf958fbf220f6b18b0289373f15d2fa5d937627e7a14"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/joseon_hwando.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 2788,
+    "sha256": "e392e7beb948c462378f15c9f9dffec0c47463644c1b72beae1e664995123753"
+  }
+}

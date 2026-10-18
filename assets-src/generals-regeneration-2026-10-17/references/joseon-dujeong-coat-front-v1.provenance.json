@@ -1,0 +1,29 @@
+{
+  "asset": "joseon-dujeong-coat-front-v1",
+  "type": "reference-image",
+  "mode": "built-in",
+  "tool": "image_gen.imagegen",
+  "generatedDate": "2026-10-17",
+  "originalPath": "C:/Users/dongh/.codex/generated_images/01a1461e-8fb8-7333-a309-fda9be965fce/exec-f901853a-e147-40d7-b780-4d6e24260102.png",
+  "savedPath": "assets-src/generals-regeneration-2026-10-17/references/joseon-dujeong-coat-front-v1.png",
+  "sourceGeometry": null,
+  "inputImages": [
+    {
+      "path": "assets-src/generals-regeneration-2026-10-17/references/body-front-v1.png",
+      "role": "body proportions and pose reference only"
+    }
+  ],
+  "prompt": "Use case: historical-scene.\nAsset type: NEW separate EMPTY wearable Joseon dujeong armor coat reference for modular image-to-3D production, strict front orthographic view.\nInput images: Image 1 is a SCALE AND T-POSE REFERENCE ONLY. It shows the fixed underlying body that this coat must fit over. Do not reproduce the person, head, neck, hands, legs, trousers, boots or undersuit. Produce ONLY the armor coat, completely empty.\nPrimary request: a sober practical late-16th-century Korean admiral's dujeong armor coat, from the neck opening to slightly below the knees, with long sleeves held straight horizontally in a symmetric T-shape. It must be a NEW clean standalone garment asset, not existing model geometry. Muted oxblood red tightly woven outer cloth with small regular brass rivet heads in orderly horizontal and vertical rows; iron underplates concealed under the cloth. Restrained dark edging, visible physically plausible panel seams, proper overlapping front closure, modest collar, and one practical dark leather waist belt with a small plain brass buckle. Coat skirt falls in clean broad panels and has a readable modest center split near its lower hem. Small tasteful construction details, realistic thickness, no ornate decoration.\nScene/backdrop: identical flat neutral mid-grey studio background and restrained even soft studio lighting as Image 1. No floor line and no visible support. Premium realistic game asset material rendering with clear separable cloth/metal/belt edges.\nComposition/framing: ONE FRONT ORTHOGRAPHIC ELEVATION ONLY on the same square canvas and body scale as Image 1, zero yaw and no perspective. Align the coat's shoulder line, waistline, sleeve ends and vertical center with Image 1's underlying body: collar sits at the base of the reference neck, shoulders match reference shoulders, horizontal sleeve cuffs end at reference wrists, waist belt sits at reference waist, hem extends to slightly below the reference knees. Leave blank grey where the reference head, hands and lower legs were. Do not zoom in or rescale the garment to fill the canvas. Sleeves lie straight with compact natural fabric thickness, not large inflated sacks. Upper garment is proportionate to that fixed normal athletic human, not to a giant.\nCritical empty-garment constraints: coat ONLY. Both wrist cuffs are visibly open and hollow with a dark fabric interior; the neck opening is visibly empty and hollow. There is NO human body, NO skin, NO face, NO head, NO neck, NO hair, NO hands, NO trousers, NO legs, NO boots, NO mannequin, NO mannequin silhouette, NO wire, NO stand, NO hanger, NO support, NO helmet, NO weapon, NO armor pedestal and NO props. The interior may be dark fabric only, never a dark human silhouette.\nAvoid: huge gold shoulder pads, fantasy pauldrons, jewelry, dragons, lion heads, chest faces, medallions, giant gold ornaments, melted forms, random speckles, grime, excessive wrinkles, weathering, floating accessories, protruding spikes, oversized collars, modern clothing, text, labels, watermark, turnaround, multiple views, collage. Maintain clean believable sewn construction and a practical wearable silhouette.",
+  "visualReview": {
+    "status": "needs-scale-correction",
+    "observations": [
+      "Empty front T-pose armor coat with no head, skin, legs, mannequin, weapon or helmet.",
+      "Muted red outer textile and restrained brass rivets; readable seams, collar, belt and center hem split.",
+      "Visual design is usable as a regeneration reference."
+    ],
+    "limitations": [
+      "Generator enlarged the coat: cuffs extend beyond reference wrists and hem is too low; targeted scale correction requested.",
+      "Single view only; not proof of finished 3D geometry, inner thickness or rigging."
+    ]
+  }
+}

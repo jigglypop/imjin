@@ -73,7 +73,7 @@ export function buildMingsmall(lod: Lod): MeshData {
     box(b, timber, [-L / 2 - 0.55, -1.4, -0.2], [-L / 2 - 0.05, 0.9, 0.2], { grain: 1 });
     if (lod < 2) {
       const x = xb + 0.015;
-      b.quadF(P('panel_gold', { rect: [0.02, 0.02, 0.98, 0.98], surf: 3 }), [[x, deck + 0.1, -0.7], [x, deck + 0.1, 0.7], [x, deck + 0.1 + 1.3, 0.7], [x, deck + 0.1 + 1.3, -0.7]], [1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+      b.quadF(P('panel_gold', { rect: [0.02, 0.02, 0.98, 0.98], surf: 3 }).fit(1.4, 1.3), [[x, deck + 0.1, -0.7], [x, deck + 0.1, 0.7], [x, deck + 0.1 + 1.3, 0.7], [x, deck + 0.1 + 1.3, -0.7]], [1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
     }
   }
 

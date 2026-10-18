@@ -1,0 +1,111 @@
+{
+  "kind": "bow",
+  "hand": "left",
+  "length": 1.92,
+  "notes": "Laminated japanese bow, shaped recurve, horn nocks, central handgrip, taut separate string",
+  "nock": [
+    0,
+    0,
+    -0.13
+  ],
+  "id": "japan_yumi",
+  "faction": "japan",
+  "grip": [
+    0,
+    0,
+    0
+  ],
+  "up": "+Y",
+  "forward": "+Z",
+  "triangles": 7900,
+  "author": "OpenAI Codex - original procedural mesh authored for imjin",
+  "license": "Project-owned original geometry; no third-party meshes or textures",
+  "blenderVersion": "5.2.1 LTS",
+  "dimensionsMeters": [
+    0.03799999877810478,
+    1.9437888860702515,
+    0.26095449924468994
+  ],
+  "lodTriangles": 7700,
+  "files": [
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_yumi.glb",
+      "bytes": 170136,
+      "sha256": "00248e498d2f0a1de9b3ebc063943cac0db0d922ed148cac64aafa231d0e5bb8"
+    },
+    {
+      "path": "C:\\dev\\imjin\\public\\models\\generals\\parts\\weapon_japan_yumi_lod1.glb",
+      "bytes": 166544,
+      "sha256": "936205e802db750e9c02239b89eba0b9b65123ecfe1a7051ea924f994f49c0fd"
+    },
+    {
+      "path": "F:\\codex-work\\imjin\\weapon-production\\japan_yumi.blend",
+      "bytes": 199348,
+      "sha256": "5f7f062bbfcf353746c6fef610c2a1354b4ece7c08c01fdf45788c3dcf856950"
+    }
+  ],
+  "verifiedLevels": [
+    {
+      "suffix": "",
+      "path": "public/models/generals/parts/weapon_japan_yumi.glb",
+      "bytes": 170136,
+      "sha256": "00248e498d2f0a1de9b3ebc063943cac0db0d922ed148cac64aafa231d0e5bb8",
+      "triangles": 7900,
+      "vertices": 4812,
+      "min": [
+        -0.01899999938905239,
+        -0.6518944501876831,
+        -0.1379999965429306
+      ],
+      "max": [
+        0.01899999938905239,
+        1.2918944358825684,
+        0.12295450270175934
+      ],
+      "dimensions": [
+        0.03799999877810478,
+        1.9437888860702515,
+        0.26095449924468994
+      ],
+      "steelOutwardVertices": 0,
+      "steelInwardVertices": 0
+    },
+    {
+      "suffix": "_lod1",
+      "path": "public/models/generals/parts/weapon_japan_yumi_lod1.glb",
+      "bytes": 166544,
+      "sha256": "936205e802db750e9c02239b89eba0b9b65123ecfe1a7051ea924f994f49c0fd",
+      "triangles": 7700,
+      "vertices": 4712,
+      "min": [
+        -0.01899999938905239,
+        -0.6518944501876831,
+        -0.1379999965429306
+      ],
+      "max": [
+        0.01899999938905239,
+        1.2918944358825684,
+        0.12295450270175934
+      ],
+      "dimensions": [
+        0.03799999877810478,
+        1.9437888860702515,
+        0.26095449924468994
+      ],
+      "steelOutwardVertices": 0,
+      "steelInwardVertices": 0
+    }
+  ],
+  "editableSource": {
+    "path": "assets-src/generals-weapons-2026-10-17/japan_yumi.blend",
+    "bytes": 199348,
+    "sha256": "5f7f062bbfcf353746c6fef610c2a1354b4ece7c08c01fdf45788c3dcf856950"
+  },
+  "thumbnail": {
+    "path": "public/ui/weapons/japan_yumi.webp",
+    "width": 512,
+    "height": 512,
+    "bytes": 3952,
+    "sha256": "b5eaa01448cda9b3bed4c2b0613ea34b00bfeea6fe10e752afc0cf6cc71c00a7"
+  }
+}

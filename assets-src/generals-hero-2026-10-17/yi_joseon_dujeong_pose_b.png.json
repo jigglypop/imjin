@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-16T16:07:51.102Z",
+  "image": {
+    "model": "gpt-image-2.5-sunburst",
+    "size": "2048x2880",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "The attached picture is a full-body costume reference of this man. Make the same man, same face, same armour and helmet, same heroic tall proportions, now standing in the commanding pose of a historical war film poster: standing tall and still, feet a shoulder width apart, chest out, chin level, looking straight ahead into the lens with calm, fierce resolve; a Joseon hwando sabre in its black lacquered scabbard stands point-down on the ground in front of him, upright on his centre line, and both his hands rest one over the other on top of its hilt, elbows slightly out. The sword is slender, slightly curved, with a round brass guard and a dark cord-wrapped grip, its scabbard tip touching the ground between his boots. Seen straight from the front at chest height through a long telephoto lens, no perspective distortion; the whole figure in the frame with a clear margin above the plume and below the boots. Soft, even, flat studio light from every side, no hard shadows, no rim light; a plain seamless very light grey background, no floor line, no cast shadow, nothing else in the picture. Crisp, sharply focused detail everywhere. The coat skirts hang straight and still. No cape, no flying ribbons. No text, no letters, no logo, no border. No painting or illustration look, no plastic CGI look.",
+  "refs": [
+    "assets-src/generals-hero-2026-10-17/yi_joseon_dujeong_front.png",
+    "assets-src/generals-hero-2026-10-17/yi_joseon_dujeong_cast_a.png"
+  ],
+  "usage": {
+    "input_tokens": 3349,
+    "input_tokens_details": {
+      "image_tokens": 3042,
+      "text_tokens": 307
+    },
+    "output_tokens": 3223,
+    "output_tokens_details": {
+      "image_tokens": 3223,
+      "text_tokens": 0
+    },
+    "total_tokens": 6572
+  }
+}

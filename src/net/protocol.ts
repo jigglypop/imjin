@@ -192,17 +192,23 @@ const SHIP = 64;
  * full precision where an error would show as a jump (position, heading), quantized where it would not.
  */
 export function encodeSnapshot(time: number, ships: readonly Ship[], owner: number, isActive: (s: Ship) => boolean): ArrayBuffer {
-  const live = ships.filter((s) => s.alive);
+  // Only live ships go on the wire, in order; counted in place rather than filtered into a new array.
+  let liveCount = 0;
   let gunBytes = 0;
-  for (const s of live) if (s.owner === owner && isActive(s) && s.guns.length > 0) gunBytes += 1 + s.guns.length * 4;
-  const buf = new ArrayBuffer(HEADER + live.length * SHIP + gunBytes);
+  for (const s of ships) {
+    if (!s.alive) continue;
+    liveCount += 1;
+    if (s.owner === owner && isActive(s) && s.guns.length > 0) gunBytes += 1 + s.guns.length * 4;
+  }
+  const buf = new ArrayBuffer(HEADER + liveCount * SHIP + gunBytes);
   const d = new DataView(buf);
   d.setUint8(0, 1);
   d.setUint8(1, PROTOCOL);
-  d.setUint16(2, live.length, true);
+  d.setUint16(2, liveCount, true);
   d.setFloat64(4, time, true);
   let o = HEADER;
-  for (const s of live) {
+  for (const s of ships) {
+    if (!s.alive) continue;
     d.setUint16(o, s.id, true);
     d.setFloat32(o + 2, s.x, true);
     d.setFloat32(o + 6, s.z, true);
@@ -233,8 +239,8 @@ export function encodeSnapshot(time: number, ships: readonly Ship[], owner: numb
     d.setUint8(o + 53, Math.round(Math.max(0, Math.min(1, s.morale)) * 255));
     o += SHIP;
   }
-  for (const s of live) {
-    if (!(s.owner === owner && isActive(s)) || s.guns.length === 0) continue;
+  for (const s of ships) {
+    if (!s.alive || !(s.owner === owner && isActive(s)) || s.guns.length === 0) continue;
     d.setUint8(o, s.guns.length);
     o += 1;
     for (const g of s.guns) {
@@ -266,8 +272,8 @@ export function decodeSnapshot(buf: ArrayBuffer): { time: number; ships: ShipFra
       speed: d.getInt16(o + 14, true) / 1000,
       turn: d.getInt16(o + 16, true) / 10000,
       hull: d.getFloat32(o + 18, true),
-      roles: [0, 1, 2, 3].map((k) => d.getUint16(o + 22 + k * 2, true) / 10) as [number, number, number, number],
-      plan: [0, 1, 2, 3].map((k) => d.getUint8(o + 30 + k) / 255) as CrewPlan,
+      roles: [d.getUint16(o + 22, true) / 10, d.getUint16(o + 24, true) / 10, d.getUint16(o + 26, true) / 10, d.getUint16(o + 28, true) / 10],
+      plan: [d.getUint8(o + 30) / 255, d.getUint8(o + 31) / 255, d.getUint8(o + 32) / 255, d.getUint8(o + 33) / 255] as CrewPlan,
       crew: 0,
       fire: d.getUint8(o + 34) / 255,
       burn: d.getUint8(o + 35) / 255,

@@ -701,11 +701,161 @@
         "total_tokens": 3094
       },
       "estimatedCostUsd": 0.0624
+    },
+    {
+      "id": "jijin",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-flare",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man: do not reuse his face, beard or costume. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. 'Late-Ming Chinese costume: Ji Jin, Ming naval guerrilla commander from Zhejiang who fought at Noryang, about forty-five, a lean sun-darkened sailor's face, a thin moustache and a short wispy beard, alert narrow eyes; simple low Ming iron helmet with a small red tassel, faded blue padded cotton armour with brass studs, salt-stained.",
+      "reference": "assets-src/commanders-2026-10-16/src/deng.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T20:33:43.725Z",
+      "finishedAt": "2026-10-16T20:34:07.554Z",
+      "usage": {
+        "input_tokens": 1369,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 345
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3125
+      },
+      "estimatedCostUsd": 0.0626
+    },
+    {
+      "id": "lirusong",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-flare",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man: do not reuse his face, beard or costume. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. 'Late-Ming Chinese costume: Li Rusong, Ming commander-in-chief of the 1592-93 expedition, about forty-four, of Liaodong frontier stock, a strong square face with high cheekbones, a full black moustache and a short thick beard, proud commanding eyes; rounded Ming steel helmet with a tall spike and a thick red tassel, dark iron lamellar cuirass under a crimson general's cloak with a small gilt chest mirror.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T20:33:43.707Z",
+      "finishedAt": "2026-10-16T20:34:10.153Z",
+      "usage": {
+        "input_tokens": 1385,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 361
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3141
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "liuting",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-flare",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man: do not reuse his face, beard or costume. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. 'Late-Ming Chinese costume: Liu Ting, Ming general of the western route in 1598, about forty, a huge burly man with a broad heavy face, thick black beard, fierce bold eyes; rounded Ming steel helmet with a red tassel, heavy black iron lamellar armour over a dark red war robe, the haft of a great iron blade glimpsed over one shoulder.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T20:33:43.724Z",
+      "finishedAt": "2026-10-16T20:34:13.863Z",
+      "usage": {
+        "input_tokens": 1371,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 347
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3127
+      },
+      "estimatedCostUsd": 0.0626
+    },
+    {
+      "id": "magui",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-flare",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man: do not reuse his face, beard or costume. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. 'Late-Ming Chinese costume: Ma Gui, Ming commander-in-chief of 1597, about fifty-four, of a Hui Muslim frontier family from Datong, a long weathered face with a prominent nose, a grey-streaked full beard, hard experienced eyes; rounded Ming helmet with a red tassel and neck flaps, dark iron mountain-pattern scale armour with a deep blue cloak collar.",
+      "reference": "assets-src/commanders-2026-10-16/src/deng.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T20:33:43.724Z",
+      "finishedAt": "2026-10-16T20:34:17.171Z",
+      "usage": {
+        "input_tokens": 1373,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 349
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3129
+      },
+      "estimatedCostUsd": 0.0626
+    },
+    {
+      "id": "yanghao",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-flare",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man: do not reuse his face, beard or costume. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. 'Late-Ming Chinese costume: Yang Hao, Ming civil official and grand coordinator of the Korean campaign in 1597, about fifty, a pale scholarly long face, a neat long thin black beard, stern self-assured eyes; black Ming official's gauze hat with side wings, a dark crimson official robe with a square embroidered rank badge on the chest, a light mail collar showing beneath it, no helmet.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T20:34:07.556Z",
+      "finishedAt": "2026-10-16T20:34:30.438Z",
+      "usage": {
+        "input_tokens": 1376,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 352
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3132
+      },
+      "estimatedCostUsd": 0.0626
+    },
+    {
+      "id": "wuweizhong",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-flare",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man: do not reuse his face, beard or costume. Square live-action period naval war film still, helmet-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, complete headgear with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn lacquer, no luxurious fantasy ornament. Original cast face, not any real actor. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. No rising sun flag, no sunburst or radiating rays and no red sun disc anywhere. Opaque background. 'Late-Ming Chinese costume: Wu Weizhong, Ming guerrilla general from Yiwu in Zhejiang who led Qi Jiguang-trained southern infantry at Pyongyang, about fifty, a compact hard southern face, a short black-grey beard, steady disciplined eyes, a fresh bandaged wound near the collarbone; plain round iron helmet with a small red tassel, worn dark-blue padded cotton armour with rows of iron studs.",
+      "reference": "assets-src/commanders-2026-10-16/src/deng.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-16T20:34:10.154Z",
+      "finishedAt": "2026-10-16T20:34:31.874Z",
+      "usage": {
+        "input_tokens": 1379,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 355
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3135
+      },
+      "estimatedCostUsd": 0.0626
     }
   ],
-  "model": "gpt-image-2.5-sunburst",
+  "model": "gpt-image-2.5-flare",
   "script": "scripts/generate-commander-portraits.mjs",
   "pricingNote": "Estimated from returned token usage at gpt-image-2 list prices per million tokens ({\"textIn\":5,\"imageIn\":8,\"imageOut\":30}); the 2.5 preview has no public price.",
-  "requestCount": 28,
-  "totalEstimatedCostUsd": 1.683
+  "requestCount": 34,
+  "totalEstimatedCostUsd": 2.058
 }

@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-16T15:37:35.718Z",
+  "image": {
+    "model": "gpt-image-2.5-sunburst",
+    "size": "2048x2048",
+    "quality": "high",
+    "background": "opaque",
+    "output_format": "png"
+  },
+  "prompt": "A new casting photograph of the man in the first attached picture, for the lead role of a big-budget historical war film; the picture that goes on the film poster. He is Yi Sun-sin, the Joseon admiral, in his late forties. Keep who the attached portrait shows: a long oval Korean face with high cheekbones, a thin moustache and a long, narrow, well-kept chin beard falling to his collar. Recast him as the strikingly handsome, charismatic leading man of a big-budget historical war film: calm, noble and fearless, piercing dark eyes under strong level brows, a straight nose, a sharp clean jaw line, healthy sun-weathered skin with fine natural texture, the beard black with a few threads of grey. An original face, not any real actor. Head and shoulders, straight on, looking into the lens with a calm, fierce, magnetic gaze; catchlights in the eyes. He is the film's star: a face people remember, well groomed, clean healthy skin with fine natural texture (no grime, no scars, no sunburn, no deep wrinkles), the beard neat and full. He wears the helmet and collar of this armour, matching the second attached picture: Joseon Korean dujeong-gap, the brigandine of the Joseon army: a long coat of thick oxblood-red cotton reaching below the knee, lined inside with overlapping iron plates, its whole face set with even rows of round brass rivet heads, a plain dark cloth belt, the cloth faded and salt-stained at the hem and the brass dulled with verdigris. Helmet: a low rounded Korean iron tugu helmet with a small spike finial and a red horsehair plume, and a long oxblood cloth neck curtain set with the same brass rivets. Soft, even, frontal studio light with gentle modelling, no harsh shadows; a plain light grey background. Photographic, sharp, 85 mm lens. No text, no letters, no logo, no border. No painting or illustration look, no plastic CGI look.",
+  "refs": [
+    "assets-src/commanders-2026-10-16/src/yi.webp",
+    "public/ui/armor/joseon_dujeong.webp"
+  ],
+  "usage": {
+    "input_tokens": 2335,
+    "input_tokens_details": {
+      "image_tokens": 1888,
+      "text_tokens": 447
+    },
+    "output_tokens": 3568,
+    "output_tokens_details": {
+      "image_tokens": 3568,
+      "text_tokens": 0
+    },
+    "total_tokens": 5903
+  }
+}

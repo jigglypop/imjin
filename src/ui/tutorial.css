@@ -10,14 +10,43 @@
   z-index: 40;
   border-radius: 16px;
   pointer-events: none;
+  box-shadow: 0 0 0 2px rgba(14, 16, 20, 0.8), 0 0 0 4px var(--accent);
+  transition: left 0.2s, top 0.2s, width 0.2s, height 0.2s;
+}
+
+/*
+ * The breathing glow is two layers crossfaded by opacity, the rings repeated on top of each so they stay over the glow:
+ * animating box-shadow itself repainted the blur every frame.
+ */
+.tour-ring::before,
+.tour-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
   box-shadow: 0 0 0 2px rgba(14, 16, 20, 0.8), 0 0 0 4px var(--accent), 0 0 18px 4px rgba(238, 241, 243, 0.3);
   animation: tour-pulse 1.8s ease-in-out infinite;
-  transition: left 0.2s, top 0.2s, width 0.2s, height 0.2s;
+  will-change: opacity;
+}
+
+.tour-ring::after {
+  box-shadow: 0 0 0 2px rgba(14, 16, 20, 0.8), 0 0 0 4px var(--accent), 0 0 26px 8px rgba(238, 241, 243, 0.2);
+  animation-name: tour-pulse-peak;
 }
 
 @keyframes tour-pulse {
   50% {
-    box-shadow: 0 0 0 2px rgba(14, 16, 20, 0.8), 0 0 0 4px var(--accent), 0 0 26px 8px rgba(238, 241, 243, 0.2);
+    opacity: 0;
+  }
+}
+
+@keyframes tour-pulse-peak {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
   }
 }
 

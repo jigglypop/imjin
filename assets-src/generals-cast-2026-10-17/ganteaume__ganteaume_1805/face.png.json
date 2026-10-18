@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-17T15:38:20.680Z",
+  "tool": "gemini image",
+  "model": "gemini-3.1-flash-image-preview",
+  "aspect": "1:1",
+  "prompt": "The attached picture is a painted portrait of Honoré Ganteaume, French vice-admiral, forty-nine. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (Honoré Ganteaume, French vice-admiral, forty-nine: a round, fleshy, shrewd Provençal face, dark hair brushed forward with grey at the temples, long sideburns, clean-shaven, heavy-lidded calculating eyes), in the costume of: Faction look: a French Navy officer of the Napoleonic wars, 1798-1805, as in big-budget Napoleonic films: The commander of the Brest fleet: a vice-amiral's dark navy-blue tailcoat with the collar, cuffs and front edges embroidered with gold oak leaves, gold bullion epaulettes with silver stars, a red-white-blue silk sash at the waist, white waistcoat and breeches, black boots; a black bicorne with broad gold edging and a tricolour cockade. Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.",
+  "refs": [
+    "public/ui/portraits/portrait_ganteaume.webp"
+  ],
+  "estimatedUsd": 0.04
+}

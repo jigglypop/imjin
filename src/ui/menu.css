@@ -819,8 +819,25 @@
   background: var(--accent);
   border-color: var(--ink-dark);
   border-width: 3px;
+  position: relative;
+  box-shadow: 0 0 0 1px var(--ink-dark);
+}
+
+/* The pulse crossfades two shadow layers by opacity instead of animating box-shadow, which repainted every frame. */
+.marker--on i::before,
+.marker--on i::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
   box-shadow: 0 0 0 1px var(--ink-dark), 0 0 18px rgba(238, 241, 243, 0.22);
   animation: marker-pulse 2s ease-in-out infinite;
+  will-change: opacity;
+}
+
+.marker--on i::after {
+  box-shadow: 0 0 0 1px var(--ink-dark), 0 0 0 9px rgba(238, 241, 243, 0.12), 0 0 22px rgba(238, 241, 243, 0.24);
+  animation-name: marker-pulse-peak;
 }
 
 .marker--on span {
@@ -832,7 +849,17 @@
 
 @keyframes marker-pulse {
   50% {
-    box-shadow: 0 0 0 1px var(--ink-dark), 0 0 0 9px rgba(238, 241, 243, 0.12), 0 0 22px rgba(238, 241, 243, 0.24);
+    opacity: 0;
+  }
+}
+
+@keyframes marker-pulse-peak {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
   }
 }
 
@@ -904,6 +931,8 @@
 }
 
 .hs-brief-scroll {
+  font-family: var(--font-cine);
+  font-weight: 500;
   flex: 1;
   min-height: 0;
   overflow-y: auto;

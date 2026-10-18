@@ -1,0 +1,8 @@
+{
+  "type": "animate_rig",
+  "original_model_task_id": "${PILOT_NEW_BODY_GENERATION_TASK_ID}",
+  "model_version": "v2.5-20260210",
+  "out_format": "glb",
+  "rig_type": "biped",
+  "spec": "tripo"
+}

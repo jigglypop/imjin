@@ -196,5 +196,6 @@ export class SmokeColumn {
       a.needsUpdate = true;
     }
     this.sprite.count = n;
+    this.sprite.visible = n > 0;
   }
 }
