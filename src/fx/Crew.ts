@@ -255,10 +255,10 @@ export class Crew {
     // centreline just forward of the stern canopy, since under it the camera before him sees only its panels (the
     // occlusion probe: enclosure 0.7-0.8 at x0 + 5, 0.03-0.07 here, face clear).
     if (GALLEYS.has(ship.spec.kind)) return { x: r.layout.x0 + 15, y: r.main, z: 0 };
-    // A ship of the line: on the quarterdeck, where the admirals of 1797-1805 stood, a little forward of the officers'
-    // mark so the poop is not right behind him (at the bow, x1 - 1.4, the lens was inside the forecastle: core 100%).
+    // A ship of the line: on the quarterdeck, where the admirals of 1797-1805 stood, a little forward of the officers
+    // mark (6 m: at 8 m the mizzen stands between him and the lens on a 74; probe: core 0, box 0 on every 1805 hull).
     const qd = r.layout.command;
-    if (SHIPS_1805.has(ship.spec.kind) && qd) return { x: qd.x + 8, y: r.main + qd.up, z: 0 };
+    if (SHIPS_1805.has(ship.spec.kind) && qd) return { x: qd.x + 6, y: r.main + qd.up, z: 0 };
     // Galleons: their castles are short and walled; in the open waist, forward of the mainmast (box 0.8 -> 0.1).
     if (ARMADA_SAIL.has(ship.spec.kind)) return { x: r.layout.x1 - 9.4, y: r.main, z: 0 };
     if (st.deck === 2) return { x: r.layout.x1 - 1.4, y: r.main, z: 0 };

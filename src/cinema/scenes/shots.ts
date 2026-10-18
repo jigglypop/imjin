@@ -15,9 +15,10 @@ const around = (ship: Pick): Orbit => ({ type: 'orbit', at: at(ship), yaw: [0.95
  * figure centred (the camera looks at his upper chest), a very slow push-in, fixed focus. `side` only says which side
  * of his face the camera stands, by 0.25 m. No orbit, no over-the-shoulder.
  */
-export const closeUp = (who: string, ship: Pick, dur: number, side: 1 | -1, acts?: Act[]): Shot => ({
+/** `clear`: a turn about him and a share of the distance found by scripts/probe-cine-occlusion.mjs --search. */
+export const closeUp = (who: string, ship: Pick, dur: number, side: 1 | -1, acts?: Act[], clear?: { turn: number; reach: number }): Shot => ({
   dur,
-  cam: { type: 'figure', who, at: at(ship), from: [3.1, 1.9, 0.25 * side], to: [2.8, 1.9, 0.22 * side], look: [0, 1.75, 0], fallback: around(ship) },
+  cam: { type: 'figure', who, at: at(ship), from: [3.1, 1.9, 0.25 * side], to: [2.8, 1.9, 0.22 * side], look: [0, 1.75, 0], fallback: around(ship), ...clear },
   fov: 24,
   aperture: 0.6,
   ease: 'inOut',
