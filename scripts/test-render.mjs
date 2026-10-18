@@ -343,7 +343,9 @@ try {
     engine.dispose();
     warm.resolve();
     await rejected;
-    assert.deepEqual(freed, { wake: 1, cloud: 1, renderer: 1 });
+    // The canvas owns the renderer: an engine torn down on a live canvas must leave it usable for the next engine, or
+    // textures kept across battles throw 'Texture already initialized' on WebGPU.
+    assert.deepEqual(freed, { wake: 1, cloud: 1, renderer: 0 });
     assert.equal(terrain.disposed, 1);
     assert.equal(loaded.view.disposed, 1);
     assert.equal(engine.ready, false);

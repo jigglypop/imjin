@@ -2006,7 +2006,13 @@ export class Engine {
     this.rts.goal.tz = z / n;
   }
 
-  /** Gives back everything the battle holds: inputs, labels, GPU buffers and programs, and the graphics device itself. */
+  /**
+   * Gives back everything the battle holds: inputs, labels, GPU buffers and programs. The renderer is not disposed here:
+   * it belongs to the canvas that made it (BattleView's <Canvas>, which disposes it on unmount), and an engine can be
+   * torn down and a new one built on the same renderer (a remount, a hot update). A disposed WebGPURenderer forgets its
+   * textures while its backend still holds their GPU copies, so the next engine drawing a texture kept across battles
+   * (cloud noise, weather map, ship atlases) threw "WebGPUTextureUtils: Texture already initialized".
+   */
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
@@ -2046,7 +2052,6 @@ export class Engine {
     this.sky?.view.dispose();
     this.sky?.environment.dispose();
     void releaseShipAssets(new Set());
-    this.renderer.dispose().catch(() => undefined);
   }
 
   info() {
