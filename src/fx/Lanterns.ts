@@ -11,7 +11,7 @@ import {
   Vector3,
   type Camera,
 } from 'three/webgpu';
-import { cameraPosition, float, instanceIndex, instancedBufferAttribute, length, mx_noise_float, pow, smoothstep, time, uv, vec3, vec4 } from 'three/tsl';
+import { cameraPosition, float, instancedBufferAttribute, length, pow, smoothstep, uv, vec3, vec4 } from 'three/tsl';
 import type { Battle } from '../sim/battle';
 import { anchorsFor, byModel, type ModelKind } from '../ships/anchors';
 import type { ShipViews } from '../ships/ShipViews';
@@ -105,6 +105,9 @@ export class Lanterns {
   private readonly glow: Sprite;
   private readonly refl: InstancedMesh;
   private readonly p = new Vector3();
+  private readonly o = new Vector3();
+  private readonly ax = new Vector3();
+  private readonly az = new Vector3();
   private readonly levels = new Map<number, Level>();
   private frame = 0;
   private clock = 0;
@@ -144,10 +147,10 @@ export class Lanterns {
     m.side = DoubleSide;
     m.fog = false;
     const u = uv();
-    const ripple = mx_noise_float(vec3(u.x.mul(5), u.y.mul(34).add(time.mul(1.4)), instanceIndex.mul(0.37)));
     const lengthFade = smoothstep(0.0, 0.06, u.y).mul(smoothstep(1.0, 0.15, u.y));
     const widthFade = smoothstep(0.5, 0.0, u.x.sub(0.5).abs());
-    const shimmer = smoothstep(-0.5, 0.7, ripple);
+    // A plain soft strip: the noise ripple it had read as a blotchy leopard-skin pattern beside and on the hulls.
+    const shimmer = float(0.55);
     m.colorNode = vec4(vec3(1.0, 0.48, 0.16).mul(1.1), 1);
     m.opacityNode = lengthFade.mul(widthFade).mul(shimmer).mul(0.8).mul(RK);
     this.refl = new InstancedMesh(geo, m, CAPACITY);
@@ -206,13 +209,25 @@ export class Lanterns {
         let cx = 0;
         let cy = 0;
         let cz = 0;
+        // The ship's axes on the sea, so that each streak can start where the line to the camera leaves the hull:
+        // started under the lantern, it lay across the lit hull side.
+        this.views.localToWorld(ship.id, 0, 0, 0, this.o);
+        this.views.localToWorld(ship.id, 1, 0, 0, this.ax);
+        this.views.localToWorld(ship.id, 0, 0, 1, this.az);
+        const fx = this.ax.x - this.o.x;
+        const fz = this.ax.z - this.o.z;
+        const sx = this.az.x - this.o.x;
+        const sz = this.az.z - this.o.z;
+        const halfL = ship.spec.length * 0.5 + 0.6;
+        const halfB = ship.spec.beam * 0.5 + 0.6;
         for (let i = 0; i < count; i += 1) {
           if (n >= CAPACITY) break;
           const l = anchors ? anchors.lanterns[i]! : legacy[i]!;
           const fl = anchors ? l[0] : l[0] * ship.spec.length;
           const y = anchors ? l[1] - BODY_DROP : deck + l[1];
           this.views.localToWorld(ship.id, fl, y, anchors ? l[2] : l[2] * ship.spec.beam, this.p);
-          const flicker = 0.9 + Math.sin(battle.time * 11 + ship.id * 3.1 + fl * 0.7 + i * 1.9) * 0.05 + Math.sin(battle.time * 23 + i * 5.3 + ship.id) * 0.03;
+          // A steady glow with only a slow candle sway (the old fast flicker read as a fault).
+          const flicker = 0.95 + Math.sin(battle.time * 1.1 + ship.id * 3.1 + fl * 0.7 + i * 1.9) * 0.03 + Math.sin(battle.time * 0.6 + i * 5.3 + ship.id) * 0.02;
           const o = n * 4;
           G[o] = this.p.x;
           G[o + 1] = this.p.y;
@@ -228,6 +243,16 @@ export class Lanterns {
           const wid = 0.5 + len * 0.07;
           const ux = dx / dl;
           const uz = dz / dl;
+          // Distance along the streak to the edge of the hull's footprint (a box of length by beam, in ship space).
+          const lx = (this.p.x - this.o.x) * fx + (this.p.z - this.o.z) * fz;
+          const lz = (this.p.x - this.o.x) * sx + (this.p.z - this.o.z) * sz;
+          const dfx = ux * fx + uz * fz;
+          const dsz = ux * sx + uz * sz;
+          const tx = Math.abs(dfx) > 1e-4 ? ((dfx > 0 ? halfL : -halfL) - lx) / dfx : Infinity;
+          const tz = Math.abs(dsz) > 1e-4 ? ((dsz > 0 ? halfB : -halfB) - lz) / dsz : Infinity;
+          const skip = Math.max(0, Math.min(tx, tz, dl * 0.9));
+          const px = this.p.x + ux * skip;
+          const pz = this.p.z + uz * skip;
           const mo = n * 16;
           // Columns of a Y rotation toward the camera, scaled by width and length, then the streak's centre on the sea.
           M[mo] = uz * wid;
@@ -243,9 +268,9 @@ export class Lanterns {
           M[mo + 10] = uz * len;
           M[mo + 11] = 0;
           // The streak lies on the sea under the ship, which the ship's own wave sample already gives.
-          M[mo + 12] = this.p.x + ux * len * 0.5;
+          M[mo + 12] = px + ux * len * 0.5;
           M[mo + 13] = v.heave + 0.5;
-          M[mo + 14] = this.p.z + uz * len * 0.5;
+          M[mo + 14] = pz + uz * len * 0.5;
           M[mo + 15] = 1;
           cx += this.p.x;
           cy += this.p.y;

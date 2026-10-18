@@ -20,7 +20,6 @@ import {
   lantern,
   lanternPole,
   loftHull,
-  longPennant,
   mast,
   mulberry32,
   ropeCoil,
@@ -248,8 +247,6 @@ export function buildGalleass(lod: Lod, kind: ShipKind = 'galleass'): MeshData {
     if (lod < 2) {
       const [sheet, name] = i === 1 && flagship && look.flagship ? look.flagship : look.masts[i % look.masts.length]!;
       flag(ctx, { pole: [m.x, deck + m.h, 0], poleH: 2.0, w: 2.6, h: 1.8, sheet, flag: name, phase: i, wood, nu: byLod(ctx, 6, 2, 1), nv: byLod(ctx, 4, 2, 1) });
-      const [ps, pn] = look.streamers[i % look.streamers.length]!;
-      longPennant(ctx, clothPatch(ctx, ps, pn), [m.x - 0.1, deck + m.h - 0.5, 0], Math.min(7, m.h * 0.45), 0.5, i);
     }
   });
   if (lod === 0) for (let i = 1; i < plan.masts.length; i += 1) line(ctx, rope, [plan.masts[i]!.x, deck + plan.masts[i]!.h * 0.8, 0], [plan.masts[i - 1]!.x, deck + 0.8, 0], 0.07);

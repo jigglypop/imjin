@@ -18,6 +18,9 @@ import { HANSAN_INTRO, MYEONGNYANG_INTRO } from './scenes/intros';
 import { NORYANG_INTRO, NORYANG_OUTRO } from './scenes/noryang';
 import type { Caption, Cue, Scene, Target } from './types';
 
+/** Whether a battle opens with its cutscene. Off until the openings are remade; `cinema.play(id)` still runs one. */
+const OPENINGS = false;
+
 /** What the cinema reads from and drives in the engine. */
 export interface CinemaHost {
   readonly battle: Battle;
@@ -247,7 +250,8 @@ export class Cinema implements RigHost {
     if (this.documentary && !this.host.remote) this.host.rts.cinematic = true;
     const key = this.host.scenarioKey();
     const intro = key ? INTROS[key] : undefined;
-    if (intro && this.intros && !automated() && !this.opened.has(intro.id)) {
+    // Battle openings are off for now (owner, 2026-10-19: not good enough yet); a battle starts at once.
+    if (OPENINGS && intro && this.intros && !automated() && !this.opened.has(intro.id)) {
       this.opened.add(intro.id);
       this.play(intro);
     }

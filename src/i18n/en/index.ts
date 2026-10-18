@@ -28,6 +28,7 @@ import { EN_GUIDE } from './guide';
 import { EN_ACCOUNT } from './account';
 import { EN_ARMORY } from './armory';
 import { EN_FILMS } from './films';
+import { EN_FLEET } from './fleet';
 
 /** Every English string, keyed by its Korean source text. Areas are split so parallel work does not collide. */
 export const EN: Record<string, string> = {
@@ -61,4 +62,5 @@ export const EN: Record<string, string> = {
   ...EN_ACCOUNT,
   ...EN_ARMORY,
   ...EN_FILMS,
+  ...EN_FLEET,
 };

@@ -43,12 +43,14 @@
   font-weight: 400;
   position: absolute;
   z-index: 2;
-  left: calc(var(--sal) + clamp(24px, 4.5vw, 72px));
-  bottom: calc(var(--sab) + clamp(24px, 6vh, 64px));
-  width: min(460px, 40vw);
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(460px, calc(100vw - 32px));
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  text-align: center;
   padding: var(--sp-5);
   border: 1px solid var(--glass-line);
   border-radius: var(--r, 16px);
@@ -258,9 +260,10 @@
   }
 
   .loading-brief {
-    left: calc(var(--sal) + 12px);
-    right: calc(var(--sar) + 12px);
-    bottom: calc(var(--sab) + 12px);
+    left: calc(var(--sal) + 16px);
+    right: calc(var(--sar) + 16px);
+    top: 50%;
+    transform: translateY(-50%);
     width: auto;
     padding: var(--sp-4);
   }

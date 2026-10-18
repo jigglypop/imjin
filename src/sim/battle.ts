@@ -305,6 +305,8 @@ export class Battle {
   private readonly sideVolleyTargets: (Ship | undefined | null)[] = [null, null, null];
   private readonly circlesA: number[] = [];
   private readonly circlesB: number[] = [];
+  private readonly collideNear: Ship[] = [];
+  private readonly targetNear: Ship[] = [];
   private firingLanes = new Map<number, boolean>();
   /** Per ship spec: the longest battery range and fastest muzzle velocity (gunSpec is pure per kind, gun and profile). */
   private batteryReach = new WeakMap<object, { range: number; muzzle: number }>();
@@ -1939,22 +1941,29 @@ export class Battle {
     const half = s.spec.length * 0.5 - r;
     const c = Math.cos(s.heading);
     const n = Math.sin(s.heading);
-    out.length = 0;
-    for (let i = -1; i <= 1; i += 1) out.push(s.x + c * half * i, s.z + n * half * i, r);
+    // Written in place: emptying and pushing let the engine drop and regrow the backing store on every call.
+    for (let i = -1, j = 0; i <= 1; i += 1, j += 3) {
+      out[j] = s.x + c * half * i;
+      out[j + 1] = s.z + n * half * i;
+      out[j + 2] = r;
+    }
     return out;
   }
 
   private collide(dt: number) {
     const ca = this.circlesA;
     const cb = this.circlesB;
+    const near = this.collideNear;
     for (const a of this.ships) {
       if (!a.alive) continue;
-      this.grid.query(a.x, a.z, a.spec.length + 25, (b) => {
-        if (b.id <= a.id || !b.alive) return;
+      const count = this.grid.gather(a.x, a.z, a.spec.length + 25, near);
+      for (let k = 0; k < count; k++) {
+        const b = near[k]!;
+        if (b.id <= a.id || !b.alive) continue;
         const reach = (a.spec.length + b.spec.length) * 0.5;
         const dx0 = b.x - a.x;
         const dz0 = b.z - a.z;
-        if (dx0 * dx0 + dz0 * dz0 > reach * reach) return;
+        if (dx0 * dx0 + dz0 * dz0 > reach * reach) continue;
         this.circles(a, ca);
         this.circles(b, cb);
         let bestPen = -Infinity;
@@ -1981,7 +1990,7 @@ export class Battle {
         if (bestPen > -3 && a.team !== b.team && (a.spec.fireship || b.spec.fireship)) this.fireshipContact(a, b);
         if (bestPen <= 0) {
           if (bestPen > -3) this.tryGrapple(a, b);
-          return;
+          continue;
         }
         const ma = a.spec.length * a.spec.beam;
         const mb = b.spec.length * b.spec.beam;
@@ -2030,7 +2039,7 @@ export class Battle {
           b.speed += closing * wb * (Math.cos(b.heading) * nx + Math.sin(b.heading) * nz);
         }
         this.tryGrapple(a, b);
-      });
+      }
     }
   }
 
@@ -2354,15 +2363,17 @@ export class Battle {
     if (s.musketReload > 0) return;
     let target: Ship | undefined;
     let best = spec.musketRange;
-    this.grid.query(s.x, s.z, spec.musketRange, (o) => {
-      if (o.team === s.team || !this.isActive(o)) return;
+    const count = this.grid.gather(s.x, s.z, spec.musketRange, this.targetNear);
+    for (let k = 0; k < count; k++) {
+      const o = this.targetNear[k]!;
+      if (o.team === s.team || !this.isActive(o)) continue;
       const d = hyp(o.x - s.x, o.z - s.z);
-      if (!this.canSee(o, d, s.team)) return;
+      if (!this.canSee(o, d, s.team)) continue;
       if (d < best) {
         best = d;
         target = o;
       }
-    });
+    }
     if (!target) return;
     const t = target as Ship;
     const accuracy = (1 - (best / spec.musketRange) * 0.6) * s.mods.accuracy * nerve;
@@ -2398,25 +2409,27 @@ export class Battle {
     let best: Ship | undefined;
     let bestScore = Infinity;
     const cosArc = Math.cos(0.75);
-    this.grid.query(s.x, s.z, range, (o) => {
-      if (o.team === s.team || !this.isActive(o)) return;
+    const count = this.grid.gather(s.x, s.z, range, this.targetNear);
+    for (let k = 0; k < count; k++) {
+      const o = this.targetNear[k]!;
+      if (o.team === s.team || !this.isActive(o)) continue;
       const dx = o.x - s.x;
       const dz = o.z - s.z;
       const d = hyp(dx, dz);
-      if (d > range || d < 8) return;
-      if (!this.canSee(o, d, s.team)) return;
-      if (this.profile !== 'historical' && !this.clearFiringLane(s, o)) return;
+      if (d > range || d < 8) continue;
+      if (!this.canSee(o, d, s.team)) continue;
+      if (this.profile !== 'historical' && !this.clearFiringLane(s, o)) continue;
       const c = (dx * sx + dz * sz) / d;
-      if (c < cosArc) return;
+      if (c < cosArc) continue;
       // Under the maneuver rules a gun is not fired through a friend's hull.
-      if (this.maneuverRules && !this.maneuverRules.clear(s, o)) return;
+      if (this.maneuverRules && !this.maneuverRules.clear(s, o)) continue;
       const focus = this.profile !== 'historical' && s.spec.faction === 'ming' ? 180 * (1 - o.hull / o.spec.hull) : 0;
       const score = d - (o.id === s.targetId ? 80 : 0) - c * 40 - focus;
       if (score < bestScore) {
         bestScore = score;
         best = o;
       }
-    });
+    }
     return best;
   }
 
@@ -2425,21 +2438,23 @@ export class Battle {
     const fz = Math.sin(s.heading);
     let best: Ship | undefined;
     let bestD = Infinity;
-    this.grid.query(s.x, s.z, range, (o) => {
-      if (o.team === s.team || !this.isActive(o)) return;
+    const count = this.grid.gather(s.x, s.z, range, this.targetNear);
+    for (let k = 0; k < count; k++) {
+      const o = this.targetNear[k]!;
+      if (o.team === s.team || !this.isActive(o)) continue;
       const dx = o.x - s.x;
       const dz = o.z - s.z;
       const d = hyp(dx, dz);
-      if (d > range) return;
-      if (!this.canSee(o, d, s.team)) return;
-      if (this.profile !== 'historical' && !this.clearFiringLane(s, o)) return;
-      if ((dx * fx + dz * fz) / d < Math.cos(0.35)) return;
-      if (this.maneuverRules && !this.maneuverRules.clear(s, o)) return;
+      if (d > range) continue;
+      if (!this.canSee(o, d, s.team)) continue;
+      if (this.profile !== 'historical' && !this.clearFiringLane(s, o)) continue;
+      if ((dx * fx + dz * fz) / d < Math.cos(0.35)) continue;
+      if (this.maneuverRules && !this.maneuverRules.clear(s, o)) continue;
       if (d < bestD) {
         bestD = d;
         best = o;
       }
-    });
+    }
     return best;
   }
 

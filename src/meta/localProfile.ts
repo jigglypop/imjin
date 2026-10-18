@@ -3,10 +3,11 @@ import { onSessionChange, savedSession } from '../account/session';
 import { GENERALS } from './catalog';
 import { buy, equip, equipItem, equipWeapon, learn, reforge, respec, salvage, newProfile, normalizeProfile, reroll, rewardFor, RuleError, type BattleReport, type Profile, type Reward } from './rules';
 import type { GearSlot } from './loot';
+import { buyShip, chooseNation, recruit } from './fleet';
 import { META_PATHS, START_COINS, START_XP, type MetaBattleStart, type MetaBattleTicket, type MetaReply, type MetaRewardReply } from './wire';
 
 /**
- * The profile the 장수 screen shows and battles draw on. It lives in the player's account on the server
+ * The profile the 제독 screen shows and battles draw on. It lives in the player's account on the server
  * (server/meta.ts): when the server can be reached this store is a cache of the server's copy, every change goes to the
  * server (shown at once through the same rules, src/meta/rules.ts; the server's answer then replaces it) and a guest
  * account is made for a browser that has none. Without a server it falls back to a profile kept in this browser
@@ -76,6 +77,9 @@ type LocalProfile = {
   equipItem: (generalId: string, slot: GearSlot, uid: string | null) => boolean;
   salvage: (uid: string) => boolean;
   reforge: (uid: string) => boolean;
+  chooseNation: (nation: string) => boolean;
+  recruit: (generalId: string) => boolean;
+  buyShip: (kind: string, count?: number) => boolean;
   dismiss: () => void;
 };
 
@@ -111,6 +115,9 @@ export const useLocalProfile = create<LocalProfile>((set, get) => {
     equipItem: (generalId, slot, uid) => apply((p) => equipItem(p, generalId, slot, uid), META_PATHS.itemEquip, { general: generalId, slot, item: uid }),
     salvage: (uid) => apply((p) => salvage(p, uid), META_PATHS.itemSalvage, { item: uid }),
     reforge: (uid) => apply((p) => reforge(p, uid), META_PATHS.itemReforge, { item: uid }),
+    chooseNation: (nation) => apply((p) => chooseNation(p, nation), META_PATHS.nation, { nation }),
+    recruit: (generalId) => apply((p) => recruit(p, generalId), META_PATHS.recruit, { general: generalId }),
+    buyShip: (kind, count = 1) => apply((p) => buyShip(p, kind, count), META_PATHS.ship, { kind, count }),
     dismiss: () => set({ refused: null }),
   };
 });

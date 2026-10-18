@@ -129,6 +129,22 @@ async function storeRules(m, store, sql) {
   const old = await store.startSession(c.id, now - 2 * ms);
   assert.ok((await store.sweep(now)) >= 1);
   assert.equal(await store.session(old, now - 2 * ms + 1), null, 'swept sessions are gone');
+  // Sessions also end a fixed time after they began, however often they are used, and all at once on request.
+  let slid = await store.startSession(b.id, now);
+  for (let at = now; at < now + m.SESSION_MAX_MS - ms / 2; at += ms / 2) assert.ok(await store.session(slid, at), 'used often, a session slides on');
+  assert.equal(await store.session(slid, now + m.SESSION_MAX_MS), null, 'until its absolute lifetime is up');
+  const phone = await store.startSession(b.id, now);
+  const desk = await store.startSession(b.id, now);
+  const elsewhere = await store.startSession(c.id, now);
+  assert.equal(await store.endSessions(b.id, null), 2, 'logging out everywhere ends every session of the user');
+  assert.equal(await store.session(phone, now), null);
+  assert.equal(await store.session(desk, now), null);
+  assert.equal((await store.session(elsewhere, now)).user.id, c.id, 'and nobody else is touched');
+  // Nicknames are looked up among signed-up users only, ignoring case, never matching the asker.
+  await store.rename(b.id, 'Admiral');
+  assert.equal((await store.userByNickname('admiral')).id, b.id);
+  assert.equal(await store.userByNickname('ADMIRAL', b.id), null, 'the own nickname is no clash');
+  assert.equal(await store.userByNickname('정'), null, 'guest nicknames are not reserved');
 
   assert.match(hash, /^\$scrypt\$ln=15,r=8,p=3\$[A-Za-z0-9+/]{22}\$[A-Za-z0-9+/]{43}$/);
   assert.equal(await m.verifyPassword('unit-password-1592', hash), true);
@@ -405,6 +421,39 @@ export async function runAccountsSuite({ name, serverEnv, openStore, shared, sql
     await refused(call('POST', '/api/auth/signup', { body: { login: 'one_more', password, nickname: '하나 더' }, address: '192.0.2.77' }), 429, 'rate');
     assert.equal((await call('POST', '/api/auth/guest', { address: '192.0.2.78' })).status, 200, 'another address still creates');
     console.log(`ok (${name}): log-in attempts are limited per login and per address, new users per address and hour`);
+
+    // Hardened rules: reserved logins, weak passwords, nickname clashes, failed log-in lockout, logging out everywhere.
+    for (const [body, code] of [
+      [{ login: 'admin', password: 'strong-pass-1592', nickname: '관리' }, 'login-reserved'],
+      [{ login: 'moonwake1', password: 'strong-pass-1592', nickname: '관리' }, 'login-reserved'],
+      [{ login: 'weak_one', password: '12345678', nickname: '약함' }, 'password-weak'],
+      [{ login: 'weak_two', password: 'aaaaaaaaaa', nickname: '약함' }, 'password-weak'],
+      [{ login: 'weak_three', password: 'Password123', nickname: '약함' }, 'password-weak'],
+      [{ login: 'same_pw', password: 'xx-same_pw-xx', nickname: '같음' }, 'password-login'],
+    ]) await refused(call('POST', '/api/auth/signup', { body, address: '198.51.100.60' }), 400, code);
+    await signUp('gwon_eung', 'hansan-isle-1592', '권응수', { address: '198.51.100.61' });
+    await refused(call('POST', '/api/auth/signup', { body: { login: 'song_copy', password: 'hansan-isle-1593', nickname: ' 권응수 ' }, address: '198.51.100.62' }), 409, 'nickname-taken');
+    const clashGuest = remember(await call('POST', '/api/auth/guest', { address: '198.51.100.63' })).json;
+    await refused(call('POST', '/api/me/nickname', { body: { nickname: '권응수' }, token: clashGuest.token }), 409, 'nickname-taken');
+    const song = await logIn('gwon_eung', 'hansan-isle-1592', '198.51.100.64');
+    assert.equal((await call('POST', '/api/me/nickname', { body: { nickname: '권응수' }, token: song.token })).status, 200, 'keeping the own nickname is no clash');
+    await refused(call('POST', '/api/me/password', { body: { current: 'hansan-isle-1592', next: '11111111' }, token: song.token }), 400, 'password-weak');
+    // Five failures from one address lock that login there for 15 minutes, even with the right password; another address is not locked.
+    await signUp('bae_seol', 'busan-raid-1592', '배설', { address: '198.51.100.65' });
+    for (let i = 0; i < 5; i++) await refused(call('POST', '/api/auth/login', { body: { login: 'bae_seol', password: `wrong-${i}-wrong` }, address: '198.51.100.66' }), 401, 'credentials');
+    const locked = await refused(call('POST', '/api/auth/login', { body: { login: 'bae_seol', password: 'busan-raid-1592' }, address: '198.51.100.66' }), 429, 'locked');
+    assert.equal(locked.headers['retry-after'], '900');
+    for (let i = 0; i < 5; i++) await refused(call('POST', '/api/auth/login', { body: { login: 'ghost_login', password: `wrong-${i}-wrong` }, address: '198.51.100.67' }), 401, 'credentials');
+    await refused(call('POST', '/api/auth/login', { body: { login: 'ghost_login', password: 'wrong-x-wrong' }, address: '198.51.100.67' }), 429, 'locked', 'an unknown login locks the same way, so a lock reveals nothing');
+    // Logging out everywhere ends every session of the account, the asking one included.
+    const songPhone = await logIn('gwon_eung', 'hansan-isle-1592', '198.51.100.68');
+    const everywhere = await call('POST', '/api/auth/logout-all', { token: song.token });
+    assert.equal(everywhere.status, 200);
+    assert.ok(everywhere.json.ended >= 3, JSON.stringify(everywhere.json));
+    await refused(call('GET', '/api/me', { token: song.token }), 401, 'session');
+    await refused(call('GET', '/api/me', { token: songPhone.token }), 401, 'session');
+    await refused(call('POST', '/api/auth/logout-all'), 401, 'session');
+    console.log(`ok (${name}): reserved logins, weak passwords and nickname clashes are refused; failed log-ins lock per login and address; log-out everywhere ends every session`);
 
     // CORS: the game's own pages may call, with a preflight; other origins are refused before anything happens.
     const preflight = await call('OPTIONS', '/api/auth/login', { origin: 'https://imjin1592.com', headers: { 'access-control-request-method': 'POST', 'access-control-request-headers': 'authorization, content-type' } });

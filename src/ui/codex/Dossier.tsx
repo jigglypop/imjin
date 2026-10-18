@@ -1,11 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { SHIP_SPECS } from '../../sim/catalog';
 import { SHORT_NAME } from '../../sim/conquest';
-import { FACTION_NAME } from '../../sim/balance';
 import type { ShipKind } from '../../sim/types';
 import type { ShipAnchors, V3 } from '../../ships/anchors';
 import { useLang, useT } from '../../i18n';
-import { ENTRIES, GRADE_NOTE, GUN_NOTES, GUN_SOURCES, NAVY_SEAL } from './entries';
+import { ENTRIES, GRADE_NOTE, GUN_NOTES, GUN_SOURCES } from './entries';
 import { type Part, type Side } from './parts';
 import { barsOf, crewOf, drawnWith, gunsOf, knots } from './specs';
 import './codex.css';
@@ -62,7 +61,6 @@ export function ShipTitle({ kind, sub }: { kind: ShipKind; sub?: string }) {
   const faction = SHIP_SPECS[kind].faction;
   return (
     <div className={`cx-title cx-title--${faction}`}>
-      <span className="cx-title-native" aria-hidden="true">{entry.native}</span>
       <div className="cx-title-main">
         <h2>{t(SHORT_NAME[kind])}</h2>
         {lang === 'ko' && <p className="cx-title-roman" aria-hidden="true">{ROMAN[kind]}</p>}
@@ -71,9 +69,6 @@ export function ShipTitle({ kind, sub }: { kind: ShipKind; sub?: string }) {
           {t(entry.role)}
         </p>
       </div>
-      <span className="cx-seal" title={t(FACTION_NAME[faction])}>
-        {NAVY_SEAL[faction]}
-      </span>
     </div>
   );
 }

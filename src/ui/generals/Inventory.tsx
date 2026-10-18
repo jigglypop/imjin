@@ -126,7 +126,7 @@ function ItemCard({ item, generalId, profile, onEquip, onGone }: { item: Item; g
         <div>
           <span className="loot-card__rarity">{t(RARITY_LABEL[item.rarity])} · {t(SLOT_LABEL[base.slot])}</span>
           <h4>{t(base.name)} <small>{base.hanja}</small></h4>
-          <p>{t(base.line)}{(base.weapon || base.model) && ` · ${t(baseFits(base, generalById(generalId)?.faction ?? '') ? '장착하면 3D 모습에 보입니다' : '이 장수가 쓸 수 없는 무기')}`}</p>
+          <p>{t(base.line)}{(base.weapon || base.model) && ` · ${t(baseFits(base, generalById(generalId)?.faction ?? '') ? '장착하면 3D 모습에 보입니다' : '이 제독이 쓸 수 없는 무기')}`}</p>
         </div>
       </header>
       <div className="gen-armor-roll__stats">

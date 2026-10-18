@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { net, useNet } from '../net/NetClient';
 import { AccountApiError, accountCall } from './api';
 import { onSessionChange, saveSession, savedSession } from './session';
-import { ACCOUNT_TEXT, LOGIN_RULE, NICKNAME_MAX, passwordFits, type AccountUser, type AuthReply, type MeReply, type UserReply } from './wire';
+import { ACCOUNT_TEXT, loginProblem, nicknameProblem, passwordProblem, type AccountUser, type AuthReply, type MeReply, type UserReply } from './wire';
 
 // The account this browser is signed in as, and what can be done with it. A guest is made only when there is first
 // something worth keeping on the server (ensureAccount), never when the page loads. The actions resolve true when the
@@ -13,14 +13,16 @@ type AccountState = {
   user: AccountUser | null;
   status: 'idle' | 'busy' | 'error';
   error: string | null;
+  /** The refusal code behind `error` ('network' when unreachable), so a form can mark the field it is about. */
+  errorCode: string | null;
 };
 
-export const useAccount = create<AccountState>(() => ({ user: savedSession()?.user ?? null, status: 'idle', error: null }));
+export const useAccount = create<AccountState>(() => ({ user: savedSession()?.user ?? null, status: 'idle', error: null, errorCode: null }));
 onSessionChange(() => useAccount.setState({ user: savedSession()?.user ?? null }));
 
 /** One request: busy while it lasts, its reason in `error` when it fails. A session the server no longer knows signs this browser out. */
 async function attempt<T>(work: () => Promise<T>): Promise<T | null> {
-  useAccount.setState({ status: 'busy', error: null });
+  useAccount.setState({ status: 'busy', error: null, errorCode: null });
   try {
     const result = await work();
     useAccount.setState({ status: 'idle' });
@@ -28,13 +30,13 @@ async function attempt<T>(work: () => Promise<T>): Promise<T | null> {
   } catch (error) {
     const failure = error instanceof AccountApiError ? error : new AccountApiError('server', ACCOUNT_TEXT.server);
     if (failure.code === 'session') saveSession(null);
-    useAccount.setState({ status: 'error', error: failure.text });
+    useAccount.setState({ status: 'error', error: failure.text, errorCode: failure.code });
     return null;
   }
 }
 
-const fail = (text: string) => {
-  useAccount.setState({ status: 'error', error: text });
+const fail = (text: string, code: string | null = null) => {
+  useAccount.setState({ status: 'error', error: text, errorCode: code });
   return false;
 };
 const keep = (reply: AuthReply) => {
@@ -42,14 +44,33 @@ const keep = (reply: AuthReply) => {
   return reply.user;
 };
 
-export const clearAccountError = () => useAccount.setState({ status: 'idle', error: null });
+export const clearAccountError = () => useAccount.setState({ status: 'idle', error: null, errorCode: null });
 
-/** What the server would refuse in a sign-up form, found before sending it; null when it is fine. */
+export type AuthField = 'login' | 'password' | 'nickname';
+
+/** Per field, the Korean reason the server would refuse a sign-up form with; empty when it would pass these checks. */
+export function signUpProblems(login: string, password: string, nickname: string): Partial<Record<AuthField, string>> {
+  const problems: Partial<Record<AuthField, string>> = {};
+  const loginCode = loginProblem(login);
+  const passwordCode = passwordProblem(password, loginCode ? null : login);
+  const nicknameCode = nicknameProblem(nickname);
+  if (loginCode) problems.login = ACCOUNT_TEXT[loginCode];
+  if (passwordCode) problems.password = ACCOUNT_TEXT[passwordCode];
+  if (nicknameCode) problems.nickname = ACCOUNT_TEXT[nicknameCode];
+  return problems;
+}
+
+/** The first reason the server would refuse a sign-up form with, found before sending it; null when it is fine. */
 export function signUpProblem(login: string, password: string, nickname: string): string | null {
-  if (!LOGIN_RULE.test(login.trim().toLowerCase())) return ACCOUNT_TEXT.login;
-  if (!passwordFits(password)) return ACCOUNT_TEXT.password;
-  const name = nickname.trim();
-  if (!name || name.length > NICKNAME_MAX) return ACCOUNT_TEXT.nickname;
+  const problems = signUpProblems(login, password, nickname);
+  return problems.login ?? problems.password ?? problems.nickname ?? null;
+}
+
+/** Which field a refusal code is about, so a form can mark it; null for a refusal of the whole form. */
+export function fieldOfCode(code: string): AuthField | null {
+  if (code === 'login' || code === 'login-reserved' || code === 'login-taken') return 'login';
+  if (code === 'password' || code === 'password-login' || code === 'password-weak') return 'password';
+  if (code === 'nickname' || code === 'nickname-taken') return 'nickname';
   return null;
 }
 
@@ -89,11 +110,21 @@ export async function logOut(): Promise<void> {
   if (held) await accountCall('POST', '/auth/logout', undefined, held).catch(() => undefined);
 }
 
+/** Ends every session of this account on every device, this one included, then signs this browser out. */
+export async function logOutEverywhere(): Promise<boolean> {
+  const held = savedSession()?.token;
+  if (!held) return false;
+  const done = await attempt(() => accountCall<{ ok: true; ended: number }>('POST', '/auth/logout-all', undefined, held));
+  if (!done) return false;
+  if (savedSession()?.token === held) saveSession(null);
+  return true;
+}
+
 export async function rename(nickname: string): Promise<boolean> {
   const held = savedSession();
   const name = nickname.trim();
   if (!held) return false;
-  if (!name || name.length > NICKNAME_MAX) return fail(ACCOUNT_TEXT.nickname);
+  if (nicknameProblem(name)) return fail(ACCOUNT_TEXT.nickname, 'nickname');
   const user = await attempt(async () => (await accountCall<UserReply>('POST', '/me/nickname', { nickname: name }, held.token)).user);
   if (user && savedSession()?.token === held.token) saveSession({ token: held.token, user });
   return !!user;
@@ -103,7 +134,8 @@ export async function rename(nickname: string): Promise<boolean> {
 export async function changePassword(current: string, next: string): Promise<boolean> {
   const held = savedSession()?.token;
   if (!held) return false;
-  if (!passwordFits(next)) return fail(ACCOUNT_TEXT.password);
+  const problem = passwordProblem(next, useAccount.getState().user?.login ?? null);
+  if (problem) return fail(ACCOUNT_TEXT[problem], problem);
   return !!(await attempt(() => accountCall<{ ok: true }>('POST', '/me/password', { current, next }, held)));
 }
 

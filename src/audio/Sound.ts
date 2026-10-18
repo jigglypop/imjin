@@ -6,11 +6,14 @@ import { Battlefield, type CampaignCue } from './battlefield';
 import { buildBus, MASTER_GAIN } from './voices';
 import { Ambience, makeNoise } from './ambience';
 import { Bed } from './music';
+import { BattleTracks } from './tracks';
 import { woodTap } from './ui';
 import { LEVELS, type Mode } from './mix';
 import { isIOS } from '../game/device';
 
 const MUSIC_KEY = 'imjin.music';
+/** Gain of the recorded battle score at the master, under the guns. */
+const TRACK_LEVEL = 0.45;
 
 /** The music bed is on unless the player turned it off (`?music=0` does it for a session, `setMusic` for good). */
 function storedMusic() {
@@ -32,6 +35,11 @@ export class Sound {
   private noise: AudioBuffer | null = null;
   private field: Battlefield | null = null;
   private bed: Bed | null = null;
+  /** The synthetic bed's own gain, silenced while the recorded score plays in a battle. */
+  private bedGain: GainNode | null = null;
+  private tracks: BattleTracks | null = null;
+  private trackGain: GainNode | null = null;
+  private trackStop = 0;
   private weather: Ambience | null = null;
   private mode: Mode = 'select';
   muted = false;
@@ -129,11 +137,20 @@ export class Sound {
     this.music.connect(this.reverb);
     this.noise = makeNoise(ctx);
     this.weather = new Ambience(ctx, this.noise, this.ambience, this.sfx);
-    this.bed = new Bed(ctx, this.music, this.reverb, this.noise);
+    this.bedGain = ctx.createGain();
+    this.bedGain.connect(this.music);
+    this.bed = new Bed(ctx, this.bedGain, this.reverb, this.noise);
+    // The recorded score goes straight to the master: it is mixed already and wants no room on top.
+    this.trackGain = ctx.createGain();
+    this.trackGain.gain.value = 0;
+    this.trackGain.connect(master);
+    this.tracks = new BattleTracks(ctx, this.trackGain, import.meta.env.BASE_URL);
     this.bed.start();
     this.applyMode(true);
     window.setInterval(() => {
       if (ctx.state === 'running' && this.musicOn) this.bed?.schedule(ctx.currentTime + 0.5, this.mode);
+      // A score refused before the first gesture starts once the context runs.
+      if (ctx.state === 'running' && this.musicOn && this.mode === 'battle') this.tracks?.play();
       // After a phone call or another app's audio the context can come back 'interrupted' with no gesture to resume it.
       if (ctx.state !== 'running' && !document.hidden && performance.now() - this.lastWake > 2000) this.wake();
     }, 250);
@@ -152,6 +169,20 @@ export class Sound {
     const level = LEVELS[this.mode];
     this.music.gain.setTargetAtTime(this.musicOn ? level.music : 0, t, tc);
     this.ambience.gain.setTargetAtTime(level.ambience, t, tc);
+    this.applyScore(instant);
+  }
+
+  /** In a battle the recorded score plays and the synthetic bed is silent; elsewhere the bed plays alone. */
+  private applyScore(instant: boolean) {
+    const ctx = this.ctx;
+    if (!ctx || !this.bedGain || !this.trackGain || !this.tracks) return;
+    const t = ctx.currentTime;
+    const score = this.mode === 'battle' && this.musicOn;
+    this.bedGain.gain.setTargetAtTime(this.mode === 'battle' ? 0 : 1, t, instant ? 0.01 : 1.2);
+    this.trackGain.gain.setTargetAtTime(score ? TRACK_LEVEL : 0, t, instant ? 0.01 : 1.5);
+    window.clearTimeout(this.trackStop);
+    if (score) this.tracks.play();
+    else this.trackStop = window.setTimeout(() => this.tracks?.stop(), instant ? 0 : 6000);
   }
 
   /** A cutscene's hush (0 to 1) lowers the guns and the sea under the music bed; null hands the mix back to the battle. */

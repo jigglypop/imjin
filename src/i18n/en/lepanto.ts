@@ -109,6 +109,8 @@ export const EN_LEPANTO: Record<string, string> = {
   "갤리선 약 54척 · 수송선 4척 (흩어짐)": "about 54 galleys · 4 transports (scattered)",
   "갤리선·갈리오트 86척": "86 galleys and galiots",
   "갤리선 22척": "22 galleys",
+  "갤리선 198척 · 갈레아스 4척 (좌익 53 · 중앙 62 · 우익 53 · 예비대 30, 도리아의 갈레아스 2척은 오지 못함)": "198 galleys · 4 galleasses (left 53 · centre 62 · right 53 · reserve 30; Doria's 2 galleasses never came up)",
+  "갤리선 210척 · 갈리오트 54척 (우익 54 · 중앙 87 · 후위 30 · 좌익 93)": "210 galleys · 54 galiots (right 54 · centre 87 · reserve 30 · left 93)",
   "갤리선 53척 · 갈레아스 2척": "53 galleys · 2 galleasses",
   "갤리선 54척": "54 galleys",
   "갤리선 62척 · 갈레아스 2척 (라 레알 포함)": "62 galleys · 2 galleasses (with La Real)",

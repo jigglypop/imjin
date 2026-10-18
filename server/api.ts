@@ -32,8 +32,13 @@ const STATUS: Record<AccountErrorCode, number> = {
   network: 503,
   login: 400,
   password: 400,
+  'password-login': 400,
+  'password-weak': 400,
   nickname: 400,
+  'login-reserved': 400,
   'login-taken': 409,
+  'nickname-taken': 409,
+  locked: 429,
   credentials: 401,
   current: 403,
   registered: 409,
@@ -189,7 +194,7 @@ export class ApiRouter {
       const failure = error instanceof ApiError ? error : error instanceof AccountError && error.code !== 'invalid' ? new ApiError(error.code) : null;
       if (!failure) console.error(`api ${path} failed:`, error instanceof Error ? error.message : 'unknown error');
       const answer = failure ?? new ApiError('server');
-      if (answer.status === 429) headers['retry-after'] = '60';
+      if (answer.status === 429) headers['retry-after'] = answer.code === 'locked' ? '900' : '60';
       // A body that was too large is not read to its end: the connection closes instead of waiting for the rest.
       if (answer.status === 413) headers.connection = 'close';
       send(answer.status, { error: { code: answer.code, text: answer.text } });

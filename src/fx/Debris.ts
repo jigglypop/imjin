@@ -20,7 +20,7 @@ import {
   Vector3,
   type BufferGeometry,
 } from 'three/webgpu';
-import { attribute, instancedBufferAttribute, mix, texture, uniform, uv } from 'three/tsl';
+import { abs, attribute, clamp, float, fract, instancedBufferAttribute, max, min, mix, smoothstep, texture, uniform, uv, vec3 } from 'three/tsl';
 import { waveField } from '../ocean/waves';
 import type { Faction } from '../sim/types';
 
@@ -42,7 +42,10 @@ const HULL_PAINT: Record<Faction, [number, number, number][]> = {
   spain1805: [[0.48, 0.12, 0.08], [0.06, 0.05, 0.045]],
 };
 
-/** Grey wood grain (rows along u, the piece's length) with knots and darker torn ends, shared by every timber piece. */
+/**
+ * Shared debris texture. r: grey wood grain (rows along u, the piece's length) with knots and darker torn ends; g: blotch
+ * noise for worn paint and soot; b: fine speckle.
+ */
 function grainTexture(): DataTexture {
   const W = 256;
   const H = 128;
@@ -51,6 +54,20 @@ function grainTexture(): DataTexture {
   const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const rows = Array.from({ length: H }, () => 0.45 + r() * 0.7);
   const knots = Array.from({ length: 5 }, () => [r() * W, r() * H, 3 + r() * 6] as const);
+  // Smooth value noise on a wrapping 16 x 8 lattice, so the blotches tile with the texture.
+  const BW = 16;
+  const BH = 8;
+  const blot = Array.from({ length: BW * BH }, () => r() * 255);
+  const lat = (i: number, j: number) => blot[(((j % BH) + BH) % BH) * BW + (((i % BW) + BW) % BW)]!;
+  const blotAt = (fx: number, fy: number) => {
+    const i = Math.floor(fx);
+    const j = Math.floor(fy);
+    const a = fx - i;
+    const b = fy - j;
+    const sa = a * a * (3 - 2 * a);
+    const sb = b * b * (3 - 2 * b);
+    return (lat(i, j) * (1 - sa) + lat(i + 1, j) * sa) * (1 - sb) + (lat(i, j + 1) * (1 - sa) + lat(i + 1, j + 1) * sa) * sb;
+  };
   for (let y = 0; y < H; y += 1) {
     for (let x = 0; x < W; x += 1) {
       let wob = y + Math.sin(x * 0.045 + y * 0.2) * 2.5;
@@ -66,9 +83,11 @@ function grainTexture(): DataTexture {
       const end = Math.min(u, 1 - u);
       const tear = 0.035 + 0.04 * Math.abs(Math.sin(y * 1.7) * Math.sin(y * 0.43));
       if (end < tear) v *= 0.55 + 0.45 * (end / tear);
-      const g = Math.max(0, Math.min(255, v * 200));
       const i = (y * W + x) * 4;
-      d[i] = d[i + 1] = d[i + 2] = g;
+      d[i] = Math.max(0, Math.min(255, v * 200));
+      // g: blotchy low-frequency noise (where paint wears through, where soot gathers); b: fine speckle.
+      d[i + 1] = blotAt(x / 16, y / 16) * 0.6 + blotAt(x / 8 + 3, y / 8 + 5) * 0.4;
+      d[i + 2] = r() * 255;
       d[i + 3] = 255;
     }
   }
@@ -119,7 +138,7 @@ export type PieceKind = (typeof Piece)[keyof typeof Piece];
 const KINDS = 8;
 
 /** How deep each kind sits in the water per unit of its y scale, in metres. */
-const DRAFT = [0.05, 0.025, 0.12, 0.45, 0.45, 0.02, 0.12, 0.4];
+const DRAFT = [0.05, 0.025, 0.12, 0.45, 0.45, 0.14, 0.12, 0.4];
 const FIXED_STEP = 1 / 20;
 const MAX_STEPS = 6;
 
@@ -136,12 +155,20 @@ export class DebrisField {
   private readonly meshes: InstancedMesh[] = [];
   /** Per kind, per drawn instance: hull paint (rgb) and wood tone (w), written with the matrices. */
   private readonly paints: InstancedBufferAttribute[] = [];
+  /** Per kind, per drawn instance: char, wetness, tint random, unused. */
+  private readonly states: InstancedBufferAttribute[] = [];
+  private readonly grain: DataTexture;
+  private readonly char: Float32Array;
+  private readonly wet: Float32Array;
+  private readonly seed: Float32Array;
   private readonly pr: Float32Array;
   private readonly pg: Float32Array;
   private readonly pb: Float32Array;
   private readonly tone: Float32Array;
   /** The navy whose hull the next pieces come from: Effects sets it from the ship nearest a hit. */
   navy: Faction = 'joseon';
+  /** How badly the source ship is burning (0..1): Effects sets it with `navy`; pieces off a burning ship come off charred. */
+  scorch = 0;
   private readonly counts = new Int32Array(KINDS);
   private readonly cap: number;
   count = 0;
@@ -204,7 +231,10 @@ export class DebrisField {
     this.pg = f();
     this.pb = f();
     this.tone = f();
-    this.pool = [this.pr, this.pg, this.pb, this.tone, this.x, this.y, this.z, this.vx, this.vy, this.vz, this.rx, this.ry, this.rz, this.wx, this.wy, this.wz, this.sx, this.sy, this.sz, this.age, this.life, this.ember, this.surf];
+    this.char = f();
+    this.wet = f();
+    this.seed = f();
+    this.pool = [this.char, this.wet, this.seed, this.pr, this.pg, this.pb, this.tone, this.x, this.y, this.z, this.vx, this.vy, this.vz, this.rx, this.ry, this.rz, this.wx, this.wy, this.wz, this.sx, this.sy, this.sz, this.age, this.life, this.ember, this.surf];
     this.kind = new Uint8Array(cap);
     this.floating = new Uint8Array(cap);
 
@@ -212,34 +242,85 @@ export class DebrisField {
     mast.rotateZ(Math.PI / 2);
     const spar = new CylinderGeometry(0.5, 0.5, 1, 6);
     spar.rotateZ(Math.PI / 2);
-    const sail = new PlaneGeometry(1, 1);
+    // Torn cloth lies in soft folds, not as a flat card.
+    const sail = new PlaneGeometry(1, 1, 6, 4);
     sail.rotateX(-Math.PI / 2);
-    // grain: u, v repeats of the shared wood grain (u runs along the piece); without it a piece keeps its flat colour.
-    const specs: { geo: BufferGeometry; color: [number, number, number]; rough: number; side?: boolean; grain?: [number, number] }[] = [
-      { geo: brokenBoard(0.12, 0.26, 0.15), color: [0.2, 0.13, 0.075], rough: 0.9, grain: [1, 0.5] },
-      { geo: brokenBoard(0.05, 0.09, 0.75), color: [0.42, 0.3, 0.17], rough: 0.85, grain: [1, 0.25] },
-      { geo: withMask(new BoxGeometry(0.5, 0.3, 0.4)), color: [0.045, 0.036, 0.03], rough: 1 },
-      { geo: withMask(mast), color: [0.24, 0.155, 0.09], rough: 0.85, grain: [1, 1] },
-      { geo: withMask(spar), color: [0.3, 0.2, 0.12], rough: 0.85, grain: [1, 1] },
-      { geo: withMask(sail), color: [0.7, 0.62, 0.46], rough: 1, side: true },
-      { geo: brokenBoard(0.3, 0.45, 0.06), color: [0.17, 0.11, 0.065], rough: 0.9, grain: [1, 0.6] },
-      { geo: withMask(new CylinderGeometry(0.35, 0.32, 0.8, 8)), color: [0.2, 0.13, 0.08], rough: 0.8, grain: [0.6, 0.8] },
+    const sp = sail.attributes.position!;
+    for (let i = 0; i < sp.count; i += 1) {
+      const u = sp.getX(i);
+      const v = sp.getZ(i);
+      sp.setY(i, Math.sin(u * 9.5 + v * 2) * 0.09 + Math.sin(v * 7 - u * 3) * 0.05 + (Math.abs(u) + Math.abs(v)) * -0.12);
+    }
+    sail.computeVertexNormals();
+    // look: how a kind is shaded. Wood kinds carry grain repeats (u runs along the piece).
+    type Look = 'wood' | 'soot' | 'cloth' | 'barrel';
+    const specs: { geo: BufferGeometry; color: [number, number, number]; rough: number; side?: boolean; look: Look; grain: [number, number] }[] = [
+      { geo: brokenBoard(0.12, 0.26, 0.15), color: [0.2, 0.13, 0.075], rough: 0.9, look: 'wood', grain: [1, 0.5] },
+      { geo: brokenBoard(0.05, 0.09, 0.75), color: [0.42, 0.3, 0.17], rough: 0.85, look: 'wood', grain: [1, 0.25] },
+      { geo: withMask(new BoxGeometry(0.5, 0.3, 0.4)), color: [0.09, 0.065, 0.045], rough: 1, look: 'soot', grain: [0.5, 0.5] },
+      { geo: withMask(mast), color: [0.24, 0.155, 0.09], rough: 0.85, look: 'wood', grain: [1, 1] },
+      { geo: withMask(spar), color: [0.3, 0.2, 0.12], rough: 0.85, look: 'wood', grain: [1, 1] },
+      { geo: withMask(sail), color: [0.21, 0.18, 0.14], rough: 1, side: true, look: 'cloth', grain: [1, 1] },
+      { geo: brokenBoard(0.3, 0.45, 0.06), color: [0.17, 0.11, 0.065], rough: 0.9, look: 'wood', grain: [1, 0.6] },
+      { geo: withMask(new CylinderGeometry(0.35, 0.32, 0.8, 10)), color: [0.2, 0.13, 0.08], rough: 0.8, look: 'barrel', grain: [0.6, 0.8] },
     ];
-    const grain = grainTexture();
+    const grain = (this.grain = grainTexture());
     for (const s of specs) {
       const mat = new MeshStandardNodeMaterial({ color: new Color(s.color[0], s.color[1], s.color[2]), roughness: s.rough, metalness: 0 });
       if (s.side) mat.side = DoubleSide;
       const paint = new InstancedBufferAttribute(new Float32Array(cap * 4), 4);
+      const state = new InstancedBufferAttribute(new Float32Array(cap * 4), 4);
       this.paints.push(paint);
-      if (s.grain) {
-        // rgb: the navy's hull paint on the board's painted face; w: the piece's wood tone.
-        const P = instancedBufferAttribute(paint, 'vec4') as any;
-        // The repeats and the tone are uniforms, not constants, so every grained piece shares one program.
-        const g = texture(grain, uv().mul(uniform(new Vector2(s.grain[0], s.grain[1])))).r.mul(1.6);
-        const wood = uniform(new Vector3(s.color[0], s.color[1], s.color[2])).mul(g).mul(P.w);
-        // Paint keeps some of the grain under it.
-        mat.colorNode = mix(wood, P.xyz.mul(g.mul(0.35).add(0.6)), attribute('mask', 'float'));
+      this.states.push(state);
+      // P.rgb: the navy's hull paint on a board's painted face; P.w: the piece's wood tone.
+      // S.x: char (0 sound, 1 burnt black); S.y: wet; S.z: a per-piece random for tint.
+      const P = instancedBufferAttribute(paint, 'vec4') as any;
+      const S = instancedBufferAttribute(state, 'vec4') as any;
+      const U = uv();
+      const tx = texture(grain, U.mul(uniform(new Vector2(s.grain[0], s.grain[1]))));
+      const g = tx.r.mul(1.6);
+      const blot = tx.g;
+      const speck = tx.b;
+      // Distance to the nearest edge of the face: worn, dirty corners and broken ends.
+      const edge = min(min(U.x, float(1).sub(U.x)), min(U.y, float(1).sub(U.y)));
+      const rim = float(1).sub(smoothstep(0, 0.14, edge));
+      // Warm-to-grey drift between pieces, so a field of planks is not one board repeated.
+      const tint = vec3(S.z.sub(0.5).mul(0.22).add(1), 1, S.z.sub(0.5).mul(-0.28).add(1));
+      const base = uniform(new Vector3(s.color[0], s.color[1], s.color[2]));
+      let col: any;
+      let rough: any = float(s.rough);
+      if (s.look === 'cloth') {
+        // Canvas weave, mildew and dirt blotches, darker frayed edges.
+        const weave = abs(fract(U.x.mul(90)).sub(0.5)).add(abs(fract(U.y.mul(90)).sub(0.5))).mul(0.16).add(0.88);
+        col = base.mul(tint).mul(weave).mul(blot.mul(0.45).add(0.68)).mul(float(1).sub(rim.mul(0.35)));
+      } else {
+        const wood = base.mul(g).mul(P.w).mul(tint).mul(float(1).sub(rim.mul(0.3)));
+        if (s.look === 'barrel') {
+          // Staves around the barrel, two iron hoops near each end.
+          const seam = smoothstep(0.4, 0.5, abs(fract(U.x.mul(12)).sub(0.5)));
+          const hy = min(min(abs(U.y.sub(0.2)), abs(U.y.sub(0.28))), min(abs(U.y.sub(0.72)), abs(U.y.sub(0.8))));
+          const hoop = float(1).sub(smoothstep(0.015, 0.03, hy));
+          col = mix(wood.mul(float(1).sub(seam.mul(0.6))), vec3(0.07, 0.06, 0.055).mul(blot.mul(0.6).add(0.7)), hoop);
+          rough = mix(rough, float(0.55), hoop);
+        } else if (s.look === 'soot') {
+          col = base.mul(g.mul(0.5).add(0.5)).mul(speck.mul(0.5).add(0.6));
+        } else {
+          // Paint wears through to the wood at the edges and in patches; it keeps some of the grain under it.
+          const worn = smoothstep(0.25, 0.45, blot.sub(rim.mul(0.5)).add(0.15));
+          const pm = attribute('mask', 'float').mul(worn);
+          col = mix(wood, P.xyz.mul(g.mul(0.35).add(0.6)), pm);
+          // Pitch and grime along the edges of bare timber.
+          col = col.mul(float(1).sub(rim.mul(blot).mul(0.35)));
+        }
       }
+      // Burnt: a soot gradient that blackens from the edges and blotches inward. No glow.
+      const charAmt = clamp(S.x.mul(blot.mul(0.7).add(0.55)).add(rim.mul(S.x).mul(0.6)), 0, 1);
+      const soot = vec3(0.028, 0.024, 0.021).mul(speck.mul(0.7).add(0.65));
+      col = mix(col, soot, charAmt);
+      rough = max(rough, charAmt);
+      // Wet: darker and a little glossier once a piece has been in the water.
+      mat.colorNode = col.mul(float(1).sub(S.y.mul(0.38)));
+      mat.roughnessNode = rough.sub(S.y.mul(0.32));
       const mesh = new InstancedMesh(s.geo, mat, cap);
       mesh.count = 0;
       mesh.visible = false;
@@ -287,6 +368,16 @@ export class DebrisField {
     this.pr[i] = p ? p[0] : 0.3 * tone;
     this.pg[i] = p ? p[1] : 0.2 * tone;
     this.pb[i] = p ? p[2] : 0.12 * tone;
+    this.seed[i] = Math.random();
+    this.wet[i] = 0;
+    // Charred lumps are always burnt; pieces off a burning ship mostly are, some only scorched at the edges.
+    const burnt = kind === Piece.Chunk ? 0.55 + Math.random() * 0.4 : ember > 0 ? 0.6 + Math.random() * 0.4 : this.scorch > 0.2 ? Math.random() * this.scorch : 0;
+    this.char[i] = burnt;
+  }
+
+  /** The shared texture lives in material nodes, which a tree dispose does not reach. */
+  dispose() {
+    this.grain.dispose();
   }
 
   private remove(i: number) {
@@ -355,6 +446,7 @@ export class DebrisField {
           this.wz[i] = 0;
           this.rx[i] = this.rx[i]! + this.wx[i]! * step;
           this.ry[i] = this.ry[i]! + this.wy[i]! * step;
+          this.wet[i] = Math.min(1, this.wet[i]! + step * 0.5);
           if (kind === Piece.Plank || kind === Piece.Splinter || kind === Piece.Beam || kind === Piece.Mast || kind === Piece.Spar || kind === Piece.Sail) this.rx[i] = this.rx[i]! * settle;
         }
       }
@@ -370,6 +462,7 @@ export class DebrisField {
       this.m.compose(this.pos, this.q, this.scale);
       this.meshes[mesh]!.setMatrixAt(n, this.m);
       this.paints[mesh]!.setXYZW(n, this.pr[i]!, this.pg[i]!, this.pb[i]!, this.tone[i]!);
+      this.states[mesh]!.setXYZW(n, this.char[i]!, this.wet[i]!, this.seed[i]!, 0);
     }
     for (let k = 0; k < KINDS; k += 1) {
       const mesh = this.meshes[k]!;
@@ -384,6 +477,10 @@ export class DebrisField {
       paint.clearUpdateRanges();
       paint.addUpdateRange(0, n * 4);
       paint.needsUpdate = true;
+      const state = this.states[k]!;
+      state.clearUpdateRanges();
+      state.addUpdateRange(0, n * 4);
+      state.needsUpdate = true;
     }
   }
 }

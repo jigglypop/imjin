@@ -10,8 +10,8 @@ import { FINISTERRE_TERRAIN, NILE_TERRAIN, ST_VINCENT_TERRAIN, TRAFALGAR_LEE_TER
 // to Calder's action off Finisterre and the two columns of Trafalgar (1805). In battle the British take the first slot
 // ('joseon') and the French and Spanish the second ('japan'). Every ship of the line in the action is on the water,
 // one for one as the 1592 battles are (owner 2026-10-17): St Vincent 15 against 27, the Nile 13 and the Leander
-// against 13, Calder's action 15 against 20, Trafalgar 27 against 33 split between the two columns' fights (12 against
-// the van and centre's 15, 15 against the rear's 18). Frigates stay out of the count except where one is drawn. The
+// against 13, Calder's action 15 against 20, Trafalgar 27 against 33, the whole action on the water in each column's
+// battle (owner 2026-10-19). Frigates stay out of the count except where one is drawn. The
 // ships keep their real names, in the sources' order of sailing; where a source names a ship but not her place in a
 // division, the division she sails with here is the game's arrangement. Spanish three-deckers (Santa Ana, Principe de
 // Asturias, Rayo, the 112s at St Vincent) sail as 'es74' and British 64s and 80s as 'gb74' until their own models exist.
@@ -25,6 +25,12 @@ import { FINISTERRE_TERRAIN, NILE_TERRAIN, ST_VINCENT_TERRAIN, TRAFALGAR_LEE_TER
 //   N. H. Nicolas (ed.), The Dispatches and Letters of Lord Nelson (1844-46): the signal and Nelson's words;
 //   J. S. Tucker, Memoirs of Admiral the Earl of St Vincent (1844): Jervis on the quarterdeck of the Victory;
 //   É. Desbrière, La campagne maritime de 1805: Trafalgar (1907): Villeneuve's orders.
+/** Both Trafalgar column battles field the whole action (Goodwin 2005); the Combined Fleet's frigates are not drawn. */
+const TRAFALGAR_FORCES = {
+  joseon: '전열함 27척 (풍상 종렬 12 · 풍하 종렬 15) · 프리깃 4척',
+  japan: '전열함 33척 (전위 8 · 중앙 7 · 후위 9 · 관측 전대 9), 프리깃 5척 · 브리그 2척 제외',
+};
+
 export const TRAFALGAR_SOURCES = [
   'Peter Goodwin, The Ships of Trafalgar, 2005',
   'Roy Adkins, Trafalgar: The Biography of a Battle, 2004',
@@ -171,7 +177,7 @@ export const TRAFALGAR_SCENARIOS: Record<TrafalgarSlug, ScenarioInfo> = {
     summary:
       '1805년 10월 21일, 카디스에서 나온 연합 함대 33척이 바람이 약한 바다에서 북쪽으로 길게 늘어선 초승달 대열을 이루었습니다. 넬슨은 함대를 두 줄로 나누어 대열에 직각으로 들이받았습니다. 빅토리호가 이끈 풍상 종렬은 큰 너울 위를 천천히 다가가며 반 시간 넘게 일방적으로 포격을 받았고, 빅토리호는 뷔상토르호의 고물을 지나며 포를 퍼부은 뒤 르두타블호와 맞붙었습니다. 넬슨은 르두타블호 돛대 위에서 날아온 총탄에 맞아 쓰러졌고, 승리를 들은 뒤 숨을 거두었습니다.',
     result: '영국 승리, 뷔상토르·산티시마 트리니다드·르두타블 나포 · 빌뇌브 포로 · 넬슨 전사',
-    forces: { joseon: '전열함 12척 (빅토리 · 아프리카 포함) · 프리깃 1척', japan: '전열함 15척 (전위 8척 · 중앙 7척, 뷔상토르 · 산티시마 트리니다드 포함)' },
+    forces: TRAFALGAR_FORCES,
     sky: 'day',
     sea: 'moderate',
     night: false,
@@ -190,7 +196,7 @@ export const TRAFALGAR_SCENARIOS: Record<TrafalgarSlug, ScenarioInfo> = {
     summary:
       '같은 날 정오 무렵, 콜링우드의 로열 소버린호가 풍하 종렬의 맨 앞에서 홀로 연합 함대 후위로 뛰어들어 에스파냐의 산타아나호와 맞붙었습니다. 뒤따른 배들이 하나씩 대열을 끊고 들어가 근접 난전이 벌어졌습니다. 추루카의 산후안 네포무세노호는 여섯 척에 둘러싸여 싸우다 추루카가 전사한 뒤 항복했고, 프랑스의 아실호는 불타 폭발했습니다. 크게 다친 그라비나는 남은 배를 모아 카디스로 물러났습니다.',
     result: '영국 승리, 연합 함대 후위 대부분 나포 · 아실호 폭발 · 추루카 전사',
-    forces: { joseon: '전열함 15척 (로열 소버린 포함)', japan: '전열함 18척 (후위 9척 · 관측 전대 9척)' },
+    forces: TRAFALGAR_FORCES,
     sky: 'afternoon',
     sea: 'moderate',
     night: false,
@@ -273,27 +279,27 @@ export function trafalgarForces(id: TrafalgarSlug, k: ForceKit) {
     lineAhead(k, 'joseon', '콜더 함대', '로버트 콜더', [['gb74', '히어로'], ['gb74', '에이잭스'], ['gb74', '트라이엄프'], ['firstrate', '바플러'], ['gb74', '아가멤논'], ['firstrate', '윈저 캐슬'], ['gb74', '디파이언스'], ['firstrate', '프린스 오브 웨일스'], ['gb74', '리펄스'], ['gb74', '레조너블'], ['gb74', '드래건'], ['firstrate', '글로리'], ['gb74', '워리어'], ['gb74', '선더러'], ['gb74', '몰타']], -900, -1100, 0.12, 7, 115);
     b.retreatBelow.japan = 0.45;
     b.retreatBelow.joseon = 0.4;
-  } else if (id === 'trafalgar-weather') {
-    // Light airs from the WNW and a heavy swell (Adkins 2004). The Combined Fleet heading north in a ragged crescent,
-    // Dumanoir's van ahead; Nelson's column heading east for the gap astern of the Bucentaure (Goodwin 2005).
+  } else {
+    // Trafalgar, light airs from the WNW and a heavy swell (Adkins 2004). Both columns struck at once, so each column's
+    // battle puts the whole action on the water: 27 British of the line and 4 frigates against the Combined Fleet's 33
+    // (Goodwin 2005). The column the battle is named for is at the view; the other lies 2.6 km north or south of it.
+    // The Combined Fleet's 5 frigates and 2 brigs are not drawn: there is no French frigate model yet.
     b.windAngle = 0.39;
-    lineAhead(k, 'japan', '뒤마누아르 전위', '피에르 뒤마누아르', [['es74', '넵투노'], ['fr74', '스키피옹'], ['fr74', '앵트레피드'], ['fr80', '포르미다블'], ['fr74', '뒤게트루앵'], ['fr74', '몽블랑'], ['es74', '라요'], ['es74', '산프란시스코 데 아시스']], 520, -1000, -Math.PI / 2, 3, 120, 50);
-    lineAhead(k, 'japan', '연합 함대 중앙', '피에르 빌뇌브', [['fr74', '에로'], ['es74', '산아구스틴'], ['trinidad', '산티시마 트리니다드'], ['fr80', '뷔상토르'], ['fr74', '르두타블 (뤼카)'], ['fr80', '넵튠'], ['es74', '산레안드로']], 380, 420, -Math.PI / 2, 3, 125, -60);
-    lineAhead(k, 'joseon', '풍상 종렬', '허레이쇼 넬슨', [['firstrate', '빅토리'], ['firstrate', '테메레르'], ['firstrate', '넵튠'], ['gb74', '리바이어선'], ['gb74', '컨커러'], ['firstrate', '브리태니아'], ['gb74', '에이잭스'], ['gb74', '아가멤논'], ['gb74', '오라이언'], ['gb74', '미노타우로스'], ['gb74', '스파르티에이트']], -1100, 60, 0, 0, 110);
+    const lee = id === 'trafalgar-lee';
+    const nz = lee ? -2600 : 0, sz = lee ? 0 : 2600;
+    // Nelson's weather column heading east for the gap astern of the Bucentaure; Dumanoir's van ahead of the centre.
+    lineAhead(k, 'japan', '뒤마누아르 전위', '피에르 뒤마누아르', [['es74', '넵투노'], ['fr74', '스키피옹'], ['fr74', '앵트레피드'], ['fr80', '포르미다블'], ['fr74', '뒤게트루앵'], ['fr74', '몽블랑'], ['es74', '라요'], ['es74', '산프란시스코 데 아시스']], 520, -1000 + nz, -Math.PI / 2, 3, 120, 50);
+    lineAhead(k, 'japan', '연합 함대 중앙', '피에르 빌뇌브', [['fr74', '에로'], ['es74', '산아구스틴'], ['trinidad', '산티시마 트리니다드'], ['fr80', '뷔상토르'], ['fr74', '르두타블 (뤼카)'], ['fr80', '넵튠'], ['es74', '산레안드로']], 380, 420 + nz, -Math.PI / 2, 3, 125, -60);
+    lineAhead(k, 'joseon', '풍상 종렬', '허레이쇼 넬슨', [['firstrate', '빅토리'], ['firstrate', '테메레르'], ['firstrate', '넵튠'], ['gb74', '리바이어선'], ['gb74', '컨커러'], ['firstrate', '브리태니아'], ['gb74', '에이잭스'], ['gb74', '아가멤논'], ['gb74', '오라이언'], ['gb74', '미노타우로스'], ['gb74', '스파르티에이트']], -1100, 60 + nz, 0, 0, 110);
     // The 64-gun Africa had lost touch in the night and came down alone from the north along the van (Goodwin 2005).
     const africa = k.squad('joseon', '아프리카', '헨리 딕비', 'gb74');
-    k.ship(africa, 'gb74', { x: -300, z: -1700, h: 0.9 }, '아프리카', true);
-    const eyes = k.squad('joseon', '프리깃', '헨리 블랙우드', 'gbfrigate');
-    k.ship(eyes, 'gbfrigate', { x: -1300, z: -600, h: 0.1 }, '유리알러스', true);
-    b.retreatBelow.japan = 0.35;
-    b.retreatBelow.joseon = 0.25;
-  } else {
-    // Collingwood's column breaks the rear astern of the Santa Ana; Gravina's observation squadron closes the end of
-    // the line (Adkins 2004; Harbron 1988). Same wind as the weather column.
-    b.windAngle = 0.39;
-    lineAhead(k, 'japan', '연합 함대 후위', '이그나시오 데 알라바', [['es74', '산후스토'], ['es74', '산타아나'], ['fr80', '앵동타블'], ['fr74', '푸괴'], ['es74', '모나르카'], ['fr74', '플뤼통'], ['es74', '바하마'], ['fr74', '에글'], ['es74', '몬타녜스']], 380, -480, -Math.PI / 2, 1, 120, -50);
-    lineAhead(k, 'japan', '관측 전대', '페데리코 그라비나', [['fr74', '알제지라스'], ['es74', '아르고나우타'], ['fr74', '스위프트슈어'], ['fr74', '아르고노트'], ['es74', '산일데폰소'], ['fr74', '아실'], ['es74', '프린시페 데 아스투리아스'], ['fr74', '베릭'], ['es74', '산후안 네포무세노 (추루카)']], 560, 720, -Math.PI / 2, 6, 120, 40);
-    lineAhead(k, 'joseon', '풍하 종렬', '커스버트 콜링우드', [['firstrate', '로열 소버린'], ['gb74', '벨아일'], ['gb74', '마스'], ['gb74', '토낭'], ['gb74', '벨레로폰'], ['gb74', '콜로서스'], ['gb74', '아킬레스'], ['firstrate', '드레드노트'], ['gb74', '폴리페무스'], ['gb74', '리벤지'], ['gb74', '스위프트슈어'], ['gb74', '디파이언스'], ['gb74', '선더러'], ['gb74', '디펜스'], ['firstrate', '프린스']], -1000, -320, 0.08, 0, 105);
+    k.ship(africa, 'gb74', { x: -300, z: -1700 + nz, h: 0.9 }, '아프리카', true);
+    // Collingwood's column breaks the rear astern of the Santa Ana; Gravina's observation squadron closes the end of the line.
+    lineAhead(k, 'japan', '연합 함대 후위', '이그나시오 데 알라바', [['es74', '산후스토'], ['es74', '산타아나'], ['fr80', '앵동타블'], ['fr74', '푸괴'], ['es74', '모나르카'], ['fr74', '플뤼통'], ['es74', '바하마'], ['fr74', '에글'], ['es74', '몬타녜스']], 380, -480 + sz, -Math.PI / 2, 1, 120, -50);
+    lineAhead(k, 'japan', '관측 전대', '페데리코 그라비나', [['fr74', '알제지라스'], ['es74', '아르고나우타'], ['fr74', '스위프트슈어'], ['fr74', '아르고노트'], ['es74', '산일데폰소'], ['fr74', '아실'], ['es74', '프린시페 데 아스투리아스'], ['fr74', '베릭'], ['es74', '산후안 네포무세노 (추루카)']], 560, 720 + sz, -Math.PI / 2, 6, 120, 40);
+    lineAhead(k, 'joseon', '풍하 종렬', '커스버트 콜링우드', [['firstrate', '로열 소버린'], ['gb74', '벨아일'], ['gb74', '마스'], ['gb74', '토낭'], ['gb74', '벨레로폰'], ['gb74', '콜로서스'], ['gb74', '아킬레스'], ['firstrate', '드레드노트'], ['gb74', '폴리페무스'], ['gb74', '리벤지'], ['gb74', '스위프트슈어'], ['gb74', '디파이언스'], ['gb74', '선더러'], ['gb74', '디펜스'], ['firstrate', '프린스']], -1000, -320 + sz, 0.08, 0, 105);
+    // Blackwood's frigates repeating signals to windward of the columns (Goodwin 2005).
+    lineAhead(k, 'joseon', '프리깃', '헨리 블랙우드', [['gbfrigate', '유리알러스'], ['gbfrigate', '나이어드'], ['gbfrigate', '피비'], ['gbfrigate', '시리어스']], -1500, -700 + nz, 0.1, 0, 700);
     b.retreatBelow.japan = 0.35;
     b.retreatBelow.joseon = 0.25;
   }

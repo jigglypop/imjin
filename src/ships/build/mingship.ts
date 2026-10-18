@@ -10,14 +10,12 @@ import {
   barrel,
   byLod,
   cannon,
-  clothPatch,
   deckPlane,
   flag,
   hatch,
   hullBand,
   hangLanterns,
   loftHull,
-  longPennant,
   mast,
   mulberry32,
   oar,
@@ -196,10 +194,6 @@ export function buildMingship(lod: Lod): MeshData {
     mast(ctx, wood, bronze, m.x, deck, m.h, m.r);
     if (lod < 2) box(b, timber, [m.x - 0.65, deck, -0.65], [m.x + 0.65, deck + 0.45, 0.65], { grain: 0 });
     junkSail(ctx, P('sail_junk'), wood, rope, { x: m.x, yTop: deck + m.h - 1.2, w: m.sailW, h: m.sailH, billow: 1.1, yaw: m.yaw, phase: i * 1.9, battens: i === 0 ? 10 : 8 });
-    if (lod < 2) {
-      const patch = i === 1 ? clothPatch(ctx, 'flags_b', 'yellow') : clothPatch(ctx, 'flags_a', 'red');
-      longPennant(ctx, patch, [m.x - 0.1, deck + m.h - 0.05, 0], i === 0 ? 8.5 : i === 1 ? 6.5 : 5, 0.9, i * 0.9);
-    }
   });
   if (lod === 0) {
     const mm = plan.masts[0]!;

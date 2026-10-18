@@ -20,14 +20,14 @@ await build({
     contents: [
       "export * from './server/accounts.ts'", "export * from './server/accountsMemory.ts'", "export * from './server/accountsPg.ts'", "export * from './server/api.ts'",
       "export * from './server/auth.ts'", "export * from './server/meta.ts'", "export * as R from './src/meta/rules.ts'", "export * as A from './src/meta/affixes.ts'",
-      "export * as B from './src/meta/battle.ts'", "export * as L from './src/meta/loot.ts'", "export * as C from './src/meta/catalog.ts'", "export { buildScenario } from './src/sim/scenarios.ts'",
+      "export * as B from './src/meta/battle.ts'", "export * as L from './src/meta/loot.ts'", "export * as C from './src/meta/catalog.ts'", "export * as F from './src/meta/fleet.ts'", "export { buildScenario } from './src/sim/scenarios.ts'",
     ].join(';\n'),
     resolveDir: root, loader: 'ts',
   },
   outfile: file, platform: 'node', format: 'cjs', bundle: true, external: ['pg-native'], logLevel: 'silent',
 });
 const m = createRequire(import.meta.url)(file);
-const { R, A, C, L } = m;
+const { R, A, C, L, F } = m;
 
 async function suite(name, store, sql = null) {
   while (!store.ready) await new Promise((r) => setTimeout(r, 100));
@@ -219,6 +219,51 @@ async function suite(name, store, sql = null) {
       assert.equal(await m.exportJsonMeta(store, other.user.id), true);
       const back = R.normalizeProfile((await store.profile(other.user.id)).data.meta, other.user.id);
       for (const key of ['owned', 'rolls', 'items', 'generals', 'stats']) assert.deepEqual(back[key], got[key], `exported ${key}`);
+    });
+
+    await check('the account navy: one nation on first entry, recruits and hulls paid through the ledger, kept across sessions, one change', async () => {
+      const g = await ok('POST', '/auth/guest', {});
+      const fresh = await ok('GET', '/meta', undefined, g.token);
+      assert.equal(fresh.profile.nation, null);
+      assert.equal((await call('POST', '/meta/recruit', { general: 'kwon' }, g.token)).json.error.text, '먼저 나라를 고르세요');
+      assert.equal((await call('POST', '/meta/nation', { nation: 'atlantis' }, g.token)).json.error.text, '고를 수 없는 나라입니다');
+      const chosen = await ok('POST', '/meta/nation', { nation: 'joseon' }, g.token);
+      assert.equal(chosen.profile.nation, 'joseon');
+      assert.deepEqual(chosen.profile.recruited, ['eokgi', 'won', 'yi']);
+      assert.deepEqual(chosen.profile.ships, F.startingFleet('joseon'));
+      assert.equal(chosen.profile.coins, 12000, 'choosing is free');
+      assert.equal((await call('POST', '/meta/learn', { general: 'wakisaka', skill: 'gunnery.rapid' }, g.token)).json.error.text, '다른 나라의 제독입니다');
+      assert.equal((await call('POST', '/meta/learn', { general: 'kwon', skill: 'gunnery.rapid' }, g.token)).json.error.text, '아직 맞이하지 않은 제독입니다');
+      const hired = await ok('POST', '/meta/recruit', { general: 'kwon' }, g.token);
+      assert.ok(hired.profile.recruited.includes('kwon'));
+      assert.equal(hired.profile.coins, 12000 - F.RECRUIT_PRICE);
+      const built = await ok('POST', '/meta/ship', { kind: 'geobukseon', count: 2 }, g.token);
+      assert.equal(built.profile.ships.geobukseon, (chosen.profile.ships.geobukseon ?? 0) + 2);
+      assert.equal(built.profile.coins, hired.profile.coins - 2 * F.shipPrice('geobukseon'));
+      assert.equal(built.profile.coins, await store.balance(g.user.id, 'coin'));
+      assert.equal((await call('POST', '/meta/ship', { kind: 'atakebune' }, g.token)).json.error.text, '이 나라가 지을 수 없는 배입니다');
+      assert.equal((await call('POST', '/meta/ship', { kind: 'geobukseon', count: 'x' }, g.token)).status, 400);
+      const again = await ok('GET', '/meta', undefined, g.token);
+      assert.equal(again.profile.nation, 'joseon', 'the navy is kept');
+      assert.deepEqual(again.profile.ships, built.profile.ships);
+      assert.deepEqual(again.profile.recruited, built.profile.recruited);
+      const value = F.fleetValue(again.profile);
+      const changed = await ok('POST', '/meta/nation', { nation: 'japan' }, g.token);
+      assert.equal(changed.profile.nation, 'japan');
+      assert.equal(changed.profile.coins, again.profile.coins + Math.floor(value * F.SELLBACK), 'the old hulls are sold back at half');
+      assert.deepEqual(changed.profile.ships, F.startingFleet('japan'));
+      assert.ok(changed.profile.recruited.includes('kwon') && changed.profile.recruited.includes('wakisaka'), 'old admirals stay on the profile');
+      assert.equal(changed.profile.generals.kwon !== undefined, true);
+      assert.equal((await call('POST', '/meta/nation', { nation: 'ming' }, g.token)).json.error.text, '나라는 한 번만 바꿀 수 있습니다');
+      assert.equal((await call('POST', '/meta/learn', { general: 'kwon', skill: 'gunnery.rapid' }, g.token)).json.error.text, '다른 나라의 제독입니다');
+      // A browser's own navy comes over with the import, bought again from the server's purse.
+      const h = await ok('POST', '/auth/guest', {});
+      const local = { ...R.newProfile(), nation: 'ming', recruited: ['chenlin', 'deng', 'magui'], ships: { ...F.startingFleet('ming'), mingship: 99 } };
+      const imported = await ok('POST', '/meta/import', { profile: local }, h.token);
+      assert.equal(imported.profile.nation, 'ming');
+      assert.ok(imported.profile.recruited.includes('magui'));
+      assert.ok(imported.profile.coins >= 0);
+      assert.ok((imported.profile.ships.mingship ?? 0) <= R.MAX_SHIPS_PER_KIND);
     });
   } finally {
     http.close();

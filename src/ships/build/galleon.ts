@@ -15,14 +15,12 @@ import {
   barrel,
   byLod,
   cannon,
-  clothPatch,
   deckPlane,
   flag,
   hatch,
   lantern,
   lanternPole,
   loftHull,
-  longPennant,
   mast,
   mulberry32,
   ropeCoil,
@@ -502,10 +500,6 @@ export function buildSailShip(kind: ShipKind, variant: number, lod: Lod): MeshDa
       const [sheet, name] = plan.flagship && i === 1 ? fl.command : fl.mast[i % fl.mast.length]!;
       const big = plan.flagship && i === 1 ? 1.35 : 1;
       flag(ctx, { pole: [m.x, deck + m.h, 0], poleH: 2.2, w: 3.0 * big * Math.min(1, m.h / 22), h: 2.0 * big * Math.min(1, m.h / 22), sheet, flag: name, phase: i * 0.9, wood: P.wood!, nu: byLod(ctx, 6, 2, 1), nv: byLod(ctx, 4, 2, 1), flutter: 1.1 });
-      if (!plan.fire) {
-        const [ss, sn] = fl.streamer[i % fl.streamer.length]!;
-        longPennant(ctx, clothPatch(ctx, ss, sn), [m.x - 0.1, deck + m.h - 0.6, 0], Math.min(9, m.h * 0.42), 0.55, i * 1.1);
-      }
     }
   });
   // Stays: each mast to the foot of the next mast forward, the foremast to the bowsprit.

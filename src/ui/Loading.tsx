@@ -1,14 +1,12 @@
-import { useEffect, useState } from 'react';
 import { SCENARIOS, type ScenarioId } from '../sim/scenarios';
 import { FACTION_SHORT, forcesOf, playableFactions } from '../sim/balance';
 import { useLang, useT } from '../i18n';
 import { useUi } from '../state/store';
 import { Backdrop } from './Backdrop';
-import { TIPS, type Tip } from './tips';
 import './loading.css';
 
 // The loading page is the battle's briefing while it is built, ten to thirty seconds: its scene from the game, the
-// poster title, when and where, one line on what happened, both sides' forces and a tip that changes as it waits.
+// poster title, when and where, and both sides' forces, centred on the screen.
 
 // Yi Sun-sin's words keep their traditional wording and register: they are quotations, not UI copy. Each stands with
 // the battle it was spoken or written at.
@@ -19,58 +17,15 @@ const QUOTES: Partial<Record<ScenarioId, [string, string]>> = {
   noryang: ['戰方急 愼勿言我死', '싸움이 급하니 나의 죽음을 알리지 말라'],
 };
 
-/** Uldolmok's current decides Myeongnyang, and no control has a tip for it. */
-const TIDE: Tip = { title: '울돌목의 물살', what: '물살은 때에 따라 방향이 바뀝니다. 물살이 일본 함대를 거슬러 흐르기 시작하면 형세가 뒤집힙니다.', when: '' };
-
-/** Each battle's own tip comes first, then the ones every battle needs. */
-const BATTLE_TIP: Record<ScenarioId, Tip> = {
-  okpo: TIPS['volley.port']!,
-  sacheon: TIPS.ram!,
-  dangpo: TIPS.ram!,
-  hansan: TIPS.crane!,
-  angolpo: TIPS.standoff!,
-  busan: TIPS.column!,
-  chilcheon: TIPS.repel!,
-  myeongnyang: TIDE,
-  noryang: TIPS.lights!,
-  plymouth: TIPS['volley.port']!,
-  portland: TIPS.line!,
-  wight: TIPS.wedge!,
-  calais: TIPS.lights!,
-  gravelines: TIPS.line!,
-  preveza: TIPS.repel!,
-  djerba: TIPS.standoff!,
-  'lepanto-north': TIPS.ram!,
-  'lepanto-centre': TIPS.ram!,
-  'st-vincent': TIPS.line!,
-  nile: TIPS['volley.port']!,
-  finisterre: TIPS.line!,
-  'trafalgar-weather': TIPS.wedge!,
-  'trafalgar-lee': TIPS.wedge!,
-  'lepanto-south': TIPS.wedge!,
-};
-const GENERAL_TIPS: Tip[] = ['skip', 'speed', 'broadside', 'ammo', 'card', 'hold'].map((id) => TIPS[id]!);
-const TIP_MS = 7000;
-
 export function Loading() {
   const t = useT();
   const lang = useLang();
   const loading = useUi((s) => s.loading);
   const progress = useUi((s) => s.progress);
   const info = useUi((s) => s.loadingBattle);
-  const [turn, setTurn] = useState(0);
-  const active = loading !== null;
-  useEffect(() => setTurn(0), [info]);
-  useEffect(() => {
-    if (!active) return;
-    const id = window.setInterval(() => setTurn((n) => n + 1), TIP_MS);
-    return () => window.clearInterval(id);
-  }, [active]);
   if (!loading) return null;
   const scenario = info?.mode === 'scenario' ? (info.id as ScenarioId) : null;
   const s = scenario ? SCENARIOS[scenario] : null;
-  const tips = scenario ? [BATTLE_TIP[scenario], ...GENERAL_TIPS] : GENERAL_TIPS;
-  const tip = tips[turn % tips.length]!;
   const quote = scenario ? QUOTES[scenario] : undefined;
   const sides = scenario ? playableFactions(scenario) : [];
   const title = t(info?.title ?? '임진왜란');
@@ -96,7 +51,6 @@ export function Loading() {
           <h1 className="loading-title">{title}</h1>
         )}
         {info && <div className="loading-place">{t(info.place)}</div>}
-        {s && <p className="loading-hook">{t(s.hook)}</p>}
         {s && (
           <div className="loading-forces">
             {sides.map((f) => (
@@ -116,10 +70,6 @@ export function Loading() {
             <b>{pct}%</b>
           </div>
         </div>
-        <p className="loading-tip" key={turn % tips.length}>
-          <b>{t(tip.title)}</b>
-          {t(tip.what)}
-        </p>
         {quote && (
           <blockquote className="loading-quote">
             <span>{t(quote[1])}</span>

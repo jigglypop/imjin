@@ -3,9 +3,10 @@ import { SHIP_SPECS } from '../sim/catalog';
 import type { ShipKind } from '../sim/types';
 import type { Faction } from '../ships/build/atlas';
 import { atlasMaterial } from '../ships/build/atlasMaterial';
-import { barrel, flag, lantern, longPennant, mulberry32, post, type Ctx, type FlagOpts, type Lod } from '../ships/build/common';
-import { box, cloth, cylinder, MeshBuilder, paints, rectSection, sweep, type V3 } from '../ships/build/parts';
+import { barrel, flag, lantern, mulberry32, post, type Ctx, type FlagOpts, type Lod } from '../ships/build/common';
+import { box, cylinder, MeshBuilder, paints, rectSection, sweep, type V3 } from '../ships/build/parts';
 import { toGeometry } from '../ships/build/pack';
+import { makuRun } from '../ships/build/japan';
 import { createMaterial } from '../ships/ShipRenderer';
 
 /**
@@ -159,10 +160,10 @@ export function buildSet(faction: Faction, lod: Lod) {
       const lacquer = P('black_lacquer');
       bulwark(plaster, lacquer, 0.9);
       for (const s of [-1, 1]) for (let x = X0 + 0.6; x < X1; x += 1.8) post(ctx, lacquer, x, 0, 1.1, s * (HZ - 0.1), 0.16);
-      const maku = P('maku');
       // Along his left side only, so the sea and the fleet show behind him.
       for (const x of [X0 + 0.5, -4.5, -1]) post(ctx, lacquer, x, 1.0, 2.7, -HZ + 0.3, 0.1);
-      cloth(b, maku, [-1, 2.6, -HZ + 0.32], [X0 + 0.5 + 1, 0, 0], [0, -1.35, 0], { nu: lod ? 4 : 12, nv: lod ? 1 : 3, billow: 0.12, flutter: 0.25, phase: 0.6 });
+      // True-aspect panels, never the whole picture stretched along the rail.
+      makuRun(ctx, X0 + 0.5, -1, -HZ + 0.32, 2.6, 1.35, 0.6, lacquer);
       mast(-3.4, 2.6, 0.36);
       line([-3.4, 13, 2.6], [X0 + 1.2, 1.1, HZ - 0.1]);
       line([-3.4, 13, 2.6], [0.8, 1.1, HZ - 0.1]);
@@ -240,7 +241,6 @@ export function buildSet(faction: Faction, lod: Lod) {
       drum(-2.7, 2.1, cell(['red_lacquer', 'dancheong', 'stained_wood']));
       gun(-1.6, -1, bronze, 1.5, 0.12);
       casks(-3.4, -1.9, 2);
-      longPennant(ctx, cell(['blue_paint', 'dancheong']), [X0 + 0.4, 4.35, 3.4], 2.6, 0.32, 0.9);
       break;
     case 'japan':
       drum(-2.8, 2.0, P('black_lacquer'), 0.36);

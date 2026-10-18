@@ -252,7 +252,6 @@ export function mast(ctx: Ctx, wood: Paint, band: Paint, x: number, y0: number, 
   if (ctx.lod === 0) {
     cylinder(ctx.b, band, [x, y0 + 0.2, 0], [x, y0 + 0.55, 0], r * 1.3, r * 1.3, seg, true);
     cylinder(ctx.b, band, [x, y0 + h - 1.2, 0], [x, y0 + h - 1.05, 0], r * 1.0, r * 1.0, seg, true);
-    knob(ctx, wood, [x, y0 + h, 0], r * 0.62, 0.28, 1.18, seg);
   }
 }
 
@@ -320,8 +319,6 @@ export function flag(ctx: Ctx, o: FlagOpts) {
     wave: 0.07 * w,
     phase: o.phase,
   });
-  // finial
-  if (ctx.lod === 0) knob(ctx, o.wood, [x, y + o.poleH, z], 0.035, 0.15, 1.7, 6);
 }
 
 /**

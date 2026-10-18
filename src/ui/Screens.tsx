@@ -107,7 +107,7 @@ export function MainMenu() {
           <CodexIcon name="book" /> {t('함선 도감')}
         </button>
         <button className="back-btn" data-mode="generals" {...mode('generals')}>
-          <Person /> {t('장수')}
+          <Person /> {t('제독')}
         </button>
         <button className="back-btn" onClick={go('settings')}>
           <Sliders /> {t('설정')}
@@ -133,12 +133,10 @@ export function MainMenu() {
         <div className={`wordmark wordmark--${lang} wordmark--${chapter.id}`}>
           {!main ? (
             <div className="menu-title-lockup">
-              <span className="wordmark-hanja wordmark-hanja--roman" aria-hidden="true">{chapter.native}</span>
               <h1 className="wordmark-title wordmark-title--poster">{title}</h1>
             </div>
           ) : lang === 'ko' ? (
             <div className="menu-title-lockup">
-              <span className="wordmark-hanja" aria-hidden="true">壬辰倭亂</span>
               <h1 className="wordmark-title wordmark-title--poster">{title}</h1>
             </div>
           ) : (

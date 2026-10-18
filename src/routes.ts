@@ -20,7 +20,7 @@ export const ROUTES: readonly { screen: RouteScreen; slug: string; name: string 
   { screen: 'online', slug: 'online', name: '온라인 대전' },
   { screen: 'settings', slug: 'settings', name: '설정' },
   { screen: 'codex', slug: 'ships', name: '함선 도감' },
-  { screen: 'generals', slug: 'generals', name: '장수' },
+  { screen: 'generals', slug: 'generals', name: '제독' },
 ];
 
 /**
@@ -59,7 +59,9 @@ export function isBattleSlug(slug: string | undefined, chapter: ChapterId = MAIN
   return !!slug && (battlesOf(chapter) as readonly string[]).includes(slug);
 }
 
-const BY_SLUG = new Map(ROUTES.map((r) => [r.slug, r.screen]));
+/** Other addresses that open a screen: /admirals opens the 제독 screen, whose address stays /generals. */
+export const ROUTE_ALIASES: Readonly<Record<string, RouteScreen>> = { admirals: 'generals' };
+const BY_SLUG = new Map<string, RouteScreen>([...ROUTES.map((r) => [r.slug, r.screen] as const), ...Object.entries(ROUTE_ALIASES)]);
 const BY_SCREEN = new Map(ROUTES.map((r) => [r.screen, r]));
 
 export function isRouteScreen(screen: string): screen is RouteScreen {

@@ -1,4 +1,4 @@
-import { Frustum, Group, Matrix4, PointLight, Sphere, Vector3, type Camera } from 'three/webgpu';
+import { Frustum, Group, Matrix4, Sphere, Vector3, type Camera } from 'three/webgpu';
 import type { Battle } from '../sim/battle';
 import type { AmmoType, BattleEvent, GunType, Projectile, Ship } from '../sim/types';
 import type { ShipViews } from '../ships/ShipViews';
@@ -13,7 +13,7 @@ import { DECKS, mainDeck } from '../ships/decks';
 import { planSinking, type CueKind, type SinkCue } from './sinkPlan';
 import { CREW_RANGE } from './crewTypes';
 import type { WakeMap } from '../ocean/WakeMap';
-import { LIGHT_COUNT, pointLights } from '../render/lights';
+import { FxPointLight, LIGHT_COUNT, pointLights } from '../render/lights';
 import type { ParticleQuality } from '../game/quality';
 import { shipObserved } from '../sim/observation';
 import { pointVisible } from '../sim/visibility';
@@ -80,7 +80,7 @@ export class Effects {
   onShake: ((amount: number) => void) | null = null;
   /** Sinking cues (see sinkPlan.ts) for the sound: kind, world position, 0..1 size. */
   onCue: ((kind: CueKind, x: number, y: number, z: number, size: number) => void) | null = null;
-  private readonly lights: PointLight[] = [];
+  private readonly lights: FxPointLight[] = [];
   private readonly sources: LightSource[] = [];
   private readonly v = new Vector3();
   private readonly s = new Vector3();
@@ -145,7 +145,7 @@ export class Effects {
     });
     this.blaze.setKeep(this.k);
     for (let i = 0; i < this.lightCount; i += 1) {
-      const l = new PointLight(0xffaa55, 0, 160, 1.6);
+      const l = new FxPointLight(0xffaa55, 0, 160, 1.6);
       l.castShadow = false;
       this.lights.push(l);
       this.group.add(l);
@@ -156,6 +156,7 @@ export class Effects {
   /** Frees the meshes and the sprites. */
   dispose() {
     disposeTree(this.group);
+    this.debris.dispose();
   }
 
   /** Run-time emission rate for all particle layers. See ParticleLayer.setKeep. */
@@ -388,6 +389,7 @@ export class Effects {
       if (d < best) {
         best = d;
         this.debris.navy = s.spec.faction;
+        this.debris.scorch = s.fire;
       }
     }
     for (let i = 0; i < count; i += 1) {
@@ -695,6 +697,7 @@ export class Effects {
       case 'wreck': {
         const count = this.n(Math.round((6 + 10 * c.size) * (0.45 + L / 60)) * this.tier);
         this.debris.navy = ship.spec.faction;
+        this.debris.scorch = ship.fire;
         for (let i = 0; i < count; i += 1) {
           this.views.localToWorld(id, rnd(-0.42, 0.42) * L, this.deckOf(ship) + rnd(0, 1.2), rnd(-0.45, 0.45) * B, this.p);
           const out = rnd(1, 5);
@@ -708,7 +711,8 @@ export class Effects {
             const s = rnd(0.6, 1.3);
             this.debris.spawn(Piece.Plank, this.p.x, this.p.y, this.p.z, vx, vy, vz, s * 1.6, s, s, life, 0.8, ember);
           } else if (r < 0.5) this.debris.spawn(Piece.Spar, this.p.x, this.p.y, this.p.z, vx, vy, vz, rnd(3, 7), 0.22, 0.22, life, 0.5, ember);
-          else if (r < 0.7) this.debris.spawn(Piece.Sail, this.p.x, this.p.y, this.p.z, vx * 0.6, vy, vz * 0.6, rnd(3, 7), 1, rnd(2, 5), life, 0.4, ember);
+          else if (r < 0.6) this.debris.spawn(Piece.Sail, this.p.x, this.p.y, this.p.z, vx * 0.6, vy, vz * 0.6, rnd(1.2, 2.6), 1, rnd(0.8, 1.8), life, 0.4, ember);
+          else if (r < 0.7) this.debris.spawn(Piece.Splinter, this.p.x, this.p.y, this.p.z, vx, vy, vz, rnd(1, 2.4), 1.6, 1.6, life, 1);
           else if (r < 0.82) this.debris.spawn(Piece.Beam, this.p.x, this.p.y, this.p.z, vx, vy, vz, rnd(2, 4.5), 1, 1, life, 0.7, ember);
           else if (r < 0.92) this.debris.spawn(Piece.Barrel, this.p.x, this.p.y, this.p.z, vx, vy, vz, 1, 1, 1, life, 1, ember);
           else this.debris.spawn(Piece.Splinter, this.p.x, this.p.y, this.p.z, vx, vy, vz, rnd(1, 2.4), 1.6, 1.6, life, 1);
@@ -783,6 +787,7 @@ export class Effects {
     for (let i = 0; i < 3; i += 1) this.splash(ship.x + rnd(-0.35, 0.35) * L * Math.cos(ship.heading), ship.z + rnd(-0.35, 0.35) * L * Math.sin(ship.heading), 1.1);
     const count = this.n(Math.round(30 * size) * this.tier);
     this.debris.navy = ship.spec.faction;
+    this.debris.scorch = ship.fire;
     const c = Math.cos(ship.heading);
     const n = Math.sin(ship.heading);
     for (let i = 0; i < count; i += 1) {
@@ -800,7 +805,8 @@ export class Effects {
         const s = rnd(0.6, 1.3);
         this.debris.spawn(Piece.Plank, x, y, z, vx, vy, vz, s * 1.6, s, s, life, 0.8);
       } else if (r < 0.55) this.debris.spawn(Piece.Beam, x, y, z, vx, vy, vz, rnd(2, 5), 1, 1, life, 0.7);
-      else if (r < 0.7) this.debris.spawn(Piece.Sail, x, y, z, vx * 0.6, vy, vz * 0.6, rnd(3, 6), 1, rnd(2, 4), life, 0.4);
+      else if (r < 0.62) this.debris.spawn(Piece.Sail, x, y, z, vx * 0.6, vy, vz * 0.6, rnd(1.2, 2.4), 1, rnd(0.8, 1.6), life, 0.4);
+      else if (r < 0.7) this.debris.spawn(Piece.Plank, x, y, z, vx, vy, vz, rnd(1, 2), rnd(0.6, 1.2), rnd(0.6, 1.2), life, 0.8);
       else if (r < 0.82) this.debris.spawn(Piece.Barrel, x, y, z, vx, vy, vz, 1, 1, 1, life, 1);
       else if (r < 0.92) this.debris.spawn(Piece.Spar, x, y, z, vx, vy, vz, rnd(3, 6), 0.22, 0.22, life, 0.5);
       else this.debris.spawn(Piece.Chunk, x, y, z, vx, vy, vz, 0.7, 0.7, 0.7, life, 1);
@@ -1117,6 +1123,20 @@ export class Effects {
   private crowd = 1;
   private readonly layRocket = (t: Trail, x: number, y: number, z: number, ppm: number) => this.layTrail(t, x, y, z, ppm, this.crowd, Shell.Rocket, 0);
 
+  /** Where each light slot shone last frame (x, y, z, on), for {@link heldAt}. */
+  private readonly held = new Float32Array(LIGHT_COUNT * 4);
+  private readonly slotOrder: (LightSource | null)[] = new Array(LIGHT_COUNT).fill(null);
+  private readonly restSources: LightSource[] = [];
+
+  /** The slot whose light shone within 1.5 m of this point last frame, or -1. */
+  private heldAt(x: number, y: number, z: number) {
+    for (let i = 0; i < this.lightCount; i += 1) {
+      const o = i * 4;
+      if (this.held[o + 3] && (this.held[o]! - x) ** 2 + (this.held[o + 1]! - y) ** 2 + (this.held[o + 2]! - z) ** 2 < 2.25) return i;
+    }
+    return -1;
+  }
+
   private updateLights(dt: number, camera: Camera) {
     const cam = camera.position;
     for (let i = this.sources.length - 1; i >= 0; i -= 1) {
@@ -1128,11 +1148,35 @@ export class Effects {
     for (const s of this.sources) {
       const fade = s.life > 0 ? 1 - s.age / s.life : 1;
       s.score = (s.intensity * fade) / (1 + (cam.distanceTo(this.v.set(s.x, s.y, s.z)) / 300) ** 2);
+      // A source where a light already shone last frame keeps its slot unless a much brighter one comes: without this
+      // the lanterns (re-sent every frame) swapped in and out of the few slots and flickered.
+      if (this.heldAt(s.x, s.y, s.z) >= 0) s.score *= 3;
     }
     this.sources.sort((a, b) => b.score! - a.score!);
+    // The chosen sources go back to the slots they held, so a steady light is not moved from slot to slot.
+    const slotOf = this.slotOrder;
+    slotOf.fill(null);
+    const rest = this.restSources;
+    rest.length = 0;
+    for (let j = 0; j < Math.min(this.lightCount, this.sources.length); j += 1) {
+      const s = this.sources[j]!;
+      const k = this.heldAt(s.x, s.y, s.z);
+      if (k >= 0 && !slotOf[k]) slotOf[k] = s;
+      else rest.push(s);
+    }
+    for (let i = 0, r = 0; i < this.lightCount && r < rest.length; i += 1) if (!slotOf[i]) slotOf[i] = rest[r++]!;
+    for (let i = 0; i < this.lightCount; i += 1) {
+      const s = slotOf[i];
+      this.held[i * 4 + 3] = s ? 1 : 0;
+      if (s) {
+        this.held[i * 4] = s.x;
+        this.held[i * 4 + 1] = s.y;
+        this.held[i * 4 + 2] = s.z;
+      }
+    }
     for (let i = 0; i < this.lightCount; i += 1) {
       const l = this.lights[i]!;
-      const s = this.sources[i];
+      const s = slotOf[i];
       if (!s) {
         l.intensity = 0;
         this.lightPos[i]!.w = 0;

@@ -82,3 +82,12 @@ All licences: Creative Commons 0 (http://creativecommons.org/publicdomain/zero/1
 | 858466 | Grand Myanmar Royal Drum  / စည်တော်(မြန်မာ) | ManDaKi | https://freesound.org/people/ManDaKi/sounds/858466/ |
 
 qubodup's military recordings (187767, 239137, 184365, 182822, 854206) were extracted by the author from videos published by US government and military public-affairs offices; see the linked pages.
+
+## Battle score
+
+| file | what it is | made from |
+|---|---|---|
+| music_battle_daechwita.mp3 | Battle score, played in turn with the others while a battle runs (src/audio/tracks.ts). | Made by the owner with Suno, 2026-10-19 |
+| music_battle_daughter_of_the_sea.mp3 | Battle score, in turn with the others. | Made by the owner with Suno, 2026-10-19 |
+| music_battle_iron_march.mp3 | Battle score, in turn with the others. | Made by the owner with Suno, 2026-10-19 |
+| music_battle_iron_march_of_daejo.mp3 | Battle score, in turn with the others. | Made by the owner with Suno, 2026-10-19 |

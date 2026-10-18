@@ -4,19 +4,17 @@
  * roof crowned by gold shachihoko, maku curtains with the crest, nobori banners and one straw sail on the foremast.
  */
 import { anchorsFor, ATAKE_PLANS, ATAKE_TURRET, atakeLevels, sideZ } from '../anchors';
-import { box, cylinder, hipRoof, MeshBuilder, paints, rectSection, spike, sweep, xlate, type MeshData, type V3 } from './parts';
+import { box, hipRoof, MeshBuilder, paints, rectSection, spike, sweep, xlate, type MeshData, type V3 } from './parts';
 import {
   anchorProp,
   barrel,
   byLod,
   cannon,
-  clothPatch,
   deckPlane,
   hatch,
   hullBand,
   hangLanterns,
   loftHull,
-  longPennant,
   mast,
   mulberry32,
   oar,
@@ -131,10 +129,6 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
     } else {
       const roof = irimoyaRoof(ctx, { tile: kawara, trim: lacquer, cap: lacquer }, plaster, { cx: plan.cx, hx: t.hx + 1.2, hz: t.hz + 1.2, wx: t.hx - 0.8, wz: t.hz - 0.7, y: t.y1 - 0.05, skirt: 0.8, hafu: 0.7, gable: 1.5, lift: 0.5 });
       for (const sx of [-1, 1] as const) shachihoko(ctx, gold, [plan.cx + sx * roof.ridgeX, roof.ridgeY + 0.25, 0], sx, 0.95);
-      // Staff for the command pennant, tall enough that the pennant's sag clears the shachihoko at the ridge's aft end.
-      const staff: V3 = [plan.cx, roof.ridgeY + 0.3, 0];
-      cylinder(b, wood, staff, [staff[0], staff[1] + 3.4, 0], 0.06, 0.04, byLod(ctx, 5, 4, 3), true);
-      if (lod < 2) longPennant(ctx, clothPatch(ctx, 'nobori_a', 'linen'), [staff[0] - 0.05, staff[1] + 3.35, 0], 6.5, 0.9, 0.3);
     }
   });
   // the second atakebune carries a small turret on the foredeck as well
@@ -153,7 +147,6 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
   mast(ctx, wood, iron, m.x, deck, m.h, m.r);
   if (lod < 2) box(b, plank, [m.x - 0.6, deck, -0.6], [m.x + 0.6, deck + 0.45, 0.6], { grain: 0 });
   sail(ctx, P('matting', { tint: [1.0, 0.92, 0.78] }), wood, rope, { x: m.x, yTop: deck + m.h - 1.3, w: m.sailW, h: m.sailH, billow: 0.8, battens: 7, phase: 0.5 });
-  if (lod < 2) longPennant(ctx, clothPatch(ctx, 'nobori_b', 'black'), [m.x - 0.1, deck + m.h - 0.1, 0], 4.6, 0.55, 1.1);
   if (lod === 0) {
     // forestay and backstay ropes from the masthead to the bulwark
     for (const sgn of [-1, 1]) {

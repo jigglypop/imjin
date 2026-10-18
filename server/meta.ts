@@ -7,7 +7,8 @@
 // account id as the salt, so no page can send a roll, a purse or experience of its own.
 import { randomBytes } from 'node:crypto';
 import { generalById, GENERALS, isImjin } from '../src/meta/catalog';
-import { buy, equip, equipItem, equipWeapon, learn, reforge, respec, salvage, newProfile, normalizeProfile, reportProblem, reroll, rewardFor, RuleError, type BattleReport, type Profile } from '../src/meta/rules';
+import { buyShip, chooseNation, recruit } from '../src/meta/fleet';
+import { cleanFleet, buy, equip, equipItem, equipWeapon, learn, reforge, respec, salvage, newProfile, normalizeProfile, reportProblem, reroll, rewardFor, RuleError, type BattleReport, type Profile } from '../src/meta/rules';
 import { GEAR_SLOTS, type GearSlot } from '../src/meta/loot';
 import { START_COINS, START_XP, type MetaBattleStart, type MetaBattleTicket, type MetaReply, type MetaRewardReply } from '../src/meta/wire';
 import { battleReport, teamGenerals } from '../src/meta/battle';
@@ -58,9 +59,15 @@ async function load(data: ProfileData, userId: string, tx: ProfileTx): Promise<P
   }
   // The other chapters' famous commanders joined later: an account made before them gets their start once.
   if (await tx.claimOnce(`meta-chapters:${userId}`)) for (const g of GENERALS) if (g.famous && !isImjin(g.faction) && !p.generals[g.id]) p.generals[g.id] = { xp: START_XP, talents: {} };
+  // The navy, its admirals in service and its hulls (src/meta/fleet.ts) are kept beside the rows, in the profile's JSON
+  // under FLEET_KEY: only these routes write it, through the same rules.
+  Object.assign(p, cleanFleet((data[FLEET_KEY] && typeof data[FLEET_KEY] === 'object' ? data[FLEET_KEY] : {}) as Record<string, unknown>));
   p.coins = await tx.balance('coin');
   return p;
 }
+
+/** Where the account's navy, admirals in service and hulls live in profiles.data. */
+export const FLEET_KEY = 'metaFleet';
 
 /**
  * Applies `change` to the user's profile in one transaction: the purse difference goes into the ledger (refused below
@@ -84,6 +91,7 @@ export async function changeMeta(accounts: AccountStore, userId: string, reason:
       after.salt = userId;
       out = after;
       await tx.saveMeta(recordOf(after));
+      data[FLEET_KEY] = { nation: after.nation, nationChanges: after.nationChanges, recruited: after.recruited, ships: after.ships };
       delete data.meta;
     });
     return { profile: out!, rev: stored.rev };
@@ -219,6 +227,27 @@ export function metaRoutes(api: ApiRouter) {
     return { profile, rev } satisfies MetaReply;
   });
 
+  // The account's navy: chosen once on first entry, changeable one more time (src/meta/fleet.ts).
+  api.user('POST', '/api/meta/nation', async ({ accounts, user, body }) => {
+    const nation = need(body.nation, 16);
+    const { profile, rev } = await changeMeta(accounts, user.id, 'nation', (p) => chooseNation(p, nation), `nation:${nation}`);
+    return { profile, rev } satisfies MetaReply;
+  });
+
+  api.user('POST', '/api/meta/recruit', async ({ accounts, user, body }) => {
+    const general = need(body.general);
+    const { profile, rev } = await changeMeta(accounts, user.id, 'recruit', (p) => recruit(p, general), `admiral:${general}`);
+    return { profile, rev } satisfies MetaReply;
+  });
+
+  api.user('POST', '/api/meta/ship', async ({ accounts, user, body }) => {
+    const kind = need(body.kind, 24);
+    const n = body.count === undefined ? 1 : body.count;
+    if (typeof n !== 'number') throw new ApiError('json');
+    const { profile, rev } = await changeMeta(accounts, user.id, 'ship', (p) => buyShip(p, kind, n), `ship:${kind}`);
+    return { profile, rev } satisfies MetaReply;
+  });
+
   // A profile this browser kept before it had an account, carried over once per account. Only choices are taken, each
   // through the server's rules: the armor it owned is bought again from the server's purse (rolled afresh from the
   // account id), the steps learned are learned again where the server's experience allows, and what was worn is put on.
@@ -236,6 +265,13 @@ export function metaRoutes(api: ApiRouter) {
           if (!(error instanceof RuleError)) throw error;
         }
       };
+      // Its navy if the account has none yet, then its admirals and hulls, each bought again from the server's purse.
+      if (local.nation && !p.nation) attempt((q) => chooseNation(q, local.nation!));
+      for (const id of local.recruited) attempt((q) => recruit(q, id));
+      for (const [kind, n] of Object.entries(local.ships)) {
+        const extra = (n ?? 0) - (p.ships[kind as keyof typeof p.ships] ?? 0);
+        for (let i = 0; i < extra; i++) attempt((q) => buyShip(q, kind, 1));
+      }
       for (const id of local.owned) attempt((q) => buy(q, id).profile);
       for (const [id, g] of Object.entries(local.generals)) {
         // Talents are learned again in tier order, rank by rank, where the server's experience allows.

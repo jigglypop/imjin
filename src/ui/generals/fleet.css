@@ -1,0 +1,167 @@
+/* The account's navy on the 제독 screen (Fleet.tsx): nation pick, fleet overview, admiral sheet head. */
+.gen-screen .emblem { display: inline-block; flex: 0 0 auto; width: 22px; height: 22px; vertical-align: -5px; }
+.gen-tab { display: inline-flex; align-items: center; gap: 7px; }
+.gen-tabs { flex-wrap: wrap; }
+.gen-tab--chapter { padding: 6px 13px; font-size: 13px; opacity: 0.8; }
+.fleet-wait { position: relative; min-height: 40vh; }
+
+/* --- Nation pick --- */
+.fleet-pick { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; font-family: var(--font-ui); }
+.fleet-pick__head { text-align: center; }
+.fleet-pick__head h2 { margin: 6px 0 8px; font: 800 30px/1.2 var(--font-title); color: var(--on-dark); }
+.fleet-pick__head p { margin: 0 auto; max-width: 620px; color: var(--ink-2); font-size: 14px; line-height: 1.6; }
+.fleet-pick__cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.fleet-nation {
+  display: flex; flex-direction: column; gap: 10px; padding: 18px; text-align: left; cursor: pointer; color: var(--ink);
+  border: 1px solid var(--glass-line); border-radius: 18px; background: var(--glass);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.fleet-nation:hover { transform: translateY(-2px); border-color: rgba(214, 178, 110, 0.45); }
+.fleet-nation--on { border-color: #d6b26e; box-shadow: 0 0 0 1px #d6b26e, 0 14px 40px rgba(0, 0, 0, 0.45); background: rgba(40, 32, 18, 0.62); }
+.fleet-nation__top { display: flex; align-items: center; gap: 12px; }
+.fleet-nation__top .emblem { width: 52px; height: 52px; }
+.fleet-nation__top b { display: block; font-size: 21px; font-weight: 800; }
+.fleet-nation__top small { color: var(--ink-3); font-family: var(--font-hanja); font-size: 13px; }
+.fleet-nation__line { color: var(--ink-2); font-size: 13px; line-height: 1.5; min-height: 39px; }
+.fleet-nation__label { margin-top: 2px; color: #d4b77a; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
+.fleet-nation__faces { display: flex; gap: 10px; flex-wrap: wrap; }
+.fleet-face { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 66px; }
+.fleet-face img { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.15); }
+.fleet-face small { font-size: 11px; line-height: 1.25; color: var(--ink-2); text-align: center; word-break: keep-all; }
+.fleet-nation__ships { color: var(--ink-2); font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.fleet-pick__foot { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.fleet-pick__foot p { margin: 0; color: var(--ink-3); font-size: 12px; max-width: 620px; line-height: 1.5; }
+.fleet-cta {
+  padding: 11px 26px; border-radius: 999px; border: 1px solid #d6b26e; background: linear-gradient(#6b5225, #4a3818);
+  color: #fff3d2; font: 700 15px var(--font-ui); cursor: pointer;
+}
+.fleet-cta small { margin-left: 6px; font-weight: 500; opacity: 0.8; }
+.fleet-cta:disabled { background: transparent; border-color: rgba(255, 255, 255, 0.18); color: var(--ink-3); cursor: default; }
+
+/* --- Fleet overview --- */
+.fleet { display: flex; flex-direction: column; gap: 14px; font-family: var(--font-ui); }
+.fleet-banner {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 18px 22px;
+  border: 1px solid var(--glass-line); border-radius: 18px; background: var(--glass);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+}
+.fleet-banner .emblem { width: 64px; height: 64px; }
+.fleet-banner__name h2 { margin: 0; font: 800 28px/1.15 var(--font-title); color: var(--on-dark); }
+.fleet-banner__name h2 small { font: 500 14px var(--font-hanja); color: var(--ink-3); margin-left: 6px; }
+.fleet-banner__name p { margin: 4px 0 0; color: var(--ink-2); font-size: 13px; }
+.fleet-stats { display: grid; grid-template-columns: repeat(4, auto); gap: 4px 22px; margin: 0; }
+.fleet-stats div { display: flex; flex-direction: column; align-items: flex-end; }
+.fleet-stats dt { color: var(--ink-3); font-size: 11px; font-weight: 600; }
+.fleet-stats dd { margin: 0; font-size: 24px; font-weight: 800; color: #ead9b2; font-variant-numeric: tabular-nums; }
+.fleet-stats dd small { font-size: 12px; font-weight: 500; color: var(--ink-3); margin-left: 2px; }
+.fleet-section { padding: 14px 18px 16px; border: 1px solid var(--glass-line); border-radius: 16px; background: var(--glass); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); }
+.fleet-section > header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.fleet-section h3 { margin: 0; font: 700 17px var(--font-title); color: #e1d4b6; }
+.fleet-section > header p { margin: 0; color: var(--ink-3); font-size: 12px; }
+.fleet-ships { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.fleet-ship { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: rgba(0, 0, 0, 0.22); }
+.fleet-ship--none { opacity: 0.7; }
+.fleet-ship__top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.fleet-ship__top b { font-size: 15px; }
+.fleet-ship__top small { font-size: 11px; color: var(--ink-3); }
+.fleet-ship__count { display: flex; align-items: baseline; gap: 3px; }
+.fleet-ship__count span { font-size: 32px; font-weight: 800; color: #ead9b2; font-variant-numeric: tabular-nums; line-height: 1; }
+.fleet-ship__count small { color: var(--ink-3); font-size: 12px; }
+.fleet-build { padding: 6px 10px; border: 1px solid rgba(214, 178, 110, 0.55); border-radius: 8px; background: rgba(48, 36, 18, 0.55); color: #ead9b2; font: 600 12px var(--font-ui); cursor: pointer; }
+.fleet-build small { margin-left: 4px; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.fleet-build:disabled { opacity: 0.45; cursor: default; }
+.fleet-admirals { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 10px; }
+.fleet-admiral { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 12px; background: rgba(0, 0, 0, 0.2); color: var(--ink); cursor: pointer; }
+.fleet-admiral img { width: 56px; height: 56px; border-radius: 12px; object-fit: cover; }
+.fleet-admiral b { font-size: 13px; white-space: nowrap; }
+.fleet-admiral small { font-size: 11px; color: #d4b77a; font-variant-numeric: tabular-nums; }
+.fleet-admiral--locked img { filter: grayscale(1) brightness(0.6); }
+.fleet-admiral--locked small { color: var(--ink-3); }
+.fleet-change__choices { display: flex; gap: 8px; flex-wrap: wrap; }
+.fleet-change__btn { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255, 255, 255, 0.04); color: var(--ink-2); font: 600 13px var(--font-ui); cursor: pointer; }
+.fleet-change__btn--armed { border-color: #d0805f; color: #f0b090; }
+
+/* --- Roster entries not in service --- */
+.gen-pick--locked img { filter: grayscale(1) brightness(0.6); }
+.gen-pick--locked .gen-pick__lv { color: var(--ink-3); }
+
+/* --- Recruit card --- */
+.adm-recruit { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 22px; align-items: start; padding: 20px; border: 1px solid var(--glass-line); border-radius: 18px; background: var(--glass); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); font-family: var(--font-ui); }
+.adm-recruit > img { width: 160px; height: 160px; border-radius: 16px; object-fit: cover; filter: saturate(0.6); }
+.adm-recruit > div { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.adm-recruit__note { margin: 0; color: var(--ink-3); font-size: 12px; }
+
+/* --- Admiral sheet head: identity, level and experience, factors --- */
+.adm-head { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px; border: 1px solid var(--glass-line); border-radius: 16px; background: var(--glass); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); font-family: var(--font-ui); }
+.adm-head__title { display: flex; align-items: center; gap: 8px; color: var(--ink-3); font-size: 13px; letter-spacing: 0.02em; }
+.adm-head__title em { font-style: normal; font-size: 11px; font-weight: 700; color: #1c1306; background: #d8b46a; border-radius: 4px; padding: 1px 6px; }
+.adm-head__name { margin: 2px 0 0; font: 800 34px/1.1 var(--font-title); color: var(--on-dark); }
+.adm-head__name small { font: 500 17px var(--font-hanja); color: var(--ink-3); margin-left: 6px; }
+.adm-level { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; align-items: center; }
+.adm-level__badge { width: 64px; height: 64px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid #d6b26e; background: radial-gradient(circle at 40% 35%, #4d3b1c, #1d1810); box-shadow: 0 0 14px rgba(214, 178, 110, 0.25); }
+.adm-level__badge small { font-size: 10px; color: #d4b77a; line-height: 1; }
+.adm-level__badge b { font-size: 26px; font-weight: 800; color: #fff3d2; line-height: 1; font-variant-numeric: tabular-nums; }
+.adm-level__track { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.adm-level__row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.adm-level__row--sub { color: var(--ink-3); }
+.adm-bar { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.adm-bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #8a6a33, #ead9b2); }
+.adm-points { padding: 1px 8px; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 999px; }
+.adm-points--on { border-color: #d6b26e; color: #ead9b2; font-weight: 700; }
+.adm-stats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.adm-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 4px; border-radius: 10px; background: rgba(0, 0, 0, 0.24); }
+.adm-stat span { font-size: 11px; color: var(--ink-3); white-space: nowrap; }
+.adm-stat b { font-size: 15px; font-weight: 700; color: #cfe3b0; font-variant-numeric: tabular-nums; }
+.adm-stat--zero b { color: var(--ink-3); font-weight: 500; }
+.adm-stat--neg b { color: #e89a86; }
+
+/* Phones and narrow windows. */
+@media (max-width: 900px) {
+  .fleet-pick__cards { grid-template-columns: 1fr; }
+  .fleet-nation__line { min-height: 0; }
+  .fleet-banner { grid-template-columns: auto minmax(0, 1fr); }
+  .fleet-stats { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .fleet-stats div { align-items: flex-start; }
+}
+@media (max-width: 560px) {
+  .fleet-pick__head h2 { font-size: 24px; }
+  .fleet-banner { padding: 14px; gap: 12px; }
+  .fleet-banner .emblem { width: 48px; height: 48px; }
+  .fleet-banner__name h2 { font-size: 22px; }
+  .fleet-stats dd { font-size: 19px; }
+  .fleet-section { padding: 12px; }
+  .fleet-ships { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adm-recruit { grid-template-columns: 1fr; }
+  .adm-recruit > img { width: 120px; height: 120px; }
+  .adm-head { padding: 14px; }
+  .adm-head__name { font-size: 28px; }
+  .adm-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .adm-stat b { font-size: 13px; }
+}
+.app--compact .fleet-pick__cards { grid-template-columns: 1fr; }
+.app--compact .adm-recruit { grid-template-columns: 1fr; }
+
+/* The admiral sheet: the head (level, factors) beside the figure on wide screens, first of all on phones. */
+.gen-poster--sheet { grid-template-areas: "fig head" "fig growth"; grid-template-rows: auto 1fr; row-gap: 14px; }
+.gen-poster--sheet > .adm-head { grid-area: head; }
+.gen-poster--sheet > .gen-figure-column { grid-area: fig; }
+.gen-poster--sheet > .gen-growth { grid-area: growth; }
+@media (max-width: 760px) {
+  .gen-poster--sheet { grid-template-areas: "head" "growth" "fig"; grid-template-rows: none; }
+  /* The milestone names crowd each other on a phone: the numbers stay, the names are in their tooltips. */
+  .tal-miles { margin-bottom: 12px; }
+  .tal-mile span { display: none; }
+}
+.app--compact .gen-poster--sheet { grid-template-areas: "head" "growth" "fig"; grid-template-rows: none; }
+
+/* Every chapter's navies on the pick, each with all its admirals: who joins at start and who joins later. */
+.fleet-pick__chapter { display: flex; flex-direction: column; gap: 10px; }
+.fleet-pick__chapter-title { margin: 0; font: 700 15px var(--font-title); color: #d4b77a; letter-spacing: 0.04em; }
+.fleet-pick__cards { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.fleet-nation__faces--later { gap: 6px; }
+.fleet-face--later { width: 54px; }
+.fleet-face--later img { width: 40px; height: 40px; border-radius: 10px; filter: grayscale(0.6) brightness(0.8); }
+.fleet-face--later small { font-size: 10px; color: var(--ink-3); }
+.fleet-nation__label--later { color: var(--ink-3); }
+.fleet-pick__foot { position: sticky; bottom: 0; padding: 12px 0; background: linear-gradient(transparent, rgba(7, 9, 12, 0.92) 35%); }

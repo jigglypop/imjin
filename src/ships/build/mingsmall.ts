@@ -4,7 +4,7 @@
  */
 import { anchorsFor, MINGSMALL_PLAN, sideZ } from '../anchors';
 import { box, hipRoof, MeshBuilder, paints, rectSection, sweep, xlate, type MeshData, type V3 } from './parts';
-import { barrel, byLod, cannon, clothPatch, deckPlane, flag, hangLanterns, hullBand, loftHull, longPennant, mast, mulberry32, oar, oarPortFrame, ropeCoil, sideTimber, wallRun, type Ctx, type Lod } from './common';
+import { barrel, byLod, cannon, deckPlane, flag, hangLanterns, hullBand, loftHull, mast, mulberry32, oar, oarPortFrame, ropeCoil, sideTimber, wallRun, type Ctx, type Lod } from './common';
 import { hullPatch, junkSail, railRect } from './ming';
 
 export function buildMingsmall(lod: Lod): MeshData {
@@ -97,7 +97,6 @@ export function buildMingsmall(lod: Lod): MeshData {
     mast(ctx, wood, bronze, m.x, deck, m.h, m.r);
     if (lod < 2) box(b, timber, [m.x - 0.4, deck, -0.4], [m.x + 0.4, deck + 0.3, 0.4], { grain: 0 });
     junkSail(ctx, P('sail_junk'), wood, rope, { x: m.x, yTop: deck + m.h - 0.9, w: m.sailW, h: m.sailH, billow: 0.7, yaw: m.yaw, phase: i * 2.1, battens: i === 0 ? 7 : 5 });
-    if (lod < 2) longPennant(ctx, i ? clothPatch(ctx, 'flags_b', 'yellow') : clothPatch(ctx, 'flags_a', 'red'), [m.x - 0.08, deck + m.h - 0.05, 0], i ? 3.2 : 4.4, 0.6, i);
   });
 
   // fittings

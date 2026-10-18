@@ -12,9 +12,15 @@ import { portraitUrl } from '../portrait';
 import { ScreenFrame } from '../Screens';
 import { GeneralModel, useGeneralModels } from './GeneralModel';
 import { CHAPTER_WEAPONS, CHAPTER_COMMANDERS, CHAPTER_NAVIES, chapterRoster, chapterSword, isChapterNavy, type ChapterNavy } from './chapterCast';
+import { AdmiralHead, FleetView, NationPick, RecruitCard } from './Fleet';
+import { nationById, serving } from '../../meta/fleet';
 import './generals.css';
+import './fleet.css';
 
-const NAVIES: { id: MetaFaction; label: string }[] = [
+/** The screen's own tabs before the other chapters' navies: the account's fleet and its admirals. */
+type View = 'fleet' | MetaFaction | ChapterNavy;
+
+const IMJIN_NAVIES: { id: MetaFaction; label: string }[] = [
   { id: 'joseon', label: '조선' },
   { id: 'japan', label: '일본' },
   { id: 'ming', label: '명' },
@@ -24,23 +30,37 @@ const commander = (id: string) => COMMANDERS.find((c) => c.id === id) ?? CHAPTER
 
 const portraitOf = (id: string) => portraitUrl(commander(id)?.portrait ?? `portrait_${id}`, true);
 
-/** One fixed representative figure beside the selected general's preserved account progression. */
+/**
+ * The 제독 screen: the account's own navy. First entry picks the nation (NationPick); then the fleet overview, the
+ * navy's admirals (one fixed representative figure beside the selected admiral's growth), and the other chapters' navies.
+ */
 export function GeneralsScreen() {
   const t = useT();
   const profile = useLocalProfile((s) => s.profile);
+  const source = useLocalProfile((s) => s.source);
   const refused = useLocalProfile((s) => s.refused);
   const dismiss = useLocalProfile((s) => s.dismiss);
   // The profile is the account's on the server: load it (and carry this browser's own over, once) when the screen opens.
+  // The nation pick waits for that answer, so an account that already chose never sees it flash.
+  const [synced, setSynced] = useState(source === 'server');
   useEffect(() => {
-    void syncProfile();
+    let live = true;
+    void syncProfile().finally(() => live && setSynced(true));
+    return () => {
+      live = false;
+    };
   }, []);
-  const [navy, setNavy] = useState<MetaFaction | ChapterNavy>('joseon');
-  const roster = useMemo(() => (isChapterNavy(navy) ? [] : GENERALS.filter((g) => g.faction === navy)), [navy]);
-  const [pick, setPick] = useState('yi');
-  const general = roster.find((g) => g.id === pick) ?? roster[0];
+  const nation = profile.nation as MetaFaction | null;
+  const [view, setView] = useState<View>('fleet');
+  const navy: MetaFaction | null = view === 'fleet' || isChapterNavy(view) ? null : view;
+  const roster = useMemo(() => (navy ? GENERALS.filter((g) => g.faction === navy) : []), [navy]);
+  const [pick, setPick] = useState('');
+  const mine = serving(profile);
+  const general = roster.find((g) => g.id === pick) ?? roster.find((g) => g.famous) ?? roster[0];
+  const chapterNavy = isChapterNavy(view) ? view : null;
   return (
     <ScreenFrame
-      title="장수"
+      title="제독"
       className="gen-screen"
       actions={
         <span className="gen-purse" aria-label={t('엽전')}>
@@ -48,42 +68,49 @@ export function GeneralsScreen() {
         </span>
       }
     >
-      <div className="gen-tabs" role="tablist" aria-label={t('나라')}>
-        {[...NAVIES, ...CHAPTER_NAVIES].map((n) => (
-          <button
-            key={n.id}
-            role="tab"
-            aria-selected={navy === n.id}
-            className={`gen-tab gen-tab--${n.id}${navy === n.id ? ' gen-tab--on' : ''}`}
-            onClick={() => {
-              setNavy(n.id);
-              setPick(isChapterNavy(n.id) ? (chapterRoster(n.id)[0]?.id ?? '') : (GENERALS.find((g) => g.faction === n.id && g.famous)?.id ?? ''));
-            }}
-          >
-            {t(n.label)}
-          </button>
-        ))}
-      </div>
-      {isChapterNavy(navy) ? <ChapterLayout navy={navy} pick={pick} setPick={setPick} /> : general && <div className="gen-layout">
-        <nav className="gen-roll" aria-label={t('장수 목록')}>
-          {roster.map((g) => {
-            const c = commander(g.id);
-            const lv = levelProgress(generalState(profile, g.id).xp).level;
-            return (
-              <button key={g.id} data-general-id={g.id} className={`gen-pick${g.id === general.id ? ' gen-pick--on' : ''}`} aria-pressed={g.id === general.id} onClick={() => setPick(g.id)}>
-                <img src={portraitOf(g.id)} alt="" width={48} height={48} loading="lazy" />
-                <span className="gen-pick__text">
-                  <b>{t(c?.name ?? g.id)}</b>
-                  <span>{t(c?.title ?? '')}</span>
-                </span>
-                <span className="gen-pick__lv">Lv.{lv}</span>
-                {skillPointsLeft(profile, g.id) > 0 && <span className="gen-pick__dot">{skillPointsLeft(profile, g.id)}</span>}
-              </button>
-            );
-          })}
-        </nav>
-        <Poster id={general.id} profile={profile} />
-      </div>}
+      {!nation ? (synced ? <NationPick /> : <div className="fleet-wait" role="status"><span className="gen-model__wait" aria-hidden="true" /></div>) : <>
+        <div className="gen-tabs" role="tablist" aria-label={t('보기')}>
+          {[{ id: 'fleet', label: '함대' }, ...IMJIN_NAVIES, ...CHAPTER_NAVIES].map((n) => (
+            <button
+              key={n.id}
+              role="tab"
+              aria-selected={view === n.id}
+              className={`gen-tab gen-tab--${n.id}${view === n.id ? ' gen-tab--on' : ''}${n.id !== 'fleet' && n.id !== nation ? ' gen-tab--chapter' : ''}`}
+              onClick={() => {
+                setView(n.id as View);
+                setPick(isChapterNavy(n.id) ? (chapterRoster(n.id)[0]?.id ?? '') : '');
+              }}
+            >
+              {n.id === 'fleet' && <i className={`emblem emblem--${nation}`} aria-hidden="true" />}
+              {n.id === 'fleet' ? t(nationById(nation)?.name ?? '함대') : t(n.label)}
+              {n.id === nation && <small className="gen-tab__mine">{t('내 제독')}</small>}
+            </button>
+          ))}
+        </div>
+        {view === 'fleet' && <FleetView profile={profile} onAdmiral={(id) => { setPick(id); setView(GENERALS.find((g) => g.id === id)!.faction as View); }} />}
+        {chapterNavy && <ChapterLayout navy={chapterNavy} pick={pick} setPick={setPick} />}
+        {navy && general && <div className="gen-layout">
+          <nav className="gen-roll" aria-label={t('제독 목록')}>
+            {roster.map((g) => {
+              const own = navy === nation;
+              const on = !own || mine.includes(g.id);
+              const lv = levelProgress(generalState(profile, g.id).xp).level;
+              return (
+                <button key={g.id} data-general-id={g.id} className={`gen-pick${g.id === general.id ? ' gen-pick--on' : ''}${on ? '' : ' gen-pick--locked'}`} aria-pressed={g.id === general.id} onClick={() => setPick(g.id)}>
+                  <img src={portraitOf(g.id)} alt="" width={48} height={48} loading="lazy" />
+                  <span className="gen-pick__text">
+                    <b>{t(commander(g.id)?.name ?? g.id)}</b>
+                    <span>{t(commander(g.id)?.title ?? '')}</span>
+                  </span>
+                  <span className="gen-pick__lv">{on ? `Lv.${lv}` : t('미합류')}</span>
+                  {own && on && skillPointsLeft(profile, g.id) > 0 && <span className="gen-pick__dot">{skillPointsLeft(profile, g.id)}</span>}
+                </button>
+              );
+            })}
+          </nav>
+          {navy !== nation || mine.includes(general.id) ? <Poster id={general.id} profile={profile} /> : <RecruitCard id={general.id} profile={profile} />}
+        </div>}
+      </>}
       {refused && (
         <button className="gen-toast" onClick={dismiss}>
           {t(refused)}
@@ -118,11 +145,11 @@ function GeneralFigure({ id, profile }: { id: string; profile: Profile }) {
   const weapon = SWORD_ONLY.has(id) && held && held.kind !== 'sword' ? defaultWeapon(GENERALS.find((g) => g.id === id)!.faction) : held;
   return (
     <>
-      <section className="gen-representative" aria-label={t('장수 모습')} data-model-id={file ?? id}>
+      <section className="gen-representative" aria-label={t('제독 모습')} data-model-id={file ?? id}>
         {file ? <GeneralModel files={files} weapon={weapon} /> : (
           <div className={`gen-model gen-representative__placeholder ${models ? 'gen-model--failed' : 'gen-model--loading'}`}>
             {models ? <img className="gen-representative__portrait" src={portraitOf(id)} alt="" /> : <span className="gen-model__wait" aria-hidden="true" />}
-            <p className="gen-representative__status" role="status">{t(models ? '이 장수의 3D 모습은 준비 중입니다.' : '장수 모델을 불러오는 중입니다.')}</p>
+            <p className="gen-representative__status" role="status">{t(models ? '이 제독의 3D 모습은 준비 중입니다.' : '제독 모델을 불러오는 중입니다.')}</p>
           </div>
         )}
       </section>
@@ -228,7 +255,7 @@ function WeaponSelection({ id, profile }: { id: string; profile: Profile }) {
           <span>{t(WEAPON_KIND_LABEL[kind])}</span>
           <div className="gen-weapons__choices">
             {choices.filter((w) => w.kind === kind).map((w) => (
-              <button key={w.id} data-weapon-id={w.id} className="gen-weapon" aria-pressed={selected?.id === w.id} disabled={SWORD_ONLY.has(id) && kind !== 'sword'} title={t(SWORD_ONLY.has(id) && kind !== 'sword' ? '이 장수의 창술·궁술 동작은 준비 중입니다' : w.line)} onClick={() => equipWeapon(id, w.id)}>
+              <button key={w.id} data-weapon-id={w.id} className="gen-weapon" aria-pressed={selected?.id === w.id} disabled={SWORD_ONLY.has(id) && kind !== 'sword'} title={t(SWORD_ONLY.has(id) && kind !== 'sword' ? '이 제독의 창술·궁술 동작은 준비 중입니다' : w.line)} onClick={() => equipWeapon(id, w.id)}>
                 <img src={`${import.meta.env.BASE_URL}ui/weapons/${w.id}.webp`} alt="" loading="lazy" width={54} height={54} />
                 <b>{t(w.name)}</b>
               </button>
@@ -242,27 +269,15 @@ function WeaponSelection({ id, profile }: { id: string; profile: Profile }) {
 
 function Poster({ id, profile }: { id: string; profile: Profile }) {
   const t = useT();
-  const c = commander(id);
   const tree = treeOf(id);
-  const prog = levelProgress(generalState(profile, id).xp);
   return (
-    <article className="gen-poster" data-general-id={id}>
+    <article className="gen-poster gen-poster--sheet" data-general-id={id}>
+      <AdmiralHead id={id} profile={profile} />
       <div className="gen-figure-column">
         <GeneralFigure key={id} id={id} profile={profile} />
         <Inventory id={id} profile={profile} />
       </div>
       <div className="gen-growth">
-        <div className="gen-poster__id">
-          <span className="gen-poster__title">{t(c?.title ?? '')}</span>
-          <h2>{t(c?.name ?? id)} {tree && <small>{tree.hanja}</small>}</h2>
-          <div className="gen-level">
-            <b>Lv.{prog.level}</b>
-            <span>{prog.need === null ? t('최고 레벨') : `${prog.into} / ${prog.need}`}</span>
-          </div>
-          <div className="gen-bar">
-            <i style={{ width: `${prog.need === null ? 100 : Math.round((prog.into / prog.need) * 100)}%` }} />
-          </div>
-        </div>
         {tree && (
           <section className="gen-trait">
             <span>{t('고유 특성')}</span>
@@ -281,18 +296,9 @@ function Poster({ id, profile }: { id: string; profile: Profile }) {
 function ChapterGrowth({ id, profile }: { id: string; profile: Profile }) {
   const t = useT();
   const tree = treeOf(id)!;
-  const prog = levelProgress(generalState(profile, id).xp);
   return (
     <>
-      <div className="gen-poster__id">
-        <div className="gen-level">
-          <b>Lv.{prog.level}</b>
-          <span>{prog.need === null ? t('최고 레벨') : `${prog.into} / ${prog.need}`}</span>
-        </div>
-        <div className="gen-bar">
-          <i style={{ width: `${prog.need === null ? 100 : Math.round((prog.into / prog.need) * 100)}%` }} />
-        </div>
-      </div>
+      <AdmiralHead id={id} profile={profile} />
       <section className="gen-trait">
         <span>{t('고유 특성')}</span>
         <b>{t(tree.trait.label)}</b>
@@ -312,9 +318,11 @@ function ChapterLayout({ navy, pick, setPick }: { navy: ChapterNavy; pick: strin
   const file = c ? figuresOf(models, c.id).values().next().value : undefined;
   const files = useMemo(() => (file ? [file] : null), [file]);
   if (!c) return null;
+  const own = profile.nation === navy;
+  const joined = (id: string) => !own || profile.recruited.includes(id);
   return (
     <div className="gen-layout">
-      <nav className="gen-roll" aria-label={t('장수 목록')}>
+      <nav className="gen-roll" aria-label={t('제독 목록')}>
         {roster.map((g) => (
           <button key={g.id} data-general-id={g.id} className={`gen-pick${g.id === c.id ? ' gen-pick--on' : ''}`} aria-pressed={g.id === c.id} onClick={() => setPick(g.id)}>
             <img src={portraitUrl(g.portrait, true)} alt="" width={48} height={48} loading="lazy" />
@@ -322,31 +330,31 @@ function ChapterLayout({ navy, pick, setPick }: { navy: ChapterNavy; pick: strin
               <b>{t(g.name)}</b>
               <span>{t(g.title)}</span>
             </span>
-            {treeOf(g.id) && <span className="gen-pick__lv">Lv.{levelProgress(generalState(profile, g.id).xp).level}</span>}
+            {treeOf(g.id) && <span className="gen-pick__lv">{joined(g.id) ? `Lv.${levelProgress(generalState(profile, g.id).xp).level}` : t('미합류')}</span>}
             {treeOf(g.id) && skillPointsLeft(profile, g.id) > 0 && <span className="gen-pick__dot">{skillPointsLeft(profile, g.id)}</span>}
           </button>
         ))}
       </nav>
-      <article className="gen-poster" data-general-id={c.id}>
+      {!joined(c.id) ? <RecruitCard id={c.id} profile={profile} /> : <article className="gen-poster" data-general-id={c.id}>
         <div className="gen-figure-column">
-          <section className="gen-representative" aria-label={t('장수 모습')} data-model-id={file ?? c.id}>
+          <section className="gen-representative" aria-label={t('제독 모습')} data-model-id={file ?? c.id}>
             {file ? <GeneralModel key={file} files={files} weapon={CHAPTER_WEAPONS[wornModel(profile, c.id) ?? ''] ?? chapterSword(navy)} /> : (
               <div className={`gen-model gen-representative__placeholder ${models ? 'gen-model--failed' : 'gen-model--loading'}`}>
                 {models ? <img className="gen-representative__portrait" src={portraitUrl(c.portrait)} alt="" /> : <span className="gen-model__wait" aria-hidden="true" />}
-                <p className="gen-representative__status" role="status">{t(models ? '이 장수의 3D 모습은 준비 중입니다.' : '장수 모델을 불러오는 중입니다.')}</p>
+                <p className="gen-representative__status" role="status">{t(models ? '이 제독의 3D 모습은 준비 중입니다.' : '제독 모델을 불러오는 중입니다.')}</p>
               </div>
             )}
           </section>
           {treeOf(c.id) && <Inventory id={c.id} profile={profile} />}
         </div>
         <div className="gen-growth">
-          <div className="gen-poster__id">
+          {!treeOf(c.id) && <div className="gen-poster__id">
             <span className="gen-poster__title">{t(c.title)}</span>
             <h2>{t(c.name)}</h2>
-          </div>
+          </div>}
           {treeOf(c.id) && <ChapterGrowth id={c.id} profile={profile} />}
         </div>
-      </article>
+      </article>}
     </div>
   );
 }

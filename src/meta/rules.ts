@@ -3,7 +3,9 @@ import type { Effect } from '../sim/grand/growthData';
 import { armorSeed, rerollCost, rollArmor, rollEffect, type ArmorRoll } from './affixes';
 import { baseFits, DAILY_DROPS, INVENTORY_CAP, REFORGE, SALVAGE, itemBase, itemEffect, itemSeed, rollDrops, RARITIES, GEAR_SLOTS, type GearSlot, type Item } from './loot';
 import { KEYSTONE_LEVEL, MASTERY_LEVEL, MASTERY_SPENT, TIER_GATE, pointsAtLevel, spentAll, spentIn, talentEffect, talentsFor, treeOf, type TalentNode } from './talents';
-import { ARMORS, GENERALS, armorById, armorsFor, basicArmor, defaultWeapon, generalById, weaponById, type ArmorDef, type WeaponDef } from './catalog';
+import { ARMORS, GENERALS, armorById, armorsFor, basicArmor, defaultWeapon, generalById, weaponById, type ArmorDef, type GeneralFaction, type WeaponDef } from './catalog';
+import type { ShipKind } from '../sim/types';
+import { ROSTER } from '../sim/conquest';
 
 /**
  * The rules of an account's growth: what a battle earns, how a general rises and learns, and what armor costs and fits.
@@ -50,9 +52,18 @@ export type Profile = {
   items: Item[];
   drops: number;
   dropped: number;
+  /**
+   * The navy the account serves (fleet.ts NATIONS), chosen on first entry; null until then. `nationChanges` counts the
+   * changes made since (one is allowed), `recruited` the admirals the account has taken into its service (every navy's,
+   * so a changed account keeps their levels), and `ships` the hulls it owns by kind, of its navy's roster only.
+   */
+  nation: GeneralFaction | null;
+  nationChanges: number;
+  recruited: string[];
+  ships: Partial<Record<ShipKind, number>>;
 };
 
-export const newProfile = (): Profile => ({ v: PROFILE_VERSION, coins: 0, owned: [], salt: 'local', rolls: {}, generals: {}, stats: { battles: 0, wins: 0, sunk: 0, lost: 0 }, firsts: [], day: '', earned: 0, items: [], drops: 0, dropped: 0 });
+export const newProfile = (): Profile => ({ v: PROFILE_VERSION, coins: 0, owned: [], salt: 'local', rolls: {}, generals: {}, stats: { battles: 0, wins: 0, sunk: 0, lost: 0 }, firsts: [], day: '', earned: 0, items: [], drops: 0, dropped: 0, nation: null, nationChanges: 0, recruited: [], ships: {} });
 
 const count = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) && n > 0 ? Math.floor(n) : 0);
 const strings = (a: unknown) => (Array.isArray(a) ? a.filter((s): s is string => typeof s === 'string') : []);
@@ -100,6 +111,7 @@ export function normalizeProfile(raw: unknown, accountId = 'local'): Profile {
     const rerolls = count(it.rerolls);
     p.items.push({ uid: it.uid, base: it.base, rarity: it.rarity as Item['rarity'], rerolls, seed: itemSeed(p.salt, it.uid, rerolls), src: typeof it.src === 'string' ? it.src.slice(0, 16) : '' });
   }
+  Object.assign(p, cleanFleet(r));
   // Gear is read after the items: a piece worn twice stays with the first general, a missing or foreign one is dropped.
   const worn = new Set<string>();
   for (const g of GENERALS) {
@@ -115,6 +127,36 @@ export function normalizeProfile(raw: unknown, accountId = 'local'): Profile {
     if (Object.keys(out).length) p.generals[g.id]!.gear = out;
   }
   return p;
+}
+
+/** Most of one kind of hull an account may own. */
+export const MAX_SHIPS_PER_KIND = 60;
+
+/** The account's navy, admirals and hulls from any stored shape (fleet.ts holds the rules that change them). */
+export function cleanFleet(r: Record<string, unknown>): Pick<Profile, 'nation' | 'nationChanges' | 'recruited' | 'ships'> {
+  const nation = typeof r.nation === 'string' && GENERALS.some((g) => g.faction === r.nation) ? (r.nation as GeneralFaction) : null;
+  const recruited = [...new Set(strings(r.recruited).filter((id) => generalById(id)))].sort();
+  const ships: Partial<Record<ShipKind, number>> = {};
+  const raw = r.ships && typeof r.ships === 'object' ? (r.ships as Record<string, unknown>) : {};
+  const roster = nation ? (ROSTER as Record<string, readonly ShipKind[]>)[nation] ?? [] : [];
+  for (const k of roster) {
+    const n = Math.min(MAX_SHIPS_PER_KIND, count(raw[k]));
+    if (n > 0) ships[k] = n;
+  }
+  return { nation, nationChanges: nation ? Math.min(9, count(r.nationChanges)) : 0, recruited, ships };
+}
+
+/**
+ * Why an account cannot raise or equip a general now, or null: once it serves a navy, a general must be one of
+ * its own admirals and taken into service. Profiles that have not chosen yet (older ones) keep every general open.
+ */
+export function serviceProblem(p: Profile, id: string): string | null {
+  const g = generalById(id);
+  if (!g) return '없는 제독입니다';
+  if (!p.nation) return null;
+  if (g.faction !== p.nation) return '다른 나라의 제독입니다';
+  if (!p.recruited.includes(id)) return '아직 맞이하지 않은 제독입니다';
+  return null;
 }
 
 /** Ranks by node, kept only where the tree, its gates and the level's points allow, learned in tier order. */
@@ -166,7 +208,9 @@ export const keystoneOf = (p: Profile, id: string): TalentNode | undefined => ta
 /** Why a general cannot take the next rank of a node now, or null. What the tree asks for comes before the points. */
 export function learnProblem(p: Profile, id: string, nodeId: string): string | null {
   const node = talentsFor(id).find((t) => t.id === nodeId);
-  if (!node) return '이 장수가 배울 수 없는 재능입니다';
+  if (!node) return '이 제독이 배울 수 없는 재능입니다';
+  const service = serviceProblem(p, id);
+  if (service) return service;
   const g = generalState(p, id);
   const have = g.talents[nodeId] ?? 0;
   if (have >= node.ranks) return node.ranks > 1 ? '이미 끝까지 익혔습니다' : '이미 익혔습니다';
@@ -199,7 +243,7 @@ export function learn(p: Profile, id: string, nodeId: string): Profile {
 export const respecCost = (p: Profile, id: string) => ((generalState(p, id).respecs ?? 0) === 0 ? 0 : RESPEC_PER_LEVEL * generalLevel(p, id));
 
 export function respecProblem(p: Profile, id: string): string | null {
-  if (!generalById(id)) return '없는 장수입니다';
+  if (!generalById(id)) return '없는 제독입니다';
   if (spentAll(generalState(p, id).talents) === 0) return '되돌릴 재능이 없습니다';
   if (p.coins < respecCost(p, id)) return '엽전이 모자랍니다';
   return null;
@@ -261,12 +305,14 @@ export function reroll(p: Profile, armorId: string): Profile {
 /** Why a general cannot put on an armor (null takes his own basic armor back), or null. */
 export function equipProblem(p: Profile, generalId: string, armorId: string | null): string | null {
   const g = generalById(generalId);
-  if (!g) return '없는 장수입니다';
+  if (!g) return '없는 제독입니다';
   if (armorId === null) return null;
   const a = armorById(armorId);
   if (!a) return '없는 갑옷입니다';
   if (a.faction !== g.faction) return '다른 나라의 갑옷입니다';
   if (!owns(p, armorId)) return '아직 가지지 않은 갑옷입니다';
+  const service = serviceProblem(p, generalId);
+  if (service) return service;
   return null;
 }
 
@@ -292,7 +338,7 @@ export function wornArmor(p: Profile, generalId: string): ArmorDef | undefined {
 /** Weapons are freely available cosmetics. A null selection restores the faction's default sword. */
 export function equipWeaponProblem(_p: Profile, generalId: string, weaponId: string | null): string | null {
   const g = generalById(generalId);
-  if (!g) return '없는 장수입니다';
+  if (!g) return '없는 제독입니다';
   if (weaponId === null) return null;
   const weapon = weaponById(weaponId);
   if (!weapon) return '없는 무기입니다';
@@ -370,18 +416,18 @@ function gearProblemFor(generalId: string, item: Item, slot: GearSlot): string |
   const g = generalById(generalId);
   if (!base || !g) return '없는 물건입니다';
   if (base.slot !== slot) return '맞지 않는 자리입니다';
-  if (!baseFits(base, g.faction)) return base.slot === 'weapon' ? '다른 나라의 무기입니다' : '이 장수가 쓸 수 없는 물건입니다';
+  if (!baseFits(base, g.faction)) return base.slot === 'weapon' ? '다른 나라의 무기입니다' : '이 제독이 쓸 수 없는 물건입니다';
   return null;
 }
 
 /** Why a general cannot carry a piece (uid null empties the slot), or null. */
 export function equipItemProblem(p: Profile, generalId: string, slot: GearSlot, uid: string | null): string | null {
-  if (!generalById(generalId)) return '없는 장수입니다';
+  if (!generalById(generalId)) return '없는 제독입니다';
   if (!GEAR_SLOTS.includes(slot)) return '없는 자리입니다';
   if (uid === null) return null;
   const item = p.items.find((i) => i.uid === uid);
   if (!item) return '가지지 않은 물건입니다';
-  return gearProblemFor(generalId, item, slot);
+  return serviceProblem(p, generalId) ?? gearProblemFor(generalId, item, slot);
 }
 
 const without = (g: GeneralState, uid: string): GeneralState =>

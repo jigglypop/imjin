@@ -92,6 +92,7 @@ import { Vegetation } from '../terrain/Vegetation';
 import { preloadStructures, Structures } from '../terrain/Structures';
 import { disposeTree } from '../render/dispose';
 import { tuneWebGLBackend } from '../render/webglBackend';
+import { registerFxLights } from '../render/lights';
 
 import { Minimap } from '../ui/Minimap';
 import { applyGenerals, battleReport } from '../meta/battle';
@@ -294,6 +295,7 @@ export class Engine {
     this.watchDevice();
     this.watchVisibility();
     tuneWebGLBackend(renderer);
+    registerFxLights(renderer);
   }
 
   /** The pixel ratio the current level allows. */

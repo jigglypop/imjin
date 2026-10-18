@@ -6,6 +6,7 @@ import { DatabaseError, Pool, TypeOverrides, types, type PoolClient, type PoolCo
 import { SESSION_RULE } from '../src/account/wire';
 import {
   AccountError,
+  SESSION_MAX_MS,
   SESSION_MS,
   balanceAfter,
   checkClaimKey,
@@ -414,13 +415,23 @@ export class PgAccountStore implements AccountStore {
     if (!SESSION_RULE.test(token)) return null;
     const hash = hashSession(token);
     const [row] = await this.run<UserRow>(
-      `WITH used AS (UPDATE sessions SET last_used = $2, expires = $3 WHERE hash = $1 AND expires > $2 RETURNING user_id)
+      `WITH used AS (UPDATE sessions SET last_used = $2, expires = $3 WHERE hash = $1 AND expires > $2 AND created > $2 - $4 RETURNING user_id)
        UPDATE users SET last_seen = $2 FROM used WHERE users.id = used.user_id RETURNING users.*`,
-      [hash, now, now + this.sessionMs],
+      [hash, now, now + this.sessionMs, SESSION_MAX_MS],
     );
     if (row) return { user: record(row), hash };
-    await this.run('DELETE FROM sessions WHERE hash = $1 AND expires <= $2', [hash, now]);
+    await this.run('DELETE FROM sessions WHERE hash = $1 AND (expires <= $2 OR created <= $2 - $3)', [hash, now, SESSION_MAX_MS]);
     return null;
+  }
+
+  async endSessions(userId: string, keepSession: string | null) {
+    const [row] = await this.run<{ ended: number }>('WITH gone AS (DELETE FROM sessions WHERE user_id = $1 AND hash IS DISTINCT FROM $2 RETURNING 1) SELECT count(*)::integer AS ended FROM gone', [userId, keepSession]);
+    return row?.ended ?? 0;
+  }
+
+  async userByNickname(nickname: string, exceptId: string | null = null) {
+    const [row] = await this.run<UserRow>('SELECT * FROM users WHERE login IS NOT NULL AND lower(nickname) = lower($1) AND id IS DISTINCT FROM $2 LIMIT 1', [nickname, exceptId]);
+    return row ? record(row) : null;
   }
 
   async endSession(token: string) {
@@ -428,7 +439,7 @@ export class PgAccountStore implements AccountStore {
   }
 
   async sweep(now = Date.now()) {
-    const [row] = await this.run<{ removed: number }>('WITH gone AS (DELETE FROM sessions WHERE expires <= $1 RETURNING 1) SELECT count(*)::integer AS removed FROM gone', [now]);
+    const [row] = await this.run<{ removed: number }>('WITH gone AS (DELETE FROM sessions WHERE expires <= $1 OR created <= $1 - $2 RETURNING 1) SELECT count(*)::integer AS removed FROM gone', [now, SESSION_MAX_MS]);
     return row?.removed ?? 0;
   }
 

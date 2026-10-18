@@ -53,10 +53,10 @@ export type Milestone = { level: number; label: string; text: string; bonus: num
 /** What the levels on the way bring: bonus points beyond the one a level, and what opens. */
 export const MILESTONES: readonly Milestone[] = [
   { level: 3, label: '초급 무관', text: '모든 가지의 2단 개방 가능', bonus: 0 },
-  { level: 5, label: '중견 장수', text: '재능 점수 +1', bonus: 1 },
-  { level: 8, label: '노련한 장수', text: '재능 점수 +1', bonus: 1 },
+  { level: 5, label: '중견 제독', text: '재능 점수 +1', bonus: 1 },
+  { level: 8, label: '숙련 제독', text: '재능 점수 +1', bonus: 1 },
   { level: KEYSTONE_LEVEL, label: '명장', text: '핵심 재능(셋 중 하나) 개방, 재능 점수 +1', bonus: 1 },
-  { level: MASTERY_LEVEL, label: '비기 전수', text: '장수 고유의 비기 개방', bonus: 0 },
+  { level: MASTERY_LEVEL, label: '비기 전수', text: '제독 고유의 비기 개방', bonus: 0 },
   { level: 15, label: '백전노장', text: '재능 점수 +1', bonus: 1 },
   { level: 20, label: '전설', text: '재능 점수 +2', bonus: 2 },
 ];
@@ -183,7 +183,7 @@ export function masteryNode(generalId: string): TalentNode | null {
     const v = (tree.mastery.effect as Effect)[k];
     if (v !== undefined) per[k] = Math.round((v - 1) * 10000) / 10000;
   }
-  return { id: 'mastery', branch: 'mastery', tier: 5, col: 1, ranks: 1, label: tree.mastery.label, hanja: tree.hanja, per, line: '이 장수만의 비기' };
+  return { id: 'mastery', branch: 'mastery', tier: 5, col: 1, ranks: 1, label: tree.mastery.label, hanja: tree.hanja, per, line: '이 제독만의 비기' };
 }
 
 /** Every node a general can learn: his three branches, then his 비기. */

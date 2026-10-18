@@ -47,6 +47,8 @@ export interface AccountStore {
   readonly ready: boolean;
   user(id: string): Promise<UserRecord | null>;
   userByLogin(login: string): Promise<UserRecord | null>;
+  /** A signed-up user (not a guest) other than `exceptId` whose nickname matches ignoring case, or null. */
+  userByNickname(nickname: string, exceptId?: string | null): Promise<UserRecord | null>;
   createGuest(nickname: string, now?: number): Promise<UserRecord>;
   /** A new user with a login; `password` is the stored hash (password.ts). Rejects with 'login-taken'. */
   createUser(login: string, password: string, nickname: string, now?: number): Promise<UserRecord>;
@@ -64,6 +66,8 @@ export interface AccountStore {
   /** The user a token signs in, or null. Every use moves the expiry on; a session ends after SESSION_MS without one. */
   session(token: string, now?: number): Promise<SignedIn | null>;
   endSession(token: string): Promise<void>;
+  /** Ends every session of the user but `keepSession` (a stored hash; null ends all); returns how many ended. */
+  endSessions(userId: string, keepSession: string | null): Promise<number>;
   /** Forgets sessions past their expiry; returns how many. */
   sweep(now?: number): Promise<number>;
   profile(userId: string): Promise<Profile | null>;
@@ -86,7 +90,10 @@ export interface AccountStore {
   close(): Promise<void>;
 }
 
+/** A session ends after this long unused; every use moves its expiry on (sliding refresh). */
 export const SESSION_MS = 90 * 24 * 3600 * 1000;
+/** And this long after it began, however often it was used: a stolen token cannot live for ever. */
+export const SESSION_MAX_MS = 365 * 24 * 3600 * 1000;
 /** A profile is one JSON object; this keeps a runaway one from filling the database. */
 const PROFILE_BYTES = 256 * 1024;
 const KIND = /^[a-z][a-z0-9_]{0,31}$/;

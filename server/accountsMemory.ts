@@ -4,6 +4,7 @@
 import { SESSION_RULE } from '../src/account/wire';
 import {
   AccountError,
+  SESSION_MAX_MS,
   SESSION_MS,
   balanceAfter,
   checkClaimKey,
@@ -29,7 +30,7 @@ type Entry = LedgerEntry & { userId: string };
 export class MemoryAccountStore implements AccountStore {
   readonly ready = true;
   private users = new Map<string, UserRecord>();
-  private sessions = new Map<string, { userId: string; expires: number; lastUsed: number }>();
+  private sessions = new Map<string, { userId: string; created: number; expires: number; lastUsed: number }>();
   /** Profiles as JSON text, so no caller ever holds the stored object. */
   private profiles = new Map<string, { text: string; rev: number }>();
   private entries: Entry[] = [];
@@ -132,7 +133,7 @@ export class MemoryAccountStore implements AccountStore {
     return this.serial(() => {
       if (!this.users.has(userId)) throw new AccountError('invalid');
       const token = newSessionToken();
-      this.sessions.set(hashSession(token), { userId, expires: now + this.sessionMs, lastUsed: now });
+      this.sessions.set(hashSession(token), { userId, created: now, expires: now + this.sessionMs, lastUsed: now });
       return token;
     });
   }
@@ -142,7 +143,7 @@ export class MemoryAccountStore implements AccountStore {
     const hash = hashSession(token);
     const session = this.sessions.get(hash);
     if (!session) return null;
-    if (session.expires <= now) {
+    if (session.expires <= now || now - session.created >= SESSION_MAX_MS) {
       this.sessions.delete(hash);
       return null;
     }
@@ -153,6 +154,23 @@ export class MemoryAccountStore implements AccountStore {
     return { user: { ...user }, hash };
   }
 
+  endSessions(userId: string, keepSession: string | null) {
+    return this.serial(() => {
+      let ended = 0;
+      for (const [hash, session] of this.sessions) {
+        if (session.userId !== userId || hash === keepSession) continue;
+        this.sessions.delete(hash);
+        ended += 1;
+      }
+      return ended;
+    });
+  }
+
+  async userByNickname(nickname: string, exceptId: string | null = null) {
+    const wanted = nickname.toLowerCase();
+    return this.find((user) => user.login !== null && user.id !== exceptId && user.nickname.toLowerCase() === wanted);
+  }
+
   async endSession(token: string) {
     if (SESSION_RULE.test(token)) this.sessions.delete(hashSession(token));
   }
@@ -160,7 +178,7 @@ export class MemoryAccountStore implements AccountStore {
   async sweep(now = Date.now()) {
     let removed = 0;
     for (const [hash, session] of this.sessions) {
-      if (session.expires > now) continue;
+      if (session.expires > now && now - session.created < SESSION_MAX_MS) continue;
       this.sessions.delete(hash);
       removed += 1;
     }

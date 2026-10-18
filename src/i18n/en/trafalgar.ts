@@ -123,6 +123,8 @@ export const EN_TRAFALGAR: Record<string, string> = {
   "같은 날 정오 무렵, 콜링우드의 로열 소버린호가 풍하 종렬의 맨 앞에서 홀로 연합 함대 후위로 뛰어들어 에스파냐의 산타아나호와 맞붙었습니다. 뒤따른 배들이 하나씩 대열을 끊고 들어가 근접 난전이 벌어졌습니다. 추루카의 산후안 네포무세노호는 여섯 척에 둘러싸여 싸우다 추루카가 전사한 뒤 항복했고, 프랑스의 아실호는 불타 폭발했습니다. 크게 다친 그라비나는 남은 배를 모아 카디스로 물러났습니다.":
     "Around noon the same day Collingwood's Royal Sovereign, at the head of the lee column, broke alone into the Combined Fleet's rear and engaged the Spanish Santa Ana. The ships behind her cut through the line one by one into a close mêlée. Churruca's San Juan Nepomuceno, surrounded by six ships, struck after Churruca was killed, and the French Achille caught fire and blew up. Gravina, badly wounded, gathered the survivors and withdrew to Cádiz.",
   "영국 승리, 연합 함대 후위 대부분 나포 · 아실호 폭발 · 추루카 전사": "British victory; most of the Combined Fleet's rear taken · the Achille blown up · Churruca killed",
+  "전열함 27척 (풍상 종렬 12 · 풍하 종렬 15) · 프리깃 4척": "27 ships of the line (weather column 12 · lee column 15) · 4 frigates",
+  "전열함 33척 (전위 8 · 중앙 7 · 후위 9 · 관측 전대 9), 프리깃 5척 · 브리그 2척 제외": "33 ships of the line (van 8 · centre 7 · rear 9 · observation squadron 9), 5 frigates and 2 brigs not drawn",
   "전열함 15척 (로열 소버린 포함)": "15 ships of the line (with the Royal Sovereign)",
   "전열함 18척 (후위 9척 · 관측 전대 9척)": "18 ships of the line (rear 9 · squadron of observation 9)",
 

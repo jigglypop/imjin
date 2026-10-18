@@ -111,7 +111,7 @@ try {
     assert.equal(T.pointsAtLevel(5), 5, 'milestone at 5 adds one');
     assert.equal(T.pointsAtLevel(20), 19 + 6);
     let p = { ...R.newProfile(), generals: { yi: { xp: R.xpFor(4), talents: {} } } };
-    assert.equal(R.learnProblem(p, 'yi', 'boarding.hooks'), '이 장수가 배울 수 없는 재능입니다');
+    assert.equal(R.learnProblem(p, 'yi', 'boarding.hooks'), '이 제독이 배울 수 없는 재능입니다');
     assert.equal(R.learnProblem(p, 'yi', 'gunnery.powder'), '이 가지에 2점을 쓰면 열립니다');
     p = R.learn(R.learn(p, 'yi', 'gunnery.rapid'), 'yi', 'gunnery.rapid');
     assert.equal(p.generals.yi.talents['gunnery.rapid'], 2);
@@ -227,7 +227,7 @@ try {
         }
       }
     }
-    assert.equal(R.equipWeaponProblem(p, 'ghost', null), '없는 장수입니다');
+    assert.equal(R.equipWeaponProblem(p, 'ghost', null), '없는 제독입니다');
     assert.equal(R.equipWeaponProblem(p, 'yi', 'ghost'), '없는 무기입니다');
     assert.equal(R.wornWeapon(p, 'ghost'), undefined);
     assert.deepEqual(p.generals, {});
@@ -571,7 +571,7 @@ try {
     assert.equal(R.equipItemProblem(q, 'nelson', 'weapon', 'k'), '다른 나라의 무기입니다');
     assert.equal(R.equipItemProblem(q, 'yi', 'weapon', 'k'), '다른 나라의 무기입니다');
     assert.equal(R.wornModel(R.equipItem(q, 'alipasha', 'weapon', 'k'), 'alipasha'), 'kilij');
-    assert.equal(R.equipItemProblem({ ...q, items: [{ ...kilij, base: 'b_sonja' }] }, 'nelson', 'book', 'k'), '이 장수가 쓸 수 없는 물건입니다');
+    assert.equal(R.equipItemProblem({ ...q, items: [{ ...kilij, base: 'b_sonja' }] }, 'nelson', 'book', 'k'), '이 제독이 쓸 수 없는 물건입니다');
   });
 
   const storageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');

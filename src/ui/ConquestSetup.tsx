@@ -8,6 +8,20 @@ import type { ConquestSetup } from '../game/Engine';
 import { sound } from '../audio/Sound';
 import { useT } from '../i18n';
 import { Minus, Plus } from './icons';
+import { useLocalProfile } from '../meta/localProfile';
+import { musterCap } from '../meta/fleet';
+import type { Profile } from '../meta/rules';
+
+/** Keeps a muster within the hulls the account owns when it plays its own navy (src/meta/fleet.ts musterCap). */
+function withinOwned(fleet: ShipKind[], faction: Faction, profile: Profile): ShipKind[] {
+  const used = new Map<ShipKind, number>();
+  return fleet.filter((k) => {
+    const cap = musterCap(profile, faction, k);
+    const n = (used.get(k) ?? 0) + 1;
+    used.set(k, n);
+    return cap === null || n <= cap;
+  });
+}
 
 const KEY = 'imjin.conquest';
 
@@ -99,11 +113,13 @@ const openingOf = (f: Faction, c: Saved) => autoFleet(f, MUSTER_BUDGET * scaleOf
 export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup) => void }) {
   const t = useT();
   const [cfg, setCfgRaw] = useState<Saved>(load);
-  const [fleet, setFleet] = useState<ShipKind[]>(() => openingOf(cfg.me, cfg));
+  const profile = useLocalProfile((s) => s.profile);
+  const [fleet, setFleetRaw] = useState<ShipKind[]>(() => withinOwned(openingOf(cfg.me, cfg), cfg.me, profile));
+  const setFleet = (next: ShipKind[], me: Faction = cfg.me) => setFleetRaw(withinOwned(next, me, profile));
   const setCfg = (patch: Partial<Saved>) => {
     sound.click();
     const next = { ...cfg, ...patch };
-    if ((patch.me && patch.me !== cfg.me) || scaleOf(next) !== scaleOf(cfg)) setFleet(openingOf(next.me, next));
+    if ((patch.me && patch.me !== cfg.me) || scaleOf(next) !== scaleOf(cfg)) setFleet(openingOf(next.me, next), next.me);
     setCfgRaw(next);
     save(next);
   };
@@ -119,7 +135,8 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
     return m;
   }, [fleet]);
   const add = (k: ShipKind, count = 1) => {
-    const n = Math.min(count, Math.floor((budget - cost) / price(k)));
+    const cap = musterCap(profile, cfg.me, k);
+    const n = Math.min(count, Math.floor((budget - cost) / price(k)), cap === null ? Infinity : cap - (counts.get(k) ?? 0));
     if (n <= 0) return;
     sound.click();
     setFleet([...fleet, ...Array.from({ length: n }, () => k)]);
@@ -192,6 +209,7 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
                     <div className="cs-ship-name">
                       <b>{t(SHORT_NAME[k])}</b>
                       <small>{price(k).toLocaleString('ko-KR')}</small>
+                      {musterCap(profile, cfg.me, k) !== null && <small className="cs-ship-owned">{t('보유 {n}척', { n: musterCap(profile, cfg.me, k)! })}</small>}
                     </div>
                     <div className="cs-ship-note">{t(ROLE_NOTE[k])}</div>
                     <div className="cs-ship-count">
@@ -199,7 +217,7 @@ export function ConquestSetupPanel({ onStart }: { onStart: (setup: ConquestSetup
                         <Minus size={16} />
                       </button>
                       <b>{counts.get(k) ?? 0}</b>
-                      <button onClick={(e) => add(k, e.shiftKey ? 10 : 1)} disabled={cost + price(k) > budget} title={t('Shift 클릭: 10척 추가')} aria-label={t('{name} 늘리기', { name: t(SHORT_NAME[k]) })}>
+                      <button onClick={(e) => add(k, e.shiftKey ? 10 : 1)} disabled={cost + price(k) > budget || (musterCap(profile, cfg.me, k) ?? Infinity) <= (counts.get(k) ?? 0)} title={t('Shift 클릭: 10척 추가')} aria-label={t('{name} 늘리기', { name: t(SHORT_NAME[k]) })}>
                         <Plus size={16} />
                       </button>
                     </div>

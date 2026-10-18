@@ -40,6 +40,24 @@ export class ShipGrid {
     this.spareKeys = previous;
   }
 
+  /** Writes the ships query() would visit, in the same order, into out; returns how many. Entries past it are stale. */
+  gather(x: number, z: number, r: number, out: Ship[]) {
+    const c = this.cell;
+    const x0 = Math.floor((x - r) / c);
+    const x1 = Math.floor((x + r) / c);
+    const z0 = Math.floor((z - r) / c);
+    const z1 = Math.floor((z + r) / c);
+    let n = 0;
+    for (let cx = x0; cx <= x1; cx += 1) {
+      for (let cz = z0; cz <= z1; cz += 1) {
+        const list = this.cells.get(this.key(cx, cz));
+        if (!list) continue;
+        for (let i = 0; i < list.length; i += 1) out[n++] = list[i]!;
+      }
+    }
+    return n;
+  }
+
   query(x: number, z: number, r: number, fn: (s: Ship) => void) {
     const c = this.cell;
     const x0 = Math.floor((x - r) / c);

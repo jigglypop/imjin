@@ -55,6 +55,7 @@ export const EN_COMMON: Record<string, string> = {
   '기세': 'Momentum',
   '함대': 'Fleet',
   '장수': 'Commanders',
+  '제독': 'Admirals',
   '바다를 준비하는 중': 'Preparing the sea',
   '하늘을 불러오지 못했습니다': 'Could not load the sky',
   '가장 낮음': 'Lowest',

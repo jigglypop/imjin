@@ -4,7 +4,7 @@
  */
 import { anchorsFor, HYEOP_PLAN, hullTop, sideZ } from '../anchors';
 import { box, cylinder, hipRoof, MeshBuilder, paints, xlate, type MeshData } from './parts';
-import { cannon, clothPatch, deckPlane, flag, innerLiner, lantern, lanternPole, loftHull, longPennant, mast, mulberry32, oar, oarPortFrame, post, sail, sideTimber, wallRun, type Ctx, type Lod } from './common';
+import { cannon, deckPlane, flag, innerLiner, lantern, lanternPole, loftHull, mast, mulberry32, oar, oarPortFrame, post, sail, sideTimber, wallRun, type Ctx, type Lod } from './common';
 
 export function buildHyeopseon(lod: Lod): MeshData {
   const plan = HYEOP_PLAN;
@@ -76,7 +76,6 @@ export function buildHyeopseon(lod: Lod): MeshData {
   sail(ctx, P('sail_hemp'), P('pine_mast', { tint: [0.9, 0.85, 0.8] }), rope, { x: m.x, yTop: deck + m.h - 0.4, w: m.sailW, h: m.sailH, billow: 0.45, battens: 5, phase: 0.4 });
   if (lod < 2) {
     flag(ctx, { pole: [m.x, deck + m.h + 0.4, 0], poleH: 0.6, w: 0.9, h: 0.75, sheet: 'flags_b', flag: 'blue', phase: 0.5, wood: timber });
-    longPennant(ctx, clothPatch(ctx, 'flags_a', 'red'), [m.x - 0.05, deck + m.h - 0.1, 0], 3.2, 0.4, 1.0);
   }
 
   // canopy aft: four posts and a tarp roof

@@ -24,7 +24,7 @@ import {
   type V3,
   type TubeStation,
 } from './parts';
-import { barrel, byLod, cannon, clothPatch, flag, furledSail, hullBand, lantern, lanternPole, loftHull, longPennant, mast, mulberry32, oar, oarPortFrame, ropeCoil, sideTimber, type Ctx, type Lod } from './common';
+import { barrel, byLod, cannon, flag, furledSail, hullBand, lantern, lanternPole, loftHull, mast, mulberry32, oar, oarPortFrame, ropeCoil, sideTimber, type Ctx, type Lod } from './common';
 
 export function buildGeobukseon(lod: Lod, omitDragonHead = false): MeshData {
   const plan = GEOBUK_PLAN;
@@ -257,7 +257,6 @@ export function buildGeobukseon(lod: Lod, omitDragonHead = false): MeshData {
     for (const x of [8.2, 4.5]) box(b, timber, [x - 0.2, roofAt(x) + 0.0, 0.55], [x + 0.2, roofAt(x) + 0.3, 1.25]);
     if (lod === 0) {
       // Nearly level: it flies just over the roof's spikes.
-      longPennant(ctx, clothPatch(ctx, 'flags_a', 'red'), [m1 - 0.1, 8.7, 0], 4.5, 0.55, 0.8, 0.02);
       barrel(ctx, P('hull_plank', { tint: [0.8, 0.7, 0.6] }), P('iron_hex', { surf: 2 }), [-9.5, roofAt(-9.5) + 0.02, 1.8], 0.38, 0.8);
       ropeCoil(ctx, P('rope'), [3.0, roofAt(3.0) + 0.05, -1.4], 0.55);
     }

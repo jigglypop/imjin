@@ -21,6 +21,9 @@ export const META_PATHS = {
   itemSalvage: '/meta/item/salvage',
   itemReforge: '/meta/item/reforge',
   import: '/meta/import',
+  nation: '/meta/nation',
+  recruit: '/meta/recruit',
+  ship: '/meta/ship',
   battleStart: '/meta/battle/start',
   battleFinish: '/meta/battle/finish',
 } as const;
