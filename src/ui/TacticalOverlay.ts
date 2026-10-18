@@ -18,8 +18,12 @@ const BAD = '#cf9686';
 const GOOD = '#8db59a';
 const QUIET = '#9aa4ae';
 const INK = '#14181d';
-/** Selected ships whose gun arcs are drawn; a phone draws only the one whose details it shows. */
-const MAX_ARCS = 12;
+/** Seconds the gun arcs take to fade in on a new ship, and to fade out while the camera swings. */
+const ARC_FADE_IN = 0.22;
+const ARC_FADE_OUT = 0.12;
+/** The camera counts as moving above these speeds (m/s, rad/s); following a ship under sail stays below them. */
+const CAM_MOVE_SPEED = 40;
+const CAM_TURN_SPEED = 0.35;
 const MAX_TARGET_LINES = 40;
 const MAX_MARKS = 160;
 /** Marks farther than this from the camera are left out: a fleet on the horizon is read from its pill. */
@@ -28,9 +32,8 @@ const MARK_RANGE = 5200;
 const BROADSIDE_HALF = 0.75;
 const BOW_HALF = 0.35;
 const ARC_STEPS = 18;
-/** The coloured band runs from this share of a battery's reach out to its edge; the cone's sides are drawn to ARC_CONE of it. */
-const ARC_BAND = 0.9;
-const ARC_CONE = 0.3;
+/** The soft band runs from this share of a battery's reach out to its edge. */
+const ARC_BAND = 0.93;
 const RING_STEPS = 64;
 
 /** `solid` marks a crew's state, filled in its colour; the player's own troubles are outlined, a quieter second rank. */
@@ -57,6 +60,12 @@ export class TacticalOverlay {
   private height = 0;
   private ratio = 1;
   private dirty = false;
+  /** The one ship whose arcs are shown, and how far they have faded in. */
+  private arcShip = 0;
+  private arcAlpha = 0;
+  private lastTime = 0;
+  private readonly camPos = [0, 0, 0];
+  private readonly camDir = [0, 0, -1];
 
   constructor(private readonly engine: Engine, parent: HTMLElement) {
     this.canvas.className = 'tactics';
@@ -275,6 +284,34 @@ export class TacticalOverlay {
     ctx.textAlign = 'start';
   }
 
+  /** True while the camera pans, zooms or turns faster than a ship sails: the arcs step aside until it settles. */
+  private cameraMoving(dt: number) {
+    const e = this.engine.camera.matrixWorld.elements;
+    const p = this.camPos;
+    const d = this.camDir;
+    const moved = Math.hypot(e[12]! - p[0]!, e[13]! - p[1]!, e[14]! - p[2]!);
+    const dot = Math.max(-1, Math.min(1, -e[8]! * d[0]! - e[9]! * d[1]! - e[10]! * d[2]!));
+    p[0] = e[12]!; p[1] = e[13]!; p[2] = e[14]!;
+    d[0] = -e[8]!; d[1] = -e[9]!; d[2] = -e[10]!;
+    if (dt <= 0) return false;
+    return moved / dt > CAM_MOVE_SPEED || Math.acos(dot) / dt > CAM_TURN_SPEED;
+  }
+
+  /**
+   * The ship whose arcs are drawn: the ship under the pointer if it is one of the player's (or the selected enemy),
+   * else the selection when it is one ship. A selection of several shows no arcs until one of them is pointed at, so a
+   * squadron's arcs never stack over the battle.
+   */
+  private arcTarget(own: Ship[], foe: Ship | undefined) {
+    const engine = this.engine;
+    const b = engine.battle;
+    const hovered = b.get(engine.views.hovered);
+    if (hovered && b.isActive(hovered) && hovered.team === engine.team) return hovered;
+    if (own.length === 1) return own[0];
+    if (!own.length && foe) return foe;
+    return undefined;
+  }
+
   private drawSelection() {
     const engine = this.engine;
     const b = engine.battle;
@@ -288,11 +325,22 @@ export class TacticalOverlay {
       else foe ??= s;
     }
     let drew = false;
-    // The first selected ship shows its arcs in full; the rest of the selection only the edge of their reach, which
-    // together trace the front a squadron covers. A phone shows the first ship alone.
-    if (own[0]) drew = this.drawArcs(own[0], OWN) || drew;
-    if (!isTouchDevice) for (const s of own.slice(1, MAX_ARCS)) drew = this.drawReach(s, OWN) || drew;
-    if (foe) drew = this.drawArcs(foe, FOE) || drew;
+    const now = performance.now() / 1000;
+    const dt = this.lastTime ? Math.min(0.1, now - this.lastTime) : 0;
+    this.lastTime = now;
+    const moving = this.cameraMoving(dt);
+    const arcShip = this.arcTarget(own, foe);
+    if ((arcShip?.id ?? 0) !== this.arcShip) {
+      this.arcShip = arcShip?.id ?? 0;
+      this.arcAlpha = 0;
+    }
+    const goal = arcShip && !moving ? 1 : 0;
+    this.arcAlpha = goal > this.arcAlpha ? Math.min(1, this.arcAlpha + dt / ARC_FADE_IN) : Math.max(0, this.arcAlpha - dt / ARC_FADE_OUT);
+    if (arcShip && this.arcAlpha > 0) {
+      drew = this.drawArcs(arcShip, arcShip.team === team ? OWN : FOE, this.arcAlpha) || drew;
+    }
+    // Still fading in: keep drawing next frame even when nothing else changes.
+    if (arcShip && this.arcAlpha < 1) drew = true;
     const lines = own.slice(0, isTouchDevice ? 1 : MAX_TARGET_LINES);
     for (const s of lines) {
       const target = b.get(aimedAt(s));
@@ -351,70 +399,26 @@ export class TacticalOverlay {
   }
 
   /**
-   * A ship's broadside and bow arcs: a band of colour along the edge of each battery's reach, brighter the more of its
-   * guns are loaded, the cone's two sides drawn a short way out from the hull, and a dashed ring at the farthest reach.
-   * The water in between stays clear, so a squadron's arcs do not wash over the battle.
+   * A ship's broadside and bow arcs, kept quiet: a soft band just inside the edge of each battery's reach (a little
+   * stronger the more of its guns are loaded) and a thin dashed line on the edge itself. No full ring, no cone sides:
+   * the arcs say where the guns bear and how far, and nothing else. `alpha` is the fade.
    */
-  private drawArcs(s: Ship, tone: string) {
+  private drawArcs(s: Ship, tone: string, alpha: number) {
     const ctx = this.ctx;
-    let max = 0;
     let drew = false;
     for (const arc of this.batteries(s)) {
-      max = Math.max(max, arc.range);
       ctx.beginPath();
       if (!this.edge(s, arc.axis, arc.half, arc.range, true) || !this.edge(s, arc.axis, arc.half, arc.range * ARC_BAND, false, true)) continue;
       ctx.closePath();
-      ctx.fillStyle = `rgba(${tone}, ${(0.16 + 0.12 * arc.loaded).toFixed(3)})`;
+      ctx.fillStyle = `rgba(${tone}, ${((0.07 + 0.07 * arc.loaded) * alpha).toFixed(3)})`;
       ctx.fill();
       ctx.beginPath();
       this.edge(s, arc.axis, arc.half, arc.range, true);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = `rgba(${tone}, ${(0.55 + 0.4 * arc.loaded).toFixed(3)})`;
+      ctx.setLineDash([6, 5]);
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = `rgba(${tone}, ${((0.3 + 0.25 * arc.loaded) * alpha).toFixed(3)})`;
       ctx.stroke();
-      ctx.beginPath();
-      for (const side of [-1, 1]) {
-        const ang = arc.axis + side * arc.half;
-        if (!this.project(s.x + Math.cos(ang) * s.spec.length * 0.6, 0.4, s.z + Math.sin(ang) * s.spec.length * 0.6, this.a)) continue;
-        if (!this.project(s.x + Math.cos(ang) * arc.range * ARC_CONE, 0.4, s.z + Math.sin(ang) * arc.range * ARC_CONE, this.b)) continue;
-        ctx.moveTo(this.a.x, this.a.y);
-        ctx.lineTo(this.b.x, this.b.y);
-      }
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = `rgba(${tone}, 0.4)`;
-      ctx.stroke();
-      drew = true;
-    }
-    if (max > 0) {
-      ctx.beginPath();
-      let ok = true;
-      for (let i = 0; i <= RING_STEPS && ok; i += 1) {
-        const ang = (i / RING_STEPS) * Math.PI * 2;
-        ok = this.project(s.x + Math.cos(ang) * max, 0.4, s.z + Math.sin(ang) * max, this.b);
-        if (i === 0) ctx.moveTo(this.b.x, this.b.y);
-        else ctx.lineTo(this.b.x, this.b.y);
-      }
-      if (ok) {
-        ctx.setLineDash([3, 6]);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = `rgba(${tone}, 0.34)`;
-        ctx.stroke();
-        ctx.setLineDash([]);
-        drew = true;
-      }
-    }
-    return drew;
-  }
-
-  /** Only the outer edges of a ship's arcs: the rest of a selection, whose edges together draw its front. */
-  private drawReach(s: Ship, tone: string) {
-    const ctx = this.ctx;
-    let drew = false;
-    for (const arc of this.batteries(s)) {
-      ctx.beginPath();
-      if (!this.edge(s, arc.axis, arc.half, arc.range, true)) continue;
-      ctx.lineWidth = 1.3;
-      ctx.strokeStyle = `rgba(${tone}, ${(0.32 + 0.3 * arc.loaded).toFixed(3)})`;
-      ctx.stroke();
+      ctx.setLineDash([]);
       drew = true;
     }
     return drew;
