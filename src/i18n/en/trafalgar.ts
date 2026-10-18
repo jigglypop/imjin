@@ -2,7 +2,6 @@
 export const EN_TRAFALGAR: Record<string, string> = {
   // The chapter
   "트라팔가르": "Trafalgar",
-  "모든 이가 제 의무를 다한 바다": "The sea where every man did his duty",
   "대서양과 지중해를 두고 장수를 키우는 세력 싸움": "A struggle for the Atlantic and the Mediterranean, raising your captains",
   "산비센테 곶에서 트라팔가르까지 다섯 해전": "Five battles, Cape St Vincent to Trafalgar",
   "영국": "Britain",

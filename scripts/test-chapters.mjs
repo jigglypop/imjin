@@ -60,7 +60,7 @@ try {
     });
     if (c.id !== 'imjin') {
       check(`${c.id}: the poster, campaign and history lines have their English`, () => {
-        for (const s of [c.title, c.tagline, c.campaign, c.history, ...c.billing.flatMap((b) => [b.side, ...b.names])]) assert.ok(EN[s], `no English for ${s}`);
+        for (const s of [c.title, c.campaign, c.history, ...c.billing.flatMap((b) => [b.side, ...b.names])]) assert.ok(EN[s], `no English for ${s}`);
         for (const id of battlesOf(c.id)) for (const s of [SCENARIOS[id].title, SCENARIOS[id].summary, SCENARIOS[id].result]) assert.ok(EN[s], `no English for ${s}`);
       });
     }

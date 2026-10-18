@@ -7,7 +7,6 @@ export const EN_ARMADA: Record<string, string> = {
   레판토: 'Lepanto',
   적벽: 'Red Cliffs',
   트라팔가르: 'Trafalgar',
-  '바람을 잡은 자의 바다': 'The sea belongs to who holds the wind',
   '해협을 따라 장수를 키우는 원정': 'Up the Channel, raising your captains',
   '플리머스에서 그라블린까지 다섯 해전': 'Five battles, Plymouth to Gravelines',
   // Navies

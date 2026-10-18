@@ -11,7 +11,6 @@ export type ChapterDef = {
   title: string;
   /** The poster's native-script line above the title. */
   native: string;
-  tagline: string;
   years: string;
   /** Year the chapter's battles start, for sorting and the selector. */
   year: number;
@@ -32,7 +31,6 @@ export const CHAPTERS: ChapterDef[] = [
     id: 'imjin',
     title: '임진왜란',
     native: '壬辰倭亂',
-    tagline: '나라를 지킨 바다',
     years: '1592 — 1598',
     year: 1592,
     ready: true,
@@ -50,7 +48,6 @@ export const CHAPTERS: ChapterDef[] = [
     id: 'armada',
     title: '아르마다',
     native: 'ARMADA',
-    tagline: '바람을 잡은 자의 바다',
     years: '1588',
     year: 1588,
     ready: true,
@@ -67,7 +64,6 @@ export const CHAPTERS: ChapterDef[] = [
     id: 'lepanto',
     title: '레판토',
     native: 'LEPANTO',
-    tagline: '노와 칼의 마지막 바다',
     years: '1538 — 1571',
     year: 1571,
     ready: true,
@@ -84,7 +80,6 @@ export const CHAPTERS: ChapterDef[] = [
     id: 'trafalgar',
     title: '트라팔가르',
     native: 'TRAFALGAR',
-    tagline: '모든 이가 제 의무를 다한 바다',
     years: '1797 — 1805',
     year: 1805,
     ready: true,

@@ -1,7 +1,6 @@
 /** English for the Lepanto chapter (1538-1571): its battles, ships, commanders and quotes. Keyed by the exact Korean source text. */
 export const EN_LEPANTO: Record<string, string> = {
   "레판토": "Lepanto",
-  "노와 칼의 마지막 바다": "The last sea of oar and sword",
   "지중해를 두고 장수를 키우는 세력 싸움": "A struggle for the Mediterranean, raising your captains",
   "프레베자에서 레판토까지 다섯 해전": "Five battles, Preveza to Lepanto",
   "신성동맹": "Holy League",

@@ -135,10 +135,9 @@ export function MainMenu() {
       </header>
       <ChapterPicker />
       <div className="menu-inner">
-        {/* A film poster's title lockup: the tagline above, the title, the years between hairlines. Every part is
+        {/* A film poster's title lockup: the title, the years between hairlines. Every part is
             sized from the title's --t, so the lockup scales as one piece. */}
         <div className={`wordmark wordmark--${lang} wordmark--${chapter.id}`}>
-          <p className="wordmark-tagline">{t(chapter.tagline)}</p>
           {!main ? (
             <div className="menu-title-lockup">
               <span className="wordmark-hanja wordmark-hanja--roman" aria-hidden="true">{chapter.native}</span>
@@ -148,7 +147,6 @@ export function MainMenu() {
             <div className="menu-title-lockup">
               <span className="wordmark-hanja" aria-hidden="true">壬辰倭亂</span>
               <h1 className="wordmark-title wordmark-title--poster">{title}</h1>
-              <span className="menu-seal" aria-hidden="true">海<br />戰</span>
             </div>
           ) : (
             <h1 className="wordmark-title wordmark-title--roman" aria-label={title}>

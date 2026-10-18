@@ -18,8 +18,6 @@
    of it, so the poster keeps its proportions from a phone on its side to an ultrawide screen. The letter-spaced
    lines give back their trailing tracking with a negative right margin, so they stay centred. */
 .menu--cinematic .wordmark { --t:clamp(112px,13dvh,168px); position:relative; margin:3dvh 0 auto; gap:0; }
-.wordmark-tagline { margin:0 -.5em calc(var(--t)*.17) 0; font-family:var(--font-title); font-weight:300; font-size:max(11px,calc(var(--t)*.115)); line-height:1; letter-spacing:.5em; white-space:nowrap; color:rgba(255,255,255,.74); text-shadow:0 1px 14px rgba(3,8,13,.8); animation:wordmark-track 2.4s cubic-bezier(.2,.6,.2,1) .5s both; }
-.wordmark--en .wordmark-tagline { margin-right:-.42em; font-family:var(--font-title); font-weight:400; font-size:max(9px,calc(var(--t)*.088)); letter-spacing:.42em; text-transform:uppercase; }
 .menu-title-lockup { position:relative; }
 .menu--cinematic .wordmark-title { margin:0; padding:0; background:none; letter-spacing:0; color:#fff; animation:wordmark-in 1.8s ease-out both; }
 /* A poster's title: Do Hyeon has one weight, its heaviest, and a stroke in its own colour thickens it further; the
@@ -30,7 +28,6 @@
 .menu--cinematic .wordmark-title--poster { display:block; font-family:var(--font-title); font-size:var(--t); font-weight:400; line-height:.9; letter-spacing:-.04em; padding:0 .04em 0 0; white-space:nowrap; -webkit-text-stroke:.022em #fff; paint-order:stroke fill; opacity:.72; filter:drop-shadow(0 2px 12px rgba(3,8,13,.4)); }
 /* The hanja run down beside the title like a poster's vertical line, and the seal is its stamp on the other side. */
 .wordmark-hanja { position:absolute; right:100%; top:50%; margin-right:calc(var(--t)*.17); transform:translateY(-50%); writing-mode:vertical-rl; font-family:var(--font-hanja); font-weight:400; font-size:max(9px,calc(var(--t)*.118)); line-height:1; letter-spacing:.34em; color:rgba(255,255,255,.62); text-shadow:0 1px 12px rgba(3,8,13,.8); animation:wordmark-in 2s ease-out .8s both; }
-.menu-seal { position:absolute; right:calc(var(--t)*-.29); bottom:calc(var(--t)*.13); width:calc(var(--t)*.2); height:calc(var(--t)*.28); display:grid; place-content:center; background:#863a30; color:#e0c2a4; font-family:var(--font-hanja); font-weight:600; font-size:calc(var(--t)*.088); line-height:1.2; transform:rotate(5deg); clip-path:polygon(3% 2%,94% 0,100% 7%,97% 96%,6% 100%,0 94%); box-shadow:0 0 0 2px #863a30; animation:wordmark-in 1s ease-out 1.6s both; }
 /* The English title: THE between hairlines over IMJIN WAR in wide capitals, in the Korean title's translucent white. */
 .menu--cinematic .wordmark-title--roman { display:flex; flex-direction:column; align-items:center; font-family:var(--font-title); line-height:1; text-transform:uppercase; opacity:.72; filter:drop-shadow(0 2px 12px rgba(3,8,13,.45)); }
 .wordmark-the { display:flex; align-items:center; gap:.9em; margin-bottom:calc(var(--t)*.07); font-size:calc(var(--t)*.125); font-weight:500; letter-spacing:.62em; }
@@ -90,7 +87,6 @@
 @media (orientation:landscape) and (max-height:540px) {
   .menu--cinematic .menu-inner { display:flex; width:54%; justify-content:center; padding:48px 24px 20px; gap:18px; }
   .menu--cinematic .wordmark { --t:62px; margin:0; }
-  .menu-seal { box-shadow:0 0 0 1px #863a30; }
   .menu-primary { min-height:52px; padding:9px 15px; }
   .menu-primary strong { font-size:15px; }
   .menu-primary small { font-size:10px; }
