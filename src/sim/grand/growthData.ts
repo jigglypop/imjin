@@ -218,6 +218,11 @@ export type TechDef = {
   income?: number;
 };
 
+/**
+ * The prices follow each navy's purse rather than the work: Japan's many ports pay little each, so its research is the
+ * cheapest; Ming's expedition is paid by the empire, so its research costs the most (tuned on computer wars,
+ * scripts/balance-grand.mjs, against the same wars without the growth rules: --no-growth).
+ */
 export const TECHS: readonly TechDef[] = [
   { id: 'panokseon', faction: 'joseon', label: '판옥선 개량', text: '판옥선·거북선 방어 +10%, 선회 +6%, 속도 +3%', gold: 380, turns: 2, needs: [], kinds: ['panokseon', 'geobukseon'], effect: { defense: 1.1, turn: 1.06, speed: 1.03 } },
   { id: 'turtle', faction: 'joseon', label: '거북선 건조', text: '거북선 건조 가능 (선소 2단계)', gold: 350, turns: 1, needs: ['panokseon'], unlock: 'geobukseon' },
@@ -225,16 +230,16 @@ export const TECHS: readonly TechDef[] = [
   { id: 'powder', faction: 'joseon', label: '화약 증산', text: '화재 +15%, 장전 +4%', gold: 450, turns: 2, needs: [], effect: { fire: 1.15, reload: 1.04 } },
   { id: 'drill', faction: 'joseon', label: '수군 조련', text: '사기 +8%, 장수 경험 +25%', gold: 350, turns: 2, needs: ['powder'], effect: { morale: 1.08, xp: 1.25 } },
 
-  { id: 'atake', faction: 'japan', label: '아타케부네 대형화', text: '대안택선 건조 가능 (선소 3단계), 아타케부네·대안택선 방어 +10%', gold: 450, turns: 2, needs: [], kinds: ['atakebune', 'daeantaek'], effect: { defense: 1.1 }, unlock: 'daeantaek' },
-  { id: 'volley', faction: 'japan', label: '조총 일제사격', text: '전 함선 명중 +6%, 장전 +3%', gold: 420, turns: 2, needs: [], effect: { accuracy: 1.06, reload: 1.03 } },
-  { id: 'boarding', faction: 'japan', label: '등선 전술', text: '백병 +10%, 방어 +5%', gold: 420, turns: 2, needs: ['volley'], effect: { melee: 1.1, defense: 1.05 } },
-  { id: 'pirates', faction: 'japan', label: '해적 수군 편입', text: '세키부네·고바야 속도 +5%, 선회 +6%', gold: 380, turns: 2, needs: [], kinds: ['sekibune', 'kobaya'], effect: { speed: 1.05, turn: 1.06 } },
-  { id: 'drill', faction: 'japan', label: '수군 조련', text: '사기 +8%, 장수 경험 +25%', gold: 350, turns: 2, needs: ['boarding'], effect: { morale: 1.08, xp: 1.25 } },
+  { id: 'atake', faction: 'japan', label: '아타케부네 대형화', text: '대안택선 건조 가능 (선소 3단계), 아타케부네·대안택선 방어 +10%', gold: 400, turns: 2, needs: [], kinds: ['atakebune', 'daeantaek'], effect: { defense: 1.1 }, unlock: 'daeantaek' },
+  { id: 'volley', faction: 'japan', label: '조총 일제사격', text: '전 함선 명중 +6%, 장전 +3%', gold: 380, turns: 2, needs: [], effect: { accuracy: 1.06, reload: 1.03 } },
+  { id: 'boarding', faction: 'japan', label: '등선 전술', text: '백병 +10%, 방어 +5%', gold: 380, turns: 2, needs: ['volley'], effect: { melee: 1.1, defense: 1.05 } },
+  { id: 'pirates', faction: 'japan', label: '해적 수군 편입', text: '세키부네·고바야 속도 +5%, 선회 +6%', gold: 340, turns: 2, needs: [], kinds: ['sekibune', 'kobaya'], effect: { speed: 1.05, turn: 1.06 } },
+  { id: 'drill', faction: 'japan', label: '수군 조련', text: '사기 +8%, 장수 경험 +25%', gold: 300, turns: 2, needs: ['boarding'], effect: { morale: 1.08, xp: 1.25 } },
 
-  { id: 'frankish', faction: 'ming', label: '불랑기 보급', text: '전 함선 장전 +6%, 명중 +3%', gold: 520, turns: 2, needs: [], effect: { reload: 1.06, accuracy: 1.03 } },
-  { id: 'greatships', faction: 'ming', label: '대선 건조', text: '광선 건조 가능 (선소 3단계), 대형선·광선 방어 +10%', gold: 600, turns: 3, needs: ['frankish'], kinds: ['mingship', 'gwangseon'], effect: { defense: 1.1 }, unlock: 'gwangseon' },
-  { id: 'grain', faction: 'ming', label: '군량 해운', text: '수입 +3%', gold: 450, turns: 2, needs: [], income: 1.03 },
-  { id: 'drill', faction: 'ming', label: '수군 조련', text: '사기 +8%, 장수 경험 +25%', gold: 350, turns: 2, needs: ['grain'], effect: { morale: 1.08, xp: 1.25 } },
+  { id: 'frankish', faction: 'ming', label: '불랑기 보급', text: '전 함선 장전 +6%, 명중 +3%', gold: 900, turns: 3, needs: [], effect: { reload: 1.06, accuracy: 1.03 } },
+  { id: 'greatships', faction: 'ming', label: '대선 건조', text: '광선 건조 가능 (선소 3단계), 대형선·광선 방어 +10%', gold: 1300, turns: 3, needs: ['frankish'], kinds: ['mingship', 'gwangseon'], effect: { defense: 1.1 }, unlock: 'gwangseon' },
+  { id: 'grain', faction: 'ming', label: '군량 해운', text: '수입 +3%', gold: 800, turns: 2, needs: [], income: 1.03 },
+  { id: 'drill', faction: 'ming', label: '수군 조련', text: '사기 +8%, 장수 경험 +25%', gold: 700, turns: 2, needs: ['grain'], effect: { morale: 1.08, xp: 1.25 } },
 ];
 
 export const techsOf = (f: GrandFaction): TechDef[] => TECHS.filter((t) => t.faction === f);
