@@ -1,7 +1,6 @@
 import {
   BufferAttribute,
   DataTexture,
-  DynamicDrawUsage,
   HalfFloatType,
   InstancedBufferGeometry,
   InstancedInterleavedBuffer,
@@ -191,7 +190,6 @@ export async function loadCrew(capacities: Partial<Record<CrewKey, number[]>>, o
           geo.setIndex(new BufferAttribute(l.index.subarray(0, l.tris * 3), 1));
           const capacity = caps[level] ?? 64;
           const ib = new InstancedInterleavedBuffer(new Float32Array(capacity * 16), 16);
-          ib.setUsage(DynamicDrawUsage);
           geo.setAttribute('iPos', new InterleavedBufferAttribute(ib, 4, 0));
           geo.setAttribute('iQuat', new InterleavedBufferAttribute(ib, 4, 4));
           geo.setAttribute('iAnim', new InterleavedBufferAttribute(ib, 4, 8));

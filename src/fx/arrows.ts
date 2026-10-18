@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry, DoubleSide, DynamicDrawUsage, Group, InstancedMesh, Matrix4, MeshStandardNodeMaterial, Quaternion, Vector3 } from 'three/webgpu';
+import { BufferAttribute, BufferGeometry, DoubleSide, Group, InstancedMesh, Matrix4, MeshStandardNodeMaterial, Quaternion, Vector3 } from 'three/webgpu';
 import { attribute } from 'three/tsl';
 import type { ShipViews } from '../ships/ShipViews';
 import { waveField } from '../ocean/waves';
@@ -154,7 +154,6 @@ export class ArrowField {
     const mat = new MeshStandardNodeMaterial({ roughness: 0.85, side: DoubleSide });
     mat.colorNode = attribute('color', 'vec3');
     this.mesh = new InstancedMesh(arrowGeometry(), mat, FLYING + STUCK);
-    this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
     this.mesh.castShadow = false;

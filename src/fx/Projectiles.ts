@@ -5,7 +5,6 @@ import {
   Color,
   ConeGeometry,
   CylinderGeometry,
-  DynamicDrawUsage,
   ExtrudeGeometry,
   Group,
   InstancedMesh,
@@ -334,7 +333,6 @@ export class Munitions {
     this.hiya = new InstancedMesh(hiyaGeometry(), wood(), MAX_HEAVY + stay);
     this.rockets = new InstancedMesh(flightRocketGeometry(), wood(), Math.round(240 * tier) + 60 + stay);
     for (const mesh of [this.near, this.far, this.heavy, this.hiya, this.rockets]) {
-      mesh.instanceMatrix.setUsage(DynamicDrawUsage);
       mesh.count = 0;
       mesh.frustumCulled = false;
       mesh.castShadow = false;

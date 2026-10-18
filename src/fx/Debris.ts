@@ -4,7 +4,6 @@ import {
   CylinderGeometry,
   DataTexture,
   DoubleSide,
-  DynamicDrawUsage,
   Euler,
   Float32BufferAttribute,
   Group,
@@ -231,7 +230,6 @@ export class DebrisField {
       const mat = new MeshStandardNodeMaterial({ color: new Color(s.color[0], s.color[1], s.color[2]), roughness: s.rough, metalness: 0 });
       if (s.side) mat.side = DoubleSide;
       const paint = new InstancedBufferAttribute(new Float32Array(cap * 4), 4);
-      paint.setUsage(DynamicDrawUsage);
       this.paints.push(paint);
       if (s.grain) {
         // rgb: the navy's hull paint on the board's painted face; w: the piece's wood tone.
@@ -243,8 +241,8 @@ export class DebrisField {
         mat.colorNode = mix(wood, P.xyz.mul(g.mul(0.35).add(0.6)), attribute('mask', 'float'));
       }
       const mesh = new InstancedMesh(s.geo, mat, cap);
-      mesh.instanceMatrix.setUsage(DynamicDrawUsage);
       mesh.count = 0;
+      mesh.visible = false;
       mesh.frustumCulled = false;
       mesh.castShadow = false;
       this.meshes.push(mesh);
@@ -375,9 +373,17 @@ export class DebrisField {
     }
     for (let k = 0; k < KINDS; k += 1) {
       const mesh = this.meshes[k]!;
-      mesh.count = this.counts[k]!;
+      const n = (mesh.count = this.counts[k]!);
+      // An empty kind is not drawn at all, and a full one sends only the pieces in use, once a frame.
+      mesh.visible = n > 0;
+      if (!n) continue;
+      const paint = this.paints[k]!;
+      mesh.instanceMatrix.clearUpdateRanges();
+      mesh.instanceMatrix.addUpdateRange(0, n * 16);
       mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.count) this.paints[k]!.needsUpdate = true;
+      paint.clearUpdateRanges();
+      paint.addUpdateRange(0, n * 4);
+      paint.needsUpdate = true;
     }
   }
 }

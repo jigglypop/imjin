@@ -2,7 +2,6 @@ import {
   AdditiveBlending,
   ClampToEdgeWrapping,
   DoubleSide,
-  DynamicDrawUsage,
   HalfFloatType,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
@@ -21,7 +20,7 @@ import {
 import {
   cos,
   float,
-  instancedDynamicBufferAttribute,
+  instancedBufferAttribute,
   length,
   positionGeometry,
   sin,
@@ -84,11 +83,9 @@ export class WakeMap {
     geo.setAttribute('uv', plane.getAttribute('uv'));
     this.a = new InstancedBufferAttribute(new Float32Array(MAX_STAMPS * 4), 4);
     this.b = new InstancedBufferAttribute(new Float32Array(MAX_STAMPS * 4), 4);
-    this.a.setUsage(DynamicDrawUsage);
-    this.b.setUsage(DynamicDrawUsage);
     geo.instanceCount = 0;
-    const A: any = instancedDynamicBufferAttribute(this.a, 'vec4');
-    const B: any = instancedDynamicBufferAttribute(this.b, 'vec4');
+    const A: any = instancedBufferAttribute(this.a, 'vec4');
+    const B: any = instancedBufferAttribute(this.b, 'vec4');
     const mat = new MeshBasicNodeMaterial();
     mat.transparent = true;
     mat.blending = AdditiveBlending;
