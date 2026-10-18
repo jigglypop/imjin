@@ -2,6 +2,7 @@ import {
   Box3,
   BufferAttribute,
   BufferGeometry,
+  DefaultLoadingManager,
   DoubleSide,
   Float32BufferAttribute,
   Group,
@@ -60,6 +61,10 @@ import { emberGlow, weather } from './weather';
 import { charShading } from '../fx/fire/char';
 import { disposeTree, freeAfterDraw } from '../render/dispose';
 import { PHASE_RANGE, SWAY_RANGE, TINT_RANGE } from './build/pack';
+import { watchManager } from '../ui/assetProgress';
+
+// Textures decoded through <img> (TextureLoader) show on the background-download bar with the models.
+watchManager(DefaultLoadingManager);
 
 export type ShipModelSpec = {
   kind: ShipKind;

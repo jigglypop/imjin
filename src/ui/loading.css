@@ -1,6 +1,6 @@
 /* ============================================================================
    The loading page (Loading.tsx): the battle's scene from the game, full-bleed, with its briefing set over it in
-   the menu's poster lettering. Desktop: a column on the left over a left and bottom shade. Phone portrait: a sheet
+   a glass panel, Pretendard (ui-design). Desktop: a column on the left over a left and bottom shade. Phone portrait: a sheet
    at the foot of the tall picture. Phone landscape: the title and the bar only.
    ============================================================================ */
 
@@ -27,8 +27,8 @@
 
 .loading .art-bg::after {
   background:
-    linear-gradient(90deg, rgba(4, 9, 15, 0.84) 0%, rgba(4, 9, 15, 0.6) 30%, rgba(4, 9, 15, 0.16) 56%, rgba(4, 9, 15, 0) 70%),
-    linear-gradient(0deg, rgba(4, 9, 15, 0.8) 0%, rgba(4, 9, 15, 0.24) 36%, rgba(4, 9, 15, 0) 58%);
+    linear-gradient(90deg, rgba(4, 9, 15, 0.5) 0%, rgba(4, 9, 15, 0.2) 34%, rgba(4, 9, 15, 0) 56%),
+    linear-gradient(0deg, rgba(4, 9, 15, 0.45) 0%, rgba(4, 9, 15, 0) 40%);
 }
 
 /* A night battle's scene is dark already: a lighter shade keeps its fires. */
@@ -39,154 +39,149 @@
 }
 
 .loading-brief {
-  font-family: var(--font-cine);
-  font-weight: 500;
+  font-family: var(--font-ui);
+  font-weight: 400;
   position: absolute;
   z-index: 2;
-  left: calc(var(--sal) + clamp(28px, 5.5vw, 88px));
-  bottom: calc(var(--sab) + clamp(28px, 7vh, 76px));
-  width: min(600px, 44vw);
+  left: calc(var(--sal) + clamp(24px, 4.5vw, 72px));
+  bottom: calc(var(--sab) + clamp(24px, 6vh, 64px));
+  width: min(460px, 40vw);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  text-shadow: 0 1px 14px rgba(3, 8, 13, 0.85);
+  padding: var(--sp-5);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r, 16px);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
 }
 
+.app--touch .loading-brief {
+  background: var(--glass-sheet);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Date and hanja: one small meta line. */
 .loading-kicker {
-  font-family: var(--font-title);
-  font-weight: 700;
-  font-size: 15px;
-  line-height: 1.2;
-  letter-spacing: 0.08em;
-  color: var(--brass);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
 }
 
 .loading-kicker span {
-  margin-left: 0.7em;
-  font-weight: 500;
-  letter-spacing: 0.24em;
+  margin-left: 0.6em;
+  font-family: var(--font-hanja);
+  letter-spacing: 0.16em;
 }
 
-/* --font-title thickened by a stroke of its own colour; Cinzel capitals on the English page. */
 .loading-title {
-  margin: 8px 0 0 -3px;
-  font-family: var(--font-title);
-  font-weight: 400;
-  font-size: clamp(56px, 6.6vw, 100px);
-  line-height: 0.95;
-  letter-spacing: -0.035em;
-  color: var(--cream);
-  -webkit-text-stroke: 0.022em var(--cream);
-  paint-order: stroke fill;
-  text-shadow: none;
-  filter: drop-shadow(0 2px 0 rgba(8, 18, 26, 0.7)) drop-shadow(0 8px 24px rgba(3, 8, 13, 0.8));
+  margin: var(--sp-2) 0 0;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--ink);
 }
 
 .loading-title--roman {
   display: flex;
   flex-direction: column;
-  font-family: var(--font-title);
-  font-weight: 700;
-  font-size: clamp(40px, 4.4vw, 70px);
-  line-height: 1;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  -webkit-text-stroke: 0;
 }
 
 .loading-title--roman small {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 0.18em;
-  font-size: 0.3em;
+  margin-bottom: 2px;
+  font-size: var(--fs-12);
   font-weight: 500;
-  letter-spacing: 0.42em;
-}
-
-.loading-title--roman small::after {
-  content: '';
-  width: 64px;
-  height: 1px;
-  background: currentColor;
-  opacity: 0.7;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
 }
 
 .loading-place {
-  margin-top: 12px;
-  font-size: var(--fs-17);
-  font-weight: 600;
+  margin-top: var(--sp-1);
+  font-size: var(--fs-13);
+  font-weight: 500;
   color: var(--ink-2);
 }
 
 .loading-hook {
-  margin: 14px 0 0;
-  max-width: 34em;
-  font-size: 18px;
+  margin: var(--sp-3) 0 0;
+  font-size: 14px;
   line-height: 1.55;
-  color: var(--ink);
+  color: var(--ink-2);
 }
 
 .loading-forces {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
 }
 
 .loading-force {
-  padding: 5px 12px;
-  border: 1px solid var(--line-2);
-  border-radius: 999px;
-  background: rgba(10, 14, 20, 0.46);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  font-size: var(--fs-13);
-  color: var(--ink-2);
-  text-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink-3);
 }
 
 .loading-force b {
-  margin-right: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 6px;
   font-weight: 600;
+  color: var(--ink-2);
 }
 
-.loading-force--joseon b {
-  color: var(--joseon);
+.loading-force b::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, var(--ink-3));
 }
 
-.loading-force--japan b {
-  color: var(--japan);
+.loading-force + .loading-force::before {
+  content: 'vs';
+  margin-right: var(--sp-2);
+  color: var(--ink-3);
+  opacity: 0.6;
 }
 
-.loading-force--ming b {
-  color: var(--ming);
-}
-
-.loading-force--england b {
-  color: var(--england);
-}
-
-.loading-force--spain b {
-  color: var(--spain);
-}
+.loading-force--joseon { --accent: var(--joseon); }
+.loading-force--japan { --accent: var(--japan); }
+.loading-force--ming { --accent: var(--ming); }
+.loading-force--england { --accent: var(--england); }
+.loading-force--spain { --accent: var(--spain); }
+.loading-force--holyleague { --accent: var(--holyleague); }
+.loading-force--ottoman { --accent: var(--ottoman); }
+.loading-force--britain { --accent: var(--britain); }
+.loading-force--france { --accent: var(--france); }
+.loading-force--spain1805 { --accent: var(--spain1805); }
 
 .loading-progress {
   width: 100%;
-  margin-top: 24px;
+  margin-top: var(--sp-4);
 }
 
 .loading-bar {
-  height: 3px;
+  height: 2px;
   border-radius: 999px;
-  background: var(--fill-2);
+  background: rgba(255, 255, 255, 0.12);
   overflow: hidden;
 }
 
 .loading-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--brass);
+  background: rgba(255, 255, 255, 0.85);
   transition: width 0.35s ease-out;
 }
 
@@ -195,51 +190,53 @@
   justify-content: space-between;
   align-items: baseline;
   gap: var(--sp-3);
-  margin-top: 8px;
-  font-size: var(--fs-13);
+  margin-top: var(--sp-2);
+  font-size: var(--fs-12);
+  font-weight: 500;
   color: var(--ink-3);
 }
 
 .loading-meta b {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--ink);
+  color: var(--ink-2);
 }
 
 .loading-tip {
   width: 100%;
-  margin: 14px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-  font-size: 14px;
+  margin: var(--sp-3) 0 0;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--glass-line);
+  font-size: var(--fs-13);
   line-height: 1.5;
-  color: var(--ink-2);
+  color: var(--ink-3);
   animation: loading-tip 0.7s ease-out;
 }
 
 .loading-tip b {
-  margin-right: 0.6em;
+  display: block;
+  margin-bottom: 2px;
   font-weight: 600;
-  color: var(--brass);
+  color: var(--ink-2);
 }
 
 .loading-quote {
-  margin: 14px 0 0;
+  margin: var(--sp-3) 0 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .loading-quote span {
-  font-size: var(--fs-15);
+  font-size: var(--fs-13);
   color: var(--ink-2);
 }
 
 .loading-quote strong {
-  font-family: var(--font-title);
+  font-family: var(--font-hanja);
   font-weight: 500;
   font-size: var(--fs-12);
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   color: var(--ink-3);
 }
 
@@ -257,53 +254,22 @@
 
   .loading .art-bg::after,
   .loading--night .art-bg::after {
-    background: linear-gradient(180deg, rgba(4, 9, 15, 0.3) 0%, rgba(4, 9, 15, 0) 18%, rgba(4, 9, 15, 0) 40%, rgba(4, 9, 15, 0.74) 60%, #050b13 88%);
+    background: linear-gradient(180deg, rgba(4, 9, 15, 0.25) 0%, rgba(4, 9, 15, 0) 18%, rgba(4, 9, 15, 0) 52%, rgba(4, 9, 15, 0.5) 80%);
   }
 
   .loading-brief {
-    left: calc(var(--sal) + 22px);
-    right: calc(var(--sar) + 22px);
-    bottom: calc(var(--sab) + 20px);
+    left: calc(var(--sal) + 12px);
+    right: calc(var(--sar) + 12px);
+    bottom: calc(var(--sab) + 12px);
     width: auto;
-  }
-
-  .loading-kicker {
-    font-size: 13px;
+    padding: var(--sp-4);
   }
 
   .loading-title {
-    font-size: clamp(46px, 14vw, 68px);
-  }
-
-  .loading-title--roman {
-    font-size: clamp(32px, 9vw, 48px);
-  }
-
-  .loading-place {
-    margin-top: 8px;
-    font-size: var(--fs-15);
+    font-size: 22px;
   }
 
   .loading-hook {
-    margin-top: 10px;
-    font-size: var(--fs-15);
-  }
-
-  .loading-forces {
-    gap: 6px;
-    margin-top: 12px;
-  }
-
-  .loading-force {
-    padding: 4px 10px;
-    font-size: var(--fs-12);
-  }
-
-  .loading-progress {
-    margin-top: 18px;
-  }
-
-  .loading-tip {
     font-size: var(--fs-13);
   }
 
@@ -315,25 +281,17 @@
 /* Phones on their side: the title, the place and the bar beside the scene. */
 @media (orientation: landscape) and (max-height: 540px) {
   .loading-brief {
-    bottom: calc(var(--sab) + 18px);
-    width: min(440px, 52vw);
+    bottom: calc(var(--sab) + 12px);
+    width: min(360px, 48vw);
+    padding: var(--sp-3) var(--sp-4);
   }
 
   .loading-title {
-    font-size: clamp(38px, 9vh, 52px);
-  }
-
-  .loading-title--roman {
-    font-size: clamp(26px, 6.5vh, 36px);
-  }
-
-  .loading-place {
-    margin-top: 6px;
-    font-size: var(--fs-13);
+    font-size: 20px;
   }
 
   .loading-progress {
-    margin-top: 12px;
+    margin-top: var(--sp-3);
   }
 
   .loading-hook,

@@ -98,8 +98,8 @@ export function MainMenu() {
   }, []);
   return (
     <section className="screen menu menu--cinematic">
-      {/* The poster under the live scene is the turtle ship's own; another chapter waits on open sea for its flagship. */}
-      {main ? <Backdrop kind="menu" cinematic /> : <div className="menu-sea" aria-hidden="true" />}
+      {/* The poster under the live scene is a still of that chapter's own scene: its flagship shows from the first paint. */}
+      <Backdrop key={chapter.id} kind="menu" cinematic chapter={chapter.id} />
       <MenuBattleBackdrop hero={chapter.hero} />
       <div className="menu-shade" aria-hidden="true" />
       <header className="screen-top menu-masthead">

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { MenuBattleScene, MenuHero } from './menuBattleScene';
+import { trackTask } from './assetProgress';
 
 /** No engine, session or campaign is created by the decorative battle. */
 export function MenuBattleBackdrop({ hero }: { hero?: MenuHero }) {
@@ -23,9 +24,12 @@ export function MenuBattleBackdrop({ hero }: { hero?: MenuHero }) {
       firstFrame = requestAnimationFrame(() => {
         timer = window.setTimeout(async () => {
           let next: MenuBattleScene | undefined;
+          // The scene's code, ships and shaders show on the top-edge bar (AssetBar) until its first frame.
+          const job = trackTask(4_000_000, 7000);
           try {
             if (cancelled || attempt !== generation || !enabled() || document.hidden) return;
             const { MenuBattleScene } = await import('./menuBattleScene');
+            job.set(0.15);
             if (cancelled || attempt !== generation || !enabled() || document.hidden || !canvas.current) return;
             next = new MenuBattleScene(canvas.current, () => { if (!cancelled && attempt === generation) setReady(true); }, hero);
             scene = next;
@@ -39,6 +43,7 @@ export function MenuBattleBackdrop({ hero }: { hero?: MenuHero }) {
               if (!cancelled) setReady(false);
             }
           } finally {
+            job.done();
             if (attempt === generation) pending = false;
           }
         }, 180);
