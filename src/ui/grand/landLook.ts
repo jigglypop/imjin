@@ -7,6 +7,7 @@ import { DEM_RECT } from './mapMath';
 import { MAP_ASPECT } from './projection';
 import { MODEL_METRE } from './hero/site';
 import { coverOf, landNoiseData, NOISE, NOISE_SCALE, PALETTE, type Cover } from './landCover';
+import { versioned } from '../../render/assetUrl';
 
 // The look of the campaign world's land: one shader for the whole DEM (and for the hero camps' smooth patches, which fade
 // into it), so the ground reads as country instead of paper facets. The light comes from a bake of the DEM (landBake.ts:
@@ -30,7 +31,7 @@ const DETAIL_SIZE = 512;
 
 /** A ground texture, scaled down to DETAIL_SIZE as it is decoded. */
 async function detailTexture(name: string, signal: AbortSignal) {
-  const response = await fetch(`/textures/${name}/diff_1k.jpg`, { signal });
+  const response = await fetch(versioned(`/textures/${name}/diff_1k.jpg`), { signal });
   if (!response.ok) throw new Error(`${name}: ${response.status}`);
   const bitmap = await createImageBitmap(await response.blob(), { resizeWidth: DETAIL_SIZE, resizeHeight: DETAIL_SIZE, resizeQuality: 'high' });
   const t = new Texture(bitmap);

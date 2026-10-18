@@ -247,7 +247,20 @@ function remoteAssetsPlugin(): Plugin {
   };
 }
 
+/** Short content hashes of public/textures/** from assets.json, for src/render/assetUrl.ts. */
+function textureVersions() {
+  try {
+    const files = JSON.parse(readFileSync(join(import.meta.dirname, 'assets.json'), 'utf8')).files as Record<string, { sha256: string }>;
+    const out: Record<string, string> = {};
+    for (const [path, entry] of Object.entries(files)) if (path.startsWith('public/textures/')) out[path.slice('public'.length)] = entry.sha256.slice(0, 12);
+    return out;
+  } catch {
+    return {};
+  }
+}
+
 export default defineConfig({
+  define: { __TEXTURE_VERSIONS__: JSON.stringify(textureVersions()) },
   plugins: [remoteAssetsPlugin(), threeWithoutWebGL(), react(), routePagesPlugin()],
   cacheDir: CACHE_DIR,
   server: { port: 5291, host: '127.0.0.1', strictPort: true, watch: { ignored: UNWATCHED } },
