@@ -22,7 +22,7 @@ three.js r186 `three/webgpu` + TSL, @react-three/fiber, React 19, zustand, Vite,
 - 폰(iOS Safari, WebGL2 경로, `?q=low`)은 1.2–1.5 GB 근처에서 탭을 죽임: 텍스처 300 MB, GPU 메모리 400 MB 미만 유지(`scripts/probe-memory.mjs`), 전투가 만든 것은 해제(`Engine.disposeBattle`, `probe-leak.mjs`로 확인).
 
 ## 하네스 (작업 전에 해당 스킬을 먼저 읽을 것. 확정된 규칙·거절된 방식은 여기에 바로 추가)
-- `.claude/skills/generals-cast` 장수 3D·무기 / `chapters` 아르마다·레판토·트라팔가르 장 / `cinematics` 전투 시네마틱·대사·고증 / `typography` 폰트(제목 정묵바위체, 자막 함렛, UI Pretendard) / `ship` 운영 배포
+- `.claude/skills/generals-cast` 장수 3D·무기 / `chapters` 아르마다·레판토·트라팔가르 장 / `cinematics` 전투 시네마틱·대사·고증 / `typography` 폰트(전부 Pretendard) / `ui-design` 글래스 UI·간격·라벨 디자인 시스템 / `ship` 운영 배포
 - 생성 원본은 로컬에 쌓지 않음: `npm run assets -- archive`로 S3 콜드 보관(CI는 받지 않음). worktree를 여러 개 만들어 에셋을 복사하지 않음. C: 여유 3 GB 이상 유지.
 
 ## 에셋
