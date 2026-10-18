@@ -54,13 +54,6 @@ const MODES: { screen: Screen; art: string; title: string; desc: string; brief: 
   { screen: 'online', art: 'mode_online', title: '온라인 대전', desc: '다른 플레이어와 실시간으로 겨룹니다.', brief: '실시간 대전' },
 ];
 
-/** The poster's billing block: the war's commanders, set like a film's cast under the buttons. */
-const BILLING: { side: string; names: string[] }[] = [
-  { side: '조선', names: ['이순신', '원균', '이억기', '권준'] },
-  { side: '명', names: ['진린', '등자룡'] },
-  { side: '일본', names: ['와키자카 야스하루', '구키 요시타카', '구루시마 미치후사'] },
-];
-
 /** The series' chapters along the top of the poster: picking one brings up its flagship the way the turtle ship is shown. */
 function ChapterPicker() {
   const t = useT();
@@ -167,9 +160,6 @@ export function MainMenu() {
           </nav>
         </div>
       </div>
-      <footer className={`menu-billing menu-billing--${lang}`} aria-hidden="true">
-        {(main ? BILLING : chapter.billing).map((group) => <span key={group.side}><b>{t(group.side)}</b>{group.names.map((name) => t(name)).join(' · ')}</span>)}
-      </footer>
       {account && <AccountPanel onClose={closeAccount} />}
     </section>
   );
