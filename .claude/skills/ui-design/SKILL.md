@@ -6,11 +6,11 @@ description: MOONWAKE UI design system — glass panels, spacing, type scale, fa
 # UI design system (owner 2026-10-18: "너무 난잡함, 깔끔하게. 글래스모피즘, 프리텐다드 통일")
 
 ## Surfaces — glass
-- Panel: `background: var(--glass-fill)` = `rgba(12,16,24,.55)`; `backdrop-filter: blur(var(--glass-blur))` (16–24px, 20 default; drop to 12px or none on `?q=low` / phones if it costs frames); `border: 1px solid var(--glass-line)` = `rgba(255,255,255,.12)`; `box-shadow: var(--glass-shadow)` = `0 8px 32px rgba(0,0,0,.35)`; radius `var(--r-panel)` 14–16px, controls `var(--r-ctl)` 10px, pills 999px.
-- Use the shared `.glass` class / tokens in `src/ui/styles.css`; never re-invent a panel look per screen.
+- Panel = the shared `.glass` class in `src/ui/styles.css`: `--glass` `rgba(12,16,24,.55)`, `--glass-blur` `blur(20px)` (16–24px; touch devices swap blur for near-opaque fill, `.app--touch`), `--glass-line` 1px `rgba(255,255,255,.12)`, `--shadow`, radius `--r` 16px / `--r-sm` 12px, pills 999px. Denser variants: `--glass-hi`, `--glass-sheet`, `--glass-solid`.
+- Never re-invent a panel look per screen; use the class and tokens.
 - No gradients-on-gradients, no ornamental borders, frames, paper textures or brush strokes on panels.
 
-## Spacing — 4 / 8 / 12 / 16 / 24 / 32 only (`--s1`..`--s6`)
+## Spacing — 4 / 8 / 12 / 16 / 24 / 32 only (`--sp-1`..`--sp-6`)
 Panel padding 16 (phone 12) – 24; gap between groups 24; inside a group 8–12.
 
 ## Type — Pretendard only (see `typography` skill)
@@ -20,12 +20,12 @@ Panel padding 16 (phone 12) – 24; gap between groups 24; inside a group 8–12
 | screen title | 24–28 | 700 |
 | section heading | 15–16 | 600 |
 | body | 14 | 400 |
-| label / meta | 12 | 500, `--text-dim` |
+| label / meta | 12 | 500, `--ink-3` |
 | HUD numbers | 12–14 | 600, tabular-nums |
-Text colors: `--text` #eef2f7, `--text-dim` rgba(238,242,247,.62). Uppercase letter-spaced eyebrows only for short meta (date/place), never as flavor.
+Text colors: `--ink`, `--ink-2`, `--ink-3` (dimmer meta). Uppercase letter-spaced eyebrows only for short meta (date/place), never as flavor.
 
 ## Color
-- Neutral glass + white text. ONE accent per faction (`--accent` set on the screen/side): Joseon `#5aa9ff`, Japan `#ff6b5a`, Spain `#e8b44a`, England `#6fc3ff`, Holy League `#c9a2ff`, Ottoman `#4fd08a`, Britain `#7fb2ff`, France-Spain `#ff8a6a`. Accent goes on the active tab, primary button, faction dot — not on everything.
+- Neutral glass + white text. ONE muted accent per faction: the `--joseon`, `--japan`, `--ming`, `--england`, `--spain`, `--holyleague`, `--ottoman`, `--britain`, `--france`, `--spain1805` tokens (and `.f-<faction>` classes). Accent goes on the active tab, the faction dot, a side rule — not on everything. Keep saturation under ~45%.
 - Health: green→amber→red only on bars.
 
 ## Structure
