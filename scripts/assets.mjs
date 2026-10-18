@@ -1014,7 +1014,8 @@ async function pruneLocal(args, flags) {
   const { files, store } = await readManifest();
   const minSize = flags['min-size'] === undefined ? 0 : parseSizeFlag(flags['min-size']);
   // Generation sources go to the cold archive instead; only runtime files are served back by the dev server.
-  const runtime = Object.keys(files).filter((path) => path.startsWith('public/'));
+  // The server and the Node tests read public/terrain straight from disk, so it never goes remote-only.
+  const runtime = Object.keys(files).filter((path) => path.startsWith('public/') && !path.startsWith('public/terrain/'));
   const targets = pick(args.length ? args : ['public/models'], runtime, 'no runtime file of assets.json there (only public/ is pruned)');
   const index = await openIndex();
   const here = new Map(await pool(targets, async (path) => [path, await localHash(index, path)]));
