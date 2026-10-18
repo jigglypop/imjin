@@ -1,7 +1,7 @@
 import { Color, Group, InstancedMesh, MeshBasicNodeMaterial, type BufferGeometry, type Material, type Texture } from 'three/webgpu';
 import { MODEL_METRE } from './hero/site';
 import type { Cover } from './landCover';
-import { FINE_SIZE, rockMaterial, treeMaterial, treeShapes } from './treeModels';
+import { rockMaterial, treeMaterial, treeShapes } from './treeModels';
 import { eyeOf, frameU, frameV, worldX, worldZ, type CameraState } from './worldCamera';
 
 // Trees and rocks for the close views of the campaign world, laid on the wooded hills round the point the camera looks
@@ -16,13 +16,18 @@ import { eyeOf, frameU, frameV, worldX, worldZ, type CameraState } from './world
 
 /** Trees (and rocks) at most of each kind, broadleaf, fir, rock, red pine: of the light shapes, and of the fine ones. */
 const CAPACITY = [7000, 5000, 1500, 5000] as const;
-const CAPACITY_NEAR = [1500, 600, 300, 900] as const;
+const CAPACITY_NEAR = [2600, 1200, 500, 1600] as const;
 /** Cell size and tree height for each level, in frame units, and the camera distance each serves up to. */
 const LEVELS = [
   { cell: 0.0011, height: 0.0022, until: 0.055 },
   { cell: 0.0019, height: 0.003, until: 0.13 },
   { cell: 0.0038, height: 0.0048, until: 0.26 },
 ] as const;
+/**
+ * A tree at least this tall for its distance from the eye is drawn with the fine shapes: about 55 pixels tall on a
+ * desktop window, where the light shapes' facets would begin to show.
+ */
+const NEAR_SIZE = 0.036;
 /** Hysteresis, so a camera resting on a boundary does not flip between two levels. */
 const HOLD = 1.12;
 /** The planted disc's radius in cells of its level, and the outer share of it over which the trees thin out. */
@@ -279,7 +284,7 @@ export class TreeLayer {
         const tall = trees[t + 3]!, wide = trees[t + 4]!;
         // Large to the eye in the fine shapes while they have room, else in the light ones.
         let set = sets[1]!;
-        if (tall > FINE_SIZE * Math.hypot(x - eye[0], y - eye[1], z - eye[2]) && sets[0]!.counts[kind]! < CAPACITY_NEAR[kind]!) set = sets[0]!;
+        if (tall > NEAR_SIZE * Math.hypot(x - eye[0], y - eye[1], z - eye[2]) && sets[0]!.counts[kind]! < CAPACITY_NEAR[kind]!) set = sets[0]!;
         const n = set.counts[kind]!;
         if (n >= set.meshes[kind]!.instanceMatrix.count) continue;
         const array = set.matrices[kind]!, o = n * 16;
