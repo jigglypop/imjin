@@ -62,6 +62,15 @@ Who commanded which battle, where they stood, flags, ship types, dates, weather 
 - Player: `src/ui/grand/CampaignOpening.tsx` drives `GrandMap`'s `film` ref (the map's frame callback uses it instead of its motion; panels and markers hidden by `body.g-filming`). Waits in black for `window.__map` (6 s max; phones' flat map plays captions over the dimmed image). Plays once per theatre (`imjin.campaignOpening`) on turn 1, `?opening=1` forces it; Esc/Enter/click/skip button. Sound: campaign cues only (`event`, `endTurn` per place, `battle` under the title) — no voices.
 - Frame grabbing: start a campaign at `/<chapter>/campaign?opening=1`, click `.g-pick__go`, wait for `window.__map`, screenshot at shot mid-points.
 
+## Film look and life (owner 2026-10-18, lifts the earlier exposure/grade/OTS/haze rejections)
+- Exposure: in a commander close-up the WHOLE frame's exposure is raised (`Cinema.exposure`, per light: day 1.3, overcast 1.6, dusk 1.55, night 2.1) with the battle's sky fill (`scene.environmentIntensity` x `SKY_FILL`), set at the cut, never mid-shot. Never a figure-only light; never `material.envMap = scene.environment` on the figures (throws "Texture already initialized").
+- Grade (`grade.ts`, `setLook(castLight)`): teal shadows, warm highlights, gentle S-curve, light vignette, grain (no grain on low). Openings only: `Cinema.grade` is 0 in play and in the documentary camera.
+- Set-ups per line (`speech()` in `scenes/shots.ts`): `lowMedium`, `overShoulder` (toward the way he faces), `closeUp`, `flagInsert`; the line is split with `lines.ts splitLine` (caption keeps the whole text + `part`, so translations still match) and each piece gets its own shot: cuts fall on line breaks. Name shows on the first piece only. Keep `slow: 0.3`.
+- Sets (`set.ts`): per-family clutter (drum, gun on carriage, casks, lantern, pennant), thin foreground rigging lines (LOD 0), drifting smoke sprites, additive lantern glow at night; all disposed with the set.
+- Life (`cast.ts alive()`): additive bone turns after `mixer.update`, cinematics only: breath on Spine02 (+-0.012 rad, 4.4 s), eased head/neck glance every 9 s (<= 0.22 rad), slow drift. /generals stays pure idle. No hand-on-hilt yet (needs IK).
+- Film controls: small text, hidden until pointer move/first tap; no 일시정지 label in normal playback.
+- Known weak spots: lowMedium against a bright sky silhouettes the face; the flag insert can frame mostly sky.
+
 ## Rejected (do not retry)
 - On-ship close-ups (2026-10-17/18): the commander stood on the real deck (`Crew.commandPost`, stand-ins, smoothing the sea's motion): feet clipping, clutter, trembling. Use the deck set.
 - The big name/title plate on a commander's first line (`.cine-plate`): removed; only the small `이름 ·` in the subtitle.
