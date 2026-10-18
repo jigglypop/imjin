@@ -1683,3 +1683,47 @@
 .screen .emblem--spain {
   background-image: url(/ui/art/emblem_spain_sm.webp);
 }
+
+/* ---------------------------------------------------------------- brief, design-system pass (.claude/skills/ui-design)
+   The fleets are the side picker: each a glass card with its navy's rule; the long account folds under 자세히. */
+.select-hook {
+  margin: 0;
+  font-size: var(--fs-15);
+  line-height: 1.5;
+  color: var(--ink);
+}
+.select-force--pick {
+  align-items: flex-start;
+  text-align: left;
+  padding: 10px 12px 10px 14px;
+  border: 1px solid var(--glass-line);
+  border-left: 3px solid var(--bar);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  font: inherit;
+  font-size: var(--fs-13);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.select-force--pick:hover { background: rgba(255, 255, 255, 0.07); }
+.select-force--on {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+  border-left-color: var(--bar);
+}
+.select-force-ships { color: var(--ink-2); }
+.select-more summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-13);
+  font-weight: 500;
+  color: var(--ink-3);
+  cursor: pointer;
+  list-style: none;
+}
+.select-more summary::-webkit-details-marker { display: none; }
+.select-more summary::after { content: '▾'; font-size: 11px; }
+.select-more[open] summary::after { content: '▴'; }
+.select-more .select-summary { margin: 8px 0 0; font-size: var(--fs-13); color: var(--ink-2); }

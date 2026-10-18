@@ -1,6 +1,6 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { CHAPTER_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
-import { commanderOf, FACTION_NAME, FACTION_SHORT, forcesOf, handicap, playableFactions } from '../sim/balance';
+import { commanderOf, FACTION_NAME, forcesOf, handicap, playableFactions } from '../sim/balance';
 import type { Faction } from '../sim/types';
 import { sound } from '../audio/Sound';
 import { campaignOver, currentBattle, orderOf, setMode, useCampaign } from '../campaign/campaign';
@@ -171,31 +171,36 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
               <span>{t(s.season)}</span>
               {s.night && <span className="night-tag">{t('야간 전투')}</span>}
             </div>
-            <p className="select-summary">{t(s.summary)}</p>
-            {!inCampaign && (
-              <div className="select-sides" role="radiogroup" aria-label={t('지휘할 진영')}>
-                {factions.map((f) => (
-                  <button key={f} role="radio" aria-checked={f === effective} className={`side-btn ${f === effective ? 'side-btn--on' : ''}`} onClick={() => setSide(f)}>
-                    <i className={`emblem emblem--${f}`} />
+            <p className="select-hook">{t(s.hook)}</p>
+            {/* One choice: each fleet is its own card, and the player picks the one to lead. */}
+            <div className="select-forces" role={inCampaign ? undefined : 'radiogroup'} aria-label={inCampaign ? undefined : t('지휘할 진영')}>
+              {sides.map((f) => {
+                const pick = !inCampaign && factions.includes(f);
+                const body = (
+                  <>
+                    <b>{t(FACTION_NAME[f])}</b>
                     <span>
-                      <b>{t(FACTION_SHORT[f])}</b>
-                      <small>{t(commanderOf(id, f).name)}</small>
+                      {t(commanderOf(id, f).name)} <small>{t(commanderOf(id, f).title)}</small>
                     </span>
+                    <span className="select-force-ships">{t(forcesOf(id, f))}</span>
+                  </>
+                );
+                const style = { '--bar': `var(--${f})` } as CSSProperties;
+                return pick ? (
+                  <button key={f} type="button" role="radio" aria-checked={f === effective} className={`select-force select-force--pick ${f === effective ? 'select-force--on' : ''}`} style={style} onClick={() => setSide(f)}>
+                    {body}
                   </button>
-                ))}
-              </div>
-            )}
-            <div className="select-forces">
-              {sides.map((f) => (
-                <div key={f} className={`select-force select-force--${f}`}>
-                  <b>{t(FACTION_NAME[f])}</b>
-                  <span>
-                    {t(commanderOf(id, f).name)} <small>{t(commanderOf(id, f).title)}</small>
-                  </span>
-                  <span>{t(forcesOf(id, f))}</span>
-                </div>
-              ))}
+                ) : (
+                  <div key={f} className="select-force" style={style}>
+                    {body}
+                  </div>
+                );
+              })}
             </div>
+            <details className="select-more">
+              <summary>{t('자세히')}</summary>
+              <p className="select-summary">{t(s.summary)}</p>
+            </details>
           </div>
           {more && (
             <button type="button" className="hs-more" onClick={() => briefRef.current?.scrollBy({ top: 140, behavior: 'smooth' })}>

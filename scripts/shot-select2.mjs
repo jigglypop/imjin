@@ -9,7 +9,7 @@ await page.goto(args.url ?? 'http://127.0.0.1:5291/', { waitUntil: 'domcontentlo
 await page.waitForSelector('.select-top', { timeout: 60000 });
 await page.waitForTimeout(6000);
 if (args.tab) await page.click(`.mode-grid .mode-card:nth-child(${args.tab})`);
-if (args.side) await page.click(`.side-btn:nth-child(${args.side})`);
+if (args.side) await page.click(`.select-force--pick:nth-child(${args.side})`);
 await page.waitForTimeout(1500);
 await page.screenshot({ path: args.out ?? 'shots/select.png' });
 console.log('ok', errors.slice(-5));
