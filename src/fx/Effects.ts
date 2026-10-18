@@ -381,6 +381,15 @@ export class Effects {
 
   /** Planking, splinters and charred lumps thrown out from a point, `power` 1 being a round shot's hit. */
   private shatter(x: number, y: number, z: number, count: number, power: number, spread: number) {
+    // The pieces wear the paint of the hull they came from: the nearest ship's navy.
+    let best = Infinity;
+    for (const s of this.battleRef?.ships ?? []) {
+      const d = (s.x - x) ** 2 + (s.z - z) ** 2;
+      if (d < best) {
+        best = d;
+        this.debris.navy = s.spec.faction;
+      }
+    }
     for (let i = 0; i < count; i += 1) {
       const r = Math.random();
       const vx = rnd(-spread, spread);
@@ -683,6 +692,7 @@ export class Effects {
       }
       case 'wreck': {
         const count = this.n(Math.round((6 + 10 * c.size) * (0.45 + L / 60)) * this.tier);
+        this.debris.navy = ship.spec.faction;
         for (let i = 0; i < count; i += 1) {
           this.views.localToWorld(id, rnd(-0.42, 0.42) * L, this.deckOf(ship) + rnd(0, 1.2), rnd(-0.45, 0.45) * B, this.p);
           const out = rnd(1, 5);
@@ -770,6 +780,7 @@ export class Effects {
     this.splash(ship.x, ship.z, 1.7 * size + 0.4);
     for (let i = 0; i < 3; i += 1) this.splash(ship.x + rnd(-0.35, 0.35) * L * Math.cos(ship.heading), ship.z + rnd(-0.35, 0.35) * L * Math.sin(ship.heading), 1.1);
     const count = this.n(Math.round(30 * size) * this.tier);
+    this.debris.navy = ship.spec.faction;
     const c = Math.cos(ship.heading);
     const n = Math.sin(ship.heading);
     for (let i = 0; i < count; i += 1) {
