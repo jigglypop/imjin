@@ -140,70 +140,64 @@ function makeMaterial(map: Texture, anim: DataTexture, influences: number) {
   return m;
 }
 
-/** Loads the characters, building one instanced mesh per level of detail with room for capacity figures each. */
-export async function loadCrew(capacities: Record<CrewKey, number[]>): Promise<Map<CrewKey, CrewAsset>> {
-  const out = new Map<CrewKey, CrewAsset>();
-  await Promise.all(
-    CREW_KEYS.map(async (key) => {
-      try {
-        const [buf, map] = await Promise.all([fetch(`/models/crew/${key}.bin`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status))))), textures.loadAsync(`/models/crew/${key}.webp`)]);
-        map.colorSpace = SRGBColorSpace;
-        map.flipY = false;
-        const { header, lods, anim } = parse(buf);
-        const animTex = new DataTexture(anim, header.joints * 3, header.frames, RGBAFormat, HalfFloatType);
-        animTex.magFilter = NearestFilter;
-        animTex.minFilter = NearestFilter;
-        animTex.generateMipmaps = false;
-        animTex.needsUpdate = true;
-        const caps = capacities[key] ?? [64, 256, 512];
-        const built: CrewLod[] = lods.map((l, level) => {
-          // Two vertex buffers in all: WebGPU allows eight, and the figures need eleven attributes.
-          const n = l.pos.length / 3;
-          const v = new Float32Array(n * 21);
-          for (let i = 0; i < n; i += 1) {
-            const o = i * 21;
-            v[o] = l.pos[i * 3]!;
-            v[o + 1] = l.pos[i * 3 + 1]!;
-            v[o + 2] = l.pos[i * 3 + 2]!;
-            v[o + 3] = l.uv[i * 2]!;
-            v[o + 4] = l.uv[i * 2 + 1]!;
-            for (let k = 0; k < 4; k += 1) {
-              v[o + 5 + k] = l.nor[i * 4 + k]! / 127;
-              v[o + 9 + k] = l.tint[i * 4 + k]! / 255;
-              v[o + 13 + k] = l.jw[i * 8 + 4 + k]! / 255;
-              v[o + 17 + k] = l.jw[i * 8 + k]!;
-            }
-          }
-          const vb = new InterleavedBuffer(v, 21);
-          const geo = new InstancedBufferGeometry();
-          geo.setAttribute('position', new InterleavedBufferAttribute(vb, 3, 0));
-          geo.setAttribute('uv', new InterleavedBufferAttribute(vb, 2, 3));
-          geo.setAttribute('nor4', new InterleavedBufferAttribute(vb, 4, 5));
-          geo.setAttribute('tint', new InterleavedBufferAttribute(vb, 4, 9));
-          geo.setAttribute('skinWeight', new InterleavedBufferAttribute(vb, 4, 13));
-          geo.setAttribute('skinIndexF', new InterleavedBufferAttribute(vb, 4, 17));
-          geo.setIndex(new BufferAttribute(l.index.subarray(0, l.tris * 3), 1));
-          const capacity = caps[level] ?? 64;
-          const ib = new InstancedInterleavedBuffer(new Float32Array(capacity * 16), 16);
-          ib.setUsage(DynamicDrawUsage);
-          geo.setAttribute('iPos', new InterleavedBufferAttribute(ib, 4, 0));
-          geo.setAttribute('iQuat', new InterleavedBufferAttribute(ib, 4, 4));
-          geo.setAttribute('iAnim', new InterleavedBufferAttribute(ib, 4, 8));
-          geo.setAttribute('iMisc', new InterleavedBufferAttribute(ib, 4, 12));
-          geo.instanceCount = 0;
-          const mesh = new Mesh(geo, makeMaterial(map, animTex, level === 0 ? 4 : 2));
-          mesh.frustumCulled = false;
-          mesh.castShadow = level === 0;
-          mesh.receiveShadow = level < 2;
-          return { mesh, buffer: ib, capacity, count: 0 };
-        });
-        out.set(key, { key, fps: header.fps, clips: header.clips as Partial<Record<ClipName, Clip>>, lods: built });
-      } catch (err) {
-        console.warn('crew model missing', key, err);
+/** Loads one character, building one instanced mesh per level of detail with room for `caps` figures each. Null when its files are missing. */
+export async function loadCrew(key: CrewKey, caps: number[]): Promise<CrewAsset | null> {
+  try {
+    const [buf, map] = await Promise.all([fetch(`/models/crew/${key}.bin`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status))))), textures.loadAsync(`/models/crew/${key}.webp`)]);
+    map.colorSpace = SRGBColorSpace;
+    map.flipY = false;
+    const { header, lods, anim } = parse(buf);
+    const animTex = new DataTexture(anim, header.joints * 3, header.frames, RGBAFormat, HalfFloatType);
+    animTex.magFilter = NearestFilter;
+    animTex.minFilter = NearestFilter;
+    animTex.generateMipmaps = false;
+    animTex.needsUpdate = true;
+    const built: CrewLod[] = lods.map((l, level) => {
+      // Two vertex buffers in all: WebGPU allows eight, and the figures need eleven attributes.
+      const n = l.pos.length / 3;
+      const v = new Float32Array(n * 21);
+      for (let i = 0; i < n; i += 1) {
+        const o = i * 21;
+        v[o] = l.pos[i * 3]!;
+        v[o + 1] = l.pos[i * 3 + 1]!;
+        v[o + 2] = l.pos[i * 3 + 2]!;
+        v[o + 3] = l.uv[i * 2]!;
+        v[o + 4] = l.uv[i * 2 + 1]!;
+        for (let k = 0; k < 4; k += 1) {
+          v[o + 5 + k] = l.nor[i * 4 + k]! / 127;
+          v[o + 9 + k] = l.tint[i * 4 + k]! / 255;
+          v[o + 13 + k] = l.jw[i * 8 + 4 + k]! / 255;
+          v[o + 17 + k] = l.jw[i * 8 + k]!;
+        }
       }
-    }),
-  );
-  return out;
+      const vb = new InterleavedBuffer(v, 21);
+      const geo = new InstancedBufferGeometry();
+      geo.setAttribute('position', new InterleavedBufferAttribute(vb, 3, 0));
+      geo.setAttribute('uv', new InterleavedBufferAttribute(vb, 2, 3));
+      geo.setAttribute('nor4', new InterleavedBufferAttribute(vb, 4, 5));
+      geo.setAttribute('tint', new InterleavedBufferAttribute(vb, 4, 9));
+      geo.setAttribute('skinWeight', new InterleavedBufferAttribute(vb, 4, 13));
+      geo.setAttribute('skinIndexF', new InterleavedBufferAttribute(vb, 4, 17));
+      geo.setIndex(new BufferAttribute(l.index.subarray(0, l.tris * 3), 1));
+      const capacity = caps[level] ?? 64;
+      const ib = new InstancedInterleavedBuffer(new Float32Array(capacity * 16), 16);
+      ib.setUsage(DynamicDrawUsage);
+      geo.setAttribute('iPos', new InterleavedBufferAttribute(ib, 4, 0));
+      geo.setAttribute('iQuat', new InterleavedBufferAttribute(ib, 4, 4));
+      geo.setAttribute('iAnim', new InterleavedBufferAttribute(ib, 4, 8));
+      geo.setAttribute('iMisc', new InterleavedBufferAttribute(ib, 4, 12));
+      geo.instanceCount = 0;
+      const mesh = new Mesh(geo, makeMaterial(map, animTex, level === 0 ? 4 : 2));
+      mesh.frustumCulled = false;
+      mesh.castShadow = level === 0;
+      mesh.receiveShadow = level < 2;
+      return { mesh, buffer: ib, capacity, count: 0 };
+    });
+    return { key, fps: header.fps, clips: header.clips as Partial<Record<ClipName, Clip>>, lods: built };
+  } catch (err) {
+    console.warn('crew model missing', key, err);
+    return null;
+  }
 }
 
 export function beginCrew(assets: Map<CrewKey, CrewAsset>) {

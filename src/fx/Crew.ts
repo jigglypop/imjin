@@ -1,11 +1,12 @@
 import { Group, Quaternion, Vector3, type Camera } from 'three/webgpu';
 import type { Battle } from '../sim/battle';
-import type { BattleEvent, Ship, Team } from '../sim/types';
+import type { BattleEvent, Ship, ShipKind, Team } from '../sim/types';
+import { SHIP_SPECS } from '../sim/catalog';
 import type { ShipViews } from '../ships/ShipViews';
 import { DECKS, blocked, layoutFor, mainDeck, type DeckLayout, type DeckPlan } from '../ships/decks';
 import { byModel } from '../ships/anchors';
 import { equipment } from '../game/quality';
-import { beginCrew, crewTime, endCrew, loadCrew, pushCrew, type Clip, type ClipName, type CrewAsset, type CrewKey } from './crewModels';
+import { beginCrew, CREW_KEYS, crewTime, endCrew, loadCrew, pushCrew, type Clip, type ClipName, type CrewAsset, type CrewKey } from './crewModels';
 import { disposeTree } from '../render/dispose';
 import { Boarding, ST_DUEL, placement } from './Boarding';
 import { DeckGear } from './deckGear';
@@ -203,14 +204,15 @@ export class Crew {
   private readonly bowShots = new Map<CrewKey, Clip>();
   private readonly aims = new Map<CrewKey, Clip>();
 
-  constructor(private readonly views: ShipViews) {
+  /** `assets` are the models of the navies in the battle (crewAssets), already loaded. */
+  constructor(
+    private readonly views: ShipViews,
+    assets: Map<CrewKey, CrewAsset>,
+  ) {
     this.boarding = new Boarding(views, this.rosters, this.live);
     this.group.add(this.boarding.group, this.gear.group);
-    void crewAssets().then((assets) => {
-      if (this.disposed) return;
-      this.assets = assets;
-      for (const a of assets.values()) for (const l of a.lods) this.group.add(l.mesh);
-    });
+    this.assets = assets;
+    for (const a of assets.values()) for (const l of a.lods) this.group.add(l.mesh);
   }
 
   /** Frees the boarding props, the deck gear and the sprites. The skinned crew meshes are cached for the next battle and only leave this group. */
@@ -930,20 +932,44 @@ export class Crew {
   }
 }
 
-let shared: Promise<Map<CrewKey, CrewAsset>> | null = null;
+/** Figures each model's levels of detail have room for. */
+const CAPACITY: Record<CrewKey, number[]> = {
+  joseon_soldier: [128, 1200, 2400],
+  joseon_marine: [112, 900, 1800],
+  joseon_officer: [16, 80, 160],
+  japan_ashigaru: [128, 1300, 2600],
+  japan_samurai: [112, 1000, 2000],
+  japan_officer: [16, 80, 200],
+  ming_soldier: [144, 1000, 2000],
+  ming_officer: [16, 60, 120],
+  rower: [160, 1000, 2400],
+};
 
-/** The character models load once and are shared by every battle. */
-export function crewAssets() {
-  shared ??= loadCrew({
-    joseon_soldier: [128, 1200, 2400],
-    joseon_marine: [112, 900, 1800],
-    joseon_officer: [16, 80, 160],
-    japan_ashigaru: [128, 1300, 2600],
-    japan_samurai: [112, 1000, 2000],
-    japan_officer: [16, 80, 200],
-    ming_soldier: [144, 1000, 2000],
-    ming_officer: [16, 60, 120],
-    rower: [160, 1000, 2400],
-  });
-  return shared;
+const loaded = new Map<CrewKey, Promise<CrewAsset | null>>();
+
+/**
+ * The models that crew the given ship kinds: every station of each navy those kinds belong to (CAST). A ship is crewed
+ * by its kind's navy, so the kinds a battle can show (Engine.kindsInBattle) name every model it can draw.
+ */
+export function crewKeysOf(kinds: Iterable<ShipKind>): CrewKey[] {
+  const keys = new Set<CrewKey>();
+  for (const kind of kinds) for (const key of CAST[SHIP_SPECS[kind].faction]) keys.add(key);
+  return CREW_KEYS.filter((key) => keys.has(key));
+}
+
+/**
+ * The character models, each loaded once, the first time a battle shows its navy, and shared by every battle after.
+ * A Joseon and Japanese battle fetches seven of the nine; the Ming soldier and officer come with the first Ming ships.
+ */
+export async function crewAssets(keys: readonly CrewKey[]) {
+  const assets = await Promise.all(
+    keys.map((key) => {
+      let asset = loaded.get(key);
+      if (!asset) loaded.set(key, (asset = loadCrew(key, CAPACITY[key])));
+      return asset;
+    }),
+  );
+  const out = new Map<CrewKey, CrewAsset>();
+  for (const asset of assets) if (asset) out.set(asset.key, asset);
+  return out;
 }

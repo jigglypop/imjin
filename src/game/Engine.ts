@@ -51,7 +51,7 @@ import { FFTWaves } from '../ocean/FFTWaves';
 import { CUT_CAP, loadShipAssets, releaseShipAssets, type ModelAsset, type ShipAssetOptions } from '../ships/ShipRenderer';
 import { ShipViews } from '../ships/ShipViews';
 import { Effects } from '../fx/Effects';
-import { Crew, crewAssets } from '../fx/Crew';
+import { Crew, crewAssets, crewKeysOf } from '../fx/Crew';
 import { Lanterns } from '../fx/Lanterns';
 import { Battle, SIM_DT } from '../sim/battle';
 import { buildScenario, SCENARIOS, type FleetSpawn, type ScenarioId } from '../sim/scenarios';
@@ -396,7 +396,7 @@ export class Engine {
       // The asset promise may fail while the shared programs are being built.
       void loading.catch(() => undefined);
       await this.warmShared(task);
-      const [sky, terrain, assets] = await loading;
+      const [sky, terrain, assets, crew] = await loading;
       this.checkLoad(task);
       task.terrain = undefined;
       this.assets = assets;
@@ -431,7 +431,7 @@ export class Engine {
       this.fx.onShake = (k) => this.rts.shake(k, AMBIENT_SHAKE);
       this.fx.onCue = (kind, x, y, z, size) => this.sound.cue(kind, x, y, z, size);
       this.scene.add(this.fx.group);
-      this.crew = new Crew(this.views);
+      this.crew = new Crew(this.views, crew);
       this.crew.onMusket = (target, sx, sz) => this.fx.musketMark(target, sx, sz);
       this.scene.add(this.crew.group);
       this.lanterns = new Lanterns(this.views);
@@ -574,15 +574,16 @@ export class Engine {
       task.terrain = terrain;
       return terrain;
     });
-    const [sky, terrain, assets] = await Promise.all([
+    const kinds = this.kindsInBattle();
+    const [sky, terrain, assets, crew] = await Promise.all([
       track(skyLoad, weights.sky),
       track(terrainLoad, weights.terrain),
-      track(loadShipAssets(this.kindsInBattle(), options, shipsDone(weights.ships)), weights.ships),
-      track(crewAssets(), weights.crew),
+      track(loadShipAssets(kinds, options, shipsDone(weights.ships)), weights.ships),
+      track(crewAssets(crewKeysOf(kinds)), weights.crew),
       preloadStructures(),
       this.conquestSetup ? preloadWorks() : undefined,
     ]);
-    return [sky, terrain, assets] as const;
+    return [sky, terrain, assets, crew] as const;
   }
 
   /**
@@ -613,7 +614,8 @@ export class Engine {
 
   /**
    * The ship kinds this battle can show: the fleets the scenario spawns, or the rosters of every seat of a conquest battle
-   * (ships are built mid-battle). Loading only these keeps the models of the other navies out of a phone's memory.
+   * (ships are built mid-battle). Loading only these keeps the models of the other navies, ships and crews, out of a
+   * phone's memory.
    */
   private kindsInBattle(): ShipKind[] {
     if (this.options.gallery) return ALL_KINDS;
@@ -1175,7 +1177,7 @@ export class Engine {
       this.skyName = info.sky;
       this.seaName = info.sea;
       waveField.setState(SEA_STATES[this.seaName]);
-      const [sky, terrain, assets] = await this.loadAssets(0.04, task);
+      const [sky, terrain, assets, crew] = await this.loadAssets(0.04, task);
       this.checkLoad(task);
       setLoading(t('지형을 준비하는 중'), 0.64);
       // The previous battle's terrain, ocean and ship batches are freed before the new ones are built, so two battles
@@ -1197,7 +1199,7 @@ export class Engine {
       this.views.reset(this.assets, this.battle, this.capacityHint());
       this.views.team = this.team;
       void releaseShipAssets(new Set(Object.keys(this.assets)));
-      this.crew = new Crew(this.views);
+      this.crew = new Crew(this.views, crew);
       this.crew.onMusket = (target, sx, sz) => this.fx.musketMark(target, sx, sz);
       this.scene.add(this.crew.group);
       this.banners?.clear();
