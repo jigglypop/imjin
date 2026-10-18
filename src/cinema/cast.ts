@@ -127,6 +127,10 @@ export class Cast {
     m.ship = ship.id;
     const to = centre(m.def.facing(ctx));
     if (to) m.facing = Math.atan2(to.z - ship.z, to.x - ship.x);
+    // The lens looks back past him: turned away from his own fleet's centre, his ships stand behind him. Alone or in
+    // the middle of them, he faces the enemy.
+    const own = centre(ctx.battle.ships.filter((s) => s.alive && s.team === ship.team && s.id !== ship.id));
+    if (own && Math.hypot(own.x - ship.x, own.z - ship.z) > 40) m.facing = Math.atan2(ship.z - own.z, ship.x - own.x);
   }
 
   /** A cut: every loaded figure (with his set) may now come on screen. */

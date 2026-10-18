@@ -147,8 +147,8 @@ export function buildSet(faction: Faction, lod: Lod) {
     case 'galleon': {
       // A galleon's quarterdeck: a painted bulwark, the navy's shields (pavesses) on the English rail.
       const paint = faction === 'england' ? P('tudor_paint') : P('red_paint');
-      bulwark(paint, cell(['cabin_wood', 'hull_plank']), 0.9);
-      if (faction === 'england' && lod === 0) for (const s of [-1, 1]) for (let x = X0 + 0.9; x < X1; x += 1.25) box(b, P('pavesse'), [x - 0.42, 0.5, s * (HZ + 0.19) - 0.02], [x + 0.42, 1.55, s * (HZ + 0.19) + 0.02], { grain: 1 });
+      bulwark(paint, cell(['cabin_wood', 'hull_plank']), 0.7);
+      if (faction === 'england' && lod === 0) for (const s of [-1, 1]) for (let x = X0 + 0.9; x < X1; x += 1.25) box(b, P('pavesse'), [x - 0.38, 0.25, s * (HZ + 0.19) - 0.02], [x + 0.38, 0.95, s * (HZ + 0.19) + 0.02], { grain: 1 });
       mast(-3.8, 2.6, 0.3);
       for (const x of [X0 + 1, X0 + 2.2, -1.6, 0.2]) line([-3.8, 14, 2.6], [x, 1.2, HZ + 0.1]);
       line([-3.8, 14, 2.6], [X0 + 1.2, 1.2, -HZ - 0.1]);
@@ -156,18 +156,10 @@ export function buildSet(faction: Faction, lod: Lod) {
       break;
     }
     case 'galley': {
-      // A galley's stern platform: a low gilt-capped rail, the frames of the canopy and the stern lantern.
+      // A galley's stern platform: a low gilt-capped rail and the stern lantern (no canopy frames: they cut across the frame).
       const paint = P('red_paint');
       const gilt = P('gilt');
       rail(paint, gilt, 0.9, 0.9, 0.1);
-      for (let x = X0 + 0.6; x <= X0 + 3.2; x += 1.3) {
-        const arc: V3[] = [];
-        for (let i = 0; i <= 8; i += 1) {
-          const a = (i / 8) * Math.PI;
-          arc.push([x, 0.9 + Math.sin(a) * 1.6, -Math.cos(a) * (HZ - 0.15)]);
-        }
-        sweep(b, gilt, arc, rectSection(0.08, 0.08));
-      }
       lantern(ctx, gilt, gilt, [X0 - 0.3, 3.1, 0], 0.42);
       cylinder(b, gilt, [X0 + 0.1, 0.9, 0], [X0 - 0.3, 3.1, 0], 0.06, 0.05, 6, true);
       flag(ctx, { pole: [X0 + 0.4, 0.9, -2.2], poleH: 5.4, w: 2.8, h: 2.0, sheet: 'flags_a', flag: FLAG[faction], phase: 0.3, wood: dark, nu: lod ? 4 : 10, nv: lod ? 3 : 6 });
