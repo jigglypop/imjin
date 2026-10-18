@@ -1,3 +1,4 @@
+import { sheetFlagRect } from '../../ships/build/atlas';
 import { Paint, type PaintOpts } from '../../ships/build/parts';
 import { SURF } from '../../ships/build/surf';
 import layout from './buildingAtlas.json';
@@ -7,7 +8,7 @@ import type { FactionId } from './types';
 // laid out like the ships' (src/ships/build/atlas.ts), so a building's vertices name their cell the same way and its
 // material reads the cell's tile the way the battle's does. Pure TS: the kits and their tests use it in node.
 
-type Slot = { name: string; size?: number; tile?: boolean; sheet?: { cols: number; rows: number }; flags?: { name: string }[] };
+type Slot = { name: string; size?: number; tile?: boolean; sheet?: { cols: number; rows: number }; flags?: { name: string; aspect?: number }[] };
 const slots = layout.factions as unknown as Record<FactionId, Slot[]>;
 
 export const BUILDING_ATLAS = { grid: layout.grid, cell: layout.cell, pad: layout.pad };
@@ -34,16 +35,22 @@ export function buildingPaints(navy: FactionId) {
   };
 }
 
-/** The paint of one banner of a navy's banner sheet: its cell with the banner's rect inside it. */
-export function bannerPaint(navy: FactionId, flag: string, tint: [number, number, number] = [1, 1, 1]) {
+/** One banner of a navy's banner sheet: its picture's rect inside the cell and the width / height its cloth must have. */
+function bannerSlot(navy: FactionId, flag: string) {
   const index = slots[navy].findIndex((s) => s.sheet);
   const slot = slots[navy][index]!;
-  const f = slot.flags!.findIndex((x) => x.name === flag);
-  if (f < 0) throw new Error(`building atlas ${navy} has no banner ${flag}`);
-  const { cols, rows } = slot.sheet!;
-  const c = f % cols, r = Math.floor(f / cols), inset = 0.012;
-  return new Paint(index, 1, SURF.banner, tint, [c / cols + inset, 1 - (r + 1) / rows + inset, (c + 1) / cols - inset, 1 - r / rows - inset]);
+  if (!slot.flags!.some((x) => x.name === flag)) throw new Error(`building atlas ${navy} has no banner ${flag}`);
+  return { index, ...sheetFlagRect(slot.sheet!, slot.flags!, flag) };
 }
+
+/** The paint of one banner of a navy's banner sheet: its cell with the banner's rect inside it. */
+export function bannerPaint(navy: FactionId, flag: string, tint: [number, number, number] = [1, 1, 1]) {
+  const b = bannerSlot(navy, flag);
+  return new Paint(b.index, 1, SURF.banner, tint, b.rect);
+}
+
+/** Width / height of a banner's picture: a nobori is cut to it so its crest stays round. */
+export const bannerAspect = (navy: FactionId, flag: string) => bannerSlot(navy, flag).aspect;
 
 /** The atlas files of a navy's buildings. */
 export const buildingAtlasFiles = (navy: FactionId) => {

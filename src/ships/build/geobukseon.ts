@@ -256,7 +256,8 @@ export function buildGeobukseon(lod: Lod, omitDragonHead = false): MeshData {
     cylinder(b, P('pine_mast', { tint: [0.9, 0.85, 0.8] }), [8.8, roofAt(8.8) + 0.3, 0.9], [2.4, roofAt(2.4) + 0.3, 0.9], 0.2, 0.15, 7, true);
     for (const x of [8.2, 4.5]) box(b, timber, [x - 0.2, roofAt(x) + 0.0, 0.55], [x + 0.2, roofAt(x) + 0.3, 1.25]);
     if (lod === 0) {
-      longPennant(ctx, clothPatch(ctx, 'flags_a', 'red'), [m1 - 0.1, 8.7, 0], 4.5, 0.55, 0.8);
+      // Nearly level: it flies just over the roof's spikes.
+      longPennant(ctx, clothPatch(ctx, 'flags_a', 'red'), [m1 - 0.1, 8.7, 0], 4.5, 0.55, 0.8, 0.02);
       barrel(ctx, P('hull_plank', { tint: [0.8, 0.7, 0.6] }), P('iron_hex', { surf: 2 }), [-9.5, roofAt(-9.5) + 0.02, 1.8], 0.38, 0.8);
       ropeCoil(ctx, P('rope'), [3.0, roofAt(3.0) + 0.05, -1.4], 0.55);
     }

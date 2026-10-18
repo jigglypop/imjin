@@ -29,33 +29,39 @@ export function junkSail(ctx: Ctx, cloth: Paint, wood: Paint, rope: Paint, o: Ju
       P.push(row);
     }
     const sway = (i: number) => 0.55 * (i / nu);
-    grid(b, cloth, P, { sway, phase: o.phase });
-    grid(b, cloth, P, { flip: true, sway, phase: o.phase });
-    cylinder(b, wood, [x - 0.06, o.yTop + 0.1, -o.w / 2 - 0.7], [x - 0.06, o.yTop + 0.1, o.w / 2 + 0.7], 0.13, 0.13, byLod(ctx, 7, 5, 3), true);
-    if (ctx.lod > 1) return;
-    const seg = byLod(ctx, 5, 4, 4);
-    for (let k = 1; k <= o.battens; k += 1) {
-      const tv = k / (o.battens + 1);
-      const path: V3[] = [];
-      const w = o.w * (1 + 0.07 * Math.sin(Math.PI * tv));
-      for (let i = 0; i <= 6; i += 1) {
-        const tu = i / 6;
-        const bulge = o.billow * Math.sin(Math.PI * tu) * Math.sin(Math.PI * Math.min(1, tv * 1.15));
-        path.push([x + bulge + 0.05, o.yTop - o.h * tv, lerp(-w / 2 - 0.3, w / 2 + 0.3, tu)]);
-      }
-      sweep(b, wood, path, rectSection(0.08, 0.1), { up: [1, 0, 0] });
-    }
-    cylinder(b, wood, [x + 0.04, o.yTop - o.h, -o.w / 2 - 0.2], [x + 0.04, o.yTop - o.h, o.w / 2 + 0.2], 0.1, 0.1, seg, true);
-    if (ctx.lod === 0) {
-      // the sheet: a bridle of lines from the batten ends to one block aft
-      for (const sgn of [-1, 1]) {
-        for (let k = 1; k <= o.battens; k += 2) {
-          const tv = k / (o.battens + 1);
-          sweep(b, rope, [[x + 0.1, o.yTop - o.h * tv, sgn * (o.w / 2 + 0.3)], [x - 1.2, o.yTop - o.h - 1.6, sgn * (o.w / 2 + 1.2)]], rectSection(0.035, 0.035));
-        }
-      }
-    }
+    // Taken in, a junk sail comes down with its yard and folds on its battens onto the boom (ShipRenderer).
+    b.sail(o.yTop - o.h, () => junkCloth(ctx, cloth, wood, rope, o, P, sway, x));
   });
+}
+
+function junkCloth(ctx: Ctx, cloth: Paint, wood: Paint, rope: Paint, o: JunkSail, P: V3[][], sway: (i: number) => number, x: number) {
+  const { b } = ctx;
+  grid(b, cloth, P, { sway, phase: o.phase });
+  grid(b, cloth, P, { flip: true, sway, phase: o.phase });
+  cylinder(b, wood, [x - 0.06, o.yTop + 0.1, -o.w / 2 - 0.7], [x - 0.06, o.yTop + 0.1, o.w / 2 + 0.7], 0.13, 0.13, byLod(ctx, 7, 5, 3), true);
+  if (ctx.lod > 1) return;
+  const seg = byLod(ctx, 5, 4, 4);
+  for (let k = 1; k <= o.battens; k += 1) {
+    const tv = k / (o.battens + 1);
+    const path: V3[] = [];
+    const w = o.w * (1 + 0.07 * Math.sin(Math.PI * tv));
+    for (let i = 0; i <= 6; i += 1) {
+      const tu = i / 6;
+      const bulge = o.billow * Math.sin(Math.PI * tu) * Math.sin(Math.PI * Math.min(1, tv * 1.15));
+      path.push([x + bulge + 0.05, o.yTop - o.h * tv, lerp(-w / 2 - 0.3, w / 2 + 0.3, tu)]);
+    }
+    sweep(b, wood, path, rectSection(0.08, 0.1), { up: [1, 0, 0] });
+  }
+  cylinder(b, wood, [x + 0.04, o.yTop - o.h, -o.w / 2 - 0.2], [x + 0.04, o.yTop - o.h, o.w / 2 + 0.2], 0.1, 0.1, seg, true);
+  if (ctx.lod === 0) {
+    // the sheet: a bridle of lines from the batten ends to one block aft
+    for (const sgn of [-1, 1]) {
+      for (let k = 1; k <= o.battens; k += 2) {
+        const tv = k / (o.battens + 1);
+        sweep(b, rope, [[x + 0.1, o.yTop - o.h * tv, sgn * (o.w / 2 + 0.3)], [x - 1.2, o.yTop - o.h - 1.6, sgn * (o.w / 2 + 1.2)]], rectSection(0.035, 0.035));
+      }
+    }
+  }
 }
 
 /** Painted patch following the hull side between two stations and heights, on both sides (the eye pairs). */

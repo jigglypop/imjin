@@ -5,6 +5,9 @@
  * Vertex layout of the merged mesh (see MeshData):
  *   position, normal, uv (tile space: repeats per atlas cell, wrapped in the shader), color (tint x AO),
  *   mat = (atlas cell, surface class), sway = (weight, phase) for cloth that flutters. bakeGrime adds a soot amount (0..1) to mat's surface class as a fraction of SOOT_STEP.
+ *   reef (optional) = how far a set sail's vertex is from where the sail gathers when taken in, metres (up to the yard of
+ *   a square sail, down to the boom of a junk sail): the shader moves it that far times how far the sail is taken in,
+ *   so a ship lowers and raises its sails without another model.
  * Ship space is +X bow, +Y up, Z across the beam, origin amidships on the waterline, metres.
  */
 import { cellOf, type Faction } from './atlas';
@@ -24,6 +27,7 @@ export type MeshData = {
   mat: Float32Array;
   sway: Float32Array;
   index: Uint32Array;
+  reef?: Float32Array;
 };
 
 // ---------- vector helpers ----------
@@ -143,8 +147,11 @@ export class MeshBuilder {
   private c: number[] = [];
   private m: number[] = [];
   private s: number[] = [];
+  private r: number[] = [];
   private idx: number[] = [];
   private stack: Xf[] = [IDENTITY];
+  /** Height (model space) the sail being built gathers to when taken in, null outside a sail. */
+  private gather: number | null = null;
 
   get xf() {
     return this.stack[this.stack.length - 1]!;
@@ -165,9 +172,17 @@ export class MeshBuilder {
     this.stack.pop();
   }
 
+  /** Run fn with every vertex it adds belonging to a sail that gathers at local height y when taken in (see reef). */
+  sail(y: number, fn: () => void) {
+    this.gather = applyP(this.xf, [0, y, 0])[1];
+    fn();
+    this.gather = null;
+  }
+
   vert(pos: V3, nor: V3, uv: V2, paint: Paint, sway?: V2): number {
     const xf = this.xf;
     const P = applyP(xf, pos);
+    this.r.push(this.gather === null ? 0 : this.gather - P[1]);
     const N = norm(applyV(xf, nor));
     this.p.push(P[0], P[1], P[2]);
     this.n.push(N[0], N[1], N[2]);
@@ -216,6 +231,7 @@ export class MeshBuilder {
       mat: new Float32Array(this.m),
       sway: new Float32Array(this.s),
       index: new Uint32Array(this.idx),
+      reef: new Float32Array(this.r),
     };
   }
 }
@@ -547,39 +563,63 @@ export function cloth(b: MeshBuilder, paint: Paint, origin: V3, uAxis: V3, vAxis
 export type PennantOpts = {
   flutter?: number;
   phase?: number;
-  /** How far the free end sags below the line `along`, as a fraction of the length. */
+  /**
+   * Depth of a swallowtail's notch as a fraction of the length: the strip ends in two square-cut tails either side of
+   * it instead of narrowing to `tip`. 0 for a plain strip.
+   */
+  fork?: number;
+  /** How far the free end sags below the line `along` as a fraction of the length; the cloth curves down toward it. */
   droop?: number;
-  /** Rows of triangles across the strip: more let the flutter bend it across as well as along. */
-  rows?: number;
+  /** Most the strip rolls about its own line toward the free end, radians: its faces turn to the light and away. */
+  twist?: number;
+  /** Radians the baked side-to-side wave turns through along the length (5 by default, under one whole wave). */
+  wave?: number;
 };
 
 /**
- * Cloth strip that trails behind a point (pennants, whiskers): its hoist edge runs `width` from `origin` toward `down`
- * and it narrows evenly about its middle line to `tip` at the free end. Drawn on both faces a little apart like cloth().
+ * Cloth strip that trails behind a point (pennants, whiskers): hung from the line out of `origin` along `along`, `width`
+ * deep toward `down` at the hoist and `tip` deep at the free end. Drawn on both faces a little apart, like cloth().
  */
 export function pennant(b: MeshBuilder, paint: Paint, origin: V3, along: V3, down: V3, length: number, width: number, tip: number, segs: number, o: PennantOpts = {}) {
   const dir = norm(along);
   const dn = norm(sub(down, mul(dir, dot(down, dir))));
   const lat = cross(dir, dn);
-  const rows = o.rows ?? 1;
-  const ph = o.phase ?? 0;
   const droop = o.droop ?? 0;
-  const mid: V3[] = [];
-  const depth: number[] = [];
-  for (let i = 0; i <= segs; i += 1) {
-    const t = i / segs;
-    // A still wave about one and a half bends long, growing toward the fly: the hoist is held, the end swings free.
-    const wave = 0.06 * length * Math.sin(t * 9.5 + ph) * Math.pow(t, 1.5);
-    mid.push(add(origin, add(add(mul(dir, length * t), mul(dn, width / 2 + droop * length * t * t)), mul(lat, wave))));
-    depth.push(lerp(width, tip, t));
-  }
-  // i along the length, j across from the top edge down; the flutter grows faster than the length toward the fly.
-  const sway = (i: number) => (o.flutter ?? 1) * Math.pow(i / segs, 1.3);
-  for (const side of [1, -1]) {
-    const P = mid.map((m, i) => Array.from({ length: rows + 1 }, (_, j) => add(m, add(mul(dn, (j / rows - 0.5) * depth[i]!), mul(lat, side * 0.008)))));
-    // grid's normal is dP/di x dP/dj = dir x dn = lat; the back layer faces the other way.
-    grid(b, paint, P, { sway, phase: ph, flip: side < 0, uvFn: (i, j) => paint.map(i / segs, 1 - j / rows) });
-  }
+  // Rows along the length. With a fork one falls on the notch's apex at every LOD, so the tails keep their length.
+  const tails = o.fork && segs > 1 ? Math.min(segs - 1, Math.max(1, Math.round(segs * o.fork))) : 0;
+  const fork = tails ? o.fork! : 0;
+  const ts: number[] = [];
+  for (let i = 0; i <= segs - tails; i += 1) ts.push(((1 - fork) * i) / (segs - tails));
+  for (let i = 1; i <= tails; i += 1) ts.push(1 - fork + (fork * i) / tails);
+  const rows = ts.map((t) => {
+    const w = lerp(width, tip, t);
+    const wave = 0.05 * length * Math.sin(t * (o.wave ?? 5) + (o.phase ?? 0)) * t;
+    // A plain strip keeps its top edge on the line from the origin; a swallowtail narrows evenly about its middle.
+    const centre = add(origin, add(add(mul(dir, length * t), mul(dn, (fork > 0 ? width : w) / 2 + droop * length * t * t)), mul(lat, wave)));
+    // Across the strip square to its line as that sags, rolled about the line; `face` is the front face's normal.
+    const tangent = norm(add(dir, mul(dn, 2 * droop * t)));
+    const flat = norm(sub(dn, mul(tangent, dot(dn, tangent))));
+    const roll = (o.twist ?? 0) * t * Math.sin(t * 4.5 + (o.phase ?? 0) * 1.7);
+    const across = add(mul(flat, Math.cos(roll)), mul(lat, Math.sin(roll)));
+    const face = sub(mul(lat, Math.cos(roll)), mul(flat, Math.sin(roll)));
+    // The notch widens from its apex to a little over a third of the end's width between the two tails.
+    const gap = fork > 0 ? (Math.max(0, t - 1 + fork) / fork) * tip * 0.18 : 0;
+    return { w, centre, across, face, gap };
+  });
+  type Row = (typeof rows)[number];
+  // A band of the strip between two offsets across it from the middle (negative toward the top edge): the whole strip,
+  // or one tail with its half of the body.
+  const band = (k0: (r: Row) => number, k1: (r: Row) => number) => {
+    for (const side of [1, -1]) {
+      const P = rows.map((r) => [k0(r), k1(r)].map((k) => add(add(r.centre, mul(r.across, k)), mul(r.face, side * 0.012))));
+      // v runs from 1 at the top edge to 0 at the bottom, as on a flag.
+      grid(b, paint, P, { flip: side < 0, sway: (i) => (o.flutter ?? 1) * ts[i]!, phase: o.phase, uvFn: (i, j) => paint.map(ts[i]!, 0.5 - (j ? k1 : k0)(rows[i]!) / rows[i]!.w) });
+    }
+  };
+  if (fork > 0) {
+    band((r) => -r.w / 2, (r) => -r.gap);
+    band((r) => r.gap, (r) => r.w / 2);
+  } else band((r) => -r.w / 2, (r) => r.w / 2);
 }
 
 

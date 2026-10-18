@@ -88,7 +88,8 @@ function tasks() {
   for (const faction of factions) {
     for (const slot of layout.factions[faction]) {
       if (only && !only.has(slot.name)) continue;
-      const items = slot.sheet ? slot.flags.map((f) => ({ id: `${slot.name}__${f.name}`, size: f.size, prompt: f.prompt })) : [{ id: slot.name, size: '1024x1024', prompt: slot.prompt }];
+      // Flags with lettering or a crest are drawn by scripts/flag-art/flag_art.py, not generated.
+      const items = (slot.sheet ? slot.flags.map((f) => ({ id: `${slot.name}__${f.name}`, size: f.size, prompt: f.prompt, draw: f.draw })) : [{ id: slot.name, size: '1024x1024', prompt: slot.prompt, draw: slot.draw }]).filter((it) => !it.draw);
       for (const it of items) for (let n = 1; n <= N; n += 1) list.push({ faction, ...it, n, file: join(CACHE, faction, `${it.id}_${n}.png`) });
     }
   }
@@ -132,6 +133,7 @@ async function runGenerate() {
   if (PROVIDER !== 'gemini' && !process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing (.env)');
   const todo = [];
   for (const t of tasks()) if (!(await exists(t.file))) todo.push(t);
+  if (todo.length && !process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing (.env)');
   console.log(`${todo.length} images to generate with ${MODEL} (${QUALITY}), ${JOBS} at a time`);
   let next = 0;
   let done = 0;
@@ -251,14 +253,27 @@ function padCell(tile, size, cell, pad, wrap) {
   return out;
 }
 
-async function loadRaw(faction, id, pickKey) {
-  const n = picks[pickKey] ?? '1';
+async function loadRaw(faction, id, pickKey, drawn = false) {
+  const n = drawn ? 'drawn' : (picks[pickKey] ?? '1');
   const file = rawOverride?.[id] ?? join(CACHE, faction, `${id}_${n}.png`);
   if (!(await exists(file))) throw new Error(`missing ${file}`);
   return file;
 }
 
 const rgbBuffer = (img) => img.removeAlpha().raw().toBuffer();
+
+/**
+ * A picture in a slot of `sw` x `sh` px at its own aspect: the largest centred box of it (fitAspect in
+ * src/ships/build/atlas.ts, which gives the game the same box), on a stretched copy of itself so the slot's edges, which
+ * the mipmaps of a far flag reach, keep the cloth's colour.
+ */
+async function fitted(file, sw, sh, aspect) {
+  const w = Math.round(Math.min(sw, sh * aspect));
+  const h = Math.round(w / aspect);
+  const back = await sharp(file).resize(sw, sh, { fit: 'fill', kernel: 'lanczos3' }).removeAlpha().png().toBuffer();
+  const pic = await sharp(file).resize(w, h, { fit: 'fill', kernel: 'lanczos3' }).removeAlpha().png().toBuffer();
+  return sharp(back).composite([{ input: pic, left: Math.round((sw - w) / 2), top: Math.round((sh - h) / 2) }]).png().toBuffer();
+}
 
 async function composeCell(faction, slot, cell, pad) {
   const size = cell - pad * 2;
@@ -270,9 +285,8 @@ async function composeCell(faction, slot, cell, pad) {
       .composite(
         await Promise.all(
           slot.flags.map(async (f, i) => {
-            const file = await loadRaw(faction, `${slot.name}__${f.name}`, `${faction}/${slot.name}__${f.name}`);
-            const input = await sharp(file).resize(sw, sh, { fit: 'fill', kernel: 'lanczos3' }).removeAlpha().png().toBuffer();
-            return { input, left: (i % cols) * sw, top: Math.floor(i / cols) * sh };
+            const file = await loadRaw(faction, `${slot.name}__${f.name}`, `${faction}/${slot.name}__${f.name}`, !!f.draw);
+            return { input: await fitted(file, sw, sh, f.aspect ?? 1), left: (i % cols) * sw, top: Math.floor(i / cols) * sh };
           }),
         ),
       )
@@ -281,7 +295,11 @@ async function composeCell(faction, slot, cell, pad) {
       .toBuffer();
     return { sheet, size, wrap: false };
   }
-  const file = await loadRaw(faction, slot.name, `${faction}/${slot.name}`);
+  const file = await loadRaw(faction, slot.name, `${faction}/${slot.name}`, !!slot.draw);
+  if (slot.aspect) {
+    const rgb = await sharp(await fitted(file, size, size, slot.aspect)).removeAlpha().raw().toBuffer();
+    return { sheet: rgb, size, wrap: false };
+  }
   // Grain (and plank rows) must run along the image's horizontal axis, which is the u axis of beams and boards in the game.
   let src = slot.rot ? sharp(file).rotate(slot.rot) : sharp(file);
   if (rawOverride && slot.name === 'stern_panel') {

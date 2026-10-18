@@ -90,7 +90,10 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
         const z = side * (outer(x) + 0.015);
         const y0 = deck + 0.22;
         const y1 = deck + plan.parapet - 0.28 + sheer(x) * 0.5;
-        b.quadF(crest.fit(1.4, y1 - y0), [[x - 0.7, y0, z], [x + 0.7, y0, z], [x + 0.7, y1, z], [x - 0.7, y1, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+        // As wide as it is tall, like its picture, so the crest stays round.
+        const hw = Math.min(0.7, (y1 - y0) / 2);
+        const yt = y0 + hw * 2;
+        b.quadF(crest, [[x - hw, y0, z], [x + hw, y0, z], [x + hw, yt, z], [x - hw, yt, z]], [0, 0, side], [[0, 0], [1, 0], [1, 1], [0, 1]]);
       }
       for (const g of anchors.gunPorts.filter((q) => q.side === (side === -1 ? 0 : 1))) {
         const z = side * (outer(g.pos[0]) + 0.02);
@@ -128,10 +131,10 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
     } else {
       const roof = irimoyaRoof(ctx, { tile: kawara, trim: lacquer, cap: lacquer }, plaster, { cx: plan.cx, hx: t.hx + 1.2, hz: t.hz + 1.2, wx: t.hx - 0.8, wz: t.hz - 0.7, y: t.y1 - 0.05, skirt: 0.8, hafu: 0.7, gable: 1.5, lift: 0.5 });
       for (const sx of [-1, 1] as const) shachihoko(ctx, gold, [plan.cx + sx * roof.ridgeX, roof.ridgeY + 0.25, 0], sx, 0.95);
-      // staff for the command banner
+      // Staff for the command pennant, tall enough that the pennant's sag clears the shachihoko at the ridge's aft end.
       const staff: V3 = [plan.cx, roof.ridgeY + 0.3, 0];
-      cylinder(b, wood, staff, [staff[0], staff[1] + 2.4, 0], 0.06, 0.04, byLod(ctx, 5, 4, 3), true);
-      if (lod < 2) longPennant(ctx, clothPatch(ctx, 'nobori_a', 'linen'), [staff[0] - 0.05, staff[1] + 2.35, 0], 6.5, 0.9, 0.3);
+      cylinder(b, wood, staff, [staff[0], staff[1] + 3.4, 0], 0.06, 0.04, byLod(ctx, 5, 4, 3), true);
+      if (lod < 2) longPennant(ctx, clothPatch(ctx, 'nobori_a', 'linen'), [staff[0] - 0.05, staff[1] + 3.35, 0], 6.5, 0.9, 0.3);
     }
   });
   // the second atakebune carries a small turret on the foredeck as well
@@ -143,7 +146,7 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
   }
   // maku curtains hang under the eaves of the lowest tier
   const t0 = lv[0]!;
-  for (const side of [-1, 1] as const) makuRun(ctx, P('maku', { rect: [0.01, 0.01, 0.99, 0.99] }), plan.cx - t0.hx + 0.5, plan.cx + t0.hx - 0.5, side * (t0.hz + 0.2), t0.y1 - 0.12, 1.5, 4, side, frame);
+  for (const side of [-1, 1] as const) makuRun(ctx, plan.cx - t0.hx + 0.5, plan.cx + t0.hx - 0.5, side * (t0.hz + 0.2), t0.y1 - 0.12, 1.5, side, frame);
 
   // --- mast and straw sail ---
   const m = plan.mast;
@@ -162,7 +165,7 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
   // --- banners ---
   for (const f of anchors.flagMounts) {
     if (f.kind !== 'nobori') continue;
-    nobori(ctx, f.pos, f.size[1] + 0.9, f.size[0], f.size[1], f.id.slice(7), f.pos[0] * 0.7 + f.pos[2], wood);
+    nobori(ctx, f.pos, f.size[1] + 0.9, f.size[1], f.id.slice(7), f.pos[0] * 0.7 + f.pos[2], wood);
   }
 
   // --- deck furniture ---

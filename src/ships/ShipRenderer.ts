@@ -60,7 +60,7 @@ import { equipment } from '../game/quality';
 import { emberGlow, weather } from './weather';
 import { charShading } from '../fx/fire/char';
 import { disposeTree, freeAfterDraw } from '../render/dispose';
-import { PHASE_RANGE, SWAY_RANGE, TINT_RANGE } from './build/pack';
+import { PHASE_RANGE, REEF_RANGE, SWAY_RANGE, TINT_RANGE } from './build/pack';
 import { watchManager } from '../ui/assetProgress';
 
 // Textures decoded through <img> (TextureLoader) show on the background-download bar with the models.
@@ -361,14 +361,18 @@ export async function releaseShipAssets(keep: Set<string>) {
 
 /** Steps the sail damage is kept in, in the whole part of the flash attribute (see packFlash). */
 const TEAR_STEPS = 15;
+/** Steps of how far the sails are set: fine enough that a sail coming down over seconds moves smoothly. */
+const SET_STEPS = 127;
 
 /**
- * The flash attribute carries three things: the brief lift of a struck hull (the fraction), how torn and burnt the
- * ship's sails are (fx/Scars.ts, 0..1 in TEAR_STEPS steps) and a seed from the ship's id so that no two ships' sails
- * are holed alike (the whole part, tear x 16 + seed).
+ * The flash attribute carries four things: the brief lift of a struck hull (the fraction), how torn and burnt the
+ * ship's sails are (fx/Scars.ts, 0..1 in TEAR_STEPS steps), a seed from the ship's id so that no two ships' sails are
+ * holed alike and how far the sails are set (the whole part, set x 256 + tear x 16 + seed, below 2^15 so the fraction
+ * keeps its precision).
  */
-export function packFlash(flash: number, tear: number, id: number) {
-  return Math.round(Math.min(1, Math.max(0, tear)) * TEAR_STEPS) * 16 + (id % 16) + Math.min(0.999, Math.max(0, flash));
+export function packFlash(flash: number, tear: number, id: number, set = 1) {
+  const s = Math.round(Math.min(1, Math.max(0, set)) * SET_STEPS);
+  return s * 256 + Math.round(Math.min(1, Math.max(0, tear)) * TEAR_STEPS) * 16 + (id % 16) + Math.min(0.999, Math.max(0, flash));
 }
 
 /**
@@ -461,7 +465,11 @@ export function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttr
     // Flags and sails flutter along their own normal; hull vertices have weight 0.
     const phase = mat.y.mul(255 * 256).add(mat.z.mul(255)).div(65535).sub(0.5).mul(PHASE_RANGE).add(positionGeometry.x.mul(0.9));
     const wave = sin(time.mul(3.1).add(phase)).add(sin(time.mul(5.3).add(phase.mul(1.7))).mul(0.4));
-    m.positionNode = positionLocal.add(normalLocal.mul(wave.mul(packedColor.w.mul(SWAY_RANGE)).mul(0.2)));
+    // A sail taken in gathers to its yard (or a junk sail's to its boom): the reef byte is each vertex's way there.
+    const set = floor(floor(B.w).div(256)).div(SET_STEPS);
+    // Taken in all the way it keeps a twentieth of its drop: the gathered cloth hangs in a bundle, not a line.
+    const reef = attribute('reef', 'vec4').w.mul(REEF_RANGE).mul(float(1).sub(set).mul(0.95));
+    m.positionNode = positionLocal.add(normalLocal.mul(wave.mul(packedColor.w.mul(SWAY_RANGE)).mul(0.2))).add(vec3(0, reef, 0));
     const worn = weather({ color: sample(map!).rgb.mul(tint), surf, soot, shipY, rough, detail: equipment.tier !== 'low' });
     baseColor = worn.color;
     rough = worn.rough;
@@ -469,7 +477,7 @@ export function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttr
     // Shot-through and burnt sails (fx/Scars.ts): not on phones, where the cloth keeps its plain shading.
     if (equipment.tier !== 'low') {
       const whole = packedWhole.add(0.5).floor();
-      const tear = floor(whole.div(16)).div(TEAR_STEPS);
+      const tear = floor(whole.mod(256).div(16)).div(TEAR_STEPS);
       const seed = whole.mod(16);
       const holes = clothHoles(positionGeometry, tear, burn, seed);
       // Sails only: a flag or a pennant is too small for a hole a hand across, and cut up it hung in rags like scraps.

@@ -4,7 +4,7 @@
  */
 import { type HullPlan, hullSection, hullTop, sideZ } from '../anchors';
 import type { Faction } from './atlas';
-import { flagAspect, flagRect } from './atlas';
+import { clothSize, flagRect } from './atlas';
 import {
   type MeshBuilder,
   type Paint,
@@ -232,13 +232,27 @@ export function oarPortFrame(ctx: Ctx, pos: V3, side: -1 | 1, dark: Paint) {
 
 // ---------- masts, sails, flags ----------
 
+/**
+ * A turned wooden knob `h` tall capping a pole `r` thick at `p`, swelling to `bulge` times its width under a rounded top:
+ * a mast's truck or a flagstaff's finial. A cone there made every mast and staff read as a sharpened stake.
+ */
+export function knob(ctx: Ctx, wood: Paint, p: V3, r: number, h: number, bulge: number, seg: number) {
+  const profile: V2[] = [
+    [r, 0],
+    [r * bulge, h * 0.35],
+    [r * bulge * 0.8, h * 0.8],
+    [0, h],
+  ];
+  ctx.b.with(xlate(p[0], p[1], p[2]), () => lathe(ctx.b, wood, profile, seg));
+}
+
 export function mast(ctx: Ctx, wood: Paint, band: Paint, x: number, y0: number, h: number, r: number) {
   const seg = byLod(ctx, 10, 7, 5);
   cylinder(ctx.b, wood, [x, y0 - 0.6, 0], [x, y0 + h, 0], r * 1.0, r * 0.62, seg, true, 3);
   if (ctx.lod === 0) {
     cylinder(ctx.b, band, [x, y0 + 0.2, 0], [x, y0 + 0.55, 0], r * 1.3, r * 1.3, seg, true);
     cylinder(ctx.b, band, [x, y0 + h - 1.2, 0], [x, y0 + h - 1.05, 0], r * 1.0, r * 1.0, seg, true);
-    cylinder(ctx.b, wood, [x, y0 + h, 0], [x, y0 + h + 0.4, 0], r * 0.62, 0.05, seg, true);
+    knob(ctx, wood, [x, y0 + h, 0], r * 0.62, 0.28, 1.18, seg);
   }
 }
 
@@ -249,8 +263,13 @@ export function sail(ctx: Ctx, cloth_: Paint, wood: Paint, rope: Paint, o: SailO
   const nu = byLod(ctx, 6, 3, 1);
   const nv = byLod(ctx, 8, 4, 1);
   const x = o.x + 0.42;
-  cloth(ctx.b, cloth_, [x, o.yTop, -o.w / 2], [0, 0, o.w], [0, -o.h, 0], { nu, nv, billow: o.billow, flutter: 0.5, phase: o.phase });
   cylinder(ctx.b, wood, [x - 0.12, o.yTop + 0.05, -o.w / 2 - 0.5], [x - 0.12, o.yTop + 0.05, o.w / 2 + 0.5], 0.1, 0.1, byLod(ctx, 6, 4, 3), true);
+  // The cloth, its battens, boom and sheets gather up to the yard when the ship takes the sail in (ShipRenderer).
+  ctx.b.sail(o.yTop, () => setSail(ctx, cloth_, wood, rope, o, x, nu, nv));
+}
+
+function setSail(ctx: Ctx, cloth_: Paint, wood: Paint, rope: Paint, o: SailOpts, x: number, nu: number, nv: number) {
+  cloth(ctx.b, cloth_, [x, o.yTop, -o.w / 2], [0, 0, o.w], [0, -o.h, 0], { nu, nv, billow: o.billow, flutter: 0.5, phase: o.phase });
   if (ctx.lod === 0) {
     for (let k = 1; k <= o.battens; k += 1) {
       const t = k / (o.battens + 1);
@@ -292,25 +311,26 @@ export function flag(ctx: Ctx, o: FlagOpts) {
   if (ctx.lod > 1) return;
   const fr = flagRect(ctx.faction, o.sheet, o.flag);
   const paint = ctx.P(o.sheet, { rect: fr.rect });
-  // A drawn flag keeps the area it was given but takes its design's proportions (a 2:1 ensign is not squeezed to 3:2).
-  const a = flagAspect(ctx.faction, o.sheet, o.flag);
-  const fh = a ? Math.sqrt((o.w * o.h) / a) : o.h;
-  const fw = a ? fh * a : o.w;
-  cloth(ctx.b, paint, [x - 0.04, y + o.poleH - 0.05, z], [-fw, 0, 0], [0, -fh, 0], {
+  // The cloth takes its picture's proportions (about the size asked for), so the lettering is never stretched.
+  const [w, h] = clothSize(o.w, o.h, fr.aspect);
+  cloth(ctx.b, paint, [x - 0.04, y + o.poleH - 0.05, z], [-w, 0, 0], [0, -h, 0], {
     nu: o.nu ?? byLod(ctx, 6, 2, 1),
     nv: o.nv ?? byLod(ctx, 4, 2, 1),
     flutter: o.flutter ?? 1,
-    wave: 0.07 * fw,
+    wave: 0.07 * w,
     phase: o.phase,
   });
   // finial
-  if (ctx.lod === 0) cylinder(ctx.b, o.wood, [x, y + o.poleH, z], [x, y + o.poleH + 0.22, z], 0.07, 0.0, 5, false);
+  if (ctx.lod === 0) knob(ctx, o.wood, [x, y + o.poleH, z], 0.035, 0.15, 1.7, 6);
 }
 
-/** Long swallow-tailed pennant from a mast top. */
-export function longPennant(ctx: Ctx, color: Paint, from: V3, length: number, width: number, phase: number) {
+/**
+ * Long swallow-tailed pennant from a mast top. It sags along its length, turns a little as it flies and ends in two
+ * square-cut tails: narrowing to a point it stood out against the sky as a black spike, not as cloth.
+ */
+export function longPennant(ctx: Ctx, color: Paint, from: V3, length: number, width: number, phase: number, droop = 0.1) {
   if (ctx.lod > 1) return;
-  pennant(ctx.b, color, from, [-1, -0.05, 0], [0, -1, 0], length, width, width * 0.12, byLod(ctx, 8, 3, 1), { flutter: 1.2, phase });
+  pennant(ctx.b, color, from, [-1, -0.05, 0], [0, -1, 0], length, width, width * 0.78, byLod(ctx, 12, 6, 1), { flutter: 1.2, phase, fork: 0.14, droop, twist: 0.6, wave: 12 });
 }
 
 // ---------- small props ----------
