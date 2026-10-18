@@ -80,7 +80,7 @@ import { AdaptiveQuality } from './adaptive';
 import { CPU_STEP_MAX, CPU_STEPS, equipment, LEVELS, levelSetting, saveLevelSetting, startLevel, type LevelSetting, type OceanQuality, type TerrainQuality } from './quality';
 import { t } from '../i18n';
 import { failBattle, publish, pushToast, setAutoBuild, setLoading, setProgress, setReport, useUi, type FleetMorale, type GameSnapshot } from '../state/store';
-import { SquadronBanners } from '../ui/SquadronBanners';
+import { ShipLabels } from '../ui/ShipLabels';
 import { MoveOrders } from '../ui/MoveOrders';
 import { TacticalOverlay } from '../ui/TacticalOverlay';
 import { sound } from '../audio/Sound';
@@ -175,7 +175,7 @@ export class Engine {
   crew!: Crew;
   lanterns!: Lanterns;
   input!: Input;
-  banners: SquadronBanners | null = null;
+  banners: ShipLabels | null = null;
   moveOrders: MoveOrders | null = null;
   tacticalOverlay: TacticalOverlay | null = null;
   /** Each fleet's state as last told to the player, and the state it has been in since `since` (battle seconds). */
@@ -446,8 +446,8 @@ export class Engine {
       this.setupFog();
       this.setupPipeline();
       if (!this.options.hideLabels) {
-        this.banners = new SquadronBanners(document.querySelector('.app') ?? document.body);
-        this.banners.onSelect = (id, additive) => this.selectSquadron(id, additive);
+        this.banners = new ShipLabels(document.querySelector('.app') ?? document.body);
+        this.banners.onSelect = (id, additive) => this.selectShip(id, additive);
       }
       this.input = new Input(this);
       this.input.attach(r.domElement);
@@ -1935,6 +1935,13 @@ export class Engine {
     const el = this.renderer.domElement;
     out.set((v.x * 0.5 + 0.5) * el.clientWidth, (-v.y * 0.5 + 0.5) * el.clientHeight);
     return v.z < 1;
+  }
+
+  selectShip(id: number, additive: boolean) {
+    if (!this.battle.isActive(this.battle.get(id))) return;
+    if (!additive) this.views.selected.clear();
+    this.views.selected.add(id);
+    this.publish(true);
   }
 
   selectSquadron(id: number, additive: boolean) {
