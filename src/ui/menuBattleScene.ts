@@ -217,15 +217,17 @@ export class MenuBattleScene {
     const turtle=this.heroOf.kind==='geobukseon', grow=Math.max(1,SHIP_SPECS[this.heroOf.kind].length/42);
     // The title block keeps its CSS size, so on a narrower landscape window (1366 px) it takes more of the frame: a ship
     // of the line stands further off and further right there, its sails clear of the title and the masthead buttons.
-    const narrow=grow>1&&!portrait?clamp((1920-this.viewWidth)/640):0;
+    const narrow=!turtle&&grow>1&&!portrait?clamp((1920-this.viewWidth)/640):0;
     const k=turtle?1:1.75*grow*(1+.18*narrow), lift=turtle?0:8*grow;
     this.camera.position.set(this.hero.x+(portrait?60:37)*k+drift, (portrait?17:8)+lift, this.hero.z+(portrait?48:24)*k);
     // In portrait a ship of the line's mastheads would reach the title: aim higher so the ship sits lower in the frame.
-    this.target.set(this.hero.x+(portrait?3:-28)*k*.15,(portrait?8:7)+lift*1.7+(portrait&&grow>1?(grow-1)*40:0),this.hero.z-(portrait?12:40)*k*.15);
+    // The turtle ship keeps its approved shot exactly (origin/main 1847179); the others aim nearer their own hull.
+    if(turtle) this.target.set(this.hero.x+(portrait?3:-28),portrait?8:7,this.hero.z-(portrait?12:40));
+    else this.target.set(this.hero.x+(portrait?3:-28)*k*.15,(portrait?8:7)+lift*1.7+(portrait&&grow>1?(grow-1)*40:0),this.hero.z-(portrait?12:40)*k*.15);
     this.camera.lookAt(this.target);
     // A ship of the line fills more of the frame than the galleons do: pan the camera to its left so the hull sits in
     // the right half of a landscape frame, clear of the title block, as the other chapters' heroes do.
-    if(grow>1&&!portrait) {
+    if(!turtle&&grow>1&&!portrait) {
       this.camera.updateMatrixWorld();
       const pan=-(grow-1)*PAN_PER_GROW*(1+.9*narrow), ex=this.camera.matrixWorld.elements;
       this.camera.position.x+=ex[0]!*pan; this.camera.position.z+=ex[2]!*pan;
