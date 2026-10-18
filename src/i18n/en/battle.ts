@@ -188,6 +188,7 @@ export const EN_BATTLE: Record<string, string> = {
   '한낮': 'Midday',
   '노을': 'Sunset',
   '흐림': 'Overcast',
+  '겨울 새벽': 'Winter dawn',
   '달밤': 'Moonlit night',
   '파도': 'Waves',
   '잔잔': 'Calm',

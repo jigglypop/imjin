@@ -1179,7 +1179,7 @@ export function GrandMap({
         />
       )}
       <div ref={marqueeRef} className="gm__marquee" aria-hidden />
-      {hint && boxMode && <div className="gm__hint" role="status" style={{ left: 12 + insets.left, bottom: 68 + insets.bottom }}>{t('박스 선택 켜짐: 끌어서 병력을 한꺼번에 고릅니다. 지도 이동은 두 손가락·휠·오른쪽 버튼·Space')}</div>}
+      {hint && boxMode && <div className="gm__hint" role="status" style={{ left: 12 + insets.left, bottom: 68 + insets.bottom }}>{t('끌어서 한꺼번에 고릅니다 · 지도 이동: 두 손가락·휠·오른쪽 버튼·Space')}</div>}
       <div
         className="gm__zoom"
         style={{ left: 12 + insets.left, bottom: 12 + insets.bottom }}
@@ -1211,7 +1211,7 @@ export function GrandMap({
               ⇕
             </button>
             {/* The compass shows where north lies as the view turns; a press brings north back up. */}
-            <button type="button" className="g-glass g-icon-btn gm__compass" aria-label={t('북쪽으로 되돌리기')} title={t('북쪽으로 되돌리기 · 오른쪽이나 가운데 버튼, 또는 Shift를 누르고 끌면 가로·세로로 돌아갑니다')} onClick={() => glideOn((d) => ({ yaw: 0, pitch: zoomPitch(d.distance) }))}>
+            <button type="button" className="g-glass g-icon-btn gm__compass" aria-label={t('북쪽으로 되돌리기')} title={t('북쪽으로 되돌리기 · 회전은 오른쪽·가운데 버튼이나 Shift+끌기')} onClick={() => glideOn((d) => ({ yaw: 0, pitch: zoomPitch(d.distance) }))}>
               <svg viewBox="0 0 24 24" width="20" height="20" style={{ transform: `rotate(${(cam.yaw * 180) / Math.PI}deg)` }} aria-hidden>
                 <path d="M12 2.5 15.2 12 12 10.4 8.8 12Z" fill="#e8452c" />
                 <path d="M12 21.5 8.8 12 12 13.6 15.2 12Z" fill="currentColor" opacity="0.55" />

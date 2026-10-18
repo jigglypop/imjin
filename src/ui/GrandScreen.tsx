@@ -68,15 +68,15 @@ const prefersReducedMotion = () => typeof matchMedia === 'function' && matchMedi
 
 /** The four steps of the first-turn guide (Korean source text); the screen fills in what each one points at. */
 const GUIDE_STEPS: Omit<GuideStepView, 'target'>[] = [
-  { title: '1. 포구 선택', text: '지도의 포구를 눌러 수비대와 수입, 시설을 확인합니다. 표지의 색은 그 포구를 가진 진영을 뜻합니다.' },
-  { title: '2. 시설 건설', text: "군영(수리, 유지비 면제 한도)이나 선소(함선 건조)를 지을 수 있습니다. 은은 바로 차감되고 몇 턴 뒤에 완공됩니다. 선소가 있으면 함선도 주문할 수 있습니다. 새 캠페인은 위쪽의 '자동 건설'이 켜진 채 시작해 턴을 마칠 때 알아서 짓습니다. 직접 고르려면 끄세요." },
-  { title: '3. 함대 이동', text: "함대 표지를 눌러 선택하면 공격할 수 있는 적의 포구가 강조되고, 그 포구를 한 번 누르면 바로 공격합니다. 우리 편 포구로 옮기려면 '이동'을 누른 뒤 포구를 고릅니다." },
-  { title: '4. 턴 종료', text: "명령을 마치면 '턴 종료'를 누릅니다. 한 턴은 석 달입니다. 턴이 끝나면 모든 함대의 움직임이 지도에 재생되고 결과가 나옵니다." },
+  { title: '1. 포구 선택', text: '포구를 누르면 수비대·수입·시설이 보입니다. 표지 색은 주인 진영을 뜻합니다.' },
+  { title: '2. 시설 건설', text: "군영·선소를 짓고 선소에서 함선을 주문합니다. '자동 건설'이 켜져 있으면 턴 끝에 알아서 짓습니다." },
+  { title: '3. 함대 이동', text: "함대를 고르고 강조된 적 포구를 누르면 공격합니다. 우리 포구로는 '이동'을 누른 뒤 고릅니다." },
+  { title: '4. 턴 종료', text: "명령을 마치면 '턴 종료'를 누릅니다. 한 턴은 석 달입니다." },
 ];
 /** The third step under the march rules, where a fleet's range and its stops along the way are drawn on the map. */
 const MARCH_GUIDE_STEP: Omit<GuideStepView, 'target'> = {
   title: '3. 함대 이동',
-  text: "함대를 고르면 닿는 포구에 고리가 생깁니다(초록 이번 턴, 노랑 다음 턴, 주황 그 뒤). 포구 위에 올리면 턴마다 멈출 곳이 번호로 보이고, 적의 포구는 누르면 공격하며 우리 편 포구는 '이동'을 누른 뒤 고릅니다. '강행군'은 이번 턴만 더 멀리 가지만 공격할 수 없습니다.",
+  text: "함대를 고르면 닿는 포구에 고리가 생깁니다. 적 포구나 함대를 누르면 공격하고, 우리 포구는 '이동'을 누른 뒤 고릅니다.",
 };
 
 /**
@@ -514,12 +514,12 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
             me={me}
             onClose={closePanels}
             onBuild={(id, kind) => ordered(grandOrders.build(id as RegionId, kind as SimBuilding))}
-            onCancelBuild={(id, kind) => report(grandOrders.cancelBuild(id as RegionId, kind as SimBuilding), '공사를 취소하고 비용을 돌려받았습니다')}
+            onCancelBuild={(id, kind) => report(grandOrders.cancelBuild(id as RegionId, kind as SimBuilding), '공사 취소 · 비용 환급')}
             onRecruit={(id, kind) => ordered(grandOrders.recruit(id as RegionId, kind as ShipKind))}
-            onCancelRecruit={(id, item) => report(grandOrders.cancelRecruit(id as RegionId, item), '주문을 취소하고 비용을 돌려받았습니다')}
+            onCancelRecruit={(id, item) => report(grandOrders.cancelRecruit(id as RegionId, item), '주문 취소 · 비용 환급')}
             onSelectFleet={selectFleet}
             onMergeAll={(ids) => report(mergeFleets(ids))}
-            onMobilize={(id) => { const res = grandOrders.mobilize(id as RegionId); if (res.ok && res.note) { setFleetId(res.note); setRegionId(null); } report(res, '수비대가 출동 함대에 승선했습니다'); }}
+            onMobilize={(id) => { const res = grandOrders.mobilize(id as RegionId); if (res.ok && res.note) { setFleetId(res.note); setRegionId(null); } report(res, '수비대가 출동했습니다'); }}
           />
         ) : null}
       </div>
@@ -533,7 +533,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
       {preview && !previewHidden && !lastBattle && !replay && !eventCard && (
         <BattlePreview
           key={pending?.id}
-          battle={{ ...preview, notes: [...(preview.notes ?? []), ...(g.pending.length > 1 ? [t('이번 턴에 진행할 전투가 {n}건 있습니다.', { n: g.pending.length })] : [])] }}
+          battle={{ ...preview, notes: [...(preview.notes ?? []), ...(g.pending.length > 1 ? [t('이번 턴 전투 {n}건', { n: g.pending.length })] : [])] }}
           cancelLabel={t('나중에')}
           onCancel={() => setPreviewHidden(true)}
           onFight={fight}
@@ -547,7 +547,7 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
           }}
           onWithdraw={() => {
             sound.click();
-            report(withdrawGrand(pending!.id), '함대가 싸움에서 물러났습니다');
+            report(withdrawGrand(pending!.id), '함대가 물러났습니다');
           }}
         />
       )}

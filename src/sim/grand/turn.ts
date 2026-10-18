@@ -170,7 +170,7 @@ function retreat(g: Grand, fl: Fleet, from: RegionId) {
   const length = (to: RegionId, turns: number) => (marching(g) ? laneKm(g, from, to) : turns);
   const choice = home ?? [...lanes].sort((a, b) => length(a.to, a.turns) - length(b.to, b.turns) || mine(a.to) - mine(b.to))[0];
   if (!choice) {
-    note(g, '{fleet|이/가} 퇴로를 잃고 전멸했습니다', { fleet: fl.name }, fl.faction === g.player ? 'bad' : 'info');
+    note(g, '{fleet}, 퇴로가 막혀 전멸', { fleet: fl.name }, fl.faction === g.player ? 'bad' : 'info');
     g.fleets.splice(g.fleets.indexOf(fl), 1);
     return;
   }
@@ -228,8 +228,8 @@ export function captureRegion(g: Grand, id: RegionId, taker: GrandFaction) {
     .map((b) => ({ ...b, level: b.level - 1, upgradeLeft: 0, hp: 1 }))
     .filter((b) => b.level > 0);
   const tone = by === g.player ? 'good' : prev === g.player ? 'bad' : 'info';
-  if (liberated) note(g, '{navy|이/가} {place|을/를} 되찾아 {owner}에 돌려주었습니다', { navy: navyName(taker), place: REGIONS[id].name, owner: navyName(by) }, tone);
-  else note(g, '{navy|이/가} {place|을/를} 차지했습니다', { navy: navyName(by), place: REGIONS[id].name }, tone);
+  if (liberated) note(g, '{navy}, {place} 탈환 · {owner}에 반환', { navy: navyName(taker), place: REGIONS[id].name, owner: navyName(by) }, tone);
+  else note(g, '{navy}, {place} 점령', { navy: navyName(by), place: REGIONS[id].name }, tone);
 }
 
 function dropEmpty(g: Grand) {
@@ -303,9 +303,9 @@ export function applyContactOutcome(g: Grand, c: Contact, outcome: BattleOutcome
   const tone = !mine ? 'info' : winner === g.player ? 'good' : 'bad';
   if (marching(g)) {
     const grade = attackerWon ? battleGrade(startA, worn.a, startD, worn.d) : battleGrade(startD, worn.d, startA, worn.a);
-    const text = c.sea ? '{place} 앞바다에서 {navy|이/가} {grade|을/를} 거두었습니다 (손실: {a} {lostA}척 · {d} {lostD}척)' : '{place} 해전에서 {navy|이/가} {grade|을/를} 거두었습니다 (손실: {a} {lostA}척 · {d} {lostD}척)';
+    const text = c.sea ? '{place} 앞바다: {navy} {grade} · 손실 {a} {lostA}척, {d} {lostD}척' : '{place} 해전: {navy} {grade} · 손실 {a} {lostA}척, {d} {lostD}척';
     note(g, text, { ...params, grade: GRADE_TEXT[grade] }, tone);
-  } else note(g, '{place} 해전에서 {navy|이/가} 승리했습니다 (손실: {a} {lostA}척 · {d} {lostD}척)', params, tone);
+  } else note(g, '{place} 해전: {navy} 승리 · 손실 {a} {lostA}척, {d} {lostD}척', params, tone);
   // The turn closes right after the fight and takes one off, so the rest is counted from the next turn.
   for (const f of [...attackers, ...defenders]) f.rest = TUNING.restAfterBattle + 1;
   // Fleets that joined from a neighbouring port fought from where they lay and stay there, win or lose.
@@ -572,7 +572,7 @@ function findMarchContacts(g: Grand, meetings: SeaMeeting[]): Contact[] {
     if (!defenders.length && bottled && attackers.every((f) => f.besieging && !f.assault)) {
       if (!r.siege || !allied(g, r.siege.by, primary)) {
         r.siege = { by: primary, turns: 0, hold: holdOf(r) };
-        note(g, '{navy|이/가} {place|을/를} 봉쇄했습니다', { navy: navyName(primary), place: REGIONS[id].name }, owner === g.player ? 'bad' : primary === g.player ? 'good' : 'info');
+        note(g, '{navy}, {place} 봉쇄', { navy: navyName(primary), place: REGIONS[id].name }, owner === g.player ? 'bad' : primary === g.player ? 'good' : 'info');
       }
       for (const f of attackers) f.route = [];
       continue;
@@ -623,7 +623,7 @@ export function besiegeContact(g: Grand, contactId: string, faction: GrandFactio
     f.route = [];
   }
   r.siege = { by: c.attacker, turns: 0, hold: holdOf(r) };
-  note(g, '{navy|이/가} {place|을/를} 봉쇄했습니다', { navy: navyName(c.attacker), place: REGIONS[c.regionId].name }, c.defender === g.player ? 'bad' : c.attacker === g.player ? 'good' : 'info');
+  note(g, '{navy}, {place} 봉쇄', { navy: navyName(c.attacker), place: REGIONS[c.regionId].name }, c.defender === g.player ? 'bad' : c.attacker === g.player ? 'good' : 'info');
   g.pending = g.pending.filter((p) => p.id !== c.id);
   settlePending(g);
   return ok();
@@ -649,7 +649,7 @@ export function withdrawContact(g: Grand, contactId: string, faction: GrandFacti
     if (c.sea) retreatAtSea(g, f);
     else retreat(g, f, c.regionId);
   }
-  note(g, '{navy|이/가} {place} 싸움에서 물러났습니다', { navy: navyName(faction), place: REGIONS[c.regionId].name }, faction === g.player ? 'bad' : 'info');
+  note(g, '{navy}, {place}에서 퇴각', { navy: navyName(faction), place: REGIONS[c.regionId].name }, faction === g.player ? 'bad' : 'info');
   if (side === 'attacker') c.attackerFleets = c.attackerFleets.filter((id) => !gone.has(id));
   else c.defenderFleets = c.defenderFleets.filter((id) => !gone.has(id));
   c.reinforcements = c.reinforcements?.filter((id) => !gone.has(id));
@@ -763,7 +763,7 @@ function runEvents(g: Grand) {
     const ships = supportReinforcements(g, f, g.forces === 'wide-v1' ? scaleShips(plan.ships, TUNING.forceScale) : plan.ships);
     if (!Object.values(ships).some((n) => n && n > 0)) continue;
     const fleet = spawnFleet(g, f, plan.at, f === 'japan' ? '후속 함대' : f === 'ming' ? '원군 함대' : f === 'england' ? '여왕의 함대' : f === 'spain' ? '증원 함대' : f === 'holyleague' ? '동맹 증원 함대' : f === 'ottoman' ? '술탄의 함대' : f === 'britain' ? '해군성의 증원 함대' : f === 'france' ? '황제의 함대' : f === 'spain1805' ? '국왕의 함대' : '의병 함대', ships, null);
-    note(g, '{navy}의 {fleet} {n}척이 {place}에 도착했습니다', { navy: navyName(f), fleet: fleet.name, n: fleet.ships.length, place: REGIONS[plan.at].name }, f === g.player ? 'good' : 'info');
+    note(g, '{place}에 {navy} {fleet} 도착 · {n}척', { navy: navyName(f), fleet: fleet.name, n: fleet.ships.length, place: REGIONS[plan.at].name }, f === g.player ? 'good' : 'info');
   }
 }
 
@@ -780,10 +780,10 @@ export function growthVictoryRules(g: Grand): NonNullable<Grand['victoryRules']>
 }
 
 export function objectiveText(f: GrandFaction, g?: Grand): string {
-  if (g?.victoryRules?.kind === 'growth-v1') return '시작 영토보다 점령 가치를 늘려 공통 목표를 달성하고 반년 동안 유지합니다.';
-  if (f === 'joseon') return '남해안의 모든 포구와 쓰시마를 차지하고 반년 동안 유지합니다.';
-  if (f === 'japan') return '한산도를 포함해 남해안 포구에서 두 곳을 제외한 나머지를 차지하고 반년 동안 유지합니다.';
-  return '부산포와 함께 쓰시마나 나고야를 차지하고 반년 동안 유지합니다.';
+  if (g?.victoryRules?.kind === 'growth-v1') return '점령 가치를 시작 때보다 목표만큼 늘립니다.';
+  if (f === 'joseon') return '남해안의 모든 포구와 쓰시마를 차지합니다.';
+  if (f === 'japan') return '한산도를 포함해 남해안 포구를 두 곳만 빼고 모두 차지합니다.';
+  return '부산포와 함께 쓰시마나 나고야를 차지합니다.';
 }
 
 export function objectiveMet(g: Grand, f: GrandFaction): boolean {
@@ -817,7 +817,7 @@ function checkVictory(g: Grand) {
     if (st.alive && ownedBy(g, f).length === 0) {
       st.alive = false;
       g.fleets = g.fleets.filter((fl) => fl.faction !== f);
-      note(g, '{navy|은/는} 모든 포구를 잃고 패망했습니다', { navy: navyName(f) }, f === g.player ? 'bad' : 'info');
+      note(g, '{navy}, 모든 포구를 잃고 패망', { navy: navyName(f) }, f === g.player ? 'bad' : 'info');
     }
     st.idle += 1;
     st.objectiveHold = st.alive && objectiveMet(g, f) ? st.objectiveHold + 1 : 0;
@@ -827,7 +827,7 @@ function checkVictory(g: Grand) {
   const done = (faction: GrandFaction, kind: 'objective' | 'score' | 'elimination') => {
     g.victory = { faction, kind, turn: g.turn };
     g.phase = 'over';
-    note(g, '{navy|이/가} 캠페인에서 승리했습니다', { navy: navyName(faction) }, faction === g.player ? 'good' : 'bad');
+    note(g, '{navy}, 캠페인 승리', { navy: navyName(faction) }, faction === g.player ? 'good' : 'bad');
   };
   if (g.player && !g.factions[g.player].alive) return done(best(alive.length ? alive : [g.player]), 'elimination');
   const objective = alive.find((f) => g.factions[f].objectiveHold >= OBJECTIVE_HOLD);
@@ -849,7 +849,7 @@ function advanceTurn(g: Grand) {
           b.level += 1;
           b.hp = 1;
           b.upgradeTotal = 0;
-          if (r.owner === g.player) note(g, '{place}의 {work} {level}단계가 완공되었습니다', { place: REGIONS[id].name, work: BUILDING_DEFS[b.kind].label, level: b.level }, 'good', 'built');
+          if (r.owner === g.player) note(g, '{place} {work} {level}단계 완공', { place: REGIONS[id].name, work: BUILDING_DEFS[b.kind].label, level: b.level }, 'good', 'built');
         }
       }
     }
@@ -861,7 +861,7 @@ function advanceTurn(g: Grand) {
       if (q.left > 0) continue;
       r.queue.splice(r.queue.indexOf(q), 1);
       joinOrNewFleet(g, r.owner, id, spawnShip(g, q.kind));
-      if (r.owner === g.player) note(g, '{place}에서 {ship|이/가} 완성되었습니다', { place: REGIONS[id].name, ship: SHIP_PREFIX[q.kind] }, 'good', 'built');
+      if (r.owner === g.player) note(g, '{place} {ship} 완성', { place: REGIONS[id].name, ship: SHIP_PREFIX[q.kind] }, 'good', 'built');
     }
     if (r.unrest > 0) r.unrest -= 1;
     else {
@@ -960,7 +960,7 @@ function holdSieges(g: Grand) {
     if (guns) for (const f of blockaders) for (const u of f.ships) u.hull = Math.max(0.25, u.hull - MARCH.shoreFire * guns);
     if (s.turns < s.hold) continue;
     const taker = blockaders.some((f) => f.faction === s.by) ? s.by : blockaders[0]!.faction;
-    note(g, '{place}의 수비대가 봉쇄를 견디지 못하고 항복했습니다', { place: REGIONS[id].name }, owner === g.player ? 'bad' : taker === g.player ? 'good' : 'info');
+    note(g, '{place} 수비대, 봉쇄 끝에 항복', { place: REGIONS[id].name }, owner === g.player ? 'bad' : taker === g.player ? 'good' : 'info');
     for (const f of blockaders) {
       f.besieging = false;
       f.assault = false;
@@ -976,5 +976,5 @@ function desert(g: Grand, f: GrandFaction) {
   const n = Math.ceil(all.length * 0.08);
   for (const { fl, u } of all.slice(0, n)) fl.ships.splice(fl.ships.indexOf(u), 1);
   dropEmpty(g);
-  if (n) note(g, n === 1 ? '{navy}: 은이 부족해 함선 1척이 이탈했습니다' : '{navy}: 은이 부족해 함선 {n}척이 이탈했습니다', { navy: navyName(f), n }, f === g.player ? 'bad' : 'info');
+  if (n) note(g, n === 1 ? '{navy}: 은 부족으로 함선 1척 이탈' : '{navy}: 은 부족으로 함선 {n}척 이탈', { navy: navyName(f), n }, f === g.player ? 'bad' : 'info');
 }

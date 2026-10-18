@@ -67,7 +67,7 @@ export function orderDispatch(g: Grand, fleets: readonly string[], ports: readon
     region.garrison = [];
     g.fleets.push(fleet);
   }
-  return ok('{n}개 함대의 이동 명령을 내렸습니다', { n: planned.plans.length });
+  return ok('함대 {n}개 출동', { n: planned.plans.length });
 }
 
 /** Port defence is transferred, preserving the exact hull ids, crews, supplies and casualties. */

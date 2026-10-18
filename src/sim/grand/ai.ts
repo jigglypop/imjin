@@ -415,7 +415,7 @@ export function autoWorks(g: Grand, f: GrandFaction): number {
   while (placed < AUTO_WORK_CAP) {
     const w = bestWork(g, f, g.factions[f].gold - reserve, 0.1, dice, reserve);
     if (!w || !orderBuild(g, w.id, w.kind).ok) break;
-    note(g, '자동 건설: {place}의 {work} {level}단계 ({gold}냥)', { place: REGIONS[w.id].name, work: BUILDING_DEFS[w.kind].label, level: w.level, gold: w.gold }, 'good', 'built');
+    note(g, '자동 건설: {place} {work} {level}단계 · {gold}냥', { place: REGIONS[w.id].name, work: BUILDING_DEFS[w.kind].label, level: w.level, gold: w.gold }, 'good', 'built');
     placed += 1;
   }
   return placed;

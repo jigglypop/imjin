@@ -39,6 +39,18 @@ function unescape(s) {
   return s.replace(/\\(['"\\])/g, '$1').replace(/\\n/g, '\n');
 }
 
+/** A template literal's own text without its ${...} substitutions, whose t('...') calls the first pass checks. */
+function templateText(lit) {
+  let out = '';
+  let depth = 0;
+  for (let i = 1; i < lit.length - 1; i++) {
+    if (depth === 0 && lit[i] === '$' && lit[i + 1] === '{') { depth = 1; i++; continue; }
+    if (depth > 0) { depth += lit[i] === '{' ? 1 : lit[i] === '}' ? -1 : 0; continue; }
+    out += lit[i];
+  }
+  return out;
+}
+
 function stripComments(src) {
   return src.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' ')).replace(/(^|[^:'"`])\/\/[^\n]*/g, (m, p) => p + ' '.repeat(m.length - p.length));
 }
@@ -63,7 +75,7 @@ for (const file of walk(area)) {
   // 2. Other Korean literals and JSX text.
   for (const m of src.matchAll(LITERAL)) {
     const lit = m[0];
-    if (!HANGUL.test(lit)) continue;
+    if (!HANGUL.test(lit[0] === '`' ? templateText(lit) : lit)) continue;
     const before = src.slice(Math.max(0, m.index - 4), m.index);
     if (/\bt\(\s*$/.test(before)) continue; // already t('...')
     if (/console\.\w+\(\s*$/.test(src.slice(Math.max(0, m.index - 16), m.index))) continue;

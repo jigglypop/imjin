@@ -2,7 +2,7 @@ export const EN_EXPANSION: Record<string, string> = {
   '밀물 · 항로별 물살에 주의하세요': 'Flood tide · watch the currents along your route',
   '썰물 · 조류의 방향이 바뀝니다': 'Ebb tide · the currents reverse',
   '포구 {ports} · 관측 함선 {ships}': 'Ports {ports} · observed ships {ships}',
-  '시작 영토보다 점령 가치를 늘려 공통 목표를 달성하고 반년 동안 유지합니다.': 'Grow control value from your starting territory to meet the common target, then hold it for two turns.',
+  '점령 가치를 시작 때보다 목표만큼 늘립니다.': 'Grow your control value past your start by the target.',
   '조류의 방향이 바뀌었습니다 · 항로와 회오리를 확인하세요': 'The current has reversed · check your route and the eddies',
   '함선 수와 전력 제한 없음 · 군영과 선소를 증설해 함대를 운용합니다': 'No ship or fleet strength cap · expand camps and shipyards to support your fleet',
   '출전 {n}척 · 건조로 계속 증원할 수 있습니다': '{n} starting ships · keep building reinforcements',

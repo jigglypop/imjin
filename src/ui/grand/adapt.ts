@@ -82,10 +82,10 @@ const LABEL: Partial<Record<RegionId, RegionView['labelSide']>> = {
 };
 
 const TERRAIN_NOTE: Record<RegionDef['terrain'], string> = {
-  strait: '좁은 해협입니다. 큰 배가 방향을 바꾸기 어려워 수비하는 쪽이 유리합니다.',
-  bay: '만과 포구입니다. 항구에 접근하려면 포대의 사정권을 지나야 합니다.',
-  island: '섬 사이의 물길입니다. 섬 그늘에 숨어 기습하기 좋습니다.',
-  open: '트인 바다입니다. 속도와 화력이 승부를 가릅니다.',
+  strait: '좁은 해협: 큰 배가 돌기 어려워 수비 측이 유리합니다.',
+  bay: '만과 포구: 포대 사정권을 지나야 닿습니다.',
+  island: '섬 사이 물길: 섬 그늘에서 기습하기 좋습니다.',
+  open: '트인 바다: 속도와 화력이 승부를 가릅니다.',
 };
 
 const player = (g: Grand): GrandFaction => g.player ?? factionsOf(g)[0]!;
@@ -349,14 +349,13 @@ export function previewView(g: Grand, contactId: string): BattlePreviewView | nu
     ...(camp ? [t('군영 {n}단계', { n: camp })] : []),
   ];
   const notes = [t(TERRAIN_NOTE[REGIONS[c.regionId].terrain])];
-  if (c.siege) notes.push(t('봉쇄된 포구를 구하러 온 함대가 봉쇄 함대와 싸웁니다.'));
   const joined = new Set(c.reinforcements ?? []);
   const helpers = (ids: string[]) => ids.filter((id) => joined.has(id)).flatMap((id) => fleetById(g, id) ?? []).map((fl) => tName(fl.name));
   const mineIn = [...c.attackerFleets, ...c.defenderFleets].some((id) => fleetById(g, id)?.faction === me);
   // A fight for a port can become a blockade while no enemy fleet lies in the port, and only by the navy that attacks.
   // The same test the order makes, so the button shows only when the blockade would be accepted and would hold.
   const besiegeable = besiegeProblem(g, c, me) === null;
-  if (marching(g) && mineIn) notes.push(c.sea ? t('퇴각하면 보급을 일부 잃고 물러납니다.') : t('퇴각하면 보급을 일부 잃고 물러납니다. 지킬 병력이 남지 않은 포구는 적에게 넘어갑니다.'));
+  if (marching(g) && mineIn) notes.push(c.sea ? t('퇴각하면 보급을 일부 잃습니다.') : t('퇴각하면 보급을 일부 잃고, 비워진 포구는 적에게 넘어갑니다.'));
   return {
     regionId: c.regionId,
     regionName: t(REGIONS[c.regionId].name),
@@ -410,15 +409,15 @@ const OPTION_TEXT: Record<GrandFaction, { name: string; leaders: string[]; blurb
   joseon: {
     name: '조선',
     leaders: ['이순신', '원균'],
-    blurb: '화포와 판옥선으로 바다를 지키는 수비형 진영입니다. 여수 선소에서 거북선을 건조할 수 있습니다.',
-    strengths: ['함포 화력', '거북선', '수입 +20%'],
+    blurb: '화포와 판옥선으로 바다를 지키는 수비형 진영입니다.',
+    strengths: ['함포 화력', '거북선'],
     weakness: '함선 수 열세',
     difficulty: 2,
   },
   japan: {
     name: '일본',
     leaders: ['와키자카', '구키'],
-    blurb: '많은 함선과 적선에 올라타는 백병전으로 밀어붙이는 공세형 진영입니다. 부산에서 시작해 값싼 함선을 늘려 가며 포구를 차지합니다.',
+    blurb: '많은 함선과 백병전으로 밀어붙이는 공세형 진영입니다.',
     strengths: ['백병전', '많은 함선', '낮은 건조비'],
     weakness: '해상 화력 열세',
     difficulty: 2,
@@ -426,8 +425,8 @@ const OPTION_TEXT: Record<GrandFaction, { name: string; leaders: string[]; blurb
   ming: {
     name: '명',
     leaders: ['진린', '등자룡'],
-    blurb: '서해 건너에서 원군으로 참전하는 진영입니다. 은이 넉넉하지만 조선 해역까지 3턴이 걸립니다.',
-    strengths: ['풍부한 은', '수입 +20%', '명 대형선'],
+    blurb: '서해 건너 원군입니다. 은이 넉넉하지만 조선까지 3턴이 걸립니다.',
+    strengths: ['풍부한 은', '명 대형선'],
     weakness: '먼 출전 거리',
     difficulty: 3,
   },
@@ -524,10 +523,10 @@ export function resultView(s: BattleSummary): BattleResultView {
     won,
     headline: won === null ? t('교전 종료') : won ? win : t('패배'),
     outcome: s.atSea
-      ? t('{winner|이/가} {place} 앞바다에서 {loser|을/를} 물리쳤습니다. 패한 함대는 물러났습니다.', { winner: winnerNavy, place, loser: t(NAVY[loser.faction]) })
+      ? t('{winner|이/가} {place} 앞바다에서 {loser|을/를} 물리쳤습니다.', { winner: winnerNavy, place, loser: t(NAVY[loser.faction]) })
       : s.captured
-        ? t('{winner|이/가} {place|을/를} 차지했습니다. {loser|은/는} 후퇴했습니다.', { winner: winnerNavy, place, loser: t(NAVY[loser.faction]) })
-        : t('{winner|이/가} {place|을/를} 지켜 냈습니다. 공격 함대는 후퇴했습니다.', { winner: winnerNavy, place }),
+        ? t('{winner|이/가} {place|을/를} 차지했습니다.', { winner: winnerNavy, place })
+        : t('{winner|이/가} {place|을/를} 지켜 냈습니다.', { winner: winnerNavy, place }),
     sides: [
       { role: '공격', faction: s.attacker.faction, ships: s.attacker.ships, lost: s.attacker.lost, kills: s.attacker.kills, you: you('attacker') },
       { role: '수비', faction: s.defender.faction, ships: s.defender.ships, lost: s.defender.lost, kills: s.defender.kills, you: you('defender') },
@@ -551,15 +550,15 @@ export function overView(g: Grand): GameOverView | null {
     ? t('{navy|은/는} 모든 포구를 잃고 패망했습니다.', { navy: mine })
     : won && !mineWon
       ? kind === 'objective'
-        ? t('{me|과/와} {navy|이/가} 함께 목표를 달성하고 유지했습니다.', { me: mine, navy })
+        ? t('{me|과/와} {navy|이/가} 목표를 이루었습니다.', { me: mine, navy })
         : kind === 'score'
-          ? t('{me|과/와} {navy|이/가} 함께 마지막 턴에 가장 높은 점수를 얻었습니다.', { me: mine, navy })
-          : t('{me|과/와} {navy|이/가} 함께 맞서던 모든 진영을 물리쳤습니다.', { me: mine, navy })
+          ? t('{me|과/와} {navy|이/가} 마지막 턴에 최고 점수를 얻었습니다.', { me: mine, navy })
+          : t('{me|과/와} {navy|이/가} 모든 적을 물리쳤습니다.', { me: mine, navy })
       : kind === 'objective'
-        ? t('{navy|이/가} 목표를 달성하고 유지했습니다.', { navy })
+        ? t('{navy|이/가} 목표를 이루었습니다.', { navy })
         : kind === 'score'
-          ? t('{navy|이/가} 마지막 턴에 가장 높은 점수를 얻었습니다.', { navy })
-          : t('{navy|은/는} 맞서던 모든 진영을 물리쳤습니다.', { navy });
+          ? t('{navy|이/가} 마지막 턴에 최고 점수를 얻었습니다.', { navy })
+          : t('{navy|이/가} 모든 적을 물리쳤습니다.', { navy });
   return {
     won,
     headline: won ? t('캠페인 승리') : t('캠페인 패배'),

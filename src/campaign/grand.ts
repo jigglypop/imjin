@@ -210,7 +210,7 @@ export const mergeFleets = (fleetIds: readonly string[]): Result =>
     if (fleets.some((f) => !f || f.faction !== g.player)) return notYours;
     const { merged, blocked } = mergeGroups(g, fleets as Fleet[]);
     if (merged) return ok('함대 {n}개를 합쳤습니다', { n: merged });
-    return blocked ?? fail('같은 포구에 정비를 마친 함대가 둘 이상 있어야 합칠 수 있습니다');
+    return blocked ?? fail('같은 포구에 정비를 마친 함대가 둘 이상 필요합니다');
   });
 
 /**

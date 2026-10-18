@@ -249,7 +249,7 @@ export function orderSplit(g: Grand, fleetId: string, shipIds: string[]): Result
   const fl = fleetById(g, fleetId);
   if (!fl || !fl.at) return fail('나눌 수 없습니다');
   const take = fl.ships.filter((s) => shipIds.includes(s.id));
-  if (!take.length) return fail('나눌 함선을 먼저 선택해야 합니다');
+  if (!take.length) return fail('나눌 함선을 고르세요');
   if (take.length >= fl.ships.length) return fail('함선을 전부 나눌 수는 없습니다');
   fl.ships = fl.ships.filter((s) => !shipIds.includes(s.id));
   const next: Fleet = { id: mintId(g, 'f'), faction: fl.faction, name: `${fl.name} 분견 함대`, commanderId: null, ships: take, at: fl.at, transit: null, route: [], from: fl.from, rest: fl.rest }; // i18n-ignore: detachment name; the UI translates the pattern
@@ -331,7 +331,7 @@ export function orderDeclareWar(g: Grand, a: GrandFaction, b: GrandFaction): Res
   if (bad) return bad;
   if (a === b || atWar(g, a, b)) return fail('이미 적대 관계입니다');
   g.relations[pairKey(a, b)] = 'war';
-  note(g, '{a|이/가} {b|과/와}의 동맹을 파기했습니다', { a: navyName(a), b: navyName(b) }, 'bad');
+  note(g, '{a}, {b|과/와}의 동맹 파기', { a: navyName(a), b: navyName(b) }, 'bad');
   return ok();
 }
 
@@ -344,7 +344,7 @@ export function orderAlliance(g: Grand, a: GrandFaction, b: GrandFaction): Resul
   // 1805: Britain stood alone against Napoleon's France and its Spanish ally; no peace or alliance came before 1808.
   if ((a === 'britain' || b === 'britain') && (a === 'france' || b === 'france' || a === 'spain1805' || b === 'spain1805')) return fail('영국은 프랑스·에스파냐와 동맹을 맺지 않습니다');
   g.relations[pairKey(a, b)] = 'allied';
-  note(g, '{a|과/와} {b|이/가} 동맹을 맺었습니다', { a: navyName(a), b: navyName(b) }, 'good');
+  note(g, '{a|과/와} {b} 동맹 체결', { a: navyName(a), b: navyName(b) }, 'good');
   return ok();
 }
 

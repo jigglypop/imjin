@@ -55,12 +55,12 @@ export function Icon({ name, size }: { name: IconName; size?: 'sm' | 'lg' }) {
 
 /** Korean source text: show a work's name and help through buildingName / buildingDesc. */
 export const BUILDINGS: Record<BuildingKind, { name: string; icon: IconName; desc: string }> = {
-  camp: { name: '군영', icon: 'camp', desc: '단계마다 유지비 면제 한도 +500은, 매 턴 선체 +5%·승조원 +6%. 수비대를 강화하고 상위 선소·포대·수리소를 열어줍니다.' },
-  shipyard: { name: '선소', icon: 'shipyard', desc: '1·2·3단계에서 동시에 2·3·4척을 건조하며 함선 가격은 100%·90%·80%입니다. 신규 함선은 1~3턴에 완성됩니다.' },
-  battery: { name: '포대', icon: 'battery', desc: '단계마다 방어 전력 +420. 손상되면 전력이 줄어듭니다. 직접 지휘하는 전투에도 같은 단계와 손상으로 배치됩니다.' },
-  dock: { name: '수리소', icon: 'dock', desc: '단계마다 머무는 함선의 선체를 매 턴 10%, 승조원을 8% 추가 회복합니다. 즉시 재정비 명령도 사용할 수 있습니다.' },
-  granary: { name: '창고', icon: 'granary', desc: '단계마다 수입이 25% 늘고, 전투에서는 화약고가 됩니다.' },
-  beacon: { name: '봉수대', icon: 'beacon', desc: '두 항로 앞까지 적 함대가 보이고 수입이 5% 늘어납니다.' },
+  camp: { name: '군영', icon: 'camp', desc: '단계당 유지비 면제 +500냥 · 매 턴 수리 +8%, 승조원 +10% · 수비대 증가' },
+  shipyard: { name: '선소', icon: 'shipyard', desc: '1단계 동시 건조 4척 · 단계당 +2척, 가격 −10%' },
+  battery: { name: '포대', icon: 'battery', desc: '단계당 방어 전력 +420 · 손상되면 약해짐 · 직접 지휘하는 전투에도 배치' },
+  dock: { name: '수리소', icon: 'dock', desc: '단계당 매 턴 수리 +17%, 승조원 +13% · 즉시 정비 가능' },
+  granary: { name: '창고', icon: 'granary', desc: '단계당 수입 +25% · 전투에서는 화약고' },
+  beacon: { name: '봉수대', icon: 'beacon', desc: '시야 2항로(2단계부터 3항로) · 단계당 수입 +5%' },
 };
 
 export const buildingName = (kind: BuildingKind) => t(BUILDINGS[kind].name);

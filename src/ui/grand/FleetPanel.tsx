@@ -48,7 +48,7 @@ function MarchBlock({ fleet, canMove, siegeOnArrival, onSiegeOnArrival, onStance
         <span className="g-march__label">{t('행동력')}</span>
         <b className="g-march__km">
           {t('{km}km/턴', { km: forced ? m.reach.forced : m.reach.normal })}
-          {m.winter && <span className="g-march__winter" title={t('겨울: 행동력 −20%, 바다 위 함대 보급 소모 증가')}>{t('겨울 −20%')}</span>}
+          {m.winter && <span className="g-march__winter" title={t('겨울: 행동력 −20% · 바다 위 보급 소모 증가')}>{t('겨울 −20%')}</span>}
         </b>
         <span className="g-level g-level--sm" role="radiogroup" aria-label={t('항해 태세')}>
           {(['normal', 'march'] as const).map((s) => (
@@ -60,8 +60,8 @@ function MarchBlock({ fleet, canMove, siegeOnArrival, onSiegeOnArrival, onStance
       </div>
       <p className="g-hint">
         {forced
-          ? t('강행군: 이번 턴에만 1.5배 멀리 갑니다. 공격하거나 적의 포구로 들어갈 수 없고, 도중에 붙잡히면 지친 채 싸웁니다.')
-          : t('강행군을 고르면 이번 턴에만 {km}km까지 가지만 공격할 수 없습니다.', { km: m.reach.forced })}
+          ? t('강행군 중에는 공격할 수 없고, 붙잡히면 지친 채 싸웁니다.')
+          : t('강행군: 이번 턴 {km}km · 공격 불가', { km: m.reach.forced })}
       </p>
       {siege ? (
         <div className="g-march__siege">
@@ -70,12 +70,12 @@ function MarchBlock({ fleet, canMove, siegeOnArrival, onSiegeOnArrival, onStance
             <b>{t('{n}/{m}턴', { n: siege.turns, m: siege.hold })}</b>
             <Bar value={siege.turns / Math.max(1, siege.hold)} tone="warn" label={t('봉쇄 {n}/{m}', { n: siege.turns, m: siege.hold })} />
           </div>
-          <p className="g-hint">{t('포구는 수입과 함선 건조가 멈췄고 수비대가 굶주립니다. {turns} 더 버티면 항복합니다.', { turns: turnsText(Math.max(1, siege.hold - siege.turns)) })}</p>
+          <p className="g-hint">{t('수입·건조 정지 · {turns} 뒤 항복', { turns: turnsText(Math.max(1, siege.hold - siege.turns)) })}</p>
           <label className="g-row g-batch-row">
             <input className="g-check" type="checkbox" checked={m.assault} onChange={(e) => onAssault?.(fleet.id, e.target.checked)} />
             <span className="g-row__main">
               <span className="g-row__title">{t('강습 명령')}</span>
-              <span className="g-row__sub">{t('턴을 마치면 기다리지 않고 포구를 공격합니다')}</span>
+              <span className="g-row__sub">{t('턴 종료 때 바로 공격합니다')}</span>
             </span>
           </label>
         </div>
@@ -86,7 +86,7 @@ function MarchBlock({ fleet, canMove, siegeOnArrival, onSiegeOnArrival, onStance
             <input className="g-check" type="checkbox" checked={!!siegeOnArrival} onChange={(e) => onSiegeOnArrival?.(e.target.checked)} />
             <span className="g-row__main">
               <span className="g-row__title">{t('도착하면 봉쇄')}</span>
-              <span className="g-row__sub">{t('적의 포구를 강습하지 않고 둘러싸 굶깁니다. 수입과 건조가 멈추고 몇 턴 뒤 항복합니다')}</span>
+              <span className="g-row__sub">{t('강습하지 않고 굶겨 항복시킵니다')}</span>
             </span>
           </label>
         )
@@ -185,14 +185,14 @@ export function FleetPanel({
       }
     >
       {moving ? (
-        <p className="g-banner">{fleet.march ? t('고리가 있는 포구 중 목적지를 고릅니다. 포구 위에 올리면 턴마다 어디까지 가는지 보입니다.') : t('지도에서 강조된 포구 중 목적지를 고릅니다. 적의 포구를 고르면 공격합니다.')}</p>
+        <p className="g-banner">{fleet.march ? t('고리가 있는 포구를 고르세요. 포구에 올리면 턴별 항로가 보입니다.') : t('강조된 포구를 고르세요. 적 포구는 공격합니다.')}</p>
       ) : (
         own &&
         canMove && (
           <p className="g-hint">
             {fleet.march
-              ? t('고리 색은 닿는 턴입니다: 초록 이번 턴, 노랑 다음 턴, 주황 그 뒤. 적의 포구를 누르면 공격하고, 적 함대를 누르면 추격합니다.')
-              : t('강조된 적의 포구를 한 번 누르면 바로 공격합니다. 우리 편 포구로 옮기려면 이동을 누르세요.')}
+              ? t('고리 색: 초록 이번 턴 · 노랑 다음 턴 · 주황 그 뒤')
+              : t('강조된 적 포구를 누르면 바로 공격합니다.')}
           </p>
         )
       )}
@@ -200,13 +200,13 @@ export function FleetPanel({
         (fleet.march && sea ? (
           <p className="g-hint">
             {fleet.route.length
-              ? t('{from|과/와} {to} 사이 바다 위에 있습니다. 다음 턴에 항해를 이어 갑니다.', sea)
-              : t('{from|과/와} {to} 사이 바다 위에 멈춰 있습니다. 새 목적지를 고르거나 되돌아갈 수 있습니다.', sea)}
+              ? t('{from|과/와} {to} 사이 바다 위입니다. 다음 턴에 계속 갑니다.', sea)
+              : t('{from|과/와} {to} 사이에 멈춰 있습니다. 새 목적지를 고르세요.', sea)}
           </p>
         ) : (
-          <p className="g-hint">{t('항해 중입니다. {turns} 뒤에 도착합니다.', { turns: turnsText(fleet.transit.left) })}</p>
+          <p className="g-hint">{t('{turns} 뒤 도착합니다.', { turns: turnsText(fleet.transit.left) })}</p>
         ))}
-      {fleet.rest > 0 && !fleet.transit && <p className="g-hint">{t('전투 후 정비 중입니다. {turns} 동안 출항할 수 없습니다.', { turns: turnsText(fleet.rest) })}</p>}
+      {fleet.rest > 0 && !fleet.transit && <p className="g-hint">{t('전투 후 정비 중 · {turns} 뒤 출항', { turns: turnsText(fleet.rest) })}</p>}
       {routeText && !moving && (
         <p className="g-note g-route">
           <b>{t('항로')}</b> {routeText}
@@ -329,11 +329,11 @@ export function FleetPanel({
           <button type="button" className="g-btn g-btn--sm" disabled={gold < fleet.refit} onClick={() => onRefit?.(fleet.id)}>
             {t('정비 {price}', { price: goldText(fleet.refit) })}
           </button>
-          <Chip>{t('선체와 승조원을 모두 회복합니다')}</Chip>
+          <Chip>{t('선체·승조원 완전 회복')}</Chip>
         </div>
       )}
 
-      <h3 className="g-section">{t('함선')} {own && <span className="g-section__hint">{t('분할하거나 해체할 함선을 고릅니다')}</span>}</h3>
+      <h3 className="g-section">{t('함선')} {own && <span className="g-section__hint">{t('분할·해체할 함선을 고르세요')}</span>}</h3>
       <ul className="g-list">
         {fleet.ships.map((s) => (
           <li key={s.id}>
@@ -378,7 +378,7 @@ export function FleetPanel({
               {t('해체 ({n}척)', { n: picked.size })}
             </button>
           )}
-          <Chip>{t('건조비의 20%를 돌려받습니다')}</Chip>
+          <Chip>{t('건조비 20% 환급')}</Chip>
         </div>
       )}
     </Sheet>
