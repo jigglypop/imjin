@@ -112,7 +112,7 @@ export function SpecSheet({ kind }: { kind: ShipKind }) {
                   <b>{t(g.label)}</b>
                   <span>
                     {t('{n}문', { n: g.count })}
-                    {g.bow ? ` · ${t('뱃머리 포함')}` : ''}
+                    {g.bow ? ` · ${t('뱃머리 포함')}` : ''} {/* i18n-ignore: the t() call is inside the template */}
                   </span>
                 </div>
                 <p>{t(GUN_NOTES[g.gun])}</p>
@@ -139,7 +139,7 @@ export function SpecSheet({ kind }: { kind: ShipKind }) {
       </section>
       <p className="cx-note">
         {t('게임의 제원입니다. 역사 전투 기준이며, 쟁탈전과 캠페인에서는 균형을 위해 일부 값이 다릅니다.')}
-        {alias && ` ${t('게임에서는 {model} 모델을 {scale}% 크기로 그립니다.', { model: t(alias.model), scale: alias.scale })}`}
+        {alias && ` ${t('게임에서는 {model} 모델을 {scale}% 크기로 그립니다.', { model: t(alias.model), scale: alias.scale })}`} {/* i18n-ignore: the t() call is inside the template */}
       </p>
     </div>
   );

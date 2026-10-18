@@ -1,6 +1,6 @@
-// Regression checks for an account's growth (src/meta): the catalog of generals and armor, levels and skill trees,
-// buying and wearing armor, what a battle pays, the plausibility test of a single-player report, and the factors a
-// general gives his squadron in a battle.
+// Regression checks for an account's growth (src/meta): the catalog of generals, armor and weapons, levels and skill
+// trees, buying and wearing gear, what a battle pays, the plausibility test of a single-player report, and the factors
+// a general gives his squadron in a battle.
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -20,24 +20,42 @@ try {
   const { buildScenario } = await load('/src/sim/scenarios.ts');
   const close = (a, b) => Math.abs(a - b) < 1e-12;
 
-  check('the catalog: unique ids, a basic armor per navy, prices by tier, signatures only for famous generals of their navy', () => {
-    const ids = C.ARMORS.map((a) => a.id);
+  check('the catalog: unique ids, a basic piece per navy and slot, prices by tier, signatures only for famous generals of their navy, art on disk', () => {
+    const ids = C.GEAR.map((a) => a.id);
     assert.equal(new Set(ids).size, ids.length);
-    for (const f of ['joseon', 'japan', 'ming']) assert.equal(C.ARMORS.filter((a) => a.faction === f && a.tier === 'basic').length, 1);
-    for (const a of C.ARMORS) {
+    for (const slot of C.SLOTS) {
+      assert.ok(C.SLOT_LABEL[slot]);
+      for (const f of ['joseon', 'japan', 'ming']) {
+        assert.equal(C.GEAR.filter((a) => a.slot === slot && a.faction === f && a.tier === 'basic').length, 1, `${f} ${slot}`);
+        assert.deepEqual(C.GEAR.filter((a) => a.slot === slot && a.faction === f && a.tier !== 'signature').map((a) => a.tier), ['basic', 'common', 'fine', 'masterwork', 'legendary'], `${f} ${slot} climb the tiers`);
+      }
+    }
+    for (const a of C.GEAR) {
+      assert.ok(C.SLOTS.includes(a.slot), a.id);
       assert.equal(a.price, C.TIER_PRICE[a.tier], a.id);
-      assert.ok(a.name && a.line, a.id);
+      assert.ok(a.name && a.line && a.hanja, a.id);
+      assert.equal(C.gearById(a.id), a);
       if (a.tier === 'signature') {
         const g = C.generalById(a.general);
         assert.ok(g && g.famous && g.faction === a.faction, a.id);
       } else assert.equal(a.general, undefined, a.id);
       for (const v of Object.values(a.effect)) assert.ok(v >= 1 && v <= 1.1, a.id);
     }
+    for (const a of C.GEAR) assert.ok(a.tier === 'signature' || a.id.startsWith(`${a.faction}_`), a.id);
     for (const g of C.GENERALS) {
       assert.ok(TREES[g.id], `${g.id} has a tree`);
       assert.ok(existsSync(join(root, 'public', 'ui', 'portraits', `portrait_${g.id}.webp`)), `${g.id} has a portrait`);
-      if (g.famous) assert.equal(C.ARMORS.filter((a) => a.general === g.id).length, 1, `${g.id} has one signature`);
+      assert.equal(C.GEAR.filter((a) => a.general === g.id).length, g.famous ? 2 : 0, `${g.id} has a signature armor and a signature weapon, or none`);
+      for (const slot of C.SLOTS) {
+        const fits = C.gearFor(g, slot);
+        assert.ok(fits.every((a) => a.slot === slot && a.faction === g.faction && (!a.general || a.general === g.id)));
+        assert.equal(fits.length, 5 + (g.famous ? 1 : 0), `${g.id} ${slot}`);
+      }
+      // A famous general is painted in every armor he can wear, and each armor has its card; the weapons' cards come later.
+      if (g.famous) for (const a of C.gearFor(g, 'armor')) if (a.tier !== 'basic') assert.ok(existsSync(join(root, 'public', C.armoredPortraitUrl(g.id, a.id))), `${g.id} in ${a.id}`);
     }
+    for (const a of C.ARMORS) assert.ok(existsSync(join(root, 'public', C.gearCardUrl(a))), `${a.id} has its card`);
+    assert.equal(C.gearCardUrl(C.gearById('yi_janggeom'), true), '/ui/weapons/yi_janggeom_sm.webp');
   });
 
   check('levels: 100 xp for the second level, 200 more for the third, capped at 10', () => {
@@ -52,11 +70,19 @@ try {
     assert.equal(R.levelProgress(1e9).need, null);
   });
 
-  check('a stored profile is cleaned: unknown generals, skills and armor dropped, counts made whole and positive', () => {
-    const p = R.normalizeProfile({ coins: 12.7, owned: ['joseon_swaeja', 'nope', 'joseon_dujeong', 'joseon_swaeja'], generals: { yi: { xp: -5, skills: ['gunnery1', 'boarding1', 'x'], armor: 'japan_oyoroi' }, ghost: { xp: 9 } }, stats: { wins: 'a' }, firsts: ['b', 'a', 'a'] });
+  check('a stored profile is cleaned: unknown generals, skills and gear dropped, counts made whole and positive', () => {
+    const p = R.normalizeProfile({
+      coins: 12.7,
+      owned: ['joseon_swaeja', 'nope', 'joseon_dujeong', 'joseon_swaeja', 'joseon_hwando', 'yi_janggeom'],
+      generals: { yi: { xp: -5, skills: ['gunnery1', 'boarding1', 'x'], armor: 'japan_oyoroi', weapon: 'yi_janggeom' }, won: { weapon: 'yi_janggeom', armor: 'joseon_hwando' }, kwon: { armor: 'joseon_dujeong', weapon: 'joseon_gakgung' }, ghost: { xp: 9 } },
+      stats: { wins: 'a' },
+      firsts: ['b', 'a', 'a'],
+    });
     assert.equal(p.coins, 12);
-    assert.deepEqual(p.owned, ['joseon_swaeja']);
-    assert.deepEqual(p.generals.yi, { xp: 0, skills: ['gunnery1'] });
+    assert.deepEqual(p.owned, ['joseon_swaeja', 'yi_janggeom'], 'bought pieces of either slot stay, basic pieces and unknown ids go');
+    assert.deepEqual(p.generals.yi, { xp: 0, skills: ['gunnery1'], weapon: 'yi_janggeom' }, "another navy's armor goes, his own signature weapon stays");
+    assert.deepEqual(p.generals.won, { xp: 0, skills: [] }, "another general's signature, and a weapon in the armor slot, go");
+    assert.deepEqual(p.generals.kwon, { xp: 0, skills: [], weapon: 'joseon_gakgung' }, 'a basic piece is never kept as worn');
     assert.equal(p.generals.ghost, undefined);
     assert.deepEqual(p.stats, { battles: 0, wins: 0, sunk: 0, lost: 0 });
     assert.deepEqual(p.firsts, ['a', 'b']);
@@ -78,34 +104,70 @@ try {
     assert.equal(R.learnProblem(p, 'yi', 'mastery'), null);
   });
 
-  check('armor: bought once with enough coins, worn only by a general of its navy, signatures by their general alone', () => {
-    let p = { ...R.newProfile(), coins: 10000 };
-    assert.equal(R.buyProblem(p, 'joseon_dujeong'), '살 수 없는 갑옷입니다');
+  check('gear: bought once with enough coins, carried only by a general of its navy in its own slot, signatures by their general alone', () => {
+    let p = { ...R.newProfile(), coins: 20000 };
+    assert.equal(R.buyProblem(p, 'joseon_dujeong'), '살 수 없는 장비입니다');
+    assert.equal(R.buyProblem(p, 'joseon_hwando'), '살 수 없는 장비입니다');
+    assert.equal(R.buyProblem(p, 'nope'), '살 수 없는 장비입니다');
     p = R.buy(p, 'yi_tongjesa').profile;
-    assert.equal(p.coins, 1000);
-    assert.equal(R.buyProblem(p, 'yi_tongjesa'), '이미 가진 갑옷입니다');
+    assert.equal(p.coins, 11000);
+    assert.equal(R.buyProblem(p, 'yi_tongjesa'), '이미 가진 장비입니다');
+    const bought = R.buy(p, 'yi_janggeom');
+    p = bought.profile;
+    assert.equal(bought.item.slot, 'weapon');
+    assert.equal(p.coins, 2000);
+    assert.deepEqual(p.owned, ['yi_janggeom', 'yi_tongjesa']);
     assert.equal(R.buyProblem(p, 'joseon_eorin'), '엽전이 모자랍니다');
-    assert.equal(R.equipProblem(p, 'won', 'yi_tongjesa'), '다른 장수의 전용 갑옷입니다');
-    assert.equal(R.equipProblem(p, 'wakisaka', 'joseon_pigap'), '다른 나라의 갑옷입니다');
-    assert.equal(R.equipProblem(p, 'yi', 'joseon_pigap'), '아직 가지지 않은 갑옷입니다');
-    p = R.equip(p, 'yi', 'yi_tongjesa');
+    assert.equal(R.buyProblem(p, 'joseon_ungeom'), '엽전이 모자랍니다');
+    assert.equal(R.equipProblem(p, 'won', 'armor', 'yi_tongjesa'), '다른 장수의 전용 장비입니다');
+    assert.equal(R.equipProblem(p, 'won', 'weapon', 'yi_janggeom'), '다른 장수의 전용 장비입니다');
+    assert.equal(R.equipProblem(p, 'wakisaka', 'armor', 'joseon_pigap'), '다른 나라의 장비입니다');
+    assert.equal(R.equipProblem(p, 'wakisaka', 'weapon', 'joseon_gakgung'), '다른 나라의 장비입니다');
+    assert.equal(R.equipProblem(p, 'yi', 'armor', 'joseon_pigap'), '아직 가지지 않은 장비입니다');
+    assert.equal(R.equipProblem(p, 'yi', 'armor', 'yi_janggeom'), '맞지 않는 자리입니다');
+    assert.equal(R.equipProblem(p, 'yi', 'weapon', 'yi_tongjesa'), '맞지 않는 자리입니다');
+    assert.equal(R.equipProblem(p, 'yi', 'weapon', 'nope'), '없는 장비입니다');
+    assert.equal(R.equipProblem(p, 'nobody', 'armor', null), '없는 장수입니다');
+    assert.equal(R.equipProblem(p, 'yi', 'cloak', null), '없는 자리입니다');
+    assert.throws(() => R.equip(p, 'yi', 'weapon', 'yi_tongjesa'), R.RuleError);
+    p = R.equip(R.equip(p, 'yi', 'armor', 'yi_tongjesa'), 'yi', 'weapon', 'yi_janggeom');
+    assert.deepEqual(p.generals.yi, { xp: 0, skills: [], armor: 'yi_tongjesa', weapon: 'yi_janggeom' });
     assert.equal(R.wornArmor(p, 'yi').id, 'yi_tongjesa');
+    assert.equal(R.wornWeapon(p, 'yi').id, 'yi_janggeom');
     assert.equal(R.wornArmor(p, 'won').id, 'joseon_dujeong');
-    p = R.equip(p, 'yi', null);
-    assert.equal(p.generals.yi.armor, undefined);
+    assert.equal(R.wornWeapon(p, 'won').id, 'joseon_hwando');
+    assert.equal(R.wornWeapon(p, 'kuki').id, 'japan_uchigatana');
+    assert.equal(R.wornGear(p, 'chenlin', 'armor').id, 'ming_dingjia');
+    assert.equal(R.wornGear(p, 'nobody', 'armor'), undefined);
+    p = R.equip(p, 'yi', 'weapon', null);
+    assert.equal(p.generals.yi.weapon, undefined);
+    assert.equal(p.generals.yi.armor, 'yi_tongjesa', 'a slot is taken back alone');
+    assert.equal(R.wornWeapon(p, 'yi').id, 'joseon_hwando');
+    p = R.equip(p, 'yi', 'armor', null);
     assert.equal(R.wornArmor(p, 'yi').id, 'joseon_dujeong');
+    assert.deepEqual(R.equip(p, 'yi', 'weapon', 'joseon_hwando').generals.yi, { xp: 0, skills: [] }, 'a basic piece is taken, never stored as worn');
+    assert.deepEqual(R.shopGear('weapon', 'ming').map((x) => x.id), ['ming_nangseon', 'ming_samnyeon', 'ming_woldo', 'ming_jangdo', 'chenlin_jihwido', 'deng_woldo']);
+    assert.equal(R.shopGear().length, C.GEAR.length - 6);
   });
 
-  check('a general\'s factors: his trait, his steps and his armor multiply; the campaign-only march, xp and temper are left out', () => {
-    let p = { ...R.newProfile(), coins: 9000, generals: { yi: { xp: R.xpFor(2), skills: ['gunnery1'] } } };
-    p = R.equip(R.buy(p, 'yi_tongjesa').profile, 'yi', 'yi_tongjesa');
-    const m = R.generalMods(p, 'yi');
-    assert.ok(close(m.accuracy, 1.06 * 1.03));
-    assert.ok(close(m.morale, 1.06 * 1.06));
-    assert.ok(close(m.defense, 1.06));
-    assert.ok(close(m.reload, 1.05));
-    assert.equal(m.speed, 1);
-    assert.deepEqual(Object.keys(m).sort(), Object.keys(R.NEUTRAL_MODS).sort());
+  check("a general's factors: his trait, his steps, his armor and his weapon multiply; the campaign-only march, xp and temper are left out", () => {
+    let p = { ...R.newProfile(), coins: 20000, generals: { yi: { xp: R.xpFor(2), skills: ['gunnery1'] } } };
+    p = R.equip(R.buy(p, 'yi_tongjesa').profile, 'yi', 'armor', 'yi_tongjesa');
+    const armorOnly = R.generalMods(p, 'yi');
+    assert.ok(close(armorOnly.accuracy, 1.06 * 1.03));
+    assert.ok(close(armorOnly.morale, 1.06 * 1.06));
+    assert.ok(close(armorOnly.defense, 1.06));
+    assert.ok(close(armorOnly.reload, 1.05));
+    assert.equal(armorOnly.melee, 1);
+    assert.equal(armorOnly.speed, 1);
+    p = R.equip(R.buy(p, 'yi_janggeom').profile, 'yi', 'weapon', 'yi_janggeom');
+    const both = R.generalMods(p, 'yi');
+    assert.ok(close(both.accuracy, 1.06 * 1.03 * 1.02));
+    assert.ok(close(both.morale, 1.06 * 1.06 * 1.06));
+    assert.ok(close(both.melee, 1.04));
+    assert.ok(close(both.defense, 1.06));
+    assert.deepEqual(Object.keys(both).sort(), Object.keys(R.NEUTRAL_MODS).sort());
+    assert.deepEqual(R.generalMods(R.newProfile(), 'kuki'), { ...R.NEUTRAL_MODS, defense: 1.06, reload: 1.04 }, 'a general with nothing bought brings only his trait');
   });
 
   const report = (o = {}) => ({ mode: 'history', scenario: 'hansan', side: 'joseon', result: 'win', stars: 2, sunk: 10, lost: 1, simSeconds: 900, generals: [{ id: 'yi', sunk: 6 }, { id: 'eokgi', sunk: 2 }], ...o });
@@ -152,8 +214,9 @@ try {
   });
 
   check('in a battle, only the squadrons of the account\'s generals on the player\'s team take their factors, and the same profile gives the same ships', () => {
-    let p = { ...R.newProfile(), coins: 9000 };
-    p = R.equip(R.buy(p, 'yi_tongjesa').profile, 'yi', 'yi_tongjesa');
+    let p = { ...R.newProfile(), coins: 20000 };
+    p = R.equip(R.buy(p, 'yi_tongjesa').profile, 'yi', 'armor', 'yi_tongjesa');
+    p = R.equip(R.buy(p, 'yi_janggeom').profile, 'yi', 'weapon', 'yi_janggeom');
     const plain = buildScenario('hansan', 0, 1592);
     const a = buildScenario('hansan', 0, 1592);
     const b = buildScenario('hansan', 0, 1592);
@@ -165,6 +228,7 @@ try {
     const ship = a.get(yiSq.shipIds[0]);
     const before = plain.get(yiSq.shipIds[0]);
     assert.ok(close(ship.mods.defense, before.mods.defense * 1.06));
+    assert.ok(close(ship.mods.melee, before.mods.melee * 1.04), 'the weapon reaches the ships too');
     for (const s of a.ships) assert.deepEqual(s.mods, b.get(s.id).mods);
     for (const s of a.ships) if (s.team === 'japan') assert.deepEqual(s.mods, plain.get(s.id).mods);
   });

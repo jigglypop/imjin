@@ -1,9 +1,9 @@
 import type { ShipMods } from '../sim/types';
 import { BRANCH_SKILLS, MASTERY_ID, TREES, type Effect, type SkillDef } from '../sim/grand/growthData';
-import { ARMORS, GENERALS, armorById, armorsFor, basicArmor, generalById, type ArmorDef } from './catalog';
+import { GEAR, GENERALS, SLOTS, basicGear, gearById, gearFor, generalById, type GearDef, type Slot } from './catalog';
 
 /**
- * The rules of an account's growth: what a battle earns, how a general rises and learns, and what armor costs and fits.
+ * The rules of an account's growth: what a battle earns, how a general rises and learns, and what gear costs and fits.
  * Pure and deterministic like src/sim (the time of day comes in as a parameter), so the server, which owns every
  * profile, and the client, which shows what a button will do before it is pressed, apply the very same rules.
  *
@@ -16,12 +16,14 @@ export const MAX_LEVEL = 10;
 export const MASTERY_LEVEL = 6;
 /** Coins a day from battles the server cannot watch (single-player); online results are not capped. */
 export const DAILY_CAP = 3000;
+/** The fastest the game runs a battle: the largest speed in Engine's SPEEDS, which is also the approach's fast-forward. */
+export const MAX_SIM_SPEED = 128;
 
-export type GeneralState = { xp: number; skills: string[]; armor?: string };
+export type GeneralState = { xp: number; skills: string[]; armor?: string; weapon?: string };
 export type Profile = {
   v: typeof PROFILE_VERSION;
   coins: number;
-  /** Bought armor, sorted. A faction's basic armor is everyone's and never listed. */
+  /** Bought armor and weapons, sorted. A faction's basic piece of each slot is everyone's and never listed. */
   owned: string[];
   generals: Record<string, GeneralState>;
   stats: { battles: number; wins: number; sunk: number; lost: number };
@@ -37,20 +39,23 @@ export const newProfile = (): Profile => ({ v: PROFILE_VERSION, coins: 0, owned:
 const count = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) && n > 0 ? Math.floor(n) : 0);
 const strings = (a: unknown) => (Array.isArray(a) ? a.filter((s): s is string => typeof s === 'string') : []);
 
-/** A stored profile made safe to use: unknown generals, armor and skills dropped, counts clamped to whole numbers. */
+/** A stored profile made safe to use: unknown generals, gear and skills dropped, counts clamped to whole numbers. */
 export function normalizeProfile(raw: unknown): Profile {
   const p = newProfile();
   if (!raw || typeof raw !== 'object') return p;
   const r = raw as Record<string, unknown>;
   p.coins = count(r.coins);
-  p.owned = [...new Set(strings(r.owned).filter((id) => armorById(id) && armorById(id)!.tier !== 'basic'))].sort();
+  p.owned = [...new Set(strings(r.owned).filter((id) => gearById(id) && gearById(id)!.tier !== 'basic'))].sort();
   const gens = r.generals && typeof r.generals === 'object' ? (r.generals as Record<string, unknown>) : {};
   for (const g of GENERALS) {
     const s = gens[g.id] as Record<string, unknown> | undefined;
     if (!s || typeof s !== 'object') continue;
     const known = new Set(skillsFor(g.id).map((k) => k.id));
     const state: GeneralState = { xp: count(s.xp), skills: [...new Set(strings(s.skills).filter((k) => known.has(k)))] };
-    if (typeof s.armor === 'string' && armorsFor(g).some((a) => a.id === s.armor)) state.armor = s.armor;
+    for (const slot of SLOTS) {
+      const id = s[slot];
+      if (typeof id === 'string' && gearFor(g, slot).some((x) => x.id === id && x.tier !== 'basic')) state[slot] = id;
+    }
     p.generals[g.id] = state;
   }
   const st = (r.stats && typeof r.stats === 'object' ? r.stats : {}) as Record<string, unknown>;
@@ -104,7 +109,7 @@ export function learnProblem(p: Profile, id: string, skillId: string): string | 
   const g = generalState(p, id);
   if (g.skills.includes(skillId)) return '이미 익혔습니다';
   if (skill.branch === 'mastery') {
-    if (levelOf(g.xp) < MASTERY_LEVEL) return `${MASTERY_LEVEL}레벨에 익힐 수 있습니다`;
+    if (levelOf(g.xp) < MASTERY_LEVEL) return `${MASTERY_LEVEL}레벨에 익힐 수 있습니다`; // i18n-ignore: the one number the English entry spells out
   } else {
     const before = BRANCH_SKILLS[skill.branch][skill.tier - 2];
     if (before && !g.skills.includes(before.id)) return '앞 단계를 먼저 익혀야 합니다';
@@ -120,55 +125,60 @@ export function learn(p: Profile, id: string, skillId: string): Profile {
   return { ...p, generals: { ...p.generals, [id]: { ...g, skills: [...g.skills, skillId] } } };
 }
 
-// --- Armor ------------------------------------------------------------------------------------------------------
+// --- Gear -------------------------------------------------------------------------------------------------------
 
 export class RuleError extends Error {}
 
-export const owns = (p: Profile, armorId: string) => armorById(armorId)?.tier === 'basic' || p.owned.includes(armorId);
+export const owns = (p: Profile, id: string) => gearById(id)?.tier === 'basic' || p.owned.includes(id);
 
-export function buyProblem(p: Profile, armorId: string): string | null {
-  const a = armorById(armorId);
-  if (!a || a.tier === 'basic') return '살 수 없는 갑옷입니다';
-  if (owns(p, armorId)) return '이미 가진 갑옷입니다';
-  if (p.coins < a.price) return '엽전이 모자랍니다';
+export function buyProblem(p: Profile, id: string): string | null {
+  const piece = gearById(id);
+  if (!piece || piece.tier === 'basic') return '살 수 없는 장비입니다';
+  if (owns(p, id)) return '이미 가진 장비입니다';
+  if (p.coins < piece.price) return '엽전이 모자랍니다';
   return null;
 }
 
-export function buy(p: Profile, armorId: string): { profile: Profile; armor: ArmorDef } {
-  const problem = buyProblem(p, armorId);
+export function buy(p: Profile, id: string): { profile: Profile; item: GearDef } {
+  const problem = buyProblem(p, id);
   if (problem) throw new RuleError(problem);
-  const armor = armorById(armorId)!;
-  return { profile: { ...p, coins: p.coins - armor.price, owned: [...p.owned, armorId].sort() }, armor };
+  const item = gearById(id)!;
+  return { profile: { ...p, coins: p.coins - item.price, owned: [...p.owned, id].sort() }, item };
 }
 
-/** Why a general cannot put on an armor (null takes his own basic armor back), or null. */
-export function equipProblem(p: Profile, generalId: string, armorId: string | null): string | null {
+/** Why a general cannot carry a piece in a slot (null takes his own basic piece back), or null. */
+export function equipProblem(p: Profile, generalId: string, slot: Slot, id: string | null): string | null {
   const g = generalById(generalId);
   if (!g) return '없는 장수입니다';
-  if (armorId === null) return null;
-  const a = armorById(armorId);
-  if (!a) return '없는 갑옷입니다';
-  if (a.faction !== g.faction) return '다른 나라의 갑옷입니다';
-  if (a.general && a.general !== g.id) return '다른 장수의 전용 갑옷입니다';
-  if (!owns(p, armorId)) return '아직 가지지 않은 갑옷입니다';
+  if (!SLOTS.includes(slot)) return '없는 자리입니다';
+  if (id === null) return null;
+  const piece = gearById(id);
+  if (!piece) return '없는 장비입니다';
+  if (piece.slot !== slot) return '맞지 않는 자리입니다';
+  if (piece.faction !== g.faction) return '다른 나라의 장비입니다';
+  if (piece.general && piece.general !== g.id) return '다른 장수의 전용 장비입니다';
+  if (!owns(p, id)) return '아직 가지지 않은 장비입니다';
   return null;
 }
 
-export function equip(p: Profile, generalId: string, armorId: string | null): Profile {
-  const problem = equipProblem(p, generalId, armorId);
+export function equip(p: Profile, generalId: string, slot: Slot, id: string | null): Profile {
+  const problem = equipProblem(p, generalId, slot, id);
   if (problem) throw new RuleError(problem);
-  const { armor: _old, ...rest } = generalState(p, generalId);
-  const state: GeneralState = armorId && armorById(armorId)!.tier !== 'basic' ? { ...rest, armor: armorId } : rest;
+  const state: GeneralState = { ...generalState(p, generalId) };
+  delete state[slot];
+  if (id && gearById(id)!.tier !== 'basic') state[slot] = id;
   return { ...p, generals: { ...p.generals, [generalId]: state } };
 }
 
-/** The armor a general wears: what he put on, or his faction's basic armor. */
-export function wornArmor(p: Profile, generalId: string): ArmorDef | undefined {
+/** What a general carries in a slot: what he put on, or his faction's basic piece. */
+export function wornGear(p: Profile, generalId: string, slot: Slot): GearDef | undefined {
   const g = generalById(generalId);
   if (!g) return undefined;
-  const id = generalState(p, generalId).armor;
-  return (id && armorById(id)) || basicArmor(g.faction);
+  const id = generalState(p, generalId)[slot];
+  return (id && gearById(id)) || basicGear(g.faction, slot);
 }
+export const wornArmor = (p: Profile, generalId: string) => wornGear(p, generalId, 'armor');
+export const wornWeapon = (p: Profile, generalId: string) => wornGear(p, generalId, 'weapon');
 
 // --- What a general brings to his ships -------------------------------------------------------------------------
 
@@ -180,7 +190,7 @@ function multiply(m: ShipMods, e: Effect | Partial<ShipMods>) {
 }
 
 /**
- * The factors a general gives the ships of his squadron: his trait, the steps he learned and his armor. Only the
+ * The factors a general gives the ships of his squadron: his trait, the steps he learned, his armor and his weapon. Only the
  * ship factors count here; the campaign's march, experience and temper have no meaning in a single battle.
  */
 export function generalMods(p: Profile, generalId: string): ShipMods {
@@ -193,8 +203,10 @@ export function generalMods(p: Profile, generalId: string): ShipMods {
     const s = steps.find((k) => k.id === id);
     if (s) multiply(m, s.effect);
   }
-  const armor = wornArmor(p, generalId);
-  if (armor) multiply(m, armor.effect);
+  for (const slot of SLOTS) {
+    const piece = wornGear(p, generalId, slot);
+    if (piece) multiply(m, piece.effect);
+  }
   return m;
 }
 
@@ -282,5 +294,5 @@ export function reportProblem(report: BattleReport, known: { ownShips: number; e
   return null;
 }
 
-/** Every armor a profile could show in a shop: its faction's, and the signatures of its generals. */
-export const shopArmors = (faction?: string): ArmorDef[] => ARMORS.filter((a) => a.tier !== 'basic' && (!faction || a.faction === faction));
+/** Every piece a shop could show: the ones a general can buy, one slot's and one faction's if asked for, signatures included. */
+export const shopGear = (slot?: Slot, faction?: string): GearDef[] => GEAR.filter((x) => x.tier !== 'basic' && (!slot || x.slot === slot) && (!faction || x.faction === faction));
