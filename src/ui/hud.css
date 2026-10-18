@@ -1320,7 +1320,7 @@
   display: contents;
 }
 
-/* Simplified: the group panel is one slim strip under the menu, holding only the groups that have ships. */
+/* Simplified: the selection bar is one slim strip under the menu. */
 .hud--slim .touch-bar {
   width: auto;
   max-width: 212px;

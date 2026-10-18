@@ -22,7 +22,7 @@ const FAR = 2200;
 export class ShipLabels {
   private readonly layer: HTMLDivElement;
   private readonly labels = new Map<number, Label>();
-  private tools = { top: 0, at: 0 };
+  private tools = { top: 0, at: 0, rects: [] as { x0: number; x1: number; y0: number; y1: number }[] };
   onSelect: ((shipId: number, additive: boolean) => void) | null = null;
 
   constructor(parent: HTMLElement) {
@@ -70,11 +70,16 @@ export class ShipLabels {
     const now = performance.now();
     if (now - this.tools.at > 500) {
       const r = document.querySelector('.hud .balance')?.getBoundingClientRect();
-      this.tools = { top: r && r.height > 0 ? r.bottom + 4 : 0, at: now };
+      // Labels never sit under the HUD's panels: they are placed as if those were labels already.
+      const rects = [...document.querySelectorAll('.hud .glass, .touch-bar > *, .hud .cards, .minimap, .dock')]
+        .map((el) => el.getBoundingClientRect())
+        .filter((b) => b.width > 0 && b.height > 0)
+        .map((b) => ({ x0: b.left, x1: b.right, y0: b.top, y1: b.bottom }));
+      this.tools = { top: r && r.height > 0 ? r.bottom + 4 : 0, at: now, rects };
     }
     const leaders = new Set(battle.squadrons.map((sq) => sq.leaderId));
     const phone = width < 700;
-    const max = phone ? 10 : width < 1500 ? 24 : 36;
+    const max = phone ? 6 : width < 1500 ? 10 : 14;
     const spots: Spot[] = [];
     const present = new Set<number>();
     for (const ship of battle.ships) {
@@ -90,7 +95,10 @@ export class ShipLabels {
       const selected = views.selected.has(ship.id);
       const hull = ship.hull / ship.spec.hull;
       const key = selected || ship.flagship;
-      if (tmp.z >= 1 || Math.abs(tmp.x) > 1 || Math.abs(tmp.y) > 1 || (dist > FAR && !key)) {
+      // Only ships worth naming get a label: the selected, the flagships, the squadron leaders, the badly hurt, and
+      // any ship the camera is right over. A line of numbered hulls stays unlabelled.
+      const worth = key || leaders.has(ship.id) || hull < 0.5 || dist < 420;
+      if (!worth || tmp.z >= 1 || Math.abs(tmp.x) > 1 || Math.abs(tmp.y) > 1 || (dist > FAR && !key)) {
         if (label) this.hide(label);
         continue;
       }
@@ -107,7 +115,7 @@ export class ShipLabels {
     // A sunk ship leaves the battle's list: its label goes with it.
     for (const [id, l] of this.labels) if (!present.has(id)) this.hide(l);
     spots.sort((a, b) => b.prio - a.prio);
-    const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
+    const placed = [...this.tools.rects];
     let count = 0;
     for (const s of spots) {
       const sx = Math.max(s.w / 2 + 4, Math.min(width - s.w / 2 - 4, s.sx));
