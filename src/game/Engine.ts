@@ -970,6 +970,7 @@ export class Engine {
         localToWorld: (id, x, y, z, out) => engine.views.localToWorld(id, x, y, z, out),
         shipScale: (id) => (engine.battle.get(id)?.flagship ? 1.12 : 1),
         commandPost: (ship) => engine.crew?.commandPost(ship) ?? null,
+        drawnHeading: (ship) => engine.views.pose(ship).heading,
         get standIns() {
           return engine.crew?.standIns ?? NO_STAND_INS;
         },

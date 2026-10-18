@@ -1,5 +1,5 @@
 import { compose, ease, locate, type CameraPose, type Place, type RigHost } from './rig';
-import type { Act, Caption, Cue, Scene, Shot } from './types';
+import type { Act, Caption, Cue, Scene, Shot, V3 } from './types';
 
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 /** Seconds a black span takes to fall and to lift. */
@@ -27,6 +27,8 @@ export class CutscenePlayer {
   private focus = 0;
   /** Whether this figure shot frames the figure (decided at its first frame, never switched mid-shot). */
   private decided = false;
+  /** The close-up's clear set-up (the shot's `turn`/`reach`): a turn about him and a share of the distance. */
+  private clear = { yaw: 0, dist: 1 };
   private lookPlace: Place | null = null;
   private firedCues = 0;
   private firedActs = 0;
@@ -110,13 +112,19 @@ export class CutscenePlayer {
       if (!this.decided) {
         this.decided = true;
         this.closeOn = !!figure;
+        // ?noframe=1 keeps the default set-up: the occlusion probe's before/after captures.
+        const plain = typeof location !== 'undefined' && location.search.includes('noframe=1');
+        this.clear = plain ? { yaw: 0, dist: 1 } : { yaw: cam.turn ?? 0, dist: cam.reach ?? 1 };
       }
       if (this.closeOn) {
         // On his figure the lens rides with the drawn (interpolated) ship, no lag: a spring would trail a moving ship
         // by metres and put him off centre. Only the height is eased, so the deck's heave does not bob the frame.
         if (figure) this.place = this.place ? { ...figure, y: this.place.y + (figure.y - this.place.y) * (1 - Math.exp(-dt * 6)) } : { ...figure };
         if (!this.place) return null;
-        return compose({ ...shot, cam: { type: 'track', at: cam.at, from: cam.from, to: cam.to, look: cam.look } }, k, this.place, this.host);
+        const c = this.clear;
+        const scale = (v: V3): V3 => [v[0] * c.dist, v[1], v[2] * c.dist];
+        const turned = { ...this.place, heading: this.place.heading + c.yaw };
+        return compose({ ...shot, cam: { type: 'track', at: cam.at, from: scale(cam.from), to: scale(cam.to), look: cam.look } }, k, turned, this.host);
       }
       this.place = this.follow(this.place, locate(cam.at, this.host), dt);
       return this.place ? compose({ ...shot, cam: cam.fallback }, k, this.place, this.host) : null;

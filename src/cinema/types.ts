@@ -44,7 +44,11 @@ export type Track = { type: 'track'; at: Target; from: V3; to: V3; look: V3; loo
  * (forward the way he faces, up from his feet, right to his right). Until his figure is on deck, or on a device or page
  * where it never comes, the shot falls back to `fallback` around his ship.
  */
-export type Close = { type: 'figure'; who: string; at: Target; from: V3; to: V3; look: V3; fallback: Orbit };
+export type Close = {
+  type: 'figure'; who: string; at: Target; from: V3; to: V3; look: V3; fallback: Orbit;
+  /** A clear set-up found by scripts/probe-cine-occlusion.mjs: a turn about him (rad) and a share of the distance. */
+  turn?: number; reach?: number;
+};
 
 /** Eases from wherever the last shot left the camera into the player's battle camera, so the hand-off has no jump. */
 export type Home = { type: 'home'; at: Target };

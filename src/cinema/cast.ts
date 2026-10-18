@@ -1,4 +1,7 @@
-import { Group, Vector3, type PerspectiveCamera, type Scene as ThreeScene } from 'three/webgpu';
+import {
+  CanvasTexture, CircleGeometry, Group, Mesh, MeshBasicMaterial, Vector3,
+  type Material, type PerspectiveCamera, type Scene as ThreeScene,
+} from 'three/webgpu';
 import { createFigure, hangSword, holdWeapon, listModels, loader, modelUrl, releaseFigure, standFigure, weaponUrl, type Figure } from '../ui/generals/GeneralModel';
 import { WEAPONS } from '../meta/catalog';
 import type { Ship } from '../sim/types';
@@ -12,12 +15,14 @@ export interface CastHost {
   localToWorld(id: number, x: number, y: number, z: number, out: Vector3): Vector3;
   shipScale(id: number): number;
   commandPost(ship: Ship): { x: number; y: number; z: number } | null;
+  /** A ship's drawn heading (interpolated between sim steps), so he turns with the hull and not in steps. */
+  drawnHeading?(ship: Ship): number;
   /** Ships whose own captain figure steps aside while the commander stands there. */
   readonly standIns: Set<number>;
 }
 
 
-type Member = { def: CastMember; figure: Figure | null; holder: Group; ship: number; facing: number; failed: boolean; shown?: boolean; post?: { x: number; y: number; z: number } | null };
+type Member = { def: CastMember; figure: Figure | null; holder: Group; ship: number; facing: number; failed: boolean; shown?: boolean; off?: number; fade?: number; mats?: Material[]; post?: { x: number; y: number; z: number } | null };
 
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const shipOf = (got: Ship | Ship[] | undefined) => (Array.isArray(got) ? got[0] : got);
@@ -43,6 +48,9 @@ export class Cast {
   private readonly group = new Group();
   private readonly tmp = new Vector3();
   private disposed = false;
+  private readonly shadowTex = contactTexture();
+  private readonly shadowMat = new MeshBasicMaterial({ map: this.shadowTex, transparent: true, depthWrite: false, color: 0x000000 });
+  private readonly shadowGeo = new CircleGeometry(0.75, 24);
 
   constructor(private readonly host: CastHost, cast: Record<string, CastMember>, _light: CastLight, ctx: SceneContext) {
     this.group.name = 'cinema_cast';
@@ -50,6 +58,12 @@ export class Cast {
     for (const [name, def] of Object.entries(cast)) {
       const holder = new Group();
       holder.visible = false;
+      // A soft contact shadow under his feet grounds him on the deck.
+      const shadow = new Mesh(this.shadowGeo, this.shadowMat);
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.position.y = 0.03;
+      shadow.renderOrder = 1;
+      holder.add(shadow);
       this.group.add(holder);
       const member: Member = { def, figure: null, holder, ship: 0, facing: 0, failed: false };
       this.members.set(name, member);
@@ -79,6 +93,19 @@ export class Cast {
         return;
       }
       // No film lights of his own (owner 2026-10-18): he takes the scene's sun, sky, fog and exposure like the ships.
+      // He fades in over his first half second on deck (opacity only; transparent from the start, so nothing recompiles).
+      const mats: Material[] = [];
+      figure.root.traverse((o) => {
+        const mesh = o as Mesh;
+        if (!mesh.isMesh) return;
+        for (const mat of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+          mat.transparent = true;
+          mat.opacity = 0;
+          mats.push(mat);
+        }
+      });
+      m.mats = mats;
+      m.fade = 0;
       m.figure = figure;
       m.holder.add(figure.root);
     } catch (e) {
@@ -135,11 +162,14 @@ export class Cast {
         this.host.standIns.delete(m.ship);
         continue;
       }
-      if (name !== on) this.aim(m, ctx);
       // He turns on his deck toward the enemy, but keeps within a third of a right angle of the bow: further round, the
-      // camera a few metres in front of him would stand outside the hull, looking at its shield wall.
-      const off = Math.max(-0.55, Math.min(0.55, wrap(m.facing - ship.heading)));
-      m.facing = ship.heading + off;
+      // camera a few metres in front of him would stand outside the hull, looking at its shield wall. While he speaks
+      // his turn on the deck holds, and he swings with the drawn hull (the sim's heading steps would jolt the lens).
+      if (name !== on || m.off === undefined) {
+        this.aim(m, ctx);
+        m.off = Math.max(-0.55, Math.min(0.55, wrap(m.facing - ship.heading)));
+      }
+      m.facing = (this.host.drawnHeading?.(ship) ?? ship.heading) + m.off;
       // His mark is chosen once, so he never steps about the deck between shots.
       m.post ??= this.host.commandPost(ship);
       const post = m.post;
@@ -156,6 +186,11 @@ export class Cast {
       m.holder.visible = !!m.shown;
       this.host.standIns.add(ship.id);
       m.figure.mixer.update(dt);
+      if (m.shown && m.mats && (m.fade ?? 0) < 1) {
+        m.fade = Math.min(1, (m.fade ?? 0) + dt / 0.5);
+        const o = m.fade * m.fade * (3 - 2 * m.fade);
+        for (const mat of m.mats) mat.opacity = o;
+      }
       // The held sword hangs outside the body as on the generals screen (idleBlade.ts).
       hangSword(m.figure);
     }
@@ -170,7 +205,24 @@ export class Cast {
       m.figure = null;
     }
     this.members.clear();
+    this.shadowGeo.dispose();
+    this.shadowMat.dispose();
+    this.shadowTex.dispose();
     this.group.removeFromParent();
     this.group.clear();
   }
+}
+
+/** A radial falloff for the contact shadow (black centre to clear edge). */
+function contactTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d')!;
+  const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, 'rgba(0,0,0,0.55)');
+  r.addColorStop(0.55, 'rgba(0,0,0,0.25)');
+  r.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = r;
+  g.fillRect(0, 0, 64, 64);
+  return new CanvasTexture(c);
 }
