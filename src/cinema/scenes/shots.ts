@@ -31,8 +31,10 @@ export const closeUp = (who: string, ship: Pick, dur: number, side: 1 | -1, acts
 /** Low and a little off his side, waist up, looking up at him against the sky (owner 2026-10-18). */
 export const lowMedium = (who: string, ship: Pick, dur: number, side: 1 | -1): Shot => ({
   dur,
-  cam: { type: 'figure', who, at: at(ship), from: [3.2, 1.15, 0.62 * side], to: [2.95, 1.18, 0.55 * side], look: [0, 1.55, 0], fallback: around(ship) },
+  cam: { type: 'figure', who, at: at(ship), from: [3.2, 1.4, 0.62 * side], to: [2.95, 1.42, 0.55 * side], look: [0, 1.52, 0], fallback: around(ship) },
   fov: 25,
+  // A little under his eyes against the sky: opened up a further step so the face reads.
+  expose: 1.3,
   slow: 0.3,
   ease: 'inOut',
 });
@@ -49,7 +51,7 @@ export const overShoulder = (who: string, ship: Pick, dur: number, side: 1 | -1)
 /** An insert of his command flag in the wind, from beside him. */
 export const flagInsert = (who: string, ship: Pick, dur: number, side: 1 | -1): Shot => ({
   dur,
-  cam: { type: 'figure', who, at: at(ship), from: [1.4, 1.5, 1.5 * side], to: [1.3, 1.45, 1.35 * side], look: [0, 4, 0], lookFlag: true, fallback: around(ship) },
+  cam: { type: 'figure', who, at: at(ship), from: [0.5, 7.0, -3.4 * side], to: [0.3, 6.8, -3.1 * side], look: [0, 4, 0], lookFlag: true, fallback: around(ship) },
   fov: 21,
   slow: 0.3,
   ease: 'inOut',

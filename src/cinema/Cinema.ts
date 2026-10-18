@@ -396,7 +396,7 @@ export class Cinema implements RigHost {
         }
       }
       // The close-up's exposure is set at the cut (a change within a shot reads as the light pumping).
-      if (cut || !r.camera) this.exposureLevel = r.camera && r.player.onFigure ? EXPOSURE[r.player.scene.castLight ?? 'day'] : 1;
+      if (cut || !r.camera) this.exposureLevel = r.camera && r.player.onFigure ? EXPOSURE[r.player.scene.castLight ?? 'day'] * (r.player.shot?.expose ?? 1) : 1;
       if (r.player.done) this.finish(r.kind === 'cutscene');
     }
     if (!this.running) this.exposureLevel = 1;

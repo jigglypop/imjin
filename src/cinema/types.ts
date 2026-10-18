@@ -71,6 +71,8 @@ export type Shot = {
   roll?: Range;
   /** Battle time per real second during this shot (1 = real time); a full cutscene ignores the speed setting. */
   slow?: number;
+  /** Extra exposure for this close-up set-up, multiplied into the close-up's own. */
+  expose?: number;
   /** Depth of field: how wide the lens is open, 0 for none; the focus follows the subject. */
   aperture?: number;
 };
