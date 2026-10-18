@@ -7,6 +7,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
+import { groundHeights } from './region-ground.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
@@ -124,8 +125,9 @@ try {
     const KOREAN = new Set(['choga', 'giwa', 'fortgate', 'bongsu']);
     for (const [name, style] of [['PLYMOUTH_TERRAIN', 'english'], ['PORTLAND_TERRAIN', 'english'], ['WIGHT_TERRAIN', 'english'], ['CALAIS_TERRAIN', 'flemish'], ['GRAVELINES_TERRAIN', 'flemish']]) {
       const spec = armada[name];
-      assert.equal(spec.biome.style, style, name);
-      const f = computeFeatures(spec, generateHeightmap(spec));
+      // The battles are fought on their real coasts (src/terrain/battleWindows.json).
+      assert.equal(spec.region.biome.style, style, name);
+      const f = computeFeatures(spec, await groundHeights(load, spec));
       const count = (type) => f.structures.filter((s) => s.type === type).length;
       assert.ok(!f.structures.some((s) => KOREAN.has(s.type)), `${name}: ${[...new Set(f.structures.map((s) => s.type))]}`);
       const houses = style === 'english' ? count('cottage') + count('tudor') : count('gable');

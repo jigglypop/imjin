@@ -20,6 +20,9 @@ const REGIONS = {
   // the Downs to Cadiz, Malta and Taranto, past the campaign's frame (src/ui/grand/mapFrameTrafalgar.json) on every side.
   // About 1.5 km a pixel at its middle latitude.
   atlantic: { out: 'atlantic_dem.webp', meta: 'atlanticMeta.json', z: 8, width: 1800, midLat: 44, bounds: { west: -13.0, east: 19.6, south: 33.8, north: 53.4 } },
+  // The Trafalgar chapter's history-battle map: Finisterre, St Vincent and Trafalgar off Iberia and the Nile at Abu Qir, so
+  // the whole Mediterranean from Galicia to Egypt. Only its flat map is kept (scripts/build-ui-map.mjs --region=trafalgarsea).
+  trafalgarsea: { out: 'trafalgarsea_dem.webp', meta: 'trafalgarSeaMeta.json', z: 8, width: 2048, midLat: 38, bounds: { west: -13.5, east: 33.0, south: 29.6, north: 45.4 } },
 };
 const REGION = REGIONS[arg('region', 'korea')];
 const OUT = join(ROOT, 'public', 'ui', REGION.out);

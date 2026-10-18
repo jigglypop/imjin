@@ -836,10 +836,12 @@
   }
 }
 
-/* Static map for phones: one flat image, panned so the chosen site sits above the brief sheet */
+/* Static map for phones and the later chapters: one flat image, framed on all of the chapter's pins when they fit
+   (StaticMap sets --mw, --fx, --fy and the image's aspect --ma), else panned so the chosen site sits above the brief */
 .smap {
   --mw: clamp(1100px, 280vw, 1700px);
-  --mh: calc(var(--mw) * 1039 / 2048);
+  --ma: 0.507;
+  --mh: calc(var(--mw) * var(--ma));
   --fx: 50%;
   --fy: 28%;
   position: absolute;
@@ -886,6 +888,14 @@
 
 .smap .marker--left.marker--on span {
   right: 24px;
+}
+
+/* A third pin on the same spot (the three wings at Lepanto) hangs its label under the pin. */
+.smap .marker--down span {
+  position: absolute;
+  left: -14px;
+  top: 12px;
+  margin: 0;
 }
 
 /* The brief: date and place, the name, difficulty, what happened, the side to lead, the two fleets, then the way in. */

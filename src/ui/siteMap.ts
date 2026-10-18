@@ -1,7 +1,9 @@
 import korea from '../select/demMeta.json';
 import channel from '../select/channelMeta.json';
-import { isArmadaBattle } from '../sim/armada';
-import type { ScenarioId } from '../sim/scenarios';
+import mediterranean from '../select/mediterraneanMeta.json';
+import trafalgarSea from '../select/trafalgarSeaMeta.json';
+import { chapterOfScenario, type ScenarioId } from '../sim/scenarios';
+import type { ChapterId } from '../routes';
 import { isPhone, isTouchOnly } from '../game/device';
 import { params } from './launch';
 
@@ -23,7 +25,7 @@ export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
   calais: { lon: 1.8, lat: 50.98 },
   gravelines: { lon: 2.05, lat: 51.06 },
   preveza: { lon: 20.72, lat: 38.95 },
-  djerba: { lon: 10.75, lat: 33.88 },
+  djerba: { lon: 10.86, lat: 33.92 },
   'lepanto-north': { lon: 21.1, lat: 38.33 },
   'lepanto-centre': { lon: 21.15, lat: 38.27 },
   'lepanto-south': { lon: 21.2, lat: 38.2 },
@@ -34,19 +36,30 @@ export const SITES: Record<ScenarioId, { lon: number; lat: number }> = {
   'trafalgar-lee': { lon: -6.22, lat: 36.2 },
 };
 
-type Meta = typeof korea;
+type Meta = { zoom: number; x0: number; x1: number; y0: number; y1: number; width: number; height: number };
 const lonToX = (meta: Meta, lon: number) => ((lon + 180) / 360) * 2 ** meta.zoom;
 const latToY = (meta: Meta, lat: number) => {
   const r = (lat * Math.PI) / 180;
   return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * 2 ** meta.zoom;
 };
 
-/** The flat map a battle is pinned on: the south coast of Korea, or the English Channel for the Armada (scripts/build-ui-map.mjs). */
-export const mapImageOf = (id: ScenarioId) => (isArmadaBattle(id) ? '/ui/map_channel.webp' : '/ui/map_south.webp');
+/**
+ * The flat map each chapter's battles are pinned on (scripts/build-ui-map.mjs): the south coast of Korea, the English
+ * Channel for the Armada, the central Mediterranean for Lepanto (Djerba to Preveza), and Iberia to the Nile for Trafalgar.
+ */
+const MAPS: Record<ChapterId, { image: string; meta: Meta }> = {
+  imjin: { image: '/ui/map_south.webp', meta: korea },
+  armada: { image: '/ui/map_channel.webp', meta: channel },
+  lepanto: { image: '/ui/map_mediterranean.webp', meta: mediterranean },
+  trafalgar: { image: '/ui/map_trafalgar.webp', meta: trafalgarSea },
+};
+
+export const mapOf = (id: ScenarioId) => MAPS[chapterOfScenario(id)];
+export const mapImageOf = (id: ScenarioId) => mapOf(id).image;
 
 export function siteUV(id: ScenarioId) {
   const s = SITES[id];
-  const meta: Meta = isArmadaBattle(id) ? channel : korea;
+  const { meta } = mapOf(id);
   return { u: (lonToX(meta, s.lon) - meta.x0) / (meta.x1 - meta.x0), v: (latToY(meta, s.lat) - meta.y0) / (meta.y1 - meta.y0) };
 }
 

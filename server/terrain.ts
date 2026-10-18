@@ -1,7 +1,10 @@
 // Heightmaps for the server's battles. Generating one takes a couple of seconds, so it runs in a worker thread
 // (this same bundle started again) and the main loop keeps ticking the battles already running.
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { Worker, parentPort, workerData } from 'node:worker_threads';
 import { generateHeightmap, type TerrainSpec } from '../src/terrain/generate';
+import { decodeRegionDem, regionHeightmap } from '../src/terrain/regionDem';
 import type { LandSampler } from '../src/sim/types';
 
 const ready = new Map<TerrainSpec, LandSampler>();
@@ -26,9 +29,25 @@ function sampler(spec: TerrainSpec, h: Float32Array): LandSampler {
   };
 }
 
-function generate(spec: TerrainSpec) {
+/**
+ * The elevation window of a terrain cut from real ground (the later chapters' battles, src/terrain/battleWindows.json): read
+ * from public/terrain beside a checkout (or IMJIN_TERRAIN_DIR), else from the site that serves the same files to browsers.
+ */
+async function demBytes(id: string): Promise<Uint8Array> {
+  const dir = process.env.IMJIN_TERRAIN_DIR ?? join(process.cwd(), 'public', 'terrain');
+  try {
+    return new Uint8Array(await readFile(join(dir, `${id}.dem`)));
+  } catch {
+    const res = await fetch(`${process.env.IMJIN_SITE_ORIGIN ?? 'https://imjin1592.com'}/terrain/${id}.dem`);
+    if (!res.ok) throw new Error(`region ground ${id}: ${res.status}`);
+    return new Uint8Array(await res.arrayBuffer());
+  }
+}
+
+async function generate(spec: TerrainSpec) {
+  const dem = spec.region ? await demBytes(spec.region.id) : null;
   return new Promise<Float32Array>((resolve, reject) => {
-    const worker = new Worker(__filename, { workerData: { terrain: spec } });
+    const worker = new Worker(__filename, { workerData: { terrain: spec, dem } });
     worker.once('message', (h: Float32Array) => resolve(h));
     worker.once('error', reject);
     worker.once('exit', (code) => code && reject(new Error(`terrain worker exited with ${code}`)));
@@ -60,7 +79,8 @@ export function loadLand(spec: TerrainSpec): Promise<LandSampler> {
 }
 
 /** Entry of the worker thread: generate the terrain it was started with and hand the heights back. */
-export function terrainWorker() {
-  const heights = generateHeightmap((workerData as { terrain: TerrainSpec }).terrain);
-  parentPort!.postMessage(heights, [heights.buffer]);
+export async function terrainWorker() {
+  const { terrain, dem } = workerData as { terrain: TerrainSpec; dem: Uint8Array | null };
+  const heights = dem ? regionHeightmap(terrain, await decodeRegionDem(dem)) : generateHeightmap(terrain);
+  parentPort!.postMessage(heights, [heights.buffer as ArrayBuffer]);
 }

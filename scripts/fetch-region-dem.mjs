@@ -5,6 +5,8 @@
 // builds the sea floor), and packed by encodeRegionDem. Windows are listed in src/sim/grand/regionWindows.json; the bearing
 // out to open sea (`seaward`) is worked out here once and kept, so edit it by hand if a region needs another approach.
 //   node scripts/fetch-region-dem.mjs [region ...]
+// --windows=src/terrain/battleWindows.json cuts the historical battles of the later chapters instead: the same grid, but a
+// window may name its own `size` (the battle maps are 20 km), and no seaward bearing is worked out for them.
 // Tiles are cached under the system temp folder, so a second run does not touch the network.
 import { mkdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -14,13 +16,14 @@ import { build } from 'esbuild';
 import sharp from 'sharp';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const WINDOWS = join(root, 'src/sim/grand/regionWindows.json');
+const WINDOWS = join(root, process.argv.find((a) => a.startsWith('--windows='))?.slice(10) ?? 'src/sim/grand/regionWindows.json');
+const BATTLES = WINDOWS.endsWith('battleWindows.json');
 const OUT = join(root, 'public/terrain');
 const CACHE = join(tmpdir(), 'imjin-terrarium');
 const Z = 13;
 const N = 1024;
-const SIZE = 16000;
-const CELL = SIZE / N;
+let SIZE = 16000;
+let CELL = SIZE / N;
 
 const bundle = await build({ entryPoints: [join(root, 'src/terrain/regionDem.ts')], bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent' });
 const { encodeRegionDem, decodeRegionDem } = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].text).toString('base64'));
@@ -150,13 +153,60 @@ function seawardOf(heights) {
   return Math.round(((best / 72) * Math.PI * 2) * 100) / 100;
 }
 
+/**
+ * Water that no boat could reach from the open sea (polders below the tide line, salt pans, the noise of a flat delta) reads
+ * as land 1 m up, so a battle map does not grow ponds behind its shore. Water joined to the battle at the window's middle
+ * by a channel wider than a few samples stays sea.
+ */
+function fillInland(heights) {
+  const wet = (k) => heights[k] === 0;
+  // Open water: water for two samples all round, so the sea reaches inland only through channels about 100 m wide or more.
+  const core = new Uint8Array(N * N);
+  for (let j = 2; j < N - 2; j += 1) {
+    for (let i = 2; i < N - 2; i += 1) {
+      const k = j * N + i;
+      let all = true;
+      for (let dj = -2; dj <= 2 && all; dj += 1) for (let di = -2; di <= 2 && all; di += 1) all = wet(k + dj * N + di);
+      core[k] = all ? 1 : 0;
+    }
+  }
+  const seen = new Uint8Array(N * N);
+  const stack = [];
+  // The battle is fought at the window's middle, so the sea is what joins it: a lake that reaches the window's edge is not.
+  for (let j = N / 2 - 64; j < N / 2 + 64; j += 1) for (let i = N / 2 - 64; i < N / 2 + 64; i += 1) stack.push(j * N + i);
+  while (stack.length) {
+    const k = stack.pop();
+    if (seen[k] || !core[k]) continue;
+    seen[k] = 1;
+    stack.push(k - 1, k + 1, k - N, k + N);
+  }
+  const keep = new Uint8Array(N * N);
+  for (let j = 0; j < N; j += 1) {
+    for (let i = 0; i < N; i += 1) {
+      const k = j * N + i;
+      if (!wet(k)) continue;
+      let near = false;
+      for (let dj = -2; dj <= 2 && !near; dj += 1) for (let di = -2; di <= 2 && !near; di += 1) {
+        const x = i + di;
+        const y = j + dj;
+        near = x >= 0 && y >= 0 && x < N && y < N && seen[y * N + x] === 1;
+      }
+      keep[k] = near ? 1 : 0;
+    }
+  }
+  for (let k = 0; k < heights.length; k += 1) if (wet(k) && !keep[k]) heights[k] = 1;
+}
+
 await mkdir(OUT, { recursive: true });
 let total = 0;
 for (const id of ids) {
   const win = windows[id];
   if (!win) throw new Error(`no window for ${id}`);
   const started = Date.now();
+  SIZE = win.size ?? 16000;
+  CELL = SIZE / N;
   const heights = await window(win.lon, win.lat);
+  if (BATTLES) fillInland(heights);
   const bytes = await encodeRegionDem({ n: N, cell: CELL, heights });
   const back = await decodeRegionDem(bytes);
   let worst = 0;
@@ -170,8 +220,8 @@ for (const id of ids) {
     if (heights[k] > 0) land += 1;
     if (heights[k] > peak) peak = heights[k];
   }
-  win.seaward ??= seawardOf(heights);
-  console.log(`${id.padEnd(13)} ${(bytes.length / 1024).toFixed(0).padStart(4)} KB  land ${((land / heights.length) * 100).toFixed(0).padStart(2)}%  peak ${peak.toFixed(0).padStart(4)} m  seaward ${win.seaward}  ${((Date.now() - started) / 1000).toFixed(1)} s`);
+  if (!BATTLES) win.seaward ??= seawardOf(heights);
+  console.log(`${id.padEnd(13)} ${(bytes.length / 1024).toFixed(0).padStart(4)} KB  land ${((land / heights.length) * 100).toFixed(0).padStart(2)}%  peak ${peak.toFixed(0).padStart(4)} m  seaward ${win.seaward ?? '-'}  ${((Date.now() - started) / 1000).toFixed(1)} s`);
 }
 const rows = Object.entries(windows).map(([id, w]) => `  ${JSON.stringify(id)}: ${JSON.stringify(w)}`);
 await writeFile(WINDOWS, `{\n${rows.join(',\n')}\n}\n`);

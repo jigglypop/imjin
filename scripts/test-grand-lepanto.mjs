@@ -118,7 +118,7 @@ try {
     assert.notEqual(rb.attacker.team, rb.defender.team);
     const map = REGION_MAPS[rb.mapId];
     assert.ok(map.points.length >= 3, `${rb.mapId} points`);
-    assert.ok(map.terrain.biome, `${rb.mapId} is fought on a Mediterranean coast`);
+    assert.ok(map.terrain.biome ?? map.terrain.region?.biome, `${rb.mapId} is fought on a Mediterranean coast`);
     const info = grandInfo(rb);
     assert.match(info.date, /^15(7\d|8\d)년/);
   });

@@ -1198,4 +1198,4 @@ function main() {
 }
 
 if (isMainThread) main();
-else terrainWorker();
+else void terrainWorker();
