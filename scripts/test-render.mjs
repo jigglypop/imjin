@@ -252,7 +252,8 @@ try {
     stamps.length = 0;
     enemy.x += 10;
     engine.stampWakes([], 0);
-    assert.equal(stamps.length, 0, 'pause adds no moving foam');
+    assert.equal(stamps.filter((s) => s[4] > 0 || s[6] > 0).length, 0, 'pause adds no moving foam');
+    assert.ok(stamps.some((s) => s[7] > 0), 'the hulls still shade the water while paused');
     assert.deepEqual(wake.trails.get(enemy.id), previous);
     wake.setCenter(1000, 1000);
     assert.equal(wake.trails.size, 0, 'a new battle cannot reuse the previous fleet paths');

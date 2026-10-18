@@ -1575,6 +1575,9 @@ export class Engine {
       else if (e.type === 'ram') w.stamp(e.x, e.z, 0, 16, 1.2, 1, 1.5);
       else if (e.type === 'explode') w.stamp(e.x, e.z, 0, 42, 1.5, 1, 2);
     }
+    // The hulls' shade on the water is drawn every frame, paused or not.
+    const sun = atmosphere.sunDir.value as Vector3;
+    for (const s of this.battle.ships) if (s.alive && shipObserved(this.battle, this.team, s)) w.shipShade(s, sun);
     if (k <= 0) return;
     for (const s of this.battle.ships) {
       if (!s.alive || !shipObserved(this.battle, this.team, s)) { w.forgetShip(s.id); continue; }

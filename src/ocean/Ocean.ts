@@ -153,6 +153,8 @@ export class Ocean {
   readonly heightScale = uniform(0.5);
   readonly debugWake = uniform(0);
   readonly tide = uniform(0);
+  /** cos and sin of twice the wind's angle: the mirror across the wind that makes the second copy of a wave tile. */
+  readonly mirror = uniform(new Vector2(1, 0));
   private readonly waveA: Vector4[];
   private readonly waveB: Vector4[];
   private readonly pmremNodes: ReturnType<typeof pmremTexture>[] = [];
@@ -321,7 +323,23 @@ export class Ocean {
         for (let c = 0; c < CASCADES.length; c += 1) {
           const cascade = CASCADES[c]!;
           const L = cascade.size;
-          const der: any = sampleFlow(fft.derivatives[c]!, L);
+          let der: any = sampleFlow(fft.derivatives[c]!, L);
+          if (c < 2) {
+            // Seen from a few tile lengths away the cascade's tile repeats as a grid. There a second copy, mirrored
+            // across the wind (so its waves still run downwind) and shifted, takes over in patches several tiles
+            // across, so no two neighbouring tiles match. Close in, where the hulls ride on the displaced surface, the
+            // shading keeps the one copy the geometry is built from.
+            const m: any = this.mirror;
+            const q = vec2(m.x.mul(p0.x).add(m.y.mul(p0.y)), m.y.mul(p0.x).sub(m.x.mul(p0.y))).add(c === 0 ? vec2(97.3, 41.9) : vec2(17.1, 29.6));
+            const alt: any = texture(fft.derivatives[c]!, q.div(L));
+            // The slope turns with the mirror; the compression's cross term is not stored, so its diagonal is mixed only.
+            const c2 = m.x.mul(m.x);
+            const s2 = m.y.mul(m.y);
+            const altD = vec4(m.x.mul(alt.x).add(m.y.mul(alt.y)), m.y.mul(alt.x).sub(m.x.mul(alt.y)), c2.mul(alt.z).add(s2.mul(alt.w)), s2.mul(alt.z).add(c2.mul(alt.w)));
+            const pick: any = fields.patch(p0, c === 0 ? 0.83 : -0.47, L * (c === 0 ? 4.1 : 5.3)).mul(smoothstep(L * 1.3, L * 3.2, dist));
+            const norm = float(1).div(sqrt(pick.mul(pick).add(float(1).sub(pick).mul(float(1).sub(pick)))));
+            der = mix(der, altD, pick).mul(norm);
+          }
           const w: any = c === 2 ? cascadeWeight(c, g, groups).mul(this.detailStrength) : cascadeWeight(c, g, groups);
           dyx.addAssign(der.x.mul(w));
           dyz.addAssign(der.y.mul(w));
@@ -381,6 +399,8 @@ export class Ocean {
       const wakeTex = wake.sample(wakeUV, this);
       const wakeFoam = saturate(wakeTex.r.mul(wakeEdge));
       const wakeTurb = saturate(wakeTex.g.mul(wakeEdge));
+      // The hulls' shade (blue): under and beside a hull the water sees less sky and no sun.
+      const hullShade = saturate(wakeTex.b.mul(wakeEdge));
       const uv3 = p0.mul(1 / 2.3).add(vec2(t.mul(0.031), t.mul(-0.024)));
       const d3 = texture(detailTex, uv3).xy.mul(2).sub(1);
       const nRaw = normalize(nGeom.add(vec3(d3.x.mul(wakeTurb).mul(-0.35), 0, d3.y.mul(wakeTurb).mul(-0.35))));
@@ -397,7 +417,18 @@ export class Ocean {
       const roughEnv = pow(pow(envBase, 4).add(lost.mul(0.35)), 0.25).min(0.55);
       const reflNode = pmremTexture(this.envTexture, Rc, roughEnv);
       pmremNodes.push(reflNode);
-      const reflection = vec3(reflNode).mul(atmosphere.envIntensity);
+      const skyReflection = vec3(reflNode).mul(atmosphere.envIntensity);
+      // A hull's reflection lies between it and the eye: a point at the waterline's height h above a pixel d metres
+      // away is mirrored from d·h/eyeHeight further on. So the hull's footprint, read that far beyond the pixel (and
+      // rocked by the waves' slope), is where the water mirrors dark planking instead of the sky.
+      const awayH = p0.sub(cameraPosition.xz);
+      const dH = max(length(awayH), 0.01);
+      const reach = min(dH.mul(4.5).div(max(cameraPosition.y, 1.5)), 70);
+      const mirrorP = p0.add(awayH.div(dH).mul(reach)).add(N.xz.mul(reach.mul(0.35).add(2)));
+      const mirrorUV = mirrorP.sub(wake.center).div(wake.extentU).add(0.5);
+      const hullMirror = saturate(wake.sample(mirrorUV, this).b.mul(wakeEdge)).mul(float(1).sub(smoothstep(900, 2600, dist)));
+      const hullColor = vec3(0.15, 0.1, 0.065).mul(atmosphere.skyAmbient.mul(4.2).add(atmosphere.sunIrradiance.mul(0.1)));
+      const reflection = mix(skyReflection, hullColor, hullMirror.mul(0.9));
 
       const L = atmosphere.sunDir;
       const H = normalize(L.add(V));
@@ -411,7 +442,7 @@ export class Ocean {
       const Fs = float(0.02).add(float(0.98).mul(pow(float(1).sub(VoH), 5)));
       // The sun is cut off under the clouds' shadows, which drift over the sea with the wind.
       const sunLit = atmosphere.sunIrradiance.mul(sunThroughClouds(p0)).toVar();
-      const spec = sunLit.mul(D.mul(Fs).mul(NoL).div(max(NoV, 0.12).mul(4)));
+      const spec = sunLit.mul(float(1).sub(hullShade.mul(0.85))).mul(D.mul(Fs).mul(NoL).div(max(NoV, 0.12).mul(4)));
       const lightSpec = vec3(0).toVar();
       const lightDiffuse = vec3(0).toVar();
       const aL = float(0.09).mul(float(0.09)).mul(float(0.09)).mul(float(0.09));
@@ -441,8 +472,9 @@ export class Ocean {
       const scatter = atmosphere.waterScatter.mul(sunLit).mul(scatterAmount).mul(0.18);
       // Patches of greener or darker water a few kilometres across: the sea is not one dye.
       const deep = atmosphere.waterDeep.mul(mix(vec3(1.1, 0.9, 0.94), vec3(0.9, 1.08, 1.04), fields.tint(p0)));
-      const body = deep.mul(atmosphere.skyAmbient.mul(4.2).add(sunLit.mul(NoL.mul(0.25).add(0.12)))).add(scatter).add(atmosphere.waterScatter.mul(atmosphere.skyAmbient).mul(crest.mul(0.35).add(wakeTurb.mul(1.6))));
+      const bodyLit = deep.mul(atmosphere.skyAmbient.mul(4.2).add(sunLit.mul(NoL.mul(0.25).add(0.12)))).add(scatter).add(atmosphere.waterScatter.mul(atmosphere.skyAmbient).mul(crest.mul(0.35).add(wakeTurb.mul(1.6))));
 
+      const body = bodyLit.mul(float(1).sub(hullShade.mul(0.55)));
       const shallowTint = float(1).sub(smoothstep(1.5, 14, depthBelow));
       // Refraction and contact foam read the scene colour and depth behind the surface. That costs a framebuffer
       // copy every frame, so the mobile tiers use the body colour alone and skip the foam at the shoreline contact.
@@ -515,7 +547,9 @@ export class Ocean {
           core.addAssign(smoothstep(v.z.mul(0.45), float(0), r).mul(k));
         });
       }
-      const coverage = whitecap.mul(1.35).mul(shore).add(contact.mul(1.2)).add(wakeFoam.mul(1.15)).add(whirl).add(surf.mul(select(depthBelow.greaterThan(-0.5), float(1), float(0))));
+      // A ring of broken water where the hull meets the sea.
+      const waterline = hullShade.mul(float(1).sub(hullShade)).mul(4).mul(0.45);
+      const coverage = whitecap.mul(1.35).mul(shore).add(contact.mul(1.2)).add(waterline).add(wakeFoam.mul(1.15)).add(whirl).add(surf.mul(select(depthBelow.greaterThan(-0.5), float(1), float(0))));
       // Foam is lace, not paint: a soft edge into the lattice of the pattern, and bubbles that let the water show through.
       const bubbles = texture(foamTex, p0.mul(1 / 1.1).add(N.xz.mul(0.05)).add(vec2(t.mul(0.02), t.mul(-0.013)))).r;
       const lace = saturate(coverage.sub(float(1).sub(pattern)).mul(1.9)).mul(mix(float(0.55), float(1), bubbles));
@@ -587,6 +621,7 @@ export class Ocean {
     this.heightScale.value = 1 / Math.max(0.2, this.waves.significantHeight() * 0.5);
     this.whitecaps.value = this.waves.state.whitecaps;
     this.detailStrength.value = this.waves.state.detail;
+    this.mirror.value.set(Math.cos(2 * this.waves.state.windAngle), Math.sin(2 * this.waves.state.windAngle));
     this.waveVersion = this.waves.version;
   }
 

@@ -105,7 +105,8 @@ export class WakeMap {
     const falloff = float(1).sub(smoothstep(0.15, 1.0, r));
     const foamOut: any = falloff.mul(B.x);
     const turbOut: any = falloff.mul(B.z);
-    mat.colorNode = vec4(foamOut, turbOut, 0, 1);
+    // Blue is the shade of the hulls over the water, stamped afresh every frame (the fade clears it).
+    mat.colorNode = vec4(foamOut, turbOut, falloff.mul(B.w) as any, 1);
     this.mesh = new Mesh(geo, mat);
     this.mesh.frustumCulled = false;
     this.scene.add(this.mesh);
@@ -201,7 +202,24 @@ export class WakeMap {
     this.trails.set(id, { x, z, heading });
   }
 
-  stamp(x: number, z: number, rot: number, size: number, intensity: number, stretch = 1, turbulence = 1) {
+  /**
+   * The water a hull darkens this frame, in the blue channel: its footprint, which the sea shades as the hull's
+   * reflection, ambient shadow and waterline, and a fainter copy pushed away from the sun for its shadow.
+   * `sun` is the unit direction towards the sun.
+   */
+  shipShade(ship: Ship, sun: { x: number; y: number; z: number }) {
+    const { x, z, heading, spec } = ship;
+    const settle = ship.sinking > 0 ? Math.max(0, 1 - ship.sinking) : 1;
+    if (settle <= 0) return;
+    const width = spec.beam * 2;
+    const stretch = (spec.length * 1.12) / width;
+    this.stamp(x, z, heading, width, 0, stretch, 0, 1.6 * settle);
+    const reach = Math.min(spec.beam * 0.9, (spec.beam * 0.3 * Math.hypot(sun.x, sun.z)) / Math.max(sun.y, 0.1));
+    const h = Math.hypot(sun.x, sun.z) || 1;
+    this.stamp(x - (sun.x / h) * reach, z - (sun.z / h) * reach, heading, width * 1.1, 0, stretch, 0, 0.5 * settle);
+  }
+
+  stamp(x: number, z: number, rot: number, size: number, intensity: number, stretch = 1, turbulence = 1, shade = 0) {
     if (this.count >= MAX_STAMPS) return;
     const o = this.count * 4;
     const A = this.a.array as Float32Array;
@@ -213,7 +231,7 @@ export class WakeMap {
     B[o] = intensity;
     B[o + 1] = stretch;
     B[o + 2] = turbulence * intensity;
-    B[o + 3] = 0;
+    B[o + 3] = shade;
     this.count += 1;
   }
 
@@ -223,7 +241,7 @@ export class WakeMap {
     const src = this.targets[this.current]!;
     const dst = this.targets[1 - this.current]!;
     if (this.resetPending) { this.fade.value.set(0, 0, 0); this.resetPending = false; }
-    else this.fade.value.set(Math.exp(-dt / 8), Math.exp(-dt / 24), 1);
+    else this.fade.value.set(Math.exp(-dt / 8), Math.exp(-dt / 24), 0);
     this.prevNode.value = src.texture;
     const prevTarget = renderer.getRenderTarget();
     const prevAutoClear = renderer.autoClear;
