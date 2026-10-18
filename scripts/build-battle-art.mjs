@@ -39,7 +39,9 @@ const load = async (file) => {
   const code = transformSync(readFileSync(join(ROOT, file), 'utf8'), { loader: 'ts', format: 'esm' }).code;
   return import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
 };
-const { BATTLE_SLUGS, CARD_SIZE, cardFile } = await load('src/routes.ts');
+const { BATTLE_SLUGS, CHAPTER_BATTLES, CARD_SIZE, cardFile } = await load('src/routes.ts');
+/** Every chapter's battles, 1592's first. */
+const ALL_BATTLES = [...BATTLE_SLUGS, ...Object.values(CHAPTER_BATTLES).flat()];
 const { SCENARIO_TEXT } = await load('src/sim/scenarioText.ts');
 const { EN_SIM } = await load('src/i18n/en/sim.ts');
 const { EN_MENUS } = await load('src/i18n/en/menus.ts');
@@ -409,9 +411,12 @@ function armadaShots() {
   const wide = [
     (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const F = c.around(H, c.team('japan'), 900); return c.place(H, c.toward(F, H) + 0.5, 230, 30, 34, 0.32, -0.05, 8); },
     (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 250, 28, 34, 0.3, -0.04, 8); },
+    // Close and low on the most engaged own ship, three-quarters from the sunlit side, the enemy behind it.
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const S = c.nearest(H, c.team('japan')); const a = c.toward(S, H); return c.place(H, c.lit(a + 0.35, a + 1.05), 130, 12, 30, 0.3, -0.06, 6); },
     (c) => { const A = c.cen(c.team('joseon')); const B = c.cen(c.team('japan')); const M = { x: (A.x + B.x) / 2, z: (A.z + B.z) / 2 }; return c.place(M, c.toward(B, A) + 0.8, 760, 150, 34, 0.2, -0.08); },
   ];
   const tall = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const S = c.nearest(H, c.team('japan')); const a = c.toward(S, H); return c.place(H, c.lit(a + 0.35, a + 1.05), 169, 15, 50, 0, 0.26, 6); },
     (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const F = c.around(H, c.team('japan'), 900); return c.place(H, c.toward(F, H) + 0.5, 240, 32, 54, 0, 0.3, 8); },
     (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 260, 30, 52, 0, 0.28, 8); },
   ];
@@ -438,9 +443,12 @@ function lepantoShots() {
   const wide = [
     (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const F = c.around(H, c.team('japan'), 600); return c.place(H, c.toward(F, H) + 0.5, 170, 22, 34, 0.32, -0.05, 8); },
     (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 180, 20, 34, 0.3, -0.04, 8); },
+    // Close and low on the most engaged own ship, three-quarters from the sunlit side, the enemy behind it.
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const S = c.nearest(H, c.team('japan')); const a = c.toward(S, H); return c.place(H, c.lit(a + 0.35, a + 1.05), 100, 9, 30, 0.3, -0.06, 6); },
     (c) => { const A = c.cen(c.team('joseon')); const B = c.cen(c.team('japan')); const M = { x: (A.x + B.x) / 2, z: (A.z + B.z) / 2 }; return c.place(M, c.toward(B, A) + 0.8, 620, 130, 34, 0.2, -0.08); },
   ];
   const tall = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const S = c.nearest(H, c.team('japan')); const a = c.toward(S, H); return c.place(H, c.lit(a + 0.35, a + 1.05), 130, 12, 50, 0, 0.26, 6); },
     (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const F = c.around(H, c.team('japan'), 600); return c.place(H, c.toward(F, H) + 0.5, 180, 24, 54, 0, 0.3, 8); },
     (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 190, 22, 52, 0, 0.28, 8); },
   ];
@@ -459,9 +467,12 @@ function trafalgarShots() {
   const wide = [
     (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const F = c.around(H, c.team('japan'), 800); return c.place(H, c.toward(F, H) + 0.5, 210, 28, 34, 0.32, -0.05, 8); },
     (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 230, 26, 34, 0.3, -0.04, 8); },
+    // Close and low on the most engaged own ship, three-quarters from the sunlit side, the enemy behind it.
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const S = c.nearest(H, c.team('japan')); const a = c.toward(S, H); return c.place(H, c.lit(a + 0.35, a + 1.05), 125, 12, 30, 0.3, -0.06, 6); },
     (c) => { const A = c.cen(c.team('joseon')); const B = c.cen(c.team('japan')); const M = { x: (A.x + B.x) / 2, z: (A.z + B.z) / 2 }; return c.place(M, c.toward(B, A) + 0.8, 720, 140, 34, 0.2, -0.08); },
   ];
   const tall = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const S = c.nearest(H, c.team('japan')); const a = c.toward(S, H); return c.place(H, c.lit(a + 0.35, a + 1.05), 162, 15, 50, 0, 0.26, 6); },
     (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const F = c.around(H, c.team('japan'), 800); return c.place(H, c.toward(F, H) + 0.5, 220, 30, 54, 0, 0.3, 8); },
     (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 240, 28, 52, 0, 0.28, 8); },
   ];
@@ -632,7 +643,7 @@ async function captureFront(browser, base) {
 
 async function capture() {
   const base = args.url ?? 'http://127.0.0.1:5291/';
-  const only = args.only ? args.only.split(',') : BATTLE_SLUGS;
+  const only = args.only ? args.only.split(',') : ALL_BATTLES;
   const browser = await launch();
   try {
     for (const id of only) {
@@ -681,7 +692,7 @@ async function keep() {
     }
     provenance.battles[id] = battle;
   }
-  provenance.battles = Object.fromEntries(BATTLE_SLUGS.filter((b) => provenance.battles[b]).map((b) => [b, provenance.battles[b]]));
+  provenance.battles = Object.fromEntries(ALL_BATTLES.filter((b) => provenance.battles[b]).map((b) => [b, provenance.battles[b]]));
   writeFileSync(provFile, `${JSON.stringify(provenance, null, 2)}\n`);
 }
 
@@ -831,7 +842,7 @@ async function cardStill(img, at) {
 }
 
 async function compose() {
-  const only = args.only ? args.only.split(',') : ['front', ...BATTLE_SLUGS];
+  const only = args.only ? args.only.split(',') : ['front', ...ALL_BATTLES];
   mkdirSync(join(ROOT, 'public', 'og'), { recursive: true });
   const browser = await launch();
   try {

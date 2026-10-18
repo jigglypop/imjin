@@ -2078,6 +2078,844 @@
         ],
         "sha256": "3af29b9f63c0161ed6ca60a70bd012a83e680cf9113162be12eae1fc1bd9660a"
       }
+    },
+    "plymouth": {
+      "grade": {
+        "exposure": 1,
+        "gamma": 1,
+        "saturation": 1.04
+      },
+      "wide": {
+        "file": "plymouth-wide.jpg",
+        "candidate": "w-0-2",
+        "captured": "2026-10-18T05:48:15.708Z",
+        "url": "http://127.0.0.1:5317/?scenario=plymouth&hud=0&lv=4&q=high&dpr=2&paused=1&warm=20",
+        "steps": [
+          {
+            "run": 2,
+            "time": 252,
+            "afloat": {
+              "joseon": 50,
+              "japan": 123
+            },
+            "sunk": {
+              "joseon": 4,
+              "japan": 3
+            },
+            "burning": 1
+          }
+        ],
+        "engine": {
+          "fps": 57,
+          "ships": 175,
+          "onLand": 0,
+          "projectiles": 8,
+          "smoke": 3990,
+          "fire": 38,
+          "batches": {
+            "racegalleon#0": [
+              6,
+              0,
+              0
+            ],
+            "racegalleon#1": [
+              5,
+              0,
+              0
+            ],
+            "spgalleon#0": [
+              31,
+              0,
+              0
+            ],
+            "spgalleon#1": [
+              31,
+              0,
+              0
+            ],
+            "galleass#0": [
+              4,
+              0,
+              0
+            ],
+            "urca#0": [
+              23,
+              0,
+              0
+            ],
+            "pinnace#0": [
+              43,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": -2.272,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 252,
+          "afloat": {
+            "joseon": 50,
+            "japan": 123
+          },
+          "sunk": {
+            "joseon": 4,
+            "japan": 3
+          },
+          "burning": 1
+        },
+        "pose": {
+          "tx": 42.142,
+          "tz": 719.661,
+          "yaw": 1.099,
+          "pitch": 0.076,
+          "distance": 158.106,
+          "fov": 30,
+          "lift": 6
+        },
+        "rendered": [
+          3840,
+          2160
+        ],
+        "clipped": 0,
+        "kept": [
+          2880,
+          1620
+        ],
+        "sha256": "cd4dd99702a271f9324081b5625e468bafa813abfb9d9b959971f6aa7e5ad464"
+      },
+      "tall": {
+        "file": "plymouth-tall.jpg",
+        "candidate": "t-0-0",
+        "captured": "2026-10-18T05:48:15.708Z",
+        "url": "http://127.0.0.1:5317/?scenario=plymouth&hud=0&lv=4&q=high&dpr=2&paused=1&warm=20",
+        "steps": [
+          {
+            "run": 2,
+            "time": 252,
+            "afloat": {
+              "joseon": 50,
+              "japan": 123
+            },
+            "sunk": {
+              "joseon": 4,
+              "japan": 3
+            },
+            "burning": 1
+          }
+        ],
+        "engine": {
+          "fps": 57,
+          "ships": 175,
+          "onLand": 0,
+          "projectiles": 8,
+          "smoke": 3990,
+          "fire": 38,
+          "batches": {
+            "racegalleon#0": [
+              6,
+              0,
+              0
+            ],
+            "racegalleon#1": [
+              5,
+              0,
+              0
+            ],
+            "spgalleon#0": [
+              31,
+              0,
+              0
+            ],
+            "spgalleon#1": [
+              31,
+              0,
+              0
+            ],
+            "galleass#0": [
+              4,
+              0,
+              0
+            ],
+            "urca#0": [
+              23,
+              0,
+              0
+            ],
+            "pinnace#0": [
+              43,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": -2.272,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 252,
+          "afloat": {
+            "joseon": 50,
+            "japan": 123
+          },
+          "sunk": {
+            "joseon": 4,
+            "japan": 3
+          },
+          "burning": 1
+        },
+        "pose": {
+          "tx": 103.589,
+          "tz": 830.106,
+          "yaw": 1.24,
+          "pitch": 0.209,
+          "distance": 72.235,
+          "fov": 50,
+          "lift": 6
+        },
+        "rendered": [
+          1242,
+          2688
+        ],
+        "clipped": 0,
+        "kept": [
+          1242,
+          2688
+        ],
+        "sha256": "3125b9a8c0cac78642160ebfc6d63aa12ed54aa8e92473ab0a1f79889fc18898"
+      }
+    },
+    "portland": {
+      "grade": {
+        "exposure": 2,
+        "gamma": 1.12,
+        "saturation": 1.04
+      },
+      "wide": {
+        "file": "portland-wide.jpg",
+        "candidate": "w-0-0",
+        "captured": "2026-10-18T05:53:12.532Z",
+        "url": "http://127.0.0.1:5317/?scenario=portland&hud=0&lv=4&q=high&dpr=2&paused=1&warm=20",
+        "steps": [
+          {
+            "run": 2,
+            "time": 420.1,
+            "afloat": {
+              "joseon": 93,
+              "japan": 95
+            },
+            "sunk": {
+              "joseon": 7,
+              "japan": 29
+            },
+            "burning": 1
+          }
+        ],
+        "engine": {
+          "fps": 58,
+          "ships": 190,
+          "onLand": 0,
+          "projectiles": 7,
+          "smoke": 1215,
+          "fire": 98,
+          "batches": {
+            "racegalleon#0": [
+              26,
+              0,
+              0
+            ],
+            "racegalleon#1": [
+              23,
+              0,
+              0
+            ],
+            "spgalleon#0": [
+              0,
+              0,
+              0
+            ],
+            "spgalleon#1": [
+              0,
+              0,
+              0
+            ],
+            "galleass#0": [
+              0,
+              0,
+              0
+            ],
+            "urca#0": [
+              0,
+              0,
+              0
+            ],
+            "pinnace#0": [
+              48,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": -1.489,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 420.1,
+          "afloat": {
+            "joseon": 93,
+            "japan": 95
+          },
+          "sunk": {
+            "joseon": 7,
+            "japan": 29
+          },
+          "burning": 1
+        },
+        "pose": {
+          "tx": 982.462,
+          "tz": 88.533,
+          "yaw": 1.429,
+          "pitch": 0.114,
+          "distance": 262.771,
+          "fov": 34,
+          "lift": 8
+        },
+        "rendered": [
+          3840,
+          2160
+        ],
+        "clipped": 0,
+        "kept": [
+          2880,
+          1620
+        ],
+        "sha256": "a9b58c1a1944685b9ae354438a1551c256b86635f74904019f6253eeb0d9abbe"
+      },
+      "tall": {
+        "file": "portland-tall.jpg",
+        "candidate": "t-0-0",
+        "captured": "2026-10-18T05:53:12.532Z",
+        "url": "http://127.0.0.1:5317/?scenario=portland&hud=0&lv=4&q=high&dpr=2&paused=1&warm=20",
+        "steps": [
+          {
+            "run": 2,
+            "time": 420.1,
+            "afloat": {
+              "joseon": 93,
+              "japan": 95
+            },
+            "sunk": {
+              "joseon": 7,
+              "japan": 29
+            },
+            "burning": 1
+          }
+        ],
+        "engine": {
+          "fps": 58,
+          "ships": 190,
+          "onLand": 0,
+          "projectiles": 7,
+          "smoke": 1215,
+          "fire": 98,
+          "batches": {
+            "racegalleon#0": [
+              26,
+              0,
+              0
+            ],
+            "racegalleon#1": [
+              23,
+              0,
+              0
+            ],
+            "spgalleon#0": [
+              0,
+              0,
+              0
+            ],
+            "spgalleon#1": [
+              0,
+              0,
+              0
+            ],
+            "galleass#0": [
+              0,
+              0,
+              0
+            ],
+            "urca#0": [
+              0,
+              0,
+              0
+            ],
+            "pinnace#0": [
+              48,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": -1.489,
+          "sig": 3.97
+        },
+        "at": {
+          "time": 420.1,
+          "afloat": {
+            "joseon": 93,
+            "japan": 95
+          },
+          "sunk": {
+            "joseon": 7,
+            "japan": 29
+          },
+          "burning": 1
+        },
+        "pose": {
+          "tx": 1053.964,
+          "tz": 211.464,
+          "yaw": 1.286,
+          "pitch": 0.209,
+          "distance": 72.235,
+          "fov": 50,
+          "lift": 6
+        },
+        "rendered": [
+          1242,
+          2688
+        ],
+        "clipped": 0,
+        "kept": [
+          1242,
+          2688
+        ],
+        "sha256": "f74bbd9d6330fa36b0f8b05887b7c53096965c408648e3e4f3d9f4359b22dae4"
+      }
+    },
+    "wight": {
+      "grade": {
+        "exposure": 1,
+        "gamma": 1,
+        "saturation": 1.04
+      },
+      "wide": {
+        "file": "wight-wide.jpg",
+        "candidate": "w-1-0",
+        "captured": "2026-10-18T05:56:44.196Z",
+        "url": "http://127.0.0.1:5317/?scenario=wight&hud=0&lv=4&q=high&dpr=2&paused=1&warm=20",
+        "steps": [
+          {
+            "run": 2,
+            "time": 262.1,
+            "afloat": {
+              "joseon": 98,
+              "japan": 114
+            },
+            "sunk": {
+              "joseon": 2,
+              "japan": 10
+            },
+            "burning": 5
+          }
+        ],
+        "engine": {
+          "fps": 60,
+          "ships": 215,
+          "onLand": 0,
+          "projectiles": 22,
+          "smoke": 5805,
+          "fire": 252,
+          "batches": {
+            "racegalleon#0": [
+              17,
+              0,
+              0
+            ],
+            "racegalleon#1": [
+              15,
+              0,
+              0
+            ],
+            "spgalleon#0": [
+              29,
+              0,
+              0
+            ],
+            "spgalleon#1": [
+              27,
+              0,
+              0
+            ],
+            "galleass#0": [
+              4,
+              0,
+              0
+            ],
+            "urca#0": [
+              23,
+              0,
+              0
+            ],
+            "pinnace#0": [
+              65,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": -1.859,
+          "sig": 2.26
+        },
+        "at": {
+          "time": 274.3,
+          "afloat": {
+            "joseon": 98,
+            "japan": 111
+          },
+          "sunk": {
+            "joseon": 2,
+            "japan": 13
+          },
+          "burning": 7
+        },
+        "pose": {
+          "tx": -647.59,
+          "tz": 665.031,
+          "yaw": 2.167,
+          "pitch": 0.114,
+          "distance": 262.771,
+          "fov": 34,
+          "lift": 8
+        },
+        "rendered": [
+          3840,
+          2160
+        ],
+        "clipped": 0,
+        "kept": [
+          2880,
+          1620
+        ],
+        "sha256": "e93a9c08ef7c6589e9505e1eea9e08c05fd40ffd5535073fc376a47724e1c0c1"
+      },
+      "tall": {
+        "file": "wight-tall.jpg",
+        "candidate": "t-1-0",
+        "captured": "2026-10-18T05:56:44.196Z",
+        "url": "http://127.0.0.1:5317/?scenario=wight&hud=0&lv=4&q=high&dpr=2&paused=1&warm=20",
+        "steps": [
+          {
+            "run": 2,
+            "time": 262.1,
+            "afloat": {
+              "joseon": 98,
+              "japan": 114
+            },
+            "sunk": {
+              "joseon": 2,
+              "japan": 10
+            },
+            "burning": 5
+          }
+        ],
+        "engine": {
+          "fps": 60,
+          "ships": 215,
+          "onLand": 0,
+          "projectiles": 22,
+          "smoke": 5805,
+          "fire": 252,
+          "batches": {
+            "racegalleon#0": [
+              17,
+              0,
+              0
+            ],
+            "racegalleon#1": [
+              15,
+              0,
+              0
+            ],
+            "spgalleon#0": [
+              29,
+              0,
+              0
+            ],
+            "spgalleon#1": [
+              27,
+              0,
+              0
+            ],
+            "galleass#0": [
+              4,
+              0,
+              0
+            ],
+            "urca#0": [
+              23,
+              0,
+              0
+            ],
+            "pinnace#0": [
+              65,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": -1.859,
+          "sig": 2.26
+        },
+        "at": {
+          "time": 274.3,
+          "afloat": {
+            "joseon": 98,
+            "japan": 111
+          },
+          "sunk": {
+            "joseon": 2,
+            "japan": 13
+          },
+          "burning": 7
+        },
+        "pose": {
+          "tx": -645.09,
+          "tz": 813.424,
+          "yaw": 1.68,
+          "pitch": 0.209,
+          "distance": 72.235,
+          "fov": 50,
+          "lift": 6
+        },
+        "rendered": [
+          1242,
+          2688
+        ],
+        "clipped": 0,
+        "kept": [
+          1242,
+          2688
+        ],
+        "sha256": "792fc09a8961aa0f43e966b996f640b3c1c82e055095d9435056aa12c1ee2dc3"
+      }
+    },
+    "calais": {
+      "grade": {
+        "exposure": 3.2,
+        "gamma": 1.35,
+        "saturation": 1.02
+      },
+      "wide": {
+        "file": "calais-wide.jpg",
+        "candidate": "w-1-1",
+        "captured": "2026-10-18T06:00:47.649Z",
+        "url": "http://127.0.0.1:5317/?scenario=calais&hud=0&lv=4&q=high&dpr=2&paused=1&warm=0",
+        "steps": [
+          {
+            "run": 2,
+            "time": 300.1,
+            "afloat": {
+              "joseon": 143,
+              "japan": 124
+            },
+            "sunk": {
+              "joseon": 5,
+              "japan": 0
+            },
+            "burning": 0
+          }
+        ],
+        "engine": {
+          "fps": 60,
+          "ships": 269,
+          "onLand": 0,
+          "projectiles": 2,
+          "smoke": 2302,
+          "fire": 56,
+          "batches": {
+            "racegalleon#0": [
+              1,
+              0,
+              0
+            ],
+            "racegalleon#1": [
+              0,
+              0,
+              0
+            ],
+            "spgalleon#0": [
+              24,
+              0,
+              0
+            ],
+            "spgalleon#1": [
+              23,
+              0,
+              0
+            ],
+            "galleass#0": [
+              4,
+              0,
+              0
+            ],
+            "urca#0": [
+              23,
+              0,
+              0
+            ],
+            "pinnace#0": [
+              36,
+              0,
+              0
+            ],
+            "fireship#0": [
+              1,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 1.8,
+          "sig": 2.26
+        },
+        "at": {
+          "time": 312.1,
+          "afloat": {
+            "joseon": 143,
+            "japan": 123
+          },
+          "sunk": {
+            "joseon": 5,
+            "japan": 1
+          },
+          "burning": 4
+        },
+        "pose": {
+          "tx": -663.912,
+          "tz": -1163.396,
+          "yaw": 3.98,
+          "pitch": 0.099,
+          "distance": 282.419,
+          "fov": 34,
+          "lift": 8
+        },
+        "rendered": [
+          3840,
+          2160
+        ],
+        "clipped": 0.1,
+        "kept": [
+          2880,
+          1620
+        ],
+        "sha256": "9bca7f74e1869efeaf09fac21d1a7a111fca3ba498df7cb0d9d94d323a40a825"
+      },
+      "tall": {
+        "file": "calais-tall.jpg",
+        "candidate": "t-1-1",
+        "captured": "2026-10-18T06:00:47.649Z",
+        "url": "http://127.0.0.1:5317/?scenario=calais&hud=0&lv=4&q=high&dpr=2&paused=1&warm=0",
+        "steps": [
+          {
+            "run": 2,
+            "time": 300.1,
+            "afloat": {
+              "joseon": 143,
+              "japan": 124
+            },
+            "sunk": {
+              "joseon": 5,
+              "japan": 0
+            },
+            "burning": 0
+          }
+        ],
+        "engine": {
+          "fps": 60,
+          "ships": 269,
+          "onLand": 0,
+          "projectiles": 2,
+          "smoke": 2302,
+          "fire": 56,
+          "batches": {
+            "racegalleon#0": [
+              1,
+              0,
+              0
+            ],
+            "racegalleon#1": [
+              0,
+              0,
+              0
+            ],
+            "spgalleon#0": [
+              24,
+              0,
+              0
+            ],
+            "spgalleon#1": [
+              23,
+              0,
+              0
+            ],
+            "galleass#0": [
+              4,
+              0,
+              0
+            ],
+            "urca#0": [
+              23,
+              0,
+              0
+            ],
+            "pinnace#0": [
+              36,
+              0,
+              0
+            ],
+            "fireship#0": [
+              1,
+              0,
+              0
+            ]
+          },
+          "backend": "webgpu",
+          "phi": 1.8,
+          "sig": 2.26
+        },
+        "at": {
+          "time": 312.1,
+          "afloat": {
+            "joseon": 143,
+            "japan": 123
+          },
+          "sunk": {
+            "joseon": 5,
+            "japan": 1
+          },
+          "burning": 4
+        },
+        "pose": {
+          "tx": -947.375,
+          "tz": -1374.822,
+          "yaw": 5.45,
+          "pitch": 0.284,
+          "distance": 114.113,
+          "fov": 54,
+          "lift": 8
+        },
+        "rendered": [
+          1242,
+          2688
+        ],
+        "clipped": 0,
+        "kept": [
+          1242,
+          2688
+        ],
+        "sha256": "5306b3b57311dd0f23d98e9ad43ff370fef087c1f4d0966e552c948f2ef40a88"
+      }
     }
   },
   "updated": "2026-10-15T15:30:21.258Z"
