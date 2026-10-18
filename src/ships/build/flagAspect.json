@@ -23,6 +23,8 @@
  "holyleague/flags_b/redgold": 1.5,
  "holyleague/flags_b/red": 1.5,
  "holyleague/flags_b/white": 1.5,
+ "holyleague/flags_c/holyleague": 1.5,
+ "holyleague/flags_c/stmark": 1.5,
  "ottoman/flags_a/kapudan": 1.5,
  "ottoman/flags_a/crescent": 1.5,
  "ottoman/flags_a/zulfikar": 1.5,
@@ -39,6 +41,8 @@
  "britain/flags_b/red": 1.5,
  "britain/flags_b/white": 1.5,
  "britain/flags_b/signal": 1.5,
+ "britain/flags_c/white": 2,
+ "britain/flags_c/vice": 1.5,
  "france/flags_a/tricolore": 1.5,
  "france/flags_a/admiral": 1,
  "france/flags_a/jack": 1.5,
@@ -47,6 +51,8 @@
  "france/flags_b/red": 1.5,
  "france/flags_b/white": 1.5,
  "france/flags_b/signal": 1.5,
+ "france/flags_c/tricolore": 1.5,
+ "france/flags_c/admiral": 1,
  "spain1805/flags_a/rojigualda": 1.5,
  "spain1805/flags_a/admiral": 1,
  "spain1805/flags_a/jack": 1.5,
@@ -54,5 +60,7 @@
  "spain1805/flags_b/pendant": 1.5,
  "spain1805/flags_b/red": 1.5,
  "spain1805/flags_b/white": 1.5,
- "spain1805/flags_b/signal": 1.5
+ "spain1805/flags_b/signal": 1.5,
+ "spain1805/flags_c/rojigualda": 1.5,
+ "spain1805/flags_c/admiral": 1
 }

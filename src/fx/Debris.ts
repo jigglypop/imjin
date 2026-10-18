@@ -49,7 +49,7 @@ function grainTexture(): DataTexture {
   const d = new Uint8Array(W * H * 4);
   let seed = 7;
   const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  const rows = Array.from({ length: H }, () => 0.62 + r() * 0.5);
+  const rows = Array.from({ length: H }, () => 0.45 + r() * 0.7);
   const knots = Array.from({ length: 5 }, () => [r() * W, r() * H, 3 + r() * 6] as const);
   for (let y = 0; y < H; y += 1) {
     for (let x = 0; x < W; x += 1) {
@@ -60,7 +60,7 @@ function grainTexture(): DataTexture {
         if (dd < kr * 3) wob += (kr * 3 - dd) * 0.6 * Math.sign(y - ky);
         if (dd < kr) v *= 0.55;
       }
-      v *= rows[((Math.floor(wob) % H) + H) % H]! * (0.78 + 0.22 * Math.sin(wob * 2.6) + (r() - 0.5) * 0.1);
+      v *= rows[((Math.floor(wob / 5) % H) + H) % H]! * (0.78 + 0.22 * Math.sin(wob * 2.6) + (r() - 0.5) * 0.1);
       // Torn ends: the last few per cent of the length darken in jagged fibres.
       const u = x / W;
       const end = Math.min(u, 1 - u);

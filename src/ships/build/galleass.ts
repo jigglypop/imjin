@@ -62,7 +62,7 @@ function ringWall(ctx: Ctx, x0: number, x1: number, lo: number, hi: number, zAt:
 const LOOKS: Partial<Record<Faction, { masts: [string, string][]; flagship?: [string, string]; ensign: [string, string]; streamers: [string, string][]; mainSail?: string; flagSail?: string }>> = {
   spain: { masts: [['flags_a', 'burgundy'], ['flags_a', 'royal'], ['flags_b', 'santiago']], ensign: ['flags_a', 'castile'], streamers: [['flags_b', 'red'], ['flags_b', 'redgold']] },
   // Venice's lion banner on the line, the blue Holy League standard on La Real's main (Capponi; the Toledo banner).
-  holyleague: { masts: [['flags_b', 'genoa'], ['flags_a', 'stmark'], ['flags_a', 'burgundy']], flagship: ['flags_a', 'holyleague'], ensign: ['flags_a', 'stmark'], streamers: [['flags_b', 'red'], ['flags_b', 'redgold']], flagSail: 'sail_cross' },
+  holyleague: { masts: [['flags_b', 'genoa'], ['flags_c', 'stmark'], ['flags_a', 'burgundy']], flagship: ['flags_c', 'holyleague'], ensign: ['flags_c', 'stmark'], streamers: [['flags_b', 'red'], ['flags_b', 'redgold']], flagSail: 'sail_cross' },
   // Red Ottoman naval flags with crescents; the Kapudan Pasha's green banner on the Sultana (no star: that came in the 18th century).
   ottoman: { masts: [['flags_a', 'crescent'], ['flags_a', 'zulfikar'], ['flags_a', 'crescent']], flagship: ['flags_a', 'kapudan'], ensign: ['flags_a', 'sultan'], streamers: [['flags_b', 'redgreen'], ['flags_b', 'green']], flagSail: 'sail_saint' },
 };
@@ -191,8 +191,8 @@ export function buildGalleass(lod: Lod, kind: ShipKind = 'galleass'): MeshData {
     b.quadF(Pn('stern_panel', { rect: [0.02, 0.02, 0.98, 0.98], surf: 3 }), [[sc.x0, deck, z0], [sc.x0, deck, -z0], [sc.x0, syTop, -z0], [sc.x0, syTop, z0]], [-1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
     b.quadF(Pn('cabin_wood'), [[sc.x1, deck, -z1], [sc.x1, deck, z1], [sc.x1, syTop, z1], [sc.x1, syTop, -z1]], [1, 0, 0], [[0, 0], [z1, 0], [z1, sc.h / 2], [0, sc.h / 2]]);
     box(b, deckP, [sc.x0, syTop - 0.05, -z0], [sc.x1, syTop + 0.05, z0], { grain: 0 });
-    // The awning: hoops over the poop with a red-and-gold cloth.
-    const aw = Pn('flags_b', { rect: [0.02, 0.52, 0.48, 0.98] });
+    // The awning: hoops over the poop with a plain red cloth (the plain red flag's cloth, so no device repeats across it).
+    const aw = clothPatch(ctx, 'flags_b', 'red');
     const n = byLod(ctx, 8, 4, 2);
     const P: V3[][] = [];
     const ax0 = sc.x0 + 0.2;

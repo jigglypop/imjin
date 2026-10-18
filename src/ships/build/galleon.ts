@@ -52,9 +52,9 @@ const FLAGS: Record<SailNavy, { mast: [string, string][]; command: [string, stri
     ensign: ['flags_a', 'royal'],
     streamer: [['flags_b', 'redgold'], ['flags_b', 'red'], ['flags_b', 'white']],
   },
-  britain: { mast: [['flags_b', 'pendant']], command: ['flags_a', 'vice'], ensign: ['flags_a', 'white'], streamer: [['flags_b', 'pendant']] },
-  france: { mast: [['flags_b', 'pendant']], command: ['flags_a', 'admiral'], ensign: ['flags_a', 'tricolore'], streamer: [['flags_b', 'pendant']] },
-  spain1805: { mast: [['flags_b', 'pendant']], command: ['flags_a', 'admiral'], ensign: ['flags_a', 'rojigualda'], streamer: [['flags_b', 'pendant']] },
+  britain: { mast: [['flags_b', 'pendant']], command: ['flags_c', 'vice'], ensign: ['flags_c', 'white'], streamer: [['flags_b', 'pendant']] },
+  france: { mast: [['flags_b', 'pendant']], command: ['flags_c', 'admiral'], ensign: ['flags_c', 'tricolore'], streamer: [['flags_b', 'pendant']] },
+  spain1805: { mast: [['flags_b', 'pendant']], command: ['flags_c', 'admiral'], ensign: ['flags_c', 'rojigualda'], streamer: [['flags_b', 'pendant']] },
 };
 
 const smooth = (a: number, c: number, x: number) => {
@@ -149,8 +149,8 @@ function upperWall(ctx: Ctx, plan: SailPlan, x0: number, x1: number, lo: number,
       inner.push([[x, lo, sgn * (zAt(x, lo) - w.thick)], [x, hi, sgn * (zAt(x, hi) - w.thick)]]);
       top.push([[x, hi, sgn * (zAt(x, hi) - w.thick)], [x, hi, sgn * zAt(x, hi)]]);
     }
-    grid(ctx.b, w.out, outer, { flip: sgn > 0, uvFn: (i, j) => w.out.map(outer[i]![j]![0], outer[i]![j]![1]) });
-    if (ctx.lod < 2) grid(ctx.b, w.inner, inner, { flip: sgn < 0, uvFn: (i, j) => w.inner.map(inner[i]![j]![0], inner[i]![j]![1]) });
+    grid(ctx.b, w.out, outer, { flip: sgn < 0, uvFn: (i, j) => w.out.map(outer[i]![j]![0], outer[i]![j]![1]) });
+    if (ctx.lod < 2) grid(ctx.b, w.inner, inner, { flip: sgn > 0, uvFn: (i, j) => w.inner.map(inner[i]![j]![0], inner[i]![j]![1]) });
     if (cap && ctx.lod < 2) grid(ctx.b, w.inner, top, { flip: sgn > 0 });
   }
 }
@@ -376,14 +376,26 @@ export function buildSailShip(kind: ShipKind, variant: number, lod: Lod): MeshDa
     const xs = t0.x0 - 0.02;
     const zw = sailSideZ(plan, t0.x0, t0.y1) * 0.82;
     const panel = Pn('stern_panel', { rect: [0.02, 0.02, 0.98, 0.98], surf: 3, tint: [1.35, 1.3, 1.25] });
-    if (lod < 2) ctx.b.quadF(panel, [[xs, t0.y0 + 0.1, zw], [xs, t0.y0 + 0.1, -zw], [xs, t0.y1 - 0.1, -zw], [xs, t0.y1 - 0.1, zw]], [-1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    if (plan.bands) {
+      // The ships of 1805 carry their galleries over the whole stern, from below the upper gun deck to the taffrail: the
+      // ship's own carved stern picture in two panels, the hull's transom and the castle's, each as wide as its part.
+      const xp = Math.min(-L / 2, t0.x0, top.x0) - 0.06;
+      const y0 = plan.bands[Math.max(0, plan.bands.length - 2)]![0];
+      const y2 = top.y1 + 0.6;
+      const zAt = (y: number) => 0.9 * (y <= deck ? hullZ(h, -L / 2 + 0.8, y) : sailSideZ(plan, t0.x0 + 0.3, y));
+      const v1 = (deck - y0) / (y2 - y0);
+      const [za, zb, zc] = [zAt(y0), zAt(deck), zAt(y2)];
+      ctx.b.quadF(panel, [[xp, y0, za], [xp, y0, -za], [xp, deck, -zb], [xp, deck, zb]], [-1, 0, 0], [[0, 0], [1, 0], [1, v1], [0, v1]]);
+      ctx.b.quadF(panel, [[xp, deck, zb], [xp, deck, -zb], [xp, y2, -zc], [xp, y2, zc]], [-1, 0, 0], [[0, v1], [1, v1], [1, 1], [0, 1]]);
+    } else if (lod < 2) ctx.b.quadF(panel, [[xs, t0.y0 + 0.1, zw], [xs, t0.y0 + 0.1, -zw], [xs, t0.y1 - 0.1, -zw], [xs, t0.y1 - 0.1, zw]], [-1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
     if (aft.length > 1 && lod < 2) {
       // The stern gallery: a walk with a balustrade across the transom at the second storey.
       const t1 = aft[1]!;
       const gz = sailSideZ(plan, t1.x0, t1.y0) * 0.9;
-      box(ctx.b, P.bulkhead!, [t1.x0 - 1.0, t1.y0 - 0.15, -gz], [t1.x0, t1.y0 + 0.05, gz], { grain: 2 });
-      box(ctx.b, P.gilt!, [t1.x0 - 1.0, t1.y0 + 0.05, -gz], [t1.x0 - 0.88, t1.y0 + 1.0, gz], { grain: 2 });
-      if (lod === 0) for (let k = 0; k <= 8; k += 1) cylinder(ctx.b, P.gilt!, [t1.x0 - 0.95, t1.y0 + 0.05, lerp(-gz, gz, k / 8)], [t1.x0 - 0.95, t1.y0 + 1.0, lerp(-gz, gz, k / 8)], 0.05, 0.05, 4, false);
+      // (The 1805 sterns have theirs in the stern picture, flush with the transom.)
+      if (!plan.bands) box(ctx.b, P.bulkhead!, [t1.x0 - 1.0, t1.y0 - 0.15, -gz], [t1.x0, t1.y0 + 0.05, gz], { grain: 2 });
+      if (!plan.bands) box(ctx.b, P.gilt!, [t1.x0 - 1.0, t1.y0 + 0.05, -gz], [t1.x0 - 0.88, t1.y0 + 1.0, gz], { grain: 2 });
+      if (lod === 0 && !plan.bands) for (let k = 0; k <= 8; k += 1) cylinder(ctx.b, P.gilt!, [t1.x0 - 0.95, t1.y0 + 0.05, lerp(-gz, gz, k / 8)], [t1.x0 - 0.95, t1.y0 + 1.0, lerp(-gz, gz, k / 8)], 0.05, 0.05, 4, false);
       // Quarter galleries on the sides near the stern.
       for (const sgn of [-1, 1]) {
         const z = sgn * sailSideZ(plan, t0.x0 + 2, t0.y0 + 1);
@@ -417,8 +429,30 @@ export function buildSailShip(kind: ShipKind, variant: number, lod: Lod): MeshDa
         sweep(ctx.b, P.livery!, [[xb + plan.beak * 0.8, yb + 0.6, 0], [xb + plan.beak * 0.4, yb + 0.5, sgn * 0.75], [fx, deck - 0.4, sgn * sailSideZ(plan, fx, deck - 0.4)]], rectSection(0.1, 0.18), { caps: true });
       }
       // A rampant lion for England, a gilded saint's figure for Spain: both a gilt carving at the beak's tip.
-      box(ctx.b, P.gilt!, [tip[0] - 0.35, tip[1] - 0.1, -0.22], [tip[0] + 0.15, tip[1] + 0.9, 0.22], { grain: 1 });
-      if (lod === 0) cylinder(ctx.b, P.gilt!, [tip[0] - 0.05, tip[1] + 0.9, 0], [tip[0] + 0.1, tip[1] + 1.3, 0], 0.2, 0.12, 6, true);
+      // The figure leans out over the cutwater: scrolled drapery, a torso, shoulders and arms, a head with its crown.
+      const [fx0, fy0] = tip;
+      const s = plan.bands ? 1.25 : 1;
+      cylinder(ctx.b, P.gilt!, [fx0 - 0.45 * s, fy0 - 0.25 * s, 0], [fx0 - 0.05 * s, fy0 + 0.35 * s, 0], 0.34 * s, 0.26 * s, byLod(ctx, 8, 6, 4), true);
+      cylinder(ctx.b, P.gilt!, [fx0 - 0.05 * s, fy0 + 0.35 * s, 0], [fx0 + 0.12 * s, fy0 + 1.0 * s, 0], 0.26 * s, 0.2 * s, byLod(ctx, 8, 6, 4), true);
+      cylinder(ctx.b, P.gilt!, [fx0 + 0.08 * s, fy0 + 0.92 * s, -0.3 * s], [fx0 + 0.08 * s, fy0 + 0.92 * s, 0.3 * s], 0.11 * s, 0.11 * s, 6, true);
+      cylinder(ctx.b, P.gilt!, [fx0 + 0.12 * s, fy0 + 1.0 * s, 0], [fx0 + 0.16 * s, fy0 + 1.12 * s, 0], 0.08 * s, 0.08 * s, 5, false);
+      cylinder(ctx.b, P.gilt!, [fx0 + 0.16 * s, fy0 + 1.1 * s, 0], [fx0 + 0.2 * s, fy0 + 1.42 * s, 0], 0.15 * s, 0.13 * s, byLod(ctx, 8, 6, 4), true);
+      if (lod === 0) {
+        for (const sgn of [-1, 1]) {
+          // Arms down to the hands clasped on the scroll, the drapery's curled edge on each side.
+          cylinder(ctx.b, P.gilt!, [fx0 + 0.08 * s, fy0 + 0.92 * s, sgn * 0.3 * s], [fx0 + 0.3 * s, fy0 + 0.5 * s, sgn * 0.22 * s], 0.08 * s, 0.07 * s, 5, true);
+          cylinder(ctx.b, P.gilt!, [fx0 + 0.3 * s, fy0 + 0.5 * s, sgn * 0.22 * s], [fx0 + 0.32 * s, fy0 + 0.42 * s, sgn * 0.08 * s], 0.07 * s, 0.06 * s, 5, true);
+          cylinder(ctx.b, P.gilt!, [fx0 - 0.5 * s, fy0 - 0.2 * s, sgn * 0.3 * s], [fx0 - 0.2 * s, fy0 + 0.2 * s, sgn * 0.27 * s], 0.09 * s, 0.05 * s, 5, true);
+        }
+        // The crown: a band and its points.
+        cylinder(ctx.b, P.gilt!, [fx0 + 0.2 * s, fy0 + 1.4 * s, 0], [fx0 + 0.21 * s, fy0 + 1.52 * s, 0], 0.15 * s, 0.17 * s, 8, true);
+        for (let k = 0; k < 5; k += 1) {
+          const a = (k / 5) * Math.PI * 2;
+          const cx = fx0 + 0.21 * s + Math.cos(a) * 0.13 * s;
+          const cz = Math.sin(a) * 0.13 * s;
+          cylinder(ctx.b, P.gilt!, [cx, fy0 + 1.52 * s, cz], [cx, fy0 + 1.64 * s, cz], 0.03 * s, 0, 4, false);
+        }
+      }
     }
   }
 

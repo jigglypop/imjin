@@ -1,6 +1,7 @@
 import layout from './atlasLayout.json';
 import { SURF } from './surf';
 import aspects from './flagAspect.json';
+import kindAtlas from './kindAtlas.json';
 
 export type Faction = 'joseon' | 'japan' | 'ming' | 'england' | 'spain' | 'holyleague' | 'ottoman' | 'britain' | 'france' | 'spain1805';
 
@@ -54,8 +55,13 @@ export function flagAspect(faction: Faction, sheet: string, flag: string): numbe
   return (aspects as Record<string, number>)[`${faction}/${sheet}/${flag}`];
 }
 
-export function atlasFiles(faction: Faction, low: boolean) {
+/** Kinds with an atlas of their own (the navy's with their hull, upper works and stern swapped, kindAtlas.json). */
+const KIND_ATLAS = new Set(Object.keys(kindAtlas.kinds));
+export const hasKindAtlas = (kind: string) => KIND_ATLAS.has(kind);
+
+/** The atlas files of a navy, or of one ship when `kind` has its own (`low`: the 1k set). */
+export function atlasFiles(faction: Faction, low: boolean, kind?: string) {
   const sfx = low ? '_1k' : '';
-  const base = `/textures/ships/${faction}`;
+  const base = kind && KIND_ATLAS.has(kind) ? `/textures/ships/kinds/${kind}` : `/textures/ships/${faction}`;
   return { albedo: `${base}_albedo${sfx}.webp`, normal: `${base}_normal${sfx}.webp`, rough: `${base}_rough${sfx}.webp` };
 }

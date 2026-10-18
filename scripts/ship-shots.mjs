@@ -107,13 +107,13 @@ const SHOTS = [
   { name: 'fireship_34', key: 'fireship#0', yaw: 0.9, pitch: 0.25, distance: 40 },
   { name: 'armada_line', key: 'spgalleon#0', yaw: PI / 2 + 0.25, pitch: 0.12, distance: 260, dx: -60 },
 ];
-// --audit=kind,kind#1,...: front, back, both sides, a three-quarter, a high close view and the stern ensign of each, sized by the ship's length.
+// --audit=kind,kind#1,...: front and back (off the bow and stern by 0.4 rad and raised, clear of the gallery row's neighbours), both sides, a three-quarter, a high close view and the stern ensign of each, sized by the ship's length.
 if (args.audit) {
   SHOTS.length = 0;
   for (const k of args.audit.split(',')) {
     const key = k.includes('#') ? k : `${k}#0`;
     const tag = key.replace('#', '');
-    for (const [v, yaw, pitch, f, dxr] of [['front', 0, 0.12, 1.5], ['back', PI, 0.12, 1.5], ['port', PI / 2, 0.1, 1.5], ['star', -PI / 2, 0.1, 1.5], ['34', 0.8, 0.2, 1.6], ['close', 2.4, 0.3, 0.6], ['ensign', 2.3, 0.32, 0.7, -0.45]])
+    for (const [v, yaw, pitch, f, dxr] of [['front', 0.4, 0.3, 1.3], ['back', PI - 0.4, 0.3, 1.3], ['port', PI / 2, 0.1, 1.5], ['star', -PI / 2, 0.1, 1.5], ['34', 0.8, 0.2, 1.6], ['close', 2.4, 0.3, 0.6], ['ensign', 2.3, 0.32, 0.7, -0.45]])
       SHOTS.push({ name: `${tag}_${v}`, key, yaw, pitch, distance: f, rel: true, dxr });
   }
 }

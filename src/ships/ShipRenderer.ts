@@ -397,7 +397,7 @@ function clothHoles(P: any, tear: any, char: any, seed: any) {
  * Hull material. With a cut attribute the hull is drawn as a section: everything above the cut height (in ship space)
  * is discarded and the inside faces show as raw timber, so the decks below can be seen.
  */
-function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, b: InstancedBufferAttribute, c?: InstancedBufferAttribute) {
+export function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, b: InstancedBufferAttribute, c?: InstancedBufferAttribute) {
   const m = new MeshStandardNodeMaterial();
   m.side = c ? DoubleSide : src.side;
   const atlas = src.userData.atlas as { grid: number; cell: number; pad: number } | undefined;

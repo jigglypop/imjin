@@ -158,6 +158,12 @@ const D = {
   },
 };
 
+// The navies with a spare cell (their unused saint's sail) fly their ensign and command flag from it at twice the
+// pixels: a 1x2 sheet of two wide slots.
+for (const [faction, names] of Object.entries({ holyleague: ['holyleague', 'stmark'], britain: ['white', 'vice'], france: ['tricolore', 'admiral'], spain1805: ['rojigualda', 'admiral'] })) {
+  D[faction].flags_c = Object.fromEntries(names.map((n) => [n, D[faction].flags_a[n]]));
+}
+
 // A faint weave and a light hoist-to-fly fade so the cloth reads as cloth, not a decal.
 const weave = await sharp({ create: { width: S, height: S, channels: 3, background: '#808080' } })
   .composite([{ input: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}"><defs><pattern id="p" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="4" fill="#808080"/><rect width="2" height="2" fill="#8a8a8a"/><rect x="2" y="2" width="2" height="2" fill="#767676"/></pattern><linearGradient id="g"><stop offset="0" stop-color="#848484"/><stop offset="1" stop-color="#787878"/></linearGradient></defs><rect width="${S}" height="${S}" fill="url(#g)"/><rect width="${S}" height="${S}" fill="url(#p)" opacity="0.6"/></svg>`) }])
