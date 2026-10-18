@@ -87,7 +87,8 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
                   </span>
                   <span className="g-fcard__start">
                     <span>{t('시작 포구 {ports} · 함대 {fleets}', { ports: portsText(o.startRegions.length), fleets: fleetsText(o.fleets) })}</span>
-                    <b>{o.startRegions.join(' · ')}</b>
+                    {/* The count is in the line above; a few names say where, the rest wait for the map. */}
+                    <b>{o.startRegions.slice(0, 6).join(' · ')}{o.startRegions.length > 6 ? ' …' : ''}</b>
                   </span>
                 </button>
               );

@@ -253,7 +253,7 @@ export function SettingsScreen() {
               }}
             />
           </Row>
-          <Row title={music ? t('배경음악 켜짐') : t('배경음악 꺼짐')} hint={t('낮은 바람 소리와 먼 북소리입니다. 효과음은 그대로 들립니다.')}>
+          <Row title={music ? t('배경음악 켜짐') : t('배경음악 꺼짐')} >
             <Switch
               on={music}
               label={t('배경음악')}
@@ -275,8 +275,7 @@ export function SettingsScreen() {
               ))}
             </div>
           </Row>
-          <p className="settings-hint">{t('자동은 기기에 맞춰 고릅니다. 화면이 끊기거나 꺼지면 스마트폰으로 바꿔 보는 것이 좋습니다.')}</p>
-          <Row title={t('카메라 흔들림')} hint={t('발포하고 폭발할 때 화면이 떨리고 늘었다 줄어드는 정도입니다. 큰 해전에서 어지러우면 줄이거나 끄세요.')}>
+          <Row title={t('카메라 흔들림')} hint={t('발포와 폭발 때 화면이 흔들리는 정도')}>
             <div className="seg seg--set" role="radiogroup" aria-label={t('카메라 흔들림')}>
               {FEEL_CHOICES.map((k) => (
                 <button
@@ -303,7 +302,6 @@ export function SettingsScreen() {
               <p className="settings-hint">{t('기본은 WebGL2입니다. WebGPU는 이 기기에서 충분히 시험되지 않았습니다. 전투가 시작되지 않으면 끄는 것이 좋습니다.')}</p>
             </>
           )}
-          <p className="settings-hint">{t('전투 중에는 전투 화면의 설정에서 화질, 하늘, 파도를 바꿀 수 있습니다.')}</p>
         </section>
         <section className="set-group set-group--help glass">
           <ControlsHelp open />

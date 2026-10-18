@@ -62,6 +62,7 @@ export const EN_MENUS: Record<string, string> = {
   '전투 화면을 시작하지 못했습니다': 'The battle screen could not start',
   '이 기기에서 그래픽을 켜지 못했습니다. 가벼운 설정으로 다시 시도하면 대부분 해결됩니다.': 'Graphics could not start on this device. Trying again with lighter settings usually fixes it.',
   '자세히': 'Details',
+  '발포와 폭발 때 화면이 흔들리는 정도': 'How much the view shakes with gunfire and blasts',
   '가벼운 설정으로 다시 시도': 'Retry with lighter settings',
 
   // Conquest setup
