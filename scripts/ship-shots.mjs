@@ -107,6 +107,16 @@ const SHOTS = [
   { name: 'fireship_34', key: 'fireship#0', yaw: 0.9, pitch: 0.25, distance: 40 },
   { name: 'armada_line', key: 'spgalleon#0', yaw: PI / 2 + 0.25, pitch: 0.12, distance: 260, dx: -60 },
 ];
+// --audit=kind,kind#1,...: front, back, both sides, a three-quarter and a high close view of each, sized by the ship's length.
+if (args.audit) {
+  SHOTS.length = 0;
+  for (const k of args.audit.split(',')) {
+    const key = k.includes('#') ? k : `${k}#0`;
+    const tag = key.replace('#', '');
+    for (const [v, yaw, pitch, f] of [['front', 0, 0.12, 1.5], ['back', PI, 0.12, 1.5], ['port', PI / 2, 0.1, 1.5], ['star', -PI / 2, 0.1, 1.5], ['34', 0.8, 0.2, 1.6], ['close', 2.4, 0.3, 0.6]])
+      SHOTS.push({ name: `${tag}_${v}`, key, yaw, pitch, distance: f, rel: true });
+  }
+}
 const only = args.shots ? new Set(args.shots.split(',')) : null;
 
 await mkdir(out, { recursive: true });
@@ -139,7 +149,8 @@ for (const s of SHOTS) {
     const n = Math.sin(ship.heading);
     const dx = s.dx ?? 0;
     const dz = s.dz ?? 0;
-    e.rts.setPose({ tx: ship.x + c * dx - n * dz, tz: ship.z + n * dx + c * dz, yaw: ship.heading + s.yaw, pitch: s.pitch, distance: s.distance });
+    const distance = s.rel ? s.distance * Math.max(14, ship.spec.length) : s.distance;
+    e.rts.setPose({ tx: ship.x + c * dx - n * dz, tz: ship.z + n * dx + c * dz, yaw: ship.heading + s.yaw, pitch: s.pitch, distance });
     return true;
   }, s);
   if (!ok) {
