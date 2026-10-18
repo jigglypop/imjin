@@ -1,5 +1,5 @@
 import {
-  CanvasTexture, CircleGeometry, Group, Mesh, MeshBasicMaterial, Vector3,
+  CanvasTexture, CircleGeometry, Group, Mesh, MeshBasicMaterial, Quaternion, Vector3, type Object3D,
   type Material, type PerspectiveCamera, type Scene as ThreeScene,
 } from 'three/webgpu';
 import { createFigure, hangSword, holdWeapon, listModels, loader, modelUrl, releaseFigure, standFigure, weaponUrl, type Figure } from '../ui/generals/GeneralModel';
@@ -22,7 +22,7 @@ export interface CastHost {
   readonly setLod: 0 | 1;
 }
 
-type Member = { def: CastMember; figure: Figure | null; holder: Group; ship: number; facing: number; failed: boolean; shown?: boolean; fade?: number; mats?: Material[]; set: DeckSet | null; placed?: boolean };
+type Member = { def: CastMember; figure: Figure | null; holder: Group; ship: number; facing: number; failed: boolean; shown?: boolean; fade?: number; mats?: Material[]; set: DeckSet | null; placed?: boolean; life?: number };
 
 const shipOf = (got: Ship | Ship[] | undefined) => (Array.isArray(got) ? got[0] : got);
 function centre(got: Ship | Ship[] | undefined) {
@@ -70,7 +70,7 @@ export class Cast {
       this.aim(member, ctx);
       const ship = ctx.battle.get(member.ship);
       if (ship) {
-        member.set = new DeckSet(ship.spec.kind, host.setLod);
+        member.set = new DeckSet(ship.spec.kind, host.setLod, ctx.battle.night);
         this.group.add(member.set.group);
       }
       void this.load(member);
@@ -153,7 +153,9 @@ export class Cast {
     const m = this.members.get(name);
     if (!m?.figure || !m.holder.visible) return null;
     const p = m.holder.position;
-    return { x: p.x, y: p.y, z: p.z, heading: m.facing, size: 2 };
+    const k = m.holder.scale.x;
+    const f = m.set?.flag;
+    return { x: p.x, y: p.y, z: p.z, heading: m.facing, size: 2, flag: f ? [f[0] * k, f[1] * k, f[2] * k] : undefined };
   }
 
   act(name: string, _move: 'stand') {
@@ -192,6 +194,10 @@ export class Cast {
       m.holder.visible = true;
       m.set.group.visible = true;
       m.figure.mixer.update(dt);
+      m.set.update(dt);
+      // Small life over the pure idle, in films only (owner 2026-10-18): breathing, and slow glances out to sea.
+      m.life = (m.life ?? 0) + dt;
+      alive(m.figure, m.life, m.def.file.length);
       // He is there from the cut's first frame (a fade on screen reads as a ghost).
       if (m.mats && m.fade !== 1) {
         m.fade = 1;
@@ -232,4 +238,50 @@ function contactTexture() {
   g.fillStyle = r;
   g.fillRect(0, 0, 64, 64);
   return new CanvasTexture(c);
+}
+
+const LIFE_Q = new Quaternion();
+const LIFE_P = new Quaternion();
+const LIFE_AXIS = new Vector3();
+const UP = new Vector3(0, 1, 0);
+const SIDE = new Vector3(1, 0, 0);
+
+/** A smooth 0..1..0 bump between `a` and `b` (seconds), eased in and out over `e`. */
+function bump(t: number, a: number, b: number, e: number) {
+  const s = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+  return s((t - a) / e) * (1 - s((t - b) / e));
+}
+
+/** Turns `bone` by `angle` about `axis` (in the figure's own frame), on top of what the clip gave it this frame. */
+function turn(bone: Object3D | undefined, root: Object3D, axis: Vector3, angle: number) {
+  if (!bone?.parent || Math.abs(angle) < 1e-5) return;
+  LIFE_AXIS.copy(axis).applyQuaternion(root.getWorldQuaternion(LIFE_Q));
+  LIFE_Q.setFromAxisAngle(LIFE_AXIS, angle);
+  bone.parent.getWorldQuaternion(LIFE_P);
+  // local' = P^-1 * D * P * local
+  bone.quaternion.premultiply(LIFE_P.clone().invert().multiply(LIFE_Q).multiply(LIFE_P));
+}
+
+/**
+ * Additive bone turns over the idle clip (cinematics only; /generals stays pure idle): a slow breath in the chest, and
+ * every ~9 s an eased glance off to one side toward the enemy and back, the eyes leading with the head. Small angles,
+ * eased with smoothstep, nothing faster than a second: no snapping, no jitter.
+ */
+function alive(figure: Figure, t: number, seed: number) {
+  const root = figure.root;
+  root.updateMatrixWorld(true);
+  const bones = (figure.root.userData.lifeBones ??= {
+    spine: root.getObjectByName('Spine02') ?? root.getObjectByName('Spine01'),
+    neck: root.getObjectByName('neck'),
+    head: root.getObjectByName('Head'),
+  }) as Record<'spine' | 'neck' | 'head', Object3D | undefined>;
+  const breath = Math.sin((t / 4.4) * Math.PI * 2);
+  turn(bones.spine, root, SIDE, -0.012 * breath);
+  const phase = (t + (seed % 5) * 1.3) % 9;
+  const dir = Math.floor((t + (seed % 5) * 1.3) / 9) % 2 ? 1 : -1;
+  const look = bump(phase, 2.2, 5.0, 1.3) * dir;
+  const drift = Math.sin(t * 0.37 + seed) * 0.025;
+  turn(bones.neck, root, UP, look * 0.09 + drift * 0.5);
+  turn(bones.head, root, UP, look * 0.13 + drift);
+  turn(bones.head, root, SIDE, 0.012 * breath - 0.03 * Math.abs(look));
 }

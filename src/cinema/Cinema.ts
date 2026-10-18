@@ -11,6 +11,7 @@ import type { ScenarioId } from '../sim/scenarios';
 import type { BattleEvent, Team } from '../sim/types';
 import { beatFor, formationBeat, type Beat, type BeatMemory } from './beats';
 import { Cast, type CastHost } from './cast';
+import { setLook } from './grade';
 import { CutscenePlayer } from './CutscenePlayer';
 import { locate, type CameraPose, type RigHost } from './rig';
 import { HANSAN_INTRO, MYEONGNYANG_INTRO } from './scenes/intros';
@@ -44,6 +45,9 @@ const BASE_FOV = 42;
 const OUTRO_DELAY = 2.5;
 /** Seconds of quiet after one beat before the next may start. */
 const BEAT_GAP = 6;
+/** The whole frame opened up in a commander's close-up, per light: his face must read even under cloud or the moon. */
+const EXPOSURE = { day: 1.3, overcast: 1.6, dusk: 1.55, night: 2.1 } as const;
+const SKY_FILL = { day: 1.3, overcast: 1.6, dusk: 1.5, night: 1.7 } as const;
 
 function stored(key: string, fallback: boolean) {
   try {
@@ -95,6 +99,7 @@ export class Cinema implements RigHost {
   private readonly opened = new Set<string>();
   private letter = 0;
   private gradeLevel = 0;
+  private exposureLevel = 1;
   private pose: CameraPose | null = null;
   /** Bumped when what the overlay shows changes, so it re-renders only then. */
   version = 0;
@@ -177,6 +182,16 @@ export class Cinema implements RigHost {
     return this.gradeLevel;
   }
 
+  /** Exposure multiplier: raised for the whole frame in a commander's close-up (owner 2026-10-18), 1 otherwise. */
+  get exposure() {
+    return this.exposureLevel;
+  }
+
+  /** The sky's share of the light, raised with the exposure in a close-up (a soft fill from the battle's own sky). */
+  get skyFill() {
+    return this.exposureLevel === 1 ? 1 : SKY_FILL[this.running?.player.scene.castLight ?? 'day'];
+  }
+
   /** How black the frame is, 0..1. */
   get black() {
     return this.running?.camera || this.running?.kind === 'cutscene' ? this.running.player.black() : 0;
@@ -256,6 +271,7 @@ export class Cinema implements RigHost {
     this.running = { player: new CutscenePlayer(scene, this), kind, camera };
     this.seenCuts = 0;
     this.pose = null;
+    if (kind === 'cutscene') setLook(scene.castLight ?? 'day');
     if (camera && kind === 'cutscene' && scene.cast && this.host.cast) this.cast = new Cast(this.host.cast, scene.cast, scene.castLight ?? 'day', this.ctx);
     if (kind === 'cutscene') {
       this.host.sound.cinema(0);
@@ -359,7 +375,8 @@ export class Cinema implements RigHost {
     if (r) {
       for (const cue of r.player.advance(dt)) this.cue(cue);
       for (const a of r.player.acts()) this.cast?.act(a.who, a.move);
-      if (r.player.cuts !== this.seenCuts) {
+      const cut = r.player.cuts !== this.seenCuts;
+      if (cut) {
         this.seenCuts = r.player.cuts;
         this.cast?.reveal();
       }
@@ -378,11 +395,15 @@ export class Cinema implements RigHost {
           placed = true;
         }
       }
+      // The close-up's exposure is set at the cut (a change within a shot reads as the light pumping).
+      if (cut || !r.camera) this.exposureLevel = r.camera && r.player.onFigure ? EXPOSURE[r.player.scene.castLight ?? 'day'] : 1;
       if (r.player.done) this.finish(r.kind === 'cutscene');
     }
+    if (!this.running) this.exposureLevel = 1;
     const wantLetter = this.covering || this.filming ? 1 : 0;
     this.letter += (wantLetter - this.letter) * (1 - Math.exp(-dt * 3));
-    const wantGrade = this.covering ? 1 : wantLetter * 0.7;
+    // The film grade is the openings' alone: play (and the documentary camera) keeps the battle's own picture.
+    const wantGrade = this.covering ? 1 : 0;
     this.gradeLevel += (wantGrade - this.gradeLevel) * (1 - Math.exp(-dt * 2));
     return placed;
   }

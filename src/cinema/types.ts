@@ -48,6 +48,8 @@ export type Close = {
   type: 'figure'; who: string; at: Target; from: V3; to: V3; look: V3; fallback: Orbit;
   /** A clear set-up found by scripts/probe-cine-occlusion.mjs: a turn about him (rad) and a share of the distance. */
   turn?: number; reach?: number;
+  /** An insert: the lens looks at his set's command flag instead of `look`. */
+  lookFlag?: boolean;
 };
 
 /** Eases from wherever the last shot left the camera into the player's battle camera, so the hand-off has no jump. */
@@ -86,7 +88,7 @@ export type Caption = { at: number; dur: number } & (
    * with his portrait as a painted insert. `source` says where the words are from, `note` marks a line written in
    * character from a record rather than quoted.
    */
-  | { kind: 'say'; cast: string; who: string; role?: string; text: string; hanja?: string; source: string; note?: string; side: Side }
+  | { kind: 'say'; cast: string; who: string; role?: string; text: string; hanja?: string; source: string; note?: string; side: Side; part?: readonly [index: number, of: number] }
 );
 
 export type CaptionKind = Caption['kind'];

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Engine } from '../game/Engine';
 import type { Caption } from '../cinema/types';
+import { splitLine } from '../cinema/lines';
 import { useT } from '../i18n';
 import './cinema.css';
 import { portraitUrl } from './portrait';
@@ -95,8 +96,8 @@ function SayView({ caption, age }: { caption: Extract<Caption, { kind: 'say' }>;
     <div className="cine-say" style={{ opacity: opacityOf(age, caption.dur) }}>
       {caption.text ? (
         <div className="cine-say-text">
-          <span className="cine-say-name">{t(caption.who)}</span>
-          <span className="cine-say-line">{t(caption.text)}</span>
+          {!caption.part?.[0] && <span className="cine-say-name">{t(caption.who)}</span>}
+          <span className="cine-say-line">{caption.part ? splitLine(t(caption.text), caption.part[1])[caption.part[0]] : t(caption.text)}</span>
         </div>
       ) : (
         <div className="cine-say-text">{t(caption.who)}</div>
@@ -175,6 +176,30 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
     };
   }, [covering, cinema]);
 
+  // The film's controls are out of the picture until the mouse moves or the screen is touched (owner 2026-10-18).
+  const [awake, setAwake] = useState(false);
+  const awakeRef = useRef(false);
+  useEffect(() => {
+    if (!covering) return;
+    let timer = 0;
+    const wake = () => {
+      awakeRef.current = true;
+      setAwake(true);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        awakeRef.current = false;
+        setAwake(false);
+      }, 2400);
+    };
+    window.addEventListener('pointermove', wake, { passive: true });
+    return () => {
+      window.removeEventListener('pointermove', wake);
+      window.clearTimeout(timer);
+      awakeRef.current = false;
+      setAwake(false);
+    };
+  }, [covering]);
+
   const captions = cinema.captions();
   const live = new Set(captions.map((c) => c.caption));
   for (const c of labels.current.keys()) if (!live.has(c)) labels.current.delete(c);
@@ -184,9 +209,15 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
     <div
       className={`cine${covering ? ' cine--covering' : ''}`}
       aria-live="polite"
-      onClick={(e) => {
-        // A click or a tap on the film skips it (the buttons handle their own).
-        if (covering && !(e.target as HTMLElement).closest('button')) cinema.skip();
+      onPointerUp={(e) => {
+        // A click on the film skips it (the buttons handle their own). A first touch only shows the controls; a
+        // second while they show skips.
+        if (!covering || (e.target as HTMLElement).closest('button')) return;
+        if (e.pointerType === 'touch' && !awakeRef.current) {
+          window.dispatchEvent(new PointerEvent('pointermove'));
+          return;
+        }
+        cinema.skip();
       }}
     >
       <div className="cine-bar cine-bar--top" ref={barTop} />
@@ -232,10 +263,10 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
           <CaptionView key={`${caption.kind}${caption.at}`} caption={caption} age={age} />
         ))}
       {covering && (
-        <div className="cine-controls">
-          {!online && (
+        <div className={`cine-controls cine-controls--film${awake || cinema.held ? ' is-awake' : ''}`}>
+          {!online && cinema.held && (
             <button className="cine-button" onClick={() => cinema.togglePause()}>
-              {t(cinema.held ? '계속' : '일시정지')} <kbd>Space</kbd>
+              {t('계속')} <kbd>Space</kbd>
             </button>
           )}
           <button className="cine-button" onClick={() => cinema.skip()}>

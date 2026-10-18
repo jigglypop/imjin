@@ -94,6 +94,12 @@
 .cine-doc-mark { font: 600 11px var(--font-ui); letter-spacing: 0.3em; color: rgba(255, 255, 255, 0.55); margin-right: 6px; }
 .cine-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(255, 255, 255, 0.06); }
 .cine-progress div { height: 100%; background: rgba(255, 255, 255, 0.35); transform-origin: 0 50%; transform: scaleX(0); }
+/* In a film the controls are small plain text, hidden until the mouse moves or the screen is touched (owner 2026-10-18). */
+.cine-controls--film { opacity: 0; transition: opacity 0.5s; gap: 18px; }
+.cine-controls--film.is-awake { opacity: 0.75; }
+.cine--covering:hover .cine-controls--film:not(.is-awake) { opacity: 0; }
+.cine-controls--film .cine-button { background: none; border: 0; padding: 4px 0; font-size: 11px; color: rgba(255, 255, 255, 0.8); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.cine-controls--film .cine-button:hover { background: none; color: #fff; }
 .cine-held { position: absolute; top: calc(var(--cine-bar, 0px) + 18px); left: 50%; transform: translateX(-50%); font: 600 12px var(--font-ui); letter-spacing: 0.4em; color: rgba(255, 255, 255, 0.8); }
 
 @keyframes cine-fade { from { opacity: 0; } to { opacity: 1; } }
@@ -111,7 +117,7 @@
 .app--compact .cine-card-role { font-size: 11px; padding-top: 5px; margin-top: 4px; }
 .app--compact .cine-doc { padding: 10px 12px; }
 /* Phones: the controls sit in the top bar, out of the captions' way; touch has no keys to name. */
-.app--compact .cine-controls { opacity: 0.85; top: max(6px, calc(var(--cine-bar, 0px) * 0.5 - 15px)); bottom: auto; }
+.app--compact .cine-controls:not(.cine-controls--film) { opacity: 0.85; } .app--compact .cine-controls { top: max(6px, calc(var(--cine-bar, 0px) * 0.5 - 15px)); bottom: auto; }
 .app--touch .cine-button kbd { display: none; }
 .app--compact .cine-lower { bottom: calc(var(--cine-bar, 0px) + 40px); }
 @media (prefers-reduced-motion: reduce) {

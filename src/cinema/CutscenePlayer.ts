@@ -124,7 +124,8 @@ export class CutscenePlayer {
         const c = this.clear;
         const scale = (v: V3): V3 => [v[0] * c.dist, v[1], v[2] * c.dist];
         const turned = { ...this.place, heading: this.place.heading + c.yaw };
-        return compose({ ...shot, cam: { type: 'track', at: cam.at, from: scale(cam.from), to: scale(cam.to), look: cam.look } }, k, turned, this.host);
+        const look = cam.lookFlag && this.place.flag ? this.place.flag : cam.look;
+        return compose({ ...shot, cam: { type: 'track', at: cam.at, from: scale(cam.from), to: scale(cam.to), look } }, k, turned, this.host);
       }
       this.place = this.follow(this.place, locate(cam.at, this.host), dt);
       return this.place ? compose({ ...shot, cam: cam.fallback }, k, this.place, this.host) : null;
