@@ -56,6 +56,9 @@ const GRAPPLE_REACH = { japan: 12, other: 3 };
 const GRAPPLE_SPEED = { japan: 6, other: 3.5 };
 /** Most ships that can hold one enemy ship at the same time. */
 const MAX_BOARDERS = 4;
+/** Enemy fleets larger than this are searched nearest first; at most NEAREST_PICKS ships are picked out by distance. */
+const NEAREST_FIRST = 24;
+const NEAREST_PICKS = 12;
 /** A grapple parts when the hulls drift further apart than this. */
 const GRAPPLE_SLACK = 14;
 /** Seconds a ship cannot throw a grapple at the ship it was just cut or repelled from. */
@@ -306,6 +309,9 @@ export class Battle {
   private firingLanes = new Map<number, boolean>();
   /** The fastest shot each ship spec fires, for the firing lane's arc. A battle keeps one balance profile throughout. */
   private readonly muzzles = new Map<ShipSpec, number>();
+  /** The nearest-enemy search's distances and picked marks, one per enemy. */
+  private enemyD = new Float64Array(64);
+  private enemyDone = new Uint8Array(64);
   private readonly sideTargets: (Ship | undefined | null)[] = [null, null, null];
   private readonly volleyTargets: (Ship | undefined | null)[] = [null, null, null];
 
@@ -1007,40 +1013,62 @@ export class Battle {
     const boards = boardsFirst(s);
     // A Ming crew's focus on wounded hulls has no fixed floor, so its candidates are all scored in full.
     const slack = this.profile !== 'historical' && s.spec.faction === 'ming' ? Infinity : 1e-6 + 60 + (maneuvers && !boards ? 120 : 0) + (boards ? 80 + 80 : 70) + (lightBoarder ? 100 : 0);
-    for (const o of list) {
-      const d = hyp(o.x - s.x, o.z - s.z);
-      if (d > within || !((this.profile === 'historical' && this.lull >= STALL_AI) || this.canSee(o, d, s.team))) continue;
-      if (pressing && this.offCourse(s, o)) continue;
-      if (d - slack >= bestScore) continue;
-      let score = d;
-      if (maneuvers) {
-        // Fire spread over the enemy line and drawn to a ship already under fire from another quarter, not a firing
-        // squad of the whole fleet on one hull; a cautious commander's crews do not leave their anchorage to chase.
-        if (!boardsFirst(s) && this.tactics?.crossing(o, s)) score -= 120;
-        score += Math.max(0, maneuvers.crowd(o) - (o.id === s.targetId ? 4 : 3)) * 30;
-        if (this.isAi(s) && maneuvers.tethered(s, o)) score += 2000;
+    const seeAll = this.profile === 'historical' && this.lull >= STALL_AI;
+    const n = list.length;
+    // Nearest first, when looking cannot change anything (see seeingIsPure): the few closest candidates settle the
+    // choice and the rest fall to the slack test without being looked at. Ties go to the earlier ship in the list, as
+    // the scan in list order gave them.
+    if (slack !== Infinity && n > NEAREST_FIRST && (seeAll || this.seeingIsPure(otherTeam(s.team)))) {
+      if (this.enemyD.length < n) {
+        this.enemyD = new Float64Array(n * 2);
+        this.enemyDone = new Uint8Array(n * 2);
       }
-      if (preferBoardable && !o.spec.boardable) score += 700;
-      if (o.id === s.targetId) score -= 60;
-      // Ming crews concentrate their long-range fire on a wounded hull instead of spreading it across the line.
-      if (this.profile !== 'historical' && s.spec.faction === 'ming') score -= 180 * (1 - o.hull / o.spec.hull);
-      // Boarders gang up on a ship that is already held.
-      if (boardsFirst(s)) score -= 40 * Math.min(2, this.boarders.get(o.id) ?? 0);
-      // Press a crew that is wavering; a running one is a prize for boarders and a waste of a gun line's time.
-      if (o.moraleState === 'wavering') score -= 70;
-      else if (o.moraleState === 'routing') score += boardsFirst(s) ? -80 : 60;
-      if (spreadBoarders) {
-        const assigned = Math.max(0, (this.boardingTargets.get(o.id) ?? 0) - (s.targetId === o.id ? 1 : 0));
-        // Four crews can fight on one deck. Sending the whole navy at its bow jams the approach with friendly hulls.
-        score += assigned * 25 + Math.max(0, assigned - MAX_BOARDERS + 1) * 180;
+      const ds = this.enemyD;
+      const done = this.enemyDone;
+      for (let i = 0; i < n; i += 1) {
+        const o = list[i]!;
+        ds[i] = hyp(o.x - s.x, o.z - s.z);
+        done[i] = 0;
       }
-      // Fast small crews hunt escorts and scouts. An isolated boat should not ignore nearby prey to climb a
-      // fully manned gunship's high rail; heavy boarding ships still commit to that gun line.
-      if (lightBoarder) score += clamp(o.crew / Math.max(1, s.crew) - 1, -1, 5) * 100;
-      if (o.spec.kind === 'hyeopseon' && !lightBoarder) score += 120;
-      if (score < bestScore) {
-        bestScore = score;
-        best = o;
+      let bestIdx = -1;
+      let picks = 0;
+      for (;;) {
+        let j = -1;
+        if (picks < NEAREST_PICKS) {
+          for (let i = 0; i < n; i += 1) if (!done[i] && ds[i]! <= within && (j < 0 || ds[i]! < ds[j]!)) j = i;
+        } else {
+          // Many near ships that cannot be seen or are off the course: the rest in list order, still with the slack test.
+          for (let i = 0; i < n; i += 1) if (!done[i] && ds[i]! <= within) { j = i; break; }
+        }
+        if (j < 0) break;
+        done[j] = 1;
+        picks += 1;
+        const d = ds[j]!;
+        if (d - slack >= bestScore) {
+          if (picks <= NEAREST_PICKS) break;
+          continue;
+        }
+        const o = list[j]!;
+        if (!seeAll && !this.canSee(o, d, s.team)) continue;
+        if (pressing && this.offCourse(s, o)) continue;
+        const score = this.enemyScore(s, o, d, preferBoardable, spreadBoarders, lightBoarder);
+        if (score < bestScore || (score === bestScore && j < bestIdx)) {
+          bestScore = score;
+          best = o;
+          bestIdx = j;
+        }
+      }
+    } else {
+      for (const o of list) {
+        const d = hyp(o.x - s.x, o.z - s.z);
+        if (d > within || !(seeAll || this.canSee(o, d, s.team))) continue;
+        if (pressing && this.offCourse(s, o)) continue;
+        if (d - slack >= bestScore) continue;
+        const score = this.enemyScore(s, o, d, preferBoardable, spreadBoarders, lightBoarder);
+        if (score < bestScore) {
+          bestScore = score;
+          best = o;
+        }
       }
     }
     if (spreadBoarders && best?.id !== s.targetId) {
@@ -1058,6 +1086,49 @@ export class Battle {
       this.boardingSlots.set(s.id, slot);
     }
     return best;
+  }
+
+  /** How much `s` wants `o` as its target, `d` metres off: lower is better. */
+  private enemyScore(s: Ship, o: Ship, d: number, preferBoardable: boolean, spreadBoarders: boolean, lightBoarder: boolean) {
+    const maneuvers = this.maneuvers;
+    let score = d;
+    if (maneuvers) {
+      // Fire spread over the enemy line and drawn to a ship already under fire from another quarter, not a firing
+      // squad of the whole fleet on one hull; a cautious commander's crews do not leave their anchorage to chase.
+      if (!boardsFirst(s) && this.tactics?.crossing(o, s)) score -= 120;
+      score += Math.max(0, maneuvers.crowd(o) - (o.id === s.targetId ? 4 : 3)) * 30;
+      if (this.isAi(s) && maneuvers.tethered(s, o)) score += 2000;
+    }
+    if (preferBoardable && !o.spec.boardable) score += 700;
+    if (o.id === s.targetId) score -= 60;
+    // Ming crews concentrate their long-range fire on a wounded hull instead of spreading it across the line.
+    if (this.profile !== 'historical' && s.spec.faction === 'ming') score -= 180 * (1 - o.hull / o.spec.hull);
+    // Boarders gang up on a ship that is already held.
+    if (boardsFirst(s)) score -= 40 * Math.min(2, this.boarders.get(o.id) ?? 0);
+    // Press a crew that is wavering; a running one is a prize for boarders and a waste of a gun line's time.
+    if (o.moraleState === 'wavering') score -= 70;
+    else if (o.moraleState === 'routing') score += boardsFirst(s) ? -80 : 60;
+    if (spreadBoarders) {
+      const assigned = Math.max(0, (this.boardingTargets.get(o.id) ?? 0) - (s.targetId === o.id ? 1 : 0));
+      // Four crews can fight on one deck. Sending the whole navy at its bow jams the approach with friendly hulls.
+      score += assigned * 25 + Math.max(0, assigned - MAX_BOARDERS + 1) * 180;
+    }
+    // Fast small crews hunt escorts and scouts. An isolated boat should not ignore nearby prey to climb a
+    // fully manned gunship's high rail; heavy boarding ships still commit to that gun line.
+    if (lightBoarder) score += clamp(o.crew / Math.max(1, s.crew) - 1, -1, 5) * 100;
+    if (o.spec.kind === 'hyeopseon' && !lightBoarder) score += 120;
+    return score;
+  }
+
+  /**
+   * Whether looking at the side's ships has no side effect: only a ship lying in wait in an ambush by day makes canSee
+   * work out (and remember for a while) whether land hides it, so then every candidate must be looked at in list order.
+   */
+  private seeingIsPure(team: Team) {
+    const m = this.maneuverRules;
+    if (!m || this.night) return true;
+    for (const plan of m.plans.values()) if (plan.team === team && plan.kind === 'ambush' && plan.phase !== 'striking') return false;
+    return true;
   }
 
   /** The nearest enemy of a ship that has seen none for a while: after dark a fleet hunts by where the enemy last was. */
