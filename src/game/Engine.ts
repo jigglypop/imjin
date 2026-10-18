@@ -1344,7 +1344,9 @@ export class Engine {
     }
     this.lastScaled = scaled;
     // Presentation between sim steps: ships drawn and the sea sampled at the frame's own time, one step behind the sim.
-    if (!this.remote && !this.fastForward) {
+    // Also while a cutscene covers the auto fast-forward before contact: its lens rides a flagship, which drawn at the
+    // sim's 30 Hz steps zigzags the close-ups (jerk 0.24-0.5 m/frame^3 at a fixed 60 fps).
+    if (!this.remote && (!this.fastForward || this.cinema.covering)) {
       const alpha = Math.min(1, Math.max(0, this.accumulator / SIM_DT));
       this.views.alpha = alpha;
       waveField.time = this.battle.time - (1 - alpha) * SIM_DT;

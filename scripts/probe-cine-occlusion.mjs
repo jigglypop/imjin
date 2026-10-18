@@ -165,6 +165,16 @@ const run = async (id) => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   const errs = [];
   page.on('pageerror', (er) => errs.push(er.message));
+  // --fixed: every frame advances the page clock by exactly 1/60 s, so jerk is the lens's own, not frame pacing.
+  if (args.fixed) await page.addInitScript(() => {
+    let now = performance.now();
+    performance.now = () => now;
+    const raf = window.requestAnimationFrame.bind(window);
+    let pending = [];
+    window.requestAnimationFrame = (cb) => { pending.push(cb); return pending.length; };
+    const pump = () => { now += 1000 / 60; const run = pending; pending = []; for (const cb of run) cb(now); raf(pump); };
+    raf(pump);
+  });
   await page.goto(`${base}/?scenario=${id}&cutscene=1${args.noframe ? '&noframe=1' : ''}`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__engine?.cinema?.progress, null, { timeout: 120000 }).catch(() => {});
   await page.evaluate(install);
@@ -208,7 +218,7 @@ const run = async (id) => {
     const cams = S.cams.filter((c) => c[2] === s.i);
     const rs = [];
     if (cams.length > 10) {
-      for (let t = cams[0][0] + 250, j = 0; t <= cams[cams.length - 1][0]; t += 1000 / 60) {
+      for (let t = cams[0][0] + 250 + (args.fixed ? 1e-3 : 0), j = 0; t <= cams[cams.length - 1][0]; t += 1000 / 60) {
         while (j < cams.length - 2 && cams[j + 1][0] < t) j++;
         const a = cams[j], b = cams[j + 1];
         // A pause (the screenshot, the search) holds the clock: skip spans where the scene time stood still.
@@ -216,6 +226,12 @@ const run = async (id) => {
         const k = Math.max(0, Math.min(1, (t - a[0]) / (b[0] - a[0] || 1)));
         rs.push([3, 4, 5].map((q) => a[q] + (b[q] - a[q]) * k));
       }
+    }
+    if (args.fixed) {
+      // One sample per page frame, each exactly 1/60 s apart: no resampling, past the first 0.25 s after the cut.
+      rs.length = 0;
+      let last = -1;
+      for (const c of cams) if (c[0] !== last && c[0] >= cams[0][0] + 250) { last = c[0]; rs.push(c.slice(3)); }
     }
     const js = [];
     for (let i = 3; i < rs.length; i++) js.push(Math.hypot(...[0, 1, 2].map((q) => rs[i][q] - 3 * rs[i - 1][q] + 3 * rs[i - 2][q] - rs[i - 3][q])));
