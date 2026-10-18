@@ -3,6 +3,7 @@ import {
   Color,
   DataTexture,
   DirectionalLight,
+  type Light,
   PCFShadowMap,
   PerspectiveCamera,
   RenderPipeline,
@@ -233,6 +234,8 @@ export class Engine {
   private fpsTime = 0;
   private lastScaled = 0;
   private vignette = uniform(0.32);
+  /** The sky preset's exposure; a cinematic close-up multiplies it. */
+  private baseExposure = 1;
   private phi = 0;
   /** Cinematic camera, kill-cam slow motion and shot feel. */
   readonly director = new Director(this);
@@ -638,8 +641,8 @@ export class Engine {
   /**
    * Builds every program and pass before the battle shows, so none compiles on the first frames as a hitch. The whole
    * pipeline is rendered once part by part (ground, sea and sky, ships and crew), each step moving the loading bar, then
-   * with the refracting ocean if a level can reach it. On WebGL the driver compiles one program at a time inside those
-   * renders. On WebGPU they only start their pipelines (renderAhead), which the GPU process compiles side by side while
+   * with the refracting ocean if a level can reach it. On WebGL without KHR_parallel_shader_compile the driver compiles one program at a time
+   * inside those renders. On WebGPU, and on WebGL with that extension (WebKit has it), they only start their pipelines (renderAhead), which the GPU process compiles side by side while
    * the next part is prepared; the bar then follows them to the end. `from` is where the bar starts.
    */
   private async prewarm(from: number, task: LoadTask) {
@@ -685,6 +688,11 @@ export class Engine {
     };
   }
 
+  /** WebGL with KHR_parallel_shader_compile links programs off the main thread, so it starts them ahead as WebGPU does. */
+  private get parallelCompile() {
+    return !!(this.renderer.backend as unknown as { parallel?: unknown }).parallel;
+  }
+
   /** Pipelines the loading renders have started on WebGPU and not yet waited for. */
   private compiling: Promise<void>[] = [];
 
@@ -698,7 +706,7 @@ export class Engine {
    * once with a camera of its own (the sky turned into a cube, the environment's blurred levels) must draw now.
    */
   private renderAhead(webgpu: boolean) {
-    if (!webgpu) {
+    if (!webgpu && !this.parallelCompile) {
       this.pipeline.render();
       return;
     }
@@ -742,16 +750,34 @@ export class Engine {
       [t('바다와 하늘을 준비하는 중'), [this.ocean.mesh, ...(clouds ? [clouds] : [])]],
       [t('함선과 병사를 준비하는 중'), [this.views.group, this.crew.group, this.fx.group, this.lanterns.group]],
     ];
-    const visible = parts.map((o) => o.visible);
+    // A part's lights (the effects' flashes) stay on while the other parts draw: the lit programs are keyed by the scene's
+    // lights, so the ground built without them would be built and compiled again in the first full frame.
+    const lit = (o: Object3D) => {
+      let found = false;
+      o.traverse((c) => (found ||= (c as Light).isLight === true));
+      return found;
+    };
+    const hide = (o: Object3D, hidden: Object3D[]) => {
+      if (!lit(o)) {
+        if (o.visible) hidden.push(o);
+        o.visible = false;
+        return;
+      }
+      if (!(o as Light).isLight) for (const c of o.children) hide(c, hidden);
+    };
     for (const [n, [text, show]] of steps.entries()) {
       setLoading(text, from + 0.04 + n * 0.05);
       await settle();
       this.checkLoad(task);
-      parts.forEach((o) => (o.visible = show.includes(o)));
+      const hidden: Object3D[] = [];
+      const shown = show.filter((o) => !o.visible);
+      for (const o of parts) if (!show.includes(o)) hide(o, hidden);
+      for (const o of shown) o.visible = true;
       this.renderAhead(webgpu);
-      parts.forEach((o, i) => (o.visible = visible[i]!));
+      for (const o of hidden) o.visible = true;
+      for (const o of shown) o.visible = false;
     }
-    if (!webgpu) return;
+    if (!webgpu && !this.parallelCompile) return;
     setLoading(t('화면 효과를 준비하는 중'), from + 0.15);
     await this.compiled(from + 0.15, from + 0.2, task);
   }
@@ -921,6 +947,9 @@ export class Engine {
   /** The film grade follows the cinema; the lens pass is in the picture only while a cutscene runs. */
   private updateFilm(dt: number) {
     film.amount.value = this.cinema.grade;
+    // A close-up opens the whole frame up (owner 2026-10-18), the cinema snapping it at the cut.
+    const exposure = this.baseExposure * this.cinema.exposure;
+    if (this.renderer.toneMappingExposure !== exposure) this.renderer.toneMappingExposure = exposure;
     // The bloom of a close fire would whiten the whole frame: it is held back while the film grade is on.
     if (this.bloomNode) this.bloomNode.strength.value = LEVELS[this.level]!.bloomStrength * (1 - 0.55 * this.cinema.grade);
     film.time.value = (film.time.value + dt) % 600;
@@ -1087,7 +1116,8 @@ export class Engine {
     this.sun.color.setRGB(irr.x / lum, irr.y / lum, irr.z / lum);
     this.sun.intensity = lum * scale * 1.35;
     this.sunLight.value.copy(this.sun.color).multiplyScalar(this.sun.intensity);
-    this.renderer.toneMappingExposure = preset.exposure;
+    this.baseExposure = preset.exposure;
+    this.renderer.toneMappingExposure = preset.exposure * this.cinema.exposure;
     if (this.fx) this.fx.night = preset.night;
     if (this.ocean) this.ocean.setEnvironment(sky.environment);
     this.clouds?.setLayer(preset.clouds);
@@ -1123,7 +1153,7 @@ export class Engine {
       const luma = mapped.r.mul(0.2126).add(mapped.g.mul(0.7152)).add(mapped.b.mul(0.0722));
       const nightColor = mix(vec3(luma, luma, luma), mapped.rgb, 0.6).mul(vec3(0.8, 0.92, 1.15));
       const toned = mix(mapped.rgb, nightColor, atmosphere.night.mul(float(1).sub(smoothstep(0.25, 0.85, luma))));
-      return smaa(vec4(filmGrade(toned.mul(vig)), 1));
+      return smaa(vec4(filmGrade(toned.mul(vig), this.eq.tier !== 'low'), 1));
     };
     this.plainOutput = finish(color);
     // A cutscene's lens: depth of field on the scene before the bloom. Phones go without it (its passes cost too much there).

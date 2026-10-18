@@ -17,10 +17,11 @@ import {
   Quaternion,
   RepeatWrapping,
   SRGBColorSpace,
+  Vector2,
   Vector3,
   type BufferGeometry,
 } from 'three/webgpu';
-import { attribute, instancedBufferAttribute, mix, texture, uv, vec2, vec3 } from 'three/tsl';
+import { attribute, instancedBufferAttribute, mix, texture, uniform, uv } from 'three/tsl';
 import { waveField } from '../ocean/waves';
 import type { Faction } from '../sim/types';
 
@@ -235,8 +236,9 @@ export class DebrisField {
       if (s.grain) {
         // rgb: the navy's hull paint on the board's painted face; w: the piece's wood tone.
         const P = instancedBufferAttribute(paint, 'vec4') as any;
-        const g = texture(grain, uv().mul(vec2(s.grain[0], s.grain[1]))).r.mul(1.6);
-        const wood = vec3(s.color[0], s.color[1], s.color[2]).mul(g).mul(P.w);
+        // The repeats and the tone are uniforms, not constants, so every grained piece shares one program.
+        const g = texture(grain, uv().mul(uniform(new Vector2(s.grain[0], s.grain[1])))).r.mul(1.6);
+        const wood = uniform(new Vector3(s.color[0], s.color[1], s.color[2])).mul(g).mul(P.w);
         // Paint keeps some of the grain under it.
         mat.colorNode = mix(wood, P.xyz.mul(g.mul(0.35).add(0.6)), attribute('mask', 'float'));
       }
