@@ -1,5 +1,5 @@
-import { Color, InstancedMesh, Matrix4, Quaternion, Sphere, Vector3, type BufferGeometry, type Material } from 'three/webgpu';
-import { treeShapes } from '../treeModels';
+import { Color, InstancedMesh, Matrix4, Quaternion, Sphere, Vector3, type Material } from 'three/webgpu';
+import { FINE_SIZE, treeShapes } from '../treeModels';
 import { outside, seeded, type Plan } from './plan';
 
 // The woods round a hero camp: broadleaf trees and pines at their own size (eight to thirteen metres, a barracks' length),
@@ -72,33 +72,69 @@ export function plantTrees(plan: Plan, reach: number, groundAt: (x: number, z: n
   return out;
 }
 
-/**
- * The trees as instanced meshes in the site's frame, one a kind (0 broadleaf, 1 fir, 2 boulder, 3 red pine) at each
- * detail: `near` for a close camera, `far` for the rest. The trees take `trees`, the boulders `rocks`.
- */
-export function treeMeshes(spots: TreeSpot[], trees: Material, rocks: Material) {
-  const build = (detail: 'near' | 'far') => treeShapes(detail).map((shape, kind) => {
-    const list = spots.filter((s) => s[4] === kind);
-    if (!list.length) { shape.dispose(); return null; }
-    return place(shape, kind === 2 ? rocks : trees, kind, list);
-  }).filter((m) => m !== null);
-  return { near: build('near'), far: build('far') };
+/** A hero camp's woods: the trees of each kind at both details, `deal` sorting them to the detail the eye wants. */
+export interface Woods {
+  /** Every mesh, the fine ones and the light ones. */
+  meshes: InstancedMesh[];
+  /** Deals each tree to the fine shapes when it stands large to `eye` (a point of the site's frame), else to the light ones. */
+  deal(eye: readonly [number, number, number]): void;
 }
 
-function place(shape: BufferGeometry, material: Material, kind: number, list: TreeSpot[]) {
-  const mesh = new InstancedMesh(shape, material, list.length);
-  const m = new Matrix4(), q = new Quaternion(), up = new Vector3(0, 1, 0), c = new Color();
-  let maxR = 0;
-  list.forEach(([x, y, z, h, , shade], i) => {
-    q.setFromAxisAngle(up, (x * 12.9898 + z * 78.233) % (Math.PI * 2));
-    const w = kind === 2 ? h : h * (kind === 1 ? 0.85 : kind === 3 ? 1.05 : 1.15) * (0.85 + ((x * 3.7 + z * 1.3) % 0.3));
-    m.compose(new Vector3(x, y, z), q, new Vector3(w, kind === 2 ? h * (0.6 + ((z * 2.3) % 0.5)) : h, w));
-    mesh.setMatrixAt(i, m);
-    mesh.setColorAt(i, c.setRGB(shade, shade * (0.97 + ((x * 7.1) % 0.06)), shade * 0.95));
-    maxR = Math.max(maxR, Math.hypot(x, z) + h);
+/**
+ * The trees as instanced meshes in the site's frame, one a kind (0 broadleaf, 1 fir, 2 boulder, 3 red pine) at each
+ * detail. The trees take `trees`, the boulders `rocks`.
+ */
+export function treeMeshes(spots: TreeSpot[], trees: Material, rocks: Material): Woods {
+  const turn = new Quaternion(), up = new Vector3(0, 1, 0), m = new Matrix4(), c = new Color();
+  const kinds = [0, 1, 2, 3].map((kind) => {
+    const list = spots.filter((s) => s[4] === kind);
+    const n = list.length;
+    const at = new Float32Array(n * 3), tall = new Float32Array(n), matrix = new Float32Array(n * 16), tint = new Float32Array(n * 3);
+    let reach = 0;
+    list.forEach(([x, y, z, h, , shade], i) => {
+      turn.setFromAxisAngle(up, (x * 12.9898 + z * 78.233) % (Math.PI * 2));
+      const w = kind === 2 ? h : h * (kind === 1 ? 0.85 : kind === 3 ? 1.05 : 1.15) * (0.85 + ((x * 3.7 + z * 1.3) % 0.3));
+      m.compose(new Vector3(x, y, z), turn, new Vector3(w, kind === 2 ? h * (0.6 + ((z * 2.3) % 0.5)) : h, w));
+      m.toArray(matrix, i * 16);
+      c.setRGB(shade, shade * (0.97 + ((x * 7.1) % 0.06)), shade * 0.95).toArray(tint, i * 3);
+      at.set([x, y, z], i * 3);
+      tall[i] = h;
+      reach = Math.max(reach, Math.hypot(x, z) + h);
+    });
+    return { n, at, tall, matrix, tint, reach };
   });
-  // One bounding sphere over the whole wood, so the camera culls it whole.
-  mesh.geometry.boundingSphere = new Sphere(new Vector3(0, 0, 0), maxR + 20);
-  mesh.boundingSphere = new Sphere(new Vector3(0, 0, 0), maxR + 20);
-  return mesh;
+  const pair = (detail: 'near' | 'far') => treeShapes(detail).map((shape, kind) => {
+    const { n, reach } = kinds[kind]!;
+    if (!n) { shape.dispose(); return null; }
+    const mesh = new InstancedMesh(shape, kind === 2 ? rocks : trees, n);
+    mesh.count = 0;
+    mesh.setColorAt(0, c.setRGB(1, 1, 1));
+    // One bounding sphere over the whole wood, so the camera culls it whole.
+    mesh.geometry.boundingSphere = new Sphere(new Vector3(0, 0, 0), reach + 20);
+    mesh.boundingSphere = new Sphere(new Vector3(0, 0, 0), reach + 20);
+    return mesh;
+  });
+  const near = pair('near'), far = pair('far');
+  return {
+    meshes: [...near, ...far].flatMap((mesh) => (mesh ? [mesh] : [])),
+    deal(eye) {
+      kinds.forEach(({ n, at, tall, matrix, tint }, kind) => {
+        const a = near[kind], b = far[kind];
+        if (!a || !b) return;
+        let na = 0, nb = 0;
+        for (let i = 0; i < n; i += 1) {
+          const fine = tall[i]! > FINE_SIZE * Math.hypot(at[i * 3]! - eye[0], at[i * 3 + 1]! - eye[1], at[i * 3 + 2]! - eye[2]);
+          const to = fine ? a : b, k = fine ? na++ : nb++;
+          (to.instanceMatrix.array as Float32Array).set(matrix.subarray(i * 16, i * 16 + 16), k * 16);
+          (to.instanceColor!.array as Float32Array).set(tint.subarray(i * 3, i * 3 + 3), k * 3);
+        }
+        for (const [mesh, count] of [[a, na], [b, nb]] as const) {
+          mesh.count = count;
+          mesh.visible = count > 0;
+          mesh.instanceMatrix.needsUpdate = true;
+          mesh.instanceColor!.needsUpdate = true;
+        }
+      });
+    },
+  };
 }

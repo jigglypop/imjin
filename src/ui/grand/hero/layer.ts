@@ -16,7 +16,7 @@ import { joTier1, LAYOUTS, town, waFieldCamp } from './layouts';
 import { Plan, type Moored } from './plan';
 import { ELEVATION_MODEL, HERO_SITES, heroEnabled, MODEL_METRE, siteUV, siteXZ, type HeroSite } from './site';
 import { heroGroundOf } from './terrain';
-import { placeBoulders, plantTrees, treeMeshes } from './trees';
+import { placeBoulders, plantTrees, treeMeshes, type Woods } from './trees';
 import { rockMaterial, treeMaterial } from '../treeModels';
 
 // The hero camps on the campaign map (see site.ts): for each hero site whose camp its own navy holds, the camp of the
@@ -28,8 +28,6 @@ import { rockMaterial, treeMaterial } from '../treeModels';
 const NEAR = 0.2;
 /** The camera distance under which they show their woods: as far as the map's own trees are planted (worldTrees.ts). */
 const WOODS = 0.3;
-/** The camera distance under which the woods are drawn with the finely built trees, about as close as the map's are. */
-const WOODS_NEAR = 0.07;
 /** How far the hero camps' crowns sway in the wind, model metres. */
 const SWAY = 0.12;
 
@@ -118,8 +116,11 @@ interface Built {
   group: Group;
   near: Group;
   far: Group;
-  /** The camp's own woods, finely and lightly built: hidden from afar, as the map's trees are (worldTrees.ts), where the ground draws them. */
-  woods: { near: Group; far: Group };
+  /** The camp's own woods: hidden from afar, as the map's trees are (worldTrees.ts), where the ground draws them. */
+  woods: Group;
+  /** Its trees, dealt to the fine or the light shapes by the eye, and where the eye was when they last were. */
+  trees: Woods | null;
+  dealt: [number, number, number] | null;
   geometries: BufferGeometry[];
   ships: { kind: Moored['kind']; u: number; v: number; rot: number }[];
   smoke: { u: number; v: number; y: number }[];
@@ -155,8 +156,9 @@ export class HeroLayer {
   private readonly building = new Map<string, Promise<void>>();
   /** The keys the last set() wants: a build that finishes after a newer set() stopped wanting it is freed at once. */
   private wanted = new Set<string>();
-  /** The camera distance setView was last given, for a site that is added after it. */
+  /** The camera distance and eye setView was last given, for a site that is added after it. */
   private distance = Infinity;
+  private eye: readonly [number, number, number] = [0, 100, 0];
   private readonly materials = new Map<FactionId, Promise<MeshBasicNodeMaterial | null>>();
   private readonly ready: Material[] = [];
   private lookReady: HeroGroundLook | null = null;
@@ -261,11 +263,11 @@ export class HeroLayer {
     const wood = (this.woodLook ??= { trees: treeMaterial(this.land.details[3]!, SWAY), rocks: rockMaterial(this.land.details[1]!) });
     const seed = Math.round(use.site.u * 1e6);
     const trees = treeMeshes([...plantTrees(plan, use.site.reach, ground.sample, seed, use.avoid), ...placeBoulders(plan, use.site.reach, ground.sample, seed)], wood.trees, wood.rocks);
-    const woods = { near: new Group(), far: new Group() };
-    group.add(woods.near, woods.far);
-    for (const detail of ['near', 'far'] as const) for (const t of trees[detail]) {
+    const woods = new Group();
+    group.add(woods);
+    for (const t of trees.meshes) {
       geometries.push(t.geometry);
-      woods[detail].add(t);
+      woods.add(t);
     }
     meshes.forEach((m) => {
       const mat = mats[[...navies].indexOf(m.navy)];
@@ -275,7 +277,7 @@ export class HeroLayer {
     });
     const at = (x: number, z: number) => siteUV(use.site, x, z);
     return {
-      key: use.key, group, near, far, woods, geometries,
+      key: use.key, group, near, far, woods, trees, dealt: null, geometries,
       ships: plan.ships.map((s) => ({ kind: s.kind, ...at(s.x, s.z), rot: s.rot })),
       smoke: plan.smoke.map(([x, y, z]) => ({ ...at(x, z), y: y * MODEL_METRE })),
     };
@@ -336,7 +338,7 @@ export class HeroLayer {
       add(toGeometry(n.data()), mat, near);
       add(toGeometry(f.data()), mat, far);
     }
-    return { key, group, near, far, woods: { near: new Group(), far: new Group() }, geometries, ships: [], smoke };
+    return { key, group, near, far, woods: new Group(), trees: null, dealt: null, geometries, ships: [], smoke };
   }
 
   /** The ships and hearths of the sites built for `uses` and of the other camps. */
@@ -345,17 +347,29 @@ export class HeroLayer {
     return { ships: list.flatMap((b) => b.ships), smoke: list.flatMap((b) => b.smoke) };
   }
 
-  /** Shows the close or the far models by the camera's distance from what it looks at. */
-  setView(distance: number) {
+  /**
+   * Shows the close or the far models by the camera's distance from what it looks at, and deals the woods to their
+   * detail by how large each tree stands to the eye (a world point).
+   */
+  setView(distance: number, eye: readonly [number, number, number]) {
     this.distance = distance;
+    this.eye = eye;
     for (const b of this.built.values()) this.show(b);
   }
 
   private show(b: Built) {
     b.near.visible = this.distance <= NEAR;
     b.far.visible = !b.near.visible;
-    b.woods.near.visible = this.distance <= WOODS_NEAR;
-    b.woods.far.visible = this.distance <= WOODS && !b.woods.near.visible;
+    b.woods.visible = this.distance <= WOODS;
+    const trees = b.trees;
+    if (!trees || !b.woods.visible) return;
+    // The eye in the site's frame: its group stands at the site's origin, a model metre to the world unit MODEL_METRE.
+    const o = b.group.position, k = 1 / MODEL_METRE;
+    const eye: [number, number, number] = [(this.eye[0] - o.x) * k, (this.eye[1] - o.y) * k, (this.eye[2] - o.z) * k];
+    // Only when the eye has moved enough to change which trees stand large.
+    if (b.dealt && Math.hypot(eye[0] - b.dealt[0], eye[1] - b.dealt[1], eye[2] - b.dealt[2]) < this.distance * k * 0.03) return;
+    b.dealt = eye;
+    trees.deal(eye);
   }
 
   /** Frees what a build made. */

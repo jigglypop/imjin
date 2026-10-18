@@ -384,8 +384,8 @@ export class MapLayer {
     const { yaw, distance } = cam;
     this.near.visible = distance <= NEAR_DISTANCE;
     this.far.visible = !this.near.visible;
-    this.hero?.setView(distance);
     const [ex, ey, ez] = eyeOf(cam);
+    this.hero?.setView(distance, [ex, ey, ez]);
     if (this.stale || Math.hypot(ex - this.eye.x, ey - this.eye.y, ez - this.eye.z) > distance * 0.02) {
       this.eye.set(ex, ey, ez);
       this.sortHulls();

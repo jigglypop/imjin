@@ -309,6 +309,13 @@ function boulder(detail: TreeDetail) {
   return s.geometry();
 }
 
+/**
+ * A tree at least this tall for its distance from the eye is drawn with the fine shapes: about 110 pixels tall on a
+ * desktop window, where the light shapes' lumps would begin to show as facets. Fewer than a tenth of the trees in a
+ * view stand that large, so the detail costs a few hundred thousand triangles at the closest and nothing from afar.
+ */
+export const FINE_SIZE = 0.07;
+
 /** The shapes by the kind a tree spot names: 0 broadleaf, 1 fir, 2 boulder, 3 red pine. */
 export function treeShapes(detail: TreeDetail) {
   return [broadleaf(detail), fir(detail), boulder(detail), redPine(detail)];
