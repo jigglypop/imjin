@@ -4,7 +4,7 @@
  */
 import { type HullPlan, hullSection, hullTop, sideZ } from '../anchors';
 import type { Faction } from './atlas';
-import { flagRect } from './atlas';
+import { flagAspect, flagRect } from './atlas';
 import {
   type MeshBuilder,
   type Paint,
@@ -292,11 +292,15 @@ export function flag(ctx: Ctx, o: FlagOpts) {
   if (ctx.lod > 1) return;
   const fr = flagRect(ctx.faction, o.sheet, o.flag);
   const paint = ctx.P(o.sheet, { rect: fr.rect });
-  cloth(ctx.b, paint, [x - 0.04, y + o.poleH - 0.05, z], [-o.w, 0, 0], [0, -o.h, 0], {
+  // A drawn flag keeps the area it was given but takes its design's proportions (a 2:1 ensign is not squeezed to 3:2).
+  const a = flagAspect(ctx.faction, o.sheet, o.flag);
+  const fh = a ? Math.sqrt((o.w * o.h) / a) : o.h;
+  const fw = a ? fh * a : o.w;
+  cloth(ctx.b, paint, [x - 0.04, y + o.poleH - 0.05, z], [-fw, 0, 0], [0, -fh, 0], {
     nu: o.nu ?? byLod(ctx, 6, 2, 1),
     nv: o.nv ?? byLod(ctx, 4, 2, 1),
     flutter: o.flutter ?? 1,
-    wave: 0.07 * o.w,
+    wave: 0.07 * fw,
     phase: o.phase,
   });
   // finial

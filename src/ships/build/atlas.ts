@@ -1,5 +1,6 @@
 import layout from './atlasLayout.json';
 import { SURF } from './surf';
+import aspects from './flagAspect.json';
 
 export type Faction = 'joseon' | 'japan' | 'ming' | 'england' | 'spain' | 'holyleague' | 'ottoman' | 'britain' | 'france' | 'spain1805';
 
@@ -46,6 +47,11 @@ export function flagRect(faction: Faction, sheet: string, flag: string): { cell:
   const r = Math.floor(f / cols);
   const inset = 0.012;
   return { cell: index, rect: [c / cols + inset, 1 - (r + 1) / rows + inset, (c + 1) / cols - inset, 1 - r / rows - inset] };
+}
+
+/** Width over height of a vector-drawn flag (scripts/draw-flags.mjs), so its cloth is cut to the design; undefined for the 1592 sheets. */
+export function flagAspect(faction: Faction, sheet: string, flag: string): number | undefined {
+  return (aspects as Record<string, number>)[`${faction}/${sheet}/${flag}`];
 }
 
 export function atlasFiles(faction: Faction, low: boolean) {
