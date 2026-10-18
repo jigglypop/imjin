@@ -114,7 +114,7 @@ export function TalentTree({ id, profile }: { id: string; profile: Profile }) {
       {picked ? (
         <NodeCard id={id} node={picked} profile={profile} resonance={res} onLearn={() => learn(id, picked.id)} />
       ) : (
-        <p className="tal-hint">{t('재능을 눌러 효과를 미리 보고 익히세요. 가지마다 점수를 쓰면 다음 단이 열리고, 10레벨에는 세 가지 중 하나의 핵심 재능을 고릅니다.')}</p>
+        <p className="tal-hint">{t('재능을 눌러 효과를 미리 보고 익히세요. 가지마다 점수를 쓰면 다음 단이 열리고, 10레벨에는 세 가지 중 하나의 핵심 재능을 고릅니다.')} {t('같은 능력을 올리는 재능은 공명해 50% 더 강해집니다')}</p>
       )}
     </section>
   );

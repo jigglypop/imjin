@@ -78,7 +78,7 @@
   display: grid;
   place-items: center;
 }
-.gen-pick--on { border-color: rgba(214, 178, 110, 0.65); background: rgba(48, 36, 18, 0.62); }
+.gen-pick--on { border-color: rgba(255, 255, 255, 0.4); background: var(--glass-hi); }
 
 .gen-poster { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 22px; align-items: start; min-width: 0; }
 .gen-growth { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
@@ -87,7 +87,7 @@
 .gen-representative__label, .gen-poster__section { display: block; margin-bottom: 8px; color: var(--ink-2); font-size: 13px; font-weight: 700; }
 .gen-poster__id { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .gen-poster__title { color: var(--ink-3); font-size: 13px; letter-spacing: 0.04em; }
-.gen-poster__id h2 { margin: 0; font-size: 40px; line-height: 1.05; color: var(--on-dark); }
+.gen-poster__id h2 { margin: 0; font-size: 36px; font-weight: 800; line-height: 1.05; color: var(--on-dark); }
 .gen-poster__id h2 small { font-size: 18px; font-weight: 500; color: var(--ink-3); margin-left: 6px; }
 .gen-level { display: flex; align-items: baseline; gap: 10px; }
 .gen-level b { font-size: 22px; }
@@ -104,12 +104,14 @@
   font-weight: 700;
 }
 .gen-trait {
-  padding: 12px 14px;
-  border-left: 3px solid #c69b48;
-  border-radius: 10px;
-  background: rgba(44, 34, 18, 0.45);
+  padding: 12px 16px;
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
-.gen-trait span { display: block; font-size: 12px; color: #d4b77a; }
+.gen-trait span { display: block; font-size: 12px; font-weight: 500; color: var(--ink-3); }
 .gen-trait b { font-size: 17px; }
 .gen-trait p { margin: 4px 0 0; color: var(--ink-2); font-size: 14px; }
 
@@ -281,7 +283,7 @@
 .tal-mile--on b { background: #e6c680; color: #1d170c; border-color: #e6c680; }
 .tal-mile--on span { color: #d4b77a; }
 .tal-branches { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.tal-branch { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 8px 6px 14px; }
+.tal-branch { background: var(--glass); border: 1px solid var(--glass-line); border-radius: 14px; padding: 8px 6px 14px; backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); }
 .tal-branch h3 { margin: 0 0 6px; text-align: center; font: 400 18px var(--font-title); color: #e1d4b6; letter-spacing: 0.08em; }
 .tal-branch h3 small { font: 500 11px var(--font-ui); color: var(--ink-3); margin-left: 4px; letter-spacing: 0; }
 .tal-grid { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(5, 66px); justify-items: center; align-items: center; }

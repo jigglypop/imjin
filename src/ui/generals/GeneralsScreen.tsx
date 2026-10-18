@@ -245,7 +245,6 @@ function Poster({ id, profile }: { id: string; profile: Profile }) {
   const c = commander(id);
   const tree = treeOf(id);
   const prog = levelProgress(generalState(profile, id).xp);
-  const points = skillPointsLeft(profile, id);
   return (
     <article className="gen-poster" data-general-id={id}>
       <div className="gen-figure-column">
@@ -254,7 +253,6 @@ function Poster({ id, profile }: { id: string; profile: Profile }) {
       </div>
       <div className="gen-growth">
         <div className="gen-poster__id">
-          <span className="gen-poster__section">{t('장수 성장')}</span>
           <span className="gen-poster__title">{t(c?.title ?? '')}</span>
           <h2>{t(c?.name ?? id)} {tree && <small>{tree.hanja}</small>}</h2>
           <div className="gen-level">
@@ -264,11 +262,10 @@ function Poster({ id, profile }: { id: string; profile: Profile }) {
           <div className="gen-bar">
             <i style={{ width: `${prog.need === null ? 100 : Math.round((prog.into / prog.need) * 100)}%` }} />
           </div>
-          {points > 0 && <span className="gen-points">{t('재능 점수 {n}', { n: points })}</span>}
         </div>
         {tree && (
           <section className="gen-trait">
-            <span>{t('고유 특성')} · {t('같은 능력을 올리는 재능은 공명해 50% 더 강해집니다')}</span>
+            <span>{t('고유 특성')}</span>
             <b>{t(tree.trait.label)}</b>
             <p>{t(tree.trait.text)}</p>
           </section>
@@ -297,7 +294,7 @@ function ChapterGrowth({ id, profile }: { id: string; profile: Profile }) {
         </div>
       </div>
       <section className="gen-trait">
-        <span>{t('고유 특성')} · {t('같은 능력을 올리는 재능은 공명해 50% 더 강해집니다')}</span>
+        <span>{t('고유 특성')}</span>
         <b>{t(tree.trait.label)}</b>
         <p>{t(tree.trait.text)}</p>
       </section>
