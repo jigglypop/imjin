@@ -6,28 +6,9 @@
    This :root is the one place the palette is written down; the other sheets and tokens.ts read it.
    ============================================================================ */
 
-/* MOONWAKE's type: three roles, nothing else (.claude/skills/typography, public/ui/fonts/README.md).
-   --font-title 정묵바위체 (Cinzel for Latin), --font-cine 함렛 Hahmlet, --font-ui Pretendard, --font-hanja Noto Serif KR.
-   정묵바위체 is served exactly as distributed (its license forbids modifying the file), so it is not subset and not
-   preloaded; the OFL faces are cut to KS X 1001's 2,350 syllables, ASCII and the marks and hanja the game sets. */
-@font-face {
-  font-family: 'Jeongmuk Bawi';
-  src: url('/ui/fonts/jeongmukbawi-regular.woff') format('woff');
-  font-weight: 100 900;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'MW Cinzel';
-  src: url('/ui/fonts/imjin-title-cinzel.woff2') format('woff2');
-  font-weight: 400 900;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'MW Hahmlet';
-  src: url('/ui/fonts/moonwake-cine-hahmlet.woff2') format('woff2');
-  font-weight: 500 800;
-  font-display: swap;
-}
+/* MOONWAKE's type: Pretendard everywhere (.claude/skills/typography, public/ui/fonts/README.md). The role variables
+   stay so code is stable, but all resolve to Pretendard ('MW UI Sans' subset); 'MW Hanja' (Noto Serif KR subset)
+   only fills hanja Pretendard lacks. */
 @font-face {
   font-family: 'MW UI Sans';
   src: url('/ui/fonts/moonwake-ui-sans.woff2') format('woff2');
@@ -124,8 +105,8 @@
   /* Type: the three roles (top of this sheet). Sizes 12/13/15/17/20/24/32, weights 400/500/600. Canvas text reads
      the same stacks from src/ui/fonts.ts. */
   --font-ui: 'MW UI Sans', 'MW Hanja', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
-  --font-cine: 'MW Hahmlet', 'MW Hanja', serif;
-  --font-hanja: 'MW Hanja', 'MW Hahmlet', serif;
+  --font-cine: 'MW UI Sans', 'MW Hanja', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+  --font-hanja: 'MW Hanja', 'MW UI Sans', serif;
   --font-title: 'MW UI Sans', 'MW Hanja', system-ui, sans-serif;
   --fs-12: 12px;
   --fs-13: 13px;
@@ -156,11 +137,6 @@
 
   /* HUD sizes: scale with the window instead of zooming */
   --bh: clamp(150px, 14vw, 182px);
-}
-
-/* The English page sets its titles in Cinzel's capitals first; Korean in them falls through to 정묵바위체. */
-:root:lang(en) {
-  --font-title: 'MW UI Sans', 'MW Hanja', system-ui, sans-serif;
 }
 
 * {

@@ -18,7 +18,7 @@ const PORTRAIT = '(max-aspect-ratio: 9/10)';
  */
 export function prefetchLoading(id: string) {
   if ((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) return;
-  void document.fonts?.load("1em 'Jeongmuk Bawi'");
+  void document.fonts?.load("800 1em 'MW UI Sans'");
   const art = loadingArt(id);
   const img = new Image();
   if (matchMedia(PORTRAIT).matches) img.src = art.tall;
