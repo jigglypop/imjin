@@ -1,8 +1,17 @@
 import { createNoise2D } from './noise';
 import type { TerrainSpec } from './generate';
-import { DEFAULT_BIOME } from './region';
+import { DEFAULT_BIOME, type RegionBiome } from './region';
 
-export type StructureType = 'choga' | 'giwa' | 'fortgate' | 'bongsu';
+export type StructureType = 'choga' | 'giwa' | 'fortgate' | 'bongsu' | EuropeanStructure;
+/** The procedural buildings of the 1588 coasts (src/terrain/europeKits.ts): English cottages and church, Flemish brick houses and church, hedgerows. */
+export type EuropeanStructure = 'cottage' | 'tudor' | 'church' | 'gable' | 'spire' | 'hedge' | 'medhouse' | 'chapel' | 'flathouse' | 'mosque' | 'drywall';
+/** The kits each coast style builds: its church (or mosque), its two kinds of house, its field boundary. */
+export const STYLE_KITS: Record<NonNullable<RegionBiome['style']>, { temple: EuropeanStructure; house: [EuropeanStructure, EuropeanStructure]; bound: EuropeanStructure }> = {
+  english: { temple: 'church', house: ['cottage', 'tudor'], bound: 'hedge' },
+  flemish: { temple: 'spire', house: ['gable', 'gable'], bound: 'hedge' },
+  greek: { temple: 'chapel', house: ['medhouse', 'medhouse'], bound: 'drywall' },
+  maghreb: { temple: 'mosque', house: ['flathouse', 'flathouse'], bound: 'drywall' },
+};
 export type Structure = { type: StructureType; x: number; z: number; y: number; rot: number; s: number };
 export type FeatureResult = { mask: Uint8Array; structures: Structure[] };
 
@@ -24,7 +33,7 @@ const smooth = (a: number, b: number, x: number) => {
 
 export function computeFeatures(spec: TerrainSpec, heights: Float32Array): FeatureResult {
   const { size, res } = spec;
-  const biome = spec.region?.biome ?? DEFAULT_BIOME;
+  const biome = spec.region?.biome ?? spec.biome ?? DEFAULT_BIOME;
   const cell = size / res;
   const rand = mulberry32(spec.seed * 31 + 7);
   const noise = createNoise2D(spec.seed + 4242);
@@ -97,6 +106,29 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
     // A row of houses runs along the shore, so it needs the line the coast takes here.
     const { i: vi, j: vj } = toCell(v.x, v.z);
     const shoreA = Math.atan2(coastAt(vi, vj + 6) - coastAt(vi, vj - 6), coastAt(vi + 6, vj) - coastAt(vi - 6, vj)) + Math.PI / 2;
+    const style = biome.style;
+    if (style) {
+      // A European village is gathered round its church: it stands on the flattest ground near the middle, the houses keep off it.
+      let best: { x: number; z: number; g: number } | null = null;
+      for (let k = 0; k < 12; k += 1) {
+        const a = rand() * Math.PI * 2;
+        const r = rand() * radius * 0.4;
+        const x = v.x + Math.cos(a) * r;
+        const z = v.z + Math.sin(a) * r;
+        const { i, j } = toCell(x, z);
+        const h = H(i, j);
+        if (h < 2.5 || h > 48 || coastAt(i, j) < 40 || reserved(x, z)) continue;
+        const g = grad(i, j).g;
+        if (!best || g < best.g) best = { x, z, g };
+      }
+      if (best && best.g < 0.14) {
+        const { i, j } = toCell(best.x, best.z);
+        const g = grad(i, j);
+        for (let k = 0; k < 4; k += 1) houses.push({ x: best.x + Math.cos(k * 1.57) * 12, z: best.z + Math.sin(k * 1.57) * 12 });
+        houses.push({ x: best.x, z: best.z });
+        structures.push({ type: STYLE_KITS[style].temple, x: best.x, z: best.z, y: H(i, j), rot: Math.round(Math.atan2(-g.gz, -g.gx) / (Math.PI / 2)) * (Math.PI / 2), s: 1 });
+      }
+    }
     let placed = 0;
     for (let tries = 0; tries < count * 14 && placed < count; tries += 1) {
       const a = rand() * Math.PI * 2;
@@ -127,8 +159,29 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
       const giwa = rand() < biome.tiled;
       const rot = Math.round((downhill + (rand() - 0.5) * 0.6) / (Math.PI / 2)) * (Math.PI / 2) + (rand() - 0.5) * 0.25;
       // The houses of a gridded town all face the street.
-      structures.push({ type: giwa ? 'giwa' : 'choga', x, z, y: h, rot: biome.layout === 'grid' ? Math.round(rot / (Math.PI / 2)) * (Math.PI / 2) : rot, s: 0.9 + rand() * 0.2 });
+      const type: StructureType = style ? STYLE_KITS[style].house[giwa ? 0 : 1] : giwa ? 'giwa' : 'choga';
+      structures.push({ type, x, z, y: h, rot: biome.layout === 'grid' ? Math.round(rot / (Math.PI / 2)) * (Math.PI / 2) : rot, s: 0.9 + rand() * 0.2 });
       placed += 1;
+    }
+    if (style) {
+      // Hedgerows round the fields beyond the houses, each about 40 m of scrub along the slope's contour or across it.
+      const hedges = Math.round(10 + rand() * 8);
+      let made = 0;
+      for (let k = 0; k < hedges * 4 && made < hedges; k += 1) {
+        const a = rand() * Math.PI * 2;
+        const r = radius + 50 + rand() * 260 * biome.fields * 0.5;
+        const x = v.x + Math.cos(a) * r;
+        const z = v.z + Math.sin(a) * r;
+        const { i, j } = toCell(x, z);
+        const h = H(i, j);
+        if (h < 2 || h > 42 || coastAt(i, j) < 30 || reserved(x, z)) continue;
+        const g = grad(i, j);
+        if (g.g > 0.11) continue;
+        // Field boundaries run on a grid of their own, turned to the village's shore.
+        const rot = shoreA + (rand() < 0.5 ? 0 : Math.PI / 2) + (rand() - 0.5) * 0.2;
+        structures.push({ type: STYLE_KITS[style].bound, x, z, y: h, rot: -rot, s: 0.8 + rand() * 0.5 });
+        made += 1;
+      }
     }
   }
 
@@ -152,7 +205,7 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
     structures.push({ type: 'bongsu', x: w.x, z: w.z, y: p.h, rot: rand() * Math.PI * 2, s: 1 });
   }
 
-  if (villages.length) {
+  if (villages.length && !biome.style) {
     const main = villages[0]!;
     let best: { x: number; z: number; d: number } | null = null;
     for (let k = 0; k < 24; k += 1) {
@@ -220,6 +273,11 @@ export function computeFeatures(spec: TerrainSpec, heights: Float32Array): Featu
         }
       }
       // Plains and tidal land are farmed well beyond the villages, wherever the ground is flat and a little above the water.
+      // A European village keeps its woods off the houses on any slope, the churchyard and gardens included.
+      if (biome.style && forest > 0) {
+        const w = toWorld(i, j);
+        for (const vil of villages) if (Math.hypot(w.x - vil.x, w.z - vil.z) < vil.r + 40) forest = 0;
+      }
       if (biome.plain > 0 && h > 1.5 && h < 30 && g < 0.06 && coastAt(i, j) > 50) field = Math.max(field, biome.plain * smooth(-0.55, -0.05, patch) * (1 - smooth(18, 30, h)));
       if (field > 0) forest *= Math.max(0, 1 - field * 2.6);
       if (beacons.length) {

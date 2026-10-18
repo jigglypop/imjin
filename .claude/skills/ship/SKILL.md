@@ -25,6 +25,7 @@ Pushing `main` runs typecheck, test and build, then deploys the site (S3 + Cloud
 8. Remove the worktree and the branch. Report the commit, what shipped, what was left out and why, and the live check.
 
 ## Rejected
+- Leaving release worktrees/branches behind: delete them (unlink junction, worktree remove, branch -d) the moment the deploy is verified.
 - Pushing from local main, which shipped unreviewed local commits on 2026-10-17.
 - Putting multi-GB generation sources in `assets.json`: CI pulls everything on every deploy.
 - Parallel worktrees with full asset copies: they filled the C: drive.

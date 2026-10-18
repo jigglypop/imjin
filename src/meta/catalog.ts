@@ -7,7 +7,9 @@ import type { ShipMods } from '../sim/types';
  * Every effect is a factor on the battle's ship modifiers (ShipMods), the same currency as the campaign's skills
  * (src/sim/grand/growthData.ts), and reaches only the ships of the squadron the general leads.
  */
+/** The 1592 navies own armor and weapons in this catalog; the other chapters' navies raise generals with talents and loot. */
 export type MetaFaction = 'joseon' | 'japan' | 'ming';
+export type GeneralFaction = MetaFaction | 'england' | 'spain' | 'holyleague' | 'ottoman' | 'britain' | 'france' | 'spain1805';
 export type MetaEffect = Partial<ShipMods>;
 
 /** `basic` is what a general wears in his portrait: every general owns his faction's from the start. */
@@ -77,13 +79,13 @@ export const ARMORS: readonly ArmorDef[] = [
 ];
 
 export const armorById = (id: string): ArmorDef | undefined => ARMORS.find((a) => a.id === id);
-export const basicArmor = (f: MetaFaction): ArmorDef => ARMORS.find((a) => a.faction === f && a.tier === 'basic')!;
+export const basicArmor = (f: GeneralFaction): ArmorDef | undefined => ARMORS.find((a) => a.faction === f && a.tier === 'basic');
 
 /**
  * The generals an account raises: the campaign's named commanders (src/sim/grand/regions.ts lists their names, posts
  * and portraits; growthData.ts their trees). `famous` ones also have painted portraits for the original armor catalog.
  */
-export type GeneralDef = { id: string; faction: MetaFaction; famous: boolean };
+export type GeneralDef = { id: string; faction: GeneralFaction; famous: boolean };
 
 export const GENERALS: readonly GeneralDef[] = [
   ...['yi', 'won', 'eokgi'].map((id) => ({ id, faction: 'joseon' as const, famous: true })),
@@ -92,12 +94,26 @@ export const GENERALS: readonly GeneralDef[] = [
   ...['kurushima', 'michiyuki', 'tachibana'].map((id) => ({ id, faction: 'japan' as const, famous: false })),
   ...['chenlin', 'deng'].map((id) => ({ id, faction: 'ming' as const, famous: true })),
   ...['lirusong', 'magui', 'liuting', 'jijin', 'yanghao', 'wuweizhong'].map((id) => ({ id, faction: 'ming' as const, famous: false })),
+  // The other chapters' commanders (src/sim/grand/regionsArmada.ts, regionsLepanto.ts, regionsTrafalgar.ts): talents
+  // and their era's loot, no armor shop. `famous` ones start with experience like the 1592 famous.
+  ...chapter('england', ['howard', 'drake'], ['frobisher', 'hawkins']),
+  ...chapter('spain', ['medina', 'recalde'], ['leyva', 'oquendo']),
+  ...chapter('holyleague', ['donjuan', 'venier'], ['barbarigo', 'doria']),
+  ...chapter('ottoman', ['alipasha', 'uluc'], ['pertev', 'siroco']),
+  ...chapter('britain', ['nelson', 'collingwood'], ['cornwallis', 'calder', 'hardy', 'blackwood', 'jervis']),
+  ...chapter('france', ['villeneuve', 'lucas'], ['ganteaume', 'missiessy', 'brueys']),
+  ...chapter('spain1805', ['gravina', 'churruca'], ['alava', 'cordoba']),
 ];
+
+function chapter(faction: GeneralFaction, famous: string[], others: string[]): GeneralDef[] {
+  return [...famous.map((id) => ({ id, faction, famous: true })), ...others.map((id) => ({ id, faction, famous: false }))];
+}
 
 export const generalById = (id: string): GeneralDef | undefined => GENERALS.find((g) => g.id === id);
 
 /** Every armor of a general's faction, including the other commanders' signature designs. */
 export const armorsFor = (g: GeneralDef): ArmorDef[] => ARMORS.filter((a) => a.faction === g.faction);
+export const isImjin = (f: string): f is MetaFaction => f === 'joseon' || f === 'japan' || f === 'ming';
 
 /** A general carries one cosmetic weapon; these do not change the factors applied to his ships. */
 export type WeaponKind = 'sword' | 'spear' | 'bow';
@@ -137,7 +153,7 @@ export const WEAPONS: readonly WeaponDef[] = [
 
 export const weaponById = (id: string): WeaponDef | undefined => WEAPONS.find((w) => w.id === id);
 export const weaponsFor = (g: GeneralDef): WeaponDef[] => WEAPONS.filter((w) => w.faction === g.faction);
-export const defaultWeapon = (faction: MetaFaction): WeaponDef => WEAPONS.find((w) => w.faction === faction && w.kind === 'sword')!;
+export const defaultWeapon = (faction: GeneralFaction): WeaponDef | undefined => WEAPONS.find((w) => w.faction === faction && w.kind === 'sword');
 
 /** Art, served from public/: the armor on its stand, and a famous general's portrait in it (the basic armor is his plain portrait). */
 export const armorCardUrl = (id: string, small = false) => `/ui/armor/${id}${small ? '_sm' : ''}.webp`;

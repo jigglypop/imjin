@@ -1,6 +1,5 @@
 import {
   AdditiveBlending,
-  DynamicDrawUsage,
   InstancedBufferAttribute,
   NormalBlending,
   Sprite,
@@ -13,7 +12,7 @@ import {
   cameraViewMatrix,
   vec2,
   float,
-  instancedDynamicBufferAttribute,
+  instancedBufferAttribute,
   length,
   max,
   mix,
@@ -99,7 +98,6 @@ export class ParticleLayer {
     this.pos = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
     this.params = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
     this.tint = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
-    for (const a of [this.pos, this.params, this.tint]) a.setUsage(DynamicDrawUsage);
     const f = () => new Float32Array(capacity);
     this.px = f();
     this.py = f();
@@ -127,9 +125,9 @@ export class ParticleLayer {
     this.sorted = kind !== 'fire' && quality.sort;
 
     const material = new SpriteNodeMaterial();
-    const P: any = instancedDynamicBufferAttribute(this.pos, 'vec4');
-    const Q: any = instancedDynamicBufferAttribute(this.params, 'vec4');
-    const T: any = instancedDynamicBufferAttribute(this.tint, 'vec4');
+    const P: any = instancedBufferAttribute(this.pos, 'vec4');
+    const Q: any = instancedBufferAttribute(this.params, 'vec4');
+    const T: any = instancedBufferAttribute(this.tint, 'vec4');
     material.positionNode = P.xyz;
     material.rotationNode = Q.y;
     material.transparent = true;
@@ -405,11 +403,10 @@ export class StreakLayer {
     this.pos = new InstancedBufferAttribute(new Float32Array(total * 4), 4);
     this.dir = new InstancedBufferAttribute(new Float32Array(total * 4), 4);
     this.tint = new InstancedBufferAttribute(new Float32Array(total * 4), 4);
-    for (const a of [this.pos, this.dir, this.tint]) a.setUsage(DynamicDrawUsage);
     const material = new SpriteNodeMaterial();
-    const P: any = instancedDynamicBufferAttribute(this.pos, 'vec4');
-    const D: any = instancedDynamicBufferAttribute(this.dir, 'vec4');
-    const T: any = instancedDynamicBufferAttribute(this.tint, 'vec4');
+    const P: any = instancedBufferAttribute(this.pos, 'vec4');
+    const D: any = instancedBufferAttribute(this.dir, 'vec4');
+    const T: any = instancedBufferAttribute(this.tint, 'vec4');
     const viewDir = cameraViewMatrix.mul(vec4(D.xyz, 0)).xyz;
     material.positionNode = P.xyz;
     material.rotationNode = atan(viewDir.y, viewDir.x);

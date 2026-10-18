@@ -30,15 +30,16 @@ const MIST = vec3(mistColor.r, mistColor.g, mistColor.b);
  * campaign world draws its own facets from the heights alone and passes `{ texture: false }`, so no texture is made.
  */
 export function loadDem(signal: AbortSignal): Promise<{ heights: Float32Array; tex: DataTexture }>;
-export function loadDem(signal: AbortSignal, options: { texture: false }): Promise<{ heights: Float32Array; tex: null }>;
-export async function loadDem(signal: AbortSignal, { texture = true }: { texture?: boolean } = {}): Promise<{ heights: Float32Array; tex: DataTexture | null }> {
+export function loadDem(signal: AbortSignal, options: { texture: false; url?: string; size?: { width: number; height: number } }): Promise<{ heights: Float32Array; tex: null }>;
+export async function loadDem(signal: AbortSignal, { texture = true, url = '/ui/korea_dem.webp', size = meta }: { texture?: boolean; url?: string; size?: { width: number; height: number } } = {}): Promise<{ heights: Float32Array; tex: DataTexture | null }> {
   signal.throwIfAborted();
-  const img = await new TextureLoader().loadAsync('/ui/korea_dem.webp');
+  // Another theatre's campaign world (src/ui/grand/mapTheatre.ts) passes its own DEM and size.
+  const img = await new TextureLoader().loadAsync(url);
   try {
     signal.throwIfAborted();
     const source = img.image as HTMLImageElement | ImageBitmap;
-    const w = meta.width;
-    const h = meta.height;
+    const w = size.width;
+    const h = size.height;
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;

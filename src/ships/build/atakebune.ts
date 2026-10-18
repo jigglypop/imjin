@@ -143,7 +143,7 @@ export function buildAtakebune(variant: number, lod: Lod): MeshData {
   }
   // maku curtains hang under the eaves of the lowest tier
   const t0 = lv[0]!;
-  for (const side of [-1, 1] as const) makuRun(ctx, P('maku', { rect: [0.01, 0.01, 0.99, 0.99] }), plan.cx - t0.hx + 0.5, plan.cx + t0.hx - 0.5, side * (t0.hz + 0.2), t0.y1 - 0.12, 1.5, side, frame);
+  for (const side of [-1, 1] as const) makuRun(ctx, P('maku', { rect: [0.01, 0.01, 0.99, 0.99] }), plan.cx - t0.hx + 0.5, plan.cx + t0.hx - 0.5, side * (t0.hz + 0.2), t0.y1 - 0.12, 1.5, 4, side, frame);
 
   // --- mast and straw sail ---
   const m = plan.mast;

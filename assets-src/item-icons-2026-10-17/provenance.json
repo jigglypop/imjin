@@ -1,0 +1,581 @@
+{
+  "note": "Loot icons, Gemini image edit with the hwando weapon card as the style reference (OpenAI images out of credit 2026-10-17).",
+  "items": {
+    "a_cheomju": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Joseon dynasty 16th-century iron helmet (cheomju) with a flat brim, riveted bowl, small finial on top, and a lacquered neck guard of overlapping plates",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_gyeoncheol": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a pair of 16th-century East Asian iron shoulder guards (pauldrons) made of overlapping lacquered iron scales laced with red silk cord",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_hwan": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a pair of 16th-century Korean archer bracers (hohwan): dark leather arm guards reinforced with small brass-riveted iron splints, tied with cords",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_gapsang": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century East Asian armored skirt (tassets): rows of small lacquered iron lamellae laced with red cord hanging from a cloth belt",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_deungchae": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Joseon general's command whip (deungchae): a slender rattan rod wrapped with red cord, with a tassel and a metal cap at the grip",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_jihwibong": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Joseon general's command baton: a short polished black lacquered staff with gilt bronze ends and a long red silk tassel",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_gunseon": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Japanese warrior's iron war fan (tessen), half open, black lacquered ribs and a red sun disc on a gold leaf",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_nagak": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a conch shell signal horn (nagak) with a bronze mouthpiece and a braided red cord sling",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_sinjeon": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Joseon command arrow (sinjeon): a single arrow with a small red pennant tied to the shaft and a tag, black fletching",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_sonja": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an old Chinese bound book of Sun Tzu's Art of War, thread-bound, faded indigo cover with a paper title label, slightly worn",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_ojak": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an old thread-bound East Asian military treatise, brown cover with a paper title label, some loose bamboo slips beside it",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_gihyo": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an old thread-bound Ming military manual with an ochre cover, opened slightly to show woodblock-printed diagrams of soldiers",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_yukdo": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a bundle of ancient bamboo strip scrolls tied with cord, a classic Chinese strategy text",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_byeonghak": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an old Joseon thread-bound drill manual with a dark green cover and a paper title label, corners worn",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_byeongbu": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Joseon military tally (byeongbu): a round wooden token cut into two separate halves lying side by side, slightly apart, each half carved with characters, a red cord",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 2
+    },
+    "s_janggunin": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a bronze general's seal with a turtle-shaped handle, square base, red seal paste on the face",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_mapae": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Joseon round bronze horse tablet (mapae) with embossed horses on its face and a short cord loop",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_gyoseo": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a royal Joseon square jade seal with a dragon handle, a gold cord tassel, beside a small red-sealed document",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "w_rapier": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a late 16th-century European rapier with a long straight double-edged blade and a swept steel hilt with wire-wrapped grip",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "w_pike16": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century naval boarding pike: a long ash shaft with a narrow leaf-shaped iron head and iron langets",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_morion": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century Spanish morion helmet: polished steel comb, upturned brim pointed front and back, brass rivets",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_cabasset": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century cabasset helmet: almond-shaped steel bowl with a small stalk at the top and a narrow flat brim, brass rivets",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_breastplate": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century steel breastplate (peto) with a central ridge and a small dent from a musket ball proof mark, leather straps",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_gorget": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century steel gorget: articulated neck plates of an officer, etched and gilt edges",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_astrolabe": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century brass mariner's astrolabe: a heavy open-spoked ring with degree scale and a pivoting sighting alidade",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_vegetius": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a leather-bound 16th-century printed book of Vegetius De re militari, worn brown calfskin with blind tooling and brass clasps",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "w_ropera": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century Spanish espada ropera: slender straight sword with a cup-and-ring hilt and a twisted wire grip",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "w_hanger": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century English hanger: short curved single-edged seaman's sword with a shell guard and wooden grip",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_fleece": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: the collar of the Order of the Golden Fleece: a heavy gold chain of fire-steel links with, hanging at the bottom, a small golden sheep (a ram fleece) suspended by its middle with head and legs drooping, clearly a sheep",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 2
+    },
+    "t_chart": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a rolled 16th-century hand-drawn portolan sea chart of the English Channel on vellum, partly unrolled, compass rose visible",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_arte": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century Spanish printed navigation book (Arte de navegar), vellum binding, open to a woodcut of a compass rose",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_mirror": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a large 1588 atlas of sea charts (The Mariner's Mirror), leather binding, open to an engraved coastal chart",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_marque": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an Elizabethan parchment letter of marque, folded, with a large red wax royal seal hanging on a ribbon",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_cedula": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century Spanish royal decree (real cédula) on paper, folded, with a paper-covered wax seal and a flourished signature",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "w_kilij": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century Ottoman kilij: a deeply curved sabre whose blade widens near the tip (yelman), gilt cross guard, dark grip",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "w_yatagan": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an Ottoman yatagan: forward-curving single-edged short sword with an ivory eared grip and silver fittings",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_zirh": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an Ottoman 16th-century mail-and-plate armor (zırh gömlek): a shirt of shiny riveted steel chain mail with rows of rectangular steel plates across the chest and belly, short mail sleeves, clearly metal armor, laid flat",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 2
+    },
+    "a_kaftan": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century Ottoman ceremonial kaftan of red and gold brocade silk with tulip patterns, folded",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_banner": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: the Holy League banner of Lepanto: blue damask standard with a crucifix, on a short gilded staff, folded softly",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_tug": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an Ottoman tuğ standard: a short staff topped with a gilt finial and a long hanging horsetail plume",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_bahriye": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an Ottoman illuminated manuscript of the Kitab-ı Bahriye, red leather binding with gold tooling, open to a painted map of an island",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_firman": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an Ottoman imperial firman scroll partly unrolled showing a large gilded tughra calligraphic monogram",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_bull": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 16th-century papal bull: folded parchment with a round lead seal hanging from red and yellow silk cords",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_doge": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Venetian bronze seal matrix with the winged lion of Saint Mark, beside a red wax impression",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "w_naval_sword": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a British naval officer's sword of 1805: slim slightly curved blade, gilt brass lion-head pommel, ivory grip, fouled-anchor guard",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "w_sabre_fr": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a French Napoleonic naval officer's sabre: curved blade, gilt brass hilt with anchor emblem, black grip",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "w_espada": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Spanish 1800s naval officer's sword: straight blade with a gilt shell guard and a wire-bound grip",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "w_smallsword": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an 18th-century officer's smallsword: thin triangular blade, ornate gilt shell hilt",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "w_axe": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Royal Navy boarding axe of 1805: a small iron axe head with a back spike on a wooden haft",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "w_pike": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a short Royal Navy boarding pike of 1805: wooden shaft with a plain iron spike head",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_frockcoat": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a 1805 naval officer's dark navy-blue frock coat with white facings and gold buttons, folded neatly",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_bicorne": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a black felt 1805 naval officer's bicorne hat with a gold-laced cockade",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_epaulettes": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a pair of 1805 admiral's gold bullion epaulettes with heavy fringe",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "a_sash": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a folded red silk officer's waist sash with tasseled ends",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_trumpet": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an 1805 brass ship's speaking trumpet, long conical and slightly dented",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_telescope": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an 1805 brass and mahogany naval telescope, partly extended",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "t_sextant": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a late 18th-century brass sextant with ebony handle, mirrors and arc scale",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_signals": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a small bound naval signal book of 1805 with blue cloth boards, open to a printed table of colored signal flags",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_clerk": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an 18th-century book \"An Essay on Naval Tactics\", calf binding, open to a printed diagram of two fleets in line",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_hoste": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an old French book on naval tactics, calf binding with gilt spine, open to an engraving of ships in formation",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "b_ordenanzas": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: a Spanish 1793 navy ordinances book, vellum binding with a red title label, slightly worn",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_admiralty": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: an 18th-century Admiralty commission on parchment, folded, with three red wax seals and the anchor emblem",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_legion": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: the Légion d'honneur medal of Napoleon's era: a white enamel five-armed star with a red ribbon",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    },
+    "s_carlos3": {
+      "tool": "gemini image edit",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "Game inventory icon in exactly the style of the reference image: a single realistic object, photographed like a museum product shot, soft studio light, centered and filling about 80% of the frame, diagonal or three-quarter view, on a flat plain charcoal background (#1b1b1b) with no shadow pattern, no text, no frame, no border, no other objects unless stated. The object: the Order of Charles III cross: white and blue enamel cross with a gold image, on a light blue and white ribbon",
+      "styleReference": "public/ui/weapons/joseon_hwando.webp",
+      "date": "2026-10-17",
+      "estimatedUsd": 0.04,
+      "takes": 1
+    }
+  }
+}

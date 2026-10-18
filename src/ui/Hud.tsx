@@ -8,7 +8,7 @@ import { SKY_PRESETS, type SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
 import { setLang, t as tr, useLang, useT } from '../i18n';
 import { pushToast, setTouchBox, useUi, type BattleOrigin, type FleetMorale, type GameSnapshot, type GunInfo, type PrimaryInfo, type SquadronInfo } from '../state/store';
-import type { Team } from '../sim/types';
+import type { Faction, Team } from '../sim/types';
 import { useCompactLayout } from './useCompactLayout';
 import { ConquestBar, CrewPanel, PointPanel } from './ConquestPanels';
 import { DirectorSettings, ShotLabel } from './DirectorToggle';
@@ -24,7 +24,7 @@ import { RankActions, RankResult } from './RankResult';
 import { portraitUrl } from './portrait';
 import { BattleGuide } from './BattleGuide';
 import { BattleResult } from './BattleResult';
-import { GUIDES } from './guideText';
+import { GUIDES, guidedFaction } from './guideText';
 
 const SEA_LABELS: Record<SeaStateName, string> = { calm: '잔잔', moderate: '보통', rough: '거침' };
 const ACTIVITY: Record<string, string> = {
@@ -55,6 +55,9 @@ function formatTime(t: number) {
 }
 
 /** Counts are by team. The engine names the sides, the player's first. */
+/** The portrait for a ship whose squadron names none: its navy's commander-in-chief. */
+const FALLBACK_PORTRAIT: Record<Faction, string> = { joseon: 'portrait_admiral', japan: 'portrait_japan', ming: 'portrait_chenlin', england: 'portrait_howard', spain: 'portrait_medina', holyleague: 'portrait_donjuan', ottoman: 'portrait_alipasha', britain: 'portrait_nelson', france: 'portrait_villeneuve', spain1805: 'portrait_gravina' };
+
 /** The battle clock, the only part of the score panel that changes every publish. */
 function Clock() {
   const time = useUi((s) => s.live.time);
@@ -206,84 +209,20 @@ const Card = memo(function Card({ sq, compact, depth, onSelect, onFocus }: { sq:
 /** `wait` is a cooldown in seconds shown over the icon. */
 type OrderDef = { icon: string; label: string; key: string; tip: string; run: () => void; on?: boolean; disabled?: boolean; wait?: number };
 
-/**
- * Always available, including when a phone folds the larger command sheet. The simplified layout shows a slim strip
- * instead: only the groups that hold ships, every slot while the player is choosing one to assign.
- */
-function FleetGroups({ engine, open, onToggle, slim }: { engine: Engine; open: boolean; onToggle: () => void; slim: boolean }) {
+/** Select-all and the route toggle: always within reach, including when a phone folds the command sheet. */
+function SelectionBar({ engine }: { engine: Engine }) {
   const t = useT();
-  const [assigning, setAssigning] = useState(false);
-  const [active, setActive] = useState(0);
-  const [editing, setEditing] = useState<number | null>(null);
-  const [name, setName] = useState('');
   // Groups, the selection and the route queue are the engine's, not the snapshot's.
   useEngineTick();
   const input = engine.input;
-  const groups = input.getGroups();
-  const current = groups.find((g) => g.selected)?.index ?? active;
+  input.syncBattle();
   const ownSelected = [...engine.views.selected].some((id) => engine.isOwn(engine.battle.get(id)));
   const queued = input.queuedWaypoints();
-  useEffect(() => { setAssigning(false); setEditing(null); setActive(0); }, [engine.battle]);
-  const saveName = () => {
-    if (editing !== null) input.renameGroup(editing, name);
-    setEditing(null);
-  };
-  const groupButton = (g: (typeof groups)[number]) => (
-    <button key={g.index} className={`fleet-group ${g.selected ? 'fleet-group--selected' : ''} ${assigning ? 'fleet-group--assign' : ''}`} data-group={g.index + 1} title={t('{name} · {n}척 · 두 번 누르면 시점 이동', { name: g.name, n: g.count })} aria-label={t('{name} · {n}척', { name: g.name, n: g.count })} onClick={(e) => {
-      setActive(g.index);
-      if (assigning || e.ctrlKey || e.metaKey || (g.count === 0 && ownSelected)) { input.assignGroup(g.index, e.shiftKey); setAssigning(false); }
-      else if (e.shiftKey) input.assignGroup(g.index, true);
-      else input.selectGroup(g.index);
-    }}>
-      <span><kbd>{g.index + 1}</kbd><b>{g.count}</b></span>{!slim && <small>{g.name}</small>}
-    </button>
-  );
-  const route = (
-    <button className={`fleet-route ${input.queueMoves ? 'fleet-tool--on' : ''}`} disabled={!ownSelected} onClick={() => input.toggleQueueMode()} aria-pressed={input.queueMoves} title={t('켜면 바다를 누를 때 이동 경로를 예약합니다 · Shift+우클릭도 가능')}>
+  return <div className="fleet-bar glass interactive">
+    <button onClick={() => input.selectAll()} title="Ctrl+A">{t('전체 선택')}</button>
+    <button className={input.queueMoves ? 'fleet-tool--on' : ''} disabled={!ownSelected} onClick={() => input.toggleQueueMode()} aria-pressed={input.queueMoves} title={t('켜면 바다를 누를 때 이동 경로를 예약합니다 · Shift+우클릭도 가능')}>
       {t('경로 예약')}{queued > 0 && <b>{queued}/16</b>}
     </button>
-  );
-  if (slim) {
-    const shown = assigning ? groups : groups.filter((g) => g.count > 0);
-    return <div className="fleet-groups fleet-groups--slim glass interactive" aria-label={t('지정 부대')}>
-      <div className="fleet-slim-head">
-        <button className="fleet-group-toggle" aria-expanded={open} onClick={onToggle} title={t(open ? '지정 부대 접기' : '지정 부대 펼치기')}>
-          {t('부대')} <Icon name={open ? 'chevronUp' : 'chevronDown'} size={14} />
-        </button>
-        {open && <>
-          <button onClick={() => input.selectAll()} title="Ctrl+A">{t('전체 선택')}</button>
-          <button className={`fleet-add ${assigning ? 'fleet-tool--on' : ''}`} disabled={!ownSelected && !assigning} onClick={() => setAssigning((v) => !v)} aria-pressed={assigning} aria-label={t(assigning ? '지정할 부대' : '부대 지정')} title={t('함선을 고른 뒤 지정할 부대를 누르세요')}>
-            <Icon name="plus" size={14} />
-          </button>
-          {/* A finger has no Shift+right-click: the route toggle stays within reach. */}
-          {isTouchDevice && route}
-        </>}
-      </div>
-      {open && shown.length > 0 && <div className="fleet-slim">{shown.map(groupButton)}</div>}
-    </div>;
-  }
-  return <div className="fleet-groups glass interactive" aria-label={t('지정 부대')}>
-    <div className="fleet-group-head">
-      <button className="fleet-group-toggle" aria-expanded={open} aria-controls="fleet-group-body" onClick={onToggle}>
-        {t('지정 부대')} <Icon name={open ? 'chevronUp' : 'chevronDown'} size={14} />
-      </button>
-      <button onClick={() => input.selectAll()} title="Ctrl+A">{t('전체 선택')}</button>
-    </div>
-    {open && <div className="fleet-group-body" id="fleet-group-body">
-    <div className="fleet-group-tools">
-      <button className={assigning ? 'fleet-tool--on' : ''} disabled={!ownSelected} onClick={() => setAssigning((v) => !v)} title={t('함선을 고른 뒤 지정할 부대를 누르세요')} aria-pressed={assigning}>{t(assigning ? '지정할 부대' : '부대 지정')}</button>
-      <button onClick={() => { setEditing(current); setName(groups[current]!.name); }}>{t('이름')}</button>
-      {route}
-    </div>
-    <div className="fleet-group-grid">
-      {groups.map(groupButton)}
-    </div>
-    {editing !== null && <form className="fleet-group-name" onSubmit={(e) => { e.preventDefault(); saveName(); }}>
-      <label htmlFor="fleet-name">{t('부대 {n}', { n: editing + 1 })}</label>
-      <input id="fleet-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={16} autoFocus aria-label={t('부대 이름')} />
-      <button type="submit">{t('저장')}</button><button type="button" onClick={() => setEditing(null)}>{t('취소')}</button>
-    </form>}
-    </div>}
   </div>;
 }
 
@@ -759,7 +698,6 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const wide = !compact;
   // The tour points at the cards, the orders and the speed control: every part stays open while it runs.
   const folded = (part: Part) => wide && !tourActive && view.folds[part];
-  const groupsOpen = compact ? !view.folds.groups : !folded('groups');
   const slim = wide && view.layout !== 'full';
   const mapFolded = folded('map');
   // The score panel and the title fold on a phone too, where they cover the most sea. The title stays open while the
@@ -895,7 +833,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const primaryFaction = primaryShip?.spec.faction ?? snap.faction;
   const primarySquadron = snap.squadrons.find((s) => s.id === primaryShip?.squadronId);
   const primaryPortrait = primarySquadron?.portrait
-    ?? (primaryFaction === 'japan' ? 'portrait_japan' : primaryFaction === 'ming' ? 'portrait_chenlin' : 'portrait_admiral');
+    ?? FALLBACK_PORTRAIT[primaryFaction];
   const enemyTeam: Team = snap.team === 'joseon' ? 'japan' : 'joseon';
   const enemyFaction = snap.squadrons.find((s) => s.team === enemyTeam)?.faction ?? enemyTeam;
   const won = snap.winner === snap.team;
@@ -916,8 +854,8 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
         { label: '손실', value: tShips(snap.ownTotal - snap.own) },
         { label: '소요 시간', value: formatTime(endTime) },
       ];
-  // The score and the comparison with history belong to a historical battle the player fought for Joseon, not to online or conquest games.
-  const scored = ended && snap.mode === 'scenario' && snap.scenario.id in GUIDES && snap.faction === 'joseon' && !engine.remote;
+  // The score and the comparison with history belong to a historical battle the player fought for the side it was written for (Joseon, England), not to online or conquest games.
+  const scored = ended && snap.mode === 'scenario' && snap.scenario.id in GUIDES && guidedFaction(snap.faction) && !engine.remote;
   const hideLabel = t(isTouchOnly ? 'UI 숨기기' : 'UI 숨기기 · Shift+H');
   const selectBox = box && <div className="select-box" style={{ left: Math.min(box.x0, box.x1), top: Math.min(box.y0, box.y1), width: Math.abs(box.x1 - box.x0), height: Math.abs(box.y1 - box.y0) }} />;
   // The tour stays as it is: the HUD cannot be hidden while it points at the panels.
@@ -1182,7 +1120,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
 
           {!ended && (
             <div className="selection-dock touch-bar">
-              <FleetGroups engine={engine} open={groupsOpen} onToggle={() => setFold('groups', groupsOpen)} slim={slim} />
+              <SelectionBar engine={engine} />
               {isTouchDevice && <div className="selection-tools">
               <button className={`tool ${touchBox ? 'tool--on' : ''}`} onClick={() => setTouchBox(!touchBox)} aria-label={t('박스')} data-tip="tool.box">
                 <Icon name="box" size={19} />

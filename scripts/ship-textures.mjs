@@ -2,10 +2,13 @@
 // (gpt-image), composite one atlas per faction with sharp, derive normal and roughness maps from the albedo, write
 // public/textures/ships/* or, with --set=buildings, public/textures/buildings/*.
 //
-//   node scripts/ship-textures.mjs generate [--set=buildings] [--faction=joseon,japan,ming] [--only=slot,slot] [--n=1] [--model=gpt-image-2] [--jobs=8]
+//   node scripts/ship-textures.mjs generate [--provider=gemini] [--set=buildings] [--faction=joseon,japan,ming] [--only=slot,slot] [--n=1] [--model=gpt-image-2] [--jobs=8]
 //   node scripts/ship-textures.mjs compose  [--set=buildings] [--faction=...] [--pick=joseon/hull_plank:2,...]
 //   node scripts/ship-textures.mjs patch    [--set=buildings] --faction=joseon --only=slot,slot   (recompose just those cells into the published atlas)
 //   node scripts/ship-textures.mjs all      [--set=buildings] (generate then compose)
+//   node scripts/ship-textures.mjs kinds    [--provider=gemini] [--kind=firstrate,...]   (per-ship atlases: the navy's
+//        published atlas with the cells of src/ships/build/kindAtlas.json swapped for the ship's own images, written to
+//        public/textures/ships/kinds/<kind>_*.webp; generates the missing images first)
 //
 // Layout, prompts and per-cell material hints live in src/ships/build/atlasLayout.json and src/ui/grand/buildingAtlas.json
 // (shared with the game code). Raw API output is cached in assets-src/textures-<set>/<faction>/<slot>[__<flag>]_<n>.png
@@ -13,6 +16,9 @@
 import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
+
+// No file cache: a patch reads the published atlas and writes it back, which Windows refuses while sharp holds it open.
+sharp.cache(false);
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const ENV_FILES = [join(ROOT, '.env'), '/Users/yeomdonghwan/Desktop/imjin/.env'];
@@ -52,15 +58,33 @@ const CACHE = SET.cache;
 const OUT = join(ROOT, 'public', 'textures', SET.out);
 const layout = JSON.parse(await readFile(join(ROOT, SET.layout), 'utf8'));
 const factions = (args.faction ?? Object.keys(layout.factions).join(',')).split(',');
-const only = args.only ? new Set(args.only.split(',')) : null;
+let only = args.only ? new Set(args.only.split(',')) : null;
 const picks = Object.fromEntries((args.pick ?? '').split(',').filter(Boolean).map((p) => p.split(':')));
 
 const exists = (p) => access(p).then(() => true, () => false);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Tasks: one image per tile or flag. Sheets expand into one task per flag. */
+const KINDS = JSON.parse(await readFile(join(ROOT, 'src/ships/build/kindAtlas.json'), 'utf8')).kinds;
+const kindList = (args.kind ?? Object.keys(KINDS).join(',')).split(',');
+/** What every swapped cell must obey: a tile repeats every few metres up and along the hull, a stern fills its quad. */
+const KIND_SUFFIX = {
+  tile: 'The same even paint and wear over the whole image: no band, stripe or patch of another colour across it, no copper, no waterline, nothing that would show as a repeating stripe when tiled.',
+  stern_panel: 'The carved and painted stern face cropped tight so it fills the frame completely to all four edges: no sky, no background, no sea, no outline of the hull, no rudder, symmetric left to right.',
+};
+/** Raw images that stand in for a navy's own while composing a ship's atlas: cell id to file. */
+let rawOverride = null;
+
+/** Tasks: one image per tile or flag. Sheets expand into one task per flag. In kinds mode, one per swapped cell of each ship. */
 function tasks() {
   const list = [];
+  if (mode === 'kinds') {
+    for (const kind of kindList) {
+      for (const [slot, prompt] of Object.entries(KINDS[kind].slots)) {
+        for (let n = 1; n <= N; n += 1) list.push({ faction: kind, id: slot, size: '1024x1024', prompt: `${prompt} ${KIND_SUFFIX[slot] ?? KIND_SUFFIX.tile}`, n, file: join(CACHE, 'kinds', kind, `${slot}_${n}.png`) });
+      }
+    }
+    return list;
+  }
   for (const faction of factions) {
     for (const slot of layout.factions[faction]) {
       if (only && !only.has(slot.name)) continue;
@@ -71,8 +95,19 @@ function tasks() {
   return list;
 }
 
+const PROVIDER = args.provider ?? 'openai';
+
 async function generate(task) {
   const prompt = `${task.prompt} ${layout.style}`;
+  if (PROVIDER === 'gemini') {
+    // Gemini's image model (scripts/gemini-image.mjs) for when the OpenAI images API is out of reach; the ratio follows the slot's size.
+    const { geminiImage } = await import('./gemini-image.mjs');
+    const [w, h] = (task.size ?? '1024x1024').split('x').map(Number);
+    const aspect = w === h ? '1:1' : w > h ? '3:2' : '2:3';
+    await mkdir(join(task.file, '..'), { recursive: true });
+    await writeFile(task.file, await geminiImage(prompt, { aspect }));
+    return;
+  }
   for (let attempt = 1; attempt <= 4; attempt += 1) {
     const res = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
@@ -94,7 +129,7 @@ async function generate(task) {
 }
 
 async function runGenerate() {
-  if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing (.env)');
+  if (PROVIDER !== 'gemini' && !process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing (.env)');
   const todo = [];
   for (const t of tasks()) if (!(await exists(t.file))) todo.push(t);
   console.log(`${todo.length} images to generate with ${MODEL} (${QUALITY}), ${JOBS} at a time`);
@@ -218,7 +253,7 @@ function padCell(tile, size, cell, pad, wrap) {
 
 async function loadRaw(faction, id, pickKey) {
   const n = picks[pickKey] ?? '1';
-  const file = join(CACHE, faction, `${id}_${n}.png`);
+  const file = rawOverride?.[id] ?? join(CACHE, faction, `${id}_${n}.png`);
   if (!(await exists(file))) throw new Error(`missing ${file}`);
   return file;
 }
@@ -249,6 +284,11 @@ async function composeCell(faction, slot, cell, pad) {
   const file = await loadRaw(faction, slot.name, `${faction}/${slot.name}`);
   // Grain (and plank rows) must run along the image's horizontal axis, which is the u axis of beams and boards in the game.
   let src = slot.rot ? sharp(file).rotate(slot.rot) : sharp(file);
+  if (rawOverride && slot.name === 'stern_panel') {
+    // A ship's own stern: trim the margins where the image model leaves a strip of background around the carving.
+    const { width, height } = await sharp(file).metadata();
+    src = sharp(await sharp(file).extract({ left: Math.round(width * 0.07), top: Math.round(height * 0.06), width: Math.round(width * 0.86), height: Math.round(height * 0.9) }).toBuffer());
+  }
   if (slot.modulate) src = src.modulate(slot.modulate);
   let big = await rgbBuffer(src.resize(1024, 1024, { fit: 'fill' }));
   if (slot.tile) big = makeSeamless(big, 1024);
@@ -267,7 +307,7 @@ async function loadPublished(faction, dim) {
   return { albedo: await plane('albedo'), normal: await plane('normal'), rough: published ? await plane('rough') : Buffer.alloc(dim * dim * 3) };
 }
 
-async function compose(faction, patch = false) {
+async function compose(faction, patch = false, name = faction) {
   const { grid, cell, pad } = layout;
   const dim = grid * cell;
   const slots = layout.factions[faction];
@@ -300,15 +340,24 @@ async function compose(faction, patch = false) {
     ['normal', normal, n, n > 512 ? 70 : 66, sfx],
     ['rough', rough, r, r > 256 ? 55 : 50, sfx],
   ]).filter(([, , w]) => w > 0);
-  for (const [kind, buf, w, quality, sfx] of outputs) await writeWebp(await resized(buf, w), w, join(OUT, `${faction}_${kind}${sfx}.webp`), { quality });
+  for (const [kind, buf, w, quality, sfx] of outputs) await writeWebp(await resized(buf, w), w, join(OUT, `${name}_${kind}${sfx}.webp`), { quality });
   // Contact sheet for review.
   await sharp(albedo, { raw: { width: dim, height: dim, channels: 3 } })
     .resize(1024, 1024)
     .jpeg({ quality: 85 })
-    .toFile(join(CACHE, `${faction}_atlas_preview.jpg`));
+    .toFile(join(CACHE, `${name.replace('/', '_')}_atlas_preview.jpg`));
 }
 
-if (mode === 'generate' || mode === 'all' || mode === 'patch') await runGenerate();
+if (mode === 'generate' || mode === 'all' || mode === 'patch' || mode === 'kinds') await runGenerate();
+if (mode === 'kinds') {
+  await mkdir(join(OUT, 'kinds'), { recursive: true });
+  for (const kind of kindList) {
+    const slots = Object.keys(KINDS[kind].slots);
+    rawOverride = Object.fromEntries(slots.map((s) => [s, join(CACHE, 'kinds', kind, `${s}_${picks[`${kind}/${s}`] ?? '1'}.png`)]));
+    only = new Set(slots);
+    await compose(KINDS[kind].faction, true, `kinds/${kind}`);
+  }
+}
 if (mode === 'compose' || mode === 'all') {
   for (const f of factions) await compose(f);
 }

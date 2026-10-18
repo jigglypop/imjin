@@ -1,4 +1,4 @@
-import { Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardNodeMaterial, PlaneGeometry, DynamicDrawUsage, Vector3 } from 'three/webgpu';
+import { Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardNodeMaterial, PlaneGeometry, Vector3 } from 'three/webgpu';
 import { abs, float, floor, fract, instancedBufferAttribute, length, max, min, mix, select, sin, smoothstep, texture, uv, vec2, vec3 } from 'three/tsl';
 import type { Battle } from '../sim/battle';
 import type { AmmoType, GunType, Ship } from '../sim/types';
@@ -205,9 +205,7 @@ export class Scars {
     private readonly mun: Munitions,
   ) {
     this.data = new InstancedBufferAttribute(new Float32Array(CAPS.decals * 4), 4);
-    this.data.setUsage(DynamicDrawUsage);
     this.mesh = new InstancedMesh(new PlaneGeometry(1, 1), decalMaterial(this.data), CAPS.decals);
-    this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.mesh.count = 0;
     this.mesh.visible = false;
     this.mesh.frustumCulled = false;

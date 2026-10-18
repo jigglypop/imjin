@@ -5,6 +5,7 @@ import {
 } from 'three/webgpu';
 import { uniform } from 'three/tsl';
 import { Battle } from '../sim/battle';
+import { SHIP_SPECS } from '../sim/catalog';
 import { ShipViews } from '../ships/ShipViews';
 import { Lanterns } from '../fx/Lanterns';
 import { loadSceneShipAssets, disposeSceneShipAssets, type ModelAsset } from '../ships/ShipRenderer';
@@ -19,6 +20,11 @@ import { disposeTree } from '../render/dispose';
 import { equipment, forceWebGL } from '../game/quality';
 import type { Terrain } from '../terrain/Terrain';
 import { RenderLease } from './renderLease';
+import type { ShipKind } from '../sim/types';
+
+/** The chapter's representative flagship and the fleets about it (src/chapters). */
+export type MenuHero = { kind: ShipKind; own: ShipKind[]; foe: ShipKind[] };
+const TURTLE: MenuHero = { kind: 'geobukseon', own: ['panokseon'], foe: ['atakebune'] };
 
 const CYCLE = 40;
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
@@ -41,8 +47,8 @@ export class MenuBattleScene {
   private fx?: Effects;
   private lanterns?: Lanterns;
   private assets?: Record<string, ModelAsset>;
-  private battle = this.makeBattle(1597);
-  private hero = this.battle.ships[0]!;
+  private battle: Battle;
+  private hero: Battle['ships'][number];
   private controller = new AbortController();
   private observer?: ResizeObserver;
   private raf = 0;
@@ -58,26 +64,35 @@ export class MenuBattleScene {
   private mobile = equipment.tier === 'low';
   private target = new Vector3();
 
-  constructor(private canvas: HTMLCanvasElement, private onReady: () => void) {}
+  constructor(private canvas: HTMLCanvasElement, private onReady: () => void, private heroOf: MenuHero = TURTLE) {
+    this.battle = this.makeBattle(1597, heroOf);
+    this.hero = this.battle.ships[0]!;
+  }
 
-  private makeBattle(seed: number) {
+  private makeBattle(seed: number, hero0: MenuHero) {
+    // The turtle ship's scene is the original one; another chapter's flagship gets the same shot with its own fleets,
+    // spaced for their larger hulls.
+    const turtle = hero0.kind === 'geobukseon';
+    const spread = turtle ? 1 : 1.35;
+    const own0 = (i: number) => (turtle ? (i === 5 ? 'geobukseon' : 'panokseon') : hero0.own[i % hero0.own.length]!);
+    const foe0 = (i: number) => (turtle ? 'atakebune' : hero0.foe[i % hero0.foe.length]!);
     const b = new Battle(seed, 'historical');
     b.humans.clear();
     b.setSea(SEA_STATES.moderate);
     const own = b.addSquadron('joseon', 'Menu fleet', '', '', '', 0);
     const foe = b.addSquadron('japan', 'Menu fleet', '', '', '', 1);
-    const hero = b.addShip('geobukseon', 0, 0, .14, '', own, true);
+    const hero = b.addShip(hero0.kind, 0, 0, .14, '', own, true);
     hero.owner = 99;
     b.humans.add(99);
     hero.order = { type: 'hold' };
     for (let i=0;i<11;i++) {
       const row=Math.floor(i/4), col=i%4;
-      const ship=b.addShip(i===5?'geobukseon':'panokseon', -65-row*65+col*8, -60-col*46-row*12, -.55, '', own, false, i%3);
+      const ship=b.addShip(own0(i), (-65-row*65+col*8)*spread, (-60-col*46-row*12)*spread, -.55, '', own, false, turtle?i%3:0);
       ship.order={type:'auto'};
     }
     for (let i=0;i<14;i++) {
       const row=Math.floor(i/5), col=i%5;
-      const ship=b.addShip('atakebune', -180-row*62+col*12, -160-col*38+row*15, .75, '', foe, false, i%2);
+      const ship=b.addShip(foe0(i), (-180-row*62+col*12)*spread, (-160-col*38+row*15)*spread, .75, '', foe, false, turtle?i%2:0);
       ship.order={type:'auto'};
       if(i===6 || i===12) { ship.fire=.26; ship.hull*=.84; }
     }
@@ -98,7 +113,7 @@ export class MenuBattleScene {
       this.resize();
       const results = await Promise.allSettled([
         loadSky(SKY_PRESETS.night, 'small', undefined, this.controller.signal),
-        loadSceneShipAssets(['geobukseon','panokseon','atakebune'], {...equipment.ships, anisotropy:equipment.anisotropy}),
+        loadSceneShipAssets([...new Set([this.heroOf.kind,...this.heroOf.own,...this.heroOf.foe,...(this.heroOf.kind==='geobukseon'?['panokseon' as const,'atakebune' as const]:[])])], {...equipment.ships, anisotropy:equipment.anisotropy}),
       ]);
       // Both sky and model geometry belong to this renderer; faction atlas textures stay shared.
       if (results[0].status==='fulfilled') this.sky=results[0].value;
@@ -182,6 +197,7 @@ export class MenuBattleScene {
     if(this.disposed || !this.renderer) return;
     const r=this.canvas.parentElement!.getBoundingClientRect();
     this.camera.aspect=Math.max(1,r.width)/Math.max(1,r.height);
+    this.viewWidth=Math.max(1,r.width);
     this.camera.updateProjectionMatrix();
     // Portrait keeps detail in the hero and caps fill-rate independently of game quality.
     const cap=this.mobile?1.15:1.5;
@@ -189,12 +205,39 @@ export class MenuBattleScene {
     this.renderer.setSize(Math.max(1,r.width),Math.max(1,r.height),false);
   }
 
+  private viewWidth=1920;
+
   private cameraPose() {
     const p=this.elapsed/CYCLE, drift=Math.sin(p*Math.PI*2)*3;
     const portrait=this.camera.aspect<.85;
-    this.camera.position.set(this.hero.x+(portrait?60:37)+drift, portrait?17:8, this.hero.z+(portrait?48:24));
-    this.target.set(this.hero.x+(portrait?3:-28),portrait?8:7,this.hero.z-(portrait?12:40));
+    if(this.heroOf.kind==='geobukseon') {
+      // The turtle ship keeps its approved shot exactly (origin/main 1847179).
+      this.camera.position.set(this.hero.x+(portrait?60:37)+drift, portrait?17:8, this.hero.z+(portrait?48:24));
+      this.target.set(this.hero.x+(portrait?3:-28),portrait?8:7,this.hero.z-(portrait?12:40));
+      this.camera.lookAt(this.target);
+      this.camera.updateMatrixWorld();
+      return;
+    }
+    // Every other chapter's flagship: a bow-quarter broadside from the turtle shot's side, the whole hull and rig in frame.
+    // Distance follows the larger of the hull length and the rig height, so a galley and a first-rate fill alike; in a
+    // landscape frame the view pans so the ship stands in the right half, clear of the title block and its buttons.
+    const spec=SHIP_SPECS[this.heroOf.kind], L=spec.length, H=spec.height;
+    const narrow=portrait?0:clamp((1920-this.viewWidth)/640);
+    const size=Math.max(L, H*1.45);
+    const D=size*(portrait?2.4:1.7*(1+.2*narrow));
+    const h=this.hero.heading, fx=Math.cos(h), fz=Math.sin(h), nx=-fz, nz=fx;
+    const ax=this.hero.x+fx*L*.04, az=this.hero.z+fz*L*.04;
+    const along=D*.6, out=D*.8;
+    this.camera.position.set(ax+nx*out+fx*along+drift, 3+H*.22, az+nz*out+fz*along);
+    this.target.set(ax, H*(portrait?.42:.4), az);
     this.camera.lookAt(this.target);
+    if(!portrait) {
+      this.camera.updateMatrixWorld();
+      const pan=-D*(.2+.1*narrow), ex=this.camera.matrixWorld.elements;
+      this.camera.position.x+=ex[0]!*pan; this.camera.position.z+=ex[2]!*pan;
+      this.target.x+=ex[0]!*pan; this.target.z+=ex[2]!*pan;
+      this.camera.lookAt(this.target);
+    }
     this.camera.updateMatrixWorld();
   }
 
@@ -233,7 +276,7 @@ export class MenuBattleScene {
       if(this.elapsed>=CYCLE) {
         this.cycle++;
         this.elapsed=0;
-        this.battle=this.makeBattle(1597+this.cycle*17);
+        this.battle=this.makeBattle(1597+this.cycle*17,this.heroOf);
         this.hero=this.battle.ships[0]!;
         this.views!.states.clear();
         this.fx!.newBattle();

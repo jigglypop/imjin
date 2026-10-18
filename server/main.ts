@@ -15,7 +15,7 @@ import { applyCommand, type Command } from '../src/sim/commands';
 import type { Conquest } from '../src/sim/conquest';
 import { CONQUEST_MAPS, CONQUEST_ORDER, type Seat } from '../src/sim/maps';
 import { SCENARIO_ORDER, SCENARIOS } from '../src/sim/scenarios';
-import { FACTIONS, teamOf, type BattleEvent, type Faction, type Ship, type Team } from '../src/sim/types';
+import { ALL_FACTIONS, teamOf, type BattleEvent, type Faction, type Ship, type Team } from '../src/sim/types';
 import {
   encodeSnapshot,
   GRACE_SECONDS,
@@ -39,7 +39,7 @@ import { MemoryAccountStore } from './accountsMemory';
 import { PgAccountStore, databaseConfig, type DatabaseConfig } from './accountsPg';
 import { ApiRouter, addressOf, originAllowed } from './api';
 import { authRoutes } from './auth';
-import { metaRoutes, payServerBattle } from './meta';
+import { metaRoutes, migrateJsonMeta, payServerBattle } from './meta';
 
 /** Set by build-server.mjs, so health identifies the bundle actually running. */
 declare const IMJIN_BUILD_REVISION: string;
@@ -607,9 +607,9 @@ function quickJoin(c: Client, msg: Extract<ClientMsg, { t: 'quick' }>) {
   dequeue(c);
   let choice = sanitizeChoice(msg.battle);
   if (choice.kind === 'conquest') choice = { ...choice, size: 2 };
-  let faction: Faction = FACTIONS.includes(msg.faction) ? msg.faction : 'joseon';
-  // Only the Joseon and Japanese fleets sail a historical duel.
-  if (choice.kind === 'scenario' && faction === 'ming') faction = 'joseon';
+  let faction: Faction = ALL_FACTIONS.includes(msg.faction) ? msg.faction : 'joseon';
+  // Only the Joseon and Japanese fleets sail a historical duel of 1592.
+  if (choice.kind === 'scenario' && faction !== 'joseon' && faction !== 'japan') faction = teamOf(faction);
   const mate = queue.find((q) => q.c !== c && choiceKey(q.choice) === choiceKey(choice) && (choice.kind === 'conquest' || teamOf(q.faction) !== teamOf(faction)));
   if (mate) {
     queue.splice(queue.indexOf(mate), 1);
@@ -726,7 +726,7 @@ function handle(c: Client, msg: ClientMsg) {
       if (!mine && !(host && !seat.client)) return;
       // A duel's sides are fixed: Joseon on seat 0, Japan on seat 1.
       // The Ming fleet sailed only with the Joseon side.
-      if (room.info.battle.kind === 'conquest' && msg.faction && FACTIONS.includes(msg.faction as Faction)) seat.faction = msg.faction as Faction;
+      if (room.info.battle.kind === 'conquest' && msg.faction && ALL_FACTIONS.includes(msg.faction as Faction)) seat.faction = msg.faction as Faction;
       if (typeof msg.human === 'boolean' && host && !seat.client) seat.human = msg.human;
       for (const s of room.info.seats) s.ready = s.client === room.info.host ? s.ready : false;
       pushRoom(room);
@@ -1026,6 +1026,15 @@ function main() {
   const api = new ApiRouter(accounts);
   authRoutes(api, ranked);
   metaRoutes(api);
+  // Growth profiles still kept as JSON (schema 1) move into their tables once the database is ready.
+  const migrating = setInterval(() => {
+    if (!accounts?.ready) return;
+    clearInterval(migrating);
+    migrateJsonMeta(accounts)
+      .then((moved) => moved && console.log(`meta: moved ${moved} JSON profiles into their tables`))
+      .catch((error) => console.error('meta: the JSON migration failed', error instanceof Error ? error.message : 'unknown error'));
+  }, 1000);
+  migrating.unref();
   // Ended sessions are forgotten every hour.
   setInterval(() => {
     if (accounts?.ready) accounts.sweep().catch((error) => console.error('accounts sweep failed', error instanceof Error ? error.message : 'unknown error'));
@@ -1204,4 +1213,4 @@ function main() {
 }
 
 if (isMainThread) main();
-else terrainWorker();
+else void terrainWorker();

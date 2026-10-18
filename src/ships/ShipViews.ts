@@ -84,6 +84,8 @@ export class ShipViews {
   private readonly need = new Map<string, number>();
   /** Ships drawn in cutaway, by level (1 roofs off, 2 walls off, 3 down to the rowers' deck). */
   cutaway = new Map<number, number>();
+  /** Ships left out of the picture: a commander's flagship while he is filmed on his set in her place (cinema/set.ts). */
+  readonly hidden = new Set<number>();
   /** How shot-through and burnt each ship's sails are, 0..1 (fx/Scars.ts keeps it). */
   readonly tears = new Map<number, number>();
   /** Timber of the decks a cutaway opens up: the rowers' floor, oar looms and posts. */
@@ -297,7 +299,7 @@ export class ShipViews {
       // A model loaded without its near level has fewer levels: the nearest one it has serves the closer ranges.
       const have = assets[v.key]?.lods.length ?? LOD_COUNT;
       const draw = scale === 1 ? v.matrix : this.drawMatrix.copy(v.matrix).scale(this.tmp.setScalar(scale));
-      if (v.visible) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), packFlash(v.flash, this.tears.get(ship.id) ?? 0, ship.id), cut);
+      if (v.visible && !this.hidden.has(ship.id)) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), packFlash(v.flash, this.tears.get(ship.id) ?? 0, ship.id), cut);
       if (level === 3 && v.visible) props = this.interior(ship, v, main, props);
       const show = (this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0;
       if (show) {
@@ -356,11 +358,48 @@ export class ShipViews {
     return i;
   }
 
-  private updateTransform(s: Ship, v: ViewState, dt: number, dist: number) {
+  /** Each ship's pose before the last sim step, and how far the render frame is between it and the current one. */
+  private readonly before = new Map<number, { x: number; z: number; heading: number }>();
+  /** 0..1 between the last two sim steps (presentation only; the sim never reads it). */
+  alpha = 1;
+
+  /** Called before every sim step: remember where each ship was, so frames between steps can interpolate. */
+  capture(battle: Battle) {
+    for (const s of battle.ships) {
+      const b = this.before.get(s.id);
+      if (b) {
+        b.x = s.x;
+        b.z = s.z;
+        b.heading = s.heading;
+      } else this.before.set(s.id, { x: s.x, z: s.z, heading: s.heading });
+    }
+  }
+
+  /** A ship's drawn pose: interpolated between the last two sim steps, so motion is smooth at any frame rate. */
+  pose(s: Ship, out = { x: 0, z: 0, heading: 0 }) {
+    const b = this.before.get(s.id);
+    const a = this.alpha;
+    if (!b || a >= 1 || Math.abs(b.x - s.x) + Math.abs(b.z - s.z) > 50) {
+      out.x = s.x;
+      out.z = s.z;
+      out.heading = s.heading;
+      return out;
+    }
+    out.x = b.x + (s.x - b.x) * a;
+    out.z = b.z + (s.z - b.z) * a;
+    out.heading = b.heading + Math.atan2(Math.sin(s.heading - b.heading), Math.cos(s.heading - b.heading)) * a;
+    return out;
+  }
+
+  private readonly drawn = { x: 0, z: 0, heading: 0 };
+
+  private updateTransform(sim: Ship, v: ViewState, dt: number, dist: number) {
+    const s = sim;
+    const p = this.pose(sim, this.drawn);
     const L = s.spec.length;
     const B = s.spec.beam;
-    const c = Math.cos(s.heading);
-    const n = Math.sin(s.heading);
+    const c = Math.cos(p.heading);
+    const n = Math.sin(p.heading);
     const t = waveField.time;
     v.sampleTimer -= dt;
     const near = dist < 700 && v.visible;
@@ -368,10 +407,10 @@ export class ShipViews {
       v.sampleTimer = near ? 0 : dist < 1800 ? 0.1 : 0.25;
       const minLambda = dist < 400 ? 0 : dist < 1500 ? 10 : 25;
       if (dist < 1500) {
-        const hb = waveField.heightAt(s.x + c * L * 0.38, s.z + n * L * 0.38, t, minLambda);
-        const hs = waveField.heightAt(s.x - c * L * 0.38, s.z - n * L * 0.38, t, minLambda);
-        const hp = waveField.heightAt(s.x + n * B * 0.45, s.z - c * B * 0.45, t, minLambda);
-        const hq = waveField.heightAt(s.x - n * B * 0.45, s.z + c * B * 0.45, t, minLambda);
+        const hb = waveField.heightAt(p.x + c * L * 0.38, p.z + n * L * 0.38, t, minLambda);
+        const hs = waveField.heightAt(p.x - c * L * 0.38, p.z - n * L * 0.38, t, minLambda);
+        const hp = waveField.heightAt(p.x + n * B * 0.45, p.z - c * B * 0.45, t, minLambda);
+        const hq = waveField.heightAt(p.x - n * B * 0.45, p.z + c * B * 0.45, t, minLambda);
         const targetHeave = (hb + hs + hp + hq) / 4;
         const targetPitch = Math.atan2(hb - hs, L * 0.76);
         const targetRoll = Math.atan2(hp - hq, B * 0.9) * 0.9 - s.turn * s.speed * 0.06;
@@ -381,7 +420,7 @@ export class ShipViews {
         v.pitch += (targetPitch - v.pitch) * k;
         v.roll += (targetRoll - v.roll) * k * 0.8;
       } else {
-        v.heave += (waveField.heightAt(s.x, s.z, t, minLambda) - v.heave) * 0.3;
+        v.heave += (waveField.heightAt(p.x, p.z, t, minLambda) - v.heave) * 0.3;
       }
     }
     let heave = v.heave;
@@ -411,9 +450,9 @@ export class ShipViews {
     } else if (s.struck) {
       roll += 0.06;
     }
-    this.e.set(roll, -s.heading + yaw, pitch, 'YZX');
+    this.e.set(roll, -p.heading + yaw, pitch, 'YZX');
     this.q.setFromEuler(this.e);
-    this.tmp.set(s.x, heave, s.z);
+    this.tmp.set(p.x, heave, p.z);
     v.matrix.compose(this.tmp, this.q, s.flagship ? this.sFlag : this.s1);
     v.origin.copy(this.tmp);
     v.up.set(0, 1, 0).applyQuaternion(this.q);

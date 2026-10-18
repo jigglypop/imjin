@@ -26,7 +26,7 @@ const load = (p) => server.ssrLoadModule(p);
 const { findSite, placeSlots, findSpawn } = await load('/src/sim/conquest.ts');
 const { wetSpot } = await load('/src/sim/maps.ts');
 const { REGION_SITES } = await load('/src/sim/grand/coast.ts');
-const { REGION_ORDER } = await load('/src/sim/grand/regions.ts');
+const { ALL_REGION_ORDER: REGION_ORDER } = await load('/src/sim/grand/regions.ts');
 
 const FILE = join(root, 'src/sim/grand/regionPoints.json');
 const heightmaps = new Map();

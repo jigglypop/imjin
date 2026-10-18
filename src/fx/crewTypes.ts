@@ -10,6 +10,17 @@ export const CAST: Record<Faction, [CrewKey, CrewKey, CrewKey, CrewKey, CrewKey,
   joseon: ['rower', 'rower', 'joseon_soldier', 'joseon_marine', 'joseon_officer', 'rower'],
   japan: ['rower', 'rower', 'japan_ashigaru', 'japan_samurai', 'japan_officer', 'rower'],
   ming: ['rower', 'rower', 'ming_soldier', 'ming_soldier', 'ming_officer', 'rower'],
+  // The Armada navies: sailors at the guns and the drum, caliver-men and arquebusiers, morion-helmeted soldiers.
+  england: ['england_sailor', 'england_sailor', 'england_shot', 'england_soldier', 'england_officer', 'england_sailor'],
+  spain: ['spain_sailor', 'spain_sailor', 'spain_shot', 'spain_soldier', 'spain_officer', 'spain_sailor'],
+  // The Lepanto navies: galley oarsmen at the benches and the guns, Spanish arquebusiers and Venetian fanti; Ottoman
+  // azap archers and janissaries, the oars pulled by captives.
+  holyleague: ['holyleague_oarsman', 'holyleague_oarsman', 'holyleague_shot', 'holyleague_soldier', 'holyleague_officer', 'holyleague_oarsman'],
+  ottoman: ['ottoman_oarsman', 'ottoman_oarsman', 'ottoman_archer', 'ottoman_janissary', 'ottoman_officer', 'ottoman_oarsman'],
+  // The navies of 1805: seamen at the guns, sails and drum, marines with musket and bayonet, a sea officer on the quarterdeck.
+  britain: ['britain_sailor', 'britain_sailor', 'britain_shot', 'britain_soldier', 'britain_officer', 'britain_sailor'],
+  france: ['france_sailor', 'france_sailor', 'france_shot', 'france_soldier', 'france_officer', 'france_sailor'],
+  spain1805: ['spain1805_sailor', 'spain1805_sailor', 'spain1805_shot', 'spain1805_soldier', 'spain1805_officer', 'spain1805_sailor'],
 };
 
 /** Hand props the crew models carry (scripts/bake-crew.mjs); a figure shows one and the rest fold away. */
@@ -19,12 +30,26 @@ export const ARMS: Record<Faction, number[]> = {
   joseon: [0, 0, W.bow, W.spear, W.sword, W.sticks],
   japan: [0, 0, W.gun, W.sword, W.sword, W.sticks],
   ming: [0, 0, W.bow, W.spear, W.sword, W.sticks],
+  england: [0, 0, W.gun, W.spear, W.sword, W.sticks],
+  spain: [0, 0, W.gun, W.spear, W.sword, W.sticks],
+  holyleague: [0, 0, W.gun, W.spear, W.sword, W.sticks],
+  ottoman: [0, 0, W.bow, W.sword, W.sword, W.sticks],
+  britain: [0, 0, W.gun, W.spear, W.sword, W.sticks],
+  france: [0, 0, W.gun, W.spear, W.sword, W.sticks],
+  spain1805: [0, 0, W.gun, W.spear, W.sword, W.sticks],
 };
 /** What the shooters pick up for a melee: every shooter model carries a spear, the fighters their own weapon. */
 export const HAND_ARMS: Record<Faction, number[]> = {
   joseon: [0, 0, W.spear, W.spear, W.sword, W.spear],
   japan: [0, 0, W.spear, W.sword, W.sword, W.spear],
   ming: [0, 0, W.spear, W.spear, W.sword, W.spear],
+  england: [0, 0, W.spear, W.spear, W.sword, W.spear],
+  spain: [0, 0, W.spear, W.spear, W.sword, W.spear],
+  holyleague: [0, 0, W.spear, W.spear, W.sword, W.spear],
+  ottoman: [0, 0, W.sword, W.sword, W.sword, W.spear],
+  britain: [0, 0, W.spear, W.spear, W.sword, W.spear],
+  france: [0, 0, W.spear, W.spear, W.sword, W.spear],
+  spain1805: [0, 0, W.spear, W.spear, W.sword, W.spear],
 };
 /** A weapon id no model carries: every weapon folds away, which is how a surrendering man drops his arms. */
 export const NO_WEAPON = W.none;

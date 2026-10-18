@@ -17,10 +17,11 @@ import {
   levelOf,
   navyName,
 } from './economy';
-import { KOREA_COAST, REGION_ORDER, REGIONS, START } from './regions';
+import { KOREA_COAST, REGIONS, regionIndex } from './regions';
+import { factionsOf, orderOf, theatreOf, type TheatreDef } from './theatre';
 import { makeRng, next } from './rng';
 import type { BattleOutcome, BuildingKind, Contact, Fleet, Grand, GrandFaction, RegionId, Result, ShipUnit } from './types';
-import { GRAND_FACTIONS, fail, ok } from './types';
+import { fail, ok } from './types';
 import { allied, atWar, fleetById, fleetStrength, lanesOf, mintId, note, ownedBy, passable, shipCount } from './world';
 import { LEVEL_XP, SHIP_PREFIX, grantXp, spawnFleet, spawnShip } from './roster';
 import { fireEvents } from './events';
@@ -36,9 +37,11 @@ export { MAX_TURNS, LEVEL_XP, spawnShip };
  * A new campaign. `spread` perturbs each navy's opening fleet by up to that share, from the seed: 0 for a real game,
  * a few hundredths when the balance scripts want to know how stable an outcome is.
  */
-export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: Grand['difficulty'] = 'normal', spread = 0): Grand {
+export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: Grand['difficulty'] = 'normal', spread = 0, theatre: TheatreDef['id'] = 'imjin'): Grand {
+  const t = theatreOf({ theatre: theatre === 'imjin' ? undefined : theatre });
   const g: Grand = {
     version: 1,
+    ...(t.id === 'imjin' ? {} : { theatre: t.id as Exclude<TheatreDef['id'], 'imjin'> }),
     balanceProfile: 'competitive-v1',
     forces: 'wide-v1',
     march: 'tw-v1',
@@ -52,10 +55,10 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
     regions: {} as Grand['regions'],
     fleets: [],
     factions: {} as Grand['factions'],
-    relations: { 'japan:joseon': 'war', 'japan:ming': 'war', 'joseon:ming': 'allied' },
+    relations: { ...t.relations } as Grand['relations'],
     pending: [],
     fought: 0,
-    credit: { joseon: 0, japan: 0, ming: 0 },
+    credit: Object.fromEntries(t.factions.map((f) => [f, 0])) as Grand['credit'],
     nextId: 0,
     log: [],
     stats: [],
@@ -64,17 +67,17 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
   };
   const support = newAllySupport(player);
   if (support) g.allySupport = support;
-  for (const id of REGION_ORDER) {
-    const owner = START.owners[id];
+  for (const id of orderOf(g)) {
+    const owner = theatreOf(g).start.owners[id] ?? null;
     g.regions[id] = { owner, buildings: [], garrison: [], queue: [], unrest: 0, garrisonRule: 'equal-power-v2', garrisonReserve: 0 };
-    for (const [kind, level] of Object.entries(START.buildings[id] ?? {}) as [BuildingKind, number][]) g.regions[id].buildings.push({ kind, level, upgradeLeft: 0, hp: 1 });
+    for (const [kind, level] of Object.entries(theatreOf(g).start.buildings[id] ?? {}) as [BuildingKind, number][]) g.regions[id].buildings.push({ kind, level, upgradeLeft: 0, hp: 1 });
     const cap = garrisonCap(id, g.regions[id]);
-    for (let i = 0; i < cap; i += 1) g.regions[id].garrison.push(spawnShip(g, GARRISON_KIND[owner]));
+    if (owner) for (let i = 0; i < cap; i += 1) g.regions[id].garrison.push(spawnShip(g, GARRISON_KIND[owner]));
   }
-  for (const f of GRAND_FACTIONS) {
+  for (const f of factionsOf(g)) {
     g.factions[f] = {
       faction: f,
-      gold: START.gold[f],
+      gold: theatreOf(g).start.gold[f] ?? 0,
       alive: true,
       commanders: [],
       unlocked: [],
@@ -84,14 +87,14 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
     };
   }
   joinCommanders(g, true);
-  const scale = Object.fromEntries(GRAND_FACTIONS.map((f) => [f, TUNING.startFleet[f] * TUNING.forceScale * (1 + spread * (2 * next(g.rng) - 1))])) as Record<GrandFaction, number>;
-  const scaled = START.fleets.map((s) => ({ ...s, ships: Object.fromEntries(Object.entries(s.ships).map(([k, n]) => [k, Math.floor(n * scale[s.faction])])) as Partial<Record<ShipKind, number>> }));
+  const scale = Object.fromEntries(factionsOf(g).map((f) => [f, TUNING.startFleet[f] * TUNING.forceScale * (1 + spread * (2 * next(g.rng) - 1))])) as Record<GrandFaction, number>;
+  const scaled = theatreOf(g).start.fleets.map((s) => ({ ...s, ships: Object.fromEntries(Object.entries(s.ships).map(([k, n]) => [k, Math.floor(n * scale[s.faction])])) as Partial<Record<ShipKind, number>> }));
   // Round a navy's total once, then allocate the remaining hulls by fractional remainder. Rounding each fleet
   // separately made a tiny slider change add several expensive warships to only the navy with three fleets.
-  for (const f of GRAND_FACTIONS) {
-    const kinds = new Set(START.fleets.filter((s) => s.faction === f).flatMap((s) => Object.keys(s.ships) as ShipKind[]));
+  for (const f of factionsOf(g)) {
+    const kinds = new Set(theatreOf(g).start.fleets.filter((s) => s.faction === f).flatMap((s) => Object.keys(s.ships) as ShipKind[]));
     for (const kind of kinds) {
-      const pieces = START.fleets.map((s, i) => ({ i, n: s.faction === f ? s.ships[kind] ?? 0 : 0 })).filter((s) => s.n > 0);
+      const pieces = theatreOf(g).start.fleets.map((s, i) => ({ i, n: s.faction === f ? s.ships[kind] ?? 0 : 0 })).filter((s) => s.n > 0);
       let left = Math.round(pieces.reduce((sum, s) => sum + s.n, 0) * scale[f]) - pieces.reduce((sum, s) => sum + (scaled[s.i]!.ships[kind] ?? 0), 0);
       pieces.sort((a, b) => (b.n * scale[f] % 1) - (a.n * scale[f] % 1) || a.i - b.i);
       for (const p of pieces) if (left-- > 0) scaled[p.i]!.ships[kind] = (scaled[p.i]!.ships[kind] ?? 0) + 1;
@@ -101,7 +104,9 @@ export function newGrand(player: GrandFaction | null, seed = 1592, difficulty: G
   for (const s of scaled) {
     spawnFleet(g, s.faction, s.at, s.name, s.ships, s.commander);
   }
-  note(g, '조선, 일본, 명 세 진영이 남해의 물길을 두고 맞섭니다.');
+  note(g, t.intro);
+  // A theatre other than 1592's is won by the common growth objective: its navies have no written war aims.
+  if (t.id !== 'imjin') g.victoryRules = growthVictoryRules(g);
   recordStats(g, 0, 0);
   fireEvents(g);
   return g;
@@ -209,7 +214,7 @@ export function captureRegion(g: Grand, id: RegionId, taker: GrandFaction) {
   const prev = r.owner;
   delete r.siege;
   // An ally that drives the enemy out of a port hands it back to the navy it was taken from.
-  const rightful = START.owners[id];
+  const rightful = theatreOf(g).start.owners[id] ?? taker;
   const liberated = rightful !== taker && g.factions[rightful].alive && allied(g, taker, rightful);
   const by = liberated ? rightful : taker;
   g.credit[taker] += REGIONS[id].value * TUNING.score.captureCredit;
@@ -348,7 +353,7 @@ export function oddsOfContact(g: Grand, contactId: string, samples = 40): number
   const f = contactForces(g, c);
   let wins = 0;
   for (let i = 0; i < samples; i += 1) {
-    const r = autoResolve({ attacker: f.attacker, defender: f.defender, seed: g.seed + 7919 * (i + 1), tags: [g.turn, REGION_ORDER.indexOf(c.regionId)] });
+    const r = autoResolve({ attacker: f.attacker, defender: f.defender, seed: g.seed + 7919 * (i + 1), tags: [g.turn, regionIndex(c.regionId)] });
     if (r.outcome.winner === 'attacker') wins += 1;
   }
   return wins / samples;
@@ -366,7 +371,7 @@ export function autoResolveContact(g: Grand, contactId: string): ResolveResult |
 
 export function resolveContact(g: Grand, c: Contact): ResolveResult {
   const f = contactForces(g, c);
-  return autoResolve({ attacker: f.attacker, defender: f.defender, seed: g.seed, tags: [g.turn, REGION_ORDER.indexOf(c.regionId)] });
+  return autoResolve({ attacker: f.attacker, defender: f.defender, seed: g.seed, tags: [g.turn, regionIndex(c.regionId)] });
 }
 
 /** After the last waiting battle is decided, the turn goes on. */
@@ -435,7 +440,7 @@ function moveFleets(g: Grand) {
 
 function findContacts(g: Grand): Contact[] {
   const out: Contact[] = [];
-  for (const id of REGION_ORDER) {
+  for (const id of orderOf(g)) {
     const here = g.fleets.filter((f) => f.at === id);
     if (!here.length) continue;
     const r = g.regions[id];
@@ -449,7 +454,7 @@ function findContacts(g: Grand): Contact[] {
     if (!hostile.length) continue;
     const power = new Map<GrandFaction, number>();
     for (const f of hostile) power.set(f.faction, (power.get(f.faction) ?? 0) + fleetStrength(f));
-    const primary = [...power.entries()].sort((a, b) => b[1] - a[1] || GRAND_FACTIONS.indexOf(a[0]) - GRAND_FACTIONS.indexOf(b[0]))[0]![0];
+    const primary = [...power.entries()].sort((a, b) => b[1] - a[1] || factionsOf(g).indexOf(a[0]) - factionsOf(g).indexOf(b[0]))[0]![0];
     const attackers = hostile.filter((f) => allied(g, f.faction, primary));
     for (const f of hostile) if (!attackers.includes(f) && g.fleets.includes(f)) retreat(g, f, id);
     const defenders = here.filter((f) => allied(g, f.faction, owner));
@@ -478,7 +483,7 @@ function findMarchContacts(g: Grand, meetings: SeaMeeting[]): Contact[] {
   const busy = new Set<string>();
   // Fleets that have a fight of their own this turn, where they lie, are nobody's reinforcement.
   for (const m of meetings) for (const id of m.fleets) busy.add(id);
-  for (const id of REGION_ORDER) {
+  for (const id of orderOf(g)) {
     const here = g.fleets.filter((f) => f.at === id);
     const owner = g.regions[id].owner;
     if (here.some((a) => (owner && atWar(g, a.faction, owner)) || here.some((b) => atWar(g, a.faction, b.faction)))) for (const f of here) busy.add(f.id);
@@ -507,7 +512,7 @@ function findMarchContacts(g: Grand, meetings: SeaMeeting[]): Contact[] {
   const strongest = (fleets: Fleet[]) => {
     const power = new Map<GrandFaction, number>();
     for (const f of fleets) power.set(f.faction, (power.get(f.faction) ?? 0) + fleetStrength(f));
-    return [...power.entries()].sort((a, b) => b[1] - a[1] || GRAND_FACTIONS.indexOf(a[0]) - GRAND_FACTIONS.indexOf(b[0]))[0]?.[0];
+    return [...power.entries()].sort((a, b) => b[1] - a[1] || factionsOf(g).indexOf(a[0]) - factionsOf(g).indexOf(b[0]))[0]?.[0];
   };
   const involves = (factions: GrandFaction[]) => g.player !== null && factions.includes(g.player);
 
@@ -536,7 +541,7 @@ function findMarchContacts(g: Grand, meetings: SeaMeeting[]): Contact[] {
     });
   }
 
-  for (const id of REGION_ORDER) {
+  for (const id of orderOf(g)) {
     const here = g.fleets.filter((f) => f.at === id);
     if (!here.length) continue;
     const r = g.regions[id];
@@ -689,7 +694,7 @@ export type TurnReport = { pending: Contact[]; finished: boolean; contacts: Cont
  */
 export function endTurn(g: Grand): TurnReport {
   if (g.phase !== 'orders') return { pending: g.pending, finished: g.phase === 'over', contacts: [], routes: {} };
-  for (const f of GRAND_FACTIONS) if (g.factions[f].alive && f !== g.player) planAi(g, f);
+  for (const f of factionsOf(g)) if (g.factions[f].alive && f !== g.player) planAi(g, f);
   if (g.autoWorks && g.player && g.factions[g.player].alive) autoWorks(g, g.player);
   for (const fl of g.fleets) fl.from = fl.at ?? fl.transit?.from ?? null;
   const routes = Object.fromEntries(g.fleets.map((fl) => [fl.id, [...fl.route]]));
@@ -720,7 +725,7 @@ export function endTurn(g: Grand): TurnReport {
 
 function recordStats(g: Grand, battles: number, turn = g.turn, paid?: Record<GrandFaction, { earned: number; upkeep: number }>) {
   const row = { turn, battles, gold: {}, regions: {}, ships: {}, strength: {}, income: {}, earned: {}, upkeep: {} } as unknown as Required<Grand['stats'][number]>;
-  for (const f of GRAND_FACTIONS) {
+  for (const f of factionsOf(g)) {
     row.gold[f] = Math.round(g.factions[f].gold);
     row.regions[f] = ownedBy(g, f).length;
     row.ships[f] = shipCount(g, f);
@@ -751,13 +756,13 @@ function runEvents(g: Grand) {
     g.factions[u.faction].unlocked.push(u.kind);
     note(g, u.note, undefined, g.player === u.faction ? 'good' : 'info');
   }
-  for (const f of GRAND_FACTIONS) {
+  for (const f of factionsOf(g)) {
     const plan = TUNING.reinforce[f];
     if (!g.factions[f].alive || g.turn < plan.first || (g.turn - plan.first) % plan.every !== 0) continue;
     if (g.regions[plan.at].owner !== f) continue;
     const ships = supportReinforcements(g, f, g.forces === 'wide-v1' ? scaleShips(plan.ships, TUNING.forceScale) : plan.ships);
     if (!Object.values(ships).some((n) => n && n > 0)) continue;
-    const fleet = spawnFleet(g, f, plan.at, f === 'japan' ? '후속 함대' : f === 'ming' ? '원군 함대' : '의병 함대', ships, null);
+    const fleet = spawnFleet(g, f, plan.at, f === 'japan' ? '후속 함대' : f === 'ming' ? '원군 함대' : f === 'england' ? '여왕의 함대' : f === 'spain' ? '증원 함대' : f === 'holyleague' ? '동맹 증원 함대' : f === 'ottoman' ? '술탄의 함대' : f === 'britain' ? '해군성의 증원 함대' : f === 'france' ? '황제의 함대' : f === 'spain1805' ? '국왕의 함대' : '의병 함대', ships, null);
     note(g, '{navy}의 {fleet} {n}척이 {place}에 도착했습니다', { navy: navyName(f), fleet: fleet.name, n: fleet.ships.length, place: REGIONS[plan.at].name }, f === g.player ? 'good' : 'info');
   }
 }
@@ -771,7 +776,7 @@ export function controlValue(g: Grand, f: GrandFaction): number {
 
 /** Snapshot the opening territory once; losing and retaking the same port cannot farm objective progress. */
 export function growthVictoryRules(g: Grand): NonNullable<Grand['victoryRules']> {
-  return { kind: 'growth-v1', initialControl: Object.fromEntries(GRAND_FACTIONS.map((f) => [f, controlValue(g, f)])) as Record<GrandFaction, number>, target: Math.ceil(REGION_ORDER.reduce((sum, id) => sum + REGIONS[id].value, 0) / 4) };
+  return { kind: 'growth-v1', initialControl: Object.fromEntries(factionsOf(g).map((f) => [f, controlValue(g, f)])) as Record<GrandFaction, number>, target: Math.ceil(orderOf(g).reduce((sum, id) => sum + REGIONS[id].value, 0) / 4) };
 }
 
 export function objectiveText(f: GrandFaction, g?: Grand): string {
@@ -807,7 +812,7 @@ export function scoreOf(g: Grand, f: GrandFaction): number {
 }
 
 function checkVictory(g: Grand) {
-  for (const f of GRAND_FACTIONS) {
+  for (const f of factionsOf(g)) {
     const st = g.factions[f];
     if (st.alive && ownedBy(g, f).length === 0) {
       st.alive = false;
@@ -817,8 +822,8 @@ function checkVictory(g: Grand) {
     st.idle += 1;
     st.objectiveHold = st.alive && objectiveMet(g, f) ? st.objectiveHold + 1 : 0;
   }
-  const alive = GRAND_FACTIONS.filter((f) => g.factions[f].alive);
-  const best = (list: GrandFaction[]) => [...list].sort((a, b) => scoreOf(g, b) - scoreOf(g, a) || GRAND_FACTIONS.indexOf(a) - GRAND_FACTIONS.indexOf(b))[0]!;
+  const alive = factionsOf(g).filter((f) => g.factions[f].alive);
+  const best = (list: GrandFaction[]) => [...list].sort((a, b) => scoreOf(g, b) - scoreOf(g, a) || factionsOf(g).indexOf(a) - factionsOf(g).indexOf(b))[0]!;
   const done = (faction: GrandFaction, kind: 'objective' | 'score' | 'elimination') => {
     g.victory = { faction, kind, turn: g.turn };
     g.phase = 'over';
@@ -835,7 +840,7 @@ function checkVictory(g: Grand) {
 function advanceTurn(g: Grand) {
   if (marching(g)) holdSieges(g);
   // Works and ships under construction.
-  for (const id of REGION_ORDER) {
+  for (const id of orderOf(g)) {
     const r = g.regions[id];
     for (const b of r.buildings) {
       if (b.upgradeLeft > 0) {
@@ -902,7 +907,7 @@ function advanceTurn(g: Grand) {
   }
   // Treasury.
   const paid = {} as Record<GrandFaction, { earned: number; upkeep: number }>;
-  for (const f of GRAND_FACTIONS) {
+  for (const f of factionsOf(g)) {
     const st = g.factions[f];
     paid[f] = { earned: 0, upkeep: 0 };
     if (!st.alive) continue;
@@ -936,7 +941,7 @@ function advanceTurn(g: Grand) {
  * guns wear the blockaders down, and when it has held out as long as it can it gives up to the blockading navy.
  */
 function holdSieges(g: Grand) {
-  for (const id of REGION_ORDER) {
+  for (const id of orderOf(g)) {
     const r = g.regions[id];
     const s = r.siege;
     if (!s) continue;

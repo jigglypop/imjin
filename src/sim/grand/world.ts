@@ -1,7 +1,8 @@
 import { SHIP_SPECS } from '../catalog';
 import { SCOUT_SIGHT, sightRange } from '../visibility';
 import { listStrength, batteryStrength } from './economy';
-import { LANES, REGION_ORDER, REGIONS, type Lane } from './regions';
+import { LANES, REGIONS, regionIndex, type Lane } from './regions';
+import { orderOf } from './theatre';
 import type { Fleet, Grand, GrandFaction, LogEntry, MsgParams, RegionId, ShipUnit } from './types';
 import { pairKey } from './types';
 
@@ -11,7 +12,7 @@ export const allied = (g: Grand, a: GrandFaction, b: GrandFaction) => a === b ||
 export const atWar = (g: Grand, a: GrandFaction, b: GrandFaction) => a !== b && g.relations[pairKey(a, b)] === 'war';
 
 export const fleetById = (g: Grand, id: string) => g.fleets.find((f) => f.id === id);
-export const ownedBy = (g: Grand, f: GrandFaction): RegionId[] => REGION_ORDER.filter((id) => g.regions[id].owner === f);
+export const ownedBy = (g: Grand, f: GrandFaction): RegionId[] => orderOf(g).filter((id) => g.regions[id].owner === f);
 export const shipCount = (g: Grand, f: GrandFaction) => g.fleets.reduce((a, fl) => a + (fl.faction === f ? fl.ships.length : 0), 0);
 export const fleetStrength = (f: Fleet) => listStrength(f.ships);
 
@@ -61,7 +62,7 @@ export function findRoute(g: Grand, f: GrandFaction, from: RegionId, to: RegionI
   const prev = new Map<RegionId, RegionId>();
   const open: RegionId[] = [from];
   while (open.length) {
-    open.sort((a, b) => dist.get(a)! - dist.get(b)! || REGION_ORDER.indexOf(a) - REGION_ORDER.indexOf(b));
+    open.sort((a, b) => dist.get(a)! - dist.get(b)! || regionIndex(a) - regionIndex(b));
     const here = open.shift()!;
     if (here === to) break;
     // A hostile port ends the sail: do not expand through it.
@@ -125,7 +126,7 @@ export function visibleRegions(g: Grand, f: GrandFaction): Set<RegionId> {
       edge = next;
     }
   };
-  for (const id of REGION_ORDER) {
+  for (const id of orderOf(g)) {
     const r = g.regions[id];
     const mine = r.owner !== null && allied(g, f, r.owner);
     if (!mine) continue;

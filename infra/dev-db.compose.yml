@@ -1,0 +1,23 @@
+# Local PostgreSQL for development only (npm run db:dev). Production uses RDS; nothing here reaches it.
+# The data lives in the named volume imjin-dev-pg, so accounts and meta profiles survive restarts:
+# `npm run db:dev:down` stops it, `docker volume rm imjin-dev-db_imjin-dev-pg` forgets everything.
+name: imjin-dev-db
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: imjin
+      POSTGRES_PASSWORD: imjin-dev
+      POSTGRES_DB: imjin
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - imjin-dev-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U imjin -d imjin"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  imjin-dev-pg:

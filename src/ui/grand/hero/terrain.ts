@@ -1,4 +1,4 @@
-import demMeta from '../../../select/demMeta.json';
+import { demMeta } from '../mapTheatre';
 import { DEM_RECT } from '../mapMath';
 import { LAYOUTS } from './layouts';
 import { outside, inside, Plan, type Ground, type Pad } from './plan';

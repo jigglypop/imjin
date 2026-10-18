@@ -20,16 +20,16 @@ await build({
     contents: [
       "export * from './server/accounts.ts'", "export * from './server/accountsMemory.ts'", "export * from './server/accountsPg.ts'", "export * from './server/api.ts'",
       "export * from './server/auth.ts'", "export * from './server/meta.ts'", "export * as R from './src/meta/rules.ts'", "export * as A from './src/meta/affixes.ts'",
-      "export * as B from './src/meta/battle.ts'", "export * as C from './src/meta/catalog.ts'", "export { buildScenario } from './src/sim/scenarios.ts'",
+      "export * as B from './src/meta/battle.ts'", "export * as L from './src/meta/loot.ts'", "export * as C from './src/meta/catalog.ts'", "export { buildScenario } from './src/sim/scenarios.ts'",
     ].join(';\n'),
     resolveDir: root, loader: 'ts',
   },
   outfile: file, platform: 'node', format: 'cjs', bundle: true, external: ['pg-native'], logLevel: 'silent',
 });
 const m = createRequire(import.meta.url)(file);
-const { R, A, C } = m;
+const { R, A, C, L } = m;
 
-async function suite(name, store) {
+async function suite(name, store, sql = null) {
   while (!store.ready) await new Promise((r) => setTimeout(r, 100));
   const api = new m.ApiRouter(store);
   m.authRoutes(api, null);
@@ -81,22 +81,32 @@ async function suite(name, store) {
       assert.deepEqual(reasons.slice(0, 3), ['reroll', 'buy', 'meta-start']);
     });
 
-    await check('equipment and skills follow the rules, and a stored salt or purse sent by a page is ignored', async () => {
+    await check('equipment, talents and respec follow the rules, and a stored salt or purse sent by a page is ignored', async () => {
       const worn = await ok('POST', '/meta/equip', { general: 'yi', armor: 'yi_tongjesa' }, token);
       assert.equal(worn.profile.generals.yi.armor, 'yi_tongjesa');
       assert.equal((await call('POST', '/meta/equip', { general: 'wakisaka', armor: 'yi_tongjesa' }, token)).json.error.text, '다른 나라의 갑옷입니다');
       const armed = await ok('POST', '/meta/weapon', { general: 'yi', weapon: 'joseon_jangchang' }, token);
       assert.equal(armed.profile.generals.yi.weapon, 'joseon_jangchang');
-      const step = R.skillsFor('yi')[0].id;
-      const learned = await ok('POST', '/meta/learn', { general: 'yi', skill: step }, token);
-      assert.deepEqual(learned.profile.generals.yi.skills, [step]);
-      assert.equal((await call('POST', '/meta/learn', { general: 'yi', skill: step }, token)).json.error.text, '이미 익혔습니다');
+      const step = 'gunnery.powder';
+      assert.equal((await call('POST', '/meta/learn', { general: 'yi', skill: step }, token)).json.error.text, '이 가지에 2점을 쓰면 열립니다');
+      await ok('POST', '/meta/learn', { general: 'yi', skill: 'gunnery.rapid' }, token);
+      const learned = await ok('POST', '/meta/learn', { general: 'yi', skill: 'gunnery.rapid' }, token);
+      assert.deepEqual(learned.profile.generals.yi.talents, { 'gunnery.rapid': 2 });
+      await ok('POST', '/meta/learn', { general: 'yi', skill: step }, token);
+      assert.equal((await call('POST', '/meta/learn', { general: 'yi', skill: 'gunnery.aim' }, token)).json.error.text, '남은 재능 점수가 없습니다');
+      const reset = await ok('POST', '/meta/respec', { general: 'yi' }, token);
+      assert.deepEqual(reset.profile.generals.yi.talents, {});
+      assert.equal(reset.profile.coins, learned.profile.coins, 'the first reset is free');
+      await ok('POST', '/meta/learn', { general: 'yi', skill: 'gunnery.aim' }, token);
+      const paidReset = await ok('POST', '/meta/respec', { general: 'yi' }, token);
+      assert.equal(reset.profile.coins - paidReset.profile.coins, R.RESPEC_PER_LEVEL * 4);
+      assert.equal((await store.ledger(id, 'coin'))[0].reason, 'respec');
       assert.equal((await call('POST', '/meta/equip', { general: 'yi' }, token)).status, 400);
     });
 
     await check('a browser profile is carried over once, as choices only: no coins, experience or rolls of its own', async () => {
       const other = await ok('POST', '/auth/guest', {});
-      const forged = { ...R.newProfile(), coins: 9999999, salt: 'forged', owned: ['won_heukcheol'], rolls: { won_heukcheol: { seed: 42, rerolls: 7 } }, generals: { won: { xp: 99999, skills: [], armor: 'won_heukcheol', weapon: 'joseon_dangpa' } } };
+      const forged = { ...R.newProfile(), coins: 9999999, salt: 'forged', owned: ['won_heukcheol'], rolls: { won_heukcheol: { seed: 42, rerolls: 7 } }, generals: { won: { xp: 99999, talents: { 'boarding.hooks': 2 }, armor: 'won_heukcheol', weapon: 'joseon_dangpa' } }, items: [{ uid: 'x', base: 'b_sonja', rarity: 'legendary', rerolls: 0, seed: 1 }] };
       const r = await ok('POST', '/meta/import', { profile: forged }, other.token);
       assert.equal(r.imported, true);
       assert.equal(r.profile.salt, other.user.id);
@@ -106,6 +116,7 @@ async function suite(name, store) {
       assert.equal(r.profile.generals.won.xp, 600);
       assert.equal(r.profile.generals.won.armor, 'won_heukcheol');
       assert.equal(r.profile.generals.won.weapon, 'joseon_dangpa');
+      assert.deepEqual(r.profile.items, [], 'loot is never carried over');
       const twice = await ok('POST', '/meta/import', { profile: forged }, other.token);
       assert.equal(twice.imported, false);
       assert.equal(twice.profile.coins, r.profile.coins);
@@ -121,6 +132,28 @@ async function suite(name, store) {
       assert.ok(paid.profile.generals.yi.xp > before.generals.yi.xp);
       assert.equal(paid.profile.stats.wins, before.stats.wins + 1);
       assert.equal((await call('POST', '/meta/battle/finish', { ticket, report }, token)).status, 409, 'a ticket pays once');
+      // Loot: rolled from the account id and the drop counter (verifiable), a first win adds a 희귀+ piece, and every
+      // piece is a line of the item ledger.
+      assert.ok(paid.reward.drops.length >= 2);
+      assert.equal(paid.profile.drops, before.drops + 1);
+      const expect = L.rollDrops(id, before.drops, { result: 'win', stars: 3, sunk: 10, firstWin: true, side: 'joseon' });
+      assert.deepEqual(paid.reward.drops.map((d) => [d.uid, d.base, d.rarity]), expect.map((d) => [d.uid, d.base, d.rarity]));
+      for (const d of paid.reward.drops) assert.equal(d.seed, L.itemSeed(id, d.uid, 0));
+      assert.equal(await store.balance(id, 'item'), paid.profile.items.length);
+      const loot = paid.profile.items[0];
+      const slot = L.itemBase(loot.base).slot;
+      const geared = await ok('POST', '/meta/item/equip', { general: 'yi', slot, item: loot.uid }, token);
+      assert.equal(geared.profile.generals.yi.gear[slot], loot.uid);
+      assert.equal((await call('POST', '/meta/item/equip', { general: 'yi', slot: 'nope', item: loot.uid }, token)).status, 400);
+      assert.equal((await call('POST', '/meta/item/equip', { general: 'yi', slot, item: 'zz' }, token)).json.error.text, '가지지 않은 물건입니다');
+      const reforged = await ok('POST', '/meta/item/reforge', { item: loot.uid }, token);
+      assert.equal(reforged.profile.items[0].seed, L.itemSeed(id, loot.uid, 1));
+      assert.equal(geared.profile.coins - reforged.profile.coins, L.REFORGE[loot.rarity]);
+      const broken = await ok('POST', '/meta/item/salvage', { item: loot.uid }, token);
+      assert.equal(broken.profile.coins - reforged.profile.coins, L.SALVAGE[loot.rarity]);
+      assert.equal(broken.profile.generals.yi.gear?.[slot], undefined);
+      assert.equal(await store.balance(id, 'item'), broken.profile.items.length);
+      assert.equal((await store.ledger(id, 'item'))[0].reason, 'salvage');
       const forged = await ok('POST', '/meta/battle/start', { mode: 'history', scenario: 'hansan', side: 'joseon' }, token);
       assert.equal((await call('POST', '/meta/battle/finish', { ticket: forged.ticket, report: { ...report, sunk: 9999 } }, token)).status, 409, 'more ships sunk than the enemy had');
       assert.equal((await call('POST', '/meta/battle/finish', { ticket: forged.ticket, report: { ...report, generals: [{ id: 'wakisaka', sunk: 0 }] } }, token)).status, 409, 'a general who did not lead');
@@ -139,6 +172,53 @@ async function suite(name, store) {
       assert.equal(after.stats.battles, before.stats.battles + 1);
       assert.ok(after.coins > before.coins);
       assert.equal(after.coins, await store.balance(id, 'coin'));
+    });
+
+    await check('the profile lives in its tables, not in the JSON; loot no longer held is kept as salvaged', async () => {
+      const stored = await store.profile(id);
+      assert.equal(stored.data.meta, undefined, 'no JSON copy of the profile');
+      if (!sql) return;
+      const p = (await ok('GET', '/meta', undefined, token)).profile;
+      const held = await sql('SELECT item_uid, def_id, rarity, seed, reforge_count FROM items WHERE user_id = $1 AND salvaged_at IS NULL ORDER BY pos', [id]);
+      assert.deepEqual(held.map((r) => [r.item_uid, r.def_id, r.rarity, Number(r.seed), r.reforge_count]), p.items.map((i) => [i.uid, i.base, i.rarity, i.seed, i.rerolls]));
+      assert.ok((await sql('SELECT count(*)::integer AS n FROM items WHERE user_id = $1 AND salvaged_at IS NOT NULL', [id]))[0].n >= 1, 'the salvaged piece stays as a row');
+      const [yi] = await sql("SELECT xp, level, talents FROM commander_progress WHERE user_id = $1 AND commander_id = 'yi'", [id]);
+      assert.equal(Number(yi.xp), p.generals.yi.xp);
+      assert.equal(yi.level, R.levelOf(p.generals.yi.xp));
+      assert.deepEqual(yi.talents, p.generals.yi.talents);
+      const worn = await sql('SELECT commander_id, slot, item_uid FROM equipment WHERE user_id = $1', [id]);
+      const gear = Object.entries(p.generals).flatMap(([g, s]) => Object.entries(s.gear ?? {}).map(([slot, uid]) => [g, slot, uid]));
+      assert.deepEqual(worn.map((r) => [r.commander_id, r.slot, r.item_uid]).sort(), gear.sort());
+      await assert.rejects(sql("INSERT INTO equipment (user_id, commander_id, slot, item_uid) VALUES ($1, 'yi', 'seal', 'no-such')", [id]), /foreign key/);
+    });
+
+    await check('a v2 JSON profile moves into the tables once (start-up sweep), keeping its choices and paying nothing', async () => {
+      const source = (await ok('GET', '/meta', undefined, token)).profile;
+      const other = await ok('POST', '/auth/guest', {});
+      const json = { ...source, v: 2, coins: 777777, salt: 'forged' };
+      json.generals = { ...source.generals, yi: { ...source.generals.yi, xp: 5000 } };
+      await store.updateProfile(other.user.id, null, (data) => { data.meta = json; });
+      assert.deepEqual(await store.jsonMetaUsers(10), [other.user.id]);
+      const lines = (await store.ledger(other.user.id)).length;
+      assert.equal(await m.migrateJsonMeta(store), 1);
+      assert.deepEqual(await store.jsonMetaUsers(10), [], 'nothing left as JSON');
+      assert.equal(await m.migrateJsonMeta(store), 0, 'a second run moves nothing');
+      assert.equal((await store.profile(other.user.id)).data.meta, undefined);
+      const want = R.normalizeProfile({ ...json, salt: other.user.id }, other.user.id);
+      const got = (await ok('GET', '/meta', undefined, other.token)).profile;
+      assert.equal(got.coins, 0, 'the JSON coins are not money: the ledger is the purse');
+      assert.equal(got.salt, other.user.id);
+      for (const key of ['owned', 'rolls', 'items', 'stats', 'firsts', 'drops', 'dropped']) assert.deepEqual(got[key], want[key], key);
+      for (const [g, s] of Object.entries(want.generals)) assert.deepEqual(got.generals[g], s, g);
+      assert.equal((await store.ledger(other.user.id)).length, lines + 0, 'moving writes no ledger line');
+      if (sql) {
+        assert.equal((await sql('SELECT count(*)::integer AS n FROM items WHERE user_id = $1', [other.user.id]))[0].n, want.items.length);
+        assert.equal((await sql("SELECT level FROM commander_progress WHERE user_id = $1 AND commander_id = 'yi'", [other.user.id]))[0].level, R.levelOf(5000));
+      }
+      // The rollback path: the rows written back as the JSON of schema 1 read as the same profile.
+      assert.equal(await m.exportJsonMeta(store, other.user.id), true);
+      const back = R.normalizeProfile((await store.profile(other.user.id)).data.meta, other.user.id);
+      for (const key of ['owned', 'rolls', 'items', 'generals', 'stats']) assert.deepEqual(back[key], got[key], `exported ${key}`);
     });
   } finally {
     http.close();
@@ -159,7 +239,13 @@ try {
     await admin.connect();
     await admin.query(`CREATE DATABASE ${database}`);
     try {
-      await suite('postgres', new m.PgAccountStore(m.databaseConfig({ DATABASE_URL: target.toString() })));
+      const client = new pg.Client({ connectionString: target.toString() });
+      await client.connect();
+      try {
+        await suite('postgres', new m.PgAccountStore(m.databaseConfig({ DATABASE_URL: target.toString() })), async (text, values) => (await client.query(text, values)).rows);
+      } finally {
+        await client.end();
+      }
     } finally {
       await admin.query(`DROP DATABASE IF EXISTS ${database} WITH (FORCE)`);
       await admin.end();

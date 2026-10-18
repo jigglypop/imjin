@@ -53,5 +53,91 @@
     "layout": "one horizontal line \"임진왜란\" set in type, replacing the generated brush lettering (menu_title_ko.webp, removed 2026-10-13)",
     "typeface": "Do Hyeon (BM DOHYEON), SIL Open Font License, four-glyph subset; see public/ui/fonts/README.md",
     "style": "src/ui/menu-cinematic.css .wordmark-title--poster: single heaviest weight thickened with a same-colour text stroke, tracking -0.085em"
-  }
+  },
+  "splash": [
+    {
+      "chapter": "armada",
+      "file": "ublic/ui/art/menu_battle_armada_wide.webp",
+      "size": [
+        1920,
+        1080
+      ],
+      "elapsed": 6.6,
+      "shots": 206,
+      "backend": "WebGPUBackend",
+      "sha256": "7c281673dde1496c7ff16a48cc9252f355f76bd0f28590bc90949e0eebf66101",
+      "captured": "2026-10-18",
+      "renderer": "the game itself (src/ui/menuBattleScene.ts), UI hidden; no image generation"
+    },
+    {
+      "chapter": "armada",
+      "file": "ublic/ui/art/menu_battle_armada_tall.webp",
+      "size": [
+        780,
+        1688
+      ],
+      "elapsed": 6.56,
+      "shots": 206,
+      "backend": "WebGPUBackend",
+      "sha256": "9a2755bc88c8c301e8f6ad859f5f9780b25106a0cd2af1adc3c2619641e046d6",
+      "captured": "2026-10-18",
+      "renderer": "the game itself (src/ui/menuBattleScene.ts), UI hidden; no image generation"
+    },
+    {
+      "chapter": "lepanto",
+      "file": "ublic/ui/art/menu_battle_lepanto_wide.webp",
+      "size": [
+        1920,
+        1080
+      ],
+      "elapsed": 6.53,
+      "shots": 128,
+      "backend": "WebGPUBackend",
+      "sha256": "da504c253ea0358959ddf9b9e0de9e15c5cffd142a3c5bbb441aef91a95b19a5",
+      "captured": "2026-10-18",
+      "renderer": "the game itself (src/ui/menuBattleScene.ts), UI hidden; no image generation"
+    },
+    {
+      "chapter": "lepanto",
+      "file": "ublic/ui/art/menu_battle_lepanto_tall.webp",
+      "size": [
+        780,
+        1688
+      ],
+      "elapsed": 6.45,
+      "shots": 128,
+      "backend": "WebGPUBackend",
+      "sha256": "a5fb7c6eec0d1d7b29bbaa5fd9cc92f1bd6a281b0e09caadabfe269dc78954d8",
+      "captured": "2026-10-18",
+      "renderer": "the game itself (src/ui/menuBattleScene.ts), UI hidden; no image generation"
+    },
+    {
+      "chapter": "trafalgar",
+      "file": "ublic/ui/art/menu_battle_trafalgar_wide.webp",
+      "size": [
+        1920,
+        1080
+      ],
+      "elapsed": 6.81,
+      "shots": 416,
+      "backend": "WebGPUBackend",
+      "sha256": "128d490ef685bc6e90b91e2d04ba17f67fc0d4358f8ce701ddeaa7969089d46e",
+      "captured": "2026-10-18",
+      "renderer": "the game itself (src/ui/menuBattleScene.ts), UI hidden; no image generation"
+    },
+    {
+      "chapter": "trafalgar",
+      "file": "ublic/ui/art/menu_battle_trafalgar_tall.webp",
+      "size": [
+        780,
+        1688
+      ],
+      "elapsed": 6.48,
+      "shots": 415,
+      "backend": "WebGPUBackend",
+      "sha256": "8186ae9eaefc99df01c7fe7031b66ac2bd7b042aa8b7c10d35b430f6f91eb049",
+      "captured": "2026-10-18",
+      "renderer": "the game itself (src/ui/menuBattleScene.ts), UI hidden; no image generation"
+    }
+  ]
 }

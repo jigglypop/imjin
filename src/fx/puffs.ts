@@ -1,4 +1,4 @@
-import { DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, MeshBasicNodeMaterial, PlaneGeometry, type Camera } from 'three/webgpu';
+import { Group, InstancedBufferAttribute, InstancedMesh, MeshBasicNodeMaterial, PlaneGeometry, type Camera } from 'three/webgpu';
 import { attribute, float, length, mix, saturate, smoothstep, step, uv, vec2 } from 'three/tsl';
 import { atmosphere } from '../render/atmosphere';
 import { equipment } from '../game/quality';
@@ -34,8 +34,6 @@ export class PuffField {
     const quad = new PlaneGeometry(1, 1);
     this.tint = new InstancedBufferAttribute(new Float32Array(PUFF_BUDGET * 3), 3);
     this.misc = new InstancedBufferAttribute(new Float32Array(PUFF_BUDGET * 4), 4);
-    this.tint.setUsage(DynamicDrawUsage);
-    this.misc.setUsage(DynamicDrawUsage);
     quad.setAttribute('iTint', this.tint);
     quad.setAttribute('iMisc', this.misc);
     const mat = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
@@ -56,7 +54,6 @@ export class PuffField {
     mat.opacityNode = saturate(mix(shape.sub(M.y.mul(0.45)).mul(1.5), shape, flash)).mul(M.x);
     mat.fog = true;
     this.mesh = new InstancedMesh(quad, mat, PUFF_BUDGET);
-    this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 5;

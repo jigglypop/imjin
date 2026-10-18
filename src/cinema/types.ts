@@ -44,13 +44,19 @@ export type Track = { type: 'track'; at: Target; from: V3; to: V3; look: V3; loo
  * (forward the way he faces, up from his feet, right to his right). Until his figure is on deck, or on a device or page
  * where it never comes, the shot falls back to `fallback` around his ship.
  */
-export type Close = { type: 'figure'; who: string; at: Target; from: V3; to: V3; look: V3; fallback: Orbit };
+export type Close = {
+  type: 'figure'; who: string; at: Target; from: V3; to: V3; look: V3; fallback: Orbit;
+  /** A clear set-up found by scripts/probe-cine-occlusion.mjs: a turn about him (rad) and a share of the distance. */
+  turn?: number; reach?: number;
+  /** An insert: the lens looks at his set's command flag instead of `look`. */
+  lookFlag?: boolean;
+};
 
 /** Eases from wherever the last shot left the camera into the player's battle camera, so the hand-off has no jump. */
 export type Home = { type: 'home'; at: Target };
 
-/** What a figure does from a moment of its shot: the command clip (the sword sent forward) or back to standing. */
-export type Act = { who: string; move: 'command' | 'stand'; at: number };
+/** What a figure does from a moment of its shot: back to his standing clip (the figures only stand, owner 2026-10-17). */
+export type Act = { who: string; move: 'stand'; at: number };
 
 export type Shot = {
   dur: number;
@@ -65,6 +71,8 @@ export type Shot = {
   roll?: Range;
   /** Battle time per real second during this shot (1 = real time); a full cutscene ignores the speed setting. */
   slow?: number;
+  /** Extra exposure for this close-up set-up, multiplied into the close-up's own. */
+  expose?: number;
   /** Depth of field: how wide the lens is open, 0 for none; the focus follows the subject. */
   aperture?: number;
 };
@@ -82,7 +90,7 @@ export type Caption = { at: number; dur: number } & (
    * with his portrait as a painted insert. `source` says where the words are from, `note` marks a line written in
    * character from a record rather than quoted.
    */
-  | { kind: 'say'; cast: string; who: string; role?: string; text: string; hanja?: string; source: string; note?: string; side: Side }
+  | { kind: 'say'; cast: string; who: string; role?: string; text: string; hanja?: string; source: string; note?: string; side: Side; part?: readonly [index: number, of: number] }
 );
 
 export type CaptionKind = Caption['kind'];

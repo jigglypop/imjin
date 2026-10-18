@@ -1,7 +1,7 @@
 import { BufferAttribute, BufferGeometry, Mesh, MeshBasicNodeMaterial } from 'three/webgpu';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { freeAfterDraw } from '../../render/dispose';
-import { V_SCALE } from '../../select/demFrame';
+import { MAP, V_SCALE } from './mapTheatre';
 import { heroEnabled } from './hero/site';
 import { heroGroundReady, prepareHeroGround, shapeLand } from './hero/terrain';
 import { DEM_RECT, MESH_SCALE } from './mapMath';
@@ -11,7 +11,7 @@ import { worldX, worldZ } from './worldCamera';
 // header describes the asset), drawn with the land's look (landLook.ts), which lights and colours them smooth from a bake
 // of the DEM itself.
 
-const ASSET = '/ui/grand_terrain.bin';
+const ASSET = MAP.land;
 const VERSION = 1;
 
 interface Header {

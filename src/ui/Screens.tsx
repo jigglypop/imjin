@@ -1,3 +1,4 @@
+import { theatreOfChapter } from './grand/theatreChoice';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { useAccount } from '../account/store';
 import { sound } from '../audio/Sound';
@@ -6,7 +7,9 @@ import { cameraFeel, FEEL_CHOICES, FEEL_LABEL, type CameraFeel } from '../camera
 import { EQUIPMENT_LABEL, equipment, forceWebGL, saveEquipmentSetting, saveWebgpuOptIn, webgpuOptIn, type EquipmentSetting } from '../game/quality';
 import { setLang, useLang, useT, type Lang } from '../i18n';
 import { prefetchScreen } from '../router';
-import { setScreen, type Screen } from '../state/store';
+import { setChapter, setScreen, useUi, type Screen } from '../state/store';
+import { CHAPTERS, chapterDef } from '../chapters';
+import { setMode } from '../campaign/campaign';
 import { AccountPanel } from './AccountPanel';
 import { Backdrop } from './Backdrop';
 import { ChevronLeft, Person, Sliders, Speaker, SpeakerOff } from './icons';
@@ -51,17 +54,41 @@ const MODES: { screen: Screen; art: string; title: string; desc: string; brief: 
   { screen: 'online', art: 'mode_online', title: '온라인 대전', desc: '다른 플레이어와 실시간으로 겨룹니다.', brief: '실시간 대전' },
 ];
 
-/** The poster's billing block: the war's commanders, set like a film's cast under the buttons. */
-const BILLING: { side: string; names: string[] }[] = [
-  { side: '조선', names: ['이순신', '원균', '이억기', '권준'] },
-  { side: '명', names: ['진린', '등자룡'] },
-  { side: '일본', names: ['와키자카 야스하루', '구키 요시타카', '구루시마 미치후사'] },
-];
+/** The series' chapters along the top of the poster: picking one brings up its flagship the way the turtle ship is shown. */
+function ChapterPicker() {
+  const t = useT();
+  const current = useUi((s) => s.chapter);
+  return (
+    <nav className="chapter-picker" aria-label={t('장 선택')}>
+      {CHAPTERS.map((c) => (
+        <button
+          key={c.id}
+          className={`chapter-chip ${c.id === current ? 'chapter-chip--on' : ''}`}
+          aria-pressed={c.id === current}
+          disabled={!c.ready}
+          title={c.ready ? undefined : t('준비 중')}
+          onClick={() => {
+            if (!c.ready || c.id === current) return;
+            sound.click();
+            setChapter(c.id as typeof current);
+          }}
+        >
+          <b>{t(c.title)}</b>
+          <small>{c.ready ? c.years : t('준비 중')}</small>
+        </button>
+      ))}
+    </nav>
+  );
+}
 
 export function MainMenu() {
   const t = useT();
   const lang = useLang();
-  const title = t('임진왜란');
+  const chapter = chapterDef(useUi((s) => s.chapter));
+  const main = chapter.id === 'imjin';
+  const title = t(chapter.title);
+  // A chapter with a faction campaign theatre (1592, the Armada) opens it; one without opens its run of battles on the history screen.
+  const chapterCampaign = { onPointerEnter: () => prefetchScreen('select'), onClick: () => { sound.click(); setMode('campaign'); setScreen('select'); } };
   const user = useAccount((s) => s.user);
   const [account, setAccount] = useState(false);
   const accountButton = useRef<HTMLButtonElement | null>(null);
@@ -71,8 +98,9 @@ export function MainMenu() {
   }, []);
   return (
     <section className="screen menu menu--cinematic">
-      <Backdrop kind="menu" cinematic />
-      <MenuBattleBackdrop />
+      {/* The poster under the live scene is a still of that chapter's own scene: its flagship shows from the first paint. */}
+      <Backdrop key={chapter.id} kind="menu" cinematic chapter={chapter.id} />
+      <MenuBattleBackdrop hero={chapter.hero} />
       <div className="menu-shade" aria-hidden="true" />
       <header className="screen-top menu-masthead">
         <button className="back-btn" data-mode="codex" {...mode('codex')}>
@@ -98,16 +126,20 @@ export function MainMenu() {
           <Person /> <span className="menu-account-name">{user && !user.guest ? user.nickname : t('로그인')}</span>
         </button>
       </header>
+      <ChapterPicker />
       <div className="menu-inner">
-        {/* A film poster's title lockup: the tagline above, the title, the years between hairlines. Every part is
+        {/* A film poster's title lockup: the title, the years between hairlines. Every part is
             sized from the title's --t, so the lockup scales as one piece. */}
-        <div className={`wordmark wordmark--${lang}`}>
-          <p className="wordmark-tagline">{t('나라를 지킨 바다')}</p>
-          {lang === 'ko' ? (
+        <div className={`wordmark wordmark--${lang} wordmark--${chapter.id}`}>
+          {!main ? (
+            <div className="menu-title-lockup">
+              <span className="wordmark-hanja wordmark-hanja--roman" aria-hidden="true">{chapter.native}</span>
+              <h1 className="wordmark-title wordmark-title--poster">{title}</h1>
+            </div>
+          ) : lang === 'ko' ? (
             <div className="menu-title-lockup">
               <span className="wordmark-hanja" aria-hidden="true">壬辰倭亂</span>
               <h1 className="wordmark-title wordmark-title--poster">{title}</h1>
-              <span className="menu-seal" aria-hidden="true">海<br />戰</span>
             </div>
           ) : (
             <h1 className="wordmark-title wordmark-title--roman" aria-label={title}>
@@ -115,12 +147,12 @@ export function MainMenu() {
               <span className="wordmark-name" aria-hidden="true">Imjin War</span>
             </h1>
           )}
-          <div className="wordmark-dates" aria-hidden="true"><i /><span>1592 — 1598</span><i /></div>
-          {lang === 'en' && <div className="wordmark-mark" aria-hidden="true"><span>壬辰倭亂</span><b>임진왜란</b></div>}
+          <div className="wordmark-dates" aria-hidden="true"><i /><span>{chapter.years}</span><i /></div>
+          {lang === 'en' && main && <div className="wordmark-mark" aria-hidden="true"><span>壬辰倭亂</span><b>임진왜란</b></div>}
         </div>
         <div className="menu-play">
-          <button className="menu-primary" data-mode="faction" {...mode('faction')}>
-            <span className="menu-primary-copy"><strong>{t('캠페인')}</strong><small>{t('한 나라로 남해안 점령')}</small></span>
+          <button className="menu-primary" data-mode="faction" {...(main || theatreOfChapter(chapter.id) ? mode('faction') : chapterCampaign)}>
+            <span className="menu-primary-copy"><strong>{t('캠페인')}</strong><small>{t(chapter.campaign)}</small></span>
             <span className="menu-arrow" aria-hidden="true">↗</span>
           </button>
           <nav className="menu-modes" aria-label={t('전투 선택')}>
@@ -128,9 +160,6 @@ export function MainMenu() {
           </nav>
         </div>
       </div>
-      <footer className={`menu-billing menu-billing--${lang}`} aria-hidden="true">
-        {BILLING.map((group) => <span key={group.side}><b>{t(group.side)}</b>{group.names.map((name) => t(name)).join(' · ')}</span>)}
-      </footer>
       {account && <AccountPanel onClose={closeAccount} />}
     </section>
   );
@@ -224,7 +253,7 @@ export function SettingsScreen() {
               }}
             />
           </Row>
-          <Row title={music ? t('배경음악 켜짐') : t('배경음악 꺼짐')} hint={t('낮은 바람 소리와 먼 북소리입니다. 효과음은 그대로 들립니다.')}>
+          <Row title={music ? t('배경음악 켜짐') : t('배경음악 꺼짐')} >
             <Switch
               on={music}
               label={t('배경음악')}
@@ -246,8 +275,7 @@ export function SettingsScreen() {
               ))}
             </div>
           </Row>
-          <p className="settings-hint">{t('자동은 기기에 맞춰 고릅니다. 화면이 끊기거나 꺼지면 스마트폰으로 바꿔 보는 것이 좋습니다.')}</p>
-          <Row title={t('카메라 흔들림')} hint={t('발포하고 폭발할 때 화면이 떨리고 늘었다 줄어드는 정도입니다. 큰 해전에서 어지러우면 줄이거나 끄세요.')}>
+          <Row title={t('카메라 흔들림')} hint={t('발포와 폭발 때 화면이 흔들리는 정도')}>
             <div className="seg seg--set" role="radiogroup" aria-label={t('카메라 흔들림')}>
               {FEEL_CHOICES.map((k) => (
                 <button
@@ -274,7 +302,6 @@ export function SettingsScreen() {
               <p className="settings-hint">{t('기본은 WebGL2입니다. WebGPU는 이 기기에서 충분히 시험되지 않았습니다. 전투가 시작되지 않으면 끄는 것이 좋습니다.')}</p>
             </>
           )}
-          <p className="settings-hint">{t('전투 중에는 전투 화면의 설정에서 화질, 하늘, 파도를 바꿀 수 있습니다.')}</p>
         </section>
         <section className="set-group set-group--help glass">
           <ControlsHelp open />

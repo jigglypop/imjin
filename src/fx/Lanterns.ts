@@ -66,6 +66,26 @@ const POINTS: Record<ModelKind, [number, number, number][]> = {
     [0.4, 1.4, 0],
     [-0.4, 1.4, 0],
   ],
+  // The 1588 ships are procedural only: their lanterns come from the anchors.
+  racegalleon: [],
+  pinnace: [],
+  fireship: [],
+  spgalleon: [],
+  galleass: [],
+  reale: [],
+  galea: [],
+  vgalleass: [],
+  sultana: [],
+  kadirga: [],
+  kalyata: [],
+  urca: [],
+  firstrate: [],
+  gb74: [],
+  gbfrigate: [],
+  fr80: [],
+  fr74: [],
+  trinidad: [],
+  es74: [],
 };
 
 const DECK: Record<string, number> = { 'panokseon#0': 6.0, 'panokseon#1': 4.7, 'panokseon#2': 4.4, 'atakebune#0': 3.5, 'sekibune#0': 2.1, 'hyeopseon#0': 0.95, 'kobaya#0': 0.8, 'mingship#0': 4.2, 'mingsmall#0': 2.4, 'geobukseon#0': 4.7 };
@@ -165,7 +185,7 @@ export class Lanterns {
       const cam = camera.position;
       let lights = 0;
       for (const ship of battle.ships) {
-        if (!ship.alive) continue;
+        if (!ship.alive || this.views.hidden.has(ship.id)) continue;
         // A ship going down loses its lights with its way: they are out by the time the deck is awash.
         const afloat = 1 - Math.min(1, ship.sinking * 4);
         const k = this.level(ship.id, ship.lights ? 1 : 0, dt) * afloat;

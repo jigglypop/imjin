@@ -3,12 +3,34 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
-const OUT = join(ROOT, 'public', 'ui', 'korea_dem.webp');
-const META = join(ROOT, 'src', 'select', 'demMeta.json');
+const arg = (n, d) => process.argv.find((a) => a.startsWith('--' + n + '='))?.slice(n.length + 3) ?? d;
+// --region=channel fetches the Armada chapter's window (the English Channel) into its own files; the default is Korea.
+// --region=britain, --region=mediterranean and --region=atlantic fetch the Armada, Lepanto and Trafalgar campaigns' worlds.
+const REGIONS = {
+  korea: { out: 'korea_dem.webp', meta: 'demMeta.json', z: 10, bounds: { west: 125.85, east: 129.5, south: 34.1, north: 35.62 } },
+  channel: { out: 'channel_dem.webp', meta: 'channelMeta.json', z: 8, bounds: { west: -6.6, east: 3.4, south: 49.02, north: 52.25 } },
+  // The Armada campaign's world: Britain and Ireland, the Channel, the North Sea's south, Brittany and the Low Countries,
+  // reaching past the campaign's frame (src/ui/grand/mapFrameArmada.json) so the continent's edge lies out in the haze.
+  // About 800 m a pixel; its scale is taken at its own latitude.
+  britain: { out: 'britain_dem.webp', meta: 'britainMeta.json', z: 8, width: 1800, midLat: 54, bounds: { west: -12.6, east: 6.6, south: 46.3, north: 60.6 } },
+  // The Lepanto campaign's world: the central and eastern Mediterranean from Genoa and Tunis to Istanbul and Rhodes, past
+  // the campaign's frame (src/ui/grand/mapFrameLepanto.json) on every side. About 1.3 km a pixel at its middle latitude.
+  mediterranean: { out: 'mediterranean_dem.webp', meta: 'mediterraneanMeta.json', z: 8, width: 1800, midLat: 40, bounds: { west: 7.0, east: 31.6, south: 33.0, north: 47.2 } },
+  // The Trafalgar campaign's world: the Channel, the Bay of Biscay, Iberia and the western Mediterranean from Cork and
+  // the Downs to Cadiz, Malta and Taranto, past the campaign's frame (src/ui/grand/mapFrameTrafalgar.json) on every side.
+  // About 1.5 km a pixel at its middle latitude.
+  atlantic: { out: 'atlantic_dem.webp', meta: 'atlanticMeta.json', z: 8, width: 1800, midLat: 44, bounds: { west: -13.0, east: 19.6, south: 33.8, north: 53.4 } },
+  // The Trafalgar chapter's history-battle map: Finisterre, St Vincent and Trafalgar off Iberia and the Nile at Abu Qir, so
+  // the whole Mediterranean from Galicia to Egypt. Only its flat map is kept (scripts/build-ui-map.mjs --region=trafalgarsea).
+  trafalgarsea: { out: 'trafalgarsea_dem.webp', meta: 'trafalgarSeaMeta.json', z: 8, width: 2048, midLat: 38, bounds: { west: -13.5, east: 33.0, south: 29.6, north: 45.4 } },
+};
+const REGION = REGIONS[arg('region', 'korea')];
+const OUT = join(ROOT, 'public', 'ui', REGION.out);
+const META = join(ROOT, 'src', 'select', REGION.meta);
 
-const Z = 10;
-const BOUNDS = { west: 125.85, east: 129.5, south: 34.1, north: 35.62 };
-const WIDTH = 2048;
+const Z = REGION.z;
+const BOUNDS = REGION.bounds;
+const WIDTH = REGION.width ?? 2048;
 
 const lonToX = (lon) => ((lon + 180) / 360) * 2 ** Z;
 const latToY = (lat) => {
@@ -120,7 +142,7 @@ await writeFile(
       y1: mercY(BOUNDS.south),
       minH: Math.round(minH),
       maxH: Math.round(maxH),
-      metersPerPixel: (40075016 * Math.cos((35 * Math.PI) / 180) * (BOUNDS.east - BOUNDS.west)) / 360 / WIDTH,
+      metersPerPixel: (40075016 * Math.cos(((REGION.midLat ?? 35) * Math.PI) / 180) * (BOUNDS.east - BOUNDS.west)) / 360 / WIDTH,
     },
     null,
     2,

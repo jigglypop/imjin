@@ -1,5 +1,4 @@
-/* The lockup's titles in --font-title (정묵바위체; Cinzel first on the English page), the hanja and the seal in
-   --font-hanja (styles.css). */
+/* The lockup's titles in --font-title (Pretendard), the hanja and the seal in --font-hanja (styles.css). */
 
 .menu--cinematic { --menu-brass:#bba77e; background:#07121b; }
 .menu--cinematic .art-bg img { object-position:50% 50%; }
@@ -8,17 +7,17 @@
 .menu-battle--ready { opacity:1; }
 .menu-battle canvas { display:block; width:100%; height:100%; }
 .menu-shade { position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(3,8,13,.2),rgba(3,8,13,.04) 38%,rgba(3,8,13,.48) 70%,#040b11 100%),linear-gradient(90deg,rgba(3,8,13,.35),transparent 72%); }
-.menu--cinematic .screen-top.menu-masthead { position:absolute; inset:0 0 auto; padding:calc(var(--sat) + 28px) calc(var(--sar) + 40px) 0 calc(var(--sal) + 40px); justify-content:flex-end; }
-.menu--cinematic .back-btn { background:transparent; border-color:rgba(210,190,148,.24); border-radius:2px; font-size:12px; min-height:40px; gap:8px; color:#d9d8d2; }
-.menu--cinematic .back-btn:hover { background:rgba(193,171,126,.12); }
+/* The masthead spans the top edge over the chapter picker: only its buttons take the pointer, so the picker's tabs stay clickable. */
+.menu--cinematic .screen-top.menu-masthead > * { pointer-events:auto; }
+.menu--cinematic .screen-top.menu-masthead { position:absolute; pointer-events:none; inset:0 0 auto; padding:calc(var(--sat) + 28px) calc(var(--sar) + 40px) 0 calc(var(--sal) + 40px); justify-content:flex-end; }
+.menu--cinematic .back-btn { background:var(--glass); border:1px solid var(--glass-line); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); box-shadow:var(--shadow); border-radius:999px; font-size:13px; font-weight:500; min-height:40px; padding:0 16px; gap:8px; color:var(--ink); }
+.menu--cinematic .back-btn:hover { background:var(--glass-hi); }
 .menu--cinematic .menu-inner { width:100%; margin:0; padding:80px 24px 76px; gap:30px; align-items:center; justify-content:flex-end; overflow-y:auto; }
 
 /* The title lockup. --t is the Korean title's size; every other part of the lockup, in both editions, is a fraction
    of it, so the poster keeps its proportions from a phone on its side to an ultrawide screen. The letter-spaced
    lines give back their trailing tracking with a negative right margin, so they stay centred. */
 .menu--cinematic .wordmark { --t:clamp(112px,13dvh,168px); position:relative; margin:3dvh 0 auto; gap:0; }
-.wordmark-tagline { margin:0 -.5em calc(var(--t)*.17) 0; font-family:var(--font-title); font-weight:300; font-size:max(11px,calc(var(--t)*.115)); line-height:1; letter-spacing:.5em; white-space:nowrap; color:rgba(255,255,255,.74); text-shadow:0 1px 14px rgba(3,8,13,.8); animation:wordmark-track 2.4s cubic-bezier(.2,.6,.2,1) .5s both; }
-.wordmark--en .wordmark-tagline { margin-right:-.42em; font-family:var(--font-title); font-weight:400; font-size:max(9px,calc(var(--t)*.088)); letter-spacing:.42em; text-transform:uppercase; }
 .menu-title-lockup { position:relative; }
 .menu--cinematic .wordmark-title { margin:0; padding:0; background:none; letter-spacing:0; color:#fff; animation:wordmark-in 1.8s ease-out both; }
 /* A poster's title: Do Hyeon has one weight, its heaviest, and a stroke in its own colour thickens it further; the
@@ -29,7 +28,6 @@
 .menu--cinematic .wordmark-title--poster { display:block; font-family:var(--font-title); font-size:var(--t); font-weight:400; line-height:.9; letter-spacing:-.04em; padding:0 .04em 0 0; white-space:nowrap; -webkit-text-stroke:.022em #fff; paint-order:stroke fill; opacity:.72; filter:drop-shadow(0 2px 12px rgba(3,8,13,.4)); }
 /* The hanja run down beside the title like a poster's vertical line, and the seal is its stamp on the other side. */
 .wordmark-hanja { position:absolute; right:100%; top:50%; margin-right:calc(var(--t)*.17); transform:translateY(-50%); writing-mode:vertical-rl; font-family:var(--font-hanja); font-weight:400; font-size:max(9px,calc(var(--t)*.118)); line-height:1; letter-spacing:.34em; color:rgba(255,255,255,.62); text-shadow:0 1px 12px rgba(3,8,13,.8); animation:wordmark-in 2s ease-out .8s both; }
-.menu-seal { position:absolute; right:calc(var(--t)*-.29); bottom:calc(var(--t)*.13); width:calc(var(--t)*.2); height:calc(var(--t)*.28); display:grid; place-content:center; background:#863a30; color:#e0c2a4; font-family:var(--font-hanja); font-weight:600; font-size:calc(var(--t)*.088); line-height:1.2; transform:rotate(5deg); clip-path:polygon(3% 2%,94% 0,100% 7%,97% 96%,6% 100%,0 94%); box-shadow:0 0 0 2px #863a30; animation:wordmark-in 1s ease-out 1.6s both; }
 /* The English title: THE between hairlines over IMJIN WAR in wide capitals, in the Korean title's translucent white. */
 .menu--cinematic .wordmark-title--roman { display:flex; flex-direction:column; align-items:center; font-family:var(--font-title); line-height:1; text-transform:uppercase; opacity:.72; filter:drop-shadow(0 2px 12px rgba(3,8,13,.45)); }
 .wordmark-the { display:flex; align-items:center; gap:.9em; margin-bottom:calc(var(--t)*.07); font-size:calc(var(--t)*.125); font-weight:500; letter-spacing:.62em; }
@@ -49,55 +47,61 @@
 @keyframes wordmark-track { from { opacity:0; letter-spacing:1em; margin-right:-1em; } }
 
 .menu-play { width:min(430px,100%); display:flex; flex-direction:column; gap:17px; }
-.menu-primary { position:relative; display:flex; justify-content:space-between; align-items:center; width:100%; padding:18px 23px; min-height:78px; color:#151817; border:1px solid #d3c4a2; border-radius:1px; background:linear-gradient(120deg,#e8dec5,#cfbc96); cursor:pointer; box-shadow:0 5px 30px rgba(0,0,0,.24); transition:background .2s,transform .2s; }
-.menu-primary:hover { background:#f1e7d1; transform:translateY(-2px); }
+.menu-primary { position:relative; display:flex; justify-content:space-between; align-items:center; width:100%; padding:16px 24px; min-height:72px; color:#11151b; border:0; border-radius:16px; background:rgba(242,245,248,.94); cursor:pointer; box-shadow:var(--shadow); transition:background .2s,transform .2s; }
+.menu-primary:hover { background:#fff; transform:translateY(-1px); }
 .menu-primary-copy { display:flex; flex-direction:column; text-align:left; gap:4px; }
-.menu-primary strong { font-size:18px; font-weight:600; letter-spacing:.02em; }
-.menu-primary small { color:#545247; font-size:12px; }
-.menu-arrow { font-size:29px; line-height:1; color:#504c3f; font-weight:300; }
-.menu-modes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-top:1px solid rgba(199,176,132,.32); border-bottom:1px solid rgba(199,176,132,.21); }
-.menu-modes button { display:flex; justify-content:center; align-items:center; gap:12px; padding:17px 6px; min-height:52px; border:0; background:transparent; color:#d7d6ce; font-size:12px; cursor:pointer; white-space:nowrap; transition:color .2s,background .2s; }
-.menu-modes button+button { border-left:1px solid rgba(199,176,132,.18); }
-.menu-modes button:hover { color:#fff5db; background:rgba(211,188,145,.08); }
-.menu-mode-arrow { color:#a99675; font-size:17px; }
+.menu-primary strong { font-size:18px; font-weight:700; }
+.menu-primary small { color:#4a525c; font-size:12px; font-weight:500; }
+.menu-arrow { font-size:24px; line-height:1; color:#4a525c; font-weight:400; }
+.menu-modes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; padding:4px; border-radius:16px; background:var(--glass); border:1px solid var(--glass-line); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); box-shadow:var(--shadow); }
+.menu-modes button { display:flex; justify-content:center; align-items:center; gap:8px; padding:14px 6px; min-height:48px; border:0; border-radius:12px; background:transparent; color:var(--ink); font-size:14px; font-weight:600; cursor:pointer; white-space:nowrap; transition:color .2s,background .2s; }
+
+.menu-modes button:hover { color:#fff; background:rgba(255,255,255,.08); }
+.menu-mode-arrow { color:var(--ink-3); font-size:15px; }
 .menu--cinematic button:focus-visible { outline:2px solid #ead8ab; outline-offset:5px; }
-/* The billing block at the foot of the poster: each navy's commanders, small and muted, a group never split. */
-.menu-billing { position:absolute; bottom:calc(var(--sab) + 22px); left:calc(var(--sal) + 40px); right:calc(var(--sar) + 40px); display:flex; flex-wrap:wrap; justify-content:center; gap:5px 26px; color:rgba(214,210,198,.5); font-size:10px; line-height:1.3; letter-spacing:.12em; pointer-events:none; }
-.menu-billing span { white-space:nowrap; }
-.menu-billing b { margin-right:1em; font-weight:500; font-size:9px; color:var(--menu-brass); opacity:.8; }
-.menu-billing--en { font-family:var(--font-title); font-size:9px; letter-spacing:.14em; text-transform:uppercase; }
-.menu-billing--en b { font-size:8px; }
 
 @media (min-width:950px) {
   .menu--cinematic .menu-inner { width:58%; padding-bottom:100px; }
   .menu--cinematic .wordmark { margin-top:5dvh; }
   .menu-play { margin-top:4dvh; }
   .menu-shade { background:linear-gradient(180deg,rgba(3,8,13,.2),transparent 30%,rgba(3,8,13,.35) 72%,#040b11 100%),linear-gradient(90deg,rgba(3,8,13,.5),rgba(3,8,13,.15) 50%,transparent 75%); }
-  /* Under the column of the title and the buttons, as the base of the poster. */
-  .menu-billing { right:auto; left:calc(var(--sal) + 24px); width:calc(58% - var(--sal) - 48px); }
 }
 @media (max-width:600px) {
-  .menu--cinematic .screen-top.menu-masthead { padding:calc(var(--sat) + 18px) calc(var(--sar) + 21px) 0 calc(var(--sal) + 21px); }
+  .menu--cinematic .screen-top.menu-masthead { padding:calc(var(--sat) + 16px) calc(var(--sar) + 12px) 0 calc(var(--sal) + 12px); gap:6px; justify-content:flex-end; }
+  .menu--cinematic .back-btn { padding:0 12px; gap:6px; white-space:nowrap; font-size:12px; }
   .menu--cinematic .menu-inner { padding:70px calc(var(--sar) + 24px) calc(var(--sab) + 72px) calc(var(--sal) + 24px); gap:20px; }
   .menu--cinematic .wordmark { --t:clamp(76px,21vw,112px); margin-top:2dvh; }
   .menu-primary { min-height:75px; padding:16px 20px; }
-  .menu-modes button { gap:8px; font-size:11px; padding:16px 4px; }
-  .menu-billing { left:24px; right:24px; bottom:calc(var(--sab) + 16px); gap:3px 16px; font-size:8px; }
-  .menu-billing b { font-size:7px; }
+  .menu-modes button { gap:6px; font-size:13px; padding:14px 4px; }
   .menu-shade { background:linear-gradient(180deg,rgba(3,8,13,.24),rgba(3,8,13,.04) 42%,rgba(3,8,13,.28) 60%,#040b11 100%); }
 }
 @media (orientation:landscape) and (max-height:540px) {
   .menu--cinematic .menu-inner { display:flex; width:54%; justify-content:center; padding:48px 24px 20px; gap:18px; }
   .menu--cinematic .wordmark { --t:62px; margin:0; }
-  .menu-seal { box-shadow:0 0 0 1px #863a30; }
   .menu-primary { min-height:52px; padding:9px 15px; }
   .menu-primary strong { font-size:15px; }
   .menu-primary small { font-size:10px; }
   .menu-play { gap:8px; margin:0; }
-  .menu-modes button { min-height:40px; padding:7px 3px; font-size:10px; gap:5px; }
-  .menu-billing { display:none; }
+  .menu-modes button { min-height:40px; padding:7px 3px; font-size:12px; gap:5px; }
 }
 @media (prefers-reduced-motion:reduce) {
   .menu-battle { display:none; }
   .menu--cinematic *, .menu--cinematic *::after { transition:none!important; animation:none!important; }
 }
+
+/* The series' chapters, set left in the masthead row like a film's reel list. */
+.chapter-picker { position:absolute; z-index:7; top:calc(var(--sat) + 26px); left:calc(var(--sal) + 40px); display:flex; gap:2px; padding:4px; border-radius:14px; background:var(--glass); border:1px solid var(--glass-line); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); box-shadow:var(--shadow); }
+.chapter-chip { display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:8px 14px; min-width:84px; border:0; border-radius:10px; background:transparent; color:var(--ink-2); cursor:pointer; transition:color .2s,background .2s; }
+.chapter-chip b { font-size:13px; font-weight:600; }
+.chapter-chip small { font-size:11px; font-weight:500; opacity:.65; font-variant-numeric:tabular-nums; }
+.chapter-chip:hover:not(:disabled) { color:#fff; background:rgba(255,255,255,.06); }
+.chapter-chip--on { color:#fff; background:rgba(255,255,255,.12); }
+.chapter-chip:disabled { cursor:default; opacity:.45; }
+.wordmark-hanja--roman { position:static; display:block; transform:none; margin:0 0 .25em; text-align:center; writing-mode:horizontal-tb; font-family:var(--font-ui); letter-spacing:.42em; font-size:max(10px,calc(var(--t)*.14)); }
+@media (max-width: 760px) {
+  .chapter-picker { top:auto; bottom:calc(var(--sab, 0px) + 232px); left:50%; transform:translateX(-50%); max-width:calc(100vw - 32px); overflow-x:auto; }
+  .chapter-chip { min-width:0; padding:6px 10px; white-space:nowrap; }
+  .chapter-chip small { font-size:10px; }
+  .chapter-chip b { font-size:13px; font-weight:600; }
+}
+.menu-sea { position:absolute; inset:0; background:radial-gradient(ellipse 90% 60% at 62% 72%, #1a2a39 0%, #0b131c 55%, #05080c 100%); }

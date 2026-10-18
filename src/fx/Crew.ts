@@ -1,3 +1,4 @@
+import type { Faction } from '../sim/types';
 import { Group, Quaternion, Vector3, type Camera } from 'three/webgpu';
 import type { Battle } from '../sim/battle';
 import type { BattleEvent, Ship, Team } from '../sim/types';
@@ -123,15 +124,12 @@ function stations(ship: Ship, figures: DeckPlan['figures'], plan: DeckPlan, lay:
     for (let t = 0; t < 10 && blocked(lay, x, 0, 0.5); t += 1) x -= 1;
     out[OFFICER]!.push({ x: Math.max(lay.x0 + 0.3, x), z: 0, yaw: yawTo(1, 0), deck: 1, up: 0 });
   }
-  // The drummer beats the war drum beside the captain on the command platform, or aft on the main deck. He faces
-  // across the ship, so the drum stands clear of the captain and both read from the side.
+  // The drummer beats the war drum aft on the main deck, never on the command platform: that holds the captain alone,
+  // so nobody stands behind the commander in an opening's close-up (owner 2026-10-18). He faces across the ship.
   if (plan.drum) {
-    if (lay.command) out[DRUM]!.push({ x: lay.command.x - 1.1, z: 0.4, yaw: yawTo(0, -1), deck: 2, up: 0 });
-    else {
-      let x = Math.max(x0, -0.3 * L) + 1.6;
-      for (let t = 0; t < 12 && blocked(lay, x, 0.4, 0.9); t += 1) x += 1;
-      out[DRUM]!.push({ x, z: 0.4, yaw: yawTo(0, -1), deck: 1, up: 0 });
-    }
+    let x = Math.max(x0, -0.3 * L) + 1.6;
+    for (let t = 0; t < 12 && blocked(lay, x, 0.4, 0.9); t += 1) x += 1;
+    out[DRUM]!.push({ x, z: 0.4, yaw: yawTo(0, -1), deck: 1, up: 0 });
   }
   return out;
 }
@@ -162,6 +160,7 @@ const NO_VIEW: CrewView = { cutaway: 0, cut: new Set(), winner: null };
  * duel on the enemy deck, the dead fall where they stand and stay there or go over the side and swim, and a beaten
  * crew drops its arms.
  */
+
 export class Crew {
   readonly group = new Group();
   private assets: Map<CrewKey, CrewAsset> | null = null;
@@ -209,8 +208,14 @@ export class Crew {
     void crewAssets().then((assets) => {
       if (this.disposed) return;
       this.assets = assets;
-      for (const a of assets.values()) for (const l of a.lods) this.group.add(l.mesh);
+      this.attach(assets);
     });
+  }
+
+  private attached = 0;
+  private attach(assets: Map<CrewKey, CrewAsset>) {
+    for (const a of assets.values()) for (const l of a.lods) if (l.mesh.parent !== this.group) this.group.add(l.mesh);
+    this.attached = assets.size;
   }
 
   /** Frees the boarding props, the deck gear and the sprites. The skinned crew meshes are cached for the next battle and only leave this group. */
@@ -225,24 +230,6 @@ export class Crew {
   }
 
   /** Ships whose captain is not drawn: a cutscene's named commander stands at his post (src/cinema/cast.ts). */
-  readonly standIns = new Set<number>();
-
-  /**
-   * Where a named commander stands for a close-up, in ship space: a step forward of the captain's mark on a panokseon's
-   * command platform; on any other ship, at the head of the main deck, where nothing stands between him and a camera off
-   * the bow (the deck plans' cabins do not always match the drawn model, so the middle of the deck is not trusted).
-   */
-  commandPost(ship: Ship) {
-    const r = this.roster(ship);
-    const st = r.stations[OFFICER]?.[0];
-    if (!st) return null;
-    const y = this.deckY(r, st.deck);
-    // The panokseon's command platform is open on every side; the other ships' castles and towers wall theirs in.
-    if (st.deck === 2 && ship.spec.kind === 'panokseon') return { x: st.x + 0.6, y, z: st.z };
-    if (st.deck === 2) return { x: r.layout.x1 - 1.4, y: r.main, z: 0 };
-    return { x: r.layout.x1 - 1.4, y, z: 0 };
-  }
-
   private deckY(r: Roster, deck: Deck) {
     return deck === 0 ? r.main - r.layout.oarDrop : deck === 2 ? r.main + (r.layout.command?.up ?? 0) : r.main;
   }
@@ -500,6 +487,8 @@ export class Crew {
     crewTime.value = this.time;
     const assets = this.assets;
     if (!assets) return;
+    // A war's crews that arrived after this battle's crew was made join the scene.
+    if (assets.size !== this.attached) this.attach(assets);
     this.frame += 1;
     this.battle = battle;
     beginCrew(assets);
@@ -536,7 +525,7 @@ export class Crew {
     this.boarding.begin(battle, this.time, dt, this.frame);
     for (const ship of battle.ships) {
       const r = this.rosters.get(ship.id);
-      if (r && r.live === this.frame) this.drawCrew(battle, ship, r, view, assets);
+      if (r && r.live === this.frame && !this.views.hidden.has(ship.id)) this.drawCrew(battle, ship, r, view, assets);
     }
     this.boarding.draw(battle, assets, camera);
     endCrew(assets);
@@ -859,7 +848,7 @@ export class Crew {
       const list = r.members[role]!;
       for (let i = 0; i < list.length; i += 1) {
         const mem = list[i]!;
-        if (mem.away || mem.gone || (role === OFFICER && this.standIns.has(ship.id))) continue;
+        if (mem.away || mem.gone) continue;
         const st = r.stations[role]![mem.station]!;
         const visible = st.deck === 0 ? r.showLow : st.deck === 2 ? r.showCommand : r.showMain;
         if (!visible) continue;
@@ -949,20 +938,82 @@ export class Crew {
   }
 }
 
-let shared: Promise<Map<CrewKey, CrewAsset>> | null = null;
+const shared = new Map<CrewKey, CrewAsset>();
+const loading = new Map<string, Promise<unknown>>();
+/** The crews by war: each set downloads the first time a battle has one of its navies. */
+const CREW_SETS: { factions: readonly Faction[]; capacities: Partial<Record<CrewKey, number[]>> }[] = [
+  {
+    factions: ['joseon', 'japan', 'ming'],
+    capacities: {
+      joseon_soldier: [128, 1200, 2400],
+      joseon_marine: [112, 900, 1800],
+      joseon_officer: [16, 80, 160],
+      japan_ashigaru: [128, 1300, 2600],
+      japan_samurai: [112, 1000, 2000],
+      japan_officer: [16, 80, 200],
+      ming_soldier: [144, 1000, 2000],
+      ming_officer: [16, 60, 120],
+      rower: [160, 1000, 2400],
+    },
+  },
+  {
+    factions: ['england', 'spain'],
+    capacities: {
+      england_shot: [128, 1000, 2000],
+      england_soldier: [96, 700, 1400],
+      england_officer: [16, 60, 120],
+      england_sailor: [144, 1000, 2000],
+      spain_shot: [128, 1000, 2000],
+      spain_soldier: [112, 900, 1800],
+      spain_officer: [16, 60, 120],
+      spain_sailor: [144, 1000, 2000],
+    },
+  },
+  {
+    factions: ['holyleague', 'ottoman'],
+    capacities: {
+      holyleague_shot: [128, 1000, 2000],
+      holyleague_soldier: [96, 800, 1600],
+      holyleague_officer: [16, 60, 120],
+      holyleague_oarsman: [200, 1600, 3200],
+      ottoman_archer: [128, 1100, 2200],
+      ottoman_janissary: [112, 900, 1800],
+      ottoman_officer: [16, 60, 120],
+      ottoman_oarsman: [200, 1600, 3200],
+    },
+  },
+  {
+    // The Trafalgar crews: a model not baked yet is skipped by loadCrew (that station stands empty), never borrowed.
+    factions: ['britain', 'france', 'spain1805'],
+    capacities: {
+      britain_shot: [96, 700, 1400],
+      britain_soldier: [96, 700, 1400],
+      britain_officer: [16, 60, 120],
+      britain_sailor: [200, 1600, 3200],
+      france_shot: [96, 800, 1600],
+      france_soldier: [96, 800, 1600],
+      france_officer: [16, 60, 120],
+      france_sailor: [200, 1600, 3200],
+      spain1805_shot: [96, 700, 1400],
+      spain1805_soldier: [96, 700, 1400],
+      spain1805_officer: [16, 60, 120],
+      spain1805_sailor: [200, 1600, 3200],
+    },
+  },
+];
 
-/** The character models load once and are shared by every battle. */
-export function crewAssets() {
-  shared ??= loadCrew({
-    joseon_soldier: [128, 1200, 2400],
-    joseon_marine: [112, 900, 1800],
-    joseon_officer: [16, 80, 160],
-    japan_ashigaru: [128, 1300, 2600],
-    japan_samurai: [112, 1000, 2000],
-    japan_officer: [16, 80, 200],
-    ming_soldier: [144, 1000, 2000],
-    ming_officer: [16, 60, 120],
-    rower: [160, 1000, 2400],
-  });
-  return shared;
+/**
+ * The character models load once and are shared by every battle; the 1592 crews always (boarding, the menu), the
+ * other wars' when a battle has their navies.
+ */
+export function crewAssets(factions: readonly Faction[] = []) {
+  const sets = CREW_SETS.filter((s, i) => i === 0 || s.factions.some((f) => factions.includes(f)));
+  return Promise.all(
+    sets.map((s) => {
+      const id = s.factions.join();
+      let p = loading.get(id);
+      if (!p) loading.set(id, (p = loadCrew(s.capacities, shared)));
+      return p;
+    }),
+  ).then(() => shared);
 }

@@ -1,6 +1,6 @@
 import { CONQUEST_MAPS } from '../src/sim/maps';
 import { SCENARIOS } from '../src/sim/scenarios';
-import { FACTIONS } from '../src/sim/types';
+import { ALL_FACTIONS, FACTIONS } from '../src/sim/types';
 import { SESSION_RULE } from '../src/account/wire';
 import type { ClientMsg } from '../src/net/protocol';
 
@@ -10,7 +10,10 @@ export const clean = (text: unknown, max: number) => String(text ?? '').replace(
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown, max: number) => typeof value === 'string' && value.length <= max;
 const index = (value: unknown) => typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < 4;
-const faction = (value: unknown) => typeof value === 'string' && FACTIONS.includes(value as (typeof FACTIONS)[number]);
+/** Any chapter's navy, for casual rooms and quick matches. */
+const faction = (value: unknown) => typeof value === 'string' && ALL_FACTIONS.includes(value as (typeof ALL_FACTIONS)[number]);
+/** Ranked stays on the 1592 navies (its rating and RANKED_ROSTER were fitted on them; docs/design-pvp.md). */
+const rankedFaction = (value: unknown) => typeof value === 'string' && FACTIONS.includes(value as (typeof FACTIONS)[number]);
 
 function choice(value: unknown) {
   if (!record(value)) return false;
@@ -45,7 +48,7 @@ export function clientMessage(value: unknown): ClientMsg | null {
       valid = choice(value.battle) && faction(value.faction);
       break;
     case 'ranked':
-      valid = faction(value.faction);
+      valid = rankedFaction(value.faction);
       break;
     case 'ping':
       valid = typeof value.at === 'number' && Number.isFinite(value.at);

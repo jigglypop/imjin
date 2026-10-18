@@ -8,6 +8,13 @@ export const COMPETITIVE_TRAITS: Record<Faction, string> = {
   joseon: '견고한 화포·도선 방어 · 비싸고 느린 주력함',
   japan: '값싼 기동·도선 · 약한 원거리 화력',
   ming: '장거리·정확한 집중 사격 · 근접·추격에 취약',
+  england: '빠른 갤리온·긴 사거리 컬버린 · 도선전에 약함',
+  spain: '높은 선루·병사 많은 도선전 · 느린 장전',
+  holyleague: '이물 대포와 화승총병 · 갈레아스의 화력',
+  ottoman: '빠른 갤리선과 활 · 많은 병사의 도선전',
+  britain: '빠른 장전의 현측 포격 · 캐로네이드의 근거리 화력',
+  france: '무거운 36리브르 포 · 저격병과 도선 훈련',
+  spain1805: '거대한 다층 전열함 · 느린 장전과 기동',
 };
 
 type UnitBalance = { spec: Partial<ShipSpec>; mods?: Partial<ShipMods>; range?: number; damage?: number };
@@ -38,6 +45,70 @@ export const COMPETITIVE_UNITS: Record<ShipKind, UnitBalance> = {
   gwangseon: { spec: { armor: 0.24, maxSpeed: 4.2, turnRate: 0.11, cost: 950, build: 80 }, mods: { reload: 0.8, accuracy: 1.15 }, range: 1.35, damage: 0.85 },
   haechangseon: { spec: { armor: 0.07, maxSpeed: 5.2, cost: 420, build: 40 }, mods: { reload: 0.85, accuracy: 1.12 }, range: 1.3, damage: 0.88 },
   hoseon: { spec: { hull: 42, crew: 38, cost: 185, build: 20 }, mods: { reload: 0.9, accuracy: 1.1 }, range: 1.25, damage: 0.9 },
+  // The Armada chapter: catalog ships at prices fitted against the 1592 navies in AI conquest matches
+  // (scripts/balance-competitive.mjs --match=england:joseon,...; docs/balance-cross.md). Ranked keeps the 1592 eight.
+  racegalleon: { spec: { cost: 1160, build: 64 } },
+  pinnace: { spec: { cost: 240, build: 22 } },
+  fireship: { spec: { cost: 180, build: 16 } },
+  spgalleon: { spec: { cost: 700, build: 60 } },
+  galleass: { spec: { cost: 620, build: 56 } },
+  urca: { spec: { cost: 260, build: 30 } },
+  // The Lepanto chapter keeps its catalog prices until scripts/balance-competitive.mjs fits them (docs/balance-cross.md).
+  reale: { spec: { cost: 900, build: 70 } },
+  galea: { spec: { cost: 650, build: 40 } },
+  vgalleass: { spec: { cost: 1200, build: 72 } },
+  sultana: { spec: { cost: 860, build: 68 } },
+  kadirga: { spec: { cost: 470, build: 38 } },
+  kalyata: { spec: { cost: 260, build: 24 } },
+  // The Trafalgar chapter's prices among its own navies, fitted with scripts/balance-competitive.mjs over 16 seeds
+  // (docs/balance-cross.md): the British 74's faster gunnery is paid for against the French and Spanish 74s. Against an
+  // earlier era's navy they are multiplied by CROSS_ERA_PRICE below. The flagships, offered only under the expanded
+  // rules, keep their proportion to their 74s.
+  firstrate: { spec: { cost: 1250, build: 90 } },
+  gb74: { spec: { cost: 910, build: 74 } },
+  gbfrigate: { spec: { cost: 320, build: 40 } },
+  fr80: { spec: { cost: 1000, build: 84 } },
+  fr74: { spec: { cost: 750, build: 74 } },
+  trinidad: { spec: { cost: 1150, build: 96 } },
+  es74: { spec: { cost: 750, build: 74 } },
+};
+
+/**
+ * Mixed-era budgets. A navy of a later era pays several times a 1592 price for a ship, so a room's muster budget, start
+ * funds, fleet cap and income grow by the largest factor of the navies present: the dearer navy still fields a squadron
+ * and the 1592 navy buys proportionally more. 1592, 1588 and 1571 navies keep factor 1, so their rooms are unchanged.
+ */
+export const ERA_BUDGET_SCALE: Partial<Record<Faction, number>> = { britain: 4, france: 4, spain1805: 4 };
+export const eraBudgetScale = (factions: Iterable<Faction>) => {
+  let k = 1;
+  for (const f of factions) k = Math.max(k, ERA_BUDGET_SCALE[f] ?? 1);
+  return k;
+};
+
+/**
+ * Cross-era prices. One price per ship cannot serve both kinds of room: a ship of the line priced fairly against the
+ * other 1805 navies is far too cheap against 1592's ships, and priced against 1592 it loses every 1805 duel. So the
+ * prices above are the 1805 navies' among themselves, and in a mixed-era room (a later era's navy against an earlier
+ * one) each later navy's ships cost this factor more, for buying, the fleet cap and the tickets a loss bleeds. Both
+ * sides still spend the same budget. Fitted with scripts/balance-competitive.mjs (docs/balance-cross.md).
+ */
+export const CROSS_ERA_PRICE: Partial<Record<Faction, number>> = { britain: 4, france: 3.7, spain1805: 3.6 };
+const ERA_KINDS: Partial<Record<Faction, ShipKind[]>> = { britain: ['firstrate', 'gb74', 'gbfrigate'], france: ['fr80', 'fr74'], spain1805: ['trinidad', 'es74'] };
+
+/** The price factors of a room's ships, or nothing when every navy in it is of one era (1805 alone, or none of 1805). */
+export function eraPrices(factions: Iterable<Faction>): Partial<Record<ShipKind, number>> | undefined {
+  const list = [...factions];
+  const later = list.filter((f) => (ERA_BUDGET_SCALE[f] ?? 1) > 1);
+  if (!later.length || later.length === list.length) return undefined;
+  const out: Partial<Record<ShipKind, number>> = {};
+  for (const f of later) for (const k of ERA_KINDS[f] ?? []) out[k] = CROSS_ERA_PRICE[f] ?? 1;
+  return out;
+}
+
+/** One navy's price factor in a room of these navies (1 unless it is a later era's navy in a mixed-era room). */
+export const eraPriceScale = (faction: Faction, factions: Iterable<Faction>) => {
+  const kind = ERA_KINDS[faction]?.[0];
+  return (kind && eraPrices(factions)?.[kind]) || 1;
 };
 
 /** The three treasuries earn the same base income; cheap boarding ships are not discounted a second time. */
@@ -45,6 +116,13 @@ export const COMPETITIVE_FACTIONS: Record<Faction, { income: number; cost: numbe
   joseon: { income: 1, cost: 1, power: 1.01 },
   japan: { income: 1, cost: 1, power: 0.93 },
   ming: { income: 1, cost: 1, power: 1.005 },
+  england: { income: 1, cost: 1, power: 1 },
+  spain: { income: 1, cost: 1, power: 1 },
+  holyleague: { income: 1, cost: 1, power: 1 },
+  ottoman: { income: 1, cost: 1, power: 1 },
+  britain: { income: 1, cost: 1, power: 1 },
+  france: { income: 1, cost: 1, power: 1 },
+  spain1805: { income: 1, cost: 1, power: 1 },
 };
 
 const specs = Object.fromEntries(Object.entries(SHIP_SPECS).map(([kind, spec]) => [kind, { ...spec, ...COMPETITIVE_UNITS[kind as ShipKind].spec }])) as Record<ShipKind, ShipSpec>;

@@ -60,7 +60,7 @@ function cardOf(g: Grand, c: Commander, coming?: number): CommanderCardView {
     mastery: node(c, MASTERY_ID, tree?.mastery.label ?? '', tree?.mastery.text ?? '', MASTERY_LEVEL),
     status,
     fleet: holder ? { id: holder.id, name: tName(holder.name), place: placeOf(g, holder.id) } : undefined,
-    joins: coming !== undefined ? t(dateLabel(coming)) : undefined,
+    joins: coming !== undefined ? t(dateLabel(coming, g)) : undefined,
     targets: coming !== undefined ? [] : targetsFor(g, c),
   };
 }

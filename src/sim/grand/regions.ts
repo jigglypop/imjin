@@ -1,5 +1,8 @@
 import type { ShipKind } from '../types';
 import type { BuildingKind, GrandFaction, RegionId } from './types';
+import { ARMADA_COMMANDERS, ARMADA_EDGES, ARMADA_REGION_ORDER, ARMADA_REGIONS } from './regionsArmada';
+import { LEPANTO_COMMANDERS, LEPANTO_EDGES, LEPANTO_REGION_ORDER, LEPANTO_REGIONS } from './regionsLepanto';
+import { TRAFALGAR_COMMANDERS, TRAFALGAR_EDGES, TRAFALGAR_REGION_ORDER, TRAFALGAR_REGIONS } from './regionsTrafalgar';
 
 export type Terrain = 'strait' | 'bay' | 'open' | 'island';
 
@@ -13,7 +16,7 @@ export type RegionDef = {
   lon: number;
   lat: number;
   /** Set for regions off the map: the border the marker is pinned to. */
-  edge?: 'se' | 'nw';
+  edge?: 'se' | 'nw' | 's' | 'n' | 'w' | 'e';
   /** 1 to 3. Sets income, building slots and the weight of the region in a score. */
   value: 1 | 2 | 3;
   terrain: Terrain;
@@ -54,7 +57,7 @@ export const PORT_EXPANSION_PARENT: Record<(typeof ADDED_PORTS)[number], RegionI
   namhaeseonso: 'noryang', gyeonnaeryang: 'hansan', happo: 'angolpo', jukdo: 'busan', gijang: 'busan', seosaengpo: 'busan', ulsan: 'busan',
 };
 
-export const REGIONS: Record<RegionId, RegionDef> = {
+const KOREAN_REGIONS: Partial<Record<RegionId, RegionDef>> = {
   myeongnyang: {
     id: 'myeongnyang',
     name: '명량·진도',
@@ -335,6 +338,15 @@ export const REGIONS: Record<RegionId, RegionDef> = {
   },
 };
 
+/** Every region of every theatre (theatre.ts picks a campaign's own). The Korean ones keep their order first. */
+export const REGIONS: Record<RegionId, RegionDef> = { ...KOREAN_REGIONS, ...ARMADA_REGIONS, ...LEPANTO_REGIONS, ...TRAFALGAR_REGIONS } as Record<RegionId, RegionDef>;
+
+/** Every theatre's regions, the Korean ones first in REGION_ORDER, so a Korean region's index is its REGION_ORDER index. */
+export const ALL_REGION_ORDER: readonly RegionId[] = [...REGION_ORDER, ...ARMADA_REGION_ORDER, ...LEPANTO_REGION_ORDER, ...TRAFALGAR_REGION_ORDER];
+const INDEX = new Map(ALL_REGION_ORDER.map((id, i) => [id, i]));
+/** A region's place in ALL_REGION_ORDER: the tie-break of route searches and the seed tag of a region's fights. */
+export const regionIndex = (id: RegionId) => INDEX.get(id) ?? -1;
+
 /** The sea lanes. Every lane runs both ways; `edges` lists each once. */
 const EDGES: [RegionId, RegionId, 1 | 2 | 3][] = [
   ['myeongnyang', 'yeosu', 2],
@@ -374,8 +386,8 @@ const EDGES: [RegionId, RegionId, 1 | 2 | 3][] = [
 ];
 
 export const LANES: Record<RegionId, Lane[]> = (() => {
-  const out = Object.fromEntries(REGION_ORDER.map((id) => [id, [] as Lane[]])) as Record<RegionId, Lane[]>;
-  for (const [a, b, turns] of EDGES) {
+  const out = Object.fromEntries(ALL_REGION_ORDER.map((id) => [id, [] as Lane[]])) as Record<RegionId, Lane[]>;
+  for (const [a, b, turns] of [...EDGES, ...ARMADA_EDGES, ...LEPANTO_EDGES, ...TRAFALGAR_EDGES]) {
     out[a].push({ to: b, turns });
     out[b].push({ to: a, turns });
   }
@@ -387,13 +399,13 @@ export const slotsOf = (id: RegionId) => 2 + REGIONS[id].value;
 
 export const KOREA_COAST: readonly RegionId[] = REGION_ORDER.filter((id) => REGIONS[id].korea);
 
-export type StartFleet = { faction: GrandFaction; at: RegionId; name: string; ships: Partial<Record<ShipKind, number>>; commander: string };
+export type StartFleet = { faction: GrandFaction; at: RegionId; name: string; ships: Partial<Record<ShipKind, number>>; commander: string | null };
 
 export type StartSetup = {
-  owners: Record<RegionId, GrandFaction>;
+  owners: Partial<Record<RegionId, GrandFaction>>;
   buildings: Partial<Record<RegionId, Partial<Record<BuildingKind, number>>>>;
   fleets: StartFleet[];
-  gold: Record<GrandFaction, number>;
+  gold: Partial<Record<GrandFaction, number>>;
 };
 
 /** `joins` is the turn a commander takes up his post under the growth rules; absent for those of the opening fleets. */
@@ -434,6 +446,10 @@ export const COMMANDERS: CommanderDef[] = [
   { id: 'magui', faction: 'ming', name: '마귀', title: '비왜 제독', portrait: 'portrait_magui', level: 2, joins: 22 },
   { id: 'liuting', faction: 'ming', name: '유정', title: '서로군 제독', portrait: 'portrait_liuting', level: 2, joins: 25 },
   { id: 'jijin', faction: 'ming', name: '계금', title: '수군 유격장', portrait: 'portrait_jijin', level: 1, joins: 25 },
+  // Other theatres' commanders join only campaigns whose navies they serve (joinCommanders skips absent navies).
+  ...ARMADA_COMMANDERS,
+  ...LEPANTO_COMMANDERS,
+  ...TRAFALGAR_COMMANDERS,
 ];
 
 /** Strategic starting positions, not simultaneous historical ownership of every port. */

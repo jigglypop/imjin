@@ -3,8 +3,9 @@ import { SHIP_SPECS } from '../catalog';
 import { REGIONS } from './regions';
 import { forkRng, next } from './rng';
 import { grantXp, spawnFleet } from './roster';
-import type { Commander, Grand, GrandFaction, MsgParams, RegionId, Result } from './types';
-import { GRAND_FACTIONS, fail, ok } from './types';
+import type { Commander, Grand, GrandFaction, MsgParams, RegionId, Result, TheatreId } from './types';
+import { fail, ok } from './types';
+import { factionsOf, theatreOf } from './theatre';
 import { note, ownedBy } from './world';
 import { supportReinforcements } from './support';
 
@@ -47,6 +48,8 @@ export type GameEvent = {
   id: string;
   /** The turn the card is dealt (see dateOf in economy.ts for its date). */
   turn: number;
+  /** The theatre whose war deals it (theatre.ts); absent: the Korean theatre of 1592. */
+  theatre?: TheatreId;
   /** The line the war's log carries for every navy. */
   headline: string;
   cards: Partial<Record<GrandFaction, EventCard>>;
@@ -366,19 +369,19 @@ function resolve(g: Grand, ev: GameEvent, f: GrandFaction, index: number) {
  * in `events.pending` until `chooseEvent` answers it.
  */
 export function fireEvents(g: Grand): void {
-  const ev = EVENTS.find((e) => e.turn === g.turn && g.events.done[e.id] === undefined);
+  const ev = EVENTS.find((e) => e.turn === g.turn && (e.theatre ?? 'imjin') === theatreOf(g).id && g.events.done[e.id] === undefined);
   if (!ev) return;
   // A card the player left unanswered gets its first answer rather than blocking the next.
   if (g.events.pending) chooseEvent(g, 0);
   g.events.done[ev.id] = -2;
   note(g, ev.headline, undefined, 'info', 'event');
   const index = EVENTS.indexOf(ev);
-  for (const f of GRAND_FACTIONS) {
+  for (const f of factionsOf(g)) {
     if (!cardFor(g, ev, f)) continue;
     if (f === g.player) {
       g.events.pending = ev.id;
       g.events.done[ev.id] = -1;
-    } else resolve(g, ev, f, Math.floor(next(forkRng(g.seed, 9100 + index, GRAND_FACTIONS.indexOf(f))) * 2));
+    } else resolve(g, ev, f, Math.floor(next(forkRng(g.seed, 9100 + index, factionsOf(g).indexOf(f))) * 2));
   }
 }
 

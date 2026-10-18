@@ -863,23 +863,29 @@
   }
 }
 
-/* Static map for phones: one flat image, panned so the chosen site sits above the brief sheet */
+/* Static map for phones and the later chapters: one flat image, framed on all of the chapter's pins when they fit
+   (StaticMap sets --mw, --fx, --fy and the image's aspect --ma), else panned so the chosen site sits above the brief */
 .smap {
   --mw: clamp(1100px, 280vw, 1700px);
-  --mh: calc(var(--mw) * 1039 / 2048);
-  --fx: 50%;
-  --fy: 28%;
+  --ma: 0.507;
+  --mh: calc(var(--mw) * var(--ma));
+  --fx: 50vw;
+  --fy: 28vh;
   position: absolute;
   inset: 0;
 }
 
+/* Panned with a compositor transform, not left/top: a left/top glide re-lays the plane every frame and snaps the image
+   and its pins to whole pixels apart, so the pins stepped against the map while it moved. */
 .smap-plane {
   position: absolute;
+  left: 0;
+  top: 0;
   width: var(--mw);
   height: var(--mh);
-  left: calc(var(--fx) - var(--u) * var(--mw));
-  top: calc(var(--fy) - var(--v) * var(--mh));
-  transition: left 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), top 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transform: translate3d(calc(var(--fx) - var(--u) * var(--mw)), calc(var(--fy) - var(--v) * var(--mh)), 0);
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change: transform;
 }
 
 .smap-plane::after {
@@ -913,6 +919,14 @@
 
 .smap .marker--left.marker--on span {
   right: 24px;
+}
+
+/* A third pin on the same spot (the three wings at Lepanto) hangs its label under the pin. */
+.smap .marker--down span {
+  position: absolute;
+  left: -14px;
+  top: 12px;
+  margin: 0;
 }
 
 /* The brief: date and place, the name, difficulty, what happened, the side to lead, the two fleets, then the way in. */
@@ -1661,8 +1675,8 @@
   }
 
   .smap {
-    --fx: 27%;
-    --fy: 62%;
+    --fx: 27vw;
+    --fy: 62vh;
     --mw: clamp(1100px, 150vw, 1700px);
   }
 
@@ -1702,3 +1716,55 @@
     min-width: 0;
   }
 }
+
+.screen .emblem--england {
+  background-image: url(/ui/art/emblem_england_sm.webp);
+}
+
+.screen .emblem--spain {
+  background-image: url(/ui/art/emblem_spain_sm.webp);
+}
+
+/* ---------------------------------------------------------------- brief, design-system pass (.claude/skills/ui-design)
+   The fleets are the side picker: each a glass card with its navy's rule; the long account folds under 자세히. */
+.select-hook {
+  margin: 0;
+  font-size: var(--fs-15);
+  line-height: 1.5;
+  color: var(--ink);
+}
+.select-force--pick {
+  align-items: flex-start;
+  text-align: left;
+  padding: 10px 12px 10px 14px;
+  border: 1px solid var(--glass-line);
+  border-left: 3px solid var(--bar);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  font: inherit;
+  font-size: var(--fs-13);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.select-force--pick:hover { background: rgba(255, 255, 255, 0.07); }
+.select-force--on {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+  border-left-color: var(--bar);
+}
+.select-force-ships { color: var(--ink-2); }
+.select-more summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-13);
+  font-weight: 500;
+  color: var(--ink-3);
+  cursor: pointer;
+  list-style: none;
+}
+.select-more summary::-webkit-details-marker { display: none; }
+.select-more summary::after { content: '▾'; font-size: 11px; }
+.select-more[open] summary::after { content: '▴'; }
+.select-more .select-summary { margin: 8px 0 0; font-size: var(--fs-13); color: var(--ink-2); }

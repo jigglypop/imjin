@@ -6,6 +6,7 @@ import type { BuildingKind, GBuilding, Grand, GrandFaction, QueueItem, RegionId,
 import { MAX_LEVEL } from './types';
 import { allyIncomeMultiplier } from './support';
 import { techIncome } from './growthData';
+import { theatreOf } from './theatre';
 
 /**
  * Every number that turns the battle catalog into campaign money and time lives in TUNING. The ship stats themselves
@@ -57,9 +58,19 @@ export const TUNING = {
     joseon: { first: 8, every: 8, at: 'yeosu', ships: { panokseon: 1, hyeopseon: 2 } },
     japan: { first: 8, every: 8, at: 'nagoya', ships: { atakebune: 1, sekibune: 3, kobaya: 2 } },
     ming: { first: 8, every: 8, at: 'liaodong', ships: { mingship: 1, mingsmall: 2 } },
+    // The Armada theatre: the queen's ships fitted out in the Thames, the king's new galleons from Lisbon.
+    england: { first: 6, every: 6, at: 'london', ships: { racegalleon: 1, pinnace: 2 } },
+    spain: { first: 6, every: 6, at: 'lisbon', ships: { spgalleon: 2, urca: 2 } },
+    // The Lepanto theatre: Venice's Arsenal and the Sultan's yard on the Golden Horn.
+    holyleague: { first: 6, every: 6, at: 'venice', ships: { galea: 3 } },
+    ottoman: { first: 6, every: 6, at: 'istanbul', ships: { kadirga: 3, kalyata: 1 } },
+    // The Trafalgar theatre: the ships commissioned at Portsmouth, Brest and Cádiz.
+    britain: { first: 6, every: 6, at: 'spithead', ships: { gb74: 2, gbfrigate: 1 } },
+    france: { first: 6, every: 6, at: 'brest', ships: { fr74: 2 } },
+    spain1805: { first: 6, every: 6, at: 'cadiz', ships: { es74: 2 } },
   } as Record<GrandFaction, { first: number; every: number; at: RegionId; ships: Partial<Record<ShipKind, number>> }>,
   /** Allied campaign train/development cohorts account for unequal opening holdings and expedition travel. */
-  startFleet: { joseon: 0.98, japan: 0.74, ming: 1.95 } as Record<GrandFaction, number>,
+  startFleet: { joseon: 0.98, japan: 0.74, ming: 1.95, england: 1, spain: 1, holyleague: 1, ottoman: 1, britain: 1, france: 1, spain1805: 1 } as Record<GrandFaction, number>,
   /** Ships a navy can build only once their design is ready (GATES `unlock`): the turn, and the news it brings. */
   unlocks: [
     { faction: 'joseon', kind: 'geobukseon', turn: 3, note: '나대용이 거북선을 완성했습니다. 선소 2단계에서 건조할 수 있습니다.' },
@@ -71,7 +82,7 @@ export const TUNING = {
    * hulls in the densest anchorages (Japan round Busan), and winter slows the long crossing from China: these replace
    * `faction.*.income` there (tuned on 300 computer wars, scripts/balance-grand.mjs).
    */
-  marchIncome: { joseon: 1.1, japan: 1.0, ming: 2.7 } as Record<GrandFaction, number>,
+  marchIncome: { joseon: 1.1, japan: 1.0, ming: 2.7, england: 1.25, spain: 1.6, holyleague: 1.4, ottoman: 1.4, britain: 1.3, france: 1.3, spain1805: 1.3 } as Record<GrandFaction, number>,
   faction: {
     // Fast-production development cohorts retain each navy's distinct expedition and opening holdings.
     // Joseon opens with twenty-two ports and their standing garrisons to Japan's sixteen, so its income per port is the lowest.
@@ -80,6 +91,23 @@ export const TUNING = {
     japan: { ...COMPETITIVE_FACTIONS.japan, income: 1.18, label: '일본' },
     // Ming's bases finance the longer expedition.
     ming: { ...COMPETITIVE_FACTIONS.ming, income: 2.3, label: '명' },
+    // England holds more ports; Spain fewer, paid for with the silver of the Indies. The auto-resolve weighs hull and
+    // soldiers and cannot see the race-built ships' reach and weather gauge, so England's ships count for more and cost
+    // less here: 16 computer wars split 9 to 7 (TUNING overrides in a headless run of newGrand(null, seed, .., 'armada')).
+    england: { ...COMPETITIVE_FACTIONS.england, income: 1.25, cost: 0.75, power: 1.5, label: '잉글랜드' },
+    spain: { ...COMPETITIVE_FACTIONS.spain, income: 1.6, label: '에스파냐' },
+    // The League's galleys outgun the Ottomans' bow to bow and carry more arquebusiers, which the auto-resolve's hull and
+    // soldier count cannot see, and the Ottomans open with more hulls: its ships count for more, 16 computer wars split 9 to 7
+    // (Ottoman to League) in a headless run of newGrand(null, seed, .., 'lepanto').
+    holyleague: { ...COMPETITIVE_FACTIONS.holyleague, income: 1.4, power: 1.3, label: '신성동맹' },
+    ottoman: { ...COMPETITIVE_FACTIONS.ottoman, income: 1.4, label: '오스만' },
+    // The Trafalgar theatre: Britain opens with the larger fleets at sea and ports on every sea it fights in, and the
+    // computer allies split their effort between the Channel and the Strait, so their ships count for more here:
+    // 16 computer wars split 8 to 8 (Britain to the allies) in a headless run of newGrand(null, seed, .., 'trafalgar').
+    // The result turns on this factor in steps (1.25 gives 12 to 4, 1.26 gives 3 to 13).
+    britain: { ...COMPETITIVE_FACTIONS.britain, income: 1.3, label: '영국' },
+    france: { ...COMPETITIVE_FACTIONS.france, income: 1.3, power: 1.255, label: '프랑스' },
+    spain1805: { ...COMPETITIVE_FACTIONS.spain1805, income: 1.3, power: 1.255, label: '에스파냐' },
   } as Record<GrandFaction, { income: number; cost: number; power: number; label: string }>,
 };
 
@@ -158,10 +186,10 @@ export function rangedShare(spec: ShipSpec): number {
 export function shipDef(kind: ShipKind): ShipDef {
   const spec = shipSpec(kind);
   const combat = combatStats(kind);
-  const f = TUNING.faction[spec.faction];
+  const f = TUNING.faction[spec.faction as GrandFaction];
   return {
     kind,
-    faction: spec.faction,
+    faction: spec.faction as GrandFaction,
     label: spec.label,
     gold: Math.max(10, Math.round(spec.cost * TUNING.goldPerCost * f.cost)),
     turns: Math.max(1, Math.ceil(spec.build / TUNING.shipSecondsPerTurn)),
@@ -183,10 +211,21 @@ export const GATES: Partial<Record<ShipKind, { yard: number; unlock: boolean }>>
   gwangseon: { yard: 3, unlock: true },
   mingship: { yard: 1, unlock: false },
   haechangseon: { yard: 1, unlock: false },
+  racegalleon: { yard: 1, unlock: false },
+  spgalleon: { yard: 1, unlock: false },
+  galleass: { yard: 2, unlock: true },
+  // The Lepanto theatre: the lantern galleys need the larger yards; Venice's galleasses wait for their conversion.
+  reale: { yard: 3, unlock: false },
+  sultana: { yard: 3, unlock: false },
+  vgalleass: { yard: 2, unlock: true },
+  // The Trafalgar theatre: three-deckers and 80s need the larger yards; the four-decker waits for its rebuilding.
+  firstrate: { yard: 2, unlock: false },
+  fr80: { yard: 2, unlock: false },
+  trinidad: { yard: 3, unlock: true },
 };
 
 /** The local boat each navy leaves to guard a port. */
-export const GARRISON_KIND: Record<GrandFaction, ShipKind> = { joseon: 'hyeopseon', japan: 'kobaya', ming: 'mingsmall' };
+export const GARRISON_KIND: Record<GrandFaction, ShipKind> = { joseon: 'hyeopseon', japan: 'kobaya', ming: 'mingsmall', england: 'pinnace', spain: 'urca', holyleague: 'galea', ottoman: 'kalyata', britain: 'gb74', france: 'fr74', spain1805: 'es74' };
 
 export const shipGold = (kind: ShipKind) => shipDef(kind).gold;
 
@@ -293,13 +332,14 @@ export const batteryStrength = (r: RegionState): number => {
   return b.level * 420 * (0.4 + 0.6 * b.hp);
 };
 
-/** Year and month (1..12) at the start of a turn. */
-export const dateOf = (turn: number): { year: number; month: number } => {
-  const since = 3 + (turn - 1) * MONTHS_PER_TURN;
-  return { year: 1592 + Math.floor(since / 12), month: (since % 12) + 1 };
+/** Year and month (1..12) at the start of a turn, in the campaign's theatre (the 1592 war when none is given). */
+export const dateOf = (turn: number, g?: Pick<Grand, 'theatre'> | null): { year: number; month: number } => {
+  const t = theatreOf(g);
+  const since = t.since + (turn - 1) * MONTHS_PER_TURN;
+  return { year: t.year + Math.floor(since / 12), month: (since % 12) + 1 };
 };
 
-export const dateLabel = (turn: number): string => {
-  const { year, month } = dateOf(turn);
+export const dateLabel = (turn: number, g?: Pick<Grand, 'theatre'> | null): string => {
+  const { year, month } = dateOf(turn, g);
   return `${year}년 ${month}월`; // i18n-ignore: every 'year년 month월' has an English entry
 };

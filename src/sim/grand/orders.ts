@@ -341,6 +341,8 @@ export function orderAlliance(g: Grand, a: GrandFaction, b: GrandFaction): Resul
   if (a === b || allied(g, a, b)) return fail('이미 동맹 관계입니다');
   // The invaders accept no treaty: only the two defenders of Joseon may ally.
   if (a === 'japan' || b === 'japan') return fail('일본은 동맹을 맺지 않습니다');
+  // 1805: Britain stood alone against Napoleon's France and its Spanish ally; no peace or alliance came before 1808.
+  if ((a === 'britain' || b === 'britain') && (a === 'france' || b === 'france' || a === 'spain1805' || b === 'spain1805')) return fail('영국은 프랑스·에스파냐와 동맹을 맺지 않습니다');
   g.relations[pairKey(a, b)] = 'allied';
   note(g, '{a|과/와} {b|이/가} 동맹을 맺었습니다', { a: navyName(a), b: navyName(b) }, 'good');
   return ok();

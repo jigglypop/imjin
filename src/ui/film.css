@@ -1,0 +1,79 @@
+/* Film styles shared by the openings (battle name plates, campaign openings): 2.39:1 letterbox, --font-title names, --font-cine lines. */
+
+.film { position: absolute; inset: 0; z-index: 5; color: #f3f1ec; overflow: hidden; cursor: pointer; --side: #d9c08a; --bar: max(0px, calc((100% - 100vw / 2.39) / 2)); }
+.film--japan { --side: #e0a39a; }
+.film--ming { --side: #e6c46e; }
+.film--england { --side: #b9c9e6; }
+.film--spain { --side: #e6c27a; }
+.film--holyleague { --side: #c9d6ef; }
+.film--ottoman { --side: #e4a58f; }
+.film-bar { position: absolute; left: 0; right: 0; height: min(13vh, max(0px, calc((100vh - 100vw / 2.39) / 2))); background: #000; }
+.film-bar--top { top: 0; }
+.film-bar--bottom { bottom: 0; }
+.film-black { position: absolute; inset: 0; background: #000; pointer-events: none; }
+
+.film-name { position: absolute; left: max(28px, 6vw); top: 50%; transform: translateY(-50%); text-shadow: 0 2px 24px rgba(0, 0, 0, 0.85); }
+.film-name-eyebrow { font-family: var(--font-cine); font-weight: 500; font-size: clamp(11px, 1vw, 15px); letter-spacing: 0.42em; color: rgba(243, 241, 236, 0.78); animation: film-track 2.4s cubic-bezier(.2, .6, .2, 1) both; }
+.film-name-main { margin-top: 0.25em; font-family: var(--font-title); font-weight: 400; font-size: clamp(44px, 6.4vw, 108px); line-height: 1.05; letter-spacing: 0.1em; animation: film-title 2.6s cubic-bezier(.2, .7, .2, 1) both; }
+.film-name-title { margin-top: 0.5em; padding-top: 0.5em; border-top: 2px solid var(--side); display: inline-block; font-family: var(--font-cine); font-weight: 600; font-size: clamp(14px, 1.4vw, 21px); letter-spacing: 0.18em; color: rgba(243, 241, 236, 0.9); animation: film-rise 1.8s ease-out 0.5s both; }
+
+.film-say { position: absolute; left: 0; right: 0; margin: 0 auto; bottom: calc(min(13vh, max(0px, calc((100vh - 100vw / 2.39) / 2))) + max(24px, 4vh)); width: min(980px, 90vw); text-align: center; animation: film-rise 0.9s cubic-bezier(.2, .7, .2, 1) both; }
+.film-say-who { font-family: var(--font-cine); font-weight: 700; font-size: clamp(12px, 1vw, 16px); letter-spacing: 0.16em; color: var(--side); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.film-say-text { margin-top: 8px; font-family: var(--font-cine); font-weight: 600; font-size: clamp(19px, 2vw, 32px); line-height: 1.42; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 18px rgba(0, 0, 0, 0.55); word-break: keep-all; }
+.film-say-hanja { margin-top: 6px; font-family: var(--font-hanja); font-weight: 500; letter-spacing: 0.22em; color: rgba(255, 255, 255, 0.72); font-size: clamp(13px, 1.15vw, 18px); }
+.film-say-source { margin-top: 8px; font-family: var(--font-ui); font-size: clamp(10px, 0.82vw, 12.5px); letter-spacing: 0.04em; color: rgba(243, 241, 236, 0.62); }
+.film-say-source::before { content: '— '; }
+.film-skip { position: absolute; right: max(16px, 3vw); top: calc(min(13vh, max(0px, calc((100vh - 100vw / 2.39) / 2))) + 12px); font: 500 12px var(--font-ui); letter-spacing: 0.06em; color: rgba(255, 255, 255, 0.86); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.22); padding: 6px 10px; cursor: pointer; opacity: 0.6; }
+.film-skip:hover { opacity: 1; }
+
+/* A fullscreen film: the generals stage taken to the whole window, or a portrait in sea fog. */
+.film-screen { position: fixed; inset: 0; z-index: 1000; overflow: hidden; background: radial-gradient(120% 80% at 50% 38%, #24313d 0%, #0b1016 62%, #05070a 100%); }
+.film-portrait { position: absolute; left: 62%; top: 46%; height: 74vh; aspect-ratio: 4 / 5; object-fit: cover; filter: saturate(0.85) contrast(1.06) brightness(0.92); -webkit-mask-image: radial-gradient(60% 60% at 50% 45%, #000 55%, transparent 100%); mask-image: radial-gradient(60% 60% at 50% 45%, #000 55%, transparent 100%); }
+.film-fog { position: absolute; inset: -20%; pointer-events: none; background: radial-gradient(40% 22% at 30% 70%, rgba(170, 190, 205, 0.16), transparent 70%), radial-gradient(45% 20% at 72% 76%, rgba(170, 190, 205, 0.12), transparent 70%), linear-gradient(transparent 55%, rgba(120, 140, 155, 0.18) 78%, rgba(10, 14, 18, 0.6)); animation: film-fog 18s linear infinite alternate; }
+.film-fog--front { opacity: 0.7; animation-duration: 11s; animation-direction: alternate-reverse; }
+
+/* The generals stage during his film: the whole window, the sea haze behind him. */
+.gen-model.gen-model--film { position: fixed; inset: 0; z-index: 1000; width: auto; max-width: none !important; aspect-ratio: auto; border-radius: 0; margin: 0 !important; box-shadow: none; cursor: pointer; background: radial-gradient(90% 60% at 62% 35%, #31404d 0%, #121a22 55%, #06090c 100%); }
+.gen-model.gen-model--film::before { content: ''; position: absolute; inset: -20%; pointer-events: none; background: radial-gradient(38% 18% at 25% 78%, rgba(170, 190, 205, 0.18), transparent 70%), radial-gradient(42% 20% at 78% 70%, rgba(170, 190, 205, 0.14), transparent 70%), linear-gradient(transparent 58%, rgba(110, 130, 145, 0.22) 80%, rgba(8, 12, 16, 0.7)); animation: film-fog 18s linear infinite alternate; }
+.gen-model--film > .gen-model__move, .gen-model--film > .gen-model__views, .gen-model--film > .gen-model__moves { display: none; }
+.gen-intro-button { margin-top: 10px; width: 100%; padding: 9px 12px; font: 600 13px var(--font-ui); letter-spacing: 0.08em; color: #ead9b2; background: rgba(201, 179, 132, 0.1); border: 1px solid rgba(201, 179, 132, 0.4); border-radius: 10px; cursor: pointer; }
+.gen-intro-button:hover { background: rgba(201, 179, 132, 0.2); }
+
+@keyframes film-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes film-track { from { opacity: 0; letter-spacing: 0.9em; } to { opacity: 1; } }
+@keyframes film-title { from { opacity: 0; transform: scale(1.05); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes film-fog { from { transform: translateX(-4%); } to { transform: translateX(4%); } }
+
+.app--compact .film-name { left: 16px; top: auto; bottom: 34%; transform: none; }
+.app--compact .film-say-text { font-size: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .film *, .film-fog, .gen-model--film::before { animation: none !important; }
+}
+
+/* A campaign's opening over its map (src/ui/grand/CampaignOpening.tsx): the panels and markers step aside. */
+.film.film--opening { position: fixed; z-index: 1000; --film-bar: min(13vh, max(0px, calc((100vh - 100vw / 2.39) / 2))); --film-gutter: max(28px, 6vw); }
+.g-filming .grand > :not(.gm):not(.g-opening) { visibility: hidden !important; }
+.g-filming .gm > :not(.gm__relief):not(.gm__img) { visibility: hidden !important; }
+.g-filming .gm__img { filter: brightness(0.55) saturate(0.8); }
+.opening-stamp { position: absolute; left: max(28px, 6vw); top: calc(min(13vh, max(0px, calc((100vh - 100vw / 2.39) / 2))) + max(26px, 5vh)); text-shadow: 0 2px 18px rgba(0, 0, 0, 0.9); animation: film-rise 1.2s cubic-bezier(.2, .7, .2, 1) both; z-index: 1; }
+.opening-stamp-when { font-family: var(--font-title); font-size: clamp(14px, 1.3vw, 20px); letter-spacing: 0.22em; color: rgba(255, 255, 255, 0.72); }
+.opening-stamp-where { margin-top: 4px; font-family: var(--font-title); font-size: clamp(26px, 2.8vw, 44px); letter-spacing: 0.12em; color: #f3f1ec; }
+.opening-line { position: absolute; left: 0; right: 0; margin: 0 auto; bottom: calc(min(13vh, max(0px, calc((100vh - 100vw / 2.39) / 2))) + max(26px, 5vh)); width: min(980px, 90vw); text-align: center; animation: film-rise 1.1s cubic-bezier(.2, .7, .2, 1) both; z-index: 1; }
+.opening-line-text { font-family: var(--font-ui); font-weight: 500; font-size: clamp(15px, 2.2vh, 26px); line-height: 1.5; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7), 0 0 10px rgba(0, 0, 0, 0.35); word-break: keep-all; }
+.opening-title { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; text-shadow: 0 2px 30px rgba(0, 0, 0, 0.85); z-index: 1; }
+.opening-title-eyebrow { font-family: var(--font-cine); font-weight: 500; font-size: clamp(11px, 1vw, 16px); letter-spacing: 0.5em; margin-right: -0.5em; color: rgba(243, 241, 236, 0.8); animation: film-track 2.6s cubic-bezier(.2, .6, .2, 1) both; }
+.opening-title-main { margin-top: 0.3em; font-family: var(--font-title); font-size: clamp(56px, 9vw, 150px); line-height: 1; letter-spacing: 0.16em; margin-right: -0.16em; color: #f6f2e8; animation: film-title 3.2s cubic-bezier(.2, .7, .2, 1) both; }
+.opening-title-hanja { margin-top: 0.55em; font-family: var(--font-hanja); font-size: clamp(14px, 1.5vw, 24px); letter-spacing: 0.9em; margin-right: -0.9em; color: rgba(255, 255, 255, 0.72); animation: film-track 3s cubic-bezier(.2, .6, .2, 1) 0.5s both; }
+.opening-title-sub { margin-top: 1.1em; font-family: var(--font-cine); font-weight: 500; font-size: clamp(13px, 1.2vw, 19px); letter-spacing: 0.3em; color: rgba(243, 241, 236, 0.82); animation: film-rise 2s ease-out 1s both; }
+.opening-title .film-say-source { margin-top: 1.4em; animation: film-rise 2s ease-out 1.6s both; }
+.film-skip kbd { font: inherit; opacity: 0.6; margin-left: 4px; }
+.app--touch .film-skip kbd { display: none; }
+.app--compact .film-stamp { left: 16px; }
+.app--compact .opening-line-text { font-size: 16px; }
+/* The screen's own top bar steps aside while a film fills the window. */
+body.film-on .screen-top { visibility: hidden; }
+.app--compact .film-portrait { left: 50%; height: 56vh; }
+
+/* Date and place (owner 2026-10-18): one small neutral line at the bottom left, above the letterbox, the same in every
+   film (battle openings, outros, campaign openings). No title card, no brass, no gradient behind it. */
+.film-stamp { position: absolute; left: var(--film-gutter, max(28px, 4.2vw)); bottom: calc(var(--film-bar) + max(18px, 2.4vh)); font-family: var(--font-ui); font-weight: 500; font-size: clamp(13px, 0.95vw, 14px); letter-spacing: 0.02em; color: rgba(255, 255, 255, 0.8); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); white-space: nowrap; z-index: 1; }

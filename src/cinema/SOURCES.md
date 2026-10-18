@@ -94,3 +94,102 @@ and the subtitle says so.
 
 Not shown: 고니시 유키나가 at Noryang (he stayed in the Suncheon fort and slipped out by sea; he was not in the strait),
 any line for 진린 before the battle, 원균 or 이억기 speaking at Hansan (no recorded words).
+
+## The later chapters (src/cinema/scenes/chapters.ts)
+One opening per Armada and Lepanto battle on the same grammar. Their commanders have no 3D figures yet: the close-ups
+frame the flagship and each line comes with the commander's portrait. The lines and their records are the battles'
+quotes, `ARMADA_QUOTES` (src/sim/armada.ts) and `LEPANTO_QUOTES` (src/sim/lepanto.ts). Only two are quoted words:
+Drake's letter to Walsingham of 29 July 1588 (O.S.), after Gravelines (Laughton, State Papers relating to the Defeat
+of the Spanish Armada, 1894), and Don John's "win here or die" before Lepanto (Capponi 2006, ch. 12; Konstam 2003), with
+Ali Pasha's promise to his Christian rowers as reported (same sources). Every other line is a summary of what the record
+says the man did, and its source line says "(인물 대사 아님)".
+
+## The order beat (all battle openings, 2026-10-17)
+The figures only stand now (owner: no command or attack clips), so the old waist-up command shot is gone: the order line
+plays over `order()` (scenes/shots.ts), a low camera off the flagship's quarter pushing in as she leads toward the enemy.
+The lines and their records are unchanged.
+
+## Commander lines (src/cinema/commanderIntros.ts)
+Each commander's record lines (the card films on /generals and in the campaign roster were removed by the owner
+2026-10-17; the data now feeds a battle opening's name plate the first time it features him). A line with `note` is
+written in character from the record named, and the subtitle adds "기록에 따른 대사"; the others are quoted.
+
+| Commander | Line | Record | Kind |
+|---|---|---|---|
+| 이순신 | 勿令妄動 靜重如山 | 장계 「옥포파왜병장」 (1592.5) | quoted |
+| | 今臣戰船 尙有十二 | 이분 『행록』 | quoted |
+| 원균 | asks the Jeolla navy for help | 『징비록』 권1 (sent 이영남 to Yi for help) | in character |
+| 이억기 | the Right fleet sails with the Left | 장계 「당항포파왜병장」 (joined Yi, 1592.6) | in character |
+| 권준 | Suncheon ships hold the centre | 장계 「당항포파왜병장」 (中衛將 順天府使) | in character |
+| 어영담 | knows the channels, leads the way | 장계; 한국민족문화대백과 「어영담」 (pilot of the fleet) | in character (C) |
+| 정운 | no provincial border against the enemy | 『행록』 (urged the sortie to Gyeongsang) | in character |
+| 김완 | Sado ships do not fall back | 장계 「옥포파왜병장」, 「견내량파왜병장」 | in character |
+| 나대용 | 前設龍頭 背植鐵尖, sees out but is not seen | 장계 「당포파왜병장」 (the turtle ship described); he built it | the report's words in his mouth |
+| 송희립 | save Yeongnam or lose Honam | 『행록』 (with 정운, urged the sortie) | in character |
+| 이영남 | Won asks for help | 『징비록』 권1 | in character |
+| 배설 | brought twelve ships out of Chilcheollyang | 『선조실록』 1597.7 | in character |
+| 안위 | nowhere to fall back, into the enemy | 『난중일기』 1597.9.16 (Yi's rebuke, then he charged in) | in character |
+| 이완 | hide my uncle's death, keep the drums | 『행록』 ("戰方急 愼勿言我死") | in character |
+| 와키자카 | broke a Joseon army at Yongin | 『脇坂記』 (Yongin, 1592.6) | in character |
+| 구키 | stopped the Mori fleet with iron-clad ships | 『信長公記』 (Kizugawaguchi 1578) | in character |
+| 가토 요시아키 | a spear of Shizugatake | Japanese records (賤ヶ岳の七本槍) | in character |
+| 구루시마 미치후사 | avenges his brother | ja.wikipedia 「来島通総」 (brother 通之 killed at Dangpo 1592) | in character |
+| 구루시마 미치유키 | ships of the Seto currents | ja.wikipedia 「来島通之」 (killed at Dangpo 1592) | in character |
+| 도도 | broke the Joseon navy at Chilcheollyang | ja.wikipedia 「漆川梁海戦」 | in character |
+| 고니시 | 戰則戰矣 不戰則假道 | 『징비록』 권1 (the sign before Dongnae, 1592.4) | quoted (B) |
+| 시마즈 | held the Ming at Sacheon, now relieves Konishi | 『征韓録』 | in character |
+| 다치바나 | did not fall back at Byeokjegwan | ja.wikipedia 「碧蹄館の戦い」 (1593) | in character |
+| 진린 | 經天緯地之才 補天浴日之功 | 『이충무공전서』, handed down as his words to the Ming court | handed down (C, worded "전함") |
+| 등자룡 | old, but the van is his | 『明史』 권247 | in character (as at Noryang) |
+| 이여송 | take back Pyongyang, guns forward | 『선조실록』 1593.1; 『明史』 李如松傳 | in character |
+| 오유충 | Zhejiang men do not fall back before a wall | 『선조실록』 1593.1 (wounded at Moranbong, fought on) | in character |
+| 양호 | stop them at Jiksan | 『선조실록』 1597.9 | in character |
+| 마귀 | surround Ulsan | 『선조실록』 1597.12 | in character |
+| 유정 | the western army strikes Suncheon with the fleet | 『선조실록』 1598.9 | in character |
+| 계금 | follows Chen Lin to Gogeumdo | 『선조실록』 1598 | in character |
+| Howard | "Their force is wonderful great and strong; and yet we pluck their feathers by little and little." | Howard to Walsingham, July 1588 (Laughton 1894) | quoted |
+| Drake | "The advantage of time and place in all martial actions is half a victory" | Drake to the Queen, April 1588 (Laughton 1894) | quoted |
+| Medina Sidonia | "I know by experience of the little I have been at sea that I am always seasick" | his letter to Philip II, February 1588 (Mattingly 1959) | quoted |
+| Don John | win here or die | Capponi 2006, ch. 12 (as in the Lepanto battle opening) | reported |
+| Ali Pasha | freedom to his Christian rowers if he wins | Capponi 2006; Konstam 2003 | reported |
+| Frobisher, Hawkins, Recalde, Leyva, Oquendo, Venier, Barbarigo, Doria, Pertev, Uluç Ali, Siroco | one line each from the deed recorded | Mattingly 1959; Martin & Parker 1988; Capponi 2006; Guilmartin 2003 (see `note` in the data) | in character |
+
+Lifespans on the name cards follow 한국민족문화대백과 / ja.wikipedia / ODNB-level references; unknown years are shown as "?".
+
+## Campaign openings (src/cinema/campaignOpenings.ts)
+
+| Campaign | Shown | Record |
+|---|---|---|
+| 1592 | Over 150,000 men ready at Nagoya (Hizen) | 한국민족문화대백과 「임진왜란」 (158,700 in the order of battle) |
+| | 4.13: Konishi's First Division off Busan | 『징비록』 권1 |
+| | 4.14–15: Busanjin and Dongnae fall | 『징비록』 권1 |
+| | 5.3: the capital entered within twenty days | 『선조수정실록』 1592.5; 『징비록』 권1 |
+| | Yi had test-fired the turtle ship's guns | 『난중일기』 1592.4.12 (the day before the landing) |
+| | 5.7 Okpo: 26 ships destroyed on the first sortie | 장계 「옥포파왜병장」 |
+| | 7.8 Hansan: "賴此一戰 遂斷其一臂" | 『징비록』 권1 |
+| 1588 | The Armada, about 130 ships, leaves Lisbon (May) | Martin & Parker 1988 |
+| | 29 July: sighted off the Lizard, beacons lit | Mattingly 1959, ch. 19–20 |
+| | 31 July: Howard and Drake win the wind off Plymouth | Mattingly 1959, ch. 21 |
+| | 2–4 August: Portland, Isle of Wight | Mattingly 1959, ch. 22–23 |
+| | Night of 7 August: eight fireships at Calais | Mattingly 1959, ch. 25 |
+| | 8 August: Gravelines | Mattingly 1959, ch. 26 |
+| | Home round Scotland and Ireland, many ships lost | Martin & Parker 1988 |
+| | "Flavit et dissipati sunt" | the 1588 commemorative medal |
+| 1571 | July 1570: Ottoman landing on Cyprus | Capponi 2006 |
+| | 25 May 1571: the Holy League | Capponi 2006 |
+| | August–September: Don John gathers the galleys at Messina | Capponi 2006 |
+| | Famagusta falls; the Sultan's fleet presses west | Capponi 2006; Guilmartin 2003 |
+| | 7 October: more than 400 ships face each other | Capponi 2006; Guilmartin 2003 |
+| | The six galleasses open fire first | Capponi 2006, ch. 12 |
+| | "The last great battle of galley fleets" (closing line) | Guilmartin 2003 |
+
+| 1805 | 1804–1805: the army for England gathers at Boulogne | Corbett 1910 |
+| | 30 March: Villeneuve leaves Toulon past Nelson's watch | Corbett 1910 |
+| | 9 April: Gravina's Spanish squadron joins at Cadiz | Corbett 1910 |
+| | 22 July: Calder's action off Finisterre, two Spanish ships taken | Corbett 1910 |
+| | 20 August: the combined fleet runs south into Cadiz | Corbett 1910 |
+| | 21 October: Nelson's two columns break the line of 33 | Corbett 1910; Adkins 2004 |
+| | "England expects that every man will do his duty" | Nelson's signal, 21 October 1805 (Pasco) |
+
+Dates of the Armada follow the Gregorian calendar, as the battles' own data do. Corbett 1910 is J. S. Corbett,
+*The Campaign of Trafalgar*; Adkins 2004 is R. Adkins, *Trafalgar: The Biography of a Battle*.

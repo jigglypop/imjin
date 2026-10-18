@@ -1,5 +1,5 @@
-import { AdditiveBlending, DynamicDrawUsage, InstancedBufferAttribute, Sprite, SpriteNodeMaterial, Vector3 } from 'three/webgpu';
-import { abs, atan, cameraViewMatrix, float, instancedDynamicBufferAttribute, length, max, mix, pow, saturate, smoothstep, texture, time, uv, vec2, vec3, vec4 } from 'three/tsl';
+import { AdditiveBlending, InstancedBufferAttribute, Sprite, SpriteNodeMaterial, Vector3 } from 'three/webgpu';
+import { abs, atan, cameraViewMatrix, float, instancedBufferAttribute, length, max, mix, pow, saturate, smoothstep, texture, time, uv, vec2, vec3, vec4 } from 'three/tsl';
 import { particleNoise } from '../particleNoise';
 
 /** Where a flame's foot is this frame: false when the place it burns on is gone (sunk, or the ship removed). */
@@ -52,12 +52,11 @@ export class FlameLayer {
     this.pos = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
     this.dir = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
     this.misc = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
-    for (const a of [this.pos, this.dir, this.misc]) a.setUsage(DynamicDrawUsage);
 
     const material = new SpriteNodeMaterial();
-    const P: any = instancedDynamicBufferAttribute(this.pos, 'vec4');
-    const D: any = instancedDynamicBufferAttribute(this.dir, 'vec4');
-    const M: any = instancedDynamicBufferAttribute(this.misc, 'vec4');
+    const P: any = instancedBufferAttribute(this.pos, 'vec4');
+    const D: any = instancedBufferAttribute(this.dir, 'vec4');
+    const M: any = instancedBufferAttribute(this.misc, 'vec4');
     const viewDir = cameraViewMatrix.mul(vec4(D.xyz, 0)).xyz;
     material.positionNode = P.xyz;
     // The quad's x axis is turned onto the tongue's direction on screen, so uv.x runs from the foot to the tip.

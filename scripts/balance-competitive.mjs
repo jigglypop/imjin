@@ -40,7 +40,8 @@ const load = (p) => server.ssrLoadModule('/src/sim/' + p + '.ts');
 const { Battle, SIM_DT } = await load('battle');
 const { shipSpec, shipMods, shipGunSpec, COMPETITIVE_UNITS, COMPETITIVE_APPRAISAL, combatStats, COMPETITIVE_PROFILE } = await load('competitive');
 const { autoFleet, buildConquest, CONQUEST_MAPS, fleetCost, FLEET_MIX } = await load('maps');
-const { rosterOf, RANKED_OPTIONS, DEFAULT_OPTIONS } = await load('conquest');
+const { rosterOf, RANKED_OPTIONS, DEFAULT_OPTIONS, eraOptions } = await load('conquest');
+const { ERA_BUDGET_SCALE, CROSS_ERA_PRICE, eraPriceScale } = await load('competitive');
 // The benchmark must not silently change when the general skirmish economy changes.
 const battleOptions = ruleset === 'ranked' ? RANKED_OPTIONS : DEFAULT_OPTIONS;
 const { autoResolve } = await load('grand/autoresolve');
@@ -57,6 +58,8 @@ for (const assignment of flag('set', '').split(',').filter(Boolean)) {
   else if (target === 'gun') for (const battery of shipSpec(kind).batteries) shipGunSpec(kind, battery.gun)[field] = Number(raw);
   else if (target === 'faction') TUNING.faction[kind][field] = Number(raw);
   else if (target === 'startFleet' && factions.includes(kind)) TUNING.startFleet[kind] = Number(raw);
+  else if (target === 'era') ERA_BUDGET_SCALE[kind] = Number(raw);
+  else if (target === 'cross') CROSS_ERA_PRICE[kind] = Number(raw);
   else if (target === 'appraisal') COMPETITIVE_APPRAISAL[kind] = Number(raw);
   else if (target === 'mix') FLEET_MIX[kind] = raw.split('|');
   else throw new Error('Unknown candidate field ' + path);
@@ -86,8 +89,8 @@ function landOf(spec) {
   };
 }
 
-function fleet(faction, composition, money = budget, price = (kind) => shipSpec(kind).cost) {
-  if (composition === 'default' && price('panokseon') === shipSpec('panokseon').cost) return autoFleet(faction, money, COMPETITIVE_PROFILE, battleOptions.maxShips, battleOptions.expanded);
+function fleet(faction, composition, money = budget, price = (kind) => shipSpec(kind).cost, scale = 1) {
+  if (composition === 'default' && price('panokseon') === shipSpec('panokseon').cost) return autoFleet(faction, money, COMPETITIVE_PROFILE, battleOptions.maxShips, battleOptions.expanded, scale);
   const kinds = [...rosterOf(faction, battleOptions.expanded)].sort((a, b) => price(a) - price(b));
   const mix = composition === 'heavy' ? [kinds.at(-1)] : composition === 'mobile' ? [kinds[0]] : FLEET_MIX[faction];
   const out = []; let left = money;
@@ -111,7 +114,10 @@ function wilson(wins, games) {
 
 function fight(mode, map, a, b, comp, seed, swap) {
   const west = swap ? b : a, east = swap ? a : b;
-  const opening = [fleet(west, comp), fleet(east, comp)];
+  // A later era's navy scales the match's budget, funds, cap and income for both sides (eraOptions), as a room does.
+  const rules = eraOptions({ ...battleOptions, musterBudget: budget, timeLimit: cap }, [west, east]);
+  const money = rules.musterBudget;
+  const opening = [fleet(west, comp, money, undefined, eraPriceScale(west, [west, east])), fleet(east, comp, money, undefined, eraPriceScale(east, [west, east]))];
   if (mode === 'autoresolve') {
     // Both forces buy from the same campaign treasury at a plain yard; defender/attacker is mirrored.
     const gold = Math.round(budget * TUNING.goldPerCost);
@@ -123,9 +129,9 @@ function fight(mode, map, a, b, comp, seed, swap) {
   let battle, conquest;
   if (mode === 'conquest') {
     const terrain = terrainMode === 'banks' ? { ...CONQUEST_MAPS[map].terrain, shapes: CONQUEST_MAPS[map].terrain.shapes.filter((s) => s.rx > 1000) } : CONQUEST_MAPS[map].terrain;
-    ({ battle, conquest } = buildConquest(map, [{ name: 'west', faction: west, team: 'joseon', human: false, fleet: opening[0] }, { name: 'east', faction: east, team: 'japan', human: false, fleet: opening[1] }], terrainMode === 'flat' ? () => -50 : landOf(terrain), seed, { ...battleOptions, musterBudget: budget, timeLimit: cap }));
+    ({ battle, conquest } = buildConquest(map, [{ name: 'west', faction: west, team: 'joseon', human: false, fleet: opening[0] }, { name: 'east', faction: east, team: 'japan', human: false, fleet: opening[1] }], terrainMode === 'flat' ? () => -50 : landOf(terrain), seed, rules));
     // Explicit equal-resource contract, including unspent opening money.
-    conquest.players.forEach((p, i) => p.funds = battleOptions.startFunds + budget - fleetCost(opening[i]));
+    conquest.players.forEach((p, i) => p.funds = rules.startFunds + money - opening[i].reduce((s, k) => s + conquest.shipSpec(k).cost, 0));
   } else {
     battle = new Battle(seed, COMPETITIVE_PROFILE); battle.humans.clear(); battle.autopilot = true;
     battle.retreatBelow = { joseon: 0, japan: 0 }; battle.windDrift = 0;

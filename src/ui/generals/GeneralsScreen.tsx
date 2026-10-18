@@ -3,12 +3,15 @@ import { useT } from '../../i18n';
 import { armorById, armorCardUrl, GENERALS, TIER_LABEL, WEAPON_KINDS, WEAPON_KIND_LABEL, weaponsFor, defaultWeapon, type MetaFaction } from '../../meta/catalog';
 import { syncProfile, useLocalProfile } from '../../meta/localProfile';
 import { AFFIX_RARITY_LABEL, affixById, PRIMARY_STATS, rerollCost, rollEffect, rollQuality, STAT_LABEL, type ArmorRoll } from '../../meta/affixes';
-import { armorRoll, rerollProblem, generalState, learnProblem, levelProgress, skillPointsLeft, owns, skillsFor, wornArmor, wornWeapon, type Profile } from '../../meta/rules';
-import { BRANCH_LABEL, TREES } from '../../sim/grand/growthData';
+import { armorRoll, rerollProblem, generalState, levelProgress, skillPointsLeft, owns, wornArmor, wornModel, wornWeapon, type Profile } from '../../meta/rules';
+import { Inventory } from './Inventory';
+import { TalentTree } from './TalentTree';
+import { treeOf } from '../../meta/talents';
 import { COMMANDERS } from '../../sim/grand/regions';
 import { portraitUrl } from '../portrait';
 import { ScreenFrame } from '../Screens';
 import { GeneralModel, useGeneralModels } from './GeneralModel';
+import { CHAPTER_WEAPONS, CHAPTER_COMMANDERS, CHAPTER_NAVIES, chapterRoster, chapterSword, isChapterNavy, type ChapterNavy } from './chapterCast';
 import './generals.css';
 
 const NAVIES: { id: MetaFaction; label: string }[] = [
@@ -17,7 +20,7 @@ const NAVIES: { id: MetaFaction; label: string }[] = [
   { id: 'ming', label: '명' },
 ];
 
-const commander = (id: string) => COMMANDERS.find((c) => c.id === id);
+const commander = (id: string) => COMMANDERS.find((c) => c.id === id) ?? CHAPTER_COMMANDERS.find((c) => c.id === id);
 
 const portraitOf = (id: string) => portraitUrl(commander(id)?.portrait ?? `portrait_${id}`, true);
 
@@ -31,10 +34,10 @@ export function GeneralsScreen() {
   useEffect(() => {
     void syncProfile();
   }, []);
-  const [navy, setNavy] = useState<MetaFaction>('joseon');
-  const roster = useMemo(() => GENERALS.filter((g) => g.faction === navy), [navy]);
+  const [navy, setNavy] = useState<MetaFaction | ChapterNavy>('joseon');
+  const roster = useMemo(() => (isChapterNavy(navy) ? [] : GENERALS.filter((g) => g.faction === navy)), [navy]);
   const [pick, setPick] = useState('yi');
-  const general = roster.find((g) => g.id === pick) ?? roster[0]!;
+  const general = roster.find((g) => g.id === pick) ?? roster[0];
   return (
     <ScreenFrame
       title="장수"
@@ -46,7 +49,7 @@ export function GeneralsScreen() {
       }
     >
       <div className="gen-tabs" role="tablist" aria-label={t('나라')}>
-        {NAVIES.map((n) => (
+        {[...NAVIES, ...CHAPTER_NAVIES].map((n) => (
           <button
             key={n.id}
             role="tab"
@@ -54,14 +57,14 @@ export function GeneralsScreen() {
             className={`gen-tab gen-tab--${n.id}${navy === n.id ? ' gen-tab--on' : ''}`}
             onClick={() => {
               setNavy(n.id);
-              setPick(GENERALS.find((g) => g.faction === n.id && g.famous)?.id ?? '');
+              setPick(isChapterNavy(n.id) ? (chapterRoster(n.id)[0]?.id ?? '') : (GENERALS.find((g) => g.faction === n.id && g.famous)?.id ?? ''));
             }}
           >
             {t(n.label)}
           </button>
         ))}
       </div>
-      <div className="gen-layout">
+      {isChapterNavy(navy) ? <ChapterLayout navy={navy} pick={pick} setPick={setPick} /> : general && <div className="gen-layout">
         <nav className="gen-roll" aria-label={t('장수 목록')}>
           {roster.map((g) => {
             const c = commander(g.id);
@@ -80,7 +83,7 @@ export function GeneralsScreen() {
           })}
         </nav>
         <Poster id={general.id} profile={profile} />
-      </div>
+      </div>}
       {refused && (
         <button className="gen-toast" onClick={dismiss}>
           {t(refused)}
@@ -239,21 +242,17 @@ function WeaponSelection({ id, profile }: { id: string; profile: Profile }) {
 
 function Poster({ id, profile }: { id: string; profile: Profile }) {
   const t = useT();
-  const learnStep = useLocalProfile((s) => s.learn);
   const c = commander(id);
-  const tree = TREES[id];
+  const tree = treeOf(id);
   const prog = levelProgress(generalState(profile, id).xp);
-  const points = skillPointsLeft(profile, id);
-  const learned = generalState(profile, id).skills;
-  const steps = skillsFor(id);
   return (
     <article className="gen-poster" data-general-id={id}>
       <div className="gen-figure-column">
         <GeneralFigure key={id} id={id} profile={profile} />
+        <Inventory id={id} profile={profile} />
       </div>
       <div className="gen-growth">
         <div className="gen-poster__id">
-          <span className="gen-poster__section">{t('장수 성장')}</span>
           <span className="gen-poster__title">{t(c?.title ?? '')}</span>
           <h2>{t(c?.name ?? id)} {tree && <small>{tree.hanja}</small>}</h2>
           <div className="gen-level">
@@ -263,49 +262,91 @@ function Poster({ id, profile }: { id: string; profile: Profile }) {
           <div className="gen-bar">
             <i style={{ width: `${prog.need === null ? 100 : Math.round((prog.into / prog.need) * 100)}%` }} />
           </div>
-          {points > 0 && <span className="gen-points">{t('재능 점수 {n}', { n: points })}</span>}
         </div>
-      {tree && (
-        <section className="gen-trait">
-          <span>{t('고유 특성')}</span>
-          <b>{t(tree.trait.label)}</b>
-          <p>{t(tree.trait.text)}</p>
-        </section>
-      )}
-      {tree && (
-        <section className="gen-tree" aria-label={t('재능')}>
-          {tree.branches.map((branch) => (
-            <div key={branch} className="gen-branch">
-              <h3>{t(BRANCH_LABEL[branch])}</h3>
-              {steps
-                .filter((s) => s.branch === branch)
-                .map((s) => {
-                  const have = learned.includes(s.id);
-                  const why = have ? null : learnProblem(profile, id, s.id);
-                  return (
-                    <button key={s.id} className={`gen-step${have ? ' gen-step--have' : why ? '' : ' gen-step--open'}`} disabled={have || !!why} title={why ? t(why) : undefined} onClick={() => learnStep(id, s.id)}>
-                      <b>{t(s.label)}</b>
-                      <small>{t(s.text)}</small>
-                    </button>
-                  );
-                })}
-            </div>
-          ))}
-          {steps
-            .filter((s) => s.branch === 'mastery')
-            .map((s) => {
-              const have = learned.includes(s.id);
-              const why = have ? null : learnProblem(profile, id, s.id);
-              return (
-                <button key={s.id} className={`gen-step gen-step--mastery${have ? ' gen-step--have' : why ? '' : ' gen-step--open'}`} disabled={have || !!why} title={why ? t(why) : undefined} onClick={() => learnStep(id, s.id)}>
-                  <b>{t('비기')}: {t(s.label)}</b>
-                  <small>{t(s.text)}</small>
-                </button>
-              );
-            })}
-        </section>
-      )}
+        {tree && (
+          <section className="gen-trait">
+            <span>{t('고유 특성')}</span>
+            <b>{t(tree.trait.label)}</b>
+            <p>{t(tree.trait.text)}</p>
+          </section>
+        )}
+        {tree && <TalentTree key={id} id={id} profile={profile} />}
       </div>
     </article>
+  );
+}
+
+/** A commander of another chapter: his figure in his own dress with his navy's sword, no 1592 progression. */
+/** A chapter commander's level, trait and talent tree: the same growth as the 1592 generals (src/meta/talents.ts). */
+function ChapterGrowth({ id, profile }: { id: string; profile: Profile }) {
+  const t = useT();
+  const tree = treeOf(id)!;
+  const prog = levelProgress(generalState(profile, id).xp);
+  return (
+    <>
+      <div className="gen-poster__id">
+        <div className="gen-level">
+          <b>Lv.{prog.level}</b>
+          <span>{prog.need === null ? t('최고 레벨') : `${prog.into} / ${prog.need}`}</span>
+        </div>
+        <div className="gen-bar">
+          <i style={{ width: `${prog.need === null ? 100 : Math.round((prog.into / prog.need) * 100)}%` }} />
+        </div>
+      </div>
+      <section className="gen-trait">
+        <span>{t('고유 특성')}</span>
+        <b>{t(tree.trait.label)}</b>
+        <p>{t(tree.trait.text)}</p>
+      </section>
+      <TalentTree key={id} id={id} profile={profile} />
+    </>
+  );
+}
+
+function ChapterLayout({ navy, pick, setPick }: { navy: ChapterNavy; pick: string; setPick: (id: string) => void }) {
+  const t = useT();
+  const profile = useLocalProfile((s) => s.profile);
+  const models = useGeneralModels();
+  const roster = chapterRoster(navy);
+  const c = roster.find((g) => g.id === pick) ?? roster[0];
+  const file = c ? figuresOf(models, c.id).values().next().value : undefined;
+  const files = useMemo(() => (file ? [file] : null), [file]);
+  if (!c) return null;
+  return (
+    <div className="gen-layout">
+      <nav className="gen-roll" aria-label={t('장수 목록')}>
+        {roster.map((g) => (
+          <button key={g.id} data-general-id={g.id} className={`gen-pick${g.id === c.id ? ' gen-pick--on' : ''}`} aria-pressed={g.id === c.id} onClick={() => setPick(g.id)}>
+            <img src={portraitUrl(g.portrait, true)} alt="" width={48} height={48} loading="lazy" />
+            <span className="gen-pick__text">
+              <b>{t(g.name)}</b>
+              <span>{t(g.title)}</span>
+            </span>
+            {treeOf(g.id) && <span className="gen-pick__lv">Lv.{levelProgress(generalState(profile, g.id).xp).level}</span>}
+            {treeOf(g.id) && skillPointsLeft(profile, g.id) > 0 && <span className="gen-pick__dot">{skillPointsLeft(profile, g.id)}</span>}
+          </button>
+        ))}
+      </nav>
+      <article className="gen-poster" data-general-id={c.id}>
+        <div className="gen-figure-column">
+          <section className="gen-representative" aria-label={t('장수 모습')} data-model-id={file ?? c.id}>
+            {file ? <GeneralModel key={file} files={files} weapon={CHAPTER_WEAPONS[wornModel(profile, c.id) ?? ''] ?? chapterSword(navy)} /> : (
+              <div className={`gen-model gen-representative__placeholder ${models ? 'gen-model--failed' : 'gen-model--loading'}`}>
+                {models ? <img className="gen-representative__portrait" src={portraitUrl(c.portrait)} alt="" /> : <span className="gen-model__wait" aria-hidden="true" />}
+                <p className="gen-representative__status" role="status">{t(models ? '이 장수의 3D 모습은 준비 중입니다.' : '장수 모델을 불러오는 중입니다.')}</p>
+              </div>
+            )}
+          </section>
+          {treeOf(c.id) && <Inventory id={c.id} profile={profile} />}
+        </div>
+        <div className="gen-growth">
+          <div className="gen-poster__id">
+            <span className="gen-poster__title">{t(c.title)}</span>
+            <h2>{t(c.name)}</h2>
+          </div>
+          {treeOf(c.id) && <ChapterGrowth id={c.id} profile={profile} />}
+        </div>
+      </article>
+    </div>
   );
 }

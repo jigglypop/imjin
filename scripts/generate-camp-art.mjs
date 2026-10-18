@@ -9,10 +9,13 @@
 //   node scripts/generate-camp-art.mjs --force            regenerate even if cached
 //   node scripts/generate-camp-art.mjs --convert          skip the API, only re-encode cached raws and rewrite the provenance
 //   node scripts/generate-camp-art.mjs --quality=high --jobs=4
+//   node scripts/generate-camp-art.mjs --only=holyleague --provider=gemini   Gemini's image model instead of OpenAI's
+// The provenance keeps the entries of camps whose raws are not on this machine (they live in the asset store).
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { geminiImage, geminiModel } from './gemini-image.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 if (existsSync(join(ROOT, '.env'))) process.loadEnvFile(join(ROOT, '.env'));
@@ -25,6 +28,7 @@ const ONLY = args.only ? args.only.split(',') : null;
 const LEVELS = (args.levels ?? '1,2,3').split(',').map(Number);
 const QUALITY = args.quality ?? 'medium';
 const JOBS = Number(args.jobs ?? 4);
+const PROVIDER = args.provider ?? 'openai';
 
 // One camp per commander portrait. `regions` are the strategic-map ports whose camp it draws while its own faction
 // holds them (the table in src/ui/grand/RegionPanel.tsx mirrors this); every other port, and a seat taken by another
@@ -48,12 +52,29 @@ const CAMPS = [
   { id: 'japan', faction: 'japan', commander: '일본 수군 (공용)', regions: [], site: 'a typical captured Korean coastal port held by Japanese troops, a bay with hills behind' },
   { id: 'chenlin', faction: 'ming', commander: '진린', regions: ['liaodong'], site: 'a northern Chinese river-mouth garrison on a flat coast, a brick-faced earthen wall and a long canal dock' },
   { id: 'deng', faction: 'ming', commander: '등자룡', regions: ['shandong'], site: 'a large Chinese naval harbour on a flat coast with a walled yamen compound, brick towers and a broad quay' },
+  // The Armada theatre: one shared camp for each navy (src/ui/grand/campArt.ts).
+  { id: 'england', faction: 'england', commander: '잉글랜드 수군 (공용)', regions: [], site: 'an English Channel harbour in a green Devon combe, chalk-and-slate cliffs, a small town of half-timbered houses and a stone church tower behind the quay' },
+  { id: 'spain', faction: 'spain', commander: '에스파냐 수군 (공용)', regions: [], site: 'a Flemish or Galician harbour on a low sandy coast with dunes, a walled town with red-tiled roofs and a church spire behind the quay' },
+  // The Lepanto theatre: one shared camp for each navy.
+  { id: 'holyleague', faction: 'holyleague', commander: '신성동맹 함대 (공용)', regions: [], site: 'a Venetian-held Ionian harbour below a stone sea fortress on a rocky point, olive and cypress hills behind, a small town of whitewashed houses with low red-tiled roofs and a square bell tower' },
+  { id: 'ottoman', faction: 'ottoman', commander: '오스만 함대 (공용)', regions: [], site: 'an Ottoman-held Greek harbour below a stone sea fortress on a dry hillside of olive trees, a small town of whitewashed houses with low red-tiled roofs, a domed mosque and a slender minaret' },
+  // The Trafalgar theatre: one shared camp for each navy.
+  { id: 'britain', faction: 'britain', commander: '영국 해군 (공용)', regions: [], site: 'a Royal Navy dockyard harbour on the English Channel like Portsmouth or Plymouth Dock, low green hills behind, brick and stone storehouses and a ropehouse along the quay, a small Georgian town of brick houses with slate roofs and a stone church tower' },
+  { id: 'france', faction: 'france', commander: '프랑스 해군 (공용)', regions: [], site: 'a French naval port on a rocky Breton roadstead like Brest, granite cliffs and heath behind, Vauban-style stone bastions and a castle on the point, grey granite houses with slate roofs and the long stone storehouses of the arsenal along the quay' },
+  { id: 'spain1805', faction: 'spain1805', commander: '에스파냐 해군 (공용)', regions: [], site: 'a Spanish naval port on a low Andalusian bay like Cádiz, pale stone bastions and sea walls, whitewashed houses with flat roofs and lookout towers, a domed church, the arsenal\'s stone slipways along the quay' },
 ];
 
 const FACTION = {
   joseon: 'Joseon Korea: grey ceramic-tiled roofs with upturned eaves, white plastered and dark timber walls, plain blue and white cloth banners without any emblem, Joseon panokseon warships (broad flat hulls with plank-shield walls and roofed command pavilions).',
   japan: 'Sengoku Japan: black-lacquered timber, white plastered walls, dark grey tiled roofs, plain white cloth banners without any emblem or marking, boxy atakebune and sekibune warships with loopholes.',
   ming: 'Ming China: brick walls, red and yellow lacquered gate towers with yellow-glazed tiled roofs, plain red and yellow cloth banners without any emblem, large Chinese junk warships with batten sails.',
+  england: 'Tudor England: grey dressed-stone curtain walls and round artillery towers, half-timbered houses with red clay tile and slate roofs, thatched cottages, the red St George cross on white flags and green-and-white Tudor pennants, low sleek race-built English galleons with three masts and square sails.',
+  spain: 'Habsburg Spain and Flanders: pale stone bastions and walls, whitewashed and red-brick houses with red tiled roofs, the red ragged cross of Burgundy on white flags and crimson banners, tall Spanish galleons with high castles fore and aft and four masts.',
+  holyleague: 'the Holy League of 1571 (Venice, Spain, the Papacy): pale limestone bastions and walls of an Italian-style sea fortress, whitewashed houses with low-pitched red clay tile roofs, plain crimson and plain blue cloth banners without any emblem, long low Mediterranean war galleys with a single bank of oars, a bow spur and lateen sails, beached and moored stern-to along the quay.',
+  britain: 'the Royal Navy of 1805: grey stone batteries and earthwork forts with heavy iron cannon, Georgian brick and stone dockyard buildings with slate roofs, the red ensign and white ensign of 1805 shown only as plain red and plain white cloth flags without any emblem, ships of the line of 1805 with black hulls and yellow-ochre bands along two or three tiers of gunports, three masts and square sails, moored in the roads.',
+  france: 'the French Imperial Navy of 1805: grey granite Vauban bastions and batteries with iron cannon, grey stone houses and arsenal storehouses with slate roofs, plain blue, white and red cloth flags without any emblem, ships of the line of 1805 with black hulls and red-ochre bands along two tiers of gunports, three masts and square sails, moored in the roadstead.',
+  spain1805: 'the Spanish Navy of 1805: pale limestone bastions and sea walls with iron cannon, whitewashed houses with flat roofs and red tiles, plain red and plain yellow cloth flags without any emblem, ships of the line of 1805 with black hulls and red bands along two or three tiers of gunports, three masts and square sails, moored in the bay.',
+  ottoman: 'the Ottoman Empire of 1571: grey stone fortress walls and round towers, whitewashed houses with low-pitched red clay tile roofs, a lead-domed mosque with a slender pencil minaret, plain red and plain green cloth banners without any emblem, long low Mediterranean war galleys (kadirga) and smaller galiots with a single bank of oars and lateen sails, moored stern-to along the quay.',
 };
 
 const STYLE =
@@ -75,6 +96,10 @@ const headers = () => ({ Authorization: `Bearer ${process.env.OPENAI_API_KEY}` }
 
 async function generate(c, level) {
   const prompt = promptOf(c, level);
+  if (PROVIDER === 'gemini') {
+    await writeFile(rawPath(c, level), await geminiImage(prompt, { aspect: '3:2', image: level > 1 ? await readFile(rawPath(c, level - 1)) : null }));
+    return;
+  }
   let res;
   if (level === 1) {
     res = await fetch('https://api.openai.com/v1/images/generations', {
@@ -101,7 +126,7 @@ async function main() {
   await mkdir(OUT, { recursive: true });
   const camps = CAMPS.filter((c) => !ONLY || ONLY.includes(c.id));
   if (!args.convert) {
-    if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing (.env)');
+    if (PROVIDER !== 'gemini' && !process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing (.env)');
     // A camp's levels must go in order, but different camps run side by side.
     const queue = [...camps];
     const worker = async () => {
@@ -119,15 +144,26 @@ async function main() {
     await Promise.all(Array.from({ length: JOBS }, worker));
   }
   const have = (c, level) => existsSync(rawPath(c, level));
-  for (const c of CAMPS) for (const level of [1, 2, 3]) if (have(c, level)) await convert(c, level);
-  await writeFile(join(ROOT, 'scripts', 'camp-art-provenance.json'), JSON.stringify({
-    provider: 'OpenAI Images API', model: MODEL, quality: QUALITY, size: '1536x1024', generatedAt: new Date().toISOString().slice(0, 10),
-    note: 'Level 1 from text; levels 2 and 3 are edits of the level below. Exported as WebP, 1024 px wide.',
+  for (const c of camps) for (const level of [1, 2, 3]) if (have(c, level)) await convert(c, level);
+  // Camps made in this run (or whose raws are here) get fresh entries; the others keep what the provenance had, so a run
+  // on a machine without every camp's raws (they live in the asset store) drops nothing.
+  const file = join(ROOT, 'scripts', 'camp-art-provenance.json');
+  const old = existsSync(file) ? JSON.parse(await readFile(file, 'utf8')) : { camps: [] };
+  const made = PROVIDER === 'gemini' ? { provider: 'Google Gemini API', model: geminiModel(), size: '3:2' } : { provider: 'OpenAI Images API', model: MODEL, quality: QUALITY, size: '1536x1024' };
+  await writeFile(file, JSON.stringify({
+    ...old,
+    note: 'Level 1 from text; levels 2 and 3 are edits of the level below. Exported as WebP, 1024 px wide. A camp without its own `made` was made with the top-level provider and model.',
     style: STYLE, factions: FACTION,
-    camps: await Promise.all(CAMPS.map(async (c) => ({
-      ...c,
-      levels: await Promise.all([1, 2, 3].filter((l) => have(c, l)).map(async (l) => ({ level: l, file: `public/ui/camps/${c.id}-L${l}.webp`, bytes: (await readFile(outPath(c, l))).length, prompt: promptOf(c, l) }))),
-    }))),
+    camps: await Promise.all(CAMPS.map(async (c) => {
+      const prev = old.camps?.find((p) => p.id === c.id);
+      if (!camps.includes(c) && prev) return prev;
+      const own = PROVIDER === 'gemini' ? { made: { ...made, generatedAt: new Date().toISOString().slice(0, 10) } } : prev?.made ? { made: prev.made } : {};
+      return {
+        ...c,
+        ...own,
+        levels: await Promise.all([1, 2, 3].filter((l) => existsSync(outPath(c, l))).map(async (l) => ({ level: l, file: `public/ui/camps/${c.id}-L${l}.webp`, bytes: (await readFile(outPath(c, l))).length, prompt: promptOf(c, l) }))),
+      };
+    })),
   }, null, 2) + '\n');
   console.log('done');
 }

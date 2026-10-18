@@ -1,0 +1,31 @@
+/* The background-download line (AssetBar.tsx): 2 px of soft white along the top edge, under the safe area. */
+.asset-bar {
+  position: fixed;
+  top: var(--sat, 0px);
+  left: 0;
+  right: 0;
+  z-index: 200;
+  height: 2px;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.asset-bar--on {
+  opacity: 1;
+}
+
+.asset-bar-fill {
+  height: 100%;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.92));
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
+  transition: transform 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .asset-bar-fill {
+    transition: none;
+  }
+}

@@ -1,5 +1,5 @@
-import demMeta from '../../select/demMeta.json';
-import { demHeightAtUV, MAP_W, V_SCALE } from '../../select/demFrame';
+import { demMeta } from './mapTheatre';
+import { demHeightAtUV, MAP_W, V_SCALE } from './mapTheatre';
 import { project } from './projection';
 
 // The campaign map is the select screen's terrain placed inside the campaign frame (mapFrame.json), which reaches

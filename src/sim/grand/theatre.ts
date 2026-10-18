@@ -1,0 +1,88 @@
+import { REGION_ORDER, START, type StartSetup } from './regions';
+import { ARMADA_REGION_ORDER, ARMADA_START } from './regionsArmada';
+import { LEPANTO_REGION_ORDER, LEPANTO_START } from './regionsLepanto';
+import { TRAFALGAR_REGION_ORDER, TRAFALGAR_START } from './regionsTrafalgar';
+import type { Grand, GrandFaction, PairKey, Relation, RegionId, TheatreId } from './types';
+
+/**
+ * A theatre is one war's world for the faction campaign: the navies that fight it, its regions in their fixed order,
+ * the opening holdings and fleets, who is allied with whom, and the season the first turn falls in. Everything else
+ * (the rules, the economy, the AI, the growth trees) is shared and keyed by faction, region or commander id, so a new
+ * chapter's campaign is data: its factions in TUNING (economy.ts), its regions, lanes, commanders and start
+ * (regionsArmada.ts is the pattern), its trees and techs (growthData.ts), and an entry here.
+ *
+ * A save without `theatre` is the Korean theatre of 1592, so those saves, their seeds and their digests are unchanged.
+ */
+export type TheatreDef = {
+  id: TheatreId;
+  factions: readonly GrandFaction[];
+  order: readonly RegionId[];
+  start: StartSetup;
+  relations: Partial<Record<PairKey, Relation>>;
+  /** The first turn's date: its year, and the months from January to its first month. */
+  year: number;
+  since: number;
+  /** The first line of the campaign's log. */
+  intro: string;
+  /** The default seed of a new campaign (headless runs). */
+  seed: number;
+};
+
+export const THEATRES: Record<TheatreId, TheatreDef> = {
+  imjin: {
+    id: 'imjin',
+    factions: ['joseon', 'japan', 'ming'],
+    order: REGION_ORDER,
+    start: START,
+    relations: { 'japan:joseon': 'war', 'japan:ming': 'war', 'joseon:ming': 'allied' },
+    year: 1592,
+    since: 3,
+    intro: '조선, 일본, 명 세 진영이 남해의 물길을 두고 맞섭니다.',
+    seed: 1592,
+  },
+  armada: {
+    id: 'armada',
+    factions: ['england', 'spain'],
+    order: ARMADA_REGION_ORDER,
+    start: ARMADA_START,
+    relations: { 'england:spain': 'war' },
+    year: 1588,
+    since: 6,
+    intro: '잉글랜드와 에스파냐가 해협과 북해의 물길을 두고 맞섭니다.',
+    seed: 1588,
+  },
+  // July 1571: the Holy League concluded in May, its fleet gathering at Messina, Famagusta still holding out.
+  lepanto: {
+    id: 'lepanto',
+    factions: ['holyleague', 'ottoman'],
+    order: LEPANTO_REGION_ORDER,
+    start: LEPANTO_START,
+    relations: { 'holyleague:ottoman': 'war' },
+    year: 1571,
+    since: 6,
+    intro: '신성동맹과 오스만 제국이 이오니아해와 지중해의 물길을 두고 맞섭니다.',
+    seed: 1571,
+  },
+  // January 1805: Spain at war with Britain since 12 December 1804 and allied to France (the treaty of 4 January 1805),
+  // the Combined Fleet's squadrons blockaded in Brest, Rochefort, Ferrol, Cádiz, Cartagena and Toulon. Three navies, as
+  // in 1592: France and Spain allied against Britain.
+  trafalgar: {
+    id: 'trafalgar',
+    factions: ['britain', 'france', 'spain1805'],
+    order: TRAFALGAR_REGION_ORDER,
+    start: TRAFALGAR_START,
+    relations: { 'britain:france': 'war', 'britain:spain1805': 'war', 'france:spain1805': 'allied' },
+    year: 1805,
+    since: 0,
+    intro: '영국과 프랑스·에스파냐 연합이 해협과 대서양, 지중해의 물길을 두고 맞섭니다.',
+    seed: 1805,
+  },
+};
+
+export const theatreOf = (g: Pick<Grand, 'theatre'> | null | undefined): TheatreDef => THEATRES[g?.theatre ?? 'imjin'];
+/** The navies of the campaign's theatre, in their fixed order. */
+export const factionsOf = (g: Pick<Grand, 'theatre'> | null | undefined): readonly GrandFaction[] => theatreOf(g).factions;
+/** The campaign's regions in their fixed order. */
+export const orderOf = (g: Pick<Grand, 'theatre'> | null | undefined): readonly RegionId[] => theatreOf(g).order;
+/** The theatre a faction fights in. */
+export const theatreOfFaction = (f: GrandFaction): TheatreDef => Object.values(THEATRES).find((t) => t.factions.includes(f)) ?? THEATRES.imjin;

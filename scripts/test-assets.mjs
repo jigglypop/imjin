@@ -10,7 +10,7 @@ import { copyFile, mkdir, mkdtemp, readFile, rm, utimes, writeFile } from 'node:
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { signV4 } from './assets.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./assets.mjs', import.meta.url));
@@ -355,6 +355,51 @@ try {
     const { code, stderr } = await run(E, ['status', '--remote']);
     assert.equal(code, 1);
     assert.equal(stderr, 'assets: s3://no-such-bucket does not exist in ap-northeast-2: node scripts/assets.mjs setup --apply creates it\n');
+  });
+
+  await check('prune-local leaves a runtime file in S3 only: pull skips it, push keeps it, the dev middleware serves it', async () => {
+    const G = await tree('g');
+    await put(G, 'scripts/lib/remote-assets.mjs', await readFile(fileURLToPath(new URL('./lib/remote-assets.mjs', import.meta.url))));
+    await copyFile(join(A, 'assets.json'), join(G, 'assets.json'));
+    const cacheG = join(tmp, 'cache-g');
+    assert.equal((await run(G, ['pull'], { IMJIN_ASSET_CACHE: cacheG })).code, 0);
+    const want = await read(G, SHIP);
+    const dry = await run(G, ['prune-local', '--dry-run'], { IMJIN_ASSET_CACHE: cacheG });
+    assert.equal(dry.code, 0, dry.stderr);
+    assert.ok(await read(G, SHIP));
+    const pruned = await run(G, ['prune-local'], { IMJIN_ASSET_CACHE: cacheG });
+    assert.equal(pruned.code, 0, pruned.stderr);
+    await assert.rejects(read(G, SHIP));
+    assert.deepEqual(JSON.parse(await readFile(join(G, '.assets-remote.json'), 'utf8')).paths, [SHIP]);
+    assert.match((await run(G, ['status'], { IMJIN_ASSET_CACHE: cacheG })).stdout, /remote-only \(prune-local\): 1 files/);
+    assert.match((await run(G, ['pull'], { IMJIN_ASSET_CACHE: cacheG })).stdout, /1 files stay remote-only/);
+    await assert.rejects(read(G, SHIP));
+    const push = await run(G, ['push', SHIP], { IMJIN_ASSET_CACHE: cacheG });
+    assert.equal(push.code, 0, push.stderr);
+    assert.ok((await manifestOf(G)).files[SHIP], 'a pruned file is not dropped');
+    // The dev server's middleware, with an empty cache: the blob comes from S3, checked, and is then cached.
+    const serve = `import { createServer } from 'node:http';
+      const { remoteAssetsMiddleware } = await import(process.argv[1]);
+      const mw = remoteAssetsMiddleware({ log: { warn() {} } });
+      const server = createServer((req, res) => mw(req, res, () => { res.statusCode = 404; res.end(); })).listen(0, '127.0.0.1', async () => {
+        const base = 'http://127.0.0.1:' + server.address().port;
+        const a = await fetch(base + '/models/ship.glb');
+        const bytes = Buffer.from(await a.arrayBuffer());
+        const b = await fetch(base + '/ui/banner.webp');
+        console.log(JSON.stringify({ status: a.status, type: a.headers.get('content-type'), hex: bytes.toString('hex'), local: b.status }));
+        server.close();
+      });`;
+    const out = await new Promise((done, fail) =>
+      execFile(process.execPath, ['--input-type=module', '-e', serve, pathToFileURL(join(G, 'scripts/lib/remote-assets.mjs')).href], { cwd: G, env: { ...ENV, IMJIN_ASSET_CACHE: join(tmp, 'cache-g2') } }, (error, stdout, stderr) => (error ? fail(new Error(stderr)) : done(JSON.parse(stdout)))),
+    );
+    assert.equal(out.status, 200);
+    assert.equal(out.type, 'model/gltf-binary');
+    assert.equal(out.hex, want.toString('hex'));
+    assert.equal(out.local, 404, 'a file the tree has goes on to Vite');
+    const back = await run(G, ['pull', '--all'], { IMJIN_ASSET_CACHE: cacheG });
+    assert.equal(back.code, 0, back.stderr);
+    assert.deepEqual(await read(G, SHIP), want);
+    await assert.rejects(readFile(join(G, '.assets-remote.json')));
   });
 
   await check('untrack takes the binaries out of git, and status still sees them and nothing else', async () => {

@@ -72,8 +72,8 @@ export function hashSeed(s: string): number {
   return h >>> 0;
 }
 
-/** mulberry32: a uniform float in [0, 1) per call. */
-function rng(seed: number) {
+/** mulberry32: a uniform float in [0, 1) per call. Shared by the loot rolls (loot.ts). */
+export function rng(seed: number) {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -97,11 +97,24 @@ const round4 = (x: number) => Math.round(x * 10000) / 10000;
 
 /** What a seed rolls on an armor. The same (armor, seed) always gives the same roll. */
 export function rollArmor(a: ArmorDef, seed: number): ArmorRoll {
-  const spec = TIER_ROLL[a.tier];
-  const r = rng(seed);
+  return rollPieces(rng(seed), TIER_ROLL[a.tier]);
+}
+
+/**
+ * Primary points and abilities from a running RNG. `bias` makes some primary stats likelier (loot.ts: a bow leans to
+ * 지능, a shield piece to 활력); without it every stat is equally likely, exactly as armor has always rolled.
+ */
+export function rollPieces(r: () => number, spec: { points: [number, number]; affixes: [number, number] }, bias?: readonly PrimaryStat[]): ArmorRoll {
   const stats: Record<PrimaryStat, number> = { str: 0, dex: 0, int: 0, vit: 0 };
   const points = int(r, ...spec.points);
-  for (let i = 0; i < points; i++) stats[PRIMARY_STATS[Math.floor(r() * 4)]!] += 1;
+  const weights = PRIMARY_STATS.map((k) => (bias?.includes(k) ? 3 : 1));
+  const wsum = weights.reduce((s, w) => s + w, 0);
+  for (let i = 0; i < points; i++) {
+    if (!bias) { stats[PRIMARY_STATS[Math.floor(r() * 4)]!] += 1; continue; }
+    let pick = r() * wsum, k = 0;
+    while (k < 3 && (pick -= weights[k]!) >= 0) k++;
+    stats[PRIMARY_STATS[k]!] += 1;
+  }
   const n = int(r, ...spec.affixes);
   const pool = [...AFFIXES];
   const affixes: RolledAffix[] = [];
@@ -118,14 +131,14 @@ export function rollArmor(a: ArmorDef, seed: number): ArmorRoll {
   return { stats, affixes };
 }
 
-/** The ship factors a roll gives, each capped at ARMOR_FACTOR_CAP. */
-export function rollEffect(roll: ArmorRoll): MetaEffect {
+/** The ship factors a roll gives, each capped at ARMOR_FACTOR_CAP (or the given cap). */
+export function rollEffect(roll: ArmorRoll, cap = ARMOR_FACTOR_CAP): MetaEffect {
   const add: Partial<Record<keyof ShipMods, number>> = {};
   const bump = (k: keyof ShipMods, v: number) => { add[k] = (add[k] ?? 0) + v; };
   for (const s of PRIMARY_STATS) for (const [k, v] of Object.entries(STAT_PER_POINT[s]) as [keyof ShipMods, number][]) bump(k, v * roll.stats[s]);
   for (const af of roll.affixes) for (const [k, v] of Object.entries(af.values) as [keyof ShipMods, number][]) bump(k, v);
   const out: MetaEffect = {};
-  for (const [k, v] of Object.entries(add) as [keyof ShipMods, number][]) if (v > 0) out[k] = Math.min(ARMOR_FACTOR_CAP, round4(1 + v));
+  for (const [k, v] of Object.entries(add) as [keyof ShipMods, number][]) if (v > 0) out[k] = Math.min(cap, round4(1 + v));
   return out;
 }
 

@@ -13,6 +13,8 @@ import { buildHyeopseon } from './hyeopseon';
 import { bakeGrime } from './bake';
 import type { MeshData } from './parts';
 import { buildPanokseon } from './panokseon';
+import { buildSailShip } from './galleon';
+import { buildGalleass } from './galleass';
 
 export const LOD_LEVELS: Lod[] = [0, 1, 2];
 
@@ -39,6 +41,27 @@ function buildLod(kind: ShipKind, variant: number, lod: Lod, omitDragonHead: boo
       return buildMingship(lod);
     case 'mingsmall':
       return buildMingsmall(lod);
+    case 'racegalleon':
+    case 'spgalleon':
+    case 'urca':
+    case 'pinnace':
+    case 'fireship':
+    case 'firstrate':
+    case 'gb74':
+    case 'gbfrigate':
+    case 'fr80':
+    case 'fr74':
+    case 'trinidad':
+    case 'es74':
+      return buildSailShip(kind, variant, lod);
+    case 'galleass':
+    case 'vgalleass':
+    case 'reale':
+    case 'galea':
+    case 'sultana':
+    case 'kadirga':
+    case 'kalyata':
+      return buildGalleass(lod, kind);
     default:
       throw new Error(`no procedural model for ${kind}`);
   }
@@ -51,5 +74,5 @@ export function buildShip(kind: ShipKind, variant: number, omitDragonHead = fals
   const lods = LOD_LEVELS.map((l) => buildLod(kind, variant, l, omitDragonHead));
   bakeGrime(lods, buildAnchorsFor(`${kind}#${variant}`)!);
   if (kind === 'geobukseon') for (const lod of lods) for (let i = 0; i < lod.position.length; i++) lod.position[i]! *= GEOBUK_SCALE;
-  return { lods, anchors, faction: SHIP_SPECS[kind].faction };
+  return { lods, anchors, faction: SHIP_SPECS[kind].faction as Faction };
 }

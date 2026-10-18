@@ -76,7 +76,8 @@ try {
   };
   await check('every historical site lands on the same spot of the DEM as on the select screen', () => {
     assert.ok(DEM_RECT.u >= 0 && DEM_RECT.v >= 0 && DEM_RECT.u + DEM_RECT.w <= 1 && DEM_RECT.v + DEM_RECT.h <= 1);
-    for (const [id, site] of Object.entries(SITES)) {
+    // The Korean battles only: the Armada's sites are on the Channel map.
+    for (const [id, site] of Object.entries(SITES).filter(([, s]) => s.lon > 100)) {
       const local = siteUV(id), frame = project(site.lon, site.lat);
       assert.ok(Math.abs(DEM_RECT.u + local.u * DEM_RECT.w - frame.u) < 1e-9, id);
       assert.ok(Math.abs(DEM_RECT.v + local.v * DEM_RECT.h - frame.v) < 1e-9, id);

@@ -15,8 +15,9 @@ import {
   Vector2,
   Vector3,
   type Camera,
+  type Texture,
 } from 'three/webgpu';
-import { Fn, abs, cos, float, hash, max, mix, normalGeometry, normalLocal, positionGeometry, sin, smoothstep, texture, uniform, uint, varying, vec2, vec3, attribute, time } from 'three/tsl';
+import { Fn, abs, bumpMap, clamp, cos, dot, float, hash, max, mix, normalGeometry, normalLocal, positionGeometry, sin, smoothstep, texture, uniform, uint, varying, vec2, vec3, attribute, time } from 'three/tsl';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Terrain } from './Terrain';
 import type { VegetationQuality } from '../game/quality';
@@ -38,7 +39,7 @@ function tag(geo: BufferGeometry, part: number, ao: (y: number) => number) {
   return g;
 }
 
-function clump(r: number, x: number, y: number, z: number, flat: number, detail: number) {
+function clump(r: number, x: number, y: number, z: number, flat: number, detail: number, rough = 0) {
   const g = new IcosahedronGeometry(r, detail);
   g.scale(1, flat, 1);
   const pos = g.getAttribute('position');
@@ -46,7 +47,9 @@ function clump(r: number, x: number, y: number, z: number, flat: number, detail:
     const px = pos.getX(i);
     const py = pos.getY(i);
     const pz = pos.getZ(i);
-    const n = 1 + Math.sin(px * 3.1 + pz * 2.3) * 0.12 + Math.cos(py * 4.7) * 0.08;
+    // `rough` adds a finer ripple to the outline of the detailed near crowns; 0 leaves the shape it always had.
+    const fine = rough ? Math.sin(px * 7.3 - py * 5.1 + pz * 6.7) * 0.09 * rough + Math.cos(px * 11.9 + pz * 9.1) * 0.05 * rough : 0;
+    const n = 1 + Math.sin(px * 3.1 + pz * 2.3) * 0.12 + Math.cos(py * 4.7) * 0.08 + fine;
     pos.setXYZ(i, px * n, py * n, pz * n);
   }
   g.computeVertexNormals();
@@ -97,11 +100,59 @@ function shareCorners(geo: BufferGeometry) {
   return out;
 }
 
+// The crowns are built once per page: shareCorners is slow on the detailed ones, and the next battle draws the same trees.
+// A battle's dispose frees the GPU copies; the arrays stay here and go up again when a battle draws them.
+const crownCache = new Map<string, BufferGeometry>();
+function cached(key: string, make: () => BufferGeometry) {
+  let g = crownCache.get(key);
+  if (!g) crownCache.set(key, (g = make()));
+  return g;
+}
+
 function farTree() {
-  return shareCorners(mergeGeometries([clump(4.4, 0, 8.5, 0, 0.7, 0)])!);
+  return cached('far', () => shareCorners(mergeGeometries([clump(4.4, 0, 8.5, 0, 0.7, 0)])!));
+}
+
+/**
+ * The pine near the camera: a rounder, slightly bent trunk with two limbs, and a broad umbrella crown of many small
+ * rough clumps in tiers (the Korean red pine's), each a subdivided icosahedron so its outline is no polygon up close.
+ */
+function nearPine() {
+  return cached('near', () => {
+    const trunk = new CylinderGeometry(0.15, 0.34, 10.4, 8, 5, true).translate(0, 5.2, 0);
+    const pos = trunk.getAttribute('position');
+    for (let i = 0; i < pos.count; i += 1) {
+      const y = pos.getY(i);
+      pos.setX(i, pos.getX(i) + Math.sin(y * 0.33) * 0.32);
+      pos.setZ(i, pos.getZ(i) + Math.sin(y * 0.21 + 1) * 0.18);
+    }
+    trunk.computeVertexNormals();
+    const parts = [tag(trunk, 0, () => 0.8)];
+    for (const [a, len, y] of [[0.6, 2.6, 8.4], [3.7, 2.2, 9.3]] as const) {
+      const limb = new CylinderGeometry(0.07, 0.12, len, 5, 1, true).translate(0, len / 2, 0).rotateZ(-1.05).rotateY(a).translate(0, y, 0);
+      parts.push(tag(limb, 0, () => 0.75));
+    }
+    const tiers: [number, number, number, number, number][] = [
+      [3.0, 0, 13.0, 0, 0.42],
+      [2.4, 1.9, 11.9, 0.9, 0.45],
+      [2.3, -1.8, 11.6, -0.6, 0.45],
+      [2.1, 0.3, 11.2, -2.0, 0.48],
+      [2.0, -0.5, 12.3, 1.9, 0.45],
+      [2.0, 2.4, 9.9, -1.1, 0.5],
+      [1.9, -2.3, 9.4, 1.2, 0.5],
+      [1.7, 0.9, 14.3, 0.7, 0.42],
+      [1.6, -1.0, 14.0, -0.9, 0.42],
+    ];
+    for (const [r, x, y, z, flat] of tiers) parts.push(clump(r, x, y, z, flat, 1, 1));
+    return shareCorners(mergeGeometries(parts)!);
+  });
 }
 
 function pine(detail: 0 | 1, lite = false) {
+  return cached(`pine${detail}${lite ? 'l' : ''}`, () => pineGeometry(detail, lite));
+}
+
+function pineGeometry(detail: 0 | 1, lite: boolean) {
   // Lite variants trade crown detail for vertices. A lite tree is about half the cost of a full one at distance.
   const trunk = tag(new CylinderGeometry(0.16, 0.3, 10, lite ? 4 : detail ? 3 : 5, 1, true).translate(0, 5, 0), 0, () => 0.8);
   const clumps = lite
@@ -153,6 +204,8 @@ type ShadowCopy = {
 
 type Ring = {
   cell: number;
+  /** For the ring right round the near one (same cells): the near ring's half-size, whose trees it leaves out. */
+  cut: number;
   grid: number;
   inner: number;
   center: ReturnType<typeof uniform>;
@@ -191,12 +244,17 @@ export class Vegetation {
     const c2 = 19;
     const edge0 = (c0 * g0) / 2;
     const edge1 = (c1 * g1) / 2;
-    this.rings.push(this.ring({ full: pine(0), lite: pine(0, true) }, c0, g0, 0, quality.shadows));
+    // The near ring: the same cells as the first ring, so a tree stays where it stands and only its model and textures
+    // change as the camera comes within ~75–100 m of it. Its grid is a fifth of the first ring's.
+    const gn = Math.max(16, Math.round((g0 * 0.2) / 2) * 2);
+    const ground = terrain.groundTextures;
+    this.rings.push(this.ring({ full: nearPine(), lite: pine(0) }, c0, gn, 0, quality.shadows, { leaves: ground.forest_leaves_02, bark: ground.cliff_side, bump: quality.shadows }));
+    this.rings.push(this.ring({ full: pine(0), lite: pine(0, true) }, c0, g0, 0, quality.shadows, null, (c0 * gn) / 2));
     this.rings.push(this.ring({ full: pine(1), lite: pine(1, true) }, c1, g1, edge0, false));
     this.rings.push(this.ring({ full: farTree(), lite: farTree() }, c2, g2, edge1, false));
   }
 
-  /** Frees both crown geometries and the material of every ring. */
+  /** Frees the GPU copies of the crowns and the material of every ring (the crown arrays stay cached for the page). */
   dispose() {
     for (const r of this.rings) {
       r.full.dispose();
@@ -216,7 +274,15 @@ export class Vegetation {
     }
   }
 
-  private ring(variants: { full: BufferGeometry; lite: BufferGeometry }, cell: number, grid: number, inner: number, shadows: boolean): Ring {
+  private ring(
+    variants: { full: BufferGeometry; lite: BufferGeometry },
+    cell: number,
+    grid: number,
+    inner: number,
+    shadows: boolean,
+    textured: { leaves: Texture; bark: Texture; bump: boolean } | null = null,
+    cut = 0,
+  ): Ring {
     // Only cells that can hold a tree are drawn. The cells come from the CPU, so the GPU does not run the vertex
     // shader of a whole crown for every cell of the grid, most of which lie in the sea or outside the screen.
     // Static: gather() marks the cells it wrote when the view moves, so they go up once then and not whole in every pass.
@@ -251,11 +317,14 @@ export class Vegetation {
     const density = maskV.r.mul(inner > 0 ? 0.82 : 1);
     const keepDensity = density.greaterThan(h3.mul(0.95).add(0.03));
     const keepOuter = d.lessThan(h4.mul(0.18).add(0.82).mul(outer));
-    const keepInner = inner > 0 ? d.greaterThan(h4.mul(0.2).add(0.88).mul(inner)) : float(1).greaterThan(0);
+    // The near ring keeps a cell when d < (0.82 + 0.18 h4) of its half-size (keepOuter), so the ring round it takes exactly the rest.
+    const keepInner = inner > 0 ? d.greaterThan(h4.mul(0.2).add(0.88).mul(inner)) : cut > 0 ? d.greaterThanEqual(h4.mul(0.18).add(0.82).mul(cut)) : float(1).greaterThan(0);
     const keep = keepDensity.and(keepOuter).and(keepInner).and(ground.greaterThan(2.5));
     const s: any = keep.select(mix(float(0.75), float(1.3), h4).mul(inner > 0 ? (cell > 15 ? 2.1 : 1.45) : 1), float(0));
-    const sTall = s.mul(float(1).sub(broad.mul(0.22)));
-    const sWide = s.mul(broad.mul(0.3).add(1));
+    // A poplar (Flanders' field rows) is half again as tall and less than half as wide; the share is the region's, 0 has none.
+    const tall = hash(seed.add(uint(5))).lessThan(t.poplar).select(float(1), float(0));
+    const sTall = s.mul(float(1).sub(broad.mul(0.22))).mul(tall.mul(0.75).add(1));
+    const sWide = s.mul(broad.mul(0.3).add(1)).mul(float(1).sub(tall.mul(0.6)));
     const rot = h1.mul(6.2831);
     const c = cos(rot);
     const sn = sin(rot);
@@ -278,7 +347,20 @@ export class Vegetation {
     const winterBare = mix(vec3(0.07, 0.055, 0.04), vec3(0.09, 0.075, 0.05), tint);
     const seasonal = mix(mix(pineCol, broadAutumn, smoothstep(0.2, 0.7, t.season).mul(autumnPick)), winterBare, smoothstep(0.8, 1.0, t.season).mul(autumnPick));
     const trunk = vec3(0.11, 0.055, 0.032);
-    m.colorNode = mix(trunk, seasonal, vPart).mul(vAo.mul(0.7).add(0.3));
+    let col: any = mix(trunk, seasonal, vPart).mul(vAo.mul(0.7).add(0.3));
+    if (textured) {
+      // Leaf litter for the needles and the cliff's grain for the bark, as detail over the tree's own colour: each
+      // texture divided by its average, so it adds the light and shade of needle tufts and furrows, not their colour.
+      const local: any = varying(positionGeometry.add(vec3(h1.mul(17), 0, h2.mul(17))));
+      const luma = (c: any) => dot(c, vec3(0.3, 0.59, 0.11));
+      const grain = (tex: Texture, uv: any) => clamp(luma(texture(tex, uv).rgb).div(luma(texture(tex, vec2(0.5)).level(float(12)).rgb).max(0.02)), 0.3, 2.0);
+      const needles = grain(textured.leaves, vec2(local.x, local.z).mul(0.42)).mul(grain(textured.leaves, vec2(local.x.add(local.z), local.y).mul(0.37)));
+      const furrows = grain(textured.bark, vec2(local.x.add(local.z).mul(0.9), local.y.mul(0.16)));
+      const detail = mix(furrows, needles.pow(1.25), vPart);
+      col = col.mul(detail);
+      if (textured.bump) m.normalNode = bumpMap(detail.mul(0.12));
+    }
+    m.colorNode = col;
     const mesh = new Mesh(full, m);
     mesh.frustumCulled = false;
     mesh.castShadow = false;
@@ -297,7 +379,7 @@ export class Vegetation {
       this.group.add(sMesh);
       shadow = { mesh: sMesh, full: sFull, lite: sLite, cells: sCells, view: new Float32Array(32), from: null };
     }
-    return { cell, grid, inner, center, mesh, full, lite, cells, blocks: new Map(), built: null, seen: new Frustum(), shadow };
+    return { cell, cut, grid, inner, center, mesh, full, lite, cells, blocks: new Map(), built: null, seen: new Frustum(), shadow };
   }
 
   update(camera: Camera) {
@@ -362,7 +444,7 @@ export class Vegetation {
     const z0 = cz - half;
     const out = into.array as Float32Array;
     // A cell nearer than the previous ring's edge is that ring's.
-    const skip = r.inner > 0 ? (0.88 * r.inner) / r.cell : 0;
+    const skip = r.inner > 0 ? (0.88 * r.inner) / r.cell : r.cut > 0 ? (0.82 * r.cut) / r.cell - 1 : 0;
     let n = 0;
     for (let bz = Math.floor(z0 / BLOCK); bz <= Math.floor((z0 + r.grid - 1) / BLOCK); bz += 1) {
       for (let bx = Math.floor(x0 / BLOCK); bx <= Math.floor((x0 + r.grid - 1) / BLOCK); bx += 1) {

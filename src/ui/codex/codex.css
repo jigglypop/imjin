@@ -1168,3 +1168,31 @@
     animation: none;
   }
 }
+
+/* England and Spain: no East Asian seal, their round emblem (St George and the Tudor rose; the Burgundy saltire). */
+.cx-navy--england h2 i,
+.cx-navy--spain h2 i,
+.cx-title--england .cx-seal,
+.cx-title--spain .cx-seal {
+  padding: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: center / cover no-repeat;
+  clip-path: none;
+  transform: none;
+  writing-mode: horizontal-tb;
+}
+.cx-title--england .cx-seal,
+.cx-title--spain .cx-seal {
+  width: 44px;
+  height: 44px;
+}
+.cx-navy--england h2 i,
+.cx-title--england .cx-seal {
+  background-image: url(/ui/art/emblem_england_sm.webp);
+}
+.cx-navy--spain h2 i,
+.cx-title--spain .cx-seal {
+  background-image: url(/ui/art/emblem_spain_sm.webp);
+}

@@ -16,8 +16,15 @@ import {
 } from 'three/webgpu';
 import { abs, attribute, cross, float, floor, Fn, If, int, ivec2, max, min, mix, mod, select, texture, transformNormalToView, uniform, varyingProperty, vec3, vec4 } from 'three/tsl';
 
-export type CrewKey = 'joseon_soldier' | 'joseon_marine' | 'joseon_officer' | 'japan_ashigaru' | 'japan_samurai' | 'japan_officer' | 'ming_soldier' | 'ming_officer' | 'rower';
-export const CREW_KEYS: CrewKey[] = ['joseon_soldier', 'joseon_marine', 'joseon_officer', 'japan_ashigaru', 'japan_samurai', 'japan_officer', 'ming_soldier', 'ming_officer', 'rower'];
+/** The 1592 crews, and the Armada's (scripts/crew-armada.mjs: on the rigs and clips of the 1592 figures). */
+export const CREW_KEYS = [
+  'joseon_soldier', 'joseon_marine', 'joseon_officer', 'japan_ashigaru', 'japan_samurai', 'japan_officer', 'ming_soldier', 'ming_officer', 'rower',
+  'england_shot', 'england_soldier', 'england_officer', 'england_sailor', 'spain_shot', 'spain_soldier', 'spain_officer', 'spain_sailor',
+  'holyleague_shot', 'holyleague_soldier', 'holyleague_officer', 'holyleague_oarsman', 'ottoman_archer', 'ottoman_janissary', 'ottoman_officer', 'ottoman_oarsman',
+  'britain_shot', 'britain_soldier', 'britain_officer', 'britain_sailor', 'france_shot', 'france_soldier', 'france_officer', 'france_sailor',
+  'spain1805_shot', 'spain1805_soldier', 'spain1805_officer', 'spain1805_sailor',
+] as const;
+export type CrewKey = (typeof CREW_KEYS)[number];
 
 export type Clip = { start: number; frames: number; loop: boolean };
 /**
@@ -139,11 +146,10 @@ function makeMaterial(map: Texture, anim: DataTexture, influences: number) {
   return m;
 }
 
-/** Loads the characters, building one instanced mesh per level of detail with room for capacity figures each. */
-export async function loadCrew(capacities: Record<CrewKey, number[]>): Promise<Map<CrewKey, CrewAsset>> {
-  const out = new Map<CrewKey, CrewAsset>();
+/** Loads the characters named in capacities into out, building one instanced mesh per level of detail with room for capacity figures each. */
+export async function loadCrew(capacities: Partial<Record<CrewKey, number[]>>, out = new Map<CrewKey, CrewAsset>()): Promise<Map<CrewKey, CrewAsset>> {
   await Promise.all(
-    CREW_KEYS.map(async (key) => {
+    (Object.keys(capacities) as CrewKey[]).map(async (key) => {
       try {
         const [buf, map] = await Promise.all([fetch(`/models/crew/${key}.bin`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status))))), textures.loadAsync(`/models/crew/${key}.webp`)]);
         map.colorSpace = SRGBColorSpace;

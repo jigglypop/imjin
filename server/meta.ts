@@ -1,17 +1,21 @@
 // The growth routes: the account's commander and armor profile (coins, owned armor and its rolls, what each general
-// wears and carries, his experience and the steps he learned). The profile is kept under `meta` in the user's progress
-// (accounts.ts profiles), and every coin moves through the account's coin ledger, whose balance is the purse: the
+// wears and carries, his experience and the steps he learned). The profile is kept in rows of its own (metaRecord.ts:
+// the tables of schema 2 in PostgreSQL), written in the same transaction as the ledger lines of the change; a profile
+// still kept as JSON under `meta` in the user's progress (schema 1) is moved to them by its next change or by the
+// start-up sweep (migrateJsonMeta), and every coin moves through the account's coin ledger, whose balance is the purse: the
 // stored `coins` is only its copy. Every change applies src/meta/rules.ts on the server; armor rolls come from the
 // account id as the salt, so no page can send a roll, a purse or experience of its own.
 import { randomBytes } from 'node:crypto';
-import { generalById, GENERALS } from '../src/meta/catalog';
-import { buy, equip, equipWeapon, learn, newProfile, normalizeProfile, reportProblem, reroll, rewardFor, RuleError, type BattleReport, type Profile } from '../src/meta/rules';
+import { generalById, GENERALS, isImjin } from '../src/meta/catalog';
+import { buy, equip, equipItem, equipWeapon, learn, reforge, respec, salvage, newProfile, normalizeProfile, reportProblem, reroll, rewardFor, RuleError, type BattleReport, type Profile } from '../src/meta/rules';
+import { GEAR_SLOTS, type GearSlot } from '../src/meta/loot';
 import { START_COINS, START_XP, type MetaBattleStart, type MetaBattleTicket, type MetaReply, type MetaRewardReply } from '../src/meta/wire';
 import { battleReport, teamGenerals } from '../src/meta/battle';
 import type { Battle } from '../src/sim/battle';
 import { buildScenario, SCENARIOS, type ScenarioId } from '../src/sim/scenarios';
-import { teamOf, type Faction, type Team } from '../src/sim/types';
+import { ALL_FACTIONS, teamOf, type Faction, type Team } from '../src/sim/types';
 import type { AccountStore, ProfileData, ProfileTx } from './accounts';
+import { profileOf, recordOf } from './metaRecord';
 import { ApiError, Limiter, type ApiRouter } from './api';
 
 const HOUR = 3600 * 1000;
@@ -36,17 +40,24 @@ const idOrNull = (value: unknown) => (value === null ? null : need(value));
 /** The profile kept for `userId`, with its purse from the ledger. A profile made now gets the starting grant once. */
 async function load(data: ProfileData, userId: string, tx: ProfileTx): Promise<Profile> {
   let p: Profile;
+  const rows = await tx.meta();
   if (data.meta && typeof data.meta === 'object') {
+    // Schema 1: the JSON profile, moved into the rows when this change is stored. This server never leaves the JSON
+    // behind, so JSON beside rows was written later (a server of schema 1 still running, or a rollback) and wins.
     // The salt is always the account id, whatever the stored copy says; rolls are recomputed from it.
     p = normalizeProfile({ ...(data.meta as object), salt: userId }, userId);
+  } else if (rows) {
+    p = profileOf(rows, userId);
   } else {
     p = newProfile();
     p.salt = userId;
     if (await tx.claimOnce(`meta-start:${userId}`)) {
       await tx.ledger({ kind: 'coin', amount: START_COINS, reason: 'meta-start' });
-      for (const g of GENERALS) if (g.famous) p.generals[g.id] = { xp: START_XP, skills: [] };
+      for (const g of GENERALS) if (g.famous) p.generals[g.id] = { xp: START_XP, talents: {} };
     }
   }
+  // The other chapters' famous commanders joined later: an account made before them gets their start once.
+  if (await tx.claimOnce(`meta-chapters:${userId}`)) for (const g of GENERALS) if (g.famous && !isImjin(g.faction) && !p.generals[g.id]) p.generals[g.id] = { xp: START_XP, talents: {} };
   p.coins = await tx.balance('coin');
   return p;
 }
@@ -63,16 +74,58 @@ export async function changeMeta(accounts: AccountStore, userId: string, reason:
       const after = await change(before, tx);
       const delta = after.coins - before.coins;
       if (delta !== 0) await tx.ledger({ kind: 'coin', amount: delta, item, reason });
+      // Every piece of loot that comes or goes is a line of the append-only ledger too (kind 'item', the balance is the
+      // inventory's size), so a drop can be traced to the battle that paid it.
+      const had = new Set(before.items.map((i) => i.uid));
+      const has = new Set(after.items.map((i) => i.uid));
+      for (const i of after.items) if (!had.has(i.uid)) await tx.ledger({ kind: 'item', amount: 1, item: `${i.uid}:${i.base}:${i.rarity}`.slice(0, 64), reason });
+      for (const i of before.items) if (!has.has(i.uid)) await tx.ledger({ kind: 'item', amount: -1, item: `${i.uid}:${i.base}:${i.rarity}`.slice(0, 64), reason });
       after.coins = await tx.balance('coin');
       after.salt = userId;
       out = after;
-      data.meta = after;
+      await tx.saveMeta(recordOf(after));
+      delete data.meta;
     });
     return { profile: out!, rev: stored.rev };
   } catch (error) {
     if (error instanceof RuleError) throw new ApiError('rule', 409, error.message);
     throw error;
   }
+}
+
+/**
+ * Moves every growth profile still kept as JSON (schema 1) into its rows, each in its own transaction as an ordinary
+ * change that changes nothing. Safe to run again and alongside the routes: a moved profile is no longer listed. Returns
+ * how many it moved; one that fails is logged and left as JSON for its next change.
+ */
+export async function migrateJsonMeta(accounts: AccountStore, log: Pick<Console, 'error'> = console): Promise<number> {
+  let moved = 0;
+  const failed = new Set<string>();
+  for (;;) {
+    const batch = (await accounts.jsonMetaUsers(100 + failed.size)).filter((id) => !failed.has(id));
+    if (!batch.length) return moved;
+    for (const id of batch) {
+      try {
+        await changeMeta(accounts, id, 'meta-migrate', (p) => p);
+        moved++;
+      } catch (error) {
+        failed.add(id);
+        log.error(`meta: could not move the profile of ${id} into its tables (${error instanceof Error ? error.message : 'unknown error'})`);
+      }
+    }
+  }
+}
+
+/** Writes a user's rows back as the JSON of schema 1 (profiles.data.meta), for a rollback to a server before schema 2. */
+export async function exportJsonMeta(accounts: AccountStore, userId: string): Promise<boolean> {
+  let wrote = false;
+  await accounts.updateProfile(userId, null, async (data, tx) => {
+    const rows = await tx.meta();
+    if (!rows) return;
+    data.meta = profileOf(rows, userId, await tx.balance('coin'));
+    wrote = true;
+  });
+  return wrote;
 }
 
 /** A battle against the computer the server agreed to pay for, kept in this process until it is reported. */
@@ -89,7 +142,8 @@ function knownHistory(id: ScenarioId, faction: Faction) {
   return { enemyShips: b.ships.filter((s) => s.team === enemy).length, ownShips: b.ships.filter((s) => s.team === team).length, generals: teamGenerals(b, team) };
 }
 
-const FACTIONS: Faction[] = ['joseon', 'japan', 'ming'];
+/** Every chapter's navy: a battle's rewards are the same for each. */
+const FACTIONS: readonly Faction[] = ALL_FACTIONS;
 
 export function metaRoutes(api: ApiRouter) {
   const tickets = new Map<string, Ticket>();
@@ -138,6 +192,33 @@ export function metaRoutes(api: ApiRouter) {
     return { profile, rev } satisfies MetaReply;
   });
 
+  api.user('POST', '/api/meta/respec', async ({ accounts, user, body }) => {
+    const general = need(body.general);
+    const { profile, rev } = await changeMeta(accounts, user.id, 'respec', (p) => respec(p, general), `respec:${general}`);
+    return { profile, rev } satisfies MetaReply;
+  });
+
+  api.user('POST', '/api/meta/item/equip', async ({ accounts, user, body }) => {
+    const general = need(body.general);
+    const slot = need(body.slot, 16) as GearSlot;
+    if (!GEAR_SLOTS.includes(slot)) throw new ApiError('json');
+    const item = idOrNull(body.item);
+    const { profile, rev } = await changeMeta(accounts, user.id, 'item-equip', (p) => equipItem(p, general, slot, item));
+    return { profile, rev } satisfies MetaReply;
+  });
+
+  api.user('POST', '/api/meta/item/salvage', async ({ accounts, user, body }) => {
+    const item = need(body.item, 24);
+    const { profile, rev } = await changeMeta(accounts, user.id, 'salvage', (p) => salvage(p, item), `item:${item}`);
+    return { profile, rev } satisfies MetaReply;
+  });
+
+  api.user('POST', '/api/meta/item/reforge', async ({ accounts, user, body }) => {
+    const item = need(body.item, 24);
+    const { profile, rev } = await changeMeta(accounts, user.id, 'reforge', (p) => reforge(p, item), `item:${item}`);
+    return { profile, rev } satisfies MetaReply;
+  });
+
   // A profile this browser kept before it had an account, carried over once per account. Only choices are taken, each
   // through the server's rules: the armor it owned is bought again from the server's purse (rolled afresh from the
   // account id), the steps learned are learned again where the server's experience allows, and what was worn is put on.
@@ -157,7 +238,8 @@ export function metaRoutes(api: ApiRouter) {
       };
       for (const id of local.owned) attempt((q) => buy(q, id).profile);
       for (const [id, g] of Object.entries(local.generals)) {
-        for (const skill of g.skills) attempt((q) => learn(q, id, skill));
+        // Talents are learned again in tier order, rank by rank, where the server's experience allows.
+        for (const [node, ranks] of Object.entries(g.talents)) for (let i = 0; i < ranks; i++) attempt((q) => learn(q, id, node));
         if (g.armor) attempt((q) => equip(q, id, g.armor!));
         if (g.weapon) attempt((q) => equipWeapon(q, id, g.weapon!));
       }

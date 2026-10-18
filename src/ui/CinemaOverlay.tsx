@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Engine } from '../game/Engine';
 import type { Caption } from '../cinema/types';
+import { splitLine } from '../cinema/lines';
 import { useT } from '../i18n';
 import './cinema.css';
 import { portraitUrl } from './portrait';
@@ -23,20 +24,14 @@ function CaptionView({ caption, age }: { caption: Caption; age: number }) {
   switch (caption.kind) {
     case 'stamp':
       return (
-        <div className="cine-stamp" style={style}>
-          <div className="cine-stamp-when">{t(caption.when)}</div>
-          <div className="cine-stamp-where">{t(caption.where)}</div>
+        // One small neutral line at the bottom, the same in every film (owner 2026-10-18).
+        <div className="film-stamp" style={style}>
+          {t(caption.when)} · {t(caption.where)}
         </div>
       );
     case 'title':
-      return (
-        <div className="cine-title" style={style}>
-          {caption.eyebrow && <div className="cine-title-eyebrow">{t(caption.eyebrow)}</div>}
-          <div className="cine-title-main">{t(caption.title)}</div>
-          {caption.hanja && <div className="cine-title-hanja">{caption.hanja}</div>}
-          {caption.sub && <div className="cine-title-sub">{t(caption.sub)}</div>}
-        </div>
-      );
+      // No battle title card over the film (owner 2026-10-18): the date and place line says where we are.
+      return null;
     case 'doc':
       return (
         <div className="cine-doc" style={style}>
@@ -66,7 +61,7 @@ function CaptionView({ caption, age }: { caption: Caption; age: number }) {
       );
     case 'card':
       return (
-        <div className={`cine-card cine-card--${caption.side}`} style={style}>
+        <div className="cine-card" style={style}>
           <img className="cine-portrait cine-portrait--large" src={portraitUrl(caption.portrait)} alt="" />
           <div className="cine-card-name">
             <b>{t(caption.who)}</b>
@@ -91,24 +86,22 @@ function CaptionView({ caption, age }: { caption: Caption; age: number }) {
 }
 
 /**
- * A film subtitle for the commander on screen: his name and title, his words, the hanja of a quoted record, its source.
- * When his figure is not on deck (not live, not loaded, a failed load) his portrait comes in as a painted insert.
+ * A film subtitle for the commander on screen (owner 2026-10-18): one colour, Pretendard medium, a soft shadow, a small
+ * name before the line in the same colour. Hanja, titles and records stay out of the frame (src/cinema/SOURCES.md).
+ * No portrait card ever (owner 2026-10-18): without his figure the camera holds wide on his flagship and the line stands alone.
  */
-function SayView({ caption, age, insert }: { caption: Extract<Caption, { kind: 'say' }>; age: number; insert: string | null }) {
+function SayView({ caption, age }: { caption: Extract<Caption, { kind: 'say' }>; age: number }) {
   const t = useT();
   return (
-    <div className={`cine-say cine-say--${caption.side}${caption.text ? '' : ' cine-say--name'}`} style={{ opacity: opacityOf(age, caption.dur) }}>
-      {insert && <img className="cine-say-insert" src={portraitUrl(insert)} alt="" />}
-      <div className="cine-say-who">
-        <b>{t(caption.who)}</b>
-        {caption.role && <span>{t(caption.role)}</span>}
-      </div>
-      {caption.text && <div className="cine-say-text">{t(caption.text)}</div>}
-      {caption.hanja && <div className="cine-hanja cine-say-hanja">{caption.hanja}</div>}
-      <div className="cine-source">
-        {t(caption.source)}
-        {caption.note && ` · ${t(caption.note)}`}
-      </div>
+    <div className="cine-say" style={{ opacity: opacityOf(age, caption.dur) }}>
+      {caption.text ? (
+        <div className="cine-say-text">
+          {!caption.part?.[0] && <span className="cine-say-name">{t(caption.who)}</span>}
+          <span className="cine-say-line">{caption.part ? splitLine(t(caption.text), caption.part[1])[caption.part[0]] : t(caption.text)}</span>
+        </div>
+      ) : (
+        <div className="cine-say-text">{t(caption.who)}</div>
+      )}
     </div>
   );
 }
@@ -126,7 +119,6 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
   const black = useRef<HTMLDivElement>(null);
   const progress = useRef<HTMLDivElement>(null);
   const labels = useRef(new Map<Caption, HTMLDivElement>());
-
   // Captions and controls re-render every frame while anything is showing; the bars, fades and labels are moved here
   // directly, so an idle battle costs one cheap callback a frame.
   useEffect(() => {
@@ -184,6 +176,30 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
     };
   }, [covering, cinema]);
 
+  // The film's controls are out of the picture until the mouse moves or the screen is touched (owner 2026-10-18).
+  const [awake, setAwake] = useState(false);
+  const awakeRef = useRef(false);
+  useEffect(() => {
+    if (!covering) return;
+    let timer = 0;
+    const wake = () => {
+      awakeRef.current = true;
+      setAwake(true);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        awakeRef.current = false;
+        setAwake(false);
+      }, 2400);
+    };
+    window.addEventListener('pointermove', wake, { passive: true });
+    return () => {
+      window.removeEventListener('pointermove', wake);
+      window.clearTimeout(timer);
+      awakeRef.current = false;
+      setAwake(false);
+    };
+  }, [covering]);
+
   const captions = cinema.captions();
   const live = new Set(captions.map((c) => c.caption));
   for (const c of labels.current.keys()) if (!live.has(c)) labels.current.delete(c);
@@ -193,9 +209,15 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
     <div
       className={`cine${covering ? ' cine--covering' : ''}`}
       aria-live="polite"
-      onClick={(e) => {
-        // A click or a tap on the film skips it (the buttons handle their own).
-        if (covering && !(e.target as HTMLElement).closest('button')) cinema.skip();
+      onPointerUp={(e) => {
+        // A click on the film skips it (the buttons handle their own). A first touch only shows the controls; a
+        // second while they show skips.
+        if (!covering || (e.target as HTMLElement).closest('button')) return;
+        if (e.pointerType === 'touch' && !awakeRef.current) {
+          window.dispatchEvent(new PointerEvent('pointermove'));
+          return;
+        }
+        cinema.skip();
       }}
     >
       <div className="cine-bar cine-bar--top" ref={barTop} />
@@ -207,7 +229,7 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
           caption.kind === 'label' ? (
             <div
               key={`${caption.at}${caption.text}`}
-              className={`cine-label cine-label--${caption.side}`}
+              className="cine-label"
               style={{ opacity: opacityOf(age, caption.dur) }}
               ref={(el) => {
                 if (el) labels.current.set(caption, el);
@@ -220,15 +242,20 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
             </div>
           ) : null,
         )}
+      {captions
+        .filter((c) => c.caption.kind === 'stamp')
+        .map(({ caption, age }) => (
+          <CaptionView key={`stamp${caption.at}`} caption={caption} age={age} />
+        ))}
       <div className="cine-lower">
         {captions
-          .filter((c) => c.caption.kind === 'stamp' || c.caption.kind === 'doc' || c.caption.kind === 'line')
+          .filter((c) => c.caption.kind === 'doc' || c.caption.kind === 'line')
           .map(({ caption, age }) => (
             <CaptionView key={`${caption.kind}${caption.at}`} caption={caption} age={age} />
           ))}
       </div>
       {captions.map(({ caption, age }) =>
-        caption.kind === 'say' ? <SayView key={`say${caption.at}`} caption={caption} age={age} insert={cinema.insertFor(caption.cast)} /> : null,
+        caption.kind === 'say' ? <SayView key={`say${caption.at}`} caption={caption} age={age} /> : null,
       )}
       {captions
         .filter((c) => c.caption.kind === 'title' || c.caption.kind === 'quote' || c.caption.kind === 'card')
@@ -236,10 +263,10 @@ export function CinemaOverlay({ engine }: { engine: Engine }) {
           <CaptionView key={`${caption.kind}${caption.at}`} caption={caption} age={age} />
         ))}
       {covering && (
-        <div className="cine-controls">
-          {!online && (
+        <div className={`cine-controls cine-controls--film${awake || cinema.held ? ' is-awake' : ''}`}>
+          {!online && cinema.held && (
             <button className="cine-button" onClick={() => cinema.togglePause()}>
-              {t(cinema.held ? '계속' : '일시정지')} <kbd>Space</kbd>
+              {t('계속')} <kbd>Space</kbd>
             </button>
           )}
           <button className="cine-button" onClick={() => cinema.skip()}>

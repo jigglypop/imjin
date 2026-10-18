@@ -1,0 +1,176 @@
+{
+  "_doc": "Per-ship atlases of the 1571, 1588 and 1805 ships: each kind takes its navy's atlas (atlasLayout.json) and swaps the cells named here for its own images, so no two kinds share hull paint, upper works or stern. Same cell layout, tiling and sizes as the navy's atlas. Written by scripts/ship-textures.mjs kinds; read by src/ships/build/atlas.ts (which kinds have one).",
+  "kinds": {
+    "racegalleon": {
+      "faction": "england",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the oak hull planking below the waterline wale of the English race-built galleon Ark Royal of 1588: long horizontal strakes about 30 cm wide, black pitch in the seams, tarred dark brown with grey salt bloom and green weed staining, iron nail heads, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the painted upper strakes of the English galleon Ark Royal of 1588: horizontal boards painted in the Tudor livery of horizontal stripes of Tudor green and off-white with a row of green-and-white painted lozenges, in faded flat paint (green and white only, no grey, no black), thin gilt fillets, paint flaking to dark oak, salt grime, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the waist and castle sides of the English galleon Ark Royal of 1588: horizontal oak boards with a faded red-ochre wash and narrow black-painted moulding battens every 50 cm, worn to bare wood at the edges, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The flat transom of the English galleon Ark Royal of 1588 seen square-on from behind filling the whole square image edge to edge: two rows of small leaded casement windows with carved frames, the Tudor royal arms carved and painted in red, blue and gold in the centre, green and white painted panels with gilt carved borders, no text, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "pinnace": {
+      "faction": "england",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the clinker-free carvel hull planking of a small English pinnace of 1588: narrow horizontal pine strakes about 20 cm wide, pitch-paid seams, light grey weathered wood with tar streaks and salt bloom, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the upper strakes of a small English pinnace of 1588: horizontal boards painted plain faded green with a single white stripe every 60 cm, scuffed and chipped to grey wood, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the low bulwark of an English pinnace of 1588: horizontal unpainted pine boards running left to right across the whole image (no vertical boards) silvered by sun and salt with black tarred battens, rope chafe marks, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The small flat transom of an English pinnace of 1588 as a flat texture swatch: only the carved and painted face of the transom, which runs off all four edges of the image: plain planking painted faded green and white, a small carved Tudor rose in the centre, one small square window, rudder hinges of iron, no text, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "fireship": {
+      "faction": "england",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull of an old merchant ship turned into a fireship in 1588: horizontal oak strakes heavily charred and blistered, soot-black and scorched brown, cracked, tar running from the seams, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the upper strakes of an old merchant ship of 1588 prepared as a fireship: horizontal boards smeared with pitch and tar, old faded red paint showing through in patches, soot stains, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the bulwarks of a fireship of 1588: horizontal boards coated in glossy black pitch and tallow, drips and smears, scorch marks, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The plain flat transom of an old Elizabethan merchant ship used as a fireship seen square-on from behind filling the whole square image edge to edge: tarred planks, two small shuttered windows, smeared pitch and soot, scorched edges, no text, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "spgalleon": {
+      "faction": "spain",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull planking of the Spanish galleon San Martín of the 1588 Armada: long horizontal oak strakes about 30 cm wide, pitch-paid seams, dark tarred brown-black, white salt crust and weed near the bottom, iron spikes, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the painted upper strakes of the Spanish galleon San Martín of 1588: horizontal boards painted deep faded crimson red with a narrow gilt bead every 45 cm and small yellow painted castles and lions in a repeating frieze, paint chipped to dark wood, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the castle sides of the Spanish galleon San Martín of 1588: horizontal boards painted black with faded red and yellow painted strapwork panels, paint worn at the edges, salt grime, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The high flat stern of the Spanish galleon San Martín, flagship of the 1588 Armada, seen square-on from behind filling the whole square image edge to edge: three tiers of carved galleries with balustrades and small glazed windows, the royal arms of Philip II carved, painted and gilded at the centre, red and black painted panels with gilt carved scrollwork and figures, no text, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "galleass": {
+      "faction": "spain",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull planking of the Neapolitan galleass San Lorenzo of the 1588 Armada: long horizontal pine and oak strakes about 25 cm wide, black pitch seams, dark brown tarred wood with grey wear, salt and weed staining, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the painted upper strakes of a Neapolitan galleass of 1588: horizontal boards painted faded red with a band of yellow ochre and thin black lines along the seams, paint flaking to bare wood, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the oar-deck bulwark of a Neapolitan galleass of 1588: horizontal boards painted black with faded yellow painted oval cartouches spaced along it, scuffed, salt grime, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The rounded carved stern of a Neapolitan galleass of 1588 seen square-on from behind filling the whole square image edge to edge: a gilt carved frame of scrolls and tritons around painted panels in red and yellow, a small carved Habsburg eagle at the top, two small windows, no text, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "urca": {
+      "faction": "spain",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull of a Baltic-built hulk (urca) supply ship of the 1588 Armada: broad horizontal oak strakes about 35 cm wide, tar-blackened, heavy wear and repairs with patched boards, salt bloom, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the upper strakes of a German hulk (urca) of 1588: horizontal boards with old faded blue-grey paint and a narrow red stripe, mostly worn to bare weathered wood, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the bulwarks of a merchant hulk of 1588: horizontal unpainted oak boards running left to right across the whole image, silvered grey, with a black tarred horizontal batten every 60 cm (nothing diagonal or vertical), rope chafe, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The plain round-tucked stern of a Hanseatic merchant hulk (urca) of 1588 as a flat texture swatch: only the carved and painted face of the transom, which runs off all four edges of the image: heavy tarred planking, a small cabin window pair with shutters, a simple carved and faded painted coat of arms of a Hanseatic town, no text, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "reale": {
+      "faction": "holyleague",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull of Don Juan of Austria's flagship galley La Real at Lepanto 1571: long horizontal pine strakes about 25 cm wide, black pitch seams, dark wood, salt bloom, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the painted side of the galley La Real of 1571: horizontal boards painted deep crimson red with gilt carved bead mouldings every 40 cm and small gilt rosettes, paint worn to dark wood at the edges, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the outrigger rail of the galley La Real of 1571: horizontal boards painted black with thin gilt lines and small painted red and gold heraldic medallions spaced along it, scuffed, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The richly carved and gilded stern of Don Juan of Austria's galley La Real of 1571 seen square-on from behind filling the whole square image edge to edge: gilt carved panels of mythological scenes and allegorical figures framed by gilt scrollwork on red and black, a carved crowned Habsburg coat of arms at the top, no text, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "galea": {
+      "faction": "holyleague",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull of a Venetian war galley (galea sottile) of 1571: long horizontal larch strakes about 25 cm wide, black pitch seams, dark brown wood with grey wear, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the painted side of a Venetian war galley of 1571: horizontal boards painted faded Venetian red with a narrow yellow ochre line every 50 cm, chipped to bare wood, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the outrigger rail of a Venetian galley of 1571: horizontal boards painted dark grey-black, worn grey wood showing through, small faded white painted numbers absent, salt grime, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The carved stern of a Venetian war galley of 1571 seen square-on from behind filling the whole square image edge to edge: a carved gilt lion of Saint Mark in a red painted panel framed by carved wooden scrolls, plain dark red planking around it, no text, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "vgalleass": {
+      "faction": "holyleague",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull of a Venetian galleass at Lepanto 1571: long horizontal oak strakes about 30 cm wide, black pitch seams, dark tarred brown-black with grey salt bloom, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the painted side of a Venetian galleass of 1571: horizontal boards painted faded red with a broad yellow ochre band along the oar ports and thin black lines, paint flaking, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the gun-deck bulwark of a Venetian galleass of 1571: horizontal boards painted black with a narrow red stripe, scuffed to grey wood, salt grime, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The broad round carved stern castle of a Venetian galleass of 1571 seen square-on from behind filling the whole square image edge to edge: two small gun ports, a carved gilt winged lion of Saint Mark between carved columns, red and black painted panels, no text, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "sultana": {
+      "faction": "ottoman",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull of Müezzinzade Ali Pasha's flagship galley Sultana at Lepanto 1571: long horizontal oak strakes about 25 cm wide, black pitch seams, dark brown wood, salt bloom, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the painted side of the Ottoman flagship galley Sultana of 1571: horizontal boards painted deep faded crimson with gilt carved tulip and carnation scroll bands every 45 cm, paint worn at the edges, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the outrigger rail of the Ottoman galley Sultana of 1571: horizontal boards painted dark green with a gilt rumi arabesque frieze and thin red lines, worn, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The gilded carved stern of the Ottoman Kapudan Pasha's galley Sultana of 1571 seen square-on from behind filling the whole square image edge to edge: gilt arabesque and saz-leaf carving, inlaid panels of red and green lacquer, a carved crescent finial at the top, a small latticed window, no text, no letters, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "kadirga": {
+      "faction": "ottoman",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull of an Ottoman kadirga war galley of 1571: long horizontal pine strakes about 25 cm wide, black pitch seams, dark brown tarred wood with grey wear, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the painted side of an Ottoman kadirga galley of 1571: horizontal boards painted faded red with thin dull green lines along the seams and a small white painted crescent repeated every metre, chipped, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the outrigger rail of an Ottoman kadirga galley of 1571: horizontal boards painted dark faded green-black, rubbed to grey wood, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The carved stern of an Ottoman kadirga war galley of 1571 seen square-on from behind filling the whole square image edge to edge: simple carved wooden arabesque panels painted faded red and green with a little gilt, a carved crescent at the top, no text, no letters, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "kalyata": {
+      "faction": "ottoman",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull of a small Ottoman kalyata galiot of 1571: narrow horizontal pine strakes about 20 cm wide, pitch-paid seams, grey-brown weathered wood, salt bloom, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the painted side of a small Ottoman galiot of 1571: horizontal boards with old faded green paint and a single red stripe, mostly worn to grey wood, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the light rail of a small Ottoman galiot of 1571: horizontal unpainted pine boards running left to right across the whole image (no vertical boards or battens) silvered by sun with black tarred battens, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The plain small stern of an Ottoman galiot (kalyata) of 1571 seen square-on from behind filling the whole square image edge to edge: weathered planking painted faded green and red, a small carved wooden crescent, no text, no letters, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "firstrate": {
+      "faction": "britain",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull below the lower wale of HMS Victory in 1805: long horizontal oak strakes about 30 cm wide, black-tarred, salt bloom, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the yellow ochre band along a gun tier of HMS Victory in 1805 (the Nelson chequer): horizontal wooden strakes painted warm yellow ochre, smooth even paint, slight chips and salt grime, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the black-painted side of HMS Victory in 1805 between the ochre gun-tier bands: horizontal wooden strakes painted black, smooth glossy paint with slight chips and salt grime, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The stern of HMS Victory in 1805 seen square-on from behind filling the whole square image edge to edge: three tiers of open stern galleries with balustrades and many glazed sash windows, cream and yellow ochre paint with black, a carved and gilded royal coat of arms at the top centre, carved gilt figures at the quarters, no text, no lettering, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "gb74": {
+      "faction": "britain",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull below the wales of a British 74-gun ship of 1805 (HMS Bellerophon): horizontal oak strakes about 30 cm wide, black-tarred and well worn, salt bloom, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the yellow ochre gun-tier band of the British 74 HMS Bellerophon in 1805: horizontal wooden strakes painted slightly dirty pale yellow ochre, sea-stained, chipped, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the black-painted side of a British 74-gun ship of 1805: horizontal strakes painted dull black, faded to charcoal grey in places, chipped, salt streaks running down, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The stern of the British 74-gun ship HMS Bellerophon in 1805 as a flat texture swatch: only the carved and painted face of the transom, which runs off all four edges of the image: two tiers of stern galleries with balustrades and glazed windows, pale ochre and black paint, a modest carved and gilded royal arms at the top, no text, no lettering, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "gbfrigate": {
+      "faction": "britain",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull below the wale of the British 36-gun frigate HMS Euryalus in 1805: horizontal oak strakes about 25 cm wide, black-tarred, clean and well kept, salt bloom, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the single yellow ochre gun-deck band of the British frigate HMS Euryalus in 1805: horizontal strakes painted bright yellow ochre, fresh smooth paint with slight chips, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the black-painted upper side of a British frigate of 1805: horizontal strakes painted glossy black, smooth with slight chips, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The flat stern of the British frigate HMS Euryalus in 1805 seen square-on from behind filling the whole square image edge to edge: one row of glazed sash cabin windows with a carved frame, a small carved gilt royal crown, ochre and black paint, no text, no lettering, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "fr80": {
+      "faction": "france",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull below the wales of the French 80-gun ship Bucentaure in 1805: horizontal oak strakes about 30 cm wide, tarred dark brown-black, weed and salt bloom, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the gun-tier band of the French 80-gun ship Bucentaure in 1805: horizontal wooden strakes painted dull yellow ochre, sea-stained, chipped, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the black-painted side of the French 80-gun ship Bucentaure in 1805: horizontal strakes painted black, faded and weathered to charcoal, salt streaks, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The stern of the French 80-gun flagship Bucentaure in 1805 seen square-on from behind filling the whole square image edge to edge: two tiers of stern galleries with glazed windows and carved balustrades, blue-grey, ochre and black paint, carved gilt laurel wreaths and Napoleonic eagles, no text, no lettering, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "fr74": {
+      "faction": "france",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull below the wales of a French 74-gun ship of 1805 (Redoutable): horizontal oak strakes about 30 cm wide, tarred brown-black, worn grey, salt bloom, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the gun-tier band of the French 74 Redoutable in 1805: horizontal wooden strakes painted faded red-brown ochre (rouge), chipped, sea-stained, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the black-painted side of a French 74-gun ship of 1805: horizontal strakes painted dull black, rubbed to brown wood at the edges, salt streaks, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The stern of the French 74-gun ship Redoutable in 1805 seen square-on from behind filling the whole square image edge to edge: two tiers of glazed stern windows with a single gallery, plain carved frames, red-brown and black paint, a small carved gilt wreath, no text, no lettering, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "trinidad": {
+      "faction": "spain1805",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull below the wales of the Spanish four-decker Santísima Trinidad in 1805: horizontal oak and Cuban mahogany strakes about 30 cm wide, tarred dark red-brown, salt bloom, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the bright red gun-tier band of the Santísima Trinidad in 1805: horizontal wooden strakes painted strong deep red, smooth paint with chips and salt grime, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the black-painted strakes between the red bands of the Santísima Trinidad in 1805: horizontal strakes painted black, smooth with chips, salt grime, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The towering stern of the Spanish four-decker Santísima Trinidad in 1805 seen square-on from behind filling the whole square image edge to edge: four tiers of galleries and glazed windows, red and black paint, a large carved and gilded figure group of the Holy Trinity at the top with the Spanish royal arms, carved gilt scrollwork, no text, no lettering, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    },
+    "es74": {
+      "faction": "spain1805",
+      "slots": {
+        "hull_plank": "Seamless tileable texture of the hull below the wales of a Spanish 74-gun ship of 1805 (San Juan Nepomuceno): horizontal oak strakes about 30 cm wide, tarred dark brown, weed and salt bloom, weathered, aged, film-production prop, muted desaturated colours.",
+        "red_paint": "Seamless tileable texture of the gun-tier band of the Spanish 74 San Juan Nepomuceno in 1805: horizontal wooden strakes painted faded brick red-ochre, sea-stained and chipped, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "black_paint": "Seamless tileable texture of the black-painted side of a Spanish 74-gun ship of 1805: horizontal strakes painted black faded to grey, salt streaks, no ports, weathered, aged, film-production prop, muted desaturated colours.",
+        "stern_panel": "The stern of the Spanish 74-gun ship San Juan Nepomuceno in 1805 seen square-on from behind filling the whole square image edge to edge: two tiers of glazed stern windows with a carved gallery, red-ochre and black paint, a carved gilt figure of Saint John Nepomucene with a crown at the top, no text, no lettering, weathered, aged, film-production prop, muted desaturated colours."
+      }
+    }
+  }
+}

@@ -1,9 +1,11 @@
 import layout from './atlasLayout.json';
 import { SURF } from './surf';
+import aspects from './flagAspect.json';
+import kindAtlas from './kindAtlas.json';
 
-export type Faction = 'joseon' | 'japan' | 'ming';
+export type Faction = 'joseon' | 'japan' | 'ming' | 'england' | 'spain' | 'holyleague' | 'ottoman' | 'britain' | 'france' | 'spain1805';
 
-type Slot = { name: string; size?: number; sheet?: { cols: number; rows: number }; flags?: { name: string; size?: string }[] };
+type Slot = { name: string; size?: number; sheet?: { cols: number; rows: number }; flags?: { name: string }[] };
 const slots = layout.factions as unknown as Record<Faction, Slot[]>;
 
 export const ATLAS = { grid: layout.grid, cell: layout.cell, pad: layout.pad };
@@ -48,24 +50,18 @@ export function flagRect(faction: Faction, sheet: string, flag: string): { cell:
   return { cell: index, rect: [c / cols + inset, 1 - (r + 1) / rows + inset, (c + 1) / cols - inset, 1 - r / rows - inset] };
 }
 
-/**
- * Width over height of a flag's picture as it was painted. The packer squeezes every picture into its slot of the
- * sheet, so cloth of this shape (not the slot's) shows the picture undistorted.
- */
-export function flagAspect(faction: Faction, sheet: string, flag: string): number {
-  const slot = slots[faction].find((s) => s.name === sheet);
-  const size = slot?.flags?.find((x) => x.name === flag)?.size?.split('x').map(Number);
-  return size ? size[0]! / size[1]! : 1;
+/** Width over height of a vector-drawn flag (scripts/draw-flags.mjs), so its cloth is cut to the design; undefined for the 1592 sheets. */
+export function flagAspect(faction: Faction, sheet: string, flag: string): number | undefined {
+  return (aspects as Record<string, number>)[`${faction}/${sheet}/${flag}`];
 }
 
-/** Cloth of the given width/height shape with the same area as w x h. */
-export function clothSize(aspect: number, w: number, h: number): [number, number] {
-  const hh = Math.sqrt((w * h) / aspect);
-  return [aspect * hh, hh];
-}
+/** Kinds with an atlas of their own (the navy's with their hull, upper works and stern swapped, kindAtlas.json). */
+const KIND_ATLAS = new Set(Object.keys(kindAtlas.kinds));
+export const hasKindAtlas = (kind: string) => KIND_ATLAS.has(kind);
 
-export function atlasFiles(faction: Faction, low: boolean) {
+/** The atlas files of a navy, or of one ship when `kind` has its own (`low`: the 1k set). */
+export function atlasFiles(faction: Faction, low: boolean, kind?: string) {
   const sfx = low ? '_1k' : '';
-  const base = `/textures/ships/${faction}`;
+  const base = kind && KIND_ATLAS.has(kind) ? `/textures/ships/kinds/${kind}` : `/textures/ships/${faction}`;
   return { albedo: `${base}_albedo${sfx}.webp`, normal: `${base}_normal${sfx}.webp`, rough: `${base}_rough${sfx}.webp` };
 }

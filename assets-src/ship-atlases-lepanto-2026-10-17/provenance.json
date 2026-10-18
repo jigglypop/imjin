@@ -1,0 +1,27 @@
+{
+  "tool": "scripts/ship-textures.mjs generate + compose",
+  "endpoint": "images/generations",
+  "model": "gpt-image-2",
+  "quality": "high",
+  "size": "1024x1024",
+  "generatedAt": "2026-10-17",
+  "prompts": "src/ships/build/atlasLayout.json factions.holyleague / factions.ottoman, each prompt followed by its style line",
+  "images": 47,
+  "estimatedCostUsd": 8.0,
+  "costNote": "Estimate (~0.17 USD per high-quality 1024x1024 image). Holy League stern panel retried once (first request returned nothing); Ottoman sail_saint and the sultan flag regenerated without the star (the star and crescent is 18th-19th century, anachronistic for 1571).",
+  "raw": "assets-src/textures-ships/{holyleague,ottoman}/*_1.png (gitignored cache)",
+  "published": {
+    "public/textures/ships/holyleague_albedo.webp": "5bc5bd65b9514bade9c7c63c3a27808f1693df6722a0e8a4a22d01d0a438c20d",
+    "public/textures/ships/holyleague_albedo_1k.webp": "39ffef5673abf10b11ef50d27a1ac4f1ef478d1736c18371784da3bf0b280a52",
+    "public/textures/ships/holyleague_normal.webp": "be9b29df83683f14eff4f4b5162c3f3458cbf83e9664c7a316d03fe879c34aab",
+    "public/textures/ships/holyleague_normal_1k.webp": "289b013d1c05f1dca802cf65abbc10d9ef278104376672a407ea04faae132660",
+    "public/textures/ships/holyleague_rough.webp": "da20f82fd94e7c9bdd035cfcde926fb5dc40bb596b54db939ca0dd4646bac179",
+    "public/textures/ships/holyleague_rough_1k.webp": "02657c85247f1c92a5278559b97aa7d16768f1547f352fd6a364d548fd56fec6",
+    "public/textures/ships/ottoman_albedo.webp": "880083ee102af32b498c2981b0b6fa9bdd34aa6f91f109104cf2b839d1e3ab87",
+    "public/textures/ships/ottoman_albedo_1k.webp": "a6cf4d69abb9f5d8963cd120e2e7c23b1442ecf415f5fefd5c1b53e7a944b57a",
+    "public/textures/ships/ottoman_normal.webp": "fb6d0c4f9de2a3d684c55bbe85be673fa0e89069cb557f50dd1b36f168fd327f",
+    "public/textures/ships/ottoman_normal_1k.webp": "0c36424a03296ef5fd7c3e2013e56f8ae2c550182e63df0f16112975a87a7a02",
+    "public/textures/ships/ottoman_rough.webp": "74116e30542287c46b9206e05138e7c72c907df9f85e32cf80e8775c4651fdf2",
+    "public/textures/ships/ottoman_rough_1k.webp": "545bc13e5a436720c57832f35c59666f81238d1f130ec2bc85af95ccd6ea19f6"
+  }
+}

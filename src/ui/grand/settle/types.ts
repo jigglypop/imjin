@@ -1,5 +1,5 @@
 import type { MeshData } from '../../../ships/build/parts';
-import { V_SCALE } from '../../../select/demFrame';
+import { V_SCALE } from '../mapTheatre';
 import { METRES_PER_RADIUS } from '../campPieces';
 import { MESH_SCALE } from '../mapMath';
 import { SETTLEMENT_RADIUS } from '../mapWorld';
@@ -348,6 +348,14 @@ export const CAMP_WALL: Record<FactionId, Record<Tier, WallStyle>> = {
   joseon: { 1: 'jo-palisade', 2: 'jo-rampart', 3: 'jo-stone' },
   japan: { 1: 'wa-curtain', 2: 'wa-earthwork', 3: 'wa-ishigaki' },
   ming: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
+  // The Armada theatre has no solved settlements; its camps are the European kits (campEurope.ts). Masonry stands in.
+  england: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
+  spain: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
+  holyleague: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
+  ottoman: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
+  britain: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
+  france: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
+  spain1805: { 1: 'mg-stockade', 2: 'mg-rammed', 3: 'mg-brick' },
 };
 
 // ---------- colour and light ----------

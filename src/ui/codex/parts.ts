@@ -124,6 +124,105 @@ const PARTS: Record<ModelKind, Part[]> = {
     { id: 'sails', label: '정크 돛', note: '살대를 댄 돛 두 개를 달았습니다.', at: sail(0.6) },
     { id: 'oars', label: '노', note: '바람이 없을 때는 노를 저었습니다.', at: oars },
   ],
+  racegalleon: [
+    { id: 'castles', label: '낮은 선루', note: '존 호킨스가 고친 "레이스 빌트" 갤리온은 앞뒤 선루를 낮추고 선체를 길고 날렵하게 만들었습니다. 바람을 거슬러 더 잘 나아갔습니다.', at: COMMAND_DECK },
+    { id: 'culverin', label: '컬버린포', note: '포신이 긴 장거리 화포입니다. 영국 함대는 거리를 두고 포격하며 에스파냐 배에 접근을 허락하지 않았습니다.', at: gun('culverin') },
+    { id: 'ports', label: '두 층의 포문', note: '아래 갑판과 위 갑판에 포문을 두 줄로 냈습니다. 포문 뚜껑은 싸울 때 위로 들어 올렸습니다.', at: gun(null) },
+    { id: 'sails', label: '가로돛', note: '앞돛대와 큰돛대에 성 조지 십자를 그린 가로돛을, 뒤쪽 돛대에는 세모난 래틴 돛을 달았습니다.', at: sail(0.55) },
+    { id: 'flag', label: '성 조지 깃발', note: '흰 바탕에 붉은 십자, 잉글랜드의 깃발입니다.', at: flag('pennant') },
+  ],
+  pinnace: [
+    { id: 'hull', label: '작은 선체', note: '돛대 둘의 작고 빠른 배입니다. 정찰과 연락, 큰 배의 호위를 맡았습니다.', at: wall(0.6) },
+    { id: 'saker', label: '세이커포', note: '가벼운 화포 몇 문만 실었습니다.', at: gun('saker') },
+    { id: 'sails', label: '가로돛', note: '두 돛대에 가로돛을, 고물에 작은 래틴 돛을 달았습니다.', at: sail(0.55) },
+  ],
+  fireship: [
+    { id: 'hull', label: '낡은 상선', note: '1588년 8월 7일 밤 칼레 앞바다에서 영국군은 낡은 상선 여덟 척에 불을 붙여 바람에 띄워 보냈습니다.', at: wall(0.6) },
+    { id: 'brush', label: '나뭇단과 역청', note: '갑판에 나뭇단과 역청 통을 쌓고, 대포에는 탄을 재워 둔 채 불길 속에서 저절로 터지게 했습니다.', at: (a) => lift(a.fireSpots[0], 0.6) },
+    { id: 'sails', label: '돛', note: '돛을 펴고 키를 묶어 둔 채 사람은 작은 배로 옮겨 탔습니다.', at: sail(0.55) },
+  ],
+  spgalleon: [
+    { id: 'castles', label: '높은 선루', note: '앞뒤로 여러 층의 선루를 높이 쌓았습니다. 병사를 가득 태우고 적선에 올라타 싸우려는 배였습니다.', at: COMMAND_DECK },
+    { id: 'cannon', label: '대포', note: '무거운 탄을 쏘는 짧은 대포입니다. 육지용 포가에 얹은 것이 많아 다시 장전하기가 느렸습니다.', at: gun('cannon') },
+    { id: 'base', label: '선회포', note: '선루 난간에 꽂아 쓰는 작은 포로, 올라타려는 적을 쓸어 냈습니다.', at: gun('base') },
+    { id: 'sails', label: '부르고뉴 십자 돛', note: '돛에는 붉은 부르고뉴 십자를, 기함의 큰 돛에는 큰 십자를 그렸습니다.', at: sail(0.55) },
+    { id: 'stern', label: '고물 장식', note: '고물을 금박 조각과 성인의 그림으로 꾸몄습니다.', at: (a) => lift(a.stern, 3.5, 0.4) },
+  ],
+  galleass: [
+    { id: 'bow', label: '뱃머리 포루', note: '높은 뱃머리 포루에 큰 대포를 앞으로 향해 놓았습니다. 갤리선과 달리 배 앞쪽으로 강한 포격을 할 수 있었습니다.', at: (a) => lift(a.fireSpots[3], 0.6) },
+    { id: 'oars', label: '노와 노꾼', note: '양쪽에 노가 서른 개 남짓이었습니다. 바람이 없어도 움직일 수 있었지만 큰 선체에는 힘이 모자랐습니다.', at: oars },
+    { id: 'sails', label: '래틴 돛', note: '돛대 셋에 세모난 래틴 돛을 달았습니다.', at: sail(0.6) },
+    { id: 'stern', label: '고물 차양', note: '지휘하는 고물 갑판 위에 줄무늬 차양을 쳤습니다.', at: COMMAND_DECK },
+  ],
+  urca: [
+    { id: 'hull', label: '둥근 선체', note: '배가 둥글고 넓은 발트해의 화물선입니다. 무적함대의 보급선으로 식량과 물, 말과 화약을 실었습니다.', at: wall(0.6) },
+    { id: 'saker', label: '세이커포', note: '가벼운 화포 몇 문만 실어 싸움에는 약했습니다.', at: gun('saker') },
+    { id: 'sails', label: '가로돛', note: '느렸고 바람을 거슬러 가기가 힘들었습니다.', at: sail(0.55) },
+  ],  reale: [
+    { id: 'bow', label: '이물 포대', note: '이물 단 위에 큰 대포 한 문과 작은 포 넷을 앞으로 향해 놓았습니다.', at: (a) => lift(a.fireSpots[3], 0.6) },
+    { id: 'oars', label: '노와 노꾼', note: '노 하나에 노꾼 셋에서 다섯이 붙어 저었습니다. 노꾼은 죄수, 노예, 품삯을 받는 자원자였습니다.', at: oars },
+    { id: 'sails', label: '래틴 돛', note: '세모난 래틴 돛을 달았지만, 싸울 때는 돛을 내리고 노로만 움직였습니다.', at: sail(0.6) },
+    { id: 'stern', label: '고물', note: '지휘관이 서는 고물 갑판 위에 차양을 쳤습니다.', at: COMMAND_DECK },
+  ],
+  galea: [
+    { id: 'bow', label: '이물 포대', note: '이물 단 위에 큰 대포 한 문과 작은 포 두셋을 앞으로 향해 놓았습니다.', at: (a) => lift(a.fireSpots[3], 0.6) },
+    { id: 'oars', label: '노와 노꾼', note: '노 하나에 노꾼 셋에서 다섯이 붙어 저었습니다. 노꾼은 죄수, 노예, 품삯을 받는 자원자였습니다.', at: oars },
+    { id: 'sails', label: '래틴 돛', note: '세모난 래틴 돛을 달았지만, 싸울 때는 돛을 내리고 노로만 움직였습니다.', at: sail(0.6) },
+    { id: 'stern', label: '고물', note: '지휘관이 서는 고물 갑판 위에 차양을 쳤습니다.', at: COMMAND_DECK },
+  ],
+  vgalleass: [
+    { id: 'bow', label: '뱃머리 포루', note: '둥근 뱃머리 포루에서 큰 포를 앞과 옆으로 쏘았습니다. 레판토에서 이 포격이 오스만 대열을 흐트러뜨렸습니다.', at: (a) => lift(a.fireSpots[3], 0.6) },
+    { id: 'oars', label: '노와 노꾼', note: '큰 선체에 비해 노의 힘이 모자라 싸움터까지 갤리선이 끌어 주었습니다.', at: oars },
+    { id: 'sails', label: '래틴 돛', note: '돛대 셋에 래틴 돛을 달았습니다.', at: sail(0.6) },
+  ],
+  sultana: [
+    { id: 'bow', label: '이물 포대', note: '이물 단 위에 큰 대포 한 문과 작은 포를 놓았습니다. 병사들은 포보다 활을 많이 썼습니다.', at: (a) => lift(a.fireSpots[3], 0.6) },
+    { id: 'oars', label: '노와 노꾼', note: '노 하나에 노꾼 셋에서 다섯이 붙어 저었습니다. 노꾼은 죄수, 노예, 품삯을 받는 자원자였습니다.', at: oars },
+    { id: 'sails', label: '래틴 돛', note: '세모난 래틴 돛을 달았지만, 싸울 때는 돛을 내리고 노로만 움직였습니다.', at: sail(0.6) },
+    { id: 'stern', label: '고물', note: '지휘관이 서는 고물 갑판 위에 차양을 쳤습니다.', at: COMMAND_DECK },
+  ],
+  kadirga: [
+    { id: 'bow', label: '이물 포대', note: '이물 포는 베네치아 갤리선보다 적었습니다.', at: (a) => lift(a.fireSpots[3], 0.6) },
+    { id: 'oars', label: '노와 노꾼', note: '노 하나에 노꾼 셋에서 다섯이 붙어 저었습니다. 노꾼은 죄수, 노예, 품삯을 받는 자원자였습니다.', at: oars },
+    { id: 'sails', label: '래틴 돛', note: '세모난 래틴 돛을 달았지만, 싸울 때는 돛을 내리고 노로만 움직였습니다.', at: sail(0.6) },
+    { id: 'stern', label: '고물', note: '지휘관이 서는 고물 갑판 위에 차양을 쳤습니다.', at: COMMAND_DECK },
+  ],
+  kalyata: [
+    { id: 'oars', label: '노와 노꾼', note: '노 하나에 노꾼 둘이 붙은 가볍고 빠른 배였습니다.', at: oars },
+    { id: 'sails', label: '래틴 돛', note: '돛대 하나에 큰 래틴 돛을 달았습니다.', at: sail(0.6) },
+  ],
+  firstrate: [
+    { id: 'decks', label: '세 층의 포갑판', note: '아래 갑판에 32파운드, 가운데에 24파운드, 위에 12파운드 포를 실어 한쪽 현측 포격만 50문이었습니다.', at: gun(null) },
+    { id: 'chequer', label: '넬슨 체크무늬', note: '검은 선체에 포문 줄마다 노란 띠를 칠하고 포문 뚜껑은 검게 칠했습니다. 넬슨이 함대 전체에 이 칠을 따르게 했습니다 (Goodwin 2005).', at: gun(null) },
+    { id: 'long32', label: '32파운드 장포', note: '가장 무거운 포를 가장 낮은 갑판에 실어 배가 기울지 않게 했습니다.', at: gun('long32') },
+    { id: 'quarterdeck', label: '뒷갑판', note: '함장과 제독이 서서 지휘하던 곳입니다. 넬슨은 이곳에서 르두타블호 저격병의 총에 맞았습니다.', at: COMMAND_DECK },
+    { id: 'sails', label: '가로돛', note: '돛대 셋에 가로돛을 세 단씩 달고, 뒤쪽 돛대에는 세로돛(스팽커)을 달았습니다.', at: sail(0.55) },
+  ],
+  gb74: [
+    { id: 'chequer', label: '넬슨 체크무늬', note: '검은 선체에 포문 줄마다 노란 띠를 칠하고 포문 뚜껑은 검게 칠했습니다. 넬슨이 함대 전체에 이 칠을 따르게 했습니다 (Goodwin 2005).', at: gun(null) },
+    { id: 'carronade', label: '캐로네이드', note: '짧고 가벼운 대구경 포로, 가까운 거리에서 적의 고물을 부쉈습니다.', at: gun('carronade') },
+    { id: 'sails', label: '가로돛', note: '돛대 셋에 가로돛을 세 단씩 달았습니다.', at: sail(0.55) },
+  ],
+  gbfrigate: [
+    { id: 'deck', label: '한 층의 포갑판', note: '포갑판이 하나뿐이라 가볍고 빨랐습니다. 전열에는 서지 않았습니다.', at: gun(null) },
+    { id: 'sails', label: '가로돛', note: '빠르게 오가며 기함의 신호를 받아 다른 배에 다시 올렸습니다.', at: sail(0.55) },
+  ],
+  fr80: [
+    { id: 'long36', label: '36리브르 장포', note: '영국 32파운드 포보다 무거운 탄을 쏘는 아래 갑판의 포입니다.', at: gun('long36') },
+    { id: 'stern', label: '고물', note: '고물 회랑의 유리창이 넓어, 빅토리호가 고물을 지나며 쏜 포탄이 배 끝까지 꿰뚫었습니다.', at: (a) => lift(a.stern, 3.5, 0.4) },
+  ],
+  fr74: [
+    { id: 'tops', label: '돛대 위 저격대', note: '뤼카는 돛대 위 망루에 소총수와 척탄병을 올려 적 갑판을 쏘게 했습니다.', at: sail(0.8) },
+    { id: 'long36', label: '36리브르 장포', note: '아래 갑판의 무거운 포입니다.', at: gun('long36') },
+  ],
+  trinidad: [
+    { id: 'decks', label: '네 층의 포갑판', note: '1795년 앞뒤 갑판을 이어 네 번째 포갑판을 만들고 대포 136문을 실었습니다.', at: gun(null) },
+    { id: 'stern', label: '고물 장식', note: '삼위일체를 새긴 고물 조각으로 이름이 붙었습니다.', at: (a) => lift(a.stern, 3.5, 0.4) },
+  ],
+  es74: [
+    { id: 'long36', label: '36파운드 장포', note: '아래 갑판의 무거운 포입니다. 훈련이 모자라 장전이 느렸습니다.', at: gun('long36') },
+    { id: 'sails', label: '가로돛', note: '돛대 셋에 가로돛을 세 단씩 달았습니다.', at: sail(0.55) },
+  ],
 };
 
 /** The anchors a kind is drawn and labelled with: its own, or its model's scaled to it. */

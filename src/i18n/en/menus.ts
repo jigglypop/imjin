@@ -7,7 +7,6 @@ export const EN_MENUS: Record<string, string> = {
   '{name} 해전 준비 중': 'Preparing the battle of {name}',
 
   // Main menu
-  '나라를 지킨 바다': 'The sea that held a kingdom',
   '명량, 한산도 등 임진왜란 해전 아홉 곳을 직접 지휘합니다.': 'Command nine naval battles of the Imjin War, from Myeongnyang to Hansando.',
   '명량, 한산도 등 아홉 해전': 'Nine battles, Myeongnyang to Hansando',
   '조선, 명, 일본 중 한 나라를 골라 남해안의 포구를 차례로 차지합니다.': 'Pick Joseon, Ming or Japan and take the ports of the southern coast one by one.',
@@ -63,6 +62,7 @@ export const EN_MENUS: Record<string, string> = {
   '전투 화면을 시작하지 못했습니다': 'The battle screen could not start',
   '이 기기에서 그래픽을 켜지 못했습니다. 가벼운 설정으로 다시 시도하면 대부분 해결됩니다.': 'Graphics could not start on this device. Trying again with lighter settings usually fixes it.',
   '자세히': 'Details',
+  '발포와 폭발 때 화면이 흔들리는 정도': 'How much the view shakes with gunfire and blasts',
   '가벼운 설정으로 다시 시도': 'Retry with lighter settings',
 
   // Conquest setup

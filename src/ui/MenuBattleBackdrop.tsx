@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import type { MenuBattleScene } from './menuBattleScene';
+import type { MenuBattleScene, MenuHero } from './menuBattleScene';
+import { trackTask } from './assetProgress';
 
 /** No engine, session or campaign is created by the decorative battle. */
-export function MenuBattleBackdrop() {
+export function MenuBattleBackdrop({ hero }: { hero?: MenuHero }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -23,14 +24,18 @@ export function MenuBattleBackdrop() {
       firstFrame = requestAnimationFrame(() => {
         timer = window.setTimeout(async () => {
           let next: MenuBattleScene | undefined;
+          // The scene's code, ships and shaders show on the top-edge bar (AssetBar) until its first frame.
+          const job = trackTask(4_000_000, 7000);
           try {
             if (cancelled || attempt !== generation || !enabled() || document.hidden) return;
             const { MenuBattleScene } = await import('./menuBattleScene');
+            job.set(0.15);
             if (cancelled || attempt !== generation || !enabled() || document.hidden || !canvas.current) return;
-            next = new MenuBattleScene(canvas.current, () => { if (!cancelled && attempt === generation) setReady(true); });
+            next = new MenuBattleScene(canvas.current, () => { if (!cancelled && attempt === generation) setReady(true); }, hero);
             scene = next;
             await next.init();
-          } catch {
+          } catch (e) {
+            console.warn('menu scene', e);
             // Graphics are decoration; every mode stays available on the real-rendered poster.
             next?.dispose();
             if (attempt === generation) {
@@ -38,6 +43,7 @@ export function MenuBattleBackdrop() {
               if (!cancelled) setReady(false);
             }
           } finally {
+            job.done();
             if (attempt === generation) pending = false;
           }
         }, 180);
@@ -67,8 +73,11 @@ export function MenuBattleBackdrop() {
       connection?.removeEventListener('change', change);
       document.removeEventListener('visibilitychange', start);
       scene?.dispose();
+      setReady(false);
     };
-  }, []);
+    // A chapter's flagship is a scene of its own: picking another chapter builds it afresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hero?.kind]);
   return <div className={`menu-battle ${ready ? 'menu-battle--ready' : ''}`} aria-hidden="true" data-state={ready ? 'ready' : 'poster'}>
     <canvas ref={canvas} tabIndex={-1} />
   </div>;

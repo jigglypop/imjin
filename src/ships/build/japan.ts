@@ -2,17 +2,13 @@
  * Parts shared by the Japanese ships: nobori banners, shachihoko, maku curtains, tategaki shield boards and the
  * plaster-and-timber walls of the fortress tiers.
  */
-import { clothSize, flagAspect, flagRect } from './atlas';
-import { byLod, knob, type Ctx } from './common';
-import { box, cloth, compose, cylinder, rotY, spike, sweep, rectSection, tube, xlate, Paint, type TubeStation, type V3 } from './parts';
+import { flagRect } from './atlas';
+import { byLod, type Ctx } from './common';
+import { box, cloth, compose, cylinder, rotY, spike, sweep, rectSection, tube, xlate, type Paint, type TubeStation, type V3 } from './parts';
 
-/**
- * Tall banner on a pole with a crossbar: the pole is at z, the banner hangs toward +z. It takes its picture's shape with
- * the area of w x h, so the crest stays round.
- */
-export function nobori(ctx: Ctx, base: V3, poleH: number, w0: number, h0: number, key: string, phase: number, wood: Paint) {
+/** Tall narrow banner on a pole with a crossbar: the pole is at z, the banner hangs toward +z. */
+export function nobori(ctx: Ctx, base: V3, poleH: number, w: number, h: number, key: string, phase: number, wood: Paint) {
   const [sheet, name] = key.split('/') as [string, string];
-  const [w, h] = clothSize(flagAspect(ctx.faction, sheet, name), w0, h0);
   const [x, y, z] = base;
   const seg = byLod(ctx, 6, 5, 4);
   cylinder(ctx.b, wood, [x, y, z], [x, y + poleH, z], 0.075, 0.055, seg, true);
@@ -25,7 +21,7 @@ export function nobori(ctx: Ctx, base: V3, poleH: number, w0: number, h0: number
   cylinder(ctx.b, wood, [x, top - 0.12, z], [x, top - 0.12, z + sgn * (w + 0.05)], 0.04, 0.04, 4, true);
   cloth(ctx.b, paint, [x + 0.01, top - 0.16, z], [0, 0, sgn * w], [0, -h, 0], { nu: byLod(ctx, 3, 2, 1), nv: byLod(ctx, 9, 4, 1), flutter: 1.0, wave: 0.05 * w, phase });
   if (ctx.lod === 0) {
-    knob(ctx, wood, [x, top, z], 0.07);
+    cylinder(ctx.b, wood, [x, top, z], [x, top + 0.3, z], 0.07, 0.0, 5, false);
     cylinder(ctx.b, wood, [x, top - h - 0.14, z], [x, top - h - 0.14, z + sgn * (w + 0.05)], 0.035, 0.035, 4, true);
   }
 }
@@ -52,19 +48,10 @@ export function shachihoko(ctx: Ctx, gold: Paint, base: V3, facing: 1 | -1, scal
   });
 }
 
-/**
- * Indigo curtains with the crest, hung along an eave: about square panels, as the crest's picture is square, each
- * showing the middle of the picture cut to its own shape so the crest stays round.
- */
-export function makuRun(ctx: Ctx, maku: Paint, x0: number, x1: number, z: number, yTop: number, h: number, phase: number, wood: Paint) {
+/** Indigo curtains with the crest, hung along an eave: one panel per bay. */
+export function makuRun(ctx: Ctx, maku: Paint, x0: number, x1: number, z: number, yTop: number, h: number, n: number, phase: number, wood: Paint) {
   if (ctx.lod > 1) return;
-  const n = Math.max(1, Math.round((x1 - x0) / h));
   const bay = (x1 - x0) / n;
-  const r = maku.rect!;
-  const a = (bay - 0.14) / h;
-  const cu = a < 1 ? ((r[2] - r[0]) * (1 - a)) / 2 : 0;
-  const cv = a > 1 ? ((r[3] - r[1]) * (1 - 1 / a)) / 2 : 0;
-  maku = new Paint(maku.cell, maku.size, maku.surf, maku.tint, [r[0] + cu, r[1] + cv, r[2] - cu, r[3] - cv]);
   // The cloth runs from its top-right corner leftward so its print faces outward.
   for (let i = 0; i < n; i += 1) {
     const xa = x0 + bay * i;

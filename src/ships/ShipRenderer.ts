@@ -2,6 +2,7 @@ import {
   Box3,
   BufferAttribute,
   BufferGeometry,
+  DefaultLoadingManager,
   DoubleSide,
   Float32BufferAttribute,
   Group,
@@ -60,6 +61,10 @@ import { emberGlow, weather } from './weather';
 import { charShading } from '../fx/fire/char';
 import { disposeTree, freeAfterDraw } from '../render/dispose';
 import { PHASE_RANGE, SWAY_RANGE, TINT_RANGE } from './build/pack';
+import { watchManager } from '../ui/assetProgress';
+
+// Textures decoded through <img> (TextureLoader) show on the background-download bar with the models.
+watchManager(DefaultLoadingManager);
 
 export type ShipModelSpec = {
   kind: ShipKind;
@@ -83,6 +88,29 @@ export const SHIP_MODELS: ShipModelSpec[] = [
   { kind: 'kobaya', variant: 0, base: '/models/kobaya', axis: 'z', bow: 1, waterline: 0.11 },
   { kind: 'mingship', variant: 0, base: '/models/mingship', axis: 'z', bow: 1, waterline: 0.15 },
   { kind: 'mingsmall', variant: 0, base: '/models/mingsmall', axis: 'z', bow: 1, waterline: 0.1 },
+  // The 1588 ships are procedural only; under ?ships=legacy they fall back to a Ming model (FALLBACK_MODEL).
+  { kind: 'racegalleon', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'racegalleon', variant: 1, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'spgalleon', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'spgalleon', variant: 1, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'galleass', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'reale', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.12 },
+  { kind: 'galea', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.12 },
+  { kind: 'vgalleass', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.12 },
+  { kind: 'sultana', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.12 },
+  { kind: 'kadirga', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.12 },
+  { kind: 'kalyata', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.12 },
+  { kind: 'urca', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'pinnace', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.1 },
+  { kind: 'fireship', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.1 },
+  // The ships of 1805 are procedural only.
+  { kind: 'firstrate', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'gb74', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'gbfrigate', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'fr80', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'fr74', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'trinidad', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
+  { kind: 'es74', variant: 0, base: '', axis: 'z', bow: 1, waterline: 0.15 },
 ];
 
 export const FALLBACK_MODEL: Partial<Record<ShipKind, string>> = {
@@ -90,6 +118,12 @@ export const FALLBACK_MODEL: Partial<Record<ShipKind, string>> = {
   kobaya: '/models/sekibune_v2',
   mingship: '/models/atakebune_v2',
   mingsmall: '/models/sekibune_v2',
+  racegalleon: '/models/mingship',
+  spgalleon: '/models/mingship',
+  galleass: '/models/mingship',
+  urca: '/models/mingship',
+  pinnace: '/models/mingsmall',
+  fireship: '/models/mingsmall',
 };
 
 /** Detail levels a full model set has: near, mid, far. A model loaded without its near level has fewer. */
@@ -368,7 +402,7 @@ function clothHoles(P: any, tear: any, char: any, seed: any) {
  * Hull material. With a cut attribute the hull is drawn as a section: everything above the cut height (in ship space)
  * is discarded and the inside faces show as raw timber, so the decks below can be seen.
  */
-function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, b: InstancedBufferAttribute, c?: InstancedBufferAttribute) {
+export function createMaterial(src: MeshStandardMaterial, a: InstancedBufferAttribute, b: InstancedBufferAttribute, c?: InstancedBufferAttribute) {
   const m = new MeshStandardNodeMaterial();
   m.side = c ? DoubleSide : src.side;
   const atlas = src.userData.atlas as { grid: number; cell: number; pad: number } | undefined;

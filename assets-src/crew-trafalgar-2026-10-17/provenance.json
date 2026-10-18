@@ -1,0 +1,959 @@
+{
+  "date": "2026-10-17",
+  "pipeline": "CREW_SET=trafalgar scripts/crew-armada.mjs",
+  "characters": {
+    "britain_shot": {
+      "base": "japan_ashigaru",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A British Royal Marine private of 1805: a black round hat with the brim turned up on one side, a red wool coatee with white facings and white crossbelts, white waistcoat and white breeches, black gaiters, black shoes. Clean-shaven, short hair.",
+        "poseReference": "render of japan_ashigaru bind pose",
+        "usage": {
+          "input_tokens": 1289,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 265
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3045
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "05a98e73-d88d-4b88-aadc-87d434fcd640"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "7298f5ce-7f5e-45b0-92ed-d402b88356ae",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5213834998059645,
+          "sy": 1.6994659930971134
+        },
+        "lods": [
+          {
+            "verts": 1907,
+            "tris": 1900
+          },
+          {
+            "verts": 970,
+            "tris": 720
+          },
+          {
+            "verts": 230,
+            "tris": 212
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "shoot",
+          "reload",
+          "melee",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "kneel",
+          "parry",
+          "combo",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "aim"
+        ]
+      }
+    },
+    "britain_soldier": {
+      "base": "japan_samurai",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A British Royal Navy seaman of 1805 ready to board: a black tarred round hat, a short blue jacket open over a checked shirt, a red neckerchief, loose white canvas trousers, black shoes. Clean-shaven, a short pigtail.",
+        "poseReference": "render of japan_samurai bind pose",
+        "usage": {
+          "input_tokens": 1284,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 260
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3040
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "29101470-4709-4d8e-85a3-6d3d87321c47"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "f520c0cb-520e-4551-957e-1f34bea09370",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6600457291370159,
+          "sy": 1.6999735464593664
+        },
+        "lods": [
+          {
+            "verts": 2122,
+            "tris": 1906
+          },
+          {
+            "verts": 1110,
+            "tris": 740
+          },
+          {
+            "verts": 218,
+            "tris": 202
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "melee",
+          "thrust",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "combo",
+          "slash",
+          "parry",
+          "block",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "britain_officer": {
+      "base": "ming_officer",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Royal Navy lieutenant of 1805: a black bicorne hat worn athwartships, a dark blue undress coat with white lapels piping and gold buttons, white waistcoat and breeches, black Hessian boots. Clean-shaven, powdered queue.",
+        "poseReference": "render of ming_officer bind pose",
+        "usage": {
+          "input_tokens": 1282,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 258
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3038
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "2bf58468-7b9b-4c82-a3b8-947d137c5041"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "89ade167-9f99-45eb-b399-c0380571b66f",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5630107692075559,
+          "sy": 1.6998119558496618
+        },
+        "lods": [
+          {
+            "verts": 1849,
+            "tris": 1682
+          },
+          {
+            "verts": 988,
+            "tris": 666
+          },
+          {
+            "verts": 176,
+            "tris": 164
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "command",
+          "melee",
+          "hit",
+          "die",
+          "cheer",
+          "wave",
+          "signal",
+          "parry",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "britain_sailor": {
+      "base": "rower",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A British Royal Navy gunner of 1805 in action: bare-chested with a black silk kerchief tied round his head against the noise, loose white canvas trousers rolled at the ankle, barefoot. Clean-shaven.",
+        "poseReference": "render of rower bind pose",
+        "usage": {
+          "input_tokens": 1274,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 250
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3030
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "9388b976-bb0f-482b-ad33-0e91a6ca90b0"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "3459ecc0-0566-4c5e-91b2-2bec54cd2c62",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6744771338647355,
+          "sy": 1.7007421344110296
+        },
+        "lods": [
+          {
+            "verts": 1670,
+            "tris": 1646
+          },
+          {
+            "verts": 829,
+            "tris": 624
+          },
+          {
+            "verts": 219,
+            "tris": 186
+          }
+        ],
+        "clips": [
+          "idle",
+          "row",
+          "haul",
+          "carry",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "ready",
+          "ram",
+          "bucket",
+          "douse",
+          "kneel",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "drumroll",
+          "drum"
+        ]
+      }
+    },
+    "france_shot": {
+      "base": "japan_ashigaru",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A French line infantryman serving as marine aboard a ship of the line in 1805: a black bicorne hat with a tricolour cockade, a dark blue coat with white lapels and red cuffs, white crossbelts, white waistcoat and breeches, black gaiters. Moustache.",
+        "poseReference": "render of japan_ashigaru bind pose",
+        "usage": {
+          "input_tokens": 1293,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 269
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3049
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "d1141c3a-692f-4349-96bc-50efb98f42bf"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "789d0048-0a01-466c-bfa9-f0a41148a614",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6347247831903897,
+          "sy": 1.7008528744566367
+        },
+        "lods": [
+          {
+            "verts": 1789,
+            "tris": 1900
+          },
+          {
+            "verts": 930,
+            "tris": 722
+          },
+          {
+            "verts": 223,
+            "tris": 212
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "shoot",
+          "reload",
+          "melee",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "kneel",
+          "parry",
+          "combo",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "aim"
+        ]
+      }
+    },
+    "france_soldier": {
+      "base": "japan_samurai",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A French Navy sailor of 1805 ready to board: a red wool stocking cap, a short dark blue jacket over a blue-and-white striped shirt, loose white canvas trousers, bare feet. Side-whiskers.",
+        "poseReference": "render of japan_samurai bind pose",
+        "usage": {
+          "input_tokens": 1273,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 249
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3029
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "bf1bf673-5147-41f3-9280-a08ebb229db6"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "90441176-923b-4498-92cf-a0ca82616bf8",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.66539972004423,
+          "sy": 1.6986248197580411
+        },
+        "lods": [
+          {
+            "verts": 2060,
+            "tris": 1914
+          },
+          {
+            "verts": 1080,
+            "tris": 740
+          },
+          {
+            "verts": 213,
+            "tris": 206
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "melee",
+          "thrust",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "combo",
+          "slash",
+          "parry",
+          "block",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "france_officer": {
+      "base": "ming_officer",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A French Imperial Navy officer of 1805: a black bicorne with a tricolour cockade, a dark blue coat with gold buttons and a red waistcoat, white breeches, black boots. Clean-shaven.",
+        "poseReference": "render of ming_officer bind pose",
+        "usage": {
+          "input_tokens": 1275,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 251
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3031
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "bce3ea3f-3d42-4aa0-bcab-0e97b269a96b"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "13cd9ed4-fe8a-4ccf-9b1a-93d8e000597a",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6195090949558677,
+          "sy": 1.698218750262734
+        },
+        "lods": [
+          {
+            "verts": 1776,
+            "tris": 1686
+          },
+          {
+            "verts": 957,
+            "tris": 666
+          },
+          {
+            "verts": 181,
+            "tris": 170
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "command",
+          "melee",
+          "hit",
+          "die",
+          "cheer",
+          "wave",
+          "signal",
+          "parry",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "france_sailor": {
+      "base": "rower",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A French Navy gunner of 1805 in action: a red stocking cap, a sleeveless white shirt open at the neck, loose white canvas trousers, barefoot. Stubble.",
+        "poseReference": "render of rower bind pose",
+        "usage": {
+          "input_tokens": 1266,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 242
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3022
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "be2aa260-a384-415d-8ab2-0791883f364a"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "f9692d6c-4455-455f-a514-0f5c4406352b",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5781973099568314,
+          "sy": 1.6991752257971726
+        },
+        "lods": [
+          {
+            "verts": 1689,
+            "tris": 1646
+          },
+          {
+            "verts": 834,
+            "tris": 624
+          },
+          {
+            "verts": 221,
+            "tris": 186
+          }
+        ],
+        "clips": [
+          "idle",
+          "row",
+          "haul",
+          "carry",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "ready",
+          "ram",
+          "bucket",
+          "douse",
+          "kneel",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "drumroll",
+          "drum"
+        ]
+      }
+    },
+    "spain1805_shot": {
+      "base": "japan_ashigaru",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Spanish marine (infantería de marina) of 1805: a black bicorne with a red cockade, a dark blue coat with red facings and cuffs, white crossbelts, red waistcoat, blue breeches, black gaiters. Black moustache.",
+        "poseReference": "render of japan_ashigaru bind pose",
+        "usage": {
+          "input_tokens": 1286,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 262
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3042
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "d6817012-4906-4176-8fca-1bf16529a5c2"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "ddb5fd66-6d80-4553-9936-881eeb30e10d",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5535067413264172,
+          "sy": 1.7004595707810362
+        },
+        "lods": [
+          {
+            "verts": 2136,
+            "tris": 1882
+          },
+          {
+            "verts": 997,
+            "tris": 710
+          },
+          {
+            "verts": 242,
+            "tris": 206
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "shoot",
+          "reload",
+          "melee",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "kneel",
+          "parry",
+          "combo",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "aim"
+        ]
+      }
+    },
+    "spain1805_soldier": {
+      "base": "japan_samurai",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Spanish Navy sailor of 1805 ready to board: a red wool cap, a short brown jacket over a white shirt, a red sash, loose white canvas trousers, rope-soled shoes. Dark stubble.",
+        "poseReference": "render of japan_samurai bind pose",
+        "usage": {
+          "input_tokens": 1273,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 249
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3029
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "9265600f-fe1a-4dd2-a0d9-763f8e2a0d7a"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "4c9ccbe7-2d63-4082-8e53-3500f859f0d6",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6550993040845325,
+          "sy": 1.725119975125
+        },
+        "lods": [
+          {
+            "verts": 2081,
+            "tris": 1914
+          },
+          {
+            "verts": 1119,
+            "tris": 740
+          },
+          {
+            "verts": 236,
+            "tris": 206
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "melee",
+          "thrust",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "combo",
+          "slash",
+          "parry",
+          "block",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "spain1805_sailor": {
+      "base": "rower",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Spanish Navy gunner of 1805 in action: a red kerchief tied round his head, a sleeveless white shirt, loose white canvas trousers, barefoot. Black stubble.",
+        "poseReference": "render of rower bind pose",
+        "usage": {
+          "input_tokens": 1267,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 243
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3023
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "989d626e-8d74-41ee-9502-83a4396a2b9e"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "d114dd02-3350-473a-8b7b-591ccd20d56e",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5534687829604286,
+          "sy": 1.7105592957404714
+        },
+        "lods": [
+          {
+            "verts": 1730,
+            "tris": 1648
+          },
+          {
+            "verts": 838,
+            "tris": 622
+          },
+          {
+            "verts": 183,
+            "tris": 182
+          }
+        ],
+        "clips": [
+          "idle",
+          "row",
+          "haul",
+          "carry",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "ready",
+          "ram",
+          "bucket",
+          "douse",
+          "kneel",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "drumroll",
+          "drum"
+        ]
+      }
+    },
+    "spain1805_officer": {
+      "base": "ming_officer",
+      "concept": {
+        "tool": "gemini image edit",
+        "model": "gemini-3.1-flash-image-preview",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Trafalgar of 1805. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable Napoleonic-era 1805 materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Spanish Navy officer of 1805: a black bicorne with a red cockade, a dark blue coat with red lapels and gold lace, red waistcoat, blue breeches, black boots. Clean-shaven, powdered hair.",
+        "poseReference": "render of ming_officer bind pose",
+        "estimatedUsd": 0.04
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "4ae27d68-e348-40e2-8a08-e1de359a4353"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "da180316-53bf-430f-a4f8-bae5b606caf6",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.7444431372999958,
+          "sy": 1.7002261429135384
+        },
+        "lods": [
+          {
+            "verts": 1943,
+            "tris": 1684
+          },
+          {
+            "verts": 996,
+            "tris": 654
+          },
+          {
+            "verts": 201,
+            "tris": 168
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "command",
+          "melee",
+          "hit",
+          "die",
+          "cheer",
+          "wave",
+          "signal",
+          "parry",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    }
+  }
+}

@@ -142,8 +142,6 @@ export const EN_BATTLE: Record<string, string> = {
   '좁은 화면에서는 접기를 고르면 아래 지휘 시트를 접습니다.': 'On a narrow screen, Folded folds the command sheet at the bottom.',
   '지휘 패널 전체 · 간소화 · 접기': 'Command panels: full · simple · folded',
   '부대': 'Groups',
-  '지정 부대 접기': 'Hide control groups',
-  '지정 부대 펼치기': 'Show control groups',
   '지도와 함선 정보 접기': 'Hide the map and ship panel',
   '지도와 함선 정보 펼치기': 'Show the map and ship panel',
   '장수 패 {n}': 'Commanders {n}',

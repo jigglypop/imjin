@@ -1,7 +1,6 @@
 import { BackSide, Color, Group, Mesh, MeshBasicNodeMaterial, SphereGeometry } from 'three/webgpu';
 import { attribute, float, mix, positionLocal, smoothstep, vec3 } from 'three/tsl';
-import demMeta from '../../select/demMeta.json';
-import { V_SCALE } from '../../select/demFrame';
+import { demMeta, MAP, V_SCALE } from './mapTheatre';
 import { loadDem } from '../../select/terrain';
 import { buildFarLandMesh } from './farLand';
 import { buildLand, fetchLand } from './groundLand';
@@ -52,7 +51,7 @@ function buildSky() {
 /** Loads the DEM and builds the ground; rejects with the signal's AbortError when aborted, having freed what it made. */
 export async function loadGround(signal: AbortSignal): Promise<WorldGround> {
   // Only the heights: the half-float texture is the select screen's relief, and this world draws its facets instead.
-  const [dem, bytes] = await Promise.all([loadDem(signal, { texture: false }), fetchLand(signal)]);
+  const [dem, bytes] = await Promise.all([loadDem(signal, { texture: false, url: MAP.dem, size: demMeta }), fetchLand(signal)]);
   signal.throwIfAborted();
   const { heights } = dem;
   const made: { dispose(): void }[] = [];
@@ -67,25 +66,27 @@ export async function loadGround(signal: AbortSignal): Promise<WorldGround> {
   try {
     const land = await buildLand(bytes, heights);
     made.push(land);
-    const far = buildFarLandMesh(heights, land.seam);
-    made.push(far);
+    // A theatre whose DEM holds its whole world (Britain) has no land past its north edge.
+    const far = MAP.farLand ? buildFarLandMesh(heights, land.seam) : null;
+    if (far) made.push(far);
     // The sea's shallows and surf follow the coasts the facets of both draw.
-    const sea = buildSea(heights, [land.facets, far.facets], noise);
+    const sea = buildSea(heights, far ? [land.facets, far.facets] : [land.facets], noise);
     made.push(sea);
     look = await looking;
     made.push(look);
     signal.throwIfAborted();
     land.mesh.material.colorNode = look.color();
     const own: any = attribute('land', 'vec4');
-    far.mesh.material.colorNode = look.color({ inner: float(1), sun: own.x, sky: own.y, slope: own.z, metres: own.w });
+    if (far) far.mesh.material.colorNode = look.color({ inner: float(1), sun: own.x, sky: own.y, slope: own.z, metres: own.w });
     const sky = buildSky();
     made.push({ dispose: () => { sky.geometry.dispose(); sky.material.dispose(); } });
     // The land is drawn before the sea plane, so the depth test discards the water wherever land stands above it.
     land.mesh.renderOrder = -1;
-    far.mesh.renderOrder = -1;
+    if (far) far.mesh.renderOrder = -1;
     sea.mesh.renderOrder = 0;
     const group = new Group();
-    group.add(sky, land.mesh, far.mesh, sea.mesh);
+    group.add(sky, land.mesh, sea.mesh);
+    if (far) group.add(far.mesh);
     const W = demMeta.width, H = demMeta.height;
     const lift = V_SCALE * MESH_SCALE;
     return {
@@ -94,7 +95,7 @@ export async function loadGround(signal: AbortSignal): Promise<WorldGround> {
       look,
       haze: WORLD_HAZE,
       heightAt(u, v) {
-        if (v < DEM_RECT.v) return far.heightAt(u, v);
+        if (v < DEM_RECT.v) return far ? far.heightAt(u, v) : 0;
         const x = ((u - DEM_RECT.u) / DEM_RECT.w) * (W - 1), y = ((v - DEM_RECT.v) / DEM_RECT.h) * (H - 1);
         if (x < 0 || y < 0 || x > W - 1 || y > H - 1) return 0;
         // Bilinear between the four texels round the point: on a facet that is the facet's own plane.

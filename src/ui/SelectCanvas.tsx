@@ -46,10 +46,16 @@ function SelectView({ id, look, side, markers }: { id: ScenarioId; look: number;
     sceneRef.current?.setForces(id, side);
   }, [id, side]);
 
-  useFrame((_, dt) => {
+  // The frame's own time, not r3f's delta: that one reads the wall clock whenever the callback happens to run, so busy
+  // frames hand the camera glide uneven steps and the map and its markers judder while the view flies to a battle.
+  const lastFrame = useRef<number | null>(null);
+  useFrame(() => {
     const scene = sceneRef.current;
     if (!scene?.ready) return;
-    scene.update(Math.min(dt, 0.05));
+    const now = Number(document.timeline.currentTime ?? performance.now());
+    const dt = lastFrame.current === null ? 1 / 60 : (now - lastFrame.current) / 1000;
+    lastFrame.current = now;
+    scene.update(Math.min(Math.max(dt, 0), 0.05));
     scene.render();
     for (const sid of SCENARIO_ORDER) {
       const el = markers.current.get(sid);

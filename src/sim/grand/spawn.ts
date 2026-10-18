@@ -9,7 +9,7 @@ import type { LandSampler, Ship, Squadron } from '../types';
 import type { BridgeSeat, RegionBattle, RegionBattleBuilding } from './bridge';
 import { ATTACKER_HOME, DEFENDER_HOME, REGION_MAPS, regionArt, regionEnvironment } from './coast';
 import { REGIONS } from './regions';
-import type { BattleOutcomeShip, BuildingKind } from './types';
+import type { BattleOutcomeShip, BuildingKind, GrandFaction } from './types';
 import { coastalTacticFor } from '../coastal-tactics';
 import { cardOf } from '../../ships/anchors';
 
@@ -44,7 +44,7 @@ export const grandMap = (rb: RegionBattle) => {
 /** What the engine stages a region battle from: the real terrain of the region, its tide, sky and loading picture. */
 export function grandInfo(rb: RegionBattle): BattleInfo {
   const m = grandMap(rb);
-  const date = dateLabel(rb.turn);
+  const date = dateLabel(rb.turn, rb);
   return {
     mode: 'conquest',
     id: rb.mapId,
@@ -69,7 +69,7 @@ export function grandInfo(rb: RegionBattle): BattleInfo {
 /** Bearing from the attacker's anchorage to the defender's port in the terrain's own coordinates: the engine turns the map to the light by it. */
 export const grandAxis = (rb: RegionBattle) => grandMap(rb).axis;
 
-const DEFAULT_PORTRAIT = { joseon: 'portrait_admiral', japan: 'portrait_japan', ming: 'portrait_deng' } as const;
+const DEFAULT_PORTRAIT: Record<GrandFaction, string> = { joseon: 'portrait_admiral', japan: 'portrait_japan', ming: 'portrait_deng', england: 'portrait_howard', spain: 'portrait_medina', holyleague: 'portrait_donjuan', ottoman: 'portrait_alipasha', britain: 'portrait_nelson', france: 'portrait_villeneuve', spain1805: 'portrait_gravina' };
 const HP_FLOOR = 0.25;
 
 /** The works the defender's port stands with, in the order they take the plots on the shore: yard, then guns, then the rest. */
@@ -123,8 +123,8 @@ function spawnSeat(b: Battle, conquest: Conquest, slot: number, seat: BridgeSeat
     let sq = squads.get(key);
     if (!sq) {
       const leader = u.leader ?? (spec.faction === seat.faction ? seat.leader : null);
-      const portrait = leader?.portrait ?? DEFAULT_PORTRAIT[spec.faction];
-      const commander = leader ? `${leader.title} ${leader.name}` : `${TUNING.faction[spec.faction].label} 수군`; // i18n-ignore: navy labels have English entries
+      const portrait = leader?.portrait ?? DEFAULT_PORTRAIT[spec.faction as GrandFaction];
+      const commander = leader ? `${leader.title} ${leader.name}` : `${TUNING.faction[spec.faction as GrandFaction].label} 수군`; // i18n-ignore: navy labels have English entries
       const index = [...squads.keys()].filter((k) => k.startsWith(`${u.kind}:`)).length + 1;
       sq = b.addSquadron(seat.team, `${SHORT_NAME[u.kind]} ${index}대`, commander, portrait, cardOf(u.kind), slot); // i18n-ignore: same squadron label as the conquest mode
       // A squadron of an allied navy (Ming beside Joseon) is listed with the seat that commands it.

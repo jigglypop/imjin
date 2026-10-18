@@ -29,10 +29,34 @@ export const ROUTES: readonly { screen: RouteScreen; slug: string; name: string 
  * scripts/test-sim.mjs keeps the order the same); a literal list here because this file takes no imports.
  */
 export const BATTLE_SLUGS = ['okpo', 'sacheon', 'dangpo', 'hansan', 'angolpo', 'busan', 'chilcheon', 'myeongnyang', 'noryang'] as const;
-export type BattleSlug = (typeof BATTLE_SLUGS)[number];
 
-export function isBattleSlug(slug: string | undefined): slug is BattleSlug {
-  return !!slug && (BATTLE_SLUGS as readonly string[]).includes(slug);
+/**
+ * The chapters of the MOONWAKE series. The first (임진왜란) is the main one and lives at the site's root; every other
+ * chapter's pages live under its id (/armada, /armada/battles/gravelines, /en/armada). The chapter registry with its
+ * names, navies and ships is src/chapters; this file keeps only the ids and battle slugs, since it takes no imports.
+ */
+export const CHAPTER_IDS = ['imjin', 'armada', 'lepanto', 'trafalgar'] as const;
+export type ChapterId = (typeof CHAPTER_IDS)[number];
+export const MAIN_CHAPTER: ChapterId = 'imjin';
+const PREFIXED: readonly string[] = CHAPTER_IDS.filter((c) => c !== MAIN_CHAPTER);
+export const isChapterId = (id: string | undefined): id is ChapterId => !!id && (CHAPTER_IDS as readonly string[]).includes(id);
+
+/** The historical battles of each later chapter, in order. */
+export const CHAPTER_BATTLES = {
+  armada: ['plymouth', 'portland', 'wight', 'calais', 'gravelines'],
+  lepanto: ['preveza', 'djerba', 'lepanto-north', 'lepanto-centre', 'lepanto-south'],
+  trafalgar: ['st-vincent', 'nile', 'finisterre', 'trafalgar-weather', 'trafalgar-lee'],
+} as const;
+export type ArmadaSlug = (typeof CHAPTER_BATTLES.armada)[number];
+export type LepantoSlug = (typeof CHAPTER_BATTLES.lepanto)[number];
+export type TrafalgarSlug = (typeof CHAPTER_BATTLES.trafalgar)[number];
+export type BattleSlug = (typeof BATTLE_SLUGS)[number] | ArmadaSlug | LepantoSlug | TrafalgarSlug;
+/** The battles of a chapter, the first chapter's included. */
+export const battlesOf = (chapter: ChapterId): readonly BattleSlug[] => (chapter === 'imjin' ? BATTLE_SLUGS : CHAPTER_BATTLES[chapter]);
+export const chapterOfBattle = (slug: BattleSlug): ChapterId => (CHAPTER_IDS.find((c) => c !== MAIN_CHAPTER && (battlesOf(c) as readonly string[]).includes(slug)) ?? MAIN_CHAPTER);
+
+export function isBattleSlug(slug: string | undefined, chapter: ChapterId = MAIN_CHAPTER): slug is BattleSlug {
+  return !!slug && (battlesOf(chapter) as readonly string[]).includes(slug);
 }
 
 const BY_SLUG = new Map(ROUTES.map((r) => [r.slug, r.screen]));
@@ -51,10 +75,9 @@ export function routeName(screen: RouteScreen): string {
  * The address of a screen in one edition: /campaign and /en/campaign; the menu is / and /en. The history screen may
  * name the battle it shows: /battles/hansan and /en/battles/hansan.
  */
-export function routePath(screen: RouteScreen, edition: Edition, battle?: BattleSlug | null): string {
-  const slug = BY_SCREEN.get(screen)!.slug;
-  const path = edition === 'ko' ? `/${slug}` : slug ? `/en/${slug}` : '/en';
-  return screen === 'select' && battle ? `${path}/${battle}` : path;
+export function routePath(screen: RouteScreen, edition: Edition, battle?: BattleSlug | null, chapter: ChapterId = battle ? chapterOfBattle(battle) : MAIN_CHAPTER): string {
+  const parts = [edition === 'en' ? 'en' : '', chapter === MAIN_CHAPTER ? '' : chapter, BY_SCREEN.get(screen)!.slug, screen === 'select' && battle ? battle : ''].filter(Boolean);
+  return `/${parts.join('/')}`;
 }
 
 export type ParsedRoute = {
@@ -65,6 +88,8 @@ export type ParsedRoute = {
   known: boolean;
   /** The battle a /battles/<id> path names; absent on every other path. */
   battle?: BattleSlug;
+  /** The chapter a prefixed path names (/armada/...); absent for the main chapter. */
+  chapter?: ChapterId;
 };
 
 /**
@@ -75,10 +100,13 @@ export type ParsedRoute = {
 export function parseRoute(pathname: string): ParsedRoute {
   const parts = pathname.replace(/\/index\.html$/, '').split('/').filter(Boolean);
   const edition = parts[0] === 'en' || parts[0] === 'ko' ? (parts.shift() as Edition) : null;
+  const named = PREFIXED.includes(parts[0]!) ? (parts.shift() as ChapterId) : null;
+  const chapter = named ?? MAIN_CHAPTER;
+  const tag = named ? { chapter: named } : {};
   const screen = parts.length === 0 ? 'menu' : BY_SLUG.get(parts[0]!);
-  if (screen && parts.length <= 1) return { screen, edition, known: true };
-  if (screen === 'select' && parts.length === 2) return isBattleSlug(parts[1]) ? { screen, edition, known: true, battle: parts[1] } : { screen, edition, known: false };
-  return { screen: 'menu', edition, known: false };
+  if (screen && parts.length <= 1) return { screen, edition, known: true, ...tag };
+  if (screen === 'select' && parts.length === 2) return isBattleSlug(parts[1], chapter) ? { screen, edition, known: true, battle: parts[1], ...tag } : { screen, edition, known: false, ...tag };
+  return { screen: 'menu', edition, known: false, ...tag };
 }
 
 /**
@@ -118,15 +146,21 @@ export function withoutParams(search: string, names: readonly string[]): string 
  * card's version here when its picture changes.
  */
 export const CARD_SIZE = { width: 1200, height: 600 } as const;
-const CARD_VERSION: Record<BattleSlug | 'front', number> = { front: 1, okpo: 1, sacheon: 1, dangpo: 1, hansan: 1, angolpo: 1, busan: 1, chilcheon: 1, myeongnyang: 1, noryang: 1 };
+const CARD_VERSION: Partial<Record<BattleSlug | 'front', number>> & Record<(typeof BATTLE_SLUGS)[number] | 'front', number> = {
+  front: 1, okpo: 1, sacheon: 1, dangpo: 1, hansan: 1, angolpo: 1, busan: 1, chilcheon: 1, myeongnyang: 1, noryang: 1,
+  // The later chapters' battles (scripts/build-battle-art.mjs).
+  plymouth: 1, portland: 1, calais: 1, gravelines: 1, preveza: 1, djerba: 1, 'lepanto-north': 1, 'lepanto-south': 1, 'lepanto-centre': 1,
+  'st-vincent': 1, 'trafalgar-weather': 1, 'trafalgar-lee': 1,
+};
 
 export function cardFile(battle: BattleSlug | null, edition: Edition): string {
-  const id = battle ?? 'front';
-  return `og/${id}-${edition}-v${CARD_VERSION[id]}.jpg`;
+  // A later chapter's battles have no cards of their own yet: they share the front card.
+  const id = battle && battle in CARD_VERSION ? battle : 'front';
+  return `og/${id}-${edition}-v${CARD_VERSION[id]!}.jpg`;
 }
 
 /** One page of the built site: its address, its file under dist/ and the storage keys that answer for it. */
-export type RoutePage = { screen: RouteScreen; edition: Edition; path: string; file: string; keys: string[]; battle?: BattleSlug };
+export type RoutePage = { screen: RouteScreen; edition: Edition; path: string; file: string; keys: string[]; battle?: BattleSlug; chapter?: ChapterId };
 
 /**
  * Every page the build writes. The bucket behind the site has no directory index, so each page is stored under its
@@ -135,11 +169,14 @@ export type RoutePage = { screen: RouteScreen; edition: Edition; path: string; f
  */
 export function routePages(): RoutePage[] {
   const editions: Edition[] = ['ko', 'en'];
-  const page = (screen: RouteScreen, edition: Edition, battle?: BattleSlug): RoutePage => {
-    const path = routePath(screen, edition, battle);
+  const page = (screen: RouteScreen, edition: Edition, battle?: BattleSlug, chapter: ChapterId = MAIN_CHAPTER): RoutePage => {
+    const path = routePath(screen, edition, battle, chapter);
     const dir = path.slice(1);
     const file = dir ? `${dir}/index.html` : 'index.html';
-    return { screen, edition, path, file, keys: dir ? [dir, `${dir}/`, file] : [file], ...(battle ? { battle } : {}) };
+    return { screen, edition, path, file, keys: dir ? [dir, `${dir}/`, file] : [file], ...(battle ? { battle } : {}), ...(chapter !== MAIN_CHAPTER ? { chapter } : {}) };
   };
-  return editions.flatMap((edition) => [...ROUTES.map(({ screen }) => page(screen, edition)), ...BATTLE_SLUGS.map((battle) => page('select', edition, battle))]);
+  // A later chapter has its own front page, history screen and battle pages; the other screens are the series' own.
+  const chapterPages = (edition: Edition) =>
+    PREFIXED.flatMap((c) => [page('menu', edition, undefined, c as ChapterId), page('select', edition, undefined, c as ChapterId), ...battlesOf(c as ChapterId).map((battle) => page('select', edition, battle, c as ChapterId))]);
+  return editions.flatMap((edition) => [...ROUTES.map(({ screen }) => page(screen, edition)), ...BATTLE_SLUGS.map((battle) => page('select', edition, battle)), ...chapterPages(edition)]);
 }

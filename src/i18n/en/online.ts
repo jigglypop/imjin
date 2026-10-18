@@ -94,6 +94,7 @@ export const EN_ONLINE: Record<string, string> = {
   '준비 완료': 'Ready ✓',
   '대기': 'Waiting',
   '조선과 일본 중 한 자리를 맡습니다. 비어 있는 자리는 컴퓨터가 맡습니다.': 'Take the Joseon or the Japanese seat. The computer plays any empty seat.',
+  '잉글랜드와 에스파냐 중 한 자리를 맡습니다. 비어 있는 자리는 컴퓨터가 맡습니다.': 'Take the English or the Spanish seat. The computer plays any empty seat.',
   '메시지 입력': 'Message',
   '나가기': 'Leave',
   '전투 시작': 'Start battle',

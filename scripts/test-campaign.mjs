@@ -14,11 +14,11 @@ const browsers = new Browsers(args);
 const results = [];
 let session;
 try {
-  session = await openPage(browsers, 'chrome', { width: 1440, height: 900 }, null, new URL('/?lang=ko&map=static&paused=1', base).toString());
+  session = await openPage(browsers, 'chrome', { width: 1440, height: 900 }, null, new URL('/battles?lang=ko&map=static&paused=1', base).toString());
   const { page } = session;
   const campaign = () => page.evaluate(() => JSON.parse(localStorage.getItem('imjin.campaign.v1')));
   const count = c => c.squads.reduce((n, q) => n + q.ships.length, 0);
-  await page.locator('.mode-card').filter({ hasText: '역사 전투' }).click();
+  // The history screen has its own address (/battles); the menu's mode cards are gone.
   await page.getByRole('tab', { name: '연속 전투', exact: true }).click();
   const initial = await campaign();
   assert.equal(initial.step, 0);

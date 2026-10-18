@@ -7,10 +7,11 @@ import { tName } from '../ui/grand/text';
 import { applyBattleResult, describeBattle, type BridgeSeat, type RegionBattle } from '../sim/grand/bridge';
 import { summarizeBattle, type BattleSummary } from '../sim/grand/report';
 import { cancelBuild, cancelRecruit, orderAlliance, orderAssault, orderBuild, orderCommander, orderDeclareWar, orderDisband, orderIntercept, orderMerge, orderMove, orderRecruit, orderRefit, orderSplit, orderStance, orderStop } from '../sim/grand/orders';
-import { REGION_ORDER } from '../sim/grand/regions';
+import { factionsOf, orderOf } from '../sim/grand/theatre';
+import { theatreOfAddress } from '../ui/grand/theatreChoice';
 import { autoResolveContact, besiegeContact, endTurn, newGrand, withdrawContact, type TurnReport } from '../sim/grand/turn';
-import type { BattleOutcome, BuildingKind, Fleet, Grand, GrandFaction, RegionId, Result, Stance } from '../sim/grand/types';
-import { GRAND_FACTIONS, fail, ok } from '../sim/grand/types';
+import type { BattleOutcome, BuildingKind, Fleet, Grand, GrandFaction, RegionId, Result, Stance, TheatreId } from '../sim/grand/types';
+import { fail, ok } from '../sim/grand/types';
 import { fleetById } from '../sim/grand/world';
 import { migrateGrandBalance } from '../sim/grand/economy';
 import { orderDispatch, orderMobilize } from '../sim/grand/dispatch';
@@ -24,22 +25,26 @@ import type { ShipKind } from '../sim/types';
  * The state is a plain object that is cloned before each command, so a command that fails leaves the save untouched.
  */
 
+/** Each theatre keeps its own save: the 1592 war under its original key, another theatre's beside it. */
 const STORAGE_KEY = 'imjin.grand.v1';
+const storageKey = (theatre: TheatreId) => (theatre === 'imjin' ? STORAGE_KEY : `imjin.grand.${theatre}.v1`);
+const theatreOfSave = (g: Grand): TheatreId => g.theatre ?? 'imjin';
 
-function valid(g: unknown): g is Grand {
+function valid(g: unknown, theatre: TheatreId): g is Grand {
   const c = g as Grand | null;
   if (!c || c.version !== 1 || typeof c.seed !== 'number' || !c.rng || !Array.isArray(c.fleets) || !Array.isArray(c.pending)) return false;
-  if (!REGION_ORDER.every((id) => c.regions?.[id])) return false;
-  return GRAND_FACTIONS.every((f) => c.factions?.[f]);
+  if (theatreOfSave(c) !== theatre) return false;
+  if (!orderOf(c).every((id) => c.regions?.[id])) return false;
+  return factionsOf(c).every((f) => c.factions?.[f]);
 }
 
-function load(): Grand | null {
+function load(theatre: TheatreId): Grand | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey(theatre));
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     migrateGrandRegions(parsed);
-    if (!valid(parsed)) return null;
+    if (!valid(parsed, theatre)) return null;
     // A war saved before the historical events existed goes on without the cards it never dealt.
     parsed.events ??= { done: {}, pending: null, flags: [], mods: [] };
     migrateGrandBalance(parsed);
@@ -51,16 +56,18 @@ function load(): Grand | null {
   }
 }
 
-function save(g: Grand | null) {
+function save(g: Grand | null, theatre: TheatreId = g ? theatreOfSave(g) : useGrand.getState().theatre) {
   try {
-    if (g) localStorage.setItem(STORAGE_KEY, JSON.stringify(g));
-    else localStorage.removeItem(STORAGE_KEY);
+    if (g) localStorage.setItem(storageKey(theatre), JSON.stringify(g));
+    else localStorage.removeItem(storageKey(theatre));
   } catch {
     // storage unavailable (private window, full quota); the campaign stays in memory
   }
 }
 
 type GrandState = {
+  /** The theatre whose war the store holds (each has its own save). */
+  theatre: TheatreId;
   grand: Grand | null;
   /** The meeting settled last, until the player has read it. Not saved. */
   lastBattle: BattleSummary | null;
@@ -72,7 +79,14 @@ type GrandState = {
   arrivalMerge: Record<string, RegionId>;
 };
 
-export const useGrand = create<GrandState>(() => ({ grand: load(), lastBattle: null, reported: null, replay: null, arrivalMerge: {} }));
+const firstTheatre = theatreOfAddress();
+export const useGrand = create<GrandState>(() => ({ theatre: firstTheatre, grand: load(firstTheatre), lastBattle: null, reported: null, replay: null, arrivalMerge: {} }));
+
+/** Shows the war of `theatre`: its save, or none to start. Nothing changes when it is already on show. */
+export function showGrandTheatre(theatre: TheatreId) {
+  if (useGrand.getState().theatre === theatre) return;
+  useGrand.setState({ theatre, grand: load(theatre), lastBattle: null, reported: null, replay: null, arrivalMerge: {} });
+}
 
 export const dismissBattle = () => useGrand.setState({ lastBattle: null });
 export const dismissReport = () => useGrand.setState({ reported: null });
@@ -114,8 +128,8 @@ function commit(change: (g: Grand) => Result): Result {
 }
 
 /** Starts a fresh campaign as the chosen navy, replacing any save. */
-export function startGrand(player: GrandFaction, difficulty: Grand['difficulty'] = 'normal', seed = Math.floor(Math.random() * 2147483647)): Grand {
-  const g = newGrand(player, seed, difficulty);
+export function startGrand(player: GrandFaction, difficulty: Grand['difficulty'] = 'normal', seed = Math.floor(Math.random() * 2147483647), theatre: TheatreId = useGrand.getState().theatre): Grand {
+  const g = newGrand(player, seed, difficulty, 0, theatre);
   // A new war builds its camps and works by itself; the top bar's switch turns that off (saves made earlier stay as they were).
   g.autoWorks = true;
   useGrand.setState({ grand: g, lastBattle: null, reported: null, replay: null, arrivalMerge: {} });
@@ -256,7 +270,7 @@ export function endGrandTurn(): TurnReport | null {
   if (!current || current.phase !== 'orders' || current.events.pending) return null;
   const next = structuredClone(current);
   const report = endTurn(next);
-  const moves = buildReplay(current, next, report.contacts, current.player ?? 'joseon', report.routes);
+  const moves = buildReplay(current, next, report.contacts, current.player ?? factionsOf(current)[0]!, report.routes);
   useGrand.setState({ grand: next, reported: current.turn, replay: isEmpty(moves) ? null : { before: current, moves } });
   save(next);
   return report;

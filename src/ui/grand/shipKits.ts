@@ -21,7 +21,7 @@ function paint(hex: string): Paint {
 }
 
 /** The navy's colour, the same as the camps' banners and owner rings. */
-const BANNER: Record<FactionId, string> = { joseon: '#3f8cff', japan: '#e8452c', ming: '#f0b72a' };
+const BANNER: Record<FactionId, string> = { joseon: '#3f8cff', japan: '#e8452c', ming: '#f0b72a', england: '#5fae78', spain: '#d8574a', holyleague: '#5f7fd0', ottoman: '#c8382f', britain: '#c8443a', france: '#3f68d0', spain1805: '#e0b23a' };
 
 const BOTTOM = 4;
 
@@ -123,10 +123,128 @@ function ming(b: MeshBuilder) {
   streamer(b, paint(BANNER.ming), 2, 20.6, 4.6);
 }
 
+/**
+ * A race-built English galleon: a long low hull with a short quarterdeck aft and hardly any forecastle, painted in the
+ * Tudor green and white chequers along the waist, three masts of square sails and a lateen on the mizzen.
+ */
+function england(b: MeshBuilder) {
+  const L = 34;
+  hull(b, paint('#3d2e22'), paint('#7a5f42'), { length: L, beam: 8.4, depth: 3.6, draft: 1.3, sheer: 1.2 });
+  box(b, paint('#2f6a46'), [-4.0, 2.0, -12], [4.0, 2.7, 10], { skip: BOTTOM });
+  box(b, paint('#e8e2d2'), [-4.05, 2.7, -12], [4.05, 3.1, 10], { skip: BOTTOM });
+  box(b, paint('#4a3526'), [-3.6, 2.3, -16], [3.6, 5.0, -9.5], { skip: BOTTOM });
+  box(b, paint('#4a3526'), [-2.6, 2.6, 10.5], [2.6, 4.0, 14], { skip: BOTTOM });
+  const wood = paint('#4f3b29'), cloth_ = paint('#efe9d8');
+  mast(b, wood, 7.5, 2.3, 19, 0.3);
+  mast(b, wood, 0, 2.3, 23, 0.34);
+  mast(b, wood, -9, 4.8, 14, 0.24);
+  sail(b, cloth_, 7.5, 18.5, 11, 7.5, 0.45);
+  sail(b, cloth_, 7.5, 10.4, 12, 6.5, 0.45);
+  sail(b, cloth_, 0, 22.5, 13, 8.5, 0.45);
+  sail(b, cloth_, 0, 13.4, 14, 7.5, 0.45);
+  sail(b, cloth_, -9, 17.5, 7, 8, 0.2);
+  streamer(b, paint(BANNER.england), 0, 25.2, 6);
+}
+
+/**
+ * A Spanish galleon of the Armada: a deep hull with towering castles fore and aft painted in red and ochre, four masts,
+ * the square sails marked with the red cross of Burgundy.
+ */
+function spain(b: MeshBuilder) {
+  const L = 34;
+  hull(b, paint('#4a3423'), paint('#80654a'), { length: L, beam: 9.6, depth: 4.0, draft: 1.5, sheer: 1.6 });
+  box(b, paint('#8c3326'), [-4.5, 2.4, -16], [4.5, 7.6, -8.5], { skip: BOTTOM });
+  box(b, paint('#c79a3e'), [-4.6, 6.9, -16.1], [4.6, 7.5, -8.4], { skip: BOTTOM });
+  box(b, paint('#8c3326'), [-3.8, 2.6, 9], [3.8, 6.2, 14.5], { skip: BOTTOM });
+  box(b, paint('#c79a3e'), [-3.9, 5.6, 8.9], [3.9, 6.1, 14.6], { skip: BOTTOM });
+  const wood = paint('#4f3b29'), cloth_ = paint('#e9dfc8'), cross = paint('#b8322a');
+  mast(b, wood, 8, 6.1, 15, 0.3);
+  mast(b, wood, 0.5, 2.6, 22, 0.36);
+  mast(b, wood, -7.5, 7.5, 12, 0.24);
+  mast(b, wood, -12.5, 7.5, 10, 0.2);
+  sail(b, cloth_, 8, 19.5, 11, 8, 0.45);
+  sail(b, cloth_, 0.5, 23.2, 13, 9, 0.45);
+  sail(b, cross, 0.5, 18.4, 2.2, 2.2, 0.45);
+  sail(b, cloth_, 0.5, 14, 14, 7.5, 0.45);
+  sail(b, cloth_, -7.5, 18, 6.5, 7, 0.2);
+  sail(b, cloth_, -12.5, 16.5, 5, 6, 0.2);
+  streamer(b, paint(BANNER.spain), 0.5, 25.6, 6);
+}
+
+/**
+ * A Mediterranean war galley of 1571: a long, low, narrow hull with the outrigger (apostis) the oars work from and a
+ * dark band of oars down each side, the spur at the bow, a raised poop under its awning at the stern, and two masts
+ * with lateen yards and triangular sails. The League's and the Sultan's galleys differ in their paint and pennant.
+ */
+function galley(b: MeshBuilder, side: Paint, deck: Paint, awning: Paint, pennantColour: string) {
+  const L = 40;
+  hull(b, side, deck, { length: L, beam: 5.2, depth: 2.0, draft: 0.8, sheer: 0.7 });
+  const wood = paint('#4a3726'), oars = paint('#3a2c20'), cloth_ = paint('#e8dfc9');
+  // The apostis and the oar banks along both sides.
+  box(b, wood, [-3.4, 1.1, -14], [3.4, 1.45, 13], { skip: BOTTOM });
+  for (const sx of [-1, 1]) box(b, oars, sx < 0 ? [-7.6, 0.25, -12.5] : [3.4, 0.25, -12.5], sx < 0 ? [-3.4, 0.55, 12] : [7.6, 0.55, 12]);
+  // The spur, the poop and its awning.
+  cylinder(b, wood, [0, 1.4, L / 2 - 0.5], [0, 1.9, L / 2 + 5], 0.35, 0.12, 5, true);
+  box(b, wood, [-2.2, 1.4, -L / 2 + 0.6], [2.2, 2.6, -L / 2 + 6.5], { skip: BOTTOM });
+  box(b, awning, [-2.4, 3.9, -L / 2 + 0.4], [2.4, 4.3, -L / 2 + 6.8], { skip: BOTTOM });
+  // Two masts with lateen yards and their triangular sails, the main forward of amidships.
+  const lateen = (z: number, h: number, yard: number) => {
+    mast(b, wood, z, 1.2, h, 0.26);
+    const top: V3 = [0.3, 1.2 + h + yard * 0.32, z - yard * 0.45], low: V3 = [0.3, 1.2 + h * 0.35, z + yard * 0.55], foot: V3 = [0.3, 2.4, z - yard * 0.25];
+    cylinder(b, wood, [top[0], top[1], top[2]], [low[0], low[1], low[2]], 0.16, 0.12, 4, false);
+    polygon(b, cloth_, [top, low, foot], [1, 0, 0]);
+    polygon(b, cloth_, [top, foot, low], [-1, 0, 0]);
+  };
+  lateen(5, 19, 24);
+  lateen(-6, 12, 16);
+  streamer(b, paint(pennantColour), 5, 1.2 + 19 + 24 * 0.32, 6);
+}
+
+/**
+ * A ship of the line of 1805: a long, deep hull with tumblehome, its sides black with a broad painted band along each
+ * gun deck (the "Nelson chequer" of yellow ochre in the British fleet at Trafalgar; red bands on most French and Spanish
+ * ships, the Santísima Trinidad's red and white), a short quarterdeck and forecastle, three masts of square sails and
+ * the navy's pennant from the main (Goodwin, The Ships of Trafalgar).
+ */
+function lineOfBattle(b: MeshBuilder, band: string, decks: number, pennantColour: string) {
+  const L = 46;
+  hull(b, paint('#1f1c1a'), paint('#8a6e4c'), { length: L, beam: 12, depth: 5.2, draft: 2.2, sheer: 0.9 });
+  const bandPaint = paint(band);
+  for (let d = 0; d < decks; d += 1) {
+    const y = 0.9 + d * 1.35;
+    box(b, bandPaint, [-6.05, y, -19], [6.05, y + 0.55, 17], { skip: BOTTOM });
+  }
+  box(b, paint('#2a2522'), [-5.4, 3.0, -21], [5.4, 4.4, -12], { skip: BOTTOM });
+  box(b, paint('#2a2522'), [-4.6, 3.0, 13], [4.6, 3.9, 18], { skip: BOTTOM });
+  const wood = paint('#4a3a2a'), cloth_ = paint('#efe9d8');
+  mast(b, wood, 11, 3.2, 26, 0.42);
+  mast(b, wood, 0, 3.2, 31, 0.48);
+  mast(b, wood, -12, 4.2, 21, 0.34);
+  for (const [z, top, w] of [[11, 27, 15], [0, 32, 18], [-12, 23, 11]] as const) {
+    sail(b, cloth_, z, top, w * 0.8, 6, 0.45);
+    sail(b, cloth_, z, top - 7, w, 8.5, 0.45);
+  }
+  streamer(b, paint(pennantColour), 0, 34.5, 8);
+}
+
+const britain = (b: MeshBuilder) => lineOfBattle(b, '#c9a24c', 2, BANNER.britain);
+const france = (b: MeshBuilder) => lineOfBattle(b, '#8c3a2c', 2, BANNER.france);
+const spain1805 = (b: MeshBuilder) => lineOfBattle(b, '#a33a2e', 2, BANNER.spain1805);
+
+const holyleague = (b: MeshBuilder) => galley(b, paint('#3b2f28'), paint('#86684a'), paint('#b8322a'), BANNER.holyleague);
+const ottoman = (b: MeshBuilder) => galley(b, paint('#4a3423'), paint('#8a6c4c'), paint('#2f6b4a'), BANNER.ottoman);
+
 const BUILD: Record<FactionId, { length: number; build: (b: MeshBuilder) => void }> = {
   joseon: { length: 30, build: joseon },
   japan: { length: 28, build: japan },
   ming: { length: 26, build: ming },
+  england: { length: 34, build: england },
+  spain: { length: 34, build: spain },
+  holyleague: { length: 45, build: holyleague },
+  ottoman: { length: 45, build: ottoman },
+  britain: { length: 46, build: britain },
+  france: { length: 46, build: france },
+  spain1805: { length: 46, build: spain1805 },
 };
 
 /**

@@ -63,10 +63,7 @@ export class Input {
   private readonly screen = new Vector2();
   private lastClickTime = 0;
   private lastClickId = 0;
-  private groupBattle: Engine['battle'] | null = null;
-  private readonly groups = Array.from({ length: 8 }, () => ({ name: '', ids: [] as number[] }));
-  private lastGroup = -1;
-  private lastGroupTime = 0;
+  private battleSeen: Engine['battle'] | null = null;
   queueMoves = false;
   private pendingRally = -1;
   /** The maneuver waiting to be drawn on the sea, once its button was pressed. */
@@ -273,62 +270,12 @@ export class Input {
     this.engine.publish(true);
   }
 
-  /** Groups belong to this battle; changing scenarios must never reuse another fleet's ship ids. */
-  getGroups() {
-    if (this.groupBattle !== this.engine.battle) {
-      this.groupBattle = this.engine.battle;
-      for (const group of this.groups) { group.name = ''; group.ids = []; }
-      this.lastGroup = -1;
-      this.queueMoves = false;
-      this.pendingRally = -1;
-    }
-    const selected = this.selectedOwn();
-    return this.groups.map((group, index) => {
-      group.ids = group.ids.filter((id) => this.engine.isOwn(this.engine.battle.get(id)));
-      return { index, name: group.name || t('부대 {n}', { n: index + 1 }), count: group.ids.length, selected: group.ids.length > 0 && selected.length === group.ids.length && group.ids.every((id) => selected.includes(id)) };
-    });
-  }
-
-  assignGroup(index: number, additive = false) {
-    this.getGroups();
-    const group = this.groups[index];
-    const ids = this.selectedOwn();
-    if (!group || !this.need(ids)) return;
-    group.ids = additive ? [...new Set([...group.ids, ...ids])] : ids;
-    pushToast(t('부대 {n} 지정 · {ships}', { n: index + 1, ships: tShips(group.ids.length) }));
-    this.engine.publish(true);
-  }
-
-  renameGroup(index: number, name: string) {
-    this.getGroups();
-    const group = this.groups[index];
-    if (!group) return;
-    group.name = name.replace(/\s+/g, ' ').trim().slice(0, 16);
-    this.engine.publish(true);
-  }
-
-  selectGroup(index: number, focus = false) {
-    this.getGroups();
-    const group = this.groups[index];
-    if (!group?.ids.length) return;
-    const now = performance.now();
-    focus ||= this.lastGroup === index && now - this.lastGroupTime < 350;
-    this.lastGroup = index;
-    this.lastGroupTime = now;
-    this.engine.views.selected.clear();
-    for (const id of group.ids) this.engine.views.selected.add(id);
-    this.engine.rts.followId = 0;
-    if (focus) {
-      const ships = group.ids.map((id) => this.engine.battle.get(id)!);
-      const x = ships.reduce((sum, s) => sum + s.x, 0) / ships.length;
-      const z = ships.reduce((sum, s) => sum + s.z, 0) / ships.length;
-      const spread = Math.max(...ships.map((s) => Math.hypot(s.x - x, s.z - z)));
-      this.engine.rts.goal.tx = x;
-      this.engine.rts.goal.tz = z;
-      this.engine.rts.goal.distance = Math.min(this.engine.rts.goal.distance, Math.max(240, spread * 2.4));
-      this.engine.rts.cinematic = false;
-    }
-    this.engine.publish(true);
+  /** Per-battle input state resets when the battle changes, so a new scenario never inherits a queued route. */
+  syncBattle() {
+    if (this.battleSeen === this.engine.battle) return;
+    this.battleSeen = this.engine.battle;
+    this.queueMoves = false;
+    this.pendingRally = -1;
   }
 
   selectAll() {
@@ -350,7 +297,7 @@ export class Input {
   }
 
   beginRally(point: number) {
-    this.getGroups();
+    this.syncBattle();
     const p = this.engine.conquest?.points[point];
     if (!Number.isInteger(point) || !p || p.owner !== this.engine.owner) return false;
     this.pendingRally = point;
@@ -360,7 +307,7 @@ export class Input {
   }
 
   private resolveRally(clientX: number, clientY: number) {
-    this.getGroups();
+    this.syncBattle();
     if (this.pendingRally < 0) return false;
     const point = this.pendingRally;
     const owned = this.engine.conquest?.points[point]?.owner === this.engine.owner;
@@ -840,12 +787,10 @@ export class Input {
     if (digit) {
       e.preventDefault();
       const index = Number(digit[1]) - 1;
-      if (e.ctrlKey || e.metaKey) this.assignGroup(index);
-      else if (e.altKey) {
+      if (e.altKey) {
         if (index < 4) this.formation((['crane', 'line', 'column', 'wedge'] as const)[index]!);
         else if (index < 7) this.setSpeed([1, 0.6, 0.3][index - 4]!);
-      } else if (e.shiftKey) this.assignGroup(index, true);
-      else this.selectGroup(index);
+      }
       return;
     }
     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyA') {

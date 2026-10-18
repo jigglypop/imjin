@@ -11,6 +11,7 @@ import { shipsText, turnsText } from './text';
 import type { FactionId, FleetView, MarchRouteView, RegionView, ReplayView, SpotView } from './types';
 import type { WorldControls, WorldView } from './WorldCanvas';
 import { DEM_RECT, groundElevation } from './mapMath';
+import { MAP } from './mapTheatre';
 import { clampState, frameAll, NEAR, OPEN_PITCH, panBy, projectFrame, screenFrame, turn, zoomAt as zoomCameraAt, zoomPitch, type CameraState } from './worldCamera';
 import { CameraMotion, KEY_ACTIONS } from './cameraMotion';
 import { boxBetween, markersInBox, type Marker } from './boxSelect';
@@ -60,6 +61,8 @@ export interface GrandMapProps {
   onReplayPhase?: (phase: 'sail' | 'clash') => void;
   onReplayBeat?: (kind: 'clash' | 'capture') => void;
   onReplayDone?: () => void;
+  /** A campaign opening films the map: while it returns a camera, it holds the camera (CampaignOpening.tsx). */
+  film?: { current: ((now: number) => CameraState | null) | null };
 }
 
 /** What review scripts read and set on the 3D map (scripts/review-settlements.mjs), as window.__engine is for a battle. */
@@ -164,6 +167,7 @@ export function GrandMap({
   onReplayPhase,
   onReplayBeat,
   onReplayDone,
+  film,
 }: GrandMapProps) {
   const t = useT();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -343,7 +347,13 @@ export function GrandMap({
       ready.current = true;
       // Ming starts with ports off the map only: open on those (the limits keep them at the edge) rather than on a coast that is not theirs.
       const owned = regions.filter((r) => r.owner === me);
-      const mine = owned.some((r) => !r.offMap) ? owned.filter((r) => !r.offMap) : owned;
+      let mine = owned.some((r) => !r.offMap) ? owned.filter((r) => !r.offMap) : owned;
+      // A theatre whose navies hold ports across the whole map (the Armada's) opens on the seat's own waters instead.
+      const seat = MAP.openOnSeat ? mine.find((r) => r.seat) ?? null : null;
+      if (seat) {
+        const at = frames.get(seat.id)!;
+        mine = [...mine].sort((a, b) => Math.hypot(frames.get(a.id)!.u - at.u, frames.get(a.id)!.v - at.v) - Math.hypot(frames.get(b.id)!.u - at.u, frames.get(b.id)!.v - at.v)).slice(0, MAP.openOnSeat);
+      }
       const pts = mine.map((r) => frames.get(r.id)!);
       const u = pts.length ? pts.reduce((a, p) => a + p.u, 0) / pts.length : 0.45;
       const v = pts.length ? pts.reduce((a, p) => a + p.v, 0) / pts.length : 0.4;
@@ -527,6 +537,13 @@ export function GrandMap({
   const frameView = useCallback((now: number): WorldView | null => {
     if (!opened.current) return null;
     const screen = screenRef.current;
+    const filmed = film?.current?.(now);
+    if (filmed) {
+      motion.halt();
+      const c = clampState(filmed);
+      camRef.current = c;
+      return { cam: c, screen, more: true };
+    }
     const next = motion.step(camRef.current, screen, now);
     camRef.current = next;
     if (next !== shownCam.current) {
@@ -535,7 +552,7 @@ export function GrandMap({
     }
     const g = gesture.current;
     return { cam: next, screen, more: motion.moving || (g.moved && !g.boxing && pointers.current.size > 0) };
-  }, [motion]);
+  }, [motion, film]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 1 && e.button !== 2) return;

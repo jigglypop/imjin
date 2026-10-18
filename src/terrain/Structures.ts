@@ -4,8 +4,9 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import type { Structure, StructureType } from './features';
 import type { Terrain } from './Terrain';
 import { equipment } from '../game/quality';
+import { europeKit, isEuropean } from './europeKits';
 
-const SIZE: Record<StructureType, number> = { choga: 13, giwa: 17, fortgate: 48, bongsu: 24 };
+const SIZE: Record<'choga' | 'giwa' | 'fortgate' | 'bongsu', number> = { choga: 13, giwa: 17, fortgate: 48, bongsu: 24 };
 const NEAR = 420;
 
 type Model = { geometry: BufferGeometry; material: Material; base: Matrix4 };
@@ -38,6 +39,11 @@ function loadModel(type: StructureType, suffix: string) {
 }
 
 async function fetchModel(type: StructureType, suffix: string): Promise<Model | null> {
+  // The 1588 coasts' buildings are built here, in metres already: no file to fetch, one model for near and far.
+  if (isEuropean(type)) {
+    const kit = europeKit(type);
+    return { geometry: kit.geometry, material: kit.material, base: new Matrix4() };
+  }
   try {
     const gltf = await loader.loadAsync(`/models/env/${type}${suffix}.glb`);
     const mesh = firstMesh(gltf.scene);
@@ -48,7 +54,7 @@ async function fetchModel(type: StructureType, suffix: string): Promise<Model | 
     const box = geometry.boundingBox as Box3;
     const size = box.getSize(new Vector3());
     const center = box.getCenter(new Vector3());
-    const scale = SIZE[type] / Math.max(size.x, size.z);
+    const scale = SIZE[type as keyof typeof SIZE] / Math.max(size.x, size.z);
     const base = new Matrix4().makeScale(scale, scale, scale).multiply(new Matrix4().makeTranslation(-center.x, -box.min.y - size.y * 0.04, -center.z));
     return { geometry, material: mesh.material as Material, base };
   } catch {
@@ -58,7 +64,7 @@ async function fetchModel(type: StructureType, suffix: string): Promise<Model | 
 
 /** Fetches every village model into the cache, so a battle's own load finds them there instead of waiting for the terrain first. */
 export async function preloadStructures() {
-  await Promise.all((Object.keys(SIZE) as StructureType[]).map((type) => Promise.all([equipment.ships.skipLod0 ? null : loadModel(type, ''), loadModel(type, '_lod1')])));
+  await Promise.all((Object.keys(SIZE) as (keyof typeof SIZE)[]).map((type) => Promise.all([equipment.ships.skipLod0 ? null : loadModel(type, ''), loadModel(type, '_lod1')])));
 }
 
 export class Structures {

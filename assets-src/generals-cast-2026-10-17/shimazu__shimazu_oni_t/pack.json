@@ -1,42 +1,35 @@
 {
-  "at": "2026-10-17T09:10:07.264Z",
-  "args": [
-    "--id=shimazu",
-    "--cand=t",
-    "--headup=4",
-    "--posture=Spine01:1,Spine02:2,neck:2,RightHand:30:y",
-    "--commandfrom=command_bow"
-  ],
+  "at": "2026-10-17T07:17:26.537Z",
   "levels": {
     "_lod0": {
       "triangles": 119988,
-      "bytes": 4371472,
+      "bytes": 4373604,
       "clips": [
         "command_bow",
         "attack_spear",
         "attack_bow",
+        "command_sword",
         "attack_sword",
         "idle_bow",
         "idle_sword",
-        "idle_spear",
-        "command_sword"
+        "idle_spear"
       ],
       "check": {
         "ok": true,
         "problems": [],
-        "bytes": 4371472,
-        "sha256": "42b9637ca03cb8c9ac6cceadea5f554be5f61c5cc680ed90de1f8bc2b569da6b",
+        "bytes": 4373604,
+        "sha256": "477cb8a95a6b7077d6ab759f13b8f22d81c7349664d7fc286f0ad8794a4e198e",
         "triangles": 119988,
         "joints": 24,
         "clips": [
           "command_bow",
           "attack_spear",
           "attack_bow",
+          "command_sword",
           "attack_sword",
           "idle_bow",
           "idle_sword",
-          "idle_spear",
-          "command_sword"
+          "idle_spear"
         ],
         "textures": [
           [
@@ -56,33 +49,33 @@
     },
     "_lod1": {
       "triangles": 9994,
-      "bytes": 1065952,
+      "bytes": 1068084,
       "clips": [
         "command_bow",
         "attack_spear",
         "attack_bow",
+        "command_sword",
         "attack_sword",
         "idle_bow",
         "idle_sword",
-        "idle_spear",
-        "command_sword"
+        "idle_spear"
       ],
       "check": {
         "ok": true,
         "problems": [],
-        "bytes": 1065952,
-        "sha256": "7cc89ebfa65adf7a588e9cc4903c8e732bfd1c456a635b5a6ada17e1660b0c7b",
+        "bytes": 1068084,
+        "sha256": "42783c2e81d8898062d6e1861cac51861e262249387a62f0135b911e54428401",
         "triangles": 9994,
         "joints": 24,
         "clips": [
           "command_bow",
           "attack_spear",
           "attack_bow",
+          "command_sword",
           "attack_sword",
           "idle_bow",
           "idle_sword",
-          "idle_spear",
-          "command_sword"
+          "idle_spear"
         ],
         "textures": [
           [
@@ -102,33 +95,33 @@
     },
     "_lod2": {
       "triangles": 4996,
-      "bytes": 680044,
+      "bytes": 682176,
       "clips": [
         "command_bow",
         "attack_spear",
         "attack_bow",
+        "command_sword",
         "attack_sword",
         "idle_bow",
         "idle_sword",
-        "idle_spear",
-        "command_sword"
+        "idle_spear"
       ],
       "check": {
         "ok": true,
         "problems": [],
-        "bytes": 680044,
-        "sha256": "8999852dc82ea39c709150379310d268e68c74c9eac89b0d92137076c84e3640",
+        "bytes": 682176,
+        "sha256": "3f5eb7f9eca2b607cd14d0d1c39e7a865e88afeaf0a60fbb396f4cc4bc992891",
         "triangles": 4996,
         "joints": 24,
         "clips": [
           "command_bow",
           "attack_spear",
           "attack_bow",
+          "command_sword",
           "attack_sword",
           "idle_bow",
           "idle_sword",
-          "idle_spear",
-          "command_sword"
+          "idle_spear"
         ],
         "textures": [
           [

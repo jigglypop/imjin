@@ -1,5 +1,6 @@
 import type { ShipKind } from '../sim/types';
-import { ATAKE_PLANS, ATAKE_TURRET, HYEOP_PLAN, KOBAYA_PLAN, MING_PLAN, MINGSMALL_PLAN, PANOK_OAR_DROP, PANOK_PLANS, SEKI_PLANS, anchorsFor, byModel, modelKind, modelScale, type ModelKind } from './anchors';
+import { ATAKE_PLANS, ATAKE_TURRET, HYEOP_PLAN, KOBAYA_PLAN, MING_PLAN, MINGSMALL_PLAN, PANOK_OAR_DROP, PANOK_PLANS, SEKI_PLANS, anchorsFor, byModel, modelKind, modelScale, sailPlanOf, type ModelKind } from './anchors';
+import { oaredPlanOf } from './anchors';
 import { useProcedural } from './build/mode';
 
 /**
@@ -48,6 +49,27 @@ export const DECKS: Record<ModelKind, DeckPlan> = {
   kobaya: { oarDrop: 0, open: true, length: 0.62, beam: 0.5, command: null, figures: { oar: 8, gun: 0, shot: 3, melee: 3 }, oars: 4, drum: false },
   mingship: { oarDrop: 1.4, open: true, length: 0.6, beam: 0.66, command: { x: -0.3, up: 3 }, figures: { oar: 16, gun: 12, shot: 12, melee: 8 }, oars: 8, drum: true },
   mingsmall: { oarDrop: 0, open: true, length: 0.6, beam: 0.55, command: null, figures: { oar: 10, gun: 2, shot: 4, melee: 3 }, oars: 5, drum: false },
+  racegalleon: { oarDrop: 0, open: true, length: 0.6, beam: 0.6, command: { x: -0.36, up: 4.4 }, figures: { oar: 0, gun: 14, shot: 10, melee: 8 }, oars: 0, drum: true },
+  pinnace: { oarDrop: 0, open: true, length: 0.6, beam: 0.55, command: null, figures: { oar: 0, gun: 4, shot: 4, melee: 3 }, oars: 0, drum: false },
+  fireship: { oarDrop: 0, open: true, length: 0.5, beam: 0.5, command: null, figures: { oar: 0, gun: 0, shot: 0, melee: 2 }, oars: 0, drum: false },
+  spgalleon: { oarDrop: 0, open: true, length: 0.6, beam: 0.6, command: { x: -0.38, up: 7.5 }, figures: { oar: 0, gun: 14, shot: 18, melee: 14 }, oars: 0, drum: true },
+  galleass: { oarDrop: 0, open: true, length: 0.66, beam: 0.8, command: { x: -0.43, up: 2.2 }, figures: { oar: 30, gun: 8, shot: 12, melee: 10 }, oars: 30, drum: true },
+  urca: { oarDrop: 0, open: true, length: 0.55, beam: 0.6, command: null, figures: { oar: 0, gun: 4, shot: 6, melee: 4 }, oars: 0, drum: false },
+  // The Lepanto galleys: oarsmen on open benches, the fighting men on the bow platform, the gangway and the poop.
+  reale: { oarDrop: 0, open: true, length: 0.7, beam: 0.8, command: { x: -0.44, up: 2.4 }, figures: { oar: 40, gun: 6, shot: 16, melee: 16 }, oars: 30, drum: true },
+  galea: { oarDrop: 0, open: true, length: 0.7, beam: 0.8, command: { x: -0.44, up: 1.7 }, figures: { oar: 30, gun: 4, shot: 10, melee: 8 }, oars: 25, drum: true },
+  vgalleass: { oarDrop: 0, open: true, length: 0.66, beam: 0.8, command: { x: -0.43, up: 2.2 }, figures: { oar: 30, gun: 10, shot: 12, melee: 10 }, oars: 30, drum: true },
+  sultana: { oarDrop: 0, open: true, length: 0.7, beam: 0.8, command: { x: -0.44, up: 2.3 }, figures: { oar: 40, gun: 4, shot: 18, melee: 16 }, oars: 31, drum: true },
+  kadirga: { oarDrop: 0, open: true, length: 0.7, beam: 0.8, command: { x: -0.44, up: 1.7 }, figures: { oar: 30, gun: 3, shot: 12, melee: 8 }, oars: 25, drum: true },
+  kalyata: { oarDrop: 0, open: true, length: 0.7, beam: 0.8, command: null, figures: { oar: 20, gun: 2, shot: 6, melee: 4 }, oars: 19, drum: false },
+  // The ships of 1805: gun crews along the weather deck, marines at the rails and the poop, the captain on the quarterdeck.
+  firstrate: { oarDrop: 0, open: true, length: 0.66, beam: 0.62, command: { x: -0.3, up: 2.2 }, figures: { oar: 0, gun: 18, shot: 12, melee: 8 }, oars: 0, drum: true },
+  gb74: { oarDrop: 0, open: true, length: 0.66, beam: 0.62, command: { x: -0.3, up: 2.2 }, figures: { oar: 0, gun: 16, shot: 10, melee: 6 }, oars: 0, drum: true },
+  gbfrigate: { oarDrop: 0, open: true, length: 0.66, beam: 0.6, command: { x: -0.32, up: 0 }, figures: { oar: 0, gun: 12, shot: 6, melee: 4 }, oars: 0, drum: false },
+  fr80: { oarDrop: 0, open: true, length: 0.66, beam: 0.62, command: { x: -0.3, up: 2.2 }, figures: { oar: 0, gun: 16, shot: 14, melee: 8 }, oars: 0, drum: true },
+  fr74: { oarDrop: 0, open: true, length: 0.66, beam: 0.62, command: { x: -0.3, up: 2.2 }, figures: { oar: 0, gun: 14, shot: 14, melee: 8 }, oars: 0, drum: true },
+  trinidad: { oarDrop: 0, open: true, length: 0.66, beam: 0.62, command: { x: -0.3, up: 2.2 }, figures: { oar: 0, gun: 18, shot: 14, melee: 10 }, oars: 0, drum: true },
+  es74: { oarDrop: 0, open: true, length: 0.66, beam: 0.62, command: { x: -0.3, up: 2.2 }, figures: { oar: 0, gun: 14, shot: 12, melee: 8 }, oars: 0, drum: true },
 };
 
 export function mainDeck(key: string, kind: ShipKind, fallback: number) {
@@ -105,6 +127,13 @@ function obstaclesFor(kind: ModelKind, variant: number): Obstacle[] {
   }
   if (kind === 'mingship') return [{ x: MING_PLAN.castle.x, z: 0, hx: MING_PLAN.castle.hx, hz: MING_PLAN.castle.hz }];
   if (kind === 'mingsmall') return [{ x: MINGSMALL_PLAN.cabin.x, z: 0, hx: MINGSMALL_PLAN.cabin.hx, hz: MINGSMALL_PLAN.cabin.hz }];
+  if (oaredPlanOf(kind)) {
+    const p = oaredPlanOf(kind)!;
+    return [p.bow, p.stern].map((c) => ({ x: (c.x0 + c.x1) / 2, z: 0, hx: (c.x1 - c.x0) / 2, hz: p.outrigger.z }));
+  }
+  const sail = sailPlanOf(kind, variant);
+  // The castles stand on the weather deck at both ends: men stand in the waist between them.
+  if (sail) return [...sail.fore.slice(0, 1), ...sail.aft.slice(0, 1)].map((c) => ({ x: (c.x0 + c.x1) / 2, z: 0, hx: (c.x1 - c.x0) / 2, hz: sail.hull.beam / 2 }));
   return [];
 }
 
@@ -116,6 +145,9 @@ function railUpFor(kind: ModelKind, variant: number, main: number) {
   if (kind === 'mingsmall') return MINGSMALL_PLAN.parapet;
   if (kind === 'kobaya') return Math.max(0.6, KOBAYA_PLAN.hull.deck - main);
   if (kind === 'hyeopseon') return Math.max(0.6, HYEOP_PLAN.hull.deck - main);
+  const sail = sailPlanOf(kind, variant);
+  if (sail) return sail.rail;
+  if (oaredPlanOf(kind)) return oaredPlanOf(kind)!.outrigger.up + 0.6;
   return 1;
 }
 

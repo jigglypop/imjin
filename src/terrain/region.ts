@@ -35,6 +35,14 @@ export type RegionBiome = {
   /** Width of the beach band, 1 as the old maps have it; mud-coloured where `shoreTint` says so. */
   shore: number;
   shoreTint: [number, number, number];
+  /**
+   * Whose land it is, for the houses, the church and the hedges: Korea (absent, the old maps) has thatch and tile houses,
+   * a beacon and a fort gate; 'english' (1588 Channel coast) stone and timber-framed cottages, a church tower and
+   * hedgerows; 'flemish' (Calais, Gravelines) brick stepped-gable houses, a spired church and hedgerows.
+   */
+  style?: 'english' | 'flemish' | 'greek' | 'maghreb';
+  /** Share of crowns that are tall and narrow, like the poplars of Flanders (absent or 0 leaves none). */
+  poplar?: number;
 };
 
 export const DEFAULT_BIOME: RegionBiome = {
@@ -54,6 +62,80 @@ export const DEFAULT_BIOME: RegionBiome = {
   dry: 0,
   shore: 1,
   shoreTint: [1, 1, 1],
+};
+
+/** The 1588 English Channel coast: broad-leaved woods (oak, beech, ash), green fields, stone and timber villages. */
+export const ENGLISH_BIOME: RegionBiome = {
+  ...DEFAULT_BIOME,
+  forest: 0.7,
+  canopyLine: 260,
+  fields: 2,
+  plain: 0.45,
+  villages: 6,
+  houses: 0.9,
+  tiled: 0.45,
+  beacons: 0,
+  broadleaf: 0.9,
+  tint: [1.08, 1.06, 0.92],
+  style: 'english',
+};
+
+/** The French and Flemish coast of Calais and Gravelines: flat fields, poplar and willow rows, brick towns. */
+export const FLEMISH_BIOME: RegionBiome = {
+  ...DEFAULT_BIOME,
+  forest: 0.45,
+  canopyLine: 220,
+  fields: 2.4,
+  plain: 0.8,
+  villages: 6,
+  houses: 1.2,
+  layout: 'row',
+  beacons: 0,
+  broadleaf: 0.8,
+  poplar: 0.45,
+  tint: [1.08, 1.05, 0.9],
+  shore: 1.4,
+  shoreTint: [0.95, 0.9, 0.78],
+  style: 'flemish',
+};
+
+/** The Greek shore of the Gulf of Patras and Preveza: dry maquis hills, olive terraces, stone villages under tile. */
+export const GREEK_BIOME: RegionBiome = {
+  ...DEFAULT_BIOME,
+  forest: 0.35,
+  canopyLine: 500,
+  rocky: 1.4,
+  fields: 1.2,
+  plain: 0.2,
+  villages: 5,
+  houses: 0.8,
+  beacons: 0,
+  broadleaf: 0.6,
+  poplar: 0.15,
+  tint: [1.1, 1.04, 0.86],
+  dry: 0.65,
+  style: 'greek',
+};
+
+/** Djerba: a flat sandy island of palms and olives, whitewashed houses and mosques, wide pale beaches. */
+export const MAGHREB_BIOME: RegionBiome = {
+  ...DEFAULT_BIOME,
+  forest: 0.2,
+  canopyLine: 120,
+  rocky: 0.3,
+  fields: 1.4,
+  plain: 0.9,
+  villages: 6,
+  houses: 1.1,
+  layout: 'scatter',
+  beacons: 0,
+  broadleaf: 0.7,
+  poplar: 0.3,
+  tint: [1.14, 1.06, 0.82],
+  dry: 0.9,
+  shore: 1.6,
+  shoreTint: [1.05, 1.0, 0.86],
+  style: 'maghreb',
 };
 
 /** A real elevation window (public/terrain/<id>.dem) with the biome that dresses it. */

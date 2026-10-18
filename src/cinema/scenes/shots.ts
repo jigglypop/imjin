@@ -1,5 +1,6 @@
 import { at } from '../subjects';
-import type { Act, Orbit, Pick, Shot, Target } from '../types';
+import { splitLine } from '../lines';
+import type { Act, Caption, Orbit, Pick, Shot, Target } from '../types';
 
 /**
  * The camera set-ups of the commander close-ups (settled in .claude/skills/cinematics/SKILL.md). Metres in the
@@ -11,34 +12,91 @@ import type { Act, Orbit, Pick, Shot, Target } from '../types';
 const around = (ship: Pick): Orbit => ({ type: 'orbit', at: at(ship), yaw: [0.95, 0.75], pitch: [0.07, 0.09], dist: [62, 54], lift: 6 });
 
 /**
- * Head and shoulders, about 85 mm, the lens wide open so the sea behind him melts: a slow push-in. `side` puts the
- * camera off his left (-1, the side's own commander, looking screen right) or his right (+1, the reverse shot).
+ * A clean medium close-up (owner 2026-10-18): chest up, the camera at his eye level a little off his face, the
+ * figure centred (the camera looks at his upper chest), a very slow push-in, fixed focus. `side` only says which side
+ * of his face the camera stands, by 0.25 m. No orbit, no over-the-shoulder.
  */
-export const closeUp = (who: string, ship: Pick, dur: number, side: 1 | -1, acts?: Act[]): Shot => ({
+/** `clear`: a turn about him and a share of the distance found by scripts/probe-cine-occlusion.mjs --search. */
+export const closeUp = (who: string, ship: Pick, dur: number, side: 1 | -1, acts?: Act[], clear?: { turn: number; reach: number }): Shot => ({
   dur,
-  cam: { type: 'figure', who, at: at(ship), from: [3.3, 1.86, 0.7 * side], to: [2.7, 1.88, 0.58 * side], look: [0, 1.7, 0], fallback: around(ship) },
-  fov: 20,
-  aperture: 1.6,
+  // Chest up, never his feet (a pitching deck shows them clipping), sharp throughout (no depth of field), and the
+  // world in slow motion while he speaks so the sea barely moves and he holds steady (owner 2026-10-18).
+  cam: { type: 'figure', who, at: at(ship), from: [2.9, 1.85, 0.24 * side], to: [2.6, 1.85, 0.21 * side], look: [0, 1.6, 0], fallback: around(ship), ...clear },
+  fov: 22,
+  slow: 0.3,
   ease: 'inOut',
   acts,
 });
 
-/** Waist up, about 50 mm, as he gives the order: the command clip starts at once and the camera pushes in on it. */
-export const command = (who: string, ship: Pick, dur: number): Shot => ({
+/** Low and a little off his side, waist up, looking up at him against the sky (owner 2026-10-18). */
+export const lowMedium = (who: string, ship: Pick, dur: number, side: 1 | -1): Shot => ({
   dur,
-  cam: { type: 'figure', who, at: at(ship), from: [3.7, 2.0, 0.9], to: [2.7, 1.95, 0.6], look: [0, 1.55, 0], fallback: around(ship) },
-  fov: 30,
-  aperture: 0.8,
-  ease: 'out',
-  acts: [{ who, move: 'command', at: 0.4 }],
+  cam: { type: 'figure', who, at: at(ship), from: [3.2, 1.4, 0.62 * side], to: [2.95, 1.42, 0.55 * side], look: [0, 1.52, 0], fallback: around(ship) },
+  fov: 25,
+  // A little under his eyes against the sky: opened up a further step so the face reads.
+  expose: 1.3,
+  slow: 0.3,
+  ease: 'inOut',
 });
 
-/** Over his shoulder toward the enemy he faces: his back sharp, the enemy fleet soft beyond. */
-export const overShoulder = (who: string, ship: Pick, dur: number): Shot => ({
+/** Over his shoulder toward the way he faces (the enemy), his head and shoulder dark in the near frame. */
+export const overShoulder = (who: string, ship: Pick, dur: number, side: 1 | -1): Shot => ({
   dur,
-  cam: { type: 'figure', who, at: at(ship), from: [-1.7, 2.02, 0.8], to: [-1.45, 2.0, 0.7], look: [40, 0.2, -3], fallback: around(ship) },
-  fov: 28,
-  aperture: 0.3,
+  cam: { type: 'figure', who, at: at(ship), from: [-1.45, 1.95, 0.62 * side], to: [-1.2, 1.93, 0.55 * side], look: [16, 1.2, -1.2 * side], fallback: around(ship) },
+  fov: 32,
+  slow: 0.3,
+  ease: 'inOut',
+});
+
+/** An insert of his command flag in the wind, from beside him. */
+export const flagInsert = (who: string, ship: Pick, dur: number, side: 1 | -1): Shot => ({
+  dur,
+  cam: { type: 'figure', who, at: at(ship), from: [0.5, 7.0, -3.4 * side], to: [0.3, 6.8, -3.1 * side], look: [0, 4, 0], lookFlag: true, fallback: around(ship) },
+  fov: 21,
+  slow: 0.3,
+  ease: 'inOut',
+});
+
+export type Setup = 'low' | 'close' | 'ots' | 'flag';
+const SETUPS = { low: lowMedium, close: (who: string, ship: Pick, dur: number, side: 1 | -1) => closeUp(who, ship, dur, side), ots: overShoulder, flag: flagInsert };
+
+type Say = Omit<Extract<Caption, { kind: 'say' }>, 'at' | 'dur' | 'part'>;
+
+/**
+ * A commander's line filmed as 1-3 set-ups (owner 2026-10-18: low medium, over the shoulder, close-up, insert), cut on
+ * the line's breaks: the subtitle shows one piece per set-up (`splitLine`), each shot as long as its piece reads.
+ * `lead`: seconds of the first shot before the subtitle comes in; `tail`: after the last goes.
+ */
+export function speech(o: { ship: Pick; side: 1 | -1; start: number; dur: number; setups: Setup[]; say: Say; lead?: number; tail?: number }) {
+  const lead = o.lead ?? 0.7;
+  const tail = o.tail ?? 0.5;
+  const parts = o.say.text ? splitLine(o.say.text, o.setups.length) : [''];
+  const n = parts.length;
+  const total = parts.reduce((sum, p) => sum + Math.max(8, p.length), 0);
+  const body = o.dur - lead - tail;
+  const shots: Shot[] = [];
+  const captions: Caption[] = [];
+  let t = o.start;
+  for (const [i, p] of parts.entries()) {
+    const read = (body * Math.max(8, p.length)) / total;
+    const dur = read + (i === 0 ? lead : 0) + (i === n - 1 ? tail : 0);
+    shots.push(SETUPS[o.setups[i]!](o.say.cast, o.ship, dur, o.side));
+    const at = t + (i === 0 ? lead : 0.12);
+    captions.push({ ...o.say, kind: 'say', at, dur: read - 0.3, part: n > 1 ? [i, n] : undefined });
+    t += dur;
+  }
+  return { shots, captions };
+}
+
+/**
+ * The order, as a camera beat (the figures only stand, owner 2026-10-17): low off his flagship's quarter, pushing in as
+ * she leads toward the enemy, the order as a subtitle over it.
+ */
+export const order = (ship: Pick, toward: Pick, dur: number): Shot => ({
+  dur,
+  cam: { type: 'orbit', at: at(ship, { toward }), yaw: [Math.PI - 0.62, Math.PI - 0.4], pitch: [0.07, 0.045], dist: [130, 82], lift: [9, 6] },
+  fov: [32, 27],
+  ease: 'inOut',
 });
 
 /** The hand-off: from the last shot into the battle camera. */

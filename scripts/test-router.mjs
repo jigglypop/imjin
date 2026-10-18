@@ -38,7 +38,7 @@ async function load(contents, external = []) {
 }
 
 const R = await load("export * from './src/routes';");
-const { ROUTES, BATTLE_SLUGS, LAUNCH_PARAMS, cardFile, parseRoute, pickEdition, routePages, routePath, withoutParams } = R;
+const { ROUTES, BATTLE_SLUGS, CHAPTER_BATTLES, LAUNCH_PARAMS, cardFile, parseRoute, pickEdition, routePages, routePath, withoutParams } = R;
 
 const SCREENS = { menu: '', faction: 'campaign', skirmish: 'conquest', select: 'battles', online: 'online', settings: 'settings', codex: 'ships', generals: 'generals' };
 
@@ -106,7 +106,9 @@ await check('settings in the query outlive a navigation; the battle-launch hooks
 
 await check('the build writes one page per address, uploaded under the bare path, the path with a slash and index.html', () => {
   const pages = routePages();
-  assert.equal(pages.length, (ROUTES.length + BATTLE_SLUGS.length) * 2);
+  // A later chapter adds its front page, its history screen and its battles.
+  const chapterPages = Object.values(CHAPTER_BATTLES).reduce((n, list) => n + 2 + list.length, 0);
+  assert.equal(pages.length, (ROUTES.length + BATTLE_SLUGS.length + chapterPages) * 2);
   assert.equal(new Set(pages.map((p) => p.file)).size, pages.length);
   const front = pages.find((p) => p.screen === 'menu' && p.edition === 'ko');
   assert.deepEqual(front, { screen: 'menu', edition: 'ko', path: '/', file: 'index.html', keys: ['index.html'] });
@@ -114,7 +116,7 @@ await check('the build writes one page per address, uploaded under the bare path
   assert.deepEqual(pages.find((p) => p.screen === 'faction' && p.edition === 'en'), { screen: 'faction', edition: 'en', path: '/en/campaign', file: 'en/campaign/index.html', keys: ['en/campaign', 'en/campaign/', 'en/campaign/index.html'] });
   assert.deepEqual(pages.find((p) => p.battle === 'hansan' && p.edition === 'en'), { screen: 'select', edition: 'en', path: '/en/battles/hansan', file: 'en/battles/hansan/index.html', keys: ['en/battles/hansan', 'en/battles/hansan/', 'en/battles/hansan/index.html'], battle: 'hansan' });
   for (const page of pages) {
-    for (const key of page.keys) assert.deepEqual(parseRoute(`/${key}`), { screen: page.screen, edition: page.edition === 'en' ? 'en' : null, known: true, ...(page.battle ? { battle: page.battle } : {}) }, key);
+    for (const key of page.keys) assert.deepEqual(parseRoute(`/${key}`), { screen: page.screen, edition: page.edition === 'en' ? 'en' : null, known: true, ...(page.battle ? { battle: page.battle } : {}), ...(page.chapter ? { chapter: page.chapter } : {}) }, key);
   }
 });
 
@@ -135,11 +137,26 @@ await check('each historical battle has an address in both editions; the history
   for (const path of ['/battles/hansan/extra', '/campaign/hansan', '/hansan', '/en/hansan']) assert.deepEqual(parseRoute(path), { screen: 'menu', edition: path.startsWith('/en/') ? 'en' : null, known: false }, path);
 });
 
+await check('a later chapter lives under its id; the main chapter keeps the root', () => {
+  assert.equal(routePath('menu', 'ko', null, 'armada'), '/armada');
+  assert.equal(routePath('menu', 'en', null, 'armada'), '/en/armada');
+  assert.equal(routePath('select', 'ko', 'gravelines'), '/armada/battles/gravelines');
+  assert.equal(routePath('select', 'en', 'calais'), '/en/armada/battles/calais');
+  assert.deepEqual(parseRoute('/armada'), { screen: 'menu', edition: null, known: true, chapter: 'armada' });
+  assert.deepEqual(parseRoute('/en/armada/battles/plymouth/'), { screen: 'select', edition: 'en', known: true, battle: 'plymouth', chapter: 'armada' });
+  assert.deepEqual(parseRoute('/battles/plymouth'), { screen: 'select', edition: null, known: false }, 'an Armada battle is not a 1592 battle');
+  assert.deepEqual(parseRoute('/armada/battles/hansan'), { screen: 'select', edition: null, known: false, chapter: 'armada' });
+  assert.deepEqual(parseRoute('/imjin'), { screen: 'menu', edition: null, known: false }, 'the main chapter has no prefix');
+});
+
 await check('every page has a two-to-one link card: its battle\'s own, or the front card', () => {
   assert.equal(cardFile(null, 'ko'), 'og/front-ko-v1.jpg');
   assert.equal(cardFile(null, 'en'), 'og/front-en-v1.jpg');
   const cards = new Set(routePages().map((p) => cardFile(p.battle ?? null, p.edition)));
-  assert.equal(cards.size, (BATTLE_SLUGS.length + 1) * 2);
+  // Every 1592 battle and the later chapters' battles that have their own card; the rest share the front card.
+  const own = routePages().filter((p) => p.battle && cardFile(p.battle, p.edition) !== cardFile(null, p.edition)).map((p) => p.battle);
+  assert.ok(BATTLE_SLUGS.every((b) => own.includes(b)), 'every 1592 battle has its own card');
+  assert.equal(cards.size, (new Set(own).size + 1) * 2);
   for (const battle of BATTLE_SLUGS) assert.match(cardFile(battle, 'en'), new RegExp(`^og/${battle}-en-v\\d+\\.jpg$`));
 });
 

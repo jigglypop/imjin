@@ -5,7 +5,8 @@ import { BRANCH_SKILLS, MASTERY_ID, MASTERY_LEVEL, TREES, techById, techsOf, typ
 import { COMMANDERS } from './regions';
 import { LEVEL_XP } from './roster';
 import type { Commander, Fleet, Grand, GrandFaction, Result, TechState } from './types';
-import { GRAND_FACTIONS, fail, ok } from './types';
+import { fail, ok } from './types';
+import { factionsOf } from './theatre';
 import { note } from './world';
 
 /**
@@ -112,7 +113,8 @@ const newCommander = (def: (typeof COMMANDERS)[number]): Commander => ({ id: def
 export function joinCommanders(g: Grand, quiet = false) {
   for (const def of COMMANDERS) {
     const st = g.factions[def.faction];
-    if (!st.alive || (def.joins ?? 1) > g.turn || st.commanders.some((c) => c.id === def.id)) continue;
+    // A commander of another theatre's navy (absent from this campaign) never joins it.
+    if (!st || !st.alive || (def.joins ?? 1) > g.turn || st.commanders.some((c) => c.id === def.id)) continue;
     st.commanders.push(newCommander(def));
     if (!quiet && def.joins !== undefined && g.turn > 1) note(g, '{name}({title}) 장군이 수군에 합류했습니다', { name: def.name, title: def.title }, def.faction === g.player ? 'good' : 'info');
   }
@@ -163,7 +165,7 @@ function finishTech(g: Grand, f: GrandFaction, t: TechDef) {
 
 /** The research of every navy goes on by a turn. Run when a turn closes. */
 export function advanceResearch(g: Grand) {
-  for (const f of GRAND_FACTIONS) {
+  for (const f of factionsOf(g)) {
     const st = g.factions[f].tech;
     if (!st?.doing || !g.factions[f].alive) continue;
     st.doing.left -= 1;
@@ -182,6 +184,13 @@ const AI_ORDER: Record<GrandFaction, readonly string[]> = {
   joseon: ['panokseon', 'turtle', 'chongtong', 'powder', 'drill'],
   japan: ['volley', 'atake', 'boarding', 'pirates', 'drill'],
   ming: ['frankish', 'greatships', 'grain', 'drill'],
+  england: ['culverin', 'raceships', 'fireships', 'drill'],
+  spain: ['galleasses', 'tercios', 'silver', 'drill'],
+  holyleague: ['galleasses', 'arquebus', 'spurs', 'drill'],
+  ottoman: ['janissaries', 'archers', 'corsairs', 'drill'],
+  britain: ['gunlocks', 'copper', 'popham', 'drill'],
+  france: ['boarders', 'soldiers', 'tops', 'drill'],
+  spain1805: ['artillery', 'fourdecks', 'havana', 'drill'],
 };
 
 /** The computer starts the next research it can afford while keeping `reserve` in the treasury. */
@@ -252,7 +261,7 @@ export function resolveEdge(m: ShipMods): { gun: number; melee: number; guard: n
 export function migrateGrandGrowth(g: Grand): boolean {
   if (g.growth === 'v1') return false;
   g.growth = 'v1';
-  for (const f of GRAND_FACTIONS) {
+  for (const f of factionsOf(g)) {
     const st = g.factions[f];
     for (const c of st.commanders) c.skills ??= [];
     const tech = techOf(g, f);

@@ -3,7 +3,9 @@ import { shipSpec } from '../../sim/competitive';
 import type { ShipKind } from '../../sim/types';
 import { buildingWorkTotal, buildingOf, dateLabel, garrisonCap, levelOf, netIncome, queueSlots, regionIncome } from '../../sim/grand/economy';
 import { buildMenu, recruitMenu, refitCost } from '../../sim/grand/orders';
-import { REGIONS, REGION_ORDER, START, type RegionDef } from '../../sim/grand/regions';
+import { REGIONS, type RegionDef } from '../../sim/grand/regions';
+import { factionsOf, orderOf, THEATRES } from '../../sim/grand/theatre';
+import { mapTheatreId } from './theatreChoice';
 import { GRADE_TEXT, type BattleSummary } from '../../sim/grand/report';
 import { pendingCard, describeEffect } from '../../sim/grand/events';
 import type { TurnReplay } from '../../sim/grand/replay';
@@ -50,6 +52,18 @@ const PIN: Partial<Record<RegionId, { lon: number; lat: number }>> = {
   nagoya: { lon: 130.05, lat: 33.55 },
   shandong: { lon: 125.12, lat: 34.5 },
   liaodong: { lon: 125.2, lat: 35.38 },
+  // The Iberian ports of the Armada theatre lie south of its map: pinned on the Bay of Biscay at its southern edge.
+  lisbon: { lon: -9.9, lat: 47.95 },
+  corunna: { lon: -7.9, lat: 47.95 },
+  santander: { lon: -5.7, lat: 47.85 },
+  // The Lepanto theatre's ports off its map: Famagusta at the eastern edge, Tripoli and Alexandria at the southern.
+  famagusta: { lon: 29.75, lat: 35.6 },
+  tripoli: { lon: 13.6, lat: 34.75 },
+  alexandria: { lon: 28.3, lat: 34.75 },
+  // The Trafalgar theatre's Caribbean islands, 5,000 km to the west: pinned on the Atlantic at its western edge, Barbados
+  // to the south-east of Martinique as it lies.
+  martinique: { lon: -10.9, lat: 38.3 },
+  barbados: { lon: -10.2, lat: 37.5 },
 };
 
 const LABEL: Partial<Record<RegionId, RegionView['labelSide']>> = {
@@ -74,12 +88,12 @@ const TERRAIN_NOTE: Record<RegionDef['terrain'], string> = {
   open: '트인 바다입니다. 속도와 화력이 승부를 가릅니다.',
 };
 
-const player = (g: Grand): GrandFaction => g.player ?? 'joseon';
+const player = (g: Grand): GrandFaction => g.player ?? factionsOf(g)[0]!;
 
 export function regionViews(g: Grand): RegionView[] {
   const me = player(g);
   const seen = visibleRegions(g, me);
-  return REGION_ORDER.map((id) => {
+  return orderOf(g).map((id) => {
     const def = REGIONS[id];
     const r = g.regions[id];
     const own = r.owner === me;
@@ -201,7 +215,7 @@ export function fleetViews(g: Grand): FleetView[] {
 }
 
 export function turnView(g: Grand): TurnView {
-  return { turn: g.turn, maxTurns: MAX_TURNS, date: t(dateLabel(g.turn)), faction: player(g), winter: marching(g) && winterTurn(g.turn) };
+  return { turn: g.turn, maxTurns: MAX_TURNS, date: t(dateLabel(g.turn, g)), faction: player(g), winter: marching(g) && winterTurn(g.turn) };
 }
 
 export function treasuryView(g: Grand): TreasuryView {
@@ -255,10 +269,10 @@ export function moveTargets(g: Grand, fl: Fleet): RegionId[] {
   if (marching(g)) {
     if (fl.rest > 0 || (!fl.at && !fl.transit)) return [];
     const { dist } = marchDistances(g, fl);
-    return REGION_ORDER.filter((id) => id !== fl.at && dist.has(id) && (fl.stance !== 'march' || passable(g, fl.faction, id)));
+    return orderOf(g).filter((id) => id !== fl.at && dist.has(id) && (fl.stance !== 'march' || passable(g, fl.faction, id)));
   }
   if (!fl.at || fl.transit || fl.rest > 0) return [];
-  return REGION_ORDER.filter((id) => id !== fl.at && findRoute(g, fl.faction, fl.at!, id));
+  return orderOf(g).filter((id) => id !== fl.at && findRoute(g, fl.faction, fl.at!, id));
 }
 
 /** March rules: the turns the fleet needs to reach each port it can be sent to, for the map's coloured range. */
@@ -367,7 +381,7 @@ export function objectiveView(g: Grand): ObjectiveView {
 
 export function scoreViews(g: Grand): ScoreView[] {
   const me = player(g), seen = visibleRegions(g, me);
-  return (['joseon', 'japan', 'ming'] as GrandFaction[]).map((f) => {
+  return factionsOf(g).map((f) => {
     const known = g.phase === 'over' || allied(g, me, f);
     return { faction: f, score: known ? scoreOf(g, f) : null, observedOnly: !known, regions: ownedBy(g, f).length,
       ships: known ? shipCount(g, f) : g.fleets.filter((fl) => fl.faction === f && fleetObserved(g, me, fl, seen)).reduce((n, fl) => n + fl.ships.length, 0), alive: g.factions[f].alive };
@@ -381,7 +395,7 @@ export function logLines(g: Grand, turn?: number, limit = 14): LogLineView[] {
 
 export function relationViews(g: Grand): RelationView[] {
   const me = player(g);
-  return (['joseon', 'japan', 'ming'] as GrandFaction[])
+  return factionsOf(g)
     .filter((f) => f !== me)
     .map((other) => {
       const isAllied = allied(g, me, other);
@@ -417,11 +431,69 @@ const OPTION_TEXT: Record<GrandFaction, { name: string; leaders: string[]; blurb
     weakness: '먼 출전 거리',
     difficulty: 3,
   },
+  england: {
+    name: '잉글랜드',
+    leaders: ['하워드', '드레이크'],
+    blurb: '빠른 레이스 빌트 갤리온과 긴 사거리의 컬버린으로 해협을 지키는 진영입니다. 플리머스와 다운스에서 시작해 무적함대를 막고 플랑드르의 항구를 노립니다.',
+    strengths: ['원거리 포격', '빠른 함선', '많은 포구'],
+    weakness: '도선전에 약함',
+    difficulty: 2,
+  },
+  spain: {
+    name: '에스파냐',
+    leaders: ['메디나 시도니아', '레칼데'],
+    blurb: '거대한 갤리온과 병사들로 바다를 건너 잉글랜드를 침공하는 진영입니다. 라코루냐의 무적함대와 됭케르크의 파르마군이 런던을 노립니다.',
+    strengths: ['강한 도선전', '큰 함대', '인디아스의 은'],
+    weakness: '느린 장전, 먼 본국',
+    difficulty: 2,
+  },
+  holyleague: {
+    name: '신성동맹',
+    leaders: ['돈 후안', '베니에르'],
+    blurb: '베네치아, 에스파냐, 교황령이 맺은 동맹의 함대입니다. 메시나에 모인 갤리선과 베네치아의 갈레아스로 오스만 함대를 찾아 이오니아해로 나갑니다.',
+    strengths: ['이물 대포 화력', '갈레아스', '화승총병'],
+    weakness: '흩어진 포구, 늦은 집결',
+    difficulty: 2,
+  },
+  ottoman: {
+    name: '오스만',
+    leaders: ['알리 파샤', '울루치 알리'],
+    blurb: '많은 갤리선과 갈리오트로 지중해 동쪽을 쥔 술탄의 함대입니다. 레판토와 모돈에서 시작해 베네치아의 섬들과 키프로스를 노립니다.',
+    strengths: ['많은 함선', '빠른 갤리선', '활과 도선전'],
+    weakness: '약한 이물 화력',
+    difficulty: 2,
+  },
+  britain: {
+    name: '영국',
+    leaders: ['넬슨', '콘월리스'],
+    blurb: '브레스트와 툴롱, 페롤과 카디스를 봉쇄하며 바다를 지키는 진영입니다. 빠른 포격과 숙련된 수병으로 연합 함대가 모이기 전에 하나씩 잡아야 합니다.',
+    strengths: ['빠른 포격', '숙련된 수병', '여러 바다의 기지'],
+    weakness: '두 적을 동시에 상대',
+    difficulty: 2,
+  },
+  france: {
+    name: '프랑스',
+    leaders: ['빌뇌브', '강톰'],
+    blurb: '나폴레옹의 함대입니다. 브레스트와 툴롱, 로슈포르의 함대를 봉쇄에서 빼내 에스파냐 함대와 합쳐 해협을 쥐고, 불로뉴의 대육군을 영국으로 건너보내야 합니다.',
+    strengths: ['큰 함선', '도선 돌격', '에스파냐와 동맹'],
+    weakness: '봉쇄된 항구, 경험 없는 수병',
+    difficulty: 3,
+  },
+  spain1805: {
+    name: '에스파냐',
+    leaders: ['그라비나', '알라바'],
+    blurb: '카디스와 페롤, 카르타헤나의 함대로 프랑스와 손잡은 진영입니다. 크고 튼튼한 전열함과 산티시마 트리니다드로 지브롤터 해협을 쥐고 있습니다.',
+    strengths: ['튼튼한 선체', '4층 갑판의 거함', '프랑스와 동맹'],
+    weakness: '수병 부족',
+    difficulty: 3,
+  },
 };
 
-export const factionOptions = (): FactionOption[] =>
-  (['joseon', 'japan', 'ming'] as GrandFaction[]).map((id) => {
+/** The pick cards of a theatre's navies (the page's own theatre by default). */
+export const factionOptions = (theatre = mapTheatreId()): FactionOption[] =>
+  THEATRES[theatre].factions.map((id) => {
     const o = OPTION_TEXT[id];
+    const start = THEATRES[theatre].start;
     return {
       id,
       name: t(o.name),
@@ -430,12 +502,12 @@ export const factionOptions = (): FactionOption[] =>
       strengths: o.strengths.map((x) => t(x)),
       weakness: t(o.weakness),
       difficulty: o.difficulty,
-      startRegions: REGION_ORDER.filter((r) => START.owners[r] === id).map((r) => t(REGIONS[r].name)),
-      fleets: START.fleets.filter((f) => f.faction === id).length,
+      startRegions: THEATRES[theatre].order.filter((r) => start.owners[r] === id).map((r) => t(REGIONS[r].name)),
+      fleets: start.fleets.filter((f) => f.faction === id).length,
     };
   });
 
-const NAVY: Record<GrandFaction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군' };
+const NAVY: Record<GrandFaction, string> = { joseon: '조선 수군', japan: '일본 수군', ming: '명 수군', england: '잉글랜드 수군', spain: '에스파냐 수군', holyleague: '신성동맹 함대', ottoman: '오스만 함대', britain: '영국 해군', france: '프랑스 해군', spain1805: '에스파냐 해군' };
 
 export function resultView(s: BattleSummary): BattleResultView {
   const winnerSide = s.winner === 'attacker' ? s.attacker : s.defender;
@@ -503,7 +575,7 @@ export function saveView(g: Grand): SaveView {
     faction: me,
     turn: g.turn,
     maxTurns: MAX_TURNS,
-    date: t(dateLabel(g.turn)),
+    date: t(dateLabel(g.turn, g)),
     regions: ownedBy(g, me).length,
     ships: shipCount(g, me),
     gold: Math.round(g.factions[me].gold),
@@ -527,7 +599,7 @@ export function eventView(g: Grand): EventView | null {
   if (!shown) return null;
   return {
     id: shown.event.id,
-    date: t(dateLabel(g.turn)),
+    date: t(dateLabel(g.turn, g)),
     title: t(shown.card.title),
     text: t(shown.card.text),
     portrait: shown.card.portrait,
@@ -546,7 +618,7 @@ export function turnReportView(g: Grand, turn: number): TurnReportView {
   const closed = row?.gold[me] ?? Math.round(g.factions[me].gold);
   const now = Math.round(g.factions[me].gold);
   return {
-    date: `${t(dateLabel(turn))} → ${t(dateLabel(turn + 1))}`,
+    date: `${t(dateLabel(turn, g))} → ${t(dateLabel(turn + 1, g))}`,
     gold: {
       now,
       before,

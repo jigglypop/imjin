@@ -1,6 +1,6 @@
 import type { Battle, BattleRules } from './battle';
 import { GUN_SPECS } from './catalog';
-import { COMPETITIVE_PROFILE, shipSpec, type BalanceProfile } from './competitive';
+import { COMPETITIVE_PROFILE, eraBudgetScale, eraPrices, shipSpec, type BalanceProfile } from './competitive';
 import type { DepthVersion } from './depth';
 import { Strategist } from './strategy';
 import { cardOf, variantFor } from '../ships/anchors';
@@ -39,6 +39,13 @@ export const RANKED_ROSTER: Record<Faction, ShipKind[]> = {
   joseon: ['panokseon', 'geobukseon', 'hyeopseon'],
   japan: ['atakebune', 'sekibune', 'kobaya'],
   ming: ['mingship', 'mingsmall'],
+  england: ['racegalleon', 'pinnace'],
+  spain: ['spgalleon', 'galleass', 'urca'],
+  holyleague: ['galea', 'vgalleass'],
+  ottoman: ['kadirga', 'kalyata'],
+  britain: ['gb74', 'gbfrigate'],
+  france: ['fr74'],
+  spain1805: ['es74'],
 };
 
 /** Ships each navy can build under the expanded rules (casual battles and the campaign): the size tiers and support craft as well. */
@@ -46,6 +53,13 @@ export const ROSTER: Record<Faction, ShipKind[]> = {
   joseon: ['panokseon', 'geobukseon', 'hyeopseon', 'pojakseon', 'sahuseon'],
   japan: ['daeantaek', 'atakebune', 'sogantaek', 'daegwanseon', 'sekibune', 'kobaya', 'byeongnyangseon'],
   ming: ['gwangseon', 'mingship', 'haechangseon', 'mingsmall', 'hoseon'],
+  england: ['racegalleon', 'pinnace', 'fireship'],
+  spain: ['spgalleon', 'galleass', 'urca'],
+  holyleague: ['reale', 'galea', 'vgalleass'],
+  ottoman: ['sultana', 'kadirga', 'kalyata'],
+  britain: ['firstrate', 'gb74', 'gbfrigate'],
+  france: ['fr80', 'fr74'],
+  spain1805: ['trinidad', 'es74'],
 };
 
 export const rosterOf = (faction: Faction, expanded: boolean | undefined) => (expanded ? ROSTER : RANKED_ROSTER)[faction];
@@ -58,6 +72,13 @@ const PORTRAITS: Record<Faction, string[]> = {
   joseon: ['portrait_admiral', 'portrait_eo', 'portrait_kwon', 'portrait_jeongun', 'portrait_anwi', 'portrait_eokgi'],
   japan: ['portrait_japan', 'portrait_kato', 'portrait_kuki', 'portrait_kurushima', 'portrait_konishi', 'portrait_wakisaka'],
   ming: ['portrait_deng', 'portrait_chenlin'],
+  england: ['portrait_howard', 'portrait_drake', 'portrait_hawkins', 'portrait_frobisher'],
+  spain: ['portrait_medina', 'portrait_recalde', 'portrait_oquendo', 'portrait_leyva'],
+  holyleague: ['portrait_donjuan', 'portrait_barbarigo', 'portrait_venier', 'portrait_doria'],
+  ottoman: ['portrait_alipasha', 'portrait_siroco', 'portrait_uluc', 'portrait_pertev'],
+  britain: ['portrait_nelson', 'portrait_collingwood', 'portrait_hardy', 'portrait_blackwood'],
+  france: ['portrait_villeneuve', 'portrait_lucas'],
+  spain1805: ['portrait_gravina', 'portrait_churruca'],
 };
 
 /** Ship names in squadron and recruit labels. */
@@ -79,6 +100,25 @@ export const SHORT_NAME: Record<ShipKind, string> = {
   gwangseon: '명 광선',
   haechangseon: '명 해창선',
   hoseon: '명 호선',
+  racegalleon: '갤리온',
+  pinnace: '핀네이스',
+  fireship: '화공선',
+  spgalleon: '에스파냐 갤리온',
+  galleass: '갈레아스',
+  urca: '우르카',
+  reale: '라 레알',
+  galea: '갤리선',
+  vgalleass: '베네치아 갈레아스',
+  sultana: '술타나',
+  kadirga: '카드르가',
+  kalyata: '칼리야타',
+  firstrate: '1급 전열함',
+  gb74: '74문 전열함 (영국)',
+  gbfrigate: '프리깃',
+  fr80: '80문 전열함',
+  fr74: '74문 전열함 (프랑스)',
+  trinidad: '산티시마 트리니다드',
+  es74: '74문 전열함 (에스파냐)',
 };
 
 /** Shore guns by navy: count, gun and seconds between rounds. */
@@ -86,6 +126,13 @@ const BATTERY_GUNS: Record<Faction, { gun: GunType; count: number; reload: numbe
   joseon: { gun: 'jija', count: 3, reload: 9 },
   japan: { gun: 'folangji', count: 4, reload: 8 },
   ming: { gun: 'folangji', count: 4, reload: 7.5 },
+  england: { gun: 'culverin', count: 3, reload: 8 },
+  spain: { gun: 'cannon', count: 3, reload: 11 },
+  holyleague: { gun: 'cannon', count: 3, reload: 10 },
+  ottoman: { gun: 'cannon', count: 2, reload: 11 },
+  britain: { gun: 'long32', count: 3, reload: 7 },
+  france: { gun: 'long36', count: 3, reload: 9 },
+  spain1805: { gun: 'long36', count: 3, reload: 9 },
 };
 
 export type Building = { kind: BuildingKind; hp: number; progress: number; reload: number[]; level: BuildingLevel; upgradeLeft: number; upgradeTotal: number; constructionTotal?: number };
@@ -146,6 +193,10 @@ export type ConquestOptions = {
   expanded?: boolean;
   incomeScale?: number;
   musterBudget?: number;
+  /** The mixed-era factor already applied to the budget, funds, cap and income (eraOptions). */
+  eraScale?: number;
+  /** A mixed-era room's price factors of the later navies' ships (eraPrices in competitive.ts). */
+  eraPrice?: Partial<Record<ShipKind, number>>;
   /** A campaign port holds for its defender on a tie. Ordinary skirmishes end in a draw. */
   tieWinner?: Team;
   /** The battle depth rules (depth.ts). Ranked and online rooms leave them out until a season adopts a version. */
@@ -155,6 +206,19 @@ export type ConquestOptions = {
 export const DEFAULT_OPTIONS: ConquestOptions = { profile: COMPETITIVE_PROFILE, tickets: 3000, timeLimit: 30 * 60, startFunds: 3600, cap: Infinity, maxShips: Infinity, expanded: true, incomeScale: 3, musterBudget: 15600 };
 /** The sole fixed fleet limit belongs to competitive ranked one-versus-one rooms. */
 export const RANKED_OPTIONS: ConquestOptions = { profile: COMPETITIVE_PROFILE, tickets: 1000, timeLimit: 30 * 60, startFunds: 1200, cap: 10000, maxShips: 36, expanded: false, incomeScale: 1, musterBudget: 5200 };
+
+/**
+ * The options of a skirmish or online room for the navies in it: scaled by eraBudgetScale (competitive.ts) when a later
+ * era's navy is present, unchanged (the same object) otherwise. `eraScale` records the factor.
+ */
+export function eraOptions(options: Partial<ConquestOptions>, factions: Iterable<Faction>): Partial<ConquestOptions> {
+  const factions_ = [...factions];
+  const k = eraBudgetScale(factions_);
+  if (k === 1 || options.eraScale !== undefined) return options;
+  const base = { ...DEFAULT_OPTIONS, ...options };
+  const eraPrice = eraPrices(factions_);
+  return { ...options, eraScale: k, ...(eraPrice ? { eraPrice } : {}), musterBudget: (base.musterBudget ?? 15600) * k, startFunds: base.startFunds * k, cap: base.cap * k, incomeScale: (base.incomeScale ?? 1) * k };
+}
 
 const BASE_INCOME = 60;
 const POINT_INCOME = 45;
@@ -267,7 +331,9 @@ export class Conquest implements BattleRules {
   autopilot = false;
 
   shipSpec(kind: ShipKind) {
-    return shipSpec(kind, this.options.profile);
+    const spec = shipSpec(kind, this.options.profile);
+    const factor = this.options.eraPrice?.[kind];
+    return factor ? { ...spec, cost: Math.round(spec.cost * factor) } : spec;
   }
 
   constructor(map: MapPoint[], players: Omit<ConquestPlayer, 'funds' | 'income' | 'cap' | 'sunk' | 'lost'>[], land: LandSampler, options: Partial<ConquestOptions> = {}) {
@@ -381,7 +447,7 @@ export class Conquest implements BattleRules {
     let count = 0;
     for (const s of b.ships) {
       if (s.owner !== slot || !b.isActive(s)) continue;
-      value += s.spec.cost;
+      value += this.options.eraPrice ? this.shipSpec(s.spec.kind).cost : s.spec.cost;
       count += 1;
     }
     for (const p of this.points) {
@@ -863,7 +929,7 @@ export class Conquest implements BattleRules {
   }
 
   lost(b: Battle, s: Ship) {
-    this.tickets[s.team] -= s.spec.cost / 12;
+    this.tickets[s.team] -= (this.options.eraPrice ? this.shipSpec(s.spec.kind).cost : s.spec.cost) / 12;
     const owner = this.players[s.owner];
     if (owner) owner.lost += 1;
     for (const pl of this.players) if (pl.team !== s.team) pl.sunk += 1 / Math.max(1, this.players.filter((q) => q.team !== s.team).length);

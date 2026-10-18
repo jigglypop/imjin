@@ -14,7 +14,8 @@ import { fileURLToPath } from 'node:url';
 const USAGE = `node scripts/assets.mjs <command>   (or npm run assets -- <command>)
   status [--remote]             what differs from assets.json; --remote: whether the bucket holds every blob it names
   push [paths...] [--dry-run]   upload new and changed files and record them; a named file that is gone is dropped
-  pull [paths...] [--dry-run]   make the tree match assets.json, from the cache or S3
+  pull [paths...] [--dry-run] [--all]   make the tree match assets.json, from the cache or S3; --all also brings
+                                back the files prune-local left in S3
   verify                        the bucket holds every blob assets.json names, history included, at its size
   restore <path> [--previous | --sha=<prefix>]   bring back an earlier version (the previous one by default)
   models [--json]               the model vault: every .glb with its triangles, versions and provenance records
@@ -24,11 +25,17 @@ const USAGE = `node scripts/assets.mjs <command>   (or npm run assets -- <comman
                                 assets-archive.json), each local copy deleted once the bucket holds it; CI never pulls it
   archive-pull <path|glob...> [--dry-run] [--force]   bring archived files back on demand
   archive-status [--remote]     what the archive holds per folder; --remote: the bucket holds every archived blob
-Environment: IMJIN_ASSET_CACHE (the shared cache), IMJIN_ASSET_ENDPOINT (an S3-compatible endpoint, path-style),
+  prune-local [paths...] [--min-size=<n[K|M|G]>] [--dry-run]   delete local copies of public/ runtime files the bucket
+                                holds (checked), recorded in .assets-remote.json; the dev server fetches them from S3
+                                (default: public/models); pull skips them until pull --all
+Environment: IMJIN_ASSET_CACHE (the shared cache), IMJIN_ASSET_CACHE_MAX (its cap, default 2G), IMJIN_ASSET_ENDPOINT (an S3-compatible endpoint, path-style),
 AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_SESSION_TOKEN (else the aws CLI's credentials).`;
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const MANIFEST = join(ROOT, 'assets.json');
+// This tree's runtime files kept only in S3 (prune-local): local, never committed; pull leaves them out until --all.
+const REMOTE = join(ROOT, '.assets-remote.json');
+const REMOTE_SCHEMA = 'imjin.assets-remote.v1';
 const SCHEMA = 'imjin.assets.v1';
 const STORE = { bucket: 'imjin1592-assets', region: 'ap-northeast-2', prefix: 'sha256/' };
 const DEPLOY_ROLE = 'imjin1592-github-deploy';
@@ -177,6 +184,12 @@ function formatManifest({ schema, store, files }) {
 }
 
 const writeManifest = (manifest) => writeAtomic(MANIFEST, formatManifest(manifest));
+const readRemote = async () => new Set((await readFile(REMOTE, 'utf8').then(JSON.parse).catch(() => null))?.paths ?? []);
+async function writeRemote(paths) {
+  if (!paths.size) return rm(REMOTE, { force: true });
+  const note = 'runtime files this tree keeps only in S3 (npm run assets -- prune-local); pull --all brings them back';
+  await writeAtomic(REMOTE, `${JSON.stringify({ schema: REMOTE_SCHEMA, note, paths: [...paths].sort() }, null, 2)}\n`);
+}
 
 // ---- the tree
 
@@ -303,6 +316,10 @@ async function unpushed(recorded, hash) {
 // ---- S3
 
 let identity = null;
+/** Forgets the credentials, so that a long-running dev server asks the aws CLI again after a session expires. */
+const resetCredentials = () => {
+  identity = null;
+};
 /** AWS credentials from the environment (as CI's configure-aws-credentials sets them), else from the aws CLI. */
 function awsCredentials() {
   if (identity) return identity;
@@ -458,12 +475,15 @@ async function status(args, flags) {
   reportHashing();
   const added = paths.filter((path) => !files[path] && here.get(path));
   const changed = paths.filter((path) => files[path] && here.get(path) && here.get(path).sha256 !== files[path].sha256);
-  const missing = paths.filter((path) => files[path] && !here.get(path));
+  const remote = await readRemote();
+  const pruned = paths.filter((path) => files[path] && !here.get(path) && remote.has(path));
+  const missing = paths.filter((path) => files[path] && !here.get(path) && !remote.has(path));
   const total = Object.values(files).reduce((sum, entry) => sum + entry.size, 0);
   console.log(`assets.json: ${Object.keys(files).length} files, ${size(total)}`);
   list('new, not in assets.json', added, (path) => size(here.get(path).size));
   list('changed here', changed, (path) => `${size(here.get(path).size)}, assets.json has ${size(files[path].size)}`);
   list('missing here', missing, (path) => size(files[path].size));
+  if (pruned.length) console.log(`remote-only (prune-local): ${pruned.length} files, ${size(pruned.reduce((sum, path) => sum + files[path].size, 0))}; the dev server fetches them from S3`);
   if (added.length || changed.length) console.log('npm run assets -- push uploads the new and changed files and records them');
   if (missing.length) console.log('npm run assets -- pull brings the missing ones');
   if (!added.length && !changed.length && !missing.length) console.log('the tree matches assets.json');
@@ -496,8 +516,10 @@ async function push(args, flags) {
   reportHashing();
   const added = targets.filter((path) => !files[path] && here.get(path));
   const changed = targets.filter((path) => files[path] && here.get(path) && here.get(path).sha256 !== files[path].sha256);
-  const dropped = targets.filter((path) => files[path] && !here.get(path) && named.has(path));
-  const absent = targets.filter((path) => files[path] && !here.get(path) && !named.has(path)).length;
+  // A file pruned to S3 is not gone: it is never dropped by being absent.
+  const remote = await readRemote();
+  const dropped = targets.filter((path) => files[path] && !here.get(path) && named.has(path) && !remote.has(path));
+  const absent = targets.filter((path) => files[path] && !here.get(path) && !named.has(path) && !remote.has(path)).length;
   list('add', added, (path) => size(here.get(path).size));
   list('change', changed, (path) => `${size(here.get(path).size)}, was ${size(files[path].size)}`);
   list('drop (its blobs stay in the store, its record in the history of assets.json)', dropped, (path) => size(files[path].size));
@@ -549,17 +571,32 @@ async function pull(args, flags) {
   const here = new Map(await pool(targets, async (path) => [path, await localHash(index, path)]));
   reportHashing();
   const recorded = recordedHashes(manifest);
+  const remote = await readRemote();
+  const all = Boolean(flags.all);
   const wanted = [];
   const kept = [];
+  let skipped = 0;
   for (const path of targets) {
     const local = here.get(path);
     if (local?.sha256 === files[path].sha256) continue;
+    // A file pruned to S3 stays there; the dev server fetches it on demand.
+    if (!local && remote.has(path) && !all) {
+      skipped++;
+      continue;
+    }
     // What the store or the cache can give back may be replaced; anything else is work nobody has pushed yet.
     if (local && (await unpushed(recorded, local.sha256))) kept.push(path);
     else wanted.push(path);
   }
   list('kept: changed here and not in assets.json (push them, or delete them and pull again)', kept, (path) => size(here.get(path).size));
+  if (skipped) console.log(`${skipped} files stay remote-only (prune-local): the dev server fetches them from S3; pull --all brings them here`);
+  const clearRemote = async () => {
+    if (!all || flags['dry-run'] || !remote.size) return;
+    for (const path of targets) remote.delete(path);
+    await writeRemote(remote);
+  };
   if (!wanted.length) {
+    await clearRemote();
     await index.save();
     console.log(`up to date: ${targets.length - kept.length} files match assets.json`);
     return;
@@ -580,6 +617,7 @@ async function pull(args, flags) {
   } finally {
     await index.save();
   }
+  await clearRemote();
   const bytes = wanted.reduce((sum, path) => sum + files[path].size, 0);
   console.log(`pulled ${wanted.length} files (${size(bytes)}): ${from.cache} from the cache, ${from.store} from s3://${store.bucket}`);
 }
@@ -969,9 +1007,92 @@ async function archiveStatus(args, flags) {
   }
 }
 
-const COMMANDS = { status, push, pull, verify, restore, models, setup, untrack, archive, 'archive-pull': archivePull, 'archive-status': archiveStatus };
-const FLAGS = { status: ['remote'], push: ['dry-run'], pull: ['dry-run'], verify: [], restore: ['previous', 'sha'], models: ['json'], setup: ['apply'], untrack: ['apply'], archive: ['dry-run', 'from'], 'archive-pull': ['dry-run', 'force'], 'archive-status': ['remote'] };
-const TAKES_PATHS = ['push', 'pull', 'restore', 'archive', 'archive-pull'];
+// ---- runtime files kept only in S3
+
+async function pruneLocal(args, flags) {
+  const dry = Boolean(flags['dry-run']);
+  const { files, store } = await readManifest();
+  const minSize = flags['min-size'] === undefined ? 0 : parseSizeFlag(flags['min-size']);
+  // Generation sources go to the cold archive instead; only runtime files are served back by the dev server.
+  // The server and the Node tests read public/terrain straight from disk, so it never goes remote-only.
+  const runtime = Object.keys(files).filter((path) => path.startsWith('public/') && !path.startsWith('public/terrain/'));
+  const targets = pick(args.length ? args : ['public/models'], runtime, 'no runtime file of assets.json there (only public/ is pruned)');
+  const index = await openIndex();
+  const here = new Map(await pool(targets, async (path) => [path, await localHash(index, path)]));
+  await index.save();
+  reportHashing();
+  const differ = targets.filter((path) => here.get(path) && here.get(path).sha256 !== files[path].sha256);
+  if (differ.length) fail(`${differ.length} of them differ from assets.json (${differ[0]} first): npm run assets -- push, then try again`);
+  // A file git still tracks (a branch from before the cut-over) would read as deleted in git: it stays.
+  const listed = spawnSync('git', ['ls-files', '-z', '--', ...new Set(targets.map((path) => path.split('/').slice(0, 2).join('/')))], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 });
+  const tracked = new Set(listed.status === 0 ? listed.stdout.split('\0').filter(Boolean) : []);
+  const chosen = targets.filter((path) => here.get(path) && files[path].size >= minSize && !tracked.has(path));
+  const inGit = targets.filter((path) => here.get(path) && tracked.has(path)).length;
+  if (inGit) console.log(`${inGit} of them stay: git tracks them on this branch (npm run assets -- untrack takes them out of git)`);
+  if (!chosen.length) {
+    console.log('nothing to prune: no local copy there that assets.json names');
+    return;
+  }
+  await checkStore(store);
+  const held = await pool(chosen, async (path) => ((await headBlob(store, files[path].sha256)) === files[path].size ? null : path));
+  const lacking = held.filter(Boolean);
+  if (lacking.length) fail(`s3://${store.bucket} lacks ${lacking.length} of them at their size (${lacking[0]} first): nothing deleted`);
+  const bytes = chosen.reduce((sum, path) => sum + files[path].size, 0);
+  if (chosen.length <= 40) list(dry ? 'would delete (the bucket holds each)' : 'deleting (the bucket holds each)', chosen, (path) => size(files[path].size));
+  if (dry) {
+    console.log(`dry run: ${chosen.length} files, ${size(bytes)} would be freed here`);
+    return;
+  }
+  const remote = await readRemote();
+  for (const path of chosen) remote.add(path);
+  // The record goes first: an interrupted run leaves a file both here and listed, which pull and the dev server handle.
+  await writeRemote(remote);
+  await pool(chosen, (path) => rm(join(ROOT, path), { force: true }));
+  const cache = await evictCache();
+  console.log(`pruned ${chosen.length} files (${size(bytes)}) to s3://${store.bucket}; ${remote.size} files are remote-only here (.assets-remote.json)`);
+  console.log(`the shared cache holds ${size(cache.after)} (cap ${size(CACHE_CAP)}${cache.freed ? `, ${size(cache.freed)} evicted` : ''})`);
+}
+
+/** A size such as 2G, 500M or 1048576 in bytes; null when it reads as none. */
+function parseSize(text) {
+  const m = /^\s*(\d+(?:\.\d+)?)\s*([KMGT]?)i?B?\s*$/i.exec(String(text ?? ''));
+  return m ? Math.round(Number(m[1]) * 1024 ** ' KMGT'.indexOf((m[2] || ' ').toUpperCase())) : null;
+}
+
+function parseSizeFlag(text) {
+  return parseSize(text) ?? fail(`--min-size=${text}: a number of bytes, or with K, M or G`);
+}
+
+/** The shared cache's cap (IMJIN_ASSET_CACHE_MAX, default 2G): the dev server and prune-local keep it under it. */
+const CACHE_CAP = parseSize(process.env.IMJIN_ASSET_CACHE_MAX) ?? 2 * 1024 ** 3;
+
+/** Deletes the least recently used blobs until the cache holds at most `cap` bytes (a hit stamps a blob's mtime). */
+async function evictCache(cap = CACHE_CAP) {
+  const found = [];
+  for (const top of ['sha256', 'named']) {
+    for (const dir of await readdir(join(CACHE, top)).catch(() => [])) {
+      for (const name of await readdir(join(CACHE, top, dir)).catch(() => [])) {
+        if (name.endsWith('.assets-tmp')) continue;
+        const path = join(CACHE, top, dir, name);
+        const st = await stat(path).catch(() => null);
+        if (st?.isFile()) found.push({ path, size: st.size, used: st.mtimeMs });
+      }
+    }
+  }
+  const before = found.reduce((sum, f) => sum + f.size, 0);
+  let total = before;
+  found.sort((a, b) => a.used - b.used);
+  for (const f of found) {
+    if (total <= cap) break;
+    await rm(f.path, { force: true });
+    total -= f.size;
+  }
+  return { before, after: total, freed: before - total };
+}
+
+const COMMANDS = { status, push, pull, verify, restore, models, setup, untrack, archive, 'archive-pull': archivePull, 'archive-status': archiveStatus, 'prune-local': pruneLocal };
+const FLAGS = { status: ['remote'], push: ['dry-run'], pull: ['dry-run', 'all'], verify: [], restore: ['previous', 'sha'], models: ['json'], setup: ['apply'], untrack: ['apply'], archive: ['dry-run', 'from'], 'archive-pull': ['dry-run', 'force'], 'archive-status': ['remote'], 'prune-local': ['dry-run', 'min-size'] };
+const TAKES_PATHS = ['push', 'pull', 'restore', 'archive', 'archive-pull', 'prune-local'];
 
 async function main(argv) {
   const [command, ...args] = argv.filter((arg) => !arg.startsWith('--'));
@@ -1003,3 +1124,6 @@ if (import.meta.main) {
     process.exitCode = 1;
   }
 }
+
+// scripts/lib/remote-assets.mjs (the dev server's S3 middleware and the tests' runtimePath) shares the store code.
+export { CACHE, CACHE_CAP, STORE, TYPES, Fail, blobKey, cachePath, evictCache, extension, parseSize, readManifest, request, resetCredentials, sha256, storeError, writeAtomic };

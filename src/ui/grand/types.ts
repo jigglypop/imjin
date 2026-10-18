@@ -1,7 +1,7 @@
 // View-model types of the faction campaign screens. They are deliberately plain data so the UI kit does not depend on
 // the campaign logic (src/sim/grand, src/campaign/grand.ts): the adapter in adapt.ts maps the store state onto these shapes.
 
-export type FactionId = 'joseon' | 'japan' | 'ming';
+export type FactionId = 'joseon' | 'japan' | 'ming' | 'england' | 'spain' | 'holyleague' | 'ottoman' | 'britain' | 'france' | 'spain1805';
 export type Owner = FactionId | null;
 
 /** The campaign has one treasury: grain and silver counted together as gold. */
@@ -34,10 +34,7 @@ export interface WorkView {
   cancelable: boolean;
 }
 
-export type ShipClass =
-  | 'panokseon' | 'geobukseon' | 'hyeopseon' | 'sahuseon' | 'pojakseon'
-  | 'atakebune' | 'sekibune' | 'kobaya' | 'daeantaek' | 'sogantaek' | 'daegwanseon' | 'byeongnyangseon'
-  | 'mingship' | 'mingsmall' | 'gwangseon' | 'haechangseon' | 'hoseon';
+export type ShipClass = import('../../sim/types').ShipKind;
 
 export interface RecruitView {
   kind: ShipClass;

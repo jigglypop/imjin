@@ -3,7 +3,8 @@
 // leading each side.
 import type { Battle } from '../src/sim/battle';
 import { applyBalance } from '../src/sim/balance';
-import { DEFAULT_OPTIONS, RANKED_OPTIONS, type Conquest } from '../src/sim/conquest';
+import { eraPriceScale } from '../src/sim/competitive';
+import { DEFAULT_OPTIONS, eraOptions, RANKED_OPTIONS, type Conquest, type ConquestOptions } from '../src/sim/conquest';
 import { CurrentField } from '../src/sim/current';
 import { autoFleet, buildConquest, CONQUEST_MAPS, type ConquestMapId, type Seat } from '../src/sim/maps';
 import { buildScenario, SCENARIOS, type ScenarioId } from '../src/sim/scenarios';
@@ -49,8 +50,9 @@ export type Built = { battle: Battle; conquest: Conquest | null; seats: Seat[] }
 /** `human` says which seats are played by a person; the others are the computer's. In a duel the seat index is the owner. */
 export function buildBattle(choice: BattleChoice, land: LandSampler, seats: Pick<RoomSeat, 'faction' | 'team'>[], names: string[], human: boolean[], seed: number, ranked = false): Built {
   if (choice.kind === 'conquest') {
-    const rules = ranked ? RANKED_OPTIONS : DEFAULT_OPTIONS;
-    const list: Seat[] = seats.map((s, i) => ({ name: names[i]!, faction: s.faction, team: s.team, human: human[i]!, fleet: autoFleet(s.faction, rules.musterBudget, undefined, rules.maxShips, rules.expanded) }));
+    // A room with a later era's navy scales its budget for every seat (eraOptions); a 1592 room is unchanged.
+    const rules = eraOptions(ranked ? RANKED_OPTIONS : DEFAULT_OPTIONS, seats.map((s) => s.faction)) as ConquestOptions;
+    const list: Seat[] = seats.map((s, i) => ({ name: names[i]!, faction: s.faction, team: s.team, human: human[i]!, fleet: autoFleet(s.faction, rules.musterBudget, undefined, rules.maxShips, rules.expanded, eraPriceScale(s.faction, seats.map((x) => x.faction))) }));
     const built = buildConquest(choice.map, list, land, seed, rules);
     return { battle: built.battle, conquest: built.conquest, seats: list };
   }

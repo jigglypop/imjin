@@ -1,4 +1,6 @@
-import frame from './mapFrame.json';
+import { MAP } from './mapTheatre';
+
+const frame = MAP.frame;
 
 // The campaign frame (mapFrame.json) is the select screen's Web Mercator DEM window widened to hold the off-map ports. It is
 // the same projection as siteUV in src/select/SelectScene.ts (lon/lat to tile x/y), normalised to the wider frame; mapMath.ts
@@ -16,7 +18,7 @@ const y1 = latToY(frame.south);
 
 /** Width / height of the frame. */
 export const MAP_ASPECT = (x1 - x0) / (y1 - y0);
-export const MAP_IMAGE = '/ui/grand_map.webp';
+export const MAP_IMAGE = MAP.image;
 
 /** Position in the map frame, both 0..1 (u to the east, v to the south). */
 export function project(lon: number, lat: number) {

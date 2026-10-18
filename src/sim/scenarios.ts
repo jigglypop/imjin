@@ -1,8 +1,9 @@
 import { Battle } from './battle';
+import { SHIP_SPECS } from './catalog';
 import { DEPTH_LATEST } from './depth';
 import { SEA_STATES } from '../ocean/waves';
 import { variantFor } from '../ships/anchors';
-import type { ShipKind, ShipMods, Squadron, Team } from './types';
+import type { Faction, ShipKind, ShipMods, Squadron, Team } from './types';
 import type { Temper } from './maneuvers';
 import {
   ANGOLPO_TERRAIN,
@@ -20,8 +21,12 @@ import type { SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
 import type { CurrentSpec } from './current';
 import { echelon, flagshipOf, numbered } from '../i18n/names';
-import type { BattleSlug } from '../routes';
+import type { BattleSlug, ChapterId } from '../routes';
 import { SCENARIO_TEXT, type ScenarioText } from './scenarioText';
+import { ARMADA_ORDER, ARMADA_PORTRAITS, ARMADA_SCENARIOS, ARMADA_TEMPERS, armadaForces, isArmadaBattle } from './armada';
+import { LEPANTO_ORDER, LEPANTO_PORTRAITS, LEPANTO_SCENARIOS, LEPANTO_TEMPERS, lepantoForces, isLepantoBattle } from './lepanto';
+import { TRAFALGAR_ORDER, TRAFALGAR_PORTRAITS, TRAFALGAR_SCENARIOS, TRAFALGAR_TEMPERS, trafalgarForces, isTrafalgarBattle } from './trafalgar';
+export { ARMADA_ORDER, isArmadaBattle, LEPANTO_ORDER, isLepantoBattle, TRAFALGAR_ORDER, isTrafalgarBattle };
 
 /** The nine historical battles. Each has an address of its own (/battles/hansan), so the id list lives in src/routes.ts. */
 export type ScenarioId = BattleSlug;
@@ -35,6 +40,7 @@ export type ScenarioInfo = ScenarioText & {
   difficulty: string;
   summary: string;
   result: string;
+  /** The two sides' forces, by battle slot: in a later chapter 'joseon' is its first navy and 'japan' its second. */
   forces: { joseon: string; japan: string; ming?: string };
   sky: SkyPresetName;
   sea: SeaStateName;
@@ -53,6 +59,8 @@ export type ScenarioInfo = ScenarioText & {
 type Place = (x: number, z: number) => { x: number; z: number };
 
 export type FleetSpawn = {
+  /** The navy the campaign's fleet replaces in the battle: Joseon in 1592, England in the Armada chapter. */
+  faction?: 'joseon' | 'england';
   squads: {
     name: string;
     commander: string;
@@ -250,11 +258,24 @@ export const SCENARIOS: Record<ScenarioId, ScenarioInfo> = {
     ],
     view: { tx: -1700, tz: 0, dir: 0, dist: 1000, pitch: 0.27 },
   },
+  ...ARMADA_SCENARIOS,
+  ...LEPANTO_SCENARIOS,
+  ...TRAFALGAR_SCENARIOS,
 };
 
 export const SCENARIO_ORDER: ScenarioId[] = ['okpo', 'sacheon', 'dangpo', 'hansan', 'angolpo', 'busan', 'chilcheon', 'myeongnyang', 'noryang'];
 
+/** Each chapter's battles in order (the first chapter's are SCENARIO_ORDER). */
+export const CHAPTER_ORDER: Record<ChapterId, ScenarioId[]> = { imjin: SCENARIO_ORDER, armada: ARMADA_ORDER, lepanto: LEPANTO_ORDER, trafalgar: TRAFALGAR_ORDER };
+/** The chapter a historical battle belongs to. */
+export const chapterOfScenario = (id: ScenarioId): ChapterId => (isArmadaBattle(id) ? 'armada' : isLepantoBattle(id) ? 'lepanto' : isTrafalgarBattle(id) ? 'trafalgar' : 'imjin');
+/** The two navies of each chapter's battles, by slot ('joseon' first, 'japan' second). */
+export const CHAPTER_NAVIES: Record<ChapterId, [Faction, Faction]> = { imjin: ['joseon', 'japan'], armada: ['england', 'spain'], lepanto: ['holyleague', 'ottoman'], trafalgar: ['britain', 'france'] };
+
 const PORTRAITS: [string, string][] = [
+  ...ARMADA_PORTRAITS,
+  ...LEPANTO_PORTRAITS,
+  ...TRAFALGAR_PORTRAITS,
   ['이순신', 'portrait_yi'],
   ['원균', 'portrait_won'],
   ['이억기', 'portrait_eokgi'],
@@ -276,6 +297,13 @@ const PORTRAITS: [string, string][] = [
 function portraitFor(team: Team, commander: string, kind: ShipKind) {
   for (const [name, portrait] of PORTRAITS) if (commander.includes(name)) return portrait;
   if (kind.startsWith('ming')) return 'portrait_deng';
+  if (kind === 'racegalleon' || kind === 'pinnace' || kind === 'fireship') return 'portrait_howard';
+  if (kind === 'spgalleon' || kind === 'galleass' || kind === 'urca') return 'portrait_medina';
+  if (kind === 'reale' || kind === 'galea' || kind === 'vgalleass') return 'portrait_donjuan';
+  if (kind === 'sultana' || kind === 'kadirga' || kind === 'kalyata') return 'portrait_alipasha';
+  if (kind === 'firstrate' || kind === 'gb74' || kind === 'gbfrigate') return 'portrait_nelson';
+  if (kind === 'fr80' || kind === 'fr74') return 'portrait_villeneuve';
+  if (kind === 'trinidad' || kind === 'es74') return 'portrait_gravina';
   return team === 'japan' ? 'portrait_japan' : 'portrait_admiral';
 }
 
@@ -285,6 +313,9 @@ function portraitFor(team: Team, commander: string, kind: ShipKind) {
  * pressed forward; Shimazu fought his way through to Konishi.
  */
 const TEMPERS: [string, Temper][] = [
+  ...ARMADA_TEMPERS,
+  ...LEPANTO_TEMPERS,
+  ...TRAFALGAR_TEMPERS,
   ['와키자카', 'rash'],
   ['구키', 'cautious'],
   ['가토', 'cautious'],
@@ -369,7 +400,7 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
     return sq;
   };
   const ship = (sq: Squadron, kind: ShipKind, p: Spot, name: string, flagship = false, variant?: number) => {
-    const r = kind === 'panokseon' || kind === 'geobukseon' || kind === 'atakebune' || kind === 'mingship' ? 22 : kind === 'sekibune' || kind === 'mingsmall' ? 15 : 9;
+    const r = kind === 'panokseon' || kind === 'geobukseon' || kind === 'atakebune' || kind === 'mingship' ? 22 : kind === 'sekibune' || kind === 'mingsmall' ? 15 : SHIP_SPECS[kind].faction === 'england' || SHIP_SPECS[kind].faction === 'spain' ? SHIP_SPECS[kind].length * 0.5 : 9;
     const spot = settle(p, r);
     taken.push({ x: spot.x, z: spot.z, r });
     const w = place(spot.x, spot.z);
@@ -600,6 +631,12 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
       });
     });
     b.retreatBelow.japan =0.35;
+  } else if (isArmadaBattle(id)) {
+    armadaForces(id, { b, rand, squad, ship, grid, arc, slotAll, numbered });
+  } else if (isLepantoBattle(id)) {
+    lepantoForces(id, { b, rand, squad, ship, grid, arc, slotAll, numbered });
+  } else if (isTrafalgarBattle(id)) {
+    trafalgarForces(id, { b, rand, squad, ship, grid, arc, slotAll, numbered });
   } else {
     b.night = true;
     const head = 0;
@@ -640,7 +677,8 @@ export function buildScenario(id: ScenarioId, axis: number, seed = 1592, land: L
 }
 
 function spawnFleet(b: Battle, fleet: FleetSpawn, axis: number, land: LandFn) {
-  const old = b.ships.filter((s) => s.spec.faction === 'joseon');
+  const navy = fleet.faction ?? 'joseon';
+  const old = b.ships.filter((s) => s.spec.faction === navy);
   if (!old.length) return;
   let cx = 0;
   let cz = 0;
@@ -656,7 +694,7 @@ function spawnFleet(b: Battle, fleet: FleetSpawn, axis: number, land: LandFn) {
   cz /= old.length;
   const heading = Math.atan2(hz, hx);
   const holding = old.filter((s) => s.order.type === 'hold').length > old.length / 2;
-  b.removeShips((s) => s.spec.faction === 'joseon');
+  b.removeShips((s) => s.spec.faction === navy);
   const ca = Math.cos(axis);
   const sa = Math.sin(axis);
   const wet = (x: number, z: number) => land(x * ca + z * sa, -x * sa + z * ca) < -4;

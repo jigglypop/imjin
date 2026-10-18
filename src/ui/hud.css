@@ -1,6 +1,6 @@
 /* ============================================================================
-   The battle HUD: score panel, toasts, settings sheet, minimap, selection detail, squadron cards, orders, speed,
-   result, squadron banners over the sea, touch tools, and the compact (phone) layouts.
+   The battle HUD: score panel, toasts, settings sheet, minimap, selection detail, commander cards, orders, speed,
+   result, ship labels over the sea, touch tools, and the compact (phone) layouts.
    Black translucent glass, light type, faction tones only as thin marks. Conquest panels are in conquest.css.
    ============================================================================ */
 
@@ -920,58 +920,32 @@
 
 /* ---------------------------------------------------------------- orders */
 
-.fleet-groups {
-  min-height: 0;
-  width: 100%;
-  padding: 6px;
+.fleet-bar {
   display: flex;
-  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+}
+.fleet-bar button {
+  flex: 1;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-
-.selection-dock .fleet-groups { background: var(--glass-solid); }
-.fleet-group-head { display: flex; gap: 4px; flex: none; }
-.fleet-group-toggle { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 4px; }
-.fleet-group-body { display: flex; flex-direction: column; gap: 6px; }
-.fleet-group-tools { display: flex; align-items: center; gap: 4px; }
-.fleet-group-head button, .fleet-group-tools button, .fleet-group-name button {
-  min-height: 30px;
-  border: 1px solid var(--line);
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
   background: transparent;
   color: var(--ink-2);
-  border-radius: 4px;
-  padding: 3px 6px;
-  font-size: var(--fs-12);
+  font: 500 var(--fs-12) var(--font-ui);
+  white-space: nowrap;
   cursor: pointer;
 }
-.fleet-group-tools button:disabled { opacity: 0.4; cursor: default; }
-.fleet-group-tools button { flex: 1; white-space: nowrap; }
-.fleet-group-tools .fleet-route { display: flex; align-items: center; justify-content: center; gap: 4px; }
-.fleet-group-tools .fleet-tool--on { color: var(--accent); border-color: var(--accent); }
-.fleet-group-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
-.fleet-group {
-  min-width: 0;
-  min-height: 44px;
-  padding: 3px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--ink-2);
-  cursor: pointer;
-}
-.fleet-group span { display: flex; align-items: center; justify-content: space-around; gap: 2px; }
-.fleet-group kbd { color: var(--ink-3); font: inherit; font-size: var(--fs-11); }
-.fleet-group b { font-size: var(--fs-13); }
-.fleet-group small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-11); }
-.fleet-group--selected { color: var(--ink); border-color: var(--accent); background: rgba(194, 166, 116, 0.15); }
-.fleet-group--assign { border-style: dashed; }
-.fleet-group-name { display: flex; align-items: center; gap: 5px; font-size: var(--fs-12); }
-.fleet-group-name input { min-width: 0; flex: 1; padding: 5px; color: var(--ink); background: rgba(0, 0, 0, 0.2); border: 1px solid var(--line); border-radius: 4px; }
-.app--compact .fleet-group-head button,
-.app--compact .fleet-group-tools button,
-.app--compact .fleet-group-name button { min-height: 44px; }
+.fleet-bar button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); color: var(--ink); }
+.fleet-bar button:disabled { opacity: 0.4; cursor: default; }
+.fleet-bar .fleet-tool--on { color: var(--ink); background: rgba(255, 255, 255, 0.12); }
+.app--compact .fleet-bar button { min-height: 40px; }
 
 .orders {
   width: clamp(300px, 24vw, 340px);
@@ -1346,207 +1320,17 @@
   display: contents;
 }
 
-/* Simplified: the group panel is one slim strip under the menu, holding only the groups that have ships. */
+/* Simplified: the selection bar is one slim strip under the menu. */
 .hud--slim .touch-bar {
   width: auto;
   max-width: 212px;
   align-items: flex-start;
 }
 
-.fleet-groups--slim {
-  width: auto;
-  padding: 4px;
-  gap: 4px;
-}
-
-.fleet-slim-head,
-.fleet-slim {
-  display: flex;
-  gap: 4px;
-}
-
-.fleet-slim {
-  flex-wrap: wrap;
-}
-
-.fleet-groups--slim button {
-  min-height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--ink-2);
-  font-size: var(--fs-12);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.fleet-groups--slim .fleet-group-toggle {
-  flex: none;
-}
-
-.fleet-groups--slim .fleet-group {
-  min-width: 44px;
-  padding: 2px 7px;
-}
-
-.fleet-groups--slim .fleet-group span {
-  gap: 5px;
-}
-
-.fleet-groups--slim .fleet-group--selected {
-  color: var(--ink);
-  border-color: var(--accent);
-}
-
-.fleet-groups--slim .fleet-add {
-  width: 30px;
-  padding: 0;
-}
-
-.fleet-groups--slim button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.fleet-groups--slim .fleet-tool--on {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-/* A tablet's touch tools keep their icons; the names are in the explanations. */
-.hud--slim .selection-tools {
-  grid-template-columns: repeat(4, 44px);
-}
-
-.hud--slim .selection-tools .tool span {
-  display: none;
-}
-
-.hud--slim .bottom {
-  gap: 12px;
-}
-
-.hud--slim .minimap {
-  width: 128px;
-  height: 128px;
-}
-
-.hud--slim .detail {
-  width: clamp(300px, 22vw, 340px);
-  min-height: 0;
-}
-
-/* Portrait chips with the count. The fleet's name heads the chip's explanation instead. */
-.hud--slim .cards {
-  height: auto;
-  gap: 6px;
-  padding: 12px 4px 2px;
-}
-
-.hud--slim .card {
-  width: 56px;
-  height: 72px;
-}
-
-.hud--slim .card--selected {
-  transform: translateY(-4px);
-}
-
-.hud--slim .card img {
-  top: 8px;
-  width: 34px;
-  height: 34px;
-}
-
-.hud--slim .card-foot {
-  padding: 0 4px 5px;
-  background: none;
-  text-align: center;
-}
-
-.hud--slim .card-name {
-  display: none;
-}
-
-.hud--slim .card-count {
-  font-size: var(--fs-13);
-  white-space: nowrap;
-  letter-spacing: -0.02em;
-}
-
-.hud--slim .card-count small {
-  font-size: 11px;
-}
-
-.hud--slim .card-flags {
-  top: 5px;
-  right: 2px;
-}
-
-.hud--slim .card-flag {
-  width: 16px;
-  height: 16px;
-}
-
-/* The orders as icons: the names and the keys are in the explanations that open on hover. */
-.hud--slim .orders {
-  width: auto;
-  gap: 6px;
-  padding: 8px 10px 9px;
-}
-
-.hud--slim .orders-tab {
-  min-height: 24px;
-  padding: 2px 6px 6px;
-  font-size: var(--fs-12);
-}
-
-.hud--slim .orders-grid {
-  display: flex;
-  gap: 4px;
-}
-
-.hud--slim .order-icon {
-  width: 40px;
-  height: 34px;
-}
-
-.hud--slim .order-label,
-.hud--slim .order kbd {
-  display: none;
-}
-
-/* A part comes back with a short rise from its edge, the group strip with a short drop. */
-@keyframes hud-rise {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-}
-
-@keyframes hud-drop {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-}
-
-.app:not(.app--compact) .hud .map-wrap,
 .app:not(.app--compact) .hud .cards,
 .app:not(.app--compact) .hud .orders,
 .fold-tab {
   animation: hud-rise 0.15s ease-out;
-}
-
-.app:not(.app--compact) .fleet-group-body,
-.fleet-slim-head > :not(.fleet-group-toggle),
-.fleet-slim {
-  animation: hud-drop 0.15s ease-out;
 }
 
 /* The top parts drop in from the top edge they fold into. `translate` composes with the score panel's own centring
@@ -1575,9 +1359,6 @@
   .app:not(.app--compact) .hud .cards,
   .app:not(.app--compact) .hud .orders,
   .fold-tab,
-  .app:not(.app--compact) .fleet-group-body,
-  .fleet-slim-head > :not(.fleet-group-toggle),
-  .fleet-slim,
   .hud-title,
   .hud .balance {
     animation: none;
@@ -1698,7 +1479,7 @@
 .app:has(.hud .result) .touch-bar,
 .app:has(.hud .result) .bottom,
 .app:has(.hud .result) .minimap--float,
-.app:has(.hud .result) .banners,
+.app:has(.hud .result) .ship-labels,
 .app:has(.hud .result) .cpoints {
   visibility: hidden;
 }
@@ -1784,7 +1565,6 @@
   z-index: 4;
 }
 
-/* ---------------------------------------------------------------- squadron banners over the 3D view (DOM built by SquadronBanners) */
 
 .move-orders {
   position: absolute;
@@ -1810,6 +1590,8 @@
 }
 .move-order--japan { --mo-cloth: #74222f; --mo-tassel: #ddd3bf; }
 .move-order--ming { --mo-cloth: #a3391f; --mo-border: #b2914f; --mo-mark: #e6d6ad; --mo-tassel: #8d2e1f; }
+.move-order--england { --mo-cloth: #ebe6d8; --mo-border: #ebe6d8; --mo-mark: #b5262e; --mo-tassel: #2f5a3c; }
+.move-order--spain { --mo-cloth: #ebe3cc; --mo-border: #c9a24a; --mo-mark: #a8232c; --mo-tassel: #c9a24a; }
 .move-order svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; transform-origin: 9px 53px; animation: move-order-raise 0.32s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
 .move-order__ring { fill: none; stroke: currentColor; stroke-opacity: 0.9; stroke-width: 1.4; transform-box: fill-box; transform-origin: center; animation: move-order-ripple 0.9s ease-out 3 both; }
 .move-order__pole { stroke: #2a2019; stroke-width: 1.8; stroke-linecap: round; }
@@ -1833,6 +1615,8 @@
 .move-order__ring--outer { animation-delay: 1.3s; }
 .move-order__mark { fill: none; stroke: var(--mo-mark); stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
 .move-order__mark--ring { stroke-width: 3.5; }
+.move-order__mark--cross { stroke-width: 5.2; stroke-linecap: butt; }
+.move-order__mark--saltire { stroke-width: 3.6; stroke-dasharray: 3.2 1.1; }
 .move-order__cloth--rally { transform-origin: 11px 29px; animation-duration: 1.8s; }
 @keyframes move-order-raise {
   from { transform: scaleY(0.05) translateY(6px); opacity: 0; }
@@ -1854,7 +1638,7 @@
   .move-order svg, .move-order__ring, .move-order__cloth { animation: none; }
 }
 
-.banners {
+.ship-labels {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -1862,128 +1646,88 @@
   z-index: 5;
 }
 
-.sqb {
+/* Ship labels (DOM built by ShipLabels, .claude/skills/ui-design): a small glass pill, the navy's dot, the name and a
+   hairline hull bar. Readable over bright sky and dark sea alike. */
+.shl {
   --fc: var(--joseon);
   position: absolute;
   left: 0;
   top: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   transform-origin: 50% 100%;
-  will-change: transform;
+  will-change: transform, opacity;
   pointer-events: auto;
   cursor: pointer;
+  transition: opacity 0.2s;
 }
+.shl.f-joseon { --fc: var(--joseon); }
+.shl.f-japan { --fc: var(--japan); }
+.shl.f-ming { --fc: var(--ming); }
+.shl.f-england { --fc: var(--england); }
+.shl.f-spain { --fc: var(--spain); }
+.shl.f-holyleague { --fc: var(--holyleague); }
+.shl.f-ottoman { --fc: var(--ottoman); }
+.shl.f-britain { --fc: var(--britain); }
+.shl.f-france { --fc: var(--france); }
+.shl.f-spain1805 { --fc: var(--spain1805); }
 
-.sqb--japan {
-  --fc: var(--japan);
-}
-
-.sqb--ming {
-  --fc: var(--ming);
-}
-
-.sqb-pill {
+.shl-pill {
   position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 10px 3px 11px;
-  border: 1px solid var(--glass-line);
+  height: 20px;
+  padding: 0 9px 1px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
-  background: rgba(14, 16, 20, 0.78);
-  color: var(--ink);
-  font-size: var(--fs-12);
-  font-weight: 500;
+  background: rgba(12, 16, 24, 0.55);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: #eef2f7;
+  font: 600 11.5px/1 var(--font-ui);
+  letter-spacing: -0.005em;
   white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(8, 12, 18, 0.3);
 }
-
-.sqb-pill::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
+.shl-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   background: var(--fc);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
-
-.sqb-name {
-  max-width: 9em;
+.shl-name {
+  max-width: 11em;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-:lang(en) .sqb-name {
-  max-width: 13em;
-}
-
-.sqb--far .sqb-name {
-  display: none;
-}
-
-.sqb-count {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-2);
-}
-
-/* A squadron whose crews waver (amber) or run (red), under the battle depth rules. */
-.sqb-nerve {
-  display: inline-flex;
-  align-items: center;
-  margin: 0 -2px;
-}
-
-.sqb-nerve[hidden] {
-  display: none;
-}
-
-.sqb-nerve--waver {
-  color: var(--warn);
-}
-
-.sqb-nerve--rout {
-  color: var(--bad);
-}
-
-.sqb-bar {
+.shl-bar {
   position: absolute;
-  left: 3px;
-  right: 0;
-  bottom: 0;
+  left: 10px;
+  right: 10px;
+  bottom: 2px;
   height: 2px;
-  background: var(--fill-2);
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
 }
-
-.sqb-bar i {
+.shl-bar i {
   display: block;
   height: 100%;
-  background: var(--fc);
+  background: var(--good);
 }
-
-.sqb-pole {
-  width: 1px;
-  height: 12px;
-  background: linear-gradient(rgba(255, 255, 255, 0.5), transparent);
+.shl--low .shl-bar i { background: var(--bad); }
+.shl--foe .shl-pill { color: #e4e7ec; }
+.shl--flag .shl-pill { font-weight: 700; }
+.shl--selected .shl-pill {
+  background: rgba(12, 16, 24, 0.72);
+  border-color: rgba(255, 255, 255, 0.5);
 }
-
-/* Fleets of the same navy on both sides: the foe's rim is the muted brown. */
-.sqb--foe .sqb-pill {
-  border-color: rgba(184, 150, 138, 0.55);
-}
-
-.sqb--selected .sqb-pill {
-  background: var(--glass-solid);
-  border-color: transparent;
-  box-shadow: 0 0 0 2px var(--accent), 0 4px 12px rgba(8, 12, 18, 0.35);
-}
-
-.sqb--dark {
-  opacity: 0.55;
+@media (max-width: 700px) {
+  .shl-pill { height: 18px; font-size: 11px; padding: 0 8px 1px 7px; }
+  .shl-name { max-width: 8em; }
 }
 
 /* ---------------------------------------------------------------- touch tools */

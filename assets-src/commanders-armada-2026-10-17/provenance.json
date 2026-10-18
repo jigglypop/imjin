@@ -1,0 +1,417 @@
+{
+  "requests": [
+    {
+      "id": "howard",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Elizabethan English costume of 1588: His face, beard and bearing follow his known contemporary portraits. Charles Howard, Lord Howard of Effingham, Lord High Admiral, about fifty-two, a long aristocratic face, high forehead, grey-streaked brown hair, a long pointed grey-brown beard and moustache, calm composed noble eyes; a small white starched lace ruff, a black-and-silver doublet under a blackened steel gorget, a thin gold chain of office, bareheaded.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:13:41.707Z",
+      "finishedAt": "2026-10-17T07:14:21.968Z",
+      "usage": {
+        "input_tokens": 1378,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 354
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3134
+      },
+      "estimatedCostUsd": 0.0626
+    },
+    {
+      "id": "hawkins",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Elizabethan English costume of 1588: His face, beard and bearing follow his known contemporary portraits. Sir John Hawkins, rear-admiral, about fifty-six, a lean hard weathered face, greying hair, a grey forked beard and moustache, stern experienced eyes; a small white ruff, a dark russet doublet with a plain steel gorget, a black flat cap.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:13:41.719Z",
+      "finishedAt": "2026-10-17T07:14:22.919Z",
+      "usage": {
+        "input_tokens": 1356,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 332
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3112
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "frobisher",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Elizabethan English costume of 1588: His face, beard and bearing follow his known contemporary portraits. Sir Martin Frobisher, about fifty, a big rugged blunt face, short curly brown hair, a thick brown beard and heavy moustache, fierce bold eyes; a small white ruff, a scuffed blackened steel half-armour cuirass over a buff leather jerkin, bareheaded.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:13:41.719Z",
+      "finishedAt": "2026-10-17T07:14:24.212Z",
+      "usage": {
+        "input_tokens": 1355,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 331
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3111
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "drake",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Elizabethan English costume of 1588: His face, beard and bearing follow his known contemporary portraits. Sir Francis Drake, vice-admiral, about forty-eight, a ruddy broad weathered face, auburn-red curly hair, a short pointed reddish beard and upturned moustache, bright confident shrewd eyes; a modest white ruff, a dark doublet under a burnished steel breastplate, a small black cap.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:13:41.719Z",
+      "finishedAt": "2026-10-17T07:14:24.986Z",
+      "usage": {
+        "input_tokens": 1363,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 339
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3119
+      },
+      "estimatedCostUsd": 0.0626
+    },
+    {
+      "id": "oquendo",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Spanish costume of 1588: His face, beard and bearing follow his known contemporary portraits. Miguel de Oquendo, Basque admiral of the Guipuzcoa squadron, about sixty, a strong weathered face, a grey-black pointed beard and moustache, proud fierce eyes; a white ruff, black doublet with a dark blued steel gorget, bareheaded with short grey hair.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:14:24.213Z",
+      "finishedAt": "2026-10-17T07:15:03.466Z",
+      "usage": {
+        "input_tokens": 1358,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 334
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3114
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "medina",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Spanish costume of 1588: His face, beard and bearing follow his known contemporary portraits. Alonso Perez de Guzman, seventh Duke of Medina Sidonia, captain-general of the Armada, about thirty-eight, a pale long melancholy face, dark hair, a neat dark pointed beard and moustache, grave anxious dark eyes; a white starched cartwheel ruff, sober black silk doublet, a blackened steel gorget, the gold Order of the Golden Fleece hanging on a red ribbon at his chest, bareheaded.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:14:21.981Z",
+      "finishedAt": "2026-10-17T07:15:07.145Z",
+      "usage": {
+        "input_tokens": 1381,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 357
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3137
+      },
+      "estimatedCostUsd": 0.0627
+    },
+    {
+      "id": "leyva",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Spanish costume of 1588: His face, beard and bearing follow his known contemporary portraits. Alonso Martinez de Leyva, dashing commander of the land forces, about forty-three, a handsome lean face, dark wavy hair, a dark pointed beard and upturned moustache, bold proud eyes; a white lace ruff, an etched blackened-and-gilt steel half-armour cuirass over a black doublet, a red silk sash, bareheaded.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:14:24.988Z",
+      "finishedAt": "2026-10-17T07:15:07.371Z",
+      "usage": {
+        "input_tokens": 1368,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 344
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3124
+      },
+      "estimatedCostUsd": 0.0626
+    },
+    {
+      "id": "recalde",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Spanish costume of 1588: His face, beard and bearing follow his known contemporary portraits. Juan Martinez de Recalde, Basque admiral, about sixty-two, a gaunt deeply lined sea-worn face, a full white-grey beard, tired grave eyes; a small white ruff, a black doublet under a plain dark steel breastplate, a black cap.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:14:22.922Z",
+      "finishedAt": "2026-10-17T07:15:08.013Z",
+      "usage": {
+        "input_tokens": 1351,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 327
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3107
+      },
+      "estimatedCostUsd": 0.0625
+    },
+    {
+      "id": "drake",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred European galleons of 1588 with square sails, a galleon deck and European sailors only, no Asian junks, no Asian soldiers, no red-armoured figures. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Elizabethan English costume of 1588: His face, beard and bearing follow his known contemporary portraits. Sir Francis Drake, vice-admiral, about forty-eight, a ruddy broad weathered face, auburn-red curly hair, a short pointed reddish beard and upturned moustache, bright confident shrewd eyes; a modest white ruff, a dark doublet under a burnished steel breastplate, a small black cap.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:15:30.872Z",
+      "note": "Redone: the first pass copied the style reference's Asian junks and red-armoured crew into the background",
+      "finishedAt": "2026-10-17T07:16:13.948Z",
+      "usage": {
+        "input_tokens": 1415,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 391
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3171
+      },
+      "estimatedCostUsd": 0.0628
+    },
+    {
+      "id": "frobisher",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred European galleons of 1588 with square sails, a galleon deck and European sailors only, no Asian junks, no Asian soldiers, no red-armoured figures. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Elizabethan English costume of 1588: His face, beard and bearing follow his known contemporary portraits. Sir Martin Frobisher, about fifty, a big rugged blunt face, short curly brown hair, a thick brown beard and heavy moustache, fierce bold eyes; a small white ruff, a scuffed blackened steel half-armour cuirass over a buff leather jerkin, bareheaded.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:15:30.872Z",
+      "note": "Redone: the first pass copied the style reference's Asian junks and red-armoured crew into the background",
+      "finishedAt": "2026-10-17T07:16:14.427Z",
+      "usage": {
+        "input_tokens": 1407,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 383
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3163
+      },
+      "estimatedCostUsd": 0.0628
+    },
+    {
+      "id": "howard",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred European galleons of 1588 with square sails, a galleon deck and European sailors only, no Asian junks, no Asian soldiers, no red-armoured figures. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Elizabethan English costume of 1588: His face, beard and bearing follow his known contemporary portraits. Charles Howard, Lord Howard of Effingham, Lord High Admiral, about fifty-two, a long aristocratic face, high forehead, grey-streaked brown hair, a long pointed grey-brown beard and moustache, calm composed noble eyes; a small white starched lace ruff, a black-and-silver doublet under a blackened steel gorget, a thin gold chain of office, bareheaded.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:15:30.860Z",
+      "note": "Redone: the first pass copied the style reference's Asian junks and red-armoured crew into the background",
+      "finishedAt": "2026-10-17T07:16:16.178Z",
+      "usage": {
+        "input_tokens": 1430,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 406
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3186
+      },
+      "estimatedCostUsd": 0.0629
+    },
+    {
+      "id": "hawkins",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred European galleons of 1588 with square sails, a galleon deck and European sailors only, no Asian junks, no Asian soldiers, no red-armoured figures. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Elizabethan English costume of 1588: His face, beard and bearing follow his known contemporary portraits. Sir John Hawkins, rear-admiral, about fifty-six, a lean hard weathered face, greying hair, a grey forked beard and moustache, stern experienced eyes; a small white ruff, a dark russet doublet with a plain steel gorget, a black flat cap.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:15:30.872Z",
+      "note": "Redone: the first pass copied the style reference's Asian junks and red-armoured crew into the background",
+      "finishedAt": "2026-10-17T07:16:19.148Z",
+      "usage": {
+        "input_tokens": 1408,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 384
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3164
+      },
+      "estimatedCostUsd": 0.0628
+    },
+    {
+      "id": "recalde",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred European galleons of 1588 with square sails, a galleon deck and European sailors only, no Asian junks, no Asian soldiers, no red-armoured figures. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Spanish costume of 1588: His face, beard and bearing follow his known contemporary portraits. Juan Martinez de Recalde, Basque admiral, about sixty-two, a gaunt deeply lined sea-worn face, a full white-grey beard, tired grave eyes; a small white ruff, a black doublet under a plain dark steel breastplate, a black cap.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:16:14.428Z",
+      "note": "Redone: the first pass copied the style reference's Asian junks and red-armoured crew into the background",
+      "finishedAt": "2026-10-17T07:17:01.826Z",
+      "usage": {
+        "input_tokens": 1403,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 379
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3159
+      },
+      "estimatedCostUsd": 0.0628
+    },
+    {
+      "id": "medina",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred European galleons of 1588 with square sails, a galleon deck and European sailors only, no Asian junks, no Asian soldiers, no red-armoured figures. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Spanish costume of 1588: His face, beard and bearing follow his known contemporary portraits. Alonso Perez de Guzman, seventh Duke of Medina Sidonia, captain-general of the Armada, about thirty-eight, a pale long melancholy face, dark hair, a neat dark pointed beard and moustache, grave anxious dark eyes; a white starched cartwheel ruff, sober black silk doublet, a blackened steel gorget, the gold Order of the Golden Fleece hanging on a red ribbon at his chest, bareheaded.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:16:13.955Z",
+      "note": "Redone: the first pass copied the style reference's Asian junks and red-armoured crew into the background",
+      "finishedAt": "2026-10-17T07:17:02.011Z",
+      "usage": {
+        "input_tokens": 1433,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 409
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3189
+      },
+      "estimatedCostUsd": 0.0629
+    },
+    {
+      "id": "oquendo",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred European galleons of 1588 with square sails, a galleon deck and European sailors only, no Asian junks, no Asian soldiers, no red-armoured figures. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Spanish costume of 1588: His face, beard and bearing follow his known contemporary portraits. Miguel de Oquendo, Basque admiral of the Guipuzcoa squadron, about sixty, a strong weathered face, a grey-black pointed beard and moustache, proud fierce eyes; a white ruff, black doublet with a dark blued steel gorget, bareheaded with short grey hair.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:16:16.218Z",
+      "note": "Redone: the first pass copied the style reference's Asian junks and red-armoured crew into the background",
+      "finishedAt": "2026-10-17T07:17:02.527Z",
+      "usage": {
+        "input_tokens": 1410,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 386
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3166
+      },
+      "estimatedCostUsd": 0.0628
+    },
+    {
+      "id": "leyva",
+      "endpoint": "images/edits",
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "The attached picture is a finished portrait from the same film: match its look exactly (framing, light, grade, grain, materials), but this is a different man from a different nation: do not reuse his face, beard or costume, and do not reuse his background ships or crew: behind this man are blurred European galleons of 1588 with square sails, a galleon deck and European sailors only, no Asian junks, no Asian soldiers, no red-armoured figures. Square live-action period naval war film still, head-to-upper-chest portrait of one man, face centred and large enough to read at 60 pixels, the whole head and any hat inside the frame with a little margin above it. Weathered sun-and-salt skin with pores and uneven stubble, believable asymmetrical face, understated expression. Cool overcast side light from one side with a faint warm firelight rim on the other, sea haze and gunpowder smoke, background of blurred dark timber rails, rigging and blue-grey water. Shallow depth of field, desaturated filmic grade, subtle 35mm grain. Late-sixteenth-century practical materials: salt-stained cloth, rubbed iron, worn leather, no luxurious fantasy ornament. No painting or illustration look, no plastic CGI skin, no modern items, no text, no letters, no logo, no border, no frame. Opaque background. Spanish costume of 1588: His face, beard and bearing follow his known contemporary portraits. Alonso Martinez de Leyva, dashing commander of the land forces, about forty-three, a handsome lean face, dark wavy hair, a dark pointed beard and upturned moustache, bold proud eyes; a white lace ruff, an etched blackened-and-gilt steel half-armour cuirass over a black doublet, a red silk sash, bareheaded.",
+      "reference": "assets-src/commanders-2026-10-16/src/chenlin.webp",
+      "size": "1024x1024",
+      "quality": "high",
+      "requestedAt": "2026-10-17T07:16:19.159Z",
+      "note": "Redone: the first pass copied the style reference's Asian junks and red-armoured crew into the background",
+      "finishedAt": "2026-10-17T07:17:03.638Z",
+      "usage": {
+        "input_tokens": 1420,
+        "input_tokens_details": {
+          "image_tokens": 1024,
+          "text_tokens": 396
+        },
+        "output_tokens": 1756,
+        "output_tokens_details": {
+          "image_tokens": 1756,
+          "text_tokens": 0
+        },
+        "total_tokens": 3176
+      },
+      "estimatedCostUsd": 0.0629
+    }
+  ],
+  "model": "gpt-image-2.5-sunburst",
+  "script": "scripts/generate-armada-portraits.mjs",
+  "pricingNote": "Estimated from returned token usage at gpt-image-2 list prices per million tokens ({\"textIn\":5,\"imageIn\":8,\"imageOut\":30}); the 2.5 preview has no public price.",
+  "requestCount": 16,
+  "totalEstimatedCostUsd": 1.003
+}

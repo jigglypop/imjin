@@ -1,0 +1,12 @@
+{
+  "tool": "scripts/ship-textures.mjs kinds --provider=gemini (per-ship cells) and patch --provider=gemini (1805 sails); scripts/draw-flags.mjs (vector flags, no model)",
+  "model": "gemini-3.1-flash-image-preview",
+  "size": "1024x1024",
+  "generatedAt": "2026-10-18",
+  "prompts": "src/ships/build/kindAtlas.json (hull_plank, red_paint, black_paint, stern_panel of 19 ships, each followed by the KIND_SUFFIX line and the layout style line); atlasLayout.json sail_canvas and sail_cross of britain, france, spain1805",
+  "images": 93,
+  "estimatedCostUsd": 6.2,
+  "costNote": "Estimate (~0.067 USD per 1024px Gemini image); 76 per-ship cells + 4 pilot retakes of firstrate + 7 retakes (vertical boards, backgrounds round the sterns, the Ark Royal livery) + 6 sails. The script does not log usage.",
+  "raw": "assets-src/textures-ships/kinds/<kind>/*_1.png and assets-src/textures-ships/{britain,france,spain1805}/sail_*_1.png (gitignored cache)",
+  "published": "public/textures/ships/kinds/<kind>_{albedo,normal,rough}{,_1k}.webp (19 ships, 2048 + 1k sets) and the patched navy atlases public/textures/ships/{holyleague,britain,france,spain1805}_*.webp"
+}

@@ -16,6 +16,7 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { geminiImage, geminiModel } from './gemini-image.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const ENV = [join(ROOT, '.env'), '/Users/yeomdonghwan/Desktop/imjin/.env'].find((p) => existsSync(p));
@@ -30,7 +31,8 @@ const ONLY = opt('only', '');
 const FORCE = flag('force');
 const CONVERT_ONLY = flag('convert');
 const JOBS = Number(opt('jobs', 5));
-const MODELS = [opt('model', 'gpt-image-2'), 'gpt-image-2.5'];
+const PROVIDER = opt('provider', 'openai');
+const MODELS = PROVIDER === 'gemini' ? [geminiModel()] : [opt('model', 'gpt-image-2'), 'gpt-image-2.5'];
 
 // Which candidate ships. A or B, chosen by eye.
 const PICKS = {
@@ -123,6 +125,54 @@ add({
     'imperial gold, vermilion and deep teal accents.' + EMBLEM_STYLE,
 });
 
+// The Armada chapter's navies (1588).
+add({
+  id: 'emblem_england', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
+  prompt:
+    'Emblem of the Elizabethan English navy of 1588: a deep green and white circular badge (the Tudor livery colours) with a bold red St George cross pennant flying from the mainmast of a white stylized race-built galleon silhouette (three masts, square sails, low castles) on stylized white waves, ' +
+    'accents of Tudor green, white and red.' + EMBLEM_STYLE,
+});
+add({
+  id: 'emblem_spain', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
+  prompt:
+    'Emblem of the Spanish Armada of 1588: a deep crimson circular badge with a bold gold ragged Burgundy saltire cross (the cross of Saint Andrew with knotted branches) centered, a small stylized gold galleon silhouette with high castles in the lower part, ' +
+    'accents of crimson, gold and black.' + EMBLEM_STYLE,
+});
+
+// The Lepanto chapter's navies (1571).
+add({
+  id: 'emblem_holyleague', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
+  prompt:
+    'Emblem of the Holy League fleet of 1571 (Venice, Spain and the Papacy): a deep blue circular badge (the blue damask of the League standard) with a bold plain gold Latin cross above a white stylized Mediterranean war galley silhouette (long low hull, a single bank of oars, one lateen sail) on stylized white waves, ' +
+    'accents of deep blue, gold and crimson.' + EMBLEM_STYLE,
+});
+add({
+  id: 'emblem_ottoman', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
+  prompt:
+    'Emblem of the Ottoman fleet of 1571: a deep crimson circular badge with a bold white crescent above a white stylized Mediterranean war galley silhouette (long low hull, a single bank of oars, two lateen sails) on stylized white waves, ' +
+    'accents of crimson, white and dark green.' + EMBLEM_STYLE,
+});
+
+// The Trafalgar chapter's navies (1805).
+add({
+  id: 'emblem_britain', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
+  prompt:
+    'Emblem of the Royal Navy of 1805: a deep navy-blue circular badge with a bold gold fouled anchor (an anchor with its cable twisted round the shank) above a small white stylized three-masted ship of the line silhouette (two rows of gunports, square sails) on stylized white waves, ' +
+    'accents of navy blue, red and gold.' + EMBLEM_STYLE,
+});
+add({
+  id: 'emblem_france', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
+  prompt:
+    'Emblem of the French Imperial Navy of 1805: a deep blue circular badge with a bold gold Napoleonic eagle with spread wings (no crown, no letters) above a small white stylized three-masted ship of the line silhouette on stylized white waves, a thin band of blue, white and red along the rim, ' +
+    'accents of blue, white, red and gold.' + EMBLEM_STYLE,
+});
+add({
+  id: 'emblem_spain1805', kind: 'emblem', variants: [''], gen: [1024, 1024], out: [512, 512], small: [128, 128],
+  prompt:
+    'Emblem of the Spanish Navy of 1805: a crimson and gold circular badge (the red and yellow of the Spanish naval ensign of 1785) with a bold simple gold castle tower with three turrets above a small white stylized three-masted ship of the line silhouette on stylized white waves, ' +
+    'accents of crimson, gold and black.' + EMBLEM_STYLE,
+});
+
 // ---------- helpers ----------
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const rawPath = (it, v) => join(RAW, `${it.id}${v ? '.' + v : ''}.png`);
@@ -133,6 +183,11 @@ async function generate(it, v) {
   if (!FORCE && existsSync(path)) return 'cached';
   let prompt = it.prompt;
   if (v === 'B') prompt += ' Alternative composition: change the camera angle and arrangement noticeably from the obvious first idea.';
+  if (PROVIDER === 'gemini') {
+    const [w, h] = it.gen;
+    await writeFile(path, await geminiImage(prompt, { aspect: w === h ? '1:1' : w > h ? '3:2' : '2:3' }));
+    return MODELS[0];
+  }
   let lastErr;
   for (let attempt = 0; attempt < 4; attempt++) {
     for (const model of MODELS) {
@@ -245,7 +300,7 @@ const selected = items.filter((it) => !ONLY || it.id.startsWith(ONLY));
 if (!selected.length) { console.error('no item matches --only', ONLY); process.exit(1); }
 
 if (!CONVERT_ONLY) {
-  if (!process.env.OPENAI_API_KEY) { console.error('OPENAI_API_KEY missing'); process.exit(1); }
+  if (PROVIDER !== 'gemini' && !process.env.OPENAI_API_KEY) { console.error('OPENAI_API_KEY missing'); process.exit(1); }
   const jobs = selected.flatMap((it) => it.variants.map((v) => [it, v]));
   let next = 0;
   const worker = async () => {
@@ -264,10 +319,11 @@ if (!CONVERT_ONLY) {
 // manifest covers every item (merge with what was converted earlier when --only is used)
 let manifest = {};
 const mpath = join(OUT, 'manifest.json');
-try { manifest = JSON.parse(await readFile(mpath, 'utf8')).items || {}; } catch {}
+let topModel = MODELS[0];
+try { const old = JSON.parse(await readFile(mpath, 'utf8')); manifest = old.items || {}; if (PROVIDER === 'gemini' && old.model) topModel = old.model; } catch {}
 for (const it of selected) await convert(it, manifest);
 const ordered = Object.fromEntries(items.filter((it) => manifest[it.id]).map((it) => [it.id, manifest[it.id]]));
-await writeFile(mpath, JSON.stringify({ model: MODELS[0], note: 'Generated by scripts/ui-art.mjs. No text in any image.', items: ordered }, null, 2));
+await writeFile(mpath, JSON.stringify({ model: topModel, note: 'Generated by scripts/ui-art.mjs. No text in any image.', items: ordered }, null, 2));
 console.log(`manifest: ${Object.keys(ordered).length} items`);
 
 // Contact sheet of the shipped files (for review): --contact <out.png>

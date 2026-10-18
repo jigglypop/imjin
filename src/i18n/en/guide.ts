@@ -49,6 +49,7 @@ export const EN_GUIDE: Record<string, string> = {
   '결과 공유': 'Share result',
   '{n}척 생존': '{n} ships survived',
   '일본 함선 {n}척 격파, 아군 {m}척 손실': '{n} Japanese ships destroyed, {m} of yours lost',
+  '에스파냐 함선 {n}척 격파, 아군 {m}척 손실': '{n} Spanish ships destroyed, {m} of yours lost',
   '역사보다 {n}척을 더 살렸습니다.': 'You saved {n} more ships than history did.',
   '역사만큼 함선을 지켜 내지 못했습니다.': 'You could not keep as many ships as history did.',
   '역사의 전과를 넘어섰습니다.': "You matched or beat history's tally.",

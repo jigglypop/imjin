@@ -1,9 +1,9 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
-import { SCENARIO_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
-import { commanderOf, FACTION_NAME, FACTION_SHORT, forcesOf, handicap, playableFactions } from '../sim/balance';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { CHAPTER_ORDER, SCENARIOS, type ScenarioId } from '../sim/scenarios';
+import { commanderOf, FACTION_NAME, forcesOf, handicap, playableFactions } from '../sim/balance';
 import type { Faction } from '../sim/types';
 import { sound } from '../audio/Sound';
-import { CAMPAIGN_ORDER, campaignOver, currentBattle, setMode, useCampaign } from '../campaign/campaign';
+import { campaignOver, currentBattle, orderOf, setMode, useCampaign } from '../campaign/campaign';
 import { isPhone, isTouchOnly } from '../game/device';
 import { prefetchLoading } from './Backdrop';
 import { CampaignPanel } from './CampaignPanel';
@@ -21,12 +21,12 @@ const flatMap = isPhone || isTouchOnly || params.get('map') === 'static';
 
 const FACTION_KEY = 'imjin.faction';
 /** The order the sides are listed in: the allies first, the invader last. */
-const ORDER: Faction[] = ['joseon', 'ming', 'japan'];
+const ORDER: Faction[] = ['joseon', 'ming', 'japan', 'england', 'spain'];
 
 function readFaction(): Faction {
   try {
     const v = localStorage.getItem(FACTION_KEY);
-    return v === 'japan' || v === 'ming' ? v : 'joseon';
+    return v === 'japan' || v === 'ming' || v === 'england' || v === 'spain' ? v : 'joseon';
   } catch {
     return 'joseon';
   }
@@ -46,17 +46,22 @@ const DIFFICULTY: Record<string, string> = { 쉬움: '난이도 쉬움', 보통:
 /** The nine historical battles: pick a battle on the map, pick a side, and sail. The 1592 campaign is a secondary mode here. */
 export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onStart: (id: ScenarioId, campaign: boolean, faction: Faction) => void }) {
   const t = useT();
+  // A later chapter lists its own battles on its own map; the 1592 run of battles (연속 전투) is the first chapter's.
+  const chapter = useUi((st) => st.chapter);
+  const armada = chapter !== 'imjin';
+  const order: ScenarioId[] = CHAPTER_ORDER[chapter];
+
   const mode = useCampaign((st) => st.mode);
   const campaign = useCampaign((st) => st.campaign);
   const [camp, setCamp] = useState(false);
   const [side, setSideRaw] = useState<Faction>(readFaction);
   const inCampaign = mode === 'campaign' && !!campaign;
   const current = campaign ? currentBattle(campaign) : 'okpo';
-  const locked = (sid: ScenarioId) => inCampaign && !!campaign && CAMPAIGN_ORDER.indexOf(sid) > campaign.step;
+  const locked = (sid: ScenarioId) => inCampaign && !!campaign && orderOf(campaign).indexOf(sid) > campaign.step;
   // The picked battle lives in the store because the address names it (/battles/hansan, src/router.ts). Before a pick
   // the screen shows the battle last played, or the series' next battle.
   const picked = useUi((st) => st.battle);
-  const id: ScenarioId = picked && !locked(picked) ? picked : inCampaign ? current : initial;
+  const id: ScenarioId = picked && order.includes(picked) && !locked(picked) ? picked : inCampaign ? current : order.includes(initial) ? initial : order[0]!;
   // Bumped by every pick, so choosing the battle already selected still flies the 3D camera back to its site.
   const [look, setLook] = useState(0);
   const setId = (next: ScenarioId) => {
@@ -68,7 +73,7 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
   const record = (sid: ScenarioId) => campaign?.history.filter((h) => h.id === sid).at(-1);
   const playable = !inCampaign || (!!campaign && !campaignOver(campaign) && id === current);
   const factions = playableFactions(id);
-  const effective: Faction = inCampaign ? 'joseon' : factions.includes(side) ? side : 'joseon';
+  const effective: Faction = inCampaign ? factions[0]! : factions.includes(side) ? side : factions[0]!;
   const sides: Faction[] = [...factions].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
   const setSide = (f: Faction) => {
     sound.click();
@@ -102,11 +107,11 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
     const wait = window.setTimeout(() => prefetchLoading(id), 500);
     return () => window.clearTimeout(wait);
   }, [id]);
-  const flat = <StaticMap id={id} onSelect={setId} />;
+  const flat = <StaticMap id={id} order={order} onSelect={setId} />;
   return (
     <section className="screen hs">
       <div className="hs-map">
-        {flatMap ? (
+        {flatMap || armada ? (
           flat
         ) : (
           <ErrorBoundary fallback={flat}>
@@ -129,7 +134,7 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
             <ChevronLeft /> {t('뒤로')}
           </button>
           <h1 className="screen-title">{t('역사 전투')}</h1>
-          <div className="screen-actions">
+          {<div className="screen-actions">
             <div className="seg" role="tablist">
               <button role="tab" aria-selected={mode === 'free'} className={mode === 'free' ? 'on' : ''} onClick={() => switchMode('free')}>
                 {t('단일 전투')}
@@ -138,10 +143,10 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
                 {t('연속 전투')}
               </button>
             </div>
-          </div>
+          </div>}
         </header>
         <div className="hs-tabs">
-          {SCENARIO_ORDER.map((sid) => (
+          {order.map((sid) => (
             <button key={sid} className={`hs-tab ${sid === id ? 'hs-tab--on' : ''} ${locked(sid) ? 'hs-tab--locked' : ''}`} disabled={locked(sid)} onClick={() => setId(sid)}>
               {inCampaign && record(sid) && (
                 <span className={`tab-seal ${record(sid)!.draw ? 'tab-seal--draw' : record(sid)!.win ? '' : 'tab-seal--loss'}`} role="img" aria-label={record(sid)!.draw ? t('무승부') : record(sid)!.win ? t('승리') : t('패배')}>
@@ -166,31 +171,36 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
               <span>{t(s.season)}</span>
               {s.night && <span className="night-tag">{t('야간 전투')}</span>}
             </div>
-            <p className="select-summary">{t(s.summary)}</p>
-            {!inCampaign && (
-              <div className="select-sides" role="radiogroup" aria-label={t('지휘할 진영')}>
-                {factions.map((f) => (
-                  <button key={f} role="radio" aria-checked={f === effective} className={`side-btn ${f === effective ? 'side-btn--on' : ''}`} onClick={() => setSide(f)}>
-                    <i className={`emblem emblem--${f}`} />
+            <p className="select-hook">{t(s.hook)}</p>
+            {/* One choice: each fleet is its own card, and the player picks the one to lead. */}
+            <div className="select-forces" role={inCampaign ? undefined : 'radiogroup'} aria-label={inCampaign ? undefined : t('지휘할 진영')}>
+              {sides.map((f) => {
+                const pick = !inCampaign && factions.includes(f);
+                const body = (
+                  <>
+                    <b>{t(FACTION_NAME[f])}</b>
                     <span>
-                      <b>{t(FACTION_SHORT[f])}</b>
-                      <small>{t(commanderOf(id, f).name)}</small>
+                      {t(commanderOf(id, f).name)} <small>{t(commanderOf(id, f).title)}</small>
                     </span>
+                    <span className="select-force-ships">{t(forcesOf(id, f))}</span>
+                  </>
+                );
+                const style = { '--bar': `var(--${f})` } as CSSProperties;
+                return pick ? (
+                  <button key={f} type="button" role="radio" aria-checked={f === effective} className={`select-force select-force--pick ${f === effective ? 'select-force--on' : ''}`} style={style} onClick={() => setSide(f)}>
+                    {body}
                   </button>
-                ))}
-              </div>
-            )}
-            <div className="select-forces">
-              {sides.map((f) => (
-                <div key={f} className={`select-force select-force--${f}`}>
-                  <b>{t(FACTION_NAME[f])}</b>
-                  <span>
-                    {t(commanderOf(id, f).name)} <small>{t(commanderOf(id, f).title)}</small>
-                  </span>
-                  <span>{t(forcesOf(id, f))}</span>
-                </div>
-              ))}
+                ) : (
+                  <div key={f} className="select-force" style={style}>
+                    {body}
+                  </div>
+                );
+              })}
             </div>
+            <details className="select-more">
+              <summary>{t('자세히')}</summary>
+              <p className="select-summary">{t(s.summary)}</p>
+            </details>
           </div>
           {more && (
             <button type="button" className="hs-more" onClick={() => briefRef.current?.scrollBy({ top: 140, behavior: 'smooth' })}>
@@ -201,7 +211,7 @@ export function HistoryScreen({ initial, onStart }: { initial: ScenarioId; onSta
         <div className="hs-foot">
           <div className="select-foot">
             <span className="select-result">{inCampaign && campaign
-                ? t('연속 전투 {step}/{total} · 함선 {n}척', { step: Math.min(campaign.step + 1, CAMPAIGN_ORDER.length), total: CAMPAIGN_ORDER.length, n: campaign.squads.reduce((n, q) => n + q.ships.length, 0) })
+                ? t('연속 전투 {step}/{total} · 함선 {n}척', { step: Math.min(campaign.step + 1, orderOf(campaign).length), total: orderOf(campaign).length, n: campaign.squads.reduce((n, q) => n + q.ships.length, 0) })
                 : t('역사 기록 · {result}', { result: t(s.result) })}</span>
             {inCampaign && (
               <button className="chip" onClick={() => setCamp(true)}>

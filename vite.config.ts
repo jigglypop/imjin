@@ -6,6 +6,9 @@ import react from '@vitejs/plugin-react';
 import { EN_BRIEFING } from './src/i18n/en/briefing.js';
 import { EN_COMMON } from './src/i18n/en/common.js';
 import { EN_SIM } from './src/i18n/en/sim.js';
+import { EN_ARMADA } from './src/i18n/en/armada.js';
+import { EN_LEPANTO } from './src/i18n/en/lepanto.js';
+import { EN_TRAFALGAR } from './src/i18n/en/trafalgar.js';
 import { SCENARIO_TEXT } from './src/sim/scenarioText.js';
 import { CARD_SIZE, SITE_NAME, cardFile, routeName, routePages, routePath, type BattleSlug, type Edition, type RoutePage, type RouteScreen } from './src/routes.js';
 
@@ -68,7 +71,7 @@ const ENGLISH_FRONT = {
 
 /** The English for a page's text, from the game's own dictionaries, so a page's title matches the tab title in the game. */
 function english(ko: string): string {
-  const text = EN_COMMON[ko] ?? EN_SIM[ko] ?? EN_BRIEFING[ko];
+  const text = EN_COMMON[ko] ?? EN_SIM[ko] ?? EN_BRIEFING[ko] ?? EN_ARMADA[ko] ?? EN_LEPANTO[ko] ?? EN_TRAFALGAR[ko];
   if (!text) throw new Error(`route pages: no English for ${ko}`);
   return text;
 }
@@ -214,8 +217,51 @@ export class WebGLRenderer { constructor() { throw new Error('three.js is built 
   };
 }
 
+/**
+ * Runtime binaries from the asset store: a public/ file that assets.json names but this tree lacks (pruned with
+ * `npm run assets -- prune-local`) is served from the shared cache, fetched from S3 on first use. A build needs every
+ * file here, so it stops while any is remote-only (`npm run assets -- pull --all` brings them back).
+ */
+function remoteAssetsPlugin(): Plugin {
+  let build = false;
+  return {
+    name: 'imjin-remote-assets',
+    configResolved(config) {
+      build = config.command === 'build';
+    },
+    async configureServer(server) {
+      const lib = await import(new URL('./scripts/lib/remote-assets.mjs', import.meta.url).href);
+      server.middlewares.use(lib.remoteAssetsMiddleware({ log: server.config.logger }));
+    },
+    buildStart() {
+      if (!build) return;
+      const remote = (() => {
+        try {
+          return (JSON.parse(readFileSync(join(import.meta.dirname, '.assets-remote.json'), 'utf8')).paths ?? []) as string[];
+        } catch {
+          return [];
+        }
+      })();
+      if (remote.length) this.error(`${remote.length} runtime files are remote-only here (${remote[0]} first): npm run assets -- pull --all, then build`);
+    },
+  };
+}
+
+/** Short content hashes of public/textures/** from assets.json, for src/render/assetUrl.ts. */
+function textureVersions() {
+  try {
+    const files = JSON.parse(readFileSync(join(import.meta.dirname, 'assets.json'), 'utf8')).files as Record<string, { sha256: string }>;
+    const out: Record<string, string> = {};
+    for (const [path, entry] of Object.entries(files)) if (path.startsWith('public/textures/')) out[path.slice('public'.length)] = entry.sha256.slice(0, 12);
+    return out;
+  } catch {
+    return {};
+  }
+}
+
 export default defineConfig({
-  plugins: [threeWithoutWebGL(), react(), routePagesPlugin()],
+  define: { __TEXTURE_VERSIONS__: JSON.stringify(textureVersions()) },
+  plugins: [remoteAssetsPlugin(), threeWithoutWebGL(), react(), routePagesPlugin()],
   cacheDir: CACHE_DIR,
   server: { port: 5291, host: '127.0.0.1', strictPort: true, watch: { ignored: UNWATCHED } },
   build: { target: ['es2022', 'safari16'], chunkSizeWarningLimit: 4000 },

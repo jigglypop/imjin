@@ -15,12 +15,15 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
+import { ERA, ERA_CAST } from './generals-cast-eras.mjs';
+import { geminiImage, geminiModel } from './gemini-image.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 process.loadEnvFile(join(ROOT, '.env'));
 const [step, ...rest] = process.argv.slice(2);
 const args = Object.fromEntries(rest.map((a) => { const [k, ...v] = a.replace(/^--/, '').split('='); return [k, v.length ? v.join('=') : 'true']; }));
-const PKG = join(ROOT, 'assets-src', 'generals-cast-2026-10-17');
+// GENERALS_PKG points a worktree at the main checkout's sources (generation binaries live there, archived to S3).
+const PKG = process.env.GENERALS_PKG ?? join(ROOT, 'assets-src', 'generals-cast-2026-10-17');
 const BLENDER = 'C:/Program Files/Blender Foundation/Blender 5.2/blender.exe';
 
 /** The weapons, as the concept describes them in his right fist. */
@@ -75,6 +78,7 @@ const CAST = [
   { id: 'yanghao', armor: 'ming_myeongap', sword: 'jian', face: 'Yang Hao, Ming supreme commissioner (a civil official commanding the army), fifties: a scholarly stern Han Chinese face, a long thin moustache and long beard', look: MING + 'A padded red-and-gold quilted mianjia armor coat studded with gilt nails, gold embroidered cloud collar, a jade belt; a gilded Ming helmet with spike, red tassel and phoenix wings.' },
   { id: 'wuweizhong', armor: 'ming_dingjia', sword: 'dao', face: 'Wu Weizhong, a Zhejiang veteran Ming commander about fifty: a hard lean southern Han Chinese face with a long diagonal SCAR across the left cheek and brow, narrow piercing eyes, a long thin drooping moustache and a short pointed grey beard', look: MING + 'A dark red nail-studded brigandine (dingjia) over a black robe, iron shoulder guards; an iron Ming helmet with spike, red tassel and phoenix-wing flaps.' },
 ];
+CAST.push(...ERA_CAST);
 const BY = Object.fromEntries(CAST.map((c) => [c.id, c]));
 const NEW_MING = new Set(['lirusong', 'magui', 'liuting', 'jijin', 'yanghao', 'wuweizhong']);
 
@@ -295,7 +299,81 @@ async function turnaround(c) {
   if (['armor', 'front', 'left', 'back', 'right'].every((w) => existsSync(join(d, `${w}.png`)))) progress(c, 'concept (armor turnaround → front/left/back/right)', rel(d));
 }
 
+// ---------------------------------------------------------------- concept, other chapters (Gemini)
+// The settled turnaround (armor sheet → front → left/back/right) with Gemini's image model: it has no transparent
+// output, so each view is made on light grey (<view>_grey.png) and cut out (scripts/lib/cutout.py, BiRefNet) to
+// <view>.png. The face reference is a photographic recast of his chapter portrait (face.png).
+const eraFrame = (c) =>
+  `A full-body character reference photograph for image-to-3D reconstruction and auto-rigging, in the look of a live-action costume fitting for ${ERA[c.era].films}: the hero costume of a film lead. ` +
+  'Exactly one man standing alone in a relaxed 45-degree A-pose for rigging: ' +
+  (c.arms ?? 'both arms straight and spread out to the sides, each arm angled exactly 45 degrees below horizontal (halfway between a T-pose and hanging down), the arms point steeply DOWN-and-out (NOT horizontal, NOT a T-pose): each fist hangs at the height of the crotch, about one forearm length outside the hip, with a clear gap between each arm and the torso; shoulders relaxed and low (not shrugged); legs straight and apart, the feet planted wider than the shoulders (an inverted V between the legs), toes forward; head level, facing the camera. ') +
+  (c.hands ?? 'BOTH hands are empty firmly closed fists, the right fist with a hollow channel through it as if around a sword grip, the backs of the hands facing outward, holding nothing at all (the weapon is fitted later): no sword, no weapon, no scabbard, no hat in the hand. ') +
+  'Heroic athletic film-lead build: tall, broad square shoulders, a deep chest, a FLAT stomach and a narrow cinched waist (a clear V-taper; from the side the belly never pushes out past the chest), the clothes and armour tailored close to the body; never stocky or pot-bellied. ' +
+  'Seen at chest height through a long telephoto lens, orthographic-looking, no perspective distortion. The whole figure fits in the frame with a clear margin above the head, below the boots and beyond both arms. ' +
+  'Soft, even, flat studio light from every side, no hard shadows, no rim light; a plain seamless light grey background, no floor line, no ground shadow, nothing else in the picture. ' +
+  `Crisp, sharply focused detail everywhere, ${ERA[c.era].materials}, soft matte or satin finish, no glare. `;
+const ERA_RULES =
+  'No cape, no cloak, no long coat-tails flying, no ribbons or banners; nothing hangs away from the body. No scabbard. ' +
+  'No text, no letters, no logo, no border, no watermark. No painting or illustration look, no cartoon, no plastic CGI look, no modern items. ';
+const ERA_FACE = (c) =>
+  `The attached picture is a painted portrait of ${c.face.split(':')[0]}. Make a photographic close-up portrait of the same man as a live-action film lead: head and shoulders, straight on, the face filling the frame, keeping exactly his face shape, nose, brows, eyes, hair, beard and age from the portrait (${c.face}), in the costume of: ${c.look} ` +
+  'Real skin texture with pores and fine lines, natural colour, soft flat studio light, a plain light grey background. Photographic, sharp, 85 mm lens. No painting look, no text, no border.';
+const ERA_ARMOR = (c) =>
+  `A costume-department turnaround sheet for ${ERA[c.era].films}: ONE complete costume (with its armour where it has one, and its headwear) shown four times side by side in one row at the same scale and height, from left to right: from the FRONT, from the BACK, from ITS LEFT SIDE in strict profile, from ITS RIGHT SIDE in strict profile. ` +
+  'Each time the costume is worn by an invisible ghost mannequin: it keeps the shape it has on a tall athletic man with broad shoulders, a deep chest and a narrow cinched waist, ' +
+  (c.hand === 'left' ? 'the LEFT sleeve angled 45 degrees down and away from the body, the RIGHT sleeve empty, folded and pinned flat to the chest, ' : 'the sleeves angled 45 degrees down and away from the body as in an A-pose, ') +
+  'the legs standing apart; empty inside, no person, no head, no hands, no mannequin, no stand. ' +
+  `The costume: ${c.look} ` +
+  'The attached picture is his portrait: take the colours and the construction of his dress where they agree with the description. ' +
+  `All four views show exactly the same costume: identical colours, plates, buttons, lace, trims and lengths. Photographic, crisp detail, ${ERA[c.era].materials}, soft even flat studio light, a plain light grey background, no ground shadow. No sword, no weapon, no scabbard. No text, no letters, no labels, no border. No illustration look.`;
+const ERA_FRONT = (c) =>
+  eraFrame(c) +
+  `He is ${c.face}. ${c.look} ` +
+  'The FIRST attached picture is the turnaround of his costume (front, back, left, right): he wears EXACTLY this costume and headwear, every plate, button, lace, colour, trim and length as in its front view, filled out by his athletic body. ' +
+  'The SECOND attached picture is a close-up of his face: keep exactly this face, its features, hair, beard, age and skin, photographic. ' +
+  ERA_RULES + (c.hand === 'left' ? 'Exactly ONE arm (the left), two legs, one empty fist.' : 'Exactly two arms, two legs, two empty fists.');
+const ERA_VIEW = (c, w) =>
+  'The FIRST attached picture is the front view of a character reference for image-to-3D reconstruction. Make the matching view of the exact same man in the exact same costume and the exact same 45-degree A-pose' +
+  (c.hand === 'left' ? ' (his right arm is missing, the empty right sleeve pinned flat to the chest; only the left arm angled down with an empty fist), ' : ' with both fists empty, ') +
+  (c.hand === 'left' && w === 'right' ? 'seen exactly from HIS RIGHT SIDE in strict profile (he faces the RIGHT edge of the picture, the camera standing at his right): the pinned empty right sleeve flat against his chest, nothing hanging from the right shoulder, his left arm hidden behind his body' : VIEW[w]) +
+  '. Same scale, same height in the frame, same orthographic look, same soft flat studio light, same plain light grey background, no floor line, no shadow. Everything consistent with the front view: colours, materials, trims, headwear, lengths, proportions. ' +
+  'The SECOND attached picture is the turnaround of his costume: from this side it must look exactly as in its matching view of that sheet. The THIRD attached picture is a close-up of his face' + (w === 'back' ? ' (not visible from behind).' : ': the same face in profile.') +
+  ' No text, no border. No painting or illustration look. ' + (c.hand === 'left' ? 'Exactly one arm, two legs.' : 'Exactly two arms, two legs.');
+
+async function gemini(file, prompt, refs, aspect) {
+  if (existsSync(file) && !args.redo) return false;
+  const images = await Promise.all(refs.map((f) => sharp(f).resize(1280, 1280, { fit: 'inside', withoutEnlargement: true }).flatten({ background: '#cfd0d2' }).png().toBuffer()));
+  for (let k = 0; ; k++) {
+    try { writeFileSync(file, await geminiImage(prompt, { aspect, images })); break; }
+    catch (e) { if (k >= 4) throw e; log('gemini', 'retry', k + 1, String(e).slice(0, 160)); await sleep(10000 * (k + 1)); }
+  }
+  record(file, { at: new Date().toISOString(), tool: 'gemini image', model: geminiModel(), aspect, prompt, refs: refs.map(rel), estimatedUsd: 0.04 });
+  ledger({ provider: 'gemini', what: rel(file), model: geminiModel(), credits: 0, usd: 0.04 });
+  return true;
+}
+const cutout = (grey, out) => { if (!existsSync(out) || args.redo) execFileSync('python', ['-E', '-P', join(ROOT, 'scripts', 'lib', 'cutout.py'), grey, out], { stdio: 'inherit' }); };
+
+async function eraTurnaround(c) {
+  const d = dirOf(c);
+  const only = (args.only ?? 'face,armor,front,left,back,right').split(',');
+  const portrait = join(ROOT, 'public', 'ui', 'portraits', `portrait_${c.id}.webp`);
+  const face = join(d, 'face.png');
+  const sheet = join(d, 'armor_grey.png');
+  const front = join(d, 'front_grey.png');
+  if (only.includes('face')) { log(c.id, 'face…'); await gemini(face, ERA_FACE(c), [portrait], '1:1'); }
+  if (only.includes('armor')) { log(c.id, 'armor sheet…'); await gemini(sheet, ERA_ARMOR(c), [portrait], '16:9'); cutout(sheet, join(d, 'armor.png')); }
+  if (only.includes('front')) { log(c.id, 'front…'); await gemini(front, ERA_FRONT(c), [sheet, face], '1:1'); cutout(front, join(d, 'front.png')); }
+  await Promise.all(['left', 'back', 'right'].filter((v) => only.includes(v)).map(async (w) => {
+    log(c.id, `${w}…`);
+    await gemini(join(d, `${w}_grey.png`), ERA_VIEW(c, w), [front, sheet, face], '1:1');
+  }));
+  for (const w of ['left', 'back', 'right'].filter((v) => only.includes(v))) cutout(join(d, `${w}_grey.png`), join(d, `${w}.png`));
+  if (['armor', 'front', 'left', 'back', 'right'].every((w) => existsSync(join(d, `${w}.png`)))) progress(c, 'concept (Gemini: face → costume turnaround → front/left/back/right, cut out)', rel(d));
+  log(c.id, 'concept done');
+}
+
 async function concept(c) {
+  if (c.era) return eraTurnaround(c);
   if (args.turnaround) return turnaround(c);
   await styleSheet();
   const d = dirOf(c);
@@ -492,8 +570,9 @@ async function rig(c) {
 // (free right arm sent forward), attack 227 Archery Shot 3. Unedited Meshy library clips.
 // Lead's picks 2026-10-17: idle 252 Idle 12 (with --posture), attack 241 Weapon Combo 2 (92 Double Combo Attack for
 // long-skirted generals via --actions), archery 227.
-const KIND_ACTIONS = 'idle_sword:252,command_sword:240,attack_sword:241,idle_spear:335,attack_spear:214,idle_bow:244,command_bow:29,attack_bow:227';
-const MESHY_CLIP = { sword_judgment: 'command_sword', sword_shout: 'command_sword', charged_slash: 'command_sword', idle_12: 'idle_sword', weapon_combo_2: 'attack_sword', double_combo_attack: 'attack_sword', idle_6: 'idle_sword', thrust_slash: 'command_sword', left_slash: 'attack_sword', axe_breathe_and_look_around: 'idle_spear', punch_forward_with_both_fists: 'attack_spear', idle_4: 'idle_bow', call_gesture: 'command_bow', archery_shot_3: 'attack_bow' };
+// Owner 2026-10-17: standing only — the one clip is 251 Idle 11 (command and attack clips removed).
+const KIND_ACTIONS = 'idle_sword:251';
+const MESHY_CLIP = { sword_judgment: 'command_sword', sword_shout: 'command_sword', charged_slash: 'command_sword', idle_12: 'idle_sword', idle_11: 'idle_sword', weapon_combo_2: 'attack_sword', double_combo_attack: 'attack_sword', idle_6: 'idle_sword', thrust_slash: 'command_sword', left_slash: 'attack_sword', axe_breathe_and_look_around: 'idle_spear', punch_forward_with_both_fists: 'attack_spear', idle_4: 'idle_bow', call_gesture: 'command_bow', archery_shot_3: 'attack_bow' };
 const ACTIONS = Object.fromEntries((args.actions ?? KIND_ACTIONS).split(',').map((p) => p.split(':')).map(([n, id]) => [Number(id), n]));
 async function motion(c) {
   const d = dirOf(c);
@@ -691,6 +770,8 @@ async function pack(c) {
         handNode.addChild(socket);
         if (lod.suffix === '') log(c.id, name, pts.length, 'fist vertices');
       }
+      // A one-armed figure (Nelson) carries a `left_handed` marker: GeneralModel holds his weapon in the left fist.
+      if (c.hand === 'left') skin.listJoints().find((j) => j.getName() === 'Hips')?.addChild(doc.createNode('left_handed'));
     }
     // Meshy's rigged output keeps only a 2k colour map (from the 2k upload); the raw model's own full-size colour,
     // normal and metal/roughness maps go back on (the UVs are the raw model's), sized per level below.
@@ -794,7 +875,8 @@ async function staticCheck(file, lod) {
   const joints = skins[0]?.listJoints().map((j) => j.getName()) ?? [];
   for (const j of ['Hips', 'Head', 'RightHand', 'LeftHand']) if (!joints.includes(j)) problems.push(`no joint ${j}`);
   const clips = root.listAnimations().map((a) => a.getName());
-  for (const c of (clips.includes('idle_sword') ? ['idle_sword', 'command_sword', 'attack_sword', 'idle_spear', 'attack_spear', 'idle_bow', 'command_bow', 'attack_bow'] : ['idle', 'command', 'slash'])) if (!clips.includes(c)) problems.push(`no clip ${c}`);
+  // Owner 2026-10-17: standing only, one clip (idle_sword = Meshy 251 Idle 11); scripts/generals-idle-only.mjs reduces a pack to it.
+  if (!clips.includes('idle_sword')) problems.push('no clip idle_sword');
   let tris = 0;
   for (const m of root.listMeshes()) for (const p of m.listPrimitives()) tris += p.getIndices().getCount() / 3;
   if (tris > lod.triangles * (lod.suffix === '_lod2' ? 2.1 : 1.5)) problems.push(`triangles ${tris}`);

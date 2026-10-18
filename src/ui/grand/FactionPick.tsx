@@ -1,3 +1,5 @@
+import { THEATRES } from '../../sim/grand/theatre';
+import { mapTheatreId } from './theatreChoice';
 import { useState } from 'react';
 import { MAP_IMAGE } from './projection';
 import { useT } from '../../i18n';
@@ -43,7 +45,7 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
               </button>
             )}
             <div>
-              <div className="g-sheet__eyebrow">{t('캠페인 · 1592')}</div>
+              <div className="g-sheet__eyebrow">{t('캠페인 · {year}', { year: String(THEATRES[mapTheatreId()].year) })}</div>
               <h1 className="g-pick__title">{t('진영 선택')}</h1>
             </div>
           </header>
@@ -85,13 +87,14 @@ export function FactionPick({ options, initial, onPick, onBack }: FactionPickPro
                   </span>
                   <span className="g-fcard__start">
                     <span>{t('시작 포구 {ports} · 함대 {fleets}', { ports: portsText(o.startRegions.length), fleets: fleetsText(o.fleets) })}</span>
-                    <b>{o.startRegions.join(' · ')}</b>
+                    {/* The count is in the line above; a few names say where, the rest wait for the map. */}
+                    <b>{o.startRegions.slice(0, 6).join(' · ')}{o.startRegions.length > 6 ? ' …' : ''}</b>
                   </span>
                 </button>
               );
             })}
           </div>
-          {sel !== 'japan' && <p className="g-pick__ally">
+          {(sel === 'joseon' || sel === 'ming') && <p className="g-pick__ally">
             {t('동맹 {navy}: 시작 함대·무료 함대 증원을 약 40%, 소득을 35% 줄입니다.', { navy: t(sel === 'joseon' ? '명' : '조선') })}
           </p>}
           <footer className="g-glass g-pick__foot">

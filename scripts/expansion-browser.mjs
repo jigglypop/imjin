@@ -36,7 +36,7 @@ const water = (page) => page.evaluate(() => {
   }
   throw new Error('No visible open water under canvas');
 });
-const overflow = (page) => page.evaluate(() => ({ page: document.documentElement.scrollWidth > innerWidth + 1, groups: [...document.querySelectorAll('.fleet-group')].some((b) => { const r = b.getBoundingClientRect(); return r.left < 0 || r.right > innerWidth || r.top < 0 || r.bottom > innerHeight; }) }));
+const overflow = (page) => page.evaluate(() => ({ page: document.documentElement.scrollWidth > innerWidth + 1, groups: [...document.querySelectorAll('.fleet-bar button')].some((b) => { const r = b.getBoundingClientRect(); return r.left < 0 || r.right > innerWidth || r.top < 0 || r.bottom > innerHeight; }) }));
 try {
   const { page, context } = await open({ width: 1920, height: 1080 });
   console.log('desktop setup');
@@ -50,16 +50,10 @@ try {
   await page.goto(battleUrl, { waitUntil: 'domcontentloaded' }); await ready(page);
   report.assets = await page.evaluate(() => performance.getEntriesByType('resource').map((r) => r.name).filter((name) => /\/(index|BattleView)-[^/]+\.js$/.test(name)));
   await page.waitForTimeout(700);
-  assert.equal(await page.locator('.fleet-group').count(), 8);
-  await page.locator('.fleet-group-tools button').getByText('Select all', { exact: true }).click();
+  await page.locator('.fleet-bar button').getByText('Select all', { exact: true }).click();
   const ownCount = await page.evaluate(() => { const e = window.__engine; return e.battle.ships.filter((s) => e.isOwn(s)).length; });
-  await page.keyboard.press('Control+1');
-  await page.waitForFunction((n) => window.__engine.input.getGroups()[0].count === n, ownCount);
-  await page.locator('.fleet-group-tools button').getByText('Name', { exact: true }).click();
-  await page.locator('#fleet-name').fill('Main fleet');
-  await page.locator('.fleet-group-name button[type="submit"]').click();
-  assert.ok((await page.locator('.fleet-group[data-group="1"]').textContent()).includes('Main fleet'));
-  await page.locator('.cards .card').first().click(); await page.keyboard.press('Control+2');
+  await page.waitForFunction((n) => window.__engine.views.selected.size === n, ownCount);
+  await page.locator('.cards .card').first().click();
   await page.keyboard.press('1'); await page.keyboard.press('1');
   const cameraBefore = await page.evaluate(() => ({ tx: window.__engine.rts.goal.tx, tz: window.__engine.rts.goal.tz }));
   await page.keyboard.press('Control+a'); await page.waitForTimeout(100);
@@ -122,8 +116,6 @@ try {
     return { kind: 'local paused renderer capacity fixture', total: b.ships.filter((s) => b.isActive(s)).length, owners: c.players.map((p) => ({ slot: p.slot, count: b.ships.filter((s) => s.owner === p.slot && b.isActive(s)).length, limit: String(c.shipLimit(p.slot)) })), onLand: b.ships.filter((s) => b.isActive(s) && e.terrain.heightAt(s.x, s.z) >= -2).length };
   });
   assert.equal(report.fixture.total, 480); assert.equal(report.fixture.onLand, 0);
-  await page.keyboard.press('Control+3');
-  await page.waitForFunction(() => window.__engine.input.getGroups()[2].count === 300);
   await page.waitForTimeout(1800); await shot(page, 'fleet-480-desktop');
   report.desktop = await page.evaluate(async () => {
     const e = window.__engine, backend = e.renderer.backend;
@@ -133,7 +125,7 @@ try {
     e.render = function (...args) { frames++; return originalRender.apply(this, args); };
     const start = performance.now(); await new Promise((resolve) => setTimeout(resolve, 4000)); const elapsed = performance.now() - start;
     backend.draw = originalDraw; e.render = originalRender;
-    return { context: '1920x1080 Edge D3D11 WebGL2, low quality, paused local 480-ship fixture; observation only', elapsedMs: elapsed, renderedFrames: frames, observedFps: frames * 1000 / elapsed, drawsPerFrame: draws / Math.max(1, frames), info: e.info(), ownRings: e.views.ringsOwn.count, enemyRings: e.views.ringsEnemy.count, ringCapacity: e.views.ringsOwn.instanceMatrix.count, batches: e.views.renderer.stats(), capacities: [...e.views.renderer.capacity], groups: e.input.getGroups() };
+    return { context: '1920x1080 Edge D3D11 WebGL2, low quality, paused local 480-ship fixture; observation only', elapsedMs: elapsed, renderedFrames: frames, observedFps: frames * 1000 / elapsed, drawsPerFrame: draws / Math.max(1, frames), info: e.info(), ownRings: e.views.ringsOwn.count, enemyRings: e.views.ringsEnemy.count, ringCapacity: e.views.ringsOwn.instanceMatrix.count, batches: e.views.renderer.stats(), capacities: [...e.views.renderer.capacity] };
   });
   assert.ok(report.desktop.renderedFrames > 0); assert.equal((await overflow(page)).page, false);
   assert.equal(report.desktop.ownRings, 300, 'all 300 selected ships need their selection ring');
@@ -145,28 +137,24 @@ try {
   console.log('mobile touch');
   const mobile = await open({ width: 390, height: 844 }, true);
   await mobile.page.goto(battleUrl, { waitUntil: 'domcontentloaded' }); await ready(mobile.page); await mobile.page.waitForTimeout(500);
-  await mobile.page.locator('.fleet-group-tools button').getByText('Select all', { exact: true }).tap();
-  await mobile.page.locator('.fleet-group-tools button').getByText('Assign', { exact: true }).tap();
-  await mobile.page.locator('.fleet-group[data-group="8"]').tap();
-  assert.ok(await mobile.page.evaluate(() => window.__engine.input.getGroups()[7].count > 0));
-  await mobile.page.locator('.fleet-group[data-group="8"]').tap();
-  await mobile.page.locator('.fleet-group[data-group="8"]').tap();
+  await mobile.page.locator('.fleet-bar button').getByText('Select all', { exact: true }).tap();
+  assert.ok(await mobile.page.evaluate(() => window.__engine.views.selected.size > 0));
   await mobile.page.waitForTimeout(700);
-  await mobile.page.locator('.fleet-route').tap(); assert.equal(await mobile.page.evaluate(() => window.__engine.input.queueMoves), true);
+  await mobile.page.locator('.fleet-bar button').getByText('Queue route', { exact: false }).tap(); assert.equal(await mobile.page.evaluate(() => window.__engine.input.queueMoves), true);
   const dock = mobile.page.locator('.dock-fold');
   if (await dock.getAttribute('aria-expanded') === 'true') await dock.tap();
   await shot(mobile.page, 'mobile-groups-folded'); assert.deepEqual(await overflow(mobile.page), { page: false, groups: false });
   await ownHome(mobile.page); await mobile.page.locator('.cq-point').waitFor(); await mobile.page.waitForTimeout(1800);
   await shot(mobile.page, 'mobile-building-panel');
-  const panelLayout = await mobile.page.evaluate(() => ({ panel: document.querySelector('.cq-point').getBoundingClientRect().toJSON(), groups: document.querySelector('.fleet-groups').getBoundingClientRect().toJSON() }));
+  const panelLayout = await mobile.page.evaluate(() => ({ panel: document.querySelector('.cq-point').getBoundingClientRect().toJSON(), groups: document.querySelector('.fleet-bar').getBoundingClientRect().toJSON() }));
   assert.ok(panelLayout.panel.bottom <= panelLayout.groups.top - 5, 'point panel must end above persistent group controls');
   await mobile.page.locator('.cq-rally-set').tap();
   if (await mobile.page.locator('.cq-point').isVisible()) await mobile.page.locator('.cq-point .cq-close').tap();
   const touchRally = await water(mobile.page); await mobile.page.touchscreen.tap(touchRally.x, touchRally.y);
   await mobile.page.waitForFunction(() => !!window.__engine.conquest.homeOf(window.__engine.owner).rally);
-  report.mobile = await mobile.page.evaluate(() => ({ viewport: [innerWidth, innerHeight], groups: window.__engine.input.getGroups(), queueMode: window.__engine.input.queueMoves, info: window.__engine.info(), rally: window.__engine.conquest.homeOf(window.__engine.owner).rally }));
+  report.mobile = await mobile.page.evaluate(() => ({ viewport: [innerWidth, innerHeight], queueMode: window.__engine.input.queueMoves, info: window.__engine.info(), rally: window.__engine.conquest.homeOf(window.__engine.owner).rally }));
   report.mobile.layout = panelLayout;
-  report.checks.push('390x844 actual touch assignment/queue mode, folded persistent groups, point panel and rally water tap');
+  report.checks.push('390x844 actual touch select-all/queue mode, folded persistent groups, point panel and rally water tap');
   await mobile.context.close();
   assert.deepEqual(report.errors, []);
   report.passed = true;

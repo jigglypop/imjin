@@ -45,31 +45,21 @@ try {
     const key = (code, modifiers = {}, target = { tagName: 'DIV' }) => input.onKey({ code, repeat: false, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, target, preventDefault() {}, ...modifiers });
     return { engine, battle, input, key, a, b, c, d };
   };
-  check('groups assign, add, select, focus, name, and exclude allied or dead ships', () => {
-    const { engine, input, key, a, b, c, d } = setup();
-    engine.views.selected = new Set([a.id, c.id, d.id]); key('Digit1', { ctrlKey: true });
-    assert.equal(input.getGroups()[0].count, 1);
-    engine.views.selected = new Set([b.id]); key('Digit1', { shiftKey: true });
-    assert.equal(input.getGroups()[0].count, 2);
-    key('Digit1'); assert.deepEqual([...engine.views.selected], [a.id, b.id]);
-    key('Digit1'); assert.equal(engine.rts.goal.tx, 150); assert.equal(engine.rts.goal.tz, 100);
-    input.renameGroup(0, '  Main   fleet  '); assert.equal(input.getGroups()[0].name, 'Main fleet');
-    b.alive = false; key('Digit1'); assert.deepEqual([...engine.views.selected], [a.id]);
-    engine.battle = new Battle(2); assert.equal(input.getGroups()[0].count, 0); assert.notEqual(input.getGroups()[0].name, 'Main fleet');
-  });
   check('Ctrl+A owns only active ships; editing and repeated keys do not trigger commands', () => {
     const { engine, input, key, a, b } = setup();
     b.struck = true; key('KeyA', { ctrlKey: true }); assert.deepEqual([...engine.views.selected], [a.id]);
-    key('Digit1', { ctrlKey: true, repeat: true }); assert.equal(input.getGroups()[0].count, 0);
-    key('Digit1', { ctrlKey: true }, { tagName: 'TEXTAREA' }); assert.equal(input.getGroups()[0].count, 0);
-    key('Digit1', { ctrlKey: true }, { tagName: 'DIV', isContentEditable: true }); assert.equal(input.getGroups()[0].count, 0);
+    engine.views.selected = new Set([a.id]);
+    key('KeyH', { repeat: true }); assert.notEqual(a.order.type, 'hold');
+    key('KeyH', {}, { tagName: 'TEXTAREA' }); assert.notEqual(a.order.type, 'hold');
+    key('KeyH', {}, { tagName: 'DIV', isContentEditable: true }); assert.notEqual(a.order.type, 'hold');
   });
-  check('plain digits choose groups; Alt digits still issue formation and speed commands', () => {
+  check('plain and Ctrl digits do nothing (no squadron assignment); Alt digits issue formation and speed commands', () => {
     const { engine, input, key, a } = setup(); engine.views.selected.add(a.id);
     const before = JSON.stringify(a.order); key('Digit1'); assert.equal(JSON.stringify(a.order), before);
     key('Digit1', { altKey: true }); assert.equal(a.order.type, 'slot');
     key('Digit6', { altKey: true }); assert.equal(a.speedCap, 0.6);
-    key('Digit7', { ctrlKey: true }); assert.equal(input.getGroups()[6].count, 1);
+    const sel = [...engine.views.selected]; key('Digit7', { ctrlKey: true }); assert.deepEqual([...engine.views.selected], sel);
+    assert.equal(typeof input.getGroups, 'undefined');
   });
   check('H stops the selection; Shift+H is the HUD toggle and leaves the orders alone', () => {
     const { engine, key, a } = setup(); engine.views.selected.add(a.id);

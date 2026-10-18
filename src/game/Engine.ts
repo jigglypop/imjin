@@ -3,6 +3,7 @@ import {
   Color,
   DataTexture,
   DirectionalLight,
+  type Light,
   PCFShadowMap,
   PerspectiveCamera,
   RenderPipeline,
@@ -55,6 +56,7 @@ import { ShipViews } from '../ships/ShipViews';
 import { Effects } from '../fx/Effects';
 import { Crew, crewAssets } from '../fx/Crew';
 import { Lanterns } from '../fx/Lanterns';
+import { SHIP_SPECS } from '../sim/catalog';
 import { Battle, SIM_DT } from '../sim/battle';
 import { buildScenario, SCENARIOS, type FleetSpawn, type ScenarioId } from '../sim/scenarios';
 import { applyBalance, FACTION_NAME, FACTION_SHORT } from '../sim/balance';
@@ -81,7 +83,7 @@ import { AdaptiveQuality } from './adaptive';
 import { CPU_STEP_MAX, CPU_STEPS, equipment, LEVELS, levelSetting, saveLevelSetting, startLevel, type LevelSetting, type OceanQuality, type TerrainQuality } from './quality';
 import { t } from '../i18n';
 import { failBattle, publish, pushToast, setAutoBuild, setLoading, setProgress, setReport, useUi, type FleetMorale, type GameSnapshot } from '../state/store';
-import { SquadronBanners } from '../ui/SquadronBanners';
+import { ShipLabels } from '../ui/ShipLabels';
 import { MoveOrders } from '../ui/MoveOrders';
 import { TacticalOverlay } from '../ui/TacticalOverlay';
 import { sound } from '../audio/Sound';
@@ -130,7 +132,7 @@ export interface CommandSink {
 }
 
 /** Every kind with a model of its own: the gallery shows them all. A battle loads only the models of the kinds it uses. */
-const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
+const ALL_KINDS: ShipKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall', 'racegalleon', 'pinnace', 'fireship', 'spgalleon', 'galleass', 'urca', 'reale', 'galea', 'vgalleass', 'sultana', 'kadirga', 'kalyata', 'firstrate', 'gb74', 'gbfrigate', 'fr80', 'fr74', 'trinidad', 'es74'];
 
 /** Lets the browser paint the loading bar before the next stretch of blocking work (a timer covers a hidden tab, where frames never come). */
 const settle = () => new Promise<void>((resolve) => {
@@ -159,7 +161,7 @@ const simBudgetMs = (speed: number) => (speed >= 64 ? 32 : speed >= 16 ? 24 : sp
 type LoadTask = { controller: AbortController; terrain?: Terrain; sky?: LoadedSky };
 
 /** Stand-ins written while no crew is drawn are simply dropped. */
-const NO_STAND_INS = new Set<number>();
+const NO_HIDDEN = new Set<number>();
 
 export class Engine {
   readonly scene = new Scene();
@@ -179,7 +181,7 @@ export class Engine {
   crew!: Crew;
   lanterns!: Lanterns;
   input!: Input;
-  banners: SquadronBanners | null = null;
+  banners: ShipLabels | null = null;
   moveOrders: MoveOrders | null = null;
   tacticalOverlay: TacticalOverlay | null = null;
   /** Each fleet's state as last told to the player, and the state it has been in since `since` (battle seconds). */
@@ -237,6 +239,8 @@ export class Engine {
   private fpsTime = 0;
   private lastScaled = 0;
   private vignette = uniform(0.32);
+  /** The sky preset's exposure; a cinematic close-up multiplies it. */
+  private baseExposure = 1;
   private phi = 0;
   /** Cinematic camera, kill-cam slow motion and shot feel. */
   readonly director = new Director(this);
@@ -450,8 +454,8 @@ export class Engine {
       this.setupFog();
       this.setupPipeline();
       if (!this.options.hideLabels) {
-        this.banners = new SquadronBanners(document.querySelector('.app') ?? document.body);
-        this.banners.onSelect = (id, additive) => this.selectSquadron(id, additive);
+        this.banners = new ShipLabels(document.querySelector('.app') ?? document.body);
+        this.banners.onSelect = (id, additive) => this.selectShip(id, additive);
       }
       this.input = new Input(this);
       this.input.attach(r.domElement);
@@ -588,7 +592,7 @@ export class Engine {
       track(skyLoad, weights.sky),
       track(terrainLoad, weights.terrain),
       track(loadShipAssets(this.kindsInBattle(), options, shipsDone(weights.ships)), weights.ships),
-      track(crewAssets(), weights.crew),
+      track(crewAssets([...new Set(this.kindsInBattle().map((k) => SHIP_SPECS[k].faction))]), weights.crew),
       preloadStructures(),
       this.conquestSetup ? preloadWorks() : undefined,
     ]);
@@ -642,8 +646,8 @@ export class Engine {
   /**
    * Builds every program and pass before the battle shows, so none compiles on the first frames as a hitch. The whole
    * pipeline is rendered once part by part (ground, sea and sky, ships and crew), each step moving the loading bar, then
-   * with the refracting ocean if a level can reach it. On WebGL the driver compiles one program at a time inside those
-   * renders. On WebGPU they only start their pipelines (renderAhead), which the GPU process compiles side by side while
+   * with the refracting ocean if a level can reach it. On WebGL without KHR_parallel_shader_compile the driver compiles one program at a time
+   * inside those renders. On WebGPU, and on WebGL with that extension (WebKit has it), they only start their pipelines (renderAhead), which the GPU process compiles side by side while
    * the next part is prepared; the bar then follows them to the end. `from` is where the bar starts.
    */
   private async prewarm(from: number, task: LoadTask) {
@@ -693,6 +697,11 @@ export class Engine {
     };
   }
 
+  /** WebGL with KHR_parallel_shader_compile links programs off the main thread, so it starts them ahead as WebGPU does. */
+  private get parallelCompile() {
+    return !!(this.renderer.backend as unknown as { parallel?: unknown }).parallel;
+  }
+
   /** Pipelines the loading renders have started on WebGPU and not yet waited for. */
   private compiling: Promise<void>[] = [];
 
@@ -706,7 +715,7 @@ export class Engine {
    * once with a camera of its own (the sky turned into a cube, the environment's blurred levels) must draw now.
    */
   private renderAhead(webgpu: boolean) {
-    if (!webgpu) {
+    if (!webgpu && !this.parallelCompile) {
       this.pipeline.render();
       return;
     }
@@ -750,16 +759,34 @@ export class Engine {
       [t('바다와 하늘을 준비하는 중'), [this.ocean.mesh, ...(clouds ? [clouds] : [])]],
       [t('함선과 병사를 준비하는 중'), [this.views.group, this.crew.group, this.fx.group, this.lanterns.group]],
     ];
-    const visible = parts.map((o) => o.visible);
+    // A part's lights (the effects' flashes) stay on while the other parts draw: the lit programs are keyed by the scene's
+    // lights, so the ground built without them would be built and compiled again in the first full frame.
+    const lit = (o: Object3D) => {
+      let found = false;
+      o.traverse((c) => (found ||= (c as Light).isLight === true));
+      return found;
+    };
+    const hide = (o: Object3D, hidden: Object3D[]) => {
+      if (!lit(o)) {
+        if (o.visible) hidden.push(o);
+        o.visible = false;
+        return;
+      }
+      if (!(o as Light).isLight) for (const c of o.children) hide(c, hidden);
+    };
     for (const [n, [text, show]] of steps.entries()) {
       setLoading(text, from + 0.04 + n * 0.05);
       await settle();
       this.checkLoad(task);
-      parts.forEach((o) => (o.visible = show.includes(o)));
+      const hidden: Object3D[] = [];
+      const shown = show.filter((o) => !o.visible);
+      for (const o of parts) if (!show.includes(o)) hide(o, hidden);
+      for (const o of shown) o.visible = true;
       this.renderAhead(webgpu);
-      parts.forEach((o, i) => (o.visible = visible[i]!));
+      for (const o of hidden) o.visible = true;
+      for (const o of shown) o.visible = false;
     }
-    if (!webgpu) return;
+    if (!webgpu && !this.parallelCompile) return;
     setLoading(t('화면 효과를 준비하는 중'), from + 0.15);
     await this.compiled(from + 0.15, from + 0.2, task);
   }
@@ -929,6 +956,9 @@ export class Engine {
   /** The film grade follows the cinema; the lens pass is in the picture only while a cutscene runs. */
   private updateFilm(dt: number) {
     film.amount.value = this.cinema.grade;
+    // A close-up opens the whole frame up (owner 2026-10-18), the cinema snapping it at the cut.
+    const exposure = this.baseExposure * this.cinema.exposure;
+    if (this.renderer.toneMappingExposure !== exposure) this.renderer.toneMappingExposure = exposure;
     // The bloom of a close fire would whiten the whole frame: it is held back while the film grade is on.
     if (this.bloomNode) this.bloomNode.strength.value = LEVELS[this.level]!.bloomStrength * (1 - 0.55 * this.cinema.grade);
     film.time.value = (film.time.value + dt) % 600;
@@ -975,12 +1005,12 @@ export class Engine {
         get camera() {
           return engine.camera;
         },
-        localToWorld: (id, x, y, z, out) => engine.views.localToWorld(id, x, y, z, out),
         shipScale: (id) => (engine.battle.get(id)?.flagship ? 1.12 : 1),
-        commandPost: (ship) => engine.crew?.commandPost(ship) ?? null,
-        get standIns() {
-          return engine.crew?.standIns ?? NO_STAND_INS;
+        drawnAt: (ship) => engine.views.pose(ship),
+        get hidden() {
+          return engine.views?.hidden ?? NO_HIDDEN;
         },
+        setLod: equipment.tier === 'low' ? 1 : 0,
       },
     });
   }
@@ -1000,7 +1030,7 @@ export class Engine {
       }
       return { tx: own.x - Math.cos(back) * 260, tz: own.z - Math.sin(back) * 260, yaw: back + 0.15, pitch: 0.34, distance: 720 };
     }
-    if (this.faction === 'joseon' && info.mode === 'scenario') {
+    if (teamOf(this.faction) === 'joseon' && this.faction !== 'ming' && info.mode === 'scenario') {
       const c = this.terrain.toWorld(info.view.tx, info.view.tz);
       const dir = info.view.dir + this.phi;
       return { tx: c.x, tz: c.z, yaw: dir + Math.PI + 0.22, pitch: info.view.pitch, distance: info.view.dist };
@@ -1053,9 +1083,14 @@ export class Engine {
       return;
     }
     const keys = Object.keys(this.assets);
+    // Bow to stern in a line, 52 m apart for the 1592 ships and wider for the longer 1588 ones.
+    const gap = keys.map((key) => Math.max(52, SHIP_SPECS[this.assets[key]!.kind].length + 12));
+    const total = gap.reduce((n, g) => n + g, 0) - gap[gap.length - 1]!;
+    let at = -total / 2;
     keys.forEach((key, i) => {
       const asset = this.assets[key]!;
-      const s = b.addShip(asset.kind, (i - (keys.length - 1) / 2) * 52, 0, 0, key, null, false, asset.variant);
+      const s = b.addShip(asset.kind, at, 0, 0, key, null, false, asset.variant);
+      at += gap[i]!;
       s.speed = 0;
       s.team = 'joseon';
       s.order = { type: 'hold' };
@@ -1090,7 +1125,8 @@ export class Engine {
     this.sun.color.setRGB(irr.x / lum, irr.y / lum, irr.z / lum);
     this.sun.intensity = lum * scale * 1.35;
     this.sunLight.value.copy(this.sun.color).multiplyScalar(this.sun.intensity);
-    this.renderer.toneMappingExposure = preset.exposure;
+    this.baseExposure = preset.exposure;
+    this.renderer.toneMappingExposure = preset.exposure * this.cinema.exposure;
     if (this.fx) this.fx.night = preset.night;
     if (this.ocean) this.ocean.setEnvironment(sky.environment);
     this.clouds?.setLayer(preset.clouds);
@@ -1126,7 +1162,7 @@ export class Engine {
       const luma = mapped.r.mul(0.2126).add(mapped.g.mul(0.7152)).add(mapped.b.mul(0.0722));
       const nightColor = mix(vec3(luma, luma, luma), mapped.rgb, 0.6).mul(vec3(0.8, 0.92, 1.15));
       const toned = mix(mapped.rgb, nightColor, atmosphere.night.mul(float(1).sub(smoothstep(0.25, 0.85, luma))));
-      return smaa(vec4(filmGrade(toned.mul(vig)), 1));
+      return smaa(vec4(filmGrade(toned.mul(vig), this.eq.tier !== 'low'), 1));
     };
     this.plainOutput = finish(color);
     // A cutscene's lens: depth of field on the scene before the bloom. Phones go without it (its passes cost too much there).
@@ -1329,6 +1365,7 @@ export class Engine {
       const budget = simBudgetMs(speed);
       let steps = 0;
       while (!this.paused && this.accumulator >= SIM_DT && steps < MAX_STEPS) {
+        this.views.capture(this.battle);
         this.stepSim(SIM_DT);
         scaled += SIM_DT;
         this.accumulator -= SIM_DT;
@@ -1344,6 +1381,14 @@ export class Engine {
       if (this.accumulator > SIM_DT * 4) this.accumulator = 0;
     }
     this.lastScaled = scaled;
+    // Presentation between sim steps: ships drawn and the sea sampled at the frame's own time, one step behind the sim.
+    // Also while a cutscene covers the auto fast-forward before contact: its lens rides a flagship, which drawn at the
+    // sim's 30 Hz steps zigzags the close-ups (jerk 0.24-0.5 m/frame^3 at a fixed 60 fps).
+    if (!this.remote && (!this.fastForward || this.cinema.covering)) {
+      const alpha = Math.min(1, Math.max(0, this.accumulator / SIM_DT));
+      this.views.alpha = alpha;
+      waveField.time = this.battle.time - (1 - alpha) * SIM_DT;
+    } else this.views.alpha = 1;
     const events = this.remote || !this.battle.events.length ? this.battle.events : this.battle.events.filter((e) => eventObserved(e, this.battle, this.conquest, this.team));
     this.views.cutaway.clear();
     for (const id of this.cutawayIds()) this.views.cutaway.set(id, this.cutaway);
@@ -1571,6 +1616,9 @@ export class Engine {
       else if (e.type === 'ram') w.stamp(e.x, e.z, 0, 16, 1.2, 1, 1.5);
       else if (e.type === 'explode') w.stamp(e.x, e.z, 0, 42, 1.5, 1, 2);
     }
+    // The hulls' shade on the water is drawn every frame, paused or not.
+    const sun = atmosphere.sunDir.value as Vector3;
+    for (const s of this.battle.ships) if (s.alive && shipObserved(this.battle, this.team, s)) w.shipShade(s, sun);
     if (k <= 0) return;
     for (const s of this.battle.ships) {
       if (!s.alive || !shipObserved(this.battle, this.team, s)) { w.forgetShip(s.id); continue; }
@@ -1881,6 +1929,13 @@ export class Engine {
       return { own: names(this.team), enemy: names(this.enemyTeam) };
     }
     const ming = !!SCENARIOS[this.scenarioId].ming;
+    // A later chapter's battle names its own navies: the slot's navy is the faction of the ships in it.
+    const navyOf = (team: Team) => this.battle.ships.find((s) => s.team === team)?.spec.faction;
+    const later = (f: string | undefined) => !!f && f !== 'joseon' && f !== 'japan' && f !== 'ming';
+    if (later(navyOf('joseon')) || later(navyOf('japan'))) {
+      const own = navyOf(this.team), enemy = navyOf(this.enemyTeam);
+      return { own: own ? t(FACTION_NAME[own]) : '', enemy: enemy ? t(FACTION_NAME[enemy]) : '' };
+    }
     const name = (team: Team) => (team === 'japan' ? t(FACTION_NAME.japan) : !ming ? t(FACTION_NAME.joseon) : t(this.faction === 'ming' ? '명·조선 연합' : '조선·명 연합'));
     return { own: name(this.team), enemy: name(this.enemyTeam) };
   }
@@ -1953,6 +2008,13 @@ export class Engine {
     return v.z < 1;
   }
 
+  selectShip(id: number, additive: boolean) {
+    if (!this.battle.isActive(this.battle.get(id))) return;
+    if (!additive) this.views.selected.clear();
+    this.views.selected.add(id);
+    this.publish(true);
+  }
+
   selectSquadron(id: number, additive: boolean) {
     const sq = this.battle.squadron(id);
     if (!sq) return;
@@ -1980,7 +2042,13 @@ export class Engine {
     this.rts.goal.tz = z / n;
   }
 
-  /** Gives back everything the battle holds: inputs, labels, GPU buffers and programs, and the graphics device itself. */
+  /**
+   * Gives back everything the battle holds: inputs, labels, GPU buffers and programs. The renderer is not disposed here:
+   * it belongs to the canvas that made it (BattleView's <Canvas>, which disposes it on unmount), and an engine can be
+   * torn down and a new one built on the same renderer (a remount, a hot update). A disposed WebGPURenderer forgets its
+   * textures while its backend still holds their GPU copies, so the next engine drawing a texture kept across battles
+   * (cloud noise, weather map, ship atlases) threw "WebGPUTextureUtils: Texture already initialized".
+   */
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
@@ -2020,7 +2088,6 @@ export class Engine {
     this.sky?.view.dispose();
     this.sky?.environment.dispose();
     void releaseShipAssets(new Set());
-    this.renderer.dispose().catch(() => undefined);
   }
 
   info() {

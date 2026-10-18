@@ -83,7 +83,7 @@ try {
     'fx/Crew.ts': 'export const crewAssets = () => Promise.resolve(new Map()); export class Crew { group = {}; dispose() {} }',
     'terrain/Structures.ts': 'export const preloadStructures = () => Promise.resolve(); export class Structures {}',
     'conquest/ConquestView.ts': 'export const preloadWorks = () => Promise.resolve(); export class ConquestView {}',
-    'ships/ShipRenderer.ts': 'export const CUT_CAP = 1, LOD_COUNT = 3; export const modelKey = (kind) => kind; export const packFlash = (flash) => flash; export class ShipRenderer {} export const loadShipAssets = () => Promise.resolve({}); export const releaseShipAssets = () => Promise.resolve();',
+    'ships/ShipRenderer.ts': 'export const CUT_CAP = 1, LOD_COUNT = 3; export const modelKey = (kind) => kind; export const packFlash = (flash) => flash; export class ShipRenderer {} export const loadShipAssets = () => Promise.resolve({}); export const releaseShipAssets = () => Promise.resolve(); export const createMaterial = () => null;',
   });
   const base = () => Object.assign(Object.create(Engine.prototype), {
     disposed: false, ready: true, loading: null, skyLoading: null, sky: null, eq: { skySize: 'small' },
@@ -159,7 +159,7 @@ try {
       battle: { time: 0, tide: 0, events: [], ended: false },
       director: { timeFactor: () => 1, update() {} }, updateFastForward() {}, cutawayIds: () => [],
       stepSim(dt) { this.battle.time += dt; },
-      views: { cutaway: new Map(), sync(b, dt) { received.views = dt; } }, stampWakes(e, dt) { received.wakes = dt; },
+      views: { cutaway: new Map(), capture() {}, sync(b, dt) { received.views = dt; } }, stampWakes(e, dt) { received.wakes = dt; },
       rts: { followId: 0, update() {} }, ocean: { setTide() {}, update() {} },
       sound: { setRoar() {}, tick(b, c, dt) { received.sound = dt; } },
       fx: { update(b, dt) { received.fx = dt; } }, crew: { update(b, dt) { received.crew = dt; } },
@@ -200,7 +200,7 @@ try {
       battle, conquest: null, pageHidden: false, fpsFrames: 0, fpsTime: 0, speed: 1, paused: true,
       fastForward: false, accumulator: 0, publishTimer: 10, minimapTimer: 10,
       director: { timeFactor: () => 1, update() {}, feed: seen }, updateFastForward() {}, cutawayIds: () => [],
-      views: { cutaway: new Map(), sync() {} }, stampWakes() {},
+      views: { cutaway: new Map(), capture() {}, sync() {} }, stampWakes() {},
       rts: { followId: 0, update() {} }, ocean: { setTide() {}, update() {} },
       sound: { setRoar() {}, tick() {}, update: seen }, fx: { update() {}, handle: seen },
       crew: { update() {}, handle: seen }, input: { onEvents: seen }, lanterns: { update() {} },
@@ -252,7 +252,8 @@ try {
     stamps.length = 0;
     enemy.x += 10;
     engine.stampWakes([], 0);
-    assert.equal(stamps.length, 0, 'pause adds no moving foam');
+    assert.equal(stamps.filter((s) => s[4] > 0 || s[6] > 0).length, 0, 'pause adds no moving foam');
+    assert.ok(stamps.some((s) => s[7] > 0), 'the hulls still shade the water while paused');
     assert.deepEqual(wake.trails.get(enemy.id), previous);
     wake.setCenter(1000, 1000);
     assert.equal(wake.trails.size, 0, 'a new battle cannot reuse the previous fleet paths');
@@ -342,7 +343,9 @@ try {
     engine.dispose();
     warm.resolve();
     await rejected;
-    assert.deepEqual(freed, { wake: 1, cloud: 1, renderer: 1 });
+    // The canvas owns the renderer: an engine torn down on a live canvas must leave it usable for the next engine, or
+    // textures kept across battles throw 'Texture already initialized' on WebGPU.
+    assert.deepEqual(freed, { wake: 1, cloud: 1, renderer: 0 });
     assert.equal(terrain.disposed, 1);
     assert.equal(loaded.view.disposed, 1);
     assert.equal(engine.ready, false);

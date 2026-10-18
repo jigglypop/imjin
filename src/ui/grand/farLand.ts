@@ -1,6 +1,6 @@
 import { BufferAttribute, BufferGeometry, Mesh, MeshBasicNodeMaterial } from 'three/webgpu';
-import meta from '../../select/demMeta.json';
-import { demHeightAtUV, V_SCALE } from '../../select/demFrame';
+import { demMeta as meta } from './mapTheatre';
+import { demHeightAtUV, V_SCALE } from './mapTheatre';
 import { freeAfterDraw } from '../../render/dispose';
 import { vertexLight } from './landBake';
 import { DEM_RECT, MESH_SCALE } from './mapMath';

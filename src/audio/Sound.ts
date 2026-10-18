@@ -56,6 +56,18 @@ export class Sound {
     for (const type of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown'] as const) {
       window.addEventListener(type, start, { passive: true, capture: true });
     }
+    // Constructing the AudioContext blocks the main thread while the OS opens the output device: about a second on
+    // Windows desktops, far longer when the device is slow. Done inside the first pointerdown it froze that click, so the
+    // first button pressed on any page seemed not to answer. Outside iOS the context is made ahead, when the page is
+    // idle (it starts suspended without a gesture), and a gesture only resumes it, which costs nothing. iOS keeps making
+    // it in the gesture, where its constructor is cheap and its autoplay rules want it.
+    if (!isIOS) {
+      const early = () => this.init();
+      const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+      const schedule = () => (idle ? idle(early, { timeout: 3000 }) : window.setTimeout(early, 1500));
+      if (document.readyState === 'complete') schedule();
+      else window.addEventListener('load', schedule, { once: true });
+    }
     document.addEventListener('visibilitychange', () => {
       const ctx = this.ctx;
       if (!ctx) return;

@@ -7,6 +7,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
+import { groundHeights } from './region-ground.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const server = await createServer({ root, configFile: false, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false, watch: null }, optimizeDeps: { noDiscovery: true, include: [] } });
@@ -117,6 +118,27 @@ try {
     const f = computeFeatures(SACHEON_TERRAIN, h);
     assert.equal(createHash('sha1').update(Buffer.from(f.mask.buffer)).update(JSON.stringify(f.structures)).digest('hex'), 'a58f60bf0f98e19e81689dcb86624d014fae01b9');
     assert.equal(DEFAULT_BIOME.villages, 7);
+  });
+  await check('the 1588 Channel coasts are dressed as England and Flanders: their own houses, a church, hedgerows, no Korean house, beacon or gate', async () => {
+    const armada = await load('/src/terrain/armadaTerrain.ts');
+    const kits = await load('/src/terrain/europeKits.ts');
+    const KOREAN = new Set(['choga', 'giwa', 'fortgate', 'bongsu']);
+    for (const [name, style] of [['PLYMOUTH_TERRAIN', 'english'], ['PORTLAND_TERRAIN', 'english'], ['WIGHT_TERRAIN', 'english'], ['CALAIS_TERRAIN', 'flemish'], ['GRAVELINES_TERRAIN', 'flemish']]) {
+      const spec = armada[name];
+      // The battles are fought on their real coasts (src/terrain/battleWindows.json).
+      assert.equal(spec.region.biome.style, style, name);
+      const f = computeFeatures(spec, await groundHeights(load, spec));
+      const count = (type) => f.structures.filter((s) => s.type === type).length;
+      assert.ok(!f.structures.some((s) => KOREAN.has(s.type)), `${name}: ${[...new Set(f.structures.map((s) => s.type))]}`);
+      const houses = style === 'english' ? count('cottage') + count('tudor') : count('gable');
+      const churches = count(style === 'english' ? 'church' : 'spire');
+      assert.ok(houses >= 10 && churches >= 1 && count('hedge') >= 10, `${name}: ${houses} houses, ${churches} churches, ${count('hedge')} hedges`);
+      if (style === 'english') assert.ok(count('cottage') > 0 && count('tudor') > 0, `${name}: stone ${count('cottage')}, timber ${count('tudor')}`);
+      // Every structure stands on land.
+      for (const s of f.structures) assert.ok(s.y > 1.5, `${name}: ${s.type} at ${s.y.toFixed(1)} m`);
+    }
+    // Phone budget: every kit is one draw of a few hundred triangles, no texture.
+    for (const type of ['cottage', 'tudor', 'church', 'gable', 'spire', 'hedge']) assert.ok(kits.kitTriangles(type) <= 900, `${type}: ${kits.kitTriangles(type)} triangles`);
   });
 } catch (error) {
   failures += 1;

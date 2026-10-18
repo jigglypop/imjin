@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { onSessionChange, savedSession } from '../account/session';
 import { GENERALS } from './catalog';
-import { buy, equip, equipWeapon, learn, newProfile, normalizeProfile, reroll, rewardFor, RuleError, type BattleReport, type Profile, type Reward } from './rules';
+import { buy, equip, equipItem, equipWeapon, learn, reforge, respec, salvage, newProfile, normalizeProfile, reroll, rewardFor, RuleError, type BattleReport, type Profile, type Reward } from './rules';
+import type { GearSlot } from './loot';
 import { META_PATHS, START_COINS, START_XP, type MetaBattleStart, type MetaBattleTicket, type MetaReply, type MetaRewardReply } from './wire';
 
 /**
@@ -27,7 +28,7 @@ function seed(): Profile {
   // The salt every armor roll of this browser's profile mixes in (the server uses the account id).
   try { p.salt = crypto.randomUUID(); } catch { p.salt = `local-${Date.now().toString(36)}`; }
   p.coins = START_COINS;
-  for (const g of GENERALS) if (g.famous) p.generals[g.id] = { xp: START_XP, skills: [] };
+  for (const g of GENERALS) if (g.famous) p.generals[g.id] = { xp: START_XP, talents: {} };
   return p;
 }
 
@@ -71,6 +72,10 @@ type LocalProfile = {
   equip: (generalId: string, armorId: string | null) => boolean;
   equipWeapon: (generalId: string, weaponId: string | null) => boolean;
   learn: (generalId: string, skillId: string) => boolean;
+  respec: (generalId: string) => boolean;
+  equipItem: (generalId: string, slot: GearSlot, uid: string | null) => boolean;
+  salvage: (uid: string) => boolean;
+  reforge: (uid: string) => boolean;
   dismiss: () => void;
 };
 
@@ -102,6 +107,10 @@ export const useLocalProfile = create<LocalProfile>((set, get) => {
     equip: (generalId, armorId) => apply((p) => equip(p, generalId, armorId), META_PATHS.equip, { general: generalId, armor: armorId }),
     equipWeapon: (generalId, weaponId) => apply((p) => equipWeapon(p, generalId, weaponId), META_PATHS.weapon, { general: generalId, weapon: weaponId }),
     learn: (generalId, skillId) => apply((p) => learn(p, generalId, skillId), META_PATHS.learn, { general: generalId, skill: skillId }),
+    respec: (generalId) => apply((p) => respec(p, generalId), META_PATHS.respec, { general: generalId }),
+    equipItem: (generalId, slot, uid) => apply((p) => equipItem(p, generalId, slot, uid), META_PATHS.itemEquip, { general: generalId, slot, item: uid }),
+    salvage: (uid) => apply((p) => salvage(p, uid), META_PATHS.itemSalvage, { item: uid }),
+    reforge: (uid) => apply((p) => reforge(p, uid), META_PATHS.itemReforge, { item: uid }),
     dismiss: () => set({ refused: null }),
   };
 });

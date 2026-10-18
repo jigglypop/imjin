@@ -1,14 +1,13 @@
 # MOONWAKE fonts
 
-Three roles and a hanja fallback, nothing else (owner decision 2026-10-17, `.claude/skills/typography/SKILL.md`). The CSS variables are in `src/ui/styles.css`; canvas text reads the same stacks from `src/ui/fonts.ts`.
+Pretendard everywhere, plus a hanja fallback (owner decision 2026-10-18, `.claude/skills/typography/SKILL.md`). `--font-title`, `--font-cine` and `--font-ui` in `src/ui/styles.css` all resolve to Pretendard; canvas text reads the same stacks from `src/ui/fonts.ts`.
 
 | Role | Variable | File | Font | License |
 |---|---|---|---|---|
-| Title | `--font-title` | `jeongmukbawi-regular.woff` | 정묵바위체 (SangSang Rock), 상상토끼 | 상상토끼 free-font terms (below) |
-| Latin title fallback | in `--font-title` (first on `/en`) | `imjin-title-cinzel.woff2` | Cinzel | OFL, `OFL-Cinzel.txt` |
-| Subtitles, dialogue, briefing, logs | `--font-cine` | `moonwake-cine-hahmlet.woff2` | 함렛 Hahmlet | OFL, `OFL-Hahmlet.txt` |
-| UI, HUD | `--font-ui` | `moonwake-ui-sans.woff2` (family `MW UI Sans`) | Pretendard, renamed subset | OFL with Reserved Font Name, `OFL-Pretendard.txt` |
+| Everything (titles, subtitles, UI, HUD) | `--font-ui` / `--font-title` / `--font-cine` | `moonwake-ui-sans.woff2` (family `MW UI Sans`) | Pretendard, renamed subset | OFL with Reserved Font Name, `OFL-Pretendard.txt` |
 | Hanja | `--font-hanja` | `moonwake-hanja-notoserifkr.woff2` | Noto Serif KR | OFL, `OFL-NotoSerifKR.txt` |
+
+The game no longer loads 정묵바위체, Cinzel or Hahmlet. Their files stay only for the offline art builders (`scripts/build-battle-art.mjs`, `scripts/build-og-image.mjs`) that rendered the existing posters; the notes below record where they came from.
 
 The OFL subsets cover KS X 1001's 2,350 Hangul syllables, printable ASCII and every other mark the game's source sets (the Hanja file: the 477 hanja in `src/`). Text with a syllable or hanja outside them falls to the next face in the stack: cut again with the new text.
 

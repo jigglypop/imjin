@@ -24,6 +24,10 @@ import {
 import {
   abs,
   bumpMap,
+  cameraPosition,
+  clamp,
+  dot,
+  mx_noise_float,
   float,
   max,
   mix,
@@ -45,6 +49,7 @@ import { DEFAULT_BIOME } from './region';
 import type { Structure } from './features';
 import type { TerrainQuality } from '../game/quality';
 import { disposeTree, freeAfterDraw, freeArray } from '../render/dispose';
+import { versioned } from '../render/assetUrl';
 
 /** The ground textures: one folder each under /textures. */
 const GROUND = ['aerial_rocks_02', 'cliff_side', 'coast_land_rocks_01', 'aerial_grass_rock', 'coast_sand_01', 'forest_leaves_02'] as const;
@@ -60,7 +65,7 @@ function loadGround(size: 1024 | 2048, anisotropy: number): Promise<Ground> {
   if (!cached) {
     const loader = new TextureLoader();
     // The 1k copies come from scripts/build-terrain-tex.mjs.
-    const file = (name: string) => `/textures/${name}/${size === 1024 ? 'diff_1k' : 'diff'}.jpg`;
+    const file = (name: string) => versioned(`/textures/${name}/${size === 1024 ? 'diff_1k' : 'diff'}.jpg`);
     cached = Promise.all(
       GROUND.map(async (name) => {
         const t = await loader.loadAsync(file(name));
@@ -88,6 +93,8 @@ export class Terrain {
   readonly tint = uniform(new Vector3(1, 1, 1));
   /** Share of crowns that are broad-leaved; the trees read it. */
   readonly broadleaf = uniform(0);
+  /** Share of crowns that are tall and narrow (poplars); the trees read it. */
+  readonly poplar = uniform(0);
   private readonly shoreTint = uniform(new Vector3(1, 1, 1));
   private readonly dry = uniform(0);
   private readonly shore = uniform(1);
@@ -99,12 +106,18 @@ export class Terrain {
   private cos = 1;
   private sin = 0;
 
+  /** The shared ground textures (cached for the page): the trees borrow the leaf litter and the cliff for crowns and bark. */
+  get groundTextures(): Readonly<Ground> {
+    return this.ground;
+  }
+
   private constructor(readonly spec: TerrainSpec, readonly heights: Float32Array, readonly mask: Uint8Array, readonly structures: Structure[], quality: TerrainQuality, private readonly ground: Ground) {
     this.sizeU.value = spec.size;
-    const biome = spec.region?.biome ?? DEFAULT_BIOME;
+    const biome = spec.region?.biome ?? spec.biome ?? DEFAULT_BIOME;
     this.tint.value.set(...biome.tint);
     this.shoreTint.value.set(...biome.shoreTint);
     this.broadleaf.value = biome.broadleaf;
+    this.poplar.value = biome.poplar ?? 0;
     this.dry.value = biome.dry;
     this.shore.value = biome.shore;
     this.rockLook.value = biome.rockLook;
@@ -383,12 +396,40 @@ export class Terrain {
     const canopyAutumn = mix(canopyBase, mix(vec3(0.16, 0.06, 0.015), vec3(0.2, 0.14, 0.03), smoothstep(-0.4, 0.5, crowns)), smoothstep(0.25, 0.7, this.season).mul(smoothstep(0.1, 0.6, crowns)).mul(0.6));
     const canopy = canopyAutumn.mul(smoothstep(0.1, 0.8, crowns).mul(0.5).add(0.75));
     col = mix(col, canopy.mul(this.tint), smoothstep(0.15, 0.7, forestDensity).mul(forestW).mul(0.92).mul(float(1).sub(rockW)));
+    // Up close the ground textures, laid for the view from afar, are a blur: a second, fine layer fades in near the
+    // camera. It is each texture's fine grain alone: a read divided by a blurred read of the same spot (a mip 16 texels
+    // across), so it adds detail and not colour, and the tile's own broad light and dark, which would repeat in bands
+    // every few metres, cancels out. Its scale differs from the coarse layer's so the two never tile together.
+    const camDist = p.sub(cameraPosition).length();
+    const near = float(1).sub(smoothstep(90, 380, camDist));
+    const luma = (c: any) => dot(c, vec3(0.3, 0.59, 0.11));
+    const full = quality.noise >= 1;
+    const highPass = (tex: Texture, uv: any) => luma(texture(tex, uv).rgb).div(luma(texture(tex, uv).level(float(4)).rgb).max(0.02));
+    const grain = (tex: Texture, scale: number) => clamp(highPass(tex, p.xz.mul(scale)), 0.45, 1.7);
+    const rocky = max(max(cliffW, coastW), max(peakW, rockW));
+    const grassGrain = grain(grass, 1 / 7.3);
+    // Rock also on the two upright planes on PCs, so a cliff's grain is not stretched down its face. Blended as separate
+    // reads, never one read of blended coordinates: those bend with the slope, and the bend aliases.
+    const tw = pow(abs(n), vec3(4));
+    const tws = tw.div(tw.x.add(tw.y).add(tw.z));
+    const rockGrain = full
+      ? clamp(highPass(cliff, p.zy.mul(1 / 6.1)).mul(tws.x).add(highPass(cliff, p.xz.mul(1 / 6.1)).mul(tws.y)).add(highPass(cliff, p.xy.mul(1 / 6.1)).mul(tws.z)), 0.45, 1.7)
+      : grain(cliff, 1 / 6.1);
+    // Phones and tablets take the grass and rock grain only.
+    const softGround = full ? mix(grassGrain, grain(leaves, 1 / 2.9), forestW.mul(0.6)) : grassGrain;
+    const detail = full ? mix(mix(softGround, rockGrain, rocky), grain(sand, 1 / 3.7), beachW) : mix(softGround, rockGrain, rocky);
+    col = col.mul(mix(float(1), detail, near.mul(0.85)));
+    // Broad patches of lighter and darker ground a few hundred metres across break the repeat of the coarse layer.
+    if (quality.noise >= 1) col = col.mul(mx_noise_float(vec3(p.x.mul(0.0031), p.z.mul(0.0031), float(4.2))).mul(0.16).add(1));
     const wet = float(1).sub(smoothstep(0.2, 4, h)).mul(float(1).sub(underwater));
     m.colorNode = col.mul(mix(vec3(1), vec3(0.54, 0.62, 0.63), wet));
     m.roughnessNode = mix(float(0.94), float(0.32), wet).sub(cliffW.mul(0.08)).sub(forestW.mul(0.04)).max(0.25);
     m.metalness = 0;
     // Reuse the shore rock texture, rather than loading another set of maps on phones.
-    m.normalNode = quality.noise >= 1 ? bumpMap(texture(coastRocks, vec2(p.x.add(p.z).mul(1 / 24), p.y.mul(1 / 18))).r, max(coastW, cliffW).mul(0.2)) : null;
+    // The same fine grain bumps the ground near the camera, so stones and tufts catch the sun (not on phones).
+    m.normalNode = quality.noise >= 1
+      ? bumpMap(texture(coastRocks, vec2(p.x.add(p.z).mul(1 / 24), p.y.mul(1 / 18))).r.mul(max(coastW, cliffW).mul(0.2)).add(detail.mul(float(1).sub(smoothstep(25, 110, camDist))).mul(0.015)))
+      : null;
     m.positionNode = null;
     void max;
     void vec2;

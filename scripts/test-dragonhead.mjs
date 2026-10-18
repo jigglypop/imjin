@@ -10,6 +10,7 @@ import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { dequantize } from '@gltf-transform/functions';
 import { MeshoptDecoder } from 'meshoptimizer';
 import { Matrix4, Matrix3, Vector3 } from 'three';
+import { runtimePath } from './lib/remote-assets.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const temporary = await mkdtemp(join(tmpdir(),'imjin-dragonhead-'));
@@ -36,7 +37,7 @@ try {
   };
   await check('published GLBs preserve PBR/UVs, one mesh, and the declared three LOD budgets',async()=>{
     for(const entry of report.lods) {
-      const doc=await io.read(join(root,entry.path)),mesh=doc.getRoot().listMeshes();
+      const doc=await io.read(await runtimePath(entry.path)),mesh=doc.getRoot().listMeshes();
       assert.equal(mesh.length,1);assert.equal(mesh[0].listPrimitives().length,1);
       const p=mesh[0].listPrimitives()[0];assert(p.getAttribute('NORMAL'));assert(p.getAttribute('TEXCOORD_0'));
       const mat=p.getMaterial();assert(mat.getBaseColorTexture());assert(mat.getNormalTexture());assert(mat.getMetallicRoughnessTexture());

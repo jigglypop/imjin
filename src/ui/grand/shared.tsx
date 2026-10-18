@@ -7,6 +7,13 @@ export const FACTION_INFO: Record<FactionId, { name: string; navy: string; color
   joseon: { name: '조선', navy: '조선 수군', color: 'var(--joseon)', soft: 'var(--joseon-soft)', crest: 'joseon' },
   japan: { name: '일본', navy: '일본 수군', color: 'var(--japan)', soft: 'var(--japan-soft)', crest: 'japan' },
   ming: { name: '명', navy: '명 수군', color: 'var(--ming)', soft: 'var(--ming-soft)', crest: 'ming' },
+  england: { name: '잉글랜드', navy: '잉글랜드 수군', color: 'var(--england)', soft: 'var(--england-soft)', crest: 'england' },
+  spain: { name: '에스파냐', navy: '에스파냐 수군', color: 'var(--spain)', soft: 'var(--spain-soft)', crest: 'spain' },
+  holyleague: { name: '신성동맹', navy: '신성동맹 함대', color: 'var(--holyleague)', soft: 'var(--holyleague-soft)', crest: 'holyleague' },
+  ottoman: { name: '오스만', navy: '오스만 함대', color: 'var(--ottoman)', soft: 'var(--ottoman-soft)', crest: 'ottoman' },
+  britain: { name: '영국', navy: '영국 해군', color: 'var(--britain)', soft: 'var(--britain-soft)', crest: 'britain' },
+  france: { name: '프랑스', navy: '프랑스 해군', color: 'var(--france)', soft: 'var(--france-soft)', crest: 'france' },
+  spain1805: { name: '에스파냐', navy: '에스파냐 해군', color: 'var(--spain1805)', soft: 'var(--spain1805-soft)', crest: 'spain1805' },
 };
 
 export const ownerName = (o: Owner) => t(o ? FACTION_INFO[o].name : '중립');
@@ -78,6 +85,25 @@ export const SHIP_NAME: Record<ShipClass, string> = {
   gwangseon: '명 광선',
   haechangseon: '명 해창선',
   hoseon: '명 호선',
+  racegalleon: '갤리온',
+  pinnace: '핀네이스',
+  fireship: '화공선',
+  spgalleon: '에스파냐 갤리온',
+  galleass: '갈레아스',
+  urca: '우르카',
+  reale: '라 레알',
+  galea: '갤리선',
+  vgalleass: '베네치아 갈레아스',
+  sultana: '술타나',
+  kadirga: '카드르가',
+  kalyata: '칼리야타',
+  firstrate: '1급 전열함',
+  gb74: '74문 전열함 (영국)',
+  gbfrigate: '프리깃',
+  fr80: '80문 전열함',
+  fr74: '74문 전열함 (프랑스)',
+  trinidad: '산티시마 트리니다드',
+  es74: '74문 전열함 (에스파냐)',
 };
 
 export const shipName = (kind: ShipClass) => t(SHIP_NAME[kind]);

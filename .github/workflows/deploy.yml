@@ -76,8 +76,12 @@ jobs:
           excludes=()
           while read -r file key; do excludes+=(--exclude "$key"); done <<< "$pages"
           aws s3 sync dist "s3://$BUCKET" --delete \
-            --exclude "assets/*" --exclude "*.glb" "${excludes[@]}" \
+            --exclude "assets/*" --exclude "*.glb" --exclude "textures/*/diff*.jpg" "${excludes[@]}" \
             --cache-control "public,max-age=86400"
+          # The ground textures are fetched by content-versioned URLs (src/render/assetUrl.ts): cached for good.
+          aws s3 sync dist "s3://$BUCKET" \
+            --exclude "*" --include "textures/*/diff*.jpg" \
+            --cache-control "public,max-age=31536000,immutable"
           aws s3 sync dist "s3://$BUCKET" \
             --exclude "*" --include "*.glb" \
             --content-type "model/gltf-binary" --cache-control "public,max-age=86400"

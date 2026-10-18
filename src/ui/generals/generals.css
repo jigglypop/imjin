@@ -78,7 +78,7 @@
   display: grid;
   place-items: center;
 }
-.gen-pick--on { border-color: rgba(214, 178, 110, 0.65); background: rgba(48, 36, 18, 0.62); }
+.gen-pick--on { border-color: rgba(255, 255, 255, 0.4); background: var(--glass-hi); }
 
 .gen-poster { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 22px; align-items: start; min-width: 0; }
 .gen-growth { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
@@ -87,7 +87,7 @@
 .gen-representative__label, .gen-poster__section { display: block; margin-bottom: 8px; color: var(--ink-2); font-size: 13px; font-weight: 700; }
 .gen-poster__id { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .gen-poster__title { color: var(--ink-3); font-size: 13px; letter-spacing: 0.04em; }
-.gen-poster__id h2 { margin: 0; font-size: 40px; line-height: 1.05; color: var(--on-dark); }
+.gen-poster__id h2 { margin: 0; font-size: 36px; font-weight: 800; line-height: 1.05; color: var(--on-dark); }
 .gen-poster__id h2 small { font-size: 18px; font-weight: 500; color: var(--ink-3); margin-left: 6px; }
 .gen-level { display: flex; align-items: baseline; gap: 10px; }
 .gen-level b { font-size: 22px; }
@@ -104,12 +104,14 @@
   font-weight: 700;
 }
 .gen-trait {
-  padding: 12px 14px;
-  border-left: 3px solid #c69b48;
-  border-radius: 10px;
-  background: rgba(44, 34, 18, 0.45);
+  padding: 12px 16px;
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
-.gen-trait span { display: block; font-size: 12px; color: #d4b77a; }
+.gen-trait span { display: block; font-size: 12px; font-weight: 500; color: var(--ink-3); }
 .gen-trait b { font-size: 17px; }
 .gen-trait p { margin: 4px 0 0; color: var(--ink-2); font-size: 14px; }
 
@@ -263,3 +265,134 @@
 .gen-armor-roll__reroll { padding: 4px 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(48, 36, 18, 0.5); color: #ead9b2; font-size: 12px; cursor: pointer; }
 .gen-armor-roll__reroll:disabled { opacity: 0.5; cursor: default; }
 .gen-armor-roll__reroll small { margin-left: 4px; opacity: 0.75; }
+
+/* --- Talent tree (TalentTree.tsx) ------------------------------------------------------------------------------- */
+.tal { display: flex; flex-direction: column; gap: 12px; font-family: var(--font-ui); }
+.tal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tal-head > div { display: flex; align-items: baseline; gap: 8px; color: var(--ink-2); font-size: 13px; }
+.tal-head__points { font: 400 30px/1 var(--font-title); color: #e6c680; font-variant-numeric: tabular-nums; }
+.tal-respec { font: 500 12px var(--font-ui); color: var(--ink-2); background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.18); padding: 6px 10px; border-radius: 4px; cursor: pointer; }
+.tal-respec small { color: var(--ink-3); margin-left: 4px; }
+.tal-respec--armed { border-color: #d0805f; color: #f0b090; }
+.tal-respec:disabled { opacity: 0.45; cursor: default; }
+.tal-miles { position: relative; list-style: none; margin: 4px 14px 28px; padding: 0; height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 2px; }
+.tal-miles__bar { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #8a6a33, #e6c680); border-radius: 2px; }
+.tal-mile { position: absolute; top: -7px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.tal-mile b { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; font-size: 10px; background: #2a2620; border: 1px solid rgba(255, 255, 255, 0.25); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.tal-mile span { font-size: 10px; color: var(--ink-3); white-space: nowrap; }
+.tal-mile--on b { background: #e6c680; color: #1d170c; border-color: #e6c680; }
+.tal-mile--on span { color: #d4b77a; }
+.tal-branches { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tal-branch { background: var(--glass); border: 1px solid var(--glass-line); border-radius: 14px; padding: 8px 6px 14px; backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); }
+.tal-branch h3 { margin: 0 0 6px; text-align: center; font: 400 18px var(--font-title); color: #e1d4b6; letter-spacing: 0.08em; }
+.tal-branch h3 small { font: 500 11px var(--font-ui); color: var(--ink-3); margin-left: 4px; letter-spacing: 0; }
+.tal-grid { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(5, 66px); justify-items: center; align-items: center; }
+.tal-links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.tal-links line { stroke: rgba(255, 255, 255, 0.12); stroke-width: 2; }
+.tal-links .tal-link--open { stroke: rgba(214, 178, 110, 0.45); }
+.tal-links .tal-link--lit { stroke: #e6c680; stroke-width: 3; }
+.tal-gate { grid-column: 3; justify-self: end; align-self: start; font-size: 10px; color: var(--ink-3); opacity: 0.8; padding: 1px 4px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 3px; }
+.tal-node { position: relative; z-index: 1; width: 46px; height: 46px; padding: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer; background: #1d1b17; border: 2px solid rgba(255, 255, 255, 0.16); color: var(--ink-3); transition: transform 0.12s, border-color 0.12s; }
+.tal-node:hover, .tal-node--pick { transform: scale(1.08); }
+.tal-node--pick { box-shadow: 0 0 0 3px rgba(230, 198, 128, 0.35); }
+.tal-node__glyph { font: 600 15px/1 var(--font-hanja); }
+.tal-node__name { position: absolute; top: calc(100% + 1px); left: 50%; transform: translateX(-50%); font-size: 10px; white-space: nowrap; color: var(--ink-3); }
+.tal-node__rank { position: absolute; right: -6px; bottom: -3px; font-size: 9px; padding: 0 3px; border-radius: 6px; background: #12110e; border: 1px solid rgba(255, 255, 255, 0.2); font-variant-numeric: tabular-nums; }
+.tal-node--lock { opacity: 0.5; }
+.tal-node--shut { opacity: 0.25; filter: grayscale(1); }
+.tal-node--open { border-color: #d6b26e; color: #ecd9ae; box-shadow: 0 0 10px rgba(214, 178, 110, 0.35); }
+.tal-node--part { border-color: #d6b26e; background: linear-gradient(#3a2f1a, #1d1b17); color: #f0dfb4; }
+.tal-node--have { border-color: #e6c680; background: radial-gradient(circle at 40% 35%, #6b5225, #2c2414); color: #fff3d2; }
+.tal-node--have .tal-node__name, .tal-node--part .tal-node__name, .tal-node--open .tal-node__name { color: #e1d4b6; }
+.tal-node--res::after { content: ""; position: absolute; left: -3px; top: -3px; width: 9px; height: 9px; border-radius: 50%; background: #79c2b0; box-shadow: 0 0 6px #79c2b0; }
+.tal-node--key { width: 50px; height: 50px; border: none; border-radius: 0; background: none; box-shadow: none; }
+.tal-node--key::before { content: ""; position: absolute; inset: 8px; z-index: -1; transform: rotate(45deg); border-radius: 4px; background: #2e2416; border: 2px solid rgba(240, 168, 96, 0.35); }
+.tal-node--key .tal-node__rank { right: -2px; bottom: 0; }
+.tal-node--key.tal-node--open::before { border-color: #f0a860; box-shadow: 0 0 12px rgba(240, 168, 96, 0.5); }
+.tal-node--key.tal-node--have::before { border-color: #f0a860; background: radial-gradient(circle at 40% 35%, #c06a2a, #4a2410); }
+.tal-node--key.tal-node--have { color: #fff3d2; }
+.tal-crown { display: flex; justify-content: center; padding-bottom: 14px; }
+.tal-node--mastery { width: auto; height: 46px; border-radius: 23px; padding: 0 18px; border-color: rgba(190, 120, 220, 0.5); }
+.tal-node--mastery .tal-node__glyph { font-size: 14px; letter-spacing: 0.1em; }
+.tal-node--mastery.tal-node--have { border-color: #c48be6; background: radial-gradient(circle, #4b2a5e, #1f1626); }
+.tal-node--mastery.tal-node--open { border-color: #c48be6; box-shadow: 0 0 12px rgba(196, 139, 230, 0.45); }
+.tal-hint { margin: 0; font-size: 13px; color: var(--ink-3); }
+.tal-card { border: 1px solid rgba(214, 178, 110, 0.4); background: rgba(30, 26, 18, 0.85); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.tal-card--key { border-color: rgba(240, 168, 96, 0.6); }
+.tal-card header { display: grid; grid-template-columns: 1fr auto; align-items: baseline; }
+.tal-card__kind { grid-column: 1 / -1; font-size: 11px; color: #d4b77a; letter-spacing: 0.06em; }
+.tal-card h4 { margin: 0; font: 400 20px var(--font-title); color: var(--ink); }
+.tal-card h4 small { font: 500 13px var(--font-hanja); color: var(--ink-3); margin-left: 6px; }
+.tal-card__rank { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.tal-card__line { margin: 0; color: var(--ink-2); font: 500 13px var(--font-cine); }
+.tal-card__per { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; color: #cfe3c9; }
+.tal-card__per em { font-style: normal; font-size: 11px; color: #79c2b0; }
+.tal-res { color: #9ee0cf !important; }
+.tal-neg { color: #e89a86 !important; }
+.tal-card__preview { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; padding: 6px 8px; background: rgba(255, 255, 255, 0.04); border-radius: 4px; }
+.tal-card__preview > span:first-child { color: #d4b77a; }
+.tal-card__preview b { color: #f0dfb4; }
+.tal-card__note { margin: 0; font-size: 12px; color: #e0a878; }
+.tal-card__learn { align-self: flex-start; font: 600 13px var(--font-ui); padding: 7px 16px; border-radius: 4px; border: 1px solid #d6b26e; background: #5a4520; color: #fff3d2; cursor: pointer; }
+.tal-card__learn:disabled { background: transparent; border-color: rgba(255, 255, 255, 0.15); color: var(--ink-3); cursor: default; }
+
+/* --- Gear and loot (Inventory.tsx) ------------------------------------------------------------------------------- */
+.loot { --r-common: #b9b4a6; --r-fine: #7fbf8e; --r-rare: #6fa8e0; --r-epic: #be8fe6; --r-legendary: #f0ad55; display: flex; flex-direction: column; gap: 10px; margin-top: 12px; font-family: var(--font-ui); }
+.loot-icon { fill: none; stroke: var(--r-common); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.loot-icon--fine { stroke: var(--r-fine); }
+.loot-icon--rare { stroke: var(--r-rare); }
+.loot-icon--epic { stroke: var(--r-epic); }
+.loot-icon--legendary { stroke: var(--r-legendary); filter: drop-shadow(0 0 3px rgba(240, 173, 85, 0.6)); }
+.loot-slots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.loot-slot { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; min-height: 76px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 5px; color: var(--ink-3); cursor: pointer; font-family: var(--font-ui); }
+.loot-slot small { font-size: 10px; }
+.loot-slot b { font-size: 11px; color: var(--ink-2); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.loot-slot__empty { width: 34px; height: 34px; display: grid; place-items: center; border: 1px dashed rgba(255, 255, 255, 0.2); border-radius: 4px; font-size: 18px; }
+.loot-slot--on { box-shadow: 0 0 0 1px #d6b26e inset; }
+.loot-slot--fine { border-color: var(--r-fine); }
+.loot-slot--rare { border-color: var(--r-rare); }
+.loot-slot--epic { border-color: var(--r-epic); }
+.loot-slot--legendary { border-color: var(--r-legendary); }
+.loot-total { margin: 0; font-size: 12px; color: #cfe3c9; }
+.loot-bag header { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.loot-bag h3 { margin: 0; font: 400 18px var(--font-title); color: #e1d4b6; }
+.loot-bag h3 small { font: 500 11px var(--font-ui); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.loot-filter { display: flex; gap: 2px; flex-wrap: wrap; }
+.loot-filter button { font: 500 11px var(--font-ui); padding: 3px 7px; border-radius: 3px; border: 1px solid transparent; background: none; color: var(--ink-3); cursor: pointer; }
+.loot-filter .loot-filter--on { border-color: rgba(214, 178, 110, 0.6); color: var(--ink); }
+.loot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 5px; max-height: 232px; overflow-y: auto; }
+.loot-item { position: relative; aspect-ratio: 1; display: grid; place-items: center; border-radius: 5px; cursor: pointer; background: #1b1a17; border: 1px solid rgba(185, 180, 166, 0.35); }
+.loot-item--fine { border-color: rgba(127, 191, 142, 0.6); }
+.loot-item--rare { border-color: rgba(111, 168, 224, 0.7); background: #171c22; }
+.loot-item--epic { border-color: rgba(190, 143, 230, 0.75); background: #1d1724; }
+.loot-item--legendary { border-color: var(--r-legendary); background: radial-gradient(circle, #3a2a14, #1b1610); }
+.loot-item--pick { box-shadow: 0 0 0 2px #e6c680; }
+.loot-item__worn { position: absolute; left: 2px; bottom: 1px; font-size: 9px; color: #e6c680; }
+.loot-empty { margin: 0; font-size: 13px; color: var(--ink-3); }
+.loot-card { border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px; padding: 12px; background: rgba(24, 22, 18, 0.9); display: flex; flex-direction: column; gap: 8px; }
+.loot-card--fine { border-color: var(--r-fine); }
+.loot-card--rare { border-color: var(--r-rare); }
+.loot-card--epic { border-color: var(--r-epic); }
+.loot-card--legendary { border-color: var(--r-legendary); box-shadow: 0 0 16px rgba(240, 173, 85, 0.2); }
+.loot-card header { display: flex; gap: 10px; align-items: center; }
+.loot-card h4 { margin: 0; font: 400 19px var(--font-title); color: var(--ink); }
+.loot-card h4 small { font: 500 12px var(--font-hanja); color: var(--ink-3); margin-left: 4px; }
+.loot-card header p { margin: 2px 0 0; font-size: 12px; color: var(--ink-3); }
+.loot-card__rarity { font-size: 11px; color: var(--ink-2); }
+.loot-card--fine .loot-card__rarity { color: var(--r-fine); }
+.loot-card--rare .loot-card__rarity { color: var(--r-rare); }
+.loot-card--epic .loot-card__rarity { color: var(--r-epic); }
+.loot-card--legendary .loot-card__rarity { color: var(--r-legendary); }
+.loot-card__who { margin: 0; font-size: 12px; color: #e0a878; }
+.loot-card__actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.loot-card__actions button { font: 500 12px var(--font-ui); padding: 6px 10px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05); color: var(--ink); cursor: pointer; }
+.loot-card__actions button small { color: var(--ink-3); margin-left: 3px; font-variant-numeric: tabular-nums; }
+.loot-card__actions .loot-card__equip { border-color: #d6b26e; background: #5a4520; }
+.loot-card__actions .loot-card__salvage--armed { border-color: #d0805f; color: #f0b090; }
+.loot-card__actions button:disabled { opacity: 0.45; cursor: default; }
+.loot-card__src { margin: 0; font-size: 10px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) {
+  .tal-branches { grid-template-columns: 1fr; }
+  .tal-grid { grid-template-rows: repeat(5, 60px); }
+}
+.loot-icon--img { object-fit: contain; border-radius: 4px; }

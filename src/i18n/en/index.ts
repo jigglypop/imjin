@@ -4,6 +4,12 @@ import { EN_COMMON } from './common';
 import { EN_MENUS } from './menus';
 import { EN_ONLINE } from './online';
 import { EN_SIM } from './sim';
+import { EN_ARMADA } from './armada';
+import { EN_LEPANTO } from './lepanto';
+import { EN_TRAFALGAR } from './trafalgar';
+import { EN_ARMADA_CAMPAIGN } from './armadaCampaign';
+import { EN_LEPANTO_CAMPAIGN } from './lepantoCampaign';
+import { EN_TRAFALGAR_CAMPAIGN } from './trafalgarCampaign';
 import { EN_EXPANSION } from './expansion';
 import { EN_CONQUEST_DEPTH } from './conquest-depth';
 import { EN_CONTROLS } from './controls';
@@ -21,11 +27,18 @@ import { EN_COMMANDERS } from './commanders';
 import { EN_GUIDE } from './guide';
 import { EN_ACCOUNT } from './account';
 import { EN_ARMORY } from './armory';
+import { EN_FILMS } from './films';
 
 /** Every English string, keyed by its Korean source text. Areas are split so parallel work does not collide. */
 export const EN: Record<string, string> = {
   ...EN_COMMON,
   ...EN_SIM,
+  ...EN_ARMADA,
+  ...EN_LEPANTO,
+  ...EN_TRAFALGAR,
+  ...EN_ARMADA_CAMPAIGN,
+  ...EN_LEPANTO_CAMPAIGN,
+  ...EN_TRAFALGAR_CAMPAIGN,
   ...EN_MENUS,
   ...EN_BATTLE,
   ...EN_CAMPAIGN,
@@ -47,4 +60,5 @@ export const EN: Record<string, string> = {
   ...EN_GUIDE,
   ...EN_ACCOUNT,
   ...EN_ARMORY,
+  ...EN_FILMS,
 };

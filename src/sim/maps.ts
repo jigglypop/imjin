@@ -1,6 +1,6 @@
 import { Battle } from './battle';
 import { COMPETITIVE_PROFILE, shipSpec, type BalanceProfile } from './competitive';
-import { Conquest, DEFAULT_OPTIONS, rosterOf, type ConquestOptions, type MapPoint } from './conquest';
+import { Conquest, DEFAULT_OPTIONS, eraOptions, rosterOf, type ConquestOptions, type MapPoint } from './conquest';
 import { teamOf, type Faction, type LandSampler, type ShipKind, type Team } from './types';
 import type { TerrainSpec } from '../terrain/generate';
 import type { SkyPresetName } from '../render/sky';
@@ -144,6 +144,13 @@ export const RANKED_FLEET_MIX: Record<Faction, ShipKind[]> = {
   joseon: ['panokseon', 'panokseon', 'geobukseon', 'panokseon', 'hyeopseon', 'panokseon', 'hyeopseon'],
   japan: ['atakebune', 'sekibune', 'sekibune', 'kobaya', 'atakebune', 'sekibune', 'kobaya', 'sekibune'],
   ming: ['mingship', 'mingsmall', 'mingship', 'mingsmall', 'mingsmall'],
+  england: ['racegalleon', 'pinnace', 'racegalleon', 'pinnace', 'racegalleon', 'pinnace'],
+  spain: ['spgalleon', 'galleass', 'urca', 'spgalleon', 'urca'],
+  holyleague: ['galea', 'galea', 'vgalleass', 'galea', 'galea'],
+  ottoman: ['kadirga', 'kadirga', 'kalyata', 'kadirga', 'kalyata', 'kadirga'],
+  britain: ['gb74', 'gb74', 'gbfrigate', 'gb74', 'gb74'],
+  france: ['fr74', 'fr74', 'fr74', 'fr74'],
+  spain1805: ['es74', 'es74', 'es74', 'es74'],
 };
 /**
  * The opening mix under the expanded rules: the same fleets with some of the new size tiers among them. The support
@@ -153,6 +160,13 @@ export const FLEET_MIX: Record<Faction, ShipKind[]> = {
   joseon: ['panokseon', 'panokseon', 'geobukseon', 'panokseon', 'hyeopseon', 'panokseon', 'hyeopseon'],
   japan: ['atakebune', 'sekibune', 'sekibune', 'kobaya', 'sogantaek', 'sekibune', 'kobaya', 'daegwanseon', 'atakebune', 'sekibune'],
   ming: ['mingship', 'mingsmall', 'mingship', 'mingsmall', 'haechangseon', 'mingsmall', 'hoseon'],
+  england: ['racegalleon', 'pinnace', 'racegalleon', 'pinnace', 'fireship', 'racegalleon', 'pinnace'],
+  spain: ['spgalleon', 'galleass', 'urca', 'spgalleon', 'urca'],
+  holyleague: ['reale', 'galea', 'galea', 'vgalleass', 'galea', 'galea'],
+  ottoman: ['sultana', 'kadirga', 'kadirga', 'kalyata', 'kadirga', 'kalyata'],
+  britain: ['firstrate', 'gb74', 'gb74', 'gbfrigate', 'gb74'],
+  france: ['fr80', 'fr74', 'fr74', 'fr74'],
+  spain1805: ['trinidad', 'es74', 'es74', 'es74'],
 };
 
 export const fleetCost = (fleet: ShipKind[], profile: BalanceProfile = COMPETITIVE_PROFILE) => fleet.reduce((a, k) => a + shipSpec(k, profile).cost, 0);
@@ -161,10 +175,11 @@ export const fleetCost = (fleet: ShipKind[], profile: BalanceProfile = COMPETITI
  * The computer's opening fleet: the faction's usual mix, as much as the budget buys, the change spent on the cheapest
  * kind of the mix. A ranked fleet (`expanded` false) keeps to the ranked mix.
  */
-export function autoFleet(faction: Faction, budget = MUSTER_BUDGET, profile: BalanceProfile = COMPETITIVE_PROFILE, maxShips = Infinity, expanded = true): ShipKind[] {
+export function autoFleet(faction: Faction, budget = MUSTER_BUDGET, profile: BalanceProfile = COMPETITIVE_PROFILE, maxShips = Infinity, expanded = true, priceScale = 1): ShipKind[] {
   const out: ShipKind[] = [];
   const mix = (expanded ? FLEET_MIX : RANKED_FLEET_MIX)[faction];
-  let left = budget;
+  // A mixed-era room's dearer prices (eraPriceScale) buy as a smaller budget at the plain prices would.
+  let left = budget / priceScale;
   for (let i = 0; i < maxShips; i += 1) {
     const kind = mix[i % mix.length]!;
     if (shipSpec(kind, profile).cost > left) {
@@ -229,7 +244,7 @@ export const defaultTeam = (f: Faction) => teamOf(f);
  * agree on positions without knowing each other's lighting.
  */
 export function buildConquest(id: ConquestMapId, seats: Seat[], land: LandSampler, seed = 1592, options: Partial<ConquestOptions> = {}, axis = 0) {
-  return buildConquestOn(CONQUEST_MAPS[id], seats, land, seed, options, axis);
+  return buildConquestOn(CONQUEST_MAPS[id], seats, land, seed, eraOptions(options, seats.map((s) => s.faction)), axis);
 }
 
 /** The capture points, light and sea of a battle. A campaign region's coast is a map too. */
@@ -238,7 +253,7 @@ export type MapLayout = { points: MapPoint[]; night: boolean; sky?: SkyPresetNam
 export function buildConquestOn<M extends MapLayout>(map: M, seats: Seat[], land: LandSampler, seed = 1592, options: Partial<ConquestOptions> = {}, axis = 0) {
   const profile = options.profile ?? COMPETITIVE_PROFILE;
   const b = new Battle(seed, profile);
-  const ranked = options.maxShips === 36 && options.cap === 10000 && options.expanded === false;
+  const ranked = options.maxShips === 36 && options.cap === 10000 * (options.eraScale ?? 1) && options.expanded === false;
   b.coastalTactic = ranked || profile === 'historical' ? undefined : map.coastalTactic;
   const environment = !ranked && map.environment ? map.environment : environmentFor({ sky: map.sky ?? 'afternoon', sea: map.sea ?? 'moderate', night: map.night, current: map.current, climate: map.climate }, seed, ranked || profile === 'historical');
   b.setSea(SEA_STATES[environment.sea]);
@@ -274,11 +289,11 @@ export function buildConquestOn<M extends MapLayout>(map: M, seats: Seat[], land
     const advance = Math.max(0, Math.hypot(home.spawn.x, home.spawn.z) - MUSTER_RADIUS);
     const cols = conquest.options.expanded ? Math.min(12, Math.max(5, Math.ceil(Math.sqrt(seat.fleet.length * 1.2)))) : 5;
     let value = 0;
-    const budget = options.musterBudget ?? DEFAULT_OPTIONS.musterBudget ?? MUSTER_BUDGET;
+    const budget = options.musterBudget ?? (DEFAULT_OPTIONS.musterBudget ?? MUSTER_BUDGET) * (options.eraScale ?? 1);
     const opening: ShipKind[] = [];
     for (const kind of seat.fleet) {
       if (!rosterOf(seat.faction, conquest.options.expanded).includes(kind)) continue;
-      const price = shipSpec(kind, profile).cost;
+      const price = conquest.shipSpec(kind).cost;
       if (opening.length >= conquest.shipLimit(slot) || value + price > Math.min(budget, conquest.players[slot]!.cap)) continue;
       value += price;
       opening.push(kind);

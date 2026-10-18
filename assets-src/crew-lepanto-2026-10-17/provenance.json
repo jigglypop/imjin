@@ -1,0 +1,647 @@
+{
+  "date": "2026-10-17",
+  "pipeline": "CREW_SET=lepanto scripts/crew-armada.mjs",
+  "characters": {
+    "holyleague_shot": {
+      "base": "japan_ashigaru",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Lepanto of 1571. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable mid-sixteenth-century Mediterranean materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Spanish tercio arquebusier of 1571 serving aboard a Holy League galley: a plain steel morion helmet with a comb, a faded red wool doublet, a leather bandolier of wooden powder charges across the chest, full brown breeches to the knee, wool stockings, leather shoes. Black moustache and short beard.",
+        "poseReference": "render of japan_ashigaru bind pose",
+        "usage": {
+          "input_tokens": 1297,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 273
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3053
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "aa8178fe-3621-4a48-ab50-f218ea33972e"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "6a48eaeb-fda5-4176-8907-cebe98ac3fc2",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6340917614213253,
+          "sy": 1.7003635668025576
+        },
+        "lods": [
+          {
+            "verts": 2025,
+            "tris": 1892
+          },
+          {
+            "verts": 991,
+            "tris": 722
+          },
+          {
+            "verts": 217,
+            "tris": 204
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "shoot",
+          "reload",
+          "melee",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "kneel",
+          "parry",
+          "combo",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "aim"
+        ]
+      }
+    },
+    "holyleague_soldier": {
+      "base": "joseon_marine",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Lepanto of 1571. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable mid-sixteenth-century Mediterranean materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Venetian infantryman (fante da mar) of 1571 on a war galley: an open steel burgonet helmet, a steel breastplate over a faded blue-grey wool doublet, a crimson sash, dark trunk hose, wool stockings, leather shoes. Brown beard.",
+        "poseReference": "render of joseon_marine bind pose",
+        "usage": {
+          "input_tokens": 1283,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 259
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3039
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "b572fcfe-b1c0-41ae-92ab-82b463729602"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "9b3c2ccd-cf96-4741-9080-c125280d3f53",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5945065271349879,
+          "sy": 1.7005319888590869
+        },
+        "lods": [
+          {
+            "verts": 1718,
+            "tris": 1682
+          },
+          {
+            "verts": 793,
+            "tris": 618
+          },
+          {
+            "verts": 209,
+            "tris": 192
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "melee",
+          "thrust",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "combo",
+          "slash",
+          "parry",
+          "block",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "holyleague_officer": {
+      "base": "ming_officer",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Lepanto of 1571. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable mid-sixteenth-century Mediterranean materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Venetian galley captain (sopracomito) of 1571, a patrician: an etched steel cuirass over a dark crimson velvet doublet, a small white ruff, a short crimson cloak-less coat with fur trim at the collar, black trunk hose, dark boots, bareheaded with short grey hair. Grey beard.",
+        "poseReference": "render of ming_officer bind pose",
+        "usage": {
+          "input_tokens": 1296,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 272
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3052
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "776ab047-614c-4b09-825c-3a98be0d0acd"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "2e652054-2b0a-42a5-9b98-1d14dd453c5c",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5555908751377399,
+          "sy": 1.6996705958038187
+        },
+        "lods": [
+          {
+            "verts": 1920,
+            "tris": 1682
+          },
+          {
+            "verts": 1014,
+            "tris": 668
+          },
+          {
+            "verts": 205,
+            "tris": 174
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "command",
+          "melee",
+          "hit",
+          "die",
+          "cheer",
+          "wave",
+          "signal",
+          "parry",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "holyleague_oarsman": {
+      "base": "rower",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Lepanto of 1571. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable mid-sixteenth-century Mediterranean materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A Mediterranean galley oarsman (galeotto, a convict rower) of 1571: shaved head with a short beard stubble, bare chest and arms, sun-browned skin, coarse undyed linen knee breeches, an iron ankle ring, barefoot.",
+        "poseReference": "render of rower bind pose",
+        "usage": {
+          "input_tokens": 1282,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 258
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3038
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "877ba1a2-1f7b-4f61-9759-c2a57eb314c1"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "d59bea13-f57e-45cb-b982-9627ae4a22cd",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.555315713409003,
+          "sy": 1.7395668718421735
+        },
+        "lods": [
+          {
+            "verts": 1571,
+            "tris": 1652
+          },
+          {
+            "verts": 784,
+            "tris": 622
+          },
+          {
+            "verts": 198,
+            "tris": 186
+          }
+        ],
+        "clips": [
+          "idle",
+          "row",
+          "haul",
+          "carry",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "ready",
+          "ram",
+          "bucket",
+          "douse",
+          "kneel",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "drumroll",
+          "drum"
+        ]
+      }
+    },
+    "ottoman_archer": {
+      "base": "joseon_soldier",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Lepanto of 1571. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable mid-sixteenth-century Mediterranean materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. An Ottoman azap marine archer of 1571 aboard a kadirga galley: a red felt conical cap wrapped with a white turban cloth, a long belted dark red wool kaftan to the knee with sleeves, a leather quiver belt, loose blue-grey trousers, soft red leather boots. Black moustache.",
+        "poseReference": "render of joseon_soldier bind pose",
+        "usage": {
+          "input_tokens": 1295,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 271
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3051
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "fab224b1-a817-483b-8dd7-7ca4047846be"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "61958244-dc02-4cae-9f62-a3a2d6882dda",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.6099268397319464,
+          "sy": 1.6994573069804084
+        },
+        "lods": [
+          {
+            "verts": 2064,
+            "tris": 1728
+          },
+          {
+            "verts": 1105,
+            "tris": 702
+          },
+          {
+            "verts": 213,
+            "tris": 186
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "shoot",
+          "melee",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "draw",
+          "parry",
+          "combo",
+          "climb",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "ottoman_janissary": {
+      "base": "japan_samurai",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Lepanto of 1571. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable mid-sixteenth-century Mediterranean materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. An Ottoman janissary of 1571: the tall white felt börk cap falling behind the head with a brass spoon-holder at the front, a long dark blue wool dolama coat tucked into a red sash, loose white trousers, red leather boots. Long moustache, shaven chin.",
+        "poseReference": "render of japan_samurai bind pose",
+        "usage": {
+          "input_tokens": 1286,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 262
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3042
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "7c946569-9678-49ca-82d6-91af1d75d0e7"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "f2253990-1888-414c-a657-72c42e6a8505",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.7446234184146698,
+          "sy": 1.6984026925957143
+        },
+        "lods": [
+          {
+            "verts": 2134,
+            "tris": 1912
+          },
+          {
+            "verts": 1120,
+            "tris": 742
+          },
+          {
+            "verts": 220,
+            "tris": 202
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "melee",
+          "thrust",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "combo",
+          "slash",
+          "parry",
+          "block",
+          "climb",
+          "throw",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "ottoman_officer": {
+      "base": "ming_officer",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Lepanto of 1571. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable mid-sixteenth-century Mediterranean materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. An Ottoman galley captain (reis) of 1571: a large white turban, a long green brocade kaftan over a mail shirt, a broad red sash, loose dark trousers, yellow leather boots. Full dark beard.",
+        "poseReference": "render of ming_officer bind pose",
+        "usage": {
+          "input_tokens": 1275,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 251
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3031
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "136ae656-93f4-4399-a8dd-381e371112a9"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "da4934d7-7ff0-4ec8-873f-589260077c72",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5706624620752372,
+          "sy": 1.6996622901763416
+        },
+        "lods": [
+          {
+            "verts": 2071,
+            "tris": 1682
+          },
+          {
+            "verts": 997,
+            "tris": 668
+          },
+          {
+            "verts": 169,
+            "tris": 170
+          }
+        ],
+        "clips": [
+          "idle",
+          "ready",
+          "command",
+          "melee",
+          "hit",
+          "die",
+          "cheer",
+          "wave",
+          "signal",
+          "parry",
+          "die2",
+          "fall",
+          "swim",
+          "knock"
+        ]
+      }
+    },
+    "ottoman_oarsman": {
+      "base": "rower",
+      "concept": {
+        "tool": "openai images/edits",
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "A full-body costume reference photograph of one man for image-to-3D reconstruction, in the look of a live-action costume fitting for a cinematic historical war film about the battle of Lepanto of 1571. The attached grey figure is the exact pose, proportions and framing to match: he stands straight facing the camera in the same T-pose, both arms stretched out sideways a little below shoulder height with open empty hands, legs straight and slightly apart, the same size and position in the frame, the whole figure from hat to feet visible. Front orthographic look, soft even flat studio light, no shadows, plain seamless light grey background. Weathered, salt-stained, believable mid-sixteenth-century Mediterranean materials, muted film colours, crisp detail. Nothing in the hands, no weapons, no sword or scabbard, no cape, no text, no logo, no border. Exactly two arms, two legs. A galley slave oarsman of an Ottoman galley in 1571, a Christian captive: shaved head, a thin beard, bare chest and arms, coarse undyed linen breeches to the knee, an iron ankle ring, barefoot.",
+        "poseReference": "render of rower bind pose",
+        "usage": {
+          "input_tokens": 1276,
+          "input_tokens_details": {
+            "image_tokens": 1024,
+            "text_tokens": 252
+          },
+          "output_tokens": 1756,
+          "output_tokens_details": {
+            "image_tokens": 1756,
+            "text_tokens": 0
+          },
+          "total_tokens": 3032
+        },
+        "estimatedUsd": 0.062
+      },
+      "model": {
+        "tool": "Tripo image_to_model",
+        "request": {
+          "type": "image_to_model",
+          "model_version": "v2.5-20250123",
+          "file": {
+            "type": "png",
+            "file_token": "dfb121b2-2dbb-4c4a-a6a9-e5f1be8f3ce7"
+          },
+          "texture": true,
+          "pbr": false,
+          "texture_quality": "standard",
+          "face_limit": 12000,
+          "orientation": "default"
+        },
+        "task": "3ab94426-5850-4d93-8e78-9a1728790bbb",
+        "credits": 30
+      },
+      "bake": {
+        "fit": {
+          "sx": 1.5738990596016944,
+          "sy": 1.699967159506776
+        },
+        "lods": [
+          {
+            "verts": 1568,
+            "tris": 1652
+          },
+          {
+            "verts": 805,
+            "tris": 622
+          },
+          {
+            "verts": 186,
+            "tris": 186
+          }
+        ],
+        "clips": [
+          "idle",
+          "row",
+          "haul",
+          "carry",
+          "hit",
+          "die",
+          "run",
+          "cheer",
+          "ready",
+          "ram",
+          "bucket",
+          "douse",
+          "kneel",
+          "die2",
+          "fall",
+          "swim",
+          "knock",
+          "drumroll",
+          "drum"
+        ]
+      }
+    }
+  }
+}

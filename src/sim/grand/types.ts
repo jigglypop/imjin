@@ -1,8 +1,15 @@
 import type { Faction, ShipKind } from '../types';
 import type { Rng } from './rng';
 
-export type GrandFaction = Faction;
+/**
+ * The navies a campaign theatre can field (theatre.ts). The 1592 war in the Korean theatre plays the first three;
+ * GRAND_FACTIONS stays their list, and code that runs a campaign asks `factionsOf(g)` for the navies of its theatre.
+ */
+export type GrandFaction = Extract<Faction, 'joseon' | 'japan' | 'ming' | 'england' | 'spain' | 'holyleague' | 'ottoman' | 'britain' | 'france' | 'spain1805'>;
 export const GRAND_FACTIONS: readonly GrandFaction[] = ['joseon', 'japan', 'ming'];
+
+/** A campaign's world: its map, regions, lanes and navies (theatre.ts). Absent in a save means the Korean theatre of 1592. */
+export type TheatreId = 'imjin' | 'armada' | 'lepanto' | 'trafalgar';
 
 export type RegionId =
   | 'myeongnyang'
@@ -44,7 +51,19 @@ export type RegionId =
   | 'jukdo'
   | 'gijang'
   | 'seosaengpo'
-  | 'ulsan';
+  | 'ulsan'
+  // The Armada theatre (regionsArmada.ts).
+  | 'london' | 'harwich' | 'downs' | 'dover' | 'portsmouth' | 'wight' | 'portland' | 'plymouth' | 'lizard' | 'scilly'
+  | 'kinsale' | 'blasket' | 'forth' | 'orkney' | 'flushing' | 'calais' | 'gravelines' | 'dunkirk' | 'sluys' | 'ushant'
+  | 'corunna' | 'santander' | 'lisbon'
+  // The Lepanto theatre (regionsLepanto.ts).
+  | 'venice' | 'zara' | 'cattaro' | 'corfu' | 'cephalonia' | 'zante' | 'candia' | 'famagusta' | 'otranto' | 'naples'
+  | 'messina' | 'civitavecchia' | 'malta' | 'genoa' | 'istanbul' | 'gallipoli' | 'negroponte' | 'rhodes' | 'nafpaktos'
+  | 'patras' | 'curzolari' | 'preveza' | 'valona' | 'modon' | 'navarino' | 'tripoli' | 'alexandria'
+  // The Trafalgar theatre (regionsTrafalgar.ts).
+  | 'spithead' | 'plymsound' | 'torbay' | 'deal' | 'cork' | 'gibraltar' | 'valletta' | 'maddalena' | 'barbados'
+  | 'brest' | 'lorient' | 'rochefort' | 'cherbourg' | 'boulogne' | 'toulon' | 'taranto' | 'martinique'
+  | 'cadiz' | 'ferrol' | 'vigo' | 'cartagena' | 'mahon' | 'trafalgar' | 'finisterre';
 
 export type BuildingKind = 'camp' | 'shipyard' | 'battery' | 'dock' | 'granary' | 'beacon';
 export const BUILDING_KINDS: readonly BuildingKind[] = ['camp', 'shipyard', 'battery', 'dock', 'granary', 'beacon'];
@@ -131,7 +150,7 @@ export type FactionState = {
 };
 
 export type Relation = 'allied' | 'war';
-export type PairKey = 'japan:joseon' | 'japan:ming' | 'joseon:ming';
+export type PairKey = 'japan:joseon' | 'japan:ming' | 'joseon:ming' | 'england:spain' | 'holyleague:ottoman' | 'britain:france' | 'britain:spain1805' | 'france:spain1805';
 
 /** A meeting of fleets in one region this turn, waiting to be fought out. */
 export type Contact = {
@@ -209,6 +228,8 @@ export type Victory = { faction: GrandFaction; kind: 'objective' | 'score' | 'el
 
 export type Grand = {
   version: 1;
+  /** The campaign's world (theatre.ts). Absent: the Korean theatre of 1592, so its saves stay as they were. */
+  theatre?: Exclude<TheatreId, 'imjin'>;
   /** Absent in saves made before the nonhistorical catalog was split from historical battles. */
   balanceProfile?: 'competitive-v1';
   /** New competitive campaigns compare territorial growth; absent saves retain their original objectives. */

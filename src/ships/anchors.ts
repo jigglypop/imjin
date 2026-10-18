@@ -5,6 +5,9 @@
  */
 import { SHIP_SPECS } from '../sim/catalog';
 import type { GunType, ShipKind } from '../sim/types';
+import { GALLEY_PLANS, isGalleyKind } from './lepantoPlans';
+import { SHIPS_1805 } from './trafalgarPlans';
+import { FIRESHIP_PLAN, GALLEASS_PLAN, PINNACE_PLAN, RACE_PLANS, SPAIN_PLANS, URCA_PLAN, type GalleassPlan, type SailPlan } from './armadaPlans';
 
 export type V3 = [number, number, number];
 
@@ -830,6 +833,160 @@ function mingSmallAnchors(plan: MingSmallPlan): ShipAnchors {
   });
 }
 
+// ---------- 1588 sailing ships ----------
+
+const clampX = (h: HullPlan, x: number) => Math.min(h.length / 2, Math.max(-h.length / 2, x));
+
+/** Height of a sailing ship's castles above the weather deck at station x (0 in the waist). */
+export function castleTop(plan: SailPlan, x: number) {
+  let y = 0;
+  for (const t of plan.fore) if (x >= t.x0 && x <= t.x1) y += t.h;
+  for (const t of plan.aft) if (x >= t.x0 && x <= t.x1) y += t.h;
+  return y;
+}
+
+/** Outer half breadth of a sailing ship's side at (x, y): the hull below the weather deck, the leaning upper works above. */
+export function sailSideZ(plan: SailPlan, x: number, y: number) {
+  const h = plan.hull;
+  const cx = clampX(h, x);
+  if (y <= h.deck) return sideZ(h, cx, y);
+  return Math.max(0.5, sideZ(h, cx, h.deck) - plan.tumble * (y - h.deck));
+}
+
+/** Castle tiers stacked from the deck: each with the height of its floor (y0) and roof deck (y1). */
+export const sailStack = <T extends { h: number }>(tiers: T[], deck: number) => {
+  let y = deck;
+  return tiers.map((t) => {
+    const y0 = y;
+    y += t.h;
+    return { ...t, y0, y1: y };
+  });
+};
+
+function sailAnchors(kind: ShipKind, plan: SailPlan): ShipAnchors {
+  const h = plan.hull;
+  const L = h.length;
+  const deck = h.deck;
+  const slots = gunSlots(kind);
+  const stations = plan.tiers.flatMap((t) => t.xs.map((x) => ({ x, y: t.castle ? deck + castleTop(plan, x) + t.y : t.y, rail: !!t.castle })));
+  const gunPorts: GunPort[] = [];
+  for (const side of [0, 1] as const) {
+    slots[side]!.forEach((gun, i) => {
+      const st = stations[i % Math.max(1, stations.length)]!;
+      const z = sailSideZ(plan, st.x, st.y) + (st.rail ? -0.15 : 0.15);
+      gunPorts.push({ side, index: i, gun, pos: [st.x, st.y, sideSign(side) * z], dir: [0, 0, sideSign(side)] });
+    });
+  }
+  const bowX = plan.fore.length ? plan.fore[0]!.x1 : L / 2;
+  const n2 = slots[2]!.length;
+  slots[2]!.forEach((gun, i) => {
+    const z = n2 <= 1 ? 0 : (i / (n2 - 1) - 0.5) * 2 * plan.chase.z;
+    gunPorts.push({ side: 2, index: i, gun, pos: [bowX + 0.15, deck + plan.chase.up, z], dir: [1, 0, 0] });
+  });
+  const aft = sailStack(plan.aft, deck);
+  const top = aft[aft.length - 1]!;
+  const waist0 = plan.aft.length ? plan.aft[0]!.x1 : -L / 2 + 1;
+  const waist1 = plan.fore.length ? plan.fore[0]!.x0 : L / 2 - 1;
+  const sternX = top.x0;
+  const lanterns: V3[] = plan.flagship
+    ? [[sternX - 0.35, top.y1 + 1.6, 0], [sternX - 0.25, top.y1 + 1.35, -1.5], [sternX - 0.25, top.y1 + 1.35, 1.5]]
+    : plan.fire ? [] : [[sternX - 0.35, top.y1 + 1.6, 0]];
+  const flags: FlagMount[] = plan.masts.map((m, i): FlagMount => ({ id: `mast${i}`, pos: [m.x, deck + m.h + 0.2, 0], kind: plan.flagship && i === 1 ? 'command' : 'pennant', size: [3.2, 2.2], color: '#e8e0d0' }));
+  flags.push({ id: 'ensign', pos: [sternX + 0.3, top.y1 + 0.9, 0], kind: 'ensign', size: [3.0, 2.0], color: '#e8e0d0' });
+  const span = waist1 - waist0;
+  return BASE(h, {
+    mainDeck: deck,
+    oarDeck: null,
+    commandDeck: [(top.x0 + top.x1) / 2, top.y1, 0],
+    deckBounds: { x0: -L / 2 + 1.2, x1: L / 2 - 1.2, halfBeam: (x) => sailSideZ(plan, x, deck) - 0.45 },
+    gunPorts,
+    oarPorts: [],
+    railStations: sideRail(h, waist0 + 0.6, waist1 - 0.6, Math.max(2, Math.round(span / 3)), deck, 0.55),
+    rowStations: [],
+    boardingPoints: boarding(h, [waist0 + span * 0.2, waist0 + span * 0.5, waist0 + span * 0.8], deck + 0.2),
+    lanterns,
+    flagMounts: flags,
+    mastTops: plan.masts.map((m): V3 => [m.x, deck + m.h, 0]),
+    fireSpots: [
+      [(waist0 + waist1) / 2, deck + 0.3, 0],
+      [waist0 + span * 0.8, deck + 0.3, 1],
+      [(top.x0 + top.x1) / 2, top.y1 + 0.3, 0],
+      ...(plan.fore.length ? [[(plan.fore[0]!.x0 + plan.fore[0]!.x1) / 2, deck + plan.fore[0]!.h + 0.3, 0] as V3] : []),
+    ],
+    damageSpots: [-0.3, -0.1, 0.1, 0.3].map((f, i): V3 => {
+      const x = f * L;
+      const y = deck - 1.0;
+      return [x, y, (i % 2 ? -1 : 1) * sideZ(h, x, y)];
+    }),
+    stern: [-L / 2, deck, 0],
+    bow: [L / 2, deck, 0],
+    ramTip: [L / 2 + plan.beak, deck - 0.6, 0],
+  });
+}
+
+/** Half breadth of the galleass's bow castle at x: full beam aft, rounding in toward its front. */
+export function galleassCastleZ(plan: GalleassPlan, x: number) {
+  const full = plan.outrigger.z - 0.2;
+  const t = Math.min(1, Math.max(0, (x - plan.bow.x0) / (plan.bow.x1 - plan.bow.x0)));
+  const u = Math.max(0, t - 0.15) / 0.85;
+  return Math.max(1.2, full * Math.sqrt(Math.max(0, 1 - u * u * 0.86)));
+}
+
+/** The oared plan of a galleass or galley kind (the Venetian galleass shares the Neapolitan one's lines), or undefined. */
+export function oaredPlanOf(kind: string): GalleassPlan | undefined {
+  if (kind === 'galleass' || kind === 'vgalleass') return GALLEASS_PLAN;
+  return isGalleyKind(kind) ? GALLEY_PLANS[kind] : undefined;
+}
+
+function galleassAnchors(plan: GalleassPlan, kind: ShipKind = 'galleass'): ShipAnchors {
+  const h = plan.hull;
+  const L = h.length;
+  const deck = h.deck;
+  const slots = gunSlots(kind);
+  const o = plan.outrigger;
+  const gunPorts: GunPort[] = [];
+  for (const side of [0, 1] as const) {
+    slots[side]!.forEach((gun, i) => {
+      const st = plan.side[i % plan.side.length]!;
+      const inBow = st.x >= plan.bow.x0;
+      const inStern = st.x <= plan.stern.x1;
+      const z = inBow ? galleassCastleZ(plan, st.x) + 0.15 : inStern ? sideZ(h, st.x, deck) + 0.15 : o.z + 0.1;
+      gunPorts.push({ side, index: i, gun, pos: [st.x, deck + st.up, sideSign(side) * z], dir: [0, 0, sideSign(side)] });
+    });
+  }
+  slots[2]!.forEach((gun, i) => gunPorts.push({ side: 2, index: i, gun, pos: [plan.bow.x1 + 0.15, deck + plan.chase.up, plan.chase.zs[i % plan.chase.zs.length]!], dir: [1, 0, 0] }));
+  const oarPorts: ShipAnchors['oarPorts'] = [];
+  const rows: { pos: V3; yaw: number }[] = [];
+  for (const side of [0, 1] as const) {
+    for (let i = 0; i < plan.oars.n; i += 1) {
+      const x = plan.oars.x0 + ((plan.oars.x1 - plan.oars.x0) * i) / (plan.oars.n - 1);
+      oarPorts.push({ side, pos: [x, deck + o.up, sideSign(side) * o.z], pitch: 0.3 });
+      rows.push({ pos: [x, deck, sideSign(side) * (o.z - 2.4)], yaw: side === 0 ? -Math.PI / 2 : Math.PI / 2 });
+    }
+  }
+  const sternTop = deck + plan.stern.h;
+  return BASE(h, {
+    mainDeck: deck,
+    oarDeck: null,
+    commandDeck: [(plan.stern.x0 + plan.stern.x1) / 2, sternTop, 0],
+    deckBounds: { x0: -L / 2 + 1.5, x1: L / 2 - 1.5, halfBeam: (x) => Math.min(o.z - 0.4, sideZ(h, x, deck) + 0.4) },
+    gunPorts,
+    oarPorts,
+    railStations: sideRail(h, -14, 12, 8, deck, -0.2),
+    rowStations: rows,
+    boardingPoints: boarding(h, [-10, 0, 10], deck + 0.2),
+    lanterns: [[plan.stern.x0 - 0.3, sternTop + 2.6, 0]],
+    flagMounts: [
+      ...plan.masts.map((m, i): FlagMount => ({ id: `mast${i}`, pos: [m.x, deck + m.h + 0.2, 0], kind: i === 1 ? 'command' : 'pennant', size: [3.2, 2.0], color: '#e8e0d0' })),
+      { id: 'ensign', pos: [plan.stern.x0 + 0.2, sternTop + 2.2, 0], kind: 'ensign', size: [2.8, 2.0], color: '#e8e0d0' },
+    ],
+    mastTops: plan.masts.map((m): V3 => [m.x, deck + m.h, 0]),
+    fireSpots: [[0, deck + 0.3, 0], [10, deck + 0.3, 1], [-8, deck + 0.3, -1], [(plan.bow.x0 + plan.bow.x1) / 2, deck + plan.bow.h + 0.3, 0]],
+    damageSpots: [-15, -5, 5, 15].map((x, i): V3 => [x, deck - 0.8, (i % 2 ? -1 : 1) * sideZ(h, x, deck - 0.8)]),
+    ramTip: [L / 2 + plan.spur, 1.6, 0],
+  });
+}
+
 const registry = new Map<string, ShipAnchors>();
 const scaledRegistry = new Map<string, ShipAnchors>();
 
@@ -857,7 +1014,11 @@ function scaledAnchors(a: ShipAnchors, scale: number): ShipAnchors {
 }
 
 /** The kinds with a procedural model of their own. */
-export type ModelKind = 'panokseon' | 'geobukseon' | 'hyeopseon' | 'atakebune' | 'sekibune' | 'kobaya' | 'mingship' | 'mingsmall';
+export type ModelKind =
+  | 'panokseon' | 'geobukseon' | 'hyeopseon' | 'atakebune' | 'sekibune' | 'kobaya' | 'mingship' | 'mingsmall'
+  | 'racegalleon' | 'pinnace' | 'fireship' | 'spgalleon' | 'galleass' | 'urca'
+  | 'reale' | 'galea' | 'vgalleass' | 'sultana' | 'kadirga' | 'kalyata'
+  | 'firstrate' | 'gb74' | 'gbfrigate' | 'fr80' | 'fr74' | 'trinidad' | 'es74';
 
 /**
  * Kinds drawn, until they get silhouettes of their own, with the model of their nearest relative of the same navy,
@@ -876,6 +1037,7 @@ export const MODEL_ALIAS: Record<Exclude<ShipKind, ModelKind>, ModelKind> = {
   hoseon: 'mingsmall',
 };
 
+
 /** The kind whose model draws this kind. */
 export const modelKind = (kind: ShipKind): ModelKind => (MODEL_ALIAS as Partial<Record<ShipKind, ModelKind>>)[kind] ?? (kind as ModelKind);
 /** Uniform scale from the model's ship space to this kind's: 1 for a kind drawn with its own model. */
@@ -888,7 +1050,11 @@ export const anchorScale = (kind: ShipKind) => (kind === 'geobukseon' ? GEOBUK_S
 /** The portrait card of a squadron of this kind: the nearest of the four ship cards. */
 export function cardOf(kind: ShipKind) {
   const model = modelKind(kind);
-  return `card_${model === 'hyeopseon' || SHIP_SPECS[kind].faction === 'ming' ? 'panokseon' : model === 'kobaya' ? 'sekibune' : model}`;
+  const faction = SHIP_SPECS[kind].faction;
+  // The 1588 navies have no cards of their own yet: the English take the allied card, the Spanish the opposing ones.
+  if (faction === 'england') return 'card_panokseon';
+  if (faction === 'spain') return model === 'spgalleon' || model === 'galleass' ? 'card_atakebune' : 'card_sekibune';
+  return `card_${model === 'hyeopseon' || faction === 'ming' ? 'panokseon' : model === 'kobaya' ? 'sekibune' : model}`;
 }
 
 const aliasRegistry = new Map<string, ShipAnchors>();
@@ -945,14 +1111,34 @@ export function buildAnchorsFor(key: string): ShipAnchors | undefined {
   else if (kind === 'kobaya') a = kobayaAnchors(KOBAYA_PLAN);
   else if (kind === 'mingship') a = mingAnchors(MING_PLAN);
   else if (kind === 'mingsmall') a = mingSmallAnchors(MINGSMALL_PLAN);
+  else if (oaredPlanOf(kind)) a = galleassAnchors(oaredPlanOf(kind)!, kind as ShipKind);
+  else {
+    const plan = sailPlanOf(kind as ShipKind, variant);
+    if (plan) a = sailAnchors(kind as ShipKind, plan);
+  }
   if (a) registry.set(key, a);
   return a;
 }
 
-export const PROCEDURAL_KINDS: ModelKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall'];
+export const PROCEDURAL_KINDS: ModelKind[] = ['panokseon', 'geobukseon', 'hyeopseon', 'atakebune', 'sekibune', 'kobaya', 'mingship', 'mingsmall', 'racegalleon', 'pinnace', 'fireship', 'spgalleon', 'galleass', 'urca', 'reale', 'galea', 'vgalleass', 'sultana', 'kadirga', 'kalyata', 'firstrate', 'gb74', 'gbfrigate', 'fr80', 'fr74', 'trinidad', 'es74'];
+
+/** The construction plan of a square-rigged ship model of 1588 or 1805, or undefined for the others. */
+export function sailPlanOf(kind: ShipKind, variant: number): SailPlan | undefined {
+  if (kind === 'racegalleon') return RACE_PLANS[variant] ?? RACE_PLANS[0]!;
+  if (kind === 'spgalleon') return SPAIN_PLANS[variant] ?? SPAIN_PLANS[0]!;
+  if (kind === 'urca') return URCA_PLAN;
+  if (kind === 'pinnace') return PINNACE_PLAN;
+  if (kind === 'fireship') return FIRESHIP_PLAN;
+  const plans = SHIPS_1805[kind];
+  if (plans) return plans[variant] ?? plans[0]!;
+  return undefined;
+}
 /** How many models a kind has: an aliased kind has its model's. */
 export function variantCount(kind: ShipKind) {
   const model = modelKind(kind);
+  if (model === 'racegalleon') return RACE_PLANS.length;
+  if (model === 'spgalleon') return SPAIN_PLANS.length;
+  if (SHIPS_1805[model]) return SHIPS_1805[model]!.length;
   return model === 'panokseon' ? PANOK_PLANS.length : model === 'atakebune' ? ATAKE_PLANS.length : model === 'sekibune' ? SEKI_PLANS.length : 1;
 }
 
@@ -961,5 +1147,7 @@ export function variantFor(kind: ShipKind, i: number, flagship = false) {
   const n = variantCount(kind);
   if (n === 1) return 0;
   if (modelKind(kind) === 'panokseon') return flagship ? 0 : 1 + (i % 2);
+  // The 1588 flagships (Ark Royal, San Martin) keep the first model; the rest of the line alternate.
+  if (modelKind(kind) === 'racegalleon' || modelKind(kind) === 'spgalleon') return flagship ? 0 : (i + 1) % n;
   return i % n;
 }

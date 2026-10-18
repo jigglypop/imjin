@@ -28,7 +28,7 @@ try {
   };
   check('each kind sees as far as its spec says: the old scouts 1600 m, the main ships 900 m', () => {
     const scouts = Object.keys(SHIP_SPECS).filter((k) => sightRange(SHIP_SPECS[k]) >= SCOUT_SIGHT);
-    assert.deepEqual(scouts, ['hyeopseon', 'sahuseon', 'kobaya', 'mingsmall']);
+    assert.deepEqual(scouts, ['hyeopseon', 'sahuseon', 'kobaya', 'mingsmall', 'pinnace', 'gbfrigate'], 'the Armada chapter adds the pinnace, Trafalgar the frigate');
     for (const kind of ['panokseon', 'geobukseon', 'atakebune', 'sekibune', 'mingship']) assert.equal(sightRange(SHIP_SPECS[kind]), MAIN_SIGHT, kind);
     for (const kind of ['hyeopseon', 'kobaya', 'mingsmall']) assert.equal(sightRange(SHIP_SPECS[kind]), 1600, kind);
     assert.equal(sightRange(SHIP_SPECS.sahuseon), 2200); assert.equal(sightRange(SHIP_SPECS.pojakseon), 1300); assert.equal(sightRange(SHIP_SPECS.daeantaek), 1300);

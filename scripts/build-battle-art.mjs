@@ -39,10 +39,16 @@ const load = async (file) => {
   const code = transformSync(readFileSync(join(ROOT, file), 'utf8'), { loader: 'ts', format: 'esm' }).code;
   return import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
 };
-const { BATTLE_SLUGS, CARD_SIZE, cardFile } = await load('src/routes.ts');
+const { BATTLE_SLUGS, CHAPTER_BATTLES, CARD_SIZE, cardFile } = await load('src/routes.ts');
+/** Every chapter's battles, 1592's first. */
+const ALL_BATTLES = [...BATTLE_SLUGS, ...Object.values(CHAPTER_BATTLES).flat()];
 const { SCENARIO_TEXT } = await load('src/sim/scenarioText.ts');
 const { EN_SIM } = await load('src/i18n/en/sim.ts');
 const { EN_MENUS } = await load('src/i18n/en/menus.ts');
+const { EN_ARMADA } = await load('src/i18n/en/armada.ts');
+const { EN_LEPANTO } = await load('src/i18n/en/lepanto.ts');
+const { EN_TRAFALGAR } = await load('src/i18n/en/trafalgar.ts');
+const { chapterOfBattle } = await load('src/routes.ts');
 
 /** The stills: a wide one for the cards and the desktop loading picture, a tall one for phones. Rendered at twice the size. */
 const WIDE = { width: 1920, height: 1080 };
@@ -390,7 +396,96 @@ const SHOTS = {
     grade: { exposure: 1.5, gamma: 1.1, saturation: 1 },
     card: 0.5,
   },
+  ...armadaShots(),
+  ...lepantoShots(),
+  ...trafalgarShots(),
 };
+
+/**
+ * The Armada's five battles (England in the first slot, Spain in the second): played until the fleets are within long
+ * culverin range of each other, then framed from behind the English ship most engaged, from beside the Spanish ship
+ * nearest it, and from high over both fleets. The framings take no outside names: they run in the page as source text.
+ */
+function armadaShots() {
+  const closing = (c) => (c.e.battle.time > 45 && c.dist(c.cen(c.team('joseon')), c.cen(c.team('japan'))) < 1000) || c.e.battle.time > 420;
+  const wide = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const F = c.around(H, c.team('japan'), 900); return c.place(H, c.toward(F, H) + 0.5, 230, 30, 34, 0.32, -0.05, 8); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 250, 28, 34, 0.3, -0.04, 8); },
+    // Close and low on the most engaged own ship, three-quarters from the sunlit side, the enemy behind it.
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const S = c.nearest(H, c.team('japan')); const a = c.toward(S, H); return c.place(H, c.lit(a + 0.35, a + 1.05), 130, 12, 30, 0.3, -0.06, 6); },
+    (c) => { const A = c.cen(c.team('joseon')); const B = c.cen(c.team('japan')); const M = { x: (A.x + B.x) / 2, z: (A.z + B.z) / 2 }; return c.place(M, c.toward(B, A) + 0.8, 760, 150, 34, 0.2, -0.08); },
+  ];
+  const tall = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const S = c.nearest(H, c.team('japan')); const a = c.toward(S, H); return c.place(H, c.lit(a + 0.35, a + 1.05), 169, 15, 50, 0, 0.26, 6); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const F = c.around(H, c.team('japan'), 900); return c.place(H, c.toward(F, H) + 0.5, 240, 32, 54, 0, 0.3, 8); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 700); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 260, 30, 52, 0, 0.28, 8); },
+  ];
+  // Two moments: the third ran past the capture's limits in the long Channel battles.
+  const plan = (warm, grade, until = closing) => ({ warm, steps: [{ run: 2, until }], moments: [0, 12], wide, tall, grade, card: 0.5 });
+  const day = { exposure: 1, gamma: 1, saturation: 1.04 };
+  return {
+    plymouth: plan(20, day),
+    portland: plan(20, { exposure: 2, gamma: 1.12, saturation: 1.04 }),
+    wight: plan(20, day),
+    // The fireships: run until the first Spanish ship has caught fire.
+    calais: plan(0, { exposure: 3.2, gamma: 1.35, saturation: 1.02 }, (c) => c.burning('japan').length >= 2 || c.e.battle.time > 300),
+    gravelines: plan(20, { exposure: 1.8, gamma: 1.1, saturation: 1.06 }),
+  };
+}
+
+/**
+ * Lepanto's five battles (the Holy League in the first slot, the Ottomans in the second): galleys fight at the ram and
+ * the boarding bridge, so each is played until the lines are within a few hundred metres (or a first galley is taken),
+ * then framed as the Armada's are, closer in.
+ */
+function lepantoShots() {
+  const closing = (c) => (c.e.battle.time > 30 && c.dist(c.cen(c.team('joseon')), c.cen(c.team('japan'))) < 450) || c.e.battle.time > 420;
+  const wide = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const F = c.around(H, c.team('japan'), 600); return c.place(H, c.toward(F, H) + 0.5, 170, 22, 34, 0.32, -0.05, 8); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 180, 20, 34, 0.3, -0.04, 8); },
+    // Close and low on the most engaged own ship, three-quarters from the sunlit side, the enemy behind it.
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const S = c.nearest(H, c.team('japan')); const a = c.toward(S, H); return c.place(H, c.lit(a + 0.35, a + 1.05), 100, 9, 30, 0.3, -0.06, 6); },
+    (c) => { const A = c.cen(c.team('joseon')); const B = c.cen(c.team('japan')); const M = { x: (A.x + B.x) / 2, z: (A.z + B.z) / 2 }; return c.place(M, c.toward(B, A) + 0.8, 620, 130, 34, 0.2, -0.08); },
+  ];
+  const tall = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const S = c.nearest(H, c.team('japan')); const a = c.toward(S, H); return c.place(H, c.lit(a + 0.35, a + 1.05), 130, 12, 50, 0, 0.26, 6); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const F = c.around(H, c.team('japan'), 600); return c.place(H, c.toward(F, H) + 0.5, 180, 24, 54, 0, 0.3, 8); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 500); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 190, 22, 52, 0, 0.28, 8); },
+  ];
+  const plan = (grade) => ({ warm: 20, steps: [{ run: 2, until: closing }], moments: [0, 10, 20], wide, tall, grade, card: 0.5 });
+  const day = { exposure: 1, gamma: 1, saturation: 1.04 };
+  return { preveza: plan(day), djerba: plan({ exposure: 1.05, gamma: 1.03, saturation: 1.06 }), 'lepanto-north': plan(day), 'lepanto-centre': plan(day), 'lepanto-south': plan(day) };
+}
+
+/**
+ * Trafalgar's five battles (Britain in the first slot, France and Spain in the second): ships of the line fight broadside
+ * to broadside at a few hundred metres, so each is played until the lines are within long gunshot, then framed as the
+ * Armada's are, a little closer in. The Nile is fought at dusk, low sun ahead: its grade adds no lift, which burnt it out.
+ */
+function trafalgarShots() {
+  const closing = (c) => (c.e.battle.time > 40 && c.dist(c.cen(c.team('joseon')), c.cen(c.team('japan'))) < 800) || c.e.battle.time > 360;
+  const wide = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const F = c.around(H, c.team('japan'), 800); return c.place(H, c.toward(F, H) + 0.5, 210, 28, 34, 0.32, -0.05, 8); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 230, 26, 34, 0.3, -0.04, 8); },
+    // Close and low on the most engaged own ship, three-quarters from the sunlit side, the enemy behind it.
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const S = c.nearest(H, c.team('japan')); const a = c.toward(S, H); return c.place(H, c.lit(a + 0.35, a + 1.05), 125, 12, 30, 0.3, -0.06, 6); },
+    (c) => { const A = c.cen(c.team('joseon')); const B = c.cen(c.team('japan')); const M = { x: (A.x + B.x) / 2, z: (A.z + B.z) / 2 }; return c.place(M, c.toward(B, A) + 0.8, 720, 140, 34, 0.2, -0.08); },
+  ];
+  const tall = [
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const S = c.nearest(H, c.team('japan')); const a = c.toward(S, H); return c.place(H, c.lit(a + 0.35, a + 1.05), 162, 15, 50, 0, 0.26, 6); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const F = c.around(H, c.team('japan'), 800); return c.place(H, c.toward(F, H) + 0.5, 220, 30, 54, 0, 0.3, 8); },
+    (c) => { const H = c.hottest('joseon', c.team('japan'), 600); const S = c.nearest(H, c.team('japan')); return c.place(S, c.toward(S, H) + 0.65, 240, 28, 52, 0, 0.28, 8); },
+  ];
+  const plan = (grade) => ({ warm: 20, steps: [{ run: 2, until: closing }], moments: [0, 10], wide, tall, grade, card: 0.5 });
+  const day = { exposure: 1, gamma: 1, saturation: 1.04 };
+  return {
+    'st-vincent': plan(day),
+    nile: plan({ exposure: 1, gamma: 1, saturation: 1 }),
+    finisterre: plan({ exposure: 1.3, gamma: 1.06, saturation: 1 }),
+    'trafalgar-weather': plan(day),
+    'trafalgar-lee': plan(day),
+  };
+}
 
 const sha = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');
 const round = (pose) => Object.fromEntries(Object.entries(pose).map(([k, v]) => [k, +v.toFixed(3)]));
@@ -412,6 +507,8 @@ async function still(page, frame, exposure) {
     [frame.toString(), exposure],
   );
   await page.waitForTimeout(1800);
+  // A dev server's error overlay (another file mid-edit) would sit over the still: drop it.
+  await page.evaluate(() => document.querySelectorAll('vite-error-overlay').forEach((o) => o.remove()));
   return { png: await page.screenshot({ type: 'png' }), pose: round(pose) };
 }
 
@@ -431,7 +528,7 @@ async function play(page, seconds) {
     e.speed = 1;
     e.paused = false;
   });
-  await page.waitForFunction((s) => window.__engine.battle.time >= window.__until + s, seconds, { timeout: 300000, polling: 50 });
+  await page.waitForFunction((s) => window.__engine.battle.time >= window.__until + s, seconds, { timeout: Number(args['play-timeout'] ?? 900000), polling: 250 });
   await page.evaluate(() => {
     window.__engine.paused = true;
   });
@@ -546,12 +643,23 @@ async function captureFront(browser, base) {
 
 async function capture() {
   const base = args.url ?? 'http://127.0.0.1:5291/';
-  const only = args.only ? args.only.split(',') : BATTLE_SLUGS;
+  const only = args.only ? args.only.split(',') : ALL_BATTLES;
   const browser = await launch();
   try {
     for (const id of only) {
       if (id === 'front') await captureFront(browser, base);
-      else await captureBattle(browser, id, base, args.capture);
+      else {
+        // A long battle can stall the GPU process once in a while: try again in a fresh page, up to --retries times.
+        for (let attempt = 0; ; attempt++) {
+          try {
+            await captureBattle(browser, id, base, args.capture);
+            break;
+          } catch (e) {
+            if (attempt >= Number(args.retries ?? 2)) throw e;
+            console.log(`${id}: attempt ${attempt + 1} failed (${e.message.split(String.fromCharCode(10))[0]}), retrying`);
+          }
+        }
+      }
     }
   } finally {
     await browser.close();
@@ -584,7 +692,7 @@ async function keep() {
     }
     provenance.battles[id] = battle;
   }
-  provenance.battles = Object.fromEntries(BATTLE_SLUGS.filter((b) => provenance.battles[b]).map((b) => [b, provenance.battles[b]]));
+  provenance.battles = Object.fromEntries(ALL_BATTLES.filter((b) => provenance.battles[b]).map((b) => [b, provenance.battles[b]]));
   writeFileSync(provFile, `${JSON.stringify(provenance, null, 2)}\n`);
 }
 
@@ -603,7 +711,7 @@ async function graded(file, grade) {
 
 const escapeHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const english = (ko) => {
-  const text = EN_SIM[ko] ?? EN_MENUS[ko];
+  const text = EN_SIM[ko] ?? EN_MENUS[ko] ?? EN_ARMADA[ko] ?? EN_LEPANTO[ko] ?? EN_TRAFALGAR[ko];
   if (!text) throw new Error(`no English for ${ko}`);
   return text;
 };
@@ -681,7 +789,12 @@ function cardPage(lang, id) {
       <div class="lockup">${mark}<div class="years"><i></i><span>1592 — 1598</span><i></i></div><div class="line">${site}</div></div></body>`;
   }
   const t = battleText(id, lang);
-  const brand = en ? '<div class="brand"><i>THE IMJIN WAR</i></div>' : '<div class="brand"><b>임진왜란</b><span class="seal">海<br>戰</span></div>';
+  // A later chapter's card carries the series name and that chapter's war instead of the Imjin War's seal.
+  const chapter = chapterOfBattle(id);
+  const CH = { armada: ['THE SPANISH ARMADA', '아르마다 전쟁'], lepanto: ['LEPANTO', '레판토'], trafalgar: ['TRAFALGAR', '트라팔가르'] }[chapter];
+  const brand = CH
+    ? `<div class="brand">${en ? `<i>MOONWAKE · ${CH[0]}</i>` : `<b>${CH[1]}</b>`}</div>`
+    : en ? '<div class="brand"><i>THE IMJIN WAR</i></div>' : '<div class="brand"><b>임진왜란</b><span class="seal">海<br>戰</span></div>';
   const title = en ? `${t.pre ? `<div class="pre">${t.pre}</div>` : ''}<div class="name" id="fit">${escapeHtml(t.title)}</div>` : `<div class="title" id="fit">${t.title}</div>`;
   return `<body class="${lang}"><img class="still" src="/still.jpg" alt=""><div class="shade"></div>${brand}
     <div class="block"><div class="kicker">${escapeHtml(t.date)}<small>${t.hanja}</small></div>${title}<div class="place">${escapeHtml(t.place)}</div></div>
@@ -729,7 +842,7 @@ async function cardStill(img, at) {
 }
 
 async function compose() {
-  const only = args.only ? args.only.split(',') : ['front', ...BATTLE_SLUGS];
+  const only = args.only ? args.only.split(',') : ['front', ...ALL_BATTLES];
   mkdirSync(join(ROOT, 'public', 'og'), { recursive: true });
   const browser = await launch();
   try {

@@ -19,6 +19,8 @@ const regionState = (value: unknown): value is RegionState => {
 export function migrateGrandRegions(raw: unknown): number {
   if (!raw || typeof raw !== 'object') return 0;
   const g = raw as Grand;
+  // Only the 1592 map grew ports after release; other theatres' saves are complete as made.
+  if (g.theatre) return 0;
   if (g.version !== 1 || !g.regions || !g.rng || !Array.isArray(g.fleets) || !Array.isArray(g.pending) || !Number.isSafeInteger(g.nextId) || g.nextId < 0 || !GRAND_FACTIONS.every((f) => g.factions?.[f])) return 0;
   // An incomplete/corrupt original map is not an older twelve-region campaign and must still fail validation.
   if (!LEGACY_REGION_ORDER.every((id) => regionState(g.regions[id]))) return 0;

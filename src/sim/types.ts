@@ -11,16 +11,33 @@ export const otherTeam = (t: Team): Team => (t === 'joseon' ? 'japan' : 'joseon'
 export type ShipKind =
   | 'panokseon' | 'geobukseon' | 'hyeopseon' | 'sahuseon' | 'pojakseon'
   | 'atakebune' | 'sekibune' | 'kobaya' | 'daeantaek' | 'sogantaek' | 'daegwanseon' | 'byeongnyangseon'
-  | 'mingship' | 'mingsmall' | 'gwangseon' | 'haechangseon' | 'hoseon';
-export type Faction = 'joseon' | 'japan' | 'ming';
+  | 'mingship' | 'mingsmall' | 'gwangseon' | 'haechangseon' | 'hoseon'
+  // The Armada chapter, 1588.
+  | 'racegalleon' | 'pinnace' | 'fireship' | 'spgalleon' | 'galleass' | 'urca'
+  // The Lepanto chapter, 1538-1571: the Holy League's lanterna, galleys and Venetian galleasses, the Ottoman flagship, galleys and galiots.
+  | 'reale' | 'galea' | 'vgalleass' | 'sultana' | 'kadirga' | 'kalyata'
+  // The Trafalgar chapter, 1797-1805: the British first-rate, 74 and frigate; the French 80 and 74; the Spanish four-decker and 74.
+  | 'firstrate' | 'gb74' | 'gbfrigate' | 'fr80' | 'fr74' | 'trinidad' | 'es74';
+export type Faction = 'joseon' | 'japan' | 'ming' | 'england' | 'spain' | 'holyleague' | 'ottoman' | 'britain' | 'france' | 'spain1805';
+/** The navies of the first chapter (임진왜란): code that walks the 1592 navies reads this list, so it keeps its three. */
 export const FACTIONS: readonly Faction[] = ['joseon', 'japan', 'ming'];
-/** The Ming fleet fights on the Joseon side. */
-export const teamOf = (faction: Faction): Team => (faction === 'japan' ? 'japan' : 'joseon');
+/** Every navy of every chapter. */
+export const ALL_FACTIONS: readonly Faction[] = ['joseon', 'japan', 'ming', 'england', 'spain', 'holyleague', 'ottoman', 'britain', 'france', 'spain1805'];
+/**
+ * The two battle slots keep their 1592 names: the first ('joseon') is a chapter's defending side, the second ('japan') the
+ * invader. The Ming fleet fights on the Joseon side; England takes the first slot and the Armada the second; Britain the
+ * first and the Combined Fleet (France and Spain, 1805) the second.
+ */
+export const teamOf = (faction: Faction): Team => (faction === 'japan' || faction === 'spain' || faction === 'ottoman' || faction === 'france' || faction === 'spain1805' ? 'japan' : 'joseon');
 /** In the historical battles each faction is one commander, with these owner ids. Conquest battles number their players from 0. */
-export const OWNER_OF: Record<Faction, number> = { joseon: 0, japan: 1, ming: 2 };
+export const OWNER_OF: Record<Faction, number> = { joseon: 0, japan: 1, ming: 2, england: 0, spain: 1, holyleague: 0, ottoman: 1, britain: 0, france: 1, spain1805: 2 };
 export type Side = 0 | 1;
 
-export type GunType = 'cheonja' | 'jija' | 'hyeonja' | 'hwangja' | 'seungja' | 'ozutsu' | 'folangji' | 'hudun';
+export type GunType = 'cheonja' | 'jija' | 'hyeonja' | 'hwangja' | 'seungja' | 'ozutsu' | 'folangji' | 'hudun'
+  // The Armada chapter: English long guns and the Spanish heavy short pieces, and the swivel guns of both.
+  | 'culverin' | 'demiculverin' | 'cannon' | 'perrier' | 'saker' | 'base'
+  // The Trafalgar chapter: the iron long guns of 1805 by the weight of their shot, and the short carronade.
+  | 'long32' | 'long18' | 'long12' | 'carronade' | 'long36';
 export type AmmoType = 'arrow' | 'ball' | 'grape' | 'fire';
 
 export type GunSpec = {
@@ -92,6 +109,10 @@ export type ShipSpec = {
   capture?: number;
   /** Share of a new fire, and of its spread, that takes hold on this ship (curtains and wet straw); 1 without it. */
   fireResist?: number;
+  /** A fireship: the fire it sets on an enemy hull it touches, after which it burns out itself. */
+  fireship?: number;
+  /** The chapter-wide balance tier (1 light ... 4 first-rate); see src/sim/points.ts. */
+  tier?: 1 | 2 | 3 | 4;
 };
 
 export type FireMode = 'free' | 'hold';

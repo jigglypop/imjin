@@ -1,3 +1,4 @@
+import type { ChapterId } from '../routes';
 import { create } from 'zustand';
 import type { SkyPresetName } from '../render/sky';
 import type { SeaStateName } from '../ocean/waves';
@@ -179,6 +180,8 @@ type UiState = {
   battle: ScenarioId | null;
   /** The screen the running battle was started from. */
   origin: BattleOrigin;
+  /** The chapter of the series on show: the menu's poster, the history screen's battles (/armada names the Armada). */
+  chapter: ChapterId;
   /** A renderer or engine failure that stops the battle from starting. */
   fatal: string | null;
   touchBox: boolean;
@@ -195,7 +198,7 @@ export type LiveState = { time: number; fps: number; timeLeft: number; guns: num
 
 const EMPTY_GUNS: number[] = [];
 
-export const useUi = create<UiState>(() => ({ snapshot: null, live: { time: 0, fps: 0, timeLeft: 0, guns: EMPTY_GUNS }, loading: '바다를 준비하는 중', progress: 0, loadingBattle: null, report: null, toasts: [], box: null, screen: 'menu', battle: null, origin: 'select', fatal: null, touchBox: false, autoBuild: false }));
+export const useUi = create<UiState>(() => ({ snapshot: null, live: { time: 0, fps: 0, timeLeft: 0, guns: EMPTY_GUNS }, loading: '바다를 준비하는 중', progress: 0, loadingBattle: null, report: null, toasts: [], box: null, screen: 'menu', battle: null, origin: 'select', chapter: 'imjin', fatal: null, touchBox: false, autoBuild: false }));
 
 /**
  * `next` with every part that equals the matching part of `prev` replaced by that part, so unchanged squadrons, points
@@ -295,6 +298,11 @@ export function setProgress(progress: number) {
  */
 export function setScreen(screen: Screen) {
   useUi.setState((s) => ({ screen, battle: screen === 'select' || screen === 'battle' ? s.battle : null }));
+}
+
+/** Shows another chapter of the series; the router moves the address under its id. */
+export function setChapter(chapter: ChapterId) {
+  useUi.setState((s) => (s.chapter === chapter ? s : { chapter, battle: null }));
 }
 
 /** Picks a historical battle on the history screen. The router renames the address to match, in place. */

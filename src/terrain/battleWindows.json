@@ -1,0 +1,16 @@
+{
+  "battle-plymouth": {"lon":-4.2,"lat":50.27,"size":20000},
+  "battle-portland": {"lon":-2.44,"lat":50.49,"size":20000},
+  "battle-wight": {"lon":-1.25,"lat":50.54,"size":20000},
+  "battle-calais": {"lon":1.8,"lat":51,"size":20000},
+  "battle-gravelines": {"lon":2.1,"lat":51.06,"size":20000},
+  "battle-preveza": {"lon":20.66,"lat":38.94,"size":20000},
+  "battle-djerba": {"lon":10.82,"lat":33.93,"size":20000},
+  "battle-lepanto-north": {"lon":21.15,"lat":38.27,"size":20000},
+  "battle-lepanto-centre": {"lon":21.1,"lat":38.22,"size":20000},
+  "battle-lepanto-south": {"lon":21.28,"lat":38.2,"size":20000},
+  "battle-st-vincent": {"lon":-9.07,"lat":36.97,"size":20000},
+  "battle-nile": {"lon":30.14,"lat":31.33,"size":20000},
+  "battle-trafalgar-weather": {"lon":-6.15,"lat":36.2,"size":20000},
+  "battle-trafalgar-lee": {"lon":-6.14,"lat":36.17,"size":20000}
+}

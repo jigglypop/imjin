@@ -20,6 +20,7 @@ import {
 } from './economy';
 import { buildRequirement, orderAssault, orderBuild, commanderSuspended, orderCommander, orderMerge, orderMove, orderRecruit, orderRefit, orderStance, recruitProblem, refitCost } from './orders';
 import { REGIONS } from './regions';
+import { factionsOf } from './theatre';
 import { forkRng, next, range, type Rng } from './rng';
 import type { BuildingKind, Fleet, Grand, GrandFaction, RegionId } from './types';
 import { BUILDING_KINDS, MAX_LEVEL } from './types';
@@ -106,9 +107,109 @@ export const AI: Record<GrandFaction, Personality> = {
     minPatience: 0.75,
     restBelow: 0.7,
   },
+  // The Armada theatre. England: fast hulls and long guns, guards its coast and strikes at the Flemish ports.
+  england: {
+    attackRatio: 1.15,
+    worksShare: 0.4,
+    reserve: 80,
+    guard: 0.9,
+    doctrine: { racegalleon: 0.62, pinnace: 0.3, fireship: 0.08 },
+    works: { camp: 1, shipyard: 1.2, battery: 1.3, dock: 1.1, granary: 1.1, beacon: 0.5 },
+    wanted: { dunkirk: 1.5, calais: 1.2, corunna: 1, gravelines: 0.8 },
+    minNet: 40,
+    impatience: 0.04,
+    minPatience: 0.65,
+    restBelow: 0.65,
+  },
+  // Spain: the great fleet of galleons and hulks, bent on the Narrow Seas and the crossing to London.
+  spain: {
+    attackRatio: 1.05,
+    worksShare: 0.35,
+    reserve: 100,
+    guard: 0.8,
+    doctrine: { spgalleon: 0.62, galleass: 0.14, urca: 0.24 },
+    works: { camp: 1, shipyard: 1.3, battery: 0.8, dock: 1.1, granary: 1.2, beacon: 0.3 },
+    wanted: { london: 2, downs: 1.2, wight: 1.2, plymouth: 1, flushing: 1 },
+    minNet: 20,
+    impatience: 0.05,
+    minPatience: 0.6,
+    restBelow: 0.6,
+  },
+  // The Lepanto theatre. The Holy League: heavy bow guns, arquebusiers and the galleasses, bent on the Ottoman bases of the
+  // Ionian Sea and the relief of the Venetian islands.
+  holyleague: {
+    attackRatio: 1.15,
+    worksShare: 0.4,
+    reserve: 90,
+    guard: 0.9,
+    doctrine: { galea: 0.74, vgalleass: 0.18, reale: 0.08 },
+    works: { camp: 1, shipyard: 1.2, battery: 1.2, dock: 1.1, granary: 1.1, beacon: 0.4 },
+    wanted: { nafpaktos: 1.5, modon: 1.2, navarino: 1, preveza: 1, famagusta: 1 },
+    minNet: 40,
+    impatience: 0.04,
+    minPatience: 0.65,
+    restBelow: 0.65,
+  },
+  // The Ottoman fleet: many fast galleys and galiots, raiding the Venetian islands and the Adriatic.
+  ottoman: {
+    attackRatio: 1.05,
+    worksShare: 0.35,
+    reserve: 100,
+    guard: 0.8,
+    doctrine: { kadirga: 0.62, kalyata: 0.3, sultana: 0.08 },
+    works: { camp: 1, shipyard: 1.3, battery: 0.9, dock: 1.1, granary: 1.2, beacon: 0.3 },
+    wanted: { famagusta: 1.5, candia: 1.3, corfu: 1.2, cephalonia: 1, zante: 1, cattaro: 0.8 },
+    minNet: 20,
+    impatience: 0.05,
+    minPatience: 0.6,
+    restBelow: 0.6,
+  },
+  // The Trafalgar theatre. Britain: the close blockade of the enemy's bases (St Vincent's and Cornwallis's doctrine), a
+  // fleet of 74s with the three-deckers as flagships, and the frigates as its eyes; it wants the Combined Fleet's ports.
+  britain: {
+    attackRatio: 1.1,
+    worksShare: 0.35,
+    reserve: 100,
+    guard: 0.85,
+    doctrine: { gb74: 0.66, firstrate: 0.14, gbfrigate: 0.2 },
+    works: { camp: 1, shipyard: 1.2, battery: 0.9, dock: 1.3, granary: 1.1, beacon: 0.5 },
+    wanted: { cadiz: 1.5, brest: 1.3, toulon: 1.3, ferrol: 1.1, boulogne: 1, martinique: 0.8 },
+    minNet: 30,
+    impatience: 0.05,
+    minPatience: 0.6,
+    restBelow: 0.6,
+  },
+  // France: Napoleon's plan of 1805, to unite the squadrons and hold the Channel for the crossing from Boulogne.
+  france: {
+    attackRatio: 1.05,
+    worksShare: 0.4,
+    reserve: 100,
+    guard: 0.9,
+    doctrine: { fr74: 0.82, fr80: 0.18 },
+    works: { camp: 1, shipyard: 1.3, battery: 1.1, dock: 1.1, granary: 1.1, beacon: 0.3 },
+    wanted: { deal: 1.5, spithead: 1.3, plymsound: 1.1, maddalena: 1, valletta: 1, barbados: 0.8 },
+    minNet: 30,
+    impatience: 0.04,
+    minPatience: 0.65,
+    restBelow: 0.65,
+  },
+  // Spain: Godoy's navy, its ships large and well built but short of trained seamen, holding the Strait and Minorca.
+  spain1805: {
+    attackRatio: 1.15,
+    worksShare: 0.4,
+    reserve: 90,
+    guard: 0.95,
+    doctrine: { es74: 0.9, trinidad: 0.1 },
+    works: { camp: 1, shipyard: 1.2, battery: 1.2, dock: 1, granary: 1.2, beacon: 0.3 },
+    wanted: { gibraltar: 1.6, valletta: 1, cork: 0.6 },
+    minNet: 30,
+    impatience: 0.04,
+    minPatience: 0.7,
+    restBelow: 0.7,
+  },
 };
 
-const enemiesOf = (g: Grand, f: GrandFaction) => (['joseon', 'japan', 'ming'] as const).filter((o) => atWar(g, f, o));
+const enemiesOf = (g: Grand, f: GrandFaction) => factionsOf(g).filter((o) => atWar(g, f, o));
 
 /**
  * The enemy strength each region can see arrive this turn under the march rules. It is asked for again and again while a

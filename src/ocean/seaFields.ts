@@ -42,6 +42,11 @@ export class SeaFields {
     return smoothstep(0.2, 0.8, broad.mul(0.55).add(fine.mul(0.45)));
   }
 
+  /** 0 to 1 over patches about `span` metres across, at an angle of its own: picks between two copies of a wave tile. */
+  patch(xz: Node, angle: number, span: number): Node {
+    return smoothstep(0.3, 0.7, this.read(xz, angle, span).r);
+  }
+
   /** 0 to 1 over patches kilometres across, where plankton, silt or depth turn the water a shade greener or darker. */
   tint(xz: Node): Node {
     const broad = this.read(xz, 1.7, 9500).r;

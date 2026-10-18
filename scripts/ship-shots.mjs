@@ -85,7 +85,38 @@ const SHOTS = [
   { name: 'pano0_cut3_bow', key: 'panokseon#0', yaw: 0.6, pitch: 0.7, distance: 22, dx: 13, cut: 3 },
   { name: 'geo_mid', key: 'geobukseon#0', yaw: PI / 2 - 0.5, pitch: 0.12, distance: 34, dx: 4 },
   { name: 'row_japan', key: 'atakebune#0', yaw: 0.7, pitch: 0.25, distance: 150, dx: 60 },
+  // The 1588 ships (Armada chapter).
+  { name: 'race0_34', key: 'racegalleon#0', yaw: 0.9, pitch: 0.18, distance: 80 },
+  { name: 'race0_side', key: 'racegalleon#0', yaw: PI / 2, pitch: 0.06, distance: 82, dx: 4 },
+  { name: 'race0_stern', key: 'racegalleon#0', yaw: 2.4, pitch: 0.2, distance: 34, dx: -14 },
+  { name: 'race0_bow', key: 'racegalleon#0', yaw: -0.6, pitch: 0.15, distance: 34, dx: 14 },
+  { name: 'race0_deck', key: 'racegalleon#0', yaw: 0.5, pitch: 0.5, distance: 30, dx: 0 },
+  { name: 'race1_34', key: 'racegalleon#1', yaw: 0.9, pitch: 0.18, distance: 80 },
+  { name: 'sp0_34', key: 'spgalleon#0', yaw: 0.9, pitch: 0.18, distance: 86 },
+  { name: 'sp0_side', key: 'spgalleon#0', yaw: PI / 2, pitch: 0.06, distance: 88, dx: 4 },
+  { name: 'sp0_stern', key: 'spgalleon#0', yaw: 2.5, pitch: 0.18, distance: 36, dx: -16 },
+  { name: 'sp0_bow', key: 'spgalleon#0', yaw: -0.6, pitch: 0.15, distance: 36, dx: 16 },
+  { name: 'sp1_34', key: 'spgalleon#1', yaw: 0.9, pitch: 0.18, distance: 86 },
+  { name: 'galleass_34', key: 'galleass#0', yaw: 0.9, pitch: 0.22, distance: 80 },
+  { name: 'galleass_side', key: 'galleass#0', yaw: PI / 2, pitch: 0.08, distance: 80 },
+  { name: 'galleass_bow', key: 'galleass#0', yaw: -0.6, pitch: 0.18, distance: 30, dx: 18 },
+  { name: 'galleass_deck', key: 'galleass#0', yaw: 0.6, pitch: 0.55, distance: 30, dx: -4 },
+  { name: 'urca_34', key: 'urca#0', yaw: 0.9, pitch: 0.18, distance: 60 },
+  { name: 'urca_stern', key: 'urca#0', yaw: 2.5, pitch: 0.18, distance: 30, dx: -10 },
+  { name: 'pinnace_34', key: 'pinnace#0', yaw: 0.9, pitch: 0.18, distance: 40 },
+  { name: 'fireship_34', key: 'fireship#0', yaw: 0.9, pitch: 0.25, distance: 40 },
+  { name: 'armada_line', key: 'spgalleon#0', yaw: PI / 2 + 0.25, pitch: 0.12, distance: 260, dx: -60 },
 ];
+// --audit=kind,kind#1,...: front and back (off the bow and stern by 0.4 rad and raised, clear of the gallery row's neighbours), both sides, a three-quarter, a high close view and the stern ensign of each, sized by the ship's length.
+if (args.audit) {
+  SHOTS.length = 0;
+  for (const k of args.audit.split(',')) {
+    const key = k.includes('#') ? k : `${k}#0`;
+    const tag = key.replace('#', '');
+    for (const [v, yaw, pitch, f, dxr] of [['front', 0.4, 0.3, 1.3], ['back', PI - 0.4, 0.3, 1.3], ['port', PI / 2, 0.1, 1.5], ['star', -PI / 2, 0.1, 1.5], ['34', 0.8, 0.2, 1.6], ['close', 2.4, 0.3, 0.6], ['ensign', 2.3, 0.32, 0.7, -0.45]])
+      SHOTS.push({ name: `${tag}_${v}`, key, yaw, pitch, distance: f, rel: true, dxr });
+  }
+}
 const only = args.shots ? new Set(args.shots.split(',')) : null;
 
 await mkdir(out, { recursive: true });
@@ -116,9 +147,10 @@ for (const s of SHOTS) {
     if (s.cut) e.views.selected.add(ship.id);
     const c = Math.cos(ship.heading);
     const n = Math.sin(ship.heading);
-    const dx = s.dx ?? 0;
+    const dx = s.dxr ? s.dxr * ship.spec.length : (s.dx ?? 0);
     const dz = s.dz ?? 0;
-    e.rts.setPose({ tx: ship.x + c * dx - n * dz, tz: ship.z + n * dx + c * dz, yaw: ship.heading + s.yaw, pitch: s.pitch, distance: s.distance });
+    const distance = s.rel ? s.distance * Math.max(14, ship.spec.length) : s.distance;
+    e.rts.setPose({ tx: ship.x + c * dx - n * dz, tz: ship.z + n * dx + c * dz, yaw: ship.heading + s.yaw, pitch: s.pitch, distance });
     return true;
   }, s);
   if (!ok) {

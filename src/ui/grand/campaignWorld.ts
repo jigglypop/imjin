@@ -1,5 +1,5 @@
 import { Color, Fog, Group, type BufferAttribute, type InstancedMesh, type InterleavedBufferAttribute, type Mesh, type Object3D, type PerspectiveCamera, type Scene } from 'three/webgpu';
-import { V_SCALE } from '../../select/demFrame';
+import { V_SCALE } from './mapTheatre';
 import { worldClock } from '../../select/terrain';
 import { MESH_SCALE, groundElevation } from './mapMath';
 import { MapLayer } from './mapLayer';

@@ -1,5 +1,5 @@
-import { DynamicDrawUsage, InstancedBufferAttribute, NormalBlending, Sprite, SpriteNodeMaterial, type Camera } from 'three/webgpu';
-import { cameraViewMatrix, float, instancedDynamicBufferAttribute, length, max, mix, normalize, positionWorld, pow, saturate, smoothstep, sqrt, texture, time, uv, vec2, vec3, vec4 } from 'three/tsl';
+import { InstancedBufferAttribute, NormalBlending, Sprite, SpriteNodeMaterial, type Camera } from 'three/webgpu';
+import { cameraViewMatrix, float, instancedBufferAttribute, length, max, mix, normalize, positionWorld, pow, saturate, smoothstep, sqrt, texture, time, uv, vec2, vec3, vec4 } from 'three/tsl';
 import { atmosphere } from '../../render/atmosphere';
 import { particleNoise, puffNoise } from '../particleNoise';
 
@@ -52,12 +52,11 @@ export class SmokeColumn {
     this.pos = new InstancedBufferAttribute(new Float32Array(this.cap * 4), 4);
     this.params = new InstancedBufferAttribute(new Float32Array(this.cap * 4), 4);
     this.tint = new InstancedBufferAttribute(new Float32Array(this.cap * 4), 4);
-    for (const a of [this.pos, this.params, this.tint]) a.setUsage(DynamicDrawUsage);
 
     const material = new SpriteNodeMaterial();
-    const P: any = instancedDynamicBufferAttribute(this.pos, 'vec4');
-    const Q: any = instancedDynamicBufferAttribute(this.params, 'vec4');
-    const T: any = instancedDynamicBufferAttribute(this.tint, 'vec4');
+    const P: any = instancedBufferAttribute(this.pos, 'vec4');
+    const Q: any = instancedBufferAttribute(this.params, 'vec4');
+    const T: any = instancedBufferAttribute(this.tint, 'vec4');
     material.positionNode = P.xyz;
     material.rotationNode = Q.y;
     material.scaleNode = Q.x;
