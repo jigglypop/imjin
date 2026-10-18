@@ -51,6 +51,8 @@ export class FFTWaves {
   /** The time and choppiness the maps were last computed for; a new spectrum clears them so the next update recomputes. */
   private mapsTime = NaN;
   private mapsChoppiness = NaN;
+  /** The spectrum and seed the starting amplitudes were drawn for. */
+  private spectrum: (SpectrumParams & { seed: number }) | null = null;
 
   constructor(params: SpectrumParams, readonly n = 256, seed = 1592) {
     if (n < 16 || (n & (n - 1)) !== 0) throw new Error(`FFT size must be a power of two, got ${n}`);
@@ -77,6 +79,11 @@ export class FFTWaves {
   }
 
   setSpectrum(params: SpectrumParams, seed = 1592) {
+    // The amplitudes are drawn from the spectrum and the seed alone, so the same pair gives the same ones: most battles
+    // share a sea state, and drawing them again (67 ms, 3.1 MB up to the GPU) would only rewrite what is already there.
+    const last = this.spectrum;
+    if (last && last.seed === seed && (Object.keys(params) as (keyof SpectrumParams)[]).every((key) => last[key] === params[key])) return;
+    this.spectrum = { ...params, seed };
     const n = this.n;
     const rand = mulberry32(seed);
     const data = this.h0Data;
