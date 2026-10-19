@@ -49,6 +49,16 @@ const NEAR_LOSS_SHOCK = 0.045;
 const LEADER_SHOCK = 0.25;
 const ADMIRAL_SHOCK = 0.18;
 const LEADERLESS = 0.003;
+/**
+ * A commander's ship struck but still fighting: its squadron (or, for the admiral, the whole navy) feels every blow,
+ * in proportion to the share of hull or crew lost, and its foes take heart. LEADER_HIT_GAP keeps the alarm from
+ * being raised more often than a crew could take it in.
+ */
+const LEADER_HIT_SHOCK = 0.4;
+const ADMIRAL_HIT_SHOCK = 0.25;
+const LEADER_HIT_LIFT = 0.25;
+const LEADER_HIT_RANGE = 900;
+const LEADER_HIT_GAP = 4;
 /** Seconds before the next captain takes over a squadron that lost its leader. */
 const SUCCESSION = 30;
 // What restores it.
@@ -77,7 +87,8 @@ const COHESION_GAIN = 0.004;
 const CUT_DRAIN = 0.014;
 const UNCOMMANDED_DRAIN = 0.003;
 
-type Memo = { crew: number; hull: number; since: number; quiet: number };
+/** `hurt` gathers a leader's fresh damage until the next alarm; `alarm` is when the last one was raised. */
+type Memo = { crew: number; hull: number; since: number; quiet: number; hurt: number; alarm: number };
 
 const dist2 = (a: Ship, b: Ship) => (a.x - b.x) ** 2 + (a.z - b.z) ** 2;
 
@@ -148,7 +159,7 @@ export class Morale {
   private memoOf(s: Ship) {
     let m = this.memo.get(s.id);
     if (!m) {
-      m = { crew: s.crew / s.spec.crew, hull: s.hull / s.spec.hull, since: this.b.time, quiet: 0 };
+      m = { crew: s.crew / s.spec.crew, hull: s.hull / s.spec.hull, since: this.b.time, quiet: 0, hurt: 0, alarm: -Infinity };
       this.memo.set(s.id, m);
     }
     return m;
@@ -182,10 +193,16 @@ export class Morale {
     const m = this.memoOf(s);
     const crew = s.crew / s.spec.crew;
     const hull = s.hull / s.spec.hull;
+    const hurt = Math.max(0, m.crew - crew) + Math.max(0, m.hull - hull);
     let drain = Math.max(0, m.crew - crew) * LOSS_CREW + Math.max(0, m.hull - hull) * LOSS_HULL + s.fire * FIRE_DRAIN * dt;
     let gain = 0;
     m.crew = crew;
     m.hull = hull;
+    m.hurt += hurt;
+    if (m.hurt > 0.004 && this.b.time - m.alarm >= LEADER_HIT_GAP) {
+      if (this.leaderStruck(s, m.hurt)) m.alarm = this.b.time;
+      m.hurt = 0;
+    }
     if (s.aground > 0) drain += AGROUND_DRAIN * dt;
     let friends = 0;
     let foes = 0;
@@ -291,6 +308,28 @@ export class Morale {
 
   private lift(s: Ship, amount: number) {
     s.morale = Math.min(1, s.morale + amount * this.resolve(s));
+  }
+
+  /** A squadron leader's or the admiral's ship took `hurt` (share of hull and crew) and fights on. */
+  private leaderStruck(s: Ship, hurt: number): boolean {
+    const b = this.b;
+    const admiral = this.admirals?.[s.spec.faction] === s.id;
+    const sq = b.squadron(s.squadronId);
+    const leader = !!sq && sq.leaderId === s.id && sq.team === s.team;
+    if (!admiral && !leader) return false;
+    b.events.push({ type: 'leaderHit', ship: s.id, flagship: admiral, hurt });
+    if (admiral) {
+      for (const o of b.ships) if (o !== s && o.team === s.team && o.spec.faction === s.spec.faction && b.isActive(o)) this.shock(o, hurt * ADMIRAL_HIT_SHOCK);
+    } else {
+      for (const id of sq!.shipIds) {
+        const o = b.get(id);
+        if (o && o !== s && b.isActive(o)) this.shock(o, hurt * LEADER_HIT_SHOCK);
+      }
+    }
+    b.near(s.x, s.z, LEADER_HIT_RANGE, (o) => {
+      if (o.team !== s.team && b.isActive(o)) this.lift(o, hurt * LEADER_HIT_LIFT * (admiral ? 1.5 : 1));
+    });
+    return true;
   }
 
   /**

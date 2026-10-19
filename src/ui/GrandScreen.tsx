@@ -1,3 +1,5 @@
+import type { TheatreSetup } from '../game/theatre';
+import { setTheatreSetup, theatreSetupOf } from './grand/portView';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sound } from '../audio/Sound';
 import { t, useLang } from '../i18n';
@@ -84,7 +86,16 @@ const MARCH_GUIDE_STEP: Omit<GuideStepView, 'target'> = {
  * lives in the store (campaign/grand.ts); this reads it through the adapters and gives orders through grandOrders.
  * A meeting the player decides to fight is handed to `onBattle`, which opens the 3D battle.
  */
-export function GrandScreen({ onBattle }: { onBattle: (battle: RegionBattle) => void }) {
+/** A port picked in the 3D theatre view, to select when the campaign page opens again. */
+let theatrePick: string | null = null;
+/** The turn the 3D theatre last opened on by itself. */
+let theatreTurn = -1;
+/** 턴 종료 pressed in the 3D theatre: the turn closes when the strategic map opens again. */
+let theatreEnd = false;
+/** The campaign state the map's 3D was last told. */
+let theatreFor: unknown = null;
+
+export function GrandScreen({ onBattle, onTheatre }: { onBattle: (battle: RegionBattle) => void; onTheatre?: (setup: TheatreSetup) => void }) {
   const lang = useLang();
   const options = useMemo(() => factionOptions(), [lang]);
   const [stage, setStage] = useState<Stage>(() => {
@@ -93,7 +104,8 @@ export function GrandScreen({ onBattle }: { onBattle: (battle: RegionBattle) => 
     const s = useGrand.getState();
     // Coming back from a battle or an auto-resolve, the player is already in the war.
     if (!s.grand) return 'pick';
-    return s.lastBattle || s.reported !== null ? 'map' : 'hub';
+    // Back from the 3D theatre (a port picked, 턴 종료, or just 전략 지도로) it is too.
+    return s.lastBattle || s.reported !== null || theatreTurn !== -1 ? 'map' : 'hub';
   });
   const grand = useGrand((s) => s.grand);
 
@@ -111,7 +123,7 @@ export function GrandScreen({ onBattle }: { onBattle: (battle: RegionBattle) => 
           onBack={toMenu}
         />
       ) : stage === 'map' && grand ? (
-        <CampaignMap g={grand} onBattle={onBattle} onNew={() => setStage('pick')} />
+        <CampaignMap g={grand} onBattle={onBattle} onTheatre={onTheatre} onNew={() => setStage('pick')} />
       ) : (
         <FactionPick
           options={options}
@@ -127,7 +139,7 @@ export function GrandScreen({ onBattle }: { onBattle: (battle: RegionBattle) => 
   );
 }
 
-function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: RegionBattle) => void; onNew: () => void }) {
+function CampaignMap({ g, onBattle, onTheatre, onNew }: { g: Grand; onBattle: (battle: RegionBattle) => void; onTheatre?: (setup: TheatreSetup) => void; onNew: () => void }) {
   // The views below are built with text in the language set now, so they are built again when it changes.
   const lang = useLang();
   const lastBattle = useGrand((s) => s.lastBattle);
@@ -223,6 +235,26 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
     }
     return done;
   };
+
+  // Back from the 3D theatre view: the port picked there is selected here.
+  useEffect(() => {
+    const id = theatrePick;
+    theatrePick = null;
+    if (id) setFocus({ id, nonce: Date.now() });
+  }, []);
+
+  // The map's 3D is the battle engine's (TheatreCanvas): it is told the campaign as it stands.
+  // Set while rendering, so the canvas finds it when it first mounts; only a changed campaign is staged again.
+  if (theatreFor !== g) {
+    theatreFor = g;
+    setTheatreSetup(theatreSetupOf(g, t('전역 3D 지도')));
+  }
+
+  useEffect(() => {
+    if (!theatreEnd) return;
+    theatreEnd = false;
+    endTurn();
+  }, []);
 
   const selectRegion = (id: string, additive = false) => {
     // An own port is picked, not visited, when Shift/Ctrl/Cmd is held or when the open batch cannot sail there anyway.
@@ -433,6 +465,19 @@ function CampaignMap({ g, onBattle, onNew }: { g: Grand; onBattle: (battle: Regi
           dismissReplay();
         }}
       />
+      {onTheatre && (
+        <button
+          type="button"
+          className="g-btn"
+          style={{ position: 'absolute', right: 16, bottom: 16, zIndex: 5 }}
+          onClick={() => {
+            sound.click();
+            onTheatre(theatreSetupOf(g, t('전역 3D 지도'), (id) => { theatrePick = id; }));
+          }}
+        >
+          {t('3D 전역')}
+        </button>
+      )}
       <TopBar
         turn={turnView(g)}
         treasury={treasuryView(g)}

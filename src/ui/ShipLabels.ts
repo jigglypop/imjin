@@ -8,16 +8,20 @@ import { shipObserved } from '../sim/observation';
 
 /**
  * The name over each ship in battle (.claude/skills/ui-design): a small glass pill with the navy's colour dot, the
- * ship's name and a hairline hull bar. Labels fade with distance; when they crowd, the selected ships, the flagships,
- * the squadron leaders and the damaged keep theirs and the rest are hidden.
+ * ship's name and a hull bar, both edged in its side's colour (blue ours, red theirs). Only the hovered ship, a small
+ * selection and the flagships are named; every other ship nearby wears a mini tag of colour and hull. Names fade with
+ * distance; when they crowd, the selected ships, the flagships and the squadron leaders keep theirs.
  */
 type Label = { root: HTMLDivElement; name: HTMLElement; bar: HTMLElement; text: string; hull: number; cls: string; shown: boolean; lang: string };
-type Spot = { ship: Ship; label: Label; sx: number; sy: number; w: number; prio: number; alpha: number; selected: boolean };
+type Spot = { ship: Ship; label: Label; sx: number; sy: number; w: number; prio: number; alpha: number; selected: boolean; mini: boolean };
 
 const tmp = new Vector3();
 const H = 22;
 /** Beyond this a label is drawn only for a selected ship or a flagship. */
 const FAR = 2200;
+/** Every other ship nearer than this wears a mini tag: its fleet's colour and its hull, no name until hovered. */
+const MINI_RANGE = 1600;
+const MAX_MINI = 90;
 
 export class ShipLabels {
   private readonly layer: HTMLDivElement;
@@ -81,6 +85,7 @@ export class ShipLabels {
     const phone = width < 700;
     const max = phone ? 6 : width < 1500 ? 10 : 14;
     const spots: Spot[] = [];
+    const fewSelected = views.selected.size <= 6;
     const present = new Set<number>();
     for (const ship of battle.ships) {
       present.add(ship.id);
@@ -94,11 +99,11 @@ export class ShipLabels {
       tmp.project(camera);
       const selected = views.selected.has(ship.id);
       const hull = ship.hull / ship.spec.hull;
-      const key = selected || ship.flagship;
-      // Only ships worth naming get a label: the selected, the flagships, the squadron leaders, the badly hurt, and
-      // any ship the camera is right over. A line of numbered hulls stays unlabelled.
-      const worth = key || leaders.has(ship.id) || hull < 0.5 || dist < 420;
-      if (!worth || tmp.z >= 1 || Math.abs(tmp.x) > 1 || Math.abs(tmp.y) > 1 || (dist > FAR && !key)) {
+      // Names only where they help: the ship under the pointer, a small selection, the flagships. Every other ship near
+      // enough wears the mini tag, its side's colour and its hull, and shows its name when hovered.
+      const key = (selected && fewSelected) || ship.flagship || views.hovered === ship.id;
+      const mini = !key && dist < MINI_RANGE;
+      if ((!key && !mini) || tmp.z >= 1 || Math.abs(tmp.x) > 1 || Math.abs(tmp.y) > 1 || (dist > FAR && !key)) {
         if (label) this.hide(label);
         continue;
       }
@@ -108,16 +113,30 @@ export class ShipLabels {
         l.text = tName(ship.name) || t(ship.spec.label);
         l.name.textContent = l.text;
       }
-      const prio = (selected ? 4000 : 0) + (ship.flagship ? 2000 : 0) + (leaders.has(ship.id) ? 800 : 0) + (hull < 0.5 ? 300 : 0) - dist / 10;
+      const prio = (mini ? -100000 : 0) + (selected ? 4000 : 0) + (ship.flagship ? 2000 : 0) + (leaders.has(ship.id) ? 800 : 0) + (hull < 0.5 ? 300 : 0) - dist / 10;
       const alpha = key ? 1 : Math.max(0.35, Math.min(1, 1 - (dist - 700) / (FAR - 700)));
-      spots.push({ ship, label: l, sx: (tmp.x * 0.5 + 0.5) * width, sy: (-tmp.y * 0.5 + 0.5) * height, w: l.text.length * (lang === 'ko' ? 11.5 : 6.6) + 30, prio, alpha, selected });
+      spots.push({ ship, label: l, sx: (tmp.x * 0.5 + 0.5) * width, sy: (-tmp.y * 0.5 + 0.5) * height, w: mini ? 30 : l.text.length * (lang === 'ko' ? 11.5 : 6.6) + 30, prio, alpha, selected, mini });
     }
     // A sunk ship leaves the battle's list: its label goes with it.
     for (const [id, l] of this.labels) if (!present.has(id)) this.hide(l);
     spots.sort((a, b) => b.prio - a.prio);
     const placed = [...this.tools.rects];
     let count = 0;
+    let minis = 0;
     for (const s of spots) {
+      if (s.mini) {
+        // Mini tags are small enough to overlap the names: they only stay out of the HUD's panels.
+        const sx = s.sx;
+        const sy = Math.max(this.tools.top + 8, s.sy);
+        const hidden = minis >= MAX_MINI || this.tools.rects.some((p) => p.x0 < sx + 16 && sx - 16 < p.x1 && p.y0 < sy + 2 && sy - 8 < p.y1);
+        if (hidden) {
+          this.hide(s.label);
+          continue;
+        }
+        minis += 1;
+        this.show(s, sx, sy, team);
+        continue;
+      }
       const sx = Math.max(s.w / 2 + 4, Math.min(width - s.w / 2 - 4, s.sx));
       const sy = Math.max(this.tools.top + H, s.sy);
       const box = { x0: sx - s.w / 2 - 3, x1: sx + s.w / 2 + 3, y0: sy - H - 2, y1: sy + 2 };
@@ -128,25 +147,29 @@ export class ShipLabels {
       }
       placed.push(box);
       count += 1;
-      const l = s.label;
-      const own = s.ship.team === team;
-      const hull = Math.round((s.ship.hull / s.ship.spec.hull) * 100);
-      const cls = `shl f-${s.ship.spec.faction}${own ? '' : ' shl--foe'}${s.selected ? ' shl--selected' : ''}${s.ship.flagship ? ' shl--flag' : ''}${hull < 35 ? ' shl--low' : ''}`;
-      if (cls !== l.cls) {
-        l.root.className = cls;
-        l.cls = cls;
-      }
-      if (hull !== l.hull) {
-        l.bar.style.width = `${hull}%`;
-        l.hull = hull;
-      }
-      if (!l.shown) {
-        l.root.style.display = '';
-        l.shown = true;
-      }
-      l.root.style.opacity = s.alpha.toFixed(2);
-      l.root.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px) translate(-50%, -100%)`;
+      this.show(s, sx, sy, team);
     }
+  }
+
+  private show(s: Spot, sx: number, sy: number, team: Team) {
+    const l = s.label;
+    const own = s.ship.team === team;
+    const hull = Math.round((s.ship.hull / s.ship.spec.hull) * 100);
+    const cls = `shl f-${s.ship.spec.faction}${own ? ' shl--own' : ' shl--foe'}${s.mini ? ' shl--mini' : ''}${s.selected ? ' shl--selected' : ''}${s.ship.flagship ? ' shl--flag' : ''}${hull < 35 ? ' shl--low' : ''}`;
+    if (cls !== l.cls) {
+      l.root.className = cls;
+      l.cls = cls;
+    }
+    if (hull !== l.hull) {
+      l.bar.style.width = `${hull}%`;
+      l.hull = hull;
+    }
+    if (!l.shown) {
+      l.root.style.display = '';
+      l.shown = true;
+    }
+    l.root.style.opacity = s.alpha.toFixed(2);
+    l.root.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px) translate(-50%, -100%)`;
   }
 
   clear() {

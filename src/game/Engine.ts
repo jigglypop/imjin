@@ -72,6 +72,13 @@ import { BUILDING_ORDER, BUILDINGS, RANKED_OPTIONS, ROSTER, rosterOf, SHORT_NAME
 import { applyCommand, type Command } from '../sim/commands';
 import { conquestInfoOf, scenarioInfo, type BattleInfo } from '../sim/info';
 import { ConquestView, preloadWorks } from '../conquest/ConquestView';
+import { lonLatToWorld, theatreBattle, theatreInfo, theatreSpec, TOKEN_SCALE, type TheatreSetup } from './theatre';
+import { TheatreWorks } from './theatreWorks';
+import { PortWorks, portBattle } from '../port/portWorks';
+import { portInfo, type PortView } from '../port/harbourTerrain';
+import { shipKindsOf } from '../meta/fleet';
+import { viewSeason } from './campaignSeason';
+import { Snowfall } from '../fx/Snowfall';
 import type { NetBattle } from '../net/NetBattle';
 import { RtsCamera, type CameraPose } from '../camera/RtsCamera';
 import { AMBIENT_SHAKE, Director } from './Director';
@@ -84,6 +91,9 @@ import { CPU_STEP_MAX, CPU_STEPS, equipment, LEVELS, levelSetting, saveLevelSett
 import { t } from '../i18n';
 import { failBattle, publish, pushToast, setAutoBuild, setLoading, setProgress, setReport, useUi, type FleetMorale, type GameSnapshot } from '../state/store';
 import { ShipLabels } from '../ui/ShipLabels';
+import { FormationGhosts } from '../ships/FormationGhosts';
+import { BattleBarks } from './BattleBarks';
+import type { Scene as MusicScene } from '../audio/tracks';
 import { MoveOrders } from '../ui/MoveOrders';
 import { TacticalOverlay } from '../ui/TacticalOverlay';
 import { sound } from '../audio/Sound';
@@ -122,6 +132,8 @@ export type EngineOptions = {
   conquest?: ConquestSetup;
   /** A battle run by the multiplayer server (conquest, or a historical duel when no conquest setup is given). */
   remote?: NetBattle;
+  /** The faction campaign's theatre instead of a battle, its camera set from outside each frame (the campaign map). */
+  theatre?: TheatreSetup;
 };
 
 /** A conquest battle: the map, every seat, and which seat is the player's. `grand` is a faction campaign meeting played on its region's coast instead of a conquest map, with the campaign's own ships. */
@@ -150,9 +162,9 @@ const DEVICE_LOST_TEXT = '그래픽 장치가 멈췄습니다. 메모리가 부�
 /** What a gun's crew is doing at each stage of loading; the last two wait for the shot. */
 const GUN_STAGE = ['포구 닦기', '화약 넣기', '마개 다지기', '포탄 넣기', '발사 준비', '발사'];
 
-/** Multipliers the player can pick. The approach before first contact runs at the largest. */
-export const SPEEDS = [1, 2, 4, 8, 16, 32, 64, 128] as const;
-const FAST_SPEED = SPEEDS[SPEEDS.length - 1];
+/** Multipliers the player can pick: few enough to read at a glance. The approach before first contact runs faster still. */
+export const SPEEDS = [1, 2, 4, 8, 16] as const;
+const FAST_SPEED = 128;
 /**
  * Sim steps per frame are capped by count and by time, so high multipliers degrade gracefully on a slow device.
  * The time budget grows with the multiplier: at 16x and up the player wants the battle to move, not a smooth 60 fps.
@@ -183,6 +195,10 @@ export class Engine {
   lanterns!: Lanterns;
   input!: Input;
   banners: ShipLabels | null = null;
+  /** The commanders' lines as subtitles during a historical battle. */
+  readonly barks = new BattleBarks();
+  /** The formation being placed, as translucent ships on their slots. */
+  ghosts: FormationGhosts | null = null;
   moveOrders: MoveOrders | null = null;
   tacticalOverlay: TacticalOverlay | null = null;
   /** Each fleet's state as last told to the player, and the state it has been in since `since` (battle seconds). */
@@ -204,6 +220,10 @@ export class Engine {
   fastForward = false;
   /** First contact has happened: there is no approach left to skip. */
   approachOver = false;
+  private musicTimer = 0;
+  private musicScene: MusicScene | null = null;
+  private musicWant: MusicScene | null = null;
+  private musicHeld = 0;
   private contactTimer = 0;
   ready = false;
   scenarioId: ScenarioId;
@@ -215,6 +235,19 @@ export class Engine {
   conquest: Conquest | null = null;
   conquestSetup: ConquestSetup | null = null;
   conquestView: ConquestView | null = null;
+  /** The faction campaign's theatre on show instead of a battle (theatre.ts): nothing is simulated. */
+  theatre: TheatreSetup | null = null;
+  private theatreWorks: TheatreWorks | null = null;
+  /** The account's home port (본진) on show instead of a battle (src/port): nothing is simulated. */
+  port: PortView | null = null;
+  private portWorks: PortWorks | null = null;
+  private snowfall: Snowfall | null = null;
+  /** Nothing is simulated: the campaign's theatre view. Only the sea and the weather move. */
+  /** The camera is set from outside every frame (the campaign map drives it): no RTS camera, no default pose. */
+  externalCamera = false;
+  get frozen() {
+    return !!this.theatre || !!this.port;
+  }
   /** The capture point picked in the conquest panel, or -1. */
   selectedPoint = -1;
   /** Set by a multiplayer session: commands go to the server instead of the local battle. */
@@ -239,6 +272,8 @@ export class Engine {
   private fpsFrames = 0;
   private fpsTime = 0;
   private lastScaled = 0;
+  /** Battle seconds per real second, smoothed over about a third of a second, for the speed readout. */
+  private actualSpeed = 1;
   private vignette = uniform(0.32);
   /** The sky preset's exposure; a cinematic close-up multiplies it. */
   private baseExposure = 1;
@@ -287,6 +322,11 @@ export class Engine {
     const seat = this.conquestSetup?.seats[this.conquestSetup.you];
     this.faction = options.campaign ? 'joseon' : seat?.faction ?? options.faction ?? 'joseon';
     this.battleInfo = this.conquestSetup ? conquestInfoOf(this.conquestSetup) : scenarioInfo(options.scenario);
+    if (options.theatre) {
+      this.theatre = options.theatre;
+      this.faction = options.theatre.me;
+      this.externalCamera = true;
+    }
     this.skyName = options.sky ?? this.battleInfo.sky;
     this.seaName = options.sea ?? this.battleInfo.sea;
     const dprParam = params.get('dpr');
@@ -404,6 +444,11 @@ export class Engine {
       this.camera.far = 60000;
       this.camera.fov = 42;
       this.camera.updateProjectionMatrix();
+      if (this.theatre && this.externalCamera) {
+        this.battleInfo = theatreInfo(this.theatre, await theatreSpec(new AbortController().signal));
+        this.skyName = this.battleInfo.sky;
+        this.seaName = this.battleInfo.sea;
+      }
       waveField.setState(SEA_STATES[this.seaName]);
       const info = this.battleInfo;
       setLoading(t('바다와 하늘을 준비하는 중'), 0.03, info);
@@ -453,6 +498,8 @@ export class Engine {
       this.lanterns = new Lanterns(this.views);
       this.lanterns.onLight = (x, y, z, i) => this.fx.lantern(x, y, z, i);
       this.scene.add(this.lanterns.group);
+      this.ghosts = new FormationGhosts(this.views, () => this.assets);
+      this.scene.add(this.ghosts.group);
       this.setupFog();
       this.setupPipeline();
       if (!this.options.hideLabels) {
@@ -546,6 +593,8 @@ export class Engine {
     this.autoFast = !this.remote && !this.conquest;
     this.fastForward = false;
     this.approachOver = false;
+    this.musicScene = null;
+    this.musicWant = null;
     this.contactTimer = 0;
   }
 
@@ -635,7 +684,14 @@ export class Engine {
     if (this.options.gallery) return ALL_KINDS;
     const kinds = new Set<ShipKind>();
     const setup = this.conquestSetup;
-    if (setup) {
+    if (this.port) {
+      // The navy's whole roster, so a hull bought at the port is moored without loading anything.
+      for (const kind of shipKindsOf(this.port.nation)) kinds.add(kind);
+      for (const kind of Object.keys(this.port.ships) as ShipKind[]) kinds.add(kind);
+    } else if (this.theatre) {
+      for (const f of this.theatre.fleets) for (const kind of f.kinds) kinds.add(kind);
+      for (const ship of theatreBattle(this.theatre, () => -50).ships) kinds.add(ship.spec.kind);
+    } else if (setup) {
       for (const seat of setup.seats) for (const kind of ROSTER[seat.faction]) kinds.add(kind);
       // An allied navy's ships (Ming beside Joseon) are not in the seat's roster.
       if (setup.grand) for (const seat of [setup.grand.attacker, setup.grand.defender]) for (const ship of seat.ships) kinds.add(ship.kind);
@@ -824,11 +880,20 @@ export class Engine {
 
   private dressTerrain() {
     this.terrain.season.value = this.battleInfo.foliage;
+    const winter = !!this.theatre && viewSeason(this.theatre.month) === 'winter';
+    this.terrain.snow.value = winter ? 1 : 0;
+    if (winter) {
+      this.snowfall = new Snowfall(this.eq.tier === 'low' ? 800 : this.eq.tier === 'medium' ? 1800 : 3500);
+      this.scene.add(this.snowfall.sprite);
+    }
     this.vegetation = new Vegetation(this.terrain, { grids: this.eq.vegetationGrids, shadows: this.eq.vegetationShadows });
     this.terrain.group.add(this.vegetation.group);
-    this.structures = new Structures(this.terrain);
-    this.terrain.group.add(this.structures.group);
-    this.worksLoad = this.structures.load();
+    // A battle's villages would be specks at the theatre's scale: its ports' works stand instead (theatreWorks.ts).
+    if (!this.theatre) {
+      this.structures = new Structures(this.terrain);
+      this.terrain.group.add(this.structures.group);
+      this.worksLoad = this.structures.load();
+    } else this.worksLoad = Promise.resolve();
   }
 
   private warm(seconds: number) {
@@ -852,7 +917,28 @@ export class Engine {
     this.conquest = null;
     this.selectedPoint = -1;
     const setup = this.conquestSetup;
-    if (setup) {
+    if (this.views) this.views.tokenScale = this.theatre ? TOKEN_SCALE : 1;
+    this.rts.maxDistance = this.theatre ? 26000 : 6500;
+    if (this.port) {
+      this.phi = 0;
+      this.terrain.setRotation(0);
+      const land = (x: number, z: number) => this.terrain.heightAt(x, z);
+      const ground = this.terrain.groundTextures;
+      this.portWorks = new PortWorks(this.port, land, { rock: ground.cliff_side, bark: ground.aerial_rocks_02 });
+      this.battle = portBattle(this.port, land, this.portWorks.shore);
+      this.owner = OWNER_OF[this.faction];
+      this.scene.add(this.portWorks.group);
+      this.conquestLoad = this.portWorks.load();
+    } else if (this.theatre) {
+      // The theatre keeps north up: its coordinates are the campaign map's.
+      this.phi = 0;
+      this.terrain.setRotation(0);
+      this.battle = theatreBattle(this.theatre, (x, z) => this.terrain.heightAt(x, z));
+      this.owner = OWNER_OF[this.faction];
+      this.theatreWorks = new TheatreWorks(this.theatre, (x, z) => this.terrain.heightAt(x, z), (discs) => this.clearForest(discs));
+      this.scene.add(this.theatreWorks.group);
+      this.conquestLoad = this.theatreWorks.load();
+    } else if (setup) {
       // Turned so the sun falls across the line between the home ports, from the side for both fleets. A multiplayer
       // client keeps the map unturned so its coordinates match the server's.
       this.phi = this.sink ? 0 : sunAz - Math.PI / 2 - (setup.grand ? grandAxis(setup.grand) : homeAxis(setup.map));
@@ -884,6 +970,7 @@ export class Engine {
       }
     }
     this.minimap.team = this.team;
+    this.barks?.reset(this.conquestSetup || this.remote || this.frozen ? null : this.scenarioId, this.team);
     this.battle.setSea(SEA_STATES[this.seaName]);
     this.applyAccountGenerals(setup);
     waveField.copyFrom(this.battle.waves);
@@ -1019,6 +1106,13 @@ export class Engine {
 
   private defaultPose(): CameraPose {
     const info = this.battleInfo;
+    if (this.theatre) {
+      // North up, over the player's own ports, as the campaign map opens.
+      const own = this.theatre.ports.filter((p) => p.owner === this.theatre!.me);
+      const at = own.length ? own.map((p) => lonLatToWorld(p.lon, p.lat)).reduce((a, b) => ({ x: a.x + b.x / own.length, z: a.z + b.z / own.length }), { x: 0, z: 0 }) : { x: 0, z: 0 };
+      return { tx: at.x, tz: at.z + 900, yaw: Math.PI / 2, pitch: 0.36, distance: 3600 };
+    }
+    if (this.portWorks) return this.portWorks.pose();
     if (this.conquest) {
       // Three quarters on to the player's fleet with its home port in the same frame, so the opening shows both
       // the ships and the port they sail from. Without a home port: behind the fleet, looking toward the middle.
@@ -1109,7 +1203,8 @@ export class Engine {
     this.sky = sky;
     const preset = SKY_PRESETS[this.skyName];
     const info = sky.info;
-    const scale = (0.16 / Math.max(1e-6, info.ambientLum)) * preset.brightness;
+    // The theatre is seen from high above with the low sun behind the eye: it is lit up so its land reads.
+    const scale = (0.16 / Math.max(1e-6, info.ambientLum)) * preset.brightness * (this.theatre ? 1.9 : 1);
     const view = this.skyView!;
     view.set(sky.view);
     this.scene.backgroundNode ??= view.background();
@@ -1122,7 +1217,7 @@ export class Engine {
     atmosphere.skyAmbient.value.copy(info.skyAmbient).multiplyScalar(scale);
     atmosphere.horizon.value.copy(info.horizon).multiplyScalar(scale);
     const sight = this.battleInfo.environment?.visibility ?? 1;
-    atmosphere.fogDensity.value = Math.max(preset.fogDensity, sight < 0.6 ? 0.00075 : sight < 0.8 ? 0.00035 : 0);
+    atmosphere.fogDensity.value = this.theatre ? 0.000025 : Math.max(preset.fogDensity, sight < 0.6 ? 0.00075 : sight < 0.8 ? 0.00035 : 0);
     atmosphere.night.value = preset.night;
     const irr = info.sunIrradiance;
     const lum = Math.max(1e-4, 0.2126 * irr.x + 0.7152 * irr.y + 0.0722 * irr.z);
@@ -1215,9 +1310,102 @@ export class Engine {
     this.remote = remote;
     this.sink = remote;
     this.conquestSetup = null;
+    this.theatre = null;
+    this.port = null;
     this.scenarioId = id;
     this.faction = this.campaign ? 'joseon' : faction ?? this.faction;
     await this.stage(scenarioInfo(id));
+  }
+
+  /** Shows the account's home port on the running engine (src/port), its buildings and moored hulls. */
+  async setPort(view: PortView) {
+    if (this.disposed) throw new DOMException('Battle disposed', 'AbortError');
+    this.remote?.dispose();
+    this.remote = null;
+    this.sink = null;
+    this.conquestSetup = null;
+    this.theatre = null;
+    this.port = view;
+    this.faction = view.nation;
+    await this.stage(portInfo());
+  }
+
+  /** The shown port changed: buildings are rebuilt, and a changed fleet is moored afresh on the same terrain. */
+  updatePort(view: PortView) {
+    if (!this.port || !this.portWorks) return;
+    const ships = JSON.stringify(view.ships) !== JSON.stringify(this.port.ships);
+    this.port = view;
+    void this.portWorks.set(view);
+    if (!ships) return;
+    this.battle = portBattle(view, (x, z) => this.terrain.heightAt(x, z), this.portWorks.shore);
+    this.battle.land = (x, z) => this.terrain.heightAt(x, z);
+    this.battle.setSea(SEA_STATES[this.seaName]);
+    this.views.reset(this.assets, this.battle, this.capacityHint());
+    this.views.team = this.team;
+  }
+
+  /** Shows the faction campaign's whole theatre on the running engine (theatre.ts), at the turn's season. */
+  async setTheatre(setup: TheatreSetup) {
+    if (this.disposed) throw new DOMException('Battle disposed', 'AbortError');
+    this.remote?.dispose();
+    this.remote = null;
+    this.sink = null;
+    this.conquestSetup = null;
+    this.port = null;
+    this.theatre = setup;
+    this.faction = setup.me;
+    const spec = await theatreSpec(new AbortController().signal);
+    await this.stage(theatreInfo(setup, spec));
+  }
+
+  /** The campaign changed (an order, a new turn): its fleets and ports' works are laid out again on the same ground. */
+  updateTheatre(setup: TheatreSetup) {
+    if (!this.theatre || !this.ready) {
+      if (this.theatre) this.theatre = setup;
+      return;
+    }
+    this.theatre = setup;
+    const land = (x: number, z: number) => this.terrain.heightAt(x, z);
+    // Only the hulls loaded with the ground can be drawn: a kind new since (a fleet raised by an event) stands as one that is.
+    this.battle = theatreBattle(setup, land, (kind) => kind in this.assets);
+    this.battle.land = land;
+    this.battle.setSea(SEA_STATES[this.seaName]);
+    this.views.rebind();
+    this.views.team = this.team;
+    // The crews stand on the drawn hulls: they are made again for the new ones, as a battle's staging does.
+    this.crew?.dispose();
+    this.crew = new Crew(this.views);
+    this.scene.add(this.crew.group);
+    // The old works and villages leave the scene now and are freed a moment later, once no frame in flight still binds them.
+    const old = this.theatreWorks;
+    old?.group.removeFromParent();
+    if (old) setTimeout(() => old.dispose(), 1500);
+    this.theatreWorks = new TheatreWorks(setup, land, (discs) => this.clearForest(discs));
+    this.scene.add(this.theatreWorks.group);
+    void this.theatreWorks.load();
+  }
+
+
+  /** The forest density lives in the terrain mask's red channel: zero it under the camps and villages. */
+  private clearForest(discs: { x: number; z: number; r: number }[]) {
+    const t = this.terrain, res = t.spec.res, size = t.spec.size, mask = t.mask;
+    for (const d of discs) {
+      const r = (d.r / size) * res, ci = (d.x / size + 0.5) * res, cj = (d.z / size + 0.5) * res;
+      for (let j = Math.max(0, Math.floor(cj - r)); j <= Math.min(res - 1, Math.ceil(cj + r)); j += 1) {
+        for (let i = Math.max(0, Math.floor(ci - r)); i <= Math.min(res - 1, Math.ceil(ci + r)); i += 1) {
+          if ((i - ci) ** 2 + (j - cj) ** 2 <= r * r) mask[(j * res + i) * 4] = 0;
+        }
+      }
+    }
+    t.maskTexture.needsUpdate = true;
+  }
+
+  /** The screen position of a campaign port (lon, lat) on the theatre, or null behind the camera. */
+  theatreScreen(lon: number, lat: number, width: number, height: number) {
+    const w = lonLatToWorld(lon, lat);
+    const v = new Vector3(w.x, Math.max(0, this.terrain.heightAt(w.x, w.z)) + 60, w.z).project(this.camera);
+    if (v.z > 1) return null;
+    return { x: (v.x * 0.5 + 0.5) * width, y: (-v.y * 0.5 + 0.5) * height };
   }
 
   /** Starts a conquest battle on the running engine, local or drawn from a multiplayer server. */
@@ -1232,6 +1420,8 @@ export class Engine {
     setAutoBuild(!setup.ranked && !remote);
     this.autoBuild.reset();
     this.faction = setup.seats[setup.you]!.faction;
+    this.theatre = null;
+    this.port = null;
     await this.stage(conquestInfoOf(setup));
   }
 
@@ -1286,7 +1476,7 @@ export class Engine {
       setLoading(null);
       this.publish(true);
       this.loading = null;
-      this.cinema.begin();
+      if (!this.theatre) this.cinema.begin();
     } catch (err) {
       this.cancelLoad(task);
       throw err;
@@ -1295,6 +1485,7 @@ export class Engine {
 
   /** Frees the previous battle's terrain with its vegetation and villages, the ocean and the conquest works. */
   private disposeBattle() {
+    this.ghosts?.clear();
     this.vegetation?.dispose();
     this.vegetation = null;
     this.structures?.dispose();
@@ -1303,12 +1494,24 @@ export class Engine {
     this.ocean?.dispose();
     this.conquestView?.dispose();
     this.conquestView = null;
+    this.theatreWorks?.dispose();
+    this.theatreWorks = null;
+    this.portWorks?.dispose();
+    this.portWorks = null;
+    this.snowfall?.dispose();
+    this.snowfall = null;
     this.crew?.dispose();
   }
 
   /** Ships can be launched in a conquest battle, so its renderer reserves room for each kind the seats can build. */
   capacityHint() {
     const hint = new Map<ShipKind, number>();
+    // The campaign map's fleets change with every order: room for them all is kept from the start, so they are
+    // re-placed in the same batches (ShipViews.rebind) without building new ones while the map keeps drawing.
+    if (this.theatre) {
+      for (const kind of this.kindsInBattle()) hint.set(kind, 48);
+      return hint;
+    }
     const setup = this.conquestSetup;
     if (!setup || !this.conquest) return hint;
     const c = this.conquest;
@@ -1351,6 +1554,7 @@ export class Engine {
     const dt = Math.min(frameDt, 0.1);
     // A multiplayer battle runs on the server at its own pace: no pause, no speed-up, nothing simulated here.
     if (!this.remote) this.updateFastForward(dt);
+    this.updateMusic(dt);
     const base = this.fastForward ? Math.max(this.speed, FAST_SPEED) : this.speed;
     const speed = this.cinema.speed(base * this.director.timeFactor(base));
     // Above 4x the frame rate is set by the simulation's share of each frame, not by the GPU, so it says nothing
@@ -1368,7 +1572,13 @@ export class Engine {
       const start = performance.now();
       const budget = simBudgetMs(speed);
       let steps = 0;
-      while (!this.paused && this.accumulator >= SIM_DT && steps < MAX_STEPS) {
+      // The campaign's port view stands still in time: only the sea and the weather move.
+      if (this.frozen) {
+        this.accumulator = 0;
+        this.battle.time += dt;
+        waveField.time = this.battle.time;
+      }
+      while (!this.frozen && !this.paused && this.accumulator >= SIM_DT && steps < MAX_STEPS) {
         this.views.capture(this.battle);
         this.stepSim(SIM_DT);
         scaled += SIM_DT;
@@ -1385,6 +1595,7 @@ export class Engine {
       if (this.accumulator > SIM_DT * 4) this.accumulator = 0;
     }
     this.lastScaled = scaled;
+    if (dt > 0) this.actualSpeed += (scaled / dt - this.actualSpeed) * Math.min(1, dt * 3);
     // Presentation between sim steps: ships drawn and the sea sampled at the frame's own time, one step behind the sim.
     // Also while a cutscene covers the auto fast-forward before contact: its lens rides a flagship, which drawn at the
     // sim's 30 Hz steps zigzags the close-ups (jerk 0.24-0.5 m/frame^3 at a fixed 60 fps).
@@ -1396,6 +1607,7 @@ export class Engine {
     const events = this.remote || !this.battle.events.length ? this.battle.events : this.battle.events.filter((e) => eventObserved(e, this.battle, this.conquest, this.team));
     this.views.cutaway.clear();
     for (const id of this.cutawayIds()) this.views.cutaway.set(id, this.cutaway);
+    this.views.hideRings = this.hudHidden;
     this.views.sync(this.battle, scaled, this.camera, this.assets);
     this.damageGallery?.tick();
     this.stampWakes(events, scaled);
@@ -1406,9 +1618,11 @@ export class Engine {
       this.fx.handle(events, this.battle);
       this.crew.handle(events, this.battle);
       this.input.onEvents(events);
+      this.barks?.onEvents(events, this.battle);
       for (const e of events) if (e.type === 'battery') this.fx.gun(e.x, e.y, e.z, e.dx, e.dy, e.dz, true);
     }
     this.battle.events = [];
+    this.barks?.update(this.battle, dt, !this.paused && !this.cinema.covering, performance.now() / 1000);
     if (this.battle.ended && !this.reported) {
       this.payAccountBattle();
       this.finishCampaignBattle();
@@ -1418,7 +1632,7 @@ export class Engine {
       this.director.update(dt);
       const follow = this.rts.followId ? this.views.worldOf(this.rts.followId) : null;
       if (this.rts.followId && !follow) this.rts.followId = 0;
-      this.rts.update(dt, follow);
+      if (!this.externalCamera) this.rts.update(dt, follow);
     }
     this.updateFilm(dt);
     this.ocean.setTide(this.battle.tide);
@@ -1446,11 +1660,13 @@ export class Engine {
     this.fx.shipRate = this.remote ? this.remote.playbackPace : 1;
     this.fx.update(this.battle, scaled, this.camera);
     this.crew.update(this.battle, scaled, this.camera, this.crewView());
+    this.snowfall?.update(this.camera.position);
     this.lanterns.update(this.battle, this.camera, this.battle.night || SKY_PRESETS[this.skyName].night > 0.5);
+    this.ghosts?.update(this.battle, this.hudHidden || this.rts.cinematic || this.battle.ended ? null : this.input.formationPreview()?.slots ?? null);
     this.updateSun();
     this.vegetation?.updateShadow(this.sun);
     const el = this.renderer.domElement;
-    this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, this.showLabels && !this.hudHidden && !this.rts.cinematic && !this.cinema.covering && !this.battle.ended, this.team);
+    this.banners?.update(this.battle, this.views, this.camera, el.clientWidth, el.clientHeight, !this.frozen && this.showLabels && !this.hudHidden && !this.rts.cinematic && !this.cinema.covering && !this.battle.ended, this.team);
     this.moveOrders?.update();
     const overlay = !this.hudHidden && !this.rts.cinematic && !this.cinema.covering && !this.battle.ended;
     this.tacticalOverlay?.update(overlay, overlay && this.showLabels);
@@ -1480,6 +1696,38 @@ export class Engine {
    * Contact: an enemy within CONTACT_RANGE, a shot in the air, or a grapple. Until then the approach can be
    * fast-forwarded; it ends for good at the first contact so the player is never yanked between speeds.
    */
+  /**
+   * Which moment the music plays: the approach until first contact, the fight, the climax once either fleet is down to
+   * about a third of its ships (back to the fight only if it recovers well past that), and the end by its outcome.
+   * A change must hold for a few seconds before the music follows it, so one sinking does not flip the score.
+   */
+  private updateMusic(dt: number) {
+    this.musicTimer -= dt;
+    if (this.musicTimer > 0) return;
+    this.musicTimer = 0.5;
+    const b = this.battle;
+    if (!b || this.options.gallery) return;
+    const own = this.team;
+    const enemy = this.enemyTeam;
+    let want: MusicScene;
+    if (b.ended) want = b.winner === own ? 'victory' : 'defeat';
+    else if (!this.remote && !this.approachOver) want = 'approach';
+    else {
+      const left = Math.min(b.teamCount(own) / Math.max(1, b.initial[own]), b.teamCount(enemy) / Math.max(1, b.initial[enemy]));
+      want = left < 0.35 || (this.musicScene === 'climax' && left < 0.45) ? 'climax' : 'battle';
+    }
+    // The end and the first contact are heard at once; the swing into and out of the climax waits to be sure.
+    if (want !== this.musicWant) {
+      this.musicWant = want;
+      this.musicHeld = 0;
+    } else this.musicHeld += 0.5;
+    const immediate = want === 'victory' || want === 'defeat' || this.musicScene === 'approach' || this.musicScene === null;
+    if (want !== this.musicScene && (immediate || this.musicHeld >= 4)) {
+      this.musicScene = want;
+      this.sound.setScene(want);
+    }
+  }
+
   private updateFastForward(dt: number) {
     const b = this.battle;
     if (this.approachOver || b.ended || this.options.gallery) {
@@ -1554,8 +1802,15 @@ export class Engine {
    */
   private applyAccountGenerals(setup: ConquestSetup | null) {
     this.accountBattle = null;
-    if (this.remote || this.sink || setup?.ranked || setup?.grand) return;
+    if (this.remote || this.sink || setup?.ranked || this.frozen) return;
     const b = this.battle;
+    if (setup?.grand) {
+      // A campaign meeting keeps its own generals but still pays the account's purse (the 본진 port's coins).
+      const scenario = `campaign:${setup.grand.regionId}`.slice(0, 32);
+      const ticket = beginRewardedBattle({ mode: 'conquest', scenario, side: this.faction, ownShips: 400, enemyShips: 400, generals: [] });
+      this.accountBattle = { ticket, mode: 'conquest', scenario };
+      return;
+    }
     const team = this.team;
     const generals = applyGenerals(b, team, useLocalProfile.getState().profile);
     const mode = setup ? 'conquest' : 'history';
@@ -1578,6 +1833,8 @@ export class Engine {
 
   private finishCampaignBattle() {
     this.reported = true;
+    // The port view is only looked at: nothing goes back to the campaign.
+    if (this.frozen) return;
     const grand = this.conquestSetup?.grand;
     if (grand && this.conquest) {
       this.finishGrandBattle(grand, this.conquest);
@@ -1813,6 +2070,7 @@ export class Engine {
       draw: b.draw,
       paused: this.paused,
       speed: this.speed,
+      actualSpeed: this.paused ? 0 : this.actualSpeed,
       autoFast: this.autoFast && !this.remote,
       fastForward: this.fastForward,
       approach: !this.remote && !this.approachOver && !this.battle.ended,
@@ -2088,6 +2346,7 @@ export class Engine {
     this.fx?.dispose();
     this.munitionsGallery?.dispose();
     if (this.lanterns) disposeTree(this.lanterns.group);
+    this.ghosts?.dispose();
     this.pipeline?.dispose();
     this.sky?.view.dispose();
     this.sky?.environment.dispose();

@@ -595,10 +595,11 @@ export class Ocean {
       }
       // A ring of broken water where the hull meets the sea.
       const waterline = hullShade.mul(float(1).sub(hullShade)).mul(4).mul(0.45);
-      const coverage = whitecap.mul(1.35).mul(shore).add(contact.mul(1.2)).add(waterline).add(wakeFoam.mul(1.15)).add(whirl).add(surf.mul(select(depthBelow.greaterThan(-0.5), float(1), float(0))));
+      const coverage = whitecap.mul(0.95).mul(shore).add(contact.mul(1.2)).add(waterline).add(wakeFoam.mul(1.15)).add(whirl).add(surf.mul(select(depthBelow.greaterThan(-0.5), float(1), float(0))));
       // Foam is lace, not paint: a soft edge into the lattice of the pattern, and bubbles that let the water show through.
       const bubbles = texture(foamTex, p0.mul(1 / 1.1).add(N.xz.mul(0.05)).add(vec2(t.mul(0.02), t.mul(-0.013)))).r;
-      const lace = saturate(coverage.sub(float(1).sub(pattern)).mul(1.9)).mul(mix(float(0.55), float(1), bubbles));
+      // A soft edge (it was a hard cut that tiled the whole sea with even white blobs).
+      const lace = saturate(coverage.sub(float(1).sub(pattern)).mul(1.15)).mul(mix(float(0.6), float(1), bubbles));
       const foam = max(lace, eddyFoam.clamp(0, 0.82));
       const foamLight = atmosphere.skyAmbient.mul(0.95).add(sunLit.mul(NoL.mul(0.6).add(0.25)).mul(1 / Math.PI)).add(lightDiffuse.mul(1 / Math.PI));
       // Under the moon the foam is grey-blue, not a lamp: the night grade lifts bright pixels, so the paint itself is dimmer.

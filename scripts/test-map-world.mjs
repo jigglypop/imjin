@@ -184,11 +184,11 @@ try {
     assert.deepEqual(drawnKinds([], 2), []);
     assert.deepEqual(drawnKinds([undefined], 1), [], 'ships of unknown kind draw nothing: the layer takes the navy\'s usual ship');
     const port = buildWorld([region('a', 127.7, 34.7)], [fleet('f1', 'a', 0, 'japan', { ships: [{ kind: 'kobaya' }, { kind: 'atakebune' }] }), fleet('f2', 'a', 0, 'japan', { ships: [{ kind: 'sekibune' }] })]);
-    assert.deepEqual(port.fleets[0].kinds, ['atakebune', 'kobaya'], 'the fleets of a navy in one port are drawn together, picked across their sizes');
+    assert.deepEqual(port.fleets[0].kinds, ['sekibune'], 'the fleets of a navy in one port are drawn together, picked across their sizes');
     assert.equal(port.fleets[0].kinds.length, port.fleets[0].count);
   });
-  check('a squadron is drawn with a few hulls, never more than five', () => {
-    assert.deepEqual([0, 1, 2, 3, 10, 30, 400].map(hullsFor), [0, 1, 2, 2, 3, 5, 5]);
+  check('a squadron is drawn with one hull for every five ships, at least one', () => {
+    assert.deepEqual([0, 1, 2, 5, 6, 10, 25, 26, 400].map(hullsFor), [0, 1, 1, 1, 2, 2, 5, 6, 80]);
     for (let n = 1; n < 60; n++) assert.ok(hullsFor(n + 1) >= hullsFor(n));
   });
   check('ships anchor on water when there is some and still get a berth when there is none', () => {
@@ -228,7 +228,7 @@ try {
     const p = project(127.7, 34.7);
     // Water everywhere south of the port.
     const isSea = (u, v) => v > p.v + SETTLEMENT_RADIUS * MAP_ASPECT * 0.5;
-    const world = buildWorld(regions, [fleet('f1', 'a', 20, 'japan'), fleet('f2', 'a', 9)], null, isSea);
+    const world = buildWorld(regions, [fleet('f1', 'a', 20, 'japan'), fleet('f2', 'a', 15)], null, isSea);
     const first = world.fleets.find((f) => f.faction === 'joseon'), second = world.fleets.find((f) => f.faction === 'japan');
     const nearest = (f) => Math.min(...f.berths.map((b) => Math.hypot(b.x, b.z)));
     assert.ok(nearest(first) <= nearest(second), 'the owner berths first, nearest its port');
@@ -364,10 +364,10 @@ try {
   check('a squadron rides in a wedge behind its leader, hulls clear of each other and at most two hulls deep', () => {
     assert.deepEqual(formation(0), []);
     assert.deepEqual(formation(1), [{ along: 0, across: 0 }]);
-    for (let n = 1; n <= 5; n++) {
+    for (let n = 1; n <= 30; n++) {
       const f = formation(n);
       assert.equal(f.length, n);
-      assert.ok(f.every((o) => o.along <= 0 && o.along >= -2));
+      if (n <= 5) assert.ok(f.every((o) => o.along <= 0 && o.along >= -2));
       // A hull is about 0.3 of its length wide: abreast they need that much room, in line a little over a length.
       f.forEach((a, i) => f.slice(i + 1).forEach((b) => assert.ok(Math.abs(a.across - b.across) >= 0.4 || Math.abs(a.along - b.along) >= 1.05, `${n}: ${i}`)));
     }
@@ -393,12 +393,12 @@ try {
     assert.ok(Math.abs(sails[0].points[1].x - ((pa.u + pb.u) / 2 - 0.5)) < 1e-12, 'a spot half way along a lane is half way');
     assert.ok(Math.abs(sails[0].points[2].z - ((pb.v - 0.5) / MAP_ASPECT)) < 1e-12);
   });
-  check('no fleet is drawn with more than five hulls and the layer caps the map at 140', () => {
-    assert.equal(SHIP_CAP, 140);
+  check('a fleet is drawn with one hull for every five ships and the layer caps the map at 320', () => {
+    assert.equal(SHIP_CAP, 320);
     const regions = [region('a', 127.7, 34.7), region('b', 128.4, 35.0)];
     const many = Array.from({ length: 300 }, (_, i) => fleet(`f${i}`, null, 90, NAVIES[i % 3], { transit: { from: 'a', to: 'b', left: 1 } }));
     const { fleets } = buildWorld(regions, many);
-    assert.ok(fleets.length === 300 && fleets.every((f) => f.count <= 5));
+    assert.ok(fleets.length === 300 && fleets.every((f) => f.count === hullsFor(90)));
     assert.ok(fleets.reduce((n, f) => n + f.count, 0) > SHIP_CAP, 'the world asks for more than the layer may draw');
   });
   console.log(`${passed} map world regressions passed`);

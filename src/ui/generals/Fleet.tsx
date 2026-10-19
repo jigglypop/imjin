@@ -4,10 +4,11 @@ import { generalById } from '../../meta/catalog';
 import { useLocalProfile } from '../../meta/localProfile';
 import {
   admiralsOf, buyShipProblem, famousOf, fleetSize, fleetValue, NATION_CHANGES, NATIONS, nationById, nationProblem, RECRUIT_PRICE, recruitProblem,
-  CHAPTER_LABEL, SELLBACK, serving, shipKindsOf, shipPrice, startingFleet, type NationDef,
+  CHAPTER_LABEL, SELLBACK, serving, shipKindsOf, startingFleet, type NationDef,
 } from '../../meta/fleet';
 import { generalMods, generalState, levelProgress, skillPointsLeft, type Profile } from '../../meta/rules';
 import { treeOf } from '../../meta/talents';
+import { shipCost } from '../../meta/port';
 import { SHORT_NAME } from '../../sim/conquest';
 import { shipTier } from '../../sim/points';
 import type { ShipKind } from '../../sim/types';
@@ -138,7 +139,7 @@ export function FleetView({ profile, onAdmiral }: { profile: Profile; onAdmiral:
                 </div>
                 <div className="fleet-ship__count"><span>{n}</span><small>{t('척')}</small></div>
                 <button className="fleet-build" disabled={!!why} title={why ? t(why) : undefined} onClick={() => buyShip(k, 1)}>
-                  {t('건조')} <small>{t('{n} 엽전', { n: shipPrice(k).toLocaleString() })}</small>
+                  {t('건조')} <small>{t('{n} 엽전', { n: shipCost(profile, k).toLocaleString() })}</small>
                 </button>
               </article>
             );

@@ -4,6 +4,10 @@ import { factionColor, withAlpha } from './tokens';
 import type { Terrain } from '../terrain/Terrain';
 import { shipObserved } from '../sim/observation';
 
+/** The two sides' colours, as --own and --foe in styles.css. */
+const SIDE_OWN = '#5c9ee6';
+const SIDE_FOE = '#e2685a';
+
 const SIZE = 320;
 
 export class Minimap {
@@ -110,8 +114,7 @@ export class Minimap {
       this.factionsTeam = this.team;
     }
     const { own, foe } = this.factions;
-    // The faction tones are already lifted for dark glass, which is what the minimap's sea is; the foe's rim stays umber.
-    const foeRing = factionColor('japan');
+    // Ships by side, the --own blue and --foe red of the HUD, whichever navies sail; capture points keep the navies' tones.
     const tone = (f: Faction) => factionColor(f);
     const sx = SIZE / this.extent;
     const ox = (0.5 - this.cx / this.extent) * SIZE;
@@ -137,11 +140,10 @@ export class Minimap {
       if (px < 0 || py < 0 || px > SIZE || py > SIZE) continue;
       const sel = selected.has(s.id);
       const friend = s.team === this.team;
-      const fill = sel ? '#ffffff' : s.spec.faction;
-      const key = `${sel ? 1 : 0}${friend ? 1 : 0}${fill}`;
+      const key = `${sel ? 1 : 0}${friend ? 1 : 0}`;
       let g = this.groups.get(key);
       if (!g) {
-        g = { sel, fill: sel ? '#ffffff' : tone(s.spec.faction), stroke: friend ? 'rgba(255, 255, 255, 0.85)' : foeRing, width: friend ? 0.7 : 1.2, xyr: [], n: 0 };
+        g = { sel, fill: sel ? '#ffffff' : friend ? SIDE_OWN : SIDE_FOE, stroke: sel ? (friend ? SIDE_OWN : SIDE_FOE) : 'rgba(8, 11, 16, 0.7)', width: sel ? 1.4 : 0.8, xyr: [], n: 0 };
         this.groups.set(key, g);
       }
       const r = s.spec.length > 30 ? 3.4 : s.spec.length > 20 ? 2.8 : 2.2;

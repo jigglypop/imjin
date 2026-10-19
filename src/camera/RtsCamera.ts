@@ -22,7 +22,7 @@ export class RtsCamera {
   private lastY = 0;
   private dom: HTMLElement | null = null;
   readonly minDistance = 14;
-  readonly maxDistance = 6500;
+  maxDistance = 6500;
   ground: (x: number, z: number) => number = () => -50;
 
   constructor(private readonly camera: PerspectiveCamera) {}
@@ -176,10 +176,11 @@ export class RtsCamera {
     const pan = this.goal.distance * 0.9 * dt;
     let fx = 0;
     let fz = 0;
-    if (k.has('KeyW') || k.has('ArrowUp')) fz += 1;
-    if (k.has('KeyS') || k.has('ArrowDown')) fz -= 1;
-    if (k.has('KeyA') || k.has('ArrowLeft')) fx -= 1;
-    if (k.has('KeyD') || k.has('ArrowRight')) fx += 1;
+    // The arrow keys pan: the letters under the left hand are orders (A fights, S stops, Q W E D F the maneuvers).
+    if (k.has('ArrowUp')) fz += 1;
+    if (k.has('ArrowDown')) fz -= 1;
+    if (k.has('ArrowLeft')) fx -= 1;
+    if (k.has('ArrowRight')) fx += 1;
     if (fx || fz) {
       this.followId = 0;
       this.cinematic = false;

@@ -1,3 +1,4 @@
+import { MusicVolume } from './MusicVolume';
 import { theatreOfChapter } from './grand/theatreChoice';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { useAccount } from '../account/store';
@@ -108,6 +109,9 @@ export function MainMenu() {
         </button>
         <button className="back-btn" data-mode="generals" {...mode('generals')}>
           <Person /> {t('제독')}
+        </button>
+        <button className="back-btn" data-mode="port" {...mode('port')}>
+          <CodexIcon name="anchor" /> {t('본진')}
         </button>
         <button className="back-btn" onClick={go('settings')}>
           <Sliders /> {t('설정')}
@@ -260,6 +264,9 @@ export function SettingsScreen() {
                 setMusic(!music);
               }}
             />
+          </Row>
+          <Row title={t('배경음악 볼륨')}>
+            <MusicVolume />
           </Row>
         </section>
         <section className="set-group glass">

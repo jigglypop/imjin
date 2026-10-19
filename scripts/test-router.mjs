@@ -40,7 +40,7 @@ async function load(contents, external = []) {
 const R = await load("export * from './src/routes';");
 const { ROUTES, BATTLE_SLUGS, CHAPTER_BATTLES, LAUNCH_PARAMS, cardFile, parseRoute, pickEdition, routePages, routePath, withoutParams } = R;
 
-const SCREENS = { menu: '', faction: 'campaign', skirmish: 'conquest', select: 'battles', online: 'online', settings: 'settings', codex: 'ships', generals: 'generals' };
+const SCREENS = { menu: '', faction: 'campaign', skirmish: 'conquest', select: 'battles', online: 'online', settings: 'settings', codex: 'ships', generals: 'generals', port: 'port' };
 
 await check('every screen has the agreed address in both editions', () => {
   assert.deepEqual(Object.fromEntries(ROUTES.map((r) => [r.screen, r.slug])), SCREENS);

@@ -1,3 +1,4 @@
+import { BattleSubtitles } from './BattleSubtitles';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
 import { PerspectiveCamera, WebGPURenderer } from 'three/webgpu';
@@ -12,6 +13,8 @@ import { forceWebGL } from '../game/quality';
 import { clearLoading } from '../game/recovery';
 import { onBattleBack } from '../router';
 import { failBattle, setLoading, setScreen, useUi } from '../state/store';
+import { TheatreOverlay } from './TheatreOverlay';
+import { PortOverlay } from './port/PortOverlay';
 import { Hud } from './Hud';
 import { CinemaOverlay } from './CinemaOverlay';
 import { conquestOf, hideHud, params, startScenario, type Launch } from './launch';
@@ -44,7 +47,7 @@ function readOptions(launch: Launch): EngineOptions {
     campaign: launch.kind === 'scenario' ? launch.campaign : undefined,
     faction: launch.kind === 'scenario' ? (launch.campaign ? 'joseon' : launch.faction) : 'joseon',
     conquest: conquestOf(launch),
-    remote: launch.kind === 'grand' ? undefined : launch.remote,
+    remote: launch.kind === 'grand' || launch.kind === 'theatre' || launch.kind === 'port' ? undefined : launch.remote,
     follow: params.get('follow')
       ? { id: Number(params.get('follow')), distance: Number(params.get('dist') ?? 70), pitch: Number(params.get('pitch') ?? 0.12), yaw: Number(params.get('yaw') ?? 2.4) }
       : undefined,
@@ -150,7 +153,8 @@ export default function BattleView({ launch }: { launch: Launch }) {
   const origin = useUi((s) => s.origin);
   const [engine, setEngine] = useState<Engine | null>(null);
   const visible = usePageVisible();
-  const applied = useRef(launch.seq);
+  // A theatre launch is staged once the engine is up (it starts on the default scenario).
+  const applied = useRef(launch.kind === 'theatre' || launch.kind === 'port' ? -1 : launch.seq);
 
   // Battles after the first reuse the running engine.
   useEffect(() => {
@@ -161,7 +165,13 @@ export default function BattleView({ launch }: { launch: Launch }) {
     const fail = (err: unknown) => {
       if (!cancelled && !(err instanceof Error && err.name === 'AbortError')) failBattle(err);
     };
-    if (conquest) {
+    if (launch.kind === 'port') {
+      engine.campaign = undefined;
+      engine.setPort(launch.view).catch(fail);
+    } else if (launch.kind === 'theatre') {
+      engine.campaign = undefined;
+      engine.setTheatre(launch.setup).catch(fail);
+    } else if (conquest) {
       engine.campaign = undefined;
       engine.setConquest(conquest, launch.kind === 'conquest' ? launch.remote ?? null : null).catch(fail);
     } else if (launch.kind === 'scenario') {
@@ -199,8 +209,11 @@ export default function BattleView({ launch }: { launch: Launch }) {
       >
         <Game launch={launch} onEngine={setEngine} />
       </Canvas>
-      {engine && !hideHud && screen === 'battle' && <Hud engine={engine} onBack={back} />}
+      {engine && !hideHud && screen === 'battle' && launch.kind !== 'theatre' && launch.kind !== 'port' && <Hud engine={engine} onBack={back} />}
+      {engine && screen === 'battle' && launch.kind === 'theatre' && <TheatreOverlay engine={engine} setup={launch.setup} onBack={back} />}
+      {engine && screen === 'battle' && launch.kind === 'port' && <PortOverlay engine={engine} onBack={() => { engine.paused = true; clearLoading(); sound.setMode('select'); setScreen('menu'); }} />}
       {engine && screen === 'battle' && <CinemaOverlay engine={engine} />}
+      {engine && screen === 'battle' && launch.kind !== 'theatre' && launch.kind !== 'port' && <BattleSubtitles engine={engine} />}
     </>
   );
 }

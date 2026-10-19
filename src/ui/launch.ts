@@ -1,5 +1,8 @@
 import type { ConquestSetup, EngineOptions } from '../game/Engine';
 import type { RegionBattle } from '../sim/grand/bridge';
+import type { TheatreSetup } from '../game/theatre';
+import { portInfo, type PortView } from '../port/harbourTerrain';
+import { HANSAN_TERRAIN } from '../terrain/generate';
 import { grandSeats, grandYou } from '../sim/grand/spawn';
 import type { NetBattle } from '../net/NetBattle';
 import { playableFactions } from '../sim/balance';
@@ -17,7 +20,11 @@ export type LaunchBody =
   | { kind: 'scenario'; id: ScenarioId; faction: Faction; campaign?: EngineOptions['campaign']; remote?: NetBattle }
   | { kind: 'conquest'; setup: ConquestSetup; remote?: NetBattle }
   /** A meeting of the faction campaign, played as a conquest battle with the campaign's own ships. */
-  | { kind: 'grand'; battle: RegionBattle };
+  | { kind: 'grand'; battle: RegionBattle }
+  /** The faction campaign's whole theatre in the battle's 3D (game/theatre.ts): nothing is fought. */
+  | { kind: 'theatre'; setup: TheatreSetup }
+  /** The account's home port (본진) in the battle's 3D (src/port): nothing is fought. */
+  | { kind: 'port'; view: PortView };
 export type Launch = LaunchBody & { seq: number };
 
 /** The conquest battle a launch asks for, if it is one. */
@@ -32,6 +39,12 @@ export function conquestOf(launch: LaunchBody): ConquestSetup | undefined {
 
 /** The battle a launch stages, as the engine will build it: the loading page shows it before the engine has started. */
 export function launchInfo(launch: LaunchBody): BattleInfo {
+  if (launch.kind === 'port') return portInfo();
+  if (launch.kind === 'theatre') {
+    // The loading page's stand-in until the engine stages the theatre (the terrain here is never built).
+    const s = launch.setup;
+    return { mode: 'conquest', id: 'theatre', art: 'hansan', title: s.title, hanja: '', date: '', place: s.title, season: '', sky: 'sunset', sea: 'calm', night: false, terrain: HANSAN_TERRAIN, view: { tx: 0, tz: 0, dir: 0, dist: 14000, pitch: 0.75 }, foliage: 0 };
+  }
   return launch.kind === 'scenario' ? scenarioInfo(launch.id) : conquestInfoOf(conquestOf(launch)!);
 }
 

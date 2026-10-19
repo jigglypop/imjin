@@ -147,12 +147,13 @@ export class Lanterns {
     m.side = DoubleSide;
     m.fog = false;
     const u = uv();
-    const lengthFade = smoothstep(0.0, 0.06, u.y).mul(smoothstep(1.0, 0.15, u.y));
-    const widthFade = smoothstep(0.5, 0.0, u.x.sub(0.5).abs());
-    // A plain soft strip: the noise ripple it had read as a blotchy leopard-skin pattern beside and on the hulls.
-    const shimmer = float(0.55);
-    m.colorNode = vec4(vec3(1.0, 0.48, 0.16).mul(1.1), 1);
-    m.opacityNode = lengthFade.mul(widthFade).mul(shimmer).mul(0.8).mul(RK);
+    // A soft pool of light on the water that dies away quickly from the hull: the long narrow bright strips stood under
+    // the ships like rocket exhaust (owner 2026-10-19). Brightest at the hull, gone well before its end, soft at the sides.
+    const lengthFade = smoothstep(0.0, 0.05, u.y).mul(pow(float(1).sub(u.y), float(2.6)));
+    const across = u.x.sub(0.5).abs().mul(2);
+    const widthFade = pow(smoothstep(1.0, 0.0, across), float(1.6));
+    m.colorNode = vec4(vec3(1.0, 0.5, 0.2), 1);
+    m.opacityNode = lengthFade.mul(widthFade).mul(0.32).mul(RK);
     this.refl = new InstancedMesh(geo, m, CAPACITY);
     this.refl.count = 0;
     this.refl.frustumCulled = false;
@@ -239,8 +240,8 @@ export class Lanterns {
           const dz = cam.z - this.p.z;
           const dl = Math.sqrt(dx * dx + dz * dz) || 1;
           // Only a streak's reach grows with the lantern's height and the viewing distance.
-          const len = Math.min(24, 5 + this.p.y * 1.1) * (1 + dist / 700);
-          const wid = 0.5 + len * 0.07;
+          const len = Math.min(12, 3 + this.p.y * 0.6) * (1 + dist / 1400);
+          const wid = 1.5 + len * 0.45;
           const ux = dx / dl;
           const uz = dz / dl;
           // Distance along the streak to the edge of the hull's footprint (a box of length by beam, in ship space).

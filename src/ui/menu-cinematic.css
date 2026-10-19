@@ -63,6 +63,10 @@
 @media (min-width:950px) {
   .menu--cinematic .menu-inner { width:58%; padding-bottom:100px; }
   .menu--cinematic .wordmark { margin-top:5dvh; }
+  /* Wide screens: the lockup shares the play column's left edge (the title's side bearing given back). */
+  .menu--cinematic .wordmark { width:min(430px,100%); align-items:flex-start; text-align:left; }
+  .menu--cinematic .wordmark-title--poster { margin-left:-.045em; }
+  .menu--cinematic .wordmark-dates i:first-child { display:none; }
   .menu-play { margin-top:4dvh; }
   .menu-shade { background:linear-gradient(180deg,rgba(3,8,13,.2),transparent 30%,rgba(3,8,13,.35) 72%,#040b11 100%),linear-gradient(90deg,rgba(3,8,13,.5),rgba(3,8,13,.15) 50%,transparent 75%); }
 }

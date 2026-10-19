@@ -371,7 +371,8 @@ export class Director {
     if (!k) return;
     const { x, z, level } = k;
     const { rts, battle } = this.host;
-    if (!this.slowEnabled || this.host.remote || this.host.paused || this.host.fastForward || battle.ended) return;
+    // Above 2x the player wants the battle to move: a kill-cam dropping 8x to a quarter speed reads as a stall.
+    if (!this.slowEnabled || this.host.remote || this.host.paused || this.host.fastForward || this.host.speed > 2 || battle.ended) return;
     if (this.slowClock >= 0 || this.clock < this.slowReadyAt) return;
     const g = rts.goal;
     if (Math.hypot(x - g.tx, z - g.tz) > Math.max(240, g.distance * 1.3)) return;

@@ -1718,12 +1718,31 @@
   height: 100%;
   background: var(--good);
 }
-.shl--low .shl-bar i { background: var(--bad); }
-.shl--foe .shl-pill { color: #e4e7ec; }
+.shl-bar i { background: var(--side); }
+.shl--own { --side: var(--own); }
+.shl--foe { --side: var(--foe); }
+.shl--own .shl-pill { border-color: color-mix(in srgb, var(--own) 55%, transparent); }
+.shl--foe .shl-pill { border-color: color-mix(in srgb, var(--foe) 55%, transparent); color: #e4e7ec; }
+.shl--own.shl--low .shl-bar i { background: var(--warn); }
+/* A ship without a name tag still shows its side and its hull: a short bar in the fleet's colour. */
+.shl--mini .shl-pill {
+  height: 6px;
+  width: 26px;
+  padding: 0;
+  gap: 0;
+  border-width: 1px;
+  background: rgba(8, 11, 16, 0.6);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.shl--mini .shl-dot,
+.shl--mini .shl-name { display: none; }
+.shl--mini .shl-bar { left: 1px; right: 1px; top: 1px; bottom: 1px; height: auto; background: transparent; }
 .shl--flag .shl-pill { font-weight: 700; }
 .shl--selected .shl-pill {
   background: rgba(12, 16, 24, 0.72);
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: var(--side);
 }
 @media (max-width: 700px) {
   .shl-pill { height: 18px; font-size: 11px; padding: 0 8px 1px 7px; }
@@ -2356,4 +2375,71 @@
     radial-gradient(farthest-side at 50% 0, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0)) center top / 100% 12px no-repeat scroll,
     radial-gradient(farthest-side at 50% 100%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0)) center bottom / 100% 12px no-repeat scroll,
     rgba(12, 14, 18, 0.97);
+}
+
+/* The suggested order: one glass pill centred over the cards, its edge breathing slowly in the player's colour so it
+   is noticed without flashing. */
+.advice {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 16px 0 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--own) 50%, transparent);
+  color: var(--ink);
+  font: 600 13px/1 var(--font-ui);
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  animation: advice-breathe 2.4s ease-in-out infinite;
+}
+.advice:hover { border-color: var(--own); }
+.advice-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--own) 22%, transparent);
+  color: var(--own);
+  font-size: 12px;
+  font-weight: 700;
+}
+@keyframes advice-breathe {
+  0%, 100% { box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25), 0 0 0 0 color-mix(in srgb, var(--own) 0%, transparent); }
+  50% { box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25), 0 0 0 4px color-mix(in srgb, var(--own) 18%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .advice { animation: none; }
+}
+.app--compact .advice {
+  height: 32px;
+  font-size: 12px;
+  max-width: calc(100vw - 24px);
+}
+.app--compact .advice-text { overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- Narrow portrait phones: the title row keeps the battle's name whole and the buttons room to breathe. The date and
+   place line (already in the opening and the loading card) gives way rather than ending in an ellipsis. ---- */
+@media (orientation: portrait) and (max-width: 430px) {
+  .app--compact .hud-title-sub {
+    display: none;
+  }
+
+  .app--compact .hud-title-main {
+    grid-row: 1 / span 2;
+  }
+
+  .app--compact .hud-menu {
+    gap: 6px;
+  }
+
+  .app--compact .hud-menu .mini-btn {
+    padding: 0 10px;
+  }
 }

@@ -193,3 +193,49 @@ Lifespans on the name cards follow 한국민족문화대백과 / ja.wikipedia / 
 
 Dates of the Armada follow the Gregorian calendar, as the battles' own data do. Corbett 1910 is J. S. Corbett,
 *The Campaign of Trafalgar*; Adkins 2004 is R. Adkins, *Trafalgar: The Biography of a Battle*.
+
+## In-battle lines (src/cinema/battleLines.ts)
+Subtitles spoken during play on events (start, contact, enemy or own flagship hit, enemy crews routing, leaders lost, losses, climax, won, lost), for
+both sides' commanders as `src/sim/scenarios.ts`, `armada.ts`, `lepanto.ts` and `trafalgar.ts` name them. Recorded words
+are rendered in Korean without hanja; everything not listed below is **in character**: a short order or reaction that
+makes no factual claim beyond what the battle's own data and records already say. The openings' lines from
+`ARMADA_QUOTES`, `LEPANTO_QUOTES` and `TRAFALGAR_QUOTES` are reused as written, with the records given there.
+
+| Battle | Line | Record | Kind |
+|---|---|---|---|
+| Okpo | 가볍게 움직이지 마라. 산처럼 고요하고 무겁게 하라. (勿令妄動 靜重如山) | 장계 「옥포파왜병장」 1592.5 | quoted |
+| Sacheon | 물이 빠지면 큰 배가 들어갈 수 없다. 저들을 바다로 끌어내라. | 장계 「당포파왜병장」 (ebb tide at Sacheon, feigned withdrawal) | the report's account as an order |
+| Dangpo | 누각 높은 배가 적장의 배다 … ; 적장이 쓰러졌다 | 장계 「당포파왜병장」 (pavilion ship of the commander, turtle ship went under it, commander shot); 구루시마 미치유키 killed per ja.wikipedia 「来島通之」 | the report's account / in character |
+| Hansan | 대여섯 척은 쫓기는 척 물러나라; 학익진을 펼쳐라 …; 앞선 두세 척을 먼저 깨뜨려라 …; 적이 노를 재촉해 달아난다 | 장계 「見乃梁破倭兵狀」 (佯退, 鶴翼列陣 一時齊進, 先破其二三隻, 促櫓逃遁) | the report's words as orders |
+| Hansan | 구키와 가토를 기다릴 것 없다 | 『脇坂記』 (as in the opening) | in character |
+| Busan | 긴 뱀처럼 줄지어 돌진하라 (長蛇突前) | 장계 「부산파왜병장」 | the report's words as an order |
+| Busan | 정운이 쓰러졌다 … | 정운 killed at Busan, 장계 「부산파왜병장」; Yi's 제문 | in character |
+| Chilcheon | 원균's lines; 배를 대라. 뭍으로 올라라! (lost) | 『선조실록』 1597.7; Won Gyun went ashore and was killed. Yi Sun-sin is not present | in character |
+| Myeongnyang | 죽고자 하면 살고, 살고자 하면 죽는다 (必死則生 必生則死) | 『난중일기』 1597.9.15 (said the day before) | quoted |
+| Myeongnyang | 노를 재촉하라 (促櫓突前) | 『난중일기』 9.16 | the diary's words as an order |
+| Myeongnyang | 안위야, 군법에 죽고 싶으냐? 물러나면 살 것 같으냐? (安衛 欲死軍法乎 退去得生乎) | 『난중일기』 9.16 | quoted |
+| Myeongnyang | 구루시마가 죽었다 (Todo) | 구루시마 미치후사 killed that day, ja.wikipedia 「鳴梁海戦」 | in character |
+| Noryang | 이 원수를 갚을 수 있다면 죽어도 여한이 없다 (此讎若除 死卽無憾) | 이분 『행록』 | quoted |
+| Noryang | 싸움이 한창 급하다. 내가 죽었다는 말을 하지 마라 (戰方急 愼勿言我死) | 이분 『행록』 | quoted |
+| Noryang | 이완: 숙부님의 기를 계속 흔들어라 … | 『행록』 "仍麾旗督戰 如前不已" | in character |
+| Noryang | 진린's lines ("통제사, 우리가 이겼소!" on won) | 『행록』 (Chen Lin called for Yi after the fight); the player hears it before learning of the death, so no claim is made that Yi answered | in character |
+| Plymouth | 저들의 깃털을 조금씩 뽑아내고 있다 | Howard to Walsingham, July 1588: "we pluck their feathers by little and little" (Laughton 1894) | quoted |
+| Wight | 때와 곳을 얻는 것이 싸움의 절반이다 | Drake to the Queen, April 1588 (Laughton 1894) | quoted (written before the campaign) |
+| Gravelines | Drake's letter of 29 July 1588 (O.S.) | Laughton 1894 (as in the opening) | quoted |
+| Djerba | 작은 배로 빠져나가 시칠리아로 간다 | Medinaceli escaped by small boat (Braudel 1972; Guilmartin 2003) | in character |
+| Lepanto (north) | Barbarigo's and Siroco's ownLeaderLost | Barbarigo fatally hit by an arrow in the eye having raised his visor to be heard; Siroco killed (Capponi 2006) | in character |
+| Lepanto (centre) | 술타나호/레알호; 알리 파샤가 쓰러졌다 | Real boarded the Sultana, Ali Pasha killed (Capponi 2006) | in character |
+| Lepanto (south) | 깃발을 들고 빠져나간다 | Uluç Ali took the Maltese capitana's standard and escaped (Capponi 2006) | in character |
+| St Vincent | 지금 영국에는 승리가 꼭 필요하다 | Jervis on the morning of 14 Feb 1797, "A victory is very essential to England at this moment" (Tucker 1844) | reported |
+| Nile | 승리라는 말로는 부족하다 | Nelson, "Victory is not a name strong enough for such a scene" (Nicolas 1845, 3권) | quoted |
+| Nile | 프랑스 제독은 제 갑판에서 죽는다 | Brueys, legs shot off, refused to be taken below (Lavery 1998); wording handed down | reported |
+| Trafalgar (weather) | 적에게 더 가까이 붙어 싸워라 | Signal 16, "Engage the enemy more closely" (Nicolas 1846, 7권) | quoted |
+| Trafalgar (weather) | 하느님께 감사한다. 나는 내 의무를 다했다 | Nelson's last words, "Thank God I have done my duty" (Beatty 1807) | quoted |
+| Trafalgar (lee) | 오늘 세상이 두고두고 이야기할 일을 해 봅시다 | Collingwood to his officers, 21 Oct 1805 (Adkins 2004) | reported |
+| Trafalgar (lee) | Gravina: 내 상처는 걱정 마라 … | Gravina wounded in the arm, led the survivors to Cadiz, died March 1806 | in character |
+| Sacheon | 총알이 어깨를 스쳤을 뿐이다 … (ownFlagHit) | Yi was hit by a musket ball in the left shoulder at Sacheon, 1592.5.29 (『난중일기』; 장계 「당포파왜병장」) and kept fighting | in character on a recorded event |
+| Myeongnyang | 적선이 비록 천 척이라도 우리 배에는 감히 곧바로 덤벼들지 못할 것이다 … (ownFlagHit) (賊船雖千隻 莫敢直搏我船 切勿動心 盡力射賊) | 『난중일기』 1597.9.16 | quoted |
+| Nile | 나는 죽는다. 아내에게 안부를 전해 다오 (ownFlagHit) | Nelson's head wound, "I am killed. Remember me to my wife" (Berry's narrative; Nicolas 1845, 3권); he survived | quoted |
+| Trafalgar (weather) | 하디, 이건 너무 뜨거운 일이라 오래가지는 않겠군 (ownFlagHit) | Nelson to Hardy as Victory came under fire, "This is too warm work, Hardy, to last long" (Nicolas 1846, 7권) | quoted |
+| Trafalgar (lee) | 넬슨이 지금 여기 있다면 … (ownFlagHit) | Collingwood to Rotherham as Royal Sovereign broke the line alone, "What would Nelson give to be here!" (Adkins 2004) | reported |
+| All | ownFlagHit / foeRout lines not listed above (own flagship struck and fighting on; two or more enemy crews breaking) | in character; ship names as the battle data gives them | in character |

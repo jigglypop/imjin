@@ -450,7 +450,8 @@
 @media (max-width: 900px), (max-height: 520px) {
   .guide {
     top: 272px;
-    width: min(360px, calc(100vw - 32px));
+    /* The same 8px edge as the score panel above it, so the two read as one column. */
+    width: min(420px, calc(100vw - 16px));
     padding: 8px 12px;
   }
 

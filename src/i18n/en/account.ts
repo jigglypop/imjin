@@ -3,6 +3,8 @@ export const EN_ACCOUNT: Record<string, string> = {
   // The panel
   '계정': 'Account',
   '로그인': 'Log in',
+  '로그인이 필요합니다': 'Log in to continue',
+  '제독, 진영, 본진과 전투 보상은 계정에 저장됩니다. 로그인하면 역사 전투와 캠페인 보상이 쌓입니다.': 'Your admirals, navy, home port and battle rewards are kept on your account. Log in and historical battles and campaigns pay into it.',
   '회원가입': 'Sign up',
   '로그아웃': 'Log out',
   '아이디': 'Username',

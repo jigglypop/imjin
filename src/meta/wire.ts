@@ -24,6 +24,7 @@ export const META_PATHS = {
   nation: '/meta/nation',
   recruit: '/meta/recruit',
   ship: '/meta/ship',
+  build: '/meta/build',
   battleStart: '/meta/battle/start',
   battleFinish: '/meta/battle/finish',
 } as const;

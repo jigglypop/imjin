@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useReducer, useRef, useState, type CSSPro
 import { SPEEDS, type Engine } from '../game/Engine';
 import { AMMO_NAMES, MANEUVER_NAMES } from '../game/Input';
 import type { ManeuverKind } from '../sim/maneuvers';
+import type { DragFormation } from '../game/formationLayout';
 import { isTouchDevice, isTouchOnly } from '../game/device';
 import { EQUIPMENT_LABEL, equipment, saveEquipmentSetting, type EquipmentSetting } from '../game/quality';
 import { SKY_PRESETS, type SkyPresetName } from '../render/sky';
@@ -23,6 +24,7 @@ import { useNet } from '../net/NetClient';
 import { RankActions, RankResult } from './RankResult';
 import { portraitUrl } from './portrait';
 import { BattleGuide } from './BattleGuide';
+import { MusicVolume } from './MusicVolume';
 import { BattleResult } from './BattleResult';
 import { GUIDES, guidedFaction } from './guideText';
 
@@ -154,6 +156,20 @@ const NerveRow = memo(function NerveRow({ m }: { m: { own: FleetMorale; foe: Fle
   );
 });
 
+/** The one order the moment calls for, as a single quiet button over the cards: pressing it carries it out. */
+function AdviceButton({ engine }: { engine: Engine }) {
+  const t = useT();
+  useEngineTick(500);
+  const a = engine.remote ? null : engine.input.advice();
+  if (!a) return null;
+  return (
+    <button key={a.key} className="advice glass interactive" onClick={() => engine.input.takeAdvice(a)} data-tip="advice">
+      <span className="advice-tag">{t('추천')}</span>
+      <span className="advice-text">{t(a.text, { n: a.n ?? 0 })}</span>
+    </button>
+  );
+}
+
 const Card = memo(function Card({ sq, compact, depth, onSelect, onFocus }: { sq: SquadronInfo; compact: boolean; depth: boolean; onSelect: (id: number, add: boolean) => void; onFocus: (id: number) => void }) {
   const t = useT();
   const lang = useLang();
@@ -207,7 +223,7 @@ const Card = memo(function Card({ sq, compact, depth, onSelect, onFocus }: { sq:
 });
 
 /** `wait` is a cooldown in seconds shown over the icon. */
-type OrderDef = { icon: string; label: string; key: string; tip: string; run: () => void; on?: boolean; disabled?: boolean; wait?: number };
+type OrderDef = { icon: string; label: string; key: string; tip: string; run: () => void; on?: boolean; disabled?: boolean; wait?: number; form?: DragFormation };
 
 /** Select-all and the route toggle: always within reach, including when a phone folds the command sheet. */
 function SelectionBar({ engine }: { engine: Engine }) {
@@ -239,16 +255,20 @@ function Orders({ engine, p, night, selected, drum, tab, setTab, collapsed, onTo
   // Squadron maneuvers under the maneuver rules: a button arms one, and the selection carries it out once drawn on the sea.
   const maneuvers = !!engine.battle.maneuvers && !engine.remote;
   const placing = input.placing?.kind;
+  const posture = p ? input.postureOf(p.id) : undefined;
   const maneuver = (kind: ManeuverKind, icon: string, key: string): OrderDef => ({ icon, label: MANEUVER_NAMES[kind], key, tip: `maneuver.${kind}`, run: () => input.beginManeuver(kind), on: placing === kind, disabled: none });
   const tabs: Record<Tab, { title: string; items: OrderDef[] }> = {
     form: {
       title: '진형',
       items: [
-        { icon: 'crane', label: '학익진', key: 'Alt+1', tip: 'crane', run: () => input.formation('crane') },
-        { icon: 'line', label: '일자진', key: 'Alt+2', tip: 'line', run: () => input.formation('line') },
-        { icon: 'column', label: '장사진', key: 'Alt+3', tip: 'column', run: () => input.formation('column') },
-        { icon: 'wedge', label: '첨자진', key: 'Alt+4', tip: 'wedge', run: () => input.formation('wedge') },
+        { icon: 'crane', label: '학익진', key: '1', tip: 'crane', run: () => input.pickFormation('crane'), on: input.formPlace?.kind === 'crane', form: 'crane' },
+        { icon: 'line', label: '일자진', key: '2', tip: 'line', run: () => input.pickFormation('line'), on: input.formPlace?.kind === 'line', form: 'line' },
+        { icon: 'column', label: '장사진', key: '3', tip: 'column', run: () => input.pickFormation('column'), on: input.formPlace?.kind === 'column', form: 'column' },
+        { icon: 'wedge', label: '첨자진', key: '4', tip: 'wedge', run: () => input.pickFormation('wedge'), on: input.formPlace?.kind === 'wedge', form: 'wedge' },
         ...(engine.battle.coastalTactic ? [{ icon: 'crane' as const, label: engine.battle.coastalTactic === 'yeosu-wings' ? '여수 분산익진' : '목포 수로종심진', key: '', tip: engine.battle.coastalTactic, run: () => input.formation(engine.battle.coastalTactic!) }] : []),
+        { icon: 'close', label: '공격', key: 'A', tip: 'posture.attack', run: () => input.posture('attack'), on: posture === 'attack' },
+        { icon: 'standoff', label: '방어', key: '', tip: 'posture.defend', run: () => input.posture('defend'), on: posture === 'defend' },
+        { icon: 'lure', label: '유인', key: '', tip: 'posture.lure', run: () => input.posture('lure'), on: posture === 'lure' },
         { icon: 'scatter', label: '자유교전', key: 'G', tip: 'auto', run: () => input.auto() },
       ],
     },
@@ -269,10 +289,10 @@ function Orders({ engine, p, night, selected, drum, tab, setTab, collapsed, onTo
         { icon: 'fast', label: '전속', key: 'Alt+5', tip: 'speed.full', run: () => input.setSpeed(1), on: !!p && p.speedCap >= 1, disabled: none },
         { icon: 'half', label: '반속', key: 'Alt+6', tip: 'speed.half', run: () => input.setSpeed(0.6), on: !!p && p.speedCap >= 0.5 && p.speedCap < 1, disabled: none },
         { icon: 'slow', label: '저속', key: 'Alt+7', tip: 'speed.slow', run: () => input.setSpeed(0.3), on: !!p && p.speedCap > 0 && p.speedCap < 0.5, disabled: none },
-        { icon: 'stop', label: '정지', key: 'H', tip: 'hold', run: () => input.hold(), disabled: none },
+        { icon: 'stop', label: '정지', key: 'S', tip: 'hold', run: () => input.hold(), disabled: none },
         // A toggle named for what the press does; it is lit while the ship runs dark.
         { icon: 'lantern', label: p && !p.lights ? '등불 켜기' : '등불 끄기', key: 'L', tip: 'lights', run: () => input.toggleLights(), on: !!p && !p.lights, disabled: !night },
-        ...(maneuvers ? [maneuver('breach', 'breach', 'D'), maneuver('pincer', 'pincer', 'W'), maneuver('lure', 'lure', 'A'), maneuver('pursue', 'pursue', 'F')] : []),
+        ...(maneuvers ? [maneuver('breach', 'breach', 'D'), maneuver('pincer', 'pincer', 'W'), maneuver('lure', 'lure', 'Shift+A'), maneuver('pursue', 'pursue', 'F')] : []),
       ],
     },
     tactic: {
@@ -290,7 +310,7 @@ function Orders({ engine, p, night, selected, drum, tab, setTab, collapsed, onTo
               maneuver('ambush', 'ambush', 'Q'),
               maneuver('encircle', 'encircle', 'E'),
               ...(placing === 'encircle' ? [{ icon: 'scatter', label: input.placing?.open ? '한쪽 열림' : '한쪽 열기', key: 'Shift+O', tip: 'maneuver.open', run: () => input.toggleOpenSide(), on: !!input.placing?.open }] : []),
-              maneuver('blockade', 'blockade', 'S'),
+              maneuver('blockade', 'blockade', 'Shift+D'),
               { icon: 'advance', label: '진군 북', key: 'Shift+E', tip: 'signal.advance', run: () => input.signal('advance') },
               { icon: 'withdraw', label: '퇴각 징', key: 'Shift+S', tip: 'signal.withdraw', run: () => input.signal('withdraw'), disabled: none },
             ]
@@ -314,13 +334,18 @@ function Orders({ engine, p, night, selected, drum, tab, setTab, collapsed, onTo
       {!collapsed && (
         <div className="orders-grid">
           {current.items.map((o) => (
-            <button key={o.tip} className={`order ${o.on ? 'order--on' : ''}`} onClick={o.disabled ? undefined : o.run} aria-disabled={o.disabled || undefined} aria-label={`${t(o.label)} (${o.key})`} data-tip={o.tip}>
+            <button
+              key={o.tip}
+              className={`order ${o.on ? 'order--on' : ''}`}
+              onClick={o.disabled ? undefined : o.run}
+              onPointerEnter={o.form ? () => (input.formHover = o.form!) : undefined}
+              onPointerLeave={o.form ? () => (input.formHover = null) : undefined} aria-disabled={o.disabled || undefined} aria-label={o.key ? `${t(o.label)} (${o.key})` : t(o.label)} data-tip={o.tip}>
               <span className="order-icon">
                 <Icon name={o.icon} size={22} />
                 {o.wait !== undefined && <span className="order-wait">{o.wait}</span>}
               </span>
               <span className="order-label">{t(o.label)}</span>
-              <kbd>{o.key}</kbd>
+              {o.key && <kbd>{o.key}</kbd>}
             </button>
           ))}
         </div>
@@ -358,6 +383,8 @@ function useHudInsets() {
       put('--tl-bottom', box('.hud .hud-menu')?.bottom ?? null);
       const bottom = box('.hud .bottom')?.top ?? null;
       put('--bottom-top', bottom);
+      // The commanders' card row: the in-battle subtitle sits just above it.
+      put('--cards-top', box('.hud .cards-wrap')?.top ?? bottom);
       // Conquest sheets use the former toolbar edge as their lower limit; it now follows the bottom cards.
       put('--fleet-top', bottom);
     };
@@ -367,7 +394,7 @@ function useHudInsets() {
     return () => {
       window.clearInterval(timer);
       window.removeEventListener('resize', measure);
-      for (const n of ['--bal-bottom', '--tl-right', '--tr-left', '--tl-bottom', '--bottom-top', '--fleet-top']) root.removeProperty(n);
+      for (const n of ['--bal-bottom', '--tl-right', '--tr-left', '--tl-bottom', '--bottom-top', '--fleet-top', '--cards-top']) root.removeProperty(n);
     };
   }, []);
 }
@@ -384,16 +411,24 @@ const BACK_LABEL: Record<BattleOrigin, { long: string; short: string }> = {
  * Pause and speed. The full layout shows every multiplier; the simplified one steps down and up beside the speed it is
  * at; a phone shows one button that cycles through them.
  */
-type SpeedState = Pick<GameSnapshot, 'speed' | 'paused' | 'approach' | 'autoFast' | 'fastForward'>;
+type SpeedState = Pick<GameSnapshot, 'speed' | 'actualSpeed' | 'paused' | 'approach' | 'autoFast' | 'fastForward'>;
 
 const SpeedControl = memo(function SpeedControl({ engine, variant, ...snap }: SpeedState & { engine: Engine; variant: 'all' | 'step' | 'cycle' }) {
   const t = useT();
+  // A speed the player picks is the speed the battle runs at: it also ends the fast approach, which otherwise kept
+  // running at its own 128x while the button the player had just pressed lit up.
   const setSpeed = (s: number) => {
     engine.speed = s;
     engine.paused = false;
+    engine.autoFast = false;
+    engine.fastForward = false;
     engine.publish(true);
   };
   const at = SPEEDS.findIndex((s) => s === snap.speed);
+  // What the readout says: the real pace while the approach is skipped or a slow device cannot keep up, else the pick.
+  const real = Math.round(snap.actualSpeed);
+  const lagging = !snap.paused && (snap.fastForward || (snap.speed >= 8 && real < snap.speed * 0.75));
+  const shown = lagging ? `${real}×` : `${snap.speed}×`;
   const next = SPEEDS[(at + 1) % SPEEDS.length]!;
   return (
     <>
@@ -410,7 +445,7 @@ const SpeedControl = memo(function SpeedControl({ engine, variant, ...snap }: Sp
       </button>
       {variant === 'cycle' ? (
         <button aria-label={t('배속 바꾸기')} data-tip="speed" onClick={() => setSpeed(next)}>
-          {snap.speed}×
+          {shown}
         </button>
       ) : variant === 'step' ? (
         <>
@@ -418,7 +453,7 @@ const SpeedControl = memo(function SpeedControl({ engine, variant, ...snap }: Sp
             <Icon name="chevronLeft" size={14} />
           </button>
           <span className={`speed-now ${snap.paused ? '' : 'on'}`} data-tip="speed">
-            {snap.speed}×
+            {shown}
           </span>
           <button className="speed-step" aria-label={t('빠르게')} data-tip="speed" disabled={at >= SPEEDS.length - 1} onClick={() => setSpeed(SPEEDS[at + 1]!)}>
             <Icon name="chevronRight" size={14} />
@@ -426,7 +461,7 @@ const SpeedControl = memo(function SpeedControl({ engine, variant, ...snap }: Sp
         </>
       ) : (
         SPEEDS.map((s) => (
-          <button key={s} className={!snap.paused && snap.speed === s ? 'on' : ''} data-tip="speed" onClick={() => setSpeed(s)}>
+          <button key={s} className={!snap.paused && !snap.fastForward && snap.speed === s ? 'on' : ''} data-tip="speed" onClick={() => setSpeed(s)}>
             {s}×
           </button>
         ))
@@ -444,7 +479,7 @@ const SpeedControl = memo(function SpeedControl({ engine, variant, ...snap }: Sp
             engine.publish(true);
           }}
         >
-          {snap.fastForward ? <span>{t('접근 중')}</span> : null}
+          {snap.fastForward ? <span>{t('접근 중 · {n}×', { n: Math.round(snap.actualSpeed) })}</span> : null}
           <Icon name="skip" size={16} />
         </button>
       )}
@@ -826,7 +861,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
   const selectSquadron = useCallback((id: number, add: boolean) => engine.selectSquadron(id, add), [engine]);
   const focusSquadron = useCallback((id: number) => engine.focusSquadron(id), [engine]);
   if (!snap) return null;
-  const speedState: SpeedState = { speed: snap.speed, paused: snap.paused, approach: snap.approach, autoFast: snap.autoFast, fastForward: snap.fastForward };
+  const speedState: SpeedState = { speed: snap.speed, actualSpeed: Math.round(snap.actualSpeed), paused: snap.paused, approach: snap.approach, autoFast: snap.autoFast, fastForward: snap.fastForward };
   const own = snap.squadrons.filter((s) => s.faction === snap.faction);
   const p = snap.primary;
   const primaryShip = p ? engine.battle.get(p.id) : undefined;
@@ -856,13 +891,13 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
       ];
   // The score and the comparison with history belong to a historical battle the player fought for the side it was written for (Joseon, England), not to online or conquest games.
   const scored = ended && snap.mode === 'scenario' && snap.scenario.id in GUIDES && guidedFaction(snap.faction) && !engine.remote;
-  const hideLabel = t(isTouchOnly ? 'UI 숨기기' : 'UI 숨기기 · Shift+H');
+  const hideLabel = t(isTouchOnly ? '촬영 모드 · 표시를 모두 숨깁니다' : '촬영 모드 · 표시를 모두 숨깁니다 · Shift+H');
   const selectBox = box && <div className="select-box" style={{ left: Math.min(box.x0, box.x1), top: Math.min(box.y0, box.y1), width: Math.abs(box.x1 - box.x0), height: Math.abs(box.y1 - box.y0) }} />;
   // The tour stays as it is: the HUD cannot be hidden while it points at the panels.
   const hideButton = !ended && !tourActive && (
     <button className={`mini-btn hud-hide-btn${titleFolded ? ' mini-btn--icon' : ''}`} onClick={hideHud} aria-label={hideLabel} title={hideLabel}>
       <Icon name="eyeOff" size={16} />
-      {!titleFolded && <span>{t('UI 숨기기')}</span>}
+      {!titleFolded && <span>{t('촬영 모드')}</span>}
     </button>
   );
   return (
@@ -1061,6 +1096,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
                       {t(engine.sound.musicOn ? '배경음악 켜짐' : '배경음악 꺼짐')}
                     </button>
                   </div>
+                  <MusicVolume />
                 </section>
                 <section className="settings-sec">
                   <div className="settings-label">{t('화면 표시')}</div>
@@ -1156,6 +1192,7 @@ export function Hud({ engine, onBack }: { engine: Engine; onBack: () => void }) 
             {!ended && (
               <>
                 {!mapFolded && (p ? <Detail engine={engine} cutaway={engine.cutaway} night={snap.night} depth={!!snap.morale} p={p} portrait={primaryPortrait} /> : hintOpen && !tourActive && !slim && <Hint onClose={closeHint} />)}
+                {!tourActive && <AdviceButton engine={engine} />}
                 <div className="cards-wrap">
                   {folded('cards') ? (
                     <FoldTab label={t('장수 패 {n}', { n: own.length })} title={t('장수 패 펼치기')} onOpen={() => setFold('cards', false)} />

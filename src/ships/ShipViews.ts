@@ -64,7 +64,7 @@ export class ShipViews {
   readonly states = new Map<number, ViewState>();
   selected = new Set<number>();
   hovered = 0;
-  /** The player's team. Its ships get the gold selection ring, the other team the red one. */
+  /** The player's team. Its ships get the blue selection ring, the other team the red one. */
   team: Team = 'joseon';
   renderer: ShipRenderer;
   private readonly frustum = new Frustum();
@@ -74,6 +74,10 @@ export class ShipViews {
   private readonly e = new Euler(0, 0, 0, 'YZX');
   private readonly s1 = new Vector3(1, 1, 1);
   private readonly tmp = new Vector3();
+  /** Filming with the HUD hidden: the selection rings go with it. */
+  hideRings = false;
+  /** Every model drawn this many times its size: the campaign theatre draws its ships as large tokens. */
+  tokenScale = 1;
   private ringsOwn: InstancedMesh;
   private ringsEnemy: InstancedMesh;
   private readonly ringRenderers = new WeakMap<InstancedMesh, WebGPURenderer>();
@@ -149,6 +153,12 @@ export class ShipViews {
   private keyFor(s: Ship, assets: Record<string, ModelAsset>) {
     const key = modelKey(modelKind(s.spec.kind), s.variant);
     return assets[key] ? key : modelKey(modelKind(s.spec.kind), 0);
+  }
+
+  /** A new battle on the same batches (they hold room enough): every ship's drawn state starts afresh. */
+  rebind() {
+    this.states.clear();
+    this.selected.clear();
   }
 
   reset(assets: Record<string, ModelAsset>, battle: Battle, hint: Map<ShipKind, number> = new Map()) {
@@ -303,13 +313,13 @@ export class ShipViews {
       const level = this.cutaway.get(ship.id) ?? 0;
       const main = level ? mainDeck(v.anchors, ship.spec.kind, ship.spec.deck) : 0;
       const cut = level ? cutHeight(level, main, byModel(DECKS, ship.spec.kind)) : undefined;
-      const scale = modelScale(ship.spec.kind);
+      const scale = modelScale(ship.spec.kind) * this.tokenScale;
       // A model loaded without its near level has fewer levels: the nearest one it has serves the closer ranges.
       const have = assets[v.key]?.lods.length ?? LOD_COUNT;
       const draw = scale === 1 ? v.matrix : this.drawMatrix.copy(v.matrix).scale(this.tmp.setScalar(scale));
       if (v.visible && !this.hidden.has(ship.id)) this.renderer.add(v.key, cut === undefined ? Math.max(0, v.lod - (LOD_COUNT - have)) : 0, draw, v.origin, v.up, Math.max(ship.burn, (1 - ship.hull / ship.spec.hull) * 0.45), packFlash(v.flash, this.tears.get(ship.id) ?? 0, ship.id, v.sail), cut);
       if (level === 3 && v.visible) props = this.interior(ship, v, main, props);
-      const show = (this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0;
+      const show = !this.hideRings && (this.selected.has(ship.id) || this.hovered === ship.id) && ship.sinking === 0;
       if (show) {
         const ring = ship.team === this.team ? this.ringsOwn : this.ringsEnemy;
         const index = ship.team === this.team ? own++ : enemy++;

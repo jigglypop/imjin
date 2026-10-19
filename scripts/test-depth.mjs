@@ -102,6 +102,33 @@ try {
     assert.ok(s.moraleState === 'steady' || s.moraleState === 'wavering', s.moraleState);
   });
 
+  check('a struck flagship that fights on shakes its navy, heartens nearby foes, is called out at most every 4 s, and stays deterministic', () => {
+    const run = () => {
+      const { b, a, z } = duel({ gap: 600 });
+      steps(b, 1);
+      b.events.length = 0;
+      const own = a.slice(1).map((s) => s.morale);
+      for (const s of z) s.morale = 0.5;
+      const foe = z.map((s) => s.morale);
+      b.damage(a[0], a[0].spec.hull * 0.2);
+      const hits = events(b, 1, 'leaderHit');
+      assert.deepEqual(hits.map((e) => e.ship), [a[0].id], 'one alarm for the admiral ship');
+      assert.equal(hits[0].flagship, true);
+      assert.ok(b.isActive(a[0]), 'the flagship fights on');
+      a.slice(1).forEach((s, i) => assert.ok(s.morale < own[i] - 0.01, `shock ${own[i] - s.morale}`));
+      z.forEach((s, i) => assert.ok(s.morale > foe[i], `lift ${s.morale - foe[i]}`));
+      b.damage(a[0], a[0].spec.hull * 0.05);
+      assert.equal(events(b, 2, 'leaderHit').length, 0, 'no second alarm inside the gap');
+      b.damage(a[0], a[0].spec.hull * 0.05);
+      assert.equal(events(b, 3, 'leaderHit').length, 1, 'the next blow after the gap raises it again');
+      // A private ship's hits raise nothing.
+      b.damage(a[1], a[1].spec.hull * 0.2);
+      assert.equal(events(b, 5, 'leaderHit').filter((e) => e.ship === a[1].id).length, 0);
+      return JSON.stringify(b.ships.map((s) => [s.morale, s.moraleState]));
+    };
+    assert.equal(run(), run());
+  });
+
   check('losing a squadron leader shakes the squadron, is called out, and the next captain takes over after 30 s', () => {
     const { b, a, own } = duel();
     steps(b, 1);

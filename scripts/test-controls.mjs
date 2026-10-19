@@ -53,13 +53,38 @@ try {
     key('KeyH', {}, { tagName: 'TEXTAREA' }); assert.notEqual(a.order.type, 'hold');
     key('KeyH', {}, { tagName: 'DIV', isContentEditable: true }); assert.notEqual(a.order.type, 'hold');
   });
-  check('plain and Ctrl digits do nothing (no squadron assignment); Alt digits issue formation and speed commands', () => {
+  check('digits 1-4 (plain or Alt) lay formations and pick the drag formation; Ctrl digits do nothing; Alt 5-7 set speed', () => {
     const { engine, input, key, a } = setup(); engine.views.selected.add(a.id);
-    const before = JSON.stringify(a.order); key('Digit1'); assert.equal(JSON.stringify(a.order), before);
-    key('Digit1', { altKey: true }); assert.equal(a.order.type, 'slot');
+    // A digit starts a placement: nothing moves until the ghost is laid, and Esc gives it up.
+    key('Digit2'); assert.equal(a.order.type, 'auto'); assert.equal(input.formPlace.kind, 'line');
+    key('Escape'); assert.equal(input.formPlace, null);
+    key('Digit1', { altKey: true }); assert.equal(input.formPlace.kind, 'crane');
+    const ghost = input.formationPreview();
+    input.formPlace.face = Math.PI / 2; const turned = input.formationPreview();
+    assert.notDeepEqual(ghost.slots, turned.slots);
+    input.confirmFormation(); assert.equal(a.order.type, 'slot'); assert.equal(a.order.x, turned.slots[0].x); assert.equal(a.order.z, turned.slots[0].z);
     key('Digit6', { altKey: true }); assert.equal(a.speedCap, 0.6);
     const sel = [...engine.views.selected]; key('Digit7', { ctrlKey: true }); assert.deepEqual([...engine.views.selected], sel);
     assert.equal(typeof input.getGroups, 'undefined');
+  });
+  check('a right-button drag lays the picked formation along it, facing a quarter right of the drag; A attacks, S stops', () => {
+    const { engine, input, key, a, b } = setup(); engine.views.selected = new Set([a.id, b.id]);
+    input.pickShip = () => undefined; input.pickWorks = () => null;
+    input.formKind = 'line';
+    input.waterPoint = () => ({ x: 0, z: 500 });
+    input.onDown({ pointerType: 'mouse', button: 2, clientX: 0, clientY: 0, shiftKey: false });
+    input.waterPoint = () => ({ x: 400, z: 500 });
+    input.onMove({ pointerType: 'mouse', clientX: 200, clientY: 0 });
+    const preview = input.formationPreview();
+    assert.equal(preview.slots.length, 2);
+    input.onUp({ pointerType: 'mouse', button: 2, clientX: 200, clientY: 0 });
+    assert.equal(a.order.type, 'slot'); assert.equal(b.order.type, 'slot');
+    // Slots match the preview exactly, centred on the drag at z 500 and no wider apart than the widest gap, bows along the line.
+    for (const s of preview.slots) { const ship = s.id === a.id ? a : b; assert.equal(ship.order.x, s.x); assert.equal(ship.order.z, s.z); }
+    assert.equal(a.order.z, 500); assert.equal((a.order.x + b.order.x) / 2, 200); assert.equal(Math.abs(a.order.x - b.order.x), 140);
+    assert.equal(a.order.face, 0);
+    key('KeyA'); assert.equal(a.order.type, 'auto'); assert.equal(a.stance, 'close');
+    key('KeyS'); assert.equal(a.order.type, 'hold');
   });
   check('H stops the selection; Shift+H is the HUD toggle and leaves the orders alone', () => {
     const { engine, key, a } = setup(); engine.views.selected.add(a.id);
@@ -69,8 +94,9 @@ try {
   check('Shift right-click and touch queue mode send real queued formation destinations', () => {
     const { engine, input, a, b } = setup(); engine.views.selected = new Set([a.id, b.id]);
     input.pickShip = () => undefined; input.pickWorks = () => null; input.waterPoint = () => ({ x: 800, z: 400 });
-    input.onDown({ pointerType: 'mouse', button: 2, clientX: 20, clientY: 20, shiftKey: false });
-    input.onDown({ pointerType: 'mouse', button: 2, clientX: 30, clientY: 30, shiftKey: true });
+    const right = (x, shiftKey) => { input.onDown({ pointerType: 'mouse', button: 2, clientX: x, clientY: x, shiftKey }); input.onUp({ pointerType: 'mouse', button: 2, clientX: x, clientY: x, shiftKey }); };
+    right(20, false);
+    right(30, true);
     assert.equal(a.orderQueue.length, 1); assert.equal(b.orderQueue.length, 1); assert.notEqual(a.orderQueue[0].x, b.orderQueue[0].x);
     input.toggleQueueMode(); input.tap(30, 30); assert.equal(input.queuedWaypoints(), 2);
     engine.remote = {}; a.remoteQueueCount = 7; b.remoteQueueCount = 3; assert.equal(input.queuedWaypoints(), 7);

@@ -21,6 +21,7 @@ export const screenChunks = {
   online: () => import('./ui/OnlinePanel'),
   codex: () => import('./ui/codex/CodexScreen'),
   generals: () => import('./ui/generals/GeneralsScreen'),
+  port: () => import('./ui/port/PortScreen'),
 };
 
 export function prefetchScreen(screen: Screen) {

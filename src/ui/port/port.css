@@ -1,0 +1,103 @@
+/* 본진: the harbour is the battle engine's own view; the header, the buildings and the shop float over it on black glass. */
+.port-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  color: var(--ink);
+}
+.port-overlay > * { pointer-events: auto; }
+.port-overlay .screen-top { pointer-events: none; }
+.port-overlay .screen-top > * { pointer-events: auto; }
+.port-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  padding: var(--sp-2) calc(var(--sar) + 20px) var(--sp-4) calc(var(--sal) + 20px);
+  pointer-events: none;
+}
+.port-body > * { pointer-events: auto; }
+
+.port-panel {
+  position: relative;
+  z-index: 3;
+  width: min(360px, 100%);
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+  padding: var(--sp-4);
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
+}
+
+.port-panel__head { display: flex; gap: var(--sp-3); align-items: flex-start; margin-bottom: var(--sp-3); }
+.port-panel__head h2 { margin: 0 0 4px; font-size: var(--fs-18, 18px); font-weight: 600; }
+.port-panel__head p { margin: 0; color: var(--ink-3); font-size: var(--fs-13, 13px); }
+
+.port-works, .port-shop { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+
+.port-work {
+  padding: var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--fill);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.port-work--on { border-color: var(--line-2); background: var(--fill-2); }
+.port-work__name { display: flex; align-items: center; gap: 8px; }
+.port-work__name small { color: var(--ink-3); }
+.port-work__line { margin: 4px 0 var(--sp-2); color: var(--ink-2); font-size: var(--fs-13, 13px); }
+.port-work__max { color: var(--good); font-size: var(--fs-13, 13px); }
+.port-work__why { display: block; margin-top: 6px; color: var(--warn); }
+
+.port-pips { display: inline-flex; gap: 4px; margin-left: auto; }
+.port-pips i { width: 9px; height: 9px; border-radius: 2px; border: 1px solid var(--line-2); }
+.port-pips i.on { background: var(--accent); border-color: var(--accent); }
+
+.port-ship {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: 10px var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--fill);
+}
+.port-ship__name { display: flex; flex-direction: column; }
+.port-ship__name small { color: var(--ink-3); }
+.port-ship--locked { opacity: 0.6; }
+.port-ship__lock { color: var(--ink-3); font-size: var(--fs-13, 13px); }
+
+.port-btn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.port-btn small { font-weight: 400; opacity: 0.75; }
+.port-btn:hover:not(:disabled) { background: var(--accent-hover); }
+.port-btn:disabled { background: var(--fill-2); color: var(--ink-3); cursor: default; }
+
+.port-refused { margin: var(--sp-3) 0 0; color: var(--bad); }
+
+@media (max-width: 900px) {
+  .port-body { flex-direction: column; align-items: stretch; overflow-y: auto; }
+  .port-panel { width: 100%; max-height: none; background: var(--glass-hi); }
+  .port-panel--works { margin-top: 32vh; }
+}

@@ -6,13 +6,13 @@ import type { Ship } from '../sim/types';
 import { shipObserved } from '../sim/observation';
 import { iconPaths } from './battleIcons';
 import { t } from '../i18n';
-import { MANEUVER_NAMES, phaseName, type Placing } from '../game/Input';
+import { FORMATION_NAMES, MANEUVER_NAMES, phaseName, type Placing } from '../game/Input';
 import type { Plan } from '../sim/maneuvers';
 import { FONT_UI } from './fonts';
 
-// The palette of the HUD (styles.css): the ring tones of the two fleets, and the muted status colours.
-const OWN = '117, 151, 177';
-const FOE = '176, 128, 108';
+// The palette of the HUD (styles.css): the --own and --foe sides, and the muted status colours.
+const OWN = '92, 158, 230';
+const FOE = '226, 104, 90';
 const WARN = '#c8b88a';
 const BAD = '#cf9686';
 const GOOD = '#8db59a';
@@ -103,6 +103,7 @@ export class TacticalOverlay {
     ctx.lineJoin = 'round';
     let drew = false;
     if (arcs) drew = this.drawPlans() || drew;
+    if (arcs) drew = this.drawFormation() || drew;
     if (arcs) drew = this.drawSelection() || drew;
     if (marks) drew = this.drawMarks() || drew;
     this.dirty = drew;
@@ -232,6 +233,41 @@ export class TacticalOverlay {
       else ctx.lineTo(this.b.x, this.b.y);
     }
     ctx.stroke();
+    return true;
+  }
+
+  /**
+   * The formation about to be laid: a faint track from each ship to its slot, and an arrow for the way it faces.
+   */
+  private drawFormation() {
+    const preview = this.engine.input.formationPreview();
+    if (!preview) return false;
+    const ctx = this.ctx;
+    const b = this.engine.battle;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 5]);
+    ctx.strokeStyle = `rgba(${OWN}, 0.45)`;
+    ctx.beginPath();
+    for (const slot of preview.slots) {
+      const s = b.get(slot.id);
+      if (!s || !this.project(s.x, 0.5, s.z, this.a) || !this.project(slot.x, 0.5, slot.z, this.b)) continue;
+      ctx.moveTo(this.a.x, this.a.y);
+      ctx.lineTo(this.b.x, this.b.y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // The ships themselves stand on their slots as translucent ghosts (FormationGhosts); here only their tracks.
+    const { x0, z0, x1, z1 } = preview.front;
+    const cx = (x0 + x1) / 2;
+    const cz = (z0 + z1) / 2;
+    const len = Math.hypot(x1 - x0, z1 - z0);
+    const lx = len > 1e-3 ? (x1 - x0) / len : 1;
+    const lz = len > 1e-3 ? (z1 - z0) / len : 0;
+    const reach = Math.max(90, Math.min(260, len * 0.25));
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(${OWN}, 0.95)`;
+    this.arrowLine(cx, cz, cx + lz * reach, cz - lx * reach, false);
+    this.label(cx - lz * 40, cz + lx * 40, t(FORMATION_NAMES[preview.kind]), `rgb(${OWN})`);
     return true;
   }
 

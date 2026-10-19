@@ -4,6 +4,7 @@ import { autoFleet } from '../sim/maps';
 import { shipPoints } from '../sim/points';
 import { GENERALS, generalById, type GeneralFaction } from './catalog';
 import { MAX_SHIPS_PER_KIND, RuleError, type Profile } from './rules';
+import { shipCost, shipUnlocked, shipyardNeeded } from './port';
 
 /**
  * The account's own navy (함대 육성): the one nation it serves, the admirals it has taken into service, and the hulls it
@@ -117,9 +118,10 @@ export function recruit(p: Profile, generalId: string): Profile {
 export function buyShipProblem(p: Profile, kind: string, count = 1): string | null {
   if (!p.nation) return '먼저 나라를 고르세요';
   if (!shipKindsOf(p.nation).includes(kind as ShipKind)) return '이 나라가 지을 수 없는 배입니다';
+  if (!shipUnlocked(p, kind as ShipKind)) return `조선소 ${shipyardNeeded(p.nation, kind as ShipKind)}레벨이 필요합니다`;
   if (!Number.isInteger(count) || count < 1 || count > 10) return '한 번에 1~10척을 지을 수 있습니다';
   if ((p.ships[kind as ShipKind] ?? 0) + count > MAX_SHIPS_PER_KIND) return `한 종류는 ${MAX_SHIPS_PER_KIND}척까지 가질 수 있습니다`;
-  if (p.coins < shipPrice(kind as ShipKind) * count) return '엽전이 모자랍니다';
+  if (p.coins < shipCost(p, kind as ShipKind) * count) return '엽전이 모자랍니다';
   return null;
 }
 
@@ -128,7 +130,7 @@ export function buyShip(p: Profile, kind: string, count = 1): Profile {
   const problem = buyShipProblem(p, kind, count);
   if (problem) throw new RuleError(problem);
   const k = kind as ShipKind;
-  return { ...p, coins: p.coins - shipPrice(k) * count, ships: { ...p.ships, [k]: (p.ships[k] ?? 0) + count } };
+  return { ...p, coins: p.coins - shipCost(p, k) * count, ships: { ...p.ships, [k]: (p.ships[k] ?? 0) + count } };
 }
 
 /**

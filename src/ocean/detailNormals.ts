@@ -85,74 +85,74 @@ export function createDetailNormalTexture(windAngle: number, seed = 7) {
   return texture;
 }
 
-function worleyBorder(size: number, cells: number, rand: () => number) {
-  const points = new Float32Array(cells * cells * 2);
-  for (let i = 0; i < points.length; i += 1) points[i] = rand();
-  const out = new Float32Array(size * size);
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const u = (x / size) * cells;
-      const v = (y / size) * cells;
-      const cu = Math.floor(u);
-      const cv = Math.floor(v);
-      let d1 = 9;
-      let d2 = 9;
-      for (let oy = -1; oy <= 1; oy += 1) {
-        for (let ox = -1; ox <= 1; ox += 1) {
-          const gx = (cu + ox + cells) % cells;
-          const gy = (cv + oy + cells) % cells;
-          const p = (gy * cells + gx) * 2;
-          const d = Math.hypot(u - (cu + ox + points[p]!), v - (cv + oy + points[p + 1]!));
-          if (d < d1) {
-            d2 = d1;
-            d1 = d;
-          } else if (d < d2) d2 = d;
-        }
-      }
-      const e = Math.min(1, (d2 - d1) / 0.42);
-      out[y * size + x] = 1 - e * e * (3 - 2 * e);
-    }
-  }
-  return out;
-}
-
-function valueNoise(size: number, cells: number, rand: () => number) {
+/** A tileable value-noise lattice, sampled at any point of the unit square (wrapping). */
+function lattice(cells: number, rand: () => number) {
   const grid = new Float32Array(cells * cells);
   for (let i = 0; i < grid.length; i += 1) grid[i] = rand();
-  const out = new Float32Array(size * size);
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const u = (x / size) * cells;
-      const v = (y / size) * cells;
-      const x0 = Math.floor(u);
-      const y0 = Math.floor(v);
-      const fx = u - x0;
-      const fy = v - y0;
-      const sx = fx * fx * (3 - 2 * fx);
-      const sy = fy * fy * (3 - 2 * fy);
-      const g = (gx: number, gy: number) => grid[((gy + cells) % cells) * cells + ((gx + cells) % cells)]!;
-      const a = g(x0, y0) + (g(x0 + 1, y0) - g(x0, y0)) * sx;
-      const b = g(x0, y0 + 1) + (g(x0 + 1, y0 + 1) - g(x0, y0 + 1)) * sx;
-      out[y * size + x] = a + (b - a) * sy;
-    }
-  }
-  return out;
+  const g = (gx: number, gy: number) => grid[(((gy % cells) + cells) % cells) * cells + (((gx % cells) + cells) % cells)]!;
+  return (x: number, y: number) => {
+    const u = x * cells;
+    const v = y * cells;
+    const x0 = Math.floor(u);
+    const y0 = Math.floor(v);
+    const fx = u - x0;
+    const fy = v - y0;
+    const sx = fx * fx * (3 - 2 * fx);
+    const sy = fy * fy * (3 - 2 * fy);
+    const a = g(x0, y0) + (g(x0 + 1, y0) - g(x0, y0)) * sx;
+    const b = g(x0, y0 + 1) + (g(x0 + 1, y0 + 1) - g(x0, y0 + 1)) * sx;
+    return a + (b - a) * sy;
+  };
 }
 
+/**
+ * The foam pattern: domain-warped noise with thin ridged veins, so foam breaks into torn streaks and lace. The old
+ * Worley cell borders read as a honeycomb on the sea and in the wakes (owner 2026-10-19); no cells here.
+ */
 export function createFoamTexture(seed = 11) {
   const rand = mulberry32(seed);
   const size = 512;
-  const big = worleyBorder(size, 9, rand);
-  const mid = worleyBorder(size, 23, rand);
-  const fine = worleyBorder(size, 57, rand);
-  const n1 = valueNoise(size, 8, rand);
-  const n2 = valueNoise(size, 32, rand);
+  const octaves = [4, 8, 16, 32, 64].map((c) => lattice(c, rand));
+  const warpA = [3, 6, 12].map((c) => lattice(c, rand));
+  const warpB = [3, 6, 12].map((c) => lattice(c, rand));
+  const ridged = [6, 12, 24, 48].map((c) => lattice(c, rand));
+  const fbm = (fs: ((x: number, y: number) => number)[], x: number, y: number) => {
+    let v = 0;
+    let w = 0.5;
+    let total = 0;
+    for (const f of fs) {
+      v += f(x, y) * w;
+      total += w;
+      w *= 0.5;
+    }
+    return v / total;
+  };
+  const raw = new Float32Array(size * size);
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const px = x / size;
+      const py = y / size;
+      const qx = px + (fbm(warpA, px, py) - 0.5) * 0.22;
+      const qy = py + (fbm(warpB, px, py) - 0.5) * 0.22;
+      const base = fbm(octaves, qx, qy);
+      let vein = 0;
+      let w = 0.5;
+      for (const f of ridged) {
+        const r = 1 - Math.abs(f(qx, qy) * 2 - 1);
+        vein += r * r * r * w;
+        w *= 0.5;
+      }
+      const v = base * 0.6 + vein * 0.55;
+      raw[y * size + x] = v;
+      lo = Math.min(lo, v);
+      hi = Math.max(hi, v);
+    }
+  }
   const data = new Uint8Array(size * size * 4);
   for (let i = 0; i < size * size; i += 1) {
-    const breakup = n1[i]! * 0.6 + n2[i]! * 0.4;
-    let v = big[i]! * 0.42 + mid[i]! * 0.36 + fine[i]! * 0.22;
-    v = v * (0.55 + breakup * 0.7) + (breakup - 0.5) * 0.25;
-    v = Math.min(1, Math.max(0, v));
+    const v = (raw[i]! - lo) / Math.max(1e-6, hi - lo);
     data[i * 4] = data[i * 4 + 1] = data[i * 4 + 2] = Math.round(v * 255);
     data[i * 4 + 3] = 255;
   }

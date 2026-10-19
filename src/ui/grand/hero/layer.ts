@@ -376,7 +376,15 @@ export class HeroLayer {
   private free(b: Built) {
     b.group.removeFromParent();
     b.group.traverse((o) => { if ((o as InstancedMesh).isInstancedMesh) (o as InstancedMesh).dispose(); });
-    for (const g of b.geometries) g.dispose();
+    // A geometry built but never drawn (the page left for the 3D theatre first) has no GPU buffers yet, and the WebGPU
+    // backend throws freeing them: the CPU side goes with the group either way.
+    for (const g of b.geometries) {
+      try {
+        g.dispose();
+      } catch {
+        /* never uploaded */
+      }
+    }
   }
 
   private drop(key: string, b: Built) {

@@ -89,6 +89,8 @@ export class Terrain {
   readonly rotation = uniform(new Vector2(1, 0));
   readonly sizeU = uniform(0);
   readonly season = uniform(0);
+  /** Snow lying on the land, 0..1 (the campaign's winter view): on the flatter ground above the tide line. */
+  readonly snow = uniform(0);
   // The region's character, as uniforms so that every region shares one shader program. The defaults change nothing.
   readonly tint = uniform(new Vector3(1, 1, 1));
   /** Share of crowns that are broad-leaved; the trees read it. */
@@ -422,6 +424,9 @@ export class Terrain {
     // Broad patches of lighter and darker ground a few hundred metres across break the repeat of the coarse layer.
     if (quality.noise >= 1) col = col.mul(mx_noise_float(vec3(p.x.mul(0.0031), p.z.mul(0.0031), float(4.2))).mul(0.16).add(1));
     const wet = float(1).sub(smoothstep(0.2, 4, h)).mul(float(1).sub(underwater));
+    // Snow on the ground that faces up, broken by the broad noise, clear of the wet shore.
+    const lying = smoothstep(0.72, 0.9, n.y.add(mx_noise_float(vec3(p.x.mul(0.02), p.z.mul(0.02), float(1.7))).mul(0.12))).mul(smoothstep(1.5, 4, h));
+    col = mix(col, vec3(0.62, 0.65, 0.72), lying.mul(this.snow));
     m.colorNode = col.mul(mix(vec3(1), vec3(0.54, 0.62, 0.63), wet));
     m.roughnessNode = mix(float(0.94), float(0.32), wet).sub(cliffW.mul(0.08)).sub(forestW.mul(0.04)).max(0.25);
     m.metalness = 0;

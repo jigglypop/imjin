@@ -1,5 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ConquestSetup } from './game/Engine';
+import type { TheatreSetup } from './game/theatre';
+import type { PortView } from './port/harbourTerrain';
 import type { RegionBattle } from './sim/grand/bridge';
 import { net, useNet } from './net/NetClient';
 import { NetBattle } from './net/NetBattle';
@@ -18,6 +20,7 @@ import { ErrorBoundary, FatalNotice } from './ui/ErrorBoundary';
 import { Loading } from './ui/Loading';
 import { RecoveryNotice } from './ui/RecoveryNotice';
 import { MainMenu, ScreenFrame, SettingsScreen } from './ui/Screens';
+import { LoginGate } from './ui/account/LoginGate';
 import { launchInfo, startScenario, urlLaunch, type Launch, type LaunchBody } from './ui/launch';
 import { screenChunks, startRouter } from './router';
 
@@ -31,6 +34,7 @@ const ConquestSetupPanel = lazy(() => screenChunks.skirmish().then((m) => ({ def
 const OnlinePanel = lazy(() => screenChunks.online().then((m) => ({ default: m.OnlinePanel })));
 const CodexScreen = lazy(() => screenChunks.codex().then((m) => ({ default: m.CodexScreen })));
 const GeneralsScreen = lazy(() => screenChunks.generals().then((m) => ({ default: m.GeneralsScreen })));
+const PortScreen = lazy(() => screenChunks.port().then((m) => ({ default: m.PortScreen })));
 
 /**
  * Code from a chunk of its own. A screen that draws its own frame shows an empty frame with its title until the code
@@ -101,7 +105,7 @@ export function App() {
   // Fetch the battle chunk in the background once a screen that can start a battle opens.
   // The menu itself stays light, and phones wait until a mode is chosen.
   useEffect(() => {
-    if (screen === 'menu' || screen === 'battle' || screen === 'settings' || screen === 'codex' || screen === 'generals') return;
+    if (screen === 'menu' || screen === 'battle' || screen === 'settings' || screen === 'codex' || screen === 'generals' || screen === 'port') return;
     void loadBattle();
   }, [screen]);
   useEffect(() => {
@@ -165,6 +169,15 @@ export function App() {
     begin({ kind: 'grand', battle }, t('{name} 해전 준비 중', { name: t(battle.regionName) }));
   };
 
+  const startPort = (view: PortView) => {
+    begin({ kind: 'port', view }, t('본진 준비 중'));
+  };
+
+  const startTheatre = (setup: TheatreSetup) => {
+    setOrigin('faction');
+    begin({ kind: 'theatre', setup }, t('전역 지도 준비 중'));
+  };
+
   const startHistory = (id: ScenarioId, campaignMode: boolean, faction: Faction) => {
     const campaign = useCampaign.getState().campaign;
     const spawn = campaignMode && campaign ? fleetSpawn(campaign) : undefined;
@@ -196,7 +209,7 @@ export function App() {
       )}
       {screen === 'faction' && !reloadForTheatre && (
         <Chunk frame="캠페인">
-          <GrandScreen onBattle={startGrandBattle} />
+          <GrandScreen onBattle={startGrandBattle} onTheatre={startTheatre} />
         </Chunk>
       )}
       {screen === 'skirmish' && (
@@ -221,7 +234,16 @@ export function App() {
       )}
       {screen === 'generals' && (
         <Chunk frame="장수">
-          <GeneralsScreen />
+          <LoginGate title="제독">
+            <GeneralsScreen />
+          </LoginGate>
+        </Chunk>
+      )}
+      {screen === 'port' && (
+        <Chunk frame="본진">
+          <LoginGate title="본진">
+            <PortScreen onPort={startPort} />
+          </LoginGate>
         </Chunk>
       )}
       {launch && <Loading />}

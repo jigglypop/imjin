@@ -4,7 +4,7 @@
 // and plain Node scripts load this file as it is.
 
 /** The screens with an address. A battle in progress has none: it opens over the screen it was started from. */
-export type RouteScreen = 'menu' | 'faction' | 'skirmish' | 'select' | 'online' | 'settings' | 'codex' | 'generals';
+export type RouteScreen = 'menu' | 'faction' | 'skirmish' | 'select' | 'online' | 'settings' | 'codex' | 'generals' | 'port';
 /** The Korean edition is unprefixed; the English one lives under /en. */
 export type Edition = 'ko' | 'en';
 
@@ -21,6 +21,7 @@ export const ROUTES: readonly { screen: RouteScreen; slug: string; name: string 
   { screen: 'settings', slug: 'settings', name: '설정' },
   { screen: 'codex', slug: 'ships', name: '함선 도감' },
   { screen: 'generals', slug: 'generals', name: '제독' },
+  { screen: 'port', slug: 'port', name: '본진' },
 ];
 
 /**

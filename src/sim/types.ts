@@ -287,6 +287,8 @@ export type BattleEvent =
   | { type: 'morale'; ship: number; state: MoraleState }
   /** A squadron's leader left the fight; `flagship` when it was the admiral of a navy. */
   | { type: 'leader'; ship: number; flagship: boolean }
+  /** A squadron leader's or the admiral's ship (`flagship`) struck and fighting on; `hurt` is the share of hull and crew lost. */
+  | { type: 'leaderHit'; ship: number; flagship: boolean; hurt: number }
   /** A computer-led fleet broke and turned for home; `ship` is one of its ships, for observation. */
   | { type: 'broken'; ship: number; team: Team }
   /** A squadron leader beat the drum to steady and rally the ships around it. */

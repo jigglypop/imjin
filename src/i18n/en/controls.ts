@@ -19,6 +19,6 @@ export const EN_CONTROLS: Record<string, string> = {
   '{name} · {n}척': '{name} · {n} ships',
   '직접 지휘하는 함선 전체 선택': 'Select all ships under your command',
   '함선을 고른 뒤 빈 바다를 우클릭하면 그곳으로 이동합니다. Shift+우클릭으로 이동 경로를 최대 16곳 예약합니다. 여러 척이면 줄을 맞춰 도착합니다.': 'Select ships and right-click the sea to move. Shift+right-click queues up to 16 waypoints. Groups arrive in formation.',
-  '전속, 반속, 저속으로 속도를 제한하고, 정지하고, 밤에는 등불을 켜고 끕니다. 단축키는 Alt+5·6·7, H, L입니다.': 'Cap speed at full, half or slow, stop, and switch lights at night. Hotkeys: Alt+5, 6, 7, H and L.',
+  '전속, 반속, 저속으로 속도를 제한하고, 정지하고, 밤에는 등불을 켜고 끕니다. 단축키는 Alt+5·6·7, S, L입니다.': 'Cap speed at full, half or slow, stop, and switch lights at night. Hotkeys: Alt+5, 6, 7, S and L.',
   '이동 명령과 예약 경로를 모두 취소하고 제자리에 섭니다.': 'Cancels movement and every queued waypoint, then holds position.',
 };

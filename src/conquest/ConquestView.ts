@@ -29,11 +29,10 @@ import { iconSvg } from '../ui/battleIcons';
 import { getLang, t } from '../i18n';
 import type { Battle } from '../sim/battle';
 import { pointVisible } from '../sim/visibility';
+import { buildingModelUrl, hasNationModel, NATION_OF_FACTION, type BuildingNation } from './buildingModels';
 
 /** Footprint widths in metres. */
 const SIZE: Record<BuildingKind, number> = { shipyard: 30, battery: 24, magazine: 11, dock: 20, beacon: 17, camp: 24 };
-// A camp uses the game's existing tiled barracks/hall model, including its authored low-detail model.
-const FILE: Record<BuildingKind, string> = { shipyard: 'shipyard', battery: 'battery', magazine: 'magazine', dock: 'dock', beacon: 'bongsu', camp: 'giwa' };
 const NEAR = 650;
 const CAP = 256;
 
@@ -45,19 +44,20 @@ type Model = { geometry: BufferGeometry; material: Material; base: Matrix4 };
 // Shared by every battle of the page.
 const models = new Map<string, Promise<Model | null>>();
 
-function loadModel(kind: BuildingKind, suffix: string) {
-  const key = FILE[kind] + suffix;
+// Each holder's works are drawn in its nation's style (buildingModels.ts); an unheld port uses the shared models.
+function loadModel(kind: BuildingKind, suffix: string, nation: BuildingNation | null = null) {
+  const key = buildingModelUrl(nation, kind, suffix ? 1 : 0);
   let model = models.get(key);
   if (!model) {
-    model = fetchModel(kind, suffix);
+    model = fetchModel(kind, key);
     models.set(key, model);
   }
   return model;
 }
 
-async function fetchModel(kind: BuildingKind, suffix: string): Promise<Model | null> {
+async function fetchModel(kind: BuildingKind, url: string): Promise<Model | null> {
   try {
-    const gltf = await loader.loadAsync(`/models/env/${FILE[kind]}${suffix}.glb`);
+    const gltf = await loader.loadAsync(url);
     let mesh: Mesh | null = null;
     gltf.scene.updateMatrixWorld(true);
     gltf.scene.traverse((o: Object3D) => {
@@ -96,7 +96,7 @@ type Label = { root: HTMLDivElement; name: HTMLElement; bar: HTMLElement; fill: 
 export class ConquestView {
   readonly group = new Group();
   private readonly selectionMarker: Mesh;
-  private readonly batches = new Map<BuildingKind, { near: InstancedMesh; far: InstancedMesh }>();
+  private readonly batches = new Map<string, { near: InstancedMesh; far: InstancedMesh }>();
   private disposed = false;
   private readonly poles: InstancedMesh;
   private readonly cloths: InstancedMesh;
@@ -148,11 +148,14 @@ export class ConquestView {
 
   async load() {
     if (this.disposed) return;
+    const nations = [null, ...new Set(this.conquest.players.map((pl) => NATION_OF_FACTION[pl.faction]))];
     await Promise.all(
-      (Object.keys(BUILDINGS) as BuildingKind[]).map(async (kind) => {
+      nations.flatMap((nation) => (Object.keys(BUILDINGS) as BuildingKind[]).map(async (kind) => {
+        // A nation without its own model of a kind draws the shared batch.
+        if (nation && !hasNationModel(nation, kind)) return;
         // Phones skip the 1024 px near model. The low level is a quarter of the size and reads the same on a phone screen.
-        const [full, far] = await Promise.all([equipment.ships.skipLod0 ? null : loadModel(kind, ''), loadModel(kind, '_lod1')]);
-        const near = full ?? far ?? (await loadModel(kind, ''));
+        const [full, far] = await Promise.all([equipment.ships.skipLod0 ? null : loadModel(kind, '', nation), loadModel(kind, '_lod1', nation)]);
+        const near = full ?? far ?? (await loadModel(kind, '', nation));
         if (this.disposed || !near) return;
         const farModel = far ?? near;
         const a = new InstancedMesh(near.geometry, near.material, CAP);
@@ -166,8 +169,8 @@ export class ConquestView {
           mesh.receiveShadow = true;
           this.group.add(mesh);
         }
-        this.batches.set(kind, { near: a, far: b });
-      }),
+        this.batches.set(`${nation}:${kind}`, { near: a, far: b });
+      })),
     );
   }
 
@@ -226,7 +229,8 @@ export class ConquestView {
       // Shore works.
       p.buildings.forEach((bd, slot) => {
         if (!bd || !observed) return;
-        const batch = this.batches.get(bd.kind);
+        const holder = p.owner >= 0 ? c.player(p.owner) : undefined;
+        const batch = (holder && this.batches.get(`${NATION_OF_FACTION[holder.faction]}:${bd.kind}`)) || this.batches.get(`null:${bd.kind}`);
         if (!batch) return;
         const spot = p.slots[slot]!;
         const d = Math.hypot(spot.x - cam.x, spot.z - cam.z, cam.y - spot.y);

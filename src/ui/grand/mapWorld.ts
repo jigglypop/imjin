@@ -755,10 +755,13 @@ export interface MapWorld { settlements: SettlementSpec[]; fleets: FleetSpec[]; 
 export const HULL_LENGTH = 0.55;
 
 /** At most this many hulls over the whole map, whatever the fleets: the layer stops adding ships here. */
-export const SHIP_CAP = 140;
+export const SHIP_CAP = 320;
 
-/** How many hulls a force is drawn with: a few for a small squadron, never more than five. */
-export const hullsFor = (ships: number) => (ships < 1 ? 0 : Math.min(5, Math.ceil(Math.sqrt(ships / 1.5))));
+/** Historical ships each drawn hull stands for: 25 ships are drawn as 5 hulls. */
+export const SHIPS_PER_HULL = 5;
+
+/** How many hulls a force is drawn with: one for every five ships, rounded up, at least one. */
+export const hullsFor = (ships: number) => (ships < 1 ? 0 : Math.max(1, Math.ceil(ships / SHIPS_PER_HULL)));
 
 /**
  * The kinds a force's `count` hulls are drawn as: picked evenly from its ships ordered largest first, so the flagship
@@ -947,9 +950,14 @@ export function pointAlong(points: { x: number; z: number }[], share: number) {
  */
 export function formation(count: number): { along: number; across: number }[] {
   const out: { along: number; across: number }[] = [];
-  for (let k = 0; k < count; k += 1) {
+  for (let k = 0; k < Math.min(count, 5); k += 1) {
     const rank = Math.ceil(k / 2);
     out.push({ along: rank ? -rank * 0.8 : 0, across: k === 0 ? 0 : (k % 2 ? -1 : 1) * rank * 0.45 });
+  }
+  // A larger force follows the leading wedge in lines of five abreast, a hull's length and a little apart.
+  for (let k = 5; k < count; k += 1) {
+    const row = Math.floor((k - 5) / 5), col = ((k - 5) % 5) - 2;
+    out.push({ along: -1.6 - (row + 1) * 1.1, across: col * 0.5 });
   }
   return out;
 }

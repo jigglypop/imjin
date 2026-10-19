@@ -21,7 +21,8 @@ import { cutCurve } from './screenPath';
 
 // The 3D world needs three.js and r3f: it is loaded on demand, and phones and touch-only tablets (flatMap), which keep the
 // flat image, never load it.
-const WorldCanvas = lazy(() => import('./WorldCanvas'));
+// The battle engine draws the map's 3D (TheatreCanvas): the same ground, sea, sky and ships as a battle.
+const WorldCanvas = lazy(() => import('./TheatreCanvas'));
 
 export interface MapInsets {
   top: number;

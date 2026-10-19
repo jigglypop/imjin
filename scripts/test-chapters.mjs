@@ -15,14 +15,14 @@ const check = (name, test) => { test(); passed++; console.log(`ok - ${name}`); }
 try {
   const bundled = await build({
     stdin: {
-      contents: `export { CHAPTERS, chapterOfFaction } from './src/chapters/index.ts'; export { battlesOf } from './src/routes.ts'; export { SCENARIOS, buildScenario } from './src/sim/scenarios.ts'; export { SHIP_SPECS } from './src/sim/catalog.ts'; export { COMPETITIVE_UNITS } from './src/sim/competitive.ts'; export { buildShip } from './src/ships/build/ShipBuilder.ts'; export { modelKind } from './src/ships/anchors.ts'; export { EN } from './src/i18n/en/index.ts'; export { teamOf } from './src/sim/types.ts';`,
+      contents: `export { CHAPTERS, chapterOfFaction } from './src/chapters/index.ts'; export { battlesOf } from './src/routes.ts'; export { SCENARIOS, buildScenario } from './src/sim/scenarios.ts'; export { SHIP_SPECS } from './src/sim/catalog.ts'; export { COMPETITIVE_UNITS } from './src/sim/competitive.ts'; export { buildShip } from './src/ships/build/ShipBuilder.ts'; export { modelKind } from './src/ships/anchors.ts'; export { EN } from './src/i18n/en/index.ts'; export { teamOf } from './src/sim/types.ts'; export { BATTLE_LINES } from './src/cinema/battleLines.ts';`,
       resolveDir: root,
     },
     bundle: true, write: false, format: 'esm', platform: 'node', logLevel: 'silent',
   });
   const path = join(temporary, 'chapters.mjs');
   await writeFile(path, bundled.outputFiles[0].contents);
-  const { CHAPTERS, chapterOfFaction, battlesOf, SCENARIOS, buildScenario, SHIP_SPECS, COMPETITIVE_UNITS, buildShip, modelKind, EN, teamOf } = await import(pathToFileURL(path).href);
+  const { CHAPTERS, chapterOfFaction, battlesOf, SCENARIOS, buildScenario, SHIP_SPECS, COMPETITIVE_UNITS, buildShip, modelKind, EN, teamOf, BATTLE_LINES } = await import(pathToFileURL(path).href);
   const ready = CHAPTERS.filter((c) => c.ready);
   const kindsOf = (navies) => Object.keys(SHIP_SPECS).filter((k) => navies.includes(SHIP_SPECS[k].faction));
 
@@ -57,6 +57,17 @@ try {
     });
     check(`${c.id}: every ship has a competitive price`, () => {
       for (const kind of kindsOf(navies)) assert.ok(COMPETITIVE_UNITS[kind]?.spec?.cost > 0, kind);
+    });
+    check(`${c.id}: every battle's commanders on both sides have in-battle lines for each moment, in Korean and English`, () => {
+      for (const id of battlesOf(c.id)) {
+        const lines = BATTLE_LINES[id] ?? [];
+        for (const team of ['joseon', 'japan']) {
+          for (const on of ['start', 'contact', 'foeFlagHit', 'ownFlagHit', 'foeRout', 'climax', 'won', 'lost']) {
+            assert.ok(lines.some((l) => l.team === team && l.on === on), `${id}: no ${team} line for ${on}`);
+          }
+        }
+        for (const l of lines) assert.ok(EN[l.text], `${id}: no English for ${l.text}`);
+      }
     });
     if (c.id !== 'imjin') {
       check(`${c.id}: the poster, campaign and history lines have their English`, () => {

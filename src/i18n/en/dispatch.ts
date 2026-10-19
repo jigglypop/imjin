@@ -51,4 +51,8 @@ export const EN_DISPATCH: Record<string, string> = {
   '항해 중인 함대는 고를 수 없습니다': 'A fleet at sea cannot be picked',
   '정비 중인 함대는 고를 수 없습니다': 'A fleet under refit cannot be picked',
   '도착한 함대 {n}개를 합쳤습니다': '{n} arrived fleets merged',
+  '전략 지도로': 'Strategic map',
+  '3D 전역': '3D theatre',
+  '전역 3D 지도': 'Theatre in 3D',
+  '전역 지도 준비 중': 'Preparing the theatre',
 };

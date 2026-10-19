@@ -6,6 +6,7 @@ import { KEYSTONE_LEVEL, MASTERY_LEVEL, MASTERY_SPENT, TIER_GATE, pointsAtLevel,
 import { ARMORS, GENERALS, armorById, armorsFor, basicArmor, defaultWeapon, generalById, weaponById, type ArmorDef, type GeneralFaction, type WeaponDef } from './catalog';
 import type { ShipKind } from '../sim/types';
 import { ROSTER } from '../sim/conquest';
+import { buildingLevel, cleanPort, FORTRESS_BONUS, type PortLevels } from './portDefs';
 
 /**
  * The rules of an account's growth: what a battle earns, how a general rises and learns, and what armor costs and fits.
@@ -61,9 +62,11 @@ export type Profile = {
   nationChanges: number;
   recruited: string[];
   ships: Partial<Record<ShipKind, number>>;
+  /** The home port's building levels (portDefs.ts); a building at its starting level is not listed. */
+  port: PortLevels;
 };
 
-export const newProfile = (): Profile => ({ v: PROFILE_VERSION, coins: 0, owned: [], salt: 'local', rolls: {}, generals: {}, stats: { battles: 0, wins: 0, sunk: 0, lost: 0 }, firsts: [], day: '', earned: 0, items: [], drops: 0, dropped: 0, nation: null, nationChanges: 0, recruited: [], ships: {} });
+export const newProfile = (): Profile => ({ v: PROFILE_VERSION, coins: 0, owned: [], salt: 'local', rolls: {}, generals: {}, stats: { battles: 0, wins: 0, sunk: 0, lost: 0 }, firsts: [], day: '', earned: 0, items: [], drops: 0, dropped: 0, nation: null, nationChanges: 0, recruited: [], ships: {}, port: {} });
 
 const count = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) && n > 0 ? Math.floor(n) : 0);
 const strings = (a: unknown) => (Array.isArray(a) ? a.filter((s): s is string => typeof s === 'string') : []);
@@ -133,7 +136,7 @@ export function normalizeProfile(raw: unknown, accountId = 'local'): Profile {
 export const MAX_SHIPS_PER_KIND = 60;
 
 /** The account's navy, admirals and hulls from any stored shape (fleet.ts holds the rules that change them). */
-export function cleanFleet(r: Record<string, unknown>): Pick<Profile, 'nation' | 'nationChanges' | 'recruited' | 'ships'> {
+export function cleanFleet(r: Record<string, unknown>): Pick<Profile, 'nation' | 'nationChanges' | 'recruited' | 'ships' | 'port'> {
   const nation = typeof r.nation === 'string' && GENERALS.some((g) => g.faction === r.nation) ? (r.nation as GeneralFaction) : null;
   const recruited = [...new Set(strings(r.recruited).filter((id) => generalById(id)))].sort();
   const ships: Partial<Record<ShipKind, number>> = {};
@@ -143,7 +146,7 @@ export function cleanFleet(r: Record<string, unknown>): Pick<Profile, 'nation' |
     const n = Math.min(MAX_SHIPS_PER_KIND, count(raw[k]));
     if (n > 0) ships[k] = n;
   }
-  return { nation, nationChanges: nation ? Math.min(9, count(r.nationChanges)) : 0, recruited, ships };
+  return { nation, nationChanges: nation ? Math.min(9, count(r.nationChanges)) : 0, recruited, ships, port: cleanPort(r.port) };
 }
 
 /**
@@ -509,7 +512,8 @@ const FIRST_STARS = 300;
 export function rewardFor(p: Profile, report: BattleReport, day: string, trusted: boolean): { profile: Profile; reward: Reward } {
   const next: Profile = { ...p, stats: { ...p.stats }, generals: { ...p.generals }, firsts: [...p.firsts], items: [...p.items] };
   if (next.day !== day) { next.day = day; next.earned = 0; next.dropped = 0; }
-  let coins = BASE[report.result] + 3 * Math.min(count(report.sunk), 40);
+  // The home port's fortress raises the battle's own coins (not the one-time bonuses).
+  let coins = Math.round((BASE[report.result] + 3 * Math.min(count(report.sunk), 40)) * (1 + FORTRESS_BONUS * buildingLevel(p.port, 'fortress')));
   let capped = false;
   if (!trusted) {
     const room = Math.max(0, DAILY_CAP - next.earned);

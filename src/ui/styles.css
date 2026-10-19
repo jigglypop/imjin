@@ -73,6 +73,11 @@
   /* Older name of --bad */
   --seal: var(--bad);
 
+  /* Sides in battle, whichever navies they are: the one place a clear blue and a clear red are allowed, so a glance
+     tells friend from foe. Rings, tags, target lines and the formation preview all use these two. */
+  --own: #5c9ee6;
+  --foe: #e2685a;
+
   /* Factions: small tonal accents (marks, edges, thin bars, the minimap), never big fills */
   --joseon: #87a3ba;
   --joseon-soft: rgba(135, 163, 186, 0.16);
@@ -476,4 +481,58 @@ input {
   .cq-x:hover {
     color: var(--seal);
   }
+}
+
+/* Music volume: a slim track filled to the level, a white thumb; one line beside its percentage. */
+.music-volume {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 260px;
+  margin-top: 8px;
+}
+.music-volume input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.music-volume input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--ink) var(--fill), rgba(255, 255, 255, 0.16) var(--fill));
+}
+.music-volume input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--ink) var(--fill), rgba(255, 255, 255, 0.16) var(--fill));
+}
+.music-volume input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+.music-volume input[type='range']::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+.music-volume-value {
+  min-width: 3.2em;
+  text-align: right;
+  font: 600 12px/1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
 }

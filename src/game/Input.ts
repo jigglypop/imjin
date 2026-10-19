@@ -9,9 +9,13 @@ import { shipObserved } from '../sim/observation';
 import { pointVisible } from '../sim/visibility';
 import type { FormationKind } from '../sim/commands';
 import { COASTAL_TACTICS } from '../sim/coastal-tactics';
+import { isTouchDevice } from './device';
+import { autoFront, DRAG_FORMATIONS, frontAt, layoutFormation, type DragFormation, type FormationSlot } from './formationLayout';
 import type { ManeuverKind, ManeuverPhase, SignalKind } from '../sim/maneuvers';
 
 const DRAG_THRESHOLD = 6;
+/** A right-button drag longer than this (pixels) lays a formation along it instead of giving a move order. */
+const FORM_DRAG_THRESHOLD = 14;
 
 export const FORMATION_NAMES = { crane: '학익진', line: '일자진', column: '장사진', wedge: '첨자진', 'yeosu-wings': COASTAL_TACTICS['yeosu-wings'].label, 'mokpo-depth': COASTAL_TACTICS['mokpo-depth'].label } as const;
 export const AMMO_NAMES: Record<AmmoMode, string> = { auto: '기본탄', hull: '대장군전·철환 (선체 파괴)', crew: '조란환 (승조원 공격)', fire: '화전 (불화살)' };
@@ -47,7 +51,15 @@ export function phaseName(kind: ManeuverKind, phase: ManeuverPhase) {
 }
 const SIGNAL_NAMES: Record<SignalKind, string> = { advance: '진군 북', withdraw: '퇴각 징' };
 /** A maneuver being drawn on the sea: from where the drag started to where it is now. */
+/** A formation being laid with the right button: the front from where the drag began to where it is now. */
+export type FormDrag = { x0: number; z0: number; x1: number; z1: number; downX: number; downY: number; active: boolean; queue: boolean };
 export type Placing = { kind: ManeuverKind; open: boolean; x0: number; z0: number; x1: number; z1: number; drawn: boolean; downX: number; downY: number };
+
+export type Posture = 'attack' | 'defend' | 'lure';
+/** A suggested order: its text (with `n` filled in), and what pressing it does. */
+export type Advice = { key: string; text: string; n?: number; run: () => void };
+export const POSTURE_NAMES: Record<Posture, string> = { attack: '공격', defend: '방어', lure: '유인' };
+const POSTURE_TOASTS: Record<Posture, string> = { attack: '공격 · 적에게 바짝 붙어 싸웁니다', defend: '방어 · 거리를 두고 쏩니다', lure: '유인 · 쏘면서 본대 쪽으로 물러납니다' };
 
 export const STANCE_NAMES: Record<Stance, string> = { auto: '자유교전', standoff: '원거리 포격 · 거리를 유지합니다', close: '근접 포격 · 바짝 붙어 쏩니다', ram: '들이받기 · 적 함선에 부딪칩니다', board: '백병전 돌입 · 적 함선에 올라탑니다' };
 
@@ -68,6 +80,23 @@ export class Input {
   private pendingRally = -1;
   /** The maneuver waiting to be drawn on the sea, once its button was pressed. */
   placing: Placing | null = null;
+  /** The formation a right-button drag lays, picked with 1-4 or the formation buttons. */
+  formKind: DragFormation = 'line';
+  formDrag: FormDrag | null = null;
+  /** The formation a button under the pointer would lay, shown on the sea before it is pressed. */
+  formHover: DragFormation | null = null;
+  /**
+   * A formation waiting to be placed, after 1-4 or a formation button: its ghost follows the pointer, facing the enemy;
+   * pressing the left button on the sea pins its centre and dragging turns it to face the pointer; release lays it.
+   * The right button or Esc gives it up.
+   */
+  formPlace: { kind: DragFormation; ids: number[]; cx: number; cz: number; face: number; width: number; pinned: boolean; downX: number; downY: number; turned: boolean } | null = null;
+  private pointerX = -1;
+  private pointerY = -1;
+  private readonly postures = new Map<number, Posture>();
+  private adviceAt = 0;
+  private lastAdvice: Advice | null = null;
+  private readonly adviceRest = new Map<string, number>();
   /** Morale callouts gathered while the last one of their kind is still on screen, by kind. */
   private readonly callouts = new Map<string, { at: number; n: number }>();
 
@@ -181,6 +210,22 @@ export class Input {
   // Touch pointers are routed to TouchControls. The handlers below only deal with mouse input.
   private onDown = (e: PointerEvent) => {
     if (e.pointerType === 'touch') return;
+    const fp = this.formPlace;
+    if (fp) {
+      if (e.button === 2) this.cancelFormation();
+      else if (e.button === 0) {
+        const p = this.waterPoint(e.clientX, e.clientY);
+        if (p) {
+          fp.cx = p.x;
+          fp.cz = p.z;
+        }
+        fp.pinned = true;
+        fp.turned = false;
+        fp.downX = e.clientX;
+        fp.downY = e.clientY;
+      }
+      return;
+    }
     if (this.placing) {
       // Drawing a maneuver: the left button draws it, the right one gives it up.
       if (e.button === 0) this.placeStart(e.clientX, e.clientY);
@@ -193,14 +238,51 @@ export class Input {
       this.downX = e.clientX;
       this.downY = e.clientY;
     } else if (e.button === 2) {
-      this.command(e.clientX, e.clientY, e.shiftKey || this.queueMoves);
+      const queue = e.shiftKey || this.queueMoves;
+      // A rally point, no ships to lay out, or an enemy or the shore under the press: the click commands at once.
+      // Only a press on open water with ships selected may grow into a formation drag, decided on release.
+      const p = this.pendingRally < 0 && this.selectedOwn().length ? this.waterPoint(e.clientX, e.clientY) : null;
+      if (!p || this.pickShip(e.clientX, e.clientY) || this.pickWorks(e.clientX, e.clientY)) {
+        this.formDrag = null;
+        this.command(e.clientX, e.clientY, queue);
+        return;
+      }
+      this.formDrag = { x0: p.x, z0: p.z, x1: p.x, z1: p.z, downX: e.clientX, downY: e.clientY, active: false, queue };
     }
   };
 
   private onMove = (e: PointerEvent) => {
     if (e.pointerType === 'touch') return;
+    this.pointerX = e.clientX;
+    this.pointerY = e.clientY;
+    const fp = this.formPlace;
+    if (fp) {
+      const p = this.waterPoint(e.clientX, e.clientY);
+      if (!p) return;
+      if (!fp.pinned) {
+        // Unpinned the ghost rides the pointer and keeps facing the enemy from wherever it is.
+        fp.cx = p.x;
+        fp.cz = p.z;
+        const enemy = this.enemyCentre(fp.ids);
+        if (enemy?.seen) fp.face = Math.atan2(enemy.z - p.z, enemy.x - p.x);
+      } else if (Math.hypot(e.clientX - fp.downX, e.clientY - fp.downY) > FORM_DRAG_THRESHOLD || fp.turned) {
+        fp.turned = true;
+        fp.face = Math.atan2(p.z - fp.cz, p.x - fp.cx);
+      }
+      return;
+    }
     if (this.placing) {
       this.placeMove(e.clientX, e.clientY);
+      return;
+    }
+    const f = this.formDrag;
+    if (f) {
+      if (!f.active && Math.hypot(e.clientX - f.downX, e.clientY - f.downY) > FORM_DRAG_THRESHOLD) f.active = true;
+      const p = f.active ? this.waterPoint(e.clientX, e.clientY) : null;
+      if (p) {
+        f.x1 = p.x;
+        f.z1 = p.z;
+      }
       return;
     }
     if (!this.leftDown) {
@@ -242,6 +324,18 @@ export class Input {
    * Without a selection the tap only reminds the player to select a ship.
    */
   tap(clientX: number, clientY: number) {
+    const fp = this.formPlace;
+    if (fp) {
+      const p = this.waterPoint(clientX, clientY);
+      if (p) {
+        fp.cx = p.x;
+        fp.cz = p.z;
+        const enemy = this.enemyCentre(fp.ids);
+        if (enemy?.seen) fp.face = Math.atan2(enemy.z - p.z, enemy.x - p.x);
+        this.confirmFormation();
+      }
+      return;
+    }
     if (this.resolveRally(clientX, clientY)) return;
     const ship = this.pickShip(clientX, clientY);
     if (this.engine.isOwn(ship)) {
@@ -326,6 +420,17 @@ export class Input {
   }
 
   private onUp = (e: PointerEvent) => {
+    if (e.pointerType !== 'touch' && e.button === 0 && this.formPlace?.pinned) {
+      this.confirmFormation();
+      return;
+    }
+    if (e.pointerType !== 'touch' && e.button === 2 && this.formDrag) {
+      const f = this.formDrag;
+      this.formDrag = null;
+      if (f.active && Math.hypot(f.x1 - f.x0, f.z1 - f.z0) > 8) this.layFormation(this.formKind, f.x0, f.z0, f.x1, f.z1);
+      else this.command(f.downX, f.downY, f.queue);
+      return;
+    }
     if (e.pointerType !== 'touch' && e.button === 0 && this.placing?.drawn) {
       this.placeEnd(e.clientX, e.clientY);
       return;
@@ -457,10 +562,15 @@ export class Input {
     this.engine.moveOrders?.show(tx, tz, queue, ids);
   }
 
-  formation(kind: FormationKind) {
+  /** The ships a formation order moves: the selection, or with none the whole fleet but the turtle ships, which roam. */
+  private formationIds() {
+    const ids = this.selectedOwn();
+    return ids.length ? ids : this.ownShips().filter((s) => s.spec.kind !== 'geobukseon' && this.engine.battle.isActive(s)).map((s) => s.id);
+  }
+
+  /** Centroid of the observed enemy, or a point a kilometre ahead of these ships when none is in sight. */
+  private enemyCentre(ids: number[]) {
     const b = this.engine.battle;
-    let ids = this.selectedOwn();
-    if (!ids.length) ids = this.ownShips().filter((s) => s.spec.kind !== 'geobukseon').map((s) => s.id);
     let ex = 0;
     let ez = 0;
     let n = 0;
@@ -470,25 +580,133 @@ export class Input {
       ez += s.z;
       n += 1;
     }
-    if (!n) {
-      const ships = ids.map((id) => b.get(id)).filter((s): s is Ship => !!s);
-      if (!ships.length) return;
-      ex = ships.reduce((v, s) => v + s.x + Math.cos(s.heading) * 1000, 0);
-      ez = ships.reduce((v, s) => v + s.z + Math.sin(s.heading) * 1000, 0);
-      n = ships.length;
+    if (n) return { x: ex / n, z: ez / n, seen: true };
+    const ships = ids.map((id) => b.get(id)).filter((s): s is Ship => !!s);
+    if (!ships.length) return null;
+    ex = ships.reduce((v, s) => v + s.x + Math.cos(s.heading) * 1000, 0);
+    ez = ships.reduce((v, s) => v + s.z + Math.sin(s.heading) * 1000, 0);
+    return { x: ex / ships.length, z: ez / ships.length, seen: false };
+  }
+
+  private shipPositions(ids: number[]) {
+    const b = this.engine.battle;
+    return ids.map((id) => b.get(id)).filter((s): s is Ship => !!s && b.isActive(s)).map((s) => ({ id: s.id, x: s.x, z: s.z, flagship: s.flagship }));
+  }
+
+  /**
+   * The slots a formation would take now, for the preview on the sea: along the right-button drag while one lasts,
+   * else facing the enemy as a button press would lay it. Null when there is nothing to show.
+   */
+  formationPreview(): { kind: DragFormation; slots: FormationSlot[]; front: { x0: number; z0: number; x1: number; z1: number } } | null {
+    const fp = this.formPlace;
+    if (fp) {
+      const ships = this.shipPositions(fp.ids);
+      if (!ships.length) return null;
+      const front = frontAt(fp.cx, fp.cz, fp.face, fp.width);
+      return { kind: fp.kind, slots: layoutFormation(fp.kind, ships, front.x0, front.z0, front.x1, front.z1), front };
     }
+    const f = this.formDrag;
+    const kind = f?.active ? this.formKind : this.formHover;
+    if (!kind) return null;
+    const ids = f?.active ? this.selectedOwn() : this.formationIds();
+    const ships = this.shipPositions(ids);
+    if (!ships.length) return null;
+    let front: { x0: number; z0: number; x1: number; z1: number };
+    if (f?.active) front = { x0: f.x0, z0: f.z0, x1: f.x1, z1: f.z1 };
+    else {
+      const enemy = this.enemyCentre(ids);
+      if (!enemy) return null;
+      const fleet = { x: ships.reduce((v, s) => v + s.x, 0) / ships.length, z: ships.reduce((v, s) => v + s.z, 0) / ships.length };
+      front = autoFront(kind, ships.length, fleet, enemy);
+    }
+    return { kind, slots: layoutFormation(kind, ships, front.x0, front.z0, front.x1, front.z1), front };
+  }
+
+  /** Lays a formation along a front drawn on the sea: every ship is sent to its own slot, the one the preview showed. */
+  layFormation(kind: DragFormation, x0: number, z0: number, x1: number, z1: number, ids = this.selectedOwn()) {
+    const slots = layoutFormation(kind, this.shipPositions(ids), x0, z0, x1, z1);
+    if (!slots.length) return;
+    this.engine.issue({ type: 'orders', list: slots.map((s) => ({ id: s.id, order: { type: 'slot' as const, x: s.x, z: s.z, face: s.face } })) });
+    this.engine.sound.drums(kind === 'crane' ? 3 : 2);
+    this.engine.moveOrders?.show((x0 + x1) / 2, (z0 + z1) / 2, false, slots.map((s) => s.id));
+    pushToast(t('{name|을/를} 펼칩니다', { name: t(FORMATION_NAMES[kind]) }));
+    this.engine.publish(true);
+  }
+
+  /**
+   * Picks a formation. During a right-button drag or a placement it only changes the ghost; otherwise it starts a
+   * placement, the ghost shown where the button would have laid it, so its place and facing are checked first.
+   */
+  pickFormation(kind: DragFormation) {
+    this.formKind = kind;
+    if (this.formDrag?.active) return;
+    if (this.formPlace) {
+      this.formPlace.kind = kind;
+      this.formPlace.width = this.defaultWidth(kind, this.formPlace.ids.length);
+      this.engine.publish(true);
+      return;
+    }
+    const ids = this.formationIds();
+    const ships = this.shipPositions(ids);
+    const enemy = this.enemyCentre(ids);
+    if (!ships.length || !enemy) return;
+    const fleet = { x: ships.reduce((v, s) => v + s.x, 0) / ships.length, z: ships.reduce((v, s) => v + s.z, 0) / ships.length };
+    const f = autoFront(kind, ships.length, fleet, enemy);
+    const cx = (f.x0 + f.x1) / 2;
+    const cz = (f.z0 + f.z1) / 2;
+    this.formPlace = { kind, ids, cx, cz, face: Math.atan2(enemy.z - cz, enemy.x - cx), width: this.defaultWidth(kind, ships.length), pinned: false, downX: 0, downY: 0, turned: false };
+    // With the pointer already on the sea the ghost starts under it.
+    if (this.pointerX >= 0 && this.dom) this.onMove({ pointerType: 'mouse', clientX: this.pointerX, clientY: this.pointerY } as PointerEvent);
+    pushToast(t(isTouchDevice ? '{name} · 바다를 누르면 그곳에 펼칩니다' : '{name} · 바다를 눌러 끌면 방향이 돌아갑니다 · 놓으면 펼칩니다 · 우클릭 취소', { name: t(FORMATION_NAMES[kind]) }));
+    this.engine.publish(true);
+  }
+
+  private defaultWidth(kind: DragFormation, n: number) {
+    const f = autoFront(kind, n, { x: 0, z: 0 }, { x: 0, z: 1000 });
+    return Math.hypot(f.x1 - f.x0, f.z1 - f.z0);
+  }
+
+  /** Lays the formation being placed exactly as its ghost shows it. */
+  confirmFormation() {
+    const fp = this.formPlace;
+    if (!fp) return;
+    this.formPlace = null;
+    const f = frontAt(fp.cx, fp.cz, fp.face, fp.width);
+    this.layFormation(fp.kind, f.x0, f.z0, f.x1, f.z1, fp.ids);
+  }
+
+  cancelFormation() {
+    if (!this.formPlace) return;
+    this.formPlace = null;
+    this.engine.publish(true);
+  }
+
+  formation(kind: FormationKind) {
+    const b = this.engine.battle;
+    const ids = this.formationIds();
+    const enemy = this.enemyCentre(ids);
+    if (!enemy) return;
     if (kind === 'crane' && b.maneuvers) {
       // Under the maneuver rules the crane is a maneuver: its bowl where the squadron lies, its wings reaching for the
       // enemy, and it closes round whatever comes into it.
       const ships = ids.map((id) => b.get(id)).filter((s): s is Ship => !!s);
       const fx = ships.reduce((v, s) => v + s.x, 0) / Math.max(1, ships.length);
       const fz = ships.reduce((v, s) => v + s.z, 0) / Math.max(1, ships.length);
-      const d = Math.hypot(ex / n - fx, ez / n - fz) || 1;
-      const ux = (ex / n - fx) / d;
-      const uz = (ez / n - fz) / d;
+      const d = Math.hypot(enemy.x - fx, enemy.z - fz) || 1;
+      const ux = (enemy.x - fx) / d;
+      const uz = (enemy.z - fz) / d;
       const r = Math.min(420, Math.max(250, d * 0.45));
       this.engine.issue({ type: 'maneuver', ids, kind: 'crane', x0: fx + ux * r, z0: fz + uz * r, x1: fx + ux * r * 2, z1: fz + uz * r * 2 });
-    } else this.engine.issue({ type: 'formation', ids, kind, cx: ex / n, cz: ez / n });
+    } else if (kind === 'crane' || kind === 'line' || kind === 'column' || kind === 'wedge') {
+      // The same slots the preview drew while the button was under the pointer.
+      this.formKind = kind;
+      const ships = this.shipPositions(ids);
+      if (!ships.length) return;
+      const fleet = { x: ships.reduce((v, s) => v + s.x, 0) / ships.length, z: ships.reduce((v, s) => v + s.z, 0) / ships.length };
+      const f = autoFront(kind, ships.length, fleet, enemy);
+      this.layFormation(kind, f.x0, f.z0, f.x1, f.z1, ids);
+      return;
+    } else this.engine.issue({ type: 'formation', ids, kind, cx: enemy.x, cz: enemy.z });
     this.engine.sound.drums(kind === 'crane' ? 3 : 2);
     pushToast(t('{name|을/를} 펼칩니다', { name: t(FORMATION_NAMES[kind]) }));
   }
@@ -742,6 +960,102 @@ export class Input {
     pushToast(t('자유교전으로 바꿉니다'));
   }
 
+  /**
+   * One word for what a squadron should do, the battle's own AI doing the rest: attack closes in and fights, defend
+   * keeps its distance and shoots, lure falls back toward the rest of the fleet drawing the enemy after it.
+   * Applies to the selection, or with none to the whole fleet.
+   */
+  posture(kind: Posture) {
+    const ids = this.commandIds(true);
+    if (!ids.length) return;
+    const b = this.engine.battle;
+    this.engine.issue({ type: 'configure', ids, patch: { stance: kind === 'attack' ? 'close' : 'standoff', repel: false } });
+    if (kind === 'lure') {
+      const enemy = this.enemyCentre(ids);
+      const picked = new Set(ids);
+      const rest = this.ownShips().filter((s) => !picked.has(s.id) && b.isActive(s));
+      const ships = this.shipPositions(ids);
+      if (enemy?.seen && ships.length) {
+        const fx = ships.reduce((v, s) => v + s.x, 0) / ships.length;
+        const fz = ships.reduce((v, s) => v + s.z, 0) / ships.length;
+        // Back toward the main body when there is one, else straight away from the enemy.
+        let dx = rest.length ? rest.reduce((v, s) => v + s.x, 0) / rest.length - fx : fx - enemy.x;
+        let dz = rest.length ? rest.reduce((v, s) => v + s.z, 0) / rest.length - fz : fz - enemy.z;
+        const d = Math.hypot(dx, dz) || 1;
+        dx /= d;
+        dz /= d;
+        const back = Math.min(700, Math.max(350, d * 0.8));
+        this.engine.issue({ type: 'orders', list: ships.map((s) => ({ id: s.id, order: { type: 'move' as const, x: s.x + dx * back, z: s.z + dz * back } })) });
+      }
+    } else this.engine.issue({ type: 'order', ids, order: { type: 'auto' } });
+    for (const id of ids) this.postures.set(id, kind);
+    pushToast(t(POSTURE_TOASTS[kind]));
+    this.engine.publish(true);
+  }
+
+  /**
+   * One suggested order for the moment, worked out from what the player can see; the HUD shows it as a single button.
+   * A suggestion acted on rests for a while so the same one does not come straight back.
+   */
+  advice(): Advice | null {
+    const engine = this.engine;
+    const b = engine.battle;
+    if (!b || b.ended) return null;
+    const now = performance.now();
+    if (now - this.adviceAt < 1000) return this.lastAdvice;
+    this.adviceAt = now;
+    const own = this.ownShips().filter((s) => b.isActive(s));
+    const foe = b.ships.filter((s) => s.team === engine.enemyTeam && b.isActive(s) && shipObserved(b, engine.team, s));
+    const resting = (key: string) => now < (this.adviceRest.get(key) ?? 0);
+    const pick = (a: Advice | null) => (this.lastAdvice = a && !resting(a.key) ? a : null);
+    if (!own.length || !foe.length) return pick(null);
+    const ox = own.reduce((v, s) => v + s.x, 0) / own.length;
+    const oz = own.reduce((v, s) => v + s.z, 0) / own.length;
+    const routing = own.filter((s) => s.moraleState === 'routing').length;
+    if (b.morale && routing >= 2 && !resting('drum')) return pick({ key: 'drum', text: '아군 {n}척이 달아납니다 · 북을 울려 재집결', n: routing, run: () => this.drumAll() });
+    const flag = foe.find((s) => s.flagship);
+    if (flag && Math.hypot(flag.x - ox, flag.z - oz) < 900 && !resting('flag')) {
+      return pick({ key: 'flag', text: '적 대장선이 가깝습니다 · 집중 공격', run: () => this.focusFire(flag) });
+    }
+    const contact = foe.some((f) => own.some((s) => Math.hypot(f.x - s.x, f.z - s.z) < 700));
+    const formed = own.filter((s) => s.order.type === 'slot' || s.order.type === 'follow').length >= own.length * 0.6;
+    if (!contact && !formed && own.length >= 3) {
+      const kind: DragFormation = own.length >= 6 && foe.length >= 3 ? 'crane' : 'line';
+      return pick({ key: 'form', text: kind === 'crane' ? '적이 다가옵니다 · 학익진으로 감싸기' : '적이 다가옵니다 · 일자진으로 맞서기', run: () => this.pickFormation(kind) });
+    }
+    const foeRouting = foe.filter((s) => s.moraleState === 'routing').length;
+    if (contact && (foe.length <= own.length * 0.5 || foeRouting >= Math.max(2, foe.length * 0.3))) {
+      return pick({ key: 'attack', text: '적이 무너집니다 · 공격', run: () => this.posture('attack') });
+    }
+    const idle = own.filter((s) => s.order.type === 'hold').length;
+    if (contact && idle >= own.length * 0.5) return pick({ key: 'auto', text: '멈춰 선 함선이 많습니다 · 자유교전', run: () => this.auto() });
+    return pick(null);
+  }
+
+  /** Carries out the suggestion on screen, then lets it rest. */
+  takeAdvice(a: Advice) {
+    this.adviceRest.set(a.key, performance.now() + 40000);
+    this.lastAdvice = null;
+    a.run();
+  }
+
+  private drumAll() {
+    const ids = this.ownShips().map((s) => s.id);
+    this.engine.issue({ type: 'drum', ids });
+    pushToast(t('북을 울려 재집결합니다'), 'good');
+  }
+
+  private focusFire(target: Ship) {
+    const ids = this.commandIds(true);
+    this.engine.issue({ type: 'order', ids, order: { type: 'attack', targetId: target.id } });
+    pushToast(t('공격 명령 · {name} · {ships}', { name: tName(target.name), ships: tShips(ids.length) }));
+  }
+
+  /** The posture last given to a ship, for lighting its button. */
+  postureOf(id: number) {
+    return this.postures.get(id);
+  }
+
   hold() {
     const ids = this.selectedOwn();
     if (!ids.length) return;
@@ -787,10 +1101,9 @@ export class Input {
     if (digit) {
       e.preventDefault();
       const index = Number(digit[1]) - 1;
-      if (e.altKey) {
-        if (index < 4) this.formation((['crane', 'line', 'column', 'wedge'] as const)[index]!);
-        else if (index < 7) this.setSpeed([1, 0.6, 0.3][index - 4]!);
-      }
+      // 1-4 lay a formation (and pick the one a right-button drag lays); Alt+5-7 set the sailing speed.
+      if (index < 4 && !e.ctrlKey && !e.metaKey && !e.shiftKey) this.pickFormation(DRAG_FORMATIONS[index]!);
+      else if (e.altKey && index < 7) this.setSpeed([1, 0.6, 0.3][index - 4]!);
       return;
     }
     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyA') {
@@ -799,6 +1112,12 @@ export class Input {
       return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // The two orders a new player needs, where a MOBA player's hand already rests: A to attack, S to stop.
+    if (!e.shiftKey && (e.code === 'KeyA' || e.code === 'KeyS')) {
+      if (e.code === 'KeyA') this.posture('attack');
+      else this.hold();
+      return;
+    }
     if (this.maneuverKey(e)) return;
     switch (e.code) {
       case 'KeyZ':
@@ -870,6 +1189,11 @@ export class Input {
         this.engine.publish(true);
         break;
       case 'Escape':
+        if (this.formDrag || this.formPlace) {
+          this.formDrag = null;
+          this.cancelFormation();
+          break;
+        }
         if (this.placing) {
           this.cancelManeuver();
           break;
@@ -892,11 +1216,13 @@ export class Input {
     }
   };
 
-  /** The maneuver keys, under the maneuver rules: Q ambush, W pincer, E ring, D breach, S blockade, A lure, F pursuit, Shift+E the drum, Shift+S the gong. */
+  /** The maneuver keys, under the maneuver rules: Q ambush, W pincer, E ring, D breach, Shift+D blockade, Shift+A lure, F pursuit, Shift+E the drum, Shift+S the gong. */
   private maneuverKey(e: KeyboardEvent) {
     if (!this.engine.battle?.maneuvers) return false;
-    const plain: Record<string, ManeuverKind> = { KeyQ: 'ambush', KeyW: 'pincer', KeyE: 'encircle', KeyD: 'breach', KeyS: 'blockade', KeyA: 'lure', KeyF: 'pursue' };
-    if (e.shiftKey && e.code === 'KeyE') this.signal('advance');
+    const plain: Record<string, ManeuverKind> = { KeyQ: 'ambush', KeyW: 'pincer', KeyE: 'encircle', KeyD: 'breach', KeyF: 'pursue' };
+    if (e.shiftKey && e.code === 'KeyA') this.beginManeuver('lure');
+    else if (e.shiftKey && e.code === 'KeyD') this.beginManeuver('blockade');
+    else if (e.shiftKey && e.code === 'KeyE') this.signal('advance');
     else if (e.shiftKey && e.code === 'KeyS') this.signal('withdraw');
     else if (e.shiftKey && e.code === 'KeyO' && this.placing) this.toggleOpenSide();
     else if (!e.shiftKey && plain[e.code]) this.beginManeuver(plain[e.code]!);

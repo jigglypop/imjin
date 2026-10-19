@@ -8,6 +8,8 @@
 import { randomBytes } from 'node:crypto';
 import { generalById, GENERALS, isImjin } from '../src/meta/catalog';
 import { buyShip, chooseNation, recruit } from '../src/meta/fleet';
+import { upgrade } from '../src/meta/port';
+import { BUILDING_IDS, buildingLevel } from '../src/meta/portDefs';
 import { cleanFleet, buy, equip, equipItem, equipWeapon, learn, reforge, respec, salvage, newProfile, normalizeProfile, reportProblem, reroll, rewardFor, RuleError, type BattleReport, type Profile } from '../src/meta/rules';
 import { GEAR_SLOTS, type GearSlot } from '../src/meta/loot';
 import { START_COINS, START_XP, type MetaBattleStart, type MetaBattleTicket, type MetaReply, type MetaRewardReply } from '../src/meta/wire';
@@ -91,7 +93,7 @@ export async function changeMeta(accounts: AccountStore, userId: string, reason:
       after.salt = userId;
       out = after;
       await tx.saveMeta(recordOf(after));
-      data[FLEET_KEY] = { nation: after.nation, nationChanges: after.nationChanges, recruited: after.recruited, ships: after.ships };
+      data[FLEET_KEY] = { nation: after.nation, nationChanges: after.nationChanges, recruited: after.recruited, ships: after.ships, port: after.port };
       delete data.meta;
     });
     return { profile: out!, rev: stored.rev };
@@ -248,6 +250,13 @@ export function metaRoutes(api: ApiRouter) {
     return { profile, rev } satisfies MetaReply;
   });
 
+  // The home port (본진): one building raised one level (src/meta/port.ts).
+  api.user('POST', '/api/meta/build', async ({ accounts, user, body }) => {
+    const building = need(body.building, 16);
+    const { profile, rev } = await changeMeta(accounts, user.id, 'build', (p) => upgrade(p, building), `build:${building}`);
+    return { profile, rev } satisfies MetaReply;
+  });
+
   // A profile this browser kept before it had an account, carried over once per account. Only choices are taken, each
   // through the server's rules: the armor it owned is bought again from the server's purse (rolled afresh from the
   // account id), the steps learned are learned again where the server's experience allows, and what was worn is put on.
@@ -268,6 +277,8 @@ export function metaRoutes(api: ApiRouter) {
       // Its navy if the account has none yet, then its admirals and hulls, each bought again from the server's purse.
       if (local.nation && !p.nation) attempt((q) => chooseNation(q, local.nation!));
       for (const id of local.recruited) attempt((q) => recruit(q, id));
+      // Buildings first, so the hulls they unlock can be bought again.
+      for (const id of BUILDING_IDS) for (let l = buildingLevel(p.port, id); l < buildingLevel(local.port, id); l++) attempt((q) => upgrade(q, id));
       for (const [kind, n] of Object.entries(local.ships)) {
         const extra = (n ?? 0) - (p.ships[kind as keyof typeof p.ships] ?? 0);
         for (let i = 0; i < extra; i++) attempt((q) => buyShip(q, kind, 1));

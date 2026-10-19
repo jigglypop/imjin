@@ -4,6 +4,7 @@ import { GENERALS } from './catalog';
 import { buy, equip, equipItem, equipWeapon, learn, reforge, respec, salvage, newProfile, normalizeProfile, reroll, rewardFor, RuleError, type BattleReport, type Profile, type Reward } from './rules';
 import type { GearSlot } from './loot';
 import { buyShip, chooseNation, recruit } from './fleet';
+import { upgrade } from './port';
 import { META_PATHS, START_COINS, START_XP, type MetaBattleStart, type MetaBattleTicket, type MetaReply, type MetaRewardReply } from './wire';
 
 /**
@@ -80,6 +81,8 @@ type LocalProfile = {
   chooseNation: (nation: string) => boolean;
   recruit: (generalId: string) => boolean;
   buyShip: (kind: string, count?: number) => boolean;
+  /** Raises a home-port building one level (port.ts). */
+  build: (building: string) => boolean;
   dismiss: () => void;
 };
 
@@ -118,6 +121,7 @@ export const useLocalProfile = create<LocalProfile>((set, get) => {
     chooseNation: (nation) => apply((p) => chooseNation(p, nation), META_PATHS.nation, { nation }),
     recruit: (generalId) => apply((p) => recruit(p, generalId), META_PATHS.recruit, { general: generalId }),
     buyShip: (kind, count = 1) => apply((p) => buyShip(p, kind, count), META_PATHS.ship, { kind, count }),
+    build: (building) => apply((p) => upgrade(p, building), META_PATHS.build, { building }),
     dismiss: () => set({ refused: null }),
   };
 });

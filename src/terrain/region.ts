@@ -142,4 +142,6 @@ export const MAGHREB_BIOME: RegionBiome = {
 export type RegionGround = {
   id: string;
   biome: RegionBiome;
+  /** The window itself, when it is not a file (the faction campaign's theatre, cut from its map's DEM). */
+  dem?: import('./regionDem').RegionDem;
 };

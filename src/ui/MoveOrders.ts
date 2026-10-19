@@ -144,7 +144,7 @@ export class MoveOrders {
   update() {
     const now = performance.now();
     this.rect = null;
-    const hidden = this.engine.rts.cinematic || this.engine.battle.ended;
+    const hidden = this.engine.rts.cinematic || this.engine.hudHidden || this.engine.battle.ended;
     this.marks = this.marks.filter((mark) => {
       const age = now - mark.at;
       if (age >= LIFETIME) { mark.root.remove(); return false; }

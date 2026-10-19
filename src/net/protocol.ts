@@ -143,6 +143,7 @@ export const SENT_EVENTS = new Set<BattleEvent['type']>([
   // The battle depth rules: a crew's nerve, a lost leader, a broken fleet and the drum, for the marks and the callouts.
   'morale',
   'leader',
+  'leaderHit',
   'broken',
   'drum',
   // Tactical maneuvers: a plan's phase, a flagship's signal and a ship cut off by a breach, for the marks and callouts.
